@@ -1641,7 +1641,7 @@ impl EeWonLobbyCtl {
             if let Some(r) = crate::lobbyevt::ctl_op(op, a, b) {
                 return r;
             }
-            if let Some(r) = crate::hostops::ctl_op(op, a, b, c, &|op, a, b, c| self.op(op, a, b, c)) {
+            if let Some(r) = crate::hostops::game_ctl_op(op, a, b, c, &|op, a, b, c| self.op(op, a, b, c)) {
                 return r;
             }
             if let (Some(res), Some(row)) = (game_string_op(op), string_row(b)) {

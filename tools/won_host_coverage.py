@@ -112,7 +112,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lanown.rs", "op"),
                (RS / "ee_won_lobby" / "src" / "lobbyevt.rs", "lobby_op"),
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "lobby_op"),
-               (RS / "ee_won_lobby" / "src" / "netops.rs", "lobby_op")], allowed={}),
+               (RS / "ee_won_lobby" / "src" / "netops.rs", "lobby_op"),
+               # the cases whose statements are Rust (R6 WONLobby round 29)
+               (RS / "ee_won_lobby" / "src" / "lobbyops.rs", "lobby_op")], allowed={}),
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
          hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
          rust=[], allowed={}),

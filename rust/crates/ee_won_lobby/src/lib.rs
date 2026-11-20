@@ -30,6 +30,7 @@ pub mod lobbydlg;
 pub mod lobbyevt;
 pub mod lobbyhost;
 pub mod lobbymap;
+pub mod lobbyops;
 pub mod lobbypopup;
 pub mod logics;
 pub mod model;

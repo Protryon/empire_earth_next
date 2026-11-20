@@ -751,6 +751,9 @@ WON_TESTS = {
     # the control hosts' cases made Rust (hostops.rs, R6 WONLobby round 29) against the deleted code over a stand-in
     # world (tests/won/won_hostops_world.h)
     "won_hostops_test": [],
+    # StagingLogic's and LanLogic's host cases made Rust (lobbyops.rs, R6 WONLobby round 29) against the deleted
+    # cases over a stand-in world (tests/won/won_lobbyops_world.h)
+    "won_lobbyops_test": [],
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won_lobby/src/golden_eexfer.txt)
     "won_eexfer_test": [],

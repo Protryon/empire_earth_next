@@ -15,6 +15,15 @@ pub(crate) type Out<'a> = &'a dyn Fn(Op, isize, isize, isize) -> isize;
 /// `DrawLobbyPing`'s ping ceiling (0x8df4cc): 5000 until the lobby config's is read, while it is still 5000.
 static PING_CEILING: AtomicU32 = AtomicU32::new(5000);
 
+/// [`ctl_op`] in the game only: while the network core is bound (the game binds it with the lobby's WONAPICore,
+/// before any control exists; the model-mode tests and the drivers' worlds never do).
+pub(crate) fn game_ctl_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
+    if !ee_won_net::cppnet::bound() {
+        return None;
+    }
+    ctl_op(op, a, b, c, out)
+}
+
 /// The op answered here (`None`: the C++ host's).
 pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
     match op {
