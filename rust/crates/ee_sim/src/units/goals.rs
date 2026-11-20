@@ -15,7 +15,7 @@
 use std::os::raw::{c_long, c_ulong};
 
 use crate::units::goal_obj;
-use crate::units::rust_goal::{EE_UNITS_GOAL_CLONE, EE_UNITS_GOAL_SET_OWNER};
+use crate::units::rust_goal::{EE_UNITS_GOAL_CLONE, EE_UNITS_GOAL_SET_OWNER, EE_UNITS_GOAL_START, EE_UNITS_GOAL_SUITS};
 
 /// One goal queue: its unit (`mUnit`'s address), its goals' objects in queue order (0: a null entry) and its timer.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -683,6 +683,46 @@ pub extern "C" fn ee_units_unit_set_goal(unit: u64, goal: u64, keep: bool, index
 #[no_mangle]
 pub extern "C" fn ee_units_unit_drop_unsuited_goals(unit: u64, index: u32) {
     drop_unsuited_goals(unit, index as usize, &mut Goals);
+}
+
+/// `DropFinishedGoals(inStartAll)` (0x1fcb0e): while the current goal is an automatic waypoint, it is deleted off
+/// the main queue and the next goal starts when it suits the unit (every next one with `start_all`, else the first
+/// that is no automatic waypoint); then the current and active goals refreshed.
+pub fn drop_finished_goals(unit: u64, start_all: bool, w: &mut dyn GoalWorld) {
+    // SAFETY: the caller holds the world
+    let t = unsafe { crate::world::WorldRead::begin() };
+    let current = unsafe { crate::world::UnitView::of(&t, unit) }.map_or(0, |u| u.goal_handle());
+    if is_auto_waypoint(current) {
+        let queues = unit_queues(unit);
+        if let Some(q) = queues.first().copied() {
+            loop {
+                EeUnitsGoalQueue::pop_delete(q, true, w);
+                let next = refresh_goals(unit);
+                if next == 0 {
+                    break;
+                }
+                let auto = is_auto_waypoint(next);
+                // SAFETY (each call): the unit's live goal
+                if start_all || !auto {
+                    let suits = unsafe { goal_obj::call(EE_UNITS_GOAL_SUITS, next, unit, 0, std::ptr::null_mut()) };
+                    if suits != 0 {
+                        unsafe { goal_obj::call(EE_UNITS_GOAL_START, next, unit, 0, std::ptr::null_mut()) };
+                    }
+                }
+                if !auto {
+                    break;
+                }
+            }
+        }
+    }
+    refresh_goals(unit);
+    refresh_active_goal(unit);
+}
+
+/// `DropFinishedGoals(inStartAll)`.
+#[no_mangle]
+pub extern "C" fn ee_units_unit_drop_finished_goals(unit: u64, start_all: bool) {
+    drop_finished_goals(unit, start_all, &mut Goals);
 }
 
 #[cfg(test)]

@@ -2307,31 +2307,6 @@ bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
     return theFound;
 }
 
-// Pops auto-waypoint goals off the main queue, starting each following goal that suits the unit
-void EEComplexUnit::DropFinishedGoals(bool inStartAll)
-{
-    if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalLocation && static_cast<EEUGRust*>(this->mGoalState)->GetIsAutoWaypoint() == true) {
-        EEUGRust* theGoal = static_cast<EEUGRust*>(this->mGoalState);
-        while (true) {
-            if (theGoal->GetIsAutoWaypoint() != true)
-                break;
-            this->mGoalQueues[0].PopFront();
-            theGoal = NULL;
-            EEUnitGoal* theNext = this->RefreshGoals();
-            if (theNext->mKind == kGoalLocation)
-                theGoal = static_cast<EEUGRust*>(theNext);
-            if (theGoal == NULL || inStartAll || !theGoal->GetIsAutoWaypoint()) {
-                if (theNext->Suits(this))
-                    theNext->Start(this);
-            }
-            if (theGoal == NULL)
-                break;
-        }
-    }
-    this->RefreshGoals();
-    this->RefreshActiveGoal();
-}
-
 // Removes a unit from the cargo and gives its room back; refreshes the icon bar if the transport is selected
 void EEComplexUnit::ReleaseCargo(EEComplexUnit* inCargo)
 {

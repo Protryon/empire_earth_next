@@ -6139,6 +6139,9 @@ void ee_units_unit_set_goal(uint64_t unit, uint64_t goal, bool keep, int32_t ind
 /// `DropUnsuitedGoals(inIndex)`.
 void ee_units_unit_drop_unsuited_goals(uint64_t unit, uint32_t index);
 
+/// `DropFinishedGoals(inStartAll)`.
+void ee_units_unit_drop_finished_goals(uint64_t unit, bool start_all);
+
 /// `EEGroup::Load` over the group's parts and the file in `f`.
 ///
 /// # Safety

@@ -685,7 +685,8 @@ public:
     void ReleaseFireEffect();               // 0x1f70bf: the fire effect off (or 0x23d5c3 for type 0x321)
     void ResizeTurretAngles(unsigned long inCount);  // 0x1f7bfa: mTabButtons = inCount zeroed floats
     void PartFinished();                    // 0x1f9d91: Virtual3C(tile), the mini map for other players' units
-    void DropFinishedGoals(bool inStartAll);  // 0x1fcb0e (drops the auto-waypoint location goals)
+    // 0x1fcb0e (drops the auto-waypoint location goals; ee_units goals.rs)
+    void DropFinishedGoals(bool inStartAll) { ee_units_unit_drop_finished_goals((uint64_t)(uintptr_t)this, inStartAll); }
     void ApplyMorale(long inValue, long& outValue);  // 0x1fbd81: inValue less 0.8 of it with positive morale, plus 0.6 with negative
     long GetSecondWaypoint(GE3DPoint& outLocation);  // 0x1fbecf: the second waypoint (7: none) (provisional name)
     // 0x1fbf66: drops the queued goals of mGoalQueues[inIndex] that refuse the unit
