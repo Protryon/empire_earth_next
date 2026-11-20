@@ -2231,6 +2231,7 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
         return theTransport != NULL && theTransport->GetPlayer() == (EEPlayer*)(uintptr_t)inA && theCarrier->mUnitClass->mTransportCapacity > 0
             && theTransport->mCargoRoom >= theClass->mWeight && theClass->CanEnter(theTransport->mUnitClass);
     }
+    case 18: return EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(theUnit->GetUnitClass())->HasGatherPoint(theComplex, UUUnit(inB));   // (its UCBD note)
     }
     return 0;
 }

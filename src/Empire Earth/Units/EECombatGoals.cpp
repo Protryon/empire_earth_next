@@ -698,8 +698,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         return 0;
     }
     case EE_COMBAT_W_IGNORED_TIME: theObject->mIgnoredTargets[(size_t)a[0]].mTime = (unsigned long)a[1]; return 0;
-    case EE_COMBAT_W_CORNER_BLOCKED:
-        return ee_units_uu_is_corner_blocked((int32_t)a[0], (int32_t)a[1], (int32_t)a[2], (int32_t)a[3]) != 0;
     case EE_COMBAT_W_CAN_GET_TO_UNIT:
         return gContinentManager.CanGetToUnit(EEQueryUnit(inObject), EEQueryUnit(inOther));
     case EE_COMBAT_W_CONTINENT_AT: return (uint64_t)(uintptr_t)gContinentManager.GetContinentAt(EEQueryUnit(inObject));
@@ -813,10 +811,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         return 0;
     }
     case EE_COMBAT_W_ELEVATION: return EEConditionBits(theClass->GetElevationFactor(theObject, theOther));
-    case EE_COMBAT_W_DAMAGE_CAPTURE:
-        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'M'), *(const EeCombatDamageIn*)(uintptr_t)a[0],
-                        *(const EeCombatDamageOut*)(uintptr_t)a[1]);
-        return 0;
     case EE_COMBAT_W_HIT_CLASS: {   // a capital ship's special weapon, else the launcher's or this class; the splash's
         EEUnitClass* theHit = theObject->mUnitClass->mCategory == kUnitCategorySpaceship && theObject->mIsSpecialAttack
             ? gUnitClassTable[kUnitTypeCapitalShipSpecialWeapon]
@@ -879,21 +873,12 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         EECombatCaptureXAction(EE_COMBAT_XA_AREA_DAMAGE, theObject, theTarget, theHash);
         return 0;
     }
-    case EE_COMBAT_W_CAPTURE:   // TEST ONLY: a formula's record (EECombatCapture's)
-        if (EESimCaptureRecord::Active()) {
-            EESimCaptureRecord theRecord((unsigned int)a[0]);
-            theRecord.Bytes((const void*)(uintptr_t)a[1], (unsigned int)a[2]);
-            theRecord.Bytes((const void*)(uintptr_t)a[3], (unsigned int)a[4]);
-            theRecord.Commit();
-        }
-        return 0;
     case EE_COMBAT_W_PATH_START: {
         GE3DPoint theNext;
         float theIndex;
         theObject->GetPathStart(theNext, theIndex);
         return EEPointArgs(a, theNext, 0);
     }
-    case EE_COMBAT_W_TILE_AT: return ::gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>((long)a[0], (long)a[1])) != NULL;
     case EE_COMBAT_W_WALL_SPOT: {
         GE3DPoint thePoint(EEBitsFloat((int32_t)a[0]), EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]));
         return EEPointArgs(a, thePoint, ee_units_uu_spot(3, (uint64_t)(uintptr_t)theObject, (uint64_t)(uintptr_t)EEQueryUnit(inOther), (float(*)[3])&thePoint.mX) != 0);

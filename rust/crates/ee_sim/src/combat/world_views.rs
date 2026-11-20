@@ -9,14 +9,16 @@
 use std::os::raw::{c_long, c_ulong};
 
 use crate::combat::damage::{
-    EE_COMBAT_W_EXPERIENCE, EE_COMBAT_W_NODE_NEXT, EE_COMBAT_W_NODE_UNIT, EE_COMBAT_W_SET_RESOURCE,
-    EE_COMBAT_W_TILE_UNITS,
+    EE_COMBAT_W_DAMAGE_CAPTURE, EE_COMBAT_W_EXPERIENCE, EE_COMBAT_W_NODE_NEXT, EE_COMBAT_W_NODE_UNIT,
+    EE_COMBAT_W_SET_RESOURCE, EE_COMBAT_W_TILE_UNITS,
 };
-use crate::combat::leaves::{EE_COMBAT_W_POSITION, EE_COMBAT_W_SEES_MAP, EE_COMBAT_W_TILE_HEIGHT};
+use crate::combat::leaves::{
+    EE_COMBAT_W_CAPTURE, EE_COMBAT_W_POSITION, EE_COMBAT_W_SEES_MAP, EE_COMBAT_W_TILE_AT, EE_COMBAT_W_TILE_HEIGHT,
+};
 use crate::combat::world::{
-    EeCombatWorldArgs, EE_COMBAT_W_LAST_ATTACKER, EE_COMBAT_W_MUZZLE_FLASH, EE_COMBAT_W_SET_AMMUNITION,
-    EE_COMBAT_W_SET_FLIGHT_TIME, EE_COMBAT_W_SHOT_EFFECT_BETWEEN, EE_COMBAT_W_SPARKS_AT, EE_COMBAT_W_SPARKS_ON,
-    EE_COMBAT_W_SPECIAL_EFFECT, EE_COMBAT_W_SPECIAL_OFF,
+    EeCombatWorldArgs, EE_COMBAT_W_CORNER_BLOCKED, EE_COMBAT_W_LAST_ATTACKER, EE_COMBAT_W_MUZZLE_FLASH,
+    EE_COMBAT_W_SET_AMMUNITION, EE_COMBAT_W_SET_FLIGHT_TIME, EE_COMBAT_W_SHOT_EFFECT_BETWEEN, EE_COMBAT_W_SPARKS_AT,
+    EE_COMBAT_W_SPARKS_ON, EE_COMBAT_W_SPECIAL_EFFECT, EE_COMBAT_W_SPECIAL_OFF,
 };
 use crate::world::effects::{effects, EffectPlace, EffectRequest};
 use crate::world::layout::layout;
@@ -53,7 +55,28 @@ pub fn answers(code: i32) -> bool {
             | EE_COMBAT_W_SEES_MAP
             | EE_COMBAT_W_TILE_HEIGHT
             | EE_COMBAT_W_POSITION
+            | EE_COMBAT_W_TILE_AT
+            | EE_COMBAT_W_CORNER_BLOCKED
+            | EE_COMBAT_W_CAPTURE
+            | EE_COMBAT_W_DAMAGE_CAPTURE
     )
+}
+
+/// TEST ONLY: a record of `tag` from two byte ranges (`EECombatCapture`'s and the formulas' records).
+///
+/// # Safety
+/// The ranges are readable.
+unsafe fn capture(tag: u32, first: (*const u8, usize), second: (*const u8, usize)) {
+    if !crate::app::capture_record::active() {
+        return;
+    }
+    let mut r = crate::app::capture_record::Record::new(tag);
+    // SAFETY: the caller's contract
+    unsafe {
+        r.bytes(std::slice::from_raw_parts(first.0, first.1));
+        r.bytes(std::slice::from_raw_parts(second.0, second.1));
+    }
+    r.commit();
 }
 
 /// A float's bits as an argument word (`EEConditionBits`)
@@ -184,6 +207,38 @@ pub unsafe fn world_op(
             let p = crate::units::unit_geom::position(&unit(object)?);
             return Some(point_args(a, p, 0));
         }
+        EE_COMBAT_W_TILE_AT => {
+            // gWorld.GetMap()->GetTileAtLocation((long)a[0], (long)a[1]) != NULL
+            let (x, y) = (a[0] as c_long as i64, a[1] as c_long as i64);
+            return Some(u64::from(WorldView::global(t)?.map()?.tile(x, y).is_some()));
+        }
+        EE_COMBAT_W_CORNER_BLOCKED => {
+            #[cfg(not(test))]
+            return Some(u64::from(
+                crate::units::uu_ffi::ee_units_uu_is_corner_blocked(a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32)
+                    != 0,
+            ));
+            #[cfg(test)]
+            return None;
+        }
+        // TEST ONLY: a formula's record (a[0] the tag, then two byte ranges)
+        // SAFETY: the host's contract: the ranges the formula handed in
+        EE_COMBAT_W_CAPTURE => unsafe {
+            capture(
+                a[0] as u32,
+                (a[1] as usize as *const u8, a[2] as usize),
+                (a[3] as usize as *const u8, a[4] as usize),
+            )
+        },
+        // TEST ONLY: CBDM, the damage's input and output records
+        // SAFETY: as above: the damage body's records
+        EE_COMBAT_W_DAMAGE_CAPTURE => unsafe {
+            capture(
+                u32::from_le_bytes(*b"CBDM"),
+                (a[0] as usize as *const u8, std::mem::size_of::<crate::combat::EeCombatDamageIn>()),
+                (a[1] as usize as *const u8, std::mem::size_of::<crate::combat::EeCombatDamageOut>()),
+            )
+        },
         _ => return None,
     }
     Some(0)
