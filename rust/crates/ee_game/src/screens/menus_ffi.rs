@@ -23,8 +23,6 @@ pub(crate) mod sys {
             c: u32,
             d: u32,
         ) -> u32;
-        pub fn ee_screenscpp_text(form: *mut c_void, which: u32, arg: u32, out: *mut u8, capacity: usize) -> usize;
-        pub fn ee_screenscpp_put_text(form: *mut c_void, which: u32, arg: u32, text: *const u8, length: usize) -> u32;
         // the settings form's (settings_form_ffi.rs)
         pub fn ee_screenscpp_selection(form: *mut c_void, control: u32, list: bool, out: *mut u32) -> i32;
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
@@ -113,19 +111,9 @@ impl Form {
         {
             return t;
         }
-        let mut out = vec![0u8; 256];
-        let n = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
-        if n == usize::MAX {
-            return None;
-        }
-        if n > out.len() {
-            out.resize(n, 0);
-            let m = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
-            out.truncate(m.min(n));
-        } else {
-            out.truncate(n);
-        }
-        Some(out)
+        // (the original C++ host's cases are texts_calls.rs'; a text that is none of them is empty)
+        crate::screens::texts_calls::text(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg)
+            .unwrap_or(Some(Vec::new()))
     }
     pub(crate) fn get(&mut self, which: u32, arg: u32) -> Vec<u8> {
         self.get_checked(which, arg).unwrap_or_default()
@@ -139,7 +127,7 @@ impl Form {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_put_text(self.0, which, arg, text.as_ptr(), text.len()) }
+        crate::screens::texts_calls::put(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg, text).unwrap_or(0)
     }
 }
 
