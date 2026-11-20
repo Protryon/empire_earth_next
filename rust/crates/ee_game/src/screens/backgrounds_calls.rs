@@ -135,7 +135,9 @@ fn cut_cells(c: &mut impl Cpp, bg: usize, screen: usize) -> i64 {
             let bottom = (y + 256).min(height);
             result = c.mb_create_cell(screen);
             if result == 0 {
-                result = c.mb_copy(x as f32, y as f32, right as f32, bottom as f32, (right - x) as f32, (bottom - y) as f32);
+                c.mb_source(x as f32, y as f32, right as f32, bottom as f32);
+                c.mb_destination((right - x) as f32, (bottom - y) as f32);
+                result = c.mb_copy();
                 if result == 0 {
                     let texture = c.mb_make_texture(screen);
                     if texture != 0 {

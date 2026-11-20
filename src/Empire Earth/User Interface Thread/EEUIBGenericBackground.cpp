@@ -49,11 +49,7 @@ EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, con
     : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, GERectangle(), inLayout, inForm,
                          inDrawPriority, inVisible)
 {
-    this->mOpacity = inOpacity;
-    this->mFrameFlags = inFlags;
-    this->mColor = inColor;
-    this->mScaleX = inScaleX;
-    this->mScaleY = inScaleY;
+    ee_screens_gb_construct((uintptr_t)this, inOpacity, (uint32_t)inFlags, (uintptr_t)&inColor, inScaleX, inScaleY);
 }
 
 // Destroys the form background
@@ -63,56 +59,16 @@ EEUIBGenericBackground::~EEUIBGenericBackground()
 
 // Draws the tinted background inside the side insets, then the frame pieces its flags ask for, each clipped to the
 // redraw rectangle (the original's DrawCorners, DrawEdges, DrawFrameCorners, DrawSides, DrawEdge and DrawCorner:
-// ee_screens frame.rs over the two host calls below)
+// ee_screens frame.rs over backgrounds_calls.rs' fill and pieces)
 long EEUIBGenericBackground::DrawBackground(const GERectangle& inRectangle)
 {
     return ee_screens_frame_draw(this, &this->mRectangle, this->mScaleX, this->mScaleY, this->mFrameFlags, &inRectangle);
 }
 
-// The background's host (frame.rs): the tinted panel over a rectangle (left, top, right, bottom); the draw's result
-extern "C" long ee_screenscpp_frame_fill(void* inBackground, const float* inInner)
-{
-    EEUIBGenericBackground* theBackground = static_cast<EEUIBGenericBackground*>(inBackground);
-    UIManager* theManager = theBackground->GetForm()->GetManager();
-    GERectangle theRectangle(inInner[0], inInner[1], inInner[2], inInner[3]);
-    return ee_ge_draw2d_fill(theManager->GetRasterizer(), theManager->GetScreen(), reinterpret_cast<const EeGeRectangle*>(&theRectangle),
-                             reinterpret_cast<const float*>(&theBackground->mColor), theBackground->mOpacity);
-}
-
-// One frame piece: the bitmap stretched from the piece's rectangle onto its visible part with the cell, its texture
-// coordinates reordered (each order the new corners' indices into the current top-left, top-right, bottom-right,
-// bottom-left; the scales swapped after a quarter turn), placed and drawn
-extern "C" void ee_screenscpp_frame_piece(void* inBackground, const EeScreensFramePiece* inPiece)
-{
-    static const GERectangle* kCells[] = {&sEdgeCell, &sFrameCornerCell, &sCornerCell, &sSideCell};
-    EEUIBGenericBackground* theBackground = static_cast<EEUIBGenericBackground*>(inBackground);
-    GEBitmap* theBitmap = theBackground->GetBitmap();
-    UIManager* theManager = theBackground->GetForm()->GetManager();
-    unsigned long theScreen = theManager->GetScreen();
-    const float* t = inPiece->texture;
-    const float* d = inPiece->destination;
-    theBitmap->ComputeStretchedCoordsAndScale(GERectangle(t[0], t[1], t[2], t[3]), GERectangle(d[0], d[1], d[2], d[3]),
-                                              *kCells[inPiece->cell], theScreen);
-    for (int i = 0; i < 3; i++) {
-        uint32_t theOrder = inPiece->orders[i];
-        if (theOrder == EE_SCREENS_FRAME_KEEP)
-            continue;
-        GETextureCoordinate c[4];
-        theBitmap->GetTextureCoordinatesPerVertex(c[0], c[1], c[2], c[3]);
-        theBitmap->SetTextureCoordinates(c[theOrder & 3], c[theOrder >> 2 & 3], c[theOrder >> 4 & 3], c[theOrder >> 6 & 3]);
-        if (i == 0 && inPiece->swap_scale)
-            theBitmap->SetXYScale(theBitmap->GetYScale(), theBitmap->GetXScale());
-    }
-    theBitmap->SetLocation(GE2DPoint(inPiece->location[0], inPiece->location[1]));
-    theManager->GetRasterizer()->Draw(theBitmap, theScreen);
-}
-
 // Opens the background and scales its frame to the window size against the form's designed size
 void EEUIBGenericBackground::Open()
 {
-    UIBackground::Open();
-    this->mScaleX = (float)gGameWindow->GetWidth() / (float)this->GetForm()->GetDesignedWidth();
-    this->mScaleY = (float)gGameWindow->GetHeight() / (float)this->GetForm()->GetDesignedHeight();
+    ee_screens_gb_open((uintptr_t)this);   // (backgrounds_calls.rs)
 }
 
 // Draws the campaign map background
@@ -123,110 +79,125 @@ long EEUIBMapBackground::DrawBackground(const GERectangle& inRectangle)
 
 // Loads the campaign map image (PNG or JPG; the original's were TGA or JPG) and cuts it into 256x256 textures, one
 // per background cell
-// The image comes from the saved game/scenario resources, else from the startup path
+// The image comes from the saved game/scenario resources, else from the startup path (backgrounds_calls.rs)
 long EEUIBMapBackground::LoadBackground()
 {
-    GERectangle theSource;
-    GERectangle theDestination;
-    GETextureDescription theTextureDescription = { 1, 0, 16, 0, false, false, true, true };
-    GESurfaceDescription theDescription;
-    GESurfaceDescription theCellDescription;
-    UString theExtension;
-    FSFileSpec theDirectory;
-    long theResult;
-    FSFileSpec* theFile = NULL;
-    GESurface* theSecondary =
-        GERasterizer::GetActiveRasterizer()->GetSecondarySurface(gUIManager->GetScreen());
-    GESurface* theImage = NULL;
-    GESurface* theCell = NULL;
-    GEScreen* theScreen = GERasterizer::GetActiveRasterizer()->GetScreen(gUIManager->GetScreen());
-    theDescription.mPixelFormat = theSecondary->GetPixelFormat();
-    theDescription.mPixelDepth = theSecondary->GetPixelDepth();
-    theDescription.mType = kSurfaceSystemMemory;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.m14 = 0;
-    theDescription.mMipLevelCount = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theResult = EEOpenSaveGameFile(this->mTextureFileName, UString(gEmptyString), theFile);
-    if (theResult != 0) {
-        theDirectory.SetVolume(gStartupVolume);
-        theDirectory.SetDirectory(gStartupDirectory);
-        FSPath* thePath = new FSPath;
-        thePath->AddDirectory(theDirectory, true);
-        theResult = thePath->FindFile(this->mTextureFileName, theFile);
-        thePath->Dereference();
-        if (theResult != 0)
-            return theResult;
-    }
-    theExtension = theFile->GetFile().GetSubstring(theFile->GetFile().GetLength() - 4, 4);
-    unsigned long theBits;
-    if (PlatStrICmp(theExtension, ".png") == 0) {
-        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFilePNG, theDescription.mWidth, theDescription.mHeight,
-                                                      theBits);
-        if (theResult != 0)
-            goto done;
-        theScreen->CreateSurface(theDescription, &theImage);
-        theResult = theImage->Load(*theFile, kImageFilePNG);
-    } else {
-        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFileJPG, theDescription.mWidth, theDescription.mHeight,
-                                                      theBits);
-        if (theResult != 0)
-            goto done;
-        theScreen->CreateSurface(theDescription, &theImage);
-        theResult = theImage->Load(*theFile, kImageFileJPG);
-    }
-    if (theResult == 0) {
-        unsigned long theWidth = theDescription.mWidth;
-        unsigned long theHeight = theDescription.mHeight;
-        unsigned long theColumns = theWidth >> 8;
-        unsigned long theRows = theHeight >> 8;
-        if (theWidth & 0xff)
-            theColumns++;
-        if (theHeight & 0xff)
-            theRows++;
-        theCellDescription = theDescription;
-        theCellDescription.mType = kSurfaceTexture;
-        theCellDescription.mWidth = 256;
-        theCellDescription.mHeight = 256;
-        this->SetNumberColumnsAndRows(theColumns, theRows);
-        theTextureDescription.mIs3DRenderable = theCellDescription.mIs3DRenderable;
-        theTextureDescription.mPixelDepth = gGamePreferences.mSettings.mGameBitDepth;
-        theTextureDescription.mSurfaceVolatility = theCellDescription.mSurfaceVolatility;
-        theTextureDescription.mIsTransparencyEnabled = theCellDescription.mIsTransparencyEnabled;
-        this->SetTextureDescription(theTextureDescription);
-        this->SetTextureRectangle(GERectangle(0.0f, 0.0f, (float)(theWidth - 1), (float)(theHeight - 1)));
-        unsigned long theX = 0;
-        for (unsigned long theColumn = 0; theColumn < theColumns; theColumn++, theX += 256) {
-            unsigned long theY = 0;
-            for (unsigned long theRow = 0; theRow < theRows; theRow++, theY += 256) {
-                unsigned long theRight = theX + 256;
-                if (theRight > theWidth)
-                    theRight = theWidth;
-                unsigned long theBottom = theY + 256;
-                if (theBottom > theHeight)
-                    theBottom = theHeight;
-                theResult = theScreen->CreateSurface(theCellDescription, &theCell);
-                if (theResult == 0) {
-                    theSource = GERectangle((float)theX, (float)theY, (float)theRight, (float)theBottom);
-                    theDestination = GERectangle(0.0f, 0.0f, (float)(theRight - theX), (float)(theBottom - theY));
-                    theResult = theImage->CopyTo(theCell, theSource, theDestination, false);
-                    if (theResult == 0) {
-                        GETexture* theTexture = theScreen->GetTextureManager()->MakeTexture(theCell);
-                        if (theTexture != NULL)
-                            this->SetBitmapTexture(theTexture, theColumn, theRow);
-                    }
-                    theCell->Dereference();
-                }
-            }
-        }
-    }
-    // Release the image surface also when its load failed.
-    if (theImage != NULL)
-        theImage->Dereference();
-done:
-    if (theFile != NULL)
-        delete theFile;
-    return theResult;
+    return (long)ee_screens_mb_load((uintptr_t)this);   // (backgrounds_calls.rs)
 }
 
+// ---- the one-statement shims of ee_screens backgrounds_calls.rs (UI lane round 8: the frame's fill and pieces,
+// Open, the map's LoadBackground): each one call, no logic
+#include "ee/EEScreensShims.h"
+#define GB(x) reinterpret_cast<EEUIBGenericBackground*>(x)
+#define GBB(x) reinterpret_cast<GEBitmap*>(x)
+#define MB(x) reinterpret_cast<EEUIBMapBackground*>(x)
+static const GERectangle* const kGBCells[] = {&sEdgeCell, &sFrameCornerCell, &sCornerCell, &sSideCell};
+static GETextureCoordinate sGBCoordinates[4];   // a piece's coordinates (the original's local)
+// LoadBackground's locals
+static FSFileSpec* sMBFile;
+static FSFileSpec sMBDirectory;
+static GESurface* sMBImage;
+static GESurface* sMBCell;
+static GESurfaceDescription sMBDescription;
+static GESurfaceDescription sMBCellDescription;
+static unsigned long sMBBits;
+static GERectangle sMBSource, sMBDestination;   // a cell's copy
+extern "C" void ee_screenscpp_gb_set_opacity(uintptr_t inBg, float inOpacity) { GB(inBg)->mOpacity = inOpacity; }
+extern "C" void ee_screenscpp_gb_set_flags(uintptr_t inBg, uint32_t inFlags) { GB(inBg)->mFrameFlags = inFlags; }
+extern "C" void ee_screenscpp_gb_set_color(uintptr_t inBg, uintptr_t inColor)
+{ GB(inBg)->mColor = *reinterpret_cast<const GEColor*>(inColor); }
+extern "C" void ee_screenscpp_gb_set_scale_x(uintptr_t inBg, float inScale) { GB(inBg)->mScaleX = inScale; }
+extern "C" void ee_screenscpp_gb_set_scale_y(uintptr_t inBg, float inScale) { GB(inBg)->mScaleY = inScale; }
+extern "C" uintptr_t ee_screenscpp_gb_rasterizer(uintptr_t inBg)
+{ return (uintptr_t)GB(inBg)->GetForm()->GetManager()->GetRasterizer(); }
+extern "C" uint32_t ee_screenscpp_gb_screen(uintptr_t inBg)
+{ return (uint32_t)GB(inBg)->GetForm()->GetManager()->GetScreen(); }
+extern "C" uintptr_t ee_screenscpp_gb_color(uintptr_t inBg) { return (uintptr_t)&GB(inBg)->mColor; }
+extern "C" float ee_screenscpp_gb_opacity(uintptr_t inBg) { return GB(inBg)->mOpacity; }
+extern "C" uintptr_t ee_screenscpp_gb_bitmap(uintptr_t inBg) { return (uintptr_t)GB(inBg)->GetBitmap(); }
+extern "C" void ee_screenscpp_gb_stretch(uintptr_t inBitmap, float inT0, float inT1, float inT2, float inT3, float inD0, float inD1, float inD2, float inD3, uint32_t inCell, uint32_t inScreen)
+{ GBB(inBitmap)->ComputeStretchedCoordsAndScale(GERectangle(inT0, inT1, inT2, inT3), GERectangle(inD0, inD1, inD2, inD3), *kGBCells[inCell], inScreen); }
+extern "C" void ee_screenscpp_gb_coordinates_load(uintptr_t inBitmap)
+{ GBB(inBitmap)->GetTextureCoordinatesPerVertex(sGBCoordinates[0], sGBCoordinates[1], sGBCoordinates[2], sGBCoordinates[3]); }
+extern "C" void ee_screenscpp_gb_coordinates_set(uintptr_t inBitmap, uint32_t inA, uint32_t inB, uint32_t inC, uint32_t inD)
+{ GBB(inBitmap)->SetTextureCoordinates(sGBCoordinates[inA], sGBCoordinates[inB], sGBCoordinates[inC], sGBCoordinates[inD]); }
+extern "C" void ee_screenscpp_gb_swap_scale(uintptr_t inBitmap)
+{ GBB(inBitmap)->SetXYScale(GBB(inBitmap)->GetYScale(), GBB(inBitmap)->GetXScale()); }
+extern "C" void ee_screenscpp_gb_bitmap_at(uintptr_t inBitmap, float inX, float inY)
+{ GBB(inBitmap)->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" int64_t ee_screenscpp_gb_draw(uintptr_t inBg, uintptr_t inBitmap, uint32_t inScreen)
+{ return GB(inBg)->GetForm()->GetManager()->GetRasterizer()->Draw(GBB(inBitmap), inScreen); }
+extern "C" void ee_screenscpp_gb_base_open(uintptr_t inBg) { GB(inBg)->UIBackground::Open(); }
+extern "C" float ee_screenscpp_gb_window_width() { return (float)gGameWindow->GetWidth(); }
+extern "C" float ee_screenscpp_gb_window_height() { return (float)gGameWindow->GetHeight(); }
+extern "C" float ee_screenscpp_gb_designed_width(uintptr_t inBg)
+{ return (float)GB(inBg)->GetForm()->GetDesignedWidth(); }
+extern "C" float ee_screenscpp_gb_designed_height(uintptr_t inBg)
+{ return (float)GB(inBg)->GetForm()->GetDesignedHeight(); }
+extern "C" void ee_screenscpp_mb_file_clear() { sMBFile = NULL; }
+extern "C" void ee_screenscpp_mb_image_clear() { sMBImage = NULL; }
+extern "C" uintptr_t ee_screenscpp_mb_secondary_surface()
+{ return (uintptr_t)GERasterizer::GetActiveRasterizer()->GetSecondarySurface(gUIManager->GetScreen()); }
+extern "C" uintptr_t ee_screenscpp_mb_screen()
+{ return (uintptr_t)GERasterizer::GetActiveRasterizer()->GetScreen(gUIManager->GetScreen()); }
+extern "C" void ee_screenscpp_mb_desc_reset() { sMBDescription = GESurfaceDescription(); }
+extern "C" void ee_screenscpp_mb_desc_pixel_format(uintptr_t inSurface)
+{ sMBDescription.mPixelFormat = reinterpret_cast<GESurface*>(inSurface)->GetPixelFormat(); }
+extern "C" void ee_screenscpp_mb_desc_pixel_depth(uintptr_t inSurface)
+{ sMBDescription.mPixelDepth = reinterpret_cast<GESurface*>(inSurface)->GetPixelDepth(); }
+extern "C" void ee_screenscpp_mb_desc_system_memory() { sMBDescription.mType = kSurfaceSystemMemory; }
+extern "C" void ee_screenscpp_mb_desc_volatility(uint32_t inValue) { sMBDescription.mSurfaceVolatility = inValue; }
+extern "C" void ee_screenscpp_mb_desc_m14(uint32_t inValue) { sMBDescription.m14 = inValue; }
+extern "C" void ee_screenscpp_mb_desc_mip_levels(uint32_t inValue) { sMBDescription.mMipLevelCount = inValue; }
+extern "C" void ee_screenscpp_mb_desc_3d(bool inValue) { sMBDescription.mIs3DRenderable = inValue; }
+extern "C" void ee_screenscpp_mb_desc_transparency(bool inValue) { sMBDescription.mIsTransparencyEnabled = inValue; }
+extern "C" int64_t ee_screenscpp_mb_open_save_game_file(uintptr_t inBg)
+{ return EEOpenSaveGameFile(MB(inBg)->GetTextureFileName(), UString(gEmptyString), sMBFile); }
+extern "C" void ee_screenscpp_mb_directory_reset() { sMBDirectory = FSFileSpec(); }
+extern "C" void ee_screenscpp_mb_directory_volume() { sMBDirectory.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_mb_directory_directory() { sMBDirectory.SetDirectory(gStartupDirectory); }
+extern "C" uintptr_t ee_screenscpp_mb_path_new() { return (uintptr_t)new FSPath; }
+extern "C" void ee_screenscpp_mb_path_add(uintptr_t inPath)
+{ reinterpret_cast<FSPath*>(inPath)->AddDirectory(sMBDirectory, true); }
+extern "C" int64_t ee_screenscpp_mb_path_find(uintptr_t inPath, uintptr_t inBg)
+{ return reinterpret_cast<FSPath*>(inPath)->FindFile(MB(inBg)->GetTextureFileName(), sMBFile); }
+extern "C" void ee_screenscpp_mb_path_dereference(uintptr_t inPath)
+{ reinterpret_cast<FSPath*>(inPath)->Dereference(); }
+extern "C" bool ee_screenscpp_mb_is_png()
+{ return PlatStrICmp(sMBFile->GetFile().GetSubstring(sMBFile->GetFile().GetLength() - 4, 4), ".png") == 0; }
+extern "C" int64_t ee_screenscpp_mb_attributes_png()
+{ return GESurface::GetImageFileAttributes(*sMBFile, kImageFilePNG, sMBDescription.mWidth, sMBDescription.mHeight, sMBBits); }
+extern "C" int64_t ee_screenscpp_mb_attributes_jpg()
+{ return GESurface::GetImageFileAttributes(*sMBFile, kImageFileJPG, sMBDescription.mWidth, sMBDescription.mHeight, sMBBits); }
+extern "C" void ee_screenscpp_mb_create_image(uintptr_t inScreen)
+{ reinterpret_cast<GEScreen*>(inScreen)->CreateSurface(sMBDescription, &sMBImage); }
+extern "C" int64_t ee_screenscpp_mb_load_png() { return sMBImage->Load(*sMBFile, kImageFilePNG); }
+extern "C" int64_t ee_screenscpp_mb_load_jpg() { return sMBImage->Load(*sMBFile, kImageFileJPG); }
+extern "C" uint32_t ee_screenscpp_mb_width() { return (uint32_t)sMBDescription.mWidth; }
+extern "C" uint32_t ee_screenscpp_mb_height() { return (uint32_t)sMBDescription.mHeight; }
+extern "C" void ee_screenscpp_mb_cell_desc() { sMBCellDescription = sMBDescription; }
+extern "C" void ee_screenscpp_mb_cell_texture() { sMBCellDescription.mType = kSurfaceTexture; }
+extern "C" void ee_screenscpp_mb_cell_width(uint32_t inWidth) { sMBCellDescription.mWidth = inWidth; }
+extern "C" void ee_screenscpp_mb_cell_height(uint32_t inHeight) { sMBCellDescription.mHeight = inHeight; }
+extern "C" void ee_screenscpp_mb_columns_rows(uintptr_t inBg, uint32_t inColumns, uint32_t inRows)
+{ MB(inBg)->SetNumberColumnsAndRows(inColumns, inRows); }
+extern "C" void ee_screenscpp_mb_texture_description(uintptr_t inBg)
+{ MB(inBg)->SetTextureDescription(GETextureDescription{sMBCellDescription.mSurfaceVolatility, 0, gGamePreferences.mSettings.mGameBitDepth, 0, sMBCellDescription.mIs3DRenderable, sMBCellDescription.mIsTransparencyEnabled, true, true}); }
+extern "C" void ee_screenscpp_mb_texture_rectangle(uintptr_t inBg, float inRight, float inBottom)
+{ MB(inBg)->SetTextureRectangle(GERectangle(0.0f, 0.0f, inRight, inBottom)); }
+extern "C" int64_t ee_screenscpp_mb_create_cell(uintptr_t inScreen)
+{ return reinterpret_cast<GEScreen*>(inScreen)->CreateSurface(sMBCellDescription, &sMBCell); }
+extern "C" void ee_screenscpp_mb_source(float inLeft, float inTop, float inRight, float inBottom)
+{ sMBSource = GERectangle(inLeft, inTop, inRight, inBottom); }
+extern "C" void ee_screenscpp_mb_destination(float inWidth, float inHeight)
+{ sMBDestination = GERectangle(0.0f, 0.0f, inWidth, inHeight); }
+extern "C" int64_t ee_screenscpp_mb_copy() { return sMBImage->CopyTo(sMBCell, sMBSource, sMBDestination, false); }
+extern "C" uintptr_t ee_screenscpp_mb_make_texture(uintptr_t inScreen)
+{ return (uintptr_t)reinterpret_cast<GEScreen*>(inScreen)->GetTextureManager()->MakeTexture(sMBCell); }
+extern "C" void ee_screenscpp_mb_cell_texture_set(uintptr_t inBg, uintptr_t inTexture, uint32_t inColumn, uint32_t inRow)
+{ MB(inBg)->SetBitmapTexture(reinterpret_cast<GETexture*>(inTexture), inColumn, inRow); }
+extern "C" void ee_screenscpp_mb_cell_dereference() { sMBCell->Dereference(); }
+extern "C" bool ee_screenscpp_mb_image() { return sMBImage != NULL; }
+extern "C" void ee_screenscpp_mb_image_dereference() { sMBImage->Dereference(); }
+extern "C" bool ee_screenscpp_mb_file() { return sMBFile != NULL; }
+extern "C" void ee_screenscpp_mb_file_delete() { delete sMBFile; }

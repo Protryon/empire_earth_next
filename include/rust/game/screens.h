@@ -11172,70 +11172,6 @@ struct EeScreensGaFields {
   bool mWriteToFile;
 };
 
-/// The values of a group (only the group's fields are filled, the rest are 0).
-struct EeScreensGameView {
-  size_t sound_manager;
-  size_t conductor;
-  /// `gRasterizer`'s index among `GERasterizer::GetRasterizer` (0 when it is none of them).
-  uint32_t current_rasterizer;
-  /// `gDisplayRasterizers.size()`.
-  uint32_t rasterizer_count;
-  bool not_korean;
-  /// The settings' `mLastOpenPostGameStatsPage`, `mTakeEndGameScreenshots`, `GetGrabScrollSpeed()`, `mZoomEnabled`.
-  int32_t pgs_page;
-  bool pgs_screenshots;
-  float grab_scroll_speed;
-  bool settings_zoom_enabled;
-  /// `gZoomEnabled`, `gDifficultyLevel`, `gFreeCamera`, `gGameScreenActive`, `gSavedMainGameForm != NULL`,
-  /// `gCameraMaxZoom`, `gHiddenUnitsMode`.
-  bool zoom_enabled;
-  int32_t difficulty;
-  bool free_camera;
-  bool screen_active;
-  bool saved_main_form;
-  float max_zoom;
-  int32_t hidden_mode;
-  /// The loaded header's `mNumPlayers` (0 without one).
-  uint32_t header_players;
-  bool is_server;
-  bool is_client;
-  bool multiplayer_session;
-  uint32_t cts_processed;
-  /// The server migrating, or the client a playback session.
-  bool cannot_exit;
-  uint32_t humans;
-  uint32_t ghosts;
-  bool has_player;
-  int32_t camera_mode;
-  bool lock_speed;
-  float game_speed;
-  bool cinematic;
-  float zoom;
-  bool user_paused;
-  uint32_t players;
-  int32_t current;
-  bool teams_locked;
-  bool cheats;
-  /// `gWorld.GetGameOptions().GetIsScenarioGame()`.
-  bool scenario_game;
-  /// `gWorldTable`'s game speed step and range (`kWorldGameSpeedStep`, `kWorldGameSpeedRange` and its second).
-  float speed_step;
-  float speed_low;
-  float speed_high;
-  /// The manager's main game form's `mHotKeyMode` (0 without the form).
-  uint32_t hot_key_mode;
-  bool present;
-  bool observer;
-  uint32_t chat_type;
-  /// An airport among the player's selected group.
-  bool airport_selected;
-  float colour[3];
-  uint32_t campaign_checksum;
-  bool all_scenarios_open;
-  /// `EE_SCREENS_SI_FLAG_*` of the intro manager's four flags.
-  uint32_t si_flags;
-};
-
 /// `EEUICPing`'s members (its protected base) but the bars.
 struct EeScreensPingFields {
   /// The lit bars less one (`SetPing`'s quality times 5).
@@ -11911,16 +11847,6 @@ void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The campaign editor's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_campaign_editor_event_for(unsigned long id);
-
-extern uint32_t ee_screenscpp_ce_campaign(uint32_t op,
-                                          uint32_t a,
-                                          const uint8_t *text,
-                                          size_t length);
-
-extern size_t ee_screenscpp_ce_campaign_text(uint32_t which,
-                                             uint32_t arg,
-                                             uint8_t *out,
-                                             size_t capacity);
 
 /// The model's ops for a caller without the events (the golden driver): `kind` 0 a call (`which` the op, `a` its
 /// argument), 1 a text (written to `out` up to `capacity`; its length), 2 a put; `usize::MAX` for an op it does
@@ -13022,6 +12948,20 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
 /// As `ee_screens_ga_init`.
 void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 
+/// `EEUIBGenericBackground`'s constructor's body (`color` the `GEColor*`).
+void ee_screens_gb_construct(size_t bg,
+                             float opacity,
+                             uint32_t flags,
+                             size_t color,
+                             float sx,
+                             float sy);
+
+/// `EEUIBGenericBackground::Open`.
+void ee_screens_gb_open(size_t bg);
+
+/// `EEUIBMapBackground::LoadBackground`.
+int64_t ee_screens_mb_load(size_t bg);
+
 /// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
 ///
 /// # Safety
@@ -13029,16 +12969,6 @@ void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 void ee_screens_shim_out(void *out,
                          const uint8_t *text,
                          size_t length);
-
-/// The values of `group` (`EE_SCREENS_VIEW_*`) for `arg` into `out`.
-extern void ee_screenscpp_game_view(uint32_t group, uint32_t arg, EeScreensGameView *out);
-
-/// The texts of `group` (`EE_SCREENS_VIEW_TEXTS_*`) for `arg`, each ended by a 0 byte, into `out` (up to
-/// `capacity` bytes); their length.
-extern size_t ee_screenscpp_game_texts(uint32_t group,
-                                       uint32_t arg,
-                                       uint8_t *out,
-                                       size_t capacity);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
@@ -13144,6 +13074,36 @@ void ee_screens_mg_show_commands(size_t group, size_t unit);
 
 /// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
 void ee_screens_mg_hot_key_event(size_t event);
+
+/// `EEUIMiniMap`'s constructor's body (`rect` the `GERectangle*`).
+void ee_screens_mm_construct(size_t map, size_t rect, uint32_t border);
+
+/// `~EEUIMiniMap`'s body.
+void ee_screens_mm_destroy(size_t map);
+
+/// `EEUIMiniMap::CopyData`.
+int64_t ee_screens_mm_copy_data(size_t map);
+
+/// `EEUIMiniMap::LoadMedia`.
+void ee_screens_mm_load_media();
+
+/// `EEUIMiniMap::UnloadMedia`.
+void ee_screens_mm_unload_media();
+
+/// `EEUIMiniMap::DrawPolygons`.
+int64_t ee_screens_mm_draw_polygons(size_t map);
+
+/// `EEUIMiniMap::MouseRButtonDown`.
+int64_t ee_screens_mm_mouse_r_down(size_t map);
+
+/// `EEUIMiniMap::CenterCamera`.
+void ee_screens_mm_center_camera(size_t map);
+
+/// `EEUIMiniMap::SetLocation`.
+void ee_screens_mm_set_location(size_t map, float x, float y);
+
+/// `EEUIMiniMap::Update` (`minimap` the `EEMiniMap*`).
+void ee_screens_mm_update(size_t minimap);
 
 /// `EEUIFMainGame::CopyData` over the host's call record: `UIForm::CopyData`'s result.
 int64_t ee_screens_main_form_copy_data(void *call);

@@ -248,7 +248,10 @@ mod game_actions_golden;
 #[cfg(test)]
 mod game_actions_tests;
 // the moved C++ host cases (UI lane round 7) and their one-statement C++ shims
+pub(crate) mod backgrounds_calls;
+pub(crate) mod campaign_model_calls;
 pub(crate) mod game_calls;
+pub(crate) mod game_view_calls;
 pub(crate) mod game_calls_more;
 pub(crate) mod game_cpp;
 pub(crate) mod game_texts;
@@ -277,6 +280,7 @@ pub mod lobby_options;
 pub mod main_form;
 pub(crate) mod main_form_calls;
 pub(crate) mod main_group_calls;
+pub(crate) mod mini_map_calls;
 #[cfg(not(test))]
 mod main_form_ffi;
 pub mod main_form_fields;
