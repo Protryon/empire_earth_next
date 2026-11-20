@@ -216,7 +216,11 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_selt;
+#[cfg(not(test))]
+mod editor_selt_ffi;
 pub mod editor_sepl;
+pub mod editor_seplx;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
