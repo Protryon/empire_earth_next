@@ -12,6 +12,8 @@
 //! - [`map`]: `EEMap`'s sight, cliffs, terrain painting, water colours, checksum and tile count over a host
 //!   ([`map_ffi`]: its C ABI; it reads and edits the terrain mesh itself).
 //! - [`map_capture`]: the capture's map records, MAPC and MAPS (TEST ONLY), over the views and the mesh.
+//! - [`cheat_capture`]: the app profile's cheat sweep, CHET and CHEF (TEST ONLY).
+//! - [`world_capture`]: the capture's MAPK, MAPP, MMPX, MMSN and CHLS records (TEST ONLY) of the data the C++ hands over.
 //! - [`minimap`]: `EEMiniMap`'s cells (sight counts, building and unit dots, the unit layer's pixels), the terrain
 //!   pixels' colours and the redraw's walk ([`minimap_ffi`]: its C ABI, the object the C++ class owns).
 //! - [`cheats`]: `EECheatCodes`' table, chat line parse, lookup, list and dispatch ([`cheats_ffi`]: its C ABI).
@@ -24,6 +26,7 @@ pub mod ambient;
 pub mod ambient_ffi;
 pub mod camera;
 pub mod camera_ffi;
+pub mod cheat_capture;
 pub mod ffi;
 pub mod game_options;
 pub mod map_capture;
@@ -33,6 +36,7 @@ pub mod minimap_ffi;
 pub mod save_io;
 pub mod settings;
 pub mod settings_ffi;
+pub mod world_capture;
 
 #[cfg(test)]
 mod ambient_tests;

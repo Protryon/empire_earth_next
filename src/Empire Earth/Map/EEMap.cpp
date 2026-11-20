@@ -28,6 +28,7 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EEAppCapture.h"
 #include "rust/render/gfx.h"
+#include "rust/game/app.h"   // the capture's MAPK, MAPP (ee_game app world_capture.rs)
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
@@ -271,7 +272,7 @@ long EEMap::ComputeChecksum()
     EEMapHostContext theContext = {this, NULL, {}};
     EeAppMapHost theHost = EEMapHost(this, theContext);
     long theChecksum = ee_app_map_checksum(&theHost, &this->mChecksumCursor);
-    EEAppCaptureChecksum(theCursor, theChecksum, this->mChecksumCursor);   // MAPK (TEST ONLY)
+    ee_app_capture_map_checksum(theCursor, theChecksum, this->mChecksumCursor);   // MAPK (TEST ONLY)
     return theChecksum;
 }
 
@@ -345,7 +346,7 @@ float EEMap::GetTerrainPitch(const GETransformation& inLocation)
     theBack += theDirection;
     this->GetGroundPoint(theBack, theBackGround);
     float thePitch = UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
-    EEAppCaptureSlope(0, inLocation, thePitch);   // MAPP (TEST ONLY)
+    ee_app_capture_slope(0, reinterpret_cast<const EeGeTransformation*>(&inLocation), thePitch);   // MAPP (TEST ONLY)
     return thePitch;
 }
 
@@ -366,7 +367,7 @@ float EEMap::GetTerrainRoll(const GETransformation& inLocation)
     theBack += theDirection;
     this->GetGroundPoint(theBack, theBackGround);
     float theRoll = UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
-    EEAppCaptureSlope(1, inLocation, theRoll);   // MAPP (TEST ONLY)
+    ee_app_capture_slope(1, reinterpret_cast<const EeGeTransformation*>(&inLocation), theRoll);   // MAPP (TEST ONLY)
     return theRoll;
 }
 

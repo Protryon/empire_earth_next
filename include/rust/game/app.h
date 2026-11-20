@@ -449,6 +449,22 @@ struct EeAppCameraMove {
   float turn_pitch;
 };
 
+/// The C++ calls of the sweep.
+struct EeAppCheatSweepHost {
+  void *ctx;
+  /// `gCheatCodes->ParseCheatCode(line)` -> the code and the parameter
+  void (*parse)(void*, const char*, long*, long*);
+  /// `gCheatCodes->ApplyCheatCode(code, player, parameter)`
+  void (*apply)(void*, long, long, long);
+  /// `gWorld.mCheatsEnabled = on`; the value before
+  bool (*set_enabled)(void*, bool);
+  /// upgrade `index` of player `player` (an `EEPlayer*`): its 16 improvement levels into `out` -> 1; 0 no upgrade
+  /// there; -1 past the last
+  int32_t (*levels)(void*, uint64_t, uint32_t, int32_t*);
+  /// the camera's location at its fraction (x, y, z)
+  void (*camera)(void*, float*);
+};
+
 /// `EEGameOptionsPlayer`'s plain members (its name stays a C++ `UWideString`), in the class's order.
 struct EeAppOptionsPlayerFields {
   /// 0/1 human, 2 computer, 3 closed
@@ -1041,6 +1057,12 @@ int32_t ee_app_camera_update(EeAppCameraFields *rec,
                              float elapsed,
                              float *ortho_size);
 
+/// The sweep (the caller checks there are cheat codes).
+///
+/// # Safety
+/// `host` is live and its callbacks valid; the caller holds the world as the simulation's step does.
+void ee_app_capture_cheat_sweep(const EeAppCheatSweepHost *host);
+
 /// `EEGameOptionsPlayer()`'s plain members.
 ///
 /// # Safety
@@ -1277,6 +1299,41 @@ int32_t ee_app_settings_write(EeAppSettingsFields *settings,
 bool ee_app_settings_after_load(EeAppSettingsFields *settings,
                                 const EeAppSettingsFields *defaults,
                                 bool korean);
+
+/// MAPK: `EEMap::GetChecksum`'s cursor before, its result and the cursor after.
+void ee_app_capture_map_checksum(unsigned long before, long result, unsigned long after);
+
+/// MAPP: a slope's kind, the location (its 64 bytes) and the result.
+///
+/// # Safety
+/// `location` is live.
+void ee_app_capture_slope(uint32_t kind, const EeGeTransformation *location, float result);
+
+/// MMPX: the rectangle and its pixels, rows `bottom` to `top` of `left` to `right` (`pitch` pixels a row).
+///
+/// # Safety
+/// `bits` holds the rows the rectangle reads.
+void ee_app_capture_minimap_pixels(long left,
+                                   long right,
+                                   long bottom,
+                                   long top,
+                                   const uint16_t *bits,
+                                   unsigned long pitch);
+
+/// MMSN: the mini map `map`'s 4096 cells (no record without a mini map); `pixels` (null: 0) holds the unit surface's
+/// pixels, `pitch` a row (the cell at index i is the pixel of column i >> 6, row i & 0x3f).
+///
+/// # Safety
+/// `map` is a live mini map or null; `pixels` covers 64 rows of `pitch` or is null.
+void ee_app_capture_minimap_snapshot(const EeAppMiniMap *map,
+                                     const uint16_t *pixels,
+                                     long pitch);
+
+/// CHLS: one line of the cheat list (its bytes, a C string).
+///
+/// # Safety
+/// `line` is a C string.
+void ee_app_capture_cheat_list(const char *line);
 
 }  // extern "C"
 
