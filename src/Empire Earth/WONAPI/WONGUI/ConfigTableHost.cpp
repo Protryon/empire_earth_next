@@ -37,6 +37,7 @@
 #include "ee/wonapi/WONPerfTimer.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "rust/won_gui/guiconf.h"
+#include "ee/wonapi/WONGUIShell.h"
 extern bool gShowParseTime; // ComponentConfigResource.cpp's
 extern int gLinesParsed;
 #define EE_CFG_LAYOUT_GLOBAL
@@ -61,13 +62,11 @@ EE_CFG_BIND(MSArrowButtonConfig,ButtonConfig,mMSArrowButton,Component)
 EE_CFG_BIND(MS3DFrameConfig,ComponentConfig,mMS3DFrame,Component)
 EE_CFG_BIND(MSButtonConfig,ButtonConfig,mMSButton,MSButtonBase)
 EE_CFG_BIND(MSTabButtonConfig,MSButtonConfig,mMSTabButton,Component)
-EE_CFG_BIND(WONFrameComponentConfig,ComponentConfig,mFrameComponent,WONFrameComponent)
+EE_CFG_BIND(WONFrameComponentConfig,ComponentConfig,mFrameComponent,Component)
 #undef EE_CFG_BIND
 // 0x00796a20: the skinned buttons' configs set their pointer before the base's
-void WONSimpleButtonConfig::SetComponent(Component* component) { this->mButton=static_cast<WONSimpleButton*>(component); ButtonConfig::SetComponent(component); }
+void WONSimpleButtonConfig::SetComponent(Component* component) { this->mButton=component; ButtonConfig::SetComponent(component); }
 void WONButtonConfig::SetComponent(Component* component) { this->mButton=static_cast<WONButton*>(component); ButtonConfig::SetComponent(component); }
-// Out-of-line copy constructor (not identified separately in the original exe)
-WONFrame::WONFrame(const WONFrame& from) { this->Copy(from); }
 // Grows the button to fit the largest of a comma-separated list of texts, keeping its current text
 void ButtonConfig::HandleFitText()
 {
@@ -120,14 +119,53 @@ bool TabCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConf
 bool WONFrameComponentConfig::GetNamedValue(const std::string& key,int& value)
 {
     const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONFRAMECOMPONENTCONFIG_GETNAMEDVALUE_KEY,key.data(),key.size());
-    WONFrameComponent* f=this->mFrameComponent;
-    if(aKeyIdx==0) value=f->GetFrameLeft();
-    else if(aKeyIdx==1) value=f->GetFrameRight();
-    else if(aKeyIdx==2) value=f->GetFrameTop();
-    else if(aKeyIdx==3) value=f->GetFrameBottom();
-    else if(aKeyIdx==4) value=f->GetFrameRight()+f->GetFrameLeft();
-    else if(aKeyIdx==5) value=f->GetFrameBottom()+f->GetFrameTop();
+    Component* f=this->mFrameComponent;
+    auto B=[f](int side) { return (int)WONShell::Op(f,EeWonShellOp::GetFrameBorder,side); };
+    if(aKeyIdx==0) value=B(0);
+    else if(aKeyIdx==1) value=B(2);
+    else if(aKeyIdx==2) value=B(1);
+    else if(aKeyIdx==3) value=B(3);
+    else if(aKeyIdx==4) value=B(2)+B(0);
+    else if(aKeyIdx==5) value=B(3)+B(1);
     else return ComponentConfig::GetNamedValue(key,value);
     return true;
+}
+// The scroll container's HORZSCROLLBAR or VERTSCROLLBAR with a new WON scrollbar config; else the base config's
+bool WONScrollContainerConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
+{
+    if(name=="HORZSCROLLBAR") {
+        config=new WONScrollbarConfig;
+        component=this->mScrollContainer->GetScrollbar(false);
+    } else if(name=="VERTSCROLLBAR") {
+        config=new WONScrollbarConfig;
+        component=this->mScrollContainer->GetScrollbar(true);
+    } else return ScrollbarScrollerConfig::GetPredefinedComponent(name,config,component);
+    return true;
+}
+// The list's HEADER or MULTILISTAREA with a new config for it; else the scroll container config's
+bool WONListCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
+{
+    if(name=="HEADER") {
+        component=(Component*)WONShell::Op(this->mListCtrl,EeWonShellOp::GetHeader);
+        config=new WONHeaderControlConfig;
+    } else if(name=="MULTILISTAREA") {
+        component=static_cast<MultiListArea*>(this->mListCtrl->GetScrollArea());
+        config=new MultiListAreaConfig;
+    } else return WONScrollContainerConfig::GetPredefinedComponent(name,config,component);
+    return true;
+}
+// The base pre-parse, then the game's skin (the Windows look) when there is none (skinobj.rs)
+bool WONSkinConfig::PreParse(ConfigParser* parser)
+{
+    if(!ComponentConfig::PreParse(parser))
+        return false;
+    ee_won_skin_ensure(ee_won_guicpp_shell_call);
+    return true;
+}
+// A sound read, then the click sound of the skin's template buttons and every named button type
+void WONSkinConfig::HandleButtonClickSound()
+{
+    SmartPtr<Sound> sound=this->ReadSound();
+    ee_won_skin_click_sound(WONSkinGlobal(),sound.get());
 }
 }

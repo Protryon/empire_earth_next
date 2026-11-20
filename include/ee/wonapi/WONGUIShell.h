@@ -6,7 +6,10 @@
 #ifndef EE_WONAPI_WONGUISHELL_H
 #define EE_WONAPI_WONGUISHELL_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyWONButton.h"
 #include "rust/won_gui/shell.h"
+#include "rust/won_gui/shell_won.h"
+#include "rust/won_gui/skinobj.h"
 
 namespace WONAPI {
 extern "C" intptr_t ee_won_guicpp_shell_call(void*,EeWonShellHostOp,intptr_t,intptr_t,intptr_t,intptr_t);
@@ -95,6 +98,45 @@ WON_SHELL_CLASS(WONShellScroller,ScrollbarScroller,())
 WON_SHELL_CLASS(WONShellHeader,MultiListHeader,((MultiListArea*)a))
 WON_SHELL_CLASS(WONShellTab,TabCtrl,())
 WON_SHELL_CLASS(WONShellDialog,Dialog,())
+WON_SHELL_CLASS(WONShellWonButton,WONButton,())
+// a frame value as the WON skin's kinds take it (shell_won.rs EeWonFrameIn: the image borrowed)
+inline EeWonFrameIn WONFrameArg(const WONFrame& f)
+{
+    EeWonFrameIn r;
+    r.left = f.mLeft; r.top = f.mTop; r.right = f.mRight; r.bottom = f.mBottom;
+    r.image = (intptr_t)f.mImage.get();
+    return r;
+}
+// the WON skin's kind's own method with a frame value
+inline intptr_t WONShellFrameOp(Component* c, EeWonShellOp op, const WONFrame& f)
+{
+    EeWonFrameIn a = WONFrameArg(f);
+    return WONShell::Op(c, op, (intptr_t)&a);
+}
+// SafeConfigGetComponent of a WON skin class by its name: the component must be a shell of its kind (or a derived
+// one: a scroll thumb is a simple button, a list control a scroll container)
+inline Component* SafeConfigGetSkinPart(Component* c, const char* name)
+{
+    static const struct { const char* n; EeWonShellKind k1, k2; } kKinds[] = {
+        {"WONSimpleButton", EeWonShellKind::WonSimpleButton, EeWonShellKind::WonScrollThumb},
+        {"WONHeaderButton", EeWonShellKind::WonHeaderButton, EeWonShellKind::WonHeaderButton},
+        {"WONScrollbar", EeWonShellKind::WonScrollbar, EeWonShellKind::WonScrollbar},
+        {"WONScrollContainer", EeWonShellKind::WonScrollContainer, EeWonShellKind::WonListCtrl},
+        {"WONListCtrl", EeWonShellKind::WonListCtrl, EeWonShellKind::WonListCtrl},
+        {"WONTabCtrl", EeWonShellKind::WonTabCtrl, EeWonShellKind::WonTabCtrl},
+        {"WONComboBox", EeWonShellKind::WonComboBox, EeWonShellKind::WonComboBox},
+        {"WONPopupBack", EeWonShellKind::WonFrameComponent, EeWonShellKind::WonFrameComponent},
+        {"WONDialogBack", EeWonShellKind::WonFrameComponent, EeWonShellKind::WonFrameComponent},
+    };
+    for (size_t i = 0; i < sizeof kKinds / sizeof kKinds[0]; i++)
+        if (strcmp(kKinds[i].n, name) == 0 && (WONShell::IsKind(c, kKinds[i].k1) || WONShell::IsKind(c, kKinds[i].k2)))
+            return c;
+    throw ConfigObjectException(std::string("Invalid ") + name);
+}
+// the game's skin (the original's gSkin; made by the first WONSkin group's PreParse)
+inline EeWonSkin* WONSkinGlobal() { return ee_won_skin_global(); }
+// a template slot of the game's skin (skinobj.rs EeWonSkinSlot; i the index into its array) = c
+inline void WONSkinSet(EeWonSkinSlot s, int i, Component* c) { ee_won_skin_set(WONSkinGlobal(), s, i, c); }
 // MSMessageBox::Msg (R6 WONLobby round 22: the box is the kind MsMessageBox, shell_msgbox.rs): a modal message box over
 // the parent window; the id (1-3) of the button pressed
 int MSMessageBoxMsg(Window* inParent, const GUIString& inTitle, const GUIString& inMessage, const GUIString& inButton1,

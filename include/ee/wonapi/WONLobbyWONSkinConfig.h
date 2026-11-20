@@ -1,7 +1,6 @@
 #ifndef EE_WONAPI_WONLOBBYWONSKINCONFIG_H
 #define EE_WONAPI_WONLOBBYWONSKINCONFIG_H
 #include "ee/wonapi/WONLobbyWONListConfig.h"
-#include "ee/wonapi/WONLobbySkinTab.h"
 namespace WONAPI {
 void WONControlsConfig_Init(ResourceConfigTable*); // at 0x00795fa0
 // ComponentCursor (0x14 bytes, allocated at 0x0079a0ab, constructor 0x00726710), four slots;

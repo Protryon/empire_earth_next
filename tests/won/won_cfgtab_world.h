@@ -149,7 +149,24 @@ struct WONShell {
             "SetDrawFrame", "SetDraw3DFrame", "SetTransparent", "SetHeaderHeight", "GetHeader", "SetColumn", "AddStandardTab",
             "SetLabelText", "AddContainedComponent", "GetLabel"};
         std::string args;
+        // the WON skin's kinds' own methods (R6 WONLobby round 23): traced as the deleted classes' calls and fields were
+        static const char* const kSide[] = {"SetFrameLeft", "SetFrameTop", "SetFrameRight", "SetFrameBottom"};
         switch (op) {
+        case EeWonShellOp::SetScaleImage: tr(P(c) + ".SetScaleImage(" + P(a != 0) + ")"); return 0;
+        case EeWonShellOp::SetCheckMouseButtonDown: tr(P(c) + ".SetCheckMouseButtonDown(" + P(a != 0) + ")"); return 0;
+        case EeWonShellOp::SetImage: tr(P(c) + ".SetImage(" + P((long long)a) + "," + PP((Obj*)b) + ")"); return 0;
+        case EeWonShellOp::WonSetColumn: { const intptr_t* x = (const intptr_t*)b; tr(P(c) + ".SetColumn(" + P((long long)a) + "," + P(*(const GUIString*)x[0]) + ",0)"); return 0; }
+        case EeWonShellOp::SetStandardColumnHeader: { const intptr_t* x = (const intptr_t*)b; tr(P(c) + ".SetStandarColumnHeader(" + P((long long)a) + "," + P(*(const GUIString*)x[0]) + "," + P((long long)x[1]) + ")"); return 0; }
+        case EeWonShellOp::SetColumnHeader: { const intptr_t* x = (const intptr_t*)b; tr(P(c) + ".SetColumnHeader(" + P((long long)a) + "," + P((Component*)x[0]) + "," + P((long long)x[1]) + ")"); return 0; }
+        case EeWonShellOp::SetHeaderHeightField: tr(P(c) + ".mHeaderHeight=" + P((long long)a)); return 0;
+        case EeWonShellOp::SetDrawFrameField: tr(P(c) + ".mDrawFrame=" + P(a != 0)); return 0;
+        case EeWonShellOp::SetButtonInFrame: tr(P(c) + ".mButtonInFrame=" + P(a != 0)); return 0;
+        case EeWonShellOp::SetTransparentField: tr(P(c) + ".mTransparent=" + P(a != 0)); return 0;
+        case EeWonShellOp::SetFrameBorder: tr(P(c) + "." + kSide[a & 3] + "(" + P((long long)b) + ")"); return 0;
+        case EeWonShellOp::SetFrameImage: tr(P(c) + ".SetFrameImage(" + PP((Obj*)a) + ")"); return 0;
+        case EeWonShellOp::SetCorner: tr(P(c) + ".SetCorner(" + PP((Obj*)a) + ")"); return 0;
+        case EeWonShellOp::SetSkin: tr(P(c) + ".mSkin=" + P((long long)a)); return 0;
+        case EeWonShellOp::SetTransparent: args = P(a != 0); break;
         case EeWonShellOp::SetLabelText: args = P(*(const GUIString*)a); break;
         case EeWonShellOp::AddContainedComponent: args = P((Component*)a); break;
         case EeWonShellOp::AddStandardTab: args = P(*(const GUIString*)a) + "," + P((Component*)b); break;
@@ -160,6 +177,8 @@ struct WONShell {
         return 0;
     }
 };
+// a frame op (WONGUIShell.h): traced as the deleted classes' SetFrame(frame)
+static intptr_t WONShellFrameOp(Component* c, EeWonShellOp, const WONFrame& f) { tr(P(c) + ".SetFrame(" + P(f) + ")"); return 0; }
 typedef Component Container; typedef Component Button; typedef Component Scroller; typedef Component MultiListArea;
 typedef Component ScrollArea; typedef Component ListArea; typedef Component InputBox; typedef Component Splitter;
 typedef Component WONButton; typedef Component WONSimpleButton; typedef Component WONHeaderButton; typedef Component WONScrollbar;
@@ -262,6 +281,38 @@ struct Skin {
 };
 static Skin sSkin;
 static Skin* gSkin = &sSkin;
+// the game's statements' calls on the skin (WONGUIShell.h, skinobj.rs), traced as the original's on its members
+static EeWonSkin* WONSkinGlobal() { return (EeWonSkin*)gSkin; }
+static bool ee_won_skin_copy_type(EeWonSkin*, bool simple, const GUIString* t, Component* b)
+{ return simple ? gSkin->CopySimpleButtonType(*t, b) : gSkin->CopyButtonType(*t, b); }
+static void ee_won_skin_set_type(EeWonSkin*, bool simple, const GUIString* k, Component* c)
+{ (simple ? gSkin->mSimpleButtonTypeMap : gSkin->mButtonTypeMap)[*k] = c; }
+static void WONSkinSet(EeWonSkinSlot s, int i, Component* c)
+{
+    Skin& k = *gSkin;
+    switch (s) {
+    case EeWonSkinSlot::PushButton: k.mPushButton = c; break;
+    case EeWonSkinSlot::Checkbox: k.mCheckbox = c; break;
+    case EeWonSkinSlot::RadioButton: k.mRadioButton = c; break;
+    case EeWonSkinSlot::HeaderButton: k.mHeaderButton = c; break;
+    case EeWonSkinSlot::TabButton: k.mTabButton = c; break;
+    case EeWonSkinSlot::CloseButton: k.mCloseButton = c; break;
+    case EeWonSkinSlot::ComboButton: k.mComboButton = c; break;
+    case EeWonSkinSlot::ScrollThumb0: k.mScrollThumb[i] = c; break;
+    case EeWonSkinSlot::ScrollGutter0: k.mScrollGutter[i] = c; break;
+    case EeWonSkinSlot::Arrow0: k.mArrowButton[i] = c; break;
+    case EeWonSkinSlot::Scrollbar0: k.mScrollbar[i] = c; break;
+    case EeWonSkinSlot::ScrollContainer: k.mScrollContainer = c; break;
+    case EeWonSkinSlot::ListCtrl: k.mListCtrl = c; break;
+    case EeWonSkinSlot::TabCtrl: k.mTabCtrl = c; break;
+    case EeWonSkinSlot::ComboBox: k.mComboBox = c; break;
+    case EeWonSkinSlot::PopupBack: k.mPopupBack = c; break;
+    case EeWonSkinSlot::DialogBack: k.mDialogBack = c; break;
+    default: break;
+    }
+}
+template<class T> T SafeConfigGetComponent(Component* c, const char* name);
+static Component* SafeConfigGetSkinPart(Component* c, const char* name) { return SafeConfigGetComponent<Component*>(c, name); }
 template<class T> T SafeConfigGetComponent(Component* c, const char* name)
 {
     unsigned bit = !strcmp(name, "Container") ? 1 : !strcmp(name, "Button") ? 2 : !strcmp(name, "Scroller") ? 4

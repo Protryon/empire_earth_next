@@ -268,16 +268,16 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kTextArea,9) EE_CFG(TextAreaConfig)->mTextArea->SetWrapIndentSize(i[0]); break;
     EE_CFG_SET(kTextArea,10) EE_CFG(TextAreaConfig)->mTextArea->SetLineAlignment((HorzAlign)i[0]); break;
     EE_CFG_SET(kTree,0) EE_CFG(TreeAreaConfig)->mTreeArea->SetSortType((ListSortType)i[0]); break;
-    EE_CFG_SET(kSimple,0) EE_CFG(WONSimpleButtonConfig)->mButton->SetScaleImage(i[0]!=0); break;
+    EE_CFG_SET(kSimple,0) WONShell::Op(EE_CFG(WONSimpleButtonConfig)->mButton,EeWonShellOp::SetScaleImage,i[0]!=0); break;
     EE_CFG_SET(kSimple,1)
-        if(!gSkin->CopySimpleButtonType(s[0],EE_CFG(WONSimpleButtonConfig)->mButton))
+        if(!ee_won_skin_copy_type(WONSkinGlobal(),true,&s[0],EE_CFG(WONSimpleButtonConfig)->mButton))
             throw ConfigObjectException("Type not found: " + std::string(s[0]));
         break;
-    EE_CFG_SET(kSimple,2) EE_CFG(WONSimpleButtonConfig)->mButton->SetImage(i[0],a.m[0].get()); break;
-    EE_CFG_SET(kSimple,3) EE_CFG(WONSimpleButtonConfig)->mButton->SetCheckMouseButtonDown(i[0]!=0); break;
+    EE_CFG_SET(kSimple,2) WONShell::Op(EE_CFG(WONSimpleButtonConfig)->mButton,EeWonShellOp::SetImage,i[0],(intptr_t)a.m[0].get()); break;
+    EE_CFG_SET(kSimple,3) WONShell::Op(EE_CFG(WONSimpleButtonConfig)->mButton,EeWonShellOp::SetCheckMouseButtonDown,i[0]!=0); break;
     EE_CFG_SET(kWONButton,0) EE_CFG(WONButtonConfig)->mButton->SetFont(a.f[0].get()); break;
     EE_CFG_SET(kWONButton,1)
-        if(!gSkin->CopyButtonType(s[0],EE_CFG(WONButtonConfig)->mButton))
+        if(!ee_won_skin_copy_type(WONSkinGlobal(),false,&s[0],static_cast<Component*>(EE_CFG(WONButtonConfig)->mButton)))
             throw ConfigObjectException("Type not found: " + std::string(s[0]));
         break;
     EE_CFG_SET(kWONButton,2) EE_CFG(WONButtonConfig)->mButton->SetTextColor(i[0]); break;
@@ -306,28 +306,28 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kSplitter,9) EE_CFG(SplitterConfig)->mSplitter->SetSplitterPos(i[0],i[1]); break;
     EE_CFG_SET(kSplitter,10) EE_CFG(SplitterConfig)->mSplitter->RegisterMaxButton(static_cast<Button*>(c[0]),(Splitter::QuadrantPosition)i[0]); break;
     EE_CFG_SET(kWScrollbar,0) if(i[0]!=0) { Button* rect=new Button; EE_CFG(WONScrollbarConfig)->mScrollbar->SetScrollRect(rect); } break;
-    EE_CFG_SET(kWHeader,0) EE_CFG(WONHeaderControlConfig)->mHeader->SetColumn(i[0],s[0],NULL); break;
-    EE_CFG_SET(kWListCtrl,0) EE_CFG(WONListCtrlConfig)->mListCtrl->mHeaderHeight=i[0]; break;
+    EE_CFG_SET(kWHeader,0) { intptr_t aCol[2]={(intptr_t)&s[0],0}; WONShell::Op(EE_CFG(WONHeaderControlConfig)->mHeader,EeWonShellOp::WonSetColumn,i[0],(intptr_t)aCol); break; }
+    EE_CFG_SET(kWListCtrl,0) WONShell::Op(EE_CFG(WONListCtrlConfig)->mListCtrl,EeWonShellOp::SetHeaderHeightField,i[0]); break;
     EE_CFG_SET(kWListCtrl,1) static_cast<MultiListArea*>(EE_CFG(WONListCtrlConfig)->mListCtrl->GetScrollArea())->SetNumColumns(i[0]); break;
     EE_CFG_SET(kWListCtrl,2) static_cast<MultiListArea*>(EE_CFG(WONListCtrlConfig)->mListCtrl->GetScrollArea())->SetDynamicSizeColumn(i[0]); break;
     EE_CFG_SET(kWListCtrl,3) static_cast<ListArea*>(static_cast<MultiListArea*>(EE_CFG(WONListCtrlConfig)->mListCtrl->GetScrollArea()))->SetListFlags((unsigned long)i[1],i[0]!=0); break;
-    EE_CFG_SET(kWListCtrl,4) EE_CFG(WONListCtrlConfig)->mListCtrl->SetStandarColumnHeader(i[0],s[0],i[1]); break;
-    EE_CFG_SET(kWListCtrl,5) EE_CFG(WONListCtrlConfig)->mListCtrl->SetColumnHeader(i[0],c[0],i[1]); break;
-    EE_CFG_SET(kWFrame,0) EE_CFG(WONFrameComponentConfig)->mFrameComponent->SetFrameLeft(i[0]); break;
-    EE_CFG_SET(kWFrame,1) EE_CFG(WONFrameComponentConfig)->mFrameComponent->SetFrameTop(i[1]); break;
-    EE_CFG_SET(kWFrame,2) EE_CFG(WONFrameComponentConfig)->mFrameComponent->SetFrameRight(i[2]); break;
-    EE_CFG_SET(kWFrame,3) EE_CFG(WONFrameComponentConfig)->mFrameComponent->SetFrameBottom(i[3]); break;
-    EE_CFG_SET(kWFrame,4) EE_CFG(WONFrameComponentConfig)->mFrameComponent->SetFrameImage(a.m[0].get()); break;
-    EE_CFG_SET(kWCombo,0) EE_CFG(WONComboBoxConfig)->mComboBox->mDrawFrame=i[0]!=0; break;
-    EE_CFG_SET(kWCombo,1) EE_CFG(WONComboBoxConfig)->mComboBox->mButtonInFrame=i[0]!=0; break;
-    EE_CFG_SET(kWCombo,2) EE_CFG(WONComboBoxConfig)->mComboBox->SetFrame(a.fr); break;
-    EE_CFG_SET(kWTabCtrl,0) EE_CFG(WONTabCtrlConfig)->mTabCtrl->SetTransparent(i[0]!=0); break;
-    EE_CFG_SET(kWTabCtrl,1) EE_CFG(WONTabCtrlConfig)->mTabCtrl->AddStandardTab(s[0],static_cast<Container*>(c[0])); break;
-    EE_CFG_SET(kWTabCtrl,2) EE_CFG(WONTabCtrlConfig)->mTabCtrl->SetFrame(a.fr); break;
-    EE_CFG_SET(kWScrollCont,0) if(i[0]==0) EE_CFG(WONScrollContainerConfig)->mScrollContainer->SetFrame(WONFrame()); break;
-    EE_CFG_SET(kWScrollCont,1) EE_CFG(WONScrollContainerConfig)->mScrollContainer->mTransparent=i[0]!=0; break;
-    EE_CFG_SET(kWScrollCont,2) EE_CFG(WONScrollContainerConfig)->mScrollContainer->SetFrame(a.fr); break;
-    EE_CFG_SET(kWScrollCont,3) EE_CFG(WONScrollContainerConfig)->mScrollContainer->SetCorner(a.m[0]); break;
+    EE_CFG_SET(kWListCtrl,4) { intptr_t aCol[2]={(intptr_t)&s[0],i[1]}; WONShell::Op(EE_CFG(WONListCtrlConfig)->mListCtrl,EeWonShellOp::SetStandardColumnHeader,i[0],(intptr_t)aCol); break; }
+    EE_CFG_SET(kWListCtrl,5) { intptr_t aCol[2]={(intptr_t)c[0],i[1]}; WONShell::Op(EE_CFG(WONListCtrlConfig)->mListCtrl,EeWonShellOp::SetColumnHeader,i[0],(intptr_t)aCol); break; }
+    EE_CFG_SET(kWFrame,0) WONShell::Op(EE_CFG(WONFrameComponentConfig)->mFrameComponent,EeWonShellOp::SetFrameBorder,0,i[0]); break;
+    EE_CFG_SET(kWFrame,1) WONShell::Op(EE_CFG(WONFrameComponentConfig)->mFrameComponent,EeWonShellOp::SetFrameBorder,1,i[1]); break;
+    EE_CFG_SET(kWFrame,2) WONShell::Op(EE_CFG(WONFrameComponentConfig)->mFrameComponent,EeWonShellOp::SetFrameBorder,2,i[2]); break;
+    EE_CFG_SET(kWFrame,3) WONShell::Op(EE_CFG(WONFrameComponentConfig)->mFrameComponent,EeWonShellOp::SetFrameBorder,3,i[3]); break;
+    EE_CFG_SET(kWFrame,4) WONShell::Op(EE_CFG(WONFrameComponentConfig)->mFrameComponent,EeWonShellOp::SetFrameImage,(intptr_t)a.m[0].get()); break;
+    EE_CFG_SET(kWCombo,0) WONShell::Op(EE_CFG(WONComboBoxConfig)->mComboBox,EeWonShellOp::SetDrawFrameField,i[0]!=0); break;
+    EE_CFG_SET(kWCombo,1) WONShell::Op(EE_CFG(WONComboBoxConfig)->mComboBox,EeWonShellOp::SetButtonInFrame,i[0]!=0); break;
+    EE_CFG_SET(kWCombo,2) WONShellFrameOp(EE_CFG(WONComboBoxConfig)->mComboBox,EeWonShellOp::SetFrame,a.fr); break;
+    EE_CFG_SET(kWTabCtrl,0) WONShell::Op(EE_CFG(WONTabCtrlConfig)->mTabCtrl,EeWonShellOp::SetTransparent,i[0]!=0); break;
+    EE_CFG_SET(kWTabCtrl,1) WONShell::Op(EE_CFG(WONTabCtrlConfig)->mTabCtrl,EeWonShellOp::AddStandardTab,(intptr_t)&s[0],(intptr_t)c[0]); break;
+    EE_CFG_SET(kWTabCtrl,2) WONShellFrameOp(EE_CFG(WONTabCtrlConfig)->mTabCtrl,EeWonShellOp::SetFrame,a.fr); break;
+    EE_CFG_SET(kWScrollCont,0) if(i[0]==0) WONShellFrameOp(EE_CFG(WONScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetFrame,WONFrame()); break;
+    EE_CFG_SET(kWScrollCont,1) WONShell::Op(EE_CFG(WONScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetTransparentField,i[0]!=0); break;
+    EE_CFG_SET(kWScrollCont,2) WONShellFrameOp(EE_CFG(WONScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetFrame,a.fr); break;
+    EE_CFG_SET(kWScrollCont,3) WONShell::Op(EE_CFG(WONScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetCorner,(intptr_t)a.m[0].get()); break;
     EE_CFG_SET(kScrollArea,0) EE_CFG(ScrollAreaConfig)->mScrollArea->SetBackground(a.bg); break;
     EE_CFG_SET(kScrollArea,1) EE_CFG(ScrollAreaConfig)->mScrollArea->SetBorderPadding(i[0],i[1],i[2],i[3]); break;
     EE_CFG_SET(kScroller,0) EE_CFG(ScrollerConfig)->mScroller->SetScrollArea(static_cast<ScrollArea*>(c[0])); break;
@@ -362,29 +362,33 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kComponent,31) a.mConfig->mHasSetHeight=true; break;
     EE_CFG_SET(kComponent,32) a.mConfig->mHasSetWidth=a.mConfig->mHasSetHeight=true; break;
     EE_CFG_SET(kComponent,33) a.mConfig->SetDesiredSizeIfNecessary(); break;
-    EE_CFG_SET(kSkin,1) gSkin->mButtonTypeMap[s[0]]=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
-    EE_CFG_SET(kSkin,2) gSkin->mSimpleButtonTypeMap[s[0]]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
-    EE_CFG_SET(kSkin,3) gSkin->mPushButton=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
-    EE_CFG_SET(kSkin,4) gSkin->mCheckbox=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
-    EE_CFG_SET(kSkin,5)
-        gSkin->mRadioButton=SafeConfigGetComponent<WONButton*>(c[0],"WONButton");
-        gSkin->mRadioButton->SetButtonFlags(8,true); break;
-    EE_CFG_SET(kSkin,6) gSkin->mHeaderButton=SafeConfigGetComponent<WONHeaderButton*>(c[0],"WONHeaderButton"); break;
-    EE_CFG_SET(kSkin,7) gSkin->mTabButton=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
-    EE_CFG_SET(kSkin,8) gSkin->mArrowButton[i[0]]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
-    EE_CFG_SET(kSkin,9) gSkin->mComboButton=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
-    EE_CFG_SET(kSkin,10) gSkin->mCloseButton=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
-    EE_CFG_SET(kSkin,11) gSkin->mScrollGutter[i[0]?1:0]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
-    EE_CFG_SET(kSkin,12) gSkin->mScrollThumb[i[0]?1:0]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
-    EE_CFG_SET(kSkin,13) gSkin->mScrollbar[i[0]?1:0]=SafeConfigGetComponent<WONScrollbar*>(c[0],"WONScrollbar"); break;
-    EE_CFG_SET(kSkin,14) gSkin->mScrollContainer=SafeConfigGetComponent<WONScrollContainer*>(c[0],"WONScrollContainer"); break;
-    EE_CFG_SET(kSkin,15) gSkin->mListCtrl=SafeConfigGetComponent<WONListCtrl*>(c[0],"WONListCtrl"); break;
-    EE_CFG_SET(kSkin,16)
-        gSkin->mTabCtrl=SafeConfigGetComponent<WONTabCtrl*>(c[0],"WONTabCtrl");
-        gSkin->mTabCtrl->mSkin=NULL; break;
-    EE_CFG_SET(kSkin,17) gSkin->mComboBox=SafeConfigGetComponent<WONComboBox*>(c[0],"WONComboBox"); break;
-    EE_CFG_SET(kSkin,18) gSkin->mPopupBack=SafeConfigGetComponent<WONFrameComponent*>(c[0],"WONPopupBack"); break;
-    EE_CFG_SET(kSkin,19) gSkin->mDialogBack=SafeConfigGetComponent<WONFrameComponent*>(c[0],"WONDialogBack"); break;
+    EE_CFG_SET(kSkin,1) ee_won_skin_set_type(WONSkinGlobal(),false,&s[0],static_cast<Component*>(SafeConfigGetComponent<WONButton*>(c[0],"WONButton"))); break;
+    EE_CFG_SET(kSkin,2) ee_won_skin_set_type(WONSkinGlobal(),true,&s[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    EE_CFG_SET(kSkin,3) WONSkinSet(EeWonSkinSlot::PushButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
+    EE_CFG_SET(kSkin,4) WONSkinSet(EeWonSkinSlot::Checkbox,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
+    EE_CFG_SET(kSkin,5) {
+        WONButton* aRadio=SafeConfigGetComponent<WONButton*>(c[0],"WONButton");
+        WONSkinSet(EeWonSkinSlot::RadioButton,0,aRadio);
+        aRadio->SetButtonFlags(8,true); break;
+    }
+    EE_CFG_SET(kSkin,6) WONSkinSet(EeWonSkinSlot::HeaderButton,0,SafeConfigGetSkinPart(c[0],"WONHeaderButton")); break;
+    EE_CFG_SET(kSkin,7) WONSkinSet(EeWonSkinSlot::TabButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
+    EE_CFG_SET(kSkin,8) WONSkinSet(EeWonSkinSlot::Arrow0,i[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    EE_CFG_SET(kSkin,9) WONSkinSet(EeWonSkinSlot::ComboButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    EE_CFG_SET(kSkin,10) WONSkinSet(EeWonSkinSlot::CloseButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    EE_CFG_SET(kSkin,11) WONSkinSet(EeWonSkinSlot::ScrollGutter0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    EE_CFG_SET(kSkin,12) WONSkinSet(EeWonSkinSlot::ScrollThumb0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    EE_CFG_SET(kSkin,13) WONSkinSet(EeWonSkinSlot::Scrollbar0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONScrollbar")); break;
+    EE_CFG_SET(kSkin,14) WONSkinSet(EeWonSkinSlot::ScrollContainer,0,SafeConfigGetSkinPart(c[0],"WONScrollContainer")); break;
+    EE_CFG_SET(kSkin,15) WONSkinSet(EeWonSkinSlot::ListCtrl,0,SafeConfigGetSkinPart(c[0],"WONListCtrl")); break;
+    EE_CFG_SET(kSkin,16) {
+        Component* aTab=SafeConfigGetSkinPart(c[0],"WONTabCtrl");
+        WONSkinSet(EeWonSkinSlot::TabCtrl,0,aTab);
+        WONShell::Op(aTab,EeWonShellOp::SetSkin,0); break;
+    }
+    EE_CFG_SET(kSkin,17) WONSkinSet(EeWonSkinSlot::ComboBox,0,SafeConfigGetSkinPart(c[0],"WONComboBox")); break;
+    EE_CFG_SET(kSkin,18) WONSkinSet(EeWonSkinSlot::PopupBack,0,SafeConfigGetSkinPart(c[0],"WONPopupBack")); break;
+    EE_CFG_SET(kSkin,19) WONSkinSet(EeWonSkinSlot::DialogBack,0,SafeConfigGetSkinPart(c[0],"WONDialogBack")); break;
     EE_CFG_SET(kSkin,20) EE_CFG(WONSkinConfig)->HandleButtonClickSound(); break;
     EE_CFG_SET(kSkin,21) {
         SmartPtr<Cursor> aCursor=new ComponentCursor(new ImageComponent(a.m[0].get()));
