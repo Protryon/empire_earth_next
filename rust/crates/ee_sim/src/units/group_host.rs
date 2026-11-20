@@ -158,6 +158,34 @@ pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR: i32 = 41;
 pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE: i32 = 42;
 /// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
 pub const EE_UNITS_GROUP_OP_PLAYER_SELECTION: i32 = 43;
+/// player `a`'s `GetUnit(c)`
+pub const EE_UNITS_GROUP_OP_PLAYER_UNIT: i32 = 44;
+/// unit `b`'s class's `IsSelectable(b)`
+pub const EE_UNITS_GROUP_OP_SELECTABLE: i32 = 45;
+/// `gDoppelgangerManager.HasDoppelganger(b's tile, b, player a's id)`
+pub const EE_UNITS_GROUP_OP_DOPPELGANGER: i32 = 46;
+/// `gWorld.mExecutingLocalSelection`
+pub const EE_UNITS_GROUP_OP_LOCAL_SELECTION: i32 = 47;
+/// `EEPlayForLocalPlayer(a, b->mStats->GetSelectionSound(-1))` (c 0) or `GetAcknowledgeSound(-1)` (1)
+pub const EE_UNITS_GROUP_OP_PLAY_SOUND: i32 = 48;
+/// `gWorldTable.GetLongValue(kWorldAcknowledgementDelay)`
+pub const EE_UNITS_GROUP_OP_ACK_DELAY: i32 = 49;
+/// player `a`'s `mViewedUnit = b`
+pub const EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: i32 = 50;
+/// `EEUnitClassCount()`
+pub const EE_UNITS_GROUP_OP_CLASS_COUNT: i32 = 51;
+/// player `a`'s `GetUpgrade(c)`
+pub const EE_UNITS_GROUP_OP_UPGRADE: i32 = 52;
+/// upgrade `a`'s `Init()`
+pub const EE_UNITS_GROUP_OP_UPGRADE_INIT: i32 = 53;
+/// unit `a`'s `SetHitPoints(c)`
+pub const EE_UNITS_GROUP_OP_SET_HIT_POINTS: i32 = 54;
+/// complex unit `a`'s `SetFlightTime(c)`
+pub const EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: i32 = 55;
+/// complex unit `a`'s `MakeAreaEffects()`
+pub const EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: i32 = 56;
+/// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
+pub const EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: i32 = 57;
 
 extern "C" {
     fn ee_units_group_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsGroupIo) -> i64;
@@ -199,6 +227,8 @@ fn unit_of(v: &UnitView) -> GroupUnit {
         hit_points: v.hit_points(),
         valid: v.valid(),
         has_tile: v.tile().is_some(),
+        has_tile_node: v.has_tile_node(),
+        resource_amount: if v.is_unit() { v.resource_amount() } else { 0 },
         tile_x: x,
         tile_y: y,
         player: v.player().map_or(0, |p| p.handle()),
@@ -460,6 +490,164 @@ impl GroupHost for GameGroups {
             })
         })
     }
+}
+
+impl crate::units::selection::SelectionHost for GameGroups {
+    fn player_unit(&mut self, player: u64, id: i64) -> u64 {
+        self.op(EE_UNITS_GROUP_OP_PLAYER_UNIT, player, 0, id, 0) as u64
+    }
+    fn selectable(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GROUP_OP_SELECTABLE, 0, unit, 0, 0) != 0
+    }
+    fn has_doppelganger(&mut self, player: u64, unit: u64) -> bool {
+        self.op(EE_UNITS_GROUP_OP_DOPPELGANGER, player, unit, 0, 0) != 0
+    }
+    fn executing_local_selection(&mut self) -> bool {
+        self.op(EE_UNITS_GROUP_OP_LOCAL_SELECTION, 0, 0, 0, 0) != 0
+    }
+    fn play_sound(&mut self, player: u64, unit: u64, which: u32) {
+        self.op(EE_UNITS_GROUP_OP_PLAY_SOUND, player, unit, which as i64, 0);
+    }
+    fn acknowledgement_delay(&mut self) -> c_ulong {
+        self.op(EE_UNITS_GROUP_OP_ACK_DELAY, 0, 0, 0, 0) as c_long as c_ulong
+    }
+    fn viewed_unit(&mut self, player: u64) -> u64 {
+        // SAFETY: a live player
+        read(|t| unsafe { crate::world::PlayerView::of(t, player) }.map_or(0, |p| p.viewed_unit_handle()))
+    }
+    fn set_viewed_unit(&mut self, player: u64, unit: u64) {
+        self.op(EE_UNITS_GROUP_OP_SET_VIEWED_UNIT, player, unit, 0, 0);
+    }
+    fn sees_all(&mut self, player: u64) -> bool {
+        // SAFETY: a live player
+        read(|t| unsafe { crate::world::PlayerView::of(t, player) }.is_some_and(|p| p.sees_all()))
+    }
+    fn acknowledged(&mut self, player: u64) -> (c_long, c_long) {
+        // SAFETY: a live player's record (the layout's offset)
+        let f = unsafe { player_fields(player) };
+        (f.mLastAcknowledgedGroup, f.mLastAcknowledgementTime)
+    }
+    fn set_acknowledged(&mut self, player: u64, group: c_long, time: c_long) {
+        // SAFETY: as above
+        let f = unsafe { player_fields(player) };
+        f.mLastAcknowledgedGroup = group;
+        f.mLastAcknowledgementTime = time;
+    }
+    fn select_pick(&mut self, player: u64, ids: &[u32]) -> Vec<u32> {
+        let mut picked = vec![0u32; ids.len() + 1];
+        // SAFETY: the slices' lengths
+        let n =
+            unsafe { crate::units::ffi::ee_units_select_pick(player, ids.as_ptr(), ids.len(), picked.as_mut_ptr()) };
+        // SAFETY: as above (TEST ONLY: off by default)
+        unsafe {
+            crate::units::pick_sweep::game::ee_units_select_pick_capture(
+                100,
+                player,
+                ids.as_ptr(),
+                ids.len(),
+                picked.as_ptr(),
+                n,
+            )
+        };
+        picked.truncate(n);
+        picked
+    }
+}
+
+impl crate::units::selection::UpgradesHost for GameGroups {
+    fn class_count(&mut self) -> u64 {
+        self.op(EE_UNITS_GROUP_OP_CLASS_COUNT, 0, 0, 0, 0) as u64
+    }
+    fn upgrade(&mut self, player: u64, class: u64) -> u64 {
+        self.op(EE_UNITS_GROUP_OP_UPGRADE, player, 0, class as i64, 0) as u64
+    }
+    fn upgrade_values(&mut self, upgrade: u64) -> (c_long, c_long, c_long, i64) {
+        // SAFETY: a live upgrade
+        read(|t| match unsafe { crate::world::StatsView::of(t, upgrade) } {
+            Some(s) => {
+                let f = s.fields();
+                let unit_type = s.class().map_or(0, |c| c.unit_type() as c_ulong as c_long as i64);
+                (
+                    world_field!(f, mFlightTime),
+                    world_field!(f, mMaxHitPoints),
+                    world_field!(f, mAreaEffectTemplates)[0],
+                    unit_type,
+                )
+            }
+            None => (0, 0, 0, 0),
+        })
+    }
+    fn init_upgrade(&mut self, upgrade: u64) {
+        self.op(EE_UNITS_GROUP_OP_UPGRADE_INIT, upgrade, 0, 0, 0);
+    }
+    fn flight_time(&mut self, complex: u64) -> c_long {
+        // SAFETY: a live complex unit
+        read(|t| unsafe { UnitView::of(t, complex) }.map_or(0, |v| world_field!(v.complex(), mFlightTime)))
+    }
+    fn set_hit_points(&mut self, unit: u64, value: c_long) {
+        self.op(EE_UNITS_GROUP_OP_SET_HIT_POINTS, unit, 0, value as i64, 0);
+    }
+    fn set_flight_time(&mut self, complex: u64, value: c_long) {
+        self.op(EE_UNITS_GROUP_OP_SET_FLIGHT_TIME, complex, 0, value as i64, 0);
+    }
+    fn make_area_effects(&mut self, complex: u64) {
+        self.op(EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS, complex, 0, 0, 0);
+    }
+    fn add_civilization_upgrades(&mut self, player: u64) {
+        self.op(EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES, player, 0, 0, 0);
+    }
+}
+
+/// A player's record (`EeUnitsPlayerFields` at the layout's offset), for one access.
+///
+/// # Safety
+/// `player` is a live player; the borrow ends before any host call.
+unsafe fn player_fields<'a>(player: u64) -> &'a mut crate::world::player_fields::EeUnitsPlayerFields {
+    // SAFETY: the caller's contract
+    unsafe {
+        &mut *((player as usize + layout().player_fields as usize)
+            as *mut crate::world::player_fields::EeUnitsPlayerFields)
+    }
+}
+
+/// The player's selection members (`op`, ee_units selection.rs): 0 `UpdateSelection(unit, flag)`, 1
+/// `TrySelectUnit(unit, flag)`, 2 `SelectUnit(id, flag, flag2)`, 3 `AddUnitToSelectedGroup(id, flag)`, 4
+/// `AddUnitsToSelectedGroup(ids)`, 5 `AddAndRemoveUnitsFromSelectedGroup(ids)`, 6 `SelectUnits(ids)`, 7
+/// `DeselectUnit(unit)`, 8 `RemoveUnitFromSelectedGroup(id)`, 9 `PlayAcknowledgement(unit)`, 10 `RefreshUpgrades()`;
+/// TrySelectUnit's answer.
+///
+/// # Safety
+/// `player` a live player; `unit` 0 or a live unit; `ids` `n` ids.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_units_selection(
+    player: *mut c_void,
+    op: i32,
+    unit: *mut c_void,
+    id: i64,
+    ids: *const c_long,
+    n: usize,
+    flag: bool,
+    flag2: bool,
+) -> bool {
+    use crate::units::selection as sel;
+    let (h, p, u) = (&mut GameGroups, player as u64, unit as u64);
+    // SAFETY: the caller's contract
+    let list: &[c_long] = if n == 0 || ids.is_null() { &[] } else { unsafe { std::slice::from_raw_parts(ids, n) } };
+    match op {
+        0 => sel::update_selection(h, p, u, flag),
+        1 => return sel::try_select_unit(h, p, u, flag),
+        2 => sel::select_unit(h, p, id, flag, flag2),
+        3 => sel::add_unit_to_selected(h, p, id, flag),
+        4 | 5 => sel::add_units(h, p, list, op == 5),
+        6 => sel::select_units(h, p, list),
+        7 => sel::deselect_unit(h, p, u),
+        8 => sel::remove_unit_from_selected(h, p, id),
+        9 => sel::play_acknowledgement(h, p, u),
+        10 => sel::refresh_upgrades(h, p),
+        _ => {}
+    }
+    false
 }
 
 impl PathWaits for GameGroups {

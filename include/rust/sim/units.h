@@ -1416,6 +1416,48 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE = 42;
 /// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
 constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_SELECTION = 43;
 
+/// player `a`'s `GetUnit(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_UNIT = 44;
+
+/// unit `b`'s class's `IsSelectable(b)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SELECTABLE = 45;
+
+/// `gDoppelgangerManager.HasDoppelganger(b's tile, b, player a's id)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_DOPPELGANGER = 46;
+
+/// `gWorld.mExecutingLocalSelection`
+constexpr static const int32_t EE_UNITS_GROUP_OP_LOCAL_SELECTION = 47;
+
+/// `EEPlayForLocalPlayer(a, b->mStats->GetSelectionSound(-1))` (c 0) or `GetAcknowledgeSound(-1)` (1)
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAY_SOUND = 48;
+
+/// `gWorldTable.GetLongValue(kWorldAcknowledgementDelay)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_ACK_DELAY = 49;
+
+/// player `a`'s `mViewedUnit = b`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_VIEWED_UNIT = 50;
+
+/// `EEUnitClassCount()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CLASS_COUNT = 51;
+
+/// player `a`'s `GetUpgrade(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UPGRADE = 52;
+
+/// upgrade `a`'s `Init()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UPGRADE_INIT = 53;
+
+/// unit `a`'s `SetHitPoints(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_HIT_POINTS = 54;
+
+/// complex unit `a`'s `SetFlightTime(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_FLIGHT_TIME = 55;
+
+/// complex unit `a`'s `MakeAreaEffects()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS = 56;
+
+/// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES = 57;
+
 /// A group's kind (`mGroupKind`): the class the original made.
 constexpr static const uint8_t EE_UNITS_GROUP_KIND_SAVED = 0;
 
@@ -3783,6 +3825,71 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// The media slots (the order of the C++ members).
+constexpr static const size_t EE_UNITS_MEDIA_BUTTON = 0;
+
+constexpr static const size_t EE_UNITS_MEDIA_MODEL = 1;
+
+constexpr static const size_t EE_UNITS_MEDIA_CREATION = 2;
+
+constexpr static const size_t EE_UNITS_MEDIA_DEATH = 3;
+
+constexpr static const size_t EE_UNITS_MEDIA_ACKNOWLEDGE = 4;
+
+constexpr static const size_t EE_UNITS_MEDIA_SELECTION = 6;
+
+/// The entry point's operations.
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_SET = 0;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_LOAD = 1;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_UNLOAD = 2;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_DESTROY = 3;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_LOAD_BUTTONS = 4;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_UNLOAD_BUTTONS = 5;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_ACKNOWLEDGE_SOUND = 6;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_SELECTION_SOUND = 7;
+
+/// The host's operations (`ee_units_upgrade_host`).
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_SOUND_LOAD = 1;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_SOUND_UNLOAD = 2;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_MODEL_LOAD = 3;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_MODEL_UNLOAD = 4;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_BUTTON_ACQUIRE = 5;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_BUTTON_RELEASE = 6;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD = 7;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD = 8;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_LOAD_MEDIA = 9;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_MEDIA = 10;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_LOAD_BUTTONS = 11;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_BUTTONS = 12;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_DATABASE_ENTER = 13;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_DATABASE_LEAVE = 14;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_UPGRADE_ENTER = 15;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_UPGRADE_LEAVE = 16;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_SLEEP = 17;
+
 /// `a` = whether the save has the part `HAS_*` (ee/EESaveGameFiles.h's predicates of the file's version)
 constexpr static const int32_t EE_UNITS_WORLD_HAS = 20;
 
@@ -4979,6 +5086,19 @@ struct EeUnitsFinishLoadIn {
   long garrison_capacity;
   /// `mStats->mPower`
   long power;
+};
+
+/// What one entry point call sees of the C++ object.
+struct EeUnitsUpgradeMedia {
+  /// `&mButton`: the eight media members
+  void **slots;
+  /// `&mIsLoadingMedia` (volatile; `mIsLoadingButtons` follows it)
+  bool *busy;
+  /// the record (`EeUnitsUnitClassUpgradeFields`: the counts, the templates)
+  EeUnitsUnitClassUpgradeFields *fields;
+  /// the object and the call's player
+  void *upgrade;
+  void *player;
 };
 
 /// `EEGetSubTileSteps`' result: the first spot's offset in the tile, the step between spots, and how many spots.
@@ -6273,6 +6393,23 @@ extern int64_t ee_units_group_host(int32_t op,
                                    int64_t c,
                                    int64_t d,
                                    EeUnitsGroupIo *io);
+
+/// The player's selection members (`op`, ee_units selection.rs): 0 `UpdateSelection(unit, flag)`, 1
+/// `TrySelectUnit(unit, flag)`, 2 `SelectUnit(id, flag, flag2)`, 3 `AddUnitToSelectedGroup(id, flag)`, 4
+/// `AddUnitsToSelectedGroup(ids)`, 5 `AddAndRemoveUnitsFromSelectedGroup(ids)`, 6 `SelectUnits(ids)`, 7
+/// `DeselectUnit(unit)`, 8 `RemoveUnitFromSelectedGroup(id)`, 9 `PlayAcknowledgement(unit)`, 10 `RefreshUpgrades()`;
+/// TrySelectUnit's answer.
+///
+/// # Safety
+/// `player` a live player; `unit` 0 or a live unit; `ids` `n` ids.
+bool ee_units_selection(void *player,
+                        int32_t op,
+                        void *unit,
+                        int64_t id,
+                        const long *ids,
+                        size_t n,
+                        bool flag,
+                        bool flag2);
 
 /// `new EESavedGroup(player, index)` (kind 0), `new EESelectedGroup(player)` (1), `new EEActiveGroup(player)` (2).
 EeUnitsGroup *ee_units_group_new(uint8_t kind,
@@ -7888,6 +8025,18 @@ bool ee_units_update(int32_t kind,
                      uint32_t id,
                      uint64_t object,
                      const EeUnitsUpdateHost *host);
+
+extern long ee_units_upgrade_host(int32_t op, void *upgrade, void *object, void *player);
+
+/// `EEUnitClassUpgrade`'s media members (`op` an `EE_UNITS_UPGRADE_MEDIA_*`; `arg` the slot, the flags or the
+/// sound's index; `value` the setter's object): the sounds' getters answer the sound.
+///
+/// # Safety
+/// `media` describes a live object.
+uint64_t ee_units_upgrade_media(const EeUnitsUpgradeMedia *media,
+                                int32_t op,
+                                long arg,
+                                void *value);
 
 /// `EEGetSubTileSteps`.
 EeUnitsUuSteps ee_units_uu_sub_tile_steps(float size,

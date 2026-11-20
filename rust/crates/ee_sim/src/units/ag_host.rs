@@ -448,7 +448,7 @@ impl AgHost for AgGame {
     }
     fn new_unload(&mut self, u: u64, x: i32, y: i32) -> u64 {
         // `NewUnloadTransport(u, x, y, true)`
-        let goal = crate::units::goal_obj::goal_new(GOAL_UNLOAD, true);
+        let goal = crate::units::goal_obj::goal_new(GOAL_UNLOAD_TRANSPORT, true);
         let mut io = EeUnitsGoalIo::default();
         io.i[0] = x as i64;
         io.i[1] = y as i64;
@@ -549,7 +549,7 @@ use crate::units::rust_goal::{
 };
 
 /// `kGoalUnloadTransport`, `kGoalAttackUnit`
-const GOAL_UNLOAD: u8 = 8;
+const GOAL_UNLOAD_TRANSPORT: u8 = 8;
 const GOAL_ATTACK_UNIT: u8 = 2;
 
 /// One body of a goal (`EEUnitGoal::Call`).

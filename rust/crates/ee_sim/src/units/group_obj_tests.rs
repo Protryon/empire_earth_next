@@ -41,6 +41,9 @@ struct World {
     computed: u32,
     keeps: BTreeMap<u32, bool>,
     selections: [u64; 2],
+    viewed: u64,
+    acks: (c_long, c_long),
+    upgrade_values: (c_long, c_long, c_long, i64),
 }
 
 impl World {
@@ -670,4 +673,150 @@ fn the_players_groups_finish_release_and_validate() {
     }
     assert_eq!(w.refs(a), 0);
     assert!(w.formations.values().all(|f| f.1 == 0), "every group released its formation");
+}
+
+impl crate::units::selection::SelectionHost for World {
+    fn player_unit(&mut self, _player: u64, id: i64) -> u64 {
+        self.world_unit(id)
+    }
+    fn selectable(&mut self, _unit: u64) -> bool {
+        true
+    }
+    fn has_doppelganger(&mut self, _player: u64, _unit: u64) -> bool {
+        false
+    }
+    fn executing_local_selection(&mut self) -> bool {
+        true
+    }
+    fn play_sound(&mut self, _player: u64, unit: u64, which: u32) {
+        self.log.push(format!("sound {which} {unit:#x}"));
+    }
+    fn acknowledgement_delay(&mut self) -> std::os::raw::c_ulong {
+        5
+    }
+    fn viewed_unit(&mut self, _player: u64) -> u64 {
+        self.viewed
+    }
+    fn set_viewed_unit(&mut self, _player: u64, unit: u64) {
+        self.viewed = unit;
+    }
+    fn sees_all(&mut self, _player: u64) -> bool {
+        false
+    }
+    fn acknowledged(&mut self, _player: u64) -> (c_long, c_long) {
+        self.acks
+    }
+    fn set_acknowledged(&mut self, _player: u64, group: c_long, time: c_long) {
+        self.acks = (group, time);
+    }
+    fn select_pick(&mut self, _player: u64, ids: &[u32]) -> Vec<u32> {
+        ids.iter().copied().filter(|i| i % 2 == 1).collect()
+    }
+}
+
+#[test]
+fn the_selection_members_select_view_toggle_and_acknowledge() {
+    use crate::units::selection as sel;
+    let mut w = World::default();
+    let a = w.unit(0x10, 1, 7, 0);
+    let b = w.unit(0x20, 2, 7, 0);
+    let c = w.unit(0x30, 3, 7, 0);
+    for u in [a, b, c] {
+        w.u(u).has_tile_node = true;
+        w.u(u).built = true;
+    }
+    let foreign = w.unit(0x40, 4, 7, 0);
+    w.u(foreign).player = OTHER_PLAYER;
+    w.selections = [
+        new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0) as u64,
+        new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0) as u64,
+    ];
+    let g = w.selections[0] as G;
+    unsafe {
+        // the pick keeps the odd ids; the last plays its sound
+        sel::select_units(&mut w, PLAYER, &[1, 2, 3]);
+        assert_eq!(units(g), vec![a, c]);
+        assert_eq!(w.log.last().unwrap(), &format!("sound 0 {c:#x}"));
+        // toggling removes the selected ones and adds the others
+        sel::add_units(&mut w, PLAYER, &[1, 2], true);
+        assert_eq!(units(g), vec![c, b]);
+        // a foreign unit is refused while own units are selected, and only viewed when none are
+        assert!(!sel::try_select_unit(&mut w, PLAYER, foreign, true));
+        clear(&mut w, g);
+        assert!(sel::try_select_unit(&mut w, PLAYER, foreign, true));
+        assert_eq!(w.viewed, foreign);
+        assert_eq!(w.refs(foreign), 1);
+        // selecting own units again drops the viewed one
+        sel::select_unit(&mut w, PLAYER, 1, true, true);
+        assert_eq!(w.viewed, 0);
+        assert_eq!(w.refs(foreign), 0);
+        assert_eq!(units(g), vec![a]);
+        // a new selection for another player's unit
+        sel::add_unit_to_selected(&mut w, PLAYER, 4, true);
+        assert!(units(g).is_empty());
+        assert_eq!(w.viewed, foreign);
+        sel::deselect_unit(&mut w, PLAYER, foreign);
+        assert_eq!(w.viewed, 0);
+        // the acknowledgement: once per delay for the same selection
+        w.log.clear();
+        let change = (*g).mChangeTime;
+        w.acks = (change, w.time + 1);
+        sel::play_acknowledgement(&mut w, PLAYER, a);
+        assert!(w.log.is_empty(), "within the delay");
+        w.acks = (change - 1, 0);
+        sel::play_acknowledgement(&mut w, PLAYER, a);
+        assert_eq!(w.log, vec![format!("sound 1 {a:#x}")]);
+        assert_eq!(w.acks.0, change);
+        for s in w.selections {
+            dereference(&mut w, s as G);
+        }
+    }
+}
+
+impl crate::units::selection::UpgradesHost for World {
+    fn class_count(&mut self) -> u64 {
+        1
+    }
+    fn upgrade(&mut self, _player: u64, _class: u64) -> u64 {
+        0x900
+    }
+    fn upgrade_values(&mut self, _upgrade: u64) -> (c_long, c_long, c_long, i64) {
+        self.upgrade_values
+    }
+    fn init_upgrade(&mut self, _upgrade: u64) {
+        self.upgrade_values = (20, 30, 0, 7);
+    }
+    fn flight_time(&mut self, _complex: u64) -> c_long {
+        5
+    }
+    fn set_hit_points(&mut self, unit: u64, value: c_long) {
+        self.log.push(format!("hp {unit:#x} {value}"));
+    }
+    fn set_flight_time(&mut self, complex: u64, value: c_long) {
+        self.log.push(format!("flight {complex:#x} {value}"));
+    }
+    fn make_area_effects(&mut self, complex: u64) {
+        self.log.push(format!("effects {complex:#x}"));
+    }
+    fn add_civilization_upgrades(&mut self, _player: u64) {
+        self.log.push("civ".into());
+    }
+}
+
+#[test]
+fn refreshed_upgrades_rescale_the_classes_units() {
+    let mut w = World::default();
+    let a = w.unit(0x10, 1, 7, 0);
+    w.u(a).built = true;
+    w.u(a).hit_points = 7;
+    let other = w.unit(0x20, 2, 9, 0);
+    let _ = other;
+    // hit points 10 -> 30, flight time 10 -> 20: 7 / 10 * 30 = 21, 5 / 10 * 20 = 10
+    w.upgrade_values = (10, 10, 0, 7);
+    crate::units::selection::refresh_upgrades(&mut w, PLAYER);
+    assert_eq!(w.log, vec!["hp 0x10 21", "flight 0x10 10", "civ"]);
+    // unchanged: only the civilization's upgrades
+    w.log.clear();
+    crate::units::selection::refresh_upgrades(&mut w, PLAYER);
+    assert_eq!(w.log, vec!["civ"]);
 }

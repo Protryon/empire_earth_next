@@ -45,6 +45,10 @@
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EEDoppelgangerManager.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
 #include <math.h>
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
@@ -222,6 +226,32 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
             theList.erase(it);
         return 0;
     }
+    // the selection's (selection.rs)
+    case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
+    case EE_UNITS_GROUP_OP_SELECTABLE:
+        return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
+    case EE_UNITS_GROUP_OP_DOPPELGANGER: {
+        EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
+        return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theTarget->mTile), theTarget, thePlayer->GetPlayerID());
+    }
+    case EE_UNITS_GROUP_OP_LOCAL_SELECTION: return gWorld.mExecutingLocalSelection;
+    case EE_UNITS_GROUP_OP_PLAY_SOUND: {
+        EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
+        EEPlayForLocalPlayer(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
+        return 0;
+    }
+    case EE_UNITS_GROUP_OP_ACK_DELAY: return (int64_t)(unsigned long)gWorldTable.GetLongValue(kWorldAcknowledgementDelay);
+    case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB)); return 0;
+    // RefreshUpgrades' (selection.rs)
+    case EE_UNITS_GROUP_OP_CLASS_COUNT: return (int64_t)EEUnitClassCount();
+    case EE_UNITS_GROUP_OP_UPGRADE: return (int64_t)(uintptr_t)thePlayer->GetUpgrade((long)inC);
+    case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init(); return 0;
+    case EE_UNITS_GROUP_OP_SET_HIT_POINTS: reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inA))->SetHitPoints((long)inC); return 0;
+    case EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: theUnit->SetFlightTime((long)inC); return 0;
+    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects(); return 0;
+    case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES:
+        thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
+        return 0;
     case EE_UNITS_GROUP_OP_PLAYER_SELECTION:
         return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
     case EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH: {

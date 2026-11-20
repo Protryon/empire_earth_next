@@ -124,6 +124,9 @@ pub struct GroupUnit {
     pub hit_points: i64,
     pub valid: bool,
     pub has_tile: bool,
+    /// `mTileNode != NULL` (on the map's tile lists)
+    pub has_tile_node: bool,
+    pub resource_amount: i64,
     pub tile_x: i64,
     pub tile_y: i64,
     pub location: [f32; 3],

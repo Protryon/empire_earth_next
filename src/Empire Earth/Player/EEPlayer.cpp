@@ -699,24 +699,7 @@ void EEPlayer::AddSightSharer(EEPlayer* inPlayer)
 // plays the last added unit's selection sound during local selection
 void EEPlayer::AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs)
 {
-    EEComplexUnit* theLastUnit = NULL;
-    EESelectedGroup* theGroup = this->mActiveGroup;
-    this->UpdateSelection(NULL, true);
-    for (unsigned long i = 0; i < inUnitIDs.size(); i++) {
-        long& theID = inUnitIDs[i];
-        RTSUnit* theUnit = this->GetUnit(theID);
-        if (theUnit == NULL)
-            continue;
-        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(theUnit)->mComplexUnit;
-        if (!theGroup->Contains(theComplexUnit) && theComplexUnit->mIsBuilt != false
-            && theComplexUnit->mUnitClass->mUnitType != kUnitTypePathPoint) {
-            theGroup->Add(theComplexUnit);
-            theLastUnit = theComplexUnit;
-        } else
-            theGroup->RemoveUnit(theComplexUnit);
-    }
-    if (theLastUnit != NULL && gWorld.mExecutingLocalSelection)
-        EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
+    ee_units_selection(this, 5, NULL, 0, inUnitIDs.data(), inUnitIDs.size(), false, false);
 }
 
 // Refunds a fraction of a technology's cost in each resource (ee_units player.rs)
@@ -730,40 +713,14 @@ void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, flo
 // Selects a unit by ID, starting a new selection when adding a unit of a player other than the selected one
 void EEPlayer::AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag)
 {
-    RTSUnit* theUnit = ::gWorld.GetUnit(inUnitID);
-    if (theUnit == NULL)
-        return;
-    unsigned long thePlayerID = theUnit->mPlayer->mPlayerID;
-    bool theNewGroup;
-    if (inFlag && (thePlayerID != this->mPlayerID || this->mActiveGroup->GetFirstUnit() == NULL
-                   || this->mActiveGroup->GetFirstUnit()->mPlayer->mPlayerID != thePlayerID))
-        theNewGroup = true;
-    else
-        theNewGroup = false;
-    this->SelectUnit(inUnitID, inFlag, theNewGroup);
+    ee_units_selection(this, 3, NULL, (int64_t)inUnitID, NULL, 0, inFlag, false);
 }
 
 // Adds the built units of a list of IDs to the selection; plays the last added unit's selection
 // sound during local selection
 void EEPlayer::AddUnitsToSelectedGroup(std::vector<long>& inUnitIDs)
 {
-    EEComplexUnit* theLastUnit = NULL;
-    EESelectedGroup* theGroup = this->mActiveGroup;
-    this->UpdateSelection(NULL, true);
-    for (unsigned long i = 0; i < inUnitIDs.size(); i++) {
-        long& theID = inUnitIDs[i];
-        RTSUnit* theUnit = this->GetUnit(theID);
-        if (theUnit == NULL)
-            continue;
-        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(theUnit)->mComplexUnit;
-        if (!theGroup->Contains(theComplexUnit) && theComplexUnit->mIsBuilt != false
-            && theComplexUnit->mUnitClass->mUnitType != kUnitTypePathPoint) {
-            theGroup->Add(theComplexUnit);
-            theLastUnit = theComplexUnit;
-        }
-    }
-    if (theLastUnit != NULL && gWorld.mExecutingLocalSelection)
-        EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
+    ee_units_selection(this, 4, NULL, 0, inUnitIDs.data(), inUnitIDs.size(), false, false);
 }
 
 // Pushes back the start time of every wonder's timer by an amount
@@ -815,25 +772,7 @@ void EEPlayer::AddStrandedUnit(EEUnit* inUnit)
 // while own units are selected
 bool EEPlayer::TrySelectUnit(EEUnit* inUnit, bool inFlag)
 {
-    bool theResult = true;
-    if (inFlag) {
-        if (inUnit->mPlayer == this) {
-            if (inUnit->mTileNode != NULL) {
-                this->UpdateSelection(NULL, true);
-                if (!this->mActiveGroup->Contains(inUnit->GetComplexUnit()))
-                    this->mActiveGroup->Add(inUnit->GetComplexUnit());
-            }
-        } else if (this->mActiveGroup->GetFirstUnit() != NULL)
-            theResult = false;
-        else
-            this->UpdateSelection(inUnit, true);
-    } else if (inUnit->mTileNode != NULL) {
-        this->UpdateSelection(NULL, true);
-        if (!this->mActiveGroup->Contains(inUnit->GetComplexUnit()))
-            this->mActiveGroup->Add(inUnit->GetComplexUnit());
-    } else if (this->mActiveGroup->GetNumUnits() == 0)
-        this->UpdateSelection(inUnit, true);
-    return theResult;
+    return ee_units_selection(this, 1, inUnit, 0, NULL, 0, inFlag, false);
 }
 
 // Town merge is defined after its existing patrol-goal include below.
@@ -1749,14 +1688,7 @@ EEComplexUnit* EEPlayer::GetNextComplexUnit(EEUnit* inUnit)
 // NEAR (71.9): registers only (the original caches TMGetTime in edi and the delay in ebx)
 void EEPlayer::PlayAcknowledgement(EEComplexUnit* inUnit)
 {
-    if (this->mLastAcknowledgedGroup == this->mActiveGroup->mChangeTime) {
-        unsigned long theDelay = gWorldTable.GetLongValue(kWorldAcknowledgementDelay);
-        if (TMGetTime() - this->mLastAcknowledgementTime <= theDelay)
-            return;
-    } else
-        this->mLastAcknowledgedGroup = this->mActiveGroup->mChangeTime;
-    this->mLastAcknowledgementTime = TMGetTime();
-    EEPlayForLocalPlayer(this, inUnit->GetStats()->GetAcknowledgeSound(-1));
+    ee_units_selection(this, 9, inUnit, 0, NULL, 0, false, false);
 }
 
 // Replaces each swapped old unit by its new one in all units, air traffic, the selection, control groups, wonders
@@ -1876,9 +1808,7 @@ void EEPlayer::RemovePatrolGroup(EEPPatrolGroup* inGroup)
 // Deselects the unit with the given ID, if it exists
 void EEPlayer::RemoveUnitFromSelectedGroup(long inUnitID)
 {
-    RTSUnit* theUnit = ::gWorld.GetUnit(inUnitID);
-    if (theUnit != NULL)
-        this->DeselectUnit(static_cast<EEUnit*>(theUnit));
+    ee_units_selection(this, 8, NULL, inUnitID, NULL, 0, false, false);
 }
 
 // Removes an animal from its herds, deleting any herd left with no tiles
@@ -1908,13 +1838,7 @@ void EEPlayer::RemoveOffMapUnit(RTSUnit* inUnit)
 // Removes a unit from the selection, or clears the viewed unit when that is the unit
 void EEPlayer::DeselectUnit(EEUnit* inUnit)
 {
-    if (inUnit != this->mViewedUnit && inUnit->GetComplexUnit() != NULL) {
-        this->mActiveGroup->RemoveUnit(inUnit->GetComplexUnit());
-        this->mSelectedGroup->RemoveUnit(inUnit->GetComplexUnit());
-    } else if (this->mViewedUnit != NULL) {
-        this->mViewedUnit->Dereference();
-        this->mViewedUnit = NULL;
-    }
+    ee_units_selection(this, 7, inUnit, 0, NULL, 0, false, false);
 }
 
 // Removes a town building from the towns containing it, deleting any town left with no tiles
@@ -2255,42 +2179,7 @@ void EEPlayer::ReloadTechTree(bool inFlag)
 // Recomputes every unit class upgrade and rescales the hit points, flight time and area effects of existing units
 void EEPlayer::RefreshUpgrades()
 {
-    for (unsigned long i = 0; i < EEUnitClassCount(); i++) {
-        EEUnitClassUpgrade* theUpgrade = this->GetUpgrade(i);
-        if (theUpgrade == NULL)
-            continue;
-        long theOldValue = theUpgrade->mFlightTime;
-        long theOldHitPoints = theUpgrade->GetMaxHitPoints();
-        long theOldKind = theUpgrade->mAreaEffectTemplates[0];
-        theUpgrade->Init();
-        if (theOldHitPoints == theUpgrade->mMaxHitPoints
-            && theOldValue == theUpgrade->mFlightTime && theOldKind == theUpgrade->mAreaEffectTemplates[0])
-            continue;
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (theUnit->mUnitClass->GetUnitType() != theUpgrade->mUnitClass->GetUnitType())
-                continue;
-            EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-            long theNewHitPoints = theUpgrade->mMaxHitPoints;
-            if (theOldHitPoints != theNewHitPoints && (theComplex == NULL || theComplex->GetIsBuilt() == true)) {
-                float theScaled = ((float)theUnit->GetHitPoints() / theOldHitPoints) * theNewHitPoints;
-                float theHitPoints = (float)UMCeil(theScaled);
-                if ((long)theHitPoints > 0)
-                    theUnit->SetHitPoints((long)theHitPoints);
-            }
-            if (theComplex == NULL)
-                continue;
-            long theNewValue = theUpgrade->mFlightTime;
-            if (theOldValue != theNewValue) {
-                float theScaled = ((float)theComplex->mFlightTime / theOldValue) * theNewValue;
-                float theValue = (float)UMCeil(theScaled);
-                if ((long)theValue > 0)
-                    theComplex->SetFlightTime((long)theValue);
-            }
-            if (theOldKind != theUpgrade->mAreaEffectTemplates[0])
-                theComplex->MakeAreaEffects();
-        }
-    }
-    this->mCivilization.AddUpgrades(this->mCivilization.GetPurchasedUpgrades(), this->GetPlayerID(), false);
+    ee_units_selection(this, 10, NULL, 0, NULL, 0, false, false);   // ee_units selection.rs refresh_upgrades
 }
 
 // Briefly reveals the area around one unit (by ID) or all units of a type, with the given sight range
@@ -2342,55 +2231,13 @@ long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned 
 // Selects the unit with the given ID (optionally clearing the selection), playing its sound for own units
 void EEPlayer::SelectUnit(unsigned long inUnitID, bool inArg1, bool inNewGroup)
 {
-    EEUnit* theUnit = static_cast<EEUnit*>(::gWorld.GetUnit(inUnitID));
-    this->UpdateSelection(NULL, true);
-    if (inNewGroup)
-        this->mActiveGroup->Clear();
-    if (theUnit == NULL || !theUnit->mUnitClass->IsSelectable(theUnit))
-        return;
-    unsigned long theType = theUnit->mUnitClass->mUnitType;
-    if (theType == kUnitTypePathPoint)
-        this->TrySelectUnit(theUnit, inArg1);
-    else if (theType != kUnitTypeVolcano) {
-        if (theUnit->mHitPoints > 0
-            && (!inArg1 || this->mSeesAll || theUnit->mPlayer == this
-                || !gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit, this->GetPlayerID()))
-            && this->TrySelectUnit(theUnit, inArg1)) {
-            EEPlayer* thePlayer = theUnit->mPlayer;
-            if (thePlayer == this || thePlayer->mPlayerID == 0) {
-                if (gWorld.mExecutingLocalSelection && thePlayer == this)
-                    EEPlayForLocalPlayer(this, theUnit->mStats->GetSelectionSound(-1));
-                return;
-            }
-        }
-        if (theUnit->mResourceAmount > 0 && theUnit->mUnitClass->mUnitType != kUnitTypeFarm
-            && !gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit, this->GetPlayerID()))
-            this->TrySelectUnit(theUnit, inArg1);
-    }
+    ee_units_selection(this, 2, NULL, (int64_t)inUnitID, NULL, 0, inArg1, inNewGroup);
 }
 
 // Replaces the selection with the built units of the given IDs and plays the last one's selection sound
 void EEPlayer::SelectUnits(std::vector<long>& inUnitIDs)
 {
-    EEComplexUnit* theLastUnit = NULL;
-    EESelectedGroup* theGroup = this->mActiveGroup;
-    this->UpdateSelection(NULL, true);
-    theGroup->Clear();
-    // New (R5b.4): the pick (ee/EEUnitStore.h EESelectPick); the group takes each picked unit (Add skips an invalid
-    // one), the last one picked plays its sound. The ids are the selection's 32-bit values (the original's long)
-    std::vector<uint32_t> theIDs(inUnitIDs.size() + 1);
-    for (size_t i = 0; i < inUnitIDs.size(); i++)
-        theIDs[i] = static_cast<uint32_t>(inUnitIDs[i]);
-    std::vector<uint32_t> thePicked(inUnitIDs.size() + 1);
-    size_t thePickedCount = EESelectPick(this, &theIDs[0], inUnitIDs.size(), &thePicked[0]);
-    ee_units_select_pick_capture(100, (uint64_t)(uintptr_t)this, &theIDs[0], inUnitIDs.size(), &thePicked[0], thePickedCount);   // TEST ONLY (off by default)
-    for (size_t i = 0; i < thePickedCount; i++) {
-        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(this->GetUnit(thePicked[i]))->mComplexUnit;
-        theGroup->Add(theComplexUnit);
-        theLastUnit = theComplexUnit;
-    }
-    if (theLastUnit != NULL && gWorld.mExecutingLocalSelection)
-        EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
+    ee_units_selection(this, 6, NULL, 0, inUnitIDs.data(), inUnitIDs.size(), false, false);
 }
 
 // Moves movable units out of a new building's footprint, onto a waypoint outside it or the nearest free tile
@@ -2503,13 +2350,7 @@ void EEPlayer::SetSelectedViewedUnit(RTSUnit* inUnit)
 // Sets the viewed unit, moving the reference; with a unit and inFlag the selection is cleared first
 void EEPlayer::UpdateSelection(EEUnit* inUnit, bool inFlag)
 {
-    if (inUnit != NULL && inFlag == true)
-        this->mActiveGroup->Clear();
-    if (this->mViewedUnit != NULL)
-        this->mViewedUnit->Dereference();
-    this->mViewedUnit = inUnit;
-    if (inUnit != NULL)
-        inUnit->Reference();
+    ee_units_selection(this, 0, inUnit, 0, NULL, 0, inFlag, false);
 }
 
 // Sets the player's override unit class
