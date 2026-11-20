@@ -35544,7 +35544,7 @@ EEPlayer's virtuals; this round moved them with one-statement C++ host cases for
 | b18100ede | next_host.rs: the next engine host's cases | -83 | -95 |
 | 5eb97abd5 | the Load's after-load fixups' player id (the bug below) | 0 | 0 |
 | da2dde926 | cm_restore.rs: EERestoreContinentRegions, TownOrHerd | -72 | -77 |
-| | **round** (the logic_lines.py counter: 91,787 -> 89,994; shim lines 15,414 -> 15,810) | **-1,793** | **-2,108** |
+| | **round** (logic_lines.py as it stood mid-round: 91,787 -> 89,994, shim lines 15,414 -> 15,810; its later version, which counts more shim forms: 87,269 -> 85,572, per commit -947, -398, -206, -77, 0, -69) | **-1,793 (-1,697)** | **-2,108** |
 
 Short of the brief's -3,000: what is left in the lane's files after this round is about 1,600 logic lines, of which
 the Paths lane's EEPathManager.cpp holds 448; the rest is listed in the progress file's "Left".
