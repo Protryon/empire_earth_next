@@ -35431,36 +35431,6 @@ collapsing, net -3,000 C++ lines from real moves. It did not get there: the roun
   lane's round 5); the seed alone was identical, and the final run had no fault.
 - **Not run**: the POSIX builds (no platform code changed).
 
-## The units' lane, round 5: the game log's orders, the two capture sweeps, the gather spot search and four capture builders whole in Rust (ee_sim units order_log.rs, unit_sweep.rs, ag_sweep.rs, gather_spot.rs, landing.rs; combat capture_units.rs; branch rust-units5, 2026-11-20)
-
-The brief: net -3,000 C++ lines from whole bodies. Numbers: docs/progress/units.md ("Round 5"). Net -887 C++ lines
-(src, include/ee): every body whose callees were Rust or views moved; the rest of the hosts calls other lanes' C++.
-
-- **A body moves whole when its callees are Rust already, not when its host is big.** The host cases left are calls
-  into other classes (the path manager, the tech tree, the player, sounds, calamities, the class's virtuals); what
-  moved is what reads only views, the Rust continent manager (the AI lane's round 5 made `gContinentManager`'s
-  lookups inline wrappers over ee_astar, so `GetPathSubSectorAt`, `IsNeighbor`, `InSameContinent` and
-  `GetContinent` are callable from ee_sim::units with `astar::world_view::cm()`), the unit utilities and the
-  unit sets (`ee_unit_sets_contains`).
-- **A TEST ONLY driver moves over one host.** The two capture sweeps (unit_sweep.rs, ag_sweep.rs) read the units and
-  classes through the views and ask one C++ switch (`ee_units_sweep_host`) to create, produce, group, make goals and
-  write the AGPL record; the units and groups captures (175 and 2 digests) are their golden.
-- **Keep the order of every noted call.** The UCBD record is a per-tick count and digest of the class bodies' notes
-  (EEUCNote, C++ only): calling Rust's `citizen::has_gather_point` instead of the C++ `HasGatherPoint` dropped one
-  note per call and changed the oracle profile's UCBD digests (count equal, digest not). The fix calls the C++
-  member through the uu host's world case 18. The continent manager's queries (`ee_astar_cmq_*`) record CM captures:
-  call the same FFI functions in the same order, not their inner Rust.
-- **cbindgen writes `extern "C"` imports into the header.** Declaring `ee_game_log_on` (an ee_game export) in
-  ee_sim made the header check fail ("declared twice"); a crate below ee_game asks its C++ host instead.
-  A `#[repr(i32)]` enum no exported function names is not written at all: use `pub const EE_..._OP_*`.
-- **c_long is 32 bits on Windows**: `x.into()` to `c_long` and `as u32` of a `c_ulong` are clippy errors here and
-  needed elsewhere; `#[allow(clippy::unnecessary_cast)]` with `as`.
-- **Gates** (the final tree, origin/rust fa7e8674a merged: no conflict): both builds and the test profile 0/0; the
-  oracle seeds 2-7 identical; the plain saveload 18/18 identical (exit 0); the Rust gate PASS (5,022 tests); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--exercise random-game --box-select --orders --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
-- **Call-site edits outside the lane**: EESim.cpp (the two sweeps by their Rust names).
-- **Behaviour changes**: none observed (oracle, captures, saveloads identical). The game log's order lines read a
-  target through the unit store (`UnitView::by_id`) where the C++ read `gWorld.GetUnit` (both a player's listed
-  units). Only a game with the game log on runs order_log.rs; EE-SIM never does.
 ## R6 WONLobby, round 27: the table setters that call a widget's Rust object in Rust (ee_won_gui cfgset.rs; branch rust-wonlobby27, 2026-11-20)
 
 Round 26 left the table reader's setters (include/ee/wonapi/WONCfgTable.inl: one case of the C++ host's apply per
