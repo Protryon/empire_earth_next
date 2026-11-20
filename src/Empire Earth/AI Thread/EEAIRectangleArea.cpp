@@ -9,36 +9,16 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEMapDimensions.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIArea.h"
-#include "ee/EEAIContinent.h"
-#include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIContinentManager.h"
 
 #include "ee/EEAIRectangleArea.h"
@@ -110,13 +90,6 @@ U2DPoint<long> EEAIArea::AreaRandomPoint()
     if (this->mTiles.Size() > 0)
         theResult = this->mTiles.GetRandomPoint(gPhysics->mRandom);
     return theResult;
-}
-
-// Rebuilds the area's hull from its edge tiles and updates its influence-region bounds (HULL 1 of the edge tiles)
-void EEAIArea::UpdateHull()
-{
-    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
-    ee_astar_area_update_hull_captured(this, this->mTiles.GetHandle(), theTable != NULL ? theTable->mRegionSize : 0);
 }
 
 // Sets the area's bounds in influence-table regions from its hull's bounding box (no table: unchanged)

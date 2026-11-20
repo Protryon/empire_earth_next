@@ -446,6 +446,10 @@ constexpr static const int32_t EE_PATH_CAPTURE_COMMIT = 128;
 /// the points `h2[..i0]` appended to the C++ vector `h1` (`std::vector<GE3DPoint>`)
 constexpr static const int32_t EE_PATH_POINTS_OUT = 129;
 
+/// A unit's goals as the record reads them (the C++ host's `EE_PATH_UNIT_CAPTURE`): the first queue's length into
+/// the answer; `i0` whether the goal is a location goal, `i1`, `i2` its location's x and y (f32 bits).
+constexpr static const int32_t EE_PATH_UNIT_CAPTURE = 70;
+
 /// `kAIChainLandCliff` .. `kAIChainLandCliffSpace` (ee/EEAIKindIDs.h).
 constexpr static const int32_t CHAIN_LAND_CLIFF = 1;
 
@@ -1916,6 +1920,12 @@ void ee_astar_cntq_i(int32_t v);
 /// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
 void ee_astar_cntq_leave(bool on);
 
+/// `EEAIArea::UpdateHull()` for the C++.
+///
+/// # Safety
+/// `h` a live area (an `EEAIArea*`).
+void ee_astar_area_update_hull_of(uint64_t h);
+
 /// `EEAIArea::RemoveTile(tile)` / `EEAIForest::RemoveTile(tile)` for the C++ (the kind's slot).
 ///
 /// # Safety
@@ -3117,12 +3127,14 @@ bool ee_path_tiles_get(void *list, uint32_t k, int32_t *out);
 /// `list` from `ee_path_tiles_new`, not used after.
 void ee_path_tiles_free(void *list);
 
-/// The dump's lines (`DumpSim` but the bounded machine's) into `out` (up to `cap` bytes, no terminator); their
-/// length.
+/// A dump's text into `out` (up to `cap` bytes, no terminator); its length. `what` 0: `DumpSim`'s (TEST ONLY, EE-SIM's
+/// state dumps: the searches in progress, the pending requests, the timers, then the bounded machine's storage as
+/// a digest of its bytes); 1: `DumpOutOfSynch`'s (the sub sectors and the queued searches).
 ///
 /// # Safety
 /// `p` a live manager, `out` writable for `cap` bytes.
 uint32_t ee_path_manager_dump(EePathManager *p,
+                              int32_t what,
                               uint8_t *out,
                               uint32_t cap);
 
@@ -3131,6 +3143,22 @@ uint32_t ee_path_manager_dump(EePathManager *p,
 /// # Safety
 /// `list` a live `Vec<EePathPoint>` from this module, `points` readable for `count` points.
 void ee_path_points_append(void *list, const EePathPoint *points, uint32_t count);
+
+/// Opens the record of a call the C++ makes (`kind`: 3 `FindPath`, 4 `FindBoundedPath`); whether it records.
+///
+/// # Safety
+/// `p` a live manager.
+bool ee_path_capture_open(EePathManager *p,
+                          uint32_t kind);
+
+/// The open record's next word (a u32, i32 or f32's bits).
+void ee_path_capture_word(uint32_t bits);
+
+/// Closes the record `ee_path_capture_open` opened.
+///
+/// # Safety
+/// `p` a live manager.
+void ee_path_capture_close(EePathManager *p);
 
 /// The C++ view's notes (`EEAIAStarView::Note`): a no-op unless a run is captured on this thread.
 void ee_astar_capture_note(uint8_t kind,
