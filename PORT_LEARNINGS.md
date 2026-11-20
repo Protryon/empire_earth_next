@@ -35295,3 +35295,114 @@ round could prove, and the rest of round 26's list (below) was not started.
   switch (about -70), the lobby's control configs as kinds with cfgtab tables (about -120), FontConfig's,
   ImageConfig's and the percent and colour-scheme configs' members in the Rust config, the hosts' image ops through
   the registry, the widgets' remaining C++ members.
+
+## R6 WONLobby, round 28: the socket op classes as kinds, the lobby hosts' network cases on the Rust objects (ee_won_net sockops.rs, cppnet.rs; ee_won_lobby netops.rs; branch rust-wonlobby28, 2026-11-20)
+
+The lead asked for the biggest whole pieces bottom-up (WONRouting.h's classes, RoutingLogic.cpp, AsyncOp) after round
+27's -167. What WONRouting.h holds now is almost all the C++ ends of Rust objects (AsyncOp, the sockets, the queue
+socket, the UDP manager and ops, the server and routing connections, ServerContext, the tracker, the threads): one-line
+forwards that the lobby's hosts, EEWonNet.cpp and the drivers call. A class goes when nothing C++ names it. This round
+took the pieces whose callers could go with them.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| d5fc7c7d7 | the socket op classes as kinds of one SocketOp (sockops.rs `init_kind`, `class_kind`, `duplicate`) | -157 |
+| 4a2183499 | the lobby hosts' network cases on the Rust objects (netops.rs over cppnet.rs) | -63 |
+| 352e83e4f | the EE game host's AddRef and Release put back (below); won_host_coverage.py knows netops.rs and the transfer's ops | +2 |
+| the clippy and docs commits | cppnet.rs's allow; this section, the progress file | 0 |
+
+Round total: WON C++ 25,098 -> 24,880 (-218). Far short of the -2,000 aim. Under the owner's new score (C++ logic lines
+removed, one-statement shims not counted; the rule arrived at the end of this round) the round removed about 45 logic
+lines (the eleven classes' Duplicate choices, RecvBytesFromOp's RunHook and RecvBytesOp's CleanupHook overrides, the
+accept and receive checks, the routing op's recipient and data type reads); the rest were shims. Shims added: none in
+C++ (the kind constructor replaces eleven); Rust driver entries `ee_won_netops_*` (5) for the golden.
+
+### The socket op kinds
+
+- CloseOp, AcceptOp, ConnectOp, RecvBytesOp, RecvMsgOp, RecvCRMsgOp, SendBytesOp, SendMsgOp, SendBytesToOp,
+  RecvBytesFromOp and the queue socket's QueueCloseOp were C++ subclasses whose state and steps were already Rust
+  (sockops.rs); what each class still decided was its constructor's wait flags and members, its Duplicate, and two
+  hook overrides. Those are Rust now: `SocketOp(EeWonCoreSocketOp kind, socket, bytes, addr, size)` runs
+  `ee_won_socketop_init_kind` (the flags, then the original constructor's init), `Duplicate` asks
+  `ee_won_socketop_duplicate` (a new op of the kind through the core table's `new_socket_op`; none for the others),
+  `ee_won_socketop_run_hook` prepares a datagram receive's buffer first (RecvBytesFromOp::RunHook), and
+  `SocketOp::CleanupHook` closes a receive's file (RecvBytesOp::CleanupHook; a no-op for the other kinds).
+  `OpKind::Close` and `OpKind::Nothing` are the two classes that had no state (CloseOp's Continue closes the socket;
+  the queued close's succeeds with or without a socket). `EeWonCoreSocketOp::Accept` is new.
+- The accessors the callers used on the subclasses (GetMsg, GetBytes, GetAddr, GetAcceptedSocket, GetBytesRead,
+  SetProgressCompletion, SetFilePath) are SocketOp's, answered by the kind. A C++ class of its own (the lobby's
+  SendFileOp) has no kind: its virtual Continue as before.
+- Callers changed: AsyncOp.cpp's `CoreNewSocketOp` (one constructor), LanLogicHost.cpp, EELobbyGameHost.cpp,
+  InitLogic.cpp, WONLobbyAccountLogic.h (`SmartPtr<SocketOp> mAcceptOp`).
+- Drivers: tests/won/won_sockop_kinds.h keeps the original constructors' signatures over the kinds (`new
+  RecvMsgOp(s)` is `new SocketOp(RecvMsg, s)`), `WonSocketOpIs` and `WonSocketOpClass` replace the drivers'
+  dynamic_casts and typeid names for the ops Rust makes (a Duplicate is a plain SocketOp of the kind).
+
+### The hosts' network cases
+
+- LanLogicHost.cpp's 17 cases on an op, a socket op, a queue socket or a byte buffer (LanOpSocket, LanSocketClose,
+  LanSocketSend, LanSendTo, ClientHold, ClientRelease, RefHold, RefRelease, LanRecvOk, LanRecvMsgTake,
+  LanDiscoveryTake, LanAcceptedSocket, LanOpOnSocket, LanRecvFromAddr, LanSocketKill, LanTimerKill, LanRunTimer),
+  the saved game transfer's 7 (Succeeded, OpSocket, AcceptedSocket, AddRef, Release, Kill, Listen) and
+  RoutingLogic.cpp's 13 (AddRef, Release, OpStatus, OpKilled, OpKill, OpFinish, AsyncOpNew, OpSocket, RNum,
+  RRecipient, RIsGameData, Now, Tick) are answered in ee_won_lobby `netops.rs` over ee_won_net `cppnet.rs`: the C++
+  object's Rust object through the core table's `object_of`, then the call the shim made. lobbyhost.rs's `Host::op`
+  (the game's logics), eexfer.rs's `host_call` and routelogic.rs's `h` ask netops first.
+- They are answered only while the core table is bound (the game binds it with WONAPICore, before any logic runs);
+  the drivers' scripted hosts (no WON C++ linked) never bind it, so their goldens are unchanged.
+- The lesson of the third commit: the first commit removed the transfer's `case Op::AddRef:` and `case Op::Release:`
+  lines with a text replace that also matched the EE game host's identical lines in the same file (both hosts call
+  their enum `Op`). won_host_coverage.py caught it (two EeWonEeGameOp values without an answer) before any harness
+  session; the game would have leaked or freed the lobby game's references. Delete host cases by their switch, not
+  by text.
+
+### Tests and mutations
+
+- `won_sockobj_test` (the socket classes' golden, golden_sockobj.txt recorded over the C++ classes): 497 lines
+  identical over the kinds. won_core_test (174), won_ops_test, won_servconn_test (202), won_opcore_test (110),
+  won_hostsock_test (103), won_routeops_test (544), won_smartroute_test (668) and the others unchanged.
+- `won_netops_test` (new): the deleted cases as they were (tests/won/won_netops_orig.h) against netops.rs over the
+  real classes on 127.0.0.1: two worlds made alike (a listener, a client, the accepted socket, a message, a datagram, a
+  timed-out receive, a succeeded-then-killed op, a killed op, a timer, two routing ops, a buffer), six seeds of 300
+  random steps plus the destructive ends; the result, the take ops' bytes, the addresses, what the peer receives and a
+  census of both worlds after every step: 3,871 checks, 0 mismatches. Mutations (LanRecvOk without the kill flag,
+  LanAcceptedSocket's socket, OpKill without finishing, RRecipient's field): 4 of 4 caught; SendBytes for SendMsg is
+  equivalent on sockets without transforms (the LAN game's authenticated sockets have them).
+- cargo: sockops_tests.rs `kinds_are_the_original_constructors`, cppnet.rs `null_objects_do_nothing`, netops.rs's
+  two.
+
+### Behaviour changes
+
+- None intended. A moved case on a NULL object is a no-op where the original's call dereferenced it (only
+  LanSocketClose had a NULL check). A Duplicate of a kind is a plain SocketOp (no C++ code asked for the subclass).
+
+### What runs it
+
+- The LAN game (lan_game.py) runs every LanLogic case moved and the socket kinds; the saved game transfer's cases run
+  only when a saved game is shared (not in the gates); RoutingLogic's only on the Internet lobby (no server left).
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at every code commit |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py header` | 286 headers current |
+| `rust_build.py gate` | three runs stopped at `ee_sim` `tech::capture_rec::tests::the_civ_manager_head` (the known order-dependent size; passes alone); the rest run by hand: 5,025 tests passed, 0 failed, clippy -D warnings clean, rustfmt clean |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (oracle: PASS) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 162 programs exit 0, peak 558 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13097` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2728 joiner=2727`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe) | every lobby capture identical (host: lobby open, LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging); only the game's frames differ. Both runs `RESULT PASS lan-game` (PT 2720/2719 this round, 2715/2714 the start exe) |
+
+### Left
+
+- WONRouting.h's other shims go with their callers: the UDP family (UDPManagerSendRecvOp's two subclasses,
+  RoutingGetUserStatusOp and PingGameOp, could be kinds the same way), ServerConnectionConnectOp, the routing
+  connection classes (RoutingLogic.cpp's ConnNew, ConnDo, StatusOp* cases and EEWonNet.cpp), RecvChunkOp, the
+  completions (RoutingOpCompletion and the LogicCompletions could be Rust completions over `cppcore::completion`).
+- Under the new rule (C++ bodies to Rust over one-statement shims), the big hosts' callers and the widgets' C++
+  bodies (GuiHost.cpp, LobbyNetCtrlHost.cpp's DrawLobbyPing and ChatLink, LobbyDialogHost.cpp, EELobbyGlueHost.cpp's
+  logic) can move next round.
