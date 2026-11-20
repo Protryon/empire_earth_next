@@ -6,16 +6,12 @@
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
 #include "lle/GEColor.h"
-#include "lle/GETransformation.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
 
 #include "ee/EEMiniMap.h"
 #include "lle/GERenderState.h"

@@ -8,7 +8,6 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFile.h"
 #include "lle/FSRestorable.h"
 
 #include "ee/RTSWorld.h"
@@ -17,8 +16,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EETeam.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEVictoryCondition.h"
-#include "ee/EEVCWonder.h"
 
 extern EEWorld gWorld;
 extern EEPhysics* gPhysics;

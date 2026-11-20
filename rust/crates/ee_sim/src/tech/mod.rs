@@ -26,6 +26,8 @@
 //!   numbers, player and area tests.
 //! - [`area_effect_save`]: the area effects' running state in a saved game.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
+//! - [`capture_rec`]: the capture's plain tech records (node, epoch and tree states; TCST, EVHP, CALC) and the
+//!   TRTE, EVUN and TNWK collections (TEST ONLY).
 //! - [`civ`]: the civilization manager's and the civilization powers' tables and their queries (whole in Rust).
 //! - [`civ_apply`]: an upgrade applied to a player, a level on a class's upgrade and a power granted, over a host.
 //! - [`civ_file`]: a civilization file's bytes read, a file applied to a player, a player's upgrade request granted.
@@ -40,6 +42,7 @@ pub mod calamity_start;
 pub mod calamity_update;
 pub mod calamity_views;
 pub mod capture;
+pub mod capture_rec;
 pub mod civ;
 pub mod civ_apply;
 pub mod civ_file;

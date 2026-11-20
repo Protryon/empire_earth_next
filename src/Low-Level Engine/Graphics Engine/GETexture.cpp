@@ -15,29 +15,23 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
 #include "lle/GE3DPlane.h"
 #include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
 #include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/Graphics Engine.h"
 #include "rust/base/png.h"
 #include "rust/render/ge.h"
 #include "rust/render/openformats.h"
@@ -47,11 +41,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
-#include "lle/UWideString.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/GERenderState.h"
 #include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
 #include "lle/GETextureSet.h"
 extern "C" {

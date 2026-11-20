@@ -6,9 +6,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
-#include "lle/UWideString.h"
-#include "lle/UString.h"
-#include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "rust/base/fs.h"

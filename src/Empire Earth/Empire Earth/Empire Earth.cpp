@@ -34,13 +34,11 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEEvent.h"
 #include "ee/EEDatabase.h"
@@ -57,18 +55,13 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
 #include "lle/FSRestorable.h"
-#include "lle/TSEvent.h"
-#include "lle/TSThread.h"
-#include "lle/TSScheduler.h"
 #include "lle/UResourceFile.h"
 #include "lle/TMTimer.h"
 #include "lle/FSPersistent.h"
 #include "lle/FSPersistentList.h"
-#include "lle/GE3DPoint.h"
 #include "ee/EEMap.h"
 #include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEPChecksum.h"
 #include "ee/EEPPlayerHelper.h"
@@ -531,7 +524,6 @@ static const float kStartViewBottom = 1085.0f;
 static const float kWaterRipplePeriod = 3.1415927f;
 static const float kWaterRippleSpeed = 0.025f;
 static const float kWaterRippleAmplitude = 0.05f;
-#include "ee/EESaveGameFiles.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
 
@@ -625,7 +617,6 @@ inline void EEDataPreLoading::Shutdown()
 void EEShutdownThreads(bool inShutdown); // registered as a shutdown routine (0x544324)
 
 #include <list>
-#include "lle/GEPhysicalModel.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EECommunications.h"
 
@@ -892,13 +883,6 @@ void EECreateGameTimer()
     ESVERIFY_AT(sTimer != NULL, 1876);
 }
 
-#include "lle/GE3DLine.h"
-#include "lle/GELine.h"
-#include "lle/GEBitmap.h"
-#include "ee/EEUIFMGStatusBox.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/EEGameUI.h"
-#include "ee/EEEffect.h"
 
 void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
 
@@ -1095,7 +1079,6 @@ void EESetDataPaths()
     gSoundManager->SetPath(gDataPath);
 }
 
-#include "lle/TSReadWriteLock.h"
 
 // Ends the current game: pauses graphics and physics, releases the scene, deletes the communications, and
 // clears the world and game state under the world lock
@@ -1276,7 +1259,6 @@ void EEGraphicsShutdown(bool inShutdown)
     gModelManager = NULL;
 }
 
-#include "ee/EECPASGFlags.h"
 #include "ee/EEMiniMap.h"
 
 // Releases the particle and complex unit pools and logs the list node pools' statistics
@@ -1349,7 +1331,6 @@ void EEShutdownThreads(bool inShutdown)
     gUnitPicker.Reset();
 }
 
-#include "ee/EECameraControl.h"
 #include "ee/EEButtonObject.h"
 
 void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
@@ -1883,7 +1864,6 @@ int main(int argc, char** argv)
 #endif
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state
 
-#include "lle/UMFastMath.h"
 
 // Loads and starts a .wav or .mp3 sound (a bare name tries .wav, then .mp3), registering it as a one-shot when
 // asked; returns the sample and instance, -1 on failure
@@ -2185,7 +2165,6 @@ void EEDeleteGameObjects(bool inShutdown)
     EEClearRandomMapGenerators();
 }
 
-#include "ee/EEUnitAction.h"
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();

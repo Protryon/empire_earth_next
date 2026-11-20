@@ -449,3 +449,5 @@ pub mod fixture;
 pub mod game_log;
 // the computer player's engine per seat and the AI manifest (ee/EECPEngine.h)
 pub mod cp_engine;
+// the capture's tile sight record, TSGT (TEST ONLY; ee/EESightCapture.h)
+pub mod sight_capture;
