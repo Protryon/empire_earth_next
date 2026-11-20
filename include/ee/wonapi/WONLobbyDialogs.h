@@ -5,6 +5,7 @@
 #include "rust/won_lobby/lobbypopup.h"
 #include "rust/won_lobby/scrolltext.h"
 #include "rust/won_net/routeop.h"
+#include "rust/won_gui/cfgkind.h"
 namespace WONAPI {
 class LobbyGame;
 class LobbyClient;

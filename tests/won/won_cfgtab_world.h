@@ -1,5 +1,6 @@
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinobj.h"
+#include "rust/won_gui/cfgkind.h"
 // The stand-in world of won_cfgtab_test.cpp, included once in each of its two namespaces (Orig: the handlers as they
 // were, won_cfgtab_orig.h; Shell: the port, WONCfgTable.inl over ee_won's cfgtab.rs). Every read, call and field
 // write is appended to the namespace's trace.

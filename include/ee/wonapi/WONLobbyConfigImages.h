@@ -1,6 +1,7 @@
 #ifndef EE_WONAPI_WONLOBBYCONFIGIMAGES_H
 #define EE_WONAPI_WONLOBBYCONFIGIMAGES_H
 #include "ee/wonapi/WONLobbyStretchImage.h"
+#include "rust/won_gui/cfgkind.h"
 namespace WONAPI {
 
 // Image configuration classes (their instructions are their kinds' tables: ee_won_gui cfgkind.rs, cfgtab.rs).

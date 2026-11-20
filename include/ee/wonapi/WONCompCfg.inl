@@ -1,5 +1,7 @@
 #include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/compcfg.h"
+#include "rust/won_gui/shell.h"
+#include "rust/won_gui/skinobj.h"
 // The C++ end of ee_won_gui's compcfg.rs (R6 WONLobby round 25): ComponentConfig's readers, look-ups, config map and
 // instructions, ResourceConfig and ResourceConfigTable are Rust objects; these are the classes' forwards and the host
 // of what the Rust asks of the C++ objects (the hooks, the components, the decoders, references). Included inside a
