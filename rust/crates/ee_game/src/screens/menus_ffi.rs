@@ -117,6 +117,11 @@ impl Form {
             }
             return Some(t);
         }
+        if let Some(t) =
+            crate::screens::game_texts::text(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg)
+        {
+            return t;
+        }
         let mut out = vec![0u8; 256];
         let n = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
         if n == usize::MAX {
@@ -136,6 +141,11 @@ impl Form {
     }
     pub(crate) fn put(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
         if let Some(r) = crate::screens::toolkit::put_text(self.0, which, arg, text) {
+            return r;
+        }
+        if let Some(r) =
+            crate::screens::game_texts::put(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg, text)
+        {
             return r;
         }
         unsafe { sys::ee_screenscpp_put_text(self.0, which, arg, text.as_ptr(), text.len()) }

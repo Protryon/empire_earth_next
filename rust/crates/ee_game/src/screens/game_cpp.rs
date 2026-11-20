@@ -86,7 +86,9 @@ out_types!(
     /// A pointer out (`FSFileSpec*&`, as an address).
     EeScreensShimPtrOut: usize,
     /// An `int32_t*`.
-    EeScreensShimI32Out: i32
+    EeScreensShimI32Out: i32,
+    /// A `long&`.
+    EeScreensShimLongOut: core::ffi::c_long
 );
 
 /// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
@@ -339,4 +341,81 @@ shims! {
     fn manager_pop() = ee_screenscpp_manager_pop;
     fn manager_swap(form: u32) = ee_screenscpp_manager_swap;
     fn save_main_game_form() = ee_screenscpp_save_main_game_form;
+    // EEScreens.cpp's texts (game_texts.rs)
+    fn pdcs_selection(selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_pdcs_selection;
+    fn pdcs_line(selection: u32, out: EeScreensShimOut) = ee_screenscpp_pdcs_line;
+    fn display_rasterizer_count() -> u32 = ee_screenscpp_display_rasterizer_count;
+    fn display_rasterizer_name(index: u32, out: EeScreensShimOut) = ee_screenscpp_display_rasterizer_name;
+    fn display_screen_count(rasterizer: u32) -> u32 = ee_screenscpp_display_screen_count;
+    fn display_screen_name(rasterizer: u32, screen: u32, out: EeScreensShimOut) = ee_screenscpp_display_screen_name;
+    fn rasterizer_count() -> u32 = ee_screenscpp_rasterizer_count;
+    fn rasterizer_name(index: u32, out: EeScreensShimOut) = ee_screenscpp_rasterizer_name;
+    fn form_control(form: usize, control: u32) -> usize = ee_screenscpp_form_control;
+    fn check_box_label(check: usize) -> usize = ee_screenscpp_check_box_label;
+    fn label_text(label: usize, out: EeScreensShimOut) = ee_screenscpp_label_text;
+    fn archive_new() -> usize = ee_screenscpp_archive_new;
+    fn archive_set(archive: usize, spec: usize) = ee_screenscpp_archive_set;
+    fn data_add_archive(archive: usize) = ee_screenscpp_data_add_archive;
+    fn set_data_paths() = ee_screenscpp_set_data_paths;
+    fn archive_delete(archive: usize) = ee_screenscpp_archive_delete;
+    fn scenario_extension(out: EeScreensShimOut) = ee_screenscpp_scenario_extension;
+    fn header_new() -> usize = ee_screenscpp_header_new;
+    fn header_delete(header: usize) = ee_screenscpp_header_delete;
+    fn header_load(header: usize, spec: usize) -> i32 = ee_screenscpp_header_load;
+    fn header_set_major(header: usize) = ee_screenscpp_header_set_major;
+    fn header_set_minor(header: usize) = ee_screenscpp_header_set_minor;
+    fn campaign_update_checksum() = ee_screenscpp_campaign_update_checksum;
+    fn intro_media_from_header(header: usize) = ee_screenscpp_intro_media_from_header;
+    fn intro_prefix_media() = ee_screenscpp_intro_prefix_media;
+    fn intro_set_file(spec: usize) = ee_screenscpp_intro_set_file;
+    fn parse_cheat(text: EeScreensShimText, code: EeScreensShimLongOut, parameter: EeScreensShimLongOut) = ee_screenscpp_parse_cheat;
+    fn send_cheat(code: i64, parameter: i64) = ee_screenscpp_send_cheat;
+    fn button_font(form: usize, control: u32) -> usize = ee_screenscpp_button_font;
+    fn button_set_text(form: usize, control: u32, text: EeScreensShimText, font: usize) = ee_screenscpp_button_set_text;
+    fn settings_last_save(auto_save: bool, out: EeScreensShimOut) = ee_screenscpp_settings_last_save;
+    fn open_save_game_file(name: EeScreensShimText, directory: EeScreensShimText, spec: EeScreensShimPtrOut) -> i32 = ee_screenscpp_open_save_game_file;
+    fn spec_set_file(spec: usize, file: EeScreensShimText) = ee_screenscpp_spec_set_file;
+    fn post_load_saved_game(spec: usize) = ee_screenscpp_post_load_saved_game;
+    fn display_message(text: EeScreensShimText, flag: bool) = ee_screenscpp_display_message;
+    fn manager_form_control(form: u32, control: u32) -> usize = ee_screenscpp_manager_form_control;
+    fn label_delete_array(label: usize) = ee_screenscpp_label_delete_array;
+    fn label_append_text(label: usize, text: EeScreensShimText) = ee_screenscpp_label_append_text;
+    fn campaign_extension(out: EeScreensShimOut) = ee_screenscpp_campaign_extension;
+    fn campaign_error_reset() = ee_screenscpp_campaign_error_reset;
+    fn campaign_load(file: EeScreensShimText) -> bool = ee_screenscpp_campaign_load;
+    fn send_connection_request(name: EeScreensShimText) = ee_screenscpp_send_connection_request;
+    fn path_new() -> usize = ee_screenscpp_path_new;
+    fn path_dereference(path: usize) = ee_screenscpp_path_dereference;
+    fn spec_set_volume_startup(spec: usize) = ee_screenscpp_spec_set_volume_startup;
+    fn spec_set_directory_startup(spec: usize, directory: EeScreensShimText) = ee_screenscpp_spec_set_directory_startup;
+    fn path_add_directory(path: usize, spec: usize) = ee_screenscpp_path_add_directory;
+    fn file_list_add_extension(list: usize, extension: EeScreensShimText) = ee_screenscpp_file_list_add_extension;
+    fn file_list_set_paths(list: usize, path: usize) = ee_screenscpp_file_list_set_paths;
+    fn file_list_create(list: usize) = ee_screenscpp_file_list_create;
+    fn file_list_find(list: usize, name: EeScreensShimText, index: EeScreensShimULongOut) -> bool = ee_screenscpp_file_list_find;
+    fn list_select(list: usize, index: u32) = ee_screenscpp_list_select;
+    fn list_scroll_to(list: usize, index: u32) = ee_screenscpp_list_scroll_to;
+    fn spec_open_read(spec: usize) -> i32 = ee_screenscpp_spec_open_read;
+    fn spec_close(spec: usize) = ee_screenscpp_spec_close;
+    fn shim_message_reset() = ee_screenscpp_shim_message_reset;
+    fn validate_save_game(spec: usize) -> bool = ee_screenscpp_validate_save_game;
+    fn display_shim_message() = ee_screenscpp_display_shim_message;
+    fn lobby_options_write_unlock() = ee_screenscpp_lobby_options_write_unlock;
+    fn lobby_options_set_defaults() = ee_screenscpp_lobby_options_set_defaults;
+    fn lobby_options_set_load_type(load_type: i32) = ee_screenscpp_lobby_options_set_load_type;
+    fn lobby_options_map_type_from_spec(spec: usize) = ee_screenscpp_lobby_options_map_type_from_spec;
+    fn load_saved_game_name_from_spec(spec: usize) = ee_screenscpp_load_saved_game_name_from_spec;
+    fn game_state_single() = ee_screenscpp_game_state_single;
+    fn set_game_state_load_type(load_type: i32) = ee_screenscpp_set_game_state_load_type;
+    fn load_scenario_name_from_spec(spec: usize) = ee_screenscpp_load_scenario_name_from_spec;
+    fn lobby_header_delete() = ee_screenscpp_lobby_header_delete;
+    fn lobby_header_new() = ee_screenscpp_lobby_header_new;
+    fn lobby_file_clear() = ee_screenscpp_lobby_file_clear;
+    fn lobby_load(file: EeScreensShimText, directory: EeScreensShimText, load_type: u32) -> u32 = ee_screenscpp_lobby_load;
+    fn debug_sound_label(id: u32) -> usize = ee_screenscpp_debug_sound_label;
+    fn label_set_text(label: usize, text: EeScreensShimText) = ee_screenscpp_label_set_text;
+    fn pgs_send(host: EeScreensShimText, port: u32, payload: EeScreensShimText) = ee_screenscpp_pgs_send;
+    fn pdcs_name_reset() = ee_screenscpp_pdcs_name_reset;
+    fn pdcs_upgrades_clear() = ee_screenscpp_pdcs_upgrades_clear;
+    fn pdcs_load(file: EeScreensShimText) -> u32 = ee_screenscpp_pdcs_load;
 }

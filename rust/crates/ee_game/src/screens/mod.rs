@@ -250,6 +250,7 @@ mod game_actions_tests;
 // the moved C++ host cases (UI lane round 7) and their one-statement C++ shims
 pub(crate) mod game_calls;
 pub(crate) mod game_cpp;
+pub(crate) mod game_texts;
 pub mod game_view;
 #[cfg(not(test))]
 mod game_view_ffi;
