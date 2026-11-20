@@ -736,6 +736,9 @@ constexpr static const int32_t EE_CP_PLAYER_SET_HAS = 426;
 /// node `v0`'s `GetIsObsolete()` (the virtual)
 constexpr static const int32_t EE_CP_PLAYER_NODE_OBSOLETE = 427;
 
+/// `GetTotalPopulation(v0, v1)`
+constexpr static const int32_t EE_CP_PLAYER_TOTAL_POPULATION = 429;
+
 /// `gPhysics->mGameTime`
 constexpr static const int32_t EE_CP_PLAYER_GAME_TIME = 428;
 

@@ -187,6 +187,15 @@ constexpr static const int32_t EE_AI_NEXT_HOST_STARTED = 61;
 /// shared random seed, the inputs processed
 constexpr static const int32_t EE_AI_NEXT_HOST_SIM_HASH = 62;
 
+/// `EECPTraceOut(player, (const char*)b, "%s", (const char*)c)`
+constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_OUT = 63;
+
+/// unit `a`'s `SetGoal(NewAttackUnit(a, b, false, false), 0, 0)`; `SetGoal(NewLocation(GE2DPoint(b, c), true, true,
+/// false, 0, false, false), 0, 0)`
+constexpr static const int32_t EE_AI_NEXT_HOST_SET_ATTACK = 64;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SET_LOCATION = 65;
+
 /// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
 constexpr static const long THREAT_RANGE = 9;
 

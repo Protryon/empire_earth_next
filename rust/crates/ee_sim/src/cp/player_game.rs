@@ -156,6 +156,8 @@ pub const EE_CP_PLAYER_SET_EMPTY: i32 = 425;
 pub const EE_CP_PLAYER_SET_HAS: i32 = 426;
 /// node `v0`'s `GetIsObsolete()` (the virtual)
 pub const EE_CP_PLAYER_NODE_OBSOLETE: i32 = 427;
+/// `GetTotalPopulation(v0, v1)`
+pub const EE_CP_PLAYER_TOTAL_POPULATION: i32 = 429;
 /// `gPhysics->mGameTime`
 pub const EE_CP_PLAYER_GAME_TIME: i32 = 428;
 
@@ -1686,6 +1688,15 @@ fn world_after_load(f: Box<dyn FnOnce()>) {
     }
     // SAFETY: the C++ queue keeps the box until the first tick
     unsafe { ee_cp_after_load(run, Box::into_raw(Box::new(f)) as usize as u64) }
+}
+
+/// The world's computer player `id` (its `EEPlayer*`; 0: none or past the players).
+///
+/// # Safety
+/// On the simulation thread.
+pub unsafe fn computer_at(id: u32) -> u64 {
+    // SAFETY: the world's players
+    unsafe { ee_cp_computer_at(id) }
 }
 
 /// The record of the world's computer player `id` (null: none).

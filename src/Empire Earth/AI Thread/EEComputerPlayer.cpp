@@ -583,6 +583,8 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return gUnitSetManager.GetSet((long)v[0])->Contains((long)v[1]) ? 1 : 0;
     case EE_CP_PLAYER_NODE_OBSOLETE:
         return thePlayer->GetTechTree()->Get((long)v[0])->GetIsObsolete() ? 1 : 0;
+    case EE_CP_PLAYER_TOTAL_POPULATION:
+        return thePlayer->GetTotalPopulation(v[0] != 0, v[1] != 0);
     case EE_CP_PLAYER_GAME_TIME:
         return (int64_t)gPhysics->mGameTime;
     }
