@@ -1,7 +1,7 @@
 # The game core lane (was the game's leaves): src/Empire Earth/Empire Earth, Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread, Map; src/RTS Engine; src/Low-Level Engine but its User Interface
 
 The lane's state. Each round rewrites this file to the current state; each round's story goes in PORT_LEARNINGS.md
-("The game's leaves, round 1/2", "The game core lane, round 3/4/5"). The census is `python -I tools/cpp_deps.py report`
+("The game's leaves, round 1/2", "The game core lane, round 3/4/5/6"). The census is `python -I tools/cpp_deps.py report`
 (after a build: it reads the objects): `leaves.txt`, `near_leaves.txt`, `waves.txt`; `cpp_deps.py unit FILE` names
 one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the directories above and nothing else.
 
@@ -9,6 +9,10 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 | C++ (deleted or shrunk) | Rust home | What callers keep |
 |---|---|---|
+| **Round 6** (branch `rust-core6`; the owner's rule of 2026-11-20: a C++ call from Rust is a one-statement shim) | | |
+| EESimEditor.cpp's steps (EESimEditorStep's 70 commands) and digests (the save's and a file's chunks, the world, the scenario lists and texts, the area screen, the trigger screens' controls, the form's controls, the players, the terrain tab, the tech lists, the form state, the trigger-only report, the open trigger and object) | ee_game sim_driver `sed_steps.rs`, `sed_digest.rs` | EESimEditor.cpp: the step's run on the UI thread (the step action, the marker, the clock pin) and one host case per C++ call or member (`ee_simcpp_sed`, `_text`, `_float`; `EeSimDriverSed`) |
+| EESimCivBuilder.cpp (the "cb" steps, deleted), ee/EESimEditor.h (deleted) | ee_game sim_driver `sed_civ.rs` | the same host |
+| EESim.cpp's host bodies: the form on top and its class, a click, the lobby's combos, the screens' lists, the control of a screen event, the physics' clock, the editor's presence, the idle human, the save request, the platform switches, --flare, --volcano and the boulders, the rules' overrides, the AI ids, a unit class's value; HostSweep, the combat sweep's host, the unit-list search sweep, the missile sweep, EESightCaptureSweep | ee_game sim_driver `sim_host.rs` over `sim_ops.rs` | EESim.cpp: the shorter host table and one case per C++ call (`ee_simcpp_sim`, `_text`, `_float`; `EeSimDriverSim`) |
 | **Round 5** (branch `rust-core5`) | | |
 | EEPlayer's private lists (mStrandedUnits, mUnitsToRepatrol, mLoadedUnitIDs, mConstructionSiteIDs, mWonderIDs, mSoundLoadedClasses, mLoadedMedia, mUnitsOffMap) | ee_sim units `player_lists.rs` (EeUnitsPlayerLists, EEPlayer::mLists) | the methods over them are one-line calls; the units' reference counts and ids through `ee_units_lists_host` (EEPlayer.cpp) |
 | EEWUnitsOffMapInfo (the class, its Load, Save, RepairPointers, SetUnit, ReleaseUnit) | ee_sim units `player_lists.rs` (EeUnitsOffMapInfo) | ee/EEWUnitsOffMapInfo.h: `typedef EeUnitsOffMapInfo EEWUnitsOffMapInfo`; the callers set `mReason` through GetOffMapInfo as before |
@@ -35,6 +39,15 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Left, and why
 
+- **The test drivers' rest**: EESim.cpp's DumpState (157 logic lines: --dump-at's text, no gate reads it, so a move
+  could not be checked against the C++), ChecksumText (DumpState's too), RngTraceHook (the stack walk), the fault
+  handlers and EESimMain; EETestFixture.cpp's EEFixtureHost (about 400 lines: each case several C++ calls; the Rust
+  fixture's `Call` API would take finer operations; only harness sessions run it) and its WON lobby walk (WONAPI's
+  C++ components).
+- **The game's own bodies of the round's candidates, not reached**: EECalamityUpdate.cpp's Call and ClassStep (978
+  logic lines), Empire Earth.cpp's start and shutdown (1,444), EEWorld.cpp (1,030), EERenderObject.cpp (956),
+  EEMessage.cpp (744), EEServer.cpp (460), the RTS Engine's classes. Under the shim rule each moves the same way as
+  the drivers did: a Rust body over one host case per C++ call.
 - **EEPlayer** (round 5's brief: the player whole in Rust): EEPlayer.cpp is 3,100 lines of hosts and orchestration
   over other lanes' classes; every decision is Rust already (ee_sim units player*.rs, 7,900 lines). The parts, by
   size: EEPlayerHost 340 (a case per C++ call of the Rust bodies: tech nodes, unit classes, the towns and herds, the

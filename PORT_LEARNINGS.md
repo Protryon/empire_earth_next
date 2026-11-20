@@ -35529,3 +35529,72 @@ round could prove, and the rest of round 26's list (below) was not started.
   switch (about -70), the lobby's control configs as kinds with cfgtab tables (about -120), FontConfig's,
   ImageConfig's and the percent and colour-scheme configs' members in the Rust config, the hosts' image ops through
   the registry, the widgets' remaining C++ members.
+
+## The game core lane, round 6: EE-SIM's scripted editor, its civilization builder steps and the driver's host bodies whole in Rust over one-statement C++ cases (ee_game sim_driver sed_steps.rs, sed_digest.rs, sed_civ.rs, sed_host.rs, sim_host.rs, sim_ops.rs; branch rust-core6, 2026-11-20)
+
+The brief: the owner's new rule (a C++ call from Rust is a one-statement shim, the score is C++ logic lines) applied to
+the bodies rounds 4 and 5 left because they call only C++; target -3,000 logic lines. The round moved the TEST ONLY
+drivers first (their gates compare the output line for line or digest by digest): -2,068 logic lines
+(`logic_lines.py`: 91,787 at 840aeb3c0, 89,719 at c7ccae8f7), net -1,943 lines (src, include/ee, include/lle).
+
+| Commit | What | C++ logic | net lines |
+|---|---|---|---|
+| b969f72e3 | EESimEditor.cpp's steps and digests, EESimCivBuilder.cpp (deleted), ee/EESimEditor.h (deleted) | -1,686 | -1,636 |
+| faa10ec7e | the civ manager head's test independent of the test order (the lead's item) | 0 | 0 |
+| c7ccae8f7 | EESim.cpp's host bodies and the capture's sweeps | -382 | -307 |
+
+- **The host shape that kept the shims small: one switch per C++ file, a Rust enum of operations.** Each C++ call or
+  member is one `case O::X: return ...;` (or a void call and `break;`) of `ee_simcpp_sed(op, p, a, f, s)` (an
+  integer or pointer answer), `ee_simcpp_sed_text` (a text copied into one static `std::string`, so a `UWideString`
+  temporary never dangles) and `ee_simcpp_sed_float`; the enum (`EeSimDriverSed`, `EeSimDriverSim`) is cbindgen's
+  `enum class`, exported through `[export] include`. 594 cases in the two files replace about 2,100 logic lines;
+  the logic_lines heuristic counts a case as a shim only when its statement is alone on the case's line or followed
+  by a lone `break;`/`return`.
+- **Plain C++ layouts are read in place, not through cases**: the scenario's numbers are Rust structs already
+  (`EeScenarioEffectFields`, `...ConditionFields`, `...ObjectFields`, `...TriggerFields`: one case answers the base
+  class's address and Rust reads and writes the fields), the trigger screens' control sets are pointer arrays
+  (`CondControls`, `EffControls`: 23 and 46 pointers, `static_assert`ed in the C++), GERectangle (bottom, left,
+  right, top), GEColor and GETransformation by address. The editor's own Rust objects (`ee_screens_sets_*`,
+  `_seun_*`, `_sew_*`, `_setn_get`, `_sear_*`, `_segr_*`, `_cb_*`) are called straight from Rust (declared in a
+  `cbindgen:ignore` module: cbindgen emits an `extern "C"` block's declarations into the header otherwise, "declared
+  twice").
+- **A pointer crosses as the type the next case casts it back to**: controls as `UIControl*` (every UI class has it
+  first), actions as `EEAction*` (EEARust's first base), messages as `EEMessage*`. The tile list's `mUnit` is an
+  `EEUnit*` (RTSTUnitList), not the RTSUnit* its typedef's name suggests (the one compile error of the round).
+- **A step's closure runs on the UI thread while the driver waits**: `ee_simcpp_sed_run(fn, ctx)` wraps the Rust
+  `FnMut(&mut Vec<String>)` in the C++ step action (the action, the marker's rounds, the clock pin stay C++: they are
+  EEAction and UIEvent subclasses). The text formats are the C library's: `%g` (ee_render cformat's `format_g`),
+  `std::to_string(float)` (`{:.6}`), Windows `long` arithmetic (`c_long`, `as u32 as c_ulong as c_long` where the
+  C++ cast through unsigned long), the FNV hash's basis 1469598103934665603 (0x14650fb0739d0383, not FNV-1a's
+  standard basis).
+- **The sweeps keep the C++'s call order**: every capture record is written by a C++ callee (CreateUnit,
+  LaunchProjectile, Step0, the impact tests, EESearchTargetAlongList, AddSight), called from Rust in the order and
+  with the float values the C++ computed (`z + 1.5`, `size * 0.5`, `radius * 0.5`: f32, no FMA). The unit lists are
+  read live, the human's allies copied first (as the C++ copied the vector).
+- **The civ manager head's test** (the lead's item): the WON lanes' branches lacked 41dbcdf89 (the test under
+  civ_tests.rs's lock), and another test's premade civilization landed between the test's two heads (7,332 against
+  7,200 bytes: one 120-byte record and its era's 12). Under the lock the tables are the reset, empty ones: the test
+  now asserts that before and after and compares the heads byte for byte. The full `cargo test -p ee_sim` ran 5
+  times in a row without a failure.
+- **Tests**: sed_digest 3 (the chunk lines, the formats, the import files), sed_steps 3 (sscanf's "%ld,%ld", the
+  elevation pattern, the placement matrix), sed_host 1 (the layouts), sed_civ 1 (hex, words, upgrades), sim_host 1
+  (the capture tags).
+- **Behaviour changes**: none intended. The editor gate's step that times out (a minute) leaves the Rust closure
+  pointing at the driver's stack, as the C++ lambda did with its output vector (the run ends with exit 3).
+- **What only harness sessions exercise**: the driver's UI reads under the UI lock (the menus and the lobby: every
+  EE-SIM run uses them, so the oracle does too); nothing of the round is reached by the game's own exe.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EESim.cpp's DumpState and ChecksumText (no gate reads
+  --dump-at's text), EETestFixture.cpp's host (each case several C++ calls behind the Rust fixture's `Call` API;
+  harness only), and the game's own bodies of the brief (EECalamityUpdate.cpp, Empire Earth.cpp, EEWorld.cpp,
+  EERenderObject.cpp, the network hosts, the RTS Engine): the next rounds' work, by the same pattern.
+- **Gates** (on c7ccae8f7; origin/rust 781d6cd0c is older than the round's base, so the merge was empty): both builds
+  0/0 (EE-AOC 417 inputs, EE-SIM 418) and the test profile 0/0; the Rust gate PASS (5,077 tests, 0 failed, no flake
+  this time); the oracle identical on seeds 2-7; the 12 capture profiles at seeds 2-3 PASS (oracle 212 digests, late
+  214, space 210, calamity 222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4,
+  transport 185); the plain saveload PASS (18 identical); the matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448
+  lines) and `--civbuilder` PASS (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT
+  PASS tour` (RENDER CHECK ok, INPUT CHECK ok); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree):
+  `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12986` units [4, 40, 40] alive [2, 3] engines
+  classic_lua x 2, `RESULT PASS lan-game PT host=2773 joiner=2772`, GATES PASS. Not run: the POSIX builds (no platform
+  code changed).
