@@ -98,6 +98,18 @@ pub fn line(start: Ge2DPoint, end: Ge2DPoint, color: Color) -> i64 {
     draw(Cmd::Lines(s.handle(), 1))
 }
 
+/// The box selection's eight lines (`EEUICSelectUnits`' `GELine[8]`: four black shadow lines, then four white),
+/// each from `f[i * 4..i * 4 + 4]` (start x, y, end x, y), drawn in that order -> the last draw's result.
+pub fn select_box(f: &[f32]) -> i64 {
+    let mut result = 0;
+    for i in 0..8 {
+        let p = &f[i * 4..i * 4 + 4];
+        let color = if i < 4 { [0.0, 0.0, 0.0] } else { [1.0, 1.0, 1.0] };
+        result = line(Ge2DPoint { x: p[0], y: p[1] }, Ge2DPoint { x: p[2], y: p[3] }, color);
+    }
+    result
+}
+
 // ---- the classes' ops
 
 /// The ping meter's (`ping.rs`): BAR (bar, f) its rectangle set, its colour green; DRAW (bar) drawn.

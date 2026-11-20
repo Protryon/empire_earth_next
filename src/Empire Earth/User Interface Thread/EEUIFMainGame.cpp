@@ -513,24 +513,14 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
     }
     case EE_SCREENS_MF_OP_MD_TILE_SEEN: return theCall.mTile->IsSeenBy(thePlayer);
     case EE_SCREENS_MF_OP_MD_PICK: return (theCall.mPicked = gUnitPicker.PickUnit(theLocation, 0)) != NULL;
-    case EE_SCREENS_MF_OP_MD_UNIT:
+    case EE_SCREENS_MF_OP_MD_UNIT:   // (its plain fields, and the first unit's, are hud_views.rs mouse_mode's)
         switch (inA) {
-        case EE_SCREENS_MF_UNIT_ID: return thePicked->mUnitID;
         case EE_SCREENS_MF_UNIT_HOSTILE_SEEN:
             return thePlayer != thePicked->mPlayer && thePicked->mPlayer->mEnemies[thePlayer->mPlayerID] &&
                    EEIsSeenBy(static_cast<EEComplexUnit*>(thePicked), thePlayer, true);
-        case EE_SCREENS_MF_UNIT_FAMILY: return thePicked->GetUnitClass()->mFamily;
         case EE_SCREENS_MF_UNIT_CAN_BE_ATTACKED: return thePicked->GetUnitClass()->CanBeAttacked();
-        case EE_SCREENS_MF_UNIT_IS_WALL: return thePicked->GetUnitClass()->mIsWall;
-        case EE_SCREENS_MF_UNIT_TILE_X: return thePicked->GetTileX();
-        case EE_SCREENS_MF_UNIT_TILE_Y: return thePicked->GetTileY();
-        case EE_SCREENS_MF_UNIT_HAS_COMPLEX: return theComplex != NULL;
-        case EE_SCREENS_MF_UNIT_COMPLEX_BUILT: return theComplex->mIsBuilt;
-        case EE_SCREENS_MF_UNIT_COMPLEX_CAPACITY: return theComplex->GetUnitClass()->mGarrisonCapacity != 0;
-        case EE_SCREENS_MF_UNIT_COMPLEX_ROOM: return theComplex->GetUnitClass()->mGarrisonCapacity != theComplex->mGarrisonCount;
         case EE_SCREENS_MF_UNIT_IN_WONDER_SET:
             return gUnitSetManager.Contains(theComplex->GetUnitClass()->GetUnitType(), theFirst->mStats->mWonderUnitSet);
-        case EE_SCREENS_MF_UNIT_SAME_PLAYER: return theFirst->mComplexUnit->mPlayer == theComplex->mPlayer;
         }
         return 0;
     case EE_SCREENS_MF_OP_MD_DAMAGE: ioIo->f[0] = EEDamageFactor((long)inA, (long)inB); return 0;
@@ -541,12 +531,9 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
         return (EEGetFirstSelectedUnit(theCall.mFirst) == true ? 1 : 0) | (theCall.mFirst != NULL ? 2 : 0);
     case EE_SCREENS_MF_OP_MD_FIRST_FIELD:
         switch (inA) {
-        case EE_SCREENS_MF_FIRST_ALIVE: return theFirst->mHitPoints > 0;
-        case EE_SCREENS_MF_FIRST_HAS_COMPLEX: return theFirst->mComplexUnit != NULL;
         case EE_SCREENS_MF_FIRST_IN_RANGE:
             return theFirst->mComplexUnit->DistanceSquared3D(GE3DPoint(ioIo->f[0], ioIo->f[1], ioIo->f[2])) >=
                    UMSquare(theFirst->GetUnitClass()->mMinRange);
-        case EE_SCREENS_MF_FIRST_CAN_RALLY: return theFirst->GetUnitClass()->mCanSetRallyPoint;
         case EE_SCREENS_MF_FIRST_IS_CASTER: return theFirst->mUnitID == theForm->mCalamity->mCasterID;
         }
         return 0;

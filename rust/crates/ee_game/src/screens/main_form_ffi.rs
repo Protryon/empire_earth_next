@@ -42,6 +42,15 @@ impl FormHost for Host {
         if let Some(r) = crate::screens::hud_views::main_form(op, a) {
             return r;
         }
+        if op == crate::screens::mouse_modes::EE_SCREENS_MF_OP_MD_UNIT
+            || op == crate::screens::mouse_modes::EE_SCREENS_MF_OP_MD_FIRST_FIELD
+        {
+            // SAFETY: the host's live call record
+            let (picked, first) = unsafe { crate::screens::hud_direct::picked_and_first(self.0.cast()) };
+            if let Some(r) = crate::screens::hud_views::mouse_mode(op, a, picked, first) {
+                return r;
+            }
+        }
         if let Some(r) = crate::screens::ui_direct::main_form(op, a, b) {
             return r;
         }

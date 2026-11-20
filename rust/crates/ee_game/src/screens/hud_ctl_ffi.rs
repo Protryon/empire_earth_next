@@ -208,6 +208,22 @@ pub(crate) unsafe fn ee_screens_chat_line_draw_text(rec: *mut EeScreensChatLineF
     chat_line::draw_text(&Rec::new(rec), &mut ChatCpp(ctl))
 }
 
+/// A HUD control's host whose class reads are the world views' (`hud_views.rs`) and whose box lines are drawn here
+/// (`hud_draw.rs`); the rest go on to [`Cpp`].
+struct Views(*mut c_void, fn(u32, i64) -> Option<i64>);
+
+impl crate::screens::hud_ctl::HudHost for Views {
+    fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
+        if op == EE_SCREENS_SU_DRAW_LINES && f.len() >= 32 && ee_render::ge::list2d::ready() {
+            return crate::screens::hud_draw::select_box(f);
+        }
+        if let Some(r) = (self.1)(op, a) {
+            return r;
+        }
+        crate::screens::hud_ctl::HudHost::op(&mut Cpp(self.0), op, a, b, f)
+    }
+}
+
 /// `EEUICSelectUnits`' members: `EE_SCREENS_SU_DO_*` with the mouse location (x, y) where one is taken.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_select_units(
@@ -217,7 +233,7 @@ pub unsafe extern "C" fn ee_screens_select_units(
     x: f32,
     y: f32,
 ) -> i64 {
-    let (r, h) = (&Rec::new(rec), &mut Cpp(ctl));
+    let (r, h) = (&Rec::new(rec), &mut Views(ctl, crate::screens::hud_views::select_units));
     match which {
         EE_SCREENS_SU_DO_COPY_DATA => select_units::copy_data(r, h),
         EE_SCREENS_SU_DO_DRAW => select_units::draw(r, h),
@@ -243,7 +259,7 @@ pub unsafe extern "C" fn ee_screens_command_units(
     x: f32,
     y: f32,
 ) -> i64 {
-    let (r, h) = (&Rec::new(rec), &mut Cpp(ctl));
+    let (r, h) = (&Rec::new(rec), &mut Views(ctl, crate::screens::hud_views::command_units));
     match which {
         EE_SCREENS_CU_DO_INIT => {
             command_units::init(r);
