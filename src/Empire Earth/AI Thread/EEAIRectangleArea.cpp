@@ -112,13 +112,6 @@ U2DPoint<long> EEAIArea::AreaRandomPoint()
     return theResult;
 }
 
-// Rebuilds the area's hull from its edge tiles and updates its influence-region bounds (HULL 1 of the edge tiles)
-void EEAIArea::UpdateHull()
-{
-    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
-    ee_astar_area_update_hull_captured(this, this->mTiles.GetHandle(), theTable != NULL ? theTable->mRegionSize : 0);
-}
-
 // Sets the area's bounds in influence-table regions from its hull's bounding box (no table: unchanged)
 void EEAIArea::UpdateBounds(EEInfluenceTable* inTable)
 {

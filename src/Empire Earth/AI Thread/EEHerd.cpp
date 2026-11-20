@@ -267,6 +267,7 @@ extern "C" int64_t ee_cp_area_host(void* inArea, int32_t inOp, EeHerdIo* io)
     return 0;
 }
 
+// (the area's, the continent manager's, the registry's and the players' reads are Rust's: herd_game.rs world_op)
 extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uint64_t inB, EeHerdIo* io)
 {
     EEHerd* me = static_cast<EEHerd*>(inHerd);
@@ -303,11 +304,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         r.can_be_attacked = theUnit->mUnitClass->CanBeAttacked();
         return 0;
     }
-    case EE_CP_HERD_RESOLVE: {
-        EEComplexUnit* theResolved;
-        EEUnitHandleResolve((uint32_t)v[0], theResolved);
-        return (int64_t)EEHerdHandle(theResolved);
-    }
     case EE_CP_HERD_REF:
         theUnit->mReferenceCount++;
         return 0;
@@ -335,62 +331,14 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_GENERATE:
         io->f[0] = gPhysics->mRandom.Generate();
         return 0;
-    case EE_CP_HERD_GAME_TIME:
-        return gPhysics != NULL ? (int64_t)gPhysics->GetGameTime() : -1;
-    case EE_CP_HERD_CONTINENT_OF:
-        return gContinentManager.GetContinentID(theUnit);
-    case EE_CP_HERD_CONTINENT_AT:
-        return gContinentManager.GetContinentID((long)v[0], (long)v[1]);
-    case EE_CP_HERD_CONTINENT: {
-        unsigned short theID = (unsigned short)v[0];
-        EEAIContinent* theContinent = v[1] == 0 ? gContinentManager.GetContinentFromID(theID)
-            : v[1] == 1 ? gContinentManager.GetContinentByID(theID) : gContinentManager.GetContinents()[theID];
-        if (theContinent == NULL)
-            return 0;
-        const U2DRectangle<long>& theBounds = theContinent->GetHullBounds();
-        io->v[0] = theContinent->GetCategory();
-        io->v[1] = theBounds.mBottom;
-        io->v[2] = theBounds.mLeft;
-        io->v[3] = theBounds.mRight;
-        io->v[4] = theBounds.mTop;
-        return 1;
-    }
     case EE_CP_HERD_AREA_POINT: {
         U2DPoint<long> thePoint = reinterpret_cast<EEAIArea*>((uintptr_t)inA)->GetRandomPoint();
         io->v[0] = thePoint.mX;
         io->v[1] = thePoint.mY;
         return 0;
     }
-    case EE_CP_HERD_AREA:
-        return (int64_t)EEHerdHandle(gContinentManager.GetArea((unsigned long)v[0]));
     case EE_CP_HERD_MAP_EDGE:
         return (int64_t)EEHerdHandle(gContinentManager.GetRandomContinent(kContinentCategoryMapEdge, gPhysics->mRandom));
-    case EE_CP_HERD_AREA_CREATE: {
-        const int64_t* theInput = reinterpret_cast<const int64_t*>(io->input);
-        std::vector<U2DPoint<long> > theTiles;
-        for (size_t i = 0; i < io->input_len; i++)
-            theTiles.push_back(U2DPoint<long>((long)theInput[2 * i], (long)theInput[2 * i + 1]));
-        me->AreaCreate(theTiles);
-        return 0;
-    }
-    case EE_CP_HERD_NUM_TILES:
-        return me->GetNumTiles();
-    case EE_CP_HERD_CLOSEST_HULL: {
-        U2DPoint<long> thePoint = me->GetClosestHullPoint(U2DPoint<long>((long)v[0], (long)v[1]));
-        io->v[0] = thePoint.mX;
-        io->v[1] = thePoint.mY;
-        return 0;
-    }
-    case EE_CP_HERD_HULL_DISTANCE:
-        io->f[0] = reinterpret_cast<EEHerd*>((uintptr_t)inA)->GetHullDistanceSquared(reinterpret_cast<EEHerd*>((uintptr_t)inB));
-        return 0;
-    case EE_CP_HERD_TILES: {
-        std::vector<U2DPoint<long> > theTiles;
-        me->GetTileSet().BuildPointList(theTiles, 1);
-        for (size_t i = 0; i < theTiles.size(); i++)
-            ee_cp_herd_push(io->list, theTiles[i].mX, theTiles[i].mY, 0, 0);
-        return 0;
-    }
     case EE_CP_HERD_UNITS_IN_RECT: {
         U2DRectangle<long> theRect;
         theRect.mBottom = (long)v[0];
@@ -504,8 +452,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_DISTANCE:
         io->f[0] = theUnit->DistanceSquaredTo(EEHerdUnit(inB));
         return 0;
-    case EE_CP_HERD_MAP_TILE:
-        return gWorld.mMap->GetTile((long)v[0], (long)v[1]) != NULL ? 1 : 0;
     case EE_CP_HERD_MAP_Z:
         io->f[0] = gWorld.mMap->mTerrainMesh.GetZ((long)v[0], (long)v[1]);
         return 0;
@@ -531,12 +477,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         theRequest->Dereference();
         return 0;
     }
-    case EE_CP_HERD_PLAYER_HERDS: {
-        EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inA);
-        for (long i = thePlayer->mHerds.size() - 1; i >= 0; i--)
-            ee_cp_herd_push(io->list, (int64_t)EEHerdHandle(thePlayer->mHerds[i]), 0, 0, 0);
-        return 0;
-    }
     case EE_CP_HERD_FIELDS_OF:
         return (int64_t)EEHerdHandle(static_cast<EeHerdFields*>(reinterpret_cast<EEHerd*>((uintptr_t)inA)));
     case EE_CP_HERD_GOALS:
@@ -549,10 +489,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         io->f[1] = theGoal->GetLocation().GetY();
         return 1;
     }
-    case EE_CP_HERD_PHYSICAL:
-        io->f[0] = theUnit->GetPhysicalModel().GetLocation().GetX();
-        io->f[1] = theUnit->GetPhysicalModel().GetLocation().GetY();
-        return 0;
     case EE_CP_HERD_FLAGS:
         return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
     case EE_CP_HERD_GOAL_ATTACK:
@@ -569,8 +505,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         EEPlayer* thePlayer = gWorld.GetPlayer((unsigned long)v[0]);
         return (int64_t)EEHerdHandle(thePlayer);
     }
-    case EE_CP_HERD_PLAYER_ID:
-        return reinterpret_cast<EEPlayer*>((uintptr_t)inA)->mPlayerID;
     case EE_CP_HERD_UNIT_BY_ID:
         return (int64_t)EEHerdHandle(dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)v[0]))));
     case EE_CP_HERD_SAVE_FLAGS:

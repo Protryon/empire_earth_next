@@ -274,13 +274,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
                                     reinterpret_cast<const int32_t*>(io->h[0]), (size_t)i[0],
                                     reinterpret_cast<EEAIPathSubSector*>(io->h[3]));
         return 0;
-    case EE_PATH_REQUEST_FLAGS: {   // the goal's flags = the request's (EECPASGFlags::operator=)
-        EeAStarGraphGoalRec* theGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
-        const EECPASGFlags& theFlags = reinterpret_cast<EEAutoPathRequest*>(io->h[0])->mFlags;
-        theGoal->flags_player = (int32_t)theFlags.mPlayerID;
-        memcpy(theGoal->path_flags, theFlags.mFlags, sizeof(theFlags.mFlags));
-        return 0;
-    }
     case EE_PATH_TILES_OUT: {   // into the C++ vector h1
         const EePoint* theTiles = reinterpret_cast<const EePoint*>(io->h[2]);
         std::vector<U2DPoint<long> >& theOut = *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]);

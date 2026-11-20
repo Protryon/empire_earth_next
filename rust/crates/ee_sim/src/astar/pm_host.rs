@@ -374,6 +374,19 @@ pub fn answer(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePathIo
             i64::from(lists.neighbors.contains(&io.h[1]))
         }
         EE_PATH_GRAPH_OBJECT => sub_sector(io.i[0]) as i64,
+        crate::astar::graph_search::EE_PATH_REQUEST_FLAGS => {
+            // the goal's flags = the request's (`EECPASGFlags::operator=`), from the request's record
+            let mut r = RequestRecord::default();
+            let mut c = EePathIo::default();
+            c.h[0] = h;
+            c.h[1] = &mut r as *mut RequestRecord as u64;
+            raw(EE_PATH_REQUEST_SAVE, &mut c);
+            // SAFETY: `h1` is the search's live goal record
+            let goal = unsafe { &mut *(io.h[1] as *mut crate::astar::graph_search::EeAStarGraphGoalRec) };
+            goal.flags_player = r.r.flags_player;
+            goal.path_flags = r.r.flags;
+            0
+        }
         EE_PATH_GRAPH_ENDS => {
             for k in 0..2 {
                 let mut c = EePathIo::default();

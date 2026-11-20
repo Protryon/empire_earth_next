@@ -1920,6 +1920,12 @@ void ee_astar_cntq_i(int32_t v);
 /// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
 void ee_astar_cntq_leave(bool on);
 
+/// `EEAIArea::UpdateHull()` for the C++.
+///
+/// # Safety
+/// `h` a live area (an `EEAIArea*`).
+void ee_astar_area_update_hull_of(uint64_t h);
+
 /// `EEAIArea::RemoveTile(tile)` / `EEAIForest::RemoveTile(tile)` for the C++ (the kind's slot).
 ///
 /// # Safety
