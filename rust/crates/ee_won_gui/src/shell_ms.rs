@@ -47,6 +47,8 @@ pub fn base(kind: K) -> B {
         K::MsEtchedFrameGroup => B::Container,
         K::MsMessageBox => B::Dialog,
         K::Ms3DFrame | K::MsSeperator | K::MsEtchedFrame | K::MsScrollThumb | K::MsPopup | K::MsDlgBack => B::Component,
+        // (the WON skin's kinds: shell_won.rs)
+        _ => B::Component,
     }
 }
 

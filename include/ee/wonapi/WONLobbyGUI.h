@@ -815,42 +815,19 @@ private:
 };
 
 class StretchImage;
-// Plain record (no vtable, 0x14 bytes): four border ints then the image at +0x10.
-// The implicit destructor releases the image; the copy constructor is out of line (declared below).
+// WONFrame (R6 WONLobby round 23): the configs' frame value (four borders and a held image). The skin's widgets hold
+// their frames as Rust records (rust/crates/ee_won_gui/src/shell_won.rs FrameRec) and take this one as an
+// EeWonFrameIn (WONGUIShell.h WONFrameArg). A copy duplicates the image (WONFrame::Copy, 0x3177c0).
 class WONFrame {
 public:
     int mLeft,mTop,mRight,mBottom;
     SmartPtr<Image> mImage;
-    WONFrame(Image* =NULL,int=0); // 0x3175f0 (ret 8): one border width on all sides
-    WONFrame(Image*,int,int,int,int);
-    WONFrame(StretchImage*);
-    WONFrame(const WONFrame&); // copies the image (not identified in the original exe)
-    WONFrame& operator=(const WONFrame&);
-    void Copy(const WONFrame&); // 0x3177c0: duplicates the image instead of sharing it
-    void SetImage(Image*); // shares the body at 0x349ab0
-    void SetImage(Image*,int,int,int,int); // 0x317730: sets the image and the borders
-    void Paint(Graphics&,Component*); //3178c0
-    void Paint(Graphics&,Component*,int,int,int,int); //317910
-};
-// WONFrameComponent (0x44 bytes): Component (0x30) plus a WONFrame (0x14)
-class WONFrameComponent : public Component {
-public:
-    WONFrameComponent(Image* =NULL,int=0,int=0,int=0,int=0);
-    WONFrameComponent(const WONFrame&);
-    const WONFrame& GetFrame(void) { return this->mFrame; } // inline
-    // Implicit virtual destructor: releases the frame's image, then Component's cleanup
-    virtual void Paint(Graphics& inGraphics); // override
-    virtual void SetFrameImageAndBorders(Image*, int, int, int, int);
-    virtual void SetFrameImage(Image*);
-    virtual void SetFrameLeft(int);
-    virtual void SetFrameTop(int);
-    virtual void SetFrameRight(int);
-    virtual void SetFrameBottom(int);
-    virtual int GetFrameLeft();
-    virtual int GetFrameTop();
-    virtual int GetFrameRight();
-    virtual int GetFrameBottom();
-    WONFrame mFrame; // at +0x30..0x43 (written at 0x31a5d6/0x31a6ef); the frame's image at +0x40
+    WONFrame(Image* i=NULL,int n=0) : mLeft(n),mTop(n),mRight(n),mBottom(n) { this->mImage=i; } // 0x3175f0
+    WONFrame(Image* i,int l,int t,int r,int b) : mLeft(l),mTop(t),mRight(r),mBottom(b) { this->mImage=i; }
+    WONFrame(StretchImage*); // the image's own borders (WONLobbyStretchImage.h)
+    WONFrame(const WONFrame& f) : mLeft(0),mTop(0),mRight(0),mBottom(0) { this->Copy(f); }
+    WONFrame& operator=(const WONFrame& f) { this->Copy(f); return *this; } // 0x3177a0
+    inline void Copy(const WONFrame& f);
 };
 // ImageComponent (0x38 bytes, 45 vtable slots): image at +0x30, tile flag +0x34, stretch flag +0x35.
 // Constructor and destructor are out of line.
@@ -1918,6 +1895,13 @@ public:
     unsigned short mWidth;                  // +08
     unsigned short mHeight;                 // +0a
 };
+// a private duplicate of the other frame's image (none when it has none), then its borders
+inline void WONFrame::Copy(const WONFrame& f)
+{
+    if(f.mImage.get()==NULL) this->mImage=NULL;
+    else this->mImage=f.mImage->Duplicate();
+    this->mLeft=f.mLeft; this->mTop=f.mTop; this->mRight=f.mRight; this->mBottom=f.mBottom;
+}
 // ImageComponent's image setters (the component sized to a non-null image) and its desired size (the image's, or
 // 10 x 10 without one)
 inline ImageComponent::ImageComponent(Image* i,bool t) { this->SetImageAndTile(i,t); this->mStretch=false; }

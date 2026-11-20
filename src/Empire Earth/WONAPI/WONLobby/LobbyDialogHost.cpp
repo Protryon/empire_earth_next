@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/EELobbyGameCode.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "rust/won_lobby/dialogs.h"
 #include "rust/won_lobby/lobbydlg.h"
 #include "rust/won_lobby/lobbypopup.h"
@@ -279,7 +280,12 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         case EeWonLobbyDlgType::Label: return (intptr_t)FindHeld<Label>(aConfig, aSlot);
         case EeWonLobbyDlgType::Combo: return (intptr_t)FindHeld<ComboBox>(aConfig, aSlot);
         case EeWonLobbyDlgType::Component: return (intptr_t)FindHeld<Component>(aConfig, aSlot);
-        case EeWonLobbyDlgType::Frame: return (intptr_t)FindHeld<WONFrameComponent>(aConfig, aSlot);
+        case EeWonLobbyDlgType::Frame: { // a WONFrameComponent kind
+            SmartPtr<Component> aPtr;
+            SafeGetShell(aConfig, aPtr, EeWonShellKind::WonFrameComponent, aSlot->name, aSlot->file, aSlot->line);
+            if (aPtr.get() != NULL) aPtr->AddRef();
+            return (intptr_t)aPtr.get();
+        }
         case EeWonLobbyDlgType::Browser: return (intptr_t)FindHeld<BrowserComponent>(aConfig, aSlot);
         case EeWonLobbyDlgType::MultiList: return (intptr_t)FindHeld<MultiListArea>(aConfig, aSlot);
         case EeWonLobbyDlgType::List: return (intptr_t)FindHeld<ListArea>(aConfig, aSlot);
@@ -324,8 +330,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         aLabel->SetText(b != 0 ? *reinterpret_cast<const GUIString*>(b) : gEmptyGUIString, true);
         return 0;
     case Op::ButtonSetText: aButton->SetText(*reinterpret_cast<const GUIString*>(b), true); return 0;
-    case Op::FrameLeft: return reinterpret_cast<WONFrameComponent*>(a)->GetFrameLeft();
-    case Op::FrameRight: return reinterpret_cast<WONFrameComponent*>(a)->GetFrameRight();
+    case Op::FrameLeft: return WONShell::Op(reinterpret_cast<Component*>(a), EeWonShellOp::GetFrameBorder, 0);
+    case Op::FrameRight: return WONShell::Op(reinterpret_cast<Component*>(a), EeWonShellOp::GetFrameBorder, 2);
     case Op::RootWidth: return GetLobbyRoot()->Width();
     case Op::RootHeight: return GetLobbyRoot()->Height();
     case Op::FontStringWidth:

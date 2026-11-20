@@ -30,6 +30,8 @@
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/shell.h"     // the shell kinds' ops the game's statements make
+#include "rust/won_gui/shell_won.h" // the WON skin's kinds' frames
+#include "rust/won_gui/skinobj.h"  // the skin's slots
 #include "rust/won_gui/guilayout.h"   // the names its original copy (_orig.h) uses
 #include "won_cfgtab_methods.h"
 wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)

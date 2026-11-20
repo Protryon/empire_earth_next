@@ -145,25 +145,11 @@ void MSListCtrlConfig::SetComponent(Component* component)
     MSScrollContainerConfig::SetComponent(component);
 }
 
-// Binds the WON scrollbar config to its scrollbar (one folded body with MSTabCtrlConfig's)
-void WONScrollbarConfig::SetComponent(Component* component)
-{
-    ScrollbarConfig::SetComponent(component);
-    this->mScrollbar=static_cast<WONScrollbar*>(component);
-}
-
-// Binds the WON header-control config to its header
-void WONHeaderControlConfig::SetComponent(Component* component)
-{
-    MultiListHeaderConfig::SetComponent(component);
-    this->mHeader=static_cast<WONHeaderControl*>(component);
-}
-
 // Binds the WON list-control config to its list control
 void WONListCtrlConfig::SetComponent(Component* component)
 {
     WONScrollContainerConfig::SetComponent(component);
-    this->mListCtrl=static_cast<WONListCtrl*>(component);
+    this->mListCtrl=static_cast<ScrollbarScroller*>(component);
 }
 
 }
