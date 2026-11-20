@@ -98,8 +98,6 @@ private:
 };
 class TextAreaConfig : public ScrollAreaConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0079b4d0
-    static Component* CompFactory() { return new TextArea; } // inline (body at 0x0079b470)
     virtual bool Virtual24(const std::string&); //395990
     virtual void SetComponent(Component*); // override, at 0x0078f860
     TextArea* mTextArea; //9c, borrowed prefixa0 only

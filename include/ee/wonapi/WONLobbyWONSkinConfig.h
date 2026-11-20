@@ -17,7 +17,6 @@ public:
 // Fieldless config (0x78 bytes; declarations only).
 class WONSkinConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x00796d20
     virtual bool PreParse(ConfigParser*);  // at 0x00799010
     virtual bool Virtual24(const std::string&); // dispatch, at 0x00799210
     void HandleButtonClickSound(); //3990e0

@@ -413,7 +413,7 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kContainer,1) EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
     EE_CFG_SET(kContainer,2) { // NEWLAYOUTPOINT's name: a layout point, its config registered under the name
         ContainerConfig* k=EE_CFG(ContainerConfig); SmartPtr<ComponentConfig> config=new ComponentConfig; SmartPtr<LayoutPoint> point=new LayoutPoint;
-        config->SetComponent(point.get()); config->mParent=k; k->mConfigMap[s[--a.ns]]=config; k->mContainer->AddLayoutPoint(point.get());
+        config->SetComponent(point.get()); config->mParent=k; k->AddChildToConfigMap(s[--a.ns],config.get(),true); k->mContainer->AddLayoutPoint(point.get());
     } break;
     EE_CFG_SET(kContainer,4) EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
     EE_CFG_SET(kContainer,5) { int anId=i[--a.ni]; EE_CFG(ContainerConfig)->mContainer->EnableLayoutInstructions(anId,i[0]!=0); } break;

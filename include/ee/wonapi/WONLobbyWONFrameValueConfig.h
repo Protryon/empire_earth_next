@@ -7,14 +7,12 @@ namespace WONAPI {
 // Config classes: only their base parts are declared.
 class WONComboBoxConfig : public ComboBoxConfig {
 public:
-    static ComponentConfig* CfgFactory() { return new WONComboBoxConfig; } // inline (body at 0x00796a90, 0xa0 bytes)
     virtual bool Virtual24(const std::string&); //397f70
     virtual void SetComponent(Component* component) { this->mComboBox=component; ComboBoxConfig::SetComponent(component); } // stores the derived pointer (+0x9c) before calling the base (body at 0x0078e7d0)
     Component* mComboBox; //9c (a WONComboBox kind)
 };
 class WONTabCtrlConfig : public TabCtrlConfig {
 public:
-    static ComponentConfig* CfgFactory() { return new WONTabCtrlConfig; } // inline (body at 0x00796af0, 0xa0 bytes)
     virtual bool Virtual24(const std::string&); //3981f0
     virtual void SetComponent(Component* component) { TabCtrlConfig::SetComponent(component); this->mTabCtrl=component; } // calls the base first, then stores +0x9c (body at 0x0078f100)
     Component* mTabCtrl; //9c (a WONTabCtrl kind)

@@ -13,8 +13,6 @@ public:
 };
 class ListAreaConfig : public ScrollAreaConfig {
 public:
-    static Component* CompFactory(); // at 0x0079abf0
-    static ComponentConfig* CfgFactory(); // at 0x00782150
     virtual bool Virtual24(const std::string&); //38da70
     virtual void SetComponent(Component*); // defined out of line
     ListArea* mListArea; //9c
@@ -22,16 +20,12 @@ public:
 // MultiList config classes (only the instruction dispatch is defined here).
 class MultiListAreaConfig : public ListAreaConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0079ae90
-    static Component* CompFactory(); // at 0x0079ae30
     virtual bool Virtual24(const std::string&); // at 0x00790160 (ends at 0x0079048f)
     virtual void SetComponent(Component*); // SetComponent override at 0x0078fd10
     MultiListArea* mMultiListArea; //a0, borrowed prefixa4
 };
 class MultiListHeaderConfig : public ContainerConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0079af50
-    static Component* CompFactory(); // at 0x0079aef0
     virtual bool Virtual24(const std::string&); // at 0x00790490 (ends at 0x00790520)
     virtual void SetComponent(Component* component) { this->mHeader=static_cast<MultiListHeader*>(component); ContainerConfig::SetComponent(component); } //39afb0
     MultiListHeader* mHeader; //98, borrowed prefix9c
@@ -39,8 +33,6 @@ public:
 // InputBoxConfig (0x7c bytes).
 class InputBoxConfig : public ComponentConfig {
 public:
-    static Component* CompFactory(); // at 0x0079ab90
-    static ComponentConfig* CfgFactory(); // at 0x00782100
     virtual bool Virtual24(const std::string&); //38cd60
     virtual void SetComponent(Component*); // defined out of line
     InputBox* mInputBox; //78
@@ -50,8 +42,6 @@ public:
 class LabelConfig : public ComponentConfig {
 public:
     LabelConfig() {} // at 0x0078d290; leaves +0x78 untouched
-    static Component* CompFactory(); // at 0x0079afd0
-    static ComponentConfig* CfgFactory(); // at 0x0078f9e0
     virtual bool Virtual24(const std::string&); //38d2b0
     virtual void SetComponent(Component*); // defined out of line
     Label* mLabel; //78
@@ -80,8 +70,6 @@ public:
 class TreeArea;
 class TreeAreaConfig : public ListAreaConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0079b590
-    static Component* CompFactory(); // at 0x0079b530
     virtual bool Virtual24(const std::string&); //395f10..395f52
     virtual void SetComponent(Component*); //original external SetComponent
     TreeArea* mTreeArea; //a0, prefixa4

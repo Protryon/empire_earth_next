@@ -40,8 +40,6 @@ private:
 // SplitterConfig (0x9c bytes): ContainerConfig (0x98) plus a borrowed pointer at +0x98.
 class SplitterConfig : public ContainerConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0079b410
-    static Component* CompFactory(); // at 0x0079b3b0
     virtual void SetComponent(Component*); // at 0x0078f960
 public: // (the table reader's setters read the members)
     virtual bool Virtual24(const std::string&); // at 0x00795450

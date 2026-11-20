@@ -345,6 +345,7 @@ struct ComponentConfig : Owned {
     bool HandleModify() { tr("HandleModify"); return mText.size() % 2 == 0; }
     ComponentConfig* GetParentObject();
     void AddChildToConfigMap(const GUIString& name, ComponentConfig* c);
+    void AddChildToConfigMap(const GUIString& name, ComponentConfig* c, bool inAlways); // (NEWLAYOUTPOINT's map entry)
     SmartPtr<RawImage> ReadRawImage()
     {
         std::string t = Take("ReadRawImage");
@@ -498,6 +499,12 @@ void ComponentConfig::AddChildToConfigMap(const GUIString& name, ComponentConfig
     if (StretchImageConfig* s = dynamic_cast<StretchImageConfig*>(c)) what = "stretch#" + P((long long)s->mStretchImage->id);
     else if (ImageFilterConfig* f = dynamic_cast<ImageFilterConfig*>(c)) what = "filter " + P(f->mRawImage.get());
     tr("parent.AddChildToConfigMap(" + P(name) + "," + what + ")");
+}
+// the game's NEWLAYOUTPOINT sets its map entry through AddChildToConfigMap (R6 WONLobby round 25): the original's
+// mConfigMap[name]=config, traced as the original's
+void ComponentConfig::AddChildToConfigMap(const GUIString& name, ComponentConfig* c, bool)
+{
+    ConfigMapSlot aSlot; aSlot.n = (std::string)name; aSlot = SmartPtr<ComponentConfig>(c);
 }
 struct ButtonConfig : ComponentConfig { V24; Component* mButton = gComp; void HandleButtonFlags(); void HandleFitText() { tr("HandleFitText"); } };
 struct ScrollAreaConfig : ContainerConfig { V24; Component* mScrollArea = gComp; };

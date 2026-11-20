@@ -43,6 +43,11 @@ CHECKS = [
                   for v in ("Comp", "Btn", "MsBtn", "Call")}),
     # the images' calls out (R6 WONLobby round 24: imgobj.rs): every one the images' host answers
     dict(enum="EeWonImageHost", header="won_gui/imgobj.h", hosts=[GUI / "PlatNativeImage.cpp"], rust=[], allowed={}),
+    # the component configs' calls out (R6 WONLobby round 25: compcfg.rs): every one the configs' host answers
+    dict(enum="EeWonCcOp", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"], rust=[],
+         allowed={}),
+    dict(enum="EeWonCcKind", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"],
+         rust=[], allowed={"Component": "the Ref op's default case (a Component's AddRef / Release)"}),
     # the lobby events' members are read in Rust (R6 WONLobby round 18)
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],

@@ -3,6 +3,7 @@
 // Requires <string>, ee/EEWonNet.h (RefCount, SmartPtr).
 #ifndef EE_WONAPI_WONLOBBYRESOURCE_H
 #define EE_WONAPI_WONLOBBYRESOURCE_H
+#include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/guistring.h"
 #include "rust/won_gui/guistrobj.h"
 #include "rust/won_net/wonfile.h"
@@ -193,96 +194,37 @@ public:
 
 // 0x377f40: static resource string by 32-bit index (borrowed).
 
-// ResourceConfig (0xb0 bytes), a ConfigObject. AddConfig (0x00793bb0) allocates 0xb0 bytes and
-// calls the no-argument constructor at 0x00790740; constructor, destructor and vtable are out of
-// line. Unlike the later SDK, there is no mConfigTable member at +0xb0.
+// A resource group (a ConfigObject: STRING, IMAGE, SOUND, FONT, COLOR and BACKGROUND lines) and the table of groups.
+// Since R6 WONLobby round 25 both are ee_won_gui compcfg.rs objects (the maps, the handlers, the reads, the look-ups,
+// the glue functions; the control ids and allocators its globals); these are the forwards (WONCompCfg.inl).
 class ResourceConfig : public ConfigObject {
 protected:
-    virtual ~ResourceConfig(); // complete destructor 0x00790d10, deleting destructor 0x00790870
-    bool mAllowOverwrite; //54, natural55..57
-    int mParseCount; // offset 0x58, incremented at 0x00793340 before the key is read
-    template<class T> class ResMap : public std::map<std::string,std::pair<T,int>,StringLessNoCase> {};
-    typedef ResMap<GUIString> StringMap;
-    typedef ResMap<SmartPtr<Image> > ImageMap;
-    typedef ResMap<SmartPtr<Font> > FontMap;
-    typedef ResMap<DWORD> ColorMap;
-    typedef ResMap<Background> BackgroundMap;
-    typedef ResMap<int> IntMap;
-    typedef ResMap<SmartPtr<Sound> > SoundMap;
-    StringMap mStringMap; //5c..67
-    ImageMap mImageMap; //68..73
-    FontMap mFontMap; //74..7f
-    ColorMap mColorMap; //80..8b
-    BackgroundMap mBackgroundMap; // offsets 0x8c..0x97 (Background is 0x14 bytes plus a 4-byte generation)
-    IntMap mIntMap; //98..a3
-    SoundMap mSoundMap; // offsets 0xa4..0xaf; class ends at 0xb0 (no later-SDK mConfigTable)
-    bool HandleString(StringParser&); // at 0x00792ac0
-    bool HandleImage(StringParser&); //392d90
-    bool HandleSound(StringParser&); //392820
-    bool HandleFont(StringParser&); //392410
-    bool HandleColor(StringParser&); //3923d0
-    bool HandleBackground(StringParser&); //393020
+    virtual ~ResourceConfig();
 public:
-    ResourceConfig(); // at 0x00790740 (no arguments)
-    virtual bool HandleValueInstruction(ConfigParser*,const std::string&,StringParser&); // at 0x00793350
-    virtual bool PreParse(ConfigParser*);  // at 0x00793340
-    void SetAllowOverwrite(bool value) { this->mAllowOverwrite=value; } // inline setter (member at +0x54)
-    bool GetString(const std::string&,GUIString&); //3934c0
-    bool GetImage(const std::string&,Image*&); //393570
-    bool GetFont(const std::string&,Font*&); //3935d0
-    bool GetSound(const std::string&,Sound*&); //393630
-    bool GetColor(const std::string&,DWORD&); //3936a0
-    bool GetBackground(const std::string&,Background&); //393710
-    bool GetInt(const std::string&,int&); //393820
-    const GUIString& SafeGetString(const std::string&); // at 0x00793890 (the resource owns the string)
-    Image* SafeGetImage(const std::string&); // at 0x007938b0 (borrowed result)
-    Sound* SafeGetSound(const std::string&); // at 0x007938d0 (borrowed result)
-    void AddSound(const std::string&,Sound*); //3934a0
-    static void EnsureComma(StringParser&); //390f20
-    static void EnsureCloseParen(StringParser&); //391060
-    static int SafeReadColor(StringParser&); //3911a0
-    static int SafeReadFontStyle(StringParser&); //3916c0
-    static SmartPtr<Font> SafeReadFont(StringParser&); //391870
-    static SmartPtr<Sound> SafeReadSound(StringParser&); //391ab0
-    static SmartPtr<Image> SafeReadImage(StringParser&); //391ea0
-    static Background SafeReadBackground(StringParser&); //392050
+    ResourceConfig();
+    virtual bool HandleValueInstruction(ConfigParser*,const std::string&,StringParser&);
+    virtual bool PreParse(ConfigParser*); // the parse count
+    GUIString SafeGetString(const std::string&); // these three throw when the group lacks the key
+    Image* SafeGetImage(const std::string&); // borrowed
+    Sound* SafeGetSound(const std::string&); // borrowed
+    void AddSound(const std::string&,Sound*); // added or replaced
+    EeWonResCfg* mRes; // owned
 };
-// ResourceConfigTable (0x20 bytes), a RefCount (8 bytes): constructor 0x007938f0, destructor
-// 0x00793aa0; they, the parser and the factories are out of line.
 class ResourceConfigTable : public RefCount {
 public:
     typedef void (*GlueResourceFunc)(ResourceConfigTable*);
     typedef ComponentConfig* (*ComponentConfigFactory)();
     typedef Component* (*ComponentFactory)();
-    ResourceConfigTable(); // at 0x007938f0 (0x20 bytes)
-    ResourceConfig* AddConfig(const std::string&,bool* = NULL); // at 0x00793bb0; bool* output
-    ResourceConfig* SafeGetConfig(const std::string&); // at 0x00793e50; throws when missing
-    void ClearGlueResourceFuncs();
-    void ClearAllocators();
-    void ClearControlIds();
-    void ClearResources();
-    void ClearAll();
-    void RegisterGlueResourceFunc(GlueResourceFunc); //393f40
-    void SafeGlueResources(); // callback walk, at 0x00793fe0
-    void RegisterControlId(const std::string&,int); // at 0x007941d0
-    void AddAllocator(const std::string&,ComponentConfigFactory,ComponentFactory); //394040
-    bool GetControlId(const std::string&,int&); //3942f0
-    bool AllocateConfig(const std::string&,SmartPtr<ComponentConfig>&,SmartPtr<Component>&); //3941f0
+    ResourceConfigTable();
+    ResourceConfig* AddConfig(const std::string&,bool* = NULL); // made when missing; whether it existed
+    ResourceConfig* SafeGetConfig(const std::string&); // throws when missing
+    void RegisterGlueResourceFunc(GlueResourceFunc);
+    void SafeGlueResources(); // every glue function with the table, in address order
+    void RegisterControlId(const std::string&,int); // (the control ids and allocators are global)
+    void AddAllocator(const std::string&,ComponentConfigFactory,ComponentFactory); // the first one stays
+    EeWonResTable* mTable; // owned
 protected:
-    virtual ~ResourceConfigTable(); // slot 0; complete 0x00793aa0, deleting 0x007939c0
-    typedef std::map<std::string,SmartPtr<ResourceConfig>,StringLessNoCase> ResourceMap;
-    ResourceMap mResourceMap; // offsets 0x08..0x13 (owning VC6 map, 0x0c bytes)
-    typedef std::set<GlueResourceFunc> GlueResourceFuncSet;
-    GlueResourceFuncSet mGlueResourceFuncSet; // offsets 0x14..0x1f; class size 0x20
-    typedef std::map<std::string,int,StringLessNoCase> ControlIdMap;
-    static ControlIdMap mControlIdMap; // at 0x00966af8 (declaration only)
-    struct ConfigAllocator {
-        ComponentConfigFactory mConfigFactory;
-        ComponentFactory mComponentFactory;
-        ConfigAllocator(ComponentConfigFactory a,ComponentFactory b) : mConfigFactory(a),mComponentFactory(b) { }
-    };
-    typedef std::map<std::string,ConfigAllocator,StringLessNoCase> ConfigAllocatorMap;
-    static ConfigAllocatorMap mConfigAllocatorMap; // at 0x00966b08 (declaration only)
+    virtual ~ResourceConfigTable();
 };
 typedef SmartPtr<ResourceConfigTable> ResourceConfigTablePtr; // SDK type
 

@@ -97,6 +97,7 @@
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/comboobj.h"
+#include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/compmem.h"
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/ctobj.h"

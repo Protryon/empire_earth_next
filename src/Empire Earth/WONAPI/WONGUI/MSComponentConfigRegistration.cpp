@@ -35,56 +35,32 @@ Component* MSTabCtrlConfig::CompFactory() { return WONShellNew(EeWonShellKind::M
 // Creates a Windows-style scroll container
 Component* MSScrollContainerConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsScrollContainer); }
 
-// Creates the config for an etched frame group
-ComponentConfig* MSEtchedFrameGroupConfig::CfgFactory() { return new MSEtchedFrameGroupConfig; }
-// Creates the config for a scroll container
-ComponentConfig* MSScrollContainerConfig::CfgFactory() { return new MSScrollContainerConfig; }
-// Creates the config for a list header control
-ComponentConfig* MSHeaderControlConfig::CfgFactory() { return new MSHeaderControlConfig; }
-// Creates the config for a list control
-ComponentConfig* MSListCtrlConfig::CfgFactory() { return new MSListCtrlConfig; }
 
-// Creates the config for an input box
-ComponentConfig* MSInputBoxConfig::CfgFactory() { return new MSInputBoxConfig; }
-// Creates the config for a scrollbar
-ComponentConfig* MSScrollbarConfig::CfgFactory() { return new MSScrollbarConfig; }
-// Creates the config for an arrow button
-ComponentConfig* MSArrowButtonConfig::CfgFactory() { return new MSArrowButtonConfig; }
-// Creates the config for a close button
-ComponentConfig* MSCloseButtonConfig::CfgFactory() { return new MSCloseButtonConfig; }
-// Creates the config for a separator
-ComponentConfig* MSSeperatorConfig::CfgFactory() { return new MSSeperatorConfig; }
-// Creates the config for a dialog background
-ComponentConfig* MSDlgBackConfig::CfgFactory() { return new MSDlgBackConfig; }
-// Creates the config for a 3D frame
-ComponentConfig* MS3DFrameConfig::CfgFactory() { return new MS3DFrameConfig; }
-// Creates the config for an etched frame
-ComponentConfig* MSEtchedFrameConfig::CfgFactory() { return new MSEtchedFrameConfig; }
 
 // Registers every Windows-style control type (MSButton ... MSHeaderControl) by name with its config
 // and component factory
 void MSComponentConfig_Init(ResourceConfigTable *theTable)
 {
-	theTable->AddAllocator("MSButton",MSButtonConfig::CfgFactory,MSButtonConfig::ButtonFactory);
-	theTable->AddAllocator("MSCheckbox",MSButtonConfig::CfgFactory,MSButtonConfig::CheckboxFactory);
-	theTable->AddAllocator("MSRadioButton",MSButtonConfig::CfgFactory,MSButtonConfig::RadioFactory);
-	theTable->AddAllocator("MSLabel",MSButtonConfig::CfgFactory,MSButtonConfig::LabelFactory);
-	theTable->AddAllocator("MSInputBox",MSInputBoxConfig::CfgFactory,MSInputBoxConfig::CompFactory);
-	theTable->AddAllocator("MSComboBox",MSComboBoxConfig::CfgFactory,MSComboBoxConfig::CompFactory);
-	theTable->AddAllocator("MSArrowButton",MSArrowButtonConfig::CfgFactory,MSArrowButtonConfig::CompFactory);
-	theTable->AddAllocator("MSCloseButton",MSCloseButtonConfig::CfgFactory,MSCloseButtonConfig::CompFactory);
-	theTable->AddAllocator("MSTabButton",MSTabButtonConfig::CfgFactory,MSTabButtonConfig::CompFactory);
-	theTable->AddAllocator("MSHeaderButton",MSHeaderButtonConfig::CfgFactory,MSHeaderButtonConfig::CompFactory);
-	theTable->AddAllocator("MSScrollbar",MSScrollbarConfig::CfgFactory,MSScrollbarConfig::CompFactory);
-	theTable->AddAllocator("MSScrollContainer",MSScrollContainerConfig::CfgFactory,MSScrollContainerConfig::CompFactory);
-	theTable->AddAllocator("MSSeperator",MSSeperatorConfig::CfgFactory,MSSeperatorConfig::CompFactory);
-	theTable->AddAllocator("MS3DFrame",MS3DFrameConfig::CfgFactory,MS3DFrameConfig::CompFactory);
-	theTable->AddAllocator("MSEtchedFrame",MSEtchedFrameConfig::CfgFactory,MSEtchedFrameConfig::CompFactory);
-	theTable->AddAllocator("MSEtchedFrameGroup",MSEtchedFrameGroupConfig::CfgFactory,MSEtchedFrameGroupConfig::CompFactory);
-	theTable->AddAllocator("MSDlgBack",MSDlgBackConfig::CfgFactory,MSDlgBackConfig::CompFactory);
-	theTable->AddAllocator("MSTabCtrl",MSTabCtrlConfig::CfgFactory,MSTabCtrlConfig::CompFactory);
-	theTable->AddAllocator("MSListCtrl",MSListCtrlConfig::CfgFactory,MSListCtrlConfig::CompFactory);
-	theTable->AddAllocator("MSHeaderControl",MSHeaderControlConfig::CfgFactory,MSHeaderControlConfig::CompFactory);
+	theTable->AddAllocator("MSButton",NewConfigOf<MSButtonConfig>,MSButtonConfig::ButtonFactory);
+	theTable->AddAllocator("MSCheckbox",NewConfigOf<MSButtonConfig>,MSButtonConfig::CheckboxFactory);
+	theTable->AddAllocator("MSRadioButton",NewConfigOf<MSButtonConfig>,MSButtonConfig::RadioFactory);
+	theTable->AddAllocator("MSLabel",NewConfigOf<MSButtonConfig>,MSButtonConfig::LabelFactory);
+	theTable->AddAllocator("MSInputBox",NewConfigOf<MSInputBoxConfig>,MSInputBoxConfig::CompFactory);
+	theTable->AddAllocator("MSComboBox",NewConfigOf<MSComboBoxConfig>,MSComboBoxConfig::CompFactory);
+	theTable->AddAllocator("MSArrowButton",NewConfigOf<MSArrowButtonConfig>,MSArrowButtonConfig::CompFactory);
+	theTable->AddAllocator("MSCloseButton",NewConfigOf<MSCloseButtonConfig>,MSCloseButtonConfig::CompFactory);
+	theTable->AddAllocator("MSTabButton",NewConfigOf<MSTabButtonConfig>,MSTabButtonConfig::CompFactory);
+	theTable->AddAllocator("MSHeaderButton",NewConfigOf<MSHeaderButtonConfig>,MSHeaderButtonConfig::CompFactory);
+	theTable->AddAllocator("MSScrollbar",NewConfigOf<MSScrollbarConfig>,MSScrollbarConfig::CompFactory);
+	theTable->AddAllocator("MSScrollContainer",NewConfigOf<MSScrollContainerConfig>,MSScrollContainerConfig::CompFactory);
+	theTable->AddAllocator("MSSeperator",NewConfigOf<MSSeperatorConfig>,MSSeperatorConfig::CompFactory);
+	theTable->AddAllocator("MS3DFrame",NewConfigOf<MS3DFrameConfig>,MS3DFrameConfig::CompFactory);
+	theTable->AddAllocator("MSEtchedFrame",NewConfigOf<MSEtchedFrameConfig>,MSEtchedFrameConfig::CompFactory);
+	theTable->AddAllocator("MSEtchedFrameGroup",NewConfigOf<MSEtchedFrameGroupConfig>,MSEtchedFrameGroupConfig::CompFactory);
+	theTable->AddAllocator("MSDlgBack",NewConfigOf<MSDlgBackConfig>,MSDlgBackConfig::CompFactory);
+	theTable->AddAllocator("MSTabCtrl",NewConfigOf<MSTabCtrlConfig>,MSTabCtrlConfig::CompFactory);
+	theTable->AddAllocator("MSListCtrl",NewConfigOf<MSListCtrlConfig>,MSListCtrlConfig::CompFactory);
+	theTable->AddAllocator("MSHeaderControl",NewConfigOf<MSHeaderControlConfig>,MSHeaderControlConfig::CompFactory);
 }
 
 }
@@ -119,8 +95,6 @@ Component* MSEtchedFrameGroupConfig::CompFactory() { return WONShellNew(EeWonShe
 }
 
 namespace WONAPI {
-// Creates the config for a Windows-style button, check box, radio button or label
-ComponentConfig* MSButtonConfig::CfgFactory() { return new MSButtonConfig; }
 // Creates a Windows-style check box
 Component* MSButtonConfig::CheckboxFactory() { return WONShellNew(EeWonShellKind::MsCheckbox); }
 }

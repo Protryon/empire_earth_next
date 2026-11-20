@@ -18,7 +18,7 @@ namespace WONAPI {
 bool MSEtchedFrameGroupConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
     if(name=="LABEL") {
-        config=LabelConfig::CfgFactory();
+        config=NewConfigOf<LabelConfig>();
         component=(Component*)WONShell::Op(this->mFrame,EeWonShellOp::GetLabel);
     } else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;

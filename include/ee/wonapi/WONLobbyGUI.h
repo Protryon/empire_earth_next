@@ -21,6 +21,7 @@
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/comboobj.h"
+#include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/ctobj.h"
 #include "rust/won_gui/dialogobj.h"
@@ -1030,81 +1031,67 @@ struct LobbyNetAddress {
     long mHandle;                           // +0x10, numeric IPv4 adapter address
 };
 // ConfigObject (0x54 bytes) is declared in WONConfigObject.h via Resource.
-// 0x78-byte base, constructor and destructor out of line; the private 0x24-byte tail is opaque.
+// A component's config. Since R6 WONLobby round 25 its readers, resource look-ups, map of named child configs, current
+// resource group, the parsers an instruction reads and its instructions are ee_won_gui's compcfg.rs object (mCfg);
+// these are the forwards (include/ee/wonapi/WONCompCfg.inl, compiled by ComponentConfigHost.cpp). The class keeps its
+// vtable, the component, the three flags the table programs set and the error text.
 class ComponentConfig : public ConfigObject {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
-    void InitComponents(); //382cc0 recursive guarded component initialization
-    Direction ReadDirection(); //3856f0
-    HorzAlign ReadHorzAlign(); //385950
-    VertAlign ReadVertAlign(); //385b10
+    void InitComponents(); // once, then every child config in name order
+    Direction ReadDirection();
+    HorzAlign ReadHorzAlign();
+    VertAlign ReadVertAlign();
     static void SetResourceFolder(const std::string&);
-    static std::string mResourceFolder;
-    SmartPtr<Sound> ReadSound(); // 0x3855f0 (the caller owns the result)
-    void EnsureComma(); //382e00; SkipComma is382dd0
-    int GetIntValue();
-    int ParseExpression(int); //383560
-    int ReadChar(); //383930
-    GUIString ReadFlag(bool* = NULL); //383a90
-    GUIString ReadRawString(bool); //383b00
+    SmartPtr<Sound> ReadSound();
+    void EnsureComma();
+    int ReadChar();
+    GUIString ReadFlag(bool* = NULL);
+    GUIString ReadRawString(bool);
     SmartPtr<Font> ReadFont();
-    SmartPtr<Image> ReadImage(bool); // 0x384fa0 (hidden result)
+    SmartPtr<Image> ReadImage(bool);
     SelectionColor ReadSelectionColor();
-    ComponentConfig* GetComponentConfig(const GUIString&,bool);
-    ComponentConfig* ReadComponentConfig(); // 0x3868d0: config lookup
-    bool HandleMapComponent(); // 0x386960 (0x386950 is a separate 9-byte wrapper)
-    bool HandleModifyGroup(ConfigParser&);
-    bool HandleResourceGroup(ConfigParser&);
+    bool HandleMapComponent();
     bool HandleModify();
-    bool BaseHandleInstruction(ConfigParser&,const std::string&,StringParser&); // 0x387370 (forwarder)
     void SetDesiredSizeIfNecessary();
-    SmartPtr<Cursor> ReadCursor(); // 0x385380 (hidden result)
-    int GetIntResource(const std::string&); //384210
-    static SmartPtr<ResourceConfigTable> mResourceConfigTable; // 0x566b28 (declaration only)
+    SmartPtr<Cursor> ReadCursor();
+    static SmartPtr<ResourceConfigTable> mResourceConfigTable; // the table a parse reads (ReadConfig_Unsafe sets it)
     SmartPtr<RawImage> ReadRawImage();
-    SmartPtr<Image> GetImageFromStr(const std::string&,bool); //384890
     SmartPtr<RawImage> GetRawImageFromStr(const std::string&);
-    StandardCursor ReadStandardCursor(); //385120
-    void AddChildToConfigMap(const GUIString&,ComponentConfig*); // 0x386c30; the parent keeps the child
-    GUIString GetStringResource(const std::string&); //383bd0
-    Image* GetImageResource(const std::string&); //383d60 borrowed
-    Font* GetFontResource(const std::string&); //383e50 borrowed
-    SmartPtr<Sound> GetSoundResource(const std::string&); //383f40 owned result
-    DWORD GetColorResource(const std::string&); //384050
-    void GetBackgroundResource(const std::string&,Background&); //384140
-    Background ReadBackground(); // 0x385ea0, returns a Background (0x14 bytes) by value
-    int ReadInt(); // 0x3837e0, no arguments
+    StandardCursor ReadStandardCursor();
+    void AddChildToConfigMap(const GUIString&,ComponentConfig*,bool inAlways=false); // an empty name only inAlways
+    Background ReadBackground();
+    int ReadInt();
     Component* ReadComponent();
-    bool EndOfString(); //382db0
-    void SkipComma(); //382e00
-    static std::string GetResourceFile(const std::string&); //387e50
+    bool EndOfString();
+    static std::string GetResourceFile(const std::string&);
 
     ComponentConfig();
-    virtual ~ComponentConfig();            // 0x382690, own VT451f54
+    virtual ~ComponentConfig();
     virtual bool HandleInstruction(ConfigParser*, const std::string&);
     virtual bool HandleValueInstruction(ConfigParser*, const std::string&, StringParser&);
     virtual bool PreParse(ConfigParser*);
     virtual bool PostParse(ConfigParser*);
     virtual bool Virtual24(const std::string&);
-    virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&);
+    virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&) { return false; }
     virtual bool GetNamedValue(const std::string&, int&);
     virtual bool CallNamedFunction(const std::string&, const std::vector<int>&, int&);
     virtual void SetComponent(Component*);
-    GUIString ReadString(bool);             // ReadString
-    int ReadColor();                       // ReadColor
-    Component* Fn386860(const std::string& inName); // 0x386860, borrowed component lookup
-    bool ReadBool();                       // 0x3837f0, boolean parser
+    GUIString ReadString(bool);
+    int ReadColor();
+    Component* Fn386860(const std::string& inName); // the named child config's component, borrowed
+    bool ReadBool();
     bool RunTable(int,const std::string&); // the table reader (ee_won cfgtab.rs, WONCfgTable.inl); false: not its key
-    SmartPtr<Component> mComponent; // at +0x54 (set at 0x3825dc)
-    ConfigParser* mConfigParser; //58, borrowed
-    StringParser* mStringParser; // at +0x5c
-    GUIString mConfigError; // at +0x60 (set at 0x3825ff)
-    bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents; // at +0x64/+0x65/+0x66; +0x67 padding
-    std::map<std::string,SmartPtr<ComponentConfig>,StringLessNoCase> mConfigMap; // at +0x68..0x73
-    SmartPtr<ResourceConfig> mCurResourceConfig; // at +0x74
+    SmartPtr<Component> mComponent;
+    GUIString mConfigError;
+    bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents;
+    EeWonCompCfg* mCfg; // owned
 };
+// a config or a component of a type for the resource table's allocators (the original's one-line CfgFactory and
+// CompFactory statics, one template each since R6 WONLobby round 25)
+template<class C> ComponentConfig* NewConfigOf() { return new C; }
+template<class T> Component* NewComponentOf() { return new T; }
+inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
 // FontConfig is declared after FontDescriptor below.
 class FontConfig;
@@ -1163,9 +1150,6 @@ public:
 
 class ContainerConfig : public ComponentConfig {
 public:
-    static Component* LayoutPointFactory();
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     bool HandleLayout(bool chain=false,bool repeat=false);
     bool HandleNoOverlapLayout();
     bool HandleNewLayoutPoint();
@@ -1183,8 +1167,6 @@ public:
 
 class DialogConfig : public ContainerConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     virtual bool Virtual24(const std::string&); //389f80
     virtual void SetComponent(Component*);  //38f960
     Dialog* mDialog;                        // +98, borrowed
@@ -1868,8 +1850,6 @@ inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall:
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
 class FontConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     FontConfig();
     Font* GetFont(); // 0x38a300; recalculates the font on demand
     void SetFont(Font*); //38a3e0

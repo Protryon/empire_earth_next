@@ -50,26 +50,16 @@ namespace WONAPI {
 // Registers the "Font" config type with the resource config table
 void FontConfig_Init(ResourceConfigTable* table)
 {
-    table->AddAllocator("Font",FontConfig::CfgFactory,FontConfig::CompFactory);
+    table->AddAllocator("Font",NewConfigOf<FontConfig>,NoComponent);
 }
 }
 
 namespace WONAPI {
 
-// Font configs create no component (the linker folds this body into the identical one at 0x006c7b10)
-Component* FontConfig::CompFactory()
-{
-    return NULL;
-}
 
 }
 
 namespace WONAPI {
-// Creates a new font config
-ComponentConfig* FontConfig::CfgFactory()
-{
-    return new FontConfig;
-}
 // Creates a font config that needs its font looked up
 FontConfig::FontConfig()
 {
