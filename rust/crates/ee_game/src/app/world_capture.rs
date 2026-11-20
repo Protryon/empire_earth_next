@@ -42,9 +42,7 @@ pub unsafe extern "C" fn ee_app_capture_slope(kind: u32, location: *const GeTran
     let mut r = Payload::default();
     r.u32(kind);
     // SAFETY: the caller's live transformation, read as its bytes
-    let bytes = unsafe {
-        std::slice::from_raw_parts(location.cast::<u8>(), std::mem::size_of::<GeTransformation>())
-    };
+    let bytes = unsafe { std::slice::from_raw_parts(location.cast::<u8>(), std::mem::size_of::<GeTransformation>()) };
     r.0.extend_from_slice(bytes);
     r.f32(result);
     capture::commit(tag(b"MAPP"), &r.0);
@@ -82,7 +80,14 @@ pub unsafe extern "C" fn ee_app_capture_minimap_pixels(
 }
 
 /// One cell of the snapshot: its count with its pixel, then (when it has dots) its index's marker and the dots.
-fn snapshot_cell(r: &mut Payload, i: u32, count: u16, pixel: u16, dots: &[EeAppMiniMapDot], units: &[EeAppMiniMapUnitDot]) {
+fn snapshot_cell(
+    r: &mut Payload,
+    i: u32,
+    count: u16,
+    pixel: u16,
+    dots: &[EeAppMiniMapDot],
+    units: &[EeAppMiniMapUnitDot],
+) {
     r.u32(count as u32 | (pixel as u32) << 16);
     if dots.is_empty() && units.is_empty() {
         return;
@@ -113,7 +118,9 @@ pub unsafe extern "C" fn ee_app_capture_minimap_snapshot(map: *const EeAppMiniMa
         let (mut dots, mut units) = (std::ptr::null(), std::ptr::null());
         let (mut dot_count, mut unit_count): (c_long, c_long) = (0, 0);
         // SAFETY: a live mini map, an index below 4096, live outputs
-        unsafe { ee_app_minimap_cell(map, i as c_long, &mut count, &mut dots, &mut dot_count, &mut units, &mut unit_count) };
+        unsafe {
+            ee_app_minimap_cell(map, i as c_long, &mut count, &mut dots, &mut dot_count, &mut units, &mut unit_count)
+        };
         let pixel = if pixels.is_null() {
             0
         } else {

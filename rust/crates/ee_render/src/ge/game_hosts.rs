@@ -21,10 +21,12 @@ extern "C" {
 
 // the tests construct over their own hosts: these two stand in for the game's (never called)
 #[cfg(test)]
+#[allow(non_snake_case)]
 unsafe extern "C" fn GEVertexHost(_: *mut c_void, _: EeGeBmpOp, _: *mut c_void, _: isize, _: isize) -> isize {
     unreachable!("the game's vertex host in a test")
 }
 #[cfg(test)]
+#[allow(non_snake_case)]
 unsafe extern "C" fn GEObjectHost(_: *mut c_void, _: EeGeObjOp, _: *mut c_void, _: isize, _: isize) -> isize {
     unreachable!("the game's object host in a test")
 }
@@ -124,13 +126,13 @@ mod tests {
     #[test]
     fn the_game_constructors_exist() {
         let f: [usize; 7] = [
-            super::ee_ge_game_bmp_new as usize,
-            super::ee_ge_game_prim_new as usize,
-            super::ee_ge_game_prim_new_line as usize,
-            super::ee_ge_game_prim_new_point as usize,
-            super::ee_ge_game_text_new as usize,
-            super::ee_ge_game_mat_new as usize,
-            super::ee_ge_game_font_new as usize,
+            super::ee_ge_game_bmp_new as *const () as usize,
+            super::ee_ge_game_prim_new as *const () as usize,
+            super::ee_ge_game_prim_new_line as *const () as usize,
+            super::ee_ge_game_prim_new_point as *const () as usize,
+            super::ee_ge_game_text_new as *const () as usize,
+            super::ee_ge_game_mat_new as *const () as usize,
+            super::ee_ge_game_font_new as *const () as usize,
         ];
         assert!(f.iter().all(|p| *p != 0));
     }

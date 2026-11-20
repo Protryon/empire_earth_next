@@ -606,7 +606,9 @@ mod tests {
     #[test]
     fn the_civ_manager_head() {
         // whatever tables the tests loaded: the head starts with the category count, and each category's known
-        // flag; it always ends with the 0x23 powers' records (a flag and 152 bytes each)
+        // flag; it always ends with the 0x23 powers' records (a flag and 152 bytes each); under civ_tests.rs's lock (they
+        // load and clear the tables)
+        let _g = crate::tech::civ_tests::locked();
         let r = civ_manager_bytes();
         assert_eq!(words(&r.0[..4])[0] as u32, ee_tech_civ_category_count());
         assert!(r.0.len() >= 4 + 0x51 * 20 + 4 + 0x23 * (4 + std::mem::size_of::<EeTechCivPower>()));

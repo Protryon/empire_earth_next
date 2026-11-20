@@ -6,14 +6,13 @@
 //! class's media), sleeping a millisecond after each effect while loading, then tells the player the node's media are
 //! loaded (unloaded). The objects are C++ behind two host operations: the effect's kind and media id, and one media
 //! call on the player's behalf.
+#![allow(clippy::unnecessary_cast)] // c_long is 32 bits on Windows, 64 on LP64
 
 use std::ffi::c_void;
 
 use ee_base::util::strings::resource_string;
 
-use crate::tech::nodes::{
-    EeTechHostIo, EeTechNodeRef, TechHost, EE_TECH_HOST_EFFECT_COUNT,
-};
+use crate::tech::nodes::{EeTechHostIo, EeTechNodeRef, TechHost, EE_TECH_HOST_EFFECT_COUNT};
 
 /// Effect `v[0]` of the researched event of `node` -> `v[0]` its kind, `v[1]` the media id it uses (by kind: the
 /// button, the area effect template, the media item, the new unit class, else the sound), `v[2]` 1 when its attribute
@@ -213,7 +212,8 @@ mod tests {
     #[test]
     fn the_media_walk() {
         let mut node = crate::tech::nodes::node_fields_new();
-        let mut data = EeTechNodeDataFields { mID: 1074, mMakesUnit: true, mUnitClass: 9, mKind: 7, ..Default::default() };
+        let mut data =
+            EeTechNodeDataFields { mID: 1074, mMakesUnit: true, mUnitClass: 9, mKind: 7, ..Default::default() };
         let n = EeTechNodeRef { obj: std::ptr::null_mut(), node: &mut node, data: &mut data };
         let effects = vec![[1, 40, 0], [2, 3, 0], [2, 4, 1], [6, 5, 0], [0x11, 6, 0], [0x13, 7, 0], [9, 8, 0]];
         let mut h = Host { effects, nodes: vec![n], log: Vec::new() };

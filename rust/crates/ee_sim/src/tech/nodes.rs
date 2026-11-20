@@ -1416,7 +1416,9 @@ struct FfiHost {
 
 impl TechHost for FfiHost {
     fn call(&mut self, op: i32, io: &mut EeTechHostIo) -> i32 {
-        use crate::tech::capture_rec::{ee_tech_capture_epoch_step, ee_tech_capture_walk_begin, ee_tech_capture_walk_step};
+        use crate::tech::capture_rec::{
+            ee_tech_capture_epoch_step, ee_tech_capture_walk_begin, ee_tech_capture_walk_step,
+        };
         use crate::tech::nodes_capture as cap;
         let t = self.t;
         let v = io.v;

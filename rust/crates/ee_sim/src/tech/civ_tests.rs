@@ -10,7 +10,7 @@ use std::sync::Mutex;
 /// The tables are the process's one instance: the tests that use them run one at a time.
 static LOCK: Mutex<()> = Mutex::new(());
 
-fn locked() -> std::sync::MutexGuard<'static, ()> {
+pub(crate) fn locked() -> std::sync::MutexGuard<'static, ()> {
     let g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     *tables_mut() = CivTables::default();
     g

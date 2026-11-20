@@ -198,10 +198,14 @@ pub fn research_to_epoch_record<H: TechHost + ?Sized>(h: &mut H, t: Tree, epoch:
     }
     let epochs = h.epochs();
     // SAFETY: a null buffer asks the size; then a buffer of that size
-    let size = unsafe { capture_rec::ee_tech_capture_research_to_epoch(epoch as c_long, epochs as c_long, local, std::ptr::null_mut()) };
+    let size = unsafe {
+        capture_rec::ee_tech_capture_research_to_epoch(epoch as c_long, epochs as c_long, local, std::ptr::null_mut())
+    };
     let mut r = Bytes(vec![0u8; size as usize]);
     // SAFETY: as above
-    unsafe { capture_rec::ee_tech_capture_research_to_epoch(epoch as c_long, epochs as c_long, local, r.0.as_mut_ptr()) };
+    unsafe {
+        capture_rec::ee_tech_capture_research_to_epoch(epoch as c_long, epochs as c_long, local, r.0.as_mut_ptr())
+    };
     tree_state(&mut r, t, player_index(h));
     for i in 0..epochs {
         let e = h.epoch(i);
@@ -258,7 +262,8 @@ pub fn walk<H: TechHost + ?Sized>(h: &mut H, t: Tree, io: &EeTechHostIo) {
     // SAFETY: live records or null
     let (tree, node) = unsafe {
         let tree = if with_tree != 0 { t.0.as_ref() } else { None };
-        let node = if io.node.obj.is_null() { None } else { Some((&*io.node.node, io.node.data.as_ref(), t.0.as_ref())) };
+        let node =
+            if io.node.obj.is_null() { None } else { Some((&*io.node.node, io.node.data.as_ref(), t.0.as_ref())) };
         (tree, node)
     };
     walk_record(kind, player, count, tree, node, a, b, result);
