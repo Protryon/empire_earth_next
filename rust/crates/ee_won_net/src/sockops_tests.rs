@@ -359,3 +359,64 @@ impl AsPtr for Obj {
         self as *const Obj as usize
     }
 }
+
+/// The kinds (R6 WONLobby round 28): each original constructor's wait flags and members, the class back as its
+/// kind, the queued close's `Continue` without a socket, `CloseOp`'s closing its socket, and no duplicate for a
+/// class that had none.
+#[test]
+fn kinds_are_the_original_constructors() {
+    let _guard = LOCK.lock().unwrap();
+    type K = EeWonCoreSocketOp;
+    let data = obj(b"abc") as *const Obj as usize;
+    let to = local(9);
+    // (kind, waits for read, write, connect)
+    let cases = [
+        (K::Close, [false, false, false]),
+        (K::QueueClose, [false, false, false]),
+        (K::RecvFrom, [true, false, false]),
+        (K::SendTo, [false, true, false]),
+        (K::RecvMsg, [true, false, false]),
+        (K::SendMsg, [false, true, false]),
+        (K::Connect, [false, true, true]),
+        (K::SendBytes, [false, true, false]),
+        (K::RecvBytes, [true, false, false]),
+        (K::RecvCrMsg, [true, false, false]),
+        (K::Accept, [true, false, false]),
+    ];
+    for (kind, waits) in cases {
+        let o = new_op(0);
+        assert_eq!(o.class_kind(), -1);
+        o.init_kind(kind, data, Some(&to), 77);
+        assert_eq!(o.class_kind(), kind as i32, "{kind:?}");
+        assert_eq!([o.wait_for_event(0), o.wait_for_event(1), o.wait_for_event(2)], waits, "{kind:?}");
+        match kind {
+            K::RecvFrom => assert_eq!(o.length(), 77),
+            K::RecvBytes => assert_eq!(o.length(), 77),
+            K::Connect => assert_eq!(o.address(), to),
+            _ => {}
+        }
+        // the bytes' reference is held by the send kinds only
+        let held = matches!(kind, K::SendTo | K::SendMsg | K::SendBytes);
+        assert_eq!(refs(data), held as i32, "{kind:?}");
+        // no C++ table here: the duplicate's new op is not made
+        assert!(o.duplicate().is_null());
+        drop(o);
+        assert_eq!(refs(data), 0, "{kind:?}");
+    }
+    // the queued close succeeds with no socket; any other kind without one is InvalidSocket
+    let q = new_op(0);
+    q.init_kind(K::QueueClose, 0, None, 0);
+    assert_eq!(q.op_continue(blocking(0)), WS_SUCCESS);
+    let c = new_op(0);
+    c.init_kind(K::Close, 0, None, 0);
+    assert_eq!(c.op_continue(blocking(0)), WS_ASYNC_SOCKET_INVALID_SOCKET);
+    // CloseOp's Continue closes its socket
+    sk::start();
+    let s = new_socket(KIND_DATAGRAM);
+    assert_eq!(sock(s).open(), WS_SUCCESS);
+    assert!(sock(s).is_open());
+    let c = new_op(s);
+    c.init_kind(K::Close, 0, None, 0);
+    assert_eq!(c.op_start(blocking(0)), WS_SUCCESS);
+    assert!(!sock(s).is_open());
+}

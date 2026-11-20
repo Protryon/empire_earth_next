@@ -75,6 +75,12 @@ static std::string TypeName(const void* inObject, const std::type_info& inType)
     size_t aSpace = s.rfind(' ');
     return aSpace == std::string::npos ? s : s.substr(aSpace + 1);
 }
+// an op of a socket op kind by the original class's name (the kinds are one C++ class since WONLobby round 28)
+static std::string TypeName(const AsyncOp* inObject, const std::type_info& inType)
+{
+    const char* aKind = WonSocketOpClass(inObject);
+    return aKind != NULL ? std::string(aKind) : TypeName(static_cast<const void*>(inObject), inType);
+}
 // a routing op's class name: the original's op classes by type (the ops are one RoutingOp over a Rust op since net
 // round 18; the golden keeps the names it recorded)
 static std::string RouteName(RoutingOp* inOp)
@@ -196,7 +202,7 @@ public:
         AsyncOp* anOp = inOp.get();
         Log(this->mName + " completed " + TypeName(anOp, typeid(*anOp)) + " " + St(anOp->GetStatus()) + " killed "
             + N(anOp->IsKilled()));
-        RecvMsgOp* aMsg = dynamic_cast<RecvMsgOp*>(anOp);
+        SocketOp* aMsg = WonSocketOpIs(anOp, WonOpKind::RecvMsg) ? static_cast<SocketOp*>(anOp) : NULL;
         if (aMsg != NULL && aMsg->GetStatus() == WS_Success)
             Log(this->mName + " message " + Hex(aMsg->GetMsg()));
     }
