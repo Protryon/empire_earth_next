@@ -121,7 +121,7 @@ public:
     void PopBack() { this->GoalOp(3, 0, NULL); }                         // the last goal removed and deleted
     void PopFront() { this->GoalOp(4, 0, NULL); }                        // the first goal removed and deleted
     EEUnitGoal* GetFront() { return this->mGoals.front(); }             // 0x1f8a26 (EEUICUnitIconBar 0x25ad15)
-    EEUnitGoal* GetGoalAt(unsigned long inIndex) { return this->mGoals[inIndex]; }   // 0x10815e
+    EEUnitGoal* GetGoalAt(unsigned long inIndex) { return this->mGoals[inIndex]; }
     // the goals (kind, then data) and the timer from and to the saved game; the first error (EEGoalQueueContainer.cpp)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);

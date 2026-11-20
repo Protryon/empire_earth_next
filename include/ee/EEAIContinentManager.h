@@ -129,7 +129,7 @@ public:
         { return (EEAIArea*)(uintptr_t)ee_astar_cmq_random_area(&this->mRecord, true, inKind, (uint64_t)(uintptr_t)&inRandom, 0); }
     // inline twin of GetContinentByID: its undone COMDAT folds with 0x26fdd; at a low share its const operator[] goes out of line
     EEAIContinent* GetContinentFromID(unsigned short inID) const { return this->GetContinents()[inID]; }
-    EEAIContinent* GetContinentByID(unsigned short inID) const { return this->GetContinents()[inID]; }   // 0x26fdd
+    EEAIContinent* GetContinentByID(unsigned short inID) const { return this->GetContinents()[inID]; }
     // inline (EEAIPathSector::GetPathAreaAt 0x2bd4d: the value load, then the const operator[]'s dead lea) (provisional
     // name)
     // name
@@ -248,8 +248,8 @@ public:
     void RemoveForestTile(EEUnit* inUnit) { ee_astar_cmq_remove_forest_tile(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
     void UpdateWallUnit(EEComplexUnit* inUnit, bool inNow);
     // inline (COMDATs in this unit's range; defined inline in EEAIContinentManager.cpp)
-    bool IsShoreTile(long inX, long inY) const { return ee_astar_cm_is_shore(&this->mRecord, inX, inY); }   // 0x26fed
-    EEAIPathSector* GetPathSectorByID(unsigned short inID) const { return this->GetPathSectors()[inID]; }   // 0x273b9
+    bool IsShoreTile(long inX, long inY) const { return ee_astar_cm_is_shore(&this->mRecord, inX, inY); }
+    EEAIPathSector* GetPathSectorByID(unsigned short inID) const { return this->GetPathSectors()[inID]; }
 
     // New (port): the members are Rust's (ee_sim::astar cm.rs, EeAStarCmRecord): the counters, the sector grid (was
     // EEAIPathSectorRegionInformation, +0xdc) and the grids' pointers are the record, its scalars at fixed addresses
