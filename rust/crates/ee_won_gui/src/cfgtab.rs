@@ -103,6 +103,8 @@ pub struct EeWonCfgTabHost {
     pub clear: extern "C" fn(ctx: *mut c_void),
     /// The frame's int `slot` (a value a read or a setter put there).
     pub peek: extern "C" fn(ctx: *mut c_void, slot: i32) -> i32,
+    /// A value of the frame for the setters made in Rust (cfgset.rs): an int, a count or an object's address.
+    pub arg: extern "C" fn(ctx: *mut c_void, what: crate::cfgset::EeWonCfgArg, slot: i32) -> isize,
 }
 
 /// What a name read does with a name its table does not hold.
@@ -701,7 +703,8 @@ impl CfgHost for Ffi<'_> {
         (self.0.push)(self.0.ctx, v)
     }
     fn apply(&mut self, setter: i32) -> bool {
-        (self.0.apply)(self.0.ctx, setter)
+        // a setter that calls a widget's Rust object is made here (cfgset.rs); the rest are the host's
+        crate::cfgset::apply(self.0, setter) || (self.0.apply)(self.0.ctx, setter)
     }
     fn fail(&mut self, msg: &[u8], slot: i32) {
         (self.0.fail)(self.0.ctx, msg.as_ptr(), msg.len(), slot)
@@ -750,6 +753,16 @@ pub unsafe extern "C" fn ee_won_cfg_tab_run(
     } else {
         1
     }
+}
+
+/// cfgset.rs's `apply` for the drivers: whether the setter is one of these (made, or traced when a hook is installed).
+///
+/// # Safety
+/// `host` is valid and its `arg` answers the setter's values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_cfg_set_apply(host: *const EeWonCfgTabHost, setter: i32) -> bool {
+    // SAFETY: the contract
+    crate::cfgset::apply(unsafe { &*host }, setter)
 }
 
 /// Whether `table` is one of the reader's handlers, for the drivers.
