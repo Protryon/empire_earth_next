@@ -35399,3 +35399,54 @@ setters, the next pieces, were not started, below).
   font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
 - The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
 - Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
+## The groups lane, round 1: EEGroup and its kinds as Rust objects; EEPlayer's group, selection and RefreshUpgrades bodies and EEUnitClassUpgrade's media in Rust (ee_sim units group_obj.rs, group_host.rs, selection.rs, upgrade_media.rs; branch rust-groups1, 2026-11-20)
+
+A new lane carved out of the Units and Game core lanes for one round. Numbers: docs/progress/groups.md. Net -2,121 C++
+lines (src and include, the generated include/rust aside: 2,585 deleted, 464 added, nearly all of the added lines
+one-statement shims, one-call forwarders and comments); the target was 3,000.
+
+- **A C++ class can name a Rust allocation.** `EEGroup` is `class EEGroup : public EeUnitsGroup` with no data, a
+  deleted constructor and destructor and every member one inline call; `EESavedGroup`, `EESelectedGroup` and
+  `EEActiveGroup` derive from it with no data either, so a `static_cast` between them is the identity and every
+  `EEGroup*` in the game (the players' vectors, a unit's `mActiveGroup`, the hot-key array) holds the Rust object's
+  address. The cbindgen'd head `EeUnitsGroup` carries what the C++ reads in place (the player, the formation, the
+  kind flags, a selection's saved group and change time, an active group's goal and its `mFields` record); the
+  allocation is `#[repr(C)] struct Alloc { head, data }`, the rest (Vecs, BTreeMaps) Rust's only. `New` replaces
+  `new`; the last `Dereference` destroys it with its kind's destructor first.
+- **Virtual calls inside a body stay the kind's.** The original's base bodies call virtuals (`EEGroup::RepairPointers`
+  and `CopyUnits` call `this->Add`, `this->Clear`); the Rust bodies dispatch on `mGroupKind` at the same places.
+  One consequence kept on purpose: a selection's `RepairPointers` adds its units through `AddIfAbsent`, which forgets
+  the saved group, so a repaired selection with units always ends with `mGroups[0]` as its saved group.
+- **Iterate a map that the callee may change by key, not by iterator.** `MoveAlongFoundPaths` erases a request and
+  then calls `MoveAlong` (C++ units): the Rust loop takes the next key above the last one each time, which visits
+  exactly what the original's `it = erase(it)` visited.
+- **`std::sort` stays MSVC's.** Both sorters (EESGUnitSorter, EEAGIncreasingVelocityUnitSorter) have ties (units of
+  one class and health, equal speeds); `units::msvc_sort` reproduces the order. The keys are read once per unit
+  before the sort (the comparisons only read).
+- **One host for many C++ objects.** `ee_units_group_host` (EEGroup.cpp) is ~60 one-statement cases: the units'
+  and formations' and paths' reference counts, `EEFormation::Create`/`Place`, the path and continent managers, the
+  interface's posts, the map's outlines, the saved path requests, `EEAwaitAutoPathRequest`/`EEAfterLoad` (each a
+  lambda calling one Rust entry point), the selection's sounds and doppelgangers, RefreshUpgrades' setters.
+  Everything a body only reads (a unit's hit points, class, stats, tile; the current player; the player's units)
+  comes from the world views.
+- **cbindgen sees `extern` blocks**: declaring a Rust `#[no_mangle]` function of another module in an `extern "C"`
+  block duplicated it in the header ("declared twice"); call it by its Rust path (`pub(crate) mod game`).
+- **`improper_ctypes`**: a `*mut RustStruct` in a `#[repr(C)]` record passed to an `extern` C function is refused;
+  the list pointer is a `*mut c_void`.
+- **header_consts' check** reads a const named like `GOAL_UNLOAD` as `kGoalUnload`; name the copy after the C++
+  constant (`GOAL_UNLOAD_TRANSPORT`).
+- **Media under two locks from Rust.** EEUnitClassUpgrade's media bodies run on the loading threads: Rust reads the
+  C++ busy flags with `read_volatile`/`write_volatile` through the member's address, the eight media members as one
+  pointer array (static_asserts of their contiguity), the counts in the record; the locks and `PlatSleep(1)` are host
+  cases. Only a game with media exercises it (EE-SIM loads none).
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Where the original read out of bounds
+  or dereferenced an end iterator, the Rust answers nothing: a saved-group index past the 20 slots on a repair gives
+  none, `GetContinent` of an empty selection 0, a removed unit whose type has no count changes no count. A duplicate
+  path request id is still dropped and its request never released, as `std::map::insert` did.
+- **Only the tours exercise**: the selection members' sounds and the HUD's group reads (GroupView over the objects),
+  the area outlines of a selected building, the media loads and unloads, the hot-key buttons' posts.
+- **Call-site edits outside the lane** (each a line or two): EEARust.cpp (GetFirstUnit's definition gone),
+  EEMessage.cpp (GetSavedGroup, GetFormation), EETestFixture.cpp (the active group's units by GetUnit),
+  EESMEffect.cpp and EEActiveGroupSweep.cpp (`New`, `mFields.mAction`), EEComplexUnit.cpp (RefreshPath by
+  GetUnitPath; an out-of-synch line's `mFields.mAction`), EEUGRustCombat.cpp (an include), EEUnitHost.cpp (21 group
+  functions deleted), the HUD's test (hud_views_tests.rs: a real group), pick_sweep.rs (`pub(crate) mod game`).
