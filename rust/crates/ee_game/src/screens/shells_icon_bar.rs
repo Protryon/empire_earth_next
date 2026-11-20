@@ -139,7 +139,7 @@ pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
     match kind {
         #[cfg(not(test))]
         EE_SCREENS_SK_ICON_BAR => Some(Box::new(IconBarKind::new(Ffi))),
-        _ => crate::screens::shells_files::make(kind, args),
+        _ => crate::screens::shells_chat::make(kind, args),
     }
 }
 

@@ -1,5 +1,6 @@
 // New (port): the base of the game's own controls whose logic is Rust (R6 game screens round 29; ee_screens
-// hud_ctl.rs): EEUICPing, EEUICChatLine, EEUICSelectUnits, EEUICCommandUnits. Each keeps its own members as a Rust
+// hud_ctl.rs): EEUICPing, EEUICSelectUnits, EEUICCommandUnits (and
+// the control shell, ee/EEUIShell.h: the chat line's and the icon bar's kinds). Each keeps its own members as a Rust
 // record (its protected base, EeScreens*Fields: the members under their C++ names) and the C++ objects it owns
 // as members; its methods forward to ee_screens. The one host, ee_screenscpp_hud_ctl, answers any control's ops
 // (HostOp: the toolkit's virtuals and base members, the mouse, the keyboard, the game view) and passes the others to
