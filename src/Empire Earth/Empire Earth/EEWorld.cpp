@@ -122,6 +122,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEUIMiniMap.h"
+#include "ee/EEGameUI.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
@@ -1009,7 +1010,7 @@ void EEWorld::CreateMiniMap(EEGameState* inState)
     delete gMiniMap;
     gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, inState->GetPlayer(inState->mLocalPlayer));
     gMiniMap->SetMap(this->mMap);
-    EEUIMiniMap::Update(gMiniMap);
+    gEEGameUI.mMiniMapUpdate(gMiniMap);   // EEUIMiniMap::Update (ee/EEGameUI.h)
 }
 
 // Installs the game state's players: places their pending units, applies tech trees, map restrictions and variant hit

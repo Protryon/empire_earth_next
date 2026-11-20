@@ -897,6 +897,7 @@ void EECreateGameTimer()
 #include "lle/GEBitmap.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIMiniMap.h"
+#include "ee/EEGameUI.h"
 #include "ee/EEEffect.h"
 
 void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
@@ -904,8 +905,8 @@ void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffec
 // Loads the status box icons, mini map, effect, unit, sky and ground shadow media
 void EELoadGameMedia()
 {
-    EEUIFMGStatusBox::LoadIcons();
-    EEUIMiniMap::LoadMedia();
+    gEEGameUI.mLoadIcons();   // EEUIFMGStatusBox::LoadIcons, EEUIMiniMap::LoadMedia (ee/EEGameUI.h)
+    gEEGameUI.mMiniMapLoadMedia();
     CreatePlaneModels();
     EEROUnits::LoadMedia();
     EEROTerrain::CreateSkyModel();
@@ -1078,8 +1079,8 @@ void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
 void EEUnloadGameMedia()
 {
-    EEUIFMGStatusBox::UnloadIcons();
-    EEUIMiniMap::UnloadMedia();
+    gEEGameUI.mUnloadIcons();   // EEUIFMGStatusBox::UnloadIcons, EEUIMiniMap::UnloadMedia (ee/EEGameUI.h)
+    gEEGameUI.mMiniMapUnloadMedia();
     ReleasePlaneModels();
     EEROUnits::ReleaseMedia();
     EEROTerrain::ReleaseSkyModels();
@@ -1456,9 +1457,9 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
     ESVERIFY_AT(theResult == keseOK, 3070);
     EEButtonObject::Reload();
     if (sIconsLoaded == true) {
-        EEUIFMGStatusBox::ReloadIcons();
-        EEUIFMGStatusBox::UnloadIcons();
-        EEUIFMGStatusBox::LoadIcons();
+        gEEGameUI.mReloadIcons();   // EEUIFMGStatusBox's (ee/EEGameUI.h)
+        gEEGameUI.mUnloadIcons();
+        gEEGameUI.mLoadIcons();
     }
     if (theHadPointer) {
         gMousePointer = new RTSMousePointer(gMouse, gGameWindow, 0);
@@ -2142,7 +2143,8 @@ void EEInitializeGameObjects()
     gMouse->mPointer = 0;
     EEUnitClass::CreateUnitClasses();
     EETechTree::BuildUnitClassInfo();
-    gUIManager = new EEUIManager(gRasterizer, gGamePreferences.mSettings.GetScreenMode() + 1, gGamePreferences.mSettings.GetScreenID(), "db\\");
+    gUIManager = gEEGameUI.mNewManager(gRasterizer, gGamePreferences.mSettings.GetScreenMode() + 1,   // ee/EEGameUI.h
+                                       gGamePreferences.mSettings.GetScreenID(), "db\\");
     if (gUIManager == NULL) ESVerify(__FILE__, 0x50a, "gUIManager != NULL");
     UIManager::SetMouseLeftHanded(gGamePreferences.mSettings.mRightHandMouseOrientation == false);
     UIControl::SetBorderColors(GEColor(0.34765625f, 0.39453125f, 0.390625f),

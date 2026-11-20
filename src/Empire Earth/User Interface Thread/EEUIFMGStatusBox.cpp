@@ -382,3 +382,9 @@ long EEUIFMGStatusBox::ReloadIcons()
 EEUIFMGStatusBox::~EEUIFMGStatusBox()
 {
 }
+
+// the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)
+#include "ee/EEGameUI.h"
+static const bool sIconsRegistered = (gEEGameUI.mLoadIcons = EEUIFMGStatusBox::LoadIcons,
+                                      gEEGameUI.mUnloadIcons = EEUIFMGStatusBox::UnloadIcons,
+                                      gEEGameUI.mReloadIcons = EEUIFMGStatusBox::ReloadIcons, true);

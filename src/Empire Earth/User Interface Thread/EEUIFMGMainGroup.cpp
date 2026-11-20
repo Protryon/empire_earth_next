@@ -74,11 +74,6 @@ void EEUIFMGMainGroup::Refresh()
     ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0);
 }
 
-EEUnit* EEUIFMGMainGroup::GetSelectedUnit()
-{
-    return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0));
-}
-
 void EEUIFMGMainGroup::Open(EEUIFMainGame* inForm)
 {
     ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_OPEN, NULL, 0);
@@ -388,3 +383,8 @@ void EEUIFMGGRust::Select()
 {
     ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_SELECT);
 }
+
+// the command buttons as the rest of the game shows them (the saved group's selection: ee/EEGameUI.h)
+#include "ee/EEGameUI.h"
+static const bool sShowCommandsRegistered =
+    (gEEGameUI.mShowCommands = [](EEUIFMGMainGroup* inGroup, EEUnit* inUnit) { inGroup->ShowCommands(inUnit); }, true);

@@ -373,3 +373,9 @@ void EEUIMiniMap::Update(EEMiniMap* inMiniMap)
     if (sWorldBitmap != NULL)
         sWorldBitmap->SetTexture(inMiniMap->mWorldTexture, gScreenIndex);
 }
+
+// the media and the update as the game calls them (Empire Earth.cpp, the world, the mini map: ee/EEGameUI.h)
+#include "ee/EEGameUI.h"
+static const bool sMiniMapRegistered = (gEEGameUI.mMiniMapLoadMedia = EEUIMiniMap::LoadMedia,
+                                        gEEGameUI.mMiniMapUnloadMedia = EEUIMiniMap::UnloadMedia,
+                                        gEEGameUI.mMiniMapUpdate = EEUIMiniMap::Update, true);

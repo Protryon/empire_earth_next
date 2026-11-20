@@ -59,7 +59,10 @@ public:
     virtual bool WantsRefresh();            // +0x14 0x26915e
     // 0x268162: the first selected unit with a +0x3c value, else the first selected unit, else the local player's
     // +0x9d4 (does not read `this`)
-    EEUnit* GetSelectedUnit();
+    EEUnit* GetSelectedUnit()
+    {
+        return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0));
+    }
     void Open(EEUIFMainGame* inForm);       // 0x2681c2 (the main game form's Open; provisional name)
     void ShowCommands(EEUnit* inUnit);      // 0x268806 (EEMSavedGroupSelect; provisional name)
     // (SetUnit 0x268070, ShowCommandButton 0x2682ea, ShowSpecialButtons 0x268dee, Update 0x268f3f: Rust's whole,

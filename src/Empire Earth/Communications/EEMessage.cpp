@@ -400,7 +400,7 @@ static void ExecuteSavedGroupSelect(EEMRecord* m)
     thePlayer->mActiveGroup->SelectSavedGroup(thePlayer->mGroups[m->Get<unsigned char>(1)], true);
     if (theSlot == theLocalSlot && gWorld.mExecutingLocalSelection == true) {
         gMouse->mPointer = 0;
-        theMainGroup->ShowCommands(theMainGroup->GetSelectedUnit());
+        gEEGameUI.mShowCommands(theMainGroup, theMainGroup->GetSelectedUnit());   // ee/EEGameUI.h
         theMainGroup->Reset();
         gUIManager->GetMainGameForm()->SetUIState(0);
         gUIManager->GetMainGameForm()->mIsCursorLocked = false;
