@@ -29,8 +29,20 @@ fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i6
 
 /// One of the computer player's host operations (ee_sim::cp's EE_CP_PLAYER_*, EE_CP_CENTER_*).
 fn player_op(me: *mut c_void, op: i32, a: u64, v: &[i64]) -> i64 {
-    // SAFETY: the live computer player
-    let ctx = unsafe { ctx_of(me as u64) };
+    // the reflexes' orders have no player (`me` null): their unit operations read none
+    let ctx = if me.is_null() {
+        crate::cp::place_game::EeCpPlaceCtx {
+            player: 0,
+            player_id: 0,
+            fields: std::ptr::null_mut(),
+            town: std::ptr::null_mut(),
+            placement: std::ptr::null_mut(),
+            capture: 0,
+        }
+    } else {
+        // SAFETY: the live computer player
+        unsafe { ctx_of(me as u64) }
+    };
     let mut io = EeCpPlaceIo {
         v: [0; 6],
         f: [0.0; 3],

@@ -135,11 +135,11 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *
         }
         // SAFETY: as above
         more::EE_AI_UNITS_HOST_WALL_BLOCKED => i64::from(unsafe { wall_blocked(me, &*(out as *const EeAiUnitsTiles)) }),
-        more::EE_AI_UNITS_HOST_TILES_AGAIN => match LAST_TILES.with(|l| l.borrow_mut().take()) {
+        more::EE_AI_UNITS_HOST_TILES_AGAIN => {
+            let tiles = LAST_TILES.with(|l| l.borrow_mut().take())?;
             // SAFETY: as above
-            Some(tiles) => tiles_out(unsafe { &mut *(out as *mut EeAiUnitsTiles) }, tiles),
-            None => return None,
-        },
+            tiles_out(unsafe { &mut *(out as *mut EeAiUnitsTiles) }, tiles)
+        }
         more::EE_AI_UNITS_HOST_GATE_SIDE => gate_side(me, a as c_long, b as c_long),
         _ => return None,
     })
@@ -308,8 +308,8 @@ unsafe fn tuning(me: *mut c_void, t: &mut EeAiUnitsTuning) {
     t.epoch_advance_time_scale = row(94).fv;
     let (f, d) = (row(124), row(125));
     let fighters = [f.i1, f.i2, f.fv as c_long as i32, d.i1, d.i2, d.fv as c_long as i32];
-    for k in 0..6 {
-        t.carrier_fighters[k] = fighters[k] as c_long;
+    for (slot, n) in t.carrier_fighters.iter_mut().zip(fighters) {
+        *slot = n as c_long;
     }
     t.population_cap_own_weight = row(93).fv;
     t.population_cap_other_weight = row(92).fv;

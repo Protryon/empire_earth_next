@@ -60,6 +60,7 @@ pub const EE_CP_HERD_CANCEL_REQUEST: i32 = 95;
 pub const EE_CP_HERD_REQUEST_DEREF: i32 = 96;
 
 /// cbindgen:ignore
+#[cfg_attr(test, allow(dead_code))]
 mod k {
     use std::os::raw::c_ulong;
     pub(super) const MOVEMENT_SEA: u8 = 4;

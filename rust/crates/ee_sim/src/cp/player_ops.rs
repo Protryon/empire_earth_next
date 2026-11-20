@@ -6,6 +6,8 @@
 
 // `c_long` is 32 bits on Windows and 64 elsewhere
 #![allow(clippy::unnecessary_cast)]
+// the constants the game glue (player_game.rs, absent from a test binary) reads
+#![cfg_attr(test, allow(dead_code))]
 
 use std::os::raw::{c_long, c_ulong};
 
