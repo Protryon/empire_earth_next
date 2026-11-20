@@ -62,3 +62,23 @@ mb_copy()"));
     assert_eq!(load_map(&mut f, BG), 2);
     assert!(f.calls().ends_with("mb_is_png()\nmb_attributes_jpg()\nmb_file()\nmb_file_delete()"));
 }
+
+#[test]
+fn construct_and_fill() {
+    let mut f = Fake::default();
+    construct(&mut f, BG, 0.5, 3, 7, 1.0, 2.0);
+    assert_eq!(
+        f.calls(),
+        "gb_set_opacity(160, 0.5)
+gb_set_flags(160, 3)
+gb_set_color(160, 7)
+gb_set_scale_x(160, 1.0)
+         gb_set_scale_y(160, 2.0)"
+    );
+    let mut f = Fake::default();
+    assert_eq!(fill(&mut f, BG, [1.0, 2.0, 3.0, 4.0]), 0);
+    assert_eq!(f.calls(), "gb_rasterizer(160)
+gb_screen(160)
+gb_color(160)
+gb_opacity(160)");
+}

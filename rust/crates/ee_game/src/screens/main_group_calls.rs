@@ -4,6 +4,9 @@
 //! `command_panel.rs`'), the hot keys of a status button (`EEMainGroupHotKey`) and the hot key event's
 //! `ProcessEvent`. `group` is an `EEUIFMGMainGroup*`, units are `EEUnit*`, buttons `EEUIFMGStatusButton*`.
 
+// `c_ulong` is `u32` on Windows and `u64` on LP64: the casts to the shims' `u32` stay
+#![allow(clippy::unnecessary_cast)]
+
 use core::ffi::c_ulong;
 
 use crate::screens::command_panel::*;
@@ -192,8 +195,7 @@ pub(crate) fn show_commands(c: &mut impl Cpp, group: usize, unit: usize, mut mem
             let position = c.mg_object_position(object);
             let command = c.mg_object_id(object);
             let kind = c.sbt_node_kind(node);
-            let eligible = position >= 0
-                && position < 10000
+            let eligible = (0..10000).contains(&position)
                 && c.mg_node_available(node)
                 && (c.mg_node_allowed(node) || c.mg_research_queued(complex, node));
             research.push(EeScreensPanelResearch {

@@ -105,3 +105,13 @@ fn the_update() {
     assert!(calls.contains("mm_bitmap(1)\nmm_world_coordinates("));
     assert!(calls.ends_with("mm_set_transformation(5)\nmm_bitmap(0)\nmm_bitmap(1)\nmm_world_texture_set(5)"));
 }
+
+#[test]
+fn set_location_keeps_the_origin_inside_the_border() {
+    let mut f = Fake::default();
+    f.answer("mm_border", &[2]);
+    set_location(&mut f, MAP, 10.0, 20.0);
+    assert_eq!(f.calls(), "mm_base_set_location(144, 10.0, 20.0)
+mm_border(144)
+mm_set_origin(144, 12.0, 22.0)");
+}
