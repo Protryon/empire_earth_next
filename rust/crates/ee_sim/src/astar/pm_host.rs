@@ -10,6 +10,7 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use crate::astar::cm::{EeAStarCmRecord, EeAStarCmTable};
+use crate::astar::continent_grid::EePoint;
 use crate::astar::graph_search::{
     EE_PATH_GRAPH_ENDS, EE_PATH_GRAPH_OBJECT, EE_PATH_GRAPH_REVS_WORLD, EE_PATH_SS_INFO, EE_PATH_SS_IS_NEIGHBOR,
     EE_PATH_SS_NEIGHBOR,
@@ -21,7 +22,6 @@ use crate::astar::pm::*;
 use crate::astar::pm_bounded::{
     EE_PATH_CAPTURE_ACTIVE, EE_PATH_CAPTURE_COMMIT, EE_PATH_MAP_SIZE, EE_PATH_UNIT_LOCATION, EE_PATH_UNIT_TILE,
 };
-use crate::astar::continent_grid::EePoint;
 use crate::world::{UnitView, WorldRead, WorldView};
 
 /// `kMovementSea`

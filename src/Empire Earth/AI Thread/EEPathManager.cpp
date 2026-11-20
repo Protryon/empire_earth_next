@@ -73,37 +73,44 @@ static const EePathPoint* EEPathPoints(const std::vector<GE3DPoint>& inPoints)
     return inPoints.empty() ? NULL : reinterpret_cast<const EePathPoint*>(&inPoints[0]);
 }
 
-// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the record writers of PMRQ below (points as three
-// f32, lists with their u32 length first); the splicing's PMSP records are pm_bounded.rs's, in the same layout
+// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the bounded searches' words of their PMRQ record (the
+// record and its scope are Rust's: ee_sim::astar pm_capture.rs)
+static void EEPathCaptureI32(long inValue) { ee_path_capture_word((uint32_t)(int32_t)inValue); }
 
-static void EEPathCapturePoints(EESimCaptureRecord& ioRecord, const std::vector<GE3DPoint>& inPoints)
+static void EEPathCaptureF32(float inValue)
 {
-    ioRecord.U32((unsigned int)inPoints.size());
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    ee_path_capture_word(theBits);
+}
+
+static void EEPathCaptureTile(const U2DPoint<long>& inTile)
+{
+    EEPathCaptureI32(inTile.mX);
+    EEPathCaptureI32(inTile.mY);
+}
+
+static void EEPathCaptureTiles(const std::vector<U2DPoint<long> >& inTiles)
+{
+    EEPathCaptureI32((long)inTiles.size());
+    for (size_t i = 0; i < inTiles.size(); i++)
+        EEPathCaptureTile(inTiles[i]);
+}
+
+static void EEPathCapturePoints(const std::vector<GE3DPoint>& inPoints)
+{
+    EEPathCaptureI32((long)inPoints.size());
     for (size_t i = 0; i < inPoints.size(); i++) {
-        ioRecord.F32(inPoints[i].GetX());
-        ioRecord.F32(inPoints[i].GetY());
-        ioRecord.F32(inPoints[i].GetZ());
+        EEPathCaptureF32(inPoints[i].GetX());
+        EEPathCaptureF32(inPoints[i].GetY());
+        EEPathCaptureF32(inPoints[i].GetZ());
     }
 }
 
-static void EEPathCaptureWaypoints(EESimCaptureRecord& ioRecord, const std::deque<EEComplexUnitWaypoint>& inWaypoints)
+static unsigned int EEPathCaptureUnitID(EEComplexUnit* inUnit)
 {
-    ioRecord.U32((unsigned int)inWaypoints.size());
-    for (size_t i = 0; i < inWaypoints.size(); i++) {
-        ioRecord.F32(inWaypoints[i].mLocation.GetX());
-        ioRecord.F32(inWaypoints[i].mLocation.GetY());
-        ioRecord.F32(inWaypoints[i].mLocation.GetZ());
-    }
+    return inUnit != NULL ? (unsigned int)inUnit->mUnitID : 0xffffffffu;
 }
-
-static void EEPathCaptureBounds(EESimCaptureRecord& ioRecord, const EEAIAStarBounds& inBounds)
-{
-    ioRecord.I32((int)inBounds.mTop);
-    ioRecord.I32((int)inBounds.mLeft);
-    ioRecord.I32((int)inBounds.mBottom);
-    ioRecord.I32((int)inBounds.mRight);
-}
-
 
 // NEAR: the original copies the (uninitialised) allocator byte of its fifth argument
 // Creates a player's graph path request between two tiles with the given sub-group flags, not yet done
@@ -134,195 +141,6 @@ inline void EEPathManager::ClampTile(EEMap* inMap, EETileCoordinate& ioTile)
     inMap->GetClosestTile(&thePoint, &theX, &theY);
     ioTile.mX = theX;
     ioTile.mY = theY;
-}
-
-// (the path goal's sea and space modifiers, vtables 0x43c458/0x43c448, are Rust: ee_sim::astar modifier_obj.rs)
-
-// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the path manager's record PMRQ, one per outermost
-// call of its entry points (the units', the AI's, the storm's, the physics tick's): a u32 kind, the inputs, the
-// result, then the queued searches after the call (per search: the queue, unit, goal tile, passes, request id, the
-// machine's type, revs, steps, found, step and rev limits) and every unit and request whose search left the queues
-// during the call with what it got (a unit's waypoints, path-done flag, request count, bounded tiles, goals; a
-// request's path, length and done flag). An Update that leaves nothing and finds nothing queued writes no record.
-// The record reads only the manager's queues and the objects, so it is the same over any implementation of them.
-namespace {
-enum {
-    kPathRequestCapture = 0x51524d50,   // "PMRQ"
-    kPathRequestPath = 1,
-    kPathRequestUnitPath = 2,
-    kPathRequestFindPath = 3,
-    kPathRequestFindBoundedPath = 4,
-    kPathRequestCompletePath = 5,
-    kPathRequestCompleteAutoPath = 6,
-    kPathRequestCancelPaths = 7,
-    kPathRequestCancelRequest = 8,
-    kPathRequestUpdate = 9,
-    kPathRequestPending = 10,
-    kPathRequestRegionUpdates = 11,
-    kPathRequestIsPathDone = 12,
-    kPathRequestHasAutoPath = 13,
-    kPathRequestGetPathGoal = 14,
-    kPathRequestReset = 15,
-};
-
-struct EEPathQueueEntry {
-    unsigned int mQueue, mUnitID;
-    int mX, mY, mPasses, mRequestID, mType, mRevs, mSteps, mFound, mMaxRevs, mRevLimit;
-    UReferenceCounter* mRequest;
-    bool operator==(const EEPathQueueEntry& inOther) const
-    {
-        return mQueue == inOther.mQueue && mUnitID == inOther.mUnitID && mX == inOther.mX && mY == inOther.mY
-            && mRequest == inOther.mRequest;
-    }
-};
-
-thread_local int sPathRequestDepth = 0;
-}   // namespace
-
-class EEPathRequestCapture {
-public:
-    EEPathRequestCapture(unsigned int inKind, EEPathManager* inManager)
-        : mRecord(kPathRequestCapture), mManager(inManager), mOn(sPathRequestDepth == 0 && EESimCaptureRecord::Active()),
-          mKind(inKind)
-    {
-        sPathRequestDepth++;
-        if (!this->mOn)
-            return;
-        this->mRecord.U32(inKind);
-        this->Queues(this->mBefore);
-        for (size_t i = 0; i < this->mBefore.size(); i++)
-            if (this->mBefore[i].mRequest != NULL)
-                this->mBefore[i].mRequest->Reference();   // read after the call, whoever else let go of it
-    }
-    ~EEPathRequestCapture()
-    {
-        sPathRequestDepth--;
-        if (!this->mOn)
-            return;
-        std::vector<EEPathQueueEntry> theAfter;
-        this->Queues(theAfter);
-        std::vector<const EEPathQueueEntry*> theLeft;
-        for (size_t i = 0; i < this->mBefore.size(); i++)
-            if (std::find(theAfter.begin(), theAfter.end(), this->mBefore[i]) == theAfter.end())
-                theLeft.push_back(&this->mBefore[i]);
-        if (this->mKind != kPathRequestUpdate || !this->mBefore.empty() || !theAfter.empty()) {
-            this->mRecord.U32(0x2d2d2d2d);   // the queues after
-            this->mRecord.U32((unsigned int)theAfter.size());
-            for (size_t i = 0; i < theAfter.size(); i++)
-                this->Entry(theAfter[i]);
-            this->mRecord.U32((unsigned int)theLeft.size());
-            for (size_t i = 0; i < theLeft.size(); i++) {
-                this->Entry(*theLeft[i]);
-                this->Unit(theLeft[i]->mUnitID);
-                if (theLeft[i]->mRequest != NULL)
-                    this->Request(static_cast<EEAutoPathRequest*>(theLeft[i]->mRequest));
-            }
-            this->mRecord.Commit();
-        }
-        for (size_t i = 0; i < this->mBefore.size(); i++)
-            if (this->mBefore[i].mRequest != NULL)
-                this->mBefore[i].mRequest->Dereference();
-    }
-    bool On() const { return this->mOn; }
-    void Tile(const EETileCoordinate& inTile)
-    {
-        this->mRecord.I32((int)inTile.mX);
-        this->mRecord.I32((int)inTile.mY);
-    }
-    void Unit(unsigned int inUnitID)
-    {
-        EEComplexUnit* theUnit = NULL;
-        EEUnitHandleResolve(inUnitID, theUnit);
-        this->mRecord.U32(theUnit != NULL ? inUnitID : 0xffffffffu);
-        if (theUnit == NULL)
-            return;
-        EEPathCaptureWaypoints(this->mRecord, theUnit->mWaypoints);
-        this->mRecord.U32(theUnit->mIsPathDone ? 1 : 0);
-        this->mRecord.I32((int)theUnit->mNumPathRequests);
-        this->mRecord.U32((unsigned int)theUnit->mBoundedPathTiles.size());
-        this->mRecord.U32((unsigned int)theUnit->mGoalQueues[0].mGoals.size());
-        EEUnitGoal* theGoal = theUnit->GetGoal();
-        this->mRecord.I32(theGoal != NULL ? (int)theGoal->GetKind() : -1);
-        EEUGRust* theLocation = EELocationGoalCast(theGoal);
-        this->mRecord.F32(theLocation != NULL ? theLocation->GetLocation().GetX() : 0.0f);
-        this->mRecord.F32(theLocation != NULL ? theLocation->GetLocation().GetY() : 0.0f);
-    }
-    void Request(EEAutoPathRequest* inRequest)
-    {
-        this->mRecord.I32(inRequest != NULL ? (int)inRequest->mRequestID : -1);
-        if (inRequest == NULL)
-            return;
-        this->mRecord.U32((unsigned int)inRequest->mPath.size());
-        for (size_t i = 0; i < inRequest->mPath.size(); i++)
-            this->Tile(inRequest->mPath[i]);
-        this->mRecord.I32((int)inRequest->mPathLength);
-        this->mRecord.U32(inRequest->mIsDone ? 1 : 0);
-    }
-    void Points(const std::vector<U2DPoint<long> >& inPoints)
-    {
-        this->mRecord.U32((unsigned int)inPoints.size());
-        for (size_t i = 0; i < inPoints.size(); i++)
-            this->Tile(inPoints[i]);
-    }
-    EESimCaptureRecord mRecord;
-
-private:
-    void Entry(const EEPathQueueEntry& inEntry)
-    {
-        const int theWords[] = {(int)inEntry.mQueue, (int)inEntry.mUnitID, inEntry.mX, inEntry.mY, inEntry.mPasses,
-                                inEntry.mRequestID, inEntry.mType, inEntry.mRevs, inEntry.mSteps, inEntry.mFound,
-                                inEntry.mMaxRevs, inEntry.mRevLimit};
-        for (int w : theWords)
-            this->mRecord.I32(w);
-    }
-    void Queues(std::vector<EEPathQueueEntry>& outEntries);
-    EEPathManager* mManager;
-    bool mOn;
-    unsigned int mKind;
-    std::vector<EEPathQueueEntry> mBefore;
-};
-
-void EEPathRequestCapture::Queues(std::vector<EEPathQueueEntry>& outEntries)
-{
-    std::vector<EePathQueued> theQueued(ee_path_manager_queued(this->mManager->mRust, NULL, 0));
-    ee_path_manager_queued(this->mManager->mRust, theQueued.data(), (uint32_t)theQueued.size());
-    for (size_t i = 0; i < theQueued.size(); i++) {
-        const EePathQueued& q = theQueued[i];
-        EEPathQueueEntry e;
-        memset(&e, 0, sizeof(e));
-        e.mQueue = q.queue;
-        e.mUnitID = q.unit;
-        e.mX = q.x;
-        e.mY = q.y;
-        e.mPasses = q.passes;
-        e.mRequest = reinterpret_cast<EEAutoPathRequest*>(q.request);
-        e.mRequestID = q.request != 0 ? (int)reinterpret_cast<EEAutoPathRequest*>(q.request)->mRequestID : -1;
-        if (q.queue == 0 && q.machine != 0) {
-            EeAStarPathSearchInfo m;
-            ee_astar_path_search_info(reinterpret_cast<const void*>(q.machine), false, &m);
-            e.mType = m.machine_type;
-            e.mRevs = m.revs;
-            e.mSteps = m.steps;
-            e.mFound = m.found ? 1 : 0;
-            e.mMaxRevs = m.max_revs;
-            e.mRevLimit = m.rev_limit;
-        } else if (q.queue == 1 && q.machine != 0) {
-            EeAStarGraphSearchInfo m;
-            ee_astar_graph_search_info(reinterpret_cast<const void*>(q.machine), &m);
-            e.mType = m.machine_type;
-            e.mRevs = m.revs;
-            e.mSteps = m.steps;
-            e.mFound = m.found ? 1 : 0;
-            e.mMaxRevs = m.max_revs;
-            e.mRevLimit = m.rev_limit;
-        }
-        outEntries.push_back(e);
-    }
-}
-
-static unsigned int EEPathCaptureUnitID(EEComplexUnit* inUnit)
-{
-    return inUnit != NULL ? (unsigned int)inUnit->mUnitID : 0xffffffffu;
 }
 
 // ---- The manager in Rust (ee_sim::astar pm.rs): the searches in progress, the spare machines, the pending units,
@@ -496,6 +314,19 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
             theUnit->mIsPathDone = true;
         theUnit->mBoundedPathTiles.clear();
         return 0;
+    case EE_PATH_UNIT_CAPTURE: {   // TEST ONLY (pm_capture.rs): the first goal queue's length, a location goal's place
+        EEUGRust* theLocation = EELocationGoalCast(theUnit->GetGoal());
+        i[0] = theLocation != NULL;
+        if (theLocation != NULL) {
+            float theX = theLocation->GetLocation().GetX(), theY = theLocation->GetLocation().GetY();
+            uint32_t theBits[2];
+            memcpy(&theBits[0], &theX, 4);
+            memcpy(&theBits[1], &theY, 4);
+            i[1] = theBits[0];
+            i[2] = theBits[1];
+        }
+        return (int64_t)theUnit->mGoalQueues[0].mGoals.size();
+    }
     case EE_PATH_UNIT_SNAP:
         theUnit->SnapLastWaypoint();
         if (i[0] && theUnit->GetGoal())
@@ -675,181 +506,9 @@ int64_t EEPathManager::Call(int32_t inWhat, uint64_t inH0, uint64_t inH1, std::i
     return theResult;
 }
 
-void EEPathManager::Update()
-{
-    EEPathRequestCapture theCapture(kPathRequestUpdate, this);   // TEST ONLY
-    this->Call(1);
-}
-
-void EEPathManager::Reset()
-{
-    EEPathRequestCapture theCapture(kPathRequestReset, this);   // TEST ONLY
-    this->Call(2);
-}
-
-void EEPathManager::Clear()
-{
-    this->Call(3);
-}
-
-void EEPathManager::FreePaths()
-{
-    this->Call(4);
-}
-
-void EEPathManager::RequestPendingPaths(EEMap* inMap)
-{
-    EEPathRequestCapture theCapture(kPathRequestPending, this);   // TEST ONLY
-    if (theCapture.On()) {
-        int32_t thePending[3];
-        theCapture.mRecord.U32((unsigned int)this->Call(20));
-        for (uint32_t k = 0; ee_path_manager_pending(this->mRust, k, thePending); k++) {
-            theCapture.mRecord.U32((unsigned int)thePending[0]);
-            theCapture.mRecord.I32(thePending[1]);
-            theCapture.mRecord.I32(thePending[2]);
-        }
-    }
-    this->Call(5);
-}
-
-void EEPathManager::SetRegionUpdates(bool inOn, bool inNow)
-{
-    EEPathRequestCapture theCapture(kPathRequestRegionUpdates, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(inOn ? 1 : 0);
-        theCapture.mRecord.U32(inNow ? 1 : 0);
-        theCapture.mRecord.U32((unsigned int)this->Call(25));
-        theCapture.mRecord.U32((unsigned int)this->Call(24));
-    }
-    this->Call(6, 0, 0, {inOn, inNow});
-}
-
-void EEPathManager::CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths)
-{
-    EEPathRequestCapture theCapture(kPathRequestCancelPaths, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.mRecord.U32(inAutoPaths ? 1 : 0);
-    }
-    this->Call(7, EEPathHandle(inUnit), 0, {inAutoPaths});
-}
-
 void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
 {
-    EEPathRequestCapture theCapture(kPathRequestCancelRequest, this);   // TEST ONLY
-    if (theCapture.On())
-        theCapture.Request(static_cast<EEAutoPathRequest*>(inRequest));
     this->Call(8, EEPathHandle(static_cast<EEAutoPathRequest*>(inRequest)));
-}
-
-void EEPathManager::CompletePath(EEComplexUnit* inUnit)
-{
-    EEPathRequestCapture theCapture(kPathRequestCompletePath, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.Unit(EEPathCaptureUnitID(inUnit));
-    }
-    this->Call(9, EEPathHandle(inUnit));
-}
-
-void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
-{
-    EEPathRequestCapture theCapture(kPathRequestCompleteAutoPath, this);   // TEST ONLY
-    if (theCapture.On())
-        theCapture.Request(inRequest);
-    this->Call(10, EEPathHandle(inRequest));
-}
-
-bool EEPathManager::HasAutoPath(EEComplexUnit* inUnit)
-{
-    EEPathRequestCapture theCapture(kPathRequestHasAutoPath, this);   // TEST ONLY
-    if (theCapture.On())
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-    bool theResult = this->Call(11, EEPathHandle(inUnit)) != 0;
-    if (theCapture.On())
-        theCapture.mRecord.U32(theResult ? 1 : 0);
-    return theResult;
-}
-
-bool EEPathManager::IsPathDone(EEComplexUnit* inUnit)
-{
-    EEPathRequestCapture theCapture(kPathRequestIsPathDone, this);   // TEST ONLY
-    if (theCapture.On())
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-    bool theResult = this->Call(12, EEPathHandle(inUnit)) != 0;
-    if (theCapture.On())
-        theCapture.mRecord.U32(theResult ? 1 : 0);
-    return theResult;
-}
-
-bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
-{
-    EEPathRequestCapture theCapture(kPathRequestGetPathGoal, this);   // TEST ONLY
-    if (theCapture.On())
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-    int64_t theTile[2] = {0, 0};
-    bool theResult = this->Call(13, EEPathHandle(inUnit), 0, {}, theTile) != 0;
-    outTile.mX = (long)theTile[0];
-    outTile.mY = (long)theTile[1];
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(theResult ? 1 : 0);
-        theCapture.Tile(outTile);
-    }
-    return theResult;
-}
-
-EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom,
-                                              const EETileCoordinate& inTo, EECPASGFlags* inFlags, long inType,
-                                              long inRevs, EeAStarModifier* inModifier, bool inUnlimitedRevs)
-{
-    EEPathRequestCapture theCapture(kPathRequestPath, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32((unsigned int)inPlayerID);
-        theCapture.Tile(inFrom);
-        theCapture.Tile(inTo);
-        theCapture.mRecord.I32((int)inFlags->mPlayerID);
-        for (int f = 0; f < 17; f++)
-            theCapture.mRecord.U32(inFlags->mFlags[f] ? 1 : 0);
-        theCapture.mRecord.I32((int)inType);
-        theCapture.mRecord.I32((int)inRevs);
-        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
-        theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
-    }
-    EEAutoPathRequest* theRequest = reinterpret_cast<EEAutoPathRequest*>(
-        this->Call(14, EEPathHandle(inFlags), EEPathHandle(inModifier),
-                   {(int64_t)inPlayerID, inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inType, inRevs, inUnlimitedRevs}));
-    if (theCapture.On())
-        theCapture.Request(theRequest);
-    return theRequest;
-}
-
-void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                    bool inUnlimitedRevs, long inRevs, bool inUseGraph, EeAStarModifier* inModifier, bool inArg8)
-{
-    EEPathRequestCapture theCapture(kPathRequestUnitPath, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.Tile(inFrom);
-        theCapture.Tile(inTo);
-        theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
-        theCapture.mRecord.I32((int)inRevs);
-        theCapture.mRecord.U32(inUseGraph ? 1 : 0);
-        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
-        theCapture.mRecord.U32(inArg8 ? 1 : 0);
-        theCapture.Unit(EEPathCaptureUnitID(inUnit));
-    }
-    this->Call(15, EEPathHandle(inUnit), EEPathHandle(inModifier),
-               {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inUnlimitedRevs, inRevs, inUseGraph, inArg8});
-}
-
-void EEPathManager::RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
-{
-    this->Call(16, EEPathHandle(inUnit), 0, {inTile.mX, inTile.mY});
-}
-
-void EEPathManager::AddPending(unsigned long inUnitID, const EETileCoordinate& inTile)
-{
-    this->Call(17, 0, 0, {(int64_t)inUnitID, inTile.mX, inTile.mY});
 }
 
 // the save file through FSFile's typed calls (pm.rs EePathFileFn)
@@ -950,79 +609,22 @@ long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest)
     return theResult;
 }
 
-// TEST ONLY (EE-SIM's state dumps): the searches in progress, the pending requests and the timers (pm.rs), then the
-// bounded machine's storage (FindPath, FindBoundedPath: one machine kept from search to search) as a digest of its
-// bytes (ee_astar storage_save.rs) and the C++ members around it
-void EEPathManager::DumpSim(FILE* inFile)
+// The dumps' text (pm.rs ee_path_manager_dump): EE-SIM's state (TEST ONLY), the out-of-synch dump
+static void EEPathDump(EePathManager* inManager, int32_t inWhat, FILE* inFile)
 {
-    std::vector<char> theText(ee_path_manager_dump(this->mRust, NULL, 0));
-    ee_path_manager_dump(this->mRust, reinterpret_cast<uint8_t*>(theText.data()), (uint32_t)theText.size());
+    std::vector<char> theText(ee_path_manager_dump(inManager, inWhat, NULL, 0));
+    ee_path_manager_dump(inManager, inWhat, reinterpret_cast<uint8_t*>(theText.data()), (uint32_t)theText.size());
     fwrite(theText.data(), 1, theText.size(), inFile);
-    const void* theBounded = ee_path_manager_bounded(this->mRust);
-    EeAStarPathSearchInfo theInfo = {};
-    theInfo.storage_hash = 2166136261u;
-    if (theBounded != NULL)
-        ee_astar_path_search_info(theBounded, true, &theInfo);
-    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", theBounded != NULL ? 1 : 0, (unsigned long)theInfo.storage_len,
-            (unsigned long)theInfo.storage_hash);
-    if (theBounded != NULL)
-        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", (long)theInfo.width, (long)theInfo.height,
-                (long)theInfo.map_width, (long)theInfo.map_height, theInfo.found ? 1 : 0);
-    fprintf(inFile, "\n");
 }
 
-// Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump
+void EEPathManager::DumpSim(FILE* inFile)
+{
+    EEPathDump(this->mRust, 0, inFile);
+}
+
 void EEPathManager::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
-    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.GetPathSubSectors().size());
-    for (long i = gContinentManager.GetPathSubSectors().size() - 1; i > 0; i--) {
-        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)i);
-        if (theSector)
-            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->GetID(),
-                    theSector->GetLocation().GetX(), theSector->GetLocation().GetY());
-    }
-    std::vector<EePathQueued> theQueued(ee_path_manager_queued(this->mRust, NULL, 0));
-    ee_path_manager_queued(this->mRust, theQueued.data(), (uint32_t)theQueued.size());
-    for (unsigned int q = 0; q < 2; q++) {
-        size_t theCount = 0;
-        for (size_t j = 0; j < theQueued.size(); j++)
-            theCount += theQueued[j].queue == q;
-        fprintf(inFile, q == 0 ? "OUT OF SYNCH DUMP: Paths In progress: %zu\n" : "OUT OF SYNCH DUMP: Graphs In progress: %zu\n",
-                theCount);
-        long k = 0;
-        for (size_t j = 0; j < theQueued.size(); j++) {
-            const EePathQueued& e = theQueued[j];
-            if (e.queue != q)
-                continue;
-            EEComplexUnit* theUnit = NULL;
-            EEUnitHandleResolve(e.unit, theUnit);
-            unsigned long theUnitID = theUnit != NULL ? theUnit->GetUnitID() : 0;
-            fprintf(inFile, "OUT OF SYNCH DUMP:\n");
-            if (q == 0) {
-                // the node's machine (the node itself used to be cast, which always failed)
-                fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%ld]: \n", k++);
-                fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %ld to (%ld,%ld) has been queued %ld time.\n", theUnitID,
-                        (long)e.x, (long)e.y, (long)e.passes);
-                if (e.machine != 0) {
-                    EeAStarPathSearchInfo theInfo;
-                    ee_astar_path_search_info(reinterpret_cast<const void*>(e.machine), false, &theInfo);
-                    fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld Pathfinder Type is: %ld\n",
-                            (long)theInfo.revs, (long)theInfo.max_revs, (long)theInfo.machine_type);
-                }
-            } else {
-                fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%ld]: \n", k++);
-                fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %ld to (%ld,%ld) has been queued %ld time.\n",
-                        theUnitID, (long)e.x, (long)e.y, (long)e.passes);
-                if (e.machine != 0) {
-                    EeAStarGraphSearchInfo theInfo;
-                    ee_astar_graph_search_info(reinterpret_cast<const void*>(e.machine), &theInfo);
-                    fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", (long)theInfo.revs,
-                            (long)theInfo.max_revs);
-                }
-            }
-        }
-    }
+    EEPathDump(this->mRust, 1, inFile);
 }
 
 // Runs a bounded tile search (at most 200 steps; a window around inFrom when inBounds is empty) and returns its
@@ -1031,16 +633,18 @@ void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint
                              const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType,
                              long inRevs, EeAStarModifier* inModifier, std::vector<U2DPoint<long> >* outVisited)
 {
-    EEPathRequestCapture theCapture(kPathRequestFindPath, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.Tile(inFrom);
-        theCapture.Tile(inTo);
-        EEPathCaptureBounds(theCapture.mRecord, inBounds);
-        theCapture.mRecord.I32((int)inType);
-        theCapture.mRecord.I32((int)inRevs);
-        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
-        theCapture.mRecord.U32(outVisited != NULL ? 1 : 0);
+    bool theCapture = ee_path_capture_open(this->mRust, 3);   // TEST ONLY (PMRQ)
+    if (theCapture) {
+        EEPathCaptureI32((long)EEPathCaptureUnitID(inUnit));
+        EEPathCaptureTile(inFrom);
+        EEPathCaptureTile(inTo);
+        const long theBounds[4] = {inBounds.mTop, inBounds.mLeft, inBounds.mBottom, inBounds.mRight};
+        for (long b : theBounds)
+            EEPathCaptureI32(b);
+        EEPathCaptureI32(inType);
+        EEPathCaptureI32(inRevs);
+        EEPathCaptureI32(inModifier != NULL ? 1 : 0);
+        EEPathCaptureI32(outVisited != NULL ? 1 : 0);
     }
     outPath.clear();
     EePathIo theIO = {};
@@ -1052,11 +656,12 @@ void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint
                                    inBounds.mTop, inType, inRevs, (int64_t)EEPathHandle(inModifier)};
     memcpy(theIO.i, theValues, sizeof(theValues));
     ee_path_manager_call(this->mRust, 27, &theIO);
-    if (theCapture.On()) {
-        theCapture.Points(outPath);
+    if (theCapture) {
+        EEPathCaptureTiles(outPath);
         if (outVisited != NULL)
-            theCapture.Points(*outVisited);
+            EEPathCaptureTiles(*outVisited);
     }
+    ee_path_capture_close(this->mRust);
 }
 
 // Runs a bounded search within inMargin tiles of inFrom and, when it reaches inTo, appends the path (start first);
@@ -1065,22 +670,23 @@ bool EEPathManager::FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long in
                                     const EETileCoordinate& inTo, std::vector<GE3DPoint>& outPath, long inMargin,
                                     bool inArg8, bool* outReached)
 {
-    EEPathRequestCapture theCapture(kPathRequestFindBoundedPath, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.mRecord.I32((int)inType);
-        theCapture.Tile(inFrom);
-        theCapture.Tile(inTo);
-        theCapture.mRecord.I32((int)inMargin);
-        EEPathCapturePoints(theCapture.mRecord, outPath);
+    bool theCapture = ee_path_capture_open(this->mRust, 4);   // TEST ONLY (PMRQ)
+    if (theCapture) {
+        EEPathCaptureI32((long)EEPathCaptureUnitID(inUnit));
+        EEPathCaptureI32(inType);
+        EEPathCaptureTile(inFrom);
+        EEPathCaptureTile(inTo);
+        EEPathCaptureI32(inMargin);
+        EEPathCapturePoints(outPath);
     }
     bool theReached = this->Call(28, EEPathHandle(inUnit), EEPathHandle(inMap),
                                  {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inType, inMargin, (int64_t)EEPathHandle(&outPath)}) != 0;
     *outReached = theReached;
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(theReached ? 1 : 0);
-        EEPathCapturePoints(theCapture.mRecord, outPath);
+    if (theCapture) {
+        EEPathCaptureI32(theReached ? 1 : 0);
+        EEPathCapturePoints(outPath);
     }
+    ee_path_capture_close(this->mRust);
     return theReached;
 }
 

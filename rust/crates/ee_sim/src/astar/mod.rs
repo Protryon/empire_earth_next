@@ -70,6 +70,7 @@ pub mod path_search;
 pub mod path_splice;
 pub mod pm;
 pub mod pm_bounded;
+pub mod pm_capture;
 pub mod pm_host;
 pub mod pm_record;
 pub mod queries;

@@ -1950,9 +1950,22 @@ unsafe fn with<R>(p: *mut EePathManager, body: impl FnOnce(&mut PathManager, &mu
 #[no_mangle]
 pub unsafe extern "C" fn ee_path_manager_call(p: *mut EePathManager, what: i32, io: *mut EePathIo) -> i64 {
     let io = &mut *io;
+    with(p, |m, host| {
+        let io_in = *io;
+        let scope = crate::astar::pm_capture::open_call(m, host, what, &io_in);
+        let r = call(m, host, what, io);
+        if scope {
+            crate::astar::pm_capture::close_call(m, host, what, io, r);
+        }
+        r
+    })
+}
+
+/// `ee_path_manager_call`'s body.
+fn call(m: &mut PathManager, host: &mut dyn PathHost, what: i32, io: &mut EePathIo) -> i64 {
     let (h, i) = (io.h, io.i);
     let t = |a: usize| (i[a] as i32, i[a + 1] as i32);
-    with(p, |m, host| match what {
+    match what {
         1 => {
             m.update(host);
             0
@@ -2044,7 +2057,18 @@ pub unsafe extern "C" fn ee_path_manager_call(p: *mut EePathManager, what: i32, 
             reached as i64
         }
         _ => -1,
-    })
+    }
+}
+
+/// Runs `body` over the manager and its host (the capture's scopes of the C++ calls).
+///
+/// # Safety
+/// `p` a live manager.
+pub(crate) unsafe fn with_manager<R>(
+    p: *mut EePathManager,
+    body: impl FnOnce(&PathManager, &mut dyn PathHost) -> R,
+) -> R {
+    with(p, |m, host| body(m, host))
 }
 
 /// The queued searches into `out` (up to `cap`), `mPaths` then `mAutoPaths`; their count.
@@ -2284,14 +2308,17 @@ pub unsafe extern "C" fn ee_path_tiles_free(list: *mut c_void) {
     }
 }
 
-/// The dump's lines (`DumpSim` but the bounded machine's) into `out` (up to `cap` bytes, no terminator); their
-/// length.
+/// A dump's text into `out` (up to `cap` bytes, no terminator); its length. `what` 0: `DumpSim`'s (TEST ONLY, EE-SIM's
+/// state dumps: the searches in progress, the pending requests, the timers, then the bounded machine's storage as
+/// a digest of its bytes); 1: `DumpOutOfSynch`'s (the sub sectors and the queued searches).
 ///
 /// # Safety
 /// `p` a live manager, `out` writable for `cap` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn ee_path_manager_dump(p: *mut EePathManager, out: *mut u8, cap: u32) -> u32 {
-    let s = with(p, |m, host| m.dump(host));
+pub unsafe extern "C" fn ee_path_manager_dump(p: *mut EePathManager, what: i32, out: *mut u8, cap: u32) -> u32 {
+    let bounded = (*p).bounded as *const c_void;
+    let s =
+        with(p, |m, host| if what == 0 { m.dump(host) + &dump_bounded(bounded) } else { m.dump_out_of_synch(host) });
     let n = s.len().min(cap as usize);
     std::ptr::copy_nonoverlapping(s.as_ptr(), out, n);
     s.len() as u32
@@ -2300,3 +2327,93 @@ pub unsafe extern "C" fn ee_path_manager_dump(p: *mut EePathManager, out: *mut u
 #[cfg(test)]
 #[path = "pm_tests.rs"]
 mod tests;
+
+/// `DumpSim`'s last line: the bounded machine (null for none) and its storage's digest.
+fn dump_bounded(bounded: *const c_void) -> String {
+    let mut i = crate::astar::path_search::EeAStarPathSearchInfo { storage_hash: 2_166_136_261, ..Default::default() };
+    if !bounded.is_null() {
+        // SAFETY: the manager's live bounded machine
+        unsafe { crate::astar::path_search::ee_astar_path_search_info(bounded, true, &mut i) };
+    }
+    let mut s =
+        format!("BOUNDED {} bytes={} hash={:08x}", i32::from(!bounded.is_null()), i.storage_len, i.storage_hash);
+    if !bounded.is_null() {
+        s += &format!(
+            " size={},{} map={},{} found={}",
+            i.width,
+            i.height,
+            i.map_width,
+            i.map_height,
+            i32::from(i.found)
+        );
+    }
+    s + "
+"
+}
+
+impl PathManager {
+    /// `DumpOutOfSynch`: the sub sectors (last first, the first not), then the tile and graph searches queued.
+    pub fn dump_out_of_synch(&self, host: &mut dyn PathHost) -> String {
+        use std::fmt::Write;
+        const P: &str = "OUT OF SYNCH DUMP:";
+        let mut s = format!(
+            "{P} Pathfinding Information
+{P}----------------------------------
+"
+        );
+        let subs: &[u64] = match crate::astar::world_view::cm() {
+            Some(r) => &r.tables().tables[crate::astar::cm::EeAStarCmTable::PathSubSectors as usize],
+            None => &[],
+        };
+        let _ = writeln!(s, "{P} Path SubSectors: {}", subs.len());
+        for k in (1..subs.len()).rev() {
+            if subs[k] != 0 {
+                // SAFETY: a listed sub sector is a live object
+                let sub = unsafe { crate::astar::cm_io::sub(subs[k]) };
+                let _ = writeln!(
+                    s,
+                    "{P} PathSubSector[{}] with center point: {},{}",
+                    sub.id, sub.location.x, sub.location.y
+                );
+            }
+        }
+        let queued = self.queued();
+        for q in 0..2u32 {
+            let count = queued.iter().filter(|e| e.queue == q).count();
+            let _ = writeln!(s, "{P} {} In progress: {count}", if q == 0 { "Paths" } else { "Graphs" });
+            for (k, e) in queued.iter().filter(|e| e.queue == q).enumerate() {
+                let unit =
+                    if e.unit == EE_PATH_NO_UNIT { 0 } else { op(host, EE_PATH_UNIT_RESOLVE, &[], &[e.unit as i64]) };
+                let id = if unit == 0 { 0 } else { op(host, EE_PATH_UNIT_ID, &[unit as u64], &[]) };
+                let _ = writeln!(s, "{P}");
+                let (queue, what) = if q == 0 { ("Paths", "Path") } else { ("AutoPaths", "AutoPath") };
+                let _ = writeln!(s, "{P} {queue} Queue[{k}]: ");
+                let _ =
+                    writeln!(s, "{P} {what} for Unit: {id} to ({},{}) has been queued {} time.", e.x, e.y, e.passes);
+                if e.machine == 0 {
+                    continue;
+                }
+                if q == 0 {
+                    let mut i = crate::astar::path_search::EeAStarPathSearchInfo::default();
+                    // SAFETY: a queued search's machine
+                    unsafe {
+                        crate::astar::path_search::ee_astar_path_search_info(e.machine as *const c_void, false, &mut i)
+                    };
+                    let _ = writeln!(
+                        s,
+                        "{P} Revs completed: {}. Tile Cap is: {} Pathfinder Type is: {}",
+                        i.revs, i.max_revs, i.machine_type
+                    );
+                } else {
+                    let mut i = crate::astar::graph_search::EeAStarGraphSearchInfo::default();
+                    // SAFETY: as above
+                    unsafe {
+                        crate::astar::graph_search::ee_astar_graph_search_info(e.machine as *const c_void, &mut i)
+                    };
+                    let _ = writeln!(s, "{P} Revs completed: {}. Tile Cap is: {}", i.revs, i.max_revs);
+                }
+            }
+        }
+        s
+    }
+}
