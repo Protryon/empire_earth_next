@@ -38,7 +38,7 @@
 #include "ee/wonapi/WONLobbyParser.h"
 #include "rust/won_gui/guiconf.h"
 #include "ee/wonapi/WONGUIShell.h"
-extern bool gShowParseTime; // ComponentConfigResource.cpp's
+extern bool gShowParseTime; // ComponentConfigHost.cpp's
 extern int gLinesParsed;
 #define EE_CFG_LAYOUT_GLOBAL
 namespace WONAPI {
