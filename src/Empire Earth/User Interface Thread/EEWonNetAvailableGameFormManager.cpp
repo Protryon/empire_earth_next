@@ -1,8 +1,8 @@
 // C:\EEX\Empire Earth\User Interface Thread\EEWonNetAvailableGameFormManager.cpp (file name inferred: no __FILE__;
 // RTTI class EEWonNetAvailableGameFormManager). 0x27a37e..0x27aa0b: the WON game room form's manager (ctor, ??_G,
-// dtor, Get), then the game's free UI helpers in address order (EETranslateString, EEDisplayScenarioIntro, the flare
-// effect, the selection and tile lookups, message 0x41b, the resource reference parser, EEExitGame). The helpers'
-// names are provisional. Unit flags: the exe module set.
+// dtor, Get), then the game's free UI helpers in address order (EETranslateString, EEDisplayScenarioIntro, message
+// 0x41b, the resource reference parser; the flare effect, the selection and tile lookups and EEExitGame, which the
+// rest of the game calls, are Empire Earth/EEGameUtilities.cpp's). The helpers' names are provisional. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <stdio.h>
@@ -145,76 +145,8 @@ void EEDisplayScenarioIntro()
     gUserInterface->PostPauseInformation(true);
 }
 
-// Shows the command-confirmation click effect at the ground point under the cursor
-void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit)
-{
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EETile* theTile;
-    EEPointUnitOrTile(inPoint, theTile, thePoint, true);
-    EEMakeCalamityEffect(thePoint, inUnit);
-}
-
-// Creates the local-only click confirmation effect on a unit or on the ground
-void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
-{
-    GE3DPoint theLocation = inLocation;
-    EEGraphicEffect* theEffect;
-    if (inUnit == NULL) {
-        theEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMouseClickNoUnit);
-        theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(inLocation.GetX(), inLocation.GetY()));
-    } else {
-        theEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMouseClickUnit);
-        if (inUnit->mTileNode != NULL)
-            inUnit->mComplexUnit->GetPosition(theLocation);
-        else
-            inUnit->GetPosition(theLocation);
-    }
-    EEEffectHandle theHandle;
-    gEffectManager->CreateEffect(inUnit, theLocation, theEffect, &theHandle, 0);
-    EEEffect* theFlare = gEffectManager->GetEffect(theHandle);
-    unsigned long thePlayerID = ::gWorld.GetCurrentPlayer()->mPlayerID;
-    theFlare->SetLocalTo(thePlayerID);
-}
-
-// Returns the local player's first selected unit; false when nothing is selected
-bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit)
-{
-    EEGroup* theGroup = ::gWorld.GetCurrentPlayer()->mSelectedGroup;
-    bool theResult = false;
-    if (theGroup->GetNumUnits() != 0) {
-        outUnit = theGroup->GetUnit(0);
-        theResult = true;
-    }
-    return theResult;
-}
-
-// Finds the tile under a screen point (picking the visible tile first); false when only the plain map lookup hit
-bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag)
-{
-    outTile = ::gWorld.mMap->PickScreenTile(inPoint, outX, outY, inFlag);
-    if (outTile != NULL)
-        return true;
-    outTile = ::gWorld.mMap->GetTileAt(inPoint, outX, outY);
-    return false;
-}
-
-// NEAR: the original stores the tile centre's y to a frame float (inPoint's dead slot) and reloads it for
-// GetMeshZ (fstp/fld); ours keeps it on the FP stack (fst)
-// Finds the ground point under a screen point; without a pick it uses the tile centre at terrain height and
-// returns false
-bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag)
-{
-    outTile = ::gWorld.mMap->GetLocationAt(inPoint, outPoint, inFlag);
-    if (outTile != NULL)
-        return true;
-    long theX;
-    long theY;
-    outTile = ::gWorld.mMap->GetTileAt(inPoint, theX, theY);
-    outPoint.SetX(theX + 0.5f);
-    outPoint.SetY(theY + 0.5f);
-    outPoint.SetZ(::gWorld.mMap->GetHeight(outPoint));
-    return false;
-}
+// (EEOrderAtCursor, EEMakeCalamityEffect, EEGetFirstSelectedUnit and EEPointUnitOrTile(XY), the game's helpers:
+// Empire Earth/EEGameUtilities.cpp)
 
 // Takes a screenshot on F9: Alt, Ctrl or Shift choose the in-game variants, otherwise a plain screenshot
 void EEPostF9Key()
@@ -249,26 +181,4 @@ bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outI
     return theResult;
 }
 
-// NEAR: the original pushes mCurrentPlayer as a dword: ExecuteRemovePlayer's first parameter is wider than
-// the header's unsigned char (NESynchronousCommunications/EEServer/EEClient; header item)
-// Leaves the game: a client removes itself (server lost) or notifies the server; the server posts the removal
-// of all players when the game is open, running or paused
-void EEExitGame()
-{
-    if (gCommunications->IsClient() == true) {
-        EEClient* theClient = static_cast<EEClient*>(gCommunications);
-        if (theClient->GetConnection() != NULL) {
-            if (theClient->mIsServerLost)
-                gCommunications->ExecuteRemovePlayer(::gWorld.mCurrentPlayer, false, false, true);
-            else
-                gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {true}), kSlotNone);
-        }
-    } else {
-        unsigned char theState = static_cast<NESynchronousServer*>(gCommunications)->GetGameState();
-        if (theState == kServerStateOpen || theState == kServerStateRunning || theState == kServerStatePaused) {
-            EEAction* theAction = new EEARemovePlayer(0xfe, true);
-            gUserInterface->PostAction(theAction);
-            theAction->Dereference();
-        }
-    }
-}
+// (EEExitGame: Empire Earth/EEGameUtilities.cpp)

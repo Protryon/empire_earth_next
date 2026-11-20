@@ -212,6 +212,7 @@ void EEAIRegisterContinentState()
         abort();
     ee_astar_cm_set_layout(&theLayout);
     ee_astar_cm_set_host(EEAIContinentHost, NULL);
+    ee_astar_world_view_set_manager(&gContinentManager.mRecord);   // the A* view's (world_view.rs)
 }
 
 void EEWriteAreaBytes(const EEAIArea& inArea, std::vector<unsigned char>& outBytes)

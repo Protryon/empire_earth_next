@@ -23,6 +23,11 @@
 #include "lle/UIForm.h"
 #include "ee/EEUIRustControl.h"
 
+// the scenario editor's diplomacy button state (EESEDiplomacyShow, ee/EESERBUnitTypes.h: its bitmaps and help text),
+// which the shells' op EE_SCREENS_SH_SE_DIPLOMACY sets; EESERBUnitTypes.cpp sets the pointer at static
+// initialization, so the shells' unit names no editor unit (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts, round 3")
+inline void (*gEEUIShellDiplomacyShow)(UIButton* inButton, unsigned long inState, bool inHelp) = nullptr;
+
 class EEUIShell {
 public:
     // the shell of inControl (inForm), NULL for another control (form)
@@ -345,5 +350,16 @@ protected:
 
 class UIControlsTable;
 UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
+
+// the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
+// extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)
+class FSPath;
+UIComboBox* EEUIShellNewFileCombo(FSPath* inPath, const UString& inPattern, unsigned long inId, GEFont* inFont,
+                                  const GE2DPoint& inLocation, unsigned long inWidth, UIForm* inForm, unsigned long inIndex);
+inline void EEUIFileComboEntries(UIControl* inList) { EEUIShell::Op(inList, EE_SCREENS_SKOP_FILE_ENTRIES); }
+inline long EEUIFileComboSelect(UIControl* inList, const UWideString& inName)
+{
+    return (long)EEUIShell::Op(inList, EE_SCREENS_SKOP_FILE_SELECT, (int64_t)&inName);
+}
 
 #endif

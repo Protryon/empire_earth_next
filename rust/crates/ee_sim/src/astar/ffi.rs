@@ -8,9 +8,10 @@
 use crate::astar::area_goals::{AreaView, EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
 use crate::astar::goals::View;
 use crate::astar::graph::{self, GraphStorage};
-use crate::astar::modifiers::{self, EeAStarStepGoal, EeAStarStorm, ModView, Skip, Unit};
+use crate::astar::modifiers::{ModView, Skip, Unit};
 use crate::astar::path_goals::PathView;
 use crate::astar::storage::{Storage, NIL};
+pub use ee_base::sparse::EeSparseArray;
 use std::ffi::c_void;
 
 /// A node as the goals and the capture see it.
@@ -259,110 +260,7 @@ impl PathView for CView<'_> {
     }
 }
 
-/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
-///
-/// # Safety
-/// `view` valid, its functions callable; `goal` readable.
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_astar_mod_step_cost(
-    view: *const EeAStarViewCallbacks,
-    goal: *const EeAStarStepGoal,
-    sea: bool,
-    from_x: i32,
-    from_y: i32,
-    x: i32,
-    y: i32,
-    parent_x: i32,
-    parent_y: i32,
-) -> i32 {
-    let goal = unsafe { *goal };
-    modifiers::step_cost(&mut CView(unsafe { &*view }), &goal, sea, from_x, from_y, x, y, parent_x, parent_y)
-}
-
-/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
-///
-/// # Safety
-/// `view` valid, its functions callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_is_passable(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::is_passable(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_attacker_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::attacker_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_walls_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::walls_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_wall_pather_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::wall_pather_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierStormShaper::GetCost`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`; `storm` readable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_storm_cost(
-    view: *const EeAStarViewCallbacks,
-    storm: *const EeAStarStorm,
-    x: i32,
-    y: i32,
-) -> i32 {
-    modifiers::storm_cost(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
-}
-
-/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
-///
-/// # Safety
-/// As `ee_astar_mod_storm_cost`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_storm_can_enter(
-    view: *const EeAStarViewCallbacks,
-    storm: *const EeAStarStorm,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::storm_can_enter(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
-}
+// (the modifiers' slots: modifier_obj.rs, over modifiers.rs)
 
 /// A graph node as the capture sees it (`EEAIAStarGraphStorage::CaptureNodes`): the parent's index in `parent_x`
 /// and the node's own index in `parent_y`.
@@ -380,7 +278,6 @@ pub(crate) fn graph_view(s: &GraphStorage, node: i32) -> EeAStarNodeView {
     }
 }
 
-use crate::astar::choke::EeChokeTileInfo;
 use crate::astar::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
 use crate::astar::sectors::{self, EeSectorRect, EeSectorSizes};
 use crate::astar::sub_sector_links::{self, EeSubSectorLink};
@@ -547,32 +444,7 @@ pub unsafe extern "C" fn ee_astar_update_tile_values(
 
 // ---- the choke point pass's grids (choke.rs) ----
 
-/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
-/// `serials` and smooths `passes - 1` times into the `flags`.
-///
-/// # Safety
-/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_choke_build_grids(
-    size: i32,
-    passes: i32,
-    infos: *const EeChokeTileInfo,
-    kinds: *mut i32,
-    serials: *mut u32,
-    flags: *mut u8,
-) {
-    let n = (size.max(0) as usize) * (size.max(0) as usize);
-    // SAFETY: the caller's contract
-    let (infos, kinds, serials, flags) = unsafe {
-        (
-            std::slice::from_raw_parts(infos, n),
-            std::slice::from_raw_parts_mut(kinds, n),
-            std::slice::from_raw_parts_mut(serials, n),
-            std::slice::from_raw_parts_mut(flags, n),
-        )
-    };
-    crate::astar::choke::build_grids(size, passes, infos, kinds, serials, flags);
-}
+// (the pass's grids are Rust's: choke.rs `ee_astar_choke_grids_*`)
 
 // ---- the sub sector links (sub_sector_links.rs) ----
 
@@ -830,220 +702,6 @@ pub unsafe extern "C" fn ee_astar_largest_continent(continents: *const EeContine
         unsafe { std::slice::from_raw_parts(continents, count) }
     };
     queries::largest_continent(continents, kind)
-}
-
-// ---- the sparse point set (sparse.rs) ----
-
-use crate::astar::sparse::{PointList, SparseArray};
-
-/// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
-#[derive(Clone, Default)]
-pub struct EeSparseArray {
-    pub(crate) set: SparseArray,
-    scratch: Vec<EePoint>,
-    raw: Vec<i32>,
-}
-
-/// A new, empty set.
-#[no_mangle]
-pub extern "C" fn ee_sparse_new() -> *mut EeSparseArray {
-    Box::into_raw(Box::default())
-}
-
-/// A copy of `s` (its points; the copy owns its own).
-///
-/// # Safety
-/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_clone(s: *const EeSparseArray) -> *mut EeSparseArray {
-    // SAFETY: the caller's contract
-    let s = unsafe { &*s };
-    Box::into_raw(Box::new(EeSparseArray { set: s.set.clone(), scratch: Vec::new(), raw: Vec::new() }))
-}
-
-/// The set as numbers (`SparseArray::raw`: a saved game's continent manager), its length in `count`.
-///
-/// # Safety
-/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_raw(s: *mut EeSparseArray, count: *mut usize) -> *const i32 {
-    // SAFETY: the caller's contract
-    let s = unsafe { &mut *s };
-    s.set.raw(&mut s.raw);
-    // SAFETY: the caller's contract
-    unsafe { *count = s.raw.len() };
-    s.raw.as_ptr()
-}
-
-/// The set from `ee_sparse_raw`'s numbers; false (the set then empty) when they are not such a list.
-///
-/// # Safety
-/// `s` a live set, `data` `count` numbers (NULL with 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_set_raw(s: *mut EeSparseArray, data: *const i32, count: usize) -> bool {
-    // SAFETY: the caller's contract
-    let s = unsafe { &mut *s };
-    let data = if count == 0 || data.is_null() {
-        &[][..]
-    } else {
-        // SAFETY: the caller's contract
-        unsafe { std::slice::from_raw_parts(data, count) }
-    };
-    s.set.set_raw(data)
-}
-
-/// Releases a set.
-///
-/// # Safety
-/// `s` from `ee_sparse_new`/`ee_sparse_clone`, not freed yet (NULL is ignored).
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_free(s: *mut EeSparseArray) {
-    if !s.is_null() {
-        // SAFETY: the caller's contract
-        drop(unsafe { Box::from_raw(s) });
-    }
-}
-
-/// `Size()`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_size(s: *const EeSparseArray) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe { &*s }.set.size()
-}
-
-/// `Clear()`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_clear(s: *mut EeSparseArray) {
-    // SAFETY: the caller's contract
-    unsafe { &mut *s }.set.clear();
-}
-
-/// `Contains(point)`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_contains(s: *const EeSparseArray, x: i32, y: i32) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { &*s }.set.contains(EePoint { x, y })
-}
-
-/// `Insert(point)`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_insert(s: *mut EeSparseArray, x: i32, y: i32) {
-    // SAFETY: the caller's contract
-    unsafe { &mut *s }.set.insert(EePoint { x, y });
-}
-
-/// `Insert(list)` (`create` false) or `Create(list)` (`create` true) over `count` points.
-///
-/// # Safety
-/// `s` a live set, `points` valid for `count` (any pointer when `count` is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_insert_list(
-    s: *mut EeSparseArray,
-    points: *const EePoint,
-    count: usize,
-    create: bool,
-) {
-    let points = if count == 0 || points.is_null() {
-        &[][..]
-    } else {
-        // SAFETY: the caller's contract
-        unsafe { std::slice::from_raw_parts(points, count) }
-    };
-    // SAFETY: the caller's contract
-    let set = &mut unsafe { &mut *s }.set;
-    if create {
-        set.create(points);
-    } else {
-        set.insert_all(points);
-    }
-}
-
-/// `Remove(point)`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_remove(s: *mut EeSparseArray, x: i32, y: i32) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { &mut *s }.set.remove(EePoint { x, y })
-}
-
-/// `BuildPointList(step)` (`extremes` false) or `GetOnlyExtremeEdgePoints` (true): the list in the set's scratch,
-/// its length in `count`.
-///
-/// # Safety
-/// `s` a live set, `count` valid; the pointer lives until the next call on `s`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_points(
-    s: *mut EeSparseArray,
-    extremes: bool,
-    step: i32,
-    count: *mut usize,
-) -> *const EePoint {
-    // SAFETY: the caller's contract
-    let s = unsafe { &mut *s };
-    let list = if extremes { PointList::Extremes } else { PointList::All(step) };
-    s.set.points(list, &mut s.scratch);
-    // SAFETY: the caller's contract
-    unsafe { *count = s.scratch.len() };
-    s.scratch.as_ptr()
-}
-
-/// `operator[](index)`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_get(s: *const EeSparseArray, index: i32) -> EePoint {
-    // SAFETY: the caller's contract
-    unsafe { &*s }.set.get(index)
-}
-
-/// `CountContainerNodes()`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_run_count(s: *const EeSparseArray) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe { &*s }.set.run_count()
-}
-
-/// `GetClosestPoint(point)`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_closest_point(s: *const EeSparseArray, x: i32, y: i32) -> EePoint {
-    // SAFETY: the caller's contract
-    unsafe { &*s }.set.closest_point(EePoint { x, y })
-}
-
-/// `GetRandomPoint(random)`: `generate(random)` is the caller's `URandom::Generate()`, called in the C++'s order.
-///
-/// # Safety
-/// `s` a live set; `generate` must not reach `s`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_random_point(
-    s: *const EeSparseArray,
-    generate: extern "C" fn(*mut c_void) -> f32,
-    random: *mut c_void,
-) -> EePoint {
-    // SAFETY: the caller's contract
-    let set = &unsafe { &*s }.set;
-    set.random_point(&mut || generate(random))
 }
 
 // ---- the manager's last loops (manager.rs) ----

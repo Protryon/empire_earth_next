@@ -61,20 +61,25 @@ public:
     const GETStage* GetStage() const { return (const GETStage*)ee_ge_tex_stage(this->mRust); }
     GESurface* GetSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::Surface); }
 
-    void Dereference();
-    unsigned long GetAllocatedSize();
+    // Drops a reference; at the last outside reference a managed texture removes itself from its manager
+    void Dereference() { ee_ge_tex_dereference(this->mRust); }
+    // Returns the surface's allocated size, times the frame count when each frame has its own texture
+    unsigned long GetAllocatedSize() { return ee_ge_tex_allocated_size(this->mRust); }
     long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow);
     // (Save 0x10033749 wrote a texture file (.sst): retired under D9)
-    void SetFrame(unsigned long inFrame);
+    // Shows the given animation frame: picks the frame texture, or moves the UV corner to its grid cell
+    void SetFrame(unsigned long inFrame) { ee_ge_tex_set_frame(this->mRust, inFrame); }
     void SetStageAlphaMode(unsigned long inMode, unsigned long inStage);
     void SetStageColorMode(unsigned long inMode, unsigned long inStage);
     void SetStageMagFilterMode(unsigned long inMode, unsigned long inStage);
     void SetStageMinFilterMode(unsigned long inMode, unsigned long inStage);
     void SetStageMipFilterMode(unsigned long inMode, unsigned long inStage);
-    void SetStageMipMapBias(float inBias, unsigned long inStage);
+    void SetStageMipMapBias(float inBias, unsigned long inStage) { ee_ge_tex_set_stage_bias(this->mRust, inBias); }
     void SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage);
-    long SetSurface(GESurface* inSurface);
-    long Unlock();
+    // Replaces the texture's surface (new rasterizer handle, promotion cleared); already-exists error if unchanged
+    long SetSurface(GESurface* inSurface) { return ee_ge_tex_set_surface(this->mRust, inSurface); }
+    // Unlocks the texture's surface
+    long Unlock() { return ee_ge_tex_unlock(this->mRust); }
 protected:
     virtual ~GETexture();                   // ??1GETexture@@MAE@XZ (protected: released through Dereference)
 private:
@@ -103,7 +108,7 @@ private:
     bool GetIsFromTexturePack() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FromPack) != 0; }
     long GetTexturePackMipLevels() const { return (long)ee_ge_tex_get(this->mRust, EeGeTexVal::PackMipLevels); }
     // port: the logical shift of every frame's surface (GESurface::GetLogicalShift; a texture pack's texture)
-    void SetLogicalShift(unsigned long inShift);
+    void SetLogicalShift(unsigned long inShift) { ee_ge_tex_set_logical_shift(this->mRust, inShift); }
     // port: the calls the Rust texture makes on other objects (EeGeTexOp)
     static intptr_t Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 

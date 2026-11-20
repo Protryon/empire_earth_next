@@ -30,6 +30,15 @@ struct Replay {
     slots: Vec<Option<TempSpec>>,
 }
 
+fn writable(p: &std::path::Path) {
+    if let Ok(m) = std::fs::symlink_metadata(p) {
+        let mut perm = m.permissions();
+        #[allow(clippy::permissions_set_readonly_false)]
+        perm.set_readonly(false);
+        let _ = std::fs::set_permissions(p, perm);
+    }
+}
+
 fn unhex(s: &str) -> Vec<u8> {
     if s == "-" {
         return Vec::new();
@@ -121,28 +130,41 @@ impl Replay {
         )
     }
 
+    /// Empties the root, as the C++ driver did before each sequence. The root's own attributes carry over: a
+    /// sequence can lock the root itself (`lock` on a spec with no file name sets the directory read-only, golden
+    /// line 281), and a later sequence's `rmdir` of the root fails (line 518, native error 5) as the C++'s did.
     fn wipe(&self) {
         fn clear(dir: &std::path::Path) {
             if let Ok(entries) = std::fs::read_dir(dir) {
                 for e in entries.flatten() {
                     let p = e.path();
-                    if let Ok(m) = std::fs::symlink_metadata(&p) {
-                        let mut perm = m.permissions();
-                        #[allow(clippy::permissions_set_readonly_false)]
-                        perm.set_readonly(false);
-                        let _ = std::fs::set_permissions(&p, perm);
-                        if m.is_dir() {
-                            clear(&p);
-                            let _ = std::fs::remove_dir(&p);
-                        } else {
-                            let _ = std::fs::remove_file(&p);
-                        }
+                    writable(&p);
+                    if p.is_dir() {
+                        clear(&p);
+                        let _ = std::fs::remove_dir(&p);
+                    } else {
+                        let _ = std::fs::remove_file(&p);
                     }
                 }
             }
         }
-        let _ = std::fs::create_dir_all(&self.root);
-        clear(std::path::Path::new(&self.root));
+        let root = std::path::Path::new(&self.root);
+        let _ = std::fs::create_dir_all(root);
+        clear(root);
+    }
+
+    /// The root as the C++ run began with it: writable. A root left behind by an earlier test process given the same
+    /// process id (the root's name) is read-only from that run's lock, and the first `rmdir` of the root (golden line
+    /// 31) then failed with native error 5: the gate's intermittent failure.
+    fn start(&self) {
+        writable(std::path::Path::new(&self.root));
+    }
+
+    /// Removes the root (writable, emptied), so that no later process finds it.
+    fn remove_root(&self) {
+        self.start();
+        self.wipe();
+        let _ = std::fs::remove_dir(&self.root);
     }
 
     fn drop_slot(&mut self, k: usize) {
@@ -368,6 +390,7 @@ fn replay(golden: &str, tag: &str) -> Result<usize, String> {
     let first = lines.next().unwrap();
     let root_length: usize = first.strip_prefix("root ").expect("a root line").parse().unwrap();
     let mut r = Replay::new(root_length, tag);
+    r.start();
     let mut sequences = 0;
     for (number, line) in lines.enumerate() {
         if let Some(n) = line.strip_prefix("seq ") {
@@ -389,16 +412,14 @@ fn replay(golden: &str, tag: &str) -> Result<usize, String> {
             for k in 0..r.slots.len() {
                 r.drop_slot(k);
             }
-            r.wipe();
-            let _ = std::fs::remove_dir(&r.root);
+            r.remove_root();
             return Err(format!("line {}:\n  golden {line}\n  replay {mine}", number + 2));
         }
     }
     for k in 0..r.slots.len() {
         r.drop_slot(k);
     }
-    r.wipe();
-    let _ = std::fs::remove_dir(&r.root);
+    r.remove_root();
     free(std::mem::replace(&mut r.volume, EeFsString::blank()));
     free(std::mem::replace(&mut r.directory, EeFsString::blank()));
     Ok(sequences)
@@ -408,6 +429,23 @@ fn replay(golden: &str, tag: &str) -> Result<usize, String> {
 fn golden_spec_replays() {
     let n = replay(include_str!("golden_spec.txt"), "a").unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(n, 60);
+}
+
+/// The gate's flake (golden line 31, `rmdir 3 = 0` replayed `= 1 ... ne 5`): every run left its root behind,
+/// read-only from line 281's lock, and a later test process given the same id found it so. A root left read-only
+/// before the replay starts must not change it.
+#[test]
+fn a_root_left_read_only_by_an_earlier_process_replays() {
+    let golden = include_str!("golden_spec.txt");
+    let first = golden.lines().next().unwrap();
+    let root = Replay::new(first.strip_prefix("root ").unwrap().parse().unwrap(), "c").root;
+    std::fs::create_dir_all(&root).unwrap();
+    let mut perm = std::fs::metadata(&root).unwrap().permissions();
+    perm.set_readonly(true);
+    std::fs::set_permissions(&root, perm).unwrap();
+    let n = replay(golden, "c").unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(n, 60);
+    assert!(!std::path::Path::new(&root).exists(), "the root {root} is left behind");
 }
 
 #[test]

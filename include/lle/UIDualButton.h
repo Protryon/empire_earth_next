@@ -6,16 +6,22 @@
 #define LLE_UIDUALBUTTON_H
 
 #include "lle/UIButton.h"
+#include "lle/UIButtonRust.h"
 
 class LLE_API UIDualButton : public UIButton {
 public:
     UIDualButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap, GEBitmap* inPressedBitmap,
                  const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                 unsigned long inBorderThickness);
-    virtual ~UIDualButton();
+                 unsigned long inBorderThickness)
+        : UIButton(inId, inNormalBitmap, inFocusedBitmap, inPressedBitmap, inRectangle, inForm, inIndex,
+                   inBorderThickness)
+    {
+    }
+    virtual ~UIDualButton() {}
 protected:
-    virtual long MouseRButtonDown();
-    virtual long MouseRButtonUp();
+    // the right button presses and releases as the left (buttonobj.rs)
+    virtual long MouseRButtonDown() { return (long)UIButtonRust::Call(this, EeUiButtonCall::DualMouseRButtonDown); }
+    virtual long MouseRButtonUp() { return (long)UIButtonRust::Call(this, EeUiButtonCall::DualMouseRButtonUp); }
 };
 
 #endif

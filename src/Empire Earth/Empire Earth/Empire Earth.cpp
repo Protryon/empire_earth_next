@@ -897,6 +897,7 @@ void EECreateGameTimer()
 #include "lle/GEBitmap.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIMiniMap.h"
+#include "ee/EEGameUI.h"
 #include "ee/EEEffect.h"
 
 void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
@@ -904,8 +905,8 @@ void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffec
 // Loads the status box icons, mini map, effect, unit, sky and ground shadow media
 void EELoadGameMedia()
 {
-    EEUIFMGStatusBox::LoadIcons();
-    EEUIMiniMap::LoadMedia();
+    gEEGameUI.mLoadIcons();   // EEUIFMGStatusBox::LoadIcons, EEUIMiniMap::LoadMedia (ee/EEGameUI.h)
+    gEEGameUI.mMiniMapLoadMedia();
     CreatePlaneModels();
     EEROUnits::LoadMedia();
     EEROTerrain::CreateSkyModel();
@@ -1078,8 +1079,8 @@ void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
 void EEUnloadGameMedia()
 {
-    EEUIFMGStatusBox::UnloadIcons();
-    EEUIMiniMap::UnloadMedia();
+    gEEGameUI.mUnloadIcons();   // EEUIFMGStatusBox::UnloadIcons, EEUIMiniMap::UnloadMedia (ee/EEGameUI.h)
+    gEEGameUI.mMiniMapUnloadMedia();
     ReleasePlaneModels();
     EEROUnits::ReleaseMedia();
     EEROTerrain::ReleaseSkyModels();
@@ -1456,9 +1457,9 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
     ESVERIFY_AT(theResult == keseOK, 3070);
     EEButtonObject::Reload();
     if (sIconsLoaded == true) {
-        EEUIFMGStatusBox::ReloadIcons();
-        EEUIFMGStatusBox::UnloadIcons();
-        EEUIFMGStatusBox::LoadIcons();
+        gEEGameUI.mReloadIcons();   // EEUIFMGStatusBox's (ee/EEGameUI.h)
+        gEEGameUI.mUnloadIcons();
+        gEEGameUI.mLoadIcons();
     }
     if (theHadPointer) {
         gMousePointer = new RTSMousePointer(gMouse, gGameWindow, 0);
@@ -1595,6 +1596,47 @@ static void EESimPreferences()
     gGamePreferences.mSettings.mMusicEnabled = false;
     gGamePreferences.mSettings.mWaitForVSync = false;
 }
+
+// (They were EEUserInterface.cpp's: tools/cpp_deps.py, PORT_LEARNINGS "Cycle cuts, round 3")
+// Receive's window event pump on the window thread (TSThread::SetEventPump): one event per call
+static bool EEPumpWindowEvent()
+{
+    PlatInputEvent theEvent;
+    if (!PlatWindowPollEvent(&theEvent))
+        return false;
+    if (theEvent.mType == PLAT_EVENT_WAKE)   // the WON lobby's wake-up (PlatWindowWake) while it is not running
+        return true;
+    static const bool sLog = getenv("EE_WINDOW_EVENT_LOG") != NULL;   // opt-in: every event as a debug string
+    if (sLog)
+        ESDebugOut("EE-WINDOW-EVENT %u (key %u/%u, text '%s') ui %d window %lux%lu\n", (unsigned)theEvent.mType,
+                   (unsigned)theEvent.mKey.mScanCode, (unsigned)theEvent.mKey.mVirtualKey,
+                   theEvent.mType == PLAT_EVENT_TEXT ? theEvent.mText.mText : "", gUserInterface != NULL,
+                   gGameWindow ? gGameWindow->GetWidth() : 0, gGameWindow ? gGameWindow->GetHeight() : 0);
+    ISHandleEvent(theEvent);   // the Input System's keyboard and mouse (DirectInput's devices before)
+    EEUserInterface::HandleEvent(theEvent);
+    return true;
+}
+
+#ifdef _WIN32
+// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): the WON lobby's two messages,
+// handled as the window procedure did; nonzero drops the message. (CD audio's MCI notifications went to SECD, which
+// is gone: the port never opened a CD drive.)
+static int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam)
+{
+    switch (inMessage) {
+    case 0x433:
+        PostMessageA((HWND)inWindow, 0x434, 0, 0);
+        if (gWonNet != NULL)
+            gWonNet->FnCFFDD(0);
+        return 1;
+    case 0x434:
+        if (gWonNet != NULL)
+            gWonNet->FnCFFF2();
+        return 1;
+    }
+    return 0;
+}
+#endif
 
 void EERustInit();   // EERust.cpp
 
@@ -2101,7 +2143,8 @@ void EEInitializeGameObjects()
     gMouse->mPointer = 0;
     EEUnitClass::CreateUnitClasses();
     EETechTree::BuildUnitClassInfo();
-    gUIManager = new EEUIManager(gRasterizer, gGamePreferences.mSettings.GetScreenMode() + 1, gGamePreferences.mSettings.GetScreenID(), "db\\");
+    gUIManager = gEEGameUI.mNewManager(gRasterizer, gGamePreferences.mSettings.GetScreenMode() + 1,   // ee/EEGameUI.h
+                                       gGamePreferences.mSettings.GetScreenID(), "db\\");
     if (gUIManager == NULL) ESVerify(__FILE__, 0x50a, "gUIManager != NULL");
     UIManager::SetMouseLeftHanded(gGamePreferences.mSettings.mRightHandMouseOrientation == false);
     UIControl::SetBorderColors(GEColor(0.34765625f, 0.39453125f, 0.390625f),

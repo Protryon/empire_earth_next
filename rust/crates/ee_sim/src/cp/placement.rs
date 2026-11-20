@@ -1679,3 +1679,25 @@ pub fn set_town_center<H: PlaceHost + ?Sized>(h: &mut H, unit: u64) {
     let t = h.unit(unit).tile;
     h.set_town(t);
 }
+
+/// TEST ONLY (PLCE): the data's digest: the water sites' count and FNV-1a 64 (low, high words), the space sites' the
+/// same, whether the tiles were collected, the classes seen's count.
+pub fn placement_digest(p: &EeCpPlacement) -> [u32; 8] {
+    let mut out = [0u32; 8];
+    for (k, list) in [&p.water_sites, &p.space_sites].into_iter().enumerate() {
+        let mut h: u64 = 0xcbf29ce484222325;
+        for t in list {
+            for w in [t[0] as u32, t[1] as u32] {
+                for b in w.to_le_bytes() {
+                    h = (h ^ b as u64).wrapping_mul(0x100000001b3);
+                }
+            }
+        }
+        out[k * 3] = list.len() as u32;
+        out[k * 3 + 1] = h as u32;
+        out[k * 3 + 2] = (h >> 32) as u32;
+    }
+    out[6] = p.site_tiles_collected as u32;
+    out[7] = p.types_seen.len() as u32;
+    out
+}

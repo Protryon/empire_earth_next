@@ -1318,7 +1318,7 @@ static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
     EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);   // the stepped list's inIndex-th
     gPhysicsSteppingUnit = theUnit;   // TEST ONLY: named by EE-SIM's random-draw trace
     theUnit->Step();
-    EEUnitUpdateCommit(inID);   // TEST ONLY (USST kind 12)
+    ee_units_note_update_commit(inID);   // TEST ONLY (USST kind 12)
 }
 
 unsigned long EEPhysics::UpdateUnits()
@@ -1332,8 +1332,8 @@ unsigned long EEPhysics::UpdateUnits()
     theHost.step = TickStep;
     unsigned long theCount = ee_units_update_units(&theHost);
     gPhysicsSteppingUnit = NULL;
-    // TEST ONLY: the step leaves' records (USTM, USST; ee/EEUnitStore.h)
-    ee_units_step_commit(gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
+    // TEST ONLY: the step leaves' records (USTM, USST; ee_sim units/notes.rs)
+    ee_units_note_step_commit(gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
     return theCount;
 }
 

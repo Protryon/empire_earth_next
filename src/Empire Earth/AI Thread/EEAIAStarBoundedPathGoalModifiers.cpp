@@ -1,15 +1,11 @@
 // C:\EEX\Empire Earth\AI Thread\EEAIAStarBoundedPathGoalModifiers.cpp (file name inferred: no __FILE__; RTTI
 // classes EEAIBoundedPathGoalModifierBase .. EEAIGPGModifierSpaceRoutePlanner, vtables 0x439bc4..0x439ce0). The path
-// goals' modifiers: 0xf53b..0x10bc7 (EEAIAStarBoundedPathGoal.cpp's COMDATs end at 0xf53b; EEAIAStarBoundedStorage's
-// ctor starts at 0x10bc7). One TU: the base classes' inline slot COMDATs (both bases, 0x10b12..0x10baa) form one
-// cluster at the end. The shared tile tests of the land/sea/space modifiers, the bounded goal's modifiers, then the
-// graph goal's influence-cost route planners. Classes: ee/EEAIPathGoalModifierBase.h,
-// ee/EEAIBoundedPathGoalModifierBase.h, ee/EEAIPathGoalModifiers.h.
+// goals' modifiers: 0xf53b..0x10bc7. Port: the modifiers are Rust objects (ee_sim::astar modifier_obj.rs, PORT_LEARNINGS
+// "AI Thread cluster, round 4"); what is left is the two facts they ask of the C++ and the gates' part tests that sat
+// in this unit (EEUCGate::IsSidePart, out of line after its first user).
 #include <windows.h>
-#include <string.h>
 #include <vector>
 #include <map>
-#include <deque>
 #include <math.h>
 #include <algorithm>
 
@@ -35,280 +31,31 @@
 #include "lle/LowLevelEngineCore.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEMathInline.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
-#include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarView.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EECPASGFlags.h"
-#include "ee/EEAIPathSector.h"
-#include "ee/EEUnitClassKinds.h"
-#include "ee/EEAIPathSubSector.h"
-#include "ee/EEAIArea.h"
-#include "ee/EEAIContinent.h"
-#include "ee/EEAIContinentManager.h"
-#include "ee/EEAIPathGoalModifiers.h"
-#include "ee/EEUnitUtilities.h"
+#include "rust/sim/astar.h"
 
-// 0x248e06 (cdecl): the tile inDistance steps from (inX, inY) in direction inDirection (0..7) (provisional name)
-
-// .rdata 0x439c80 / 0x439c84 (next to the vtables): the land planner's influence scale and bridge cost
-static const float kEEGPGInfluenceScale = 1.85f;
-static const float kEEGPGBridgeCost = 800.0f;
-
-// Whether the step (inFromX, inFromY) -> (inX, inY) is not diagonal (inline; the wall modifiers' GetCost 0x10814
-// materialises it as an int: push 1; pop eax) (provisional name)
-inline BOOL EEIsStraightStep(long inFromX, long inFromY, long inX, long inY)
+// The attackable modifier's references of its walker and target (modifier_obj.rs)
+extern "C" void ee_astar_mod_host_unit_reference(uint64_t inUnit, bool inAdd)
 {
-    return inFromX == inX || inFromY == inY;
-}
-
-// Returns a sea (inSea) or space walker's step cost (ee_astar modifiers::step_cost over a quiet view of the world map)
-long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFromY, long inX, long inY, long inParentX,
-                                       long inParentY)
-{
-    EEAIAStarView theView(gWorld.mMap, true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    EeAStarStepGoal theGoal;
-    theGoal.walker = this->mGoal->unit;
-    theGoal.avoid_units = this->mGoal->avoid_units;
-    theGoal.is_bounded = this->mGoal->is_bounded;
-    theGoal.goal_bounds = this->mGoal->goal_bounds;
-    return ee_astar_mod_step_cost(&theCallbacks, &theGoal, inSea, inFromX, inFromY, inX, inY, inParentX, inParentY);
-}
-
-// Returns whether the goal's walker may enter a tile (ee_astar modifiers::is_passable)
-bool EEAIPathGoalModifierBase::IsPassable(const EeAStarPathGoalRec* inGoal, long inX, long inY, bool inAtGoal)
-{
-    EEAIAStarView theView(gWorld.GetMap(), true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_is_passable(&theCallbacks, inGoal->unit, inX, inY);
-}
-
-// (0x40fa75 IsSeaBlocker and 0x40fb08 IsLandBlocker: EEAIAStarView::HasStepBlocker, with the walker as an argument)
-
-// Creates a bounded-goal modifier attached to the given bounded path goal
-EEAIBoundedPathGoalModifierBase::EEAIBoundedPathGoalModifierBase(EeAStarPathGoalRec* inGoal)
-    : EEAIPathGoalModifierBase(inGoal)
-{
-    this->mBoundedGoal = inGoal;
-}
-
-// Attaches the modifier to a bounded path goal (also as its plain goal)
-void EEAIBoundedPathGoalModifierBase::SetGoal(EeAStarPathGoalRec* inGoal)
-{
-    this->mBoundedGoal = inGoal;
-    this->mGoal = this->mBoundedGoal;
-}
-
-// Creates the space walker's modifier for a bounded path goal
-EEAIBPGModifierSpace::EEAIBPGModifierSpace(EeAStarPathGoalRec* inGoal)
-    : EEAIBoundedPathGoalModifierBase(inGoal)
-{
-}
-
-// Creates the sea walker's modifier for a bounded path goal
-EEAIBPGModifierSea::EEAIBPGModifierSea(EeAStarPathGoalRec* inGoal)
-    : EEAIBoundedPathGoalModifierBase(inGoal)
-{
-}
-
-// Creates the modifier that ends a search within the unit's weapon range of the target, referencing both units
-EEAIBPGModifierEnemyIsAttackableByUnit::EEAIBPGModifierEnemyIsAttackableByUnit(EEComplexUnit* inUnit,
-                                                                               EEComplexUnit* inTarget)
-    : mUnit(inUnit)
-{
-    inUnit->Reference();
-    this->mTarget = inTarget;
-    inTarget->Reference();
-    this->mRangeSquared = UMSquare(inUnit->mStats->GetRange());
-}
-
-// Destroys the modifier, releasing its references to the unit and the target
-EEAIBPGModifierEnemyIsAttackableByUnit::~EEAIBPGModifierEnemyIsAttackableByUnit()
-{
-    this->mUnit->Dereference();
-    this->mTarget->Dereference();
-}
-
-// Returns whether a node lies within weapon range of the goal's destination; if so, moves the destination and
-// the goal tile onto the node
-bool EEAIBPGModifierEnemyIsAttackableByUnit::CheckNode(EEAIAStarNode* inNode)
-{
-    U2DPoint<long> thePoint;
-    bool theResult = inNode == NULL;
-    if (!theResult) {
-        thePoint = U2DPoint<long>(inNode->mX, inNode->mY);
-        U2DPoint<long> theDestination(this->mBoundedGoal->destination.x, this->mBoundedGoal->destination.y);
-        if (thePoint.DistanceToSquaredF(theDestination) <= this->mRangeSquared) {
-            this->mBoundedGoal->destination.x = (int32_t)thePoint.mX;
-            this->mBoundedGoal->destination.y = (int32_t)thePoint.mY;
-            this->mBoundedGoal->goal = this->mBoundedGoal->destination;
-            theResult = true;
-        }
-    }
-    return theResult;
-}
-
-// Returns a flat step cost of 10
-long EEAIBPGModifierEnemyIsAttackableByUnit::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
-                                                       long inParentY)
-{
-    return 10;
-}
-
-// Returns whether the unit may enter a tile (ee_astar modifiers::attacker_can_enter)
-bool EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
-{
-    EEAIAStarView theView(gWorld.GetMap(), true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_attacker_can_enter(&theCallbacks, this->mUnit, inX, inY);
-}
-
-// Creates the modifier that lets a walker path through walls
-EEAIBPGModifierWallsDoNotBlock::EEAIBPGModifierWallsDoNotBlock()
-{
-}
-
-// +0x04 (no address: ICF-folded into EEAIGPGModifierComputerPlayerWallPather's identical 0x10814)
-long EEAIBPGModifierWallsDoNotBlock::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
-                                               long inParentY)
-{
-    return EEIsStraightStep(inFromX, inFromY, inX, inY) ? 10 : 14;
-}
-
-// Returns whether the walker may enter a tile, walls passable (ee_astar modifiers::walls_can_enter)
-bool EEAIBPGModifierWallsDoNotBlock::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
-{
-    EEAIAStarView theView(gWorld.GetMap(), true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_walls_can_enter(&theCallbacks, this->mBoundedGoal->unit, inX, inY);
-}
-
-// Returns true when the sub-sector has no links to inFrom or any such link has a passable end (the path graph goal's
-// HasPassableLink 0x1a845)
-bool EEAIGraphHasPassableLink(const EeAStarGraphGoalRec* inGoal, EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
-{
-    std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> > theLinks;
-    inSector->GetLinks(inFrom->GetID(), theLinks);
-    bool theResult = theLinks.size() == 0;
-    for (long i = theLinks.size() - 1; i >= 0 && !theResult; i--) {
-        if (inGoal->path_flags[theLinks[i].first->GetKind()] == true || inGoal->path_flags[theLinks[i].second->GetKind()] == true)
-            theResult = true;
-    }
-    return theResult;
-}
-
-// Creates an influence-cost modifier for the player against an enemy, with the given weights
-EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID,
-                                                                         unsigned long inEnemyID,
-                                                                         const EECPASGWeights& inWeights)
-    : mWeights(inWeights), mPlayerID(inPlayerID), mEnemyID(inEnemyID)
-{
-}
-
-// Creates an influence-cost modifier for the player against an enemy, with zero weights
-EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID,
-                                                                         unsigned long inEnemyID)
-    : mWeights(0.0f), mPlayerID(inPlayerID), mEnemyID(inEnemyID)
-{
-}
-
-// Creates the enemy-avoidance route modifier for the player
-EEAIGPModifierEnemyAvoidance::EEAIGPModifierEnemyAvoidance(unsigned long inPlayerID)
-    : EEAIGPGModiferUseInfluenceCostsBase(inPlayerID, 0)
-{
-}
-
-/// NEAR: the original calls std::pair<long, int>'s ctor 0xaa817 out of line (ours expands it: the Dinkum depth family)
-// Returns a sector step cost: 1 inside one sector, else 10/14; +350 when enemies have influence within one region
-long EEAIGPModifierEnemyAvoidance::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
-{
-    U2DRectangle<long> theRect;
-    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
-    std::pair<long, int> theRegion(inTo->GetLocation().GetX() / theTable->mRegionSize,
-                                   inTo->GetLocation().GetY() / theTable->mRegionSize);
-    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject)->GetSector();
-    long theCost;
-    if (theFrom == inTo->GetSector())
-        theCost = 1;
-    else if (theFrom->GetCenter().mX == inTo->GetSector()->GetCenter().mX || theFrom->GetCenter().mY == inTo->GetSector()->GetCenter().mY)
-        theCost = 10;
+    EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inUnit;
+    if (inAdd)
+        theUnit->Reference();
     else
-        theCost = 14;
-    theRect.mLeft = theRegion.first - 1;
-    theRect.mTop = theRegion.second - 1;
-    theRect.mRight = theRegion.first + 1;
-    theRect.mBottom = theRegion.second + 1;
-    if (theTable->SumEnemyValue(this->mPlayerID, theRect, true) > 0)
-        theCost += 350;
-    if (theCost <= 1)
-        theCost = 1;
-    return theCost;
+        theUnit->Dereference();
 }
 
-// +0x08 (no address: ICF-folded into EEAIGPGModifierSpaceRoutePlanner's identical 0x10aa1)
-bool EEAIGPModifierEnemyAvoidance::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
+// The enemy avoidance's influence table (its Rust table) and region size, NULL without one
+extern "C" const void* ee_astar_mod_host_influence(int32_t* outRegionSize)
 {
-    bool theResult = this->mGoal->path_flags[inSector->GetKind()];
-    if (!theResult) {
-        if (inSector->GetKind() != kAITileGate)
-            return theResult;
-        theResult = inSector->IsPassable(this->mPlayerID);
-    }
-    if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
-        theResult = EEAIGraphHasPassableLink(this->mGoal, inSector, inFrom);
-    return theResult;
-}
-
-// Creates the computer player's wall route planner for the player against an enemy
-EEAIGPGModifierComputerPlayerWallPlanner::EEAIGPGModifierComputerPlayerWallPlanner(unsigned long inPlayerID,
-                                                                                   long inEnemyID)
-    : EEAIGPGModiferUseInfluenceCostsBase(inPlayerID, inEnemyID)
-{
-}
-
-// Returns whether the player may pass the gate sector: true when its gate is missing or destroyed, or is the
-// player's or an ally's unlocked main part
-bool EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(EEAIPathSubSector* inSector, unsigned long inPlayerID)
-{
-    U2DSparseArrayPointContainer& theTiles = inSector->mTiles;
-    bool theBlocked = false;
-    EEUnitClass* theGateClass = NULL;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayerID];
-    EEComplexUnit* theGate = NULL;
-    for (long i = theTiles.Size() - 1; i >= 0 && !theBlocked; i--) {
-        EETile* theMapTile = gWorld.GetMap()->GetTileAtLocation(theTiles[i]);
-        if (!theMapTile)
-            continue;
-        for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode; theNode = theNode->mNext) {
-            EEUnit* theUnit = theNode->mUnit;
-            if (!theUnit || theUnit->GetUnitClass()->mCategory != kUnitCategoryGate)
-                continue;
-            theGate = theUnit->mComplexUnit;
-            theGateClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theGate->GetUnitClass());
-            break;
-        }
-        if (!theGate || theGate->mHitPoints <= 0) {
-            theBlocked = true;
-            break;
-        }
-        if ((thePlayer == theGate->mPlayer || theGate->mPlayer->mEnemies[thePlayer->mPlayerID] == 0) &&
-            !theGateClass->IsSidePart(theGate) && !theGate->mIsLocked)
-            theBlocked = true;
-        else
-            theBlocked = false;
-    }
-    return theBlocked;
+    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
+    *outRegionSize = theTable ? (int32_t)theTable->mRegionSize : 0;
+    return theTable ? theTable->mTable : NULL;
 }
 
 // Returns whether a gate part is an end part (last, with a part before it) or the middle part
@@ -322,46 +69,4 @@ bool EEUnitClass::IsSidePart(EEComplexUnit* inGate)
 bool EEUnitClass::IsMiddlePart(EEComplexUnit* inGate)
 {
     return inGate->mNextPart != NULL && inGate->mNextPart->mNextPart == NULL && inGate->mPreviousPart != NULL;
-}
-
-// Returns a sector step cost: 1 inside one sector, else 10 straight or 14 diagonal
-// (the path graph goal's default step cost is ICF-folded into it)
-long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
-{
-    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject)->GetSector();
-    EEAIPathSector* theTo = inTo->GetSector();
-    if (theFrom != theTo)
-        return theFrom->GetCenter().mX == theTo->GetCenter().mX || theFrom->GetCenter().mY == theTo->GetCenter().mY ? 10 : 14;
-    return 1;
-}
-
-// Returns whether the planner may enter a sector: a passable kind or a gate open to the player, then a passable
-// link from inFrom
-bool EEAIGPGModifierComputerPlayerWallPlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
-{
-    bool theResult = this->mGoal->path_flags[inSector->GetKind()];
-    if (!theResult) {
-        if (inSector->GetKind() != kAITileGate)
-            return theResult;
-        theResult = this->IsGateOpen(inSector, this->mPlayerID);
-    }
-    if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
-        theResult = EEAIGraphHasPassableLink(this->mGoal, inSector, inFrom);
-    return theResult;
-}
-
-// The wall pather (ee/EEAIBoundedPathGoalModifierBase.h); its +0x04 is also EEAIBPGModifierWallsDoNotBlock's
-// Returns 10 for a straight step, 14 for a diagonal one
-long EEAIGPGModifierComputerPlayerWallPather::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
-                                                        long inParentY)
-{
-    return EEIsStraightStep(inFromX, inFromY, inX, inY) ? 10 : 14;
-}
-
-// Returns whether the wall pather may enter a tile, trees passable (ee_astar modifiers::wall_pather_can_enter)
-bool EEAIGPGModifierComputerPlayerWallPather::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
-{
-    EEAIAStarView theView(gWorld.GetMap(), true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_wall_pather_can_enter(&theCallbacks, this->mBoundedGoal->unit, inX, inY);
 }

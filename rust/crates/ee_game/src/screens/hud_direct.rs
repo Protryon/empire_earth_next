@@ -176,6 +176,15 @@ pub(crate) unsafe fn main_form(
     let set_text = |t: &[u8]| unsafe { wide_assign(&mut (*call).text, t) };
     Some(match op {
         // ---- the held text and the chat line's
+        // ---- the viewport's view rectangle (ee_gfx input_views.rs: gViewport; zeros before the graphics made it)
+        EE_SCREENS_MF_OP_VIEW_RECT => {
+            let v = ee_render::gfx::input_views::main_viewport().map(|v| v.view_rectangle).unwrap_or_default();
+            io.f[..4].copy_from_slice(&[v.left, v.top, v.right, v.bottom]);
+            0
+        }
+        // ---- the chat log's entries (EEUIECLEFormManager::GetEntryCount: chat_log_ffi.rs; absent from a test build)
+        #[cfg(not(test))]
+        EE_SCREENS_MF_OP_LOG_ENTRIES => crate::screens::chat_log_ffi::ee_screens_chat_log_count() as i64,
         EE_SCREENS_MF_OP_TEXT_SET => {
             // SAFETY: the Rust caller's `a` bytes at `b`
             let bytes = unsafe { core::slice::from_raw_parts(b as *const u8, a.max(0) as usize) };
@@ -648,6 +657,12 @@ pub(crate) fn control(ctl: Cpp, op: u32, a: i64, f: &mut [f32]) -> Option<i64> {
             0
         }
         EE_SCREENS_HC_DISPLAY_MODE => direct::with_fields(ctl, |r| r.mDisplayMode as i64).unwrap_or(0),
+        // gViewport's view rectangle (ee_gfx input_views.rs; zeros before the graphics made it)
+        EE_SCREENS_HC_VIEW_RECT => {
+            let v = ee_render::gfx::input_views::main_viewport().map(|v| v.view_rectangle).unwrap_or_default();
+            f[..4].copy_from_slice(&[v.left, v.top, v.right, v.bottom]);
+            0
+        }
         EE_SCREENS_HC_MODIFIERS => ee_base::input::ffi::keyboard_modifiers() as i64,
         EE_SCREENS_HC_FORM_REDRAW => {
             direct::form_call_f(form(), EeUiFormCall::RedrawIntersectControls, 0, 0, &mut ge(f));

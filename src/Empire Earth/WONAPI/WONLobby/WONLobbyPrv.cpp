@@ -73,21 +73,21 @@ static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *t
 	aTable->AddAllocator("UpdateAccountCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::UpdateAccount>);
 	aTable->AddAllocator("UserListCtrl",UserListCtrlConfig::CfgFactory,UserListCtrlConfig::CompFactory);
 
-	aTable->AddAllocator("AddFriendDialog",DialogConfig::CfgFactory,New<AddFriendDialog>);
-	aTable->AddAllocator("AdminActionDialog",DialogConfig::CfgFactory,New<AdminActionDialog>);
-	aTable->AddAllocator("BadUserDialog",DialogConfig::CfgFactory,New<BadUserDialog>);
-	aTable->AddAllocator("ChooseNetworkAdapterDialog",DialogConfig::CfgFactory,New<ChooseNetworkAdapterDialog>);
-	aTable->AddAllocator("CreditsDialog",CreditsDialogConfig::CfgFactory,New<CreditsDialog>);
-	aTable->AddAllocator("CreateGameDialog",DialogConfig::CfgFactory,New<CreateGameDialog>);
-	aTable->AddAllocator("CreateRoomDialog",DialogConfig::CfgFactory,New<CreateRoomDialog>);
-	aTable->AddAllocator("DirectConnectDialog",DialogConfig::CfgFactory,New<DirectConnectDialog>);
-	aTable->AddAllocator("LanNameDialog",DialogConfig::CfgFactory,New<LanNameDialog>);
-	aTable->AddAllocator("LanPortDialog",DialogConfig::CfgFactory,New<LanPortDialog>);
-	aTable->AddAllocator("OkCancelDialog",DialogConfig::CfgFactory,New<OkCancelDialog>);
-	aTable->AddAllocator("PasswordDialog",DialogConfig::CfgFactory,New<PasswordDialog>);
-	aTable->AddAllocator("RoomDialog",DialogConfig::CfgFactory,New<RoomDialog>);
-	aTable->AddAllocator("StatusDialog",DialogConfig::CfgFactory,New<StatusDialog>);
-	aTable->AddAllocator("TOUDialog",DialogConfig::CfgFactory,New<TOUDialog>);
+	aTable->AddAllocator("AddFriendDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>);
+	aTable->AddAllocator("AdminActionDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>);
+	aTable->AddAllocator("BadUserDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>);
+	aTable->AddAllocator("ChooseNetworkAdapterDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>);
+	aTable->AddAllocator("CreditsDialog",CreditsDialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Credits>);
+	aTable->AddAllocator("CreateGameDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>);
+	aTable->AddAllocator("CreateRoomDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>);
+	aTable->AddAllocator("DirectConnectDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>);
+	aTable->AddAllocator("LanNameDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::LanName>);
+	aTable->AddAllocator("LanPortDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>);
+	aTable->AddAllocator("OkCancelDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>);
+	aTable->AddAllocator("PasswordDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Password>);
+	aTable->AddAllocator("RoomDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Room>);
+	aTable->AddAllocator("StatusDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Status>);
+	aTable->AddAllocator("TOUDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Tou>);
 
 
 	aTable->AddAllocator("CrossPromotionButton",CrossPromotionButtonConfig::CfgFactory,CrossPromotionButtonConfig::CompFactory);

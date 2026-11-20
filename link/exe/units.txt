@@ -1,18 +1,15 @@
 052f3 05d47 Empire Earth/Actions/EEAWonNet.cpp
-0d6e3 0e9a1 Empire Earth/AI Thread/EEAIArea.cpp
 0f53b 10bc7 Empire Earth/AI Thread/EEAIAStarBoundedPathGoalModifiers.cpp
 1c740 1d846 Empire Earth/AI Thread/EEAIChokePoint.cpp
 1d846 1ed2c Empire Earth/AI Thread/EEAIContinent.cpp
 1ed2c 29f57 Empire Earth/AI Thread/EEAIContinentManager.cpp
 29f57 2bb72 Empire Earth/AI Thread/EEAIFunctionObjects.cpp
 2bbd3 2be88 Empire Earth/AI Thread/EEAIPathSector.cpp
-2be88 2c79f Empire Earth/AI Thread/EEAIPathSubSector.cpp
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp
 2cc87 2ce2e Empire Earth/AI Thread/EEArtificialIntelligence.cpp
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp
 8bbbf 8e702 Empire Earth/AI Thread/EECPResourceCenter.cpp
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
-a543d a5589 Empire Earth/AI Thread/EEHumanPlayer.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
 acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
@@ -26,11 +23,7 @@ b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
 d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
-d5d08 d5f7e Empire Earth/Database/EEColorTable.cpp
-d5f7e d6035 Empire Earth/Database/EECPBehaviorTable.cpp
-d6035 d61f7 Empire Earth/Database/EEDatabase.cpp
 d61f7 d68c7 Empire Earth/Database/EEDbObject.cpp
-d68c7 d6bed Empire Earth/Database/EEGameVariant.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
 d72c1 d9b2b Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp
 d9b2b da3be Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp
@@ -38,7 +31,6 @@ da56d da984 Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp
 dae63 db169 Empire Earth/Database/EETerrainColorTable.cpp
 db169 dbcc8 Empire Earth/Database/EETerrainTable.cpp
 dbcc8 dc682 Empire Earth/Database/EETerrainTypeTable.cpp
-dc8e7 dd160 Empire Earth/Database/EEUnitBehavior.cpp
 ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 10972b 10a9b0 Empire Earth/Graphics Thread/EEGraphics.cpp
 10a9b0 10aa88 Empire Earth/Graphics Thread/EEMouse.cpp
@@ -60,7 +52,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1245bb 1248f6 RTS Engine/Map/RTSTile.cpp
 1248f6 124a88 RTS Engine/Map/RTSVisibleMap.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
-1273d7 127584 Empire Earth/Empire Earth/EECDKeyStrings.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
 12a54a 12c3eb Empire Earth/Empire Earth/EECheatCodes.cpp
 12c3eb 12cac8 Empire Earth/Empire Earth/EECivilization.cpp
@@ -71,9 +62,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1304e4 131b7c Empire Earth/Empire Earth/EEGameState.cpp
 131b7c 13242b Empire Earth/Empire Earth/EEMusicManager.cpp
 13242b 136b6d Empire Earth/Empire Earth/EEPreferences.cpp
-136b6d 136d66 Empire Earth/Empire Earth/EETeam.cpp
-136d66 136f4c Empire Earth/Empire Earth/EEUnitSet.cpp
-136f4c 1372a6 Empire Earth/Empire Earth/EEUnitSetManager.cpp
 1372a6 137b3f Empire Earth/Empire Earth/EEVCWonder.cpp
 137ba3 13e967 Empire Earth/Empire Earth/EEWorld.cpp
 13e967 13e967 Empire Earth/Empire Earth/EEGlobals.cpp   # the globals of Empire Earth.cpp (data only; same init order)
@@ -159,14 +147,12 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 256845 257223 Empire Earth/User Interface Thread/EEUIBUpgrade.cpp
 257223 257881 Empire Earth/User Interface Thread/EEUICChatLine.cpp
 257881 258464 Empire Earth/User Interface Thread/EEUICCommandUnits.cpp
-258464 25861c Empire Earth/User Interface Thread/EEUICPing.cpp
 25861c 25952f Empire Earth/User Interface Thread/EEUICPortrait.cpp
 25952f 259f7f Empire Earth/User Interface Thread/EEUICSelectUnits.cpp
 25b2ce 25cead Empire Earth/User Interface Thread/EEUICWonNetGamesBox.cpp
 25cead 25e2f8 Empire Earth/User Interface Thread/EEUICWonNetRoomsBox.cpp
 25e2f8 25fdb3 Empire Earth/User Interface Thread/EEUICWonNetStatBox.cpp
 260c27 2624a6 Empire Earth/User Interface Thread/EEUIFError.cpp
-2624a6 26272b Empire Earth/User Interface Thread/EEUIFileComboBox.cpp
 26272b 26783d Empire Earth/User Interface Thread/EEUIFMainGame.cpp
 26783d 267ad9 Empire Earth/User Interface Thread/EEUIFMGAttribute.cpp
 267ec8 2691b2 Empire Earth/User Interface Thread/EEUIFMGMainGroup.cpp

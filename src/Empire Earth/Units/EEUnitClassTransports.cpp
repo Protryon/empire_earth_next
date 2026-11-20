@@ -64,6 +64,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     std::vector<U2DPoint<long> > theTiles;
     if (inOp >= EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT)
         return EEUnitClassMoveOp(inOp, theUnit, inB, inC, inD, ioIo);   // EEUnitClass.cpp
+    // (the cargo, container, command, home base, turn speeds, projectile category and map size: cls_host.rs)
     switch (inOp) {
     case EE_UNITS_CLS_NEXT_TO_AREA:
         return gContinentManager.IsNextToArea((long)inC, (long)inD, (unsigned short)inA);
@@ -117,10 +118,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         ioIo->b = theGoal->GetLoadUnitTile().mY;
         return 1;
     }
-    case EE_UNITS_CLS_CARGO:
-        return EEObj(theUnit->mCargo[(size_t)inC]);
-    case EE_UNITS_CLS_CONTAINER:
-        return EEObj(theUnit->GetContainer());
     case EE_UNITS_CLS_WAYPOINTS:
         return (int64_t)theUnit->mWaypoints.size();
     case EE_UNITS_CLS_NEXT_WAYPOINT: {
@@ -129,8 +126,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         ioIo->p[0] = thePoint.mX; ioIo->p[1] = thePoint.mY; ioIo->p[2] = thePoint.mZ;
         return theAnswer;
     }
-    case EE_UNITS_CLS_COMMAND_TYPE:
-        return theUnit->mCommand ? theUnit->mCommand->mType : 0;
     case EE_UNITS_CLS_GROUND_HEIGHT: {
         GE3DPoint thePoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]);
         ((EEUnitClass*)(uintptr_t)inB)->GetGroundHeight(thePoint, &ioIo->f);
@@ -140,10 +135,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         return ((EEUnitClass*)(uintptr_t)inB)->IsBombOnTarget(theUnit);
     case EE_UNITS_CLS_AWAY_FROM_GOAL:
         return ((EEUnitClass*)(uintptr_t)inB)->IsAwayFromGoal(theUnit);
-    case EE_UNITS_CLS_PROJECTILE_CATEGORY: {
-        EEUnitClass* theProjectile = ((EEUnitClass*)(uintptr_t)inB)->mProjectileClass;
-        return theProjectile != NULL ? (int64_t)theProjectile->mCategory : -1;
-    }
     case EE_UNITS_CLS_ATTACK_TARGET_ALIVE: {
         EEUGRust* theAttack = EEAttackUnitCast(theUnit->GetGoal());
         return theAttack != NULL && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0;
@@ -156,17 +147,11 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     }
     case EE_UNITS_CLS_QUEUE_GOALS:
         return (int64_t)theUnit->GetQueueGoals((unsigned long)inC).size();
-    case EE_UNITS_CLS_TURN_SPEEDS:
-        ioIo->p[0] = theUnit->mStats->GetMaxVelocity();
-        ioIo->p[1] = theUnit->mStats->GetMaxAngularVelocity();
-        return 0;
     case EE_UNITS_CLS_TILES_NEAR_POINT:
         EEGetTilesNearPoint(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), ioIo->f, theTiles);
         break;
     case EE_UNITS_CLS_IS_SPACE_MAP:
         return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    case EE_UNITS_CLS_MAP_SIZE:
-        return ::gWorld.mMap->GetSize();
     case EE_UNITS_CLS_HULL_CENTER:
         ioIo->a = ((EEAIContinent*)(uintptr_t)inA)->GetHullCenter().mX;
         ioIo->b = ((EEAIContinent*)(uintptr_t)inA)->GetHullCenter().mY;
@@ -178,8 +163,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
             ee_units_cls_push((EeUnitsClsListHandle*)ioIo->list, (int32_t)EEObj(theUnits[i]), (int32_t)(EEObj(theUnits[i]) >> 32));
         return 0;
     }
-    case EE_UNITS_CLS_HOME_BASE:
-        return EEObj(theUnit->mHomeBase);
     case EE_UNITS_CLS_FLIGHT_TARGET: {   // GetNextFlightState's goal target (0x615ccf)
         EEUnitGoal* theGoal = theUnit->mGoalState;
         GE3DPoint theTarget;

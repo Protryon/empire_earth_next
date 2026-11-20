@@ -44,7 +44,6 @@
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EECBUIListBox.h"
-#include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScreenEvent.h"
@@ -318,43 +317,6 @@ void EEUIManager::DeleteScenarioEditor()
     this->mScenarioEditorForm = NULL;
 }
 
-// Shows a new message box asking for a text or password
-void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned long inAlignment, EEUIFPasswordCallback inCallback,
-                                        bool inFlag)
-{
-    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_PASSWORD, inMessage, inAlignment, NULL, (EEUIFErrorCallback)inCallback,
-                                   NULL, NULL, inFlag);
-}
-
-// Shows a new message box with only a Cancel button
-void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
-                                EEUIFErrorCallback inCallback, UIForm* inCancel)
-{
-    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
-}
-
-// Shows a new message box with an optional OK button
-void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
-                                 EEUIFErrorCallback inCallback, bool inFlag)
-{
-    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
-}
-
-// Shows a new Yes/No message box
-void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
-                                  EEUIFErrorCallback inNo)
-{
-    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
-}
-
-// Shows a new Yes/No/Cancel message box
-void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
-                                     EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
-{
-    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL,
-                                   false);
-}
-
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
 // (ee_screens ui_manager.rs)
 void EEUIManager::StartScenarioEditor()
@@ -482,3 +444,9 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     return 0;
 }
 
+// the manager's construction as the game's start makes it (Empire Earth.cpp: ee/EEGameUI.h)
+static const bool sManagerRegistered =
+    (gEEGameUI.mNewManager = [](GERasterizer* inRasterizer, unsigned long inNumberOfSurfaces, unsigned long inScreen,
+                                const UString& inUnused) { return new EEUIManager(inRasterizer, inNumberOfSurfaces,
+                                                                                  inScreen, inUnused); },
+     true);

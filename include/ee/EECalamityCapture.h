@@ -13,10 +13,12 @@ void EECalamityCaptureSaves();
 class EECalamity;
 // CALK of one calamity (inIndex: its place among the active ones; also at each calamity's start), and of the
 // contagion manager
-void EECalamityCaptureSave(EECalamity* inCalamity, unsigned long inIndex);
+// the hooks the game calls (EECalamityManager.cpp): pointers EECalamityCapture.cpp sets before main, so no game unit
+// names a symbol of that TEST ONLY unit (PORT_LEARNINGS "Cycle cuts")
+inline void (*EECalamityCaptureSave)(EECalamity* inCalamity, unsigned long inIndex) = nullptr;
 void EECalamityCaptureContagionSave();
 // both CALKs whenever the calamity's time alive crossed a multiple of five seconds in its update (inBefore: the time
 // alive before it)
-void EECalamityCaptureAged(EECalamity* inCalamity, unsigned long inIndex, float inBefore);
+inline void (*EECalamityCaptureAged)(EECalamity* inCalamity, unsigned long inIndex, float inBefore) = nullptr;
 
 #endif

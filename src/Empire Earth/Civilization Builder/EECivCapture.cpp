@@ -191,7 +191,7 @@ struct EECivCaptureApply {
     EESimCaptureRecord mRecord{EECaptureTag("CVAP")};
 };
 
-EECivCaptureApply* EECivCaptureApplyBegin(EECivUpgrade inUpgrade, long inPlayer)
+static EECivCaptureApply* EECivCaptureApplyBeginImpl(EECivUpgrade inUpgrade, long inPlayer)
 {
     if (!EESimCaptureRecord::Active())
         return NULL;
@@ -224,7 +224,7 @@ EECivCaptureApply* EECivCaptureApplyBegin(EECivUpgrade inUpgrade, long inPlayer)
     return c;
 }
 
-void EECivCaptureApplyEnd(EECivCaptureApply* inCapture, bool inResult)
+static void EECivCaptureApplyEndImpl(EECivCaptureApply* inCapture, bool inResult)
 {
     if (inCapture == NULL)
         return;
@@ -262,8 +262,8 @@ void EECivCaptureApplyEnd(EECivCaptureApply* inCapture, bool inResult)
     delete inCapture;
 }
 
-void EECivCaptureLoad(const UString& inName, const UString& inDirectory, long inResult, const UWideString& inCivName,
-                      const std::vector<EECivUpgrade>& inUpgrades)
+static void EECivCaptureLoadImpl(const UString& inName, const UString& inDirectory, long inResult,
+                                 const UWideString& inCivName, const std::vector<EECivUpgrade>& inUpgrades)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -280,7 +280,7 @@ void EECivCaptureLoad(const UString& inName, const UString& inDirectory, long in
     r.Commit();
 }
 
-void EECivCaptureApplyFile(const UString& inName, EEPlayer* inPlayer, long inResult)
+static void EECivCaptureApplyFileImpl(const UString& inName, EEPlayer* inPlayer, long inResult)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -294,3 +294,10 @@ void EECivCaptureApplyFile(const UString& inName, EEPlayer* inPlayer, long inRes
     }
     r.Commit();
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EECivCaptureApplyBegin = EECivCaptureApplyBeginImpl,
+                                      EECivCaptureApplyEnd = EECivCaptureApplyEndImpl,
+                                      EECivCaptureLoad = EECivCaptureLoadImpl,
+                                      EECivCaptureApplyFile = EECivCaptureApplyFileImpl, true);

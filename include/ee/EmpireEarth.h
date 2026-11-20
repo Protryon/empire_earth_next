@@ -98,7 +98,7 @@ bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit);
 void EEPostF9Key();
 class EEUIFMainGame;
 extern EEUIFMainGame* gSavedMainGameForm;  // 0x563144 (LoadScenario stores gUIManager->GetMainGameForm(); provisional name)
-extern UString gMultiplayerString;         // 0x562fd8 (defined by UI Events/EEScreens.cpp, ""; provisional name)
+extern UString gMultiplayerString;         // 0x562fd8 (EEGlobals.cpp; constructed by UI Events/EEScreens.cpp, ""; provisional name)
 bool EEIsMultiplayerGame(bool inFlag);     // 0x2989a9 (inFlag ? byte 0x531664 : true; provisional name)
 void EEStartExternalLobby();               // 0x297276 (the main screen's MultiPlayer when the check passes; provisional name)
 void EEShowSinglePlayerScreen();           // 0x13fe97 (the campaign choice's Back, after Pop; provisional name)
@@ -163,10 +163,9 @@ void EESetDataPaths();                     // 0x140d3c (SetTexturePath/SetModelP
 extern UWideString gU52A280;               // 0x52a280 "een1ve1s_" (prefixed to campaign scenario and media file names)
 extern UWideString gU530BC8;               // 0x530bc8 (Empire Earth.cpp; EEUIESSEOpen appends it to label 0's text)
 
-// 0x4e8708: a float table indexed [unit class +0x1c8][other unit class +0x1cc] (19 readers, e.g. the AI Hero unit;
-// two stores). Name is provisional. The rows are ee_combat's (damage_table.rs); EEDamageFactor is the checked read
-// (0 off the table, where an index of -1 read before the array)
-extern float** gDamageTable;
+// 0x4e8708 gDamageTable: a float table indexed [unit class +0x1c8][other unit class +0x1cc]. The rows are
+// ee_combat's (damage_table.rs); EEDamageFactor is the checked read (0 off the table, where an index of -1 read before
+// the array)
 float EEDamageFactor(long inRow, long inColumn);
 
 // (provisional name for the window; the font names are Empire Earth.cpp's assert strings, e.g. "gFontTahoma12"): the

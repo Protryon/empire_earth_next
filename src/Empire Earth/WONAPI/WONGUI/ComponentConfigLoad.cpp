@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
-#include "ee/wonapi/WONMSMessageBoxAPI.h"
+#include "ee/wonapi/WONGUIShell.h"
 
 // Parse statistics shared with the configuration instruction code (defined there)
 extern bool gShowParseTime;
@@ -56,7 +56,7 @@ bool ComponentConfig::ReadConfig_Unsafe(Component* component,const char* fileNam
         sprintf(text,"Lines parsed: %d\nConfig Parse Time: %.2f (%.2f) (= %%%d)",
                      gLinesParsed,PerfTimer::GetElapsedTime(),PerfTimer::GetCountedTime(),
                      (int)(PerfTimer::GetPercentTime()*100));
-        MSMessageBox::Msg(Window::GetDefaultWindow(),GUIString("Config Parse Time"),
+        MSMessageBoxMsg(Window::GetDefaultWindow(),GUIString("Config Parse Time"),
                           GUIString(text),gEmptyGUIString,gEmptyGUIString,gEmptyGUIString);
     }
     gShowParseTime=oldShowParseTime;

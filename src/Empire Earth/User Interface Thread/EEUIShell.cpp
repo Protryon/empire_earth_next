@@ -68,6 +68,9 @@
 #include "ee/EEUnitVectorItem.h"
 #include "lle/GELine.h"
 #include "lle/UIControlsTable.h"
+#include <set>
+#include "lle/FSArchive.h"
+#include "lle/FSPath.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -191,6 +194,16 @@ UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRe
             theBar->mSlots[2 + i] = (void*)(uintptr_t)theSound->GetSampleID();
         }
     return theBar;
+}
+
+// A new file combo box (EEUIFileComboBox: the editor's map, sound and elevation lists): the path referenced, the
+// list filled by the kind (shells_files.rs)
+UIComboBox* EEUIShellNewFileCombo(FSPath* inPath, const UString& inPattern, unsigned long inId, GEFont* inFont,
+                                  const GE2DPoint& inLocation, unsigned long inWidth, UIForm* inForm, unsigned long inIndex)
+{
+    inPath->Reference();
+    return new EEUIShellCombo(EE_SCREENS_SK_FILE_COMBO, {(int64_t)inPath, (int64_t)(const char*)inPattern}, inId, 1, {},
+                              inFont, GERectangle(inLocation, (float)inWidth, 20.0f), 400, inForm, inIndex, 0, 2);
 }
 
 int64_t EEUIShellRadio::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -326,8 +339,6 @@ static GEText* EEShellText(UIControl* inControl, int64_t inWhich)
     return static_cast<UIEditBox*>(inControl)->GetGEText();
 }
 
-void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp);   // EESERBUnitTypes.cpp
-
 static EEUIFScenarioEditor* EEShellTriggers()
 {
     return gUIManager->GetScenarioEditorForm();
@@ -363,6 +374,24 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         break;
     case EE_SCREENS_SH_SELECTION_INDEX: return (int64_t)(uint32_t)static_cast<EEUIShellCombo*>(c)->Selection();
     case EE_SCREENS_SH_SET_SELECTION: static_cast<UIComboBox*>(c)->SetCurrentSelection((unsigned long)a); break;
+    case EE_SCREENS_SH_FILE_APPEND_LISTED: {
+        std::set<UString> theFiles;
+        reinterpret_cast<FSPath*>(a)->ListFiles(UString(reinterpret_cast<const char*>(b)), theFiles);
+        for (std::set<UString>::const_iterator it = theFiles.begin(); it != theFiles.end(); ++it) {
+            theText = *it;
+            theText.InsertString("", theText.GetLength() - 4, true);
+            static_cast<UIComboBox*>(c)->AppendLine(theText);
+        }
+        break;
+    }
+    case EE_SCREENS_SH_FILE_FIND_LINE: {
+        const UILBString* theList = static_cast<UIComboBox*>(c)->GetListBox();
+        for (unsigned long i = 0; i < theList->GetLineCount(); i++)
+            if (theList->GetData(i) == *reinterpret_cast<const UWideString*>(a))
+                return i;
+        return -1;
+    }
+    case EE_SCREENS_SH_FILE_PATH_RELEASE: reinterpret_cast<FSPath*>(a)->Dereference(); break;
     case EE_SCREENS_SH_DELETE_ALL: static_cast<UIComboBox*>(c)->DeleteAllEntries(); break;
     case EE_SCREENS_SH_APPEND_STRING:
         gResource->GetString((unsigned long)a, theText);
@@ -672,7 +701,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EESEAPaint*>(a)); break;
     case EE_SCREENS_SH_ACTION_RELEASE: reinterpret_cast<EESEAPaint*>(a)->Dereference(); break;
     // the scenario editor lane's (0xa0..): the diplomacy buttons' state, an action's post and release
-    case EE_SCREENS_SH_SE_DIPLOMACY: EESEDiplomacyShow(static_cast<UIButton*>(c), (unsigned long)a, b != 0); break;
+    case EE_SCREENS_SH_SE_DIPLOMACY: gEEUIShellDiplomacyShow(static_cast<UIButton*>(c), (unsigned long)a, b != 0); break;
     case EE_SCREENS_SH_SE_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EEAction*>(a)); break;
     case EE_SCREENS_SH_SE_ACTION_RELEASE: reinterpret_cast<EEAction*>(a)->Dereference(); break;
     case EE_SCREENS_SH_BRUSH_HIGHLIGHT: gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(f[0], f[1], a != 0); break;

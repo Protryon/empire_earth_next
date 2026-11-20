@@ -74,7 +74,7 @@ fn chat_parts(ctl: *mut c_void) -> Option<ChatParts> {
 }
 
 /// The chat line's host: its timer's and texts' ops on their Rust objects, the form's clipped draw on the form's;
-/// the cut (the toolkit's C++ `UIGetStringCutOffIndex`) and any control's ops go on to [`Cpp`].
+/// the message's cut (ee_ui cutoff.rs) over the message text's font; any control's ops go on to [`Cpp`].
 pub(crate) struct ChatCpp(pub(crate) *mut c_void);
 
 impl crate::screens::hud_ctl::HudHost for ChatCpp {
@@ -83,7 +83,7 @@ impl crate::screens::hud_ctl::HudHost for ChatCpp {
         use crate::screens::hud_direct::CppWide;
         use ee_base::time::*;
         use ee_render::ge::smallobj::*;
-        let ours = (EE_SCREENS_CHL_POLL..=EE_SCREENS_CHL_DRAW).contains(&op) && op != EE_SCREENS_CHL_CUT;
+        let ours = (EE_SCREENS_CHL_POLL..=EE_SCREENS_CHL_DRAW).contains(&op);
         let Some(p) = chat_parts(self.0).filter(|_| ours) else {
             return crate::screens::hud_ctl::HudHost::op(&mut Cpp(self.0), op, a, b, f);
         };
@@ -133,6 +133,25 @@ impl crate::screens::hud_ctl::HudHost for ChatCpp {
                     }
                 }
                 EE_SCREENS_CHL_LENGTH => return (*(a as *const CppWide)).s.length as i64,
+                EE_SCREENS_CHL_CUT => {
+                    // UIGetStringCutOffIndex(message, the message text's font, b, true, true): each character
+                    // measured as a fresh GEText of that font would (ee_ui cutoff.rs)
+                    let s = (*(a as *const CppWide)).s.string;
+                    let text = if s.is_null() { &[0u8][..] } else { core::ffi::CStr::from_ptr(s).to_bytes_with_nul() };
+                    let t = p.texts[1];
+                    let mut last = 0.0f32;
+                    let mut measure = |ch: &[u8]| {
+                        let mut z = ch.to_vec();
+                        z.push(0);
+                        if let Some(e) = text_measure(t, z.as_ptr().cast(), (!ch.is_empty()) as core::ffi::c_ulong) {
+                            last = e.right - e.left;
+                        }
+                        last
+                    };
+                    let m = &ee_ui::text::Platform;
+                    return ee_ui::cutoff::cut_off_index(m, &mut measure, text, b as core::ffi::c_ulong, true, true)
+                        as i64;
+                }
                 _ => {
                     // EE_SCREENS_CHL_DRAW: the form's clipped draw of the text in f's rectangle (a GERectangle's
                     // order for the form's call: bottom, left, right, top)

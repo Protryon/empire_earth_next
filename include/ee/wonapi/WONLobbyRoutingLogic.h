@@ -9,12 +9,7 @@ class RoutingOpCompletion;
 struct EeWonRouteLogic;
 namespace WONAPI {
 class LobbyGameList;
-class AddFriendDialog;
-class AdminActionDialog;
-class BadUserDialog;
-class CreateRoomDialog;
-class RoomDialog;
-class PasswordDialog;
+class LobbyRustDialog;
 // RTTI: RoutingLogic > NetLogic > LobbyLogic > RefCount; vtable 0x855a60.
 // A Rust object since R6 WONLobby round 9 (rust/crates/ee_won_lobby/src/routelogic.rs): the servers it is on and
 // connecting to, the joined rooms, the idle and moderator state, the last server refresh (the original's 0x40,
@@ -53,12 +48,12 @@ public:
     std::string mGameDataType; // 0x44, "G" from the constructor
     SmartPtr<LobbyServerList> mServerList; // 0x54
     SmartPtr<LobbyGameList> mGameList; // 0x58
-    SmartPtr<AddFriendDialog> mAddFriendDialog; // 0x74; type descriptor 0x8e1608
-    SmartPtr<AdminActionDialog> mAdminActionDialog; // 0x78; type descriptor 0x8e1630
-    SmartPtr<BadUserDialog> mBadUserDialog; // 0x7c; type descriptor 0x8e1658
-    SmartPtr<CreateRoomDialog> mCreateRoomDialog; // 0x80; type descriptor 0x8e1680
-    SmartPtr<RoomDialog> mRoomDialog; // 0x84; type descriptor 0x8e16a8
-    SmartPtr<PasswordDialog> mPasswordDialog; // 0x88; type descriptor 0x8e15e0
+    SmartPtr<LobbyRustDialog> mAddFriendDialog; // 0x74; type descriptor 0x8e1608
+    SmartPtr<LobbyRustDialog> mAdminActionDialog; // 0x78; type descriptor 0x8e1630
+    SmartPtr<LobbyRustDialog> mBadUserDialog; // 0x7c; type descriptor 0x8e1658
+    SmartPtr<LobbyRustDialog> mCreateRoomDialog; // 0x80; type descriptor 0x8e1680
+    SmartPtr<LobbyRustDialog> mRoomDialog; // 0x84; type descriptor 0x8e16a8
+    SmartPtr<LobbyRustDialog> mPasswordDialog; // 0x88; type descriptor 0x8e15e0
 };
 }
 #endif

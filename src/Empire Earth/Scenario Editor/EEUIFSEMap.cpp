@@ -28,13 +28,12 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapGenerators.h"
-#include "ee/EEUIFileComboBox.h"
+#include "ee/EEUIShell.h"
 #include "ee/EESEARust.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "rust/game/screens.h"
-#include "ee/EEUIShell.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 void SeplLinePush(const UWideString& inLine);   // a line for the next combo box made with pending lines (the same)
@@ -120,9 +119,8 @@ extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i,
         theSpec.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
         FSPath* thePath = new FSPath;
         thePath->AddDirectory(theSpec, true);
-        EEUIFileComboBox* t = new EEUIFileComboBox(thePath, UString("*") + ".dat", kSEMapElevationFile, 1,
-                                                   std::vector<UWideString>(), gSeplScreenFont, theLocation, 200, 400,
-                                                   theForm, (unsigned long)i[2], 0, 2, false);
+        UIComboBox* t = EEUIShellNewFileCombo(thePath, UString("*") + ".dat", kSEMapElevationFile, gSeplScreenFont,
+                                              theLocation, 200, theForm, (unsigned long)i[2]);
         GEText* theGEText = t->GetGEText();
         theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
         theGEText->SetIsTransparent(true);
@@ -169,7 +167,7 @@ extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i,
         c->GetTriggerEvent(kControlTriggerSelectionChanged)->ProcessEvent(NULL, c);
         return 0;
     }
-    case EE_SCREENS_SEMP_OP_FILE_ENTRIES: static_cast<EEUIFileComboBox*>(p[0])->CreateEntries(); return 0;
+    case EE_SCREENS_SEMP_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
     }
     return 0;
 }

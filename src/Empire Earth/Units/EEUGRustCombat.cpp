@@ -104,21 +104,13 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
         a[2] = Bits(thePoint.GetZ());
         return 0;
     }
-    // the dispatch's (ee_combat goal_dispatch.rs)
+    // the dispatch's (ee_combat goal_dispatch.rs; the projectile test and the TEST ONLY records: goal_objects.rs)
     case EE_COMBAT_G_STEP:
         EECombatStep((int32_t)a[0], theUnit, UnitGoalOf((uint64_t)a[2]), reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[1])));
         return 0;
     case EE_COMBAT_G_EVALUATE:
         return EECombatCondition((int32_t)a[0], theUnit, (unsigned long)a[1], reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[2])),
                                  UnitGoalOf((uint64_t)a[3]), NULL);
-    case EE_COMBAT_G_PROJECTILE_CLASS: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->mProjectileClass != NULL;
-    case EE_COMBAT_G_CAPTURE: {   // TEST ONLY: CBGO
-        float thePoint[3] = {Float(a[4]), Float(a[5]), Float(a[6])};
-        EECombatCaptureGoal((uint32_t)a[0], (uint32_t)a[1], reinterpret_cast<EEUnit*>(theUnit),
-                            reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[2])), (int32_t)a[3], thePoint, (uint32_t)a[7],
-                            (uint32_t)((uint64_t)a[7] >> 32));
-        return 0;
-    }
     case EE_COMBAT_G_PATH_ATTEMPTS: return UnitGoalOf(inUnit)->mPathAttempts;
     case EE_COMBAT_G_CLASS_NAME: {
         EEUnitClass* theClass = reinterpret_cast<EEUnit*>(theUnit)->mUnitClass;
@@ -127,9 +119,6 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
     // the heal goal's (ee_combat goal_heal.rs)
     case EE_COMBAT_G_RELEASE_HEAL_EFFECT: theUnit->ReleaseHealEffect(); return 0;
     case EE_COMBAT_G_CAN_HEAL: return EECanHeal(reinterpret_cast<EEUnit*>(theUnit), UnitOf((uint64_t)a[0]));
-    case EE_COMBAT_G_CAPTURE_HEAL_WORK:   // TEST ONLY: CBSO
-        EECombatCaptureHealWork(theUnit, reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0])), (unsigned long)a[1]);
-        return 0;
     }
     return 0;
 }

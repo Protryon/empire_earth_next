@@ -19,6 +19,7 @@
 #include "lle/File System.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
+#include "rust/render/ge.h"
 
 // Every allocation zero-filled: what a loader leaves unset reads the same in every build
 void* operator new(size_t inSize)
@@ -138,97 +139,6 @@ long StoreScreen::CreateSurface(GESurfaceDescription& inDescription, GESurface**
     return kErrorOK;
 }
 
-// ------------------------------------------------------------------------------------------------------ arrays --
-
-StoreVertexArray::StoreVertexArray(unsigned long inType, unsigned long inCount)
-    : mType(inType), mPoints(3 * (size_t)inCount), mNormals(3 * (size_t)inCount), mUVs(2 * (size_t)inCount),
-      mColors(3 * (size_t)inCount), mOpacities(inCount), mOutOfRange(0)
-{
-}
-
-void StoreVertexArray::CopyFrom(const GEVertexArray& inArray)
-{
-    const StoreVertexArray* theArray = dynamic_cast<const StoreVertexArray*>(&inArray);
-    if (theArray) {
-        mPoints = theArray->mPoints;
-        mNormals = theArray->mNormals;
-        mUVs = theArray->mUVs;
-        mColors = theArray->mColors;
-        mOpacities = theArray->mOpacities;
-    }
-}
-
-#define STORE_IN_RANGE(n) if ((size_t)inIndex >= mOpacities.size()) { n; return; }
-void StoreVertexArray::GetColor(GEColor& outColor, unsigned long inIndex) const
-{
-    STORE_IN_RANGE(outColor = GEColor(0.0f, 0.0f, 0.0f))
-    outColor = GEColor(mColors[3 * inIndex], mColors[3 * inIndex + 1], mColors[3 * inIndex + 2]);
-}
-void StoreVertexArray::GetNormal(GEVector& outNormal, unsigned long inIndex) const
-{
-    STORE_IN_RANGE(outNormal = GEVector(0.0f, 0.0f, 0.0f))
-    outNormal = GEVector(mNormals[3 * inIndex], mNormals[3 * inIndex + 1], mNormals[3 * inIndex + 2]);
-}
-float StoreVertexArray::GetOpacity(unsigned long inIndex) const
-{
-    return (size_t)inIndex < mOpacities.size() ? mOpacities[inIndex] : 0.0f;
-}
-void StoreVertexArray::GetPoint(GE3DPoint& outPoint, unsigned long inIndex) const
-{
-    STORE_IN_RANGE(outPoint = GE3DPoint(0.0f, 0.0f, 0.0f))
-    outPoint = GE3DPoint(mPoints[3 * inIndex], mPoints[3 * inIndex + 1], mPoints[3 * inIndex + 2]);
-}
-void StoreVertexArray::GetTextureCoordinate(GETextureCoordinate& outCoordinate, unsigned long inIndex) const
-{
-    STORE_IN_RANGE(outCoordinate = GETextureCoordinate(0.0f, 0.0f))
-    outCoordinate = GETextureCoordinate(mUVs[2 * inIndex], mUVs[2 * inIndex + 1]);
-}
-#undef STORE_IN_RANGE
-#define STORE_IN_RANGE if ((size_t)inIndex >= mOpacities.size()) { mOutOfRange++; return; }
-void StoreVertexArray::SetColor(const GEColor& inColor, unsigned long inIndex)
-{
-    STORE_IN_RANGE
-    mColors[3 * inIndex] = inColor.GetRed();
-    mColors[3 * inIndex + 1] = inColor.GetGreen();
-    mColors[3 * inIndex + 2] = inColor.GetBlue();
-}
-void StoreVertexArray::SetNormal(const GEVector& inNormal, unsigned long inIndex)
-{
-    STORE_IN_RANGE
-    mNormals[3 * inIndex] = inNormal.GetX();
-    mNormals[3 * inIndex + 1] = inNormal.GetY();
-    mNormals[3 * inIndex + 2] = inNormal.GetZ();
-}
-void StoreVertexArray::SetOpacity(float inOpacity, unsigned long inIndex)
-{
-    STORE_IN_RANGE
-    mOpacities[inIndex] = inOpacity;
-}
-void StoreVertexArray::SetPoint(const GE3DPoint& inPoint, unsigned long inIndex)
-{
-    STORE_IN_RANGE
-    mPoints[3 * inIndex] = inPoint.GetX();
-    mPoints[3 * inIndex + 1] = inPoint.GetY();
-    mPoints[3 * inIndex + 2] = inPoint.GetZ();
-}
-void StoreVertexArray::SetTextureCoordinate(const GETextureCoordinate& inCoordinate, unsigned long inIndex)
-{
-    STORE_IN_RANGE
-    mUVs[2 * inIndex] = inCoordinate.GetU();
-    mUVs[2 * inIndex + 1] = inCoordinate.GetV();
-}
-void StoreVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& inPoint, const GEVector& inNormal,
-                                 const GETextureCoordinate& inCoordinate, float inOpacity, unsigned long inIndex)
-{
-    STORE_IN_RANGE
-    SetColor(inColor, inIndex);
-    SetPoint(inPoint, inIndex);
-    SetNormal(inNormal, inIndex);
-    SetTextureCoordinate(inCoordinate, inIndex);
-    SetOpacity(inOpacity, inIndex);
-}
-#undef STORE_IN_RANGE
-
 // -------------------------------------------------------------------------------------------------------- main --
 
 // The stems of the files in a folder with one of the extensions (sorted, case as on disk, no duplicates)
@@ -325,6 +235,7 @@ int main(int argc, char** argv)
         theModels = theTextures = true;
     if (theSubset == 0)
         theSubset = 1;
+    ee_ge_store_capture(true);   // the arrays' shadows (digest.cpp)
     FILE* theOut = fopen(argv[2], "w");
     if (!theOut) {
         fprintf(stderr, "cannot write %s\n", argv[2]);

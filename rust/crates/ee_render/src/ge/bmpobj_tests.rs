@@ -12,7 +12,6 @@ use std::collections::BTreeMap;
 
 const GOLDEN: &str = include_str!("golden_gbmp.txt");
 const RASTERIZER: usize = 0x5000;
-const HANDLE: usize = 0x10;
 
 #[derive(Clone, Copy, Default)]
 struct Texture {
@@ -48,6 +47,8 @@ struct Obj {
 struct World {
     objects: BTreeMap<usize, Obj>,
     serial: i32,
+    /// Handles by serial.
+    serials: BTreeMap<i32, usize>,
     screens: c_ulong,
     out: Vec<String>,
 }
@@ -88,7 +89,9 @@ fn name(o: usize) -> String {
 fn new_object(kind: Kind) -> usize {
     with(|w| {
         w.serial += 1;
-        let h = w.serial as usize * HANDLE;
+        // an object of a C++ array's size (its Rust array NULL: a vertex array's calls come to the host)
+        let h = Box::into_raw(Box::new([0u64; 4])) as usize;
+        w.serials.insert(w.serial, h);
         w.objects.insert(h, Obj { serial: w.serial, kind, refs: 1, alive: true });
         h
     })
@@ -98,7 +101,7 @@ fn handle(s: &str) -> usize {
     if s == "0" {
         0
     } else {
-        s[1..].parse::<usize>().unwrap() * HANDLE
+        with(|w| w.serials[&s[1..].parse::<i32>().unwrap()])
     }
 }
 
@@ -334,7 +337,12 @@ unsafe fn digest(h: usize) -> u64 {
 fn step() {
     emit("step".into());
     let live: Vec<usize> = with(|w| {
-        w.objects.iter().filter(|(_, o)| o.alive && matches!(o.kind, Kind::Bitmap(_))).map(|(h, _)| *h).collect()
+        // in construction order
+        w.serials
+            .values()
+            .copied()
+            .filter(|h| w.objects[h].alive && matches!(w.objects[h].kind, Kind::Bitmap(_)))
+            .collect()
     });
     for h in live {
         // SAFETY: a live bitmap
@@ -543,5 +551,33 @@ fn the_stretch_uses_the_textures_dropped_levels() {
         assert_eq!(uvs, expect.uv);
         assert_eq!(ee_ge_bmp_getf(p, EeGeBmpFloat::XScale), expect.x_scale);
         EeGeBitmap::destroy(p);
+    }
+}
+
+#[test]
+fn the_vertex_calls_go_to_the_rust_array() {
+    use crate::ge::vertarr::{ee_ge_va_destroy, ee_ge_va_new, ee_ge_va_vertices};
+    // SAFETY: the arrays live until the end; the C++ objects are their layout (vtable, data, Rust array)
+    unsafe {
+        let (v, w) = (ee_ge_va_new(1, 4), ee_ge_va_new(1, 4));
+        let a = cppobj::CppArray { vtable: std::ptr::null(), data: ee_ge_va_vertices(v), rust: v as *mut c_void };
+        let b = cppobj::CppArray { vtable: std::ptr::null(), data: ee_ge_va_vertices(w), rust: w as *mut c_void };
+        let (oa, ob) = (&a as *const cppobj::CppArray as usize, &b as *const cppobj::CppArray as usize);
+        let color = [1.0f32, 0.0, 1.0];
+        assert_eq!(vertex_op(EeGeBmpOp::VertexSetColor, oa, 2, color.as_ptr() as isize), Some(0));
+        let mut got = [0.0f32; 3];
+        vertex_op(EeGeBmpOp::VertexGetColor, oa, 2, got.as_mut_ptr() as isize);
+        assert_eq!(got, color);
+        vertex_op(EeGeBmpOp::VertexSetOpacity, oa, 2, 1.0f32.to_bits() as isize);
+        assert_eq!(vertex_op(EeGeBmpOp::VertexGetOpacity, oa, 2, 0,), Some(1.0f32.to_bits() as isize));
+        let point = Ge3DPoint::new(4.0, 5.0, 6.0);
+        vertex_op(EeGeBmpOp::VertexSetPoint, oa, 1, &point as *const Ge3DPoint as isize);
+        vertex_op(EeGeBmpOp::VertexCopyFrom, ob, 0, oa as isize);
+        let mut copied = Ge3DPoint::default();
+        vertex_op(EeGeBmpOp::VertexGetPoint, ob, 1, &mut copied as *mut Ge3DPoint as isize);
+        assert_eq!(copied, point);
+        assert_eq!(vertex_op(EeGeBmpOp::TexWidth, oa, 0, 0), None);
+        ee_ge_va_destroy(v);
+        ee_ge_va_destroy(w);
     }
 }

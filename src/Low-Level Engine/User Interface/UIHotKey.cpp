@@ -91,7 +91,6 @@ UIHotKey::UIHotKey(UIForm* inForm, const UIHotKey& inHotKey)
 UIHotKey::~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
 long UIHotKey::CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_all(&inFile, UIHotKeyHost::Op); }
 void UIHotKey::DeleteHotKeys() { ee_ui_hotkey_delete_all(UIHotKeyHost::Op); }
-bool UIHotKey::FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }
 
 // Builds the hot key's display name, e.g. "Ctrl + Shift + A" (key names without " key")
 void UIHotKey::GetHotKeyName(UWideString& outName)

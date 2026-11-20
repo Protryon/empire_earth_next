@@ -113,6 +113,7 @@ pub mod strcase;
 pub mod text;
 pub mod thread;
 pub mod titlecfg;
+pub mod titleobj;
 pub mod udpmgr;
 pub mod udpops;
 pub mod userstatus;

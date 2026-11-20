@@ -6,7 +6,7 @@
 //! reads (the map's height, the nearest town's patrol point, a route, a unit's type) are the game host's; Fill takes the
 //! selection's units by the store's test (`group::fill_members`), the keeps test the objects as the originals did (the
 //! store's keep tests are compared with the objects': a disagreement counts as a mismatch); the spreads keep the group
-//! as it is (logged). The group command sweep (`EEGroupCommandSweep.cpp`) writes the log as its USGC record, the gate
+//! as it is (logged). The group command sweep (group_sweep.rs) writes the log as its USGC record, the gate
 //! of the bodies (tools/sim_capture.py), so every word below is the C++ dry host's, in its order.
 
 use std::cell::RefCell;

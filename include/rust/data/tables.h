@@ -13,6 +13,12 @@ constexpr static const size_t EE_DATA_GRAPHIC_STATES = 14;
 /// The model slot of the shared model in the frame maps (the parts' models take 0 .. 13 in first-seen order).
 constexpr static const long EE_DATA_GRAPHIC_SHARED_MODEL = 14;
 
+/// The size of a dbobjects record (`EEDbObject::mRecord`: the unit class record, ee/EEUnitClassRecord.h).
+constexpr static const size_t EE_DATA_OBJECT_RECORD = 1960;
+
+/// The slots of the behaviour table.
+constexpr static const size_t EE_DATA_CP_BEHAVIORS = 129;
+
 /// The db tables whose entries are only their records' members, held here (`ee/EEDbRecords.h` `EEDbList`: the
 /// classes' `sTable` reads them as the vectors they were).
 enum class EeDataList {
@@ -26,6 +32,8 @@ enum class EeDataList {
   Upgrades = 3,
   /// `EETerrainTypeTable::sTable` (every row).
   TerrainTypes = 4,
+  /// `EEColorTable::sTable`: the player colours (every row; [`EeDataPlayerColors`]).
+  Colors = 5,
 };
 
 /// `EEAnimal`'s plain members, in the class's order (`include/ee/EEAnimal.h`: the class's base).
@@ -101,11 +109,6 @@ struct EeDataUpgradeFactor {
 struct EeDataUpgradeFields {
   EeDataUpgradeFactor mFactors[16];
   long mMaxLevel;
-};
-
-/// `EEColorTable`'s four colours (red, green, blue): `mColor`, `mColor2`, `mDarkColor`, `mColor4`.
-struct EeDataPlayerColors {
-  float colors[4][3];
 };
 
 /// `EETerrainTypeTable`'s members from `mID` (`include/ee/EEDatabaseTables.h`: the class's base).
@@ -331,6 +334,17 @@ struct EeDataGraphicFramePart {
   bool shares;
 };
 
+/// One row of dbworld (`EEWorldTableEntry`, 28 bytes): a world constant's four values (docs/DATA_FORMATS.md 8.3).
+struct EeDataWorldEntry {
+  float mFloatValue;
+  float mFloatValue2;
+  int32_t mUnusedDatabaseID;
+  int32_t mUnusedIndex;
+  int32_t mLongValue;
+  uint32_t mLongValue2;
+  int32_t mUnused;
+};
+
 extern "C" {
 
 /// The size of a dbanimals record.
@@ -363,6 +377,13 @@ size_t ee_data_to_hit_record_size();
 /// `bytes` holds `ee_data_to_hit_record_size()` bytes; `out` has room for six floats.
 void ee_data_to_hit_from_record(const uint8_t *bytes, float *out);
 
+/// `EEToHitTable::Load`'s row `index` (below 6) of `gWeaponToHitFactors` from one record.
+///
+/// # Safety
+/// `bytes` holds `ee_data_to_hit_record_size()` bytes; no other thread reads the table while it loads.
+void ee_data_to_hit_load(size_t index,
+                         const uint8_t *bytes);
+
 /// The size of a dbstartingresources record.
 size_t ee_data_starting_resources_record_size();
 
@@ -389,14 +410,19 @@ void ee_data_upgrade_default(EeDataUpgradeFields *fields);
 bool ee_data_upgrade_from_record(const uint8_t *bytes,
                                  EeDataUpgradeFields *fields);
 
-/// The size of a dbcolortable record.
-size_t ee_data_color_record_size();
-
-/// `EEColorTable::Load`'s copy of one record.
+/// `EEColorTable`'s colour `which` (0 the main, 1 the second, 2 the dark shade, 3 the fourth) of player colour
+/// `index` into `out[3]`; white (`GEColor()`, the class's `sColor`) past the table or for a row not loaded.
 ///
 /// # Safety
-/// `bytes` holds `ee_data_color_record_size()` bytes; `out` is writable.
-void ee_data_color_from_record(const uint8_t *bytes, EeDataPlayerColors *out);
+/// `out` has three writable floats.
+void ee_data_player_color(size_t index,
+                          uint32_t which,
+                          float *out);
+
+/// `EEColorTable::FindIndex`: the first player colour whose main colour equals (red, green, blue), else 0.
+size_t ee_data_player_color_find(float red,
+                                 float green,
+                                 float blue);
 
 /// The size of a dbaiunittargeting record.
 size_t ee_data_ai_targeting_record_size();
@@ -596,6 +622,54 @@ void ee_data_graphic_frame_maps(const EeDataGraphicFramePart *parts,
                                                unsigned long frame,
                                                long value),
                                 void *context);
+
+/// The size of a dbobjects record.
+size_t ee_data_object_record_size();
+
+/// `EEDatabase::Clear`: no records.
+void ee_data_objects_clear();
+
+/// A load's start: `count` empty slots.
+void ee_data_objects_begin(size_t count);
+
+/// Record `index` (past the slots it is dropped).
+///
+/// # Safety
+/// `bytes` holds a whole record.
+void ee_data_objects_load(size_t index, const uint8_t *bytes);
+
+/// The record count (`GetCount`).
+size_t ee_data_objects_count();
+
+/// Record `index`'s bytes (`GetEntry`: NULL past the end or for a slot not loaded).
+uint8_t *ee_data_objects_get(size_t index);
+
+/// The size of a dbworld record.
+size_t ee_data_world_record_size();
+
+/// `EEWorldTable::Clear`: no rows.
+void ee_data_world_clear();
+
+/// A load's start: `count` zeroed rows.
+void ee_data_world_begin(size_t count);
+
+/// Row `index` from its record (`ee_data_world_record_size()` bytes); past the rows it is dropped.
+///
+/// # Safety
+/// `bytes` holds a whole record.
+void ee_data_world_load(size_t index, const uint8_t *bytes);
+
+/// Row `id` (`EEWorldConstant`); zero past the table (where the C++ read past its vector).
+EeDataWorldEntry ee_data_world_entry(uint32_t id);
+
+/// `EECPBehavior::Load`'s copy of one record (`ee_data_cp_behavior_record_size()` bytes) into `gCPBehaviors`.
+///
+/// # Safety
+/// `bytes` holds a whole record; no other thread reads the table while it loads.
+void ee_data_cp_behavior_load(const uint8_t *bytes);
+
+/// The size of a dbcpbehavior record.
+size_t ee_data_cp_behavior_record_size();
 
 /// The size of a record of `list`'s table.
 size_t ee_data_list_record_size(EeDataList list);

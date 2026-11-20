@@ -1,7 +1,6 @@
 // New (port): the unit store's C++ side (ee/EEUnitStore.h; docs/RUST_PLAN.md R5b.4 leaf 5): the location's write
-// reports, the insert's seed, the removal and the TEST ONLY consistency check (the step notes, the pick and Fill
-// records and their sweeps are Rust's since the game's leaves round 1: ee_sim units step_note.rs, store_sweep.rs). The
-// records are Rust's
+// reports, the insert's seed, the removal, the box selection's pick, and the TEST ONLY consistency check and pick
+// records. The records are Rust's
 // (rust/crates/ee_sim/src/units/store.rs).
 #include <windows.h>
 #include <stdio.h>
@@ -370,6 +369,13 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
         exit(3);
     }
     return theListed;
+}
+
+// the box selection's pick over the unit store (ee_units select.rs: the loop of EEPlayer::SelectUnits 0x56a658 over the
+// records in place of the objects; the player is its list's object, as the store records it)
+size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs)
+{
+    return ee_units_select_pick(reinterpret_cast<uintptr_t>(static_cast<RTSPlayer*>(inPlayer)), inIDs, inCount, outIDs);
 }
 
 // New (R5b.2 combat, ninth round): the fills behind the combat reads' store bridges (ee_rust's ee_combat_store_unit_of,

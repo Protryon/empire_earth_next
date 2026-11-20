@@ -141,6 +141,7 @@ void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp)
     if (inHelp)
         inButton->GetForm()->UpdateHelpString();
 }
+static const bool sDiplomacyShowRegistered = (gEEUIShellDiplomacyShow = EESEDiplomacyShow, true);   // ee/EEUIShell.h
 
 // ---- the player tab's host (editor_players.rs; EE_SCREENS_SEPL_OP_*): the controls it makes and drives, the
 // players and the world it loads from and stores to
@@ -390,7 +391,7 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
                 gResource->GetString(k + IDS_UNIT_FAMILY_FIRST, theLines[k]);
             gResource->GetString(IDS_SET, theFormat);
             for (long j = 0; j < gUnitSetManager.GetSize(); j++) {
-                if (gUnitSetManager.GetSet(j) == NULL || gUnitSetManager.GetSet(j)->mShowInEditor != true)
+                if (gUnitSetManager.GetSet(j) == NULL || gUnitSetManager.GetSet(j)->ShowInEditor() != true)
                     continue;
                 theLines.push_back(UWideString());
                 sprintf(theLines.back(), theFormat, (const char*)gUnitSetManager.GetSet(j)->GetName());

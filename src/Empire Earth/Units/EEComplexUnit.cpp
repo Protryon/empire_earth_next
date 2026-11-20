@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <math.h>
 #include <typeinfo>
+#include "rust/sim/units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EETechCapture.h"
 
@@ -2478,7 +2479,7 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
 {
     GETransformation theTransformation;
     GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EEUnitSet* theSet = gUnitSetManager.mSets.size() > 99 ? gUnitSetManager.mSets[99] : 0;
+    EEUnitSet* theSet = gUnitSetManager.GetSet(99);
     bool theResult = false;
     EEUnitClass* theTransportClass = NULL;
     if (this->GetUnitClass()->IsTransport())
@@ -2545,6 +2546,7 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inA;
     EEPlayer* thePlayer = (EEPlayer*)(uintptr_t)inA;
     float* f = *ioF;
+    // (the world's and the players' plain reads are Rust's: ee_units sight_host.rs)
     switch (inOp) {
     case EE_UNITS_SIGHT_UNIT: {
         EEUnitClass* theClass = theUnit->GetUnitClass();
@@ -2567,24 +2569,14 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     case EE_UNITS_SIGHT_CENTER:
         theUnit->AddCenterOffset(f[0], f[1]);
         return 0;
-    case EE_UNITS_SIGHT_CURRENT:
-        return EEObj(::gWorld.GetCurrentPlayer());
-    case EE_UNITS_SIGHT_SHARED_LOS:
-        return thePlayer->mSharedLOS;
     case EE_UNITS_SIGHT_ALLIED:
         return thePlayer->IsAlliedWith((EEPlayer*)(uintptr_t)inB);
-    case EE_UNITS_SIGHT_SHARERS:
-        return (int64_t)thePlayer->mSightSharers.size();
-    case EE_UNITS_SIGHT_SHARER:
-        return EEObj(thePlayer->mSightSharers[(size_t)inC]);
     case EE_UNITS_SIGHT_CIRCLE:
         if (inOn)
             EEAddSightCircle(f[0], f[1], f[2], thePlayer);
         else
             EERemoveSightCircle(f[0], f[1], f[2], thePlayer);
         return 0;
-    case EE_UNITS_SIGHT_TILE:
-        return EEObj(::gWorld.mMap->GetTile((long)inC, (long)inD));
     case EE_UNITS_SIGHT_TILE_SIGHT:
         if (inOn)
             ((EEMapTile*)(uintptr_t)inA)->AddSight((EEPlayer*)(uintptr_t)inB);
@@ -2612,10 +2604,6 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
         else
             ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
         return 0;
-    case EE_UNITS_SIGHT_NUM_PLAYERS:
-        return (int64_t)::gWorld.mNumPlayers;
-    case EE_UNITS_SIGHT_PLAYER:
-        return EEObj(::gWorld.mPlayers[(size_t)inC]);
     }
     return 0;
 }
@@ -3330,7 +3318,7 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 {
     ioWords[7] = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
     ioWords[8] = (uint32_t)inUnit->mNextTriggerTime;
-    EEUnitStateNote(kUnitStateAIStep, inUnit->mUnitID, ioWords, 9);
+    ee_units_note_state(kUnitStateAIStep, (uint32_t)inUnit->mUnitID, ioWords, 9);
 }
 
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
@@ -3339,7 +3327,7 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 // changes, the finished goals' drop, the camouflage and the command's write host calls (EEUnitAction.cpp)
 void EEComplexUnit::AIStep()
 {
-    bool theNoting = EEUnitStepNoting();   // TEST ONLY (USST)
+    bool theNoting = ee_units_note_noting();   // TEST ONLY (USST)
     uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime,
                             (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
     EeUnitsAIHost theHost;

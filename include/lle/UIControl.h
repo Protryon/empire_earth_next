@@ -46,7 +46,7 @@ public:
     virtual void ChangeFont(GEFont* inFont) {}
     virtual long CloseIMECompositionString() { return kErrorFailed; }
     static bool ControlKeyPressed() { return UIControl::sControlKey->GetValue() > 0; }
-    virtual long CopyData();
+    virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
     static bool CopyKeyPressed() { return UIControl::sControlKey->GetValue() && UIControl::sCopyKey->GetValue(); }
     static bool CutKeyPressed()
     {
@@ -75,7 +75,7 @@ public:
     GESurface* GetDrawingSurface() const;
     // the record (ee_ui controlobj.rs): the members and the base's logic, for Rust callers
     UIForm* GetForm() const { return static_cast<UIForm*>(this->mForm); }
-    bool GetHasMouseCapture() const;
+    bool GetHasMouseCapture() const { return this->Call(EeUiControlCall::HasMouseCapture) != 0; }
     unsigned long GetHeight() const { return UMFloor(this->GetRectangle().GetBottom() - this->GetRectangle().GetTop() + 1.0f); }
     virtual bool GetHelpString(UWideString& outString) const;
     UIHotKey* GetHotKey() const { return static_cast<UIHotKey*>(this->mHotKey); }
@@ -83,10 +83,10 @@ public:
     virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
     bool GetIsDirty() const { return this->mIsDirty; }
-    bool GetLeftMouseButtonDown() const;
+    bool GetLeftMouseButtonDown() const { return this->Call(EeUiControlCall::LeftButtonDown) != 0; }
     GERasterizer* GetRasterizer() const;
     const GERectangle& GetRectangle() const { return UIControl::AsRect(this->mRectangle); }
-    bool GetRightMouseButtonDown() const;
+    bool GetRightMouseButtonDown() const { return this->Call(EeUiControlCall::RightButtonDown) != 0; }
     unsigned long GetScreenIndex() const;
     SESoundManager* GetSoundManager() const;
     unsigned long GetStringTableID() const { return this->mStringTableID; }
@@ -117,8 +117,8 @@ public:
     {
         return UIControl::sControlKey->GetValue() && UIControl::sPasteKey->GetValue() || UIControl::ShiftKeyPressed() && UIControl::sInsertKey->GetValue();
     }
-    virtual void ReleaseCapturedKeyboard();
-    virtual void ReleaseCapturedMouse();
+    virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
+    virtual void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
     static bool RightKeyPressed();
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor)
@@ -143,8 +143,8 @@ public:
         this->SetDirty(true);
     }
     void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
-    virtual void SetDirty(bool inDirty);
-    virtual void SetDisplayMode(unsigned long inMode);
+    virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
+    virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
     virtual void SetLocation(const GE2DPoint& inLocation);
     virtual void SetRectangle(const GERectangle& inRectangle);
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
@@ -164,8 +164,9 @@ public:
 protected:
     UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
               unsigned long inIndex, unsigned long inBorderThickness);
-    void CaptureKeyboard();
-    void CaptureMouse();
+    // The base's logic (ee_ui controlobj.rs)
+    void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
+    void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
     virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness);   // slot 0x84
     const GE2DPoint& GetMouseLocation() const;
     void SetBgRectangle(const GERectangle& inRectangle);

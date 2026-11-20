@@ -39,7 +39,7 @@
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;
@@ -177,20 +177,9 @@ UIControl::~UIControl()
     delete this->CopiedBgRhombus();
 }
 
-// The base's logic (ee_ui controlobj.rs)
-void UIControl::CaptureKeyboard() { this->Call(C::CaptureKeyboard); }
-void UIControl::CaptureMouse() { this->Call(C::CaptureMouse); }
-long UIControl::CopyData() { return (long)this->Call(C::CopyData); }
 void UIControl::FireTriggerEvent(unsigned long inEvent) { this->Call(C::FireTrigger, inEvent); }
-bool UIControl::GetHasMouseCapture() const { return this->Call(C::HasMouseCapture) != 0; }
 bool UIControl::GetHelpString(UWideString& outString) const { return this->Call(C::HelpString, (intptr_t)&outString) != 0; }
-bool UIControl::GetLeftMouseButtonDown() const { return this->Call(C::LeftButtonDown) != 0; }
-bool UIControl::GetRightMouseButtonDown() const { return this->Call(C::RightButtonDown) != 0; }
 UIEvent* UIControl::GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(C::TriggerEvent, inEvent); }
-void UIControl::ReleaseCapturedKeyboard() { this->Call(C::ReleaseKeyboard); }
-void UIControl::ReleaseCapturedMouse() { this->Call(C::ReleaseMouse); }
-void UIControl::SetDirty(bool inDirty) { this->Call(C::SetDirty, inDirty); }
-void UIControl::SetDisplayMode(unsigned long inMode) { this->Call(C::SetDisplayMode, inMode); }
 void UIControl::SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent)
 {
     this->Call(C::SetTrigger, inEvent, (intptr_t)inTriggerEvent);
@@ -256,36 +245,6 @@ bool UIControl::EnterKeyPressed()
 bool UIControl::EndKeyPressed()
 {
     return UIControl::sEndKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumEndKey->GetValue();
-}
-
-// Returns the UI manager's drawing surface
-GESurface* UIControl::GetDrawingSurface() const
-{
-    return this->GetForm()->GetManager()->GetDrawingSurface();
-}
-
-// Returns the form's mouse location
-const GE2DPoint& UIControl::GetMouseLocation() const
-{
-    return this->GetForm()->GetMouseLocation();
-}
-
-// Returns the UI manager's rasterizer
-GERasterizer* UIControl::GetRasterizer() const
-{
-    return this->GetForm()->GetManager()->GetRasterizer();
-}
-
-// Returns the UI manager's screen index
-unsigned long UIControl::GetScreenIndex() const
-{
-    return this->GetForm()->GetManager()->GetScreen();
-}
-
-// Returns the UI manager's sound manager
-SESoundManager* UIControl::GetSoundManager() const
-{
-    return this->GetForm()->GetManager()->GetSoundManager();
 }
 
 // Returns whether Home (or keypad 7 with Num Lock off) is held
@@ -478,15 +437,23 @@ extern "C" long ee_uicpp_control_mouse(void* inControl, const void* inLocation, 
                                 inArg);
 }
 
-// Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
-// (ee_ui mouse.rs)
-long UIControl::UpdateMouse(const GE2DPoint& inLocation)
-{
-    return ee_ui_control_update_mouse(this, &inLocation);
-}
-
 // Returns whether Up (or keypad 8 with Num Lock off) is held
 bool UIControl::UpKeyPressed()
 {
     return UIControl::sUpKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumUpKey->GetValue();
 }
+
+// (their bodies need the form's, the manager's or the background table's class)
+// Returns the UI manager's screen index
+unsigned long UIControl::GetScreenIndex() const { return this->GetForm()->GetManager()->GetScreen(); }
+// Returns the UI manager's sound manager
+SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->GetManager()->GetSoundManager(); }
+// Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
+// (ee_ui mouse.rs)
+long UIControl::UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
+// Returns the form's mouse location
+const GE2DPoint& UIControl::GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
+// Returns the UI manager's drawing surface
+GESurface* UIControl::GetDrawingSurface() const { return this->GetForm()->GetManager()->GetDrawingSurface(); }
+// Returns the UI manager's rasterizer
+GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }

@@ -2,6 +2,11 @@
 
     python -I tools/cpp_deps.py [report] [--build build/clang] [--out build/cpp_deps] [--top N] [--code-only] [--all-refs]
     python -I tools/cpp_deps.py unit FILE [--build ...]      # one unit's outgoing and incoming edges, with symbols
+    python -I tools/cpp_deps.py cuts [--build ...] [--max-weight N] [--top N]   # what-if: the cheapest cuts of SCC 1
+    python -I tools/cpp_deps.py cuts --focus 'User Interface Thread/,UI Events/'   # rank by the focus units freed
+    python -I tools/cpp_deps.py why FILE [--focus ...]       # why a unit is in SCC 1: its shortest cycle, who names it
+    python -I tools/cpp_deps.py layer --focus ...            # the focus units as a layer: every edge into it to cut
+    python -I tools/cpp_deps.py cuts --of FILE               # the cuts of the cycle holding FILE (not SCC 1)
     python -I tools/cpp_deps.py selftest                     # compiles tiny objects with clang-cl and checks the graph
 
 Build first (`python -I build.py -j 3 --sim`). The objects are the ones the Windows links name:
@@ -57,6 +62,16 @@ Reports (under --out, default build/cpp_deps; a summary on stdout):
     dirs.txt           a per-directory roll-up
     edges.tsv          every edge: from, to, weight, symbols (demangled)
     summary.json       the numbers
+`cuts` (a what-if over the graph, under --out): for every candidate cut inside SCC 1, the lines SCC 1 would lose if
+it were made (SCC 1 recomputed without it), ranked:
+    edge       one edge A -> B (weight <= --max-weight): A stops naming B;
+    symbol     one symbol S of B: every unit of SCC 1 stops naming S (S moves out of B, e.g. into a data unit, or
+               behind a hook); only the edges S alone made disappear;
+    data       every data symbol of B (its globals' storage moved out of B: the EEGlobalStorage.h pattern);
+    unit-out   every edge out of A inside SCC 1, for an A naming at most --max-weight symbols there.
+Each cut is classified by its symbols: `data` (all are globals' storage), `hook` (a function pointer, a callback or
+registration, a capture or test hook), `vtable` (a vtable or RTTI reference: a construction), `call` (a real call).
+Writes cuts.txt (every cut with its symbols) and cuts.json; prints the top ones.
 Lines are the unit's source file (.cpp/.c) lines; the class view adds the class's header (include/ or src/) once.
 Code only the POSIX builds compile is in none of these objects.
 """
@@ -110,6 +125,21 @@ def qualified_name(dem):
         elif c == " " and depth == 0 and not head[i + 1:i + 2] in ("<", ">"):
             start = i + 1
     return head[start:]
+
+
+def exact_class(dem):
+    """The class part of a demangled name with its template arguments ('A<B>' for A<B>::f); '' for a free name."""
+    q = qualified_name(dem)
+    depth, last = 0, -1
+    for i in range(len(q) - 1):
+        c = q[i]
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+        elif c == ":" and q[i + 1] == ":" and depth == 0:
+            last = i
+    return q[:last] if last >= 0 else ""
 
 
 def class_of(dem):
@@ -343,6 +373,16 @@ def analyse(units, rust_defs, code_only=False):
         u.cls = c.most_common(1)[0][0] if c else "(file) " + pathlib.PurePosixPath(u.name).stem
     home = {cls: max(cnt.items(), key=lambda kv: (kv[1], kv[0]))[0] for cls, cnt in class_count.items()}
     by_name = {u.name: u for u in units}
+    # the exact template instances each unit defines a function of (a template's instances share their class's home,
+    # but only where the home instantiates that instance: UIListBox<UWideString>, the engine's, is no member of the
+    # editor unit that is UIListBox's home for UIListBox<EESEUITTData>)
+    instances = collections.defaultdict(set)
+    for u in units:
+        for raw, dem, k in u.defs:
+            if k in "Tt":
+                q = exact_class(dem)
+                if "<" in q:
+                    instances[u.name].add(q)
 
     def resolve(raw, dem):
         """(category, unit name or None)."""
@@ -353,7 +393,8 @@ def analyse(units, rust_defs, code_only=False):
             if len(ds) == 1:
                 return ds[0].kind, ds[0].name
             h = home.get(class_of(dem))
-            if h:
+            q = exact_class(dem)
+            if h and ("<" not in q or q in instances[h]):
                 return by_name[h].kind, h
             if all(d.kind == ds[0].kind for d in ds) and ds[0].kind != "cpp":
                 return ds[0].kind, ds[0].name
@@ -375,7 +416,7 @@ def analyse(units, rust_defs, code_only=False):
                 edges[u.name].setdefault(target, {})[raw] = dem
             elif cat != "cpp":
                 other[u.name][cat] += 1
-    return {"units": by_name, "edges": edges, "other": other, "home": home, "resolve": resolve}
+    return {"units": by_name, "edges": edges, "other": other, "home": home, "resolve": resolve, "def_kind": def_kind}
 
 
 def tarjan(nodes, succ):
@@ -793,6 +834,249 @@ def show_unit(g, name):
             print(f"       {d}")
 
 
+# ---------------------------------------------------------------- cuts: a what-if over the edges of SCC 1
+
+HOOK_RE = re.compile(r"Hook|Callback|Register|Capture|TestFixture|TEST_?ONLY|Observer|Listener", re.I)
+
+
+def symbol_kind(raw, dem, def_kind):
+    """data | hook | vtable | call, for one symbol an edge names."""
+    if raw.startswith(("??_7", "??_R", "??_8")):
+        return "vtable"
+    func = def_kind.get(raw, "T") in "Tt"
+    if not func:
+        return "hook" if "(__cdecl *" in dem or HOOK_RE.search(qualified_name(dem)) else "data"
+    return "hook" if HOOK_RE.search(qualified_name(dem)) else "call"
+
+
+def cut_kind(kinds):
+    ks = set(kinds)
+    if not ks:
+        return "-"
+    if ks == {"data"}:
+        return "data"
+    if "call" in ks:
+        return "call"
+    if "vtable" in ks:
+        return "vtable"
+    return "hook"
+
+
+def cut_candidates(g, core, max_weight):
+    """[(kind, label, removed edges {(a, b)}, {mangled: demangled})] inside the component `core`."""
+    edges, def_kind = g["edges"], g["def_kind"]
+    inner = {(a, b): edges[a][b] for a in core for b in edges.get(a, {}) if b in core}
+    out = []
+    for (a, b), syms in sorted(inner.items()):
+        if len(syms) <= max_weight:
+            out.append(("edge", f"{a} -> {b}", {(a, b)}, syms))
+    # one symbol: the edges whose every symbol is it
+    by_sym = collections.defaultdict(set)
+    for (a, b), syms in inner.items():
+        if len(syms) == 1:
+            by_sym[next(iter(syms))].add((a, b))
+    for raw, es in sorted(by_sym.items()):
+        if len(es) < 2:
+            continue                # the edge cut already
+        b = next(iter(es))[1]
+        dem = inner[next(iter(es))][raw]
+        # every other edge naming it too (it moves out of B for all of them)
+        users = sorted(a for (a, bb), syms in inner.items() if raw in syms)
+        out.append(("symbol", f"{qualified_name(dem)} (of {b}, named by {len(users)})", es, {raw: dem}))
+    # every data symbol of B
+    for b in sorted(core):
+        gone, syms = set(), {}
+        for (a, bb), ss in inner.items():
+            if bb != b:
+                continue
+            data = {r: d for r, d in ss.items() if symbol_kind(r, d, def_kind) == "data"}
+            syms.update(data)
+            if data and len(data) == len(ss):
+                gone.add((a, b))
+        if gone:
+            out.append(("data", f"the globals of {b}", gone, syms))
+    # every edge out of A
+    for a in sorted(core):
+        es = {(a, b): ss for (aa, b), ss in inner.items() if aa == a}
+        n = sum(len(ss) for ss in es.values())
+        if es and n <= max_weight:
+            merged = {r: d for ss in es.values() for r, d in ss.items()}
+            out.append(("unit-out", f"{a} -> {len(es)} units", set(es), merged))
+    return out
+
+
+def focus_match(name, focus):
+    """`focus`: substrings of unit names (e.g. "User Interface Thread/"); a unit matches if it contains one and no
+    `!`-prefixed one (e.g. "!EEFOFindNewTargetNearOldTarget": the unit utilities, in the UI folder)."""
+    return (bool(focus) and any(f in name for f in focus if not f.startswith("!"))
+            and not any(f[1:] in name for f in focus if f.startswith("!")))
+
+
+def find_cuts(g, max_weight=6, focus=(), of=None):
+    """Returns (core, core lines, [cut dict ranked by lines out of SCC 1]). With `focus` (unit name substrings) the
+    cuts are ranked first by the focus units they take out of SCC 1, and only cuts freeing one are kept. With `of` (a
+    unit name), the component is the one holding that unit instead of SCC 1 (e.g. the UI's own cycle)."""
+    units, edges = g["units"], g["edges"]
+    succ = {a: set(bs) for a, bs in edges.items()}
+    L = lambda n: units[n].lines   # noqa: E731
+    core = sorted(core_of(g, of))
+    cset = set(core)
+    L0 = sum(L(n) for n in core)
+    sub = {n: {b for b in succ.get(n, ()) if b in cset} for n in core}
+    res, seen = [], {}
+    for kind, label, removed, syms in cut_candidates(g, cset, max_weight):
+        key = frozenset(removed)
+        if key in seen and kind != "data":
+            continue                # the same cut as an earlier one
+        if key not in seen:
+            drop = collections.defaultdict(set)
+            for a, b in removed:
+                drop[a].add(b)
+            cs = tarjan(core, {n: sub[n] - drop.get(n, set()) for n in core})
+            big = max(cs, key=lambda c: sum(L(n) for n in c))
+            seen[key] = (L0 - sum(L(n) for n in big), sorted(cset - set(big)))
+        lost, freed = seen[key]
+        if lost <= 0:
+            continue
+        nfocus = sum(1 for n in freed if focus_match(n, focus))
+        if focus and not nfocus:
+            continue
+        kinds = [symbol_kind(r, d, g["def_kind"]) for r, d in syms.items()]
+        res.append({"cut": kind, "what": label, "lines": lost, "units": len(freed), "freed": freed, "focus": nfocus,
+                    "class": cut_kind(kinds), "edges": sorted(f"{a} -> {b}" for a, b in removed),
+                    "symbols": sorted(qualified_name(d) + f" [{k}]" for (r, d), k in zip(syms.items(), kinds))})
+    res.sort(key=lambda r: (-r["focus"], -r["lines"], len(r["symbols"]), r["cut"], r["what"]))
+    return core, L0, res
+
+
+def report_cuts(g, out, top, max_weight, focus=(), of=None):
+    core, L0, res = find_cuts(g, max_weight, focus, of)
+    out.mkdir(parents=True, exist_ok=True)
+    with open(out / "cuts.txt", "w", encoding="utf-8", newline="\n") as f:
+        f.write(f"# cuts of SCC 1 ({len(core)} units, {L0} lines), ranked by the lines SCC 1 would lose\n"
+                "# lines units  cut  class  what; its edges, symbols and the units it takes out\n")
+        for r in res:
+            f.write(f"\n{r['lines']:6d} {r['units']:4d}  {r['cut']:8s} {r['class']:6s} {r['what']}\n")
+            for e in r["edges"][:12]:
+                f.write(f"         edge   {e}\n")
+            if len(r["edges"]) > 12:
+                f.write(f"         ... {len(r['edges']) - 12} more edges\n")
+            for s in r["symbols"][:12]:
+                f.write(f"         sym    {s}\n")
+            if len(r["symbols"]) > 12:
+                f.write(f"         ... {len(r['symbols']) - 12} more symbols\n")
+            for n in r["freed"][:10]:
+                f.write(f"         out    {n}\n")
+            if len(r["freed"]) > 10:
+                f.write(f"         ... {len(r['freed']) - 10} more units\n")
+    (out / "cuts.json").write_text(json.dumps({"scc1": [len(core), L0], "cuts": res}, indent=1) + "\n")
+    nf = sum(1 for n in core if focus_match(n, focus))
+    print(f"SCC 1: {len(core)} units, {L0} lines; {len(res)} cuts that shrink it (max weight {max_weight})"
+          + (f"; focus {', '.join(focus)}: {nf} units in SCC 1, ranked by the focus units freed" if focus else ""))
+    print("  lines units " + ("focus " if focus else "") + " cut      class  what  [symbols]")
+    for r in res[:top]:
+        syms = ", ".join(r["symbols"][:4]) + (" ..." if len(r["symbols"]) > 4 else "")
+        fc = f"{r['focus']:5d} " if focus else ""
+        print(f"  {r['lines']:6d} {r['units']:4d} {fc} {r['cut']:8s} {r['class']:6s} {r['what']}  [{syms}]")
+    print(f"\nall cuts in {out / 'cuts.txt'}")
+    return res
+
+
+def core_of(g, of=None):
+    """SCC 1 (the component with the most lines), or with `of` (a unit name) the component holding that unit."""
+    units, edges = g["units"], g["edges"]
+    cpp = sorted(n for n, u in units.items() if u.kind == "cpp")
+    comps = tarjan(cpp, {a: set(bs) for a, bs in edges.items()})
+    if of:
+        n = find_unit(units, of)
+        return set(next(c for c in comps if n in c))
+    return set(max(comps, key=lambda c: sum(units[n].lines for n in c)))
+
+
+def shortest_path(succ, src, dst_set, allowed):
+    """BFS src -> any of dst_set over `allowed` nodes; returns the node list or None."""
+    prev, frontier = {src: None}, [src]
+    while frontier:
+        nxt = []
+        for v in frontier:
+            for w in sorted(succ.get(v, ())):
+                if w not in allowed or w in prev:
+                    continue
+                prev[w] = v
+                if w in dst_set:
+                    path = [w]
+                    while prev[path[-1]] is not None:
+                        path.append(prev[path[-1]])
+                    return path[::-1]
+                nxt.append(w)
+        frontier = nxt
+    return None
+
+
+def find_unit(units, name):
+    matches = [n for n in units if n == name or n.endswith("/" + name) or pathlib.PurePosixPath(n).stem == name]
+    if len(matches) != 1:
+        sys.exit(f"{name}: {'no unit' if not matches else 'ambiguous: ' + ', '.join(matches)}")
+    return matches[0]
+
+
+def show_why(g, name, focus=()):
+    """Why a unit is in SCC 1: its shortest cycle, and the edges into it from SCC 1 (with --focus, only those from
+    outside the focus: the layer the unit belongs to; those are the ones to cut)."""
+    units, edges = g["units"], g["edges"]
+    n = find_unit(units, name)
+    core = core_of(g)
+    if n not in core:
+        print(f"{n} is not in SCC 1 ({len(core)} units)")
+        return
+    preds = {a for a in core if n in edges.get(a, {})}
+    print(f"{n}: in SCC 1 ({len(core)} units); {len(preds)} units of SCC 1 name it")
+    path = shortest_path(edges, n, preds, core)
+    if path:
+        cyc = path + [n]
+        print("shortest cycle:")
+        for a, b in zip(cyc, cyc[1:]):
+            syms = sorted(qualified_name(d) for d in edges[a][b].values())
+            print(f"  {a} -> {b}  [{', '.join(syms[:4])}{' ...' if len(syms) > 4 else ''}]")
+    print("named from SCC 1" + (" (outside the focus)" if focus else "") + ":")
+    for a in sorted(preds):
+        if focus_match(a, focus):
+            continue
+        syms = sorted(qualified_name(d) for d in edges[a][n].values())
+        print(f"  <- {a}  [{', '.join(syms[:6])}{' ...' if len(syms) > 6 else ''}]")
+
+
+def show_layer(g, focus, of=None):
+    """The focus units of SCC 1 as a layer above the rest: every edge into the layer from the rest of SCC 1 (the
+    back edges), grouped by symbol, and SCC 1 with all of them cut."""
+    units, edges = g["units"], g["edges"]
+    core = core_of(g, of)
+    layer = {n for n in core if focus_match(n, focus)}
+    by_sym = collections.defaultdict(set)
+    drop = set()
+    for a in sorted(core - layer):
+        for b, syms in edges.get(a, {}).items():
+            if b in layer:
+                drop.add((a, b))
+                for d in syms.values():
+                    by_sym[(b, qualified_name(d))].add(a)
+    print(f"SCC 1: {len(core)} units, {sum(units[n].lines for n in core)} lines; the layer: {len(layer)} units, "
+          f"{sum(units[n].lines for n in layer)} lines; {len(drop)} edges into it from the rest, {len(by_sym)} symbols")
+    for (b, sym), users in sorted(by_sym.items()):
+        names = sorted(pathlib.PurePosixPath(u).name for u in users)
+        print(f"  {pathlib.PurePosixPath(b).name}: {sym}  <- {len(users)}: {', '.join(names[:8])}"
+              + (" ..." if len(names) > 8 else ""))
+    sub = {a: {b for b in edges.get(a, {}) if b in core and (a, b) not in drop} for a in core}
+    cs = tarjan(sorted(core), sub)
+    big = max(cs, key=lambda c: sum(units[n].lines for n in c))
+    print(f"with every one cut: SCC 1 {len(big)} units, {sum(units[n].lines for n in big)} lines, "
+          f"{sum(1 for n in big if focus_match(n, focus))} of the layer in it")
+    for c in cs:
+        if len(c) > 1 and c is not big:
+            print(f"  a cycle of {len(c)} units, {sum(units[n].lines for n in c)} lines: "
+                  + ", ".join(pathlib.PurePosixPath(x).name for x in c))
+
+
 # ---------------------------------------------------------------- self test
 
 SELFTEST = {
@@ -870,6 +1154,44 @@ def selftest():
     ks, st = keystones(["p", "q", "r", "z"], sq, pq, lambda n: 10)
     check("keystones: moving the hub q takes p and r out of the cycle",
           [k[0] for k in ks] == ["q"] and ks[0][1] == 20 and len(st) <= 1)
+    # cuts: p -> q (a call), q -> p (a global of p), q -> r (a hook pointer of r), r -> q (a call); 10 lines each
+    cu = {n: Unit(n, "cpp", 10) for n in ("p.cpp", "q.cpp", "r.cpp")}
+    cg = {"units": cu, "def_kind": {"?gP@@3HA": "B", "?gHook@@3P6AXXZEA": "B"},
+          "edges": {"p.cpp": {"q.cpp": {"?f@@YAXXZ": "void __cdecl f(void)"}},
+                    "q.cpp": {"p.cpp": {"?gP@@3HA": "int gP"},
+                              "r.cpp": {"?gHook@@3P6AXXZEA": "void (__cdecl *gHook)(void)"}},
+                    "r.cpp": {"q.cpp": {"?h@@YAXXZ": "void __cdecl h(void)"}}}}
+    core, l0, cr = find_cuts(cg)
+    by = {(r["cut"], r["what"]): r for r in cr}
+    e_qp = by.get(("edge", "q.cpp -> p.cpp"))
+    check("cuts: SCC 1 is p, q, r (30 lines)", sorted(core) == ["p.cpp", "q.cpp", "r.cpp"] and l0 == 30)
+    check("cuts: cutting q -> p takes p out (10 lines), a data cut",
+          e_qp is not None and e_qp["lines"] == 10 and e_qp["freed"] == ["p.cpp"] and e_qp["class"] == "data")
+    e_qr = by.get(("edge", "q.cpp -> r.cpp"))
+    check("cuts: q -> r through a function pointer is a hook cut", e_qr is not None and e_qr["class"] == "hook")
+    e_pq = by.get(("edge", "p.cpp -> q.cpp"))
+    check("cuts: p -> q is a real call", e_pq is not None and e_pq["class"] == "call" and e_pq["lines"] == 10)
+    check("cuts: the globals of p are the same cut as q -> p", by.get(("data", "the globals of p.cpp"), {}).get("lines") == 10)
+    check("cuts: ranked by lines, nothing that frees no line", all(r["lines"] > 0 for r in cr)
+          and [r["lines"] for r in cr] == sorted((r["lines"] for r in cr), reverse=True))
+    fcore, _, fr = find_cuts(cg, focus=("r.cpp",))
+    check("cuts --focus: only the cuts freeing r", bool(fr) and all("r.cpp" in r["freed"] and r["focus"] == 1
+                                                                    for r in fr))
+    check("shortest_path p -> r over p, q, r",
+          shortest_path(cg["edges"], "p.cpp", {"r.cpp"}, {"p.cpp", "q.cpp", "r.cpp"}) == ["p.cpp", "q.cpp", "r.cpp"])
+    tu = {n: Unit(n, "cpp", 10) for n in ("h.cpp", "e1.cpp", "e2.cpp", "u.cpp")}
+    tu["h.cpp"].defs = [("?f@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::f(void)", "T"),
+                        ("?g@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::g(void)", "T")]
+    for n in ("e1.cpp", "e2.cpp"):
+        tu[n].defs = [("?f@?$T@M@@QEAAXXZ", "public: void __cdecl T<float>::f(void)", "T")]
+    tu["u.cpp"].undef = [("?f@?$T@M@@QEAAXXZ", "public: void __cdecl T<float>::f(void)"),
+                         ("?h@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::h(void)")]
+    tu["e1.cpp"].defs.append(("?h@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::h(void)", "T"))
+    tu["e2.cpp"].defs.append(("?h@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::h(void)", "T"))
+    tg = analyse(list(tu.values()), set())
+    check("a template instance its class's home never defines is inline; one it defines is the home's",
+          tg["home"].get("T") == "h.cpp" and set(tg["edges"].get("u.cpp", {})) == {"h.cpp"}
+          and all("float" not in d for d in tg["edges"]["u.cpp"]["h.cpp"].values()))
     cw = cluster_waves(["x", "y", "z", "w"], {"x": {"y"}, "y": {"x", "z"}, "w": {"z"}}, [["x", "y"], ["z"], ["w"]])
     check("cluster waves: z, then {x, y} and w together", cw == [[["z"]], [["x", "y"], ["w"]]])
     print("SELFTEST " + ("PASS" if all(checks) else "FAIL"))
@@ -878,11 +1200,16 @@ def selftest():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", nargs="?", default="report", choices=["report", "unit", "selftest"])
+    ap.add_argument("cmd", nargs="?", default="report", choices=["report", "unit", "cuts", "why", "layer", "selftest"])
     ap.add_argument("file", nargs="?", help="unit: the unit (path under src/, file name or stem)")
     ap.add_argument("--build", default=str(ROOT / "build" / "clang"))
     ap.add_argument("--out", default=str(ROOT / "build" / "cpp_deps"))
     ap.add_argument("--top", type=int, default=30)
+    ap.add_argument("--max-weight", type=int, default=6,
+                    help="cuts: the most symbols an edge or unit-out cut may name")
+    ap.add_argument("--of", default=None, help="cuts, layer: the component holding this unit instead of SCC 1")
+    ap.add_argument("--focus", default="", help="cuts, why, layer: comma-separated unit name substrings (e.g. "
+                    "'User Interface Thread/,UI Events/'); cuts ranks by the focus units a cut frees")
     ap.add_argument("--all-refs", action="store_true",
                     help="count every undefined symbol of an object, also those only unreached COMDAT copies make")
     ap.add_argument("--code-only", action="store_true",
@@ -898,6 +1225,20 @@ def main():
         if not a.file:
             sys.exit("unit: name a unit")
         show_unit(g, a.file)
+        return 0
+    focus = tuple(f for f in a.focus.split(",") if f)
+    if a.cmd == "cuts":
+        report_cuts(g, out, a.top, a.max_weight, focus, a.of)
+        return 0
+    if a.cmd == "why":
+        if not a.file:
+            sys.exit("why: name a unit")
+        show_why(g, a.file, focus)
+        return 0
+    if a.cmd == "layer":
+        if not focus:
+            sys.exit("layer: give --focus")
+        show_layer(g, focus, a.of)
         return 0
     build_reports(g, out, a.top)
     return 0

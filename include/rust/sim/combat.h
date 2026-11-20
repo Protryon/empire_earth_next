@@ -27,6 +27,19 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// The folders, by `ee_combat_capture_fold`'s `which`.
+constexpr static const uint32_t EE_COMBAT_FOLD_CONDITION = 0;
+
+constexpr static const uint32_t EE_COMBAT_FOLD_HOST_READS = 1;
+
+constexpr static const uint32_t EE_COMBAT_FOLD_SHOTS = 2;
+
+constexpr static const uint32_t EE_COMBAT_FOLD_X_READS = 3;
+
+constexpr static const uint32_t EE_COMBAT_FOLD_X_ACTIONS = 4;
+
+constexpr static const uint32_t EE_COMBAT_FOLD_GOAL_OBJECTS = 5;
+
 /// `EEUnit::mResourceAmount` (the store's).
 constexpr static const int32_t EE_COMBAT_Q_RESOURCE_AMOUNT = 68;
 
@@ -1264,6 +1277,90 @@ constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED_BY = 11;
 /// The unit regions of a map.
 struct EeCombatUnitRegions;
 
+/// One lazy read and its answer.
+struct EeCombatRead {
+  /// `EE_COMBAT_READ_*`
+  int32_t code;
+  /// 0/1, the `long` result, or an f32's bits
+  uint32_t value;
+};
+
+/// A trigger test's reads (the capture's CBTC layout). The C++ fills everything above `reads`; the test logs its
+/// lazy reads.
+struct EeCombatConditionIn {
+  /// `EE_COMBAT_GOAL_*`
+  int32_t kind;
+  uint32_t event;
+  uint32_t unit_id;
+  /// the target's id (0 without one)
+  uint32_t target_id;
+  /// the unit's goal's `mKind` (-1 without one)
+  int32_t goal_kind;
+  /// the unit's player `IsHuman`
+  int32_t human;
+  /// the unit's `mStats->mRange`
+  float range;
+  int32_t reload_timer;
+  /// `mStats->mReloadTime`
+  int32_t reload_time;
+  /// `mStats->mCanFireOverWalls`
+  int32_t fire_over_walls;
+  /// `mHerd != NULL`
+  int32_t herd;
+  /// the unit's class `IsCrusader`
+  int32_t crusader;
+  /// the attack goal's `mIsConvert`
+  int32_t convert;
+  /// the class's `mIsParatrooperBomber`
+  int32_t paratrooper_bomber;
+  /// the unit's `mCloaked` (a missile's lifetime flag)
+  uint32_t cloaked;
+  /// `mFlightTime` and `mStats->mFlightTime`
+  int32_t flight_time;
+  int32_t flight_time_max;
+  /// the class's `GetHealThreshold()`
+  float heal_threshold;
+  /// the target: the attack goal's, the heal goal's, or (shots) the attack-unit goal's
+  int32_t has_target;
+  int32_t target_hp;
+  int32_t target_tile[2];
+  /// the attack goal's last known target tile
+  int32_t goal_tile[2];
+  /// the target's complex unit is there, its velocity, cloak and container
+  int32_t target_complex;
+  float target_velocity;
+  int32_t target_cloakable;
+  /// `GetIsCloaked()`
+  int32_t target_cloaked;
+  /// the target class's `mCloakRadius`
+  int32_t target_cloak_radius;
+  int32_t target_container;
+  /// the target's player is the unit's
+  int32_t target_same_player;
+  /// the unit's player is at war with the target's (`mEnemies[target player] != 0`)
+  int32_t target_enemy;
+  /// the target's player is at war with the unit's
+  int32_t target_enemy_of;
+  /// the target class's `mFamily`, `mCategory`, `IsLandBuilding()`
+  uint32_t target_family;
+  uint32_t target_category;
+  int32_t target_land_building;
+  /// the target's `mStats->mAttack`, `mStats->mMaxHitPoints`
+  float target_attack;
+  int32_t target_max_hp;
+  /// the lazy reads made (may exceed the log's 4)
+  int32_t reads;
+  EeCombatRead log[4];
+};
+
+/// A trigger test's outcome.
+struct EeCombatConditionOut {
+  /// the test's value (`bool` 0/1; the shots' `long`)
+  int32_t result;
+  /// `EE_COMBAT_CONDITION_*`
+  int32_t action;
+};
+
 /// One hit's damage arguments (`ComputeDamage`'s after the units).
 struct EeCombatDamageCall {
   /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
@@ -1303,6 +1400,8 @@ using EeCombatWorldArgs = int64_t[12];
 struct EeCombatWorldHost {
   EeCombatQueryHost query;
   uint64_t (*op)(void *ctx, int32_t code, uint64_t object, uint64_t other, EeCombatWorldArgs *args);
+  /// the call's class (`EEUnitClass*`: Attacked's or FireShot's, else the unit's)
+  uint64_t class_;
 };
 
 /// `EEToHitTable::GetAttackFactor`'s inputs.
@@ -1669,90 +1768,6 @@ struct EeCombatHealGoal {
   uint64_t target;
   /// `mElapsedTime` (milliseconds since the last heal)
   uint32_t elapsed;
-};
-
-/// A trigger test's outcome.
-struct EeCombatConditionOut {
-  /// the test's value (`bool` 0/1; the shots' `long`)
-  int32_t result;
-  /// `EE_COMBAT_CONDITION_*`
-  int32_t action;
-};
-
-/// One lazy read and its answer.
-struct EeCombatRead {
-  /// `EE_COMBAT_READ_*`
-  int32_t code;
-  /// 0/1, the `long` result, or an f32's bits
-  uint32_t value;
-};
-
-/// A trigger test's reads (the capture's CBTC layout). The C++ fills everything above `reads`; the test logs its
-/// lazy reads.
-struct EeCombatConditionIn {
-  /// `EE_COMBAT_GOAL_*`
-  int32_t kind;
-  uint32_t event;
-  uint32_t unit_id;
-  /// the target's id (0 without one)
-  uint32_t target_id;
-  /// the unit's goal's `mKind` (-1 without one)
-  int32_t goal_kind;
-  /// the unit's player `IsHuman`
-  int32_t human;
-  /// the unit's `mStats->mRange`
-  float range;
-  int32_t reload_timer;
-  /// `mStats->mReloadTime`
-  int32_t reload_time;
-  /// `mStats->mCanFireOverWalls`
-  int32_t fire_over_walls;
-  /// `mHerd != NULL`
-  int32_t herd;
-  /// the unit's class `IsCrusader`
-  int32_t crusader;
-  /// the attack goal's `mIsConvert`
-  int32_t convert;
-  /// the class's `mIsParatrooperBomber`
-  int32_t paratrooper_bomber;
-  /// the unit's `mCloaked` (a missile's lifetime flag)
-  uint32_t cloaked;
-  /// `mFlightTime` and `mStats->mFlightTime`
-  int32_t flight_time;
-  int32_t flight_time_max;
-  /// the class's `GetHealThreshold()`
-  float heal_threshold;
-  /// the target: the attack goal's, the heal goal's, or (shots) the attack-unit goal's
-  int32_t has_target;
-  int32_t target_hp;
-  int32_t target_tile[2];
-  /// the attack goal's last known target tile
-  int32_t goal_tile[2];
-  /// the target's complex unit is there, its velocity, cloak and container
-  int32_t target_complex;
-  float target_velocity;
-  int32_t target_cloakable;
-  /// `GetIsCloaked()`
-  int32_t target_cloaked;
-  /// the target class's `mCloakRadius`
-  int32_t target_cloak_radius;
-  int32_t target_container;
-  /// the target's player is the unit's
-  int32_t target_same_player;
-  /// the unit's player is at war with the target's (`mEnemies[target player] != 0`)
-  int32_t target_enemy;
-  /// the target's player is at war with the unit's
-  int32_t target_enemy_of;
-  /// the target class's `mFamily`, `mCategory`, `IsLandBuilding()`
-  uint32_t target_family;
-  uint32_t target_category;
-  int32_t target_land_building;
-  /// the target's `mStats->mAttack`, `mStats->mMaxHitPoints`
-  float target_attack;
-  int32_t target_max_hp;
-  /// the lazy reads made (may exceed the log's 4)
-  int32_t reads;
-  EeCombatRead log[4];
 };
 
 /// The C++ host of a trigger test: `read` answers a lazy read over `context` (the unit, its goal or class, the
@@ -2236,6 +2251,19 @@ struct EeCombatTargetHost {
 };
 
 extern "C" {
+
+/// TEST ONLY: one call of the folder `which` (`size` bytes at `data`).
+///
+/// # Safety
+/// `data` points to `size` bytes.
+void ee_combat_capture_fold(uint32_t which, const uint8_t *data, size_t size);
+
+/// TEST ONLY: the condition record's call (`EECombatCaptureCondition`: the record's inputs, then its outputs).
+void ee_combat_capture_condition(const EeCombatConditionIn *input,
+                                 const EeCombatConditionOut *output);
+
+/// TEST ONLY: every folder's partial batch as a record (`EECombatCaptureFlush`), in the folders' order.
+void ee_combat_capture_fold_flush();
 
 /// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
 ///

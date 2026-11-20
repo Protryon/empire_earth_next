@@ -53,7 +53,7 @@
 #include "lle/UIEditBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 // A nested struct: a member of UIComboBox, so it has the class's friendships (UIControl's, UITextLabel's, UIListBox's)
 struct UIComboBox::Rust {

@@ -22,7 +22,6 @@ const GOLDEN: &str = include_str!("golden_gmod.txt");
 const RASTERIZER: usize = 0x5000;
 const TEXTURE_MANAGER: usize = 0x6000;
 const MODEL_MANAGER: usize = 0x7000;
-const HANDLE: usize = 0x10;
 
 enum Kind {
     Model(*mut EeGeModel),
@@ -40,7 +39,7 @@ struct Obj {
 
 #[derive(Default)]
 struct World {
-    /// By handle (`serial * HANDLE`).
+    /// By handle (a C++-layout object's address).
     objects: BTreeMap<usize, Obj>,
     serial: i32,
     screen_id: c_ulong,
@@ -87,7 +86,8 @@ fn name(o: usize) -> String {
 /// for an array. Its memory lives as long as the test (a dangling pointer still names its object, as the driver's).
 fn new_object(kind: Kind) -> usize {
     let h = match kind {
-        Kind::Vertices(..) | Kind::Polygons(_) => Box::into_raw(Box::new([0u8; HANDLE])) as usize,
+        // (the size of a C++ array, cppobj::CppArray, whose Rust array is NULL: the model asks the host)
+        Kind::Vertices(..) | Kind::Polygons(_) => Box::into_raw(Box::new([0u64; 4])) as usize,
         _ => testing::new_counted(std::ptr::null_mut()),
     };
     with(|w| {
@@ -915,5 +915,45 @@ fn the_physical_table_reads_the_model_in_place() {
         assert!((t.retry_line)(model, &x, 0, 1.0, std::ptr::null(), 0));
         EeGeModel::destroy(p);
         testing::delete_ustring(n);
+    }
+}
+
+#[test]
+fn the_arrays_calls_go_to_their_rust_arrays() {
+    use crate::ge::vertarr::{ee_ge_pa_destroy, ee_ge_va_destroy};
+    use crate::ge::vertarr::{ee_ge_pa_index, ee_ge_pa_indices, ee_ge_pa_new, ee_ge_va_new, ee_ge_va_vertices};
+    // SAFETY: the arrays live until the end; the C++ objects are their layout (vtable, data, Rust array)
+    unsafe {
+        let v = ee_ge_va_new(0, 3);
+        let va = cppobj::CppArray { vtable: ptr::null(), data: ee_ge_va_vertices(v), rust: v as *mut c_void };
+        let obj = &va as *const cppobj::CppArray as usize;
+        let point = Ge3DPoint::new(1.0, 2.0, 3.0);
+        assert_eq!(
+            EeGeModel::array_op(EeGeModOp::VertexSetPoint, obj, 2, &point as *const Ge3DPoint as isize, 0),
+            Some(0)
+        );
+        let mut points = [Ge3DPoint::default(); 3];
+        EeGeModel::array_op(EeGeModOp::VertexGather, obj, 3, points.as_mut_ptr() as isize, 0);
+        assert_eq!(points[2], point);
+        assert_eq!(EeGeModel::array_op(EeGeModOp::VertexSize, obj, 0, 0, 0), Some(3));
+        assert_eq!(EeGeModel::array_op(EeGeModOp::VertexSizeOf, obj, 0, 0, 0), Some(3 * 0x20 + 8));
+        assert_eq!(EeGeModel::array_op(EeGeModOp::MaterialNew, obj, 0, 0, 0), None);
+        let p = ee_ge_pa_new(2);
+        let pa =
+            cppobj::CppArray { vtable: ptr::null(), data: ee_ge_pa_indices(p) as *mut c_void, rust: p as *mut c_void };
+        let obj = &pa as *const cppobj::CppArray as usize;
+        EeGeModel::array_op(EeGeModOp::PolygonSetIndex, obj, 1, 7, 2);
+        assert_eq!(ee_ge_pa_index(p, 1, 1), 7);
+        let mut indices = [0u32; 6];
+        EeGeModel::array_op(EeGeModOp::PolygonGather, obj, 2, indices.as_mut_ptr() as isize, 0);
+        assert_eq!(indices, [0, 0, 0, 0, 7, 0]);
+        assert_eq!(EeGeModel::array_op(EeGeModOp::PolygonSizeOf, obj, 0, 0, 0), Some(2 * 3 * 2 + 12));
+        let none = cppobj::CppArray { vtable: ptr::null(), data: ptr::null_mut(), rust: ptr::null_mut() };
+        assert_eq!(
+            EeGeModel::array_op(EeGeModOp::VertexSize, &none as *const cppobj::CppArray as usize, 0, 0, 0),
+            None
+        );
+        ee_ge_va_destroy(v);
+        ee_ge_pa_destroy(p);
     }
 }

@@ -61,6 +61,9 @@
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
+#include "ee/EEGameOptions.h"
+#include "ee/EEGamePreferences.h"
+#include "ee/EEWonNetUI.h"
 
 static unsigned long sLastUpdateTime;
 
@@ -178,3 +181,24 @@ long EEUIEWNAROpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     sLastUpdateTime = TMGetTime();
     return kErrorOK;
 }
+
+// The UI that the WON network code (EEWonNet.cpp) calls, set before main (ee/EEWonNetUI.h)
+static void WonNetDisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
+                                 EEUIFErrorCallback inCallback, bool inFlag)
+{
+    gUIManager->DisplayMessage(inMessage, inAlignment, inForm, inCallback, inFlag);
+}
+
+static void WonNetDisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
+                                EEUIFErrorCallback inCallback, UIForm* inCancel)
+{
+    gUIManager->DisplayCancel(inMessage, inAlignment, inForm, inCallback, inCancel);
+}
+
+static const bool sWonNetUIRegistered = (gEEWonNetUI = EEWonNetUI{
+    [] { return gGamePreferences.Save(); },
+    WonNetDisplayMessage,
+    WonNetDisplayCancel,
+    []() -> UIEvent* { return new EEUIEWNAROpenScreen; },
+    []() -> UIEvent* { return new EEUIEWNAGOpenScreen; },
+}, true);

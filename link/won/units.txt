@@ -6,7 +6,6 @@
 2f3070 2f3962 WONGUI/Button.cpp
 2f3a50 2f4888 WONGUI/ComboBox.cpp
 2f4890 2f4aeb WONGUI/ComponentLifetime.cpp
-2f5560 3010e0 WONGUI/MSControlConstructors.cpp
 2f6100 2f62a1 WONGUI/ComponentLayoutAdapters.cpp
 2f6140 2f620f WONGUI/ChildLayoutRegistration.cpp
 2f61b0 3372c0 WONGUI/ChildLayouts.cpp
@@ -24,7 +23,6 @@
 2fd480 2fd57a WONGUI/MenuAddItem.cpp
 2fdcd0 2fe6d1 WONGUI/MSGraphicsUtil.cpp
 2fe6e0 2febe6 WONGUI/MSButtonBase.cpp
-3016f0 302236 WONGUI/MSMessageBox.cpp
 3033a0 3199da WONGUI/WONControlSetup.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp

@@ -1,8 +1,8 @@
 //! WONInternal's title and community configs (`TitleConfig.cpp`): which child a `TITLEDEF` or `COMMUNITY`
 //! instruction opens and the nesting errors, `CommunityConfig::PostParse`'s rules (the name-login mode, the image
 //! path and hash string defaults, the trust level lifespan map from `CertificateLifeSpan`) and both `ToString`
-//! texts. The C++ classes stay `ConfigObject`s (the config parser calls their virtual hooks and binds their keys
-//! to members); `include/ee/wonapi/WONTitleConfigMsg.h` applies these in the original's order.
+//! texts. The classes are `titleobj`'s Rust objects since WON round 22 (before, C++ `ConfigObject`s that applied
+//! these through `WONTitleConfigMsg.h`, now the drivers' tests/won/won_titlecfg_msg.h).
 //!
 //! Reached by nothing in the game (the auth server's config files; the WON servers are gone).
 

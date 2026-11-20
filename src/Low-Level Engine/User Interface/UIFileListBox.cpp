@@ -147,8 +147,6 @@ void UIFileListBox::CreateEntries(unsigned long inSortType)
 {
     ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType);
 }
-long UIFileListBox::DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
-FSPath* UIFileListBox::GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
 void UIFileListBox::SetSearchPaths(FSPath* inPath)
 {
     ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath);

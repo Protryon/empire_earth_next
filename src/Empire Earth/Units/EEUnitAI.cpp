@@ -160,8 +160,7 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
 {
     EEComplexUnit* theUnit = CondUnit(inA);
     switch (inOp) {
-    case EE_UNITS_COND_GOAL:
-        return EEObj(inC != 0 ? theUnit->mGoalState : theUnit->mActiveGoal);
+    // (the goals, the last attacker, the line of sight, the cargo count and the position: ee_units cls_host.rs)
     case EE_UNITS_COND_GOAL_INFO: {
         EEUnitGoal* theGoal = CondGoal(inB);
         bool theForced = theGoal->mKind == kGoalLocation && static_cast<EEUGRust*>(theGoal)->GetIsForcedMove();
@@ -182,8 +181,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         return theUnit->mBehavior->CanMoveFreely(theUnit);
     case EE_UNITS_COND_LOCATION_QUEUED:
         return EEIsLocationGoalQueued(theUnit);
-    case EE_UNITS_COND_LAST_ATTACKER:
-        return EEObj(static_cast<EEUnit*>(theUnit->mLastAttacker));
     case EE_UNITS_COND_CONDITION_TARGET:
         return EEObj(static_cast<EEUnit*>(theUnit->GetConditionTarget()));
     case EE_UNITS_COND_CAN_REACH:
@@ -202,9 +199,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         CondPoint(ioIo, theLocation);
         return EEObj(theTarget);
     }
-    case EE_UNITS_COND_LINE_OF_SIGHT:
-        ioIo->f = theUnit->GetLineOfSight();
-        return 0;
     case EE_UNITS_COND_HIT_DISTANCE:
         ioIo->f = EEGetHitDistanceSquared(theUnit, (EEUnit*)(uintptr_t)inB, -10000.0f, -10000.0f);
         return 0;
@@ -233,8 +227,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         GE3DPoint thePoint((float)theUnit->mTileX + 0.5f, (float)theUnit->mTileY + 0.5f, theUnit->mHeight);
         return theLocation.DistanceTo(thePoint) > gWorldTable.GetFloatValue(kWorldTileStrayDistance);
     }
-    case EE_UNITS_COND_CARGO:
-        return theUnit->GetNumCargoUnits();
     case EE_UNITS_COND_FRAME_COUNT:
         return theUnit->GetModel()->mFrameCounts[theUnit->GetAnimation()];
     case EE_UNITS_COND_MAX_VELOCITY:
@@ -295,12 +287,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         return 0;
     case EE_UNITS_COND_WAYPOINTS:
         return (int64_t)theUnit->mWaypoints.size();
-    case EE_UNITS_COND_POSITION: {
-        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-        theUnit->GetPosition(thePosition);
-        CondPoint(ioIo, thePosition);
-        return 0;
-    }
     case EE_UNITS_COND_GROUND_Z: {
         GE3DPoint theGround(0.0f, 0.0f, 0.0f);
         ::gWorld.mMap->GetGroundPoint(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), theGround);

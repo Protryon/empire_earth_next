@@ -6,6 +6,8 @@
 
 use std::ffi::{c_ulong, c_void};
 
+use crate::geval::vertarr_capture as capture;
+
 /// `GXVERTEX`: position, normal, one texture coordinate.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -333,17 +335,24 @@ pub enum EeGeVaField {
 /// `new GEVertexArray(type, count)`: type 1 coloured, any other standard (the rasterizer makes only 0 and 1).
 #[no_mangle]
 pub extern "C" fn ee_ge_va_new(kind: u32, size: u32) -> *mut EeGeVertexArray {
-    Box::into_raw(Box::new(if kind == 1 {
+    let a = Box::into_raw(Box::new(if kind == 1 {
         EeGeVertexArray::Color(StdColorVertexArray::new(size))
     } else {
         EeGeVertexArray::Standard(StandardVertexArray::new(size))
-    }))
+    }));
+    if capture::on() {
+        capture::va_new(a as usize, kind, size);
+    }
+    a
 }
 
 /// # Safety
 /// `a` is from `ee_ge_va_new` and not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_va_destroy(a: *mut EeGeVertexArray) {
+    if capture::on() {
+        capture::va_drop(a as usize);
+    }
     // SAFETY: the caller's contract
     drop(unsafe { Box::from_raw(a) });
 }
@@ -367,6 +376,9 @@ pub unsafe extern "C" fn ee_ge_va_vertices(a: *mut EeGeVertexArray) -> *mut c_vo
 /// `a` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_va_type(a: *const EeGeVertexArray) -> c_ulong {
+    if let Some(kind) = capture::on().then(|| capture::with_va(a as usize, |s| s.kind)).flatten() {
+        return kind as c_ulong;
+    }
     // SAFETY: the caller's contract
     match unsafe { &*a } {
         EeGeVertexArray::Standard(_) => 0,
@@ -380,6 +392,10 @@ pub unsafe extern "C" fn ee_ge_va_type(a: *const EeGeVertexArray) -> c_ulong {
 /// `a` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_va_size(a: *const EeGeVertexArray, size_of: bool) -> c_ulong {
+    // the gate's arrays: GetSize the point floats' count, SizeOf 48 bytes each
+    if let Some(n) = capture::on().then(|| capture::with_va(a as usize, |s| s.points.len())).flatten() {
+        return (if size_of { n * 48 } else { n }) as c_ulong;
+    }
     // SAFETY: the caller's contract
     let n = match unsafe { &*a } {
         EeGeVertexArray::Standard(v) => {
@@ -407,6 +423,9 @@ pub unsafe extern "C" fn ee_ge_va_size(a: *const EeGeVertexArray, size_of: bool)
 /// Both are live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_va_copy_from(a: *mut EeGeVertexArray, b: *const EeGeVertexArray) {
+    if capture::on() {
+        capture::va_copy(a as usize, b as usize);
+    }
     // SAFETY: the caller's contract
     match unsafe { (&mut *a, &*b) } {
         (EeGeVertexArray::Standard(x), EeGeVertexArray::Standard(y)) => x.copy_from(y),
@@ -421,6 +440,17 @@ pub unsafe extern "C" fn ee_ge_va_copy_from(a: *mut EeGeVertexArray, b: *const E
 /// `a` is live, `index` one of its vertices; `out` holds the field's floats.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_va_get(a: *const EeGeVertexArray, field: EeGeVaField, index: u32, out: *mut f32) {
+    if capture::on() {
+        let n = field_len(field);
+        let got = capture::with_va(a as usize, |s| {
+            let values = s.field(field as u32, index).map_or(vec![0.0; n], |v| v.to_vec());
+            // SAFETY: `out` holds the field's floats
+            unsafe { std::ptr::copy_nonoverlapping(values.as_ptr(), out, n) };
+        });
+        if got.is_some() {
+            return;
+        }
+    }
     // SAFETY: the caller's contract
     let a = unsafe { &*a };
     let values: Vec<f32> = match (a, field) {
@@ -445,6 +475,18 @@ pub unsafe extern "C" fn ee_ge_va_get(a: *const EeGeVertexArray, field: EeGeVaFi
 /// `a` is live, `index` one of its vertices; `value` holds the field's floats.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_va_set(a: *mut EeGeVertexArray, field: EeGeVaField, index: u32, value: *const f32) {
+    if capture::on() {
+        let n = field_len(field);
+        let stored = capture::with_va(a as usize, |s| match s.field(field as u32, index) {
+            // SAFETY: `value` holds the field's floats
+            Some(v) => v.copy_from_slice(unsafe { std::slice::from_raw_parts(value, n) }),
+            None => s.out_of_range += 1,
+        });
+        // SAFETY: the caller's contract
+        if stored.is_some() && index >= unsafe { len(&*a) } {
+            return;
+        }
+    }
     // SAFETY: the caller's contract
     unsafe {
         let v3 = || [*value, *value.add(1), *value.add(2)];
@@ -477,6 +519,23 @@ pub unsafe extern "C" fn ee_ge_va_set_vertex(
     opacity: f32,
     index: u32,
 ) {
+    if capture::on() {
+        let stored = capture::with_va(a as usize, |s| {
+            if s.field(4, index).is_none() {
+                s.out_of_range += 1;
+                return;
+            }
+            for (field, from, count) in [(1, c, 3), (4, p, 3), (2, n, 3), (5, uv, 2), (3, &opacity as *const f32, 1)] {
+                // SAFETY: the caller's contract: each pointer holds its floats
+                let from = unsafe { std::slice::from_raw_parts(from, count) };
+                s.field(field, index).unwrap().copy_from_slice(from);
+            }
+        });
+        // SAFETY: the caller's contract
+        if stored.is_some() && index >= unsafe { len(&*a) } {
+            return;
+        }
+    }
     // SAFETY: the caller's contract
     unsafe {
         let v3 = |q: *const f32| [*q, *q.add(1), *q.add(2)];
@@ -490,13 +549,20 @@ pub unsafe extern "C" fn ee_ge_va_set_vertex(
 /// `new GEPolygonArray(count)`.
 #[no_mangle]
 pub extern "C" fn ee_ge_pa_new(size: u32) -> *mut EeGePolygonArray {
-    Box::into_raw(Box::new(EeGePolygonArray(PolygonArray::new(size))))
+    let p = Box::into_raw(Box::new(EeGePolygonArray(PolygonArray::new(size))));
+    if capture::on() {
+        capture::pa_new(p as usize, size);
+    }
+    p
 }
 
 /// # Safety
 /// `p` is from `ee_ge_pa_new` and not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_pa_destroy(p: *mut EeGePolygonArray) {
+    if capture::on() {
+        capture::pa_drop(p as usize);
+    }
     // SAFETY: the caller's contract
     drop(unsafe { Box::from_raw(p) });
 }
@@ -517,6 +583,10 @@ pub unsafe extern "C" fn ee_ge_pa_indices(p: *mut EeGePolygonArray) -> *mut u16 
 /// `p` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_pa_size(p: *const EeGePolygonArray, size_of: bool) -> c_ulong {
+    // the gate's arrays: GetSize the triangles, SizeOf 4 bytes an index
+    if let Some(n) = capture::on().then(|| capture::with_pa(p as usize, |s| s.indices.len())).flatten() {
+        return (if size_of { n * 4 } else { n / 3 }) as c_ulong;
+    }
     // SAFETY: the caller's contract
     let p = unsafe { &(*p).0 };
     (if size_of { p.size_of() } else { p.size() }) as c_ulong
@@ -528,6 +598,10 @@ pub unsafe extern "C" fn ee_ge_pa_size(p: *const EeGePolygonArray, size_of: bool
 /// `p` is live; `polygon` one of its triangles.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_pa_index(p: *const EeGePolygonArray, polygon: u32, corner: u32) -> c_ulong {
+    let i = polygon as usize * 3 + corner as usize;
+    if let Some(v) = capture::on().then(|| capture::with_pa(p as usize, |s| s.indices.get(i).copied())).flatten() {
+        return v.unwrap_or(0) as c_ulong;
+    }
     // SAFETY: the caller's contract
     unsafe { (*p).0.vertex_index(polygon, corner) as c_ulong }
 }
@@ -538,10 +612,39 @@ pub unsafe extern "C" fn ee_ge_pa_index(p: *const EeGePolygonArray, polygon: u32
 /// `p` is live; `polygon` one of its triangles.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_pa_set_index(p: *mut EeGePolygonArray, polygon: u32, corner: u32, index: c_ulong) {
+    #[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
+    if capture::on() {
+        let i = polygon as usize * 3 + corner as usize;
+        let stored = capture::with_pa(p as usize, |s| match s.indices.get_mut(i) {
+            Some(v) => *v = index as u32,
+            None => s.out_of_range += 1,
+        });
+        // SAFETY: the caller's contract
+        if stored.is_some() && i >= unsafe { (*p).0.indices().len() } {
+            return;
+        }
+    }
     // SAFETY: the caller's contract
     #[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
     unsafe {
         (*p).0.set_vertex_index(polygon, corner, index as u32)
+    }
+}
+
+/// A field's float count.
+fn field_len(field: EeGeVaField) -> usize {
+    match field {
+        EeGeVaField::Opacity => 1,
+        EeGeVaField::Uv => 2,
+        _ => 3,
+    }
+}
+
+/// The array's vertex count.
+fn len(a: &EeGeVertexArray) -> u32 {
+    match a {
+        EeGeVertexArray::Standard(v) => v.len(),
+        EeGeVertexArray::Color(v) => v.len(),
     }
 }
 
@@ -650,5 +753,31 @@ mod tests {
         assert_eq!(p.vertex_index(0, 1), 0x2345, "stored as 16 bits");
         assert_eq!(p.size(), 2);
         assert_eq!(p.size_of(), 2 * 3 * 2 + 12);
+    }
+
+    #[test]
+    fn the_store_gates_capture_answers_from_the_shadow() {
+        capture::set_on(true);
+        let a = ee_ge_va_new(0, 2);
+        let p = ee_ge_pa_new(1);
+        // SAFETY: the arrays live until destroyed below
+        unsafe {
+            ee_ge_va_set(a, EeGeVaField::Color, 1, [0.5f32, 0.25, 0.125].as_ptr());
+            let mut c = [0.0f32; 3];
+            ee_ge_va_get(a, EeGeVaField::Color, 1, c.as_mut_ptr());
+            assert_eq!(c, [0.5, 0.25, 0.125], "a standard array keeps no colour; its shadow does");
+            ee_ge_va_set(a, EeGeVaField::Point, 5, [1.0f32, 2.0, 3.0].as_ptr());
+            assert_eq!(capture::with_va(a as usize, |s| s.out_of_range), Some(1), "a set past the end is counted");
+            assert_eq!((ee_ge_va_size(a, false), ee_ge_va_size(a, true)), (6, 288), "the gate's sizes");
+            ee_ge_pa_set_index(p, 0, 2, 70000);
+            assert_eq!(ee_ge_pa_index(p, 0, 2), 70000, "32 bits in the shadow");
+            ee_ge_pa_set_index(p, 1, 0, 1);
+            assert_eq!(capture::with_pa(p as usize, |s| s.out_of_range), Some(1));
+            assert_eq!((ee_ge_pa_size(p, false), ee_ge_pa_size(p, true)), (1, 12));
+            ee_ge_va_destroy(a);
+            ee_ge_pa_destroy(p);
+        }
+        capture::set_on(false);
+        assert!(capture::with_va(a as usize, |_| ()).is_none());
     }
 }

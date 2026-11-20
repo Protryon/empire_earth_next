@@ -3,7 +3,32 @@ import os
 import pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINK_DIR = ROOT / "link"
-TOOLCHAIN = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))   # downloaded headers (DX7 SDK)
+def _main_checkout(root):
+    """The main checkout of a git worktree (its .git file names <main>/.git/worktrees/<name>), else root."""
+    dot_git = root / ".git"
+    if dot_git.is_file():
+        line = dot_git.read_text(encoding="utf-8").strip()
+        if line.startswith("gitdir:"):
+            gitdir = pathlib.Path(line[len("gitdir:"):].strip())
+            if gitdir.parent.name == "worktrees":
+                return gitdir.parent.parent.parent
+    return root
+
+
+def _toolchain():
+    """The downloaded toolchain parts (DX7 SDK, fonts): EE_TOOLCHAIN, this checkout's toolchain/, or, in a worktree
+    without one, the main checkout's (toolchain/ is not in git; a worktree that compiled without it embedded empty
+    fonts, PORT_LEARNINGS "Empty fonts in a worktree")."""
+    if "EE_TOOLCHAIN" in os.environ:
+        return pathlib.Path(os.environ["EE_TOOLCHAIN"])
+    own = ROOT / "toolchain"
+    if own.is_dir():
+        return own
+    shared = _main_checkout(ROOT) / "toolchain"
+    return shared if shared.is_dir() else own
+
+
+TOOLCHAIN = _toolchain()   # downloaded headers (DX7 SDK), the built-in fonts
 # where units are staged to compile: inside this checkout (build/eex), so every worktree has its own and nothing is
 # written outside the checkout; the compiler still names them C:\EEX\... in __FILE__ (FILE_PREFIX, verify.py), as
 # the original build tree did, so the asserts read the same from any checkout

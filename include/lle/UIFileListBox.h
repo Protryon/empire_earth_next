@@ -23,8 +23,8 @@ public:
     virtual ~UIFileListBox();
     void AddValidExtension(const UString& inExtension);
     void CreateEntries(unsigned long inSortType);
-    long DeleteSelectedFile();
-    FSPath* GetFilePath() const;
+    long DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
+    FSPath* GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
     void SetSearchPaths(FSPath* inPath);
 private:
     EeUiFileList* mRust;                    // the valid extensions (".xxx") and the path (referenced)

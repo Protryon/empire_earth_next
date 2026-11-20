@@ -221,12 +221,16 @@ void EEActiveGroup::Fill(EESelectedGroup* inGroup, long inSort, long inSlot)
     this->SetFormation(inGroup->mFormation);
     if (inSort == 0)
         inGroup->SortUnits();
-    // New (R5b.4): the test of the units the group takes (valid, with hit points, in the slot) is EEFillMembers
-    // (ee/EEUnitStore.h): their indices in the selection's order; each one is taken here in that order
+    // New (R5b.4): the test of the units the group takes (valid, with hit points, in the slot) is
+    // ee_units_fill_members (ee_units group.rs): their indices in the selection's order; each one is taken here in
+    // that order
     std::vector<uint32_t> theTaken(theCount + 1);
-    EEComplexUnit* const* theUnits = theCount > 0 ? &inGroup->mUnits[0] : NULL;
-    size_t theTakenCount = EEFillMembers(theUnits, theCount, inSlot, &theTaken[0]);
-    EEFillCapture(100, inGroup->mPlayer, theUnits, theCount, inSlot, &theTaken[0], theTakenCount);   // TEST ONLY (off by default)
+    std::vector<uint32_t> theIDs(theCount + 1);
+    for (size_t i = 0; i < theCount; i++)
+        theIDs[i] = static_cast<uint32_t>(inGroup->mUnits[i]->mUnitID);
+    size_t theTakenCount = ee_units_fill_members(&theIDs[0], theCount, (int64_t)inSlot, &theTaken[0]);
+    ee_units_fill_capture(100, (uint64_t)(uintptr_t)inGroup->mPlayer, &theIDs[0], theCount, (int64_t)inSlot, &theTaken[0],
+                          theTakenCount);   // TEST ONLY (off by default)
     for (size_t k = 0; k < theTakenCount; k++) {
         EEComplexUnit* theUnit = inGroup->GetUnit((long)theTaken[k]);
         if (theUnit->mActiveGroup)
@@ -505,6 +509,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
     EEUnitGoal* theOther = (EEUnitGoal*)(uintptr_t)inB;
     switch (inOp) {
+    // (the goals' kinds, the gather and patrol goals' units, a unit's sphere and the regions' size: ag_host.rs)
     case EE_UNITS_AG_REMOVE:
         theGroup->RemoveUnit((EEComplexUnit*)(uintptr_t)inB);
         return 0;
@@ -562,15 +567,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         for (std::map<unsigned int, GE3DPoint>::iterator it = theGroup->mDestinations.begin(); it != theGroup->mDestinations.end(); ++it)
             ee_units_ag_push((EeUnitsAgListHandle*)io->list, it->first, (const float(*)[3])&it->second.mX, 0.0f);
         return 0;
-    case EE_UNITS_AG_WORLD_SPHERE: {
-        EEUnit* theFound = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)inC));
-        if (theFound == NULL)
-            return 0;
-        io->f = theFound->mUnitClass->GetInnerCollisionSphere();
-        return 1;
-    }
-    case EE_UNITS_AG_REGIONS_SIZE:
-        return ee_combat_regions_size(gWorld.mMap->mUnitRegions);
     case EE_UNITS_AG_CAP_FACTOR:
         io->f = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
         return 0;
@@ -672,8 +668,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         io->p[1] = theClosest.mY;
         return 0;
     }
-    case EE_UNITS_AG_GOAL_KIND:
-        return theGoal != NULL ? (int64_t)theGoal->mKind : -1;
     case EE_UNITS_AG_CLONE:
         return EEObj(theGoal->Clone());
     case EE_UNITS_AG_DELETE:
@@ -715,10 +709,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_CLEAR_PATH_STATE:
         theGoal->SetGroupPathState(0);
         return 0;
-    case EE_UNITS_AG_GATHER_STORAGE:
-        return EEObj(theGoal->GetGatherStorage());
-    case EE_UNITS_AG_GATHER_RESOURCE:
-        return EEObj(theGoal->GetGatherResource());
     case EE_UNITS_AG_SET_GATHER_STORAGE:
         theGoal->SetGatherStorage((EEUnit*)(uintptr_t)inB);
         return 0;
@@ -736,8 +726,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_SET_EXPLORE_TILE:
         theGoal->SetExploreTile((long)inC, (long)inD);
         return 0;
-    case EE_UNITS_AG_PATROL_POINT:
-        return EEObj(theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : ee_units_pg_last(theGoal->GetPatrolGroup()));
     case EE_UNITS_AG_NEW_ATTACK_UNIT:
         return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit((EEComplexUnit*)(uintptr_t)inA, (EEUnit*)(uintptr_t)inB,
                                                                        true, false)));

@@ -45,6 +45,7 @@ pub fn base(kind: K) -> B {
         K::MsHeaderControl => B::Header,
         K::MsTabCtrl => B::Tab,
         K::MsEtchedFrameGroup => B::Container,
+        K::MsMessageBox => B::Dialog,
         K::Ms3DFrame | K::MsSeperator | K::MsEtchedFrame | K::MsScrollThumb | K::MsPopup | K::MsDlgBack => B::Component,
     }
 }
@@ -71,6 +72,7 @@ pub fn make(kind: K) -> Box<dyn ShellKind> {
         K::MsHeaderControl => Box::new(crate::shell_mscont::MsHeaderControl),
         K::MsTabCtrl => Box::new(crate::shell_mscont::MsTabCtrl::default()),
         K::MsEtchedFrameGroup => Box::new(crate::shell_mscont::MsEtchedGroup::default()),
+        K::MsMessageBox => Box::new(crate::shell_msgbox::MsMessageBox::default()),
         _ => Box::new(MsPlain(kind)),
     }
 }

@@ -69,6 +69,8 @@ pub mod pixel;
 pub mod prim;
 pub mod rastobj;
 pub mod smallobj;
+/// TEST ONLY: the store gate's reads of the arrays' capture.
+pub mod store_capture;
 pub mod surface_px;
 pub mod terrain;
 pub mod terrain_mesh;

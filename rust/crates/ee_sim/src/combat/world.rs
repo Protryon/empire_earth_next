@@ -648,6 +648,8 @@ pub struct EeCombatWorldHost {
     pub query: EeCombatQueryHost,
     pub op:
         unsafe extern "C" fn(ctx: *mut c_void, code: i32, object: u64, other: u64, args: *mut EeCombatWorldArgs) -> u64,
+    /// the call's class (`EEUnitClass*`: Attacked's or FireShot's, else the unit's)
+    pub class: u64,
 }
 
 impl QueryHost for EeCombatWorldHost {
@@ -680,6 +682,15 @@ impl QueryHost for EeCombatWorldHost {
 
 impl WorldHost for EeCombatWorldHost {
     fn op(&mut self, code: i32, object: EeCombatHandle, other: EeCombatHandle, args: &mut EeCombatWorldArgs) -> u64 {
+        if crate::combat::world_views::answers(code) && crate::world::layout::get().is_some() {
+            // SAFETY: the host's call runs on the simulation thread, which holds the world; its handles are live
+            let t = unsafe { crate::world::view::WorldRead::begin() };
+            // SAFETY: as above
+            if let Some(r) = unsafe { crate::combat::world_views::world_op(&t, code, object, other, self.class, args) }
+            {
+                return r;
+            }
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.op)(self.query.ctx, code, object, other, args) }
     }

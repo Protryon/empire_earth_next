@@ -27,9 +27,9 @@ public:
     UIBackground(const UIBackground&) = delete;
     UIBackground& operator=(const UIBackground&) = delete;
     virtual ~UIBackground();
-    virtual void Close();                   // slot 0x04
-    virtual void Open();
-    virtual void RelayoutBackground();
+    virtual void Close() { this->Call(EeUiBgCall::Close); }                   // slot 0x04
+    virtual void Open() { this->Call(EeUiBgCall::Open); }
+    virtual void RelayoutBackground() { this->Call(EeUiBgCall::Relayout); }
     virtual long LoadBackground() = 0;      // slot 0x10
     virtual long DrawBackground(const GERectangle& inRectangle) = 0;
     virtual long UnloadBackground() = 0;    // slot 0x18
@@ -38,8 +38,8 @@ public:
     UIForm* GetForm() { return static_cast<UIForm*>(this->mForm); }
     bool GetIsVisible() const { return this->mIsVisible; }
     const GERectangle& GetRectangle() const { return *reinterpret_cast<const GERectangle*>(&this->mRectangle); }
-    void SetRectangle(const GERectangle& inRectangle);
-    void SetVisibility(bool inVisible);
+    void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiBgCall::SetRectangle, inRectangle); }
+    void SetVisibility(bool inVisible) { this->Call(EeUiBgCall::SetVisibility, inVisible); }
 protected:
     intptr_t Call(EeUiBgCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
         { return ee_ui_bg_call(this, inCall, a, b, f); }

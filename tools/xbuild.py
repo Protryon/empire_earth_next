@@ -835,9 +835,12 @@ WON_TESTS = {
     # (golden: rust/crates/ee_won_net/src/golden_hostop.txt)
     "won_hostop_test": [],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
-    # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
+    # texts), the original's statements against tests/won/won_titlecfg_msg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won_net/src/golden_titlecfg.txt)
     "won_titlecfg_test": [],
+    # TitleConfig and CommunityConfig whole in Rust (WON round 22): the C++ classes as they were
+    # (tests/won/won_titlecfg_orig.h, over the game's ConfigObject) against ee_won_net titleobj.rs, random title files
+    "won_titleobj_test": [WON_SRC / "WONConfig" / "ConfigObject.cpp"],
     # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
     # statements against tests/won/won_peerauth_msg.h over ee_won's peerauth module and its session object
     # (golden: rust/crates/ee_won_net/src/golden_peerauth.txt)

@@ -66,6 +66,18 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEDisplayDevices.h"
+#include "lle/GETerrainMesh.h"
+#include "lle/NESynchronousServer.h"
+#include "lle/NESynchronousClient.h"
+#include "ee/EEMessage.h"
+#include "ee/EEServer.h"
+#include "ee/EEClient.h"
+#include "ee/EEMap.h"
+#include "ee/EEEffect.h"
+#include "ee/EEEffectManager.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EEAction.h"
+#include "ee/EEARust.h"
 
 extern EEWorld gWorld;
 extern EEUIManager* gUIManager;
@@ -255,4 +267,103 @@ void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& out
     outScreen.mY = theNormalized.mY * theScale;
     outScreen.mZ = theNormalized.mZ * theScale;
     outDepth = theDepth;
+}
+
+// ---- the game's helpers the actions, the ghosts and the data loading thread use (they were
+// EEWonNetAvailableGameFormManager.cpp's: in the UI's unit they put the actions and the ghost units in one
+// dependency cycle with the UI; tools/cpp_deps.py, PORT_LEARNINGS "Cycle cuts, round 3")
+
+// Shows the command-confirmation click effect at the ground point under the cursor
+void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit)
+{
+    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
+    EETile* theTile;
+    EEPointUnitOrTile(inPoint, theTile, thePoint, true);
+    EEMakeCalamityEffect(thePoint, inUnit);
+}
+
+// Creates the local-only click confirmation effect on a unit or on the ground
+void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
+{
+    GE3DPoint theLocation = inLocation;
+    EEGraphicEffect* theEffect;
+    if (inUnit == NULL) {
+        theEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMouseClickNoUnit);
+        theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(inLocation.GetX(), inLocation.GetY()));
+    } else {
+        theEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMouseClickUnit);
+        if (inUnit->mTileNode != NULL)
+            inUnit->mComplexUnit->GetPosition(theLocation);
+        else
+            inUnit->GetPosition(theLocation);
+    }
+    EEEffectHandle theHandle;
+    gEffectManager->CreateEffect(inUnit, theLocation, theEffect, &theHandle, 0);
+    EEEffect* theFlare = gEffectManager->GetEffect(theHandle);
+    unsigned long thePlayerID = ::gWorld.GetCurrentPlayer()->mPlayerID;
+    theFlare->SetLocalTo(thePlayerID);
+}
+
+// Returns the local player's first selected unit; false when nothing is selected
+bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit)
+{
+    EEGroup* theGroup = ::gWorld.GetCurrentPlayer()->mSelectedGroup;
+    bool theResult = false;
+    if (theGroup->GetNumUnits() != 0) {
+        outUnit = theGroup->GetUnit(0);
+        theResult = true;
+    }
+    return theResult;
+}
+
+// Finds the tile under a screen point (picking the visible tile first); false when only the plain map lookup hit
+bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag)
+{
+    outTile = ::gWorld.mMap->PickScreenTile(inPoint, outX, outY, inFlag);
+    if (outTile != NULL)
+        return true;
+    outTile = ::gWorld.mMap->GetTileAt(inPoint, outX, outY);
+    return false;
+}
+
+// NEAR: the original stores the tile centre's y to a frame float (inPoint's dead slot) and reloads it for
+// GetMeshZ (fstp/fld); ours keeps it on the FP stack (fst)
+// Finds the ground point under a screen point; without a pick it uses the tile centre at terrain height and
+// returns false
+bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag)
+{
+    outTile = ::gWorld.mMap->GetLocationAt(inPoint, outPoint, inFlag);
+    if (outTile != NULL)
+        return true;
+    long theX;
+    long theY;
+    outTile = ::gWorld.mMap->GetTileAt(inPoint, theX, theY);
+    outPoint.SetX(theX + 0.5f);
+    outPoint.SetY(theY + 0.5f);
+    outPoint.SetZ(::gWorld.mMap->GetHeight(outPoint));
+    return false;
+}
+
+// NEAR: the original pushes mCurrentPlayer as a dword: ExecuteRemovePlayer's first parameter is wider than
+// the header's unsigned char (NESynchronousCommunications/EEServer/EEClient; header item)
+// Leaves the game: a client removes itself (server lost) or notifies the server; the server posts the removal
+// of all players when the game is open, running or paused
+void EEExitGame()
+{
+    if (gCommunications->IsClient() == true) {
+        EEClient* theClient = static_cast<EEClient*>(gCommunications);
+        if (theClient->GetConnection() != NULL) {
+            if (theClient->mIsServerLost)
+                gCommunications->ExecuteRemovePlayer(::gWorld.mCurrentPlayer, false, false, true);
+            else
+                gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {true}), kSlotNone);
+        }
+    } else {
+        unsigned char theState = static_cast<NESynchronousServer*>(gCommunications)->GetGameState();
+        if (theState == kServerStateOpen || theState == kServerStateRunning || theState == kServerStatePaused) {
+            EEAction* theAction = new EEARemovePlayer(0xfe, true);
+            gUserInterface->PostAction(theAction);
+            theAction->Dereference();
+        }
+    }
 }

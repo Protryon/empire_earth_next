@@ -51,6 +51,25 @@ static const unsigned char kMonoBoldItalic[] = {
 };
 #endif
 
+/* An empty font file embeds as an empty array and still compiles. Then PlatFontRegister refuses every face, every
+   GEFont gets no platform font and a height of 0, and no text draws or measures. That once came out of a build that
+   linked: EE-SIM's editor forms had fh=0 everywhere. So the build fails here instead. The smallest of the twelve
+   files is 281,536 bytes; a TrueType header alone is 12. */
+#define PLAT_FONT_EMBEDDED(a)                                                                                       \
+    _Static_assert(sizeof(a) > 65536, #a ": an embedded font file is empty or truncated (python -I tools/fetch_posix.py fonts)")
+PLAT_FONT_EMBEDDED(kSansRegular);
+PLAT_FONT_EMBEDDED(kSansBold);
+PLAT_FONT_EMBEDDED(kSansItalic);
+PLAT_FONT_EMBEDDED(kSansBoldItalic);
+PLAT_FONT_EMBEDDED(kSerifRegular);
+PLAT_FONT_EMBEDDED(kSerifBold);
+PLAT_FONT_EMBEDDED(kSerifItalic);
+PLAT_FONT_EMBEDDED(kSerifBoldItalic);
+PLAT_FONT_EMBEDDED(kMonoRegular);
+PLAT_FONT_EMBEDDED(kMonoBold);
+PLAT_FONT_EMBEDDED(kMonoItalic);
+PLAT_FONT_EMBEDDED(kMonoBoldItalic);
+
 int PlatFontRegisterBuiltIn(void)
 {
     static const struct {

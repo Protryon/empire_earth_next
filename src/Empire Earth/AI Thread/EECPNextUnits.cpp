@@ -57,9 +57,8 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEPathManager.h"
+#include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
@@ -86,7 +85,6 @@
 #include "ee/EECPPlacement.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EEAutoPathRequest.h"
-#include "ee/EEAIPathGoalModifiers.h"
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_units_*: the save block's format (units_save.rs), the bindings' Lua helpers (units_lua.rs)
 #include "rust/sim/units.h"
@@ -722,10 +720,10 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
         theBounds.Set(theFrom);
         theBounds.Extend(theTo);
         std::vector<U2DPoint<long> > theSegment;
-        EEAIGPGModifierComputerPlayerWallPather* thePather = new EEAIGPGModifierComputerPlayerWallPather;
+        EeAStarModifier* thePather = ee_astar_modifier_new_wall_pather();
         gPathManager.FindPath((EEComplexUnit*)(uintptr_t)a, gWorld.mMap, theFrom, theTo, theBounds, theSegment, 1, 0x32,
             thePather, NULL);
-        thePather->Dereference();
+        ee_astar_modifier_release(thePather);
         EECPUnitsTilesOut(t, theSegment);
         return (int64_t)theSegment.size();
     }
@@ -738,14 +736,14 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
         s->mRoutes.clear();
         EECPASGFlags theFlags;
         gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, theFlags);
-        EEAIGPGModifierComputerPlayerWallPlanner* theModifier = new EEAIGPGModifierComputerPlayerWallPlanner((long)a, 0);
+        EeAStarModifier* theModifier = ee_astar_modifier_new_wall_planner((uint32_t)a, 0);
         EETileCoordinate theFrom, theTo;
         theFrom.mX = t.from[0];
         theFrom.mY = t.from[1];
         theTo.mX = t.to[0];
         theTo.mY = t.to[1];
         EEAutoPathRequest* theRequest = gPathManager.RequestPath((long)a, theFrom, theTo, &theFlags, 2, -1, theModifier, 1);
-        theModifier->Dereference();
+        ee_astar_modifier_release(theModifier);
         if (theRequest == NULL)
             return 0;
         long theHandle = s->mNextRoute++;
@@ -946,7 +944,7 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
     case EE_AI_UNITS_HOST_POP_COST:
         return ((EEUnitClass*)(uintptr_t)a)->GetPopulationCost();
     case EE_AI_UNITS_HOST_DAMAGES:
-        return gDamageTable != NULL && gDamageTable[(long)a][(long)b] != 0.0f ? 1 : 0;
+        return EEDamageFactor((long)a, (long)b) != 0.0f ? 1 : 0;
     case EE_AI_UNITS_HOST_TEAM_INDEX:
         return (int64_t)((EEPlayer*)(uintptr_t)a)->GetTeamIndex();
     case EE_AI_UNITS_HOST_WONDER_COUNT:

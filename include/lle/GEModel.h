@@ -58,7 +58,7 @@ public:
     GEModel* GetParentModel() const { return (GEModel*)ee_ge_mod_get(this->mRust, EeGeModVal::Parent); }
     GEPolygonArray* GetPolygonArray(unsigned long inLOD) { return this->GetPolygonArrays()[inLOD]; }
     unsigned long GetPolygonCount() const { return this->Val(EeGeModVal::PolygonCount); }
-    unsigned long GetPolygonCount(unsigned long inLOD) const;
+    unsigned long GetPolygonCount(unsigned long inLOD) const { return ee_ge_mod_polygon_count(this->mRust, inLOD); }
     GEVertexArray* GetVertexArray(unsigned long inFrame) { return this->GetVertexArrays()[inFrame]; }
     unsigned long GetSubModelCount() const { return this->Val(EeGeModVal::SubModelCount); }
     const GE3DPoint& GetTagPoint(unsigned long inIndex) const { return this->GetTagPointList()[inIndex]; }
@@ -74,20 +74,21 @@ public:
 
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
     // retired under D9; GEModelManager::LoadModel stores a glTF's model with ee_ge_mod_store_loaded)
-    void ComputeBoundingVolumes();
+    void ComputeBoundingVolumes() { ee_ge_mod_compute_bounding_volumes(this->mRust); }
     // (ComputeLODReduction 0x1001ce5b, 'GEModel LOD.cpp', and the vertex cache optimiser of 'GEModel Caching.cpp'
     // (ComputeOptimalDataOrdering 0x10017523, ComputeVertexCacheEfficiency 0x10017580,
     // ComputeMemoryLocalityEfficiency 0x100173ba) had no caller in the game, the tools or the data path: deleted)
-    void ComputeModelNormals();
+    void ComputeModelNormals() { ee_ge_mod_compute_normals(this->mRust); }
     // Hides UReferenceCounter::Dereference: GEPhysicalModel calls this one, GEModelManager calls the base explicitly
     // (0x10004370) when it drops its own reference.
-    void Dereference();
-    void PrepareTransforms();
+    // Releases a reference; when only the manager's (and one caller's) reference is left, removes it from the manager
+    void Dereference() { ee_ge_mod_dereference(this->mRust); }
+    void PrepareTransforms() { ee_ge_mod_prepare_transforms(this->mRust); }
     // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
-    void SetGraphicsCurrentFrame(unsigned long inFrame);
+    void SetGraphicsCurrentFrame(unsigned long inFrame) { ee_ge_mod_set_current_frame(this->mRust, inFrame); }
     void SetTexture(GETexture* inTexture, unsigned long inIndex);
-    unsigned long SizeOf();
-    bool Verify() const;
+    unsigned long SizeOf() { return ee_ge_mod_size_of(this->mRust); }
+    bool Verify() const { return ee_ge_mod_verify(this->mRust); }
     GEModel(const GEModel&) = delete;
     GEModel& operator=(const GEModel&) = delete;
 protected:

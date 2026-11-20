@@ -25,6 +25,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEGameState.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EEGameVariant.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EECivilizationManager.h"
@@ -146,6 +147,7 @@ float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
 EE_GLOBAL_STORAGE(EEComputerPlayerBehaviorTable, gComputerPlayerBehaviorTable, "?gComputerPlayerBehaviorTable@@3VEEComputerPlayerBehaviorTable@@A");
 
 EE_GLOBAL_STORAGE(EEUnitSetManager, gUnitSetManager, "?gUnitSetManager@@3VEEUnitSetManager@@A");
+EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // the game variants: ee_data's list (ee/EEDbList.h)
 EE_GLOBAL_STORAGE(EEAEManager, gAEManager, "?gAEManager@@3VEEAEManager@@A");
 EE_GLOBAL_STORAGE(EEAmbientSoundManager, gAmbientSoundManager, "?gAmbientSoundManager@@3VEEAmbientSoundManager@@A");
 EE_GLOBAL_STORAGE(EECivilizationManager, gCivilizationManager, "?gCivilizationManager@@3VEECivilizationManager@@A");
@@ -243,6 +245,15 @@ EECheatCodes* gCheatCodes;
 EEUIManager* gUIManager;
 EEMouse* gMouse;
 bool gFreeCamera;                           // 0x5319e8 (EmpireEarth.h)
+// The UI's globals the rest of the game names (their units' storage before: 16 units named EEUIFMainGame.cpp only
+// for gMiniMap, which put the main game form in the game's dependency cycle; tools/cpp_deps.py)
+class EEMiniMap;
+EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; EEUIFMainGame.cpp's .bss)
+RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; EEUserInterface.cpp's .bss)
+bool sIconsLoaded;                          // 0x5652ec (the status box's icons are loaded; EEUIFMGStatusBox.cpp's)
+// 0x562fd8 the WON password the UI thread keeps (ee/EmpireEarth.h; constructed in UI Events/EEScreens.cpp, which
+// defined it: the UI thread's unit named the screens' host only for it)
+EE_GLOBAL_STORAGE(UString, gMultiplayerString, "?gMultiplayerString@@3VUString@@A");
 
 // the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
 // port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the
@@ -326,3 +337,13 @@ float gSpaceStationHeight = 1.5f;
 // the scenario editor's screen font while a tab makes its controls (was EESERBUnitTypes.cpp's)
 class GEFont;
 GEFont* gSeplScreenFont;
+// 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
+// Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced). Was
+// EEROUnits.cpp's: 21 units named the renderer's unit for it
+char gEmptyString[4] = "";
+// the game's UI as the WON network code uses it (ee/EEWonNetUI.h; EEUIEWonNetArenaRoomEvents.cpp fills it)
+#include "ee/EEWonNetUI.h"
+EEWonNetUI gEEWonNetUI;
+// the game's UI as the rest of the game calls it (ee/EEGameUI.h; the UI's units fill it)
+#include "ee/EEGameUI.h"
+EEGameUI gEEGameUI;

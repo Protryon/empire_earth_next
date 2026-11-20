@@ -8,8 +8,12 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
+#include <vector>
+
 #include "ee/EEWorldConstants.h"
+#include "ee/EEGlobalConstants.h"
 #include "rust/data/tables.h"
+#include "rust/sim/combat.h"
 #include "ee/EEDbList.h"
 #include "rust/data/media.h"
 
@@ -23,7 +27,13 @@ class GETextureSet;
 class EEToHitTable {
 public:
     virtual ~EEToHitTable() {}
-    static long Load(FSFileSpec* inFile);   // 0xdcaad (db\dbweapontohit.dat: 6 x 6 into gToHitTable)
+    // 0xdcaad: db\dbweapontohit.dat's 6 x 6 factors (percent to fraction) into gWeaponToHitFactors (ee_data
+    // tables.rs); a table of another size is not read. Returns the last read status (requires ee/EEDbRecords.h)
+    template <class F> static long Load(F* inFile)
+    {
+        return EEDbReadRecords(inFile, ee_data_to_hit_record_size(), [](unsigned long inCount) { return inCount == 6; },
+            [](unsigned long inIndex, const unsigned char* inRecord) { ee_data_to_hit_load(inIndex, inRecord); });
+    }
     // 0xdbe44 (ret 0x10): the chance of weapon kind inKind against inClass (EECPAttackSubGroupUnit 0x63aef)
     // (provisional name)
     float GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned long inPlayer, unsigned long inTargetPlayer);
@@ -58,24 +68,31 @@ static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on ever
 // Its only instance is gWorldTable (0x52fca0). The original read the constants as mEntries[k].<field>: the
 // inline operator[]'s begin() is `mov eax, [0x52fca8]` (mEntries._First; what earlier rounds called "gDatabase"),
 // its op+ `imul 0x1c` (refused at some sites: 0x84d7b; the out-of-line operator[] 0x1ae53b, `mov ecx, 0x92fca4`).
+// Since the game's leaves round 2 the rows are ee_data's (tables.rs EeDataWorldEntry); the class is their readers.
+extern float& gGameStateGameSpeed;          // 0x52fb54: entry 42's float, cached after the load (EEGlobals.cpp)
 class EEWorldTable {
 public:
-    EEWorldTable();
-    virtual ~EEWorldTable() { this->mEntries.clear(); }
-    long Load(FSFileSpec* inFile);          // 0xdcb79 (db\dbworld.dat)
-    void Clear();                           // 0xdcc2b (the ctor calls it)
+    // 0xdcb79: db\dbworld.dat's rows (the reads stop at the first error), then the game speed cached; the first
+    // read error (requires ee/EEDbRecords.h)
+    template <class F> long Load(F* inFile)
+    {
+        ee_data_world_clear();
+        long theResult = EEDbReadRecords(inFile, ee_data_world_record_size(),
+            [](unsigned long inCount) { ee_data_world_begin(inCount); return true; },
+            [](unsigned long inIndex, const unsigned char* inRecord) { ee_data_world_load(inIndex, inRecord); }, true);
+        gGameStateGameSpeed = this->GetFloatValue(kWorldGameSpeedDefault);
+        return theResult;
+    }
+    void Clear() { ee_data_world_clear(); }
 
     // Inline accessors (const: the out-of-line copies compute the element address before the load). Where VC6
     // refused them they are COMDATs called with ecx = &gWorldTable; inlined elsewhere (begin() folds to [0x52fca8]).
     // A constant is named by its id (ee/EEWorldConstants.h, generated from dbworld's ids): a raw row number does
     // not compile. F, F2, L, L2: the four values of a row (docs/DATA_FORMATS.md 8.3).
-    float GetFloatValue(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue; }
-    float GetFloatValue2(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue2; }
-    unsigned long GetLongValue(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue; }
-    unsigned long GetLongValue2(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue2; }
-
-private:
-    std::vector<EEWorldTableEntry> mEntries;    // +0x04 (_First +0x08 = 0x52fca8)
+    float GetFloatValue(EEWorldConstant inID) const { return ee_data_world_entry((uint32_t)inID).mFloatValue; }
+    float GetFloatValue2(EEWorldConstant inID) const { return ee_data_world_entry((uint32_t)inID).mFloatValue2; }
+    unsigned long GetLongValue(EEWorldConstant inID) const { return ee_data_world_entry((uint32_t)inID).mLongValue; }
+    unsigned long GetLongValue2(EEWorldConstant inID) const { return ee_data_world_entry((uint32_t)inID).mLongValue2; }
 };
 
 extern EEWorldTable gWorldTable;            // 0x52fca0 (Empire Earth.cpp)
@@ -133,11 +150,35 @@ public:
 // record, its copy and the list), the base
 class EETerrainTypeTable : public EeDataTerrainTypeFields {
 public:
-    static long Load(FSFileSpec* inFile);   // 0xdbd2e (db\dbterrainType.dat)
-    static void Unload();
-    static long LoadDamageTables(FSFileSpec* inFile);  // 0xdbf11 (gDamageTable and its two twins; provisional name)
-    static void ClearDamageTables();
-    static EEDbList<EETerrainTypeTable, EeDataList::TerrainTypes> sTable;  // 0x8e86f8 (guard 0x8e86f0 bit 1; only its unit sees it)
+    // 0xdbd2e: db\dbterrainType.dat into the Rust list; the last read status (requires ee/EEDbRecords.h)
+    template <class F> static long Load(F* inFile) { return EEDbLoadList(inFile, EeDataList::TerrainTypes); }
+    static void Unload() { EETerrainTypeTable::sTable.clear(); }
+    // 0xdbf11: the damage tables (ee_combat damage_table.rs: one row of 0x44 factors per unit family, percent to
+    // fraction, and the two twins scaled by world constant 0x59's values; CBDT); the last read status (provisional name)
+    template <class F> static long LoadDamageTables(F* inFile)
+    {
+        std::vector<int32_t> thePercents;
+        unsigned long theCount = 0;
+        bool theCounted = false;
+        ee_combat_damage_table_clear();
+        long theResult = EEDbReadRecords(inFile, ee_data_damage_table_record_size(),
+            [&](unsigned long inCount) {
+                theCount = inCount;
+                theCounted = true;
+                thePercents.resize(inCount * EE_COMBAT_DAMAGE_COLUMNS);
+                return true;
+            },
+            [&](unsigned long inIndex, const unsigned char* inRecord) {
+                ee_data_damage_table_from_record(inRecord, &thePercents[inIndex * EE_COMBAT_DAMAGE_COLUMNS]);
+            });
+        if (theCounted)
+            ee_combat_damage_table_load(thePercents.empty() ? NULL : (const int32_t(*)[EE_COMBAT_DAMAGE_COLUMNS])&thePercents[0],
+                                        (uint32_t)theCount, kHeightEpsilon, gWorldTable.GetFloatValue(kWorldDifficultyDamageScale),
+                                        gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale));
+        return theResult;
+    }
+    static void ClearDamageTables() { ee_combat_damage_table_clear(); }
+    static constexpr EEDbList<EETerrainTypeTable, EeDataList::TerrainTypes> sTable{};   // Rust's list (ee/EEDbList.h)
     // inline (out-of-line COMDATs 0x11e22b / 0x11e24e after their first user in EEMap.cpp) (provisional names)
     static EETerrainTypeTable* Get(unsigned long inIndex) { return inIndex < EETerrainTypeTable::sTable.size() ? EETerrainTypeTable::sTable[inIndex] : NULL; }
     static unsigned long GetCount() { return EETerrainTypeTable::sTable.size(); }

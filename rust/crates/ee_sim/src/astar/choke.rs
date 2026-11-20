@@ -151,6 +151,60 @@ pub fn build_grids(
     }
 }
 
+/// The pass's grids while its flood fills run (the C++ globals `gEEAIChokeTileKinds`, `gEEAIChokeTileSerials`,
+/// `gEEAIChokeTileFlags` before): built by `ee_astar_choke_grids_build`, read by the fill's view
+/// (`world_view.rs`'s `choke_tile`) and by the C++ loop that starts the fills, freed by `ee_astar_choke_grids_free`.
+struct Grids {
+    kinds: Vec<i32>,
+    serials: Vec<u32>,
+    flags: Vec<u8>,
+}
+
+static GRIDS: std::sync::Mutex<Option<Grids>> = std::sync::Mutex::new(None);
+
+/// A flagged tile at `index` that is not an area's own: its area serial (the choke fill's start and its view's
+/// `IsChokeTile`); None otherwise or without grids.
+pub(crate) fn grid_choke_tile(index: i32) -> Option<u32> {
+    let g = GRIDS.lock().unwrap_or_else(|e| e.into_inner());
+    let g = g.as_ref()?;
+    let i = usize::try_from(index).ok()?;
+    (*g.flags.get(i)? != 0 && *g.kinds.get(i)? != KIND_AREA).then(|| g.serials[i])
+}
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) and smooths
+/// `passes - 1` times into the pass's grids, which stay until `ee_astar_choke_grids_free`.
+///
+/// # Safety
+/// `infos` valid for `size * size` records.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_choke_grids_build(size: i32, passes: i32, infos: *const EeChokeTileInfo) {
+    let n = (size.max(0) as usize) * (size.max(0) as usize);
+    // SAFETY: the caller's contract
+    let infos = if n == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(infos, n) } };
+    let mut g = Grids { kinds: vec![0; n], serials: vec![0; n], flags: vec![0; n] };
+    build_grids(size, passes, infos, &mut g.kinds, &mut g.serials, &mut g.flags);
+    *GRIDS.lock().unwrap_or_else(|e| e.into_inner()) = Some(g);
+}
+
+/// `IsChokeTile(index)` of the pass's grids: a flagged tile that is not an area's own; `*serial` its area serial
+/// (0 when it is not one).
+///
+/// # Safety
+/// `serial` a valid pointer.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_choke_grids_tile(index: i32, serial: *mut u32) -> bool {
+    let s = grid_choke_tile(index);
+    // SAFETY: the caller's contract
+    unsafe { *serial = s.unwrap_or(0) };
+    s.is_some()
+}
+
+/// Frees the pass's grids.
+#[no_mangle]
+pub extern "C" fn ee_astar_choke_grids_free() {
+    *GRIDS.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
 #[cfg(test)]
 mod build_tests {
     use super::*;
@@ -358,5 +412,36 @@ mod tests {
         assert_eq!(flags[(w + 1) as usize], 1); // kept from before
         assert_eq!(flags[(w + 2) as usize], 0); // no serial of its own before the pass: never a border
         assert_eq!(serials[(w + 2) as usize], 3);
+    }
+
+    #[test]
+    fn the_held_grids_answer_the_choke_tiles_until_freed() {
+        // a 3 x 3 map: every tile land but the corners' area tiles
+        let land = EeChokeTileInfo { tile: true, category: 1, continent_serial: 3, ..Default::default() };
+        let mut infos = [land; 9];
+        infos[0] = EeChokeTileInfo { tile: true, category: 2, continent_serial: 4, ..Default::default() };
+        infos[8] = EeChokeTileInfo { tile: true, category: 2, continent_serial: 6, ..Default::default() };
+        unsafe { ee_astar_choke_grids_build(3, 1, infos.as_ptr()) };
+        // one pass: nothing smoothed, nothing flagged
+        for i in 0..9 {
+            assert_eq!(grid_choke_tile(i), None);
+        }
+        let mut serial = 7u32;
+        assert!(!unsafe { ee_astar_choke_grids_tile(0, &mut serial) });
+        assert_eq!(serial, 0);
+        assert_eq!(grid_choke_tile(-1), None);
+        assert_eq!(grid_choke_tile(9), None);
+        // a flagged land tile is a choke tile with its serial
+        {
+            let mut g = GRIDS.lock().unwrap();
+            let g = g.as_mut().unwrap();
+            g.flags[4] = 1;
+            g.serials[4] = 9;
+            g.flags[0] = 1;
+        }
+        assert_eq!(grid_choke_tile(4), Some(9));
+        assert_eq!(grid_choke_tile(0), None, "an area's own tile is never a choke tile");
+        ee_astar_choke_grids_free();
+        assert_eq!(grid_choke_tile(4), None);
     }
 }

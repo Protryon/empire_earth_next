@@ -29,7 +29,7 @@ bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)
         this->EnsureComma();
         aColor=this->ReadColor();
     }
-    this->mCredits->AddLine(aLine,this->Fn386860(std::string("DialogComponent")),aColor);
+    this->mCredits->LCall(EeWonLobbyDlgCall::AddLine,(intptr_t)&aLine,(intptr_t)this->Fn386860(std::string("DialogComponent")),(intptr_t)(uint32_t)aColor);
     return true;
     }
     return DialogConfig::Virtual24(inInstruction);
@@ -38,7 +38,7 @@ bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)
 void CreditsDialogConfig::SetComponent(Component* inComponent)
 {
     DialogConfig::SetComponent(inComponent);
-    this->mCredits=static_cast<CreditsDialog*>(inComponent);
+    this->mCredits=static_cast<LobbyRustDialog*>(inComponent);
 }
 
 // ---- ScrollingTextComponent: the shell and its host (each op the original's statements on the component or the

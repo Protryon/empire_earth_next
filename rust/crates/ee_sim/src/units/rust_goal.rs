@@ -663,6 +663,9 @@ fn unit_line_of_sight(u: &crate::world::UnitView) -> f32 {
 /// `kUnitTypeLighthouseAtAlexandria` (the owns-lighthouse test)
 const LIGHTHOUSE_AT_ALEXANDRIA: i32 = 0x3b;
 
+#[cfg(not(test))]
+use crate::units::patrol_group as pg;
+
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
 
@@ -705,10 +708,26 @@ impl OpHost<'_> {
 
 impl GoalHost for OpHost<'_> {
     fn reference(&mut self, object: u64, group: bool) {
-        self.op(EE_UNITS_GOAL_HOST_REFERENCE, object, u64::from(group));
+        if group {
+            // SAFETY: a live patrol group the goal holds
+            #[cfg(not(test))]
+            unsafe {
+                pg::ee_units_pg_reference(object as usize as *mut pg::EeUnitsPatrolGroup)
+            };
+        } else {
+            self.op(EE_UNITS_GOAL_HOST_REFERENCE, object, 0);
+        }
     }
     fn dereference(&mut self, object: u64, group: bool) {
-        self.op(EE_UNITS_GOAL_HOST_DEREFERENCE, object, u64::from(group));
+        if group {
+            // SAFETY: as above
+            #[cfg(not(test))]
+            unsafe {
+                pg::ee_units_pg_dereference(object as usize as *mut pg::EeUnitsPatrolGroup)
+            };
+        } else {
+            self.op(EE_UNITS_GOAL_HOST_DEREFERENCE, object, 0);
+        }
     }
     fn unit_id(&mut self, unit: u64) -> u32 {
         read_unit(unit, |u| u.id())
@@ -796,6 +815,42 @@ impl GoalHost for OpHost<'_> {
     }
 }
 
+// The patrol groups are Rust objects (patrol_group.rs): their calls are made here (the units' behaviour lane, round
+// 2; they were GoalOp's GROUP_* cases), the player's group by id is the C++'s.
+// SAFETY (every call): `group` is a live patrol group the goal holds; `unit` a live unit.
+#[cfg(not(test))]
+impl PatrolHost for OpHost<'_> {
+    fn new_group(&mut self) -> u64 {
+        pg::ee_units_pg_new() as usize as u64
+    }
+    fn group_next(&mut self, group: u64, unit: u64) -> u64 {
+        unsafe { pg::ee_units_pg_next(pg_of(group), unit as usize as *mut std::ffi::c_void) as usize as u64 }
+    }
+    fn group_previous(&mut self, group: u64, unit: u64) -> u64 {
+        unsafe { pg::ee_units_pg_previous(pg_of(group), unit as usize as *mut std::ffi::c_void) as usize as u64 }
+    }
+    fn group_count(&mut self, group: u64) -> u32 {
+        unsafe { pg::ee_units_pg_point_count(pg_of(group)) as u32 }
+    }
+    fn group_id(&mut self, group: u64) -> u32 {
+        unsafe { pg::ee_units_pg_id(pg_of(group)) as u32 }
+    }
+    fn group_nearest(&mut self, group: u64, x: i64, y: i64) -> u64 {
+        unsafe { pg::ee_units_pg_nearest(pg_of(group), x as i32, y as i32) as usize as u64 }
+    }
+    fn player_group(&mut self, unit: u64, id: u32) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_PLAYER_GROUP, unit, u64::from(id)) as u64
+    }
+    fn group_points(&mut self, group: u64) -> u32 {
+        unsafe { pg::ee_units_pg_point_count(pg_of(group)) as u32 }
+    }
+    fn group_point(&mut self, group: u64, index: u32) -> u64 {
+        unsafe { pg::ee_units_pg_point(pg_of(group), index as usize) as usize as u64 }
+    }
+}
+
+/// A test binary has no patrol group objects' entry points: the host's calls.
+#[cfg(test)]
 impl PatrolHost for OpHost<'_> {
     fn new_group(&mut self) -> u64 {
         self.op(EE_UNITS_GOAL_HOST_NEW_PATROL_GROUP, 0, 0) as u64
@@ -824,6 +879,11 @@ impl PatrolHost for OpHost<'_> {
     fn group_point(&mut self, group: u64, index: u32) -> u64 {
         self.op(EE_UNITS_GOAL_HOST_GROUP_POINT, group, u64::from(index)) as u64
     }
+}
+
+#[cfg(not(test))]
+fn pg_of(group: u64) -> *mut pg::EeUnitsPatrolGroup {
+    group as usize as *mut pg::EeUnitsPatrolGroup
 }
 
 impl CalamityHost for OpHost<'_> {
@@ -1411,11 +1471,15 @@ impl BuildHost for OpHost<'_> {
     fn build_event(&mut self, player: u64, target: u64, repair: bool) {
         self.op_ints(EE_UNITS_GOAL_HOST_BUILD_EVENT, player, target, &[i64::from(repair)]);
     }
-    fn abandon_building(&mut self, unit: u64, target: u64) {
-        self.op(EE_UNITS_GOAL_HOST_ABANDON_BUILDING, unit, target);
+    fn abandon_building(&mut self, _unit: u64, _target: u64) {
+        // (main's stage 6: the C++ build manager is gone; the Lua verbs send builders to the foundations left
+        // without one, data/ai/lib/verbs.lua)
     }
     fn halt(&mut self, unit: u64, action: i64) {
-        self.op_ints(EE_UNITS_GOAL_HOST_HALT, unit, 0, &[action]);
+        // `SetCurrentPhysicsAction((long)action)`, `SetVelocity(0.0f)`, `mAngularVelocity = GEOrientation()`
+        read_unit(unit, |u| {
+            crate::units::update_views::halt(u, Some(action as std::os::raw::c_long as std::os::raw::c_ulong))
+        });
     }
     fn site_taken(&mut self, target: u64, player: u64, target_type: i32) -> bool {
         crate::units::world::site_taken(self, target, player, target_type)

@@ -24,9 +24,7 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 PLATFORM_UNITS = [
                   # the fonts built in (PORT.md step 4.5; the C compiler's #embed, PlatFont itself is Rust)
                   "Platform/Common/PlatFontData.c"]
-# the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
-UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES,
+EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
                        # game's code, built as the GameCode units it replaced were
@@ -41,12 +39,12 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
                        "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
-                       # TEST ONLY: the placement and resource centres' capture (PLCE; ee/EECPPlaceCapture.h)
-                       "Empire Earth/AI Thread/EECPPlaceCapture.cpp",
                        # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
                        "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
-                       # the tile A* searches' view of the world (docs/RUST_PLAN.md R5b.1; ee/EEAIAStarView.h)
-                       "Empire Earth/AI Thread/EEAIAStarView.cpp",
+                       # the screen event class and its factory, a leaf (PORT_LEARNINGS "Cycle cuts, round 3")
+                       "Empire Earth/UI Events/EEScreenEvent.cpp",
+                       # EESaveLoad.cpp's data path lookup, a leaf (PORT_LEARNINGS "Cycle cuts"; ee/EESaveGameFiles.h)
+                       "Empire Earth/Persistent/EEOpenSaveGameFile.cpp",
                        # the continent manager's regions in a saved game (save version 0.263; ee/EESaveGameFiles.h)
                        "Empire Earth/AI Thread/EEAIContinentSave.cpp",
                        # the start of the Rust library (ee_rust_init)
@@ -128,8 +126,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES,
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)
                        "Empire Earth/Units/EECombatGoals.cpp",
-                       # TEST ONLY: the group command sweep over the dry host (ee/EEUnitHost.h; USGC records)
-                       "Empire Earth/Units/EEGroupCommandSweep.cpp",
                        # TEST ONLY: the active groups' sweep at a groups game's end (AGPL records; R5b.4 round 35)
                        "Empire Earth/Units/EEActiveGroupSweep.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)

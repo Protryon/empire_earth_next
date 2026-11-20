@@ -160,10 +160,7 @@ pub const EE_PATH_PM_LOAD: i32 = 54;
 pub const EE_PATH_GM_SAVE: i32 = 55;
 /// graph machine `h0` from the record `h1` (its modifier `h2`, goal unit `h3`) -> whether its storage loaded
 pub const EE_PATH_GM_LOAD: i32 = 56;
-/// a loaded graph search's modifier from the record `h1` -> it (0: none, or one that cannot be rebuilt: `i0` 0)
-pub const EE_PATH_GM_MODIFIER: i32 = 57;
-/// modifier `h0` `Dereference()`
-pub const EE_PATH_MODIFIER_DEREFERENCE: i32 = 58;
+// (57, 58 were the C++ route planners' saved making and Dereference: modifier_obj.rs)
 /// sub sector `i0` exists
 pub const EE_PATH_SUB_SECTOR: i32 = 59;
 /// the owners waiting for their requests: 0 take them (the first tick), 1 whether one waits for request id `i0`,
@@ -1795,7 +1792,7 @@ impl PathManager {
                 && sector_ok(host, s.g.goal[16]);
             let mut modifier = 0;
             if ok && s.g.modifier != EE_PATH_MODIFIER_NONE {
-                modifier = op(host, EE_PATH_GM_MODIFIER, &[0, &s.g as *const EePathSavedGraph as u64], &[]) as u64;
+                modifier = crate::astar::modifier_obj::from_saved(&s.g) as u64;
                 ok = modifier != 0;
             }
             let mut machine = 0;
@@ -1827,9 +1824,10 @@ impl PathManager {
             } else if machine != 0 {
                 self.release_graph_machine(host, machine);
             }
-            if modifier != 0 {
-                op(host, EE_PATH_MODIFIER_DEREFERENCE, &[modifier], &[]);
-            }
+            // SAFETY: the maker's reference
+            unsafe {
+                crate::astar::modifier_obj::release(modifier as *mut crate::astar::modifier_obj::EeAStarModifier)
+            };
             if unit != 0 && !ok {
                 // (as the load did before 0.278)
                 self.request_pending_path(host, unit, (s.node[1], s.node[2]));

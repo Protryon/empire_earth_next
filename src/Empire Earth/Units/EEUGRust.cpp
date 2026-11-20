@@ -334,21 +334,14 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     EEGoalContext* theContext = static_cast<EEGoalContext*>(inContext);
     EEUnit* theUnit = ObjectOf<EEUnit>(inA);
     EEComplexUnit* theComplex = ObjectOf<EEComplexUnit>(inA);
-    EEPPatrolGroup* theGroup = ObjectOf<EEPPatrolGroup>(inA);
     EECalamityClass* theClass = ObjectOf<EECalamityClass>(inA);
     GE3DPoint thePoint(ioArgs->f[0], ioArgs->f[1], ioArgs->f[2]);
     switch (inOp) {
-    case EE_UNITS_GOAL_HOST_REFERENCE:
-        if (inB != 0)
-            ee_units_pg_reference(theGroup);
-        else
-            theUnit->Reference();
+    case EE_UNITS_GOAL_HOST_REFERENCE:   // (a patrol group's: rust_goal.rs, a Rust object)
+        theUnit->Reference();
         return 0;
     case EE_UNITS_GOAL_HOST_DEREFERENCE:
-        if (inB != 0)
-            ee_units_pg_dereference(theGroup);
-        else
-            theUnit->Dereference();
+        theUnit->Dereference();
         return 0;
     case EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS:
         ObjectOf<EEUnitGoal>(inA)->SetPathAttempts(0);
@@ -421,25 +414,9 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         *theContext->mText += (const char*)theUnit->mUnitClass->mName;
         return 0;
 
-    // the patrol's
-    case EE_UNITS_GOAL_HOST_NEW_PATROL_GROUP:
-        return Handle(ee_units_pg_new());
-    case EE_UNITS_GOAL_HOST_GROUP_NEXT:
-        return Handle(ee_units_pg_next(theGroup, ObjectOf<EEComplexUnit>(inB)));
-    case EE_UNITS_GOAL_HOST_GROUP_PREVIOUS:
-        return Handle(ee_units_pg_previous(theGroup, ObjectOf<EEComplexUnit>(inB)));
-    case EE_UNITS_GOAL_HOST_GROUP_COUNT:
-        return (uint32_t)ee_units_pg_point_count(theGroup);
-    case EE_UNITS_GOAL_HOST_GROUP_ID:
-        return (uint32_t)ee_units_pg_id(theGroup);
-    case EE_UNITS_GOAL_HOST_GROUP_NEAREST:
-        return Handle(ee_units_pg_nearest(theGroup, (int32_t)ioArgs->i[0], (int32_t)ioArgs->i[1]));
+    // the patrol's (the groups' own calls are Rust's: rust_goal.rs)
     case EE_UNITS_GOAL_HOST_PLAYER_GROUP:
         return Handle(theComplex->GetPlayer()->GetPatrolGroup((unsigned long)inB));
-    case EE_UNITS_GOAL_HOST_GROUP_POINTS:
-        return (int64_t)ee_units_pg_point_count(theGroup);
-    case EE_UNITS_GOAL_HOST_GROUP_POINT:
-        return Handle(ee_units_pg_point(theGroup, (size_t)inB));
 
     // the cast calamity's
     case EE_UNITS_GOAL_HOST_CALAMITY_CLASS: {
@@ -768,15 +745,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, ioArgs->i[0] != 0 ? 0x7c42 : 0x273a, false);
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_ABANDON_BUILDING:
-        // (main's stage 6: the C++ build manager is gone; the Lua verbs send builders to the foundations left without
-        // one, data/ai/lib/verbs.lua)
-        return 0;
-    case EE_UNITS_GOAL_HOST_HALT:
-        theComplex->SetCurrentPhysicsAction((long)ioArgs->i[0]);
-        theComplex->SetVelocity(0.0f);
-        theComplex->mAngularVelocity = GEOrientation();
-        return 0;
     case EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED: {
             // IsShiftQueueNext's queue: another goal than this one that is no automatic waypoint
             const EEGoalDeque& theGoals = theComplex->GetQueueGoals(0);

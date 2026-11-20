@@ -54,6 +54,10 @@ impl EeGePrim {
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeBmpOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeBmpOp, obj: usize, a: isize, b: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { crate::ge::bmpobj::vertex_op(op, obj, a, b) } {
+            return r;
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (pr(p).host, pr(p).owner) };
         // SAFETY: the host's contract

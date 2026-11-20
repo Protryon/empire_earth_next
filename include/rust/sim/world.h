@@ -703,6 +703,9 @@ struct EeWorldLayout {
   /// the effect handles `mConversionEffect`, `mHealEffect` (`uint32_t` values)
   uint64_t complex_conversion_effect;
   uint64_t complex_heal_effect;
+  /// `mAngularVelocity`, `mOrientation` (`GEOrientation`s: yaw, pitch, roll)
+  uint64_t complex_angular_velocity;
+  uint64_t complex_orientation;
   /// `EEProductionEntry::mFlag` (a `long`)
   uint64_t build_entry_flag;
   /// `EEHerd::mID` (an `unsigned short`)
@@ -715,6 +718,11 @@ struct EeWorldLayout {
   /// `EEUnitGoal*`)
   uint64_t active_group_fields;
   uint64_t active_group_goal;
+  /// `EEComputerPlayer::mPlacement` (an `EECPPlacement*`) from the `EEPlayer*`; `EECPPlacement::mTownCenterTile`
+  /// (a `U2DPoint<long>`) and `mRust` (an `EeCpPlacement*`)
+  uint64_t cp_placement;
+  uint64_t placement_town;
+  uint64_t placement_rust;
 };
 
 extern "C" {
