@@ -35536,3 +35536,162 @@ C++ (the kind constructor replaces eleven); Rust driver entries `ee_won_netops_*
 - Under the new rule (C++ bodies to Rust over one-statement shims), the big hosts' callers and the widgets' C++
   bodies (GuiHost.cpp, LobbyNetCtrlHost.cpp's DrawLobbyPing and ChatLink, LobbyDialogHost.cpp, EELobbyGlueHost.cpp's
   logic) can move next round.
+
+## R6 WONLobby, round 29: the hosts' decisions in Rust over one-statement cases: the shells' event choices, the control and logic hosts' runs, the EE lobby's window (ee_won_lobby evmap.rs, hostops.rs, lobbyops.rs, eewindow.rs; branch rust-wonlobby29, 2026-11-20)
+
+The owner's rule from the end of round 28 applied from the start: a C++ body whose statements had decisions
+between them moves to Rust even when every statement calls C++; each statement becomes a one-statement case of the
+host the Rust objects already call, in the same order. The score is C++ logic lines removed
+(`logic_lines.py`: code lines that are not one-statement shims).
+
+### What moved (logic and lines: `logic_lines.py` over the whole tree, the commit against its parent)
+
+| Commit | What | Logic | Lines |
+|---|---|---|---|
+| 5d6c86c4b | the shells' event choices (evmap.rs: LobbyCtrlHost.cpp's 50-case CtlEventOf, the dialog's and popup's choices; `RawEvent` calls), DrawLobbyPing and nineteen control host cases (hostops.rs) | -189 | -179 |
+| d26bf2cb1 | StagingLogic's 10 and LanLogic's 13 host cases and LanLogic::HandlePeerAuthDone (lobbyops.rs; lanobj.rs `PeerAuthDone`); the op status, success and listen as netops.rs answers; hostops.rs gated on the bound core | -153 | -64 |
+| 02d27a425 | EELobbyOpen, EELobbyShow, EELobbyHide, EELobbyClose, EELobbyShowGameScreen (eewindow.rs; eeglue calls `Open` .. `ShowGameScreen`); the glue host set at static initialisation | -103 | 0 |
+| 21a605358 | origin/rust (781d6cd0c) merged: PORT_LEARNINGS only (round 27 and 28 kept after batch 9's sections) | 0 | 0 |
+| b15912e85 | rust_includes.py's module headers in the new worlds (the hostops world's address clone renamed: ipobj.h's is global) | 0 | 0 |
+| bcea01d61 | won_lanmodel_test's stale take sink cleared (below) | 0 | 0 |
+| the docs commit | this section, the progress file | 0 | 0 |
+
+Round total (c01702f3f -> 02d27a425, the whole tree): logic 93,298 -> 92,853 (**-445**), lines 175,688 -> 175,445
+(-243), shim lines 15,483 -> 15,741 (+258). Far short of the -2,000 aim: the round moved what it could prove with a
+golden per piece; three stand-in worlds (below) were the cost.
+
+Shims added: 145 one-statement host cases (LobbyNetCtrlHost.cpp 23, LobbyLogicHost.cpp 26, LanLogicHost.cpp 34,
+EELobbyGlueHost.cpp 62), LanLogicHost.cpp's one-statement `LanNewConnectOp` helper, the five window functions'
+forwards and the glue host's static registration. Shims deleted: 1 (the ping case's `DrawLobbyPing` call); the 50
+cases of CtlEventOf and the 33 multi-statement cases deleted were logic. Rust driver entries: `ee_won_lobby_event_of`,
+`ee_won_lobby_hostops_ctl_op` / `_reset`, `ee_won_lobby_lobbyops_op`.
+
+### The pattern: a game-mode expansion before the host
+
+- The Rust objects send the same ops as before (the controls `GfxDrawPing`, `FilterSet`, ...; the logics `LanListen`,
+  `LanRefreshCertificate`, ...). In the game, lobbyctl.rs's and rows.rs's dispatch (hostops.rs `game_ctl_op`) and
+  lobbyhost.rs's `Host::op` (lobbyops.rs `game_lobby_op`) answer the moved ops first: the decisions in Rust, each C++
+  statement a new op of the same host (`EeWonLobbyCtlOp` from 1500, `EeWonLobbyOp` from 600, `EeWonEeGlueOp` from
+  300), sent through the same dispatch so the other Rust answers (the model's, the widgets', netops.rs's) still apply.
+- Both expansions run only while the network core table is bound (the game binds it with the lobby's WONAPICore,
+  before any control or logic exists). The model-mode cargo tests and every golden's scripted host never bind it, so
+  the controls', rows', logics' and glue's goldens see the ops at the old grain, unchanged. (The first commit gated
+  on nothing: two cargo tests that run controls and LanLogic in model mode failed until the second commit's gate.)
+- The goldens of the moved code are worlds of stand-ins (tests/won/won_hostops_world.h, won_lobbyops_world.h,
+  won_eewindow_world.h): the deleted code copied by script from the parent commit (the *_orig.h headers) and the
+  hosts' new cases copied into the driver's host run over the same stand-ins, which log every call; the traces and
+  the objects' state (texts, members, references) must be the same.
+- New void shims are written `case Op::X: statement;` with `return 0;` on the next line: the form logic_lines.py
+  counts as a shim. The one-line `case Op::X: statement; return 0;` (947 lines in the WON tree) counts as logic: a
+  quirk of the tool, not changed here (no existing case was reformatted).
+
+### evmap.rs
+
+- `ctl_event_of`, `dlg_event_of`, `popup_event_of`: the event type to the shells' kinds (WindowEventType's places and
+  the lobby's event ids as literals). The shells send `RawEvent` with the raw `mType`; `Event` stays for the drivers.
+- won_host_coverage.py: `EeWonLobbyCtlEvent`'s values are made by evmap.rs now (its `ctl_event_of` mentions them).
+
+### hostops.rs (the control hosts)
+
+- DrawLobbyPing (MOTDCtrl.cpp's, called only as `(g, ping, height, 0, 0)`: its text and alignment branches never ran):
+  the ceiling latched from the config while it is 5000 (`PING_CEILING`), the searching or failed picture centred, or
+  1..10 green bars, over the ops the rows already had (ResImage, ImageHeight, GfxDrawImage, GfxSetColor, GfxFillRect)
+  and two new (LobbyConfigGet, ConfigPingCeiling).
+- The game list's row count `" (%d)"`, the ping and list summaries, the labels' and combos' `"%d"` numbers and the
+  transfer percent: the number formatted in Rust, a temporary text (TextNew, Release) into a one-statement setter.
+- The filter row's clear and set (its members one op each, the label built in the item's text), the filter values'
+  loop, the room tree's join (the row's address and id read from rows.rs directly, Rust to Rust) and creations, the
+  public flag, an event's item by its type, the saved game dialog (held around the list and run).
+
+### lobbyops.rs (the logics' hosts)
+
+- StagingLogic: the join op's finish, run and kill, the logout's seven statements, leaving a game, its progress and
+  details, the join without a ping. LanLogic: the auto refresh, the whisper, the LAN name and port saves, the
+  certificate refresh (its four outcomes; the op's reference given back last, as the SmartPtr), the peer
+  authentication's start and its completion's checks, the listen and its two error dialogs, the discovery socket and
+  its completions, the connect (the context read first, then the op: the original's statement order) and the
+  register reply, the sockets' completions, the direct connection's save.
+- `OpStatusOf`, `OpSucceededOf` and `SocketListen` are netops.rs's (cppnet.rs over the ops' and sockets' Rust): no
+  C++ case.
+- LanLogic::HandlePeerAuthDone is one forward to lanobj.rs `PeerAuthDone`, which adds the socket `LanPeerAuthDone`
+  returns as pending. The socket comes from the PeerAuthServerOp's own `GetSocket` (`PeerAuthSocket`): netops.rs's
+  `LanOpSocket` is a SocketOp's and would have answered NULL for a server op.
+
+### eewindow.rs (the EE lobby's window)
+
+- The five functions' decisions, and the pointer's float arithmetic between the back buffer and the window
+  (`(int32_t)(x * clientWidth / sEELobbyWidth)`, `(float)px * sEELobbyWidth / clientWidth`: f32 in the original's
+  order) are Rust; `sEELobbyWidth` / `sEELobbyHeight` are its atomics. `gEELobbyOpen`, `gEELobbyShown`, the window
+  manager, the root window and the platform window stay the C++ globals the renderer reads under the lobby lock.
+- The lesson: EELobbyOpen's statements used to run before EELobbyInit set the glue host; as Rust they run through
+  the host, so with it unset every op answered 0 and the lobby would never have opened. The host is now set at
+  static initialisation. The golden's driver sets its host first and cannot see this; the first build's compile error
+  (EELobbyInit undeclared above the host) led to the reading that found it, before any harness session.
+
+### Tests and mutations
+
+- `won_evmap_test` (new): the three original choices against `ee_won_lobby_event_of` over every type -1,000..200,000:
+  603,003 checks, 0 mismatches (50, 5 and 1 types named).
+- `won_hostops_test` (new): DrawLobbyPing over every ping at seven heights in 13 config scenarios, and the other
+  cases over boundary numbers, three texts, the configs, 41 event types and the dialog's results: 897,532 cases, 0
+  mismatches. Mutations (the summary's text order, the bars' clamp, the tree item, the dialog's reference, the
+  filter's add flag, the count's shown bit): 6 of 6 caught.
+- `won_lobbyops_test` (new): 26 op calls x 8,192 combinations of the world's answers: 212,992 cases, 0 mismatches.
+  Mutations (the expiry test, the reply's result, the kill's clear, the direct name's field, two independent
+  statements swapped): 4 of 5 caught; the swap is equivalent (the two statements touch different objects).
+- `won_eewindow_test` (new): 20,000 sequences of one to five window calls over random worlds: 0 mismatches. Four
+  mutations (the warp's divisor, full screen's style, the close's cursor, the game form's event order) make 13,607
+  sequences mismatch; a fifth (the mouse device's existence test) crashes the world on its null device.
+- cargo: evmap.rs 2, hostops.rs 1, lobbyops.rs 2, eewindow.rs 1 (show and hide's arithmetic over a test host).
+
+### Behaviour changes
+
+- None intended. A zero ping ceiling in the lobby config shows 10 bars (the original divided by it).
+- The direct connection's save reads the dialog's text once per use (the original kept it in a local): a getter.
+- A peer authentication op without a socket is not added as pending (the original added NULL); the server op is
+  always made with its socket.
+- EELobbyOpen fetches the window's root container after EELobbyInit rather than before it (Init does not touch the
+  window).
+
+### What runs it
+
+- The LAN game (lan_game.py, the gates' lan-game) runs the window functions (open, show, hide, the game screen), the
+  LAN logic's listen, discovery, connect, register, sockets' completions and the staging logic's cases it reaches;
+  the tour runs the window functions and the LAN screen. The peer authentication, the certificate refresh, the
+  Internet controls' cases (the room tree, the filter row, the summaries) and the saved game dialog run only in the
+  goldens: no server is left, and the gates share no saved game.
+
+### Gates (on the merged tree)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at every code commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the merged tree) |
+| `rust_build.py header` | 289 headers current |
+| `rust_build.py gate` | PASS, 5,046 tests (the merged tree; the known flakes did not show) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (oracle: PASS) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | 166 programs: 164 exit 0 in the full run, peak 558 MB (won_cfgtab_test); won_routeops_test failed one timing check under the run's load (its killed create's 100 ms pump) and passed alone; won_lanmodel_test crashed (below) and passes after its fix (1,356,412 trace lines, as before) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12898` units [4, 39, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2788 joiner=2790`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe) | every lobby capture identical (host: lobby open, LAN screen, create dialog; joiner: lobby open, LAN screen, LAN list, staging) but the host's two staging screens' 15 pixels at x 121..122, y 329..344: the input box's blinking caret (2 x 15, the expected difference lan_capture_compare.py names; round 14 recorded the same box); only the game's frames differ otherwise. Both runs `RESULT PASS lan-game` (PT 2844/2845 this round, 2730/2719 the start exe) |
+| LAN games during the round | `RESULT PASS lan-game` after the logics' commit (PT 3089/3090) and after the window functions' (2901/2984) |
+
+won_lanmodel_test (round 11's driver) crashed in the full run: its reference world left `sCppSink` pointing at a dead
+local after each take, and a later take of the Rust world whose `Vec` landed at the same stack address was appended
+to as a `std::string`. Round 29's Rust moved the frames; adding a print to lobbyops.rs hid it again (the first sign it
+was a stack coincidence). The driver now clears the pointer after each take (commit bcea01d61).
+
+
+### Left
+
+- The rest of the hosts' multi-statement cases: LobbyNetCtrlHost.cpp's chat link constructor and formatted text,
+  the parser's command text, the text toolkit's takes; LobbyDialogHost.cpp's BadUserItem (a Rust row over rows.rs),
+  ConnectListItem, the adapters' rows, the file finder; EELobbyGlueHost.cpp's EELobbyHostGame, EELobbyJoinGame,
+  EELobbyStartHostedGame, EELobbyRunSierraUpdate, EEGetLocalAddress and the glue host's own multi-statement cases;
+  InitLogic.cpp's and RoutingLogic.cpp's op runs (Internet only); GuiHost.cpp's constructors and its draw cases;
+  Window.cpp's and WindowManager.cpp's C++ ends.
+- Round 28's list: the UDP family's subclasses as kinds, ServerConnectionConnectOp, RecvChunkOp, the routing
+  completions as Rust completions.
+- The config readers (RoomLabelCtrlConfig, UserListCtrlConfig, ChatCtrlConfig, ServerListCtrlConfig,
+  GameBrowserCtrlConfig, GameUserListCtrlConfig) as cfgtab kinds.
+- For the lead: 947 one-line `case X: stmt; return 0;` shims in the WON tree count as logic in logic_lines.py.
