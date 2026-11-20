@@ -49,6 +49,8 @@ public:
     void SetTile(bool h,bool v) { ee_won_stretch_set_tile(this->mObj,h,v); }
     void SetSkipCenter(bool b) { ee_won_stretch_set_skip(this->mObj,b); }
 };
+// a frame of a stretch image: its own borders
+inline WONFrame::WONFrame(StretchImage* i) : mLeft(i->GetLeft()),mTop(i->GetTop()),mRight(i->GetRight()),mBottom(i->GetBottom()) { this->mImage=i; }
 class StretchCenterImage : public ProgramImage {
 protected:
     SmartPtr<Image> mStretchImage,mCenterImage; // offsets 0x10, 0x14; class size 0x18

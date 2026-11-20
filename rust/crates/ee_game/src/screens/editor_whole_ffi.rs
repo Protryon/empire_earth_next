@@ -292,7 +292,10 @@ pub unsafe extern "C" fn ee_screens_sew_place_push(
 
 impl SeeHost for Host {
     fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
-        // three pointers (the host's p[0], p[1], p[2]), four integers, four floats
+        // three pointers (the host's p[0], p[1], p[2]), four integers, four floats; the toolkit's ops in Rust first
+        if let Some(r) = crate::screens::editor_direct::see(op, p, i) {
+            return r;
+        }
         let p = p.map(|x| x as *mut c_void);
         unsafe { sys::ee_screenscpp_see(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
     }

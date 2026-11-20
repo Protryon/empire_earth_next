@@ -453,7 +453,5 @@ SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->Get
 long UIControl::UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
 // Returns the form's mouse location
 const GE2DPoint& UIControl::GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
-// Returns the UI manager's drawing surface
-GESurface* UIControl::GetDrawingSurface() const { return this->GetForm()->GetManager()->GetDrawingSurface(); }
 // Returns the UI manager's rasterizer
 GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }

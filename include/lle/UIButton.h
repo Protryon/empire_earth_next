@@ -32,7 +32,6 @@ public:
     virtual long DrawTextA();
     GE2DPoint GetBitmapLocation() const;
     unsigned long GetState() const;         // UIButtonState
-    GEBitmap* GetFocusedBitmap() const;
     GEText* GetGEText();
     GEBitmap* GetNormalBitmap() const;
     GEBitmap* GetPressedBitmap() const;

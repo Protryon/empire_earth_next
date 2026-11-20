@@ -40,6 +40,34 @@ Round 4 (rust-aicluster4), in `rust/crates/ee_sim/src/astar/`:
   the gates' `IsSidePart`). Deleted: EEAIPathGoalModifierBase.h, EEAIBoundedPathGoalModifierBase.h,
   EEAIPathGoalModifiers.h, EEStormModifiers.h, EEAIPathSubSector.cpp.
 
+Round 5 (rust-aicluster5), the continent manager and its objects, in `rust/crates/ee_sim/src/astar/`:
+
+- `objects.rs`: **the manager's objects are Rust allocations**. Each kind (continent, path area, forest, hill, choke
+  point, rectangle area, path sector, sub sector) is one `#[repr(C)]` record (`EeAStar*Obj`: the area's record, its
+  tile set's handle, the kind's record) made and freed by `ee_astar_object_new/_delete` (a sector frees its sub
+  sectors). The C++ classes (ee/EEAIContinent.h, ...) are views of them with no constructor and no vtable, checked
+  against the Rust layout at start (EEAIRegisterContinentState). EEAIArea, EETown and EEHerd have no vtable: the
+  slots a kind had its own of dispatch by the area type (Create, GetRandomPoint: EEAIRectangleArea.cpp; RemoveTile,
+  GetClosestPoints: Rust). `U2DSparseArrayPointContainer` has no vtable.
+- `cm_queries.rs`, `cm_capture.rs`: **every query and change of the manager** (the lookups by tile or unit, the
+  region ids, the adjacent ids, the choke points, the random areas, GetTilesNextTo, IsNextToArea, RepairPathArea,
+  RemoveForestTile, the serial table) with its CNTQ record; the members are inline forwarders in
+  ee/EEAIContinentManager.h. The CNTQ scope's depth is shared with the three queries left in C++.
+- `cm_passes.rs`: **the build passes whole**: Clear, BuildRegions, Rebuild, Reset, Shutdown (the continents, hills,
+  path areas, forests, sectors and sub sectors, links, region ids, choke points and their pruning, scenario areas,
+  chains). EEAIChokePoint.cpp deleted.
+- `area_continent.rs`, `area_shore.rs`: **EEAIContinent's members whole** (GetClosestPoints with AREA 2, the shore
+  members with AREA 6); EEAIContinent.cpp deleted. EEAIPathSector.cpp deleted (its lookup is Rust).
+- `cm_host.rs`: the continent state's host questions Rust answers (Contains, RemoveTile, the kinds' Create, the
+  tiles' presence, terrain, AI value, AI kind, wall, wood weight).
+
+What is left in C++ of the cluster's continent side: EEAIContinentManager.cpp (about 300 lines: the class's ctor and
+dtor, CanGetTo and AreConnectedForUnit (they read unit classes), UpdateWallUnit (footprints, the path manager),
+BuildRegions' scenario inputs, the forests' RegrowTrees (it makes units)); EEAIContinentSave.cpp (the save's file
+part, the host for a town's or herd's owner, a herd's Create, the region size global, the AI value write, the random
+stream, and the load's re-filing of the towns and herds); EEAIRectangleArea.cpp (the random points of the kinds, the
+hull's update).
+
 ## Goldens and gates
 
 ASRN (every tile search: the machine's questions, the view's answers in order, the storage) is the view's and the
@@ -49,17 +77,10 @@ Results: PORT_LEARNINGS "AI Thread cluster, round 4".
 
 ## Left (next rounds)
 
-- **The census** (`tools/cpp_deps.py report`): before the round 27 AI Thread units, 12,153 lines, 11,184 of them
-  in cycles; after it 25 units, 10,774 lines, 9,732 in cycles. Leaves: the two capture units and EECPEngineHelpers;
-  near-leaves: EECPEngine, EEAIArea, EEAIChokePoint (new), EEAIContinentCapture, EEAIRectangleArea, the modifiers'
-  remains (new), EEAIPathSector, EEHumanPlayer. The biggest cycle went from 236 units and 114,201 lines to 233 and
-  112,645; EEAIContinentManager.cpp is now its third keystone (603 lines out of the cycle with it).
-- **The continent manager's build passes** (CreateContinents, CreateHills, CreatePathAreas, CreatePathSectors,
-  Rebuild, the choke point pass's CreateChokePoint) still make the C++ area objects; the areas as Rust records behind
-  handles would let them and the area classes (EEAIArea, EEAIContinent, EEAIChokePoint, EEAIPathSector,
-  EEAIRectangleArea) move (R5b.1's plan).
-- **The path manager's host** (EEPathManager.cpp, 1,260 lines): the units' and requests' operations the Rust manager
-  asks. The view operations 130/131 could go (the search could make its Rust view itself) once the path search
-  tests' fake views take another seam.
+- **The path manager's host** (EEPathManager.cpp, about 1,400 lines): the units' and requests' operations the Rust
+  manager asks. Not started this round.
+- **The continent manager's rest**: CanGetTo and AreConnectedForUnit need the unit classes' passable flags and
+  terrain tests in Rust (the Units lane's); UpdateWallUnit needs the footprint tiles and the path manager;
+  RegrowTrees makes units. The save unit's town and herd re-filing needs the players' towns and herds in Rust.
 - **The computer player's class** (EEComputerPlayer.cpp): it can only go when EEPlayer is Rust's.
 - **The herd paths no game reaches** (round 2's list) stay unit-tested only.

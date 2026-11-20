@@ -942,8 +942,8 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
                 outReply.flags |= 8;
                 if (theUnit->mHitPoints > 0) {
                     outReply.flags |= 16;
-                    outReply.x = EEGetDistanceSquared(static_cast<EEComplexUnit*>(theUnit), theStormUnit);
-                    outReply.y = EEGetUnitRadius(static_cast<EEComplexUnit*>(theUnit), theStormUnit);
+                    outReply.x = ee_units_uu_distance_squared((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)theStormUnit);
+                    outReply.y = ee_units_uu_angle(0, (uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)theStormUnit, NULL, NULL);
                     if (theUnit->mPlayer == ::gWorld.mPlayers[0])
                         outReply.flags |= 32;
                 }

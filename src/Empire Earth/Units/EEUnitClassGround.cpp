@@ -252,7 +252,6 @@ void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 // +0x04, +0x08, +0x34, +0x30, +0x74, +0x84, +0x88, +0xa0, +0xb8 in address order.
 
 // 0x23f27e (cdecl): moves a location to the depth a submerged unit may take at its tile (provisional name)
-void EEGetSeabedDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation);
 
 // Lifts a location that lies below the terrain mesh (the sea floor) up onto it
 void EEUnitClass::SubmergedNavalGroundLocation(GE3DPoint& ioLocation)
@@ -296,7 +295,7 @@ EEUnit* EEUnitClass::SubmergedNavalCreateUnitAt(GETransformation& inTransformati
     theTransformation.SetY(thePosition.GetY());
     theTransformation.SetZ(thePosition.GetZ());
     EEUnit* theUnit = this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-    EEGetSeabedDepth(theUnit->mComplexUnit, thePosition);
+    thePosition.SetZ(ee_units_uu_seabed(0, (uint64_t)(uintptr_t)theUnit->mComplexUnit, (const float(*)[3])&thePosition.mX));
     theUnit->mComplexUnit->SetLocation(thePosition, true);
     return theUnit;
 }
@@ -320,7 +319,7 @@ EEUnit* EEUnitClass::SubmergedNavalCreateUnit(long inX, long inY, long inPlayer,
     theTransformation.SetElement(3, 2, 0.0f);
     theTransformation.SetElement(3, 3, 1.0f);
     EEUnit* theUnit = this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-    EEGetSeabedDepth(theUnit->mComplexUnit, thePosition);
+    thePosition.SetZ(ee_units_uu_seabed(0, (uint64_t)(uintptr_t)theUnit->mComplexUnit, (const float(*)[3])&thePosition.mX));
     theUnit->mComplexUnit->SetLocation(thePosition, true);
     return theUnit;
 }

@@ -380,7 +380,7 @@ impl ActionReads<'_> {
                 EE_UNITS_ACT_R_CATEGORY => r.category,
                 EE_UNITS_ACT_R_CONTAINER => i64::from(r.container),
                 EE_UNITS_ACT_R_RESOURCE_AMOUNT => r.resource_amount,
-                // `GetQueueGoals(0).size() > 1`: the goal queues' mirror (goals.rs)
+                // `GetQueueGoals(0).size() > 1`: the unit's goal queues (goals.rs)
                 EE_UNITS_ACT_R_QUEUED_GOALS => match crate::units::goals::queue_len(r.object, 0) {
                     Some(n) => i64::from(n > 1),
                     None => self.host.read(code),
@@ -1613,12 +1613,10 @@ mod tests {
     }
 
     #[test]
-    fn the_queued_goals_come_from_the_mirror() {
-        // a citizen in a container with two queued goals keeps them when it idles (the mirror's queue 0)
+    fn the_queued_goals_come_from_the_queues() {
+        // a citizen in a container with two queued goals keeps them when it idles (its queue 0)
         let object = 0x60a1_0000_0001u64;
-        let ids = [11u32, 12];
-        // SAFETY: valid pointers to locals
-        unsafe { crate::units::goals::ee_units_goal_queue_set(0x60a1_0000_1000, object, ids.as_ptr(), 2) };
+        crate::units::goals::tests::fake_lens(object, &[2]);
         let record = EeUnitRecord {
             object,
             command: ACTION_IDLE,
@@ -1632,12 +1630,11 @@ mod tests {
         assert!(!ops(&m.log).contains(&EE_UNITS_ACT_CLEAR_GOALS));
         assert!(!m.asked.contains(&EE_UNITS_ACT_R_QUEUED_GOALS));
         // one goal: cleared
-        // SAFETY: valid pointers to locals
-        unsafe { crate::units::goals::ee_units_goal_queue_set(0x60a1_0000_1000, object, ids.as_ptr(), 1) };
+        crate::units::goals::tests::fake_lens(object, &[1]);
         let mut m = unit(ACTION_IDLE);
         assert!(action_changed(EE_UNITS_ACTION_BASE, &mut m, &mut || Some(record)));
         assert!(ops(&m.log).contains(&EE_UNITS_ACT_CLEAR_GOALS));
-        crate::units::goals::ee_units_goal_queue_drop(0x60a1_0000_1000);
+        crate::units::goals::tests::fake_lens(object, &[]);
     }
 
     #[test]

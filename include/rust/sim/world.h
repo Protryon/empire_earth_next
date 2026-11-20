@@ -568,6 +568,8 @@ struct EeWorldLayout {
   uint64_t complex_container;
   uint64_t complex_command;
   uint64_t complex_goal_state;
+  /// `mGoalQueues` (a vector of `EEUnitVectorItem`s, each its Rust queue's pointer)
+  uint64_t complex_goal_queues;
   uint64_t complex_active_goal;
   uint64_t complex_herd;
   /// `mCargo`: a `std::vector<EEComplexUnit*>`, whose first two words are its begin and end (the C++ checks it)

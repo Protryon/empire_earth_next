@@ -794,7 +794,7 @@ extern "C" float ee_units_pm_host_mesh_ground(float inX, float inY)
 extern "C" void ee_units_pm_host_adjust_dive_depth(uint64_t inObject, float* ioPoint)
 {
     GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
-    EEAdjustDiveDepth(PMUnit(inObject), thePoint);
+    thePoint.SetZ(ee_units_uu_seabed(1, (uint64_t)(uintptr_t)PMUnit(inObject), (const float(*)[3])&thePoint.mX));   // uu_world.rs
     ioPoint[0] = thePoint.mX;
     ioPoint[1] = thePoint.mY;
     ioPoint[2] = thePoint.mZ;

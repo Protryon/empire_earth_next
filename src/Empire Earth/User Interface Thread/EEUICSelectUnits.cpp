@@ -22,13 +22,9 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EEAction.h"
 #include "ee/EEARust.h"
-#include "lle/GELine.h"
 #include "ee/EEUICSelectUnits.h"
 
-static GEColor sSelectBoxColor(1.0f, 1.0f, 1.0f);
-static GEColor sSelectShadowColor(0.0f, 0.0f, 0.0f);
-
-// Creates the main game view's drag-selection box (white lines over black shadow lines), hidden
+// Creates the main game view's drag-selection box (its eight lines: ee_screens hud_draw.rs), hidden
 EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                                    EEALasso* inLasso)
     : EEUIRustControl(inId, GERectangle(GE2DPoint(gViewport.GetViewRectangle().GetTopLeft()), 2.0f, 2.0f), inForm, inIndex, 0),
@@ -39,9 +35,6 @@ EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned 
     this->mLasso = inLasso;
     this->mLasso->Reference();
     this->SetAlwaysDirty(true);
-    this->mLines = new GELine[8];
-    for (int i = 0; i < 8; i++)
-        this->mLines[i].SetColor(i < 4 ? sSelectShadowColor : sSelectBoxColor);
 }
 
 // Destroys the selection box, releasing its click and lasso handlers
@@ -49,11 +42,10 @@ EEUICSelectUnits::~EEUICSelectUnits()
 {
     this->mClick->Dereference();
     this->mLasso->Dereference();
-    delete[] this->mLines;
 }
 
 // CopyData, DrawPolygons, the double click, the release, the drag and StartSelection: ee_screens select_units.rs
-// (EE_SCREENS_SU_DO_*) over the lines', picker's and actions' ops below
+// (EE_SCREENS_SU_DO_*) over the picker's and actions' ops below (the lines and the unit's reads: hud_ctl_ffi.rs)
 long EEUICSelectUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)
 {
     return (long)ee_screens_select_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f,
@@ -64,14 +56,7 @@ int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
 {
     EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
     switch (inOp) {
-    case EE_SCREENS_SU_DRAW_LINES:
-        for (int i = 0; i < 8; i++) {
-            this->mLines[i].SetStartPoint(GE2DPoint(ioF[i * 4], ioF[i * 4 + 1]));
-            this->mLines[i].SetEndPoint(GE2DPoint(ioF[i * 4 + 2], ioF[i * 4 + 3]));
-        }
-        return gRasterizer->Draw(this->mLines, 8, this->GetScreenIndex());
     case EE_SCREENS_SU_PICK: return (int64_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
-    case EE_SCREENS_SU_OWN_LIVE: return theUnit->GetHitPoints() > 0 && theUnit->GetPlayer() == gWorld.GetCurrentPlayer();
     case EE_SCREENS_SU_LASSO_TYPE:
         this->mLasso->SelectUnits(gU4E8F08.GetViewRectangle(), (long)inB, theUnit->GetUnitClass()->mUnitType, theUnit->mUnitID);
         break;
@@ -81,7 +66,6 @@ int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         break;
     case EE_SCREENS_SU_CLICK: this->mClick->SelectAtMouse((unsigned long)inA); break;
     // the trigger tab's (EESEUICTriggerSelectUnits)
-    case EE_SCREENS_SU_HAS_COMPLEX: return theUnit->mComplexUnit != NULL;
     case EE_SCREENS_SU_POINT_AT: {
         GE3DPoint thePoint;
         EETile* theLocation;

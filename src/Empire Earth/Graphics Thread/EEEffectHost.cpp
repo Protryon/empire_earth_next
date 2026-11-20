@@ -923,13 +923,6 @@ void EEEffectCaptureSweep()
     ee_gfx_effects_sweep(gEffectManager != NULL ? gEffectManager->mRust : NULL);
 }
 
-// Returns the goal at an index of the queue (EEUnitVectorItem's member, out of line after its first user, the goal
-// markers' rebuild)
-EEUnitGoal* EEUnitVectorItem::GetGoalAt(unsigned long inIndex)
-{
-    return this->mGoals[inIndex];
-}
-
 // The quad batches' arrays (the camera batch's vertices 0x4e8db8, the ground batch's 0x4e8da8 and their polygons
 // 0x4e8df0: two triangles a quad); their textures, counts, alpha references, quads, flushes and draws are ee_gfx
 // effect_batch.rs's, the shared plane models (0x4e8df4, 0x4e8df8) too. The GE value classes pass as their mirrors.

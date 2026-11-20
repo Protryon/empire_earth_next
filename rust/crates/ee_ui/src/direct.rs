@@ -294,6 +294,16 @@ sub_call!(
     slider_call, Kind::Slider, EeUiSlider, EeUiSliderCall, ee_ui_slider_call
 );
 
+/// One of `UITextLabel`'s methods with the float buffer `f`; `None` when `control` is not a label.
+pub fn label_call_f(control: Cpp, call: EeUiLabelCall, a: isize, b: isize, f: &mut [f32; 4]) -> Option<isize> {
+    let o = find(Kind::Label, control) as *const EeUiLabel;
+    if o.is_null() {
+        return None;
+    }
+    // SAFETY: a live label
+    Some(unsafe { ee_ui_label_call(o, call, a, b, f.as_mut_ptr()) })
+}
+
 /// One of `UIStatusBar`'s methods with the float buffer `f`; `None` when `control` is not a status bar.
 pub fn status_call(control: Cpp, call: EeUiStatusBarCall, a: isize, b: isize, f: &mut [f32; 4]) -> Option<isize> {
     let o = find(Kind::StatusBar, control) as *const EeUiStatusBar;

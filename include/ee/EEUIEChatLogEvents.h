@@ -32,7 +32,6 @@ public:
                                 (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
     }
     static void Clear() { ee_screens_chat_log_clear(); }
-    static unsigned long GetEntryCount() { return ee_screens_chat_log_count(); }
     static long Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
     {
         return ee_screens_chat_log_load(&inFile);

@@ -1864,6 +1864,15 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     io: *mut EeUnitsGoalIo,
     host: *const EeUnitsGoalHost,
 ) -> i64 {
+    // the base goal's fields are Rust's (goal_obj.rs): every table is wrapped once in their operations
+    let wrapped;
+    // SAFETY: the caller's contract
+    let host = if unsafe { (*host).op } as usize == crate::units::goal_obj::base_host_op as *const () as usize {
+        host
+    } else {
+        wrapped = EeUnitsGoalHost { context: host as *mut c_void, op: crate::units::goal_obj::base_host_op };
+        &wrapped as *const EeUnitsGoalHost
+    };
     // the base goal's record first (EEUnitGoal's Save and Load; not the heal goal's), for every kind
     if (op == EE_UNITS_GOAL_LOAD || op == EE_UNITS_GOAL_SAVE) && kind != GOAL_HEAL_UNIT {
         // SAFETY: the caller's contract

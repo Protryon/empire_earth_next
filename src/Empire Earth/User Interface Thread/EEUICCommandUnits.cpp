@@ -109,8 +109,7 @@ long EEUICCommandUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)
 // NEAR: registers (the original keeps 0 in ebx for the bool tests and the unsigned conversion; the theFar.x copy is a mov)
 int64_t EEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
-    EESelectedGroup* theGroup = inOp == EE_SCREENS_CU_GROUP_CENTER || inOp == EE_SCREENS_CU_GROUP_COUNT ||
-        inOp == EE_SCREENS_CU_CATEGORY ? gWorld.GetCurrentPlayer()->mSelectedGroup : NULL;
+    // (the selection's count and its units' categories are hud_ctl_ffi.rs')
     switch (inOp) {
     case EE_SCREENS_CU_DRAW_ARROW: {
         GEColor theWhite(1.0f, 1.0f, 1.0f);
@@ -188,7 +187,7 @@ int64_t EEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float
     case EE_SCREENS_CU_GROUP_CENTER: {
         GERectangle theBounds;
         GE2DPoint theCenter;
-        theGroup->GetBounds(theBounds);
+        gWorld.GetCurrentPlayer()->mSelectedGroup->GetBounds(theBounds);
         theBounds.GetCenter(theCenter);
         ioF[0] = theCenter.GetX();
         ioF[1] = theCenter.GetY();
@@ -198,8 +197,6 @@ int64_t EEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float
         this->mListener->Execute(ioF[0], ioF[1], (inB & EE_SCREENS_CU_EXECUTE_HIT) != 0, (unsigned long)inA,
                                  (inB & EE_SCREENS_CU_EXECUTE_FACING) != 0, ioF[2], (inB & EE_SCREENS_CU_EXECUTE_DRAGGED) != 0);
         break;
-    case EE_SCREENS_CU_GROUP_COUNT: return theGroup->GetNumUnits();
-    case EE_SCREENS_CU_CATEGORY: return theGroup->GetUnit((unsigned long)inA)->GetUnitClass()->mCategory;
     }
     return 0;
 }

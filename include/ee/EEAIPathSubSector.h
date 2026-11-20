@@ -22,11 +22,11 @@ struct EECPASGFlags;
 // upper_bound, then lower_bound), +0x2c the neighbours, +0x3c the location, +0x44 the sector (StartGraphPath reads
 // its +0x40/+0x44), +0x48 the tile count, +0x4c the continent, +0x4e the path area, +0x50 the id (the manager's
 // 0x24dcf indexes +0x5c by it), +0x54 the kind (0x10465 compares it with 0xd), +0x58 the player, +0x5c stale
-class EEAIPathSubSector : public AStarGraphableObjectBase, private EeAStarSubSectorRecord {
+class EEAIPathSubSector : private EeAStarSubSectorRecord {
 public:
-    // (EEAIPathSubSector.cpp 0x2be88..0x2c79f): ctor 0x2be88, dtor 0x2bf08 (??_G 0x2beec)
-    EEAIPathSubSector() { ee_astar_sub_sector_init(this); }
-    virtual ~EEAIPathSubSector() { ee_astar_sub_sector_free(this); }
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIPathSubSector* New() { return (EEAIPathSubSector*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::PathSubSectors); }
+    static void Delete(EEAIPathSubSector* inObject) { ee_astar_object_delete(EeAStarCmTable::PathSubSectors, (uint64_t)(uintptr_t)inObject); }
     // (0x2c0b9 GetLinks, the links listed under an id: the Rust record's, ee_astar_sub_sector_links_of)
     // (0x2c10f IsPassable, whether the sub-sector's gate lets a player through: ee_sim::astar modifier_obj.rs
     // gate_passable)
@@ -107,6 +107,8 @@ public:
     U2DSparseArrayPointContainer mTiles;    // +0x10 (0x1c)
 
 private:
+    EEAIPathSubSector();
+    ~EEAIPathSubSector();
     EEAIPathSubSector(const EEAIPathSubSector&);
     EEAIPathSubSector& operator=(const EEAIPathSubSector&);
 };

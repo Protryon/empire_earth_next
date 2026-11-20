@@ -31,6 +31,8 @@ enum class EeWonShellBase : uint32_t {
   Tab,
   /// `WONShellDialog : Dialog`.
   Dialog,
+  /// `WONShellWonButton : WONButton`.
+  WonButton,
 };
 
 /// A deleted widget class: the kind a shell runs.
@@ -83,6 +85,28 @@ enum class EeWonShellKind : uint32_t {
   MsEtchedFrameGroup,
   /// `MSMessageBox` over `MSDialog` (`a` its texts, an `EeWonMsgBoxTexts*`, or 0 for the dialog alone).
   MsMessageBox,
+  /// `WONSimpleButton` (the WON skin's kinds: shell_won.rs).
+  WonSimpleButton,
+  /// `WONScrollThumb`.
+  WonScrollThumb,
+  /// `WONHeaderButton` (over `WONButton`).
+  WonHeaderButton,
+  /// `WONInputBox`.
+  WonInputBox,
+  /// `WONScrollbar` (`a` vertical).
+  WonScrollbar,
+  /// `WONComboBox`.
+  WonComboBox,
+  /// `WONScrollContainer`.
+  WonScrollContainer,
+  /// `WONListCtrl`.
+  WonListCtrl,
+  /// `WONHeaderControl` (`a` 0, `b` the skin, an `EeWonSkin*`).
+  WonHeaderControl,
+  /// `WONTabCtrl` (`a` the skin, an `EeWonSkin*`, or 0).
+  WonTabCtrl,
+  /// `WONFrameComponent` (`a` the frame to copy, an `EeWonFrameIn*`, or 0 for none).
+  WonFrameComponent,
 };
 
 /// A call out of a kind (the C++ host's op).
@@ -134,6 +158,36 @@ enum class EeWonShellHostOp : uint32_t {
   SameSize,
   /// `CenterLayout(this, a, true, false)` with `b` and `c` (when not 0) added, added to the shell's child layouts.
   CenterLayout,
+  /// an image's method `a` (`EeWonWbImage`) on `(Image*)b` (a duplicate comes back held).
+  Img,
+  /// `WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b)` with the four images at `c` as the slots.
+  DrawImages,
+  /// WONButton's call: `ee_won_wonbtn_call(((WONButton*)a)->mWb, b, c[0..4])`.
+  WonBtn,
+  /// `((WONButton*)a)->SetButtonState(c[0], (Image*)c[1], c[2], (Font*)c[3], c[4] != 0)`.
+  WonBtnState,
+  /// `((WONButton*)a)->CopyAttributes((WONButton*)b)`.
+  WonBtnCopy,
+  /// `((Button*)a)->CopyAttributes((Button*)b)`.
+  BtnCopy,
+  /// `((Button*)a)->SetClickSound((Sound*)b)`.
+  ClickSound,
+  /// `((WrappedText*)a)->GetWidth()`.
+  TextWidth,
+  /// the shell's combo box part `a` (`EeWonShellComboPart`).
+  ComboGet,
+  /// the combo box `a`'s part `b` = `(Component*)c`.
+  ComboPartOn,
+  /// `((Component*)a)->GetDesiredSize(w, h)` (virtual) into the two ints at `b`.
+  VDesiredSize,
+  /// a new `ImageComponent` stretching `(Image*)a` (not held).
+  NewStretchImage,
+  /// `new WONMSSkin::MSImage(a, b, c, d)` (not held).
+  NewMsImage,
+  /// `GetNamedFont(a)` (a NUL-terminated name), held.
+  GetNamedFont,
+  /// `((RefCount*)a)->AddRef()` when `b` > 0, else its `Release()` (an image or a font).
+  RefObj,
 };
 
 /// A virtual a shell overrides (its bit in the kind's mask). The arguments are the C++ ones as `isize` (a pointer
@@ -215,6 +269,50 @@ enum class EeWonShellOp : uint32_t {
   GetLabel,
   /// `MSMessageBox`'s `mButton1` (a `Component*`).
   GetButton1,
+  /// the WON kinds' `Duplicate()`: a new widget (a `Component*`, not held).
+  Duplicate,
+  /// `WONScrollContainer::Duplicate()` on a scroll container or a list control.
+  DuplicateScroll,
+  /// `WONSimpleButton::SetImage(a, (Image*)b)`.
+  SetImage,
+  /// `WONSimpleButton::SetScaleImage(a != 0)`.
+  SetScaleImage,
+  /// `WONSimpleButton::SetCheckMouseButtonDown(a != 0)`.
+  SetCheckMouseButtonDown,
+  /// `SetFrame(*(const EeWonFrameIn*)a)` (a deep copy: the image duplicated).
+  SetFrame,
+  /// the kind's frame into `*(EeWonFrameIn*)a` (the image borrowed).
+  GetFrame,
+  /// `WONComboBox::mDrawFrame = a != 0`.
+  SetDrawFrameField,
+  /// `WONComboBox::mButtonInFrame = a != 0`.
+  SetButtonInFrame,
+  /// `WONScrollContainer::mTransparent = a != 0`.
+  SetTransparentField,
+  /// `WONScrollContainer::mHeaderHeight = a`.
+  SetHeaderHeightField,
+  /// `WONScrollContainer::SetCorner((Image*)a)`.
+  SetCorner,
+  /// `WONScrollContainer::mCorner` (borrowed).
+  GetCorner,
+  /// `WONScrollContainer::CopyAttributes((WONScrollContainer*)a)`.
+  CopyScrollAttributes,
+  /// `WONListCtrl::SetHeader((WONHeaderControl*)a)`.
+  SetHeader,
+  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b[0], b[1])` (`b` two `intptr_t`s).
+  SetStandardColumnHeader,
+  /// `WONListCtrl::SetColumnHeader(a, (Component*)b[0], b[1])`.
+  SetColumnHeader,
+  /// `WONHeaderControl::SetColumn(a, *(const GUIString*)b[0], (int*)b[1])`.
+  WonSetColumn,
+  /// the skin (`WONTabCtrl::mSkin`, `WONHeaderControl::mSkin`) = `(EeWonSkin*)a`.
+  SetSkin,
+  /// `WONFrameComponent::SetFrameImage((Image*)a)` (shared).
+  SetFrameImage,
+  /// `WONFrameComponent::SetFrameLeft(b)` .. `SetFrameBottom(b)` (`a` 0..3).
+  SetFrameBorder,
+  /// `WONFrameComponent::GetFrameLeft()` .. `GetFrameBottom()` (`a` 0..3).
+  GetFrameBorder,
 };
 
 /// A base class's widget a kind makes (the host's `NewBase`).
@@ -224,6 +322,8 @@ enum class EeWonShellBaseNew : uint32_t {
   MultiListArea,
   Button,
   Label,
+  /// `new WONButton`.
+  WonButton,
 };
 
 /// A combo box's part member (the host's `ComboPart`: `mButton`, `mEdit`, `mListArea`, `mListBox`).

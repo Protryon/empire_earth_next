@@ -3,7 +3,7 @@
 // object, area, condition, effect and trigger screens' events) are EEScreenEvent codes handled by ee_screens
 // scenario_editor.rs over this unit's host, ee_screenscpp_se (docs/RUST_PLAN.md "R6 game screens"); the events with
 // per-instance state (the slider's label, the check box's controls, the scenario combo box's refill) are EESEERust
-// events (ee_screens editor_events.rs, ee/EESEARust.h); FillScenarioComboBox, their host's and the effects', is here.
+// events (ee_screens editor_events.rs, ee/EESEARust.h).
 // The host also serves the editor form's and its tabs' events (the toolbar, the hot keys, the elevation tool, the
 // player tab's epoch, the effects' radios, the instructions' "///" expansion: the units that newed them).
 // After RTSPlayer.cpp (..0x16f892), before EESEIAExport.cpp's Virtual4 0x16ff5f. Unit flags: the exe module set.
@@ -47,37 +47,16 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESEUnit.h"
 #include "ee/EESEARust.h"
-void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
-void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSETGame.cpp
+void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSEffect.cpp
 
 // ---- the host of the editor's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,
-// inEntity the event's control. The editor's objects, one call each (EE_SCREENS_SE_OP_*).
+// inEntity the event's control. The editor's objects, one call each (EE_SCREENS_SE_OP_*); the toolkit's ops and the
+// texts are answered in Rust (editor_direct.rs).
 static GE2DPoint sAreaCenter;   // EE_SCREENS_SE_OP_AREA_CENTER's, for EE_SCREENS_SE_OP_CENTER_ON_AREA
 
 // the exit question's answers (on the question's form)
 static void EESESaveBeforeExit(UIForm* inForm) { ee_screens_event(EE_SCREENS_SE_SAVE_BEFORE_EXIT, inForm, NULL); }
 static void EESEExitWithoutSaving(UIForm* inForm) { ee_screens_event(EE_SCREENS_SE_EXIT_WITHOUT_SAVING, inForm, NULL); }
-
-// a text (EE_SCREENS_SE_TEXT_*) into outText (up to inCapacity bytes); its length in bytes
-extern "C" size_t ee_screenscpp_se_text(void* inForm, void* inEntity, uint32_t inWhich, uint32_t inArg, uint8_t* outText,
-                                        size_t inCapacity)
-{
-    UWideString theText;
-    if (inWhich == EE_SCREENS_SE_TEXT_EDIT_LINE)
-        theText = static_cast<UIEditBox*>(static_cast<UIEntity*>(inEntity))->GetText(inArg);
-    else
-        gResource->GetString((int32_t)inArg, theText);
-    size_t theLength = theText.GetTCHARLength();
-    memcpy(outText, (const char*)theText, theLength < inCapacity ? theLength : inCapacity);
-    return theLength;
-}
-
-// the entity's (an edit box's) text
-extern "C" void ee_screenscpp_se_set_text(void* inEntity, const uint8_t* inText, size_t inLength)
-{
-    UWideString theText(std::string(reinterpret_cast<const char*>(inText), inLength).c_str());
-    static_cast<UIEditBox*>(static_cast<UIEntity*>(inEntity))->SetText(theText);
-}
 
 static void EESEPostAction(EEAction* inAction)
 {
@@ -98,8 +77,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     };
     auto Trigger = [&](uint32_t inWhat, uint32_t inA = 0) { return Sub(kSETriggerScreenTrigger, inWhat, inA); };
     switch (inOp) {
-    case EE_SCREENS_SE_OP_ENTITY_ID:
-        return static_cast<UIControl*>(theEntity)->GetId();
     case EE_SCREENS_SE_OP_TAB: {
         switch (inA) {
         case EE_SCREENS_SE_TAB_SHOW: theEditor->TriggerCall(EE_SCREENS_SETS_SHOW_TAB, inB); break;
@@ -144,11 +121,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         Object(EE_SCREENS_SEOB_CHECK_CHANGED, (uint32_t) static_cast<UIControl*>(theEntity)->GetId(),
                (uint32_t) static_cast<UITriStateCheckBox*>(theEntity)->GetCheckState());
         break;
-    case EE_SCREENS_SE_OP_LIST_SELECTION: {
-        unsigned long theSelection;
-        return static_cast<UILBString*>(theEntity)->GetCurrentSelection(theSelection) == kErrorOK ? (uint32_t)theSelection
-                                                                                                    : 0xffffffffu;
-    }
     case EE_SCREENS_SE_OP_SELECTED_UNIT_COUNT:
         return theEditor->GetSelectedUnitCount();
     case EE_SCREENS_SE_OP_CENTER_ON_UNIT: {
@@ -156,12 +128,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         theAction->SetUnit(theEditor->GetSelectedUnit(inA));
         theAction->Dereference();
         break;
-    }
-    case EE_SCREENS_SE_OP_COMBO_SELECTION: {
-        // (the original read the selection whatever the call answered: none reads as no selection here)
-        unsigned long theSelection;
-        return static_cast<UIComboBox*>(theEntity)->GetCurrentSelection(theSelection) == kErrorOK ? (uint32_t)theSelection
-                                                                                                    : 0xffffffffu;
     }
     case EE_SCREENS_SE_OP_AREA_MODE:
         Sub(kSETriggerScreenArea, EE_SCREENS_SEAR_SET_MODE, inA != 0 ? 1 : 0);
@@ -198,12 +164,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     case EE_SCREENS_SE_OP_TRIGGER_REMOVE:
         Trigger(EE_SCREENS_SETR_REMOVE_ENTRY, inA);
         break;
-    case EE_SCREENS_SE_OP_CHECKED:
-        return static_cast<UICheckBox*>(theEntity)->GetIsChecked();
-    case EE_SCREENS_SE_OP_SHOW:
-        if (UIControl* theControl = theEditor->GetControlById(inA))
-            theControl->SetDisplayMode(inB);
-        break;
     // the editor form's and its tabs' (group 2)
     case EE_SCREENS_SE_OP_UNIT_RESELECT:
         theEditor->UnitCall(EE_SCREENS_SEUN_RESELECT);
@@ -231,11 +191,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         theFile.Close();
         break;
     }
-    case EE_SCREENS_SE_OP_RANGE:
-        return (uint32_t)static_cast<UISlider*>(theEditor->GetControlById(inA))->GetCurrentRangeValue();
-    case EE_SCREENS_SE_OP_LABEL_NUMBER:
-        static_cast<UITextLabel*>(theEditor->GetControlById(inA))->SetText((long)(int32_t)inB);
-        break;
     case EE_SCREENS_SE_OP_PLAYER_REBUILD_TECH:
         theEditor->PlayerCall(EE_SCREENS_SEPL_REBUILD_TECH_LISTS);
         break;
@@ -270,15 +225,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     case EE_SCREENS_SE_OP_EXIT_AFTER_SAVE:
         gUIManager->GetScenarioEditorForm()->SetExitAfterSave(true);
         break;
-    case EE_SCREENS_SE_OP_EDIT_LINES:
-        return static_cast<UIEditBox*>(theEntity)->GetLineCount();
     }
     return 0;
-}
-
-// Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object'
-void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
-{
-    EEUIShell::Op(inComboBox, EE_SCREENS_SKOP_SET_MODE, inAreas ? kSETriggerScreenArea : kSETriggerScreenObject);
-    FillPlaceComboBox(inAreas, inLabel, inComboBox);
 }

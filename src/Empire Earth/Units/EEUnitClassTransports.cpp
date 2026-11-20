@@ -83,7 +83,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     }
     case EE_UNITS_CLS_BLOCKED: {
         std::vector<EEUnit*> theUnits;
-        return EEGetBlockingUnits((EEPlayer*)(uintptr_t)inA, (long)inC, (EETile*)(uintptr_t)inB, 0, theUnits);
+        return ee_units_uu_tile_units_standing(inA, (int32_t)inC, inB, 0, 2, &theUnits) != 0;
     }
     case EE_UNITS_CLS_TILES_IN_RADIUS:
         EEGetTilesInRadius((long)inC, (long)inD, 2, true, theTiles);
@@ -250,7 +250,7 @@ bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EECo
     bool theAllowWater = (inCargo->mUnitClass->mDomains & kMovementLand) == 0;
     bool theResult;
     if (inCargo->mStats->mMaxVelocity <= 0.0f) {
-        EEGetTilesAroundUnit(inTransport, inCargo, 1, 0, 0, theTiles);
+        ee_units_uu_tiles_around((uint64_t)(uintptr_t)inTransport, (uint64_t)(uintptr_t)inCargo, 1, 0, 0, &theTiles);
         theResult = EEPickTileNear(theTiles, inTransport, inCargo, 0, outLocation);
     } else {
         inTransport->GetPosition(thePosition);

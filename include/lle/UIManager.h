@@ -104,7 +104,6 @@ public:
     UIForm* GetStackedForm(unsigned long inIndex) const;   // port (test fixture)
     TSCriticalSection* GetUILock() const;                  // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const;
-    GESurface* GetDrawingSurface() const;
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)
     static ISEntity* GetLMouseButton() { return UIManager::sLMouseButton; }
 #endif
@@ -135,7 +134,6 @@ public:
     SESoundManager* GetSoundManager() const;
     UResourceFile* GetStringTable() const;
     unsigned long GetUITextureBitDepth() const { return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth); }
-    bool IsFormOnStack(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormOnStack, (intptr_t)inForm) != 0; }
     bool IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }
     void LoadDatabase(FSPath* inPath, const UString& inDirectory);
     void LockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 0); }

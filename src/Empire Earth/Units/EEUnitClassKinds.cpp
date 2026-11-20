@@ -46,7 +46,7 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
 void EEUnitClass::AddToRegion(EEUnit* inUnit)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_ADD_TO_REGION)) {
-    case 1: EEAddBuildingRegion(inUnit); return;
+    case 1: ee_units_uu_footprint(2, (uint64_t)(uintptr_t)inUnit); return;   // uu_world.rs building_region
     case 2: return;
     }
     this->BaseAddToRegion(inUnit);
@@ -55,7 +55,7 @@ void EEUnitClass::AddToRegion(EEUnit* inUnit)
 void EEUnitClass::AddToTile(EEUnit* inUnit)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_ADD_TO_TILE)) {
-    case 1: EEAddToFootprintTiles(inUnit); return;
+    case 1: ee_units_uu_footprint(0, (uint64_t)(uintptr_t)inUnit); return;   // uu_world.rs footprint_link
     case 2: this->SpaceTransportAddToTile(inUnit); return;
     case 3: this->AmbientAddToTile(inUnit); return;
     case 4: this->ResourceAddToTile(inUnit); return;
@@ -397,7 +397,7 @@ void EEUnitClass::LocationToTile(const GE3DPoint& inLocation, long& outX, long& 
 void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_REMOVE_FROM_REGION)) {
-    case 1: EERemoveBuildingRegion(inUnit); return;
+    case 1: ee_units_uu_footprint(3, (uint64_t)(uintptr_t)inUnit); return;
     case 2: return;
     }
     this->BaseRemoveFromRegion(inUnit);
@@ -406,7 +406,7 @@ void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
 void EEUnitClass::RemoveFromTile(EEUnit* inUnit)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_REMOVE_FROM_TILE)) {
-    case 1: EERemoveFromFootprintTiles(inUnit); return;
+    case 1: ee_units_uu_footprint(1, (uint64_t)(uintptr_t)inUnit); return;
     case 2: this->SpaceTransportRemoveFromTile(inUnit); return;
     case 3: this->AmbientRemoveFromTile(inUnit); return;
     }

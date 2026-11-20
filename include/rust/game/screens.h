@@ -1651,6 +1651,12 @@ constexpr static const int32_t EE_SCREENS_SEPL_LIST_EFFECT = 4;
 /// `EeScreensSeplCtl::flags`: a slider without a range (only its page size `extra[2]`, when not 0).
 constexpr static const uint32_t EE_SCREENS_SEPL_NO_RANGE = 32;
 
+/// The effect record's size in pointers.
+constexpr static const size_t EE_SCREENS_SEET_EFFECT_SLOTS = 46;
+
+/// The condition record's size in pointers.
+constexpr static const size_t EE_SCREENS_SEET_CONDITION_SLOTS = 23;
+
 constexpr static const uint32_t EE_SCREENS_SEET_A_LABEL = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEET_A_CHECK = 1;
@@ -8849,6 +8855,18 @@ constexpr static const uint32_t EE_SCREENS_SH_COPY_FIRST_TO_ALL = 69;
 /// The brush group `a`'s `mBrushSize = b`.
 constexpr static const uint32_t EE_SCREENS_SH_BRUSH_SIZE = 70;
 
+/// `EEUICChatLine` (a control; args: the table's background opacity, its `f32` bits).
+constexpr static const uint32_t EE_SCREENS_SK_CHAT_LINE = 131;
+
+/// The texts made: `a` the shell's slots (`void*[4]`: the bold name, its drawn copy, the message, its drawn copy).
+constexpr static const uint32_t EE_SCREENS_SKOP_CHAT_PARTS = 132;
+
+/// -> the line's record (an `EeScreensChatLineFields*`).
+constexpr static const uint32_t EE_SCREENS_SKOP_CHAT_RECORD = 133;
+
+/// The line's four texts (its slots) deleted.
+constexpr static const uint32_t EE_SCREENS_SH_CHAT_FREE = 195;
+
 /// `EEUIFError` (a form; no args).
 constexpr static const uint32_t EE_SCREENS_SK_DIALOG = 104;
 
@@ -11182,23 +11200,6 @@ struct EeScreensRect {
   float top;
 };
 
-/// `EEUICChatLine`'s members (its protected base): the C++ objects it owns by address (the timer a `TMPoll*`,
-/// the texts `GEText*`s, made and deleted by the class's constructor and destructor; the UI cluster lane, round 1).
-struct EeScreensChatLineFields {
-  /// The copied draw rectangle moved down by the shadow offset.
-  EeScreensRect mTextRectangle;
-  /// The table's background opacity.
-  float mOpacity;
-  uint32_t mShadowOffset;
-  bool mShowing;
-  void *mTimer;
-  /// the bold name, the message and the copies `CopyData` makes of them
-  void *mName;
-  void *mMessage;
-  void *mDrawnName;
-  void *mDrawnMessage;
-};
-
 /// `GE2DPoint`.
 struct EeScreensPoint {
   float x;
@@ -12107,6 +12108,15 @@ uint32_t ee_screens_sear_state(const EeScreensSeArea *screen,
 /// `screen` comes from `ee_screens_sear_new` (or is NULL); `names` is a `std::vector<UWideString>`.
 void ee_screens_sear_names(const EeScreensSeArea *screen, void *names);
 
+/// The member `a`, `k` of a record (`EESETSEffect.cpp`'s remaining cases' accessor; NULL: no such member).
+///
+/// # Safety
+/// `controls` is NULL or a live record of the kind `condition` names.
+void *ee_screens_seet_slot(void *controls,
+                           bool condition,
+                           uint32_t a,
+                           uint32_t k);
+
 /// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
 /// 0 the military group's object moved in (`a` 1) or out (`a` 0) of the group (`b`: the list's line), 1 the
 /// dialogue's camera scroll speed shown, 2 the AI attribute's ranges shown (`b`: the attribute combo box's line).
@@ -12984,27 +12994,6 @@ int64_t ee_screens_ping_draw(EeScreensPingFields *rec, void *ctl);
 
 /// `EEUICPing::SetPing`.
 void ee_screens_ping_set(EeScreensPingFields *rec, void *ctl, float value);
-
-/// `EEUICChatLine`'s constructor part (`ctl` the line: its record's place in the class is registered).
-void ee_screens_chat_line_init(EeScreensChatLineFields *rec,
-                               void *ctl,
-                               float opacity);
-
-/// `EEUICChatLine::CopyData`.
-int64_t ee_screens_chat_line_copy_data(EeScreensChatLineFields *rec, void *ctl);
-
-/// `EEUICChatLine::Display(colour, name, message, time)` (the colour a `GEColor*`, the texts `UWideString*`s).
-uint32_t ee_screens_chat_line_display(void *ctl,
-                                      const void *color,
-                                      const void *name,
-                                      const void *message,
-                                      uint32_t time);
-
-/// `EEUICChatLine::DrawPolygons`.
-int64_t ee_screens_chat_line_draw(EeScreensChatLineFields *rec, void *ctl);
-
-/// `EEUICChatLine::DrawTextA`.
-int64_t ee_screens_chat_line_draw_text(EeScreensChatLineFields *rec, void *ctl);
 
 /// `EEUICSelectUnits`' members: `EE_SCREENS_SU_DO_*` with the mouse location (x, y) where one is taken.
 int64_t ee_screens_select_units(EeScreensSelectUnitsFields *rec,
