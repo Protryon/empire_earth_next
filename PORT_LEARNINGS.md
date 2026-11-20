@@ -34648,3 +34648,56 @@ capture profile at seeds 2-3 PASS (43 digests equal golden_cpp_scenario.txt; del
 - Only a person (or the editor tour) reaches: the form's button fire (the hot keys' `FIRE`), the map tab's label
   rectangles at its first layout and the elevation file combo, the area screen's centre (the Center on Area button),
   the trigger tab's list clicks, and every answer's draw (the toolkit's state is the gate's, the frame is the tour's).
+
+## The units' lane, round 4: the unit utilities' forwarders gone, the unit host's goal calls in Rust, one-call members inline (ee_sim units goal_spec.rs; branch rust-units4, 2026-11-19)
+
+The brief: net -3,000 C++ lines by whole class moves, the UI's dependencies first. Numbers: docs/progress/units.md
+("Round 4"). Net -712 C++ lines (src, include/ee, include/lle, include/gx, include/dx7): the forwarder layer and the
+hosts' calls whose answers were Rust already; no class moved wholly.
+
+- **Measure the UI's dependency before choosing.** `cpp_deps.py layer --focus` over the UI directories reports
+  EEFOFindNewTargetNearOldTarget.cpp itself (it lives in User Interface Thread); the UI's own edges into the Units
+  lane come from `edges.tsv` filtered by directory: 56 distinct symbols, most of them accessors (`EEGroup`,
+  `EEUnitClass::Is*`, `EEGhostUnit`'s statics, `EEPhysics`' clock). The UI is not held by one units class; it is
+  held by the world under all of them.
+- **A forwarder rewrite as a tool, not by hand.** build/u4/fwd.py held one template per forwarder (the Rust call
+  with the forwarder's argument mapping: a handle `(uint64_t)(uintptr_t)x`, `&v` for a vector reference, `p.mX` /
+  `p->mX` for a point) and rewrote every call site it could prove simple, reporting the rest (`GE3DPoint(...)`
+  temporaries, a statement form such as `EEFindDropLocation(u, &t, &p, x)` -> `t = EECombatFindDropLocation(u, x,
+  p)`). Declarations are told from calls by the token before the name (`return`/`case` aside, an identifier or
+  `*`/`&` after a type is a declaration). A temporary point whose address the Rust takes becomes a local
+  `const float p[3]`; a `case` gains braces for it.
+- **Line numbers move under a rewrite.** The deletion pass first read the dry run's line numbers, which the
+  rewrite's include insertions had shifted in four files: match the declaration by its text after any edit.
+- **`unsafe { .. } as T` needs parentheses** (`(unsafe { make(&p) }) as usize`): the block is a statement there.
+- **A host's C++ constructor becomes a plan and a step.** `ee_units_host_goal_new` built goals with the inline
+  `EEUGRust::New*` (each `Make` plus one body call); goal_spec.rs `plan` is the pure mapping (kind, argument,
+  operation, handles, block; the 32-bit `(long)` truncations as `as i32`), tested without a world, and `make` runs it
+  through `goal_new` and `goal_obj::call`. Units resolve through the registry (`ee_units_resolve`, none for the null
+  id), members by the layout's offsets (`unit_player`, `unit_complex_unit`).
+- **Do not export a bare `pub const` from a new module**: cbindgen wrote `GOAL_ATTACK_UNIT` into units.h and the
+  header check failed; `pub(crate)`.
+- **One-call members inline in the class's header.** A member whose body is one Rust call, in a header that already
+  includes the Rust module's header (ee/EEUnit.h, ee/EEPlayer.h), becomes its declaration's inline body: ~5 lines a
+  member. A virtual stays virtual; the class's key function (its first out-of-line virtual, the destructor) keeps the
+  vtable in its unit. Bodies that read another incomplete class (`inPlayer->GetPlayerID()`, `mUnitClass->...` above
+  `EEUnitClass`) or that hold a TEST ONLY note (`EEUCNote`) stay out of line.
+- **The Rust gate's ee_base tests fail under load**: `com_is_initialised_on_platform_threads` (a 10 s thread wait)
+  and `system_keyboard_and_mouse_through_the_c_abi` failed once each while a build ran; the gate stops at the first
+  failing crate, so build/u4/gate.py runs its four steps with `cargo test --no-fail-fast` (the same commands
+  otherwise); both passed on the rerun.
+- **Gates** (the final tree, origin/rust 4fb6c7119 merged: no change): both builds 0/0 (EE-AOC 482 inputs, EE-SIM
+  483) and the test profile 0/0; the Rust gate PASS (4,994 tests); the oracle seeds 2-7 identical; the twelve capture
+  profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26,
+  scenario 43, groups 2, placement 4, transport 185 digests); the plain saveload 18/18 identical (exit 0); the matrix
+  `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062 lines);
+  eedata check and cppgate PASS; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 40, 40], alive_computers
+  [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
+- **Call-site edits outside the lane**: the forwarders' callers in AI Thread, Calamities, Civilization Builder, Empire
+  Earth, Formations, Graphics Thread, Map, Player, Random Map, Scenario Editor Actions, Scenario Manager, UI Events
+  (EEScreens.cpp's `EEGetLeadUnitID`) and EEUIFMainGame.cpp (the full list: docs/progress/units.md "Round 4");
+  ee/EEPlayer.h holds EEActiveGroup's new inline members.
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Where the C++ dereferenced a missing
+  unit (`ee_units_host_unit_research_state`, `_unit_goal_clone` with no goal), the Rust answers zeros or none.
+- **Not done**: no class moved wholly; unit creation, the class bodies, the TEST ONLY sweeps and the hosts' world
+  calls stay (docs/progress/units.md "What is left").
