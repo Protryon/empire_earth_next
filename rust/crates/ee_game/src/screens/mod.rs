@@ -356,6 +356,7 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+pub(crate) mod lobby_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;

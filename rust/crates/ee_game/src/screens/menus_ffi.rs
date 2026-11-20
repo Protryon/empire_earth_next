@@ -13,8 +13,6 @@ use crate::screens::single_player::EeScreensSinglePlayerSlot;
 pub(crate) mod sys {
     use core::ffi::c_void;
 
-    use crate::screens::single_player::EeScreensSinglePlayerSlot;
-
     extern "C" {
         pub fn ee_screenscpp_call(
             form: *mut c_void,
@@ -27,13 +25,6 @@ pub(crate) mod sys {
         ) -> u32;
         pub fn ee_screenscpp_text(form: *mut c_void, which: u32, arg: u32, out: *mut u8, capacity: usize) -> usize;
         pub fn ee_screenscpp_put_text(form: *mut c_void, which: u32, arg: u32, text: *const u8, length: usize) -> u32;
-        pub fn ee_screenscpp_lobby_fill(
-            slots: *const EeScreensSinglePlayerSlot,
-            human: *const u8,
-            human_length: usize,
-            computer: *const u8,
-            computer_length: usize,
-        );
         // the settings form's (settings_form_ffi.rs)
         pub fn ee_screenscpp_selection(form: *mut c_void, control: u32, list: bool, out: *mut u32) -> i32;
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
@@ -250,15 +241,7 @@ impl MenuHost for Form {
         self.op(op, arg, 0, 0, 0);
     }
     fn lobby_fill(&mut self, slots: &[EeScreensSinglePlayerSlot; 16], human: &[u8], computer: &[u8]) {
-        unsafe {
-            sys::ee_screenscpp_lobby_fill(
-                slots.as_ptr(),
-                human.as_ptr(),
-                human.len(),
-                computer.as_ptr(),
-                computer.len(),
-            )
-        }
+        crate::screens::lobby_calls::fill(&mut crate::screens::game_cpp::Ffi, slots, human, computer)
     }
     fn start_local_server(&mut self, human: &[u8]) {
         self.put(EE_SCREENS_TEXT_SERVER, 0, human);
