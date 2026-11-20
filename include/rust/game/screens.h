@@ -3828,6 +3828,620 @@ constexpr static const uint32_t EE_SCREENS_SEPX_HIDE = 172;
 
 constexpr static const uint32_t EE_SCREENS_SEPX_ADD_CONTROL = 173;
 
+/// `new GEBitmap`; the form p1's `GetButtonTexture()`; texture p1's `GetWidth()`; bitmap p0's `SetTexture(texture
+/// p1, form p2's screen)`; bitmap p1's `SetTextureCoordinates` of the corners (f0, f1)-(f2, f3), `SetXYScale(f0,
+/// f1)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_NEW_BITMAP = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXTURE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEXTURE_WIDTH = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_COORDS = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_SCALE = 5;
+
+/// A unit type button (`EEUIShellRadio`, id i1 + 0x406, at x i3, index i0, checked when i1 is 0) on form p1; its
+/// up checked, down checked, down unchecked, up unchecked bitmaps (p2), no focused bitmap, the draw offset 0, the
+/// button-up event p2, the string id i0; added to form p1 (p2 the radio, layer i0).
+constexpr static const uint32_t EE_SCREENS_SEUNX_TYPE_RADIO = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_UP_CHECKED = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_DOWN_CHECKED = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_DOWN_UNCHECKED = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_UP_UNCHECKED = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_NO_FOCUS = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_DRAW_OFFSET = 12;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_TRIGGER = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_STRING_ID = 14;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_RADIO = 15;
+
+/// `IDS_SE_REMOVE` into the host's text; the Remove Cargo button (form p1, x f0, index i0); button p1's `SetText(the
+/// text, the screen font)`, `SetBgOpacity(1)`, its text white and transparent; added to form p1 (p2, layer i0); the
+/// Rotation button (form p1, index i0), its `SetStringTableID(IDS_ROTATE)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_STRING_REMOVE = 16;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON = 17;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_SET_TEXT = 18;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_OPAQUE = 19;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXT_WHITE = 20;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXT_TRANSPARENT = 21;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_BUTTON = 22;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_BUTTON = 23;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_STRING = 24;
+
+/// The actions: `new EESEAMouseClick`, `new EESEALasso`, `new EESEARust(kSEAPlaceUnit)`, `(kSEAPlaceGate)`,
+/// `(kSEAPlaceWall)`, `(kSEAMoveUnit)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_ACTION_CLICK = 25;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ACTION_LASSO = 26;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ACTION_PLACE_UNIT = 27;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ACTION_PLACE_GATE = 28;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ACTION_PLACE_WALL = 29;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ACTION_MOVE_UNIT = 30;
+
+/// The selection tool (form p1, the tools p2, index i0) and its add to form p1 (p2); the command tool (form p1, the
+/// click p2, index i0) and its add.
+constexpr static const uint32_t EE_SCREENS_SEUNX_SELECT_UNITS = 31;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_SELECT_UNITS = 32;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_COMMAND_UNITS = 33;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_COMMAND_UNITS = 34;
+
+/// `textures\scenunit` loaded (mip maps off); texture p1's `SetFrame(0)`, alpha and colour modes texture, min and
+/// mag filters 0, no mip filter, mip map bias -1, wrap addressing; bitmap p1's `SetTexture(texture p2,
+/// gScreenIndex)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_LOAD_SCENUNIT = 35;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_FRAME = 36;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_ALPHA = 37;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_COLOR = 38;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_MIN = 39;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_MAG = 40;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_MIP = 41;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_BIAS = 42;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TEX_WRAP = 43;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_TEXTURE_SCREEN = 44;
+
+/// The upgrade panel (p2 the id and the index, two `unsigned long`s it takes by reference, form p1); p1's `Dereference()` as
+/// an action, a bitmap, an event; the panel p1 deleted.
+constexpr static const uint32_t EE_SCREENS_SEUNX_UPGRADE_PANEL = 45;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RELEASE_ACTION = 46;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RELEASE_BITMAP = 47;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_RELEASE_EVENT = 48;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_DELETE_PANEL = 49;
+
+/// The placement action p1's Rust action (`mAction`); the tab p1's wall start and end (f0, f1), technology, player,
+/// state; its gate's tile x, y, technology, direction.
+constexpr static const uint32_t EE_SCREENS_SEUNX_SEW_ACTION = 50;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_START = 51;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_END = 52;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_TECH = 53;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_PLAYER = 54;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_STATE = 55;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_TILE_X = 56;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_TILE_Y = 57;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_TECH = 58;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_DIRECTION = 59;
+
+/// `gWorld.mGhostUnitsLock->Enter()`, `->Leave()`, `gWorld.ClearGhostUnits()`, `EEPreviewPlacement(the mouse)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_LOCK_ENTER = 60;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_LOCK_LEAVE = 61;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLEAR_GHOSTS = 62;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PREVIEW_PLACEMENT = 63;
+
+/// `EEPointUnitOrTileXY(the mouse, *p0, *p1, *p2, true)` (p1, p2 `long`s); the host's tiles cleared, (i0, i1)
+/// pushed, `EEPreviewWall(the tiles, tab p1's wall technology, player)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_MOUSE_TILE = 64;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TILES_CLEAR = 65;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TILES_PUSH = 66;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PREVIEW_WALL = 67;
+
+/// `EEFindGateWall(tile (i0, i1), *p2)` (p2 a `long`); the tab p1's gate ghost (`CreateGate`); `PreviewGate(the
+/// mouse, *p2)` (it may turn it); the gate's direction set to i0.
+constexpr static const uint32_t EE_SCREENS_SEUNX_FIND_GATE_WALL = 68;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CREATE_GATE = 69;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PREVIEW_GATE = 70;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_SET_DIRECTION = 71;
+
+/// `EESetGameViewRectangle(f)`, `gB529066 = false`, `gCameraFollowing = false`, `gB529068 = false`, `gMiniMap !=
+/// NULL`, its `RefreshView()`, `gUIManager->RedrawAll()`, the current form's `SetAllControlsDirty()`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_GAME_VIEW = 72;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLEAR_B529066 = 73;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLEAR_FOLLOWING = 74;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLEAR_B529068 = 75;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_MINIMAP = 76;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_MINIMAP_REFRESH = 77;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_REDRAW_ALL = 78;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ALL_DIRTY = 79;
+
+/// The tab p1's panel rectangle `And` the rectangle p2 into the host's rectangle; the form's `DrawBackground(bitmap
+/// p2, that rectangle, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
+/// top, right, bottom set to f0; the panel added dirty to control p2's form.
+constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_AND = 80;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_DRAW_PANEL = 81;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_ANGLE = 82;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_LEFT = 83;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_TOP = 84;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_RIGHT = 85;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_BOTTOM = 86;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_DIRTY = 87;
+
+/// The tab p1's gate and wall `Cancel()`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_CANCEL = 88;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_CANCEL = 89;
+
+/// The class pick: `gWorld.GetPlayer(i0)`, list p1's unit type at line i0, `gUnitClassTable[i0] != NULL`, its
+/// `mTechnology`, player p1's tech tree node i0, `gUnitClassTable[i0]`; player p1's id; class p1's
+/// `mIsGaiaPlaceable`, `mIsPlayerPlaceable`, its gate category; node p1's `mData->mKind`, `mData->mID`,
+/// `GetUnitClass(0)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_PLAYER = 90;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TYPE_AT = 91;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLASS_EXISTS = 92;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLASS_TECH = 93;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_TREE_NODE = 94;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLASS = 95;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PLAYER_ID = 96;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GAIA_PLACEABLE = 97;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_PLAYER_PLACEABLE = 98;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CLASS_IS_GATE = 99;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_NODE_KIND = 100;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_NODE_ID = 101;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_NODE_UNIT_CLASS = 102;
+
+/// The tab p1's wall: technology = i0, `Initialize(i0)`; its gate: technology = i0, wall type = i0, unit class = p2,
+/// `Initialize(i0)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_SET_TECH = 103;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_INITIALIZE = 104;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_SET_TECH = 105;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_SET_WALL_TYPE = 106;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_SET_CLASS = 107;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_INITIALIZE = 108;
+
+/// Control p1's editor's load thread `Post402(type i0, i1)`; its selected unit i0's complex unit; complex unit p1's
+/// cargo count.
+constexpr static const uint32_t EE_SCREENS_SEUNX_POST_402 = 109;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_SELECTED_COMPLEX = 110;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_CARGO_UNITS = 111;
+
+/// The mouse buttons: left just double pressed, just pressed, just unpressed, down; right just pressed, just
+/// unpressed.
+constexpr static const uint32_t EE_SCREENS_SEUNX_L_DOUBLE = 112;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_L_PRESSED = 113;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_L_RELEASED = 114;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_L_DOWN = 115;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_R_PRESSED = 116;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_R_RELEASED = 117;
+
+/// `gUnitPicker.PickUnit((f0, f1), 0)`; unit p1's `mUnitID`, its gate category, `Dereference()`;
+/// `gWorld.GetUnit(i0)`; the tab p1's gate from unit p2: technology, wall type, class; unit p1's `Kill(0, 0, 0)`;
+/// the gate's `Initialize(unit p2's player)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_PICK_UNIT = 118;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_UNIT_ID = 119;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_UNIT_IS_GATE = 120;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_UNIT_DEREFERENCE = 121;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GET_UNIT = 122;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_TECH_OF_UNIT = 123;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_WALL_OF_UNIT = 124;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_CLASS_OF_UNIT = 125;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_UNIT_KILL = 126;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_INITIALIZE_OF_UNIT = 127;
+
+/// The tab p1's gate and wall `Update((f0, f1))`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_GATE_UPDATE = 128;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_WALL_UPDATE = 129;
+
+/// The keyboard's Delete and Shift entities; entity p1 just pressed, its value nonzero.
+constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_DELETE = 130;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_SHIFT = 131;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_PRESSED = 132;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_DOWN = 133;
+
+/// `new EESEARust(kSEADeleteUnit, NULL, -1, the current player's id, i0 != 0)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_DELETE_ACTION = 134;
+
+/// The terrain type tables: their count, table i0 in the editor, table i0.
+constexpr static const uint32_t EE_SCREENS_SETNX_TT_COUNT = 0;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TT_IN_EDITOR = 1;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TT_GET = 2;
+
+/// The terrain tables: the host's list cleared, the tables' count, table i0 in the editor, pushed, the list's size,
+/// sorted by name (`EESETerrainNameLess`), its entry i0.
+constexpr static const uint32_t EE_SCREENS_SETNX_T_CLEAR = 3;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COUNT = 4;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_IN_EDITOR = 5;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_PUSH = 6;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_SIZE = 7;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_SORT = 8;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_AT = 9;
+
+/// Terrain p1's `mID`, `mColorType`, `mIsAmbientsOnly`, its unit classes' count, its preview texture into *p2,
+/// its first unit class.
+constexpr static const uint32_t EE_SCREENS_SETNX_T_ID = 10;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COLOR_TYPE = 11;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_AMBIENTS = 12;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_CLASS_COUNT = 13;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_PREVIEW = 14;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_CLASS = 15;
+
+/// String i0 into the host's text; the paint type radio (id i0, the text, index i2, checked i3, at f0, f1, on form
+/// p1); radio p1's label's background 0.4, its text transparent, yellow; radio p1 as a control.
+constexpr static const uint32_t EE_SCREENS_SETNX_STRING = 16;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_RADIO = 17;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LABEL_BG = 18;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LABEL_TRANSPARENT = 19;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LABEL_YELLOW = 20;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RADIO_CONTROL = 21;
+
+/// The type list's lines: i0 new lines, line i0's name of terrain p1[i0], its colour set i1; the list (index i0,
+/// at f0, f1, width f2, form p1); the lines cleared; its event (group p1); list p1's trigger (event p2), text
+/// transparent, yellow, selected background clear, background 0.4; added to form p1 (p2); as a control.
+constexpr static const uint32_t EE_SCREENS_SETNX_LINES_NEW = 22;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_NAME = 23;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_COLOR_SET = 24;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_LIST_NEW = 25;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINES_CLEAR = 26;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_EVENT = 27;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_TRIGGER = 28;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_EVENT_RELEASE = 29;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_TEXT_TRANSPARENT = 30;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_TEXT_YELLOW = 31;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_SELECTED_CLEAR = 32;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_BG = 33;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_ADD = 34;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_CONTROL = 35;
+
+/// The colour list's lines: i0 new lines, type table p1[i0]'s first and last colour, colour i1 pushed on line i0;
+/// the list (index i0, at f0, f1, width f2, form p1); the lines cleared; its event (group p1); list p1's trigger
+/// (event p2), `ChangeSelectionIndex(i0, false, true)`, selected background clear, background 0.4; added to form p1
+/// (p2); as a control.
+constexpr static const uint32_t EE_SCREENS_SETNX_COLORS_NEW = 36;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_FIRST_COLOR = 37;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPE_LAST_COLOR = 38;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLORS_PUSH = 39;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_LIST_NEW = 40;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLORS_CLEAR = 41;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_EVENT = 42;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_TRIGGER = 43;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_SELECT = 44;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_SELECTED_CLEAR = 45;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_BG = 46;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_ADD = 47;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_COLOR_CONTROL = 48;
+
+/// The paint control (the handles p2, index i0, form p1); control p2 added to form p1 (layer 3).
+constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_NEW = 49;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_ADD_CONTROL = 50;
+
+/// `new GEBitmap`; the preview `UIBitmap` (bitmap p2, index i0, at f0, f1, form p1); bitmap p1's `Dereference()`;
+/// the `UIBitmap` p2 added to form p1; as a control.
+constexpr static const uint32_t EE_SCREENS_SETNX_NEW_BITMAP = 51;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_UIBITMAP_NEW = 52;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_BITMAP_RELEASE = 53;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_UIBITMAP_ADD = 54;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_UIBITMAP_CONTROL = 55;
+
+/// `EELoadTerrainPreviews()`, `EEReleaseTerrainPreviews()`.
+constexpr static const uint32_t EE_SCREENS_SETNX_LOAD_PREVIEWS = 56;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RELEASE_PREVIEWS = 57;
+
+/// The colour list's and the type list's `GetCurrentSelection(*p2)` (list p1, p2 an `unsigned long`): the error.
+constexpr static const uint32_t EE_SCREENS_SETNX_COLORS_SELECTION = 58;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TYPES_SELECTION = 59;
+
+/// The type list p1's line i0's texture.
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_TEXTURE = 60;
+
+/// `gUnitClassTable[i0] != NULL`, its button's texture.
+constexpr static const uint32_t EE_SCREENS_SETNX_CLASS_EXISTS = 61;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_CLASS_BUTTON_TEXTURE = 62;
+
+/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height; the preview p1's
+/// `ComputeStretchedCoordsAndScale(its rectangle, its rectangle, f, list p0's screen)`.
+constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_TEXTURE = 63;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TEXTURE_WIDTH = 64;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_TEXTURE_HEIGHT = 65;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_STRETCH = 66;
+
+/// The preview p2's bitmap's `SetColorPerVertex` of the colour list p1's line i0's colours 0, i1, i2, i3.
+constexpr static const uint32_t EE_SCREENS_SETNX_TINT = 67;
+
+/// Form p1's load thread's `Post408(i0)`, `Post409(i0)`.
+constexpr static const uint32_t EE_SCREENS_SETNX_POST_408 = 68;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_POST_409 = 69;
+
+/// The paint control p1's `SKOP_PAINT_SET_CENTERED(i0 != 0)`; `new EESEAPaintRust(kSEAPaintTerrain, i0, i1)`,
+/// `(kSEAPaintBulldozer)`.
+constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_CENTERED = 70;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_TERRAIN = 71;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_BULLDOZER = 72;
+
+/// A brush radio (group p2's brush i0, id i1, the text, index i3, at f0, f1, form p1; checked for brush 0).
+constexpr static const uint32_t EE_SCREENS_SETNX_BRUSH_RADIO = 73;
+
+/// The colour list p1 (from 100): its base `CopyData()`, `SetCopiedHasFocus(true)`, its copied lines' count, line
+/// i0's colour count, its copy text rectangle into *p2 (a `GERectangle`), its line height; `new GERhombus`, rhombus
+/// p1's `SetRectangle(*p2)`, rhombus p2's colour of the list p1's line i0's colour i1, the list p1's draw of
+/// rhombus p2, rhombus p1 deleted; the list's base `DrawPolygons()`.
+constexpr static const uint32_t EE_SCREENS_SETNX_C_BASE_COPY = 100;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_FOCUS_ON = 101;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_COPY_COUNT = 102;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_LINE_SIZE = 103;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_COPY_RECT = 104;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_LINE_HEIGHT = 105;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RHOMBUS_NEW = 106;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RHOMBUS_RECT = 107;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_RHOMBUS_COLOR = 108;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_DRAW_RHOMBUS = 109;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RHOMBUS_DELETE = 110;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_C_BASE_DRAW = 111;
+
+/// The type list p1: its copied lines' count, copied line i0 has a texture, its `Dereference()`, cleared,
+/// `Reference()`; its base `CopyData()`, `*mCopyText = *mText`, the copied selection, `SetCopiedHasFocus(false)`,
+/// the frame flag set to i0, the copied focus colour from the focus colour, the frame flag; `new GELine` of its
+/// copied focus colour; its base `DrawPolygons()`; copied line i0's texture; its bitmap's `SetTexture(p2)`; its copy
+/// text rectangle into *p2, its line height; its bitmap stretched over *p2 from f (left, top, right, bottom), at
+/// *p2's top left, drawn; its copied selection's rectangle into *p2; line p1's start and end (f0, f1); the list's
+/// draw of line p2; line p1 deleted; `DrawScrollBarText()`, `UIControl::DrawTextA()`, `GetDrawCount()`, its copy
+/// text at (f0, f1), its text copied line i0's name, `DrawClippedText(*p2, its copy text, the list)`; its line i0
+/// has a texture, `Dereference()`, set to p2, `Reference()`.
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_COUNT = 120;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_HAS_TEXTURE = 121;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_RELEASE = 122;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_CLEAR = 123;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_REFERENCE = 124;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BASE_COPY = 125;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_TEXT = 126;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_HAS_SELECTION = 127;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_FOCUS_OFF = 128;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_SET_FRAMED = 129;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_FOCUS_COLOR = 130;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_FRAMED = 131;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_NEW = 132;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BASE_DRAW = 133;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_TEXTURE = 134;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP_TEXTURE = 135;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_RECT = 137;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_LINE_HEIGHT = 138;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_STRETCH = 139;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP_AT = 140;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DRAW_BITMAP = 141;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_SELECTED_RECT = 142;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_START = 143;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_END = 144;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DRAW_LINE = 145;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_DELETE = 146;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_SCROLL_TEXT = 147;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_CONTROL_TEXT = 148;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DRAW_COUNT = 149;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_TEXT_AT = 150;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_TEXT_NAME = 151;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DRAW_TEXT = 152;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DATA_HAS_TEXTURE = 153;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DATA_RELEASE = 154;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DATA_SET = 155;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_DATA_REFERENCE = 156;
+
+/// The list boxes' members composed here (`ee_screens_setlb_call`): the colour list's `CopyData` and
+/// `DrawPolygons`, the type list's `CopyData`, `DrawPolygons`, `DrawTextA`.
+constexpr static const uint32_t EE_SCREENS_SETLB_COLOR_COPY = 1;
+
+constexpr static const uint32_t EE_SCREENS_SETLB_COLOR_DRAW = 2;
+
+constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_COPY = 3;
+
+constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_DRAW = 4;
+
+constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_TEXT = 5;
+
 constexpr static const uint32_t EE_SCREENS_SESC_SORT = 1;
 
 constexpr static const uint32_t EE_SCREENS_SESC_MOVE_DOWN = 2;
@@ -12667,6 +13281,14 @@ void ee_screens_sefx_names(const EeScreensSeEffectScreen *screen, void *names);
 /// # Safety
 /// `screen` comes from `ee_screens_sefx_new` (or is NULL).
 void *ee_screens_sefx_handle(const EeScreensSeEffectScreen *screen, uint32_t which);
+
+/// The terrain list boxes' members (`EE_SCREENS_SETLB_*`: the colour list's `CopyData`, `DrawPolygons`; the type
+/// list's `CopyData`, `DrawPolygons`, `DrawTextA`) composed in Rust (editor_setnx.rs) over `ee_screenscpp_setnx`.
+///
+/// # Safety
+/// `list` is the live list box of the member's class (its `this`).
+int32_t ee_screens_setlb_call(uint32_t which,
+                              void *list);
 
 /// `EEUIFSETerrain`'s constructor: every control made on `form` from the control index `*index` (advanced), the
 /// lists' events over the C++ `tab`, the paint area over the form's edge `scroll` and `brushes`. Freed by
