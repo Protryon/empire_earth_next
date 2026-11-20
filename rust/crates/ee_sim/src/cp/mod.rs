@@ -21,6 +21,8 @@
 //! - `lists`: the computer player's lists (the resource centres whole, with their forwarders' PLCE records, the
 //!   favourite types' history, the units to kill, the danger zones);
 //! - `place_capture`: TEST ONLY, the PLCE and CPEV capture scopes (was EECPPlaceCapture.cpp);
+//! - `player_game`: `EEComputerPlayer`'s members in the game (the events, the tick, the start, the load and save's
+//!   C++ parts, the favourite screener, the hero count) over `ee_cp_player_host`; `player_ops`: their rules;
 //! - `ffi`: the C ABI the C++ calls (`rust/sim/cp.h`).
 
 pub mod events;
@@ -46,6 +48,9 @@ pub mod placement;
 #[cfg(test)]
 mod placement_tests;
 pub mod player;
+pub mod player_game;
+/// cbindgen:ignore
+pub mod player_ops;
 pub mod resource_center;
 #[cfg(test)]
 mod resource_center_tests;

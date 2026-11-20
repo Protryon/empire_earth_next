@@ -369,64 +369,6 @@ EECPPlacement::~EECPPlacement()
     ee_cp_placement_free(this->mRust);
 }
 
-#define EECP_CONTEXT EeCpPlaceCtx theContext = EECPPlaceContext(this->mPlayer)
-
-// the forwarders' PLCE records (TEST ONLY): a float argument's bits, a unit's id
-static long EECPBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return (long)theBits;
-}
-
-// a test's forwarder: the PLCE record of its arguments and result around the Rust call
-template <class F> static bool EECPAsk(unsigned int inKind, EEComputerPlayer* inPlayer, std::initializer_list<long> inArgs,
-    F inCall)
-{
-    EECPPlaceScope theScope(inKind, inPlayer);   // PLCE (TEST ONLY)
-    for (long theArg : inArgs)
-        theScope.I(theArg);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    bool theResult = inCall(&theContext);
-    theScope.I(theResult);
-    return theResult;
-}
-
-// a search's forwarder: the tile in and, found, out (else what the caller left there, as the original's searches did);
-// the record's found tile and, for the searches over the centres, the player's centres
-template <class F> static bool EECPSearch(unsigned int inKind, EEComputerPlayer* inPlayer, std::initializer_list<long> inArgs,
-    EETileCoordinate& ioTile, bool inCenters, F inCall)
-{
-    EECPPlaceScope theScope(inKind, inPlayer);   // PLCE (TEST ONLY)
-    for (long theArg : inArgs)
-        theScope.I(theArg);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    int32_t theTile[2] = {(int32_t)ioTile.mX, (int32_t)ioTile.mY};
-    bool theResult = inCall(&theContext, theTile);
-    if (theResult) {
-        ioTile.mX = theTile[0];
-        ioTile.mY = theTile[1];
-    }
-    theScope.I(theResult).I(theResult ? ioTile.mX : 0).I(theResult ? ioTile.mY : 0);
-    if (inCenters)
-        theScope.Centers(inPlayer);
-    return theResult;
-}
-
-#define EECP_ASK(kind, args, call) return EECPAsk(kind, this->mPlayer, args, [&](const EeCpPlaceCtx* c) { return call; })
-#define EECP_SEARCH(kind, args, tile, centers, call)                                                                    \
-    return EECPSearch(kind, this->mPlayer, args, tile, centers, [&](const EeCpPlaceCtx* c, int32_t* t) { return call; })
-#define EECP_ARGS(...) std::initializer_list<long>({__VA_ARGS__})
-
-long EECPPlacement::Restore()
-{
-    EECPPlaceScope theScope(kPlceRestore, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    long theResult = ee_cp_placement_restore(&theContext);
-    theScope.I(theResult).State(this);
-    return theResult;
-}
-
 // the town centre tile (U2DPoint's own Load and Save)
 long EECPPlacement::Load(FSFile& inFile)
 {
@@ -445,35 +387,8 @@ long EECPPlacement::Save(FSFile& outFile)
     return theResult;
 }
 
-void EECPPlacement::Reset()
-{
-    EECPPlaceScope theScope(kPlceReset, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    ee_cp_placement_reset(&theContext);
-    theScope.State(this);
-}
-
-void EECPPlacement::UnitAdded(EEComplexUnit* inUnit)
-{
-    EECPPlaceScope theScope(kPlceUnitAdded, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.CU(inUnit);
-    EECP_CONTEXT;
-    ee_cp_unit_added(&theContext, EECPHandle(static_cast<EEUnit*>(inUnit)));
-    theScope.State(this);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The free functions
-
-long EECPCountOwn(EEComputerPlayer* inPlayer, long inType)
-{
-    EECPPlaceScope theScope(kPlceCountOwn, inPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inType);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    long theResult = ee_cp_count_own(&theContext, (int32_t)inType);
-    theScope.I(theResult);
-    return theResult;
-}
 
 // the epoch's classes (the original civilization manager's GetAntiAirClass .. GetWallClass)
 #define EECP_EPOCH_CLASS(name, kind, call)                                                                              \

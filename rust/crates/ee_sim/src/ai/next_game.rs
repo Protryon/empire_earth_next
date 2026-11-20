@@ -2651,9 +2651,9 @@ pub unsafe extern "C" fn ee_ai_next_drop_ready(
 
 // the reflexes (EECPReflexes.cpp before)
 #[path = "next_reflex.rs"]
-mod reflex;
+pub mod reflex;
 
 // the stats lines, the losses' counters, the profile, the sim hash, the out-of-synch checksum and its dump
 // (EECPTrace.cpp before)
 #[path = "next_trace.rs"]
-mod trace;
+pub mod trace;

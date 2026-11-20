@@ -141,7 +141,6 @@ pub const EE_CP_CENTER_WORLD_COMPLEX: i32 = 115;
 // the player's (EEComputerPlayer.cpp; `a`, `b` units or centres)
 pub const EE_CP_PLAYER_BEHAVIOR_FLOAT: i32 = 300;
 pub const EE_CP_PLAYER_BASE_POP_LIMIT: i32 = 301;
-pub const EE_CP_PLAYER_DEATHMATCH: i32 = 302;
 pub const EE_CP_PLAYER_CHEAT_ON: i32 = 303;
 pub const EE_CP_PLAYER_NUM_TEAMS: i32 = 304;
 pub const EE_CP_PLAYER_TEAM_WONDERS: i32 = 305;
@@ -153,19 +152,12 @@ pub const EE_CP_PLAYER_POPULATION: i32 = 309;
 pub const EE_CP_PLAYER_HANDLE: i32 = 310;
 pub const EE_CP_PLAYER_PATH_AREA_ID: i32 = 311;
 pub const EE_CP_PLAYER_UNIT_CONTINENT_AT: i32 = 312;
-/// `std::sort` of the input centres by their `GetCenter`'s distance from (`v0`, `v1`) (pushed in order)
-pub const EE_CP_PLAYER_CENTERS_SORT: i32 = 322;
-/// class `v0` for favourite kind `v1` in epoch `v2`: whether it passes, its AI kind and type into `v0`, `v1`
-pub const EE_CP_PLAYER_FAVORITE_CANDIDATE: i32 = 323;
 pub const EE_CP_PLAYER_IS_EPOCH: i32 = 325;
 pub const EE_CP_PLAYER_UNIT_IS_BUILDING: i32 = 326;
-/// unit `a`'s current research, then its build queue's technologies (pushed)
-pub const EE_CP_PLAYER_UNIT_RESEARCH: i32 = 327;
 pub const EE_CP_PLAYER_UNIT_OBSOLETE: i32 = 328;
 pub const EE_CP_PLAYER_SEEN_BY: i32 = 329;
 pub const EE_CP_PLAYER_KILL: i32 = 330;
 pub const EE_CP_PLAYER_IS_TRANSPORT: i32 = 331;
-pub const EE_CP_PLAYER_CARGO: i32 = 332;
 
 // (the context's placement pointer is opaque to the C++, which only hands it back)
 #[allow(improper_ctypes)]
@@ -173,6 +165,23 @@ extern "C" {
     fn ee_cp_player_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
     fn ee_cp_place_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
     fn ee_cp_center_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
+}
+
+/// One host operation by its number's range: the player's from 300, the centres' from 100, the placement's.
+///
+/// # Safety
+/// `ctx` is a call's context; the operation's objects are live.
+pub(crate) unsafe fn host_call(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: &mut EeCpPlaceIo) -> i64 {
+    // SAFETY: the caller's contract
+    unsafe {
+        if op >= 300 {
+            ee_cp_player_host(ctx, op, a, b, io)
+        } else if op >= 100 {
+            ee_cp_center_host(ctx, op, a, b, io)
+        } else {
+            ee_cp_place_host(ctx, op, a, b, io)
+        }
+    }
 }
 
 /// Pushes a pair onto a host operation's list.
@@ -207,15 +216,7 @@ impl Game {
     }
     fn call(&mut self, op: i32, a: u64, b: u64, io: &mut EeCpPlaceIo) -> i64 {
         // SAFETY: the C++ switch reads the live objects the bodies hand it
-        unsafe {
-            if op >= 300 {
-                ee_cp_player_host(self.ctx, op, a, b, io)
-            } else if op >= 100 {
-                ee_cp_center_host(self.ctx, op, a, b, io)
-            } else {
-                ee_cp_place_host(self.ctx, op, a, b, io)
-            }
-        }
+        unsafe { host_call(self.ctx, op, a, b, io) }
     }
     fn q(&mut self, op: i32, a: u64, v: &[i64]) -> i64 {
         let mut io = Self::io();
@@ -629,7 +630,8 @@ impl PlayerHost for Game {
         self.q(EE_CP_PLAYER_BASE_POP_LIMIT, 0, &[]) as i32
     }
     fn is_deathmatch(&mut self) -> bool {
-        self.q(EE_CP_PLAYER_DEATHMATCH, 0, &[]) != 0
+        // SAFETY: the C++ caller's player
+        unsafe { super::player_game::ee_cp_pl_is_deathmatch(self.ctx().player) }
     }
     fn cheat_on(&mut self, cheat: i32) -> bool {
         self.q(EE_CP_PLAYER_CHEAT_ON, 0, &[cheat as i64]) != 0
@@ -696,7 +698,17 @@ impl PlayerHost for Game {
     fn centers_sort(&mut self, from: Tile) {
         let p = self.ctx().fields;
         let centers = self.centers();
-        let (_, order) = self.handles(EE_CP_PLAYER_CENTERS_SORT, 0, &xy(from), &centers);
+        // the original's std::sort by the centres' GetCenter (each with its PLCE record): MSVC's, the same order of ties
+        let mut order = centers.clone();
+        let ctx = self.ctx;
+        let key = |c: u64| {
+            let mut t = [0i32; 2];
+            // SAFETY: the player's listed centre
+            unsafe { ee_cp_center_get_center(ctx, c, t.as_mut_ptr()) };
+            let (dx, dy) = ((from[0] as c_long).wrapping_sub(t[0] as c_long), (from[1] as c_long).wrapping_sub(t[1] as c_long));
+            dx.wrapping_mul(dx).wrapping_add(dy.wrapping_mul(dy))
+        };
+        crate::units::msvc_sort::sort_by(&mut order, |&a, &b| key(a) < key(b));
         // SAFETY: the player's lists (the sort only read the centres)
         let l = unsafe { lists::lists(p) };
         let mut boxes: Vec<Option<Box<lists::CpCenter>>> =
@@ -707,8 +719,13 @@ impl PlayerHost for Game {
         }
     }
     fn favorite_candidate(&mut self, class: u32, kind: i32, epoch: i32) -> Option<(i32, i32)> {
-        let (r, io) = self.qf(EE_CP_PLAYER_FAVORITE_CANDIDATE, 0, 0, &[class as i64, kind as i64, epoch as i64]);
-        (r != 0).then_some((io.v[0] as i32, io.v[1] as i32))
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let c = crate::world::ClassView::by_index(&t, class as usize)?;
+        let (handle, enabled, ai_kind, unit_type) =
+            (c.handle(), crate::world_field!(c.fields(), mIsEnabled), c.ai_kind(), c.unit_type());
+        drop(t);
+        (enabled && super::player_game::favorite_screen(self.ctx(), handle, kind, epoch as i64))
+            .then_some((ai_kind as i32, unit_type as i32))
     }
     fn history_push(&mut self, unit_type: u32, epoch: i32) {
         // SAFETY: the player's lists
@@ -721,7 +738,12 @@ impl PlayerHost for Game {
         self.q(EE_CP_PLAYER_UNIT_IS_BUILDING, unit, &[]) != 0
     }
     fn unit_research(&mut self, unit: u64) -> Vec<i32> {
-        self.list(EE_CP_PLAYER_UNIT_RESEARCH, unit, &[], &[]).1.into_iter().map(|p| p[0] as i32).collect()
+        let t = unsafe { crate::world::WorldRead::begin() };
+        // SAFETY: the caller's live complex unit
+        let Some(u) = (unsafe { crate::world::UnitView::of(&t, unit) }) else { return Vec::new() };
+        let mut out = vec![u.current_research() as i32];
+        out.extend((0..u.build_queue_len()).map(|q| u.build_queue_technology(q).unwrap_or(0) as i32));
+        out
     }
     fn unit_obsolete(&mut self, unit: u64) -> bool {
         self.q(EE_CP_PLAYER_UNIT_OBSOLETE, unit, &[]) != 0
@@ -736,7 +758,10 @@ impl PlayerHost for Game {
         self.q(EE_CP_PLAYER_IS_TRANSPORT, unit, &[]) != 0
     }
     fn cargo(&mut self, unit: u64) -> Vec<u64> {
-        self.handles(EE_CP_PLAYER_CARGO, unit, &[], &[]).1
+        let t = unsafe { crate::world::WorldRead::begin() };
+        // SAFETY: the caller's live complex unit
+        unsafe { crate::world::UnitView::of(&t, unit) }
+            .map_or(Vec::new(), |u| (0..u.cargo_len()).map(|i| u.cargo_handle(i)).collect())
     }
 }
 

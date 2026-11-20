@@ -154,63 +154,10 @@ void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVicti
         ee_ai_units_on_dealt(inPlayer->mUnitsState->mRust, inPlayer, inAmount, EECPUnitsHandle(inVictim));
 }
 
-void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_damage(inPlayer->mUnitsState->mRust, inPlayer, inAttackerPlayer, inAmount, EECPUnitsHandle(inUnit));
-}
-
-void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 3, EECPUnitsHandle(inUnit));   // created
-}
-
 void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend)
 {
     if (inPlayer->mUnitsState != NULL)
         ee_ai_units_on_player(inPlayer->mUnitsState->mRust, inDefend ? 9 : 8, inPlayerID, 0, 0);
-}
-
-void EECPUnitsOnFlare(EEComputerPlayer* inPlayer, long inPlayerID, long inX, long inY)
-{
-    if (inPlayer->mUnitsState != NULL)
-        ee_ai_units_on_player(inPlayer->mUnitsState->mRust, 10, inPlayerID, inX, inY);
-}
-
-void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 4, EECPUnitsHandle(inUnit));   // built
-}
-
-void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool inSwapped)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL && !inSwapped)
-        ee_ai_units_on_taken(inPlayer->mUnitsState->mRust, inPlayer, EECPUnitsHandle(inUnit));
-}
-
-void EECPUnitsOnGoalDone(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 5, EECPUnitsHandle(inUnit));   // idle
-}
-
-void EECPUnitsOnSwapped(EEComputerPlayer* inPlayer, std::vector<EEPUnitSwap>& ioSwaps)
-{
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL)
-        return;
-    long theNow = (long)gPhysics->mGameTime;
-    for (unsigned long k = 0; k < ioSwaps.size(); k++) {
-        if (ioSwaps[k].mOld == NULL || ioSwaps[k].mNew == NULL)
-            continue;
-        if (ioSwaps[k].mOld->mPlayer != inPlayer && ioSwaps[k].mNew->mPlayer != inPlayer)
-            continue;
-        ee_ai_units_on_swap(s->mRust, (long)ioSwaps[k].mOld->mUnitID, (long)ioSwaps[k].mNew->mUnitID,
-            ioSwaps[k].mNew->mPlayer == inPlayer, ioSwaps[k].mNew->mUnitClass->mUnitType, theNow);
-    }
-    ee_ai_units_forward_expire(s->mRust, theNow);
 }
 
 // ---------------------------------------------------------------------------------------------------------------

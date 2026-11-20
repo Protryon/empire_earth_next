@@ -388,8 +388,6 @@ constexpr static const int32_t EE_CP_PLAYER_BEHAVIOR_FLOAT = 300;
 
 constexpr static const int32_t EE_CP_PLAYER_BASE_POP_LIMIT = 301;
 
-constexpr static const int32_t EE_CP_PLAYER_DEATHMATCH = 302;
-
 constexpr static const int32_t EE_CP_PLAYER_CHEAT_ON = 303;
 
 constexpr static const int32_t EE_CP_PLAYER_NUM_TEAMS = 304;
@@ -411,18 +409,9 @@ constexpr static const int32_t EE_CP_PLAYER_PATH_AREA_ID = 311;
 
 constexpr static const int32_t EE_CP_PLAYER_UNIT_CONTINENT_AT = 312;
 
-/// `std::sort` of the input centres by their `GetCenter`'s distance from (`v0`, `v1`) (pushed in order)
-constexpr static const int32_t EE_CP_PLAYER_CENTERS_SORT = 322;
-
-/// class `v0` for favourite kind `v1` in epoch `v2`: whether it passes, its AI kind and type into `v0`, `v1`
-constexpr static const int32_t EE_CP_PLAYER_FAVORITE_CANDIDATE = 323;
-
 constexpr static const int32_t EE_CP_PLAYER_IS_EPOCH = 325;
 
 constexpr static const int32_t EE_CP_PLAYER_UNIT_IS_BUILDING = 326;
-
-/// unit `a`'s current research, then its build queue's technologies (pushed)
-constexpr static const int32_t EE_CP_PLAYER_UNIT_RESEARCH = 327;
 
 constexpr static const int32_t EE_CP_PLAYER_UNIT_OBSOLETE = 328;
 
@@ -432,13 +421,223 @@ constexpr static const int32_t EE_CP_PLAYER_KILL = 330;
 
 constexpr static const int32_t EE_CP_PLAYER_IS_TRANSPORT = 331;
 
-constexpr static const int32_t EE_CP_PLAYER_CARGO = 332;
-
 constexpr static const unsigned long EASY = 0;
 
 constexpr static const unsigned long MEDIUM = 1;
 
 constexpr static const unsigned long HARD = 2;
+
+/// `EEPlayer::AddResource(v0, v1)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_ADD_RESOURCE = 340;
+
+/// the player's `mNextState` (0: none); `EECPNextGetState(player)` (made when missing)
+constexpr static const int32_t EE_CP_PLAYER_NEXT_STATE = 341;
+
+constexpr static const int32_t EE_CP_PLAYER_NEXT_STATE_GET = 342;
+
+/// `EECPUnitsRust(player)` (0: no units state)
+constexpr static const int32_t EE_CP_PLAYER_UNITS_STATE = 343;
+
+/// `EEPlayer::CanProduce(v0, v1, v2, v3, v4, (UWideString*)a)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_CAN_PRODUCE = 344;
+
+/// `EEPlayer::UnitCompleted(a)`, `UnitPlaced(a)`, `UnitTaken(a, v0)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_UNIT_COMPLETED = 345;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_UNIT_PLACED = 346;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_UNIT_TAKEN = 347;
+
+/// `EEPlayer::DamageTaken(v0, v1, a)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_DAMAGE_TAKEN = 348;
+
+/// `EECPNavalFleeOn`, `EECPMilitiaOn`, `gCPTraceOn`, `EECPExperiment(player, (const char*)a)`
+constexpr static const int32_t EE_CP_PLAYER_NAVAL_FLEE_ON = 349;
+
+constexpr static const int32_t EE_CP_PLAYER_MILITIA_ON = 350;
+
+constexpr static const int32_t EE_CP_PLAYER_TRACE_ON = 351;
+
+constexpr static const int32_t EE_CP_PLAYER_EXPERIMENT = 352;
+
+/// `IsAlly((EEPlayer*)a)`
+constexpr static const int32_t EE_CP_PLAYER_IS_ALLY = 353;
+
+/// the epoch `v0`'s kind-7 media loaded (`v1` 1) or unloaded; `EEPlayer::EpochMediaLoaded(v0)`, `..Unloaded(v0)`
+constexpr static const int32_t EE_CP_PLAYER_EPOCH_MEDIA = 354;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_EPOCH_MEDIA_LOADED = 355;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_EPOCH_MEDIA_UNLOADED = 356;
+
+/// the epoch `v0`'s `ResearchKind(7, true)` (an epoch node)
+constexpr static const int32_t EE_CP_PLAYER_EPOCH_RESEARCH = 357;
+
+/// `mCivilizationFile`'s text; the scratch name set to `(const char*)a`, applied (`EEApplyCivilizationFile`), stored
+constexpr static const int32_t EE_CP_PLAYER_CIV_NAME = 358;
+
+constexpr static const int32_t EE_CP_PLAYER_CIV_SET_NAME = 359;
+
+constexpr static const int32_t EE_CP_PLAYER_CIV_APPLY = 360;
+
+constexpr static const int32_t EE_CP_PLAYER_CIV_STORE = 361;
+
+/// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
+constexpr static const int32_t EE_CP_PLAYER_SPACE_MAP = 362;
+
+/// `EEPlayer::UnitsSwapped(*(std::vector<EEPUnitSwap>*)a)`; `EEPlayer::Clear()`
+constexpr static const int32_t EE_CP_PLAYER_BASE_UNITS_SWAPPED = 363;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_CLEAR = 364;
+
+/// `EEPlayer::RepairPointers(v0, v1)`; `gDeferComputerPlayerRestore`
+constexpr static const int32_t EE_CP_PLAYER_BASE_REPAIR = 365;
+
+constexpr static const int32_t EE_CP_PLAYER_DEFER_RESTORE = 366;
+
+/// unit `a`'s class `CanMoveOnTerrain(a, v0)`; `AddStrandedUnit(a)`
+constexpr static const int32_t EE_CP_PLAYER_CAN_MOVE_ON = 367;
+
+constexpr static const int32_t EE_CP_PLAYER_ADD_STRANDED = 368;
+
+/// unit `a`'s `QueueGoal(NewLocation(f0, f1, f2, false, true, false, 0, false, false), 0)`
+constexpr static const int32_t EE_CP_PLAYER_QUEUE_LOCATION = 369;
+
+/// `DetachUnitFromAI(a)` (the virtual)
+constexpr static const int32_t EE_CP_PLAYER_DETACH = 370;
+
+/// the tech tree's current epoch's `mCurrentSOL = 0`; `EEPlayer::EpochReached(v0)`
+constexpr static const int32_t EE_CP_PLAYER_RESET_SOL = 371;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_EPOCH_REACHED = 372;
+
+/// `mEpochEnd - mEpochStart + 1`; `gPhysics->GetRandom(v0, v1)`
+constexpr static const int32_t EE_CP_PLAYER_EPOCH_SPAN = 373;
+
+constexpr static const int32_t EE_CP_PLAYER_RANDOM_RANGE = 374;
+
+/// `EEPlayer::Load(v0, v1, *(FSFile*)a)`, `Save(..)`; the placement's `Load(*(FSFile*)a)`, `Save(..)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_LOAD = 375;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_SAVE = 376;
+
+constexpr static const int32_t EE_CP_PLAYER_PLACEMENT_LOAD = 377;
+
+constexpr static const int32_t EE_CP_PLAYER_PLACEMENT_SAVE = 378;
+
+/// `&EESaveFilePrimitive`
+constexpr static const int32_t EE_CP_PLAYER_SAVE_PRIMITIVE = 379;
+
+/// `EEEpochCount()`
+constexpr static const int32_t EE_CP_PLAYER_EPOCH_COUNT = 380;
+
+/// `EEPlayer::TakeResource(v0, v1)`; `Pay((EETechnology*)a, v0, f0)`; `PayImprovement((EEUnitClass*)a, v0)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_TAKE_RESOURCE = 382;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_PAY = 383;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_PAY_IMPROVEMENT = 384;
+
+/// node `a`'s `mData->mID` (-1: no data); `mData->mUnitClass`
+constexpr static const int32_t EE_CP_PLAYER_TECH_ID = 385;
+
+constexpr static const int32_t EE_CP_PLAYER_TECH_UNIT_CLASS = 386;
+
+/// class `a`'s `IsBuilding()`, `IsTransport()`, `IsDropSite()`, `IsPriest()`, `FliesOver()`
+constexpr static const int32_t EE_CP_PLAYER_CLASS_IS_BUILDING = 387;
+
+constexpr static const int32_t EE_CP_PLAYER_CLASS_IS_TRANSPORT = 388;
+
+constexpr static const int32_t EE_CP_PLAYER_CLASS_IS_DROP_SITE = 389;
+
+constexpr static const int32_t EE_CP_PLAYER_CLASS_IS_PRIEST = 390;
+
+constexpr static const int32_t EE_CP_PLAYER_CLASS_FLIES_OVER = 391;
+
+/// `EEPlayer::GetPopulationLimit(v0)`, `EEPlayer::CanAfford((EETechTreeNode*)a, v0, v1)`
+constexpr static const int32_t EE_CP_PLAYER_BASE_POP_LIMIT_OF = 392;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_CAN_AFFORD = 393;
+
+/// `gWorld.mGameOptions.mResources`, `mIsScenarioGame`, `gGameOptions.mLoadType`
+constexpr static const int32_t EE_CP_PLAYER_GAME_RESOURCES = 394;
+
+constexpr static const int32_t EE_CP_PLAYER_SCENARIO_GAME = 395;
+
+constexpr static const int32_t EE_CP_PLAYER_LOAD_TYPE = 396;
+
+/// `gWorld.mMap->ExploreUnseen(player)`; the start's trace line
+constexpr static const int32_t EE_CP_PLAYER_EXPLORE_UNSEEN = 397;
+
+constexpr static const int32_t EE_CP_PLAYER_TRACE_START = 398;
+
+/// `gCPTraceManager` set to `(const char*)a` -> the one before
+constexpr static const int32_t EE_CP_PLAYER_TRACE_MANAGER = 399;
+
+/// `new EECPPlacement(player)` into `mPlacement`; `delete mPlacement`; `mComputerPlayer = player`
+constexpr static const int32_t EE_CP_PLAYER_NEW_PLACEMENT = 400;
+
+constexpr static const int32_t EE_CP_PLAYER_DELETE_PLACEMENT = 401;
+
+constexpr static const int32_t EE_CP_PLAYER_SET_SELF = 402;
+
+/// `gCPBehaviors`; `EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty)`
+constexpr static const int32_t EE_CP_PLAYER_BEHAVIORS = 403;
+
+constexpr static const int32_t EE_CP_PLAYER_AI_LEVEL = 404;
+
+/// `EECPNextDeleteState(player)`, `EECPUnitsDelete(player)`
+constexpr static const int32_t EE_CP_PLAYER_NEXT_DELETE = 405;
+
+constexpr static const int32_t EE_CP_PLAYER_UNITS_DELETE = 406;
+
+/// unit `a`'s goal queue 0's size; `GetGoalState()`'s kind (-1: none); `IsRepairable()`
+constexpr static const int32_t EE_CP_PLAYER_GOAL_COUNT = 407;
+
+constexpr static const int32_t EE_CP_PLAYER_GOAL_STATE_KIND = 408;
+
+constexpr static const int32_t EE_CP_PLAYER_REPAIRABLE = 409;
+
+/// unit `a`'s `ClearGoalQueue(0)`; `StartAction(v0)`; `mUnitClass->ActionChanged(a)`; `GetActiveGroup()->RemoveUnit(a)`
+constexpr static const int32_t EE_CP_PLAYER_CLEAR_GOALS = 410;
+
+constexpr static const int32_t EE_CP_PLAYER_START_ACTION = 411;
+
+constexpr static const int32_t EE_CP_PLAYER_ACTION_CHANGED = 412;
+
+constexpr static const int32_t EE_CP_PLAYER_GROUP_REMOVE = 413;
+
+/// the load goal `b`'s `GetNumLoadUnits()`, `HasLoadUnit(a)`, `EvaluateCondition(a, v0)`, its container tile's x, y
+constexpr static const int32_t EE_CP_PLAYER_LOAD_UNITS = 414;
+
+constexpr static const int32_t EE_CP_PLAYER_HAS_LOAD_UNIT = 415;
+
+constexpr static const int32_t EE_CP_PLAYER_GOAL_CONDITION = 416;
+
+constexpr static const int32_t EE_CP_PLAYER_LOAD_TILE_X = 417;
+
+constexpr static const int32_t EE_CP_PLAYER_LOAD_TILE_Y = 418;
+
+/// unit `a`'s `UnloadCargoAtTile(v0, v1, true)`
+constexpr static const int32_t EE_CP_PLAYER_UNLOAD_AT = 419;
+
+/// a new unload goal of `a` to (v0, v1); the goal `b`'s `CanUnloadAtDestination()`; unit `a`'s `QueueGoal(b, 0)`
+constexpr static const int32_t EE_CP_PLAYER_NEW_UNLOAD = 422;
+
+constexpr static const int32_t EE_CP_PLAYER_CAN_UNLOAD = 423;
+
+constexpr static const int32_t EE_CP_PLAYER_QUEUE_GOAL = 424;
+
+/// `gUnitSetManager.GetSet(v0)->IsEmpty()`, `->Contains(v1)`
+constexpr static const int32_t EE_CP_PLAYER_SET_EMPTY = 425;
+
+constexpr static const int32_t EE_CP_PLAYER_SET_HAS = 426;
+
+/// node `v0`'s `GetIsObsolete()` (the virtual)
+constexpr static const int32_t EE_CP_PLAYER_NODE_OBSOLETE = 427;
+
+/// `gPhysics->mGameTime`
+constexpr static const int32_t EE_CP_PLAYER_GAME_TIME = 428;
 
 /// `mPlacement->Load(file)` (the town centre tile): its result.
 constexpr static const int32_t EE_CP_SAVE_PLACEMENT_LOAD = 401;
@@ -1111,6 +1310,12 @@ struct EeCpPlaceResult {
   int32_t x;
   int32_t y;
   int32_t gap;
+};
+
+/// One `EEPUnitSwap` (`mOld`, `mNew`).
+struct EeCpUnitSwap {
+  uint64_t old;
+  uint64_t new_;
 };
 
 /// One host operation's values.
@@ -2013,6 +2218,305 @@ int32_t ee_cp_pending_epoch(const EeCpPlaceCtx *ctx);
 /// # Safety
 /// As [`ee_cp_work_out_population`].
 bool ee_cp_avoids_enemies(const EeCpPlaceCtx *ctx, uint64_t unit);
+
+/// `Init` (both constructors): the record's tuning values, the lists, the placement, `mComputerPlayer`.
+///
+/// # Safety
+/// `player` is the `EEComputerPlayer` being constructed (its `EEPlayer` base made, `mPlacement` null).
+void ee_cp_pl_init(uint64_t player);
+
+/// The destructor: the units to kill dereferenced, the centres deleted, the lists dropped; the placement and the
+/// engines' states deleted.
+///
+/// # Safety
+/// `player` is the `EEComputerPlayer` being destroyed.
+void ee_cp_pl_destroy(uint64_t player);
+
+/// `SetCombatState`: a new state clears the next enable time.
+///
+/// # Safety
+/// `player` is a live computer player.
+void ee_cp_pl_set_combat_state(uint64_t player, unsigned long state);
+
+/// `SetCitizenPercentage`.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_set_citizen_percentage(uint64_t player, float value);
+
+/// `SetNextIslandExpansionTime`: the difficulty's island timer (minutes) from now.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_set_next_island_expansion_time(uint64_t player);
+
+/// `SetNextAttackTime`.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_set_next_attack_time(uint64_t player, unsigned long time);
+
+/// `IsDeathmatch`: a deathmatch game (resources 4, not a scenario).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+bool ee_cp_pl_is_deathmatch(uint64_t player);
+
+/// `DetachUnitFromAI`: the unit marked detached, its AI state 290008.
+///
+/// # Safety
+/// `unit` is a live complex unit.
+void ee_cp_pl_detach_unit(uint64_t unit);
+
+/// `AddResource`: the player's, the trace's income line, the next engine's view.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_add_resource(uint64_t player, long index, long amount);
+
+/// `TakeResource`: positive amounts only.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_take_resource(uint64_t player, long index, long amount);
+
+/// `WorkOutPopulation`.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_work_out_population(uint64_t player);
+
+/// `Regroup`, `UpdateGroups` (`which` 0, 1).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_regroup(uint64_t player, uint32_t which);
+
+/// `RefreshResourceCenters`: a regroup when there is no centre, else the groups updated; a regroup again when none
+/// is left (RefreshTownGroups is empty since stage 5).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_refresh_resource_centers(uint64_t player);
+
+/// `GetPopulationLimit`: EEPlayer's when ignoring the others, else the cap (worked out first when unset and
+/// inactive).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+long ee_cp_pl_population_limit(uint64_t player,
+                               long arg);
+
+/// `EECPPendingEpoch` with its CPEV scope.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+long ee_cp_pl_pending_epoch(uint64_t player);
+
+/// `AvoidsEnemies` with its CPEV scope.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `unit` is a live complex unit.
+bool ee_cp_pl_avoids_enemies(uint64_t player, uint64_t unit);
+
+/// `CanAfford` (`EECPNextCanAfford`): an epoch is free with the epochs cheat, else EEPlayer's check.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `node` is 0 or a live tech node.
+bool ee_cp_pl_can_afford(uint64_t player,
+                         uint64_t node,
+                         long unit_type,
+                         long count);
+
+/// `CanProduce`: an epoch technology always; else EEPlayer's answer, refusing a missing node or one of kind 5.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `reason` is null or a live `UWideString`.
+bool ee_cp_pl_can_produce(uint64_t player,
+                          long tech,
+                          long class_,
+                          long count,
+                          bool check_cost,
+                          long wonder_mode,
+                          uint64_t reason);
+
+/// `UnitPlaced`: the player's, the script's event, the placement while active.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `unit` is a live complex unit.
+void ee_cp_pl_unit_placed(uint64_t player, uint64_t unit);
+
+/// `UnitCompleted`: the player's, the script's event, a land building offered to the centres.
+///
+/// # Safety
+/// As [`ee_cp_pl_unit_placed`].
+void ee_cp_pl_unit_completed(uint64_t player, uint64_t unit);
+
+/// `UnitTaken`: the player's, the script's, the traces, the next engine's losses, the centres' release.
+///
+/// # Safety
+/// As [`ee_cp_pl_unit_placed`].
+void ee_cp_pl_unit_taken(uint64_t player,
+                         uint64_t unit,
+                         bool swapped);
+
+/// `UnitsSwapped`: the script's held set and ids follow the new units; a replacing drop site is offered to the
+/// centres; then the player's.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `swaps` holds `count` swaps of the vector `vector`.
+void ee_cp_pl_units_swapped(uint64_t player,
+                            const EeCpUnitSwap *swaps,
+                            size_t count,
+                            uint64_t vector);
+
+/// `UnitStranded`: the unit referenced and queued to be killed at the next update.
+///
+/// # Safety
+/// As [`ee_cp_pl_unit_placed`].
+void ee_cp_pl_unit_stranded(uint64_t player, uint64_t unit);
+
+/// `FlareReceived`: the seat's Lua AI gets the flare (not in observer mode).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `from` is 0 or a live player.
+void ee_cp_pl_flare(uint64_t player, uint64_t from, long x, long y);
+
+/// `DamageTaken`: the player's; the time; the script's event; the building and citizen flags; the naval flee and
+/// the danger zones' reflexes.
+///
+/// # Safety
+/// As [`ee_cp_pl_unit_placed`] (`unit` a live unit).
+void ee_cp_pl_damage_taken(uint64_t player,
+                           long attacker,
+                           long amount,
+                           uint64_t unit);
+
+/// `SetActive`: turning on hands the player's units to the placement.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_set_active(uint64_t player, bool active);
+
+/// `PayImprovement`: EEPlayer's (the classic's ledger is gone since stage 6).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `class` is 0 or a live class.
+void ee_cp_pl_pay_improvement(uint64_t player, uint64_t class_, long improvement);
+
+/// `Pay`: epoch advances are free with the epochs cheat; with the trace, what the payment bought (TEST ONLY).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `tech` is a live technology.
+void ee_cp_pl_pay(uint64_t player,
+                  uint64_t tech,
+                  long unit_type,
+                  float fraction);
+
+/// `UnitGoalDone`: transports idled (empty damaged ones sent home), the script's event, a detached unit given back,
+/// nearly idle units dropped from their group.
+///
+/// # Safety
+/// As [`ee_cp_pl_unit_placed`].
+void ee_cp_pl_unit_goal_done(uint64_t player,
+                             uint64_t unit);
+
+/// `EnterEpoch`: the epoch's kind-7 technologies, the four favourites again and, outside a load, the retired units.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_enter_epoch(uint64_t player,
+                          long epoch);
+
+/// `EpochReached`: the reached epoch's SOL count starts over, a real epoch entered, then the player's.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_epoch_reached(uint64_t player,
+                            long epoch);
+
+/// `EpochMediaLoaded` (`loaded`) and `EpochMediaUnloaded`: a real epoch's kind-7 media, then the player's.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_epoch_media(uint64_t player,
+                          long epoch,
+                          bool loaded);
+
+/// `Update`: the start at the first call (the script, the reveal cheat, the trace line, the island timer, the
+/// centres, the civilization, the extra resources), the next engine's tick, then the stranded units killed.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_update(uint64_t player,
+                     unsigned long time);
+
+/// `Clear`: the player's, the centres deleted, not started, the placement reset, no danger zones.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+void ee_cp_pl_clear(uint64_t player);
+
+/// `RepairPointers`: the player's, then the managers' restore (deferred while EEWorld::CreatePlayers repairs every
+/// player of a 0.260-or-later save).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+long ee_cp_pl_repair_pointers(uint64_t player,
+                              unsigned long major,
+                              unsigned long minor);
+
+/// `EECPRestoreDeferredManagers`: the deferred players' managers restored in their repair order.
+///
+/// # Safety
+/// The deferred players are live.
+void ee_cp_pl_restore_deferred(unsigned long major, unsigned long minor);
+
+/// `Save`: the player's, then ee_sim::cp::save's block.
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`]; `file` is a live `FSFile`.
+long ee_cp_pl_save(uint64_t player, unsigned long major, unsigned long minor, uint64_t file);
+
+/// `Load`: the player's, then ee_sim::cp::save's block; the favourites and their history and the running values
+/// put back at the first tick (the load's EnterEpoch picks new favourites after this).
+///
+/// # Safety
+/// As [`ee_cp_pl_save`].
+long ee_cp_pl_load(uint64_t player,
+                   unsigned long major,
+                   unsigned long minor,
+                   uint64_t file);
+
+/// The experiments' timers' and the resource state's blocks (EECPSaveExperimentTimers .. EECPLoadResourceState):
+/// `what` 0 saves the timers, 1 loads them, 2 saves the resource state, 3 loads it; `player` is any computer
+/// player's handle for the host (the after-load fixups), 0 when there is none.
+///
+/// # Safety
+/// `file` is a live `FSFile`; `player` is 0 or a live computer player.
+long ee_cp_pl_state_block(uint64_t file,
+                          uint32_t what,
+                          EeUnitsPlayerSaveFn primitive);
+
+/// `EEAfterLoad([f, b]() { f(b); })` (EEComputerPlayer.cpp)
+extern void ee_cp_after_load(void (*f)(uint64_t), uint64_t b);
+
+/// `gWorld.mPlayers[id]`'s `mComputerPlayer` (0: none or past the players)
+extern uint64_t ee_cp_computer_at(uint32_t id);
+
+/// `GetHeroCount`: the player's heroes by class (`by_class`) plus what its land buildings make (`requests`).
+///
+/// # Safety
+/// As [`ee_cp_pl_set_combat_state`].
+long ee_cp_pl_hero_count(uint64_t player,
+                         bool by_class,
+                         bool requests);
+
+/// `EETechTreeNode::GetUnitClass(i)`: the node's unit class `i`, or its default class past the end.
+///
+/// # Safety
+/// `node` is a live tech node.
+long ee_cp_node_unit_class(uint64_t node, unsigned long i);
 
 /// The town's world (EETown.cpp): `town` the `EETown*`.
 extern int64_t ee_cp_town_host(void *town, int32_t op, uint64_t a, uint64_t b, TownIo *io);

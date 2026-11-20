@@ -31,7 +31,6 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EERules.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEUnitVectorItem.h"

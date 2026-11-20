@@ -142,53 +142,6 @@ extern "C" void ee_cp_engine_debug_out(const char* inText)
     ESDebugOut("%s", inText);
 }
 
-// EEComputerPlayer::CanAfford: the plain check (EEPlayer::CanAfford), an epoch free with the epochs cheat (stage 6: the
-// strategy's reserve is the Lua verbs' own check, data/ai/lib/verbs.lua)
-bool EECPNextCanAfford(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inUnitType, long inCount)
-{
-    bool theEpoch = inNode != NULL && inNode->mData != NULL && EEIsEpochID(inNode->mData->mID);
-    if (theEpoch && inPlayer->mTechnologies != NULL && EECPCheatOn(inPlayer, kAICheatEpochs))
-        return true;
-    return inPlayer->EEPlayer::CanAfford(inNode, inUnitType, inCount);
-}
-
-void EECPNextIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
-{
-    if (inPlayer->mNextState != NULL)
-        ee_ai_next_income(inPlayer->mNextState, inResource - kResourceFood, inAmount);
-}
-
-void EECPNextEventAdd(const EEComputerPlayer* inPlayer, long inKind, long inType, long inCount)
-{
-    if (inPlayer->mNextState != NULL)
-        ee_ai_next_event_add(inPlayer->mNextState, inKind, inType, inCount);
-}
-
-// the next engine's tick: the bookkeeping the classic tick does first (EEComputerPlayer::Update): new units into
-// resource centres, the combat state's decay and the population cap (WorkOutPopulation; GetPopulationLimit reads it).
-// EnableManagers does not run: its flags gate only classic decisions. Then the engine (ee_ai_next_update): the
-// reflexes' danger zones, the army's scan, one strategy step on a fresh view.
-void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
-{
-    EECPNextGetState(inPlayer);
-    if (inPlayer->mPlacement == NULL || inPlayer->mTechnologies == NULL)
-        return;
-    if (inPlayer->mRegroupPending) {
-        inPlayer->UpdateGroups();
-        inPlayer->mRegroupPending = false;
-    }
-    if (inPlayer->mCombatState == 2 && inPlayer->mNumAttacks == 0 && inTime - inPlayer->mLastDamagedTime > 60000) {
-        inPlayer->SetCombatState(1);
-        inPlayer->mBuildingDamaged = false;
-        inPlayer->mCitizenDamaged = false;
-    }
-    if (inTime >= (unsigned long)inPlayer->mNextPopulationTime) {
-        inPlayer->WorkOutPopulation();
-        inPlayer->mNextPopulationTime = inTime + 60000;
-    }
-    ee_ai_next_update(inPlayer, inTime);
-}
-
 bool EECPNextPrepare(EEComputerPlayer* inPlayer)
 {
     return ee_ai_next_prepare(inPlayer);
@@ -251,32 +204,6 @@ long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inN
 long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCause)
 {
     return ee_ai_next_site_blocked(inPlayer, EECPNextHandle(inUnit), outCause);
-}
-
-void EECPNextTraceHit(EEComputerPlayer* inPlayer, long inAttacker, EEUnit* inUnit)
-{
-    ee_ai_next_trace_hit(inPlayer, inAttacker, EECPNextHandle(inUnit));
-}
-
-void EECPNextTraceDeath(EEComputerPlayer* inPlayer, EEUnit* inUnit)
-{
-    ee_ai_next_trace_death(inPlayer, EECPNextHandle(inUnit));
-}
-
-// the reflexes (ee/EECPReflexes.h; ee_ai next_reflex.rs)
-void EECPRMNoteDanger(EEComputerPlayer* inPlayer, EEUnit* inCitizen, unsigned long inAttacker)
-{
-    ee_ai_next_note_danger(inPlayer, EECPNextHandle(inCitizen), inAttacker);
-}
-
-void EECPRMNavalFlee(EEComputerPlayer* inPlayer, EEUnit* inVictim, EEComplexUnit* inAttacker)
-{
-    ee_ai_next_naval_flee(inPlayer, EECPNextHandle(inVictim), EECPNextHandle(inAttacker));
-}
-
-void EECPRMFleeRaids(EEComputerPlayer* inPlayer)
-{
-    ee_ai_next_flee_raids(inPlayer);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
