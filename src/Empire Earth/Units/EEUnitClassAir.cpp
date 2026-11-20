@@ -23,6 +23,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitClassKinds.h"
+#include "ee/EECombatGoals.h"
 
 // ---- EEUCLandable.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The unit class of the
@@ -148,7 +149,7 @@ void EEUnitClass::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
         theUnit = theAttack->GetAttackTarget();
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
         if (inUnit->mUnitClass->mProjectileClass != NULL)
-            EEFindDropLocation(inUnit, &theUnit, &theTarget, NULL);
+            theUnit = EECombatFindDropLocation(inUnit, NULL, theTarget);
         else if (theComplex != NULL) {
             theTarget.SetX(theComplex->mPhysicalModel.GetLocation().GetX());
             theTarget.SetY(theComplex->mPhysicalModel.GetLocation().GetY());
@@ -299,7 +300,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     case EE_UNITS_ACT_QUEUE_LANDING:
         return (int64_t)ee_units_atc_queue_request(theAirTraffic, inUnit->mHomeBase, inUnit, 1);
     case EE_UNITS_ACT_BOMBER_GROUND_GOAL:
-        EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
+        theEnemy = EECombatFindDropLocation(inUnit, NULL, theTarget);
         inUnit->SetGoal(EEUGRust::NewAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
         break;
     case EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT:
@@ -316,12 +317,12 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         break;
     case EE_UNITS_ACT_LANDABLE_PATH:
         if (theGoal->mKind == kGoalAttackUnit) {
-            EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
+            theEnemy = EECombatFindDropLocation(inUnit, NULL, theTarget);
             EEComplexUnit* theComplex = theEnemy->mComplexUnit;
             if (theComplex != NULL && (theComplex->mVelocity < -0.0001f || theComplex->mVelocity > 0.0001f)) {
                 float theRange = inUnit->GetStats()->mRange;
                 float theRange2 = theRange;
-                if (EEGetHitDistanceSquared(inUnit, theEnemy, -10000.0f, -10000.0f) > theRange * theRange2)
+                if (EECombatHitDistanceSquared(inUnit, theEnemy, -10000.0f, -10000.0f) > theRange * theRange2)
                     theGoal->GetDestination(inUnit, theTarget);
             }
         } else {
@@ -390,7 +391,7 @@ bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
         theOffset.SetY(theStats->GetScale() * theOffset.GetY());
         theOffset.SetZ(theStats->GetScale() * theOffset.GetZ());
         theTransformation.Apply(theOffset, theStart);
-        EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
+        theEnemy = EECombatFindDropLocation(inUnit, NULL, theTarget);
         float theReach = inUnit->GetStats()->mAreaEffect;
         if (theEnemy != NULL && theEnemy->mComplexUnit != NULL &&
             (theEnemy->mComplexUnit->mVelocity < -0.0001f || theEnemy->mComplexUnit->mVelocity > 0.0001f) && theReach > 0.5f) {
@@ -665,10 +666,10 @@ void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
     EEUnitGoal* theGoal = inUnit->mGoalState;
     if (theGoal->mKind == kGoalAttackUnit) {
         EEUnit* theUnit;
-        EEFindDropLocation(inUnit, &theUnit, &theTarget, NULL);
+        theUnit = EECombatFindDropLocation(inUnit, NULL, theTarget);
         float theRange = inUnit->mStats->mRange;
         float theRange2 = theRange;
-        if (EEGetHitDistanceSquared(inUnit, theUnit, -10000.0f, -10000.0f) > theRange * theRange2)
+        if (EECombatHitDistanceSquared(inUnit, theUnit, -10000.0f, -10000.0f) > theRange * theRange2)
             theGoal->GetDestination(inUnit, theTarget);
     } else
         theGoal->GetDestination(inUnit, theTarget);
@@ -744,7 +745,7 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
     EEUnit* theUnit;
     EEUnitGoal* theGoal = inUnit->mGoalState;
     if (theGoal->mKind == kGoalAttackUnit) {
-        EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
+        theUnit = EECombatFindDropLocation(inUnit, NULL, theEnemy);
         ee_units_uu_aim_point((uint64_t)(uintptr_t)inUnit, (const float(*)[3])&theEnemy.mX, (float(*)[3])&theTarget.mX);
     } else
         theGoal->GetDestination(inUnit, theTarget);

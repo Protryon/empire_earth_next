@@ -442,6 +442,8 @@ void EEUIFMainGame::Open()
 #include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIEChatLogEvents.h"
+#include "ee/EECombatGoals.h"
+#include "rust/sim/units.h"
 
 static_assert(EE_SCREENS_MF_CTL_WIN_LOSE == kMainGameWinLose && EE_SCREENS_MF_CTL_CANCEL_UI_MODE == kMainGameCancelUIMode &&
                   EE_SCREENS_MF_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_MF_SOUND_BUTTON2 == kSoundButton2 && EE_SCREENS_MF_CTL_POPULATION == kMainGamePopulation &&
@@ -517,7 +519,7 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
         switch (inA) {
         case EE_SCREENS_MF_UNIT_HOSTILE_SEEN:
             return thePlayer != thePicked->mPlayer && thePicked->mPlayer->mEnemies[thePlayer->mPlayerID] &&
-                   EEIsSeenBy(static_cast<EEComplexUnit*>(thePicked), thePlayer, true);
+                   EECombatIsSeenBy(static_cast<EEComplexUnit*>(thePicked), thePlayer, true);
         case EE_SCREENS_MF_UNIT_CAN_BE_ATTACKED: return thePicked->GetUnitClass()->CanBeAttacked();
         case EE_SCREENS_MF_UNIT_IN_WONDER_SET:
             return gUnitSetManager.Contains(theComplex->GetUnitClass()->GetUnitType(), theFirst->mStats->mWonderUnitSet);
@@ -1027,12 +1029,12 @@ extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t
         theTarget->Dereference();
         return 0;
     case EE_SCREENS_CURSOR_OP_SEEN:
-        return EEIsSeenBy(theTarget, theRead.mPlayer, true);
+        return EECombatIsSeenBy(theTarget, theRead.mPlayer, true);
     case EE_SCREENS_CURSOR_OP_T_DISABLED:
         return theTarget->mTileNode != NULL && theTarget->mComplexUnit->mIsDisabled &&
                !theTarget->mComplexUnit->IsProtected();
     case EE_SCREENS_CURSOR_OP_T_TARGETABLE:
-        return EEUUGetIsUnitClassTargetable(NULL, theTarget->mUnitClass);
+        return ee_units_uu_targetable(0, (uint64_t)(uintptr_t)theTarget->mUnitClass, 0);
     case EE_SCREENS_CURSOR_OP_AIM: {
         // EEGetAttackRangeKind's aim: the model's default point scaled and placed, else the tile's centre
         GE3DPoint thePoint, theAim;

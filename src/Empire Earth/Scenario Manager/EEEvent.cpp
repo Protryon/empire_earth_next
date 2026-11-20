@@ -19,6 +19,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
+#include "rust/sim/units.h"
 
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
 public:
@@ -345,7 +346,6 @@ long SetEventUnitSound(EEEventEffect* inEffect, long inPlayerIndex, long inID, E
 }
 
 void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology);  // 0x244deb (ee/EEUnitUtilities.h)
-long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>& outUnits);   // 0x24c395 (ee/EEAreaUtilities.h)
 
 // Replaces the player's units of one class by the effect's new class (kind 0x13), or only inUnit when it is in the
 // effect's unit set and inID is a kind-3 tech node; returns 3 when no unit qualifies
@@ -371,7 +371,7 @@ long ConvertEventUnits(EEEventEffect* inEffect, long inPlayerIndex, long inID, E
         EEUnitClassUpgrade* theFromUpgrade = thePlayer->mUnitClassUpgrades[theFrom];
         theFromUpgrade->CopyUpgradeLevels(theToUpgrade);
         EEReplaceQueuedTechnology(thePlayer, theFromUpgrade->mUnitClass, theToUpgrade->mUnitClass->mTechnology);
-        EEGetPlayerUnitsOfType(theFrom, inPlayerIndex, theUnits);
+        ee_units_uu_player_units_of_type(theFrom, inPlayerIndex, &theUnits);
     }
     if (theUnits.size() != 0) {
         EEUnitClass* theClass = gUnitClassTable[theTo];

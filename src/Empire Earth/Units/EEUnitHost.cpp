@@ -63,6 +63,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
 #include "rust/sim/units.h"
+#include "ee/EECombatGoals.h"
 
 static EEUnit* UnitOf(uint32_t inID)
 {
@@ -89,76 +90,6 @@ extern "C" size_t ee_units_host_group_ids(void* inGroup, uint32_t* outIDs, size_
         outIDs[i] = theUnit != NULL ? static_cast<uint32_t>(theUnit->mUnitID) : 0xffffffffu;
     }
     return theCount;
-}
-
-extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
-{
-    bool theFlagA = inSpec->flag_a != 0;
-    bool theFlagB = inSpec->flag_b != 0;
-    switch (inSpec->ctor) {
-    case EE_GOAL_CTOR_EXPLORE:
-        return static_cast<EEUnitGoal*>(EEUGRust::NewExplore(theFlagA));
-    case EE_GOAL_CTOR_ATTACK_GROUND:
-        return static_cast<EEUnitGoal*>(EEUGRust::NewAttackGround(GE3DPoint(inSpec->point[0], inSpec->point[1], inSpec->point[2]), theFlagA));
-    case EE_GOAL_CTOR_ATTACK_UNIT: {
-        EEUnit* theTarget = UnitOf(inSpec->unit_b);
-        if (theTarget == NULL)
-            return NULL;
-        return static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit(ComplexOf(inSpec->unit_a), theTarget, theFlagA, theFlagB));
-    }
-    case EE_GOAL_CTOR_GATHER:
-        return static_cast<EEUnitGoal*>(EEUGRust::NewGather(UnitOf(inSpec->unit_a), UnitOf(inSpec->unit_b), theFlagA));
-    case EE_GOAL_CTOR_HEAL_UNIT: {
-        EEComplexUnit* theTarget = ComplexOf(inSpec->unit_a);
-        if (theTarget == NULL)
-            return NULL;
-        return static_cast<EEUnitGoal*>(EEUGRust::NewHealUnit(theTarget, theFlagA));
-    }
-    case EE_GOAL_CTOR_PATROL:
-        return static_cast<EEUnitGoal*>(EEUGRust::NewPatrol(theFlagA));
-    case EE_GOAL_CTOR_PATROL_ROUTE:
-        return static_cast<EEUnitGoal*>(EEUGRust::NewPatrol(static_cast<EEPPatrolGroup*>(inSpec->object), ComplexOf(inSpec->unit_a), theFlagA));
-    case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: EEUGRust::NewLocation(&point, true, forced, rotating, facing, false, 0)
-        GE3DPoint theLocation(inSpec->point[0], inSpec->point[1], inSpec->point[2]);
-        EEUGRust* theGoal = EEUGRust::NewLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
-        theGoal->SetUseGroupMovement(inSpec->flag_c != 0);
-        return static_cast<EEUnitGoal*>(theGoal);
-    }
-    case EE_GOAL_CTOR_UNLOAD_TRANSPORT: {   // EEMUnloadTransport's: the first unit's complex unit, the tile
-        EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
-        if (theUnit == NULL)
-            return NULL;
-        return static_cast<EEUnitGoal*>(EEUGRust::NewUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
-                                                                (long)inSpec->point[1], theFlagA));
-    }
-    case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
-        return static_cast<EEUnitGoal*>(EEUGRust::NewLocation(inSpec->point[0], inSpec->point[1], 0.0f, false, true, false,
-                                                         0.0f, false, 0));
-    case EE_GOAL_CTOR_LOCATION_2D:   // EEMSmartFarmers' move
-        return static_cast<EEUnitGoal*>(EEUGRust::NewLocation(GE2DPoint(inSpec->point[0], inSpec->point[1]), true, true, false,
-                                                         0.0f, false, 0));
-    case EE_GOAL_CTOR_BUILD_REPAIR: {   // EEMSetRallyGoal's: the farm or damaged building's owner, the building
-        EEUnit* theTarget = UnitOf(inSpec->unit_a);
-        if (theTarget == NULL)
-            return NULL;
-        return static_cast<EEUnitGoal*>(EEUGRust::NewBuildRepair(theTarget->mPlayer, theTarget, theFlagA));
-    }
-    case EE_GOAL_CTOR_CAST_CALAMITY: {   // EEMCastCalamity's: the caster, the target or none, the tile, the technology
-        EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
-        if (theUnit == NULL)
-            return NULL;
-        return static_cast<EEUnitGoal*>(EEUGRust::NewCastCalamity(theUnit, UnitOf(inSpec->unit_b), (long)inSpec->ints[0],
-                                                                  (long)inSpec->ints[1], (long)inSpec->ints[2],
-                                                                  theFlagA));
-    }
-    default:
-        return NULL;
-    }
-}
-
-extern "C" void ee_units_host_goal_release(void* inGoal)
-{
-    delete static_cast<EEUnitGoal*>(inGoal);
 }
 
 // a group as Rust holds it: its EEGroup base (the address group_ids reads)
@@ -380,7 +311,7 @@ extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, f
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
     std::vector<EEUnit*>* thePieces = new std::vector<EEUnit*>();
     EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->Get(inTechnology)->mData->mUnitClass];
-    EEPlanWall(GE2DPoint(inStartX, inStartY), GE2DPoint(inEndX, inEndY), theClass, thePlayer, 1, 0, *thePieces);
+    ee_units_uu_plan_wall(inStartX, inStartY, inEndX, inEndY, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)thePlayer, 1, 0, thePieces);
     *outCount = thePieces->size();
     return thePieces;
 }
@@ -393,16 +324,6 @@ extern "C" void ee_units_host_wall_build(void* inGroup, void* inPieces)
 extern "C" void ee_units_host_group_spread_for_unload(void* inGroup, int64_t inX, int64_t inY)
 {
     ActiveOf(inGroup)->SpreadForUnload((long)inX, (long)inY);
-}
-
-extern "C" void ee_units_host_goal_set_transport(void* inGoal, uint32_t inUnit)
-{
-    static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->SetUnloadTransport(ComplexOf(inUnit)->mComplexUnit);
-}
-
-extern "C" uint8_t ee_units_host_goal_can_unload(void* inGoal)
-{
-    return static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
 }
 
 extern "C" void ee_units_host_unload_warning(void* inPlayer, int64_t inX, int64_t inY)
@@ -428,12 +349,6 @@ static EETechTreeNode* NodeOf(void* inPlayer, int32_t inTechnology)
 extern "C" uint8_t ee_units_host_can_produce(void* inPlayer, int32_t inTechnology)
 {
     return static_cast<EEPlayer*>(inPlayer)->CanProduce(inTechnology, 0x20, 1, true, 3, NULL) ? 1 : 0;
-}
-
-extern "C" uint8_t ee_units_host_can_place_on_tile(void* inPlayer, int64_t inUnitType, int64_t inX, int64_t inY)
-{
-    bool theResult = EECanPlaceOnTile(static_cast<EEPlayer*>(inPlayer), (long)inUnitType, (long)inX, (long)inY, 0, 1);
-    return theResult ? 1 : 0;
 }
 
 extern "C" uint32_t ee_units_host_make_building(void* inPlayer, int64_t inUnitType, int64_t inX, int64_t inY)
@@ -528,7 +443,7 @@ extern "C" size_t ee_units_host_farm_drop_sites(uint32_t inFarm, uint32_t* outID
         return CopyList(outIDs, inCapacity);
     }
     std::vector<EEUnit*> theSites;
-    sFound = EEGetFarmDropSites(ComplexOf(inFarm), theSites) ? 1 : 0;
+    sFound = ee_units_uu_farm_drop_sites((uint64_t)(uintptr_t)(ComplexOf(inFarm)), &theSites) ? 1 : 0;
     sHostList.clear();
     for (size_t i = 0; i < theSites.size(); i++)
         sHostList.push_back(static_cast<uint32_t>(theSites[i]->mUnitID));
@@ -552,11 +467,6 @@ extern "C" void ee_units_host_unit_drop_gathered(uint32_t inUnit)
 extern "C" void ee_units_host_work_farm(uint32_t inFarm, uint32_t inUnit)
 {
     EEWorkFarm(ComplexOf(inFarm), ComplexOf(inUnit));
-}
-
-extern "C" void ee_units_host_unit_set_goal(uint32_t inUnit, void* inGoal)
-{
-    ComplexOf(inUnit)->SetGoal(static_cast<EEUnitGoal*>(inGoal), 0, 0);
 }
 
 extern "C" void ee_units_host_group_finish(void* inGroup)
@@ -599,24 +509,12 @@ extern "C" int64_t ee_units_host_calamity_cost(void* inClass)
     return theCost;
 }
 
-// a read
-extern "C" void* ee_units_host_unit_player(uint32_t inUnit)
-{
-    EEPlayer* thePlayer = ComplexOf(inUnit)->mPlayer;
-    return thePlayer;
-}
-
 // SplitCalamityCasters
 extern "C" void ee_units_host_group_split_calamity_casters(void* inGroup, void* inClass, void* inPlayer, int32_t inTechnology,
                                                            uint32_t inTarget)
 {
     EEUnit* theTarget = inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL;
     ActiveOf(inGroup)->SplitCalamityCasters(static_cast<EECalamityClass*>(inClass), NodeOf(inPlayer, inTechnology), theTarget);
-}
-
-extern "C" void* ee_units_host_goal_clone(void* inGoal)
-{
-    return static_cast<EEUnitGoal*>(inGoal)->Clone();
 }
 
 extern "C" void ee_units_host_group_remove_unit(void* inGroup, uint32_t inUnit)
@@ -639,7 +537,7 @@ extern "C" void* ee_units_host_player_selection(void* inPlayer)
 // the reads below are made on the objects
 extern "C" uint8_t ee_units_host_unit_seen_by(uint32_t inUnit, void* inPlayer)
 {
-    return EEIsSeenBy(UnitOf(inUnit), static_cast<EEPlayer*>(inPlayer), true) ? 1 : 0;
+    return EECombatIsSeenBy(UnitOf(inUnit), static_cast<EEPlayer*>(inPlayer), true) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_host_unit_ghost_seen(uint32_t inUnit)
@@ -668,16 +566,6 @@ extern "C" uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t
     return ComplexOf(inUnit)->CanAttackClass(UnitOf(inTarget)->mUnitClass) ? 1 : 0;
 }
 
-extern "C" uint8_t ee_units_host_unit_shares_rally_point(uint32_t inUnit, int64_t inUnitType)
-{
-    return ComplexOf(inUnit)->mUnitClass->SharesRallyPoint((unsigned long)inUnitType) ? 1 : 0;
-}
-
-extern "C" int64_t ee_units_host_unit_num_goal_queues(uint32_t inUnit)
-{
-    return (int64_t)ComplexOf(inUnit)->GetNumGoalQueues();
-}
-
 extern "C" void ee_units_host_unit_clear_goal_queue(uint32_t inUnit, int64_t inQueue)
 {
     ComplexOf(inUnit)->ClearGoalQueue((unsigned long)inQueue);
@@ -693,36 +581,11 @@ extern "C" void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int
     ComplexOf(inUnit)->QueueGoal(static_cast<EEUnitGoal*>(inGoal), (long)inQueue);
 }
 
-extern "C" void ee_units_host_unit_queue_timer(uint32_t inUnit, int64_t inQueue, int64_t inMs)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    theUnit->mGoalQueues[inQueue].ResetTimer();
-    theUnit->mGoalQueues[inQueue].AddTime((unsigned long)inMs);
-}
-
-extern "C" void* ee_units_host_unit_goal_clone(uint32_t inUnit)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    return theUnit->mGoalState->Clone();
-}
-
-extern "C" void ee_units_host_unit_queue_clear(uint32_t inUnit, int64_t inQueue)
-{
-    ComplexOf(inUnit)->mGoalQueues[inQueue].Clear();
-}
-
 extern "C" void ee_units_host_unit_clear_air_traffic(uint32_t inUnit)
 {
     EEComplexUnit* theUnit = ComplexOf(inUnit);
     EEUnitClass* theClass = theUnit->GetUnitClass();
     ee_units_atc_clear_airport_queue(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], theUnit, 0);
-}
-
-extern "C" void ee_units_host_unit_refresh_goals(uint32_t inUnit)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    theUnit->RefreshGoals();
-    theUnit->RefreshActiveGoal();
 }
 
 extern "C" void ee_units_host_unit_clear_build_targets(uint32_t inUnit)
@@ -864,19 +727,6 @@ extern "C" uint8_t ee_units_host_research_node(void* inPlayer, int32_t inTechnol
 extern "C" uint8_t ee_units_host_scenario_game()
 {
     return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
-}
-
-extern "C" uint8_t ee_units_host_unit_shares_research(uint32_t inUnit, int64_t inUnitType)
-{
-    return ComplexOf(inUnit)->mUnitClass->SharesResearch((long)inUnitType) ? 1 : 0;
-}
-
-extern "C" int64_t ee_units_host_unit_research_state(uint32_t inUnit, int64_t* outCurrent, uint8_t* outDisabled)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    *outCurrent = theUnit->mCurrentResearch;
-    *outDisabled = theUnit->mIsDisabled ? 1 : 0;
-    return (int64_t)theUnit->GetBuildQueueSize();
 }
 
 extern "C" void ee_units_host_unit_queue_research(uint32_t inUnit, int32_t inTechnology, uint8_t inFront)

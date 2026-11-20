@@ -148,7 +148,7 @@ void EESMCreateUnit(EESMHostContext* inContext, long inPlayerID, long inUnitType
     if (theNode != NULL && thePlayer->GetTechTree()->Get(theClass->GetTechnology())->mData->mKind == 6) {
         theLocation.mX += 0.5f;
         theLocation.mY += 0.5f;
-        EEPlanWall(theLocation, theLocation, theClass, thePlayer, false, 1, theWallPieces);
+        ee_units_uu_plan_wall(theLocation.mX, theLocation.mY, theLocation.mX, theLocation.mY, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)thePlayer, false, 1, &theWallPieces);
         theUnit = *(theWallPieces.begin());
         theWallPieces.clear();
     } else {
@@ -311,6 +311,7 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitVectorItem.h"
+#include "rust/sim/units.h"
 
 // what one effect's run keeps between its world calls (ee_scenario effect.rs, effect_ai.rs, task.rs): the
 // calamity point and class, the units a calamity found in an area, the graphic effect, the expanded message, the

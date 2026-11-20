@@ -28,12 +28,11 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EEAppCapture.h"
 #include "rust/render/gfx.h"
+#include "rust/sim/units.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (EEUserInterface.cpp; provisional name)
-// 0x24b212 (EEFOFindNewTargetNearOldTarget.cpp's range): the tiles within inRadius of inCenter (provisional name)
-void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<EETileCoordinate>& outTiles);
 
 // unit-local constants (.rdata next to EEMap's vtables)
 const float kMapTileSize = 0.40824828f;     // 0x441ce8 (RTSMap's ctor argument; provisional name)
@@ -93,12 +92,14 @@ static void EEMapHostOp(void* inContext, int32_t inOp, EeAppMapIo* io)
                    (io->flag && theLocal->IsAlliedWith(thePlayer) && theLocal->mSharedLOS && thePlayer->mSharedLOS);
         break;
     }
-    case EE_APP_MAP_OP_TILES_NEAR:
+    case EE_APP_MAP_OP_TILES_NEAR: {
+        const float thePoint[3] = {io->f[0], io->f[1], 0.0f};
         theContext.mTiles.clear();
-        EEGetTilesNearPoint(GE3DPoint(io->f[0], io->f[1], 0.0f), io->f[2], theContext.mTiles);
+        ee_units_uu_get_tiles_near_point(&thePoint, io->f[2], &theContext.mTiles);
         io->tiles = theContext.mTiles.empty() ? NULL : &theContext.mTiles[0].mX;
         io->a = (long)theContext.mTiles.size();
         break;
+    }
     case EE_APP_MAP_OP_SIGHT_AT: {
         EETileCoordinate theTile(io->x, io->y);
         if (io->a != 0 && io->flag)

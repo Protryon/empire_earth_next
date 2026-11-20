@@ -62,6 +62,7 @@
 #include "lle/UICheckBox.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
+#include "rust/sim/units.h"
 
 // ------------------------------------------------------------------------------------------------ the classes' parts
 // The editor kinds' C++ (ee/EEARust.h): the load text's post from the load thread (the trigger tab's object
@@ -148,7 +149,7 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
     case EE_SCREENS_SEA_PLANT: {
         EEUnitClass* theClass = gUnitClassTable[i[0]];
         EEPlayer* thePlayer = gWorld.mPlayers[0];
-        if (EECanPlaceOnTile(thePlayer, i[0], i[1], i[2], 0, 0))
+        if (ee_units_uu_can_place_unit_on_tile((uint64_t)(uintptr_t)thePlayer, 0, i[0], i[1], i[2], 0, 0, NULL))
             theClass->CreateUnit(i[1], i[2], thePlayer->mPlayerID, false, NULL);
         return 0;
     }
@@ -442,7 +443,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
         std::vector<EEUnit*> theWalls;
         EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
         EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->GetData(i[1])->mUnitClass];
-        EEPlanWall(GE2DPoint(f[0], f[1]), GE2DPoint(f[2], f[3]), theClass, thePlayer, 0, 1, theWalls);
+        ee_units_uu_plan_wall(f[0], f[1], f[2], f[3], (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)thePlayer, 0, 1, &theWalls);
         break;
     }
     case EE_SCREENS_SEW_OP_GHOST_LOCK:

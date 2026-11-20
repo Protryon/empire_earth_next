@@ -2657,11 +2657,11 @@ void EEPlayer::ClearFootprint(EEComplexUnit* inUnit)
     theBounds.mTop = (float)theY;
     theBounds.mLeft = (float)theX;
     theBounds.mRight = (float)theRight;
-    EEGetUnitsInRectangle(theBounds, theUnits);
+    ee_units_uu_units_in_rectangle(theBounds.GetLeft(), theBounds.GetTop(), theBounds.GetRight(), theBounds.GetBottom(), &theUnits);
     unsigned long theCount = theUnits.size();
     for (unsigned long i = 0; i < theCount; i++) {
         EEComplexUnit* theUnit = theUnits[i]->mComplexUnit;
-        if (theUnit == NULL || theUnit == inUnit || !EEIsUnitMovable(inUnit, theUnit))
+        if (theUnit == NULL || theUnit == inUnit || !ee_units_uu_is_unit_movable((uint64_t)(uintptr_t)theUnit))
             continue;
         bool theMoved = false;
         long thePathCount = theUnit->mWaypoints.size();
@@ -2684,14 +2684,14 @@ void EEPlayer::ClearFootprint(EEComplexUnit* inUnit)
         }
         if (theMoved)
             continue;
-        EEGetSquareBlockRing(0, theX, theY, theSize, theTiles, false);
+        ee_units_uu_block_ring(0, theX, theY, theSize, theSize, &theTiles, false, 1);
         std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(theRight, theY));
         unsigned long theTileCount = theTiles.size();
         for (unsigned long j = 0; j < theTileCount; j++) {
             EETile* theTile = gWorld.mMap->GetTile(theTiles[j].mX,
                                                  (*(theTiles.begin() + j)).mY);
             if (theTile == NULL || theTile->mUnits != NULL ||
-                !EECanStandOn(theTiles[j], theUnit))
+                !ee_units_uu_can_stand_on(theTiles[j].mX, theTiles[j].mY, (uint64_t)(uintptr_t)theUnit))
                 continue;
             GETransformation theLocation(false);
             theLocation = theUnit->mPhysicalModel.GetLocation();

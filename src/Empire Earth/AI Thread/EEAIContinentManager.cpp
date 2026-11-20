@@ -30,6 +30,7 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMArea.h"
 #include "ee/EEDebugTrace.h"
+#include "rust/sim/units.h"
 
 // The continent manager's passes, queries and objects are Rust (ee_sim::astar cm_passes.rs, cm_queries.rs,
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
@@ -240,7 +241,7 @@ void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
         return;
     if (inUnit->IsFoundation() || (!inUnit->GetUnitClass()->mBlocksTile && inUnit->GetUnitClass()->mCategory != kUnitCategoryGate))
         return;
-    EEGetFootprintTiles(inUnit, theTiles);
+    ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)inUnit, &theTiles);
     ee_astar_cm_add_sector_tiles(&this->mRecord, theTiles.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&theTiles[0]),
                                  theTiles.size());   // Rust: cm_passes.rs
     gPathManager.SetRegionUpdates(true, inNow);

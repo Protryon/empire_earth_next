@@ -32,6 +32,7 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/sim/units.h"
 bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUnit's, before EEGoalQueueContainer's; ee/EEGhostUnit.h)
 
 long EETurnGatePart(GETransformation&, long, long);
@@ -284,7 +285,7 @@ void EEGhostUnit::FillVolcanoSquare()
             EETile* theTile = theMap->GetTile(x, y);
             bool theCell;
             if (theTile != NULL) {
-                theCell = EEIsTileUnblocked(this->mPlayer, theType, theTile);
+                theCell = ee_units_uu_is_tile_unblocked((uint64_t)(uintptr_t)this->mPlayer, theType, (uint64_t)(uintptr_t)theTile);
                 if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
                     this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
                 else

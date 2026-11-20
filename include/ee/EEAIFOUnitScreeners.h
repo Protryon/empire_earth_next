@@ -10,9 +10,6 @@ class EEComputerPlayer;
 class EEUnitClass;
 template <class T> class U2DPoint;
 
-// 0x2492c2 (cdecl; EECPWallManager.cpp): the tiles around (inX, inY) at inRadius appended to outTiles (ee/EECPIntelligence.h
-// declared it until stage 5)
-void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
 
 // RTTI EEAIFOUnitSelectionScreener (vtable slot +0x04 only; base of the screeners).
 class EEAIFOUnitSelectionScreener {

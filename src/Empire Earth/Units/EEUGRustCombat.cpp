@@ -88,7 +88,7 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
         return 1;
     case EE_COMBAT_G_VERIFY_TARGET: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
-        ESVERIFY_AT(::EEUUGetIsUnitClassTargetable(theUnit, theTarget->GetClass()) == true, 729);
+        ESVERIFY_AT(ee_units_uu_targetable((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)theTarget->GetClass(), 0) != 0, 729);
         ESVERIFY_AT(theTarget->GetClass()->GetWeapon() >= 0 && theTarget->GetClass()->GetWeapon() < keeucwTotal, 730);
         return 0;
     }
