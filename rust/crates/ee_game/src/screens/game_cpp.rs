@@ -104,7 +104,8 @@ pub unsafe extern "C" fn ee_screens_shim_out(out: *mut c_void, text: *const u8, 
     unsafe { (*(out as *mut Vec<u8>)).extend_from_slice(core::slice::from_raw_parts(text, length)) };
 }
 
-/// A shim's argument type.
+/// A shim's argument type (only the fake asks it).
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) trait ShimArg: Copy + fmt::Debug {
     /// The fake's part of the call (an out text gets the fake's next text for the shim).
     #[cfg(test)]
@@ -126,6 +127,7 @@ impl ShimArg for EeScreensShimOut {
 }
 
 /// A shim's answer type (the fake's answers are i64s).
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) trait ShimRet {
     fn from_fake(v: i64) -> Self;
 }

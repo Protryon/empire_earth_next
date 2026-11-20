@@ -2,6 +2,9 @@
 //! `ResizeGameScreen`, `ShowMessageOfTheDay`, `OpenSelectServer`, `PauseGraphics` and `UpdateInterface` forward
 //! here (`User Interface Thread/EEUserInterface.cpp`).
 
+// (the casts of the C `long`s are no-ops on Windows and conversions on LP64)
+#![allow(clippy::unnecessary_cast)]
+
 use core::ffi::{c_long, c_void};
 
 use crate::screens::game_cpp::Ffi;

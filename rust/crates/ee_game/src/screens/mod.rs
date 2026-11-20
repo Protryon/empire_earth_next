@@ -275,9 +275,9 @@ pub mod lobby_form;
 mod lobby_form_ffi;
 pub mod lobby_options;
 pub mod main_form;
+pub(crate) mod main_form_calls;
 #[cfg(not(test))]
 mod main_form_ffi;
-pub(crate) mod main_form_calls;
 pub mod main_form_fields;
 pub mod main_game;
 #[cfg(not(test))]
@@ -322,8 +322,9 @@ pub mod settings_form;
 mod settings_form_ffi;
 // TEST ONLY: the SGVW trace of the screens' and the editor's game reads (EE_SGVW)
 pub(crate) mod sgvw;
-// the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
+// the shells' moved host cases (UI lane round 7)
 pub(crate) mod shell_calls;
+// the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
 pub mod shells;
 pub mod shells_chat;
 pub mod shells_dialog;
@@ -350,11 +351,11 @@ pub mod status_button;
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
 mod toolkit;
-#[cfg(not(test))]
-mod ui_direct;
 pub(crate) mod ui_calls;
 #[cfg(not(test))]
 mod ui_calls_ffi;
+#[cfg(not(test))]
+mod ui_direct;
 pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;

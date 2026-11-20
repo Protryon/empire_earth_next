@@ -4,6 +4,9 @@
 //! shells' adapter (`shells_ffi.rs`) asks [`call`] before the C++ host. (The editor-only kinds' ops stay the
 //! scenario editor lane's.)
 
+// (the casts of the C `long`s are no-ops on Windows and conversions on LP64)
+#![allow(clippy::unnecessary_cast)]
+
 use core::ffi::{c_long, c_ulong};
 
 use crate::screens::game_calls::string;

@@ -5,6 +5,9 @@
 //!
 //! Pointers are the C++ objects' addresses (`usize`): the form, a background, an event, a file spec, a server.
 
+// (the casts of the C `long`s are no-ops on Windows and conversions on LP64)
+#![allow(clippy::unnecessary_cast)]
+
 use core::ffi::c_ulong;
 
 use ee_render::ge::texobj::EeGeTextureDescription;

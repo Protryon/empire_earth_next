@@ -6,9 +6,7 @@ use crate::screens::game_cpp::Fake;
 const REC: usize = 0x40;
 
 fn run(f: &mut Fake, op: u32, a: i64, b: i64) -> (Option<i64>, EeScreensMainFormIo) {
-    let mut io = EeScreensMainFormIo::default();
-    io.f = [1.0, 2.0, 3.0, 4.0];
-    io.n = [7, 8];
+    let mut io = EeScreensMainFormIo { f: [1.0, 2.0, 3.0, 4.0], n: [7, 8] };
     let r = call(f, REC, op, a, b, &mut io);
     (r, io)
 }
@@ -96,8 +94,7 @@ fn the_form() {
     );
     let mut f = Fake::default();
     f.answer("screen_event_new", &[50, 51]);
-    let mut io = EeScreensMainFormIo::default();
-    io.n = [(EE_SCREENS_MF_NO_EVENT as i64) | (3 << 32), 4];
+    let mut io = EeScreensMainFormIo { n: [(EE_SCREENS_MF_NO_EVENT as i64) | (3 << 32), 4], ..Default::default() };
     call(&mut f, REC, EE_SCREENS_MF_OP_ADD_HOT_KEY, 0x0004_0003_0002_0001, (1 << 32) | 9, &mut io);
     assert_eq!(
         f.calls(),
