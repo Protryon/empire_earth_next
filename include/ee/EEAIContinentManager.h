@@ -38,8 +38,6 @@ class EEMap;
 class EEComplexUnit;
 class URandom;
 
-struct EeSubSectorLinks;
-
 class EEAIContinentManager {
 public:
     EEAIContinentManager();                 // 0x1ef6b (Empire Earth.cpp's chain)
@@ -82,16 +80,7 @@ public:
 
     // Out-of-line members (EEAIContinentManager.cpp; ret N / argument reads / the value left at ret)
     static void Shutdown();                 // 0x1ef12: Reset() of gContinentManager, delete[] the four grids (absolute)
-    void AddChokePoint(EEAIChokePoint* inChokePoint);      // 0x1f1b8: mChokePoints[+0x78] = it; its continent's 0x26d84; AddArea
-    void AddRectangleArea(EEAIRectangleArea* inArea);// 0x1f3a0: dynamic_cast<EEAIRectangleArea*>; mRectangleAreas[+0x8a] = it
     void Reset();                           // 0x1f503: clears every container and counter (not the grids)
-    void DeleteChokePoints();
-    void DeleteContinents();                // 0x1f5dd (also mL134/mUnitUnderMouse/mPlayerID = 0)
-    void DeleteForests();
-    void DeleteHills();
-    void DeletePathAreas();
-    void DeletePathSectors();               // 0x1f624 (also the sub-sector ids and mRegionInformation.Reset())
-    void DeleteRectangleAreas();
     // 0x1f813: mTileValues = new long[mHeight * mWidth], zeroed
     void AllocateTileValues() { ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::TileValues, true, this->mRecord.height * this->mRecord.width); }
     void ClearChecksum() { this->mRecord.checksum = 0; }
@@ -228,28 +217,7 @@ public:
     }
     // inline (COMDAT 0x88ce9 after its first user EECPPersonnel::DraftUnit) (provisional name)
     unsigned long GetNumContinents() const { return this->GetContinents().size(); }
-    // (EEAIContinentManager.cpp; provisional names)
-    void AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles);
-    void GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas);
-    // 0x1f6b1 LinkSubSectors: Rust (cm_links.rs link_sub_sectors, over the records)
-    void FreeGrids();                       // New (port): the four tile grids freed
     void FreePathAreaID(unsigned short inID) { ee_astar_cm_add_free_ids(&this->mRecord, EeAStarCmFree::PathAreas, &inID, 1, false); }
-    void Build(EEMap* inMap);
-    void CreateContinents(EEMap* inMap);
-    void CreateContinentGrid(EeAStarFlood* inFill, EEMap* inMap);   // 0x1fa5c (ret 8; Rust: ee_astar continent_grid.rs; AddShoreTile 0x1f3e0 and AddTileValue 0x24fea are part of it)
-    void PruneChokePoints();
-    void NumberContinentChains(EEMap* inMap, unsigned long inKind);   // 0x201f7 (ret 8; inMap not read)
-    void CreateHills(EEMap* inMap);
-    void CreatePathAreaKind(EEMap* inMap, long inKind);
-    void CreatePathAreas(EEMap* inMap);
-    void CreatePathSectors(EEMap* inMap, EeAStarFlood* inAreas);   // inAreas: the path area fill (its id grid)
-    void LinkSubSectorGrid(EeAStarFlood* inFill, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused; the walk in Rust: ee_astar sub_sector_links.rs)
-    void ApplySubSectorLinks(EeSubSectorLinks* inLinks);   // new (port): the walk's LinkSubSectors calls, then frees it
-    // inline (COMDAT 0x27604 in this unit's range; defined inline in EEAIContinentManager.cpp): mPathSectors[its id]
-    void SetPathSector(EEAIPathSector* inSector);
-    void CreateScenarioAreas(EEMap* inMap); // 0x2124c (ret 4; inMap unused)
-    void RelinkSubSectors(std::map<unsigned short, std::vector<EETileCoordinate> >& inSectors,
-        std::vector<EEAIPathSubSector*>& inSubSectors);   // 0x215dc (ret 8; the walk in Rust: ee_astar sub_sector_links.rs)
     unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind)
         { return ee_astar_cm_adjacent_area_id(&this->mRecord, (int32_t)inKind, inTile.mX, inTile.mY, (int32_t)inAreaKind); }
     bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const
@@ -380,7 +348,7 @@ extern EEAIContinentManager gContinentManager;
 // (cdecl; provisional names)
 long EEAIGetTileKind(const EETileLocation& inTile);     // 0x1ed2c (EEAIContinentManager.cpp; the caller 0x2380c)
 long EEAIGetTileWallID(const EETileLocation& inTile);   // 0x1eea9 (EEAIContinentManager.cpp)
-void EEAIBuildChokePoints(EEMap* inMap, long inKind);   // 0x1c949 (the terrain pass before PruneChokePoints; body elsewhere)
+// (0x1c949 EEAIBuildChokePoints, the terrain pass before PruneChokePoints: Rust, cm_passes.rs)
 long EEGetRandomInt(long inMin, long inMax, URandom& inRandom);  // 0x2491c9 (a random index in [inMin, inMax]; body elsewhere) (provisional name)
 extern long& gEEAIRegionSize;                            // 0x52fd80 (0x20b48 sets it by map size: 8..0x12) (provisional name)
 

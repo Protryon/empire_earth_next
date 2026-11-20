@@ -772,6 +772,17 @@ struct EeAStarCmOwned {
   int64_t serial;
 };
 
+/// A scenario area as `CreateScenarioAreas` reads it: whether it exists and is set, and its rectangle's sides.
+struct EeScenarioArea {
+  bool set;
+  float top;
+  float bottom;
+  float left;
+  float right;
+  float height;
+  float width;
+};
+
 /// `EEAIContinent`'s own members (`ee_astar_continent_init` / `ee_astar_continent_free` in its ctor and dtor).
 struct EeAStarContinentRecord {
   /// the lists (`ee_astar_continent_*`)
@@ -918,17 +929,6 @@ struct EePruneCallbacks {
   /// `k` -1 for the choke point itself
   bool (*is_near)(void*, size_t, size_t, ptrdiff_t);
   void (*remove)(void*, size_t);
-};
-
-/// A scenario area as `CreateScenarioAreas` reads it: whether it exists and is set, and its rectangle's sides.
-struct EeScenarioArea {
-  bool set;
-  float top;
-  float bottom;
-  float left;
-  float right;
-  float height;
-  float width;
 };
 
 /// One rectangle area to create: the scenario area's index, its id, its tile rectangle.
@@ -1510,6 +1510,15 @@ void ee_astar_area_update_hull(EeAStarAreaRecord *r, const EeSparseArray *tiles,
 /// `r` a live record, `tiles` a live set.
 bool ee_astar_area_remove_tile(EeAStarAreaRecord *r, EeSparseArray *tiles, int32_t x, int32_t y);
 
+/// `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints` for the C++ (the slot of `this`'s kind).
+///
+/// # Safety
+/// `this`, `other` live areas; the outputs writable.
+bool ee_astar_area_closest_points_of(uint64_t this_,
+                                     uint64_t other,
+                                     EeHullPoint *out_this,
+                                     EeHullPoint *out_other);
+
 /// # Safety
 /// `r` points to a record (uninitialised is fine).
 void ee_astar_path_area_init(EeAStarPathAreaRecord *r);
@@ -1983,6 +1992,55 @@ void ee_astar_cm_apply_links(const EeAStarCmRecord *r, EeSubSectorLinks *links);
 /// # Safety
 /// As `remove_sub_sectors`; `r` the manager's record.
 void ee_astar_cm_remove_sub_sectors(EeAStarCmRecord *r, uint64_t sector);
+
+/// `Reset()`.
+///
+/// # Safety
+/// `r` the live record, not in use elsewhere.
+void ee_astar_cm_reset_all(EeAStarCmRecord *r);
+
+/// `Shutdown()` of the manager: `Reset`, then the four grids freed.
+///
+/// # Safety
+/// As `ee_astar_cm_reset_all`.
+void ee_astar_cm_shutdown(EeAStarCmRecord *r);
+
+/// `Clear(map)`: clearing, reset, the grids freed, the continents and hills of the map made.
+///
+/// # Safety
+/// `r` the live record, not in use elsewhere; `map` a live `EEMap*`; the world readable.
+void ee_astar_cm_clear(EeAStarCmRecord *r, uint64_t map, long region);
+
+/// `BuildRegions(map)` after `Clear`: the tile values, path areas and sectors, choke points, region ids, scenario
+/// areas (`scenario`, `scenario_ids`: the scenario manager's areas) and the six chain kinds; the work grids freed
+/// (the continent ids kept when `keep_continent_ids`).
+///
+/// # Safety
+/// As `ee_astar_cm_clear`; `scenario` and `scenario_ids` hold `count` entries.
+void ee_astar_cm_build_regions(EeAStarCmRecord *r,
+                               uint64_t map,
+                               long region,
+                               const EeScenarioArea *scenario,
+                               const long *scenario_ids,
+                               size_t count,
+                               bool keep_continent_ids);
+
+/// `Rebuild()`: the sub sectors of the first pending sector made again, linked, the path areas of its changed
+/// tiles repaired, the new sub sectors filed; whether no sector is left pending.
+///
+/// # Safety
+/// As `ee_astar_cm_clear`.
+bool ee_astar_cm_rebuild(EeAStarCmRecord *r,
+                         uint64_t map,
+                         long region);
+
+/// `AddSectorTiles(tiles)`: sorted and unique, then each (from the last) queued under its path sector's id.
+///
+/// # Safety
+/// `r` the live record; `tiles` holds `n` points.
+void ee_astar_cm_add_sector_tiles(EeAStarCmRecord *r,
+                                  const EeHullPoint *tiles,
+                                  size_t n);
 
 /// A unit's tile (`mTileX`, `mTileY`), for the manager's lookups by a unit.
 ///

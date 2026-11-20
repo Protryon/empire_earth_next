@@ -94,13 +94,6 @@ void EEAIArea::Create(const std::vector<U2DPoint<long> >& inTiles)
         this->AreaCreate(inTiles);
 }
 
-bool EEAIArea::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
-{
-    if (this->area_type == kAIAreaContinent)
-        return static_cast<EEAIContinent*>(this)->GetClosestPoints(inOther, outThis, outOther);
-    return this->AreaClosestPoints(inOther, outThis, outOther);
-}
-
 U2DPoint<long> EEAIArea::GetRandomPoint()
 {
     switch (this->area_type) {

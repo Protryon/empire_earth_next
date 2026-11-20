@@ -22,7 +22,10 @@ public:
     static EEAIContinent* New() { return (EEAIContinent*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::Continents); }
     static void Delete(EEAIContinent* inObject) { ee_astar_object_delete(EeAStarCmTable::Continents, (uint64_t)(uintptr_t)inObject); }
     // +0x1c 0x1da61: the EEAIArea slot (closest points)
-    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
+    // (Rust: ee_sim::astar area_continent.rs, with its AREA 2 record)
+    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
+        { return ee_astar_area_closest_points_of((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther,
+                                                 reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther)); }
     // +0x2c 0x1dc54 (ret 8): reserves outTiles to mShoreTiles's size, then walks mShoreTiles (inID 0: every tile)
     void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles);
     // +0x30 0x1e45e (ret 0xc): Virtual34 with the one-element id list { inID }

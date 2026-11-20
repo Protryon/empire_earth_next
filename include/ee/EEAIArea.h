@@ -54,7 +54,10 @@ public:
         { return EEAIArea::PointOf(ee_astar_area_closest_hull_point(this, EEAIArea::HullPoint(inPoint))); }
     // +0x1c 0xd8fe (ret 0xc): this area's tile and inOther's hull outline point closest to each other; false (both
     // (0, 0)) when either area is empty (a continent: its own)
-    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
+    // (Rust: ee_sim::astar area_continent.rs, the kind's slot)
+    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
+        { return ee_astar_area_closest_points_of((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther,
+                                                 reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther)); }
     bool AreaClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
     {
         return ee_astar_area_closest_points(this, this->mTiles.GetHandle(), inOther, inOther->mTiles.GetHandle(),

@@ -73,48 +73,6 @@ static uint16_t EEAIShoreRegion(void*, long inX, long inY, bool inSpace)
     return gContinentManager.GetContinent(theNeighbor, inSpace ? kAIPathSpaceRegion : kAIPathWaterBody);
 }
 
-// Finds this continent's shore tile and the other continent's hull outline point closest to each other; falls
-// back to the area version when the other is not a continent or either has no shore. Returns success
-bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
-{
-    EEGeomCaptureScope theScope;
-    EEAIContinent* theOther = inOther != NULL && inOther->GetAreaType() == kAIAreaContinent ? static_cast<EEAIContinent*>(inOther) : NULL;
-    EeHullPoint theThis;
-    EeHullPoint theOtherPoint;
-    bool theResult;
-    if (this->GetShoreTiles().size() != 0 && theOther && theOther->GetShoreTiles().size() != 0)
-        theResult = true;
-    else
-        theResult = false;
-    outThis.mX = 0;
-    outThis.mY = 0;
-    outOther.mX = 0;
-    outOther.mY = 0;
-    if (theOther) {
-        if (theResult) {
-            ee_area_closest_points_to_hull(reinterpret_cast<const EeHullPoint*>(this->GetShoreTiles().begin()), this->GetShoreTiles().size(),
-                                           reinterpret_cast<const EeHullPoint*>(theOther->GetHullPointData()), theOther->GetHullPointCount(),
-                                           &theThis, &theOtherPoint);
-            outThis = U2DHullPoint(theThis);
-            outOther = U2DHullPoint(theOtherPoint);
-        } else
-            theResult = this->AreaClosestPoints(inOther, outThis, outOther);
-    } else
-        theResult = this->AreaClosestPoints(inOther, outThis, outOther);
-    if (theScope.mOuter) {   // TEST ONLY: AREA 2
-        EEGeomCaptureBegin(kGeomCaptureArea, 2);
-        EEGeomCapturePoints(this->GetShoreTiles().begin(), this->GetShoreTiles().size(), false);
-        EEGeomCaptureValue(theOther != NULL);
-        EEGeomCaptureValue(inOther->GetNumTiles());
-        EEGeomCapturePoints(inOther->GetHullPoints(), false);
-        EEGeomCaptureValue(theResult);
-        EEGeomCapturePoint(outThis);
-        EEGeomCapturePoint(outOther);
-        EEGeomCaptureCommit();
-    }
-    return theResult;
-}
-
 // Appends the continent's shore tiles next to area inID (all of them for id 0)
 void EEAIContinent::GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles)
 {
