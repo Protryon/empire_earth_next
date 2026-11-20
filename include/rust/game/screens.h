@@ -1657,6 +1657,251 @@ constexpr static const size_t EE_SCREENS_SEET_EFFECT_SLOTS = 46;
 /// The condition record's size in pointers.
 constexpr static const size_t EE_SCREENS_SEET_CONDITION_SLOTS = 23;
 
+/// The world's value `w` (`EE_SCREENS_SEPL_WORLD_*`): `EE_SCREENS_SEPX_WORLD_GET + w` reads it, `_WORLD_SET + w`
+/// sets it to i0 (`SetPopulationLimit`, `mNumberOfWondersToWin`, the flags, the game options').
+constexpr static const uint32_t EE_SCREENS_SEPX_WORLD_GET = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_WORLD_SET = 20;
+
+/// Player i0's values: resource cap i2 (read, set to i3), the current, end and start epochs, the shared line of
+/// sight (read, `SetSharedLOS(i3 != 0, map)`), the game options' colour and CPU flag (of `mPlayers[i0 - 1]`), the
+/// computer player's flag k (`EE_SCREENS_SEPX_AI_GET + k`, `_AI_SET + k` to i3 != 0; `SetActive` for k 0), the
+/// citizen percentage (f0; `SetCitizenPercentage((float)i3 * kHeightEpsilon)`).
+constexpr static const uint32_t EE_SCREENS_SEPX_CAP = 40;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_CAP = 41;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_CURRENT_EPOCH = 42;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_END_EPOCH = 43;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_START_EPOCH = 44;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_LOS = 45;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_LOS = 46;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_OPTIONS_COLOR = 47;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_OPTIONS_COLOR = 48;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_OPTIONS_CPU = 49;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_OPTIONS_CPU = 50;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_CITIZENS = 51;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_CITIZENS = 52;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_AI_GET = 60;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_AI_SET = 70;
+
+/// The events (their handle answered): `new EESEERust(kSEEStartEpoch, p1)`, `new UIESliderChange(p1, 1, 0)`,
+/// `EESEENewUnitLimit(p1, 1, 0)`, `EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH)`, `EECreateScreenEvent(i0)`;
+/// p0's `SetTriggerEvent(i0, p1)`; p1's `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_SEPX_EVENT_START_EPOCH = 80;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_EVENT_SLIDER = 81;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_EVENT_UNIT_LIMIT = 82;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_EVENT_DISPLAY_EPOCH = 83;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_EVENT_SCREEN = 84;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_TRIGGER = 85;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_EVENT_RELEASE = 86;
+
+/// `new EESEAChangeWorldPlayerCount(i0)`, `gUserInterface->PostAction(p0)`, its `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_SEPX_COUNT_ACTION = 87;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_POST_ACTION = 88;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_ACTION_RELEASE = 89;
+
+/// p0's `EEUIShell::Op(EE_SCREENS_SKOP_TECH_REBUILD)`, `_TECH_CLEAR`, `_TECH_ADD` of list i0's tech i1.
+constexpr static const uint32_t EE_SCREENS_SEPX_TECH_REBUILD = 90;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TECH_CLEAR = 91;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TECH_ADD = 92;
+
+/// The rules' unit limit minimum, maximum, default.
+constexpr static const uint32_t EE_SCREENS_SEPX_UNIT_LIMIT_MIN = 93;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_UNIT_LIMIT_MAX = 94;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_UNIT_LIMIT_DEFAULT = 95;
+
+/// Player i0's colour differs from p0's (`EEGetPlayerColor` of its colour index); `SetColor` of it.
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_DIFFERS = 96;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SET_PLAYER_COLOR = 97;
+
+/// `gMiniMap != NULL`, `gMiniMap->Redraw()`.
+constexpr static const uint32_t EE_SCREENS_SEPX_MINIMAP = 98;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MINIMAP_REDRAW = 99;
+
+/// The editor's load thread's `Post406(player i0, its start epoch)`, `Post403(i0, i1 != 0)`, `Post407(i0, its start
+/// epoch)`.
+constexpr static const uint32_t EE_SCREENS_SEPX_POST_406 = 100;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_POST_403 = 101;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_POST_407 = 102;
+
+/// The tech type lists: `gTechTree.GetNodeIDs` into the host's ids, their count, the four lists cleared (units,
+/// buildings, heroes, technologies), node id i0's unit class index, `gUnitClassTable[i0] != NULL`, its
+/// `IsLandBuilding()`, its `mAIKind`, id i0 pushed on list i1.
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_IDS = 103;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_COUNT = 104;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_CLEAR = 105;
+
+/// The host's ids emptied (a fresh list each time, as the C++'s local).
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_IDS_CLEAR = 106;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_CLASS = 109;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_CLASS_EXISTS = 110;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_LAND_BUILDING = 111;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_AI_KIND = 112;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_TT_PUSH = 113;
+
+/// List i0's tech count; player i1's node of its tech i2: `mData->mShowInEditor`, `mScenEditorObsoleted`.
+constexpr static const uint32_t EE_SCREENS_SEPX_FT_COUNT = 114;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_FT_SHOWN = 115;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_FT_OBSOLETED = 116;
+
+/// The combo box p0's `GetCurrentSelection` as the C++ wrote it into its `unsigned long` (`ee_screenscpp_sepx`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_COMBO_SELECTION_RAW = 117;
+
+/// `SeplFont(i0)->GetHeight()`.
+constexpr static const uint32_t EE_SCREENS_SEPX_FONT_HEIGHT = 120;
+
+/// The controls by kind (their handle answered), each with the record's font, text, numbers and the rectangle f:
+/// a label, an edit box, a combo box (with the epochs' titles), the max player combo, a check box, a slider, the unit
+/// types radio, the tech list, the select, tab, set players, colour and diplomacy buttons, a radio, a tri-state, the
+/// object edit, the trigger screens' combo boxes (a shell of kind i0, the trigger's and the scenario's with their
+/// arguments, the plain one), a text button, an arrow, the unit lists (plain, effect, object, the unit tab's).
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LABEL = 121;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_EDIT = 122;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_COMBO = 123;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_COMBO_EPOCHS = 124;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_MAX_PLAYER = 125;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_CHECK = 126;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_SLIDER = 127;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_UNIT_TYPE = 128;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_TECH_LIST = 129;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_SELECT = 130;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_TAB = 131;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_SET_PLAYERS = 132;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_COLOR = 133;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_DIPLOMACY = 134;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_RADIO = 135;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_TRISTATE = 136;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_OBJ_EDIT = 137;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_SHELL_COMBO = 138;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_TRIGGER_COMBO = 139;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_SCENARIO_COMBO = 140;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_PLAIN_COMBO = 141;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_BUTTON = 142;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_ARROW = 143;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_PLAIN = 144;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_EFFECT = 145;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_OBJECT = 146;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_UNIT = 147;
+
+/// The made control p2: `SetAlignment(i0)`, `SetBgOpacity(f0)`, its text label's `SetBgOpacity(f0)` (a radio),
+/// `SeplColor(its GEText, i0)` by class (a label, an edit box, a combo box, a list, a button, a check box's, a
+/// radio's, a tri-state's label), the edit box's `SetText(the record's text)`, a combo box's `SetTextBoxBgOpacity(f0)`,
+/// `SetListBoxSelectedBgColor(blue)`, `SetCurrentSelection(i0)`, `SetListBoxAlwaysDirty(true)`, a slider's
+/// `SetPageSize(i0)`, `SetRange(i0, i1)`, `SetCurrentRangeValue(i0)`, a list's `SetScrollBarBgOpacity(f0)`, its selected
+/// background blue, a button's `SetText(the record's text, its font)`, `SetDisplayMode(hidden)`, the form's
+/// `AddControl(it, i0)`.
+constexpr static const uint32_t EE_SCREENS_SEPX_ALIGN = 150;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_BG = 151;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_RADIO_LABEL_BG = 152;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_LABEL = 153;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_EDIT = 154;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_COMBO = 155;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_LIST = 156;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_BUTTON = 157;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_CHECK = 158;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_RADIO = 159;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COLOR_TRISTATE = 160;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_EDIT_TEXT = 161;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COMBO_TEXT_BG = 162;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COMBO_SELECT_BLUE = 163;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COMBO_SELECT = 164;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_COMBO_ALWAYS_DIRTY = 165;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SLIDER_PAGE = 166;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SLIDER_RANGE = 167;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_SLIDER_VALUE = 168;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_LIST_SCROLL_BG = 169;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_LIST_SELECT_BLUE = 170;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_BUTTON_TEXT = 171;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_HIDE = 172;
+
+constexpr static const uint32_t EE_SCREENS_SEPX_ADD_CONTROL = 173;
+
 constexpr static const uint32_t EE_SCREENS_SEET_A_LABEL = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEET_A_CHECK = 1;
