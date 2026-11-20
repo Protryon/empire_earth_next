@@ -34215,3 +34215,87 @@ numbers and the UI units' targets now.
   main checkout's toolchain/ in a worktree that has none (EE_TOOLCHAIN still wins).
 - Lesson: a build input outside git (toolchain/, fetched data) must resolve the same in every worktree, and a
   missing one must fail the build. An object cache hides the difference until one worktree compiles the unit itself.
+
+## The UI lane, round 6: EEUICChatLine as a kind, the HUD controls' plain reads and the message box's toolkit calls in Rust, the lane's dead members (ee_game shells_chat.rs, hud_views.rs, hud_draw.rs, shells_dialog.rs; ee_ui direct.rs; branch rust-ui6, 2026-11-19)
+
+The brief: the UI units sit above the big cycle since cycle cuts round 3; move whole classes bottom up, aim for
+-3,000 net C++ lines. **Net C++ -119** (+48 -167; one unit and one header gone). docs/progress/ui-cluster.md has
+the commits and what is left.
+
+### Why so little: the cycle was not the obstacle
+
+- `cpp_deps.py report`, `unit` and `layer --focus 'User Interface Thread/,UI Events/'` after a full build: no UI
+  unit is in a cycle; the layer's only edges are EEFOFindNewTargetNearOldTarget's (the unit utilities). The one leaf,
+  EEScreenEvent, is the screens' `UIEvent` subclass: a C++ vtable the toolkit calls, nothing to move.
+- Leaving the cycle changes the link graph, not the code: what is left in this lane is host cases, each one call on
+  a C++ object of another lane (the picker, the actions, communications, the tech tree and the players'
+  improvement calls, the campaign files, `FSFileSpec`, `GESurface`, `GEModel`, the rasterizer's state,
+  `gGameWindow`, `gUserInterface`'s posts). A case can only go when its callee is Rust. Two checks found no dead
+  host cases: every `extern "C"` entry point of the lane's C++ is still named by Rust, and no constant answered
+  first by `hud_views.rs`/`hud_direct.rs`/`ui_direct.rs` still has a C++ case. So the round took the cases whose
+  callees were Rust already: the toolkit's direct path, the world views, the 2D draw list.
+- The 4 "targets" units: EEUIBuildWall/EEUIBuildGate are world calls with editor subclasses (the editor lane's);
+  EEUIRustControl is the HUD controls' base; EEUICChatLine moved.
+
+### What moved
+
+- **`EEUICChatLine`** is a kind over `EEUIShellControl` (shells_chat.rs, kind 0x83): the record
+  (`EeScreensChatLineFields`) and the timer (a `TMPoll` is its `EeTimePoll`, made in Rust) are the kind's; the
+  factory `EEUIShellNewChatLine` (EEUIShell.cpp) makes the shell, sets its background from the table, then the four
+  `GEText`s into the shell's slots and hands them to the kind (`SKOP_CHAT_PARTS`), in the constructor's order; the
+  host op 0xc3 deletes them. `chat_record` (hud_ctl_ffi.rs) finds the record through the kind's op instead of a
+  registered offset; the chat line's members are plain Rust functions now (no C++ caller).
+- **The box selection** (`EEUICSelectUnits`): its eight `GELine`s are gone; `hud_draw::select_box` draws the eight
+  lines on the draw list (black shadow, then white), each a temporary `Shape` (the C++ drew the array in one
+  `Draw(lines, 8)`: the same lines in the same order). `OWN_LIVE` and `HAS_COMPLEX`, the command's `GROUP_COUNT` and
+  `CATEGORY`, and `EEMouseModeOp`'s plain fields of the picked and the first unit (id, family, wall, tile, complex,
+  built, garrison capacity and room, same player; alive, complex, rally point) are `hud_views.rs`' over the views.
+  The call record's `mPicked`/`mFirst` are read in place (`hud_direct::picked_and_first`, the asserted layout).
+- **The message box** (`EEUIFError.cpp`'s host): show, tabbing, password, line count, scroll bar, alignment, the
+  texts' colours, add and enable are calls on the toolkit's Rust objects (shells_dialog.rs `CppDialog::direct`; the
+  texts through `ee_ge_text_*` on the `GEText`'s Rust object). The float register is kept on both sides (the C++
+  ops that make controls still read it). `ee_ui::direct::label_call_f` is new.
+- **Dead members** (`tools/dead_members.py report`): EEUserInterface's unused posts and Undo/Redo, UIControl's and
+  UIManager's GetDrawingSurface, UIButton::GetFocusedBitmap, UIManager::IsFormOnStack, UITLScrolling's
+  Pause/ResumeScrolling, EEUIFMGStatusButton::BaseButtonUp, EEUIECLEFormManager::GetEntryCount.
+
+### Lessons
+
+- **Measure what the lines call, not where the unit sits.** The census said "above the cycle, move bottom up";
+  the per-case callee check said nearly nothing is movable without another lane's object in Rust. Run both before
+  promising a number.
+- **A Rust-owned `TMPoll`** is just an `EeTimePoll` (the class holds the record by value): a kind can own one in a
+  `Box` and hand its address to code that treats it as a `TMPoll*`. A `GEText` cannot be made from Rust without
+  the C++ object host (`GEObjectHost` is not registered with ee_render), so the factory makes texts.
+- **A kind whose record other Rust reads** answers a kind op with the record's address (`SKOP_CHAT_RECORD`) and the
+  reader uses `shells_ffi::op_of`; no offset registry.
+- rustfmt failed the first gate on a test's `vec![...]`; run `rustfmt --check` on new files before the gate (the
+  gate is ~40 minutes under the machine's load).
+
+### Gates
+
+- Both builds 0/0 (EE-AOC 507 inputs, EE-SIM 508), the test profile 0/0 (507); `rust_build.py header` current.
+- The Rust gate: the full run on e32577e45 passed its tests and failed clippy on three `hud_views.rs` functions
+  unused in the test build (their callers are the `#[cfg(not(test))]` FFI modules); b08517139 tests them over the
+  fake world (`hud_views` test PASS, `cargo clippy -p ee_game -p ee_ui --all-targets -D warnings` clean);
+  then the full gate on b08517139: PASS (4973 tests; test, clippy, rustfmt, header).
+- The oracle at seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines; seeds 2-3 also after the chat line
+  alone).
+- sim_editor PASS (14,448 lines), the civilization builder gate PASS (4,062), scenario_check 27/27.
+- Tours (test profile, the main checkout's tree, through slot.py): the random game `--box-select --orders --seed 7`
+  (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS; no GX errors), the editor
+  exercise (RESULT PASS, no GX errors), the tour `--input-check --view-check --play-seconds 120 --seed 7`
+  (F3 paused 0 -> 1 -> 0 ok, VIEW CHECK PASS, RESULT PASS, no GX errors). Captures looked at: the chat line (gates tour's chat.bmp: "TEST chat line: the chat display
+  (EEUICChatLine)" drawn at the top left over its background), the box selection's result, the editor's map tab.
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT 13029,
+  units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 2715/2715).
+- origin/rust (3449a04fd) was already in the base: nothing to merge. Not run: the sim_capture profiles (no
+  simulation code changed), the POSIX builds.
+
+### What only the tours (or a person) exercise
+
+- The chat line kind (EE-SIM builds no form): the tours' in-game chat line (EETestFixture's "TEST chat line").
+- The box selection's lines (`--box-select`); the command drag's count and categories (a right drag: `--orders`
+  moves); the mouse modes' unit reads (every cursor update over a unit in the tours).
+- The message box's direct calls: the civilization builder gate shows the box in EE-SIM; in the game only a person
+  (or a screen that raises a message) shows one.
