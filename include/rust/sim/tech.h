@@ -880,6 +880,20 @@ enum class EeCalamityOp : int32_t {
   WorldHandle = 83,
 };
 
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
+};
+
 /// The host calls. "Target" is the unit the slot was given (the covered, ticked, cloaked unit), "owner" the
 /// effect's own unit.
 enum class EeAreaEffectOp {
@@ -923,20 +937,6 @@ enum class EeAreaEffectOp {
   /// shape `e` 1 those whose footprint meets it, else those whose tile is within `x` (squared) of tile (`f`, `g`):
   /// value their count.
   CountBuildings = 18,
-};
-
-/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
-enum class EeCalamityCastMode : int32_t {
-  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
-  Base = 0,
-  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
-  Global,
-  /// `EELocationCalamityClass`: the base, then the class's location.
-  Location,
-  /// `EEUnitCalamityClass`: the base, then the class's target.
-  Unit,
-  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
-  SpecialAttack,
 };
 
 /// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
@@ -1166,6 +1166,61 @@ struct EeCalamityReply {
   float w;
 };
 
+/// What the C++ knows of the class's effects and sounds when it asks: which are set
+/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
+/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
+struct EeCalamityClassMedia {
+  uint32_t present;
+  uint32_t duration[4];
+  float size[4];
+  uint32_t time1[4];
+  float quake_damage_factor;
+};
+
+/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
+/// `ee/EECalamityClass.h`; 236 bytes on every target).
+struct EeCalamityData {
+  uint8_t mLabel[100];
+  float mFloatParam1;
+  float mFloatParam2;
+  float mQuakeMinimumStrength;
+  float mQuakeStrength;
+  float mUnused1;
+  float mRange;
+  int32_t mUnusedDatabaseID;
+  int32_t mID;
+  int32_t mClassEnum;
+  int32_t mUnusedTargetKind;
+  int32_t mLifeTime;
+  int32_t mUnused2;
+  int32_t mGraphicEffectID1;
+  int32_t mGraphicEffectID2;
+  int32_t mGraphicEffectID3;
+  int32_t mGraphicEffectID4;
+  int32_t mUnused3;
+  int32_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnitClassIndex;
+  int32_t mIntParam1;
+  int32_t mIntParam2;
+  int32_t mIntParam3;
+  int32_t mIntParam4;
+  int32_t mIntParam5;
+  int32_t mIntParam6;
+  bool mUnused6;
+  bool mBoolParam1;
+  bool mUnused7;
+  bool mUnused8;
+  bool mIsCastByAllSelected;
+  bool mIsBlockedByImmunity;
+  int32_t mSoundID;
+  int32_t mSecondarySoundID;
+  int32_t mCost;
+  uint32_t mUnitSet;
+  int32_t mNameID;
+  bool mUnusedClassFlag;
+};
+
 /// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
 /// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
 struct EeAreaEffectTemplateFields {
@@ -1367,61 +1422,6 @@ struct EeCalamityClassFields {
   float mMinimumInterval;
   float mMaximumInterval;
   float mSightBonus;
-};
-
-/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
-/// `ee/EECalamityClass.h`; 236 bytes on every target).
-struct EeCalamityData {
-  uint8_t mLabel[100];
-  float mFloatParam1;
-  float mFloatParam2;
-  float mQuakeMinimumStrength;
-  float mQuakeStrength;
-  float mUnused1;
-  float mRange;
-  int32_t mUnusedDatabaseID;
-  int32_t mID;
-  int32_t mClassEnum;
-  int32_t mUnusedTargetKind;
-  int32_t mLifeTime;
-  int32_t mUnused2;
-  int32_t mGraphicEffectID1;
-  int32_t mGraphicEffectID2;
-  int32_t mGraphicEffectID3;
-  int32_t mGraphicEffectID4;
-  int32_t mUnused3;
-  int32_t mUnused4;
-  int32_t mUnused5;
-  int32_t mUnitClassIndex;
-  int32_t mIntParam1;
-  int32_t mIntParam2;
-  int32_t mIntParam3;
-  int32_t mIntParam4;
-  int32_t mIntParam5;
-  int32_t mIntParam6;
-  bool mUnused6;
-  bool mBoolParam1;
-  bool mUnused7;
-  bool mUnused8;
-  bool mIsCastByAllSelected;
-  bool mIsBlockedByImmunity;
-  int32_t mSoundID;
-  int32_t mSecondarySoundID;
-  int32_t mCost;
-  uint32_t mUnitSet;
-  int32_t mNameID;
-  bool mUnusedClassFlag;
-};
-
-/// What the C++ knows of the class's effects and sounds when it asks: which are set
-/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
-/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
-struct EeCalamityClassMedia {
-  uint32_t present;
-  uint32_t duration[4];
-  float size[4];
-  uint32_t time1[4];
-  float quake_damage_factor;
 };
 
 /// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.

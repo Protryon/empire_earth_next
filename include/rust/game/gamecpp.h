@@ -540,6 +540,136 @@ enum class EeGameCpp : uint32_t {
   WonNetClearGameList,
   WonNetPresent,
   WorldLayoutRegister,
+  AeHas2,
+  CalDelete,
+  CalEffectGenerationZero,
+  CalNew,
+  CalRunStart,
+  CalRunStop,
+  CalRunUpdate,
+  CalSetCasterRaw,
+  CalSetClassRaw,
+  CalSetSecondaryRaw,
+  CalSetSoundRaw,
+  CalSetTargetRaw,
+  CanCastScopeDelete,
+  CanCastScopeNew,
+  CanCastScopeRecord,
+  CapAged,
+  CapCast,
+  CapContagionEvent,
+  CapSave,
+  CapStart,
+  CapStop,
+  CapUpdate,
+  ContinentOfTile,
+  CxFireEffect,
+  CxSetFireEffect,
+  EffFinishDamaged,
+  EffGet,
+  EffKindOf,
+  FileClose,
+  FileOpenRead,
+  FilePuts,
+  FileReadBytes,
+  FileReadULong,
+  FnCanInfect,
+  FnEffect1,
+  FnEffect2,
+  FnEffect3,
+  FnFields,
+  FnNew,
+  FnSetEffect1,
+  FnSetEffect2,
+  FnSetEffect3,
+  GfxEffectDereference,
+  GfxEffectDuration,
+  GfxEffectGet,
+  GfxEffectLoadPtr,
+  GfxEffectReference,
+  GfxEffectSize,
+  GfxEffectTime1,
+  GfxEffectUnloadPtr,
+  KlDeleteFunctor,
+  KlInitialize,
+  KlLoadMedia,
+  KlNew,
+  KlSetEffect1,
+  KlSetEffect2,
+  KlSetEffect3,
+  KlSetEffect4,
+  KlSetFunctor,
+  KlSetSecondary,
+  KlSetSound,
+  KlUnloadMedia,
+  KlValidLocation,
+  KlValidTarget,
+  MapAreaOnMap,
+  MapIsEdgeTile,
+  MeshIsSpaceMap,
+  MgrCalamityAt,
+  MgrCalamityCount,
+  MgrCalamityErase,
+  MgrCalamityPush,
+  MgrClassAt,
+  MgrClassCount,
+  MgrClassSet,
+  MgrClassesResize,
+  MgrDeleteCalamities,
+  MgrDeleteClasses,
+  NodeReference,
+  PickUnitAtMouse,
+  PlLoadClassMedia,
+  PlSetClassMedia,
+  SoParams,
+  SoPlayOnce,
+  SoSetParams,
+  SoundObjectGet,
+  SoundObjectLoadPtr,
+  SoundObjectUnloadPtr,
+  SoundStop,
+  SoundUnloadSample,
+  TileFree,
+  TileTerrainType,
+  TileVisibleTo,
+  UcBattleCryEffect,
+  UcCreateUnitAt,
+  UcInnerSphere,
+  UcLeprosyEffect,
+  UcPlagueEffect,
+  UcPulseCannonEffect,
+  UnMaxHitPointsI32,
+  UnStatsAttack,
+  VariantQuakeFactor,
+  VecCalamityAt,
+  VecCalamityCount,
+  VecUnitsAt,
+  VecUnitsCount,
+  VecUnitsDelete,
+  VecUnitsNew,
+  WorldTileBlocked,
+  WorldUnit,
+  GfxEffectIndex,
+  SoundObjectIndex,
+  CalamityManager,
+  MemFilePosition,
+  MemFileData,
+  MemFileNewDefault,
+  SaveMinorVersion,
+  CalSave,
+  CalLoad,
+  CalNewEmpty,
+  CalEffectGenerationCount,
+  CalEffectGenerationAt,
+  ContagionRust,
+  KlUpdate,
+  KlStart,
+  KlStop,
+  KlCanCastAt,
+  EffectManagerPresent,
+  EffCount,
+  EffDestroyedCount,
+  HelperUpdate,
 };
 
 extern "C" {
@@ -565,6 +695,326 @@ EeCalamityState ee_gamecpp_calamity_state(void *calamity);
 /// # Safety
 /// As [`ee_gamecpp_calamity_state`]; `state` valid.
 void ee_gamecpp_calamity_set_state(const EeCalamityState *state, void *calamity);
+
+/// CALI: every calamity class's members (EECalamityCaptureClasses).
+void ee_gamecpp_capture_calamity_classes();
+
+/// CALK kind 0: a calamity's checksum, its save, a copy loaded from it and the copy's checksum
+/// (EECalamityCaptureSave).
+void ee_gamecpp_capture_calamity_save(void *k, unsigned long index);
+
+/// CALK kind 1: the contagion manager's checksums, its save and a copy loaded from it (EECalamityCaptureContagionSave).
+void ee_gamecpp_capture_contagion_save();
+
+/// CALK of every active calamity, then the contagion manager's (EECalamityCaptureSaves).
+void ee_gamecpp_capture_calamity_saves();
+
+/// CALK every five seconds of a calamity's life (its time alive crossing a multiple of 5000).
+void ee_gamecpp_capture_calamity_aged(void *k, unsigned long index, float before);
+
+/// EECalamityCaptureEventHook: a world call of the update being recorded.
+void ee_gamecpp_capture_calamity_event(long op, long a, long b, float c, float d);
+
+/// EECalamityCaptureUpdate: the class's Update of the calamity and, capturing, its CALW record.
+long ee_gamecpp_capture_calamity_update(void *kl, void *k, float elapsed);
+
+/// EECalamityCanCastEnter: whether the scope is the outermost.
+bool ee_gamecpp_capture_can_cast_enter();
+
+/// EECalamityCanCastLeave.
+void ee_gamecpp_capture_can_cast_leave();
+
+/// EECalamityCanCastRecord: an outermost CanCastAt's CCAS record (kind 0); the result.
+///
+/// # Safety
+/// `at` is three floats.
+long ee_gamecpp_capture_can_cast_record(bool outermost,
+                                        void *kl,
+                                        void *cx,
+                                        const float (*at)[3],
+                                        unsigned long x,
+                                        unsigned long y,
+                                        bool check,
+                                        void *target,
+                                        long result);
+
+/// CCAS kind 1: the sweep (every five game minutes): each class cast by each player's first living unit at six
+/// points with four targets, checked and (for the first target at the first two points) unchecked; nature's cast for
+/// the global classes.
+void ee_gamecpp_capture_calamity_sweep();
+
+/// EECalamityCaptureStartEventHook: a world call of the start or stop being recorded.
+void ee_gamecpp_capture_start_event(long op, long a, long b, float c, float d);
+
+/// EECalamityCaptureStartPoint: an effect's location (z as the int's bits; kCalamityStartEffect).
+void ee_gamecpp_capture_start_point(long which, float x, float y, float z);
+
+/// EECalamityCaptureStart (`stop` false) and EECalamityCaptureStop: the class's Start or Stop and, capturing (and
+/// not inside another one's record), its CALT record.
+bool ee_gamecpp_capture_calamity_start(void *kl,
+                                       void *k,
+                                       bool stop);
+
+/// EECalamityCaptureContagionEventHook: a world call of the helper update being recorded.
+void ee_gamecpp_capture_contagion_event(long op, long a, long b, float c, float d);
+
+/// EECalamityCaptureContagion: the helper's Update and, capturing (and not inside another one's record), its CONT
+/// record.
+void ee_gamecpp_capture_contagion(void *helper,
+                                  float elapsed);
+
+/// EETechCaptureCastCalamities (EE-SIM --calamities): at the k-th call, every class whose row is k modulo 8 cast by
+/// each computer player's first living unit on (or at, or for) the next player's (CALI first, CALK each time).
+void ee_gamecpp_capture_cast_calamities(long call);
+
+/// `EECalamity(class, caster)` (`with_class`) and `EECalamity()`: no units or sounds, Reset; the class, the caster
+/// (referenced), the class's media for the caster's player (nature without a caster).
+void ee_gamecpp_calamity_construct(void *c,
+                                   void *kl,
+                                   void *caster_unit,
+                                   bool with_class);
+
+/// `~EECalamity`: the sounds stopped, the class's media unloaded unless it has a caster id but no caster unit, the
+/// units released.
+void ee_gamecpp_calamity_destruct(void *c);
+
+/// `StopSound` (`secondary` false) and `StopSecondarySound`: the sound stopped and released.
+void ee_gamecpp_calamity_stop_sound(void *c, bool secondary);
+
+/// `ReleaseSound` and `ReleaseSecondarySound`: the sound released without stopping it.
+void ee_gamecpp_calamity_release_sound(void *c, bool secondary);
+
+/// `Reset`: no class, target or caster (both released), the sounds released, the effect generations and handle
+/// zeroed, the numbers a new calamity's (ee_tech calamity_record.rs reset).
+void ee_gamecpp_calamity_reset(void *c);
+
+/// `DumpOutOfSynch`: the calamity's state in the out-of-sync dump.
+void ee_gamecpp_calamity_dump(void *c, void *file);
+
+/// `GetDiscreteUpdates`: the whole discrete update periods elapsed; the remainder kept.
+unsigned long ee_gamecpp_calamity_discrete_updates(void *c);
+
+/// `PlaySound`: the class's.
+void ee_gamecpp_calamity_play_sound(void *c);
+
+/// `SetCasterUnit` (`target` false) and `SetTargetUnit`: the reference and the unit's id moved to it (-1 when
+/// cleared); a target also sets whether the calamity has one.
+void ee_gamecpp_calamity_set_unit(void *c,
+                                  void *u,
+                                  bool is_target);
+
+/// `SetSound` (`secondary` false) and `SetSecondarySound`: the current one stopped, the new one kept referenced.
+void ee_gamecpp_calamity_set_sound(void *c,
+                                   void *node,
+                                   bool secondary);
+
+/// `GetCalamityClass`: the class of the enum, NULL out of range.
+void *ee_gamecpp_calamity_class_of(void *m, unsigned long class_enum);
+
+/// `DestroyCalamities`: every active calamity stopped (CALT) and deleted (asserting that all were).
+void ee_gamecpp_calamity_destroy_all(void *m);
+
+/// `LoadCalamityClasses`: the class records read, each record's class (when its kind has one) created and
+/// initialized; the record count's read result.
+long ee_gamecpp_calamity_load_classes(void *m,
+                                      void *file);
+
+/// `CreateGlobalCalamity` (`kind` 0), `CreateLocationCalamity` (1, at the tile), `CreateUnitCalamity` (2, on the
+/// target): a calamity of the class for the caster and player started; false if the class, tile, target or caster
+/// does not exist.
+bool ee_gamecpp_calamity_create(void *m,
+                                int32_t kind,
+                                unsigned long class_enum,
+                                unsigned long caster_id,
+                                unsigned long target_id,
+                                long x,
+                                long y,
+                                unsigned long player);
+
+/// `DumpOutOfSynch`: every active calamity in the out-of-sync dump.
+void ee_gamecpp_calamity_dump_all(void *m, void *file);
+
+/// `GetCalamityIndex` (`classes` false) and `GetCalamityClassIndex`: the object's index in the list (written only
+/// when it is there); false if absent.
+///
+/// # Safety
+/// `out` valid.
+bool ee_gamecpp_calamity_index(void *m,
+                               void *object,
+                               bool in_classes,
+                               long *out);
+
+/// `GetCalamityType`: the class's target kind (written only when the class exists); false if it does not.
+///
+/// # Safety
+/// `out` valid.
+bool ee_gamecpp_calamity_type(void *m,
+                              unsigned long class_enum,
+                              long *out);
+
+/// `GetOutOfSynchChecksum`: the sum of the active calamities' (a long, wrapping).
+long ee_gamecpp_calamity_checksum_all(void *m);
+
+/// `EECalamity::GetOutOfSynchChecksum` (ee_tech calamity_record.rs checksum).
+long ee_gamecpp_calamity_checksum(void *c);
+
+/// `IsCalamityActive`: a calamity of the class is active.
+bool ee_gamecpp_calamity_is_active(void *m, long class_enum);
+
+/// `LoadMedia` (`load`) and `UnloadMedia` of the class of the enum for the player.
+void ee_gamecpp_calamity_class_media(void *m, void *pl, unsigned long class_enum, bool load);
+
+/// `Restore`: the loaded calamities replace the active ones; saves before 0.30 drop kinds 7, 8 and 10 (not deleted).
+void ee_gamecpp_calamity_restore(void *m,
+                                 unsigned long major,
+                                 unsigned long minor,
+                                 void *list);
+
+/// `AddCalamity`: the calamity started (CALT, CALS) and kept active, or deleted when it does not start (CALK on
+/// its start).
+void ee_gamecpp_calamity_add(void *m,
+                             void *c);
+
+/// `DestroyCalamityClasses`: the active calamities destroyed, every class deleted (asserting that all were).
+void ee_gamecpp_calamity_destroy_classes(void *m);
+
+/// `Update`: every player's earthquake-shaken flag cleared, each active calamity updated (CALW, CALU, CALK) and the
+/// ones that report 7 (done) stopped (CALT) and deleted.
+void ee_gamecpp_calamity_update_all(void *m,
+                                    float elapsed);
+
+/// `EECreateCalamityUnit`: a unit of the class at the transformation for the player (-1: the calamity's); NULL if
+/// the class does not exist.
+void *ee_gamecpp_calamity_create_unit(void *c,
+                                      long unit_class_index,
+                                      void *t,
+                                      long player);
+
+/// `GetDefaultTarget`: a unit class's: the id of the unit under the mouse, -1 if none; -1 for the others.
+long ee_gamecpp_calamity_class_default_target(void *kl);
+
+/// `~EECalamityClass` (`list` 2), `LoadMedia` (0) and `UnloadMedia` (1): the class's media list in its order.
+void ee_gamecpp_calamity_class_media_list(void *kl,
+                                          uint32_t list,
+                                          void *pl,
+                                          bool on_demand);
+
+/// `GetMedia` for the C++.
+///
+/// # Safety
+/// `out` valid.
+void ee_gamecpp_calamity_class_get_media(void *kl, EeCalamityClassMedia *out);
+
+/// `Initialize`: the common fields, the class's effects and sounds fetched as it fetched them, its numbers, its
+/// contagion functor (ee_tech calamity_class.rs).
+///
+/// # Safety
+/// `data` is the class's db record.
+void ee_gamecpp_calamity_class_initialize(void *kl,
+                                          const EeCalamityData *data);
+
+/// `Start` (`which` 0), `Stop` (1), `Update` (2): the class's parameters and sounds (ee_tech calamity_class.rs run),
+/// the run in Rust over the C++ run's host (ee/EECalamityUpdate.h).
+long ee_gamecpp_calamity_class_run(void *kl,
+                                   void *c,
+                                   uint32_t which,
+                                   float elapsed);
+
+/// `Reset` of a new calamity: its placeholders (ee_tech calamity_class.rs reset), the time warp's target tile, the
+/// fire's and the plague's contagion helper on the target.
+void ee_gamecpp_calamity_class_reset(void *kl,
+                                     void *c);
+
+/// `UpdateSound`: the calamity's main or secondary sound for its target location with the falloff; a volume other
+/// than -1 replaces the computed one (clamped to 0..1).
+void ee_gamecpp_calamity_class_update_sound(void *c,
+                                            void *sound,
+                                            float volume,
+                                            float falloff,
+                                            bool primary);
+
+/// `PlaySound`: the earthquake's, hurricane's and volcano's looping main sound, the meteor storm's once at the
+/// target (ee_tech calamity_class.rs sound_mode); nothing for the others.
+void ee_gamecpp_calamity_class_play_sound(void *kl,
+                                          void *c);
+
+/// `CanCastAt`: the rules of the class's base (Rust, ee_tech calamity_cast.rs), recorded by the CCAS scope.
+///
+/// # Safety
+/// `at` is the location (three floats).
+long ee_gamecpp_calamity_class_can_cast(void *kl,
+                                        void *cx,
+                                        const float (*at)[3],
+                                        unsigned long x,
+                                        unsigned long y,
+                                        bool check,
+                                        void *target_unit);
+
+/// `IsValidLocation` of a location class: the shared rule over the class's radius, water flag, map area, space
+/// terrain and placed unit class.
+bool ee_gamecpp_calamity_class_valid_location(void *kl,
+                                              void *cx,
+                                              unsigned long x,
+                                              unsigned long y);
+
+/// `IsValidTarget` of a unit class: the fire's and the plague's functor decides (CanInfect), the others' the shared
+/// rule.
+bool ee_gamecpp_calamity_class_valid_target(void *kl,
+                                            void *cx,
+                                            void *target_unit);
+
+/// `GetRandomLocation` (the volcano's): a random location of a map tile between the minimum and maximum radius
+/// around the centre, at the tile's height.
+///
+/// # Safety
+/// `center` and `out` are three floats each.
+void ee_gamecpp_calamity_class_random_location(void *kl,
+                                               const float (*center)[3],
+                                               float (*out)[3]);
+
+/// `Place`: the volcano makes units step aside from its site at the tile; nothing for the other classes.
+void ee_gamecpp_calamity_class_place(void *kl,
+                                     void *u,
+                                     unsigned long x,
+                                     unsigned long y);
+
+/// `EEContagionFunctor(class, kind)`: the numbers from the class's record (ee_tech contagion_functor.rs init), the
+/// effects each kind kept.
+void ee_gamecpp_functor_construct(void *fu,
+                                  void *kl,
+                                  uint32_t kind);
+
+/// `Update`: the whole discrete update periods elapsed on the calamity for this update's damage.
+void ee_gamecpp_functor_update(void *fu, float elapsed, void *c);
+
+/// `Infect`: the kind's effect on a newly infected unit (the fire's burn, the leprosy's and plague's effects, the
+/// area effect's target effect, the extra damage's morale, the mind control's hold).
+void ee_gamecpp_functor_infect(void *fu,
+                               void *u,
+                               void *c);
+
+/// `Cure`: the kind's effect undone (the fire put out, the plague's deletable flag, the extra damage's morale, the
+/// mind control's release); nothing for the leprosy and the area effects.
+void ee_gamecpp_functor_cure(void *fu,
+                             void *u,
+                             void *c);
+
+/// `Apply`: the unit damaged per elapsed period (ee_tech contagion_functor.rs apply_damage); the fire and the plague
+/// keep it from being deleted (the fire before, unless it is carried; the plague after), the area effect shows its
+/// hit effect.
+void ee_gamecpp_functor_apply(void *fu,
+                              void *u,
+                              float elapsed,
+                              void *c);
+
+/// `EECalamityCanCastAt` for the C++ callers (ee/EECalamityUpdate.h).
+long ee_gamecpp_calamity_can_cast_at(void *kl,
+                                     EeCalamityCastMode mode,
+                                     void *cx,
+                                     unsigned long x,
+                                     unsigned long y,
+                                     bool check,
+                                     void *target_unit);
 
 /// The ctor's members (the world layout registered first; the ghost lock made; the statistics reset).
 void ee_gamecpp_world_init(void *w);

@@ -38,16 +38,7 @@ bool EECalamityRunStart(EECalamityClass* inClass, EECalamity* inCalamity, const 
 void EECalamityRunStop(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
                        EESoundObject* inSound, EESoundObject* inSecondarySound);
 
-// the cast tests in Rust (ee_tech calamity_cast.rs; EECalamityCast.cpp): the class's enum, the tile, the caster and
-// the immunity flag of a question
-EeCalamityCast EECalamityCastOf(EECalamityClass* inClass, EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
-// CanCastAt as the override of inMode runs it: 0 allowed, 1 refused, 2 protected by an area effect
-long EECalamityCanCastAt(EECalamityClass* inClass, EeCalamityCastMode inMode, EEComplexUnit* inUnit, unsigned long inX,
-                         unsigned long inY, bool inCheck, EEUnit* inTargetUnit);
-// a unit class's IsValidTarget
-bool EECalamityValidTarget(EECalamityClass* inClass, EEComplexUnit* inUnit, EEUnit* inTargetUnit);
-// a location class's IsValidLocation (inUnitClassIndex: the hurricane's or the volcano's unit class)
-bool EECalamityValidLocation(EECalamityClass* inClass, const EeCalamityCast& inCast, EEComplexUnit* inUnit,
-                             long inUnitClassIndex);
+// the cast tests (ee_tech calamity_cast.rs) and their host are Rust (ee_game gamecpp calamity_objects.rs): the
+// class's CanCastAt, IsValidLocation and IsValidTarget forward there
 
 #endif
