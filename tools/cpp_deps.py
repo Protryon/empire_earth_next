@@ -879,8 +879,10 @@ def cut_candidates(g, core, max_weight):
 
 
 def focus_match(name, focus):
-    """`focus`: substrings of unit names (e.g. "User Interface Thread/"); a unit matches if it contains one."""
-    return bool(focus) and any(f in name for f in focus)
+    """`focus`: substrings of unit names (e.g. "User Interface Thread/"); a unit matches if it contains one and no
+    `!`-prefixed one (e.g. "!EEFOFindNewTargetNearOldTarget": the unit utilities, in the UI folder)."""
+    return (bool(focus) and any(f in name for f in focus if not f.startswith("!"))
+            and not any(f[1:] in name for f in focus if f.startswith("!")))
 
 
 def find_cuts(g, max_weight=6, focus=()):
