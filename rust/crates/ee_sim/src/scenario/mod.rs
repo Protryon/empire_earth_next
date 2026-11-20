@@ -33,6 +33,7 @@
 //! - [`effect`]: a trigger effect's run (`EESMEffect::Execute` and its helpers) over the world's calls by
 //!   operation; [`effect_ai`] the AI's military effects, [`task`] the two task effects.
 //! - [`ffi`]: the C ABI the C++ classes call.
+//! - [`sm_capture`]: TEST ONLY, the simulation capture's scenario records (SMCE .. SMCU) over the C++ reads.
 
 pub mod aivar;
 pub mod area;
@@ -53,6 +54,8 @@ pub mod placement;
 pub mod player;
 pub mod round;
 pub mod save;
+pub mod sm_capture;
+pub mod sm_capture_game;
 pub mod stream;
 pub mod task;
 pub mod text;
