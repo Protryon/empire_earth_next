@@ -572,17 +572,6 @@ void EEUserInterface::UpdateInterface()
     ee_screens_actions_process();
 }
 
-// Posts a screenshot request (message 0x41b)
-void EEUserInterface::PostScreenShot(long inX, bool inFlag1, bool inFlag2)
-{
-    EEScreenCapture* theCapture = new EEScreenCapture;
-    theCapture->mCaptureComplete = NULL;
-    theCapture->mSurface = NULL;
-    theCapture->mIsPostGame = inFlag2;
-    theCapture->mWidth = inX;
-    this->Post(0x41b, theCapture, (void*)inFlag1);
-}
-
 // Posts loading a saved game file (message 0x408)
 void EEUserInterface::PostLoadSavedGame(const FSFileSpec& inSpec)
 {

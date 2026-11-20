@@ -101,7 +101,15 @@ public:
         inObject->Reference();
         this->Post(0x40c, inObject, NULL);
     }
-    void PostScreenShot(long inX, bool inFlag1, bool inFlag2);   // 0x41b (a new EEScreenCapture; EEUserInterface.cpp)
+    void PostScreenShot(long inX, bool inFlag1, bool inFlag2)   // 0x41b (a new EEScreenCapture)
+    {
+        EEScreenCapture* theCapture = new EEScreenCapture;
+        theCapture->mCaptureComplete = NULL;
+        theCapture->mSurface = NULL;
+        theCapture->mIsPostGame = inFlag2;
+        theCapture->mWidth = inX;
+        this->Post(0x41b, theCapture, (void*)inFlag1);
+    }
     // 0x422 (a copy)
     void PostDialogMessage(const EESMDialogMessage& inMessage) { this->Post(0x422, new EESMDialogMessage(inMessage), NULL); }
     void PostLoadSavedGame(const FSFileSpec& inSpec);   // 0x408 (a copy; EEUserInterface.cpp)
