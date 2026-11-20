@@ -93,25 +93,15 @@ public:
     void SetRegionUpdates(bool inOn, bool inNow) { this->Call(6, 0, 0, {inOn, inNow}); }
     void Clear() { this->Call(3); }
     void FreePaths() { this->Call(4); }   // 0xa5f39 (both queues in progress)
-    // 0xa71c9: a path through the bounded machine (inMargin tiles around the start); true when it reaches inTo
-    bool FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
-                         const EETileCoordinate& inTo, std::vector<GE3DPoint>& outPath, long inMargin,
-                         bool inArg8, bool* outReached);   // FindPath pushes 1; 0xa71c9 never reads [ebp+0x24] (provisional name)
-    // 0xa7414 (cdecl; EEUnitClass 0x636b69, inArg3 0): inWaypoints after the last one on ioPath's tiles appended, last
-    // first (provisional name)
-    static void MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EEComplexUnitWaypoint>& inWaypoints, long inArg3);
+    // 0xa71c9 FindBoundedPath: Rust (ee_sim::astar pm_entry.rs find_bounded_path; its callers are Rust)
 
     // the Rust manager's host (EEPathManager.cpp): what stays C++ (provisional names; addresses are the bodies).
     // TryShortPath, TrimPath, AppendWaypoints, JoinPaths, RunBoundedPath and FinishPath with its found and failed
     // halves are Rust (pm_bounded.rs) over the bounded machine, a Rust search with the path machines (path_search.rs)
     int64_t Call(int32_t inWhat, uint64_t inH0 = 0, uint64_t inH1 = 0, std::initializer_list<int64_t> inValues = {},
                  int64_t* outValues = NULL);
-    // a found graph path's sub sectors (their ids, the goal's first first) given to the unit or the request (the
-    // search and its result are Rust: graph_search.rs)
-    void RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, const int32_t* inPath, size_t inCount,
-                          EEAIPathSubSector* inFrom);
-    // 0xab3aa: a tile off the map is moved onto it (an inline member: its COMDAT is with the templates)
-    void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
+    // RequestUnitPaths (a found graph path given to the unit or the request) and ClampTile (0xab3aa): Rust
+    // (pm_apply.rs over EEPathManager.cpp's one-statement host cases)
 
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }   // a handle of the Rust calls
 

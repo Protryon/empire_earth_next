@@ -55,10 +55,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Empire Earth/EEGameLog.cpp",
                        # TEST ONLY: the headless simulation's driver (EE-SIM.exe: build.py --sim links its entry)
                        "Empire Earth/Empire Earth/EESim.cpp",
-                       # TEST ONLY: its scripted scenario editor (EE-SIM.exe --editor-script; ee/EESimEditor.h)
+                       # TEST ONLY: the host of its scripted scenario editor and civilization builder steps
+                       # (EE-SIM.exe --editor-script; ee_game sim_driver sed_steps.rs, sed_civ.rs)
                        "Empire Earth/Empire Earth/EESimEditor.cpp",
-                       # TEST ONLY: its civilization builder steps (the "cb" command; tools/sim_editor/civbuilder.txt)
-                       "Empire Earth/Empire Earth/EESimCivBuilder.cpp",
                        # the hosts of the scenario editor's actions whole in Rust (EEARust kinds, ee/EEARust.h): the
                        # paints' ranges 0x1a830a..0x1a9112 (EESEAPaintRust; ee_screens editor_actions.rs), the
                        # deletion's 0x1a6b45..0x1a7331, the lasso's and the click's 0x1a7358..0x1a75e0; the editor's

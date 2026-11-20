@@ -154,8 +154,6 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
         return theUnit->mPlayer->IsHuman() ? 1 : 0;
     case EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY:
         return theUnit->mCitizenBuildQueue.size() == 0 ? 1 : 0;
-    case EE_UNITS_ACT_R_WAYPOINTS:
-        return (int64_t)(long)theUnit->mWaypoints.size();
     case EE_UNITS_ACT_R_HOME_BASE:
         return theUnit->mHomeBase != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_BOMBER:
@@ -336,9 +334,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_CLEAR_GOALS:
         theUnit->ClearGoals((long)inA);
         break;
-    case EE_UNITS_ACT_CANCEL_PATHS:
-        gPathManager.CancelPaths(theUnit, true);
-        break;
     case EE_UNITS_ACT_NEXT_PART_ACTION:
         theUnit->mNextPart->StartAction((unsigned long)inA);
         theUnit->mNextPart->mUnitClass->ActionChanged(theUnit->mNextPart);
@@ -481,9 +476,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
             theUnit->SetHeight(theClass->GetHeightAt(theUnit, thePosition));
         break;
     }
-    case EE_UNITS_ACT_UNIT_NEXT_WAYPOINT:
-        theUnit->NextWaypoint();
-        break;
     case EE_UNITS_ACT_RETURN_TO_AIRPORT:
         theClass->AirAnimalReturnToAirport(theUnit);
         break;

@@ -605,10 +605,16 @@ mod tests {
 
     #[test]
     fn the_civ_manager_head() {
-        // whatever tables the tests loaded: the head starts with the category count, and each category's known
-        // flag; it always ends with the 0x23 powers' records (a flag and 152 bytes each); under civ_tests.rs's lock (they
-        // load and clear the tables)
+        // the head starts with the category count, and each category's known flag; it always ends with the 0x23
+        // powers' records (a flag and 152 bytes each). Independent of the test order: under civ_tests.rs's lock (every
+        // test that loads tables takes it) with the tables it resets to the empty ones, which the head is then made of
+        // (a branch without this lock saw a premade civilization another test loaded between the two heads: 132
+        // bytes, its record and its era's)
         let _g = crate::tech::civ_tests::locked();
+        let empty = || {
+            ee_tech_civ_category_count() == 0 && ee_tech_civ_civilization_count() == 0 && ee_tech_civ_era_count() == 0
+        };
+        assert!(empty());
         let r = civ_manager_bytes();
         assert_eq!(words(&r.0[..4])[0] as u32, ee_tech_civ_category_count());
         assert!(r.0.len() >= 4 + 0x51 * 20 + 4 + 0x23 * (4 + std::mem::size_of::<EeTechCivPower>()));
@@ -620,7 +626,10 @@ mod tests {
         assert_eq!(find_key(b"nokey"), (false, 0xdeadbeef));
         let mut size = 0;
         let p = ee_tech_capture_civ_manager(&mut size);
+        assert!(empty());
         assert_eq!(size as usize, r.0.len());
+        // SAFETY: the buffer and its size
+        assert_eq!(unsafe { std::slice::from_raw_parts(p, size as usize) }, &r.0[..]);
         // SAFETY: the buffer and its size
         unsafe { ee_tech_capture_free(p, size) };
     }

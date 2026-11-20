@@ -73,10 +73,6 @@ private:
     unsigned long mValue;
 };
 
-// EE-SIM's TEST ONLY end sweep of the app profile (--app-sweep, at the game's end): EEMap's AddSight and
-// RemoveSight for every player at three points (MAPS, TSGT), ExploreUnseen and FogSeen of the last player (TSGT),
-// then two full cycles of the out-of-synch checksum's windows (MAPK)
-void EESightCaptureSweep();
 // EE-SIM's tick hook, every game minute: a kSightSnapshot record of the whole map
 inline void EESightCaptureSnapshot()
 {
