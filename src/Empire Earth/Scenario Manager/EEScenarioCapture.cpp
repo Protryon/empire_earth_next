@@ -385,8 +385,8 @@ void EESMCaptureEffectWorld(EESMEffect* inEffect)
         r.U32((thePlayer->mSeesAll ? 1u : 0u) | (thePlayer->mObserverMode ? 2u : 0u));
         for (unsigned long q = 0; q < gWorld.mNumPlayers; q++)
             r.I32((int)thePlayer->mEnemies[q]);
-        r.U32((unsigned int)thePlayer->mPendingGroups.size());
-        r.U32((unsigned int)thePlayer->mRunningGroups.size());
+        r.U32((unsigned int)thePlayer->GetNumPendingGroups());
+        r.U32((unsigned int)thePlayer->GetNumRunningGroups());
         r.U32((unsigned int)thePlayer->mPatrolGroups.size());
         r.U32((unsigned int)thePlayer->mCivilization.mAvailablePoints);
         r.U32((unsigned int)thePlayer->mCivilization.mMaxPoints);

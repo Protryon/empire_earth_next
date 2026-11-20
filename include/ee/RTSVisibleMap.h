@@ -6,12 +6,6 @@
 
 class RTSVisibleMap {
 public:
-    static const UString sTileHeight;       // "RTSVisibleMap-TileHeight" (0x5298e8)
-    static const UString sTileWidth;        // "RTSVisibleMap-TileWidth" (0x5298d0)
-    static const UString sTileData;         // "RTSVisibleMap-TileData" (0x5298c0)
-    static const UString sAllLOS;           // "RTSVisibleMap-AllLOS" (0x5298b0)
-    static const UString sMapCreated;       // "RTSVisibleMap-MapCreated" (0x5298a0)
-    static const UString sNumTilesSaved;    // "RTSVisibleMap-NumTilesSaved" (0x529890)
 };
 
 #endif

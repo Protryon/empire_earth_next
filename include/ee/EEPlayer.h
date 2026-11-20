@@ -35,8 +35,8 @@ void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // e
 class EEComplexUnit;
 class EEAIArea;                             // ee/EEAIArea.h (GetNearestArea)
 class EEFormation;
-class EEGroupPathRequest;                   // ee/EEGroupPathRequest.h
-struct EEGroupCluster;                      // ee/EEGroupCluster.h
+class GERectangle;
+class EEAutoPathRequest;                    // ee/EEAutoPathRequest.h (a group path request's path)
 struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h
 class EEUnitGoal;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
@@ -56,7 +56,7 @@ class EETile;
 class EEUnitClass;
 class EEUnitClassUpgrade;                   // (ee/EEUnit.h; was `struct EEUnitStats`)
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
-class EEWUnitsOffMapInfo;                   // (ee/EEWUnitsOffMapInfo.h)
+typedef EeUnitsOffMapInfo EEWUnitsOffMapInfo;   // (ee/EEWUnitsOffMapInfo.h)
 class EEMedia;
 class EESoundObject;                        // (EEUnitClassUpgrade's sounds: SetClassAcknowledgeSound..SetClassSelectionSound)
 class EEGraphicObject;
@@ -101,183 +101,123 @@ public:
     EESoundObject* mSounds[5];              // under attack, garrison, flare, 0x7d0 twice (loaded with the list)
 };
 
-// A group of units (RTTI EEGroup > UReferenceCounter; EEGroup.cpp around 0x205ee4)
-class EEGroup : public UReferenceCounter {
+// The unit groups (port, the groups lane round 1): Rust objects (ee_units group_obj.rs; were EEGroup.cpp,
+// EESavedGroup.cpp, EESelectedGroup.cpp, EEActiveGroup.cpp 0x1ebc47..0x20a3c0). EEGroup and its kinds (RTTI EEGroup >
+// UReferenceCounter; EESavedGroup, EESelectedGroup, EEActiveGroup > EEGroup) name the Rust object: its head
+// EeUnitsGroup holds what the C++ reads in place (mPlayer, mFormation, mKindFlags, a selection's mSavedGroup,
+// mChangeTime, mNeedsSort, a hot-key group's mIndex, an active group's mGoal and mFields); the classes add no data
+// and each member is one call (the original's virtuals dispatch on the kind in Rust). Made by New (one reference),
+// freed by the last Dereference. The C++ the bodies call is ee_units_group_host (EEGroup.cpp).
+class EEGroup : public EeUnitsGroup {
 public:
-    EEGroup(EEPlayer* inPlayer);
-    virtual ~EEGroup();                     // +0x00 0x2060a2 (??_G 0x206086)
-    virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x206174 (`ret 4`; EEMSelectTheseUnits adds through it)
-    // +0x08 0x206280: cancels and deletes the path request of path inPathID (mU08's key)
-    virtual void Remove(long inPathID);
-    // +0x0c (0x20637e for EESelectedGroup): inUnit is in the group (the hot keys' unit selection)
-    virtual bool Contains(EEComplexUnit* inUnit);
-    virtual EEComplexUnit* GetUnit(long inIndex);   // +0x14 0x165bfe: mUnits[inIndex]
-    virtual unsigned long GetNumUnits();    // +0x18 0x165c0d: mUnits.size()
-    // +0x1c 0x2064f4 / +0x30 0x206e61: FSFile Read/Write slots (+0x5c/+0x94) on the third argument; +0x2c 0x206dd9:
-    // the units by id back to pointers (EESavedGroup/EESelectedGroup forward to them)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x2064f4
-    virtual void UpdateKindFlags();         // +0x20 0x206c41
-    virtual void Clear();                   // +0x24 0x206c73 (provisional name; EEMSelectTheseUnits clears first)
-    // +0x28..+0x3c (vtable 0x446f20; arguments by `ret N`; +0x34 is pure in EEGroup's vtable) (provisional name)
-    virtual void RemoveUnit(EEComplexUnit* inUnit);  // +0x28 0x206d15 (removes inUnit by index)
-    virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);  // +0x2c 0x206dd9
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x30 0x206e61
-    virtual void Validate() = 0;            // +0x34 (pure)
-    virtual void MoveAlong(EEGroupPathRequest* inRequest);   // +0x38 0x206680 (a found path: the units follow it)
-    virtual void MoveAlongFoundPaths();     // +0x3c 0x20754e
-
-    // 0x2cfc (out of line; slot 0x18 then slot 0x14(0)): the group's first unit, 0 when empty (provisional name;
-    // EEUIEHKCreateGroup)
-    EEComplexUnit* GetFirstUnit();
-    // inline const accessor (Save 0x206e61 reads mUnits[i] through the const operator[]: lea; mov [eax]) (provisional
-    // name)
-    EEComplexUnit* GetUnitAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
-    void SetFormation(EEFormation* inFormation);   // 0x206ef2 (keeps a reference)
-    // 0x2061ee: the rectangle around the group's units (EEAMiniMap::SendGroup; provisional name)
-    void GetBounds(GERectangle& outBounds);
-    // 0x206462: how many units are of class kind inKind (their class +0x1b8; provisional name)
-    long CountUnitsOfKind(long inKind);
-    void Assign(EEGroup* inGroup);          // 0x208ef3 (EEMSavedGroupCreate: a saved group takes the active group; provisional name)
-    // 0x2063a1: this group's units become inGroup's (EESavedGroup::Assign, EESelectedGroup::SelectSavedGroup)
-    // (provisional name)
-    void CopyUnits(EEGroup* inGroup);
-    EEGroup& CopyGroup(EEGroup* inGroup);     // 0x206121: the units and maps of inGroup (EESelectedGroup::CopySelection) (provisional name)
-    // EEGroup.cpp (provisional names)
-    EECPASGFlags GetFlags();                // 0x2062cb: the flags all units share (their class's slot +0x28)
-    EEComplexUnit* FindUnitOfCategory(long inCategory);   // 0x206405 (class +0x1b8)
-    EEComplexUnit* FindUnitWithFlags(unsigned long inFlags);   // 0x20642e (class +0x1e0 & inFlags, mL38 first)
-    EEGroupPathRequest* FindPathRequest(EEComplexUnit* inUnit);   // 0x20649e (the request holding inUnit's id)
-    // 0x206581: a path request for inCluster's units from inFrom to inTo (EEActiveGroup::RequestPaths)
-    void RequestPath(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, EEGroupCluster* inCluster);
-    void CancelPathRequest(long inPathID);  // 0x206cc9 (EEActiveGroup 0x1efa05)
-    void RemoveAt(long inIndex);
-    // 0x206f1a (cdecl; EECPAttackSubGroup::PickSplitUnits, 0x45e8d2, EEActiveGroup::RequestPaths): inUnits split into
-    // clusters (ee/EEGroupCluster.h) by continent / boats / distance inDistance (squared first when inSquare)
-    static void MakeClusters(std::vector<EEComplexUnit*>& inUnits, std::vector<EEGroupCluster*>& outClusters,
-                             long inDistance, bool inSquare);
-    // 0x1f07a7 (a template COMDAT among EEActiveGroup.cpp's std::sort instantiations, `ret 4` with the sorter by value):
-    // std::sort(mUnits, inSorter) (EESelectedGroup::SortBy 0x209b15 is the same shape: probably one EEGroup member
-    // in the original)
-    template <class T> void SortBy(T inSorter) { std::sort(this->mUnits.begin(), this->mUnits.end(), inSorter); }
-    // save keys (EEGroup.cpp's `$E` chains 0x205eda / 0x205f1d, guard byte 0x963270 bits 1, 2)
-    static const UString sNumSelectedUnitsStringID;   // 0x963278 "EEGroup-NumSelectedUnitsStringID"
-    static const UString sUnitIDStringID;             // 0x963260 "EEGroup-UnitIDStringID"
-
-    // Layout from the ctor EEGroup(EEPlayer*) 0x20601b (sizeof 0x3c: EEActiveGroup's own members start at +0x3c;
-    // dtor 0x2060a2). Names and map types inferred
-    // inline (COMDAT 0xe42b9 right after its first user EEE2DMarchingIcons::Step): whether mU14 holds inKey (the
-    // marching icons pass unit types) (provisional name)
-    bool HasUnitType(long inKey) { return this->mUnitTypeCounts.find(inKey) != this->mUnitTypeCounts.end() ? true : false; }
-    // inline (COMDAT 0x4042b8 after its first user EEAMouseClick::Execute): mU14's value for inKey, 0 when absent
-    long GetUnitTypeCount(long inKey) { std::map<long, long>::iterator i = this->mUnitTypeCounts.find(inKey); return i != this->mUnitTypeCounts.end() ? i->second : 0; }
-
-    std::map<long, EEGroupPathRequest*> mPathRequests;  // +0x08 the path requests by path id (dtor 0x2075e8)
-    std::map<long, long> mUnitTypeCounts;   // +0x14 (dtor 0x95e70)
-    EEComplexUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
-    std::vector<EEComplexUnit*> mUnits;     // +0x20 (GetUnit/GetNumUnits)
-    EEPlayer* mPlayer;                      // +0x30 (the ctor argument)
-    EEFormation* GetFormation() const { return this->mFormation; }
-    EEFormation* mFormation;                // +0x34 (= EEFormation::Create(0))
-    long mKindFlags;                        // +0x38 (= 0; Virtual20 clears it)
+    EEGroup() = delete;
+    EEGroup(const EEGroup&) = delete;
+    ~EEGroup() = delete;
+    void Reference() { ee_units_group_reference(this); }
+    void Dereference() { ee_units_group_dereference(this); }
+    void Add(EEComplexUnit* inUnit) { ee_units_group_do(this, 0, inUnit); }
+    void Remove(long inPathID) { ee_units_group_cancel_path(this, inPathID); }   // the path request's cancel
+    bool Contains(EEComplexUnit* inUnit) { return ee_units_group_contains(this, inUnit); }
+    EEComplexUnit* GetUnit(long inIndex) { return static_cast<EEComplexUnit*>(ee_units_group_unit(this, inIndex)); }
+    unsigned long GetNumUnits() { return ee_units_group_len(this); }
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+        { return ee_units_group_file(this, false, &inFile, &EESaveFilePrimitive); }
+    void UpdateKindFlags() { ee_units_group_do(this, 4, NULL); }
+    void Clear() { ee_units_group_do(this, 2, NULL); }
+    void RemoveUnit(EEComplexUnit* inUnit) { ee_units_group_do(this, 1, inUnit); }
+    long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)ee_units_group_get(this, 7, 0); }
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+        { return ee_units_group_file(this, true, &outFile, &EESaveFilePrimitive); }
+    void Validate() { ee_units_group_do(this, 3, NULL); }
+    void MoveAlongFoundPaths() { ee_units_group_do(this, 5, NULL); }
+    EEComplexUnit* GetFirstUnit() { return this->GetUnit(0); }   // NULL when empty
+    void SetFormation(EEFormation* inFormation) { ee_units_group_set_formation(this, inFormation); }
+    EEFormation* GetFormation() const { return static_cast<EEFormation*>(this->mFormation); }
+    EEPlayer* GetPlayer() const { return static_cast<EEPlayer*>(this->mPlayer); }
+    // the rectangle around the units on the map (GERectangle: bottom, left, right, top; untouched for none)
+    void GetBounds(GERectangle& outBounds) { ee_units_group_bounds(this, reinterpret_cast<float(*)[4]>(&outBounds)); }
+    long CountUnitsOfKind(long inKind) { return (long)ee_units_group_get(this, 0, inKind); }
+    void Assign(EEGroup* inGroup) { ee_units_group_with(this, 3, inGroup); }   // a hot-key group takes a selection
+    void CopyUnits(EEGroup* inGroup) { ee_units_group_with(this, 0, inGroup); }
+    EEGroup& CopyGroup(EEGroup* inGroup) { ee_units_group_with(this, 1, inGroup); return *this; }
+    EECPASGFlags GetFlags();                // the terrain flags every unit shares (EEGroup.cpp)
+    EEComplexUnit* FindUnitOfCategory(long inCategory)
+        { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_group_get(this, 3, inCategory))); }
+    EEComplexUnit* FindUnitWithFlags(unsigned long inFlags)
+        { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_group_get(this, 4, (int64_t)inFlags))); }
+    void CancelPathRequest(long inPathID) { ee_units_group_cancel_path(this, inPathID); }
+    bool HasUnitType(long inKey) { return ee_units_group_get(this, 1, inKey) != 0; }
+    long GetUnitTypeCount(long inKey) { return (long)ee_units_group_get(this, 2, inKey); }
+    // the path of the path request carrying unit id inUnitID (EEComplexUnit::RefreshPath), NULL for none
+    EEAutoPathRequest* GetUnitPath(unsigned long inUnitID)
+        { return reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(ee_units_group_get(this, 6, (int64_t)inUnitID))); }
 };
 
-// The player's current selection (RTTI EESelectedGroup > EEGroup; vtable 0x442ac0; sizeof 0x48): EEPlayer's Reset news
-// three of them (0x165813: +0x9ac, +0x9b0, +0x9b4) and stores +0x3c, +0x44, +0x40 after the base ctor
+// The player's current selection (RTTI EESelectedGroup > EEGroup): EEPlayer's Reset makes two
 class EESelectedGroup : public EEGroup {
 public:
-    EESelectedGroup& CopySelection(EESelectedGroup* inGroup);  // 0x20915b (returns *this: probably the user operator=) (with the player's active group; reads its +0x3c/+0x44; provisional name)
-    void SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup);  // 0x20920c (EEMSavedGroupSelect: a saved group, true)
-    // EESelectedGroup.cpp 0x209008..0x20a3c0 (provisional names)
-    virtual ~EESelectedGroup();             // +0x00 0x209144 (??_G 0x165c20, EEPlayer.cpp)
-    virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x2091d1: Virtual40(inUnit, true)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x20930f
-    virtual void Clear();                   // +0x24 0x209340
-    virtual void RemoveUnit(EEComplexUnit* inUnit);  // +0x28 0x20935e
-    virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);  // +0x2c 0x2093a3
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x30 0x2093df
-    virtual void Validate();                // +0x34 0x209469
-    virtual void AddIfAbsent(EEComplexUnit* inUnit, bool inNeedsSort);  // +0x40 0x2091df (new slot)
-    void AddUnit(EEComplexUnit* inUnit, bool inNeedsSort);
-    void SortUnits();                       // 0x20942f (std::sort by EESGUnitSorter when mB44 is set)
-    // 0x209b15 (a template COMDAT among EESelectedGroup.cpp's std::sort instantiations): std::sort(mUnits, inSorter);
-    // (provisional name; its instantiator includes <algorithm>; VC6 binds std::sort at the instantiation)
-    template <class T> void SortBy(T inSorter) { std::sort(this->mUnits.begin(), this->mUnits.end(), inSorter); }
-    void ShowSelectionAreas();
-    void RefreshSelectionAreas(EEComplexUnit* inUnit);
-    unsigned short GetContinent();
-
-    // inline (EEPlayer::Reset 0x165813 news three: EEGroup(inPlayer) out of line, then the vptr
-    // and +0x3c, +0x44, +0x40; the vtable and ??_G 0x165c20 are emitted in EEPlayer.cpp)
-    EESelectedGroup(EEPlayer* inPlayer) : EEGroup(inPlayer) { this->mSavedGroup = NULL; this->mNeedsSort = false; this->mChangeTime = 0; }
-    EEGroup* mSavedGroup;                   // +0x3c (= 0; EEMChangeFormation gives it the formation too)
-    long mChangeTime;                       // +0x40 (= 0)
-    bool mNeedsSort;                        // +0x44 (= false)
+    static EESelectedGroup* New(EEPlayer* inPlayer)
+        { return static_cast<EESelectedGroup*>(static_cast<EEGroup*>(ee_units_group_new(1, inPlayer, 0))); }
+    EESelectedGroup& CopySelection(EESelectedGroup* inGroup) { ee_units_group_with(this, 2, inGroup); return *this; }
+    // a saved group's units, remembering the group when asked (EEMSavedGroupSelect: true)
+    void SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup) { ee_units_group_with(this, inRememberGroup ? 4 : 5, inGroup); }
+    void AddIfAbsent(EEComplexUnit* inUnit, bool inNeedsSort) { ee_units_group_do(this, inNeedsSort ? 9 : 10, inUnit); }
+    void AddUnit(EEComplexUnit* inUnit, bool inNeedsSort) { ee_units_group_do(this, inNeedsSort ? 11 : 12, inUnit); }
+    void SortUnits() { ee_units_group_do(this, 6, NULL); }
+    void ShowSelectionAreas() { ee_units_group_do(this, 7, NULL); }
+    void RefreshSelectionAreas(EEComplexUnit* inUnit) { ee_units_group_do(this, 8, inUnit); }
+    unsigned short GetContinent() { return (unsigned short)ee_units_group_get(this, 5, 0); }
+    EEGroup* GetSavedGroup() const { return static_cast<EEGroup*>(this->mSavedGroup); }
 };
 
 class EECalamityClass;
 class EETechTreeNode;
 
-// A group the commands act on (RTTI EEActiveGroup > EEGroup; vtable 0x446cf8; ctor 0x1ebc86(EEPlayer*); sizeof 0xb8:
-// `new 0xb8` in EEMessage.cpp's Executes). The unit-command messages build one per formation slot (1..5) from the
-// selected group and push it into EEPlayer +0x854. Names are provisional.
-// port (the units' state lane, round 1): the plain members (mAction, the 17 speeds mSpeed .. mCapFactor in their
-// order, the four flags) are the Rust record EeUnitsActiveGroupFields (ee_units ag_fields.rs), the second base; the
-// group bodies (ag.rs) read and write them in place.
-class EEActiveGroup : public EEGroup, public EeUnitsActiveGroupFields {
+// A group the commands act on (RTTI EEActiveGroup > EEGroup): the unit-command messages make one per formation slot
+// (1..5) from the selected group and push it into EEPlayer's mPendingGroups. Its plain record (the action, the 17
+// speeds, the four flags) is mFields (ee_units ag_fields.rs); its bodies are ag.rs's and group_obj.rs's.
+class EEActiveGroup : public EEGroup {
 public:
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }   // the inline members' handles
-    EEActiveGroup(EEPlayer* inPlayer);
-    virtual ~EEActiveGroup();               // +0x00 0x1ebd27 (??_G 0x1ebd0b)
-    virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x1ebcfd: Virtual48(inUnit, false)
-    virtual void Clear();                   // +0x24 0x1eeb6d (the dtor calls it first)
-    // its own slots (vtable 0x446cf8) provisional names; types inferred
-    // +0x40 0x1ebdfc (Virtual44: mUnits): inUnits' clusters (EEGroup::MakeClusters) each request a path from their
-    // first unit's tile to the goal's; true when there were clusters
-    virtual bool RequestPaths(std::vector<EEComplexUnit*>& inUnits);
-    virtual void RequestAllPaths();         // +0x44 0x1ebdf2
-    virtual void AddMember(EEComplexUnit* inUnit, bool inRemoveFromOld);  // +0x48 0x1ebd73 (EEMRepairUnit: each unit sent to repair)
-    virtual void ComputeValues() { ee_units_ag_compute_values(H(this)); }  // +0x4c 0x1ed692 (the ctor's last call)
-    // 0x1ed9d4: the selected group's units for one slot (IsInFormationSlot); inSort 0: SortUnits first, 1: sorted afterwards
-    // by EEAGIncreasingVelocityUnitSorter
-    void Fill(EESelectedGroup* inGroup, long inSort, long inSlot);
-    void Finish();                          // 0x1edaf3: ClearGoal, into the player's mFinishedGroups (referenced), mBB4 = true
+    static EEActiveGroup* New(EEPlayer* inPlayer)
+        { return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(ee_units_group_new(2, inPlayer, 0))); }
+    // inUnits' clusters each request a path from their first unit's tile to the goal's; true when there were clusters
+    bool RequestPaths(std::vector<EEComplexUnit*>& inUnits)
+        { return ee_units_group_request_paths(this, reinterpret_cast<void* const*>(inUnits.data()), inUnits.size()); }
+    void RequestAllPaths() { ee_units_group_do(this, 21, NULL); }
+    void AddMember(EEComplexUnit* inUnit, bool inRemoveFromOld) { ee_units_group_do(this, inRemoveFromOld ? 13 : 14, inUnit); }
+    void ComputeValues() { ee_units_ag_compute_values(H(this)); }
+    // the selected group's units for one slot; inSort 0: SortUnits first, 1: sorted slowest first afterwards
+    void Fill(EESelectedGroup* inGroup, long inSort, long inSlot) { ee_units_group_fill(this, inGroup, inSort, inSlot); }
+    void Finish() { ee_units_group_do(this, 15, NULL); }   // the goal dropped, into the player's finished groups
     void KeepAttackers() { ee_units_ag_keep_attackers(H(this)); }  // 0x1eec0b (SpreadAroundUnit: keeps the units that can attack)
     bool IsReserved(const GE3DPoint& inLocation) { return ee_units_ag_reserved(H(this), (const float(*)[3])&inLocation.mX, 0) != 0; }  // 0x1efaf0: a mU3C location at (or near) inLocation
     bool IsCellTaken(const GE3DPoint& inLocation) { return ee_units_ag_reserved(H(this), (const float(*)[3])&inLocation.mX, 1) != 0; }  // 0x1efba8: a mU3C location in inLocation's unit region
     void SpreadForUnload(long inTileX, long inTileY) { ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 1); }  // 0x1ef5ce (EEMessage 0xc8615: as SpreadAroundTile, the transports stay)
     // 0x1ef86c (EEMessage 0xbc48f: a calamity's casters for inTarget; the others attack it)
     void SplitCalamityCasters(EECalamityClass* inCalamity, EETechTreeNode* inNode, EEUnit* inTarget) { ee_units_ag_split_calamity_casters(H(this), H(inCalamity), H(inNode), H(inTarget)); }
-    virtual void RemoveUnit(EEComplexUnit* inUnit);  // +0x28 0x1efa05 (EEGroup's, then the active group and mU3C)
-    virtual void Validate();                // +0x34 0x1efcd7 (drops the dead units)
-    // 0x1edc93: mGoal = inGoal, +0xb5 = inFlag, +0xb6 = (kind 1 and its +0x33)
-    void SetGoal(EEUnitGoal* inGoal, bool inFlag);
+    // the goal and whether it is queued; the group moves together for a location goal asking for it
+    void SetGoal(EEUnitGoal* inGoal, bool inFlag) { ee_units_group_set_goal(this, inGoal, inFlag); }
     void Plan() { ee_units_ag_plan(H(this)); }  // 0x1edcc0 (after SetGoal)
-    void KeepNonCitizens();
-    // 0x1edbb2..0x1edc72: a unit's stat, or the group's when mBB6 is set (SetGoal: a kind-1 goal with its +0x33)
-    // (provisional names)
-    float GetMaxVelocity(EEComplexUnit* inUnit);  // 0x1edbb2: mF70 / mStats->mFAC
-    float GetAcceleration(EEComplexUnit* inUnit);  // 0x1edbd0: mF7C / mStats->mFA8
-    float GetMaxAngularVelocity(EEComplexUnit* inUnit);  // 0x1edbee: mScroll / mStats->mFB4
-    float GetAngularAcceleration(EEComplexUnit* inUnit);  // 0x1edc0f: mF94 / mStats->mFB0
-    float GetInverseMaxVelocity(EEComplexUnit* inUnit);  // 0x1edc30: mFA0 / mStats->mFD0
-    float GetInverseAcceleration(EEComplexUnit* inUnit);  // 0x1edc51: mFA4 / mStats->mFC4
-    float GetInverseAngularAcceleration(EEComplexUnit* inUnit);  // 0x1edc72: mFAC / mStats->mParam8
-    void KeepGroundAttackers();
-    void ResetUnitsPaths();                 // 0x1edac5 (EEMPathTo)
-    void KeepCitizens();                    // 0x1eef6c (EEMBuildWall)
+    void KeepNonCitizens() { ee_units_group_do(this, 17, NULL); }
+    // a unit's stat, or the group's when it moves together (EEActiveGroup.cpp)
+    float GetMaxVelocity(EEComplexUnit* inUnit);
+    float GetAcceleration(EEComplexUnit* inUnit);
+    float GetMaxAngularVelocity(EEComplexUnit* inUnit);
+    float GetAngularAcceleration(EEComplexUnit* inUnit);
+    float GetInverseMaxVelocity(EEComplexUnit* inUnit);
+    float GetInverseAcceleration(EEComplexUnit* inUnit);
+    float GetInverseAngularAcceleration(EEComplexUnit* inUnit);
+    void KeepGroundAttackers() { ee_units_group_do(this, 18, NULL); }
+    void ResetUnitsPaths() { ee_units_group_do(this, 20, NULL); }   // EEMPathTo
+    void KeepCitizens() { ee_units_group_do(this, 19, NULL); }      // EEMBuildWall
     void SpreadAroundResource(EEUnit* inTarget) { ee_units_ag_spread_around_resource(H(this), H(inTarget)); }  // 0x1eefbe (EEMGatherResource)
     void SpreadAroundTile(long inTileX, long inTileY) { ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 0); }  // 0x1ef2d4 (EEMDropoffResource: the drop-off's tile)
     void SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY) { ee_units_ag_spread_around_unit(H(this), H(inTarget), (int32_t)inTileX, (int32_t)inTileY); }  // 0x1eecb2 (EEMAttackUnit: the target and its tile)
     void KeepMobileUnits() { ee_units_ag_keep_mobile(H(this)); }
-    void TellGroup(EEComplexUnit* inUnit, const GE3DPoint& inLocation);  // 0x1efca8 (the teleport calamity)
-    // inline (out-of-line COMDAT 0xbb02a after its first user EEMAddPatrolPoint::Execute; 25 callers, none expands
-    // it): defined in ee/EEActiveGroup.h, where EEUnitGoal is complete (its delete calls the virtual dtor)
-    void ClearGoal();
-
-    std::map<unsigned int, GE3DPoint> mDestinations;  // +0x3c (operator[] 0x1efd6c: 12-byte values; 0x20-byte nodes; dtor 0x1efdac: _Init ICF-folded with set<UString>'s; types inferred)
-    std::vector<GE3DPoint> mU48;            // +0x48 (12-byte elements: _Buy 0x150afb)
-    std::vector<GE3DPoint> mU58;            // +0x58
-    EEUnitGoal* mGoal;                      // +0x68 (SetGoal; deleted through its virtual dtor)
+    // the unit's reserved destination (the teleport calamity)
+    void TellGroup(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { ee_units_group_tell(this, inUnit, (const float(*)[3])&inLocation.mX); }
+    void ClearGoal() { ee_units_group_do(this, 16, NULL); }
 };
 
 // A player's tech tree (RTTI EETechTree > RTSTechTree, vtable 0x446114, sizeof 0x554, ctor 0x1cbcc2: the player's
@@ -421,10 +361,6 @@ public:
     }
     EETechTreeEpoch& operator=(const EETechTreeEpoch& inOther);
 
-    // the save key (EETechTreeEpoch.cpp's `$E` chain 0x1cdf25; guard byte 0x562dd8). Unguarded
-    // a class static only renumbers an includer's `$E` symbols
-    static const UString sEpochsCurrentSOL;
-
     std::map<long, EETechTreeNode*> mNodes; // +0x24 by id (0x18-byte nodes: _Init 0x617b6)
     std::vector<long> mLoadedUnitClasses;   // +0x30 unit classes whose media Virtual14 loaded (_Buy 0xe7d2e)
 };
@@ -497,17 +433,6 @@ public:
     // 0x267eaa: the epoch the statistics group shows (inline in the original's EEUIFMGGStatistics.h, the COMDAT after
     // its Select; defined in EEUIFMGMainGroup.cpp with the panel groups' host; provisional name)
     long GetShownEpoch() const;
-
-    // the save keys (EETechTree.cpp's `$E` chains 0x1cba2f..0x1cbc47; guard byte 0x562dc0). Unguarded
-    // a class static only renumbers an includer's `$E` symbols
-    static const UString sNumEpochs;        // "EETechTree-NumEpochs"
-    static const UString sNumTechIDs;       // "EETechTree-NumTechIDs"
-    static const UString sTechNodeID;       // "EETechTree-TechNodeID"
-    static const UString sNodeIsResearched; // "EETechTree-NodeIsResearched"
-    static const UString sNodeIsObsolete;   // "EETechTree-NodeIsObsolete"
-    static const UString sCurrentEpoch;     // "EETechTree-CurrentEpoch"
-    static const UString sStartEpoch;       // "EETechTree-StartEpoch"
-    static const UString sEndEpoch;         // "EETechTree-EndEpoch"
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
     EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
@@ -639,14 +564,6 @@ public:
     void KillUnit(RTSUnit* inUnit, bool inForce);  // 0x16f6ae (marks inUnit->mB28, pushes it)
     long SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x16f7b1 (Save's)
 
-    // the save keys (RTSPlayer.cpp's six `$E` chains; one guard byte 0x531f18; unguarded). Names from
-    // the keys (provisional names).
-    static const UString sSaveVisMap;       // "RTSPlayer-SaveVisMap"
-    static const UString sUniqueID;         // "RTSPlayer-UniqueID"
-    static const UString sPlayerNumber;     // "RTSPlayer-PlayerNumber"
-    static const UString sUnitCount;        // "RTSPlayer-UnitCount"
-    static const UString sHashBucketLength; // "RTSPlayer-HashBucketLength"
-    static const UString sObserverMode;     // "RTSPlayer-ObserverMode"
 
     // Layout (no gaps; sizeof 0x468): the ctor 0x16f12e (vectors, the name, the bucket loop of 0x80, two GEColors
     // of 1.0), its Reset 0x16f464 and Load/Save. Names are provisional unless stated.
@@ -697,25 +614,6 @@ public:
     virtual void AddUnit(RTSUnit* inUnit, bool inKeepID);
     virtual void UnitRemoved(RTSUnit* inUnit);  // +0x2c 0x164241 (a complex unit leaves: ClearGoalQueue per mGoalQueues item) (clears mPendingGroups, then RTSPlayer's)
     virtual void RemovingUnit(RTSUnit* inUnit);  // +0x38 0x168deb (an EEUnit leaves its tile; out of its region and the influence table while linked)
-    // The class static save keys (EEPlayer.cpp's init chains 0x161825..0x161c55; guard bytes 0x531e98 / 0x531e10;
-    // unguarded: a class static only renumbers an includer's `$E` symbols, never its bytes).
-    // Member names from the keys (provisional names).
-    static const UString sClassObjectType;      // "EEPlayer-ClassObjectType"
-    static const UString sUnitIsComplex;        // "EEPlayer-UnitIsComplex"
-    static const UString sNumResources;         // "EEPlayer-NumResources"
-    static const UString sResource;             // "EEPlayer-Resource"
-    static const UString sPopLimit;             // "EEPlayer-PopLimit"
-    static const UString sPatrolGroups;         // "EEPlayer-PatrolGroups"
-    static const UString sHaveTechTree;         // "EEPlayer-HaveTechTree"
-    static const UString sDiplomaticStance;     // "EEPlayer-DiplomaticStance"
-    static const UString sStatistics;           // "EEPlayer-Statistics"
-    static const UString sPopulationCount;      // "EEPlayer-PopulationCount"
-    static const UString sEndOfGameCount;       // "EEPlayer-EndOfGameCount"
-    static const UString sObserverMode;         // "EEPlayer-ObserverMode"
-    static const UString sGeneric;              // "EEPlayer-Generic"
-    static const UString sSharedLOSFlag;        // "EEPlayer-SharedLOSFlag"
-    static const UString sSendChatMessage;      // "EEPlayer-SendChatMessage"
-    static const UString sSendChatMessageType;  // "EEPlayer-SendChatMessageType"
 public:
     // +0x44 (EEMDisband: the unit's technology, its type, 0.75 of its hit-point fraction: a refund) (provisional name)
     virtual void RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction);
@@ -801,7 +699,7 @@ public:
     void ApplyImprovement(long inUnitType, long inImprovement, bool inFlag);  // 0x16b65a (ret 0xc; arg 3 read as a byte)
     // 0x1655f6: inUnit's entry in the player's +0x7c0 vector, 0 if none (the teleport sets its +0x14 to 4)
     // (provisional name)
-    EEWUnitsOffMapInfo* GetOffMapInfo(EEComplexUnit* inUnit);  // (mUnitsOffMap's entry; was a gap struct EEPlayerUnitInfo)
+    EEWUnitsOffMapInfo* GetOffMapInfo(EEComplexUnit* inUnit);  // (the lists' record of inUnit, 0 none)
     void SelectUnits(std::vector<long>& inUnitIDs);   // 0x16a658 (EEMSelectUnits::Execute; provisional name)
     // selection by the EEM* messages (EEMessage.cpp Executes; provisional names)
     void AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag);
@@ -879,7 +777,6 @@ public:
     void RemoveOwnSightAt(const EETileLocation& inLocation);
     void AddSightSharer(EEPlayer* inPlayer);  // 0x1627b9 (pushes inPlayer into mSightSharers between two walks of the units)
     void RemoveSightSharer(EEPlayer* inPlayer);  // 0x1684ab (the mirror: inPlayer out of mSightSharers; RemoveWonderPower, 0x16ab41)
-    void RemoveTownID(long inID);           // 0x163605 (erases mTownsByID's entry inID)
     void AddUnitToRepatrol(EEComplexUnit* inUnit);  // 0x162b35 (one of its own units into mUnitsToRepatrol, referenced)
     void ClearUnitsToRepatrol();            // 0x163fbb (mUnitsToRepatrol dereferenced and cleared)
     void AddOffMapUnit(RTSUnit* inUnit);    // 0x162dab (a new EEWUnitsOffMapInfo for inUnit into mUnitsOffMap)
@@ -912,7 +809,7 @@ public:
     void EnableCamouflagePower();          // 0x16c548: civilization powers, original this/no args
     void ResetWonderTimers(EEPlayer* inPlayer);  // 0x16c1e1 (both players' mWonders units: mCloaked = the time)
     void NoticeForeignUnit(EEUnit* inUnit);  // 0x16442b (mCombatState = 1 for a unit of a player other than 0)
-    EEGroup* GetActiveGroupOf(EEComplexUnit* inUnit);  // 0x164b4f (the group of mRunningGroups, else mPendingGroups, holding inUnit)
+    EEGroup* GetActiveGroupOf(EEComplexUnit* inUnit) { return static_cast<EEGroup*>(ee_units_group_active_of(this, inUnit)); }  // 0x164b4f (the group of mRunningGroups, else mPendingGroups, holding inUnit)
     long GetCitizenPassability();           // 0x1650a3 (flags 1/2/4/8 from unit class 0x20's upgrade +0x160)
     EEAIArea* GetNearestArea(const EETileCoordinate& inTile, bool inSameContinent);  // 0x164781 (ret 8; EECPResourceManager::FindResourceTarget takes its slot +0x18) (provisional name)
     long GetTotalPopulation(bool inFirst, bool inSecond);  // 0x1651e0 (mPopulationCount plus the units' AddedToParent: mPendingUnits, then those in a 0x1d container)
@@ -946,31 +843,31 @@ public:
     EECivilization mCivilization;           // +0x468 (ctor 0x12c57d; provisional name)
     EEPlayerStatistics mSavedGroups;        // +0x4a8 (the player's statistics; provisional name)
     UString mCivilizationFile;              // +0x7ac (saved)
-    std::vector<EEWUnitsOffMapInfo*> mUnitsOffMap; // +0x7bc (AddOffMapUnit pushes a new one per unit taken off the map; push_back 0x16c8b5)
     std::vector<EETown*> mTowns;            // +0x7cc (the player's towns: EECPILocation::Update 0x80a57 walks them)
     std::vector<EEHerd*> mHerds;            // +0x7dc
-    std::vector<EEUnit*> mStrandedUnits;    // +0x7ec (AddStrandedUnit pushes a referenced unit unless std::find has it)
-    std::vector<EEMedia*> mLoadedMedia;     // +0x7fc (AddLoadedMedia pushes the loaded media: push_back 0x16c8e1)
-    std::map<long, EETown*> mTownsByID;  // +0x818 (dtor 0x16c938; find 0x16c94c)
+    // port (the game core lane, round 5): the private lists (the stranded units, the units to repatrol, the loaded
+    // and saved ids, the media-loaded classes, the loaded media, the off-map records) are a Rust object
+    // (ee_units player_lists.rs; made by the constructors, freed by the destructor). The towns by id (written,
+    // never read) and the third selected group (made, never used) are gone
+    EeUnitsPlayerLists* mLists;
     std::vector<UString> mMediaWarnings;    // +0x824 (the ctor's _Buy 0x88ba6 / the dtor's _Tidy 0x665e4 are vector<UString>'s)
     std::vector<EEPlayer*> mSightSharers;   // +0x834 (0x1627b9 push_backs `this`: vector<EEPlayer*>'s push_back 0x44e8f)
-    // inline (out-of-line COMDAT 0x152525 after its first user EEPhysics::GetOutOfSynchChecksum) (provisional name)
-    unsigned long GetNumRunningGroups() { return this->mRunningGroups.size(); }
-    std::vector<EEGroup*> mRunningGroups;   // +0x844 (Virtual04 0x16275a copies mPendingGroups into it)
-    std::vector<EEGroup*> mPendingGroups;   // +0x854 (the command messages push their new EEActiveGroups)
-    std::vector<EEGroup*> mFinishedGroups;  // +0x864 (EEActiveGroup::Finish pushes itself)
+    // port (the groups lane, round 2): the running (+0x844: AddPendingUnits copies the pending ones into it), pending
+    // (+0x854: the command messages push their new EEActiveGroups) and finished groups (+0x864: EEActiveGroup::Finish
+    // pushes itself) are a Rust object (ee_units group_obj.rs EeUnitsPlayerGroups; made by the constructors, freed by
+    // the destructor); the C++ reads them through these
+    EeUnitsPlayerGroups* mGroupLists;
+    unsigned long GetNumRunningGroups() { return ee_units_player_groups_len(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_RUNNING); }
+    EEGroup* GetRunningGroup(unsigned long inIndex) { return static_cast<EEGroup*>(ee_units_player_groups_at(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_RUNNING, inIndex)); }
+    unsigned long GetNumPendingGroups() { return ee_units_player_groups_len(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_PENDING); }
+    void AddPendingGroup(EEGroup* inGroup) { ee_units_player_groups_push(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_PENDING, inGroup); }
     std::vector<EEPPatrolGroup*> mPatrolGroups;  // +0x874 (AddPatrolGroup: push_back 0x16c986)
     std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to EEUnitClassCount() by Reset: one per unit class; the forwarders
                                             // 0x163db9.. index it
     std::vector<EEPlayer*> mAllies;         // +0x894 (EEPPlayerHelper push_backs into it; EEMSendFlare copies it with
                                             // vector<EEPlayer*>::operator= 0x1119ec and flares each)
-    std::vector<EEComplexUnit*> mUnitsToRepatrol;  // +0x8a4 (AddUnitToRepatrol pushes a referenced unit unless std::find has it; ClearUnitsToRepatrol dereferences and clears)
     UReferenceContainer<EEComplexUnit*>* mConstructionSites;  // +0x8b4 (0x16368f: Contains 0x27c820, then its +4 vector)
-    std::vector<long> mConstructionSiteIDs;  // +0x8b8
-    std::vector<unsigned long> mLoadedUnitIDs;    // +0x8c8 (HasLoadedUnitID: std::find; element type inferred)
-    std::vector<long> mSoundLoadedClasses;  // +0x8d8
     UReferenceContainer<EEComplexUnit*>* mWonders;       // +0x8f8 (Reset news one: vtable 0x4429d8)
-    std::vector<long> mWonderIDs;           // +0x8fc
     EEPPlayerEventList mEvents;             // +0x918 (RTTI EEPPlayerEventList, ctor 0x16e5b9; provisional name)
     EEGroup* mGroups[20];                   // +0x954 the saved (hot-key) groups, indexed by a byte (EEMSavedGroupClear
                                             // 0xc5117); Reset calls each one's slot +0x24
@@ -981,7 +878,6 @@ public:
     EESelectedGroup* mActiveGroup;          // +0x9ac (an EESelectedGroup: Reset 0x165813) (slot +0x18 = count, +0x24, +0x14; provisional name)
     EESelectedGroup* GetSelectedGroup() const { return this->mSelectedGroup; }
     EESelectedGroup* mSelectedGroup;        // +0x9b0
-    EESelectedGroup* mL9B4;                 // +0x9b4 (Reset news a third EESelectedGroup)
     EEUnitSet* mHealedUnitSet;              // +0x9b8 (ComputeLoadDistance: Contains(unit type) heals those units)
     struct EeUnitsAtc* mAirTraffic[4];   // +0x9bc (Reset: each EEATCNew(), Rust's state: ee/EEAirTrafficControl.h); indexed by an airport class's mAirTrafficType - 1 (EEMClearAirportCommands 0xbd588)
     // inline: the garrison goal's ComputeUpgrade (0x226c08) loads its argument before `this` (provisional name)

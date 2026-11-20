@@ -365,20 +365,8 @@ constexpr static const int32_t EE_UNITS_AG_GROUP = 1;
 /// group `a`'s `GetUnit(c)`
 constexpr static const int32_t EE_UNITS_AG_GROUP_UNIT = 2;
 
-/// group `a`'s `RemoveUnit(b)`
-constexpr static const int32_t EE_UNITS_AG_REMOVE = 3;
-
-/// group `a`'s `Finish()`
-constexpr static const int32_t EE_UNITS_AG_FINISH = 4;
-
 /// group `a`'s `mMovesTogether = true`
 constexpr static const int32_t EE_UNITS_AG_MOVES_TOGETHER = 5;
-
-/// group `a`'s `RequestAllPaths()`
-constexpr static const int32_t EE_UNITS_AG_REQUEST_ALL = 6;
-
-/// group `a`'s `RequestPaths(units)`: the `c` units at `io.list`
-constexpr static const int32_t EE_UNITS_AG_REQUEST_PATHS = 7;
 
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 constexpr static const int32_t EE_UNITS_AG_SEND = 8;
@@ -386,22 +374,6 @@ constexpr static const int32_t EE_UNITS_AG_SEND = 8;
 /// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
 /// heading)
 constexpr static const int32_t EE_UNITS_AG_ARRANGE = 9;
-
-/// `new EEActiveGroup(a's mPlayer)`
-constexpr static const int32_t EE_UNITS_AG_NEW_GROUP = 10;
-
-/// group `a`'s `Add(b)`
-constexpr static const int32_t EE_UNITS_AG_ADD = 11;
-
-/// group `a`'s `SetFormation(b's mFormation)`
-constexpr static const int32_t EE_UNITS_AG_SET_FORMATION = 12;
-
-/// group `b` launched from `a` (ag.rs `AgHost::launch`): goal `io.a`, target `io.b`, action `io.c`, command
-/// `io.d`, queued `c`
-constexpr static const int32_t EE_UNITS_AG_LAUNCH = 13;
-
-/// group `a`'s `mDestinations` (pushed: id, point)
-constexpr static const int32_t EE_UNITS_AG_DESTINATIONS = 14;
 
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 constexpr static const int32_t EE_UNITS_AG_WORLD_SPHERE = 15;
@@ -433,17 +405,8 @@ constexpr static const int32_t EE_UNITS_AG_QUEUE_GOAL = 24;
 /// unit `a`'s `SetGoal(b, 0, c)`
 constexpr static const int32_t EE_UNITS_AG_SET_GOAL = 25;
 
-/// unit `a`'s `mGoalQueues[c].Add(b)`, `RefreshGoals()`, `RefreshActiveGoal()`
-constexpr static const int32_t EE_UNITS_AG_QUEUE_ADD = 26;
-
 /// unit `a`'s `mGoalQueues[1].AddTime(1)`
 constexpr static const int32_t EE_UNITS_AG_ADD_TIME = 27;
-
-/// unit `a`'s `StartAction(c)`, then its class's `ActionChanged(a)`
-constexpr static const int32_t EE_UNITS_AG_ACT = 28;
-
-/// unit `a`'s `QueueSquadronGoals(b, c & 1)` (`c & 2`) or `SetSquadronGoals(b, c & 1)`
-constexpr static const int32_t EE_UNITS_AG_SQUADRON = 29;
 
 /// unit `a`'s `SetGatheredResource(NULL)`
 constexpr static const int32_t EE_UNITS_AG_CLEAR_GATHERED = 30;
@@ -463,9 +426,6 @@ constexpr static const int32_t EE_UNITS_AG_FOOTPRINT = 34;
 /// `gWorld.mMap->GetTile(c, d) != NULL`
 constexpr static const int32_t EE_UNITS_AG_HAS_TILE = 35;
 
-/// the tile at `io.p` (`UMFloorUnsigned`): 1 and its height in `io.f`, terrain in `io.a`; 0 for none
-constexpr static const int32_t EE_UNITS_AG_TILE_AT = 36;
-
 /// `gContinentManager.CanGetTo(a, c, d)`
 constexpr static const int32_t EE_UNITS_AG_CAN_GET_TO = 37;
 
@@ -484,9 +444,6 @@ constexpr static const int32_t EE_UNITS_AG_COMMAND_TYPE = 41;
 /// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
 constexpr static const int32_t EE_UNITS_AG_NUM_CARGO = 42;
 
-/// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
-constexpr static const int32_t EE_UNITS_AG_ANGLE = 44;
-
 /// the units of tile (c, d) (pushed)
 constexpr static const int32_t EE_UNITS_AG_TILE_UNITS = 45;
 
@@ -499,15 +456,6 @@ constexpr static const int32_t EE_UNITS_AG_SEEN_BY = 47;
 /// `EECanPriestConvert(a, b)`
 constexpr static const int32_t EE_UNITS_AG_PRIEST_CONVERT = 48;
 
-/// unit `a`'s `GetPower() >= calamity b's GetCost() && node c's Contains(its type)`
-constexpr static const int32_t EE_UNITS_AG_CAN_CAST = 49;
-
-/// unit `a`'s `Reference()`
-constexpr static const int32_t EE_UNITS_AG_REFERENCE = 50;
-
-/// unit `a`'s `Dereference()`
-constexpr static const int32_t EE_UNITS_AG_DEREFERENCE = 51;
-
 /// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
 /// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
 constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
@@ -515,39 +463,11 @@ constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
 /// goal `a`'s `mKind` (-1: none)
 constexpr static const int32_t EE_UNITS_AG_GOAL_KIND = 60;
 
-/// goal `a`'s `Clone()`
-constexpr static const int32_t EE_UNITS_AG_CLONE = 61;
-
-/// `delete` goal `a`
-constexpr static const int32_t EE_UNITS_AG_DELETE = 62;
-
-/// location goal `a`'s `GetB1C()` (`io.a`), `GetIsForcedMove()` (`io.b`), `GetShouldFace()` (`io.c`), `GetYaw()`
-/// (`io.f`)
-constexpr static const int32_t EE_UNITS_AG_LOCATION_FIELDS = 63;
-
-/// goal `a`'s `GetB1C()`
-constexpr static const int32_t EE_UNITS_AG_GOAL_B1C = 64;
-
 /// goal `a`'s `GetGoalLocation(io.p)`
 constexpr static const int32_t EE_UNITS_AG_GOAL_LOCATION = 65;
 
 /// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
 constexpr static const int32_t EE_UNITS_AG_NEW_LOCATION = 66;
-
-/// `EEUGRust::NewUnloadTransport(a, c, d, true)`
-constexpr static const int32_t EE_UNITS_AG_NEW_UNLOAD = 67;
-
-/// unload goal `a`'s `CanUnloadAtDestination()`
-constexpr static const int32_t EE_UNITS_AG_CAN_UNLOAD_DEST = 68;
-
-/// unload goal `a`'s `GetUnloadTransport(&io.a, &io.b)`
-constexpr static const int32_t EE_UNITS_AG_UNLOAD_DEST = 69;
-
-/// goal `a`'s `mB1D = true`
-constexpr static const int32_t EE_UNITS_AG_SET_B1D = 70;
-
-/// location goal `a`'s `SetGroupPathState(0)`
-constexpr static const int32_t EE_UNITS_AG_CLEAR_PATH_STATE = 71;
 
 /// gather goal `a`'s `GetGatherStorage()`
 constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;
@@ -555,32 +475,50 @@ constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;
 /// gather goal `a`'s `GetGatherResource()`
 constexpr static const int32_t EE_UNITS_AG_GATHER_RESOURCE = 73;
 
-/// gather goal `a`'s `SetGatherStorage(b)`
-constexpr static const int32_t EE_UNITS_AG_SET_GATHER_STORAGE = 74;
-
-/// attack goal `a`'s `GetAttackTarget()`
-constexpr static const int32_t EE_UNITS_AG_ATTACK_TARGET = 75;
-
-/// attack goal `a`'s `IsConvertAttack()`
-constexpr static const int32_t EE_UNITS_AG_IS_CONVERT_ATTACK = 76;
-
-/// attack goal `a`'s `SetAttacker(NULL)`
-constexpr static const int32_t EE_UNITS_AG_CLEAR_ATTACKER = 77;
-
-/// heal goal `a`'s `GetHealTarget()`
-constexpr static const int32_t EE_UNITS_AG_HEAL_TARGET = 78;
-
-/// heal goal `a`'s `Suits(b)`
-constexpr static const int32_t EE_UNITS_AG_SUITS = 79;
-
-/// explore goal `a`'s `SetExploreTile(c, d)`
-constexpr static const int32_t EE_UNITS_AG_SET_EXPLORE_TILE = 80;
-
 /// patrol goal `a`'s `GetPatrolTarget()`, else `GetPatrolGroup()->GetLast()`
 constexpr static const int32_t EE_UNITS_AG_PATROL_POINT = 81;
 
-/// `EEUGRust::NewAttackUnit(a, b, true, false)`
-constexpr static const int32_t EE_UNITS_AG_NEW_ATTACK_UNIT = 82;
+/// unit `a`'s `mGoalQueues[c].Add(goal b)`
+constexpr static const int32_t EE_UNITS_AG_QUEUE_ADD_ONLY = 90;
+
+/// unit `a`'s `RefreshGoals()`
+constexpr static const int32_t EE_UNITS_AG_REFRESH_GOALS = 91;
+
+/// unit `a`'s `RefreshActiveGoal()`
+constexpr static const int32_t EE_UNITS_AG_REFRESH_ACTIVE_GOAL = 92;
+
+/// unit `a`'s `StartAction(c)`
+constexpr static const int32_t EE_UNITS_AG_START_ACTION = 93;
+
+/// unit `a`'s class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_AG_ACTION_CHANGED = 94;
+
+/// unit `a`'s `QueueSquadronGoals(goal b, c)`
+constexpr static const int32_t EE_UNITS_AG_QUEUE_SQUADRON = 95;
+
+/// unit `a`'s `SetSquadronGoals(goal b, c)`
+constexpr static const int32_t EE_UNITS_AG_SET_SQUADRON = 96;
+
+/// unit `a`'s `GetPower()`
+constexpr static const int32_t EE_UNITS_AG_POWER = 97;
+
+/// calamity class `a`'s `GetCost()`
+constexpr static const int32_t EE_UNITS_AG_CALAMITY_COST = 98;
+
+/// tech node `a`'s `Contains(unit b's class's mUnitType)`
+constexpr static const int32_t EE_UNITS_AG_NODE_HAS_TYPE = 99;
+
+/// `gPhysics->GetRandom(c, d)`
+constexpr static const int32_t EE_UNITS_AG_RANDOM = 100;
+
+/// the map tile at `UMFloorUnsigned` of `p` is there
+constexpr static const int32_t EE_UNITS_AG_TILE_PRESENT = 101;
+
+/// that tile's `GetHeight()` into `f`
+constexpr static const int32_t EE_UNITS_AG_TILE_HEIGHT = 102;
+
+/// that tile's `mTerrainType`
+constexpr static const int32_t EE_UNITS_AG_TILE_TERRAIN = 103;
 
 /// The goals the sweep makes (`EeUnitsSweepop::EE_UNITS_SWEEP_OP_GOAL`'s kind).
 constexpr static const uint64_t EE_UNITS_SWEEP_GOAL_MOVE = 0;
@@ -1380,20 +1318,201 @@ constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
 /// `kActionUnloadTransport` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
 
-/// `EEFormation::Create(io.i)`; when made, the old formation dereferenced and the new one the group's
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_FORMATION_SET = 320;
+/// unit `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UNIT_REFERENCE = 1;
 
-/// `mUnits.push_back(id io.i)` (the id in the pointer, as the original)
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_PUSH_ID = 321;
+/// unit `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UNIT_DEREFERENCE = 2;
 
-/// the formation's `mType` into `io.i`, 8 without one
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_KIND = 322;
+/// `gWorld.GetUnit(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_WORLD_UNIT = 3;
 
-/// `mUnits.size()` into `io.i`
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_COUNT = 323;
+/// `EEFormation::Create(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_NEW = 4;
 
-/// `GetUnitAt(index)->mUnitID` into `io.i`
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_UNIT_ID = 324;
+/// formation `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_REFERENCE = 5;
+
+/// formation `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE = 6;
+
+/// formation `a`'s `mType`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_KIND = 7;
+
+/// formation `a`'s `mCenter` into `io.p`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_CENTER = 8;
+
+/// formation `a`'s `mCenter = io.p`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_CENTER = 9;
+
+/// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_PLACE = 10;
+
+/// unit `a`'s class's `GetTerrainFlags(a, flags)` into `io.flags`
+constexpr static const int32_t EE_UNITS_GROUP_OP_TERRAIN_FLAGS = 13;
+
+/// `gContinentManager.GetContinentID(a)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_OF = 14;
+
+/// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_AT = 15;
+
+/// `gContinentManager.GetPathAreaIDAt(c, d)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_AREA_AT = 17;
+
+/// `gPathManager.RequestPath(c, (io.a, io.b), (io.c, io.d), flags io.flags, 1, -1, NULL, 0)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REQUEST = 19;
+
+/// `gPathManager.CancelAutoPathRequest(a)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_CANCEL = 20;
+
+/// path `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REFERENCE = 21;
+
+/// path `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DEREFERENCE = 22;
+
+/// path `a`'s `mIsDone`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DONE = 23;
+
+/// path `a`'s `mRequestID`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_ID = 24;
+
+/// path `a`'s `mPath` tiles pushed
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_TILES = 25;
+
+/// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_GROUP_PATH = 26;
+
+/// unit `a`'s `ClearBuildTargets()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS = 27;
+
+/// `TMGetTime()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_TIME = 28;
+
+/// `gUserInterface->PostMessage424Once()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_POST_SELECTION = 29;
+
+/// player `a`'s `mGroups[c]` (0 past them)
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUP = 31;
+
+/// `gWorld.mMap->ClearU1955DC()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_AREAS = 34;
+
+/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas (left, right, top, bottom) at `list`, the continents at `list2`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_OUTLINES = 35;
+
+/// `gAEManager.mTemplates[c]->mRadius` into `io.f`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS = 36;
+
+/// `EESaveAutoPathRequest(file a, path b)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SAVE_PATH = 37;
+
+/// `EELoadAutoPathRequest(file a, io.a)`: the error
+constexpr static const int32_t EE_UNITS_GROUP_OP_LOAD_PATH = 38;
+
+/// `EEAwaitAutoPathRequest(c, ...)` calling `ee_units_group_path_resolved(b, d, request)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AWAIT_PATH = 39;
+
+/// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AFTER_LOAD = 40;
+
+/// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_SELECTION = 43;
+
+/// player `a`'s `GetUnit(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_UNIT = 44;
+
+/// unit `b`'s class's `IsSelectable(b)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SELECTABLE = 45;
+
+/// `gDoppelgangerManager.HasDoppelganger(b's tile, b, player a's id)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_DOPPELGANGER = 46;
+
+/// `gWorld.mExecutingLocalSelection`
+constexpr static const int32_t EE_UNITS_GROUP_OP_LOCAL_SELECTION = 47;
+
+/// `EEPlayForLocalPlayer(a, b->mStats->GetSelectionSound(-1))` (c 0) or `GetAcknowledgeSound(-1)` (1)
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAY_SOUND = 48;
+
+/// `gWorldTable.GetLongValue(kWorldAcknowledgementDelay)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_ACK_DELAY = 49;
+
+/// player `a`'s `mViewedUnit = b`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_VIEWED_UNIT = 50;
+
+/// `EEUnitClassCount()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CLASS_COUNT = 51;
+
+/// player `a`'s `GetUpgrade(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UPGRADE = 52;
+
+/// upgrade `a`'s `Init()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UPGRADE_INIT = 53;
+
+/// unit `a`'s `SetHitPoints(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_HIT_POINTS = 54;
+
+/// complex unit `a`'s `SetFlightTime(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_FLIGHT_TIME = 55;
+
+/// complex unit `a`'s `MakeAreaEffects()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS = 56;
+
+/// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES = 57;
+
+/// formation `a`'s `mOrientation` (16 floats) into `list`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_ORIENTATION = 60;
+
+/// formation `a`'s `mOrientation` from `list`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION = 61;
+
+/// formation `a`'s `mHeading` into `f`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_HEADING = 62;
+
+/// formation `a`'s `mHeading = f`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_HEADING = 63;
+
+/// formation `a`'s `mB5C`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_B5C = 64;
+
+/// formation `a`'s `mB5C = c != 0`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_B5C = 65;
+
+/// the path subsector at (c, d)'s location's x
+constexpr static const int32_t EE_UNITS_GROUP_OP_SUBSECTOR_X = 66;
+
+/// its y
+constexpr static const int32_t EE_UNITS_GROUP_OP_SUBSECTOR_Y = 67;
+
+/// `gMapWidth`
+constexpr static const int32_t EE_UNITS_GROUP_OP_MAP_WIDTH = 68;
+
+/// `gMapHeight`
+constexpr static const int32_t EE_UNITS_GROUP_OP_MAP_HEIGHT = 69;
+
+/// `gUserInterface != NULL`
+constexpr static const int32_t EE_UNITS_GROUP_OP_INTERFACE = 70;
+
+/// `gUserInterface->PostRefreshSavedGroup(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO = 71;
+
+/// A group's kind (`mGroupKind`): the class the original made.
+constexpr static const uint8_t EE_UNITS_GROUP_KIND_SAVED = 0;
+
+constexpr static const uint8_t EE_UNITS_GROUP_KIND_SELECTED = 1;
+
+constexpr static const uint8_t EE_UNITS_GROUP_KIND_ACTIVE = 2;
+
+/// The running list (the groups the tick moves)
+constexpr static const uint32_t EE_UNITS_PLAYER_GROUPS_RUNNING = 0;
+
+/// The pending list (the commands' new groups, started by `AddPendingUnits`)
+constexpr static const uint32_t EE_UNITS_PLAYER_GROUPS_PENDING = 1;
+
+/// The finished list (`EEActiveGroup::Finish` pushes itself; `RemovalsDone` releases them)
+constexpr static const uint32_t EE_UNITS_PLAYER_GROUPS_FINISHED = 2;
 
 /// `kHiddenFlagPhaseMask`, `kHiddenFlagMoved`, `kHiddenFlagHidden` (ee/EEUnitClassIDs.h)
 constexpr static const uint8_t EE_UNITS_HIDDEN_PHASE_MASK = 3;
@@ -1485,6 +1604,30 @@ constexpr static const int32_t EE_UNITS_IMPROVEMENT_REPAIR = 12;
 constexpr static const int32_t EE_UNITS_IMPROVEMENT_SPEED = 14;
 
 constexpr static const int32_t EE_UNITS_IMPROVEMENT_TRANSPORT = 15;
+
+/// The callback's `ChangeLevel(improvement index, delta io.i)` on the record the context names.
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_CHANGE_LEVEL = 200;
+
+/// The upgrade's `mName.Load(file)` (the answer: its read status)
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_NAME_LOAD = 201;
+
+/// The upgrade's `mName.Save(file)` (its write status)
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_NAME_SAVE = 202;
+
+/// `ee_units_improvement`'s `what`
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_RESET = 0;
+
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_COPY_LEVELS = 1;
+
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_REAPPLY = 2;
+
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_LOAD = 3;
+
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_SAVE = 4;
+
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_UPGRADE_LOAD = 5;
+
+constexpr static const uint32_t EE_UNITS_IMPROVEMENT_DO_UPGRADE_SAVE = 6;
 
 /// The goal classes (`EEUG*`).
 constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
@@ -1888,6 +2031,512 @@ constexpr static const int32_t EE_UNITS_PLAYER_ASSIGN_TILE = 101;
 /// town `i[0]` without a patrol group gets one (`RefreshPatrolGroup`)
 constexpr static const int32_t EE_UNITS_PLAYER_TOWN_PATROL = 102;
 
+/// `reinterpret_cast<RTSUnit*>(a)->Reference()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNIT_REFERENCE = 1;
+
+/// `reinterpret_cast<RTSUnit*>(a)->Dereference()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNIT_DEREFERENCE = 2;
+
+/// `mActiveGroup = a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_ACTIVE = 3;
+
+/// `mSelectedGroup = a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_SELECTED = 4;
+
+/// `mGroups[b] = a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_HOT_KEY = 5;
+
+/// `gWorld.mExecutingLocalSelection = b != 0`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_EXECUTING_LOCAL = 6;
+
+/// `reinterpret_cast<NEMessage*>(a)->Execute()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_EXECUTE = 7;
+
+/// `mSelectedViewedUnit` (no reference counted)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SELECTED_VIEWED = 8;
+
+/// `mSelectedViewedUnit = a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_SELECTED_VIEWED = 9;
+
+/// `mViewedUnit = a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_VIEWED = 10;
+
+/// `GetNextComplexUnit(a)` (0: the first)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NEXT_COMPLEX = 11;
+
+/// complex unit `a`'s `ReplaceUnits(swaps)` (the swaps' vector: `io.out`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_REPLACE_UNITS = 12;
+
+/// `EEATCReplaceUnits(mAirTraffic[b], swaps)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ATC_REPLACE = 13;
+
+/// unit `a` is an unbuilt wall (`mUnitClass->mIsWall && !mIsBuilt`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNBUILT_WALL = 14;
+
+/// `AddConstructionSite(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_SITE = 15;
+
+/// `mWonders->Replace(a, b)` (nothing when `a` is not there: the original's `Contains` first)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDER_REPLACE = 16;
+
+/// `gDoppelgangerManager.UnregisterPlayer(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DOPPELGANGERS = 17;
+
+/// `mEvents.Clear(b ? this : NULL)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_EVENTS_CLEAR = 18;
+
+/// `mConstructionSites->Clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SITES_CLEAR = 19;
+
+/// `mSavedGroups.Clear()` (the statistics)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_STATS_CLEAR = 20;
+
+/// `mSavedGroups.SetName(GetName())`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_STATS_NAME = 21;
+
+/// `EEUnitStorePlayerTable(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_STORE_TABLE = 22;
+
+/// `EEUnitClassCount()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLASS_COUNT = 23;
+
+/// `mUnitClassUpgrades.resize(b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UPGRADES_RESIZE = 24;
+
+/// `mUnitClassUpgrades[b]` = a new upgrade of `gUnitClassTable[b]` (NULL without the class)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UPGRADE_NEW = 25;
+
+/// `delete mUnitClassUpgrades.begin()[b]`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UPGRADE_DELETE = 26;
+
+/// `mUnitClassUpgrades.clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UPGRADES_CLEAR = 27;
+
+/// `mTechnologies = new EETechTree`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_NEW = 28;
+
+/// `delete mTechnologies`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_DELETE = 29;
+
+/// `EEATCNew()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ATC_NEW = 30;
+
+/// `mAirTraffic[b] = a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ATC_SET = 31;
+
+/// `ee_units_atc_delete(mAirTraffic[b])`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ATC_DELETE = 32;
+
+/// `ee_units_atc_repair_pointers(mAirTraffic[b])`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ATC_REPAIR = 33;
+
+/// the world table's long `b`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WORLD_LONG = 34;
+
+/// `mHealedUnitSet = NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HEALED_CLEAR = 35;
+
+/// `EEGraphicEffect::Get(b)` as an `EEMedia*`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_EFFECT = 36;
+
+/// media `a`'s `LoadMedia()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_LOAD = 37;
+
+/// media `a`'s `UnloadMedia()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD = 38;
+
+/// `EEDeletePointers(mTowns)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWNS_DELETE = 39;
+
+/// `ee_units_off_map(mLists, b, 0, 0, 0, 0)` (2 cleared, 3 repaired)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_OFF_MAP = 40;
+
+/// `std::for_each(mPatrolGroups, EEPDereferencer())`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROLS_RELEASE = 41;
+
+/// `delete mWonders`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDERS_DELETE = 42;
+
+/// `ee_units_queued_free(mQueued)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_QUEUED_FREE = 43;
+
+/// `RTSPlayer::Clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_RTS_CLEAR = 44;
+
+/// `mCivilization.Reapply(this, b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CIV_REAPPLY = 45;
+
+/// `RTSPlayer::RepairPointers(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_RTS_REPAIR = 46;
+
+/// `mPatrolGroups.size()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROL_COUNT = 47;
+
+/// `ee_units_pg_repair(mPatrolGroups[b])`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROL_REPAIR = 48;
+
+/// `EEMakeSavedTowns(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MAKE_SAVED_TOWNS = 49;
+
+/// `mFirstUnit` (a 0) or unit `a`'s `mNext`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NEXT_UNIT = 50;
+
+/// `EESaveHasLiveState(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_LIVE_STATE = 51;
+
+/// `AddUnitToTown(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_TO_TOWN = 52;
+
+/// the civilization builder's button is due to blink (points to add)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CIV_POINTS = 53;
+
+/// `EESetCivBuilderButtonBlinking(true)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CIV_BLINK = 54;
+
+/// `mConstructionSites` (b 0) or `mWonders` (1)`->Add(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CONTAINER_ADD = 55;
+
+/// `RecountPopulation()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_RECOUNT_POPULATION = 56;
+
+/// `mHerds.size()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_COUNT = 57;
+
+/// `mHerds[a]->RepairPointers(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_REPAIR = 58;
+
+/// `RegisterHerds()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_REGISTER_HERDS = 59;
+
+/// `mEvents.RepairEvents(this, b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_EVENTS_REPAIR = 60;
+
+/// the queued improvements queued again (`EEPlayerImprovement(this, 10, 0, 0)`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_REQUEUE = 61;
+
+/// `mNumCapitols`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CAPITOLS = 62;
+
+/// tech `b`'s `GetIsObsolete()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_OBSOLETE = 63;
+
+/// tech `b`'s `mIsAllowed = c != 0`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_ALLOW = 64;
+
+/// `EEApplySavedTowns(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_APPLY_SAVED_TOWNS = 65;
+
+/// `mTowns.size()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_COUNT = 66;
+
+/// town `b` is there without a patrol group
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED = 67;
+
+/// `AdoptTownPatrol(mTowns[b])`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_ADOPT = 68;
+
+/// `mTowns[b]->RefreshPatrolGroup()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_REFRESH = 69;
+
+/// unit `a`'s `GetTileX()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILE_X = 70;
+
+/// `AddOffMapUnit(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_OFF_MAP = 71;
+
+/// `RecountHeroesAndTeleporters()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_RECOUNT_HEROES = 72;
+
+/// `AddLoadedMedia(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_MEDIA = 73;
+
+/// `RemoveLoadedMedia(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_REMOVE_MEDIA = 74;
+
+/// `UnloadAllMedia()` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNLOAD_ALL_MEDIA = 75;
+
+/// `ClearUnitsToRepatrol()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLEAR_REPATROL = 76;
+
+/// complex unit `a`'s `mIsDisabled`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DISABLED = 77;
+
+/// complex unit `a`'s `FindNearestTown()` (an `EETown*`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NEAREST_TOWN = 78;
+
+/// `ee_units_pg_nearest(patrol a, b, c)` (an `EEComplexUnit*`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROL_NEAREST = 79;
+
+/// complex unit `a`'s `mPatrolGroup`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROL_OF = 80;
+
+/// `EEUGRust::NewPatrol(patrol b, point a, true)` (the goal, an `EEUnitGoal*`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NEW_PATROL_GOAL = 81;
+
+/// active group `a`'s `KeepMobileUnits()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_KEEP_MOBILE = 82;
+
+/// active group `a`'s `Plan()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PLAN = 83;
+
+/// unit `a`'s `Kill(0, 0, 0)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_KILL = 84;
+
+/// town `a`'s `mPatrolGroup`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_PATROL = 85;
+
+/// `mConstructionSites->mItems.clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SITES_ITEMS_CLEAR = 86;
+
+/// `*mTechnologies = gTechTree`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_COPY = 87;
+
+/// `mTechnologies = NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_NULL = 88;
+
+/// `EEDeletePointers(mHerds)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERDS_DELETE = 89;
+
+/// `mPatrolGroups.clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROLS_CLEAR = 90;
+
+/// `delete mConstructionSites`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SITES_DELETE = 91;
+
+/// `ee_units_wonders_free(mWonderState)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDER_STATE_FREE = 92;
+
+/// `ee_units_lists_free(mLists)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_LISTS_FREE = 93;
+
+/// `ee_units_player_groups_free(mGroupLists)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_GROUP_LISTS_FREE = 94;
+
+/// `KillUnit(a, false)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_KILL_UNIT = 95;
+
+/// unit `a`'s stats' `GetLineOfSight()` (its bits)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT = 100;
+
+/// unit `a`'s complex unit's `SightOffHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEX_SIGHT_OFF = 101;
+
+/// unit `a`'s complex unit's `SetSight(b's float bits)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_SIGHT = 102;
+
+/// unit `a`'s `SightOnHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SIGHT_ON = 103;
+
+/// unit `a`'s complex unit's `mSight = 0`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SIGHT_ZERO = 104;
+
+/// `gWorld.mPlayers[gWorld.mCurrentPlayer] == this`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_IS_LOCAL = 105;
+
+/// the main game form's Ctrl+D hot key removed
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HOT_KEY_REMOVE = 106;
+
+/// the map is a waterless one
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WATERLESS = 107;
+
+/// the map is no space map
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NOT_SPACE = 108;
+
+/// the main game form's Ctrl+D hot key: select the units of type `b`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HOT_KEY_ADD = 109;
+
+/// `gCivPowersManager.HasPower(this, kCivPowerCamouflage)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HAS_CAMOUFLAGE = 110;
+
+/// the camouflage power's unit set (an `EEUnitSet*`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CAMOUFLAGE_SET = 111;
+
+/// unit set `a`'s `Contains(b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_HAS = 112;
+
+/// complex unit `a`'s command's type (0 none)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMMAND_TYPE = 113;
+
+/// complex unit `a`'s `mCamouflageTimer = b`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_CAMOUFLAGE_TIMER = 114;
+
+/// complex unit `a`'s `SetCloakableChain(false)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLOAKABLE_OFF = 115;
+
+/// complex unit `a`'s `SetCloakedChain(false)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLOAKED_OFF = 116;
+
+/// complex unit `a`'s `mU32C = 0`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLEAR_U32C = 117;
+
+/// unit `a`'s `GetTileY()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILE_Y = 118;
+
+/// `mConstructionSites->mItems.size()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SITE_COUNT = 119;
+
+/// `mConstructionSites->mItems[b]`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SITE_AT = 120;
+
+/// the upgrade of unit class `b` (`EEPlayerClassStats`: NULL past the classes)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLASS_STATS = 121;
+
+/// upgrade `a`'s `mTerrainMask`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TERRAIN_MASK = 122;
+
+/// `gWorld.GetNumTeams()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEAM_COUNT = 123;
+
+/// `gWorld.mTeams[b].ContainsPlayer(c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEAM_HAS = 124;
+
+/// upgrade `a`'s `mButtonLoadCount`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_BUTTON_LOADS = 125;
+
+/// `IsHuman()` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_IS_HUMAN = 126;
+
+/// button `a`'s `Release()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_BUTTON_RELEASE = 127;
+
+/// button `a`'s `Acquire()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_BUTTON_ACQUIRE = 128;
+
+/// `gWorld.mMap->mSize`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MAP_SIZE = 129;
+
+/// `gWorld.mMap->GetTile(b, c) != NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILE_PRESENT = 130;
+
+/// tile (b, c)'s visibility for the player into the terrain mesh
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILE_VISIBILITY = 131;
+
+/// `mPatrolGroups[b]`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROL_AT = 132;
+
+/// `mDamageFrom[b] += c`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DAMAGE_ADD = 133;
+
+/// `gWorld.mPlayers[b] == this`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_IS_SELF = 134;
+
+/// `mEnemies[gWorld.mPlayers[b]->mPlayerID]`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ENEMY_OF = 135;
+
+/// `mCombatState = b`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_COMBAT = 136;
+
+/// `mTechnologies->SetPlayerIndex(b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_SET_INDEX = 137;
+
+/// `mTechnologies->SetPlayer(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_SET_PLAYER = 138;
+
+/// `mBB44 = false`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_BB44_CLEAR = 139;
+
+/// `mPopulationLimitBonus = 0`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_POPULATION_BONUS_CLEAR = 140;
+
+/// `mTributeFee = EE_UNITS_PLAYER_TRIBUTE_FEE`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TRIBUTE_RESET = 141;
+
+/// `mLastUnit` (an `RTSUnit*`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_LAST_UNIT = 142;
+
+/// unit `a`'s `GetComplexUnit()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEX_OF = 143;
+
+/// `mQueued = ee_units_queued_new()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_QUEUED_NEW = 144;
+
+/// `mWonderState = ee_units_wonders_new()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDER_STATE_NEW = 145;
+
+/// `mLists = ee_units_lists_new()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_LISTS_NEW = 146;
+
+/// `mGroupLists = ee_units_player_groups_new()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_GROUP_LISTS_NEW = 147;
+
+/// `mComputerPlayer = NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPUTER_CLEAR = 148;
+
+/// `mHumanPlayer = NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HUMAN_CLEAR = 149;
+
+/// `mWonders = new UReferenceContainer<EEComplexUnit*>`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDERS_NEW = 150;
+
+/// `mConstructionSites = new UReferenceContainer<EEComplexUnit*>`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SITES_NEW = 151;
+
+/// `ee_units_player_body`'s `what`: the members above.
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_DESTROY = 0;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_RESET = 1;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_CLEAR = 2;
+
+/// `RepairPointers(a, b)` (the answer)
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_REPAIR_POINTERS = 3;
+
+/// `ExecuteSelectionMessage(message a)`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_EXECUTE_SELECTION = 4;
+
+/// `SetSelectedViewedUnit(unit a)`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_SET_SELECTED_VIEWED = 5;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_UNSELECT_ALL = 6;
+
+/// `ClearSavedGroup(a)`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP = 7;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_LOAD_EFFECTS = 8;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_UNLOAD_EFFECTS = 9;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_UNLOAD_ALL_MEDIA = 10;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_KILL_STRANDED = 11;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_RESTORE_PATROLS = 12;
+
+/// `PulseSight(by id b, sight f, id a)`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_PULSE_SIGHT = 13;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_MAP_RESTRICTIONS = 14;
+
+/// `EnableCamouflagePower()` (b 1) / `DisableCamouflagePower()`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_CAMOUFLAGE = 15;
+
+/// `GetNearestConstructionSite(unit a)` (the answer)
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_NEAREST_SITE = 16;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_CITIZEN_PASSABILITY = 17;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_TEAM_INDEX = 18;
+
+/// `SwapClassButtonMedia(class b, first a, second c)`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_SWAP_BUTTONS = 19;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_REFRESH_TERRAIN = 20;
+
+/// `GetPatrolGroup(id a)` (the answer)
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_PATROL_GROUP = 21;
+
+/// `DamageTaken(from b, amount c, unit)`
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_DAMAGE = 22;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_RESET_TECH_TREE = 23;
+
+/// `GetNextComplexUnit(unit a)` (the answer)
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_NEXT_COMPLEX = 24;
+
+/// the constructors (b 1: `EEPlayer(name, id c)`)
+constexpr static const uint32_t EE_UNITS_PLAYER_DO_CONSTRUCT = 25;
+
 /// player `i[0]`'s id (`i[0]`), `mSaveVisMap` (`i[1]`) and stance toward player `i[1]` (`i[2]`)
 constexpr static const int32_t EE_UNITS_PLAYER_VIEW = 71;
 
@@ -1960,6 +2609,32 @@ constexpr static const uint32_t EE_UNITS_EVENTS_REPAIR = 3;
 
 constexpr static const uint32_t EE_UNITS_EVENTS_TICK = 4;
 
+/// The lists (`ee_units_lists_*`'s `list`).
+constexpr static const uint32_t EE_UNITS_LISTS_STRANDED = 0;
+
+constexpr static const uint32_t EE_UNITS_LISTS_REPATROL = 1;
+
+constexpr static const uint32_t EE_UNITS_LISTS_LOADED_IDS = 2;
+
+constexpr static const uint32_t EE_UNITS_LISTS_SITE_IDS = 3;
+
+constexpr static const uint32_t EE_UNITS_LISTS_WONDER_IDS = 4;
+
+constexpr static const uint32_t EE_UNITS_LISTS_SOUND_CLASSES = 5;
+
+constexpr static const uint32_t EE_UNITS_LISTS_MEDIA = 6;
+
+/// The host's operations (`ee_units_lists_host(op, value)`).
+constexpr static const int32_t EE_UNITS_LISTS_HOST_REFERENCE = 0;
+
+constexpr static const int32_t EE_UNITS_LISTS_HOST_DEREFERENCE = 1;
+
+/// the unit's `GetUnitID()`
+constexpr static const int32_t EE_UNITS_LISTS_HOST_UNIT_ID = 2;
+
+/// `gWorld.GetUnit(id)` (0 none)
+constexpr static const int32_t EE_UNITS_LISTS_HOST_UNIT_BY_ID = 3;
+
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_ULONG = 1;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_LONG = 2;
@@ -1975,6 +2650,11 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_LONG = 6;
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_FLOAT = 7;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_BOOL = 8;
+
+/// a record's 16 levels as 0x40 raw bytes (`FSFile::Read(char*, 0x40, read)`; io.i their address: improvement.rs)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_LEVELS = 96;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_LEVELS = 97;
 
 /// the units' `unsigned short` (unit_save.rs, unit_load.rs)
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_USHORT = 98;
@@ -2129,6 +2809,243 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_KIND = 71;
 /// the unit's own `Save`
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_SAVE = 72;
 
+/// `EEUnitClassCount()`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_CLASS_COUNT = 300;
+
+/// `gUnitClassTable[index] != NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_CLASS_PRESENT = 301;
+
+/// the load's stand-in upgrade = NULL
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_DUMMY_CLEAR = 302;
+
+/// the load's stand-in upgrade = a new upgrade of `gUnitClassTable[index]`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_DUMMY_NEW = 303;
+
+/// `ESVERIFY_AT(the stand-in != NULL, index)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_DUMMY_VERIFY = 304;
+
+/// upgrade `io.i` is there (`io.i < EEUnitClassCount() && mUnitClassUpgrades[io.i] != NULL`)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UPGRADE_PRESENT = 305;
+
+/// `mUnitClassUpgrades[io.i]->Load(...)` (its result)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UPGRADE_LOAD = 306;
+
+/// the stand-in's `Load(...)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_DUMMY_LOAD = 307;
+
+/// `mTechnologies = new EETechTree`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_NEW = 308;
+
+/// `*mTechnologies = gTechTree`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_COPY = 309;
+
+/// `mTechnologies->SetPlayerIndex(mPlayerID)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_INDEX = 310;
+
+/// `mTechnologies->SetPlayer(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_PLAYER = 311;
+
+/// `mTechnologies->Load(...)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_LOAD = 312;
+
+/// `ee_units_pg_new()` (into `io.i`)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_PATROL_NEW = 313;
+
+/// `ee_units_pg_load(io.i, major, minor, &file)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_PATROL_LOAD = 314;
+
+/// `AddPatrolGroup(io.i)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_PATROL_ADD = 315;
+
+/// `ee_units_pg_dereference(io.i)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_PATROL_RELEASE = 316;
+
+/// `mWonders->Clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_WONDERS_CLEAR = 317;
+
+/// `mWonders->mItems.clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR = 318;
+
+/// `mTechnologies->Save(...)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_SAVE = 319;
+
+/// `mPatrolGroups[index]` (into `io.i`)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_PATROL_AT = 320;
+
+/// `gUnitClassTable[io.i]` is there
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_CLASS_THERE = 330;
+
+/// that class's `mUnitType`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_CLASS_TYPE = 331;
+
+/// that class's `mIsComplex`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_CLASS_COMPLEX = 332;
+
+/// that class's `CreateUnitAtTile(player, -10000, -10000, NULL, 3.1415927f)` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_CREATE = 333;
+
+/// unit `io.i`'s `Load(...)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_LOAD = 334;
+
+/// unit `io.i`'s `mIsQueuedForDelete`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_QUEUED_DELETE = 335;
+
+/// `KillUnit(unit io.i, true)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_KILL = 336;
+
+/// `EEComplexUnit::Create()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_COMPLEX_NEW = 337;
+
+/// `EEUnit::Create()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_NEW = 338;
+
+/// unit `io.i`'s id into the loaded ids (`ee_units_lists_add(mLists, EE_UNITS_LISTS_LOADED_IDS, ...)`)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_LOADED_ID = 339;
+
+/// unit `io.i`'s `RepairPointers(...)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_REPAIR = 340;
+
+/// unit `io.i`'s `Clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_CLEAR = 341;
+
+/// unit `io.i`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_UNIT_RELEASE = 342;
+
+/// the saved unit's class's `mUnitType`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_SAVED_TYPE = 343;
+
+/// the saved unit's `mComplexUnit != NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_SAVED_COMPLEX = 344;
+
+/// `EnableCamouflagePower()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CAMOUFLAGE_ON = 300;
+
+/// `DisableCamouflagePower()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CAMOUFLAGE_OFF = 301;
+
+/// `gWorld.RemoveShareBonus()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARE_REMOVE = 302;
+
+/// `gWorld.ApplyShareBonus()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARE_APPLY = 303;
+
+/// player `i[0]` (0 this one)`->AddSightSharer(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARER_ADD = 304;
+
+/// player `i[0]` (0 this one)`->RemoveSightSharer(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARER_REMOVE = 305;
+
+/// unit `i[0]`'s complex unit's `SightOnHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_COMPLEX_SIGHT_ON = 306;
+
+/// unit `i[0]`'s complex unit's `SightOffHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_COMPLEX_SIGHT_OFF = 307;
+
+/// complex unit `i[0]`'s `SetFlightTime(i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SET_FLIGHT_TIME = 308;
+
+/// complex unit `i[0]`'s `SetPower(i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SET_POWER = 309;
+
+/// unit `i[0]`'s `SetHitPoints(i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SET_HIT_POINTS = 310;
+
+/// player `i[0]` (0 this one)`->mEvents.ShowEvents(it)`
+constexpr static const int32_t EE_UNITS_PLAYER_X_EVENTS_SHOW = 311;
+
+/// player `i[0]` (0 this one)`->mEvents.HideEvents(it)`
+constexpr static const int32_t EE_UNITS_PLAYER_X_EVENTS_HIDE = 312;
+
+/// player `i[0]` (0 this one)`->mAllies.push_back(player i[1] (0 this one))`
+constexpr static const int32_t EE_UNITS_PLAYER_X_ALLY_ADD = 313;
+
+/// player `i[0]` (0 this one)`->RemoveAlly(player i[1] (0 this one))`
+constexpr static const int32_t EE_UNITS_PLAYER_X_ALLY_REMOVE = 314;
+
+/// `mSightSharers.push_back(player i[0] (0 this one))`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARERS_PUSH = 315;
+
+/// whether `mSightSharers` holds player `i[0]` (0 this one)
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARERS_HAS = 316;
+
+/// `mSightSharers.erase(std::find(..., player i[0] (0 this one)))`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SHARERS_ERASE = 317;
+
+/// `gMiniMap != NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_X_MINIMAP = 318;
+
+/// `gMiniMap->Redraw()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_MINIMAP_REDRAW = 319;
+
+/// `mWonders->Add(unit i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_WONDERS_ADD = 320;
+
+/// `mWonders->Remove(unit i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_WONDERS_REMOVE = 321;
+
+/// complex unit `i[0]`'s `mCloaked = gPhysics->mGameTime`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLOAKED_NOW = 322;
+
+/// complex unit `i[0]`'s `mCloaked = 0`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLOAKED_CLEAR = 323;
+
+/// `mSavedGroups.Lower(i[0], i[1])` (as `EE_UNITS_PLAYER_STATS_LOWER`)
+constexpr static const int32_t EE_UNITS_PLAYER_X_STATS_LOWER = 324;
+
+/// player `i[0]` (0 this one)'s `mFirstUnit` (an `RTSUnit*`)
+constexpr static const int32_t EE_UNITS_PLAYER_X_FIRST_UNIT = 325;
+
+/// unit `i[0]`'s `mNext`
+constexpr static const int32_t EE_UNITS_PLAYER_X_NEXT_UNIT = 326;
+
+/// unit `i[0]`'s class `IsLandBuilding()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_LAND_BUILDING = 327;
+
+/// unit `i[0]`'s `SightOnHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SIGHT_ON = 328;
+
+/// unit `i[0]`'s `SightOffHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_SIGHT_OFF = 329;
+
+/// `gWorld.mPlayers[i[0]] == this`
+constexpr static const int32_t EE_UNITS_PLAYER_X_IS_SELF = 330;
+
+/// `gWorld.mPlayers[i[0]]->WonderStarted(complex unit i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_WONDER_STARTED = 331;
+
+/// unit `i[0]`'s `mResourceAmount`
+constexpr static const int32_t EE_UNITS_PLAYER_X_RESOURCE = 332;
+
+/// unit `i[0]`'s `mResourceAmount = 0`
+constexpr static const int32_t EE_UNITS_PLAYER_X_RESOURCE_CLEAR = 333;
+
+/// `gContinentManager.RemoveForestTile(unit i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_FOREST_REMOVE = 334;
+
+/// node `i[0]`'s `mIsAllowed = i[1] != 0`
+constexpr static const int32_t EE_UNITS_PLAYER_X_NODE_ALLOW = 335;
+
+/// `mUnitClassUpgrades.size()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_UPGRADE_SLOTS = 336;
+
+/// `mUnitClassUpgrades[i[0]]` (an `EEUnitClassUpgrade*`)
+constexpr static const int32_t EE_UNITS_PLAYER_X_UPGRADE_AT = 337;
+
+/// upgrade `i[0]`'s `mUnitClass->GetUnitType()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_UPGRADE_UNIT_TYPE = 338;
+
+/// `mTechnologies->Get(i[0])` (0 none)
+constexpr static const int32_t EE_UNITS_PLAYER_X_NODE = 339;
+
+/// `gResource->GetString(i[0], *(UWideString*)i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_STRING = 340;
+
+/// `(long)` of the world table's `GetLongValue2(EEWorldImprovementTime(i[0]))`
+constexpr static const int32_t EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2 = 341;
+
+/// `(long)` of the world table's `GetLongValue(EEWorldImprovementTime(i[0]))`
+constexpr static const int32_t EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 = 342;
+
 /// The series of a player's statistics.
 constexpr static const size_t EE_UNITS_STATS_SERIES = 31;
 
@@ -2190,6 +3107,45 @@ constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS = 21;
 
 /// unit `io.i`'s `SetHitPoints(index as long)`
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS = 22;
+
+/// `mViewedUnit` is there and held by the player only
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_VIEWED_ALONE = 40;
+
+/// `UpdateSelection(NULL, true)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_UNVIEW = 41;
+
+/// `mSelectedViewedUnit` is there and held by the player only
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_SELECTED_VIEWED_ALONE = 42;
+
+/// `SetSelectedViewedUnit(NULL)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_SELECTED_UNVIEW = 43;
+
+/// `ee_units_groups_player(this, 4)` (group_obj.rs validate_player)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_VALIDATE_GROUPS = 44;
+
+/// `UpdateAirTraffic()`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_AIR = 45;
+
+/// `mEvents.TickEvents(this, gPhysics->mTickTime)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_EVENTS = 46;
+
+/// `kWorldWonderHealAmount` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_HEAL_AMOUNT = 47;
+
+/// the tech tree's `mCurrentEpoch` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_EPOCH = 48;
+
+/// `kWorldWonderHealEpochStep` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_HEAL_STEP = 49;
+
+/// `kWorldWonderHealEpochFactor` into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR = 50;
+
+/// the first unit (`io.i` 0) or the one after unit `io.i`, into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_NEXT_UNIT = 51;
+
+/// `mHealedUnitSet->Contains(unit io.i's class's mUnitType)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_X_HEALED = 52;
 
 /// `kPlayerHealInterval` (ms)
 constexpr static const float EE_UNITS_PLAYER_HEAL_INTERVAL = 10000.0;
@@ -3765,6 +4721,71 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// The media slots (the order of the C++ members).
+constexpr static const size_t EE_UNITS_MEDIA_BUTTON = 0;
+
+constexpr static const size_t EE_UNITS_MEDIA_MODEL = 1;
+
+constexpr static const size_t EE_UNITS_MEDIA_CREATION = 2;
+
+constexpr static const size_t EE_UNITS_MEDIA_DEATH = 3;
+
+constexpr static const size_t EE_UNITS_MEDIA_ACKNOWLEDGE = 4;
+
+constexpr static const size_t EE_UNITS_MEDIA_SELECTION = 6;
+
+/// The entry point's operations.
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_SET = 0;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_LOAD = 1;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_UNLOAD = 2;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_DESTROY = 3;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_LOAD_BUTTONS = 4;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_UNLOAD_BUTTONS = 5;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_ACKNOWLEDGE_SOUND = 6;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_MEDIA_SELECTION_SOUND = 7;
+
+/// The host's operations (`ee_units_upgrade_host`).
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_SOUND_LOAD = 1;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_SOUND_UNLOAD = 2;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_MODEL_LOAD = 3;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_MODEL_UNLOAD = 4;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_BUTTON_ACQUIRE = 5;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_BUTTON_RELEASE = 6;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD = 7;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD = 8;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_LOAD_MEDIA = 9;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_MEDIA = 10;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_LOAD_BUTTONS = 11;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_BUTTONS = 12;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_DATABASE_ENTER = 13;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_DATABASE_LEAVE = 14;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_UPGRADE_ENTER = 15;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_UPGRADE_LEAVE = 16;
+
+constexpr static const int32_t EE_UNITS_UPGRADE_OP_SLEEP = 17;
+
 /// `GetPathStart`'s and the others' "no path" answer.
 constexpr static const int32_t EE_UNITS_WAYPOINTS_NONE = 7;
 
@@ -4000,6 +5021,13 @@ struct EeUnitsPatrolGroup;
 
 /// The events (`EEPPlayerEventList`'s state).
 struct EeUnitsPlayerEvents;
+
+/// A player's three group lists (EEPlayer's `mGroupLists`): the groups by address, in the vectors' order; the lists
+/// hold no reference of their own (the bodies count them, as the original's did).
+struct EeUnitsPlayerGroups;
+
+/// The player's lists.
+struct EeUnitsPlayerLists;
 
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
@@ -4455,6 +5483,79 @@ struct EeGoalQueueHost {
   void (*refresh)(void *context);
 };
 
+/// One host operation's values.
+struct EeUnitsGroupIo {
+  int64_t a;
+  int64_t b;
+  int64_t c;
+  int64_t d;
+  float f;
+  float p[3];
+  uint8_t flags[17];
+  /// the items an operation reads (`len` of them)
+  const void *list;
+  size_t len;
+  /// a second list it reads
+  const void *list2;
+  /// the list it fills (`ee_units_group_push`)
+  void *out;
+};
+
+/// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
+struct EeUnitsActiveGroupFields {
+  /// the command's action (`kActionIdle` 5000 when made; the messages store a goal id)
+  long mAction;
+  /// per stat (the units' max velocity, acceleration, max angular velocity, angular acceleration) the mean, the
+  /// maximum and the minimum
+  float mSpeed;
+  float mMaxSpeed;
+  float mMinSpeed;
+  float mAcceleration;
+  float mMaxAcceleration;
+  float mMinAcceleration;
+  float mTurnSpeed;
+  float mMaxTurnSpeed;
+  float mMinTurnSpeed;
+  float mTurnAcceleration;
+  float mMaxTurnAcceleration;
+  float mMinTurnAcceleration;
+  /// 1 / the means (0 when not > 0)
+  float mInverseSpeed;
+  float mInverseAcceleration;
+  float mInverseTurnSpeed;
+  float mInverseTurnAcceleration;
+  /// the world table's group speed cap factor (the means are capped at the minimum times it)
+  float mCapFactor;
+  bool mIsFinished;
+  bool mIsQueued;
+  bool mMovesTogether;
+  bool mIsSpecialAttack;
+};
+
+/// The members of a group the C++ reads in place (the head of the Rust allocation; `EEGroup` derives from it).
+struct EeUnitsGroup {
+  /// the player (`EEPlayer*`, the constructor's)
+  void *mPlayer;
+  /// the formation (`EEFormation*`, referenced; `EEFormation::Create(0)` when made)
+  void *mFormation;
+  /// the units' classes' kind flags or'ed
+  long mKindFlags;
+  /// a selection's saved group (`EESelectedGroup::mSavedGroup`; its index while loading)
+  EeUnitsGroup *mSavedGroup;
+  /// a selection's last change (`TMGetTime()`)
+  long mChangeTime;
+  /// a selection asks to be sorted (`EESelectedGroup::mNeedsSort`)
+  bool mNeedsSort;
+  /// the kind (`EE_UNITS_GROUP_KIND_*`)
+  uint8_t mGroupKind;
+  /// a hot-key group's index (`EESavedGroup::mIndex`: 1..20, posted to the user interface)
+  long mIndex;
+  /// an active group's goal (`EEUnitGoal*`, owned)
+  void *mGoal;
+  /// an active group's plain record (`EEActiveGroup`'s action, speeds and flags)
+  EeUnitsActiveGroupFields mFields;
+};
+
 /// A unit class's fields the improvements read.
 struct EeUnitsImproveClass {
   float area_effect;
@@ -4658,6 +5759,18 @@ struct EeUnitsPlayerEvent {
 
 /// The C++ host: `(list, player, op, event) -> the answer`.
 using EeUnitsEventsFn = int32_t(*)(void*, void*, int32_t, const EeUnitsPlayerEvent*);
+
+/// `EEWUnitsOffMapInfo`: a unit taken off the map (its C++ names and types; the callers set `mReason`).
+struct EeUnitsOffMapInfo {
+  /// the tile it left (`EETileLocation`: x, y; saved)
+  long mLocation[2];
+  /// the unit (`RTSUnit*`, referenced; its id while loading)
+  void *mUnit;
+  /// the game time it left (saved)
+  unsigned long mTime;
+  /// why (1..7: the transports, the calamities, the scenario's effect; saved)
+  long mReason;
+};
 
 /// One point (`EEStatisticsPoint`: the value, the game time).
 struct EeUnitsStatPoint {
@@ -4912,6 +6025,19 @@ struct EeUnitsFinishLoadIn {
   long garrison_capacity;
   /// `mStats->mPower`
   long power;
+};
+
+/// What one entry point call sees of the C++ object.
+struct EeUnitsUpgradeMedia {
+  /// `&mButton`: the eight media members
+  void **slots;
+  /// `&mIsLoadingMedia` (volatile; `mIsLoadingButtons` follows it)
+  bool *busy;
+  /// the record (`EeUnitsUnitClassUpgradeFields`: the counts, the templates)
+  EeUnitsUnitClassUpgradeFields *fields;
+  /// the object and the call's player
+  void *upgrade;
+  void *player;
 };
 
 /// `EEGetSubTileSteps`' result: the first spot's offset in the tile, the step between spots, and how many spots.
@@ -5179,37 +6305,6 @@ struct EeUnitsPlayerUnit {
   uint64_t container;
   long current_research;
   long build_queue;
-};
-
-/// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
-struct EeUnitsActiveGroupFields {
-  /// the command's action (`kActionIdle` 5000 when made; the messages store a goal id)
-  long mAction;
-  /// per stat (the units' max velocity, acceleration, max angular velocity, angular acceleration) the mean, the
-  /// maximum and the minimum
-  float mSpeed;
-  float mMaxSpeed;
-  float mMinSpeed;
-  float mAcceleration;
-  float mMaxAcceleration;
-  float mMinAcceleration;
-  float mTurnSpeed;
-  float mMaxTurnSpeed;
-  float mMinTurnSpeed;
-  float mTurnAcceleration;
-  float mMaxTurnAcceleration;
-  float mMinTurnAcceleration;
-  /// 1 / the means (0 when not > 0)
-  float mInverseSpeed;
-  float mInverseAcceleration;
-  float mInverseTurnSpeed;
-  float mInverseTurnAcceleration;
-  /// the world table's group speed cap factor (the means are capped at the minimum times it)
-  float mCapFactor;
-  bool mIsFinished;
-  bool mIsQueued;
-  bool mMovesTogether;
-  bool mIsSpecialAttack;
 };
 
 extern "C" {
@@ -6227,17 +7322,236 @@ void ee_units_unit_drop_unsuited_goals(uint64_t unit, uint32_t index);
 /// `DropFinishedGoals(inStartAll)`.
 void ee_units_unit_drop_finished_goals(uint64_t unit, bool start_all);
 
-/// `EEGroup::Load` over the group's parts and the file in `f`.
+/// Pushes an item onto an operation's list.
 ///
 /// # Safety
-/// `f` is valid with `ctx` for the call.
-int32_t ee_units_group_load(void *ctx, EeUnitsPlayerSaveFn f);
+/// `list` is the `out` of a running operation; `p` is three floats.
+void ee_units_group_push(void *list, int64_t a, int64_t b, const float (*p)[3]);
 
-/// `EEGroup::Save`: as [`ee_units_group_load`].
+extern int64_t ee_units_group_host(int32_t op,
+                                   uint64_t a,
+                                   uint64_t b,
+                                   int64_t c,
+                                   int64_t d,
+                                   EeUnitsGroupIo *io);
+
+/// The player's selection members (`op`, ee_units selection.rs): 0 `UpdateSelection(unit, flag)`, 1
+/// `TrySelectUnit(unit, flag)`, 2 `SelectUnit(id, flag, flag2)`, 3 `AddUnitToSelectedGroup(id, flag)`, 4
+/// `AddUnitsToSelectedGroup(ids)`, 5 `AddAndRemoveUnitsFromSelectedGroup(ids)`, 6 `SelectUnits(ids)`, 7
+/// `DeselectUnit(unit)`, 8 `RemoveUnitFromSelectedGroup(id)`, 9 `PlayAcknowledgement(unit)`, 10 `RefreshUpgrades()`;
+/// TrySelectUnit's answer.
 ///
 /// # Safety
-/// As [`ee_units_group_load`].
-int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
+/// `player` a live player; `unit` 0 or a live unit; `ids` `n` ids.
+bool ee_units_selection(void *player,
+                        int32_t op,
+                        void *unit,
+                        int64_t id,
+                        const long *ids,
+                        size_t n,
+                        bool flag,
+                        bool flag2);
+
+/// `new EESavedGroup(player, index)` (kind 0), `new EESelectedGroup(player)` (1), `new EEActiveGroup(player)` (2).
+EeUnitsGroup *ee_units_group_new(uint8_t kind,
+                                 void *player,
+                                 long index);
+
+/// `Reference()`.
+///
+/// # Safety
+/// `g` is a live group (as for every entry point below).
+void ee_units_group_reference(EeUnitsGroup *g);
+
+/// `Dereference()`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+void ee_units_group_dereference(EeUnitsGroup *g);
+
+/// `GetNumUnits()`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+unsigned long ee_units_group_len(EeUnitsGroup *g);
+
+/// `GetUnit(i)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+void *ee_units_group_unit(EeUnitsGroup *g, long i);
+
+/// `Contains(unit)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+bool ee_units_group_contains(EeUnitsGroup *g, void *unit);
+
+/// The group members whose arguments are a unit or nothing (`op`): 0 `Add`, 1 `RemoveUnit`, 2 `Clear`, 3
+/// `Validate`, 4 `UpdateKindFlags`, 5 `MoveAlongFoundPaths`, 6 `SortUnits`, 7 `ShowSelectionAreas`, 8
+/// `RefreshSelectionAreas`, 9 `AddIfAbsent(unit, true)`, 10 `AddIfAbsent(unit, false)`, 11 `AddUnit(unit, true)`, 12
+/// `AddUnit(unit, false)`, 13 `AddMember(unit, true)`, 14 `AddMember(unit, false)`, 15 `Finish`, 16 `ClearGoal`, 17
+/// `KeepNonCitizens`, 18 `KeepGroundAttackers`, 19 `KeepCitizens`, 20 `ResetUnitsPaths`, 21 `RequestAllPaths`, 22
+/// `EEComplexUnit::SetActiveGroup` (the unit's group this one).
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `unit` a live complex unit where one is named.
+void ee_units_group_do(EeUnitsGroup *g,
+                       int32_t op,
+                       void *unit);
+
+/// The members between two groups (`op`): 0 `CopyUnits(other)`, 1
+/// `CopyGroup(other)`, 2 `CopySelection(other)`, 3 `EESavedGroup::Assign(selection other)`, 4
+/// `SelectSavedGroup(other, true)`, 5 `SelectSavedGroup(other, false)`.
+///
+/// # Safety
+/// `g` and `other` are live groups.
+void ee_units_group_with(EeUnitsGroup *g, int32_t op, EeUnitsGroup *other);
+
+/// The members that answer a value (`op`, argument `a`): 0 `CountUnitsOfKind(a)`, 1 `HasUnitType(a)`, 2
+/// `GetUnitTypeCount(a)`, 3 `FindUnitOfCategory(a)`, 4 `FindUnitWithFlags(a)`, 5 `GetContinent()`, 6 the path of the
+/// request carrying unit id `a` (`FindPathRequest(unit)->mPath`), 7 `RepairPointers()`, 8 the kind.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+int64_t ee_units_group_get(EeUnitsGroup *g,
+                           int32_t op,
+                           int64_t a);
+
+/// `SetFormation(formation)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `formation` 0 or a live formation.
+void ee_units_group_set_formation(EeUnitsGroup *g, void *formation);
+
+/// `Remove(id)` and `CancelPathRequest(id)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+void ee_units_group_cancel_path(EeUnitsGroup *g, long id);
+
+/// `GetBounds(out)`: `out` the rectangle's bottom, left, right, top.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `out` four floats.
+void ee_units_group_bounds(EeUnitsGroup *g, float (*out)[4]);
+
+/// `GetFlags()`'s 17 flags into `out`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `out` 17 bytes.
+void ee_units_group_flags(EeUnitsGroup *g, uint8_t (*out)[17]);
+
+/// `Load(major, minor, file)` / `Save(major, minor, file)` (`save`) over the player save's file primitive `f`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `file` the primitive's open file.
+long ee_units_group_file(EeUnitsGroup *g,
+                         bool save,
+                         void *file,
+                         EeUnitsPlayerSaveFn f);
+
+/// `Fill(selection, sort, slot)`.
+///
+/// # Safety
+/// `g` a live active group, `selection` a live selection.
+void ee_units_group_fill(EeUnitsGroup *g, EeUnitsGroup *selection, long sort, long slot);
+
+/// `SetGoal(goal, queued)`.
+///
+/// # Safety
+/// `g` a live active group, `goal` a live goal.
+void ee_units_group_set_goal(EeUnitsGroup *g, void *goal, bool queued);
+
+/// `RequestPaths(units)`: the `n` units at `units`.
+///
+/// # Safety
+/// `g` a live active group with a goal; `units` `n` live complex units.
+bool ee_units_group_request_paths(EeUnitsGroup *g, void *const *units, size_t n);
+
+/// `TellGroup(unit, location)`.
+///
+/// # Safety
+/// `g` a live active group; `location` three floats.
+void ee_units_group_tell(EeUnitsGroup *g, void *unit, const float (*location)[3]);
+
+/// `EEPlayer::GetActiveGroupOf(unit)`.
+///
+/// # Safety
+/// `player` a live player.
+EeUnitsGroup *ee_units_group_active_of(void *player, void *unit);
+
+/// The player's groups (`op`): 0 the running groups emptied, released and cleared (`~EEPlayer`, `Reset`, `Clear`), 1
+/// `~EEPlayer`'s other groups released, 2 `Reset`'s and `Clear`'s selection and hot-key groups emptied, 3
+/// `RemovalsDone`'s, 4 the tick's validation.
+///
+/// # Safety
+/// `player` a live player whose groups are live.
+void ee_units_groups_player(void *player,
+                            int32_t op);
+
+/// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).
+///
+/// # Safety
+/// `g` the waiting group (referenced); `request` 0 or a request with the caller's reference.
+void ee_units_group_path_resolved(EeUnitsGroup *g,
+                                  int64_t key,
+                                  void *request);
+
+/// `EESaveActiveGroups(file)` over the player save's primitive `f`.
+///
+/// # Safety
+/// `file` the primitive's open file.
+void ee_units_groups_save_active(void *file, EeUnitsPlayerSaveFn f);
+
+/// `EELoadActiveGroups(file)`: the first read error; the groups come back at the loaded game's first tick.
+///
+/// # Safety
+/// As [`ee_units_groups_save_active`].
+long ee_units_groups_load_active(void *file,
+                                 EeUnitsPlayerSaveFn f);
+
+/// The loaded groups back (`EELoadActiveGroups`' `EEAfterLoad` of [`EE_UNITS_GROUP_OP_AFTER_LOAD`]).
+///
+/// # Safety
+/// `saved` the operation's value, used once.
+void ee_units_group_restore_saved(void *saved);
+
+/// A player's new lists (its constructors).
+EeUnitsPlayerGroups *ee_units_player_groups_new();
+
+/// Frees a player's lists (its destructor; the groups were released before).
+///
+/// # Safety
+/// `p` came from [`ee_units_player_groups_new`] (or is null) and is not used afterwards.
+void ee_units_player_groups_free(EeUnitsPlayerGroups *p);
+
+/// List `list`'s length.
+///
+/// # Safety
+/// `p` a player's live lists.
+unsigned long ee_units_player_groups_len(const EeUnitsPlayerGroups *p, uint32_t list);
+
+/// List `list`'s group `i` (null past the end).
+///
+/// # Safety
+/// As [`ee_units_player_groups_len`].
+EeUnitsGroup *ee_units_player_groups_at(const EeUnitsPlayerGroups *p,
+                                        uint32_t list,
+                                        unsigned long i);
+
+/// `push_back(group)` onto list `list`.
+///
+/// # Safety
+/// As [`ee_units_player_groups_len`].
+void ee_units_player_groups_push(EeUnitsPlayerGroups *p, uint32_t list, EeUnitsGroup *group);
+
+/// `op` 0: [`EeUnitsPlayerGroups::start_pending`] (`AddPendingUnits`), 1: the pending list cleared
+/// (`ReleasePendingUnits`).
+///
+/// # Safety
+/// As [`ee_units_player_groups_len`].
+void ee_units_player_groups_do(EeUnitsPlayerGroups *p, uint32_t op);
 
 /// `EEUnit::UpdateHidden()` and `EEComplexUnit::UpdateHidden()` of `unit` (an `EEUnit*`; its object kind picks
 /// the body).
@@ -6246,31 +7560,11 @@ int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
 /// `unit` is a live unit; the caller holds the world (the simulation thread, or the renderer's read).
 bool ee_units_update_hidden(uint64_t unit);
 
-extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
-
-extern void *ee_units_host_active_group_new(void *player);
-
-extern void ee_units_host_group_fill(void *group, void *selection, int32_t sort, int32_t slot);
-
-extern void ee_units_host_group_release(void *group);
-
-extern void ee_units_host_pending_push(void *player, void *group);
-
-extern void ee_units_host_group_keep_mobile(void *group);
-
-extern void ee_units_host_group_clear_goal(void *group);
-
-extern void ee_units_host_group_set_goal(void *group, void *goal, uint8_t queued);
-
-extern void ee_units_host_group_plan(void *group);
-
 extern int32_t ee_units_host_random(int32_t low, int32_t high);
 
 extern void ee_units_host_play_acknowledgement(void *player, void *group, int32_t index);
 
 extern float ee_units_host_map_height(float x, float y);
-
-extern void ee_units_host_group_keep_ground_attackers(void *group);
 
 extern void ee_units_host_send_group_command(void *group,
                                              uint32_t target,
@@ -6282,17 +7576,9 @@ extern void ee_units_host_acknowledge_unit(void *player, uint32_t unit);
 
 extern uint32_t ee_units_host_town_patrol_point(uint32_t unit, uint8_t *found);
 
-extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
-
-extern void ee_units_host_group_spread_around_tile(void *group, int64_t x, int64_t y);
-
 extern void ee_units_host_unit_add_build_target(uint32_t unit, uint32_t target);
 
 extern void ee_units_host_unit_order_repair(uint32_t unit, uint32_t target);
-
-extern void ee_units_host_group_add_member(void *group, uint32_t unit);
-
-extern void ee_units_host_group_keep_non_citizens(void *group);
 
 extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
 
@@ -6300,16 +7586,7 @@ extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
 
 extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
 
-extern void ee_units_host_group_spread_around_unit(void *group,
-                                                   uint32_t target,
-                                                   int64_t x,
-                                                   int64_t y);
-
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
-
-extern void ee_units_host_group_reset_paths(void *group);
-
-extern void ee_units_host_group_keep_citizens(void *group);
 
 extern void *ee_units_host_wall_plan(void *player,
                                      int32_t technology,
@@ -6322,8 +7599,6 @@ extern void *ee_units_host_wall_plan(void *player,
 extern void ee_units_host_wall_build(void *group, void *pieces);
 
 extern void ee_units_host_wall_release(void *pieces);
-
-extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
@@ -6358,8 +7633,6 @@ extern void ee_units_host_unit_drop_gathered(uint32_t unit);
 
 extern void ee_units_host_work_farm(uint32_t farm, uint32_t unit);
 
-extern void ee_units_host_group_finish(void *group);
-
 extern void *ee_units_host_calamity_of(void *player,
                                        int32_t technology,
                                        int32_t *class_enum,
@@ -6382,8 +7655,6 @@ extern void ee_units_host_group_split_calamity_casters(void *group,
                                                        void *player,
                                                        int32_t technology,
                                                        uint32_t target);
-
-extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 
 extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
@@ -6428,8 +7699,6 @@ extern void *ee_units_host_load_goal_new(uint8_t kind,
 extern uint8_t ee_units_host_load_goal_fields(void *goal, int64_t *x, int64_t *y);
 
 extern void ee_units_host_player_event(void *player, int64_t x, int64_t y, int32_t code);
-
-extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
 
 extern uint8_t ee_units_host_research_node(void *player, int32_t technology, int32_t *kind);
 
@@ -6499,6 +7768,19 @@ int32_t ee_units_improve_gain_records(const EeUnitsUnitClassFields *class_,
                                       const int32_t *levels,
                                       int32_t level,
                                       int32_t improvement);
+
+/// Member `what` (`EE_UNITS_IMPROVEMENT_DO_*`) on the record `levels`/`total` (16 words, the points), over the
+/// callback `f` and its context (neither used by the reset); `major`, `minor` the saved game's version.
+///
+/// # Safety
+/// `levels` 16 live words, `total` the record's points; `f` handles every operation the member makes.
+int32_t ee_units_improvement(uint32_t what,
+                             int32_t *levels,
+                             long *total,
+                             void *ctx,
+                             EeUnitsPlayerSaveFn f,
+                             uint32_t major,
+                             uint32_t minor);
 
 /// `EEFindLandingPoint(unit, ioTarget)` (EEWheel.cpp's forwarder).
 ///
@@ -6955,6 +8237,31 @@ bool ee_units_player_areas(const EeUnitsPlayerRefs *refs,
                            uint32_t what,
                            void *unit);
 
+extern int64_t ee_units_player_body_host(int32_t op,
+                                         void *player,
+                                         uint64_t a,
+                                         int64_t b,
+                                         int64_t c,
+                                         void *swaps);
+
+/// The player's members (`what`, `EE_UNITS_PLAYER_DO_*`) over the game; `swaps`/`n` `UnitsSwapped`'s pairs
+/// (`EEPUnitSwap`: old, new), `vector` their `std::vector`.
+///
+/// # Safety
+/// `player` a live player; `a` the member's object where it takes one; `swaps` `n` pairs.
+int64_t ee_units_player_body(void *player,
+                             uint32_t what,
+                             uint64_t a,
+                             int64_t b,
+                             int64_t c,
+                             float f);
+
+/// `UnitsSwapped(swaps)`.
+///
+/// # Safety
+/// `player` a live player; `swaps` `n` (old, new) unit pairs, the data of `vector`.
+void ee_units_player_units_swapped(void *player, void *const (*swaps)[2], size_t n, void *vector);
+
 /// The diplomacy on player `other` (an `EEPlayer*`): `what` 0 `SetDiplomaticStance(other, stance, map)` (`flag`:
 /// a map), 1 `AddSightSharer(other)`, 2 `RemoveSightSharer(other)`, 3 `SetSharedLOS(flag)`.
 ///
@@ -7020,6 +8327,82 @@ int32_t ee_units_events_file(EeUnitsPlayerEvents *events,
 /// # Safety
 /// `events` is live.
 uint64_t ee_units_events_digest(const EeUnitsPlayerEvents *events);
+
+extern uint64_t ee_units_lists_host(int32_t op, uint64_t value);
+
+/// New, empty lists (the constructors').
+EeUnitsPlayerLists *ee_units_lists_new();
+
+/// # Safety
+/// `l` came from [`ee_units_lists_new`] (or is null) and is not used after. The lists' references are not released
+/// (the destructor releases what the original did first).
+void ee_units_lists_free(EeUnitsPlayerLists *l);
+
+/// [`EeUnitsPlayerLists::add`]
+///
+/// # Safety
+/// `l` is live; a referenced list's `value` is a live unit.
+bool ee_units_lists_add(EeUnitsPlayerLists *l, uint32_t list, uint64_t value);
+
+/// [`EeUnitsPlayerLists::remove`]
+///
+/// # Safety
+/// `l` is live.
+bool ee_units_lists_remove(EeUnitsPlayerLists *l, uint32_t list, uint64_t value);
+
+/// [`EeUnitsPlayerLists::has`]
+///
+/// # Safety
+/// `l` is live.
+bool ee_units_lists_has(const EeUnitsPlayerLists *l, uint32_t list, uint64_t value);
+
+/// The list's length.
+///
+/// # Safety
+/// `l` is live.
+size_t ee_units_lists_len(const EeUnitsPlayerLists *l, uint32_t list);
+
+/// Entry `i` (0 past the end).
+///
+/// # Safety
+/// `l` is live.
+uint64_t ee_units_lists_at(const EeUnitsPlayerLists *l, uint32_t list, size_t i);
+
+/// [`EeUnitsPlayerLists::clear`]
+///
+/// # Safety
+/// `l` is live; with `release`, its entries are live units.
+void ee_units_lists_clear(EeUnitsPlayerLists *l, uint32_t list, bool release);
+
+/// The off-map records: `what` 0 `AddOffMapUnit(unit)` at (`x`, `y`) and `time`, 1 `RemoveOffMapUnit(unit)`, 2 the
+/// records deleted, 3 `RepairPointers`' walk.
+///
+/// # Safety
+/// `l` is live; `unit` a live unit (for 0, 1); the world is loaded (for 3).
+void ee_units_off_map(EeUnitsPlayerLists *l,
+                      uint32_t what,
+                      uint64_t unit,
+                      long x,
+                      long y,
+                      unsigned long time);
+
+/// `GetOffMapInfo(unit)`: the record (null none), live until the next off-map call.
+///
+/// # Safety
+/// `l` is live.
+EeUnitsOffMapInfo *ee_units_off_map_info(EeUnitsPlayerLists *l, uint64_t unit);
+
+/// The player's save of the records: `what` 0 the count (into `io.i`), 1 record `index`'s Save; its load: 2 the
+/// records made (`io.i` of them, empty), 3 record `index`'s Load. The file's primitives through `f` with `ctx`.
+///
+/// # Safety
+/// `l` is live; `f` is valid with `ctx` for the call; `index` is below the count.
+int32_t ee_units_off_map_file(EeUnitsPlayerLists *l,
+                              uint32_t what,
+                              uint32_t index,
+                              void *ctx,
+                              EeUnitsPlayerSaveFn f,
+                              EeUnitsPlayerSaveIo *io);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
 /// and its C++ parts through `f`.
@@ -7692,6 +9075,18 @@ bool ee_units_update(int32_t kind,
                      uint32_t id,
                      uint64_t object,
                      const EeUnitsUpdateHost *host);
+
+extern long ee_units_upgrade_host(int32_t op, void *upgrade, void *object, void *player);
+
+/// `EEUnitClassUpgrade`'s media members (`op` an `EE_UNITS_UPGRADE_MEDIA_*`; `arg` the slot, the flags or the
+/// sound's index; `value` the setter's object): the sounds' getters answer the sound.
+///
+/// # Safety
+/// `media` describes a live object.
+uint64_t ee_units_upgrade_media(const EeUnitsUpgradeMedia *media,
+                                int32_t op,
+                                long arg,
+                                void *value);
 
 /// `EEGetSubTileSteps`.
 EeUnitsUuSteps ee_units_uu_sub_tile_steps(float size,

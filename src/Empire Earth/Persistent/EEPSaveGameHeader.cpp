@@ -11,11 +11,6 @@
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EESaveGameFiles.h"
 
-const UString EEPSaveGameHeader::sMajorVersion("EEPSaveGameHeader-MajorVersion");
-const UString EEPSaveGameHeader::sMinorVersion("EEPSaveGameHeader-MinorVersion");
-const UString EEPSaveGameHeader::sNumChunks("EEPSaveGameHeader-NumChunks");
-const UString EEPSaveGameHeader::sChunkID("EEPSaveGameHeader-ChunkID");
-const UString EEPSaveGameHeader::sCompressionType("EEPSaveGameHeader-CompressionType");
 
 // Creates a save header with placeholder name and description, version 0.1 and three players
 EEPSaveGameHeader::EEPSaveGameHeader()

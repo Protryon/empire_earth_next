@@ -74,12 +74,6 @@ public:
     void UpdateTile(EEMap* inMap);          // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)
     unsigned long GetUnitID() const { return this->mUnitID; }  // (EEWUnitsOffMapInfo::Save 0x161d22 reads an RTSUnit's id through it)
 
-    // the save keys (RTSUnit.cpp's four `$E` chains; one guard byte; unguarded: a class static only
-    // renumbers an includer's `$E` symbols, never its bytes)
-    static const UString sUnitID;
-    static const UString sTileX;
-    static const UString sTileY;
-    static const UString sSpecificData;
 
     // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)
     RTSUnitLink* mTileNode;                 // +0x08 (0: not a valid target; the unit calamities' Virtual4C)

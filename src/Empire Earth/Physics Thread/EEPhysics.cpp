@@ -265,7 +265,7 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
             fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Active Group Count: %ld  *************\n",
                     thePlayer->GetNumRunningGroups());
             for (j = 0; j < thePlayer->GetNumRunningGroups(); j++) {
-                theActiveGroup = thePlayer->mRunningGroups[j];
+                theActiveGroup = thePlayer->GetRunningGroup(j);
                 fprintf(theFile, "\n");
                 fprintf(theFile, "OUT OF SYNCH DUMP:  Active Group #%ld has a unit count of %ld\n", j,
                         theActiveGroup->GetNumUnits());

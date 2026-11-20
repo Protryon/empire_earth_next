@@ -33,7 +33,6 @@
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // Creates a scenario effect with the default settings (see Reset)
 EESMEffect::EESMEffect()
@@ -402,7 +401,7 @@ void SMEAction(EEComplexUnit* inUnit, long inAction)
 void SMEGroupGoal(EEActiveGroup* inGroup, EEUGRust* inGoal, long inAction)
 {
     inGroup->SetGoal(inGoal, false);
-    inGroup->mAction = inAction;
+    inGroup->mFields.mAction = inAction;
     inGroup->Plan();
 }
 
@@ -627,8 +626,8 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     }
     case EE_SCENARIO_WORLD_GROUP_NEW: {
         EEPlayer* thePlayer = SMEPlayer(a[0]);
-        inRun->mGroup = new EEActiveGroup(thePlayer);
-        thePlayer->mPendingGroups.push_back(inRun->mGroup);
+        inRun->mGroup = EEActiveGroup::New(thePlayer);
+        thePlayer->AddPendingGroup(inRun->mGroup);
         return 0;
     }
     case EE_SCENARIO_WORLD_GROUP_ADD_TASKED: {
@@ -1119,9 +1118,9 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_STANCE_EXPLORE: {
         EEComplexUnit* theUnit = SMEComplex(a[0]);
         EEPlayer* thePlayer = theUnit->mPlayer;
-        EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
+        EEActiveGroup* theGroup = EEActiveGroup::New(thePlayer);
         theGroup->AddMember(theUnit, true);
-        thePlayer->mPendingGroups.push_back(theGroup);
+        thePlayer->AddPendingGroup(theGroup);
         theGroup->KeepMobileUnits();
         theGroup->ClearGoal();
         SMEGroupGoal(theGroup, EEUGRust::NewExplore(true), kActionFindUnexploredArea);
@@ -1149,9 +1148,9 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         EEComplexUnit* theTarget = thePatrolGroup != NULL ? static_cast<EEComplexUnit*>(ee_units_pg_nearest(thePatrolGroup, theUnit->GetTileX(), theUnit->GetTileY())) : NULL;
         if (theTarget == NULL)
             return 0;
-        EEActiveGroup* theGroup = new EEActiveGroup(theUnit->mPlayer);
+        EEActiveGroup* theGroup = EEActiveGroup::New(theUnit->mPlayer);
         theGroup->AddMember(theUnit, true);
-        theUnit->mPlayer->mPendingGroups.push_back(theGroup);
+        theUnit->mPlayer->AddPendingGroup(theGroup);
         theGroup->KeepMobileUnits();
         EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget, true);
         theGroup->ClearGoal();
