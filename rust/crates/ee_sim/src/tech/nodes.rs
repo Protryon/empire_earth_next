@@ -26,6 +26,7 @@ use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 use std::ptr;
 
+use crate::tech::tech_ids;
 use crate::tech::tree::{
     self, EeTechEpochCounter, EeTechMakeObsolete, EeTechNode, EeTechTreeState, EeTechUnlockAction,
 };
@@ -1409,12 +1410,36 @@ pub fn is_latest_effect<H: TechHost + ?Sized>(
 struct FfiHost {
     ctx: *mut c_void,
     f: EeTechHostFn,
+    /// the tree's record (the captured operations' tree)
+    t: Tree,
 }
 
 impl TechHost for FfiHost {
     fn call(&mut self, op: i32, io: &mut EeTechHostIo) -> i32 {
-        // SAFETY: the C++ callback with its own context; io lives for the call
-        unsafe { (self.f)(self.ctx, op, io) }
+        use crate::tech::capture_rec::{ee_tech_capture_epoch_step, ee_tech_capture_walk_begin, ee_tech_capture_walk_step};
+        use crate::tech::nodes_capture as cap;
+        let t = self.t;
+        let v = io.v;
+        // the id tables are Rust's (tech_ids.rs); the entry points the capture wraps and the capture's records are
+        // nodes_capture.rs's
+        match op {
+            EE_TECH_HOST_EPOCH_COUNT => io.v[0] = tech_ids::epoch_count(),
+            EE_TECH_HOST_EPOCH_OF => io.v[0] = tech_ids::epoch_of(v[0]),
+            EE_TECH_HOST_RESEARCH_NODE => return cap::research_node(self, t, io.node, io.unit),
+            EE_TECH_HOST_SET_PREREQUISITE => cap::set_prerequisite(self, t, io.node, v[0]),
+            EE_TECH_HOST_EPOCH_RESEARCH => return cap::research_epoch(self, t, io.node, v[0], io.unit),
+            EE_TECH_HOST_ADD_SOL => cap::add_sol(self, t, io.node),
+            EE_TECH_HOST_UPDATE_AVAILABILITY => cap::update_availability(self, t, io.node),
+            EE_TECH_HOST_WALK_BEGIN => ee_tech_capture_walk_begin(),
+            EE_TECH_HOST_WALK_STEP => ee_tech_capture_walk_step(v[0] as c_long, v[1] as c_long),
+            EE_TECH_HOST_WALK => cap::walk(self, t, io),
+            EE_TECH_HOST_CAPTURE_EPOCHS => cap::epochs_record(self, t, v[0], v[1], v[2]),
+            EE_TECH_HOST_CAPTURE_EPOCH_STEP => ee_tech_capture_epoch_step(v[0] as c_long, v[1] as c_long),
+            EE_TECH_HOST_CAPTURE_RESEARCH_TO_EPOCH => cap::research_to_epoch_record(self, t, v[0], v[1] != 0),
+            // SAFETY: the C++ callback with its own context; io lives for the call
+            _ => return unsafe { (self.f)(self.ctx, op, io) },
+        }
+        0
     }
 }
 
@@ -1477,6 +1502,8 @@ pub enum EeTechNodeOp {
     SetObsolete = 6,
     /// `DependsOn(a)` (0/1)
     DependsOn = 7,
+    /// `LoadMedia(unit)` (`a` 1) or `UnloadMedia(unit)` (`a` 0); `unit` is the player (node_media.rs)
+    Media = 8,
 }
 
 /// A node's (or an epoch's) operation of the tree `t` (`ctx`); its answer, else 0.
@@ -1494,17 +1521,18 @@ pub unsafe extern "C" fn ee_tech_walk_node(
     b: bool,
     unit: *mut c_void,
 ) -> i32 {
-    let h = &mut FfiHost { ctx, f };
     let t = Tree(t);
+    let h = &mut FfiHost { ctx, f, t };
     match op {
         EeTechNodeOp::IsAvailable => return i32::from(is_available(h, t, n)),
         EeTechNodeOp::IsObsolete => return i32::from(is_obsolete(h, t, n)),
-        EeTechNodeOp::SetPrerequisite => node_set_prerequisite(h, n, a),
+        EeTechNodeOp::SetPrerequisite => crate::tech::nodes_capture::set_prerequisite(h, t, n, a),
         EeTechNodeOp::MakeAvailable => node_make_available(h, n),
-        EeTechNodeOp::Research => return node_research(h, n, unit),
+        EeTechNodeOp::Research => return crate::tech::nodes_capture::research_node(h, t, n, unit),
         EeTechNodeOp::SetEditorObsoleted => node_set_editor_obsoleted(h, n, a != 0, b),
         EeTechNodeOp::SetObsolete => node_set_obsolete(h, n, a != 0, b),
         EeTechNodeOp::DependsOn => return i32::from(node_depends_on(h, n, a)),
+        EeTechNodeOp::Media => crate::tech::node_media::node_media(h, n, unit, a != 0),
     }
     0
 }
@@ -1528,6 +1556,8 @@ pub enum EeTechEpochOp {
     ResearchKind = 7,
     /// `Research(a, unit)`'s body: its result
     Research = 8,
+    /// `LoadMediaOfKind(a)` (`b` true) or `UnloadMediaOfKind(a)`; `unit` is the tree's player (node_media.rs)
+    MediaOfKind = 9,
 }
 
 /// An epoch's operation; `Research`'s result, else 0.
@@ -1545,18 +1575,19 @@ pub unsafe extern "C" fn ee_tech_walk_epoch(
     b: bool,
     unit: *mut c_void,
 ) -> i32 {
-    let h = &mut FfiHost { ctx, f };
     let t = Tree(t);
+    let h = &mut FfiHost { ctx, f, t };
     match op {
-        EeTechEpochOp::AddSol => epoch_add_sol(h, t, e),
-        EeTechEpochOp::UpdateAvailability => epoch_update_availability(h, t, e),
+        EeTechEpochOp::AddSol => crate::tech::nodes_capture::add_sol(h, t, e),
+        EeTechEpochOp::UpdateAvailability => crate::tech::nodes_capture::update_availability(h, t, e),
         EeTechEpochOp::MakeObsolete => epoch_make_obsolete(h, t, e, a),
         EeTechEpochOp::ObsoleteOutdated => epoch_obsolete_outdated(h, t, e),
         EeTechEpochOp::Unlock => epoch_unlock(h, t, e),
         EeTechEpochOp::ResearchSelf => epoch_research_self(h, e),
         EeTechEpochOp::ResearchAll => epoch_research_all(h, e, b),
         EeTechEpochOp::ResearchKind => epoch_research_kind(h, e, a, b),
-        EeTechEpochOp::Research => return epoch_research(h, t, e, a, unit),
+        EeTechEpochOp::Research => return crate::tech::nodes_capture::research_epoch(h, t, e, a, unit),
+        EeTechEpochOp::MediaOfKind => crate::tech::node_media::epoch_media_of_kind(h, e, a, b, unit),
     }
     0
 }
@@ -1609,10 +1640,10 @@ pub unsafe extern "C" fn ee_tech_walk_tree(
     b: i32,
     unit: *mut c_void,
 ) -> i32 {
-    let h = &mut FfiHost { ctx, f };
     let t = Tree(t);
+    let h = &mut FfiHost { ctx, f, t };
     match op {
-        EeTechTreeOp::Research => tree_research(h, t, a, unit),
+        EeTechTreeOp::Research => crate::tech::nodes_capture::research(h, t, a, unit),
         EeTechTreeOp::ResearchToEpoch => tree_research_to_epoch(h, t, a),
         EeTechTreeOp::SetEpoch => tree_set_epoch(h, t, a),
         EeTechTreeOp::AdvanceEpoch => tree_advance_epoch(h, t),
@@ -1653,7 +1684,7 @@ pub unsafe extern "C" fn ee_tech_is_latest_effect(
     if let Some(info) = list {
         table.insert(unit_type, info);
     }
-    is_latest_effect(&mut FfiHost { ctx, f }, Tree(t), &table, id, unit_type, kind)
+    is_latest_effect(&mut FfiHost { ctx, f, t: Tree(t) }, Tree(t), &table, id, unit_type, kind)
 }
 
 /// `EETechTreeNode::operator=` (0x5cfde2, `epoch` false) and `EETechTreeEpoch::operator=` (0x5ceb26, `epoch` true):

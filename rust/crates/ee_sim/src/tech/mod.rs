@@ -22,6 +22,9 @@
 //! - [`contagion_functor`]: the six contagion functors as one record: their numbers, getters and `Apply`'s hit.
 //! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
 //!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
+//! - [`node_media`]: a node's media walk and cost text, an epoch's media of one kind.
+//! - [`nodes_capture`]: the tree's capture records where its walks run (TNRS, TNPR, TSOL, TTRS, TEPO, TRTE, TNWK).
+//! - [`tech_ids`]: the epoch count and each node id's epoch (`gEpochCount`, `EETechTreeEpochOf`).
 //! - [`area_effect`]: the area effects' eight kinds as one record over a host of world calls, their templates'
 //!   numbers, player and area tests.
 //! - [`area_effect_save`]: the area effects' running state in a saved game.
@@ -56,7 +59,10 @@ pub mod contagion_store;
 pub mod contagion_store_ffi;
 pub mod effects;
 pub mod ffi;
+pub mod node_media;
 pub mod nodes;
+pub mod nodes_capture;
+pub mod tech_ids;
 pub mod tree;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the

@@ -30,7 +30,7 @@ static void EETechCaptureNodeImpl(EESimCaptureRecord& ioRecord, EETechTreeNode* 
 {
     unsigned char theBytes[EE_TECH_CAPTURE_NODE_SIZE];
     EETechTree* theTree = inNode->mTree;
-    ioRecord.Bytes(theBytes, ee_tech_capture_node(inNode, inNode->mData, theTree, gEpochCount, theBytes));
+    ioRecord.Bytes(theBytes, ee_tech_capture_node(inNode, inNode->mData, theTree, EEEpochCount(), theBytes));
 }
 
 static void EETechCaptureEpochImpl(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch)
@@ -426,22 +426,6 @@ static void EECalamityCaptureSweepImpl()
     }
 }
 
-// ---- TRTE: ResearchToEpoch's steps --------------------------------------------------------------------------------
-
-static void EETechCaptureResearchToEpochImpl(EETechTree* inTree, long inEpoch, bool inLocal)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    std::vector<unsigned char> theHead(ee_tech_capture_research_to_epoch(inEpoch, (long)inTree->mEpochs.size(), inLocal, NULL));
-    ee_tech_capture_research_to_epoch(inEpoch, (long)inTree->mEpochs.size(), inLocal, theHead.data());
-    EESimCaptureRecord theRecord(EECaptureTag("TRTE"));
-    theRecord.Bytes(theHead.data(), (unsigned int)theHead.size());
-    EETechCaptureTree(theRecord, inTree);
-    for (long e = 0; e < (long)inTree->mEpochs.size(); e++)
-        EETechCaptureEpoch(theRecord, &inTree->mEpochs[e]);
-    theRecord.Commit();
-}
-
 // ---- EVUN: the units an effect walks (the collection: ee_sim tech capture_rec.rs) ----------------------------------
 
 static void EETechCaptureUnitStepImpl(EEUnit* inUnit, bool inApplies, long inValue)
@@ -642,28 +626,6 @@ static void EECalamityCaptureContagionImpl(EeContagionHelper* inHelper, float in
     sContagionEventCount = 0;
 }
 
-// ---- TNWK: the tech tree's walks ------------------------------------------------------------------------------------
-
-static void EETechCaptureWalkImpl(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB,
-                                  long inResult)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    // GetBuildTime and NeedsUnitMedia are asked from other threads too (the media loader's): their records' order
-    // against the game thread's is timing's, so they are TNMT, apart from the game thread's walks
-    EESimCaptureRecord theRecord(ee_tech_capture_walk_tag(inKind));
-    uint32_t theSize = 0;
-    unsigned char* theHead = ee_tech_capture_walk(inKind, inTree != NULL ? EETechCapturePlayerIndex(inTree) : -1, inA, inB,
-                                                  inResult, &theSize);
-    theRecord.Bytes(theHead, theSize);
-    ee_tech_capture_free(theHead, theSize);
-    if (inNode != NULL)
-        EETechCaptureNode(theRecord, inNode);
-    if (inTree != NULL)
-        EETechCaptureTree(theRecord, inTree);
-    theRecord.Commit();
-}
-
 // The game calls these through the header's hook pointers, set here before main: the game's units name no
 // symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
 static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EECalamityCanCastLeave = CanCastLeave,
@@ -682,16 +644,11 @@ static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EEC
                                       EETechCaptureCastCalamities = EETechCaptureCastCalamitiesImpl,
                                       EETechCaptureCost = EETechCaptureCostImpl,
                                       EETechCaptureEpoch = EETechCaptureEpochImpl,
-                                      EETechCaptureEpochStep = ee_tech_capture_epoch_step,
                                       EETechCaptureNode = EETechCaptureNodeImpl,
                                       EETechCapturePlayer = EETechCapturePlayerImpl,
                                       EETechCaptureRescale = ee_tech_capture_rescale,
-                                      EETechCaptureResearchToEpoch = EETechCaptureResearchToEpochImpl,
                                       EETechCaptureSweep = EETechCaptureSweepImpl,
                                       EETechCaptureTree = EETechCaptureTreeImpl,
                                       EETechCaptureUnitStep = EETechCaptureUnitStepImpl,
                                       EETechCaptureUnitWalkHook = ee_tech_capture_unit_walk,
-                                      EETechCaptureUpgrade = EETechCaptureUpgradeImpl,
-                                      EETechCaptureWalk = EETechCaptureWalkImpl,
-                                      EETechCaptureWalkBegin = ee_tech_capture_walk_begin,
-                                      EETechCaptureWalkStep = ee_tech_capture_walk_step, true);
+                                      EETechCaptureUpgrade = EETechCaptureUpgradeImpl, true);
