@@ -169,14 +169,14 @@ fn is_edit(condition: bool, a: u32) -> bool {
 }
 
 /// The edit box's line 0 (`GetText(0)`).
-fn edit_line(c: Cpp) -> Vec<u8> {
+pub(crate) fn edit_line(c: Cpp) -> Vec<u8> {
     let p = direct::edit_call(c, EeUiEditCall::Line, 0, 0).unwrap_or(0);
     // SAFETY: the edit box's line bytes (or NULL)
     unsafe { direct::c_bytes(p as *const c_void) }
 }
 
 /// `UIEditBox::SetText(text)`.
-fn edit_set_text(c: Cpp, text: &[u8]) {
+pub(crate) fn edit_set_text(c: Cpp, text: &[u8]) {
     let t = direct::c_text(text);
     direct::edit_call(c, EeUiEditCall::SetText, t.as_ptr() as isize, 0);
 }
@@ -188,7 +188,7 @@ fn combo_text(c: Cpp) -> Vec<u8> {
 }
 
 /// `UIComboBox::AppendLine(text)`: dirty, the line appended to the list, an open list reopened.
-fn combo_append(c: Cpp, text: &[u8]) {
+pub(crate) fn combo_append(c: Cpp, text: &[u8]) {
     let t = direct::c_text(text);
     direct::control_virtual(c, EeUiOp::SetDirty, 1, 0, &mut [0.0; 4]);
     direct::list_op(direct::combo_list(c), EeUiOp::ListAppendText, t.as_ptr() as isize, 0, 0);
@@ -196,7 +196,7 @@ fn combo_append(c: Cpp, text: &[u8]) {
 }
 
 /// The list box's virtual `AppendLine(text)`.
-fn list_append(c: Cpp, text: &[u8]) {
+pub(crate) fn list_append(c: Cpp, text: &[u8]) {
     let t = direct::c_text(text);
     direct::list_op(c, EeUiOp::ListAppendText, t.as_ptr() as isize, 0, 0);
 }
