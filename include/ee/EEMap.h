@@ -74,9 +74,6 @@ public:
     // 0x1247ed (counts inPlayer in; a first sighting stores 2) (provisional name). The tile sight, SetVisibility
     // included, is Rust (ee_units tile_sight.rs; EESightRings.cpp forwards)
     void AddSight(EEPlayer* inPlayer);
-    static const UString sElevation;        // "RTSTile-Elevation" (0x529878; key names are provisional)
-    static const UString sModelIndex;       // "RTSTile-ModelIndex" (0x529860)
-    static const UString sTerrainIndex;     // "RTSTile-TerrainIndex" (0x529850)
     void RemoveSight(EEPlayer* inPlayer);   // 0x1246c4 (EEPlayer::RemoveSharedSight/RemoveOwnSight; provisional name)
 
     long GetTerrainType() const { return this->mTerrainType; }  // inline (EEUCTransport::FilterLoadable 0x61c806 budget) r37_big B2
@@ -248,9 +245,6 @@ public:
     // provisional name)
     std::vector<RTSColoredRectangle>& GetColoredRectangles() { return this->mColoredRectangles; }
 
-    static const UString sMapWidth;         // "RTSMap-MapWidth" (0x529840; key names are provisional)
-    static const UString sMapHeight;        // "RTSMap-MapHeight" (0x529828)
-    static const UString sVertexColorIndex; // "RTSMap-VertexColorIndex" (0x529818)
 
     std::vector<RTSColoredRectangle> mColoredRectangles;   // +0x04 (0x24-byte elements; provisional name)
     TSCriticalSection* mCriticalSectionForColoredRectangles;   // +0x14 (named by the ctor's assert)

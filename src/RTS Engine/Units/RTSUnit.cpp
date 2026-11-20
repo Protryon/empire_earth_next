@@ -136,10 +136,6 @@ void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere)
     }
 }
 
-const UString RTSUnit::sUnitID("RTSUnit-UnitID");
-const UString RTSUnit::sTileX("RTSUnit-TileX");
-const UString RTSUnit::sTileY("RTSUnit-TileY");
-const UString RTSUnit::sSpecificData("RTSUnit-Specific-Data");
 
 // Creates an invalid unit with no id, tile or tile node
 RTSUnit::RTSUnit()

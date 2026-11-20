@@ -19,11 +19,6 @@ public:
     long SaveHeader(FSFile& outFile);
     long SaveBody(FSFile& outFile);
 
-    static const UString sMajorVersion;     // "EEPSaveGameHeader-MajorVersion" (guard bit 1)
-    static const UString sMinorVersion;     // bit 2
-    static const UString sNumChunks;        // bit 4
-    static const UString sChunkID;          // bit 8
-    static const UString sCompressionType;  // bit 0x10
 
     // inline accessors (the SCL load event's inline budget needs these five expansions; provisional names)
     void SetMajorVersion(unsigned long inVersion) { this->mMajorVersion = inVersion; }

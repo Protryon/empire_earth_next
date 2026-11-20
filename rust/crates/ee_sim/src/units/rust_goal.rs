@@ -933,7 +933,16 @@ impl CalamityHost for OpHost<'_> {
         self.op_with_point(EE_UNITS_GOAL_HOST_FACES_POINT, unit, 0, point) != 0
     }
     fn unit_in_set(&mut self, unit: u64, set: i64) -> bool {
-        self.op_ints(EE_UNITS_GOAL_HOST_UNIT_IN_SET, unit, 0, &[set]) != 0
+        // gUnitSetManager.GetSet((long)set) != NULL && its Contains(the class's type) (the unit sets are Rust)
+        #[cfg(not(test))]
+        return crate::app::unit_sets::ee_unit_sets_contains(
+            set as i32 as u32 as usize,
+            read_unit(unit, |u| u.class().map_or(0, |c| c.unit_type())) as u32,
+        );
+        #[cfg(test)]
+        {
+            self.op_ints(EE_UNITS_GOAL_HOST_UNIT_IN_SET, unit, 0, &[set]) != 0
+        }
     }
     fn stats_range(&mut self, unit: u64) -> f32 {
         read_unit(unit, |u| u.stats().expect("a unit's stats").range())
@@ -1012,7 +1021,18 @@ impl ExploreHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_TILE_SCREEN, unit, 0, &[i64::from(x), i64::from(y)]) != 0
     }
     fn cell_taken(&mut self, unit: u64, x: i32, y: i32) -> bool {
-        self.op_ints(EE_UNITS_GOAL_HOST_CELL_TAKEN, unit, 0, &[i64::from(x), i64::from(y)]) != 0
+        // mActiveGroup != NULL && mActiveGroup->IsCellTaken(the tile's centre) (ag_host.rs)
+        #[cfg(not(test))]
+        {
+            let group = read_unit(unit, |u| u.active_group_handle());
+            let cell = [x as f32 + 0.5, y as f32 + 0.5, 0.0];
+            // SAFETY: a live point
+            group != 0 && unsafe { crate::units::ag_host::ee_units_ag_reserved(group, &cell, 1) != 0 }
+        }
+        #[cfg(test)]
+        {
+            self.op_ints(EE_UNITS_GOAL_HOST_CELL_TAKEN, unit, 0, &[i64::from(x), i64::from(y)]) != 0
+        }
     }
     fn can_stand(&mut self, unit: u64, x: i32, y: i32) -> bool {
         crate::units::uu_direct::can_stand_on(x, y, unit)
@@ -1393,7 +1413,19 @@ impl BuildHost for OpHost<'_> {
         read_unit(unit, |u| build_unit_fields(u, true)).0
     }
     fn tech_node(&mut self, player: u64, technology: i32) -> u64 {
-        self.op_ints(EE_UNITS_GOAL_HOST_TECH_NODE, player, 0, &[i64::from(technology)]) as u64
+        // GetTechTree()->Get(technology) (the tree's view)
+        #[cfg(not(test))]
+        {
+            // SAFETY: a goal body runs inside the C++ call that holds the world; the handle is a live player
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            let p = unsafe { crate::world::PlayerView::of(&t, player) };
+            p.and_then(|p| p.tech_tree()).and_then(|tree| tree.node(i64::from(technology))).map_or(0, |n| n.handle())
+        }
+        #[cfg(test)]
+        {
+            self.op_ints(EE_UNITS_GOAL_HOST_TECH_NODE, player, 0, &[i64::from(technology)]) as u64
+        }
     }
     fn node_info(&mut self, node: u64) -> (i32, i32, i32) {
         let mut io = EeUnitsGoalIo::default();
@@ -1589,6 +1621,7 @@ impl crate::units::location::LocationHost for OpHost<'_> {
 }
 
 impl OpHost<'_> {
+    #[cfg(test)]
     fn op_point_io(&mut self, op: i32, a: u64, b: u64, out: &mut [f32; 3]) -> bool {
         let mut io = EeUnitsGoalIo::default();
         io.f[..3].copy_from_slice(out);
@@ -1643,8 +1676,14 @@ impl GatherHost for OpHost<'_> {
         }
     }
     fn gather_spot(&mut self, unit: u64, resource: u64) -> Option<[f32; 3]> {
-        let mut out = [0.0f32; 3];
-        self.op_point_io(EE_UNITS_GOAL_HOST_GATHER_SPOT, unit, resource, &mut out).then_some(out)
+        // EEGatherFindSpot (gather_spot.rs; the goal host's case once)
+        #[cfg(not(test))]
+        return crate::units::gather_spot::game_find_spot(unit, resource);
+        #[cfg(test)]
+        {
+            let mut out = [0.0f32; 3];
+            self.op_point_io(EE_UNITS_GOAL_HOST_GATHER_SPOT, unit, resource, &mut out).then_some(out)
+        }
     }
     fn begin_gathering(&mut self, unit: u64, resource: u64) {
         crate::units::world::begin_gathering(self, unit, resource);
@@ -1720,7 +1759,13 @@ impl GatherHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED, unit, target) != 0
     }
     fn accessible(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_ACCESSIBLE, unit, resource) != 0
+        // EEGatherAccessible (gather_spot.rs; the goal host's case once)
+        #[cfg(not(test))]
+        return crate::units::gather_spot::game_accessible(unit, resource);
+        #[cfg(test)]
+        {
+            self.op(EE_UNITS_GOAL_HOST_ACCESSIBLE, unit, resource) != 0
+        }
     }
     fn path_length(&mut self, unit: u64, tile: (i32, i32)) -> f32 {
         crate::units::uu_direct::path_length_to(unit, [tile.0, tile.1], 0x10, false)

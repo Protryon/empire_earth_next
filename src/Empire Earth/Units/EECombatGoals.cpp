@@ -66,13 +66,6 @@ namespace {
 
 thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
 
-uint32_t EEShotBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
 }   // namespace
 
 EECombatHostReadScope::EECombatHostReadScope(int inSlot) : mSlot(inSlot), mOuter(sHostReadDepth[inSlot]++ == 0) {}
@@ -81,65 +74,6 @@ EECombatHostReadScope::~EECombatHostReadScope() { sHostReadDepth[this->mSlot]--;
 uint32_t EECombatCommandOf(const EEComplexUnit* inUnit)
 {
     return inUnit->mCommand != NULL ? (uint32_t)inUnit->mCommand->mType : 0;
-}
-
-void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theRecord[22];
-    memset(theRecord, 0, sizeof(theRecord));
-    theRecord[0] = inFunc;
-    theRecord[1] = (uint32_t)inUnit->mUnitID;
-    theRecord[2] = inBefore;
-    theRecord[3] = EECombatCommandOf(inUnit);
-    theRecord[4] = (uint32_t)inUnit->mAnimation;
-    theRecord[5] = (uint32_t)inUnit->mCurrentPhysicsAction;
-    theRecord[6] = (uint32_t)inUnit->mHitPoints;
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    theRecord[7] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
-    if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
-        EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
-        theRecord[8] = theTarget != NULL ? (uint32_t)theTarget->mUnitID : 0;
-    } else if (theGoal != NULL && theGoal->mKind == kGoalAttackGround) {
-        const GE3DPoint& thePoint = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
-        theRecord[9] = EEShotBits(thePoint.GetX());
-        theRecord[10] = EEShotBits(thePoint.GetY());
-        theRecord[11] = EEShotBits(thePoint.GetZ());
-    }
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    theRecord[12] = EEShotBits(theLocation.GetX());
-    theRecord[13] = EEShotBits(theLocation.GetY());
-    theRecord[14] = EEShotBits(theLocation.GetZ());
-    theRecord[15] = (uint32_t)inUnit->mRottingAwayTime;
-    theRecord[16] = (uint32_t)inUnit->mFlightTime;
-    theRecord[17] = (uint32_t)inUnit->mCloaked;
-    theRecord[18] = EEShotBits(inUnit->mOpacity);
-    theRecord[19] = EEShotBits(inUnit->mVelocity);
-    theRecord[20] = inUnit->mPlayer != NULL ? (uint32_t)inUnit->mPlayer->mPopulationCount : 0;
-    theRecord[21] = (uint32_t)inUnit->mTileX;
-    ee_combat_capture_fold(EE_COMBAT_FOLD_SHOTS, (const uint8_t*)theRecord, sizeof(theRecord));
-}
-
-void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                             uint32_t inExtra0, uint32_t inExtra1, uint32_t inExtra2)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theRecord[7] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
-                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult,
-                             inExtra0, inExtra1, inExtra2};
-    ee_combat_capture_fold(EE_COMBAT_FOLD_HOST_READS, (const uint8_t*)theRecord, sizeof(theRecord));
-}
-
-void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                          uint32_t inExtra0, uint32_t inExtra1)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theRecord[6] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
-                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult, inExtra0, inExtra1};
-    ee_combat_capture_fold(EE_COMBAT_FOLD_X_READS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
@@ -159,37 +93,6 @@ void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const 
     uint32_t theRecord[7] = {inFunc, (uint32_t)inUnit->mUnitID, inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
                              (uint32_t)inResult, inCheckLocation, (uint32_t)inUnit->mIgnoredTargets.size(), theHash};
     ee_combat_capture_fold(EE_COMBAT_FOLD_X_READS, (const uint8_t*)theRecord, sizeof(theRecord));
-}
-
-void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theRecord[20];
-    memset(theRecord, 0, sizeof(theRecord));
-    theRecord[0] = inFunc;
-    theRecord[1] = (uint32_t)inUnit->mUnitID;
-    theRecord[2] = inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0;
-    theRecord[3] = inBefore;
-    theRecord[4] = EECombatCommandOf(inUnit);
-    theRecord[5] = (uint32_t)inUnit->mAnimation;
-    theRecord[6] = (uint32_t)inUnit->GetHitPoints();
-    theRecord[7] = (uint32_t)inUnit->mReloadTimer;
-    theRecord[8] = (uint32_t)inUnit->mWeaponTagPoint;
-    theRecord[9] = (uint32_t)inUnit->mAmmunition;
-    theRecord[10] = (uint32_t)inUnit->mFlightTime;
-    theRecord[11] = inUnit->mIsSpecialAttack;
-    theRecord[12] = inUnit->mIsFiringHigh;
-    theRecord[13] = inUnit->mExperience;
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    theRecord[14] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
-    EEUnit* theGoalTarget = EECombatShotTarget(inUnit);
-    theRecord[15] = theGoalTarget != NULL ? (uint32_t)theGoalTarget->mUnitID : 0;
-    theRecord[16] = inTarget != NULL ? (uint32_t)inTarget->GetHitPoints() : 0;
-    theRecord[17] = inTarget != NULL ? (uint32_t)inTarget->GetResourceAmount() : 0;
-    theRecord[18] = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;
-    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer;
-    ee_combat_capture_fold(EE_COMBAT_FOLD_X_ACTIONS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureFlush()
@@ -698,8 +601,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         return 0;
     }
     case EE_COMBAT_W_IGNORED_TIME: theObject->mIgnoredTargets[(size_t)a[0]].mTime = (unsigned long)a[1]; return 0;
-    case EE_COMBAT_W_CORNER_BLOCKED:
-        return ee_units_uu_is_corner_blocked((int32_t)a[0], (int32_t)a[1], (int32_t)a[2], (int32_t)a[3]) != 0;
     case EE_COMBAT_W_CAN_GET_TO_UNIT:
         return gContinentManager.CanGetToUnit(EEQueryUnit(inObject), EEQueryUnit(inOther));
     case EE_COMBAT_W_CONTINENT_AT: return (uint64_t)(uintptr_t)gContinentManager.GetContinentAt(EEQueryUnit(inObject));
@@ -813,10 +714,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         return 0;
     }
     case EE_COMBAT_W_ELEVATION: return EEConditionBits(theClass->GetElevationFactor(theObject, theOther));
-    case EE_COMBAT_W_DAMAGE_CAPTURE:
-        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'M'), *(const EeCombatDamageIn*)(uintptr_t)a[0],
-                        *(const EeCombatDamageOut*)(uintptr_t)a[1]);
-        return 0;
     case EE_COMBAT_W_HIT_CLASS: {   // a capital ship's special weapon, else the launcher's or this class; the splash's
         EEUnitClass* theHit = theObject->mUnitClass->mCategory == kUnitCategorySpaceship && theObject->mIsSpecialAttack
             ? gUnitClassTable[kUnitTypeCapitalShipSpecialWeapon]
@@ -848,52 +745,12 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_UNIT_DAMAGED:
         EEQueryUnit(inObject)->mUnitClass->UnitDamaged(EEQueryUnit(inObject)->GetComplexUnit(), theOther, (long)a[0]);
         return 0;
-    case EE_COMBAT_W_AREA_CAPTURE: {   // TEST ONLY: CBAD (the victims), CBXA (their FNV-1a 32 after the hits)
-        if (!EESimCaptureRecord::Active())
-            return 0;
-        const uint64_t* theVictims = (const uint64_t*)(uintptr_t)a[0];
-        EEUnit* theTarget = EEQueryUnit(inOther);
-        uint32_t theBits = (uint32_t)a[4];
-        float theRadius;
-        memcpy(&theRadius, &theBits, 4);
-        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'A', 'D'));
-        theRecord.I32((int32_t)theObject->GetUnitID());
-        theRecord.I32((int32_t)a[2]);
-        theRecord.I32((int32_t)a[3]);
-        theRecord.F32(theRadius);
-        theRecord.I32((int32_t)a[5]);
-        theRecord.I32(theTarget != NULL && theTarget->GetComplexUnit() != NULL ? (int32_t)theTarget->GetUnitID() : -1);
-        theRecord.I32((int32_t)a[1]);
-        for (int64_t i = 0; i < a[1]; i++)
-            theRecord.I32((int32_t)EEQueryUnit(theVictims[i])->GetUnitID());
-        theRecord.Commit();
-        uint32_t theHash = 0x811c9dc5u;
-        for (int64_t i = 0; i < a[1]; i++) {
-            EEComplexUnit* theVictim = EEQueryComplex(theVictims[i]);
-            uint32_t theFields[3] = {(uint32_t)theVictim->mUnitID, (uint32_t)theVictim->GetHitPoints(),
-                                     (uint32_t)theVictim->GetResourceAmount()};
-            const unsigned char* theBytes = (const unsigned char*)theFields;
-            for (size_t k = 0; k < sizeof(theFields); k++)
-                theHash = (theHash ^ theBytes[k]) * 0x01000193u;
-        }
-        EECombatCaptureXAction(EE_COMBAT_XA_AREA_DAMAGE, theObject, theTarget, theHash);
-        return 0;
-    }
-    case EE_COMBAT_W_CAPTURE:   // TEST ONLY: a formula's record (EECombatCapture's)
-        if (EESimCaptureRecord::Active()) {
-            EESimCaptureRecord theRecord((unsigned int)a[0]);
-            theRecord.Bytes((const void*)(uintptr_t)a[1], (unsigned int)a[2]);
-            theRecord.Bytes((const void*)(uintptr_t)a[3], (unsigned int)a[4]);
-            theRecord.Commit();
-        }
-        return 0;
     case EE_COMBAT_W_PATH_START: {
         GE3DPoint theNext;
         float theIndex;
         theObject->GetPathStart(theNext, theIndex);
         return EEPointArgs(a, theNext, 0);
     }
-    case EE_COMBAT_W_TILE_AT: return ::gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>((long)a[0], (long)a[1])) != NULL;
     case EE_COMBAT_W_WALL_SPOT: {
         GE3DPoint thePoint(EEBitsFloat((int32_t)a[0]), EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]));
         return EEPointArgs(a, thePoint, ee_units_uu_spot(3, (uint64_t)(uintptr_t)theObject, (uint64_t)(uintptr_t)EEQueryUnit(inOther), (float(*)[3])&thePoint.mX) != 0);
@@ -937,9 +794,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         EEModel* theModel = EEQueryUnit(inObject)->GetModel();
         return theModel->mModel != NULL && EEPointArgs(a, theModel->mDefaultPoint, 1);
     }
-    case EE_COMBAT_W_HIT_CAPTURE:   // TEST ONLY: CBXA
-        EECombatCaptureXAction(EE_COMBAT_XA_APPLY_HIT, theObject, EEQueryUnit(inOther), 0);
-        return 0;
     }
     return 0;
 }
