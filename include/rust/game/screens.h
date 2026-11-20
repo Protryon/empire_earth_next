@@ -13341,6 +13341,24 @@ int64_t ee_screens_status_button_op(void *call,
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
 
+/// `EEUserInterface::ChangeRasterizer`.
+void ee_screens_ui_change_rasterizer(long rasterizer, long screen);
+
+/// `EEUserInterface::ResizeGameScreen`.
+void ee_screens_ui_resize_game_screen(uint32_t width, uint32_t height, bool force, bool flag);
+
+/// `EEUserInterface::ShowMessageOfTheDay` (the two `const UWideString*`).
+void ee_screens_ui_show_motd(const void *game, const void *system);
+
+/// `EEUserInterface::OpenSelectServer`.
+void ee_screens_ui_open_select_server();
+
+/// `EEUserInterface::PauseGraphics`.
+void ee_screens_ui_pause_graphics();
+
+/// `EEUserInterface::UpdateInterface`.
+void ee_screens_ui_update_interface();
+
 /// `EEUserInterface::TestScenario` on the UI object `ui`.
 void ee_screens_ui_test_scenario(void *ui);
 

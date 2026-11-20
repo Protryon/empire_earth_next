@@ -1677,8 +1677,6 @@ extern "C" float ee_screenscpp_background_top(uintptr_t inBackground)
 { return reinterpret_cast<UIBackground*>(inBackground)->GetRectangle().mTop; }
 extern "C" float ee_screenscpp_background_right(uintptr_t inBackground)
 { return reinterpret_cast<UIBackground*>(inBackground)->GetRectangle().mRight; }
-extern "C" float ee_screenscpp_background_bottom(uintptr_t inBackground)
-{ return reinterpret_cast<UIBackground*>(inBackground)->GetRectangle().mBottom; }
 extern "C" void ee_screenscpp_background_set_rect(uintptr_t inBackground, float inLeft, float inTop, float inRight, float inBottom)
 { reinterpret_cast<UIBackground*>(inBackground)->SetRectangle(GERectangle(inLeft, inTop, inRight, inBottom)); }
 extern "C" void ee_screenscpp_background_set_visible(uintptr_t inBackground, bool inVisible)

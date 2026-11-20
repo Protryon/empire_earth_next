@@ -350,6 +350,9 @@ mod status_button_ffi;
 mod toolkit;
 #[cfg(not(test))]
 mod ui_direct;
+pub(crate) mod ui_calls;
+#[cfg(not(test))]
+mod ui_calls_ffi;
 pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;
