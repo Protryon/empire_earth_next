@@ -34215,3 +34215,117 @@ numbers and the UI units' targets now.
   main checkout's toolchain/ in a worktree that has none (EE_TOOLCHAIN still wins).
 - Lesson: a build input outside git (toolchain/, fetched data) must resolve the same in every worktree, and a
   missing one must fail the build. An object cache hides the difference until one worktree compiles the unit itself.
+
+## R6 WONLobby, round 23: the WON skin's widgets and the skin whole in Rust, the frame as a Rust record (ee_won_gui shell_won.rs, skinobj.rs; branch rust-wonlobby23, 2026-11-19)
+
+Round 22 left the WON skin's widgets because each holds `WONFrame`s (four borders and a held image whose copy
+duplicates it) and WONSkin holds them as typed templates it duplicates. This round made the frame a Rust record and
+moved the eleven widget classes and the skin (WONSkin with WONMSSkin's constructor) in one go.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| a2ef3405d | the frame record, the eleven kinds and the skin in Rust with their cargo tests (no C++ caller yet) | 0 |
+| 501f29d79 | the C++ switched over: 22 units and 5 headers deleted, the configs' setters, the factories, the skin layouts' host and the shell host; golden `won_wonskin_test` | -1,294 |
+
+Round total: WON C++ 30,871 -> 29,577 (-1,294).
+
+### The frame record (shell_won.rs `FrameRec`, `EeWonFrameIn`)
+
+- A kind holds its frame as `FrameRec` (four `Cell<i32>` and a held image). `copy_from` is `WONFrame::Copy`: the
+  image's duplicate (the host's `Img Duplicate`: the `SmartPtr` temporary's reference becomes the frame's) or none,
+  then the borders; `set_image` is the shared `SetImage`; `paint` is `WONFrame::Paint` (guidraw.rs `frame_paint` run
+  with the image as slot 0, the new host op `DrawImages`).
+- A frame crosses as `EeWonFrameIn` (the image borrowed): `WONShellFrameOp(c, SetFrame, frame)` from the configs,
+  `GetFrame` out of a kind (the skin's backs, a scroll container's `CopyAttributes`). The C++ `WONFrame` stays the
+  configs' value type (`CfgReadFrame`, `CfgTabFrame::fr`), all inline in WONLobbyGUI.h: its copy and assignment still
+  duplicate the image, so the configs make the same duplicates as before.
+
+### The kinds (shell_won.rs)
+
+- WONSimpleButton and WONScrollThumb (a `Button` shell; the thumb's constructor sets the mouse-down check and the
+  scaling), WONHeaderButton (a new shell over the C++ `WONButton`, `WONShellWonButton`: WONButton stays a C++ class
+  over wonbtnobj.rs, the header button's constructor, paint and `Duplicate` are the kind's), WONInputBox, WONScrollbar,
+  WONComboBox, WONScrollContainer and WONListCtrl (one kind state, `list`), WONHeaderControl, WONTabCtrl,
+  WONFrameComponent. Each one's members are the kind's; the classes' own methods are shell ops (23 new
+  `EeWonShellOp`s: `Duplicate`, `DuplicateScroll`, `SetImage`, `SetFrame`, `GetFrame`, the field writes
+  `SetDrawFrameField`, `SetButtonInFrame`, `SetTransparentField`, `SetHeaderHeightField`, ...).
+- **Two duplicates for the scroll containers**: `WONScrollContainer::Duplicate` and `WONListCtrl::Duplicate` were
+  non-virtual and the skin called each through its static type (the scroll container template may be a list
+  control: `WONSkin`'s `SCROLLCONTAINER` key takes one): `DuplicateScroll` is the former on either kind,
+  `Duplicate` the kind's own. A scroll thumb's duplicate is a simple button (as the original's).
+- **The skin layouts**: a kind answers its own fields, its header and its state images through a new `ShellKind`
+  hook, `skin_op` (asked before `skin` for any layout op: `SetHeaderHeight`, `SetColumn`, `SetColumnItem`, `Image`);
+  SkinnedContainers.cpp keeps the parts the base classes hold (a combo box's, a scroll container's) and the calls
+  on other components (157 -> 78 lines).
+- New host ops: `Img`, `DrawImages`, `WonBtn`, `WonBtnState`, `WonBtnCopy`, `BtnCopy`, `ClickSound`, `TextWidth`,
+  `ComboGet`, `ComboPartOn`, `VDesiredSize` (a virtual `GetDesiredSize` on another widget), `NewStretchImage` (the tab
+  frame's `ImageComponent`), `NewMsImage`, `GetNamedFont`, `RefObj`; `NewBase WonButton`. The WONButton calls go to
+  its Rust object through the registry in the game (`Sh::wb`, `wb_state`, `wb_copy`), the host op in a driver.
+
+### The skin (skinobj.rs)
+
+- `EeWonSkin`: the 24 template slots in declaration order (held), the two type maps as sorted vectors under
+  guistring.rs `compare_no_case` (the original's `GUIStringLessNoCase` map: `[]` inserts an empty entry, then the
+  assignment), every getter, the type copies, the click sound and WONMSSkin's constructor (its MS images the host's
+  `NewMsImage`, its font held over the constructor). The game has one skin (`ee_won_skin_ensure`, the first `WONSkin`
+  group's PreParse) and never frees it (neither did the original: the template tab control and every header control
+  held it); `ee_won_skin_new` / `_free` are the drivers'.
+- The skin's view has no widget: `Sh::detached`, and the C++ shell host takes a NULL shell (`t` NULL).
+- `HandleButtonClickSound` skips an empty slot (the original crashed on one; no config leaves one empty).
+- The configs: the kSkin setters are `WONSkinSet(slot, i, c)` and `ee_won_skin_set_type`, their type checks
+  `SafeConfigGetSkinPart(c, name)` (the shell's kind by the class name; a scroll thumb passes for a simple button, a
+  list control for a scroll container, as their `dynamic_cast`s did); `WONButton` checks stay `SafeConfigGetComponent`.
+  The resource table's factories are two templates (`SkinFactory<getter>`, `KindFactory<kind>`).
+
+### Tests and mutations
+
+- `won_wonskin_test` (new): the deleted classes' statements over a scripted world (every call on another object,
+  image, WONButton, layout or Graphics the host op the kind makes) against the kinds and the skin: 40,000 widget
+  sequences (each kind made with random constructor arguments, a tab or header control on a new skin of each side,
+  14 random paints, layouts, desired sizes and own methods with random frames, images and arguments) and 8,000 skin
+  sequences (the Windows look made, 20 random getters, slot and type sets with keys in mixed case, type copies, click
+  sounds, the free): 48,011 checks, 0 failures. Mutations (build/w23/mutate.py, scratch): 8 of 8 caught (the tab back's width, the header arrow's none test, a duplicate's mouse-down check, the list's member release order, the arrow getter's index, the type maps' case, the header template's pressed font, the frame copy's duplicate).
+- `won_cfgtab_test` unchanged (383,620 checks, 0 mismatches): its stand-in world traces the new shell ops and skin
+  calls as the original's method calls and field writes (`c.mHeaderHeight=5`, `skin.mPushButton=c3`).
+- cargo: shell_won_tests.rs (4: masks, names and bases; the frame's duplicate and release; the opaque tab frame; the
+  simple button's images for the layout), skinobj_tests.rs (2: the Windows look's templates and their release; the
+  type maps' case and order, the copies, the click sound).
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at 501f29d79 |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py header` | 280 headers current |
+| `rust_build.py gate` | PASS, 4,977 tests (the first run failed clippy `needless_range_loop`, then rustfmt: fixed in 7c5bd090b) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical |
+| `won_host_coverage.py` | PASS (EeWonShellHostOp: 38 values, 34 host cases, 4 allowed) |
+| `xbuild.py wontest` | all 158 programs exit 0 (157 and won_wonskin_test) under the 2 GB cap, peak 558 MB |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13234` units [4, 41, 41] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2730 joiner=2732`, GATES PASS |
+
+origin/rust (3449a04fd) was already in the branch's base: no merge. The lead's aded2ef33 (the toolchain fix) was
+cherry-picked as ad46f5038.
+
+### Behaviour changes
+
+None intended. The click sound skips an empty template slot. The skin is never freed (its templates leak at exit,
+as the original's did through the tab control's reference).
+
+### What runs it
+
+- The LAN game and the tour: every lobby screen's WON widgets are made by the resource table's factories from the
+  skin (`_LobbySkin.cfg`'s `WONSkin` group sets its templates and button types), so the lobby's look is this code;
+  only a tour or the LAN game draws it (the goldens never draw).
+- `_LobbySkin.cfg` replaces every template but the input box and the popup back, so the lobby's input boxes draw
+  WONMSSkin's sunken MS frame (its `Frame3` image, duplicated per box); the other MS images are made and replaced.
+
+### Left
+
+- The images (Image, NativeImage, the raw images, Palette, ImageFilters, ImageDecoder, DelayLoadImage, MSImage):
+  not started (the decoders are already shells over imgdec.rs; the classes are the platform's bases).
+- WONButton itself (a C++ class over wonbtnobj.rs) could become a shell kind now that a `WONButton` shell exists.
+- EEUIEWonNetStatsEvents (the game's WON statistics form's two events, 70 lines) is created by EEUIManager.cpp's
+  factory and would move into the UI lane's Rust screens (ee_game screens): left for that lane.
