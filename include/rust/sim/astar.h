@@ -38,6 +38,20 @@ constexpr static const int32_t EE_ASTAR_CM_AI_VALUE = 6;
 /// tile (`i0`, `i1`)'s `mAIValue = i2` (nothing off the map)
 constexpr static const int32_t EE_ASTAR_CM_SET_AI_VALUE = 7;
 
+/// the town `h[0]`'s `mTownID`
+constexpr static const int32_t EE_ASTAR_CM_TOWN_ID = 41;
+
+/// `gContinentManager.Clear(gWorld.mMap)`, `.BuildRegions(gWorld.mMap)`
+constexpr static const int32_t EE_ASTAR_CM_CLEAR_MAP = 42;
+
+constexpr static const int32_t EE_ASTAR_CM_BUILD_MAP = 43;
+
+/// player `i[0]`'s `RegisterHerds()` (`i[1]` 0) or `RegisterTowns()` (1)
+constexpr static const int32_t EE_ASTAR_CM_REGISTER = 44;
+
+/// `ESDebugOut("%s", (const char*)h[0])`
+constexpr static const int32_t EE_ASTAR_CM_DEBUG_OUT = 45;
+
 /// `kContinentCategoryNone`, `Land`, `MapEdge`
 constexpr static const uint8_t CATEGORY_NONE = 0;
 
@@ -2016,6 +2030,15 @@ uint64_t ee_astar_cm_find_continent(const EeAStarCmRecord *r, long x, long y);
 /// # Safety
 /// As `ee_astar_cm_find_continent`.
 uint64_t ee_astar_cm_find_sub_sector(const EeAStarCmRecord *r, long x, long y);
+
+/// `EERestoreContinentRegions` after its block was taken: false when the block could not be read (the regions are
+/// built again).
+///
+/// # Safety
+/// `r` is the manager's live record; `data` holds `len` bytes.
+bool ee_astar_cm_restore_regions(EeAStarCmRecord *r,
+                                 const uint8_t *data,
+                                 size_t len);
 
 /// `ApplySubSectorLinks`.
 ///

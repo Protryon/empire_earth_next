@@ -45,6 +45,7 @@ pub mod cm_build;
 pub mod cm_capture;
 pub mod cm_host;
 pub mod cm_io;
+pub mod cm_restore;
 pub mod cm_links;
 pub mod cm_passes;
 pub mod cm_queries;
