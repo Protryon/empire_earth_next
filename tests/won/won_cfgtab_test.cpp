@@ -29,6 +29,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgtab.h"
+#include "rust/won_gui/cfgset.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/shell.h"     // the shell kinds' ops the game's statements make
 #include "rust/won_gui/shell_won.h" // the WON skin's kinds' frames
@@ -73,9 +74,11 @@ static bool LApply(void* c, int32_t s) { bool r = H(c)->apply(H(c)->ctx, s); Ev(
 static void LFail(void* c, const uint8_t* m, uintptr_t n, int32_t s) { H(c)->fail(H(c)->ctx, m, n, s); Ev("f" + P((long long)s) + ":" + Hex(m, n, 1)); }
 static void LClear(void* c) { H(c)->clear(H(c)->ctx); Ev("x"); }
 static int32_t LPeek(void* c, int32_t s) { int32_t v = H(c)->peek(H(c)->ctx, s); Ev("k" + P((long long)s) + "=" + P((long long)v)); return v; }
+// the frame's values for the setters made in Rust (cfgset.rs): not events of the reader (its golden is the same)
+static intptr_t LArg(void* c, EeWonCfgArg w, int32_t s) { return H(c)->arg(H(c)->ctx, w, s); }
 static int32_t LoggedRun(const EeWonCfgTabHost* h, int32_t t, const uint8_t* k, uintptr_t n)
 {
-    EeWonCfgTabHost w = {(void*)h, LRead, LComma, LEnd, LText, LPush, LApply, LFail, LClear, LPeek};
+    EeWonCfgTabHost w = {(void*)h, LRead, LComma, LEnd, LText, LPush, LApply, LFail, LClear, LPeek, LArg};
     sEv.clear();
     int32_t r = ::ee_won_cfg_tab_run(&w, t, k, n);
     sRuns[r + 1]++;
@@ -85,6 +88,32 @@ static int32_t LoggedRun(const EeWonCfgTabHost* h, int32_t t, const uint8_t* k, 
 #define ee_won_cfg_tab_run LoggedRun
 #include "ee/wonapi/WONCfgTable.inl"
 #undef ee_won_cfg_tab_run
+// The setters cfgset.rs makes (R6 WONLobby round 27), described by its trace hook: traced as the world traces the
+// method the original statement called (a shell kind's own method through the world's WONShell::Op, from the call),
+// and the reader's apply event as LApply logged it. (won_cfgset_test checks the calls against the game's forwards.)
+static void SetHook(void*, void* inComp, int32_t inSetter, const EeWonCfgSetTrace* t)
+{
+    Ev("a" + P((long long)inSetter) + "=" + P(true));
+    Component* comp = (Component*)inComp;
+    if (t->ncalls == 1 && t->calls[0].fun == EeWonCfgFun::Shell) {
+        WONShell::Op(comp, (EeWonShellOp)t->calls[0].op, t->calls[0].args[0], t->calls[0].args[1]);
+        return;
+    }
+    std::string args;
+    for (int k = 0; k < t->nargs; k++) {
+        const intptr_t v = t->args[k];
+        std::string one;
+        switch (t->disp[k]) {
+        case EeWonCfgDisp::Num: one = P((long long)v); break;
+        case EeWonCfgDisp::Comp: one = PP((Component*)v); break;
+        case EeWonCfgDisp::Str: one = P(*(const GUIString*)v); break;
+        case EeWonCfgDisp::Image: one = PP(static_cast<Obj*>((Image*)v)); break;
+        case EeWonCfgDisp::Font: one = PP(static_cast<Obj*>((Font*)v)); break;
+        }
+        args += (k ? "," : "") + one;
+    }
+    tr(P(comp) + "." + std::string((const char*)t->name, t->name_len) + "(" + args + ")");
+}
 }
 
 static unsigned long long sSeed = 0x9e3779b97f4a7c15ull;
@@ -143,6 +172,7 @@ int main(int argc, char** argv)
         }
     }
     Shell::sPrint = print;
+    ee_won_cfg_set_trace(Shell::SetHook, NULL);
     {
         // the shipped resource files
         int files = 0, lines = 0;

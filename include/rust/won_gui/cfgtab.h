@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/cfgset.h"
 
 /// A read the host makes into its frame.
 enum class EeWonCfgRead : int32_t {
@@ -87,6 +88,8 @@ struct EeWonCfgTabHost {
   void (*clear)(void *ctx);
   /// The frame's int `slot` (a value a read or a setter put there).
   int32_t (*peek)(void *ctx, int32_t slot);
+  /// A value of the frame for the setters made in Rust (cfgset.rs): an int, a count or an object's address.
+  ptrdiff_t (*arg)(void *ctx, EeWonCfgArg what, int32_t slot);
 };
 
 extern "C" {
@@ -100,6 +103,13 @@ int32_t ee_won_cfg_tab_run(const EeWonCfgTabHost *host,
                            int32_t table,
                            const uint8_t *key,
                            size_t len);
+
+/// cfgset.rs's `apply` for the drivers: whether the setter is one of these (made, or traced when a hook is installed).
+///
+/// # Safety
+/// `host` is valid and its `arg` answers the setter's values.
+bool ee_won_cfg_set_apply(const EeWonCfgTabHost *host,
+                          int32_t setter);
 
 /// Whether `table` is one of the reader's handlers, for the drivers.
 bool ee_won_cfg_tab_has(int32_t table);

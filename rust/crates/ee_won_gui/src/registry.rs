@@ -58,6 +58,8 @@ pub enum EeWonGuiKind {
     Tab,
     /// shell.rs `EeWonShell` (a generic widget shell's kind)
     Shell,
+    /// splitobj.rs `EeWonSplitter`
+    Splitter,
 }
 
 struct Maps {
