@@ -1278,3 +1278,35 @@ void EESimGameEnded(int inResult)
 {
     ee_sim_driver_game_ended(inResult);
 }
+
+// TSGT, MAPS, MAPK (TEST ONLY): the app profile's end sweep of EEMap's sight and out-of-synch checksum
+// (ee/EESightCapture.h)
+void EESightCaptureSweep()
+{
+    if (!EESimCaptureRecord::Active() || gWorld.mMap == NULL)
+        return;
+    EEMap* theMap = gWorld.mMap;
+    float theRadius = gWorldTable.GetFloatValue(kWorldWonderSightRadius);
+    float theSize = (float)theMap->mSize;
+    const float kPoints[][2] = {{theSize * 0.5f, theSize * 0.5f}, {5.5f, 7.5f}, {theSize - 3.25f, theSize * 0.3f}};
+    for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        if (thePlayer == NULL)
+            continue;
+        for (const float* thePoint : kPoints) {
+            theMap->AddSight(thePlayer, thePoint[0], thePoint[1], theRadius, false);
+            theMap->AddSight(thePlayer, thePoint[0] + 2.0f, thePoint[1] - 1.0f, theRadius * 0.5f, true);
+            theMap->RemoveSight(thePlayer, thePoint[0], thePoint[1], theRadius, false);
+        }
+        theMap->RemoveSight(thePlayer, kPoints[0][0] + 2.0f, kPoints[0][1] - 1.0f, theRadius * 0.5f, true);
+    }
+    if (gWorld.mNumPlayers > 1) {
+        EEPlayer* theLast = gWorld.mPlayers[gWorld.mNumPlayers - 1];
+        theMap->ExploreUnseen(theLast);
+        theMap->FogSeen(theLast);
+    }
+    // two full cycles of the checksum's 64 x 64 windows
+    long theBands = (theMap->mSize + 63) / 64;
+    for (long i = 0; i < 2 * theBands * theBands + 1; i++)
+        theMap->ComputeChecksum();
+}

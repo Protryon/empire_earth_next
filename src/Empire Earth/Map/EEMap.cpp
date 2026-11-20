@@ -661,3 +661,20 @@ bool EEPlayer::IsAlliedWith(EEPlayer* inPlayer)
 {
     return inPlayer == this || this->mEnemies[inPlayer->mPlayerID] == 0 && inPlayer->mEnemies[this->mPlayerID] == 0;
 }
+
+// TSGT (TEST ONLY): the record of the outermost sight scope (ee/EESightCapture.h) for the world's map, with the tile's
+// index in the map's tile array (-1: not one of them)
+void EESightRecord(unsigned int inShape, unsigned int inKind, EEPlayer* inPlayer, const RTSTile* inTile, long inTileX,
+                   long inTileY, unsigned long inValue, const float* inArgs)
+{
+    EEMap* theMap = gWorld.mMap;
+    if (theMap == NULL)
+        return;
+    const EETile* theTile = static_cast<const EETile*>(inTile);
+    long theIndex = theTile != NULL && theMap->mTileArray != NULL && theTile >= theMap->mTileArray &&
+                            theTile < theMap->mTileArray + theMap->mTileArrayCount
+                        ? (long)(theTile - theMap->mTileArray)
+                        : -1;
+    ee_app_sight_record(inShape, inKind, (uint64_t)(uintptr_t)inPlayer, (uint64_t)(uintptr_t)inTile, theIndex, inTileX,
+                        inTileY, inValue, inArgs, (uint64_t)(uintptr_t)theMap, theMap->mTerrainMesh.GetRust());
+}
