@@ -42,6 +42,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
+#include "rust/game/gamecpp.h"
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
@@ -857,4 +858,20 @@ long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_
     theFrame.mVersion = inVersion;
     theFrame.mProtocol = NULL;
     return ee_netmsg_session(EESessionHost, &theFrame, inServer, inWhat, a, b, c, d);
+}
+
+// ------------------------------------------------------------------------- round 9, lane D: this file's bodies' C++
+
+int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane D section): one statement each
+int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpE(inOp, p, a, f);
+}
+
+double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpEF(inOp, p, a, f);
 }

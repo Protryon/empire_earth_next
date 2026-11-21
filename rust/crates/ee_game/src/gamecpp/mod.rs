@@ -32,6 +32,26 @@ pub mod startup;
 pub mod state;
 pub mod world;
 
+// ---- round 9, lane A: the render objects (EERenderObject.cpp, the Graphics Thread's units)
+//
+//
+
+// ---- round 9, lane B: the effects' host and the map (EEEffectHost.cpp, Map)
+//
+//
+
+// ---- round 9, lane C: the persistent helpers (Persistent)
+//
+//
+
+// ---- round 9, lane D: the session, the civilization builder and the tech tree (Communications, Civ Builder, Tech Tree)
+//
+//
+
+// ---- round 9, lane E: the entry points, the start screen, the fixture's host (Empire Earth)
+//
+//
+
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
@@ -1402,6 +1422,26 @@ pub enum EeGameCpp {
     GfxRenderTo,
     CaptureSave,
     CaptureDoneSet,
+    //
+    // ---- round 9, lane A (EECore9OpA's cases)
+    //
+    //
+    //
+    // ---- round 9, lane B (EECore9OpB's cases)
+    //
+    //
+    //
+    // ---- round 9, lane C (EECore9OpC's cases)
+    //
+    //
+    //
+    // ---- round 9, lane D (EECore9OpD's cases)
+    //
+    //
+    //
+    // ---- round 9, lane E (EECore9OpE's cases)
+    //
+    //
 }
 
 pub use EeGameCpp as O;

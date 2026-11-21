@@ -717,6 +717,7 @@ std::vector<GETexture*> gU4E8EF0;
 #include "rust/render/ge.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
+#include "rust/game/gamecpp.h"
 
 // the render fill's answers that are not world views (ee_gfx fill.rs FillHost) and its frame
 static EEComplexUnit* EEFillComplex(uint64_t inUnit)
@@ -1479,4 +1480,20 @@ void EEResetGraphicsValues()
     gGraphics->PostPushRenderObject(gU565358);
     gGraphics->PostPushRenderObject(gU565354);
     gGraphics->PostPushRenderObject(gU565350);
+}
+
+// ------------------------------------------------------------------------- round 9, lane A: this file's bodies' C++
+
+int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane A section): one statement each
+int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpB(inOp, p, a, f);
+}
+
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpBF(inOp, p, a, f);
 }

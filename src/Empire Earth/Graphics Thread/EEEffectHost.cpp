@@ -58,6 +58,7 @@
 #include "rust/base/math.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
+#include "rust/game/gamecpp.h"
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
@@ -977,4 +978,20 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
     ee_gfx_effects_decal_track(U(theEffect), R(theLocation),
                                theType == kUnitTypeResGiraffe ? EE_GFX_TRACK_GIRAFFE : theType == kUnitTypeResHorse ? EE_GFX_TRACK_HORSE : 0,
                                theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
+}
+
+// ------------------------------------------------------------------------- round 9, lane B: this file's bodies' C++
+
+int64_t EECore9OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane B section): one statement each
+int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpC(inOp, p, a, f);
+}
+
+double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpCF(inOp, p, a, f);
 }

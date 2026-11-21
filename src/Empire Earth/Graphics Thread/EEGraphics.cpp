@@ -477,9 +477,9 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     return 0;
 }
 
-// the end of the chain (the next bodies' cases go before it)
+// round 9's cases (EERenderObject.cpp's EECore9OpA, then B..E)
+int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-    return 0;
+    return EECore9OpA(inOp, p, a, f);
 }

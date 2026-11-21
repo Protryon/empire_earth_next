@@ -206,6 +206,7 @@ UString GetDateText()
     return theDate;
 }
 #include "ee/EEStringIDs.h"
+#include "rust/game/gamecpp.h"
 class EEGameState;
 extern EEGameState gGameState;
 long MuteForSaveLoad(bool inLoading, bool inQuiet);                  // 0x14d195 (mutes the sound before a save/load)
@@ -563,4 +564,20 @@ static long CountChunkTags(std::vector<long>& inTags, long inTag)
         if (*theIterator == inTag)
             theCount++;
     return theCount;
+}
+
+// ------------------------------------------------------------------------- round 9, lane C: this file's bodies' C++
+
+int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane C section): one statement each
+int64_t EECore9OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpD(inOp, p, a, f);
+}
+
+double EECore9OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpDF(inOp, p, a, f);
 }

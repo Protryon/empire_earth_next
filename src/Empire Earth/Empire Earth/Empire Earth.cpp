@@ -1931,7 +1931,23 @@ int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     return EEGraphicsOp(inOp, p, a, f);
 }
 
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpAF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 9, lane E: this file's bodies' C++
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane E section): one statement
+// each; the end of the chain
+int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    return 0;
+}
+
+double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
     return 0.0;
