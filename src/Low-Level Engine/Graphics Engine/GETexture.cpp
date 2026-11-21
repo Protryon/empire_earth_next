@@ -201,21 +201,7 @@ GETexture::~GETexture()
     ee_ge_tex_destroy(this->mRust);
 }
 
-// Loads the texture (and its animation frames) from its decoded PNG frames (port, D9: the original read a texture or
-// .tga file), building or dropping MIP levels as asked; frames become separate textures (format 0) or cells of one
-// grid surface (format 1)
-long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
-                     bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat)
-{
-    return ee_ge_tex_load(this->mRust, inTexture, (EeGeSurfaceDescription*)&inDescription, inScreen, inCreateMIPMaps,
-                          inNumMipLevelsToDrop, inFrameFormat);
-}
 
-// Locks the texture's surface and returns its memory and row pitch
-long GETexture::Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
-{
-    return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow);
-}
 
 // (the SetStage* setters: inline in lle/GETexture.h)
 
@@ -230,12 +216,6 @@ static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "G
 static_assert(offsetof(EeGeTextureDescription, num_mip_levels_to_drop) == offsetof(GETextureDescription, mNumMipLevelsToDrop), "");
 static_assert(offsetof(EeGeTextureDescription, use_texture_pack) == offsetof(GETextureDescription, mUseTexturePack), "");
 
-// port: the texture pack (SetTexturePack): its settings live in Rust (ee_ge managers.rs, TexturePack). The directory
-// stays set when the pack is turned off, so a texture loaded from it is reloaded from it (RefreshAllTextures).
-void GETextureManager::SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
-{
-    ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop);
-}
 
 // The pack's name of a texture: "textures\x" -> "textures-4x\x"; false for a name outside "textures\" (or no pack
 // directory), for the pictures the game reads as data, and while the pack is off
@@ -248,15 +228,7 @@ bool GETextureManager::GetTexturePackName(const UString& inName, UString& outNam
     return true;
 }
 
-long GETextureManager::GetTexturePackLogicalShift()
-{
-    return ee_ge_texpack_logical_shift();
-}
 
-long GETextureManager::GetTexturePackMipLevelsToDrop()
-{
-    return ee_ge_texpack_mip_levels_to_drop();
-}
 
 // The calls the manager makes on other objects (EeGeManOp), in the original's statements
 intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
@@ -324,11 +296,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     }
 }
 
-// port: the cache's texture at an index, in the cache's (name) order: the store gate digests every cached texture
-GETexture* GETextureManager::GetTextureAt(unsigned long inIndex)
-{
-    return (GETexture*)ee_ge_texman_at(this->mRust, inIndex);
-}
 
 // Creates a texture manager on a search path (referenced), with no textures and its own lock
 GETextureManager::GETextureManager(FSPath* inTexturePath)
@@ -342,19 +309,7 @@ GETextureManager::~GETextureManager()
     ee_ge_texman_free(this->mRust);
 }
 
-unsigned long GETextureManager::GetMemoryFootprint()
-{
-    return ee_ge_texman_footprint(this->mRust);
-}
 
-// Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
-// name's stem; the original tried <name>.tga, then <name>.sst); NULL if it cannot be found or loaded
-// Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
-// looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
-long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
-{
-    return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
-}
 
 // ---- GETextureSet (GETextureSet.cpp, folded here in R4.3 part 16)
 

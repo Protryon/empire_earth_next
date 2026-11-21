@@ -199,7 +199,8 @@ private:
     // the message manager's calls out that reach the C++ (ee_net's EeNetMmOp): the messages, the server, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
     // the queues' common calls out (ee_net's EeNetQOp)
-    static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
+    static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
+        { return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d); }
 
     EeNetServer* mRust;                     // the server, whole in Rust (ee_net server.rs)
 };

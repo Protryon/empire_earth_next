@@ -106,8 +106,6 @@ RTSUnit::~RTSUnit()
     delete this->mTileNode;
 }
 
-void RTSUnit::Invalidate() { ee_rts_unit_invalidate(this); }
-void RTSUnit::FreeNode() { ee_rts_unit_free_node(this); }
 
 // Appends the unit's id and tile to a debug description
 void RTSUnit::Describe(UWideString& ioString)
@@ -125,20 +123,7 @@ void RTSUnit::DescribeLong(UWideString& ioString)
     ioString += theString;
 }
 
-void RTSUnit::Initialize(long inLinked) { ee_rts_unit_initialize(this, inLinked); }
-void RTSUnit::Reset() { ee_rts_unit_reset(this); }
-void RTSUnit::InsertAfter(RTSUnit* inUnit) { ee_rts_unit_insert_after(this, inUnit); }
-void RTSUnit::Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }
-void RTSUnit::RemoveFromList() { ee_rts_unit_remove_from_list(this); }
-void RTSUnit::Unlink() { ee_rts_unit_unlink(this); }
-void RTSUnit::UpdateTile(EEMap* inMap) { ee_rts_unit_update_tile(this, inMap); }
-void RTSUnit::Clear() { ee_rts_unit_clear(this); }
 
-// Drops the last reference to the unit
-void RTSUnit::LastDereference()
-{
-    UReferenceCounter::Dereference();
-}
 
 // Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error. port (R5b.4,
 // round 26): the body is Rust (ee_units unit_load.rs rts_load)
@@ -163,10 +148,6 @@ void RTSUnit::CopyFrom(class RTSUnit *)
 {
 }
 
-long RTSUnit::RepairPointers(unsigned long,unsigned long)
-{
-    return 0;
-}
 
 // The shims units.rs calls (UnitsCpp: the unit's side)
 extern "C" {

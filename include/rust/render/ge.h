@@ -2245,6 +2245,12 @@ const EeGeRastColor *ee_ge_rast_color(EeGeRasterizer *p,
 /// `p` is live; `color` is valid.
 void ee_ge_rast_set_ambient_color(EeGeRasterizer *p, const EeGeRastColor *color);
 
+/// `GetAmbientIntensity()`.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_rast_ambient_intensity(EeGeRasterizer *p);
+
 /// `SetAmbientIntensity(inIntensity, ...)` (the screen is ignored).
 ///
 /// # Safety

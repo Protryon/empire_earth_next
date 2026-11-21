@@ -21,7 +21,7 @@ public:
     long FindFile(const UWideString& inName);
     long FindFile(const UString& inName, FSFileSpec*& outFile);
     long FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& outDirectory);
-    const FSArchive& GetArchive(unsigned long inIndex) const;
+    const FSArchive& GetArchive(unsigned long inIndex) const { return this->mArchives[inIndex]; }
     long GetArchive(unsigned long inIndex, FSArchive& outArchive) const;
     unsigned long GetArchiveCount() const { return this->mArchives.size(); }
     long GetDirectory(unsigned long inIndex, FSFileSpec& outDirectory) const;

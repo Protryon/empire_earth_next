@@ -43,16 +43,7 @@
 #include "rust/render/ge.h"
 #include "GERustMath.h"
 
-// The screen record is the Rust record (the plug-in reads its fields through GetScreenState).
-static_assert(sizeof(GERScreenState) == sizeof(EeGeRastScreen), "GERScreenState is EeGeRastScreen");
-static_assert(offsetof(GERScreenState, mFog) == offsetof(EeGeRastScreen, fog), "mFog");
-static_assert(offsetof(GERScreenState, mScreen) == offsetof(EeGeRastScreen, screen), "mScreen");
-static_assert(offsetof(GERScreenState, mAlphaTestingRefValue) == offsetof(EeGeRastScreen, alpha_testing_ref_value), "ref");
-static_assert(offsetof(GERScreenState, mAlphaTesting) == offsetof(EeGeRastScreen, alpha_testing), "mAlphaTesting");
-static_assert(offsetof(GERScreenState, mZCompare) == offsetof(EeGeRastScreen, z_compare), "mZCompare");
-static_assert(offsetof(GERScreenState, m32C) == offsetof(EeGeRastScreen, counters), "m32C");
-static_assert(offsetof(GERScreenState, mWaitForVSync) == offsetof(EeGeRastScreen, wait_for_vsync), "mWaitForVSync");
-static_assert(sizeof(GERFogAttributes) == sizeof(EeGeRastFog) && sizeof(GEColor) == sizeof(EeGeRastColor), "fog");
+static_assert(sizeof(EeGeRastFog) == 0x20 && sizeof(GEColor) == sizeof(EeGeRastColor), "fog");
 
 static intptr_t GEFloatBits(float inValue)
 {
@@ -150,19 +141,6 @@ GERasterizer::~GERasterizer()
     ee_ge_rast_destroy(this->mRust);
 }
 
-// Activates the rasterizer and makes it the active one on success (no active rasterizer on failure)
-long GERasterizer::Activate()
-{
-    return (long)ee_ge_rast_activate(this->mRust);
-}
-
-// Deactivates the rasterizer: deletes every screen's render state and clears the active rasterizer
-long GERasterizer::Deactivate()
-{
-    ee_ge_rast_deactivate(this->mRust);
-    return kErrorOK;
-}
-
 // Returns a model's on-screen width in pixels (its scaled bounding diameter projected through the viewport)
 float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
                                  float inScale, bool inOrthographic)
@@ -176,159 +154,11 @@ float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inV
     return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic);
 }
 
-// The base's render state setters (0x10024352..0x100245e9): each records the state in the screen's record.
-void GERasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTesting, (intptr_t)inState);
-}
-
-void GERasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTestingCompareState, (intptr_t)inState);
-}
-
-void GERasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTestingRefValue, GEFloatBits(inValue));
-}
-
-// Sets the ambient light colour and recomputes the effective ambient colour (the screen is ignored)
-void GERasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScreen)
-{
-    ee_ge_rast_set_ambient_color(this->mRust, reinterpret_cast<const EeGeRastColor*>(&inColor));
-}
-
-// Sets the ambient light intensity and recomputes the effective ambient colour (the screen is ignored)
-void GERasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScreen)
-{
-    ee_ge_rast_set_ambient_intensity(this->mRust, inIntensity);
-}
-
-void GERasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AntiAliasing, (intptr_t)inState);
-}
-
-void GERasterizer::SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen)
-{
-    ee_ge_rast_set_blending(this->mRust, inScreen, inSource, inDestination);
-}
-
-void GERasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ColorKeying, (intptr_t)inState);
-}
-
-void GERasterizer::SetCulling(unsigned long inState)
-{
-    ee_ge_rast_set(this->mRust, EeGeRastVal::Culling, (intptr_t)inState);
-}
-
-// Does nothing (no-texture display mode is not supported by the base rasterizer)
-void GERasterizer::SetDisplayNoTextureMode(bool inState, unsigned long inScreen)
-{
-}
-
-// SetDisplayOverdrawMode: does nothing either (the same empty body, ICF-folded into 0x10024451)
-void GERasterizer::SetDisplayOverdrawMode(bool inState, unsigned long inScreen)
-{
-}
-
-void GERasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Dithering, (intptr_t)inState);
-}
-
-void GERasterizer::SetFog(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogState, (intptr_t)inState);
-}
-
-void GERasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
-{
-    ee_ge_rast_set_fog_color(this->mRust, inScreen, reinterpret_cast<const EeGeRastColor*>(&inColor));
-}
-
-void GERasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
-{
-    ee_ge_rast_set_fog_range(this->mRust, inScreen, inStart, inEnd);
-}
-
-void GERasterizer::SetFogType(unsigned long inType, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogType, (intptr_t)inType);
-}
-
-void GERasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Lighting, (intptr_t)inState);
-}
-
-void GERasterizer::SetProjectionMode(unsigned long inMode, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ProjectionMode, (intptr_t)inMode);
-}
-
-void GERasterizer::SetShading(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Shading, (intptr_t)inState);
-}
-
-void GERasterizer::SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ShadingColorSource, (intptr_t)inSource);
-}
-
-void GERasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Specular, (intptr_t)inState);
-}
-
-void GERasterizer::SetViewport(const GEViewport& inViewport, unsigned long inScreen)
-{
-    ee_ge_rast_set_viewport(this->mRust, inScreen, GERust(inViewport));
-}
-
-void GERasterizer::SetWaitForVSync(bool inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::WaitForVSync, inState);
-}
-
-void GERasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ZBuffer, (intptr_t)inState);
-}
-
-void GERasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ZCompare, (intptr_t)inState);
-}
-
-// ---- the header's accessors (inline in the original) and the statics
-GERScreenState* GERasterizer::GetScreenState(unsigned long inScreen) const
-{
-    return reinterpret_cast<GERScreenState*>(ee_ge_rast_screen(this->mRust, inScreen));
-}
-
-const GEColor& GERasterizer::GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
-float GERasterizer::GetAmbientIntensity() const { return GEBitsFloat(ee_ge_rast_get(this->mRust, EeGeRastVal::AmbientIntensity)); }
-bool GERasterizer::GetIsActivated() const { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsActivated) != 0; }
-const UString& GERasterizer::GetName() const { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
-unsigned long GERasterizer::GetScreenCount() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenCount); }
-unsigned long GERasterizer::GetScreenID() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenId); }
-void GERasterizer::SetScreenID(unsigned long inID) { ee_ge_rast_set(this->mRust, EeGeRastVal::ScreenId, (intptr_t)inID); }
-
 void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
 {
     float theRipple[3] = {inWaterRipple0, inWaterRipple1, inWaterRipple2};
     ee_ge_rast_ripple(this->mRust, &theRipple, true);
 }
-
-GERasterizer* GERasterizer::GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
-void GERasterizer::ClearRasterizers() { ee_ge_rast_list(0, NULL, 0); }
-void GERasterizer::AddRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_list(1, inRasterizer, 0); }
-unsigned long GERasterizer::GetRasterizerCount() { return (unsigned long)(uintptr_t)ee_ge_rast_list(2, NULL, 0); }
-GERasterizer* GERasterizer::GetRasterizer(unsigned long inIndex) { return static_cast<GERasterizer*>(ee_ge_rast_list(3, NULL, inIndex)); }
 
 // 0x1002398a: GEText's scalar deleting dtor (see ~GERasterizer). A `delete p` compiles to a ??_G call whenever the
 //   dtor body is inline-visible (even when the caller's budget is spent), and to ??1 + ??3 only when it is not;

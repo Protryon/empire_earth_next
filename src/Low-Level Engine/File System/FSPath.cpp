@@ -136,11 +136,6 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& o
     return theResult;
 }
 
-// Returns the archive at an index (unchecked)
-const FSArchive& FSPath::GetArchive(unsigned long inIndex) const
-{
-    return this->mArchives[inIndex];
-}
 
 // Copies the archive at an index to outArchive; kErrorBeyondEnd past the last one
 long FSPath::GetArchive(unsigned long inIndex, FSArchive& outArchive) const
