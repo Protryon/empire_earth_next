@@ -390,49 +390,6 @@ void EEComplexUnit::AddContact(EEComplexUnit* inUnit)
     }
 }
 
-// Appends a waypoint with its running path distance (off-map points are snapped or refused)
-void EEComplexUnit::AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap)
-{
-    EEComplexUnitWaypoint theWaypoint;
-    theWaypoint.mDistance = 0.0f;
-    theWaypoint.mStartDistance = 0.0f;
-    unsigned long theSize = this->mWaypoints.size();
-    long theLast = theSize - 1;
-    EEMap* theMap = ::gWorld.mMap;
-    long theX = UMFloor(inLocation.GetX());
-    long theY = UMFloor(inLocation.GetY());
-    EEMapTile* theTile = theMap ? theMap->GetTile(theX, theY) : 0;
-    bool theValid;
-    if (!inSnapToMap)
-        theValid = !theMap->IsEdgeTile(theX, theY);
-    else {
-        if (theTile == NULL)
-            theMap->GetClosestTile(const_cast<GE3DPoint*>(&inLocation), &theX, &theY);
-        theValid = true;
-    }
-    if (!theValid)
-        return;
-    if (theSize > 0) {
-        float theDistance = sqrt((inLocation.GetX() - this->mWaypoints[theLast].mLocation.GetX())
-                                     * (inLocation.GetX() - this->mWaypoints[theLast].mLocation.GetX())
-                                 + (inLocation.GetY() - this->mWaypoints[theLast].mLocation.GetY())
-                                     * (inLocation.GetY() - this->mWaypoints[theLast].mLocation.GetY())
-                                 + (inLocation.GetZ() - this->mWaypoints[theLast].mLocation.GetZ())
-                                     * (inLocation.GetZ() - this->mWaypoints[theLast].mLocation.GetZ()));
-        theWaypoint.mStartDistance = this->mWaypoints[theLast].mDistance;
-        theWaypoint.mDistance = theWaypoint.mStartDistance + theDistance;
-    } else {
-        theWaypoint.mStartDistance = 0.0f;
-        theWaypoint.mDistance = sqrt((inLocation.GetX() - this->mPhysicalModel.GetLocation().GetX())
-                                         * (inLocation.GetX() - this->mPhysicalModel.GetLocation().GetX())
-                                     + (inLocation.GetY() - this->mPhysicalModel.GetLocation().GetY())
-                                         * (inLocation.GetY() - this->mPhysicalModel.GetLocation().GetY())
-                                     + (inLocation.GetZ() - this->mPhysicalModel.GetLocation().GetZ())
-                                         * (inLocation.GetZ() - this->mPhysicalModel.GetLocation().GetZ()));
-    }
-    theWaypoint.mLocation = inLocation;
-    this->mWaypoints.push_back(theWaypoint);
-}
 #include "ee/EEStringIDs.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EESoundObject.h"
@@ -442,7 +399,6 @@ void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
 void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
 void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer);
 static const float kMinimumFootprint = 1.0f;   // 0x446db8 (FindContacts; provisional name)
-static const float kPathSpeedScale = 5.0f;     // 0x446dbc (ShouldMoveToNextAutoWaypoint: mFormationRank / 5 region sizes; provisional name)
 bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before this unit's 0x4c76f0 table; EEUserInterface/EEWorld/EEMap read it; provisional name)
 
 // Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
@@ -767,14 +723,6 @@ void EEComplexUnit::ReleaseFireEffect()
         }
     } else if (theClass->mUnitType == kUnitTypeMarketCP)
         EERemoveCloakEffect(this);
-}
-
-// Drops the unit's waypoints (the original stepped through them instead while its never-set waypoint marking flag
-// 0x963234 was on)
-void EEComplexUnit::DropPath()
-{
-    this->mWaypoints.clear();
-    this->mCollisionResolutionCount = 0.0f;
 }
 
 // Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
@@ -1331,18 +1279,6 @@ void EEComplexUnit::AddCenterOffset(float& ioX, float& ioY)
     }
 }
 
-// Returns the first waypoint and the remaining path length; 7 when there is no path
-long EEComplexUnit::GetPathStart(GE3DPoint& outLocation, float& outLength)
-{
-    if (this->mWaypoints.size() > 0) {
-        EEComplexUnitWaypoint& theFirst = *this->mWaypoints.begin();
-        outLength = this->mWaypoints.back().mDistance - theFirst.mStartDistance;
-        outLocation = (*this->mWaypoints.begin()).mLocation;
-        return 0;
-    }
-    return 7;
-}
-
 // Returns the unit's out-of-sync checksum for the selected parts (tile, physics, goals, area effects)
 long EEComplexUnit::GetChecksum(unsigned long inFlags)
 {
@@ -1384,27 +1320,6 @@ long EEComplexUnit::GetChecksum(unsigned long inFlags)
 EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
 {
     return this->mGoalQueues[inIndex].mGoals;
-}
-
-// Returns the remaining path length; 7 when there is no path
-long EEComplexUnit::GetPathLength(float& outDistance)
-{
-    if (this->mWaypoints.size() > 0) {
-        EEComplexUnitWaypoint& theFirst = *this->mWaypoints.begin();
-        outDistance = this->mWaypoints.back().mDistance - theFirst.mStartDistance;
-        return 0;
-    }
-    return 7;
-}
-
-// Returns the next waypoint's location; 7 when there is no path
-long EEComplexUnit::GetNextWaypointPoint(GE3DPoint& outLocation)
-{
-    if (this->mWaypoints.size() > 0) {
-        outLocation = (*this->mWaypoints.begin()).mLocation;
-        return 0;
-    }
-    return 7;
 }
 
 // Appends a debug description: action, collision state, velocity and the current goal
@@ -1550,20 +1465,6 @@ bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
     // ee_combat world.rs can_reach_unit over the world host; CBXR records the outcome
     bool theResult = EECombatWorld(EE_COMBAT_WORLD_CAN_REACH_UNIT, this, inTarget) != 0;
     EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, inTarget, theResult);
-    return theResult;
-}
-
-// Returns the first continent of the given kind under the unit's footprint, or 0
-unsigned short EEComplexUnit::GetFootprintContinent(long inKind)
-{
-    std::vector<EETileCoordinate> theTiles;
-    unsigned short theResult = 0;
-    ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)this, &theTiles);
-    for (std::vector<EETileCoordinate>::iterator theIterator = theTiles.begin(); theIterator != theTiles.end(); ++theIterator) {
-        unsigned short theContinent = ::gContinentManager.GetContinent(*theIterator, inKind);
-        if (theContinent != 0 && theResult == 0)
-            theResult = theContinent;
-    }
     return theResult;
 }
 
@@ -2002,25 +1903,6 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
     return theResult;
 }
 
-// Finds the unit's waypoint on the given tile (off-map waypoints count at their closest tile); returns true if found
-bool EEComplexUnit::FindWaypointAtTile(long inX, long inY, EEComplexUnitWaypoint*& outWaypoint)
-{
-    // gWorld.GetMap() is read twice, with no local: the original keeps it in eax, not in a callee-saved register
-    bool theFound = false;
-    for (unsigned long i = 0; i < this->mWaypoints.size(); i++) {
-        long theX = UMFloor(this->mWaypoints[i].mLocation.GetX());
-        long theY = UMFloor(this->mWaypoints[i].mLocation.GetY());
-        if (::gWorld.GetMap()->GetTile(theX, theY) == NULL)
-            ::gWorld.GetMap()->GetClosestTile(&this->mWaypoints[i].mLocation, &theX, &theY);
-        if (theX != inX || theY != inY)
-            continue;
-        theFound = true;
-        outWaypoint = &this->mWaypoints[i];
-        break;
-    }
-    return theFound;
-}
-
 // Returns true if the unit is built, alive and below its maximum hit points
 bool EEComplexUnit::IsRepairable()
 {
@@ -2034,29 +1916,6 @@ void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
     EeCombatMoraleIn theIn = {(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
                               EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale};
     outValue = EECombatMorale(theIn);
-}
-
-// Drops the unit's first waypoint; returns 0, or 7 if there was none
-long EEComplexUnit::NextWaypoint()
-{
-    long theResult;
-    if (this->mWaypoints.size() > 0) {
-        this->mWaypoints.pop_front();
-        theResult = 0;
-    } else
-        theResult = 7;
-    this->mCollisionResolutionCount = 0.0f;
-    return theResult;
-}
-
-// Gets the location of the unit's second waypoint; returns 0, or 7 if it has fewer than two
-long EEComplexUnit::GetSecondWaypoint(GE3DPoint& outLocation)
-{
-    if (this->mWaypoints.size() > 1) {
-        outLocation = this->mWaypoints[1].mLocation;
-        return 0;
-    }
-    return 7;
 }
 
 // Pops the citizen's build queue until a still-valid unit comes out; returns it, or NULL when the queue runs out
@@ -2090,128 +1949,6 @@ void EEComplexUnit::FleeAfterCalamity(long inArg)
         this->StartAction(kActionPrepareToMove);
     }
     this->GetUnitClass()->ActionChanged(this);
-}
-
-// Turns a group path into location goals for the unit (replacing its location goal, or after its attack goal),
-// skipping up to three points near its start sector, and sets it moving
-// inPath's constness is inferred (non-const is the least the body needs)
-void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
-{
-    std::vector<GE3DPoint> thePath;
-    EEUnitVectorItem* theQueue = &this->mGoalQueues[0];
-    EEUGRust* theAttack = EEAttackUnitCast(this->GetGoal());
-    // a location goal or a heal goal (which derived from it; its group path state was never read)
-    bool theHasLocation = EEGoalHasLocation(this->GetGoal());
-    EEUGRust* theLocation = EELocationGoalCast(this->GetGoal());
-    EEAIPathSector* theStartSector = gContinentManager.GetPathSector(this);
-    long theSkipped = 0;
-    bool theKeepAttack = false;
-    bool theReplaced = false;
-    if (this->mHitPoints < 1 || this->mIsDisabled || this->mTile == NULL)
-        goto done;
-    if (!theHasLocation) {
-        if (theAttack == NULL) {
-            if (this->GetCommandType() != kActionIdle)
-                goto done;
-        } else if (!theAttack->mB1C) {
-            theKeepAttack = true;
-            if (theQueue->mGoals.size() < 2)
-                goto done;
-        }
-    } else if (theLocation != NULL)
-        theLocation->SetGroupPathState(3);
-    if (!theKeepAttack && (theQueue->mGoals.size() == 0
-        || (theQueue->mGoals.back()->mKind == 1 && static_cast<EEUGRust*>(theQueue->mGoals.back())->GetIsAutoWaypoint())))
-        goto done;
-    if (inPath.size() >= 2) {
-        thePath.reserve(inPath.size());
-        bool theSkip = true;
-        for (long i = 0; i < (long)inPath.size(); i++) {
-            if (theSkip) {
-                EETileCoordinate theTile;
-                theTile.mX = UMFloor(inPath[i].GetX());
-                theTile.mY = UMFloor(inPath[i].GetY());
-                EEAIPathSector* theSector = gContinentManager.GetPathSector(theTile);
-                if (theSkipped >= 3)
-                    theSkip = false;
-                else {
-                    U2DPoint<long> theStart(theStartSector->GetCenter().mX, theStartSector->GetCenter().mY);
-                    U2DPoint<long> theEnd(theSector->GetCenter().mX, theSector->GetCenter().mY);
-                    if (!(theStart.DistanceToSquared(theEnd) >= 2))
-                        theSkipped++;
-                    else
-                        theSkip = false;
-                }
-            }
-            if (!theSkip)
-                thePath.push_back(inPath[i]);
-        }
-        for (long thePathIndex = thePath.size() - 1; thePathIndex >= 0; thePathIndex--) {
-            EEUnitGoal* theGoal = EEUGRust::NewLocation(&thePath[thePathIndex], this->mGoalState != NULL && this->mGoalState->mB1C,
-                theLocation != NULL && theLocation->GetIsForcedMove(), false, 0.0f, true, false);
-            if (!theKeepAttack) {
-                this->SetGoal(theGoal, 1, 0);
-                theReplaced = true;
-            } else
-                this->mGoalQueues[0].Insert(1, theGoal);
-        }
-    }
-    this->RefreshGoals();
-    this->RefreshActiveGoal();
-    if (!theReplaced) {
-        EEUnitGoal* theCurrent = this->GetGoal();
-        if (!EEGoalHasLocation(theCurrent))
-            goto done;
-        GE3DPoint theCurrentLocation = EELocationGoalPoint(theCurrent);
-        long theY = UMFloor(theCurrentLocation.GetY());
-        long theX = UMFloor(theCurrentLocation.GetX());
-        if (this->GetTileX() == theX && this->GetTileY() == theY)
-            goto done;
-        if (this->mWaypoints.size() != 0 && UMFloor(this->mWaypoints.back().mLocation.GetX()) == theX
-            && UMFloor(this->mWaypoints.back().mLocation.GetY()) == theY)
-            goto done;
-        if (theCurrent->mKind == kGoalLocation)
-            static_cast<EEUGRust*>(theCurrent)->SetGroupPathState(4);
-    }
-    this->StartAction(kActionPrepareToMove);
-    this->GetUnitClass()->ActionChanged(this);
-done:
-    this->RefreshGoals();
-    this->RefreshActiveGoal();
-}
-
-// Snaps the last waypoint to the goal's exact location when both share a tile (location, attack, build, load goals)
-void EEComplexUnit::SnapLastWaypoint()
-{
-    // NEAR: the waypoint copy goes through an out-of-line operator= (0x1a95d6) in the original
-    GE3DPoint theGoalLocation(0.0f, 0.0f, 0.0f);
-    EEComplexUnitWaypoint theLast;
-    theLast.mLocation = GE3DPoint(0.0f, 0.0f, 0.0f);
-    theLast.mDistance = 0.0f;
-    theLast.mStartDistance = 0.0f;
-    if (this->mWaypoints.size() <= 0 || this->mGoalState == NULL)
-        return;
-    unsigned char theKind = this->mGoalState->mKind;
-    if (theKind <= 0 || (!(theKind <= kGoalAttackUnit) && theKind != kGoalBuildRepair && (theKind <= 5 || (!(theKind <= kGoalLoadTransport) && theKind != kGoalLoadGarrison))))
-        return;
-    this->mGoalState->GetGoalLocation(theGoalLocation);
-    theLast = this->mWaypoints.back();
-    if (UMFloor(theLast.mLocation.GetX()) == UMFloor(theGoalLocation.GetX())
-        && UMFloor(theLast.mLocation.GetY()) == UMFloor(theGoalLocation.GetY())) {
-        this->mWaypoints.pop_back();
-        this->AddWaypoint(theGoalLocation, false);
-    }
-}
-
-// Adjusts a path for the unit's class and adds it as waypoints (stored end first), skipping the start tile it stands on
-void EEComplexUnit::TakePath(std::vector<GE3DPoint>& ioPath, bool inSmooth)
-{
-    long theSkip = 1;
-    if (ioPath.size() > 1 && this->GetTileX() == UMFloor(ioPath.back().GetX()) && this->GetTileY() == UMFloor(ioPath.back().GetY()))
-        theSkip = 2;
-    this->GetUnitClass()->AdjustPath(this, ioPath, inSmooth);
-    for (long i = ioPath.size() - theSkip; i >= 0; i--)
-        this->AddWaypoint(ioPath[i], false);
 }
 
 // Swaps replaced units (old -> new pairs) in the unit's goals, cargo, parts and build queue
@@ -3040,39 +2777,6 @@ void EEComplexUnit::PlayEffect(long inTechnology)
         gDataPreLoading->PostLoadTechnology(this->mPlayer->mPlayerID, inTechnology);
 }
 
-// Returns true when a unit on an auto waypoint has a finished path that is short or ends in a neighbouring sector,
-// so it may move on to the next goal
-bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
-{
-    EEUGRust* theLocation = EELocationGoalCast(this->GetGoal());
-    if (theLocation == NULL || !theLocation->GetIsAutoWaypoint() || this->mGoalQueues[0].mGoals.size() <= 1
-        || !gPathManager.IsPathDone(this) || gPathManager.HasAutoPath(this))
-        return false;
-    bool theResult = (long)this->mWaypoints.size() <= gEEAIRegionSize;
-    if (theResult || (long)this->mWaypoints.size() <= 0)
-        return theResult;
-    EEAIPathSector* theFrom = gContinentManager.GetPathSector(this);
-    if (theFrom != NULL) {
-        EETileCoordinate theTile;
-        theTile.mX = UMFloor(this->mWaypoints.back().mLocation.GetX());
-        theTile.mY = UMFloor(this->mWaypoints.back().mLocation.GetY());
-        EEAIPathSector* theTo = gContinentManager.GetPathSector(theTile);
-        if (theTo != NULL) {
-            long theLimit;
-            if (!(this->GetUnitClass()->mDomains & kMovementSea))
-                theLimit = gEEAIRegionSize * 2;
-            else {
-                theLimit = gEEAIRegionSize;
-                if (this->mFormationRank != 0)
-                    theLimit = UMCeil(this->mFormationRank / kPathSpeedScale * theLimit);
-            }
-            if ((long)this->mWaypoints.size() <= theLimit && theFrom->GetCenter().DistanceToSquared(theTo->GetCenter()) < 2)
-                theResult = true;
-        }
-    }
-    return theResult;
-}
-
 // Replaces a cargo unit with another, adjusting the cargo room
 void EEComplexUnit::ReplaceCargo(EEComplexUnit* inOld, EEComplexUnit* inNew)
 {
@@ -3486,4 +3190,33 @@ void EEComplexUnit::DescribeLong(class UWideString &)
 
 void EEComplexUnit::FnE123D()
 {
+}
+
+// The C++ calls of the Rust path bodies (ee_sim::units waypoints.rs, ee_sim::astar pm_apply.rs): one statement each
+extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inArg, float* ioPoint)
+{
+    EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inUnit;
+    EEUnitGoal* theGoal = (EEUnitGoal*)(uintptr_t)inArg;
+    switch (inOp) {
+    case EE_UNITS_WP_SET_GOAL: theUnit->SetGoal(theGoal, 1, 0); return 0;
+    case EE_UNITS_WP_INSERT_GOAL: theUnit->mGoalQueues[0].Insert(1, theGoal); return 0;
+    case EE_UNITS_WP_REFRESH_GOALS: theUnit->RefreshGoals(); return 0;
+    case EE_UNITS_WP_REFRESH_ACTIVE_GOAL: theUnit->RefreshActiveGoal(); return 0;
+    case EE_UNITS_WP_START_ACTION: theUnit->StartAction((unsigned long)inArg); return 0;
+    case EE_UNITS_WP_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
+    case EE_UNITS_WP_QUEUE_LENGTH: return (int64_t)theUnit->mGoalQueues[0].mGoals.size();
+    case EE_UNITS_WP_QUEUE_BACK: return (int64_t)(uintptr_t)theUnit->mGoalQueues[0].mGoals.back();
+    case EE_UNITS_WP_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
+    case EE_UNITS_WP_CLEAR_BOUNDED: theUnit->mBoundedPathTiles.clear(); return 0;
+    case EE_UNITS_WP_REFRESH_PATH: theUnit->RefreshPath(); return 0;
+    case EE_UNITS_WP_REGION_SIZE: return gEEAIRegionSize;
+    case EE_UNITS_WP_GOAL_POINT: { GE3DPoint thePoint = EELocationGoalPoint(theGoal); memcpy(ioPoint, &thePoint.mX, 12); return 0; }
+    case EE_UNITS_WP_CLOSEST_TILE: {
+        GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
+        long theX = 0, theY = 0;
+        ::gWorld.GetMap()->GetClosestTile(&thePoint, &theX, &theY);
+        return (int64_t)(uint32_t)theX | ((int64_t)(uint32_t)theY << 32);
+    }
+    }
+    return 0;
 }

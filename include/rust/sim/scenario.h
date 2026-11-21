@@ -181,6 +181,139 @@ constexpr static const int32_t EE_SCENARIO_CLASS_FORTRESS = 81;
 /// Added to a class field: the upgrade's class (`GetStats()->mUnitClass`) instead of the unit's.
 constexpr static const int32_t EE_SCENARIO_OF_STATS = 100;
 
+/// `gSoundManager->SetLatency(a)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_LATENCY = 20;
+
+/// Trigger `a`'s record (`EeScenarioTriggerFields*`).
+constexpr static const uint32_t EE_SCENARIO_ROUND_TRIGGER_FIELDS = 21;
+
+/// `gUserInterface->PostHideMessages()`; `gSoundManager->StopAllOneShotSounds()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_POST_HIDE = 22;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_STOP_SOUNDS = 23;
+
+/// `m->mMessages.erase(begin + a)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_ERASE = 24;
+
+/// `gWorld.mNumPlayers`, `GetPlayer(a) != NULL`, its `DelayWonderTimers(b)`, `IsHuman()`, `mObserverMode`,
+/// `UnselectAllUnits()`, `mSelectedGroup->CopySelection(mActiveGroup)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_NUM_PLAYERS = 25;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_PLAYER_EXISTS = 26;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELAY_WONDERS = 27;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_PLAYER_HUMAN = 28;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_PLAYER_OBSERVER = 29;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_UNSELECT = 30;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_COPY_SELECTION = 31;
+
+/// `gGraphics->PostLetterboxOut(3000)`, `PostLetterboxIn(3000)`, `PostFadeIn(0)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_LETTERBOX_OUT = 32;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_LETTERBOX_IN = 33;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_FADE_IN = 34;
+
+/// The camera: `ResetPath()`, `ClearUnitB()`, `ClearUnitA()`, `mTurnYaw = 0`, `SetMode(a)`, `SetZoom(m->mSavedZoom)`,
+/// `SetOffset(m->mK008.mOffset, true)`, `SetLocation(m->mK008.mFocus, true, false)`, `SetViewTurn(m->mK008.mT00,
+/// true)`, `SetOffsetTurn(m->mK008.mT40, true)`, `SetChanged()`, `Update(0)`; `GetOffset(mFraction,
+/// m->mK008.mOffset)`, `GetLocation`, `GetViewTurn`, `GetOffsetTurn` (into the key), `mMode`, `GetZoom()` (bits).
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_RESET_PATH = 35;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_CLEAR_B = 36;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_CLEAR_A = 37;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_TURN_RESET = 38;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_MODE = 39;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_ZOOM = 40;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_OFFSET = 41;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_LOCATION = 42;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_VIEW_TURN = 43;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_OFFSET_TURN = 44;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_CHANGED = 45;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_UPDATE = 46;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_GET_OFFSET = 47;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_GET_LOCATION = 48;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_GET_VIEW_TURN = 49;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_GET_OFFSET_TURN = 50;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_MODE = 51;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_ZOOM = 52;
+
+/// `gWorld.mInCinematic = a != 0`; `gWorld.mSavedGameSpeed = gWorld.GetGameSpeed()`; `gWorld.SetGameSpeed(
+/// gWorld.mSavedGameSpeed)`; `gUserInterface->CloseForm(the main game form)`; the main game form's `SetUIState(a)`,
+/// `mIsCursorLocked = a != 0`; `gMouse->mPointer = a`; the mouse at the window's centre.
+constexpr static const uint32_t EE_SCENARIO_ROUND_SET_IN_CINEMATIC = 53;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_SAVE_GAME_SPEED = 54;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_RESTORE_GAME_SPEED = 55;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CLOSE_MAIN_FORM = 56;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_FORM_UI_STATE = 57;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_FORM_CURSOR_LOCK = 58;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MOUSE_POINTER = 59;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MOUSE_CENTER = 60;
+
+/// Dialog message `a`: its sound's length `> 0`, `gUserInterface->PostDialogMessage(it)`, its unit (`gWorld.GetUnit(
+/// mUnitID) != NULL`), `mScrollSpeed`, the camera's `MoveTo` its unit at the scroll speed (`_FACING`: turned to face
+/// it, scroll speed 0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_VOICED = 61;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_POST_DIALOG = 62;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_UNIT = 63;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_SCROLL = 64;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_MOVE_TO = 65;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_MOVE_TO_FACING = 66;
+
+/// `mPendingEffects.size()`, `mPendingEffects[a] != NULL`, its `Execute(0)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_PENDING_COUNT = 67;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_PENDING_EXISTS = 68;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_PENDING_EXECUTE = 69;
+
+/// `mUnitClassMedia.size()`, entry `a`'s upgrade's `UnloadMedia(its player)`, its trace line (`Prepare`'s),
+/// `mUnitClassMedia.clear()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_MEDIA_COUNT = 70;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MEDIA_UNLOAD = 71;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MEDIA_TRACE = 72;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_MEDIA_CLEAR = 73;
+
+/// `mObjects.size()`, object `a`'s `ReplaceUnit(b >> 32, (uint32_t)b)` (both as `long`s).
+constexpr static const uint32_t EE_SCENARIO_ROUND_OBJECT_COUNT = 74;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_OBJECT_REPLACE = 75;
+
 /// Whether player a has an upgrade of unit type b (`GetUpgrade(b) != NULL`; 1/0).
 constexpr static const uint32_t EE_SCENARIO_WORLD_CA_UPGRADE = 193;
 
@@ -1179,6 +1312,281 @@ constexpr static const uint32_t EE_SCENARIO_OBJECT_NAME = 0;
 
 constexpr static const uint32_t EE_SCENARIO_LIST_IDS = 0;
 
+/// `EESMCaptureSeed()`: the physics random seed (0 without physics).
+constexpr static const uint32_t EE_SCENARIO_CAP_SEED = 0;
+
+/// `gWorld.mScenarioManager`.
+constexpr static const uint32_t EE_SCENARIO_CAP_MANAGER = 1;
+
+/// The manager's lists: `mTriggers`, `mConditions`, `mEffects`, `mObjects`, `mAreas`, `mPendingEffects`: the size
+/// (`p` the manager) and element `a` (`_AT`).
+constexpr static const uint32_t EE_SCENARIO_CAP_TRIGGERS = 10;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TRIGGER_AT = 11;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CONDITIONS = 12;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CONDITION_AT = 13;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_EFFECTS = 14;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_EFFECT_AT = 15;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_OBJECTS = 16;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_OBJECT_AT = 17;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREAS = 18;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_AT = 19;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PENDING = 20;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PENDING_AT = 21;
+
+/// `p`'s `Save(b >> 32, (uint32_t)b, *file a)`: a trigger, condition, effect, object, area, the manager, a
+/// player's `mSavedGroups`.
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_TRIGGER = 30;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_CONDITION = 31;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_EFFECT = 32;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_OBJECT = 33;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_AREA = 34;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_MANAGER = 35;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SAVE_GROUPS = 36;
+
+/// `new FSMemoryFile(p, false)` over a Rust memory file `p` (an `EeFsMemFile*` the record owns), its `delete`.
+constexpr static const uint32_t EE_SCENARIO_CAP_FILE_NEW = 40;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_FILE_FREE = 42;
+
+/// The manager's record (`EeScenarioManagerFields*`), `mLastChatText`, `mMediaStrings.GetSection(a)`,
+/// `mMessages.size()`, `mTimedEffects`; the camera's `mKeys.size()` and `mPathIndex`.
+constexpr static const uint32_t EE_SCENARIO_CAP_MANAGER_FIELDS = 50;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_LAST_CHAT = 51;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_MEDIA_SECTION = 52;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_MESSAGES = 53;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TIMED = 54;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CAMERA_KEYS = 55;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CAMERA_PATH = 56;
+
+/// A condition's record and `mChatText`; a trigger's record, `mConditions.size()`, `mEffects.size()`; an object's
+/// record, `mUnits.size()`, `mUnits[a]`; an effect's record.
+constexpr static const uint32_t EE_SCENARIO_CAP_CONDITION_FIELDS = 60;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CONDITION_CHAT = 61;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TRIGGER_FIELDS = 62;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TRIGGER_CONDITIONS = 63;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TRIGGER_EFFECTS = 64;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_OBJECT_FIELDS = 65;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_OBJECT_UNITS = 66;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_OBJECT_UNIT = 67;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_EFFECT_FIELDS = 68;
+
+/// An area's `mID`, `mSelectMode`, `mAnchor.mX`, `.mY`, `mRect`'s left, top, right, bottom (floats).
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_ID = 70;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_SELECT = 71;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_ANCHOR_X = 72;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_ANCHOR_Y = 73;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_LEFT = 74;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_TOP = 75;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_RIGHT = 76;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AREA_BOTTOM = 77;
+
+/// The world: `mInCinematic`, `mNumPlayers`, `mPlayers[a]`, `GetTimeOfDay()` and `mGameSpeed` (floats), the physics'
+/// `mTimeOfDayRuns`, the weather's enabled flag, the physics' `mLastOutOfSynchChecksum`, `GetOutOfSynchChecksum(false,
+/// a)`, the store of `mLastOutOfSynchChecksum = a`, `EECPOutOfSynchChecksum()`, `mUnits.mFirst`, a unit's
+/// `mTileNode->mNext`.
+constexpr static const uint32_t EE_SCENARIO_CAP_IN_CINEMATIC = 80;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_NUM_PLAYERS = 81;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER = 82;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TIME_OF_DAY = 83;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_GAME_SPEED = 84;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_TIME_OF_DAY_RUNS = 85;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_WEATHER = 86;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_LAST_SUM = 87;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SUM = 88;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SET_LAST_SUM = 89;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CP_SUM = 90;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_FIRST_UNIT = 91;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_NEXT_UNIT = 92;
+
+/// A player's `mGameResult`, `mSeesAll`, `mObserverMode`, `mEnemies[a]`, the sizes of `mPendingGroups`,
+/// `mRunningGroups` and `mPatrolGroups`, `mCivilization.mAvailablePoints` and `mMaxPoints`, `mComputerPlayer`,
+/// `mResourceCaps[a]`, `mShareBonus`, `mScenarioVariables[a]`, `mTributes[a]`, `mMiningLimit`, `mPlayerID`; a
+/// computer player's `mFavoriteLandType`, `mFavoriteSeaType`, `mFavoriteAirType`, `mDifficulty`.
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_RESULT = 100;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_SEES_ALL = 101;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_OBSERVER = 102;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_ENEMY = 103;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_PENDING_GROUPS = 104;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_RUNNING_GROUPS = 105;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS = 106;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_CIV_AVAILABLE = 107;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_CIV_MAX = 108;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_COMPUTER = 109;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_COMPUTER_LAND = 110;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_COMPUTER_SEA = 111;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_COMPUTER_AIR = 112;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_RESOURCE = 113;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_SHARE_BONUS = 114;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_COMPUTER_DIFFICULTY = 115;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_VARIABLE = 116;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_TRIBUTE = 117;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_MINING_LIMIT = 118;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PLAYER_ID = 119;
+
+/// Units: `gWorld.GetUnit(a)`; a unit's `mPlayer`, `GetHitPoints()`, `mTileX`, `mTileY`, `mTileNode`,
+/// `GetStats()->mName`, `mComplexUnit`, `GetChecksum(3)`, `mUnitID`, `mResourceAmount`, `mResourceType`; a complex
+/// unit's `GetCommandType()`, `GetGoal()`, a goal's `mKind`, `mGoalQueues.size()`, queue `a`'s goal count and goal
+/// `b`, its flags (`mIsDisabled`, `mIsCommandable`, `mIsDeletable`, `mIsLocked`, `mIsDetachedFromAI`),
+/// `mBehavior`, `EEUnitBehavior::sTable`'s size and entry `a`, `mContainer`, `mFlightTime`, `mAmmunition`,
+/// `mCargo.size()`, its location's matrix (the address of 16 floats), `mGarrisonCount`, the model's scale (a float),
+/// `mReloadTimer`, `mPower`, `mRottingAwayTime`, `mIsBuilt`, `mIsAnimationPaused`, `mUnitVariables`' size and
+/// entry `a`; an upgrade's record (`EeUnitsUnitClassUpgradeFields*`).
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT = 120;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_PLAYER = 121;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_HIT_POINTS = 122;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_TILE_X = 123;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_TILE_Y = 124;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_TILE_NODE = 125;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_NAME = 126;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_COMPLEX = 127;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_CHECKSUM = 128;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_ID = 129;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_RESOURCE_AMOUNT = 130;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UNIT_RESOURCE_TYPE = 131;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_COMMAND = 140;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_GOAL = 141;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_GOAL_KIND = 142;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_QUEUES = 143;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_QUEUE_LEN = 144;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_QUEUE_GOAL = 145;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_DISABLED = 146;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_COMMANDABLE = 147;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_DELETABLE = 148;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_LOCKED = 149;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_DETACHED = 150;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_BEHAVIOR = 151;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_BEHAVIORS = 152;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_BEHAVIOR_AT = 153;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CONTAINER = 154;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_FLIGHT_TIME = 155;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_AMMUNITION = 156;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_CARGO = 157;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_LOCATION = 158;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_GARRISON = 159;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_SCALE = 160;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_RELOAD_TIMER = 161;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_POWER = 162;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_ROTTING = 163;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_BUILT = 164;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_PAUSED = 165;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_VARIABLES = 166;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_VARIABLE_AT = 167;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_UPGRADE_FIELDS = 168;
+
+/// A `std::vector<long>`'s size and element `a` (SMCP's players).
+constexpr static const uint32_t EE_SCENARIO_CAP_LONGS = 170;
+
+constexpr static const uint32_t EE_SCENARIO_CAP_LONGS_AT = 171;
+
 /// `FSFile::Read(unsigned long&)` into `*value`.
 constexpr static const uint32_t EE_SCENARIO_IO_READ_ULONG = 0;
 
@@ -1582,11 +1990,689 @@ constexpr static const int64_t EE_SCENARIO_CU_GARRISON_WAIT = 28;
 /// Set only: `Kill(0, 0, 0)` (b 0) or, for a resource, `SetResourceAmount(0)`, `UnitTaken`, `KillUnit` (b 1).
 constexpr static const int64_t EE_SCENARIO_CU_KILL = 29;
 
+/// `SMEUnit(a)->GetPlayer()->DetachUnitFromAI(SMEUnit(a)->GetComplexUnit())`.
+constexpr static const uint32_t EE_SCENARIO_WX_DETACH = 400;
+
+/// `inRun->mGroup = new EEActiveGroup(SMEPlayer(a))`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_CREATE = 401;
+
+/// `SMEPlayer(a)->mPendingGroups.push_back(inRun->mGroup)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_PEND = 402;
+
+/// `SMEComplex(a)->GetComplexUnit() != NULL`.
+constexpr static const uint32_t EE_SCENARIO_WX_HAS_COMPLEX = 403;
+
+/// `SMEComplex(a)->GetComplexUnit()->SetFlightTime(SMEComplex(a)->GetStats()->mFlightTime)`.
+constexpr static const uint32_t EE_SCENARIO_WX_REFUEL = 404;
+
+/// `SMEComplex(a)->GetComplexUnit()->SetAmmunition(SMEComplex(a)->GetUnitClass()->mAmmunition)`.
+constexpr static const uint32_t EE_SCENARIO_WX_REARM = 405;
+
+/// `inRun->mFound[0] = theGroup->FindUnitWithFlags(kUnitKindCitizen)`, `[1]` the naval citizen's; `inRun->mFound[a]
+/// != NULL`; `inRun->mFound[a]->CanGather(SMEUnit(b), SMEUnit(b)->GetTileX(), SMEUnit(b)->GetTileY(), true, false)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_FIND = 406;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FOUND_CAN_GATHER = 407;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_FIND_NAVAL = 560;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FOUND = 561;
+
+/// `theGroup->SpreadAroundTile(SMEUnit(a)->GetTileX(), SMEUnit(a)->GetTileY())`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_SPREAD_AT_UNIT = 408;
+
+/// `theGroup->SpreadAroundUnit(SMEUnit(a), SMEUnit(a)->GetTileX(), SMEUnit(a)->GetTileY())`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_SPREAD_AROUND = 409;
+
+/// `theGroup->ClearGoal()`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_CLEAR_GOAL = 410;
+
+/// The group's goal (`inRun->mGroupGoal`): `NewGather(SMEUnit(a), NULL, true)`, `NewAttackUnit(theGroup->GetFirstUnit(),
+/// SMEUnit(a), true, false)`, `NewGather(NULL, SMEUnit(a)->GetComplexUnit(), true)`, `NewLocation(GE2DPoint((float)(long)a,
+/// (float)(long)b), true, true, false, 0, false, 0)`, `NewPatrol(SMEUnit(a)->GetComplexUnit()->mPatrolGroup,
+/// SMEUnit(a)->GetComplexUnit(), true)`, `NewPatrol(true)`, `NewLocation(GE2DPoint(f(a), f(b)), true, c != 0, false, 0,
+/// false, 0)`, `NewExplore(true)`, `NewPatrol(inRun->mPatrol, inRun->mPatrolTarget, true)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_GATHER = 411;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_ATTACK = 412;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_DROPOFF = 413;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_TILE = 414;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_PATROL_POINT = 415;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_PATROL_NEW = 416;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_MOVE = 417;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_EXPLORE = 418;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_TOWN_PATROL = 419;
+
+/// `theGroup->SetGoal(inRun->mGroupGoal, false)`, `theGroup->mAction = a`, `theGroup->Plan()` (`SMEGroupGoal`).
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_SET_GOAL = 420;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_ACTION = 421;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_PLAN = 422;
+
+/// A unit's goal (`inRun->mUnitGoal`): `NewHealUnit(SMEComplex(a), true)`, `NewLocation(GE2DPoint(f(a), f(b)), true,
+/// c != 0, false, 0, false, 0)`, `NewCastCalamity(SMEComplex(a), SMEUnitOrNull(b), c, d, inRun->mCalamities[e],
+/// true)`, `NewUnloadTransport(SMEComplex(a), (long)f(b), (long)f(c), true)`, `NewLocation(f(a), f(b), 0, true, true,
+/// false, 0, false, 0)`, `NewLocation(&GE3DPoint(SMEComplex(a)'s location), true, true, true, f(b), false, false)`.
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_HEAL = 423;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_LOCATION = 424;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_CAST = 425;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_UNLOAD = 426;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_POINT = 427;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_FACE = 428;
+
+/// `SMEComplex(a)->SetGoal(inRun->mUnitGoal, 0, 0)`; `inRun->mUnitGoal->CanUnloadAtDestination()`; `delete
+/// inRun->mUnitGoal`.
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_SET_GOAL = 429;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_CAN_UNLOAD = 430;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UGOAL_DELETE = 431;
+
+/// `SMEComplex(a)->GetGoal()->mKind`.
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_KIND = 432;
+
+/// `inRun->mGoal = EELoadGarrisonGoalCast(SMEComplex(a)->GetGoal())`, the transport's, `inRun->mGoal->AddLoadUnits(
+/// inRun->mLoad)`, `inRun->mGoal = EEUGRust::NewLoad(a, SMEComplex(b), inRun->mLoad, true)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_CAST_GARRISON = 433;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_CAST_TRANSPORT = 434;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_ADD_LOAD = 435;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GOAL_NEW_LOAD = 436;
+
+/// `SMEComplex(a)->SetGoal(inRun->mGoal, 0, 0)` and with `inRun->mGoal->Clone()`.
+constexpr static const uint32_t EE_SCENARIO_WX_SET_RUN_GOAL = 437;
+
+constexpr static const uint32_t EE_SCENARIO_WX_SET_RUN_GOAL_CLONE = 438;
+
+/// `theGroup->GetUnit(a) != SMEUnit(b)`; `inRun->mLoad.push_back(theGroup->GetUnit(a))`; the target's class's
+/// `FilterLoadable(&inRun->mLoad, SMEUnit(a)->GetComplexUnit(), &inRun->mRejected)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_UNIT_IS_NOT = 439;
+
+constexpr static const uint32_t EE_SCENARIO_WX_LOAD_PUSH_GROUP_UNIT = 440;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FILTER_LOADABLE = 441;
+
+/// `theGroup->Finish()`, `theGroup->AddMember(inRun->mRejected[a], true)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_FINISH = 442;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_ADD_REJECTED = 443;
+
+/// `SMEComplex(a)->OrderRepair(SMEUnit(b))`.
+constexpr static const uint32_t EE_SCENARIO_WX_ORDER_REPAIR = 444;
+
+/// `EEPlayForLocalPlayer(SMEPlayer(a), theGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1))`.
+constexpr static const uint32_t EE_SCENARIO_WX_ACKNOWLEDGE = 445;
+
+/// The group's first unit's `GetTileX()`, `GetTileY()`; `ee_units_pg_add_point` of the group goal's patrol group at
+/// the first unit's tile (`a` the kind) and at `f(b)`, `f(c)`; the first unit's player's `AddPatrolGroup` of it.
+constexpr static const uint32_t EE_SCENARIO_WX_FIRST_TILE_X = 446;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FIRST_TILE_Y = 447;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PATROL_ADD_FIRST = 448;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PATROL_ADD = 449;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FIRST_ADD_PATROL = 450;
+
+/// `SMEComplex(a)->QueueGoal(EEUGRust::NewLocation(GE2DPoint(f(b), f(c)), true, d != 0, false, 0, false, 0), e)`;
+/// `SMEComplex(a)->mGoalQueues[b].AddTime(c)`.
+constexpr static const uint32_t EE_SCENARIO_WX_QUEUE_LOCATION = 451;
+
+constexpr static const uint32_t EE_SCENARIO_WX_QUEUE_ADD_TIME = 452;
+
+/// The calamity nodes: `inRun->mCalamities.clear()`, `SMEPlayer(a)->GetTechTree()->GetNodeIDs(inRun->mNodeIDs)`,
+/// `inRun->mNodeIDs.size()`, node `b`'s `mData->mCalamity`, its `GetIsAvailable()`, `inRun->mCalamities.push_back(
+/// inRun->mNodeIDs[a])`, `inRun->mCalamities.size()`, whether `SMEPlayer(b)->GetTechTree()->Get(mCalamities[c])`
+/// contains `SMEComplex(a)`'s class's type.
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_CLEAR = 453;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_IDS = 454;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_COUNT = 455;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_CALAMITY = 456;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_AVAILABLE = 457;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_PUSH = 458;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_COUNT = 459;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_CONTAINS = 460;
+
+/// `inRun->mCalamity != NULL`, its `GetTargetKind()`, `IsValidTarget(SMEComplex(a), SMEUnit(b))`,
+/// `IsValidLocation(SMEComplex(a), b, c)`.
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_HAS = 461;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_KIND = 462;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_IS_VALID_TARGET = 463;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CAL_IS_VALID_LOCATION = 464;
+
+/// `inRun->mPlace = GE2DPoint(f(a), f(b))`.
+constexpr static const uint32_t EE_SCENARIO_WX_PLACE_SET = 465;
+
+/// An area's `GetArea(a) != NULL`, `IsUnset()`, `IsOffMap()`; an object's `!= NULL`, `Evaluate(false)`.
+constexpr static const uint32_t EE_SCENARIO_WX_AREA_EXISTS = 466;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AREA_UNSET = 467;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AREA_OFF_MAP = 468;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJECT_EXISTS = 469;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJECT_EVALUATE = 470;
+
+/// The map tile (a, b): `!= NULL`, `mHeight`'s bits.
+constexpr static const uint32_t EE_SCENARIO_WX_TILE_EXISTS = 471;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TILE_HEIGHT = 472;
+
+/// `inRun->mHeld = SMEUnit(a)`; its `Kill(a != 0, false, false)`, `mTileNode != NULL`, `GetPlayer()->KillUnit(it,
+/// false)`.
+constexpr static const uint32_t EE_SCENARIO_WX_HOLD = 473;
+
+constexpr static const uint32_t EE_SCENARIO_WX_HELD_KILL = 474;
+
+constexpr static const uint32_t EE_SCENARIO_WX_HELD_ON_NODE = 475;
+
+constexpr static const uint32_t EE_SCENARIO_WX_HELD_PLAYER_KILL = 476;
+
+/// `SMEComplex(a)`'s location's element (b, c), bits.
+constexpr static const uint32_t EE_SCENARIO_WX_LOCATION_AT = 477;
+
+/// `inRun->mFace = SMEComplex(a)->mPhysicalModel.GetLocation()`, `inRun->mFace.SetOrientationYPR(f(a), f(b), f(c))`,
+/// `SMEComplex(a)->SetTransformation(inRun->mFace, true)`, `inRun->mFacePoint = GE3DPoint(mFace's x, y, z)`,
+/// `SMEComplex(a)->PlaceOnGround(inRun->mFacePoint)`.
+constexpr static const uint32_t EE_SCENARIO_WX_FACE_FROM_UNIT = 479;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FACE_ORIENT = 480;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FACE_APPLY = 481;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FACE_POINT = 482;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLACE_ON_GROUND = 483;
+
+/// `gUIManager->GetMainGameForm() != NULL`; its `mRefreshGroup = true`.
+constexpr static const uint32_t EE_SCENARIO_WX_MAIN_FORM = 484;
+
+constexpr static const uint32_t EE_SCENARIO_WX_REFRESH_GROUP = 485;
+
+/// `inRun->mGroup = new EEActiveGroup(SMEComplex(a)->mPlayer)`, `SMEComplex(a)->mPlayer->mPendingGroups.push_back(
+/// inRun->mGroup)` (a stance's group).
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_GROUP_CREATE = 486;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_GROUP_PEND = 487;
+
+/// `theGroup->AddMember(SMEComplex(a), true)`.
+constexpr static const uint32_t EE_SCENARIO_WX_GROUP_ADD_COMPLEX = 488;
+
+/// `SMEComplex(a)->mIsLocked`, `= b != 0`; the gate's second and fourth parts into `inRun->mPart` (`!= NULL`), its
+/// `mIsLocked`, `= a != 0`.
+constexpr static const uint32_t EE_SCENARIO_WX_LOCKED = 489;
+
+constexpr static const uint32_t EE_SCENARIO_WX_SET_LOCKED = 490;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GATE_SECOND = 491;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GATE_FOURTH = 492;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PART_LOCKED = 493;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PART_SET_LOCKED = 494;
+
+/// `(inRun->mTown = SMEComplex(a)->FindNearestTown()) != NULL`, `(inRun->mPatrol = inRun->mTown->mPatrolGroup) !=
+/// NULL`, `(inRun->mPatrolTarget = ee_units_pg_nearest(inRun->mPatrol, SMEComplex(a)'s tile)) != NULL`.
+constexpr static const uint32_t EE_SCENARIO_WX_TOWN_FIND = 495;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TOWN_PATROL = 496;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PATROL_NEAREST = 497;
+
+/// `SMEComplex(a)->mBehavior == EEUnitBehavior::sTable[b]`; `= sTable[b]`.
+constexpr static const uint32_t EE_SCENARIO_WX_BEHAVIOR_IS = 498;
+
+constexpr static const uint32_t EE_SCENARIO_WX_SET_BEHAVIOR = 499;
+
+/// `SMEPlayer(a)->SetGameResult(b)`; `gWorld.RemovePlayerFromGame(a != 0, b)`.
+constexpr static const uint32_t EE_SCENARIO_WX_SET_GAME_RESULT = 500;
+
+constexpr static const uint32_t EE_SCENARIO_WX_REMOVE_PLAYER = 501;
+
+/// `gGraphics->PostFadeIn(3000)`, `PostFadeOut(3000)`.
+constexpr static const uint32_t EE_SCENARIO_WX_FADE_IN = 502;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FADE_OUT = 503;
+
+/// Player `a`'s node of the effect's technology: `mData->mMakesUnit`, `gUnitClassTable[mData->mUnitClass] != NULL`,
+/// `EEReplaceQueuedTechnology(player, that class, 100000)`, `GetTechTree()->MakeObsolete(mTechnology)`.
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_MAKES_UNIT = 504;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_CLASS_EXISTS = 505;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_REPLACE_QUEUED = 506;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_OBSOLETE = 507;
+
+/// `SMEPlayer(a)->mSeesAll = b != 0`; `SMEPlayer(a) == gWorld.GetPlayer(gWorld.mCurrentPlayer)`;
+/// `gMiniMap->Redraw()`.
+constexpr static const uint32_t EE_SCENARIO_WX_SET_SEES_ALL = 508;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLAYER_IS_CURRENT = 509;
+
+constexpr static const uint32_t EE_SCENARIO_WX_MINIMAP_REDRAW = 510;
+
+/// `SMEPlayer(a)->mCivilization.AddPoints(b)`; `EESetCivBuilderButtonBlinking(true)`; the trumpets' sound object
+/// `!= NULL`, its `Play()`.
+constexpr static const uint32_t EE_SCENARIO_WX_CIV_ADD = 511;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CIV_BLINK = 512;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TRUMPETS = 513;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TRUMPETS_PLAY = 514;
+
+/// A unit's raw tile (`mTile != NULL`, `mTileX`, `mTileY`) and its container's.
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_ON_TILE = 515;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_TILE_X = 516;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_TILE_Y = 517;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_HAS_COMPLEX = 518;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_IN_CONTAINER = 519;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CONTAINER_ON_TILE = 520;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CONTAINER_TILE_X = 521;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CONTAINER_TILE_Y = 522;
+
+/// `GetTrigger(a)->mConditionStartTime = b`, `mIsOn = b != 0`, `mHasFired = b != 0`.
+constexpr static const uint32_t EE_SCENARIO_WX_TRIGGER_START = 523;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TRIGGER_ON = 524;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TRIGGER_FIRED = 525;
+
+/// The calamity's tile walk: `(inRun->mMapTile = gWorld.mMap->GetTile(a, b)) != NULL`, `(inRun->mNode =
+/// mMapTile->mUnits) != NULL`, `(inRun->mNode = mNode->mNext) != NULL`, `mNode->mUnit == NULL`, the unit in
+/// `inRun->mSeen`, `inRun->mCalamity->CanCastAt(NULL, inRun->mPoint, its tile, true, it) != 0`, `CreateUnitCalamity(a,
+/// -1, its id, 0)`, `inRun->mSeen.push_back(it)`.
+constexpr static const uint32_t EE_SCENARIO_WX_MAP_TILE = 526;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_FIRST = 527;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_NEXT = 528;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_NO_UNIT = 529;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_SEEN = 530;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_REFUSED = 531;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_CREATE = 532;
+
+constexpr static const uint32_t EE_SCENARIO_WX_NODE_MARK = 533;
+
+/// `(inRun->mGraphic = EEGraphicEffect::Get(a)) != NULL`, its `Load(false)`, its `mKind`.
+constexpr static const uint32_t EE_SCENARIO_WX_GFX_GET = 534;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GFX_LOAD = 535;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GFX_KIND = 536;
+
+/// The weather's tiles: `inRun->mTiles.clear()`, `.push_back(U2DPoint<long>(a, b))`,
+/// `gEffectManager->CreateWeatherEffect(inRun->mTiles, inRun->mGraphic, NULL)`.
+constexpr static const uint32_t EE_SCENARIO_WX_TILES_CLEAR = 537;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TILES_PUSH = 538;
+
+constexpr static const uint32_t EE_SCENARIO_WX_WEATHER_CREATE = 539;
+
+/// The map tile (a, b)'s `GetHeight()` bits, whether its terrain is deep or shallow water; `inRun->mPoint =
+/// GE3DPoint(f(a), f(b), f(c))`; `gEffectManager->CreatePlacedEffect(inRun->mPoint, inRun->mGraphic, NULL)`.
+constexpr static const uint32_t EE_SCENARIO_WX_TILE_GET_HEIGHT = 540;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TILE_WATER = 541;
+
+constexpr static const uint32_t EE_SCENARIO_WX_POINT_SET = 542;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLACED_CREATE = 543;
+
+/// `gWorld.mEnvironmentManager != NULL`, its `SetEnabled(a != 0)`.
+constexpr static const uint32_t EE_SCENARIO_WX_ENV_EXISTS = 544;
+
+constexpr static const uint32_t EE_SCENARIO_WX_ENV_SET = 545;
+
+/// Computer player `a`'s toggles `SetActive` .. `SetCanGather` (`EE_SCENARIO_WX_AI_TOGGLE + n`, n 0..7: active,
+/// cheating, attack, defend, build, explore, ignore others, gather) with `b != 0`.
+constexpr static const uint32_t EE_SCENARIO_WX_AI_TOGGLE = 546;
+
+/// Computer player `a`'s `SetFavoriteAirType(b)`, `SetFavoriteLandType(b)`, `SetFavoriteSeaType(b)`.
+constexpr static const uint32_t EE_SCENARIO_WX_AI_FAVORITE_AIR = 554;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AI_FAVORITE_LAND = 555;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AI_FAVORITE_SEA = 556;
+
+/// `theCamera.SetZoom(f(a))`.
+constexpr static const uint32_t EE_SCENARIO_WX_CAMERA_SET_ZOOM = 557;
+
+/// `SMEComplex(a)->StartAction(b)`; `SMEComplex(a)->GetUnitClass()->ActionChanged(SMEComplex(a))` (`SMEAction`).
+constexpr static const uint32_t EE_SCENARIO_WX_START_ACTION = 558;
+
+constexpr static const uint32_t EE_SCENARIO_WX_ACTION_CHANGED = 559;
+
+/// Task-Area's placement (`SMETakeOffMap`, `SMEPlaceInArea`) on unit `a` (`SMEUnit(a)->GetComplexUnit()` its complex
+/// unit) and the run's transformation `mT` (`inRun->mTransformation`): the complex class's `IsLandBuilding()`;
+/// `mT = location`; `Set2DPosition(U2DPoint<float>(mT.GetX(), mT.GetY()))`; the unit class's air traffic type and
+/// the complex class's `IsAirBase()`; `ee_units_atc_remove_airport` / `_add_airport` of the player's air traffic;
+/// the local player's selection holds it; `gUserInterface->PostMessage424Once()`; `TakeOffMap()`; the player's
+/// off-map info `!= NULL`, its `mReason = 2`; `mLastMapPosition = GE3DPoint(mT)`.
+constexpr static const uint32_t EE_SCENARIO_WX_LAND_BUILDING = 562;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_FROM_UNIT = 563;
+
+constexpr static const uint32_t EE_SCENARIO_WX_SET_2D_FROM_T = 564;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AIRPORT = 565;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AIRPORT_REMOVE = 566;
+
+constexpr static const uint32_t EE_SCENARIO_WX_AIRPORT_ADD = 567;
+
+constexpr static const uint32_t EE_SCENARIO_WX_SELECTED_LOCALLY = 568;
+
+constexpr static const uint32_t EE_SCENARIO_WX_POST_424 = 569;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TAKE_OFF_MAP = 570;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OFF_MAP_INFO = 571;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OFF_MAP_REASON = 572;
+
+constexpr static const uint32_t EE_SCENARIO_WX_LAST_MAP_POSITION = 573;
+
+/// The effect's object's `mInAreaCheck`, `mArea`, `mNearCheck` (`_SET_*`: `= a`); the effect's `mTaskArea`, the task
+/// area's `IsOffMap()`; the object's `FindPlacement(SMEUnit(a)'s class's type, inRun->mPlace, true)`; `mT.SetX(f(a))`,
+/// `SetY`, `mMatrix[2][3] = f(a)`, `mT.GetX()`, `GetY()`; the complex unit's `mU0DC` x and y; `inRun->mPlace`'s x and
+/// y; `(inRun->mMapTile = GetTile((long)mPlace.x, (long)mPlace.y)) != NULL`, its `GetHeight()`; the unit class's air
+/// domain, the complex unit's location's z, the class's `GetCruiseAltitude()`; the ground transformation
+/// `inRun->mGround`'s `MakeIdentity()` and `SetPosition(GE3DPoint(mT))`; the class's `mPitchesWithTerrain` /
+/// `mRollsWithTerrain`, `inRun->mPitch = gWorld.mMap->GetTerrainPitch(inRun->mGround)` / `mRoll = GetTerrainRoll`;
+/// `mT.SetOrientationYPR(UMArcTan2(location (1, 0), (0, 0)), inRun->mPitch, inRun->mRoll)`; `mContainer == NULL`,
+/// `SetTransformation(mT, true)`, `mContainer->UnloadCargoByID(mUnitID, mT)`; the class's `GetTileSize()`;
+/// `mPhysicalModel.SetLocation(mT)`; the class's category, the complex unit's `mFlightTime` and `mHomeBase != NULL`.
+constexpr static const uint32_t EE_SCENARIO_WX_OBJ_IN_AREA_CHECK = 574;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJ_AREA = 575;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJ_NEAR_CHECK = 576;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJ_SET_IN_AREA_CHECK = 577;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJ_SET_AREA = 578;
+
+constexpr static const uint32_t EE_SCENARIO_WX_OBJ_SET_NEAR_CHECK = 579;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TASK_AREA_OFF_MAP = 580;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TASK_FIND_PLACEMENT = 581;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_SET_X = 582;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_SET_Y = 583;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_SET_Z = 584;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_X = 585;
+
+constexpr static const uint32_t EE_SCENARIO_WX_U0DC_X = 586;
+
+constexpr static const uint32_t EE_SCENARIO_WX_U0DC_Y = 587;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLACE_X = 588;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLACE_Y = 589;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLACE_TILE = 590;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PLACE_TILE_HEIGHT = 591;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_AIR = 592;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNIT_Z = 593;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CRUISE = 594;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GROUND_IDENTITY = 595;
+
+constexpr static const uint32_t EE_SCENARIO_WX_GROUND_POSITION = 596;
+
+constexpr static const uint32_t EE_SCENARIO_WX_PITCHES = 597;
+
+constexpr static const uint32_t EE_SCENARIO_WX_ROLLS = 598;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TERRAIN_PITCH = 599;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TERRAIN_ROLL = 600;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_ORIENT_HEADING = 601;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CONTAINER_NULL = 602;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_APPLY = 603;
+
+constexpr static const uint32_t EE_SCENARIO_WX_UNLOAD_CARGO = 604;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TILE_SIZE = 605;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_SET_LOCATION = 606;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CATEGORY = 607;
+
+constexpr static const uint32_t EE_SCENARIO_WX_FLIGHT_TIME = 608;
+
+constexpr static const uint32_t EE_SCENARIO_WX_HOME_BASE = 609;
+
+constexpr static const uint32_t EE_SCENARIO_WX_T_Y = 635;
+
+constexpr static const uint32_t EE_SCENARIO_WX_EFFECT_TASK_AREA = 636;
+
+/// Modify Tech Tree's add (`SMETechAdd`) for player `a` and the effect's technology `t`: `t`, `EEEpochCount()`, the
+/// tree's `mEndEpoch`, `ResetEpochRange(mStartEpoch, t)`, node `t`'s `MakeAvailable()`, `mEpoch = 0`, `mObsoleteEpoch
+/// = EEEpochCount()`, `SetScenEditorObsoleted(false, false)`, `SetObsolete(false, false)`, `NeedsUnitMedia() == true
+/// && !mIsUnitMediaLoaded`, the player's `SetUnitClassMedia(its class, 0x7f)`, `mIsUnitMediaLoaded = true`,
+/// `mData->mKind`, the tree's `mEpochsBeforeWonders = 0`, `Research(t, NULL)`.
+constexpr static const uint32_t EE_SCENARIO_WX_EFFECT_TECH = 610;
+
+constexpr static const uint32_t EE_SCENARIO_WX_EPOCH_COUNT = 611;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TREE_END_EPOCH = 612;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TREE_RESET_RANGE = 613;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_MAKE_AVAILABLE = 614;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_EPOCH_ZERO = 615;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_OBSOLETE_EPOCH = 616;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_SCEN_OBSOLETED = 617;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_SET_OBSOLETE = 618;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_NEEDS_MEDIA = 619;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_LOAD_MEDIA = 620;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_MEDIA_LOADED = 621;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_KIND = 622;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TREE_WONDERS_ZERO = 623;
+
+constexpr static const uint32_t EE_SCENARIO_WX_TECH_RESEARCH = 624;
+
+/// Set Favorite Units' class tests (`SMEClassValue`, class `a`): `EEUnitClassCount()`, `gUnitClassTable[a] !=
+/// NULL`, its air and sea domains, `GetIsProjectile()`, `IsLandBuilding()`, `GetAttack() > 0`, `GetMaxVelocity() >
+/// 0`, `FliesOver()`, `GetCategory()`.
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_COUNT = 625;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_EXISTS = 626;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_AIR = 627;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_SEA = 628;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_PROJECTILE = 629;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_LAND_BUILDING = 630;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_ATTACKS = 631;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_MOVES = 632;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_FLIES_OVER = 633;
+
+constexpr static const uint32_t EE_SCENARIO_WX_CLASS_CATEGORY = 634;
+
+/// Create Units' unit (`EESMCreateUnit`; the context a plain `EESMHostContext`, `L` its `*mLocation`; a class `c` and
+/// a unit `u` are handles the earlier statements answered): `gUnitClassTable[a]`, the class of the object's unit
+/// `a`, the object's `FindPlacement(a, L, true)`, the player's node of the class's technology `!= NULL`, its
+/// `mData->mKind`, `L`'s x and y (bits), `L = GE2DPoint(f(a), f(b))`, `ee_units_uu_plan_wall` at `L` into the
+/// context's wall pieces, the first piece, their `clear()`, the class's `IsLandBuilding()`, `CreateUnit((long)L.x,
+/// (long)L.y, player, false, NULL)`; the unit's `mTileNode != NULL`, `SetBuilt(1, 0, 1)`, its class's air domain,
+/// the refuel and rearm, `gWorld.mMap->mSize`, the context's transformation from the unit's location, its
+/// `SetOrientationYPR(f(a), 0, 0)`, `SetTransformation(it, true)`, the stats' power, `SetPower`, the player's
+/// `AddPendingUnits(false, true)`, `gWorld.FlushQueuedPlacements()`, `PlaceUnitOnGround(u)`, the object's
+/// `mHasAttributeCheck`, `EEChangeUnit(the object's attribute, ..., u, ...)`, `mCreated->push_back(its id)`, the
+/// creation sound `!= NULL`, the unit's player is the local one, the sound's `Play`.
+constexpr static const uint32_t EE_SCENARIO_WC_CLASS = 700;
+
+constexpr static const uint32_t EE_SCENARIO_WC_OBJECT_UNIT_CLASS = 701;
+
+constexpr static const uint32_t EE_SCENARIO_WC_FIND_PLACEMENT = 702;
+
+constexpr static const uint32_t EE_SCENARIO_WC_TECH_NODE = 703;
+
+constexpr static const uint32_t EE_SCENARIO_WC_TECH_KIND = 704;
+
+constexpr static const uint32_t EE_SCENARIO_WC_LOCATION_X = 705;
+
+constexpr static const uint32_t EE_SCENARIO_WC_LOCATION_Y = 706;
+
+constexpr static const uint32_t EE_SCENARIO_WC_LOCATION_SET = 707;
+
+constexpr static const uint32_t EE_SCENARIO_WC_PLAN_WALL = 708;
+
+constexpr static const uint32_t EE_SCENARIO_WC_PIECES_FIRST = 709;
+
+constexpr static const uint32_t EE_SCENARIO_WC_PIECES_CLEAR = 710;
+
+constexpr static const uint32_t EE_SCENARIO_WC_IS_LAND_BUILDING = 711;
+
+constexpr static const uint32_t EE_SCENARIO_WC_CREATE = 712;
+
+constexpr static const uint32_t EE_SCENARIO_WC_ON_NODE = 713;
+
+constexpr static const uint32_t EE_SCENARIO_WC_SET_BUILT = 714;
+
+constexpr static const uint32_t EE_SCENARIO_WC_AIR = 715;
+
+constexpr static const uint32_t EE_SCENARIO_WC_REFUEL = 716;
+
+constexpr static const uint32_t EE_SCENARIO_WC_REARM = 717;
+
+constexpr static const uint32_t EE_SCENARIO_WC_MAP_SIZE = 718;
+
+constexpr static const uint32_t EE_SCENARIO_WC_T_FROM = 719;
+
+constexpr static const uint32_t EE_SCENARIO_WC_T_ORIENT = 720;
+
+constexpr static const uint32_t EE_SCENARIO_WC_T_APPLY = 721;
+
+constexpr static const uint32_t EE_SCENARIO_WC_COMPLEX_POWER = 722;
+
+constexpr static const uint32_t EE_SCENARIO_WC_SET_POWER = 723;
+
+constexpr static const uint32_t EE_SCENARIO_WC_PENDING = 724;
+
+constexpr static const uint32_t EE_SCENARIO_WC_FLUSH = 725;
+
+constexpr static const uint32_t EE_SCENARIO_WC_PLACE_ON_GROUND = 726;
+
+constexpr static const uint32_t EE_SCENARIO_WC_ATTRIBUTE_CHECK = 727;
+
+constexpr static const uint32_t EE_SCENARIO_WC_CHANGE_UNIT = 728;
+
+constexpr static const uint32_t EE_SCENARIO_WC_PUSH_CREATED = 729;
+
+constexpr static const uint32_t EE_SCENARIO_WC_SOUND = 730;
+
+constexpr static const uint32_t EE_SCENARIO_WC_SOUND_LOCAL = 731;
+
+constexpr static const uint32_t EE_SCENARIO_WC_SOUND_PLAY = 732;
+
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
 struct EeScenarioTiles;
 
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
+
+/// `EEScenarioManager`'s numbers, in the class's order.
+struct EeScenarioManagerFields {
+  long mGameResult;
+  /// The camera zoom `StartCinematic` saves.
+  float mSavedZoom;
+  float mStartX;
+  float mStartY;
+  /// The scenario clock (ms).
+  float mTime;
+  /// The time since the last trigger round (ms).
+  float mTriggerTimer;
+  float mCinematicStartTime;
+  long mSavedCameraMode;
+  unsigned long mNextTriggerID;
+  unsigned long mNextConditionID;
+  unsigned long mNextEffectID;
+  unsigned long mNextObjectID;
+  unsigned long mNextAreaID;
+  /// Set by `Reset`: new pending effects are not recorded until `ApplyPendingEffects` has run.
+  bool mB234;
+  bool mIsMovingCamera;
+  bool mShowDebugIDs;
+  bool mIsShowingDialog;
+  bool mIsEndingCinematic;
+};
+
+/// The C ABI's round host: the manager's numbers and queue, and the operation callback.
+struct EeScenarioRoundHost {
+  void *ctx;
+  EeScenarioManagerFields *fields;
+  EeScenarioTimedQueue *queue;
+  int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
+};
 
 /// `EESMObject`'s numbers, in the class's order.
 struct EeScenarioObjectFields {
@@ -1825,40 +2911,6 @@ struct EeScenarioTimedEntry {
   bool mHasRun;
 };
 
-/// `EEScenarioManager`'s numbers, in the class's order.
-struct EeScenarioManagerFields {
-  long mGameResult;
-  /// The camera zoom `StartCinematic` saves.
-  float mSavedZoom;
-  float mStartX;
-  float mStartY;
-  /// The scenario clock (ms).
-  float mTime;
-  /// The time since the last trigger round (ms).
-  float mTriggerTimer;
-  float mCinematicStartTime;
-  long mSavedCameraMode;
-  unsigned long mNextTriggerID;
-  unsigned long mNextConditionID;
-  unsigned long mNextEffectID;
-  unsigned long mNextObjectID;
-  unsigned long mNextAreaID;
-  /// Set by `Reset`: new pending effects are not recorded until `ApplyPendingEffects` has run.
-  bool mB234;
-  bool mIsMovingCamera;
-  bool mShowDebugIDs;
-  bool mIsShowingDialog;
-  bool mIsEndingCinematic;
-};
-
-/// The C ABI's round host: the manager's numbers and queue, and the operation callback.
-struct EeScenarioRoundHost {
-  void *ctx;
-  EeScenarioManagerFields *fields;
-  EeScenarioTimedQueue *queue;
-  int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
-};
-
 /// The C++ host of the lists (`EESMListOp` in EEScenarioManager.cpp): the manager's numbers and timed effects, and
 /// one operation callback (`EE_SCENARIO_LIST_OP_*`; `text` a NUL-terminated name for `SET_NAME` and `OUT_NAME`).
 struct EeScenarioListHost {
@@ -1867,6 +2919,24 @@ struct EeScenarioListHost {
   EeScenarioTimedQueue *timed;
   void *(*op)(void *ctx, uint32_t op, uint32_t list, size_t index, void *element, const char *text);
 };
+
+/// SMTE's trigger state before (`EESMCaptureTriggerState`): on, fired, the condition start time.
+struct EeScenarioCapTriggerBefore {
+  bool mIsOn;
+  bool mHasFired;
+  unsigned long mStart;
+};
+
+/// SMOB's units before (`EESMCaptureObjectState`): their count and FNV-1a, the seed.
+struct EeScenarioCapObjectBefore {
+  uint32_t mCount;
+  uint64_t mHash;
+  uint32_t mSeed;
+};
+
+/// The save version the records' Saves use (`kSaveGameMajorVersion`, `kSaveGameMinorVersion`), packed as the
+/// `_SAVE_*` reads take it: the C++ forwards pass it in.
+using EeScenarioCapVersion = int64_t;
 
 /// The C++ host of the text file (`EESMTextOp` in EEScenarioManager.cpp): the lists' host and one operation
 /// callback (`EE_SCENARIO_TEXT_OP_*`: `slot` a text slot or an error kind, `value` a player, an id or the file's
@@ -1891,6 +2961,25 @@ struct EeScenarioEntry {
 };
 
 extern "C" {
+
+/// `EEScenarioManager::EndCinematic`.
+void ee_scenario_end_cinematic(EeScenarioRoundHost host);
+
+/// `EEScenarioManager::StartCinematic`.
+void ee_scenario_start_cinematic(EeScenarioRoundHost host);
+
+/// `EEScenarioManager::ExitCinematic`.
+void ee_scenario_exit_cinematic(EeScenarioRoundHost host);
+
+/// `EEScenarioManager::ApplyPendingEffects`.
+void ee_scenario_apply_pending(EeScenarioRoundHost host);
+
+/// The scenario's unit class media unloaded (`prepare`: `Prepare`'s, traced and cleared; else the destructor's).
+void ee_scenario_unload_media(EeScenarioRoundHost host,
+                              bool prepare);
+
+/// `EEScenarioManager::ReplaceUnit`.
+void ee_scenario_replace_unit(EeScenarioRoundHost host, long old, long new_);
 
 /// `EESMCondition::Compare`.
 bool ee_scenario_compare(uint32_t value, uint32_t op, uint32_t target);
@@ -2333,6 +3422,109 @@ void ee_scenario_list_rename_object_conditions(const EeScenarioListHost *host, v
 /// # Safety
 /// As [`ee_scenario_list_rename_object_conditions`].
 void ee_scenario_list_set_parent(const EeScenarioListHost *host, void *object, long parent);
+
+/// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
+extern int64_t ee_scenariocpp_capture(uint32_t op, const void *p, int64_t a, int64_t b);
+
+/// One float read.
+extern double ee_scenariocpp_capture_f(uint32_t op, const void *p);
+
+/// SMCE (`condition` an `EESMCondition*`).
+void ee_scenario_cap_condition(const void *condition, bool result, uint32_t seed);
+
+/// The trigger's state before its Evaluate (`trigger` an `EESMTrigger*`).
+EeScenarioCapTriggerBefore ee_scenario_cap_trigger_before(const void *trigger);
+
+/// SMTE.
+///
+/// # Safety
+/// `before` points to the state [`ee_scenario_cap_trigger_before`] answered.
+void ee_scenario_cap_trigger(const void *trigger,
+                             const EeScenarioCapTriggerBefore *before,
+                             float time,
+                             uint32_t seed);
+
+/// SMOB's state before (`object` an `EESMObject*`).
+EeScenarioCapObjectBefore ee_scenario_cap_object_begin(const void *object);
+
+/// SMOB.
+///
+/// # Safety
+/// `before` points to the state [`ee_scenario_cap_object_begin`] answered.
+void ee_scenario_cap_object_end(const void *object,
+                                bool include_dead,
+                                bool result,
+                                const EeScenarioCapObjectBefore *before);
+
+/// SMCP (`players` null or a `std::vector<long>*`).
+void ee_scenario_cap_players(long kind,
+                             bool single,
+                             long result,
+                             const void *players,
+                             uint32_t seed);
+
+/// SMAR (`area` an `EESMArea*`).
+void ee_scenario_cap_area(const void *area,
+                          long kind,
+                          long a,
+                          long b,
+                          long x,
+                          long y,
+                          uint64_t hash);
+
+/// SMEX and SMEW (`effect` an `EESMEffect*`; `version` the save version, major in the high 32 bits).
+void ee_scenario_cap_effect(const void *effect,
+                            bool cinematic,
+                            uint32_t seed,
+                            EeScenarioCapVersion version);
+
+/// SMEW alone.
+void ee_scenario_cap_effect_world(const void *effect, EeScenarioCapVersion version);
+
+/// SMSV (`manager` the `EEScenarioManager*`).
+void ee_scenario_cap_saved(const void *manager,
+                           long kind,
+                           long result,
+                           EeScenarioCapVersion version);
+
+/// SMUP (and every 120th round SMSV).
+void ee_scenario_cap_update(const void *manager, bool human, EeScenarioCapVersion version);
+
+/// SMPA.
+void ee_scenario_cap_player_attribute(long player,
+                                      unsigned long attribute,
+                                      long mode,
+                                      long amount,
+                                      uint32_t seed,
+                                      EeScenarioCapVersion version);
+
+/// SMTK (the texts as C strings).
+///
+/// # Safety
+/// `text` and `result` are null or C strings.
+void ee_scenario_cap_tokens(const char *text, const char *result, uint32_t seed);
+
+/// SMFP (`object` an `EESMObject*`).
+void ee_scenario_cap_placement(const void *object,
+                               unsigned long unit_type,
+                               bool random,
+                               bool result,
+                               float x,
+                               float y,
+                               uint32_t seed);
+
+/// SMCU (`args` seven `long`s; `unit` an `EEUnit*`, `player` an `EEPlayer*`, `upgrade` an `EEUnitClassUpgrade*`,
+/// each null for none).
+///
+/// # Safety
+/// `args` points to seven `long`s.
+void ee_scenario_cap_unit_change(long kind,
+                                 const long *args,
+                                 const void *unit,
+                                 const void *player,
+                                 const void *upgrade,
+                                 uint32_t seed,
+                                 EeScenarioCapVersion version);
 
 /// `ExportText` ([`export`]).
 ///

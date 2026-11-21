@@ -30,6 +30,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_sockop_kinds.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
@@ -177,7 +178,7 @@ static bool Connected()
 {
     if (sWaitOp->GetStatus() != WS_Pending) return true;
     if (sWaitOp->GetHttpSocket() == NULL || sWaitOp->mTracker.GetNumTrack() != 1) return false;
-    return dynamic_cast<RecvCRMsgOp*>(sWaitOp->mTracker.GetTrackedOp(0)) != NULL;
+    return WonSocketOpIs(sWaitOp->mTracker.GetTrackedOp(0), WonOpKind::RecvCrMsg);
 }
 static void* sWaitTimer;
 static bool TimerDone() { return static_cast<AsyncOp*>(static_cast<RefCount*>(sWaitTimer))->GetStatus() != WS_Pending; }

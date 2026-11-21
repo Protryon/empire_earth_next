@@ -389,11 +389,7 @@ pub fn answer(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePathIo
         }
         EE_PATH_GRAPH_ENDS => {
             for k in 0..2 {
-                let mut c = EePathIo::default();
-                c.i[0] = io.i[2 * k];
-                c.i[1] = io.i[2 * k + 1];
-                raw(EE_PATH_CLAMP, &mut c);
-                let (x, y) = (c.i[0], c.i[1]);
+                let (x, y) = clamp_tile(raw, 0, io.i[2 * k], io.i[2 * k + 1]);
                 io.i[2 * k] = x;
                 io.i[2 * k + 1] = y;
                 let s = sub_sector_at(x, y);
@@ -446,9 +442,145 @@ pub fn answer(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePathIo
             crate::app::capture_record::commit(io.i[0] as u32, bytes);
             0
         }
-        _ => return None,
+        _ => return unit_path_op(op, io, raw),
     };
     Some(r)
+}
+
+/// The unit's path operations (the paths lane's round 1: the waypoint list and its bodies are Rust,
+/// ee_sim::units waypoints.rs).
+#[cfg(not(test))]
+fn unit_path_op(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePathIo) -> i64) -> Option<i64> {
+    use crate::astar::path_splice::EePathPoint;
+    use crate::astar::pm_bounded::{
+        EE_PATH_UNIT_DROP_PATH, EE_PATH_UNIT_SNAP, EE_PATH_UNIT_TAKE_PATH, EE_PATH_UNIT_WAYPOINT_POINTS,
+    };
+    use crate::units::waypoints;
+    let h = io.h[0];
+    // SAFETY (each arm): the operation's unit is a live complex unit; `h1` the operation's list or points
+    match op {
+        EE_PATH_UNIT_WAYPOINTS => Some(unsafe { waypoints::list(h) }.len() as i64),
+        EE_PATH_UNIT_WAYPOINT_POINTS => {
+            let out = unsafe { &mut *(io.h[1] as *mut Vec<EePathPoint>) };
+            let l = unsafe { waypoints::list(h) };
+            out.extend(l.locations().iter().map(|p| EePathPoint { x: p[0], y: p[1], z: p[2] }));
+            Some(0)
+        }
+        EE_PATH_UNIT_DROP_PATH => {
+            unsafe { waypoints::drop_path(h) };
+            Some(0)
+        }
+        EE_PATH_UNIT_TAKE_PATH => {
+            let n = io.i[0] as usize;
+            let points: &[EePathPoint] =
+                if n == 0 { &[] } else { unsafe { std::slice::from_raw_parts(io.h[1] as *const EePathPoint, n) } };
+            let mut path: Vec<[f32; 3]> = points.iter().map(|p| [p.x, p.y, p.z]).collect();
+            unsafe { waypoints::take_path(h, &mut path, io.i[1] != 0) };
+            Some(0)
+        }
+        EE_PATH_UNIT_SNAP => {
+            unsafe { waypoints::snap_and_take(h, io.i[0] != 0) };
+            Some(0)
+        }
+        EE_PATH_AUTO_WAYPOINT => {
+            // FinishGraphPath's unit part: an auto-waypoint location goal's tile, the path dropped
+            let (from, goal, on_tile) = {
+                let t = token();
+                let u = unsafe { UnitView::of(&t, h) }?;
+                (u.tile_xy(), auto_waypoint(&u), u.tile().is_some())
+            };
+            let Some(at) = goal.filter(|_| on_tile) else { return Some(0) };
+            io.i[0] = from.0;
+            io.i[1] = from.1;
+            io.i[3] = i64::from(ee_base::math::um::floor(at[1]));
+            io.i[2] = i64::from(ee_base::math::um::floor(at[0]));
+            unsafe { waypoints::drop_path(h) };
+            Some(1)
+        }
+        EE_PATH_UNIT_GOAL_TILE => {
+            let t = token();
+            let Some(at) = auto_waypoint(&unsafe { UnitView::of(&t, h) }?) else { return Some(0) };
+            // (long) of the floats: truncated
+            io.i[0] = i64::from(at[0] as c_long);
+            io.i[1] = i64::from(at[1] as c_long);
+            Some(1)
+        }
+        EE_PATH_PENDING_UNIT => {
+            // RequestPendingPath's unit part: the path dropped; a graph search unless an auto-waypoint location goal
+            unsafe { waypoints::drop_path(h) };
+            let t = token();
+            let u = unsafe { UnitView::of(&t, h) }?;
+            let graph = u.goal_handle() != 0 && auto_waypoint(&u).is_none();
+            let (x, y) = u.tile_xy();
+            io.i[0] = x;
+            io.i[1] = y;
+            Some(i64::from(graph))
+        }
+        crate::astar::graph_search::EE_PATH_APPLY_GRAPH_PATH => {
+            // RequestUnitPaths: the path's ids `h0[..i0]` to unit `h1` or request `h2` (from sub sector `h3`)
+            let n = io.i[0] as usize;
+            let ids: &[i32] =
+                if n == 0 { &[] } else { unsafe { std::slice::from_raw_parts(io.h[0] as *const i32, n) } };
+            unsafe { crate::astar::pm_apply::request_unit_paths(raw, io.h[1], io.h[2], ids, io.h[3]) };
+            Some(0)
+        }
+        EE_PATH_UNIT_COUNT_REQUEST => Some(unsafe { crate::astar::pm_apply::count_request(h) }),
+        crate::astar::pm_bounded::EE_PATH_UNIT_PATH_DONE => {
+            unsafe { crate::astar::pm_apply::path_done(h) };
+            Some(0)
+        }
+        crate::astar::pm_capture::EE_PATH_UNIT_CAPTURE => Some(unsafe { crate::astar::pm_apply::capture_facts(h, io) }),
+        EE_PATH_CLAMP => {
+            // (on the map h1 when i2, else the world's)
+            let (x, y) = clamp_tile(raw, if io.i[2] != 0 { io.h[1] } else { 0 }, io.i[0], io.i[1]);
+            io.i[0] = x;
+            io.i[1] = y;
+            Some(0)
+        }
+        crate::astar::graph_search::EE_PATH_GRAPH_TERRAIN_FLAGS => {
+            // SetFlags: the unit class's GetTerrainFlags into the goal's flags (its player kept)
+            let class = {
+                let t = token();
+                unsafe { UnitView::of(&t, h) }?.class()?.handle()
+            };
+            let goal = unsafe { &mut *(io.h[1] as *mut crate::astar::graph_search::EeAStarGraphGoalRec) };
+            goal.path_flags = crate::units::gather_spot::class_terrain_flags(class, h);
+            Some(0)
+        }
+        _ => None,
+    }
+}
+
+/// `ClampTile` (pm_apply.rs; `map` 0: the world's).
+#[cfg(not(test))]
+fn clamp_tile(raw: &mut dyn FnMut(i32, &mut EePathIo) -> i64, map: u64, x: i64, y: i64) -> (i64, i64) {
+    crate::astar::pm_apply::clamp(raw, map, x, y)
+}
+
+#[cfg(test)]
+fn clamp_tile(_raw: &mut dyn FnMut(i32, &mut EePathIo) -> i64, _map: u64, x: i64, y: i64) -> (i64, i64) {
+    (x, y)
+}
+
+/// Whether the unit's goal is a location goal (`EELocationGoalCast`).
+#[cfg(not(test))]
+fn is_location(u: &UnitView<'_>) -> bool {
+    u.goal().is_some_and(|(kind, _)| kind == crate::units::location::GOAL_LOCATION)
+}
+
+/// The unit's goal's location when it is an auto-waypoint location goal.
+#[cfg(not(test))]
+fn auto_waypoint(u: &UnitView<'_>) -> Option<[f32; 3]> {
+    if !is_location(u) {
+        return None;
+    }
+    let g = crate::units::location::get(u.goal_handle());
+    g.auto_waypoint.then_some(g.location)
+}
+
+#[cfg(test)]
+fn unit_path_op(_op: i32, _io: &mut EePathIo, _raw: &mut dyn FnMut(i32, &mut EePathIo) -> i64) -> Option<i64> {
+    None
 }
 
 #[cfg(test)]

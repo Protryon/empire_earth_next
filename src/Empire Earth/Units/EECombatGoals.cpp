@@ -601,37 +601,8 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         return 0;
     }
     case EE_COMBAT_W_IGNORED_TIME: theObject->mIgnoredTargets[(size_t)a[0]].mTime = (unsigned long)a[1]; return 0;
-    case EE_COMBAT_W_CAN_GET_TO_UNIT:
-        return gContinentManager.CanGetToUnit(EEQueryUnit(inObject), EEQueryUnit(inOther));
-    case EE_COMBAT_W_CONTINENT_AT: return (uint64_t)(uintptr_t)gContinentManager.GetContinentAt(EEQueryUnit(inObject));
-    case EE_COMBAT_W_CONTINENT_LINK: {
-        EEAIContinent* theFrom = (EEAIContinent*)(uintptr_t)inObject;
-        EEAIContinent* theTo = (EEAIContinent*)(uintptr_t)inOther;
-        return gContinentManager.AreAdjacent(theFrom->GetID(), theTo->GetID()) != 0;
-    }
-    case EE_COMBAT_W_CONNECTED_FOR_UNIT:
-        return gContinentManager.AreConnectedForUnit(EEQueryUnit((uint64_t)a[0]), (EEAIContinent*)(uintptr_t)inObject,
-                                                     (EEAIContinent*)(uintptr_t)inOther);
+    // the reach tests' continent queries: Rust (world_views.rs reach_op)
     case EE_COMBAT_W_OTHER_CONTINENT: return theObject->IsOnOtherContinentThan(theOther);
-    case EE_COMBAT_W_FIND_PATH: {
-        std::vector<U2DPoint<long> > thePath;
-        U2DPoint<long> theFrom((long)a[0], (long)a[1]);
-        U2DPoint<long> theTo((long)a[2], (long)a[3]);
-        EEAIAStarBounds theBounds;
-        theBounds.mTop = (long)a[4];
-        theBounds.mLeft = (long)a[5];
-        theBounds.mBottom = (long)a[6];
-        theBounds.mRight = (long)a[7];
-        EeAStarModifier* theModifier = ee_astar_modifier_new_attackable((uint64_t)(uintptr_t)theObject, (uint64_t)(uintptr_t)theOther);
-        gPathManager.FindPath(theObject, ::gWorld.mMap, theFrom, theTo, theBounds, thePath, 0xb, (long)a[8], theModifier,
-                              NULL);
-        if (thePath.size() != 0) {
-            a[0] = thePath[0].mX;
-            a[1] = thePath[0].mY;
-        }
-        ee_astar_modifier_release(theModifier);
-        return thePath.size();
-    }
     case EE_COMBAT_W_SEEN_BY_OWNER: return EECombatIsSeenBy(theObject, EEQueryUnit(inOther)->GetPlayer(), true);
     case EE_COMBAT_W_ATTACKED_GOAL: {
         if (a[0])

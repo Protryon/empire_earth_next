@@ -35,7 +35,6 @@ void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume,
 // 0x249727 (cdecl): the tiles of the line (inX1, inY1)..(inX2, inY2) into outTiles (provisional name)
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles, bool inEnds, bool inThin);  // bools: 0x649727 tests them with `cmp byte`
 // the kinds' helpers EEUnitClassKinds.cpp's dispatchers call (provisional names)
-void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inArg);  // the naval kinds' paths
 EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit);  // a gate's first part (EEUnitClassBuildings.cpp)
 
 // an object's address as the Rust bodies take it (a unit's EEUnit*, which every complex unit's address is; a class)

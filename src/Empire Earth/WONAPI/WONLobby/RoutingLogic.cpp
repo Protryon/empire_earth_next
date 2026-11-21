@@ -81,8 +81,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     typedef EeWonRouteLogicOp O;
     RoutingLogic* L = static_cast<RoutingLogic*>(inObj);
     switch (inOp) {
-    case O::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
-    case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case O::TextFree: delete T(a); return 0;
     case O::TextLength: return T(a)->length();
     case O::TextUnits: // the text's wchar_t units (to b when not 0); 0 is the empty text
@@ -95,18 +93,11 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     // ---- the lobby
     case O::Killed: return L->mKilled;
-    case O::OpStatus: return (int)AO(a)->GetStatus();
-    case O::OpKilled: return AO(a)->IsKilled();
-    case O::OpKill: AO(a)->Kill(true); return 0;
-    case O::OpFinish: AO(a)->Finish(WS_Success); return 0;
-    case O::AsyncOpNew: { AsyncOp* anOp = new AsyncOp; anOp->AddRef(); return (intptr_t)anOp; }
     case O::RunOp: L->RunOp(AO(a), NULL, 0); return 0;
     case O::RunWithStatus:
         LobbyRunOpWithStatus(AO(a), gLobbyResources[b].mString, gLobbyResources[c].mString, (int)(d & 0xff),
                              (unsigned long)(d >> 8));
         return 0;
-    case O::Now: return (intptr_t)time(NULL);
-    case O::Tick: return (intptr_t)WONTickCount();
     case O::LastInputTick: return (intptr_t)GetLobbyWindow()->GetLastInputTick();
     case O::BroadcastLobby: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case O::Pref:
@@ -181,17 +172,10 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         }
         return 0;
     // ---- the routing ops and connection
-    case O::RNum: return (intptr_t)RO(a)->Num((int)b);
     case O::RSetNum: RO(a)->SetNum((int)b, (long long)c); return 0;
     case O::RSetText: RO(a)->SetText((int)b, TX(c)); return 0;
-    case O::RIsGameData: return RO(a)->DataType() == L->mGameDataType;
-    case O::RRecipient: {
-        std::list<unsigned short> aRecipients = RO(a)->Recipients();
-        return aRecipients.empty() ? -1 : (intptr_t)aRecipients.front();
-    }
     case O::RConnection: return (intptr_t)RO(a)->mConnection.get();
     case O::RNew: { RoutingOp* anOp = new RoutingOp(RC(a), (RoutingOpType)b); anOp->AddRef(); return (intptr_t)anOp; }
-    case O::OpSocket: return (intptr_t) static_cast<RefCount*>(static_cast<SocketOp*>(AO(a))->GetSocket());
     case O::ConnNew: { RoutingConnection* aConnection = new RoutingConnection; aConnection->AddRef(); return (intptr_t)aConnection; }
     case O::ConnDo:
         switch (b) {

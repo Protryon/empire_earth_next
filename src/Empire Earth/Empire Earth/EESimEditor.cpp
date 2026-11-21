@@ -1,14 +1,25 @@
-// TEST ONLY: the scripted scenario editor's steps of the headless simulation (EE-SIM.exe --editor-script;
-// ee/EESimEditor.h). Port addition, no original address. The script's runner and its language are Rust (ee_game
-// sim_editor: the lines, the words, the steps' order and output; its module documentation lists the commands); a
-// step here is one line's command: an action of its own in the UI thread's action queue (so under the UI copy lock
-// and the world's write lock, as every editor action runs) that posts the line's actions, then a marker that posts
-// itself again three times (an action posted by an action, such as the blank map's terrain paint, runs before it)
-// and wakes the driver. While a step runs, TMGetTime answers a pinned time on the UI thread (2000, 3000, ... by step).
+// TEST ONLY: the host of the scripted scenario editor (EE-SIM.exe --editor-script). Port addition, no original
+// address. The script's runner, its language, its steps and its digests are Rust (ee_game sim_driver editor.rs,
+// sed_steps.rs, sed_digest.rs); this file runs a step on the UI thread and answers the steps' C++ calls and members
+// (ee_simcpp_sed*: one case per call, EeSimDriverSed). A step is an action of its own in the UI thread's action
+// queue (so under the UI copy lock and the world's write lock, as every editor action runs) that runs the step's
+// code, then a marker that posts itself again three times (an action posted by an action, such as the blank map's
+// terrain paint, runs before it) and wakes the driver. While a step runs, TMGetTime answers a pinned time on the UI
+// thread (2000, 3000, ... by step).
 #include <windows.h>
-#include <mbstring.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <functional>
+#include <map>
+#include <mutex>
+#include <string>
+#include <typeinfo>
+#include <vector>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -22,8 +33,10 @@
 #include "lle/NEMessage.h"
 #include "lle/UITriStateCheckBox.h"
 #include "lle/GETerrainMesh.h"
-#include <vector>
-#include <deque>
+#include "lle/GEText.h"
+#include "lle/UIListBox.h"
+#include "lle/UIBitmap.h"
+#include "lle/FSChunk.h"
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -41,47 +54,39 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEPhysics.h"
 #include "ee/EESaveLoad.h"
-#include <string.h>
-#include "lle/GEText.h"
-#include "lle/UIListBox.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEARust.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEMessage.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGhostUnit.h"
-#include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
-#include "rust/base/time.h"
-#include "rust/game/screens.h"
-#include "rust/game/sim_driver.h"   // the world digest
-#include "rust/sim/scenario.h"
 #include "ee/EEUIShell.h"
-#include <condition_variable>
-#include <functional>
-#include <mutex>
-#include <string>
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
-#include "lle/FSChunk.h"
 #include "ee/EESETSConditionControls.h"
-#include <map>
-// the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
-extern std::map<const void*, unsigned long> gSeetAlignments;
-long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
 #include "ee/EESETSEffectControls.h"
-#include <typeinfo>
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESERBUnitTypes.h"
 #include "ee/EESELoadThread.h"
-// the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
-bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);
+#include "ee/EEUnitHandle.h"
+#include "ee/EECivilizationManager.h"
+#include "ee/EECBUIListBox.h"
+#include "ee/EECivilizationBuilder.h"
+#include "rust/base/time.h"
+#include "rust/game/sim_driver.h"   // EeSimDriverSed
 
-// TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_base/src/time)
-
+// the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
+extern std::map<const void*, unsigned long> gSeetAlignments;
+long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
 // EESaveLoad.cpp: the save's chunks (the map, the scenario, the players, the world, ...), in their order
 void BuildSaveGameChunks(std::vector<FSPersistent*>& outList);
+
+// the plain layouts the Rust reads (sed_host.rs CondControls, EffControls; GERectangle, GEColor, GETransformation)
+static_assert(sizeof(EESETSConditionControls) == 23 * sizeof(void*), "EESETSConditionControls: pointers only");
+static_assert(sizeof(EESETSEffectControls) == 46 * sizeof(void*), "EESETSEffectControls: pointers only");
+static_assert(sizeof(GERectangle) == 16 && sizeof(GEColor) == 12 && sizeof(GETransformation) == 64, "plain layouts");
 
 // ------------------------------------------------------------------------------------------------ the steps
 
@@ -183,1031 +188,7 @@ bool RunStep(const std::function<void()>& inCode, long inRounds = 1)
     return sStepDone.wait_for(theLock, std::chrono::seconds(60), [] { return sStepFinished; });
 }
 
-// ------------------------------------------------------------------------------------------------ the digest
-
-struct Hash {
-    uint64_t mValue = 1469598103934665603ULL;
-    unsigned long mCount = 0;
-    void Bytes(const void* inData, size_t inLength)
-    {
-        const unsigned char* p = static_cast<const unsigned char*>(inData);
-        for (size_t i = 0; i < inLength; i++) {
-            this->mValue ^= p[i];
-            this->mValue *= 1099511628211ULL;
-        }
-    }
-    void Long(long inValue)
-    {
-        int64_t v = inValue;
-        this->Bytes(&v, sizeof(v));
-    }
-    void Float(float inValue)
-    {
-        uint32_t v;
-        memcpy(&v, &inValue, sizeof(v));
-        this->Bytes(&v, sizeof(v));
-    }
-};
-
-std::string Hex(uint64_t inValue)
-{
-    char theText[24];
-    snprintf(theText, sizeof(theText), "%016llx", (unsigned long long)inValue);
-    return theText;
-}
-
-// The save's chunks that differ by run though the editor writes none of them: the checksum (1, over the players),
-// the players (5: per player a few words the computer players' AI thread and timers write), the multiplayer helper
-// (8: the server's times) and the environment manager (12: one byte of its state)
-bool ChunkByRun(long inTag)
-{
-    return inTag == 1 || inTag == 5 || inTag == 8 || inTag == 12;
-}
-
-std::string ChunkText(long inTag, long inResult, const unsigned char* inData, unsigned long inLength)
-{
-    if (ChunkByRun(inTag))
-        return std::to_string(inTag) + " result=" + std::to_string(inResult) + " (differs by run)";
-    Hash h;
-    h.Bytes(inData, inLength);
-    return std::to_string(inTag) + " result=" + std::to_string(inResult) + " bytes=" + std::to_string(inLength) + " " +
-           Hex(h.mValue);
-}
-
-// The save's body: the game's save chunks (EESaveLoad.cpp's list, each written as WriteSaveGameChunks writes it)
-// -> one line per chunk: its tag, length and hash. The header (the date, the time) is not written.
-void SaveDigest(std::vector<std::string>& outLines)
-{
-    std::vector<FSPersistent*> theList;
-    BuildSaveGameChunks(theList);
-    for (size_t i = 0; i < theList.size(); i++) {
-        FSChunk theChunk;
-        FSMemoryFile theFile(0x400, true, 1000);
-        long theResult = theChunk.SavePersistentToChunk(kSaveGameMajorVersion, kSaveGameMinorVersion, theList[i]);
-        if (theResult == 0)
-            theResult = theChunk.SaveChunkToFile(theFile);
-        unsigned long theLength = 0;
-        theFile.GetLength(theLength);
-        outLines.push_back("  chunk " + ChunkText(theList[i]->GetTagID(), theResult, theFile.GetData(), theLength));
-        delete theList[i];
-    }
-}
-
-// A saved file's chunks: the file read whole, its header loaded, then each chunk as written (tags in the order of
-// the save's list, BuildSaveGameChunks)
-void FileDigest(const UString& inName, std::vector<std::string>& outLines)
-{
-    FSFileSpec theFile;
-    theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-    theFile.SetFile(inName);
-    if (theFile.Open(kFileAccessRead) != 0) {
-        outLines.push_back("  missing");
-        return;
-    }
-    FSMemoryFile theMemory(1000, true, 1);
-    EEPSaveGameHeader theHeader;
-    long theResult = theMemory.Load(theFile);
-    theFile.Close();
-    if (theResult != 0 || theHeader.Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theMemory) != 0) {
-        outLines.push_back("  unreadable");
-        return;
-    }
-    std::vector<FSPersistent*> theList;
-    BuildSaveGameChunks(theList);
-    unsigned long theLength = 0;
-    theMemory.GetLength(theLength);
-    for (size_t i = 0; i < theList.size(); i++) {
-        long theStart = 0, theEnd = 0;
-        theMemory.GetPosition(theStart);
-        FSChunk theChunk;
-        long theRead = (unsigned long)theStart < theLength ? theChunk.LoadChunkFromFile(theMemory) : 9;
-        theMemory.GetPosition(theEnd);
-        outLines.push_back("  chunk " + ChunkText(theList[i]->GetTagID(), theRead, theMemory.GetData() + theStart,
-                                                  (unsigned long)(theEnd - theStart)));
-        delete theList[i];
-    }
-    long theEnd = 0;
-    theMemory.GetPosition(theEnd);
-    outLines.push_back("  rest " + std::to_string(theLength - (unsigned long)theEnd));
-}
-
-// The world as the editor left it: the map's tiles and mesh, every player's units, the editor's selection and paint
-// area, the save's body. Under the world's write lock (a step).
-void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
-{
-    outLines.push_back("digest " + inLabel);
-    // the map's tiles and mesh, every player's units (ee_game sim_driver digest.rs, over the world views)
-    if (!ee_sim_driver_world_digest(gWorld.mMap != NULL ? gWorld.mMap->mTerrainMesh.GetRust() : NULL, &outLines,
-                                    [](void* inLines, const char* inLine) {
-                                        static_cast<std::vector<std::string>*>(inLines)->push_back(inLine);
-                                    }))
-        return;
-    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-    std::string theSelection = "  selection";
-    for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
-        theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
-    outLines.push_back(theSelection);
-    const GERectangle& theArea = theEditor->GetBrushGroup()->mRectangle;
-    char theText[160];
-    snprintf(theText, sizeof(theText), "  paint area %g,%g,%g,%g", (double)theArea.GetLeft(), (double)theArea.GetTop(),
-             (double)theArea.GetRight(), (double)theArea.GetBottom());
-    outLines.push_back(theText);
-    SaveDigest(outLines);
-}
-
-// ------------------------------------------------------------------------------------------------ the scenario lists
-// TEST ONLY: the scenario manager's list operations as the trigger screens call them (EESETSArea's, EESETSCondition's
-// ... Sort, MoveUp, MoveDown, Delete, Duplicate, New), and the lists' state: every element's name, id and index
-// references, the trigger entries, the timed effects and the name lists the screens show
-
-std::string Num(unsigned long inValue)
-{
-    return std::to_string((long)inValue);
-}
-
-void NameList(const char* inLabel, const std::vector<UWideString>& inNames, std::vector<std::string>& outLines)
-{
-    std::string theText = std::string("  ") + inLabel;
-    for (const UWideString& n : inNames)
-        theText += std::string(" |") + (const char*)n;
-    outLines.push_back(theText);
-}
-
-void ScenarioListState(std::vector<std::string>& outLines)
-{
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    for (unsigned long i = 0; i < m->mTriggers.size(); i++) {
-        EESMTrigger* t = m->mTriggers[i];
-        std::string s = "  trigger " + Num(i) + " " + (const char*)t->mName + " id " + Num(t->mID) + " c";
-        for (EESMTConditionWrapper* c : t->mConditions)
-            s += " " + Num(c->mValue);
-        s += " e";
-        for (EESMTEffectWrapper* e : t->mEffects)
-            s += " " + Num(e->mEffectIndex);
-        outLines.push_back(s);
-    }
-    for (unsigned long i = 0; i < m->mConditions.size(); i++) {
-        EESMCondition* c = m->mConditions[i];
-        outLines.push_back("  condition " + Num(i) + " " + (const char*)c->mName + " id " + Num(c->mID) + " type " +
-                           Num(c->mType) + " object " + Num(c->mObjectIndex) + " trigger " + Num(c->mTrigger));
-    }
-    std::vector<EESMEffect*> theEffects(m->mEffects);
-    theEffects.insert(theEffects.end(), m->mPendingEffects.begin(), m->mPendingEffects.end());
-    for (unsigned long i = 0; i < theEffects.size(); i++) {
-        EESMEffect* e = theEffects[i];
-        std::string s = std::string(i < m->mEffects.size() ? "  effect " : "  pending ") + Num(i) + " " +
-                        (const char*)e->mName + " id " + Num(e->mID) + " areas " + Num(e->mTaskArea) + " " +
-                        Num(e->mTargetArea) + " " + Num(e->mPlaceArea) + " " + Num(e->mLocationArea) + " objects " +
-                        Num(e->mObject) + " " + Num(e->mLocationObject) + " " + Num(e->mTaskObject) + " " +
-                        Num(e->mPlaceObject) + " " + Num(e->mTargetObject) + " trigger " + Num(e->mTrigger) + " list";
-        for (unsigned long o : e->mObjects)
-            s += " " + Num(o);
-        outLines.push_back(s);
-    }
-    for (unsigned long i = 0; i < m->mObjects.size(); i++) {
-        EESMObject* o = m->mObjects[i];
-        outLines.push_back("  object " + Num(i) + " " + (const char*)o->mName + " id " + Num(o->mL64) + " area " +
-                           Num(o->mArea) + " parent " + Num(o->mParent) + " near " + Num(o->mNearObject));
-    }
-    for (unsigned long i = 0; i < m->mAreas.size(); i++)
-        outLines.push_back("  area " + Num(i) + " " + (const char*)m->mAreas[i]->mName + " id " + Num(m->mAreas[i]->mID));
-    std::string s = "  timed";
-    for (unsigned long i = 0; i < m->GetNumTimedEffects(); i++)
-        s += " " + Num(m->GetTimedEntry(i).mEffectIndex) + "@" + Num(m->GetTimedEntry(i).mTime);
-    outLines.push_back(s);
-    outLines.push_back("  next " + Num(m->mNextTriggerID) + " " + Num(m->mNextConditionID) + " " +
-                       Num(m->mNextEffectID) + " " + Num(m->mNextObjectID) + " " + Num(m->mNextAreaID));
-    for (int theDebug = 0; theDebug < 2; theDebug++) {
-        bool theOld = m->mShowDebugIDs;
-        m->mShowDebugIDs = theDebug != 0;
-        std::vector<UWideString> n[9];
-        for (unsigned long w = 0; w < 9; w++)
-            m->GetNames(w, n[w]);   // EE_SCENARIO_NAMES_TRIGGERS .. EE_SCENARIO_NAMES_USER_AREAS
-        m->mShowDebugIDs = theOld;
-        const char* theLabels[] = {"triggers", "conditions", "user conditions", "effects", "user effects", "objects",
-                                   "user objects", "areas", "user areas"};
-        for (int k = 0; k < 9; k++)
-            NameList(theLabels[k], n[k], outLines);
-    }
-    std::string f = "  find";
-    for (long theID = 0; theID < 8; theID++) {
-        EESMCondition* c = m->FindConditionByID(theID);
-        EESMEffect* e = m->FindEffectByID(theID);
-        EESMObject* o = m->FindObjectByID(theID);
-        f += " " + std::to_string(theID) + ":" + (c ? (const char*)c->mName : "-") + "/" + (e ? (const char*)e->mName : "-") +
-             "/" + (o ? (const char*)o->mName : "-") + "/" + std::to_string(o ? m->GetObjectIndex(o) : -2);
-    }
-    outLines.push_back(f);
-}
-
-// TEST ONLY: the trigger text file of the instructions tab (EESEIAExport, EESEIAImport): the manager's ExportText
-// and ImportTriggerText over files in data\Scenarios (written and read as the editor's actions do, the version line
-// aside: EESEIAImport reads it before the manager)
-
-// the import files (each ends with a new line: a last line without one leaves the original's text list a line short
-// and ImportText reads past it)
-const char* const sTextFiles[] = {
-    // 0: valid (version 1): the four media strings, the texts of three effects and a condition, two player names
-    "{1_After Math}\nAftermath text\nline two\n\n{0_Hints}\nHints \xc3\xbc\n\n{3_Instructions}\nDo this.\n\n\n\n"
-    "{2_History}\nLong ago\n\n{5_Effect:<Effect0_Copy>}\nNew briefing\n{2_Effect:<Effect1>}\nNew dialogue\n\n"
-    "{9_Condition:<Condition3_Copy>}\nnew chat\n\n{1_Player Name:Alice}\n{2_Player Name:Bob \xc3\xbc}\n",
-    // 1: errors of every kind (validated: listed; not validated: applied up to the first)
-    "preamble before any entry\n{3_Effect:Renamed}\nRenamed class\n\n{0_Hints}\nHints two\n{3_Player Name:Carol}\n"
-    "{0_Player Name:Zero}\n{99_Player Name:Nobody}\n{6_Condition:<Condition5>}\nchat 6\n{4_Effect:<Effect3>}\nchat 4\n"
-    "{7_Bogus}\nbogus\n{99_Effect:x}\ny\n{0_Effect:Do Nothing}\nz\n{99_Condition:x}\ny\n{5_Condition:<Condition4>}\n"
-    "t\n{6_Condition:Wrong}\nt\n{\xc3\xbc" "3_Effect:x}\nt\nx{y\na{b}c\n{a}{b}\n{}\n{2_History}\nhistory two\n",
-    // 2: version 0 entries ("<id>_<name>"; a condition entry reads as an effect's)
-    "{5_<Effect0_Copy>}\nkind zero\n\n{2_Effect:<Effect1>}\nkind zero two\n{9_Condition:<Condition3_Copy>}\nxx\n",
-    // 3: empty
-    "",
-    // 4: long lines (TextFileContent: fgets reads 511 bytes at a time, so an entry can start inside a line)
-    NULL,
-};
-
-std::string TextFileContent(unsigned long inIndex)
-{
-    if (inIndex != 4)
-        return sTextFiles[inIndex];
-    std::string a(600, 'a'), b(511, 'b'), c(509, 'c');
-    return "{2_History}\n" + a + "\n" + b + "{3_Effect:<Effect2>}\nafter\n" + c + "\xc3\xbc\xc3\xbc\n{0_Hints}\n" + b +
-           "\n\n";
-}
-
-FSFileSpec TextFile(unsigned long inIndex)
-{
-    FSFileSpec theFile;
-    theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-    theFile.SetFile(UString(("smtext" + std::to_string(inIndex) + ".lcl").c_str()));
-    return theFile;
-}
-
-// every effect's and condition's name and texts, every player's name
-void TextElements(std::vector<std::string>& outLines)
-{
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    for (EESMEffect* e : m->mEffects)
-        outLines.push_back("  effect " + Num(e->mID) + " " + (const char*)e->mName + " |" + (const char*)e->mDescription +
-                           "|" + (const char*)e->mMessage + "|" + (const char*)e->mNewName + "|");
-    for (EESMCondition* c : m->mConditions)
-        outLines.push_back("  condition " + Num(c->mID) + " " + (const char*)c->mName + " |" + (const char*)c->mChatText +
-                           "|");
-    std::string s = "  players";
-    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++)
-        s += std::string(" |") + (gWorld.GetPlayer(p) != NULL ? (const char*)gWorld.GetPlayer(p)->mName : "-");
-    outLines.push_back(s);
-}
-
-// sm text | sm export | sm import FILE KIND VALIDATE
-void ScenarioTextStep(const std::vector<std::string>& w, std::vector<std::string>& outLines)
-{
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    const std::string& theOp = w[1];
-    if (theOp == "text") {   // sm text: types and texts on the effects and conditions the script left
-        struct {
-            unsigned long mType, mAction;
-            const char* mText;
-        } theEffects[] = {{kSMEffectMedia, kSMMediaActionChangeText, "Briefing \xc3\xbc\nsecond line"},
-                          {kSMEffectMedia, kSMMediaActionSendDialogue, "Hello \xe6\x97\xa5\xe6\x9c\xac"},
-                          {kSMEffectObject, kSMObjectActionClassName, "Class X"},
-                          {kSMEffectMedia, kSMMediaActionSendChatMessage, "chat msg"}};
-        for (unsigned long i = 1; i < m->mEffects.size() && i <= 4; i++) {
-            EESMEffect* e = m->mEffects[i];
-            e->mType = theEffects[i - 1].mType;
-            if (e->mType == kSMEffectMedia)
-                e->mMediaAction = theEffects[i - 1].mAction;
-            else
-                e->mObjectAction = theEffects[i - 1].mAction;
-            e->mDescription = "desc only";
-            e->mMessage = "message only";
-            e->mNewName = "new name only";
-            if (e->mType == kSMEffectObject)
-                e->mNewName = theEffects[i - 1].mText;
-            else if (theEffects[i - 1].mAction == kSMMediaActionChangeText)
-                e->mDescription = theEffects[i - 1].mText;
-            else
-                e->mMessage = theEffects[i - 1].mText;
-        }
-        const char* theChats[] = {"gg", "multi\nline", "not exported", ""};
-        for (unsigned long i = 1; i < m->mConditions.size() && i <= 4; i++) {
-            EESMCondition* c = m->mConditions[i];
-            c->mType = i == 3 ? 2 : kSMConditionChatMessageContains;
-            c->mChatText = theChats[i - 1];
-        }
-        TextElements(outLines);
-        return;
-    }
-    char theWrite[] = "w";
-    char theRead[] = "r";
-    if (theOp == "export") {   // sm export: ExportText's result and the file's lines
-        FSFileSpec theFile = TextFile(9);
-        long theResult = theFile.FOpen(theWrite) == 0 ? m->ExportText(theFile) : -1;
-        theFile.Close();
-        outLines.push_back("  export " + std::to_string(theResult));
-        char theBuffer[0x400];
-        if (theFile.FOpen(theRead) == 0) {
-            while (fgets(theBuffer, sizeof(theBuffer), (FILE*)theFile) != NULL) {
-                std::string theLine(theBuffer);
-                while (!theLine.empty() && (theLine.back() == '\n' || theLine.back() == '\r'))
-                    theLine.pop_back();
-                outLines.push_back("  | " + theLine);
-            }
-            theFile.Close();
-        }
-        return;
-    }
-    // sm import FILE KIND VALIDATE: ImportTriggerText over file FILE (sTextFiles); its result, the errors, the texts
-    unsigned long theIndex = (unsigned long)atol(w[2].c_str());
-    FSFileSpec theFile = TextFile(theIndex);
-    if (theFile.FOpen(theWrite) == 0) {
-        fputs(TextFileContent(theIndex).c_str(), (FILE*)theFile);
-        theFile.Close();
-    }
-    m->mImportErrors.clear();
-    long theResult = -1;
-    if (theFile.FOpen(theRead) == 0)
-        theResult = m->ImportTriggerText(theFile, (unsigned long)atol(w[3].c_str()), atol(w[4].c_str()) != 0);
-    theFile.Close();
-    outLines.push_back("  import " + w[2] + " " + w[3] + " " + w[4] + " result " + std::to_string(theResult));
-    for (const UWideString& e : m->mImportErrors)
-        outLines.push_back(std::string("  error ") + (const char*)e);
-    TextElements(outLines);
-}
-
-// sm OP LIST [INDEX]: LIST 0 triggers, 1 conditions, 2 effects, 3 objects, 4 areas; OP new, sort, up, down, delete,
-// dup; "sm fill": every element's index references set from its place (each list's size modulo), two trigger entries
-// of each kind, a timed entry per effect and a pending copy of effect 1; "sm state": the state above
-void ScenarioListStep(const std::vector<std::string>& w, std::vector<std::string>& outLines)
-{
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    const std::string& theOp = w.size() > 1 ? w[1] : std::string();
-    long k = w.size() > 2 ? atol(w[2].c_str()) : 0;
-    unsigned long i = w.size() > 3 ? (unsigned long)atol(w[3].c_str()) : 0;
-    if (theOp == "state") {
-        ScenarioListState(outLines);
-        return;
-    }
-    if (theOp == "text" || theOp == "export" || theOp == "import") {
-        ScenarioTextStep(w, outLines);
-        return;
-    }
-    if (theOp == "fill") {
-        unsigned long nt = m->mTriggers.size(), nc = m->mConditions.size(), ne = m->mEffects.size();
-        unsigned long no = m->mObjects.size(), na = m->mAreas.size();
-        for (unsigned long j = 0; j < nt; j++) {
-            EESMTrigger* t = m->mTriggers[j];
-            t->SetCondition(0, false, (j + 1) % nc);
-            t->SetConditionOperator(0, 1);
-            t->SetCondition(1, true, (j + 2) % nc);
-            t->SetEffect(0, 0, (j + 1) % ne);
-            t->SetEffectOperator(0, 1);
-            t->SetEffect(1, 5, (j + 2) % ne);
-        }
-        for (unsigned long j = 0; j < nc; j++) {
-            if (m->mConditions[j]->mType != kSMConditionObject)
-                m->mConditions[j]->mObjectIndex = (j + 1) % no;
-            m->mConditions[j]->mTrigger = nt ? (j + 1) % nt : 0;
-        }
-        for (unsigned long j = 0; j < ne; j++) {
-            EESMEffect* e = m->mEffects[j];
-            e->mTaskArea = j % na;
-            e->mTargetArea = (j + 1) % na;
-            e->mPlaceArea = (j + 2) % na;
-            e->mLocationArea = (j + 3) % na;
-            e->mObject = j % no;
-            e->mLocationObject = (j + 1) % no;
-            e->mTaskObject = (j + 2) % no;
-            e->mPlaceObject = (j + 3) % no;
-            e->mTargetObject = (j + 4) % no;
-            e->mTrigger = nt ? (j + 1) % nt : 0;
-            e->mObjects.clear();
-            for (unsigned long o = 0; o < no; o += 2)
-                e->mObjects.push_back((o + j) % no);
-            m->AddTimedEffect((long)j, 1000 * (unsigned long)(ne - j), false);
-        }
-        for (unsigned long j = 0; j < no; j++) {
-            m->mObjects[j]->mArea = (j + 2) % na;
-            m->mObjects[j]->mParent = (j + 1) % no;
-            m->mObjects[j]->mNearObject = (j + 2) % no;
-        }
-        if (ne > 1)
-            m->AddV134Effect(*m->mEffects[1]);
-        return;
-    }
-    outLines.push_back("  " + theOp + " " + std::to_string(k) + " " + std::to_string(i));
-    if (theOp == "new")
-        m->NewEntry(k);
-    else if (theOp == "sort")
-        m->SortList(k);
-    else if (theOp == "up" || theOp == "down")
-        m->MoveEntry(k, i, theOp == "up");
-    else if (theOp == "delete")
-        outLines.push_back(std::string("  deleted ") + (m->DeleteEntry(k, i) ? "1" : "0"));
-    else if (theOp == "dup")
-        m->DuplicateEntry(k, i);
-}
-
-// ------------------------------------------------------------------------------------------------ the script
-
-// a unit by its id, or "@X,Y": the last unit (a player's, not the world's) on that tile
-unsigned long UnitRef(const std::string& inWord)
-{
-    if (inWord.empty() || inWord[0] != '@')
-        return strtoul(inWord.c_str(), NULL, 0);
-    long x = 0, y = 0;
-    if (sscanf(inWord.c_str() + 1, "%ld,%ld", &x, &y) != 2 || gWorld.mMap == NULL)
-        return 0xffffffffUL;
-    EEMapTile* theTile = gWorld.mMap->RTSMap::GetTile(x, y);
-    unsigned long theID = 0xffffffffUL;
-    for (RTSTileUnitNode* n = theTile != NULL ? theTile->mUnits : NULL; n != NULL; n = n->mNext)
-        if (n->mUnit != NULL && n->mUnit->GetPlayer() != NULL && n->mUnit->GetPlayer()->mPlayerID != 0)
-            theID = n->mUnit->GetUnitID();
-    return theID;
-}
-
-// the editor's long-lived actions (the tabs keep one of each and post it again)
-EESEARust* sRotate = NULL;
-EESEARust* sMove = NULL;
-EESEARust* sPlace = NULL;
-
-// The ghosts put on the tile (X, Y) as EEPreviewPlacement puts them under the mouse over the map: each on the tile
-// (a farm ghost on its slot), at the tile's centre (an even size: its corner) at the mesh's height, FillSquare
-// deciding whether it can be placed, its tile from its class
-void PutGhosts(long inX, long inY)
-{
-    gWorld.mGhostUnitsLock->Enter();
-    gGhostUnitsChanged = true;
-    for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
-        EEGhostUnit* theGhost = gWorld.mGhostUnits[i];
-        theGhost->mTileX = inX;
-        theGhost->mTileY = inY;
-        long theType = theGhost->mUnitClass->GetUnitType();
-        if ((theType == kUnitTypeFarm || theType == kUnitTypeRoboticFarm) && gWorld.GetNumGhostUnits() != 1)
-            EEGhostUnit::SetFarmSlotTile(theGhost, i);
-        GE3DPoint thePosition;
-        float theHalf = (theGhost->mUnitClass->GetTileSize() & 1) == 0 ? 0.0f : 0.5f;
-        thePosition.mX = (float)theGhost->mTileX + theHalf;
-        thePosition.mY = (float)theGhost->mTileY + theHalf;
-        thePosition.mZ = 0.0f;
-        if (gWorld.GetMap()->GetTile(theGhost->mTileX, theGhost->mTileY) != NULL) {
-            thePosition.mZ = gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePosition.mX, thePosition.mY);
-            if (thePosition.mZ < 0.0f)
-                thePosition.mZ = 0.0f;
-        }
-        theGhost->mTransformation.SetPosition(thePosition);
-        theGhost->FillSquare();
-        theGhost->mUnitClass->LocationToTile(thePosition, theGhost->mTileX, theGhost->mTileY);
-        if (gWorld.GetMap()->GetTile(theGhost->mTileX, theGhost->mTileY) == NULL)
-            theGhost->mCanPlace = false;
-    }
-    gWorld.mGhostUnitsLock->Leave();
-}
-
-// The ghosts' tiles and whether each can be placed (the step's output)
-std::string GhostText()
-{
-    std::string theText = "  ghosts";
-    gWorld.mGhostUnitsLock->Enter();
-    for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
-        EEGhostUnit* g = gWorld.mGhostUnits[i];
-        theText += " " + std::to_string(g->mUnitClass->GetUnitType()) + "@" + std::to_string(g->mTileX) + "," +
-                   std::to_string(g->mTileY) + (g->mCanPlace ? "+" : "-");
-    }
-    gWorld.mGhostUnitsLock->Leave();
-    return theText;
-}
-
-// An elevation file pair: NAME.txt holds "W H", NAME.dat W x H shorts (row by row): a ridge of land rising to 300
-// across the middle, water down to -200 at the two ends
-void WriteElevationFile(const std::string& inName, long inWidth, long inHeight)
-{
-    FSFileSpec theDirectory;
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
-    theDirectory.CreateDirectory();
-    std::vector<short> theData((size_t)(inWidth * inHeight));
-    for (long y = 0; y < inHeight; y++)
-        for (long x = 0; x < inWidth; x++)
-            theData[(size_t)(y * inWidth + x)] = (short)(300 - (labs(2 * y - inHeight) * 500) / inHeight + (x * 37) % 41 - 20);
-    std::string theInfo = std::to_string(inWidth) + " " + std::to_string(inHeight) + "\n";
-    const struct {
-        const char* mExtension;
-        const unsigned char* mData;
-        unsigned long mLength;
-    } theFiles[2] = {{".dat", reinterpret_cast<const unsigned char*>(theData.data()), (unsigned long)(theData.size() * 2)},
-                     {".txt", reinterpret_cast<const unsigned char*>(theInfo.c_str()), (unsigned long)theInfo.size()}};
-    for (const auto& f : theFiles) {
-        FSFileSpec theFile;
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
-        theFile.SetFile(UString((inName + f.mExtension).c_str()));
-        theFile.Create();
-        unsigned long theWritten = 0;
-        if (theFile.Open(kFileAccessWrite) == 0) {
-            theFile.Write(f.mData, f.mLength, theWritten);
-            theFile.Close();
-        }
-    }
-}
-
-// an editor control by its id (decimal or 0x)
-UIControl* EditorControl(const std::string& inId)
-{
-    if (!inId.empty() && inId[0] == '%')   // %N: the form's control N (ids repeat on the trigger screens)
-        return gUIManager->GetScenarioEditorForm()->GetControl(strtoul(inId.c_str() + 1, NULL, 0));
-    return gUIManager->GetScenarioEditorForm()->GetControlById(strtoul(inId.c_str(), NULL, 0));
-}
-
-// the trigger tab's condition and effect screens' shared controls
-EESETSConditionControls* ConditionControls()
-{
-    return static_cast<EESETSConditionControls*>(ee_screens_secd_handle(static_cast<EeScreensSeConditionScreen*>(
-        gUIManager->GetScenarioEditorForm()->GetTriggerSub(kSETriggerScreenCondition)), 0));
-}
-
-EESETSEffectControls* EffectControls()
-{
-    return static_cast<EESETSEffectControls*>(ee_screens_sefx_handle(static_cast<EeScreensSeEffectScreen*>(
-        gUIManager->GetScenarioEditorForm()->GetTriggerSub(kSETriggerScreenEffect)), 0));
-}
-
-// the area screen (TEST ONLY): its state and centre, the brush group's highlight and paint area, every scenario area's
-// name, text, select mode, rectangle and anchor
-void AreaDigest(std::vector<std::string>& outLines)
-{
-    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-    EeScreensSeArea* s = static_cast<EeScreensSeArea*>(theEditor->GetTriggerSub(kSETriggerScreenArea));
-    float theRectangle[4];
-    float thePoint[2];
-    float theMiddle[2];
-    unsigned long theFlags = ee_screens_sear_state(s, theRectangle, thePoint);
-    GERectangle r(theRectangle[0], theRectangle[1], theRectangle[2], theRectangle[3]);
-    GE2DPoint p(thePoint[0], thePoint[1]);
-    bool theCenter = ee_screens_sear_center(s, theMiddle);
-    GE2DPoint c(theCenter ? theMiddle[0] : 0.0f, theCenter ? theMiddle[1] : 0.0f);
-    EEUIFSEBrushGroup* b = theEditor->GetBrushGroup();
-    char theText[512];
-    snprintf(theText, sizeof(theText),
-             "  areascreen flags=%lu rect=%g,%g,%g,%g point=%g,%g center=%s highlight=%d paint=%g,%g,%g,%g", theFlags,
-             (double)r.GetLeft(), (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), (double)p.GetX(),
-             (double)p.GetY(), theCenter ? (std::to_string(c.GetX()) + "," + std::to_string(c.GetY())).c_str() : "none",
-             b->mIsHighlightShown ? 1 : 0, (double)b->mRectangle.GetLeft(), (double)b->mRectangle.GetTop(),
-             (double)b->mRectangle.GetRight(), (double)b->mRectangle.GetBottom());
-    outLines.push_back(theText);
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    for (unsigned long i = 0; i < m->mAreas.size(); i++) {
-        EESMArea* a = m->GetArea(i);
-        const GERectangle& q = a->GetRect();
-        snprintf(theText, sizeof(theText), "  area %lu mode=%lu rect=%d %g,%g,%g,%g anchor=%d %ld,%ld '", i,
-                 a->GetSelectMode(), a->GetHasRectangle() ? 1 : 0, (double)q.GetLeft(), (double)q.GetTop(),
-                 (double)q.GetRight(), (double)q.GetBottom(), a->GetHasAnchor() ? 1 : 0, a->GetAnchor().GetX(),
-                 a->GetAnchor().GetY());
-        outLines.push_back(theText + std::string((const char*)a->GetName()) + "' '" + (const char*)a->GetText() + "'");
-    }
-}
-
-// one control: its display mode, then a label's first line, a slider's value, a combo box's lines and selection
-std::string ControlText(const char* inName, size_t inIndex, UIControl* inControl)
-{
-    char theText[64];
-    snprintf(theText, sizeof(theText), "  %s%zu mode=%lu", inName, inIndex, inControl->GetDisplayMode());
-    return theText;
-}
-
-void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
-{
-    std::vector<UITextLabel*> theLabels;
-    std::vector<UISlider*> theSliders;
-    std::vector<UIControl*> theChecks, theRadios;
-    std::vector<UIComboBox*> theCombos;
-    std::vector<UIComboBox*> theScenario;
-    std::vector<UILBString*> theLists;
-    if (inCondition) {
-        EESETSConditionControls* t = ConditionControls();
-        theLabels.assign(t->mLabels, t->mLabels + 5);
-        theSliders.push_back(t->mSlider);
-        theChecks.assign(t->mCheckBoxes, t->mCheckBoxes + 3);
-        theRadios.assign(t->mRadioButtons, t->mRadioButtons + 2);
-        for (int i = 0; i < 3; i++)
-            theCombos.push_back(reinterpret_cast<UIComboBox*>(t->mComboBoxes[i]));
-        theScenario.assign(t->mScenarioComboBoxes, t->mScenarioComboBoxes + 4);
-    } else {
-        EESETSEffectControls* t = EffectControls();
-        theLabels.assign(t->mLabels, t->mLabels + 13);
-        theSliders.assign(t->mSliders, t->mSliders + 4);
-        theChecks.assign(t->mCheckBoxes, t->mCheckBoxes + 2);
-        theRadios.assign(t->mRadioButtons, t->mRadioButtons + 6);
-        theCombos.assign(t->mComboBoxes, t->mComboBoxes + 4);
-        theScenario.assign(t->mScenarioComboBoxes, t->mScenarioComboBoxes + 4);
-        theLists.assign(t->mListBoxes, t->mListBoxes + 2);
-    }
-    outLines.push_back(inCondition ? "  condition controls" : "  effect controls");
-    for (size_t i = 0; i < theLabels.size(); i++)
-        outLines.push_back(ControlText("label", i, theLabels[i]) + " '" +
-                           (theLabels[i]->GetLineCount() > 0 ? std::string((const char*)theLabels[i]->GetText(0)) : "") +
-                           "'");
-    for (size_t i = 0; i < theSliders.size(); i++)
-        outLines.push_back(ControlText("slider", i, theSliders[i]) + " value=" +
-                           std::to_string(theSliders[i]->GetCurrentRangeValue()));
-    for (size_t i = 0; i < theChecks.size(); i++)
-        outLines.push_back(ControlText("check", i, theChecks[i]) + " checked=" +
-                           (static_cast<UICheckBox*>(theChecks[i])->GetIsChecked() ? "1" : "0"));
-    for (size_t i = 0; i < theRadios.size(); i++)
-        outLines.push_back(ControlText("radio", i, theRadios[i]));
-    for (size_t i = 0; i < theCombos.size(); i++)
-        outLines.push_back(ControlText("combo", i, theCombos[i]) + " lines=" +
-                           std::to_string(theCombos[i]->GetListBox()->GetLineCount()));
-    for (size_t i = 0; i < theScenario.size(); i++) {
-        unsigned long theSelection = 0;
-        bool theSelected = theScenario[i]->GetCurrentSelection(theSelection) == kErrorOK;
-        outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(EEUIShell::Op(theScenario[i], EE_SCREENS_SKOP_MODE)) +
-                           " lines=" + std::to_string(theScenario[i]->GetListBox()->GetLineCount()) + " selection=" +
-                           (theSelected ? std::to_string(theSelection) : std::string("none")));
-    }
-    for (size_t i = 0; i < theLists.size(); i++) {
-        std::string theText = ControlText("list", i, theLists[i]) + " lines=" + std::to_string(theLists[i]->GetLineCount());
-        for (unsigned long k = 0; k < theLists[i]->GetLineCount(); k++)
-            theText += std::string(k == 0 ? " '" : ", '") + (const char*)theLists[i]->GetData(k) + "'";
-        outLines.push_back(theText);
-    }
-}
-
-// the form's controls (TEST ONLY): every control with an index in [inFirst, inLast] or in the entity group inGroup
-// (-1: any): its class, id, groups, rectangle, display mode, background, border, help string, text colour and font
-// height, texts, check state, selection and lines, slider value and range, and the trigger events by id
-std::string Colour(const GEColor& inColor)
-{
-    char theText[64];
-    snprintf(theText, sizeof(theText), "%g,%g,%g", (double)inColor.mRed, (double)inColor.mGreen, (double)inColor.mBlue);
-    return theText;
-}
-
-std::string TypeName(const void* inObject, const std::type_info& inType)
-{
-    std::string theName = inObject == NULL ? "null" : inType.name();
-    if (theName.compare(0, 6, "class ") == 0)
-        theName.erase(0, 6);
-    return theName;
-}
-
-// a control's class: a shell's (ee/EEUIShell.h) is the class its kind replaces
-std::string TypeName(UIControl* inControl)
-{
-    if (EEUIShell* s = EEUIShell::Of(inControl))
-        return s->KindName();
-    return TypeName(inControl, typeid(*inControl));
-}
-
-std::string GETextText(GEText* inText)
-{
-    if (inText == NULL)
-        return " fg=none";
-    char theText[96];
-    snprintf(theText, sizeof(theText), " fg=%s tr=%d fh=%lu", Colour(inText->GetFgColor()).c_str(),
-             inText->GetIsTransparent() ? 1 : 0, inText->GetFont() != NULL ? inText->GetFont()->GetHeight() : 0UL);
-    return theText + std::string(" '") + (const char*)inText->GetText() + "'";
-}
-
-std::string LabelText(const UITextLabel* inLabel)
-{
-    if (inLabel == NULL)
-        return " label=none";
-    std::string theText = GETextText(inLabel->GetGEText()) + " lines=" + std::to_string(inLabel->GetLineCount());
-    for (unsigned long k = 0; k < inLabel->GetLineCount() && k < 4; k++)
-        theText += std::string(k == 0 ? " '" : "|'") + (const char*)inLabel->GetText(k) + "'";
-    return theText;
-}
-
-std::string ListText(const UILBString* inList)
-{
-    if (inList == NULL)
-        return " list=none";
-    unsigned long theSelection = 0;
-    bool theSelected = inList->GetCurrentSelection(theSelection) == kErrorOK;
-    std::string theText = " n=" + std::to_string(inList->GetLineCount()) + " sel=" +
-                          (theSelected ? std::to_string(theSelection) : std::string("none"));
-    for (unsigned long k = 0; k < inList->GetLineCount() && k < 6; k++)
-        theText += std::string(k == 0 ? " '" : "|'") + (const char*)inList->GetData(k) + "'";
-    return theText;
-}
-
-void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::vector<std::string>& outLines)
-{
-    UIForm* theForm = gUIManager->GetScenarioEditorForm();
-    std::map<UIControl*, std::string> theGroups;
-    for (unsigned long g = 0; g < theForm->GetControlGroupCount(); g++) {
-        UIEntityGroup* theGroup = theForm->GetEntityGroup(g);
-        for (unsigned long e = 0; theGroup != NULL && e < theGroup->GetEntityCount(); e++) {
-            std::string& theList = theGroups[static_cast<UIControl*>(theGroup->GetEntity(e))];
-            theList += (theList.empty() ? "" : ",") + std::to_string(g) + (theGroup->GetIsEnabled() ? "" : "d");
-        }
-    }
-    for (unsigned long i = inFirst; i <= inLast && i < theForm->GetControlCount(); i++) {
-        UIControl* c = theForm->GetControl(i);
-        if (c == NULL)
-            continue;
-        std::string theGroupList = theGroups.count(c) ? theGroups[c] : std::string("-");
-        if (inGroup >= 0 && ("," + theGroupList + ",").find("," + std::to_string(inGroup) + ",") == std::string::npos &&
-            ("," + theGroupList + ",").find("," + std::to_string(inGroup) + "d,") == std::string::npos)
-            continue;
-        if (c->GetId() == 9 && dynamic_cast<UITextLabel*>(c) != NULL) {
-            // the load text: its text (and the rectangle fitted to it) is the load thread's last, a timing
-            outLines.push_back("  c" + std::to_string(i) + " the load text g=" + theGroupList);
-            continue;
-        }
-        const GERectangle& r = c->GetRectangle();
-        GEColor theBg;
-        c->GetBgColor(theBg);
-        char theText[320];
-        snprintf(theText, sizeof(theText), "  c%lu %s id=0x%lx ix=%lu g=%s r=%g,%g,%g,%g m=%lu bg=%g,%s b=%lu h=%lu", i,
-                 TypeName(c).c_str(), c->GetId(), c->GetIndex(), theGroupList.c_str(), (double)r.GetLeft(),
-                 (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), c->GetDisplayMode(),
-                 (double)c->GetBgOpacity(), Colour(theBg).c_str(), c->GetBorderThickness(), c->GetStringTableID());
-        std::string theLine = theText;
-        if (UIRadioButton* b = dynamic_cast<UIRadioButton*>(c))
-            theLine += std::string(" k=") + (b->GetIsChecked() ? "1" : "0") + LabelText(b->GetTextLabel()) +
-                       " btn" + GETextText(b->GetGEText());
-        else if (UICheckBox* b = dynamic_cast<UICheckBox*>(c))
-            theLine += std::string(" k=") + (b->GetIsChecked() ? "1" : "0") + LabelText(b->GetTextLabel());
-        else if (UIButton* b = dynamic_cast<UIButton*>(c))
-            theLine += GETextText(b->GetGEText());
-        else if (UIComboBox* b = dynamic_cast<UIComboBox*>(c))
-            theLine += " tb=" + std::to_string(b->GetTextBoxType()) + LabelText(b->GetTextLabel()) +
-                       ListText(b->GetListBox());
-        else if (UILBString* b = dynamic_cast<UILBString*>(c))
-            theLine += GETextText(b->GetGEText()) + ListText(b);
-        else if (UIEditBox* b = dynamic_cast<UIEditBox*>(c))
-            theLine += GETextText(b->GetGEText()) + " lines=" + std::to_string(b->GetLineCount()) + " '" +
-                       (b->GetLineCount() > 0 ? b->GetText(0) : "") + "'";
-        else if (UISlider* b = dynamic_cast<UISlider*>(c))
-            theLine += " v=" + std::to_string(b->GetCurrentRangeValue()) + " max=" + std::to_string(b->GetMaxRange());
-        else if (i > 0 && theForm->GetControl(i - 1) != NULL &&
-                 TypeName(theForm->GetControl(i - 1)) == "EEUIFMGAttribute")
-            // a unit attribute's value (the unit tab's panel): its bonus follows the tech tree the load thread
-            // reloads, shown on a later frame (a timing)
-            theLine += " (an attribute value)";
-        else if (UITextLabel* b = dynamic_cast<UITextLabel*>(c))
-            theLine += LabelText(b);
-        for (unsigned long t = kControlTriggerRangeChanged; t <= kControlTriggerButtonUp; t++)
-            if (UIEvent* e = c->GetTriggerEvent(t))
-                theLine += " e" + std::to_string(t - kControlTriggerRangeChanged) + "=" + TypeName(e, typeid(*e));
-        outLines.push_back(theLine);
-    }
-}
-
-// the players as the player tab writes them (TEST ONLY): names, colours, civilizations, epochs, resource caps,
-// shared line of sight, game options, the computer players' settings, stances; the world's game options
-void PlayersDigest(std::vector<std::string>& outLines)
-{
-    char theText[512];
-    for (unsigned long p = 0; p < (unsigned long)gWorld.GetNumPlayers(); p++) {
-        EEPlayer* q = gWorld.GetPlayer(p);
-        if (q == NULL) {
-            outLines.push_back("  player " + std::to_string(p) + " none");
-            continue;
-        }
-        EETechTree* t = q->GetTechTree();
-        std::string theCaps, theEnemies;
-        for (int i = 2; i < 7; i++)
-            theCaps += (i == 2 ? "" : ",") + std::to_string(q->mResourceCaps[i]);
-        for (unsigned long j = 0; j < (unsigned long)gWorld.GetNumPlayers(); j++)
-            theEnemies += std::to_string((long)q->mEnemies[j]);
-        snprintf(theText, sizeof(theText),
-                 "  player %lu '%s' colour=%s civ='%s' epochs=%ld,%ld,%ld caps=%s los=%d upgrades=%zu points=%g enemies=%s",
-                 p, (const char*)q->mName, Colour(q->mColor).c_str(), (const char*)q->mCivilizationFile, (long)t->mCurrentEpoch,
-                 (long)t->mStartEpoch, (long)t->mEndEpoch, theCaps.c_str(), q->mSharedLOS ? 1 : 0,
-                 q->mCivilization.mPurchasedUpgrades.size(), (double)q->mCivilization.mAvailablePoints,
-                 theEnemies.c_str());
-        std::string theLine = theText;
-        if (p > 0) {
-            const EEGameOptionsPlayer& o = gWorld.mGameOptions.mPlayers[p - 1];
-            snprintf(theText, sizeof(theText), " options=%lu,%d", o.mColor, o.mB36 ? 1 : 0);
-            theLine += theText;
-        }
-        if (EEComputerPlayer* c = q->mComputerPlayer) {
-            snprintf(theText, sizeof(theText), " ai=%d%d%d%d%d%d%d%d citizens=%g", c->mActive ? 1 : 0,
-                     c->mIsCheating ? 1 : 0, c->mCanAttack ? 1 : 0, c->mCanDefend ? 1 : 0, c->mCanBuild ? 1 : 0,
-                     c->mCanExplore ? 1 : 0, c->mIgnoreOthers ? 1 : 0, c->mCanGather ? 1 : 0,
-                     (double)c->mCitizenPercentage);
-            theLine += theText;
-        }
-        outLines.push_back(theLine);
-    }
-    snprintf(theText, sizeof(theText),
-             "  world max=%ld population=%ld wonders=%ld victory=%d teams=%d cheats=%d improvements=%d carbon=%d "
-             "options=%ld,%ld,%d,%d,%d",
-             (long)gMaxPlayers, (long)gWorld.mPopulationLimit, (long)gWorld.mNumberOfWondersToWin,
-             gWorld.mVictoryEnabled ? 1 : 0, gWorld.mTeamsLocked ? 1 : 0, gWorld.mCheatsEnabled ? 1 : 0,
-             gWorld.mUnitImprovementsAllowed ? 1 : 0, gWorld.mUsingCarbon ? 1 : 0, (long)gWorld.mGameOptions.mUnitLimit,
-             (long)gWorld.mGameOptions.mWondersForVictory, gWorld.mGameOptions.mVictory ? 1 : 0,
-             gWorld.mGameOptions.mLockTeams ? 1 : 0, gWorld.mGameOptions.mCheatCodes ? 1 : 0);
-    outLines.push_back(theText);
-}
-
-// the editor's load thread drained (TEST ONLY): every message posted to it so far handled, as
-// EEDataPreLoading::WaitForMessageQueue (its 0x40a sets mMessageQueueDone); the digests that read what it loads
-// (epochs, tech trees, the load text) run after it, so they do not depend on its timing
-void SyncLoadThread()
-{
-    EESELoadThread* theThread = gUIManager->GetScenarioEditorForm()->GetLoadThread();
-    if (theThread->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true) == kErrorOK) {
-        theThread->mMessageQueueDone->Wait(kTSWaitInfinite);
-        theThread->mMessageQueueDone->Clear();
-    }
-}
-
-// the editor form's own state (TEST ONLY, round 7): its tab and control group, the selection and its cargo count,
-// its flags, the mini map's, help label's and load text's display modes (the load text's text after the load thread
-// is idle), the brush highlight, the saved view and panel rectangles, the edge scroll's edges
-// the terrain tab (TEST ONLY, round 8): its terrains' and colour types' table ids in order, the selected terrain, the
-// type list (each line's name, preview and colour set), the colour list (each set's size and first colour), their
-// selections, the preview bitmap's texture and corner colours, the paint radios, the controls' display modes, the
-// paint area's centring, the brush group's size, highlight and rectangle
-void TerrainDigest(std::vector<std::string>& outLines)
-{
-    EEUIFScenarioEditor* e = gUIManager->GetScenarioEditorForm();
-    EeScreensSeTerrain* t = (EeScreensSeTerrain*)e->GetTab(kEditorTabTerrain);
-    auto Get = [t](uint32_t inWhat, unsigned long inIndex = 0) { return (long)ee_screens_setn_get(t, inWhat, (uint32_t)inIndex); };
-    std::string s = "  terrain selected=" + std::to_string((long)(unsigned long)(uint32_t)Get(EE_SCREENS_SETN_GET_SELECTED)) +
-                    " terrains";
-    for (unsigned long k = 0; k < (unsigned long)Get(EE_SCREENS_SETN_GET_TERRAIN_COUNT); k++)
-        s += " " + std::to_string(Get(EE_SCREENS_SETN_GET_TERRAIN_ID, k));
-    s += " colors";
-    for (unsigned long k = 0; k < (unsigned long)Get(EE_SCREENS_SETN_GET_COLOR_COUNT); k++)
-        s += " " + std::to_string(Get(EE_SCREENS_SETN_GET_COLOR_ID, k));
-    outLines.push_back(s);
-    EESEUITerrainTypeLB* theTypes = static_cast<EESEUITerrainTypeLB*>(e->GetControlById(kSETerrainTerrainType));
-    unsigned long theSelection = 0;
-    bool theSelected = theTypes->GetCurrentSelection(theSelection) == kErrorOK;
-    s = "  types n=" + std::to_string(theTypes->GetLineCount()) + " sel=" +
-        (theSelected ? std::to_string(theSelection) : std::string("none")) + ":";
-    for (unsigned long k = 0; k < theTypes->GetLineCount(); k++) {
-        const EESEUITTData& d = theTypes->GetData(k);
-        s += std::string(" '") + (const char*)d.mName + "'" + (d.mTexture != NULL ? "t" : "-") + std::to_string(d.mColorSet);
-    }
-    outLines.push_back(s);
-    EESEUITerrainColorLB* theColors = static_cast<EESEUITerrainColorLB*>(e->GetControlById(kSETerrainTerrainColorType));
-    theSelected = theColors->GetCurrentSelection(theSelection) == kErrorOK;
-    s = "  colorsets n=" + std::to_string(theColors->GetLineCount()) + " sel=" +
-        (theSelected ? std::to_string(theSelection) : std::string("none")) + ":";
-    for (unsigned long k = 0; k < theColors->GetLineCount(); k++) {
-        const std::vector<GEColor>& d = theColors->GetData(k);
-        s += " " + std::to_string(d.size()) + (d.empty() ? std::string() : "/" + Colour(d[0]));
-    }
-    outLines.push_back(s);
-    UIBitmap* theBitmap = static_cast<UIBitmap*>(e->GetControlById(kSETerrainBitmap));
-    GEColor c0, c1, c2, c3;
-    theBitmap->GetBitmap()->GetColorPerVertex(c0, c1, c2, c3);
-    s = std::string("  preview texture=") + (theBitmap->GetBitmap()->GetTexture(0) != NULL ? "1" : "0") + " corners " +
-        Colour(c0) + " " + Colour(c1) + " " + Colour(c2) + " " + Colour(c3) + " modes";
-    for (unsigned long theID : {(unsigned long)kSETerrainTerrainTypeLabel, (unsigned long)kSETerrainTerrainType,
-                                (unsigned long)kSETerrainTerrainColorTypeLabel, (unsigned long)kSETerrainTerrainColorType,
-                                (unsigned long)kSETerrainBitmap})
-        s += " " + std::to_string(e->GetControlById(theID)->GetDisplayMode());
-    s += std::string(" radios ") +
-         (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainTerrainButton))->GetIsChecked() ? "1" : "0") +
-         (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainMountainsButton))->GetIsChecked() ? "1" : "0");
-    s += std::string(" centered=") + (EEUIShell::Op(e->GetControlById(205), EE_SCREENS_SKOP_PAINT_CENTERED) ? "1" : "0");
-    EEUIFSEBrushGroup* b = e->GetBrushGroup();
-    char theText[160];
-    snprintf(theText, sizeof(theText), " brush size=%lu shown=%d centered=%d rect=%g,%g,%g,%g", b->mBrushSize,
-             b->mIsHighlightShown ? 1 : 0, b->mIsCentered ? 1 : 0, (double)b->mRectangle.GetLeft(),
-             (double)b->mRectangle.GetTop(), (double)b->mRectangle.GetRight(), (double)b->mRectangle.GetBottom());
-    outLines.push_back(s + theText);
-}
-
-// the player tab's two tech lists (TEST ONLY, round 8): each one's techs (ids, in order), lines, selection and the
-// lines CopyData marks
-void TechDigest(std::vector<std::string>& outLines)
-{
-    for (unsigned long theID : {(unsigned long)kSERBUnitTypesTechList, (unsigned long)kSERBUnitTypesOtherTechList}) {
-        UILBString* l = static_cast<UILBString*>(gUIManager->GetScenarioEditorForm()->GetControlById(theID));
-        l->CopyData();
-        long theCount = (long)EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_COUNT);
-        unsigned long theSelection = 0;
-        bool theSelected = l->GetCurrentSelection(theSelection) == kErrorOK;
-        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(theCount) + " lines=" +
-                        std::to_string(l->GetLineCount()) + " sel=" +
-                        (theSelected ? std::to_string(theSelection) : std::string("none")) + " marked";
-        for (long d = 0; d < (long)EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_MARKED_COUNT); d++)
-            s += " " + std::to_string(EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_MARKED_AT, d));
-        s += " ids";
-        for (long k = 0; k < theCount; k++)
-            s += " " + std::to_string(EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_AT, k));
-        outLines.push_back(s);
-        s = "  lines";
-        for (unsigned long k = 0; k < l->GetLineCount(); k++)
-            s += std::string(k == 0 ? " '" : "|'") + (const char*)l->GetData(k) + "'";
-        outLines.push_back(s);
-    }
-}
-
-void FormState(std::vector<std::string>& outLines)
-{
-    SyncLoadThread();
-    EEUIFScenarioEditor* e = gUIManager->GetScenarioEditorForm();
-    char theText[600];
-    std::string theUnits;
-    for (unsigned long i = 0; i < e->GetSelectedUnitCount(); i++) {
-        EEUnit* u = e->GetSelectedUnit(i);
-        theUnits += (i == 0 ? "" : ",") + (u == NULL ? std::string("null") : std::to_string(u->GetUnitID()) +
-                                                                              (u->mIsEditorSelected ? "" : "!"));
-    }
-    // the form's slots (editor_form.rs EE_SCREENS_SEFM_*): the saved view and the panel as float bits
-    auto S = [e](uint32_t inSlot) { return e->GetSlot(inSlot); };
-    auto R = [&S](uint32_t inSlot) {
-        float r[4];
-        for (uint32_t k = 0; k < 4; k++) {
-            uint32_t theBits = (uint32_t)S(inSlot + k);
-            memcpy(&r[k], &theBits, 4);
-        }
-        return GERectangle(r[0], r[1], r[2], r[3]);
-    };
-    GERectangle a = R(EE_SCREENS_SEFM_SAVED_VIEW);
-    GERectangle b = R(EE_SCREENS_SEFM_PANEL);
-    const GERectangle& s = e->GetEdgeScroll()->mEdges;
-    UITextLabel* theLoadText = (UITextLabel*)S(EE_SCREENS_SEFM_LOAD_TEXT);
-    snprintf(theText, sizeof(theText),
-             "  form tab=%ld eg=%ld on=%d cargo=%ld sel=[%s] b=%d%d sw=%d sus=%d hid=%d exit=%d mini=%lu help=%lu "
-             "load=%lu hl=%d view=%g,%g,%g,%g panel=%g,%g,%g,%g edges=%g,%g,%g,%g",
-             (long)S(EE_SCREENS_SEFM_CURRENT_TAB), (long)S(EE_SCREENS_SEFM_ENTITY_GROUP),
-             S(EE_SCREENS_SEFM_ENTITY_GROUP_ENABLED) ? 1 : 0, (long)S(EE_SCREENS_SEFM_NUM_CARGO_UNITS),
-             theUnits.c_str(), S(EE_SCREENS_SEFM_B2B1) ? 1 : 0, S(EE_SCREENS_SEFM_B2B2) ? 1 : 0,
-             S(EE_SCREENS_SEFM_SWITCHING) ? 1 : 0, S(EE_SCREENS_SEFM_SUSPENDED) ? 1 : 0, e->GetIsUIHidden() ? 1 : 0,
-             S(EE_SCREENS_SEFM_EXIT_AFTER_SAVE) ? 1 : 0, ((UIControl*)S(EE_SCREENS_SEFM_MINI_MAP))->GetDisplayMode(),
-             ((UIControl*)S(EE_SCREENS_SEFM_HELP_LABEL))->GetDisplayMode(), theLoadText->GetDisplayMode(),
-             e->GetBrushGroup()->mIsHighlightShown ? 1 : 0, (double)a.GetLeft(), (double)a.GetTop(), (double)a.GetRight(),
-             (double)a.GetBottom(), (double)b.GetLeft(), (double)b.GetTop(), (double)b.GetRight(), (double)b.GetBottom(),
-             (double)s.GetLeft(), (double)s.GetTop(), (double)s.GetRight(), (double)s.GetBottom());
-    std::string theLine = theText;
-    if (theLoadText->GetDisplayMode() == kDisplayModeShown)
-        theLine += LabelText(theLoadText);
-    outLines.push_back(theLine);
-    std::string theGroups = "  groups";
-    for (unsigned long g = 0; g < e->GetControlGroupCount(); g++)
-        theGroups += std::string(" ") + (e->GetEntityGroup(g) != NULL && e->GetEntityGroup(g)->GetIsEnabled() ? "1" : "0");
-    outLines.push_back(theGroups);
-}
-
-// the trigger-only save's report (TEST ONLY, round 7): a fixed set of changes first with `setup` (a trigger off,
-// looping, timed and described; a NOT and an OR; a wrapper past the conditions and one past the effects; a looping
-// trigger's effect naming the class; an effect of no type; an object in an effect's list, one a parent, an area an
-// object's and one an effect's), then the save's result and ScenarioTriggers.txt's lines
-void TriggerReport(bool inSetup, std::vector<std::string>& outLines)
-{
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    if (inSetup && m->mTriggers.size() >= 2 && m->mEffects.size() >= 3 && m->mConditions.size() >= 2) {
-        EESMTrigger* t = m->mTriggers[0];
-        t->SetIsOn(false);
-        t->SetIsLooping(true);
-        t->SetConditionDuration(7);
-        t->SetName(UWideString("Report One"));
-        t->mText = UWideString("A described trigger");
-        t->SetCondition(0, true, 1);
-        t->SetConditionOperator(0, kSMTriggerOperatorOr);
-        t->SetCondition(1, false, (long)m->mConditions.size() + 3);
-        t->SetEffect(0, 4, 1);
-        t->SetEffectOperator(0, kSMTriggerOperatorAnd);
-        t->SetEffect(1, 0, (long)m->mEffects.size() + 2);
-        m->mEffects[1]->mType = kSMEffectObject;
-        m->mEffects[1]->mObjectAction = kSMObjectActionClassName;
-        m->mEffects[2]->mType = kSMEffectNone;
-        EESMTrigger* u = m->mTriggers[1];
-        u->SetIsLooping(true);
-        u->SetEffect(0, 0, 2);
-        if (m->mObjects.size() >= 4 && m->mAreas.size() >= 4) {
-            m->mEffects[1]->mObjects.push_back(1);
-            m->mObjects[3]->mParent = 2;
-            m->mObjects[1]->mArea = 2;
-            m->mEffects[2]->mTaskArea = 3;
-        }
-    }
-    long theResult = EESETestSaveTriggersOnly(gUIManager->GetScenarioEditorForm());
-    outLines.push_back("  result " + std::to_string(theResult));
-    UString thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
-    FILE* theFile = fopen((const char*)thePath, "rb");
-    if (theFile == NULL) {
-        outLines.push_back("  no report");
-        return;
-    }
-    std::string theLine;
-    int c;
-    while ((c = fgetc(theFile)) != EOF) {
-        if (c == '\n') {
-            outLines.push_back("  | " + theLine);
-            theLine.clear();
-        } else if (c == '\r')
-            theLine += "<CR>";
-        else
-            theLine += (char)c;
-    }
-    if (!theLine.empty())
-        outLines.push_back("  | " + theLine + "<no LF>");
-    fclose(theFile);
-}
-
-// the protected virtuals a person's mouse reaches (TEST ONLY): a button's release, a combo box's chosen line
+// the protected virtuals a person's mouse reaches: a button's release, a combo box's chosen line, an edit box's Enter
 struct ButtonAccess : UIButton {
     static void Up(UIButton* inButton) { (inButton->*(&ButtonAccess::ButtonUp))(); }
 };
@@ -1217,825 +198,634 @@ struct ComboAccess : UIComboBox {
 struct EditAccess : UIEditBox {
     static void Enter(UIEditBox* inBox) { (inBox->*(&EditAccess::ProcessEnterKey))(); }
 };
+struct CivListAccess : UILBString {
+    static unsigned long Index(const UILBString* inList) { return (inList->*(&CivListAccess::GetSelectionIndex))(); }
+    static bool Auto(const UILBString* inList) { return (inList->*(&CivListAccess::GetAutoSelect))(); }
+    static bool Copied(const UILBString* inList) { return (inList->*(&CivListAccess::GetCopiedHasSelection))(); }
+    static unsigned long Drawn(const UILBString* inList) { return (inList->*(&CivListAccess::GetDrawCount))(); }
+};
 
-// the trigger tab's open trigger (TEST ONLY): the sub-screen's selection, then the trigger's flags, timer, conditions
-// (not, condition, operator) and effects (delay, effect, operator)
-void TriggerDigest(std::vector<std::string>& outLines)
-{
-    int32_t theSelection = 0;
-    bool theHas = false;
-    ee_screens_sets_sub(gUIManager->GetScenarioEditorForm()->GetTriggerTab(), kSETriggerScreenTrigger,
-                        &theSelection, &theHas);
-    EESMTrigger* t = gWorld.mScenarioManager->GetTrigger(theSelection);
-    char theText[256];
-    snprintf(theText, sizeof(theText), "  trigger selection=%ld has=%d", (long)theSelection, theHas ? 1 : 0);
-    outLines.push_back(theText);
-    if (t == NULL) {
-        outLines.push_back("  trigger none");
-        return;
-    }
-    std::string theConditions, theEffects;
-    for (unsigned long i = 0; i < t->GetConditionCount(); i++) {
-        EESMTConditionWrapper* c = t->GetConditionAt(i);
-        theConditions += (i == 0 ? "" : ",") + std::string(c->mIsNot ? "!" : "") + std::to_string(c->mValue) + "/" +
-                         std::to_string(c->mOperator);
-    }
-    for (unsigned long i = 0; i < t->GetEffectCount(); i++) {
-        EESMTEffectWrapper* e = t->GetEffectAt(i);
-        theEffects += (i == 0 ? "" : ",") + std::to_string(e->mDelay) + ":" + std::to_string(e->mEffectIndex) + "/" +
-                      std::to_string(e->mOperator);
-    }
-    snprintf(theText, sizeof(theText), "  trigger '%s' text='%s' on=%d duration=%lu looping=%d cinematic=%d",
-             (const char*)t->mName, (const char*)t->mText, t->mIsOn ? 1 : 0, t->mConditionDuration,
-             t->mIsLooping ? 1 : 0, t->mIsInCinematic ? 1 : 0);
-    outLines.push_back(std::string(theText) + " conditions=" + theConditions + " effects=" + theEffects);
-}
-
-// the trigger tab's open object (TEST ONLY): the sub-screen's selection, then the scenario object's fields
-void ObjectDigest(std::vector<std::string>& outLines)
-{
-    int32_t theSelection = 0;
-    bool theHas = false;
-    ee_screens_sets_sub(gUIManager->GetScenarioEditorForm()->GetTriggerTab(), kSETriggerScreenObject,
-                        &theSelection, &theHas);
-    EESMObject* o = gWorld.mScenarioManager->GetScenarioObject(theSelection + 1);
-    char theText[512];
-    snprintf(theText, sizeof(theText), "  object selection=%ld has=%d", (long)theSelection, theHas ? 1 : 0);
-    outLines.push_back(theText);
-    if (o == NULL) {
-        outLines.push_back("  object none");
-        return;
-    }
-    std::string theUnits;
-    for (unsigned long i = 0; i < o->GetUnitCount(); i++)
-        theUnits += (i == 0 ? "" : ",") + std::to_string(o->GetUnitAt(i));
-    snprintf(theText, sizeof(theText),
-             "  object '%s' map=%d units=%s count=%lu,%lu dynamic=%d owner=%lu family=%lu class=%lu parent=%lu "
-             "checks=%lu,%lu,%lu,%lu,%lu,%lu area=%lu near=%lu,%lu attribute=%lu,%lu,%lu,%d visible=%lu state=%lu "
-             "selected=%lu",
-             (const char*)o->mName, o->mIsSelectOnMap ? 1 : 0, theUnits.c_str(), o->mMinCount, o->mMaxCount,
-             o->mIsDynamic ? 1 : 0, o->mOwner, o->mFamily, o->mClass, o->mParent, o->mInAreaCheck, o->mNearCheck,
-             o->mHasAttributeCheck, o->mVisibleByCheck, o->mHasStateCheck, o->mSelectedByCheck, o->mArea,
-             o->mNearMode, o->mNearObject, o->mAttribute, o->mAttributeMin, o->mAttributeMax,
-             o->mIsAttributePercent ? 1 : 0, o->mVisibleByPlayer, o->mState, o->mSelectedByPlayer);
-    outLines.push_back(theText);
-}
+char sModeRead[] = "r";
+char sModeWrite[] = "w";
+std::string sText;                          // the last text answered (the UI thread's, while a step runs)
 
 }   // namespace
 
-// One script line's command (its words; the Rust runner's step) -> 0, 1 an unknown command, 2 the step did not finish
-// within a minute; its output lines into outLines
-int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>& theOutput)
+// The step's code (Rust's) run as a step -> false when it did not finish within a minute
+extern "C" bool ee_simcpp_sed_run(void (*inCode)(void*), void* inContext)
 {
-    {
-        auto L = [&](size_t i) { return i < w.size() ? atol(w[i].c_str()) : 0L; };
-        auto F = [&](size_t i) { return i < w.size() ? (float)atof(w[i].c_str()) : 0.0f; };
-        const std::string& c = w[0];
-        std::function<void()> theCode;
-        std::string theProblem;
-        if (c == "tab")
-            theCode = [=] { EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetTabButton(L(1)), EE_SCREENS_SKOP_CHECK_DIRECT); };
-        else if (c == "blank")
-            theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
-        else if (c == "random")
-            theCode = [=] { (new EESEARust(kSEARandomMap, NULL, L(1), L(2)))->Dereference(); };
-        else if (c == "terrain")
-            theCode = [=] {
-                EESEAPaint* a = new EESEAPaintRust(kSEAPaintTerrain, L(1), EETerrainTable::Get(L(1))->mColorType);
-                if (a->SetArea(L(2), L(3), L(4), L(5)))
-                    gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "bulldoze")
-            theCode = [=] {
-                EESEAPaint* a = new EESEAPaintRust(kSEAPaintBulldozer);
-                if (a->SetArea(L(1), L(2), L(3), L(4)))
-                    gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "elevation")
-            theCode = [=] {
-                long theButton = w[1] == "raise" ? kSEElevationRaiseButton
-                                 : w[1] == "hills" ? kSEElevationLowerButton : kSEElevationLevelButton;
-                static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(theButton))->Check();
-                EESEAPaint* a = new EESEAPaintRust(kSEAPaintElevation, (char)L(2));
-                if (a->SetArea(L(3), L(4), L(5), L(6)))
-                    gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "area")
-            theCode = [=] {
-                EESEARust* a = new EESEARust(kSEAPaintArea, NULL, L(1), L(2));
-                ee_screens_sew_area_corner(a->mAction, L(3), L(4));
-                a->Dereference();
-            };
-        else if (c == "place")   // place PLAYER TYPE X Y YAW [ANIMATION]
-            theCode = [=] {
-                EESEARust* a = new EESEARust(kSEAPlaceUnit);
-                GETransformation theTransformation;
-                theTransformation.SetOrientationYPR(F(5), 0.0f, 0.0f);
-                EEMapTile* theTile = gWorld.mMap->RTSMap::GetTile((long)F(3), (long)F(4));
-                theTransformation.SetPosition(F(3), F(4), theTile != NULL ? theTile->mHeight : 0.0f);
-                ee_screens_sew_place_push(a->mAction, L(1), L(2), &theTransformation.mMatrix[0][0], w.size() > 6 ? L(6) : 7);
-                gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "select" || c == "toggle" || c == "add" || c == "clear")
-            theCode = [=] {
-                EESEAMouseClick* a = new EESEAMouseClick;
-                unsigned long theID = c == "clear" ? 0 : UnitRef(w[1]);
-                EEMessage* m = c == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
-                               : c == "toggle" ? static_cast<EEMessage*>(new EEMRecord(kMessageAddUnitToSelectedGroup, {theID}))
-                               : c == "add" ? static_cast<EEMessage*>(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theID}))
-                               : static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
-                a->SetMessage(m);
-                gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "mouseclick")   // mouseclick X Y [ROTATING]: EESEAMouseClick::Execute with the mouse at (X, Y)
-            theCode = [=] {
-                gMouse->mPosition = GE2DPoint(F(1), F(2));
-                EESEAMouseClick* a = new EESEAMouseClick;
-                a->Execute(F(1), F(2), false, 0, L(3) != 0, 0.0f, false);
-                a->Dereference();
-            };
-        else if (c == "lasso")   // lasso select|add|addremove L T R B [TYPE]: EESEALasso with that EEMSelectUnits
-            theCode = [=] {
-                unsigned char theType = w[1] == "select" ? kMessageSelectUnits
-                                        : w[1] == "add" ? kMessageAddUnitsToSelectedGroup
-                                                        : kMessageAddAndRemoveUnitsFromSelectedGroup;
-                EESEALasso* a = new EESEALasso;
-                a->mMessage = EENewSelectUnits(GERectangle(F(2), F(3), F(4), F(5)), L(6), theType);
-                gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "lassorect")   // lassorect L T R B: EESEALasso::SelectInRectangle (deselects, posts)
-            theCode = [=] {
-                EESEALasso* a = new EESEALasso;
-                a->SelectInRectangle(GERectangle(F(1), F(2), F(3), F(4)), 0);
-                a->Dereference();
-            };
-        else if (c == "units")   // every unit's id, type, player and tile (no hit points: they follow the epochs)
-            theCode = [=, &theOutput] {
-                gPhysics->FlushWorld();
-                for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
-                    EEPlayer* thePlayer = gWorld.mPlayers[i];
-                    if (thePlayer == NULL)
-                        continue;
-                    for (EEUnit* u = thePlayer->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
-                        theOutput.push_back("  unit " + std::to_string(u->GetUnitID()) + " type=" +
-                                            std::to_string((long)u->mUnitClass->mUnitType) + " player=" +
-                                            std::to_string(i) + " tile=" + std::to_string((long)u->mTileX) + "," +
-                                            std::to_string((long)u->mTileY));
-                }
-            };
-        else if (c == "selection")   // the editor's selected units' ids
-            theCode = [=, &theOutput] {
-                EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-                std::string theSelection = "  selection";
-                for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
-                    theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
-                theOutput.push_back(theSelection);
-            };
-        else if (c == "rotate")
-            theCode = [=] {
-                if (sRotate == NULL)
-                    sRotate = new EESEARust(kSEARotate);
-                ee_screens_sew_rotate(sRotate->mAction, F(1));
-            };
-        else if (c == "delete")   // delete UNIT | delete PLAYER group|first (the player's selection)
-            theCode = [=] {
-                if (w.size() > 2)
-                    (new EESEARust(kSEADeleteUnit, NULL, -1, L(1), w[2] == "group"))->Dereference();
-                else
-                    (new EESEARust(kSEADeleteUnit, NULL, (int32_t)UnitRef(w[1])))->Dereference();
-            };
-        else if (c == "pickup")   // pickup UNIT: the move's first half (lifted off the map, a ghost at the mouse)
-            theCode = [=] {
-                if (sMove == NULL)
-                    sMove = new EESEARust(kSEAMoveUnit);
-                ee_screens_sew_pick_up(sMove->mAction, (uint32_t)UnitRef(w[1]));
-            };
-        else if (c == "putdown")   // putdown X Y YAW: the picked-up unit's ghosts on the tile, turned, then PutDown
-            theCode = [=] {
-                if (sMove == NULL)
-                    return;
-                gWorld.mGhostUnitsLock->Enter();
-                for (unsigned long k = 0; k < gWorld.GetNumGhostUnits(); k++) {
-                    EEGhostUnit* theGhost = gWorld.mGhostUnits[k];
-                    theGhost->mTransformation = GETransformation();
-                    theGhost->mTransformation.SetOrientationYPR(F(3), 0.0f, 0.0f);
-                    EEMapTile* theTile = gWorld.mMap->RTSMap::GetTile(L(1), L(2));
-                    theGhost->mTransformation.SetPosition(L(1) + 0.5f, L(2) + 0.5f, theTile != NULL ? theTile->mHeight : 0.0f);
-                    theGhost->mTileX = L(1);
-                    theGhost->mTileY = L(2);
-                    theGhost->mCanPlace = true;
-                }
-                gWorld.mGhostUnitsLock->Leave();
-                ee_screens_seun_set_under_mouse(gUIManager->GetScenarioEditorForm()->GetUnitTab(), -1);
-                ee_screens_sew_put_down(sMove->mAction);
-            };
-        else if (c == "wall")   // wall PLAYER TECHNOLOGY X0 Y0 X1 Y1
-            theCode = [=] {
-                EESEARust* a = new EESEARust(kSEAPlaceWall);
-                ee_screens_sew_wall(a->mAction, F(3), F(4), F(5), F(6), L(1), L(2));
-                a->Dereference();
-            };
-        else if (c == "gate")   // gate PLAYER TECHNOLOGY X Y DIRECTION
-            theCode = [=] {
-                EESEARust* a = new EESEARust(kSEAPlaceGate);
-                ee_screens_sew_gate(a->mAction, L(3), L(4), L(1), L(2), L(5));
-                a->Dereference();
-            };
-        else if (c == "quicksave")   // quicksave NAME: the toolbar's quick save (written to data\Scenarios)
-            theCode = [=] {
-                EESEAQuickSaveLoad* theSave = new EESEAQuickSaveLoad(UString(w[1].c_str()));
-                EESEARust* a = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(theSave));
-                gUserInterface->PostAction(a);
-                a->Dereference();
-                theSave->Dereference();
-            };
-        else if (c == "savefile")   // savefile NAME: the body of the quick save NAME
-            theCode = [=, &theOutput] {
-                UString theName = GetSaveTextName(UString((std::string("EEQuickSave") + w[1]).c_str()), true);
-                theOutput.push_back("savefile " + w[1]);
-                FileDigest(theName, theOutput);
-            };
-        else if (c == "elevfile")   // elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT | elevfile -
-            theCode = [=, &theOutput] {
-                EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-                UIComboBox* theList = static_cast<UIComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
-                if (w[1] == "-") {
-                    theList->SetCurrentSelection(0);
-                    return;
-                }
-                WriteElevationFile(w[1], L(2), L(3));
-                EEUIFileComboEntries(theList);
-                long theFound = EEUIFileComboSelect(theList, UWideString(w[1].c_str()));
-                const long theBoxes[4] = {kSEMapWaterCutoff, kSEMapWaterDepth, kSEMapLandHeight, kSEMapLandCutoff};
-                for (int i = 0; i < 4; i++)
-                    static_cast<UIEditBox*>(theEditor->GetControlById(theBoxes[i]))->SetText((unsigned long)L(4 + i));
-                theOutput.push_back("  elevation file " + w[1] + (theFound == 0 ? " listed" : " missing"));
-            };
-        else if (c == "ghost")   // ghost PLAYER TYPE X Y YAW
-            theCode = [=, &theOutput] {
-                EEGhostUnit::Create(GE2DPoint(L(3) + 0.5f, L(4) + 0.5f), L(2), gWorld.mPlayers[L(1)], F(5), false);
-                PutGhosts(L(3), L(4));
-                theOutput.push_back(GhostText());
-            };
-        else if (c == "ghostat")   // ghostat X Y
-            theCode = [=, &theOutput] {
-                PutGhosts(L(1), L(2));
-                theOutput.push_back(GhostText());
-            };
-        else if (c == "placeghost" || c == "drop")   // placeghost PLAYER [UNIT] | drop [UNIT]
-            theCode = [=, &theOutput] {
-                gPhysics->FlushWorld();   // the units placed before are in the world, as a person finds them
-                EeScreensSeUnit* theScreen = gUIManager->GetScenarioEditorForm()->GetUnitTab();
-                size_t theUnitWord = c == "drop" ? 1 : 2;
-                ee_screens_seun_set_under_mouse(theScreen, w.size() > theUnitWord ? (int32_t)UnitRef(w[theUnitWord]) : -1);
-                bool thePlaced = true;
-                if (c == "drop") {
-                    if (sMove != NULL)
-                        ee_screens_sew_put_down(sMove->mAction);
-                } else {
-                    if (sPlace == NULL)
-                        sPlace = new EESEARust(kSEAPlaceUnit);
-                    thePlaced = ee_screens_sew_place_unit(sPlace->mAction, L(1)) != 0;
-                }
-                ee_screens_seun_set_under_mouse(theScreen, -1);
-                gWorld.mGhostUnitsLock->Enter();
-                gWorld.ClearGhostUnits();
-                gWorld.mGhostUnitsLock->Leave();
-                theOutput.push_back(std::string("  placed ") + (thePlaced ? "1" : "0"));
-            };
-        else if (c == "cancelmove")
-            theCode = [=] {
-                if (sMove != NULL)
-                    ee_screens_sew_cancel(sMove->mAction);
-                gWorld.mGhostUnitsLock->Enter();
-                gWorld.ClearGhostUnits();
-                gWorld.mGhostUnitsLock->Leave();
-            };
-        // check ID 0|1: SetChecked, which fires the box's checked or unchecked event. The hide-UI box (0x12) shows
-        // the UI while checked: EESEEHideUI posts the check state as EESEEChangeViewport's flag, which calls
-        // SetGameView(view, flag == false), so checked -> GetIsUIHidden() false (the original's 0x5af4c1, 0x5af55a)
-        else if (c == "check")
-            theCode = [=] {
-                UIControl* theBox = EditorControl(w[1]);
-                static_cast<UICheckBox*>(theBox)->SetChecked(L(2) != 0);
-            };
-        else if (c == "view")
-            theCode = [=, &theOutput] {
-                const GERectangle& r = gViewport.GetViewRectangle();
-                char theText[160];
-                snprintf(theText, sizeof(theText), "  view %g,%g,%g,%g hidden=%d", (double)r.GetLeft(), (double)r.GetTop(),
-                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->GetScenarioEditorForm()->GetIsUIHidden() ? 1 : 0);
-                theOutput.push_back(theText);
-            };
-        else if (c == "click")   // click quicksave
-            theCode = [=] {
-                EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-                UIControl* theButton = theEditor->GetQuickSaveButton();
-                theButton->GetTriggerEvent(kControlTriggerButtonUp)->ProcessEvent(theEditor, theButton);
-            };
-        else if (c == "editorsave")   // the editor's own quick save file (EEQuickSave + the scenario extension)
-            theCode = [=, &theOutput] {
-                theOutput.push_back("editorsave");
-                FileDigest(GetSaveTextName(UString("EEQuickSave") + gScenarioExtension, true), theOutput);
-            };
-        else if (c == "trigger")   // trigger SCREEN: the trigger tab's sub-screen (0 trigger, 1 condition, 2 effect, 3 object, 4 area)
-            theCode = [=] {
-                gUIManager->GetScenarioEditorForm()->TriggerCall(EE_SCREENS_SETS_SHOW_TAB, (uint32_t)(kSETriggerTabTrigger + L(1)));
-            };
-        else if (c == "newentry")   // the open sub-screen's New button
-            theCode = [=] { gUIManager->GetScenarioEditorForm()->TriggerCall(EE_SCREENS_SETS_NEW_ENTRY); };
-        else if (c == "ctype")   // ctype TYPE: the condition's type combo box (types from 2), as a person picks it
-            theCode = [=] {
-                EEUIFScenarioEditor* s = gUIManager->GetScenarioEditorForm();
-                static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_secd_handle(
-                    static_cast<EeScreensSeConditionScreen*>(s->GetTriggerSub(kSETriggerScreenCondition)), 1)))
-                    ->SetCurrentSelection(L(1) - 2);
-                s->TriggerSubOp(kSETriggerScreenCondition, EE_SCREENS_SESC_CHANGE_TYPE);
-            };
-        else if (c == "etype")   // etype TYPE ACTION: the effect's type combo box (types from 1), then its action combo
-            theCode = [=] {
-                EEUIFScenarioEditor* s = gUIManager->GetScenarioEditorForm();
-                static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_sefx_handle(
-                    static_cast<EeScreensSeEffectScreen*>(s->GetTriggerSub(kSETriggerScreenEffect)), 1)))
-                    ->SetCurrentSelection(L(1) - 1);
-                s->TriggerSubOp(kSETriggerScreenEffect, EE_SCREENS_SESC_CHANGE_TYPE);
-                EffectControls()->mComboBoxes[0]->SetCurrentSelection(L(2));
-                s->TriggerSubOp(kSETriggerScreenEffect, EE_SCREENS_SESC_CHANGE_ACTION);
-            };
-        else if (c == "ctl" && w.size() > 2 && (w[2] == "list" || w[2] == "combo"))
-            // ctl e list|combo INDEX LINE: an effect list box's line clicked (its selection, then its button-up
-            // event) or a combo box's line picked (its selection, then its selection-changed event)
-            theCode = [=] {
-                EESETSEffectControls* t = EffectControls();
-                UIControl* theControl;
-                unsigned long theTrigger;
-                if (w[2] == "list") {
-                    t->mListBoxes[L(3)]->ChangeSelectionIndex((unsigned long)L(4), false, false);
-                    theControl = t->mListBoxes[L(3)];
-                    theTrigger = kControlTriggerButtonUp;
-                } else {
-                    t->mComboBoxes[L(3)]->SetCurrentSelection((unsigned long)L(4));
-                    theControl = t->mComboBoxes[L(3)];
-                    theTrigger = kControlTriggerSelectionChanged;
-                }
-                if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
-                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theControl);
-            };
-        else if (c == "ctl")   // ctl c|e check|slide|radio INDEX [VALUE]: a condition (c) or effect (e) control
-            theCode = [=] {
-                UICheckBox* theBox = NULL;
-                UISlider* theSlider = NULL;
-                UIRadioButton* theRadio = NULL;
-                size_t i = (size_t)L(3);
-                if (w[1] == "c") {
-                    EESETSConditionControls* t = ConditionControls();
-                    if (w[2] == "check") theBox = t->mCheckBoxes[i];
-                    else if (w[2] == "slide") theSlider = t->mSlider;
-                    else theRadio = t->mRadioButtons[i];
-                } else {
-                    EESETSEffectControls* t = EffectControls();
-                    if (w[2] == "check") theBox = t->mCheckBoxes[i];
-                    else if (w[2] == "slide") theSlider = t->mSliders[i];
-                    else theRadio = t->mRadioButtons[i];
-                }
-                if (theBox != NULL)
-                    theBox->SetChecked(L(4) != 0);   // fires the box's checked or unchecked event
-                else if (theSlider != NULL) {
-                    // a person's drag: the value set, then the range-changed event the slider fires
-                    theSlider->SetCurrentRangeValue(L(4));
-                    if (UIEvent* theEvent = theSlider->GetTriggerEvent(kControlTriggerRangeChanged))
-                        theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theSlider);
-                } else if (theRadio != NULL)
-                    theRadio->Check();   // fires the checked event unless it was checked
-            };
-        else if (c == "ectl")
-            // ectl edit|edit2|text|edit48 INDEX TEXT | player|scen|ecombo INDEX LINE: an effect control's text typed
-            // ('_' a space) or its line set (the player picker's player, a scenario or effect combo box's line;
-            // no event: the next Store reads them)
-            theCode = [=] {
-                EESETSEffectControls* t = EffectControls();
-                size_t i = (size_t)L(2);
-                std::string theText = w.size() > 3 ? w[3] : std::string();
-                std::replace(theText.begin(), theText.end(), '_', ' ');
-                if (w[1] == "edit" || w[1] == "edit2" || w[1] == "text" || w[1] == "edit48") {
-                    UIEditBox* b = w[1] == "edit" ? t->mEditBoxes[i] : w[1] == "edit2" ? t->mEditBoxes2[i]
-                                   : w[1] == "text"                   ? t->mTextEditBox
-                                                                      : t->mEditBox48;
-                    b->SetText(UWideString(theText.c_str()));
-                } else if (w[1] == "player")
-                    EEUIShell::Op(t->mPlayers[i], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)L(3));
-                else if (w[1] == "scen")
-                    t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
-                else
-                    static_cast<UIComboBox*>(t->mEffectComboBoxes[i])->SetCurrentSelection((unsigned long)L(3));
-            };
-        else if (c == "cctl")
-            // cctl edit|text INDEX TEXT | player|combo|scen INDEX LINE: a condition control's text typed ('_' a
-            // space) or its line set (no event: the next Store reads them)
-            theCode = [=] {
-                EESETSConditionControls* t = ConditionControls();
-                size_t i = (size_t)L(2);
-                std::string theText = w.size() > 3 ? w[3] : std::string();
-                std::replace(theText.begin(), theText.end(), '_', ' ');
-                if (w[1] == "edit" || w[1] == "text")
-                    (w[1] == "edit" ? t->mEditBoxes[i] : t->mTextEditBox)->SetText(UWideString(theText.c_str()));
-                else if (w[1] == "player")
-                    EEUIShell::Op(t->mPlayers[i], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)L(3));
-                else if (w[1] == "scen")
-                    t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
-                else
-                    reinterpret_cast<UIComboBox*>(t->mComboBoxes[i])->SetCurrentSelection((unsigned long)L(3));
-            };
-        else if (c == "crefresh")   // the condition screen's RefreshControls (a condition combo box's change)
-            theCode = [=] {
-                gUIManager->GetScenarioEditorForm()->TriggerSubSlot(kSETriggerScreenCondition, EE_SCREENS_SETS_SCREEN_REFRESH);
-            };
-        else if (c == "conditionstate")   // every condition: its numbers (EeScenarioConditionFields' words) and texts
-            theCode = [=, &theOutput] {
-                EEScenarioManager* m = gWorld.mScenarioManager;
-                for (unsigned long i = 0; i < m->mConditions.size(); i++) {
-                    EESMCondition* e = m->mConditions[i];
-                    const EeScenarioConditionFields& f = *e;
-                    unsigned char theBytes[sizeof(EeScenarioConditionFields)];
-                    memcpy(theBytes, &f, sizeof(theBytes));
-                    std::string s = "  condition " + Num(i) + " '" + (const char*)e->mName + "' n";
-                    char theWord[16];
-                    const size_t theWords = offsetof(EeScenarioConditionFields, mIsTriggerOn);   // then six bools
-                    for (size_t k = 0; k + 4 <= theWords; k += 4) {
-                        uint32_t v;
-                        memcpy(&v, theBytes + k, 4);
-                        snprintf(theWord, sizeof(theWord), " %lx", (unsigned long)v);
-                        s += theWord;
-                    }
-                    s += " b";
-                    for (size_t k = theWords; k < theWords + 6; k++)
-                        s += theBytes[k] ? "1" : "0";
-                    s += std::string(" text '") + (const char*)e->mText + "' chat '" + (const char*)e->mChatText + "'";
-                    theOutput.push_back(s);
-                }
-            };
-        else if (c == "areaset" || c == "areapoint")   // areaset AREA L T R B | areapoint AREA X Y: a scenario area's
-            // rectangle or anchor set (EESMArea::SetRectangle, SetAnchor), as the area screen's Store sets them
-            theCode = [=] {
-                EESMArea* a = gWorld.mScenarioManager->GetArea((unsigned long)L(1));
-                if (c == "areaset")
-                    a->SetRectangle(GERectangle(F(2), F(3), F(4), F(5)));
-                else
-                    a->SetAnchor(U2DPoint<long>(L(2), L(3)));
-            };
-        else if (c == "areastate")   // the area screen and the scenario's areas (AreaDigest)
-            theCode = [=, &theOutput] { AreaDigest(theOutput); };
-        else if (c == "align")   // align c|e: the condition's or effect's labels' text alignments
-            theCode = [=, &theOutput] {
-                std::vector<UITextLabel*> theLabels;
-                if (w[1] == "c")
-                    theLabels.assign(ConditionControls()->mLabels, ConditionControls()->mLabels + 5);
-                else
-                    theLabels.assign(EffectControls()->mLabels, EffectControls()->mLabels + 13);
-                std::string theText = "  align";
-                for (UITextLabel* l : theLabels)
-                    theText += " " + (gSeetAlignments.count(l) ? std::to_string(gSeetAlignments[l]) : std::string("-"));
-                theOutput.push_back(theText);
-            };
-        else if (c == "media")   // the scenario's media texts (hints, aftermath, history, instructions) and export file
-            theCode = [=, &theOutput] {
-                EEScenarioManager* m = gWorld.mScenarioManager;
-                const char* theNames[4] = {"hints", "aftermath", "history", "instructions"};
-                for (unsigned long k = 0; k < 4; k++) {
-                    std::string theText = (const char*)m->mMediaStrings.GetSection(k);
-                    size_t n = (std::min)(theText.size(), (size_t)60);
-                    while (n > 0 && n < theText.size() && (theText[n] & 0xC0) == 0x80)   // a whole character
-                        n--;
-                    std::string theHead = theText.substr(0, n);
-                    std::replace(theHead.begin(), theHead.end(), '\n', '|');
-                    theOutput.push_back("  " + std::string(theNames[k]) + " " + std::to_string(theText.size()) + " '" +
-                                        theHead + "'");
-                }
-                theOutput.push_back(std::string("  export '") + (const char*)m->mExportFileName + "'");
-            };
-        else if (c == "seed")   // the user interface's random seed (the map tab's CreateMap draws or reads it)
-            theCode = [=, &theOutput] { theOutput.push_back("  seed " + std::to_string(gUserInterface->mRandomSeed)); };
-        else if (c == "erefresh")   // the effect screen's RefreshControls (an effect combo box's change: UpdateName)
-            theCode = [=] {
-                gUIManager->GetScenarioEditorForm()->TriggerSubSlot(kSETriggerScreenEffect, EE_SCREENS_SETS_SCREEN_REFRESH);
-            };
-        else if (c == "effectstate")   // every effect: its numbers (EeScenarioEffectFields' words), texts and objects
-            theCode = [=, &theOutput] {
-                EEScenarioManager* m = gWorld.mScenarioManager;
-                for (unsigned long i = 0; i < m->mEffects.size(); i++) {
-                    EESMEffect* e = m->mEffects[i];
-                    const EeScenarioEffectFields& f = *e;
-                    unsigned char theBytes[sizeof(EeScenarioEffectFields)];
-                    memcpy(theBytes, &f, sizeof(theBytes));
-                    std::string s = "  effect " + Num(i) + " '" + (const char*)e->mName + "' n";
-                    char theWord[16];
-                    for (size_t k = 0; k + 4 <= sizeof(theBytes); k += 4) {
-                        uint32_t v;
-                        memcpy(&v, theBytes + k, 4);
-                        snprintf(theWord, sizeof(theWord), " %lx", (unsigned long)v);
-                        s += theWord;
-                    }
-                    s += std::string(" new '") + (const char*)e->mNewName + "' msg '" + (const char*)e->mMessage +
-                         "' file '" + (const char*)e->mFileName + "' desc '" + (const char*)e->mDescription + "' text '" +
-                         (const char*)e->mText + "' objects";
-                    for (unsigned long o : e->mObjects)
-                        s += " " + Num(o);
-                    theOutput.push_back(s);
-                }
-            };
-        else if (c == "ui")   // ui c|e: the condition's or effect's controls (display modes, labels, combos, sliders)
-            theCode = [=, &theOutput] { ControlsDigest(w[1] == "c", theOutput); };
-        else if (c == "combo" || c == "slider" || c == "radio")   // combo|slider ID VALUE | radio ID: an editor control
-            // by id: a combo box's line picked and its selection-changed event processed, a slider moved and its
-            // range-changed event processed, a radio checked (it fires unless it was checked)
-            theCode = [=] {
-                UIControl* theControl = EditorControl(w[1]);
-                if (c == "radio") {
-                    static_cast<UIRadioButton*>(theControl)->Check();
-                    return;
-                }
-                unsigned long theTrigger;
-                if (c == "combo") {
-                    static_cast<UIComboBox*>(theControl)->SetCurrentSelection((unsigned long)L(2));
-                    theTrigger = kControlTriggerSelectionChanged;
-                } else {
-                    static_cast<UISlider*>(theControl)->SetCurrentRangeValue(L(2));
-                    theTrigger = kControlTriggerRangeChanged;
-                }
-                if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
-                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theControl);
-            };
-        else if (c == "controls")   // controls ID...: editor controls' display modes (and a label's first line)
-            theCode = [=, &theOutput] {
-                for (size_t i = 1; i < w.size(); i++) {
-                    UIControl* theControl = EditorControl(w[i]);
-                    std::string theText = "  " + w[i] + " mode=" + std::to_string(theControl->GetDisplayMode());
-                    if (theControl->GetType() == kControlTypeTextLabel) {
-                        UITextLabel* theLabel = static_cast<UITextLabel*>(theControl);
-                        theText += std::string(" '") + (theLabel->GetLineCount() > 0 ? (const char*)theLabel->GetText(0) : "") + "'";
-                    }
-                    if (theControl->GetType() == kControlTypeTriStateCheckBox)
-                        theText += " state=" + std::to_string(static_cast<UITriStateCheckBox*>(theControl)->GetCheckState());
-                    theOutput.push_back(theText);
-                }
-            };
-        else if (c == "unitlist")   // the unit tab's unit list (0x3f1): its line count and first lines
-            theCode = [=, &theOutput] {
-                UILBString* theList = static_cast<UILBString*>(EditorControl("0x3f1"));
-                std::string theText = "  units " + std::to_string(theList->GetLineCount()) + ":";
-                for (unsigned long k = 0; k < theList->GetLineCount() && k < 6; k++)
-                    theText += std::string(" '") + (const char*)theList->GetData(k) + "'";
-                theOutput.push_back(theText);
-            };
-        else if (c == "unittab")   // the unit tab's placement state, its list state, rotation, cargo and ghosts
-            theCode = [=, &theOutput] {
-                EeScreensSeUnit* s = gUIManager->GetScenarioEditorForm()->GetUnitTab();
-                char theText[160];
-                snprintf(theText, sizeof theText, "  unit tab flags=%ld under=%ld list=%ld/%ld/%ld angle=%.4f ghosts=%lu",
-                         (long)ee_screens_seun_get(s, EE_SCREENS_SEUN_GET_FLAGS),
-                         (long)ee_screens_seun_get(s, EE_SCREENS_SEUN_GET_UNDER_MOUSE),
-                         (long)ee_screens_seun_get(s, EE_SCREENS_SEUN_GET_LISTED_MODE),
-                         (long)ee_screens_seun_get(s, EE_SCREENS_SEUN_GET_LISTED_SORT),
-                         (long)ee_screens_seun_get(s, EE_SCREENS_SEUN_GET_LISTED_LAYER), (double)ee_screens_seun_angle(s),
-                         (unsigned long)gWorld.GetNumGhostUnits());
-                std::string theLine = theText;
-                UILBString* theCargo = static_cast<UILBString*>(EditorControl("0x3f2"));
-                theLine += " cargo " + std::to_string(theCargo->GetLineCount()) + ":";
-                for (unsigned long k = 0; k < theCargo->GetLineCount(); k++)
-                    theLine += std::string(" '") + (const char*)theCargo->GetData(k) + "'";
-                unsigned long theSelected;
-                if (theCargo->GetLineCount() > 0 && theCargo->GetCurrentSelection(theSelected) == kErrorOK)
-                    theLine += " selected " + std::to_string(theSelected);
-                theOutput.push_back(theLine);
-            };
-        else if (c == "unitpick")   // unitpick NAME: the unit list's first line starting with NAME ('_' a space) picked
-            theCode = [=, &theOutput] {
-                UILBString* theList = static_cast<UILBString*>(EditorControl("0x3f1"));
-                std::string theName = w[1];
-                std::replace(theName.begin(), theName.end(), '_', ' ');
-                for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
-                    std::string theLine = (const char*)theList->GetData(k);
-                    if (theLine.compare(0, theName.size(), theName) != 0)
-                        continue;
-                    theList->ChangeSelectionIndex(k, true, false);
-                    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_SELECT);   // as the list's ButtonUp
-                    theOutput.push_back("  picked " + std::to_string(k) + " '" + theLine + "'");
-                    return;
-                }
-                theOutput.push_back("  no line " + theName);
-            };
-        else if (c == "unitbuild")   // unitbuild wall X0 Y0 X1 Y1 | gate X Y DIRECTION | cancel: the tab's build tools
-            theCode = [=] {
-                EESEUnit* s = (EESEUnit*)ee_screens_segr_parts(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits));
-                long theFlags = ee_screens_seun_get(gUIManager->GetScenarioEditorForm()->GetUnitTab(), EE_SCREENS_SEUN_GET_FLAGS);
-                if (w[1] == "wall") {
-                    s->mBuildWall.mStart.SetXY(F(2), F(3));
-                    s->mBuildWall.mEnd.SetXY(F(4), F(5));
-                    s->mBuildWall.Build();   // PlaceWall
-                } else if (w[1] == "gate") {
-                    s->mBuildGate.mTileX = L(2);
-                    s->mBuildGate.mTileY = L(3);
-                    s->mBuildGate.mDirection = L(4);
-                    s->mBuildGate.Build(GE2DPoint(F(2), F(3)), L(4));   // PlaceGate
-                } else {
-                    if (theFlags & 2)
-                        s->mBuildWall.Cancel();   // EndWall
-                    if (ee_screens_seun_get(gUIManager->GetScenarioEditorForm()->GetUnitTab(), EE_SCREENS_SEUN_GET_FLAGS) & 4)
-                        s->mBuildGate.Cancel();   // EndGate
-                }
-            };
-        else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
-            theCode = [=, &theOutput] {
-                EeScreensSePlayers* theScreen = gUIManager->GetScenarioEditorForm()->GetPlayerTab();
-                UIComboBox* theStart =
-                    static_cast<UIComboBox*>(ee_screens_sepl_control(theScreen, (uint32_t)L(1), EE_SCREENS_SEPL_ROW_START_EPOCH));
-                UIComboBox* theEndBox =
-                    static_cast<UIComboBox*>(ee_screens_sepl_control(theScreen, (uint32_t)L(1), EE_SCREENS_SEPL_ROW_END_EPOCH));
-                theEndBox->SetCurrentSelection((unsigned long)L(3));
-                theStart->SetCurrentSelection((unsigned long)L(2));
-                if (UIEvent* theEvent = theStart->GetTriggerEvent(kControlTriggerSelectionChanged))
-                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theStart);
-                unsigned long theEnd = 0;
-                bool theSelected = theEndBox->GetCurrentSelection(theEnd) == kErrorOK;
-                theOutput.push_back("  end epochs " + std::to_string(theEndBox->GetListBox()->GetLineCount()) +
-                                    " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
-            };
-        else if (c == "form")   // form FIRST LAST [GROUP]: the editor form's controls by index (FormDigest)
-            theCode = [=, &theOutput] {
-                FormDigest((unsigned long)L(1), (unsigned long)L(2), w.size() > 3 ? L(3) : -1L, theOutput);
-            };
-        else if (c == "players")   // the players and the world as the player tab writes them (PlayersDigest)
-            theCode = [=, &theOutput] { PlayersDigest(theOutput); };
-        else if (c == "edit")   // edit ID TEXT: an editor edit box's text set ("-" for none)
-            theCode = [=] {
-                static_cast<UIEditBox*>(EditorControl(w[1]))->SetText(UWideString(w[2] == "-" ? "" : w[2].c_str()));
-            };
-        else if (c == "buttonup")   // buttonup ID: an editor button released (its ButtonUp, as by the mouse)
-            theCode = [=] { ButtonAccess::Up(static_cast<UIButton*>(EditorControl(w[1]))); };
-        else if (c == "changesel")   // changesel ID LINE: a combo box's line chosen (its ChangeSelection)
-            theCode = [=] {
-                UIComboBox* theBox = static_cast<UIComboBox*>(EditorControl(w[1]));
-                theBox->SetCurrentSelection((unsigned long)L(2));
-                ComboAccess::Change(theBox);
-            };
-        else if (c == "enter")   // enter ID: an editor edit box's Enter key (its ProcessEnterKey)
-            theCode = [=] { EditAccess::Enter(static_cast<UIEditBox*>(EditorControl(w[1]))); };
-        else if (c == "tscreen")   // tscreen select N|new|dup|delete|up|down|sort|name: the trigger tab's list buttons
-            theCode = [=] {
-                EEUIFScenarioEditor* s = gUIManager->GetScenarioEditorForm();
-                if (w[1] == "select") {
-                    static_cast<UILBString*>(ee_screens_sets_control(s->GetTriggerTab(), EE_SCREENS_SETS_LIST, 0))
-                        ->ChangeSelectionIndex((unsigned long)L(2), false, false);
-                    s->TriggerCall(EE_SCREENS_SETS_SELECT_ENTRY);
-                } else if (w[1] == "new") s->TriggerCall(EE_SCREENS_SETS_NEW_ENTRY);
-                else if (w[1] == "dup") s->TriggerCall(EE_SCREENS_SETS_DUPLICATE_ENTRY);
-                else if (w[1] == "delete") s->TriggerCall(EE_SCREENS_SETS_DELETE_ENTRY);
-                else if (w[1] == "up") s->TriggerCall(EE_SCREENS_SETS_INC_PRIORITY);
-                else if (w[1] == "down") s->TriggerCall(EE_SCREENS_SETS_DEC_PRIORITY);
-                else if (w[1] == "sort") s->TriggerCall(EE_SCREENS_SETS_ALPHA_SORT);
-                else s->TriggerCall(EE_SCREENS_SETS_SELECT_NAME);
-            };
-        else if (c == "tsclick")   // tsclick select|add UNIT: the object screen's click (EESETSAMouseClick) posted
-            theCode = [=] {
-                EESETSAMouseClick* a = new EESETSAMouseClick;
-                unsigned long theID = UnitRef(w[2]);
-                a->SetMessage(w[1] == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
-                                               : static_cast<EEMessage*>(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theID})));
-                gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "fire")   // fire ID: a control's button-up event processed (as its release fires it)
-            theCode = [=] {
-                UIControl* theControl = EditorControl(w[1]);
-                if (UIEvent* theEvent = theControl->GetTriggerEvent(kControlTriggerButtonUp))
-                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theControl);
-            };
-        else if (c == "tscreenstate")   // the trigger tab's list, open sub-screen and the sub-screens' selections
-            theCode = [=, &theOutput] {
-                EeScreensSeTriggerTab* s = gUIManager->GetScenarioEditorForm()->GetTriggerTab();
-                UILBString* theList = static_cast<UILBString*>(ee_screens_sets_control(s, EE_SCREENS_SETS_LIST, 0));
-                std::string theLine = "  tscreen screen=" +
-                                      std::to_string((long)(intptr_t)ee_screens_sets_control(s, EE_SCREENS_SETS_CURRENT_SCREEN, 0)) +
-                                      " storing=" + std::to_string(gB4C3220 ? 1 : 0) + " list " +
-                                      std::to_string(theList->GetLineCount()) + ":";
-                for (unsigned long k = 0; k < theList->GetLineCount() && k < 6; k++)
-                    theLine += std::string(" '") + (const char*)theList->GetData(k) + "'";
-                unsigned long theSelected;
-                if (theList->GetCurrentSelection(theSelected) == kErrorOK)
-                    theLine += " selected " + std::to_string(theSelected);
-                else
-                    theLine += " none";
-                for (long k = 0; k < 5; k++) {
-                    int32_t theSelection = 0;
-                    bool theHas = false;
-                    ee_screens_sets_sub(s, (uint32_t)k, &theSelection, &theHas);
-                    theLine += " s" + std::to_string(k) + "=" + std::to_string((long)theSelection) + (theHas ? "+" : "-");
-                }
-                theOutput.push_back(theLine);
-            };
-        else if (c == "triggerstate")   // the trigger tab's open trigger (TriggerDigest)
-            theCode = [=, &theOutput] { TriggerDigest(theOutput); };
-        else if (c == "object")   // the trigger tab's open scenario object (ObjectDigest)
-            theCode = [=, &theOutput] { ObjectDigest(theOutput); };
-        else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
-            theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
-        else if (c == "formstate")   // round 7: the editor form's own state (FormState)
-            theCode = [=, &theOutput] { FormState(theOutput); };
-        else if (c == "loadtext")   // loadtext TEXT|-: the form's SetLoadText ('_' a space)
-            theCode = [=] {
-                std::string theText = w[1] == "-" ? std::string() : w[1];
-                std::replace(theText.begin(), theText.end(), '_', ' ');
-                gUIManager->GetScenarioEditorForm()->SetLoadText(UWideString(theText.c_str()));
-            };
-        else if (c == "fsel")   // fsel add|remove UNIT | fsel first | fsel clear: the form's selection members
-            theCode = [=] {
-                EEUIFScenarioEditor* e = gUIManager->GetScenarioEditorForm();
-                if (w[1] == "first")
-                    e->DeselectFirstUnit();
-                else if (w[1] == "clear")
-                    e->ClearSelection();
-                else {
-                    EEUnit* u = static_cast<EEUnit*>(RTSResolveUnitID((uint32_t)UnitRef(w[2])));
-                    if (u != NULL && w[1] == "add")
-                        e->SelectUnit(u);
-                    else if (u != NULL)
-                        e->DeselectUnit(u);
-                }
-            };
-        else if (c == "formcall")   // formcall store|resume: the form's RefreshCurrentGroup / ResumeCurrentGroup
-            theCode = [=] {
-                if (w[1] == "store")
-                    gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup();
-                else
-                    gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
-            };
-        else if (c == "gameview")   // gameview L T R B HIDDEN: the form's SetGameView
-            theCode = [=] {
-                gUIManager->GetScenarioEditorForm()->SetGameView(GERectangle(F(1), F(2), F(3), F(4)), L(5) != 0);
-            };
-        else if (c == "trigreport")   // trigreport [setup]: the trigger-only save's report (TriggerReport)
-            theCode = [=, &theOutput] { TriggerReport(w.size() > 1 && w[1] == "setup", theOutput); };
-        else if (c == "terrainstate")   // round 8: the terrain tab (TerrainDigest)
-            theCode = [=, &theOutput] { TerrainDigest(theOutput); };
-        else if (c == "terrainpick" || c == "terraincolor")   // terrainpick|terraincolor LINE: a list's line clicked
-            theCode = [=] {
-                UIControl* theList = gUIManager->GetScenarioEditorForm()->GetControlById(
-                    c == "terrainpick" ? kSETerrainTerrainType : kSETerrainTerrainColorType);
-                if (c == "terrainpick")
-                    static_cast<EESEUITerrainTypeLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
-                else
-                    static_cast<EESEUITerrainColorLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
-            };
-        else if (c == "terrainpaint")   // terrainpaint L T R B: the paint area's CreatePaintAction over an area, posted
-            theCode = [=, &theOutput] {
-                UIControl* thePaint = gUIManager->GetScenarioEditorForm()->GetControlById(205);
-                EESEAPaint* a = reinterpret_cast<EESEAPaint*>(EEUIShell::Op(thePaint, EE_SCREENS_SKOP_PAINT_CREATE));
-                theOutput.push_back(std::string("  paint ") + (a != NULL ? "action" : "none") +
-                                    " centered=" + (EEUIShell::Op(thePaint, EE_SCREENS_SKOP_PAINT_CENTERED) ? "1" : "0"));
-                if (a == NULL)
-                    return;
-                if (a->SetArea(L(1), L(2), L(3), L(4)))
-                    gUserInterface->PostAction(a);
-                a->Dereference();
-            };
-        else if (c == "terrainmouse")   // terrainmouse X Y | terrainmouse update: the tab's MouseMove or Update
-            theCode = [=] {
-                EeScreensSeGroup* t = gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabTerrain);
-                if (w[1] == "update")
-                    ee_screens_segr_call(t, EE_SCREENS_SEFM_GROUP_UPDATE, 0.0f, 0.0f, NULL);
-                else
-                    ee_screens_segr_call(t, EE_SCREENS_SEFM_GROUP_MOUSE_MOVE, F(1), F(2), NULL);
-            };
-        else if (c == "brushhl")   // brushhl X Y CENTERED: the brush group's SetHighlight
-            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
-        else if (c == "techfill")   // techfill ID FIRST LAST: a tech list's Fill (EESEATechTree's move between them)
-            theCode = [=] { EEUIShell::Op(EditorControl(w[1]), EE_SCREENS_SKOP_TECH_FILL, L(2), L(3)); };
-        else if (c == "techstate")   // the two tech lists (TechDigest)
-            theCode = [=, &theOutput] { TechDigest(theOutput); };
-        else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
-            theCode = [=, &theOutput] {
-                if (!EESimCivBuilderStep(w, theOutput))
-                    theOutput.push_back("  cb: unknown " + (w.size() > 1 ? w[1] : std::string()));
-            };
-        else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
-            theCode = [=, &theOutput] {
-                gPhysics->FlushWorld();
-                Digest(w.size() > 1 ? w[1] : std::string(), theOutput);
-            };
-        else
-            return 1;
-        // the load thread drained before the step is queued: its texts reach the UI thread as actions
-        // (EESEAChangeLoadText, one object posted again with each text), so a sync inside the step (FormState's) leaves
-        // the ones posted meanwhile queued behind the step, and the load text read was whichever ran first (the
-        // editor gate's flake under load); drained here, every one runs before the step
-        if (c == "form" || c == "players" || c == "unittab" || c == "formstate")
-            SyncLoadThread();
-        return RunStep(theCode) ? 0 : 2;
+    return RunStep([inCode, inContext] { inCode(inContext); });
+}
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define ED ((EEUIFScenarioEditor*)p)
+#define CTL ((UIControl*)p)
+#define LBS static_cast<UILBString*>(CTL)
+#define CMB static_cast<UIComboBox*>(CTL)
+#define TTL static_cast<EESEUITerrainTypeLB*>(CTL)
+#define TCL static_cast<EESEUITerrainColorLB*>(CTL)
+#define ACT ((EEAction*)p)
+#define RUST static_cast<EEARust*>(ACT)
+#define SM ((EEScenarioManager*)p)
+#define TR ((EESMTrigger*)p)
+#define EF ((EESMEffect*)p)
+#define CO ((EESMCondition*)p)
+#define AR ((EESMArea*)p)
+#define PL ((EEPlayer*)p)
+#define CP ((EEComputerPlayer*)p)
+#define UN ((EEUnit*)p)
+#define GH ((EEGhostUnit*)p)
+#define SP ((FSFileSpec*)p)
+#define MF ((FSMemoryFile*)p)
+#define CH ((std::vector<FSPersistent*>*)p)
+#define NM ((std::vector<UWideString>*)p)
+#define SU ((EESEUnit*)p)
+#define UF ((UIForm*)p)
+#define CL static_cast<EECBUIListBox*>(CTL)
+#define CV ((EECivilization*)p)
+#define UPG ((std::vector<EECivUpgrade>*)p)
+
+// The steps' C++ calls and members (sed_host.rs EeSimDriverSed): p the object, a and f the arguments, s a text
+extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t* a, const float* f, const char* s)
+{
+    typedef EeSimDriverSed O;
+    switch (inOp) {
+    case O::Editor: return P64(gUIManager->GetScenarioEditorForm());
+    case O::FormSlot: return (int64_t)ED->GetSlot((uint32_t)a[0]);
+    case O::ControlById: return P64(ED->GetControlById((unsigned long)a[0]));
+    case O::FormControl: return P64(ED->GetControl((unsigned long)a[0]));
+    case O::FormControlCount: return ED->GetControlCount();
+    case O::FormGroupCount: return ED->GetControlGroupCount();
+    case O::FormGroup: return P64(ED->GetEntityGroup((unsigned long)a[0]));
+    case O::SelectedCount: return ED->GetSelectedUnitCount();
+    case O::SelectedUnit: return P64(ED->GetSelectedUnit((unsigned long)a[0]));
+    case O::SelectedUnitId: return ED->GetSelectedUnit((unsigned long)a[0])->GetUnitID();
+    case O::FormSetLoadText: ED->SetLoadText(UWideString(s));
+        break;
+    case O::FormDeselectFirst: ED->DeselectFirstUnit();
+        break;
+    case O::FormClearSelection: ED->ClearSelection();
+        break;
+    case O::FormSelectUnit: ED->SelectUnit((EEUnit*)a[0]);
+        break;
+    case O::FormDeselectUnit: ED->DeselectUnit((EEUnit*)a[0]);
+        break;
+    case O::FormRefreshGroup: ED->RefreshCurrentGroup();
+        break;
+    case O::FormResumeGroup: ED->ResumeCurrentGroup();
+        break;
+    case O::FormSetGameView: ED->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), a[0] != 0);
+        break;
+    case O::SaveTriggersOnly: return EESETestSaveTriggersOnly(static_cast<UIForm*>(ED));
+    case O::TriggerStoring: return gB4C3220;
+    case O::GroupIsEnabled: return ((UIEntityGroup*)p)->GetIsEnabled();
+    case O::GroupEntityCount: return ((UIEntityGroup*)p)->GetEntityCount();
+    case O::GroupEntity: return P64(static_cast<UIControl*>(((UIEntityGroup*)p)->GetEntity((unsigned long)a[0])));
+    // the controls
+    case O::ShellOp: return EEUIShell::Op(CTL, (uint32_t)a[0], a[1], a[2]);
+    case O::ShellOf: return P64(EEUIShell::Of(CTL));
+    case O::DisplayMode: return CTL->GetDisplayMode();
+    case O::ControlId: return CTL->GetId();
+    case O::ControlIndex: return CTL->GetIndex();
+    case O::ControlType: return CTL->GetType();
+    case O::ControlRect: return P64(&CTL->GetRectangle());
+    case O::ControlBgColor: CTL->GetBgColor(*(GEColor*)a[0]);
+        break;
+    case O::ControlBorder: return CTL->GetBorderThickness();
+    case O::ControlStringTableId: return CTL->GetStringTableID();
+    case O::TriggerEvent: return P64(CTL->GetTriggerEvent((unsigned long)a[0]));
+    case O::ProcessEvent: return ((UIEvent*)p)->ProcessEvent(gUIManager->GetScenarioEditorForm(), (UIControl*)a[0]);
+    case O::IsRadio: return dynamic_cast<UIRadioButton*>(CTL) != NULL;
+    case O::IsCheck: return dynamic_cast<UICheckBox*>(CTL) != NULL;
+    case O::IsButton: return dynamic_cast<UIButton*>(CTL) != NULL;
+    case O::IsCombo: return dynamic_cast<UIComboBox*>(CTL) != NULL;
+    case O::IsList: return dynamic_cast<UILBString*>(CTL) != NULL;
+    case O::IsEdit: return dynamic_cast<UIEditBox*>(CTL) != NULL;
+    case O::IsSlider: return dynamic_cast<UISlider*>(CTL) != NULL;
+    case O::IsTextLabel: return dynamic_cast<UITextLabel*>(CTL) != NULL;
+    case O::RadioIsChecked: return static_cast<UIRadioButton*>(CTL)->GetIsChecked();
+    case O::RadioTextLabel: return P64(static_cast<UIRadioButton*>(CTL)->GetTextLabel());
+    case O::RadioCheck: static_cast<UIRadioButton*>(CTL)->Check();
+        break;
+    case O::CheckIsChecked: return static_cast<UICheckBox*>(CTL)->GetIsChecked();
+    case O::CheckTextLabel: return P64(static_cast<UICheckBox*>(CTL)->GetTextLabel());
+    case O::CheckSetChecked: static_cast<UICheckBox*>(CTL)->SetChecked(a[0] != 0);
+        break;
+    case O::TriStateCheckState: return static_cast<UITriStateCheckBox*>(CTL)->GetCheckState();
+    case O::ButtonGeText: return P64(static_cast<UIButton*>(CTL)->GetGEText());
+    case O::ButtonUp: ButtonAccess::Up(static_cast<UIButton*>(CTL));
+        break;
+    case O::ComboList: return P64(CMB->GetListBox());
+    case O::ComboSelection: return CMB->GetCurrentSelection(*(unsigned long*)a[0]);
+    case O::ComboSetSelection: CMB->SetCurrentSelection((unsigned long)a[0]);
+        break;
+    case O::ComboTextBoxType: return CMB->GetTextBoxType();
+    case O::ComboTextLabel: return P64(CMB->GetTextLabel());
+    case O::ComboChange: ComboAccess::Change(CMB);
+        break;
+    case O::FileComboSelect: return EEUIFileComboSelect(CTL, UWideString(s));
+    case O::ListLineCount: return LBS->GetLineCount();
+    case O::ListSelection: return LBS->GetCurrentSelection(*(unsigned long*)a[0]);
+    case O::ListChangeSelection: LBS->ChangeSelectionIndex((unsigned long)a[0], a[1] != 0, a[2] != 0);
+        break;
+    case O::ListCopyData: LBS->CopyData();
+        break;
+    case O::ListGeText: return P64(LBS->GetGEText());
+    case O::EditGeText: return P64(static_cast<UIEditBox*>(CTL)->GetGEText());
+    case O::EditLineCount: return static_cast<UIEditBox*>(CTL)->GetLineCount();
+    case O::EditSetText: static_cast<UIEditBox*>(CTL)->SetText(UWideString(s));
+        break;
+    case O::EditSetNumber: static_cast<UIEditBox*>(CTL)->SetText((unsigned long)a[0]);
+        break;
+    case O::EditEnter: EditAccess::Enter(static_cast<UIEditBox*>(CTL));
+        break;
+    case O::SliderValue: return static_cast<UISlider*>(CTL)->GetCurrentRangeValue();
+    case O::SliderMax: return static_cast<UISlider*>(CTL)->GetMaxRange();
+    case O::SliderSetValue: static_cast<UISlider*>(CTL)->SetCurrentRangeValue((long)a[0]);
+        break;
+    case O::LabelGeText: return P64(static_cast<UITextLabel*>(CTL)->GetGEText());
+    case O::LabelLineCount: return static_cast<UITextLabel*>(CTL)->GetLineCount();
+    case O::TextFgColor: return P64(&((GEText*)p)->GetFgColor());
+    case O::TextIsTransparent: return ((GEText*)p)->GetIsTransparent();
+    case O::TextFont: return P64(((GEText*)p)->GetFont());
+    case O::FontHeight: return ((GEFont*)p)->GetHeight();
+    case O::BitmapGeBitmap: return P64(static_cast<UIBitmap*>(CTL)->GetBitmap());
+    case O::GeBitmapCorners:
+        ((GEBitmap*)p)->GetColorPerVertex(((GEColor*)a[0])[0], ((GEColor*)a[0])[1], ((GEColor*)a[0])[2], ((GEColor*)a[0])[3]);
+        break;
+    case O::GeBitmapTexture: return P64(((GEBitmap*)p)->GetTexture(0));
+    case O::TerrainTypeCount: return TTL->GetLineCount();
+    case O::TerrainTypeSelection: return TTL->GetCurrentSelection(*(unsigned long*)a[0]);
+    case O::TerrainTypeTexture: return P64(TTL->GetData((unsigned long)a[0]).mTexture);
+    case O::TerrainTypeColorSet: return TTL->GetData((unsigned long)a[0]).mColorSet;
+    case O::TerrainTypePick: TTL->ChangeSelectionIndex((unsigned long)a[0], true, false);
+        break;
+    case O::TerrainColorCount: return TCL->GetLineCount();
+    case O::TerrainColorSelection: return TCL->GetCurrentSelection(*(unsigned long*)a[0]);
+    case O::TerrainColorSetSize: return TCL->GetData((unsigned long)a[0]).size();
+    case O::TerrainColorSetFirst: return P64(&TCL->GetData((unsigned long)a[0])[0]);
+    case O::TerrainColorPick: TCL->ChangeSelectionIndex((unsigned long)a[0], true, false);
+        break;
+    case O::AlignmentHas: return gSeetAlignments.count((const void*)p);
+    case O::AlignmentGet: return gSeetAlignments[(const void*)p];
+    case O::BrushRect: return P64(&((EEUIFSEBrushGroup*)p)->mRectangle);
+    case O::BrushHighlight: return ((EEUIFSEBrushGroup*)p)->mIsHighlightShown;
+    case O::BrushCentered: return ((EEUIFSEBrushGroup*)p)->mIsCentered;
+    case O::BrushSize: return ((EEUIFSEBrushGroup*)p)->mBrushSize;
+    case O::BrushSetHighlight: ((EEUIFSEBrushGroup*)p)->SetHighlight(f[0], f[1], a[0] != 0);
+        break;
+    case O::EdgeScrollEdges: return P64(&((EEAScroll*)p)->mEdges);
+    case O::LoadThreadPostDone: return ((EESELoadThread*)p)->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true);
+    case O::LoadThreadWaitDone: ((EESELoadThread*)p)->mMessageQueueDone->Wait(kTSWaitInfinite);
+        break;
+    case O::LoadThreadClearDone: ((EESELoadThread*)p)->mMessageQueueDone->Clear();
+        break;
+    case O::UnitWallStart: SU->mBuildWall.mStart.SetXY(f[0], f[1]);
+        break;
+    case O::UnitWallEnd: SU->mBuildWall.mEnd.SetXY(f[0], f[1]);
+        break;
+    case O::UnitWallBuild: SU->mBuildWall.Build();
+        break;
+    case O::UnitWallCancel: SU->mBuildWall.Cancel();
+        break;
+    case O::UnitGateTileX: SU->mBuildGate.mTileX = (long)a[0];
+        break;
+    case O::UnitGateTileY: SU->mBuildGate.mTileY = (long)a[0];
+        break;
+    case O::UnitGateDirection: SU->mBuildGate.mDirection = (long)a[0];
+        break;
+    case O::UnitGateBuild: SU->mBuildGate.Build(GE2DPoint(f[0], f[1]), (long)a[0]);
+        break;
+    case O::UnitGateCancel: SU->mBuildGate.Cancel();
+        break;
+    // the actions and messages
+    case O::SeaNew:
+        return P64(static_cast<EEAction*>(
+            new EESEARust((uint32_t)a[0], (void*)p, (int32_t)a[1], (int32_t)a[2], (int32_t)a[3], (int32_t)a[4])));
+    case O::SeaAction: return P64(static_cast<EESEARust*>(ACT)->mAction);
+    case O::PaintNew: return P64(static_cast<EEAction*>(new EESEAPaintRust((uint32_t)a[0], (int32_t)a[1], (int32_t)a[2])));
+    case O::PaintSetArea: return static_cast<EESEAPaint*>(ACT)->SetArea((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
+    case O::PostAction: gUserInterface->PostAction(ACT);
+        break;
+    case O::DerefAction: ACT->Dereference();
+        break;
+    case O::ClickNew: return P64(static_cast<EEAction*>(new EESEAMouseClick));
+    case O::TsClickNew: return P64(static_cast<EEAction*>(new EESETSAMouseClick));
+    case O::ClickSetMessage: RUST->SetMessage((EEMessage*)a[0]);
+        break;
+    case O::ClickExecute: RUST->Execute(f[0], f[1], false, 0, a[0] != 0, 0.0f, false);
+        break;
+    case O::LassoNew: return P64(static_cast<EEAction*>(new EESEALasso));
+    case O::LassoSetSelect: RUST->mMessage = EENewSelectUnits(GERectangle(f[0], f[1], f[2], f[3]), (long)a[0], (unsigned char)a[1]);
+        break;
+    case O::LassoSelectInRectangle: RUST->SelectInRectangle(GERectangle(f[0], f[1], f[2], f[3]), 0);
+        break;
+    case O::QuickSaveNew: return P64(static_cast<EEAction*>(new EESEAQuickSaveLoad(UString(s))));
+    case O::MRecord0: return P64(static_cast<EEMessage*>(new EEMRecord((unsigned char)a[0])));
+    case O::MRecord1: return P64(static_cast<EEMessage*>(new EEMRecord((unsigned char)a[0], {(unsigned long)a[1]})));
+    case O::MouseSetPosition: gMouse->mPosition = GE2DPoint(f[0], f[1]);
+        break;
+    // the world
+    case O::PhysicsFlush: gPhysics->FlushWorld();
+        break;
+    case O::MapPresent: return gWorld.mMap != NULL;
+    case O::MapMesh: return P64(gWorld.mMap != NULL ? gWorld.mMap->mTerrainMesh.GetRust() : NULL);
+    case O::MapTile: return P64(gWorld.mMap->RTSMap::GetTile((long)a[0], (long)a[1]));
+    case O::MapGetTile: return P64(gWorld.GetMap()->GetTile((long)a[0], (long)a[1]));
+    case O::TileFirstNode: return P64(((EEMapTile*)p)->mUnits);
+    case O::NodeNext: return P64(((RTSTileUnitNode*)p)->mNext);
+    case O::NodeUnit: return P64(((RTSTileUnitNode*)p)->mUnit);
+    case O::NodeUnitPlayer: return P64(UN->GetPlayer());
+    case O::NodeUnitId: return UN->GetUnitID();
+    case O::PlayerId: return PL->mPlayerID;
+    case O::TerrainColorType: return EETerrainTable::Get((long)a[0])->mColorType;
+    case O::ViewportRect: return P64(&gViewport.GetViewRectangle());
+    case O::RandomSeed: return gUserInterface->mRandomSeed;
+    case O::ResolveUnit: return P64(static_cast<EEUnit*>(RTSResolveUnitID((uint32_t)a[0])));
+    case O::WorldNumPlayers: return gWorld.mNumPlayers;
+    case O::WorldPlayersAt: return P64(gWorld.mPlayers[a[0]]);
+    case O::WorldGetNumPlayers: return gWorld.GetNumPlayers();
+    case O::WorldGetPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
+    case O::WorldMaxPlayers: return gMaxPlayers;
+    case O::WorldPopulationLimit: return gWorld.mPopulationLimit;
+    case O::WorldWondersToWin: return gWorld.mNumberOfWondersToWin;
+    case O::WorldVictoryEnabled: return gWorld.mVictoryEnabled;
+    case O::WorldTeamsLocked: return gWorld.mTeamsLocked;
+    case O::WorldCheatsEnabled: return gWorld.mCheatsEnabled;
+    case O::WorldImprovementsAllowed: return gWorld.mUnitImprovementsAllowed;
+    case O::WorldUsingCarbon: return gWorld.mUsingCarbon;
+    case O::OptionsUnitLimit: return gWorld.mGameOptions.mUnitLimit;
+    case O::OptionsWondersForVictory: return gWorld.mGameOptions.mWondersForVictory;
+    case O::OptionsVictory: return gWorld.mGameOptions.mVictory;
+    case O::OptionsLockTeams: return gWorld.mGameOptions.mLockTeams;
+    case O::OptionsCheatCodes: return gWorld.mGameOptions.mCheatCodes;
+    case O::OptionsPlayerColor: return gWorld.mGameOptions.mPlayers[a[0]].mColor;
+    case O::OptionsPlayerB36: return gWorld.mGameOptions.mPlayers[a[0]].mB36;
+    case O::PlayerFirstUnit: return P64(PL->mFirstUnit);
+    case O::PlayerColor: return P64(&PL->mColor);
+    case O::PlayerTechTree: return P64(PL->GetTechTree());
+    case O::PlayerResourceCap: return PL->mResourceCaps[a[0]];
+    case O::PlayerEnemy: return (long)PL->mEnemies[a[0]];
+    case O::PlayerSharedLos: return PL->mSharedLOS;
+    case O::PlayerPurchasedUpgrades: return PL->mCivilization.mPurchasedUpgrades.size();
+    case O::PlayerComputer: return P64(PL->mComputerPlayer);
+    case O::TreeCurrentEpoch: return (long)((EETechTree*)p)->mCurrentEpoch;
+    case O::TreeStartEpoch: return (long)((EETechTree*)p)->mStartEpoch;
+    case O::TreeEndEpoch: return (long)((EETechTree*)p)->mEndEpoch;
+    case O::ComputerActive: return CP->mActive;
+    case O::ComputerIsCheating: return CP->mIsCheating;
+    case O::ComputerCanAttack: return CP->mCanAttack;
+    case O::ComputerCanDefend: return CP->mCanDefend;
+    case O::ComputerCanBuild: return CP->mCanBuild;
+    case O::ComputerCanExplore: return CP->mCanExplore;
+    case O::ComputerIgnoreOthers: return CP->mIgnoreOthers;
+    case O::ComputerCanGather: return CP->mCanGather;
+    case O::UnitId: return UN->GetUnitID();
+    case O::UnitNext: return P64(static_cast<EEUnit*>(UN->mNext));
+    case O::UnitType: return (long)UN->mUnitClass->mUnitType;
+    case O::UnitTileX: return (long)UN->mTileX;
+    case O::UnitTileY: return (long)UN->mTileY;
+    case O::UnitIsEditorSelected: return UN->mIsEditorSelected;
+    // the ghosts
+    case O::GhostsLock: gWorld.mGhostUnitsLock->Enter();
+        break;
+    case O::GhostsUnlock: gWorld.mGhostUnitsLock->Leave();
+        break;
+    case O::GhostsChanged: gGhostUnitsChanged = true;
+        break;
+    case O::GhostsClear: gWorld.ClearGhostUnits();
+        break;
+    case O::GhostCount: return gWorld.GetNumGhostUnits();
+    case O::GhostAt: return P64(gWorld.mGhostUnits[a[0]]);
+    case O::GhostCreate: EEGhostUnit::Create(GE2DPoint(f[0], f[1]), (long)a[0], gWorld.mPlayers[a[1]], f[2], false);
+        break;
+    case O::GhostSetTileX: GH->mTileX = (long)a[0];
+        break;
+    case O::GhostSetTileY: GH->mTileY = (long)a[0];
+        break;
+    case O::GhostTileX: return GH->mTileX;
+    case O::GhostTileY: return GH->mTileY;
+    case O::GhostUnitType: return GH->mUnitClass->GetUnitType();
+    case O::GhostTileSize: return GH->mUnitClass->GetTileSize();
+    case O::GhostSetFarmSlot: EEGhostUnit::SetFarmSlotTile(GH, (long)a[0]);
+        break;
+    case O::GhostSetPosition: GH->mTransformation.SetPosition(GE3DPoint(f[0], f[1], f[2]));
+        break;
+    case O::GhostSetTransformation: GH->mTransformation = *(const GETransformation*)a[0];
+        break;
+    case O::GhostFillSquare: GH->FillSquare();
+        break;
+    case O::GhostLocationToTile: GH->mUnitClass->LocationToTile(GE3DPoint(f[0], f[1], f[2]), GH->mTileX, GH->mTileY);
+        break;
+    case O::GhostCanPlace: return GH->mCanPlace;
+    case O::GhostSetCanPlace: GH->mCanPlace = a[0] != 0;
+        break;
+    // the scenario manager
+    case O::Sm: return P64(gWorld.mScenarioManager);
+    case O::SmTriggerCount: return SM->mTriggers.size();
+    case O::SmTriggerAt: return P64(SM->mTriggers[a[0]]);
+    case O::SmConditionCount: return SM->mConditions.size();
+    case O::SmConditionAt: return P64(SM->mConditions[a[0]]);
+    case O::SmEffectCount: return SM->mEffects.size();
+    case O::SmEffectAt: return P64(SM->mEffects[a[0]]);
+    case O::SmPendingCount: return SM->mPendingEffects.size();
+    case O::SmPendingAt: return P64(SM->mPendingEffects[a[0]]);
+    case O::SmObjectCount: return SM->mObjects.size();
+    case O::SmObjectAt: return P64(SM->mObjects[a[0]]);
+    case O::SmAreaCount: return SM->mAreas.size();
+    case O::SmAreaAt: return P64(SM->mAreas[a[0]]);
+    case O::SmTimedCount: return SM->GetNumTimedEffects();
+    case O::SmTimedEffect: return SM->GetTimedEntry((unsigned long)a[0]).mEffectIndex;
+    case O::SmTimedTime: return SM->GetTimedEntry((unsigned long)a[0]).mTime;
+    case O::SmNextTriggerId: return SM->mNextTriggerID;
+    case O::SmNextConditionId: return SM->mNextConditionID;
+    case O::SmNextEffectId: return SM->mNextEffectID;
+    case O::SmNextObjectId: return SM->mNextObjectID;
+    case O::SmNextAreaId: return SM->mNextAreaID;
+    case O::SmShowDebugIds: return SM->mShowDebugIDs;
+    case O::SmSetShowDebugIds: SM->mShowDebugIDs = a[0] != 0;
+        break;
+    case O::SmGetNames: SM->GetNames((unsigned long)a[0], *(std::vector<UWideString>*)a[1]);
+        break;
+    case O::NamesNew: return P64(new std::vector<UWideString>());
+    case O::NamesCount: return NM->size();
+    case O::NamesFree: delete NM;
+        break;
+    case O::SmFindCondition: return P64(SM->FindConditionByID((long)a[0]));
+    case O::SmFindEffect: return P64(SM->FindEffectByID((long)a[0]));
+    case O::SmFindObject: return P64(SM->FindObjectByID((long)a[0]));
+    case O::SmObjectIndex: return SM->GetObjectIndex((EESMObject*)a[0]);
+    case O::SmGetTrigger: return P64(SM->GetTrigger((unsigned long)a[0]));
+    case O::SmGetObject: return P64(SM->GetScenarioObject((unsigned long)a[0]));
+    case O::SmGetArea: return P64(SM->GetArea((unsigned long)a[0]));
+    case O::SmExportText: return SM->ExportText(*(FSFileSpec*)a[0]);
+    case O::SmImportText: return SM->ImportTriggerText(*(FSFileSpec*)a[0], (unsigned long)a[1], a[2] != 0);
+    case O::SmClearImportErrors: SM->mImportErrors.clear();
+        break;
+    case O::SmImportErrorCount: return SM->mImportErrors.size();
+    case O::SmAddTimedEffect: SM->AddTimedEffect((long)a[0], (unsigned long)a[1], false);
+        break;
+    case O::SmAddPendingCopy: SM->AddV134Effect(*(EESMEffect*)a[0]);
+        break;
+    case O::SmNewEntry: SM->NewEntry((unsigned long)a[0]);
+        break;
+    case O::SmSortList: SM->SortList((unsigned long)a[0]);
+        break;
+    case O::SmMoveEntry: SM->MoveEntry((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
+        break;
+    case O::SmDeleteEntry: return SM->DeleteEntry((unsigned long)a[0], (unsigned long)a[1]);
+    case O::SmDuplicateEntry: SM->DuplicateEntry((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::TriggerFields: return P64(static_cast<EeScenarioTriggerFields*>(TR));
+    case O::TriggerConditionCount: return TR->mConditions.size();
+    case O::TriggerConditionAt: return P64(TR->mConditions[a[0]]);
+    case O::TriggerEffectCount: return TR->mEffects.size();
+    case O::TriggerEffectAt: return P64(TR->mEffects[a[0]]);
+    case O::TriggerGetConditionCount: return TR->GetConditionCount();
+    case O::TriggerGetConditionAt: return P64(TR->GetConditionAt((unsigned long)a[0]));
+    case O::TriggerGetEffectCount: return TR->GetEffectCount();
+    case O::TriggerGetEffectAt: return P64(TR->GetEffectAt((unsigned long)a[0]));
+    case O::TriggerSetCondition: TR->SetCondition((unsigned long)a[0], a[1] != 0, (unsigned long)a[2]);
+        break;
+    case O::TriggerSetConditionOperator: TR->SetConditionOperator((unsigned long)a[0], (long)a[1]);
+        break;
+    case O::TriggerSetEffect: TR->SetEffect((unsigned long)a[0], (long)a[1], (unsigned long)a[2]);
+        break;
+    case O::TriggerSetEffectOperator: TR->SetEffectOperator((unsigned long)a[0], (long)a[1]);
+        break;
+    case O::TriggerSetIsOn: TR->SetIsOn(a[0] != 0);
+        break;
+    case O::TriggerSetIsLooping: TR->SetIsLooping(a[0] != 0);
+        break;
+    case O::TriggerSetConditionDuration: TR->SetConditionDuration((unsigned long)a[0]);
+        break;
+    case O::TriggerSetName: TR->SetName(UWideString(s));
+        break;
+    case O::TriggerSetText: TR->mText = UWideString(s);
+        break;
+    case O::WrapperValue: return ((EESMTConditionWrapper*)p)->mValue;
+    case O::WrapperOperator: return ((EESMTConditionWrapper*)p)->mOperator;
+    case O::WrapperIsNot: return ((EESMTConditionWrapper*)p)->mIsNot;
+    case O::WrapperDelay: return ((EESMTEffectWrapper*)p)->mDelay;
+    case O::WrapperEffectIndex: return ((EESMTEffectWrapper*)p)->mEffectIndex;
+    case O::WrapperEffectOperator: return ((EESMTEffectWrapper*)p)->mOperator;
+    case O::ConditionFields: return P64(static_cast<EeScenarioConditionFields*>(CO));
+    case O::ConditionSetChatText: CO->mChatText = s;
+        break;
+    case O::EffectFields: return P64(static_cast<EeScenarioEffectFields*>(EF));
+    case O::EffectSetDescription: EF->mDescription = s;
+        break;
+    case O::EffectSetMessage: EF->mMessage = s;
+        break;
+    case O::EffectSetNewName: EF->mNewName = s;
+        break;
+    case O::EffectObjectCount: return EF->mObjects.size();
+    case O::EffectObjectAt: return EF->mObjects[a[0]];
+    case O::EffectClearObjects: EF->mObjects.clear();
+        break;
+    case O::EffectPushObject: EF->mObjects.push_back((unsigned long)a[0]);
+        break;
+    case O::ObjectFields: return P64(static_cast<EeScenarioObjectFields*>((EESMObject*)p));
+    case O::ObjectUnitCount: return ((EESMObject*)p)->GetUnitCount();
+    case O::ObjectUnitAt: return ((EESMObject*)p)->GetUnitAt((unsigned long)a[0]);
+    case O::AreaId: return AR->mID;
+    case O::AreaSelectMode: return AR->GetSelectMode();
+    case O::AreaHasRectangle: return AR->GetHasRectangle();
+    case O::AreaRect: return P64(&AR->GetRect());
+    case O::AreaHasAnchor: return AR->GetHasAnchor();
+    case O::AreaAnchorX: return AR->GetAnchor().GetX();
+    case O::AreaAnchorY: return AR->GetAnchor().GetY();
+    case O::AreaSetRectangle: AR->SetRectangle(GERectangle(f[0], f[1], f[2], f[3]));
+        break;
+    case O::AreaSetAnchor: AR->SetAnchor(U2DPoint<long>((long)a[0], (long)a[1]));
+        break;
+    // the files and the save
+    case O::SpecNew: return P64(new FSFileSpec());
+    case O::SpecFree: delete SP;
+        break;
+    case O::SpecSetVolumeStartup: SP->SetVolume(gStartupVolume);
+        break;
+    case O::SpecSetDirectoryStartup: SP->SetDirectory(gStartupDirectory + s);
+        break;
+    case O::SpecSetFile: SP->SetFile(UString(s));
+        break;
+    case O::SpecCreateDirectory: SP->CreateDirectory();
+        break;
+    case O::SpecCreate: SP->Create();
+        break;
+    case O::SpecOpenRead: return SP->Open(kFileAccessRead);
+    case O::SpecOpenWrite: return SP->Open(kFileAccessWrite);
+    case O::SpecFOpenRead: return SP->FOpen(sModeRead);
+    case O::SpecFOpenWrite: return SP->FOpen(sModeWrite);
+    case O::SpecClose: SP->Close();
+        break;
+    case O::SpecWrite: return SP->Write((const unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
+    case O::SpecGets: return P64(fgets((char*)a[0], (int)a[1], (FILE*)*SP));
+    case O::SpecPuts: fputs(s, (FILE*)*SP);
+        break;
+    case O::MemNew: return P64(new FSMemoryFile((unsigned long)a[0], a[1] != 0, (unsigned long)a[2]));
+    case O::MemFree: delete MF;
+        break;
+    case O::MemLoad: return MF->Load(*(FSFileSpec*)a[0]);
+    case O::MemLength: return MF->GetLength(*(unsigned long*)a[0]);
+    case O::MemPosition: return MF->GetPosition(*(long*)a[0]);
+    case O::MemData: return P64(MF->GetData());
+    case O::HeaderNew: return P64(new EEPSaveGameHeader());
+    case O::HeaderFree: delete (EEPSaveGameHeader*)p;
+        break;
+    case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, *(FSMemoryFile*)a[0]);
+    case O::ChunksNew: return P64(new std::vector<FSPersistent*>());
+    case O::ChunksBuild: BuildSaveGameChunks(*CH);
+        break;
+    case O::ChunksCount: return CH->size();
+    case O::ChunksAt: return P64((*CH)[a[0]]);
+    case O::ChunksFree: delete CH;
+        break;
+    case O::PersistentTag: return ((FSPersistent*)p)->GetTagID();
+    case O::PersistentFree: delete (FSPersistent*)p;
+        break;
+    case O::ChunkNew: return P64(new FSChunk());
+    case O::ChunkFree: delete (FSChunk*)p;
+        break;
+    case O::ChunkSavePersistent:
+        return ((FSChunk*)p)->SavePersistentToChunk(kSaveGameMajorVersion, kSaveGameMinorVersion, (FSPersistent*)a[0]);
+    case O::ChunkSaveToFile: return ((FSChunk*)p)->SaveChunkToFile(*(FSMemoryFile*)a[0]);
+    case O::ChunkLoadFromFile: return ((FSChunk*)p)->LoadChunkFromFile(*(FSMemoryFile*)a[0]);
+    // the civilization builder (sed_civ.rs)
+    case O::UiFormById: return P64(gUIManager->GetFormByID((unsigned long)a[0]));
+    case O::UiFormControlById: return P64(UF->GetControlById((unsigned long)a[0]));
+    case O::UiFormControlCount: return UF->GetControlCount();
+    case O::UiFormControl: return P64(UF->GetControl((unsigned long)a[0]));
+    case O::UiFormId: return UF->GetFormID();
+    case O::UiFormShellOf: return P64(EEUIShell::Of(UF));
+    case O::UiFormCurrent: return P64(gUIManager->GetCurrentForm());
+    case O::UiFormCount: return gUIManager->GetFormCount();
+    case O::UiFormStacked: return P64(gUIManager->GetStackedForm((unsigned long)a[0]));
+    case O::UiPop: gUIManager->Pop();
+        break;
+    case O::IsCivList: return dynamic_cast<EECBUIListBox*>(CTL) != NULL;
+    case O::CivListUpgradesOnly: return CL->mSelectUpgradesOnly;
+    case O::CivListShowPoints: return CL->mShowPoints;
+    case O::CivListSortLines: return CL->mSortLines;
+    case O::CivListHeaderColor: return P64(&CL->mC13C);
+    case O::CivListReset: CL->ResetSelection();
+        break;
+    case O::CivListTabbedTo: CL->TabbedTo();
+        break;
+    case O::CivListCopyData: return CL->CopyData();
+    case O::CivListCopiedShowPoints: return CL->mCopiedShowPoints;
+    case O::CivListCopiedColor: return P64(&CL->mC148);
+    case O::ControlTabable: return CTL->GetTabable();
+    case O::ListAutoSelect: return CivListAccess::Auto(LBS);
+    case O::ListHasSelection: return LBS->GetHasSelection();
+    case O::ListSelectionIndex: return CivListAccess::Index(LBS);
+    case O::ListCopiedHasSelection: return CivListAccess::Copied(LBS);
+    case O::ListDrawCount: return CivListAccess::Drawn(LBS);
+    case O::ListDataEquals: return LBS->GetData((unsigned long)a[0]) == s;
+    case O::ProcessEventOn: return ((UIEvent*)p)->ProcessEvent((UIForm*)a[0], (UIControl*)a[1]);
+    case O::CivEdit: return CivBuilderEditCivilization();
+    case O::CivTimer: return EEProcessTimerExpired();
+    case O::CivBlink: return EESetCivBuilderButtonBlinking(a[0] != 0);
+    case O::CivAvailablePoints: return CV->mAvailablePoints;
+    case O::CivMaxPoints: return CV->mMaxPoints;
+    case O::CivUnchanged: return CV->mUnchanged;
+    case O::CivNoPointsAdded: return CV->mNoPointsAdded;
+    case O::CivPurchasedCount: return CV->mPurchasedUpgrades.size();
+    case O::CivPurchasedAt: return (unsigned long)CV->mPurchasedUpgrades[a[0]];
+    case O::CivDeferredCount: return CV->mDeferredUpgrades.size();
+    case O::CivDeferredAt: return (unsigned long)CV->mDeferredUpgrades[a[0]];
+    case O::EditorCivilization: return P64(&ED->mC1A0);
+    case O::WorldCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
+    case O::PlayerCivilization: return P64(&PL->mCivilization);
+    case O::PlayerCivilizationChosen: return PL->mCivilizationChosen;
+    case O::PlayerCivilizationLocked: return PL->mCivilizationLocked;
+    case O::SpecGetLength: return SP->GetLength(*(unsigned long*)a[0]);
+    case O::SpecRead: return SP->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
+    case O::SpecDelete: SP->Delete();
+        break;
+    case O::CivSave: return CivBuilderSaveCivilization(UString(s), a[0] != 0);
+    case O::CivLoad:
+        return EELoadCivilization(UString(s), EEGetCivilizationDirectory(true), *(UWideString*)a[0],
+                                  *(std::vector<EECivUpgrade>*)a[1]);
+    case O::CivApply: return EEApplyCivilizationFile(*(UString*)a[0], PL);
+    case O::WideNew: return P64(new UWideString());
+    case O::WideFree: delete (UWideString*)p;
+        break;
+    case O::UpgradesNew: return P64(new std::vector<EECivUpgrade>());
+    case O::UpgradesCount: return UPG->size();
+    case O::UpgradesAt: return (unsigned long)(*UPG)[a[0]];
+    case O::UpgradesFree: delete UPG;
+        break;
+    case O::NarrowNew: return P64(new UString(s));
+    case O::NarrowFree: delete (UString*)p;
+        break;
+    case O::SetFreeCamera: gFreeCamera = a[0] != 0;
+        break;
+    case O::SetAllowCustomCivs: gAllowCustomCivs = a[0] != 0;
+        break;
+    case O::SetScenarioGame: gIsScenarioGame = a[0] != 0;
+        break;
+    default: break;
     }
+    return 0;
+}
+
+// The steps' texts: copied into sText, valid until the next text
+extern "C" const char* ee_simcpp_sed_text(EeSimDriverSed inOp, uintptr_t p, int64_t a, const char* s)
+{
+    typedef EeSimDriverSed O;
+    switch (inOp) {
+    case O::ShellKindName: return (sText = ((EEUIShell*)p)->KindName()).c_str();
+    case O::ControlTypeName: return (sText = typeid(*CTL).name()).c_str();
+    case O::EventTypeName: return (sText = typeid(*(UIEvent*)p).name()).c_str();
+    case O::ListData: return (sText = (const char*)LBS->GetData((unsigned long)a)).c_str();
+    case O::EditText: return (sText = static_cast<UIEditBox*>(CTL)->GetText((unsigned long)a)).c_str();
+    case O::LabelText: return (sText = (const char*)static_cast<UITextLabel*>(CTL)->GetText((unsigned long)a)).c_str();
+    case O::TextText: return (sText = (const char*)((GEText*)p)->GetText()).c_str();
+    case O::TerrainTypeName: return (sText = (const char*)TTL->GetData((unsigned long)a).mName).c_str();
+    case O::PlayerName: return (sText = (const char*)PL->mName).c_str();
+    case O::PlayerCivilizationFile: return (sText = (const char*)PL->mCivilizationFile).c_str();
+    case O::NamesAt: return (sText = (const char*)(*NM)[a]).c_str();
+    case O::SmImportError: return (sText = (const char*)SM->mImportErrors[a]).c_str();
+    case O::SmMediaSection: return (sText = (const char*)SM->mMediaStrings.GetSection((unsigned long)a)).c_str();
+    case O::SmExportFileName: return (sText = (const char*)SM->mExportFileName).c_str();
+    case O::TriggerName: return (sText = (const char*)TR->mName).c_str();
+    case O::TriggerText: return (sText = (const char*)TR->mText).c_str();
+    case O::ConditionName: return (sText = (const char*)CO->mName).c_str();
+    case O::ConditionText: return (sText = (const char*)CO->mText).c_str();
+    case O::ConditionChatText: return (sText = (const char*)CO->mChatText).c_str();
+    case O::EffectName: return (sText = (const char*)EF->mName).c_str();
+    case O::EffectText: return (sText = (const char*)EF->mText).c_str();
+    case O::EffectMessage: return (sText = (const char*)EF->mMessage).c_str();
+    case O::EffectNewName: return (sText = (const char*)EF->mNewName).c_str();
+    case O::EffectFileName: return (sText = (const char*)EF->mFileName).c_str();
+    case O::EffectDescription: return (sText = (const char*)EF->mDescription).c_str();
+    case O::ObjectName: return (sText = (const char*)((EESMObject*)p)->mName).c_str();
+    case O::AreaName: return (sText = (const char*)AR->GetName()).c_str();
+    case O::AreaText: return (sText = (const char*)AR->GetText()).c_str();
+    case O::StartupPath: return (sText = (const char*)(gStartupVolume + gStartupDirectory)).c_str();
+    case O::SaveTextName: return (sText = (const char*)GetSaveTextName(UString(s), a != 0)).c_str();
+    case O::UiFormTypeName: return (sText = typeid(*UF).name()).c_str();
+    case O::CivName: return (sText = (const char*)CV->mName).c_str();
+    case O::WideText: return (sText = (const char*)*(UWideString*)p).c_str();
+    case O::EditorSaveName:
+        return (sText = (const char*)GetSaveTextName(UString("EEQuickSave") + gScenarioExtension, true)).c_str();
+    default: break;
+    }
+    return NULL;
+}
+
+// The steps' floats
+extern "C" double ee_simcpp_sed_float(EeSimDriverSed inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeSimDriverSed O;
+    switch (inOp) {
+    case O::ControlBgOpacity: return CTL->GetBgOpacity();
+    case O::PlayerAvailablePoints: return (double)PL->mCivilization.mAvailablePoints;
+    case O::ComputerCitizens: return CP->mCitizenPercentage;
+    case O::MeshZ: return gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]);
+    case O::TileHeight: return ((EEMapTile*)p)->mHeight;
+    default: break;
+    }
+    return 0.0;
 }

@@ -78,6 +78,12 @@ static std::string TypeName(const void* inObject, const std::type_info& inType)
     size_t aSpace = s.rfind(' ');
     return aSpace == std::string::npos ? s : s.substr(aSpace + 1);
 }
+// an op of a socket op kind by the original class's name (the kinds are one C++ class since WONLobby round 28)
+static std::string TypeName(const AsyncOp* inObject, const std::type_info& inType)
+{
+    const char* aKind = WonSocketOpClass(inObject);
+    return aKind != NULL ? std::string(aKind) : TypeName(static_cast<const void*>(inObject), inType);
+}
 
 // a stream socket that logs its hooks and its Duplicate
 class LogSocket : public BlockingSocket {
@@ -130,10 +136,10 @@ public:
         AsyncOp* anOp = inOp.get();
         Log(this->mName + " completed " + TypeName(anOp, typeid(*anOp)) + " " + St(anOp->GetStatus()) + " killed "
             + N(anOp->IsKilled()));
-        RecvMsgOp* aMsg = dynamic_cast<RecvMsgOp*>(anOp);
+        SocketOp* aMsg = WonSocketOpIs(anOp, WonOpKind::RecvMsg) ? static_cast<SocketOp*>(anOp) : NULL;
         if (aMsg != NULL && aMsg->GetStatus() == WS_Success)
             Log(this->mName + " message " + Hex(aMsg->GetMsg()));
-        RecvBytesOp* aBytes = dynamic_cast<RecvBytesOp*>(anOp);
+        SocketOp* aBytes = WonSocketOpIs(anOp, WonOpKind::RecvBytes) ? static_cast<SocketOp*>(anOp) : NULL;
         if (aMsg == NULL && aBytes != NULL && aBytes->GetStatus() == WS_Success)
             Log(this->mName + " bytes " + Hex(aBytes->GetBytes()));
     }
