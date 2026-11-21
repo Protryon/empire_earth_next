@@ -387,3 +387,20 @@ double EECore9OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     default: return EECore9OpD7F(inOp, p, a, f);
     }
 }
+
+// ------------------------------------------------------------------------- round 10, lane C: Communications, the Civilization Builder's area effects and captures, Calamities, Map
+
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane C's bodies in Rust (gamecpp; EeGameCpp's round 10 lane C section): one
+// statement each
+int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpD(inOp, p, a, f);
+}
+
+double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpDF(inOp, p, a, f);
+}

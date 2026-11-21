@@ -67,6 +67,26 @@ pub mod entry;
 //
 //
 
+// ---- round 10, lane A: the Graphics Thread (EEGraphics.cpp's RenderTo, EEROUnits.cpp and the other draw units)
+//
+//
+
+// ---- round 10, lane B: the Database, the Tech Tree's loads and copies, Persistent
+//
+//
+
+// ---- round 10, lane C: Communications, the Civilization Builder's area effects and captures, Calamities, Map
+//
+//
+
+// ---- round 10, lane D: the Empire Earth directory's managers and utilities
+//
+//
+
+// ---- round 10, lane E: the entry, the start screen, the test drivers
+//
+//
+
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
@@ -2894,6 +2914,16 @@ pub enum EeGameCpp {
     EntryNotInEditor,
     EntryStartLoadingInput,
     EntryUpdateSavedGames,
+    //
+    // ---- round 10, lane A (EECore10OpA's cases)
+    //
+    // ---- round 10, lane B (EECore10OpB's cases)
+    //
+    // ---- round 10, lane C (EECore10OpC's cases)
+    //
+    // ---- round 10, lane D (EECore10OpD's cases)
+    //
+    // ---- round 10, lane E (EECore10OpE's cases)
     //
 }
 

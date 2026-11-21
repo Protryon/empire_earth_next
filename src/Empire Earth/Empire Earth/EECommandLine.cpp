@@ -162,6 +162,8 @@ bool EEParseCommandLine(const char* inCommandLine)
 
 // The command line's C++ calls and members (EeGameCpp's lane E section; Empire Earth.cpp's EECore9OpE default): one
 // statement each; the end of the chain
+int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
+
 int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -221,8 +223,7 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
         break;
     case O::EntryUpdateSavedGames: EEUpdateSavedGames();
         break;
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-        break;
+    default: return EECore10OpA(inOp, p, a, f);
     }
     return 0;
 }

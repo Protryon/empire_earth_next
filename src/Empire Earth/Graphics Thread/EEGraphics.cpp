@@ -481,3 +481,20 @@ int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const fl
 {
     return EECore9OpA(inOp, p, a, f);
 }
+
+// ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EERenderSnapshot, EEUnitPicker)
+
+int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 10 lane A section): one
+// statement each
+int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpB(inOp, p, a, f);
+}
+
+double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpBF(inOp, p, a, f);
+}

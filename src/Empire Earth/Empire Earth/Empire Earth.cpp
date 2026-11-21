@@ -1875,10 +1875,11 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
+double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
+
 double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-    return 0.0;
+    return EECore10OpAF(inOp, p, a, f);
 }
 
 // The deferred COMDATs at the end of the unit (0x14494d..0x14622a: the inline-class deleting dtors and every template
@@ -1891,4 +1892,20 @@ double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 long EEFn0FCA98()
 {
     return 0;
+}
+
+// ------------------------------------------------------------------------- round 10, lane E: the entry, the start screen, the test drivers (the end of the chain)
+
+// the C++ calls and members of lane E's bodies in Rust (gamecpp; EeGameCpp's round 10 lane E section): one
+// statement each
+int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    return 0;
+}
+
+double EECore10OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
+    return 0.0;
 }

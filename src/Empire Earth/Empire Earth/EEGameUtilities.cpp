@@ -7,6 +7,7 @@
 // Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
+#include "rust/game/gamecpp.h"   // round 10 (ee_game gamecpp)
 #include <vector>
 #include <algorithm>
 #include <mbstring.h>
@@ -330,4 +331,21 @@ void EEExitGame()
             theAction->Dereference();
         }
     }
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the Empire Earth directory's managers and utilities
+
+int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane D's bodies in Rust (gamecpp; EeGameCpp's round 10 lane D section): one
+// statement each
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpE(inOp, p, a, f);
+}
+
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpEF(inOp, p, a, f);
 }

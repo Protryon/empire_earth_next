@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
+#include "rust/game/gamecpp.h"   // round 10 (ee_game gamecpp)
 
 #include "ee/EEDbObject.h"
 
@@ -39,3 +40,20 @@ const UString kDbGameVariantFile("db\\dbGameVariant.dat");
 const UString kDbPremadeCivsFile("db\\dbpremadecivs.dat");
 const UString kDbCliffTerrainFile("db\\dbcliffterrain.dat");
 const UString kDbCivPowersFile("db\\dbcivpowers.dat");
+
+// ------------------------------------------------------------------------- round 10, lane B: the Database, the Tech Tree, Persistent
+
+int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane B's bodies in Rust (gamecpp; EeGameCpp's round 10 lane B section): one
+// statement each
+int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpC(inOp, p, a, f);
+}
+
+double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpCF(inOp, p, a, f);
+}
