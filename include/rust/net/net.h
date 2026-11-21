@@ -1021,6 +1021,32 @@ int32_t ee_net_pr_xfer_receive(const EeNetProtocol *p,
                                uint8_t *buffer,
                                uint32_t *received);
 
+/// `NESynchronousServer`'s constructor as the game calls it: its arguments as the C++ takes them (the name a
+/// zero-terminated string), the protocol the server's own (TCP); [`ee_net_sv_args`] packs them.
+///
+/// # Safety
+/// As [`ee_net_sv_new`]; `name` is a zero-terminated string.
+EeNetServer *ee_net_sv_new_game(void *ctx,
+                                EeNetSvHostFn host,
+                                EeNetMmHostFn mmhost,
+                                EeNetQHostFn qhost,
+                                const EeNetComms *comms,
+                                uint8_t max_players,
+                                unsigned long default_send_interval,
+                                uint8_t pts_per_ct,
+                                unsigned long max_pts_per_second,
+                                unsigned long min_pts_per_second,
+                                float cost_factor,
+                                unsigned long max_send_interval,
+                                unsigned long send_interval_increment,
+                                unsigned long send_interval_decrement,
+                                unsigned long current_communications_tick,
+                                unsigned long current_physics_tick,
+                                const char *name,
+                                bool allow_new_connections,
+                                bool announce,
+                                unsigned long network_adapter);
+
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
 ///
 /// # Safety

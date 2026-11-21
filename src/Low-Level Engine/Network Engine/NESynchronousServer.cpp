@@ -21,27 +21,14 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
                                          bool inAnnounce, unsigned long inNetworkAdapter)
     : NESynchronousCommunications(inCurrentCommunicationsTick)
 {
-    EeNetSvArgs theArgs;
-    theArgs.max_players = inMaxPlayers;
-    theArgs.default_send_interval = (uint32_t)inDefaultSendInterval;
-    theArgs.pts_per_ct = inPTsPerCT;
-    theArgs.max_pts_per_second = (uint32_t)inMaxPhysicsTicksPerSecond;
-    theArgs.min_pts_per_second = (uint32_t)inMinPhysicsTicksPerSecond;
-    theArgs.cost_factor = inPhysicsTickCostFactor;
-    theArgs.max_send_interval = (uint32_t)inMaxSendInterval;
-    theArgs.send_interval_increment = (uint32_t)inSendIntervalIncrement;
-    theArgs.send_interval_decrement = (uint32_t)inSendIntervalDecrement;
-    theArgs.current_communications_tick = (uint32_t)inCurrentCommunicationsTick;
-    theArgs.current_physics_tick = (uint32_t)inCurrentPhysicsTick;
-    theArgs.allow_new_connections = inAllowNewConnections;
     // the server calls the protocol itself (ee_net ffi_protocol.rs): Publish's name, announcement and adapter
-    theArgs.tcp = true;
-    theArgs.name = reinterpret_cast<const uint8_t*>(static_cast<const char*>(inName));
-    theArgs.name_length = strlen(static_cast<const char*>(inName));
-    theArgs.announce = inAnnounce;
-    theArgs.network_adapter = (uint32_t)inNetworkAdapter;
-    this->mRust = ee_net_sv_new(this, NESynchronousServer::Host, NESynchronousServer::MessageManagerHost,
-                                NESynchronousServer::QueueHost, &theArgs, this->mComms);
+    this->mRust = ee_net_sv_new_game(this, NESynchronousServer::Host, NESynchronousServer::MessageManagerHost,
+                                     NESynchronousServer::QueueHost, this->mComms, inMaxPlayers, inDefaultSendInterval,
+                                     inPTsPerCT, inMaxPhysicsTicksPerSecond, inMinPhysicsTicksPerSecond,
+                                     inPhysicsTickCostFactor, inMaxSendInterval, inSendIntervalIncrement,
+                                     inSendIntervalDecrement, inCurrentCommunicationsTick, inCurrentPhysicsTick,
+                                     static_cast<const char*>(inName), inAllowNewConnections, inAnnounce,
+                                     inNetworkAdapter);
 }
 
 // Destroys the server: frees events, threads, locks and the recorder, then closes the published server

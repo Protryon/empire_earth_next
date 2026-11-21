@@ -2,7 +2,7 @@
 //! its members; the Rust's calls out go to three host functions: the server's (`EeNetSvOp`), the message manager's
 //! that reach the C++ (`EeNetMmOp`: NESynchronousServer::MessageManagerHost) and the queues' common ones (`EeNetQOp`).
 
-use std::ffi::{c_ulong, c_void};
+use std::ffi::{c_char, c_ulong, c_void, CStr};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::net::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
@@ -549,6 +549,87 @@ pub struct EeNetServer(Box<Server<SvFfiHost>>);
 
 fn sv<'a>(s: *const EeNetServer) -> &'a Server<SvFfiHost> {
     unsafe { &(*s).0 }
+}
+
+/// `NESynchronousServer`'s constructor as the game calls it: its arguments as the C++ takes them (the name a
+/// zero-terminated string), the protocol the server's own (TCP); [`ee_net_sv_args`] packs them.
+///
+/// # Safety
+/// As [`ee_net_sv_new`]; `name` is a zero-terminated string.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_net_sv_new_game(
+    ctx: *mut c_void,
+    host: EeNetSvHostFn,
+    mmhost: EeNetMmHostFn,
+    qhost: EeNetQHostFn,
+    comms: *const EeNetComms,
+    max_players: u8,
+    default_send_interval: c_ulong,
+    pts_per_ct: u8,
+    max_pts_per_second: c_ulong,
+    min_pts_per_second: c_ulong,
+    cost_factor: f32,
+    max_send_interval: c_ulong,
+    send_interval_increment: c_ulong,
+    send_interval_decrement: c_ulong,
+    current_communications_tick: c_ulong,
+    current_physics_tick: c_ulong,
+    name: *const c_char,
+    allow_new_connections: bool,
+    announce: bool,
+    network_adapter: c_ulong,
+) -> *mut EeNetServer {
+    let name = unsafe { CStr::from_ptr(name) }.to_bytes();
+    let args = ee_net_sv_args(
+        [max_players, pts_per_ct],
+        [
+            default_send_interval,
+            max_pts_per_second,
+            min_pts_per_second,
+            max_send_interval,
+            send_interval_increment,
+            send_interval_decrement,
+            current_communications_tick,
+            current_physics_tick,
+            network_adapter,
+        ],
+        cost_factor,
+        name,
+        [allow_new_connections, announce],
+    );
+    unsafe { ee_net_sv_new(ctx, host, mmhost, qhost, &args, comms) }
+}
+
+/// The game's arguments packed (`[max players, PTs per CT]`, `[default send interval, max PTs/s, min PTs/s, max
+/// send interval, its increment, its decrement, the current CT, the current PT, the network adapter]`, the cost
+/// factor, the name, `[allow new connections, announce]`), the protocol TCP; `name` outlives the server's creation.
+pub fn ee_net_sv_args(
+    bytes: [u8; 2],
+    longs: [c_ulong; 9],
+    cost_factor: f32,
+    name: &[u8],
+    flags: [bool; 2],
+) -> EeNetSvArgs {
+    EeNetSvArgs {
+        max_players: bytes[0],
+        default_send_interval: longs[0] as u32,
+        pts_per_ct: bytes[1],
+        max_pts_per_second: longs[1] as u32,
+        min_pts_per_second: longs[2] as u32,
+        cost_factor,
+        max_send_interval: longs[3] as u32,
+        send_interval_increment: longs[4] as u32,
+        send_interval_decrement: longs[5] as u32,
+        current_communications_tick: longs[6] as u32,
+        current_physics_tick: longs[7] as u32,
+        allow_new_connections: flags[0],
+        tcp: true,
+        name: name.as_ptr(),
+        name_length: name.len(),
+        announce: flags[1],
+        network_adapter: longs[8] as u32,
+    }
 }
 
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
