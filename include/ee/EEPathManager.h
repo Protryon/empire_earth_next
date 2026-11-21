@@ -36,7 +36,7 @@ class EEPathManager {
 public:
     EEPathManager();
     virtual ~EEPathManager();
-    void CancelAutoPathRequest(EEAutoPathRequest* inRequest) { this->Call(8, H(inRequest)); }   // 0xa896b (ret 4) (provisional name)
+    void CancelAutoPathRequest(EEAutoPathRequest* inRequest) { this->Call(8, H(inRequest)); }
     void DumpOutOfSynch(FILE* inFile);   // FILE*: 0xa639b (ret 4; EEPhysics's out-of-synch dump) (provisional name)
     void DumpSim(FILE* inFile);         // TEST ONLY (EE-SIM's state dumps): the searches in progress, pending requests, timers
     // port (save version 0.256, EEPWorldHelper): the request history, the region maps and the timers, which the
