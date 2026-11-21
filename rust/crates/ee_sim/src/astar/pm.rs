@@ -26,6 +26,7 @@
 
 use std::collections::VecDeque;
 use std::ffi::c_void;
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::astar::pm_record::PathRecord;
 
@@ -1904,7 +1905,17 @@ pub extern "C" fn ee_path_manager_new(f: EePathHostFn, ctx: *mut c_void) -> *mut
     }));
     // SAFETY: just made; the box does not move
     unsafe { (*p).host.bounded = &mut (*p).bounded };
+    // the first is the game's (gPathManager): the Rust callers' (pm_entry.rs)
+    let _ = GLOBAL.compare_exchange(std::ptr::null_mut(), p, Ordering::AcqRel, Ordering::Acquire);
     p
+}
+
+/// The game's manager (`gPathManager.mRust`; null before it is made).
+static GLOBAL: AtomicPtr<EePathManager> = AtomicPtr::new(std::ptr::null_mut());
+
+/// The game's manager (null before `gPathManager` is constructed).
+pub fn global() -> *mut EePathManager {
+    GLOBAL.load(Ordering::Acquire)
 }
 
 /// # Safety
@@ -1912,6 +1923,7 @@ pub extern "C" fn ee_path_manager_new(f: EePathHostFn, ctx: *mut c_void) -> *mut
 #[no_mangle]
 pub unsafe extern "C" fn ee_path_manager_free(p: *mut EePathManager) {
     if !p.is_null() {
+        let _ = GLOBAL.compare_exchange(p, std::ptr::null_mut(), Ordering::AcqRel, Ordering::Acquire);
         drop(Box::from_raw(p));
     }
 }
@@ -1943,7 +1955,8 @@ unsafe fn with<R>(p: *mut EePathManager, body: impl FnOnce(&mut PathManager, &mu
 /// 16 `RequestPendingPath(h0, (i0, i1))`, 17 `AddPending(unit i0, (i1, i2))`, 18 the loaded running state
 /// put back, 19 the graph searches' resolve, 20 the pending count, 21 the queued count, 22 `mLCC`,
 /// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back,
-/// 27 `FindPath` (pm_bounded.rs), 28 `FindBoundedPath` (its points appended to the C++ vector `i6`).
+/// 27 `FindPath` (pm_bounded.rs; the path and visited tiles appended to the `Vec<EePoint>`s `h2` and `h3`),
+/// 28 `FindBoundedPath` (its points appended to the `Vec<EePathPoint>` `i6`): pm_entry.rs makes both.
 ///
 /// # Safety
 /// `p` a live manager, `io` live; the handles live objects of their kinds.
@@ -2053,7 +2066,10 @@ fn call(m: &mut PathManager, host: &mut dyn PathHost, what: i32, io: &mut EePath
         28 => {
             let (reached, path) =
                 crate::astar::pm_bounded::find_bounded_path(host, h[0], h[1], i[4], t(0), t(2), i[5] as i32);
-            crate::astar::pm_bounded::points_out(host, i[6] as u64, &path);
+            // SAFETY: `i6` is the caller's live `Vec<EePathPoint>` (pm_entry.rs)
+            unsafe {
+                (*(i[6] as u64 as usize as *mut Vec<crate::astar::path_splice::EePathPoint>)).extend_from_slice(&path)
+            };
             reached as i64
         }
         _ => -1,

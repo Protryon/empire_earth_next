@@ -4,7 +4,7 @@
 
 #![cfg(not(test))]
 
-use std::ffi::c_void;
+use std::ffi::{c_long, c_void};
 
 use ee_base::math::types::GeTransformation;
 
@@ -24,7 +24,6 @@ extern "C" {
     fn ee_units_uu_host_passable_flags(class_obj: u64, unit: u64) -> i32;
     fn ee_units_uu_host_surrounding_tiles(target: u64, virtual_call: u8, out: *mut [i32; 2], capacity: u32) -> u32;
     fn ee_units_uu_host_container_continent(container: u64, unit: u64) -> u64;
-    fn ee_units_uu_host_continent(which: i32, a: u64, b: u64, c: u64) -> u64;
     fn ee_units_uu_host_tile_line(
         x1: i32,
         y1: i32,
@@ -57,15 +56,6 @@ extern "C" {
     fn ee_units_uu_host_spot(which: i32, unit: u64, x: i32, y: i32, out: *mut f32) -> i32;
     fn ee_units_uu_host_world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64;
     fn ee_units_uu_host_world_f(which: i32, a: u64, b: u64, f: f32) -> f32;
-    fn ee_units_uu_host_find_path(
-        unit: u64,
-        from: *const i32,
-        to: *const i32,
-        bounds: *const i32,
-        limit: u32,
-        walls: u8,
-        first: *mut i32,
-    ) -> u8;
 }
 
 /// `ee_units_uu_host_world`'s questions and writes (one C++ switch).
@@ -90,21 +80,6 @@ const WORLD_F_GATHER_REACH: i32 = 1;
 const WORLD_F_WALL_RISE: i32 = 2;
 const WORLD_F_DEPOSIT_FACTOR: i32 = 4;
 
-/// `ee_units_uu_host_continent`'s questions (one C++ switch).
-const CONTINENT_ID: i32 = 0;
-const CONTINENT_BY_ID: i32 = 1;
-const CONTINENT_AT: i32 = 2;
-const CONTINENT_NUMBER: i32 = 3;
-const CONTINENT_CONNECTED: i32 = 4;
-const CONTINENT_CONNECTED_FOR_UNIT: i32 = 5;
-const CONTINENT_TILE_FLAG: i32 = 6;
-const CONTINENT_LINK: i32 = 7;
-const CONTINENT_CATEGORY: i32 = 8;
-const CONTINENT_CONNECTED_BY_ID: i32 = 9;
-const CONTINENT_OF: i32 = 10;
-const CONTINENT_SHORE: i32 = 11;
-const CONTINENT_FOOTPRINT: i32 = 12;
-const CONTINENT_CAN_GET_TO: i32 = 13;
 /// `ee_units_uu_host_player`'s questions.
 const PLAYER_HUMAN: i32 = 1;
 const PLAYER_UNIT_SET: i32 = 2;
@@ -284,37 +259,36 @@ impl UuHost for Game {
         // SAFETY: live units
         unsafe { ee_units_uu_host_container_continent(container, unit) }
     }
+    // the continent manager's lookups: its Rust record (ee_sim::astar), its entry points where the C++ called them
     fn continent_id(&mut self, x: i32, y: i32) -> u16 {
-        // SAFETY: a C++ read of the continent manager
-        unsafe { ee_units_uu_host_continent(CONTINENT_ID, x as u32 as u64, y as u32 as u64, 0) as u16 }
+        cm_lookup::continent_id(x, y)
     }
     fn continent_by_id(&mut self, id: u16) -> u64 {
-        // SAFETY: as continent_id
-        unsafe { ee_units_uu_host_continent(CONTINENT_BY_ID, u64::from(id), 0, 0) }
+        cm_lookup::continent_by_id(id)
     }
     fn continent_at(&mut self, x: i32, y: i32) -> u64 {
-        // SAFETY: as continent_id
-        unsafe { ee_units_uu_host_continent(CONTINENT_AT, x as u32 as u64, y as u32 as u64, 0) }
+        match cm_lookup::continent_id(x, y) {
+            0 => 0,
+            id => cm_lookup::continent_by_id(id),
+        }
     }
     fn continent_number(&mut self, continent: u64) -> u16 {
-        // SAFETY: a continent the C++ gave
-        unsafe { ee_units_uu_host_continent(CONTINENT_NUMBER, continent, 0, 0) as u16 }
+        // SAFETY: a continent the manager gave
+        unsafe { crate::astar::cm_io::continent(continent).id }
     }
     fn are_connected(&mut self, a: u64, b: u64, flags: i32) -> bool {
-        // SAFETY: continents the C++ gave
-        unsafe { ee_units_uu_host_continent(CONTINENT_CONNECTED, a, b, flags as u32 as u64) != 0 }
+        // SAFETY: continents the manager gave (its own CNTQ scope)
+        unsafe { crate::astar::cm_queries::ee_astar_cmq_are_connected(a, b, flags as c_long) }
     }
     fn are_connected_for_unit(&mut self, unit: u64, a: u64, b: u64) -> bool {
         // SAFETY: as are_connected; a live unit
-        unsafe { ee_units_uu_host_continent(CONTINENT_CONNECTED_FOR_UNIT, a, b, unit) != 0 }
+        unsafe { crate::astar::cm_unit::connected_for_unit(unit, a, b) }
     }
     fn continent_tile_flag(&mut self, x: i32, y: i32) -> i32 {
-        // SAFETY: as continent_id
-        unsafe { ee_units_uu_host_continent(CONTINENT_TILE_FLAG, x as u32 as u64, y as u32 as u64, 0) as i32 }
+        crate::astar::world_view::ee_astar_tile_flag(x as c_long, y as c_long) as i32
     }
     fn continent_link(&mut self, row: u16, column: u16) -> bool {
-        // SAFETY: as continent_id
-        unsafe { ee_units_uu_host_continent(CONTINENT_LINK, u64::from(row), u64::from(column), 0) != 0 }
+        cm_lookup::adjacent(row, column)
     }
     fn line_blocked(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) -> bool {
         crate::units::uu_world::line_blocked(self, x1, y1, x2, y2).0
@@ -440,14 +414,13 @@ impl UuHost for Game {
         read(|t| unsafe { PlayerView::of(t, player) }.is_some_and(|p| p.save_vis_map()))
     }
     fn continent_category(&mut self, continent: u64) -> u8 {
-        // SAFETY: a continent the C++ gave
-        unsafe { ee_units_uu_host_continent(CONTINENT_CATEGORY, continent, 0, 0) as u8 }
+        // SAFETY: a continent the manager gave
+        unsafe { crate::astar::cm_io::continent(continent).category }
     }
     fn are_connected_by_id(&mut self, a: u16, b: u16, flags: i32) -> bool {
-        // SAFETY: a C++ read of the continent manager
-        unsafe {
-            ee_units_uu_host_continent(CONTINENT_CONNECTED_BY_ID, u64::from(a), u64::from(b), flags as u32 as u64) != 0
-        }
+        let (second, first) = (cm_lookup::continent_by_id(b), cm_lookup::continent_by_id(a));
+        // SAFETY: as are_connected
+        unsafe { crate::astar::cm_queries::ee_astar_cmq_are_connected(first, second, flags as c_long) }
     }
     fn regions_size(&mut self) -> i32 {
         with_regions(|r| r.size()).unwrap_or(0)
@@ -474,16 +447,18 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_tile_test(TILE_MESH_VALID + which, 0, 0, x as i32, y as i32) != 0 }
     }
     fn shore_tile(&mut self, x: i32, y: i32) -> bool {
-        // SAFETY: as continent_id
-        unsafe { ee_units_uu_host_continent(CONTINENT_SHORE, x as u32 as u64, y as u32 as u64, 0) != 0 }
+        // SAFETY: the registered record
+        crate::astar::world_view::cm()
+            .is_some_and(|r| unsafe { crate::astar::cm::ee_astar_cm_is_shore(r, x as c_long, y as c_long) })
     }
     fn continent_of(&mut self, x: i32, y: i32, kind: i32) -> u16 {
-        // SAFETY: as continent_id
-        unsafe { ee_units_uu_host_continent(CONTINENT_OF, x as u32 as u64, y as u32 as u64, kind as u32 as u64) as u16 }
+        // SAFETY: the registered record (its own CNTQ scope)
+        crate::astar::world_view::cm().map_or(0, |r| unsafe {
+            crate::astar::cm_queries::ee_astar_cmq_region_id(r, x as c_long, y as c_long, kind as c_long)
+        })
     }
     fn footprint_continent(&mut self, complex: u64, kind: i32) -> u16 {
-        // SAFETY: a live complex unit
-        unsafe { ee_units_uu_host_continent(CONTINENT_FOOTPRINT, complex, 0, kind as u32 as u64) as u16 }
+        crate::astar::cm_unit::footprint_region(complex, kind as c_long)
     }
     fn in_same_area(&mut self, tiles: &[Tile], kind: i32) -> bool {
         // SAFETY: the tiles' buffer
@@ -517,8 +492,32 @@ impl UuHost for Game {
 
 /// `gContinentManager.CanGetTo(unit, x, y)` (the AI lane's C++: landing.rs).
 pub(crate) fn can_get_to(unit: u64, x: i32, y: i32) -> bool {
-    // SAFETY: a C++ read of the continent manager; a live unit
-    unsafe { ee_units_uu_host_continent(CONTINENT_CAN_GET_TO, x as u32 as u64, y as u32 as u64, unit) != 0 }
+    // SAFETY: a live unit
+    unsafe { crate::astar::cm_unit::can_get_to_unit(unit, x as c_long, y as c_long) }
+}
+
+/// The continent manager's inline lookups (ee/EEAIContinentManager.h) over its record.
+mod cm_lookup {
+    use crate::astar::cm::EeAStarCmTable;
+    use crate::astar::world_view::cm;
+    use std::ffi::c_long;
+
+    /// `GetContinentID(x, y)`: 0 off the map
+    pub fn continent_id(x: i32, y: i32) -> u16 {
+        cm().map_or(0, |r| crate::astar::cm_io::continent_id_at(r, x as c_long, y as c_long))
+    }
+    /// `GetContinentByID(id)` (0: none)
+    pub fn continent_by_id(id: u16) -> u64 {
+        cm().map_or(0, |r| {
+            r.tables().tables[EeAStarCmTable::Continents as usize].get(id as usize).copied().unwrap_or(0)
+        })
+    }
+    /// `AreAdjacent(row, column)`: `mTileFlags[row * mFlagsWidth + column]`
+    pub fn adjacent(row: u16, column: u16) -> bool {
+        let Some(r) = cm() else { return false };
+        // SAFETY: the flags grid is mFlagsWidth squared (the C++ read it unchecked)
+        unsafe { *r.tile_flags.add(row as usize * r.flags_width as usize + column as usize) }
+    }
 }
 
 /// The citizen class's `HasGatherPoint(unit, resource)` (its UCBD note: gather_spot.rs's accessibility test).
@@ -602,20 +601,32 @@ impl UuWorld for Game {
         limit: u32,
         walls: bool,
     ) -> Option<Tile> {
-        let mut first = [0; 2];
-        // SAFETY: a live unit; two, two and four ints; two out
-        let found = unsafe {
-            ee_units_uu_host_find_path(
+        // FindPath(unit, the map, from, to, (left, top, right, bottom), kind 0xb, the limit, the walls' modifier)
+        let map = read(|t| WorldView::global(t).and_then(|w| w.map()).map_or(0, |m| m.handle()));
+        let modifier =
+            if walls { crate::astar::modifier_obj::ee_astar_modifier_new_walls() } else { std::ptr::null_mut() };
+        let window = crate::astar::pm_entry::EePathWindow {
+            top: bounds[1],
+            left: bounds[0],
+            bottom: bounds[3],
+            right: bounds[2],
+        };
+        // SAFETY: a live unit, the live map, the modifier made here
+        let path = unsafe {
+            crate::astar::pm_entry::find_path(
                 unit,
-                from.as_ptr(),
-                to.as_ptr(),
-                bounds.as_ptr(),
-                limit,
-                u8::from(walls),
-                first.as_mut_ptr(),
+                map,
+                (from[0], from[1]),
+                (to[0], to[1]),
+                window,
+                0xb,
+                limit as i32,
+                modifier as u64,
             )
         };
-        (found != 0).then_some(first)
+        // SAFETY: made above (or null)
+        unsafe { crate::astar::modifier_obj::ee_astar_modifier_release(modifier) };
+        path.first().map(|p| [p.x, p.y])
     }
     fn can_take(&mut self, container: u64, unit: u64, kind: u32) {
         world(WORLD_CAN_TAKE, container, unit, 0, kind as i32, 0, 0.0);

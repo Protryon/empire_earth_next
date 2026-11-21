@@ -37,7 +37,7 @@
 // scenario manager, and the forests' two members that make units.
 
 // TEST ONLY: CNTQ (the record of an outermost query; ee_sim::astar cm_capture.rs, whose scope depth this shares)
-// for the three queries left here (they read the units' classes)
+// for the query left here
 class EEContinentQueryCapture {
 public:
     explicit EEContinentQueryCapture(unsigned int inKind) : mOn(ee_astar_cntq_enter(inKind)) {}
@@ -49,7 +49,7 @@ public:
     bool mOn;
 };
 
-enum { kQueryCanGetTo = 6, kQueryConnectedForUnit = 13, kQueryUpdateWallUnit = 24 };
+enum { kQueryUpdateWallUnit = 24 };
 
 // Resets the global continent manager and frees its tile grids (Rust: cm_passes.rs)
 void EEAIContinentManager::Shutdown()
@@ -130,103 +130,19 @@ bool EEAIContinentManager::Rebuild()
     return ee_astar_cm_rebuild(&this->mRecord, (uint64_t)(uintptr_t)gWorld.mMap, EEAIRegionSize());
 }
 
-// Returns whether inUnit can reach tile (inX, inY): same continent unless air-blocked, else by its complex unit:
-// planet ships always, aircraft by planet on space maps, ships by water body or space region
-bool EEAIContinentManager::CanGetTo(EEUnit* inUnit, long inX, long inY)
+// CanGetTo's C++ (ee_sim::astar cm_unit.rs): 0 the map is a space map; 1 the aircraft's planet id, its land
+// continent when it had none
+extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
 {
-    EEContinentQueryCapture q(kQueryCanGetTo);   // TEST ONLY
-    q.Unit(inUnit); q.I(inX); q.I(inY);
-    bool theQ = [&]() -> bool {
-    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-    bool theResult = false;
-    std::pair<long, int> theTile(inUnit->mTileX, inUnit->mTileY);
-    if ((unsigned long)theTile.first < this->mRecord.width && (unsigned long)theTile.second < this->mRecord.height &&
-        (unsigned long)inX < this->mRecord.width && (unsigned long)inY < this->mRecord.height) {
-        EEAIContinent* theFrom = this->GetContinentAt(inUnit);
-        EEAIContinent* theTo = this->GetContinentAt(inX, inY);
-        bool theBlocked;
-        if ((inUnit->mUnitClass->mDomains & kMovementAir) == 0 || inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 0xc))
-            theBlocked = false;
-        else
-            theBlocked = true;
-        if (theFrom == theTo && !theBlocked) {
-            theResult = true;
-        } else {
-            theResult = false;
-            if (theComplexUnit) {
-                EEUnitClass* theClass = theComplexUnit->mUnitClass;
-                if (theClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                    theResult = true;
-                } else {
-                    unsigned char theFlags = theClass->mDomains;
-                    unsigned short theID;
-                    if ((theFlags & kMovementSeaOrSpace) == 0) {
-                        if ((theFlags & kMovementAir) != 0 || theClass->mUnitType == kUnitTypeAirport) {
-                            // a map without space tiles needs no planet check
-                            if (!gWorld.mMap->mTerrainMesh.GetIsSpaceMap() || !theBlocked) {
-                                theResult = true;
-                            } else {
-                                if ((theFlags & kMovementAir) != 0) {
-                                    theID = theComplexUnit->mPlanetID;
-                                    if (theID == 0) {
-                                        EEDebugTrace("EEAIContinentManager::GetCanPathToContinent: no planet ID for airplane %d of type %s\n",
-                                                     theComplexUnit->GetUnitID(), theComplexUnit->GetUnitClass()->GetName());
-                                        theID = EEGetLandContinentOf(theComplexUnit);
-                                        theComplexUnit->mPlanetID = theID;
-                                    }
-                                } else {
-                                    theID = this->GetContinent(theComplexUnit, kAIPathNonSpace);
-                                }
-                                if (theID != 0) {
-                                    EETileCoordinate theTarget;
-                                    theTarget.mX = inX;
-                                    theTarget.mY = inY;
-                                    if (theID == this->GetContinent(theTarget, kAIPathNonSpace))
-                                        theResult = true;
-                                    else
-                                        theResult = false;
-                                }
-                            }
-                        }
-                    } else {
-                        long theKind = (theFlags & kMovementSea) ? 1 : 3;
-                        if (inUnit->mComplexUnit)
-                            theID = inUnit->mComplexUnit->GetFootprintContinent(theKind);
-                        else
-                            theID = this->GetContinent(inUnit, theKind);
-                        if (theID != 0) {
-                            EETileCoordinate theTarget;
-                            theTarget.mX = inX;
-                            theTarget.mY = inY;
-                            if (theID == this->GetContinent(theTarget, theKind))
-                                theResult = true;
-                            else
-                                theResult = false;
-                        }
-                    }
-                }
-            }
-        }
+    if (inWhat == 0)
+        return gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
+    EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inUnit;
+    if (theUnit->mPlanetID == 0) {
+        EEDebugTrace("EEAIContinentManager::GetCanPathToContinent: no planet ID for airplane %d of type %s\n",
+                     theUnit->GetUnitID(), theUnit->GetUnitClass()->GetName());
+        theUnit->mPlanetID = EEGetLandContinentOf(theUnit);
     }
-    return theResult;
-    }();
-    q.I(theQ);
-    return theQ;
-}
-
-// Returns whether two continents are connected for inUnit's passable terrain (AreConnected; flags 0 without a unit)
-bool EEAIContinentManager::AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond)
-{
-    EEContinentQueryCapture q(kQueryConnectedForUnit);   // TEST ONLY
-    q.Unit(inUnit); q.Area(inFirst); q.Area(inSecond);
-    bool theQ = [&]() -> bool {
-    long theFlags = 0;
-    if (inUnit)
-        theFlags = inUnit->GetUnitClass()->GetPassableFlags(inUnit);
-    return this->AreConnected(inFirst, inSecond, theFlags);
-    }();
-    q.I(theQ);
-    return theQ;
+    return theUnit->mPlanetID;
 }
 
 // Queues the footprint tiles of a finished blocking unit or gate for a sector rebuild and tells the path manager

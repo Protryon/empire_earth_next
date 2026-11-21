@@ -204,32 +204,7 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         theUnit->mCollisionResolutionCount = 0.0f;
         return 1;
     }
-    case EE_UNITS_COND_AUTO_WAYPOINT:
-        return theUnit->ShouldMoveToNextAutoWaypoint();
-    case EE_UNITS_COND_WAYPOINT_STEP: {
-        bool theFlag;
-        if (inC == 0) {
-            theFlag = theUnit->mWaypoints.size() == 0;
-            if (theFlag && (!gPathManager.HasAutoPath(theUnit) || !gPathManager.IsPathDone(theUnit))) {
-                theUnit->RefreshPath();
-                theFlag = theUnit->mWaypoints.size() == 0;
-            }
-        } else if (inC == 1) {
-            if (theUnit->mWaypoints.size() == 0) {
-                theUnit->RefreshPath();
-                return (long)theUnit->mWaypoints.size() > 0;
-            }
-            if (theUnit->mWaypoints.size() == 1)
-                theUnit->RefreshPath();
-            return 1;
-        } else if (inC == 2)
-            theFlag = theUnit->mHasArrived;
-        else
-            return theUnit->mWaypoints.size() == 1 && gPathManager.IsPathDone(theUnit);
-        if (theFlag && theUnit->mCollisionState != 0)
-            theUnit->mCollisionState = 0;
-        return theFlag;
-    }
+    // the waypoints' cases: Rust (cls_host.rs over waypoints.rs)
     case EE_UNITS_COND_HERD: {
         EEHerd* theHerd = theUnit->mHerd;
         if (theHerd == NULL)
@@ -239,8 +214,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     }
     case EE_UNITS_COND_ATTACK_NEARBY:
         return ((EEUnitClass*)(uintptr_t)inB)->AttackNearby(theUnit, CondGoal((uint64_t)inC));
-    case EE_UNITS_COND_WAYPOINTS:
-        return (int64_t)theUnit->mWaypoints.size();
     case EE_UNITS_COND_GROUND_Z: {
         GE3DPoint theGround(0.0f, 0.0f, 0.0f);
         ::gWorld.mMap->GetGroundPoint(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), theGround);

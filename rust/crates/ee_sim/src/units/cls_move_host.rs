@@ -8,7 +8,7 @@
 
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
-use crate::units::cls_host::{ClsGame, EeUnitsClsIo, EeUnitsClsListHandle};
+use crate::units::cls_host::{ClsGame, EeUnitsClsIo};
 use crate::units::cls_move::{self as mv, MoveHost};
 use crate::units::unit_class_fields::EeUnitsUnitClassFields;
 use crate::units::uu::{EeUnitsUuUnit, UuHost};
@@ -63,10 +63,6 @@ pub const EE_UNITS_CLS_MV_NEXT_WAYPOINT: i32 = 60;
 pub const EE_UNITS_CLS_MV_DISTANCE_3D: i32 = 61;
 /// unit `a`'s `mBoundedPathTiles.clear()` (c 0) or `push_back((io.a, io.b))` (1)
 pub const EE_UNITS_CLS_MV_BOUNDED: i32 = 62;
-/// `gPathManager.FindBoundedPath(a, map, c, a's tile, (io.a, io.b), path, 50, true, &reached)`: the path pushed
-pub const EE_UNITS_CLS_MV_FIND_BOUNDED_PATH: i32 = 63;
-/// `EEPathManager::MergeWaypoints(the list's points, a's mWaypoints, 0)`: the list replaced
-pub const EE_UNITS_CLS_MV_MERGE_WAYPOINTS: i32 = 64;
 /// unit `a`'s `SetVelocity(io.f)`
 pub const EE_UNITS_CLS_MV_SET_VELOCITY: i32 = 65;
 /// unit `a`'s `StartAction(c)`
@@ -75,47 +71,12 @@ pub const EE_UNITS_CLS_MV_START_ACTION: i32 = 66;
 pub const EE_UNITS_CLS_MV_ACTION_CHANGED: i32 = 67;
 /// unit `a`'s `UpdateWaterState(true)`
 pub const EE_UNITS_CLS_MV_UPDATE_WATER_STATE: i32 = 68;
-/// `gPathManager.CancelPaths(a, true)`
-pub const EE_UNITS_CLS_MV_CANCEL_PATHS: i32 = 69;
 /// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
 pub const EE_UNITS_CLS_MV_INITIAL_CONTACT: i32 = 70;
 /// `PathToGoal`'s request for unit `a`, goal `b` to `(io.a, io.b)`: revisions `c`, graph `d & 1`, arg8 `d & 2`
 pub const EE_UNITS_CLS_MV_REQUEST_PATH: i32 = 71;
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 pub const EE_UNITS_CLS_MV_FLEE_GOAL: i32 = 72;
-
-/// Pushes a point onto a host operation's list.
-///
-/// # Safety
-/// `list` is the `EeUnitsClsIo::list` of a running operation.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_push_point(list: *mut EeUnitsClsListHandle, x: f32, y: f32, z: f32) {
-    // SAFETY: the caller's contract
-    unsafe { (*list).points.push(Ge3DPoint { x, y, z }) }
-}
-
-/// A host operation's points (x, y, z each), `*count` of them.
-///
-/// # Safety
-/// `list` is the `EeUnitsClsIo::list` of a running operation; `count` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_points(list: *mut EeUnitsClsListHandle, count: *mut usize) -> *const f32 {
-    // SAFETY: the caller's contract
-    unsafe {
-        *count = (*list).points.len();
-        (*list).points.as_ptr().cast()
-    }
-}
-
-/// Empties a host operation's points (before the C++ pushes their replacement).
-///
-/// # Safety
-/// As [`ee_units_cls_points`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_clear_points(list: *mut EeUnitsClsListHandle) {
-    // SAFETY: the caller's contract
-    unsafe { (*list).points.clear() }
-}
 
 impl ClsGame {
     fn mv(&mut self, op: i32, a: u64, b: u64, c: i64) -> (i64, EeUnitsClsIo) {
@@ -311,21 +272,32 @@ impl MoveHost for ClsGame {
         self.call(EE_UNITS_CLS_MV_BOUNDED, unit, 0, 1, 0, &mut io);
     }
     fn find_bounded_path(&mut self, unit: u64, kind: i32, to: Tile) -> Vec<Ge3DPoint> {
-        let mut handle = EeUnitsClsListHandle::default();
-        let mut io = EeUnitsClsIo {
-            a: to[0] as i64,
-            b: to[1] as i64,
-            list: std::ptr::addr_of_mut!(handle).cast(),
-            ..Default::default()
+        // FindBoundedPath(unit, the map, kind, its tile, to, path, 50) (pm_entry.rs, its PMRQ record)
+        // SAFETY: the simulation thread holds the world; a live unit
+        let (from, map) = {
+            let t = unsafe { crate::world::WorldRead::begin() };
+            let from = unsafe { crate::world::UnitView::of(&t, unit) }.map_or((0, 0), |u| u.tile_xy());
+            (from, crate::world::WorldView::global(&t).and_then(|w| w.map()).map_or(0, |m| m.handle()))
         };
-        self.call(EE_UNITS_CLS_MV_FIND_BOUNDED_PATH, unit, 0, i64::from(kind), 0, &mut io);
-        handle.points
+        // SAFETY: as above
+        let (_, path) = unsafe {
+            crate::astar::pm_entry::find_bounded_path(
+                unit,
+                map,
+                kind,
+                (from.0 as i32, from.1 as i32),
+                (to[0], to[1]),
+                50,
+            )
+        };
+        path.iter().map(|p| Ge3DPoint { x: p.x, y: p.y, z: p.z }).collect()
     }
     fn merge_waypoints(&mut self, unit: u64, path: &mut Vec<Ge3DPoint>) {
-        let mut handle = EeUnitsClsListHandle { points: std::mem::take(path), ..Default::default() };
-        let mut io = EeUnitsClsIo { list: std::ptr::addr_of_mut!(handle).cast(), ..Default::default() };
-        self.call(EE_UNITS_CLS_MV_MERGE_WAYPOINTS, unit, 0, 0, 0, &mut io);
-        *path = handle.points;
+        // EEPathManager::MergeWaypoints(path, the unit's waypoints) (waypoints.rs)
+        let mut p: Vec<[f32; 3]> = path.iter().map(|q| [q.x, q.y, q.z]).collect();
+        // SAFETY: a live complex unit
+        crate::units::waypoints::merge(&mut p, &unsafe { crate::units::waypoints::list(unit) }.locations());
+        *path = p.iter().map(|q| Ge3DPoint { x: q[0], y: q[1], z: q[2] }).collect();
     }
     fn set_velocity(&mut self, unit: u64, v: f32) {
         let mut io = EeUnitsClsIo { f: v, ..Default::default() };
@@ -341,7 +313,7 @@ impl MoveHost for ClsGame {
         self.mv(EE_UNITS_CLS_MV_UPDATE_WATER_STATE, unit, 0, 0);
     }
     fn cancel_paths(&mut self, unit: u64) {
-        self.mv(EE_UNITS_CLS_MV_CANCEL_PATHS, unit, 0, 0);
+        crate::units::waypoints::cancel_paths(unit);
     }
     fn set_initial_contact_location(&mut self, unit: u64, p: Ge3DPoint) {
         self.mv_p(EE_UNITS_CLS_MV_INITIAL_CONTACT, unit, 0, 0, p);
