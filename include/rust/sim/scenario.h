@@ -4742,8 +4742,9 @@ struct EeScenarioEvEffect {
   int32_t mAreaEffect;
   int32_t mTerrainType;
   int32_t mUnused2;
-  uint8_t mRunOnLoad;
-  uint8_t mUnused3;
+  /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
+  unsigned char mRunOnLoad;
+  unsigned char mUnused3;
   uint16_t mUnused4;
   int32_t mUnused5;
   int32_t mUnused6;

@@ -12,7 +12,7 @@
 // the C++ member names; c_long/c_ulong are 32 bits on Windows
 #![allow(non_snake_case, clippy::unnecessary_cast)]
 
-use std::os::raw::{c_long, c_ulong};
+use std::os::raw::{c_long, c_uchar, c_ulong};
 
 use crate::app::capture_record::Record;
 use crate::tech::effects::{
@@ -57,8 +57,9 @@ pub struct EeScenarioEvEffect {
     pub mAreaEffect: i32,
     pub mTerrainType: i32,
     pub mUnused2: i32,
-    pub mRunOnLoad: u8,
-    pub mUnused3: u8,
+    /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
+    pub mRunOnLoad: c_uchar,
+    pub mUnused3: c_uchar,
     pub mUnused4: u16,
     pub mUnused5: i32,
     pub mUnused6: i32,
@@ -66,6 +67,9 @@ pub struct EeScenarioEvEffect {
     /// (sizeof 0x58)
     pub mUnused8: i32,
 }
+
+// the dbeffects record's size (tools/eedata specgen reads this assert)
+const _: () = assert!(std::mem::size_of::<EeScenarioEvEffect>() == 88);
 
 // ---- the statements (`ee_scenariocpp_event(op, a)`: a[0..4] the arguments, pointers as integers; a float is its
 // bits in the low 32 bits)
