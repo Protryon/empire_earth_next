@@ -57,13 +57,8 @@ EeUnitsAtc* EEATCNew()
     return ee_units_atc_new(&EEATCHost);
 }
 
-// Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared for the air traffic)
-float EEUnit::GetTileDistanceSquared(EEUnit* inOther)
-{
-    long theDeltaY = this->mTileY - inOther->mTileY;
-    long theDeltaX = this->mTileX - inOther->mTileX;
-    return (float)(theDeltaX * theDeltaX + theDeltaY * theDeltaY);
-}
+// Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared)
+float EEUnit::GetTileDistanceSquared(EEUnit* inOther) { return ee_units_atc_tile_distance_squared(this, inOther); }
 
 // The file's primitives for Load and Save (EESavePrimitive) and a unit's id for Save
 static int32_t EEATCFile(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
@@ -91,13 +86,7 @@ long EEATCSave(EeUnitsAtc* inATC, FSFile* inFile)
 // Hands replaced aircraft's cargo weight and queue entries to their replacements
 void EEATCReplaceUnits(EeUnitsAtc* inATC, std::vector<EEPUnitSwap>& inSwaps)
 {
-    std::vector<void*> theOld;
-    std::vector<void*> theNew;
-    for (size_t i = 0; i < inSwaps.size(); i++) {
-        theOld.push_back(inSwaps[i].mOld);
-        theNew.push_back(inSwaps[i].mNew);
-    }
-    ee_units_atc_replace(inATC, theOld.data(), theNew.data(), theOld.size());
+    ee_units_atc_replace(inATC, reinterpret_cast<const EeAStarUnit*>(inSwaps.data()), inSwaps.size());
 }
 
 // The original's BlocksTakeoffs (ICF-folded into 0x4bb118), UpdateLandings 0x550277 and UpdateTakeoffs 0x550487:

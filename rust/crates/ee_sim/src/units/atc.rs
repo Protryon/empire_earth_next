@@ -978,19 +978,47 @@ pub unsafe extern "C" fn ee_units_atc_dump(p: *mut EeUnitsAtc, file: *mut c_void
     h.ctx = file;
     dump(AtcRef(p), &mut h);
 }
-/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`
+/// `ReplaceUnits`: `count` (old, new) pairs at `swaps` (the physics' `EEPUnitSwap`s: two unit pointers each)
 ///
 /// # Safety
-/// See above; `olds` and `news` hold `count` units each.
+/// See above; `swaps` holds `2 * count` units (null with `count` 0).
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_atc_replace(p: *mut EeUnitsAtc, olds: *const Unit, news: *const Unit, count: usize) {
-    let swaps: Vec<(Unit, Unit)> = if count == 0 {
+pub unsafe extern "C" fn ee_units_atc_replace(p: *mut EeUnitsAtc, swaps: *const Unit, count: usize) {
+    let swaps: Vec<(Unit, Unit)> = if count == 0 || swaps.is_null() {
         Vec::new()
     } else {
         // SAFETY: the contract
-        unsafe { (0..count).map(|i| (*olds.add(i), *news.add(i))).collect() }
+        unsafe { (0..count).map(|i| (*swaps.add(2 * i), *swaps.add(2 * i + 1))).collect() }
     };
     replace_units(AtcRef(p), &mut host(), &swaps);
+}
+
+/// The units' tiles in place (`mTileX`, `mTileY`: the `RTSUnit` record), for [`tile_distance_squared`] alone.
+#[cfg(not(test))]
+struct Tiles;
+
+#[cfg(not(test))]
+impl AtcHost for Tiles {
+    fn call(&mut self, op: i32, unit: Unit, _other: Unit, io: &mut EeUnitsAtcIo) -> i64 {
+        if op == EE_UNITS_ATC_TILE {
+            let at = unit as usize + crate::world::layout::layout().rts_unit_fields as usize;
+            // SAFETY: a live unit's record (the caller's contract)
+            let r = unsafe { &*(at as *const crate::world::unit_fields::EeUnitsRtsUnitFields) };
+            io.a = r.mTileX as _;
+            io.b = r.mTileY as _;
+        }
+        0
+    }
+}
+
+/// `EEUnit::GetTileDistanceSquared(other)`.
+///
+/// # Safety
+/// `unit` and `other` are live units; the world layout is registered.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_tile_distance_squared(unit: Unit, other: Unit) -> f32 {
+    tile_distance_squared(&mut Tiles, unit, other)
 }
 
 /// The maximum (0) or the used (1) air cargo.

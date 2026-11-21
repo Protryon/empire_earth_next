@@ -41,6 +41,11 @@ static EEComplexUnit* PGUnit(uint64_t inObject)
     return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inObject));
 }
 
+static FSFile* PGFile(uint64_t inFile)
+{
+    return reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inFile));
+}
+
 static EEPPatrolGroup* PGGroup(uint64_t inObject)
 {
     return reinterpret_cast<EEPPatrolGroup*>(static_cast<uintptr_t>(inObject));
@@ -50,43 +55,26 @@ static EEPPatrolGroup* PGGroup(uint64_t inObject)
 // points as listed, as a closed loop
 void EEPGSetPatrolPoints(EEPPatrolGroup* inGroup, const std::vector<U2DPoint<long> >& inPoints, unsigned long inPlayerID)
 {
-    std::vector<int32_t> theTiles;
-    for (size_t i = 0; i < inPoints.size(); i++) {
-        theTiles.push_back((int32_t)inPoints[i].mX);
-        theTiles.push_back((int32_t)inPoints[i].mY);
-    }
-    ee_units_pg_set_points(inGroup, theTiles.empty() ? NULL : &theTiles[0], (uint32_t)inPoints.size(), (uint32_t)inPlayerID);
+    ee_units_pg_set_points(inGroup, inPoints.empty() ? NULL : &inPoints[0].mX, (uint32_t)inPoints.size(), (uint32_t)inPlayerID);
 }
 
 // ---- the C++ the Rust bodies call (ee_units patrol_group.rs; each the original statement it replaced)
-
-// a point's GetTile() (EEPatrolTileIs) and GetTileX/GetTileY (SetPatrolPoints, IndexOf)
-extern "C" void ee_units_pg_host_unit_tile(uint64_t inUnit, int32_t* outX, int32_t* outY)
-{
-    EEComplexUnit* theUnit = PGUnit(inUnit);
-    *outX = (int32_t)theUnit->GetTileX();
-    *outY = (int32_t)theUnit->GetTileY();
-}
 
 extern "C" float ee_units_pg_host_distance(uint64_t inUnit, int32_t inX, int32_t inY)
 {
     return PGUnit(inUnit)->DistanceSquaredToTileXY(inX, inY);
 }
 
-// the map's tile at ((long)x, (long)y): its height; whether it HasUnit(probe) (AddPoint's first point)
-extern "C" uint8_t ee_units_pg_host_tile_at(float inX, float inY, uint64_t inProbe, float* outHeight)
+// the map's tile at ((long)x, (long)y) HasUnit(probe) (AddPoint's first point)
+extern "C" uint8_t ee_units_pg_host_tile_has(float inX, float inY, uint64_t inProbe)
 {
-    EEMapTile* theTile = ::gWorld.mMap->GetTile((long)inX, (long)inY);
-    *outHeight = theTile->GetHeight();
-    return inProbe != 0 && theTile->HasUnit(PGUnit(inProbe)) ? 1 : 0;
+    return ::gWorld.mMap->GetTile((long)inX, (long)inY)->HasUnit(PGUnit(inProbe)) ? 1 : 0;
 }
 
-extern "C" uint64_t ee_units_pg_host_create_point(uint64_t inGroup, float inX, float inY, uint32_t inPlayerID)
+// a path point of the player's at (x, y) (patrol_group.rs create_point gives it the group)
+extern "C" uint64_t ee_units_pg_host_create_point(float inX, float inY, uint32_t inPlayerID)
 {
-    EEUnit* theCreated = gUnitClassTable[kUnitTypePathPoint]->CreateUnit((long)inX, (long)inY, (long)inPlayerID, 0, NULL);
-    EEComplexUnit* theUnit = theCreated->GetComplexUnit();
-    theUnit->SetPatrolGroup(PGGroup(inGroup));
-    return PGObject(theUnit);
+    return PGObject(gUnitClassTable[kUnitTypePathPoint]->CreateUnit((long)inX, (long)inY, (long)inPlayerID, 0, NULL));
 }
 
 // the unit-side calls: patrol_group.rs EE_UNITS_PG_*
@@ -101,7 +89,6 @@ extern "C" uint64_t ee_units_pg_host_unit(int32_t inWhich, uint64_t inUnit, uint
         return PGObject(theUnit->GetPatrolGroup());
     case EE_UNITS_PG_KILL:
         theUnit->Kill(1, 0, 0);
-        theUnit->GetPlayer()->KillUnit(theUnit, false);
         return 0;
     case EE_UNITS_PG_KILL_UNIT:
         theUnit->GetPlayer()->KillUnit(theUnit, false);
@@ -126,26 +113,18 @@ extern "C" uint8_t ee_units_pg_host_live_state(uint32_t inMajorVersion, uint32_t
     return EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0;
 }
 
-// the saved game's typed calls (unsigned long, bool): a read takes the value and gives back what the file left
-extern "C" int32_t ee_units_pg_host_file(uint64_t inFile, int32_t inWhich, uint32_t* ioValue)
+// the saved game's typed calls (unsigned long, bool)
+extern "C" int32_t ee_units_pg_host_write(uint64_t inFile, int32_t inWhich, uint32_t inValue)
 {
-    FSFile* theFile = reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inFile));
-    switch (inWhich) {
-    case EE_UNITS_PG_WRITE_U32:
-        return (int32_t)theFile->Write((unsigned long)*ioValue);
-    case EE_UNITS_PG_WRITE_BOOL:
-        return (int32_t)theFile->Write(*ioValue != 0);
-    case EE_UNITS_PG_READ_U32: {
-        unsigned long theValue = *ioValue;
-        long theResult = theFile->Read(theValue);
-        *ioValue = (uint32_t)theValue;
-        return (int32_t)theResult;
-    }
-    default: {
-        bool theValue = *ioValue != 0;
-        long theResult = theFile->Read(theValue);
-        *ioValue = theValue ? 1 : 0;
-        return (int32_t)theResult;
-    }
-    }
+    return inWhich == EE_UNITS_PG_WRITE_U32 ? (int32_t)PGFile(inFile)->Write((unsigned long)inValue) : (int32_t)PGFile(inFile)->Write(inValue != 0);
+}
+
+extern "C" int32_t ee_units_pg_host_read_u32(uint64_t inFile, unsigned long* ioValue)
+{
+    return (int32_t)PGFile(inFile)->Read(*ioValue);
+}
+
+extern "C" int32_t ee_units_pg_host_read_bool(uint64_t inFile, bool* ioValue)
+{
+    return (int32_t)PGFile(inFile)->Read(*ioValue);
 }
