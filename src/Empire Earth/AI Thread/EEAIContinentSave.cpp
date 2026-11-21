@@ -153,12 +153,12 @@ bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outAre
 // the block's file part and the block a load keeps are Rust's (ee_sim::astar cm_file.rs)
 long EESaveContinentRegions(FSFile& outFile)
 {
-    return ee_astar_cm_save_regions(&gContinentManager.mRecord, FSMemoryFile::Ops(outFile));
+    return ee_astar_cm_save_regions(&gContinentManager.mRecord, &outFile);
 }
 
 long EELoadContinentRegions(FSFile& inFile)
 {
-    return ee_astar_cm_load_regions(FSMemoryFile::Ops(inFile));
+    return ee_astar_cm_load_regions(&inFile);
 }
 
 bool EEContinentRegionsPending()
