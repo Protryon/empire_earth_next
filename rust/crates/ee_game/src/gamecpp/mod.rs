@@ -33,6 +33,7 @@ pub mod state;
 pub mod world;
 
 // ---- round 9, lane A: the render objects (EERenderObject.cpp, the Graphics Thread's units)
+pub mod picker;
 pub mod render_object;
 //
 //
@@ -1425,6 +1426,41 @@ pub enum EeGameCpp {
     CaptureDoneSet,
     //
     // ---- round 9, lane A (EECore9OpA's cases)
+    // the unit picker (picker.rs; EEUnitPicker.cpp's EEPickerOp)
+    PkCapacity,
+    PkClassCategory,
+    PkClassFamily,
+    PkClassIsWall,
+    PkClassPickable,
+    PkClassProjectile,
+    PkClassUnitType,
+    PkCount,
+    PkCurrentPlayerAllied,
+    PkEntry,
+    PkEntryAssignPhysical,
+    PkEntryId,
+    PkEntryReleaseModel,
+    PkEntrySetFrame0,
+    PkEntrySetId,
+    PkEntrySetLocation,
+    PkEntrySetModel,
+    PkEntrySetScale,
+    PkEntryUnit,
+    PkFindUnit,
+    PkFogAttributes,
+    PkGroupNonEmpty,
+    PkLock,
+    PkMainCameraInverse,
+    PkPixelSize,
+    PkPushId,
+    PkRastFogOff,
+    PkStatsScale,
+    PkTakeView,
+    PkUnitIdField,
+    PkUnitReference,
+    PkUnitResourceType,
+    PkUnitTileX,
+    PkUnlock,
     // the render objects (render_object.rs; EERenderObject.cpp)
     RoPlayerId,
     RoViewedUnitId,
@@ -1490,7 +1526,6 @@ pub enum EeGameCpp {
     RoFlag529066,
     RoFlag529068,
     RoFogColor,
-    RoFogFactor,
     RoGeLineDelete,
     RoGeLineDraw,
     RoGeLineEnd,

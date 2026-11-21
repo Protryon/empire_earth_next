@@ -1359,6 +1359,40 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  PkCapacity,
+  PkClassCategory,
+  PkClassFamily,
+  PkClassIsWall,
+  PkClassPickable,
+  PkClassProjectile,
+  PkClassUnitType,
+  PkCount,
+  PkCurrentPlayerAllied,
+  PkEntry,
+  PkEntryAssignPhysical,
+  PkEntryId,
+  PkEntryReleaseModel,
+  PkEntrySetFrame0,
+  PkEntrySetId,
+  PkEntrySetLocation,
+  PkEntrySetModel,
+  PkEntrySetScale,
+  PkEntryUnit,
+  PkFindUnit,
+  PkFogAttributes,
+  PkGroupNonEmpty,
+  PkLock,
+  PkMainCameraInverse,
+  PkPixelSize,
+  PkPushId,
+  PkRastFogOff,
+  PkStatsScale,
+  PkTakeView,
+  PkUnitIdField,
+  PkUnitReference,
+  PkUnitResourceType,
+  PkUnitTileX,
+  PkUnlock,
   RoPlayerId,
   RoViewedUnitId,
   RoSelectedViewedUnitId,
@@ -1423,7 +1457,6 @@ enum class EeGameCpp : uint32_t {
   RoFlag529066,
   RoFlag529068,
   RoFogColor,
-  RoFogFactor,
   RoGeLineDelete,
   RoGeLineDraw,
   RoGeLineEnd,
@@ -2367,6 +2400,43 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// EEUnitPicker::Contains: whether the picker holds a unit (by id, from the last entry).
+bool ee_gamecpp_picker_contains(void *picker, void *unit);
+
+/// EEUnitPicker::PickUnit (`reference`: the unit referenced) and PickUnitUnreferenced: the unit under a screen point,
+/// searched under the picker's lock.
+///
+/// # Safety
+/// `point` is a readable screen point (two floats).
+void *ee_gamecpp_picker_pick(void *picker,
+                             const float *point,
+                             long prefer_resources,
+                             bool reference);
+
+/// EEUnitPicker::Clear: the entries' models released, the picker emptied.
+void ee_gamecpp_picker_clear(void *picker);
+
+/// EEUnitPicker::Reset: emptied, then the frame's viewport, projection and see-through mode taken.
+void ee_gamecpp_picker_reset(void *picker);
+
+/// EEUnitPicker::AddUnit: a unit at a transformation when there is room and it is big enough on screen (ee_gfx
+/// pick.rs admits): its id, and its complex unit's physical model at the transformation, or its graphic's first model
+/// at its stats' scale.
+///
+/// # Safety
+/// `transformation` is a readable transformation (sixteen floats).
+void ee_gamecpp_picker_add_unit(void *picker,
+                                void *unit,
+                                const float *transformation,
+                                float pixel_size);
+
+/// The walks' host for a picker (EEUnitPicker.cpp's FindUnit and PickBox pass it to ee_gfx pick_walk.rs).
+///
+/// # Safety
+/// `out` is a writable `EeGfxPickHost`.
+void ee_gamecpp_picker_host(void *picker,
+                            void *out);
 
 /// EEInitialiseScene: the light and the time-of-day colour, the fade and letterbox, the scene's flags, the effect
 /// queues, the render units' bars, once per scene, and the shared bitmap.

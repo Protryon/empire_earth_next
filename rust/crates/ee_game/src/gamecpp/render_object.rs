@@ -631,9 +631,9 @@ fn apply_lighting(kind: EeGfxLighting) {
 /// `location` is a readable point (three floats).
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_ro_fog_factor(location: *const f32, fog: u32) -> f32 {
-    let mut value = 0.0f32;
-    h(O::RoFogFactor, 0, &[location as usize as i64, fog as i64, ptr(&mut value)]);
-    value
+    // SAFETY: the function's contract
+    let p = unsafe { *(location as *const Ge3DPoint) };
+    super::picker::fog_factor(p, fog as c_ulong)
 }
 
 /// The raster table's depth_range: the main viewport's depth range, then the viewport set on the rasterizer.

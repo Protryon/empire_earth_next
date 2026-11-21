@@ -16,12 +16,11 @@ class EEUnit;
 class EETile;
 class EEDoppelganger;
 
-void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue);
 void SetTerrainLighting();                  // 0x10f833: the effects' lighting set-up (EEE3DEarthquake::DrawPass2)
 void SetLightingOff();                      // 0x10f6de: lighting set-up (EEROWater::RenderScene)
 void SetSceneFog();                         // 0x10f60f: lighting set-up (EEROWater::RenderScene)
 
-// the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by GetFogFactor)
+// the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by the fog factor, gamecpp picker.rs)
 // (provisional name)
 class GEQuaternion;
 extern long& gHiddenUnitsMode;

@@ -319,8 +319,9 @@ const EeGfxRaster gEERustRaster = {
 
 // ------------------------------------------------------------------------- round 9, lane A: this file's bodies' C++
 
-int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+// the unit picker's cases (EEUnitPicker.cpp), then lane B's
+int64_t EEPickerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEPickerOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the mirrors and constants of gamecpp render_object.rs
 static_assert(offsetof(EERenderEnvironment, mCameraYaw) == 0x84 && offsetof(EERenderEnvironment, mColor54) == 0x54
@@ -628,8 +629,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoRastViewRectangle: *(GERectangle*)a[0] = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
         break;
-    case O::RoFogFactor: GetFogFactor(*(const GE3DPoint*)a[0], (unsigned long)a[1], *(float*)a[2]);
-        break;
     case O::RoScreenPoint: GetScreenPoint(*(const GE3DPoint*)a[0], *(GE2DPoint*)a[1]);
         break;
     case O::RoRastFog: gRasterizer->SetFog((unsigned long)a[0], gScreenIndex);
@@ -719,7 +718,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoPostPushRenderObject: gGraphics->PostPushRenderObject(a[0] == 0 ? gU565360 : a[0] == 1 ? gU56535C : a[0] == 2 ? gU565358 : a[0] == 3 ? gU565354 : a[0] == 4 ? gU565350 : gU56534C);
         break;
-    default: return EECore9OpB(inOp, p, a, f);
+    default: return EEPickerOp(inOp, p, a, f);
     }
     return 0;
 }
@@ -743,6 +742,6 @@ double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoDoppelScale: return RO_DG->GetScale();
     case O::RoGhostScale: return RO_GH->GetScale();
     case O::RoCxAnimationFraction: return ((EEComplexUnit*)p)->mAnimationFraction;
-    default: return EECore9OpBF(inOp, p, a, f);
+    default: return EEPickerOpF(inOp, p, a, f);
     }
 }
