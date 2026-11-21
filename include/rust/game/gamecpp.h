@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 #include "rust/sim/tech.h"
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
@@ -970,6 +971,392 @@ enum class EeGameCpp : uint32_t {
   WCanBuyCivilization,
   WRemovePlayerFromGame,
   WSetDiplomaticStanceCall,
+  PrefScreenID,
+  RastSetFog,
+  RastSetFogColor,
+  RastSetFogType,
+  RastSetAmbientColor,
+  RastSetAmbientIntensity,
+  RastSetColorKeying,
+  RastSetCullingCW,
+  RastSetLighting,
+  RastSetProjectionMode,
+  RastSetShading,
+  RastSetSpecular,
+  RastSetZBufferOff,
+  RastSetZCompareLessEqual,
+  RastSetDithering,
+  RastSetAntiAliasingPref,
+  RastSetAlphaTesting,
+  RastSetAlphaCompareGreater,
+  RastSetAlphaRef,
+  RastSetVSyncPref,
+  RastSetWaterRipple,
+  PhysTimerRunning,
+  FpPrecision,
+  FpPrecision53,
+  FpSetPrecision53,
+  FpRounding,
+  FpSetRoundingNearest,
+  CpOnAttackPlayer,
+  SetCampaignChecksum,
+  RegisterShutdownMutex,
+  TsInitialize,
+  TmInitialize,
+  IsInitialize,
+  WindowHide,
+  MessageShowError,
+  InitializeNetwork,
+  NewUserInterface,
+  UStrNew,
+  UStrFree,
+  NewTextureManager,
+  TextureManagerPresent,
+  NewModelManager,
+  ModelManagerPresent,
+  PrefGameBitDepth,
+  WindowResize,
+  RastActivateScreen,
+  NewRoTerrain,
+  NewRoGroundShadows,
+  NewRoUnits,
+  NewRoWater,
+  NewRoEffects,
+  UStrFromW,
+  FontCreate,
+  FontAt,
+  RegisterShutdownGraphics,
+  PersistChecksum,
+  PersistGeneric2,
+  PersistMap,
+  PersistPoint3,
+  PersistPlayers,
+  PersistScenario,
+  PersistWorld,
+  PersistMultiplayer,
+  PersistEffects,
+  PersistCalamity,
+  PersistEnvironment,
+  RegisterShutdownPersistents,
+  UiLoadIcons,
+  UiMiniMapLoadMedia,
+  CreatePlaneModels,
+  RoUnitsLoadMedia,
+  RoSkyCreate,
+  RoShadowCreate,
+  UiUnloadIcons,
+  UiMiniMapUnloadMedia,
+  ReleasePlaneModels,
+  RoUnitsReleaseMedia,
+  RoSkyRelease,
+  RoShadowRelease,
+  NewFsPath,
+  FileSpecSetDirStartupSub,
+  FileSpecSetArchiveName,
+  DataArchivePresent,
+  FsPathAddArchive,
+  FsPathAddDirectory,
+  FileSpecSetCivilizationDir,
+  DataPathPresent,
+  DataPathDereference,
+  CivPathPresent,
+  CivPathDereference,
+  SetCivPath,
+  SetDataPath,
+  FreeCamera,
+  GameWindowWidth,
+  GameWindowHeight,
+  RectRoundToNearest,
+  ViewportSetViewRectangle,
+  SceneFlagsClear,
+  NewMusicManager,
+  MusicManagerPresent,
+  NewMousePointer,
+  MousePointerPresent,
+  NewGraphics,
+  GraphicsPresent,
+  NewDataPreLoading,
+  DataPreLoadingPresent,
+  NewPhysics,
+  RegisterShutdownThreads,
+  ScreenModeCount,
+  ScreenCurrentMode,
+  DebugVideoModeActive,
+  ScreenMode,
+  ScreenSetMode,
+  WindowClientOrigin,
+  WindowWidth,
+  WindowHeight,
+  RastPrimaryPresent,
+  RastPrimaryClear,
+  RastSecondaryPresent,
+  RastSecondaryClear,
+  DebugVideoModeChanged,
+  MusicStop,
+  AmbientStop,
+  AmbientSetEnabled,
+  SoundStopOneShots,
+  GfxPostReleaseScene,
+  GfxPostMessage50AAndWait,
+  PreloadWaitForQueue,
+  CommDeleteDetached,
+  WorldClear,
+  GameStateClear,
+  PhysPostInit,
+  SetGameScreenActive,
+  WindowRaise,
+  IsMouseResume,
+  IsKeyboardResume,
+  RastClearStart,
+  RastShowScene,
+  MenuWidth,
+  MenuHeight,
+  IsMouseSuspend,
+  IsKeyboardSuspend,
+  ModelsRemoveAll,
+  EffectTextureCount,
+  EffectTextureDereference,
+  TexturesRemoveAll,
+  ScreenRestoreOriginalMode,
+  ScreenReleaseWindow,
+  FontDereference,
+  DisplayRasterizersClear,
+  DeleteGameWindow,
+  DeleteEffectBatchBuffers,
+  RastDeactivate,
+  DeleteRoWater,
+  DeleteRoGroundShadows,
+  DeleteRo4C,
+  DeleteRoTerrain,
+  DeleteRoUnits,
+  DeleteRoEffects,
+  DeleteTextureManager,
+  DeleteModelManager,
+  CommDelete,
+  WonNetDeleteDetached,
+  MousePointerPost,
+  MousePointerShown,
+  PhysShutdown,
+  PhysDelete,
+  PreloadShutdown,
+  PreloadDelete,
+  GfxShutdown,
+  GfxDelete,
+  MousePointerShutdown,
+  MousePointerDelete,
+  MusicManagerDelete,
+  UserInterfaceDelete,
+  MouseRelease,
+  RastIsActivated,
+  RastActivate,
+  CreateEffectBatchBuffers,
+  ScreenCapture,
+  GfxSetSecondarySurface,
+  MouseSetWindowBounds,
+  MouseLoad,
+  TexturesRefreshAll,
+  ButtonsReload,
+  IconsLoaded,
+  UiReloadIcons,
+  MousePointerPostSurface,
+  FpSetPrecision,
+  GeInitialize,
+  EnumerateDisplayDevices,
+  RasterizerCount,
+  RasterizerSelect,
+  RasterizerIsPreferred,
+  PrefSetRasterizerName,
+  RastScreenCount,
+  PrefScreenIDRaw,
+  SetScreenIndexZero,
+  RastSetScreenID,
+  Screen32BitDevice,
+  PrefSetGameBitDepth16,
+  PrefTextureBitDepth,
+  Screen32BitTexture,
+  PrefSetTextureBitDepth16,
+  GameSizeFromPreferences,
+  SetGameWindowFallback,
+  PrefSave,
+  ScreenDesktopRect,
+  PrefFullScreen,
+  DisplayLogicalSize,
+  CreateGameWindow,
+  WindowSetFixedSize,
+  WindowTextInputStart,
+  SaveOriginalVideoMode,
+  SeInitialize,
+  MixerGet,
+  MixerUse,
+  ConductorSetChannelGroups,
+  PrefMusicEnabled,
+  ConductorSetState,
+  ConductorSetReverb,
+  PrefReverbEnabled,
+  ConductorSetVolumePref,
+  ConductorSetIntensity0,
+  StrFormatMusicFolder,
+  ConductorSetMusicFolder,
+  NewSoundManager,
+  SoundMaxChannels,
+  PrefMaxSounds,
+  SoundSetMaxChannels,
+  SoundSetMasterVolumePref,
+  SoundSetCategoryPriority,
+  SoundSetCategoryPercentage,
+  SoundSetLatency,
+  RegisterShutdownSound,
+  SoundManagerDestroy,
+  SoundPoolDump,
+  SoundPoolCleanup,
+  DbFindTable,
+  DbLoadStartingResources,
+  DbLoadUnitBehavior,
+  DbLoadSounds,
+  DbLoadGraphics,
+  DbLoadGfxEffects,
+  DbLoadMusic,
+  DbLoadWorld,
+  DbLoadFamily,
+  DbLoadButtons,
+  DbLoadTechTree,
+  DbLoadAnimals,
+  DbLoadColorTable,
+  DbLoadAIUnitTargeting,
+  DbLoadTerrain,
+  DbLoadTerrainType,
+  DbLoadCliffTerrain,
+  DbLoadCivPowers,
+  DbLoadCivilization,
+  DbLoadWeaponToHit,
+  DbLoadCalamity,
+  DbLoadUnitSet,
+  DbLoadAreaEffect,
+  DbLoadUpgrade,
+  DbLoadCPBehavior,
+  DbLoadGameVariant,
+  DbLoadPremadeCivs,
+  LoadRules,
+  DbFindEvents,
+  DbFindEffects,
+  LoadEvents,
+  TerrainColorsLoad,
+  UiInitialize,
+  FileSpecIsDirectory,
+  FileSpecCreateDirectory,
+  FileSpecSetUserCivilizationsDir,
+  DbFindAmbientSounds,
+  AmbientLoad,
+  GfxEffectsSortMedia,
+  DumpRules,
+  RegisterShutdownDatabase,
+  TileSetUnitListPool,
+  SoundsPoolInit,
+  DoppelgangerSetPool,
+  DoppelgangerSetComplexPool,
+  RandomMapInitialize,
+  LobbyOptionsSetDefaults,
+  WorldOptionsSetDefaults,
+  InitPhysicsModels,
+  NewMouse,
+  MousePresent,
+  MouseSetPositionXY,
+  MouseSetSensitivityPref,
+  CreateUnitClasses,
+  TechBuildUnitClassInfo,
+  NewUIManager,
+  UiSetLeftHandedPref,
+  UiSetBorderColors,
+  NewArtificialIntelligence,
+  ArtificialIntelligencePresent,
+  NewCheatCodes,
+  CheatCodesPresent,
+  NewGameTimer,
+  GameTimerPresent,
+  RegisterShutdownGameObjects,
+  DeleteGameTimer,
+  ContinentsShutdown,
+  DeleteCheatCodes,
+  DeleteArtificialIntelligence,
+  DeleteUIManager,
+  DeleteMouse,
+  MiniMapPresent,
+  AeManagerClear,
+  FreePhysicsModels,
+  ClearRandomMapGenerators,
+  PathManagerClear,
+  TileReleaseUnitListPool,
+  DoppelgangerRelease,
+  ReportLeakingUnits,
+  UnitActionDeleteScripts,
+  ReleaseUnitClasses,
+  AnimalsUnload,
+  AmbientClearSounds,
+  DamageTablesClear,
+  CalamityClassesDestroy,
+  DatabaseObjectsClear,
+  ButtonsUnload,
+  GfxEffectsUnloadTable,
+  DeleteMediaTable,
+  MusicObjectsClear,
+  SoundObjectsUnloadTable,
+  ColorTableUnload,
+  TargetingTableUnload,
+  TerrainTableUnload,
+  TerrainColorsUnload,
+  TerrainTypesUnload,
+  CliffTerrainUnload,
+  UpgradeTableUnload,
+  UnitBehaviorUnload,
+  StartingResourcesUnload,
+  GameVariantUnload,
+  WorldTableClear,
+  TechTreeUnloadAll,
+  CalamityManagerDestroy,
+  DeleteResource,
+  ComplexUnitReleasePool,
+  NodePoolDumpStats,
+  UStrHasSoundExtension,
+  SoundLoad,
+  SoundPlaySample,
+  SoundRegisterOneShot,
+  UStrWithExtension,
+  GfxLockMode,
+  UiCurrentFormPresent,
+  AntiAliasing,
+  UiRedrawAll,
+  RastDirtyRectangleSupport,
+  UiLockForCopy,
+  WorldReadLock,
+  WorldWriteLock,
+  SceneFlags6668Clear,
+  TakeRenderSnapshot,
+  RtsGfxFrameStarting,
+  WorldReadUnlock,
+  UiUnlockForCopy,
+  WorldWriteUnlock,
+  RtsGfxFrameDone,
+  LightFadeIn,
+  LightFadeOut,
+  LetterboxIn,
+  LetterboxOut,
+  InitialiseScene,
+  ReleaseScene,
+  GfxQueueDoneSet,
+  RtsGfxHandleMessage,
+  RtsGfxRestoreSurfaces,
+  GfxPostRedrawUI,
+  MouseBeginFrame,
+  MouseLoadScreenIndex,
+  MouseEndFrame,
+  TimeOfDay,
+  CaptureIsPostGame,
+  TakeJpgScreenshots,
+  FileSpecSetFileC,
+  FileSpecCreate,
+  GfxRenderTo,
+  CaptureSave,
+  CaptureDoneSet,
 };
 
 extern "C" {
@@ -1316,6 +1703,29 @@ long ee_gamecpp_calamity_can_cast_at(void *kl,
                                      bool check,
                                      void *target_unit);
 
+/// EEGraphics::FrameStarting: the whole UI redrawn when needed, then the frame's data copied under the world lock
+/// (the read lock and the UI's for modes 0 and 1, the write lock for 2 and 3; 1 and 3 keep it until FrameDone).
+void ee_gamecpp_gfx_frame_starting(void *g);
+
+/// EEGraphics::FrameDone: the frame finished and the lock kept since FrameStarting released (modes 1 and 3).
+void ee_gamecpp_gfx_frame_done(void *g);
+
+/// EEGraphics::HandleMessage: the game's graphics messages (the fades, the letterbox, the scene's start and
+/// release, the UI's redraw, a screenshot, the lock mode, the queue-done signal); the others RTSGraphics'.
+void ee_gamecpp_gfx_handle_message(void *g,
+                                   uint32_t message,
+                                   void *p1,
+                                   void *p2);
+
+/// EEGraphics::RestoreSurfaces: the lost surfaces restored, then the mouse pointer hidden, the UI redrawn (two more
+/// redraws posted), the cursor reloaded and the pointer shown again if it was; the restore's result.
+long ee_gamecpp_gfx_restore_surfaces(void *g);
+
+/// EEGraphics::SaveScreenShot: the capture rendered into the first free file EE###.bmp (or .jpg), or
+/// EEPostGame-M-D-Y-###.jpg for the post-game map, then the capture signalled done.
+void ee_gamecpp_gfx_screenshot(void *g,
+                               void *capture);
+
 /// The loading started: the random generator seeded, the human player count and the multiplayer flag set (members:
 /// the humans, the seed). EEStartLoading (C++) runs it: the legacy harness's seed pin breaks there.
 void ee_gamecpp_msg_start_loading(void *m);
@@ -1409,6 +1819,126 @@ void ee_gamecpp_msg_group_command(void *group,
                                   unsigned long player_id,
                                   long command,
                                   long goal_queue);
+
+/// EESetThreadFloatingPoint: the calling thread's FPU at 53-bit precision and round to nearest.
+void ee_gamecpp_startup_thread_fp();
+
+/// EEAttackPlayers: every computer player at war with the player attacks it; with the flag, the others (its allies
+/// and its own computer player) defend it.
+void ee_gamecpp_startup_attack_players(long player,
+                                       uint8_t flag);
+
+/// EELoadNetworkSettings: the five campaign checksums from string resources 0x32..0x34, 0x37, 0x36 (a missing
+/// string keeps the value).
+void ee_gamecpp_startup_network_settings();
+
+/// EEInitializePart1: the engine (input, threads, timers) started, the display opened and the graphics, sound,
+/// network, database, game objects and user interface initialised; false (after a message box) when the sound fails.
+bool ee_gamecpp_startup_part1();
+
+/// EEInitializeGraphics: the texture and model managers, the screen at 640x480, the render states, the render
+/// objects and every UI font; the graphics shutdown registered.
+void ee_gamecpp_startup_graphics();
+
+/// EERegisterPersistents: the saved game's persistent sections (checksum, map, scenario, players, world, effects,
+/// ...) in their order, and the list's shutdown.
+void ee_gamecpp_startup_persistents();
+
+/// EELoadGameMedia: the status box's icons, the mini map's, the effects', the units', the sky's and the ground
+/// shadows' media.
+void ee_gamecpp_startup_load_media();
+
+/// EEUnloadGameMedia: the same released.
+void ee_gamecpp_startup_unload_media();
+
+/// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
+/// present) and the civilization path made, replacing the previous ones.
+void ee_gamecpp_startup_data_paths();
+
+/// EESetGameViewRectangle: the viewport set to the rectangle (in 1600x1200 layout units, scaled to the window and
+/// rounded unless the camera is free); the camera stops following.
+void ee_gamecpp_startup_game_view(const EeGeRectangle *rectangle);
+
+/// EEInitializeThreads: the music manager, the mouse pointer, graphics, data preloading and physics threads; their
+/// shutdown registered.
+void ee_gamecpp_startup_threads();
+
+/// EESetVideoMode: the screen switched to the mode of that size and depth (optionally the lowest refresh above
+/// 60 Hz), the window resized and both surfaces cleared; nothing when the mode is already active.
+void ee_gamecpp_startup_video_mode(unsigned long width,
+                                   unsigned long height,
+                                   unsigned long bits,
+                                   bool prefer_refresh);
+
+/// EEStopAllSounds: the music, the ambient sounds (disabled) and every one-shot sound stopped.
+void ee_gamecpp_startup_stop_sounds();
+
+/// EEClearGame: graphics and physics paused, the scene released, the communications deleted, the world and the
+/// game state cleared under the world lock.
+void ee_gamecpp_startup_clear_game();
+
+/// EEInitializePart2: the game threads and the saved game's persistent sections.
+void ee_gamecpp_startup_part2();
+
+/// EEStartMenuScreen: the menus' screen after start-up (the port plays no intro movies).
+void ee_gamecpp_startup_menu_screen();
+
+/// EEGraphicsShutdown: the models, textures and fonts released, the start-up video mode restored, the game window
+/// destroyed, the render objects and the texture and model managers deleted.
+void ee_gamecpp_startup_graphics_shutdown();
+
+/// EEShutdownThreads: the physics stopped, the communications and the WON connection deleted, then the physics,
+/// data preloading, graphics and mouse pointer threads shut down and deleted, the music manager and the user
+/// interface deleted.
+void ee_gamecpp_startup_shutdown_threads();
+
+/// EEChangeGameScreen: the display made again at the new size (full screen or not): the rasterizer reactivated,
+/// the render states and the camera reset, the mouse, textures, buttons and icons reloaded and the mouse pointer
+/// thread restarted.
+void ee_gamecpp_startup_change_screen(unsigned long width,
+                                      unsigned long height,
+                                      bool full_screen);
+
+/// EEInitializeDisplay: the graphics engine started, the preferred rasterizer picked, the screen, depths and
+/// resolution validated (800x600x16 as the fallback), the game window made and captured.
+bool ee_gamecpp_startup_display();
+
+/// EEInitializeSounds: the sound engine and the music conductor from the preferences and the sound manager; false
+/// if the sound engine fails.
+bool ee_gamecpp_startup_sounds();
+
+/// EEDeleteSoundManager: the sound manager destroyed, its memory pool logged and freed with its locks.
+void ee_gamecpp_startup_delete_sound_manager();
+
+/// EEInitializeDatabase: the rules and every db table in start-up order, the user folders (campaigns, saved games,
+/// scenarios, users) made, the ambient sounds loaded, the game pools sized and the database shutdown registered.
+void ee_gamecpp_startup_database();
+
+/// EEInitGamePools: the memory pools of the tile unit lists, sounds, doppelgangers and particles.
+void ee_gamecpp_startup_game_pools();
+
+/// EEInitializeGameObjects: the random maps, the game options, the physics models and sight rings, the mouse, the
+/// unit classes, the UI manager, the AI, the cheat codes and the game timer; their shutdown registered.
+void ee_gamecpp_startup_game_objects();
+
+/// EEDeleteGameObjects: the game timer, the AI, the cheat codes, the UI manager, the mouse and the mini map deleted
+/// and the world and the game state cleared.
+void ee_gamecpp_startup_delete_game_objects();
+
+/// EEDeleteDatabase: every db table and its media unloaded, the calamity manager and the language resources
+/// deleted, the pools freed.
+void ee_gamecpp_startup_delete_database(bool shutdown);
+
+/// EELoadSound: a .wav or .mp3 sound loaded and started (a bare name tries .wav, then .mp3), registered as a
+/// one-shot when asked; the sample and the instance, -1 on failure.
+///
+/// # Safety
+/// `name` is a UString, `sample` and `instance` the caller's.
+void ee_gamecpp_startup_load_sound(const void *name,
+                                   unsigned long kind,
+                                   unsigned long *sample,
+                                   unsigned long *instance,
+                                   unsigned long flag);
 
 /// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
 /// fresh checksum).

@@ -815,15 +815,15 @@ double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     return EEMessageOpNextF(inOp, p, a, f);
 }
 
-// the end of the chain (the next round's bodies go here)
+// the next bodies' cases (Empire Earth.cpp)
+int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-    return 0;
+    return EEStartupOp(inOp, p, a, f);   // the start-up bodies' (Empire Earth.cpp)
 }
 
 double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-    return 0.0;
+    return EEStartupOpF(inOp, p, a, f);
 }
