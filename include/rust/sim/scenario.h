@@ -810,6 +810,128 @@ constexpr static const int64_t EE_SCENARIO_GFX_PAIR = 2;
 /// A marching line (between any unit and the next).
 constexpr static const int64_t EE_SCENARIO_GFX_MARCHING = 4;
 
+/// Effect a's text k emptied (`= ""`); a's text k set to b's; a as its `EeScenarioEffectFields*`; a's `mObjects`
+/// cleared; set to b's.
+constexpr static const uint32_t EE_SCENARIO_EC_TEXT_CLEAR = 0;
+
+constexpr static const uint32_t EE_SCENARIO_EC_TEXT_COPY = 1;
+
+constexpr static const uint32_t EE_SCENARIO_EC_FIELDS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_EC_OBJECTS_CLEAR = 3;
+
+constexpr static const uint32_t EE_SCENARIO_EC_OBJECTS_COPY = 4;
+
+/// The effect's texts: `mName`, `mText`, `mMessage`, `mS64`, `mS78`, `mNewName`, `mFileName`, `mDescription`.
+constexpr static const int64_t EE_SCENARIO_EC_TEXTS = 8;
+
+/// The context's effect as its `EeScenarioEffectFields*`.
+constexpr static const uint32_t EE_SCENARIO_WY_EFFECT_FIELDS = 810;
+
+/// Player a0's `mEvents.AddEvent(U2DPoint<long>(a1, a2), 3, a0, -1, true)`.
+constexpr static const uint32_t EE_SCENARIO_WY_FLARE = 811;
+
+/// `EELoadSound("Sounds\\" + SMESoundPath() + the effect's mFileName, 0x31, *a0, *a1, 0)` (a0, a1 `unsigned
+/// long*`), `gSoundManager->RegisterOneShotSound(a0, a1)`.
+constexpr static const uint32_t EE_SCENARIO_WY_SOUND_LOAD = 812;
+
+constexpr static const uint32_t EE_SCENARIO_WY_SOUND_REGISTER = 813;
+
+/// `EEUISCIFormManager::Get()`; the media strings' section a0 emptied, or appended `"\n"` and the effect's
+/// `mDescription`; `EESoundObject::Get(a0)`, its `Play()`; form a0's `SetBlinking(true)`.
+constexpr static const uint32_t EE_SCENARIO_WY_SCI_FORM = 814;
+
+constexpr static const uint32_t EE_SCENARIO_WY_SECTION_CLEAR = 815;
+
+constexpr static const uint32_t EE_SCENARIO_WY_SECTION_APPEND = 816;
+
+constexpr static const uint32_t EE_SCENARIO_WY_SOUND_OBJECT = 817;
+
+constexpr static const uint32_t EE_SCENARIO_WY_SOUND_PLAY = 818;
+
+constexpr static const uint32_t EE_SCENARIO_WY_FORM_BLINK = 819;
+
+/// `new EESMDialogMessage`; message a0's `mText += the run's mText`, `mDuration`, `mIsCinematic`, `mUnitType`,
+/// `mScrollSpeed`, `mUnitID` = a1, `mSound = SMESoundPath() + the effect's mFileName`; the manager's
+/// `AddMessage(*a0)`; `delete` a0; unit a0's `mUnitID`.
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_NEW = 820;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_TEXT = 821;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_DURATION = 822;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_CINEMATIC = 823;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_UNIT_TYPE = 824;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_SCROLL = 825;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_UNIT_ID = 826;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_SOUND = 827;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_ADD = 828;
+
+constexpr static const uint32_t EE_SCENARIO_WY_MSG_FREE = 829;
+
+constexpr static const uint32_t EE_SCENARIO_WY_UNIT_ID = 830;
+
+/// `gUserInterface->AddChatLogEntry(GEColor(), UWideString(), the run's mText, a0, 1)`; the chat text (a copy of
+/// the run's `mText`); `gUIManager->DisplayMessage(it, 1, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCENARIO_WY_CHAT_LOG = 831;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CHAT_TEXT = 832;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CHAT_BOX = 833;
+
+/// The run's `mCalamity = GetCalamityClass(a0)` (`!= NULL`); `GetCalamityType(a0, *a1)` (a1 a `long*`); the run's
+/// `mCalamity->GetTargetKind()`.
+constexpr static const uint32_t EE_SCENARIO_WY_CAL_CLASS = 834;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CAL_TYPE = 835;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CAL_TARGET_KIND = 836;
+
+/// `new EECameraKey`; key a0's `mOffset = the camera's GetEndOffset()`, `GetUnitPoint(unit a1, mFocus)`,
+/// `GetUnitTurn(unit a1, mT40)`, `mWait` (float bits a1), `mChanged = a1 != 0`, `mRate` (float bits a1); the
+/// camera's `AddKey(*a0)`; `delete` a0.
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_NEW = 837;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_OFFSET = 838;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_FOCUS = 839;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_TURN = 840;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_WAIT = 841;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_CHANGED = 842;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_RATE = 843;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_ADD = 844;
+
+constexpr static const uint32_t EE_SCENARIO_WY_KEY_FREE = 845;
+
+/// Change Unit's, on the context's unit: the empty unit list (the C++'s local) cleared; `QueueGoal(EEUGRust::
+/// NewLoad(kGoalLoadGarrison, it, the list, false), 0)`; `StartAction(a0)`; its class's `ActionChanged(it)`;
+/// `Kill(0, 0, 0)`; `SetResourceAmount(0)`; its player's `UnitTaken(it, false)`, `KillUnit(it, false)`.
+constexpr static const uint32_t EE_SCENARIO_WY_CU_UNITS_CLEAR = 846;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_QUEUE_GARRISON = 847;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_START_ACTION = 848;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_ACTION_CHANGED = 849;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_KILL = 850;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_RESOURCE_ZERO = 851;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_TAKEN = 852;
+
+constexpr static const uint32_t EE_SCENARIO_WY_CU_KILL_UNIT = 853;
+
 /// `gEventEffects.data()` (`EeScenarioEvEffect*`), `.size()`; `gLoadingSavedGame`; `gEventsEnabled`.
 constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_DATA = 0;
 
@@ -3354,6 +3476,15 @@ void ee_scenario_unload_media(EeScenarioRoundHost host,
 
 /// `EEScenarioManager::ReplaceUnit`.
 void ee_scenario_replace_unit(EeScenarioRoundHost host, long old, long new_);
+
+/// One statement (EESMEffect.cpp).
+extern int64_t ee_scenariocpp_effect(uint32_t op, void *a, const void *b, int64_t k);
+
+/// `EESMEffect::Reset` of the effect at `e` (the C++ object).
+void ee_scenario_effect_reset(void *e);
+
+/// `EESMEffect::Copy`: `src` into `e` (the C++ objects).
+void ee_scenario_effect_copy(void *e, const void *src);
 
 /// `EEEvent::Trigger`: runs every effect of event `event` for a player (a given player's own index wins); the last
 /// effect's result.

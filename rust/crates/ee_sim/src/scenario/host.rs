@@ -254,6 +254,9 @@ impl Host for EeScenarioHost {
         if let Some(value) = crate::scenario::ai_store::compose(&mut cpp, op, args) {
             return value;
         }
+        if let Some(value) = crate::scenario::effect_text::compose(&mut cpp, op, args) {
+            return value;
+        }
         if let Some(value) = crate::scenario::world_compose::compose(&mut cpp, op, args) {
             return value;
         }

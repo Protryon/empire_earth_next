@@ -50,16 +50,7 @@ EESMEffect::~EESMEffect()
 // (the numbers: ee_scenario fields.rs effect_defaults)
 void EESMEffect::Reset()
 {
-    this->mName = "";
-    this->mText = "";
-    this->mMessage = "";
-    this->mS64 = "";
-    this->mS78 = "";
-    this->mNewName = "";
-    this->mFileName = "";
-    this->mDescription = "";
-    *static_cast<EeScenarioEffectFields*>(this) = ee_scenario_effect_defaults();
-    this->mObjects.clear();
+    ee_scenario_effect_reset(this);   // ee_scenario effect_copy.rs
 }
 
 #include "lle/U2DSparseArray.h"
@@ -69,16 +60,27 @@ void EESMEffect::Reset()
 // Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
 {
-    this->mName = inEffect.mName;
-    this->mText = inEffect.mText;
-    this->mMessage = inEffect.mMessage;
-    this->mS64 = inEffect.mS64;
-    this->mS78 = inEffect.mS78;
-    this->mNewName = inEffect.mNewName;
-    this->mFileName = inEffect.mFileName;
-    this->mDescription = inEffect.mDescription;
-    *static_cast<EeScenarioEffectFields*>(this) = inEffect;   // every number
-    this->mObjects = inEffect.mObjects;
+    ee_scenario_effect_copy(this, &inEffect);   // ee_scenario effect_copy.rs
+}
+
+// Reset's and Copy's single statements (effect_copy.rs EE_SCENARIO_EC_*): the texts by number, the record, the objects
+UWideString EESMEffect::* const kSMETexts[EE_SCENARIO_EC_TEXTS] = {&EESMEffect::mName, &EESMEffect::mText, &EESMEffect::mMessage, &EESMEffect::mS64, &EESMEffect::mS78, &EESMEffect::mNewName, &EESMEffect::mFileName, &EESMEffect::mDescription};
+EESMEffect* SMEEffectOf(void* inEffect) { return static_cast<EESMEffect*>(inEffect); }
+const EESMEffect* SMEEffectOf(const void* inEffect) { return static_cast<const EESMEffect*>(inEffect); }
+extern "C" int64_t ee_scenariocpp_effect(uint32_t inOp, void* a, const void* b, int64_t k)
+{
+    switch (inOp) {
+    case EE_SCENARIO_EC_TEXT_CLEAR: SMEEffectOf(a)->*kSMETexts[k] = "";
+        return 0;
+    case EE_SCENARIO_EC_TEXT_COPY: SMEEffectOf(a)->*kSMETexts[k] = SMEEffectOf(b)->*kSMETexts[k];
+        return 0;
+    case EE_SCENARIO_EC_FIELDS: return (int64_t)(intptr_t)static_cast<EeScenarioEffectFields*>(SMEEffectOf(a));
+    case EE_SCENARIO_EC_OBJECTS_CLEAR: SMEEffectOf(a)->mObjects.clear();
+        return 0;
+    case EE_SCENARIO_EC_OBJECTS_COPY: SMEEffectOf(a)->mObjects = SMEEffectOf(b)->mObjects;
+        return 0;
+    }
+    return 0;
 }
 
 // Sets, raises or lowers a player value: a resource, the population cap (also queued as a pending effect), difficulty,
@@ -282,6 +284,7 @@ int64_t SMEBits(float inValue)
     return theBits;
 }
 int64_t SMEPack(long inX, long inY) { return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32); }
+int64_t SMEPackTile(const U2DPoint<long>& inTile) { return SMEPack(inTile.GetX(), inTile.GetY()); }
 int64_t SMEID(EEUnit* inUnit) { return inUnit != NULL ? (int64_t)(uint32_t)inUnit->mUnitID : -1; }
 int64_t SMEPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
 
@@ -296,12 +299,6 @@ UString SMESoundPath()
     return thePath;
 }
 
-void SMEPlayTrumpets()
-{
-    EESoundObject* theSound = EESoundObject::Get(kSoundTrumpets);
-    if (theSound != NULL)
-        theSound->Play();
-}
 
 // unit inUnit: StartAction(inAction) and its class's ActionChanged (every order of the effects ends so)
 void SMEAction(EEComplexUnit* inUnit, long inAction)
@@ -369,15 +366,9 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_LOAD_AT: return SMEID(inRun->mLoad[(size_t)a[0]]);
     case EE_SCENARIO_WORLD_GOAL_VALID: return inRun->mGoal->IsLoadGarrisonValid();
     case EE_SCENARIO_WORLD_GOAL_DELETE: delete inRun->mGoal; return 0;
-    case EE_SCENARIO_WORLD_GOAL_LOAD_TILE: {
-        U2DPoint<long> theTile = inRun->mGoal->GetLoadUnitTile();
-        return SMEPack(theTile.GetX(), theTile.GetY());
-    }
+    case EE_SCENARIO_WORLD_GOAL_LOAD_TILE: return SMEPackTile(inRun->mGoal->GetLoadUnitTile());
     case EE_SCENARIO_WORLD_REJECTED_COUNT: return (int64_t)inRun->mRejected.size();
     case EE_SCENARIO_WORLD_GROUP_SPREAD: theGroup->SpreadAroundTile((long)a[0], (long)a[1]); return 0;
-    case EE_SCENARIO_WORLD_CAL_TARGET_KIND:
-        inRun->mCalamity = EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)a[0]);
-        return inRun->mCalamity != NULL ? (int64_t)inRun->mCalamity->GetTargetKind() : -1;
     case EE_SCENARIO_WORLD_UPDATE_ACTIVE: gWorld.UpdateActiveUnits(); return 0;
     }
     return 0;
@@ -502,21 +493,6 @@ int64_t SMEChangeUnitWorld(EESMHostContext* inContext, uint32_t inOp, const int6
         theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), a[1] != 0);
         break;
     case EE_SCENARIO_CU_BUILT: theComplex->SetBuilt(a[1] != 0, 1, 1); break;
-    case EE_SCENARIO_CU_GARRISON_WAIT: {
-        std::vector<EEComplexUnit*> theUnits;
-        theComplex->QueueGoal(EEUGRust::NewLoad(kGoalLoadGarrison, theComplex, theUnits, false), 0);
-        SMEAction(theComplex, kActionWaitForGarrisonCost);
-        break;
-    }
-    case EE_SCENARIO_CU_KILL:
-        if (a[1] == 0) {
-            theUnit->Kill(0, 0, 0);
-            break;
-        }
-        theUnit->SetResourceAmount(0);
-        theUnit->GetPlayer()->UnitTaken(theUnit, false);
-        theUnit->GetPlayer()->KillUnit(theUnit, false);
-        break;
     default: *theVariable = (long)a[1]; break;
     }
     return 0;
@@ -968,6 +944,96 @@ int64_t SMEAtomWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
 
 // an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*): each the original's statement or
 // statement sequence at its place, on the units by id, the players by index
+// the effect run's text, sound, message, calamity, camera key and Change Unit statements (ee_scenario effect_text.rs
+// EE_SCENARIO_WY_*: the Rust composes the sequences), on handles and the context
+static_assert(kSoundTrumpets == 0x1b7 && kActionWaitForGarrisonCost == 12008, "effect_text.rs's numbers");
+UWideString sSMEChat;                       // the chat box's text (the original's local)
+std::vector<EEComplexUnit*> sSMEUnits;      // the garrison goal's empty unit list (the original's local)
+EESMEffectRun* SMERunOf(EESMHostContext* inContext) { return static_cast<EESMEffectRun*>(inContext); }
+EESMDialogMessage* SMEMessageOf(int64_t inHandle) { return (EESMDialogMessage*)(intptr_t)inHandle; }
+EECameraKey* SMEKeyOf(int64_t inHandle) { return (EECameraKey*)(intptr_t)inHandle; }
+int64_t SMEYWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+{
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    switch (inOp) {
+    case EE_SCENARIO_WY_EFFECT_FIELDS: return SMEPtr(static_cast<EeScenarioEffectFields*>(inContext->mEffect));
+    case EE_SCENARIO_WY_FLARE: SMEPlayerOf(a[0])->mEvents.AddEvent(U2DPoint<long>((long)a[1], (long)a[2]), 3, SMEPlayerOf(a[0]), -1, true);
+        return 0;
+    case EE_SCENARIO_WY_SOUND_LOAD: EELoadSound("Sounds\\" + SMESoundPath() + UString(inContext->mEffect->mFileName), 0x31, *(unsigned long*)(intptr_t)a[0], *(unsigned long*)(intptr_t)a[1], 0);
+        return 0;
+    case EE_SCENARIO_WY_SOUND_REGISTER: gSoundManager->RegisterOneShotSound((unsigned long)a[0], (unsigned long)a[1]);
+        return 0;
+    case EE_SCENARIO_WY_SCI_FORM: return SMEPtr(EEUISCIFormManager::Get());
+    case EE_SCENARIO_WY_SECTION_CLEAR: theManager->mMediaStrings.GetSection((unsigned long)a[0]) = UWideString(gEmptyString);
+        return 0;
+    case EE_SCENARIO_WY_SECTION_APPEND: theManager->mMediaStrings.GetSection((unsigned long)a[0]) = theManager->mMediaStrings.GetSection((unsigned long)a[0]) + (UWideString("\n") + inContext->mEffect->mDescription);
+        return 0;
+    case EE_SCENARIO_WY_SOUND_OBJECT: return SMEPtr(EESoundObject::Get((unsigned long)a[0]));
+    case EE_SCENARIO_WY_SOUND_PLAY: ((EESoundObject*)(intptr_t)a[0])->Play();
+        return 0;
+    case EE_SCENARIO_WY_FORM_BLINK: ((EEUISCIFormManager*)(intptr_t)a[0])->SetBlinking(true);
+        return 0;
+    case EE_SCENARIO_WY_MSG_NEW: return SMEPtr(new EESMDialogMessage);
+    case EE_SCENARIO_WY_MSG_TEXT: SMEMessageOf(a[0])->mText += SMERunOf(inContext)->mText;
+        return 0;
+    case EE_SCENARIO_WY_MSG_DURATION: return SMEMessageOf(a[0])->mDuration = (unsigned long)a[1];
+    case EE_SCENARIO_WY_MSG_CINEMATIC: return SMEMessageOf(a[0])->mIsCinematic = a[1] != 0;
+    case EE_SCENARIO_WY_MSG_UNIT_TYPE: return SMEMessageOf(a[0])->mUnitType = (unsigned long)a[1];
+    case EE_SCENARIO_WY_MSG_SCROLL: return SMEMessageOf(a[0])->mScrollSpeed = (long)a[1];
+    case EE_SCENARIO_WY_MSG_UNIT_ID: return SMEMessageOf(a[0])->mUnitID = (unsigned long)a[1];
+    case EE_SCENARIO_WY_MSG_SOUND: SMEMessageOf(a[0])->mSound = (const char*)(SMESoundPath() + (const char*)inContext->mEffect->mFileName);
+        return 0;
+    case EE_SCENARIO_WY_MSG_ADD: theManager->AddMessage(*SMEMessageOf(a[0]));
+        return 0;
+    case EE_SCENARIO_WY_MSG_FREE: delete SMEMessageOf(a[0]);
+        return 0;
+    case EE_SCENARIO_WY_UNIT_ID: return (int64_t)SMEUnitOf(a[0])->mUnitID;
+    case EE_SCENARIO_WY_CHAT_LOG: gUserInterface->AddChatLogEntry(GEColor(), UWideString(), SMERunOf(inContext)->mText, (unsigned long)a[0], 1);
+        return 0;
+    case EE_SCENARIO_WY_CHAT_TEXT: sSMEChat = SMERunOf(inContext)->mText;
+        return 0;
+    case EE_SCENARIO_WY_CHAT_BOX: gUIManager->DisplayMessage(sSMEChat, 1, NULL, NULL, true);
+        return 0;
+    case EE_SCENARIO_WY_CAL_CLASS: return (SMERunOf(inContext)->mCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)a[0])) != NULL;
+    case EE_SCENARIO_WY_CAL_TYPE: return USingleton<EECalamityManager>::GetInstance()->GetCalamityType((EECalamityEnum)a[0], *(long*)(intptr_t)a[1]);
+    case EE_SCENARIO_WY_CAL_TARGET_KIND: return (int64_t)SMERunOf(inContext)->mCalamity->GetTargetKind();
+    case EE_SCENARIO_WY_KEY_NEW: return SMEPtr(new EECameraKey);
+    case EE_SCENARIO_WY_KEY_OFFSET: SMEKeyOf(a[0])->mOffset = theCamera.GetEndOffset();
+        return 0;
+    case EE_SCENARIO_WY_KEY_FOCUS: theCamera.GetUnitPoint(SMEUnitOf(a[1]), SMEKeyOf(a[0])->mFocus);
+        return 0;
+    case EE_SCENARIO_WY_KEY_TURN: theCamera.GetUnitTurn(SMEUnitOf(a[1]), SMEKeyOf(a[0])->mT40);
+        return 0;
+    case EE_SCENARIO_WY_KEY_WAIT: SMEKeyOf(a[0])->mWait = SMEFloat(a[1]);
+        return 0;
+    case EE_SCENARIO_WY_KEY_CHANGED: return SMEKeyOf(a[0])->mChanged = a[1] != 0;
+    case EE_SCENARIO_WY_KEY_RATE: SMEKeyOf(a[0])->mRate = SMEFloat(a[1]);
+        return 0;
+    case EE_SCENARIO_WY_KEY_ADD: theCamera.AddKey(*SMEKeyOf(a[0]));
+        return 0;
+    case EE_SCENARIO_WY_KEY_FREE: delete SMEKeyOf(a[0]);
+        return 0;
+    case EE_SCENARIO_WY_CU_UNITS_CLEAR: sSMEUnits.clear();
+        return 0;
+    case EE_SCENARIO_WY_CU_QUEUE_GARRISON: inContext->mUnit->GetComplexUnit()->QueueGoal(EEUGRust::NewLoad(kGoalLoadGarrison, inContext->mUnit->GetComplexUnit(), sSMEUnits, false), 0);
+        return 0;
+    case EE_SCENARIO_WY_CU_START_ACTION: inContext->mUnit->GetComplexUnit()->StartAction((long)a[0]);
+        return 0;
+    case EE_SCENARIO_WY_CU_ACTION_CHANGED: inContext->mUnit->GetComplexUnit()->GetUnitClass()->ActionChanged(inContext->mUnit->GetComplexUnit());
+        return 0;
+    case EE_SCENARIO_WY_CU_KILL: inContext->mUnit->Kill(0, 0, 0);
+        return 0;
+    case EE_SCENARIO_WY_CU_RESOURCE_ZERO: inContext->mUnit->SetResourceAmount(0);
+        return 0;
+    case EE_SCENARIO_WY_CU_TAKEN: inContext->mUnit->GetPlayer()->UnitTaken(inContext->mUnit, false);
+        return 0;
+    case EE_SCENARIO_WY_CU_KILL_UNIT: inContext->mUnit->GetPlayer()->KillUnit(inContext->mUnit, false);
+        return 0;
+    }
+    return 0;
+}
+
 int64_t SMEReadWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);   // EEScenarioHost.cpp
 int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
 {
@@ -977,6 +1043,8 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         return SMEClassWorld(inOp, a);
     if (inOp >= EE_SCENARIO_RX_TECH_NODE && inOp <= EE_SCENARIO_RX_EFFECT_COPY)   // the host's reads (read_compose.rs)
         return SMEReadWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
+    if (inOp >= EE_SCENARIO_WY_EFFECT_FIELDS && inOp <= EE_SCENARIO_WY_CU_KILL_UNIT)   // effect_text.rs
+        return SMEYWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     if (inOp >= EE_SCENARIO_WC_CLASS && inOp <= EE_SCENARIO_WC_SOUND_PLAY)   // Create Units' (no effect run)
         return SMECreateWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     EESMEffectRun* theRun = static_cast<EESMEffectRun*>(static_cast<EESMHostContext*>(inContext));
@@ -992,10 +1060,7 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_PLAYER_OBSERVER: return SMEPlayer(a[0])->mObserverMode;
     case EE_SCENARIO_WORLD_PLAYER_IS_HUMAN: return SMEPlayer(a[0])->IsHuman();
     case EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER: return SMEComputer(a[0]) != NULL;
-    case EE_SCENARIO_WORLD_AREA_CENTER: {
-        U2DPoint<long> theTile = theManager->GetArea((unsigned long)a[0])->GetCenterTile();
-        return SMEPack(theTile.GetX(), theTile.GetY());
-    }
+    case EE_SCENARIO_WORLD_AREA_CENTER: return SMEPackTile(theManager->GetArea((unsigned long)a[0])->GetCenterTile());
     case EE_SCENARIO_WORLD_DIALOG_IDLE: return !theManager->mIsShowingDialog && theManager->GetNumMessages() == 0;
     case EE_SCENARIO_WORLD_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)a[0])->PickUnitType();
 
@@ -1018,82 +1083,12 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_SET_STANCE: gWorld.SetDiplomaticStance((long)a[0], (long)a[1], (unsigned long)a[2]); return 0;
     case EE_SCENARIO_WORLD_NOTICE_TARGET: SMEPlayer(a[0])->NoticeTargetPlayer(SMEPlayer(a[1]), false); return 0;
     case EE_SCENARIO_WORLD_ADD_PENDING: theManager->AddV134Effect(*theEffect); return 0;
-    case EE_SCENARIO_WORLD_FLARE: {
-        EEPlayer* thePlayer = SMEPlayer(a[0]);
-        thePlayer->mEvents.AddEvent(U2DPoint<long>((long)a[1], (long)a[2]), 3, thePlayer, -1, true);
-        return 0;
-    }
 
-    case EE_SCENARIO_WORLD_PLAY_SOUND: {
-        unsigned long theSample;
-        unsigned long theInstance;
-        EELoadSound("Sounds\\" + SMESoundPath() + UString(theEffect->mFileName), 0x31, theSample, theInstance, 0);
-        if (!UIsNone32(theInstance))
-            gSoundManager->RegisterOneShotSound(theSample, theInstance);
-        return 0;
-    }
-    case EE_SCENARIO_WORLD_CHANGE_TEXT: {
-        static const unsigned long kSlots[] = {0, 3, 2};   // hints, instructions, history (GetSection's slots)
-        EEUISCIFormManager* theForm = EEUISCIFormManager::Get();
-        UWideString theMediaText = "\n";
-        theMediaText += theEffect->mDescription;
-        if (a[0] >= 0 && a[0] < 3) {
-            UWideString& theSection = theManager->mMediaStrings.GetSection(kSlots[a[0]]);
-            if (a[1] != 0)
-                theSection = UWideString(gEmptyString);
-            else
-                theSection = theSection + theMediaText;
-        }
-        SMEPlayTrumpets();
-        theForm->SetBlinking(true);
-        return 0;
-    }
     case EE_SCENARIO_WORLD_EXPAND_MESSAGE: theEffect->ExpandTokens(theEffect->mMessage, theRun->mText); return 0;
-    case EE_SCENARIO_WORLD_DIALOGUE: {
-        EESMDialogMessage theMessage;
-        UWideString theName;
-        theMessage.mText = theName;
-        theMessage.mText += theRun->mText;
-        theMessage.mDuration = theEffect->mDuration * 1000;
-        theMessage.mIsCinematic = a[0] != 0;
-        EESMObject* theObject = theManager->GetScenarioObject(theEffect->mObject);
-        theObject->Evaluate(false);
-        if (theObject->mUnits.size() > 0 && gWorld.GetUnit(theObject->mUnits[0]) != NULL) {
-            EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[0]);
-            theMessage.mUnitType = theUnit->mUnitClass->mUnitType;
-            theMessage.mScrollSpeed = theEffect->mIntValue1;
-            theMessage.mUnitID = theUnit->mUnitID;
-        } else
-            theMessage.mUnitType = 0;
-        theMessage.mSound = (const char*)(SMESoundPath() + (const char*)theEffect->mFileName);
-        theManager->AddMessage(theMessage);
-        return 0;
-    }
     case EE_SCENARIO_WORLD_DISPLAY_EMPTY: gUIManager->DisplayMessage(UWideString(), 1, NULL, NULL, true); return 0;
-    case EE_SCENARIO_WORLD_CHAT_LOG: {
-        GEColor theColor;
-        UWideString theName;
-        gUserInterface->AddChatLogEntry(theColor, theName, theRun->mText, theEffect->mDuration * 1000, 1);
-        return 0;
-    }
-    case EE_SCENARIO_WORLD_CHAT_BOX: {
-        // A chat message without a duration is shown in a message box: with its text (the box showed the media
-        // text, which only the Change Text action fills, so it was empty).
-        UWideString theChat;
-        theChat += theRun->mText;
-        gUIManager->DisplayMessage(theChat, 1, NULL, NULL, true);
-        return 0;
-    }
 
     case EE_SCENARIO_WORLD_SET_TIME_OF_DAY: gWorld.SetTimeOfDay(SMEFloat(a[0])); return 0;
     case EE_SCENARIO_WORLD_TIME_OF_DAY_RUNS: gPhysics->mTimeOfDayRuns = a[0] != 0; return 0;
-    case EE_SCENARIO_WORLD_CAL_CLASS:
-        theRun->mCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)a[0]);
-        return theRun->mCalamity != NULL;
-    case EE_SCENARIO_WORLD_CAL_TYPE: {
-        long theType = 0;
-        return USingleton<EECalamityManager>::GetInstance()->GetCalamityType((EECalamityEnum)a[0], theType) ? theType : -1;
-    }
     case EE_SCENARIO_WORLD_CAL_CAN_CAST:
         return theRun->mCalamity->CanCastAt(NULL, theRun->mPoint, (long)a[0], (long)a[1], true, SMEUnitOrNull(a[2])) == 0;
     case EE_SCENARIO_WORLD_CAL_GLOBAL: USingleton<EECalamityManager>::GetInstance()->CreateGlobalCalamity((unsigned long)a[0], 0, 0); return 0;
@@ -1111,30 +1106,9 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_END_CINEMATIC: theManager->EndCinematic(); return 0;
     case EE_SCENARIO_WORLD_TIMED_NOT_RUN: theManager->SetTimedEffectHasRun(theEffect, false); return 0;
 
-    case EE_SCENARIO_WORLD_ADD_PENDING_PLAYER: {
-        EESMEffect theCopy;
-        theCopy.Copy(*theEffect);
-        theCopy.mPlayer = (unsigned long)a[0];
-        theManager->AddV134Effect(theCopy);
-        return 0;
-    }
 
     case EE_SCENARIO_WORLD_CAMERA_RESET: theCamera.ResetPath(); return 0;
     case EE_SCENARIO_WORLD_CAMERA_TURN_RESET: theCamera.mTurnYaw = 0.0f; return 0;
-    case EE_SCENARIO_WORLD_CAMERA_KEY: {
-        // These camera APIs consume the original base-unit pointer, including its optional complex-unit link.
-        long theStepDuration = (long)a[1];
-        EEUnit* theUnit = SMEUnit(a[0]);
-        EECameraKey theKey;
-        theKey.mOffset = theCamera.GetEndOffset();
-        theCamera.GetUnitPoint(theUnit, theKey.mFocus);
-        theCamera.GetUnitTurn(theUnit, theKey.mT40);
-        theKey.mWait = 0.0f;
-        theKey.mChanged = theStepDuration == 0;
-        theKey.mRate = theStepDuration == 0 ? 0.0f : 1.0f / (float)theStepDuration;
-        theCamera.AddKey(theKey);
-        return 0;
-    }
     case EE_SCENARIO_WORLD_CAMERA_START: theCamera.StartPath(); return 0;
     case EE_SCENARIO_WORLD_CAMERA_POINT:
         (a[0] != 0 ? theRun->mStart : theRun->mEnd) = GE3DPoint(SMEFloat(a[1]), SMEFloat(a[2]), SMEFloat(a[3]));
