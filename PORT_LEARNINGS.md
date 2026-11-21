@@ -36652,3 +36652,51 @@ two- and three-statement callbacks, each a case and a Rust function for a line o
 - **Left** (docs/progress/game-leaves.md): EERenderObject.cpp, EEEffectHost.cpp, EETestFixture.cpp's host,
   EEServer.cpp and EEClient.cpp, EEMap.cpp, EEGraphics::RenderTo, EEGetFileChecksum, EEInitializeNetwork, the start
   screen and the entry points, the persistent helpers.
+## The units' lane, round 6: GoalOp's compound cases split; 51 EEComplexUnit and EEUnitClass bodies in Rust over one-statement hosts (ee_sim units goal_split.rs, cu_body.rs, cu_cargo.rs, cu_misc.rs, uc_body.rs, uc_produce.rs; branch rust-units6, 2026-11-20)
+
+Numbers: docs/progress/units.md ("Round 6"). C++ logic lines (logic_lines.py) 85,080 -> 83,722 (-1,358); lines -603;
+the target was -3,000. Under the owner's new rule (a body moves even when it calls other C++), the round moved
+GoalOp's compound cases and 51 class bodies; the C++ left for them is one case a statement.
+
+- **A compound host case splits without touching its callers.** Every goal body asks its goal host through the base
+  fields' wrapper (goal_obj.rs `base_host_op`), so one `split` there answers the compound operations from their
+  statements (`EE_UNITS_GOAL_HOST_X_*`, 600..709) while the bodies, their tests and the combat goals keep asking
+  `START_ACTION`, `COMPLETE_BUILDING`, ... as before. The groups lane's `FnHost::split` is the same idea.
+- **One host per C++ file, one body module per cluster.** `ee_units_cu_host` (EEComplexUnit.cpp) and
+  `ee_units_uc_host` (EEUnitClass.cpp) take `(op, this, a, b, c, float[4])`: an object, two values and four floats
+  in and out cover every statement met; a member becomes `ee_units_cu_body(EE_UNITS_CU_DO_X, this, ...)`. The Rust
+  bodies are generic over a one-method trait, so their tests are op-sequence checks over a recording mock.
+- **A C++ local the statements share becomes a host scratch.** Kill's `EECivPower`, Heal's `EEEffectHandle` and
+  ProduceUnit's tile line are file statics of the host, reset by a statement where the original declared them;
+  transformation locals are Rust `[[f32; 4]; 4]` buffers handed by address (`GETransformation()` is the identity;
+  a C++ statement that writes a transformation the original kept, like ProduceUnit's `theAdjusted` after the yaw,
+  writes the Rust buffer, because `ee_units_uu_find_placement` reads its matrix in and notes it out).
+- **Call the same FFI functions the C++ called.** The placement searches, `can_stand_on` and the dock placement are
+  Rust already (uu_ffi.rs); the bodies call those `extern "C"` functions, not their inner Rust, so each search's
+  UU note is recorded as before. Calls that record a capture (the `EECombat*` formulas' CB* records) stay C++
+  statements (HealGarrison and Regenerate were left for that reason).
+- **header_consts.rs checks copied constants by name.** It caught `ACTION_HUNT` (no such header name: renamed) and
+  needed `kUnitTypeMarketCP`'s rename; a review caught `kMovementSeaOrSpace` written `2 | 8` (it is `4 | 8`) before
+  any gate ran: name every copied constant with its header prefix so the test sees it.
+- **cbindgen**: a `macro_rules!`-generated `pub const` is not exported (the C++ saw undefined names, which clang
+  "corrected" to unrelated constants: duplicate case errors); two modules declaring the same `extern "C"` host make
+  the header check fail ("declared twice"): one module owns the import (`uc_body::game::Game`), the other reuses it.
+- **Merges** (origin/rust 0d42f70a3, rust-batch11; then a84903ce6, rust-batch12, which needed only PORT_LEARNINGS.md: rust-batch12's). The first: EEComplexUnit.cpp kept both hosts (the paths lane's
+  `ee_units_wp_host` after `ee_units_cu_host`); the scenario editor's EESMEffect.cpp and EEScenarioCapture.cpp,
+  written against the old group members, now use the group objects (`AddPendingGroup`, `GetNumPendingGroups`,
+  `GetNumRunningGroups`, `mFields.mAction`, `EEActiveGroup::New`).
+- **Call-site edits outside the lane**: those two Scenario Manager files (the merge only).
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Only a drawn game reaches
+  SetAnimation's and RefreshSound's sounds, PayInsurance's notice, COMPLETE_BUILDING's creation sound and UI refresh,
+  FOUNDATION_STARTED's chat line and the media loads: the tours exercise them.
+- **Gates** (the final tree, origin/rust a84903ce6 merged): both builds 0/0 (EE-AOC 414 inputs, EE-SIM 415) and the
+  test profile 0/0; the oracle seeds 2-7 identical (before and after each merge); the Rust gate PASS (5,360 tests); the
+  twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6,
+  missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the plain saveload 18/18 identical
+  (exit 0); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines) and
+  `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--exercise random-game --box-select --orders
+  --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh`
+  GATES PASS (tour; ai-game time-cap PT 11694, units [4, 34, 36], alive [2, 3], classic_lua x 2; lan-game PT
+  2765/2766). The captures, saveloads, editor and eedata gates ran on the batch-11 merge (654a39e3d + the constants
+  fix); batch 12's merge changed no file of this lane but the generated header and was gated by the builds, the
+  oracle, the Rust gate, the tour and gates.sh.
