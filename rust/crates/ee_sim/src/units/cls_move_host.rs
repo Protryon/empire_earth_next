@@ -23,8 +23,7 @@ use crate::units::uu_world;
 pub const EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT: i32 = 39;
 /// `EEGetPursuerOf(unit a)`
 pub const EE_UNITS_CLS_MV_PURSUER: i32 = 40;
-/// `EEGetDirectionTo(a, b)`
-pub const EE_UNITS_CLS_MV_DIRECTION_TO: i32 = 41;
+// (41 was the direction between two units' tiles: `direction_to`)
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 pub const EE_UNITS_CLS_MV_MAX_VELOCITY: i32 = 43;
 /// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
@@ -73,8 +72,8 @@ pub const EE_UNITS_CLS_MV_ACTION_CHANGED: i32 = 67;
 pub const EE_UNITS_CLS_MV_UPDATE_WATER_STATE: i32 = 68;
 /// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
 pub const EE_UNITS_CLS_MV_INITIAL_CONTACT: i32 = 70;
-/// `PathToGoal`'s request for unit `a`, goal `b` to `(io.a, io.b)`: revisions `c`, graph `d & 1`, arg8 `d & 2`
-pub const EE_UNITS_CLS_MV_REQUEST_PATH: i32 = 71;
+/// unit `a`'s player's `AvoidsEnemies(a)` (a virtual: the computer player's CPEV record)
+pub const EE_UNITS_CLS_MV_AVOIDS_ENEMIES: i32 = 71;
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 pub const EE_UNITS_CLS_MV_FLEE_GOAL: i32 = 72;
 
@@ -89,6 +88,23 @@ impl ClsGame {
         let r = self.call(op, a, b, c, 0, &mut io);
         (r, io)
     }
+}
+
+/// A unit's tile (`GetTileX()`, `GetTileY()`).
+fn tile_of(unit: u64) -> (i32, i32) {
+    // SAFETY: the simulation thread holds the world; a live unit
+    let t = unsafe { crate::world::WorldRead::begin() };
+    unsafe { crate::world::UnitView::of(&t, unit) }.map_or((0, 0), |u| {
+        let (x, y) = u.tile_xy();
+        (x as i32, y as i32)
+    })
+}
+
+/// A unit's player's id (`mPlayer->GetPlayerID()`).
+fn player_of(unit: u64) -> i64 {
+    // SAFETY: as above
+    let t = unsafe { crate::world::WorldRead::begin() };
+    unsafe { crate::world::UnitView::of(&t, unit) }.and_then(|u| u.player()).map_or(0, |p| i64::from(p.id()))
 }
 
 fn point(p: [f32; 3]) -> Ge3DPoint {
@@ -162,7 +178,10 @@ impl MoveHost for ClsGame {
         self.mv(EE_UNITS_CLS_MV_PURSUER, unit, 0, 0).0 as u64
     }
     fn direction_to(&mut self, from: u64, to: u64) -> i32 {
-        self.mv(EE_UNITS_CLS_MV_DIRECTION_TO, from, to, 0).0 as i32
+        // `EEGetDirectionTo` of the two units' tiles (its UUNT note)
+        let tile = tile_of;
+        let (a, b) = (tile(from), tile(to));
+        uu_ffi::ee_units_uu_tile_direction(a.0, a.1, b.0, b.1)
     }
     fn line_of_sight(&mut self, unit: u64) -> f32 {
         crate::units::unit_geom::with_unit(unit, crate::units::unit_geom::line_of_sight).expect("a live unit")
@@ -319,9 +338,23 @@ impl MoveHost for ClsGame {
         self.mv_p(EE_UNITS_CLS_MV_INITIAL_CONTACT, unit, 0, 0, p);
     }
     fn request_path(&mut self, unit: u64, goal: u64, to: Tile, revs: i32, graph: bool, arg8: bool) {
-        let mut io = EeUnitsClsIo { a: to[0] as i64, b: to[1] as i64, ..Default::default() };
-        let flags = i64::from(graph) | (i64::from(arg8) << 1);
-        self.call(EE_UNITS_CLS_MV_REQUEST_PATH, unit, goal, i64::from(revs), flags, &mut io);
+        // `PathToGoal`'s request: an enemy avoidance modifier for a unit its player keeps from enemies, the goal's
+        // attempt counted, `RequestUnitPath(unit, its tile, to, false, revs, graph, modifier, arg8)`
+        use crate::astar::modifier_obj::{ee_astar_modifier_new_enemy_avoidance, ee_astar_modifier_release};
+        let avoids = self.mv(EE_UNITS_CLS_MV_AVOIDS_ENEMIES, unit, 0, 0).0 != 0;
+        let modifier =
+            if avoids { ee_astar_modifier_new_enemy_avoidance(player_of(unit) as u32) } else { std::ptr::null_mut() };
+        self.add_path_attempts(goal, 1);
+        let from = tile_of(unit);
+        let mut io = crate::astar::pm::EePathIo::default();
+        io.h[0] = unit;
+        io.h[1] = modifier as u64;
+        let v = [from.0 as i64, from.1 as i64, to[0] as i64, to[1] as i64, 0, revs as i64, graph as i64, arg8 as i64];
+        io.i[..8].copy_from_slice(&v);
+        // SAFETY: the game's live manager; a live unit
+        unsafe { crate::astar::pm::ee_path_manager_call(crate::astar::pm::global(), 15, &mut io) };
+        // SAFETY: the maker's reference (or null)
+        unsafe { ee_astar_modifier_release(modifier) };
     }
     fn flee_goal(&mut self, unit: u64, to: [f32; 2], keep: bool) {
         self.mv_p(EE_UNITS_CLS_MV_FLEE_GOAL, unit, 0, i64::from(keep), Ge3DPoint { x: to[0], y: to[1], z: 0.0 });

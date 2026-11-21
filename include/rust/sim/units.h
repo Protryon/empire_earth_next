@@ -1107,9 +1107,6 @@ constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT = 39;
 /// `EEGetPursuerOf(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
 
-/// `EEGetDirectionTo(a, b)`
-constexpr static const int32_t EE_UNITS_CLS_MV_DIRECTION_TO = 41;
-
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
 
@@ -1182,8 +1179,8 @@ constexpr static const int32_t EE_UNITS_CLS_MV_UPDATE_WATER_STATE = 68;
 /// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
 constexpr static const int32_t EE_UNITS_CLS_MV_INITIAL_CONTACT = 70;
 
-/// `PathToGoal`'s request for unit `a`, goal `b` to `(io.a, io.b)`: revisions `c`, graph `d & 1`, arg8 `d & 2`
-constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
+/// unit `a`'s player's `AvoidsEnemies(a)` (a virtual: the computer player's CPEV record)
+constexpr static const int32_t EE_UNITS_CLS_MV_AVOIDS_ENEMIES = 71;
 
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
@@ -5672,9 +5669,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_CENTER = 9;
 /// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
 constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_PLACE = 10;
 
-/// unit `a`'s class's `GetTerrainFlags(a, flags)` into `io.flags`
-constexpr static const int32_t EE_UNITS_GROUP_OP_TERRAIN_FLAGS = 13;
-
 /// `gContinentManager.GetContinentID(a)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_OF = 14;
 
@@ -5683,27 +5677,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_AT = 15;
 
 /// `gContinentManager.GetPathAreaIDAt(c, d)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_AREA_AT = 17;
-
-/// `gPathManager.RequestPath(c, (io.a, io.b), (io.c, io.d), flags io.flags, 1, -1, NULL, 0)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REQUEST = 19;
-
-/// `gPathManager.CancelAutoPathRequest(a)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_CANCEL = 20;
-
-/// path `a`'s `Reference()`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REFERENCE = 21;
-
-/// path `a`'s `Dereference()`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DEREFERENCE = 22;
-
-/// path `a`'s `mIsDone`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DONE = 23;
-
-/// path `a`'s `mRequestID`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_ID = 24;
-
-/// path `a`'s `mPath` tiles pushed
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_TILES = 25;
 
 /// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
 constexpr static const int32_t EE_UNITS_GROUP_OP_SET_GROUP_PATH = 26;
@@ -5728,15 +5701,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_OUTLINES = 35;
 
 /// `gAEManager.mTemplates[c]->mRadius` into `io.f`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS = 36;
-
-/// `EESaveAutoPathRequest(file a, path b)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_SAVE_PATH = 37;
-
-/// `EELoadAutoPathRequest(file a, io.a)`: the error
-constexpr static const int32_t EE_UNITS_GROUP_OP_LOAD_PATH = 38;
-
-/// `EEAwaitAutoPathRequest(c, ...)` calling `ee_units_group_path_resolved(b, d, request)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_AWAIT_PATH = 39;
 
 /// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AFTER_LOAD = 40;
@@ -6189,733 +6153,6 @@ constexpr static const int32_t EE_UNITS_PG_OP_LOAD = 14;
 constexpr static const int32_t EE_UNITS_PG_OP_REPAIR = 15;
 
 constexpr static const int32_t EE_UNITS_PG_OP_SAVE = 16;
-
-/// `mServerMessageQueueLock->Enter()`
-constexpr static const int32_t EE_UNITS_PH_QUEUE_LOCK_ENTER = 1;
-
-/// `mServerMessageQueueLock->Leave()`
-constexpr static const int32_t EE_UNITS_PH_QUEUE_LOCK_LEAVE = 2;
-
-/// `mServerMessages.size()`
-constexpr static const int32_t EE_UNITS_PH_SERVER_MESSAGES = 3;
-
-/// `mServerMessages.front()`
-constexpr static const int32_t EE_UNITS_PH_FRONT = 4;
-
-/// `mServerMessages.pop_front()`
-constexpr static const int32_t EE_UNITS_PH_POP_FRONT = 5;
-
-/// message `a`'s `Dereference()`
-constexpr static const int32_t EE_UNITS_PH_DEREFERENCE = 6;
-
-/// `mTimerRunning`
-constexpr static const int32_t EE_UNITS_PH_TIMER_RUNNING = 7;
-
-/// message `a`'s `GetType()`
-constexpr static const int32_t EE_UNITS_PH_MESSAGE_TYPE = 8;
-
-/// record `a`'s `Get<bool>(c)`
-constexpr static const int32_t EE_UNITS_PH_RECORD_BOOL = 9;
-
-/// record `a`'s `Get<unsigned char>(c)`
-constexpr static const int32_t EE_UNITS_PH_RECORD_BYTE = 10;
-
-/// record `a`'s `Get<uint32_t>(c)`
-constexpr static const int32_t EE_UNITS_PH_RECORD_U32 = 11;
-
-/// `gCommunications->IsServer()`
-constexpr static const int32_t EE_UNITS_PH_IS_SERVER = 12;
-
-/// `gCommunications->IsClient()`
-constexpr static const int32_t EE_UNITS_PH_IS_CLIENT = 13;
-
-/// `static_cast<EEClient*>(gCommunications)->mHasLeftGame`
-constexpr static const int32_t EE_UNITS_PH_HAS_LEFT_GAME = 14;
-
-/// `GetOutOfSynchChecksum(c != 0, 1)`
-constexpr static const int32_t EE_UNITS_PH_OUT_OF_SYNCH_CHECKSUM = 15;
-
-/// `gCommunications->GetNumberOfCTsProcessedInPhysics()`
-constexpr static const int32_t EE_UNITS_PH_CTS_PROCESSED = 16;
-
-/// `new NEMRecord(kNetMessageWorldDatabaseChecksumResponse, {c, d})`
-constexpr static const int32_t EE_UNITS_PH_CHECKSUM_RESPONSE = 17;
-
-/// message `a`'s `SetOriginatingSlot(gWorld.GetCurrentPlayer()->mSlot)`
-constexpr static const int32_t EE_UNITS_PH_SET_SLOT_CURRENT = 18;
-
-/// `gCommunications->ProcessLocalUserInput(message a, kSlotNone)`
-constexpr static const int32_t EE_UNITS_PH_LOCAL_INPUT = 19;
-
-/// the server's `LogChecksumResponse(message a)`
-constexpr static const int32_t EE_UNITS_PH_LOG_CHECKSUM_RESPONSE = 20;
-
-/// `gCommunications->IncrementNumberOfCTsProcessedInPhysics()`
-constexpr static const int32_t EE_UNITS_PH_INCREMENT_CTS = 21;
-
-/// `gCommunications->SetAveragePhysicsUpdateTime(c)`
-constexpr static const int32_t EE_UNITS_PH_SET_AVERAGE_UPDATE = 22;
-
-/// `gCommunications->SetAverageTimeBetweenPhysicsTicks(c)`
-constexpr static const int32_t EE_UNITS_PH_SET_AVERAGE_BETWEEN = 23;
-
-/// `SetSpeed(f[0])`
-constexpr static const int32_t EE_UNITS_PH_SET_SPEED = 24;
-
-/// message `a`'s `GetMessageLabel()`
-constexpr static const int32_t EE_UNITS_PH_MESSAGE_LABEL = 25;
-
-/// message `a`'s `GetForSpecificSlot() == kSlotNone`
-constexpr static const int32_t EE_UNITS_PH_FOR_NO_SLOT = 26;
-
-/// `mInputMessagesProcessed++`
-constexpr static const int32_t EE_UNITS_PH_INPUTS_PROCESSED_INCREMENT = 27;
-
-/// `EEMessageCaptureExecuted(message a)`
-constexpr static const int32_t EE_UNITS_PH_CAPTURE_EXECUTED = 28;
-
-/// `EESimCaptureRecord::Active()`
-constexpr static const int32_t EE_UNITS_PH_CAPTURE_ACTIVE = 29;
-
-/// `EEUnitStoreCheck(c)`
-constexpr static const int32_t EE_UNITS_PH_UNIT_STORE_CHECK = 30;
-
-/// `gEEMessageExecutedTestHook != NULL`
-constexpr static const int32_t EE_UNITS_PH_TEST_HOOK_SET = 31;
-
-/// `gEEMessageExecutedTestHook(message a, c)`
-constexpr static const int32_t EE_UNITS_PH_TEST_HOOK = 32;
-
-/// `gCommunications->ExecuteRemovePlayer(...)` of the remove-player record `a`
-constexpr static const int32_t EE_UNITS_PH_REMOVE_PLAYER = 33;
-
-/// `EEGameMessageCast(message a)->ExecuteSelectionMessage()`
-constexpr static const int32_t EE_UNITS_PH_EXECUTE_SELECTION = 34;
-
-/// `EEPhysicsLog(message a, mGameTime, c)`
-constexpr static const int32_t EE_UNITS_PH_LOG = 35;
-
-/// `EEGameMessageCast(message a)`
-constexpr static const int32_t EE_UNITS_PH_GAME_MESSAGE = 36;
-
-/// game message `a`'s `ExecuteMessage()`
-constexpr static const int32_t EE_UNITS_PH_EXECUTE_GAME_MESSAGE = 37;
-
-/// message `a`'s `Execute()`
-constexpr static const int32_t EE_UNITS_PH_EXECUTE = 38;
-
-/// `ee_world_view_check(&gWorld, the ticks done)`
-constexpr static const int32_t EE_UNITS_PH_WORLD_VIEW_CHECK = 39;
-
-/// `sLoadedSeedPending`
-constexpr static const int32_t EE_UNITS_PH_LOADED_SEED_PENDING = 40;
-
-/// `sLoadedSeedPending = false`
-constexpr static const int32_t EE_UNITS_PH_CLEAR_LOADED_SEED_PENDING = 41;
-
-/// `mRandom.SetSeed(sLoadedSeed)`
-constexpr static const int32_t EE_UNITS_PH_SET_LOADED_SEED = 42;
-
-/// the fix-ups of `EEAfterLoad` (c 0) or `EEAfterLoadLast` (c 1) are empty
-constexpr static const int32_t EE_UNITS_PH_FIXUPS_EMPTY = 43;
-
-/// the running fix-ups swapped with those of `EEAfterLoad` (c 0) or `EEAfterLoadLast` (c 1)
-constexpr static const int32_t EE_UNITS_PH_FIXUPS_TAKE = 44;
-
-/// the running fix-ups' size
-constexpr static const int32_t EE_UNITS_PH_FIXUPS_COUNT = 45;
-
-/// running fix-up `c` called
-constexpr static const int32_t EE_UNITS_PH_FIXUP_RUN = 46;
-
-/// the running fix-ups cleared
-constexpr static const int32_t EE_UNITS_PH_FIXUPS_CLEAR = 47;
-
-/// `EEUnitOrderReset()`
-constexpr static const int32_t EE_UNITS_PH_UNIT_ORDER_RESET = 48;
-
-/// `ReportStatistics()`
-constexpr static const int32_t EE_UNITS_PH_REPORT_STATISTICS = 49;
-
-/// `DrainInput()`
-constexpr static const int32_t EE_UNITS_PH_DRAIN_INPUT = 50;
-
-/// `ServeLoadSaveRequests()`
-constexpr static const int32_t EE_UNITS_PH_SERVE_LOAD_SAVE = 51;
-
-/// `gCommunications->GetIsGamePaused()`
-constexpr static const int32_t EE_UNITS_PH_PAUSED = 52;
-
-/// `gWorld.mCameraControl.mUnitA == NULL`
-constexpr static const int32_t EE_UNITS_PH_NO_CAMERA_UNIT = 53;
-
-/// `gWorld.mCameraControl.Update(mSpeed)`
-constexpr static const int32_t EE_UNITS_PH_CAMERA_UPDATE = 54;
-
-/// the bits of `mRandom.Generate()`
-constexpr static const int32_t EE_UNITS_PH_RANDOM_GENERATE = 55;
-
-/// `TMGetTime()`
-constexpr static const int32_t EE_UNITS_PH_TIME = 56;
-
-/// `gWorld.UpdateActiveUnits()`
-constexpr static const int32_t EE_UNITS_PH_UPDATE_ACTIVE_UNITS = 57;
-
-/// `UpdateCivTimer()`
-constexpr static const int32_t EE_UNITS_PH_UPDATE_CIV_TIMER = 58;
-
-/// `gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000`
-constexpr static const int32_t EE_UNITS_PH_RESOURCE_TIME = 59;
-
-/// `gWorld.mGameOptions.mResources`
-constexpr static const int32_t EE_UNITS_PH_RESOURCES = 60;
-
-/// `gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing)`
-constexpr static const int32_t EE_UNITS_PH_HAS_JIT_POWER = 61;
-
-/// `gResource->GetString(IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW, the text)`
-constexpr static const int32_t EE_UNITS_PH_JIT_TEXT = 62;
-
-/// `gUserInterface->AddChatLogEntry(the text, 0)`
-constexpr static const int32_t EE_UNITS_PH_CHAT_TEXT = 63;
-
-/// `UpdateWeather()`
-constexpr static const int32_t EE_UNITS_PH_UPDATE_WEATHER = 64;
-
-/// `gPathManager.Update()`
-constexpr static const int32_t EE_UNITS_PH_PATH_UPDATE = 65;
-
-/// `UpdateAreaEffectsClock()`
-constexpr static const int32_t EE_UNITS_PH_AREA_EFFECTS_CLOCK = 66;
-
-/// `CheckShiftMode()`
-constexpr static const int32_t EE_UNITS_PH_CHECK_SHIFT_MODE = 67;
-
-/// `UpdateUnits()`
-constexpr static const int32_t EE_UNITS_PH_UPDATE_UNITS = 68;
-
-/// `gEffectManager->Update()`
-constexpr static const int32_t EE_UNITS_PH_EFFECTS_UPDATE = 69;
-
-/// `EECalamityManager::GetInstance()->Update(mTickTime)`
-constexpr static const int32_t EE_UNITS_PH_CALAMITIES_UPDATE = 70;
-
-/// `gArtificialIntelligence->Update()`
-constexpr static const int32_t EE_UNITS_PH_AI_UPDATE = 71;
-
-/// `gWorld.mInCinematic`
-constexpr static const int32_t EE_UNITS_PH_IN_CINEMATIC = 72;
-
-/// `gWorld.mScenarioManager->mGameResult`
-constexpr static const int32_t EE_UNITS_PH_SCENARIO_RESULT = 73;
-
-/// `gWorld.mScenarioManager->Update()`
-constexpr static const int32_t EE_UNITS_PH_SCENARIO_UPDATE = 74;
-
-/// `gWorld.CheckGameOver()`
-constexpr static const int32_t EE_UNITS_PH_CHECK_GAME_OVER = 75;
-
-/// `gWorld.mScenarioManager->mGameResult = c`
-constexpr static const int32_t EE_UNITS_PH_SET_SCENARIO_RESULT = 76;
-
-/// `EndGame(c != 0)`
-constexpr static const int32_t EE_UNITS_PH_END_GAME = 77;
-
-/// `FlushWorld()`
-constexpr static const int32_t EE_UNITS_PH_FLUSH_WORLD = 78;
-
-/// `gWorld.mGameOptions.mCampaignName.GetLength()`
-constexpr static const int32_t EE_UNITS_PH_CAMPAIGN_NAME_LENGTH = 79;
-
-/// `gWorld.mGameOptions.mCampaignChecksum`
-constexpr static const int32_t EE_UNITS_PH_CAMPAIGN_CHECKSUM = 80;
-
-/// `gWorld.mGameOptions.mIsScenarioGame`
-constexpr static const int32_t EE_UNITS_PH_SCENARIO_GAME = 81;
-
-/// `(unsigned long)gWorld.GetCurrentPlayer()->mCivilization.GetAvailablePoints()`
-constexpr static const int32_t EE_UNITS_PH_AVAILABLE_POINTS = 82;
-
-/// `EESetCivBuilderButtonBlinking(c != 0)`
-constexpr static const int32_t EE_UNITS_PH_CIV_BLINK = 83;
-
-/// `gGamePreferences.mSettings.mAutoSaveInMilliseconds`
-constexpr static const int32_t EE_UNITS_PH_AUTOSAVE_PERIOD = 84;
-
-/// `mTimerInterval`
-constexpr static const int32_t EE_UNITS_PH_TIMER_INTERVAL = 85;
-
-/// `gWorld.mScenarioManager->mIsShowingDialog`
-constexpr static const int32_t EE_UNITS_PH_SHOWING_DIALOG = 86;
-
-/// `gPhysics->PostAutoSave()`
-constexpr static const int32_t EE_UNITS_PH_POST_AUTOSAVE = 87;
-
-/// `gCommunications->GetCurrentCommunicationsTick()`
-constexpr static const int32_t EE_UNITS_PH_CURRENT_CT = 88;
-
-/// `gWorld.mNumPlayers`
-constexpr static const int32_t EE_UNITS_PH_NUM_PLAYERS = 89;
-
-/// `gWorld.mPlayers[c]`
-constexpr static const int32_t EE_UNITS_PH_PLAYER_AT = 90;
-
-/// `RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)")`
-constexpr static const int32_t EE_UNITS_PH_CHECK_UNIT_LIST = 91;
-
-/// `gWorld.FlushQueuedPlacements()`
-constexpr static const int32_t EE_UNITS_PH_FLUSH_PLACEMENTS = 92;
-
-/// player `a`'s `AddPendingUnits(0, 1)`
-constexpr static const int32_t EE_UNITS_PH_ADD_PENDING_UNITS = 93;
-
-/// `gWorld.QueueBornDeactivations()`
-constexpr static const int32_t EE_UNITS_PH_QUEUE_BORN_DEACTIVATIONS = 94;
-
-/// `ProcessUnitSwaps()`
-constexpr static const int32_t EE_UNITS_PH_PROCESS_UNIT_SWAPS = 95;
-
-/// player `a`'s `RemoveKilledUnits()`
-constexpr static const int32_t EE_UNITS_PH_REMOVE_KILLED_UNITS = 96;
-
-/// `Tick()`
-constexpr static const int32_t EE_UNITS_PH_TICK = 97;
-
-/// `gB529065 = true`
-constexpr static const int32_t EE_UNITS_PH_SET_GAME_ENDED = 98;
-
-/// player `a`'s `mObserverMode`
-constexpr static const int32_t EE_UNITS_PH_OBSERVER = 99;
-
-/// `gWorld.RemovePlayerFromGame(c != 0, d)`
-constexpr static const int32_t EE_UNITS_PH_REMOVE_FROM_GAME = 100;
-
-/// player `a`'s `SetGameResult(c)`
-constexpr static const int32_t EE_UNITS_PH_SET_GAME_RESULT = 101;
-
-/// `gWorld.GetCurrentPlayer()->mGameResult`
-constexpr static const int32_t EE_UNITS_PH_CURRENT_GAME_RESULT = 102;
-
-/// the campaign progress (a new one) `Load(gCampaignUser, the campaign, its checksum, true)`
-constexpr static const int32_t EE_UNITS_PH_PROGRESS_LOAD = 103;
-
-/// the campaign progress' `SaveCompletedScenario(gCampaignUser, the campaign, the scenario, the checksum)`
-constexpr static const int32_t EE_UNITS_PH_PROGRESS_SAVE = 104;
-
-/// the main game form is the current form (`dynamic_cast<EEUIFMainGame*>`)
-constexpr static const int32_t EE_UNITS_PH_MAIN_GAME_CURRENT = 105;
-
-/// the in-game options button blinks
-constexpr static const int32_t EE_UNITS_PH_OPTIONS_BLINK = 106;
-
-/// `gWorld.mTeams.clear()`
-constexpr static const int32_t EE_UNITS_PH_TEAMS_CLEAR = 107;
-
-/// `ee_app_teams_clear()`
-constexpr static const int32_t EE_UNITS_PH_APP_TEAMS_CLEAR = 108;
-
-/// the server's `PauseGame()`
-constexpr static const int32_t EE_UNITS_PH_PAUSE_GAME = 109;
-
-/// the campaign progress released
-constexpr static const int32_t EE_UNITS_PH_PROGRESS_RELEASE = 110;
-
-/// the time of day (`TMGetTimeOfDay`) into the scratch time
-constexpr static const int32_t EE_UNITS_PH_TIME_OF_DAY = 111;
-
-/// the dump's name ("OOS <date>.log") from the scratch time
-constexpr static const int32_t EE_UNITS_PH_DUMP_NAME = 112;
-
-/// the dump file = `PlatFOpen(the name, "w")`
-constexpr static const int32_t EE_UNITS_PH_DUMP_OPEN = 113;
-
-/// `fprintf(the dump, "\n")`
-constexpr static const int32_t EE_UNITS_PH_DUMP_NEWLINE = 114;
-
-/// the dump's player line of player `a`
-constexpr static const int32_t EE_UNITS_PH_DUMP_PLAYER = 115;
-
-/// player `a`'s `mActiveGroup`
-constexpr static const int32_t EE_UNITS_PH_ACTIVE_GROUP = 116;
-
-/// group `a`'s `GetNumUnits()`
-constexpr static const int32_t EE_UNITS_PH_GROUP_NUM_UNITS = 117;
-
-/// the dump's selected group count line (`c`)
-constexpr static const int32_t EE_UNITS_PH_DUMP_SELECTED_COUNT = 118;
-
-/// group `a`'s `GetUnit(c)->mUnitID`
-constexpr static const int32_t EE_UNITS_PH_GROUP_UNIT_ID = 119;
-
-/// the dump's unit line (#`c` with id `d`)
-constexpr static const int32_t EE_UNITS_PH_DUMP_UNIT = 120;
-
-/// player `a`'s `GetNumRunningGroups()`
-constexpr static const int32_t EE_UNITS_PH_RUNNING_GROUPS = 121;
-
-/// the dump's active group count line (`c`)
-constexpr static const int32_t EE_UNITS_PH_DUMP_ACTIVE_COUNT = 122;
-
-/// player `a`'s `GetRunningGroup(c)`
-constexpr static const int32_t EE_UNITS_PH_RUNNING_GROUP = 123;
-
-/// active group `a`'s `GetNumUnits()`
-constexpr static const int32_t EE_UNITS_PH_ACTIVE_GROUP_NUM_UNITS = 124;
-
-/// the dump's active group line (#`c` with `d` units)
-constexpr static const int32_t EE_UNITS_PH_DUMP_ACTIVE_GROUP = 125;
-
-/// active group `a`'s `GetUnit(c)->mUnitID`
-constexpr static const int32_t EE_UNITS_PH_ACTIVE_GROUP_UNIT_ID = 126;
-
-/// player `a`'s `mAirTraffic[c]`
-constexpr static const int32_t EE_UNITS_PH_AIR_TRAFFIC = 127;
-
-/// `ee_units_atc_dump(air traffic a, the dump)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_AIR_TRAFFIC = 128;
-
-/// `gPathManager.DumpOutOfSynch(the dump)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_PATHS = 129;
-
-/// `gWorld.mMap->DumpOutOfSynch(the dump)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_MAP = 130;
-
-/// `EECalamityManager::GetInstance()->DumpOutOfSynch(the dump)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_CALAMITIES = 131;
-
-/// `gWorld.GetContagionManager()->DumpOutOfSynch(the dump)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_CONTAGIONS = 132;
-
-/// `gWorld.mUnits.mFirst`
-constexpr static const int32_t EE_UNITS_PH_FIRST_UNIT = 133;
-
-/// unit `a`'s `mTileNode->mNext`
-constexpr static const int32_t EE_UNITS_PH_NEXT_UNIT = 134;
-
-/// unit `a`'s `OutOfSynchDump(the dump, c)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_UNIT_STATE = 135;
-
-/// the dump's closing lines and `fclose`
-constexpr static const int32_t EE_UNITS_PH_DUMP_CLOSE = 136;
-
-/// `(unsigned long)` unit `a`'s `GetChecksum(c)`
-constexpr static const int32_t EE_UNITS_PH_UNIT_CHECKSUM = 137;
-
-/// `mRandom.GetSeed() + mInputMessagesProcessed` (unsigned long)
-constexpr static const int32_t EE_UNITS_PH_SEED_AND_INPUTS = 138;
-
-/// `EECPOutOfSynchChecksum()`
-constexpr static const int32_t EE_UNITS_PH_CP_CHECKSUM = 139;
-
-/// `(unsigned long)gWorld.mMap->ComputeChecksum()`
-constexpr static const int32_t EE_UNITS_PH_MAP_CHECKSUM = 140;
-
-/// `gContinentManagerChecksum`
-constexpr static const int32_t EE_UNITS_PH_CONTINENT_CHECKSUM = 141;
-
-/// `(unsigned long)EECalamityManager::GetInstance()->GetOutOfSynchChecksum()`
-constexpr static const int32_t EE_UNITS_PH_CALAMITY_CHECKSUM = 142;
-
-/// `mLastOutOfSynchChecksum = c`
-constexpr static const int32_t EE_UNITS_PH_SET_LAST_CHECKSUM = 143;
-
-/// player `a`'s `mPlayerID`
-constexpr static const int32_t EE_UNITS_PH_PLAYER_ID = 144;
-
-/// the bits of `gWorld.mGameSpeed`... the time text: hours `c` < 100 or not (`d`), minutes, seconds in `b`
-constexpr static const int32_t EE_UNITS_PH_TIME_TEXT = 145;
-
-/// the bits of `gPhysics->mGameClock`
-constexpr static const int32_t EE_UNITS_PH_GAME_CLOCK = 146;
-
-/// `mUnitSwaps.size()`
-constexpr static const int32_t EE_UNITS_PH_SWAPS = 147;
-
-/// `mUnitSwaps[c].mOld`
-constexpr static const int32_t EE_UNITS_PH_SWAP_OLD = 148;
-
-/// `mUnitSwaps[c].mNew`
-constexpr static const int32_t EE_UNITS_PH_SWAP_NEW = 149;
-
-/// unit `a`'s `GetPlayer()`
-constexpr static const int32_t EE_UNITS_PH_UNIT_PLAYER = 150;
-
-/// complex unit `a`'s `mIsCitizen`
-constexpr static const int32_t EE_UNITS_PH_IS_CITIZEN = 151;
-
-/// `ClearServerMessages()`
-constexpr static const int32_t EE_UNITS_PH_CLEAR_SERVER_MESSAGES = 152;
-
-/// `mSaveGameLock->Enter()`
-constexpr static const int32_t EE_UNITS_PH_SAVE_LOCK_ENTER = 153;
-
-/// `mSaveGameLock->Leave()`
-constexpr static const int32_t EE_UNITS_PH_SAVE_LOCK_LEAVE = 154;
-
-/// `mLoadSaveRequests.size()`
-constexpr static const int32_t EE_UNITS_PH_REQUESTS = 155;
-
-/// `mLoadSaveRequests[c]->Dereference()`
-constexpr static const int32_t EE_UNITS_PH_REQUEST_DEREFERENCE = 156;
-
-/// `mLoadSaveRequests.clear()`
-constexpr static const int32_t EE_UNITS_PH_REQUESTS_CLEAR = 157;
-
-/// `mInputMessagesProcessed = 0`
-constexpr static const int32_t EE_UNITS_PH_INPUTS_PROCESSED_CLEAR = 158;
-
-/// the bits of `mSpeed`
-constexpr static const int32_t EE_UNITS_PH_SPEED = 159;
-
-/// `gCommunications != NULL`
-constexpr static const int32_t EE_UNITS_PH_HAS_COMMUNICATIONS = 160;
-
-/// `gWorld.mGameOptions.CanBuyCivilization()`
-constexpr static const int32_t EE_UNITS_PH_CAN_BUY_CIVILIZATION = 161;
-
-/// `gWorld.GetCurrentPlayer()->mCivilizationChosen`
-constexpr static const int32_t EE_UNITS_PH_CIVILIZATION_CHOSEN = 162;
-
-/// `gWorld.GetCurrentPlayer()->mObserverMode`
-constexpr static const int32_t EE_UNITS_PH_CURRENT_OBSERVER = 163;
-
-/// `EEGetCivTimerLimit()`
-constexpr static const int32_t EE_UNITS_PH_CIV_TIMER_LIMIT = 164;
-
-/// `EEGetCivTimerSecondWarning()`
-constexpr static const int32_t EE_UNITS_PH_CIV_TIMER_SECOND = 165;
-
-/// `EEGetCivTimerFirstWarning()`
-constexpr static const int32_t EE_UNITS_PH_CIV_TIMER_FIRST = 166;
-
-/// the civ timer message (`(unsigned char)c`) to the local input
-constexpr static const int32_t EE_UNITS_PH_CIV_TIMER_MESSAGE = 167;
-
-/// `EELoadOrSave(mLoadSaveRequests[c])`
-constexpr static const int32_t EE_UNITS_PH_LOAD_OR_SAVE = 168;
-
-/// `mLoadSaveRequests[c] = NULL`
-constexpr static const int32_t EE_UNITS_PH_REQUEST_CLEAR = 169;
-
-/// `new EEMRecord(kMessageLoadOrSaveGameResponse, {c})`
-constexpr static const int32_t EE_UNITS_PH_LOAD_SAVE_RESPONSE = 170;
-
-/// message `a`'s `SetOriginatingSlot(gWorld.GetCurrentPlayer()->GetSlot())`
-constexpr static const int32_t EE_UNITS_PH_SET_SLOT_CURRENT_GET = 171;
-
-/// the server's `LogResponse(message a)`
-constexpr static const int32_t EE_UNITS_PH_LOG_RESPONSE = 172;
-
-/// `gCommunications->ProcessLocalUserInput(message a, kSlotServer)`
-constexpr static const int32_t EE_UNITS_PH_LOCAL_INPUT_SERVER = 173;
-
-/// `gWorld.GetCurrentPlayer()->mShiftMode`
-constexpr static const int32_t EE_UNITS_PH_SHIFT_MODE = 174;
-
-/// the keyboard's Shift key is up
-constexpr static const int32_t EE_UNITS_PH_SHIFT_UP = 175;
-
-/// the exit-shift-mode message (`mGameTime`) to the local input
-constexpr static const int32_t EE_UNITS_PH_EXIT_SHIFT_MODE = 176;
-
-/// the bits of `gWorld.GetTimeOfDay()`
-constexpr static const int32_t EE_UNITS_PH_GET_TIME_OF_DAY = 177;
-
-/// `gWorld.SetTimeOfDay(f[0])`
-constexpr static const int32_t EE_UNITS_PH_SET_TIME_OF_DAY = 178;
-
-/// the bits of `gWorld.mWindYaw`
-constexpr static const int32_t EE_UNITS_PH_WIND_YAW = 179;
-
-/// `gWorld.mWindYaw = f[0]`
-constexpr static const int32_t EE_UNITS_PH_SET_WIND_YAW = 180;
-
-/// the wind's transformation: a new one, `SetOrientationYPR(f[0], 0, 0)`
-constexpr static const int32_t EE_UNITS_PH_WIND_ORIENT = 181;
-
-/// `gWorld.mWindDirection` = the wind's transformation applied to north (0, 0.001, 0)
-constexpr static const int32_t EE_UNITS_PH_WIND_DIRECTION = 182;
-
-/// `gWorld.mEnvironmentManager->Tick(mGameTime)`
-constexpr static const int32_t EE_UNITS_PH_ENVIRONMENT_TICK = 183;
-
-/// the current player's `mSavedGroups.GetLastValue(c)`
-constexpr static const int32_t EE_UNITS_PH_LAST_STATISTIC = 184;
-
-/// the report-statistics message (`c`, `d`) to the local input
-constexpr static const int32_t EE_UNITS_PH_REPORT_MESSAGE = 185;
-
-/// `srand(TMGetTime())`
-constexpr static const int32_t EE_UNITS_PH_SEED_RAND = 186;
-
-/// `rand()`
-constexpr static const int32_t EE_UNITS_PH_RAND = 187;
-
-/// `gGamePreferences.mSettings.mNumberOfAutoSaves`
-constexpr static const int32_t EE_UNITS_PH_AUTOSAVES = 188;
-
-/// the autosave's name ("AutoSave <date - time><extension>") from the scratch time
-constexpr static const int32_t EE_UNITS_PH_AUTOSAVE_NAME = 189;
-
-/// `gGamePreferences.mSettings.mLastAutoSave = the name`
-constexpr static const int32_t EE_UNITS_PH_SET_LAST_AUTOSAVE = 190;
-
-/// `gGamePreferences.Save()`
-constexpr static const int32_t EE_UNITS_PH_PREFERENCES_SAVE = 191;
-
-/// the save request (the name) sent to every player, waiting up to 15 s
-constexpr static const int32_t EE_UNITS_PH_SEND_SAVE_REQUEST = 192;
-
-/// the base's `RTSPhysics::HandleMessage(c, a, b)`
-constexpr static const int32_t EE_UNITS_PH_RTS_HANDLE_MESSAGE = 193;
-
-/// `gWorld.mLock->WriteLock()`
-constexpr static const int32_t EE_UNITS_PH_WORLD_LOCK = 194;
-
-/// `gWorld.mLock->WriteUnlock()`
-constexpr static const int32_t EE_UNITS_PH_WORLD_UNLOCK = 195;
-
-/// `gWorld.mScenarioManager && !gScenarioSimDialogs`
-constexpr static const int32_t EE_UNITS_PH_SCENARIO_DIALOGS = 196;
-
-/// `gWorld.mScenarioManager->ShowDialogMessage()`
-constexpr static const int32_t EE_UNITS_PH_SHOW_DIALOG = 197;
-
-/// `Init()`
-constexpr static const int32_t EE_UNITS_PH_INIT = 198;
-
-/// `AutoSave()`
-constexpr static const int32_t EE_UNITS_PH_AUTOSAVE = 199;
-
-/// `mLoadSaveRequests.push_back(message a)`
-constexpr static const int32_t EE_UNITS_PH_REQUESTS_PUSH = 200;
-
-/// player `a`'s `UnitsSwapped(mUnitSwaps)`
-constexpr static const int32_t EE_UNITS_PH_UNITS_SWAPPED = 201;
-
-/// `SwapUnit(unit a, unit b)`
-constexpr static const int32_t EE_UNITS_PH_SWAP_UNIT = 202;
-
-/// unit `a`'s `Dereference()`
-constexpr static const int32_t EE_UNITS_PH_UNIT_DEREFERENCE = 203;
-
-/// `mUnitSwaps.clear()`
-constexpr static const int32_t EE_UNITS_PH_SWAPS_CLEAR = 204;
-
-/// `gWorld.mCameraControl.mUnitA`
-constexpr static const int32_t EE_UNITS_PH_CAMERA_UNIT_A = 205;
-
-/// `gWorld.mCameraControl.mUnitB`
-constexpr static const int32_t EE_UNITS_PH_CAMERA_UNIT_B = 206;
-
-/// the camera follows unit `a` (its following, turn yaw and pitch kept)
-constexpr static const int32_t EE_UNITS_PH_CAMERA_FOLLOW = 207;
-
-/// `gWorld.mCameraControl.ClearUnitA()`
-constexpr static const int32_t EE_UNITS_PH_CAMERA_CLEAR_A = 208;
-
-/// `gWorld.mCameraControl.ClearUnitB()`
-constexpr static const int32_t EE_UNITS_PH_CAMERA_CLEAR_B = 209;
-
-/// `gWorld.GetContagionManager()->SwapUnit(unit a, unit b)`
-constexpr static const int32_t EE_UNITS_PH_CONTAGION_SWAP = 210;
-
-/// `gWorld.mScenarioManager->ReplaceUnit(unit a's mUnitID, unit b's)`
-constexpr static const int32_t EE_UNITS_PH_SCENARIO_REPLACE = 211;
-
-/// `gEffectManager->ReplaceUnit(unit a, unit b)`
-constexpr static const int32_t EE_UNITS_PH_EFFECTS_REPLACE = 212;
-
-/// `gAEManager.Tick(kAreaEffectInterval)`
-constexpr static const int32_t EE_UNITS_PH_AREA_EFFECTS_TICK = 213;
-
-/// `mTicksPerSecond`
-constexpr static const int32_t EE_UNITS_PH_TICKS_PER_SECOND = 214;
-
-/// the bits of `gWorld.GetGameSpeed()`
-constexpr static const int32_t EE_UNITS_PH_GAME_SPEED = 215;
-
-/// `gFreeCamera`
-constexpr static const int32_t EE_UNITS_PH_FREE_CAMERA = 216;
-
-/// `Lock()`
-constexpr static const int32_t EE_UNITS_PH_LOCK = 217;
-
-/// `Unlock()`
-constexpr static const int32_t EE_UNITS_PH_UNLOCK = 218;
-
-/// message `a`'s `Reference()`
-constexpr static const int32_t EE_UNITS_PH_REFERENCE = 219;
-
-/// unit `a`'s `Reference()`
-constexpr static const int32_t EE_UNITS_PH_UNIT_REFERENCE = 220;
-
-/// `mUnitSwaps.push_back({complex a, complex b})`
-constexpr static const int32_t EE_UNITS_PH_SWAPS_PUSH = 221;
-
-/// `mThread != NULL`
-constexpr static const int32_t EE_UNITS_PH_HAS_THREAD = 222;
-
-/// `mThread->Post(c, NULL, NULL, true)`
-constexpr static const int32_t EE_UNITS_PH_POST = 223;
-
-/// `*(unsigned long*)a = c`
-constexpr static const int32_t EE_UNITS_PH_SET_ULONG = 224;
-
-/// `ESVERIFY_AT(the dump file != NULL, 544)`
-constexpr static const int32_t EE_UNITS_PH_DUMP_VERIFY = 225;
-
-constexpr static const int32_t EE_UNITS_PH_DO_TICK = 1;
-
-constexpr static const int32_t EE_UNITS_PH_DO_DRAIN_INPUT = 2;
-
-constexpr static const int32_t EE_UNITS_PH_DO_OUT_OF_SYNCH_CHECKSUM = 3;
-
-constexpr static const int32_t EE_UNITS_PH_DO_END_GAME = 4;
-
-constexpr static const int32_t EE_UNITS_PH_DO_INIT = 5;
-
-constexpr static const int32_t EE_UNITS_PH_DO_TIME_STRING = 6;
-
-constexpr static const int32_t EE_UNITS_PH_DO_MINUTES_AND_SECONDS = 7;
-
-constexpr static const int32_t EE_UNITS_PH_DO_UNIT_SWAP_KIND = 8;
-
-constexpr static const int32_t EE_UNITS_PH_DO_UPDATE_CIV_TIMER = 9;
-
-constexpr static const int32_t EE_UNITS_PH_DO_SERVE_LOAD_SAVE = 10;
-
-constexpr static const int32_t EE_UNITS_PH_DO_CHECK_SHIFT_MODE = 11;
-
-constexpr static const int32_t EE_UNITS_PH_DO_UPDATE_WEATHER = 12;
-
-constexpr static const int32_t EE_UNITS_PH_DO_REPORT_STATISTICS = 13;
-
-constexpr static const int32_t EE_UNITS_PH_DO_AUTOSAVE = 14;
-
-constexpr static const int32_t EE_UNITS_PH_DO_FLUSH_WORLD = 15;
-
-constexpr static const int32_t EE_UNITS_PH_DO_RUN_OWED_TICKS = 16;
-
-constexpr static const int32_t EE_UNITS_PH_DO_CLEAR_SERVER_MESSAGES = 17;
-
-constexpr static const int32_t EE_UNITS_PH_DO_HANDLE_MESSAGE = 18;
-
-constexpr static const int32_t EE_UNITS_PH_DO_PROCESS_UNIT_SWAPS = 19;
-
-constexpr static const int32_t EE_UNITS_PH_DO_SWAP_UNIT = 20;
-
-constexpr static const int32_t EE_UNITS_PH_DO_AREA_EFFECTS_CLOCK = 21;
-
-constexpr static const int32_t EE_UNITS_PH_DO_UPDATE_TIMING = 22;
-
-constexpr static const int32_t EE_UNITS_PH_DO_IDLE = 23;
-
-constexpr static const int32_t EE_UNITS_PH_DO_QUEUE_MESSAGE = 24;
-
-constexpr static const int32_t EE_UNITS_PH_DO_QUEUE_UNIT_SWAP = 25;
-
-constexpr static const int32_t EE_UNITS_PH_DO_POST = 26;
 
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
@@ -8267,9 +7504,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_CIV_POWER = 45;
 /// the exploration power's pulse: `PulseSight(true, its amount, unit i[0]'s id)`
 constexpr static const int32_t EE_UNITS_PLAYER_PULSE_EXPLORATION = 46;
 
-/// `gContinentManager.UpdateWallUnit(i[0], i[1])`
-constexpr static const int32_t EE_UNITS_PLAYER_UPDATE_WALL = 47;
-
 /// `EEGameLogUnitLost(this, i[0])` (the game log)
 constexpr static const int32_t EE_UNITS_PLAYER_LOG_LOST = 48;
 
@@ -8539,8 +7773,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_SCREEN = 77;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CELL_TAKEN = 78;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_STAND = 79;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_REACHABLE = 80;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_MAP_DIMENSIONS = 82;
 
@@ -12882,12 +12114,10 @@ constexpr static const int32_t EE_UNITS_WP_QUEUE_LENGTH = 6;
 
 constexpr static const int32_t EE_UNITS_WP_QUEUE_BACK = 7;
 
-/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `RefreshPath()`; `gEEAIRegionSize`
+/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `gEEAIRegionSize`
 constexpr static const int32_t EE_UNITS_WP_IS_HUMAN = 8;
 
 constexpr static const int32_t EE_UNITS_WP_CLEAR_BOUNDED = 9;
-
-constexpr static const int32_t EE_UNITS_WP_REFRESH_PATH = 10;
 
 constexpr static const int32_t EE_UNITS_WP_REGION_SIZE = 11;
 
@@ -13706,44 +12936,6 @@ struct EeUnitsPushIn {
   float tick_seconds;
 };
 
-/// `EEPhysics`' plain members (ee/EEPhysics.h), in the class's order.
-struct EeUnitsPhysicsSaved {
-  unsigned long mCurrentTick;
-  float mF84;
-  float mTicksPerGameSecond;
-  float mTickSeconds;
-  float mTimeOfDayStep;
-  float mGameClock;
-  float mTickTime;
-  float mAreaEffectsClock;
-  float mShiftModeClock;
-  long mTickTimeMs;
-  long mTickStartTime;
-  long mPreviousTickStartTime;
-  long mTickRandom;
-  unsigned long mNumTicksDone;
-  unsigned long mTicksToProcess;
-  unsigned long mTickGapSum;
-  unsigned long mTickGapCount;
-  unsigned long mTickWorkSum;
-  unsigned long mTickWorkCount;
-  /// untouched by the constructor, its init and Load/Save
-  long mAutoSaveClock;
-  long mGameTime;
-  long mLD4;
-  long mAveragePhysicsUpdateTime;
-  long mAverageTimeBetweenPhysicsTicks;
-  bool mTimeOfDayRuns;
-  bool mGameStarted;
-  bool mBE2;
-  bool mCivTimerRuns;
-  bool mCivTimerFirstWarning;
-  bool mCivTimerSecondWarning;
-  bool mGameOver;
-  bool mBE7;
-  bool mResourceTimerPending;
-};
-
 /// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
 struct EeUnitsTurn {
   float delta;
@@ -13806,6 +12998,44 @@ struct EeUnitsPitchIn {
   float rate;
   /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
   uint8_t naval;
+};
+
+/// `EEPhysics`' plain members (ee/EEPhysics.h), in the class's order.
+struct EeUnitsPhysicsSaved {
+  unsigned long mCurrentTick;
+  float mF84;
+  float mTicksPerGameSecond;
+  float mTickSeconds;
+  float mTimeOfDayStep;
+  float mGameClock;
+  float mTickTime;
+  float mAreaEffectsClock;
+  float mShiftModeClock;
+  long mTickTimeMs;
+  long mTickStartTime;
+  long mPreviousTickStartTime;
+  long mTickRandom;
+  unsigned long mNumTicksDone;
+  unsigned long mTicksToProcess;
+  unsigned long mTickGapSum;
+  unsigned long mTickGapCount;
+  unsigned long mTickWorkSum;
+  unsigned long mTickWorkCount;
+  /// untouched by the constructor, its init and Load/Save
+  long mAutoSaveClock;
+  long mGameTime;
+  long mLD4;
+  long mAveragePhysicsUpdateTime;
+  long mAverageTimeBetweenPhysicsTicks;
+  bool mTimeOfDayRuns;
+  bool mGameStarted;
+  bool mBE2;
+  bool mCivTimerRuns;
+  bool mCivTimerFirstWarning;
+  bool mCivTimerSecondWarning;
+  bool mGameOver;
+  bool mBE7;
+  bool mResourceTimerPending;
 };
 
 /// One host call's values: the arguments in `i`/`f`, the answers back in them.
@@ -15745,14 +14975,6 @@ EeUnitsGroup *ee_units_group_active_of(void *player, void *unit);
 void ee_units_groups_player(void *player,
                             int32_t op);
 
-/// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).
-///
-/// # Safety
-/// `g` the waiting group (referenced); `request` 0 or a request with the caller's reference.
-void ee_units_group_path_resolved(EeUnitsGroup *g,
-                                  int64_t key,
-                                  void *request);
-
 /// `EESaveActiveGroups(file)` over the player save's primitive `f`.
 ///
 /// # Safety
@@ -16299,25 +15521,6 @@ int32_t ee_units_pg_save(EeUnitsPatrolGroup *group, uint32_t major, uint32_t min
 /// # Safety
 /// See above.
 int32_t ee_units_pg_repair(EeUnitsPatrolGroup *group);
-
-extern int64_t ee_units_ph_host(int32_t op,
-                                void *physics,
-                                uint64_t a,
-                                uint64_t b,
-                                int64_t c,
-                                int64_t d,
-                                float (*f)[4]);
-
-/// `EEPhysics`' body `what` (`EE_UNITS_PH_DO_*`) on `physics`, whose plain members are `saved`.
-///
-/// # Safety
-/// `physics` is the live `EEPhysics` and `saved` its `EeUnitsPhysicsSaved` base.
-int64_t ee_units_ph_body(int32_t what,
-                         void *physics,
-                         EeUnitsPhysicsSaved *saved,
-                         uint64_t a,
-                         uint64_t b,
-                         int64_t c);
 
 /// `TurnTowardAngle` over the C++'s values.
 ///

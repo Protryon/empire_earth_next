@@ -812,6 +812,9 @@ EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 #define UC ((EEUnitClass*)p)
 #define FILE_SPEC (*(FSFileSpec*)p)
 
+int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEGameStateOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
 // The world bodies' C++ calls and members (EeGameCpp's world section; EEGameOps.cpp's default case): one statement each
 int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
@@ -1379,8 +1382,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::DumpLeakTitle: fprintf(FILE_SPEC, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
         break;
-    default: ESVERIFY_AT(inOp == O::UnRts, 1);
-        break;
+    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
     }
     return 0;
 }
@@ -1394,8 +1396,7 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
     case O::ViewportXCenter: return gViewport.GetXCenter();
     case O::ViewportYCenter: return gViewport.GetYCenter();
-    default: ESVERIFY_AT(inOp == O::CxEffectHeight, 1);
-        break;
+    default: return EEGameStateOpF(inOp, p, a, f);
     }
     return 0.0;
 }

@@ -106,7 +106,6 @@ pub mod order;
 pub mod order_log;
 pub mod patrol;
 pub mod patrol_group;
-pub mod phys_body;
 pub mod physics;
 pub mod physics_save;
 pub mod pick_sweep;

@@ -79,6 +79,7 @@ pub mod pm_host;
 pub mod pm_record;
 pub mod queries;
 pub mod repair;
+pub mod request;
 pub mod search_note;
 pub mod sector_rec;
 pub mod sectors;

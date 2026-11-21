@@ -17,6 +17,7 @@ pub mod generator;
 mod golden;
 pub mod grid;
 pub mod map;
+pub mod object;
 pub mod math;
 pub mod points;
 pub mod resources;
