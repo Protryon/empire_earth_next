@@ -35,16 +35,12 @@ static int64_t EEATCHost(void* inContext, int32_t inOp, void* inUnit, void* inOt
     case EE_UNITS_ATC_REFERENCE: theUnit->Reference(); return 0;
     case EE_UNITS_ATC_DEREFERENCE: theUnit->Dereference(); return 0;
     case EE_UNITS_ATC_SET_CLEARANCE: theUnit->SetB342(io->a != 0); return 0;
-    case EE_UNITS_ATC_RELEASE_EXITING:   // ClearAirportQueue: the airport's exiting unit when it is the dropped plane
-        if (theUnit->mExitingUnitID != -1 && theOther == theUnit->FindPassenger(theUnit->mExitingUnitID))
-            theUnit->SetExitingUnitID(-1);
-        return 0;
+    case EE_UNITS_ATC_FIND_PASSENGER: return (int64_t)(intptr_t)theUnit->FindPassenger(io->a);
+    case EE_UNITS_ATC_CLEAR_EXITING: theUnit->SetExitingUnitID(-1); return 0;
     case EE_UNITS_ATC_KILL: theUnit->Kill(1, 0, 0); return 0;
-    case EE_UNITS_ATC_REROUTE:
-        theUnit->SetHomeBase(theOther);
-        theUnit->StartAction(kActionRequestLanding);
-        theUnit->GetUnitClass()->ActionChanged(theUnit);
-        return 0;
+    case EE_UNITS_ATC_SET_HOME_BASE: theUnit->SetHomeBase(theOther); return 0;
+    case EE_UNITS_ATC_REQUEST_LANDING: theUnit->StartAction(kActionRequestLanding); return 0;
+    case EE_UNITS_ATC_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
     case EE_UNITS_ATC_RESOLVE: return (int64_t)(intptr_t)EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((uint32_t)io->a));
     case EE_UNITS_ATC_DUMP_LINE: fputs(static_cast<const char*>(inUnit), static_cast<FILE*>(inContext)); return 0;
     }

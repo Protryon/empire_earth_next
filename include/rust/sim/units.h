@@ -618,6 +618,22 @@ constexpr static const int32_t EE_UNITS_ATC_RESOLVE = 23;
 /// the dump's line: the NUL-terminated text at `unit`
 constexpr static const int32_t EE_UNITS_ATC_DUMP_LINE = 24;
 
+/// the game's steps of the two composite calls (the FFI host makes them; the C++ answers each with one call):
+/// `FindPassenger(io.a)` of the airport `unit`
+constexpr static const int32_t EE_UNITS_ATC_FIND_PASSENGER = 25;
+
+/// `SetExitingUnitID(-1)`
+constexpr static const int32_t EE_UNITS_ATC_CLEAR_EXITING = 26;
+
+/// `SetHomeBase(other)`
+constexpr static const int32_t EE_UNITS_ATC_SET_HOME_BASE = 27;
+
+/// `StartAction(kActionRequestLanding)`
+constexpr static const int32_t EE_UNITS_ATC_REQUEST_LANDING = 28;
+
+/// the class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_ATC_ACTION_CHANGED = 29;
+
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
 
