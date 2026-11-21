@@ -86,7 +86,7 @@ pub extern "C" fn ee_gamecpp_ae_collect_effects(
         }
         let kind = template(e).mKind;
         if template(e).mRadius <= 0.0 {
-            h(O::AeSetAffectedAll, e, &[player as i64, loc]);
+            super::ae_effect::set_affected_all(e, player as i64, loc);
         } else {
             let count = h(O::AeVecCount, units.0, &[]);
             for k in 0..count {

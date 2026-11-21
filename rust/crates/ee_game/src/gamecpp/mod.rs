@@ -76,6 +76,8 @@ pub mod entry;
 //
 
 // ---- round 10, lane C: Communications, the Civilization Builder's area effects and captures, Calamities, Map
+pub mod ae_capture;
+pub mod ae_effect;
 //
 //
 
@@ -2920,6 +2922,44 @@ pub enum EeGameCpp {
     // ---- round 10, lane B (EECore10OpB's cases)
     //
     // ---- round 10, lane C (EECore10OpC's cases)
+    // the area effects (ae_effect.rs, ae_capture.rs; EEAreaEffect.cpp)
+    LcAeTemplate,
+    LcAeSetTemplate,
+    LcAeSetOwner,
+    LcMoraleBonus,
+    LcTplReference,
+    LcTplDereference,
+    LcTplGfx,
+    LcTplGfx18,
+    LcTplMedia,
+    LcTplSetGfx,
+    LcTplSetGfx18,
+    LcTplSetMedia,
+    LcGfxGet,
+    LcGfxReference,
+    LcGfxDereference,
+    LcGfxLoad,
+    LcGfxUnload,
+    LcGfxCreateUnitEffect,
+    LcMediaGet,
+    LcMediaCount,
+    LcMediaLoad,
+    LcMediaUnload,
+    LcCxReference,
+    LcCxDereference,
+    LcCxHitPoints,
+    LcCxApplyAreaEffects,
+    LcCxRemoveAffecting,
+    LcCxUpdateAreaEffects,
+    LcListRemove,
+    LcListNew,
+    LcListDelete,
+    LcListAssign,
+    LcAeCaptureTick,
+    LcMemFileNew,
+    LcMemFileDelete,
+    LcMemFilePosition,
+    LcMemFileData,
     //
     // ---- round 10, lane D (EECore10OpD's cases)
     //

@@ -14,29 +14,23 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEAreaEffectTemplate.h"
+#include "rust/game/gamecpp.h"
 
 // UReferenceContainer<T>::Contains (its COMDAT 0x27c820 closes this unit) is defined in ee/UReferenceContainer.h
+
+// port (round 10, lane C): the bodies are gamecpp ae_effect.rs's; each list passes itself as its container
+#define EELIST static_cast<UReferenceContainer<EEAreaEffect*>*>(this)
 
 // Loads the template's graphic effects and sound media
 void EEAreaEffectTemplate::Load(bool inIsOnDemand)
 {
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Load(inIsOnDemand);
-    if (this->mGraphicEffect18 != NULL)
-        this->mGraphicEffect18->Load(inIsOnDemand);
-    if (this->mMedia != NULL)
-        this->mMedia->LoadMedia();
+    ee_gamecpp_aetpl_media(this, false, inIsOnDemand);
 }
 
 // Unloads the template's graphic effects and sound media
 void EEAreaEffectTemplate::Unload()
 {
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Unload();
-    if (this->mGraphicEffect18 != NULL)
-        this->mGraphicEffect18->Unload();
-    if (this->mMedia != NULL)
-        this->mMedia->UnloadMedia();
+    ee_gamecpp_aetpl_media(this, true, false);
 }
 
 // Adds an area effect to the unit's list (taking a reference)
@@ -49,71 +43,41 @@ void EEUnitAreaEffectList::Add(EEAreaEffect* inEffect)
 // count as one), replacing a weaker one
 void EEUnitAreaEffectList::AddAreaEffect(EEAreaEffect* inEffect)
 {
-    long theKind = inEffect->mTemplate->mKind;
-    std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin();
-    for (; theIterator != this->mItems.end(); ++theIterator) {
-        if (ee_area_effect_same_group(theKind, (*theIterator)->mTemplate->mKind))
-            break;
-    }
-    if (theIterator != this->mItems.end()) {
-        EEAreaEffect* theOld = *theIterator;
-        if ((unsigned long)inEffect->GetStrength() <= (unsigned long)theOld->GetStrength())
-            return;
-        UReferenceContainer<EEAreaEffect*>::Remove(*theIterator);
-    }
-    if (inEffect != NULL)
-        UReferenceContainer<EEAreaEffect*>::Add(inEffect);
+    ee_gamecpp_aelist_add(EELIST, inEffect);
 }
 
 // Lets every effect modify a value of the given kind, showing each effect that applied
 void EEUnitAreaEffectList::ApplyModifiers(long inKind, const long& inDamage, long& outDamage, EEComplexUnit* inUnit)
 {
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator) {
-        if ((*theIterator)->Modify(inKind, inDamage, outDamage))
-            (*theIterator)->ShowOn(inUnit);
-    }
+    ee_gamecpp_aelist_modifiers(EELIST, inKind, &inDamage, &outDamage, inUnit);
 }
 
 // Removes the first effect of the given kind; returns whether one was found
 bool EEUnitAreaEffectList::Remove(long inKind)
 {
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator) {
-        if ((*theIterator)->mTemplate->mKind == inKind) {
-            UReferenceContainer<EEAreaEffect*>::Remove(*theIterator);
-            return true;
-        }
-    }
-    return false;
+    return ee_gamecpp_aelist_remove(EELIST, inKind);
 }
 
 // Rebuilds the list keeping only the strongest effect of each kind
 void EEUnitAreaEffectList::KeepStrongest()
 {
-    EEUnitAreaEffectList theList;
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator)
-        theList.AddAreaEffect(*theIterator);
-    *this = theList;
+    ee_gamecpp_aelist_keep_strongest(EELIST);
 }
 
 // Marks every effect in the list for a recount
 void EEUnitAreaEffectList::MarkDirty()
 {
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator)
-        (*theIterator)->MarkDirty();
+    ee_gamecpp_aelist_mark_dirty(EELIST);
 }
 
-// Moves every effect in the list to a new location and recounts it
+// Moves every effect in the list to a new location and recounts it (inValue unread)
 void EEUnitAreaEffectList::MoveAndUpdate(const GE2DPoint& inPoint, float inValue)
 {
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator) {
-        (*theIterator)->mLocation = inPoint;
-        (*theIterator)->Recount((long)inValue);
-    }
+    ee_gamecpp_aelist_move(EELIST, &inPoint);
 }
 
 // Ticks every effect in the list on the unit
 void EEUnitAreaEffectList::Tick(EEComplexUnit* inUnit, float inElapsed)
 {
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator)
-        (*theIterator)->Tick(inUnit, inElapsed);
+    ee_gamecpp_aelist_tick(EELIST, inUnit, inElapsed);
 }

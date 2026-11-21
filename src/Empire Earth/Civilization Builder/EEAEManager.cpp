@@ -28,62 +28,14 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEAECapture.h"
 #include "rust/game/gamecpp.h"
 #include <memory>
 #include <stdint.h>
 
-// The unit functors of the manager's passes (RTTI names; each > EEUUUnitFunctor, slot +0x04 only; their ??_G is
-// ICF-shared with EEPSuggestRecomputeAllAreaEffects's 0x16b555)
-class ApplyGeneratedEffectsToOthersFunctor : public EEUUUnitFunctor {   // vtable 0x44bb50
-public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->ApplyAreaEffects(); }
-};
-
-class SetAffectedByAreaEffectFunctor : public EEUUUnitFunctor {         // vtable 0x44bb60
-public:
-    SetAffectedByAreaEffectFunctor(EEAreaEffect* inEffect, unsigned long inPlayer, const GE2DPoint& inLocation)
-        : mEffect(inEffect), mPlayer(inPlayer), mLocation(inLocation) {}
-    virtual void Apply(EEComplexUnit* inUnit);
-
-    EEAreaEffect* mEffect;                  // +0x04
-    unsigned long mPlayer;                  // +0x08
-    GE2DPoint mLocation;                    // +0x0c
-};
-
-class ClearAreaEffectsFunctor : public EEUUUnitFunctor {                // vtable 0x44bb70
-public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->RemoveAffectingAreaEffects(); }
-};
-
-class RebuildAreaEffectRegionListFunctor : public EEUUUnitFunctor {     // vtable 0x44bd28
-public:
-    RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects);
-    virtual void Apply(EEComplexUnit* inUnit);
-
-    UReferenceContainer<EEAreaEffect*>* mEffects;   // +0x04
-};
-
-class RemoveRedundantAreaEffectsFunctor : public EEUUUnitFunctor {      // vtable 0x44bd38
-public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.KeepStrongest(); }
-};
-
-class UpdateGeneratedAreaEffectsFunctor : public EEUUUnitFunctor {      // vtable 0x44bd48
-public:
-    UpdateGeneratedAreaEffectsFunctor(float inElapsed) : mElapsed(inElapsed) {}
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->UpdateAreaEffects((unsigned long)this->mElapsed); }
-
-    float mElapsed;                         // +0x04
-};
-
-class UpdateAffectedByAreaEffectsFunctor : public EEUUUnitFunctor {     // vtable 0x44bd58
-public:
-    UpdateAffectedByAreaEffectsFunctor(float inElapsed) : mElapsed(inElapsed) {}
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.Tick(inUnit, this->mElapsed); }
-
-    float mElapsed;                         // +0x04
-};
+// port (round 10, lane C): the unit functors of the manager's passes (ApplyGeneratedEffectsToOthersFunctor,
+// SetAffectedByAreaEffectFunctor, ClearAreaEffectsFunctor, RebuildAreaEffectRegionListFunctor,
+// RemoveRedundantAreaEffectsFunctor, UpdateGeneratedAreaEffectsFunctor, UpdateAffectedByAreaEffectsFunctor; vtables
+// 0x44bb50.., 0x44bd28..) are gamecpp ae_effect.rs's walks over every player's units
 
 // The living units (expanded into the collector 0x27b77d) (provisional name)
 struct EEAEAliveUnit {
@@ -101,32 +53,12 @@ EEAEManager::~EEAEManager()
     this->Clear();
 }
 
-// Lets every unit apply the area effects it generates to the units around it
-void EEAEManager::ApplyGeneratedAreaEffects()
-{
-    ApplyGeneratedEffectsToOthersFunctor theFunctor;
-    EEForEachPlayersUnit(&theFunctor);
-}
-
 // Adds the list's effects to every living unit they cover around a location (a radius-0 effect: to every
 // unit of every player); a healing effect skips its own unit and shows on the units it covers
 void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned long inPlayerID,
                            EEUnitAreaEffectList* inList, EEComplexUnit* inUnit)
 {
     ee_gamecpp_ae_collect_effects(this, inRadius, &inLocation, inPlayerID, inList, inUnit);
-}
-
-// Adds the effect to a covered unit's affecting effects and applies it
-void SetAffectedByAreaEffectFunctor::Apply(EEComplexUnit* inUnit)
-{
-    ee_gamecpp_ae_set_affected(this->mEffect, this->mPlayer, inUnit, &this->mLocation);
-}
-
-// Clears the affecting area effects of every unit
-void EEAEManager::ClearAreaEffects()
-{
-    ClearAreaEffectsFunctor theFunctor;
-    EEForEachPlayersUnit(&theFunctor);
 }
 
 // Empties the list of active area effects
@@ -200,27 +132,6 @@ void EEAEManager::LoadTemplateMedia(unsigned long inIndex)
     ee_gamecpp_ae_template_media(this, inIndex, true);
 }
 
-// Rebuilds the list of active area effects from every built unit's own effects
-void EEAEManager::RebuildAreaEffectRegionList()
-{
-    RebuildAreaEffectRegionListFunctor theFunctor(&this->mEffects);
-    EEForEachPlayersUnit(&theFunctor);
-}
-
-// Starts a rebuild of the active effect list by emptying it
-RebuildAreaEffectRegionListFunctor::RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects)
-    : mEffects(inEffects)
-{
-    ee_gamecpp_ae_container_empty(inEffects);
-}
-
-// Keeps only each unit's strongest affecting effect of each kind
-void EEAEManager::RemoveRedundantAreaEffects()
-{
-    RemoveRedundantAreaEffectsFunctor theFunctor;
-    EEForEachPlayersUnit(&theFunctor);
-}
-
 // Releases every template and empties the active effect list
 void EEAEManager::Clear()
 {
@@ -234,35 +145,10 @@ void EEAEManager::UnloadTemplateMedia(unsigned long inIndex)
 }
 
 // Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
+// (each a pass over every player's units)
 void EEAEManager::Tick(float inElapsed)
 {
-    this->ClearAreaEffects();
-    this->ApplyGeneratedAreaEffects();
-    this->RemoveRedundantAreaEffects();
-    this->UpdateGeneratedAreaEffects(inElapsed);
-    this->RebuildAreaEffectRegionList();
-    this->UpdateAffectedByAreaEffects(inElapsed);
-    EEAECaptureTick(inElapsed);   // TEST ONLY: AEFX (ee/EEAECapture.h)
-}
-
-// Updates the area effects every unit generates for the elapsed time
-void EEAEManager::UpdateGeneratedAreaEffects(float inElapsed)
-{
-    UpdateGeneratedAreaEffectsFunctor theFunctor(inElapsed);
-    EEForEachPlayersUnit(&theFunctor);
-}
-
-// Ticks every unit's affecting area effects for the elapsed time
-void EEAEManager::UpdateAffectedByAreaEffects(float inElapsed)
-{
-    UpdateAffectedByAreaEffectsFunctor theFunctor(inElapsed);
-    EEForEachPlayersUnit(&theFunctor);
-}
-
-// Adds a built unit's own area effects to the active effect list
-void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
-{
-    ee_gamecpp_ae_rebuild_add(this->mEffects, inUnit);
+    ee_gamecpp_aem_tick(this, inElapsed);   // and, TEST ONLY, AEFX (ee/EEAECapture.h)
 }
 
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
@@ -313,12 +199,6 @@ static_assert(sizeof(U2DRectangle<long>) == 4 * sizeof(long) && offsetof(U2DRect
               && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "gamecpp civ.rs AeUnitsInRect");
 static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "gamecpp civ.rs: a location's two floats");
 
-// a temporary's address for the full expression (the functor passes)
-template <class T> static T* EETemporary(T&& inObject)
-{
-    return &inObject;
-}
-
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define AE ((EEAreaEffect*)p)
 #define CX ((EEComplexUnit*)p)
@@ -348,8 +228,6 @@ int64_t EECore9OpD4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::AeShowOn: AE->ShowOn((EEComplexUnit*)a[0]);
         break;
     case O::AeSetUnit: AE->SetUnit((EEComplexUnit*)a[0]);
-        break;
-    case O::AeSetAffectedAll: EEForEachPlayersUnit(EETemporary(SetAffectedByAreaEffectFunctor(AE, (unsigned long)a[0], *(GE2DPoint*)a[1])));
         break;
     case O::AeNew: return P64(new EEAreaEffect((EEAreaEffectTemplate*)a[0]));
     case O::AeListCount: return (int64_t)LIST->mItems.size();

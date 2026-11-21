@@ -35,6 +35,8 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAreaEffectKindIDs.h"
+#include "ee/EEAECapture.h"
+#include "lle/FSMemoryFile.h"
 #include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"
 
@@ -86,18 +88,11 @@ struct EEAEMFBBuildingInRange {
 };
 
 // The world of an area effect's Rust slots (ee_tech area_effect.rs EeAreaEffectOp; answered by gamecpp civ.rs's
-// ee_gamecpp_ae_host over the cases at the end of this file): the effect (its owner unit and player; NULL for a
-// template's test) and the unit the slot was given (NULL when none)
+// ee_gamecpp_ae_host over the cases at the end of this file): the first two members of gamecpp ae_effect.rs's AeHost,
+// the effect (its owner unit and player; NULL for a template's test) and the unit the slot was given (NULL when none)
 struct EEAEHost {
-    EEAEHost(EEAreaEffect* inEffect, EEComplexUnit* inTarget) : mEffect(inEffect), mTarget(inTarget)
-    {
-        this->mFfi.ctx = this;
-        this->mFfi.call = (void (*)(void*, const EeAreaEffectCall*, EeAreaEffectReply*))&ee_gamecpp_ae_host;
-    }
-
     EEAreaEffect* mEffect;
     EEComplexUnit* mTarget;
-    EeAreaEffectHostFfi mFfi;
 };
 
 // a temporary's address for the full expression (the building counts' vector)
@@ -108,87 +103,67 @@ template <class T> static T* EETemporary(T&& inObject)
 
 }   // namespace
 
-// Creates an area effect of its template's kind that holds a reference to the template, with no unit or player yet
-// (the morale from buildings' cap: the template's maximum level plus the game variant's morale bonus), and loads its
-// media
+// port (round 10, lane C): the effect's, the template's and the unit list's bodies are gamecpp ae_effect.rs's
+
+// Creates an area effect of its template's kind that holds a reference to the template, with no unit or player yet,
+// and loads its media
 EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate)
 {
-    this->mTemplate = inTemplate;
-    this->mTemplate->Reference();
-    this->mUnit = NULL;
-    long theKind = inTemplate->mKind;
-    long theBonus = theKind == kAreaEffectMoraleFromBuildings ? gWorld.GetGameVariant()->mMoraleBonus : 0;
-    ee_area_effect_init(this, theKind, inTemplate->mMaxLevel, theBonus);
-    this->LoadMedia(false);
+    ee_gamecpp_aefx_construct(this, inTemplate);
 }
 
 // Destroys the area effect, releasing its template and unit and unloading its media
 EEAreaEffect::~EEAreaEffect()
 {
-    this->mTemplate->Dereference();
-    if (this->mUnit != NULL)
-        this->mUnit->Dereference();
-    this->UnloadMedia();
+    ee_gamecpp_aefx_destruct(this);
 }
 
 // Applies the effect to a unit (the cloaking makes it cloakable)
 void EEAreaEffect::AppliedTo(EEComplexUnit* inUnit)
 {
-    EEAEHost theHost(this, inUnit);
-    ee_area_effect_applied(this, &theHost.mFfi, false);
+    ee_gamecpp_aefx_applied(this, inUnit, false);
 }
 
 // Tells whether the effect, by its kind, covers the unit from a point for a player
 bool EEAreaEffect::Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint)
 {
-    EEAEHost theHost(this, inUnit);
-    return ee_area_effect_covers(this, this->mTemplate, &theHost.mFfi, (int32_t)inPlayer,
-                                 (int32_t)inUnit->GetPlayer()->mPlayerID, inPoint.mX, inPoint.mY);
+    return ee_gamecpp_aefx_covers(this, inPlayer, inUnit, &inPoint);
 }
 
 // Plays the template's graphic effect on the unit, if it has one
 void EEAreaEffect::ShowOn(EEUnit* inUnit)
 {
-    EEGraphicEffect* theEffect = this->mTemplate->mGraphicEffect;
-    if (theEffect != NULL)
-        gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, false, 0, 0);
+    ee_gamecpp_aefx_show_on(this, inUnit);
 }
 
 // Writes the effect's location, owning unit id and player to the out-of-sync dump
 void EEAreaEffect::Dump(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Position Location X: %6.6f\n", (double)this->mLocation.mX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Position Location Y: %6.6f\n", (double)this->mLocation.mY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Owning Unit ID #%08lx\n", this->mUnit != NULL ? this->mUnit->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Player Number %ld\n", this->mPlayer);
+    ee_gamecpp_aefx_dump(this, inFile);
 }
 
 // Returns a sync checksum of the location's float bits, the player and the owning unit id
 long EEAreaEffect::Checksum()
 {
-    return ee_area_effect_checksum(this, this->mLocation.mX, this->mLocation.mY,
-                                   this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);
+    return ee_gamecpp_aefx_checksum(this);
 }
 
 // Returns the effect's strength by its kind
 long EEAreaEffect::GetStrength()
 {
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_strength(this, this->mTemplate, &theHost.mFfi);
+    return ee_gamecpp_aefx_strength(this);
 }
 
 // Returns a morale kind's level
 long EEAreaEffect::GetLevel()
 {
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_level(this, this->mTemplate, &theHost.mFfi);
+    return ee_gamecpp_aefx_level(this);
 }
 
 // Returns the template's radius times the effect's scale
 float EEAreaEffect::GetRadius()
 {
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_radius(this->mTemplate, &theHost.mFfi);
+    return ee_gamecpp_aefx_radius(this);
 }
 
 // Tells whether the effect is an immunity
@@ -200,36 +175,31 @@ bool EEAreaEffect::IsImmunity()
 // Returns the owning unit's area-effect scale, or 1 without a unit
 float EEAreaEffect::GetScale()
 {
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_scale(&theHost.mFfi);
+    return ee_gamecpp_aefx_scale(this);
 }
 
 // Sets the owning unit, taking a reference to it
 void EEAreaEffect::SetUnit(EEComplexUnit* inUnit)
 {
-    this->mUnit = inUnit;
-    if (inUnit != NULL)
-        inUnit->Reference();
+    ee_gamecpp_aefx_set_unit(this, inUnit);
 }
 
 // Loads the template's media
 void EEAreaEffect::LoadMedia(bool inIsOnDemand)
 {
-    this->mTemplate->Load(inIsOnDemand);
+    ee_gamecpp_aetpl_media(this->mTemplate, false, inIsOnDemand);
 }
 
 // Modifies a value of a kind by the effect's kind; false when it leaves it
 bool EEAreaEffect::Modify(long inKind, long inValue, long& outValue)
 {
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_modify(this, this->mTemplate, &theHost.mFfi, inKind, inValue, &outValue);
+    return ee_gamecpp_aefx_modify(this, inKind, inValue, &outValue);
 }
 
 // Takes the effect off a unit (the cloaking gives back the unit's own cloakability)
 void EEAreaEffect::RemovedFrom(EEComplexUnit* inUnit)
 {
-    EEAEHost theHost(this, inUnit);
-    ee_area_effect_applied(this, &theHost.mFfi, true);
+    ee_gamecpp_aefx_applied(this, inUnit, true);
 }
 
 // Marks the morale from buildings for a recount
@@ -241,53 +211,43 @@ void EEAreaEffect::MarkDirty()
 // Unloads the template's media
 void EEAreaEffect::UnloadMedia()
 {
-    this->mTemplate->Unload();
+    ee_gamecpp_aetpl_media(this->mTemplate, true, false);
 }
 
-// Recounts the morale from buildings' buildings when marked
+// Recounts the morale from buildings' buildings when marked (inArg unread)
 void EEAreaEffect::Recount(long inArg)
 {
-    EEAEHost theHost(this, NULL);
-    ee_area_effect_recount(this, this->mTemplate, &theHost.mFfi, this->mLocation.mX, this->mLocation.mY);
+    ee_gamecpp_aefx_recount(this);
 }
 
 // Ticks the effect on a unit it affects (the healing heals it)
 void EEAreaEffect::Tick(EEComplexUnit* inUnit, float inElapsed)
 {
-    EEAEHost theHost(this, inUnit);
-    ee_area_effect_tick(this, this->mTemplate, &theHost.mFfi, inElapsed);
+    ee_gamecpp_aefx_tick(this, inUnit, inElapsed);
 }
 
 // Creates an empty template: square shape, radius 1, allied players, no unit set or graphics, white tint
 EEAreaEffectTemplate::EEAreaEffectTemplate()
 {
-    ee_area_effect_template_reset(this);
-    this->mGraphicEffect = NULL;
-    this->mGraphicEffect18 = NULL;
-    this->mMedia = NULL;
+    ee_gamecpp_aetpl_construct(this);
 }
 
 // Destroys the template, releasing its two graphic effects
 EEAreaEffectTemplate::~EEAreaEffectTemplate()
 {
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Dereference();
-    if (this->mGraphicEffect18 != NULL)
-        this->mGraphicEffect18->Dereference();
+    ee_gamecpp_aetpl_destruct(this);
 }
 
 // Tells whether the template's player mode (1 self, 2 allies, 3 enemies, 4 everyone) affects the other player
 bool EEAreaEffectTemplate::AffectsPlayer(long inPlayer, long inOther)
 {
-    EEAEHost theHost(NULL, NULL);
-    return ee_area_effect_affects_player(this, &theHost.mFfi, inPlayer, inOther, false);
+    return ee_gamecpp_aetpl_affects(this, inPlayer, inOther, false);
 }
 
 // Tells whether the other player falls outside the template's mode (1 others, 2 enemies, 3 friends)
 bool EEAreaEffectTemplate::AffectsPlayerReversed(long inPlayer, long inOther)
 {
-    EEAEHost theHost(NULL, NULL);
-    return ee_area_effect_affects_player(this, &theHost.mFfi, inPlayer, inOther, true);
+    return ee_gamecpp_aetpl_affects(this, inPlayer, inOther, true);
 }
 
 // Tells whether a point lies in the square or circular area around a center on the same continent; a space
@@ -295,27 +255,13 @@ bool EEAreaEffectTemplate::AffectsPlayerReversed(long inPlayer, long inOther)
 bool EEAreaEffectTemplate::IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale,
                                     EEComplexUnit* inUnit)
 {
-    EEAEHost theHost(NULL, inUnit);
-    return ee_area_effect_is_within(this, &theHost.mFfi, inCenter.mX, inCenter.mY, inPoint.mX, inPoint.mY, inScale,
-                                    inUnit != NULL);
+    return ee_gamecpp_aetpl_is_within(this, &inCenter, &inPoint, inScale, inUnit);
 }
 
 // Fills the template from an area-effect file record, resolving its graphic effects and media
 bool EEAreaEffectTemplate::Init(const EEAreaEffectData& inData)
 {
-    ee_area_effect_template_init(this, reinterpret_cast<const EeAreaEffectData*>(&inData));
-    if (inData.mGraphicEffect > 0) {
-        this->mGraphicEffect = EEGraphicEffect::Get(inData.mGraphicEffect);
-        if (this->mGraphicEffect != NULL)
-            this->mGraphicEffect->Reference();
-    }
-    if (inData.mGraphicEffect18 > 0) {
-        this->mGraphicEffect18 = EEGraphicEffect::Get(inData.mGraphicEffect18);
-        if (this->mGraphicEffect18 != NULL)
-            this->mGraphicEffect18->Reference();
-    }
-    this->mMedia = inData.mMedia > 0 ? EEMedia::Get(inData.mMedia) : NULL;
-    return true;
+    return ee_gamecpp_aetpl_init(this, &inData);
 }
 
 // ------------------------------------------------------------------------- round 9, lane D: the area effects' host
@@ -393,11 +339,86 @@ double EECore9OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
+#define LCAE ((EEAreaEffect*)p)
+#define LCTPL ((EEAreaEffectTemplate*)p)
+#define LCGFX ((EEGraphicEffect*)p)
+#define LCCX ((EEComplexUnit*)p)
+#define LCLIST ((UReferenceContainer<EEAreaEffect*>*)p)
+#define LCMEM (static_cast<FSMemoryFile*>((FSFile*)p))
+
 // the C++ calls and members of lane C's bodies in Rust (gamecpp; EeGameCpp's round 10 lane C section): one
 // statement each
 int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore10OpD(inOp, p, a, f);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the area effects (gamecpp ae_effect.rs; p an EEAreaEffect*)
+    case O::LcAeTemplate: return P64(LCAE->mTemplate);
+    case O::LcAeSetTemplate: LCAE->mTemplate = (EEAreaEffectTemplate*)a[0];
+        break;
+    case O::LcAeSetOwner: LCAE->mUnit = (EEComplexUnit*)a[0];
+        break;
+    case O::LcMoraleBonus: return gWorld.GetGameVariant()->mMoraleBonus;
+    // the templates (p an EEAreaEffectTemplate*), their graphic effects (p an EEGraphicEffect*) and media
+    case O::LcTplReference: LCTPL->Reference();
+        break;
+    case O::LcTplDereference: LCTPL->Dereference();
+        break;
+    case O::LcTplGfx: return P64(LCTPL->mGraphicEffect);
+    case O::LcTplGfx18: return P64(LCTPL->mGraphicEffect18);
+    case O::LcTplMedia: return P64(LCTPL->mMedia);
+    case O::LcTplSetGfx: LCTPL->mGraphicEffect = (EEGraphicEffect*)a[0];
+        break;
+    case O::LcTplSetGfx18: LCTPL->mGraphicEffect18 = (EEGraphicEffect*)a[0];
+        break;
+    case O::LcTplSetMedia: LCTPL->mMedia = (EEMedia*)a[0];
+        break;
+    case O::LcGfxGet: return P64(EEGraphicEffect::Get((unsigned long)a[0]));
+    case O::LcGfxReference: LCGFX->Reference();
+        break;
+    case O::LcGfxDereference: LCGFX->Dereference();
+        break;
+    case O::LcGfxLoad: LCGFX->Load(a[0] != 0);
+        break;
+    case O::LcGfxUnload: LCGFX->Unload();
+        break;
+    case O::LcGfxCreateUnitEffect: gEffectManager->CreateUnitEffect((EEUnit*)a[0], LCGFX, NULL, false, 0, 0);
+        break;
+    case O::LcMediaGet: return P64(EEMedia::Get((unsigned long)a[0]));
+    case O::LcMediaCount: return (int64_t)EEMedia::GetCount();
+    case O::LcMediaLoad: ((EEMedia*)p)->LoadMedia();
+        break;
+    case O::LcMediaUnload: ((EEMedia*)p)->UnloadMedia();
+        break;
+    // the units (p an EEComplexUnit*) and the area-effect lists (p a UReferenceContainer<EEAreaEffect*>*)
+    case O::LcCxReference: LCCX->Reference();
+        break;
+    case O::LcCxDereference: LCCX->Dereference();
+        break;
+    case O::LcCxHitPoints: return LCCX->mHitPoints;
+    case O::LcCxApplyAreaEffects: LCCX->ApplyAreaEffects();
+        break;
+    case O::LcCxRemoveAffecting: LCCX->RemoveAffectingAreaEffects();
+        break;
+    case O::LcCxUpdateAreaEffects: LCCX->UpdateAreaEffects((unsigned long)f[0]);
+        break;
+    case O::LcListRemove: return LCLIST->Remove((EEAreaEffect*)a[0]);
+    case O::LcListNew: return P64(static_cast<UReferenceContainer<EEAreaEffect*>*>(new EEUnitAreaEffectList));
+    case O::LcListDelete: delete static_cast<EEUnitAreaEffectList*>(LCLIST);
+        break;
+    case O::LcListAssign: *static_cast<EEUnitAreaEffectList*>(LCLIST) = *static_cast<EEUnitAreaEffectList*>((UReferenceContainer<EEAreaEffect*>*)a[0]);
+        break;
+    // the capture's AEFX (TEST ONLY: gamecpp ae_capture.rs; p a memory file as an FSFile*)
+    case O::LcAeCaptureTick: EEAECaptureTick(f[0]);
+        break;
+    case O::LcMemFileNew: return P64(static_cast<FSFile*>(new FSMemoryFile));
+    case O::LcMemFileDelete: delete LCMEM;
+        break;
+    case O::LcMemFilePosition: return LCMEM->GetPosition(*(long*)a[0]);
+    case O::LcMemFileData: return P64(LCMEM->GetData());
+    default: return EECore10OpD(inOp, p, a, f);
+    }
+    return 0;
 }
 
 double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)

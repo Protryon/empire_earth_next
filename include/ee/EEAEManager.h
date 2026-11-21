@@ -28,22 +28,16 @@ public:
     // military heroes, 7 economy from units, 8 cloaking (the unit is an EEComplexUnit, SetUnit's type; every
     // caller passes one)
     EEAreaEffect* CreateAreaEffect(unsigned long inIndex, EEComplexUnit* inUnit);
-    // (EEAEManager.cpp; provisional names): the unit functor passes of Tick (ApplyGeneratedEffectsToOthers 0x27ae23,
-    // ClearAreaEffects 0x27b04d, RebuildAreaEffectRegionList 0x27b576, RemoveRedundantAreaEffects 0x27b5ba,
-    // UpdateGeneratedAreaEffects 0x27b673, UpdateAffectedByAreaEffects 0x27b693), mEffects emptied (0x27b064), the
-    // effect of inKind at (inX, inY) for inPlayer (0x27b3d2; inMode: Virtual20 effects and the other relation test;
-    // inExclude's effects skipped), its tile form (0x27b4ce), template inIndex's Unload (0x27b60b)
-    void ApplyGeneratedAreaEffects();
-    void ClearAreaEffects();
+    // (EEAEManager.cpp; provisional names): mEffects emptied (0x27b064), the effect of inKind at (inX, inY) for
+    // inPlayer (0x27b3d2; inMode: Virtual20 effects and the other relation test; inExclude's effects skipped), its tile
+    // form (0x27b4ce), template inIndex's Unload (0x27b60b). The unit functor passes of Tick (ApplyGeneratedEffectsToOthers
+    // 0x27ae23, ClearAreaEffects 0x27b04d, RebuildAreaEffectRegionList 0x27b576, RemoveRedundantAreaEffects 0x27b5ba,
+    // UpdateGeneratedAreaEffects 0x27b673, UpdateAffectedByAreaEffects 0x27b693) are gamecpp ae_effect.rs's
     void ClearEffects();
     EEAreaEffect* FindEffect(long inKind, float inX, float inY, unsigned long inPlayer, bool inMode,
                            EEUnitAreaEffectList* inExclude);
     bool EffectAtTile(long inKind, long inX, long inY, long inPlayer, bool inMode);
-    void RebuildAreaEffectRegionList();
-    void RemoveRedundantAreaEffects();
     void UnloadTemplateMedia(unsigned long inIndex);
-    void UpdateGeneratedAreaEffects(float inElapsed);
-    void UpdateAffectedByAreaEffects(float inElapsed);
     // 0x27b50d: the same test with the other mode of 0x27b4ce (last argument true)
     bool HasAreaEffect2(long inKind, long inX, long inY, long inPlayer);
     // 0x27b54b: area effect template inIndex's slot +4 with 0 (the tech tree's event kind 2; provisional name)

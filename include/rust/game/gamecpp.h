@@ -2798,6 +2798,43 @@ enum class EeGameCpp : uint32_t {
   EntryNotInEditor,
   EntryStartLoadingInput,
   EntryUpdateSavedGames,
+  LcAeTemplate,
+  LcAeSetTemplate,
+  LcAeSetOwner,
+  LcMoraleBonus,
+  LcTplReference,
+  LcTplDereference,
+  LcTplGfx,
+  LcTplGfx18,
+  LcTplMedia,
+  LcTplSetGfx,
+  LcTplSetGfx18,
+  LcTplSetMedia,
+  LcGfxGet,
+  LcGfxReference,
+  LcGfxDereference,
+  LcGfxLoad,
+  LcGfxUnload,
+  LcGfxCreateUnitEffect,
+  LcMediaGet,
+  LcMediaCount,
+  LcMediaLoad,
+  LcMediaUnload,
+  LcCxReference,
+  LcCxDereference,
+  LcCxHitPoints,
+  LcCxApplyAreaEffects,
+  LcCxRemoveAffecting,
+  LcCxUpdateAreaEffects,
+  LcListRemove,
+  LcListNew,
+  LcListDelete,
+  LcListAssign,
+  LcAeCaptureTick,
+  LcMemFileNew,
+  LcMemFileDelete,
+  LcMemFilePosition,
+  LcMemFileData,
 };
 
 extern "C" {
@@ -4476,6 +4513,114 @@ bool ee_gamecpp_entry_parse_command_line(const char *line);
 /// `command_line` is a terminated C string; `instance` the module's.
 int32_t ee_gamecpp_entry_run(void *instance,
                              const char *command_line);
+
+/// The AEFX record of an area-effect tick (AETP first, once).
+void ee_gamecpp_ae_capture_tick(float elapsed);
+
+/// EEAreaEffect(template): the template referenced, no unit or player yet (the morale from buildings' cap: the
+/// template's maximum level plus the game variant's morale bonus), then the template's media.
+void ee_gamecpp_aefx_construct(void *effect,
+                               void *template_);
+
+/// ~EEAreaEffect: the template and the unit let go, then the template's media unloaded.
+void ee_gamecpp_aefx_destruct(void *effect);
+
+/// AppliedTo / RemovedFrom: the kind's slot on a unit (the cloaking's).
+void ee_gamecpp_aefx_applied(void *effect, void *unit, bool removed);
+
+/// Covers: whether the effect, by its kind, covers the unit from a point for a player.
+bool ee_gamecpp_aefx_covers(void *effect, unsigned long player, void *unit, const void *point);
+
+/// ShowOn: the template's graphic effect played on the unit, if it has one.
+void ee_gamecpp_aefx_show_on(void *effect, void *unit);
+
+/// Dump: the effect's location, owning unit id (-1 without one) and player in the out-of-sync dump.
+void ee_gamecpp_aefx_dump(void *effect, void *file);
+
+/// Checksum: the location's float bits, the player and the owning unit's id (0 without one).
+long ee_gamecpp_aefx_checksum(void *effect);
+
+/// GetStrength: by the kind.
+long ee_gamecpp_aefx_strength(void *effect);
+
+/// GetLevel: a morale kind's level.
+long ee_gamecpp_aefx_level(void *effect);
+
+/// GetRadius: the template's radius times the effect's scale.
+float ee_gamecpp_aefx_radius(void *effect);
+
+/// GetScale: the owning unit's area-effect scale, 1 without a unit.
+float ee_gamecpp_aefx_scale(void *effect);
+
+/// SetUnit: the owning unit, referenced.
+void ee_gamecpp_aefx_set_unit(void *effect, void *unit);
+
+/// Modify: a value of a kind by the effect's kind into `out`; false when it leaves it.
+bool ee_gamecpp_aefx_modify(void *effect, long kind, long value, long *out);
+
+/// Recount: the morale from buildings' buildings recounted when marked.
+void ee_gamecpp_aefx_recount(void *effect);
+
+/// Tick: the effect on a unit it affects (the healing heals it).
+void ee_gamecpp_aefx_tick(void *effect, void *unit, float elapsed);
+
+/// EEAreaEffectTemplate(): square, radius 1, allied players, no unit set, white tint; no graphics or media.
+void ee_gamecpp_aetpl_construct(void *template_);
+
+/// ~EEAreaEffectTemplate: its two graphic effects let go.
+void ee_gamecpp_aetpl_destruct(void *template_);
+
+/// Load (`unload` false) or Unload: both graphic effects, then the media.
+void ee_gamecpp_aetpl_media(void *template_, bool unload, bool on_demand);
+
+/// AffectsPlayer (`reversed` false) / AffectsPlayerReversed: the template's player mode.
+bool ee_gamecpp_aetpl_affects(void *template_, long player, long other, bool reversed);
+
+/// IsWithin: a point in the square or circular area around a center (and on its continent; a carried space dock or
+/// turret also on its carrier's planet).
+bool ee_gamecpp_aetpl_is_within(void *template_,
+                                const void *center,
+                                const void *point,
+                                float scale,
+                                void *unit);
+
+/// Init: the members from an area-effect file record, its graphic effects (referenced) and media resolved.
+bool ee_gamecpp_aetpl_init(void *template_,
+                           const void *data);
+
+/// AddAreaEffect: the effect, replacing one of the same kind (the morale kinds count as one) whose strength is
+/// smaller; nothing when the old one's is at least as large.
+void ee_gamecpp_aelist_add(void *list,
+                           void *effect);
+
+/// ApplyModifiers: each effect's Modify of the kind (the damage read anew each time: it may be the out value),
+/// showing each that applied on the unit.
+void ee_gamecpp_aelist_modifiers(void *list,
+                                 long kind,
+                                 const long *damage,
+                                 long *out,
+                                 void *unit);
+
+/// Remove: the first effect of the kind; whether one was found.
+bool ee_gamecpp_aelist_remove(void *list, long kind);
+
+/// KeepStrongest: the list rebuilt through AddAreaEffect.
+void ee_gamecpp_aelist_keep_strongest(void *list);
+
+/// MarkDirty: each effect's.
+void ee_gamecpp_aelist_mark_dirty(void *list);
+
+/// MoveAndUpdate: each effect moved to the point and recounted.
+void ee_gamecpp_aelist_move(void *list, const void *point);
+
+/// Tick: each effect's on the unit.
+void ee_gamecpp_aelist_tick(void *list, void *unit, float elapsed);
+
+/// EEAEManager::Tick: every unit's affecting effects cleared, each unit's own effects applied to the units around
+/// it, the strongest of each kind kept, the generators updated, the active list rebuilt from the built units' own
+/// effects, the affecting effects ticked; then the capture's AEFX (TEST ONLY).
+void ee_gamecpp_aem_tick(void *manager,
+                         float elapsed);
 
 }  // extern "C"
 
