@@ -288,11 +288,6 @@ constexpr static const int32_t EE_CP_HERD_SET_TARGET_SEARCH = 93;
 
 constexpr static const int32_t EE_CP_HERD_HOLD_UNIT = 94;
 
-/// `gPathManager.CancelAutoPathRequest(a)`; the request `a`'s `Dereference()`
-constexpr static const int32_t EE_CP_HERD_CANCEL_REQUEST = 95;
-
-constexpr static const int32_t EE_CP_HERD_REQUEST_DEREF = 96;
-
 /// The table's records (`gCPBehaviors[129]`).
 constexpr static const size_t EE_CP_BEHAVIORS = 129;
 
