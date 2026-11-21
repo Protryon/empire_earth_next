@@ -148,9 +148,7 @@ public:
     void CancelPathRequest(long inPathID) { ee_units_group_cancel_path(this, inPathID); }
     bool HasUnitType(long inKey) { return ee_units_group_get(this, 1, inKey) != 0; }
     long GetUnitTypeCount(long inKey) { return (long)ee_units_group_get(this, 2, inKey); }
-    // the path of the path request carrying unit id inUnitID (EEComplexUnit::RefreshPath), NULL for none
-    EEAutoPathRequest* GetUnitPath(unsigned long inUnitID)
-        { return reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(ee_units_group_get(this, 6, (int64_t)inUnitID))); }
+    // (GetUnitPath: Rust's, RefreshPath in waypoints.rs)
 };
 
 // The player's current selection (RTTI EESelectedGroup > EEGroup): EEPlayer's Reset makes two
