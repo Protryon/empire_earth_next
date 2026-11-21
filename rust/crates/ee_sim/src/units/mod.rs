@@ -136,8 +136,18 @@ pub mod tile_sight;
 pub mod tile_sight_host;
 pub mod town_save;
 pub mod turret;
+pub mod uc_anim;
 pub mod uc_body;
+pub mod uc_create;
+pub mod uc_media;
+#[cfg(test)]
+mod uc_mock;
 pub mod uc_produce;
+pub mod ucb_release;
+pub mod ucg_ground;
+pub mod ucp_people;
+pub mod ucs_shots;
+pub mod ucx_transports;
 pub mod unit_bulk;
 pub mod unit_class_fields;
 pub mod unit_fields;

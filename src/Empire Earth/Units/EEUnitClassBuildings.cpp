@@ -47,7 +47,6 @@ static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits jus
 // 0x446ff4 (-2.0, below it a building is gone) is ee_units cls_condition.rs BUILDING_SUNK
 
 // 0x446dc0: the yaw of each map quarter (EEGetFacingQuarter's 0..3) (provisional name)
-static const float kQuarterYaws[4] = { 0.0f, 3.1415927f, -1.5707964f, 1.5707964f };
 
 // Puts docks and navy yards on the water plane and lifts other buildings just above the ground
 void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
@@ -62,57 +61,7 @@ void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
 // with a goal, or one with an explore order) as the exiting unit; returns whether one was picked
 bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
 {
-    bool theResult = false;
-    unsigned long theCount = inUnit->mCargo.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theCargo = inUnit->mCargo[i];
-        if (theCargo->GetHitPoints() == theCargo->GetStats()->mMaxHitPoints) {
-            bool theLeave = false;
-            if (theCargo->GetPlayer()->IsHuman()) {
-                long theKind = theCargo->GetUnitClass()->mFamily;
-                if (theKind == kUnitFamilyAircraft || theKind == kUnitFamilySpaceFighter) {
-                    if (!inUnit->mGoalQueues[1].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(1) != NULL)
-                        theLeave = true;
-                } else if (theKind == kUnitFamilyBomber) {
-                    if (!theCargo->GetUnitClass()->mIsParatrooperBomber) {
-                        if (!inUnit->mGoalQueues[2].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(2) != NULL)
-                            theLeave = true;
-                    } else {
-                        if (!inUnit->mGoalQueues[4].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(4) != NULL)
-                            theLeave = true;
-                    }
-                } else {
-                    if (!inUnit->mGoalQueues[3].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(3) != NULL)
-                        theLeave = true;
-                }
-            }
-            if (theLeave || theCargo->mGoalState != NULL) {
-                inUnit->SetExitingUnitID(theCargo->mUnitID);
-                theResult = true;
-                if (theCargo->mGoalState != NULL && theCargo->GetPlayer()->IsHuman() && !theCargo->mIsDetachedFromAI) {
-                    theCargo->mGoalQueues[0].Clear();
-                    theCargo->RefreshGoals();
-                    theCargo->RefreshActiveGoal();
-                }
-            }
-            if (theCargo->GetQueueGoals(1).size() > 0) {
-                EEUnitGoal* theGoal = theCargo->mGoalQueues[1].GetFront();
-                EEUGRust* theExplore = EEExploreGoalCast(theGoal);
-                if (theGoal != NULL) {
-                    theCargo->mGoalQueues[0].Clear();
-                    inUnit->SetExitingUnitID(theCargo->mUnitID);
-                    if (theExplore != NULL) {
-                        theCargo->StartAction(kActionFindUnexploredArea);
-                        theCargo->GetUnitClass()->ActionChanged(theCargo);
-                    }
-                    theResult = true;
-                }
-            }
-        }
-        if (theResult)
-            break;
-    }
-    return theResult;
+    return ee_units_ucb_call(EE_UNITS_UCB_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0;   // ucb_release.rs
 }
 
 // Erupts a volcano: gives it an attack-ground goal at a random spot near it; returns true
@@ -134,38 +83,13 @@ bool EEUnitClass::EruptVolcano(EEComplexUnit* inUnit)
 EEUnit* EEUnitClass::BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                    EEUnit* inCreator)
 {
-    GETransformation theTransformation(inTransformation);
-    if (this->mUnitType == kUnitTypeDock || this->mUnitType == kUnitTypeNavyYard) {
-        theTransformation.SetX(theTransformation.GetX());
-        theTransformation.SetZ(0.0f);
-    } else if (this->mUnitType != kUnitTypeCameraObject)
-        theTransformation.SetZ(theTransformation.GetZ() + kBuildingLift);
-    return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
 }
 
 // Creates a building on a tile's centre (docks and navy yards at water level, off-map tiles at the -10000 sentinel)
 EEUnit* EEUnitClass::BuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    GE3DPoint theCenter;
-    GE3DPoint theGround;
-    GETransformation theTransformation;
-    if (this->mUnitType == kUnitTypeDock || this->mUnitType == kUnitTypeNavyYard) {
-        theTransformation.SetX(inX + 0.5f);
-        theTransformation.SetY(inY + 0.5f);
-        theTransformation.SetZ(0.0f);
-    } else if (::gWorld.mMap->GetTile(inX, inY) != NULL) {
-        theCenter.SetX(inX + 0.5f);
-        theCenter.SetY(inY + 0.5f);
-        ::gWorld.mMap->GetGroundPoint(theCenter, theGround);
-        theGround.SetZ(theGround.GetZ() + kBuildingLift);
-        theTransformation.SetX(theGround.GetX());
-        theTransformation.SetY(theGround.GetY());
-        theTransformation.SetZ(theGround.GetZ());
-    } else {
-        theTransformation.SetX(-10000.0f);
-        theTransformation.SetY(-10000.0f);
-    }
-    return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucb_release.rs
 }
 
 // Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
@@ -202,26 +126,7 @@ long EEGetUnitFacingQuarter(EEComplexUnit* inUnit)
 // (inferred meaning)
 long EEGetWallPiecePart(long inIndex, bool* outFlag)
 {
-    long theResult;
-    *outFlag = inIndex == 0 || inIndex == 2 || inIndex == 6 || inIndex == 8;
-    switch (inIndex) {
-    case 0:
-    case 3:
-        theResult = 3;
-        break;
-    case 1:
-    case 2:
-        theResult = 0;
-        break;
-    case 5:
-    case 8:
-        theResult = 2;
-        break;
-    default:
-        theResult = 1;
-        break;
-    }
-    return theResult;
+    return ee_units_ucb_wall_piece_part((int32_t)inIndex, outFlag);   // ucb_release.rs
 }
 
 // Returns the first living targetable building found in rings 1..19 around a unit's tile
@@ -259,261 +164,28 @@ EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
 void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners,
                              bool inAppend)
 {
-    float theTop = 0.0f;
-    float theLeft = 0.0f;
-    float theBottom = 0.0f;
-    float theRight = 0.0f;
-    if (!inAppend)
-        outTiles.clear();
-    if (this->mUnitType == kUnitTypeAirport) {
-        EEComplexUnit* theUnit = inUnit->mComplexUnit;
-        while (theUnit->mPreviousPart != NULL)
-            theUnit = theUnit->mPreviousPart;
-        long theSize = theUnit->mUnitClass->GetTileSize();
-        long theY = theUnit->GetTileY();
-        long theX = theUnit->GetTileX();
-        switch (EEGetFacingQuarter(theX, theY)) {
-        case 0:
-            theLeft = (float)theX;
-            theRight = (float)(theX + theSize);
-            theBottom = (float)theY;
-            theTop = (float)(theY + theSize * 4);
-            break;
-        case 1:
-            theLeft = (float)theX;
-            theRight = (float)(theX + theSize);
-            theBottom = (float)(theY + theSize * -3);
-            theTop = (float)(theY + theSize);
-            break;
-        case 2:
-            theLeft = (float)theX;
-            theRight = (float)(theX + theSize * 4);
-            theBottom = (float)theY;
-            theTop = (float)(theY + theSize);
-            break;
-        case 3:
-            theLeft = (float)(theX + theSize * -3);
-            theRight = (float)(theX + theSize);
-            theBottom = (float)theY;
-            theTop = (float)(theY + theSize);
-            break;
-        }
-        ee_units_uu_block_ring(inCorners, UMFloor(theLeft), UMFloor(theBottom), UMFloor(theRight - theLeft),
-                               -UMFloor(theBottom - theTop), &outTiles, inAppend, 0);
-    } else
-        this->BaseGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
+    ee_units_ucb_call(EE_UNITS_UCB_DO_SURROUNDING_TILES, this, inUnit, EEObj(&outTiles), inCorners, inAppend, NULL);   // ucb_release.rs
 }
 
 // Sets up a new building (built, its resource stock, regeneration); an airport turns to its map quarter, a navy yard
 // picks its facing and a space dock its yaw
 void EEUnitClass::BuildingUnitCreated(EEComplexUnit* inUnit)
 {
-    inUnit->SetBuilt(0, 1, 1);
-    this->BaseUnitCreated(inUnit);
-    inUnit->SetResourceType(this->mResourceType);
-    if (inUnit->mResourceType != kResourceNone)
-        inUnit->SetResourceAmount(this->mResourceAmount);
-    inUnit->SetRegenerationTimer(1000);
-    if (this->mUnitType == kUnitTypeAirport) {
-        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-        long theQuarter = EEGetUnitFacingQuarter(inUnit);
-        inUnit->SetFacing(theQuarter);
-        float theYaw = kQuarterYaws[theQuarter];
-        theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-        inUnit->mPhysicalModel.SetLocation(theTransformation);
-    } else if (this->mUnitType == kUnitTypeNavyYard)
-        inUnit->SetFacing(GetNavyYardFacing(inUnit->GetTileX(), inUnit->GetTileY()));
-    else if (this->mUnitType == kUnitTypeSpaceDock) {
-        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-        theTransformation.SetOrientationYPR(
-            EEGetSpaceDockYaw(inUnit->GetTileX() + 1, inUnit->GetTileY() + 1, inUnit->mUnitClass->GetTileSize()), 0.0f, 0.0f);
-        inUnit->mPhysicalModel.SetLocation(theTransformation);
-    }
+    ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
 }
 
 // Launches the exiting unit: places it at the exit (runway, water or tag point), gives it the building's rally
 // goals or its own (else loads it back) and starts its takeoff from this home base
 void EEUnitClass::ReleaseUnit(EEComplexUnit* inUnit)
 {
-    GEOrientation theOrientation;
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    EEGoalDeque::const_iterator theIterator;
-    long theQueue = 0;
-    unsigned long theCargoID = inUnit->mExitingUnitID;
-    if (UIsNone32(theCargoID))
-        return;
-    bool theWaterExit = inUnit->mUnitClass->mAirTrafficType == 3;
-    thePosition.SetX((float)inUnit->GetTileX() + (float)this->mTileSize * 0.5f);
-    thePosition.SetY((float)inUnit->GetTileY() + (float)this->mTileSize * 0.5f);
-    thePosition.SetZ(theWaterExit ? 0.0f : inUnit->mTile->mHeight);
-    float theYaw;
-    if (inUnit->mUnitClass->mAirTrafficType == 1 || theWaterExit) {
-        switch (inUnit->mFacing) {
-        case 0: theYaw = 0.0f; break;
-        case 1: theYaw = 3.1415927f; break;
-        case 2: theYaw = -1.5707964f; break;
-        default: theYaw = 1.5707964f; break;
-        }
-        if (theWaterExit) {
-            thePosition.SetX(thePosition.GetX() - 2.0f * UMCos(1.5707964f - theYaw));
-            thePosition.SetY(thePosition.GetY() + 2.0f * UMCos(theYaw));
-        }
-    } else {
-        inUnit->mPhysicalModel.GetLocation().ConvertToOrientation(theOrientation);
-        theYaw = theOrientation.GetYaw();
-        EETagPointList* thePoints = inUnit->GetModel()->mTagPoints[inUnit->GetAnimation()];
-        EEComplexUnit* theCargo = inUnit->FindPassenger(theCargoID);
-        if (theCargo != NULL) {
-            if (thePoints != NULL && !thePoints->mPoints.empty()) {
-                thePoints->Scale(theTransformation, inUnit->mStats->GetScale());
-                thePoints->mPoints[0]->GetPoint(theCargo->mPhysicalModel.GetFrame(), theTransformation, thePosition);
-            }
-            theCargo->mPhysicalModel.SetScale(theCargo->mStats->GetScale()
-                * ((thePosition.GetZ() * 0.5f) / theCargo->mUnitClass->GetCruiseAltitude() + 0.5f));
-        }
-    }
-    theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
-    theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-    EEComplexUnit* theCargo = inUnit->UnloadCargoByID(theCargoID, theTransformation);
-    theCargo->mOrientation = GEOrientation(theYaw, 0.0f, 0.0f);
-    theCargo->mPlanetID = EEGetLandContinentOf(theCargo);
-    bool theCarrier = (inUnit->mUnitClass->mCategory == kUnitCategoryNavalBuilding || inUnit->mUnitClass->mCategory == kUnitCategorySpaceBuilding)
-        && inUnit->mUnitClass->mAirTrafficType != 0;
-    EEUnitGoal* theGoal = NULL;
-    if (!theCargo->mGoalQueues[1].mGoals.empty()) {
-        theIterator = theCargo->GetQueueGoals(1).begin();
-        for (; theIterator != theCargo->GetQueueGoals(1).end(); ++theIterator) {
-            EEUGRust* theAttack = EEAttackUnitCast(*theIterator);
-            EEUnitGoal* theCopy;
-            if (theAttack != NULL) {
-                if (theAttack->Suits(theCargo) && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0)
-                    theCopy = theAttack->Clone();
-                else {
-                    GE2DPoint theTarget((float)theAttack->GetAttackTarget()->GetTileX(), (float)theAttack->GetAttackTarget()->GetTileY());
-                    theCopy = EEUGRust::NewLocation(theTarget, false, true, false, 0.0f, false, false);
-                }
-            } else if ((*theIterator)->Suits(theCargo))
-                theCopy = (*theIterator)->Clone();
-            else {
-                (*theIterator)->GetGoalLocation(thePosition);
-                theCopy = EEUGRust::NewLocation(&thePosition, false, true, false, 0.0f, false, false);
-            }
-            theCargo->QueueGoal(theCopy, 0);
-        }
-    } else {
-        if (theCarrier)
-            theQueue = 1;
-        else if (inUnit->mUnitClass->mUnitType == kUnitTypeNavyYard)
-            theQueue = 2;
-        else if (theCargo->mUnitClass->mCategory == kUnitCategoryAirplane || theCargo->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
-            unsigned long theKind = theCargo->mUnitClass->mFamily;
-            if (theKind == kUnitFamilyAircraft || theKind == kUnitFamilySpaceFighter)
-                theQueue = 1;
-            else if (theKind == kUnitFamilyBomber)
-                theQueue = theCargo->mUnitClass->mIsParatrooperBomber ? 4 : 2;
-            else
-                theQueue = 3;
-        }
-        if (theQueue != 0)
-            theGoal = inUnit->GetQueuedGoal(theQueue);
-        if (!theCargo->mPlayer->IsHuman() || theGoal == NULL) {
-            if (theCargo->GetGoal() != NULL)
-                theGoal = theCargo->GetGoal();
-            if (theGoal == NULL) {
-                inUnit->LoadCargo(theCargo, false, 0);
-                if (theCargo == NULL)
-                    return;
-                ee_units_atc_remove_from_takeoff_queues(theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1], theCargo);
-                inUnit->SetExitingUnitID(-1);
-                return;
-            }
-        }
-        if (!theCargo->mIsDetachedFromAI && (theCargo->mPlayer->IsHuman() || theCargo->GetGoal() == NULL)) {
-            theCargo->ClearGoalQueue(0);
-            theIterator = inUnit->mGoalQueues[theQueue].mGoals.begin();
-            for (; theIterator != inUnit->mGoalQueues[theQueue].mGoals.end(); ++theIterator) {
-                if (theQueue == 4) {
-                    EEUnitGoal* theRally = *theIterator;
-                    if (theRally != NULL) {
-                        GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-                        bool theLast = theIterator == inUnit->mGoalQueues[4].mGoals.end() - 1;
-                        theRally->GetGoalLocation(theTarget);
-                        if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()),
-                                                  UMFloorUnsigned(theTarget.GetY())))
-                            theGoal = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
-                        else
-                            theGoal = EEUGRust::NewLocation(&theTarget, false, true, false, 0.0f, false, false);
-                    }
-                } else {
-                    EEUGRust* theAttack = EEAttackUnitCast(*theIterator);
-                    if (theAttack != NULL) {
-                        if (theAttack->Suits(theCargo) && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0)
-                            theGoal = theAttack->Clone();
-                        else {
-                            GE2DPoint theTarget((float)theAttack->GetAttackTarget()->GetTileX(), (float)theAttack->GetAttackTarget()->GetTileY());
-                            theGoal = EEUGRust::NewLocation(theTarget, false, true, false, 0.0f, false, false);
-                        }
-                    } else if ((*theIterator)->Suits(theCargo))
-                        theGoal = (*theIterator)->Clone();
-                    else {
-                        (*theIterator)->GetGoalLocation(thePosition);
-                        theGoal = EEUGRust::NewLocation(&thePosition, false, true, false, 0.0f, false, false);
-                    }
-                }
-                theCargo->QueueGoal(theGoal, 0);
-            }
-        } else if (!theCargo->mPlayer->IsHuman() && theCargo->mUnitClass->mUnitType == kUnitTypeParatrooperPlane
-                   && theCargo->GetGoal() != NULL) {
-            GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-            // The plane's own goal is its only (so last) destination: drop the troops there if the tile is free
-            bool theLast = true;
-            theCargo->GetGoal()->GetGoalLocation(theTarget);
-            EEUnitGoal* theCopy;
-            if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY())))
-                theCopy = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
-            else
-                theCopy = EEUGRust::NewLocation(&theTarget, false, true, false, 0.0f, false, false);
-            theCargo->QueueGoal(theCopy, 0);
-        }
-    }
-    theCargo->SetHomeBase(inUnit);
-    theCargo->StartAction(kActionTakeoff);
-    theCargo->mUnitClass->ActionChanged(theCargo);
-    inUnit->SetExitingUnitID(-1);
+    ee_units_ucb_call(EE_UNITS_UCB_DO_RELEASE_UNIT, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
 }
 
 // Runs an armed building's tick (physics, turrets, timers, animation, sound) and fires on its attack frame; skips
 // disabled ones and standing foundations
 void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    if (inUnit->mIsDisabled && inUnit->mHitPoints > 0)
-        return;
-    if (inUnit->IsFoundation() && inUnit->mHitPoints > 0 && inUnit->mCurrentPhysicsAction != 2)
-        return;
-    if (this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
-    }
-    inUnit->UpdateOrbitals();
-    this->UpdateCamouflageTimer(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionTrackEnemyUnit:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
+    ee_units_ucb_call(EE_UNITS_UCB_DO_UPDATE_ARMED, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
 }
 
 // ---- EEUCBuildingPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). A building that
@@ -528,48 +200,7 @@ void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
 // The temple's copy of EEUCBasicPriest::Update (0x20df05)
 void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
-        inUnit->UpdateOrbitals();
-    }
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    if (this->mIsMedic) {
-        inUnit->UpdateHealSearchTimer();
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalHealUnit)
-            inUnit->mGoalState->Work(inUnit);
-    }
-    if (inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    this->UpdateDone(inUnit);
-    this->RegeneratePower(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionConvertEnemyUnit:
-        this->BasicPriestUpdateConversion(inUnit);
-        return;
-    case kActionResourcesRotting:
-        return;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    if (inUnit->mConversionStartTime != 0)
-        inUnit->mConversionStartTime = 0;
-    inUnit->ReleaseConversionEffect();
-    this->BasicPriestHideConversionEffects(inUnit);
+    ee_units_ucb_call(EE_UNITS_UCB_DO_PRIEST_UPDATE, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
 }
 
 // ---- EEUCGate.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -1001,45 +632,13 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                          EEUnit* inCreator)
 {
-    EEMap* theMap = ::gWorld.mMap;
-    long theX = UMFloor(inTransformation.GetX());
-    long theY = UMFloor(inTransformation.GetY());
-    long theSize = this->mTileSize;
-    bool theFound = false;
-    EEUnit* theUnit = this->BuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    for (long i = theX; i < theX + theSize && !theFound; i++) {
-        for (long j = theY; j < theY + theSize && !theFound; j++) {
-            EETile* theTile = theMap->GetTile(i, j);
-            if (theTile == NULL)
-                continue;
-            for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && !theFound; theNode = theNode->mNext) {
-                EEUnit* theOther = theNode->mUnit;
-                if (theOther != NULL && theUnit->CanGather(theOther, theOther->GetTileX(), theOther->GetTileY(), 0, 0)) {
-                    theUnit->mComplexUnit->SetMine(theOther);
-                    theFound = true;
-                }
-            }
-        }
-    }
-    return theUnit;
+    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
 }
 
 // Creates a mine on a tile, at the tile's height (0 off the map)
 EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    GETransformation theTransformation;
-    EETile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-    if (theTile != NULL) {
-        float theHeight = theTile->mHeight;
-        theTransformation.SetX((float)inX);
-        theTransformation.SetY((float)inY);
-        theTransformation.SetZ(theHeight);
-    } else {
-        theTransformation.SetX((float)inX);
-        theTransformation.SetY((float)inY);
-        theTransformation.SetZ(0.0f);
-    }
-    return this->MiningBuildingCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucb_release.rs
 }
 
 // ---- EEUCNavalBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval building's
@@ -1051,39 +650,7 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer,
 // attack, move or explore goal; any ship with a goal for a computer player); returns whether one was picked
 bool EEUnitClass::NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit)
 {
-    bool theResult = false;
-    unsigned long theCount = inUnit->GetNumCargoUnits();
-    for (unsigned long i = 0; !theResult && i < theCount; i++) {
-        EEComplexUnit* theCargo = inUnit->mCargo[i];
-        if (theCargo->mHitPoints != theCargo->mStats->mMaxHitPoints)
-            continue;
-        bool theReady = false;
-        if (theCargo->mPlayer->IsHuman()) {
-            if (theCargo->GetQueueGoals(1).size() > 0) {
-                EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
-                if (EEAttackUnitCast(theGoal) == 0 &&
-                    !EEGoalHasLocation(theGoal) &&
-                    EEExploreGoalCast(theGoal) == 0)
-                    theGoal = NULL;
-                if (theGoal != NULL)
-                    theReady = true;
-            }
-            if (!theReady && inUnit->GetQueueGoals(1).size() > 0) {
-                EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
-                if (EEAttackUnitCast(theGoal) == 0 &&
-                    !EEGoalHasLocation(theGoal) &&
-                    EEExploreGoalCast(theGoal) == 0)
-                    theGoal = NULL;
-                if (theGoal != NULL)
-                    theReady = true;
-            }
-        }
-        if (theReady || (inUnit->mPlayer->mComputerPlayer != NULL && theCargo->mGoalState != NULL)) {
-            inUnit->SetExitingUnitID(theCargo->mUnitID);
-            theResult = true;
-        }
-    }
-    return theResult;
+    return ee_units_ucb_call(EE_UNITS_UCB_DO_NAVAL_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0;   // ucb_release.rs
 }
 
 // Returns whether the dock's transformed bounding box lies wholly below the water line
@@ -1130,20 +697,13 @@ void EEUnitClass::SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long&
 EEUnit* EEUnitClass::SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                         EEUnit* inCreator)
 {
-    GETransformation theTransformation(inTransformation);
-    theTransformation.SetX(theTransformation.GetX());
-    theTransformation.SetZ(this->mCruiseAltitude);
-    return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
 }
 
 // Creates a space building on a tile, at the cruise altitude
 EEUnit* EEUnitClass::SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    GETransformation theTransformation;
-    theTransformation.SetX((float)inX);
-    theTransformation.SetY((float)inY);
-    theTransformation.SetZ(this->mCruiseAltitude);
-    return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucb_release.rs
 }
 
 // Sets up a new space building as a building, already built
@@ -1168,3 +728,107 @@ bool EEUnitClass::SpaceBuildingHasArrived(EEComplexUnit* inUnit, float inValue)
     return theResult;
 }
 
+template <class T> static T* EEUcbObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// ReleaseUnit's yaw is the orientation's first float
+static_assert(offsetof(GEOrientation, mYaw) == 0, "a GEOrientation starts with its yaw");
+
+// The C++ of the buildings' Rust bodies (ee_units ucb_release.rs; EE_UNITS_UCB_*): one statement of the original
+// bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
+extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
+                                     float (*ioF)[4])
+{
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EEUcbObject<EEComplexUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_UCB_LOCATION_YAW: theUnit->mPhysicalModel.GetLocation().ConvertToOrientation(*reinterpret_cast<GEOrientation*>(f)); return 0;
+    case EE_UNITS_UCB_CARGO_SIZE: return theUnit->mCargo.size();
+    case EE_UNITS_UCB_CARGO_INDEX: return EEObj(theUnit->mCargo[(size_t)inB]);
+    case EE_UNITS_UCB_HIT_POINTS_OF: return theOther->GetHitPoints();
+    case EE_UNITS_UCB_MAX_HIT_POINTS_OF: return theOther->GetStats()->mMaxHitPoints;
+    case EE_UNITS_UCB_HUMAN_OF: return theOther->GetPlayer()->IsHuman();
+    case EE_UNITS_UCB_QUEUE_SHIFT_MODE: return theUnit->mGoalQueues[(size_t)inB].GetUnit()->mPlayer->mShiftMode;
+    case EE_UNITS_UCB_GOAL_STATE_OF: return EEObj(theOther->mGoalState);
+    case EE_UNITS_UCB_UNIT_ID_OF: return theOther->mUnitID;
+    case EE_UNITS_UCB_SET_EXITING: theUnit->SetExitingUnitID((unsigned long)inB); return 0;
+    case EE_UNITS_UCB_DETACHED: return theOther->mIsDetachedFromAI;
+    case EE_UNITS_UCB_CLEAR_QUEUE0: theOther->mGoalQueues[0].Clear(); return 0;
+    case EE_UNITS_UCB_REFRESH_GOALS: theOther->RefreshGoals(); return 0;
+    case EE_UNITS_UCB_REFRESH_ACTIVE: theOther->RefreshActiveGoal(); return 0;
+    case EE_UNITS_UCB_QUEUE_LEN_OF: return theOther->GetQueueGoals((unsigned long)inB).size();
+    case EE_UNITS_UCB_QUEUE_FRONT_OF: return EEObj(theOther->mGoalQueues[(size_t)inB].GetFront());
+    case EE_UNITS_UCB_EXPLORE_CAST: return EEObj(EEExploreGoalCast(EEUcbObject<EEUnitGoal>(inA)));
+    case EE_UNITS_UCB_ATTACK_CAST: return EEObj(EEAttackUnitCast(EEUcbObject<EEUnitGoal>(inA)));
+    case EE_UNITS_UCB_HAS_LOCATION: return EEGoalHasLocation(EEUcbObject<EEUnitGoal>(inA));
+    case EE_UNITS_UCB_HIT_POINTS_FIELD_OF: return theOther->mHitPoints;
+    case EE_UNITS_UCB_MAX_HIT_POINTS_FIELD_OF: return theOther->mStats->mMaxHitPoints;
+    case EE_UNITS_UCB_PLAYER_HUMAN_OF: return theOther->mPlayer->IsHuman();
+    case EE_UNITS_UCB_COMPUTER_PLAYER: return EEObj(theUnit->mPlayer->mComputerPlayer);
+    case EE_UNITS_UCB_EXITING_ID: return theUnit->mExitingUnitID;
+    case EE_UNITS_UCB_AIR_TRAFFIC_SELF: return theUnit->mUnitClass->mAirTrafficType;
+    case EE_UNITS_UCB_TILE_SIZE_FIELD: return theClass->mTileSize;
+    case EE_UNITS_UCB_FACING: return theUnit->mFacing;
+    case EE_UNITS_UCB_FIND_PASSENGER: return EEObj(theUnit->FindPassenger((unsigned long)inB));
+    case EE_UNITS_UCB_TAGS_EMPTY: return EEUcbObject<EETagPointList>(inA)->mPoints.empty();
+    case EE_UNITS_UCB_TAGS_SCALE_STATS: EEUcbObject<EETagPointList>(inA)->Scale(*EEUcbObject<GETransformation>((uint64_t)inB), theUnit->mStats->GetScale()); return 0;
+    case EE_UNITS_UCB_TAG0_POINT: EEUcbObject<EETagPointList>(inA)->mPoints[0]->GetPoint(EEUcbObject<EEComplexUnit>((uint64_t)inB)->mPhysicalModel.GetFrame(), *EEUcbObject<GETransformation>((uint64_t)inC), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCB_SET_CARGO_SCALE: theOther->mPhysicalModel.SetScale(theOther->mStats->GetScale() * ((f[0] * 0.5f) / theOther->mUnitClass->GetCruiseAltitude() + 0.5f)); return 0;
+    case EE_UNITS_UCB_UNLOAD_BY_ID: return EEObj(theUnit->UnloadCargoByID((unsigned long)inB, *EEUcbObject<GETransformation>(inA)));
+    case EE_UNITS_UCB_CATEGORY_SELF: return theUnit->mUnitClass->mCategory;
+    case EE_UNITS_UCB_QUEUE_GOAL_OF: return EEObj(theOther->GetQueueGoals((unsigned long)inB)[(size_t)inC]);
+    case EE_UNITS_UCB_UNIT_HIT_POINTS: return EEUcbObject<EEUnit>(inA)->mHitPoints;
+    case EE_UNITS_UCB_UNIT_TYPE_SELF: return theUnit->mUnitClass->mUnitType;
+    case EE_UNITS_UCB_CATEGORY_OF: return theOther->mUnitClass->mCategory;
+    case EE_UNITS_UCB_FAMILY_OF: return theOther->mUnitClass->mFamily;
+    case EE_UNITS_UCB_PARATROOPER_OF: return theOther->mUnitClass->mIsParatrooperBomber;
+    case EE_UNITS_UCB_GOAL_OF: return EEObj(theOther->GetGoal());
+    case EE_UNITS_UCB_LOAD_CARGO: theUnit->LoadCargo(theOther, false, 0); return 0;
+    case EE_UNITS_UCB_ATC_REMOVE_TAKEOFF: ee_units_atc_remove_from_takeoff_queues(theOther->mPlayer->mAirTraffic[theOther->mUnitClass->mAirTrafficType - 1], theOther); return 0;
+    case EE_UNITS_UCB_UNIT_QUEUE_LEN: return theUnit->mGoalQueues[(size_t)inB].mGoals.size();
+    case EE_UNITS_UCB_UNIT_QUEUE_GOAL: return EEObj(theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]);
+    case EE_UNITS_UCB_TILE_FREE: return EEIsTileFree(theOther, (unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_UCB_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
+    case EE_UNITS_UCB_UNIT_TYPE_OF: return theOther->mUnitClass->mUnitType;
+    case EE_UNITS_UCB_SET_HOME_BASE: theOther->SetHomeBase(theUnit); return 0;
+    case EE_UNITS_UCB_SET_BUILT: theUnit->SetBuilt((long)inB, (long)(inC & 1), (long)(inC >> 1)); return 0;
+    case EE_UNITS_UCB_SET_RESOURCE_TYPE: theUnit->SetResourceType(theClass->mResourceType); return 0;
+    case EE_UNITS_UCB_RESOURCE_TYPE: return theUnit->mResourceType;
+    case EE_UNITS_UCB_SET_RESOURCE_AMOUNT: theUnit->SetResourceAmount(theClass->mResourceAmount); return 0;
+    case EE_UNITS_UCB_FACING_QUARTER: return EEGetUnitFacingQuarter(theUnit);
+    case EE_UNITS_UCB_SET_FACING: theUnit->SetFacing((unsigned long)inB); return 0;
+    case EE_UNITS_UCB_NAVY_YARD_FACING: return GetNavyYardFacing(theUnit->GetTileX(), theUnit->GetTileY());
+    case EE_UNITS_UCB_SPACE_DOCK_YAW: f[0] = EEGetSpaceDockYaw(theUnit->GetTileX() + 1, theUnit->GetTileY() + 1, theUnit->mUnitClass->GetTileSize()); return 0;
+    case EE_UNITS_UCB_DISABLED: return theUnit->mIsDisabled;
+    case EE_UNITS_UCB_PHYSICS_ACTION: return theUnit->mCurrentPhysicsAction;
+    case EE_UNITS_UCB_UPDATE_TURRETS: theUnit->UpdateTurrets(); return 0;
+    case EE_UNITS_UCB_TILE_X_FIELD: return theUnit->mTileX;
+    case EE_UNITS_UCB_UPDATE_HEAL_SEARCH: theUnit->UpdateHealSearchTimer(); return 0;
+    case EE_UNITS_UCB_IS_MEDIC: return theClass->mIsMedic;
+    case EE_UNITS_UCB_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
+    case EE_UNITS_UCB_REGENERATION: return theUnit->mStats->mRegeneration;
+    case EE_UNITS_UCB_REGENERATE_POWER: theClass->RegeneratePower(theUnit); return 0;
+    case EE_UNITS_UCB_PRIEST_CONVERSION: theClass->BasicPriestUpdateConversion(theUnit); return 0;
+    case EE_UNITS_UCB_CONVERSION_START: return theUnit->mConversionStartTime;
+    case EE_UNITS_UCB_CLEAR_CONVERSION_START: theUnit->mConversionStartTime = 0; return 0;
+    case EE_UNITS_UCB_RELEASE_CONVERSION: theUnit->ReleaseConversionEffect(); return 0;
+    case EE_UNITS_UCB_HIDE_CONVERSION: theClass->BasicPriestHideConversionEffects(theUnit); return 0;
+    case EE_UNITS_UCB_CRUISE_ALTITUDE: f[0] = theClass->mCruiseAltitude; return 0;
+    case EE_UNITS_UCB_CAN_GATHER: return EEUcbObject<EEUnit>(inA)->CanGather(EEUcbObject<EEUnit>((uint64_t)inB), EEUcbObject<EEUnit>((uint64_t)inB)->GetTileX(), EEUcbObject<EEUnit>((uint64_t)inB)->GetTileY(), 0, 0);
+    case EE_UNITS_UCB_TILE_UNITS: return EEObj(EEUcbObject<EETile>(inA)->mUnits);
+    case EE_UNITS_UCB_NODE_UNIT: return EEObj(EEUcbObject<RTSTileUnitNode>(inA)->mUnit);
+    case EE_UNITS_UCB_NODE_NEXT: return EEObj(EEUcbObject<RTSTileUnitNode>(inA)->mNext);
+    case EE_UNITS_UCB_SET_MINE: EEUcbObject<EEUnit>(inA)->mComplexUnit->SetMine(EEUcbObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCB_PREVIOUS_PART_OF: return EEObj(theOther->mPreviousPart);
+    case EE_UNITS_UCB_TILE_SIZE_OF: return theOther->mUnitClass->GetTileSize();
+    case EE_UNITS_UCB_FACING_QUARTER_AT: return EEGetFacingQuarter((long)inB, (long)inC);
+    case EE_UNITS_UCB_TILES_CLEAR: EEUcbObject<std::vector<EETileCoordinate>>(inA)->clear(); return 0;
+    case EE_UNITS_UCB_BASE_SURROUNDING: theClass->BaseGetSurroundingTiles(theUnit, *EEUcbObject<std::vector<EETileCoordinate>>(inA), (long)inB, inC != 0); return 0;
+    case EE_UNITS_UCB_COMPLEX_FIELD_OF: return EEObj(theOther->mComplexUnit);
+    default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
+    }
+}
