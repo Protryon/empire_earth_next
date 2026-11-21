@@ -68,7 +68,8 @@ fn a_granary_brings_its_farms_and_robotic_pieces_turn() {
 fn a_gate_has_three_turned_parts() {
     let mut h = Mock::default();
     create_gate(&mut h, 0.25, 50, 9);
-    let parts: Vec<(i64, i64)> = h.log.iter().filter(|e| e.0 == EE_UNITS_GHOST_TURN_GATE_PART).map(|e| (e.3, e.4)).collect();
+    let parts: Vec<(i64, i64)> =
+        h.log.iter().filter(|e| e.0 == EE_UNITS_GHOST_TURN_GATE_PART).map(|e| (e.3, e.4)).collect();
     assert_eq!(parts, [(2, 0), (2, 2), (2, 4)]);
     assert_eq!(h.count(EE_UNITS_GHOST_ADD), 3);
 }

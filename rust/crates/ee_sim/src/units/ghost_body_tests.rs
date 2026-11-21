@@ -82,9 +82,9 @@ fn a_plain_building_fills_its_square_and_heights() {
         .land(9, 11, 9, 11, 0);
     h.tiles.insert((10, 10), TERRAIN_SHALLOW_WATER);
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], true);
+    assert!(h.can_place[&G]);
     assert_eq!(h.footprint.len(), 9);
-    assert_eq!(h.heights[&(1 * ROW + 1)], 0.0);
+    assert_eq!(h.heights[&(ROW + 1)], 0.0);
     assert_eq!(h.heights[&0], 2.0);
     // a blocked inner cell refuses it; one on the outer edge does not
     let mut h = Mock::default()
@@ -94,10 +94,10 @@ fn a_plain_building_fills_its_square_and_heights() {
         .land(9, 11, 9, 11, 0);
     h.blocked.push((11, 11));
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], true);
+    assert!(h.can_place[&G]);
     h.blocked.push((9, 9));
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], false);
+    assert!(!h.can_place[&G]);
 }
 
 #[test]
@@ -115,15 +115,15 @@ fn a_dock_needs_three_land_rim_tiles() {
     h.tiles.insert((4, 4), 0);
     h.tiles.insert((4, 5), 0);
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], false);
-    assert_eq!(h.footprint[&(0, 0)], false);
+    assert!(!h.can_place[&G]);
+    assert!(!h.footprint[&(0, 0)]);
     let mut h = base();
     for t in [(4, 4), (4, 5), (4, 6)] {
         h.tiles.insert(t, 0);
     }
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], true);
-    assert_eq!(h.footprint[&(0, 0)], true);
+    assert!(h.can_place[&G]);
+    assert!(h.footprint[&(0, 0)]);
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn a_space_dock_turns_to_its_yaw() {
         .answer(EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN, G, 1)
         .answer(EE_UNITS_GHOST_SPACE_DOCK_YAW, G, bits(0.75));
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], true);
+    assert!(h.can_place[&G]);
     // offset 2: the inner 3 x 3
     assert_eq!(h.footprint.values().filter(|v| **v).count(), 9);
     assert!(h.log.iter().any(|e| e.0 == EE_UNITS_GHOST_SET_YAW && e.3 == bits(0.75)));
@@ -148,7 +148,7 @@ fn a_mining_building_needs_its_overlap_unit() {
         .answer(EE_UNITS_GHOST_TILE_FIRST_NODE, G, 40);
     h.answers.insert((EE_UNITS_GHOST_NODE_IN_SET, G), 1);
     fill_square(&mut h, G);
-    assert_eq!(h.can_place[&G], true);
+    assert!(h.can_place[&G]);
     assert_eq!(h.footprint.len(), 9);
     assert_eq!(h.count(EE_UNITS_GHOST_NODE_NEXT), 1);
 }

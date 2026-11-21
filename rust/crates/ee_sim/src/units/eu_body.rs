@@ -296,7 +296,10 @@ pub fn kill<H: EuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
         }
     }
     let category = s.q(EE_UNITS_EU_CATEGORY);
-    if s.q(EE_UNITS_EU_UNIT_TYPE) == UNIT_TYPE_FARM || category == CATEGORY_LAND_CITIZEN || category == CATEGORY_NAVAL_CITIZEN {
+    if s.q(EE_UNITS_EU_UNIT_TYPE) == UNIT_TYPE_FARM
+        || category == CATEGORY_LAND_CITIZEN
+        || category == CATEGORY_NAVAL_CITIZEN
+    {
         s.qb(EE_UNITS_EU_SET_RESOURCE_AMOUNT, 0);
     }
     s.q(EE_UNITS_EU_SIGHT_ON_HERE);
@@ -316,7 +319,15 @@ pub fn kill<H: EuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
 /// `CanGather(resource, x, y, visible, ignore_amount)`: whether the unit may gather from another (a visible tile,
 /// resource left unless ignored): a land citizen takes its own fully repaired farm or a dead or enemy non-citizen
 /// off deep water; a naval citizen enemy naval units.
-pub fn can_gather<H: EuHost + ?Sized>(h: &mut H, unit: u64, other: u64, x: i64, y: i64, visible: bool, ignore: bool) -> bool {
+pub fn can_gather<H: EuHost + ?Sized>(
+    h: &mut H,
+    unit: u64,
+    other: u64,
+    x: i64,
+    y: i64,
+    visible: bool,
+    ignore: bool,
+) -> bool {
     let s = &mut S { h, unit };
     let mut visible = visible;
     if !visible && s.yes(EE_UNITS_EU_HAS_MAP) && s.qbc(EE_UNITS_EU_MAP_TILE_EXISTS, x, y) != 0 {
@@ -503,7 +514,14 @@ mod game {
     /// # Safety
     /// `unit` and `other` are live `EEUnit`s, on the simulation thread.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_eu_can_gather(unit: *mut c_void, other: *mut c_void, x: i64, y: i64, visible: u8, ignore: u8) -> u8 {
+    pub unsafe extern "C" fn ee_units_eu_can_gather(
+        unit: *mut c_void,
+        other: *mut c_void,
+        x: i64,
+        y: i64,
+        visible: u8,
+        ignore: u8,
+    ) -> u8 {
         u8::from(can_gather(&mut Game, unit as usize as u64, other as usize as u64, x, y, visible != 0, ignore != 0))
     }
 

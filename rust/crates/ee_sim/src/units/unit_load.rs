@@ -306,7 +306,8 @@ pub unsafe fn complex_load_rest<H: SaveHost>(
     inp: &EeUnitsUnitSaveIn,
     base: i32,
 ) -> i32 {
-    let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0, minor: inp.minor, running: inp.running_state != 0 };
+    let mut rd =
+        R { host, value: 0, fraction: 0.0, flag: 0, state: 0, minor: inp.minor, running: inp.running_state != 0 };
     let (major, minor) = (inp.major, inp.minor);
     let mut r = base;
     if r == 0 {
@@ -473,7 +474,12 @@ fn load_to_flags<H: SaveHost>(rd: &mut R<'_, H>, cx: *mut EeUnitsComplexUnitFiel
     // are not tested
     use crate::units::dop_load as dl;
     dl::build_queue(rd.host, rd.minor);
-    dl::ids(rd.host, dl::EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_CLEAR, dl::EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_PUSH, &mut rd.value);
+    dl::ids(
+        rd.host,
+        dl::EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_CLEAR,
+        dl::EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_PUSH,
+        &mut rd.value,
+    );
     dl::ids(rd.host, dl::EE_UNITS_UNIT_LOAD_SET_CARGO_CLEAR, dl::EE_UNITS_UNIT_LOAD_SET_CARGO_PUSH, &mut rd.value);
     let mut r = rd.section(EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS).0;
     if r != 0 {

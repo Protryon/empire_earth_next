@@ -458,7 +458,9 @@ pub fn replace_units<H: CuHost + ?Sized>(h: &mut H, unit: u64, pairs: u64) {
         }
         i += 1;
     }
-    if h.cu(EE_UNITS_CU_CARGO_SIZE, unit, 0, 0, 0, &mut [0.0; 4]) > 0 || h.cu(EE_UNITS_CU_CONTAINER, unit, 0, 0, 0, &mut [0.0; 4]) != 0 {
+    if h.cu(EE_UNITS_CU_CARGO_SIZE, unit, 0, 0, 0, &mut [0.0; 4]) > 0
+        || h.cu(EE_UNITS_CU_CONTAINER, unit, 0, 0, 0, &mut [0.0; 4]) != 0
+    {
         for k in 0..count {
             let (old, new) = (pair(h, k, 0), pair(h, k, 1));
             replace_unit(h, unit, old as u64, new as u64);
@@ -534,12 +536,14 @@ pub fn is_passable_by<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64) -> b
                 return false;
             }
             if (s.qa(EE_UNITS_CU_HOSTILE, other) != 0 || s.yes(EE_UNITS_CU_IS_LOCKED))
-                && (s.qa(EE_UNITS_CU_HOSTILE, other) == 0 || s.qa(EE_UNITS_CU_UNIT_UNIT_TYPE, other) != UNIT_TYPE_X04_TROJAN_HORSE)
+                && (s.qa(EE_UNITS_CU_HOSTILE, other) == 0
+                    || s.qa(EE_UNITS_CU_UNIT_UNIT_TYPE, other) != UNIT_TYPE_X04_TROJAN_HORSE)
             {
                 return false;
             }
         }
-    } else if s.yes(EE_UNITS_CU_BLOCKS_TILE) && !s.yes(EE_UNITS_CU_IS_FOUNDATION_NOW) && s.q(EE_UNITS_CU_HIT_POINTS) > 0 {
+    } else if s.yes(EE_UNITS_CU_BLOCKS_TILE) && !s.yes(EE_UNITS_CU_IS_FOUNDATION_NOW) && s.q(EE_UNITS_CU_HIT_POINTS) > 0
+    {
         return false;
     }
     true
@@ -679,7 +683,8 @@ pub fn move_to_location<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: f32, y: f32
     let old_tile = s.obj(EE_UNITS_CU_TILE_POINTER);
     let tx = s.qb(EE_UNITS_CU_UM_FLOOR, bits(x));
     let ty = s.qb(EE_UNITS_CU_UM_FLOOR, bits(y));
-    let moved = s.yes(EE_UNITS_CU_IS_COLLIDABLE) && (tx != s.q(EE_UNITS_CU_GET_TILE_X) || ty != s.q(EE_UNITS_CU_TILE_Y));
+    let moved =
+        s.yes(EE_UNITS_CU_IS_COLLIDABLE) && (tx != s.q(EE_UNITS_CU_GET_TILE_X) || ty != s.q(EE_UNITS_CU_TILE_Y));
     s.qabc(EE_UNITS_CU_MOVE_TO_UPDATE, u64::from(update), tx, ty);
     if moved {
         clear_contacts(s.h, unit);
@@ -687,7 +692,8 @@ pub fn move_to_location<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: f32, y: f32
     }
     if old_tile != s.obj(EE_UNITS_CU_TILE_POINTER)
         && s.q(EE_UNITS_CU_WAYPOINT_COUNT) != 0
-        && (s.q(EE_UNITS_CU_CLASS_DOMAINS) & MOVEMENT_AIR != 0 || s.q(EE_UNITS_CU_UNIT_TYPE) == UNIT_TYPE_SP15_SPACE_FIGHTER)
+        && (s.q(EE_UNITS_CU_CLASS_DOMAINS) & MOVEMENT_AIR != 0
+            || s.q(EE_UNITS_CU_UNIT_TYPE) == UNIT_TYPE_SP15_SPACE_FIGHTER)
     {
         s.q(EE_UNITS_CU_NEXT_WAYPOINT_POINT);
         s.q(EE_UNITS_CU_SET_HEIGHT_AT_POINT);

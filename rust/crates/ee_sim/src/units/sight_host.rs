@@ -143,8 +143,11 @@ impl SightHost for Game {
         self.op(op, on, player, tile, x as i64, y as i64, &mut [0.0; 3]);
     }
     fn show(&mut self, on: bool, x: i32, y: i32) {
-        let (cell, mesh) =
-            if on { (EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_TILE) } else { (EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE_OFF) };
+        let (cell, mesh) = if on {
+            (EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_TILE)
+        } else {
+            (EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE_OFF)
+        };
         self.op(cell, on, 0, 0, x as i64, y as i64, &mut [0.0; 3]);
         self.op(mesh, on, 0, 0, x as i64, y as i64, &mut [0.0; 3]);
     }

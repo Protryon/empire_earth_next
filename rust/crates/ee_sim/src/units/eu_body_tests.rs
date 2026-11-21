@@ -145,7 +145,15 @@ fn a_citizen_gathers_a_dead_animal_or_an_enemy() {
     // an enemy: yes
     assert!(can_gather(&mut base().answer(EE_UNITS_EU_ENEMY_OF, other, 0, 1), 1, other, 0, 0, true, false));
     // on deep water: no
-    assert!(!can_gather(&mut base().answer(EE_UNITS_EU_TERRAIN_OF, other, 0, TERRAIN_DEEP_WATER), 1, other, 0, 0, true, false));
+    assert!(!can_gather(
+        &mut base().answer(EE_UNITS_EU_TERRAIN_OF, other, 0, TERRAIN_DEEP_WATER),
+        1,
+        other,
+        0,
+        0,
+        true,
+        false
+    ));
 }
 
 #[test]

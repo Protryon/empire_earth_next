@@ -67,7 +67,7 @@ const UNIT_TYPE_ROBOTIC_FARM: i64 = 0x33a;
 /// `kUnitCategoryMiningBuilding`
 const CATEGORY_MINING_BUILDING: i64 = 0x18;
 /// .rdata 0x446dc0: the four facing yaws
-const WALL_ROTATIONS: [f32; 4] = [0.0, 3.141_592_7, -1.570_796_4, 1.570_796_4];
+const WALL_ROTATIONS: [f32; 4] = [0.0, std::f32::consts::PI, -std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2];
 /// the gate's direction for the creation and its three parts
 const GATE_DIRECTION: i64 = 2;
 const GATE_PARTS: [i64; 3] = [0, 2, 4];
@@ -147,7 +147,14 @@ pub fn create_gate<H: GhostHost + ?Sized>(h: &mut H, rotation: f32, class: u64, 
 
 /// `EEBuildWallGhosts(tiles, corners, technology, player, rotation)`: the placement ghosts replaced by one wall
 /// ghost per planned tile, shaped by its corner and set on the ground; `tiles` and `corners` the vectors' addresses.
-pub fn build_wall_ghosts<H: GhostHost + ?Sized>(h: &mut H, tiles: u64, corners: u64, technology: i64, player: u64, rotation: f32) {
+pub fn build_wall_ghosts<H: GhostHost + ?Sized>(
+    h: &mut H,
+    tiles: u64,
+    corners: u64,
+    technology: i64,
+    player: u64,
+    rotation: f32,
+) {
     let class = h.ghost(EE_UNITS_GHOST_TECH_CLASS, 0, player, technology, 0) as u64;
     h.ghost(EE_UNITS_GHOST_LOCK_ENTER, 0, 0, 0, 0);
     h.ghost(EE_UNITS_GHOST_CLEAR_GHOSTS, 0, 0, 0, 0);
@@ -229,7 +236,14 @@ mod game {
     pub unsafe extern "C" fn ee_units_ghost_build_walls(args: *const EeUnitsGhostWalls) {
         // SAFETY: the caller's arguments
         let a = unsafe { *args };
-        build_wall_ghosts(&mut Game, a.tiles as usize as u64, a.corners as usize as u64, a.technology, a.player as usize as u64, a.rotation);
+        build_wall_ghosts(
+            &mut Game,
+            a.tiles as usize as u64,
+            a.corners as usize as u64,
+            a.technology,
+            a.player as usize as u64,
+            a.rotation,
+        );
     }
 }
 

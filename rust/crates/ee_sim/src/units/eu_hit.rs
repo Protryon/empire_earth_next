@@ -253,13 +253,17 @@ pub fn take_hit<H: EuHost + ?Sized>(h: &mut H, unit: u64, attacker: u64, damage_
     hit_points = s.q(EE_UNITS_EU_HIT_NEW_POINTS);
     s.qbc(EE_UNITS_EU_DAMAGE_TAKEN, player, damage);
     // new: the attacking computer player's Lua units interface counts the hit it dealt
-    if player > 0 && (player as u32 as u64) < (s.q(EE_UNITS_EU_NUM_PLAYERS) as u64) && s.qb(EE_UNITS_EU_HAS_UNITS_STATE, player) != 0 {
+    if player > 0
+        && (player as u32 as u64) < (s.q(EE_UNITS_EU_NUM_PLAYERS) as u64)
+        && s.qb(EE_UNITS_EU_HAS_UNITS_STATE, player) != 0
+    {
         s.qbc(EE_UNITS_EU_ON_DEALT, player, damage);
     }
     let tile_x = s.qa(EE_UNITS_EU_TILE_X, 0);
     if tile_x != OFF_MAP {
         if attacker != 0 {
-            let owner = if s.qa(EE_UNITS_EU_ON_MAP, attacker) != 0 { s.qa(EE_UNITS_EU_OWNER, attacker) as u64 } else { 0 };
+            let owner =
+                if s.qa(EE_UNITS_EU_ON_MAP, attacker) != 0 { s.qa(EE_UNITS_EU_OWNER, attacker) as u64 } else { 0 };
             let from = if owner != 0 {
                 let container = s.qa(EE_UNITS_EU_CONTAINER, owner) as u64;
                 if container == 0 {
@@ -285,7 +289,10 @@ pub fn take_hit<H: EuHost + ?Sized>(h: &mut H, unit: u64, attacker: u64, damage_
     }
     if hit_points > 0 {
         let effect = s.q(EE_UNITS_EU_DAMAGE_EFFECT) as u64;
-        if effect != 0 && s.yes(EE_UNITS_EU_SHOWS_DAMAGE) && s.qab(EE_UNITS_EU_DAMAGE_EFFECT_FORMULA, effect, hit_points) != 0 {
+        if effect != 0
+            && s.yes(EE_UNITS_EU_SHOWS_DAMAGE)
+            && s.qab(EE_UNITS_EU_DAMAGE_EFFECT_FORMULA, effect, hit_points) != 0
+        {
             if s.q(EE_UNITS_EU_CATEGORY) != CATEGORY_GATE {
                 s.qa(EE_UNITS_EU_EFFECT_ON_SELF, effect);
             } else {
@@ -318,7 +325,9 @@ pub fn take_hit<H: EuHost + ?Sized>(h: &mut H, unit: u64, attacker: u64, damage_
                 && s.q(EE_UNITS_EU_PLAYER_ID) != player
             {
                 let category = s.q(EE_UNITS_EU_COMPLEX_CATEGORY);
-                let series = if [CATEGORY_BUILDING, CATEGORY_BUILDING19, CATEGORY_GATE, CATEGORY_MINING_BUILDING].contains(&category) {
+                let series = if [CATEGORY_BUILDING, CATEGORY_BUILDING19, CATEGORY_GATE, CATEGORY_MINING_BUILDING]
+                    .contains(&category)
+                {
                     2
                 } else {
                     3
@@ -364,7 +373,13 @@ pub(crate) mod game {
     /// # Safety
     /// `unit` is a live `EEUnit`, `attacker` a live one or null, on the simulation thread.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_eu_take_hit(unit: *mut c_void, attacker: *mut c_void, damage: i64, player: u32, mode: i64) {
+    pub unsafe extern "C" fn ee_units_eu_take_hit(
+        unit: *mut c_void,
+        attacker: *mut c_void,
+        damage: i64,
+        player: u32,
+        mode: i64,
+    ) {
         take_hit(&mut Game, unit as usize as u64, attacker as usize as u64, damage, i64::from(player), mode);
     }
 }

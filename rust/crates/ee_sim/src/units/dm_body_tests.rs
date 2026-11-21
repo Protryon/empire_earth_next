@@ -114,7 +114,8 @@ fn the_finds_match_player_and_unit() {
 
 #[test]
 fn a_shown_tile_frees_the_players_doppelgangers_only() {
-    let mut w = World::with_tiles(3).answer(EE_UNITS_DM_IS_CURRENT, PLAYER, 0, 1).answer(EE_UNITS_DM_IS_COMPLEX, 601, 0, 1);
+    let mut w =
+        World::with_tiles(3).answer(EE_UNITS_DM_IS_CURRENT, PLAYER, 0, 1).answer(EE_UNITS_DM_IS_COMPLEX, 601, 0, 1);
     w.dops.insert(600, (PLAYER, 40, 0, 1));
     w.dops.insert(601, (PLAYER, 41, 0, 1));
     w.dops.insert(602, (8, 42, 0, 1));
@@ -157,7 +158,12 @@ fn a_hidden_tile_remembers_a_resource_out_of_sight() {
 #[test]
 fn a_cloaked_or_wonder_unit_is_never_out_of_sight() {
     let unit = 40;
-    let mut w = World::with_tiles(3).answer(EE_UNITS_DM_UNIT_COMPLEX, unit, 0, unit as i64).answer(EE_UNITS_DM_IS_CLOAKED, unit, 0, 1);
+    let mut w = World::with_tiles(3).answer(EE_UNITS_DM_UNIT_COMPLEX, unit, 0, unit as i64).answer(
+        EE_UNITS_DM_IS_CLOAKED,
+        unit,
+        0,
+        1,
+    );
     assert!(!is_out_of_sight(&mut w, unit, PLAYER));
     let mut w = World::with_tiles(3);
     assert!(is_out_of_sight(&mut w, unit, PLAYER));

@@ -222,7 +222,8 @@ pub fn has_doppelganger_of<H: DmHost + ?Sized>(h: &mut H, tile: u64, unit: u64, 
         let mut i = 0;
         while i < q(h, EE_UNITS_DM_NUM_DOPPELGANGERS, tile) && !found {
             let d = qb(h, EE_UNITS_DM_DOPPELGANGER_AT, tile, i) as u64;
-            found = q(h, EE_UNITS_DM_DOPPELGANGER_PLAYER, d) == p && unit == q(h, EE_UNITS_DM_DOPPELGANGER_UNIT, d) as u64;
+            found =
+                q(h, EE_UNITS_DM_DOPPELGANGER_PLAYER, d) == p && unit == q(h, EE_UNITS_DM_DOPPELGANGER_UNIT, d) as u64;
             i += 1;
         }
     }
@@ -342,7 +343,8 @@ fn remembered<H: DmHost + ?Sized>(h: &mut H, unit: u64, player: u64, id: i64) ->
             || q(h, EE_UNITS_DM_FAMILY, unit) == FAMILY_FISH
             || (q(h, EE_UNITS_DM_IS_LAND_BUILDING, unit) != 0
                 && q(h, EE_UNITS_DM_HIT_POINTS, unit) > 0
-                && (q(h, EE_UNITS_DM_IS_FOUNDATION, unit) == 0 || q(h, EE_UNITS_DM_UNIT_PLAYER, unit) as u64 == player)))
+                && (q(h, EE_UNITS_DM_IS_FOUNDATION, unit) == 0
+                    || q(h, EE_UNITS_DM_UNIT_PLAYER, unit) as u64 == player)))
         && {
             let t = q(h, EE_UNITS_DM_UNIT_TILE, unit) as u64;
             !has_doppelganger_of(h, t, unit, id)
@@ -413,7 +415,10 @@ pub fn is_out_of_sight<H: DmHost + ?Sized>(h: &mut H, unit: u64, player: u64) ->
 pub fn add_for_unseen_unit<H: DmHost + ?Sized>(h: &mut H, unit: u64) {
     let tile = q(h, EE_UNITS_DM_UNIT_TILE, unit) as u64;
     let player = q(h, EE_UNITS_DM_UNIT_PLAYER, unit) as u64;
-    if tile == 0 || q(h, EE_UNITS_DM_SAVES_VIS_MAP, player) == 0 || qb(h, EE_UNITS_DM_IS_SEEN_BY, unit, player as i64) != 0 {
+    if tile == 0
+        || q(h, EE_UNITS_DM_SAVES_VIS_MAP, player) == 0
+        || qb(h, EE_UNITS_DM_IS_SEEN_BY, unit, player as i64) != 0
+    {
         return;
     }
     let family = q(h, EE_UNITS_DM_FAMILY, unit);

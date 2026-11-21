@@ -161,7 +161,7 @@ const TERRAIN_DEEP_WATER: i64 = 1;
 const TERRAIN_SHALLOW_WATER: i64 = 10;
 const TERRAIN_SPACE: i64 = 12;
 /// .rdata 0x446dc0: the four facing yaws (docks, robotic farm pieces)
-const WALL_ROTATIONS: [f32; 4] = [0.0, 3.141_592_7, -1.570_796_4, 1.570_796_4];
+const WALL_ROTATIONS: [f32; 4] = [0.0, std::f32::consts::PI, -std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2];
 /// the footprint's row length (`mHeights` is 12 x 12)
 const ROW: i64 = 12;
 
@@ -219,7 +219,11 @@ fn trunc(value: f32) -> i64 {
 
 /// The height of tile (x, y) for the footprint: 0 for water (and space when `space`), else the terrain's.
 fn set_height<H: GhostHost + ?Sized>(s: &mut S<'_, H>, index: i64, x: i64, y: i64, space: bool) {
-    let terrain = if s.qbc(EE_UNITS_GHOST_TILE_EXISTS, x, y) != 0 { Some(s.qbc(EE_UNITS_GHOST_TILE_TERRAIN, x, y)) } else { None };
+    let terrain = if s.qbc(EE_UNITS_GHOST_TILE_EXISTS, x, y) != 0 {
+        Some(s.qbc(EE_UNITS_GHOST_TILE_TERRAIN, x, y))
+    } else {
+        None
+    };
     let water = match terrain {
         None => true,
         Some(t) => t == TERRAIN_DEEP_WATER || t == TERRAIN_SHALLOW_WATER || (space && t == TERRAIN_SPACE),
@@ -496,7 +500,8 @@ pub fn preview_placement<H: GhostHost + ?Sized>(h: &mut H, location: u64) {
                     3 => s.qb(EE_UNITS_GHOST_SET_TILE_X, x - trunc(offset)),
                     _ => 0,
                 };
-            } else if (kind == UNIT_TYPE_FARM || kind == UNIT_TYPE_ROBOTIC_FARM) && s.q(EE_UNITS_GHOST_NUM_GHOSTS) != 1 {
+            } else if (kind == UNIT_TYPE_FARM || kind == UNIT_TYPE_ROBOTIC_FARM) && s.q(EE_UNITS_GHOST_NUM_GHOSTS) != 1
+            {
                 s.qb(EE_UNITS_GHOST_SET_FARM_SLOT, i);
             }
             if (s.q(EE_UNITS_GHOST_TILE_SIZE) > 1
@@ -634,7 +639,10 @@ pub fn preview_gate<H: GhostHost + ?Sized>(h: &mut H, location: u64, direction: 
                     existing = s.qa(EE_UNITS_GHOST_NODE_UNIT, node) as u64;
                 }
             }
-            if existing != 0 && s.qa(EE_UNITS_GHOST_UNIT_IS_WALL, existing) != 0 && s.qa(EE_UNITS_GHOST_UNIT_TINTED, existing) != 0 {
+            if existing != 0
+                && s.qa(EE_UNITS_GHOST_UNIT_IS_WALL, existing) != 0
+                && s.qa(EE_UNITS_GHOST_UNIT_TINTED, existing) != 0
+            {
                 new_gate = false;
                 *direction = s.qa(EE_UNITS_GHOST_UNIT_GATE_DIRECTION, existing);
             }
@@ -675,7 +683,12 @@ pub(crate) mod game {
     /// # Safety
     /// `ghost` is a live `EEGhostUnit` (or null for the previews), `a` and `b` live as the body needs them.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_ghost_body(what: i32, ghost: *mut c_void, a: *const c_void, b: *mut c_long) -> i64 {
+    pub unsafe extern "C" fn ee_units_ghost_body(
+        what: i32,
+        ghost: *mut c_void,
+        a: *const c_void,
+        b: *mut c_long,
+    ) -> i64 {
         let g = ghost as usize as u64;
         match what {
             EE_UNITS_GHOST_DO_FILL_SQUARE => fill_square(&mut Game, g),

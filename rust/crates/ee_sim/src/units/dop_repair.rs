@@ -445,7 +445,8 @@ pub fn repair_pointers<H: DopHost + ?Sized>(h: &mut H, unit: u64, major: i64, mi
             if !failed {
                 failed = result != 0;
             }
-            auto_waypoint = s.qa(EE_UNITS_DOP_GOAL_KIND, g) == GOAL_LOCATION && s.qa(EE_UNITS_DOP_LOCATION_AUTO, g) != 0;
+            auto_waypoint =
+                s.qa(EE_UNITS_DOP_GOAL_KIND, g) == GOAL_LOCATION && s.qa(EE_UNITS_DOP_LOCATION_AUTO, g) != 0;
             if result == 0 && item == 0 && s.qa(EE_UNITS_DOP_GOAL_KIND, g) == GOAL_BUILD_REPAIR {
                 let tech = s.qa(EE_UNITS_DOP_BUILD_TECH, g);
                 s.qb(EE_UNITS_DOP_SET_CURRENT_RESEARCH, tech);

@@ -138,9 +138,12 @@ fn init_offsets_a_large_units_placement() {
 
 #[test]
 fn free_node_deletes_each_orbital_and_wheel() {
-    let mut h = Mock::default()
-        .sequence(EE_UNITS_CU_NUM_ORBITALS, 0, 0, &[2, 2, 2])
-        .sequence(EE_UNITS_CU_NUM_WHEELS, 0, 0, &[1, 1]);
+    let mut h = Mock::default().sequence(EE_UNITS_CU_NUM_ORBITALS, 0, 0, &[2, 2, 2]).sequence(
+        EE_UNITS_CU_NUM_WHEELS,
+        0,
+        0,
+        &[1, 1],
+    );
     free_node(&mut h, 1);
     assert_eq!(h.count(EE_UNITS_CU_DELETE_ORBITAL), 2);
     assert_eq!(h.count(EE_UNITS_CU_DELETE_WHEEL), 1);

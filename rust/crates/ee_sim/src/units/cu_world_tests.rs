@@ -134,7 +134,12 @@ fn a_closed_gate_lets_only_friends_and_trojans_pass() {
     };
     assert!(is_passable_by(&mut gate(), U, 5));
     assert!(!is_passable_by(&mut gate().answer(EE_UNITS_CU_HOSTILE, 5, 0, 1), U, 5));
-    let mut h = gate().answer(EE_UNITS_CU_HOSTILE, 5, 0, 1).answer(EE_UNITS_CU_UNIT_UNIT_TYPE, 5, 0, UNIT_TYPE_X04_TROJAN_HORSE);
+    let mut h = gate().answer(EE_UNITS_CU_HOSTILE, 5, 0, 1).answer(
+        EE_UNITS_CU_UNIT_UNIT_TYPE,
+        5,
+        0,
+        UNIT_TYPE_X04_TROJAN_HORSE,
+    );
     assert!(is_passable_by(&mut h, U, 5));
     assert!(!is_passable_by(&mut gate(), U, 0));
     // a tile blocker that stands
@@ -144,13 +149,19 @@ fn a_closed_gate_lets_only_friends_and_trojans_pass() {
 
 #[test]
 fn the_reach_of_a_ranged_unit_is_its_range_on_its_continent() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_CU_STATS_RANGE, 0, 0, bits(3.0))
-        .answer(EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE, 0, 4, bits(9.0));
+    let mut h = Mock::default().answer(EE_UNITS_CU_STATS_RANGE, 0, 0, bits(3.0)).answer(
+        EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE,
+        0,
+        4,
+        bits(9.0),
+    );
     assert!(can_reach_tile(&mut h, U, 4, 4));
-    let mut h = Mock::default()
-        .answer(EE_UNITS_CU_STATS_RANGE, 0, 0, bits(3.0))
-        .answer(EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE, 0, 4, bits(9.5));
+    let mut h = Mock::default().answer(EE_UNITS_CU_STATS_RANGE, 0, 0, bits(3.0)).answer(
+        EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE,
+        0,
+        4,
+        bits(9.5),
+    );
     assert!(!can_reach_tile(&mut h, U, 4, 4));
     // a ballistic unit needs its pitch
     let mut h = Mock::default()
@@ -203,10 +214,12 @@ fn the_nearest_town_is_the_containing_one_or_the_closest() {
         .answer(EE_UNITS_CU_TOWN_DISTANCE, 101, 0, 20)
         .answer(EE_UNITS_CU_TOWN_DISTANCE, 102, 0, 30);
     assert_eq!(find_nearest_town(&mut h, U), 101);
-    let mut h = Mock::default()
-        .answer(EE_UNITS_CU_NUM_TOWNS, 0, 0, 2)
-        .answer(EE_UNITS_CU_TOWN_AT, 0, 1, 101)
-        .answer(EE_UNITS_CU_TOWN_CONTAINS, 101, 0, 1);
+    let mut h = Mock::default().answer(EE_UNITS_CU_NUM_TOWNS, 0, 0, 2).answer(EE_UNITS_CU_TOWN_AT, 0, 1, 101).answer(
+        EE_UNITS_CU_TOWN_CONTAINS,
+        101,
+        0,
+        1,
+    );
     assert_eq!(find_nearest_town(&mut h, U), 101);
 }
 
@@ -277,10 +290,12 @@ fn the_build_queue_pops_past_invalid_units() {
 
 #[test]
 fn fanaticism_costs_hit_points_but_leaves_one() {
-    let mut h = Mock::default().answer(EE_UNITS_CU_FANATICISM_COST, 0, 0, bits(0.99)).answer(EE_UNITS_CU_HIT_POINTS, 0, 0, 50);
+    let mut h =
+        Mock::default().answer(EE_UNITS_CU_FANATICISM_COST, 0, 0, bits(0.99)).answer(EE_UNITS_CU_HIT_POINTS, 0, 0, 50);
     go_fanatic(&mut h, U);
     assert!(h.asked(EE_UNITS_CU_SET_HIT_POINTS, 0, 1));
-    let mut h = Mock::default().answer(EE_UNITS_CU_FANATICISM_COST, 0, 0, bits(0.5)).answer(EE_UNITS_CU_HIT_POINTS, 0, 0, 50);
+    let mut h =
+        Mock::default().answer(EE_UNITS_CU_FANATICISM_COST, 0, 0, bits(0.5)).answer(EE_UNITS_CU_HIT_POINTS, 0, 0, 50);
     go_fanatic(&mut h, U);
     assert!(h.asked(EE_UNITS_CU_SET_HIT_POINTS, 0, 25));
     assert!(h.asked(EE_UNITS_CU_SET_TINTED, 0, 1));

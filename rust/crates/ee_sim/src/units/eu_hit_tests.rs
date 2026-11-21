@@ -61,10 +61,11 @@ fn a_linked_part_passes_the_hit_to_its_first_part() {
 
 #[test]
 fn a_cinematic_hit_only_sparks() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_EU_IN_CINEMATIC, 0, 1)
-        .answer(EE_UNITS_EU_HIT_POINTS, 0, 5)
-        .answer(EE_UNITS_EU_HAS_BLOOD, 0, 1);
+    let mut h = Mock::default().answer(EE_UNITS_EU_IN_CINEMATIC, 0, 1).answer(EE_UNITS_EU_HIT_POINTS, 0, 5).answer(
+        EE_UNITS_EU_HAS_BLOOD,
+        0,
+        1,
+    );
     take_hit(&mut h, 1, 0, 10, 2, 1);
     assert_eq!(h.count(EE_UNITS_EU_BLOOD), 1);
     assert_eq!(h.count(EE_UNITS_EU_HIT_FORMULA), 0);

@@ -527,7 +527,8 @@ pub fn copy_from<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64, rts: u64)
     s.qa(EE_UNITS_CU_COPY_UNIT_VARIABLES, other);
     s.qa(EE_UNITS_CU_COPY_BEHAVIOR, other);
     if s.yes(EE_UNITS_CU_PLAYER_IS_HUMAN)
-        && (s.qb(EE_UNITS_CU_BEHAVIOR_IS, BEHAVIOR_HARASS) != 0 || s.qb(EE_UNITS_CU_BEHAVIOR_IS, BEHAVIOR_CAUTIOUS) != 0)
+        && (s.qb(EE_UNITS_CU_BEHAVIOR_IS, BEHAVIOR_HARASS) != 0
+            || s.qb(EE_UNITS_CU_BEHAVIOR_IS, BEHAVIOR_CAUTIOUS) != 0)
     {
         s.qa(EE_UNITS_CU_SET_BEHAVIOR, 0);
     }
@@ -539,7 +540,9 @@ pub fn copy_from<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64, rts: u64)
     }
     if s.qa(EE_UNITS_CU_SAME_UNIT_TYPE, other) != 0 {
         let mut i = 0;
-        while (i as i64) < s.qa(EE_UNITS_CU_UNIT_MODEL_PARTS, other) && (i as i64) < s.qa(EE_UNITS_CU_UNIT_MODEL_PARTS, unit) {
+        while (i as i64) < s.qa(EE_UNITS_CU_UNIT_MODEL_PARTS, other)
+            && (i as i64) < s.qa(EE_UNITS_CU_UNIT_MODEL_PARTS, unit)
+        {
             s.qab(EE_UNITS_CU_COPY_TURRET_ANGLE, other, i);
             i += 1;
         }
@@ -589,7 +592,9 @@ pub fn copy_from<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64, rts: u64)
         let mut j = 0;
         while j < s.qab(EE_UNITS_CU_UNIT_GOAL_COUNT, other, i) {
             let mut goal = s.qabc(EE_UNITS_CU_UNIT_GOAL_AT, other, i, j) as u64;
-            if s.qa(EE_UNITS_CU_GOAL_KIND_OF, goal) == GOAL_UNLOAD_TRANSPORT && s.qa(EE_UNITS_CU_SAME_PLAYER, other) != 0 {
+            if s.qa(EE_UNITS_CU_GOAL_KIND_OF, goal) == GOAL_UNLOAD_TRANSPORT
+                && s.qa(EE_UNITS_CU_SAME_PLAYER, other) != 0
+            {
                 s.qa(EE_UNITS_CU_SET_UNLOAD_TRANSPORT, goal);
             }
             goal = s.qa(EE_UNITS_CU_GOAL_CLONE, goal) as u64;
@@ -746,7 +751,10 @@ pub fn init<H: CuHost + ?Sized>(h: &mut H, unit: u64, class: u64, placement: u64
     s.qa(EE_UNITS_CU_INIT_CARGO_ROOM, class);
     s.qa(EE_UNITS_CU_INIT_COLLISION_RADIUS, class);
     let category = s.qa(EE_UNITS_CU_CLASS_CATEGORY_OF, class);
-    s.qb(EE_UNITS_CU_SET_IS_CITIZEN, i64::from(category == CATEGORY_LAND_CITIZEN || category == CATEGORY_NAVAL_CITIZEN));
+    s.qb(
+        EE_UNITS_CU_SET_IS_CITIZEN,
+        i64::from(category == CATEGORY_LAND_CITIZEN || category == CATEGORY_NAVAL_CITIZEN),
+    );
     s.qa(EE_UNITS_CU_INIT_DELETABLE, class);
     for i in 0..4 {
         let template = s.qab(EE_UNITS_CU_UPGRADE_AREA_TEMPLATE, player, i);
@@ -786,13 +794,15 @@ pub fn free_node<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
 
 /// `SwapGraphic(old, new)`: the unit on another graphic, keeping its animation progress and turret, orbital and
 /// wheel angles.
+#[allow(clippy::manual_clamp)] // the original's tests, in its order
 pub fn swap_graphic<H: CuHost + ?Sized>(h: &mut H, unit: u64, old: u64, new: u64) {
     let s = &mut S { h, unit };
     let state = s.q(EE_UNITS_CU_ANIMATION);
     let frame = s.q(EE_UNITS_CU_PM_FRAME) as u32;
     let old_start = s.qab(EE_UNITS_CU_GRAPHIC_START_FRAME, old, state) as u32;
     // (float)(unsigned long)(frame - start) / (float)count
-    let mut fraction = frame.wrapping_sub(old_start) as f32 / s.qab(EE_UNITS_CU_GRAPHIC_FRAME_COUNT, old, state) as u32 as f32;
+    let mut fraction =
+        frame.wrapping_sub(old_start) as f32 / s.qab(EE_UNITS_CU_GRAPHIC_FRAME_COUNT, old, state) as u32 as f32;
     if fraction < 0.0 {
         fraction = 0.0;
     } else if fraction > 1.0 {
@@ -887,7 +897,15 @@ pub fn clear_goals<H: CuHost + ?Sized>(h: &mut H, unit: u64, index: i64) {
 
 /// `StepAside(player, class, x, y, force)`: an idle or gathering unit sent to a random free tile around a
 /// footprint being placed (a waiting gatherer looks for another spot); true if it was sent away.
-pub fn step_aside<H: CuHost + ?Sized>(h: &mut H, unit: u64, player: u64, class: u64, x: i64, y: i64, force: bool) -> bool {
+pub fn step_aside<H: CuHost + ?Sized>(
+    h: &mut H,
+    unit: u64,
+    player: u64,
+    class: u64,
+    x: i64,
+    y: i64,
+    force: bool,
+) -> bool {
     let s = &mut S { h, unit };
     let command = if s.yes(EE_UNITS_CU_HAS_COMMAND) { s.q(EE_UNITS_CU_COMMAND_KIND) } else { 0 };
     let unarmed = s.q(EE_UNITS_CU_CLASS_FAMILY) == FAMILY_ANIMAL && s.float(EE_UNITS_CU_STATS_ATTACK) == 0.0;
@@ -991,8 +1009,7 @@ pub struct FanaticismColors {
 
 impl FanaticismColors {
     /// the originals' first values
-    pub const START: Self =
-        Self { cloaked: [0.9, 0.0, 0.0], base: [0.6, 0.5, 0.5], color: [0.5, 0.5, 0.5], time: 0 };
+    pub const START: Self = Self { cloaked: [0.9, 0.0, 0.0], base: [0.6, 0.5, 0.5], color: [0.5, 0.5, 0.5], time: 0 };
 }
 
 /// `UpdateFanaticismColor()`: a fanatic unit's colour pulses between the effect's two colours; it ends when the
@@ -1141,7 +1158,14 @@ mod game {
         player: *mut c_void,
         goal_queues: u32,
     ) {
-        init(&mut Game, unit as usize as u64, class as usize as u64, placement as usize as u64, player as usize as u64, i64::from(goal_queues));
+        init(
+            &mut Game,
+            unit as usize as u64,
+            class as usize as u64,
+            placement as usize as u64,
+            player as usize as u64,
+            i64::from(goal_queues),
+        );
     }
 
     /// `EEComplexUnit::StepAside(player, class, x, y, force)` on `unit`.
@@ -1157,7 +1181,15 @@ mod game {
         y: i64,
         force: u8,
     ) -> u8 {
-        u8::from(step_aside(&mut Game, unit as usize as u64, player as usize as u64, class as usize as u64, x, y, force != 0))
+        u8::from(step_aside(
+            &mut Game,
+            unit as usize as u64,
+            player as usize as u64,
+            class as usize as u64,
+            x,
+            y,
+            force != 0,
+        ))
     }
 }
 
