@@ -18,6 +18,7 @@
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEAIKindIDs.h"
 #include "rust/render/ge.h"
+#include "rust/game/rts.h"
 
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)
@@ -29,24 +30,7 @@
 //   object 0x929818  (guard 0x929838 bit 4)
 
 // Creates an empty map with the given scale value (also copied to gMapTileSize) and its colored-rectangle lock
-RTSMap::RTSMap(float inF1955F4)
-{
-    this->mF1955F4 = inF1955F4;   // (the record EeUnitsRtsMapFields' members: no member initializers)
-    this->mF1955F8 = 0.0f;
-    this->mF1955FC = 0.0f;
-    this->mB195620 = false;
-    this->mL1955EC = 0;
-    this->mTiles = NULL;
-    this->mL195600 = 0;
-    this->mL195604 = 0;
-    this->mL195610 = 0;
-    this->mL195614 = 0;
-    this->mSize = 0;
-    this->mL195608 = 0;
-    this->mL19560C = 0;
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mCriticalSectionForColoredRectangles) == keseOK, 149);
-    gMapTileSize = this->GetF1955F4();
-}
+RTSMap::RTSMap(float inF1955F4) { ee_rts_map_construct(this, inF1955F4); }
 
 // Adds nothing to the sync checksum (the engine map's empty override)
 // (vtable 0x841d94 slot 0: an out-of-line empty override; EEMap::GetChecksum 0x51c531 calls it)
@@ -55,11 +39,7 @@ void RTSMap::GetChecksum(ESChecksum& ioChecksum) const
 }
 
 // Destroys the map, freeing its tile table and its colored-rectangle lock
-RTSMap::~RTSMap()
-{
-    this->DeleteTiles();
-    TSScheduler::DestroyCriticalSection(this->mCriticalSectionForColoredRectangles);
-}
+RTSMap::~RTSMap() { ee_rts_map_destruct(this); }
 
 // The terrain edits (Raise, its spreads and smoothing, the tiles' upkeep, GetNumRaisedCorners, IsTileFlat) are ee_ge
 // map_raise.rs' over the mesh's Rust object; the map's tiles and water are asked here
@@ -114,71 +94,11 @@ void RTSMap::ClearU1955DC()
 // NEAR: only the load of inPlayerCount is scheduled differently (the original loads it with inWidth).
 // Sets up a diamond-shaped map of the given width and height for the player count, optionally creating its
 // tiles, and builds a flat terrain mesh
-void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles)
-{
-    long theRight = inHeight;
-    long theLeft = inHeight - 1;
-    bool theLeftShrinking = true;
-    bool theRightGrowing = true;
-    if (this->mB195620)
-        this->DeleteTiles();
-    this->mL195608 = inHeight - 1;
-    this->mL195614 = inWidth;
-    this->mSize = inWidth + inHeight;
-    this->mL195610 = inHeight;
-    this->mU19561C = inPlayerCount;
-    this->mL19560C = this->mSize + inWidth - 1;
-    this->mB195620 = true;
-    this->mF1955F8 = 84.0f;
-    this->mF1955FC = 42.0f;
-    long theNumTiles = this->mSize * this->mSize;
-    this->ReserveTiles(theNumTiles);
-    this->mTiles = new EEMapTile*[theNumTiles];
-    for (long theY = 0; theY < this->mSize; theY++) {
-        if (inCreateTiles) {
-            for (long theX = 0; theX < this->mSize; theX++) {
-                EEMapTile* theTile;
-                theTile = theX >= theLeft && theX < theRight + 1 ? this->CreateTile(0.0f) : NULL;
-                this->mTiles[this->mSize * theY + theX] = theTile;
-            }
-        }
-        if (theLeftShrinking) {
-            if (theLeft != 0)
-                theLeft--;
-            else
-                theLeftShrinking = false;
-        } else
-            theLeft++;
-        if (theRightGrowing) {
-            theRight++;
-            if (theRight == this->mSize) {
-                theRight = this->mSize - 1;
-                theRightGrowing = false;
-            }
-        } else
-            theRight--;
-    }
-    this->mTerrainMesh.CreateFlatMesh(inWidth, inHeight);
-}
+void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles) { ee_rts_map_create(this, inWidth, inHeight, inPlayerCount, inCreateTiles); }
 
 // NEAR: inline budget: the original refuses every _Ptrit::operator+ except the innermost mIndices site.
 // Paints the queued vertex-color rectangles onto the terrain mesh (newest first) and empties the queue
-void RTSMap::ApplyVertexColors()
-{
-    for (long i = this->mVertexColors.size() - 1; i >= 0; i--) {
-        long theWidth = this->mVertexColors[i].mRight - this->mVertexColors[i].mLeft;
-        long theOffset = 0;
-        for (long theY = this->mVertexColors[i].mBottom; theY < this->mVertexColors[i].mTop; theY++) {
-            long k = 0;
-            for (long theX = this->mVertexColors[i].mLeft; theX < this->mVertexColors[i].mRight; theX++, k++) {
-                if (this->mTerrainMesh.GetIsValidPoint(theX, theY))
-                    this->mTerrainMesh.SetColorFromColorTableIndex(theX, theY, this->mVertexColors[i].mIndices[theOffset + k]);
-            }
-            theOffset += theWidth;
-        }
-    }
-    this->mVertexColors.clear();
-}
+void RTSMap::ApplyVertexColors() { ee_rts_map_apply_vertex_colors(this); }
 
 // Returns the tile closest to a point and stores its coordinates
 EEMapTile* EEMap::GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY)
@@ -314,4 +234,23 @@ void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::v
     this->ClearU1955DC();
     ee_ge_map_area_outlines(this, reinterpret_cast<const EeGeAreaRect*>(inAreas.data()), inContinents.data(),
                             inAreas.size(), this->mTerrainMesh.GetIsSpaceMap(), Ops::Continent, Ops::Run);
+}
+
+// The shims map.rs calls (MapCpp; LLE round 8)
+extern "C" {
+EeUnitsRtsMapFields* ee_rtsmapcpp_fields(RTSMap* inMap) { return inMap; }
+void** ee_rtsmapcpp_lock_slot(RTSMap* inMap) { return reinterpret_cast<void**>(&inMap->mCriticalSectionForColoredRectangles); }
+long* ee_rtsmapcpp_l1955ec_slot(RTSMap* inMap) { return &inMap->mL1955EC; }
+void ee_rtsmapcpp_set_tile_size(float inSize) { gMapTileSize = inSize; }
+EEMapTile*** ee_rtsmapcpp_tiles_slot(RTSMap* inMap) { return &inMap->mTiles; }
+EEMapTile** ee_rtsmapcpp_tiles_new(long inCount) { return new EEMapTile*[inCount]; }
+void ee_rtsmapcpp_delete_tiles(RTSMap* inMap) { inMap->DeleteTiles(); }
+void ee_rtsmapcpp_reserve_tiles(RTSMap* inMap, unsigned long inCount) { inMap->ReserveTiles(inCount); }
+EEMapTile* ee_rtsmapcpp_create_tile(RTSMap* inMap, float inHeight) { return inMap->CreateTile(inHeight); }
+void ee_rtsmapcpp_create_flat_mesh(RTSMap* inMap, long inWidth, long inHeight) { inMap->mTerrainMesh.CreateFlatMesh(inWidth, inHeight); }
+size_t ee_rtsmapcpp_colors_size(RTSMap* inMap) { return inMap->mVertexColors.size(); }
+const RTSMapVertexColors* ee_rtsmapcpp_colors_at(RTSMap* inMap, size_t inIndex) { return &inMap->mVertexColors[inIndex]; }
+void ee_rtsmapcpp_colors_clear(RTSMap* inMap) { inMap->mVertexColors.clear(); }
+bool ee_rtsmapcpp_mesh_valid_point(RTSMap* inMap, long inX, long inY) { return inMap->mTerrainMesh.GetIsValidPoint(inX, inY); }
+void ee_rtsmapcpp_mesh_set_color(RTSMap* inMap, long inX, long inY, unsigned char inIndex) { inMap->mTerrainMesh.SetColorFromColorTableIndex(inX, inY, inIndex); }
 }

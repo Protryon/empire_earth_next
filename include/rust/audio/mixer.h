@@ -167,6 +167,73 @@ bool SPIMProcessMessage();
 /// `SPIMSetLatency`: the device's own.
 long SPIMSetLatency(unsigned long _milliseconds);
 
+/// `SPIMSetOutputDevice`: the device the next activation opens (NULL: the default).
+///
+/// # Safety
+/// `name` is NULL or NUL-terminated.
+void SPIMSetOutputDevice(const char *name);
+
+/// `SPIMGetOutputDevices`: the playback devices' names, 128 bytes apart.
+///
+/// # Safety
+/// `out` is writable for `capacity` names of 128 bytes.
+unsigned long SPIMGetOutputDevices(char (*out)[128], unsigned long capacity);
+
+/// `SPIMActivateMixer`: opens the playback device (the chosen output, else the default, else the null device; the
+/// null device alone in the headless simulation) and the mixer at its rate.
+long SPIMActivateMixer();
+
+/// `SPIMDeactivateMixer`: the channels, then the device.
+long SPIMDeactivateMixer();
+
+/// `SPIMInitializeMixer`: the window is not needed (the device is cpal's).
+void SPIMInitializeMixer(void *_window);
+
+/// The plug-in's check (`SEMixer::IsValid`, `ee_soundcpp_module_is_valid`): it activates, and is deactivated again.
+bool ee_mixer_plugin_is_valid();
+
+/// `SPIMDuplicateSample`: a copy of the sample sharing its wave data (one more reference; none when the original's
+/// wave did not load).
+///
+/// # Safety
+/// `sample` is a live sample, `out` writable.
+long SPIMDuplicateSample(void *sample,
+                         void **out);
+
+/// `SPIMLoadWaveData`: the sound file (from disk, or a memory file's bytes) decoded into the sample, its name, its
+/// format and length set; `kSPIMNativeError` when the file cannot be read, `kSPIMFailed` when it cannot be decoded.
+///
+/// # Safety
+/// `spec` is a live `FSFileSpec`, `sample` a live sample.
+long SPIMLoadWaveData(void *spec,
+                      void *sample);
+
+/// The plug-in's entry point of that name (the mixer looks its SPIM entries up by name; every plug-in is linked
+/// in, and the mixer is the one sound plug-in); NULL for another name.
+///
+/// # Safety
+/// `name` is NUL-terminated.
+void *ee_soundcpp_module_entry(void *_module,
+                               const char *name);
+
+/// `ee_soundcpp_module_is_valid`: the mixer's check.
+bool ee_soundcpp_module_is_valid(void *_module);
+
+/// The plug-in is linked in: nothing to unload.
+void ee_soundcpp_module_unload(void *_module);
+
+/// The first (and only) sound plug-in: this one (`SEMixerStart::mModule` a non-null marker).
+///
+/// # Safety
+/// `start` is a live `SEMixerStart` (`EeSoundMixerStart`).
+int32_t ee_soundcpp_first_module(void *start);
+
+/// No more plug-ins (`kErrorNoMoreFiles`).
+///
+/// # Safety
+/// As [`ee_soundcpp_first_module`].
+int32_t ee_soundcpp_next_module(void *start);
+
 }  // extern "C"
 
 #endif  // EE_RUST_AUDIO_MIXER_H
