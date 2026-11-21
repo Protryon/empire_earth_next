@@ -72,6 +72,14 @@ struct EeFsFileCalls {
                          unsigned long *written);
   /// `Write(const char*, length, written)`.
   int32_t (*write_text)(void *file, const char *data, unsigned long length, unsigned long *written);
+  /// `Read(int32_t&)`.
+  int32_t (*read_i32)(void *file, int32_t *value);
+  /// `Read(float&)`.
+  int32_t (*read_f32)(void *file, float *value);
+  /// `Write(const int32_t&)`.
+  int32_t (*write_i32)(void *file, int32_t value);
+  /// `Write(const float&)`.
+  int32_t (*write_f32)(void *file, float value);
 };
 
 /// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
@@ -240,6 +248,20 @@ long ee_fs_arch_extract_all(EeFsArchiveObj *a,
 /// # Safety
 /// `calls` lives for the rest of the process.
 bool ee_fs_file_register(const EeFsFileCalls *calls);
+
+/// `FSFile::Read(long&)`: through a 32-bit copy that starts as the old value and is stored back even when the read
+/// fails (`Read(int32_t&)`; 4 bytes on every data model).
+///
+/// # Safety
+/// `file` is a live C++ `FSFile*`; `value` is valid.
+long ee_fs_read_long(void *file,
+                     long *value);
+
+/// `FSFile::Read(unsigned long&)`: as [`ee_fs_read_long`] through `Read(uint32_t&)`.
+///
+/// # Safety
+/// As [`ee_fs_read_long`].
+long ee_fs_read_ulong(void *file, unsigned long *value);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);

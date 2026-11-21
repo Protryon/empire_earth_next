@@ -13,6 +13,7 @@
 #ifndef LLE_FSFILE_H
 #define LLE_FSFILE_H
 #include "rust/base/lle_enums.h"
+#include "rust/base/fs.h"
 
 #include <stdint.h>
 #include "lle/UString.h"       // their Load and Save (below)
@@ -75,20 +76,8 @@ public:
     // long/unsigned long: 4 bytes in the file on every data model (see the top). The value goes through a 32-bit
     // copy that starts as the old value and is stored back even when the read fails, so a short read leaves what
     // the direct 4-byte read left on Windows. Derived classes bring these in with `using FSFile::Read/Write`.
-    long Read(long& outValue)
-    {
-        int32_t theValue = static_cast<int32_t>(outValue);
-        long theResult = this->Read(theValue);
-        outValue = theValue;
-        return theResult;
-    }
-    long Read(unsigned long& outValue)
-    {
-        uint32_t theValue = static_cast<uint32_t>(outValue);
-        long theResult = this->Read(theValue);
-        outValue = theValue;
-        return theResult;
-    }
+    long Read(long& outValue) { return ee_fs_read_long(this, &outValue); }   // (ee_base fs cppfile.rs)
+    long Read(unsigned long& outValue) { return ee_fs_read_ulong(this, &outValue); }
     long Write(const long& inValue) { return this->Write(static_cast<int32_t>(inValue)); }
     long Write(const unsigned long& inValue) { return this->Write(static_cast<uint32_t>(inValue)); }
 };

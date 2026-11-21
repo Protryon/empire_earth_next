@@ -6,6 +6,8 @@
 
 use std::ffi::{c_long, c_void};
 
+use crate::fs::cppfile::{ee_fs_read_long, CppFile};
+
 use crate::math::types::{Ge3DLine, Ge3DPoint, GeVector};
 
 /// `U2DPoint<long>::GetLineTiles(inTo, inStep, outTiles)`: from this tile towards `to` in steps of `step` tiles,
@@ -168,6 +170,57 @@ pub unsafe extern "C" fn ee_u2d_rect_closest_point(rect: *const [f32; 4], point:
     }
 }
 
+/// The C++ `kErrorNotOpen`.
+const ERROR_NOT_OPEN: c_long = 4;
+
+/// The rectangle's members in their order (bottom, left, right, top), as `U2DRectangle<long>` or `<float>` holds
+/// them.
+#[derive(Clone, Copy)]
+enum RectFields {
+    Long(*mut [c_long; 4]),
+    Float(*mut [f32; 4]),
+}
+
+/// `U2DRectangle<T>::Load` / `Save`: left, top, right, bottom through the file's typed calls (`Read(long&)`'s
+/// 32-bit copy, or `Read(float&)`), the first error ending it; `kErrorNotOpen` when the file is not open.
+fn rect_io(file: &mut CppFile, open: bool, fields: RectFields, write: bool) -> c_long {
+    if !open {
+        return ERROR_NOT_OPEN;
+    }
+    for i in [1, 3, 2, 0] {
+        // SAFETY: the rectangle is valid for the call (the FFI's contract)
+        let status = unsafe {
+            match (fields, write) {
+                (RectFields::Long(r), false) => ee_fs_read_long(file.0, &mut (*r)[i]),
+                (RectFields::Long(r), true) => file.write_i32((*r)[i] as i32) as c_long,
+                (RectFields::Float(r), false) => file.read_f32(&mut (*r)[i]) as c_long,
+                (RectFields::Float(r), true) => file.write_f32((*r)[i]) as c_long,
+            }
+        };
+        if status != 0 {
+            return status;
+        }
+    }
+    0
+}
+
+/// `U2DRectangle<T>::Load` (`write` false) and `Save` over a C++ `FSFile*` whose `GetIsOpen()` is `open`; `rect`
+/// is the rectangle (four `long`s, or with `float` four floats).
+///
+/// # Safety
+/// `file` is a live C++ `FSFile*`; `rect` points at the four members.
+#[no_mangle]
+pub unsafe extern "C" fn ee_u2d_rect_io(
+    file: *mut c_void,
+    open: bool,
+    rect: *mut c_void,
+    float: bool,
+    write: bool,
+) -> c_long {
+    let fields = if float { RectFields::Float(rect.cast()) } else { RectFields::Long(rect.cast()) };
+    rect_io(&mut CppFile(file), open, fields, write)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,5 +261,32 @@ mod tests {
         assert_eq!(closest_corner(r, [-1.0, 5.0]), ([0.0, 4.0], [10.0, 4.0], [0.0, 0.0]));
         assert_eq!(closest_corner(r, [11.0, -1.0]), ([10.0, 0.0], [0.0, 0.0], [10.0, 4.0]));
         assert_eq!(closest_corner(r, [11.0, 5.0]), ([10.0, 4.0], [0.0, 4.0], [10.0, 0.0]));
+    }
+
+    #[test]
+    fn a_rectangle_loads_and_saves_left_top_right_bottom() {
+        use crate::fs::cppfile::tests::with_file;
+        // bottom, left, right, top in memory; left, top, right, bottom in the file
+        let mut longs: [c_long; 4] = [4, 1, 3, -2];
+        let ((), m) = with_file(&[], |f| {
+            // SAFETY: a registered file, a valid rectangle
+            assert_eq!(unsafe { ee_u2d_rect_io(f.0, true, longs.as_mut_ptr().cast(), false, true) }, 0);
+        });
+        assert_eq!(m.log, ["write_i32 1", "write_i32 -2", "write_i32 3", "write_i32 4"]);
+        let mut back: [c_long; 4] = [0; 4];
+        let ((), m) = with_file(&m.data, |f| {
+            // SAFETY: as above
+            assert_eq!(unsafe { ee_u2d_rect_io(f.0, true, back.as_mut_ptr().cast(), false, false) }, 0);
+        });
+        assert_eq!((back, m.log.len()), (longs, 4));
+        // a short file: the first error, the fields after it untouched; not open: 4 and nothing read
+        let mut floats: [f32; 4] = [9.0; 4];
+        let ((), m) = with_file(&1.5f32.to_bits().to_le_bytes(), |f| {
+            // SAFETY: as above
+            assert_eq!(unsafe { ee_u2d_rect_io(f.0, true, floats.as_mut_ptr().cast(), true, false) }, 0x12);
+            assert_eq!(unsafe { ee_u2d_rect_io(f.0, false, floats.as_mut_ptr().cast(), true, false) }, 4);
+        });
+        assert_eq!(floats, [9.0, 1.5, 9.0, 9.0]);
+        assert_eq!(m.log, ["read_f32", "read_f32"]);
     }
 }

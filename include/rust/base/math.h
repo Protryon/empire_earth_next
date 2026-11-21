@@ -504,6 +504,17 @@ void ee_u2d_rect_closest_point(const float (*rect)[4],
                                const float (*point)[2],
                                float (*out)[2]);
 
+/// `U2DRectangle<T>::Load` (`write` false) and `Save` over a C++ `FSFile*` whose `GetIsOpen()` is `open`; `rect`
+/// is the rectangle (four `long`s, or with `float` four floats).
+///
+/// # Safety
+/// `file` is a live C++ `FSFile*`; `rect` points at the four members.
+long ee_u2d_rect_io(void *file,
+                    bool open,
+                    void *rect,
+                    bool float_,
+                    bool write);
+
 }  // extern "C"
 
 #endif  // EE_RUST_BASE_MATH_H
