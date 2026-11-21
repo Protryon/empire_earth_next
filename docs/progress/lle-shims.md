@@ -37,6 +37,13 @@ pool's five host functions; 5 deleted (the mixer plug-in's `ee_soundcpp_*` modul
 lane's scope (src/Low-Level Engine but User Interface, include/lle but UI*, src/RTS Engine) the logic went from
 6,281 to 4,592 (-1,689).
 
+## Gates (on the tree merged with origin/rust a84903ce6)
+
+Both builds and the test profile 0/0; the Rust gate PASS (5,336 tests); oracle seeds 2-7 identical; the twelve
+capture profiles PASS (seeds 2-3); the plain saveload PASS and the matrix exit 0 (`saveload expect: PASS`);
+scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS; the tour and the
+box-select/orders game PASS; gates.sh GATES PASS (lan-game included). Details: PORT_LEARNINGS.md "LLE round 8".
+
 ## What is left, by directory
 
 - src/RTS Engine: RTSMap.cpp (most of its bodies are EEMap's, game core round 8's; the rest are forwarders to
