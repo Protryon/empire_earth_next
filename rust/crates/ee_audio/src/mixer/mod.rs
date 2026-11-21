@@ -13,4 +13,7 @@ pub mod device;
 #[cfg(not(test))]
 pub mod ffi;
 
+/// cbindgen:ignore
+pub mod plugin;
+
 pub use mixer::{file_frame_bytes, Mixer, SampleData, SampleHost, CHANNEL_NONE};
