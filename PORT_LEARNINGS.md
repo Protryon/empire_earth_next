@@ -36873,3 +36873,90 @@ PORT_LEARNINGS.md's appended sections, both kept; strip_markers --check 0 files;
   duplicated by the merge and dropped, this section moved to the end); on the merged tree both builds 0/0 (EE-AOC
   414 inputs, EE-SIM 415), the test profile 0/0, the header current (293), the oracle seeds 2-7 identical, the
   Rust gate PASS (5,331 tests). The captures, saveload, tours and gates.sh ran on the batch 11 merge (above).
+
+## The scenario editor lane, round 5: the id tables as Rust constants, the scenario manager's glue and EESMArea whole in Rust, the editor actions' and the form's sequences composed in Rust (ee_sim scenario ids.rs, entry.rs, area_fields.rs; ee_game editor_ids.rs, editor_seax.rs, editor_cpp_consts_tests.rs; branch rust-seditor5, 2026-11-21)
+
+The brief: finish the lane (the remaining ~1,600 logic lines in `.cpp` and ~900 in headers, the id tables
+included), give the AI lane a Rust accessor for EESMArea's rectangle, sweep the lane's shims whose callers are now
+Rust. The id step went first on the round's branch; three forks (sm: the Scenario Manager; act: the Scenario Editor
+Actions; ed: the Scenario Editor) worked from it in sibling worktrees, each with its op ranges given up front and one
+shared lock for heavy jobs. **Logic lines -1,780** (`logic_lines.py`: 68,443 at 016e37451 -> 66,663 at the forks'
+merge d225f0198, before origin/rust), net C++ lines -1,505 (+1,397 / -2,902), Rust +4,832. The lane's own C++ went
+from about 3,220 logic lines (`.cpp` and headers) to about 1,440.
+
+### What moved (commits)
+
+| Commit | What | Logic | Net C++ |
+|---|---|---|---|
+| c0884d2e6 | `ee/EEScenarioIDs.h` (248) and `ee/EEScenarioEditorIDs.h` (151) as Rust constants (`scenario::ids`, `editor_ids.rs`) | -443 | -604 |
+| b29dfee75, 372b35deb (sm) | the elements' glue whole in Rust (`entry.rs`): Load/Save of every element and the manager, the Copy methods, Reset, Update, Prepare, the list operations, the text export/import, ListMediaFiles, every capture wrapper; `EESMArea` whole (`area_fields.rs`: its numbers a record the class derives from); `EESMDialogMessage`'s numbers; `EEEventEffect` as Rust's `EeScenarioEvEffect` | -528 | -500 |
+| 98413f652, fa1647df1 (act) | the actions' hosts (sea, sew, sep, seu) composed over `ee_screenscpp_seax` (`editor_seax.rs`; 16 tests); the tile units, the bulldozer's remove, the elevation file read and the unit pick whole in Rust; `ee/EESEARust.h`'s kinds as the Rust constants | -460 | -66 |
+| cb537369f, 60f37f062, ba1230ad6 (ed) | the static_asserts against C++ constants as `editor_cpp_consts_tests.rs` (it reads the C++ headers); the form's constructor, CopyData, UpdateKeyboard and UpdateMouse, the build tools' Cancel, the brush group's destructor and the unit tab's lists composed in Rust; one shared handle/text writer (`EESEOut`/`EESEWrite`) for the seven statement hosts | -359 | -345 |
+
+### For the AI lane
+
+`size_t ee_scenario_area_region_inputs(EeScenarioArea* inputs, long* ids, size_t capacity)` (C; fills only when the
+areas fit and returns their count) and `ee_sim::scenario::entry::region_inputs()` (Rust) give BuildRegions' scenario
+inputs exactly as EEAIContinentManager.cpp builds them: set when the area exists and has an anchor, the rectangle's
+sides, height = bottom - top, width = right - left, the id (0 for no area). The AI file is unchanged.
+
+### Lessons
+
+- **An id table can leave C++ entirely when its users take the Rust names.** The two reconstruction headers had about
+  130 uses in C++, all in a handful of files; a generator turned each `kSMEffectObject` into
+  `EE_SCENARIO_SM_EFFECT_OBJECT` (the evidence comments became docs), renamed the uses and deleted the headers. The
+  enum type names were unused. Check the generated names against every existing exported name first (none clashed).
+- **A static_assert between two Rust constants is moot; one against a C++ constant is a test.** The forks deleted the
+  first kind and ed moved the second into a Rust test that reads the C++ headers (`ee/EEStringIDs.h`,
+  `lle/UIControl.h`, ...), so the checks survive without C++ lines.
+- **Renames in another fork's files conflict on every touched line.** act renamed `kSEA*`/`kSEE*` in ed's files while
+  ed rewrote the same lines (`SexOut` -> `EESEOut`): the merge took ed's side and re-applied act's renames by a
+  name map, and ed's deletion of the static_asserts made act's leftover self-comparison (`X == X`) disappear with them.
+- **`sim_capture.py check` needs the run's `--seeds`.** A check without `--seeds 2-3` after a run at seeds 2-3 reads
+  the missing seeds as empty digests (`got ''`) and fails; the round's first capture chain failed that way and was
+  rerun.
+- **A merged branch that is not yet in origin/rust counts twice.** Round 4 (016e37451) was not in origin/rust 439543b4b,
+  so a logic count from origin/rust to the merged tip includes round 4's -3,090; the round's own number is its base
+  (016e37451) against the forks' merge before origin/rust came in.
+- **A fork that changes a struct `eedata` reads must run `eedata.py check`.** Fork sm made `EEEventEffect` a typedef
+  of Rust's `EeScenarioEvEffect`; every build, oracle, capture and saveload passed, but `check` failed ("struct
+  EEEventEffect not found": specgen and the overlay parse the C++ header for dbeffects' record layout). 1e368df56 points
+  them at the Rust struct. The per-commit gates do not run `check`; a change to a record the db tables describe needs
+  it (and `cppgate`) before the merge.
+
+### What exercises what
+
+- The oracle runs `EEScenarioManager::Update` (now Rust's entry) and EEEvent's handlers in every game; the scenario
+  capture profile and scenario_check run the elements' Load/Save, the effects, the area queries and the capture
+  wrappers; the saveloads save and load the manager.
+- The editor gate drives the form, the tabs, the trigger screens, terrain, placement and the actions' hosts through
+  EE-SIM without drawing; the editor tour draws the editor.
+- Only a person reaches: the actions' pause and resume (the renderer and the locks), the elevation file read, real
+  mouse picks and the lasso, drag paints, ghost placement at the mouse, the area screen's anchor and rectangle
+  setters, the campaign media listing, the text export/import dialogs, the drawing of every tab past the first frame.
+
+### Behaviour changes
+
+- The elevation file pair is opened once (the old two-pass capacity retry went); a malformed `.txt` is parsed only up
+  to the bytes read (the original `sscanf` could read past them into an uninitialised buffer).
+- ListMediaFiles' failed scenario-name check reports through ESVerify with slightly different text.
+- `EESMArea`'s and `EESMDialogMessage`'s member order inside the class changed (the numbers are a base record); saves
+  go through save.rs and are unchanged.
+
+### Gates
+
+On the merged tree (origin/rust 439543b4b in; tip after 1e368df56):
+
+- `build.py --sim` and `--test-profile windowed-software`: 0 unresolved, 0 duplicates (EE-AOC 414 inputs, EE-SIM 415).
+- `rust_build.py gate`: PASS, 5,598 tests (ee_sim `scenario::` 240); clippy clean.
+- `sim_oracle.py`: seeds 2-7 identical to ref (after the eedata fix again at seeds 2-3: 6,087 and 5,300 lines).
+- `sim_capture.py` at seeds 2-3, 12 profiles (oracle, late, space, calamity, missile, effects, scenario, app, units,
+  groups, placement, transport): PASS (scenario: 43 digests equal to the C++ golden, rerun after the eedata fix).
+- saveload plain (every save point identical) and matrix `--expect`: PASS.
+- `scenario_check`: 27/27. `sim_editor`: PASS (14,448 lines) and `--civbuilder` PASS (4,062 lines).
+- `eedata.py check` and `cppgate`: PASS (after 1e368df56).
+- The editor tour (`fixture_game.py --exercise editor`), round 5 against its base: RESULT PASS both; the menu frames
+  differ only in the build-number label, the editor frame's grass variants differ between two runs of the base too
+  (the blank map's tile variants vary from run to run), the UI state files are equal but for pid and clock.
+- `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12731, game_s 795, units [4, 39, 40], alive_computers
+  [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2950, joiner 2948).
