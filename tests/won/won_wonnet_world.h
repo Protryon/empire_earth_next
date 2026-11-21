@@ -13,6 +13,9 @@
 #include <list>
 #include <map>
 #include <functional>
+#include "rust/won_net/reqdir.h"
+#include "rust/won_net/routeop.h"
+#include "rust/won_net/smartroute.h"
 
 namespace W {
 static std::vector<std::string> sTrace;
