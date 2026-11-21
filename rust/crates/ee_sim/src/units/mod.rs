@@ -63,6 +63,8 @@ pub mod dop_file;
 pub mod dop_load;
 pub mod dop_repair;
 pub mod dry;
+pub mod eu_body;
+pub mod eu_hit;
 pub mod explore;
 pub mod ffi;
 pub mod game_over;
