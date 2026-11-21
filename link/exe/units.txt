@@ -1,7 +1,6 @@
 052f3 05d47 Empire Earth/Actions/EEAWonNet.cpp
 0f53b 10bc7 Empire Earth/AI Thread/EEAIAStarBoundedPathGoalModifiers.cpp
 1ed2c 29f57 Empire Earth/AI Thread/EEAIContinentManager.cpp
-29f57 2bb72 Empire Earth/AI Thread/EEAIFunctionObjects.cpp
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp
 2cc87 2ce2e Empire Earth/AI Thread/EEArtificialIntelligence.cpp
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp
@@ -126,8 +125,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 205eda 20834c Empire Earth/Units/EEGroup.cpp
 20834c 208c37 Empire Earth/Units/EESightRings.cpp
 208c37 208e6b Empire Earth/Graphics Thread/EEOrbital.cpp
-208e6b 209008 Empire Earth/Units/EESavedGroup.cpp
-209008 20a279 Empire Earth/Units/EESelectedGroup.cpp
 228c4c 22a509 Empire Earth/Units/EEUnit.cpp
 22a509 22d95f Empire Earth/Units/EEUnitAction.cpp
 22d95f 22f272 Empire Earth/Units/EEUnitAI.cpp

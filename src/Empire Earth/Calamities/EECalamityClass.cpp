@@ -13,6 +13,7 @@
 #include "ee/EECalamityUpdate.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
+#include "rust/game/gamecpp.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEMedia.h"
@@ -52,15 +53,7 @@ long EECalamityClass::GetCost()
 // Returns the id of the unit under the mouse for a unit class, -1 if none (and for the other classes)
 long EECalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool)
 {
-    long theUnitID = -1;
-    if (this->GetTargetKind() != EE_CALAMITY_TARGET_UNIT)
-        return theUnitID;
-    EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
-    if (theUnit != NULL) {
-        theUnitID = theUnit->mUnitID;
-        theUnit->Dereference();
-    }
-    return theUnitID;
+    return ee_gamecpp_calamity_class_default_target(this);   // (ee_game gamecpp calamity_objects.rs)
 }
 
 // Returns the unit set the calamity affects
@@ -73,21 +66,7 @@ unsigned long EECalamityClass::GetUnitSet()
 // volcano's sample unloaded; ee_tech calamity_class.rs media_step)
 EECalamityClass::~EECalamityClass()
 {
-    EEGraphicEffect* theEffects[4] = {this->mGraphicEffect1, this->mGraphicEffect2, this->mGraphicEffect3,
-                                      this->mGraphicEffect4};
-    for (uint32_t i = 0;; i++) {
-        uint32_t theStep = ee_calamity_class_media_step((int32_t)this->mClassEnum, EE_CALAMITY_MEDIA_DESTROY, i);
-        if (theStep == EE_CALAMITY_STEP_END)
-            break;
-        if (theStep >= EE_CALAMITY_STEP_EFFECT1 && theStep < EE_CALAMITY_STEP_EFFECT1 + 4) {
-            if (theEffects[theStep - EE_CALAMITY_STEP_EFFECT1] != NULL)
-                theEffects[theStep - EE_CALAMITY_STEP_EFFECT1]->Dereference();
-        } else if (theStep == EE_CALAMITY_STEP_FUNCTOR) {
-            delete this->mFunctor;
-            this->mFunctor = NULL;
-        } else if (theStep == EE_CALAMITY_STEP_SAMPLE && this->mSound != NULL)
-            gSoundManager->Unload(this->mSound->GetSampleID());
-    }
+    ee_gamecpp_calamity_class_media_list(this, EE_CALAMITY_MEDIA_DESTROY, NULL, false);
 }
 
 // Reads the calamity data: the common fields (class, lifetime, unit set, cost, range, immunity and
@@ -95,73 +74,26 @@ EECalamityClass::~EECalamityClass()
 // its numbers, its contagion functor (ee_tech calamity_class.rs)
 void EECalamityClass::Initialize(EECalamityData* inData)
 {
-    const EeCalamityData* theData = reinterpret_cast<const EeCalamityData*>(inData);
-    ee_calamity_class_initialize_base(this, theData);
-    const int32_t theIDs[6] = {inData->mGraphicEffectID1, inData->mGraphicEffectID2, inData->mGraphicEffectID3,
-                               inData->mGraphicEffectID4, inData->mSoundID, inData->mSecondarySoundID};
-    EEGraphicEffect** theEffects[4] = {&this->mGraphicEffect1, &this->mGraphicEffect2, &this->mGraphicEffect3,
-                                       &this->mGraphicEffect4};
-    for (uint32_t i = 0; i < 6; i++) {
-        if (!ee_calamity_class_fetches(ee_calamity_class_get_mode(inData->mClassEnum, i), theIDs[i]))
-            continue;
-        if (i < 4) {
-            *theEffects[i] = EEGraphicEffect::Get(theIDs[i]);
-            if (*theEffects[i] != NULL)
-                (*theEffects[i])->Reference();
-        } else if (i == 4)
-            this->mSound = EESoundObject::Get(theIDs[i]);
-        else
-            this->mSecondarySound = EESoundObject::Get(theIDs[i]);
-    }
-    EeCalamityClassMedia theMedia;
-    this->GetMedia(theMedia);
-    ee_calamity_class_fill(this, theData, &theMedia);
-    uint32_t theKind = ee_calamity_class_functor_kind(inData->mClassEnum);
-    if (theKind != EE_CALAMITY_FUNCTOR_NONE)
-        this->mFunctor = new EEContagionFunctor(this, theKind);
+    ee_gamecpp_calamity_class_initialize(this, reinterpret_cast<const EeCalamityData*>(inData));
 }
 
 // New (port): the class's effects (whether set, duration, size, delay) and sounds for the Rust tables
 void EECalamityClass::GetMedia(EeCalamityClassMedia& outMedia)
 {
-    outMedia = EeCalamityClassMedia();
-    EEGraphicEffect* theEffects[4] = {this->mGraphicEffect1, this->mGraphicEffect2, this->mGraphicEffect3,
-                                      this->mGraphicEffect4};
-    for (uint32_t i = 0; i < 4; i++) {
-        if (theEffects[i] == NULL)
-            continue;
-        outMedia.present |= EE_CALAMITY_MEDIA_EFFECT1 << i;
-        outMedia.duration[i] = (uint32_t)theEffects[i]->mDuration;
-        outMedia.size[i] = theEffects[i]->GetSize();
-        outMedia.time1[i] = (uint32_t)theEffects[i]->mTime1;
-    }
-    if (this->mSound != NULL)
-        outMedia.present |= EE_CALAMITY_MEDIA_SOUND;
-    if (this->mSecondarySound != NULL)
-        outMedia.present |= EE_CALAMITY_MEDIA_SECONDARY_SOUND;
+    ee_gamecpp_calamity_class_get_media(this, &outMedia);
 }
 
 // The class's Start: its parameters and sounds (ee_tech calamity_class.rs run), the decisions in Rust (ee_tech
 // calamity_start.rs; ee/EECalamityUpdate.h), the world steps the class's (EECalamityUpdate.cpp)
 bool EECalamityClass::Start(EECalamity* inCalamity)
 {
-    EeCalamityClassMedia theMedia;
-    this->GetMedia(theMedia);
-    EeCalamityClassRun theRun = ee_calamity_class_run(this, &theMedia, EE_CALAMITY_RUN_START);
-    return EECalamityRunStart(this, inCalamity, theRun.params, (theRun.sounds & EE_CALAMITY_RUN_SOUND) ? this->mSound : NULL,
-                              (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL);
+    return ee_gamecpp_calamity_class_run(this, inCalamity, EE_CALAMITY_RUN_START, 0.0f) != 0;
 }
 
 // The class's Stop (none for the classes whose Stop was empty), as Start
 void EECalamityClass::Stop(EECalamity* inCalamity)
 {
-    EeCalamityClassMedia theMedia;
-    this->GetMedia(theMedia);
-    EeCalamityClassRun theRun = ee_calamity_class_run(this, &theMedia, EE_CALAMITY_RUN_STOP);
-    if (!theRun.runs)
-        return;
-    EECalamityRunStop(this, inCalamity, theRun.params, (theRun.sounds & EE_CALAMITY_RUN_SOUND) ? this->mSound : NULL,
-                      (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL);
+    ee_gamecpp_calamity_class_run(this, inCalamity, EE_CALAMITY_RUN_STOP, 0.0f);
 }
 
 // The class's Update: its parameters (ee_tech calamity_class.rs run; the game variant's earthquake damage factor),
@@ -169,44 +101,14 @@ void EECalamityClass::Stop(EECalamity* inCalamity)
 // the calamity is over
 long EECalamityClass::Update(EECalamity* inCalamity, float inElapsedTime)
 {
-    EeCalamityClassMedia theMedia;
-    this->GetMedia(theMedia);
-    theMedia.quake_damage_factor = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->GetEarthquakeDamageFactor();
-    EeCalamityClassRun theRun = ee_calamity_class_run(this, &theMedia, EE_CALAMITY_RUN_UPDATE);
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theRun.params,
-                               (theRun.sounds & EE_CALAMITY_RUN_SOUND) ? this->mSound : NULL,
-                               (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL);
+    return ee_gamecpp_calamity_class_run(this, inCalamity, EE_CALAMITY_RUN_UPDATE, inElapsedTime);
 }
 
 // The class's Reset of a new calamity: its placeholders (ee_tech calamity_class.rs reset), the time warp's target
 // tile, the fire's and the plague's contagion helper on the target
 void EECalamityClass::Reset(EECalamity* inCalamity)
 {
-    EeCalamityReset theReset = EeCalamityReset();
-    EEUnit* theTargetUnit = NULL;
-    theReset.has_target = inCalamity->GetTargetUnit(theTargetUnit);
-    if (theReset.has_target && theTargetUnit->mComplexUnit != NULL) {
-        theReset.target_tile_x = theTargetUnit->mComplexUnit->mTileX;
-        theReset.target_tile_y = theTargetUnit->mComplexUnit->mTileY;
-        theReset.target_hit_points = theTargetUnit->mComplexUnit->mHitPoints;
-    }
-    theReset.bool1 = inCalamity->mBoolPlaceHolder1;
-    theReset.bool2 = inCalamity->mBoolPlaceHolder2;
-    theReset.float1 = inCalamity->mFloatPlaceHolder1;
-    theReset.int1 = inCalamity->mIntPlaceHolder1;
-    theReset.int2 = inCalamity->mIntPlaceHolder2;
-    theReset.tile_x = (long)inCalamity->mTilePlaceHolder1.mX;
-    theReset.tile_y = (long)inCalamity->mTilePlaceHolder1.mY;
-    ee_calamity_class_reset((int32_t)this->mClassEnum, &theReset);
-    inCalamity->mBoolPlaceHolder1 = theReset.bool1;
-    inCalamity->mBoolPlaceHolder2 = theReset.bool2;
-    inCalamity->mFloatPlaceHolder1 = theReset.float1;
-    inCalamity->mIntPlaceHolder1 = theReset.int1;
-    inCalamity->mIntPlaceHolder2 = theReset.int2;
-    inCalamity->mTilePlaceHolder1.SetXY(theReset.tile_x, theReset.tile_y);
-    if (theReset.create_helper)
-        inCalamity->mIntPlaceHolder1 = ::gWorld.GetContagionManager()->CreateContagionHelper(this->mFunctor, inCalamity,
-                                                                                             theTargetUnit);
+    ee_gamecpp_calamity_class_reset(this, inCalamity);
 }
 
 // Updates the calamity's main or secondary sound for the target location with the given falloff; a volume other than
@@ -214,22 +116,7 @@ void EECalamityClass::Reset(EECalamity* inCalamity)
 void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff,
                                   bool inPrimary)
 {
-    GE3DPoint theLocation;
-    theLocation = inCalamity->mTargetLocation;
-    SESMInstanceNode* theNode;
-    if (inPrimary)
-        theNode = inCalamity->mSound;
-    else
-        theNode = inCalamity->mSecondarySound;
-    if (theNode == NULL)
-        return;
-    float theVolume;
-    float thePan;
-    float thePitch;
-    EEComputeSoundParameters(inSound->GetVolume(), theLocation, theVolume, thePan, thePitch, inFalloff);
-    if (inVolume != -1.0f)
-        theVolume = (1.0f < inVolume) ? 1.0f : max(0.0f, inVolume);
-    gSoundManager->SetSoundParameters(theNode, theVolume, thePan, thePitch);
+    ee_gamecpp_calamity_class_update_sound(inCalamity, inSound, inVolume, inFalloff, inPrimary);
 }
 
 // Returns 0 if the caster (or nature) is alive with enough power and sees the tile, 2 if immunity blocks it there,
@@ -237,51 +124,27 @@ void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound
 long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                 bool inCheck, EEUnit* inTargetUnit)
 {
-    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h), by the class's base
-    long theKind = this->GetTargetKind();
-    EeCalamityCastMode theMode = theKind == EE_CALAMITY_TARGET_GLOBAL     ? EeCalamityCastMode::Global
-                                 : theKind == EE_CALAMITY_TARGET_LOCATION ? EeCalamityCastMode::Location
-                                 : this->mClassEnum == kCalamitySpecialAttack ? EeCalamityCastMode::SpecialAttack
-                                                                              : EeCalamityCastMode::Unit;
-    EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
-    return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
-                             EECalamityCanCastAt(this, theMode, inUnit, inX, inY, inCheck, inTargetUnit));
+    return ee_gamecpp_calamity_class_can_cast(this, inUnit, (const float(*)[3])&inLocation.mX, inX, inY, inCheck, inTargetUnit);
 }
 
 // A location class's IsValidLocation: the shared rule over the class's radius, water flag, map area, space terrain
 // and placed unit class (ee_tech calamity_cast.rs, calamity_class.rs cast_fields)
 bool EECalamityClass::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    long theUnitClass = ee_calamity_class_cast_fields(this, &theCast, kTerrainSpace);
-    return EECalamityValidLocation(this, theCast, inUnit, theUnitClass);
+    return ee_gamecpp_calamity_class_valid_location(this, inUnit, inX, inY);
 }
 
 // A unit class's IsValidTarget: the fire's and the plague's functor decides (CanInfect), the other classes' the shared
 // rule (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
 bool EECalamityClass::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
-    if (ee_calamity_class_targets_by_functor((int32_t)this->mClassEnum))
-        return this->mFunctor->CanInfect(inTargetUnit);
-    return EECalamityValidTarget(this, inUnit, inTargetUnit);
+    return ee_gamecpp_calamity_class_valid_target(this, inUnit, inTargetUnit);
 }
 
 // Picks a random point on the map between the minimum and maximum radius around the centre, at the tile's height
 void EECalamityClass::GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation)
 {
-    EEMapTile* theTile;
-    do {
-        float theAngle = gPhysics->mRandom.Generate() * 6.2831855f - 3.1415927f;
-        float theFraction = gPhysics->mRandom.Generate();
-        float theCos = UMCos(theAngle);
-        float theSin = UMCos(1.5707964f - theAngle);
-        float theDistance = (1.0f - theFraction) * this->mMinimumRadius + theFraction * this->mMaximumRadius;
-        outLocation.SetX(theCos * theDistance);
-        outLocation.SetY(theSin * theDistance);
-        outLocation += inCenter;
-        theTile = ::gWorld.mMap->GetTile(UMFloor(outLocation.GetX()), UMFloor(outLocation.GetY()));
-    } while (theTile == NULL);
-    outLocation.SetZ(theTile->mHeight);
+    ee_gamecpp_calamity_class_random_location(this, (const float(*)[3])&inCenter.mX, (float(*)[3])&outLocation.mX);
 }
 
 // (the base's: every class's own, by tables keyed by its enum)
@@ -291,59 +154,18 @@ class EEContagionFunctor * EECalamityClass::GetContagionFunctor()
     return this->mFunctor;
 }
 
-namespace {
-
-// runs one of the class's media lists (ee_tech calamity_class.rs media_step) for LoadMedia or UnloadMedia
-void MediaSteps(EECalamityClass* inClass, uint32_t inList, EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    EEGraphicEffect* theEffects[4] = {inClass->mGraphicEffect1, inClass->mGraphicEffect2, inClass->mGraphicEffect3,
-                                      inClass->mGraphicEffect4};
-    bool theLoad = inList == EE_CALAMITY_MEDIA_LOAD;
-    for (uint32_t i = 0;; i++) {
-        uint32_t theStep = ee_calamity_class_media_step((int32_t)inClass->mClassEnum, inList, i);
-        if (theStep == EE_CALAMITY_STEP_END)
-            break;
-        if (theStep >= EE_CALAMITY_STEP_EFFECT1 && theStep < EE_CALAMITY_STEP_EFFECT1 + 4) {
-            EEGraphicEffect* theEffect = theEffects[theStep - EE_CALAMITY_STEP_EFFECT1];
-            if (theEffect != NULL && theLoad)
-                theEffect->Load(inIsOnDemand);
-            else if (theEffect != NULL)
-                theEffect->Unload();
-        } else if (theStep == EE_CALAMITY_STEP_SOUND || theStep == EE_CALAMITY_STEP_SECONDARY_SOUND) {
-            EESoundObject* theSound = theStep == EE_CALAMITY_STEP_SOUND ? inClass->mSound : inClass->mSecondarySound;
-            if (theSound != NULL && theLoad)
-                theSound->LoadMedia();
-            else if (theSound != NULL)
-                theSound->UnloadMedia();
-        } else if (theStep == EE_CALAMITY_STEP_UNIT_MEDIA && theLoad) {
-            if (inIsOnDemand == true)
-                inPlayer->LoadUnitClassMedia(inClass->mUnitClassIndex);
-            inPlayer->SetUnitClassMedia(inClass->mUnitClassIndex, 0x7f);
-        } else if (theStep == EE_CALAMITY_STEP_UNIT_MEDIA)
-            inPlayer->UnloadUnitClassMedia(inClass->mUnitClassIndex);
-        else if (theStep == EE_CALAMITY_STEP_UNIT_BUTTONS && theLoad)
-            inPlayer->LoadUnitClassButtons(inClass->mUnitClassIndex);
-        else if (theStep == EE_CALAMITY_STEP_UNIT_BUTTONS)
-            inPlayer->UnloadUnitClassButtons(inClass->mUnitClassIndex);
-    }
-}
-
-}   // namespace
 
 // (the base's: every class's own, by tables keyed by its enum)
 // Loads the class's effects and sounds (and the unit class it places) in its order
 void EECalamityClass::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
 {
-    MediaSteps(this, EE_CALAMITY_MEDIA_LOAD, inPlayer, inIsOnDemand);
+    ee_gamecpp_calamity_class_media_list(this, EE_CALAMITY_MEDIA_LOAD, inPlayer, inIsOnDemand);
 }
 
 // The volcano makes units step aside from its site at the tile; nothing for the other classes
 void EECalamityClass::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    if (this->mClassEnum != kCalamityVolcano)
-        return;
-    EETileCoordinate theTile(inX, inY);
-    ee_units_uu_step_aside(0, (uint64_t)(uintptr_t)(gUnitClassTable[this->mUnitClassIndex]), (uint64_t)(uintptr_t)inUnit->mPlayer, theTile.mX, theTile.mY, 1);
+    ee_gamecpp_calamity_class_place(this, inUnit, inX, inY);
 }
 
 // Returns the game variant with the given index
@@ -359,25 +181,11 @@ EEGameVariant* EEGameVariant::GetGameVariant(long inIndex)
 // storm's once at the target (ee_tech calamity_class.rs sound_mode); nothing for the others
 void EECalamityClass::PlaySound(EECalamity* inCalamity)
 {
-    uint32_t theMode = ee_calamity_class_sound_mode((int32_t)this->mClassEnum);
-    if (theMode == EE_CALAMITY_PLAY_NODE) {
-        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(),
-                                                                        0.0f, 1.0f, this->mSound->GetLooping(), NULL));
-        if (inCalamity->mSound != NULL)
-            inCalamity->mSound->Dereference();
-    } else if (theMode == EE_CALAMITY_PLAY_AT_TARGET) {
-        GE3DPoint theLocation;
-        float theVolume;
-        float thePan;
-        float thePitch;
-        theLocation = inCalamity->mTargetLocation;
-        EEComputeSoundParameters(this->mSound->GetVolume(), theLocation, theVolume, thePan, thePitch, kCalamitySoundFalloff);
-        gSoundManager->Play(this->mSound->GetSampleID(), theVolume, thePan, thePitch, false, NULL);
-    }
+    ee_gamecpp_calamity_class_play_sound(this, inCalamity);
 }
 
 // Unloads the class's effects and sounds (and the unit class it places) in its order
 void EECalamityClass::UnloadMedia(EEPlayer* inPlayer)
 {
-    MediaSteps(this, EE_CALAMITY_MEDIA_UNLOAD, inPlayer, false);
+    ee_gamecpp_calamity_class_media_list(this, EE_CALAMITY_MEDIA_UNLOAD, inPlayer, false);
 }

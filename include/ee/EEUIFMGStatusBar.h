@@ -14,7 +14,6 @@ class UITextLabel;
 class UILayoutUtility;
 
 class EEUIFMGStatusBar : public EEUIBUpgrade {
-    friend class EEUIFMGStatusBox;           // actual external SetIconBitmap caller; access spelling provisional
 public:
     // 0x2691b2: args3..5 unread; arg3 actual layout address, pointer-vs-reference spelling inferred
     EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout, unsigned long inScreenWidth,
@@ -32,8 +31,7 @@ protected:
     virtual long MouseRButtonUp();          // +0x48 0x269be6
     // the mouse handler EE_SCREENS_UP_BAR_* in Rust (ee_screens upgrade.rs bar_mouse; MoveIcon 0x269c43 is its)
     long BarMouse(uint32_t inWhich, const GE2DPoint* inLocation);
-    // 0x26c42a (EEUIFMGStatusBox.cpp's range, after its first user; provisional name): mIcon shows inBitmap
-    void SetIconBitmap(GEBitmap* inBitmap, const GERectangle& inTextureRectangle);
+    // (SetIconBitmap 0x26c42a is Rust's: ee_screens status_box_calls.rs set_icon_bitmap)
 public:
     // inline: the value labels' first lines (out of line after their first user, EEUIFMGStatusBox::Fn26CBE1:
     // 0x26dac9 / 0x26dad8, in this order) (provisional names)

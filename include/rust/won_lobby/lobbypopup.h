@@ -120,6 +120,8 @@ enum class EeWonLobbyPopupCall : uint32_t {
   Event,
   /// a member: 0 the menu, 1 the subject, 2 the room flags.
   Field,
+  /// `HandleComponentEvent(a)` with `b` the event's `mType` (evmap.rs chooses the kind).
+  RawEvent,
 };
 
 /// The menu entries' texts (the lobby's resource strings).

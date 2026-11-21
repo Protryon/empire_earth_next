@@ -446,6 +446,15 @@ pub mod game {
         f(unsafe { &mut *(at as *mut crate::units::ag_fields::EeUnitsActiveGroupFields) })
     }
 
+    use crate::units::ag_host::AgGame;
+    use crate::units::group_host::GameGroups;
+    use crate::units::group_obj::{self as go, GroupHost};
+
+    /// A group the host handed out (its handle is the group object's address).
+    fn grp(group: HostRef) -> go::G {
+        group.0.cast()
+    }
+
     fn view_of<R>(id: u32, f: impl FnOnce(&crate::world::UnitView) -> R) -> Option<R> {
         if id == u32::MAX {
             return None;
@@ -459,19 +468,9 @@ pub mod game {
     }
 
     extern "C" {
-        fn ee_units_host_group_ids(group: *mut c_void, out: *mut u32, capacity: usize) -> usize;
-        fn ee_units_host_active_group_new(player: *mut c_void) -> *mut c_void;
-        fn ee_units_host_group_fill(group: *mut c_void, selection: *mut c_void, sort: i32, slot: i32);
-        fn ee_units_host_group_release(group: *mut c_void);
-        fn ee_units_host_pending_push(player: *mut c_void, group: *mut c_void);
-        fn ee_units_host_group_keep_mobile(group: *mut c_void);
-        fn ee_units_host_group_clear_goal(group: *mut c_void);
-        fn ee_units_host_group_set_goal(group: *mut c_void, goal: *mut c_void, queued: u8);
-        fn ee_units_host_group_plan(group: *mut c_void);
         fn ee_units_host_random(low: i32, high: i32) -> i32;
         fn ee_units_host_play_acknowledgement(player: *mut c_void, group: *mut c_void, index: i32);
         fn ee_units_host_map_height(x: f32, y: f32) -> f32;
-        fn ee_units_host_group_keep_ground_attackers(group: *mut c_void);
         fn ee_units_host_send_group_command(
             group: *mut c_void,
             target: u32,
@@ -481,19 +480,12 @@ pub mod game {
         );
         fn ee_units_host_acknowledge_unit(player: *mut c_void, unit: u32);
         fn ee_units_host_town_patrol_point(unit: u32, found: *mut u8) -> u32;
-        fn ee_units_host_group_spread_around_resource(group: *mut c_void, target: u32);
-        fn ee_units_host_group_spread_around_tile(group: *mut c_void, x: i64, y: i64);
         fn ee_units_host_unit_add_build_target(unit: u32, target: u32);
         fn ee_units_host_unit_order_repair(unit: u32, target: u32);
-        fn ee_units_host_group_add_member(group: *mut c_void, unit: u32);
-        fn ee_units_host_group_keep_non_citizens(group: *mut c_void);
         fn ee_units_host_patrol_new_lone(player: *mut c_void, x: f32, y: f32);
         fn ee_units_host_unit_goal_patrol_route(unit: u32) -> *mut c_void;
         fn ee_units_host_goal_patrol_add_point(goal: *mut c_void, x: f32, y: f32, player: *mut c_void);
-        fn ee_units_host_group_spread_around_unit(group: *mut c_void, target: u32, x: i64, y: i64);
         fn ee_units_host_path_to_point(first: u32, x: *mut f32, y: *mut f32) -> f32;
-        fn ee_units_host_group_reset_paths(group: *mut c_void);
-        fn ee_units_host_group_keep_citizens(group: *mut c_void);
         fn ee_units_host_wall_plan(
             player: *mut c_void,
             technology: i32,
@@ -505,7 +497,6 @@ pub mod game {
         ) -> *mut c_void;
         fn ee_units_host_wall_build(group: *mut c_void, pieces: *mut c_void);
         fn ee_units_host_wall_release(pieces: *mut c_void);
-        fn ee_units_host_group_spread_for_unload(group: *mut c_void, x: i64, y: i64);
         fn ee_units_host_unload_warning(player: *mut c_void, x: i64, y: i64);
         fn ee_units_host_can_produce(player: *mut c_void, technology: i32) -> u8;
         fn ee_units_host_make_building(player: *mut c_void, unit_type: i64, x: i64, y: i64) -> u32;
@@ -519,7 +510,6 @@ pub mod game {
         fn ee_units_host_can_take(target: u32, unit: u32) -> u8;
         fn ee_units_host_unit_drop_gathered(unit: u32);
         fn ee_units_host_work_farm(farm: u32, unit: u32);
-        fn ee_units_host_group_finish(group: *mut c_void);
         fn ee_units_host_calamity_of(
             player: *mut c_void,
             technology: i32,
@@ -536,7 +526,6 @@ pub mod game {
             technology: i32,
             target: u32,
         );
-        fn ee_units_host_group_remove_unit(group: *mut c_void, unit: u32);
         fn ee_units_host_unit_clear_goals(unit: u32);
         fn ee_units_host_player_selection(player: *mut c_void) -> *mut c_void;
         fn ee_units_host_unit_seen_by(unit: u32, player: *mut c_void) -> u8;
@@ -563,7 +552,6 @@ pub mod game {
         ) -> *mut c_void;
         fn ee_units_host_load_goal_fields(goal: *mut c_void, x: *mut i64, y: *mut i64) -> u8;
         fn ee_units_host_player_event(player: *mut c_void, x: i64, y: i64, code: i32);
-        fn ee_units_host_group_add_unit(group: *mut c_void, unit: u32);
         fn ee_units_host_research_node(player: *mut c_void, technology: i32, kind: *mut i32) -> u8;
         fn ee_units_host_scenario_game() -> u8;
         fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
@@ -592,15 +580,10 @@ pub mod game {
             crate::units::store::with_store(|s| s.get(id).copied())
         }
         fn group_ids(&mut self, group: HostRef, out: &mut Vec<u32>) {
-            out.clear();
-            // SAFETY: the host fills at most `capacity` ids and returns the group's count
-            let n = unsafe { ee_units_host_group_ids(group.0, std::ptr::null_mut(), 0) };
-            out.resize(n, 0);
-            if n > 0 {
-                // SAFETY: as above, `out` holds n ids
-                let m = unsafe { ee_units_host_group_ids(group.0, out.as_mut_ptr(), n) };
-                out.truncate(m.min(n));
-            }
+            // the group object's units as ids (0xffffffff for none)
+            // SAFETY: a live group the host handed out
+            let units = unsafe { go::units(grp(group)) };
+            *out = units.into_iter().map(|u| if u == 0 { u32::MAX } else { GameGroups.unit(u).id }).collect();
         }
         fn goal_new(&mut self, spec: &EeGoalSpec) -> Option<GoalHandle> {
             // SAFETY: the sweep runs on the simulation's thread holding the world (goal_spec.rs)
@@ -617,31 +600,31 @@ pub mod game {
         // SAFETY (each call below): the references are objects the host handed out (the sender, its selection, a
         // group from active_group_new) and live for the body's call
         fn active_group_new(&mut self, player: HostRef) -> HostRef {
-            HostRef(unsafe { ee_units_host_active_group_new(player.0) })
+            HostRef(go::new(&mut GameGroups, go::EE_UNITS_GROUP_KIND_ACTIVE, player.0 as u64, 0).cast())
         }
         fn group_fill(&mut self, group: HostRef, selection: HostRef, sort: i32, slot: i32) {
-            unsafe { ee_units_host_group_fill(group.0, selection.0, sort, slot) }
+            unsafe { go::fill(&mut GameGroups, grp(group), grp(selection), sort as i64, slot as i64) }
         }
         fn group_release(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_release(group.0) }
+            unsafe { go::dereference(&mut GameGroups, grp(group)) }
         }
         fn pending_push(&mut self, player: HostRef, group: HostRef) {
-            unsafe { ee_units_host_pending_push(player.0, group.0) }
+            GameGroups.player_groups_push(player.0 as u64, 1, group.0 as u64)
         }
         fn group_keep_mobile(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_keep_mobile(group.0) }
+            crate::units::ag::keep_mobile(&mut AgGame, group.0 as u64)
         }
         fn group_clear_goal(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_clear_goal(group.0) }
+            unsafe { go::clear_goal(&mut GameGroups, grp(group)) }
         }
         fn group_set_goal(&mut self, group: HostRef, goal: GoalHandle, queued: bool) {
-            unsafe { ee_units_host_group_set_goal(group.0, goal.as_ptr(), queued as u8) }
+            unsafe { go::set_goal(&mut GameGroups, grp(group), goal.as_ptr() as usize as u64, queued) }
         }
         fn group_set_action(&mut self, group: HostRef, action: i32) {
             group_fields(group, |f| f.mAction = action as _)
         }
         fn group_plan(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_plan(group.0) }
+            crate::units::ag::plan(&mut AgGame, group.0 as u64)
         }
         fn random(&mut self, low: i32, high: i32) -> i32 {
             unsafe { ee_units_host_random(low, high) }
@@ -655,7 +638,7 @@ pub mod game {
             unsafe { ee_units_host_map_height(x, y) }
         }
         fn group_keep_ground_attackers(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_keep_ground_attackers(group.0) }
+            unsafe { go::keep(&mut GameGroups, grp(group), 1) }
         }
         fn send_group_command(&mut self, group: HostRef, target: u32, player: HostRef, command: i32, queue: i32) {
             unsafe { ee_units_host_send_group_command(group.0, target, player.0, command, queue) }
@@ -684,10 +667,11 @@ pub mod game {
             group_fields(group, |f| f.mIsQueued = queued)
         }
         fn group_spread_around_resource(&mut self, group: HostRef, target: u32) {
-            unsafe { ee_units_host_group_spread_around_resource(group.0, target) }
+            let target = crate::units::ffi::ee_units_resolve(target) as u64;
+            crate::units::ag::spread_around_resource(&mut AgGame, group.0 as u64, target)
         }
         fn group_spread_around_tile(&mut self, group: HostRef, x: i64, y: i64) {
-            unsafe { ee_units_host_group_spread_around_tile(group.0, x, y) }
+            crate::units::ag::spread_around_tile(&mut AgGame, group.0 as u64, x as i32, y as i32, false)
         }
         fn unit_add_build_target(&mut self, unit: u32, target: u32) {
             unsafe { ee_units_host_unit_add_build_target(unit, target) }
@@ -696,10 +680,12 @@ pub mod game {
             unsafe { ee_units_host_unit_order_repair(unit, target) }
         }
         fn group_add_member(&mut self, group: HostRef, unit: u32) {
-            unsafe { ee_units_host_group_add_member(group.0, unit) }
+            // `UnitOf(unit)->mComplexUnit->mComplexUnit`
+            let complex = view_of(unit, |u| u.complex_unit_handle()).unwrap_or(0);
+            unsafe { go::add_member(&mut GameGroups, grp(group), complex, true) }
         }
         fn group_keep_non_citizens(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_keep_non_citizens(group.0) }
+            unsafe { go::keep(&mut GameGroups, grp(group), 0) }
         }
         fn patrol_new_lone(&mut self, player: HostRef, x: f32, y: f32) {
             unsafe { ee_units_host_patrol_new_lone(player.0, x, y) }
@@ -722,7 +708,8 @@ pub mod game {
             unsafe { ee_units_host_goal_patrol_add_point(goal.as_ptr(), x, y, player.0) }
         }
         fn group_spread_around_unit(&mut self, group: HostRef, target: u32, x: i64, y: i64) {
-            unsafe { ee_units_host_group_spread_around_unit(group.0, target, x, y) }
+            let target = crate::units::ffi::ee_units_resolve(target) as u64;
+            crate::units::ag::spread_around_unit(&mut AgGame, group.0 as u64, target, x as i32, y as i32)
         }
         fn unit_complex_id(&mut self, unit: u32) -> u32 {
             // `GetComplexUnit()`: `mComplexUnit`
@@ -735,10 +722,10 @@ pub mod game {
             (x, y, z)
         }
         fn group_reset_paths(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_reset_paths(group.0) }
+            unsafe { go::reset_units_paths(&mut GameGroups, grp(group)) }
         }
         fn group_keep_citizens(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_keep_citizens(group.0) }
+            unsafe { go::keep(&mut GameGroups, grp(group), 2) }
         }
         fn wall_plan(
             &mut self,
@@ -760,7 +747,7 @@ pub mod game {
             unsafe { ee_units_host_wall_release(pieces.0) }
         }
         fn group_spread_for_unload(&mut self, group: HostRef, x: i64, y: i64) {
-            unsafe { ee_units_host_group_spread_for_unload(group.0, x, y) }
+            crate::units::ag::spread_around_tile(&mut AgGame, group.0 as u64, x as i32, y as i32, true)
         }
         fn unit_can_unload(&mut self, unit: u32) -> bool {
             // `(IsTransport() || mIsParatrooperBomber) && GetNumCargoUnits() > 0`
@@ -867,7 +854,7 @@ pub mod game {
             );
         }
         fn group_finish(&mut self, group: HostRef) {
-            unsafe { ee_units_host_group_finish(group.0) }
+            unsafe { go::finish(&mut GameGroups, grp(group)) }
         }
         fn calamity_of(&mut self, player: HostRef, technology: i32) -> Option<(HostRef, i32, bool)> {
             let (mut class_enum, mut all) = (0i32, 0u8);
@@ -908,7 +895,9 @@ pub mod game {
             )
         }
         fn group_remove_unit(&mut self, group: HostRef, unit: u32) {
-            unsafe { ee_units_host_group_remove_unit(group.0, unit) }
+            // `UnitOf(unit)->GetComplexUnit()`
+            let complex = view_of(unit, |u| u.complex_unit_handle()).unwrap_or(0);
+            unsafe { go::remove_unit(&mut GameGroups, grp(group), complex) }
         }
         fn unit_clear_goals(&mut self, unit: u32) {
             unsafe { ee_units_host_unit_clear_goals(unit) }
@@ -1081,7 +1070,8 @@ pub mod game {
             unsafe { ee_units_host_player_event(player.0, x, y, code) }
         }
         fn group_add_unit(&mut self, group: HostRef, unit: u32) {
-            unsafe { ee_units_host_group_add_unit(group.0, unit) }
+            let complex = crate::units::ffi::ee_units_resolve(unit) as u64;
+            unsafe { go::add_member(&mut GameGroups, grp(group), complex, true) }
         }
         fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>) {
             let mut out = vec![0u32; units.len()];

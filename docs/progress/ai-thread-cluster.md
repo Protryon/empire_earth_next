@@ -80,25 +80,37 @@ Round 6 (rust-aicluster6), the path manager's host and the areas' hosts:
   areas, forests, last attackers, transports. `astar/cm_host.rs`: `area_create`, `update_hull` (`EEAIArea::UpdateHull`
   inline over it).
 
+Round 7 (rust-aicluster7; the owner's "calling C++ from Rust is fine"), the computer player and the hosts' rest:
+
+- `cp/player_game.rs`, `cp/player_ops.rs`: **EEComputerPlayer's bodies whole**. Every member (the events: units
+  placed, completed, taken, swapped, stranded, done with a goal; damage, flares, epochs, payments; the tick with
+  EECPNextUpdate's bookkeeping; the start, Clear, Load and Save's C++ parts with their after-load fixups,
+  RepairPointers and the deferred RestoreManagers; the experiment timers' and resource state's blocks) is one call
+  into Rust; what only C++ holds is one `ee_cp_player_host` case each (EE_CP_PLAYER_* 340..429). The favourite
+  screener, the hero count and the centres' sort are Rust: EEAIFunctionObjects.cpp/.h, EEAIFOUnitScreeners.h,
+  EECPUMGatherUnitsScreenBase.h, EECPUnitTileDistanceLess.h and EECPReflexes.h deleted. The CPEV and PLCE scopes open
+  in Rust (the `Scope` guard) where the C++ opened them.
+- `cp/herd_world.rs`, `cp/town_world.rs`, `cp/place_world.rs`: the herd's, the town's, the placement's and the
+  centres' host cases with more than one statement, answered in Rust before the C++ switch.
+- `ai/units_host.rs`: the classic_lua units host's FACTS, ai.tuning, the random points (area, forest, hill, choke
+  point), the largest sea's shore, the wall line, the wall's blocking test and the gate side.
+- `ai/next_host.rs`: the next engine host's trace, town, population, centres, goal targets, danger zones, orders,
+  units of a type, distance, micro players and "%.2f".
+- `astar/cm_restore.rs`: EERestoreContinentRegions and TownOrHerd (the continent save's town and herd ids; a town's
+  id is one host case).
+
 What is left in C++ of the cluster:
 
-- EEPathManager.cpp (about 750 lines): the host operations that change a unit or read what only C++ holds (DropPath,
-  TakePath with the class's AdjustPath, SnapLastWaypoint and the goal's PathTaken, the path-done flag with the
-  bounded tiles' vector, the waypoint deque, the location goal's tile and auto-waypoint flag, the request count with
-  `EEPlayer::IsHuman`, `UnitStranded`, `GetTerrainFlags`, RequestUnitPaths' goals), the requests (`EEAutoPathRequest`
-  objects: the Units lane's group and goal code reads their `mPath`), the owners awaiting a loaded request
-  (`std::function`), ClampTile (the terrain mesh's GetClosestTile), the FSFile glue of the save parts, FindPath and
-  FindBoundedPath (their PMRQ words over C++ vectors), MergeWaypoints.
-- EEAIContinentManager.cpp (about 300 lines): ctor and dtor, CanGetTo and AreConnectedForUnit (the unit classes'
-  passable flags and terrain tests: the Units lane's), UpdateWallUnit, BuildRegions' scenario inputs, RegrowTrees.
-- EEAIContinentSave.cpp: the save's file part, the host for a town's or herd's owner (their ids are C++ members),
-  the herd's Create, the region size global (`gPathManager.mLC8`), the AI value write, the random stream
-  (`URandom::Generate`), the load's re-filing of the towns and herds.
-- EEAIRectangleArea.cpp: the kinds' Create and GetRandomPoint dispatch (the town's and herd's records are C++ bases,
-  the random stream is C++'s), the rectangle's random point, UpdateBounds.
-- EETown.cpp, EEHerd.cpp: the hosts' unit, goal, patrol group, formation, animal and random operations.
-- EEComputerPlayer.cpp (waits on EEPlayer), EECPNext*.cpp (the classic_lua host's player and unit operations),
-  EECPPlacement.cpp, EECPResourceCenter.cpp, EECPTrace.cpp, EEAIFunctionObjects.cpp, EECPEngineHelpers.cpp.
+- EEPathManager.cpp (the Paths lane's), CanGetTo and AreConnectedForUnit (the Paths lane's), the rest of
+  EEAIContinentManager.cpp (ctor, dtor, UpdateWallUnit, BuildRegions' scenario inputs, RegrowTrees).
+- EECPNextUnits.cpp: the units host's one-statement cases, its messages (EEMRecord), the wall path and the routes
+  (the path manager's requests: EEAutoPathRequest), the enemy-near-all count, the improvement cost, the citizen
+  upgrade test, the tribute, the trace.
+- EECPNext.cpp: the names tables (EEDbRowIds), the engine's seat helpers, the files' reads, the AREAS and SIM_HASH
+  dumps, the forests' ids.
+- EEAIContinentSave.cpp: the layout checks, the regions' file part (FSFile).
+- EECPTrace.cpp (the trace's printf and the personality's switches), EECPPlacement.cpp's forwarders and the epoch
+  classes, EEAIRectangleArea.cpp's dispatch, EEArtificialIntelligence.cpp.
 
 ## Goldens and gates
 
@@ -109,13 +121,10 @@ Results: PORT_LEARNINGS "AI Thread cluster, round 4".
 
 ## Left (next rounds)
 
-- **The path manager's last host operations** wait on the Units lane: the unit's path and goal members (DropPath,
-  TakePath, SnapLastWaypoint, the waypoint deque, the location goal, SetGoal and the location goals
-  RequestUnitPaths makes), `EEUnitClass::GetTerrainFlags`, and `EEPlayer::IsHuman` / `UnitStranded` (EEPlayer's).
-  `EEAutoPathRequest` can become a Rust record once its readers (EEGroup, EEActiveGroup, EEUGRust, the wall
-  manager) read it through accessors.
-- **The continent manager's rest**: CanGetTo and AreConnectedForUnit need the unit classes' passable flags and
-  terrain tests in Rust (the Units lane's); UpdateWallUnit needs the footprint tiles; RegrowTrees makes units. The
-  save unit's town and herd re-filing needs the players' towns and herds (their ids) in Rust records.
-- **The computer player's class** (EEComputerPlayer.cpp): it can only go when EEPlayer is Rust's.
+- **The path manager's last host operations, CanGetTo, AreConnectedForUnit, EEAutoPathRequest**: the Paths lane's.
+- **The units host's messages** (EEMRecord built per argument count) and the wall routes (path requests): a
+  message builder the human's commands share would let them go; the routes wait on EEAutoPathRequest.
+- **The units host's improvement cost, citizen upgrade and enemy-near-all**: the class improvements' table, the
+  events' effects and the influence table's region sums as Rust reads (all small).
+- **EECPNext.cpp's names tables, the seat helpers and the dumps**; EECPTrace.cpp's personality switches.
 - **The herd paths no game reaches** (round 2's list) stay unit-tested only.

@@ -662,9 +662,6 @@ struct EeWorldLayout {
   uint64_t tech_host;
   /// `EeCpFields` in `EEComputerPlayer`
   uint64_t cp_fields;
-  /// `EEGroup::mUnits` (a `std::vector<EEComplexUnit*>`; `EESelectedGroup`'s `GetUnit`/`GetNumUnits` are
-  /// `EEGroup`'s)
-  uint64_t group_units;
   /// `EEUnitClassUpgrade::mUnitClass` (an `EEUnitClass*`: the stats' own class) and `mButton` (an
   /// `EEButtonObject*`)
   uint64_t stats_unit_class;
@@ -727,6 +724,10 @@ struct EeWorldLayout {
   uint64_t cp_placement;
   uint64_t placement_town;
   uint64_t placement_rust;
+  /// `EEPlayer::mGroupLists` (an `EeUnitsPlayerGroups*`)
+  uint64_t player_group_lists;
+  /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
+  uint64_t player_lists;
 };
 
 extern "C" {

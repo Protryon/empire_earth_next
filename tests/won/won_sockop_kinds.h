@@ -5,6 +5,8 @@
 // SocketOp of the kind: ask its kind (WonSocketOpIs), not its C++ class. Include after ee/wonapi/WONRouting.h.
 #ifndef WON_SOCKOP_KINDS_H
 #define WON_SOCKOP_KINDS_H
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/sockops.h"
 namespace WONAPI {
 typedef EeWonCoreSocketOp WonOpKind;
 inline bool WonSocketOpIs(AsyncOp* inOp, WonOpKind inKind)

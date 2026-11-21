@@ -22,8 +22,6 @@
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPUMGatherUnitsScreenBase.h"
-#include <EEAIFunctionObjects.h>
 
 #include "ee/EEAIForest.h"
 #include "ee/EEPathManager.h"

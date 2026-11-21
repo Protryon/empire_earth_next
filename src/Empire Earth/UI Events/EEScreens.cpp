@@ -843,8 +843,8 @@ EE_SCREENS_CE_CALLBACK(EEScreensCEShowEditor, EE_SCREENS_CE_SHOW_EDITOR)
 EE_SCREENS_CE_CALLBACK(EEScreensCEDeleteYes, EE_SCREENS_CE_DELETE_YES)
 #undef EE_SCREENS_CE_CALLBACK
 
-// The model's host (campaign_model.rs, EE_SCREENS_CEM_*): the edited campaign, the strings and the files, each op
-// the original model's calls (Campaign/EECampaignEditorBehavior.cpp); the results are kept for the texts below
+// The model's host's state (campaign_model_calls.rs, EE_SCREENS_CEM_*): the edited campaign, the strings and the
+// files (the original model's calls: Campaign/EECampaignEditorBehavior.cpp)
 static EECampaign sCampaignEditorCampaign;              // 0x562df4 (gCampaignEditor's campaign)
 static UWideString sCampaignEditorKept;                 // the last string or error
 static std::vector<UWideString> sCampaignEditorLines;   // the last scenario list
@@ -854,158 +854,108 @@ static FSFileSpec sCampaignEditorDirectory;             // Reset's directory
 static FSFileSpec* sCampaignEditorSpec;                 // Reset's found campaign file (FindFile's out)
 static FSMemoryFile* sCampaignEditorFile;               // Reset's archived scenario
 
-extern "C" uint32_t ee_screenscpp_ce_campaign(uint32_t inOp, uint32_t inA, const uint8_t* inText, size_t inLength)
-{
-    EECampaign& c = sCampaignEditorCampaign;
-    UWideString theText = Text(inText, inLength);
-    switch (inOp) {
-    case EE_SCREENS_CEM_STRING:
-        sCampaignEditorKept = UWideString();
-        return (uint32_t)gResource->GetString(inA, sCampaignEditorKept);
-    case EE_SCREENS_CEM_SET_FIELD:
-        switch (inA) {
-        case EE_SCREENS_CE_FIELD_NAME: c.SetCampaignName(theText); break;
-        case EE_SCREENS_CE_FIELD_AUTHOR: c.SetAuthorName(theText); break;
-        case EE_SCREENS_CE_FIELD_EMAIL: c.SetAuthorEmail(theText); break;
-        case EE_SCREENS_CE_FIELD_BACKGROUND: c.SetBackgroundImage(theText); break;
-        case EE_SCREENS_CE_FIELD_CIVILIZATION: c.SetRequiredCiv(theText); break;
-        case EE_SCREENS_CE_FIELD_DESCRIPTION: c.SetCampaignDescription(theText); break;
-        default: c.SetPassword(theText); break;
-        }
-        break;
-    case EE_SCREENS_CEM_SET_SCENARIOS: {
-        std::vector<UWideString> theLines;
-        for (size_t i = 0, theStart = 0; i < inLength; i++)
-            if (inText[i] == 0) {
-                theLines.push_back(Text(inText + theStart, i - theStart));
-                theStart = i + 1;
-            }
-        c.SetCampaignScenarios(theLines);
-        break;
-    }
-    case EE_SCREENS_CEM_LOAD: {
-        UWideString theFile;
-        theFile = "Campaigns\\";
-        theFile += theText;
-        sCampaignEditorKept = UWideString();
-        return c.Load(theFile, sCampaignEditorKept, true);
-    }
-    case EE_SCREENS_CEM_SAVE:
-        sCampaignEditorKept = UWideString();
-        return c.Save(sCampaignEditorKept);
-    case EE_SCREENS_CEM_LIST:
-        sCampaignEditorLines.clear();
-        sCampaignEditorKept = UWideString();
-        return c.ListScenarioFiles(sCampaignEditorLines, sCampaignEditorKept, false, false);
-    case EE_SCREENS_CEM_DELETE: {
-        FSFileSpec theFile;
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\");
-        theFile.SetFile(UString((const char*)theText));
-        return theFile.Delete() == kErrorOK;
-    }
-    case EE_SCREENS_CEM_RESET_BEGIN:
-        sCampaignEditorFiles.clear();
-        sCampaignEditorSpec = NULL;
-        sCampaignEditorFile = NULL;
-        sCampaignEditorPaths[0] = new FSPath;
-        sCampaignEditorPaths[1] = new FSPath;
-        c.SetDirectory((const char*)(gStartupDirectory + "data\\"));
-        break;
-    case EE_SCREENS_CEM_LIST_FILES:
-        sCampaignEditorDirectory.SetVolume(gStartupVolume);
-        sCampaignEditorDirectory.SetDirectory(gStartupDirectory + "data\\" + (inA ? "Scenarios\\" : "Campaigns\\"));
-        sCampaignEditorPaths[inA]->AddDirectory(sCampaignEditorDirectory, true);
-        sCampaignEditorPaths[inA]->ListFiles(UString("*") + (inA ? gScenarioExtension : gCampaignExtension),
-                                             sCampaignEditorFiles);
-        break;
-    case EE_SCREENS_CEM_BUILT_IN:
-        return EECampaignFormManager::GetBuiltInCampaign(theText);
-    case EE_SCREENS_CEM_CHECK: {
-        // a campaign scenario's archived copy summed against the file's checksum (unless warned already)
-        bool theWarned = false;
-        unsigned long theSum = 0;
-        long theError = sCampaignEditorPaths[0]->FindFile(
-            UString((const char*)(c.GetCampaignName() + (const char*)gCampaignExtension)), sCampaignEditorSpec);
-        if (theError != kErrorOK)
-            return false;
-        FSArchive* theArchive = new FSArchive(*sCampaignEditorSpec);
-        if (theArchive->Open() == kErrorOK) {
-            theError = theArchive->FindFile("Scenarios\\" + gU52A280 + theText + (const char*)gScenarioExtension,
-                                            sCampaignEditorFile);
-            if (theError == kErrorOK) {
-                if (sCampaignEditorFile->Open(kFileAccessRead) == kErrorOK) {
-                    unsigned long theLength;
-                    if (sCampaignEditorFile->GetLength(theLength) == kErrorOK) {
-                        for (unsigned long i = 0; i < theLength; i++) {
-                            unsigned char theByte;
-                            sCampaignEditorFile->Read(theByte);
-                            theSum += theByte;
-                        }
-                        if (!inA && theSum != EEGetFileChecksum(sCampaignEditorDirectory,
-                                                                UString((const char*)(theText + (const char*)gScenarioExtension)), 0)) {
-                            UWideString theFormat;
-                            UWideString theMessage;
-                            gResource->GetString(IDS_CAMPAIGN_HAS_SCENARIO_WHICH_DIFFERS, theFormat);
-                            sprintf(theMessage, (const char*)theFormat, (const char*)c.GetCampaignName(),
-                                    (const char*)theText);
-                            gUIManager->DisplayMessage(theMessage, true, NULL, NULL, true);
-                            theWarned = true;
-                        }
-                    }
-                }
-                sCampaignEditorFile->Close();
-                delete sCampaignEditorFile;
-                sCampaignEditorFile = NULL;
-            }
-        }
-        theArchive->Close();
-        delete theArchive;
-        return theWarned;
-    }
-    case EE_SCREENS_CEM_RESET_END:
-        sCampaignEditorPaths[0]->Dereference();
-        sCampaignEditorPaths[1]->Dereference();
-        delete sCampaignEditorSpec;
-        delete sCampaignEditorFile;
-        break;
-    }
-    return 0;
-}
-
-extern "C" size_t ee_screenscpp_ce_campaign_text(uint32_t inWhich, uint32_t inArg, uint8_t* outText, size_t inCapacity)
-{
-    EECampaign& c = sCampaignEditorCampaign;
-    std::string theBytes;
-    auto Add = [&](const UWideString& inLine) { theBytes.append((const char*)inLine, inLine.GetTCHARLength()); };
-    auto AddLines = [&](const std::vector<UWideString>& inLines) {
-        for (size_t i = 0; i < inLines.size(); i++)
-            Add(inLines[i]), theBytes.push_back('\0');
-    };
-    switch (inWhich) {
-    case EE_SCREENS_CEM_TEXT_FIELD:
-        switch (inArg) {
-        case EE_SCREENS_CE_FIELD_NAME: Add(c.GetCampaignName()); break;
-        case EE_SCREENS_CE_FIELD_AUTHOR: Add(c.GetAuthorName()); break;
-        case EE_SCREENS_CE_FIELD_EMAIL: Add(c.GetAuthorEmail()); break;
-        case EE_SCREENS_CE_FIELD_BACKGROUND: Add(c.GetBackgroundImage()); break;
-        case EE_SCREENS_CE_FIELD_CIVILIZATION: Add(c.GetRequiredCiv()); break;
-        case EE_SCREENS_CE_FIELD_DESCRIPTION: Add(c.GetDescription()); break;
-        default: Add(c.GetPassword()); break;
-        }
-        break;
-    case EE_SCREENS_CEM_TEXT_SCENARIOS: AddLines(c.GetScenarios()); break;
-    case EE_SCREENS_CEM_TEXT_KEPT: Add(sCampaignEditorKept); break;
-    case EE_SCREENS_CEM_TEXT_LINES: AddLines(sCampaignEditorLines); break;
-    case EE_SCREENS_CEM_TEXT_FILES:
-        for (std::set<UString>::const_iterator it = sCampaignEditorFiles.begin(); it != sCampaignEditorFiles.end(); ++it)
-            theBytes.append((const char*)*it).push_back('\0');
-        break;
-    case EE_SCREENS_CEM_TEXT_EXTENSION: theBytes = (const char*)(inArg ? gScenarioExtension : gCampaignExtension); break;
-    }
-    memcpy(outText, theBytes.data(), theBytes.size() < inCapacity ? theBytes.size() : inCapacity);
-    return theBytes.size();
-}
+// (the model's host, the original's ee_screenscpp_ce_campaign and _text, is Rust's over the shims below:
+// ee_screens campaign_model_calls.rs; each one call, no logic)
+#define CEC sCampaignEditorCampaign
+static std::vector<UWideString> sCEMScenarios;   // SET_SCENARIOS' lines (the original's local)
+static FSFileSpec sCEMDelete;                    // DELETE's file
+static unsigned char sCEMByte;                   // CHECK's byte read
+static UWideString sCEMFormat;                   // CHECK's message format
+static UWideString sCEMMessage;                  // and the message
+static std::vector<UString> sCEMFileList;        // the files' text (Reset's set in order)
+extern "C" void ee_screenscpp_cem_kept_clear() { sCampaignEditorKept = UWideString(); }
+extern "C" uint32_t ee_screenscpp_cem_string(uint32_t inId)
+{ return (uint32_t)gResource->GetString(inId, sCampaignEditorKept); }
+extern "C" void ee_screenscpp_cem_set_name(EeScreensShimText inText) { CEC.SetCampaignName(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_author(EeScreensShimText inText) { CEC.SetAuthorName(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_email(EeScreensShimText inText) { CEC.SetAuthorEmail(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_background(EeScreensShimText inText)
+{ CEC.SetBackgroundImage(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_civilization(EeScreensShimText inText) { CEC.SetRequiredCiv(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_description(EeScreensShimText inText)
+{ CEC.SetCampaignDescription(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_password(EeScreensShimText inText) { CEC.SetPassword(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_scenarios_clear() { sCEMScenarios.clear(); }
+extern "C" void ee_screenscpp_cem_scenarios_add(EeScreensShimText inText)
+{ sCEMScenarios.push_back(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_set_scenarios() { CEC.SetCampaignScenarios(sCEMScenarios); }
+extern "C" uint32_t ee_screenscpp_cem_load(EeScreensShimText inFile)
+{ return (uint32_t)CEC.Load(EEShimText(inFile), sCampaignEditorKept, true); }
+extern "C" uint32_t ee_screenscpp_cem_save() { return (uint32_t)CEC.Save(sCampaignEditorKept); }
+extern "C" void ee_screenscpp_cem_lines_clear() { sCampaignEditorLines.clear(); }
+extern "C" uint32_t ee_screenscpp_cem_list()
+{ return (uint32_t)CEC.ListScenarioFiles(sCampaignEditorLines, sCampaignEditorKept, false, false); }
+extern "C" void ee_screenscpp_cem_delete_reset() { sCEMDelete = FSFileSpec(); }
+extern "C" void ee_screenscpp_cem_delete_volume() { sCEMDelete.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_cem_delete_directory()
+{ sCEMDelete.SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\"); }
+extern "C" void ee_screenscpp_cem_delete_file(EeScreensShimText inText) { sCEMDelete.SetFile(EEShimString(inText)); }
+extern "C" bool ee_screenscpp_cem_delete() { return sCEMDelete.Delete() == kErrorOK; }
+extern "C" void ee_screenscpp_cem_files_clear() { sCampaignEditorFiles.clear(); }
+extern "C" void ee_screenscpp_cem_spec_clear() { sCampaignEditorSpec = NULL; }
+extern "C" void ee_screenscpp_cem_file_clear() { sCampaignEditorFile = NULL; }
+extern "C" void ee_screenscpp_cem_path_new(uint32_t inIndex) { sCampaignEditorPaths[inIndex] = new FSPath; }
+extern "C" void ee_screenscpp_cem_set_directory() { CEC.SetDirectory((const char*)(gStartupDirectory + "data\\")); }
+extern "C" void ee_screenscpp_cem_directory_volume() { sCampaignEditorDirectory.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_cem_directory_scenarios()
+{ sCampaignEditorDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\"); }
+extern "C" void ee_screenscpp_cem_directory_campaigns()
+{ sCampaignEditorDirectory.SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\"); }
+extern "C" void ee_screenscpp_cem_path_add(uint32_t inIndex)
+{ sCampaignEditorPaths[inIndex]->AddDirectory(sCampaignEditorDirectory, true); }
+extern "C" void ee_screenscpp_cem_list_scenario_files()
+{ sCampaignEditorPaths[1]->ListFiles(UString("*") + gScenarioExtension, sCampaignEditorFiles); }
+extern "C" void ee_screenscpp_cem_list_campaign_files()
+{ sCampaignEditorPaths[0]->ListFiles(UString("*") + gCampaignExtension, sCampaignEditorFiles); }
+extern "C" uint32_t ee_screenscpp_cem_built_in(EeScreensShimText inText)
+{ return (uint32_t)EECampaignFormManager::GetBuiltInCampaign(EEShimText(inText)); }
+extern "C" int64_t ee_screenscpp_cem_find_campaign()
+{ return sCampaignEditorPaths[0]->FindFile(UString((const char*)(CEC.GetCampaignName() + (const char*)gCampaignExtension)), sCampaignEditorSpec); }
+extern "C" uintptr_t ee_screenscpp_cem_archive_new() { return (uintptr_t)new FSArchive(*sCampaignEditorSpec); }
+extern "C" int64_t ee_screenscpp_cem_archive_open(uintptr_t inArchive)
+{ return reinterpret_cast<FSArchive*>(inArchive)->Open(); }
+extern "C" int64_t ee_screenscpp_cem_archive_find(uintptr_t inArchive, EeScreensShimText inText)
+{ return reinterpret_cast<FSArchive*>(inArchive)->FindFile("Scenarios\\" + gU52A280 + EEShimText(inText) + (const char*)gScenarioExtension, sCampaignEditorFile); }
+extern "C" void ee_screenscpp_cem_archive_close(uintptr_t inArchive)
+{ reinterpret_cast<FSArchive*>(inArchive)->Close(); }
+extern "C" void ee_screenscpp_cem_archive_delete(uintptr_t inArchive)
+{ delete reinterpret_cast<FSArchive*>(inArchive); }
+extern "C" int64_t ee_screenscpp_cem_file_open() { return sCampaignEditorFile->Open(kFileAccessRead); }
+extern "C" int64_t ee_screenscpp_cem_file_length(unsigned long* inLength)
+{ return sCampaignEditorFile->GetLength(*inLength); }
+extern "C" void ee_screenscpp_cem_file_read() { sCampaignEditorFile->Read(sCEMByte); }
+extern "C" uint32_t ee_screenscpp_cem_file_byte() { return sCEMByte; }
+extern "C" uint64_t ee_screenscpp_cem_file_checksum(EeScreensShimText inText)
+{ return (uint64_t)EEGetFileChecksum(sCampaignEditorDirectory, UString((const char*)(EEShimText(inText) + (const char*)gScenarioExtension)), 0); }
+extern "C" void ee_screenscpp_cem_differs_format()
+{ gResource->GetString(IDS_CAMPAIGN_HAS_SCENARIO_WHICH_DIFFERS, sCEMFormat); }
+extern "C" void ee_screenscpp_cem_differs_print(EeScreensShimText inText)
+{ sprintf(sCEMMessage, (const char*)sCEMFormat, (const char*)CEC.GetCampaignName(), (const char*)EEShimText(inText)); }
+extern "C" void ee_screenscpp_cem_differs_show() { gUIManager->DisplayMessage(sCEMMessage, true, NULL, NULL, true); }
+extern "C" void ee_screenscpp_cem_file_close() { sCampaignEditorFile->Close(); }
+extern "C" void ee_screenscpp_cem_file_delete() { delete sCampaignEditorFile; }
+extern "C" void ee_screenscpp_cem_path_dereference(uint32_t inIndex) { sCampaignEditorPaths[inIndex]->Dereference(); }
+extern "C" void ee_screenscpp_cem_spec_delete() { delete sCampaignEditorSpec; }
+extern "C" void ee_screenscpp_cem_name(void* inOut) { EEShimOut(inOut, CEC.GetCampaignName()); }
+extern "C" void ee_screenscpp_cem_author(void* inOut) { EEShimOut(inOut, CEC.GetAuthorName()); }
+extern "C" void ee_screenscpp_cem_email(void* inOut) { EEShimOut(inOut, CEC.GetAuthorEmail()); }
+extern "C" void ee_screenscpp_cem_background(void* inOut) { EEShimOut(inOut, CEC.GetBackgroundImage()); }
+extern "C" void ee_screenscpp_cem_civilization(void* inOut) { EEShimOut(inOut, CEC.GetRequiredCiv()); }
+extern "C" void ee_screenscpp_cem_description(void* inOut) { EEShimOut(inOut, CEC.GetDescription()); }
+extern "C" void ee_screenscpp_cem_password(void* inOut) { EEShimOut(inOut, CEC.GetPassword()); }
+extern "C" uint32_t ee_screenscpp_cem_scenario_count() { return (uint32_t)CEC.GetScenarios().size(); }
+extern "C" void ee_screenscpp_cem_scenario(uint32_t inIndex, void* inOut)
+{ EEShimOut(inOut, CEC.GetScenarios()[inIndex]); }
+extern "C" void ee_screenscpp_cem_kept(void* inOut) { EEShimOut(inOut, sCampaignEditorKept); }
+extern "C" uint32_t ee_screenscpp_cem_line_count() { return (uint32_t)sCampaignEditorLines.size(); }
+extern "C" void ee_screenscpp_cem_line(uint32_t inIndex, void* inOut)
+{ EEShimOut(inOut, sCampaignEditorLines[inIndex]); }
+extern "C" void ee_screenscpp_cem_files_snapshot()
+{ sCEMFileList.assign(sCampaignEditorFiles.begin(), sCampaignEditorFiles.end()); }
+extern "C" uint32_t ee_screenscpp_cem_file_count() { return (uint32_t)sCEMFileList.size(); }
+extern "C" void ee_screenscpp_cem_file_name(uint32_t inIndex, void* inOut) { EEShimOut(inOut, sCEMFileList[inIndex]); }
+extern "C" void ee_screenscpp_cem_scenario_extension(void* inOut) { EEShimOut(inOut, gScenarioExtension); }
+extern "C" void ee_screenscpp_cem_campaign_extension(void* inOut) { EEShimOut(inOut, gCampaignExtension); }
 
 static uint32_t EEScreensCampaignEditorCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA,
                                             uint32_t inB, uint32_t inC, uint32_t inD)
@@ -2227,137 +2177,111 @@ static EEPlayer* EEScreensViewPlayer(uint32_t inArg)
     return theIndex < 17 ? gWorld.GetPlayer(theIndex) : NULL;
 }
 
-extern "C" void ee_screenscpp_game_view(uint32_t inGroup, uint32_t inArg, EeScreensGameView* v)
-{
-    *v = EeScreensGameView();
-    switch (inGroup) {
-    case EE_SCREENS_VIEW_SOUND:
-        v->sound_manager = (uintptr_t)gSoundManager;
-        v->conductor = gConductor ? (uintptr_t)&gConductor->GetConductor() : 0;
-        break;
-    case EE_SCREENS_VIEW_SETTINGS:
-        for (unsigned long i = 0; i < GERasterizer::GetRasterizerCount(); i++)
-            if (GERasterizer::GetRasterizer(i) == gRasterizer) {
-                v->current_rasterizer = i;
-                break;
-            }
-        v->rasterizer_count = (uint32_t)gDisplayRasterizers.size();
-        v->not_korean = gGamePreferences.IsNotKorean();
-        v->pgs_page = gGamePreferences.GetSettings().mLastOpenPostGameStatsPage;
-        v->pgs_screenshots = gGamePreferences.GetSettings().mTakeEndGameScreenshots;
-        v->grab_scroll_speed = gGamePreferences.mSettings.GetGrabScrollSpeed();
-        v->settings_zoom_enabled = gGamePreferences.mSettings.mZoomEnabled;
-        v->zoom_enabled = gZoomEnabled;
-        v->difficulty = gDifficultyLevel;
-        v->free_camera = gFreeCamera;
-        v->screen_active = gGameScreenActive;
-        v->saved_main_form = gSavedMainGameForm != NULL;
-        v->max_zoom = gCameraMaxZoom;
-        v->hidden_mode = gHiddenUnitsMode;
-        v->header_players = sLobbyHeader ? (uint32_t)sLobbyHeader->mNumPlayers : 0;
-        break;
-    case EE_SCREENS_VIEW_SESSION:
-        if (gCommunications == NULL)
-            break;
-        v->is_server = gCommunications->IsServer() == true;
-        v->is_client = gCommunications->IsClient() == true;
-        v->multiplayer_session = gCommunications->GetIsMultiplayerSession();
-        v->cts_processed = gCommunications->GetNumberOfCTsProcessedInPhysics();
-        v->cannot_exit = v->is_server ? static_cast<NESynchronousServer*>(gCommunications)->IsMigrating()
-                                      : static_cast<NESynchronousClient*>(gCommunications)->IsPlaybackRecordingSession();
-        v->humans = gCommunications->GetNumHumanPlayers();
-        break;
-    case EE_SCREENS_VIEW_WORLD:   // (the world's members are the views': game_view_ffi.rs world_view)
-        v->camera_mode = gWorld.mCameraControl.mMode;
-        v->lock_speed = gWorld.mGameOptions.GetLockSpeed() != false;
-        v->zoom = gWorld.mCameraControl.GetZoom();
-        v->scenario_game = gWorld.GetGameOptions().GetIsScenarioGame() == true;
-        v->speed_step = gWorldTable.GetFloatValue(kWorldGameSpeedStep);
-        v->speed_low = gWorldTable.GetFloatValue(kWorldGameSpeedRange);
-        v->speed_high = gWorldTable.GetFloatValue2(kWorldGameSpeedRange);
-        v->hot_key_mode = gUIManager->GetMainGameForm() ? gUIManager->GetMainGameForm()->mHotKeyMode : 0;
-        break;
-    // (EE_SCREENS_VIEW_PLAYER: the player's members are the views': game_view_ffi.rs world_view, hud_views.rs)
-    case EE_SCREENS_VIEW_COLOUR: {
-        const GEColor& theColour = EEGetPlayerColor(inArg);
-        v->colour[0] = theColour.mRed, v->colour[1] = theColour.mGreen, v->colour[2] = theColour.mBlue;
-        break;
-    }
-    case EE_SCREENS_VIEW_CAMPAIGN:
-        v->campaign_checksum = EECampaignFormManager::Get()->mChecksum;
-        v->all_scenarios_open = EECampaignFormManager::Get()->mAllScenariosOpen;
-        break;
-    case EE_SCREENS_VIEW_INTRO: {
-        EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
-        v->si_flags = (theIntro->mIsInGame ? EE_SCREENS_SI_FLAG_IN_GAME : 0) |
-                      (theIntro->mIsLoadingFromGame ? EE_SCREENS_SI_FLAG_LOADING : 0) |
-                      (theIntro->mIsCampaign ? EE_SCREENS_SI_FLAG_CAMPAIGN : 0) |
-                      (theIntro->mScrollBriefingToEnd ? EE_SCREENS_SI_FLAG_SCROLL : 0);
-        break;
-    }
-    }
-}
-
-extern "C" size_t ee_screenscpp_game_texts(uint32_t inGroup, uint32_t inArg, uint8_t* outText, size_t inCapacity)
-{
-    std::string theBytes;
-    UWideString t;
-#define EE_SCREENS_ADD(text) (t = (text), theBytes.append((const char*)t, t.GetTCHARLength()).push_back('\0'))
-    switch (inGroup) {
-    case EE_SCREENS_VIEW_TEXTS_SETTINGS:
-        // (game_view.rs T_*: in this order)
-        EE_SCREENS_ADD(gGamePreferences.GetSettings().mRasterizerName);
-        EE_SCREENS_ADD(EEGamePreferences::sDefaultSettings.mRasterizerName);
-        EE_SCREENS_ADD(gGamePreferences.GetSettings().mAudioDevice);
-        EE_SCREENS_ADD(EEGamePreferences::sDefaultSettings.mAudioDevice);
-        EE_SCREENS_ADD((const char*)gGameVersion);
-        EE_SCREENS_ADD(gPlayerName);
-        EE_SCREENS_ADD(gCampaignAOCRoman);
-        EE_SCREENS_ADD(gCampaignAOCPacific);
-        EE_SCREENS_ADD(gCampaignAOCAsian);
-        EE_SCREENS_ADD(gCampaignEELearning);
-        EE_SCREENS_ADD(gSavedGameExtension);
-        EE_SCREENS_ADD(gScenarioExtension);
-        EE_SCREENS_ADD(gCampaignExtension);
-        EE_SCREENS_ADD(gU530BC8);
-        EE_SCREENS_ADD(sCampaignError);
-        EE_SCREENS_ADD(gLoadSavedGameName);
-        EE_SCREENS_ADD(gLoadScenarioName);
-        EE_SCREENS_ADD(sLobbyMissing);
-        EE_SCREENS_ADD(sCampaignEditorTranslated);
-        break;
-    case EE_SCREENS_VIEW_TEXTS_CAMPAIGN:
-        EE_SCREENS_ADD(EECampaignFormManager::Get()->mCampaign.GetDescription());
-        EE_SCREENS_ADD(EECampaignFormManager::Get()->mCampaign.GetRequiredCiv());
-        EE_SCREENS_ADD(EECampaignFormManager::Get()->mCampaignName);
-        EE_SCREENS_ADD(EECampaignFormManager::Get()->mDescription);
-        break;
-    case EE_SCREENS_VIEW_TEXTS_INTRO:
-        EE_SCREENS_ADD(EEUISCIFormManager::Get()->GetBriefing());
-        EE_SCREENS_ADD(EEUISCIFormManager::Get()->GetHints());
-        EE_SCREENS_ADD(EEUISCIFormManager::Get()->GetHistory());
-        break;
-    case EE_SCREENS_VIEW_TEXTS_PLAYER:
-        if (EEPlayer* thePlayer = EEScreensViewPlayer(inArg)) {
-            EE_SCREENS_ADD(thePlayer->GetName());
-            EE_SCREENS_ADD(UWideString(thePlayer->mCivilization.mName));
-        }
-        break;
-    case EE_SCREENS_VIEW_TEXTS_WORLD:
-        EE_SCREENS_ADD(gWorld.mStatistics.mCampaignName);
-        break;
-    case EE_SCREENS_VIEW_TEXTS_RECORD:
-        if (inArg < gWorld.mStatistics.GetRecords().size())
-            EE_SCREENS_ADD(gWorld.mStatistics.GetRecords()[inArg].GetName());
-        break;
-    case EE_SCREENS_VIEW_TEXTS_MAP_TYPE:
-        EE_SCREENS_ADD(EEScreensLobbyOptions(inArg)->mMapType);
-        break;
-    }
-#undef EE_SCREENS_ADD
-    memcpy(outText, theBytes.data(), theBytes.size() < inCapacity ? theBytes.size() : inCapacity);
-    return theBytes.size();
-}
+// (the read views' fills, the original's ee_screenscpp_game_view and _game_texts, are Rust's over the shims below:
+// ee_screens game_view_calls.rs; each one read, no logic)
+extern "C" uintptr_t ee_screenscpp_gv_sound_manager() { return (uintptr_t)gSoundManager; }
+extern "C" bool ee_screenscpp_gv_has_conductor() { return gConductor != NULL; }
+extern "C" uintptr_t ee_screenscpp_gv_conductor() { return (uintptr_t)&gConductor->GetConductor(); }
+extern "C" uint32_t ee_screenscpp_gv_rasterizer_count() { return (uint32_t)GERasterizer::GetRasterizerCount(); }
+extern "C" bool ee_screenscpp_gv_rasterizer_is_current(uint32_t inIndex)
+{ return GERasterizer::GetRasterizer(inIndex) == gRasterizer; }
+extern "C" uint32_t ee_screenscpp_gv_display_rasterizers() { return (uint32_t)gDisplayRasterizers.size(); }
+extern "C" bool ee_screenscpp_gv_not_korean() { return gGamePreferences.IsNotKorean(); }
+extern "C" int32_t ee_screenscpp_gv_pgs_page()
+{ return (int32_t)gGamePreferences.GetSettings().mLastOpenPostGameStatsPage; }
+extern "C" bool ee_screenscpp_gv_pgs_screenshots() { return gGamePreferences.GetSettings().mTakeEndGameScreenshots; }
+extern "C" float ee_screenscpp_gv_grab_scroll_speed() { return gGamePreferences.mSettings.GetGrabScrollSpeed(); }
+extern "C" bool ee_screenscpp_gv_settings_zoom() { return gGamePreferences.mSettings.mZoomEnabled; }
+extern "C" bool ee_screenscpp_gv_zoom_enabled() { return gZoomEnabled; }
+extern "C" int32_t ee_screenscpp_gv_difficulty() { return (int32_t)gDifficultyLevel; }
+extern "C" bool ee_screenscpp_gv_free_camera() { return gFreeCamera; }
+extern "C" bool ee_screenscpp_gv_screen_active() { return gGameScreenActive; }
+extern "C" bool ee_screenscpp_gv_saved_main_form() { return gSavedMainGameForm != NULL; }
+extern "C" float ee_screenscpp_gv_max_zoom() { return gCameraMaxZoom; }
+extern "C" int32_t ee_screenscpp_gv_hidden_mode() { return (int32_t)gHiddenUnitsMode; }
+extern "C" bool ee_screenscpp_gv_has_header() { return sLobbyHeader != NULL; }
+extern "C" uint32_t ee_screenscpp_gv_header_players() { return (uint32_t)sLobbyHeader->mNumPlayers; }
+extern "C" bool ee_screenscpp_gv_comms() { return gCommunications != NULL; }
+extern "C" bool ee_screenscpp_gv_is_server() { return gCommunications->IsServer() == true; }
+extern "C" bool ee_screenscpp_gv_is_client() { return gCommunications->IsClient() == true; }
+extern "C" bool ee_screenscpp_gv_multiplayer_session() { return gCommunications->GetIsMultiplayerSession(); }
+extern "C" uint32_t ee_screenscpp_gv_cts_processed()
+{ return (uint32_t)gCommunications->GetNumberOfCTsProcessedInPhysics(); }
+extern "C" bool ee_screenscpp_gv_server_migrating()
+{ return static_cast<NESynchronousServer*>(gCommunications)->IsMigrating(); }
+extern "C" bool ee_screenscpp_gv_client_playback()
+{ return static_cast<NESynchronousClient*>(gCommunications)->IsPlaybackRecordingSession(); }
+extern "C" uint32_t ee_screenscpp_gv_humans() { return (uint32_t)gCommunications->GetNumHumanPlayers(); }
+extern "C" int32_t ee_screenscpp_gv_camera_mode() { return (int32_t)gWorld.mCameraControl.mMode; }
+extern "C" bool ee_screenscpp_gv_lock_speed() { return gWorld.mGameOptions.GetLockSpeed() != false; }
+extern "C" float ee_screenscpp_gv_zoom() { return gWorld.mCameraControl.GetZoom(); }
+extern "C" bool ee_screenscpp_gv_scenario_game() { return gWorld.GetGameOptions().GetIsScenarioGame() == true; }
+extern "C" float ee_screenscpp_gv_speed_step() { return gWorldTable.GetFloatValue(kWorldGameSpeedStep); }
+extern "C" float ee_screenscpp_gv_speed_low() { return gWorldTable.GetFloatValue(kWorldGameSpeedRange); }
+extern "C" float ee_screenscpp_gv_speed_high() { return gWorldTable.GetFloatValue2(kWorldGameSpeedRange); }
+extern "C" bool ee_screenscpp_gv_main_form() { return gUIManager->GetMainGameForm() != NULL; }
+extern "C" uint32_t ee_screenscpp_gv_hot_key_mode() { return (uint32_t)gUIManager->GetMainGameForm()->mHotKeyMode; }
+extern "C" float ee_screenscpp_gv_red(uint32_t inPlayer) { return EEGetPlayerColor(inPlayer).mRed; }
+extern "C" float ee_screenscpp_gv_green(uint32_t inPlayer) { return EEGetPlayerColor(inPlayer).mGreen; }
+extern "C" float ee_screenscpp_gv_blue(uint32_t inPlayer) { return EEGetPlayerColor(inPlayer).mBlue; }
+extern "C" uint32_t ee_screenscpp_gv_campaign_checksum() { return (uint32_t)EECampaignFormManager::Get()->mChecksum; }
+extern "C" bool ee_screenscpp_gv_all_scenarios_open() { return EECampaignFormManager::Get()->mAllScenariosOpen; }
+extern "C" bool ee_screenscpp_gv_intro_in_game() { return EEUISCIFormManager::Get()->mIsInGame; }
+extern "C" bool ee_screenscpp_gv_intro_loading() { return EEUISCIFormManager::Get()->mIsLoadingFromGame; }
+extern "C" bool ee_screenscpp_gv_intro_campaign() { return EEUISCIFormManager::Get()->mIsCampaign; }
+extern "C" bool ee_screenscpp_gv_intro_scroll() { return EEUISCIFormManager::Get()->mScrollBriefingToEnd; }
+extern "C" void ee_screenscpp_gt_rasterizer_name(void* inOut)
+{ EEShimOut(inOut, gGamePreferences.GetSettings().mRasterizerName); }
+extern "C" void ee_screenscpp_gt_default_rasterizer_name(void* inOut)
+{ EEShimOut(inOut, EEGamePreferences::sDefaultSettings.mRasterizerName); }
+extern "C" void ee_screenscpp_gt_audio_device(void* inOut)
+{ EEShimOut(inOut, UWideString(gGamePreferences.GetSettings().mAudioDevice)); }
+extern "C" void ee_screenscpp_gt_default_audio_device(void* inOut)
+{ EEShimOut(inOut, UWideString(EEGamePreferences::sDefaultSettings.mAudioDevice)); }
+extern "C" void ee_screenscpp_gt_game_version(void* inOut) { EEShimOutC(inOut, (const char*)gGameVersion); }
+extern "C" void ee_screenscpp_gt_player_name(void* inOut) { EEShimOut(inOut, UWideString(gPlayerName)); }
+extern "C" void ee_screenscpp_gt_campaign_roman(void* inOut) { EEShimOut(inOut, UWideString(gCampaignAOCRoman)); }
+extern "C" void ee_screenscpp_gt_campaign_pacific(void* inOut) { EEShimOut(inOut, UWideString(gCampaignAOCPacific)); }
+extern "C" void ee_screenscpp_gt_campaign_asian(void* inOut) { EEShimOut(inOut, UWideString(gCampaignAOCAsian)); }
+extern "C" void ee_screenscpp_gt_campaign_learning(void* inOut) { EEShimOut(inOut, UWideString(gCampaignEELearning)); }
+extern "C" void ee_screenscpp_gt_saved_game_extension(void* inOut)
+{ EEShimOut(inOut, UWideString(gSavedGameExtension)); }
+extern "C" void ee_screenscpp_gt_scenario_extension(void* inOut) { EEShimOut(inOut, UWideString(gScenarioExtension)); }
+extern "C" void ee_screenscpp_gt_campaign_extension(void* inOut) { EEShimOut(inOut, UWideString(gCampaignExtension)); }
+extern "C" void ee_screenscpp_gt_u530bc8(void* inOut) { EEShimOut(inOut, UWideString(gU530BC8)); }
+extern "C" void ee_screenscpp_gt_campaign_error(void* inOut) { EEShimOut(inOut, sCampaignError); }
+extern "C" void ee_screenscpp_gt_load_saved_game_name(void* inOut)
+{ EEShimOut(inOut, UWideString(gLoadSavedGameName)); }
+extern "C" void ee_screenscpp_gt_load_scenario_name(void* inOut) { EEShimOut(inOut, UWideString(gLoadScenarioName)); }
+extern "C" void ee_screenscpp_gt_lobby_missing(void* inOut) { EEShimOut(inOut, UWideString(sLobbyMissing)); }
+extern "C" void ee_screenscpp_gt_campaign_editor_translated(void* inOut)
+{ EEShimOut(inOut, UWideString(sCampaignEditorTranslated)); }
+extern "C" void ee_screenscpp_gt_campaign_description(void* inOut)
+{ EEShimOut(inOut, UWideString(EECampaignFormManager::Get()->mCampaign.GetDescription())); }
+extern "C" void ee_screenscpp_gt_campaign_civilization(void* inOut)
+{ EEShimOut(inOut, UWideString(EECampaignFormManager::Get()->mCampaign.GetRequiredCiv())); }
+extern "C" void ee_screenscpp_gt_campaign_name(void* inOut)
+{ EEShimOut(inOut, UWideString(EECampaignFormManager::Get()->mCampaignName)); }
+extern "C" void ee_screenscpp_gt_campaign_form_description(void* inOut)
+{ EEShimOut(inOut, UWideString(EECampaignFormManager::Get()->mDescription)); }
+extern "C" void ee_screenscpp_gt_intro_briefing(void* inOut)
+{ EEShimOut(inOut, UWideString(EEUISCIFormManager::Get()->GetBriefing())); }
+extern "C" void ee_screenscpp_gt_intro_hints(void* inOut)
+{ EEShimOut(inOut, UWideString(EEUISCIFormManager::Get()->GetHints())); }
+extern "C" void ee_screenscpp_gt_intro_history(void* inOut)
+{ EEShimOut(inOut, UWideString(EEUISCIFormManager::Get()->GetHistory())); }
+extern "C" uintptr_t ee_screenscpp_gt_player(uint32_t inIndex) { return (uintptr_t)EEScreensViewPlayer(inIndex); }
+extern "C" void ee_screenscpp_gt_player_name_of(uintptr_t inPlayer, void* inOut)
+{ EEShimOut(inOut, UWideString(reinterpret_cast<EEPlayer*>(inPlayer)->GetName())); }
+extern "C" void ee_screenscpp_gt_player_civilization(uintptr_t inPlayer, void* inOut)
+{ EEShimOut(inOut, UWideString(reinterpret_cast<EEPlayer*>(inPlayer)->mCivilization.mName)); }
+extern "C" void ee_screenscpp_gt_world_campaign_name(void* inOut)
+{ EEShimOut(inOut, UWideString(gWorld.mStatistics.mCampaignName)); }
+extern "C" uint32_t ee_screenscpp_gt_record_count() { return (uint32_t)gWorld.mStatistics.GetRecords().size(); }
+extern "C" void ee_screenscpp_gt_record_name(uint32_t inIndex, void* inOut)
+{ EEShimOut(inOut, UWideString(gWorld.mStatistics.GetRecords()[inIndex].GetName())); }
+extern "C" void ee_screenscpp_gt_map_type(uint32_t inSource, void* inOut)
+{ EEShimOut(inOut, UWideString(EEScreensLobbyOptions(inSource)->mMapType)); }
 
 // TEST ONLY: the world lock, for the SGVW trace's note of the reading thread's holds (ee_game screens/sgvw.rs)
 extern "C" const void* ee_screenscpp_sgvw_world_lock() { return gWorld.mLock; }

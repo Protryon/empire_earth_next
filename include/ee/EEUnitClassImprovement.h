@@ -14,6 +14,20 @@ class EEUnitClassUpgrade;
 class FSFile;
 class UWideString;
 
+// port (the groups lane, round 2): the constructor, CopyLevelsTo, Reapply, Load and Save are Rust (ee_units
+// improvement.rs) over the levels and the points; the C++ they call is EEImprovementHost (ChangeLevel, the upgrade's
+// name, the file's primitives) on an EEImprovementContext
+struct EeUnitsPlayerSaveIo;
+class EEUnitClassImprovement;
+struct EEImprovementContext {
+    EEUnitClassImprovement* mImprovement;   // the record ChangeLevel raises
+    EEUnitClass* mClass;
+    EEUnitClassUpgrade* mUpgrade;
+    FSFile* mFile;
+    operator void*() { return this; }
+};
+int32_t EEImprovementHost(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
+
 class EEUnitClassImprovement {
 public:
     EEUnitClassImprovement();               // 0x23a5bf: every mLevels = 1, mL44 = 0

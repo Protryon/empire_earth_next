@@ -33,7 +33,6 @@
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // Creates a scenario effect with the default settings (see Reset)
 EESMEffect::EESMEffect()
@@ -574,8 +573,8 @@ int64_t SMEAtomWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     switch (inOp) {
     case EE_SCENARIO_WX_DETACH: SMEUnit(a[0])->GetPlayer()->DetachUnitFromAI(SMEUnit(a[0])->GetComplexUnit());
         return 0;
-    case EE_SCENARIO_WX_GROUP_CREATE: return SMEPtr(inRun->mGroup = new EEActiveGroup(SMEPlayer(a[0])));
-    case EE_SCENARIO_WX_GROUP_PEND: SMEPlayer(a[0])->mPendingGroups.push_back(inRun->mGroup);
+    case EE_SCENARIO_WX_GROUP_CREATE: return SMEPtr(inRun->mGroup = EEActiveGroup::New(SMEPlayer(a[0])));
+    case EE_SCENARIO_WX_GROUP_PEND: SMEPlayer(a[0])->AddPendingGroup(inRun->mGroup);
         return 0;
     case EE_SCENARIO_WX_HAS_COMPLEX: return SMEComplex(a[0])->GetComplexUnit() != NULL;
     case EE_SCENARIO_WX_REFUEL: SMEComplex(a[0])->GetComplexUnit()->SetFlightTime(SMEComplex(a[0])->GetStats()->mFlightTime);
@@ -610,7 +609,7 @@ int64_t SMEAtomWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WX_GOAL_TOWN_PATROL: return SMEPtr(inRun->mGroupGoal = EEUGRust::NewPatrol(inRun->mPatrol, inRun->mPatrolTarget, true));
     case EE_SCENARIO_WX_GROUP_SET_GOAL: theGroup->SetGoal(inRun->mGroupGoal, false);
         return 0;
-    case EE_SCENARIO_WX_GROUP_ACTION: return theGroup->mAction = (long)a[0];
+    case EE_SCENARIO_WX_GROUP_ACTION: return theGroup->mFields.mAction = (long)a[0];
     case EE_SCENARIO_WX_GROUP_PLAN: theGroup->Plan();
         return 0;
     case EE_SCENARIO_WX_UGOAL_HEAL: return SMEPtr(inRun->mUnitGoal = EEUGRust::NewHealUnit(SMEComplex(a[0]), true));
@@ -712,8 +711,8 @@ int64_t SMEAtomWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
         return 0;
     case EE_SCENARIO_WX_MAIN_FORM: return gUIManager->GetMainGameForm() != NULL;
     case EE_SCENARIO_WX_REFRESH_GROUP: return gUIManager->GetMainGameForm()->mRefreshGroup = true;
-    case EE_SCENARIO_WX_UNIT_GROUP_CREATE: return SMEPtr(inRun->mGroup = new EEActiveGroup(SMEComplex(a[0])->mPlayer));
-    case EE_SCENARIO_WX_UNIT_GROUP_PEND: SMEComplex(a[0])->mPlayer->mPendingGroups.push_back(inRun->mGroup);
+    case EE_SCENARIO_WX_UNIT_GROUP_CREATE: return SMEPtr(inRun->mGroup = EEActiveGroup::New(SMEComplex(a[0])->mPlayer));
+    case EE_SCENARIO_WX_UNIT_GROUP_PEND: SMEComplex(a[0])->mPlayer->AddPendingGroup(inRun->mGroup);
         return 0;
     case EE_SCENARIO_WX_GROUP_ADD_COMPLEX: theGroup->AddMember(SMEComplex(a[0]), true);
         return 0;
