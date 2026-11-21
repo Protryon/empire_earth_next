@@ -1,7 +1,7 @@
 //! `extern "C"` for the civilization builder whole (`civ_whole.rs`, `civ_edit.rs`, `civ_list.rs`): its entry
 //! points (the game's open paths, the timer, the blinking button, the campaign's save, the edited civilization's
-//! end, the questions' answers), the list box's overrides (`EECBUIListBox`'s forwarders), and the one host,
-//! `ee_screenscpp_cb` (`Civilization Builder/EECivilizationBuilder.cpp`).
+//! end, the questions' answers), the list box's overrides (`EECBUIListBox`'s forwarders), and the one host
+//! (`civ_host.rs`, over the C++ shims of `Civilization Builder/EECivilizationBuilder.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::{c_long, c_void};
@@ -9,30 +9,43 @@ use core::ffi::{c_long, c_void};
 use crate::screens::civ_list;
 use crate::screens::civ_whole::{self, CbHost, EeScreensCbOut};
 
-/// cbindgen:ignore
-mod sys {
-    extern "C" {
-        pub fn ee_screenscpp_cb(
-            op: u32,
-            p: usize,
-            a: i64,
-            b: i64,
-            c: i64,
-            text: *const u8,
-            length: usize,
-            out: *mut core::ffi::c_void,
-        ) -> i64;
-    }
-}
-
-/// The C++ host.
+/// The host: its ops in Rust (`civ_host.rs`) over the one-statement C++ shims.
 pub(crate) struct Host;
 
 impl CbHost for Host {
     fn op(&mut self, op: u32, p: usize, a: i64, b: i64, c: i64, text: &[u8], out: &mut EeScreensCbOut) -> i64 {
-        let out = (out as *mut EeScreensCbOut).cast::<c_void>();
-        unsafe { sys::ee_screenscpp_cb(op, p, a, b, c, text.as_ptr(), text.len(), out) }
+        crate::screens::civ_host::op(&mut crate::screens::game_cpp::Ffi, op, p, a, b, c, text, out)
     }
+}
+
+/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
+/// `EeTechCivReply*`; `civ_manager_calls.rs`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_civ_host(call: *const c_void, reply: *mut c_void) {
+    use ee_sim::tech::civ_apply::{EeTechCivCall, EeTechCivReply};
+    // SAFETY: the simulation's call and reply, live for the call
+    let (call, reply) = unsafe { (&*(call as *const EeTechCivCall), &mut *(reply as *mut EeTechCivReply)) };
+    crate::screens::civ_manager_calls::host(&mut crate::screens::game_cpp::Ffi, call, reply)
+}
+
+/// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
+/// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_civ_file_host(ctx: *mut c_void, call: *const c_void, reply: *mut c_void) {
+    use ee_sim::tech::civ_file::{EeTechCivFileCall, EeTechCivFileReply};
+    // SAFETY: the simulation's call and reply, live for the call
+    let (call, reply) = unsafe { (&*(call as *const EeTechCivFileCall), &mut *(reply as *mut EeTechCivFileReply)) };
+    crate::screens::civ_file_calls::host(&mut crate::screens::game_cpp::Ffi, ctx as usize, call, reply)
+}
+
+/// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
+#[no_mangle]
+pub extern "C" fn ee_screens_civ_fill_list(list: *mut c_void) {
+    crate::screens::civ_manager_calls::fill_civilization_list(
+        &mut crate::screens::game_cpp::Ffi,
+        &mut Host,
+        list as usize,
+    )
 }
 
 unsafe fn bytes<'a>(text: *const u8, length: usize) -> &'a [u8] {

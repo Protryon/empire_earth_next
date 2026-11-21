@@ -12135,6 +12135,18 @@ long ee_screens_chat_log_load(void *file);
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
 
+/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
+/// `EeTechCivReply*`; `civ_manager_calls.rs`).
+void ee_screens_civ_host(const void *call,
+                         void *reply);
+
+/// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
+/// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
+void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
+
+/// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
+void ee_screens_civ_fill_list(void *list);
+
 /// An op's text appended (the host's answer).
 void ee_screens_cb_out_text(EeScreensCbOut *out, const uint8_t *text, size_t length);
 
@@ -13483,6 +13495,23 @@ int64_t ee_screens_portrait_mouse_down(void *portrait);
 
 /// `EEUICPortrait::SetUnit(unit)` (an `EEUnit*`, NULL for none).
 void ee_screens_portrait_set_unit(void *portrait, void *unit);
+
+/// The constructor's body (`EEUICPortrait::EEUICPortrait`: the rectangle, the level shown).
+void ee_screens_portrait_init(void *portrait,
+                              float left,
+                              float top,
+                              float right,
+                              float bottom,
+                              bool show);
+
+/// The destructor's body (`EEUICPortrait::~EEUICPortrait`).
+void ee_screens_portrait_free(void *portrait);
+
+/// `EEUICPortrait::DrawTextA` -> its result.
+int64_t ee_screens_portrait_draw_text(void *portrait);
+
+/// `EEUICPortrait::MouseMove` -> 0.
+int64_t ee_screens_portrait_mouse_move(void *portrait);
 
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);
