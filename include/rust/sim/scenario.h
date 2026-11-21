@@ -1436,7 +1436,7 @@ constexpr static const uint32_t EE_SCENARIO_LIST_OP_ENTRY_COUNT = 16;
 /// `mEffectIndex` (a pointer to the `unsigned long`).
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_ENTRY = 17;
 
-/// `gResource->GetString` of string `index` (`EE_SCENARIO_STRING_*`) as a C string.
+/// `gResource->GetString(index, the host's text)` (`index` a string id: [`EE_SCENARIO_STRING_IDS`]).
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_RESOURCE = 18;
 
 /// `text` appended to the caller's name list.
@@ -1445,8 +1445,14 @@ constexpr static const uint32_t EE_SCENARIO_LIST_OP_OUT_NAME = 19;
 /// An area's `SetAnchor(U2DPoint<long>(x, y))`: `x` in `list` (32 bits), `y` in `index`.
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_ANCHOR = 20;
 
-/// `Prepare`'s media: player `list`'s upgrade of unit class `index` loads its media, kept in `mUnitClassMedia`.
+/// `Prepare`'s media: player `list`'s upgrade of unit class `index` loads its media (`LoadMedia(player, 0x7f)`);
+/// `_MEDIA_KEEP`: the pair pushed on `mUnitClassMedia`.
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_MEDIA = 21;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_MEDIA_KEEP = 22;
+
+/// The host's text (the last `_RESOURCE`'s string) as a C string.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_TEXT = 23;
 
 /// The strings of [`EE_SCENARIO_LIST_OP_RESOURCE`]: `IDS_COPY`, `IDS_EXISTS`, and the built-ins' names
 /// (`IDS_ALWAYS_TRUE`, `IDS_DO_NOTHING`, `IDS_NONE`, `IDS_OFF_MAP`, `IDS_PREVIOUS_LOCATION`).
@@ -1468,6 +1474,76 @@ constexpr static const size_t EE_SCENARIO_STRING_PREVIOUS_LOCATION = 6;
 constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
 
 constexpr static const uint32_t EE_SCENARIO_MANAGER_LAST_CHAT = 1;
+
+/// TEST ONLY: `EESMCaptureUpdate(m, a != 0)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAPTURE_RECORD = 76;
+
+/// `DeleteVectorContents` of `m->mTriggers`, `mConditions`, `mEffects`, `mObjects`, `mAreas`, `mPendingEffects`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELETE_TRIGGERS = 77;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELETE_CONDITIONS = 78;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELETE_EFFECTS = 79;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELETE_OBJECTS = 80;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELETE_AREAS = 81;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_DELETE_PENDING = 82;
+
+/// `ee_scenario_timed_free(m->mTimedEffects)`, `m->mTimedEffects = NULL`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_TIMED_FREE = 83;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_TIMED_FORGET = 84;
+
+/// `new EESMEffect` (its handle), effect a's `Copy(*effect b)`, `m->mPendingEffects.push_back(effect a)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EFFECT_NEW = 85;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_EFFECT_COPY = 86;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_PENDING_PUSH = 87;
+
+/// `m->mEffects.size()`, `m->mEffects[a]` (a handle).
+constexpr static const uint32_t EE_SCENARIO_ROUND_EFFECTS = 88;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_EFFECT_AT = 89;
+
+/// The held point (the original's local) set to `gWorld.mLine.GetStart()`: its address (a `GE3DPoint*`, x, y, z
+/// `f32`s); `gWorld.mCameraControl.mZoom`, `gSideScrollSpeed` (an `f32`'s bits each);
+/// `gWorld.mCameraControl.SetLocation(the held point, false, true)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_LINE_START = 90;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD = 92;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_SIDE_SCROLL_SPEED = 93;
+
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAMERA_SET_START = 94;
+
+/// A new element of list `slot`: its handle into `*value` (a `void*`).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_NEW = 22;
+
+/// The element `value` of list `slot`: its `Load` (the result), `push_back` onto the list, `delete`.
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_READ = 23;
+
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_KEEP = 24;
+
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_FREE = 25;
+
+/// `GetIsLoadingScenario()` (1/0).
+constexpr static const uint32_t EE_SCENARIO_IO_LOADING_SCENARIO = 26;
+
+/// The condition `value` names object 0 (`mType == kSMConditionObject && mObjectIndex == 0`; 1/0).
+constexpr static const uint32_t EE_SCENARIO_IO_CONDITION_OBJECT_ZERO = 27;
+
+/// The manager's `mMessages.size()` into `*value` (an `unsigned long`), `resize(*value)`, message `index`'s `Load`
+/// and `Save` (the result).
+constexpr static const uint32_t EE_SCENARIO_IO_MESSAGES_COUNT = 28;
+
+constexpr static const uint32_t EE_SCENARIO_IO_MESSAGES_RESIZE = 29;
+
+constexpr static const uint32_t EE_SCENARIO_IO_MESSAGE_LOAD = 30;
+
+constexpr static const uint32_t EE_SCENARIO_IO_MESSAGE_SAVE = 31;
 
 /// The context object's `mUnits.size()`.
 constexpr static const uint32_t EE_SCENARIO_READ_OBJ_UNIT_COUNT = 53;
@@ -2363,6 +2439,16 @@ constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA = 10;
 
 /// The media strings' section `slot` set to `text`.
 constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET_MEDIA = 11;
+
+/// [`EE_SCENARIO_TEXT_OP_ERROR`]'s statements: `gResource->GetString(value, the host's format)`; `sprintf(the
+/// host's message, the format, value, text)`, `sprintf(.., text, text2)`; `mImportErrors.push_back(the message)`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR_FORMAT = 12;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR_PRINT_ID = 13;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR_PRINT_TEXTS = 14;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR_PUSH = 15;
 
 /// `FindObjectByID(a)`: -1 without the object or (when `b` is 1) when its `mHasAttributeCheck` is 0, else its
 /// `Evaluate(0)` and then `mUnits.size()`.
@@ -3953,6 +4039,27 @@ void ee_scenario_list_rename_object_conditions(const EeScenarioListHost *host, v
 /// # Safety
 /// As [`ee_scenario_list_rename_object_conditions`].
 void ee_scenario_list_set_parent(const EeScenarioListHost *host, void *object, long parent);
+
+/// `EEScenarioManager::~EEScenarioManager`.
+void ee_scenario_manager_destroy(EeScenarioRoundHost host);
+
+/// `EEScenarioManager::AddV134Effect` (`effect` the `const EESMEffect*`).
+void ee_scenario_add_pending(EeScenarioRoundHost host, const void *effect);
+
+/// `EEScenarioManager::SetTimedEffectHasRun` (`effect` the `EESMEffect*`).
+void ee_scenario_set_timed_has_run(EeScenarioRoundHost host, const void *effect, bool flag);
+
+/// `EEScenarioManager::MoveCameraToStart`.
+void ee_scenario_move_camera_to_start(EeScenarioRoundHost host);
+
+/// `EEScenarioManager::ObjectChanged`: the object's parent set (`parent`) or its conditions renamed.
+///
+/// # Safety
+/// As `ee_scenario_list_set_parent` and `ee_scenario_list_rename_object_conditions`.
+void ee_scenario_object_changed(const EeScenarioListHost *host,
+                                void *object,
+                                bool parent,
+                                long value);
 
 /// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
 extern int64_t ee_scenariocpp_capture(uint32_t op, const void *p, int64_t a, int64_t b);

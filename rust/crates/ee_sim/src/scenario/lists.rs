@@ -78,14 +78,18 @@ pub const EE_SCENARIO_LIST_OP_ENTRY_COUNT: u32 = 16;
 /// The index in a trigger's entry: `index` the entry, `list` 0 a condition entry's `mValue`, 1 an effect entry's
 /// `mEffectIndex` (a pointer to the `unsigned long`).
 pub const EE_SCENARIO_LIST_OP_ENTRY: u32 = 17;
-/// `gResource->GetString` of string `index` (`EE_SCENARIO_STRING_*`) as a C string.
+/// `gResource->GetString(index, the host's text)` (`index` a string id: [`EE_SCENARIO_STRING_IDS`]).
 pub const EE_SCENARIO_LIST_OP_RESOURCE: u32 = 18;
 /// `text` appended to the caller's name list.
 pub const EE_SCENARIO_LIST_OP_OUT_NAME: u32 = 19;
 /// An area's `SetAnchor(U2DPoint<long>(x, y))`: `x` in `list` (32 bits), `y` in `index`.
 pub const EE_SCENARIO_LIST_OP_ANCHOR: u32 = 20;
-/// `Prepare`'s media: player `list`'s upgrade of unit class `index` loads its media, kept in `mUnitClassMedia`.
+/// `Prepare`'s media: player `list`'s upgrade of unit class `index` loads its media (`LoadMedia(player, 0x7f)`);
+/// `_MEDIA_KEEP`: the pair pushed on `mUnitClassMedia`.
 pub const EE_SCENARIO_LIST_OP_MEDIA: u32 = 21;
+pub const EE_SCENARIO_LIST_OP_MEDIA_KEEP: u32 = 22;
+/// The host's text (the last `_RESOURCE`'s string) as a C string.
+pub const EE_SCENARIO_LIST_OP_TEXT: u32 = 23;
 
 /// The strings of [`EE_SCENARIO_LIST_OP_RESOURCE`]: `IDS_COPY`, `IDS_EXISTS`, and the built-ins' names
 /// (`IDS_ALWAYS_TRUE`, `IDS_DO_NOTHING`, `IDS_NONE`, `IDS_OFF_MAP`, `IDS_PREVIOUS_LOCATION`).
@@ -96,6 +100,8 @@ pub const EE_SCENARIO_STRING_DO_NOTHING: usize = 3;
 pub const EE_SCENARIO_STRING_NONE: usize = 4;
 pub const EE_SCENARIO_STRING_OFF_MAP: usize = 5;
 pub const EE_SCENARIO_STRING_PREVIOUS_LOCATION: usize = 6;
+/// Their string ids (`IDS_COPY` .. `IDS_PREVIOUS_LOCATION`, ee/EEStringIDs.h).
+const EE_SCENARIO_STRING_IDS: [usize; 7] = [13002, 13003, 13004, 13005, 13001, 13006, 13007];
 
 /// `kSMConditionObject`: an object's Exists condition (they stay at the end of the conditions).
 const CONDITION_OBJECT: c_ulong = 1;
@@ -842,7 +848,8 @@ impl Lists for HostLists<'_> {
         unsafe { &mut *(p as *mut c_ulong) }
     }
     fn resource(&mut self, which: usize) -> Vec<u8> {
-        let p = self.call(EE_SCENARIO_LIST_OP_RESOURCE, 0, which, std::ptr::null_mut());
+        self.call(EE_SCENARIO_LIST_OP_RESOURCE, 0, EE_SCENARIO_STRING_IDS[which], std::ptr::null_mut());
+        let p = self.call(EE_SCENARIO_LIST_OP_TEXT, 0, 0, std::ptr::null_mut());
         Self::c_text(p)
     }
     fn set_anchor(&mut self, area: Element, x: c_long, y: c_long) {
@@ -850,6 +857,7 @@ impl Lists for HostLists<'_> {
     }
     fn load_media(&mut self, player: i32, class: c_ulong) {
         self.call(EE_SCENARIO_LIST_OP_MEDIA, player as u32, class as usize, std::ptr::null_mut());
+        self.call(EE_SCENARIO_LIST_OP_MEDIA_KEEP, player as u32, class as usize, std::ptr::null_mut());
     }
     fn out_name(&mut self, name: &[u8]) {
         self.call_text(EE_SCENARIO_LIST_OP_OUT_NAME, 0, std::ptr::null_mut(), name);

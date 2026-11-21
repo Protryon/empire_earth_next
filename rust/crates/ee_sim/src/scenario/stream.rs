@@ -194,7 +194,11 @@ impl Stream for EeScenarioStream {
         self.call(EE_SCENARIO_IO_ENTRY_SET, slot, index, (&mut entry as *mut EeScenarioEntry).cast());
     }
     fn element_load(&mut self, kind: u32) -> i32 {
-        self.call(EE_SCENARIO_IO_ELEMENT_LOAD, kind, 0, std::ptr::null_mut())
+        // composed of the C++'s single statements (manager_compose.rs)
+        crate::scenario::manager_compose::element_load(
+            &mut |op, slot, index, value| self.call(op, slot, index, value),
+            kind,
+        )
     }
     fn element_save(&mut self, kind: u32, index: c_ulong) -> i32 {
         self.call(EE_SCENARIO_IO_ELEMENT_SAVE, kind, index, std::ptr::null_mut())
@@ -208,7 +212,10 @@ impl Stream for EeScenarioStream {
         self.call(EE_SCENARIO_IO_MEDIA, save as u32, 0, std::ptr::null_mut())
     }
     fn messages(&mut self, save: bool) -> i32 {
-        self.call(EE_SCENARIO_IO_MESSAGES, save as u32, 0, std::ptr::null_mut())
+        crate::scenario::manager_compose::messages(
+            &mut |op, slot, index, value| self.call(op, slot, index, value),
+            save,
+        )
     }
 }
 

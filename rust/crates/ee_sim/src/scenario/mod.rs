@@ -57,6 +57,7 @@ pub mod fields;
 pub mod host;
 pub mod lists;
 pub mod manager;
+pub mod manager_compose;
 pub mod object;
 pub mod objeval;
 pub mod placement;
