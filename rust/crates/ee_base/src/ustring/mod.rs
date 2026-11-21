@@ -21,11 +21,11 @@ mod golden;
 /// Serialises the golden replays (they set the process-wide legacy flag and default capacities).
 #[cfg(test)]
 static GOLDEN_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+mod fileio;
 #[cfg(test)]
 mod golden_store;
 #[cfg(test)]
 mod golden_wide;
-mod fileio;
 mod record;
 mod wide;
 

@@ -20,7 +20,8 @@ pub struct EeFsFileCalls {
     /// `Read(unsigned char*, length, read)`.
     pub read_bytes: unsafe extern "C" fn(file: *mut c_void, out: *mut u8, length: c_ulong, read: *mut c_ulong) -> i32,
     /// `Read(char*, length, read)`.
-    pub read_text: unsafe extern "C" fn(file: *mut c_void, out: *mut c_char, length: c_ulong, read: *mut c_ulong) -> i32,
+    pub read_text:
+        unsafe extern "C" fn(file: *mut c_void, out: *mut c_char, length: c_ulong, read: *mut c_ulong) -> i32,
     /// `Write(const uint32_t&)`.
     pub write_u32: unsafe extern "C" fn(file: *mut c_void, value: u32) -> i32,
     /// `Write(const unsigned char*, length, written)`.
@@ -58,18 +59,22 @@ impl CppFile {
     pub fn read_text(&mut self, out: &mut [u8]) -> (i32, c_ulong) {
         let mut read: c_ulong = 0;
         // SAFETY: the file is the live C++ object this was made from; `out` is valid for its length
-        let status = unsafe { (self.calls().read_text)(self.0, out.as_mut_ptr().cast(), out.len() as c_ulong, &mut read) };
+        let status =
+            unsafe { (self.calls().read_text)(self.0, out.as_mut_ptr().cast(), out.len() as c_ulong, &mut read) };
         (status, read)
     }
     /// `Write(const char*, length, written)`: the status and the count.
     pub fn write_text(&mut self, data: &[u8]) -> (i32, c_ulong) {
         let mut written: c_ulong = 0;
         // SAFETY: as `read_text`
-        let status = unsafe { (self.calls().write_text)(self.0, data.as_ptr().cast(), data.len() as c_ulong, &mut written) };
+        let status =
+            unsafe { (self.calls().write_text)(self.0, data.as_ptr().cast(), data.len() as c_ulong, &mut written) };
         (status, written)
     }
 }
 
+// (`c_ulong` is u32 on Windows, u64 on LP64)
+#[allow(clippy::unnecessary_cast)]
 impl FsFile for CppFile {
     fn read_u32(&mut self, value: &mut u32) -> i32 {
         // SAFETY: as `read_text`
@@ -87,6 +92,7 @@ impl FsFile for CppFile {
     }
 }
 
+#[allow(clippy::unnecessary_cast)]
 impl FsWrite for CppFile {
     fn write_u32(&mut self, value: u32) -> i32 {
         // SAFETY: as `read_text`

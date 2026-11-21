@@ -118,7 +118,11 @@ pub unsafe extern "C" fn ee_urandom_generate(r: *mut EeURandom) -> f32 {
 /// # Safety
 /// `r` is a live `URandom`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_urandom_generate_int(r: *mut EeURandom, min: std::ffi::c_long, max: std::ffi::c_long) -> std::ffi::c_long {
+pub unsafe extern "C" fn ee_urandom_generate_int(
+    r: *mut EeURandom,
+    min: std::ffi::c_long,
+    max: std::ffi::c_long,
+) -> std::ffi::c_long {
     let limit = max.wrapping_add(1);
     // SAFETY: the caller's contract
     let value = unsafe { ee_urandom_generate(r) } * limit.wrapping_sub(min) as f32 + min as f32;

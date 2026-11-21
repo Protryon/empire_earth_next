@@ -1,7 +1,7 @@
-# LLE: bodies over one-statement shims (round 8)
+# LLE: bodies over one-statement shims (rounds 8-9)
 
-The lane's state after LLE round 8 (branch `rust-lle8`, 2026-11-20). The round's story is PORT_LEARNINGS.md
-"LLE round 8". Earlier state: [lle-rest.md](lle-rest.md) (rounds 1-2), [gfx-lle-cluster.md](gfx-lle-cluster.md),
+The lane's state after LLE round 9 (branch `rust-lle9`, 2026-11-21). The rounds' stories are PORT_LEARNINGS.md
+"LLE round 8" and "LLE round 9". Earlier state: [lle-rest.md](lle-rest.md) (rounds 1-2), [gfx-lle-cluster.md](gfx-lle-cluster.md),
 [lle-network-engine-whole-classes.md](lle-network-engine-whole-classes.md), [game-leaves.md](game-leaves.md).
 
 Scope (from this round): src/Low-Level Engine but its User Interface, include/lle but UI*, include/gx, include/dx7,
@@ -19,7 +19,25 @@ Plain members a body reads and writes become a `#[repr(C)]` record the C++ class
 the players' records before): `EeRtsPhysicsFields`, `EeRtsGraphicsFields`, `EeRtsMouseFields`. The Thread System,
 Time Manager, Input System and sound samples are Rust objects already: the bodies call them directly.
 
-## What moved (commits)
+## Round 9 (branch `rust-lle9`)
+
+The measure is `logic_lines.py` (fixed for round 9: one-statement `case EeX::Y:` cases count as shims).
+
+| Commit | What | Logic (whole tree) | Net C++ (src, include but include/rust) |
+|---|---|---|---|
+| 0b58b5b47 | `GERScreenState`/`GERFogAttributes` are the Rust records; 266 one-statement out-of-line members moved inline into their class headers (GERasterizer, GETerrainMesh, GEPhysicalModel, GEModel(Manager), GETexture(Manager), GEFontBitmap, NEMRecord, NEMessage, the NE server and client, FSPath, RTSGraphics, RTSMouse, RTSMousePointer, RTSUnit, RTSWorld) | -241 | -299 |
+| dbbe0159f | the C++ `FSFile`'s calls for Rust (ee_base fs cppfile.rs, registered by File System.cpp); `UString`/`UWideString` `Load`/`Save`, the memory file's and the chunk's file loads and saves over them | -75 | -90 |
+| 046e6a402 | `GELight` whole (ee_render ge light.rs); DX7 text draws, `CreateAWindow`, the clears' and highlight's rectangles, the light and stage reads; the field stream's byte calls | -192 | -190 |
+| 12532feca | `FSPath` whole (ee_base fs path_obj.rs); `URandom`'s draws (ee_base random), `GEVector::Normalize`, `U2DPoint<long>::GetLineTiles`, `U2DRectangle<float>::GetClosestPoint` (math u2d.rs); dead U2D templates deleted | -316 | -420 |
+| ae4274fe5 | `GETextureSet` whole (ee_render ge texset.rs); `FSMemoryFile`'s `Close`/`Copy`/`FOpen` disk copies; `GetImageFileAttributes` | -93 | -104 |
+| | **the round** (b80c2286f -> ae4274fe5: 69,811 -> 68,894) | **-917** | **-1,103** (+539 -1,642) |
+
+In scope (src/Low-Level Engine but User Interface, include/lle but UI*, src/RTS Engine, include/ee/RTS*.h): 4,381
+-> 3,452. Shims: about 20 one-statement C++ shims added (the FSFile calls table's six lambdas, FSPath's seven, the
+texture set's dereference, CreateAWindow's window constructor and debug line, GetLineTiles' vector assign, the DX7
+host's split cases); the moved one-liners are moves, not new shims. Deleted: the DX7 host's `LightParams` case.
+
+## Round 8 (branch `rust-lle8`)
 
 | Commit | What | Logic (whole tree) | Net C++ (src, include but include/rust) |
 |---|---|---|---|
@@ -29,38 +47,31 @@ Time Manager, Input System and sound samples are Rust objects already: the bodie
 | 5b806af90 | RTSGraphics, RTSMouse, RTSMousePointer, RTSMiniMap, RTSTile, RTSWorld, RTSUnit, RTSPlayer (ee_game rts) | -939 | -1,164 |
 | 66328b822 | NEMRecord's bodies (ee_game lle netrecord.rs) | -150 | -234 |
 | b03aad460 | RTSMap's own bodies (ee_game rts map.rs) | -66 | -61 |
-| 2ba3d27e0 | clippy and rustfmt (Rust only) | 0 | 0 |
-| | **the round** (e0a5ecc60 -> b03aad460: 81,661 -> 79,939) | **-1,722** | **-2,188** (+610 -2,798) |
+| | **the round** (old measure) | **-1,722** | **-2,188** |
 
-Shims: 306 one-statement C++ shims added (`ee_rts*cpp_*`, `ee_rtscpp_*`, `ee_nemcpp_*`, `ee_mixercpp_*`) and the
-pool's five host functions; 5 deleted (the mixer plug-in's `ee_soundcpp_*` module entries, now Rust). In this
-lane's scope (src/Low-Level Engine but User Interface, include/lle but UI*, src/RTS Engine) the logic went from
-6,281 to 4,592 (-1,689).
+## Gates (round 9, on the tree merged with origin/rust 439543b4b)
 
-## Gates (on the tree merged with origin/rust a84903ce6)
+GATES_PLACEHOLDER
 
-Both builds and the test profile 0/0; the Rust gate PASS (5,336 tests); oracle seeds 2-7 identical; the twelve
-capture profiles PASS (seeds 2-3); the plain saveload PASS and the matrix exit 0 (`saveload expect: PASS`);
-scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS; the tour and the
-box-select/orders game PASS; gates.sh GATES PASS (lan-game included). Details: PORT_LEARNINGS.md "LLE round 8".
+## What is left, by directory (logic lines, round 9's end)
 
-## What is left, by directory
+- src/Low-Level Engine/Graphics Engine: GEModel.cpp 142 (the host prologues, the model manager's create args and
+  sub-model, the terrain host, the physical model's reference counting, the PM table), GETexture.cpp 109
+  (GEStoreFrame, the copy cases' rectangles, the manager's lock/dump/pack-log cases, the layout pins), DX7Rasterizer.cpp
+  79 (the surface metrics and probe-window cases: the scrobj replay goldens record their shapes; layout pins),
+  GEBitmap.cpp 65 (the font bitmap's text byte and range cases), GERasterizer.cpp 46.
+- src/Low-Level Engine/Network Engine: NESynchronousServer.cpp 101, Client 32, Communications: the hosts' compound
+  cases. Not moved this round: tests_server.rs and the NE goldens replay each op's argument shape, so splitting a
+  case means re-recording them.
+- src/RTS Engine: RTSMap.cpp 82 (EEMap's bodies: game core's), RTSUnit.cpp 64, RTSPlayer.cpp 30.
+- include/lle: the constant enums (GERenderState.h 82, ISKeyCode.h 74, NEMessageID.h 43), LowLevelEngineCore.h 81
+  (ESError, the UM rounding inlines), the value types' members and inline math (GERectangle, GEViewport, U2DRectangle,
+  GESurface's 30 pure virtuals: the store gate's fakes subclass them), UString/UWideString/FSFile declarations.
 
-- src/RTS Engine: RTSMap.cpp (most of its bodies are EEMap's, game core round 8's; the rest are forwarders to
-  ee_render map_raise.rs), RTSWorld::SetCameraTransformation (the camera's trigonometry), RTSUnit's handle helpers
-  and the unit list's failure report (debugging).
-- src/Low-Level Engine/Graphics Engine: GEModel, GETexture, GEBitmap, DX7Rasterizer, GERasterizer: host switches
-  (one-statement cases, but over scoped enums, which logic_lines.py counts as logic: see below) and the few
-  multi-statement cases (the model manager's sub-model, the font bitmap's).
-- src/Low-Level Engine/Network Engine: NESynchronousServer/Client/Communications: their host switches (as above)
-  and constructors' argument records.
-- src/Low-Level Engine/File System: FSPath (vectors of FSArchive/FSFileSpec C++ objects), File System.cpp.
-- include/lle: the value-type templates (U2DPoint, U2DRectangle: simulation math, by instantiation), the class
-  declarations of the GE shells (GERasterizer.h's 100 virtuals: the store gate's StoreRasterizer subclasses it),
-  the constant enums (GERenderState.h, ISKeyCode.h, NEMessageID.h), FSFile.h's typed overloads.
-
-## The measure
+## The measure (round 8)
 
 `logic_lines.py`'s case pattern `case\s+[^:]+` stops at the first `:` of a scoped enum (`case EeGeModOp::X:`), so
 every one-statement case of the cbindgen enums' host switches counts as logic: about 470 lines in this scope at
 the round's base (a variant that accepts `::` measured 5,812 in-scope logic lines against 6,281).
+
+Round 9's numbers are the fixed script's (`case EeX::Y:` one-statement cases count as shims).

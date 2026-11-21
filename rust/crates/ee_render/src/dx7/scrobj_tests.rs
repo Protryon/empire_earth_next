@@ -441,7 +441,13 @@ impl scrobj::WindowCalls for WindowLog {
     fn shown(&mut self) {
         self.log.push("shown".into());
     }
-    fn new_window(&mut self, window: *mut c_void, width: core::ffi::c_ulong, height: core::ffi::c_ulong, style: core::ffi::c_ulong) -> *mut c_void {
+    fn new_window(
+        &mut self,
+        window: *mut c_void,
+        width: core::ffi::c_ulong,
+        height: core::ffi::c_ulong,
+        style: core::ffi::c_ulong,
+    ) -> *mut c_void {
         self.log.push(format!("new {} {width}x{height} {style}", window as usize));
         9 as *mut c_void
     }

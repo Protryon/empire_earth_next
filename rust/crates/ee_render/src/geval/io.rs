@@ -25,7 +25,8 @@ pub struct EeGeFieldIo {
     pub write_u32: unsafe extern "C" fn(file: *mut c_void, value: u32) -> c_long,
     pub write_f32: unsafe extern "C" fn(file: *mut c_void, value: f32) -> c_long,
     /// `Read(char*, length, read)`.
-    pub read_bytes: unsafe extern "C" fn(file: *mut c_void, out: *mut u8, length: c_ulong, read: *mut c_ulong) -> c_long,
+    pub read_bytes:
+        unsafe extern "C" fn(file: *mut c_void, out: *mut u8, length: c_ulong, read: *mut c_ulong) -> c_long,
     /// `Write(const char*, length, written)`.
     pub write_bytes:
         unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: c_ulong, written: *mut c_ulong) -> c_long,

@@ -30,7 +30,8 @@ pub unsafe fn ustring_load(s: *mut EeUString, file: &mut dyn FsFile) -> i32 {
     let length = stored as c_ulong;
     if result == OK && length != 0 {
         // SAFETY: the buffer holds `length + 1` bytes
-        let buffer = unsafe { slice::from_raw_parts_mut(ee_ustring_load_buffer(s, length).cast::<u8>(), length as usize) };
+        let buffer =
+            unsafe { slice::from_raw_parts_mut(ee_ustring_load_buffer(s, length).cast::<u8>(), length as usize) };
         let (status, read) = file.read_text(buffer);
         result = status;
         if result == OK && read as c_ulong != length {

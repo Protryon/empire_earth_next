@@ -939,14 +939,28 @@ struct TextJob {
 
 /// `DX7DrawTextPlat`: the `GXSurface::DrawText` callback; the target covers the surface from the origin. The font is
 /// referenced around the draw, as the original did (the text holds it: the count never reaches zero here).
-extern "C" fn text_job_draw(target: *const crate::gx::abi::PlatFontTarget, origin_x: c_long, origin_y: c_long, job: *mut c_void) -> bool {
+extern "C" fn text_job_draw(
+    target: *const crate::gx::abi::PlatFontTarget,
+    origin_x: c_long,
+    origin_y: c_long,
+    job: *mut c_void,
+) -> bool {
     // SAFETY: the context is the TextJob of `draw_text`; the target is GX's for the call
     unsafe {
         let job = &mut *(job as *mut TextJob);
         let font = ee_ge_text_font(cppobj::plain(job.text as usize)) as usize;
         cppobj::reference(font);
         let t = &*target;
-        if !ee_dx7r_text_draw(job.text, job.clip, origin_x, origin_y, t.mWidth, t.mHeight, t.mScale, target as *const c_void) {
+        if !ee_dx7r_text_draw(
+            job.text,
+            job.clip,
+            origin_x,
+            origin_y,
+            t.mWidth,
+            t.mHeight,
+            t.mScale,
+            target as *const c_void,
+        ) {
             job.result = 1; // kErrorNativeError
         }
         let counted = font as *mut cppobj::CppCounted;
@@ -967,8 +981,14 @@ pub unsafe extern "C" fn ee_dx7r_draw_text(text: Handle, clip: *const TextRect, 
     // SAFETY: the caller's contract
     unsafe {
         ee_dx7r_text_bounds(text, clip, &mut bounds);
-        let rect = crate::gx::abi::Rect { left: bounds.left, top: bounds.top, right: bounds.right, bottom: bounds.bottom };
-        let drawn = crate::gx::ffi::gx_surface_draw_text(surface, &rect, text_job_draw, &mut job as *mut TextJob as *mut c_void);
+        let rect =
+            crate::gx::abi::Rect { left: bounds.left, top: bounds.top, right: bounds.right, bottom: bounds.bottom };
+        let drawn = crate::gx::ffi::gx_surface_draw_text(
+            surface,
+            &rect,
+            text_job_draw,
+            &mut job as *mut TextJob as *mut c_void,
+        );
         if drawn != crate::gx::abi::GX_OK && job.result == 0 {
             job.result = 1;
         }
@@ -982,7 +1002,11 @@ pub unsafe extern "C" fn ee_dx7r_draw_text(text: Handle, clip: *const TextRect, 
 /// # Safety
 /// As [`ee_dx7r_draw_text`]; `ge_rect` points at four floats.
 #[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_draw_text_clipped(text: Handle, ge_rect: *const [f32; 4], surface: *mut c_void) -> c_long {
+pub unsafe extern "C" fn ee_dx7r_draw_text_clipped(
+    text: Handle,
+    ge_rect: *const [f32; 4],
+    surface: *mut c_void,
+) -> c_long {
     use ee_base::math::um::floor;
     // SAFETY: the caller's contract
     let [bottom, left, right, top] = unsafe { *ge_rect };

@@ -944,7 +944,8 @@ impl EeDx7Rasterizer {
                 state::clear_texture(state, &mut device);
                 return;
             }
-            let stage = &*(Self::op(p, EeDx7RastOp::TextureStage, texture, 0, 0) as *const crate::ge::texobj_tex::EeGeTStage);
+            let stage =
+                &*(Self::op(p, EeDx7RastOp::TextureStage, texture, 0, 0) as *const crate::ge::texobj_tex::EeGeTStage);
             let view = StageView {
                 surface: Self::op(p, EeDx7RastOp::TextureStageSurface, texture, 0, 0) as H,
                 mColorMode: stage.color_mode,

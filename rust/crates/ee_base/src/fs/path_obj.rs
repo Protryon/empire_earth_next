@@ -9,13 +9,17 @@
 
 use std::ffi::{c_char, c_long, c_ulong, c_void};
 
-use crate::fs::archive_obj::{ee_fs_arch_assign, ee_fs_arch_close, ee_fs_arch_name_member, ee_fs_arch_open, EeFsArchiveObj};
+use crate::fs::archive_obj::{
+    ee_fs_arch_assign, ee_fs_arch_close, ee_fs_arch_name_member, ee_fs_arch_open, EeFsArchiveObj,
+};
 use crate::fs::ffi::ee_fs_archive_list;
 use crate::fs::memfile::EeFsMemFile;
 use crate::fs::path::{path_find, path_list_directories, EeFsPathNameSink};
 use crate::fs::spec::{ee_fs_spec_assign, ee_fs_spec_init, EeFsSpec, EeFsString, TempSpec};
 use crate::fs::status;
-use crate::ustring::{ee_ustring_change_case, ee_ustring_compare, ee_ustring_free, ee_ustring_init_copy, ee_ustring_init_text};
+use crate::ustring::{
+    ee_ustring_change_case, ee_ustring_compare, ee_ustring_free, ee_ustring_init_copy, ee_ustring_init_text,
+};
 
 /// The C++ objects an `FSPath` holds, made and deleted on the C++ side (FSPath.cpp), and the startup volume and
 /// directory its searches start from.
@@ -125,7 +129,12 @@ impl EeFsPath {
     ///
     /// # Safety
     /// `name` is a live `UString` record, `out_directory` a live spec record.
-    pub unsafe fn find_file(&self, name: *const EeFsString, out_file: &mut *mut EeFsSpec, out_directory: *mut EeFsSpec) -> c_long {
+    pub unsafe fn find_file(
+        &self,
+        name: *const EeFsString,
+        out_file: &mut *mut EeFsSpec,
+        out_directory: *mut EeFsSpec,
+    ) -> c_long {
         let calls = self.calls();
         // SAFETY: the startup strings are the C++ globals
         let mut file = unsafe { self.new_spec() };
@@ -354,7 +363,11 @@ pub unsafe extern "C" fn ee_fs_path_has_file(p: *const EeFsPath, name: *const c_
 /// # Safety
 /// `p` is live, `name` a C string, `archived` writable.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_path_archive_status(p: *const EeFsPath, name: *const c_char, archived: *mut bool) -> bool {
+pub unsafe extern "C" fn ee_fs_path_archive_status(
+    p: *const EeFsPath,
+    name: *const c_char,
+    archived: *mut bool,
+) -> bool {
     // SAFETY: the caller's contract
     unsafe {
         let mut text = EeFsString::blank();
@@ -382,7 +395,8 @@ pub unsafe extern "C" fn ee_fs_path_list_files(p: *const EeFsPath, pattern: *con
 #[no_mangle]
 pub unsafe extern "C" fn ee_fs_path_archive(p: *const EeFsPath, index: c_ulong) -> *mut EeFsArchiveObj {
     // SAFETY: the caller's contract
-    unsafe { (&(*p).archives).get(index as usize).copied().unwrap_or(std::ptr::null_mut()) }
+    let p = unsafe { &*p };
+    p.archives.get(index as usize).copied().unwrap_or(std::ptr::null_mut())
 }
 
 /// `GetArchive(inIndex, outArchive)` / `GetDirectory(inIndex, outDirectory)` (`directory`): the item assigned to
@@ -391,7 +405,12 @@ pub unsafe extern "C" fn ee_fs_path_archive(p: *const EeFsPath, index: c_ulong) 
 /// # Safety
 /// `p` is live; `out` a live `FSArchive` (or `FSFileSpec` for a directory).
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_path_get(p: *const EeFsPath, directory: bool, index: c_ulong, out: *mut c_void) -> c_long {
+pub unsafe extern "C" fn ee_fs_path_get(
+    p: *const EeFsPath,
+    directory: bool,
+    index: c_ulong,
+    out: *mut c_void,
+) -> c_long {
     // SAFETY: the caller's contract
     unsafe {
         let p = &*p;
@@ -417,7 +436,8 @@ pub unsafe extern "C" fn ee_fs_path_get(p: *const EeFsPath, directory: bool, ind
 #[no_mangle]
 pub unsafe extern "C" fn ee_fs_path_count(p: *const EeFsPath, directory: bool) -> c_ulong {
     // SAFETY: the caller's contract
-    (unsafe { if directory { (&(*p).directories).len() } else { (&(*p).archives).len() } }) as c_ulong
+    let p = unsafe { &*p };
+    (if directory { p.directories.len() } else { p.archives.len() }) as c_ulong
 }
 
 /// `RemoveArchive(inIndex)` (the archive closed, then deleted) / `RemoveDirectory(inIndex)` (`directory`);
@@ -539,7 +559,10 @@ mod tests {
             let mut out = spec(c"");
             assert_eq!(ee_fs_path_get(p, true, 0, &mut out.0 as *mut EeFsSpec as *mut c_void), 0);
             assert_eq!(out.0.file.bytes(), b"c");
-            assert_eq!(ee_fs_path_get(p, true, 3, &mut out.0 as *mut EeFsSpec as *mut c_void), status::BEYOND_END as c_long);
+            assert_eq!(
+                ee_fs_path_get(p, true, 3, &mut out.0 as *mut EeFsSpec as *mut c_void),
+                status::BEYOND_END as c_long
+            );
             assert_eq!(ee_fs_path_remove(p, true, 1), 0);
             assert_eq!(ee_fs_path_get(p, true, 1, &mut out.0 as *mut EeFsSpec as *mut c_void), 0);
             assert_eq!(out.0.file.bytes(), b"b");

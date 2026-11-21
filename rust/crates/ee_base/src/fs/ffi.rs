@@ -757,7 +757,11 @@ unsafe fn write_contents(file: *mut EeFsMemFile, stream: *mut c_void) -> i32 {
 /// # Safety
 /// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_close_disk(file: *mut EeFsMemFile, stream: *mut *mut c_void, temporary: *const EeFsString) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_close_disk(
+    file: *mut EeFsMemFile,
+    stream: *mut *mut c_void,
+    temporary: *const EeFsString,
+) -> i32 {
     // SAFETY: the caller's contract
     unsafe {
         let result = ee_fs_mem_close(file);
@@ -780,21 +784,22 @@ pub unsafe extern "C" fn ee_fs_mem_close_disk(file: *mut EeFsMemFile, stream: *m
 /// # Safety
 /// `file` is live, `destination` a C string.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_copy_disk(file: *mut EeFsMemFile, destination: *const c_char, fail_if_exists: bool) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_copy_disk(
+    file: *mut EeFsMemFile,
+    destination: *const c_char,
+    fail_if_exists: bool,
+) -> i32 {
     // SAFETY: the caller's contract
     unsafe {
-        let mut stream = std::ptr::null_mut();
-        let result = if fail_if_exists && {
-            stream = disk::PlatFOpen(destination, c"r".as_ptr());
-            !stream.is_null()
-        } {
-            2 // kErrorAlreadyExists
+        let existing = if fail_if_exists { disk::PlatFOpen(destination, c"r".as_ptr()) } else { std::ptr::null_mut() };
+        let (result, stream) = if !existing.is_null() {
+            (2, existing) // kErrorAlreadyExists
         } else {
-            stream = disk::PlatFOpen(destination, c"wb".as_ptr());
+            let stream = disk::PlatFOpen(destination, c"wb".as_ptr());
             if stream.is_null() {
-                1 // kErrorNativeError
+                (1, stream) // kErrorNativeError
             } else {
-                write_contents(file, stream)
+                (write_contents(file, stream), stream)
             }
         };
         ee_fs_mem_set_position(file, 0, 0);

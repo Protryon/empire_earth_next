@@ -499,7 +499,8 @@ mod ffi {
     }
 
     /// The C++ side of `CreateAWindow`: the window's constructor and the failure's debug line (one statement each).
-    pub type EeDx7NewWindowFn = unsafe extern "C" fn(window: *mut c_void, width: c_ulong, height: c_ulong, style: c_ulong) -> *mut c_void;
+    pub type EeDx7NewWindowFn =
+        unsafe extern "C" fn(window: *mut c_void, width: c_ulong, height: c_ulong, style: c_ulong) -> *mut c_void;
     pub type EeDx7WindowErrorFn = unsafe extern "C" fn(error: *const core::ffi::c_char);
 
     /// cbindgen:ignore
@@ -508,7 +509,14 @@ mod ffi {
         extern "C" {
             pub fn PlatWindowGetDisplayLogicalSize(window: *mut c_void, width: *mut i32, height: *mut i32) -> c_int;
             pub fn PlatWindowCreate(title: *const c_char, width: i32, height: i32, flags: u32) -> *mut c_void;
-            pub fn PlatWindowCreateAt(title: *const c_char, x: i32, y: i32, width: i32, height: i32, flags: u32) -> *mut c_void;
+            pub fn PlatWindowCreateAt(
+                title: *const c_char,
+                x: i32,
+                y: i32,
+                width: i32,
+                height: i32,
+                flags: u32,
+            ) -> *mut c_void;
             pub fn PlatWindowLastError() -> *const c_char;
             pub fn PlatGetLastError() -> u32;
             pub fn PlatCursorShow(show: c_int);

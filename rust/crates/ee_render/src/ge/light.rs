@@ -32,13 +32,7 @@ pub struct EeGeLight {
 
 /// `GEColor::Normalize`: each channel clamped to 0..1 (a NaN stays).
 fn clamp_channel(v: f32) -> f32 {
-    if v > 1.0 {
-        1.0
-    } else if v < 0.0 {
-        0.0
-    } else {
-        v
-    }
+    v.clamp(0.0, 1.0)
 }
 
 impl EeGeLight {
@@ -99,7 +93,8 @@ impl EeGeLight {
         self.computed_color = self.color.map(|c| c * intensity);
     }
 
-    /// The fields the DX7 rasterizer's `AddLight`/`UpdateLight` read.
+    /// The fields the DX7 rasterizer's `AddLight`/`UpdateLight` read (`c_ulong` is u32 on Windows only).
+    #[allow(clippy::unnecessary_cast)]
     pub fn params(&self) -> LightParams {
         LightParams {
             location: self.location,
@@ -178,7 +173,10 @@ mod tests {
     #[test]
     fn a_new_light_is_white_with_unit_intensity() {
         let l = EeGeLight::new();
-        assert_eq!((l.color, l.computed_color, l.intensity, l.attenuation0, l.style), ([1.0; 3], [1.0; 3], 1.0, 1.0, 0));
+        assert_eq!(
+            (l.color, l.computed_color, l.intensity, l.attenuation0, l.style),
+            ([1.0; 3], [1.0; 3], 1.0, 1.0, 0)
+        );
         assert_eq!(std::mem::size_of::<EeGeLight>(), 0x70 + std::mem::size_of::<c_ulong>());
     }
 
