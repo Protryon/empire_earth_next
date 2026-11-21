@@ -107,6 +107,7 @@ impl CppFile {
 /// # Safety
 /// `file` is a live C++ `FSFile*`; `value` is valid.
 #[no_mangle]
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
 pub unsafe extern "C" fn ee_fs_read_long(file: *mut c_void, value: *mut c_long) -> c_long {
     // SAFETY: the function's contract
     unsafe {
@@ -122,6 +123,7 @@ pub unsafe extern "C" fn ee_fs_read_long(file: *mut c_void, value: *mut c_long) 
 /// # Safety
 /// As [`ee_fs_read_long`].
 #[no_mangle]
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
 pub unsafe extern "C" fn ee_fs_read_ulong(file: *mut c_void, value: *mut c_ulong) -> c_long {
     // SAFETY: the function's contract
     unsafe {

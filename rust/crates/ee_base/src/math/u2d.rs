@@ -183,6 +183,7 @@ enum RectFields {
 
 /// `U2DRectangle<T>::Load` / `Save`: left, top, right, bottom through the file's typed calls (`Read(long&)`'s
 /// 32-bit copy, or `Read(float&)`), the first error ending it; `kErrorNotOpen` when the file is not open.
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
 fn rect_io(file: &mut CppFile, open: bool, fields: RectFields, write: bool) -> c_long {
     if !open {
         return ERROR_NOT_OPEN;

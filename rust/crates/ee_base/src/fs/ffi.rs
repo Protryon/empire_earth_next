@@ -154,6 +154,7 @@ pub unsafe extern "C" fn ee_fs_mem_get_position(file: *const EeFsMemFile, out: *
 /// # Safety
 /// `file` is live, `out_length` valid for a write, `source` a zero-terminated name.
 #[no_mangle]
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
 pub unsafe extern "C" fn ee_fs_mem_compress_checked(
     file: *mut EeFsMemFile,
     level: c_ulong,
@@ -714,6 +715,7 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
+    #[allow(clippy::unnecessary_cast)]
     fn mem_round_trip_through_the_c_abi() {
         let file = ee_fs_mem_new(8, true, 1);
         unsafe {

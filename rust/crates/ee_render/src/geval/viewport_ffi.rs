@@ -267,13 +267,15 @@ mod tests {
 
     #[test]
     fn camera_points_normalize_per_projection() {
-        let mut v = GeViewport::default();
-        v.orthographic_scale = 2.0;
-        v.orthographic_depth_scale = 3.0;
-        v.orthographic_depth_offset = 0.5;
-        v.perspective_scale = 4.0;
-        v.perspective_depth_scale = 5.0;
-        v.perspective_depth_offset = -1.0;
+        let mut v = GeViewport {
+            orthographic_scale: 2.0,
+            orthographic_depth_scale: 3.0,
+            orthographic_depth_offset: 0.5,
+            perspective_scale: 4.0,
+            perspective_depth_scale: 5.0,
+            perspective_depth_offset: -1.0,
+            ..GeViewport::default()
+        };
         let p = Ge3DPoint::new(1.0, 2.0, 3.0);
         let (mut out, mut w) = (Ge3DPoint::default(), 0.0f32);
         // SAFETY: valid pointers

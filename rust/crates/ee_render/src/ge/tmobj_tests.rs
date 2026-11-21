@@ -504,7 +504,8 @@ fn the_out_forms_write_what_the_plain_ones_return() {
         let (mut x, mut y): (c_ulong, c_ulong) = (7, 7);
         ee_ge_tm_get_pair(p, EeGeTmVal::BottomLeftX, EeGeTmVal::BottomLeftY, &mut x, &mut y);
         assert_eq!((x, y), (ee_ge_tm_get(p, EeGeTmVal::BottomLeftX), ee_ge_tm_get(p, EeGeTmVal::BottomLeftY)));
-        (&mut (*p).visible_rows).push([3, -4, 5]);
+        let mesh = &mut *p;
+        mesh.visible_rows.push([3, -4, 5]);
         let (mut r0, mut r1, mut r2): (c_long, c_long, c_long) = (0, 0, 0);
         ee_ge_tm_visible_row_parts(p, 0, &mut r0, &mut r1, &mut r2);
         assert_eq!((r0, r1, r2), (3, -4, 5));

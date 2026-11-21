@@ -497,6 +497,7 @@ impl ServerHost for SvFfiHost {
     fn msg_set_s2aw_id(&self, m: Msg, id: u32) {
         self.call(EeNetSvOp::MsgSetS2awId, m, id as usize, 0, 0);
     }
+    #[allow(clippy::unnecessary_cast)] // (c_ulong: 32 bits on Windows, 64 on LP64)
     fn msg_export_new(&self, m: Msg, size: &mut u32) -> usize {
         let (mut data, mut n): (usize, c_ulong) = (0, 0);
         self.call(EeNetSvOp::MsgExportNew, m, &mut data as *mut usize as usize, &mut n as *mut c_ulong as usize, 0);
@@ -604,6 +605,7 @@ pub unsafe extern "C" fn ee_net_sv_new_game(
 /// The game's arguments packed (`[max players, PTs per CT]`, `[default send interval, max PTs/s, min PTs/s, max
 /// send interval, its increment, its decrement, the current CT, the current PT, the network adapter]`, the cost
 /// factor, the name, `[allow new connections, announce]`), the protocol TCP; `name` outlives the server's creation.
+#[allow(clippy::unnecessary_cast)] // (c_ulong: 32 bits on Windows, 64 on LP64)
 pub fn ee_net_sv_args(
     bytes: [u8; 2],
     longs: [c_ulong; 9],

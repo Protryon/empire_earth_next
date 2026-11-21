@@ -376,6 +376,7 @@ impl ClientHost for ClFfiHost {
     fn msg_add_input(&self, response: Msg, input: Msg) -> i32 {
         self.call(EeNetClOp::MsgAddInput, response, input, 0, 0) as i32
     }
+    #[allow(clippy::unnecessary_cast)] // (c_ulong: 32 bits on Windows, 64 on LP64)
     fn msg_export_new(&self, m: Msg, size: &mut u32) -> usize {
         let (mut data, mut n): (usize, c_ulong) = (0, 0);
         self.call(EeNetClOp::MsgExportNew, m, &mut data as *mut usize as usize, &mut n as *mut c_ulong as usize, 0);
