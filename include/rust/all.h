@@ -25,6 +25,7 @@
 #include "rust/game/cp_engine.h"
 #include "rust/game/fixture.h"
 #include "rust/game/game_log.h"
+#include "rust/game/lle.h"
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
 #include "rust/game/sight_capture.h"

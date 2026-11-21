@@ -41,6 +41,7 @@ public:
     unsigned char GetOriginatingSlot() const { return this->mOriginatingSlot; }
     void SetForSpecificSlot(unsigned char inSlot) { this->mForSpecificSlot = inSlot; }
     void SetOriginatingSlot(unsigned char inSlot) { this->mOriginatingSlot = inSlot; }
+    void SetType(unsigned char inType) { this->mType = inType; }   // New (LLE round 8): the import constructor's (netrecord.rs)
 
     // the message the builder registered for its type makes from received bytes; NULL for a type with none
     static NEMessage* ConvertMemoryToMessage(unsigned char* inData);
@@ -67,7 +68,8 @@ struct NEMRecordValue {
     long long mValue;
 };
 
-// New (LLE Network Engine round 6): the 28 engine messages (0x20..0x3c but 0x2c) as one class. The fixed members sit
+// New (LLE Network Engine round 6): the 28 engine messages (0x20..0x3c but 0x2c) as one class (LLE round 8: its
+// bodies are Rust, ee_game lle netrecord.rs). The fixed members sit
 // packed in wire order in mRecord (the transfer's 1 KB block among them), then the members that never travel (the
 // physics tick's rate); the strings by ordinal in mStrings; the communications ticks' players' inputs in
 // mPlayerInputs. The layout, the type's flags, its send-to-all-and-wait member, its response rule and its label are
@@ -115,11 +117,6 @@ public:
     UWideString mStrings[2];
     std::vector<NEMessage*> mPlayerInputs;
 
-private:
-    template <class V>
-    void Fill(const V* inValue, const V* inValuesEnd, const char* const* inString, const char* const* inStringsEnd);
-    size_t CodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass, std::vector<EeNetMsgSlot>& outParts,
-                      std::vector<unsigned char*>* outBuffers);
 };
 
 #endif
