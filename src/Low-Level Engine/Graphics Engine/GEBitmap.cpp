@@ -72,8 +72,6 @@ static intptr_t GEBitmapFloatBits(float inValue)
 // (C linkage: ee_ge game_hosts.rs names it)
 extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    GEVertexArray* theVertices = (GEVertexArray*)inObj;
-    GETexture* theTexture = (GETexture*)inObj;
     switch (inOp) {
     case EeGeBmpOp::RasterActive:
         return (intptr_t)GERasterizer::GetActiveRasterizer();
@@ -83,24 +81,24 @@ extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, int
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
     // (the vertex arrays' other calls are on their Rust arrays: ee_ge bmpobj.rs vertex_op)
     case EeGeBmpOp::VertexDelete:
-        delete theVertices;
+        delete ((GEVertexArray*)inObj);
         return 0;
     case EeGeBmpOp::TexReference:
-        theTexture->Reference();
+        ((GETexture*)inObj)->Reference();
         return 0;
     case EeGeBmpOp::TexDereference:
-        theTexture->Dereference();
+        ((GETexture*)inObj)->Dereference();
         return 0;
     case EeGeBmpOp::TexFrameWidth:
-        return GEBitmapFloatBits(theTexture->GetFrameWidth());
+        return GEBitmapFloatBits(((GETexture*)inObj)->GetFrameWidth());
     case EeGeBmpOp::TexFrameHeight:
-        return GEBitmapFloatBits(theTexture->GetFrameHeight());
+        return GEBitmapFloatBits(((GETexture*)inObj)->GetFrameHeight());
     case EeGeBmpOp::TexWidth:
-        return (intptr_t)theTexture->GetWidth();
+        return (intptr_t)((GETexture*)inObj)->GetWidth();
     case EeGeBmpOp::TexHeight:
-        return (intptr_t)theTexture->GetHeight();
+        return (intptr_t)((GETexture*)inObj)->GetHeight();
     case EeGeBmpOp::TexDropLevels:
-        return (intptr_t)theTexture->GetNumMipLevelsToDrop();
+        return (intptr_t)((GETexture*)inObj)->GetNumMipLevelsToDrop();
     }
     (void)inOwner;
     return 0;
@@ -121,20 +119,18 @@ static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWi
 // and GEWindow's forwarders (its header does not include the Rust header)
 extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    UString* theString = (UString*)inObj;
-    UWideString* theWide = (UWideString*)inObj;
     switch (inOp) {
     case EeGeObjOp::StrNew:
         return (intptr_t)new UString;
     case EeGeObjOp::StrCopy:
         return (intptr_t)new UString(*(const UString*)a);
     case EeGeObjOp::StrDelete:
-        delete theString;
+        delete ((UString*)inObj);
         return 0;
     case EeGeObjOp::WStrNew:
         return (intptr_t)new UWideString((unsigned long)a);
     case EeGeObjOp::WStrDelete:
-        delete theWide;
+        delete ((UWideString*)inObj);
         return 0;
     case EeGeObjOp::TexDereference:
         ((GETexture*)inObj)->Dereference();
@@ -191,18 +187,12 @@ GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
 // direct_op, on the 2D draw list)
 intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    GEText* theText = (GEText*)inObj;
-    GEBitmap* theBitmap = (GEBitmap*)inObj;
-    GESurface* theSurface = (GESurface*)inObj;
-    GERasterizer* theRasterizer = (GERasterizer*)inObj;
-    GETexture* theTexture = (GETexture*)inObj;
-    GEScreen* theScreen = (GEScreen*)inObj;
     unsigned long* theLongs = (unsigned long*)a;
     switch (inOp) {
     case EeGeFbOp::TextNew:
         return (intptr_t)new GEText((GEFont*)inObj);
     case EeGeFbOp::TextDelete:
-        delete theText;
+        delete ((GEText*)inObj);
         return 0;
     case EeGeFbOp::TextSetByte: {
         // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
@@ -212,7 +202,7 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
         UWideString theString;
         theString = theCell;
-        theText->SetText(theString);
+        ((GEText*)inObj)->SetText(theString);
         return 0;
     }
     case EeGeFbOp::TextOps:
@@ -228,41 +218,41 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
         return 0;
     case EeGeFbOp::RasterScreen:
-        return (intptr_t)theRasterizer->GetScreen((unsigned long)a);
+        return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a);
     case EeGeFbOp::RasterGetBlending:
-        theRasterizer->GetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        ((GERasterizer*)inObj)->GetBlending(theLongs[0], theLongs[1], (unsigned long)b);
         return 0;
     case EeGeFbOp::RasterSetBlending:
-        theRasterizer->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        ((GERasterizer*)inObj)->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
         return 0;
     case EeGeFbOp::BmpNew:
         return (intptr_t)new GEBitmap;
     case EeGeFbOp::BmpDereference:
-        theBitmap->Dereference();
+        ((GEBitmap*)inObj)->Dereference();
         return 0;
     case EeGeFbOp::TexSurface:
-        return (intptr_t)theTexture->GetSurface();
+        return (intptr_t)((GETexture*)inObj)->GetSurface();
     case EeGeFbOp::SurfTextUnlock:
-        return theSurface->TextUnlock();
+        return ((GESurface*)inObj)->TextUnlock();
     case EeGeFbOp::SurfLock:
-        return theSurface->Lock();
+        return ((GESurface*)inObj)->Lock();
     case EeGeFbOp::SurfUnlock:
-        return theSurface->Unlock();
+        return ((GESurface*)inObj)->Unlock();
     case EeGeFbOp::SurfPixels:
-        theLongs[0] = theSurface->GetWidth();
-        theLongs[1] = theSurface->GetHeight();
-        theLongs[2] = theSurface->GetBytesPerRow();
-        return (intptr_t)theSurface->GetMemoryAddress();
+        theLongs[0] = ((GESurface*)inObj)->GetWidth();
+        theLongs[1] = ((GESurface*)inObj)->GetHeight();
+        theLongs[2] = ((GESurface*)inObj)->GetBytesPerRow();
+        return (intptr_t)((GESurface*)inObj)->GetMemoryAddress();
     case EeGeFbOp::SurfClear: {
         GEColor theBlack(0.0f, 0.0f, 0.0f);
-        return theSurface->Clear(theBlack, 1.0f);
+        return ((GESurface*)inObj)->Clear(theBlack, 1.0f);
     }
     case EeGeFbOp::ScreenCreateSurface:
-        return theScreen->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
+        return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
     case EeGeFbOp::ScreenMakeTexture:
-        return (intptr_t)theScreen->GetTextureManager()->MakeTexture((GESurface*)a);
+        return (intptr_t)((GEScreen*)inObj)->GetTextureManager()->MakeTexture((GESurface*)a);
     case EeGeFbOp::Verify:
-        ESVerify(__FILE__, a == 0 ? 228 : 235, a == 0 ? "theResult == keseOK" : "theTexture != NULL");
+        ESVerify(__FILE__, a == 0 ? 228 : 235, a == 0 ? "theResult == keseOK" : "((GETexture*)inObj) != NULL");
         return 0;
     default:
         return 0;

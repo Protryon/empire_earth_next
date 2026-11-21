@@ -64,9 +64,6 @@ static float GEBitsFloat(intptr_t inBits)
 struct GERasterizerHost {
     static intptr_t Call(void* inOwner, EeGeRastOp inOp, void* inObj, intptr_t a, intptr_t b)
     {
-        GEModel* theModel = static_cast<GEModel*>(inObj);
-        const GEPhysicalModel* thePlaced = static_cast<const GEPhysicalModel*>(inObj);
-        GEText* theText = static_cast<GEText*>(inObj);
         switch (inOp) {
         case EeGeRastOp::NameNew: return (intptr_t) new UString(*reinterpret_cast<const UString*>(a));
         case EeGeRastOp::NameDelete: delete static_cast<UString*>(inObj); return 0;
@@ -76,31 +73,31 @@ struct GERasterizerHost {
         case EeGeRastOp::FontNew: return (intptr_t) new GEFont("Arial Bold", 9, 0, kFontQualityAntialiased);
         case EeGeRastOp::FontDereference: static_cast<GEFont*>(inObj)->Dereference(); return 0;
         case EeGeRastOp::TextNew: return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a));
-        case EeGeRastOp::TextDelete: delete theText; return 0;
-        case EeGeRastOp::TextSetAlignment: theText->SetAlignment((unsigned long)a); return 0;
-        case EeGeRastOp::TextSetFgColor: theText->SetFgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
-        case EeGeRastOp::TextSetBgColor: theText->SetBgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
-        case EeGeRastOp::TextSetFont: theText->SetFont(reinterpret_cast<GEFont*>(a)); return 0;
-        case EeGeRastOp::TextSetIsTransparent: theText->SetIsTransparent(a != 0); return 0;
-        case EeGeRastOp::TextSetLocation: theText->SetLocation(GEBitsFloat(a), GEBitsFloat(b)); return 0;
+        case EeGeRastOp::TextDelete: delete static_cast<GEText*>(inObj); return 0;
+        case EeGeRastOp::TextSetAlignment: static_cast<GEText*>(inObj)->SetAlignment((unsigned long)a); return 0;
+        case EeGeRastOp::TextSetFgColor: static_cast<GEText*>(inObj)->SetFgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
+        case EeGeRastOp::TextSetBgColor: static_cast<GEText*>(inObj)->SetBgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
+        case EeGeRastOp::TextSetFont: static_cast<GEText*>(inObj)->SetFont(reinterpret_cast<GEFont*>(a)); return 0;
+        case EeGeRastOp::TextSetIsTransparent: static_cast<GEText*>(inObj)->SetIsTransparent(a != 0); return 0;
+        case EeGeRastOp::TextSetLocation: static_cast<GEText*>(inObj)->SetLocation(GEBitsFloat(a), GEBitsFloat(b)); return 0;
         case EeGeRastOp::ActivateRasterizer: return static_cast<GERasterizer*>(inOwner)->ActivateRasterizer();
         case EeGeRastOp::FontBitmapNew:
             new GEFontBitmap(static_cast<GERasterizer*>(inOwner), reinterpret_cast<GEFont*>(a), (unsigned long)b);
             return 0;
         case EeGeRastOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
         case EeGeRastOp::TextureDereference: static_cast<GETexture*>(inObj)->Dereference(); return 0;
-        case EeGeRastOp::ModelCenter: *reinterpret_cast<GE3DPoint*>(a) = theModel->GetCenterPoint(); return 0;
-        case EeGeRastOp::ModelBoundingRadius: return GEFloatBits(theModel->GetBoundingRadius((unsigned long)a));
-        case EeGeRastOp::ModelGraphicsRadius: return GEFloatBits(theModel->GetGraphicsBoundingRadius());
-        case EeGeRastOp::ModelGraphicsBox: *reinterpret_cast<GEBoundingBox*>(a) = theModel->GetGraphicsBoundingBox(); return 0;
-        case EeGeRastOp::ModelSetClip: theModel->SetClipToPlane((unsigned long)a, b != 0); return 0;
+        case EeGeRastOp::ModelCenter: *reinterpret_cast<GE3DPoint*>(a) = static_cast<GEModel*>(inObj)->GetCenterPoint(); return 0;
+        case EeGeRastOp::ModelBoundingRadius: return GEFloatBits(static_cast<GEModel*>(inObj)->GetBoundingRadius((unsigned long)a));
+        case EeGeRastOp::ModelGraphicsRadius: return GEFloatBits(static_cast<GEModel*>(inObj)->GetGraphicsBoundingRadius());
+        case EeGeRastOp::ModelGraphicsBox: *reinterpret_cast<GEBoundingBox*>(a) = static_cast<GEModel*>(inObj)->GetGraphicsBoundingBox(); return 0;
+        case EeGeRastOp::ModelSetClip: static_cast<GEModel*>(inObj)->SetClipToPlane((unsigned long)a, b != 0); return 0;
         case EeGeRastOp::ModelInternalTransform:
-            *reinterpret_cast<GETransformation*>(b) = theModel->GetInternalTransform((unsigned long)a);
+            *reinterpret_cast<GETransformation*>(b) = static_cast<GEModel*>(inObj)->GetInternalTransform((unsigned long)a);
             return 0;
-        case EeGeRastOp::PlacedScale: return GEFloatBits(thePlaced->GetScale());
-        case EeGeRastOp::PlacedFrame: return (intptr_t)thePlaced->GetFrame();
-        case EeGeRastOp::PlacedModel: return (intptr_t)thePlaced->GetModel();
-        case EeGeRastOp::PlacedLocation: *reinterpret_cast<GETransformation*>(a) = thePlaced->GetLocation(); return 0;
+        case EeGeRastOp::PlacedScale: return GEFloatBits(static_cast<const GEPhysicalModel*>(inObj)->GetScale());
+        case EeGeRastOp::PlacedFrame: return (intptr_t)static_cast<const GEPhysicalModel*>(inObj)->GetFrame();
+        case EeGeRastOp::PlacedModel: return (intptr_t)static_cast<const GEPhysicalModel*>(inObj)->GetModel();
+        case EeGeRastOp::PlacedLocation: *reinterpret_cast<GETransformation*>(a) = static_cast<const GEPhysicalModel*>(inObj)->GetLocation(); return 0;
         default: return 0;
         }
     }
@@ -110,18 +107,17 @@ struct GERasterizerHost {
 // Rust does not make itself (the texts; any draw on another rasterizer)
 static long GERasterizerDraw2D(void* inRasterizer, unsigned long inScreen, const EeGeDraw2D* inCmd)
 {
-    GERasterizer* theRasterizer = static_cast<GERasterizer*>(inRasterizer);
     switch (inCmd->kind) {
-    case EeGeDraw2DKind::Bitmap: return theRasterizer->Draw(static_cast<GEBitmap*>(inCmd->object), inScreen);
-    case EeGeDraw2DKind::Rhombus: return theRasterizer->Draw(static_cast<GERhombus*>(inCmd->object), inScreen);
-    case EeGeDraw2DKind::Lines: return theRasterizer->Draw(static_cast<GELine*>(inCmd->object), inCmd->count, inScreen);
-    case EeGeDraw2DKind::Points: return theRasterizer->Draw(static_cast<GEPoint*>(inCmd->object), inCmd->count, inScreen);
+    case EeGeDraw2DKind::Bitmap: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEBitmap*>(inCmd->object), inScreen);
+    case EeGeDraw2DKind::Rhombus: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GERhombus*>(inCmd->object), inScreen);
+    case EeGeDraw2DKind::Lines: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GELine*>(inCmd->object), inCmd->count, inScreen);
+    case EeGeDraw2DKind::Points: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEPoint*>(inCmd->object), inCmd->count, inScreen);
     case EeGeDraw2DKind::TextClipped:
-        return theRasterizer->Draw(static_cast<GEText*>(inCmd->object), *reinterpret_cast<const GERectangle*>(&inCmd->clip),
+        return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEText*>(inCmd->object), *reinterpret_cast<const GERectangle*>(&inCmd->clip),
                                    inCmd->surface ? static_cast<GESurface*>(inCmd->surface)
-                                                  : theRasterizer->GetSecondarySurface(inScreen));
+                                                  : static_cast<GERasterizer*>(inRasterizer)->GetSecondarySurface(inScreen));
     case EeGeDraw2DKind::Text:
-        return theRasterizer->Draw(static_cast<GEText*>(inCmd->object), static_cast<GESurface*>(inCmd->surface));
+        return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEText*>(inCmd->object), static_cast<GESurface*>(inCmd->surface));
     }
     return 0;
 }

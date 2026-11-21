@@ -28,40 +28,37 @@
 struct DX7RasterizerHost {
     static intptr_t Call(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_t a, intptr_t b)
     {
-        GEScreen* theScreen = static_cast<GEScreen*>(inObj);
-        GESurface* theSurface = static_cast<GESurface*>(inObj);
-        GETexture* theTexture = static_cast<GETexture*>(inObj);
         switch (inOp) {
         case EeDx7RastOp::ScreenNew:
             return (intptr_t) static_cast<GEScreen*>(new DX7Screen(NULL, static_cast<GXDirectDraw*>(inObj),
                                                                    UString(reinterpret_cast<const char*>(a)), (b & 1) != 0, (b & 2) != 0));
-        case EeDx7RastOp::ScreenDelete: delete static_cast<DX7Screen*>(theScreen); return 0;
-        case EeDx7RastOp::ScreenDirectDraw: return (intptr_t)(GXDirectDraw*)*static_cast<DX7Screen*>(theScreen);
-        case EeDx7RastOp::ScreenIsFullScreen: return theScreen->GetIsFullScreen();
-        case EeDx7RastOp::ScreenCurrentMode: *reinterpret_cast<GEVideoMode*>(a) = theScreen->GetCurrentMode(); return 0;
-        case EeDx7RastOp::ScreenModeCount: return (intptr_t)theScreen->GetModeCount();
-        case EeDx7RastOp::ScreenMode: *reinterpret_cast<GEVideoMode*>(b) = theScreen->GetMode((unsigned long)a); return 0;
+        case EeDx7RastOp::ScreenDelete: delete static_cast<DX7Screen*>(static_cast<GEScreen*>(inObj)); return 0;
+        case EeDx7RastOp::ScreenDirectDraw: return (intptr_t)(GXDirectDraw*)*static_cast<DX7Screen*>(static_cast<GEScreen*>(inObj));
+        case EeDx7RastOp::ScreenIsFullScreen: return static_cast<GEScreen*>(inObj)->GetIsFullScreen();
+        case EeDx7RastOp::ScreenCurrentMode: *reinterpret_cast<GEVideoMode*>(a) = static_cast<GEScreen*>(inObj)->GetCurrentMode(); return 0;
+        case EeDx7RastOp::ScreenModeCount: return (intptr_t)static_cast<GEScreen*>(inObj)->GetModeCount();
+        case EeDx7RastOp::ScreenMode: *reinterpret_cast<GEVideoMode*>(b) = static_cast<GEScreen*>(inObj)->GetMode((unsigned long)a); return 0;
         case EeDx7RastOp::ScreenCreateSurface:
-            return theScreen->CreateSurface(*reinterpret_cast<GESurfaceDescription*>(a), reinterpret_cast<GESurface**>(b));
-        case EeDx7RastOp::ScreenSetTextureManager: theScreen->SetTextureManager(reinterpret_cast<GETextureManager*>(a)); return 0;
+            return static_cast<GEScreen*>(inObj)->CreateSurface(*reinterpret_cast<GESurfaceDescription*>(a), reinterpret_cast<GESurface**>(b));
+        case EeDx7RastOp::ScreenSetTextureManager: static_cast<GEScreen*>(inObj)->SetTextureManager(reinterpret_cast<GETextureManager*>(a)); return 0;
         case EeDx7RastOp::ManagerSetScreen: static_cast<GETextureManager*>(inObj)->SetScreen(reinterpret_cast<GEScreen*>(a)); return 0;
-        case EeDx7RastOp::SurfaceAttached: return (intptr_t)theSurface->GetAttachedSurface(0);
-        case EeDx7RastOp::SurfaceAttach: return theSurface->AttachSurface(reinterpret_cast<GESurface*>(a));
-        case EeDx7RastOp::SurfaceReference: theSurface->Reference(); return 0;
-        case EeDx7RastOp::SurfaceDereference: theSurface->Dereference(); return 0;
-        case EeDx7RastOp::SurfaceGx: return (intptr_t)(GXSurface*)*static_cast<DX7Surface*>(theSurface);
-        case EeDx7RastOp::SurfaceGxChecked: return (intptr_t)(GXSurface*)*dynamic_cast<DX7Surface*>(theSurface);
-        case EeDx7RastOp::SurfaceWidth: return (intptr_t)theSurface->GetWidth();
-        case EeDx7RastOp::SurfaceHeight: return (intptr_t)theSurface->GetHeight();
-        case EeDx7RastOp::SurfaceFlip: return theSurface->Flip(a != 0);
-        case EeDx7RastOp::TextureHasChanged: return theTexture->HasChanged();
-        case EeDx7RastOp::TextureReference: theTexture->Reference(); return 0;
-        case EeDx7RastOp::TextureDereference: theTexture->Dereference(); return 0;
-        case EeDx7RastOp::TexturePromote: theTexture->Promote(); return 0;
-        case EeDx7RastOp::TextureStage: return (intptr_t)theTexture->GetStage();
+        case EeDx7RastOp::SurfaceAttached: return (intptr_t)static_cast<GESurface*>(inObj)->GetAttachedSurface(0);
+        case EeDx7RastOp::SurfaceAttach: return static_cast<GESurface*>(inObj)->AttachSurface(reinterpret_cast<GESurface*>(a));
+        case EeDx7RastOp::SurfaceReference: static_cast<GESurface*>(inObj)->Reference(); return 0;
+        case EeDx7RastOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
+        case EeDx7RastOp::SurfaceGx: return (intptr_t)(GXSurface*)*static_cast<DX7Surface*>(static_cast<GESurface*>(inObj));
+        case EeDx7RastOp::SurfaceGxChecked: return (intptr_t)(GXSurface*)*dynamic_cast<DX7Surface*>(static_cast<GESurface*>(inObj));
+        case EeDx7RastOp::SurfaceWidth: return (intptr_t)static_cast<GESurface*>(inObj)->GetWidth();
+        case EeDx7RastOp::SurfaceHeight: return (intptr_t)static_cast<GESurface*>(inObj)->GetHeight();
+        case EeDx7RastOp::SurfaceFlip: return static_cast<GESurface*>(inObj)->Flip(a != 0);
+        case EeDx7RastOp::TextureHasChanged: return static_cast<GETexture*>(inObj)->HasChanged();
+        case EeDx7RastOp::TextureReference: static_cast<GETexture*>(inObj)->Reference(); return 0;
+        case EeDx7RastOp::TextureDereference: static_cast<GETexture*>(inObj)->Dereference(); return 0;
+        case EeDx7RastOp::TexturePromote: static_cast<GETexture*>(inObj)->Promote(); return 0;
+        case EeDx7RastOp::TextureStage: return (intptr_t)static_cast<GETexture*>(inObj)->GetStage();
         case EeDx7RastOp::TextureStageSurface:
-            return (intptr_t)(GXSurface*)*static_cast<DX7Surface*>(theTexture->GetStageTexture(0)->GetFrameSurface());
-        case EeDx7RastOp::TextureValidate: theTexture->ValidateChanges(); return 0;
+            return (intptr_t)(GXSurface*)*static_cast<DX7Surface*>(static_cast<GETexture*>(inObj)->GetStageTexture(0)->GetFrameSurface());
+        case EeDx7RastOp::TextureValidate: static_cast<GETexture*>(inObj)->ValidateChanges(); return 0;
         case EeDx7RastOp::WindowOrigin: *reinterpret_cast<GE2DPoint*>(a) = static_cast<GEWindow*>(inObj)->GetClientOrigin(); return 0;
         case EeDx7RastOp::LockEnter: static_cast<TSCriticalSection*>(inObj)->Enter(); return 0;
         case EeDx7RastOp::LockLeave: static_cast<TSCriticalSection*>(inObj)->Leave(); return 0;
@@ -381,22 +378,21 @@ static_assert(offsetof(GERectangle, mBottom) == 0 && offsetof(GERectangle, mLeft
 
 static intptr_t DX7ObjectHost(EeDx7ObjOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    GESurface* theSurface = static_cast<GESurface*>(inObj);
     switch (inOp) {
     case EeDx7ObjOp::NameNew: return (intptr_t) new UString(*static_cast<const UString*>(inObj));
     case EeDx7ObjOp::NameDelete: delete static_cast<UString*>(inObj); return 0;
     case EeDx7ObjOp::SurfaceNew:
         return (intptr_t) static_cast<GESurface*>(new DX7Surface(static_cast<GXSurface*>(inObj), *reinterpret_cast<const GESurfaceDescription*>(a),
                                                                  reinterpret_cast<DX7Screen*>(b)));
-    case EeDx7ObjOp::SurfaceObject: return (intptr_t) static_cast<DX7Surface*>(theSurface)->mDX7;
-    case EeDx7ObjOp::SurfaceReference: theSurface->Reference(); return 0;
-    case EeDx7ObjOp::SurfaceDereference: theSurface->Dereference(); return 0;
-    case EeDx7ObjOp::SurfaceAllocatedSize: return (intptr_t)theSurface->GetAllocatedSize();
+    case EeDx7ObjOp::SurfaceObject: return (intptr_t) static_cast<DX7Surface*>(static_cast<GESurface*>(inObj))->mDX7;
+    case EeDx7ObjOp::SurfaceReference: static_cast<GESurface*>(inObj)->Reference(); return 0;
+    case EeDx7ObjOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
+    case EeDx7ObjOp::SurfaceAllocatedSize: return (intptr_t)static_cast<GESurface*>(inObj)->GetAllocatedSize();
     case EeDx7ObjOp::SurfaceMetrics:
     {   // ee_dx7/src/surface.rs LogicalMetrics: logical width and height set, pixel width and height, logical shift
-        const uint32_t theMetrics[5] = { (uint32_t)theSurface->GetLogicalWidthSet(), (uint32_t)theSurface->GetLogicalHeightSet(),
-                                         (uint32_t)theSurface->GetPixelWidth(), (uint32_t)theSurface->GetPixelHeight(),
-                                         (uint32_t)theSurface->GetLogicalShift() };
+        const uint32_t theMetrics[5] = { (uint32_t)static_cast<GESurface*>(inObj)->GetLogicalWidthSet(), (uint32_t)static_cast<GESurface*>(inObj)->GetLogicalHeightSet(),
+                                         (uint32_t)static_cast<GESurface*>(inObj)->GetPixelWidth(), (uint32_t)static_cast<GESurface*>(inObj)->GetPixelHeight(),
+                                         (uint32_t)static_cast<GESurface*>(inObj)->GetLogicalShift() };
         memcpy(reinterpret_cast<void*>(a), theMetrics, sizeof theMetrics);
         return 0;
     }
