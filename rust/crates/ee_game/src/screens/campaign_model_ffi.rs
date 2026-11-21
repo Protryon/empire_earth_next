@@ -1,5 +1,5 @@
-//! The campaign editor's model over the C++ host (`campaign_model.rs`; `UI Events/EEScreens.cpp`'s
-//! `ee_screenscpp_ce_campaign`, the edited `EECampaign` and the files). The editor's events reach the model through
+//! The campaign editor's model over its host (`campaign_model.rs`; `campaign_model_calls.rs` over
+//! `UI Events/EEScreens.cpp`'s shims: the edited `EECampaign` and the files). The editor's events reach the model through
 //! [`call`], [`text`] and [`put`] (their host answers the model's ops here, before C++).
 
 use std::sync::Mutex;
@@ -8,11 +8,6 @@ use crate::screens::campaign_editor::*;
 use crate::screens::campaign_model::{CampaignModel, CampaignModelHost};
 use crate::screens::menus::EE_SCREENS_TEXT_EDIT;
 use crate::screens::menus_ffi::Form;
-
-extern "C" {
-    fn ee_screenscpp_ce_campaign(op: u32, a: u32, text: *const u8, length: usize) -> u32;
-    fn ee_screenscpp_ce_campaign_text(which: u32, arg: u32, out: *mut u8, capacity: usize) -> usize;
-}
 
 /// The model (the original's `gCampaignEditor` but its campaign). No host op re-enters the editor's events, so the
 /// lock is held across the model's host calls.
@@ -30,17 +25,10 @@ struct Cpp;
 
 impl CampaignModelHost for Cpp {
     fn call(&mut self, op: u32, a: u32, text: &[u8]) -> u32 {
-        unsafe { ee_screenscpp_ce_campaign(op, a, text.as_ptr(), text.len()) }
+        crate::screens::campaign_model_calls::call(&mut crate::screens::game_cpp::Ffi, op, a, text)
     }
     fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {
-        let mut out = vec![0u8; 256];
-        let n = unsafe { ee_screenscpp_ce_campaign_text(which, arg, out.as_mut_ptr(), out.len()) };
-        if n > out.len() {
-            out.resize(n, 0);
-            unsafe { ee_screenscpp_ce_campaign_text(which, arg, out.as_mut_ptr(), out.len()) };
-        }
-        out.truncate(n);
-        out
+        crate::screens::campaign_model_calls::text(&mut crate::screens::game_cpp::Ffi, which, arg)
     }
 }
 

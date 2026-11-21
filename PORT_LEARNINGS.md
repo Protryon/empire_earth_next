@@ -36106,3 +36106,100 @@ the Paths lane's EEPathManager.cpp holds 448; the rest is listed in the progress
   Windows only).
 - **Not moved**: see the progress file's "Left": the Paths lane's path manager slice, the units host's messages and
   wall routes, the improvement cost, citizen upgrade and enemy-near-all, EECPNext's names tables and dumps.
+
+## The UI lane, round 8: the UI manager's, the status box's, the command buttons', the main group's, the mini map's, the backgrounds', the campaign model's, the read views', the status bars' and the command control's C++ logic in Rust over one-statement shims (ee_game screens *_calls.rs; branch rust-ui8, 2026-11-20)
+
+The brief: round 7's method on round 7's "What's left" (the multi-statement cases, the HUD classes' bodies, the LLE
+UI hosts), then the rest of the lane's class bodies; score the C++ logic lines removed (`logic_lines.py`), target
+-3,000. **Logic -1,332** (whole tree, base 6fb6603c0 -> 2b1a6d091, before the merge of origin/rust: 85,890 ->
+84,558), net C++ lines -349 (+1,495 -1,844 in src and include), 730 one-statement shims added, none of the existing
+shims deleted (8 multi-statement C++ hosts deleted: `ee_screenscpp_status_box`, `_main_group`, `_frame_fill`,
+`_frame_piece`, `_ce_campaign`, `_ce_campaign_text`, `_game_view`, `_game_texts`). The target was not reached:
+docs/progress/ui-cluster.md lists what is left, file by file.
+
+### What moved
+
+Ten modules (ee_game screens), each with its tests over `game_cpp.rs`' fake:
+- `ui_manager_calls.rs`: `EEUIManager::HostOp`'s multi-call cases, the three event factories, `CreateForm`,
+  `CreateUserDefinedBackground`, `CreateUserDefinedControl` (the window rectangle, the strings, one `new` shim per
+  control type), `Create/DeleteScenarioEditor`;
+- `status_box_calls.rs`: the status box's host whole, `UnloadIcons`, `ReloadIcons`, the status bar's
+  `SetIconBitmap` (deleted: its only caller was the host);
+- `status_button_calls.rs`: `EEStatusButtonOp` whole and the command button's members (constructor body,
+  destructor, `ReleaseButton`, `DrawPolygons`, `DrawTextA`, `HotKeyUp`, `SetCommandButton`, `SetTechButton`,
+  `SetLocation`), `EEUIManager::Fn26FA55/6A`;
+- `main_group_calls.rs`: the main group's host whole, `ShowCommands` (the panel view built from shims, the layout
+  still `command_panel.rs`'), the status buttons' hot keys, the hot key event;
+- `mini_map_calls.rs`: the mini map's bodies (the numbers stay `mini_map.rs`' and ee_render's `gfx::minimap`);
+- `backgrounds_calls.rs`: the framed background (its fill calls ee_render's `ee_ge_draw2d_fill` directly) and the
+  campaign map's `LoadBackground` (the image cut into 256 x 256 cells);
+- `campaign_model_calls.rs`, `game_view_calls.rs`: the campaign editor model's host and the read views' fills;
+- `status_bar_calls.rs`, `command_units_calls.rs`: the status bar button's layout and draws, the command control's
+  arrow.
+
+### Lessons
+
+- **Cast to the base the C++ hands on, inside the shim.** A `new` shim returns `(uintptr_t)static_cast<UIControl*>
+  (new X(...))` (or `UIEvent*`, `UIForm*`, `UIBackground*`): the address of a class with a second base is not its
+  base's, and the C++ side reinterprets the number as the base. The same for a getter whose class is derived
+  (`GetScenarioEditorForm()` as a `UIForm*`).
+- **Protected members**: a shim is a free function. Members the shims need became public (`EEUIMiniMap`'s data,
+  `EEUICCommandUnits`' C++ objects) or a `using UIControl::CaptureMouse;` in the derived class; a member that calls a
+  protected base (`UIButton::ButtonDown`, `TabbedFrom`) stayed C++.
+- **`delete p->*m` parses as `(delete p)->*m`**: a member-pointer delete needs the parentheses.
+- **A temporary cannot bind to a non-const reference parameter** (`GESurface::CopyTo` takes `GERectangle&`): such
+  arguments are file statics the shims set first.
+- **Heredocs on this machine fold `\\` to `\`** in some tool paths: Rust and C++ strings with a backslash
+  (`"textures\\Flare"`) were broken twice; fix with Python bytes, check the file after writing.
+- **Clippy runs the test configuration**: a function or a shim only the FFI path calls is dead code in the test
+  build (`-D warnings`): give each one a test.
+- **`logic_lines.py` changed during the round** (11:27): measure the base and the head with the same script, in one
+  run.
+
+### What only the tours (or a person) exercise
+
+Cumulative with round 7's list ("The UI lane, round 7"):
+- The tours: the UI manager's database load (the user-defined controls and backgrounds, every control type the
+  main menu and the main game form use), the status box (fill, refresh, the bars, the icons' load), the command
+  buttons (their construction, draws, presses, hot keys, `ShowCommands`), the mini map (copy, draw, the right
+  press, the centring drag), the framed backgrounds, the status bar buttons, the command control's arrow.
+- EE-SIM: none of this round's code (the oracle and the captures are the regression check only).
+- Only a person: the campaign editor (the model's load, save, list, delete, the archived scenario's check and its
+  message), the campaign map background (`EEUIBMapBackground::LoadBackground`), the scenario editor's start
+  (`StartScenarioEditor`'s host cases), the WON server select's events, the post-game graph's control, the icons'
+  reload after a device loss.
+
+### Gates
+
+Per commit (logic over the whole tree with the same `logic_lines.py`; net C++ lines in src and include): 573bde2cb
+(UI manager, status box, command buttons) -484 / -81, 744991ffa (main group) -157 / -62, 3609d4b93 (mini map,
+backgrounds, campaign model, read views) -526 / -211, 2b1a6d091 (status bars, command control) -165 / +5; the rest
+(clippy, rustfmt, a test's text, the docs) are Rust or docs only. Per piece: the build `--sim` 0/0, the moved
+modules' unit tests; the oracle seeds 2-3 identical after pieces 1-4 and 5-8.
+
+On the final tree (merged with origin/rust 9e024ffb3, batch 10: a clean merge, no conflict, no marker; strip_markers
+--check: 0 files):
+- both builds 0/0 (EE-AOC 418 inputs, EE-SIM 419) and the test profile 0/0 (418); `rust_build.py header` current;
+- the Rust gate PASS (5,161 tests; test, clippy, rustfmt, header) on the final tree; its earlier runs failed clippy
+  (dead code in the test build: 6ee2904d7 tested those bodies), one test's text (449f43d6c), rustfmt (66544d31b)
+  and the header check (the regenerated header after rustfmt, 14 lines moved: the last commit; both builds relinked
+  0/0 after it);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests);
+- the plain saveload PASS (exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062);
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RESULT PASS), `--exercise editor` (RESULT PASS),
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS; ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS); no GX errors. The menu captures against the base build's (the main checkout's test profile, the
+  same tour): equal but the build label and, on the main menu, the Multiplayer button's tooltip (the hover's
+  timing); the settings tabs, the single player and random map screens equal pixel for pixel; the game frames differ
+  as two live games do;
+- `bash tools/gates.sh` through its own slot (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game
+  time-cap PT 12970, units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 2835/2839).
+- Not run: the POSIX builds.
+- The chain's first attempt checked the captures without `--seeds 2-3` (a false FAIL on the missing seeds 4-7) and a
+  killed chain kept running under its bash and held EE-SIM.exe through the next build's link: stop a chain's whole
+  process tree (by its PIDs under the worktree), never by image name (other lanes' EE-SIMs).

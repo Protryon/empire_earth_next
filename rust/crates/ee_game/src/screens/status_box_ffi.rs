@@ -1,5 +1,5 @@
-//! `extern "C"` for the status box (`status_box.rs`). The host is `ee_screenscpp_status_box`
-//! (`User Interface Thread/EEUIFMGStatusBox.cpp`): `call` is its record of one call (the box, the unit, the held
+//! `extern "C"` for the status box (`status_box.rs`). The host's ops are Rust's over its
+//! shims (`status_box_calls.rs`; `User Interface Thread/EEUIFMGStatusBox.cpp`): `call` is its record of one call (the box, the unit, the held
 //! text).
 
 use core::ffi::c_void;
@@ -12,7 +12,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_status_box(call: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
         pub fn ee_screenscpp_status_box_unit(call: *mut c_void, two_bars: *mut bool) -> i64;
     }
 }
@@ -25,7 +24,8 @@ impl BoxHost for Host {
         if let Some(r) = unsafe { crate::screens::hud_direct::status_box(self.0.cast(), op, a, b, c) } {
             return r;
         }
-        unsafe { sys::ee_screenscpp_status_box(self.0, op, a, b, c) }
+        // the rest: Rust over the C++ shims (status_box_calls.rs)
+        crate::screens::status_box_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c)
     }
     fn view(&mut self, fill: bool) -> EeScreensHudUnit {
         let mut two_bars = false;

@@ -1,5 +1,5 @@
-//! `extern "C"` for the framed background (`frame.rs`): `EEUIBGenericBackground::DrawBackground` calls it; the host
-//! is `ee_screenscpp_frame_fill` and `_piece` (`User Interface Thread/EEUIBGenericBackground.cpp`).
+//! `extern "C"` for the framed background (`frame.rs`): `EEUIBGenericBackground::DrawBackground` calls it; its fill
+//! and pieces are `backgrounds_calls.rs`' (over `User Interface Thread/EEUIBGenericBackground.cpp`'s shims).
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::{c_long, c_void};
@@ -8,27 +8,15 @@ use ee_base::math::types::GeRectangle;
 
 use crate::screens::frame::{EeScreensFramePiece, Frame, FrameHost};
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::{c_long, c_void};
-
-    use crate::screens::frame::EeScreensFramePiece;
-
-    extern "C" {
-        pub fn ee_screenscpp_frame_fill(background: *mut c_void, inner: *const f32) -> c_long;
-        pub fn ee_screenscpp_frame_piece(background: *mut c_void, piece: *const EeScreensFramePiece);
-    }
-}
-
 /// The background (`EEUIBGenericBackground*`).
 struct Background(*mut c_void);
 
 impl FrameHost for Background {
     fn fill(&mut self, inner: [f32; 4]) -> c_long {
-        unsafe { sys::ee_screenscpp_frame_fill(self.0, inner.as_ptr()) }
+        crate::screens::backgrounds_calls::frame_fill(self.0 as usize, inner)
     }
     fn piece(&mut self, piece: &EeScreensFramePiece) {
-        unsafe { sys::ee_screenscpp_frame_piece(self.0, piece) }
+        crate::screens::backgrounds_calls::frame_piece(self.0 as usize, piece)
     }
 }
 
