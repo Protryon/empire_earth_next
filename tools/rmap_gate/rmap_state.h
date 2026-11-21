@@ -1,4 +1,5 @@
-// The game's random-map state as the generator PIMs see it (the pointer every EERMPIM* export receives).
+// The game's random-map state as the generator PIMs saw it (the pointer every EERMPIM* export received): the rmap gate's
+// copy (the game's ee/EERandomMap.h until the world lane's round 1 moved the state to Rust, ee_sim rmap object.rs).
 // Defined by the game (C:\EEX\Empire Earth\Random Map\...); file name inferred; member names are provisional.
 // Only what Default.dll's codegen proves: fields at proven offsets, unknown stretches as `char _gapXXX[n]`.
 //
