@@ -252,12 +252,17 @@ mod tests {
 
     #[test]
     fn the_pushed_frustum_points_are_the_eight_corners_in_order() {
-        let v = GeViewport::default();
         let r = GeRectangle { bottom: 100.0, left: 0.0, right: 200.0, top: 0.0 };
+        let mut v = GeViewport::default();
+        // SAFETY: a live viewport and a valid rectangle
+        unsafe { ee_ge_viewport_set_view_rectangle(&mut v, &r) };
         let mut got: Vec<Ge3DPoint> = Vec::new();
         // SAFETY: valid pointers and a matching context
         unsafe { ee_ge_viewport_frustum_points_push(&v, &r, false, collect, (&mut got as *mut Vec<Ge3DPoint>).cast()) };
-        assert_eq!(got.as_slice(), &v.frustum_world_points(&r, false)[..]);
+        let bits =
+            |p: &[Ge3DPoint]| p.iter().map(|q| [q.x.to_bits(), q.y.to_bits(), q.z.to_bits()]).collect::<Vec<_>>();
+        assert_eq!(bits(&got), bits(&v.frustum_world_points(&r, false)));
+        assert!(got.iter().all(|q| q.x.is_finite() && q.y.is_finite() && q.z.is_finite()));
     }
 
     #[test]
