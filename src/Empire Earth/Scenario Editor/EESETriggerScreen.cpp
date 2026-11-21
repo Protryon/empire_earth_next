@@ -40,24 +40,12 @@
 #include "ee/EEScreenEvent.h"
 #include "ee/EESEARust.h"
 #include "rust/game/screens.h"
-extern char gEmptyString[]; // 0x4e5b98: the shared empty string
-extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its controls (EESERBUnitTypes.cpp)
 
 bool gB4C3220 = true;
 
 // ---- the trigger tab's host (editor_tscreen.rs; EE_SCREENS_SETS_OP_*): its tab and bitmap buttons, the sub-screens,
 // the views, the list
 
-static_assert(EE_SCREENS_SETS_IDS_NEW == IDS_TRIGGER_EDITOR_NEW && EE_SCREENS_SETS_IDS_NEW + 1 == IDS_DUPLICATE &&
-                  EE_SCREENS_SETS_IDS_NEW + 2 == IDS_TRIGGER_EDITOR_DELETE &&
-                  EE_SCREENS_SETS_IDS_NEW + 3 == IDS_TRIGGER_EDITOR_NAME &&
-                  EE_SCREENS_SETS_IDS_DESCRIPTION == IDS_DESCRIPTION_76A8,
-              "the strings");
-static_assert(EE_SCREENS_SETS_TAB_FIRST == EE_SCREENS_SE_TRIGGER_TAB_TRIGGER && EE_SCREENS_SE_TRIGGER_TAB_AREA == EE_SCREENS_SE_TRIGGER_TAB_TRIGGER + 4 &&
-                  EE_SCREENS_SETS_GROUPS[0] == EE_SCREENS_SE_ENTITY_GROUP_TRIGGER && EE_SCREENS_SETS_GROUPS[1] == EE_SCREENS_SE_ENTITY_GROUP_CONDITION &&
-                  EE_SCREENS_SETS_GROUPS[2] == EE_SCREENS_SE_ENTITY_GROUP_EFFECT && EE_SCREENS_SETS_GROUPS[3] == EE_SCREENS_SE_ENTITY_GROUP_OBJECT &&
-                  EE_SCREENS_SETS_GROUPS[4] == EE_SCREENS_SE_ENTITY_GROUP_AREA,
-              "the sub-tabs");
 
 namespace {
 
@@ -76,8 +64,6 @@ const GERectangle kSetsPanel(0.0f, 448.0f, 1023.0f, 606.0f);   // the tab's +0x1
 // sequences)
 extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)p;
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SETS_OP_FONT_HEIGHT: return (int32_t)gU531930->GetHeight();
     case EE_SCREENS_SETS_OP_DEBUG_IDS: return gWorld.mScenarioManager->mShowDebugIDs ? 1 : 0;

@@ -65,7 +65,6 @@
 // Sort, MoveDown, MoveUp, Delete, Duplicate, Activate (0x582b22), Store (0x582b96), GetNames, Load (0x582c55), New,
 // RefreshControls, Show and Hide are its slots; the class forwards.
 
-extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
 // ------------------------------------------------------------------------------------------------ the types' host
 
@@ -88,26 +87,6 @@ void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBo
 
 namespace {
 
-static_assert(EE_SCREENS_SE_TRIGGER_SCREEN_TRIGGER == 0 && EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT == 3 && EE_SCREENS_SE_TRIGGER_SCREEN_AREA == 4 &&
-                  EE_SCREENS_SE_TS_EFFECT_TITLE_LABEL == 0x960 && EE_SCREENS_SE_TS_EFFECT_TYPE_COMBO_BOX == 0x961 &&
-                  EE_SCREENS_SE_TRIGGER_SCREEN_NAME_EDIT_BOX == 0x7db && EE_SCREENS_SE_TRIGGER_SCREEN_NAME_LABEL == 0x7dc &&
-                  EE_SCREENS_SE_TRIGGER_SCREEN_DUPLICATE_BUTTON == 0x7d6 && EE_SCREENS_SE_TRIGGER_SCREEN_DELETE_BUTTON == 0x7d7 &&
-                  kControlTriggerRangeChanged == 0x3e8 && kControlTriggerChecked == 0x3e9 &&
-                  kControlTriggerSelectionChanged == 0x3eb && kControlTriggerButtonUp == 0x3f0 &&
-                  kTextAlignLeft == 0 && kTextAlignCenter == 1 && kTextAlignRight == 2 &&
-                  EE_SCENARIO_SM_EFFECT_NONE == 0 && EE_SCENARIO_SM_EFFECT_OBJECT == 1 && EE_SCENARIO_SM_EFFECT_PLAYER == 2 && EE_SCENARIO_SM_EFFECT_TRIGGER == 3 &&
-                  EE_SCENARIO_SM_EFFECT_MEDIA == 4 && EE_SCENARIO_SM_EFFECT_GAME == 5 && EE_SCENARIO_SM_EFFECT_AI == 6,
-              "editor_effects.rs's values");
-static_assert(EE_SCENARIO_SM_CONDITION_ALWAYS_TRUE == 0 && EE_SCENARIO_SM_CONDITION_PLAYER_ATTRIBUTE == 2 && EE_SCENARIO_SM_CONDITION_PLAYER_TECHNOLOGY == 3 &&
-                  EE_SCENARIO_SM_CONDITION_TRIGGER_ATTRIBUTE == 4 && EE_SCENARIO_SM_CONDITION_PLAYER_DIPLOMACY == 5 &&
-                  EE_SCENARIO_SM_CONDITION_GAME_ATTRIBUTE == 6 && EE_SCENARIO_SM_CONDITION_CHAT_MESSAGE_CONTAINS == 7 &&
-                  EE_SCREENS_SE_TS_CONDITION_TITLE_LABEL == 0x8fc && EE_SCREENS_SE_TS_CONDITION_TYPE_COMBO_BOX == 0x8fd &&
-                  kControlTriggerUnchecked == 0x3ea && kControlTriggerEnterPressed == 0x3f1 &&
-                  EE_SCREENS_SEE_CHECK_DISPLAY == EE_SCREENS_SEE_CHECK_DISPLAY,
-              "editor_conditions.rs's values");
-static_assert(IDS_TRIGGER_SCREEN_TAB_OBJECT == 30302 && IDS_AREA == 30303 && kMovementAir == 1 && kMovementSea == 4 &&
-                  kUnitCategoryProjectile == 9 && kUnitCategoryMissile == 0xc,
-              "editor_trigx.rs's values");
 
 // the technologies by their editor names (editor_trigx.rs tech_less: as EESETSConditionType.cpp's
 // EESETSCTResearchNameLess; once EESETSETPlayer.cpp)
@@ -127,12 +106,6 @@ std::vector<UWideString> sSeetNames[2];   // the kept names: EE_SCREENS_SEET_OP_
 std::vector<long> sSeetTechs;             // EE_SCREENS_SEET_OP_TECHS' kept technologies
 UWideString sSeetText;                    // the kept formatted text (EE_SCREENS_SEETX_FORMAT_*)
 
-int32_t SeetWrite(void* outBuffer, int32_t inCapacity, const char* inText)
-{
-    size_t theLength = strlen(inText);
-    memcpy(outBuffer, inText, (std::min)(theLength, (size_t)(inCapacity > 0 ? inCapacity : 0)));
-    return (int32_t)theLength;
-}
 
 UWideString SeetBytes(const void* inBytes, int32_t inLength)
 {
@@ -218,8 +191,8 @@ int32_t SeetOp(uint32_t inOp, const SeetC& c, void* const* p, int32_t* i, float*
         gUIManager->GetScenarioEditorForm()->GetTriggerBox(false)->SetText(SeetBytes(p[2], i[2]));
         return 0;
     case EE_SCREENS_SEET_OP_NAME_BOX:
-        return SeetWrite(p[2], k, gUIManager->GetScenarioEditorForm()->GetTriggerBox(false)->GetText(0));
-    case EE_SCREENS_SEET_OP_NAME: return SeetWrite(p[2], k, sSeetNames[0][(size_t)i[2]]);
+        return EESEWrite(p[2], k, gUIManager->GetScenarioEditorForm()->GetTriggerBox(false)->GetText(0));
+    case EE_SCREENS_SEET_OP_NAME: return EESEWrite(p[2], k, sSeetNames[0][(size_t)i[2]]);
     case EE_SCREENS_SEET_OP_CALAMITY_COUNT: return (int32_t)EECalamityManager::GetInstance()->GetCalamityClassCount();
     case EE_SCREENS_SEET_OP_GRAPHIC_COUNT: return (int32_t)EEGraphicEffect::GetCount();
     case EE_SCREENS_SEET_OP_BEHAVIOR_COUNT: return (int32_t)(sizeof(gCPBehaviors) / sizeof(EECPBehavior));
@@ -318,7 +291,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
         gWorld.mScenarioManager->GetNames((unsigned long)i[1], sSeetNames[i[0]]);
         return 0;
     case EE_SCREENS_SEETX_NAMES_COUNT: return (int32_t)sSeetNames[i[0]].size();
-    case EE_SCREENS_SEETX_NAMES_AT: return SeetWrite(p[2], i[3], sSeetNames[i[0]][(size_t)i[1]]);
+    case EE_SCREENS_SEETX_NAMES_AT: return EESEWrite(p[2], i[3], sSeetNames[i[0]][(size_t)i[1]]);
     case EE_SCREENS_SEETX_COMBO_APPEND_NAMES:
         static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeetNames[i[0]]);
         return 0;
@@ -357,15 +330,15 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_FORMAT_FLOAT:
         sprintf(sSeetText, static_cast<const char*>(p[0]), (double)f[0]);
         return 0;
-    case EE_SCREENS_SEETX_KEPT_TEXT: return SeetWrite(p[2], i[3], sSeetText);
+    case EE_SCREENS_SEETX_KEPT_TEXT: return EESEWrite(p[2], i[3], sSeetText);
     case EE_SCREENS_SEETX_OBJECT:
         *theOut = gWorld.mScenarioManager->GetScenarioObject((unsigned long)(uint32_t)i[0]);
         return 0;
-    case EE_SCREENS_SEETX_OBJECT_NAME: return SeetWrite(p[2], i[3], static_cast<EESMObject*>(p[0])->mName);
+    case EE_SCREENS_SEETX_OBJECT_NAME: return EESEWrite(p[2], i[3], static_cast<EESMObject*>(p[0])->mName);
     case EE_SCREENS_SEETX_TRIGGER:
         *theOut = gWorld.mScenarioManager->GetTrigger((unsigned long)(uint32_t)i[0]);
         return 0;
-    case EE_SCREENS_SEETX_TRIGGER_NAME: return SeetWrite(p[2], i[3], static_cast<EESMTrigger*>(p[0])->mName);
+    case EE_SCREENS_SEETX_TRIGGER_NAME: return EESEWrite(p[2], i[3], static_cast<EESMTrigger*>(p[0])->mName);
     case EE_SCREENS_SEETX_CALAMITY:
         *theOut = EECalamityManager::GetInstance()->GetCalamityClass((unsigned long)i[0]);
         return 0;
@@ -437,12 +410,12 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_CONDITION_FIELDS:
         *theOut = static_cast<EeScenarioConditionFields*>(static_cast<EESMCondition*>(p[0]));
         return 0;
-    case EE_SCREENS_SEETX_EFFECT_TEXT + 0: return SeetWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mNewName);
-    case EE_SCREENS_SEETX_EFFECT_TEXT + 1: return SeetWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mMessage);
-    case EE_SCREENS_SEETX_EFFECT_TEXT + 2: return SeetWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mFileName);
-    case EE_SCREENS_SEETX_EFFECT_TEXT + 3: return SeetWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mDescription);
-    case EE_SCREENS_SEETX_EFFECT_TEXT + 4: return SeetWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mText);
-    case EE_SCREENS_SEETX_EFFECT_TEXT + 5: return SeetWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mName);
+    case EE_SCREENS_SEETX_EFFECT_TEXT + 0: return EESEWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mNewName);
+    case EE_SCREENS_SEETX_EFFECT_TEXT + 1: return EESEWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mMessage);
+    case EE_SCREENS_SEETX_EFFECT_TEXT + 2: return EESEWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mFileName);
+    case EE_SCREENS_SEETX_EFFECT_TEXT + 3: return EESEWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mDescription);
+    case EE_SCREENS_SEETX_EFFECT_TEXT + 4: return EESEWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mText);
+    case EE_SCREENS_SEETX_EFFECT_TEXT + 5: return EESEWrite(p[2], i[3], static_cast<EESMEffect*>(p[0])->mName);
     case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 0:
         static_cast<EESMEffect*>(p[0])->mNewName = SeetBytes(p[1], i[0]);
         return 0;
@@ -461,9 +434,9 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 5:
         static_cast<EESMEffect*>(p[0])->mName = SeetBytes(p[1], i[0]);
         return 0;
-    case EE_SCREENS_SEETX_CONDITION_TEXT + 0: return SeetWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mChatText);
-    case EE_SCREENS_SEETX_CONDITION_TEXT + 1: return SeetWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mText);
-    case EE_SCREENS_SEETX_CONDITION_TEXT + 2: return SeetWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mName);
+    case EE_SCREENS_SEETX_CONDITION_TEXT + 0: return EESEWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mChatText);
+    case EE_SCREENS_SEETX_CONDITION_TEXT + 1: return EESEWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mText);
+    case EE_SCREENS_SEETX_CONDITION_TEXT + 2: return EESEWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mName);
     case EE_SCREENS_SEETX_SET_CONDITION_TEXT + 0:
         static_cast<EESMCondition*>(p[0])->mChatText = SeetBytes(p[1], i[0]);
         return 0;

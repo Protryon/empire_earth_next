@@ -8,6 +8,9 @@ use core::ffi::c_void;
 
 use crate::screens::editor_form::*;
 use crate::screens::editor_players::SeplHost;
+use crate::screens::editor_sefmx::{
+    cpp, EE_SCREENS_SEFMX_BASE_COPY_DATA, EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD, EE_SCREENS_SEFMX_BASE_UPDATE_MOUSE,
+};
 
 struct Host;
 
@@ -38,6 +41,21 @@ pub struct EeScreensSeForm(EditorForm);
 #[no_mangle]
 pub extern "C" fn ee_screens_sefm_new(shell: *mut c_void) -> *mut EeScreensSeForm {
     Box::into_raw(Box::new(EeScreensSeForm(EditorForm::new(shell as usize))))
+}
+
+/// `EEUIFScenarioEditor`'s constructor after `UIForm`'s (`shell` the C++ form): its rectangle (0, 0, 1023, 767),
+/// the form's object made into `*out` (the build's controls call back into it), built, the civilization builder's
+/// points, the music file name `<NONE>`.
+///
+/// # Safety
+/// `out` is the shell's `mRust`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sefm_construct(shell: *mut c_void, out: *mut *mut EeScreensSeForm) {
+    construct(&mut crate::screens::editor_sefmx::cpp, shell as usize, || {
+        let form = ee_screens_sefm_new(shell);
+        unsafe { *out = form };
+        unsafe { (*form).0.build(&mut Host) };
+    });
 }
 
 /// The destructor: the events released and the controls deleted (the original's order), the object freed.
@@ -138,6 +156,18 @@ pub unsafe extern "C" fn ee_screens_sefm_call(
         EE_SCREENS_SEFM_SET_GAME_VIEW => f.set_game_view(h, rect, a != 0),
         EE_SCREENS_SEFM_SET_LOAD_TEXT => f.set_load_text(h, p, a == 0),
         EE_SCREENS_SEFM_SAVE_TRIGGERS => return save_triggers(),
+        EE_SCREENS_SEFM_COPY_DATA_WHOLE => {
+            f.copy_data(h);
+            return whole(&mut cpp, f.shell(), true, EE_SCREENS_SEFMX_BASE_COPY_DATA);
+        }
+        EE_SCREENS_SEFM_UPDATE_KEYBOARD_WHOLE => {
+            let own = f.update_keyboard(h);
+            return whole(&mut cpp, f.shell(), own, EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD);
+        }
+        EE_SCREENS_SEFM_UPDATE_MOUSE_WHOLE => {
+            let own = f.update_mouse(h);
+            return whole(&mut cpp, f.shell(), own, EE_SCREENS_SEFMX_BASE_UPDATE_MOUSE);
+        }
         _ => {}
     }
     0

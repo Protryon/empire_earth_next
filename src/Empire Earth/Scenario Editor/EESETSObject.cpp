@@ -66,35 +66,10 @@ struct EESETSOUnitTypeNameLess {
 // CheckChanged, Show and MouseMove are its members; the class forwards. The control classes below stay C++, and
 // this unit is the screen's host (ee_screenscpp_seob).
 
-extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
 // ---- the host (editor_object.rs: the ops from 100; the action names and the toolkit's texts are answered in Rust,
 // editor_direct.rs)
 
-static_assert(EE_SCREENS_SEOB_IDS_ANY_CLASS == IDS_ANY_CLASS && EE_SCREENS_SEOB_IDS_NONE == IDS_NONE &&
-                  EE_SCREENS_SEOB_IDS_SE_UNIT_GROUP_UNITS == IDS_SE_UNIT_GROUP_UNITS &&
-                  EE_SCREENS_SEOB_IDS_FAMILY == IDS_FAMILY && EE_SCREENS_SEOB_IDS_SELECT_ON_MAP == IDS_SELECT_ON_MAP &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 1 == IDS_OBJECT_SPECIFICATION &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 2 == IDS_TRIGGER_EDITOR_OWNER &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 3 == IDS_CLASS &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 5 == IDS_TRIGGER_EDITOR_MIN &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 6 == IDS_TRIGGER_EDITOR_MAX &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 7 == IDS_DYNAMIC && EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 8 == IDS_IN_AREA &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 9 == IDS_VISIBLE_BY &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 10 == IDS_HAS_STATE &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 11 == IDS_SELECTED_BY &&
-                  EE_SCREENS_SEOB_IDS_SELECT_ON_MAP + 12 == IDS_HAS_ATTRIBUTE &&
-                  EE_SCREENS_SEOB_IDS_UNIT_SELECTED_LIST == IDS_UNIT_SELECTED_LIST &&
-                  EE_SCREENS_SEOB_IDS_TRIGGER_EDITOR_USE_OBJECT == IDS_TRIGGER_EDITOR_USE_OBJECT &&
-                  EE_SCREENS_SEOB_IDS_TRIGGER_PROXIMITY_FIRST == IDS_TRIGGER_PROXIMITY_FIRST &&
-                  EE_SCREENS_SEOB_IDS_TRIGGER_ATTRIBUTE_FIRST == IDS_TRIGGER_ATTRIBUTE_FIRST,
-              "the strings");
-static_assert(EE_SCREENS_SEOB_AREA_CHECK == EE_SCREENS_SE_TS_OBJECT_AREA_CHECK && EE_SCREENS_SEOB_NEAR_CHECK == EE_SCREENS_SE_TS_OBJECT_NEAR_CHECK &&
-                  EE_SCREENS_SEOB_VISIBLE_BY_CHECK == EE_SCREENS_SE_TS_OBJECT_VISIBLE_BY_CHECK &&
-                  EE_SCREENS_SEOB_HAS_STATE_CHECK == EE_SCREENS_SE_TS_OBJECT_HAS_STATE_CHECK &&
-                  EE_SCREENS_SEOB_SELECTED_BY_CHECK == EE_SCREENS_SE_TS_OBJECT_SELECTED_BY_CHECK &&
-                  EE_SCREENS_SEOB_SELECT_UNITS == EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS,
-              "the ids");
 
 namespace {
 
@@ -156,7 +131,6 @@ std::vector<unsigned long> sSeobUnits;   // EE_SCREENS_SEOB_OP_SELECT_OBJECT_UNI
 // the screen's own ops (editor_trigx.rs composes the sequences and the ops on a scenario object)
 extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SEOB_OP_UNIT_SET_COUNT: return (int32_t)gUnitSetManager.GetSize();
     case EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN:

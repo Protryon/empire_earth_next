@@ -54,28 +54,13 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
 // rows' steps are its members; the class forwards. EESETSTriggerUIComboBox stays C++ (above), and this unit is the
 // screen's host (ee_screenscpp_setr).
 
-extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
 // ---- the host (editor_trigger.rs: the ops from 200)
 
-static_assert(EE_SCREENS_SETR_IDS_SE_REMOVE == IDS_SE_REMOVE && EE_SCREENS_SETR_IDS_CONDITION == IDS_CONDITION &&
-                  EE_SCREENS_SETR_IDS_EFFECT == IDS_EFFECT && EE_SCREENS_SETR_IDS_SECONDS == IDS_SECONDS &&
-                  EE_SCREENS_SETR_IDS_IF == IDS_IF && EE_SCREENS_SETR_IDS_IF + 1 == IDS_THEN &&
-                  EE_SCREENS_SETR_IDS_IF + 2 == IDS_NOT && EE_SCREENS_SETR_IDS_IF + 3 == IDS_DELAY &&
-                  EE_SCREENS_SETR_IDS_IF + 4 == IDS_AND && EE_SCREENS_SETR_IDS_IF + 5 == IDS_OR &&
-                  EE_SCREENS_SETR_IDS_IF + 6 == IDS_TRIGGER_STATEMENT && EE_SCREENS_SETR_IDS_IF + 7 == IDS_TRIGGER_IS_ON &&
-                  EE_SCREENS_SETR_IDS_IF + 8 == IDS_CONDITIONS_TRUE_FOR && EE_SCREENS_SETR_IDS_IF + 9 == IDS_LOOPING &&
-                  EE_SCREENS_SETR_IDS_INCLUDE_IN_CINEMATIC == IDS_INCLUDE_IN_CINEMATIC,
-              "the strings");
-static_assert(EE_SCREENS_SETR_END == EE_SCENARIO_SM_TRIGGER_OPERATOR_END && EE_SCREENS_SETR_AND == EE_SCENARIO_SM_TRIGGER_OPERATOR_AND &&
-                  EE_SCREENS_SETR_OR == EE_SCENARIO_SM_TRIGGER_OPERATOR_OR,
-              "the operators");
 
 // the screen's own ops (editor_trigx.rs composes the sequences and the ops on a trigger)
 extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)i;
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SETR_OP_GET_NAMES:
         gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0]));
@@ -95,12 +80,6 @@ UWideString SetrBytes(const void* inBytes, int32_t inLength)
     return UWideString(std::string(static_cast<const char*>(inBytes), (size_t)(inLength > 0 ? inLength : 0)).c_str());
 }
 
-int32_t SetrWrite(void* outBuffer, int32_t inCapacity, const char* inText)
-{
-    size_t theLength = strlen(inText);
-    memcpy(outBuffer, inText, (std::min)(theLength, (size_t)(inCapacity > 0 ? inCapacity : 0)));
-    return (int32_t)theLength;
-}
 
 UWideString sSetrText;   // the kept remove button's text (EE_SCREENS_SETRX_FORMAT_REMOVE)
 
@@ -110,7 +89,6 @@ UWideString sSetrText;   // the kept remove button's text (EE_SCREENS_SETRX_FORM
 // word of a found object or a text's buffer (capacity i3), a text p1's i0 bytes)
 extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)f;
     void** theOut = static_cast<void**>(p[2]);
     EESMTrigger* t = static_cast<EESMTrigger*>(p[0]);
     switch (inOp) {
@@ -120,8 +98,8 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETRX_SET_TEXT:
         t->SetText(SetrBytes(p[1], i[0]));
         return 0;
-    case EE_SCREENS_SETRX_NAME: return SetrWrite(p[2], i[3], t->mName);
-    case EE_SCREENS_SETRX_TEXT: return SetrWrite(p[2], i[3], t->mText);
+    case EE_SCREENS_SETRX_NAME: return EESEWrite(p[2], i[3], t->mName);
+    case EE_SCREENS_SETRX_TEXT: return EESEWrite(p[2], i[3], t->mText);
     case EE_SCREENS_SETRX_CONDITION:
         *theOut = t->GetCondition((unsigned long)i[0]);
         return 0;

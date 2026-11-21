@@ -103,6 +103,13 @@ pub const EE_SCREENS_SEFM_CLEAR_SELECTION: u32 = 19;
 pub const EE_SCREENS_SEFM_SET_GAME_VIEW: u32 = 20;
 pub const EE_SCREENS_SEFM_SET_LOAD_TEXT: u32 = 21;
 pub const EE_SCREENS_SEFM_SAVE_TRIGGERS: u32 = 22;
+/// The C++ members whole: `CopyData` (the form's, then `UIForm::CopyData`'s answer), `UpdateKeyboard` and
+/// `UpdateMouse` (the form's, then `UIForm`'s when the form lets it run, else 0).
+pub const EE_SCREENS_SEFM_COPY_DATA_WHOLE: u32 = 2000;
+pub const EE_SCREENS_SEFM_UPDATE_KEYBOARD_WHOLE: u32 = 2001;
+pub const EE_SCREENS_SEFM_UPDATE_MOUSE_WHOLE: u32 = 2002;
+/// `<NONE>`, the music file name the constructor gives the form.
+pub const EE_SCREENS_SEFM_IDS_SE_MAP_NONE: u32 = 20009;
 
 // ---- the form's host (`ee_screenscpp_sefm`)
 
@@ -437,6 +444,11 @@ pub struct EditorForm {
 impl EditorForm {
     pub fn new(shell: usize) -> Self {
         EditorForm { shell, slots: core::array::from_fn(|_| AtomicUsize::new(0)), selected: Mutex::new(Vec::new()) }
+    }
+
+    /// The C++ `EEUIFScenarioEditor`.
+    pub fn shell(&self) -> usize {
+        self.shell
     }
 
     pub fn get(&self, slot: u32) -> usize {
@@ -1477,5 +1489,67 @@ pub fn trigger_report<R: ScenarioRecords + ?Sized>(r: &mut R) -> Vec<u8> {
     out
 }
 
+/// The constructor's sequence over the form's statements `x`; `make` makes, stores and builds the object.
+pub fn construct(x: &mut crate::screens::editor_sepl::Sepx, shell: usize, make: impl FnOnce()) {
+    use crate::screens::editor_sefmx::*;
+    x(EE_SCREENS_SEFMX_SET_RECTANGLE, [0, shell, 0], &mut [0; 4], &mut [0.0, 0.0, 1023.0, 767.0]);
+    make();
+    x(EE_SCREENS_SEFMX_CIVILIZATION_POINTS, [0, shell, 0], &mut [0; 4], &mut [0.0; 4]);
+    x(EE_SCREENS_SEFMX_STRING, [0, shell, 0], &mut [EE_SCREENS_SEFM_IDS_SE_MAP_NONE as i32, 0, 0, 0], &mut [0.0; 4]);
+    x(EE_SCREENS_SEFMX_MUSIC_TEXT, [0, shell, 0], &mut [0; 4], &mut [0.0; 4]);
+}
+
+/// A C++ member whole (`EE_SCREENS_SEFM_COPY_DATA_WHOLE` ..): the form's part `own` (whether `UIForm`'s runs, for
+/// the input), then the base's statement `base` on the form.
+pub fn whole(x: &mut crate::screens::editor_sepl::Sepx, shell: usize, own: bool, base: u32) -> i32 {
+    if !own {
+        return 0;
+    }
+    x(base, [0, shell, 0], &mut [0; 4], &mut [0.0; 4])
+}
+
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod construct_tests {
+    use super::*;
+    use crate::screens::editor_sefmx::*;
+
+    #[test]
+    fn the_constructor_sets_the_rectangle_makes_then_names_the_music() {
+        let mut log: Vec<(u32, [i32; 4], [f32; 4])> = Vec::new();
+        let mut made = false;
+        let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| {
+            assert_eq!(p[1], 9);
+            log.push((op, *i, *f));
+            0
+        };
+        construct(&mut x, 9, || made = true);
+        assert!(made);
+        let ops: Vec<u32> = log.iter().map(|l| l.0).collect();
+        assert_eq!(
+            ops,
+            [
+                EE_SCREENS_SEFMX_SET_RECTANGLE,
+                EE_SCREENS_SEFMX_CIVILIZATION_POINTS,
+                EE_SCREENS_SEFMX_STRING,
+                EE_SCREENS_SEFMX_MUSIC_TEXT
+            ]
+        );
+        assert_eq!(log[0].2, [0.0, 0.0, 1023.0, 767.0]);
+        assert_eq!(log[2].1[0], EE_SCREENS_SEFM_IDS_SE_MAP_NONE as i32);
+    }
+
+    #[test]
+    fn a_whole_member_runs_the_base_only_when_the_form_lets_it() {
+        let mut ran = Vec::new();
+        let mut x = |op: u32, _: [usize; 3], _: &mut [i32; 4], _: &mut [f32; 4]| {
+            ran.push(op);
+            7
+        };
+        assert_eq!(whole(&mut x, 1, false, EE_SCREENS_SEFMX_BASE_UPDATE_MOUSE), 0);
+        assert_eq!(whole(&mut x, 1, true, EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD), 7);
+        assert_eq!(ran, [EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD]);
+    }
+}

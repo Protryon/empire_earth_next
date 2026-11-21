@@ -2327,6 +2327,17 @@ constexpr static const uint32_t EE_SCREENS_SEFM_SET_LOAD_TEXT = 21;
 
 constexpr static const uint32_t EE_SCREENS_SEFM_SAVE_TRIGGERS = 22;
 
+/// The C++ members whole: `CopyData` (the form's, then `UIForm::CopyData`'s answer), `UpdateKeyboard` and
+/// `UpdateMouse` (the form's, then `UIForm`'s when the form lets it run, else 0).
+constexpr static const uint32_t EE_SCREENS_SEFM_COPY_DATA_WHOLE = 2000;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_UPDATE_KEYBOARD_WHOLE = 2001;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_UPDATE_MOUSE_WHOLE = 2002;
+
+/// `<NONE>`, the music file name the constructor gives the form.
+constexpr static const uint32_t EE_SCREENS_SEFM_IDS_SE_MAP_NONE = 20009;
+
 /// The button texture (`textures\SE Buttons`, referenced), the edge scroll, the poll (500, started), the panel's
 /// bitmap (`textures\scenpart`) and the full view's background (`textures\Scenfull`) made into the five words at p0.
 constexpr static const uint32_t EE_SCREENS_SEFM_OP_BASICS = 800;
@@ -4914,6 +4925,21 @@ constexpr static const uint32_t EE_SCREENS_SEFMX_TEXT_WRITE = 212;
 
 constexpr static const uint32_t EE_SCREENS_SEFMX_TEXT_CLOSE = 213;
 
+/// The form p1's `UIForm::CopyData()`, `UIForm::UpdateKeyboard()`, `UIForm::UpdateMouse()` (their answers); its
+/// `SetRectangle((f0, f1, f2, f3))`; its civilization's `SetPointsAndMax(the world table's builder points)`; its
+/// `SetMusicFileName(the host's text)` (the constructor's, `ee_screens_sefm_construct`).
+constexpr static const uint32_t EE_SCREENS_SEFMX_BASE_COPY_DATA = 2000;
+
+constexpr static const uint32_t EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD = 2001;
+
+constexpr static const uint32_t EE_SCREENS_SEFMX_BASE_UPDATE_MOUSE = 2002;
+
+constexpr static const uint32_t EE_SCREENS_SEFMX_SET_RECTANGLE = 2003;
+
+constexpr static const uint32_t EE_SCREENS_SEFMX_CIVILIZATION_POINTS = 2004;
+
+constexpr static const uint32_t EE_SCREENS_SEFMX_MUSIC_TEXT = 2005;
+
 /// The constructor's: `mIsDone = a0 != 0`, `mEditor = p1`, `ESVERIFY_AT(CreateEvent(mThreadCreated / mThreadDone /
 /// mMessageQueueDone) == keseOK)`, `CreateThread(mThread, Main, this)`, `mThread->SetPriority(a0)`,
 /// `mThreadCreated->Wait(infinite)`, `mThread->SetName(gScenarioEditorThreadName)`, `mChangeLoadText = new
@@ -5360,6 +5386,7 @@ constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_EFFECT = 145;
 
 constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_OBJECT = 146;
 
+/// (the unit tab's lists: an `EEUIShellList` of shell kind i0)
 constexpr static const uint32_t EE_SCREENS_SEPX_MAKE_LIST_UNIT = 147;
 
 /// The made control p2: `SetAlignment(i0)`, `SetBgOpacity(f0)`, its text label's `SetBgOpacity(f0)` (a radio),
@@ -7604,6 +7631,17 @@ constexpr static const uint32_t EE_SCREENS_SEUN_OP_CLEAR_GHOSTS = 313;
 /// The colour of the gate tool's player's walls restored (p0 the shell; `EEClearGateHighlights`).
 constexpr static const uint32_t EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS = 314;
 
+/// The build tools' `Cancel` (once EESEUIBuildGate::Cancel, EESEUIBuildWall::Cancel): the tool p1's player into
+/// p0 (`gWorld.mPlayers[tool->mPlayer]`), the gate's / the wall's; player p1's `UnloadUnitClassMedia` of the gate
+/// p2's class type / of the wall p2's technology's class.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_GATE_PLAYER = 2000;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_WALL_PLAYER = 2001;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_UNLOAD_GATE = 2002;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_UNLOAD_WALL = 2003;
+
 /// A frame's preview (p0 the shell): i0 0 the unit ghost at the mouse, 1 the wall ghosts, 2 the gate on a wall.
 constexpr static const uint32_t EE_SCREENS_SEUN_OP_PREVIEW = 315;
 
@@ -7827,6 +7865,11 @@ constexpr static const uint32_t EE_SCREENS_SEUN_SELECT = 10;
 constexpr static const uint32_t EE_SCREENS_SEUN_UPDATE_SELECTION = 11;
 
 constexpr static const uint32_t EE_SCREENS_SEUN_REFRESH = 12;
+
+/// The build tools' `Cancel` (p the C++ tool): `cancel_gate`, `cancel_wall`.
+constexpr static const uint32_t EE_SCREENS_SEUN_CANCEL_GATE = 2000;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_CANCEL_WALL = 2001;
 
 /// With an argument `a`: `ShowCargo(a != 0)`, `MouseMove(x, y)`; `ShowUnitStatus(p)`, `Draw(p: the rectangle)`.
 constexpr static const uint32_t EE_SCREENS_SEUN_SHOW_CARGO = 13;
@@ -15659,6 +15702,15 @@ void ee_screens_seel_call(const EeScreensSeElevation *tab, uint32_t what, float 
 /// stores it first: the build's controls call back into it). Freed by `ee_screens_sefm_free`.
 EeScreensSeForm *ee_screens_sefm_new(void *shell);
 
+/// `EEUIFScenarioEditor`'s constructor after `UIForm`'s (`shell` the C++ form): its rectangle (0, 0, 1023, 767),
+/// the form's object made into `*out` (the build's controls call back into it), built, the civilization builder's
+/// points, the music file name `<NONE>`.
+///
+/// # Safety
+/// `out` is the shell's `mRust`.
+void ee_screens_sefm_construct(void *shell,
+                               EeScreensSeForm **out);
+
 /// The destructor: the events released and the controls deleted (the original's order), the object freed.
 ///
 /// # Safety
@@ -15895,6 +15947,12 @@ long ee_screens_seia_event(void *form,
 void ee_screens_sepl_diplomacy_show(void *button,
                                     unsigned long state,
                                     bool help);
+
+/// The brush group's destructor body.
+///
+/// # Safety
+/// `group` is the C++ group being destroyed.
+void ee_screens_sebr_group_free(const EeScreensSeBrushGroup *group);
 
 /// The brush group's constructor body (`index` the form's next control index, advanced).
 ///

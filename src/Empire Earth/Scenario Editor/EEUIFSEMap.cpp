@@ -33,26 +33,17 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
 #include "rust/game/screens.h"
+#include "ee/EECivilization.h"
+#include "ee/EEUIFScenarioEditor.h"
 
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 void SeplLinePush(const UWideString& inLine);   // a line for the next combo box made with pending lines (the same)
 
 // ---- the tab's host (editor_map.rs: the ops from 500)
 
-static_assert(EE_SCREENS_SE_MAP_ELEVATION_FILE == 0x75 && EE_SCREENS_SE_MAP_WIDTH == 0x6b && EE_SCREENS_SE_MAP_LAND_CUTOFF == 0x78 &&
-                  EE_SCREENS_SE_MAP_DEFAULT_TERRAIN_LABEL == 0x64 && EE_SCREENS_SE_MAP_WATER_CUTOFF == 0x7d,
-              "editor_map.rs's ids");
 
-extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
 
 namespace {
 
-int32_t SempxOut(int32_t* i, const void* inObject)
-{
-    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
-    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
-    return 0;
-}
 
 }   // namespace
 
@@ -83,26 +74,26 @@ extern "C" int32_t ee_screenscpp_sempx(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEMPX_RADIO_HEIGHT: return (int32_t)(unsigned long)theForm->GetManager()->GetRadioOn()->GetHeight();
     case EE_SCREENS_SEMPX_FONT_HEIGHT: return (int32_t)(unsigned long)gSeplScreenFont->GetHeight();
-    case EE_SCREENS_SEMPX_NEW_RADIO: return SempxOut(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_MAP_RADIO, {}, (unsigned long)i[0], gSefxText, gSeplScreenFont, GERectangle(GE2DPoint(f[0], f[1]), 100.0f, (float)(unsigned long)f[2]), theForm, (unsigned long)i[2], 0, false, i[3] != 0, false)));
-    case EE_SCREENS_SEMPX_RADIO_LABEL: return SempxOut(i, static_cast<UIControl*>(static_cast<UIRadioButton*>(static_cast<UIControl*>(p[0]))->GetTextLabel()));
-    case EE_SCREENS_SEMPX_NEW_BUTTON: return SempxOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_MAP_BUTTON, {(int64_t)p[2]}, 0x65, NULL, NULL, NULL, GERectangle(GE2DPoint(f[0], f[1]), 260.0f, (float)(unsigned long)(gSeplScreenFont->GetHeight() + 10.0f)), theForm, (unsigned long)i[2], 2)));
+    case EE_SCREENS_SEMPX_NEW_RADIO: return EESEOut(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_MAP_RADIO, {}, (unsigned long)i[0], gSefxText, gSeplScreenFont, GERectangle(GE2DPoint(f[0], f[1]), 100.0f, (float)(unsigned long)f[2]), theForm, (unsigned long)i[2], 0, false, i[3] != 0, false)));
+    case EE_SCREENS_SEMPX_RADIO_LABEL: return EESEOut(i, static_cast<UIControl*>(static_cast<UIRadioButton*>(static_cast<UIControl*>(p[0]))->GetTextLabel()));
+    case EE_SCREENS_SEMPX_NEW_BUTTON: return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_MAP_BUTTON, {(int64_t)p[2]}, 0x65, NULL, NULL, NULL, GERectangle(GE2DPoint(f[0], f[1]), 260.0f, (float)(unsigned long)(gSeplScreenFont->GetHeight() + 10.0f)), theForm, (unsigned long)i[2], 2)));
     case EE_SCREENS_SEMPX_BUTTON_TEXT: static_cast<UIButton*>(static_cast<UIControl*>(p[0]))->SetText(gSefxText, gSeplScreenFont);
         return 0;
     case EE_SCREENS_SEMPX_ELEVATION_DIRECTORY: static_cast<FSFileSpec*>(p[0])->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
         return 0;
-    case EE_SCREENS_SEMPX_NEW_PATH: return SempxOut(i, new FSPath);
+    case EE_SCREENS_SEMPX_NEW_PATH: return EESEOut(i, new FSPath);
     case EE_SCREENS_SEMPX_PATH_ADD: static_cast<FSPath*>(p[0])->AddDirectory(*static_cast<FSFileSpec*>(p[2]), true);
         return 0;
     case EE_SCREENS_SEMPX_PATH_RELEASE: static_cast<FSPath*>(p[0])->Dereference();
         return 0;
-    case EE_SCREENS_SEMPX_NEW_FILE_COMBO: return SempxOut(i, static_cast<UIControl*>(EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), UString("*") + ".dat", EE_SCREENS_SE_MAP_ELEVATION_FILE, gSeplScreenFont, GE2DPoint(f[0], f[1]), 200, theForm, (unsigned long)i[2])));
+    case EE_SCREENS_SEMPX_NEW_FILE_COMBO: return EESEOut(i, static_cast<UIControl*>(EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), UString("*") + ".dat", EE_SCREENS_SE_MAP_ELEVATION_FILE, gSeplScreenFont, GE2DPoint(f[0], f[1]), 200, theForm, (unsigned long)i[2])));
     case EE_SCREENS_SEMPX_FILE_COMBO_HELP: static_cast<UIControl*>(p[0])->SetStringTableID(IDS_ELEVATION_FILE_TO_USE_WITH_BLANK);
         return 0;
     case EE_SCREENS_SEMPX_BLANK_MAP: (new EESEARust(EE_SCREENS_SEW_BLANK_MAP, NULL, i[0], i[1], i[2]))->Dereference();
         return 0;
     case EE_SCREENS_SEMPX_RANDOM_MAP: (new EESEARust(EE_SCREENS_SEW_RANDOM_MAP, NULL, i[0], i[1]))->Dereference();
         return 0;
-    case EE_SCREENS_SEMPX_RANDOM_NEW: return SempxOut(i, new URandomIntegers);
+    case EE_SCREENS_SEMPX_RANDOM_NEW: return EESEOut(i, new URandomIntegers);
     case EE_SCREENS_SEMPX_RANDOM_SEED: static_cast<URandomIntegers*>(p[0])->SetSeed(TMGetTime());
         return 0;
     case EE_SCREENS_SEMPX_RANDOM_DRAW: return (int32_t)static_cast<URandomIntegers*>(p[0])->Generate(0, 1000000);
