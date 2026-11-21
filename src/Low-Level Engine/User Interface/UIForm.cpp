@@ -50,6 +50,9 @@
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
 #include "lle/UIEMouseWheelScroll.h"
+#include "lle/UIShims.h"
+#include "lle/UIObjHost.h"
+#include "rust/ui/lle_form.h"
 
 // unreferenced (its init chain 0x10070706 is the only user)
 static const UString kUIFormKey("B7B2257DB7B2257DA49985B7B5A18DF4D49327D6B51165F42EB1A52ECC918DA616B16D26B41955F43C190DDE7EB1BD9624F92DDEFC610D9EB4B9559CB4210D84FC29"
@@ -59,60 +62,108 @@ ISEntity* UIForm::sTabKey;
 ISEntity* UIForm::sShiftKey;
 
 static GERectangle UIFormRect(const float* inF) { return GERectangle(inF[1], inF[3], inF[2], inF[0]); }
-static void UIFormPutRect(float* outF, const GERectangle& inRectangle)
-{
-    outF[0] = inRectangle.mBottom;
-    outF[1] = inRectangle.mLeft;
-    outF[2] = inRectangle.mRight;
-    outF[3] = inRectangle.mTop;
-}
+
+// The form's calls out of more than one call are Rust's (ee_ui lle_form.rs, the host ee_ui_form_host), over the
+// one-statement shims below (and UIManager.cpp's)
+#define FORM(x) reinterpret_cast<UIForm*>(x)
+#define MGR(x) reinterpret_cast<UIManager*>(x)
+#define CTL(x) reinterpret_cast<UIControl*>(x)
+#define HOTKEY(x) reinterpret_cast<UIHotKey*>(x)
+#define EVENT(x) reinterpret_cast<UIEvent*>(x)
+static UWideString sUIFormHelpString;   // FormHelpGet's string, which FormHelpSetText sets (the UI thread's)
+extern "C" void ee_uicpp_form_help_clear() { sUIFormHelpString = ""; }
+extern "C" bool ee_uicpp_control_help_string(uintptr_t inControl)
+{ return CTL(inControl)->GetHelpString(sUIFormHelpString); }
+extern "C" void ee_uicpp_hot_key_set_just_pressed(uintptr_t inKey, uintptr_t inEvent)
+{ HOTKEY(inKey)->SetJustPressedEvent(EVENT(inEvent)); }
+extern "C" void ee_uicpp_hot_key_set_pressed(uintptr_t inKey, uintptr_t inEvent)
+{ HOTKEY(inKey)->SetPressedEvent(EVENT(inEvent)); }
+extern "C" void ee_uicpp_hot_key_set_just_unpressed(uintptr_t inKey, uintptr_t inEvent)
+{ HOTKEY(inKey)->SetJustUnpressedEvent(EVENT(inEvent)); }
+extern "C" void ee_uicpp_hot_key_set_double_pressed(uintptr_t inKey, uintptr_t inEvent)
+{ HOTKEY(inKey)->SetDoublePressedEvent(EVENT(inEvent)); }
+extern "C" void ee_uicpp_form_fetch_tab_key() { gISKeyboard->GetEntity(kKeyTab, UIForm::sTabKey); }
+extern "C" void ee_uicpp_form_fetch_shift_key() { gISKeyboard->GetEntity(kKeyShift, UIForm::sShiftKey); }
+extern "C" void ee_uicpp_event_uninitialize(uintptr_t inEvent) { EVENT(inEvent)->Uninitialize(); }
+extern "C" void ee_uicpp_event_initialize(uintptr_t inEvent) { EVENT(inEvent)->Initialize(); }
+extern "C" uint32_t ee_uicpp_entity_value(uintptr_t inEntity)
+{ return (uint32_t)reinterpret_cast<ISEntity*>(inEntity)->GetValue(); }
+extern "C" bool ee_uicpp_entity_just_pressed(uintptr_t inEntity)
+{ return reinterpret_cast<ISEntity*>(inEntity)->JustPressed(); }
+extern "C" bool ee_uicpp_entity_just_unpressed(uintptr_t inEntity)
+{ return reinterpret_cast<ISEntity*>(inEntity)->JustUnpressed(); }
+extern "C" bool ee_uicpp_entity_just_double_pressed(uintptr_t inEntity)
+{ return reinterpret_cast<ISEntity*>(inEntity)->JustDoublePressed(); }
+extern "C" uint32_t ee_uicpp_form_screen(uintptr_t inForm) { return FORM(inForm)->GetManager()->GetScreen(); }
+extern "C" uintptr_t ee_uicpp_form_keyboard_captured(uintptr_t inForm)
+{ return (uintptr_t)FORM(inForm)->GetKeyboardCaptured(); }
+extern "C" void ee_uicpp_control_ime_result(uintptr_t inControl, uintptr_t inText)
+{ CTL(inControl)->AddIMEResultString(*reinterpret_cast<const UWideString*>(inText)); }
+extern "C" long ee_uicpp_control_ime_change(uintptr_t inControl, uintptr_t inText, uintptr_t inAttributes, uint32_t inCursor)
+{ return CTL(inControl)->ChangeIMECompositionString(*reinterpret_cast<const UWideString*>(inText), *reinterpret_cast<const UString*>(inAttributes), inCursor); }
+extern "C" long ee_uicpp_control_ime_close(uintptr_t inControl) { return CTL(inControl)->CloseIMECompositionString(); }
+extern "C" long ee_uicpp_control_ime_open(uintptr_t inControl) { return CTL(inControl)->OpenIMECompositionString(); }
+extern "C" long ee_uicpp_control_translated_key(uintptr_t inControl, uintptr_t inKey, int32_t inRepeat)
+{ return CTL(inControl)->UpdateTranslatedKey(reinterpret_cast<const char*>(inKey), (short)inRepeat); }
+extern "C" uintptr_t ee_uicpp_mgr_create_form(uintptr_t inM, EeUiShimText inData)
+{ return (uintptr_t)MGR(inM)->CreateForm(*reinterpret_cast<const UIDbDataForms*>(inData.ptr)); }
+extern "C" void ee_uicpp_mgr_add_form(uintptr_t inM, uintptr_t inForm) { MGR(inM)->AddForm(FORM(inForm)); }
+extern "C" void ee_uicpp_form_enable_group0(uintptr_t inForm) { FORM(inForm)->GetEntityGroup(0)->Enable(); }
 
 // UIEntityGroup is whole in Rust (rust/crates/ee_ui/src/groupobj.rs, R6 ui round 21; the original unit
 // UIEntityGroup.cpp, 0x1006e304..0x1006e5a8): the calls out of Disable/Enable on entity a, a button or a hot key
+#define ENTITY_CONTROL static_cast<UIControl*>(reinterpret_cast<UIEntity*>(a))
 intptr_t UIEntityGroup::HostOp(void*, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float*)
 {
-    UIEntity* theEntity = reinterpret_cast<UIEntity*>(a);
-    UIControl* theControl = static_cast<UIControl*>(theEntity);
     switch (inOp) {
-    case EeUiOp::GrpIsButton: return theEntity->GetType() == kControlTypeButton;
-    case EeUiOp::GrpShown: return theControl->GetDisplayMode() == kDisplayModeShown;
-    case EeUiOp::GrpOnCurrentForm: return theControl->GetForm() == theControl->GetForm()->GetManager()->GetCurrentForm();
-    case EeUiOp::GrpAddDirty:
-        theControl->GetForm()->GetManager()->AddDirtyRectangle(theControl->GetRectangle(), theControl->GetForm());
-        break;
-    case EeUiOp::GrpHide: theControl->HideControl(); break;
-    case EeUiOp::GrpSetDirty: theControl->SetDirty(true); break;
-    case EeUiOp::GrpTabbing: return theControl->GetForm()->GetTabbingOn();
-    case EeUiOp::GrpIsTabStop: return theControl->GetForm()->GetTabStop() == theControl->GetIndex();
-    case EeUiOp::GrpTab: theControl->GetForm()->Tab(); break;
-    case EeUiOp::GrpSetEnabled: static_cast<UIHotKey*>(theEntity)->SetEnabled(b != 0); break;
-    default: break;
+    case EeUiOp::GrpIsButton: return reinterpret_cast<UIEntity*>(a)->GetType() == kControlTypeButton;
+    case EeUiOp::GrpShown: return ENTITY_CONTROL->GetDisplayMode() == kDisplayModeShown;
+    case EeUiOp::GrpOnCurrentForm: return ENTITY_CONTROL->GetForm() == ENTITY_CONTROL->GetForm()->GetManager()->GetCurrentForm();
+    case EeUiOp::GrpAddDirty: ENTITY_CONTROL->GetForm()->GetManager()->AddDirtyRectangle(ENTITY_CONTROL->GetRectangle(), ENTITY_CONTROL->GetForm()); return 0;
+    case EeUiOp::GrpHide: ENTITY_CONTROL->HideControl(); return 0;
+    case EeUiOp::GrpSetDirty: ENTITY_CONTROL->SetDirty(true); return 0;
+    case EeUiOp::GrpTabbing: return ENTITY_CONTROL->GetForm()->GetTabbingOn();
+    case EeUiOp::GrpIsTabStop: return ENTITY_CONTROL->GetForm()->GetTabStop() == ENTITY_CONTROL->GetIndex();
+    case EeUiOp::GrpTab: ENTITY_CONTROL->GetForm()->Tab(); return 0;
+    case EeUiOp::GrpSetEnabled: static_cast<UIHotKey*>(reinterpret_cast<UIEntity*>(a))->SetEnabled(b != 0); return 0;
+    default: return 0;
     }
-    return 0;
 }
+#undef ENTITY_CONTROL
 
 intptr_t UIForm::Call(EeUiFormCall inCall, intptr_t inA, intptr_t inB, float* ioF) const
 {
     return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF);
 }
+// a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
+intptr_t UIForm::CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const
+{
+    float f[4] = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    return this->Call(inCall, inA, inB, f);
+}
+
+// an input entity by key or button
+template <class D> static ISEntity* UIFormEntity(D* inDevice, unsigned long inKey)
+{
+    ISEntity* theEntity = NULL;
+    inDevice->GetEntity(inKey, theEntity);
+    return theEntity;
+}
 
 // The Rust form's calls out (EeUiOp, obj.rs): a is the control, group, background, hot key, event, table or other
 // object the op names; rectangles and points travel in f
+extern "C" intptr_t ee_uicpp_form_host(EE_UI_HOST_ARGS) { return UIForm::HostOp(inObj, inOp, a, b, c, d, f); }
+#define theForm static_cast<UIForm*>(inForm)
+#define theControl reinterpret_cast<UIControl*>(a)
+#define theGroup reinterpret_cast<UIEntityGroup*>(a)
+#define theBackground reinterpret_cast<UIBackground*>(a)
+#define theKey reinterpret_cast<UIHotKey*>(a)
+#define theEvent reinterpret_cast<UIEvent*>(a)
+#define theTable reinterpret_cast<UIControlsTable*>(a)
+#define thePoll reinterpret_cast<TMPoll*>(a)
+#define theRhombus reinterpret_cast<GERhombus*>(a)
 intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
 {
-    static UWideString sHelpString;   // FormHelpGet's string, which FormHelpSetText sets (the UI thread's)
-    UIForm* theForm = static_cast<UIForm*>(inForm);
-    UIControl* theControl = reinterpret_cast<UIControl*>(a);
-    UIEntityGroup* theGroup = reinterpret_cast<UIEntityGroup*>(a);
-    UIBackground* theBackground = reinterpret_cast<UIBackground*>(a);
-    UIHotKey* theKey = reinterpret_cast<UIHotKey*>(a);
-    UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
-    UIControlsTable* theTable = reinterpret_cast<UIControlsTable*>(a);
-    GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
-    TMPoll* thePoll = reinterpret_cast<TMPoll*>(a);
-    GERhombus* theRhombus = reinterpret_cast<GERhombus*>(a);
-    ISEntity* theEntity = NULL;
-    (void)d;
     switch (inOp) {
     // the controls
     case EeUiOp::FormCtlType: return theControl->GetType();
@@ -125,8 +176,8 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormCtlTabable: return theControl->GetTabable();
     case EeUiOp::FormCtlChecked: return static_cast<UIRadioButton*>(theControl)->GetIsChecked();
     case EeUiOp::FormCtlImeEnabled: return theControl->GetIMEEnabled();
-    case EeUiOp::PartRect: UIFormPutRect(f, theControl->GetRectangle()); return 0;
-    case EeUiOp::PartCopiedDrawRect: UIFormPutRect(f, theControl->GetCopiedDrawRectangle()); return 0;
+    case EeUiOp::PartRect: UIObjHost::PutRect(f, theControl->GetRectangle()); return 0;
+    case EeUiOp::PartCopiedDrawRect: UIObjHost::PutRect(f, theControl->GetCopiedDrawRectangle()); return 0;
     case EeUiOp::PartCopyData: return theControl->CopyData();
     case EeUiOp::PartDrawPolygons: return theControl->DrawPolygons();
     case EeUiOp::PartDrawText: return theControl->DrawTextA();
@@ -144,10 +195,7 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormCtlFireTrigger: theControl->FireTriggerEvent((unsigned long)b); return 0;
     case EeUiOp::FormCtlReleaseMouse: theControl->ReleaseCapturedMouse(); return 0;
     case EeUiOp::FormCtlReleaseKeyboard: theControl->ReleaseCapturedKeyboard(); return 0;
-    case EeUiOp::FormHelpGet:
-        sHelpString = "";
-        return theControl->GetHelpString(sHelpString);
-    case EeUiOp::FormHelpSetText: static_cast<UITextLabel*>(theControl)->SetText(sHelpString, true); return 0;
+    case EeUiOp::FormHelpSetText: static_cast<UITextLabel*>(theControl)->SetText(sUIFormHelpString, true); return 0;
     case EeUiOp::FormLabelFit: return static_cast<UITextLabel*>(theControl)->GetFitRectToText();
     // the groups
     case EeUiOp::FormGroupEnabled: return theGroup->GetIsEnabled();
@@ -161,7 +209,7 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormBgPriority: return theBackground->GetDrawPriority();
     case EeUiOp::FormBgId: return theBackground->GetBackgroundID();
     case EeUiOp::FormBgVisible: return theBackground->GetIsVisible();
-    case EeUiOp::FormBgRect: UIFormPutRect(f, theBackground->GetRectangle()); return 0;
+    case EeUiOp::FormBgRect: UIObjHost::PutRect(f, theBackground->GetRectangle()); return 0;
     case EeUiOp::FormBgOpen: theBackground->Open(); return 0;
     case EeUiOp::FormBgClose: theBackground->Close(); return 0;
     case EeUiOp::FormBgDelete: delete theBackground; return 0;
@@ -180,61 +228,25 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormHotKeyDelete: delete theKey; return 0;
     case EeUiOp::FormHotKeySetEnabled: theKey->mEnabled = b != 0; return 0;
     case EeUiOp::FormHotKeyFire: return theKey->FireEvents();
-    case EeUiOp::FormHotKeyTemp: {
+    case EeUiOp::FormHotKeyTemp: {   // (mForm is the record's: UIForm is the hot key's friend)
         UIHotKey* theHotKey = new UIHotKey;
         theHotKey->mForm = theForm;
         theHotKey->SetKey((unsigned long)a);
         return (intptr_t)theHotKey;
     }
     case EeUiOp::FormHotKeySetModifier: theKey->SetModifier((unsigned long)b, (unsigned char)c); return 0;
-    case EeUiOp::FormHotKeySetEvent: {
-        UIEvent* theSet = reinterpret_cast<UIEvent*>(c);
-        if (b == 0)
-            theKey->SetJustPressedEvent(theSet);
-        else if (b == 1)
-            theKey->SetPressedEvent(theSet);
-        else if (b == 2)
-            theKey->SetJustUnpressedEvent(theSet);
-        else
-            theKey->SetDoublePressedEvent(theSet);
-        return 0;
-    }
     case EeUiOp::FormHotKeySetAlways: theKey->mAlwaysFire = b != 0; return 0;
-    case EeUiOp::FormKeyEntity: gISKeyboard->GetEntity((unsigned long)a, theEntity); return (intptr_t)theEntity;
+    case EeUiOp::FormKeyEntity: return (intptr_t)UIFormEntity(gISKeyboard, (unsigned long)a);
     case EeUiOp::FormKeysReady: return UIForm::sTabKey != NULL;
-    case EeUiOp::FormKeysFetch:
-        gISKeyboard->GetEntity(kKeyTab, UIForm::sTabKey);
-        gISKeyboard->GetEntity(kKeyShift, UIForm::sShiftKey);
-        return 0;
     case EeUiOp::FormTabJustPressed: return UIForm::sTabKey->JustPressed();
     case EeUiOp::FormShiftValue: return UIForm::sShiftKey->GetValue();
     // the events
-    case EeUiOp::FormEventCall:
-        if (b == 0)
-            theEvent->Uninitialize();
-        else if (b == 1)
-            theEvent->Dereference();
-        else if (b == 2)
-            theEvent->Reference();
-        else
-            theEvent->Initialize();
-        return 0;
     case EeUiOp::FormEventProcess: return theEvent->ProcessEvent(theForm, NULL);
     case EeUiOp::FormWheelEventNew: return (intptr_t) new UIEMouseWheelScroll;
     // the mouse
     case EeUiOp::FormMouseWheel: return UIManager::GetMouseWheel() != NULL;
     case EeUiOp::FormWheelAmount: return UIManager::GetMouseWheelScrollAmount();
-    case EeUiOp::FormMouseEntity: gISMouse->GetEntity((unsigned long)a, theEntity); return (intptr_t)theEntity;
-    case EeUiOp::FormMouseAsk: {
-        ISEntity* theAsked = reinterpret_cast<ISEntity*>(a);
-        if (b == 0)
-            return theAsked->GetValue() != 0;
-        if (b == 1)
-            return theAsked->JustPressed();
-        if (b == 2)
-            return theAsked->JustUnpressed();
-        return theAsked->JustDoublePressed();
-    }
+    case EeUiOp::FormMouseEntity: return (intptr_t)UIFormEntity(gISMouse, (unsigned long)a);
     // the controls table
     case EeUiOp::FormTable: return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a);
     case EeUiOp::FormTableFormIndex: return theTable->GetFormIndex();
@@ -244,15 +256,11 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormTableStringId: return theTable->GetStringTableID();
     case EeUiOp::FormTableCreateControl: return (intptr_t)theTable->CreateControl(theForm->GetManager());
     case EeUiOp::FormTableCreateEvent: theTable->CreateControlEvent(theForm); return 0;
-    case EeUiOp::FormTableRelayout:
-        theTable->RelayoutControl(reinterpret_cast<UIControl*>(b), theForm->GetManager());
-        return 0;
+    case EeUiOp::FormTableRelayout: theTable->RelayoutControl(reinterpret_cast<UIControl*>(b), theForm->GetManager()); return 0;
     // the manager
     case EeUiOp::FormSurfaces: return theForm->GetManager()->GetNumberOfSurfaces();
-    case EeUiOp::FormWindowWidth:
-        return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth();
-    case EeUiOp::FormWindowHeight:
-        return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight();
+    case EeUiOp::FormWindowWidth: return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth();
+    case EeUiOp::FormWindowHeight: return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight();
     case EeUiOp::FormManagerProcessEvents: theForm->GetManager()->ProcessAllEventsForForm(theForm); return 0;
     case EeUiOp::FormManagerAddDirty: theForm->GetManager()->AddDirtyRectangle(UIFormRect(f), theForm); return 0;
     case EeUiOp::FormMusicStop: theForm->GetManager()->StopMusic(); return 0;
@@ -261,11 +269,6 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormManagerDelete: delete reinterpret_cast<UIFormManager*>(a); return 0;
     case EeUiOp::FormNow: return TMGetTime();
     // the draw-background lock, the help-text poll
-    case EeUiOp::FormLockNew: {
-        TSCriticalSection* theLock = NULL;
-        ESVERIFY_AT(TSScheduler::CreateCriticalSection(theLock) == keseOK, 1743);
-        return (intptr_t)theLock;
-    }
     case EeUiOp::FormLockDelete: TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); return 0;
     case EeUiOp::FormLockEnter: reinterpret_cast<TSCriticalSection*>(a)->Enter(); return 0;
     case EeUiOp::FormLockLeave: reinterpret_cast<TSCriticalSection*>(a)->Leave(); return 0;
@@ -280,43 +283,28 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormVirtHelpLocation: theForm->SetHelpTextPopupLocation(); return 0;
     case EeUiOp::FormVirtDrawBackground: return theForm->DrawBackground(UIFormRect(f));
     // the draws
-    case EeUiOp::FormBitmapTexSize:
-        f[0] = (float)theBitmap->GetTexture(theForm->GetManager()->GetScreen())->GetWidth();
-        f[1] = (float)theBitmap->GetTexture(theForm->GetManager()->GetScreen())->GetHeight();
-        return 0;
-    case EeUiOp::FormBitmapSetTexCoords: {
-        GETextureCoordinate theTopLeft;
-        GETextureCoordinate theBottomRight;
-        GETextureCoordinate theTopRight;
-        GETextureCoordinate theBottomLeft;
-        theTopLeft.SetU(f[0]);
-        theTopLeft.SetV(f[1]);
-        theBottomRight.SetU(f[2]);
-        theBottomRight.SetV(f[3]);
-        theTopRight.SetU(theBottomRight.GetU());
-        theTopRight.SetV(theTopLeft.GetV());
-        theBottomLeft.SetU(theTopLeft.GetU());
-        theBottomLeft.SetV(theBottomRight.GetV());
-        theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-        return 0;
-    }
     case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus;
     case EeUiOp::RhombusDelete: delete theRhombus; return 0;
-    case EeUiOp::FormRhombusLabelColor:
-        theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor());
-        return 0;
-    default:
-        break;
+    case EeUiOp::FormRhombusLabelColor: theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor()); return 0;
+    default: return 0;
     }
-    return 0;
 }
+#undef theForm
+#undef theControl
+#undef theGroup
+#undef theBackground
+#undef theKey
+#undef theEvent
+#undef theTable
+#undef thePoll
+#undef theRhombus
 
 // Creates an empty form with the given control and group counts, tool tips and tabbing off
 UIForm::UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
                unsigned long inFormID, bool inUseGDIForText)
     : mRust(NULL)
 {
-    this->mRust = ee_ui_form_new(this, UIForm::HostOp, inControlCount, inControlGroupCount, inManager, inFormID,
+    this->mRust = ee_ui_form_new(this, ee_ui_form_host, inControlCount, inControlGroupCount, inManager, inFormID,
                                  inUseGDIForText);
 }
 
@@ -326,7 +314,7 @@ UIForm::UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIF
 {
     UWideString theMusic(inData.mMusicFile);
     PlatMbsLwr((unsigned char*)(const char*)theMusic);
-    this->mRust = ee_ui_form_new_db(this, UIForm::HostOp, inManager, &inData, (const char*)theMusic, inUseGDIForText);
+    this->mRust = ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, (const char*)theMusic, inUseGDIForText);
 }
 
 // Destroys the form, releasing its events, hot keys, groups, backgrounds, database-created controls and draw lock
@@ -337,12 +325,7 @@ UIForm::~UIForm()
 }
 
 // Adds a rectangle that text drawing must keep out of
-void UIForm::AddClipRectangle(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::AddClipRectangle, 0, 0, f);
-}
+void UIForm::AddClipRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddClipRectangle, 0, 0, inRectangle); }
 
 // Puts a control into its form slot (when the slot is empty) and adds it to the given group
 void UIForm::AddControl(UIControl* inControl, unsigned long inGroup)
@@ -356,12 +339,7 @@ void UIForm::AddDatabaseControl(const UICDatabase& inControl)
 }
 
 // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
-void UIForm::AddDirtyRectangle(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::AddDirtyRectangle, 0, 0, f);
-}
+void UIForm::AddDirtyRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddDirtyRectangle, 0, 0, inRectangle); }
 
 void UIForm::AddEvent(const UIEventData& inEvent)
 {
@@ -374,17 +352,6 @@ void UIForm::AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup)
     this->Call(EeUiFormCall::AddHotKey, (intptr_t)&inHotKey, (intptr_t)inGroup);
 }
 
-// The key and the three modifiers, 16 bits each (a code past 0xffff is no key, as kKeyNone 0x7fff is)
-static intptr_t UIFormKeys(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
-                           unsigned long inModifier3)
-{
-    uint64_t theKeys[4] = {inKey, inModifier1, inModifier2, inModifier3};
-    uint64_t thePacked = 0;
-    for (int i = 0; i < 4; i++)
-        thePacked |= (theKeys[i] < 0xffff ? theKeys[i] : 0xffff) << (16 * i);
-    return (intptr_t)thePacked;
-}
-
 // Builds a hot key from a key, up to three modifiers and four events, then adds it to the given group
 void UIForm::AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
                        unsigned long inModifier3, UIEvent* inJustPressedEvent, UIEvent* inPressedEvent,
@@ -393,95 +360,55 @@ void UIForm::AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned 
 {
     this->Call(EeUiFormCall::AddHotKeyEvents, (intptr_t)inJustPressedEvent, (intptr_t)inPressedEvent);
     this->Call(EeUiFormCall::AddHotKeyEvents2, (intptr_t)inJustUnpressedEvent, (intptr_t)inDoublePressedEvent);
-    this->Call(EeUiFormCall::AddHotKeyBuild, UIFormKeys(inKey, inModifier1, inModifier2, inModifier3),
+    this->Call(EeUiFormCall::AddHotKeyBuild, ee_ui_form_pack_keys(inKey, inModifier1, inModifier2, inModifier3),
                (intptr_t)((uint64_t)(uint32_t)inGroup | (uint64_t)inAlwaysFire << 32));
 }
 
 // Passes an IME result string to the control holding the keyboard
 void UIForm::AddIMEResultString(const UWideString& inString)
 {
-    if (UIControl* theControl = this->GetKeyboardCaptured())
-        theControl->AddIMEResultString(inString);
+    ee_ui_form_pass_to_keyboard(this, 0, &inString, NULL, 0);
 }
 
 // Passes the IME composition string to the control holding the keyboard; kErrorOK when none does
 long UIForm::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                         unsigned long inCursor)
 {
-    UIControl* theControl = this->GetKeyboardCaptured();
-    return theControl ? theControl->ChangeIMECompositionString(inString, inAttributes, inCursor) : kErrorOK;
+    return ee_ui_form_pass_to_keyboard(this, 1, &inString, &inAttributes, inCursor);
 }
 
 // Closes the IME composition string of the control holding the keyboard; kErrorOK when none does
 long UIForm::CloseIMECompositionString()
 {
-    UIControl* theControl = this->GetKeyboardCaptured();
-    return theControl ? theControl->CloseIMECompositionString() : kErrorOK;
+    return ee_ui_form_pass_to_keyboard(this, 2, NULL, NULL, 0);
 }
 
 // Reads every form record from the UI database file and creates, registers and enables each form with an ID above 0
-long UIForm::Create(FSFileSpec& inFile, UIManager* inManager)
-{
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    long theResult;
-    UIDbDataForms theData;
-    inFile.Open(kFileAccessRead);
-    theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            if (!(theData.mFormID > 0))
-                continue;
-            UIForm* theForm = inManager->CreateForm(theData);
-            inManager->AddForm(theForm);
-            theForm->GetEntityGroup(0)->Enable();
-        }
-    }
-    inFile.Close();
-    return theResult;
-}
+long UIForm::Create(FSFileSpec& inFile, UIManager* inManager) { return ee_ui_form_create(&inFile, inManager); }
 
 // Redraws every visible background that overlaps the rectangle; returns the last draw result
-long UIForm::DrawBackground(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    return (long)this->Call(EeUiFormCall::DrawBackground, 0, 0, f);
-}
+long UIForm::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiFormCall::DrawBackground, 0, 0, inRectangle); }
 
 // Draws the part of a bitmap's texture under a rectangle at a screen location
 long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GE2DPoint& inLocation)
 {
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    float theX = inLocation.GetX(), theY = inLocation.GetY();
-    uint32_t theBits[2];
-    memcpy(&theBits[0], &theX, 4);
-    memcpy(&theBits[1], &theY, 4);
-    return (long)this->Call(EeUiFormCall::DrawBitmap, (intptr_t)inBitmap,
-                            (intptr_t)((uint64_t)theBits[0] | (uint64_t)theBits[1] << 32), f);
+    return (long)this->CallRect(EeUiFormCall::DrawBitmap, (intptr_t)inBitmap, ee_ui_float_pair_bits(inLocation.GetX(), inLocation.GetY()), inRectangle);
 }
 
 // Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
 long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
                             const GERectangle& inTileRectangle)
 {
-    const GERectangle* theRectangles[3] = {&inRectangle, &inDrawRectangle, &inTileRectangle};
-    for (int i = 0; i < 3; i++) {
-        float f[4];
-        UIFormPutRect(f, *theRectangles[i]);
-        this->Call(EeUiFormCall::StageRect, i, 0, f);
-    }
+    this->CallRect(EeUiFormCall::StageRect, 0, 0, inRectangle);
+    this->CallRect(EeUiFormCall::StageRect, 1, 0, inDrawRectangle);
+    this->CallRect(EeUiFormCall::StageRect, 2, 0, inTileRectangle);
     return (long)this->Call(EeUiFormCall::DrawTiles, (intptr_t)inBitmap);
 }
 
 // Draws text clipped around the form's clip rectangles, the copied popup or the IME candidate window
 long UIForm::DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl)
 {
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    return (long)this->Call(EeUiFormCall::DrawClippedText, (intptr_t)inText, (intptr_t)inControl, f);
+    return (long)this->CallRect(EeUiFormCall::DrawClippedText, (intptr_t)inText, (intptr_t)inControl, inRectangle);
 }
 
 // Returns the background with the given ID, or NULL
@@ -505,8 +432,7 @@ UIEntityGroup* UIForm::GetEntityGroupById(unsigned long inId) const
 // Opens an IME composition string in the control holding the keyboard; kErrorFailed when none does
 long UIForm::OpenIMECompositionString()
 {
-    UIControl* theControl = this->GetKeyboardCaptured();
-    return theControl ? theControl->OpenIMECompositionString() : kErrorFailed;
+    return ee_ui_form_pass_to_keyboard(this, 3, NULL, NULL, 0);
 }
 
 // Deletes every hot key of one group
@@ -519,7 +445,7 @@ void UIForm::RemoveAllHotKeysForAGroup(unsigned long inGroup)
 void UIForm::RemoveHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
                           unsigned long inModifier3, unsigned long inGroup)
 {
-    this->Call(EeUiFormCall::RemoveHotKeyKeys, UIFormKeys(inKey, inModifier1, inModifier2, inModifier3), (intptr_t)inGroup);
+    this->Call(EeUiFormCall::RemoveHotKeyKeys, ee_ui_form_pack_keys(inKey, inModifier1, inModifier2, inModifier3), (intptr_t)inGroup);
 }
 
 // Deletes the hot key at an index in a group
@@ -541,20 +467,10 @@ void UIForm::RemoveControl(UIControl* inControl, unsigned long inGroup)
 }
 
 // Marks dirty every visible control of an enabled group that overlaps the rectangle
-void UIForm::RedrawIntersectControls(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::RedrawIntersectControls, 0, 0, f);
-}
+void UIForm::RedrawIntersectControls(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::RedrawIntersectControls, 0, 0, inRectangle); }
 
 // Lays the form out again inside a new rectangle, with its backgrounds and database controls
-void UIForm::RelayoutForm(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::RelayoutForm, 0, 0, f);
-}
+void UIForm::RelayoutForm(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::RelayoutForm, 0, 0, inRectangle); }
 
 void UIForm::SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
@@ -587,17 +503,11 @@ void UIForm::UpdateMouseLocation(const GE2DPoint& inLocation)
 // Passes a typed character to the control holding the keyboard
 long UIForm::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    UIControl* theControl = this->GetKeyboardCaptured();
-    return theControl ? theControl->UpdateTranslatedKey(inKey, inRepeat) : kErrorOK;
+    return ee_ui_form_pass_to_keyboard(this, 4, inKey, NULL, (uint32_t)(int)inRepeat);
 }
 
 // The header's members (inline in the original, emitted first by UIBackground.cpp 0x10059559..0x10059795)
-void UIForm::SetRectangle(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::SetRectangle, 0, 0, f);
-}
+void UIForm::SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::SetRectangle, 0, 0, inRectangle); }
 UIControl* UIForm::GetControl(unsigned long inIndex) const
 {
     return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::Control, (intptr_t)inIndex));
@@ -637,13 +547,8 @@ void UIForm::SetHelpTextLabel(UITextLabel* inLabel)
 void UIForm::SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
 void UIForm::SetLayout(UILayoutUtility& inLayout)
 {
-    unsigned long theTypes[4] = {inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(),
-                                 inLayout.GetBottomOffsetType()};
     float f[4] = {inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset()};
-    uint64_t thePacked = 0;
-    for (int i = 0; i < 4; i++)
-        thePacked |= (uint64_t)(theTypes[i] & 0xffff) << (16 * i);
-    this->Call(EeUiFormCall::SetLayout, (intptr_t)thePacked, 0, f);
+    this->Call(EeUiFormCall::SetLayout, ee_ui_form_pack_types(inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(), inLayout.GetBottomOffsetType()), 0, f);
 }
 void UIForm::SetMusicFileName(const UWideString& inName) { this->Call(EeUiFormCall::SetMusicFileName, (intptr_t)(const char*)inName); }
 UIControl* UIForm::GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
