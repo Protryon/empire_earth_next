@@ -138,12 +138,20 @@ void EEPhysics::QueueServerMessage(NEMessage* inMessage) { this->mServerMessages
 void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
     { ee_physics_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
 void EEPhysics::Idle() { ee_physics_idle(this); }
-void EEPhysics::Tick() { ee_physics_tick(this); }
+// its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
+void EEPhysics::Tick()
+{
+    ee_physics_tick(this);
+}
 void EEPhysics::QueueMessage(NEMessage* inMessage) { ee_physics_queue_message(this, inMessage); }
 void EEPhysics::SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
 void EEPhysics::ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
 void EEPhysics::DrainInput() { ee_physics_drain_input(this); }
-void EEPhysics::ReportStatistics() { ee_physics_report_statistics(this); }
+// its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
+void EEPhysics::ReportStatistics()
+{
+    ee_physics_report_statistics(this);
+}
 long EEPhysics::PostAutoSave() { return ee_physics_post(this, 0x50a); }
 long EEPhysics::PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
 long EEPhysics::PostInit() { return ee_physics_post(this, 0x509); }

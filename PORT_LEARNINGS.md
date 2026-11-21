@@ -36878,3 +36878,65 @@ PORT_LEARNINGS.md's appended sections, both kept; strip_markers --check 0 files;
   duplicated by the merge and dropped, this section moved to the end); on the merged tree both builds 0/0 (EE-AOC
   414 inputs, EE-SIM 415), the test profile 0/0, the header current (293), the oracle seeds 2-7 identical, the
   Rust gate PASS (5,331 tests). The captures, saveload, tours and gates.sh ran on the batch 11 merge (above).
+
+## The world lane, round 1: the random map whole, the physics thread's and the data pre-loading thread's bodies, the campaign progress whole in Rust (ee_sim rmap object.rs; ee_game physics.rs, preload.rs, campaign.rs; branch rust-world1, 2026-11-21)
+
+What moved (docs/progress/world.md has the lane's state):
+- The random map whole (4c1fb3cde, 6a67e213d; ee_sim rmap `object.rs`): EERandomMap and its state EERandomMapData
+  (the Default generator PIMs' struct) are one Rust object: the grids, players, teams, the script's lists and scalar
+  block, the rings; InitializeValues, the script read, CreateGrids, CreateValidMap, CreateTeams, Generate (the steps
+  with exactly what Default.cpp's adapter copied back; the game passes over the object's own grid rows), PlaceWall,
+  CreateRandomMap's retries, the generator list's set-up (Initialize: the script search, the generator lines, the
+  display names) and its lookup. The C++ keeps the generator list (a `std::vector<EERMGenerator>` of `UWideString`s
+  that the lobby and the editor read, sorted by `std::sort`) and `ee_rmap_cpp`, one statement per world call.
+- EEPhysics' bodies (6a67e213d; ee_game `physics.rs`): Tick, DrainInput, GetOutOfSynchChecksum and its OOS dump,
+  EndGame, FlushWorld, the unit swaps, Init, HandleMessage, Idle, AutoSave, the civilization and resource timers,
+  CheckShiftMode, ReportStatistics, UpdateWeather, UpdateTiming, the area effects clock, the load/save requests,
+  GetTimeString and the posts, over the saved block (`EeUnitsPhysicsSaved`) read in place and `ee_physcpp`'s
+  one-statement cases. Each method is a forward; the after-load fixups (`std::function` lists) stay C++ (one case).
+- EEDataPreLoading's bodies (6a67e213d; ee_game `preload.rs`): the thread loop, its messages, the queue and its two
+  flags (Rust state now: the header loses mQueue, mQuit, mQueueing), the media loads, LoadGame, WaitForMessageQueue.
+- EECampaignProgress whole (01500a0fd; ee_game `campaign.rs`): a handle on a Rust object (the completed scenarios,
+  their civilization keys and civ points; Load, RestoreCivilization, SaveCompletedScenario, MakeKey) over
+  `ee_campaigncpp`; EECampaign::Load's body (the archive's tags, the decrypted password, the scenario list) too.
+- Game C++ over the round's three move commits: 918 lines added (mostly one-statement cases and forwards), 3,235
+  deleted; Default.cpp (583), ee/EERandomMap.h (294) and ee/EERandomMapView.h (172) left the game.
+
+Lessons:
+- The random map moved wholly, so its gate's adapter moved with it: Default.cpp, ee/EERandomMap.h and
+  ee/EERandomMapView.h live on only as the rmap gate's driver (tools/rmap_gate/rmap_adapter.cpp, rmap_state.h,
+  rmap_view.h, the PIM entry points over ee_rmap_run) and the game's "default" module is gone. The gate still checks
+  the Rust generator against the digests recorded from the C++ (2088 maps, and 2088 with `--reader`); its stubs lost
+  TMGetTime/ESDebugOut, header inlines over Rust since the LLE rounds.
+- The physics' capture calls stay in their place and order: Tick's TEST ONLY unit store check, the world view check,
+  NMEX and the UI fixture's hook are each a host case Rust calls at the C++'s point, so the twelve capture profiles
+  and the oracle stayed equal without a rebaseline.
+- EE-SIM's `--rng-trace` (gURandomTraceHook, called by the C++ URandom) no longer lists the random map script
+  reader's draws: the reader draws on the map's own streams inside Rust (ee_base `URandom`), which never call the
+  hook. The draws are the same in number and order (the rmap gate and the oracle); only the trace is shorter.
+- A one-line forward breaks the test profile's harness hooks: tools/build.py's HARNESS_HOOKS overlay matches
+  `\nvoid EEPhysics::Tick()\n` (and ReportStatistics) to mark it `__declspec(noinline)`, so `void EEPhysics::Tick()
+  { ee_physics_tick(this); }` stopped the test profile build ("overlay EEPhysics.cpp: ... matches 0 times").
+  The two forwards keep the declaration on its own line (d3e32f42d). Before moving a body, grep HARNESS_HOOKS and
+  TEST_PROFILES for its declaration.
+- The Rust gate's clippy rejects the C++'s own expressions transcribed as they are (excessive float precision,
+  collapsible ifs, negated float comparisons); physics.rs allows those three lints for the module (76b3a54af) rather than
+  rewriting what must stay the original's f32 operations. rustfmt orders `pub mod` lines (db88d84e6).
+
+Gates (tip db88d84e6 plus this section; the lane merged with origin/rust 439543b4b, batch 13, at 3eb58c81b):
+- `build.py -j 10 --sim`: EE-AOC 413 inputs, EE-SIM 414, 0 unresolved, 0 duplicates; the test profile 0/0 (413);
+- the Rust gate PASS (5,414 tests; test, clippy, rustfmt, header: 296 headers current);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile 22,
+  effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport 185 digests);
+- saveload plain PASS (exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`;
+- scenario_check 27/27 (a first run under heavy machine load timed out one AOC scenario waiting for a form, 26/27;
+  the rerun passed whole); sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062); eedata check and cppgate PASS;
+- through slot.py on the main checkout's tree: the tour `random-game --box-select --orders --seed 7` (BOX SELECT
+  PASS; ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS; no GX errors); `bash tools/gates.sh`: GATES
+  PASS (tour with F3 ok; ai-game time-cap PT 12994, units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT
+  2958/2944).
+- Not run: the POSIX builds. Only a live game exercises the campaign progress' save after a won scenario, a user
+  campaign's RestoreCivilization, a passworded EECampaign::Load, the physics' autosave, the OOS dump, the
+  civilization timer's warnings, the shift-mode exit and the pre-loader's queueing messages.
