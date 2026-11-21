@@ -4,12 +4,8 @@
 //! Microsoft library prints it (13 hex digits, a zero as `0x0.0000000000000p+0`), the FNV-1a hashes of the C++.
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
-use std::ffi::{c_char, c_void, CString};
-
 use ee_render::ge::tmobj::{ee_ge_tm_is_valid, ee_ge_tm_point, ee_ge_tm_tile, EeGeTerrainMesh};
 use ee_sim::world::{WorldRead, WorldView};
-
-use super::host::EeSimDriverPushFn;
 
 /// The digests' 64-bit FNV-1a hash and a count.
 pub struct Hash {
@@ -148,33 +144,18 @@ fn world_lines(world: &WorldView, mesh: *const EeGeTerrainMesh, out: &mut Vec<St
     true
 }
 
-/// The world's digest lines through `push` (the editor's `Digest`, under the world's write lock: a step); false
-/// without a map. `mesh` is the map's terrain mesh (`GETerrainMesh::GetRust`).
-///
-/// # Safety
-/// The caller holds the world; `mesh` is the map's live mesh (or null); `push` takes a C string.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sim_driver_world_digest(
-    mesh: *const EeGeTerrainMesh,
-    sink: *mut c_void,
-    push: EeSimDriverPushFn,
-) -> bool {
-    // SAFETY: the caller holds the world
+/// The world's digest lines (the editor's `Digest`, under the world's write lock: a step); false without a map.
+/// `mesh` is the map's terrain mesh (`GETerrainMesh::GetRust`, 0 without a map).
+pub fn world_digest(mesh: usize, out: &mut Vec<String>) -> bool {
+    // SAFETY: the caller (a step) holds the world
     let token = unsafe { WorldRead::begin() };
-    let mut lines = Vec::new();
-    let found = match WorldView::global(&token) {
-        Some(world) => world_lines(&world, mesh, &mut lines),
+    match WorldView::global(&token) {
+        Some(world) => world_lines(&world, mesh as *const EeGeTerrainMesh, out),
         None => {
-            lines.push("  map none".into());
+            out.push("  map none".into());
             false
         }
-    };
-    for line in lines {
-        let text = CString::new(line).unwrap_or_default();
-        // SAFETY: the C++'s sink over a C string
-        unsafe { push(sink, text.as_ptr() as *const c_char) };
     }
-    found
 }
 
 #[cfg(test)]

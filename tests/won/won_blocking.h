@@ -5,6 +5,7 @@
 // were recorded through them call these. Requires ee/wonapi/WONRouting.h.
 #ifndef EE_TESTS_WON_BLOCKING_H
 #define EE_TESTS_WON_BLOCKING_H
+#include "won_sockop_kinds.h"
 
 namespace WonBlocking {
 using namespace WONAPI;

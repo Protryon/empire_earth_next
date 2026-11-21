@@ -42,7 +42,9 @@ impl ShellHost for CppHost {
                 op_of(a as Cpp, (b >> 32) as u32, b & 0xffff_ffff, 0).unwrap_or(0)
             }
             // SAFETY: the shell's live control; the host's float buffer is four floats
-            _ => unsafe { sys::ee_screenscpp_shell(ctl, op, a, b, f.as_mut_ptr()) },
+            // the cases that are Rust's over the C++ shims (shell_calls.rs), else the C++ host
+            _ => crate::screens::shell_calls::call(&mut crate::screens::game_cpp::Ffi, ctl as usize, op, a, b, f)
+                .unwrap_or_else(|| unsafe { sys::ee_screenscpp_shell(ctl, op, a, b, f.as_mut_ptr()) }),
         }
     }
 }

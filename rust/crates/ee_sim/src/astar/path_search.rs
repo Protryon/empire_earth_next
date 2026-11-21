@@ -36,8 +36,6 @@ pub const EE_PATH_BLOCKED_TILES: i32 = 133;
 /// `CollectUnitTiles`: a sea unit `h0`'s tiles appended to the tile list `h1`
 pub const EE_PATH_UNIT_TILES: i32 = 134;
 // (135..139 were the C++ modifiers' operations: the modifiers are Rust objects, modifier_obj.rs)
-/// the tiles `h2[..i0]` appended to the C++ vector `h1` (`std::vector<U2DPoint<long> >`)
-pub const EE_PATH_TILES_OUT: i32 = 140;
 
 /// The machine types (`EEAIMachineType`).
 const TYPE_BOUNDED: i32 = 4;
@@ -679,11 +677,10 @@ fn points_out(list: u64, points: &[EePathPoint]) {
     unsafe { (*(list as *mut Vec<EePathPoint>)).extend_from_slice(points) };
 }
 
-/// Appends tiles to a C++ `std::vector<U2DPoint<long> >`.
-fn tiles_out(raw: &mut Raw, vector: u64, tiles: &[EePoint]) {
-    if !tiles.is_empty() {
-        call(raw, EE_PATH_TILES_OUT, &[0, vector, tiles.as_ptr() as u64], &[tiles.len() as i64]);
-    }
+/// Appends tiles to a tile list of the bounded search's caller (pm_entry.rs: a `Vec<EePoint>`).
+fn tiles_out(_raw: &mut Raw, vector: u64, tiles: &[EePoint]) {
+    // SAFETY: the list is the caller's live `Vec<EePoint>`
+    unsafe { (*(vector as *mut Vec<EePoint>)).extend_from_slice(tiles) };
 }
 
 /// The machine operations of the path manager's host, answered over the Rust searches (`None`: not one of them).

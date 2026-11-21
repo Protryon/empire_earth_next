@@ -28,6 +28,9 @@ impl UiHost for MessageHost {
         if let Some(r) = crate::screens::hud_views::ui_message_manager(op, a) {
             return r;
         }
+        if let Some(r) = crate::screens::ui_calls::ui_message(&mut crate::screens::game_cpp::Ffi, op, a, b) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_ui_message(self.0, op, a, b, c) }
     }
 }
@@ -37,6 +40,9 @@ struct EventHost;
 impl UiHost for EventHost {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
         if let Some(r) = crate::screens::ui_objects_ffi::ui_event(op, a) {
+            return r;
+        }
+        if let Some(r) = crate::screens::ui_calls::ui_event(&mut crate::screens::game_cpp::Ffi, op, a, b, c) {
             return r;
         }
         unsafe { sys::ee_screenscpp_ui_event(op, a, b, c) }

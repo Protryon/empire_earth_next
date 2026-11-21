@@ -25,6 +25,11 @@ impl UiHost for GameHost {
         if let Some(r) = crate::screens::hud_views::ui_game(op, a, b) {
             return r;
         }
+        if let Some(r) =
+            crate::screens::ui_calls::ui_game(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b)
+        {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_ui_game(self.0, op, a, b, c) }
     }
 }
