@@ -1359,6 +1359,260 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  RoPlayerId,
+  RoViewedUnitId,
+  RoSelectedViewedUnitId,
+  RoGroupContainsComplex,
+  RoUnitHitPointsValue,
+  RoUnitResourceAmount,
+  RoCxFrame,
+  RoCxNextFrame,
+  RoCxAnimation,
+  RoCxCommandType,
+  RoCxIsBuilt,
+  RoCxAnimationFraction,
+  GobjLoadMedia,
+  GobjUnloadMedia,
+  RoAmbientColor,
+  RoAmbientCountTree,
+  RoAmbientCountUnit,
+  RoAmbientFrameCountIncrement,
+  RoAmbientUpdate,
+  RoAmbientUpdateDue,
+  RoAreaEffectTextureReference,
+  RoBitmapDereference,
+  RoCameraFollowing,
+  RoCaptureFill,
+  RoCaptureFillPresent,
+  RoCivilizationUnchanged,
+  RoClassCategory,
+  RoClassF170,
+  RoClassFacesCamera,
+  RoClassFamily,
+  RoClassScale,
+  RoClassShadowScale,
+  RoClassTileSize,
+  RoClassUnitType,
+  RoCliffTexturesCount,
+  RoCliffTexturesPush,
+  RoCollisionSphereMode,
+  RoComplexInView,
+  RoComplexIsFoundation,
+  RoComplexLocation,
+  RoCopyViewport,
+  RoDoppelAnimation,
+  RoDoppelFrame,
+  RoDoppelHitPoints,
+  RoDoppelIsBuilt,
+  RoDoppelIsComplex,
+  RoDoppelIsFoundation,
+  RoDoppelMaxHitPoints,
+  RoDoppelModel,
+  RoDoppelPlayer,
+  RoDoppelPlayerColor,
+  RoDoppelPlayerMember,
+  RoDoppelScale,
+  RoDoppelTransformation,
+  RoDoppelUnit,
+  RoEditorDrawText,
+  RoEditorSelectUnits,
+  RoEnvironment,
+  RoEnvironmentWind,
+  RoFindWaypoint,
+  RoFlag529065,
+  RoFlag529066,
+  RoFlag529068,
+  RoFogColor,
+  RoFogFactor,
+  RoGeLineDelete,
+  RoGeLineDraw,
+  RoGeLineEnd,
+  RoGeLineNew,
+  RoGeLineOpacity,
+  RoGeLineStart,
+  RoGhostAnimation,
+  RoGhostAt,
+  RoGhostCanPlace,
+  RoGhostClass,
+  RoGhostCount,
+  RoGhostFrame,
+  RoGhostLock,
+  RoGhostModel,
+  RoGhostPlayerColor,
+  RoGhostRecordCopy,
+  RoGhostRecordDelete,
+  RoGhostRecordNew,
+  RoGhostRecordsBackSource,
+  RoGhostRecordsCount,
+  RoGhostRecordsPop,
+  RoGhostRecordsPush,
+  RoGhostScale,
+  RoGhostTransformation,
+  RoGhostUnitsChanged,
+  RoGhostUnlock,
+  RoGobjFrameCount,
+  RoGobjModel,
+  RoGobjShadowTexture,
+  RoGobjTexture,
+  RoGridPhase,
+  RoGroupContains,
+  RoHiddenUnitsMode,
+  RoHideAllBackgrounds,
+  RoLabelCivilizationName,
+  RoLabelPlayerName,
+  RoLetterboxZoom,
+  RoLightAttenuation0,
+  RoLightAttenuation1,
+  RoLightAttenuation2,
+  RoLightColor,
+  RoLightDirection,
+  RoLightIntensity,
+  RoLightStyle,
+  RoLineDereference,
+  RoLinePointSet,
+  RoLinePointsResize,
+  RoLineSetTexture,
+  RoLineSetWidth,
+  RoLinesBack,
+  RoLinesClear,
+  RoLinesCount,
+  RoLinesPushBack,
+  RoLoadTexture,
+  RoMainGameDrawText,
+  RoMainSelectUnits,
+  RoMainViewportDepthRange,
+  RoMainViewportRearClipping,
+  RoMainViewportSetRearClipping,
+  RoMeshCliffTextureCount,
+  RoMeshSetCliffTextures,
+  RoMeshWaterTile,
+  RoModelInView,
+  RoMusicFollowsBattle,
+  RoMusicIntensity,
+  RoNewBitmap,
+  RoNodeNext,
+  RoNodeUnit,
+  RoNodeUnitIsTree,
+  RoObjectCount,
+  RoObjectUnloadMedia,
+  RoObjectsClear,
+  RoObjectsInsert,
+  RoOrbitalCount,
+  RoOrthographic,
+  RoPhysicsTicks,
+  RoPickTriggerUnitsInRectangle,
+  RoPickUnitUnreferenced,
+  RoPickUnits,
+  RoPickUnitsInRectangle,
+  RoPickedClear,
+  RoPickedIds,
+  RoPickerAdd,
+  RoPickerContains,
+  RoPostClearRenderObjects,
+  RoPostPushRenderObject,
+  RoRastAddLight,
+  RoRastAmbientColor,
+  RoRastAmbientIntensity,
+  RoRastClearBlack,
+  RoRastFog,
+  RoRastFogColor,
+  RoRastFogRange,
+  RoRastFogType,
+  RoRastLightMesh,
+  RoRastLighting,
+  RoRastRemoveLights,
+  RoRastSetMainViewport,
+  RoRastSetViewport,
+  RoRastUpdateLight,
+  RoRastViewRectangle,
+  RoRastViewport,
+  RoRenderObject,
+  RoRenderUnit,
+  RoScaffoldingModel,
+  RoSceneFade,
+  RoScreenPoint,
+  RoSelectedClear,
+  RoSelectedObjectsClear,
+  RoSelectedObjectsPush,
+  RoSelectedUnitsClear,
+  RoSelectedUnitsPush,
+  RoSelectionIsDrawn,
+  RoSetGameViewRectangle,
+  RoSetLabelUnit,
+  RoSetSelectedUnit,
+  RoShowAllBackgrounds,
+  RoSpaceStationHeight,
+  RoSpaceTurretHeight,
+  RoSunDirection,
+  RoTexAddressing,
+  RoTexAlphaMode,
+  RoTexColorMode,
+  RoTexMagFilter,
+  RoTexMinFilter,
+  RoTexMipBias,
+  RoTexMipFilter,
+  RoTexReference,
+  RoTextDelete,
+  RoTextNew,
+  RoTextSetCentred,
+  RoTextSetColor,
+  RoTextSetLocation,
+  RoTextSetText,
+  RoTextSetTransparent,
+  RoTileDoppelganger,
+  RoTileDoppelgangerCount,
+  RoTileFirstNode,
+  RoTileSeenBy,
+  RoTransformToCamera,
+  RoTriggerSelectUnits,
+  RoTriggerSelectionIsDrawn,
+  RoTurretPartCount,
+  RoUnitAreaEffectCount,
+  RoUnitAreaEffectKind,
+  RoUnitAreaEffectStrength,
+  RoUnitBarSet,
+  RoUnitBarsClear,
+  RoUnitBarsCount,
+  RoUnitBarsResize,
+  RoUnitComplexIsFoundation,
+  RoUnitCount,
+  RoUnitHitPoints,
+  RoUnitHitPointsIsOne,
+  RoUnitId,
+  RoUnitIsObstacle,
+  RoUnitIsTree,
+  RoUnitLighting,
+  RoUnitNameClear,
+  RoUnitNameFromStats,
+  RoUnitNextPart,
+  RoUnitOpacity,
+  RoUnitOrbitalSet,
+  RoUnitOrbitalsResize,
+  RoUnitPartsClear,
+  RoUnitPhysicalFrame,
+  RoUnitPhysicalScale,
+  RoUnitSidePart,
+  RoUnitStatsRange,
+  RoUnitStatsScale,
+  RoUnitTileSize,
+  RoUnitTint,
+  RoUnitTurretSet,
+  RoUnitTurretsResize,
+  RoUnitWheelSet,
+  RoUnitWheelsResize,
+  RoUnitsClear,
+  RoUnitsInsert,
+  RoUpdateVisibleTerrain,
+  RoViewportRearClipping,
+  RoViewportSetCamera,
+  RoVisibleRow,
+  RoVisibleRowCount,
+  RoWaypointLocation,
+  RoWheelCount,
+  RoWindDirection,
+  RoWorldTransformation,
+  RoWorldUnit,
+  RoZoomLock,
 };
 
 extern "C" {
@@ -2113,6 +2367,97 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// EEInitialiseScene: the light and the time-of-day colour, the fade and letterbox, the scene's flags, the effect
+/// queues, the render units' bars, once per scene, and the shared bitmap.
+void ee_gamecpp_ro_initialise_scene();
+
+/// EEReleaseScene: the effect queues' references dropped, the render pools and lists emptied, the shared bitmap
+/// released and the unit picker reset (only after EEInitialiseScene).
+void ee_gamecpp_ro_release_scene();
+
+/// EEStartLetterboxOut / EEStartLetterboxIn over a number of frames (at once for 0).
+void ee_gamecpp_ro_letterbox(bool out, unsigned long frames);
+
+/// EERenderObject::Fn10C036: the grid, water and cloud clocks, the light fade, the letterbox and the view zoom (the
+/// bars cleared, the view band set, the UI's backgrounds shown or hidden), the camera and viewport, and the light
+/// colours on a time-of-day change; once per frame (gB529066).
+void ee_gamecpp_ro_fn10c036(void *_ro);
+
+/// EERenderObject::Fn10E8D1: the terrain pass's set-up: the frame's scene state, the space-cliff textures, the
+/// visible terrain and its lighting, then the camera transform (at most every 100 ms while the camera follows).
+void ee_gamecpp_ro_fn10e8d1(void *ro);
+
+/// The raster table's load_texture (ee_gfx raster.rs): a texture loaded with its stage settings.
+///
+/// # Safety
+/// `name` is a NUL-terminated path, `load` a readable `EeGfxTextureLoad`.
+void *ee_gamecpp_ro_load_texture(const uint8_t *name, const void *load);
+
+/// EERenderObject::QueueEffects: the effect render queues rebuilt over the visible tile rows (ee_gfx effect_obj.rs).
+void ee_gamecpp_ro_queue_effects(void *_ro);
+
+/// The lighting set-ups (SetSceneFog, SetLightingOff, SetTerrainLighting, the raster table's): ee_gfx lighting.rs's
+/// rasterizer calls over the environment, applied in order.
+void ee_gamecpp_ro_lighting(uint32_t kind);
+
+/// The raster table's fog_factor: `GetFogFactor` at a point.
+///
+/// # Safety
+/// `location` is a readable point (three floats).
+float ee_gamecpp_ro_fog_factor(const float *location, uint32_t fog);
+
+/// The raster table's depth_range: the main viewport's depth range, then the viewport set on the rasterizer.
+void ee_gamecpp_ro_depth_range(float near_z,
+                               float far_z);
+
+/// The raster table's screen_point: EEROUnits.cpp's GetScreenPoint.
+///
+/// # Safety
+/// The pointers are valid (`point` three floats).
+void ee_gamecpp_ro_screen_point(const float *point, float *x, float *y);
+
+/// The raster table's draw_text (EEE3DGoal::DrawPass3, 0xf13db): centred transparent Tahoma 10 at a point, clipped
+/// to the viewport by the game's or the scenario editor's form.
+///
+/// # Safety
+/// `text` is NUL-terminated.
+void ee_gamecpp_ro_draw_text(float x,
+                             float y,
+                             const uint8_t *text,
+                             float red,
+                             float green,
+                             float blue);
+
+/// The raster table's screen_line (EEE3DMarchingLine::DrawPass4, 0xf3c68): a GELine between two screen points, its
+/// opacity per vertex.
+int32_t ee_gamecpp_ro_screen_line(float x0,
+                                  float y0,
+                                  float x1,
+                                  float y1,
+                                  float opacity0,
+                                  float opacity1);
+
+/// The raster table's rear_clipping: the main viewport's rear clipping distance set, the old one answered.
+float ee_gamecpp_ro_rear_clipping(float distance);
+
+/// EEPostGraphicsAll (`all`) / EEResetGraphicsValues: the game's render objects posted to the graphics thread, the
+/// user interface's last (left out of the reset).
+void ee_gamecpp_ro_post_render_objects(bool all);
+
+/// EERenderObject::FillRenderLists: the frame's render lists: the pools reset, the units picked, the visible tiles
+/// walked (units, map objects, remembered ones), the ghost units, then the music intensity and the ambient sounds.
+void ee_gamecpp_ro_fill_render_lists(void *ro);
+
+/// RFIL's world key (TEST ONLY; EERenderCapture.cpp's WorldKey): the fill's world as far as two runs can differ in it,
+/// FNV-1a over the current player and its viewed units, every tile of the visible rows (its sight and remembered
+/// units) and every unit on them (its id, hit points, resource, and a complex unit's location, frame, animation,
+/// command, build state and selection).
+uint64_t ee_gamecpp_ro_world_key();
+
+/// EERenderObject::FillUnit et al. are FillRenderLists' own; the scene's pieces the C++ still names.
+void ee_gamecpp_ro_light_fade(bool down,
+                              unsigned long frames);
 
 }  // extern "C"
 
