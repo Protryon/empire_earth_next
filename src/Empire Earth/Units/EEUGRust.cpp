@@ -125,60 +125,7 @@ namespace {
 // NULL for none); another resource but an animal becomes the gathered one
 EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
 {
-    std::vector<EEUnit*> theUnits;
-    std::vector<U2DPoint<long> > theTiles;
-    GE3DPoint theLocation;
-    U2DPoint<long> theTile;
-    U2DPoint<long> theTarget;
-    GE2DPoint theCenter;
-    EEUnit* theFound = NULL;
-    EEUnitClass* theCitizen = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
-    if (inUnit->mResourceAmount > 0 && inUnit->mResourceType != inResource->mResourceType)
-        inUnit->mResourceAmount = 0;
-    if (inResource->mResourceType == kResourceWood && !ee_units_uu_spot(1, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inResource, (float(*)[3])&theLocation.mX)) {
-        unsigned short theForestID =
-            gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
-        EEAIForest* theForest = gContinentManager.GetForests()[theForestID];
-        if (theForest != NULL && theForest->GetNumTiles() > 1) {
-            theCenter.SetX(inResource->GetTileX());
-            theCenter.SetY(inResource->GetTileY());
-            ee_units_uu_units_in_radius(theCenter.mX, theCenter.mY, inUnit->GetLineOfSight(), &theUnits);
-            EEComplexUnit* theOther = NULL;
-            for (long i = theUnits.size() - 1; i >= 0; i--) {
-                EEComplexUnit* theUnit = (EEComplexUnit*)*(theUnits.begin() + i);
-                if (theUnit->GetPlayer() == inUnit->GetPlayer() && theUnit->GetUnitClass()->IsDropSite()
-                    && theUnit->CanTake(inUnit, 3)) {
-                    theOther = theUnit;
-                    break;
-                }
-            }
-            if (theOther != NULL)
-                theTile.SetXY(theOther->GetTileX(), theOther->GetTileY());
-            else
-                theTile.SetXY(inUnit->GetTileX(), inUnit->GetTileY());
-            theTarget = U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY());
-            if (theTile != theTarget) {
-                theTile.GetLineTiles(theTarget, 1.0f, theTiles);
-                for (unsigned long j = 0; j < theTiles.size() && theFound == NULL; j++) {
-                    long theX = theTiles[j].mX;
-                    long theY = (theTiles.begin() + j)->mY;
-                    EEMapTile* theMapTile = ::gWorld.GetMap()->GetTile(theX, theY);
-                    if (theMapTile == NULL)
-                        continue;
-                    for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL && theFound == NULL;
-                         theNode = theNode->mNext) {
-                        EEUnit* theTree = theNode->mUnit;
-                        if (theTree != NULL && theTree->mResourceType == kResourceWood && inUnit->CanGather(theTree, theX, theY, false, false)
-                            && theCitizen->HasGatherPoint(inUnit, theTree)
-                            && gContinentManager.GetForestIDAt(U2DPoint<long>(theX, theY)) == theForestID)
-                            theFound = theTree;
-                    }
-                }
-            }
-        }
-    } else if (inResource->GetUnitClass()->mFamily != kUnitFamilyAnimal)
-        inUnit->SetGatheredResource(inResource);
-    return theFound;
+    return (EEUnit*)(uintptr_t)ee_units_gather_next_tree((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inResource);   // uu_gather_tree.rs
 }
 
 }  // namespace
@@ -884,4 +831,52 @@ long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile);
+}
+
+// ---- the C++ of EEGatherNextTree's Rust body (ee_units uu_gather_tree.rs; EE_UNITS_GT_*): one statement each
+
+static std::vector<EEUnit*> sGtUnits;                 // the units in the radius
+static std::vector<U2DPoint<long> > sGtTiles;         // the tile line
+static U2DPoint<long> sGtTarget;                      // the line's target tile
+static GE3DPoint sGtSpot;                             // the free spot asked
+
+static int64_t GtBits(float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return (int64_t)theBits; }
+template <class T> static T* GtObj(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
+
+extern "C" int64_t ee_units_gt_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, float (*ioF)[4])
+{
+    EEUnit* theUnit = GtObj<EEUnit>(inA);
+    EEComplexUnit* theComplex = GtObj<EEComplexUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_GT_RESOURCE_AMOUNT: return theUnit->mResourceAmount;
+    case EE_UNITS_GT_RESOURCE_TYPE: return theUnit->mResourceType;
+    case EE_UNITS_GT_CLEAR_RESOURCE_AMOUNT: theUnit->mResourceAmount = 0; return 0;
+    case EE_UNITS_GT_FREE_SPOT: return ee_units_uu_spot(1, inA, inB, (float(*)[3])&sGtSpot.mX);
+    case EE_UNITS_GT_FOREST_ID: return gContinentManager.GetForestIDAt(U2DPoint<long>((long)inC, (long)inD));
+    case EE_UNITS_GT_FOREST: return (int64_t)(uintptr_t)gContinentManager.GetForests()[(unsigned short)inC];
+    case EE_UNITS_GT_FOREST_TILES: return GtObj<EEAIForest>(inA)->GetNumTiles();
+    case EE_UNITS_GT_TILE_X: return theUnit->GetTileX();
+    case EE_UNITS_GT_TILE_Y: return theUnit->GetTileY();
+    case EE_UNITS_GT_LINE_OF_SIGHT: return GtBits(theComplex->GetLineOfSight());
+    case EE_UNITS_GT_UNITS_IN_RADIUS: return ee_units_uu_units_in_radius(f[0], f[1], f[2], &sGtUnits);
+    case EE_UNITS_GT_LIST_UNIT: return (int64_t)(uintptr_t)sGtUnits[(size_t)inC];
+    case EE_UNITS_GT_PLAYER: return (int64_t)(uintptr_t)theUnit->GetPlayer();
+    case EE_UNITS_GT_IS_DROP_SITE: return theUnit->GetUnitClass()->IsDropSite();
+    case EE_UNITS_GT_CAN_TAKE: return theComplex->CanTake(GtObj<EEComplexUnit>(inB), 3);
+    case EE_UNITS_GT_LINE_CLEAR: sGtTiles.clear(); return 0;
+    case EE_UNITS_GT_LINE_TARGET: sGtTarget = U2DPoint<long>((long)inC, (long)inD); return 0;
+    case EE_UNITS_GT_LINE_TILES: return (U2DPoint<long>((long)inC, (long)inD).GetLineTiles(sGtTarget, 1.0f, sGtTiles), (int64_t)sGtTiles.size());
+    case EE_UNITS_GT_LINE_TILE: return (int64_t)(((uint64_t)(uint32_t)sGtTiles[(size_t)inC].mY << 32) | (uint32_t)sGtTiles[(size_t)inC].mX);
+    case EE_UNITS_GT_MAP_TILE: return (int64_t)(uintptr_t)::gWorld.GetMap()->GetTile((long)inC, (long)inD);
+    case EE_UNITS_GT_FIRST_NODE: return (int64_t)(uintptr_t)GtObj<EEMapTile>(inA)->mUnits;
+    case EE_UNITS_GT_NODE_UNIT: return (int64_t)(uintptr_t)GtObj<RTSTileUnitNode>(inA)->mUnit;
+    case EE_UNITS_GT_NEXT_NODE: return (int64_t)(uintptr_t)GtObj<RTSTileUnitNode>(inA)->mNext;
+    case EE_UNITS_GT_CAN_GATHER: return theComplex->CanGather(GtObj<EEUnit>(inB), (long)inC, (long)inD, false, false);
+    case EE_UNITS_GT_HAS_GATHER_POINT:
+        return EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(theComplex->GetUnitClass())->HasGatherPoint(theComplex, GtObj<EEUnit>(inB));
+    case EE_UNITS_GT_SET_GATHERED: theComplex->SetGatheredResource(GtObj<EEUnit>(inB)); return 0;
+    case EE_UNITS_GT_FAMILY: return theUnit->GetUnitClass()->mFamily;
+    }
+    return 0;
 }
