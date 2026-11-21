@@ -36021,3 +36021,88 @@ captures) and EEWorld.cpp: -3,173 logic lines (`logic_lines.py`: 85,208 at f4b52
 - **Left** (docs/progress/game-leaves.md): Empire Earth.cpp, EERenderObject.cpp, EEMessage.cpp, EEServer.cpp,
   EETestFixture.cpp's host, EEEffectHost.cpp, the RTS Engine, EEMap.cpp, EEGraphics.cpp, EEGameState.cpp, and in the
   moved files RecordStatistics, the calamity's save Io host, the contagion world host.
+## AI Thread cluster, round 7: EEComputerPlayer's bodies whole in Rust, the herd's, town's, placement's, centres', classic_lua units' and next engine's hosts' rest, the continent save's restore (ee_sim::cp player_game.rs, player_ops.rs, herd_world.rs, town_world.rs, place_world.rs; ai units_host.rs, next_host.rs; astar cm_restore.rs; branch rust-aicluster7, 2026-11-20)
+
+The seventh round of the cluster lane (docs/progress/ai-thread-cluster.md), from 840aeb3c0 (rust-batch10), the first
+under the owner's "calling C++ from Rust is fine": round 6 stopped at the bodies that call units, goals and
+EEPlayer's virtuals; this round moved them with one-statement C++ host cases for each such call.
+
+| Commit | What | Logic lines | Net lines (src, include/ee, include/lle) |
+|---|---|---|---|
+| 1a7012548 | player_game.rs, player_ops.rs: EEComputerPlayer's bodies; EEAIFunctionObjects and five headers deleted | -965 | -1,326 |
+| 4dc3c31a9 | herd_world.rs, town_world.rs, place_world.rs: the four hosts' multi-statement cases | -461 | -428 |
+| 7c96be5a9 | units_host.rs: the classic_lua units host's facts, tuning, random points, shore, walls, gate side | -212 | -182 |
+| b18100ede | next_host.rs: the next engine host's cases | -83 | -95 |
+| 5eb97abd5 | the Load's after-load fixups' player id (the bug below) | 0 | 0 |
+| da2dde926 | cm_restore.rs: EERestoreContinentRegions, TownOrHerd | -72 | -77 |
+| | **round** (logic_lines.py as it stood mid-round: 91,787 -> 89,994, shim lines 15,414 -> 15,810; its later version, which counts more shim forms: 87,269 -> 85,572, per commit -947, -398, -206, -77, 0, -69) | **-1,793 (-1,697)** | **-2,108** |
+
+Short of the brief's -3,000: what is left in the lane's files after this round is about 1,600 logic lines, of which
+the Paths lane's EEPathManager.cpp holds 448; the rest is listed in the progress file's "Left".
+
+- **What moved.** (1) EEComputerPlayer: every member is one call into `player_game.rs` (events, epochs, payments,
+  the tick with EECPNextUpdate's bookkeeping, the start, Clear, Load and Save's C++ parts and their after-load
+  fixups, RepairPointers with the deferred RestoreManagers, the experiment timers' and resource state's blocks);
+  the class keeps its vtable and members. The favourite screener and the hero count (EEAIFunctionObjects.cpp/.h)
+  and the centres' sort are Rust; six headers deleted. (2) The herd's, town's, placement's and centres' host cases
+  with more than one statement (`herd_world.rs`, `town_world.rs`, `place_world.rs`, answered before the C++
+  switch). (3) The classic_lua units host's FACTS, ai.tuning, the random points, the shore, the wall line and its
+  blocking test, the gate side (`units_host.rs`). (4) The next engine host's trace, town, population, centres, goal
+  targets, danger zones, orders, units of a type, distance, micro players, "%.2f" (`next_host.rs`). (5)
+  EERestoreContinentRegions and TownOrHerd (`cm_restore.rs`).
+- **Lesson: a context built before the base class's Load holds the old player id.** `ee_cp_pl_load` built its
+  context (`ctx_of`, which reads `mPlayerID` through the player's view) before `EEPlayer::Load` read the id from the
+  file, and the after-load fixups checked "is the world's computer player of that id still this one" with the
+  default-constructed player's id: every fixup was skipped and saveload diverged at the first tick after the load
+  (`oos, ai`) while the oracle and the captures were identical (no load there). The context is built again after the
+  base Load. Anything a Rust body reads once at its start can be stale after a C++ call that changes the object.
+- **Lesson: a host call may have no player.** The reflexes' orders (`EE_AI_NEXT_HOST_ORDER`, next_reflex.rs) are
+  asked with a null player; the Rust body built the computer player's context from it to reach the unit
+  operations and faulted (EE-SIM FAULT c0000005 in next_host::op, from the naval flee of a damage event) in the
+  late, space and transport captures and three settings of the saveload matrix. The oracle's six seeds never
+  ran the naval flee and stayed identical. The unit-only operations now go through a context with no player.
+- **Lesson: a Rust note stays open until it drops.** The gate side copied EEGetUnitsOnTile's UUTL note (kind 41)
+  into its body and held it to the end of the function, so the four EEDoesWallGateFitOnUnit calls made after it
+  were nested notes and not recorded (seed 3's late and space captures: one tick's calls 0x9c -> 0x98, the
+  record count equal). Found by printing that tick's notes from both builds; the note is dropped where the C++
+  call returned. (The wall test is also one host case now, EE_AI_UNITS_HOST_GATE_WALL: `GetHitPoints()` and the
+  rest as the C++ asked them.)
+- **Lesson: a kind record is not at the area's address.** The units host's forest and hill pick passed the
+  continent's handle as its `EeAStarContinentRecord*` (the C++ inline's implicit base conversion adds the record's
+  offset): the hill list read garbage and seed 3's army chose a choke point instead of a hill (oracle line 3333).
+  `cm_io::continent(h)` gives the record.
+- **Lesson: the logic-line heuristic counts `case X:` + statement + `return` on three lines as logic**; the cases
+  are written `case X: statement;` then `return 0;` (the shim form the counter recognizes). Some existing
+  one-statement cases in the hosts touched were reformatted the same way.
+- **Lesson: cbindgen hoists a `pub const` (even `pub(crate)`) whose name another crate also exports into
+  common.h**, rewriting both headers; `/// cbindgen:ignore` on the `mod` line did not stop it. Name the module's
+  private constants uniquely (PL_TYPE_PATH_POINT).
+- **What runs it.** Every game: the computer players' events and tick (CPEV, PLCE in the oracle capture), the herds,
+  towns, placement and centres (HULL, AREA, CNTQ, PLCE), the classic_lua units host (UUNT, CNTQ), the next engine's
+  host; a load: the computer player's Load, the after-load fixups, RepairPointers' deferred restores, the continent
+  regions' restore. Nothing of it draws.
+- **Behaviour.** None intended. Not kept: `EEUnitHandleID`'s once-per-run stderr line for a unit without an id (the
+  unit-to-kill and the herd's unit record read the id directly); the TEST ONLY URandom trace hook does not see the
+  units host's local random streams (the area points' `URandom(seed)` is Rust's).
+- **Call-site edits outside the lane**: the Units lane's EEUGRust.cpp, EEUnitClassBuildings.cpp and
+  EEUnitClassPeople.cpp lost their `#include "ee/EEAIFOUnitScreeners.h"` (the header is deleted; nothing used it);
+  link/exe/units.txt lost EEAIFunctionObjects.cpp's line. EETeam::ContainsPlayer (game core's, defined in
+  EEComputerPlayer.cpp) is a std::find; EETechTreeNode::GetUnitClass (defined there too) forwards to the tech view.
+  Rust outside the lane's modules: none changed; the Units lane's `uu_ffi`, `uu`, `goal_obj`, `msvc_sort` and the
+  combat `ee_combat_attack_get` are called.
+- **Gates**: the final tree (the round's commits on 840aeb3c0; origin/rust 781d6cd0c is older and already contained, so no
+  merge was needed; strip_markers --check clean): the `--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0;
+  the Rust gate PASS (5,080 tests; an earlier run failed only ee_audio's real-time null-device test under load);
+  the oracle at seeds 2-7 identical; the captures at seeds 2-3: late 214 and space 210 digests (after the gate side's
+  note fix), oracle 212 and transport 185 (after the reflexes' null-player fix), calamity 222, missile 22, effects 6,
+  scenario 43, app 26, units 175, groups 2, placement 4 (on da2dde926, before the two fixes, which change only the
+  naval flee's crash path and the gate side's notes) all PASS; the plain saveload (`--seeds 2-7 --at
+  600,1350,2100`) 18/18 identical (da2dde926); the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) exit 0, `saveload expect: PASS` (after the null-player fix; it exited 1 before it,
+  the late and space games faulting); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS
+  (4,062 lines); `gates.sh` (EE_GATES_TREE the main checkout's tree; on da2dde926) `RESULT PASS tour`, `RESULT PASS
+  ai-game outcome time-cap PT 12851` units [4, 39, 40] alive_computers [2, 3] engines classic_lua x 2,
+  `RESULT PASS lan-game PT host=2811 joiner=2808`, GATES PASS. The POSIX builds were not run (this machine builds
+  Windows only).
+- **Not moved**: see the progress file's "Left": the Paths lane's path manager slice, the units host's messages and
+  wall routes, the improvement cost, citizen upgrade and enemy-near-all, EECPNext's names tables and dumps.

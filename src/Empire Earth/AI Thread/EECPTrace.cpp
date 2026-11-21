@@ -228,24 +228,6 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
 // ---------------------------------------------------------------------------------------------------------------
 // The trace lines beyond the decisions, the out-of-synch checksum and its dump: Rust's (ee_ai next_trace.rs)
 
-// What a payment bought (TEST ONLY, EE_AI_EXP spending), counted into the next "spend" line
-void EECPTraceSpend(EEComputerPlayer* inPlayer, long inKind, const long inCost[5])
-{
-    if (!gCPTraceOn || inPlayer->mPlayerID >= 64 || inKind < 0 || inKind > 7 || !EECPExperiment(inPlayer, "spending"))
-        return;
-    ee_ai_trace_spend(inPlayer->mPlayerID, inKind, inCost);
-}
-
-void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
-{
-    ee_ai_trace_income(inPlayer->mPlayerID, inResource, inAmount);
-}
-
-void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
-{
-    ee_ai_trace_unit_lost(inPlayer, (uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit));
-}
-
 void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
     ee_ai_trace_stats(inPlayer, inTime);

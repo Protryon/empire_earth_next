@@ -97,8 +97,6 @@ inline unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inS
     return (unsigned long)ee_cp_engine_resolve(inChoice, inSeed, inSlot, inPlayerID);
 }
 
-// the next engine's tick (EEComputerPlayer::Update calls it instead of the managers' decisions)
-void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime);
 // the next engine's start (EEComputerPlayer::Update, the first tick): resolves the script and loads it -> false
 // when it cannot (logged), and the seat then stands idle
 bool EECPNextPrepare(EEComputerPlayer* inPlayer);
