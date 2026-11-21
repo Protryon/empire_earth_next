@@ -10193,6 +10193,21 @@ constexpr static const uint32_t EE_SCREENS_SB_DO_HELP = 3;
 /// `kResourceGold` (`mResourceCaps`' index).
 constexpr static const int64_t EE_SCREENS_SB_RESOURCE_GOLD = 5;
 
+/// The manager's unit passes (`EEAEPassFunctor`'s pass): the original's functors, by their RTTI names.
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_APPLY_GENERATED = 0;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_SET_AFFECTED = 1;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_CLEAR = 2;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_REBUILD = 3;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_REMOVE_REDUNDANT = 4;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_GENERATED = 5;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_AFFECTED = 6;
+
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
 
@@ -12147,13 +12162,6 @@ void ee_screens_civ_host(const void *call,
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
 
-/// The area effects' host (`EEAEHost::Call`: `effect` the `EEAreaEffect*`, `target` the `EEComplexUnit*`, either
-/// NULL; `call` an `EeAreaEffectCall*`, `reply` an `EeAreaEffectReply*`; `area_effect_host.rs`).
-void ee_screens_ae_host(void *effect,
-                        void *target,
-                        const void *call,
-                        void *reply);
-
 /// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
 /// the `EEComplexUnit*`; `area_effect_manager.rs`).
 void ee_screens_aem_collect(float radius,
@@ -13690,6 +13698,106 @@ int64_t ee_screens_status_button_op(void *call,
 /// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
+
+void ee_screens_ae_construct(size_t effect, size_t template_);
+
+void ee_screens_ae_destroy(size_t effect);
+
+/// `AppliedTo(unit)` (the shim list's `aem_applied_to`).
+void ee_screens_ae_applied_to(size_t effect, size_t unit);
+
+void ee_screens_ae_removed_from(size_t effect, size_t unit);
+
+/// `Covers(player, unit, point)` (`aem_covers`).
+bool ee_screens_ae_covers(size_t effect, uint64_t player, size_t unit, float x, float y);
+
+/// `GetStrength` (`ael_strength`).
+int64_t ee_screens_ae_strength(size_t effect);
+
+int64_t ee_screens_ae_level(size_t effect);
+
+float ee_screens_ae_radius(size_t effect);
+
+float ee_screens_ae_scale(size_t effect);
+
+/// `IsImmunity` (`aem_is_immunity`).
+bool ee_screens_ae_is_immunity(size_t effect);
+
+/// `Modify(kind, *value, *out)` (`ael_modify`: `value` and `out` the caller's longs, maybe the same).
+bool ee_screens_ae_modify(size_t effect,
+                          int64_t kind,
+                          size_t value,
+                          size_t out);
+
+/// `MarkDirty` (`ael_mark_dirty`).
+void ee_screens_ae_mark_dirty(size_t effect);
+
+/// `Recount(arg)` (`ael_recount`; the argument unread).
+void ee_screens_ae_recount(size_t effect, float _value);
+
+/// `Tick(unit, elapsed)` (`ael_tick`).
+void ee_screens_ae_tick(size_t effect, size_t unit, float elapsed);
+
+/// `ShowOn(unit)` (`ael_show_on`).
+void ee_screens_ae_show_on(size_t effect, size_t unit);
+
+void ee_screens_ae_set_unit(size_t effect, size_t unit);
+
+/// `IsInRange(point)` (`aem_in_range`).
+bool ee_screens_ae_in_range(size_t effect, float x, float y);
+
+/// The effect's template's `AffectsPlayer(player, (long)(unsigned long)other)` (`aem_affects_player`).
+bool ee_screens_ae_affects_player(size_t effect,
+                                  int64_t player,
+                                  uint64_t other);
+
+/// The same reversed (`aem_affects_player_reversed`).
+bool ee_screens_ae_affects_player_reversed(size_t effect, int64_t player, uint64_t other);
+
+void ee_screens_aet_construct(size_t template_);
+
+void ee_screens_aet_destroy(size_t template_);
+
+/// `AffectsPlayer(player, other)` / `AffectsPlayerReversed` (`reversed`) of a template.
+bool ee_screens_aet_affects(size_t template_, int32_t player, int32_t other, bool reversed);
+
+/// `IsWithin(center, point, scale, unit)` of a template.
+bool ee_screens_aet_is_within(size_t template_,
+                              float center_x,
+                              float center_y,
+                              float point_x,
+                              float point_y,
+                              float scale,
+                              size_t unit);
+
+/// `Init(data)` of a template (`data` an `EEAreaEffectData*`, the record's layout).
+bool ee_screens_aet_init(size_t template_, size_t data);
+
+/// `EEAEPassFunctor::Apply(unit)`: one unit of a manager pass.
+void ee_screens_aem_pass(uint32_t which,
+                         size_t arg,
+                         uint64_t player,
+                         float elapsed,
+                         float x,
+                         float y,
+                         size_t unit);
+
+void ee_screens_aem_tick(size_t manager, float elapsed);
+
+void ee_screens_aem_clear(size_t manager);
+
+void ee_screens_aem_clear_effects(size_t manager);
+
+size_t ee_screens_aem_create(size_t manager, uint64_t index, size_t unit);
+
+/// `LoadTemplateMedia(index)` / `UnloadTemplateMedia(index)` (`load` false).
+void ee_screens_aem_template_media(size_t manager, uint64_t index, bool load);
+
+/// `EEUnitAreaEffectList::KeepStrongest`.
+void ee_screens_ael_keep_strongest(size_t list);
+
+/// TEST ONLY: the capture's record after a tick (`EEAECaptureTick`'s target).
+void ee_screens_ae_capture_tick(float elapsed);
 
 /// `EEUISCIFormManager::Clear`.
 void ee_screens_sci_clear(size_t m);

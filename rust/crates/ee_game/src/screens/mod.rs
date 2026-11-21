@@ -357,9 +357,13 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+pub(crate) mod area_effect_capture;
+#[cfg(not(test))]
+mod area_effect_ffi;
 pub(crate) mod area_effect_host;
 pub(crate) mod area_effect_lists;
 pub(crate) mod area_effect_manager;
+pub(crate) mod area_effect_obj;
 pub(crate) mod area_effect_running;
 pub(crate) mod civ_file_calls;
 pub(crate) mod civ_host;
