@@ -89,11 +89,11 @@ static_assert(EE_SCREENS_SEOB_IDS_ANY_CLASS == IDS_ANY_CLASS && EE_SCREENS_SEOB_
                   EE_SCREENS_SEOB_IDS_TRIGGER_PROXIMITY_FIRST == IDS_TRIGGER_PROXIMITY_FIRST &&
                   EE_SCREENS_SEOB_IDS_TRIGGER_ATTRIBUTE_FIRST == IDS_TRIGGER_ATTRIBUTE_FIRST,
               "the strings");
-static_assert(EE_SCREENS_SEOB_AREA_CHECK == kSETSObjectAreaCheck && EE_SCREENS_SEOB_NEAR_CHECK == kSETSObjectNearCheck &&
-                  EE_SCREENS_SEOB_VISIBLE_BY_CHECK == kSETSObjectVisibleByCheck &&
-                  EE_SCREENS_SEOB_HAS_STATE_CHECK == kSETSObjectHasStateCheck &&
-                  EE_SCREENS_SEOB_SELECTED_BY_CHECK == kSETSObjectSelectedByCheck &&
-                  EE_SCREENS_SEOB_SELECT_UNITS == kSETSObjectSelectUnits,
+static_assert(EE_SCREENS_SEOB_AREA_CHECK == EE_SCREENS_SE_TS_OBJECT_AREA_CHECK && EE_SCREENS_SEOB_NEAR_CHECK == EE_SCREENS_SE_TS_OBJECT_NEAR_CHECK &&
+                  EE_SCREENS_SEOB_VISIBLE_BY_CHECK == EE_SCREENS_SE_TS_OBJECT_VISIBLE_BY_CHECK &&
+                  EE_SCREENS_SEOB_HAS_STATE_CHECK == EE_SCREENS_SE_TS_OBJECT_HAS_STATE_CHECK &&
+                  EE_SCREENS_SEOB_SELECTED_BY_CHECK == EE_SCREENS_SE_TS_OBJECT_SELECTED_BY_CHECK &&
+                  EE_SCREENS_SEOB_SELECT_UNITS == EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS,
               "the ids");
 
 namespace {
@@ -192,7 +192,7 @@ extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i
         *theOut = new EESETSALasso;
         return 0;
     case EE_SCREENS_SEOBX_NEW_SELECT:
-        *theOut = new EESEUICTriggerSelectUnits(static_cast<UIForm*>(p[0]), kSETSObjectSelectUnits, (unsigned long)i[0],
+        *theOut = new EESEUICTriggerSelectUnits(static_cast<UIForm*>(p[0]), EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS, (unsigned long)i[0],
                                                 static_cast<EESETSAMouseClick*>(p[1]), static_cast<EESETSALasso*>(*theOut));
         return 0;
     case EE_SCREENS_SEOBX_ADD_CONTROL:

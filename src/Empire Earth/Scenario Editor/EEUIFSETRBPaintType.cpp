@@ -66,7 +66,7 @@ static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_S
                   kSEEUseAreaObject == EE_SCREENS_SEE_USE_AREA_OBJECT && kSEEFaceAreaObject == EE_SCREENS_SEE_FACE_AREA_OBJECT &&
                   kSEEMapType == EE_SCREENS_SEE_MAP_TYPE && kSEESortUnitList == EE_SCREENS_SEE_SORT_UNIT_LIST &&
                   kSEEStartEpoch == EE_SCREENS_SEE_START_EPOCH && kSEEUnitLimit == EE_SCREENS_SEE_UNIT_LIMIT &&
-                  EE_SCREENS_SEE_PER_PLAYER_LABEL_ID == kSERBUnitTypesPerPlayerCountLabel,
+                  EE_SCREENS_SEE_PER_PLAYER_LABEL_ID == EE_SCREENS_SE_RB_UNIT_TYPES_PER_PLAYER_COUNT_LABEL,
               "ee/EESEARust.h's event kinds");
 
 // p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*): the ops left of the host (the toolkit's

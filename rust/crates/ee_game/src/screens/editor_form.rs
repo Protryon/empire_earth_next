@@ -393,7 +393,7 @@ const DEREF_SCROLL: i32 = 4;
 /// The editor's control group 0 (the form's own controls).
 const GROUP_FORM: i32 = 0;
 
-// the scenario's records (`ee/EEScenarioIDs.h`; the host static_asserts them)
+// the scenario's records (`ee_sim scenario::ids`; the host static_asserts them)
 const CONDITION_OBJECT: c_ulong = 1;
 const CONDITION_PLAYER_ATTRIBUTE: c_ulong = 2;
 const EFFECT_NONE: c_ulong = 0;

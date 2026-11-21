@@ -71,7 +71,7 @@
 #include "ee/EEPersistentTemplates.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EEScenarioIDs.h"
+#include "rust/sim/scenario.h"
 // the campaign archive's tag keys (unguarded file-scope globals, 0x5656a0 down to 0x5655f8)
 const UWideString kEECampaignAuthorNameKey("AuthorName");
 const UWideString kEECampaignAuthorEmailKey("AuthorEmail");
@@ -423,7 +423,7 @@ bool EECampaign::ListEffectSound(const UWideString& inFile, EESMEffect* inEffect
     UString theHead;
     UString theName;
     bool theResult = true;
-    if (inEffect->mType == kSMEffectMedia && (inEffect->mMediaAction == kSMMediaActionPlaySound || inEffect->mMediaAction == kSMMediaActionSendDialogue)) {
+    if (inEffect->mType == EE_SCENARIO_SM_EFFECT_MEDIA && (inEffect->mMediaAction == EE_SCENARIO_SM_MEDIA_ACTION_PLAY_SOUND || inEffect->mMediaAction == EE_SCENARIO_SM_MEDIA_ACTION_SEND_DIALOGUE)) {
         theSound = inEffect->mFileName;
         if (theSound != "") {
             theName = "Sounds\\";

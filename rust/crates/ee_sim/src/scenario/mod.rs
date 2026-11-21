@@ -14,6 +14,7 @@
 //! - [`objeval`]: `EESMObject::Evaluate`, the object's units rebuilt and filtered (the list the C++'s).
 //! - [`trigger`]: `EESMTrigger::Evaluate` with its condition chain (`EESMTConditionWrapper::Evaluate`), duration
 //!   and the timed effects it schedules.
+//! - [`ids`]: the named kinds the triggers store (once `ee/EEScenarioIDs.h`).
 //! - [`fields`]: the effect's, condition's and object's numbers as records the C++ classes derive from (their
 //!   defaults and index upkeep); [`save`]: their `Load` and `Save` over [`stream`], the `FSFile` calls by operation.
 //! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
@@ -54,6 +55,7 @@ pub mod effect_text;
 pub mod event;
 pub mod ffi;
 pub mod fields;
+pub mod ids;
 pub mod host;
 pub mod lists;
 pub mod manager;

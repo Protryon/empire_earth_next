@@ -376,10 +376,10 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
 // a class attribute's and Set AI Variable's world calls (ca_compose.rs, ai_store.rs EE_SCENARIO_WK_*: the Rust
 // composes EE_SCENARIO_WORLD_CA_* and _AI_STORE and reads and writes the upgrade's, class's and computer player's
 // records itself): one statement each, on handles
-static_assert(kSMEffectObject == 1 && kSMObjectActionUnitAttribute == 8 && kSMUnitAttributeShockArmorPlus == 20 &&
-                  kSMUnitAttributeReloadTimePlus == 26 && kSMUnitAttributeRangePlus == 36 &&
-                  kSMUnitAttributeLineOfSightPlus == 37 && kSMUnitAttributeMaxVelocityPlus == 38 &&
-                  kSMUnitAttributeAnimalAIActivePlus == 40 && kSMUnitAttributeCameraFocusPlus == 41,
+static_assert(EE_SCENARIO_SM_EFFECT_OBJECT == 1 && EE_SCENARIO_SM_OBJECT_ACTION_UNIT_ATTRIBUTE == 8 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_SHOCK_ARMOR_PLUS == 20 &&
+                  EE_SCENARIO_SM_UNIT_ATTRIBUTE_RELOAD_TIME_PLUS == 26 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_RANGE_PLUS == 36 &&
+                  EE_SCENARIO_SM_UNIT_ATTRIBUTE_LINE_OF_SIGHT_PLUS == 37 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_MAX_VELOCITY_PLUS == 38 &&
+                  EE_SCENARIO_SM_UNIT_ATTRIBUTE_ANIMAL_AI_ACTIVE_PLUS == 40 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_CAMERA_FOCUS_PLUS == 41,
               "ca_compose.rs's numbers");
 std::vector<EEHerd*> sSMEHerds;   // GetHerdsOfType's list (the original's local)
 EEPlayer* SMEPlayerOf(int64_t inHandle) { return (EEPlayer*)(intptr_t)inHandle; }
@@ -550,7 +550,7 @@ int64_t SMECreateWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t*
         return 0;
     case EE_SCENARIO_WC_ATTRIBUTE_CHECK: return (int64_t)theObject->mHasAttributeCheck;
     case EE_SCENARIO_WC_CHANGE_UNIT:
-        EEChangeUnit(theObject->mAttribute, theObject->mIsAttributePercent, SMEUnitOf(a[0]), theObject->mAttributeMin, theObject->mAttributeMax, theObject->mHasAttributeCheck == 2, kSMAttributeModeExactly);
+        EEChangeUnit(theObject->mAttribute, theObject->mIsAttributePercent, SMEUnitOf(a[0]), theObject->mAttributeMin, theObject->mAttributeMax, theObject->mHasAttributeCheck == 2, EE_SCENARIO_SM_ATTRIBUTE_MODE_EXACTLY);
         return 0;
     case EE_SCENARIO_WC_PUSH_CREATED: inContext->mCreated->push_back(SMEUnitOf(a[0])->GetUnitID());
         return 0;

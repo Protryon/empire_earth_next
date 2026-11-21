@@ -375,7 +375,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::BrushSetHighlight: ((EEUIFSEBrushGroup*)p)->SetHighlight(f[0], f[1], a[0] != 0);
         break;
     case O::EdgeScrollEdges: return P64(&((EEAScroll*)p)->mEdges);
-    case O::LoadThreadPostDone: return ((EESELoadThread*)p)->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true);
+    case O::LoadThreadPostDone: return ((EESELoadThread*)p)->mThread->Post(EE_SCREENS_SE_LOAD_THREAD_MESSAGE_QUEUE_DONE, NULL, NULL, true);
     case O::LoadThreadWaitDone: ((EESELoadThread*)p)->mMessageQueueDone->Wait(kTSWaitInfinite);
         break;
     case O::LoadThreadClearDone: ((EESELoadThread*)p)->mMessageQueueDone->Clear();

@@ -25,7 +25,6 @@
 #include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIShell.h"
-#include "ee/EEScenarioEditorIDs.h"
 #include "ee/EESEIAExport.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"

@@ -183,11 +183,11 @@ static_assert(EEUIFScenarioEditor::kSlotButtonTexture == EE_SCREENS_SEFM_BUTTON_
                   EEUIFScenarioEditor::kSlotWasUIHidden == EE_SCREENS_SEFM_WAS_UI_HIDDEN &&
                   EEUIFScenarioEditor::kSlotExitAfterSave == EE_SCREENS_SEFM_EXIT_AFTER_SAVE,
               "editor_form.rs's slots");
-static_assert(kSMConditionObject == 1 && kSMConditionPlayerAttribute == 2 && kSMEffectNone == 0 &&
-                  kSMEffectObject == 1 && kSMEffectPlayer == 2 && kSMObjectActionClassName == 10 &&
-                  kSMObjectActionClassAttribute == 12 && kSMPlayerActionModifyTechTree == 5 &&
-                  kSMTriggerOperatorAnd == 1 && kSMTriggerOperatorOr == 2 && kSEAExit == 3 && kSEEHideUI == 1 &&
-                  kSEEQuickLoad == 3 && kSEEQuickSave == 4 && kToolbarButtonExit == 15 &&
+static_assert(EE_SCENARIO_SM_CONDITION_OBJECT == 1 && EE_SCENARIO_SM_CONDITION_PLAYER_ATTRIBUTE == 2 && EE_SCENARIO_SM_EFFECT_NONE == 0 &&
+                  EE_SCENARIO_SM_EFFECT_OBJECT == 1 && EE_SCENARIO_SM_EFFECT_PLAYER == 2 && EE_SCENARIO_SM_OBJECT_ACTION_CLASS_NAME == 10 &&
+                  EE_SCENARIO_SM_OBJECT_ACTION_CLASS_ATTRIBUTE == 12 && EE_SCENARIO_SM_PLAYER_ACTION_MODIFY_TECH_TREE == 5 &&
+                  EE_SCENARIO_SM_TRIGGER_OPERATOR_AND == 1 && EE_SCENARIO_SM_TRIGGER_OPERATOR_OR == 2 && kSEAExit == 3 && kSEEHideUI == 1 &&
+                  kSEEQuickLoad == 3 && kSEEQuickSave == 4 && EE_SCREENS_SE_TOOLBAR_BUTTON_EXIT == 15 &&
                   IDS_CIVILIZATION_BUILDER_TOOL == EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL,
               "editor_form.rs's numbers");
 
@@ -354,7 +354,7 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEFMX_BITMAP_RELEASE: static_cast<GEBitmap*>(p[0])->Dereference();
         return 0;
     case EE_SCREENS_SEFMX_NEW_QUICK_ACTION: return SefxOut(i, static_cast<EEAction*>(new EESEAQuickSaveLoad(gScenarioExtension)));
-    case EE_SCREENS_SEFMX_NEW_HIDE_UI: return SefxOut(i, static_cast<UIControl*>(new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gEmptyString), gU531934, GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), theForm, (unsigned long)i[0], 0, false)));
+    case EE_SCREENS_SEFMX_NEW_HIDE_UI: return SefxOut(i, static_cast<UIControl*>(new UICheckBox(EE_SCREENS_SE_SCENARIO_EDITOR_HIDE_UI_CHECK_BOX, UWideString(gEmptyString), gU531934, GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), theForm, (unsigned long)i[0], 0, false)));
     case EE_SCREENS_SEFMX_HIDE_UI_HELP: c->SetStringTableID(IDS_HIDE_UI);
         return 0;
     case EE_SCREENS_SEFMX_CHECK_SET: static_cast<UICheckBox*>(c)->SetChecked(true);

@@ -74,7 +74,7 @@ static_assert(EE_SCREENS_SELTX_IDS_LOADING_EPOCH_FOR_PLAYER == IDS_LOADING_EPOCH
                   EE_SCREENS_SELTX_IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING ==
                       IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING &&
                   EE_SCREENS_SELTX_IDS_LCL_FILE_HAS_INVALID_VERSION == IDS_LCL_FILE_HAS_INVALID_VERSION &&
-                  EE_SCREENS_SELTX_LOCALIZATION_EDIT == kSEInstructionsLocalizationEditBox,
+                  EE_SCREENS_SELTX_LOCALIZATION_EDIT == EE_SCREENS_SE_INSTRUCTIONS_LOCALIZATION_EDIT_BOX,
               "editor_selt.rs's numbers");
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)

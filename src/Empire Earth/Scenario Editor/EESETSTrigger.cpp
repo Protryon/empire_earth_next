@@ -67,8 +67,8 @@ static_assert(EE_SCREENS_SETR_IDS_SE_REMOVE == IDS_SE_REMOVE && EE_SCREENS_SETR_
                   EE_SCREENS_SETR_IDS_IF + 8 == IDS_CONDITIONS_TRUE_FOR && EE_SCREENS_SETR_IDS_IF + 9 == IDS_LOOPING &&
                   EE_SCREENS_SETR_IDS_INCLUDE_IN_CINEMATIC == IDS_INCLUDE_IN_CINEMATIC,
               "the strings");
-static_assert(EE_SCREENS_SETR_END == kSMTriggerOperatorEnd && EE_SCREENS_SETR_AND == kSMTriggerOperatorAnd &&
-                  EE_SCREENS_SETR_OR == kSMTriggerOperatorOr,
+static_assert(EE_SCREENS_SETR_END == EE_SCENARIO_SM_TRIGGER_OPERATOR_END && EE_SCREENS_SETR_AND == EE_SCENARIO_SM_TRIGGER_OPERATOR_AND &&
+                  EE_SCREENS_SETR_OR == EE_SCENARIO_SM_TRIGGER_OPERATOR_OR,
               "the operators");
 
 // the screen's own ops (editor_trigx.rs composes the sequences and the ops on a trigger)
@@ -153,7 +153,7 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
         static_cast<UIButton*>(p[0])->SetText(sSetrText, gU531934);
         return 0;
     case EE_SCREENS_SETRX_CONDITION_IS_OBJECT:
-        return gWorld.mScenarioManager->GetCondition((unsigned long)(uint32_t)i[0])->GetType() == kSMConditionObject;
+        return gWorld.mScenarioManager->GetCondition((unsigned long)(uint32_t)i[0])->GetType() == EE_SCENARIO_SM_CONDITION_OBJECT;
     case EE_SCREENS_SETRX_CONDITION_COUNT: return (int32_t)gWorld.mScenarioManager->mConditions.size();
     case EE_SCREENS_SETRX_TRIGGER_TAB:
         *theOut = gUIManager->GetScenarioEditorForm()->GetTriggerTab();

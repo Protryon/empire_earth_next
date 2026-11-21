@@ -362,7 +362,7 @@ void EESMObject::SetUnits(const std::vector<unsigned long>& inUnits)
 // ---- the trigger's members (ee_scenario trigger_members.rs: each a forward; the vectors and strings stay here, reached
 // by ee_scenariocpp_trigger's single statements)
 
-static_assert(EE_SCENARIO_TR_EFFECTS - EE_SCENARIO_TR_CONDITIONS == 20 && kSMTriggerOperatorEnd == 0,
+static_assert(EE_SCENARIO_TR_EFFECTS - EE_SCENARIO_TR_CONDITIONS == 20 && EE_SCENARIO_SM_TRIGGER_OPERATOR_END == 0,
               "trigger_members.rs's numbers");
 
 // Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry

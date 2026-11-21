@@ -373,7 +373,7 @@ template<class T> int32_t EESMListIO(EESMStream* inStream, std::vector<T*>& ioLi
 // a loaded condition naming object 0 (it is dropped)
 static bool EESMConditionNamesObjectZero(EESMCondition* inCondition)
 {
-    return inCondition->mType == kSMConditionObject && inCondition->mObjectIndex == 0;
+    return inCondition->mType == EE_SCENARIO_SM_CONDITION_OBJECT && inCondition->mObjectIndex == 0;
 }
 
 int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)

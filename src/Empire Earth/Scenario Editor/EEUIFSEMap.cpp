@@ -32,7 +32,6 @@
 #include "ee/EESEARust.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
-#include "ee/EEScenarioEditorIDs.h"
 #include "rust/game/screens.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
@@ -40,8 +39,8 @@ void SeplLinePush(const UWideString& inLine);   // a line for the next combo box
 
 // ---- the tab's host (editor_map.rs: the ops from 500)
 
-static_assert(kSEMapElevationFile == 0x75 && kSEMapWidth == 0x6b && kSEMapLandCutoff == 0x78 &&
-                  kSEMapDefaultTerrainLabel == 0x64 && kSEMapWaterCutoff == 0x7d,
+static_assert(EE_SCREENS_SE_MAP_ELEVATION_FILE == 0x75 && EE_SCREENS_SE_MAP_WIDTH == 0x6b && EE_SCREENS_SE_MAP_LAND_CUTOFF == 0x78 &&
+                  EE_SCREENS_SE_MAP_DEFAULT_TERRAIN_LABEL == 0x64 && EE_SCREENS_SE_MAP_WATER_CUTOFF == 0x7d,
               "editor_map.rs's ids");
 
 extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
@@ -96,7 +95,7 @@ extern "C" int32_t ee_screenscpp_sempx(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEMPX_PATH_RELEASE: static_cast<FSPath*>(p[0])->Dereference();
         return 0;
-    case EE_SCREENS_SEMPX_NEW_FILE_COMBO: return SempxOut(i, static_cast<UIControl*>(EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), UString("*") + ".dat", kSEMapElevationFile, gSeplScreenFont, GE2DPoint(f[0], f[1]), 200, theForm, (unsigned long)i[2])));
+    case EE_SCREENS_SEMPX_NEW_FILE_COMBO: return SempxOut(i, static_cast<UIControl*>(EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), UString("*") + ".dat", EE_SCREENS_SE_MAP_ELEVATION_FILE, gSeplScreenFont, GE2DPoint(f[0], f[1]), 200, theForm, (unsigned long)i[2])));
     case EE_SCREENS_SEMPX_FILE_COMBO_HELP: static_cast<UIControl*>(p[0])->SetStringTableID(IDS_ELEVATION_FILE_TO_USE_WITH_BLANK);
         return 0;
     case EE_SCREENS_SEMPX_BLANK_MAP: (new EESEARust(kSEABlankMap, NULL, i[0], i[1], i[2]))->Dereference();

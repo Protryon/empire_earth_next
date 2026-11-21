@@ -205,7 +205,7 @@ pub struct EeScenarioObjectFields {
     pub mIsAttributePercent: bool,
 }
 
-/// `kSMEffectObject`, `kSMEffectNone` (ee/EEScenarioIDs.h).
+/// `kSMEffectObject`, `kSMEffectNone` (ee_sim scenario::ids).
 pub const EE_SCENARIO_EFFECT_NONE: c_ulong = 0;
 pub const EE_SCENARIO_EFFECT_OBJECT: c_ulong = 1;
 /// `kSMPlayerActionTotal`: Load moves a later player action down by 2, then to Victory (0).

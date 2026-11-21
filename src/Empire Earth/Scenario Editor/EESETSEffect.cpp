@@ -88,20 +88,20 @@ void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBo
 
 namespace {
 
-static_assert(kSETriggerScreenTrigger == 0 && kSETriggerScreenObject == 3 && kSETriggerScreenArea == 4 &&
-                  kSETSEffectTitleLabel == 0x960 && kSETSEffectTypeComboBox == 0x961 &&
-                  kSETriggerScreenNameEditBox == 0x7db && kSETriggerScreenNameLabel == 0x7dc &&
-                  kSETriggerScreenDuplicateButton == 0x7d6 && kSETriggerScreenDeleteButton == 0x7d7 &&
+static_assert(EE_SCREENS_SE_TRIGGER_SCREEN_TRIGGER == 0 && EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT == 3 && EE_SCREENS_SE_TRIGGER_SCREEN_AREA == 4 &&
+                  EE_SCREENS_SE_TS_EFFECT_TITLE_LABEL == 0x960 && EE_SCREENS_SE_TS_EFFECT_TYPE_COMBO_BOX == 0x961 &&
+                  EE_SCREENS_SE_TRIGGER_SCREEN_NAME_EDIT_BOX == 0x7db && EE_SCREENS_SE_TRIGGER_SCREEN_NAME_LABEL == 0x7dc &&
+                  EE_SCREENS_SE_TRIGGER_SCREEN_DUPLICATE_BUTTON == 0x7d6 && EE_SCREENS_SE_TRIGGER_SCREEN_DELETE_BUTTON == 0x7d7 &&
                   kControlTriggerRangeChanged == 0x3e8 && kControlTriggerChecked == 0x3e9 &&
                   kControlTriggerSelectionChanged == 0x3eb && kControlTriggerButtonUp == 0x3f0 &&
                   kTextAlignLeft == 0 && kTextAlignCenter == 1 && kTextAlignRight == 2 &&
-                  kSMEffectNone == 0 && kSMEffectObject == 1 && kSMEffectPlayer == 2 && kSMEffectTrigger == 3 &&
-                  kSMEffectMedia == 4 && kSMEffectGame == 5 && kSMEffectAI == 6,
+                  EE_SCENARIO_SM_EFFECT_NONE == 0 && EE_SCENARIO_SM_EFFECT_OBJECT == 1 && EE_SCENARIO_SM_EFFECT_PLAYER == 2 && EE_SCENARIO_SM_EFFECT_TRIGGER == 3 &&
+                  EE_SCENARIO_SM_EFFECT_MEDIA == 4 && EE_SCENARIO_SM_EFFECT_GAME == 5 && EE_SCENARIO_SM_EFFECT_AI == 6,
               "editor_effects.rs's values");
-static_assert(kSMConditionAlwaysTrue == 0 && kSMConditionPlayerAttribute == 2 && kSMConditionPlayerTechnology == 3 &&
-                  kSMConditionTriggerAttribute == 4 && kSMConditionPlayerDiplomacy == 5 &&
-                  kSMConditionGameAttribute == 6 && kSMConditionChatMessageContains == 7 &&
-                  kSETSConditionTitleLabel == 0x8fc && kSETSConditionTypeComboBox == 0x8fd &&
+static_assert(EE_SCENARIO_SM_CONDITION_ALWAYS_TRUE == 0 && EE_SCENARIO_SM_CONDITION_PLAYER_ATTRIBUTE == 2 && EE_SCENARIO_SM_CONDITION_PLAYER_TECHNOLOGY == 3 &&
+                  EE_SCENARIO_SM_CONDITION_TRIGGER_ATTRIBUTE == 4 && EE_SCENARIO_SM_CONDITION_PLAYER_DIPLOMACY == 5 &&
+                  EE_SCENARIO_SM_CONDITION_GAME_ATTRIBUTE == 6 && EE_SCENARIO_SM_CONDITION_CHAT_MESSAGE_CONTAINS == 7 &&
+                  EE_SCREENS_SE_TS_CONDITION_TITLE_LABEL == 0x8fc && EE_SCREENS_SE_TS_CONDITION_TYPE_COMBO_BOX == 0x8fd &&
                   kControlTriggerUnchecked == 0x3ea && kControlTriggerEnterPressed == 0x3f1 &&
                   kSEECheckDisplay == EE_SCREENS_SEE_CHECK_DISPLAY,
               "editor_conditions.rs's values");

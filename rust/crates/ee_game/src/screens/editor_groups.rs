@@ -9,7 +9,7 @@
 
 use crate::screens::editor_form::*;
 
-/// The tabs (`kEditorTab*`, ee/EEScenarioEditorIDs.h: `CreateTabGroup`'s cases).
+/// The tabs (`kEditorTab*`, editor_ids.rs: `CreateTabGroup`'s cases).
 pub const TAB_MAP: u32 = 0;
 pub const TAB_ELEVATION: u32 = 1;
 pub const TAB_TERRAIN: u32 = 2;

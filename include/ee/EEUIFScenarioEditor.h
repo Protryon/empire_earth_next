@@ -11,7 +11,6 @@
 // keeps its civilization (the builder's) and forwards. Requires lle/UIForm.h, ee/EECivilization.h.
 #ifndef EE_EEUIFSCENARIOEDITOR_H
 #define EE_EEUIFSCENARIOEDITOR_H
-#include "ee/EEScenarioEditorIDs.h"
 #include "ee/EEUnitHandle.h"
 #include "rust/game/screens.h"
 
@@ -101,9 +100,9 @@ public:
     // Rust objects (kEditorTab*: an EeScreensSeMap* .. EeScreensSeInstructions*)
     EeScreensSeGroup* GetTabGroup(long inGroup) const { return (EeScreensSeGroup*)this->GetSlot(kSlotGroup + inGroup); }
     void* GetTab(long inGroup) const { return ee_screens_segr_tab(this->GetTabGroup(inGroup)); }
-    EeScreensSeTriggerTab* GetTriggerTab() const { return (EeScreensSeTriggerTab*)this->GetTab(kEditorTabTriggers); }
-    EeScreensSeUnit* GetUnitTab() const { return (EeScreensSeUnit*)this->GetTab(kEditorTabUnits); }
-    EeScreensSePlayers* GetPlayerTab() const { return (EeScreensSePlayers*)this->GetTab(kEditorTabPlayers); }
+    EeScreensSeTriggerTab* GetTriggerTab() const { return (EeScreensSeTriggerTab*)this->GetTab(EE_SCREENS_SE_EDITOR_TAB_TRIGGERS); }
+    EeScreensSeUnit* GetUnitTab() const { return (EeScreensSeUnit*)this->GetTab(EE_SCREENS_SE_EDITOR_TAB_UNITS); }
+    EeScreensSePlayers* GetPlayerTab() const { return (EeScreensSePlayers*)this->GetTab(EE_SCREENS_SE_EDITOR_TAB_PLAYERS); }
     // the trigger tab's members (EE_SCREENS_SETS_*), its name or description box, its sub-screens' own calls with
     // their selections where their classes passed them (EE_SCREENS_SETR_*, _SESC_*, _SEOB_*, _SEAR_*) and slots
     void TriggerCall(uint32_t inWhat, uint32_t inA = 0) const

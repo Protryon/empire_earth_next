@@ -53,10 +53,10 @@ static_assert(EE_SCREENS_SETS_IDS_NEW == IDS_TRIGGER_EDITOR_NEW && EE_SCREENS_SE
                   EE_SCREENS_SETS_IDS_NEW + 3 == IDS_TRIGGER_EDITOR_NAME &&
                   EE_SCREENS_SETS_IDS_DESCRIPTION == IDS_DESCRIPTION_76A8,
               "the strings");
-static_assert(EE_SCREENS_SETS_TAB_FIRST == kSETriggerTabTrigger && kSETriggerTabArea == kSETriggerTabTrigger + 4 &&
-                  EE_SCREENS_SETS_GROUPS[0] == kEntityGroupTrigger && EE_SCREENS_SETS_GROUPS[1] == kEntityGroupCondition &&
-                  EE_SCREENS_SETS_GROUPS[2] == kEntityGroupEffect && EE_SCREENS_SETS_GROUPS[3] == kEntityGroupObject &&
-                  EE_SCREENS_SETS_GROUPS[4] == kEntityGroupArea,
+static_assert(EE_SCREENS_SETS_TAB_FIRST == EE_SCREENS_SE_TRIGGER_TAB_TRIGGER && EE_SCREENS_SE_TRIGGER_TAB_AREA == EE_SCREENS_SE_TRIGGER_TAB_TRIGGER + 4 &&
+                  EE_SCREENS_SETS_GROUPS[0] == EE_SCREENS_SE_ENTITY_GROUP_TRIGGER && EE_SCREENS_SETS_GROUPS[1] == EE_SCREENS_SE_ENTITY_GROUP_CONDITION &&
+                  EE_SCREENS_SETS_GROUPS[2] == EE_SCREENS_SE_ENTITY_GROUP_EFFECT && EE_SCREENS_SETS_GROUPS[3] == EE_SCREENS_SE_ENTITY_GROUP_OBJECT &&
+                  EE_SCREENS_SETS_GROUPS[4] == EE_SCREENS_SE_ENTITY_GROUP_AREA,
               "the sub-tabs");
 
 namespace {
@@ -167,19 +167,19 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETSX_NAMES_CLEAR:
         sSetsNames.clear();
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + kSETriggerScreenTrigger:
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_TRIGGER:
         ee_screens_setr_get_names(static_cast<EeScreensSeTrigger*>(p[1]), &sSetsNames);
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + kSETriggerScreenCondition:
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_CONDITION:
         ee_screens_secd_names(static_cast<EeScreensSeConditionScreen*>(p[1]), &sSetsNames);
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + kSETriggerScreenEffect:
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_EFFECT:
         ee_screens_sefx_names(static_cast<EeScreensSeEffectScreen*>(p[1]), &sSetsNames);
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + kSETriggerScreenObject:
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT:
         ee_screens_seob_get_names(static_cast<EeScreensSeObject*>(p[1]), &sSetsNames);
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + kSETriggerScreenArea:
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_AREA:
         ee_screens_sear_names(static_cast<EeScreensSeArea*>(p[1]), &sSetsNames);
         return 0;
     case EE_SCREENS_SETSX_LIST_APPEND_NAMES:

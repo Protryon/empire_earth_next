@@ -154,9 +154,9 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
         return 0;
     }
     case EE_SCREENS_SEA_ELEVATION_MODE:
-        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
+        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_RAISE_BUTTON))->GetIsChecked() == true)
             return 0;
-        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
+        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_LOWER_BUTTON))->GetIsChecked() == true)
             return 1;
         return 2;
     case EE_SCREENS_SEA_RAISE: {
@@ -172,7 +172,7 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
         theMap->RemoveFlatCliffs((long)i[0], (long)i[1], (long)i[2], (long)i[3]);
         return 0;
     case EE_SCREENS_SEA_STORE_MOUSE_TILE:
-        EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationPaint), EE_SCREENS_SKOP_PAINT_STORE_TILE);
+        EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_PAINT), EE_SCREENS_SKOP_PAINT_STORE_TILE);
         return 0;
     case EE_SCREENS_SEA_ELEVATION_CHANGED:
         gEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
@@ -277,7 +277,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
         break;
     }
     case EE_SCREENS_SEW_OP_TECH_FILL:
-        EEUIShell::Op(theEditor->GetControlById(i[0] != 0 ? kSERBUnitTypesTechList : kSERBUnitTypesOtherTechList),
+        EEUIShell::Op(theEditor->GetControlById(i[0] != 0 ? EE_SCREENS_SE_RB_UNIT_TYPES_TECH_LIST : EE_SCREENS_SE_RB_UNIT_TYPES_OTHER_TECH_LIST),
                       EE_SCREENS_SKOP_TECH_FILL, i[1], i[2]);
         break;
     case EE_SCREENS_SEW_OP_ROTATE:
@@ -484,7 +484,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
 extern "C" size_t ee_screenscpp_sew_elevation(int16_t* outData, size_t inCapacity, int32_t* out)
 {
     EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-    UIComboBox* theList = static_cast<UIComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
+    UIComboBox* theList = static_cast<UIComboBox*>(theEditor->GetControlById(EE_SCREENS_SE_MAP_ELEVATION_FILE));
     unsigned long theSelection;
     theList->GetCurrentSelection(theSelection);
     if (theSelection == 0)
@@ -514,7 +514,7 @@ extern "C" size_t ee_screenscpp_sew_elevation(int16_t* outData, size_t inCapacit
                     theResult = theCount;
                     out[0] = (int32_t)theFileWidth;
                     out[1] = (int32_t)theFileHeight;
-                    const long theBoxes[4] = {kSEMapWaterCutoff, kSEMapWaterDepth, kSEMapLandHeight, kSEMapLandCutoff};
+                    const long theBoxes[4] = {EE_SCREENS_SE_MAP_WATER_CUTOFF, EE_SCREENS_SE_MAP_WATER_DEPTH, EE_SCREENS_SE_MAP_LAND_HEIGHT, EE_SCREENS_SE_MAP_LAND_CUTOFF};
                     for (int k = 0; k < 4; k++)
                         out[2 + k] = static_cast<UIEditBox*>(theEditor->GetControlById(theBoxes[k]))->GetTextAsInt(0);
                 }
