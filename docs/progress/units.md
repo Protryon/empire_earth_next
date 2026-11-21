@@ -17,6 +17,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | behaviour 3 | `rust-unitsbeh3` | -1,134 | the goal objects and their queues whole in Rust (goal_obj.rs, goals.rs: made, cloned, deleted, saved and stepped in Rust; the mirror gone); the goals' accessors and context-free virtuals inline over Rust; the unit's queue calls (SetGoal, GetQueuedGoal, RefreshGoals, RefreshActiveGoal, DropUnsuitedGoals, DropFinishedGoals) and the hosts' goal cases in Rust; 46 unit-utility forwarders gone |
 | 4 | `rust-units4` | -712 | the unit utilities' one-call forwarders gone (40: callers call the Rust); the unit host's goal constructions, clones, queue calls and plain reads in Rust (units/goal_spec.rs); 34 one-call members of `EEUnitClass` and `EEActiveGroup` inline in their headers |
 | 5 | `rust-units5` | -887 | the game log's human orders, the units sweep and the active groups' sweep whole in Rust (EEActiveGroupSweep.cpp deleted); the gather goal's spot search and accessibility; the combat records of a unit's state (CBSO, CBXA, CBQR, CBXR, CBAD); EEFindLandingPoint, EEGetRandomPointAhead; host cases answered over the views and the Rust continent manager |
+| 6 | `rust-units6` | -603 (logic -1,358) | GoalOp's compound cases split into one-statement cases; 51 `EEComplexUnit` and `EEUnitClass` bodies (Kill, Invalidate, StartProduction, ProduceUnit, the cargo, garrison and production queue, Heal, UpdateBuilding, ...) in Rust over one-statement hosts |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -213,7 +214,49 @@ Verified on the final tree (origin/rust fa7e8674a merged, no conflict): both bui
 oracle seeds 2-7 identical; the plain saveload 18/18 identical (exit 0); the Rust gate PASS (5,022 tests); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--exercise random-game --box-select --orders --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game). Only a game with the game log on (not EE-SIM) runs
 order_log.rs: the tour exercises it.
 
+## Round 6 (branch `rust-units6`, from the groups lane's round 2 tip 9f2b3d970, 2026-11-20)
+
+The brief: C++ logic lines removed (target -3,000) under the owner's new rule: a body moves to Rust even when it
+calls other C++, each call one statement of a C++ host. What moved is GoalOp's compound cases and 51 class bodies of
+`EEComplexUnit` and `EEUnitClass` (each now one call); the C++ they call is a one-statement case of a new host per
+file (`ee_units_cu_host` in EEComplexUnit.cpp, `ee_units_uc_host` in EEUnitClass.cpp).
+
+| Commit | What | Logic / net C++ |
+|---|---|---|
+| 3d2240436 | GoalOp's compound cases split into one-statement cases (units/goal_split.rs, called by goal_obj.rs `base_host_op` for every operation): START_ACTION, FIND_UNIT, TELL_GROUP, the file's WRITE/READ, APPEND, the calamity class/info/creation, CONTACT_RANGE, the explore goal's area, tile screen, map dimensions and continent point, NOTICE_FOREIGN, the unload/load transports' cases, the sounds, GARRISON_UPGRADE, DEPOSIT, REPLACE_CLASS, NODE_INFO, COMPLETE_BUILDING, FILL_PARTS, CANCEL_FOUNDATION, BUILD_EVENT, FOUNDATION_STARTED, STORAGE_SEARCH, HUNT, FIND_GHOST, TAKE_ONE, WORK_TIMER | -239 / -82 |
+| d29aa826d | `EEComplexUnit::Kill`, `Invalidate`, `StartProduction`, `SetBuilt`, `StartAction`, `SetAnimation`, `PayInsurance`, `FindContacts` (units/cu_body.rs); `EEUnitClass::Heal`, `UpdateBuilding`, `UpdateAnimal`, `RefreshSound`, `CreateDeathUnit` (units/uc_body.rs) | -459 / -148 |
+| 44bbf5232 | `UpdateJITManufacturing`, `CancelQueuedProduction`, `ToggleJITManufacturing`, `RemoveResearch`, `ReplaceResearch`, `QueueResearchUncaptured`, `LoadCargo`, `GarrisonUnit`, `AddGarrison`, `KillCargo`, `ReleaseCargo`, `ReplaceCargo`, `UnloadCargoAt`, `UnloadCargoAtTile`, `UnloadCargoNow`, `OrderRepair`, `AddBuildTarget`, `AddContact` (units/cu_cargo.rs); `TakeOffMap`, `UpdateWaterState`, `LoadMedia`, `SetDisabled`, `UpdateCamouflage`, `SetGatheredResource`, `PlayEffect`, `ReleaseFireEffect`, `Halt`, `FleeAfterCalamity`, `LinkPart`, `ClearGoalQueue` (units/cu_misc.rs) | -523 / -299 |
+| 595dc49f2 | `EEUnitClass::ProduceUnit` (units/uc_produce.rs) | -137 / -74 |
+
+Round total (logic_lines.py over src, include/ee, include/lle; 9f2b3d970 -> 595dc49f2): logic 85,080 -> 83,722
+(-1,358); lines 171,112 -> 170,509 (-603). Shims added: about 480 one-statement host cases (GoalOp's 110
+`EE_UNITS_GOAL_HOST_X_*`, ee_units_cu_host's ~290, ee_units_uc_host's ~145) and the 51 one-call members; shims
+deleted: none (the hosts' old compound cases were logic). Target -3,000: short by about 1,640 (see "What is left").
+
+New Rust: units::goal_split (`split`, `GoalSplitHost`, `FfiSplit`), units::cu_body (`CuHost`, `ee_units_cu_body`),
+units::cu_cargo (`CuCargoHost`, `Placement`), units::cu_misc, units::uc_body (`UcHost`, `ee_units_uc_body`),
+units::uc_produce (`UcRust`, `FindPlacement`, `ee_units_uc_produce`); each with its tests (op sequences over
+recording mocks: 18 + 13 + 11 + 8 + 7 + 5).
+
+Gates: see PORT_LEARNINGS.md "The units' lane, round 6".
+
 ## What is left (behaviour)
+
+- **Round 6's measure** (the logic left in the lane's files, logic_lines.py's per-file count): EEComplexUnit.cpp ~1,500
+  (CopyFrom, ResetEEComplexUnit, SwapGraphic, StepAside, ReplaceUnits, GetChecksum, OutOfSynchDump, the area effects,
+  FreeNode, UpdateFanaticismColor with its function statics, the cu host's preamble), EEUnitClass.cpp ~1,320 (Animate,
+  LaunchShot, BaseCreateUnit/BaseCreateUnitAt, ReplantFarm, LaunchFromTurret, MoveToTileCentre, HealGarrison and
+  Regenerate (their CBTM/CBHL/CBRG captures stay C++ calls), the media and button loads, EEUnitClassMoveOp's non-path
+  cases), EEFOFindNewTargetNearOldTarget.cpp ~1,320 (EEConvertUnit: its adaptation block is strings, a shuffle and a
+  goto; EEReplaceUnit; the search and line-of-fire hosts), EEUnitClassBuildings 728, EEComplexDoppelganger 720
+  (RepairPointers, the load sections), EEPhysics 692, EEGhostUnit 535, EEUnitClassAir 513, EECombatGoals' EEWorldOp
+  (~60 compound lines: HIT_CLASS, DAMAGE_IN, TILE_SEEN, ATTACKED_GOAL, HELP, UNIT_EFFECT), EEUnitUpdate's EEUpdateAct
+  (mostly one statement already; the notes at its top would have to stay per original code), EEUnitClassShots' EEShotOp.
+  Each moves the same way as this round's: the body in Rust, each C++ statement one case of the file's host.
+- GoalOp's compound cases left: PATH_REACHABLE (the path manager; the Paths lane's), CAN_CAST_AT, BOARDING,
+  SURROUNDING_TILES, LINE_TO_UNIT_BLOCKED, MINING_BEAM, NEXT_RESOURCE and RESOURCE_OF_KIND (their list marshalling);
+  EECombatGoalHostOp's TELL_GROUP, POSITION, VERIFY_TARGET.
+
 
 - **Round 5's measure**: the TEST ONLY drivers and the bodies over Rust callees are gone. What stays in the hosts
   (GoalOp ~480 lines, EEUpdateAct 377, EEWorldOp ~230, ee_units_ag_host 230, EEUnitClassMoveOp 210, the trigger
