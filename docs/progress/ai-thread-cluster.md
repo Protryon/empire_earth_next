@@ -99,18 +99,42 @@ Round 7 (rust-aicluster7; the owner's "calling C++ from Rust is fine"), the comp
 - `astar/cm_restore.rs`: EERestoreContinentRegions and TownOrHerd (the continent save's town and herd ids; a town's
   id is one host case).
 
+Round 8 (rust-aicluster8), the hosts' last bodies, the trace, the schedule:
+
+- `ai/personality.rs`: **EECPTrace.cpp's personality and switches whole** (the personality by EE_AI_PERSONALITY or
+  the rules' assignment, read from the game's Rust rules: `tech::civ::rules()`; every switch with its EE_AI_EXP
+  experiments; the difficulty's cheats narrowed by EE_AI_CHEATS; EECPTraceInit's first read of EE_AI_TRACE). The
+  Rust bodies call it directly (the units host's ai.tuning, the reflexes, the placement's claim range, the
+  computer player's naval flee, militia, cheats, experiments); C++ keeps EECPPersonality (an index into the C++
+  copy of the rules), EECPExperiment, EECPCheatNames and EECPTraceInit as forwarders.
+- `ai/trace_line.rs`: **EECPTraceOut's line and the trace manager** (`gCPTraceManager` gone; the scopes are Rust);
+  the start's trace line (`trace_start` in cp/player_game.rs).
+- `ai/units_world.rs`: the units host's **wall path** (pm_entry's FindPath), **wall routes** (the requests held by
+  handle in the Rust state; EECPUnitsState gone: `EEComputerPlayer::mUnitsState` is the Rust state), **enemies
+  near through the fog**, **citizen upgrade test**, **tribute**, the **epoch's wall and gate classes** and the
+  **Lua verbs' placement search** with their PLCE records; the crossed terrain (units_host.rs) through the Units
+  lane's `class_terrain_flags`.
+- `ai/next_schedule.rs`: **EEArtificialIntelligence whole** (the players' collection and the tick's step; the class
+  is two inline forwarders; EEArtificialIntelligence.cpp deleted; the save's schedule part through
+  `ee_ai_schedule_get/_set`).
+- `ai/next_host.rs`: the next host's forests, forest points, AREAS dump and file reads.
+- `astar/cm_file.rs`: **the regions block's file part** (EESaveContinentRegions, EELoadContinentRegions, the kept
+  block); `astar/cm_world.rs`: **UpdateWallUnit** (its CNTQ record) and **RegrowTrees**.
+- Deleted besides: EECPPlacement.cpp's epoch classes (three unused), EECPNextPlaceSearch, the EETileDistanceLess
+  pair and choke point overloads (no caller), EECPNextUnits.cpp's unused held-set accessors.
+
 What is left in C++ of the cluster:
 
-- EEPathManager.cpp (the Paths lane's), CanGetTo and AreConnectedForUnit (the Paths lane's), the rest of
-  EEAIContinentManager.cpp (ctor, dtor, UpdateWallUnit, BuildRegions' scenario inputs, RegrowTrees).
-- EECPNextUnits.cpp: the units host's one-statement cases, its messages (EEMRecord), the wall path and the routes
-  (the path manager's requests: EEAutoPathRequest), the enemy-near-all count, the improvement cost, the citizen
-  upgrade test, the tribute, the trace.
-- EECPNext.cpp: the names tables (EEDbRowIds), the engine's seat helpers, the files' reads, the AREAS and SIM_HASH
-  dumps, the forests' ids.
-- EEAIContinentSave.cpp: the layout checks, the regions' file part (FSFile).
-- EECPTrace.cpp (the trace's printf and the personality's switches), EECPPlacement.cpp's forwarders and the epoch
-  classes, EEAIRectangleArea.cpp's dispatch, EEArtificialIntelligence.cpp.
+- EEPathManager.cpp (the Paths lane's).
+- EECPNextUnits.cpp: the units host's one-statement cases, its messages (EEMRecord built per argument count, the
+  borrowed slot), the improvement cost, the tiles' level test (EEAreTilesLevel with its UCBD note), a few
+  two-statement cases (class and tech names, the map size, the gather target, the selection).
+- EECPNext.cpp: the names tables (EEDbRowIds), the engine's seat helpers, the area hull, the SIM_HASH dump (a C++
+  unit list and a virtual checksum).
+- EEAIContinentSave.cpp: the layout checks and the host's few two-statement cases.
+- EEAIContinentManager.cpp: BuildRegions' scenario inputs (EESMArea's rect).
+- EEHerd.cpp's formation placement, IsAnimalOnMap, GetUnits; EEAIRectangleArea.cpp's random point; EETown.cpp's
+  input points; EECPEngineHelpers.cpp's small members of other classes.
 
 ## Goldens and gates
 
@@ -121,10 +145,11 @@ Results: PORT_LEARNINGS "AI Thread cluster, round 4".
 
 ## Left (next rounds)
 
-- **The path manager's last host operations, CanGetTo, AreConnectedForUnit, EEAutoPathRequest**: the Paths lane's.
-- **The units host's messages** (EEMRecord built per argument count) and the wall routes (path requests): a
-  message builder the human's commands share would let them go; the routes wait on EEAutoPathRequest.
-- **The units host's improvement cost, citizen upgrade and enemy-near-all**: the class improvements' table, the
-  events' effects and the influence table's region sums as Rust reads (all small).
-- **EECPNext.cpp's names tables, the seat helpers and the dumps**; EECPTrace.cpp's personality switches.
+- **The units host's messages**: an EEMRecord built from a value list (a constructor over a pointer and a count in
+  the Communications lane's EEMRecord) would let the per-count switch go.
+- **The improvement cost**: the class improvements' table (`mImprovements`: max level, cost factors) and the
+  upgrade's cost scale as Rust reads.
+- **EECPNext.cpp's names tables** (the db row ids as a Rust read from the Database lane) and the seat helpers (the
+  manifest is ee_game's); the SIM_HASH dump (a world unit list in the world views).
+- **BuildRegions' scenario inputs** (EESMArea's rect: the Scenario lane's record).
 - **The herd paths no game reaches** (round 2's list) stay unit-tested only.
