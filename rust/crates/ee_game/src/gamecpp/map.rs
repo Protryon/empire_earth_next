@@ -391,7 +391,11 @@ pub extern "C" fn ee_gamecpp_map_dump(map: *mut c_void, file: *mut c_void) {
                 continue;
             }
             h(O::MpDumpTileTitle, file as P, &[x as i64, y as i64]);
-            h(O::MpTileDump, tile, &[file as i64, rts(m).mU19561C as i64]);
+            super::tile::ee_gamecpp_tile_dump(
+                tile as *const std::ffi::c_void,
+                file as *mut std::ffi::c_void,
+                rts(m).mU19561C as c_ulong,
+            );
             h(O::MpDumpNewLine, file as P, &[]);
         }
     }
@@ -691,7 +695,8 @@ unsafe extern "C" fn map_host_op(context: *mut c_void, op: i32, io: *mut EeAppMa
         EE_APP_MAP_OP_CLIFF => ee_gamecpp_map_host_cliff(io),
         EE_APP_MAP_OP_TILE_CHECKSUM => {
             let tile = hp(O::MpGetTile, m, &[x as i64, y as i64]);
-            let sum = h(O::MpTileChecksum, tile, &[rts(m).mU19561C as i64]) as c_long;
+            let sum =
+                super::tile::ee_gamecpp_tile_checksum(tile as *const std::ffi::c_void, rts(m).mU19561C as c_ulong);
             // SAFETY: as above
             unsafe { (*io).a = sum };
         }

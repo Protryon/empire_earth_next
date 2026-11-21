@@ -609,8 +609,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoRastClearBlack: gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), *(const GERectangle*)a[0], gScreenIndex);
         break;
-    case O::RoSetGameViewRectangle: EESetGameViewRectangle(*(const GERectangle*)a[0]);
-        break;
     case O::RoShowAllBackgrounds: gUIManager->GetMainGameForm()->ShowAllBackgrounds();
         break;
     case O::RoHideAllBackgrounds: gUIManager->GetMainGameForm()->HideAllBackgrounds();

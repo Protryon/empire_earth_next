@@ -402,7 +402,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MpRtsCreate: M->Create((long)a[0], (long)a[1], (unsigned long)a[2], true);
         break;
-    case O::MpTileChecksum: return ((EETile*)p)->GetChecksum((unsigned long)a[0]);
     case O::MpSightEnabled: return gSightUpdatesEnabled == true;
     case O::MpTileVecNew: return P64(new std::vector<EETileCoordinate>);
     case O::MpTileVecDelete: delete (std::vector<EETileCoordinate>*)p;
@@ -427,8 +426,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpTileLoad: ((EETile*)p)->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2], (unsigned long)a[3]);
         break;
     case O::MpTileSave: return ((EETile*)p)->Save(*(FSFile*)a[0], (unsigned long)a[1]);
-    case O::MpTileDump: ((EETile*)p)->Dump((FILE*)a[0], (unsigned long)a[1]);
-        break;
     case O::MpTileSetTerrainType: M->GetTile((unsigned long)a[0], (unsigned long)a[1])->SetTerrainType((long)a[2], EETileLocation((long)a[0], (long)a[1]), M);
         break;
     case O::MpFileReadUlong: return ((FSFile*)p)->Read(*(unsigned long*)a[0]);

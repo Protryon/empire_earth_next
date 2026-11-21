@@ -371,7 +371,8 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
     // the zoom changed: the view band, the bars cleared (one row more at the top), the UI's backgrounds at full view
     if step.set_view {
         let view = GeRectangle { bottom: bars.bottom, left: bars.left, right: bars.right, top: bars.top };
-        h(O::RoSetGameViewRectangle, 0, &[cptr(&view)]);
+        // SAFETY: the view's rectangle
+        unsafe { super::startup::ee_gamecpp_startup_game_view(&view) };
         clear(0.0, bars.top_bar_end + 1.0);
         clear(bars.bottom_bar_start, height);
         if step.show_backgrounds {

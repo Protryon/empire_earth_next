@@ -453,8 +453,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::InitialiseScene: EEInitialiseScene();
         break;
-    case O::ReleaseScene: EEReleaseScene();
-        break;
     case O::MouseBeginFrame: gMouse->BeginFrame();
         break;
     case O::MouseLoadScreenIndex: gMouse->Load(gRasterizer->GetScreen(gScreenIndex));

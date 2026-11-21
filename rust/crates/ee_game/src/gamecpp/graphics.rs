@@ -86,7 +86,7 @@ pub extern "C" fn ee_gamecpp_gfx_handle_message(g: *mut c_void, message: u32, p1
             h(O::InitialiseScene, 0, &[]);
         }
         0x504 => {
-            h(O::ReleaseScene, 0, &[]);
+            super::render_object::ee_gamecpp_ro_release_scene();
         }
         0x50b => {
             if h(O::UiManagerPresent, 0, &[]) != 0 {

@@ -521,7 +521,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
     let (i, f) = unsafe { (std::slice::from_raw_parts(i, 8), std::slice::from_raw_parts(f, 2)) };
     match i[0] {
         EE_NETMSG_WACT_ATTACK_PLAYERS => {
-            h(O::AttackPlayers, 0, &[i[1], i[2] as u8 as i64]);
+            super::startup::ee_gamecpp_startup_attack_players(i[1] as c_long, i[2] as u8);
         }
         EE_NETMSG_WACT_BUILD_GATE => {
             // the EETileCoordinate (two longs) the C++ takes by reference

@@ -282,16 +282,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CalEffectHandle: return P64(&CL->mEffectHandle.mValue);
     case O::CalSound: return P64(CL->mSound);
     case O::CalSecondary: return P64(CL->mSecondarySound);
-    case O::CalSetSound: CL->SetSound((SESMInstanceNode*)a[0]);
-        break;
-    case O::CalSetSecondary: CL->SetSecondarySound((SESMInstanceNode*)a[0]);
-        break;
-    case O::CalSetTarget: CL->SetTargetUnit((EEUnit*)a[0]);
-        break;
-    case O::CalStopSound: CL->StopSound();
-        break;
-    case O::CalStopSecondary: CL->StopSecondarySound();
-        break;
     case O::CalCreateUnit: return P64(EECreateCalamityUnit(CL, (long)a[0], TR(1), (long)a[2]));
     case O::KlFields: return P64(static_cast<EeCalamityClassFields*>(KL));
     case O::KlEffect1: return P64(KL->mGraphicEffect1);
@@ -381,8 +371,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::KlDeleteFunctor: delete KL->mFunctor;
         break;
-    case O::KlValidLocation: return KL->IsValidLocation((EEComplexUnit*)a[0], (unsigned long)a[1], (unsigned long)a[2]);
-    case O::KlValidTarget: return KL->IsValidTarget((EEComplexUnit*)a[0], (EEUnit*)a[1]);
     case O::MgrClassCount: return (int64_t)MG->mCalamityClasses.size();
     case O::MgrClassAt: return P64(MG->mCalamityClasses[a[0]]);
     case O::MgrClassSet: MG->mCalamityClasses[a[0]] = (EECalamityClass*)a[1];
