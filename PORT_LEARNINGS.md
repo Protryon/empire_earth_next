@@ -36904,4 +36904,3 @@ the windowed game (the tours, the gates' ai-game).
 - Not run: the POSIX builds; `xbuild.py test` builds but its Windows plat_test does not link here (20 undefined
   `SDL_*` symbols: no SDL for the Windows host in this checkout, nothing of this round's); the legacy debugger harness
   (`gates.sh --legacy`), whose frame cap the C++ `RTSGraphics::Main` keeps.
-||||||| a84903ce6
