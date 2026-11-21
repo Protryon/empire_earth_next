@@ -531,6 +531,7 @@ const FOUNDATION_3: i64 = 0x133;
 /// The C++ statements of the bodies.
 pub trait UbHost {
     /// one statement (`EE_UNITS_UB_*`)
+    #[allow(clippy::too_many_arguments)]
     fn ub(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, e: i64, f: &mut [f32; 4]) -> i64;
 }
 

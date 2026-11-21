@@ -5,7 +5,8 @@
 //! `ee_units_ck_host`, EECloakingUtilities.cpp), asked in the original's order; the loops, choices and arithmetic are
 //! here.
 
-#![allow(clippy::unnecessary_cast)]
+// the original's float literals and its clamp chain are kept as written
+#![allow(clippy::unnecessary_cast, clippy::excessive_precision, clippy::approx_constant, clippy::manual_clamp)]
 
 use std::os::raw::c_long;
 
@@ -276,10 +277,13 @@ pub fn space_dock_site_open<H: CkHost + ?Sized>(h: &mut H, x: c_long, y: c_long,
         while ty <= top && ok {
             let t = terrain(h, tx, ty);
             if tx == left || ty == bottom || tx == right || ty == top {
-                if t.is_none() || yes(scd(h, EE_UNITS_CK_IS_EDGE, tx as i64, ty as i64)) {
-                    ok = false;
-                } else if yes(h.ck(EE_UNITS_CK_IS_LAND, 0, t.unwrap(), 0, &mut [0.0; 4])) {
-                    blocking += 1;
+                match t {
+                    Some(kind) if !yes(scd(h, EE_UNITS_CK_IS_EDGE, tx as i64, ty as i64)) => {
+                        if yes(h.ck(EE_UNITS_CK_IS_LAND, 0, kind, 0, &mut [0.0; 4])) {
+                            blocking += 1;
+                        }
+                    }
+                    _ => ok = false,
                 }
             } else {
                 let placeable = match t {
@@ -550,9 +554,9 @@ mod tests {
         assert!(!space_dock_site_open(&mut h, 5, 5, 9));
         // inner (4..5, 4..5) one land tile, the border land, the rest space
         let mut h = grid(|x, y| {
-            if (3..=6).contains(&x) && (3..=6).contains(&y) && !((4..=5).contains(&x) && (4..=5).contains(&y)) {
-                1
-            } else if (x, y) == (4, 4) {
+            let border =
+                (3..=6).contains(&x) && (3..=6).contains(&y) && !((4..=5).contains(&x) && (4..=5).contains(&y));
+            if border || (x, y) == (4, 4) {
                 1
             } else {
                 TERRAIN_SPACE

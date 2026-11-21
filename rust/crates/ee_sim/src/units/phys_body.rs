@@ -8,7 +8,8 @@
 //! time (no reference across a host call). Every other C++ statement is one operation of [`PhHost::ph`] (the game's:
 //! `ee_units_ph_host`, EEPhysics.cpp, one statement a case), asked in the original's order.
 
-#![allow(clippy::unnecessary_cast)]
+// the original's float literals and negated comparisons (NaN goes the original's way) are kept as written
+#![allow(clippy::unnecessary_cast, clippy::excessive_precision, clippy::neg_cmp_op_on_partial_ord)]
 
 use crate::units::physics_save::EeUnitsPhysicsSaved;
 use std::os::raw::{c_long, c_ulong};
