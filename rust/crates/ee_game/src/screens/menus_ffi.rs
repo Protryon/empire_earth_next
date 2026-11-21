@@ -15,7 +15,6 @@ pub(crate) mod sys {
 
     extern "C" {
         // the settings form's (settings_form_ffi.rs)
-        pub fn ee_screenscpp_selection(form: *mut c_void, control: u32, list: bool, out: *mut u32) -> i32;
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
         pub fn ee_screenscpp_put_settings(record: *const crate::screens::settings_form::EeScreensSettingsRecord);
         pub fn ee_screenscpp_modes(

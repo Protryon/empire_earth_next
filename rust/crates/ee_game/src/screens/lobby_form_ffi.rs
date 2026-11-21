@@ -47,8 +47,12 @@ impl LobbyHost for Form {
         self.get(EE_SCREENS_TEXT_STRING, id)
     }
     fn selection(&mut self, form: u32, control: u32) -> (bool, u32) {
-        let mut out = 0u32;
-        let result = unsafe { sys::ee_screenscpp_selection(self.lobby_on(form).0, control, false, &mut out) };
+        let (result, out) = crate::screens::screens_more_calls::selection(
+            &mut crate::screens::game_cpp::Ffi,
+            self.lobby_on(form).0 as usize,
+            control,
+            false,
+        );
         (result == 0, out)
     }
     fn player(&mut self, source: u32, index: u32) -> LobbyPlayer {

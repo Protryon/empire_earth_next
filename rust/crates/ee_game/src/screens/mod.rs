@@ -363,6 +363,7 @@ pub(crate) mod sci_calls;
 pub(crate) mod unit_hack_calls;
 pub(crate) mod cursor_calls;
 pub(crate) mod dialog_calls;
+pub(crate) mod screens_more_calls;
 pub(crate) mod screens_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;

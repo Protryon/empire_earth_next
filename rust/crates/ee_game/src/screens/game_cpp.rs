@@ -196,8 +196,9 @@ pub(crate) struct Ffi;
 
 macro_rules! shims {
     ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $sym:ident ; )*) => {
-        /// The C++ shims (one statement each).
+        /// The C++ shims (one statement each; some are only the FFI hosts', absent from a test binary).
         #[allow(clippy::too_many_arguments)]
+        #[cfg_attr(test, allow(dead_code))]
         pub(crate) trait Cpp {
             $( fn $name(&mut self, $($arg: $ty),*) $(-> $ret)?; )*
         }
@@ -2214,4 +2215,29 @@ shims! {
     fn dlg_pressed_callback(button: usize) -> usize = ee_screenscpp_dlg_pressed_callback;
     fn dlg_pressed_data(button: usize) -> usize = ee_screenscpp_dlg_pressed_data;
     fn dlg_post_closed(dialog: usize, callback: usize, data: usize) = ee_screenscpp_dlg_post_closed;
+    // EEScreens.cpp's hot keys and selections (screens_more_calls.rs)
+    fn hk_target_reset() = ee_screenscpp_hk_target_reset;
+    fn hk_location_at() -> bool = ee_screenscpp_hk_location_at;
+    fn hk_tile_at(x: EeScreensShimLongOut, y: EeScreensShimLongOut) = ee_screenscpp_hk_tile_at;
+    fn hk_target_x() -> f32 = ee_screenscpp_hk_target_x;
+    fn hk_target_y() -> f32 = ee_screenscpp_hk_target_y;
+    fn hk_units_clear() = ee_screenscpp_hk_units_clear;
+    fn hk_units_push(unit: u64) = ee_screenscpp_hk_units_push;
+    fn sel_control(form: usize, control: u32) -> usize = ee_screenscpp_sel_control;
+    fn sel_list(control: usize, selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_sel_list;
+    fn sel_combo(control: usize, selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_sel_combo;
+    // EEScreens.cpp's chat log file (chat_log_ffi.rs)
+    fn cl_read_ulong(file: usize, value: EeScreensShimULongOut) -> i32 = ee_screenscpp_cl_read_ulong;
+    fn cl_read_string(file: usize) -> i32 = ee_screenscpp_cl_read_string;
+    fn cl_read_colour(file: usize) -> i32 = ee_screenscpp_cl_read_colour;
+    fn cl_string(text: EeScreensShimOut) = ee_screenscpp_cl_string;
+    fn cl_red() -> f32 = ee_screenscpp_cl_red;
+    fn cl_green() -> f32 = ee_screenscpp_cl_green;
+    fn cl_blue() -> f32 = ee_screenscpp_cl_blue;
+    fn cl_set_red(v: f32) = ee_screenscpp_cl_set_red;
+    fn cl_set_green(v: f32) = ee_screenscpp_cl_set_green;
+    fn cl_set_blue(v: f32) = ee_screenscpp_cl_set_blue;
+    fn cl_write_ulong(file: usize, value: u32) -> i32 = ee_screenscpp_cl_write_ulong;
+    fn cl_write_string(file: usize, text: EeScreensShimText) -> i32 = ee_screenscpp_cl_write_string;
+    fn cl_write_colour(file: usize) -> i32 = ee_screenscpp_cl_write_colour;
 }

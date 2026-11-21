@@ -44,9 +44,13 @@ impl ScenarioHost for Form {
         self.get(EE_SCREENS_TEXT_STRING, id)
     }
     fn combo_selection(&mut self, form: u32, control: u32) -> u32 {
-        let mut out = 0u32;
-        unsafe { sys::ee_screenscpp_selection(self.on(form).0, control, false, &mut out) };
-        out
+        crate::screens::screens_more_calls::selection(
+            &mut crate::screens::game_cpp::Ffi,
+            self.on(form).0 as usize,
+            control,
+            false,
+        )
+        .1
     }
 }
 
