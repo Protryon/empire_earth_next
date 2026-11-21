@@ -219,18 +219,22 @@ public:
 protected:
     bool GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
     void SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
+public:   // (the shims' access: UIForm.cpp)
     UIControl* GetKeyboardCaptured() const;
     UIControl* GetMouseCaptured() const;
+    // the Rust form's calls out that are not Rust's (ee_ui lle_form.rs: ee_ui_form_host comes first)
+    static intptr_t HostOp(void* inForm, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
+                           float* ioF);
 private:
     void AddDirtyRectangle(const GERectangle& inRectangle);
     void SetKeyboardCaptured(UIControl* inControl);
     void SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
-    // the forwarders' one call into the Rust form, and the Rust form's calls out
+    // the forwarders' one call into the Rust form (with a rectangle)
     intptr_t Call(EeUiFormCall inCall, intptr_t inA = 0, intptr_t inB = 0, float* ioF = NULL) const;
-    static intptr_t HostOp(void* inForm, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
-                           float* ioF);
+    intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const;
 
     EeUiForm* mRust;                        // the state (formobj.rs)
+public:   // (the key shims' access: UIForm.cpp)
 #ifdef LOWLEVELENGINE_EXPORTS
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
 #if defined(LLE_UIFORM_CPP)

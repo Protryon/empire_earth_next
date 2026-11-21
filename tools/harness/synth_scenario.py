@@ -352,9 +352,11 @@ def read_base(ssa, member):
     raise SystemExit(f'{ssa}: no member ending in {member!r}')
 
 
-def build(base):
+def build(base, no_media=False):
     hb, chunks = split_file(base)
     h = parse_header(hb[4:])
+    if no_media:   # no intro sound, map picture, movie or texts (the campaign editor step: no files to miss)
+        h['media'] = {k: EMPTY for k in h['media']}
     h['mLockTeams'] = 0; h['mLockSpeed'] = 0; h['mUnitLimit'] = max(h['mUnitLimit'], 1000)
     h['mName'] = _z('Synth Army.scn')
     areas, area_index = [], {}
@@ -396,6 +398,8 @@ def build(base):
                       pending=[], messages=[], mIsMovingCamera=0, mNextTriggerID=2, mNextConditionID=1,
                       mNextEffectID=len(effects) + 1, mNextObjectID=len(objects) + 1, mNextAreaID=len(areas) + 1,
                       mTime=0.0, mTriggerTimer=0.0, mStartX=0.0, mStartY=0.0)
+            if no_media:
+                sm['media'] = {k: EMPTY for k in sm['media']}
             pl = write_sm(sm)
         elif tag == 3:
             z = struct.unpack('<fff', pl)[2]
@@ -410,8 +414,9 @@ def main():
     ap.add_argument('--out', required=True, type=pathlib.Path, help='the .scn to write (a stage directory, not the repo)')
     ap.add_argument('--ssa', type=pathlib.Path, default=INSTALL / BASE_SSA, help='campaign archive with the base map')
     ap.add_argument('--member', default=BASE_MEMBER, help='base scenario member name (suffix match)')
+    ap.add_argument('--no-media', action='store_true', help='no media strings (intro sound, map picture, texts)')
     a = ap.parse_args()
-    data = build(read_base(a.ssa, a.member))
+    data = build(read_base(a.ssa, a.member), a.no_media)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_bytes(data)
     print(f'wrote {a.out} ({len(data)} bytes; {len(PLAN)} unit groups, {sum(row[1] for row in PLAN)} units)')

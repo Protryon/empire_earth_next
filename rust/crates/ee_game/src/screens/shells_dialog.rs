@@ -143,6 +143,17 @@ impl DialogCpp for CppDialog {
         if let Some(r) = self.direct(form, slots, op, a, b) {
             return r;
         }
+        // SAFETY: the kind's six slots, live for the call
+        if let Some(r) = crate::screens::dialog_calls::call(
+            &mut crate::screens::game_cpp::Ffi,
+            form as usize,
+            unsafe { &mut *(slots as *mut [usize; 6]) },
+            op,
+            a,
+            b,
+        ) {
+            return r;
+        }
         // SAFETY: the live box and its slots
         unsafe { ee_screenscpp_dialog(form, slots, op, a, b) }
     }
