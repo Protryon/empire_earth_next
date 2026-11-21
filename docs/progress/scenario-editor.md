@@ -1,7 +1,7 @@
 # The scenario editor lane
 
 The lane's state. Each round rewrites this file to the current state; the rounds' stories go in PORT_LEARNINGS.md
-("The scenario editor lane, round 1" .. "round 4").
+("The scenario editor lane, round 1" .. "round 5").
 
 **Scope** (agent rules "Lane scopes"): `src/Empire Earth/Scenario Editor` and `Scenario Manager` (the triggers),
 their `include/ee` headers, and the editor's Rust in `ee_game` screens (`editor_*.rs`, `shells_seditor.rs`;
@@ -9,58 +9,59 @@ their `include/ee` headers, and the editor's Rust in `ee_game` screens (`editor_
 manager's Rust is `ee_sim::scenario`. The UI lane owns the shells' core (`ee/EEUIShell.h`, `EEUIShell.cpp`,
 `shells.rs`, `shells_ffi.rs`) and the toolkit (`ee_ui`, `ee_ui::direct`).
 
-## Where it stands (round 4)
+## Where it stands (round 5)
 
-Rounds 3 and 4 work under "Calling C++ from Rust is fine": a host case or a C++ function that was a statement
-sequence over C++ objects is composed in Rust of one-statement C++ shims (a host switch's case of one statement, or
-a one-statement function), in the C++'s order. The composition sits in the C ABI adapter (`compose(op, args)`
-answers the old op from the new statements, `None` for the C++'s own), so the older Rust and its recorded-stream
-tests see the same ops. C++ logic lines (`logic_lines.py`, whole repository): 85,861 at round 4's base (effb22404),
-82,693 with the round's work: **-3,168** (net C++ lines -1,323). The lane's own `.cpp` files hold about 1,600 logic
-lines now (EESMEffect.cpp 198, EEScenarioManager.cpp 197, EESMObject.cpp 142, EESEUnit.cpp 115, EEUIFSETerrain.cpp
-98, EESMArea.cpp 98, EEUIFScenarioEditor.cpp 93, EESERBUnitTypes.cpp 81, the rest under 70 each), and its headers
-about 900 (mostly the id tables EEScenarioIDs.h and EEScenarioEditorIDs.h).
+Rounds 3-5 work under "Calling C++ from Rust is fine": a host case or a C++ function that was a statement sequence
+over C++ objects is composed in Rust of one-statement C++ shims, in the C++'s order; the composition sits in the C ABI
+adapter (`compose(op, args)`), so the older Rust and its recorded-stream tests see the same ops. Round 5 (three forks:
+sm, act, ed) took the lane's C++ from about 3,220 logic lines (`.cpp` and headers) to about 1,440; see
+PORT_LEARNINGS.md "The scenario editor lane, round 5" for the whole repository's count.
+
+### The ids
+
+`ee/EEScenarioIDs.h` and `ee/EEScenarioEditorIDs.h` are gone: their constants are `ee_sim::scenario::ids`
+(`EE_SCENARIO_SM_*`, 248) and `ee_game::screens::editor_ids` (`EE_SCREENS_SE_*`, 151), with their evidence as docs;
+the C++ reads them from `rust/sim/scenario.h` and `rust/game/screens.h`. `ee/EESEARust.h`'s `kSEA*`/`kSEE*` are gone
+too (the C++ uses `EE_SCREENS_SEW_*`/`EE_SCREENS_SEE_*`; `kSEAPaint*` stay in the units lane's ee/EEARust.h). The
+static_asserts that compared C++ constants with Rust's are `editor_cpp_consts_tests.rs` (it reads the C++ headers).
 
 ### The scenario manager (`ee_sim::scenario`)
 
-- **Whole in Rust**: the scenario capture records (`sm_capture.rs`, round 3); `EESMStoreAI` and its field tables
-  (`ai_store.rs`; ee/EESMAIFields.h deleted); the trigger's members (`trigger_members.rs`: `EESMTrigger`'s methods
-  are one-line forwards over `ee_scenariocpp_trigger`, `EE_SCENARIO_TR_*`); the area tiles' hash in the SMAR
-  capture.
-- **Composed over one-statement C++**: the effect run's world (`world_compose.rs`, WX 400..636, WC 700..732) and its
-  texts, sounds, dialogue, chat, calamity tests, camera key and Change Unit's garrison and kill (`effect_text.rs`,
-  WY 810..853); `EESMEffect::Reset`/`Copy` (`effect_copy.rs`); a class attribute's world calls (`ca_compose.rs`, WK
-  740..765); the host's reads and the pending population write (`read_compose.rs`, RX 770..801); the object reads,
-  `EESMUnitField`, the tile lists (`object_reads.rs`, WZ 900..938); EEEvent.cpp's `Trigger`, `RunEffect` and every
-  handler, the pathfinding functor's step and `LoadEvents` (`event.rs`, `EE_SCENARIO_EV_*` 0..131; their EVRN/EVAT
-  captures are built with the C++'s bytes in place); the manager's cinematics (`cinematic.rs`, ROUND 20..75) and
-  its destructor, pending copies, timed flag, camera step, object change, round capture, the save's element loads
-  and dialog message vector, the list host's media and strings and the import errors (`manager_compose.rs`, ROUND
-  76..94, IO 22..31, LIST_OP 22..23, TEXT_OP 12..15); `EESMDialogMessage::Load`/`Save`; StreamIO's trigger entries
-  (through `EE_SCENARIO_IO_TRIGGER` = 32 and the trigger's members).
-- Left in C++ (about 760 logic lines): EESMEffect.cpp (the statement switches' remaining multi-statement cases, the
-  effect table), EEScenarioManager.cpp (`Update`'s order, the `Load`/`Save` framing, the list and text hosts'
-  remaining sequences), EESMObject.cpp, EESMArea.cpp, EESMMediaStrings.cpp (49, untouched), EEScenarioHost.cpp (45),
-  EEEvent.cpp (37, the class shell and its table).
+- **Whole in Rust**: the capture records (`sm_capture.rs`); `EESMStoreAI` (`ai_store.rs`); the trigger's members
+  (`trigger_members.rs`); `EESMArea` (round 5: its numbers are `EeScenarioAreaFields`, a record the C++ class derives
+  from, every method a one-statement forward; `area_fields.rs`); `EESMDialogMessage`'s numbers
+  (`EeScenarioMessageFields`); `EEEventEffect` is Rust's `EeScenarioEvEffect`; the elements' glue (round 5,
+  `entry.rs`): Load/Save of the effect, condition, object, trigger, area, media strings, dialog message and manager,
+  the Copy methods, the manager's Reset, Update, Prepare, ShowDialogMessage, the list operations (sort, new, move,
+  delete, duplicate, names, finds), ExportText/ImportTriggerText, `EESMMediaStrings::ListMediaFiles`, and every
+  capture wrapper (seed, run, record in the C++'s order). The host contexts and stream/list/round/text tables are
+  built in Rust over `extern "C"` C++ callbacks (`ee_scenariocpp_host_*`, `_stream_io`, `_list_op`, `_round_op`,
+  `_text_op`, `_entry`).
+- **For the AI lane**: `ee_scenario_area_region_inputs(EeScenarioArea*, long* ids, size_t capacity) -> size_t` (C)
+  and `ee_sim::scenario::entry::region_inputs()` (Rust) give BuildRegions' scenario inputs (set, the rectangle, height,
+  width, the id); EEAIContinentManager.cpp still builds them itself.
+- **Composed over one-statement C++** (rounds 3-4): the effect run's world (`world_compose.rs`), its texts
+  (`effect_text.rs`), the class attributes (`ca_compose.rs`), the host's reads (`read_compose.rs`), the object reads
+  (`object_reads.rs`), EEEvent's handlers (`event.rs`), the cinematics (`cinematic.rs`), the manager's statements
+  (`manager_compose.rs`).
+- Left in C++ (about 520 logic lines): `EESMEffect.cpp` (153: the run's context members and the statement switches'
+  dispatch), `EEScenarioManager.cpp` (97: the round, list and text hosts), `EEScenarioManager.h` (83: declarations
+  and inline getters), `EEScenarioHost.cpp` (44), `EEEvent.cpp` (37), CreateUnits' C++-typed locals.
 
 ### The scenario editor (`ee_game::screens`)
 
-- **Objects**: the form (`EEUIFScenarioEditor`, a C++ `UIForm` over its Rust object `editor_form.rs`); the tab
-  groups (`editor_groups_ffi.rs`); the trigger tab's five sub-screens (`editor_tsubs.rs`); the condition and effect
-  screens' control records (`editor_direct.rs`); controls as kinds (`EESEUIBDiplomacy`, `EEUIFSEActionButton`,
-  `shells_seditor.rs`).
-- **Composed over one-statement C++** (round 4 unless noted): the shared maker (`editor_sepl.rs`, round 3; SEPX
-  0..173) and the player tab's civilization, diplomacy, texts, lines and the brush group (`editor_seplx.rs`, SEPX
-  200..308); the load thread, the text export and import (`editor_selt.rs`, SELTX); the form's host and `Close`, the
-  map, elevation and events hosts, the upgrade panel (`editor_sefmx.rs`, `editor_tabsx.rs`: SEFMX, SEMPX, SEELX,
-  SEUPX, SEX, SEEX; calls onto the tabs' Rust objects go direct, `editor_calls.rs`); the trigger tab family: the
-  effect and condition screens' `SeetOp`, the object, trigger, area and instructions screens and the trigger tab
-  (`editor_trigx.rs`: SEETX, SEOBX 200.., SETRX 300.., SETSX 400.., SEARX 500.., SEINX 600..; TRGX 900.. through
-  `ee_ui::direct`); the unit tab (`editor_seunx.rs`, SEUNX) and the terrain tab with its list boxes' draws
-  (`editor_setnx.rs`, SETNX, SETLB). `ee_screenscpp_sefm` and `ee_screenscpp_seel` are gone.
-- Left in C++ (about 840 logic lines): the hosts' remaining multi-statement cases (EESEUnit.cpp 115,
-  EEUIFSETerrain.cpp 98, EEUIFScenarioEditor.cpp 93, EESERBUnitTypes.cpp 81, EESETSEffect.cpp 65, the trigger
-  screens 30-56 each), the C++ class shells (constructors that build controls, the vtables), EEUIEOpenCivBuilder.cpp.
+- **Objects**: the form (`editor_form.rs`; round 5: its constructor, CopyData, UpdateKeyboard and UpdateMouse
+  composed, the slot enum is `EE_SCREENS_SEFM_*`), the tab groups, the trigger tab's sub-screens, the condition and
+  effect screens' records, the controls as kinds.
+- **Composed over one-statement C++**: the shared maker and the player tab (`editor_sepl.rs`, `editor_seplx.rs`), the
+  load thread and text export/import (`editor_selt.rs`), the form's host, map, elevation, events, upgrade panel
+  (`editor_sefmx.rs`, `editor_tabsx.rs`), the trigger tab family (`editor_trigx.rs`), the unit and terrain tabs
+  (`editor_seunx.rs`, `editor_setnx.rs`; round 5: the gate and wall tools' Cancel, the unit lists), the editor
+  actions' hosts (round 5, `editor_seax.rs`: sea, sew, sep, seu over `ee_screenscpp_seax`; the tile units, the
+  bulldozer's remove, the elevation file read and the unit pick whole in Rust).
+- Left in C++ (about 920 logic lines): `EEUIFSETerrain.cpp` (90), `EESEUnit.cpp` (81), `EESEARust.cpp` (64: the
+  hosts' preludes, EESEPUnit/EESEPComplexUnit, the command control's constructor and RustOp), the headers' class
+  shells (EEUIFScenarioEditor.h 54, EEUIFSETerrain.h 39), the trigger screens (30-42 each), EESERBUnitTypes.cpp (35).
 
 ## Numbers this lane uses
 
@@ -68,19 +69,24 @@ about 900 (mostly the id tables EEScenarioIDs.h and EEScenarioEditorIDs.h).
   0xa0-0xaf. The hosts' op ranges: `_sepl` below 100, `_seob` 100.., `_setr` 200.., `_seun` 300.., `_sets` 400..,
   `_semp` 500.., `_sear` 600.., `_sein` 700.., `_sefm` 800.., `_seel` 900.., `_setn` 1000..; `_sepx` 0..173 and
   200..308; the statement hosts (`_seltx`, `_sefmx`, `_seunx`, `_setnx`, `_seetx` with `_seobx`.. `_seinx`, `_sempx`,
-  `_seelx`, `_seupx`, `_sex`, `_seex`) have their own numbers each.
-- The scenario world channel (one number space; `EESMEffectWorld` dispatches by range): `EE_SCENARIO_WORLD_*` 0..198,
+  `_seelx`, `_seupx`, `_sex`, `_seex`) have their own numbers each; round 5's additions are 2000.. in each (SEFMX
+  2000..2005, SEUN 2000..2001, SEUN_OP 2000..2003). The actions' statement host `ee_screenscpp_seax`:
+  `EE_SCREENS_SEAX_*` 3000..3181.
+- The scenario world channel (one number space; `ee_scenariocpp_host_world`, once `EESMEffectWorld`, dispatches by range): `EE_SCENARIO_WORLD_*` 0..198,
   `WX` 400..636, `WC` 700..732, `WK` 740..765, `RX` 770..801, `WY` 810..853, `WZ` 900..938. `EE_SCENARIO_ROUND_*`
   0..17 (round.rs), 20..75 (cinematic.rs), 76..94 (manager_compose.rs). The stream channel `EE_SCENARIO_IO_*` 0..21
   (stream.rs), 22..31 (manager_compose.rs), 32 (the trigger). `EE_SCENARIO_EV_*` 0..131, `EE_SCENARIO_TR_*` 0..46,
-  `EE_SCENARIO_CAP_*` 0..171. Parallel forks: give each its range up front (two forks both took IO 22 in round 4).
+  `EE_SCENARIO_CAP_*` 0..171. Round 5's channels: the entries host `EE_SCENARIO_EN_*` 0..47, the list entries
+  `EE_SCENARIO_LS_*` 0..9, the manager entries `EE_SCENARIO_MN_*` 0..3. Parallel forks: give each its range up front (two forks both took IO 22 in round 4).
 
 ## Left
 
-- The remaining ~1,600 logic lines above, with the same composition. The biggest pieces: EESMEffect.cpp's switches,
-  EEScenarioManager.cpp's `Update`/`Load`/`Save`, the unit and terrain tabs' hosts, the form's constructor.
+- The remaining ~1,440 logic lines above (counted with `build/ld.py`-style per-file logic_lines over the lane's files),
+  the same composition. The biggest: EESMEffect.cpp's run context and dispatch, EEScenarioManager.cpp's hosts and
+  EEScenarioManager.h's declarations, the terrain and unit tabs' hosts, EESEARust.cpp's class parts.
 - **The counter's one-liners**: `case X: stmt; return 0;` on one line counts as logic in `logic_lines.py` (two
-  semicolons); the lane's older hosts hold about 150 such lines that are one-statement shims in kind. Not reformatted.
+  semicolons) unless its second statement is a return/break; write new shims two-line.
+- The AI lane can switch BuildRegions to `ee_scenario_area_region_inputs` (its file, not this lane's).
 
 ## Checks
 
@@ -93,4 +99,6 @@ about 900 (mostly the id tables EEScenarioIDs.h and EEScenarioEditorIDs.h).
   build's; the game view and the mini map vary by run), eedata check and cppgate, `gates.sh`.
 - Only a person reaches: the load thread's posts, the text export/import dialogs, the unit tab's mouse previews and
   hold/cancel, the terrain paint control's drag, the diplomacy events' clicks, the dialog messages' camera moves
-  outside EE-SIM's scenario dialogs, and the drawing of every tab past the editor's first frame.
+  outside EE-SIM's scenario dialogs, the drawing of every tab past the editor's first frame; since round 5 also the
+  actions' pause and resume, the elevation file read, real mouse picks, the lasso, drag paints and ghost placement,
+  the area screen's anchor and rectangle setters, the campaign media listing.
