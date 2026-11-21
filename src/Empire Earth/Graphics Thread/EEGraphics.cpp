@@ -3,6 +3,7 @@
 // second's implicit dtor, the members in vtable order, the message posts, RTSMouse's inline member and the second
 // object's ctor; EEMouse.cpp's ctor starts at 0x10a9b0). Unit flags: the exe's module set.
 #include <windows.h>
+#include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp)
 #include <deque>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -68,104 +69,21 @@ EEGraphics::~EEGraphics()
 // lock and UI lock for modes 0/1, write lock for 2/3; modes 1/3 keep the lock until FrameDone)
 void EEGraphics::FrameStarting()
 {
-    if (gUIManager != NULL && gUIManager->GetCurrentForm() != NULL) {
-        if (gAntiAliasing)
-            gUIManager->RedrawAll();
-        else {
-            unsigned long theScreen = gScreenIndex;
-            if (!gRasterizer->GetDirtyRectangleSupport(theScreen))
-                gUIManager->RedrawAll();
-        }
-    }
-    if (this->mLockMode == 0 || this->mLockMode == 1) {
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-    } else {
-        gWorld.mLock->WriteLock();
-    }
-    gB529066 = false;
-    gB529068 = false;
-    EETakeRenderSnapshot();   // port: the render phase reads the snapshot, not the live world (ee/EERenderSnapshot.h)
-    RTSGraphics::FrameStarting();
-    if (this->mLockMode == 0) {
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-    } else if (this->mLockMode == 2) {
-        gWorld.mLock->WriteUnlock();
-    }
+    ee_gamecpp_gfx_frame_starting(this);
 }
 
 // Handles the game's graphics messages (fades, letterbox, scene init/release, UI redraw, screenshot, lock mode,
 // queue-done signal); passes others to RTSGraphics
 void EEGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
 {
-    switch (inMessage) {
-    case 0x506:
-        EEStartLightFadeIn((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
-        break;
-    case 0x507:
-        EEStartLightFadeOut((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
-        break;
-    case 0x508:
-        EEStartLetterboxIn((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
-        break;
-    case 0x509:
-        EEStartLetterboxOut((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
-        break;
-    case 0x503:
-        EEInitialiseScene();
-        break;
-    case 0x504:
-        EEReleaseScene();
-        break;
-    case 0x50b:
-        if (gUIManager != NULL) {
-            gUIManager->LockUIForCopyData();
-            gUIManager->RedrawAll();
-            gUIManager->UnlockUIForCopyData();
-        }
-        break;
-    case 0x505:
-        this->SaveScreenShot(static_cast<EEScreenCapture*>(inParameter1));
-        break;
-    case 0x502:
-        this->mLockMode = (long)reinterpret_cast<intptr_t>(inParameter1);
-        break;
-    case 0x50a:
-        this->mMessageQueueDone->Set();
-        break;
-    case 0x501:
-        break;
-    default:
-        RTSGraphics::HandleMessage(inMessage, inParameter1, inParameter2);
-        break;
-    }
+    ee_gamecpp_gfx_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2);
 }
 
 // Restores lost surfaces, then hides the mouse pointer, redraws the UI (and posts two more redraws), reloads
 // the mouse cursor and shows the pointer again if it was shown; returns the restore result
 long EEGraphics::RestoreSurfaces()
 {
-    bool theWasDrawing = gMousePointer->mIsShown;
-    long theResult = RTSGraphics::RestoreSurfaces();
-    if (theResult == 0) {
-        gMousePointer->mThread->Post(0x402, NULL, NULL, true);
-        while (gMousePointer->mIsShown)
-            PlatSleep(1);
-        while (gMousePointer->mIsShown)
-            PlatSleep(1);
-        gWorld.mLock->WriteLock();
-        gUIManager->RedrawAll();
-        this->PostRedrawUI();
-        this->PostRedrawUI();
-        gMouse->BeginFrame();
-        gMouse->Load(gRasterizer->GetScreen(gScreenIndex));
-        gMouse->EndFrame();
-        gWorld.mLock->WriteUnlock();
-        if (theWasDrawing)
-            gMousePointer->mThread->Post(0x404, NULL, NULL, true);
-    }
-    return theResult;
+    return ee_gamecpp_gfx_restore_surfaces(this);
 }
 
 // Starts the scene (RTSGraphics' behaviour)
@@ -183,45 +101,14 @@ void EEGraphics::RenderScene()
 // Finishes the frame and releases the lock kept since FrameStarting (lock modes 1 and 3)
 void EEGraphics::FrameDone()
 {
-    RTSGraphics::FrameDone();
-    if (this->mLockMode == 1) {
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-    } else if (this->mLockMode == 3) {
-        gWorld.mLock->WriteUnlock();
-    }
+    ee_gamecpp_gfx_frame_done(this);
 }
 
 // Renders a capture into the first free file EE###.bmp (or .jpg), or EEPostGame-M-D-Y-###.jpg for the
 // post-game map, then signals the capture done
 void EEGraphics::SaveScreenShot(EEScreenCapture* inCapture)
 {
-    FSFileSpec theFile;
-    UString theTime;
-    UString theExtension;
-    TMTime theNow;
-    long theIndex = 0;
-    TMGetTimeOfDay(theNow);
-    if (gTakeJPGScreenshots || inCapture->mIsPostGame)
-        sprintf(theExtension, ".%s", "jpg");
-    else
-        sprintf(theExtension, ".%s", "bmp");
-    do {
-        if (inCapture->mIsPostGame) {
-            sprintf(theTime, "%lu-%lu-%lu-%.3lu", theNow.mMonth + 1, theNow.mDay, theNow.mYear, theIndex);
-            theFile.SetFile(UString("EEPostGame-") + theTime + theExtension);
-        } else {
-            sprintf(theTime, "%.3lu", theIndex);
-            theFile.SetFile(UString("EE") + theTime + theExtension);
-        }
-        theIndex++;
-    } while (theFile.Create() == kErrorAlreadyExists);
-    this->RenderTo(inCapture);
-    if (gTakeJPGScreenshots || inCapture->mIsPostGame)
-        inCapture->mSurface->Save(theFile, kImageFileJPG);
-    else
-        inCapture->mSurface->Save(theFile, kImageFileBMP);
-    inCapture->mCaptureComplete->Set();
+    ee_gamecpp_gfx_screenshot(this, inCapture);
 }
 
 // Renders a capture: the current view, or the whole map top-down tile by tile into a new surface of the asked
@@ -504,4 +391,95 @@ long EEGraphics::PostMessage50AAndWait()
     if (theResult == 0)
         this->mMessageQueueDone->Wait(kTSWaitInfinite);
     return theResult;
+}
+
+// ------------------------------------------------------------------------- the graphics bodies' C++ (gamecpp graphics.rs)
+
+
+int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define GFX ((EEGraphics*)p)
+#define CAPTURE ((EEScreenCapture*)p)
+
+// The graphics thread object's C++ calls and members (EeGameCpp's graphics section; Empire Earth.cpp's EEStartupOp
+// default): one statement each
+int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::GfxLockMode: return P64(&GFX->mLockMode);
+    case O::GfxQueueDoneSet: GFX->mMessageQueueDone->Set();
+        break;
+    case O::GfxPostRedrawUI: GFX->PostRedrawUI();
+        break;
+    case O::GfxRenderTo: GFX->RenderTo((EEScreenCapture*)a[0]);
+        break;
+    case O::RtsGfxFrameStarting: GFX->RTSGraphics::FrameStarting();
+        break;
+    case O::RtsGfxFrameDone: GFX->RTSGraphics::FrameDone();
+        break;
+    case O::RtsGfxHandleMessage: GFX->RTSGraphics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
+        break;
+    case O::RtsGfxRestoreSurfaces: return GFX->RTSGraphics::RestoreSurfaces();
+    case O::UiCurrentFormPresent: return gUIManager->GetCurrentForm() != NULL;
+    case O::UiRedrawAll: gUIManager->RedrawAll();
+        break;
+    case O::UiLockForCopy: gUIManager->LockUIForCopyData();
+        break;
+    case O::UiUnlockForCopy: gUIManager->UnlockUIForCopyData();
+        break;
+    case O::AntiAliasing: return gAntiAliasing;
+    case O::RastDirtyRectangleSupport: return gRasterizer->GetDirtyRectangleSupport(gScreenIndex);
+    case O::WorldReadLock: gWorld.mLock->ReadLock();
+        break;
+    case O::WorldReadUnlock: gWorld.mLock->ReadUnlock();
+        break;
+    case O::WorldWriteLock: gWorld.mLock->WriteLock();
+        break;
+    case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
+        break;
+    case O::SceneFlags6668Clear: gB529066 = false, gB529068 = false;
+        break;
+    case O::TakeRenderSnapshot: EETakeRenderSnapshot();
+        break;
+    case O::LightFadeIn: EEStartLightFadeIn((unsigned long)a[0]);
+        break;
+    case O::LightFadeOut: EEStartLightFadeOut((unsigned long)a[0]);
+        break;
+    case O::LetterboxIn: EEStartLetterboxIn((unsigned long)a[0]);
+        break;
+    case O::LetterboxOut: EEStartLetterboxOut((unsigned long)a[0]);
+        break;
+    case O::InitialiseScene: EEInitialiseScene();
+        break;
+    case O::ReleaseScene: EEReleaseScene();
+        break;
+    case O::MouseBeginFrame: gMouse->BeginFrame();
+        break;
+    case O::MouseLoadScreenIndex: gMouse->Load(gRasterizer->GetScreen(gScreenIndex));
+        break;
+    case O::MouseEndFrame: gMouse->EndFrame();
+        break;
+    case O::TimeOfDay: TMGetTimeOfDay(*(TMTime*)a[0]);
+        break;
+    case O::TakeJpgScreenshots: return gTakeJPGScreenshots;
+    case O::CaptureIsPostGame: return CAPTURE->mIsPostGame;
+    case O::CaptureSave: CAPTURE->mSurface->Save(*(FSFileSpec*)a[0], (long)a[1]);
+        break;
+    case O::CaptureDoneSet: CAPTURE->mCaptureComplete->Set();
+        break;
+    case O::FileSpecSetFileC: ((FSFileSpec*)p)->SetFile((const char*)a[0]);
+        break;
+    case O::FileSpecCreate: return ((FSFileSpec*)p)->Create();
+    default: return EEGraphicsOpNext(inOp, p, a, f);
+    }
+    return 0;
+}
+
+// the end of the chain (the next bodies' cases go before it)
+int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    return 0;
 }

@@ -9,18 +9,6 @@ use crate::screens::main_form::{
     EE_SCREENS_MF_OP_TEXT_SET,
 };
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    use crate::screens::main_form::EeScreensMainFormIo;
-
-    extern "C" {
-        pub fn ee_screenscpp_main_form(call: *mut c_void, op: u32, a: i64, b: i64, io: *mut EeScreensMainFormIo)
-            -> i64;
-    }
-}
-
 struct Host(*mut c_void);
 
 impl Host {
@@ -85,7 +73,8 @@ impl FormHost for Host {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_main_form(self.0, op, a, b, io) }
+        // (the original C++ host's cases are main_form_calls.rs'; an op that is none of them answers 0)
+        0
     }
     fn set_text(&mut self, text: &[u8]) {
         let mut io = EeScreensMainFormIo::default();

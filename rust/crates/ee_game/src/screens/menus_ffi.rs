@@ -13,27 +13,7 @@ use crate::screens::single_player::EeScreensSinglePlayerSlot;
 pub(crate) mod sys {
     use core::ffi::c_void;
 
-    use crate::screens::single_player::EeScreensSinglePlayerSlot;
-
     extern "C" {
-        pub fn ee_screenscpp_call(
-            form: *mut c_void,
-            entity: *mut c_void,
-            op: u32,
-            a: u32,
-            b: u32,
-            c: u32,
-            d: u32,
-        ) -> u32;
-        pub fn ee_screenscpp_text(form: *mut c_void, which: u32, arg: u32, out: *mut u8, capacity: usize) -> usize;
-        pub fn ee_screenscpp_put_text(form: *mut c_void, which: u32, arg: u32, text: *const u8, length: usize) -> u32;
-        pub fn ee_screenscpp_lobby_fill(
-            slots: *const EeScreensSinglePlayerSlot,
-            human: *const u8,
-            human_length: usize,
-            computer: *const u8,
-            computer_length: usize,
-        );
         // the settings form's (settings_form_ffi.rs)
         pub fn ee_screenscpp_selection(form: *mut c_void, control: u32, list: bool, out: *mut u32) -> i32;
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
@@ -99,7 +79,8 @@ impl Form {
         // the cases that are Rust's over the C++ shims (game_calls.rs), else the C++ host
         let moved =
             crate::screens::game_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c, d);
-        let r = moved.unwrap_or_else(|| unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) });
+        // (the original C++ host's cases are screens_calls.rs'; an op that is none of them answers 0)
+        let r = moved.unwrap_or(0);
         if let Some(g) = begun.filter(|_| crate::screens::sgvw::HOST_WORLD_OPS.contains(&op)) {
             crate::screens::sgvw::record(g, &format!("C {op} {a} {b} {c} {d} -> {r}"));
         }
@@ -122,19 +103,9 @@ impl Form {
         {
             return t;
         }
-        let mut out = vec![0u8; 256];
-        let n = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
-        if n == usize::MAX {
-            return None;
-        }
-        if n > out.len() {
-            out.resize(n, 0);
-            let m = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
-            out.truncate(m.min(n));
-        } else {
-            out.truncate(n);
-        }
-        Some(out)
+        // (the original C++ host's cases are texts_calls.rs'; a text that is none of them is empty)
+        crate::screens::texts_calls::text(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg)
+            .unwrap_or(Some(Vec::new()))
     }
     pub(crate) fn get(&mut self, which: u32, arg: u32) -> Vec<u8> {
         self.get_checked(which, arg).unwrap_or_default()
@@ -148,7 +119,8 @@ impl Form {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_put_text(self.0, which, arg, text.as_ptr(), text.len()) }
+        crate::screens::texts_calls::put(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg, text)
+            .unwrap_or(0)
     }
 }
 
@@ -250,15 +222,7 @@ impl MenuHost for Form {
         self.op(op, arg, 0, 0, 0);
     }
     fn lobby_fill(&mut self, slots: &[EeScreensSinglePlayerSlot; 16], human: &[u8], computer: &[u8]) {
-        unsafe {
-            sys::ee_screenscpp_lobby_fill(
-                slots.as_ptr(),
-                human.as_ptr(),
-                human.len(),
-                computer.as_ptr(),
-                computer.len(),
-            )
-        }
+        crate::screens::lobby_calls::fill(&mut crate::screens::game_cpp::Ffi, slots, human, computer)
     }
     fn start_local_server(&mut self, human: &[u8]) {
         self.put(EE_SCREENS_TEXT_SERVER, 0, human);

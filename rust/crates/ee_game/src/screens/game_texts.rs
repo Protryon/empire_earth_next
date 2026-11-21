@@ -14,7 +14,11 @@ use crate::screens::game_cpp::{
     Cpp, EeScreensShimLongOut as OutL, EeScreensShimOut as Out, EeScreensShimPtrOut as OutPtr,
     EeScreensShimText as Text, EeScreensShimULongOut as OutUL,
 };
-use crate::screens::lobby_form::{EE_SCREENS_TEXT_LE_CHECK_LABEL, EE_SCREENS_TEXT_LE_OPEN_HEADER};
+use crate::screens::lobby_calls::{lobby_load, options_of, LobbyLoad};
+use crate::screens::lobby_form::{
+    EE_SCREENS_TEXT_LE_CHECK_LABEL, EE_SCREENS_TEXT_LE_CHECK_LOAD, EE_SCREENS_TEXT_LE_MAP_DISPLAY,
+    EE_SCREENS_TEXT_LE_OPEN_HEADER,
+};
 use crate::screens::main_game::EE_SCREENS_TEXT_MG_QUICK_LOAD;
 use crate::screens::main_game_options::EE_SCREENS_TEXT_GO_BUTTON;
 use crate::screens::menus::{
@@ -87,6 +91,11 @@ pub(crate) fn text<C: Cpp + ?Sized>(c: &mut C, form: usize, which: u32, arg: u32
             }
             let label = c.check_box_label(check);
             Some(out_text(|o| c.label_text(label, o)))
+        }
+        EE_SCREENS_TEXT_LE_MAP_DISPLAY => {
+            // the options' map type's generator display name
+            let options = options_of(c, arg);
+            Some(out_text(|o| c.le_map_display(options, o)))
         }
         _ => return None,
     })
@@ -275,7 +284,12 @@ pub(crate) fn put<C: Cpp + ?Sized>(c: &mut C, form: usize, which: u32, arg: u32,
             c.lobby_header_delete();
             c.lobby_header_new();
             c.lobby_file_clear();
-            c.lobby_load(Text::of(p[0]), Text::of(p[1]), arg)
+            lobby_load(c, p[0], p[1], LobbyLoad::Lobby(arg))
+        }
+        EE_SCREENS_TEXT_LE_CHECK_LOAD => {
+            // the start's check of the chosen file (its own header, freed after)
+            let p = parts(text);
+            lobby_load(c, p[0], p[1], LobbyLoad::Start)
         }
         EE_SCREENS_TEXT_DSU_LABEL => {
             let label = c.debug_sound_label(arg);

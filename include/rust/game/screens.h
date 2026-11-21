@@ -14803,44 +14803,6 @@ struct EeScreensCommandUnitsFields {
   bool mEditor;
 };
 
-/// A lobby slot (`EEGameOptionsPlayer`) but its name.
-struct EeScreensLobbyPlayerRecord {
-  unsigned long kind;
-  long loaded_type;
-  float ping;
-  unsigned long slot;
-  unsigned long color;
-  unsigned long team;
-  unsigned long citizens;
-  unsigned long transfer;
-  bool is_local;
-  bool is_ready;
-  bool b36;
-  unsigned long engine;
-};
-
-/// The lobby options' (`EEGameOptions`) values the lobby reads, but the map type.
-struct EeScreensLobbyOptionsRecord {
-  unsigned long load_type;
-  unsigned long map_size;
-  unsigned long resources;
-  long epoch_start;
-  long epoch_end;
-  unsigned long unit_limit;
-  unsigned long wonders;
-  unsigned long variant;
-  unsigned long difficulty;
-  unsigned long speed;
-  bool multiplayer;
-  bool record_games;
-  bool custom_civs;
-  bool reveal_map;
-  bool lock_teams;
-  bool lock_speed;
-  bool cheat_codes;
-  bool victory;
-};
-
 /// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
 /// the tile centres, the wall's technology and player.
 struct EeScreensBuildWallFields {
@@ -15102,6 +15064,44 @@ struct EeScreensVideoMode {
   unsigned long height;
   unsigned long refresh_rate;
   unsigned long bit_count;
+};
+
+/// A lobby slot (`EEGameOptionsPlayer`) but its name.
+struct EeScreensLobbyPlayerRecord {
+  unsigned long kind;
+  long loaded_type;
+  float ping;
+  unsigned long slot;
+  unsigned long color;
+  unsigned long team;
+  unsigned long citizens;
+  unsigned long transfer;
+  bool is_local;
+  bool is_ready;
+  bool b36;
+  unsigned long engine;
+};
+
+/// The lobby options' (`EEGameOptions`) values the lobby reads, but the map type.
+struct EeScreensLobbyOptionsRecord {
+  unsigned long load_type;
+  unsigned long map_size;
+  unsigned long resources;
+  long epoch_start;
+  long epoch_end;
+  unsigned long unit_limit;
+  unsigned long wonders;
+  unsigned long variant;
+  unsigned long difficulty;
+  unsigned long speed;
+  bool multiplayer;
+  bool record_games;
+  bool custom_civs;
+  bool reveal_map;
+  bool lock_teams;
+  bool lock_speed;
+  bool cheat_codes;
+  bool victory;
 };
 
 /// A unit of the current player's list as the hot keys see it. The unit's own fields (`unit_type`, `category`,
@@ -16720,24 +16720,6 @@ int64_t ee_screens_icon_bar_mouse_move(void *state, void *bar);
 /// `Update`.
 void ee_screens_icon_bar_update(void *state, void *bar);
 
-/// A slot of `source` (`EE_SCREENS_LE_SOURCE_*`) into `out`, its name into `name` (up to `capacity` bytes); the
-/// name's length.
-extern size_t ee_screenscpp_lobby_player(uint32_t source,
-                                         uint32_t index,
-                                         EeScreensLobbyPlayerRecord *out,
-                                         uint8_t *name,
-                                         size_t capacity);
-
-/// A slot of `source` from a record and a name.
-extern void ee_screenscpp_put_lobby_player(uint32_t source,
-                                           uint32_t index,
-                                           const EeScreensLobbyPlayerRecord *player,
-                                           const uint8_t *name,
-                                           size_t length);
-
-/// The options of `source` into `out`.
-extern void ee_screenscpp_lobby_options(uint32_t source, EeScreensLobbyOptionsRecord *out);
-
 /// `LobbyUpdatePlayer`: the given parts (`LobbyShowPlayer`'s flags) of one slot's row.
 void ee_screens_lobby_update_player(long slot, long flags);
 
@@ -17041,6 +17023,39 @@ int64_t ee_screens_status_button_op(void *call,
 /// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
+
+/// `EEUISCIFormManager::Clear`.
+void ee_screens_sci_clear(size_t m);
+
+/// `EEUISCIFormManager::DeleteObjects`.
+void ee_screens_sci_delete_objects(size_t m);
+
+/// `EEUISCIFormManager::Get`: the manager (an `EEUISCIFormManager*`).
+size_t ee_screens_sci_get();
+
+/// `EEUISCIFormManager::OpenMap`.
+bool ee_screens_sci_open_map(size_t m);
+
+/// `EEUISCIFormManager::OpenScenario`.
+bool ee_screens_sci_open_scenario(size_t m);
+
+/// `EEUISCIFormManager::OpenSound`.
+bool ee_screens_sci_open_sound(size_t m);
+
+/// `EEUISCIFormManager::GetMap` (`spec` the `FSFileSpec*` out).
+bool ee_screens_sci_get_map(size_t m, size_t spec);
+
+/// `EEUISCIFormManager::GetScenario`.
+bool ee_screens_sci_get_scenario(size_t m, size_t spec);
+
+/// `EEUISCIFormManager::GetSound`.
+bool ee_screens_sci_get_sound(size_t m, size_t spec);
+
+/// `EEUISCIFormManager::HasMedia`.
+bool ee_screens_sci_has_media(size_t m);
+
+/// `EEUISCIFormManager::SetBlinking`.
+void ee_screens_sci_set_blinking(bool blinking);
 
 /// `EEUIFMGStatusBar`'s constructor's body (`rect` the `GERectangle*`, `form` the `UIForm*`).
 void ee_screens_sba_construct(size_t bar, size_t rect, size_t form, bool editor, bool large_icon);

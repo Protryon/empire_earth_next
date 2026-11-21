@@ -22,6 +22,11 @@ impl UpgradeHost for Call {
         if let Some(r) = crate::screens::hud_views::upgrade(op) {
             return r;
         }
+        if let Some(r) =
+            crate::screens::upgrade_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c)
+        {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_upgrade(self.0, op, a, b, c) }
     }
 }
