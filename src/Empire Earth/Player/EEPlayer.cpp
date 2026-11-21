@@ -333,8 +333,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         thePlayer->PulseSight(true, thePower.mAmount, theUnit->mUnitID);
         return 0;
     }
-    case EE_UNITS_PLAYER_UPDATE_WALL: gContinentManager.UpdateWallUnit(theComplex, a[1] != 0);
-        return 0;
     case EE_UNITS_PLAYER_LOG_LOST: EEGameLogUnitLost(thePlayer, theComplex);   // port: the game log (ee/EEGameLog.h)
         return 0;
     case EE_UNITS_PLAYER_UNIT_NODE: return (int64_t)reinterpret_cast<uintptr_t>(theUnit->GetTechTreeNode());

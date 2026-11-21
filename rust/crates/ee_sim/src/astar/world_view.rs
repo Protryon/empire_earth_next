@@ -75,6 +75,11 @@ pub unsafe extern "C" fn ee_astar_world_view_set_manager(r: *mut EeAStarCmRecord
     CM_RECORD.store(r, Ordering::Release);
 }
 
+/// The registered record to change (null before it is registered).
+pub(crate) fn cm_ptr() -> *mut EeAStarCmRecord {
+    CM_RECORD.load(Ordering::Acquire)
+}
+
 pub(crate) fn cm() -> Option<&'static EeAStarCmRecord> {
     let p = CM_RECORD.load(Ordering::Acquire);
     // SAFETY: the registered global record (it outlives every search)

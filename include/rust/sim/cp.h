@@ -169,9 +169,6 @@ constexpr static const int32_t EE_CP_HERD_MAP_SIZE = 47;
 /// a young one of animal `b` born by parent `a` (`CreateUnit`, its growth, grow time, search timer, `HoldUnit`)
 constexpr static const int32_t EE_CP_HERD_BIRTH = 48;
 
-/// `gPathManager.CancelAutoPathRequest(a)`, then `a->Dereference()`
-constexpr static const int32_t EE_CP_HERD_CANCEL_PATH = 49;
-
 /// the herds of player `a` (`EEPlayer::GetHerds`' order: from the last), pushed (`EEHerd*`)
 constexpr static const int32_t EE_CP_HERD_PLAYER_HERDS = 50;
 
@@ -290,11 +287,6 @@ constexpr static const int32_t EE_CP_HERD_TO_COMPLEX = 92;
 constexpr static const int32_t EE_CP_HERD_SET_TARGET_SEARCH = 93;
 
 constexpr static const int32_t EE_CP_HERD_HOLD_UNIT = 94;
-
-/// `gPathManager.CancelAutoPathRequest(a)`; the request `a`'s `Dereference()`
-constexpr static const int32_t EE_CP_HERD_CANCEL_REQUEST = 95;
-
-constexpr static const int32_t EE_CP_HERD_REQUEST_DEREF = 96;
 
 /// The table's records (`gCPBehaviors[129]`).
 constexpr static const size_t EE_CP_BEHAVIORS = 129;

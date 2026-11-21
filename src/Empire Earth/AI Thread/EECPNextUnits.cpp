@@ -60,7 +60,7 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EECPNextUnits.h"
-#include "ee/EEAutoPathRequest.h"
+#include "ee/EECPASGFlags.h"
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_units_*: the save block's format (units_save.rs), the bindings' Lua helpers (units_lua.rs)
 #include "rust/sim/units.h"
@@ -77,19 +77,10 @@ const unsigned char kBorrowedSlot = 0xfd;   // the slot id a computer player ans
 
 // The state is Rust's (ee_ai units_state.rs: the held set, the events, the forwarding, the enemy memory, the reflexes,
 // the limits, the danger layers, the bindings' scratch; units_bind.rs, units_more.rs: its hooks and the bindings).
-// The C++ keeps ai.wall_route's path requests (C++ objects, not saved).
+// ai.wall_route's path requests are the state's too (the paths lane's round 2).
 struct EECPUnitsState {
     void* mRust = ee_ai_units_state_new();
-    // ai.wall_route's path requests (the path manager's, held until read; not saved: a loaded game forgets them)
-    std::map<long, EEAutoPathRequest*> mRoutes;
-    long mNextRoute = 1;
-    ~EECPUnitsState()
-    {
-        for (std::map<long, EEAutoPathRequest*>::iterator it = mRoutes.begin(); it != mRoutes.end(); ++it)
-            if (it->second != NULL)
-                it->second->Dereference();
-        ee_ai_units_state_free(mRust);
-    }
+    ~EECPUnitsState() { ee_ai_units_state_free(mRust); }
 };
 
 static uint64_t EECPUnitsHandle(const RTSUnit* inUnit)
@@ -386,7 +377,6 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 
 static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a, int64_t b, void* outRecord)
 {
-    EECPUnitsState* s = inOp >= EE_AI_UNITS_HOST_ROUTE_REQUEST ? EECPUnitsGet(me) : NULL;   // the routes' (me given)
     switch (inOp) {
     case EE_AI_UNITS_HOST_TILES_AGAIN: {
         std::vector<U2DPoint<long> > theTiles;
@@ -399,64 +389,7 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
         EECPUnitsTilesIn(*(EeAiUnitsTiles*)outRecord, theFive);
         return EEAreTilesLevel(theFive) ? 1 : 0;
     }
-    case EE_AI_UNITS_HOST_WALL_PATH: {
-        EeAiUnitsTiles& t = *(EeAiUnitsTiles*)outRecord;
-        U2DPoint<long> theFrom(t.from[0], t.from[1]), theTo(t.to[0], t.to[1]);
-        EEAIAStarBounds theBounds;
-        theBounds.Set(theFrom);
-        theBounds.Extend(theTo);
-        std::vector<U2DPoint<long> > theSegment;
-        EeAStarModifier* thePather = ee_astar_modifier_new_wall_pather();
-        gPathManager.FindPath((EEComplexUnit*)(uintptr_t)a, gWorld.mMap, theFrom, theTo, theBounds, theSegment, 1, 0x32,
-            thePather, NULL);
-        ee_astar_modifier_release(thePather);
-        EECPUnitsTilesOut(t, theSegment);
-        return (int64_t)theSegment.size();
-    }
-    case EE_AI_UNITS_HOST_ROUTE_REQUEST: {
-        // one request a player at a time: a new one drops the old
-        EeAiUnitsTiles& t = *(EeAiUnitsTiles*)outRecord;
-        for (std::map<long, EEAutoPathRequest*>::iterator it = s->mRoutes.begin(); it != s->mRoutes.end(); ++it)
-            if (it->second != NULL)
-                it->second->Dereference();
-        s->mRoutes.clear();
-        EECPASGFlags theFlags;
-        gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, theFlags);
-        EeAStarModifier* theModifier = ee_astar_modifier_new_wall_planner((uint32_t)a, 0);
-        EETileCoordinate theFrom, theTo;
-        theFrom.mX = t.from[0];
-        theFrom.mY = t.from[1];
-        theTo.mX = t.to[0];
-        theTo.mY = t.to[1];
-        EEAutoPathRequest* theRequest = gPathManager.RequestPath((long)a, theFrom, theTo, &theFlags, 2, -1, theModifier, 1);
-        ee_astar_modifier_release(theModifier);
-        if (theRequest == NULL)
-            return 0;
-        long theHandle = s->mNextRoute++;
-        s->mRoutes[theHandle] = theRequest;
-        return theHandle;
-    }
-    case EE_AI_UNITS_HOST_ROUTE_STATE: {
-        std::map<long, EEAutoPathRequest*>::iterator it = s->mRoutes.find((long)a);
-        if (it == s->mRoutes.end() || it->second == NULL)
-            return -2;
-        return it->second->mIsDone ? (int64_t)it->second->mPath.size() : -1;
-    }
-    case EE_AI_UNITS_HOST_ROUTE_TAKE: {
-        std::map<long, EEAutoPathRequest*>::iterator it = s->mRoutes.find((long)a);
-        if (it == s->mRoutes.end() || it->second == NULL)
-            return 0;
-        EeAiUnitsTiles& t = *(EeAiUnitsTiles*)outRecord;
-        EEAutoPathRequest* theRequest = it->second;
-        for (size_t k = 0; k < theRequest->mPath.size() && k < t.cap; k++) {
-            t.xy[2 * k] = theRequest->mPath[k].mX;
-            t.xy[2 * k + 1] = theRequest->mPath[k].mY;
-        }
-        int64_t n = (int64_t)theRequest->mPath.size();
-        theRequest->Dereference();
-        s->mRoutes.erase(it);
-        return n;
-    }
+    // the wall path and the wall routes: Rust (units_more.rs over ee_sim::astar pm_entry.rs, request.rs)
     default:
         return 0;
     }
@@ -735,8 +668,7 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return EECPUnitsSwitch(me, a);
     case EE_AI_UNITS_HOST_T_BEHAVIORS:
         return (int64_t)(uintptr_t)gCPBehaviors;
-    case EE_AI_UNITS_HOST_TILES_LEVEL: case EE_AI_UNITS_HOST_WALL_PATH: case EE_AI_UNITS_HOST_ROUTE_REQUEST:
-    case EE_AI_UNITS_HOST_ROUTE_STATE: case EE_AI_UNITS_HOST_ROUTE_TAKE: case EE_AI_UNITS_HOST_TILES_AGAIN:
+    case EE_AI_UNITS_HOST_TILES_LEVEL: case EE_AI_UNITS_HOST_TILES_AGAIN:
         return EECPUnitsWallsHost(me, inOp, a, b, outRecord);
     default:
         return 0;

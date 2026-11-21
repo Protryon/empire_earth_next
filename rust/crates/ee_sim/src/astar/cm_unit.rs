@@ -217,6 +217,67 @@ mod game {
         result
     }
 
+    /// `EEAIContinentManager::UpdateWallUnit(unit, now)` with its CNTQ record (kind 24, the unit's id, `now`, the
+    /// manager's state after): a finished blocking unit's or gate's footprint tiles queued for a sector rebuild and
+    /// the path manager told (`SetRegionUpdates(true, now)`); nothing while the manager clears, before it has areas or
+    /// without a map, nor for a foundation.
+    ///
+    /// # Safety
+    /// `unit` a live complex unit.
+    pub unsafe fn update_wall_unit(unit: u64, now: bool) {
+        let q = Query::new(24);
+        let id = {
+            let t = token();
+            // SAFETY: the caller's contract
+            unsafe { UnitView::of(&t, unit) }.map_or(-1, |u| u.id() as i64)
+        };
+        q.i(id);
+        q.i(now as i64);
+        // SAFETY: the caller's contract
+        unsafe { update_wall(unit, now) };
+        if q.on() {
+            // SAFETY: the registered live record
+            unsafe { crate::astar::cm_queries::ee_astar_cntq_state(crate::astar::world_view::cm_ptr()) };
+        }
+    }
+
+    unsafe fn update_wall(unit: u64, now: bool) {
+        let Some(r) = cm() else { return };
+        let (has_map, foundation, blocks, category) = {
+            let t = token();
+            let map = crate::world::WorldView::global(&t).and_then(|w| w.map()).is_some();
+            // SAFETY: the caller's contract
+            let u = unsafe { UnitView::of(&t, unit) }.expect("a live unit");
+            let foundation = u.is_complex() && crate::world_field!(u.complex(), mIsFoundation);
+            let c = u.class();
+            (map, foundation, c.is_some_and(|c| c.blocks_tile()), c.map_or(0, |c| c.category()))
+        };
+        if r.tables().areas.is_empty() || r.clearing || !has_map {
+            return;
+        }
+        if foundation || (!blocks && category != crate::astar::world_view::CATEGORY_GATE) {
+            return;
+        }
+        let mut tiles = Vec::new();
+        crate::units::uu_ffi::unit_tiles(0, unit, &mut tiles);
+        let points: Vec<crate::astar::hull::EeHullPoint> =
+            tiles.iter().map(|t| crate::astar::hull::EeHullPoint { x: t[0] as c_long, y: t[1] as c_long }).collect();
+        // SAFETY: the registered live record; the points live for the call
+        unsafe {
+            crate::astar::cm_passes::ee_astar_cm_add_sector_tiles(
+                crate::astar::world_view::cm_ptr(),
+                points.as_ptr(),
+                points.len(),
+            )
+        };
+        // gPathManager.SetRegionUpdates(true, now)
+        let mut io = crate::astar::pm::EePathIo::default();
+        io.i[0] = 1;
+        io.i[1] = i64::from(now);
+        // SAFETY: the game's live manager
+        unsafe { crate::astar::pm::ee_path_manager_call(crate::astar::pm::global(), 6, &mut io) };
+    }
+
     /// `AreConnectedForUnit(unit, first, second)` with its CNTQ record (the unit's passable flags; 0 without one).
     ///
     /// # Safety
