@@ -572,6 +572,7 @@ mod tests {
         assert_eq!(EE_SCENARIO_SM_UNIT_ATTRIBUTE_AMMUNITION, 0xa); // kSMUnitAttributeAmmunition
         assert_eq!(EE_SCENARIO_SM_UNIT_ATTRIBUTE_LEADERSHIP_PLUS, 0x1e); // kSMUnitAttributeLeadershipPlus
         assert_eq!(EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_WORK_RATE, 0x32); // kSMUnitAttributeTotalWorkRate
-        assert_eq!(EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CAN_ENTER_LAND_TRANSPORTS, 0x46); // kSMUnitAttributeTotalCanEnterLandTransports
+        assert_eq!(EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CAN_ENTER_LAND_TRANSPORTS, 0x46);
+        // kSMUnitAttributeTotalCanEnterLandTransports
     }
 }

@@ -23,24 +23,37 @@ use crate::world::player_fields::EeUnitsPlayerFields;
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::unit_class_fields::EeUnitsUnitClassFields;
 
-/// One effect of an event (`EEEventEffect`, ee/EEEvent.h: a dbeffects row of 88 bytes).
+/// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
+/// every target; provisional names from the tech tree's readers).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeScenarioEvEffect {
     pub mUnused1: i32,
     pub mUnusedID: i32,
+    /// +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
     pub mValue: f32,
+    /// +0x0c the offset added to the base
     pub mOffset: f32,
+    /// +0x10 the factor of the value
     pub mFactor: f32,
+    /// +0x14 a gUnitClassTable index (< EEUnitClassCount())
     pub mUnitClass: i32,
+    /// +0x18 a unit class (kind 0x13: its media)
     pub mNewUnitClass: i32,
     pub mUnitSet: i32,
+    /// +0x20
     pub mKind: i32,
+    /// +0x24 an EEMedia index (kind 6)
     pub mMediaIndex: i32,
+    /// +0x28 a tech tree id (kind 9)
     pub mTechnology: i32,
+    /// +0x2c (kind 2: 0x28 = an area effect)
     pub mAttribute: i32,
+    /// +0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)
     pub mSoundID: i32,
+    /// +0x34 an EEButtonObject index (kind 1)
     pub mButton: i32,
+    /// +0x38 an EEAEManager index (kind 2)
     pub mAreaEffect: i32,
     pub mTerrainType: i32,
     pub mUnused2: i32,
@@ -50,6 +63,7 @@ pub struct EeScenarioEvEffect {
     pub mUnused5: i32,
     pub mUnused6: i32,
     pub mUnused7: i32,
+    /// (sizeof 0x58)
     pub mUnused8: i32,
 }
 
