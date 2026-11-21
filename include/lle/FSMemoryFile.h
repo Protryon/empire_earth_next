@@ -6,6 +6,7 @@
 #define LLE_FSMEMORYFILE_H
 
 #include "lle/FSFileSpec.h"  // the base class
+#include "rust/base/fs.h"
 
 struct EeFsMemFile;          // rust/crates/ee_base/src/fs: the contents and position
 
@@ -48,7 +49,9 @@ public:
 
     virtual long Create() { return this->GetData() ? kErrorOK : kErrorFailed; }   // +0x04 0x4644 (provisional names)
     virtual long Close();                                                       // +0x08 0x9fbe (and the temporary file)
-    virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes);   // +0x0c 0xa176 (to a disk file)
+    // +0x0c 0xa176 (to a disk file)
+    virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes)
+        { return ee_fs_mem_copy_disk(this->mState, inDestination, inOverwrite); }
     virtual long Delete() { return ee_fs_mem_delete(this->mState); }            // +0x10 0xa315 (empty and closed)
     virtual bool GetIsOpen() const { return true; }                             // +0x24 (folded 0x590dc)
     virtual long Open(unsigned long inAccess) { return ee_fs_mem_open(this->mState); }   // +0x30 0xa58b
@@ -92,7 +95,9 @@ public:
     virtual long Write(const bool& inValue) { return this->MemWrite(inValue); }           // +0x74 (folded 0xa813)
 
     virtual long DeleteDirectory() { return kErrorFailed; }                                // +0xa4 (0x4652)
-    virtual long FOpen(char* inMode);                                           // +0xa8 0xa343 (a temporary disk copy)
+    // +0xa8 0xa343 (a temporary disk copy)
+    virtual long FOpen(char* inMode)
+        { return ee_fs_mem_fopen_disk(this->mState, inMode, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<EeFsString*>(&this->mTemporaryFileName)); }
     virtual long GetFirstFile(FSFileSpec& outFile) { return kErrorFailed; }                // +0xb0 (folded 0x3903e)
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile) { return kErrorFailed; }   // +0xac (0x39110)
     virtual long GetLength(unsigned long& outLength) const                      // +0xb4 0xa45b (the written length)

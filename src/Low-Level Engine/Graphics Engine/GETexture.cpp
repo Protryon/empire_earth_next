@@ -313,38 +313,7 @@ GETextureManager::~GETextureManager()
 
 // ---- GETextureSet (GETextureSet.cpp, folded here in R4.3 part 16)
 
-// Creates a width x height grid of empty texture slots
-GETextureSet::GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight,
-                           unsigned long inTextureTileCoverage)
-{
-    this->mNumTexturesInWidth = inNumTexturesInWidth;
-    this->mNumTexturesInHeight = inNumTexturesInHeight;
-    this->mTextureTileCoverage = inTextureTileCoverage;
-    this->mTextures.resize(inNumTexturesInWidth);
-    for (unsigned long i = 0; i < inNumTexturesInWidth; i++)
-        this->mTextures[i].resize(inNumTexturesInHeight, NULL);
-}
-
-// Destroys the texture grid, releasing every texture in it
-GETextureSet::~GETextureSet()
-{
-    for (unsigned long i = 0; i < this->mNumTexturesInWidth; i++) {
-        for (unsigned long j = 0; j < this->mNumTexturesInHeight; j++) {
-            if (this->mTextures[i][j] != NULL)
-                this->mTextures[i][j]->Dereference();
-        }
-    }
-}
-
-// Puts a texture into a grid slot, releasing the old one and referencing the new one
-void GETextureSet::SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture)
-{
-    if (this->mTextures[inX][inY] != NULL)
-        this->mTextures[inX][inY]->Dereference();
-    this->mTextures[inX][inY] = inTexture;
-    if (this->mTextures[inX][inY] != NULL)
-        this->mTextures[inX][inY]->Reference();
-}
+void GETextureSet::Dereference(void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); }
 
 // ---- GESurface (GESurface.cpp, folded here in R4.3 part 16)
 
@@ -385,12 +354,7 @@ static intptr_t GESurfaceHost(EeOfSurfOp inOp, void* inObj, intptr_t a, intptr_t
 long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
                                        unsigned long& outHeight, unsigned long& outDepth)
 {
-    unsigned long theOut[3] = {outWidth, outHeight, outDepth};
-    long theResult = ee_of_surf_attributes(&GESurfaceHost, &inFile, inType, &theOut);
-    outWidth = theOut[0];
-    outHeight = theOut[1];
-    outDepth = theOut[2];
-    return theResult;
+    return ee_of_surf_attributes(&GESurfaceHost, &inFile, inType, &outWidth, &outHeight, &outDepth);
 }
 
 // Loads an image file into the surface by file type (BMP: unsupported, JPG, JPG2, PNG; TGA: no longer read, D9)

@@ -9,6 +9,7 @@ use crate::fs::chunk::EeFsChunk;
 use crate::fs::cppfile::CppFile;
 use crate::fs::file::EeFsFileOps;
 use crate::fs::memfile::EeFsMemFile;
+use crate::fs::spec::EeFsString;
 use crate::fs::status;
 
 unsafe fn bytes<'a>(data: *const u8, length: usize) -> &'a [u8] {
@@ -719,5 +720,172 @@ mod tests {
             ee_fs_chunk_free(&mut chunk);
             assert!(chunk.data.is_null());
         }
+    }
+}
+
+// ---- FSMemoryFile's disk copies (File System.cpp before LLE round 9)
+
+/// cbindgen:ignore
+mod disk {
+    use std::ffi::{c_char, c_int, c_void};
+    extern "C" {
+        pub fn PlatFOpen(path: *const c_char, mode: *const c_char) -> *mut c_void;
+        pub fn PlatDeleteFile(path: *const c_char) -> c_int;
+        pub fn PlatGetTempDirectory(path: *mut c_char, size: u32) -> u32;
+        pub fn PlatCreateTempFile(directory: *const c_char, prefix: *const c_char, path: *mut c_char) -> i32;
+        pub fn PlatGetLastError() -> u32;
+    }
+}
+
+/// The memory file's contents, compacted, written to a stdio stream (none when empty); the compaction's result.
+unsafe fn write_contents(file: *mut EeFsMemFile, stream: *mut c_void) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let result = ee_fs_mem_compact(file);
+        if result == status::OK {
+            let length = ee_fs_mem_length(file);
+            if length > 0 {
+                libc::fwrite(ee_fs_mem_data(file).cast(), 1, length as usize, stream.cast());
+            }
+        }
+        result
+    }
+}
+
+/// `FSMemoryFile::Close`: the memory file closed; an `FOpen` stream closed and its temporary file deleted.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_close_disk(file: *mut EeFsMemFile, stream: *mut *mut c_void, temporary: *const EeFsString) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let result = ee_fs_mem_close(file);
+        if (*stream).is_null() {
+            return result;
+        }
+        libc::fclose((*stream).cast());
+        // Fixed: the stream pointer was kept, so a second Close (the destructor's) closed the same FILE again
+        *stream = std::ptr::null_mut();
+        if (*temporary).length > 0 {
+            disk::PlatDeleteFile((*temporary).string);
+        }
+        result
+    }
+}
+
+/// `FSMemoryFile::Copy(inDestination, inFailIfExists, ...)`: the contents written to a disk file; kErrorAlreadyExists
+/// when asked to fail on an existing file, kErrorNativeError when it cannot be created. The position is reset.
+///
+/// # Safety
+/// `file` is live, `destination` a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_copy_disk(file: *mut EeFsMemFile, destination: *const c_char, fail_if_exists: bool) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut stream = std::ptr::null_mut();
+        let result = if fail_if_exists && {
+            stream = disk::PlatFOpen(destination, c"r".as_ptr());
+            !stream.is_null()
+        } {
+            2 // kErrorAlreadyExists
+        } else {
+            stream = disk::PlatFOpen(destination, c"wb".as_ptr());
+            if stream.is_null() {
+                1 // kErrorNativeError
+            } else {
+                write_contents(file, stream)
+            }
+        };
+        ee_fs_mem_set_position(file, 0, 0);
+        if !stream.is_null() {
+            libc::fclose(stream.cast());
+        }
+        result
+    }
+}
+
+/// `FSMemoryFile::FOpen(inMode)`: the contents copied to a new temporary file (`EE_` in the temporary directory),
+/// reopened with `mode` into `*stream` (its name in `temporary`); kErrorNativeError (the platform's error recorded)
+/// when that fails. The memory file is open while the stream is.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`; `mode` a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_fopen_disk(
+    file: *mut EeFsMemFile,
+    mode: *const c_char,
+    stream: *mut *mut c_void,
+    temporary: *mut EeFsString,
+) -> i32 {
+    const PLAT_MAX_PATH: usize = 260;
+    let mut directory = [0 as c_char; PLAT_MAX_PATH];
+    let mut name = [0 as c_char; PLAT_MAX_PATH];
+    let mut opened = false;
+    let mut result = status::OK;
+    // SAFETY: the caller's contract; the buffers hold PLAT_MAX_PATH bytes
+    unsafe {
+        ee_fs_mem_set_open(file, true);
+        if disk::PlatGetTempDirectory(directory.as_mut_ptr(), 256) != 0
+            && disk::PlatCreateTempFile(directory.as_ptr(), c"EE_".as_ptr(), name.as_mut_ptr()) != 0
+        {
+            crate::ustring::ee_ustring_assign_text((*temporary).us(), name.as_ptr());
+            *stream = disk::PlatFOpen((*temporary).string, c"w+b".as_ptr());
+            if !(*stream).is_null() {
+                result = write_contents(file, *stream);
+                if result == status::OK {
+                    // the C++ left the position at the end after writing the contents out
+                    ee_fs_mem_set_position(file, ee_fs_mem_length(file) as i64, 0);
+                }
+                libc::fclose((*stream).cast());
+                *stream = disk::PlatFOpen((*temporary).string, mode);
+                if (*stream).is_null() {
+                    ee_fs_mem_set_open(file, false);
+                } else {
+                    opened = true;
+                }
+            } else {
+                crate::ustring::ee_ustring_assign_text((*temporary).us(), c"".as_ptr());
+                ee_fs_mem_set_open(file, false);
+            }
+        }
+        if !opened {
+            result = 1; // kErrorNativeError
+            crate::error::ee_error_record_native(disk::PlatGetLastError() as std::ffi::c_ulong);
+        }
+    }
+    result
+}
+
+#[cfg(test)]
+mod disk_tests {
+    use super::*;
+
+    #[test]
+    fn a_memory_file_is_copied_to_disk_and_opened_as_a_stream() {
+        let file = ee_fs_mem_new(8, true, 1);
+        let dir = std::env::temp_dir().join(format!("ee_fs_mem_disk_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = std::ffi::CString::new(dir.join("copy.bin").to_str().unwrap()).unwrap();
+        unsafe {
+            let mut count = 0;
+            ee_fs_mem_write(file, b"hello".as_ptr(), 5, &mut count);
+            assert_eq!(ee_fs_mem_copy_disk(file, path.as_ptr(), false), status::OK);
+            assert_eq!(std::fs::read(dir.join("copy.bin")).unwrap(), b"hello");
+            assert_eq!(ee_fs_mem_copy_disk(file, path.as_ptr(), true), 2);
+            // a temporary copy reopened for reading, then closed and deleted
+            let mut temporary = EeFsString::with_capacity(16);
+            let mut stream: *mut c_void = std::ptr::null_mut();
+            assert_eq!(ee_fs_mem_fopen_disk(file, c"rb".as_ptr(), &mut stream, &mut temporary), status::OK);
+            assert!(!stream.is_null());
+            let name = std::path::PathBuf::from(String::from_utf8_lossy(temporary.bytes()).into_owned());
+            assert_eq!(std::fs::read(&name).unwrap(), b"hello");
+            assert_eq!(ee_fs_mem_close_disk(file, &mut stream, &temporary), status::OK);
+            assert!(stream.is_null());
+            assert!(!name.exists());
+            crate::ustring::ee_ustring_free(temporary.us());
+            ee_fs_mem_free(file);
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

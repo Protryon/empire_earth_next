@@ -272,12 +272,12 @@ fn a_png_lands_in_the_top_left_corner_and_a_larger_one_is_refused() {
 
     let mut out = [0; 3];
     with(|w| w.contents = png(2, 1, &[0; 8]));
-    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_PNG, &mut out) }, 0);
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_PNG, out.as_mut_ptr(), out.as_mut_ptr().add(1), out.as_mut_ptr().add(2)) }, 0);
     assert_eq!(out, [2, 1, 32]);
     // a broken PNG fails and leaves the outputs alone
     let mut out = [7; 3];
     with(|w| w.contents = b"not a png".to_vec());
-    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_PNG, &mut out) }, K_ERROR_FAILED);
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_PNG, out.as_mut_ptr(), out.as_mut_ptr().add(1), out.as_mut_ptr().add(2)) }, K_ERROR_FAILED);
     assert_eq!(out, [7; 3]);
 }
 
@@ -377,7 +377,7 @@ fn a_corrupt_or_larger_jpeg_fails_where_libjpeg_ended_the_process() {
     with(|w| w.stream = stream as usize);
     assert_eq!(load(K_IMAGE_FILE_JPG), K_ERROR_FAILED);
     let mut out = [7; 3];
-    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG, &mut out) }, K_ERROR_FAILED);
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG, out.as_mut_ptr(), out.as_mut_ptr().add(1), out.as_mut_ptr().add(2)) }, K_ERROR_FAILED);
     assert_eq!(out, [7; 3]);
     unsafe { fclose(stream) };
     // a 3 x 1 image does not go into a 2 x 2 surface
@@ -388,7 +388,7 @@ fn a_corrupt_or_larger_jpeg_fails_where_libjpeg_ended_the_process() {
     assert_eq!(pixel32(0, 0), 0);
     let mut out = [0; 3];
     unsafe { fseek(stream, 0, SEEK_SET) };
-    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG, &mut out) }, 0);
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG, out.as_mut_ptr(), out.as_mut_ptr().add(1), out.as_mut_ptr().add(2)) }, 0);
     assert_eq!(out, [3, 1, 24]);
     unsafe { fclose(stream) };
 }
@@ -451,7 +451,7 @@ fn a_jpg2_round_trips_its_colour_and_alpha() {
     // the attributes of a JPG2: its colour image's, 32 bits
     let mut out = [0; 3];
     unsafe { fseek(stream, 0, SEEK_SET) };
-    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG2, &mut out) }, 0);
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG2, out.as_mut_ptr(), out.as_mut_ptr().add(1), out.as_mut_ptr().add(2)) }, 0);
     assert_eq!(out, [32, 16, 32]);
     unsafe { fclose(stream) };
 }

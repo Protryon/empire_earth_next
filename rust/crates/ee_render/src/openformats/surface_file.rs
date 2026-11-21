@@ -745,12 +745,15 @@ pub unsafe extern "C" fn ee_of_surf_attributes(
     host: EeOfSurfHostFn,
     file: *mut c_void,
     kind: u8,
-    out: *mut [c_ulong; 3],
+    out_width: *mut c_ulong,
+    out_height: *mut c_ulong,
+    out_depth: *mut c_ulong,
 ) -> c_long {
     let io = Io { host, surface: std::ptr::null_mut(), file };
-    // SAFETY: the caller's contract
-    let out = unsafe { &mut *out };
-    match kind {
+    // SAFETY: the caller's contract (the outputs start as the caller's values, as the C++'s array did)
+    let mut values = unsafe { [*out_width, *out_height, *out_depth] };
+    let out = &mut values;
+    let result = match kind {
         K_IMAGE_FILE_JPG => jpg_attributes(&io, out, false),
         K_IMAGE_FILE_JPG2 => {
             let result = jpg_attributes(&io, out, true);
@@ -765,7 +768,10 @@ pub unsafe extern "C" fn ee_of_surf_attributes(
             Err(result) => result,
         },
         _ => K_ERROR_FAILED,
-    }
+    };
+    // SAFETY: as above
+    unsafe { (*out_width, *out_height, *out_depth) = (values[0], values[1], values[2]) };
+    result
 }
 
 #[cfg(test)]
