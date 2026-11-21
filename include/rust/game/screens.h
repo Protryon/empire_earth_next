@@ -1651,459 +1651,6 @@ constexpr static const int32_t EE_SCREENS_SEPL_LIST_EFFECT = 4;
 /// `EeScreensSeplCtl::flags`: a slider without a range (only its page size `extra[2]`, when not 0).
 constexpr static const uint32_t EE_SCREENS_SEPL_NO_RANGE = 32;
 
-/// `kEditorTabMap`: sEditorTabs[0] help Language.rc 0x213a 'Map'; CreateTabGroup new EEUIFSEMap
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_MAP = 0;
-
-/// `kEditorTabElevation`: help 0x213b 'Elevation'; new EEUIFSEElevation
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_ELEVATION = 1;
-
-/// `kEditorTabTerrain`: help 0x213c 'Terrain'; new EEUIFSETerrain
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_TERRAIN = 2;
-
-/// `kEditorTabUnits`: help 0x213d 'Units'; new EESEUnit
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_UNITS = 3;
-
-/// `kEditorTabTriggers`: help 0x213e 'Triggers'; new EESETriggerScreen
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_TRIGGERS = 4;
-
-/// `kEditorTabPlayers`: help 0x1b61 'Players'; new EESEPlayerScreen
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_PLAYERS = 5;
-
-/// `kEditorTabInstructions`: help 0x2143 'Story/Instructions'; new EESEInstructions
-constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_INSTRUCTIONS = 6;
-
-/// `kEntityGroupTrigger`: ShowTab case 0x7d0 (tab 'Trigger'); EESETSTrigger adds its controls to group 9
-constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_TRIGGER = 9;
-
-/// `kEntityGroupObject`: ShowTab case 0x7d3 (tab 'Object'); EESETSObject adds its controls to group 10
-constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_OBJECT = 10;
-
-/// `kEntityGroupArea`: ShowTab case 0x7d4 (tab 'Area'); EESETSArea adds its controls to group 11
-constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_AREA = 11;
-
-/// `kEntityGroupCondition`: ShowTab case 0x7d1 (tab 'Condition'); EESETSCondition/EESETSConditionControls add to group 12
-constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_CONDITION = 12;
-
-/// `kEntityGroupEffect`: ShowTab case 0x7d2 (tab 'Effect'); EESETSEffect/EESETSEffectControls add to group 13
-constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_EFFECT = 13;
-
-/// `kLoadThreadCreateGhostUnit`: Handle402 loads the unit class media, EEGhostUnit::Create at the mouse, unloads; posted by EESEUnit (unit list selection) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_CREATE_GHOST_UNIT = 1026;
-
-/// `kLoadThreadStartScenarioTest`: handler calls gUserInterface->StartScenarioTest(); posted by ExitEditor(true) while mInScenarioEditor (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_START_SCENARIO_TEST = 1028;
-
-/// `kLoadThreadStartScenarioTest2`: handler calls gUserInterface->StartScenarioTest2(); posted by ExitEditor(true) when not mInScenarioEditor (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_START_SCENARIO_TEST2 = 1029;
-
-/// `kLoadThreadLoadEpochMedia`: Handle406 loads the first n tech nodes' media with 'Loading %s Epoch' (0x7659, names 0x75c1 + i) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_LOAD_EPOCH_MEDIA = 1030;
-
-/// `kLoadThreadUnloadEpochMedia`: Handle407 unloads the first n tech nodes' media (counterpart of 0x406) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_UNLOAD_EPOCH_MEDIA = 1031;
-
-/// `kLoadThreadLoadTerrain`: Handle408(terrain, false): EETerrainTable::Load + its unit classes' media (0x7b27); posted by EEUIFSETerrain (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_LOAD_TERRAIN = 1032;
-
-/// `kLoadThreadUnloadTerrain`: Handle408(terrain, true): EETerrainTable::Unload + unit class media unload (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_UNLOAD_TERRAIN = 1033;
-
-/// `kLoadThreadMessageQueueDone`: handler sets mMessageQueueDone (no poster found in the tree) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_MESSAGE_QUEUE_DONE = 1034;
-
-/// `kLoadThreadPostEvent`: handler gUserInterface->PostEvent(param, 0) and dereferences it; EEUIFScenarioEditor::PostLoadEvent (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_POST_EVENT = 1035;
-
-/// `kLoadThreadShowLoadedObject`: handler gUserInterface->ShowLoadedObject(param); EEUIFScenarioEditor::PostShowLoadedObject (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_SHOW_LOADED_OBJECT = 1036;
-
-/// `kPlayerScreenPlayerPage1`: Language.rc 0x5027 'Player Page 1' (tab id 0x12c -> Fn1761C8(0))
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_PLAYER_PAGE1 = 0;
-
-/// `kPlayerScreenPlayerPage2`: Language.rc 0x5028 'Player Page 2' (tab id 0x15d -> Fn1761C8(1))
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_PLAYER_PAGE2 = 1;
-
-/// `kPlayerScreenAISettings`: Language.rc 0x5055 'AI Settings' (tab id 0x170 -> Fn1761C8(2))
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_AI_SETTINGS = 2;
-
-/// `kPlayerScreenTechTree`: Language.rc 0x5029 'Tech Tree' (tab id 0x12d -> Fn1761C8(3))
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_TECH_TREE = 3;
-
-/// `kPlayerScreenOptions`: Language.rc 0x5042 'Options' (tab id 0x15a -> Fn1761C8(4))
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_OPTIONS = 4;
-
-/// `kPlayerTabPlayerPage1`: EESETab ctor case 0x12c: Language.rc 0x5027 'Player Page 1'
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_PLAYER_PAGE1 = 300;
-
-/// `kPlayerTabTechTree`: EESETab ctor case 0x12d: Language.rc 0x5029 'Tech Tree'
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_TECH_TREE = 301;
-
-/// `kPlayerTabOptions`: EESETab ctor case 0x15a: Language.rc 0x5042 'Options'
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_OPTIONS = 346;
-
-/// `kPlayerTabPlayerPage2`: EESETab ctor case 0x15d: Language.rc 0x5028 'Player Page 2'
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_PLAYER_PAGE2 = 349;
-
-/// `kPlayerTabAISettings`: EESETab ctor case 0x170: Language.rc 0x5055 'AI Settings'
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_AI_SETTINGS = 368;
-
-/// `kSelectButtonMoveRight`: button text '>'; Select moves the selected entry of list 0x154 (theLeft true), repeats while held (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_RIGHT = 342;
-
-/// `kSelectButtonMoveLeft`: button text '<'; Select moves the selected entry of list 0x155 back, repeats while held (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_LEFT = 343;
-
-/// `kSelectButtonMoveAllRight`: button text '>>'; Select moves every entry of list 0x154 (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_ALL_RIGHT = 344;
-
-/// `kSelectButtonMoveAllLeft`: button text '<<'; Select moves every entry of list 0x155 (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_ALL_LEFT = 345;
-
-/// `kSETechListUnits`: Language.rc 0x5033 'Units' (button 0x14a)
-constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_UNITS = 0;
-
-/// `kSETechListBuildings`: Language.rc 0x5034 'Buildings' (button 0x14b)
-constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_BUILDINGS = 1;
-
-/// `kSETechListHeroes`: Language.rc 0x5035 'Heroes' (button 0x14c)
-constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_HEROES = 2;
-
-/// `kSETechListTechnologies`: Language.rc 0x5036 'Technologies' (button 0x14d; Fn1760AD's fallback list)
-constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_TECHNOLOGIES = 3;
-
-/// `kToolbarButtonLoad`: sToolbarButtons help Language.rc 0x1b58 'Load'; new EESEELoadScenario
-constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_LOAD = 10;
-
-/// `kToolbarButtonSave`: help 0x1b59 'Save'; new EESEESaveScenario
-constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_SAVE = 11;
-
-/// `kToolbarButtonQuickLoad`: help 0x2140 'Quick Load'; new EESEEQuickLoad
-constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_QUICK_LOAD = 12;
-
-/// `kToolbarButtonQuickSave`: help 0x2141 'Quick Save'; new EESEEQuickSave
-constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_QUICK_SAVE = 13;
-
-/// `kToolbarButtonTest`: help 0x2142 'Test'; new EESEETestScenario
-constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_TEST = 14;
-
-/// `kToolbarButtonExit`: help 0x213f 'Exit'; new EESEEExitScenario
-constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_EXIT = 15;
-
-/// `kSETriggerScreenTrigger`: Language.rc 0x765b 'Trigger'; CreateScreen case 0 new EESETSTrigger
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_TRIGGER = 0;
-
-/// `kSETriggerScreenCondition`: Language.rc 0x765c 'Condition'; CreateScreen case 1 new EESETSCondition
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_CONDITION = 1;
-
-/// `kSETriggerScreenEffect`: Language.rc 0x765d 'Effect'; CreateScreen case 2 new EESETSEffect
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_EFFECT = 2;
-
-/// `kSETriggerScreenObject`: Language.rc 0x765e 'Object'; CreateScreen case 3 new EESETSObject
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT = 3;
-
-/// `kSETriggerScreenArea`: Language.rc 0x765f 'Area'; CreateScreen case 4 new EESETSArea
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_AREA = 4;
-
-/// `kSETriggerTabTrigger`: ctor UIRadioButton(2000 + 0, Language.rc 0x765b 'Trigger'); ShowTab -> screen 0
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_TRIGGER = 2000;
-
-/// `kSETriggerTabCondition`: ctor UIRadioButton(2000 + 1, Language.rc 0x765c 'Condition'); ShowTab -> screen 1
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_CONDITION = 2001;
-
-/// `kSETriggerTabEffect`: ctor UIRadioButton(2000 + 2, Language.rc 0x765d 'Effect'); ShowTab -> screen 2
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_EFFECT = 2002;
-
-/// `kSETriggerTabObject`: ctor UIRadioButton(2000 + 3, Language.rc 0x765e 'Object'); ShowTab -> screen 3
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_OBJECT = 2003;
-
-/// `kSETriggerTabArea`: ctor UIRadioButton(2000 + 4, Language.rc 0x765f 'Area'); ShowTab -> screen 4
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_AREA = 2004;
-
-/// `kUnitSortAlpha`: GetSortMode: radio 0x3ee Language.rc 0x5038 'Alpha'; name comparator
-constexpr static const int32_t EE_SCREENS_SE_UNIT_SORT_ALPHA = 0;
-
-/// `kUnitSortEpoch`: radio 0x3ef Language.rc 0x5039 'Epoch'; EESEUnitEpochLess
-constexpr static const int32_t EE_SCREENS_SE_UNIT_SORT_EPOCH = 1;
-
-/// `kUnitSortFamily`: radio 0x3f0 Language.rc 0x503a 'Family'; EESEUnitLayerLess (mL1C8 = family)
-constexpr static const int32_t EE_SCREENS_SE_UNIT_SORT_FAMILY = 2;
-
-/// `kUnitPaletteLandUnits`: button 0x406 help Language.rc 8501 'Land Units'; RefreshUnitList mDomains & 2
-constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_LAND_UNITS = 0;
-
-/// `kUnitPaletteAirUnits`: button 0x407 help 8505 'Air Units'; RefreshUnitList mDomains & 1 or & 8
-constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_AIR_UNITS = 1;
-
-/// `kUnitPaletteNavalUnits`: button 0x408 help 8502 'Naval Units'; RefreshUnitList mDomains & 4
-constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_NAVAL_UNITS = 2;
-
-/// `kUnitPaletteStructures`: button 0x409 help 8504 'Structures'; RefreshUnitList IsLandBuilding
-constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_STRUCTURES = 3;
-
-/// `kUnitPaletteHeroes`: button 0x40a help 8503 'Heroes'; RefreshUnitList hero category
-constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_HEROES = 4;
-
-/// `kUnitPaletteResources`: button 0x40b help 8500 'Resources'; RefreshUnitList remainder
-constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_RESOURCES = 5;
-
-/// `kPlayerListWorld`: FillList: IDS_TRIGGER_PLAYER_WORLD
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_WORLD = 1;
-
-/// `kPlayerListAnyHuman`: FillList: IDS_ANY_HUMAN
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_HUMAN = 2;
-
-/// `kPlayerListAnyComputer`: FillList: IDS_ANY_COMPUTER
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_COMPUTER = 4;
-
-/// `kPlayerListAllHuman`: FillList: IDS_ALL_HUMAN
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ALL_HUMAN = 8;
-
-/// `kPlayerListAllComputer`: FillList: IDS_ALL_COMPUTER
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ALL_COMPUTER = 16;
-
-/// `kPlayerListAnyPlayer`: FillList: IDS_ANY_PLAYER
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_PLAYER = 32;
-
-/// `kPlayerListAnyExcludeWorld`: FillList: IDS_ANY_EXCLUDE_WORLD
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_EXCLUDE_WORLD = 64;
-
-/// `kPlayerListPlayers`: FillList: IDS_TRIGGER_PLAYER once per player (1..mPlayer)
-constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_PLAYERS = 128;
-
-/// `kCivBuilderIdCivNameMainTitle`: dbuicontrols form 7 id 196 "CB Civ Name (Main Title)"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_NAME_MAIN_TITLE = 196;
-
-/// `kCivBuilderIdCivPtsLeftLabel`: dbuicontrols form 7 id 209 "CB Civ Pts Left Label"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_PTS_LEFT_LABEL = 209;
-
-/// `kCivBuilderIdCivPtsLeft`: dbuicontrols form 7 id 210 "CB Civ Pts Left (#)"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_PTS_LEFT = 210;
-
-/// `kCivBuilderIdNewCivNameTextField`: dbuicontrols form 15 id 410 "CB New Civ: Name Text Field"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_NEW_CIV_NAME_TEXT_FIELD = 410;
-
-/// `kCivBuilderIdSaveCivFileListBox`: dbuicontrols form 16 id 420 "CB Save Civ: File List Box"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_SAVE_CIV_FILE_LIST_BOX = 420;
-
-/// `kCivBuilderIdLoadCivFileListBox`: dbuicontrols form 17 id 425 "CB Load Civ: File List Box"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_LOAD_CIV_FILE_LIST_BOX = 425;
-
-/// `kCivBuilderIdCivAcceptChangesButton`: dbuicontrols form 7 id 448 "CB Civ Accept Changes Button"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_ACCEPT_CHANGES_BUTTON = 448;
-
-/// `kCivBuilderIdSaveCivNameTextField`: dbuicontrols form 16 id 562 "CB Save Civ: Name Text Field"
-constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_SAVE_CIV_NAME_TEXT_FIELD = 562;
-
-/// `kSEElevationRaiseButton`: EEUIFSEElevation.cpp:141 mRaiseButton = new UIRadioButton(id 0x96) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_RAISE_BUTTON = 150;
-
-/// `kSEElevationLowerButton`: EEUIFSEElevation.cpp:154 mLowerButton = new UIRadioButton(id 0x97) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_LOWER_BUTTON = 151;
-
-/// `kSEElevationElevationTitle`: EEUIFSEElevation.cpp:180 mElevationTitle = new UITextLabel(id 0x98) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_ELEVATION_TITLE = 152;
-
-/// `kSEElevationStrengthTitle`: EEUIFSEElevation.cpp:192 mStrengthTitle = new UITextLabel(id 0x99) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_STRENGTH_TITLE = 153;
-
-/// `kSEElevationElevationSlider`: EEUIFSEElevation.cpp:216 mElevationSlider = new EEUIFSEESElevation(id 0x9d) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_ELEVATION_SLIDER = 157;
-
-/// `kSEElevationStrengthLabel`: EEUIFSEElevation.cpp:205 mStrengthLabel = new UITextLabel(id 0x9f) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_STRENGTH_LABEL = 159;
-
-/// `kSEElevationLevelButton`: EEUIFSEElevation.cpp:166 mLevelButton = new UIRadioButton(id 0xa0) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_LEVEL_BUTTON = 160;
-
-/// `kSEElevationPaint`: EEUIFSEElevation.cpp:135 mPaint = new EEUIFSEPaintElevation(id 0xa1) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_PAINT = 161;
-
-/// `kSEElevationStrengthSlider`: EEUIFSEElevation.cpp:227 mStrengthSlider = new UISlider(id 0xa2) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_ELEVATION_STRENGTH_SLIDER = 162;
-
-/// `kSEInstructionsLocalizationEditBox`: EESEInstructions.cpp:354 mLocalizationEditBox = new UIEditBox(id 0x45b) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_INSTRUCTIONS_LOCALIZATION_EDIT_BOX = 1115;
-
-/// `kSEMapDefaultTerrainLabel`: EEUIFSEMap.cpp:296 mDefaultTerrainLabel = new UITextLabel(id 0x64) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_DEFAULT_TERRAIN_LABEL = 100;
-
-/// `kSEMapWidthLabel`: EEUIFSEMap.cpp:242 mWidthLabel = new UITextLabel(id 0x66) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_WIDTH_LABEL = 102;
-
-/// `kSEMapHeightLabel`: EEUIFSEMap.cpp:254 mHeightLabel = new UITextLabel(id 0x67) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_HEIGHT_LABEL = 103;
-
-/// `kSEMapMapStyleLabel`: EEUIFSEMap.cpp:311 mMapStyleLabel = new UITextLabel(id 0x68) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_MAP_STYLE_LABEL = 104;
-
-/// `kSEMapDefaultTerrain`: EEUIFSEMap.cpp:353 mDefaultTerrain = new UIComboBox(id 0x69) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_DEFAULT_TERRAIN = 105;
-
-/// `kSEMapMapStyle`: EEUIFSEMap.cpp:328 mMapStyle = new UIComboBox(id 0x6a) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_MAP_STYLE = 106;
-
-/// `kSEMapWidth`: EEUIFSEMap.cpp:271 mWidth = new UIComboBox(id 0x6b) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_WIDTH = 107;
-
-/// `kSEMapHeight`: EEUIFSEMap.cpp:276 mHeight = new UIComboBox(id 0x6c) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_HEIGHT = 108;
-
-/// `kSEMapSeedEditBox`: EEUIFSEMap.cpp:370 mSeedEditBox = new UIEditBox(id 0x70) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_SEED_EDIT_BOX = 112;
-
-/// `kSEMapSeedLabel`: EEUIFSEMap.cpp:383 mSeedLabel = new UITextLabel(id 0x71) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_SEED_LABEL = 113;
-
-/// `kSEMapRandomMapSize`: EEUIFSEMap.cpp:470 mRandomMapSize = new UIComboBox(id 0x72) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_RANDOM_MAP_SIZE = 114;
-
-/// `kSEMapRandomMapSizeLabel`: EEUIFSEMap.cpp:450 mRandomMapSizeLabel = new UITextLabel(id 0x73) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_RANDOM_MAP_SIZE_LABEL = 115;
-
-/// `kSEMapElevationFileLabel`: EEUIFSEMap.cpp:493 mElevationFileLabel = new UITextLabel(id 0x74) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_ELEVATION_FILE_LABEL = 116;
-
-/// `kSEMapElevationFile`: EEUIFSEMap.cpp:506 mElevationFile = new EEUIFileComboBox(id 0x75) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_ELEVATION_FILE = 117;
-
-/// `kSEMapLandCutoffLabel`: EEUIFSEMap.cpp:602 mLandCutoffLabel = new UITextLabel(id 0x76) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_CUTOFF_LABEL = 118;
-
-/// `kSEMapLandHeightLabel`: EEUIFSEMap.cpp:576 mLandHeightLabel = new UITextLabel(id 0x77) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_HEIGHT_LABEL = 119;
-
-/// `kSEMapLandCutoff`: EEUIFSEMap.cpp:614 mLandCutoff = new UIEditBox(id 0x78) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_CUTOFF = 120;
-
-/// `kSEMapLandHeight`: EEUIFSEMap.cpp:588 mLandHeight = new UIEditBox(id 0x79) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_HEIGHT = 121;
-
-/// `kSEMapWaterCutoffLabel`: EEUIFSEMap.cpp:550 mWaterCutoffLabel = new UITextLabel(id 0x7a) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_CUTOFF_LABEL = 122;
-
-/// `kSEMapWaterDepthLabel`: EEUIFSEMap.cpp:524 mWaterDepthLabel = new UITextLabel(id 0x7b) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_DEPTH_LABEL = 123;
-
-/// `kSEMapWaterDepth`: EEUIFSEMap.cpp:536 mWaterDepth = new UIEditBox(id 0x7c) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_DEPTH = 124;
-
-/// `kSEMapWaterCutoff`: EEUIFSEMap.cpp:562 mWaterCutoff = new UIEditBox(id 0x7d) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_CUTOFF = 125;
-
-/// `kSERBUnitTypesTechList`: EESERBUnitTypes.cpp:647 mTechList = new EESEUITechListBox(id 0x154) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_TECH_LIST = 340;
-
-/// `kSERBUnitTypesOtherTechList`: EESERBUnitTypes.cpp:682 mOtherTechList = new EESEUITechListBox(id 0x155) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_OTHER_TECH_LIST = 341;
-
-/// `kSERBUnitTypesAdd`: EESERBUnitTypes.cpp:658 mAdd = new EESEBSelect(id 0x156) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_ADD = 342;
-
-/// `kSERBUnitTypesRemove`: EESERBUnitTypes.cpp:664 mRemove = new EESEBSelect(id 0x157) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_REMOVE = 343;
-
-/// `kSERBUnitTypesAddAll`: EESERBUnitTypes.cpp:670 mAddAll = new EESEBSelect(id 0x158) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_ADD_ALL = 344;
-
-/// `kSERBUnitTypesRemoveAll`: EESERBUnitTypes.cpp:676 mRemoveAll = new EESEBSelect(id 0x159) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_REMOVE_ALL = 345;
-
-/// `kSERBUnitTypesDisplayEpoch`: EESERBUnitTypes.cpp:694 mDisplayEpoch = new UICheckBox(id 0x15e) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_DISPLAY_EPOCH = 350;
-
-/// `kSERBUnitTypesPerPlayerCountLabel`: EESERBUnitTypes.cpp:1233 mPerPlayerCountLabel = new UITextLabel(id 0x162) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_PER_PLAYER_COUNT_LABEL = 354;
-
-/// `kSETSConditionTitleLabel`: EESETSCondition.cpp:99 mTitleLabel = new UITextLabel(id 0x8fc) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_CONDITION_TITLE_LABEL = 2300;
-
-/// `kSETSConditionTypeComboBox`: EESETSCondition.cpp:112 mTypeComboBox = new UIComboBox(id 0x8fd) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_CONDITION_TYPE_COMBO_BOX = 2301;
-
-/// `kSETSEComboBoxTextEditBox`: EESETSEComboBox.cpp:191 mTextEditBox = new UIEditBox(id 0x983) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TSE_COMBO_BOX_TEXT_EDIT_BOX = 2435;
-
-/// `kSETSEffectTitleLabel`: EESETSEffect.cpp:110 mTitleLabel = new UITextLabel(id 0x960) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_EFFECT_TITLE_LABEL = 2400;
-
-/// `kSETSEffectTypeComboBox`: EESETSEffect.cpp:123 mTypeComboBox = new UIComboBox(id 0x961) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_EFFECT_TYPE_COMBO_BOX = 2401;
-
-/// `kSETSObjectUnitsRadio`: EESETSObject.cpp:168 mUnitsRadio = new UIRadioButton(id 0x834) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_UNITS_RADIO = 2100;
-
-/// `kSETSObjectAreaCheck`: EESETSObject.cpp:400 mAreaCheck = new UITriStateCheckBox(id 0x846) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_AREA_CHECK = 2118;
-
-/// `kSETSObjectNearCheck`: EESETSObject.cpp:430 mNearCheck = new UITriStateCheckBox(id 0x848) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_NEAR_CHECK = 2120;
-
-/// `kSETSObjectVisibleByCheck`: EESETSObject.cpp:563 mVisibleByCheck = new UITriStateCheckBox(id 0x84e) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_VISIBLE_BY_CHECK = 2126;
-
-/// `kSETSObjectHasStateCheck`: EESETSObject.cpp:593 mHasStateCheck = new UITriStateCheckBox(id 0x850) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_HAS_STATE_CHECK = 2128;
-
-/// `kSETSObjectSelectedByCheck`: EESETSObject.cpp:623 mSelectedByCheck = new UITriStateCheckBox(id 0x852) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_SELECTED_BY_CHECK = 2130;
-
-/// `kSETSObjectSelectUnits`: EESETSObject.cpp:161 mSelectUnits = new EESEUICTriggerSelectUnits(id 0x855) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS = 2133;
-
-/// `kSETSTriggerSecondsLabel`: EESETSTrigger.cpp:179 mSecondsLabel = new UITextLabel(id 0x9cb) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_SECONDS_LABEL = 2507;
-
-/// `kSETSTriggerPrevConditionsButton`: EESETSTrigger.cpp:433 mPrevConditionsButton = new UIButton(id 0x9dc) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_PREV_CONDITIONS_BUTTON = 2524;
-
-/// `kSETSTriggerNextConditionsButton`: EESETSTrigger.cpp:442 mNextConditionsButton = new UIButton(id 0x9dd) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_NEXT_CONDITIONS_BUTTON = 2525;
-
-/// `kSETSTriggerPrevEffectsButton`: EESETSTrigger.cpp:451 mPrevEffectsButton = new UIButton(id 0x9de) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_PREV_EFFECTS_BUTTON = 2526;
-
-/// `kSETSTriggerNextEffectsButton`: EESETSTrigger.cpp:460 mNextEffectsButton = new UIButton(id 0x9df) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_NEXT_EFFECTS_BUTTON = 2527;
-
-/// `kSETSTriggerConditionDurationEditBox`: EESETSTrigger.cpp:491 mConditionDurationEditBox = new UIEditBox(id 0x9e2) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_CONDITION_DURATION_EDIT_BOX = 2530;
-
-/// `kSETerrainTerrainButton`: EEUIFSETerrain.cpp:365 mTerrainButton = new EEUIFSETRBPaintType(id 0xc8) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_BUTTON = 200;
-
-/// `kSETerrainBitmap`: EEUIFSETerrain.cpp:457 mBitmap = new UIBitmap(id 0xc9) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_BITMAP = 201;
-
-/// `kSETerrainMountainsButton`: EEUIFSETerrain.cpp:374 mMountainsButton = new EEUIFSETRBPaintType(id 0xca) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_MOUNTAINS_BUTTON = 202;
-
-/// `kSETerrainTerrainTypeLabel`: EEUIFSETerrain.cpp:383 mTerrainTypeLabel = new UITextLabel(id 0xcb) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE_LABEL = 203;
-
-/// `kSETerrainTerrainType`: EEUIFSETerrain.cpp:417 mTerrainType = new EESEUITerrainTypeLB(id 0xcc) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE = 204;
-
-/// `kSETerrainTerrainColorTypeLabel`: EEUIFSETerrain.cpp:393 mTerrainColorTypeLabel = new UITextLabel(id 0xce) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE_LABEL = 206;
-
-/// `kSETerrainTerrainColorType`: EEUIFSETerrain.cpp:437 mTerrainColorType = new EESEUITerrainColorLB(id 0xcf) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE = 207;
-
-/// `kSETriggerScreenDuplicateButton`: EESETriggerScreen.cpp:169 mDuplicateButton = new UIButton(id 0x7d6) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_DUPLICATE_BUTTON = 2006;
-
-/// `kSETriggerScreenDeleteButton`: EESETriggerScreen.cpp:183 mDeleteButton = new UIButton(id 0x7d7) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_DELETE_BUTTON = 2007;
-
-/// `kSETriggerScreenNameEditBox`: EESETriggerScreen.cpp:254 mNameEditBox = new UIEditBox(id 0x7db) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_NAME_EDIT_BOX = 2011;
-
-/// `kSETriggerScreenNameLabel`: EESETriggerScreen.cpp:244 mNameLabel = new UITextLabel(id 0x7dc) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_NAME_LABEL = 2012;
-
-/// `kScenarioEditorHideUICheckBox`: EEUIFScenarioEditor.cpp:436 mHideUICheckBox = new UICheckBox(id 0x12) (provisional name)
-constexpr static const int32_t EE_SCREENS_SE_SCENARIO_EDITOR_HIDE_UI_CHECK_BOX = 18;
-
 /// The effect record's size in pointers.
 constexpr static const size_t EE_SCREENS_SEET_EFFECT_SLOTS = 46;
 
@@ -3066,6 +2613,459 @@ constexpr static const uint32_t TAB_TRIGGERS = 4;
 constexpr static const uint32_t TAB_PLAYERS = 5;
 
 constexpr static const uint32_t TAB_INSTRUCTIONS = 6;
+
+/// `kEditorTabMap`: sEditorTabs[0] help Language.rc 0x213a 'Map'; CreateTabGroup new EEUIFSEMap
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_MAP = 0;
+
+/// `kEditorTabElevation`: help 0x213b 'Elevation'; new EEUIFSEElevation
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_ELEVATION = 1;
+
+/// `kEditorTabTerrain`: help 0x213c 'Terrain'; new EEUIFSETerrain
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_TERRAIN = 2;
+
+/// `kEditorTabUnits`: help 0x213d 'Units'; new EESEUnit
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_UNITS = 3;
+
+/// `kEditorTabTriggers`: help 0x213e 'Triggers'; new EESETriggerScreen
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_TRIGGERS = 4;
+
+/// `kEditorTabPlayers`: help 0x1b61 'Players'; new EESEPlayerScreen
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_PLAYERS = 5;
+
+/// `kEditorTabInstructions`: help 0x2143 'Story/Instructions'; new EESEInstructions
+constexpr static const int32_t EE_SCREENS_SE_EDITOR_TAB_INSTRUCTIONS = 6;
+
+/// `kEntityGroupTrigger`: ShowTab case 0x7d0 (tab 'Trigger'); EESETSTrigger adds its controls to group 9
+constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_TRIGGER = 9;
+
+/// `kEntityGroupObject`: ShowTab case 0x7d3 (tab 'Object'); EESETSObject adds its controls to group 10
+constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_OBJECT = 10;
+
+/// `kEntityGroupArea`: ShowTab case 0x7d4 (tab 'Area'); EESETSArea adds its controls to group 11
+constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_AREA = 11;
+
+/// `kEntityGroupCondition`: ShowTab case 0x7d1 (tab 'Condition'); EESETSCondition/EESETSConditionControls add to group 12
+constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_CONDITION = 12;
+
+/// `kEntityGroupEffect`: ShowTab case 0x7d2 (tab 'Effect'); EESETSEffect/EESETSEffectControls add to group 13
+constexpr static const int32_t EE_SCREENS_SE_ENTITY_GROUP_EFFECT = 13;
+
+/// `kLoadThreadCreateGhostUnit`: Handle402 loads the unit class media, EEGhostUnit::Create at the mouse, unloads; posted by EESEUnit (unit list selection) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_CREATE_GHOST_UNIT = 1026;
+
+/// `kLoadThreadStartScenarioTest`: handler calls gUserInterface->StartScenarioTest(); posted by ExitEditor(true) while mInScenarioEditor (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_START_SCENARIO_TEST = 1028;
+
+/// `kLoadThreadStartScenarioTest2`: handler calls gUserInterface->StartScenarioTest2(); posted by ExitEditor(true) when not mInScenarioEditor (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_START_SCENARIO_TEST2 = 1029;
+
+/// `kLoadThreadLoadEpochMedia`: Handle406 loads the first n tech nodes' media with 'Loading %s Epoch' (0x7659, names 0x75c1 + i) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_LOAD_EPOCH_MEDIA = 1030;
+
+/// `kLoadThreadUnloadEpochMedia`: Handle407 unloads the first n tech nodes' media (counterpart of 0x406) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_UNLOAD_EPOCH_MEDIA = 1031;
+
+/// `kLoadThreadLoadTerrain`: Handle408(terrain, false): EETerrainTable::Load + its unit classes' media (0x7b27); posted by EEUIFSETerrain (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_LOAD_TERRAIN = 1032;
+
+/// `kLoadThreadUnloadTerrain`: Handle408(terrain, true): EETerrainTable::Unload + unit class media unload (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_UNLOAD_TERRAIN = 1033;
+
+/// `kLoadThreadMessageQueueDone`: handler sets mMessageQueueDone (no poster found in the tree) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_MESSAGE_QUEUE_DONE = 1034;
+
+/// `kLoadThreadPostEvent`: handler gUserInterface->PostEvent(param, 0) and dereferences it; EEUIFScenarioEditor::PostLoadEvent (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_POST_EVENT = 1035;
+
+/// `kLoadThreadShowLoadedObject`: handler gUserInterface->ShowLoadedObject(param); EEUIFScenarioEditor::PostShowLoadedObject (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_LOAD_THREAD_SHOW_LOADED_OBJECT = 1036;
+
+/// `kPlayerScreenPlayerPage1`: Language.rc 0x5027 'Player Page 1' (tab id 0x12c -> Fn1761C8(0))
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_PLAYER_PAGE1 = 0;
+
+/// `kPlayerScreenPlayerPage2`: Language.rc 0x5028 'Player Page 2' (tab id 0x15d -> Fn1761C8(1))
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_PLAYER_PAGE2 = 1;
+
+/// `kPlayerScreenAISettings`: Language.rc 0x5055 'AI Settings' (tab id 0x170 -> Fn1761C8(2))
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_AI_SETTINGS = 2;
+
+/// `kPlayerScreenTechTree`: Language.rc 0x5029 'Tech Tree' (tab id 0x12d -> Fn1761C8(3))
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_TECH_TREE = 3;
+
+/// `kPlayerScreenOptions`: Language.rc 0x5042 'Options' (tab id 0x15a -> Fn1761C8(4))
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_SCREEN_OPTIONS = 4;
+
+/// `kPlayerTabPlayerPage1`: EESETab ctor case 0x12c: Language.rc 0x5027 'Player Page 1'
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_PLAYER_PAGE1 = 300;
+
+/// `kPlayerTabTechTree`: EESETab ctor case 0x12d: Language.rc 0x5029 'Tech Tree'
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_TECH_TREE = 301;
+
+/// `kPlayerTabOptions`: EESETab ctor case 0x15a: Language.rc 0x5042 'Options'
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_OPTIONS = 346;
+
+/// `kPlayerTabPlayerPage2`: EESETab ctor case 0x15d: Language.rc 0x5028 'Player Page 2'
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_PLAYER_PAGE2 = 349;
+
+/// `kPlayerTabAISettings`: EESETab ctor case 0x170: Language.rc 0x5055 'AI Settings'
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_TAB_AI_SETTINGS = 368;
+
+/// `kSelectButtonMoveRight`: button text '>'; Select moves the selected entry of list 0x154 (theLeft true), repeats while held (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_RIGHT = 342;
+
+/// `kSelectButtonMoveLeft`: button text '<'; Select moves the selected entry of list 0x155 back, repeats while held (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_LEFT = 343;
+
+/// `kSelectButtonMoveAllRight`: button text '>>'; Select moves every entry of list 0x154 (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_ALL_RIGHT = 344;
+
+/// `kSelectButtonMoveAllLeft`: button text '<<'; Select moves every entry of list 0x155 (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_SELECT_BUTTON_MOVE_ALL_LEFT = 345;
+
+/// `kSETechListUnits`: Language.rc 0x5033 'Units' (button 0x14a)
+constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_UNITS = 0;
+
+/// `kSETechListBuildings`: Language.rc 0x5034 'Buildings' (button 0x14b)
+constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_BUILDINGS = 1;
+
+/// `kSETechListHeroes`: Language.rc 0x5035 'Heroes' (button 0x14c)
+constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_HEROES = 2;
+
+/// `kSETechListTechnologies`: Language.rc 0x5036 'Technologies' (button 0x14d; Fn1760AD's fallback list)
+constexpr static const int32_t EE_SCREENS_SE_TECH_LIST_TECHNOLOGIES = 3;
+
+/// `kToolbarButtonLoad`: sToolbarButtons help Language.rc 0x1b58 'Load'; new EESEELoadScenario
+constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_LOAD = 10;
+
+/// `kToolbarButtonSave`: help 0x1b59 'Save'; new EESEESaveScenario
+constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_SAVE = 11;
+
+/// `kToolbarButtonQuickLoad`: help 0x2140 'Quick Load'; new EESEEQuickLoad
+constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_QUICK_LOAD = 12;
+
+/// `kToolbarButtonQuickSave`: help 0x2141 'Quick Save'; new EESEEQuickSave
+constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_QUICK_SAVE = 13;
+
+/// `kToolbarButtonTest`: help 0x2142 'Test'; new EESEETestScenario
+constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_TEST = 14;
+
+/// `kToolbarButtonExit`: help 0x213f 'Exit'; new EESEEExitScenario
+constexpr static const int32_t EE_SCREENS_SE_TOOLBAR_BUTTON_EXIT = 15;
+
+/// `kSETriggerScreenTrigger`: Language.rc 0x765b 'Trigger'; CreateScreen case 0 new EESETSTrigger
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_TRIGGER = 0;
+
+/// `kSETriggerScreenCondition`: Language.rc 0x765c 'Condition'; CreateScreen case 1 new EESETSCondition
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_CONDITION = 1;
+
+/// `kSETriggerScreenEffect`: Language.rc 0x765d 'Effect'; CreateScreen case 2 new EESETSEffect
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_EFFECT = 2;
+
+/// `kSETriggerScreenObject`: Language.rc 0x765e 'Object'; CreateScreen case 3 new EESETSObject
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT = 3;
+
+/// `kSETriggerScreenArea`: Language.rc 0x765f 'Area'; CreateScreen case 4 new EESETSArea
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_AREA = 4;
+
+/// `kSETriggerTabTrigger`: ctor UIRadioButton(2000 + 0, Language.rc 0x765b 'Trigger'); ShowTab -> screen 0
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_TRIGGER = 2000;
+
+/// `kSETriggerTabCondition`: ctor UIRadioButton(2000 + 1, Language.rc 0x765c 'Condition'); ShowTab -> screen 1
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_CONDITION = 2001;
+
+/// `kSETriggerTabEffect`: ctor UIRadioButton(2000 + 2, Language.rc 0x765d 'Effect'); ShowTab -> screen 2
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_EFFECT = 2002;
+
+/// `kSETriggerTabObject`: ctor UIRadioButton(2000 + 3, Language.rc 0x765e 'Object'); ShowTab -> screen 3
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_OBJECT = 2003;
+
+/// `kSETriggerTabArea`: ctor UIRadioButton(2000 + 4, Language.rc 0x765f 'Area'); ShowTab -> screen 4
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_TAB_AREA = 2004;
+
+/// `kUnitSortAlpha`: GetSortMode: radio 0x3ee Language.rc 0x5038 'Alpha'; name comparator
+constexpr static const int32_t EE_SCREENS_SE_UNIT_SORT_ALPHA = 0;
+
+/// `kUnitSortEpoch`: radio 0x3ef Language.rc 0x5039 'Epoch'; EESEUnitEpochLess
+constexpr static const int32_t EE_SCREENS_SE_UNIT_SORT_EPOCH = 1;
+
+/// `kUnitSortFamily`: radio 0x3f0 Language.rc 0x503a 'Family'; EESEUnitLayerLess (mL1C8 = family)
+constexpr static const int32_t EE_SCREENS_SE_UNIT_SORT_FAMILY = 2;
+
+/// `kUnitPaletteLandUnits`: button 0x406 help Language.rc 8501 'Land Units'; RefreshUnitList mDomains & 2
+constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_LAND_UNITS = 0;
+
+/// `kUnitPaletteAirUnits`: button 0x407 help 8505 'Air Units'; RefreshUnitList mDomains & 1 or & 8
+constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_AIR_UNITS = 1;
+
+/// `kUnitPaletteNavalUnits`: button 0x408 help 8502 'Naval Units'; RefreshUnitList mDomains & 4
+constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_NAVAL_UNITS = 2;
+
+/// `kUnitPaletteStructures`: button 0x409 help 8504 'Structures'; RefreshUnitList IsLandBuilding
+constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_STRUCTURES = 3;
+
+/// `kUnitPaletteHeroes`: button 0x40a help 8503 'Heroes'; RefreshUnitList hero category
+constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_HEROES = 4;
+
+/// `kUnitPaletteResources`: button 0x40b help 8500 'Resources'; RefreshUnitList remainder
+constexpr static const int32_t EE_SCREENS_SE_UNIT_PALETTE_RESOURCES = 5;
+
+/// `kPlayerListWorld`: FillList: IDS_TRIGGER_PLAYER_WORLD
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_WORLD = 1;
+
+/// `kPlayerListAnyHuman`: FillList: IDS_ANY_HUMAN
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_HUMAN = 2;
+
+/// `kPlayerListAnyComputer`: FillList: IDS_ANY_COMPUTER
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_COMPUTER = 4;
+
+/// `kPlayerListAllHuman`: FillList: IDS_ALL_HUMAN
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ALL_HUMAN = 8;
+
+/// `kPlayerListAllComputer`: FillList: IDS_ALL_COMPUTER
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ALL_COMPUTER = 16;
+
+/// `kPlayerListAnyPlayer`: FillList: IDS_ANY_PLAYER
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_PLAYER = 32;
+
+/// `kPlayerListAnyExcludeWorld`: FillList: IDS_ANY_EXCLUDE_WORLD
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_ANY_EXCLUDE_WORLD = 64;
+
+/// `kPlayerListPlayers`: FillList: IDS_TRIGGER_PLAYER once per player (1..mPlayer)
+constexpr static const int32_t EE_SCREENS_SE_PLAYER_LIST_PLAYERS = 128;
+
+/// `kCivBuilderIdCivNameMainTitle`: dbuicontrols form 7 id 196 "CB Civ Name (Main Title)"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_NAME_MAIN_TITLE = 196;
+
+/// `kCivBuilderIdCivPtsLeftLabel`: dbuicontrols form 7 id 209 "CB Civ Pts Left Label"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_PTS_LEFT_LABEL = 209;
+
+/// `kCivBuilderIdCivPtsLeft`: dbuicontrols form 7 id 210 "CB Civ Pts Left (#)"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_PTS_LEFT = 210;
+
+/// `kCivBuilderIdNewCivNameTextField`: dbuicontrols form 15 id 410 "CB New Civ: Name Text Field"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_NEW_CIV_NAME_TEXT_FIELD = 410;
+
+/// `kCivBuilderIdSaveCivFileListBox`: dbuicontrols form 16 id 420 "CB Save Civ: File List Box"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_SAVE_CIV_FILE_LIST_BOX = 420;
+
+/// `kCivBuilderIdLoadCivFileListBox`: dbuicontrols form 17 id 425 "CB Load Civ: File List Box"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_LOAD_CIV_FILE_LIST_BOX = 425;
+
+/// `kCivBuilderIdCivAcceptChangesButton`: dbuicontrols form 7 id 448 "CB Civ Accept Changes Button"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_CIV_ACCEPT_CHANGES_BUTTON = 448;
+
+/// `kCivBuilderIdSaveCivNameTextField`: dbuicontrols form 16 id 562 "CB Save Civ: Name Text Field"
+constexpr static const int32_t EE_SCREENS_SE_CIV_BUILDER_ID_SAVE_CIV_NAME_TEXT_FIELD = 562;
+
+/// `kSEElevationRaiseButton`: EEUIFSEElevation.cpp:141 mRaiseButton = new UIRadioButton(id 0x96) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_RAISE_BUTTON = 150;
+
+/// `kSEElevationLowerButton`: EEUIFSEElevation.cpp:154 mLowerButton = new UIRadioButton(id 0x97) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_LOWER_BUTTON = 151;
+
+/// `kSEElevationElevationTitle`: EEUIFSEElevation.cpp:180 mElevationTitle = new UITextLabel(id 0x98) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_ELEVATION_TITLE = 152;
+
+/// `kSEElevationStrengthTitle`: EEUIFSEElevation.cpp:192 mStrengthTitle = new UITextLabel(id 0x99) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_STRENGTH_TITLE = 153;
+
+/// `kSEElevationElevationSlider`: EEUIFSEElevation.cpp:216 mElevationSlider = new EEUIFSEESElevation(id 0x9d) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_ELEVATION_SLIDER = 157;
+
+/// `kSEElevationStrengthLabel`: EEUIFSEElevation.cpp:205 mStrengthLabel = new UITextLabel(id 0x9f) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_STRENGTH_LABEL = 159;
+
+/// `kSEElevationLevelButton`: EEUIFSEElevation.cpp:166 mLevelButton = new UIRadioButton(id 0xa0) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_LEVEL_BUTTON = 160;
+
+/// `kSEElevationPaint`: EEUIFSEElevation.cpp:135 mPaint = new EEUIFSEPaintElevation(id 0xa1) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_PAINT = 161;
+
+/// `kSEElevationStrengthSlider`: EEUIFSEElevation.cpp:227 mStrengthSlider = new UISlider(id 0xa2) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_ELEVATION_STRENGTH_SLIDER = 162;
+
+/// `kSEInstructionsLocalizationEditBox`: EESEInstructions.cpp:354 mLocalizationEditBox = new UIEditBox(id 0x45b) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_INSTRUCTIONS_LOCALIZATION_EDIT_BOX = 1115;
+
+/// `kSEMapDefaultTerrainLabel`: EEUIFSEMap.cpp:296 mDefaultTerrainLabel = new UITextLabel(id 0x64) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_DEFAULT_TERRAIN_LABEL = 100;
+
+/// `kSEMapWidthLabel`: EEUIFSEMap.cpp:242 mWidthLabel = new UITextLabel(id 0x66) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_WIDTH_LABEL = 102;
+
+/// `kSEMapHeightLabel`: EEUIFSEMap.cpp:254 mHeightLabel = new UITextLabel(id 0x67) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_HEIGHT_LABEL = 103;
+
+/// `kSEMapMapStyleLabel`: EEUIFSEMap.cpp:311 mMapStyleLabel = new UITextLabel(id 0x68) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_MAP_STYLE_LABEL = 104;
+
+/// `kSEMapDefaultTerrain`: EEUIFSEMap.cpp:353 mDefaultTerrain = new UIComboBox(id 0x69) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_DEFAULT_TERRAIN = 105;
+
+/// `kSEMapMapStyle`: EEUIFSEMap.cpp:328 mMapStyle = new UIComboBox(id 0x6a) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_MAP_STYLE = 106;
+
+/// `kSEMapWidth`: EEUIFSEMap.cpp:271 mWidth = new UIComboBox(id 0x6b) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_WIDTH = 107;
+
+/// `kSEMapHeight`: EEUIFSEMap.cpp:276 mHeight = new UIComboBox(id 0x6c) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_HEIGHT = 108;
+
+/// `kSEMapSeedEditBox`: EEUIFSEMap.cpp:370 mSeedEditBox = new UIEditBox(id 0x70) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_SEED_EDIT_BOX = 112;
+
+/// `kSEMapSeedLabel`: EEUIFSEMap.cpp:383 mSeedLabel = new UITextLabel(id 0x71) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_SEED_LABEL = 113;
+
+/// `kSEMapRandomMapSize`: EEUIFSEMap.cpp:470 mRandomMapSize = new UIComboBox(id 0x72) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_RANDOM_MAP_SIZE = 114;
+
+/// `kSEMapRandomMapSizeLabel`: EEUIFSEMap.cpp:450 mRandomMapSizeLabel = new UITextLabel(id 0x73) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_RANDOM_MAP_SIZE_LABEL = 115;
+
+/// `kSEMapElevationFileLabel`: EEUIFSEMap.cpp:493 mElevationFileLabel = new UITextLabel(id 0x74) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_ELEVATION_FILE_LABEL = 116;
+
+/// `kSEMapElevationFile`: EEUIFSEMap.cpp:506 mElevationFile = new EEUIFileComboBox(id 0x75) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_ELEVATION_FILE = 117;
+
+/// `kSEMapLandCutoffLabel`: EEUIFSEMap.cpp:602 mLandCutoffLabel = new UITextLabel(id 0x76) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_CUTOFF_LABEL = 118;
+
+/// `kSEMapLandHeightLabel`: EEUIFSEMap.cpp:576 mLandHeightLabel = new UITextLabel(id 0x77) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_HEIGHT_LABEL = 119;
+
+/// `kSEMapLandCutoff`: EEUIFSEMap.cpp:614 mLandCutoff = new UIEditBox(id 0x78) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_CUTOFF = 120;
+
+/// `kSEMapLandHeight`: EEUIFSEMap.cpp:588 mLandHeight = new UIEditBox(id 0x79) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_LAND_HEIGHT = 121;
+
+/// `kSEMapWaterCutoffLabel`: EEUIFSEMap.cpp:550 mWaterCutoffLabel = new UITextLabel(id 0x7a) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_CUTOFF_LABEL = 122;
+
+/// `kSEMapWaterDepthLabel`: EEUIFSEMap.cpp:524 mWaterDepthLabel = new UITextLabel(id 0x7b) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_DEPTH_LABEL = 123;
+
+/// `kSEMapWaterDepth`: EEUIFSEMap.cpp:536 mWaterDepth = new UIEditBox(id 0x7c) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_DEPTH = 124;
+
+/// `kSEMapWaterCutoff`: EEUIFSEMap.cpp:562 mWaterCutoff = new UIEditBox(id 0x7d) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_MAP_WATER_CUTOFF = 125;
+
+/// `kSERBUnitTypesTechList`: EESERBUnitTypes.cpp:647 mTechList = new EESEUITechListBox(id 0x154) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_TECH_LIST = 340;
+
+/// `kSERBUnitTypesOtherTechList`: EESERBUnitTypes.cpp:682 mOtherTechList = new EESEUITechListBox(id 0x155) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_OTHER_TECH_LIST = 341;
+
+/// `kSERBUnitTypesAdd`: EESERBUnitTypes.cpp:658 mAdd = new EESEBSelect(id 0x156) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_ADD = 342;
+
+/// `kSERBUnitTypesRemove`: EESERBUnitTypes.cpp:664 mRemove = new EESEBSelect(id 0x157) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_REMOVE = 343;
+
+/// `kSERBUnitTypesAddAll`: EESERBUnitTypes.cpp:670 mAddAll = new EESEBSelect(id 0x158) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_ADD_ALL = 344;
+
+/// `kSERBUnitTypesRemoveAll`: EESERBUnitTypes.cpp:676 mRemoveAll = new EESEBSelect(id 0x159) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_REMOVE_ALL = 345;
+
+/// `kSERBUnitTypesDisplayEpoch`: EESERBUnitTypes.cpp:694 mDisplayEpoch = new UICheckBox(id 0x15e) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_DISPLAY_EPOCH = 350;
+
+/// `kSERBUnitTypesPerPlayerCountLabel`: EESERBUnitTypes.cpp:1233 mPerPlayerCountLabel = new UITextLabel(id 0x162) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_RB_UNIT_TYPES_PER_PLAYER_COUNT_LABEL = 354;
+
+/// `kSETSConditionTitleLabel`: EESETSCondition.cpp:99 mTitleLabel = new UITextLabel(id 0x8fc) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_CONDITION_TITLE_LABEL = 2300;
+
+/// `kSETSConditionTypeComboBox`: EESETSCondition.cpp:112 mTypeComboBox = new UIComboBox(id 0x8fd) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_CONDITION_TYPE_COMBO_BOX = 2301;
+
+/// `kSETSEComboBoxTextEditBox`: EESETSEComboBox.cpp:191 mTextEditBox = new UIEditBox(id 0x983) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TSE_COMBO_BOX_TEXT_EDIT_BOX = 2435;
+
+/// `kSETSEffectTitleLabel`: EESETSEffect.cpp:110 mTitleLabel = new UITextLabel(id 0x960) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_EFFECT_TITLE_LABEL = 2400;
+
+/// `kSETSEffectTypeComboBox`: EESETSEffect.cpp:123 mTypeComboBox = new UIComboBox(id 0x961) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_EFFECT_TYPE_COMBO_BOX = 2401;
+
+/// `kSETSObjectUnitsRadio`: EESETSObject.cpp:168 mUnitsRadio = new UIRadioButton(id 0x834) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_UNITS_RADIO = 2100;
+
+/// `kSETSObjectAreaCheck`: EESETSObject.cpp:400 mAreaCheck = new UITriStateCheckBox(id 0x846) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_AREA_CHECK = 2118;
+
+/// `kSETSObjectNearCheck`: EESETSObject.cpp:430 mNearCheck = new UITriStateCheckBox(id 0x848) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_NEAR_CHECK = 2120;
+
+/// `kSETSObjectVisibleByCheck`: EESETSObject.cpp:563 mVisibleByCheck = new UITriStateCheckBox(id 0x84e) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_VISIBLE_BY_CHECK = 2126;
+
+/// `kSETSObjectHasStateCheck`: EESETSObject.cpp:593 mHasStateCheck = new UITriStateCheckBox(id 0x850) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_HAS_STATE_CHECK = 2128;
+
+/// `kSETSObjectSelectedByCheck`: EESETSObject.cpp:623 mSelectedByCheck = new UITriStateCheckBox(id 0x852) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_SELECTED_BY_CHECK = 2130;
+
+/// `kSETSObjectSelectUnits`: EESETSObject.cpp:161 mSelectUnits = new EESEUICTriggerSelectUnits(id 0x855) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS = 2133;
+
+/// `kSETSTriggerSecondsLabel`: EESETSTrigger.cpp:179 mSecondsLabel = new UITextLabel(id 0x9cb) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_SECONDS_LABEL = 2507;
+
+/// `kSETSTriggerPrevConditionsButton`: EESETSTrigger.cpp:433 mPrevConditionsButton = new UIButton(id 0x9dc) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_PREV_CONDITIONS_BUTTON = 2524;
+
+/// `kSETSTriggerNextConditionsButton`: EESETSTrigger.cpp:442 mNextConditionsButton = new UIButton(id 0x9dd) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_NEXT_CONDITIONS_BUTTON = 2525;
+
+/// `kSETSTriggerPrevEffectsButton`: EESETSTrigger.cpp:451 mPrevEffectsButton = new UIButton(id 0x9de) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_PREV_EFFECTS_BUTTON = 2526;
+
+/// `kSETSTriggerNextEffectsButton`: EESETSTrigger.cpp:460 mNextEffectsButton = new UIButton(id 0x9df) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_NEXT_EFFECTS_BUTTON = 2527;
+
+/// `kSETSTriggerConditionDurationEditBox`: EESETSTrigger.cpp:491 mConditionDurationEditBox = new UIEditBox(id 0x9e2) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TS_TRIGGER_CONDITION_DURATION_EDIT_BOX = 2530;
+
+/// `kSETerrainTerrainButton`: EEUIFSETerrain.cpp:365 mTerrainButton = new EEUIFSETRBPaintType(id 0xc8) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_BUTTON = 200;
+
+/// `kSETerrainBitmap`: EEUIFSETerrain.cpp:457 mBitmap = new UIBitmap(id 0xc9) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_BITMAP = 201;
+
+/// `kSETerrainMountainsButton`: EEUIFSETerrain.cpp:374 mMountainsButton = new EEUIFSETRBPaintType(id 0xca) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_MOUNTAINS_BUTTON = 202;
+
+/// `kSETerrainTerrainTypeLabel`: EEUIFSETerrain.cpp:383 mTerrainTypeLabel = new UITextLabel(id 0xcb) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE_LABEL = 203;
+
+/// `kSETerrainTerrainType`: EEUIFSETerrain.cpp:417 mTerrainType = new EESEUITerrainTypeLB(id 0xcc) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE = 204;
+
+/// `kSETerrainTerrainColorTypeLabel`: EEUIFSETerrain.cpp:393 mTerrainColorTypeLabel = new UITextLabel(id 0xce) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE_LABEL = 206;
+
+/// `kSETerrainTerrainColorType`: EEUIFSETerrain.cpp:437 mTerrainColorType = new EESEUITerrainColorLB(id 0xcf) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE = 207;
+
+/// `kSETriggerScreenDuplicateButton`: EESETriggerScreen.cpp:169 mDuplicateButton = new UIButton(id 0x7d6) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_DUPLICATE_BUTTON = 2006;
+
+/// `kSETriggerScreenDeleteButton`: EESETriggerScreen.cpp:183 mDeleteButton = new UIButton(id 0x7d7) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_DELETE_BUTTON = 2007;
+
+/// `kSETriggerScreenNameEditBox`: EESETriggerScreen.cpp:254 mNameEditBox = new UIEditBox(id 0x7db) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_NAME_EDIT_BOX = 2011;
+
+/// `kSETriggerScreenNameLabel`: EESETriggerScreen.cpp:244 mNameLabel = new UITextLabel(id 0x7dc) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_TRIGGER_SCREEN_NAME_LABEL = 2012;
+
+/// `kScenarioEditorHideUICheckBox`: EEUIFScenarioEditor.cpp:436 mHideUICheckBox = new UICheckBox(id 0x12) (provisional name)
+constexpr static const int32_t EE_SCREENS_SE_SCENARIO_EDITOR_HIDE_UI_CHECK_BOX = 18;
 
 /// The scenarios', movies' and sounds' directories made when missing -> their paths (`FSPath`) into p0's three
 /// words / the three paths p0 released.
@@ -4035,6 +4035,423 @@ constexpr static const uint32_t EE_SCREENS_SEPL_COPY_FIRST_TO_ALL = 10;
 constexpr static const uint32_t EE_SCREENS_SEPL_PLAYER_COUNT = 11;
 
 constexpr static const uint32_t EE_SCREENS_SEPL_MARK_CHANGED = 12;
+
+/// `gUserInterface->PostAction(p)` (an `EEAction*`).
+constexpr static const uint32_t EE_SCREENS_SEAX_POST_ACTION = 3000;
+
+/// The action p released.
+constexpr static const uint32_t EE_SCREENS_SEAX_DEREFERENCE_ACTION = 3001;
+
+/// `gB529066 = false`, `gCameraFollowing = false`, `gB529068 = false` (each its own statement).
+constexpr static const uint32_t EE_SCREENS_SEAX_FOLLOW_529066 = 3002;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CAMERA_FOLLOWING = 3003;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_FOLLOW_529068 = 3004;
+
+/// -> whether the mesh point (i0, i1) is valid; its height -> f0.
+constexpr static const uint32_t EE_SCREENS_SEAX_MESH_VALID_POINT = 3005;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MESH_Z = 3006;
+
+/// The terrain i0's table entry: -> ambients only, its unit class count, its ambient unit chance.
+constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_AMBIENTS_ONLY = 3007;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_NUM_CLASSES = 3008;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_CHANCE = 3009;
+
+/// -> whether the world player may place the class i0 on the tile (i1, i2); the unit made there.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLANT_CAN_PLACE = 3010;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLANT_CREATE = 3011;
+
+/// -> whether the editor's radio button of id i0 is checked.
+constexpr static const uint32_t EE_SCREENS_SEAX_RADIO_CHECKED = 3012;
+
+/// The statics' longs (`sSeaxLong[i0] = i1`, -> `sSeaxLong[i0]`) and `EEMap::Raise` over them (f0..f3, i0 != 0).
+constexpr static const uint32_t EE_SCREENS_SEAX_LONG_SET = 3013;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_LONG_GET = 3014;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_RAISE = 3015;
+
+/// -> the map's tile (i0, i1) (`EEMapTile*`), its first unit node, a node's next and unit.
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE = 3016;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE_FIRST_NODE = 3017;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NODE_NEXT = 3018;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NODE_UNIT = 3019;
+
+/// The unit p (`EEUnit*`): -> on a tile's list; -> its complex unit's previous part (an `EEUnit*`); referenced;
+/// -> a path point; -> a resource; emptied; killed; taken from its player; released.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_ON_TILE = 3020;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PREVIOUS_PART = 3021;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_REFERENCE = 3022;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PATH_POINT = 3023;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_RESOURCE = 3024;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_EMPTY = 3025;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_KILL = 3026;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PLAYER_KILL = 3027;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_DEREFERENCE = 3028;
+
+/// -> the screen event i0 (`EECreateScreenEvent`); the event p posted; released.
+constexpr static const uint32_t EE_SCREENS_SEAX_SCREEN_EVENT_NEW = 3030;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EVENT_POST = 3031;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EVENT_DEREFERENCE = 3032;
+
+/// The quick save p (`EEAQuickSaveLoad`): not a load; written to its file.
+constexpr static const uint32_t EE_SCREENS_SEAX_QUICK_SAVE_NOT_LOAD = 3033;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_QUICK_SAVE_WRITE = 3034;
+
+/// The tech list of id i0 filled with the lines i1..i2.
+constexpr static const uint32_t EE_SCREENS_SEAX_TECH_FILL = 3035;
+
+/// The editor's paint area `GERectangle(left i0, top i1, right i2, bottom i3)`.
+constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_AREA = 3036;
+
+/// The pause's statements: posted; the world's write lock and the UI copy lock let go; -> paused; `PlatSleep(1)`;
+/// the locks taken again.
+constexpr static const uint32_t EE_SCREENS_SEAX_PAUSE_POST = 3037;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_WRITE_UNLOCK = 3038;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UI_UNLOCK = 3039;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_PAUSED = 3040;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SLEEP = 3041;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UI_LOCK = 3042;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_WRITE_LOCK = 3043;
+
+/// The world reset; a new scenario manager; a new environment manager.
+constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_RESET = 3044;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NEW_SCENARIO_MANAGER = 3045;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NEW_ENVIRONMENT_MANAGER = 3046;
+
+/// -> a new map (i0..i3); verified; set as the world's.
+constexpr static const uint32_t EE_SCREENS_SEAX_MAP_NEW = 3047;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MAP_VERIFY = 3048;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MAP_SET = 3049;
+
+/// The mesh tile (i0, i1) water when i2; the tile's height f0.
+constexpr static const uint32_t EE_SCREENS_SEAX_MESH_SET_WATER = 3050;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE_SET_HEIGHT = 3051;
+
+/// -> a terrain paint of the terrain i0 (an `EEAction*`); its area (i0..i3).
+constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_NEW = 3052;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_SET_AREA = 3053;
+
+/// The minimap: given the map; `EEUIMiniMap::Update`; `RedrawAll`; `Redraw`; `Refresh`.
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_SET_MAP = 3054;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_UPDATE = 3055;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REDRAW_ALL = 3056;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REDRAW = 3057;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REFRESH = 3058;
+
+/// The renderer: the scene released; made again; resumed.
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_RELEASE_SCENE = 3059;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_INITIALISE_SCENE = 3060;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_RESUME = 3061;
+
+/// -> new game options; p's map size i0; its start epoch i0; its map dimensions into the longs 0, 1; deleted.
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_NEW = 3062;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_MAP_SIZE = 3063;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_EPOCH = 3064;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_DIMENSIONS = 3065;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_DELETE = 3066;
+
+/// -> the player i0 (`EEPlayer*`); p's observer flag, whether it is human, its tech tree's start epoch.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER = 3067;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_OBSERVER = 3068;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_HUMAN = 3069;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_START_EPOCH = 3070;
+
+/// The random map: its players cleared, the player i0 added; the location zeroed; `CreateRandomMap(options p,
+/// the players, local i0, the generator of style i1, the seed, the map, the location)`; the location's x, y, z.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYERS_CLEAR = 3071;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYERS_PUSH = 3072;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_ZERO = 3073;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_RANDOM_MAP = 3075;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_X = 3076;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_Y = 3077;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_Z = 3078;
+
+/// The player p's pending units: their count; -> the unit i0; the unit p's media loaded; the pending unit i0 added
+/// to the world; -> the unit p is a built land building; the player p loads the unit q's class buttons.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_PENDING_COUNT = 3079;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PENDING = 3081;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_LOAD_MEDIA = 3082;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_ADD_UNIT_ENTRY = 3083;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_BUILT_LAND_BUILDING = 3084;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_LOAD_BUTTONS = 3085;
+
+/// The wall plan's list cleared; `EEPlanWall` from (f0, f1) to (f2, f3) of the player i0's class of the technology i1.
+constexpr static const uint32_t EE_SCREENS_SEAX_WALLS_CLEAR = 3086;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAN_WALL = 3087;
+
+/// The ghosts: their lock taken; let go; -> their count; -> the ghost i0 (`EEGhostUnit*`).
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_ENTER = 3088;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_LEAVE = 3089;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_COUNT = 3090;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST = 3091;
+
+/// `EEBuildGate` on the tile (i0, i1) for the player i2, the technology i3, the direction i4.
+constexpr static const uint32_t EE_SCREENS_SEAX_BUILD_GATE = 3092;
+
+/// -> the world's unit of id i0 (an `RTSUnit*`); -> p's player's id.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_BY_ID = 3093;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_RTS_UNIT_PLAYER_ID = 3094;
+
+/// The elevation file pair: the map tab's list selection read; -> it; -> a new file spec; its directory; its file
+/// (the selection's name, i0 ".txt" else ".dat"); -> its `Open` result; i0 bytes read into q; -> the count read;
+/// closed; deleted; -> the edit box i0's number.
+constexpr static const uint32_t EE_SCREENS_SEAX_ELEVATION_SELECTION = 3095;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SELECTION_GET = 3096;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_NEW = 3097;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_DIRECTORY = 3098;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_FILE = 3099;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_OPEN = 3100;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_READ = 3101;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_READ_COUNT = 3102;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_CLOSE = 3103;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_DELETE = 3104;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EDIT_INT = 3105;
+
+/// The ghost p: -> its class's type; -> the class of type i0 (`EEUnitClass*`); the class p: -> small; -> flies over;
+/// its cruise altitude -> f0; the ghost p's tile, class tile size, animation, transformation (-> t), can place.
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TYPE = 3111;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS = 3112;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_SMALL = 3113;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_FLIES = 3114;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_CRUISE = 3115;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TILE_X = 3116;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TILE_Y = 3117;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_CLASS_TILE_SIZE = 3118;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_ANIMATION = 3119;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TRANSFORMATION = 3120;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_CAN_PLACE = 3121;
+
+/// The tile p's height -> f0.
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE_HEIGHT = 3122;
+
+/// -> the unit of id i0 (the placements' handles: `EEUnit*`, `EEComplexUnit*`).
+constexpr static const uint32_t EE_SCREENS_SEAX_SEP_UNIT = 3123;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEP_COMPLEX = 3124;
+
+/// The unit p: -> its complex unit; -> its player.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_COMPLEX = 3125;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PLAYER = 3126;
+
+/// -> the complex unit p's player is q; -> the unit p's class transports; -> the complex unit p has room for the
+/// class q; -> the class p can enter the complex unit q's class.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_PLAYER_IS = 3127;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_TRANSPORTS = 3128;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ROOM_FOR = 3129;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_CAN_ENTER = 3130;
+
+/// The complex unit p referenced; -> its id.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_REFERENCE = 3131;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ID = 3132;
+
+/// -> the class p's type; -> a unit of it made at t (or at the world's transformation) for the player i0.
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_TYPE = 3133;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CREATE_AT = 3134;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CREATE_AT_WORLD = 3135;
+
+/// The unit p's chain cloakable; cloaked; t's closest tile into the longs 0, 1; the unit's tile x, y from them; its
+/// tile updated.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLOAKABLE = 3136;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLOAKED = 3137;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLOSEST_TILE = 3138;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_TILE_X = 3139;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_TILE_Y = 3140;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_UPDATE_TILE = 3141;
+
+/// The player p releases the media of the unit type i0.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_UNLOAD_MEDIA = 3142;
+
+/// -> the class p is a land building.
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_LAND_BUILDING = 3143;
+
+/// The unit p's complex unit: built; the animation i0; -> its stats' power is above 0; given its power.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_BUILT = 3144;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_ANIMATION = 3145;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_POWERED = 3146;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_POWER = 3147;
+
+/// The player p's pending units grown by one (`AddPendingUnits(0, 1)`).
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_ADD_PENDING = 3148;
+
+/// The complex unit p loads the unit q's complex unit (`GetComplexUnit`).
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOAD_UNIT = 3149;
+
+/// -> the complex unit p is editor-selected; the editor selects it; the unit tab's selection updated; p released.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_EDITOR_SELECTED = 3150;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EDITOR_SELECT_COMPLEX = 3151;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EDITOR_UPDATE_SELECTION = 3152;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_DEREFERENCE = 3153;
+
+/// -> the unit p's id; -> the complex unit p's next part; -> the unit p's class; -> the class p pitches.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_ID = 3154;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_NEXT = 3155;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLASS = 3156;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_PITCHES = 3157;
+
+/// The complex unit p's location -> t; -> its class.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOCATION = 3158;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_CLASS = 3159;
+
+/// The complex unit p loads the unit q's `mComplexUnit`.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOAD_COMPLEX = 3160;
+
+/// `MoveTo(i0, i1, true)` of the complex unit p; of the unit p.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_MOVE_TO = 3161;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_MOVE_TO = 3162;
+
+/// The complex unit p: -> its facing quarter; -> its facing; its facing set to i0; its class levels the ground at
+/// its tile (f0 in and out).
+constexpr static const uint32_t EE_SCREENS_SEAX_FACING_QUARTER = 3163;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_FACING = 3164;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SET_FACING = 3165;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_LEVEL_GROUND = 3166;
+
+/// The rotation: the unit p's complex unit's location into the statics' transformation; its orientation the yaw f0;
+/// set as the complex unit's.
+constexpr static const uint32_t EE_SCREENS_SEAX_T_FROM_LOCATION = 3170;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_T_YPR = 3171;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_T_APPLY = 3172;
+
+/// -> the complex unit p is an air traffic building; it leaves its player's air traffic list.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ATC_AIRPORT = 3173;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_ATC_REMOVE = 3174;
+
+/// The complex unit p killed; the player p takes the complex unit q off.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_KILL = 3175;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_KILL_COMPLEX = 3176;
+
+/// The complex unit p's cargo q (an index) unloaded at a copy of its location.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_UNLOAD = 3177;
+
+/// The lasso's ids: cleared; the units of type i0 in the rectangle p picked; -> their count; -> the id i0.
+constexpr static const uint32_t EE_SCREENS_SEAX_IDS_CLEAR = 3178;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PICK = 3179;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_IDS_COUNT = 3180;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_ID = 3181;
+
+/// The unit types the placements test (`kUnitTypeAirport`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved`,
+/// `kUnitTypeCameraObject`; the C++ static_asserts them).
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_AIRPORT = 66;
+
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY = 52;
+
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED = 698;
+
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT = 359;
 
 /// `gRasterizer->GetTextureManager(form->GetManager()->GetScreen())->LoadTexture("textures\\SE Buttons", the
 /// screen's description)` -> the texture; p0's `Reference()`.
@@ -7438,423 +7855,6 @@ constexpr static const uint32_t EE_SCREENS_SEUN_GET_LISTED_LAYER = 26;
 
 /// Handles: the selection tool.
 constexpr static const uint32_t EE_SCREENS_SEUN_GET_SELECT_UNITS = 27;
-
-/// `gUserInterface->PostAction(p)` (an `EEAction*`).
-constexpr static const uint32_t EE_SCREENS_SEAX_POST_ACTION = 3000;
-
-/// The action p released.
-constexpr static const uint32_t EE_SCREENS_SEAX_DEREFERENCE_ACTION = 3001;
-
-/// `gB529066 = false`, `gCameraFollowing = false`, `gB529068 = false` (each its own statement).
-constexpr static const uint32_t EE_SCREENS_SEAX_FOLLOW_529066 = 3002;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CAMERA_FOLLOWING = 3003;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_FOLLOW_529068 = 3004;
-
-/// -> whether the mesh point (i0, i1) is valid; its height -> f0.
-constexpr static const uint32_t EE_SCREENS_SEAX_MESH_VALID_POINT = 3005;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MESH_Z = 3006;
-
-/// The terrain i0's table entry: -> ambients only, its unit class count, its ambient unit chance.
-constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_AMBIENTS_ONLY = 3007;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_NUM_CLASSES = 3008;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_CHANCE = 3009;
-
-/// -> whether the world player may place the class i0 on the tile (i1, i2); the unit made there.
-constexpr static const uint32_t EE_SCREENS_SEAX_PLANT_CAN_PLACE = 3010;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLANT_CREATE = 3011;
-
-/// -> whether the editor's radio button of id i0 is checked.
-constexpr static const uint32_t EE_SCREENS_SEAX_RADIO_CHECKED = 3012;
-
-/// The statics' longs (`sSeaxLong[i0] = i1`, -> `sSeaxLong[i0]`) and `EEMap::Raise` over them (f0..f3, i0 != 0).
-constexpr static const uint32_t EE_SCREENS_SEAX_LONG_SET = 3013;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_LONG_GET = 3014;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_RAISE = 3015;
-
-/// -> the map's tile (i0, i1) (`EEMapTile*`), its first unit node, a node's next and unit.
-constexpr static const uint32_t EE_SCREENS_SEAX_TILE = 3016;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_TILE_FIRST_NODE = 3017;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_NODE_NEXT = 3018;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_NODE_UNIT = 3019;
-
-/// The unit p (`EEUnit*`): -> on a tile's list; -> its complex unit's previous part (an `EEUnit*`); referenced;
-/// -> a path point; -> a resource; emptied; killed; taken from its player; released.
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_ON_TILE = 3020;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PREVIOUS_PART = 3021;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_REFERENCE = 3022;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PATH_POINT = 3023;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_RESOURCE = 3024;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_EMPTY = 3025;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_KILL = 3026;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PLAYER_KILL = 3027;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_DEREFERENCE = 3028;
-
-/// -> the screen event i0 (`EECreateScreenEvent`); the event p posted; released.
-constexpr static const uint32_t EE_SCREENS_SEAX_SCREEN_EVENT_NEW = 3030;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_EVENT_POST = 3031;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_EVENT_DEREFERENCE = 3032;
-
-/// The quick save p (`EEAQuickSaveLoad`): not a load; written to its file.
-constexpr static const uint32_t EE_SCREENS_SEAX_QUICK_SAVE_NOT_LOAD = 3033;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_QUICK_SAVE_WRITE = 3034;
-
-/// The tech list of id i0 filled with the lines i1..i2.
-constexpr static const uint32_t EE_SCREENS_SEAX_TECH_FILL = 3035;
-
-/// The editor's paint area `GERectangle(left i0, top i1, right i2, bottom i3)`.
-constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_AREA = 3036;
-
-/// The pause's statements: posted; the world's write lock and the UI copy lock let go; -> paused; `PlatSleep(1)`;
-/// the locks taken again.
-constexpr static const uint32_t EE_SCREENS_SEAX_PAUSE_POST = 3037;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_WRITE_UNLOCK = 3038;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UI_UNLOCK = 3039;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_PAUSED = 3040;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SLEEP = 3041;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UI_LOCK = 3042;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_WRITE_LOCK = 3043;
-
-/// The world reset; a new scenario manager; a new environment manager.
-constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_RESET = 3044;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_NEW_SCENARIO_MANAGER = 3045;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_NEW_ENVIRONMENT_MANAGER = 3046;
-
-/// -> a new map (i0..i3); verified; set as the world's.
-constexpr static const uint32_t EE_SCREENS_SEAX_MAP_NEW = 3047;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MAP_VERIFY = 3048;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MAP_SET = 3049;
-
-/// The mesh tile (i0, i1) water when i2; the tile's height f0.
-constexpr static const uint32_t EE_SCREENS_SEAX_MESH_SET_WATER = 3050;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_TILE_SET_HEIGHT = 3051;
-
-/// -> a terrain paint of the terrain i0 (an `EEAction*`); its area (i0..i3).
-constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_NEW = 3052;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_SET_AREA = 3053;
-
-/// The minimap: given the map; `EEUIMiniMap::Update`; `RedrawAll`; `Redraw`; `Refresh`.
-constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_SET_MAP = 3054;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_UPDATE = 3055;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REDRAW_ALL = 3056;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REDRAW = 3057;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REFRESH = 3058;
-
-/// The renderer: the scene released; made again; resumed.
-constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_RELEASE_SCENE = 3059;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_INITIALISE_SCENE = 3060;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_RESUME = 3061;
-
-/// -> new game options; p's map size i0; its start epoch i0; its map dimensions into the longs 0, 1; deleted.
-constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_NEW = 3062;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_MAP_SIZE = 3063;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_EPOCH = 3064;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_DIMENSIONS = 3065;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_DELETE = 3066;
-
-/// -> the player i0 (`EEPlayer*`); p's observer flag, whether it is human, its tech tree's start epoch.
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER = 3067;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_OBSERVER = 3068;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_HUMAN = 3069;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_START_EPOCH = 3070;
-
-/// The random map: its players cleared, the player i0 added; the location zeroed; `CreateRandomMap(options p,
-/// the players, local i0, the generator of style i1, the seed, the map, the location)`; the location's x, y, z.
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYERS_CLEAR = 3071;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYERS_PUSH = 3072;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_POINT_ZERO = 3073;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_RANDOM_MAP = 3075;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_POINT_X = 3076;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_POINT_Y = 3077;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_POINT_Z = 3078;
-
-/// The player p's pending units: their count; -> the unit i0; the unit p's media loaded; the pending unit i0 added
-/// to the world; -> the unit p is a built land building; the player p loads the unit q's class buttons.
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_PENDING_COUNT = 3079;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PENDING = 3081;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_LOAD_MEDIA = 3082;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_ADD_UNIT_ENTRY = 3083;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_BUILT_LAND_BUILDING = 3084;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_LOAD_BUTTONS = 3085;
-
-/// The wall plan's list cleared; `EEPlanWall` from (f0, f1) to (f2, f3) of the player i0's class of the technology i1.
-constexpr static const uint32_t EE_SCREENS_SEAX_WALLS_CLEAR = 3086;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAN_WALL = 3087;
-
-/// The ghosts: their lock taken; let go; -> their count; -> the ghost i0 (`EEGhostUnit*`).
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_ENTER = 3088;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_LEAVE = 3089;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_COUNT = 3090;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST = 3091;
-
-/// `EEBuildGate` on the tile (i0, i1) for the player i2, the technology i3, the direction i4.
-constexpr static const uint32_t EE_SCREENS_SEAX_BUILD_GATE = 3092;
-
-/// -> the world's unit of id i0 (an `RTSUnit*`); -> p's player's id.
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_BY_ID = 3093;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_RTS_UNIT_PLAYER_ID = 3094;
-
-/// The elevation file pair: the map tab's list selection read; -> it; -> a new file spec; its directory; its file
-/// (the selection's name, i0 ".txt" else ".dat"); -> its `Open` result; i0 bytes read into q; -> the count read;
-/// closed; deleted; -> the edit box i0's number.
-constexpr static const uint32_t EE_SCREENS_SEAX_ELEVATION_SELECTION = 3095;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SELECTION_GET = 3096;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_NEW = 3097;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_DIRECTORY = 3098;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_FILE = 3099;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_OPEN = 3100;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_READ = 3101;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_READ_COUNT = 3102;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_CLOSE = 3103;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_DELETE = 3104;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_EDIT_INT = 3105;
-
-/// The ghost p: -> its class's type; -> the class of type i0 (`EEUnitClass*`); the class p: -> small; -> flies over;
-/// its cruise altitude -> f0; the ghost p's tile, class tile size, animation, transformation (-> t), can place.
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TYPE = 3111;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS = 3112;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_SMALL = 3113;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_FLIES = 3114;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_CRUISE = 3115;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TILE_X = 3116;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TILE_Y = 3117;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_CLASS_TILE_SIZE = 3118;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_ANIMATION = 3119;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TRANSFORMATION = 3120;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_CAN_PLACE = 3121;
-
-/// The tile p's height -> f0.
-constexpr static const uint32_t EE_SCREENS_SEAX_TILE_HEIGHT = 3122;
-
-/// -> the unit of id i0 (the placements' handles: `EEUnit*`, `EEComplexUnit*`).
-constexpr static const uint32_t EE_SCREENS_SEAX_SEP_UNIT = 3123;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SEP_COMPLEX = 3124;
-
-/// The unit p: -> its complex unit; -> its player.
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_COMPLEX = 3125;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PLAYER = 3126;
-
-/// -> the complex unit p's player is q; -> the unit p's class transports; -> the complex unit p has room for the
-/// class q; -> the class p can enter the complex unit q's class.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_PLAYER_IS = 3127;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_TRANSPORTS = 3128;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ROOM_FOR = 3129;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_CAN_ENTER = 3130;
-
-/// The complex unit p referenced; -> its id.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_REFERENCE = 3131;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ID = 3132;
-
-/// -> the class p's type; -> a unit of it made at t (or at the world's transformation) for the player i0.
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_TYPE = 3133;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CREATE_AT = 3134;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CREATE_AT_WORLD = 3135;
-
-/// The unit p's chain cloakable; cloaked; t's closest tile into the longs 0, 1; the unit's tile x, y from them; its
-/// tile updated.
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLOAKABLE = 3136;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLOAKED = 3137;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLOSEST_TILE = 3138;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_TILE_X = 3139;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_TILE_Y = 3140;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_UPDATE_TILE = 3141;
-
-/// The player p releases the media of the unit type i0.
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_UNLOAD_MEDIA = 3142;
-
-/// -> the class p is a land building.
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_LAND_BUILDING = 3143;
-
-/// The unit p's complex unit: built; the animation i0; -> its stats' power is above 0; given its power.
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_BUILT = 3144;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_ANIMATION = 3145;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_POWERED = 3146;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_POWER = 3147;
-
-/// The player p's pending units grown by one (`AddPendingUnits(0, 1)`).
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_ADD_PENDING = 3148;
-
-/// The complex unit p loads the unit q's complex unit (`GetComplexUnit`).
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOAD_UNIT = 3149;
-
-/// -> the complex unit p is editor-selected; the editor selects it; the unit tab's selection updated; p released.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_EDITOR_SELECTED = 3150;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_EDITOR_SELECT_COMPLEX = 3151;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_EDITOR_UPDATE_SELECTION = 3152;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_DEREFERENCE = 3153;
-
-/// -> the unit p's id; -> the complex unit p's next part; -> the unit p's class; -> the class p pitches.
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_ID = 3154;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_NEXT = 3155;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLASS = 3156;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_PITCHES = 3157;
-
-/// The complex unit p's location -> t; -> its class.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOCATION = 3158;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_CLASS = 3159;
-
-/// The complex unit p loads the unit q's `mComplexUnit`.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOAD_COMPLEX = 3160;
-
-/// `MoveTo(i0, i1, true)` of the complex unit p; of the unit p.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_MOVE_TO = 3161;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_MOVE_TO = 3162;
-
-/// The complex unit p: -> its facing quarter; -> its facing; its facing set to i0; its class levels the ground at
-/// its tile (f0 in and out).
-constexpr static const uint32_t EE_SCREENS_SEAX_FACING_QUARTER = 3163;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_FACING = 3164;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_SET_FACING = 3165;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_LEVEL_GROUND = 3166;
-
-/// The rotation: the unit p's complex unit's location into the statics' transformation; its orientation the yaw f0;
-/// set as the complex unit's.
-constexpr static const uint32_t EE_SCREENS_SEAX_T_FROM_LOCATION = 3170;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_T_YPR = 3171;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_T_APPLY = 3172;
-
-/// -> the complex unit p is an air traffic building; it leaves its player's air traffic list.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ATC_AIRPORT = 3173;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_ATC_REMOVE = 3174;
-
-/// The complex unit p killed; the player p takes the complex unit q off.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_KILL = 3175;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_KILL_COMPLEX = 3176;
-
-/// The complex unit p's cargo q (an index) unloaded at a copy of its location.
-constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_UNLOAD = 3177;
-
-/// The lasso's ids: cleared; the units of type i0 in the rectangle p picked; -> their count; -> the id i0.
-constexpr static const uint32_t EE_SCREENS_SEAX_IDS_CLEAR = 3178;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_PICK = 3179;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_IDS_COUNT = 3180;
-
-constexpr static const uint32_t EE_SCREENS_SEAX_ID = 3181;
-
-/// The unit types the placements test (`kUnitTypeAirport`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved`,
-/// `kUnitTypeCameraObject`; the C++ static_asserts them).
-constexpr static const int32_t EE_SCREENS_SEAX_TYPE_AIRPORT = 66;
-
-constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY = 52;
-
-constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED = 698;
-
-constexpr static const int32_t EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT = 359;
 
 /// `EESEASaveScenario`.
 constexpr static const uint32_t EE_SCREENS_SEW_SAVE = 1;
