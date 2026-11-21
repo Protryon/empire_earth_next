@@ -8,6 +8,66 @@
 #include <stddef.h>
 #include "rust/base/math.h"
 #include "rust/sim/tech.h"
+#include "rust/sim/units.h"
+
+/// The string ids (ee/EEStringIDs.h, ee/EESaveLoad.h; EESaveLoad.cpp's static_assert).
+constexpr static const int64_t PS_IDS_FILE_COULDNT_BE_OPENED = 7152;
+
+constexpr static const int64_t PS_IDS_SAVE_GAME_INCOMPATIBLE = 7154;
+
+constexpr static const int64_t PS_IDS_SAVE_GAME_INVALID_DATA = 7156;
+
+constexpr static const int64_t PS_IDS_SAVE_GAME_MISSING_DATA = 7157;
+
+constexpr static const int64_t PS_IDS_TOO_MANY_PLAYERS_IN_LOBBY = 10034;
+
+constexpr static const int64_t PS_IDS_PLAYER_NOT_IN_SAVED = 10037;
+
+constexpr static const int64_t PS_IDS_SAVED_GAME_REQUIRES_PLAYERS = 10038;
+
+constexpr static const int64_t PS_IDS_TOO_MANY_PLAYERS_TO_PLAY = 10039;
+
+constexpr static const int64_t PS_IDS_NOT_VALID_MULTIPLAYER_SCENARIO = 10040;
+
+constexpr static const int64_t PS_IDS_ERROR_CREATING_FILE = 10049;
+
+constexpr static const int64_t PS_IDS_ERROR_SAVING_FILE = 10050;
+
+constexpr static const int64_t PS_IDS_INVALID_FILE_NAME = 10068;
+
+constexpr static const int64_t PS_KEESL_SAVE_GAME_INVALID = 7153;
+
+/// The chunk tags (ee/EEPersistentTag.h): `kPersistentChecksum` .. `kPersistentCalamities`.
+constexpr static const int64_t PS_TAG_CHECKSUM = 1;
+
+constexpr static const int64_t PS_TAG_SEED = 2;
+
+constexpr static const int64_t PS_TAG_CAMERA = 3;
+
+constexpr static const int64_t PS_TAG_MAP = 4;
+
+constexpr static const int64_t PS_TAG_PLAYERS = 5;
+
+constexpr static const int64_t PS_TAG_SCENARIO = 6;
+
+constexpr static const int64_t PS_TAG_WORLD = 7;
+
+constexpr static const int64_t PS_TAG_EFFECTS = 10;
+
+constexpr static const int64_t PS_TAG_MULTIPLAYER = 11;
+
+constexpr static const int64_t PS_TAG_ENVIRONMENT = 12;
+
+constexpr static const int64_t PS_TAG_CALAMITIES = 13;
+
+/// `kErrorOK`.
+constexpr static const int64_t PF_OK = 0;
+
+/// `kErrorFailed`.
+constexpr static const int64_t PF_FAILED = 9;
+
+/// `kErrorBeyondEnd`.
+constexpr static const int64_t PF_BEYOND_END = 10;
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
@@ -1359,6 +1419,409 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  PsSetLoadingScenario,
+  PsClearLoadingScenario,
+  PchClearCalamities,
+  PchCalamities,
+  PchNewCalamities,
+  PchNewCalamity,
+  PchCalamityLoad,
+  PchCalamitySave,
+  PchPush,
+  PchContagionLoad,
+  PchCount,
+  PchAt,
+  PchSetCaster,
+  PchPlaySound,
+  PchDeleteAt,
+  PchRestoreContagions,
+  PchActive,
+  PchVerifyActive,
+  VecCalamitiesCount,
+  VecCalamitiesAt,
+  PchClassIndex,
+  PchVerifyClassIndex,
+  PchGetTarget,
+  PchContagionSave,
+  PcRust,
+  PcUStrLoad,
+  PcUStrText,
+  PcSaveText,
+  PmPhysicsLoad,
+  PmPhysicsSave,
+  PmServerSetPhysicsTick,
+  PmClientSetPhysicsTick,
+  PmCommCtsProcessed,
+  PmCommLastTick,
+  PmServerLastCt,
+  PmServerCt,
+  PmServerPt,
+  PmServerMessageNumber,
+  PmClientCt,
+  PmClientPt,
+  PphFields,
+  PphPush,
+  PphCopyPlayers,
+  PphPlayerChecksum,
+  PphChecksumLocal,
+  PphNewHuman,
+  PphNewComputer,
+  PphVerifyType3,
+  PphPlayerLoad,
+  PphPlayerSave,
+  PphComputerOf,
+  PphHasHuman,
+  PphVerifyPlayerType,
+  PphCpSetEngineNext,
+  PphCpEngine,
+  PphAiKnown,
+  PphLogUnknownAi,
+  PphCpSetAi,
+  PphCpLoadState,
+  PphCpUnitsLoad,
+  PphHasUnitsLuaState,
+  PphIsAllied,
+  PphAddAlly,
+  PphStrNew,
+  PphStrDelete,
+  PphStrSize,
+  PphStrData,
+  PphCpEngineAi,
+  PphClassicAiPresent,
+  PphClassicAiId,
+  PphCpSaveState,
+  PphCpUnitsSave,
+  HdrNameLoad,
+  HdrNameSave,
+  HdrDescriptionLoad,
+  HdrDescriptionSave,
+  HdrPlayerNamesLoad,
+  HdrPlayerNamesSave,
+  HdrDateLoad,
+  HdrDateSave,
+  HdrOptionsLoad,
+  HdrOptionsSave,
+  HdrMediaLoad,
+  HdrMediaSave,
+  PwhFields,
+  PwhScenario,
+  PwhSetScenario,
+  PwhTeamsFromWorld,
+  PwhTeamsCount,
+  PwhTeamsResize,
+  PwhTeamLoad,
+  PwhTeamSave,
+  PwWorldPopulationLimit,
+  PwStSetScenario,
+  PwStTeamsFromHelper,
+  PwHasLiveState,
+  PwChatLogLoad,
+  PwChatLogSave,
+  PwMainFormLoad,
+  PwMainFormSave,
+  PwPrimitive,
+  PwHasRunningState,
+  PwHasRegionOrder,
+  PwHasExperimentTimers,
+  PwHasTowns,
+  PwHasTownAreas,
+  PwHasGhosts,
+  PwHasGhostResources,
+  PwHasGoalGhosts,
+  PwHasContinentRegions,
+  PwHasResourceState,
+  PwHasPlayerUnitOrder,
+  PwHasPathSearches,
+  PwHasActiveGroups,
+  PwHasGraphSearches,
+  PwHasTechAllowed,
+  PwHasTileTypes,
+  PwPathRunningLoad,
+  PwPathRunningSave,
+  PwAreaEffectsLoad,
+  PwAreaEffectsSave,
+  PwExperimentTimersLoad,
+  PwExperimentTimersSave,
+  PwTownsLoad,
+  PwTownsSave,
+  PwContinentRegionsLoad,
+  PwContinentRegionsSave,
+  PwResourceStateLoad,
+  PwResourceStateSave,
+  PwPathSearchesLoad,
+  PwPathSearchesSave,
+  PwActiveGroupsLoad,
+  PwActiveGroupsSave,
+  PwGraphSearchesLoad,
+  PwGraphSearchesSave,
+  PwDebugText,
+  PwChainFirst,
+  PwChainHead,
+  PwTileNodeNext,
+  PwNodePrev,
+  PwLink,
+  PwComplexOfSavedId,
+  PwHandleId,
+  PwUnitReference,
+  PwUnitDereference,
+  PwComplexOfId,
+  PwForestCount,
+  PwForestAt,
+  PwForestRenewal,
+  PwForestSetRenewal,
+  PwForestSize,
+  PwForestTiles,
+  PwForestAtTile,
+  PwPointsNew,
+  PwPointsDelete,
+  PwPointsCount,
+  PwPointX,
+  PwPointY,
+  PwAiNextPlayer,
+  PwAiNextUpdateTime,
+  PwAiPlayerCount,
+  PwMap,
+  PwMapSize,
+  PwMapTileAt,
+  PwMapRegions,
+  PwNodeUnit,
+  PwNodeSetUnit,
+  PwNodeNext,
+  PwTileSetTerrainType,
+  PwNumPlayers,
+  PwPlayerFirstUnit,
+  PwPlayerGetUnit,
+  PwPlayerSetBucketFirst,
+  PwPlayerSetFirstUnit,
+  PwPlayerSetLastUnit,
+  PwUnitNext,
+  PwUnitSetPrevious,
+  PwUnitSetNext,
+  PwDynComplex,
+  PwCxLastAttacker,
+  PwCxGoalQueueCount,
+  PwCxGoalCount,
+  PwCxGoalAt,
+  PwAttackUnitCast,
+  PwAttackTarget,
+  PwGatherGoalCast,
+  PwGatherResource,
+  PwGatherStorage,
+  PwCxGetPlacement,
+  PwCxSetPlacement,
+  PwUnitClassCount,
+  PwUnitClassAt,
+  PwComplexCreate,
+  PwCxInitUnit,
+  PwUnitCreate,
+  PwUnitInit,
+  PwUnitSetTile,
+  PwRegisterUnit,
+  PwPlayerTechTree,
+  PwTreeNodeIds,
+  PwTreeGet,
+  PwNodeAllowed,
+  PwNodeSetAllowed,
+  PwCameraZoom,
+  PwWorldGameSpeed,
+  PfReadULong,
+  PfReadLong,
+  PfReadU16,
+  PfReadI8,
+  PfReadU8,
+  PfReadF32,
+  PfReadBool,
+  PfReadChars,
+  PfWriteULong,
+  PfWriteLong,
+  PfWriteU16,
+  PfWriteI8,
+  PfWriteU8,
+  PfWriteF32,
+  PfWriteBool,
+  PfWriteChars,
+  PvLongsNew,
+  PvLongsDelete,
+  PvLongsCount,
+  PvLongsAt,
+  PvAfterLoad,
+  PsMajorVersion,
+  PsListNew,
+  PsListDelete,
+  PsListPush,
+  PsListCount,
+  PsListAt,
+  PsListClear,
+  PsPersistentTag,
+  PsPersistentDelete,
+  PsNewChecksumChunk,
+  PsWorldChecksum,
+  PsNewSeedChunk,
+  PsNewMapChunk,
+  PsMapChunkUnown,
+  PsMapChunkObject,
+  PsNewCameraChunk,
+  PsCameraChunkValue,
+  PsNewScenarioChunk,
+  PsScenarioChunkUnown,
+  PsScenarioChunkObject,
+  PsNewEffectsChunk,
+  PsEffectsChunkUnown,
+  PsEffectsChunkObject,
+  PsNewEnvironmentChunk,
+  PsEnvironmentChunkUnown,
+  PsEnvironmentChunkObject,
+  PsNewPlayerHelper,
+  PsNewWorldHelper,
+  PsNewMultiplayerHelper,
+  PsNewCalamityHelper,
+  PsCastChecksum,
+  PsCastSeed,
+  PsSeedValue,
+  PsCastEffects,
+  PsCastCamera,
+  PsCastMap,
+  PsCastPlayers,
+  PsCastWorld,
+  PsCastScenario,
+  PsCastCalamities,
+  PsCastEnvironment,
+  PsHeaderNew,
+  PsHeaderDelete,
+  PsHeaderSave,
+  PsHeaderLoad,
+  PsHdrSetName,
+  PsHdrDefaultDescription,
+  PsHdrVersions,
+  PsHdrNumbers,
+  PsHdrNamesClear,
+  PsHdrNamesAppendPlayer,
+  PsHdrNamesAppendSpace,
+  PsHdrSetDate,
+  PsHdrTagsClear,
+  PsHdrTagsPush,
+  PsHdrTagsCount,
+  PsHdrTagAt,
+  PsWorldScenario,
+  PsHdrMediaFromScenario,
+  PsHdrOptionsFromWorld,
+  PsMaxPlayers,
+  PsSpecNew,
+  PsSpecDelete,
+  PsSpecSetDirectory,
+  PsSpecFirstFile,
+  PsSpecNextFile,
+  PsSpecsNew,
+  PsSpecsDelete,
+  PsSpecsCount,
+  PsSpecLess,
+  PsSpecsInsert,
+  PsSpecsDeleteFirst,
+  PsSpecsEraseFirst,
+  PsSpecSetStartupVolume,
+  PsSpecSetStartupDirectory,
+  PsSpecSetFile,
+  PsSpecDeleteFile,
+  PsSpecCreate,
+  PsSpecOpen,
+  PsSpecClose,
+  PsSpecOpenAny,
+  PsFileIsOpen,
+  PsFileCloseAny,
+  PsChunksNew,
+  PsChunksDelete,
+  PsChunksResize,
+  PsChunksClear,
+  PsChunkSavePersistent,
+  PsChunkSaveToFile,
+  PsChunkNew,
+  PsChunkDelete,
+  PsChunkLoadHeader,
+  PsChunkGetSize,
+  PsChunkSkip,
+  PsChunkLoadFromFile,
+  PsChunkLoadPersistent,
+  PsMemFileNew,
+  PsMemFileNew1000,
+  PsMemFileDelete,
+  PsMemFileSave,
+  PsMemFileLoad,
+  PsUStrNew,
+  PsUStrDelete,
+  PsSaveTextName,
+  PsDeleteTextTwin,
+  PsReportSaved,
+  PsReportSaveError,
+  PsMessageString,
+  PsMessageStringVerify,
+  PsResourceString,
+  PsResourceStringVerify,
+  PsGameState,
+  PsValidateIntoMessage,
+  PsGraphicsPostResume,
+  PsUiResumeGraphics,
+  PsMapApplyVertexColors,
+  PsSetMasterVolume,
+  PsSetMusicVolume,
+  PsSleep,
+  PsCommPresent,
+  PsShowSplash,
+  PsShowSelectionAreas,
+  PsOpenMainGameForm,
+  PsWaitRenderNow,
+  PsSetLoadingSavedGame,
+  PsStClear,
+  PsStReset,
+  PsStInit,
+  PsStWriteLock,
+  PsStWriteUnlock,
+  PsStFinishLoad,
+  PsStOptionsFromHeader,
+  PsStSetChecksum,
+  PsStSetEffectManager,
+  PsStSetMap,
+  PsStSetCalamityHelper,
+  PsStSetEnvironmentManager,
+  PsStRestorablePushEffects,
+  PsStRestorablePushCalamities,
+  PsStRestorablePushEnvironment,
+  PsStLoadedPlayerPush,
+  PsPlayerRemoveAlly,
+  PsEditorFormPresent,
+  PsEditorClearSelection,
+  PsPreloadWaitQueue,
+  PsWorldClear,
+  PsWorldStartGame,
+  PsInScenarioEditor,
+  PsTextIsUtf8,
+  PsLegacyTextLoad,
+  PsReportCorrupt,
+  PsDebugCorrupt,
+  PsDataPathFind,
+  PsMapL195610,
+  PsMapL195614,
+  PsPphMaxPlayers,
+  PsPphLocalIndex,
+  PsPphPlayerCount,
+  PsPphPlayerAt,
+  PsWStrsNew,
+  PsWStrsDelete,
+  PsWStrsClear,
+  PsWStrsPush,
+  PsWStrsPushSlotName,
+  PsWStrsCount,
+  PsWStrsAt,
+  PsWStrsContains,
+  PsWStrNew,
+  PsWStrDelete,
+  PsWStrClear,
+  PsWStrLength,
+  PsSprintfNumber,
+  PsSprintfText,
+  PsSprintfTwoNumbers,
+  PsLoadProgress,
+  PsMasterVolume,
+  PsMusicVolume,
 };
 
 extern "C" {
@@ -2113,6 +2576,190 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// `EEPPlayerHelper()`: for loading, three slots, local player 0.
+void ee_gamecpp_pph_init(void *helper);
+
+/// `EEPPlayerHelper(EEWorld&)`: for saving, the world's existing players, slot count and current player.
+void ee_gamecpp_pph_from_world(void *helper,
+                               void *world);
+
+/// `EEPPlayerHelper::GetChecksum`: every player's checksum and the local player index.
+void ee_gamecpp_pph_checksum(const void *helper, void *checksum);
+
+/// `EEPPlayerHelper::GetLocalPlayerIndex`: the loaded local player index; 13 unless the chunk was loaded.
+long ee_gamecpp_pph_local_index(void *helper,
+                                long *out);
+
+/// `EEPPlayerHelper::GetPlayers`: the loaded players; 13 unless the chunk was loaded.
+long ee_gamecpp_pph_players(void *helper, void *out);
+
+/// `EEPPlayerHelper::Load`: the slot count, the local player index and each player (human or computer), then each
+/// player's ally list filled with the allies that share line of sight; the first read error.
+long ee_gamecpp_pph_load(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPPlayerHelper::Save`: the player count, slot count, local player index and each player with its type (and a
+/// computer player's engine, AI id, next engine's state and per-unit Lua state); fails for a loading chunk or no
+/// players.
+long ee_gamecpp_pph_save(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPSaveGameHeader::Load`: the name and version part, then the body (a save older than 0.255 holds Windows-1252
+/// text, converted as it loads); the first read error.
+long ee_gamecpp_hdr_load(void *header,
+                         void *file);
+
+/// `EEPSaveGameHeader::LoadFromFile`: a save file opened, copied into memory and its header read from there.
+long ee_gamecpp_hdr_load_from_file(void *header,
+                                   void *file);
+
+/// `EEPSaveGameHeader::Save`: the name and version part, then the body; the first write error.
+long ee_gamecpp_hdr_save(void *header, void *file);
+
+/// `EEPMultiplayerHelper::Load`: the physics state and the eight network tick counters; only the server's or client's
+/// physics tick restored from them; the first read error.
+long ee_gamecpp_pmh_load(unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPMultiplayerHelper::Save`: the physics state and the server's or client's network tick counters (nothing for
+/// versions up to 0.12); the first write error.
+long ee_gamecpp_pmh_save(unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPCalamityHelper::Load`: the active calamities, then the contagion manager; the contagion manager's error.
+long ee_gamecpp_pch_load(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPCalamityHelper::RepairPointers`: the loaded calamities reconnected to their caster and target units and their
+/// media loaded (those whose units are gone deleted); then the contagions reconnected.
+long ee_gamecpp_pch_repair(void *helper);
+
+/// `EEPCalamityHelper::Save`: the calamity manager's active calamities (with their current target ids) and the world's
+/// contagions.
+long ee_gamecpp_pch_save(unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPChecksum::Load`: the verbose flag and the described checksum entries; the first read error.
+long ee_gamecpp_pc_load(void *chunk, void *file);
+
+/// `EEPChecksum::Save`: the verbose flag and the described checksum entries; the first write error.
+long ee_gamecpp_pc_save(void *chunk, void *file);
+
+/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it too).
+void ee_gamecpp_ps_build_chunks(void *list);
+
+/// `TrimAutoSaves`: the files matching a pattern in a directory deleted, lowest (FSFileSpec order) first, until at
+/// most `max` remain.
+long ee_gamecpp_ps_trim_auto_saves(const void *pattern,
+                                   const void *directory,
+                                   unsigned long max);
+
+/// `LoadSavedGameFile`: a saved game validated and loaded with the sound muted (a multiplayer reload or into the game
+/// state), the graphics resumed after when asked; 9 when the file is not a valid save.
+long ee_gamecpp_ps_load_saved_game_file(void *file,
+                                        bool reload,
+                                        bool quiet,
+                                        bool resume);
+
+/// `EELoadSavedGameFile`: a saved game opened from a directory, validated and loaded into the game state with the sound
+/// muted, the graphics resumed after when asked; the first error.
+long ee_gamecpp_ps_load_from_directory(const void *name,
+                                       bool reload,
+                                       bool quiet,
+                                       const void *directory,
+                                       bool resume);
+
+/// `SaveGame`: the game saved to a file in a directory with the sound muted; the first error.
+long ee_gamecpp_ps_save_game(const void *name,
+                             unsigned long time,
+                             bool quiet,
+                             const void *directory);
+
+/// `EECheckSavedGameOptions`: a save's players against the lobby (the scenario slots for a multiplayer scenario, else
+/// every lobby player a saved one and all saved humans present); the problems listed; whether there are none.
+bool ee_gamecpp_ps_check_saved_options(void *saved,
+                                       void *current,
+                                       bool all_found,
+                                       void *missing,
+                                       long count);
+
+/// `EEValidateSaveGameFile`: whether a file holds a save this build can load; on failure the error message set (the
+/// header check's specific text, else the generic "save game invalid").
+bool ee_gamecpp_ps_validate(void *file,
+                            void *message);
+
+/// `SaveGameToFile`'s C++ entry (EESaveLoad.cpp's `SaveGameToFile`, 0x14d34b).
+long ee_gamecpp_ps_save_to_file(void *file, unsigned long time);
+
+/// `WriteSaveGame`'s C++ entry.
+long ee_gamecpp_ps_write_save(const void *name, unsigned long time, void *file, void *other);
+
+/// `EEGameStateLoader::Load`'s C++ entry.
+bool ee_gamecpp_loader_load(void *state, void *file);
+
+/// `EEGameStateLoader::LoadGame`: the game state restored from a saved header and its chunks; on failure "Load game
+/// file is corrupt." reported and the state cleared; whether it worked.
+bool ee_gamecpp_loader_load_game(void *state,
+                                 void *header_file,
+                                 void *file);
+
+/// `EEGameState::SetDefaultMapCenter`: the camera centred on the middle of the map, if there is one.
+void ee_gamecpp_st_default_map_center(void *state);
+
+/// `EELoadPersistent`: one chunk (by tag) read out of a saved game file without loading the rest; the read error.
+long ee_gamecpp_ps_load_persistent(const void *name,
+                                   long tag,
+                                   void **out);
+
+/// `EEPWorldHelper()`: no teams, improvements, team lock and cheats allowed.
+void ee_gamecpp_pwh_init(void *helper);
+
+/// `EEPWorldHelper(EEWorld&)`: the world's teams, time of day, zoom, speed, limits, victory and cheat settings and id
+/// counters.
+void ee_gamecpp_pwh_from_world(void *helper,
+                               void *world);
+
+/// `EEPWorldHelper::Load`: the teams, world settings and id counters (the Carbon flag from 0.239 on), the running
+/// state (from 0.254: world_save.rs), then the chat log and the main game form; only the form's error.
+long ee_gamecpp_pwh_load(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPWorldHelper::Save`: as Load's order (the Carbon flag always), the running state, the chat log and the main game
+/// form; only the form's error.
+long ee_gamecpp_pwh_save(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPWorldHelper::Restore`: the loaded teams, world settings and id counters into the game state (and its scenario
+/// manager, if any).
+void ee_gamecpp_pwh_restore(void *helper,
+                            void *state);
+
+/// The host of world_save.rs (was EEPWorldHost): the file's primitives, the version's predicates, the other systems'
+/// parts and the world's units by address.
+///
+/// # Safety
+/// `ctx` is null (the first tick's restore) or a live [`PwCtx`]; `io` is a live record.
+int64_t ee_gamecpp_pworld_host(void *ctx,
+                               int32_t op,
+                               EeUnitsWorldIo *io);
+
+/// `EEFindLoadedGhostUnit` (save 0.262 on): the unit made for the ghost of id `id` (made at the first ask, held by
+/// world_save.rs until the first tick), or null.
+void *ee_gamecpp_find_loaded_ghost_unit(unsigned long id);
 
 }  // extern "C"
 

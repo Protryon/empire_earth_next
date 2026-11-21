@@ -16,6 +16,8 @@ public:
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x149d9b
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x149e5c
     virtual FSPersistent* CreateDefault() const;                                // +0x14 0x149d3c
+    // the Rust set (ee_game gamecpp persist_parts.rs reads and fills it)
+    EeErrorChecksum* GetRust() const { return this->mRust; }
 
 };
 
