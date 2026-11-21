@@ -36038,3 +36038,92 @@ class, combat, trigger, update and landing hosts' path cases.
   PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `fixture_game.py --exercise random-game --box-select --orders --seed 7` (through slot.py) RESULT PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12368` units [4, 38, 39] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2777 joiner=2783`, GATES PASS. Per step: the
   `--sim` build 0/0 and the oracle at seeds 2-3; the oracle capture after the waypoints, after the reach and
   FindPath move (where the two lessons above were found) and at the end with units, transport and groups.
+
+## The UI lane, round 9: EEScreens.cpp's C++ hosts whole, the main game form's host and mouse modes whole, the shells' and the improvement button's multi-statement cases, the scenario intro manager's bodies in Rust over one-statement shims (ee_game screens lobby_calls.rs, post_game_calls.rs, screens_calls.rs, texts_calls.rs, sci_calls.rs, upgrade_calls.rs; main_form_calls.rs, shell_calls.rs; branch rust-ui9, 2026-11-20)
+
+The brief: round 8's method on its "What's left", biggest first, and a sweep of the lane's shims whose callee is now
+Rust; score the C++ logic lines removed (`logic_lines.py`), target -3,000. **Logic -825** (whole tree, base 89bf3c2f9
+-> 9c1f128e3, before the merge of origin/rust, one run of the same script: 84,558 -> 83,733), net C++ lines -699
+(+924 -1,623 in src and include), 545 one-statement shims added (547 `extern "C"` lines, two of them re-signed
+`find_generator`/`gt_map_type`), 11 multi-statement C++ hosts deleted (`ee_screenscpp_call`, `_text`, `_put_text`,
+`_main_form`, `_lobby_fill`, `_lobby_player`, `_put_lobby_player`, `_lobby_options`, `_pgs_history`, `_pgs_record`,
+`_lobby_load`) with the dispatcher chain under `ee_screenscpp_call` (eleven static functions), `EEMouseModeOp` and
+`EEUIFMainGame::HostOp`. The target was not reached; the shim sweep was not done (none deleted).
+docs/progress/ui-cluster.md lists what is left, file by file.
+
+### What moved
+
+- `lobby_calls.rs`: the lobby's sources and slots (`EEScreensLobbyOptions`, `_LobbySlot`), the saved game's check
+  (`EEScreensLobbyLoad`: the load screen's on the lobby's header and file, the start's on a header of its own, freed
+  after), the slot and options records (built in Rust from field shims), the random map's fill, the saved options'
+  apply (through `EEScreensLobbySetOption`, sent whole), the boot copy's free.
+- `post_game_calls.rs`: the statistics' history and records, a series into the line graph (one `GetSeries` copy per
+  series in a file static), the window's size.
+- `screens_calls.rs`: the eleven dispatchers that were `ee_screenscpp_call`'s default chain and the root's own
+  cases: with `game_calls.rs`, `game_calls_more.rs` and these, every op is Rust's and the adapter answers 0 for none.
+- `texts_calls.rs`: every case of `ee_screenscpp_text` and `_put_text` (the loading screen's lines decrypt through
+  ee_base's `ee_ue_decrypt_ustring`, no shim).
+- `main_form_calls.rs`: the rest of the main game form's host and the mouse modes (fields, the wall's search and
+  preview, the sends, the order at the cursor, the point reads).
+- `shell_calls.rs`: 31 more of `ee_screenscpp_shell`'s cases and `EEShellTree`, `EEShellRotate` (the one-line
+  cases and the members' base calls stay).
+- `sci_calls.rs`: `EEUISCIFormManager`'s bodies (its members are one forward each).
+- `upgrade_calls.rs`: 14 of `EEUIBUpgrade::HostOp`'s cases (the qualified base calls stay in the member).
+
+### Lessons
+
+- **A host whose every case is Rust's goes whole.** Moving the one-line cases too costs a shim each and gains little
+  per case, but it deletes the dispatcher's overhead (locals, lambdas, the switch, the chain's defaults) and the
+  Rust adapter's `extern` and fallback: four hosts went this way.
+- **A free shim is no friend.** `EESMMediaStrings`' strings are private to its friends (`EEUIFMainGame`,
+  `EEUISCIFormManager`): the shims read them through the public `GetSection` or a one-statement accessor added to the
+  lane's own class. The members a shim needs that are protected in a base (`UIForm::GetDrawToolTipShadow`) take a
+  `using` in the derived class.
+- **Fake-tested `match` arms with guards**: a later unguarded arm for the same op (`MD_UNIT`) is not unreachable, so
+  the compiler does not warn; a test that expected `None` for the unhandled sub-kind had to become `Some(0)` (the C++
+  host's answer).
+- **Heredocs again**: Python run from a bash heredoc folded `\\n` in a Rust test string into a real newline (valid
+  Rust, wrong text); test text with backslashes is written with the Write tool and appended.
+- **Shim names collide across rounds**: `mf_media_load` existed (round 7's `LoadMedia`); the generator does not
+  check, the macro's duplicate method error does.
+
+### What only the tours (or a person) exercise
+
+Cumulative with rounds 7 and 8 ("The UI lane, round 7", "round 8"):
+- The tours: the settings' texts and puts (adapters, output devices, the rasterizer and audio settings, the restore
+  question), the main menu's and the single player's root calls (music, sensitivity, the resize, the random map's
+  lobby fill), the main game form's host whole (every per-frame op, the mouse modes' points, picks, sends and
+  orders: the orders game), the loading screen's lines, the hot keys', the camera's and the main game's chain.
+- The LAN game (gates.sh): the lobby's slot and options records, the player information and option sends, the start
+  loading, the lobby's chat, the map type's send. Network code is exercised only there.
+- EE-SIM: the editor's shells (`--exercise editor`, sim_editor: the tech lists, the rotation, the keys, the paint
+  areas, the tab selection, the map creation).
+- Only a person: the post-game summary (records, series, window), the saved game's options check and apply (the load
+  screen, the boot question), the campaign screens' files, scenarios, progress and the campaign load, the custom
+  campaign's built-in check, the civilization choice (its controls, names, files), the debug sound panel, the
+  campaign editor's questions, lists and translation, the save questions, the scenario intro manager (map, sound,
+  scenario reopen, blinking briefing), the improvement buttons' fields, sounds and icon offset.
+
+### Gates
+
+On the final tree before the batch 12 merge (ae1f64f17 merged with origin/rust 0d42f70a3, batch 11: one conflict,
+PORT_LEARNINGS.md's appended sections, both kept; strip_markers --check 0 files; no conflict marker):
+- both builds 0/0 (EE-AOC 417 inputs, EE-SIM 418) and the test profile 0/0 (417), after rustfmt too;
+  `rust_build.py header` current (286 headers);
+- the Rust gate PASS (5,266 tests; test, clippy, rustfmt, header). Its first run failed rustfmt only (ae1f64f17);
+  the second failed `eecolor::tests::golden_replay` (the known load flake) and passed whole on the third;
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests), checked with `--seeds 2-3`;
+- the plain saveload PASS (exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062);
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RESULT PASS, no GX errors), `--exercise editor` (RESULT
+  PASS), `random-game --box-select --orders --seed 7` (BOX SELECT PASS; ORDERS PASS: gather, repair,
+  repair-queued, move; RESULT PASS). The menu captures against the base build's (the main checkout's test profile,
+  the same tour): the settings tabs, the single player and random map screens equal pixel for pixel, the main menu
+  and the closed settings differ only in the build label (154 pixels); the game frames differ as two live games do;
+- `bash tools/gates.sh` through its own slot (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game
+  time-cap PT 12590, units [4, 38, 39], alive [2, 3], classic_lua x 2; lan-game PT 3135/3136).
+- Not run: the POSIX builds.
