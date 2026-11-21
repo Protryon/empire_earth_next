@@ -361,6 +361,7 @@ pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
 pub(crate) mod texts_calls;
+pub(crate) mod upgrade_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;

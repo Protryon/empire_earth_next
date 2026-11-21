@@ -2103,4 +2103,35 @@ shims! {
     fn sci_button_blinking(button: usize, blinking: bool) = ee_screenscpp_sci_button_blinking;
     fn sci_button_shown(button: usize) = ee_screenscpp_sci_button_shown;
     fn sci_button_hidden(button: usize) = ee_screenscpp_sci_button_hidden;
+    // EEUIBUpgrade.cpp's (upgrade_calls.rs)
+    fn up_attribute(call: usize) -> i64 = ee_screenscpp_up_attribute;
+    fn up_set_attribute(call: usize, value: i64) = ee_screenscpp_up_set_attribute;
+    fn up_level(call: usize) -> i64 = ee_screenscpp_up_level;
+    fn up_set_level(call: usize, value: i64) = ee_screenscpp_up_set_level;
+    fn up_last_message(call: usize) -> i64 = ee_screenscpp_up_last_message;
+    fn up_set_last_message(call: usize, value: i64) = ee_screenscpp_up_set_last_message;
+    fn up_editor(call: usize) -> bool = ee_screenscpp_up_editor;
+    fn up_disabled(call: usize) -> bool = ee_screenscpp_up_disabled;
+    fn up_set_disabled(call: usize, value: bool) = ee_screenscpp_up_set_disabled;
+    fn up_editor_complex(call: usize) -> usize = ee_screenscpp_up_editor_complex;
+    fn up_step(call: usize, unit: usize) -> f32 = ee_screenscpp_up_step;
+    fn up_cost_factor(call: usize, unit: usize) -> f32 = ee_screenscpp_up_cost_factor;
+    fn up_unit_type(unit: usize) -> i64 = ee_screenscpp_up_unit_type;
+    fn up_class_exists(unit_type: i64) -> bool = ee_screenscpp_up_class_exists;
+    fn up_class_technology(unit_type: i64) -> i64 = ee_screenscpp_up_class_technology;
+    fn up_node(technology: i64) -> usize = ee_screenscpp_up_node;
+    fn up_text_cost(call: usize, node: usize, unit: usize, factor: f32) = ee_screenscpp_up_text_cost;
+    fn up_sound(which: u32) = ee_screenscpp_up_sound;
+    fn up_help_label(call: usize) -> usize = ee_screenscpp_up_help_label;
+    fn up_help_label_set(label: usize, call: usize) = ee_screenscpp_up_help_label_set;
+    fn up_bg_opacity(call: usize, opacity: f32) = ee_screenscpp_up_bg_opacity;
+    fn up_border_opacity(call: usize, opacity: f32) = ee_screenscpp_up_border_opacity;
+    fn up_bar_enabled(call: usize) -> bool = ee_screenscpp_up_bar_enabled;
+    fn up_bar_pressed(call: usize) -> bool = ee_screenscpp_up_bar_pressed;
+    fn up_has_capture(call: usize) -> bool = ee_screenscpp_up_has_capture;
+    fn up_inside_form_mouse(call: usize) -> bool = ee_screenscpp_up_inside_form_mouse;
+    fn up_inside_location(call: usize) -> bool = ee_screenscpp_up_inside_location;
+    fn up_icon_left(call: usize) -> f32 = ee_screenscpp_up_icon_left;
+    fn up_icon_top(call: usize) -> f32 = ee_screenscpp_up_icon_top;
+    fn up_icon_set_location(call: usize, x: f32, y: f32) = ee_screenscpp_up_icon_set_location;
 }
