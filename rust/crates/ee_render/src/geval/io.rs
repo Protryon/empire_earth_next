@@ -3,7 +3,7 @@
 //! per-class end-of-file and short-read rules, and the position a failed load leaves, stay exactly the C++'s).
 //! `GERustIO.h` fills the table from an `FSFile&`. Results are the engine's `long` codes, 0 for `kErrorOK`.
 
-use std::ffi::{c_long, c_void};
+use std::ffi::{c_long, c_ulong, c_void};
 
 /// `kErrorOK`.
 pub(crate) const OK: c_long = 0;
@@ -25,9 +25,10 @@ pub struct EeGeFieldIo {
     pub write_u32: unsafe extern "C" fn(file: *mut c_void, value: u32) -> c_long,
     pub write_f32: unsafe extern "C" fn(file: *mut c_void, value: f32) -> c_long,
     /// `Read(char*, length, read)`.
-    pub read_bytes: unsafe extern "C" fn(file: *mut c_void, out: *mut u8, length: u32, read: *mut u32) -> c_long,
+    pub read_bytes: unsafe extern "C" fn(file: *mut c_void, out: *mut u8, length: c_ulong, read: *mut c_ulong) -> c_long,
     /// `Write(const char*, length, written)`.
-    pub write_bytes: unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: u32, written: *mut u32) -> c_long,
+    pub write_bytes:
+        unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: c_ulong, written: *mut c_ulong) -> c_long,
     /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
     pub get_position: unsafe extern "C" fn(file: *mut c_void, out: *mut c_long) -> c_long,
     /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
@@ -102,12 +103,18 @@ impl FieldIo for CppIo {
         unsafe { (self.0.write_f32)(self.0.file, value) }
     }
     fn read_bytes(&mut self, out: &mut [u8], read: &mut u32) -> c_long {
+        let mut count = *read as c_ulong;
         // SAFETY: `out` is valid for its length
-        unsafe { (self.0.read_bytes)(self.0.file, out.as_mut_ptr(), out.len() as u32, read) }
+        let status = unsafe { (self.0.read_bytes)(self.0.file, out.as_mut_ptr(), out.len() as c_ulong, &mut count) };
+        *read = count as u32;
+        status
     }
     fn write_bytes(&mut self, data: &[u8], written: &mut u32) -> c_long {
+        let mut count = *written as c_ulong;
         // SAFETY: `data` is valid for its length
-        unsafe { (self.0.write_bytes)(self.0.file, data.as_ptr(), data.len() as u32, written) }
+        let status = unsafe { (self.0.write_bytes)(self.0.file, data.as_ptr(), data.len() as c_ulong, &mut count) };
+        *written = count as u32;
+        status
     }
     fn get_position(&mut self, out: &mut c_long) -> c_long {
         // SAFETY: as above

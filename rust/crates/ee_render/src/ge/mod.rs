@@ -52,6 +52,7 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
+pub mod light;
 pub mod list2d;
 pub mod manager_ffi;
 /// cbindgen:ignore

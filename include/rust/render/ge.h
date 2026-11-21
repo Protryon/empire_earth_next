@@ -919,6 +919,27 @@ struct EeGeTextOps {
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
 };
 
+/// `GELight`'s members in the C++'s order (sizeof 0x74).
+struct EeGeLight {
+  float color[3];
+  float computed_color[3];
+  float location[3];
+  float model_space_location[3];
+  float direction[3];
+  float model_space_direction[3];
+  float attenuation0;
+  float attenuation1;
+  float attenuation2;
+  float intensity;
+  float range;
+  float range_inverse;
+  float range_squared;
+  float model_space_range;
+  float model_space_range_inverse;
+  float model_space_range_squared;
+  unsigned long style;
+};
+
 /// One command as the executor reads it.
 struct EeGeDraw2D {
   EeGeDraw2DKind kind;
@@ -1541,6 +1562,36 @@ EeGeFont *ee_ge_game_font_new(void *owner,
                               unsigned long size,
                               unsigned long style,
                               unsigned long quality);
+
+/// `GELight()`.
+///
+/// # Safety
+/// `l` is valid for a write.
+void ee_ge_light_init(EeGeLight *l);
+
+/// `operator=(inLight)`.
+///
+/// # Safety
+/// Both are live.
+void ee_ge_light_assign(EeGeLight *l, const EeGeLight *other);
+
+/// `SetColor(inColor)`.
+///
+/// # Safety
+/// `l` is live; `color` points at three floats.
+void ee_ge_light_set_color(EeGeLight *l, const float (*color)[3]);
+
+/// `SetDirection(inDirection)`.
+///
+/// # Safety
+/// `l` is live; `direction` points at three floats.
+void ee_ge_light_set_direction(EeGeLight *l, const float (*direction)[3]);
+
+/// `SetIntensity(inIntensity)`.
+///
+/// # Safety
+/// `l` is live.
+void ee_ge_light_set_intensity(EeGeLight *l, float intensity);
 
 /// The game's executor and the primitives' vertex host (`GEVertexHost`), set once by the C++ (`GERasterizer`'s
 /// constructor).

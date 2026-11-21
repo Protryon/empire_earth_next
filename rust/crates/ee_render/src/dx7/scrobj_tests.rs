@@ -414,3 +414,50 @@ fn the_golden_driver_replays_bit_for_bit() {
         assert_eq!(*g, r, "sequence {}", i + 1);
     }
 }
+
+/// `CreateAWindow`'s calls, logged.
+#[derive(Default)]
+struct WindowLog {
+    log: Vec<String>,
+    refuse: bool,
+}
+
+impl scrobj::WindowCalls for WindowLog {
+    fn display_size(&mut self) -> (i32, i32) {
+        self.log.push("display".into());
+        (800, 600)
+    }
+    fn create(&mut self, p: &crate::dx7::screen::WindowParams) -> *mut c_void {
+        self.log.push(format!("create at={} {}x{} flags={}", p.create_at, p.width, p.height, p.flags));
+        if self.refuse {
+            core::ptr::null_mut()
+        } else {
+            7 as *mut c_void
+        }
+    }
+    fn failed(&mut self) {
+        self.log.push("failed".into());
+    }
+    fn shown(&mut self) {
+        self.log.push("shown".into());
+    }
+    fn new_window(&mut self, window: *mut c_void, width: core::ffi::c_ulong, height: core::ffi::c_ulong, style: core::ffi::c_ulong) -> *mut c_void {
+        self.log.push(format!("new {} {width}x{height} {style}", window as usize));
+        9 as *mut c_void
+    }
+}
+
+#[test]
+fn a_window_is_created_then_shown_and_wrapped() {
+    let mut calls = WindowLog::default();
+    let mut window = core::ptr::null_mut();
+    assert_eq!(scrobj::create_window(&mut calls, false, 10.0, 20.0, 640, 480, 0, &mut window), 0);
+    assert_eq!(window as usize, 9);
+    assert_eq!(calls.log, ["display", "create at=true 640x480 flags=48", "shown", "new 7 640x480 0"]);
+    // the probe window (style 2) and a refused one
+    let mut calls = WindowLog { refuse: true, ..Default::default() };
+    let mut window = core::ptr::null_mut();
+    assert_eq!(scrobj::create_window(&mut calls, false, 0.0, 0.0, 16, 16, 2, &mut window), 1);
+    assert!(window.is_null());
+    assert_eq!(calls.log, ["display", "create at=false 16x16 flags=20", "failed"]);
+}

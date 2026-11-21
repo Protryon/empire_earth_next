@@ -73,9 +73,9 @@ struct EeGeFieldIo {
   long (*write_u32)(void *file, uint32_t value);
   long (*write_f32)(void *file, float value);
   /// `Read(char*, length, read)`.
-  long (*read_bytes)(void *file, uint8_t *out, uint32_t length, uint32_t *read);
+  long (*read_bytes)(void *file, uint8_t *out, unsigned long length, unsigned long *read);
   /// `Write(const char*, length, written)`.
-  long (*write_bytes)(void *file, const uint8_t *data, uint32_t length, uint32_t *written);
+  long (*write_bytes)(void *file, const uint8_t *data, unsigned long length, unsigned long *written);
   /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
   long (*get_position)(void *file, long *out);
   /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
