@@ -36638,3 +36638,19 @@ lanes' bodies (paths.md "What is left").
   (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12482` units
   [4, 38, 39] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2943 joiner=2938`, GATES
   PASS.
+- **The merges** (origin/rust 0d42f70a3, rust-batch11, then a84903ce6, rust-batch12): batch 11 carried the scenario
+  editor's round 3 written against the pre-groups-2 APIs (`new EEActiveGroup`, `mPendingGroups.push_back`,
+  `mAction`, the player's group vectors): EESMEffect.cpp and EEScenarioCapture.cpp now use the group objects'
+  (`EEActiveGroup::New`, `AddPendingGroup`, `mFields.mAction`, `GetNumPendingGroups`/`GetNumRunningGroups`).
+  Batch 12's AI round 7 had routed the herd's request cancel through two new C++ cases (herd_world.rs CANCEL_PATH:
+  EE_CP_HERD_CANCEL_REQUEST, _REQUEST_DEREF) and kept the wall routes' host codes in EECPNextUnits.cpp's dispatcher:
+  both dropped again (the cancel is herd.rs's direct Rust call; the routes are units_more.rs's). PORT_LEARNINGS.md
+  was origin's with this lane's missing sections appended. On the final merged tree (519ef948e): both builds 0/0
+  (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0; the Rust gate PASS (5,301 tests; on the batch-11 merge
+  one run failed ee_base's `input::ffi::tests::system_keyboard_and_mouse_through_the_c_abi`, which passed 3/3
+  alone: a load flake of the shared keyboard state); the oracle seeds 2-7 identical; the captures at seeds 2-3 PASS
+  (oracle 212, late 214, space 210, calamity 222, transport 185, groups 2, placement 4, scenario 43; all twelve PASS
+  on the batch-11 merge); the plain saveload 18/18 identical; the matrix exit 0, `saveload expect: PASS`;
+  scenario_check 27/27; sim_editor PASS (14,448) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the
+  tour RESULT PASS; gates.sh `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12930` units [4, 39, 40]
+  alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2761 joiner=2758`, GATES PASS.
