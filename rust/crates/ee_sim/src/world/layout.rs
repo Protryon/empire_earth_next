@@ -158,9 +158,6 @@ pub struct EeWorldLayout {
     /// `EeCpFields` in `EEComputerPlayer`
     pub cp_fields: u64,
     // ---- the HUD's reads (the UI thread lane, round 1)
-    /// `EEGroup::mUnits` (a `std::vector<EEComplexUnit*>`; `EESelectedGroup`'s `GetUnit`/`GetNumUnits` are
-    /// `EEGroup`'s)
-    pub group_units: u64,
     /// `EEUnitClassUpgrade::mUnitClass` (an `EEUnitClass*`: the stats' own class) and `mButton` (an
     /// `EEButtonObject*`)
     pub stats_unit_class: u64,
@@ -226,6 +223,11 @@ pub struct EeWorldLayout {
     pub cp_placement: u64,
     pub placement_town: u64,
     pub placement_rust: u64,
+    // ---- the groups lane, round 2: the player's group lists (group_obj.rs `EeUnitsPlayerGroups`)
+    /// `EEPlayer::mGroupLists` (an `EeUnitsPlayerGroups*`)
+    pub player_group_lists: u64,
+    /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
+    pub player_lists: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

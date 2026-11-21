@@ -829,14 +829,6 @@ bool EEIsValidName(const UWideString& inName)
     return ee_screens_valid_name(theChars.data(), theLength);
 }
 
-// Returns the group's first unit, or NULL when the group is empty
-EEComplexUnit* EEGroup::GetFirstUnit()
-{
-    if (this->GetNumUnits())
-        return this->GetUnit(0);
-    return NULL;
-}
-
 // Returns whether the unit class is a building that handles aircraft (an air base or carrier)
 bool EEUnitClass::IsAirBase()
 {

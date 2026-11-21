@@ -63,12 +63,6 @@ struct FakePlayer {
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeGroup {
-    units: [usize; 3],
-}
-
-#[repr(C)]
-#[derive(Default)]
 struct FakeGoal {
     kind: u8,
     id: c_ulong,
@@ -127,7 +121,6 @@ fn fake_layout(world: usize) -> EeWorldLayout {
         world_in_cinematic: offset_of!(FakeWorld, flags) as u64 + 4,
         world_using_carbon: offset_of!(FakeWorld, flags) as u64 + 6,
         world_address: world as u64,
-        group_units: offset_of!(FakeGroup, units) as u64,
         stats_unit_class: offset_of!(FakeStats, class) as u64,
         stats_button: offset_of!(FakeStats, button) as u64,
         ..Default::default()
@@ -202,10 +195,9 @@ fn hud_reads_over_the_views() {
     airport.class = addr(&*airport_class);
     airport.stats = addr(&*stats);
     let selection: Vec<usize> = vec![addr(&*citizen), addr(&*airport)];
-    let mut group = Box::<FakeGroup>::default();
-    let sb = selection.as_ptr() as usize;
-    group.units = [sb, sb + 2 * std::mem::size_of::<usize>(), 0];
-    me.selected_group = addr(&*group);
+    let units: Vec<u64> = selection.iter().map(|&u| u as u64).collect();
+    let group = ee_sim::units::group_obj::detached(&units);
+    me.selected_group = group as usize;
     me.selected_viewed = addr(&*airport);
     let c = addr(&*citizen) as i64;
     let p = addr(&*airport) as i64;
@@ -365,5 +357,7 @@ fn hud_reads_over_the_views() {
     assert_eq!(icon_bar(EE_SCREENS_IB_OP_GROUP_COUNT, 0, 0), Some(-1));
     assert_eq!(upgrade(EE_SCREENS_UP_OP_HAS_GROUP), Some(0));
     assert!(hot_key_units(false, [0.0; 2], &mut keep).is_empty());
+    // SAFETY: the test's group
+    unsafe { ee_sim::units::group_obj::free_detached(group) };
     drop((selection, cargo_list, queue));
 }

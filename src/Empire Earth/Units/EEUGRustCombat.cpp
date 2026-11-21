@@ -27,7 +27,6 @@
 #include "ee/EECombatGoals.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEActiveGroup.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitUtilities.h"

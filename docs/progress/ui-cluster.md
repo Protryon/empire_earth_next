@@ -1,7 +1,7 @@
 # The UI cluster lane (the main game HUD, the menus, the UI events, the LLE UI's hosts)
 
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
-("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6", "The UI lane, round 7").
+("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 8").
 
 **Scope (the lane scopes of 2026-11-19).** `src/Empire Earth/User Interface Thread/*` but the editor-only
 controls (`EESE*`, `EEUIFSE*`), `EEFOFindNewTargetNearOldTarget.cpp` (the units' lane) and the WON boxes
@@ -10,71 +10,64 @@ events (`EEUIEWonNet*`); `src/Low-Level Engine/User Interface`; `include/lle/UI*
 (`EEUI*`, `EEScreens*`, `EEUserInterface*`); the shells (`ee/EEUIShell.h`, `EEUIShell.cpp`, ee_game
 `screens/shells*.rs`) and the `ee_ui`/`ee_game` screens.
 
-## Round 7: the host cases' logic in Rust over one-statement C++ shims (branch `rust-ui7`, 2026-11-20)
-
-The owner's decision of 2026-11-20 ("calling C++ from Rust is fine") lifted round 6's obstacle: a host case whose
-callees are other lanes' C++ objects now moves to Rust with each call one C++ statement.
+## The method (rounds 7 and 8): C++ logic in Rust over one-statement C++ shims
 
 - **`game_cpp.rs`** (ee_game screens): the `shims!` macro. One list of `fn name(args) -> ret = symbol;` makes the
   trait `Cpp` (the moved logic is generic over it), its FFI implementation `Ffi` (the `extern "C"` block; absent
   from a test binary) and the recording `Fake` (every call logged as `name(args)`, answers, out numbers and out
   texts from per-shim queues). Argument types: numbers, pointers as `usize`, `EeScreensShimText` (bytes handed in),
-  `EeScreensShimOut` (a `Vec<u8>` the C++ appends to through `ee_screens_shim_out`), out numbers
-  (`EeScreensShimULongOut` for `unsigned long&`, `EeScreensShimLongOut` for `long&`, `EeScreensShimI32Out`,
-  `EeScreensShimPtrOut` for an `FSFileSpec*&`). The C++ side's types and helpers: `ee/EEScreensShims.h`
-  (`EEShimText`, `EEShimString`, `EEShimOut`).
-- **The moved logic**, each module asked by its host's adapter before the C++ host (below the hosts' traits: the
-  screens' replay goldens are unchanged), each with a test file over the fake:
-  - `game_calls.rs`, `game_calls_more.rs`: `ee_screenscpp_call`'s cases (`menus_ffi.rs` `Form::op`);
-  - `game_texts.rs`: `ee_screenscpp_text` and `ee_screenscpp_put_text` (`Form::get_checked`, `Form::put`);
-  - `ui_calls.rs` (+ `ui_calls_ffi.rs`): the members `EEUserInterface::ChangeRasterizer`, `ResizeGameScreen`,
-    `ShowMessageOfTheDay`, `OpenSelectServer`, `PauseGraphics`, `UpdateInterface` (their C++ bodies forward to
-    `ee_screens_ui_*`), and `ee_screenscpp_ui_game` / `_ui_message` / `_ui_event` / `_action`'s cases;
-  - `main_form_calls.rs`: `EEUIFMainGame::HostOp`'s and `EEMouseModeOp`'s cases (`main_form_ffi.rs`);
-  - `shell_calls.rs`: `ee_screenscpp_shell`'s cases of the toolkit shells, the saved groups, the icon bar, the chat
-    line and the paint areas (`shells_ffi.rs`; the editor-only kinds' ops untouched).
-- **The shims**: 605 one-statement `extern "C"` functions (`ee_screenscpp_<name>`) in the host's own file
-  (EEScreens.cpp 306, EEUserInterface.cpp 116, EEUIFMainGame.cpp 132, EEUIShell.cpp 51), each a call on another
-  lane's object, no logic (two-way choices are two shims; the call order of every case is the C++ case's).
-  The generator and its inputs were scratch (build/ui7/gen); a new shim is one line in a `shims!` list and one
-  `extern "C"` function.
+  `EeScreensShimOut` (a `Vec<u8>` the C++ appends to through `ee_screens_shim_out`), out numbers. The C++ side's
+  helpers: `ee/EEScreensShims.h` (`EEShimText`, `EEShimString`, `EEShimOut`).
+- **A shim** (`ee_screenscpp_<name>`) is one C++ statement in the host's own file, no choice: a two-way case is two
+  shims and the `if` in Rust; a local the C++ built or wrote is a file static reset by a shim where the local was
+  made; an array of members is a member-pointer table (`kMGBoxSlots`, `kMMLines`, `kSBAValues`). A protected member
+  a shim needs became public in the class (`EEUIMiniMap`, `EEUICCommandUnits`) or a `using` (the base's
+  `CaptureMouse`, `GetMouseLocation`). Pointers cross as the class C++ hands on: a control as `UIControl*`, an
+  event as `UIEvent*` (`static_cast` in the shim, never a raw derived pointer).
+- **Where the logic plugs in**: a host's Rust adapter asks the `*_calls.rs` module before (or instead of) the C++
+  host; a C++ member's body is one forward to an `ee_screens_*` Rust function.
+- The generator and the case cutter were scratch (build/ui8/gen: `gen.py` spec lines `name(arg: T) [-> R] | C++
+  statement` -> the Rust list entry and the `extern "C"` one-liner; `cut.py` deletes cases by label).
 
-| Commit | What | Logic (lane files) |
-|---|---|---|
-| 56a9f7e56 | `ee_screenscpp_call`'s cases (game_calls.rs, game_cpp.rs) | EEScreens.cpp 2004 -> 1713 |
-| 25d4044d1 | the screens' texts (game_texts.rs) | -> 1496 |
-| e152dbfdb | more of the calls (game_calls_more.rs) | -> 1235 |
-| cc8e670dc | the UI thread's members and hosts (ui_calls.rs) | EEUserInterface.cpp 447 -> 166 |
-| 6dc3daa5c | the main game form and the mouse modes (main_form_calls.rs) | EEUIFMainGame.cpp 709 -> 431 |
-| 9bf340d65 | the shells' host (shell_calls.rs) | EEUIShell.cpp 499 -> 408 |
+## Round 8 (branch `rust-ui8`, 2026-11-20)
 
-The totals (`logic_lines.py` over the whole tree from base 840aeb3c0) are in PORT_LEARNINGS.md "The UI lane,
-round 7".
+| Module (ee_game screens) | What moved (C++ deleted or now one forward) |
+|---|---|
+| `ui_manager_calls.rs` | `EEUIManager::HostOp`'s multi-call cases; `EECreateGameEvent`, `EECreateFormEvent`, `EECreateWonNetServerSelectEvent`; `CreateForm`, `CreateUserDefinedBackground`, `CreateUserDefinedControl`, `Create/DeleteScenarioEditor` |
+| `status_box_calls.rs` | `EEUIFMGStatusBox::HostOp` whole (deleted with `ee_screenscpp_status_box`), `UnloadIcons`, `ReloadIcons`; `EEUIFMGStatusBar::SetIconBitmap` (deleted) |
+| `status_button_calls.rs` | `EEStatusButtonOp` whole (deleted); the command button's constructor body, destructor, `ReleaseButton`, `DrawPolygons`, `DrawTextA`, `HotKeyUp`, `SetCommandButton`, `SetTechButton`, `SetLocation`; `EEUIManager::Fn26FA55/6A` |
+| `main_group_calls.rs` | `ee_screenscpp_main_group` whole (deleted), `ShowCommands`, `EEMainGroupHotKey` (deleted), `EEUIEMGHotKeyStatusButton::ProcessEvent` |
+| `mini_map_calls.rs` | `EEUIMiniMap`'s constructor body, destructor, `CopyData`, `LoadMedia`, `UnloadMedia`, `DrawPolygons`, `MouseRButtonDown`, `CenterCamera`, `SetLocation`, `Update`, `RustOp`'s multi-call cases |
+| `backgrounds_calls.rs` | `EEUIBGenericBackground`'s constructor body, `Open`, the frame host (`ee_screenscpp_frame_fill`, `_piece` deleted: the fill calls ee_render's `ee_ge_draw2d_fill` directly); `EEUIBMapBackground::LoadBackground` |
+| `campaign_model_calls.rs` | `ee_screenscpp_ce_campaign`, `_ce_campaign_text` whole (deleted) |
+| `game_view_calls.rs` | `ee_screenscpp_game_view`, `_game_texts` whole (deleted) |
+| `status_bar_calls.rs` | `EEUIFMGStatusBar`'s constructor layout, destructor, `CopyData`, `DrawPolygons`, `DrawTextA` |
+| `command_units_calls.rs` | `EEUICCommandUnits`' constructor (the arrow model and texture) and destructor |
+
+Each module has its unit tests over the fake (`*_calls_tests.rs` or an inline `tests`). The totals are in
+PORT_LEARNINGS.md "The UI lane, round 8".
 
 ## What is left (the lane's part)
 
-- **Multi-statement cases still in C++**, by file (lines in cases of 3+ lines at the round's end): EEScreens.cpp
-  (the campaign editor's model host `ee_screenscpp_ce_campaign`, the read views `ee_screenscpp_game_view`/
-  `_game_texts`' field fills, the post-game records, the lobby's saved options, the questions' callback tables,
-  the std::set/vector list cases), EEUIFMGStatusBox.cpp (157), EEUIManager.cpp (129), EEUIFError.cpp (111),
-  EEUIBUpgrade.cpp (100), the LLE UI hosts (UIManager 96, UIForm 74, UIControlsTable 50, UIComboBox 52),
-  EEUICCommandUnits (80), EEUIFMGStatusButton (62), EEUICPortrait (53), EEUIFMGMainGroup (52). Each goes the same
-  way: its adapter asks a `*_calls.rs` first, the case's calls become shims in its own file.
-- **One-statement cases** (`case X: call(); break;`, about a hundred in EEScreens.cpp alone) are shims already by
-  the owner's definition; `logic_lines.py` counts their three lines as logic. Moving them moves the dispatch, not
-  logic, so this round left them.
-- **Cases left on purpose**: a printf-style format of a language string (`sprintf` of a resource format:
-  CS_PROGRESS, TEXT_WONDER, APPEND_NUMBERED), the float-to-unsigned cast of a mixed ternary (CAM_MOUSE_VALUE), the
-  copy-constructed options (LE_APPLY_SAVED), C++ containers built and walked in place (CAMPAIGN_FILES, ADAPTERS,
-  CE_APPEND, PREVIEW_WALL).
-- From round 6, still true: `EEUIRustControl`'s subclasses (the select/command units, portrait, mini map) own C++
-  sub-objects; the improvement buttons have no shell base; `EEUISCIFormManager` is file and surface C++.
+Logic lines per file at the round's end (`logic_lines.py`'s heuristic): EEScreens.cpp 683 (the big hosts
+`ee_screenscpp_call`/`_text`/`_put_text`, mostly one-statement cases now; the post-game records, the lobby's saved
+options and slots, the question callbacks, the camera's and the main game form's calls), EEUIFMainGame.cpp 359,
+EEUIShell.cpp 311, the LLE UI (UIManager 272, UIForm 222, UIControl 156, UIControlsTable 153, UIComboBox 123,
+UIBackground 75, UIFileListBox 54, UIEditBox 53, UILBString 45), EEUIBUpgrade 141 (its `HostOp`: the status box's
+pattern applies), EEUIFError 126, EEUIEScenarioIntroEvents 110, EEUICCommandUnits 96 (`RustOp`'s arrow draw and
+ground solve: float math, port with care), EEUICPortrait 95, EEUserInterface 83, EEUIManager 75, EEUIFMGStatusBox
+55, EEUIFMGStatusButton 50, EEUIFMGMainGroup 35 (the panel groups' printf of a resource format).
+- **Shims whose callee is now Rust**: not swept this round (the brief's other half) but the frame fill, which
+  calls `ee_ge_draw2d_fill` from Rust now.
+- Left on purpose (as round 7): a printf of a resource format (kept as one `sprintf` shim where moved: the campaign
+  check's message), the float-to-unsigned cast of a mixed ternary, C++ containers walked in place where the walk is
+  the case (round 8 snapshots a `std::set` into a vector shim instead).
 
 ## Checks
 
-- Per piece: the build `--sim` 0/0; the unit tests of the moved modules (`cargo test -p ee_game --lib screens::`);
-  the oracle at seeds 2-3; a tour or the orders game where the moved code runs per frame.
+- Per piece: the build `--sim` 0/0; the moved modules' unit tests (`cargo test -p ee_game --lib screens::`); the
+  oracle at seeds 2-3.
 - At the round's end: both builds and the test profile 0/0, `rust_build.py header` and the Rust gate, the oracle
   seeds 2-7, the twelve capture profiles at seeds 2-3, the plain saveload and the matrix with `--expect`,
   scenario_check, sim_editor and `--civbuilder`, the tours (`--exercise tour`, `editor`, `random-game --box-select
-  --orders --seed 7`), `bash tools/gates.sh`.
+  --orders --seed 7`) with their captures against the base build's, `bash tools/gates.sh`.

@@ -34,7 +34,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lobbyevt.rs", "ctl_op"),
                (RS / "ee_won_lobby" / "src" / "widgets.rs", "ctl_op"),
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_string_op"),
-               (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_image_op")],
+               (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_image_op"),
+               # the cases whose statements are Rust (R6 WONLobby round 29)
+               (RS / "ee_won_lobby" / "src" / "hostops.rs", "ctl_op")],
          allowed={}),
     # the generic widget shells' calls out (R6 WONLobby round 20): the C++ host answers what the base classes'
     # Rust objects do not (shell.rs Sh routes the component's, button's and MS button's calls to them in the game)
@@ -58,7 +60,9 @@ CHECKS = [
          rust=[(RS / "ee_won_lobby" / "src" / "rows.rs", "ctl_op")], allowed={}),
     # the C++ makes these (CtlEventOf maps a ComponentEvent's type to one): each must be made somewhere
     dict(enum="EeWonLobbyCtlEvent", header="won_lobby/lobbyctl.h", mentions=True,
-         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "LobbyCtrlHost.cpp"],
+         # the event's type maps to them in Rust (R6 WONLobby round 29: evmap.rs)
+         rust=[(RS / "ee_won_lobby" / "src" / "evmap.rs", "ctl_event_of", True)], allowed={}),
     dict(enum="EeWonLobbyCtlType", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
     # the strings go out as resource rows (R6 WONLobby round 17): each named in its table
@@ -108,7 +112,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lanown.rs", "op"),
                (RS / "ee_won_lobby" / "src" / "lobbyevt.rs", "lobby_op"),
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "lobby_op"),
-               (RS / "ee_won_lobby" / "src" / "netops.rs", "lobby_op")], allowed={}),
+               (RS / "ee_won_lobby" / "src" / "netops.rs", "lobby_op"),
+               # the cases whose statements are Rust (R6 WONLobby round 29)
+               (RS / "ee_won_lobby" / "src" / "lobbyops.rs", "lobby_op")], allowed={}),
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
          hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
          rust=[], allowed={}),

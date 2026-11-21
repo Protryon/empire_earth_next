@@ -40,6 +40,9 @@ enum class EeWonLanCall : uint32_t {
   ClientList,
   /// `AddPendingSocket(a)` (a peer-authenticated socket the shell accepted).
   AddPending,
+  /// HandlePeerAuthDone(`a`, the peer authentication op): its socket added as pending when the host's checks
+  /// accept it (`LanPeerAuthDone`, lobbyops.rs's in the game; R6 WONLobby round 29).
+  PeerAuthDone,
 };
 
 /// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).

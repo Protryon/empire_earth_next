@@ -904,8 +904,8 @@ impl<'t> StatsView<'t> {
     }
 }
 
-/// A unit group (`EEGroup`: a player's selected group; its handle is the `EESelectedGroup*`'s address, which is the
-/// `EEGroup*`'s). `GetUnit`/`GetNumUnits` are `EEGroup`'s (no subclass overrides them): `mUnits` read in place.
+/// A unit group (`EEGroup`: a Rust object, ee_sim units group_obj.rs; its handle is the group's address, a player's
+/// `mSelectedGroup`, a unit's `mActiveGroup`).
 #[derive(Clone, Copy)]
 pub struct GroupView<'t> {
     object: usize,
@@ -927,17 +927,13 @@ impl<'t> GroupView<'t> {
     pub fn handle(&self) -> u64 {
         self.object as u64
     }
-    fn range(&self) -> (usize, usize) {
-        let at = layout().group_units;
-        let w = std::mem::size_of::<usize>() as u64;
-        // SAFETY: a live group's vector member: its first two words are its begin and end (EEWorldLayout.cpp
-        // checks the library's layout)
-        unsafe { (pointer(self.object, at), pointer(self.object, at + w)) }
+    fn group(&self) -> crate::units::group_obj::G {
+        self.object as crate::units::group_obj::G
     }
-    /// `GetNumUnits()` (`mUnits.size()`)
+    /// `GetNumUnits()`
     pub fn len(&self) -> usize {
-        let (begin, end) = self.range();
-        (end - begin) / std::mem::size_of::<usize>()
+        // SAFETY: a live group while the token lives
+        unsafe { crate::units::group_obj::len(self.group()) }
     }
     /// `GetNumUnits() == 0`
     pub fn is_empty(&self) -> bool {
@@ -945,11 +941,8 @@ impl<'t> GroupView<'t> {
     }
     /// `GetUnit(i)`'s handle (an `EEComplexUnit*`; 0 past the end, where the C++ read past it)
     pub fn unit_handle(&self, i: usize) -> u64 {
-        if i >= self.len() {
-            return 0;
-        }
-        // SAFETY: an element of the vector
-        unsafe { pointer(self.range().0, (i * std::mem::size_of::<usize>()) as u64) as u64 }
+        // SAFETY: as above
+        unsafe { crate::units::group_obj::unit_at(self.group(), i) }
     }
     /// `GetFirstUnit()`'s handle (0 when empty)
     pub fn first_unit_handle(&self) -> u64 {
