@@ -51,7 +51,23 @@ host's split cases); the moved one-liners are moves, not new shims. Deleted: the
 
 ## Gates (round 9, on the tree merged with origin/rust 439543b4b)
 
-GATES_PLACEHOLDER
+- both builds 0/0 (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0 (414); the headers current (296); the
+  Rust gate PASS (5,452 tests, 0 failed; test, clippy, rustfmt, header: the first run's header check failed only
+  because the headers were regenerated after it; rerun PASS);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); run dirs deleted;
+- the plain saveload PASS (seeds 2-7, exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines),
+  `--civbuilder` PASS (4,062); eedata check PASS, cppgate PASS;
+- through slot.py, the test profile: the tour `--input-check --view-check --play-seconds 120 --seed 7` (F3 ok, VIEW
+  CHECK PASS, RESULT PASS, no GX errors), the same tour on the older exe for the frame comparison (RESULT PASS);
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS), the box-selected frame looked at;
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): the first run GATES FAIL on the ai-game's
+  "main-menu: the window capture is blank" (tour and lan-game PASS); the rerun GATES PASS (tour; ai-game time-cap
+  PT 13146, units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 3220/3223).
+- Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py), `gates.sh --legacy`.
 
 ## What is left, by directory (logic lines, round 9's end)
 
