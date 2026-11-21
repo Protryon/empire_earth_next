@@ -259,8 +259,10 @@ pub(crate) fn op<C: Cpp + ?Sized>(
             let split = (b as usize).min(text.len());
             let name = c_str(&text[..split]);
             c.cbh_upgrades_clear();
-            for q in text[split..].chunks_exact(4) {
-                c.cbh_upgrades_push(u32::from_le_bytes([q[0], q[1], q[2], q[3]]));
+            let mut at = split;
+            while at + 4 <= text.len() {
+                c.cbh_upgrades_push(u32::from_le_bytes([text[at], text[at + 1], text[at + 2], text[at + 3]]));
+                at += 4;
             }
             let message = c.cbh_request_new(a as u8, EeScreensShimText::of(name));
             if c.cbh_multiplayer() {

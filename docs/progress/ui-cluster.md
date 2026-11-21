@@ -1,16 +1,17 @@
 # The UI cluster lane (the main game HUD, the menus, the UI events, the LLE UI's hosts)
 
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
-("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 10").
+("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 11").
 
 **Scope (the lane scopes of 2026-11-19).** `src/Empire Earth/User Interface Thread/*` but the editor-only
 controls (`EESE*`, `EEUIFSE*`), `EEFOFindNewTargetNearOldTarget.cpp` (the units' lane) and the WON boxes
 (`EEUICWonNet*`, `EEWonNetAvailableGameFormManager.cpp`: the WON lanes'); `src/Empire Earth/UI Events` but the WON
 events (`EEUIEWonNet*`); `src/Low-Level Engine/User Interface`; `include/lle/UI*`; their `include/ee` headers
 (`EEUI*`, `EEScreens*`, `EEUserInterface*`); the shells (`ee/EEUIShell.h`, `EEUIShell.cpp`, ee_game
-`screens/shells*.rs`) and the `ee_ui`/`ee_game` screens.
+`screens/shells*.rs`) and the `ee_ui`/`ee_game` screens. From round 11 also `src/Empire Earth/Civilization Builder`
+(the builder, the civilization manager and files, the area effects; the brief's).
 
-## The method (rounds 7 to 10): C++ logic in Rust over one-statement C++ shims
+## The method (rounds 7 to 11): C++ logic in Rust over one-statement C++ shims
 
 - **`game_cpp.rs`** (ee_game screens): the `shims!` macro. One list of `fn name(args) -> ret = symbol;` makes the
   trait `Cpp` (the moved logic is generic over it), its FFI implementation `Ffi` (the `extern "C"` block; absent
@@ -39,48 +40,54 @@ events (`EEUIEWonNet*`); `src/Low-Level Engine/User Interface`; `include/lle/UI*
 - **A shim's callee that is Rust** (the sweep): the shim list entry names the Rust symbol itself (`fn world_pause(..)
   = ee_gamecpp_world_pause;`) and the C++ shim goes; a composition of Rust calls (`EEUISCIFormManager::Get()->X()`)
   is written in Rust.
-- The generator and the case cutter were scratch (build/ui8/gen, build/ui9/gen: `gen.py` spec lines `name(arg: T) [-> R] | C++
+- **A simulation host** (round 11: `EECivHostCall`, `EECivFileCall`, `EEAEHost::Call`) stays the function pointer
+  the simulation's Rust is handed; its body is one statement passing the call to an `ee_screens_*` Rust host whose
+  cases call the shims. A class's own op host (`RustOp`) is deleted and its Rust adapter answers the ops first.
+- The generator and the case cutter were scratch (build/ui8/gen, build/ui9/gen, build/ui11: `gen.py` spec lines `name(arg: T) [-> R] | C++
   statement` -> the Rust list entry and the `extern "C"` one-liner; `cut.py` deletes cases by label).
 
-## Round 10 (branch `rust-ui10`, 2026-11-20)
+## Round 11 (branch `rust-ui11`, 2026-11-21)
 
-| Module | What moved (C++ deleted or now one forward) |
+| Module (ee_game screens) | What moved (C++ deleted or now one forward) |
 |---|---|
-| ee_ui `lle_manager.rs` | `UIManager::HostOp`'s multi-call cases (window, blending, the UI texture's load, bitmaps, locks, events, callbacks, sound instances), `LoadTexture`, `LoadDatabase`, `RemoveDatabase`, `SetMouseLeftHanded`, the constructor's mouse buttons; `UIEvent::HostOp`'s file count, owner, add |
-| ee_ui `lle_form.rs` | `UIForm::HostOp`'s multi-call cases (help string, hot keys' events, keys, events, mouse asks, lock, bitmap draws), `UIForm::Create`, the IME and typed-key passes, the hot key and layout packs |
-| ee_ui `lle_control.rs` | `UIControl::HostOp`'s event case, the 24 shared keys, the mouse dispatch's calls (`ee_uicpp_control_mouse` deleted; `mouse_ffi.rs` calls the shims), the manager bitmap table |
-| ee_ui `lle_table.rs` | `UIControlsTable`'s host's multi-call cases, `CreateBitmap`, `SetupStringArray` |
-| ee_ui `lle_combo.rs` | the combo box's host's queries and actions of more than one call, its constructor's part making |
-| ee_game `unit_hack_calls.rs`, `cursor_calls.rs`, `dialog_calls.rs` | `ee_screenscpp_unit_hack`'s, `ee_screenscpp_cursor`'s and `ee_screenscpp_dialog`'s multi-statement cases |
-| ee_game `chat_log_ffi.rs`, `screens_more_calls.rs` | `ee_screenscpp_cl_read`, `_cl_last`, `_cl_write`, `_hot_key_target`, `_hot_key_keep`, `_selection` (deleted) |
+| `civ_host.rs` | `EECivilizationBuilder.cpp`'s builder host `ee_screenscpp_cb` whole (deleted: every op, the edit boxes, labels, file lists, form events, strings, the request's message, the players' reload, the civilization load) and `EECBUIListBox::HostOp` whole (the list's ops, the line draw); the civilization tables' queries read from `ee_sim::tech::civ` directly |
+| `civ_manager_calls.rs` | `EECivilizationManager.cpp`'s simulation host (`EECivHostCall`, now one forward: the class upgrades' stats read and put, the sight, the fields, the nodes, the media) and `FillCivilizationList` |
+| `civ_file_calls.rs` | `EECBCivilizationFiles.cpp`'s `EECivFileCall` (one forward: the file's load, the civilization reset and free buys, the grant, the refusal's chat and draw) |
+| `portrait_calls.rs` | `EEUICPortrait::RustOp` (deleted), the constructor's, destructor's, `DrawTextA`'s and `MouseMove`'s bodies |
+| `command_units_ops.rs` | `EEUICCommandUnits::RustOp` (deleted: the arrow's draw, the ground point, the pick, the group's centre, the click; the editor's `EESEUICCommandUnits::RustOp` falls back to `EEUIRustControl`'s) |
+| `icon_bar_ops.rs` | `EEUIShellControl::RustOp` (deleted: the icon bar kind's ops) |
+| `area_effect_host.rs` | `EEAreaEffect.cpp`'s `EEAEHost::Call` (one forward: every world call of the area effects; the morale buildings' functors stay) |
+| `area_effect_manager.rs` | `EEAEManager::CollectEffects`, `FindEffect` |
+| `area_effect_running.rs` | `EEAEManager::Load`, `EEAESaveRunningState`, `EEAELoadRunningState` and its fix-up (the anonymous `EEAERefOf`, `EEAEEffectOf`, `EEAEComplexUnit` deleted) |
+| `area_effect_lists.rs` | `EEAreaEffectTemplate::Load`, `Unload`; `EEUnitAreaEffectList::AddAreaEffect`, `ApplyModifiers`, `Remove`, `MarkDirty`, `MoveAndUpdate`, `Tick` |
+| `ui_message_calls.rs`, `ui_game_calls.rs` | `EEUserInterface.cpp`'s `ee_screenscpp_ui_message` and `ee_screenscpp_ui_game` whole (deleted) |
 
-The shim sweep: ten shims deleted (`sc_pause_game`, `tt_engine_ai`, `rc_left_handed`, `rc_delete_editor`,
-`rc_create_editor` by their Rust symbols; `sc_pgs_sci_delete`, `rc_si_blink_off`, `rc_si_open_map`,
-`rc_si_open_sound`, `intro_set_blinking` composed in Rust). The editor tour has a campaign editor step
-(`fixture_game.py --exercise editor`, the fixture's `editnum`). The totals are in PORT_LEARNINGS.md "The UI lane,
-round 10".
+Shims: 581 one-statement `extern "C"` shims added and 2 shim list entries naming Rust symbols (`ug_civ_edit`,
+`ug_civ_create`); none deleted. The totals are in PORT_LEARNINGS.md "The UI lane, round 11".
 
 ## What is left (the lane's part)
 
-Logic lines per file at round 10's end (`logic_lines.py`'s heuristic): EEScreens.cpp 202 (the settings record's
+Logic lines per file at round 11's end (`logic_lines.py`'s heuristic): EEScreens.cpp 202 (the settings record's
 X-macro list, `modes`, `current_mode`, `game_size`, the lobby's option setter and rules, the statics), EEUIFMainGame.cpp
-177 (the destructor, `CreateGroup`, `IsInGameView`, the 32 default player names, the cursor read's set-up),
-EEUIShell.cpp 166 (the one-line cases, the `BaseCall` members, `DrawBars`, the icon bar's and chat line's
-constructors), EEUICCommandUnits 96, EEUICPortrait 95, EEUIBUpgrade 88, EEUserInterface 83, UIControl 82 (the 24
-key statics, the key helpers), EEUIManager 75, UIBackground 75, UIForm 55 (the db constructor's lower-casing, the
-temp hot key, the statics), EEUIFMGStatusBox 55, UIFileListBox 54, UIEditBox 53, UIManager 52 (the nested form
-switches, the statics, the forwarders' frame), EEUIFMGStatusButton 50, UILBString 45, EEUIFError 40, EEUIFMGMainGroup
-35, UIControlsTable 28, UIComboBox 20. The `include/lle/UI*` headers are declarations: they go only with a whole class.
-- **Shims whose callee is now Rust**: swept once (ten). Most of the rest pass an object (a C++ shell's `mRust` or
-  `this`) that only the C++ reaches; `gWorld.ClearGhostUnits()` and the others on `&gWorld` would need the world's
-  address as a shim of its own.
-- Left on purpose (as rounds 7-9): the printfs of a resource format, qualified base-class calls, the nested
-  one-statement switches of `UIManager::HostOp` (the form's protected members: the manager is the form's friend).
+177 (the destructor, `CreateGroup`, `IsInGameView`, the 32 default player names, `EEPostGraphicsAll`), EECivCapture.cpp
+149 and EEAECapture.cpp 130 (TEST ONLY capture records: their units are cut from the game's units by hook pointers,
+so a Rust caller would need the same cut), EEUIShell.cpp 137 (the one-line cases, the `BaseCall` members, `DrawBars`,
+the icon bar's and chat line's constructors), EEAreaEffect.cpp 120 (the morale buildings' functors, the effect's and
+template's constructors, `Init`, the forwarders' frames), EEAEManager.cpp 101 (the unit passes' functors, `Clear`,
+the I/O op), EECivilizationManager.cpp 91 (the db reads, the forwarders' sinks), EEUIBUpgrade 88, UIControl 82,
+EEUIManager 75, UIBackground 73, EECBCivilizationFiles 71 (`EELoadCivilizationUncaptured`, the directory), UIForm 55,
+EEUIFMGStatusBox 55, UIFileListBox 54, UIManager 52, EEUIFMGStatusButton 50, UIEditBox 50, UILBString 45, EEUIFError
+40, EEUIFMGAttribute 39, EEUserInterface 37, UIButton 36, EEUIFMGMainGroup 35. The `include/lle/UI*` and `include/ee`
+headers are declarations: they go only with a whole class.
+- **Shims whose callee is now Rust**: swept once (round 10). Round 11's shims call C++ only, but `ug_civ_edit` and
+  `ug_civ_create`, which name the builder's Rust entry points.
+- Left on purpose (as rounds 7-10): the printfs of a resource format, qualified base-class calls, the unit passes'
+  functors over `EEForEachPlayersUnit` and the collectors' predicates (C++ templates).
 
 ## Checks
 
 - Per piece: the build `--sim` 0/0; the moved modules' unit tests (`cargo test -p ee_game --lib screens::`).
-- At the round's end: both builds and the test profile 0/0, `rust_build.py header` and the Rust gate, the oracle
+- At the round's end: both builds and the test profile 0/0, the oracle seeds 2-3 per simulation commit, `rust_build.py header` and the Rust gate, the oracle
   seeds 2-7, the twelve capture profiles at seeds 2-3, the plain saveload and the matrix with `--expect`,
   scenario_check, sim_editor and `--civbuilder`, the tours (`--exercise tour`, `editor` with its campaign editor
   step, `random-game --box-select --orders --seed 7`) with their captures against the base build's, `bash

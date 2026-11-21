@@ -65,29 +65,27 @@ pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeT
             let u = c.civh_upgrade(player, kind);
             let s = &call.stats;
             match call.b {
-                b if b == EE_TECH_CIV_STAT_ATTACK as i64 => c.civh_put_attack(u, s.up_attack),
-                b if b == EE_TECH_CIV_STAT_RELOAD_TIME as i64 => c.civh_put_reload_time(u, s.up_reload_time),
-                b if b == EE_TECH_CIV_STAT_ARMOR as i64 => {
+                EE_TECH_CIV_STAT_ATTACK => c.civh_put_attack(u, s.up_attack),
+                EE_TECH_CIV_STAT_RELOAD_TIME => c.civh_put_reload_time(u, s.up_reload_time),
+                EE_TECH_CIV_STAT_ARMOR => {
                     for (i, &v) in s.up_armor.iter().enumerate() {
                         c.civh_put_armor(u, i as u32, v);
                     }
                 }
-                b if b == EE_TECH_CIV_STAT_RANGE as i64 => c.civh_put_range(u, s.up_range),
-                b if b == EE_TECH_CIV_STAT_LINE_OF_SIGHT as i64 => c.civh_put_line_of_sight(u, s.up_line_of_sight),
-                b if b == EE_TECH_CIV_STAT_SPEED as i64 => c.civh_put_max_velocity(u, s.up_max_velocity),
-                b if b == EE_TECH_CIV_STAT_FLIGHT_TIME as i64 => c.civh_put_flight_time(u, s.up_flight_time),
-                b if b == EE_TECH_CIV_STAT_AREA_EFFECT as i64 => c.civh_put_area_effect(u, s.up_area_effect),
-                b if b == EE_TECH_CIV_STAT_GATHER_TIMES as i64 => {
+                EE_TECH_CIV_STAT_RANGE => c.civh_put_range(u, s.up_range),
+                EE_TECH_CIV_STAT_LINE_OF_SIGHT => c.civh_put_line_of_sight(u, s.up_line_of_sight),
+                EE_TECH_CIV_STAT_SPEED => c.civh_put_max_velocity(u, s.up_max_velocity),
+                EE_TECH_CIV_STAT_FLIGHT_TIME => c.civh_put_flight_time(u, s.up_flight_time),
+                EE_TECH_CIV_STAT_AREA_EFFECT => c.civh_put_area_effect(u, s.up_area_effect),
+                EE_TECH_CIV_STAT_GATHER_TIMES => {
                     for (i, &v) in s.up_gather_times.iter().enumerate() {
                         c.civh_put_gather_time(u, i as u32, v);
                     }
                 }
-                b if b == EE_TECH_CIV_STAT_BUILD_TIME as i64 => c.civh_put_build_time_scale(u, s.up_build_time_scale),
-                b if b == EE_TECH_CIV_STAT_REPAIR_RATE as i64 => c.civh_put_repair_rate(u, s.up_repair_rate),
-                b if b == EE_TECH_CIV_STAT_AREA_EFFECT_SCALE as i64 => {
-                    c.civh_put_area_effect_scale(u, s.up_area_effect_scale)
-                }
-                b if b == EE_TECH_CIV_STAT_COST as i64 => c.civh_put_cost_scale(u, s.up_cost_scale),
+                EE_TECH_CIV_STAT_BUILD_TIME => c.civh_put_build_time_scale(u, s.up_build_time_scale),
+                EE_TECH_CIV_STAT_REPAIR_RATE => c.civh_put_repair_rate(u, s.up_repair_rate),
+                EE_TECH_CIV_STAT_AREA_EFFECT_SCALE => c.civh_put_area_effect_scale(u, s.up_area_effect_scale),
+                EE_TECH_CIV_STAT_COST => c.civh_put_cost_scale(u, s.up_cost_scale),
                 _ => {}
             }
         }
@@ -251,7 +249,7 @@ mod tests {
     fn a_put_writes_its_stat_only() {
         let mut fake = Fake::default();
         fake.answer("civh_upgrade", &[100]);
-        let mut c = call(EE_TECH_CIV_OP_PUT, 7, EE_TECH_CIV_STAT_GATHER_TIMES as i64);
+        let mut c = call(EE_TECH_CIV_OP_PUT, 7, EE_TECH_CIV_STAT_GATHER_TIMES);
         c.stats.up_gather_times[6] = 12;
         host(&mut fake, &c, &mut EeTechCivReply::default());
         assert_eq!(fake.log.len(), 8);

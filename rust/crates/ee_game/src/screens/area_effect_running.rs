@@ -255,6 +255,7 @@ mod tests {
         at: usize,
     }
 
+    #[allow(clippy::unnecessary_cast)]
     unsafe extern "C" fn buf_io(ctx: *mut core::ffi::c_void, op: u32, value: *mut core::ffi::c_void) -> c_long {
         use ee_sim::tech::calamity_record::*;
         // SAFETY: the test's buffer and the record's value
