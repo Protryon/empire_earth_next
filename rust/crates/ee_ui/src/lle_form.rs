@@ -3,6 +3,9 @@
 //! (`UIForm::Create`) and the IME and typed keys passed to the control holding the keyboard. The form's state and
 //! methods were already Rust (`formobj.rs`).
 
+// the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
+#![cfg_attr(feature = "no_cpp", allow(dead_code))]
+
 use core::ffi::{c_long, c_ulong};
 
 use crate::lle_cpp::{

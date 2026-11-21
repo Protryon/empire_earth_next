@@ -3,6 +3,9 @@
 //! description's bitmaps (`CreateBitmap`) and its string-table range (`SetupStringArray`). The table's records and
 //! factories were already Rust (`tableobj.rs`).
 
+// the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
+#![cfg_attr(feature = "no_cpp", allow(dead_code))]
+
 use core::ffi::c_ulong;
 
 use crate::controls_table as ct;

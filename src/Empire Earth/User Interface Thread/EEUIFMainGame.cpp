@@ -128,96 +128,59 @@ UWideString gDefaultPlayerNames[32] = {
 // Update, 0x262e29 GetSelection, and the two message ctors' COMDATs 0x262c24 (EEMHackANewUnit) and 0x262d32
 // (EEMLoadUnitData). The host answers its ops (EE_SCREENS_UH_OP_*): the class table, the object and player lists,
 // the keys, the mouse, the messages.
+#include "ee/EEScreensShims.h"
+// the moved cases' shims (ee_screens unit_hack_calls.rs asks them first)
+#define UH_OBJECTS(x) static_cast<UIComboBox*>(static_cast<EEUIFMainGame*>(reinterpret_cast<void*>(x))->GetControl(kMainGameTempObjectList))
+static GE3DPoint sUHPoint;   // the point's out (a local of the original case)
+static ISEntity* EEKey(unsigned long inKey);
+static EETile* sShimTile;   // the mouse tile's other out (a local of the original case)
+extern "C" bool ee_screenscpp_uh_class_exists(int32_t inIndex) { return gUnitClassTable[inIndex] != NULL; }
+extern "C" bool ee_screenscpp_uh_class_enabled(int32_t inIndex) { return gUnitClassTable[inIndex]->mIsEnabled; }
+extern "C" bool ee_screenscpp_uh_class_placeable(int32_t inIndex)
+{ return gUnitClassTable[inIndex]->mIsPlayerPlaceable; }
+extern "C" void ee_screenscpp_uh_class_name(int32_t inIndex, void* inName)
+{ EEShimOut(inName, UWideString((const char*)gUnitClassTable[inIndex]->mName)); }
+extern "C" void ee_screenscpp_uh_combo_append(uintptr_t inForm, EeScreensShimText inLine)
+{ UH_OBJECTS(inForm)->AppendLine(EEShimText(inLine)); }
+extern "C" uintptr_t ee_screenscpp_uh_combo_trigger(uintptr_t inForm)
+{ return (uintptr_t)UH_OBJECTS(inForm)->GetTriggerEvent(kControlTriggerSelectionChanged); }
+extern "C" void ee_screenscpp_uh_combo_set_trigger(uintptr_t inForm, uintptr_t inEvent)
+{ UH_OBJECTS(inForm)->SetTriggerEvent(kControlTriggerSelectionChanged, reinterpret_cast<UIEvent*>(inEvent)); }
+extern "C" void ee_screenscpp_uh_combo_select_first(uintptr_t inForm) { UH_OBJECTS(inForm)->SetCurrentSelection(0); }
+extern "C" void ee_screenscpp_event_reference(uintptr_t inEvent) { reinterpret_cast<UIEvent*>(inEvent)->Reference(); }
+extern "C" void ee_screenscpp_uh_combo_selection(uintptr_t inForm, unsigned long* inSelection)
+{ UH_OBJECTS(inForm)->GetCurrentSelection(*inSelection); }
+extern "C" int32_t ee_screenscpp_uh_object_list_selection(uintptr_t inForm, unsigned long* inSelection)
+{ return (int32_t)UH_OBJECTS(inForm)->GetListBox()->GetCurrentSelection(*inSelection); }
+extern "C" int32_t ee_screenscpp_uh_player_list_selection(uintptr_t inForm, unsigned long* inSelection)
+{ return (int32_t)static_cast<UIComboBox*>(static_cast<EEUIFMainGame*>(reinterpret_cast<void*>(inForm))->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(*inSelection); }
+extern "C" int32_t ee_screenscpp_uh_control_value() { return (int32_t)EEKey(kKeyControl)->GetValue(); }
+extern "C" void ee_screenscpp_uh_send_place(int32_t inUnitType, float inX, float inY, int32_t inFlag)
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageHackANewUnit, {(long)inUnitType, GE2DPoint(inX, inY), (unsigned char)inFlag}), kSlotNone); }
+extern "C" bool ee_screenscpp_uh_point(float inX, float inY)
+{ return EEPointUnitOrTile(GE2DPoint(inX, inY), sShimTile, sUHPoint, true); }
+extern "C" float ee_screenscpp_uh_point_x() { return sUHPoint.GetX(); }
+extern "C" float ee_screenscpp_uh_point_y() { return sUHPoint.GetY(); }
+extern "C" void ee_screenscpp_uh_point_reset() { sUHPoint = GE3DPoint(); }
 extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t inA, int32_t inB, float* ioPoint,
                                            uint32_t* ioSelection, uint8_t* ioText, size_t inLength)
 {
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    // the object list only for its ops: the class table's are asked from the form's constructor, before its
-    // controls exist
-    UIComboBox* theObjects = inOp >= EE_SCREENS_UH_OP_COMBO_CLEAR && inOp <= EE_SCREENS_UH_OP_COMBO_SELECTION
-                                 ? static_cast<UIComboBox*>(theForm->GetControl(kMainGameTempObjectList))
-                                 : NULL;
-
     switch (inOp) {
     case EE_SCREENS_UH_OP_CLASS_COUNT:
         return (int32_t)EEUnitClassCount();
-    case EE_SCREENS_UH_OP_CLASS: {
-        EEUnitClass* theClass = gUnitClassTable[inA];
-        if (theClass == NULL)
-            return 0;
-        return 1 | (theClass->mIsEnabled ? 2 : 0) | (theClass->mIsPlayerPlaceable ? 4 : 0);
-    }
     case EE_SCREENS_UH_OP_CLASS_CATEGORY:
         return gUnitClassTable[inA]->mCategory;
     case EE_SCREENS_UH_OP_CLASS_TYPE:
         return gUnitClassTable[inA]->mUnitType;
-    case EE_SCREENS_UH_OP_CLASS_NAME: {
-        UWideString theName((const char*)gUnitClassTable[inA]->mName);
-        size_t theLength = theName.GetTCHARLength();
-        if (theLength <= inLength)
-            memcpy(ioText, (const char*)theName, theLength);
-        return (int32_t)theLength;
-    }
     case EE_SCREENS_UH_OP_COMBO_CLEAR:
-        theObjects->DeleteAllEntries();
+        UH_OBJECTS(inForm)->DeleteAllEntries();
         return 0;
-    case EE_SCREENS_UH_OP_COMBO_APPEND: {
-        char* theBytes = new char[inLength + 1];
-        memcpy(theBytes, ioText, inLength);
-        theBytes[inLength] = 0;
-        theObjects->AppendLine(UWideString(theBytes));
-        delete[] theBytes;
-        return 0;
-    }
-    case EE_SCREENS_UH_OP_COMBO_SELECT_FIRST: {
-        // port: the first line is selected without the box's change event. The original's event sent EEMLoadUnitData
-        // from the UI thread as the main game form opened, racing the game's start: in the loading's last communications
-        // ticks the client ran it as lobby input, a tick later the physics ran it as a game input (one more input
-        // counted: the out-of-synch checksum, EE-SIM's AI trace "inputs=" and its capture's NMEX/NMIM/NMDC/USCK
-        // differed by run under load). Its only effect was the sender's hack class and that class's media preloaded
-        // for every player; the hack's own placing sends the listed class, and a later change still sends the message.
-        UIEvent* theEvent = theObjects->GetTriggerEvent(kControlTriggerSelectionChanged);
-        if (theEvent != NULL) {
-            theEvent->Reference();
-            theObjects->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-        }
-        theObjects->SetCurrentSelection(0);
-        if (theEvent != NULL) {
-            theObjects->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-            theEvent->Dereference();
-        }
-        return 0;
-    }
-    case EE_SCREENS_UH_OP_COMBO_SELECTION: {
-        unsigned long theSelection;
-        theObjects->GetCurrentSelection(theSelection);
-        return (int32_t)theSelection;
-    }
-    case EE_SCREENS_UH_OP_LIST_SELECTION: {
-        unsigned long theSelection = *ioSelection;
-        long theResult = static_cast<UIComboBox*>(theForm->GetControl(inA == 1 ? kMainGameTempObjectList
-                                                                                 : kMainGameTempPlayerList))
-                             ->GetListBox()->GetCurrentSelection(theSelection);
-        *ioSelection = (uint32_t)theSelection;
-        return (int32_t)theResult;
-    }
     case EE_SCREENS_UH_OP_TILE:
         return gWorld.mMap->GetTile((long)ioPoint[0], (long)ioPoint[1]) != NULL;
-    case EE_SCREENS_UH_OP_KEY: {
-        ISEntity* theKey;
-        gISKeyboard->GetEntity(inA == 0 ? kKeyShift : kKeyControl, theKey);
-        return (int32_t)theKey->GetValue();
-    }
     case EE_SCREENS_UH_OP_PLAYER_SKIPPED:
         return gWorld.mPlayers[inA] == NULL || gWorld.mPlayers[inA] == gWorld.GetCurrentPlayer();
     case EE_SCREENS_UH_OP_LOCAL_PLAYER:
         return (int32_t)gWorld.GetCurrentPlayer()->mPlayerID;
-    case EE_SCREENS_UH_OP_SEND_PLACE: {
-        long theType = inA;
-        gCommunications->ProcessLocalUserInput(
-            new EEMRecord(kMessageHackANewUnit, {theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB}), kSlotNone);
-        return 0;
-    }
     case EE_SCREENS_UH_OP_SEND_LOAD:
         gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadUnitData, {inA, true}), kSlotNone);
         return 0;
@@ -225,14 +188,6 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
         return gViewport.GetViewRectangle().Contains(GE2DPoint(ioPoint[0], ioPoint[1]));
     case EE_SCREENS_UH_OP_LEFT_BUTTON:
         return inA == 0 ? UIManager::GetLMouseButton()->JustPressed() : UIManager::GetLMouseButton()->JustUnpressed();
-    case EE_SCREENS_UH_OP_POINT: {
-        GE3DPoint thePoint;
-        EETile* theLocation;
-        bool theFound = EEPointUnitOrTile(GE2DPoint(ioPoint[0], ioPoint[1]), theLocation, thePoint, true);
-        ioPoint[0] = thePoint.GetX();
-        ioPoint[1] = thePoint.GetY();
-        return theFound;
-    }
     }
     return 0;
 }
@@ -474,57 +429,55 @@ static_assert(sizeof(EEUIFMGCursorRead) == 5 * sizeof(void*), "hud_direct.rs Cur
 
 // The world's answers to the cursor's ops (EE_SCREENS_CURSOR_OP_*): the target, the selection by index, an air
 // base's cargo by index; the positions' floats into outF
+#define CR(x) static_cast<EEUIFMGCursorRead*>(reinterpret_cast<void*>(x))
+static bool sCurShielded;   // EECanConvert's in-out shielded flag (a local of the original case)
+extern "C" uintptr_t ee_screenscpp_cur_mouse_over(uintptr_t inCtx)
+{ return (uintptr_t)CR(inCtx)->mForm->GetMouseOverControl(); }
+extern "C" uintptr_t ee_screenscpp_cur_command_units(uintptr_t inCtx)
+{ return (uintptr_t)CR(inCtx)->mForm->GetControl(kMainGameCommandUnits); }
+extern "C" void ee_screenscpp_cur_pick(uintptr_t inCtx, uint32_t inFlags)
+{ CR(inCtx)->mTarget = gUnitPicker.PickUnit(gMouse->mPosition, inFlags); }
+extern "C" bool ee_screenscpp_cur_has_target(uintptr_t inCtx) { return CR(inCtx)->mTarget != NULL; }
+extern "C" bool ee_screenscpp_cur_t_on_tile(uintptr_t inCtx) { return CR(inCtx)->mTarget->mTileNode != NULL; }
+extern "C" bool ee_screenscpp_cur_t_disabled(uintptr_t inCtx) { return CR(inCtx)->mTarget->mComplexUnit->mIsDisabled; }
+extern "C" bool ee_screenscpp_cur_t_protected(uintptr_t inCtx)
+{ return CR(inCtx)->mTarget->mComplexUnit->IsProtected(); }
+extern "C" bool ee_screenscpp_cur_t_has_complex(uintptr_t inCtx)
+{ return CR(inCtx)->mTarget->GetComplexUnit() != NULL; }
+extern "C" bool ee_screenscpp_cur_t_has_model(uintptr_t inCtx)
+{ return CR(inCtx)->mTarget->GetModel()->mModel != NULL; }
+extern "C" float ee_screenscpp_cur_t_scale(uintptr_t inCtx) { return CR(inCtx)->mTarget->mStats->GetScale(); }
+extern "C" void ee_screenscpp_cur_t_default_point(uintptr_t inCtx, float* inPoint)
+{ *reinterpret_cast<GE3DPoint*>(inPoint) = CR(inCtx)->mTarget->GetModel()->mDefaultPoint; }
+extern "C" void ee_screenscpp_cur_t_place(uintptr_t inCtx, float inX, float inY, float inZ, float* inAim)
+{ CR(inCtx)->mTarget->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(GE3DPoint(inX, inY, inZ), *reinterpret_cast<GE3DPoint*>(inAim)); }
+extern "C" int32_t ee_screenscpp_cur_t_tile_x(uintptr_t inCtx) { return (int32_t)CR(inCtx)->mTarget->GetTileX(); }
+extern "C" int32_t ee_screenscpp_cur_t_tile_y(uintptr_t inCtx) { return (int32_t)CR(inCtx)->mTarget->GetTileY(); }
+extern "C" float ee_screenscpp_cur_t_tile_height(uintptr_t inCtx) { return CR(inCtx)->mTarget->mTile->GetHeight(); }
+extern "C" bool ee_screenscpp_cur_can_gather(uintptr_t inCtx, uint32_t inFlags)
+{ return CR(inCtx)->mGroup->FindUnitWithFlags(inFlags)->CanGather(CR(inCtx)->mTarget, CR(inCtx)->mTarget->GetTileX(), CR(inCtx)->mTarget->GetTileY(), false, false); }
+extern "C" void ee_screenscpp_cur_set_shielded(bool inShielded) { sCurShielded = inShielded; }
+extern "C" bool ee_screenscpp_cur_convert(uintptr_t inCtx, uint32_t inIndex)
+{ return EECanConvert(CR(inCtx)->mGroup->GetUnit(inIndex), CR(inCtx)->mTarget->mComplexUnit, sCurShielded); }
+extern "C" bool ee_screenscpp_cur_shielded() { return sCurShielded; }
+#define theRead (*static_cast<EEUIFMGCursorRead*>(inContext))
+#define theTarget theRead.mTarget
+#define theUnit theRead.mGroup->GetUnit(inA)
+#define theCargo theRead.mGroup->GetUnit(inA)->GetComplexUnit()->mCargo[inB]
 extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t inA, uint32_t inB, float* outF)
 {
-    EEUIFMGCursorRead& theRead = *static_cast<EEUIFMGCursorRead*>(inContext);
-    EEUnit* theTarget = theRead.mTarget;
-    EEComplexUnit* theUnit = inOp >= EE_SCREENS_CURSOR_OP_SEL_KIND && inOp <= EE_SCREENS_CURSOR_OP_SEL_CONVERT ? theRead.mGroup->GetUnit(inA) : NULL;
-    EEComplexUnit* theCargo = inOp >= EE_SCREENS_CURSOR_OP_CARGO_CAN_ATTACK ? theRead.mGroup->GetUnit(inA)->GetComplexUnit()->mCargo[inB] : NULL;
-
     switch (inOp) {
-    case EE_SCREENS_CURSOR_OP_MOUSE_OK:
-        return theRead.mForm->GetMouseOverControl() == NULL ||
-               theRead.mForm->GetMouseOverControl() == theRead.mForm->GetControl(kMainGameCommandUnits);
     case EE_SCREENS_CURSOR_OP_FLAGS:
         return (int32_t)theRead.mGroup->mKindFlags;
     case EE_SCREENS_CURSOR_OP_IN_VIEW:
         return gRasterizer->GetViewport(gScreenIndex).GetViewRectangle().Contains(gMouse->mPosition);
-    case EE_SCREENS_CURSOR_OP_PICK:
-        theRead.mTarget = gUnitPicker.PickUnit(gMouse->mPosition, inA);
-        return theRead.mTarget != NULL;
     case EE_SCREENS_CURSOR_OP_RELEASE:
         theTarget->Dereference();
         return 0;
     case EE_SCREENS_CURSOR_OP_SEEN:
         return EECombatIsSeenBy(theTarget, theRead.mPlayer, true);
-    case EE_SCREENS_CURSOR_OP_T_DISABLED:
-        return theTarget->mTileNode != NULL && theTarget->mComplexUnit->mIsDisabled &&
-               !theTarget->mComplexUnit->IsProtected();
     case EE_SCREENS_CURSOR_OP_T_TARGETABLE:
         return ee_units_uu_targetable(0, (uint64_t)(uintptr_t)theTarget->mUnitClass, 0);
-    case EE_SCREENS_CURSOR_OP_AIM: {
-        // EEGetAttackRangeKind's aim: the model's default point scaled and placed, else the tile's centre
-        GE3DPoint thePoint, theAim;
-        if (theTarget->GetComplexUnit() != NULL && theTarget->GetModel()->mModel != NULL) {
-            float theScale = theTarget->mStats->GetScale();
-            thePoint = theTarget->GetModel()->mDefaultPoint;
-            thePoint.SetX(thePoint.GetX() * theScale);
-            thePoint.SetY(thePoint.GetY() * theScale);
-            thePoint.SetZ(thePoint.GetZ() * theScale);
-            theTarget->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(thePoint, theAim);
-        } else {
-            theAim.SetX((float)theTarget->GetTileX() + 0.5f);
-            theAim.SetY((float)theTarget->GetTileY() + 0.5f);
-            theAim.SetZ(theTarget->mTile->GetHeight());
-        }
-        outF[0] = theAim.GetX();
-        outF[1] = theAim.GetY();
-        outF[2] = theAim.GetZ();
-        return 0;
-    }
-    case EE_SCREENS_CURSOR_OP_CAN_GATHER:
-        return theRead.mGroup->FindUnitWithFlags(inA)->CanGather(theTarget, theTarget->GetTileX(),
-                                                                  theTarget->GetTileY(), false, false);
     case EE_SCREENS_CURSOR_OP_CAN_HEAL:
         return EECanHeal(theRead.mFirst, theTarget->mComplexUnit);
     case EE_SCREENS_CURSOR_OP_SEL_AIR_BASE:
@@ -535,16 +488,15 @@ extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t
         return theUnit->mUnitClass->IsPriest();
     case EE_SCREENS_CURSOR_OP_SEL_CAN_ATTACK:
         return theUnit->GetComplexUnit()->CanAttackClass(theTarget->GetUnitClass());
-    case EE_SCREENS_CURSOR_OP_SEL_CONVERT: {
-        bool theShielded = inB != 0;
-        bool theResult = EECanConvert(theUnit, theTarget->mComplexUnit, theShielded);
-        return (theResult ? 1 : 0) | (theShielded ? 2 : 0);
-    }
     case EE_SCREENS_CURSOR_OP_CARGO_CAN_ATTACK:
         return theCargo->CanAttackClass(theTarget->GetUnitClass());
     }
     return 0;
 }
+#undef theRead
+#undef theTarget
+#undef theUnit
+#undef theCargo
 
 // Picks the mouse cursor for the unit under it from what the selection can do to it (ee_screens cursor.rs, with
 // GetAttackStance, GetTransportCommand, GetRepairCommand, GetCommandOnUnit, Fn265D7A and EEGetAttackRangeKind)
@@ -598,7 +550,6 @@ long EEUIFMainGame::UpdateMouse()
 
 // ---- the shims of the moved cases (UI lane round 7: ee_game screens main_form_calls.rs, game_cpp.rs), each one
 // C++ statement on the host's call record or the world
-#include "ee/EEScreensShims.h"
 static EEUIFMGFormCall* R(uintptr_t inRec) { return reinterpret_cast<EEUIFMGFormCall*>(inRec); }
 static UIControl* C(uintptr_t inControl) { return reinterpret_cast<UIControl*>(inControl); }
 // the keyboard's key (NULL when the keyboard has none)
@@ -607,7 +558,6 @@ static ISEntity* EEKey(unsigned long inKey)
     ISEntity* theKey = NULL;
     return gISKeyboard->GetEntity(inKey, theKey) != 0 ? NULL : theKey;
 }
-static EETile* sShimTile;   // the mouse tile's other out (a local of the original case)
 // shims5
 extern "C" void ee_screenscpp_mf_set_ui_state(uintptr_t inRec, int32_t inState)
 { R(inRec)->mForm->SetUIState(inState); }

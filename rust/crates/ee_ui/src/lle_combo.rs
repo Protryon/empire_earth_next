@@ -3,6 +3,9 @@
 //! `UIComboBox::Rust::Op`) and its constructor's part making ([`construct`]). The combo box's state and methods were
 //! already Rust (`comboobj.rs`).
 
+// the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
+#![cfg_attr(feature = "no_cpp", allow(dead_code))]
+
 use core::ffi::c_ulong;
 
 use crate::comboobj::{

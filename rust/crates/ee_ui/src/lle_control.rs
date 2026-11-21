@@ -3,6 +3,9 @@
 //! first control looks up, the mouse dispatch's button and handler calls (`mouse_ffi.rs`) and the manager bitmap a
 //! whole object asks for. The control's record and methods were already Rust (`controlobj.rs`, `mouse.rs`).
 
+// the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
+#![cfg_attr(feature = "no_cpp", allow(dead_code))]
+
 use crate::lle_cpp::{lle_host, Cpp, HostArgs};
 use crate::mouse::{ButtonQuery, ControlMouseCall};
 use crate::obj::EeUiOp as Op;

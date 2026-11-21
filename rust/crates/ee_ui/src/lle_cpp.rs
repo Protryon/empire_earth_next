@@ -14,6 +14,9 @@
 //! (`usize`), [`EeUiShimText`] (bytes handed in) and [`EeUiShimOut`] (a text the shim appends to with
 //! `ee_ui_shim_out`).
 
+// the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
+#![cfg_attr(feature = "no_cpp", allow(dead_code))]
+
 use core::ffi::c_void;
 #[allow(unused_imports)]
 use core::ffi::{c_long, c_ulong};
@@ -89,6 +92,7 @@ macro_rules! out_types {
         pub struct $name(pub *mut $t);
 
         impl $name {
+            #[allow(dead_code)]
             pub fn of(out: &mut $t) -> Self {
                 $name(out)
             }

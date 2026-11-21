@@ -3,6 +3,9 @@
 //! texture's load, the events' host ([`event_call`], `ee_ui_event_host`), the database's load and removal, the
 //! shared mouse buttons. The manager's state and methods were already Rust (`managerobj.rs`).
 
+// the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
+#![cfg_attr(feature = "no_cpp", allow(dead_code))]
+
 use core::ffi::c_long;
 
 use crate::lle_cpp::{

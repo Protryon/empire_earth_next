@@ -59,6 +59,7 @@ macro_rules! out_types {
         pub struct $name(pub *mut $t);
 
         impl $name {
+            #[allow(dead_code)]
             pub fn of(out: &mut $t) -> Self {
                 $name(out)
             }
@@ -88,7 +89,9 @@ out_types!(
     /// An `int32_t*`.
     EeScreensShimI32Out: i32,
     /// A `long&`.
-    EeScreensShimLongOut: core::ffi::c_long
+    EeScreensShimLongOut: core::ffi::c_long,
+    /// A `float*` (the C++ writes as many floats as the call says).
+    EeScreensShimF32Out: f32
 );
 
 /// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
@@ -2134,4 +2137,81 @@ shims! {
     fn up_icon_left(call: usize) -> f32 = ee_screenscpp_up_icon_left;
     fn up_icon_top(call: usize) -> f32 = ee_screenscpp_up_icon_top;
     fn up_icon_set_location(call: usize, x: f32, y: f32) = ee_screenscpp_up_icon_set_location;
+    // EEUIFMainGame.cpp's unit hack (unit_hack_calls.rs)
+    fn uh_class_exists(index: i32) -> bool = ee_screenscpp_uh_class_exists;
+    fn uh_class_enabled(index: i32) -> bool = ee_screenscpp_uh_class_enabled;
+    fn uh_class_placeable(index: i32) -> bool = ee_screenscpp_uh_class_placeable;
+    fn uh_class_name(index: i32, name: EeScreensShimOut) = ee_screenscpp_uh_class_name;
+    fn uh_combo_append(form: usize, line: EeScreensShimText) = ee_screenscpp_uh_combo_append;
+    fn uh_combo_trigger(form: usize) -> usize = ee_screenscpp_uh_combo_trigger;
+    fn uh_combo_set_trigger(form: usize, event: usize) = ee_screenscpp_uh_combo_set_trigger;
+    fn uh_combo_select_first(form: usize) = ee_screenscpp_uh_combo_select_first;
+    fn event_reference(event: usize) = ee_screenscpp_event_reference;
+    fn uh_combo_selection(form: usize, selection: EeScreensShimULongOut) = ee_screenscpp_uh_combo_selection;
+    fn uh_object_list_selection(form: usize, selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_uh_object_list_selection;
+    fn uh_player_list_selection(form: usize, selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_uh_player_list_selection;
+    fn uh_control_value() -> i32 = ee_screenscpp_uh_control_value;
+    fn uh_send_place(unit_type: i32, x: f32, y: f32, flag: i32) = ee_screenscpp_uh_send_place;
+    fn uh_point(x: f32, y: f32) -> bool = ee_screenscpp_uh_point;
+    fn uh_point_x() -> f32 = ee_screenscpp_uh_point_x;
+    fn uh_point_y() -> f32 = ee_screenscpp_uh_point_y;
+    fn uh_point_reset() = ee_screenscpp_uh_point_reset;
+    // EEUIFMainGame.cpp's cursor (cursor_calls.rs)
+    fn cur_mouse_over(ctx: usize) -> usize = ee_screenscpp_cur_mouse_over;
+    fn cur_command_units(ctx: usize) -> usize = ee_screenscpp_cur_command_units;
+    fn cur_pick(ctx: usize, flags: u32) = ee_screenscpp_cur_pick;
+    fn cur_has_target(ctx: usize) -> bool = ee_screenscpp_cur_has_target;
+    fn cur_t_on_tile(ctx: usize) -> bool = ee_screenscpp_cur_t_on_tile;
+    fn cur_t_disabled(ctx: usize) -> bool = ee_screenscpp_cur_t_disabled;
+    fn cur_t_protected(ctx: usize) -> bool = ee_screenscpp_cur_t_protected;
+    fn cur_t_has_complex(ctx: usize) -> bool = ee_screenscpp_cur_t_has_complex;
+    fn cur_t_has_model(ctx: usize) -> bool = ee_screenscpp_cur_t_has_model;
+    fn cur_t_scale(ctx: usize) -> f32 = ee_screenscpp_cur_t_scale;
+    fn cur_t_default_point(ctx: usize, point: EeScreensShimF32Out) = ee_screenscpp_cur_t_default_point;
+    fn cur_t_place(ctx: usize, x: f32, y: f32, z: f32, aim: EeScreensShimF32Out) = ee_screenscpp_cur_t_place;
+    fn cur_t_tile_x(ctx: usize) -> i32 = ee_screenscpp_cur_t_tile_x;
+    fn cur_t_tile_y(ctx: usize) -> i32 = ee_screenscpp_cur_t_tile_y;
+    fn cur_t_tile_height(ctx: usize) -> f32 = ee_screenscpp_cur_t_tile_height;
+    fn cur_can_gather(ctx: usize, flags: u32) -> bool = ee_screenscpp_cur_can_gather;
+    fn cur_set_shielded(shielded: bool) = ee_screenscpp_cur_set_shielded;
+    fn cur_convert(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_convert;
+    fn cur_shielded() -> bool = ee_screenscpp_cur_shielded;
+    // EEUIFError.cpp's (dialog_calls.rs)
+    fn dlg_text_load(ids: u32) = ee_screenscpp_dlg_text_load;
+    fn dlg_button_set_text(button: usize) = ee_screenscpp_dlg_button_set_text;
+    fn dlg_callback(index: u32) -> usize = ee_screenscpp_dlg_callback;
+    fn dlg_edit_text(edit: usize) -> usize = ee_screenscpp_dlg_edit_text;
+    fn dlg_data() -> usize = ee_screenscpp_dlg_data;
+    fn dlg_set_callback(button: usize, callback: usize, data: usize) = ee_screenscpp_dlg_set_callback;
+    fn dlg_show_button(button: usize) = ee_screenscpp_dlg_show_button;
+    fn dlg_set_close(button: usize) = ee_screenscpp_dlg_set_close;
+    fn dlg_button_text_color(button: usize) = ee_screenscpp_dlg_button_text_color;
+    fn dlg_button_text_transparent(button: usize) = ee_screenscpp_dlg_button_text_transparent;
+    fn dlg_window_width() -> f32 = ee_screenscpp_dlg_window_width;
+    fn dlg_window_height() -> f32 = ee_screenscpp_dlg_window_height;
+    fn dlg_layout_reset() = ee_screenscpp_dlg_layout_reset;
+    fn dlg_layout_left(v: f32) = ee_screenscpp_dlg_layout_left;
+    fn dlg_layout_right(v: f32) = ee_screenscpp_dlg_layout_right;
+    fn dlg_layout_top(v: f32) = ee_screenscpp_dlg_layout_top;
+    fn dlg_layout_bottom(v: f32) = ee_screenscpp_dlg_layout_bottom;
+    fn dlg_layout_calculate(width: f32, height: f32) = ee_screenscpp_dlg_layout_calculate;
+    fn dlg_font16_height() -> f32 = ee_screenscpp_dlg_font16_height;
+    fn dlg_font_create(height: i32) = ee_screenscpp_dlg_font_create;
+    fn dlg_font_release() = ee_screenscpp_dlg_font_release;
+    fn dlg_button_font(button: usize) = ee_screenscpp_dlg_button_font;
+    fn dlg_new_label(dialog: usize) -> usize = ee_screenscpp_dlg_new_label;
+    fn dlg_new_edit(dialog: usize) -> usize = ee_screenscpp_dlg_new_edit;
+    fn dlg_new_button(dialog: usize, kind: u32, index: u32) -> usize = ee_screenscpp_dlg_new_button;
+    fn dlg_edit_selected_color(edit: usize) = ee_screenscpp_dlg_edit_selected_color;
+    fn dlg_edit_bg_color(edit: usize) = ee_screenscpp_dlg_edit_bg_color;
+    fn dlg_edit_cursor_color(edit: usize) = ee_screenscpp_dlg_edit_cursor_color;
+    fn dlg_float(index: u32) -> f32 = ee_screenscpp_dlg_float;
+    fn dlg_box_set_layout(dialog: usize) = ee_screenscpp_dlg_box_set_layout;
+    fn dlg_new_background(dialog: usize) -> usize = ee_screenscpp_dlg_new_background;
+    fn dlg_delete(control: usize) = ee_screenscpp_dlg_delete;
+    fn dlg_scale_background(background: usize) = ee_screenscpp_dlg_scale_background;
+    fn dlg_pressed(button: usize) -> bool = ee_screenscpp_dlg_pressed;
+    fn dlg_pressed_callback(button: usize) -> usize = ee_screenscpp_dlg_pressed_callback;
+    fn dlg_pressed_data(button: usize) -> usize = ee_screenscpp_dlg_pressed_data;
+    fn dlg_post_closed(dialog: usize, callback: usize, data: usize) = ee_screenscpp_dlg_post_closed;
 }
