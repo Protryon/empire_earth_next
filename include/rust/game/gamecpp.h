@@ -7,7 +7,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/game/app.h"
 #include "rust/sim/tech.h"
+
+/// `kSlotServer`, `kSlotNone` (NEMessageID.h).
+constexpr static const int64_t SS_SLOT_SERVER = 254;
+
+constexpr static const int64_t SS_SLOT_NONE = 255;
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
@@ -1359,6 +1365,409 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  SsLockCt,
+  SsUnlockCt,
+  SsOptionsWriteLock,
+  SsOptionsWriteUnlock,
+  SsWorldWriteLock,
+  SsWorldWriteUnlock,
+  SsStopPing,
+  SsStartPing,
+  SsSearchLock,
+  SsAttemptLock,
+  SsServerFastLock,
+  SsClientFastLock,
+  SsSectionEnter,
+  SsSectionLeave,
+  SsPhysicsQueueEnter,
+  SsPhysicsQueueLeave,
+  SsFrameServer,
+  SsMultiplayerGame,
+  SsOptionsMultiplayer,
+  SsLoadType,
+  SsGameState,
+  SsDefaultColor,
+  SsCitizensDefault,
+  SsVersionMatch,
+  SsBinaryChecksum,
+  SsCurrentCt,
+  SsCtsInPhysics,
+  SsHumans,
+  SsMpSession,
+  SsPlayerNumber,
+  SsCurrentPt,
+  SsMySendToSlot,
+  SsNumPlayers,
+  SsWorldPlayers,
+  SsTime,
+  SsWon,
+  SsScreenActive,
+  SsEngineChoices,
+  SsFormById,
+  SsCurrentForm,
+  SsFormVisible,
+  SsSendToSlot,
+  SsPlayerSendToSlot,
+  SsSHasLeft,
+  SsCHasLeft,
+  SsSMigrating,
+  SsCMigrating,
+  SsSFastId,
+  SsCFastId,
+  SsSExecuting,
+  SsCExecuting,
+  SsLoadState,
+  SsDroppedLoaders,
+  SsVoteEdict,
+  SsYesVotes,
+  SsNoVotes,
+  SsNumVotes,
+  SsVoted,
+  SsLagMask,
+  SsUiSlot,
+  SsAllowMigration,
+  SsIgnoreTimeout,
+  SsServerLost,
+  SsHasLoaded,
+  SsLostAfterLoading,
+  SsWasBooted,
+  SsReg,
+  SsRegLoadOptions,
+  SsRegLoadLobby,
+  SsRegLoadReg,
+  SsRegStoreOptions,
+  SsRegStoreLobby,
+  SsRegNameClear,
+  SsRegNameCopy,
+  SsRegNameIcmp,
+  SsRegNameEq,
+  SsRegNameFromMsg,
+  SsRegNameIcmpPlayer,
+  SsSendResponse,
+  SsSendLocalResponse,
+  SsSendFullOptions,
+  SsNewPlayerInfo,
+  SsMsgSetOriginServer,
+  SsLocalInput,
+  SsCommsLocalInput,
+  SsNewRecord0,
+  SsNewRecord2,
+  SsNewRecord3,
+  SsNewRecord4,
+  SsSendPingStat,
+  SsNewString,
+  SsDeleteString,
+  SsClientAddress,
+  SsSlotInfoServer,
+  SsSlotInfoRecord,
+  SsNewPhysicsTick,
+  SsConnectionCheckResponse,
+  SsMsgType,
+  SsMsgOrigin,
+  SsMsgForSlot,
+  SsMsgNeValue,
+  SsMsgRecord,
+  SsMsgInputCount,
+  SsMsgInput,
+  SsMsgReference,
+  SsMsgDereference,
+  SsMsgExecute,
+  SsMsgSetFastId,
+  SsMsgIsGame,
+  SsMsgQueue,
+  SsMsgLogResponse,
+  SsBroadcast,
+  SsSendToAll,
+  SsTakeConnectionRequest,
+  SsLobbyUpdatePlayer,
+  SsNewRemovePlayer,
+  SsNewBootClient,
+  SsNewServerMigration,
+  SsPostAction,
+  SsActionDereference,
+  SsNewPauseEvent,
+  SsPostEvent,
+  SsEventDereference,
+  SsGetString,
+  SsDisplayMessage,
+  SsSprintfName,
+  SsIdsMsgGame,
+  SsChatGameLine,
+  SsChatText,
+  SsCloseForm,
+  SsOpenForm,
+  SsPushForm,
+  SsCancelGame,
+  SsCancelCallback,
+  SsLobbyForm,
+  SsHostMigrated,
+  SsTransfer,
+  SsConnectStatus,
+  SsSprintfRetry,
+  SsSprintfVersions,
+  SsNewWonInfo,
+  SsDeleteWonInfo,
+  SsWonGetInfo,
+  SsWonSetInfo,
+  SsWonInfoHumans,
+  SsWonInfoPlayers,
+  SsWonJoined,
+  SsWonClearGameList,
+  SsWonRejoinRoom,
+  SsSoundLoadServer,
+  SsSoundPlayServer,
+  SsLoadSound,
+  SsWorldPlayer,
+  SsWorldPlayerBySlot,
+  SsPlIsHuman,
+  SsPlSlot,
+  SsPlHasHuman,
+  SsPlId,
+  SsPlSetSlot,
+  SsPlSetFirewall,
+  SsPlNameFromMsg,
+  SsWorldReconnect,
+  SsWorldRemove,
+  SsExecuteSelection,
+  SsSetCt,
+  SsSetCtsInPhysics,
+  SsIncrementCts,
+  SsSetMpSession,
+  SsSetHumans,
+  SsSetPt,
+  SsRegisterSlot,
+  SsUnregisterSlot,
+  SsSendToClear,
+  SsSendToInsert,
+  SsSendToErase,
+  SsAbortXfer,
+  SsRemoveInProgress,
+  SsOpenSaveGame,
+  SsNewHeader,
+  SsDeleteHeader,
+  SsHeaderSetVersions,
+  SsHeaderLoad,
+  SsXferToClient,
+  SsStartGame,
+  SsPauseGame,
+  SsCommsStopPing,
+  SsCommsResetXfer,
+  SsCommsPresent,
+  SsCommsDelete,
+  SsCommsNewClient,
+  SsClientStartThreads,
+  SsLowestCts,
+  SsDisconnect,
+  SsLocalOut,
+  SsSleep,
+  SsFrameProtocol,
+  SsStartTimeFromMsg,
+  SsPhysicsRandom,
+  SsNumTeams,
+  SsGetProtocol,
+  SsProtocolStatus,
+  SsPostResume,
+  SsGfxPaused,
+  SsPhysicsPostStart,
+  SsTimerRunning,
+  SsMainGameUiState0,
+  ClNewBootDefault,
+  ClNameLength,
+  ClExtension,
+  ClExtIsSaved,
+  ClExtIsScenario,
+  ClExtIsCampaign,
+  ClNewFileSpec,
+  ClFileSetVolume,
+  ClFileSetDirectory,
+  ClFileSetFile,
+  ClFileFree,
+  ClFileOpenRead,
+  ClFileClose,
+  ClFileDeleteOnDisk,
+  ClFileCreateWrite,
+  ClHeaderLoad,
+  ClHeaderChecksum,
+  ClIdsNotResponding,
+  ClIdsSeconds,
+  ClTimeoutFormat,
+  ClSprintfSeconds,
+  AeFields,
+  AeTemplateFields,
+  AeTplFields,
+  AeOwner,
+  AeLocation,
+  AeIsImmunity,
+  AeAffectsPlayer,
+  AeAffectsPlayerReversed,
+  AeIsInRange,
+  AeCovers,
+  AeAppliedTo,
+  AeShowOn,
+  AeSetUnit,
+  AeSetAffectedAll,
+  AeNew,
+  AeListCount,
+  AeListAt,
+  AeListAdd,
+  AeListDereference,
+  AeListEmpty,
+  AeUnitProtected,
+  AeUnitBuilt,
+  AeUnitOwnList,
+  AeUnitAffectingList,
+  AeUnitAffectingAdd,
+  AeUnitPlayerId,
+  AeUnitId,
+  AeUnitComplex,
+  AeUnitNext,
+  AeWorldUnit,
+  AeWorldNumPlayers,
+  AeWorldPlayer,
+  AePlFirstUnit,
+  AeNewUnitVec,
+  AeDeleteUnitVec,
+  AeUnitsInRect,
+  AeVecCount,
+  AeVecComplexAt,
+  AeManager,
+  AeManagerEffects,
+  AeTemplateCount,
+  AeTemplateAt,
+  AeTemplatesClear,
+  AeTemplatePush,
+  AeTemplateDereference,
+  AeTemplateLoad,
+  AeTemplateUnload,
+  AeNewTemplate,
+  AeTemplateInit,
+  AeTemplateError,
+  AeFileOpenRead,
+  AeFileReadULong,
+  AeFileReadData,
+  AeFileClose,
+  AeIoCall,
+  AeAfterLoad,
+  AeLostRefs,
+  AhTargetInSet,
+  AhTargetTechNode,
+  AhNodeKind,
+  AhPlayer,
+  AhAllied,
+  AhAtWar,
+  AhTargetBuilt,
+  AhTargetRepairable,
+  AhTargetPosition,
+  AhContinent,
+  AhTargetCarrier,
+  AhTargetType,
+  AhPlanet,
+  AhTargetHitPoints,
+  AhTargetMaxHitPoints,
+  AhInCinematic,
+  AhTargetSetHitPoints,
+  AhTargetCloak,
+  AhCamouflaged,
+  AhStaysHidden,
+  AhCloakedEnemy,
+  AhTargetCloakOwn,
+  AhMiniMapHide,
+  AhOwner,
+  AhOwnerHitPoints,
+  AhCountInRect,
+  AhCountInRange,
+  AhOwnerScale,
+  AhOwnerLeadership,
+  AhOwnerGarrisonBonus,
+  TkTreeFields,
+  TkCurrentPlayer,
+  TkPlayerIndex,
+  TkPlId,
+  TkEpochTitle,
+  TkPostShowEpochName,
+  TkMainGameForm,
+  TkRefreshGroup,
+  TkEpochCount,
+  TkEpochAt,
+  TkEpochRef,
+  TkEpochNodes,
+  TkUnitId,
+  TkGet,
+  TkSetRef,
+  TkNeedsUnitMedia,
+  TkTrigger,
+  TkGetPlayer,
+  TkTreePlayer,
+  TkEpochReached,
+  TkStatReset,
+  TkStatSet,
+  TkUnloadClassMedia,
+  TkClassMedia,
+  TkClassButtonsLoad,
+  TkClassButtonsUnload,
+  TkEpochMediaLoaded,
+  TkEpochMediaUnloaded,
+  TkEventsEnabled,
+  TkIsLocal,
+  TkAssert,
+  TkEvent,
+  TkEventEffects,
+  TkEventEffect,
+  TkEffKind,
+  TkEffUnitClass,
+  TkEffTechnology,
+  TkEffButton,
+  TkEffAreaEffect,
+  TkEffMediaIndex,
+  TkEffNewUnitClass,
+  TkEffSoundId,
+  TkEffAttribute,
+  TkButtonAcquire,
+  TkButtonRelease,
+  TkItemLoad,
+  TkItemUnload,
+  TkSoundLoad,
+  TkSoundUnload,
+  TkClassCount,
+  TkClassAt,
+  TkClassType,
+  TkClassTechnology,
+  TkFileOpenRead,
+  TkFileLength,
+  TkFilePosition,
+  TkFileClose,
+  TkEpochsResize,
+  TkEpochLoad,
+  TkEpochUnload,
+  TkNodeUnitClass0,
+  TkNodeIsAvailable,
+  TkNodeGetCost,
+  TkNodeFields,
+  TkNodeData,
+  TkNodeTree,
+  TkClassCosts,
+  TkUpgrade,
+  TkInCostSet,
+  TkPlayerJit,
+  TkClassHasRallyPoint,
+  TkNodeCount,
+  TkNodeAt,
+  TkNodeKeyAt,
+  TkNodeUnload,
+  TkNodeDelete,
+  TkNodesClear,
+  TkEpochDeleteData,
+  TkPushId,
+  TkLoadedClassesPush,
+  TkLoadedClassesCount,
+  TkLoadedClassAt,
+  TkLoadedClassesClear,
+  TkNodeLoadMedia,
+  TkNodeUnloadMedia,
+  TkEpochCostFactor,
+  TkCostSetFactor,
+  TkStatsCostScale,
+  TkJitFactor,
 };
 
 extern "C" {
@@ -2113,6 +2522,166 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// EEAEManager::CollectEffects: the list's effects added to every living unit they cover around a location (a
+/// radius-0 effect: to every unit of every player); a healing effect skips its own unit and shows on the units it
+/// covers.
+void ee_gamecpp_ae_collect_effects(void *_manager,
+                                   float radius,
+                                   const void *location,
+                                   unsigned long player,
+                                   void *list,
+                                   void *unit);
+
+/// SetAffectedByAreaEffectFunctor::Apply: the effect added to a covered unit's affecting effects and applied.
+void ee_gamecpp_ae_set_affected(void *effect,
+                                unsigned long player,
+                                void *unit,
+                                const void *location);
+
+/// A container emptied (its references let go, then its items).
+void ee_gamecpp_ae_container_empty(void *list);
+
+/// EEAEManager::ClearEffects: the active list emptied.
+void ee_gamecpp_ae_clear_effects(void *manager);
+
+/// EEAEManager::Clear: every template released, then the active list emptied.
+void ee_gamecpp_ae_clear(void *manager);
+
+/// EEAEManager::Load: the templates of the area-effect file (an empty slot for records with id 0); 3 when a template
+/// fails to initialize.
+long ee_gamecpp_ae_load(void *manager,
+                        void *file);
+
+/// EEAEManager::CreateAreaEffect: the effect of the template at an index (a known kind) for a unit, owned by the
+/// unit's player; NULL otherwise.
+void *ee_gamecpp_ae_create(void *manager,
+                           unsigned long index,
+                           void *unit);
+
+/// EEAEManager::FindEffect: an active effect of a kind covering a point that affects the player (immunities only, by
+/// the reversed player test, in immunity mode), skipping protected units' effects and those in the exclusion list.
+void *ee_gamecpp_ae_find(void *manager,
+                         long kind,
+                         float x,
+                         float y,
+                         unsigned long player,
+                         bool mode,
+                         void *exclude);
+
+/// EEAEManager::LoadTemplateMedia / UnloadTemplateMedia: the template at an index, if any.
+void ee_gamecpp_ae_template_media(void *manager, unsigned long index, bool load);
+
+/// RebuildAreaEffectRegionListFunctor::Apply: a built unit's own effects added to the active list.
+void ee_gamecpp_ae_rebuild_add(void *effects, void *unit);
+
+/// EEAESaveRunningState: per unit (of every player but the world's) with effects, its own effects' location (and
+/// the morale from buildings' count), then the effects acting on it, each as its owner and index; then the active
+/// list the same way.
+void ee_gamecpp_ae_save_running(void *file);
+
+/// EEAELoadRunningState: the saved running state read, and put back at the loaded game's first tick.
+long ee_gamecpp_ae_load_running(void *file);
+
+/// The running state put back (EEAfterLoad): each unit's own effects' location and morale count (when the unit
+/// has the saved number of own effects), each unit's affecting effects in their saved order, the active list;
+/// the references no longer found are counted and reported.
+///
+/// # Safety
+/// `state` is the record ee_area_effect_running_load made (the caller keeps it).
+void ee_gamecpp_ae_restore_running(const EeAreaEffectRunning *state);
+
+/// The world of an area effect's Rust slots (ee_sim tech area_effect.rs's host; was EEAreaEffect.cpp's
+/// EEAEHost::Call): `ctx` the EEAEHost (the effect and the unit the slot was given).
+///
+/// # Safety
+/// `call` and `reply` are the slot's live records.
+void ee_gamecpp_ae_host(void *ctx,
+                        const void *call,
+                        void *reply);
+
+/// EEClient::HandleSlotUpdate: this client booted from the canceled game when the host's slot (0) has become open
+/// (closed), else the slot's line refreshed.
+void ee_gamecpp_client_slot_update(uint8_t slot,
+                                   const EeAppOptionsPlayerFields *player);
+
+/// EEClient::CreateXferFile: the file a transfer writes (a saved game, scenario or campaign by its extension, under
+/// the data folder); NULL for another extension, a name under five characters, a file already there with the same
+/// checksum, or one that cannot be created and opened for writing.
+void *ee_gamecpp_client_xfer_file(const void *name,
+                                  unsigned long size);
+
+/// EEClient::HandleConnectionTimeoutWarning: the server migration's countdown in the chat log ("host not
+/// responding (%d seconds)").
+void ee_gamecpp_client_timeout_warning(unsigned long remaining);
+
+/// The session host (ee_sim `EeNetSessHostFn`; `call` an `EeNetSessCall`: the frame and the values).
+///
+/// # Safety
+/// `call` is the session's live call record; its frame is EEServer.cpp's `EESessionFrame`.
+int64_t ee_gamecpp_session_host(uint32_t op,
+                                void *call);
+
+/// EETechTree::UpdateInterface: for the local player's tree, the new epoch's name shown and the main game form's
+/// group panel refreshed.
+void ee_gamecpp_tech_update_interface(void *tree,
+                                      bool epoch_changed);
+
+/// The walks' host (ee_sim tech nodes.rs EE_TECH_HOST_*; was EETechTree.cpp's EETechHost): the tree's containers, the
+/// entry points the simulation capture wraps, the world, the events, the interface and the media.
+///
+/// # Safety
+/// `io` is the walk's live record; `tree` an EETechTree.
+int32_t ee_gamecpp_tech_host(void *tree,
+                             int32_t op,
+                             void *io);
+
+/// EETechTree::Load (the tech tree file): every epoch block (the original: exactly 15), the epoch count, and the
+/// epoch range reset to all epochs.
+long ee_gamecpp_tech_load_file(void *tree,
+                               void *file);
+
+/// EETechTree::UnloadAll: every epoch unloaded.
+void ee_gamecpp_tech_unload_all(void *tree);
+
+/// EETechTree::GetNodeIDs (`all`) and GetEpochNodeIDs: the node ids of every epoch, or of one (out of range: none).
+void ee_gamecpp_tech_node_ids(void *tree,
+                              bool all,
+                              long epoch,
+                              void *out);
+
+/// EETechTree::SumCostsUncaptured: the resource costs of a tech and every unresearched prerequisite and upgrade path
+/// to it (ee_sim's sum over the tree's nodes).
+///
+/// # Safety
+/// `costs` holds 7 longs.
+void ee_gamecpp_tech_sum_costs(void *tree,
+                               long id,
+                               long unit_class,
+                               long *costs);
+
+/// EETechTreeNode::GetCostUncaptured: the node's cost in a resource for a unit class (the class's own costs when it
+/// has some), scaled; a unit's by the wonder's epochs, the variant's cost set, the player's upgrade and the
+/// just-in-time manufacturing (ee_sim's `ee_tech_node_cost`).
+long ee_gamecpp_tech_node_cost(void *node,
+                               long resource,
+                               long unit_class,
+                               float scale);
+
+/// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
+long ee_gamecpp_tech_epoch_delete_nodes(void *epoch,
+                                        bool unload);
+
+/// EETechTreeEpoch::GetNodeIDs: the epoch's node ids appended.
+void ee_gamecpp_tech_epoch_node_ids(void *epoch, void *out);
+
+/// EETechTreeEpoch::LoadMedia: the media of every unit class the epoch's buildings make (kept in its loaded list),
+/// then the epoch's own.
+void ee_gamecpp_tech_epoch_load_media(void *epoch,
+                                      void *player);
+
+/// EETechTreeEpoch::UnloadMedia: the unit class media it loaded, then its own.
+void ee_gamecpp_tech_epoch_unload_media(void *epoch, void *player);
 
 }  // extern "C"
 

@@ -16,6 +16,7 @@
 #include "ee/EETechTreeRecord.h"
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
+#include "rust/game/gamecpp.h"
 
 #include <stddef.h>
 // the file's record as Rust reads it (ee_tech nodes.rs EeTechTreeRecord) is the data tools' (ee/EETechTreeRecord.h)
@@ -50,15 +51,7 @@ EETechTreeEpoch::~EETechTreeEpoch()
 // Deletes every tech node of the epoch
 void EETechTreeEpoch::DeleteNodes()
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode != NULL)
-            delete theTreeNode;
-        ++theNode;
-    }
-    this->mNodes.clear();
+    ee_gamecpp_tech_epoch_delete_nodes(this, false);
 }
 
 // Returns an epoch's cost in a resource scaled by the game variant's epoch cost factors (first, second or
@@ -141,32 +134,13 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
 // Unloads and deletes every tech node and the epoch's data
 long EETechTreeEpoch::Unload()
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        EETechTreeNode* theTreeNode = theNode->second;
-        theTreeNode->Unload();
-        if (theTreeNode != NULL)
-            delete theTreeNode;
-        ++theNode;
-    }
-    this->mNodes.clear();
-    if (this->mData != NULL) {
-        delete this->mData;
-        this->mData = NULL;
-    }
-    return 0;
+    return ee_gamecpp_tech_epoch_delete_nodes(this, true);
 }
 
 // Appends the ids of the epoch's tech nodes
 void EETechTreeEpoch::GetNodeIDs(std::vector<long>& outIDs)
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        outIDs.push_back(theNode->first);
-        ++theNode;
-    }
+    ee_gamecpp_tech_epoch_node_ids(this, &outIDs);
 }
 
 // Tells whether the epoch can be researched: available, not obsolete, not researched
@@ -191,18 +165,7 @@ void EETechTreeEpoch::AddSOL()
 // Loads the media of every unit class the epoch's buildings make and the epoch's own media
 void EETechTreeEpoch::LoadMedia(EEPlayer* inPlayer)
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode->NeedsUnitMedia() == true) {
-            inPlayer->SetUnitClassMedia(theTreeNode->mData->mUnitClass, 0x7f);
-            long theUnitClass = theTreeNode->mData->mUnitClass;
-            this->mLoadedUnitClasses.push_back(theUnitClass);
-        }
-        ++theNode;
-    }
-    EETechTreeNode::LoadMedia(inPlayer);
+    ee_gamecpp_tech_epoch_load_media(this, inPlayer);
 }
 
 // Loads the media of the epoch's nodes of one kind (ee_sim tech node_media.rs)
@@ -241,12 +204,7 @@ long EETechTreeEpoch::Research(long inID, EEComplexUnit* inUnit)
 // Unloads the unit class media the epoch loaded and the epoch's own media
 void EETechTreeEpoch::UnloadMedia(EEPlayer* inPlayer)
 {
-    unsigned long theIndex;
-    for (theIndex = 0; theIndex < this->mLoadedUnitClasses.size(); ++theIndex) {
-        inPlayer->UnloadUnitClassMedia(this->mLoadedUnitClasses[theIndex]);
-    }
-    this->mLoadedUnitClasses.clear();
-    EETechTreeNode::UnloadMedia(inPlayer);
+    ee_gamecpp_tech_epoch_unload_media(this, inPlayer);
 }
 
 // Unloads the media of the epoch's nodes of one kind
