@@ -2935,4 +2935,18 @@ shims! {
     fn civc_civ_no_points(civ: usize) -> bool = ee_screenscpp_civc_civ_no_points;
     fn civc_civ_unchanged(civ: usize) -> bool = ee_screenscpp_civc_civ_unchanged;
     fn civc_civ_purchased_flag(player: usize) -> bool = ee_screenscpp_civc_civ_purchased_flag;
+    // the civilization manager's bodies (civ_manager_obj.rs, UI lane round 12)
+    fn civm_capture_begin(upgrade: u32, player: i64) -> usize = ee_screenscpp_civm_capture_begin;
+    fn civm_capture_end(state: usize, result: bool) = ee_screenscpp_civm_capture_end;
+    fn civm_file_open(file: usize) -> i32 = ee_screenscpp_civm_file_open;
+    fn civm_read_chunk(file: usize) -> i32 = ee_screenscpp_civm_read_chunk;
+    fn civm_chunk_bytes(out: EeScreensShimOut) = ee_screenscpp_civm_chunk_bytes;
+    fn civm_read_byte(file: usize) -> i32 = ee_screenscpp_civm_read_byte;
+    fn civm_byte() -> u8 = ee_screenscpp_civm_byte;
+    fn civm_file_close(file: usize) = ee_screenscpp_civm_file_close;
+    fn civm_powers_cost() -> i64 = ee_screenscpp_civm_powers_cost;
+    fn civm_civs_clear(list: usize) = ee_screenscpp_civm_civs_clear;
+    fn civm_civs_push(list: usize, entry: usize) = ee_screenscpp_civm_civs_push;
+    fn civm_purchased_count(player: usize) -> usize = ee_screenscpp_civm_purchased_count;
+    fn civm_purchased_data(player: usize) -> usize = ee_screenscpp_civm_purchased_data;
 }

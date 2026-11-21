@@ -369,6 +369,9 @@ pub(crate) mod civ_capture;
 #[cfg(not(test))]
 mod civ_capture_ffi;
 pub(crate) mod civ_file_calls;
+pub(crate) mod civ_manager_obj;
+#[cfg(not(test))]
+mod civ_manager_ffi;
 pub(crate) mod civ_host;
 pub(crate) mod civ_manager_calls;
 pub(crate) mod command_units_ops;

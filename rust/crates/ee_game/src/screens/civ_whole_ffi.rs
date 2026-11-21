@@ -18,16 +18,6 @@ impl CbHost for Host {
     }
 }
 
-/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
-/// `EeTechCivReply*`; `civ_manager_calls.rs`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_civ_host(call: *const c_void, reply: *mut c_void) {
-    use ee_sim::tech::civ_apply::{EeTechCivCall, EeTechCivReply};
-    // SAFETY: the simulation's call and reply, live for the call
-    let (call, reply) = unsafe { (&*(call as *const EeTechCivCall), &mut *(reply as *mut EeTechCivReply)) };
-    crate::screens::civ_manager_calls::host(&mut crate::screens::game_cpp::Ffi, call, reply)
-}
-
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 #[no_mangle]
