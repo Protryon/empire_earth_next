@@ -334,7 +334,7 @@ static int64_t NetOp(EEARust* a, int64_t* i)
         gWorld.mUserPaused = i[1] != 0;
         return 0;
     }
-    case EE_SCREENS_GA_N_FIREWALL: return gWonNet ? gWonNet->mIsBehindFirewall == 1 : false;
+    case EE_SCREENS_GA_N_FIREWALL: return gWonNet ? gWonNet->GetIsBehindFirewall() : false;
     case EE_SCREENS_GA_N_VALID_NAME: return EEIsValidName(i[1] ? a->mGameName : a->mPlayerName);
     case EE_SCREENS_GA_N_COMMS: return gCommunications != NULL;
     case EE_SCREENS_GA_N_DELETE_COMMS:

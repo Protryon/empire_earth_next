@@ -73,7 +73,7 @@ static long JoinSelectedRoom(UIForm* inForm);
 long EEUIEWNARUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     if (gWonNet) {
-        if (TMGetTime() - sLastUpdateTime > 10000 || gWonNet->mRoomListChanged == true) {
+        if (TMGetTime() - sLastUpdateTime > 10000 || gWonNet->GetRoomListChanged() == true) {
             sLastUpdateTime = TMGetTime();
             UITextLabel* theLabel14 = dynamic_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsTotalGamesNumber));
             UITextLabel* theLabel16 = dynamic_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsServersNameLabel));
