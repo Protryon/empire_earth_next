@@ -331,6 +331,10 @@ mod settings_form_ffi;
 pub(crate) mod sgvw;
 // the shells' moved host cases (UI lane round 7)
 pub(crate) mod shell_calls;
+pub(crate) mod shell_factories;
+pub(crate) mod hud_bodies;
+#[cfg(not(test))]
+mod hud_bodies_ffi;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
 pub mod shells;
 pub mod shells_chat;

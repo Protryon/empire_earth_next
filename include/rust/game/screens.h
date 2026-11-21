@@ -10208,6 +10208,14 @@ constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_GENERATED = 5;
 
 constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_AFFECTED = 6;
 
+/// The tables a load fills: the civilization builder's categories (with the powers' extra cost), the premade
+/// civilizations, the powers.
+constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_TABLES = 0;
+
+constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_PREMADE = 1;
+
+constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_POWERS = 2;
+
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
 
@@ -12153,11 +12161,6 @@ long ee_screens_chat_log_load(void *file);
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
 
-/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
-/// `EeTechCivReply*`; `civ_manager_calls.rs`).
-void ee_screens_civ_host(const void *call,
-                         void *reply);
-
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
@@ -13617,6 +13620,32 @@ uint32_t ee_screens_scenario_intro_event_for(unsigned long id);
 /// The settings form's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_settings_event_for(unsigned long id);
 
+void ee_screens_mfb_create_group(size_t form, uint32_t index);
+
+bool ee_screens_mfb_in_game_view(size_t form, float x, float y);
+
+void ee_screens_mfb_destroy(size_t form);
+
+void ee_screens_upb_construct(size_t button);
+
+void ee_screens_upb_button_down(size_t button);
+
+int64_t ee_screens_upb_copy_data(size_t button);
+
+int64_t ee_screens_upb_draw_text(size_t button);
+
+void ee_screens_upb_mouse_over(size_t button);
+
+int64_t ee_screens_upb_right_down(size_t button);
+
+void ee_screens_upb_set_dirty(size_t button, bool dirty);
+
+void ee_screens_cbb_construct(size_t table, size_t list, bool tabable);
+
+void ee_screens_cbb_append(size_t list, size_t lines);
+
+int64_t ee_screens_cbb_copy_data(size_t list);
+
 /// A shell's constructor: the kind `kind` of the control `ctl`, made from `args[0..n]`; NULL for an unknown kind.
 ///
 /// # Safety
@@ -13798,6 +13827,55 @@ void ee_screens_ael_keep_strongest(size_t list);
 
 /// TEST ONLY: the capture's record after a tick (`EEAECaptureTick`'s target).
 void ee_screens_ae_capture_tick(float elapsed);
+
+/// CVAP's first half: its state (null when the capture is off).
+void *ee_screens_civc_apply_begin(uint32_t upgrade, long player);
+
+/// CVAP's second half (nothing for a null state).
+void ee_screens_civc_apply_end(void *state, bool result);
+
+/// CVLD (the C strings and the upgrades live for the call).
+void ee_screens_civc_load(const char *name,
+                          const char *directory,
+                          long result,
+                          const char *civ_name,
+                          const uint32_t *upgrades,
+                          size_t count);
+
+/// CVAF (`player` the `EEPlayer*`).
+void ee_screens_civc_apply_file(const char *name, size_t player, long result);
+
+/// `Load` (0), `LoadPremadeCivilizations` (1), `EECivPowersManager::Load` (2) of `file` (an `FSFile*`).
+long ee_screens_civm_load(size_t file,
+                          uint32_t which);
+
+/// `GetCivilizations(out)` (`all`) / `GetCivilizationsOfType(out, era)`.
+void ee_screens_civm_civilizations(size_t out, int32_t era, bool all);
+
+bool ee_screens_civm_apply_upgrade(uint32_t upgrade, long player);
+
+/// `EECivPowersManager::HasPower(player, id)` (`player` an `EEPlayer*`).
+bool ee_screens_civm_has_power(size_t player, long id);
+
+/// `SplitAttribute(upgrade, category, index)`: each out written when given.
+void ee_screens_civm_split(uint32_t upgrade, unsigned long *category, unsigned long *index);
+
+/// `MatchesPremadeCivilization(file, name, upgrades, name_id)` (`characters` the name's `GetLength()`).
+bool ee_screens_civm_matches(const char *file,
+                             const char *name,
+                             uint32_t characters,
+                             const uint32_t *upgrades,
+                             size_t count,
+                             long *name_id);
+
+/// `GetCategory(category, out)`: the record in place, `out` left alone without one.
+bool ee_screens_civm_category(uint32_t category, void **out);
+
+/// `GetCategoryNameID(category, out)`.
+bool ee_screens_civm_category_name_id(uint32_t category, long *out);
+
+/// `ToLegacy(upgrade, out)`.
+bool ee_screens_civm_to_legacy(uint32_t upgrade, unsigned long *out);
 
 /// `EEUISCIFormManager::Clear`.
 void ee_screens_sci_clear(size_t m);
