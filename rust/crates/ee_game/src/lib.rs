@@ -8,6 +8,9 @@
 
 use std::ffi::c_char;
 
+// the RTS Engine's bodies over one-statement C++ shims (LLE round 8: src/RTS Engine)
+pub mod rts;
+
 use ee_base as _;
 use ee_base as _;
 // the Input System's devices (ee_input/src/ffi.rs), called by Input System.cpp, ISKeyboard and ISMouse; its entry
