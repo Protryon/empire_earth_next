@@ -70,8 +70,6 @@
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EEStringIDs.h"
 // the command buttons' part of the host (EEUIFMGStatusButton.cpp)
-int64_t EEStatusButtonOp(EEUIFMGStatusButton* inButton, EEComplexUnit* inFirst, UWideString& ioText,
-                         UWideString* outString, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x2116a2 (EEUIBuildGate.cpp's)
 void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity's ghost at the mouse) (provisional name)
@@ -680,9 +678,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         return 0;
     case EE_SCREENS_MF_OP_POST_SHOW_DIALOG: gPhysics->PostShowDialogMessage(); return 0;
     default:
-        if (inOp >= EE_SCREENS_MF_OP_SB)
-            return EEStatusButtonOp(theCall.mButton, theCall.mFirst, theCall.mText, theCall.mOut, inOp - EE_SCREENS_MF_OP_SB,
-                                    inA, inB, ioIo->n[0]);
         return EEMouseModeOp(theCall, inOp, inA, inB, ioIo);
     }
     return 0;

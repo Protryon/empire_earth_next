@@ -105,43 +105,6 @@ EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer)
     return theContext;
 }
 
-static void EECPPush(EeCpPlaceIo* io, int64_t inA, int64_t inB)
-{
-    ee_cp_place_push(io->list, inA, inB);
-}
-
-static void EECPPushTiles(EeCpPlaceIo* io, const std::vector<U2DPoint<long> >& inTiles)
-{
-    for (size_t i = 0; i < inTiles.size(); i++)
-        EECPPush(io, inTiles[i].mX, inTiles[i].mY);
-}
-
-static std::vector<U2DPoint<long> > EECPInputTiles(const EeCpPlaceIo* io)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    for (size_t i = 0; i < io->input_len; i++)
-        theTiles.push_back(U2DPoint<long>((long)io->input[2 * i], (long)io->input[2 * i + 1]));
-    return theTiles;
-}
-
-template <class T> static std::vector<T*> EECPInputObjects(const EeCpPlaceIo* io)
-{
-    std::vector<T*> theObjects;
-    for (size_t i = 0; i < io->input_len; i++)
-        theObjects.push_back(EECPObject<T>((uint64_t)io->input[2 * i]));
-    return theObjects;
-}
-
-static EEAIArea* EECPArea(uint64_t inHandle, bool inChoke)
-{
-    if (inChoke)
-        return EECPObject<EEAIChokePoint>(inHandle);
-    return EECPObject<EEAIContinent>(inHandle);
-}
-
-extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,
-    EeCpPlaceIo* io);
-
 // The placement's world (ee_sim::cp::place_game's EE_CP_PLACE_* operations): the original's calls, one each
 extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,
     EeCpPlaceIo* io)
@@ -153,85 +116,20 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         return thePlayer->mTechnologies->mCurrentEpoch;
     case EE_CP_PLACE_PASSABILITY:
         return thePlayer->GetCitizenPassability();
-    case EE_CP_PLACE_RANGE:
-        io->f[0] = thePlayer->mUnitClassUpgrades[(long)v[0]]->mRange;
+    case EE_CP_PLACE_RANGE: io->f[0] = thePlayer->mUnitClassUpgrades[(long)v[0]]->mRange;
         return 0;
-    case EE_CP_PLACE_TECH_KIND: {
-        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get((long)v[0]);
-        if (theNode == NULL)
-            return 0;
-        io->v[0] = theNode->mData->mKind;
-        return 1;
-    }
+    case EE_CP_PLACE_TOWN_FIELDS:
+        return (int64_t)EECPHandle(static_cast<EeTownFields*>(EECPObject<EETown>(inA)));
     case EE_CP_PLACE_HAS_PATHFINDING:
         return gCivPowersManager.HasPower(thePlayer, kCivPowerPathfinding) ? 1 : 0;
     case EE_CP_PLACE_CLAIM_RANGE_ON:
         return EECPClaimRangeOn(thePlayer) ? 1 : 0;
     case EE_CP_PLACE_CLAIM_RANGE:
         return EECPClaimRange(thePlayer);
-    case EE_CP_PLACE_OWN_UNITS:
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            EECPPush(io, (int64_t)EECPHandle(theUnit), 0);
-        return 0;
-    case EE_CP_PLACE_NATURE_UNITS:
-        if (gWorld.mPlayers[0] == NULL)
-            return 0;
-        for (EEUnit* theUnit = gWorld.mPlayers[0]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            EECPPush(io, (int64_t)EECPHandle(theUnit), 0);
-        return 1;
-    case EE_CP_PLACE_TOWNS:
-        for (size_t i = 0; i < thePlayer->mTowns.size(); i++) {
-            EETown* theTown = thePlayer->mTowns[i];
-            if (theTown == NULL) {
-                EECPPush(io, -1, 0);
-                continue;
-            }
-            const U2DPoint<long>& theCenter = theTown->GetHullCenter();
-            EECPPush(io, theTown->mContinent, (int64_t)((uint64_t)(uint32_t)theCenter.mX << 32 | (uint32_t)theCenter.mY));
-        }
-        return 0;
     case EE_CP_PLACE_HAS_PLAYER0:
         return gWorld.mPlayers[0] != NULL ? 1 : 0;
     case EE_CP_PLACE_WORLD_UNIT:
         return (int64_t)EECPHandle(gWorld.GetUnit((unsigned long)v[0]));
-    case EE_CP_PLACE_UNIT_INFO: {
-        EEUnit* theUnit = EECPObject<EEUnit>(inA);
-        EeCpUnitInfo& i = io->unit;
-        i.tile[0] = (int32_t)theUnit->mTileX;
-        i.tile[1] = (int32_t)theUnit->mTileY;
-        i.id = (uint32_t)theUnit->mUnitID;
-        EEUnitClass* theClass = theUnit->mUnitClass;
-        i.has_class = theClass != NULL;
-        if (theClass != NULL) {
-            i.unit_type = (int32_t)theClass->mUnitType;
-            i.tile_size = (int32_t)theClass->GetTileSize();
-            i.category = (int32_t)theClass->mCategory;
-            i.family = (int32_t)theClass->mFamily;
-            i.technology = (int32_t)theClass->mTechnology;
-            i.land_building = theClass->IsLandBuilding() ? 1 : 0;
-            i.wall = theClass->mIsWall ? 1 : 0;
-            i.drop_site = theClass->IsDropSite() ? 1 : 0;
-        }
-        i.hit_points = (int32_t)theUnit->mHitPoints;
-        i.resource_amount = (int32_t)theUnit->mResourceAmount;
-        i.resource_type = (int32_t)theUnit->mResourceType;
-        i.valid = theUnit->mIsValid ? 1 : 0;
-        i.has_tile = theUnit->mTile != NULL ? 1 : 0;
-        i.has_tile_node = theUnit->GetTileNode() != NULL ? 1 : 0;
-        i.player = EECPHandle(theUnit->mPlayer);
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        i.complex = EECPHandle(theComplex);
-        if (theComplex != NULL) {
-            i.complex_tile[0] = (int32_t)theComplex->mTileX;
-            i.complex_tile[1] = (int32_t)theComplex->mTileY;
-            i.complex_hit_points = (int32_t)theComplex->mHitPoints;
-            i.complex_built = theComplex->mIsBuilt ? 1 : 0;
-            i.facing = (uint32_t)theComplex->mFacing;
-            i.previous_part = EECPHandle(theComplex->GetPreviousPart());
-            i.next_part = EECPHandle(theComplex->GetNextPart());
-        }
-        return 0;
-    }
     case EE_CP_PLACE_CLASS_COUNT:
         return (int64_t)EEUnitClassCount();
     case EE_CP_PLACE_CLASS_EXISTS:
@@ -246,18 +144,6 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         return gWorld.mMap != NULL ? 1 : 0;
     case EE_CP_PLACE_MAP_FLAGS:
         return (int64_t)gWorld.mMap->mMapCharacteristics;
-    case EE_CP_PLACE_TILE_TERRAIN: {
-        EETile* theTile = gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1]));
-        return theTile != NULL ? (int64_t)theTile->mTerrainType : -1;
-    }
-    case EE_CP_PLACE_MAP_TILE_TERRAIN: {
-        EETile* theTile = gWorld.mMap->GetTile((long)v[0], (long)v[1]);
-        return theTile != NULL ? (int64_t)theTile->GetTerrainType() : -1;
-    }
-    case EE_CP_PLACE_TILE_FREE: {
-        EETile* theTile = gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1]));
-        return theTile == NULL ? -1 : theTile->mUnits == NULL ? 1 : 0;
-    }
     case EE_CP_PLACE_IS_EDGE:
         return gWorld.mMap->IsEdgeTile((long)v[0], (long)v[1]) ? 1 : 0;
     case EE_CP_PLACE_LARGEST_CONTINENT:
@@ -272,23 +158,6 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         return EECPObject<EEAIContinent>(inA)->GetID();
     case EE_CP_PLACE_CONTINENT_FLAG:
         return gContinentManager.AreAdjacent((long)v[0], (long)v[1]) ? 1 : 0;
-    case EE_CP_PLACE_SHORE_NEXT_TO: {
-        std::vector<U2DPoint<long> > theTiles = EECPInputTiles(io);
-        EECPObject<EEAIContinent>(inA)->GetShoreNextTo((unsigned short)v[0], theTiles);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_SHORE_TILES: {
-        std::vector<U2DPoint<long> > theTiles = EECPObject<EEAIContinent>(inA)->GetShoreTiles();
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_HULL_CENTER: {
-        const U2DPoint<long>& theCenter = EECPArea(inA, v[0] != 0)->GetHullCenter();
-        io->v[0] = theCenter.mX;
-        io->v[1] = theCenter.mY;
-        return 0;
-    }
     case EE_CP_PLACE_ARE_CONNECTED:
         return gContinentManager.AreConnected(EECPObject<EEAIContinent>(inA), EECPObject<EEAIContinent>(inB), (long)v[0]) ? 1 : 0;
     case EE_CP_PLACE_TILE_CONTINENT:
@@ -305,50 +174,14 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         return (int64_t)EECPHandle(gContinentManager.GetPathAreaAt(EETileCoordinate((long)v[0], (long)v[1])));
     case EE_CP_PLACE_UNIT_PATH_AREA:
         return (int64_t)EECPHandle(gContinentManager.GetPathAreaAt(EECPObject<EEUnit>(inA)));
-    case EE_CP_PLACE_CHOKE_POINTS: {
-        std::vector<EEAIChokePoint*> theChokePoints;
-        gContinentManager.GetChokePoints(theChokePoints, (unsigned short)v[0], true);
-        for (size_t i = 0; i < theChokePoints.size(); i++)
-            EECPPush(io, (int64_t)EECPHandle(theChokePoints[i]), 0);
-        return 0;
-    }
-    case EE_CP_PLACE_HULL_BOUNDS: {
-        const U2DRectangle<long>& theBounds = EECPObject<EEAIChokePoint>(inA)->GetHullBounds();
-        io->v[0] = theBounds.mLeft;
-        io->v[1] = theBounds.mTop;
-        io->v[2] = theBounds.mRight;
-        io->v[3] = theBounds.mBottom;
-        return 0;
-    }
-    case EE_CP_PLACE_CHOKE_TILES: {
-        std::vector<U2DPoint<long> > theTiles = EECPInputTiles(io);
-        EECPObject<EEAIChokePoint>(inA)->GetTileSet().BuildPointList(theTiles, 1);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
     case EE_CP_PLACE_FACING_QUARTER:
         return EEGetFacingQuarter((long)v[0], (long)v[1]);
     case EE_CP_PLACE_SITE_THREAT:
         return EECPNextSiteThreat(thePlayer, (long)v[0], (long)v[1], false, NULL) != 0 ? 1 : 0;
-    case EE_CP_PLACE_UNITS_IN_RECT:   // the houses' filters (the centres'; any unit: ee_units uu_ffi.rs collect_units)
-        return ee_cp_center_host(inContext, inOp, inA, inB, io);
     case EE_CP_PLACE_RANDOM:
         return gPhysics->GetRandom(0L, (long)v[0]);
     case EE_CP_PLACE_SPACE_DOCK_OPEN:
         return EEIsSpaceDockSiteOpen((long)v[0], (long)v[1], thePlayer) ? 1 : 0;
-    case EE_CP_PLACE_SORT: {
-        // the original's std::sort with the comparator's key: the same comparisons, so the same order of ties
-        std::vector<std::pair<int64_t, uint32_t> > theKeys;
-        for (size_t i = 0; i < io->input_len; i++)
-            theKeys.push_back(std::pair<int64_t, uint32_t>(io->input[i], (uint32_t)i));
-        std::sort(theKeys.begin(), theKeys.end(),
-            [](const std::pair<int64_t, uint32_t>& inFirst, const std::pair<int64_t, uint32_t>& inSecond) {
-                return inFirst.first < inSecond.first;
-            });
-        for (size_t i = 0; i < theKeys.size(); i++)
-            io->order[i] = theKeys[i].second;
-        return 0;
-    }
     }
     return 0;
 }
@@ -369,64 +202,6 @@ EECPPlacement::~EECPPlacement()
     ee_cp_placement_free(this->mRust);
 }
 
-#define EECP_CONTEXT EeCpPlaceCtx theContext = EECPPlaceContext(this->mPlayer)
-
-// the forwarders' PLCE records (TEST ONLY): a float argument's bits, a unit's id
-static long EECPBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return (long)theBits;
-}
-
-// a test's forwarder: the PLCE record of its arguments and result around the Rust call
-template <class F> static bool EECPAsk(unsigned int inKind, EEComputerPlayer* inPlayer, std::initializer_list<long> inArgs,
-    F inCall)
-{
-    EECPPlaceScope theScope(inKind, inPlayer);   // PLCE (TEST ONLY)
-    for (long theArg : inArgs)
-        theScope.I(theArg);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    bool theResult = inCall(&theContext);
-    theScope.I(theResult);
-    return theResult;
-}
-
-// a search's forwarder: the tile in and, found, out (else what the caller left there, as the original's searches did);
-// the record's found tile and, for the searches over the centres, the player's centres
-template <class F> static bool EECPSearch(unsigned int inKind, EEComputerPlayer* inPlayer, std::initializer_list<long> inArgs,
-    EETileCoordinate& ioTile, bool inCenters, F inCall)
-{
-    EECPPlaceScope theScope(inKind, inPlayer);   // PLCE (TEST ONLY)
-    for (long theArg : inArgs)
-        theScope.I(theArg);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    int32_t theTile[2] = {(int32_t)ioTile.mX, (int32_t)ioTile.mY};
-    bool theResult = inCall(&theContext, theTile);
-    if (theResult) {
-        ioTile.mX = theTile[0];
-        ioTile.mY = theTile[1];
-    }
-    theScope.I(theResult).I(theResult ? ioTile.mX : 0).I(theResult ? ioTile.mY : 0);
-    if (inCenters)
-        theScope.Centers(inPlayer);
-    return theResult;
-}
-
-#define EECP_ASK(kind, args, call) return EECPAsk(kind, this->mPlayer, args, [&](const EeCpPlaceCtx* c) { return call; })
-#define EECP_SEARCH(kind, args, tile, centers, call)                                                                    \
-    return EECPSearch(kind, this->mPlayer, args, tile, centers, [&](const EeCpPlaceCtx* c, int32_t* t) { return call; })
-#define EECP_ARGS(...) std::initializer_list<long>({__VA_ARGS__})
-
-long EECPPlacement::Restore()
-{
-    EECPPlaceScope theScope(kPlceRestore, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    long theResult = ee_cp_placement_restore(&theContext);
-    theScope.I(theResult).State(this);
-    return theResult;
-}
-
 // the town centre tile (U2DPoint's own Load and Save)
 long EECPPlacement::Load(FSFile& inFile)
 {
@@ -445,35 +220,8 @@ long EECPPlacement::Save(FSFile& outFile)
     return theResult;
 }
 
-void EECPPlacement::Reset()
-{
-    EECPPlaceScope theScope(kPlceReset, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    ee_cp_placement_reset(&theContext);
-    theScope.State(this);
-}
-
-void EECPPlacement::UnitAdded(EEComplexUnit* inUnit)
-{
-    EECPPlaceScope theScope(kPlceUnitAdded, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.CU(inUnit);
-    EECP_CONTEXT;
-    ee_cp_unit_added(&theContext, EECPHandle(static_cast<EEUnit*>(inUnit)));
-    theScope.State(this);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The free functions
-
-long EECPCountOwn(EEComputerPlayer* inPlayer, long inType)
-{
-    EECPPlaceScope theScope(kPlceCountOwn, inPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inType);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    long theResult = ee_cp_count_own(&theContext, (int32_t)inType);
-    theScope.I(theResult);
-    return theResult;
-}
 
 // the epoch's classes (the original civilization manager's GetAntiAirClass .. GetWallClass)
 #define EECP_EPOCH_CLASS(name, kind, call)                                                                              \

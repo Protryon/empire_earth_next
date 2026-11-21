@@ -50,6 +50,7 @@ pub mod cm_passes;
 pub mod cm_queries;
 pub mod cm_query;
 pub mod cm_repair;
+pub mod cm_restore;
 pub mod cm_unit;
 pub mod continent;
 pub mod continent_grid;

@@ -62,33 +62,20 @@ template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
     return (size_t)((const char*)inMember - (const char*)inObject);
 }
 
-// the town or herd an area of the serial table is (its player and id), else none
-void TownOrHerd(const EEAIArea* inArea, EeAStarCmIo* io)
-{
-    io->i[0] = 0;
-    io->i[1] = -1;
-    io->i[2] = -1;
-    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        if (thePlayer == NULL)
-            continue;
-        for (size_t i = 0; i < thePlayer->mTowns.size(); i++)
-            if (thePlayer->mTowns[i] == inArea) {
-                io->i[0] = 7; io->i[1] = thePlayer->mTowns[i]->mTownID; io->i[2] = (long)p; return;
-            }
-        for (size_t i = 0; i < thePlayer->mHerds.size(); i++)
-            if (thePlayer->mHerds[i] == inArea) {
-                io->i[0] = 8; io->i[1] = thePlayer->mHerds[i]->mID; io->i[2] = (long)p; return;
-            }
-    }
-}
 
 int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
 {
     EEMap* theMap = gWorld.mMap;
     switch (inOp) {
-    case EE_ASTAR_CM_OWNER:
-        TownOrHerd((const EEAIArea*)(uintptr_t)io->h[0], io);
+    case EE_ASTAR_CM_TOWN_ID:
+        return ((EETown*)(uintptr_t)io->h[0])->mTownID;
+    case EE_ASTAR_CM_CLEAR_MAP: gContinentManager.Clear(gWorld.mMap);
+        return 0;
+    case EE_ASTAR_CM_BUILD_MAP: gContinentManager.BuildRegions(gWorld.mMap);
+        return 0;
+    case EE_ASTAR_CM_REGISTER: io->i[1] == 0 ? gWorld.mPlayers[(size_t)io->i[0]]->RegisterHerds() : gWorld.mPlayers[(size_t)io->i[0]]->RegisterTowns();
+        return 0;
+    case EE_ASTAR_CM_DEBUG_OUT: ESDebugOut("%s", (const char*)(uintptr_t)io->h[0]);
         return 0;
     case EE_ASTAR_CM_REGION_SIZE: return gEEAIRegionSize;
     case EE_ASTAR_CM_SET_REGION_SIZE: gEEAIRegionSize = (long)io->i[0]; return 0;
@@ -194,73 +181,9 @@ bool EEContinentRegionsPending()
 
 bool EERestoreContinentRegions()
 {
-    if (sLoadedRegions.empty())
-        return false;
     std::vector<unsigned char> theBytes;
     theBytes.swap(sLoadedRegions);
-    EEAIContinentManager& theManager = gContinentManager;
-    EeAStarCmLoad* theLoad = ee_astar_cm_read_regions(&theManager.mRecord, &theBytes[0], theBytes.size());
-    if (theLoad == NULL) {
-        // a damaged block: the regions are built as an older save's load builds them
-        ESDebugOut("EEAIContinentSave: the saved regions could not be read: the load builds its own\n");
-        theManager.Clear(gWorld.mMap);
-        theManager.BuildRegions(gWorld.mMap);
-        for (unsigned long p = 0; p < gWorld.mNumPlayers; p++)
-            if (gWorld.mPlayers[p] != NULL) {
-                gWorld.mPlayers[p]->RegisterHerds();
-                gWorld.mPlayers[p]->RegisterTowns();
-            }
-        return false;
-    }
-    EeAStarCmLoadInfo theInfo = ee_astar_cm_load_info(theLoad);
-    if (theInfo.unknown_owners != 0)
-        ESDebugOut("EEAIContinentSave: %u serials named areas of no known owner in the saved game\n", theInfo.unknown_owners);
-    if (theInfo.unfiled_sub_sectors != 0)   // no sector held them in the saved game (not owned there either): kept
-        ESDebugOut("EEAIContinentSave: %u saved sub sectors are in no sector\n", theInfo.unfiled_sub_sectors);
-    // the herds and towns the load made again: their saved serials (by player and id), else the load's
-    std::map<std::pair<long, long>, unsigned long> theSaved[2];
-    for (int k = 0; k < 2; k++) {
-        size_t theCount;
-        const EeAStarCmOwned* theOwned = ee_astar_cm_load_owned(theLoad, k == 1, &theCount);
-        for (size_t i = 0; i < theCount; i++)
-            theSaved[k][std::make_pair((long)theOwned[i].player, (long)theOwned[i].index)] = (unsigned long)theOwned[i].serial;
-    }
-    ee_astar_cm_load_free(theLoad);
-    unsigned long theUnmatched = 0;
-    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        if (thePlayer == NULL)
-            continue;
-        for (int k = 0; k < 2; k++) {
-            size_t theCount = k == 0 ? thePlayer->mTowns.size() : thePlayer->mHerds.size();
-            for (size_t t = 0; t < theCount; t++) {
-                EEAIArea* theArea = k == 0 ? (EEAIArea*)thePlayer->mTowns[t] : (EEAIArea*)thePlayer->mHerds[t];
-                if (theArea == NULL)
-                    continue;
-                long theID = k == 0 ? thePlayer->mTowns[t]->mTownID : (long)thePlayer->mHerds[t]->mID;
-                std::map<std::pair<long, long>, unsigned long>::iterator theIt = theSaved[k].find(std::make_pair((long)p, theID));
-                if (theIt != theSaved[k].end()) {
-                    theArea->SetSerial(theIt->second);
-                    theSaved[k].erase(theIt);
-                } else
-                    theUnmatched++;
-                theManager.AddArea(theArea);
-            }
-        }
-    }
-    if (theUnmatched != 0 || !theSaved[0].empty() || !theSaved[1].empty())
-        ESDebugOut("EEAIContinentSave: %lu herds and towns of the load are not the saved ones (%lu saved towns, %lu saved herds left)\n",
-                   theUnmatched, (unsigned long)theSaved[0].size(), (unsigned long)theSaved[1].size());
-    theManager.mRecord.clearing = theInfo.clearing;
-    // an area of the load past the saved counter (a herd or town the saved game did not have) keeps the counter
-    EEAIListView<EeAStarCmArea> theAreas = theManager.GetAreas();
-    if (!theAreas.empty() && theAreas[theAreas.size() - 1].serial > theInfo.last_serial) {
-        ESDebugOut("EEAIContinentSave: an area of the load has serial %lu past the saved %lu: the counter stays\n",
-                   (unsigned long)theAreas[theAreas.size() - 1].serial, (unsigned long)theInfo.last_serial);
-        theManager.mRecord.last_serial = theAreas[theAreas.size() - 1].serial;
-    } else
-        theManager.mRecord.last_serial = theInfo.last_serial;
-    return true;
+    return !theBytes.empty() && ee_astar_cm_restore_regions(&gContinentManager.mRecord, &theBytes[0], theBytes.size());
 }
 
 unsigned long EEContinentRegionsDigest()

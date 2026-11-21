@@ -363,7 +363,7 @@ static intptr_t Host(void* inLogic, Op op, void* a, void* b, intptr_t c, intptr_
     if (op == Op::RefRelease) { ObjRel(OO(a)); return 0; }
     intptr_t aResult = Answer(op, a, b, c, d, aTaken);
     if (IsTake(op)) {
-        if (b == sCppSink) sCppSink->append(aTaken); // a take the golden's world makes (a C++ string)
+        if (b != NULL && b == sCppSink) sCppSink->append(aTaken); // a take the golden's world makes (a C++ string)
         else ee_won_lobby_sink(b, U8(aTaken), aTaken.size());
     }
     std::string aOut = aHead + aArgs + " -> " + (op == Op::LanNewClient || op == Op::LanSocketClient ||
@@ -583,6 +583,7 @@ struct RefLan {
             std::string aName;
             sCppSink = &aName;
             T(Op::LanNameTake, NULL, &aName);
+            sCppSink = NULL; // (a stale pointer to a dead local could equal a later take's Rust buffer)
             Ref* aClient = RR(T(Op::LanNewClient, NULL, NULL, (intptr_t)aName.data(), (intptr_t)(aName.size() / 2)));
             SetRef(mMyClient, aClient);
             T(Op::ClientRelease, aClient);
@@ -604,6 +605,7 @@ struct RefLan {
             std::string aSummary;
             sCppSink = &aSummary;
             T(Op::LanSummaryTake, a, &aSummary);
+            sCppSink = NULL;
             aBytes += aSummary;
             outResult = T(Op::LanSendTo, mDiscovery, b, (intptr_t)aBytes.data(), (intptr_t)aBytes.size());
             return true;
@@ -632,7 +634,7 @@ struct RefLan {
         case Op::LanJoinPasswordClear: mJoinPassword.clear(); return true;
         case Op::LanPasswordDialogRun:
             outResult = T(Op::LanPasswordDialog);
-            if (outResult == 100001) { mJoinPassword.clear(); sCppSink = &mJoinPassword; T(Op::LanPasswordTake, NULL, &mJoinPassword); }
+            if (outResult == 100001) { mJoinPassword.clear(); sCppSink = &mJoinPassword; T(Op::LanPasswordTake, NULL, &mJoinPassword); sCppSink = NULL; }
             return true;
         case Op::LanConnect: outResult = T(Op::LanConnectTo, a, mServer, c); return true;
         case Op::LanJoinPasswordTake: ee_won_lobby_sink(b, U8(mJoinPassword), mJoinPassword.size()); return true;

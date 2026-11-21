@@ -57,32 +57,12 @@ GERectangle EEUIMiniMap::sBounds;
 static GEColor sFlareColor(1.0f, 0.0f, 0.0f);
 static GEColor sFlareBlinkColor;            // 0x5652f8 (1, 1, 1)
 
-// gMiniMap's transformations' 2D entries (m00 m01 m03 m10 m11 m13) for ee_screens mini_map.rs
-static void EEUIMiniMapMatrix(const GETransformation& inTransformation, float outMatrix[6])
-{
-    outMatrix[0] = inTransformation.mMatrix[0][0];
-    outMatrix[1] = inTransformation.mMatrix[0][1];
-    outMatrix[2] = inTransformation.mMatrix[0][3];
-    outMatrix[3] = inTransformation.mMatrix[1][0];
-    outMatrix[4] = inTransformation.mMatrix[1][1];
-    outMatrix[5] = inTransformation.mMatrix[1][3];
-}
-
 // Creates the mini map control with its click action, the map drawn inside its border
 EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                          unsigned long inBorderThickness)
     : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mAction = new EEAMiniMap;
-    float theBorder = inBorderThickness;
-    this->mOrigin.SetX(inRectangle.GetLeft() + theBorder);
-    this->mOrigin.SetY(inRectangle.GetTop() + theBorder);
-    this->mDrawLine0 = false;
-    this->mDrawLine1 = false;
-    this->mDrawLine2 = false;
-    this->mDrawLine3 = false;
-    this->mShowFlare = false;
-    this->mFlareBlink = true;
+    ee_screens_mm_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uint32_t)inBorderThickness);   // (mini_map_calls.rs)
 }
 
 // Releases the mouse after a right click on the mini map
@@ -95,8 +75,7 @@ long EEUIMiniMap::MouseRButtonUp()
 // Destroys the mini map control and its click action
 EEUIMiniMap::~EEUIMiniMap()
 {
-    if (this->mAction != NULL)
-        this->mAction->Dereference();
+    ee_screens_mm_destroy((uintptr_t)this);
 }
 
 // Snapshots the mini map for drawing: refreshes the units texture, scales the map to the window, places the
@@ -104,158 +83,32 @@ EEUIMiniMap::~EEUIMiniMap()
 // numbers are ee_screens mini_map.rs', the C++ reads and applies them in the original's order
 long EEUIMiniMap::CopyData()
 {
-    EeScreensMiniMapCopy theCopy = {};
-    const GERectangle& theRect = this->GetRectangle();
-    theCopy.flare_on = gMiniMap->mB12185;
-    gMiniMap->UpdateWorldTexture();
-    const GE2DPoint* theCorners[4] = {&gMiniMap->mCorner0, &gMiniMap->mCorner1, &gMiniMap->mCorner2, &gMiniMap->mCorner3};
-    for (int i = 0; i < 4; i++) {
-        theCopy.corners[i][0] = theCorners[i]->GetX();
-        theCopy.corners[i][1] = theCorners[i]->GetY();
-    }
-    theCopy.rect[0] = theRect.GetLeft();
-    theCopy.rect[1] = theRect.GetTop();
-    theCopy.rect[2] = theRect.GetRight();
-    theCopy.rect[3] = theRect.GetBottom();
-    theCopy.window_width = (uint32_t)gGameWindow->GetWidth();
-    theCopy.window_height = (uint32_t)gGameWindow->GetHeight();
-    theCopy.origin[0] = this->mOrigin.GetX();
-    theCopy.origin[1] = this->mOrigin.GetY();
-    theCopy.flare_point[0] = gMiniMap->mU1216C.GetX();
-    theCopy.flare_point[1] = gMiniMap->mU1216C.GetY();
-    EEUIMiniMapMatrix(gMiniMap->mMapToPixel, theCopy.map_to_pixel);
-    if (GETexture* theTexture = sFlareBitmap->GetTexture(gScreenIndex)) {
-        theCopy.flare_texture_height = (uint32_t)theTexture->GetHeight();
-        theCopy.flare_texture_width = (uint32_t)theTexture->GetWidth();
-    }
-    theCopy.flare_location[0] = sFlareBitmap->GetLocation().GetX();
-    theCopy.flare_location[1] = sFlareBitmap->GetLocation().GetY();
-    theCopy.flare_width = sFlareBitmap->GetWidth();
-    theCopy.free_camera = gFreeCamera;
-    theCopy.show_flare = this->mShowFlare;
-    theCopy.flare_blink = this->mFlareBlink;
-    ee_screens_mini_map_copy_data(&theCopy);
-    sMapBitmap->SetLocation(this->mOrigin);
-    sWorldBitmap->SetLocation(this->mOrigin);
-    sMapBitmap->SetXYScale(theCopy.map_scale[0], theCopy.map_scale[1]);
-    sWorldBitmap->SetXYScale(theCopy.world_scale[0], theCopy.world_scale[1]);
-    this->mDrawLine1 = this->mDrawLine3 = this->mDrawLine0 = this->mDrawLine2 = true;
-    this->mShowFlare = theCopy.show_flare != 0;
-    this->mFlareBlink = theCopy.flare_blink != 0;
-    if (theCopy.flare_color != EE_SCREENS_MM_COLOR_NONE)
-        sFlareBitmap->SetColor(theCopy.flare_color == EE_SCREENS_MM_COLOR_FLARE ? sFlareColor : sFlareBlinkColor);
-    if (theCopy.redraw_all)
-        gUIManager->RedrawAll();
-    if (theCopy.set_flare) {
-        sFlareBitmap->SetLocation(GE2DPoint(theCopy.flare_new_location[0], theCopy.flare_new_location[1]));
-        sFlareBitmap->SetXYScale(theCopy.flare_scale[0], theCopy.flare_scale[1]);
-    }
-    for (int i = 0; i < 4; i++) {
-        this->mLines[i].SetStartPoint(GE2DPoint(theCopy.lines[i][0][0], theCopy.lines[i][0][1]));
-        this->mLines[i].SetEndPoint(GE2DPoint(theCopy.lines[i][1][0], theCopy.lines[i][1][1]));
-    }
-    return UIControl::CopyData();
+    return (long)ee_screens_mm_copy_data((uintptr_t)this);   // (mini_map_calls.rs)
 }
 
 // Creates the terrain, units and flare bitmaps and loads the flare texture
 void EEUIMiniMap::LoadMedia()
 {
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    sMapBitmap = new GEBitmap;
-    sWorldBitmap = new GEBitmap;
-    sFlareBitmap = new GEBitmap;
-    GETexture* theTexture = gTextureManager->LoadTexture(UString("textures\\Flare"), theDescription);
-    theTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    theTexture->SetStageColorMode(kStageOpModulate, -1);
-    theTexture->SetStageMinFilterMode(1, -1);
-    theTexture->SetStageMagFilterMode(1, -1);
-    theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-    theTexture->SetStageMipMapBias(0.0f, -1);
-    theTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    sFlareBitmap->SetTexture(theTexture, gScreenIndex);
+    ee_screens_mm_load_media();
 }
 
 // Releases the terrain, units and flare bitmaps
 void EEUIMiniMap::UnloadMedia()
 {
-    sMapBitmap->Dereference();
-    sMapBitmap = NULL;
-    sWorldBitmap->Dereference();
-    sWorldBitmap = NULL;
-    sFlareBitmap->Dereference();
-    sFlareBitmap = NULL;
+    ee_screens_mm_unload_media();
 }
 
 // Draws the terrain, the units, the flare and the camera outline clipped to the map: ee_screens mini_map.rs' plan,
 // executed in its order (the result is the last bitmap's or line's draw)
 long EEUIMiniMap::DrawPolygons()
 {
-    uint32_t theLines = (this->mDrawLine0 ? 1 : 0) | (this->mDrawLine1 ? 2 : 0) | (this->mDrawLine2 ? 4 : 0) |
-                        (this->mDrawLine3 ? 8 : 0);
-    const GERectangle& theCopied = this->GetCopiedDrawRectangle();
-    EeScreensMiniMapDraw thePlan = ee_screens_mini_map_draw_plan(this->mShowFlare, theLines, theCopied.GetLeft(),
-                                                                 theCopied.GetTop(), theCopied.GetRight(),
-                                                                 theCopied.GetBottom());
-    GEViewport theViewport;
-    GERectangle theViewRect;
-    GERectangle theClip;
-    theClip.SetLeft(thePlan.clip[0]);
-    theClip.SetTop(thePlan.clip[1]);
-    theClip.SetRight(thePlan.clip[2]);
-    theClip.SetBottom(thePlan.clip[3]);
-    long theResult = 0;
-    GERasterizer* theRasterizer = this->GetRasterizer();
-    for (uint32_t i = 0; i < thePlan.count; i++) {
-        unsigned long theScreen = gScreenIndex;
-        uint8_t theStep = thePlan.steps[i];
-        switch (theStep) {
-        case EE_SCREENS_MM_DRAW_ENTER: gMiniMap->mTerrainCriticalSection->Enter(); break;
-        case EE_SCREENS_MM_DRAW_BASE: UIControl::DrawPolygons(); break;
-        case EE_SCREENS_MM_DRAW_MAP: theRasterizer->Draw(sMapBitmap, theScreen); break;
-        case EE_SCREENS_MM_DRAW_WORLD: theResult = theRasterizer->Draw(sWorldBitmap, theScreen); break;
-        case EE_SCREENS_MM_DRAW_FLARE: theResult = theRasterizer->Draw(sFlareBitmap, theScreen); break;
-        case EE_SCREENS_MM_DRAW_CLIP:
-        case EE_SCREENS_MM_DRAW_RESTORE:
-            if (theStep == EE_SCREENS_MM_DRAW_CLIP)
-                theViewRect = theRasterizer->GetViewport(theScreen).GetViewRectangle();
-            theViewport = theRasterizer->GetViewport(gScreenIndex);
-            theViewport.SetViewRectangle(theStep == EE_SCREENS_MM_DRAW_CLIP ? theClip : theViewRect);
-            theRasterizer->SetViewport(theViewport, gScreenIndex);
-            break;
-        case EE_SCREENS_MM_DRAW_LEAVE: gMiniMap->mTerrainCriticalSection->Leave(); break;
-        default: theResult = theRasterizer->Draw(&this->mLines[theStep - EE_SCREENS_MM_DRAW_LINE], 1, theScreen); break;
-        }
-    }
-    return theResult;
+    return (long)ee_screens_mm_draw_polygons((uintptr_t)this);   // (mini_map_calls.rs)
 }
 
 // On a right press, posts a mini map action (mode 1) at the clicked map point, clamped to the map
 long EEUIMiniMap::MouseRButtonDown()
 {
-    GE2DPoint thePoint;
-    unsigned long theWidth = gGameWindow->GetWidth();
-    unsigned long theHeight = gGameWindow->GetHeight();
-    unsigned long theModifiers = gISKeyboard->GetModifierState();
-    // the mouse in mini-map units, clamped to the map by two tests per axis: ee_gfx minimap.rs (RUST_PLAN R4.4)
-    ee_gfx_minimap_press_point(reinterpret_cast<const EeGe2DPoint*>(&this->GetMouseLocation()),
-                               reinterpret_cast<const EeGe2DPoint*>(&this->mOrigin), (uint32_t)theWidth,
-                               (uint32_t)theHeight, reinterpret_cast<const EeGeRectangle*>(&EEUIMiniMap::sBounds),
-                               reinterpret_cast<EeGe2DPoint*>(&thePoint));
-    EEAMiniMap* theAction = this->mAction;
-    theAction->mMode = 1;
-    theAction->mPoint = thePoint;
-    theAction->mModifiers = theModifiers;
-    gUserInterface->PostAction(theAction);
-    this->CaptureMouse();
-    return 0;
+    return (long)ee_screens_mm_mouse_r_down((uintptr_t)this);
 }
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
@@ -286,31 +139,10 @@ long EEUIMiniMap::MouseMove(const GE2DPoint& inLocation)
 int64_t EEUIMiniMap::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
     EEUIMiniMap* inMap = this;
-    switch (inOp - EE_SCREENS_HC_CLASS) {
+    switch (inOp - EE_SCREENS_HC_CLASS) {   // (the other cases are Rust's: mini_map_calls.rs rust_op)
     case EE_SCREENS_MM_OP_HAS_CAPTURE: return inMap->GetHasMouseCapture();
     case EE_SCREENS_MM_OP_LEFT_DOWN: return inMap->GetLeftMouseButtonDown();
     case EE_SCREENS_MM_OP_POINTER: return gMouse->mPointer;
-    case EE_SCREENS_MM_OP_CENTER: inMap->CenterCamera(); break;
-    case EE_SCREENS_MM_OP_READ_MOUSE: {
-        EeScreensMiniMapMouse& theMouse = *reinterpret_cast<EeScreensMiniMapMouse*>(ioF);
-        const GERectangle& theRect = inMap->GetRectangle();
-        theMouse.mouse[0] = inMap->GetForm()->GetMouseLocation().GetX();
-        theMouse.mouse[1] = inMap->GetForm()->GetMouseLocation().GetY();
-        theMouse.rect[0] = theRect.GetLeft();
-        theMouse.rect[1] = theRect.GetTop();
-        theMouse.rect[2] = theRect.GetRight();
-        theMouse.rect[3] = theRect.GetBottom();
-        EEUIMiniMapMatrix(gMiniMap->mPixelToMap, theMouse.pixel_to_map);
-        break;
-    }
-    case EE_SCREENS_MM_OP_TILE_EXISTS: return ::gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)inA, (long)inB)) != NULL;
-    case EE_SCREENS_MM_OP_SEND_FLARE:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {(long)inA, (long)inB}), kSlotNone);
-        break;
-    case EE_SCREENS_MM_OP_FLARE_DONE:
-        gMouse->mPointer = 0;
-        static_cast<EEUIFMainGame*>(inMap->GetForm())->SetUIState(0);
-        break;
     }
     return 0;
 }
@@ -318,61 +150,160 @@ int64_t EEUIMiniMap::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 // Centres the camera on the map point under the mouse, clamped to the map
 void EEUIMiniMap::CenterCamera()
 {
-    GE2DPoint thePoint;
-    // the mouse in mini-map units, clamped to the map: ee_gfx minimap.rs (RUST_PLAN R4.4)
-    ee_gfx_minimap_center_point(reinterpret_cast<const EeGe2DPoint*>(&this->GetMouseLocation()),
-                                reinterpret_cast<const EeGe2DPoint*>(&this->mOrigin), (uint32_t)gGameWindow->GetWidth(),
-                                (uint32_t)gGameWindow->GetHeight(),
-                                reinterpret_cast<const EeGeRectangle*>(&EEUIMiniMap::sBounds),
-                                reinterpret_cast<EeGe2DPoint*>(&thePoint));
-    EEAMiniMap* theAction = this->mAction;
-    theAction->mMode = 0;
-    theAction->mPoint = thePoint;
-    gUserInterface->PostAction(theAction);
+    ee_screens_mm_center_camera((uintptr_t)this);
 }
 
 // Moves the mini map control and its map origin
 void EEUIMiniMap::SetLocation(const GE2DPoint& inLocation)
 {
-    UIControl::SetLocation(inLocation);
-    float theBorder = this->GetBorderThickness();
-    this->mOrigin.SetX(inLocation.GetX() + theBorder);
-    this->mOrigin.SetY(inLocation.GetY() + theBorder);
+    ee_screens_mm_set_location((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
 }
 
 // Points the mini map bitmaps at a new map's terrain and units textures and recomputes the map bounds (the numbers:
 // ee_screens mini_map.rs)
 void EEUIMiniMap::Update(EEMiniMap* inMiniMap)
 {
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theBottomLeft;
-    EEMap* theMap = ::gWorld.mMap;
-    if (inMiniMap == NULL)
-        return;
-    EeScreensMiniMapUpdate theUpdate = {};
-    theUpdate.width = (int32_t)theMap->mL195614;
-    theUpdate.height = (int32_t)theMap->mL195610;
-    theUpdate.size = (int32_t)theMap->mSize;
-    EEUIMiniMapMatrix(inMiniMap->mMapToPixel, theUpdate.map_to_pixel);
-    ee_screens_mini_map_update(&theUpdate);
-    theTopRight.SetU(theUpdate.extent);
-    theBottomRight.SetV(theUpdate.extent);
-    theBottomLeft.SetU(theUpdate.extent);
-    theBottomLeft.SetV(theUpdate.extent);
-    if (sWorldBitmap != NULL)
-        sWorldBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-    EEUIMiniMap::sBounds.SetLeft(theUpdate.bounds[0]);
-    EEUIMiniMap::sBounds.SetRight(theUpdate.bounds[2]);
-    EEUIMiniMap::sBounds.SetTop(theUpdate.bounds[1]);
-    EEUIMiniMap::sBounds.SetBottom(theUpdate.bounds[3]);
-    gMiniMapTransformation = inMiniMap->mPixelToMap;
-    if (sMapBitmap != NULL)
-        sMapBitmap->SetTexture(inMiniMap->mTerrainTexture, gScreenIndex);
-    if (sWorldBitmap != NULL)
-        sWorldBitmap->SetTexture(inMiniMap->mWorldTexture, gScreenIndex);
+    ee_screens_mm_update((uintptr_t)inMiniMap);   // (mini_map_calls.rs)
 }
+
+// ---- the one-statement shims of ee_screens mini_map_calls.rs (UI lane round 8): each one call, no logic
+#include "ee/EEScreensShims.h"
+#define MM(x) reinterpret_cast<EEUIMiniMap*>(x)
+static GEBitmap** const kMMBitmaps[3] = {&sMapBitmap, &sWorldBitmap, &sFlareBitmap};
+static const GEColor* const kMMFlareColors[2] = {&sFlareColor, &sFlareBlinkColor};
+static bool EEUIMiniMap::* const kMMLines[4] = {&EEUIMiniMap::mDrawLine0, &EEUIMiniMap::mDrawLine1,
+                                                &EEUIMiniMap::mDrawLine2, &EEUIMiniMap::mDrawLine3};
+static GE2DPoint EEMiniMap::* const kMMCorners[4] = {&EEMiniMap::mCorner0, &EEMiniMap::mCorner1, &EEMiniMap::mCorner2,
+                                                     &EEMiniMap::mCorner3};
+static GETextureDescription sMMDescription;   // LoadMedia's description
+static GERectangle sMMViewRect;               // DrawPolygons' kept view rectangle
+static GEViewport sMMViewport;                // and its viewport (the original's locals)
+extern "C" float ee_screenscpp_mm_rect_left(uintptr_t inRect)
+{ return reinterpret_cast<const GERectangle*>(inRect)->GetLeft(); }
+extern "C" float ee_screenscpp_mm_rect_top(uintptr_t inRect)
+{ return reinterpret_cast<const GERectangle*>(inRect)->GetTop(); }
+extern "C" void ee_screenscpp_mm_action_new(uintptr_t inMap) { MM(inMap)->mAction = new EEAMiniMap; }
+extern "C" void ee_screenscpp_mm_set_origin(uintptr_t inMap, float inX, float inY)
+{ MM(inMap)->mOrigin = GE2DPoint(inX, inY); }
+extern "C" void ee_screenscpp_mm_set_lines(uintptr_t inMap, bool inDraw)
+{ MM(inMap)->mDrawLine1 = MM(inMap)->mDrawLine3 = MM(inMap)->mDrawLine0 = MM(inMap)->mDrawLine2 = inDraw; }
+extern "C" bool ee_screenscpp_mm_line_drawn(uintptr_t inMap, uint32_t inLine) { return MM(inMap)->*kMMLines[inLine]; }
+extern "C" void ee_screenscpp_mm_set_show_flare(uintptr_t inMap, bool inShow) { MM(inMap)->mShowFlare = inShow; }
+extern "C" void ee_screenscpp_mm_set_flare_blink(uintptr_t inMap, bool inBlink) { MM(inMap)->mFlareBlink = inBlink; }
+extern "C" bool ee_screenscpp_mm_show_flare(uintptr_t inMap) { return MM(inMap)->mShowFlare; }
+extern "C" bool ee_screenscpp_mm_flare_blink(uintptr_t inMap) { return MM(inMap)->mFlareBlink; }
+extern "C" uintptr_t ee_screenscpp_mm_action(uintptr_t inMap) { return (uintptr_t)MM(inMap)->mAction; }
+extern "C" void ee_screenscpp_mm_action_dereference(uintptr_t inMap) { MM(inMap)->mAction->Dereference(); }
+extern "C" float ee_screenscpp_mm_origin_x(uintptr_t inMap) { return MM(inMap)->mOrigin.GetX(); }
+extern "C" float ee_screenscpp_mm_origin_y(uintptr_t inMap) { return MM(inMap)->mOrigin.GetY(); }
+extern "C" uintptr_t ee_screenscpp_mm_map_rect(uintptr_t inMap) { return (uintptr_t)&MM(inMap)->GetRectangle(); }
+extern "C" uintptr_t ee_screenscpp_mm_drawn_rect(uintptr_t inMap)
+{ return (uintptr_t)&MM(inMap)->GetCopiedDrawRectangle(); }
+extern "C" float ee_screenscpp_mm_rect_right(uintptr_t inRect)
+{ return reinterpret_cast<const GERectangle*>(inRect)->GetRight(); }
+extern "C" float ee_screenscpp_mm_rect_bottom(uintptr_t inRect)
+{ return reinterpret_cast<const GERectangle*>(inRect)->GetBottom(); }
+extern "C" bool ee_screenscpp_mm_flare_on() { return gMiniMap->mB12185; }
+extern "C" void ee_screenscpp_mm_update_world_texture() { gMiniMap->UpdateWorldTexture(); }
+extern "C" float ee_screenscpp_mm_corner_x(uint32_t inCorner) { return (gMiniMap->*kMMCorners[inCorner]).GetX(); }
+extern "C" float ee_screenscpp_mm_corner_y(uint32_t inCorner) { return (gMiniMap->*kMMCorners[inCorner]).GetY(); }
+extern "C" uint32_t ee_screenscpp_mm_window_width() { return (uint32_t)gGameWindow->GetWidth(); }
+extern "C" uint32_t ee_screenscpp_mm_window_height() { return (uint32_t)gGameWindow->GetHeight(); }
+extern "C" float ee_screenscpp_mm_flare_point_x() { return gMiniMap->mU1216C.GetX(); }
+extern "C" float ee_screenscpp_mm_flare_point_y() { return gMiniMap->mU1216C.GetY(); }
+extern "C" float ee_screenscpp_mm_map_to_pixel(uint32_t inRow, uint32_t inColumn)
+{ return gMiniMap->mMapToPixel.mMatrix[inRow][inColumn]; }
+extern "C" float ee_screenscpp_mm_pixel_to_map(uint32_t inRow, uint32_t inColumn)
+{ return gMiniMap->mPixelToMap.mMatrix[inRow][inColumn]; }
+extern "C" uintptr_t ee_screenscpp_mm_flare_texture() { return (uintptr_t)sFlareBitmap->GetTexture(gScreenIndex); }
+extern "C" uint32_t ee_screenscpp_mm_texture_height(uintptr_t inTexture)
+{ return (uint32_t)reinterpret_cast<GETexture*>(inTexture)->GetHeight(); }
+extern "C" uint32_t ee_screenscpp_mm_texture_width(uintptr_t inTexture)
+{ return (uint32_t)reinterpret_cast<GETexture*>(inTexture)->GetWidth(); }
+extern "C" float ee_screenscpp_mm_flare_location_x() { return sFlareBitmap->GetLocation().GetX(); }
+extern "C" float ee_screenscpp_mm_flare_location_y() { return sFlareBitmap->GetLocation().GetY(); }
+extern "C" float ee_screenscpp_mm_flare_width() { return sFlareBitmap->GetWidth(); }
+extern "C" bool ee_screenscpp_mm_free_camera() { return gFreeCamera; }
+extern "C" void ee_screenscpp_mm_bitmap_at_origin(uint32_t inBitmap, uintptr_t inMap)
+{ (*kMMBitmaps[inBitmap])->SetLocation(MM(inMap)->mOrigin); }
+extern "C" void ee_screenscpp_mm_bitmap_scale(uint32_t inBitmap, float inX, float inY)
+{ (*kMMBitmaps[inBitmap])->SetXYScale(inX, inY); }
+extern "C" void ee_screenscpp_mm_flare_color(bool inBlink) { sFlareBitmap->SetColor(*kMMFlareColors[inBlink]); }
+extern "C" void ee_screenscpp_mm_redraw_all() { gUIManager->RedrawAll(); }
+extern "C" void ee_screenscpp_mm_flare_at(float inX, float inY) { sFlareBitmap->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_mm_line_start(uintptr_t inMap, uint32_t inLine, float inX, float inY)
+{ MM(inMap)->mLines[inLine].SetStartPoint(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_mm_line_end(uintptr_t inMap, uint32_t inLine, float inX, float inY)
+{ MM(inMap)->mLines[inLine].SetEndPoint(GE2DPoint(inX, inY)); }
+extern "C" int64_t ee_screenscpp_mm_base_copy_data(uintptr_t inMap) { return MM(inMap)->UIControl::CopyData(); }
+extern "C" uintptr_t ee_screenscpp_mm_description() { return (uintptr_t)&sMMDescription; }
+extern "C" void ee_screenscpp_mm_set_description()
+{ sMMDescription = GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, true}; }
+extern "C" void ee_screenscpp_mm_bitmap_new(uint32_t inBitmap) { *kMMBitmaps[inBitmap] = new GEBitmap; }
+extern "C" uintptr_t ee_screenscpp_mm_bitmap(uint32_t inBitmap) { return (uintptr_t)*kMMBitmaps[inBitmap]; }
+extern "C" void ee_screenscpp_mm_bitmap_dereference(uint32_t inBitmap) { (*kMMBitmaps[inBitmap])->Dereference(); }
+extern "C" void ee_screenscpp_mm_bitmap_clear(uint32_t inBitmap) { *kMMBitmaps[inBitmap] = NULL; }
+extern "C" void ee_screenscpp_texture_wrap(uintptr_t inTexture)
+{ reinterpret_cast<GETexture*>(inTexture)->SetStageTextureAddressingMode(kAddressingWrap, -1); }
+extern "C" void ee_screenscpp_mm_flare_texture_set(uintptr_t inTexture)
+{ sFlareBitmap->SetTexture(reinterpret_cast<GETexture*>(inTexture), gScreenIndex); }
+extern "C" void ee_screenscpp_mm_terrain_enter() { gMiniMap->mTerrainCriticalSection->Enter(); }
+extern "C" void ee_screenscpp_mm_terrain_leave() { gMiniMap->mTerrainCriticalSection->Leave(); }
+extern "C" int64_t ee_screenscpp_mm_base_draw(uintptr_t inMap) { return MM(inMap)->UIControl::DrawPolygons(); }
+extern "C" int64_t ee_screenscpp_mm_draw_bitmap(uintptr_t inMap, uint32_t inBitmap)
+{ return MM(inMap)->GetRasterizer()->Draw(*kMMBitmaps[inBitmap], gScreenIndex); }
+extern "C" int64_t ee_screenscpp_mm_draw_line(uintptr_t inMap, uint32_t inLine)
+{ return MM(inMap)->GetRasterizer()->Draw(&MM(inMap)->mLines[inLine], 1, gScreenIndex); }
+extern "C" void ee_screenscpp_mm_save_view_rect(uintptr_t inMap)
+{ sMMViewRect = MM(inMap)->GetRasterizer()->GetViewport(gScreenIndex).GetViewRectangle(); }
+extern "C" void ee_screenscpp_mm_viewport_load(uintptr_t inMap)
+{ sMMViewport = MM(inMap)->GetRasterizer()->GetViewport(gScreenIndex); }
+extern "C" void ee_screenscpp_mm_viewport_clip(float inLeft, float inTop, float inRight, float inBottom)
+{ sMMViewport.SetViewRectangle(GERectangle(inLeft, inTop, inRight, inBottom)); }
+extern "C" void ee_screenscpp_mm_viewport_saved() { sMMViewport.SetViewRectangle(sMMViewRect); }
+extern "C" void ee_screenscpp_mm_viewport_apply(uintptr_t inMap)
+{ MM(inMap)->GetRasterizer()->SetViewport(sMMViewport, gScreenIndex); }
+extern "C" float ee_screenscpp_mm_mouse_x(uintptr_t inMap) { return MM(inMap)->GetMouseLocation().GetX(); }
+extern "C" float ee_screenscpp_mm_mouse_y(uintptr_t inMap) { return MM(inMap)->GetMouseLocation().GetY(); }
+extern "C" float ee_screenscpp_mm_form_mouse_x(uintptr_t inMap)
+{ return MM(inMap)->GetForm()->GetMouseLocation().GetX(); }
+extern "C" float ee_screenscpp_mm_form_mouse_y(uintptr_t inMap)
+{ return MM(inMap)->GetForm()->GetMouseLocation().GetY(); }
+extern "C" uintptr_t ee_screenscpp_mm_bounds() { return (uintptr_t)&EEUIMiniMap::sBounds; }
+extern "C" uint32_t ee_screenscpp_mm_modifiers() { return (uint32_t)gISKeyboard->GetModifierState(); }
+extern "C" void ee_screenscpp_mm_action_mode(uintptr_t inMap, int64_t inMode)
+{ MM(inMap)->mAction->mMode = (long)inMode; }
+extern "C" void ee_screenscpp_mm_action_point(uintptr_t inMap, float inX, float inY)
+{ MM(inMap)->mAction->mPoint = GE2DPoint(inX, inY); }
+extern "C" void ee_screenscpp_mm_action_modifiers(uintptr_t inMap, uint32_t inModifiers)
+{ MM(inMap)->mAction->mModifiers = inModifiers; }
+extern "C" void ee_screenscpp_mm_post_action(uintptr_t inMap) { gUserInterface->PostAction(MM(inMap)->mAction); }
+extern "C" void ee_screenscpp_mm_capture(uintptr_t inMap) { MM(inMap)->CaptureMouse(); }
+extern "C" void ee_screenscpp_mm_base_set_location(uintptr_t inMap, float inX, float inY)
+{ MM(inMap)->UIControl::SetLocation(GE2DPoint(inX, inY)); }
+extern "C" uint32_t ee_screenscpp_mm_border(uintptr_t inMap) { return (uint32_t)MM(inMap)->GetBorderThickness(); }
+extern "C" bool ee_screenscpp_mm_tile_exists(int64_t inX, int64_t inY)
+{ return ::gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)inX, (long)inY)) != NULL; }
+extern "C" void ee_screenscpp_mm_send_flare(int64_t inX, int64_t inY)
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {(long)inX, (long)inY}), kSlotNone); }
+extern "C" void ee_screenscpp_mm_pointer_clear() { gMouse->mPointer = 0; }
+extern "C" void ee_screenscpp_mm_form_ui_state_clear(uintptr_t inMap)
+{ static_cast<EEUIFMainGame*>(MM(inMap)->GetForm())->SetUIState(0); }
+extern "C" int32_t ee_screenscpp_mm_map_width() { return (int32_t)::gWorld.mMap->mL195614; }
+extern "C" int32_t ee_screenscpp_mm_map_height() { return (int32_t)::gWorld.mMap->mL195610; }
+extern "C" int32_t ee_screenscpp_mm_map_size() { return (int32_t)::gWorld.mMap->mSize; }
+extern "C" float ee_screenscpp_mm_update_map_to_pixel(uintptr_t inMinimap, uint32_t inRow, uint32_t inColumn)
+{ return reinterpret_cast<EEMiniMap*>(inMinimap)->mMapToPixel.mMatrix[inRow][inColumn]; }
+extern "C" void ee_screenscpp_mm_world_coordinates(float inExtent)
+{ sWorldBitmap->SetTextureCoordinates(GETextureCoordinate(), GETextureCoordinate(inExtent, 0.0f), GETextureCoordinate(0.0f, inExtent), GETextureCoordinate(inExtent, inExtent)); }
+extern "C" void ee_screenscpp_mm_set_bounds(float inLeft, float inTop, float inRight, float inBottom)
+{ EEUIMiniMap::sBounds = GERectangle(inLeft, inTop, inRight, inBottom); }
+extern "C" void ee_screenscpp_mm_set_transformation(uintptr_t inMinimap)
+{ gMiniMapTransformation = reinterpret_cast<EEMiniMap*>(inMinimap)->mPixelToMap; }
+extern "C" void ee_screenscpp_mm_terrain_texture_set(uintptr_t inMinimap)
+{ sMapBitmap->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mTerrainTexture, gScreenIndex); }
+extern "C" void ee_screenscpp_mm_world_texture_set(uintptr_t inMinimap)
+{ sWorldBitmap->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mWorldTexture, gScreenIndex); }
 
 // the media and the update as the game calls them (Empire Earth.cpp, the world, the mini map: ee/EEGameUI.h)
 #include "ee/EEGameUI.h"

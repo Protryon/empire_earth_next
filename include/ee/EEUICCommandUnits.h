@@ -33,6 +33,7 @@ protected:
     virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL);
 
+public:   // (for the shims of ee_screens command_units_calls.rs)
     EEAMouseClick* mListener;               // referenced (EEUIFMainGame's mouse click action)
     GEModel* mModel;                        // referenced
     GETexture* mTexture;                    // referenced

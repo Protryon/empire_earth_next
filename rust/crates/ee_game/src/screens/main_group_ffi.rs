@@ -1,18 +1,9 @@
-//! `extern "C"` for the main game form's main panel group (`main_group.rs`). The host is `ee_screenscpp_main_group`
-//! (`User Interface Thread/EEUIFMGMainGroup.cpp`) on the group.
+//! `extern "C"` for the main game form's main panel group (`main_group.rs`). The host is Rust over the
+//! group's C++ shims (`main_group_calls.rs`; `User Interface Thread/EEUIFMGMainGroup.cpp`).
 
 use core::ffi::c_void;
 
 use crate::screens::main_group::{self, GroupHost};
-
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_main_group(group: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
-    }
-}
 
 struct Host(*mut c_void);
 
@@ -20,7 +11,14 @@ impl Host {
     /// `EE_SCREENS_MGR_OP_FORMS`: the group's form (0) or the manager's main game form (1).
     fn form(&self, which: i64) -> *mut c_void {
         use crate::screens::main_group::EE_SCREENS_MGR_OP_FORMS;
-        unsafe { sys::ee_screenscpp_main_group(self.0, EE_SCREENS_MGR_OP_FORMS, which, 0, 0) as *mut c_void }
+        Self::host(self.0, EE_SCREENS_MGR_OP_FORMS, which, 0, 0) as *mut c_void
+    }
+}
+
+impl Host {
+    /// The group's host ops in Rust over the C++ shims (main_group_calls.rs).
+    fn host(group: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        crate::screens::main_group_calls::call(&mut crate::screens::game_cpp::Ffi, group as usize, op, a, b, c)
     }
 }
 
@@ -47,7 +45,7 @@ impl GroupHost for Host {
         if let Some(r) = crate::screens::hud_direct::main_group(|| self.form(0), op, a, b) {
             return r;
         }
-        unsafe { sys::ee_screenscpp_main_group(self.0, op, a, b, c) }
+        Self::host(self.0, op, a, b, c)
     }
 }
 

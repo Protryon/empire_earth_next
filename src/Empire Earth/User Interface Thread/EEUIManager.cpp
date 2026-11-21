@@ -128,192 +128,51 @@ EEUIManager::~EEUIManager()
 // their Cancel opens the form the load was made for; the main game form's unit reload is C++.
 UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID)
 {
-    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
-    uint32_t theCode = ee_screens_control_event_for(inID, gGameScreenActive, theManager->mInScenarioEditor);
-    if (theCode == EE_SCREENS_CPP_CANCEL_LOAD)
-        return new EEUIECancel(!gGameScreenActive ? static_cast<UIForm*>(theManager->GetScenarioEditorForm())
-                                                  : theManager->GetMainGameForm());
-    if (theCode == EE_SCREENS_CPP_LOAD_UNIT)
-        return new EEUIELoadUnit;
-    return EECreateScreenEvent(theCode);
+    return reinterpret_cast<UIEvent*>(ee_screens_um_game_event((uintptr_t)inForm, (uint32_t)inID));   // (ui_manager_calls.rs)
 }
 
 // Creates the event a form fires when it opens, closes or activates; NULL for other ids (ee_screens factories.rs;
 // WON's server select open is C++)
 UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 {
-    uint32_t theCode = ee_screens_form_event_for(inID);
-    if (theCode == EE_SCREENS_CPP_WNS_OPEN)
-        return new EEUIEWNSOpen;
-    return EECreateScreenEvent(theCode);
+    return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID));
 }
 
 // Creates the scenario editor form on first use
 void EEUIManager::CreateScenarioEditor()
 {
-    if (this->mScenarioEditorForm == NULL)
-        this->mScenarioEditorForm = new EEUIFScenarioEditor(this);
+    ee_screens_um_create_editor((uintptr_t)this);
 }
 
 // Creates the game's framed generic background for a background table entry (flags from its attributes)
 UIBackground* EEUIManager::CreateUserDefinedBackground(const UIBackgroundTable& inTable)
 {
-    GETextureDescription theDescription;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mPixelDepth = this->GetUITextureBitDepth();
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mCreateMIPMaps = true;
-    theDescription.mHasAlpha = inTable.GetHasAlpha();
-    UIBackground* theResult = NULL;
-    if (inTable.GetBackgroundType() == kBackgroundGeneric) {
-        UIForm* theForm = this->GetFormByID(inTable.GetFormID());
-        if (theForm != NULL) {
-            unsigned long theFlags = (inTable.GetAttribute1() == true ? 1 : 0) |
-                                     (inTable.GetAttribute2() == true ? 2 : 0) |
-                                     (inTable.GetAttribute3() == true ? 4 : 0);
-            theResult = new EEUIBGenericBackground(inTable.GetBackgroundID(), inTable.GetTextureFile(),
-                theDescription, inTable.GetLayout(), theForm, inTable.GetDrawPriority(),
-                inTable.GetColor(), inTable.GetVisible(), inTable.GetOpacity(), 1.0f, 1.0f, theFlags);
-        }
-    }
-    return theResult;
+    return reinterpret_cast<UIBackground*>(ee_screens_um_create_background((uintptr_t)this, (uintptr_t)&inTable));
 }
 
-// Creates the game's own controls from the UI database (mini map, status buttons, icon bars, WON lists ...)
-// The result lives in one variable kept in memory (the original's [ebp+8]): the line graph case
-// works through it (casts), which is what spills it. Case bodies in the original's layout order. The status bar
-// takes a non-const UILayoutUtility* while the table exports only the const GetLayout (hence the cast).
-// The games box's `new 0x19c` needs its reserved tail (EEUICWonNetGamesBox.h; docs/LOST_DEBUG.md).
+// Creates the game's own controls from the UI database (mini map, status buttons, icon bars, WON lists ...;
+// ee_screens ui_manager_calls.rs over the shims below)
 UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
 {
-    UIControl* theControl;
-    std::vector<UWideString> theStrings;
-    GERectangle theRectangle, theParent;
-    UIForm* theForm = this->GetFormByID(inTable.GetFormID());
-    GEWindow* theWindow = this->GetRasterizer()->GetWindow(this->GetScreen());
-    float theExclusive = theForm->GetUseExclusiveCoords() ? 0.0f : 1.0f;
-    theParent.SetLeft(0.0f);
-    theParent.SetTop(0.0f);
-    theParent.SetRight((float)theWindow->GetWidth() - theExclusive);
-    theParent.SetBottom((float)theWindow->GetHeight() - theExclusive);
-    inTable.GetLayout().CalculateRectangle(theParent, theRectangle, theForm->GetUseExclusiveCoords());
-    inTable.SetupStringArray(this, theStrings);
-    switch (inTable.GetControlType()) {
-    case kDbControlMiniMap:
-        theControl = new EEUIMiniMap(theRectangle, theForm, inTable.GetFormIndex(), inTable.GetID(), 0);
-        break;
-    case kDbControlStatusButton:
-        theControl = new EEUIFMGStatusButton(this, theRectangle, inTable);
-        break;
-    case kDbControlErrorLog:
-        theControl = new EEUIShellList(EE_SCREENS_SK_ERROR_LOG, {}, inTable.GetID(), std::vector<UWideString>(),
-                                       inTable.GetFont(), false, theRectangle, theForm, inTable.GetFormIndex(), 0);
-        break;
-    case kDbControlAttribute:
-        theControl = new EEUIFMGAttribute(inTable.GetFont(), theForm, theRectangle, inTable.GetFormIndex(),
-                                    inTable.GetID(), inTable.GetTextForeground(), false,
-                                    inTable.GetBorderThickness());
-        break;
-    case kDbControlMainGameStatusBar:
-        theControl = new EEUIFMGStatusBar(inTable.GetFormID(), inTable.GetFormIndex(),
-                                    (UILayoutUtility*)&inTable.GetLayout(), 800, 600, theRectangle, theForm,
-                                    false, true, inTable.GetLoopMovie());
-        break;
-    case kDbControlSelectUnits:
-        theControl = new EEUICSelectUnits(theForm, inTable.GetID(), inTable.GetFormIndex(),
-                                    this->GetMainGameForm()->mMouseClick, this->GetMainGameForm()->mLasso);
-        break;
-    case kDbControlCommandUnits:
-        theControl = new EEUICCommandUnits(theForm, inTable.GetID(), inTable.GetFormIndex(), this->GetMainGameForm()->mMouseClick);
-        break;
-    case kDbControlPortrait:
-        theControl = new EEUICPortrait(theForm, theRectangle, inTable.GetID(), inTable.GetFormIndex(), false);
-        break;
-    case kDbControlChatLine:
-        theControl = EEUIShellNewChatLine(inTable, theRectangle, theForm);
-        break;
-    case kDbControlCBListBox:
-        inTable.SetupFont(this, theRectangle, true);
-        theControl = new EECBUIListBox(inTable, inTable.GetID(), theStrings, inTable.GetFont(), theRectangle,
-                                 theForm, inTable.GetFormIndex(), inTable.GetBorderThickness(),
-                                 inTable.GetStartChecked());
-        break;
-    case kDbControlWonNetRoomsBox:
-        theControl = new EEUICWonNetRoomsBox(inTable.GetID(), inTable.GetFont(), theRectangle.GetTopLeft(),
-            (unsigned long)theRectangle.GetWidth(), (unsigned long)theRectangle.GetHeight(),
-            theForm, inTable.GetFormIndex(), inTable.GetBorderThickness());
-        break;
-    case kDbControlWonNetGamesBox:
-        theControl = new EEUICWonNetGamesBox(inTable.GetID(), inTable.GetFont(), theRectangle.GetTopLeft(),
-            (unsigned long)theRectangle.GetWidth(), (unsigned long)theRectangle.GetHeight(),
-            theForm, inTable.GetFormIndex(), inTable.GetBorderThickness());
-        break;
-    case kDbControlWonNetStatBox:
-        theControl = new EEUICWonNetStatBox(inTable.GetID(), inTable.GetFont(), theRectangle.GetTopLeft(),
-            (unsigned long)theRectangle.GetWidth(), (unsigned long)theRectangle.GetHeight(),
-            theForm, inTable.GetFormIndex(), inTable.GetBorderThickness());
-        break;
-    case kDbControlSavedGroup:
-    {   // EEUIBSavedGroup (ee_game shells_saved.rs): the table's bitmaps
-        UIButton* theButton = new EEUIShellButton(EE_SCREENS_SK_SAVED_GROUP, {}, inTable.GetID(), NULL, NULL, NULL,
-                                                  theRectangle, theForm, inTable.GetFormIndex(), 0);
-        GEBitmap* theBitmap = inTable.CreateNormalBitmap(theForm->GetManager(), theRectangle);
-        theButton->SetNormalBitmap(theBitmap);
-        theBitmap->Dereference();
-        theBitmap = inTable.CreatePressedBitmap(theForm->GetManager(), theRectangle);
-        theButton->SetPressedBitmap(theBitmap);
-        theBitmap->Dereference();
-        theControl = theButton;
-        break;
-    }
-    case kDbControlUnitIconBar:
-        theControl = EEUIShellNewIconBar(inTable, theRectangle, theForm);
-        break;
-    case kDbControlPGSLineGraph:
-        // the post-game summary's line graph (EEUIPGSLineGraph): its values formatted by ee_screens post_game.rs
-        theControl = new UIGraph(inTable.GetID(), theRectangle, theForm, inTable.GetFormIndex(),
-                                 inTable.GetBorderThickness(), EeUiGraphKind::PostGame, ee_screens_pgs_format);
-        static_cast<UIGraph*>(theControl)->SetFont(inTable.GetFont());
-        static_cast<UIGraph*>(theControl)->SetFontColor(inTable.GetTextForeground());
-        break;
-    case kDbControlPing:
-        theControl = new EEUICPing(inTable.GetID(), theRectangle.GetTopLeft(), theForm, inTable.GetFormIndex());
-        break;
-    default:
-        theControl = NULL;
-        break;
-    }
-    return theControl;
+    return reinterpret_cast<UIControl*>(ee_screens_um_create_control((uintptr_t)this, (uintptr_t)&inTable));
 }
 
 // Creates the main game form as the game's own class; other forms as the base manager does
 UIForm* EEUIManager::CreateForm(const UIDbDataForms& inData)
 {
-    if (inData.mFormID != kFormMainGame)
-        return UIManager::CreateForm(inData);
-    return new EEUIFMainGame(this, inData);
+    return reinterpret_cast<UIForm*>(ee_screens_um_create_form((uintptr_t)this, (uintptr_t)&inData));
 }
 
 // Creates the WON server select form's cancel event; NULL for other ids
 UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kControlEventWNSCancel:
-        theEvent = new EEUIEWNSCancel;
-        break;
-    }
-    return theEvent;
+    return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
 }
 
 // Deletes the scenario editor form
 void EEUIManager::DeleteScenarioEditor()
 {
-    delete this->GetScenarioEditorForm();
-    this->mScenarioEditorForm = NULL;
+    ee_screens_um_delete_editor((uintptr_t)this);
 }
 
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
@@ -362,86 +221,202 @@ extern "C" int64_t ee_screenscpp_ui_manager(void* inCall, uint32_t inOp, int64_t
 int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
     EEUIManager* theManager = ioCall.mManager;
-    EEGameOptions& theLobby = gWorld.GetLobbyOptions();
-    static const unsigned long kKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF9};
-    ISEntity* theKey;
-    switch (inOp) {
-    case EE_SCREENS_UM_OP_REGISTER:
-        theManager->RegisterControlEventCallback(EECreateGameEvent);
-        theManager->RegisterControlEventCallback(EECreateWonNetServerSelectEvent);
-        theManager->RegisterFormEventCallback(EECreateFormEvent);
-        break;
-    case EE_SCREENS_UM_OP_LOAD_DATABASE: theManager->LoadDatabase(gDataPath, UString()); break;
-    case EE_SCREENS_UM_OP_ADD_LIKE: {
-        const EeScreensManagerControl& c = *reinterpret_cast<const EeScreensManagerControl*>(inC);
-        return UIControlsTable::AddControlLike(theManager, c.template_id, c.id, c.form_index, c.group, c.left, c.right,
-                                               c.top, c.bottom, c.string_begin, c.string_end, c.help);
-    }
-    case EE_SCREENS_UM_OP_MOVE: {
-        const EeScreensManagerMove& m = *reinterpret_cast<const EeScreensManagerMove*>(inC);
-        return UIControlsTable::MoveControlsHorizontally(m.form, m.first, m.last, m.left_delta, m.right_delta);
-    }
+    switch (inOp) {   // (the cases of more than one call are Rust's: ee_screens ui_manager_calls.rs)
     case EE_SCREENS_UM_OP_ENGINE_COUNT: return EECPEngineChoiceCount();
     case EE_SCREENS_UM_OP_MUSIC:
         theManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
         break;
-    case EE_SCREENS_UM_OP_SAVE_EVENT: {
-        theManager->mU138 = 0;
-        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SL_ACTIVATE);   // (ee_screens save_load.rs)
-        theManager->GetFormByID(kFormSaveGame)->SetFormActivateEvent(theEvent);
-        theEvent->Dereference();
-        break;
-    }
-    case EE_SCREENS_UM_OP_LOBBY_LOCK: inA != 0 ? theLobby.GetLock()->WriteLock() : theLobby.GetLock()->WriteUnlock(); break;
-    case EE_SCREENS_UM_OP_EDITOR_ON:
-        theManager->mInScenarioEditor = true;
-        gGameStateIsMultiplayer = false;
-        break;
-    case EE_SCREENS_UM_OP_NEW_SERVER:
-        if (gCommunications != NULL)
-            delete gCommunications;
-        gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
-        static_cast<EEServer*>(gCommunications)->StartThreads();
-        static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0;
-        break;
-    case EE_SCREENS_UM_OP_LOBBY_DEFAULTS:
-        theLobby.mMapSize = 1;
-        theLobby.mLoadType = 3;
-        theLobby.mEpochStart = kTechEpochPrehistoric;
-        theLobby.mVariant = 0;
-        break;
-    case EE_SCREENS_UM_OP_NAME: gResource->GetString(inA == 0 ? IDS_SE_HUMAN : IDS_COMPUTER, ioCall.mNames[inA]); break;
     case EE_SCREENS_UM_OP_CITIZENS: return gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    case EE_SCREENS_UM_OP_SET_PLAYER: {
-        const EeScreensManagerPlayer& p = *reinterpret_cast<const EeScreensManagerPlayer*>(inC);
-        EEGameOptionsPlayer thePlayer;
-        thePlayer.mType = p.kind;
-        thePlayer.mName = ioCall.mNames[p.name];
-        thePlayer.mSlot = p.slot;
-        thePlayer.mColor = p.color;
-        thePlayer.mStartingCitizens = p.starting_citizens;
-        thePlayer.mIsLocal = p.is_local != 0;
-        thePlayer.mIsReady = p.is_ready != 0;
-        theLobby.mPlayers[p.slot] = thePlayer;
-        break;
-    }
-    case EE_SCREENS_UM_OP_SERVER_LOAD:
-        static_cast<EEServer*>(gCommunications)->StopPing();
-        static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
-        break;
-    case EE_SCREENS_UM_OP_KEY_PRESSED:
-        gISKeyboard->GetEntity(kKeys[inA], theKey);
-        return theKey->JustPressed();
-    case EE_SCREENS_UM_OP_KEYS_FREE:
-        return theManager->GetCurrentForm() != NULL && !theManager->GetCurrentForm()->GetIsKeyboardCaptured() &&
-               !gLoadingSavedGame;
     case EE_SCREENS_UM_OP_POST_F9: EEPostF9Key(); break;
     case EE_SCREENS_UM_OP_BASE_KEYBOARD: return theManager->UIManager::UpdateKeyboard();
     case EE_SCREENS_UM_OP_BASE_MOUSE: return theManager->UIManager::UpdateMouse(*ioCall.mMouse);
     }
     return 0;
 }
+
+// ---- the one-statement shims of ee_screens ui_manager_calls.rs (UI lane round 8): each one call, no logic
+#define UMCALL(x) (*reinterpret_cast<EEUIManagerCall*>(x))
+#define UMG(x) reinterpret_cast<EEUIManager*>(x)
+#define UMF(x) reinterpret_cast<UIForm*>(x)
+#define UMCT(x) (*reinterpret_cast<UIControlsTable*>(x))
+#define UMBT(x) (*reinterpret_cast<const UIBackgroundTable*>(x))
+#define UMCTL(x) (*reinterpret_cast<const EeScreensManagerControl*>(x))
+#define UMMOVE(x) (*reinterpret_cast<const EeScreensManagerMove*>(x))
+static const unsigned long kUMKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF9};
+static ISEntity* sUMKey;                       // the key um_key_load found
+static GERectangle sUMParent, sUMRect;         // CreateUserDefinedControl's window and control rectangles
+static std::vector<UWideString> sUMStrings;    // and its strings
+static_assert(EE_SCREENS_UMC_FORM_MAIN_GAME == kFormMainGame && EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
+                  EE_SCREENS_UMC_BACKGROUND_GENERIC == kBackgroundGeneric &&
+                  EE_SCREENS_UMC_STATUS_BUTTON == kDbControlStatusButton && EE_SCREENS_UMC_MINI_MAP == kDbControlMiniMap &&
+                  EE_SCREENS_UMC_ERROR_LOG == kDbControlErrorLog && EE_SCREENS_UMC_ATTRIBUTE == kDbControlAttribute &&
+                  EE_SCREENS_UMC_MAIN_GAME_STATUS_BAR == kDbControlMainGameStatusBar &&
+                  EE_SCREENS_UMC_SELECT_UNITS == kDbControlSelectUnits &&
+                  EE_SCREENS_UMC_COMMAND_UNITS == kDbControlCommandUnits && EE_SCREENS_UMC_PORTRAIT == kDbControlPortrait &&
+                  EE_SCREENS_UMC_CHAT_LINE == kDbControlChatLine && EE_SCREENS_UMC_CB_LIST_BOX == kDbControlCBListBox &&
+                  EE_SCREENS_UMC_WON_STAT_BOX == kDbControlWonNetStatBox &&
+                  EE_SCREENS_UMC_UNIT_ICON_BAR == kDbControlUnitIconBar &&
+                  EE_SCREENS_UMC_SAVED_GROUP == kDbControlSavedGroup &&
+                  EE_SCREENS_UMC_PGS_LINE_GRAPH == kDbControlPGSLineGraph && EE_SCREENS_UMC_PING == kDbControlPing &&
+                  EE_SCREENS_UMC_WON_ROOMS_BOX == kDbControlWonNetRoomsBox &&
+                  EE_SCREENS_UMC_WON_GAMES_BOX == kDbControlWonNetGamesBox,
+              "ui_manager_calls.rs' ids");
+extern "C" uintptr_t ee_screenscpp_um_call_manager(uintptr_t inCall) { return (uintptr_t)UMCALL(inCall).mManager; }
+extern "C" void ee_screenscpp_um_register_game_event(uintptr_t inManager)
+{ UMG(inManager)->RegisterControlEventCallback(EECreateGameEvent); }
+extern "C" void ee_screenscpp_um_register_wns_event(uintptr_t inManager)
+{ UMG(inManager)->RegisterControlEventCallback(EECreateWonNetServerSelectEvent); }
+extern "C" void ee_screenscpp_um_register_form_event(uintptr_t inManager)
+{ UMG(inManager)->RegisterFormEventCallback(EECreateFormEvent); }
+extern "C" void ee_screenscpp_um_load_database(uintptr_t inManager)
+{ UMG(inManager)->LoadDatabase(gDataPath, UString()); }
+extern "C" int64_t ee_screenscpp_um_add_like(uintptr_t inManager, uintptr_t inControl)
+{ return UIControlsTable::AddControlLike(UMG(inManager), UMCTL(inControl).template_id, UMCTL(inControl).id, UMCTL(inControl).form_index, UMCTL(inControl).group, UMCTL(inControl).left, UMCTL(inControl).right, UMCTL(inControl).top, UMCTL(inControl).bottom, UMCTL(inControl).string_begin, UMCTL(inControl).string_end, UMCTL(inControl).help); }
+extern "C" int64_t ee_screenscpp_um_move(uintptr_t inMoves)
+{ return UIControlsTable::MoveControlsHorizontally(UMMOVE(inMoves).form, UMMOVE(inMoves).first, UMMOVE(inMoves).last, UMMOVE(inMoves).left_delta, UMMOVE(inMoves).right_delta); }
+extern "C" void ee_screenscpp_um_clear_u138(uintptr_t inManager) { UMG(inManager)->mU138 = 0; }
+extern "C" void ee_screenscpp_um_save_form_set_activate(uintptr_t inManager, uintptr_t inEvent)
+{ UMG(inManager)->GetFormByID(kFormSaveGame)->SetFormActivateEvent(reinterpret_cast<UIEvent*>(inEvent)); }
+extern "C" void ee_screenscpp_um_set_in_editor(uintptr_t inManager) { UMG(inManager)->mInScenarioEditor = true; }
+extern "C" void ee_screenscpp_um_clear_multiplayer() { gGameStateIsMultiplayer = false; }
+extern "C" bool ee_screenscpp_comms_present() { return gCommunications != NULL; }
+extern "C" void ee_screenscpp_comms_delete() { delete gCommunications; }
+extern "C" void ee_screenscpp_um_new_server()
+{ gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true); }
+extern "C" void ee_screenscpp_server_clear_load_responses()
+{ static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0; }
+extern "C" void ee_screenscpp_lobby_set_map_size(uint32_t inValue) { gWorld.GetLobbyOptions().mMapSize = inValue; }
+extern "C" void ee_screenscpp_lobby_set_load_type(uint32_t inValue) { gWorld.GetLobbyOptions().mLoadType = inValue; }
+extern "C" void ee_screenscpp_lobby_set_epoch_prehistoric()
+{ gWorld.GetLobbyOptions().mEpochStart = kTechEpochPrehistoric; }
+extern "C" void ee_screenscpp_lobby_set_variant(uint32_t inValue) { gWorld.GetLobbyOptions().mVariant = inValue; }
+extern "C" void ee_screenscpp_um_name_human(uintptr_t inCall)
+{ gResource->GetString(IDS_SE_HUMAN, UMCALL(inCall).mNames[0]); }
+extern "C" void ee_screenscpp_um_name_computer(uintptr_t inCall)
+{ gResource->GetString(IDS_COMPUTER, UMCALL(inCall).mNames[1]); }
+extern "C" void ee_screenscpp_lobby_player_reset(uint32_t inSlot)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot] = EEGameOptionsPlayer(); }
+extern "C" void ee_screenscpp_lobby_player_set_type(uint32_t inSlot, uint32_t inValue)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mType = inValue; }
+extern "C" void ee_screenscpp_um_lobby_player_set_name(uintptr_t inCall, uint32_t inSlot, uint32_t inName)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mName = UMCALL(inCall).mNames[inName]; }
+extern "C" void ee_screenscpp_lobby_player_set_slot(uint32_t inSlot, uint32_t inValue)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mSlot = inValue; }
+extern "C" void ee_screenscpp_lobby_player_set_color(uint32_t inSlot, uint32_t inValue)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mColor = inValue; }
+extern "C" void ee_screenscpp_lobby_player_set_citizens(uint32_t inSlot, uint32_t inValue)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mStartingCitizens = inValue; }
+extern "C" void ee_screenscpp_lobby_player_set_local(uint32_t inSlot, bool inValue)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mIsLocal = inValue; }
+extern "C" void ee_screenscpp_lobby_player_set_ready(uint32_t inSlot, bool inValue)
+{ gWorld.GetLobbyOptions().mPlayers[inSlot].mIsReady = inValue; }
+extern "C" void ee_screenscpp_comms_start_loading()
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone); }
+extern "C" void ee_screenscpp_um_key_load(uint32_t inKey) { gISKeyboard->GetEntity(kUMKeys[inKey], sUMKey); }
+extern "C" bool ee_screenscpp_um_key_just_pressed() { return sUMKey->JustPressed(); }
+extern "C" uintptr_t ee_screenscpp_um_current_form(uintptr_t inManager)
+{ return (uintptr_t)UMG(inManager)->GetCurrentForm(); }
+extern "C" bool ee_screenscpp_form_keyboard_captured(uintptr_t inForm)
+{ return reinterpret_cast<UIForm*>(inForm)->GetIsKeyboardCaptured(); }
+extern "C" bool ee_screenscpp_loading_saved_game() { return gLoadingSavedGame; }
+extern "C" uintptr_t ee_screenscpp_form_manager(uintptr_t inForm)
+{ return (uintptr_t)reinterpret_cast<UIForm*>(inForm)->GetManager(); }
+extern "C" bool ee_screenscpp_um_in_editor(uintptr_t inManager) { return UMG(inManager)->mInScenarioEditor; }
+extern "C" bool ee_screenscpp_game_screen_active() { return gGameScreenActive; }
+extern "C" uintptr_t ee_screenscpp_um_editor_form(uintptr_t inManager)
+{ return (uintptr_t)static_cast<UIForm*>(UMG(inManager)->GetScenarioEditorForm()); }
+extern "C" uintptr_t ee_screenscpp_um_main_game_form(uintptr_t inManager)
+{ return (uintptr_t)static_cast<UIForm*>(UMG(inManager)->GetMainGameForm()); }
+extern "C" uintptr_t ee_screenscpp_um_new_cancel(uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIEvent*>(new EEUIECancel(reinterpret_cast<UIForm*>(inForm))); }
+extern "C" uintptr_t ee_screenscpp_um_new_load_unit() { return (uintptr_t)static_cast<UIEvent*>(new EEUIELoadUnit); }
+extern "C" uintptr_t ee_screenscpp_um_new_wns_open() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWNSOpen); }
+extern "C" uintptr_t ee_screenscpp_um_new_wns_cancel() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWNSCancel); }
+extern "C" void ee_screenscpp_um_new_editor(uintptr_t inManager)
+{ UMG(inManager)->mScenarioEditorForm = new EEUIFScenarioEditor(UMG(inManager)); }
+extern "C" void ee_screenscpp_um_delete_editor(uintptr_t inManager) { delete UMG(inManager)->GetScenarioEditorForm(); }
+extern "C" void ee_screenscpp_um_clear_editor(uintptr_t inManager) { UMG(inManager)->mScenarioEditorForm = NULL; }
+extern "C" uint32_t ee_screenscpp_um_form_data_id(uintptr_t inData)
+{ return (uint32_t)reinterpret_cast<const UIDbDataForms*>(inData)->mFormID; }
+extern "C" uintptr_t ee_screenscpp_um_base_create_form(uintptr_t inManager, uintptr_t inData)
+{ return (uintptr_t)static_cast<UIForm*>(UMG(inManager)->UIManager::CreateForm(*reinterpret_cast<const UIDbDataForms*>(inData))); }
+extern "C" uintptr_t ee_screenscpp_um_new_main_game(uintptr_t inManager, uintptr_t inData)
+{ return (uintptr_t)static_cast<UIForm*>(new EEUIFMainGame(UMG(inManager), *reinterpret_cast<const UIDbDataForms*>(inData))); }
+extern "C" uint32_t ee_screenscpp_bt_type(uintptr_t inTable) { return (uint32_t)UMBT(inTable).GetBackgroundType(); }
+extern "C" uint32_t ee_screenscpp_bt_form_id(uintptr_t inTable) { return (uint32_t)UMBT(inTable).GetFormID(); }
+extern "C" bool ee_screenscpp_bt_attribute1(uintptr_t inTable) { return UMBT(inTable).GetAttribute1() == true; }
+extern "C" bool ee_screenscpp_bt_attribute2(uintptr_t inTable) { return UMBT(inTable).GetAttribute2() == true; }
+extern "C" bool ee_screenscpp_bt_attribute3(uintptr_t inTable) { return UMBT(inTable).GetAttribute3() == true; }
+extern "C" uintptr_t ee_screenscpp_um_form_by_id(uintptr_t inManager, uint32_t inId)
+{ return (uintptr_t)UMG(inManager)->GetFormByID(inId); }
+extern "C" uintptr_t ee_screenscpp_um_new_generic_background(uintptr_t inManager, uintptr_t inTable, uintptr_t inForm, uint32_t inFlags)
+{ return (uintptr_t)static_cast<UIBackground*>(new EEUIBGenericBackground(UMBT(inTable).GetBackgroundID(), UMBT(inTable).GetTextureFile(), GETextureDescription{1, 0, UMG(inManager)->GetUITextureBitDepth(), 0, false, false, UMBT(inTable).GetHasAlpha(), true}, UMBT(inTable).GetLayout(), UMF(inForm), UMBT(inTable).GetDrawPriority(), UMBT(inTable).GetColor(), UMBT(inTable).GetVisible(), UMBT(inTable).GetOpacity(), 1.0f, 1.0f, inFlags)); }
+extern "C" uint32_t ee_screenscpp_ct_form_id(uintptr_t inTable) { return (uint32_t)UMCT(inTable).GetFormID(); }
+extern "C" uint32_t ee_screenscpp_ct_type(uintptr_t inTable) { return (uint32_t)UMCT(inTable).GetControlType(); }
+extern "C" uint32_t ee_screenscpp_um_window_width(uintptr_t inManager)
+{ return (uint32_t)UMG(inManager)->GetRasterizer()->GetWindow(UMG(inManager)->GetScreen())->GetWidth(); }
+extern "C" uint32_t ee_screenscpp_um_window_height(uintptr_t inManager)
+{ return (uint32_t)UMG(inManager)->GetRasterizer()->GetWindow(UMG(inManager)->GetScreen())->GetHeight(); }
+extern "C" bool ee_screenscpp_form_exclusive_coords(uintptr_t inForm) { return UMF(inForm)->GetUseExclusiveCoords(); }
+extern "C" void ee_screenscpp_um_parent_set(float inLeft, float inTop, float inRight, float inBottom)
+{ sUMParent = GERectangle(inLeft, inTop, inRight, inBottom); }
+extern "C" void ee_screenscpp_ct_layout_rectangle(uintptr_t inTable, uintptr_t inForm)
+{ UMCT(inTable).GetLayout().CalculateRectangle(sUMParent, sUMRect, UMF(inForm)->GetUseExclusiveCoords()); }
+extern "C" void ee_screenscpp_ct_strings(uintptr_t inManager, uintptr_t inTable)
+{ UMCT(inTable).SetupStringArray(UMG(inManager), sUMStrings); }
+extern "C" void ee_screenscpp_um_strings_clear() { sUMStrings.clear(); }
+extern "C" uintptr_t ee_screenscpp_ct_new_mini_map(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIMiniMap(sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetID(), 0)); }
+extern "C" uintptr_t ee_screenscpp_ct_new_status_button(uintptr_t inManager, uintptr_t inTable)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIFMGStatusButton(UMG(inManager), sUMRect, UMCT(inTable))); }
+extern "C" uintptr_t ee_screenscpp_ct_new_error_log(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIShellList(EE_SCREENS_SK_ERROR_LOG, {}, UMCT(inTable).GetID(), std::vector<UWideString>(), UMCT(inTable).GetFont(), false, sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), 0)); }
+extern "C" uintptr_t ee_screenscpp_ct_new_attribute(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIFMGAttribute(UMCT(inTable).GetFont(), UMF(inForm), sUMRect, UMCT(inTable).GetFormIndex(), UMCT(inTable).GetID(), UMCT(inTable).GetTextForeground(), false, UMCT(inTable).GetBorderThickness())); }
+extern "C" uintptr_t ee_screenscpp_ct_new_status_bar(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIFMGStatusBar(UMCT(inTable).GetFormID(), UMCT(inTable).GetFormIndex(), (UILayoutUtility*)&UMCT(inTable).GetLayout(), 800, 600, sUMRect, UMF(inForm), false, true, UMCT(inTable).GetLoopMovie())); }
+extern "C" uintptr_t ee_screenscpp_ct_new_select_units(uintptr_t inManager, uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICSelectUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), UMG(inManager)->GetMainGameForm()->mMouseClick, UMG(inManager)->GetMainGameForm()->mLasso)); }
+extern "C" uintptr_t ee_screenscpp_ct_new_command_units(uintptr_t inManager, uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICCommandUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), UMG(inManager)->GetMainGameForm()->mMouseClick)); }
+extern "C" uintptr_t ee_screenscpp_ct_new_portrait(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICPortrait(UMF(inForm), sUMRect, UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), false)); }
+extern "C" uintptr_t ee_screenscpp_ct_new_chat_line(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(EEUIShellNewChatLine(UMCT(inTable), sUMRect, UMF(inForm))); }
+extern "C" void ee_screenscpp_ct_setup_font(uintptr_t inManager, uintptr_t inTable)
+{ UMCT(inTable).SetupFont(UMG(inManager), sUMRect, true); }
+extern "C" uintptr_t ee_screenscpp_ct_new_cb_list_box(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EECBUIListBox(UMCT(inTable), UMCT(inTable).GetID(), sUMStrings, UMCT(inTable).GetFont(), sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness(), UMCT(inTable).GetStartChecked())); }
+extern "C" uintptr_t ee_screenscpp_ct_new_rooms_box(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICWonNetRoomsBox(UMCT(inTable).GetID(), UMCT(inTable).GetFont(), sUMRect.GetTopLeft(), (unsigned long)sUMRect.GetWidth(), (unsigned long)sUMRect.GetHeight(), UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness())); }
+extern "C" uintptr_t ee_screenscpp_ct_new_games_box(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICWonNetGamesBox(UMCT(inTable).GetID(), UMCT(inTable).GetFont(), sUMRect.GetTopLeft(), (unsigned long)sUMRect.GetWidth(), (unsigned long)sUMRect.GetHeight(), UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness())); }
+extern "C" uintptr_t ee_screenscpp_ct_new_stat_box(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICWonNetStatBox(UMCT(inTable).GetID(), UMCT(inTable).GetFont(), sUMRect.GetTopLeft(), (unsigned long)sUMRect.GetWidth(), (unsigned long)sUMRect.GetHeight(), UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness())); }
+extern "C" uintptr_t ee_screenscpp_ct_new_saved_group(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIButton*>(new EEUIShellButton(EE_SCREENS_SK_SAVED_GROUP, {}, UMCT(inTable).GetID(), NULL, NULL, NULL, sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), 0)); }
+extern "C" uintptr_t ee_screenscpp_ct_normal_bitmap(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)UMCT(inTable).CreateNormalBitmap(UMF(inForm)->GetManager(), sUMRect); }
+extern "C" uintptr_t ee_screenscpp_ct_pressed_bitmap(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)UMCT(inTable).CreatePressedBitmap(UMF(inForm)->GetManager(), sUMRect); }
+extern "C" void ee_screenscpp_um_button_set_normal(uintptr_t inButton, uintptr_t inBitmap)
+{ reinterpret_cast<UIButton*>(inButton)->SetNormalBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
+extern "C" void ee_screenscpp_um_button_set_pressed(uintptr_t inButton, uintptr_t inBitmap)
+{ reinterpret_cast<UIButton*>(inButton)->SetPressedBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
+extern "C" void ee_screenscpp_um_bitmap_dereference(uintptr_t inBitmap)
+{ reinterpret_cast<GEBitmap*>(inBitmap)->Dereference(); }
+extern "C" uintptr_t ee_screenscpp_ct_new_icon_bar(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(EEUIShellNewIconBar(UMCT(inTable), sUMRect, UMF(inForm))); }
+extern "C" uintptr_t ee_screenscpp_ct_new_pgs_graph(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new UIGraph(UMCT(inTable).GetID(), sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness(), EeUiGraphKind::PostGame, ee_screens_pgs_format)); }
+extern "C" void ee_screenscpp_ct_graph_font(uintptr_t inGraph, uintptr_t inTable)
+{ reinterpret_cast<UIGraph*>(inGraph)->SetFont(UMCT(inTable).GetFont()); }
+extern "C" void ee_screenscpp_ct_graph_font_color(uintptr_t inGraph, uintptr_t inTable)
+{ reinterpret_cast<UIGraph*>(inGraph)->SetFontColor(UMCT(inTable).GetTextForeground()); }
+extern "C" uintptr_t ee_screenscpp_ct_new_ping(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICPing(UMCT(inTable).GetID(), sUMRect.GetTopLeft(), UMF(inForm), UMCT(inTable).GetFormIndex())); }
+extern "C" uintptr_t ee_screenscpp_um_button_control(uintptr_t inButton)
+{ return (uintptr_t)static_cast<UIControl*>(reinterpret_cast<UIButton*>(inButton)); }
 
 // the manager's construction as the game's start makes it (Empire Earth.cpp: ee/EEGameUI.h)
 static const bool sManagerRegistered =

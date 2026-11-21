@@ -23,6 +23,7 @@ pub mod grabobj;
 pub mod guicfg;
 pub mod guiconf;
 pub mod guictl;
+pub mod guictor;
 pub mod guidraw;
 pub mod guiedit;
 pub mod guievent;

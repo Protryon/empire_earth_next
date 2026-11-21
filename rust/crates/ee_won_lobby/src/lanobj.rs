@@ -57,6 +57,9 @@ pub enum EeWonLanCall {
     ClientList,
     /// `AddPendingSocket(a)` (a peer-authenticated socket the shell accepted).
     AddPending,
+    /// HandlePeerAuthDone(`a`, the peer authentication op): its socket added as pending when the host's checks
+    /// accept it (`LanPeerAuthDone`, lobbyops.rs's in the game; R6 WONLobby round 29).
+    PeerAuthDone,
 }
 
 /// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
@@ -920,6 +923,12 @@ impl EeWonLan {
             EeWonLanCall::ClientList => return self.owned.as_ref().map_or(0, |o| o.clients()),
             EeWonLanCall::AddPending => {
                 self.on(Op::LanAddPending, a);
+            }
+            EeWonLanCall::PeerAuthDone => {
+                let socket = self.on(Op::LanPeerAuthDone, a) as *mut c_void;
+                if !socket.is_null() {
+                    self.on(Op::LanAddPending, socket);
+                }
             }
         }
         0
