@@ -111,7 +111,10 @@ mod tests {
         f.answer("pr_result", &[1]).answer("pr_resource", &[7, 6]).answer("pr_value", &[9]);
         f.answer("pr_series_count", &[3]).answer("pr_series_value", &[4]);
         let r = record(&mut f, 2);
-        assert_eq!((r.result, r.resources[0], r.resources[1], r.values[0], r.epoch_points, r.epoch_second), (1, 7, 6, 9, 3, 4));
+        assert_eq!(
+            (r.result, r.resources[0], r.resources[1], r.values[0], r.epoch_points, r.epoch_second),
+            (1, 7, 6, 9, 3, 4)
+        );
         let calls = f.calls();
         assert!(calls.contains("pr_last_value(2, 24)\npr_increases(2, 15)\npr_series_load(2, 12)"));
         assert!(calls.ends_with("pr_series_count()\npr_series_value(1)"));

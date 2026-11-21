@@ -361,11 +361,10 @@ pub(crate) mod lobby_calls;
 pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
-pub(crate) mod texts_calls;
-pub(crate) mod upgrade_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
+pub(crate) mod texts_calls;
 mod toolkit;
 pub(crate) mod ui_calls;
 #[cfg(not(test))]
@@ -389,5 +388,6 @@ pub mod unit_hack;
 #[cfg(not(test))]
 mod unit_hack_ffi;
 pub mod upgrade;
+pub(crate) mod upgrade_calls;
 #[cfg(not(test))]
 mod upgrade_ffi;

@@ -13,24 +13,16 @@ use crate::screens::game_calls::string;
 use crate::screens::game_cpp::{
     Cpp, EeScreensShimLongOut as OutL, EeScreensShimOut, EeScreensShimText as Text, EeScreensShimULongOut as OutUL,
 };
+use crate::screens::main_form::{EE_SCREENS_MF_SOUND_BUTTON1, EE_SCREENS_MF_SOUND_BUTTON2};
 use crate::screens::shells::EE_SCREENS_SH_APPEND_NUMBERED;
+use crate::screens::shells::{EE_SCREENS_SH_APPEND_STRING, EE_SCREENS_SH_BUTTON_TEXT, EE_SCREENS_SH_TEXT_FG};
+use crate::screens::shells_chat::EE_SCREENS_SH_CHAT_FREE;
 use crate::screens::shells_dialog::EE_SCREENS_SH_FILL;
 use crate::screens::shells_editor::{
     EE_SCREENS_SH_BITMAP_COORDS, EE_SCREENS_SH_CLEAR_RADIO_BITMAPS, EE_SCREENS_SH_EDITOR_PLAYER,
     EE_SCREENS_SH_LIST_OF_COMBO_SELECTION, EE_SCREENS_SH_LIST_SELECTION, EE_SCREENS_SH_MAP_CREATE,
     EE_SCREENS_SH_NEW_BITMAP, EE_SCREENS_SH_SELECT_TAB, EE_SCREENS_SH_TECH_TREE_MOVE, EE_SCREENS_SH_TEXTURE_SIZE,
 };
-use crate::screens::shells_tech::{
-    EE_SCREENS_SH_FORM_CHECKED, EE_SCREENS_SH_LIST_CURRENT, EE_SCREENS_SH_TECH_DEPENDS, EE_SCREENS_SH_TECH_MARK_PLAYER,
-    EE_SCREENS_SH_TECH_NAME_ID, EE_SCREENS_SH_TECH_OBSOLETE, EE_SCREENS_SH_TECH_OBSOLETED,
-};
-use crate::screens::shells_unit::{
-    EE_SCREENS_SH_KEY, EE_SCREENS_SH_LIST_INSERT_BYTES, EE_SCREENS_SH_LIST_LINE, EE_SCREENS_SH_ROTATE,
-    EE_SCREENS_SH_UNIT_CLASS, EE_SCREENS_SH_UNIT_NAME_AND_ID,
-};
-use crate::screens::main_form::{EE_SCREENS_MF_SOUND_BUTTON1, EE_SCREENS_MF_SOUND_BUTTON2};
-use crate::screens::shells::{EE_SCREENS_SH_APPEND_STRING, EE_SCREENS_SH_BUTTON_TEXT, EE_SCREENS_SH_TEXT_FG};
-use crate::screens::shells_chat::EE_SCREENS_SH_CHAT_FREE;
 use crate::screens::shells_files::{EE_SCREENS_SH_FILE_APPEND_LISTED, EE_SCREENS_SH_FILE_FIND_LINE};
 use crate::screens::shells_icon_bar::{EE_SCREENS_SH_IB_FREE, EE_SCREENS_SH_SIZE};
 use crate::screens::shells_paint::{
@@ -41,6 +33,14 @@ use crate::screens::shells_paint::{
 use crate::screens::shells_saved::{
     EE_SCREENS_SH_SG_DRAW, EE_SCREENS_SH_SG_FACE, EE_SCREENS_SH_SG_FIRST_UNIT, EE_SCREENS_SH_SG_SEND,
     EE_SCREENS_SH_SG_SOUND, EE_SCREENS_SH_SG_TEXTURE_REF,
+};
+use crate::screens::shells_tech::{
+    EE_SCREENS_SH_FORM_CHECKED, EE_SCREENS_SH_LIST_CURRENT, EE_SCREENS_SH_TECH_DEPENDS, EE_SCREENS_SH_TECH_MARK_PLAYER,
+    EE_SCREENS_SH_TECH_NAME_ID, EE_SCREENS_SH_TECH_OBSOLETE, EE_SCREENS_SH_TECH_OBSOLETED,
+};
+use crate::screens::shells_unit::{
+    EE_SCREENS_SH_KEY, EE_SCREENS_SH_LIST_INSERT_BYTES, EE_SCREENS_SH_LIST_LINE, EE_SCREENS_SH_ROTATE,
+    EE_SCREENS_SH_UNIT_CLASS, EE_SCREENS_SH_UNIT_NAME_AND_ID,
 };
 
 /// The button sounds (`kSoundButton1`, `kSoundButton2`).

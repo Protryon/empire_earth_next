@@ -316,7 +316,8 @@ mod tests {
     #[test]
     fn a_fill_resets_every_slot_and_names_the_open_ones() {
         let mut slots = [EeScreensSinglePlayerSlot { source: EE_SCREENS_SP_CLOSED, slot: 4, ..Default::default() }; 16];
-        slots[0] = EeScreensSinglePlayerSlot { source: EE_SCREENS_SP_HUMAN, kind: 1, local: true, ..Default::default() };
+        slots[0] =
+            EeScreensSinglePlayerSlot { source: EE_SCREENS_SP_HUMAN, kind: 1, local: true, ..Default::default() };
         let mut f = Fake::default();
         fill(&mut f, &slots, b"Me", b"CPU");
         let calls = f.calls();

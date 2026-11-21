@@ -213,7 +213,9 @@ fn the_rest() {
     let mut f = Fake::default();
     f.answer("ll_check_load", &[1]);
     assert_eq!(put(&mut f, FORM, EE_SCREENS_TEXT_LE_OPEN_HEADER, 4, b"a\0b"), Some(3));
-    assert!(f.calls().starts_with("lobby_header_delete()\nlobby_header_new()\nlobby_file_clear()\nll_open_lobby(\"a\", \"b\")"));
+    assert!(f
+        .calls()
+        .starts_with("lobby_header_delete()\nlobby_header_new()\nlobby_file_clear()\nll_open_lobby(\"a\", \"b\")"));
     let mut f = Fake::default();
     put(&mut f, FORM, EE_SCREENS_TEXT_SERVER, 0, b"Me");
     assert_eq!(f.log[4], "send_connection_request(\"Me\")");

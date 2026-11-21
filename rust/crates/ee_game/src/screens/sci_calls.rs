@@ -247,7 +247,9 @@ mod tests {
         let mut f = Fake::default();
         f.answer("sci_file", &[1]).text("sci_file_name", b"s.scn").answer("sci_open_file", &[1]);
         assert!(get_scenario(&mut f, M, 0x50));
-        assert!(f.calls().ends_with("sci_open_file(48, \"s.scn\")\nsci_find_file(48, \"s.scn\")\nsci_spec_from_file(48, 80)"));
+        assert!(f
+            .calls()
+            .ends_with("sci_open_file(48, \"s.scn\")\nsci_find_file(48, \"s.scn\")\nsci_spec_from_file(48, 80)"));
         let mut f = Fake::default();
         f.answer("sci_has_hints", &[1]);
         assert!(has_media(&mut f, M));

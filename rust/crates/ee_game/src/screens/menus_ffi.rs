@@ -119,7 +119,8 @@ impl Form {
         {
             return r;
         }
-        crate::screens::texts_calls::put(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg, text).unwrap_or(0)
+        crate::screens::texts_calls::put(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg, text)
+            .unwrap_or(0)
     }
 }
 

@@ -11,7 +11,6 @@ use crate::screens::menus::EE_SCREENS_TEXT_STRING;
 use crate::screens::menus_ffi::{sys, Form};
 use crate::screens::scenario_screens_ffi::ee_screenscpp_form;
 
-
 /// The lobby's state (the UI thread's; locked only around its own reads and writes).
 static LOBBY: Mutex<LobbyForm> = Mutex::new(LobbyForm::new());
 
