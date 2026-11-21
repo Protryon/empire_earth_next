@@ -357,6 +357,8 @@ pub unsafe extern "C" fn ee_won_socketop_set_event_index(o: *const EeWonSocketOp
 /// As `ee_won_socketop_socket`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_socketop_run_hook(o: *const EeWonSocketOp) {
+    // `RecvBytesFromOp::RunHook` (2b57d0): its buffer and reset before the base's run
+    op!(o).recv_from_prepare();
     op!(o).run_hook()
 }
 #[cfg(test)]

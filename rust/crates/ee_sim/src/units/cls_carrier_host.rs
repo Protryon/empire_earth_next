@@ -35,8 +35,6 @@ pub const EE_UNITS_CLS_CR_HOME_FIRST_SLOT: i32 = 81;
 pub const EE_UNITS_CLS_CR_RANDOM: i32 = 82;
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 pub const EE_UNITS_CLS_CR_HEIGHT_AT: i32 = 83;
-/// `gContinentManager.CanGetTo(unit a, c, d)`
-pub const EE_UNITS_CLS_CR_CAN_GET_TO: i32 = 84;
 
 impl ClsGame {
     #[allow(clippy::too_many_arguments)] // the switch's operands
@@ -112,7 +110,7 @@ impl CarrierHost for ClsGame {
         self.cr0(EE_UNITS_CLS_IS_SPACE_MAP, 0, 0).0 != 0
     }
     fn can_get_to(&mut self, unit: u64, x: i32, y: i32) -> bool {
-        self.cr(EE_UNITS_CLS_CR_CAN_GET_TO, unit, 0, i64::from(x), i64::from(y), Ge3DPoint::default(), 0.0).0 != 0
+        crate::units::uu_host::can_get_to(unit, x, y)
     }
 }
 

@@ -112,13 +112,7 @@ static const EeWonAsyncOpHooks kAsyncOpHooks={HookRun,HookCleanup,HookCoreQueue,
                                              HookNewCompletion,HookCallback};
 const EeWonAsyncOpHooks* AsyncOpHooks() { return &kAsyncOpHooks; }
 
-// ---- the library's core table (ee_won cppcore.rs): what the Rust objects' own calls still need the C++ for. The
-// queue socket's queued close: a socket op without a socket whose Continue succeeds (0x5c bytes, RTTI 44caac)
-class QueueCloseOp : public SocketOp {
-public:
-    QueueCloseOp() : SocketOp(NULL) {}
-    virtual WONStatus Continue() { return WS_Success; }
-};
+// ---- the library's core table (ee_won cppcore.rs): what the Rust objects' own calls still need the C++ for
 // a C++ object's Rust object of the kind (NULL when it is not of the kind's class)
 static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
 {
@@ -157,23 +151,9 @@ static void* CoreNewOp() { return static_cast<RefCount*>(new AsyncOp); }
 static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inBytes,const EeWonIpAddr* inAddr,
                              uint32_t inSize)
 {
-    AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
-    const ByteBuffer* aBytes=static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes));
-    SocketOp* anOp=NULL;
-    switch(inKind) {
-    case EeWonCoreSocketOp::Close: anOp=new CloseOp(aSocket); break;
-    case EeWonCoreSocketOp::QueueClose: anOp=new QueueCloseOp; anOp->SetRunAsyncImmediately(false); break;
-    case EeWonCoreSocketOp::RecvFrom: anOp=new RecvBytesFromOp((unsigned short)inSize,aSocket); break;
-    case EeWonCoreSocketOp::RecvMsg: anOp=new RecvMsgOp(aSocket); break;
-    case EeWonCoreSocketOp::SendMsg: anOp=new SendMsgOp(aBytes,aSocket); break;
-    case EeWonCoreSocketOp::SendTo:
-        anOp=new SendBytesToOp(aBytes,IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket);
-        break;
-    case EeWonCoreSocketOp::Connect: anOp=new ConnectOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket); break;
-    case EeWonCoreSocketOp::SendBytes: anOp=new SendBytesOp(aBytes,aSocket); break;
-    case EeWonCoreSocketOp::RecvBytes: anOp=new RecvBytesOp(inSize,aSocket); break;
-    case EeWonCoreSocketOp::RecvCrMsg: anOp=new RecvCRMsgOp(aSocket); break;
-    }
+    IPAddr anAddr=inAddr!=NULL ? IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)) : IPAddr();
+    SocketOp* anOp=new SocketOp(inKind,static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)),
+                                static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),&anAddr,inSize);
     return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
 }
 static void* CoreNewQueueSocket(int32_t inType,bool inBlocking)
@@ -229,7 +209,7 @@ static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
 // a progress chunk: a RecvChunkOp of the receiving op with its completion, run in the op's mode
 static void CoreProgress(void* inOp,void* inCompletion)
 {
-    RecvBytesOp* anOp=static_cast<RecvBytesOp*>(SockOp(inOp));
+    SocketOp* anOp=SockOp(inOp);
     SmartPtr<RecvChunkOp> aChunk=new RecvChunkOp(anOp);
     aChunk->SetCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(static_cast<RefCount*>(inCompletion)));
     long aMode=anOp->GetMode();
@@ -279,6 +259,7 @@ static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t in
 void SocketOp::CleanupHook()
 {
     if(this->IsInSocketThread()) WONAPICore::RemoveFromSocketThread(this);
+    ee_won_socketop_close_file(this->mSockOp,this->GetStatus()); // a receive's target file closed (2b5580)
 }
 bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
 static uint32_t AddressOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mAddress; }

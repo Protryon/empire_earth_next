@@ -287,31 +287,7 @@ float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTa
 // Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
 void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 {
-    EEUnitSet* theSet = gUnitSetManager.GetSet(0x62);
-    memset(outFlags.mFlags, 0, sizeof(outFlags.mFlags));
-    if (!(this->mDomains & kMovementAir)) {
-        bool theWater = this->CanMoveOnTerrain(inUnit, 0xa);
-        outFlags.mFlags[kAITileLand] = this->CanMoveOnTerrain(inUnit, 0);
-        outFlags.mFlags[kAITileShallowsShore] = theWater;
-        outFlags.mFlags[kAITileShallowsNearShore] = theWater;
-        outFlags.mFlags[kAITileShallows] = theWater;
-        outFlags.mFlags[kAITileCliff] = this->CanMoveOnTerrain(inUnit, 9);
-        outFlags.mFlags[kAITileWater] = this->CanMoveOnTerrain(inUnit, 1);
-        if (this->CanMoveOnTerrain(inUnit, 1)) {
-            outFlags.mFlags[kAITileShore] = this->mWaterKind != 1 && this->mWaterKind != 2;
-            outFlags.mFlags[kAITileShallowsShore] = theWater && this->mWaterKind != 1 && this->mWaterKind != 2;
-            outFlags.mFlags[kAITileNearShore] = this->mWaterKind != 2;
-            outFlags.mFlags[kAITileShallowsNearShore] = theWater && this->mWaterKind != 2;
-        }
-        if (inUnit != NULL)
-            outFlags.mFlags[kAITileForest] = (inUnit->mStats->mTerrainMask >> 14) & 1;
-        else if (this->mCanCrossForest)
-            outFlags.mFlags[kAITileForest] = true;
-        if (theSet->Contains(this->mUnitType))
-            outFlags.mFlags[kAITileGate] = true;
-    } else
-        memset(outFlags.mFlags, 1, sizeof(outFlags.mFlags));
-    outFlags.mFlags[kAITileSpace] = this->CanMoveOnTerrain(inUnit, 0xc);
+    ee_units_terrain_flags((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inUnit, outFlags.mFlags);   // gather_spot.rs
 }
 
 // Computes the volume, pan and pitch of a sound played at the unit's position
@@ -1298,17 +1274,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
                                theOther != NULL ? theOther->mUnitClass->mIsWall : false, 1);
     }
     case EE_UNITS_CLS_MV_SET_BLOCKING: inUnit->SetBlockingUnit((RTSUnit*)(uintptr_t)inB); return 0;
-    case EE_UNITS_CLS_MV_ADD_WAYPOINT: inUnit->AddWaypoint(thePoint, inC != 0); return 0;
-    case EE_UNITS_CLS_MV_WAYPOINT:
-        thePoint = inUnit->mWaypoints[(size_t)inC].mLocation;
-        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-        return 0;
-    case EE_UNITS_CLS_MV_SECOND_WAYPOINT: {
-        long theAnswer = inUnit->GetSecondWaypoint(thePoint);
-        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-        return theAnswer;
-    }
-    case EE_UNITS_CLS_MV_NEXT_WAYPOINT: inUnit->NextWaypoint(); return 0;
+    // the waypoints' operations: Rust (cls_host.rs waypoint_op)
     case EE_UNITS_CLS_MV_DISTANCE_3D: io->f = inUnit->DistanceSquared3D(thePoint); return 0;
     case EE_UNITS_CLS_MV_BOUNDED:
         if (inC == 0)
@@ -1316,31 +1282,10 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         else
             inUnit->mBoundedPathTiles.push_back(U2DPoint<long>((long)io->a, (long)io->b));
         return 0;
-    case EE_UNITS_CLS_MV_FIND_BOUNDED_PATH:
-    case EE_UNITS_CLS_MV_MERGE_WAYPOINTS: {
-        EeUnitsClsListHandle* theList = (EeUnitsClsListHandle*)io->list;
-        std::vector<GE3DPoint> thePath;
-        bool theReached = false;
-        if (inOp == EE_UNITS_CLS_MV_FIND_BOUNDED_PATH) {
-            gPathManager.FindBoundedPath(inUnit, gWorld.mMap, (long)inC, inUnit->GetTile(),
-                                         EETileCoordinate((long)io->a, (long)io->b), thePath, 50, true, &theReached);
-        } else {
-            size_t theCount = 0;
-            const float* theXYZ = ee_units_cls_points(theList, &theCount);
-            for (size_t i = 0; i < theCount; i++)
-                thePath.push_back(GE3DPoint(theXYZ[3 * i], theXYZ[3 * i + 1], theXYZ[3 * i + 2]));
-            EEPathManager::MergeWaypoints(thePath, inUnit->mWaypoints, 0);
-            ee_units_cls_clear_points(theList);
-        }
-        for (size_t i = 0; i < thePath.size(); i++)
-            ee_units_cls_push_point(theList, thePath[i].mX, thePath[i].mY, thePath[i].mZ);
-        return 0;
-    }
     case EE_UNITS_CLS_MV_SET_VELOCITY: inUnit->SetVelocity(io->f); return 0;
     case EE_UNITS_CLS_MV_START_ACTION: inUnit->StartAction((long)inC); return 0;
     case EE_UNITS_CLS_MV_ACTION_CHANGED: ((EEUnitClass*)(uintptr_t)inB)->ActionChanged(inUnit); return 0;
     case EE_UNITS_CLS_MV_UPDATE_WATER_STATE: inUnit->UpdateWaterState(true); return 0;
-    case EE_UNITS_CLS_MV_CANCEL_PATHS: gPathManager.CancelPaths(inUnit, true); return 0;
     case EE_UNITS_CLS_MV_INITIAL_CONTACT:
         if (inUnit->mInitialContactLocation != thePoint)
             inUnit->mInitialContactLocation = thePoint;
@@ -1401,7 +1346,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     }
     case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
     case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, thePoint); return 0;
-    case EE_UNITS_CLS_CR_CAN_GET_TO: return gContinentManager.CanGetTo(inUnit, (long)inC, (long)inD);
     // the ground levelling's (cls_level.rs): the mesh and the tile are the handle a
     case EE_UNITS_CLS_LV_MESH_Z: io->f = ((GETerrainMesh*)(uintptr_t)inUnit)->GetZ((unsigned long)inC, (unsigned long)inD); return 0;
     case EE_UNITS_CLS_LV_SET_MESH_Z: ((GETerrainMesh*)(uintptr_t)inUnit)->SetZ((unsigned long)inC, (unsigned long)inD, io->f); return 0;

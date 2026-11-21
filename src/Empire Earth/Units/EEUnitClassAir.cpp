@@ -203,18 +203,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     case EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER:
         theClass->TakeOffFromCarrier(inUnit);
         break;
-    case EE_UNITS_ACT_FLY_CHECK_PATH: {
-        GE3DPoint theNext;
-        float theIndex;
-        if (inUnit->GetPathStart(theNext, theIndex) == 0 &&
-            (!inUnit->mUnitClass->mIsParatrooperBomber || inUnit->GetNumCargoUnits() != 0) &&
-            !gContinentManager.CanGetTo(inUnit, (long)theNext.GetX(), (long)theNext.GetY())) {
-            inUnit->DropPath();
-            EEFindLandingPoint(inUnit, &theNext);
-            inUnit->AddWaypoint(theNext, false);
-        }
-        break;
-    }
     case EE_UNITS_ACT_FIND_NEAREST_AIRPORT:
         *inoutAirport = static_cast<EEComplexUnit*>(ee_units_atc_find_nearest_airport(theAirTraffic, inUnit));
         return *inoutAirport != NULL ? 1 : 0;

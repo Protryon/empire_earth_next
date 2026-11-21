@@ -687,6 +687,8 @@ struct EeWorldLayout {
   uint64_t complex_held_units;
   uint64_t complex_unit_variables;
   uint64_t complex_bounded_path_tiles;
+  /// `mWaypoints` (an `EEWaypointList`: its first word the Rust list's handle, ee_sim::units waypoints.rs)
+  uint64_t complex_waypoints;
   /// `mContacts` (a `UList<EEComplexUnit*>`): its `mHead` and `mCount` (an `unsigned long`); a node's `mData` and
   /// `mNext`
   uint64_t complex_contacts_head;

@@ -199,6 +199,7 @@ void EEWorldLayoutRegister()
     theLayout.complex_held_units = offsetof(EEComplexUnit, mHeldUnits);
     theLayout.complex_unit_variables = offsetof(EEComplexUnit, mUnitVariables);
     theLayout.complex_bounded_path_tiles = offsetof(EEComplexUnit, mBoundedPathTiles);
+    theLayout.complex_waypoints = offsetof(EEComplexUnit, mWaypoints);
     theLayout.complex_contacts_head = offsetof(EEComplexUnit, mContacts) + offsetof(UList<EEComplexUnit*>, mHead);
     theLayout.complex_contacts_count = offsetof(EEComplexUnit, mContacts) + offsetof(UList<EEComplexUnit*>, mCount);
     theLayout.contact_node_data = offsetof(UListNode<EEComplexUnit*>, mData);

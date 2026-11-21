@@ -36,6 +36,12 @@ constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
 
 constexpr static const uint32_t TYPE_PATH_POINT = 223;
 
+constexpr static const uint8_t MOVEMENT_SEA = 4;
+
+constexpr static const uint8_t MOVEMENT_SEA_OR_SPACE = (4 | 8);
+
+constexpr static const uint64_t TYPE_AIRPORT = 66;
+
 constexpr static const uint8_t GOAL_ATTACK_GROUND = 3;
 
 /// `kErrorOK`.
@@ -45,8 +51,6 @@ constexpr static const int32_t OK = 0;
 constexpr static const int32_t FAILED = 9;
 
 constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
-
-constexpr static const int64_t CATEGORY_PLANET_SPACESHIP = 34;
 
 constexpr static const uint8_t GOAL_PATROL = 9;
 

@@ -57,6 +57,7 @@ class EESoundObject;
 
 #include "ee/EEUnitClassImprovement.h"
 #include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
+#include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
 // 0x16c, ctor 0x23b6ae(EEUnitClass*); EEPlayer's Reset news one per gUnitClassTable entry into its vector at +0x884).
@@ -268,6 +269,26 @@ struct EEComplexUnitWaypoint {
     float mDistance;                        // +0x0c
     float mStartDistance;                   // +0x10
 };
+static_assert(sizeof(EEComplexUnitWaypoint) == sizeof(EeUnitsWaypoint), "a waypoint is ee_sim's EeUnitsWaypoint");
+
+// EEComplexUnit::mWaypoints: the path, a Rust list (ee_sim::units waypoints.rs, which has the bodies over it) behind
+// the deque members its readers use; an element reference is valid until the list changes. Its first word is the
+// list's handle (the world layout's complex_waypoints).
+class EEWaypointList {
+public:
+    EEWaypointList() : mList(ee_units_waypoints_new()) {}
+    EEWaypointList(const EEWaypointList& inOther) : mList(ee_units_waypoints_new()) { ee_units_waypoints_assign(this->mList, inOther.mList); }
+    ~EEWaypointList() { ee_units_waypoints_free(this->mList); }
+    EEWaypointList& operator=(const EEWaypointList& inOther) { ee_units_waypoints_assign(this->mList, inOther.mList); return *this; }
+    size_t size() const { return ee_units_waypoints_len(this->mList); }
+    bool empty() const { return this->size() == 0; }
+    const EEComplexUnitWaypoint& operator[](size_t inIndex) const
+        { return *reinterpret_cast<const EEComplexUnitWaypoint*>(ee_units_waypoints_at(this->mList, inIndex)); }
+    const EEComplexUnitWaypoint& back() const { return (*this)[this->size() - 1]; }
+    void push_back(const EEComplexUnitWaypoint& inWaypoint) { ee_units_waypoints_push(this->mList, reinterpret_cast<const EeUnitsWaypoint*>(&inWaypoint)); }
+    void clear() { ee_units_waypoints_clear(this->mList); }
+    EeUnitsWaypoints* mList;
+};
 
 // EEComplexUnit::mIgnoredTargets's element (0x18 bytes; ctor 0x1f5d8b out of line right after its first user
 // IgnoreTarget: six zero stores): an attacker record, found by its unit id (std::find 0x200eb6 with an unsigned long)
@@ -420,19 +441,20 @@ public:
     // 0x1f9df3: the effect of kind inKind in the unit's effect list (+0x100), false if none (provisional name)
     bool GetEffect(long inKind, EEGraphicEffect*& outEffect);
     // the volcano moving a unit off its tiles (provisional names; types inferred)
-    long NextWaypoint();                    // 0x1fbdd1 (0: the unit has more waypoints to try)
-    long GetPathStart(GE3DPoint& outLocation, float& outLength);  // 0x1fa013 (0: outLocation is the next one)
-    void DropPath();
+    long NextWaypoint() { return ee_units_waypoints_next((uint64_t)(uintptr_t)this); }   // 0x1fbdd1 (0: the unit has more waypoints to try)
+    long GetPathStart(GE3DPoint& outLocation, float& outLength)   // 0x1fa013 (0: outLocation is the next one)
+        { return ee_units_waypoints_start(this->mWaypoints.mList, &outLocation.mX, &outLength); }
+    void DropPath() { ee_units_waypoints_drop((uint64_t)(uintptr_t)this); }   // the waypoints and the collision count (waypoints.rs)
     // 0x1fa229 (EEUCSpaceBuilding::HasArrived: where the unit is going; 7 when it has no path: long) (provisional name)
-    long GetNextWaypointPoint(GE3DPoint& outLocation);
-    long GetPathLength(float& outDistance);  // 0x1fa1e1: the path's remaining length (7: no path) (provisional name)
+    long GetNextWaypointPoint(GE3DPoint& outLocation) { return ee_units_waypoints_start(this->mWaypoints.mList, &outLocation.mX, NULL); }
+    long GetPathLength(float& outDistance) { return ee_units_waypoints_start(this->mWaypoints.mList, NULL, &outDistance); }  // 0x1fa1e1: the path's remaining length (7: no path) (provisional name)
     void UpdateWaterState(bool inArg);      // 0x1f7c47 (mWaterState from the class's +0x2d0 bits and the tile) (provisional name)
     void ApplyAreaEffects();                // 0x1f9b72 (the area effects over the largest radius) (provisional name)
     // 0x1f9c9b (ret 0x20): up to inTries points around inTarget away from this unit until inScreen accepts one
     // (EECPAttackSubGroupUnit::Flee's flee) (provisional name)
     bool IsOnOtherContinentThan(EEComplexUnit* inUnit);
     bool IsOnOtherContinent(long inTileX, long inTileY);  // 0x1fa6f9 (another continent than the unit's) (provisional name)
-    unsigned short GetFootprintContinent(long inKind);  // 0x1fa7f6 (the first continent among the unit's tiles) (provisional name)
+    unsigned short GetFootprintContinent(long inKind) { return ee_astar_cm_footprint_continent((uint64_t)(uintptr_t)this, inKind); }  // 0x1fa7f6 (the first continent among the unit's tiles: ee_sim::astar cm_unit.rs)
     // inline (EEUCLandTransport::BadlyHurt 0x217017: const operator[], `lea; mov [eax]`) (provisional name)
     EEComplexUnit* GetCargo(unsigned long inIndex) const { return this->mCargo[inIndex]; }
     void SetMine(EEUnit* inUnit);           // 0x1fe1df (keeps a reference; the mining building's mine) (provisional name)
@@ -648,10 +670,11 @@ public:
     bool GetIsCloaked() const { return this->mIsCloakable ? this->mIsCloaked : false; }
     bool AddGarrison(long inAmount, long inGarrisonPopulation);  // 0x1f5f55: mL288 += inAmount within the class's mL250 (provisional name)
     EEComplexUnit* FindPassenger(unsigned long inUnitID);  // 0x1f9f85: the cargo unit with that id (provisional name)
-    void SetGroupPathGoals(std::vector<GE3DPoint>& inPath);  // 0x1fc0a8, actual12-byte point vector; constness inferred
+    void SetGroupPathGoals(std::vector<GE3DPoint>& inPath)   // ee_sim::units waypoints.rs
+        { ee_units_waypoints_group_path_goals((uint64_t)(uintptr_t)this, inPath.empty() ? NULL : &inPath[0].mX, inPath.size()); }  // 0x1fc0a8, actual12-byte point vector; constness inferred
     void ReleaseCargo(EEComplexUnit* inCargo);  // 0x1fcb8c, actual cargo removal member/ret4
     EEComplexUnit* GetConditionTarget();    // 0x1ff58b: actual referenced complex attacker or null
-    bool ShouldMoveToNextAutoWaypoint();   // 0x1feb61: actual path/goal predicate, no args/AL
+    bool ShouldMoveToNextAutoWaypoint() { return ee_units_waypoints_next_auto((uint64_t)(uintptr_t)this); }   // 0x1feb61: actual path/goal predicate, no args/AL
     EEComplexUnit* UnloadCargoAt(unsigned long inIndex, const GETransformation& inLocation);
     EEComplexUnit* UnloadCargoByID(unsigned long inUnitID, const GETransformation& inLocation);  // 0x1fd2ba: UnloadCargoAt on the cargo unit with that id (provisional name)
     void MoveToLocation(float inX, float inY, bool inUpdateTiles);  // 0x1fe611 (before the unit moves to (inX, inY)) (provisional name)
@@ -688,7 +711,7 @@ public:
     // 0x1fcb0e (drops the auto-waypoint location goals; ee_units goals.rs)
     void DropFinishedGoals(bool inStartAll) { ee_units_unit_drop_finished_goals((uint64_t)(uintptr_t)this, inStartAll); }
     void ApplyMorale(long inValue, long& outValue);  // 0x1fbd81: inValue less 0.8 of it with positive morale, plus 0.6 with negative
-    long GetSecondWaypoint(GE3DPoint& outLocation);  // 0x1fbecf: the second waypoint (7: none) (provisional name)
+    long GetSecondWaypoint(GE3DPoint& outLocation) { return ee_units_waypoints_second(this->mWaypoints.mList, &outLocation.mX); }  // 0x1fbecf (7: none)
     // 0x1fbf66: drops the queued goals of mGoalQueues[inIndex] that refuse the unit
     void DropUnsuitedGoals(unsigned long inIndex) { ee_units_unit_drop_unsuited_goals((uint64_t)(uintptr_t)this, (uint32_t)inIndex); }
     void ReplaceResearch(long inTechnology, long inNewTechnology);  // 0x1ffbc2 (0x244deb: each live unit of a technology's classes) (provisional name)
@@ -721,7 +744,7 @@ public:
     void SetCamouflaged(bool inValue);      // 0x239aad: bit 31 of mCamouflageTimer (EEUnitClass 0x23978b; in EEUnitClass.cpp) (provisional name)
     void SetIsCommandable(bool inValue) { if (this->mIsCommandable != inValue) this->mIsCommandable = inValue; }  // (EEUnitClass::UnitDied)
     void SetB342(bool inValue) { if (this->mIsClearanceGranted != inValue) this->mIsClearanceGranted = inValue; }  // (EEAirTrafficControl::ClearAirportQueue: cmp then store through the address)
-    void AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap);  // 0x1f625b (EEUnitClass::AddWaypointAt) (provisional name)
+    void AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap) { ee_units_waypoints_add((uint64_t)(uintptr_t)this, &inLocation.mX, inSnapToMap); }  // 0x1f625b (EEUnitClass::AddWaypointAt)
     // (provisional names; types inferred)
     void ReleaseConversionEffect();         // 0x1f6f99: the mL2C0 effect off
     void KillCargo();                       // 0x1f8af6: unloads every cargo unit (Virtual60(0, 0, 0)), statistics
@@ -738,10 +761,15 @@ public:
     void FindContacts();                    // 0x1f6817: links the units on the tiles around the unit (AddContact both ways)
     void SetNextFrame(long inValue) { if (this->mNextFrame != inValue) this->mNextFrame = inValue; }  // inline (SetAnimation: cmp, lea, store)
     // 0x1fbc3b (ret 0xc): the waypoint on tile (inX, inY), if any
-    bool FindWaypointAtTile(long inX, long inY, EEComplexUnitWaypoint*& outWaypoint);
-    void SnapLastWaypoint();                // 0x1fc507 (EEPathManager 0xa84f6): re-adds the last waypoint at the goal's location
-    // 0x1fc61b (EEPathManager 0xa83da): the class's Virtual0C on ioPath, then its points as waypoints, last first
-    void TakePath(std::vector<GE3DPoint>& ioPath, bool inSmooth);
+    bool FindWaypointAtTile(long inX, long inY, const EEComplexUnitWaypoint*& outWaypoint)   // waypoints.rs
+    {
+        size_t theIndex = 0;
+        bool theFound = ee_units_waypoints_at_tile((uint64_t)(uintptr_t)this, inX, inY, &theIndex);
+        if (theFound)
+            outWaypoint = &this->mWaypoints[theIndex];
+        return theFound;
+    }
+    void SnapLastWaypoint() { ee_units_waypoints_snap((uint64_t)(uintptr_t)this); }   // 0x1fc507 (EEPathManager 0xa84f6): re-adds the last waypoint at the goal's location
     void PlaceOnGround(const GE3DPoint& inLocation);  // 0x1fc90c (EEPhysicsModel::Move): onto the ground at inLocation
 
     // Layout (no gaps): the ctor 0x1f5999 (member ctors), its init calls 0x23da8e/0x229706/
@@ -750,7 +778,7 @@ public:
     std::vector<EEProductionEntry> mBuildQueue;  // +0x048 the production queue (8-byte elements: `_Buy` 0x14823b)
     std::deque<EEUnit*> mCitizenBuildQueue;  // +0x058 (POD elements; dtor 0x2003a4)
     std::vector<EEComplexUnit*> mCargo;            // +0x06c the cargo (EEUGUnloadTransport 0x2288ea: _Ptrit<EEUnit*>::operator+)
-    std::deque<EEComplexUnitWaypoint> mWaypoints;  // +0x07c the path
+    EEWaypointList mWaypoints;              // +0x07c the path (a Rust list)
     std::vector<EEUnitVectorItem> mGoalQueues;  // +0x090 (0x28-byte polymorphic elements: `_Buy` 0x10918a multiplies by 40, dtor 0x776bb)
     std::deque<EEComplexUnitAttacker> mIgnoredTargets;  // +0x0a0 the attackers (IgnoreTarget)
     std::vector<EEComplexUnit*> mHeldUnits;  // +0x0b4
@@ -941,9 +969,6 @@ public:
     void GroundLocation(GE3DPoint& ioLocation);  // +0x04 (the time warp's return, flag 4)
     // +0x08 (base 0x2907a3: empty): the tile under inLocation along the camera line (EEUCNavalCitizen 0x218490)
     void LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
-    // +0x0c (base 0x2907a3: empty): adjusts a path for the class (EEUCSeaAnimal 0x219d87: random depths) (provisional
-    // name)
-    void AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
     void CargoRemoved(EEComplexUnit* inUnit, EEComplexUnit* inCargo);  // +0x14 (EEUCFortress 0x2101da: ret 8, the cargo)
     // +0x18 (EEComplexUnit::LoadCargo pushes (this, cargo, its third argument) after loading a cargo)
     void CargoAdded(EEComplexUnit* inUnit, EEComplexUnit* inCargo, bool inArg);   // bool: 0x6101b5 `cmp byte`
@@ -1187,9 +1212,7 @@ public:
     bool NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit);
     bool NavalBuildingHasSunk(EEComplexUnit* inUnit);
     void NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
-    void NavalCitizenAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
     EEUnit* NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
-    void NavalPriestAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
     EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
     void ProjectileActionChanged(EEComplexUnit* inUnit);
     void ProjectileUnitCreated(EEComplexUnit* inUnit);

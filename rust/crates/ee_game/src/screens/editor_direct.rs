@@ -651,12 +651,27 @@ pub(crate) unsafe fn sepl(op: u32, p: *const *mut c_void, i: &mut [i32; 4], f: &
 
         extern "C" {
             pub fn ee_screenscpp_sepl(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
+            pub fn ee_screenscpp_sepx(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         }
     }
     // SAFETY: the contract (three handles)
     let q = unsafe { [*p as usize, *p.add(1) as usize, *p.add(2) as usize] };
     // SAFETY: the contract
     if let Some(r) = unsafe { sepl_direct(op, q, i, f) } {
+        return r;
+    }
+    // the statement sequences composed in Rust (editor_sepl.rs) over the C++'s single statements
+    let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+        use crate::screens::editor_players::EE_SCREENS_SEPL_OP_COMBO_SELECTION;
+        if op == crate::screens::editor_sepl::EE_SCREENS_SEPL_OP_COMBO_SELECTION_RAW {
+            // SAFETY: p0 the op's live combo box
+            return unsafe { sepl_direct(EE_SCREENS_SEPL_OP_COMBO_SELECTION, p, i, f) }.unwrap_or(-1);
+        }
+        let p = p.map(|v| v as *mut c_void);
+        // SAFETY: the statements take the composed op's live handles
+        unsafe { sys::ee_screenscpp_sepx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
+    };
+    if let Some(r) = crate::screens::editor_sepl::compose(&mut x, op, q, i, f) {
         return r;
     }
     // SAFETY: the contract
