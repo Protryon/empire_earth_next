@@ -5,7 +5,7 @@
 // only those.
 #![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
 
-/// The crate ee_net before the restructure.
-pub mod net;
 /// The Network Engine's named constants (message ids, slots, connection results) for its C++ headers.
 pub mod msgid;
+/// The crate ee_net before the restructure.
+pub mod net;

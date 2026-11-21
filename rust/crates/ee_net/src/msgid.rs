@@ -135,7 +135,15 @@ mod tests {
 
     #[test]
     fn the_values_are_the_originals() {
-        for (value, original) in [(NEMessageID::kNetMessageAddPlayer as u32, 0x20), (NEMessageID::kNetMessageXferStatus as u32, 0x3c), (NEConnectionResult::kConnectionGameInProgressAsSent as u32, 0x2751), (NESlot::kSlotServer as u32, 0xfe), (NESlot::kSlotNone as u32, 0xff), (NERecordPlaybackMode::kRecordModePlaying as u32, 3), (NEServerGameState::kServerStatePaused as u32, 4)] {
+        for (value, original) in [
+            (NEMessageID::kNetMessageAddPlayer as u32, 0x20),
+            (NEMessageID::kNetMessageXferStatus as u32, 0x3c),
+            (NEConnectionResult::kConnectionGameInProgressAsSent as u32, 0x2751),
+            (NESlot::kSlotServer as u32, 0xfe),
+            (NESlot::kSlotNone as u32, 0xff),
+            (NERecordPlaybackMode::kRecordModePlaying as u32, 3),
+            (NEServerGameState::kServerStatePaused as u32, 4),
+        ] {
             assert_eq!(value, original);
         }
         assert_eq!(std::mem::size_of::<NEMessageID>(), 4);

@@ -38,33 +38,13 @@
 #include "rust/base/math.h"
 
 // ---- Error system (ES)
-// proven: "theResult == keseOK" assert text. Other values: codes returned by the Thread/Time System units;
-// names are provisional.
-enum ESError {
-    kErrorOK = 0,
-    keseOK = kErrorOK,  // spelled this way in the original's assert strings
-    kErrorNativeError = 1,                    // after ESRecordNativeError(GetLastError()) (TSEvent::Set 0x53d09)
-    kErrorNotSuspended = 2,                   // TSThread::Resume: ResumeThread returned 0
-    kErrorNotFound = 3,                       // TSScheduler::DestroyThread, TSThread::Receive (no message), TMTimer
-    kErrorBusy = 5,                           // TMTimer::Set* while running
-    kErrorAlreadyExists = 2,                  // FSFileSpec::Create (ERROR_FILE_EXISTS), CreateDirectory (ERROR_ALREADY_
-                                            // EXISTS), Lock/Unlock (already in that state); same value as
-                                            // kErrorNotSuspended: the real name of 2 is unknown
-    kErrorNotOpen = 4,                        // FSMemoryFile::Read with no buffer; FSFileSpec I/O on a closed file
-    kErrorNoMoreFiles = 7,                    // FSFileSpec::GetNextFile: ERROR_NO_MORE_FILES
-    kErrorBeyondEnd = 0xa,                    // FSFileSpec::SetPosition past the end of the file
-    kErrorNotWritable = 0xf,                  // FSFileSpec::Write/SetLength without write access
-    kErrorNotReadable = 0x10,                 // FSFileSpec::Read without read access
-    kErrorAlreadyOpen = 5,                    // FSBasicFile::Delete on an open file
-    kErrorOutOfMemory = 8,                    // operator new failed (TSScheduler::Create*)
-    kErrorFailed = 9,                         // TSInitialize: URegisterShutdown failed; FSMemoryFile's unsupported
-                                            // operations (DeleteDirectory, Lock, GetFirstFile, ...)
-    kErrorBadPath = 0xe,                      // FSBasicFile::Delete / FSFileSpec::Open: path longer than MAX_PATH
-    kErrorIOFailed = 0xe,                     // FSDebugFile::ReadText/WriteText: short fread/fwrite (same value as
-                                            // kErrorBadPath; real name unknown)
-    kErrorNotSupported = 0xd,                 // FSDebugFile::Copy
-    kErrorTimeout = 0x11,                     // TSEvent::Wait: WAIT_TIMEOUT
-    kErrorEndOfFile = 0x12                    // FSMemoryFile::Read past the end
+// ESError is Rust's (rust/base/lle_enums.h), one name per value; the names that share a value:
+enum {
+    keseOK = kErrorOK,                          // spelled this way in the original's assert strings
+    kErrorAlreadyExists = kErrorNotSuspended,   // FSFileSpec::Create (ERROR_FILE_EXISTS), CreateDirectory
+                                                // (ERROR_ALREADY_EXISTS), Lock/Unlock: the real name of 2 is unknown
+    kErrorAlreadyOpen = kErrorBusy,             // FSBasicFile::Delete on an open file
+    kErrorIOFailed = kErrorBadPath              // FSDebugFile::ReadText/WriteText: short fread/fwrite (real name unknown)
 };
 
 class UString;

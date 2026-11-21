@@ -154,7 +154,9 @@ const _: () = {
     assert!(offset_of!(S, mType) == offset_of!(G, kind) && offset_of!(S, mPixelFormat) == offset_of!(G, pixel_format));
     assert!(offset_of!(S, mSurfaceVolatility) == offset_of!(G, surface_volatility));
     assert!(offset_of!(S, mWidth) == offset_of!(G, width) && offset_of!(S, mHeight) == offset_of!(G, height));
-    assert!(offset_of!(S, m14) == offset_of!(G, m14) && offset_of!(S, mMipLevelCount) == offset_of!(G, mip_level_count));
+    assert!(
+        offset_of!(S, m14) == offset_of!(G, m14) && offset_of!(S, mMipLevelCount) == offset_of!(G, mip_level_count)
+    );
     assert!(offset_of!(S, mPixelDepth) == offset_of!(G, pixel_depth));
     assert!(offset_of!(S, mIs3DRenderable) == offset_of!(G, is_3d_renderable));
     assert!(offset_of!(S, mIsTransparencyEnabled) == offset_of!(G, is_transparency_enabled));

@@ -259,13 +259,80 @@ pub enum SETransitionFlags {
     kTransitionFlagLong = 2,
 }
 
+/// The Error System's codes (proven: the "theResult == keseOK" assert text; the others are the codes the Thread, Time
+/// and File System units return, names provisional). One name per value: lle/LowLevelEngineCore.h adds the aliases
+/// (`keseOK`, and `kErrorAlreadyExists`, `kErrorAlreadyOpen`, `kErrorIOFailed`, whose values another name has).
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ESError {
+    kErrorOK = 0,
+    /// after ESRecordNativeError(GetLastError()) (TSEvent::Set 0x53d09)
+    kErrorNativeError = 1,
+    /// TSThread::Resume: ResumeThread returned 0
+    kErrorNotSuspended = 2,
+    /// TSScheduler::DestroyThread, TSThread::Receive (no message), TMTimer
+    kErrorNotFound = 3,
+    /// FSMemoryFile::Read with no buffer; FSFileSpec I/O on a closed file
+    kErrorNotOpen = 4,
+    /// TMTimer::Set* while running
+    kErrorBusy = 5,
+    /// FSFileSpec::GetNextFile: ERROR_NO_MORE_FILES
+    kErrorNoMoreFiles = 7,
+    /// operator new failed (TSScheduler::Create*)
+    kErrorOutOfMemory = 8,
+    /// TSInitialize: URegisterShutdown failed; FSMemoryFile's unsupported operations (DeleteDirectory, Lock,
+    /// GetFirstFile, ...)
+    kErrorFailed = 9,
+    /// FSFileSpec::SetPosition past the end of the file
+    kErrorBeyondEnd = 0xa,
+    /// FSDebugFile::Copy
+    kErrorNotSupported = 0xd,
+    /// FSBasicFile::Delete / FSFileSpec::Open: path longer than MAX_PATH
+    kErrorBadPath = 0xe,
+    /// FSFileSpec::Write/SetLength without write access
+    kErrorNotWritable = 0xf,
+    /// FSFileSpec::Read without read access
+    kErrorNotReadable = 0x10,
+    /// TSEvent::Wait: WAIT_TIMEOUT
+    kErrorTimeout = 0x11,
+    /// FSMemoryFile::Read past the end
+    kErrorEndOfFile = 0x12,
+}
+
+/// FSFileSpec::Open's access (lle/FSFile.h adds the original's assert-text spellings `kfsaRead`, `kfsaWrite`).
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FSFileAccess {
+    kFileAccessRead = 1,
+    kFileAccessWrite = 2,
+    /// FSFileSpec::Open maps modes other than 1/2/4 to GENERIC_READ|GENERIC_WRITE; Read/Write test the 1/2 bits
+    kFileAccessReadWrite = 3,
+    /// FSFileSpec::Open: 4 -> GENERIC_WRITE, then SetFilePointer(FILE_END)
+    kFileAccessAppend = 4,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn the_values_are_the_originals() {
-        for (value, original) in [(ISKeyCode::kKeyA as u32, 0x1e), (ISKeyCode::kKeyNone as u32, 0x7fff), (ISModifierState::kModifierAlt as u32, 4), (ISMouseEntity::kMouseOtherButton as u32, 6), (FSFileOrigin::kFileOriginCurrent as u32, 2), (UMFloatingPointPrecision::kFPPrecision24 as u32, 0x20000), (UOSType::kOSWindowsNT4 as u32, 4), (SETransitionCommand::kMusicTransitionEndAndIntro as u32, 5), (SETransitionFlags::kTransitionFlagLong as u32, 2)] {
+        for (value, original) in [
+            (ISKeyCode::kKeyA as u32, 0x1e),
+            (ISKeyCode::kKeyNone as u32, 0x7fff),
+            (ISModifierState::kModifierAlt as u32, 4),
+            (ISMouseEntity::kMouseOtherButton as u32, 6),
+            (FSFileOrigin::kFileOriginCurrent as u32, 2),
+            (UMFloatingPointPrecision::kFPPrecision24 as u32, 0x20000),
+            (UOSType::kOSWindowsNT4 as u32, 4),
+            (SETransitionCommand::kMusicTransitionEndAndIntro as u32, 5),
+            (SETransitionFlags::kTransitionFlagLong as u32, 2),
+            (ESError::kErrorEndOfFile as u32, 0x12),
+            (ESError::kErrorBadPath as u32, 0xe),
+            (FSFileAccess::kFileAccessAppend as u32, 4),
+        ] {
             assert_eq!(value, original);
         }
         assert_eq!(std::mem::size_of::<ISKeyCode>(), 4);

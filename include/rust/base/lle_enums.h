@@ -240,4 +240,52 @@ enum SETransitionFlags {
   kTransitionFlagLong = 2,
 };
 
+/// The Error System's codes (proven: the "theResult == keseOK" assert text; the others are the codes the Thread, Time
+/// and File System units return, names provisional). One name per value: lle/LowLevelEngineCore.h adds the aliases
+/// (`keseOK`, and `kErrorAlreadyExists`, `kErrorAlreadyOpen`, `kErrorIOFailed`, whose values another name has).
+enum ESError {
+  kErrorOK = 0,
+  /// after ESRecordNativeError(GetLastError()) (TSEvent::Set 0x53d09)
+  kErrorNativeError = 1,
+  /// TSThread::Resume: ResumeThread returned 0
+  kErrorNotSuspended = 2,
+  /// TSScheduler::DestroyThread, TSThread::Receive (no message), TMTimer
+  kErrorNotFound = 3,
+  /// FSMemoryFile::Read with no buffer; FSFileSpec I/O on a closed file
+  kErrorNotOpen = 4,
+  /// TMTimer::Set* while running
+  kErrorBusy = 5,
+  /// FSFileSpec::GetNextFile: ERROR_NO_MORE_FILES
+  kErrorNoMoreFiles = 7,
+  /// operator new failed (TSScheduler::Create*)
+  kErrorOutOfMemory = 8,
+  /// TSInitialize: URegisterShutdown failed; FSMemoryFile's unsupported operations (DeleteDirectory, Lock,
+  /// GetFirstFile, ...)
+  kErrorFailed = 9,
+  /// FSFileSpec::SetPosition past the end of the file
+  kErrorBeyondEnd = 10,
+  /// FSDebugFile::Copy
+  kErrorNotSupported = 13,
+  /// FSBasicFile::Delete / FSFileSpec::Open: path longer than MAX_PATH
+  kErrorBadPath = 14,
+  /// FSFileSpec::Write/SetLength without write access
+  kErrorNotWritable = 15,
+  /// FSFileSpec::Read without read access
+  kErrorNotReadable = 16,
+  /// TSEvent::Wait: WAIT_TIMEOUT
+  kErrorTimeout = 17,
+  /// FSMemoryFile::Read past the end
+  kErrorEndOfFile = 18,
+};
+
+/// FSFileSpec::Open's access (lle/FSFile.h adds the original's assert-text spellings `kfsaRead`, `kfsaWrite`).
+enum FSFileAccess {
+  kFileAccessRead = 1,
+  kFileAccessWrite = 2,
+  /// FSFileSpec::Open maps modes other than 1/2/4 to GENERIC_READ|GENERIC_WRITE; Read/Write test the 1/2 bits
+  kFileAccessReadWrite = 3,
+  /// FSFileSpec::Open: 4 -> GENERIC_WRITE, then SetFilePointer(FILE_END)
+  kFileAccessAppend = 4,
+};
+
 #endif  // EE_RUST_BASE_LLE_ENUMS_H

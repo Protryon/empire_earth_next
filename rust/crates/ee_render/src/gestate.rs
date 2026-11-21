@@ -345,7 +345,19 @@ mod tests {
 
     #[test]
     fn the_values_are_the_originals() {
-        for (value, original) in [(GEBlendFactor::kBlendBothInvSrcAlpha as u32, 12), (GECompareFunction::kCompareAlways as u32, 7), (GEPixelFormatID::kPixelFormatUnknown as u32, 14), (GESurfaceType::kSurfaceBackBuffer as u32, 7), (GEZBufferMode::kZBufferTestAndWrite as u32, 3), (GEFontStyle::kFontStyleShadow as u32, 0x10), (GEClipPlane::kClipPlaneRight as u32, 5), (GEImageFileType::kImageFilePNG as u32, 4), (GETMWaterInfoFlag::kWaterInfoSpace as u32, 0x80), (GETerrainClipFlag::kVertexClipBottom as u32, 0x20), (GETextAlignment::kTextAlignRight as u32, 2)] {
+        for (value, original) in [
+            (GEBlendFactor::kBlendBothInvSrcAlpha as u32, 12),
+            (GECompareFunction::kCompareAlways as u32, 7),
+            (GEPixelFormatID::kPixelFormatUnknown as u32, 14),
+            (GESurfaceType::kSurfaceBackBuffer as u32, 7),
+            (GEZBufferMode::kZBufferTestAndWrite as u32, 3),
+            (GEFontStyle::kFontStyleShadow as u32, 0x10),
+            (GEClipPlane::kClipPlaneRight as u32, 5),
+            (GEImageFileType::kImageFilePNG as u32, 4),
+            (GETMWaterInfoFlag::kWaterInfoSpace as u32, 0x80),
+            (GETerrainClipFlag::kVertexClipBottom as u32, 0x20),
+            (GETextAlignment::kTextAlignRight as u32, 2),
+        ] {
             assert_eq!(value, original);
         }
         assert_eq!(std::mem::size_of::<GEBlendFactor>(), 4);

@@ -10,12 +10,12 @@
 pub mod dx7;
 /// The crate ee_ge before the restructure.
 pub mod ge;
+/// The Graphics Engine's named constants (render states, pixel formats, fonts, clip planes) for its C++ headers.
+pub mod gestate;
 // the value types' C ABI under lle/GERust.h (a small header every C++ unit includes)
 pub mod geval;
 /// The crate ee_gfx before the restructure.
 pub mod gfx;
-/// The Graphics Engine's named constants (render states, pixel formats, fonts, clip planes) for its C++ headers.
-pub mod gestate;
 /// The crate ee_gx before the restructure.
 /// cbindgen:ignore
 pub mod gx;

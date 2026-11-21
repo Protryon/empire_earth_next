@@ -23,13 +23,9 @@ static_assert(sizeof(short) == 2 && sizeof(float) == 4 && sizeof(double) == 8 &&
 
 // Open() access modes (names from NERecordPlayback.cpp's assert texts; values from its calls: Open(1) to read a
 // playback file, Open(2) to write a record file; FSBasicFile +0x34 stores the mode)
-enum FSFileAccess {
-    kFileAccessRead = 1,
-    kfsaRead = kFileAccessRead,  // spelled this way in the original's assert strings
-    kFileAccessWrite = 2,
-    kfsaWrite = kFileAccessWrite,  // spelled this way in the original's assert strings
-    kFileAccessReadWrite = 3,  // FSFileSpec::Open maps modes other than 1/2/4 to GENERIC_READ|GENERIC_WRITE; Read/Write test the 1/2 bits; GESurface::SaveAsJPG2 reopens with 3 (provisional name)
-    kFileAccessAppend = 4,   // FSFileSpec::Open: 4 -> GENERIC_WRITE, then SetFilePointer(FILE_END) when inAccess & 4; GESurface::SaveAsJPG opens with 4 (provisional name)
+enum {                                      // FSFileAccess is Rust's (rust/base/lle_enums.h)
+    kfsaRead = kFileAccessRead,             // spelled this way in the original's assert strings
+    kfsaWrite = kFileAccessWrite
 };
 
 class LLE_API FSFile {
