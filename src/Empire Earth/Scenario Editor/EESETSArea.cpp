@@ -183,7 +183,7 @@ extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEARX_LBUTTON_PRESSED: return UIManager::GetLMouseButton()->JustPressed();
     case EE_SCREENS_SEARX_LBUTTON_UNPRESSED: return UIManager::GetLMouseButton()->JustUnpressed();
     case EE_SCREENS_SEARX_NEW_PAINT:
-        *theOut = new EESEARust(kSEAPaintArea, NULL, i[0], i[1]);
+        *theOut = new EESEARust(EE_SCREENS_SEW_PAINT_AREA, NULL, i[0], i[1]);
         return 0;
     case EE_SCREENS_SEARX_BOUNDS_VIEW:
         gMouse->SetBounds(gViewport.GetViewRectangle());

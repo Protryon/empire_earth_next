@@ -99,8 +99,8 @@ extern "C" int32_t ee_screenscpp_sex(uint32_t inOp, void* const* p, int32_t* i, 
         return 0;
     case EE_SCREENS_SEX_PLACE_FIRST: static_cast<UIComboBox*>(SexEditor(p)->GetControlById(0x999))->SetCurrentSelection(0);
         return 0;
-    case EE_SCREENS_SEX_NEW_SAVE_ACTION: return SexOut(i, static_cast<EEAction*>(new EESEARust(kSEASave)));
-    case EE_SCREENS_SEX_NEW_TEST_ACTION: return SexOut(i, static_cast<EEAction*>(new EESEARust(kSEATest)));
+    case EE_SCREENS_SEX_NEW_SAVE_ACTION: return SexOut(i, static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_SAVE)));
+    case EE_SCREENS_SEX_NEW_TEST_ACTION: return SexOut(i, static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_TEST)));
     case EE_SCREENS_SEX_ASK_EXIT: gUIManager->DisplayYesNoCancel(gSefxText, 1, NULL, EESESaveBeforeExit, EESEExitWithoutSaving);
         return 0;
     case EE_SCREENS_SEX_CHECK_ID: return (int32_t)static_cast<UIControl*>(static_cast<UIEntity*>(p[0]))->GetId();

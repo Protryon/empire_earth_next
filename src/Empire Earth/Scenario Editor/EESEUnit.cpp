@@ -150,7 +150,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     UIControl* theShell = static_cast<UIControl*>(p[0]);
     void** theOut = static_cast<void**>(p[0]);
     switch (inOp) {
-    case EE_SCREENS_SEUN_OP_SORT_EVENT: *theOut = static_cast<UIEvent*>(new EESEERust(kSEESortUnitList)); return 0;
+    case EE_SCREENS_SEUN_OP_SORT_EVENT: *theOut = static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_SORT_UNIT_LIST)); return 0;
     case EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS:
         EEClearGateHighlights(gWorld.GetPlayer(theTab->mBuildGate.mPlayer), theTab->mBuildGate.mWallType);
         return 0;
@@ -289,16 +289,16 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         *theOut = static_cast<EEAction*>(new EESEALasso);
         return 0;
     case EE_SCREENS_SEUNX_ACTION_PLACE_UNIT:
-        *theOut = static_cast<EEAction*>(new EESEARust(kSEAPlaceUnit));
+        *theOut = static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_PLACE_UNIT));
         return 0;
     case EE_SCREENS_SEUNX_ACTION_PLACE_GATE:
-        *theOut = static_cast<EEAction*>(new EESEARust(kSEAPlaceGate));
+        *theOut = static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_PLACE_GATE));
         return 0;
     case EE_SCREENS_SEUNX_ACTION_PLACE_WALL:
-        *theOut = static_cast<EEAction*>(new EESEARust(kSEAPlaceWall));
+        *theOut = static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_PLACE_WALL));
         return 0;
     case EE_SCREENS_SEUNX_ACTION_MOVE_UNIT:
-        *theOut = static_cast<EEAction*>(new EESEARust(kSEAMoveUnit));
+        *theOut = static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_MOVE_UNIT));
         return 0;
     case EE_SCREENS_SEUNX_SELECT_UNITS:
         *theOut = new EEUICSelectUnits(
@@ -560,7 +560,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEUNX_KEY_DOWN: return static_cast<ISEntity*>(p[1])->GetValue() != 0;
     case EE_SCREENS_SEUNX_DELETE_ACTION:
         *theOut = static_cast<EEAction*>(
-            new EESEARust(kSEADeleteUnit, NULL, -1, gWorld.GetCurrentPlayer()->GetPlayerID(), i[0] != 0));
+            new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, -1, gWorld.GetCurrentPlayer()->GetPlayerID(), i[0] != 0));
         return 0;
     }
     return 0;
