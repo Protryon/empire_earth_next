@@ -143,11 +143,6 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
     }
 }
 
-// The recorder's and the server's queue calls out: the common ones (its callback is the Rust server's own)
-ptrdiff_t NESynchronousServer::QueueHost(void*, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
-{
-    return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
-}
 
 // The server's calls out, each the statement NESynchronousServer.cpp made (the protocol ops are the Rust's own:
 // ee_net ffi_protocol.rs)

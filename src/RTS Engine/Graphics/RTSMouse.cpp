@@ -68,19 +68,13 @@ RTSMouse::~RTSMouse()
 }
 void RTSMouse::SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin) { RTSMouseFrameCall(this, 1, inSurface, &inOrigin, false); }
 long RTSMouse::RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, bool inIsWindowed) { return RTSMouseFrameCall(this, 3, inSurface, &inOrigin, inIsWindowed); }
-long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface) { return ee_rts_mouse_load_pointer(inFile, inScreen, reinterpret_cast<void**>(ioSurface)); }
-long RTSMouse::Load(GEScreen* inScreen) { return ee_rts_mouse_load(this, inScreen); }
 void RTSMouse::Draw(GESurface* inSurface, const GE2DPoint& inOrigin) { RTSMouseFrameCall(this, 2, inSurface, &inOrigin, false); }
-void RTSMouse::BeginFrame() { ee_rts_mouse_begin_frame(this); }
-void RTSMouse::EndFrame() { ee_rts_mouse_end_frame(this); }
-void RTSMouse::ClampPosition() { ee_gfx_mouse_clamp(reinterpret_cast<EeGe2DPoint*>(&this->mPosition), reinterpret_cast<const EeGeRectangle*>(&this->mBounds)); }
 // the pointer textures, both save-under surfaces and the frame's pointer released; 0
 long RTSMouse::Release()
 {
     RTSMouseFrameCall(this, 6, NULL, NULL, false);
     return 0;
 }
-void RTSMouse::Update() { ee_rts_mouse_update(this); }
 
 // The shims mouse.rs calls (MouseCpp)
 extern "C" {

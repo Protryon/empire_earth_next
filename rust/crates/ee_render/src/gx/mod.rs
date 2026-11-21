@@ -27,7 +27,7 @@ pub mod surface;
 pub mod uniform;
 
 #[cfg(not(test))]
-mod ffi;
+pub(crate) mod ffi;
 
 #[cfg(test)]
 mod fake;

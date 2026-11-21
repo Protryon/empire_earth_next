@@ -6,6 +6,7 @@
 // Provisional unless an assert names them. Requires lle/LowLevelEngine.h, ee/EEMouse.h.
 #ifndef EE_RTSMOUSEPOINTER_H
 #define EE_RTSMOUSEPOINTER_H
+#include "rust/game/rts.h"
 
 class GESurface;
 class GEWindow;
@@ -20,9 +21,11 @@ public:
     RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority);
     virtual ~RTSMousePointer();             // +0x00 (??_G 0x11b628; dtor 0x11b644)
 
-    static unsigned long Main(void* inPointer);   // 0x11b66d (the thread function)
+    // 0x11b66d (the thread function)
+    static unsigned long Main(void* inPointer) { return ee_rts_mouse_pointer_main(inPointer); }
     // 0x11b813: the thread's messages 0x401 (end), 0x402/0x404 (mB1C off/on), 0x405 (mU04 = the surface)
-    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
+    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
+        { ee_rts_mouse_pointer_handle_message(this, inMessage, inParameter1); }
 
     GESurface* mSurface;                    // +0x04 (the surface the pointer is drawn on)
     TSThread* mThread;                      // +0x08

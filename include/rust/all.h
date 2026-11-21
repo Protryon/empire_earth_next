@@ -12,6 +12,7 @@
 #include "rust/base/input.h"
 #include "rust/base/math.h"
 #include "rust/base/png.h"
+#include "rust/base/random.h"
 #include "rust/base/sparse.h"
 #include "rust/base/time.h"
 #include "rust/base/ts.h"
