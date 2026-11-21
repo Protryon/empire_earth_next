@@ -662,7 +662,11 @@ pub extern "C" fn ee_gamecpp_pch_repair(helper: *mut c_void) -> c_long {
         }
         if cal(calamity).mHasTargetUnit {
             let target = hp(O::WorldUnit, 0, &[cal(calamity).mTargetUnitID as i64]);
-            h(O::CalSetTarget, calamity, &[pa(target)]);
+            super::calamity_objects::ee_gamecpp_calamity_set_unit(
+                calamity as *mut std::ffi::c_void,
+                target as *mut std::ffi::c_void,
+                true,
+            );
             if target == 0 {
                 error = 3;
             }
