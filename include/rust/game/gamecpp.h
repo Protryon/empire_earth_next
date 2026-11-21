@@ -670,6 +670,306 @@ enum class EeGameCpp : uint32_t {
   EffCount,
   EffDestroyedCount,
   HelperUpdate,
+  StTail,
+  StTeamsClear,
+  StLoadedPlayersClear,
+  StChecksumReset,
+  StPlayersClear,
+  StDeleteMap,
+  StDeleteScenario,
+  StDeleteEffects,
+  StDeleteCalamity,
+  StDeleteEnvironment,
+  StRestorablesClear,
+  StRestorableCount,
+  StRestorableRepair,
+  StOptionsPtr,
+  StPlayersResize,
+  StPlayerSet,
+  StNewMap,
+  StNewScenarioManager,
+  StNewEffectManager,
+  StNewCalamityHelper,
+  StNewEnvironmentManager,
+  CalamityHelperReset,
+  OptFields,
+  OptPlayer,
+  OptPlayerFields,
+  OptPlayerAssign,
+  OptPlayerCopyName,
+  OptMapType,
+  OptCampaignNameLength,
+  OptGetCampaignMapName,
+  OptCopyCampaignName,
+  OptCopyScenarioName,
+  OptSetMapName,
+  OptGetMapDimensions,
+  OptAssign,
+  ResString,
+  ResStringVerify,
+  StrFormatFileError,
+  StrAssignEmpty,
+  ArchiveNew,
+  ArchiveDelete,
+  ArchiveSet,
+  DataPathAddArchive,
+  DataPathFindFile,
+  SetDataPaths,
+  UiSetLoadingText,
+  UiRandomSeed,
+  FileSpecNew,
+  FileSpecDelete,
+  FileSpecSetVolumeStartup,
+  FileSpecSetStartupData,
+  FileSpecSetFileW,
+  FileOpenReadSpec,
+  CampaignNew,
+  CampaignDelete,
+  CampaignFileName,
+  CampaignLoad,
+  ValidateSaveGameFile,
+  LoaderNew,
+  LoaderDelete,
+  LoaderLoad,
+  PlSetNameFromSlot,
+  CpSetReplaceOnLoad,
+  NewWorldPlayer,
+  NewHumanPlayerNamed,
+  CpEngineResolve,
+  CpEngineSet,
+  WorldTableLong,
+  PlSetCivilizationPoints,
+  ResourceLevelAmount,
+  RulesSpeedCount,
+  RulesSpeedDefault,
+  RulesSpeedFactor,
+  VecPlayersNew,
+  VecPlayersDelete,
+  VecPlayersPush,
+  VecPlayersSize,
+  CreateRandomMap,
+  EpochCount,
+  RandomNew,
+  RandomDelete,
+  RandomSetSeed,
+  RandomGenerate,
+  LobbyWriteLock,
+  LobbyWriteUnlock,
+  LobbyMapTypeScenDefault,
+  PhysicsPresent,
+  CxSetPoolSize,
+  ActionDereference,
+  AttackPlayers,
+  BehaviorAt,
+  BuildGate,
+  CameraSetZoom,
+  CameraUpdate,
+  CanPlace,
+  CheatApply,
+  CivRequestUpgrades,
+  ClientFastID,
+  ClientFastLast,
+  ClientFastLockEnter,
+  ClientFastLockLeave,
+  ClientSetMigrating,
+  ClientSetNormalPlayback,
+  ClientSetSlowPlayback,
+  CommIsClient,
+  CommIsGamePaused,
+  CommPresent,
+  CommProcessLocal,
+  CommSendLoadMainScreenResponse,
+  CommSetHumans,
+  CommSetMultiplayer,
+  CpEngineChoiceCount,
+  CxBehavior,
+  CxClearAllGoalQueues,
+  CxGoFanatic,
+  CxHasCargo,
+  CxNumCargoUnits,
+  CxQueueAddTime,
+  CxQueueBack,
+  CxQueueGoal,
+  CxQueueSize,
+  CxRemoveResearch,
+  CxSetBehavior,
+  CxSetHomeBase,
+  CxSetIsPacked,
+  CxSetLocked,
+  CxToggleJit,
+  CxUnloadCargoNow,
+  CxUpdateJit,
+  EffSetLocalTo,
+  EventDereference,
+  FormationCreate,
+  FormationDereference,
+  FormationSetB5C,
+  GameLogChat,
+  GameUiShowCommands,
+  GateFourthPart,
+  GateSecondPart,
+  GfxIsPaused,
+  GfxPostPause,
+  GfxPostResume,
+  GfxPostSetFlag5B,
+  GoalAsUnload,
+  GoalClone,
+  GoalCreationTime,
+  GoalHasLocation,
+  GoalIsAttackGround,
+  GoalIsAttackUnit,
+  GoalIsBuildRepair,
+  GoalIsGather,
+  GoalIsLoadGarrison,
+  GoalLocation,
+  GroupCount,
+  GroupFormationType,
+  GroupSetFormation,
+  GroupUnit,
+  IsMouseBuffered,
+  IsMouseRefresh,
+  LobbyOptPlayer,
+  LobbyReadLock,
+  LobbyReadUnlock,
+  MainFormGroup0,
+  MainFormSetButtonBlinking,
+  MainFormSetCursorLocked,
+  MainFormSetInfoBlinking,
+  MainFormSetUiState,
+  MainFormUpdateHelp,
+  MainGroupReset,
+  MapGroundPoint,
+  MouseGetPosition,
+  MouseSetPointer,
+  MouseSetPosition,
+  MouseSetShiftMode,
+  MouseUpdate,
+  MsgField,
+  MsgLoadSavedGame,
+  MsgOrigin,
+  MsgSaveGame,
+  MsgSender,
+  MsgSetOrigin,
+  MsgStartLoading,
+  MsgString,
+  NewChatAction,
+  NewLoadMainScreenRecord,
+  NewLoadSaveResponse,
+  NewLocationGoal2D,
+  NewStartGameRecord,
+  NewTimerExpiredEvent,
+  PatrolGroupSelect,
+  PhysClearF84,
+  PhysFlushWorld,
+  PhysPost,
+  PhysQueueMessage,
+  PhysSetSeed,
+  PhysSetSlowPlayback,
+  PlActiveGroup,
+  PlAddAndRemoveSelectedIds,
+  PlAddEvent,
+  PlAddResource,
+  PlAddSelectedId,
+  PlAddSelectedIds,
+  PlAddTribute,
+  PlAssignSavedGroup,
+  PlCanBuy,
+  PlCivAddUpgrades,
+  PlClearSavedGroup,
+  PlCopyAllies,
+  PlCountQueuedImprovements,
+  PlFlareReceived,
+  PlGetSlot,
+  PlIncrementEpic,
+  PlName,
+  PlPlayAcknowledgement,
+  PlQueueImprovement,
+  PlRefundDelete,
+  PlRefundTechnology,
+  PlRemoveQueuedImprovement,
+  PlRemoveSelectedId,
+  PlSavedGroupAt,
+  PlSavedGroupsSet,
+  PlSelectId,
+  PlSelectIds,
+  PlSelectedCopyActive,
+  PlSelectedGroup,
+  PlSetGameResult,
+  PlSetHackUnitClass,
+  PlSetSelectedViewedUnit,
+  PlTakeResource,
+  PlUnselectAll,
+  PlaceUnit,
+  PlayForLocalSelectionSound,
+  PreloadLoadClass,
+  PreloadUnloadClass,
+  ReplaceUnit,
+  ResChatText,
+  ScenarioSetLastChat,
+  SelGroupFirstUnit,
+  SelGroupSavedGroup,
+  SelGroupSelectSaved,
+  SelGroupSetFormation,
+  ServerClearSendToSlots,
+  ServerFastID,
+  ServerFastLast,
+  ServerFastLockEnter,
+  ServerFastLockLeave,
+  ServerGetSendToSlot,
+  ServerLogResponse,
+  ServerSendPlayerSlotInfo,
+  ServerSetGameState,
+  ServerSetLoadResponses,
+  ServerSetLoadState,
+  ServerSetMigrating,
+  ServerSetSendToSlotForPlayer,
+  SimSeed,
+  SimSeedSet,
+  Sleep,
+  SoundObjectPlay,
+  StrAppendC,
+  StrAppendSpace,
+  StrAppendStr,
+  StrAssignMsg,
+  StrFormatS,
+  StrFormatSS,
+  StrFormatSSS,
+  StrLength,
+  StrNew1K,
+  TimeNow,
+  TrimAutoSaves,
+  UcAsGate,
+  UcIsTransport,
+  UcReplantFarm,
+  UcUnloadFailedText,
+  UiAddChat,
+  UiAddChatGameLine,
+  UiAddChatMsgLine,
+  UiAddChatPlayerLine,
+  UiCloseForm,
+  UiPostAction,
+  UiPostEvent,
+  UiPostLobbyUpdateGameOptions,
+  UiPostLobbyUpdatePlayer,
+  UiPostStartLoading,
+  UiSetLagStatus,
+  UiSetLoadPercent,
+  UiShowLoadSaveError,
+  UiSwapToMainGame,
+  UiSwapToScenarioEditor,
+  UiUpdateJit,
+  UnGetClass,
+  UnTreeTechnology,
+  UnloadGoalTransport,
+  VecCivUpgradesDelete,
+  VecCivUpgradesOfMsg,
+  VecLongDelete,
+  VecLongNew,
+  VecPlayersAt,
+  VotingPropose,
+  WCanBuyCivilization,
+  WRemovePlayerFromGame,
+  WSetDiplomaticStanceCall,
 };
 
 extern "C" {
@@ -1015,6 +1315,126 @@ long ee_gamecpp_calamity_can_cast_at(void *kl,
                                      unsigned long y,
                                      bool check,
                                      void *target_unit);
+
+/// The loading started: the random generator seeded, the human player count and the multiplayer flag set (members:
+/// the humans, the seed). EEStartLoading (C++) runs it: the legacy harness's seed pin breaks there.
+void ee_gamecpp_msg_start_loading(void *m);
+
+/// The record type's body the C++ kept, by its EE_NETMSG_BODY_* index (ee_sim netmsg bodies.rs).
+void ee_gamecpp_msg_body(int64_t index, void *m);
+
+/// The saved game's request (the old EEMLoadOrSaveGame::LoadOrSave; EEPhysics::ServeLoadSaveRequests): the game
+/// saved under the requested name, the auto-saves rotated for an auto-save, the mouse restored and an error box
+/// shown on failure; the request's tick.
+long ee_gamecpp_msg_load_or_save(void *m);
+
+/// EE_NETMSG_OP_WORLD_ACT: the lobby's, the loading's, the chat's and the world's one calls (a the sender, b the
+/// local player where the act names them).
+///
+/// # Safety
+/// `i` points to the host call's integers, `f` to its floats.
+void ee_gamecpp_msg_world_act(void *m,
+                              const int64_t *i,
+                              const float *f,
+                              void *a,
+                              void *b);
+
+/// EE_NETMSG_OP_CHAT_TEXT: text `i0` of the chat table posted as kind `i1` (when `i2`, only a non-empty one).
+void ee_gamecpp_msg_chat_text(int64_t text,
+                              int64_t kind,
+                              int64_t nonempty);
+
+/// EE_NETMSG_OP_SOUND: sound `index` of the host's table played, if it is loaded.
+void ee_gamecpp_msg_sound(int64_t index);
+
+/// EE_NETMSG_OP_SELECT_LIST: the ids added to and removed from (0), added to (1) or made (2) the player's selection.
+///
+/// # Safety
+/// `ids` points to `count` ids.
+void ee_gamecpp_msg_select_list(void *pl,
+                                int64_t how,
+                                const int32_t *ids,
+                                int64_t count);
+
+/// EE_NETMSG_OP_SELECT: one unit removed from (0), added to (1) or made (2) the selection, or none selected.
+void ee_gamecpp_msg_select(void *pl,
+                           int64_t how,
+                           int64_t id);
+
+/// EE_NETMSG_OP_RESOURCE: a resource added (0), taken (1), traded (2) or a tribute recorded.
+void ee_gamecpp_msg_resource(void *pl, int64_t how, int64_t r, int64_t amount, int64_t from);
+
+/// EE_NETMSG_OP_DISBAND: the unit's technology refunded at the factor, the disband emitter played and the unit
+/// killed.
+void ee_gamecpp_msg_disband(void *pl,
+                            void *u,
+                            float factor);
+
+/// EE_NETMSG_OP_DELETE_REFUND: a deleted unit's technology refunded at the delete refund factor.
+void ee_gamecpp_msg_delete_refund(void *u);
+
+/// EE_NETMSG_OP_UNIT_ACT: a unit's one action (`class` the unit class or player the act names, `u` the unit).
+///
+/// # Safety
+/// `i` points to the host call's integers.
+void ee_gamecpp_msg_unit_act(const int64_t *i,
+                             void *a,
+                             void *u);
+
+/// EE_NETMSG_OP_PLAYER_ACT: a player's one action.
+///
+/// # Safety
+/// `i` points to the host call's integers.
+void ee_gamecpp_msg_player_act(const int64_t *i, void *pl);
+
+/// EE_NETMSG_OP_SELECTION: the communications object's fast-selection state (the server's or the client's).
+///
+/// # Safety
+/// `i` points to the host call's integers.
+int64_t ee_gamecpp_msg_selection(const int64_t *i,
+                                 void *pl);
+
+/// EE_NETMSG_OP_CAN_PLACE: whether the player can place the unit type at the tile (none off the map).
+bool ee_gamecpp_msg_can_place(void *pl,
+                              int64_t unit_type,
+                              int64_t x,
+                              int64_t y,
+                              int64_t tx,
+                              int64_t ty);
+
+/// EESendGroupCommand: the local command markers of a group order (move 0xb8, attack 0xb9, target 0xba, unload
+/// 0xbb) shown on the goal the units just queued, else on the first unit whose last goal fits.
+void ee_gamecpp_msg_group_command(void *group,
+                                  void *target,
+                                  unsigned long player_id,
+                                  long command,
+                                  long goal_queue);
+
+/// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
+/// fresh checksum).
+void ee_gamecpp_state_init(void *st);
+
+/// EEGameState::Reset: the map, the managers and the player list forgotten (not deleted).
+void ee_gamecpp_state_reset(void *st);
+
+/// EEGameState::Clear: the map, the scenario, effect, calamity and weather managers and every player deleted, then
+/// the state's defaults (Init) and Reset.
+void ee_gamecpp_state_clear(void *st);
+
+/// EEGameState::RepairRestorables: every restorable repairs its pointers with the loaded save's versions.
+void ee_gamecpp_state_repair_restorables(void *st);
+
+/// EEGameState::SetCalamityHelper: the old helper reset and deleted (unless it is the new one).
+void ee_gamecpp_state_set_calamity_helper(void *st, void *helper);
+
+/// EEGameState::SetEnvironmentManager: the old manager deleted.
+void ee_gamecpp_state_set_environment(void *st, void *manager);
+
+/// EEGameState::Create: a saved game, scenario or campaign scenario loaded (the error message set on failure), or
+/// the players, teams, managers and random map of a new game made; whether it succeeded.
+bool ee_gamecpp_state_create(void *st,
+                             void *opt,
+                             void *err);
 
 /// The ctor's members (the world layout registered first; the ghost lock made; the statistics reset).
 void ee_gamecpp_world_init(void *w);
