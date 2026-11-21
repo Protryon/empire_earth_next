@@ -357,14 +357,13 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+pub(crate) mod cursor_calls;
+pub(crate) mod dialog_calls;
 pub(crate) mod lobby_calls;
 pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
-pub(crate) mod unit_hack_calls;
-pub(crate) mod cursor_calls;
-pub(crate) mod dialog_calls;
-pub(crate) mod screens_more_calls;
 pub(crate) mod screens_calls;
+pub(crate) mod screens_more_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
@@ -389,6 +388,7 @@ pub mod ui_thread;
 #[cfg(not(test))]
 mod ui_thread_ffi;
 pub mod unit_hack;
+pub(crate) mod unit_hack_calls;
 #[cfg(not(test))]
 mod unit_hack_ffi;
 pub mod upgrade;
