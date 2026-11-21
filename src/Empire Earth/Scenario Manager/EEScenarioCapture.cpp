@@ -112,8 +112,8 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_PLAYER_SEES_ALL: return SP(inP)->mSeesAll;
     case EE_SCENARIO_CAP_PLAYER_OBSERVER: return SP(inP)->mObserverMode;
     case EE_SCENARIO_CAP_PLAYER_ENEMY: return (int64_t)SP(inP)->mEnemies[(size_t)inA];
-    case EE_SCENARIO_CAP_PLAYER_PENDING_GROUPS: return (int64_t)SP(inP)->mPendingGroups.size();
-    case EE_SCENARIO_CAP_PLAYER_RUNNING_GROUPS: return (int64_t)SP(inP)->mRunningGroups.size();
+    case EE_SCENARIO_CAP_PLAYER_PENDING_GROUPS: return (int64_t)SP(inP)->GetNumPendingGroups();
+    case EE_SCENARIO_CAP_PLAYER_RUNNING_GROUPS: return (int64_t)SP(inP)->GetNumRunningGroups();
     case EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS: return (int64_t)SP(inP)->mPatrolGroups.size();
     case EE_SCENARIO_CAP_PLAYER_CIV_AVAILABLE: return (int64_t)SP(inP)->mCivilization.mAvailablePoints;
     case EE_SCENARIO_CAP_PLAYER_CIV_MAX: return (int64_t)SP(inP)->mCivilization.mMaxPoints;
