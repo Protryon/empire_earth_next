@@ -36568,3 +36568,84 @@ type enums (376 enumerator lines) are declarations, not logic, but the tool coun
   buffers, EELobbyGameHost.cpp), the glue host's own multi-statement cases, the Internet logics' hosts (AccountLogic,
   InitLogic, RoutingLogic: a golden over round 29's lobbyops world), the control configs as cfgtab kinds, round 28's
   list (the UDP subclasses, ServerConnectionConnectOp, RecvChunkOp, the routing completions).
+
+## The scenario editor lane, round 4: EEEvent's handlers, the editor's hosts (form, tabs, trigger family, load thread), the effect texts, the manager's IO and the trigger's members composed in Rust over one-statement C++ (ee_sim scenario event.rs, effect_text.rs, manager_compose.rs, trigger_members.rs, object_reads.rs; ee_game editor_*x.rs; branch rust-seditor4, 2026-11-20)
+
+The brief: carry round 3's composition (a C++ statement sequence rebuilt in Rust at the C ABI adapter from
+one-statement C++ shims, in the C++'s order) across the rest of the lane, with forks working in parallel in nested
+worktrees. **Logic lines -3,168** (85,861 at effb22404 -> 82,693 with the round; `logic_lines.py`, whole
+repository), net C++ lines -1,323. Rust about +14,900 lines, tests included.
+
+### What moved (commits)
+
+| Commit | What | Logic | Net C++ |
+|---|---|---|---|
+| 242e8bcd6 | the load thread, the text export/import, the player tab's civilization and diplomacy, the maker's texts and lines, the brush group (`editor_selt.rs`, `editor_seplx.rs`) | -395 | -263 |
+| 4665c3212 | EEEvent's `Trigger`, `RunEffect` and every handler, the pathfinding functor's step, `LoadEvents` (`event.rs`; 11 tests) | -448 | -413 |
+| f3845bfb4 | the trigger tab family: `SeetOp`, the object, trigger, area, instructions screens and the tab (`editor_trigx.rs`; 35 tests) | -596 | -39 |
+| d193e3af0 | the form's host and `Close`, the map, elevation and events hosts, the upgrade panel (`editor_sefmx.rs`, `editor_tabsx.rs`, `editor_calls.rs`) | -677 | -335 |
+| 698146f2f | the unit tab's and the terrain tab's hosts, the terrain list boxes' draws (`editor_seunx.rs`, `editor_setnx.rs`) | -424 | +117 |
+| 02f96bdb5 | a class attribute's world calls, `EESMStoreAI` whole (ee/EESMAIFields.h deleted), the dialog message's Load/Save, the host's reads (`ca_compose.rs`, `ai_store.rs`, `read_compose.rs`) | -216 | -207 |
+| 5adc980fe | the effect run's texts, sounds, dialogue, chat, calamity tests, camera key, Change Unit's garrison and kill; `EESMEffect::Reset`/`Copy` (`effect_text.rs`, `effect_copy.rs`) | -112 | -26 |
+| 6879501fe | the manager's destructor, pending copies, timed flag, camera step, object change, round capture, the save's element loads and message vector, the list and text hosts' cases (`manager_compose.rs`) | -110 | -61 |
+| 28253224d | `EESMTrigger`'s members as one-line forwards, the object and host reads, the tile lists, StreamIO's trigger entries, the SMAR tiles' hash (`trigger_members.rs`, `object_reads.rs`) | -190 | -96 |
+
+The first five are forks of the round's base, merged together (their sum is the merge's, -2,540); the last four
+sit on 02f96bdb5. `ee_screenscpp_sefm` and `ee_screenscpp_seel` are gone.
+
+### Lessons
+
+- **A C++ class derived from a Rust field record needs shims only for calls and lookups.** EEPlayer's, the unit
+  class's, the upgrade's, the computer player's and the effect's numbers live in `#[repr(C)]` records the C++
+  classes derive from (`EeScenarioEffectFields`, the tech records): the Rust reads and writes them through the
+  pointer the context hands over, and a shim exists only where the C++ calls a method or looks an object up.
+- **Prefix even private consts.** cbindgen moves shared definitions between the generated headers, so a private
+  `const` with a generic name can land in (and clash in) another module's header. Every const carries the module's
+  prefix (`EE_SCENARIO_WY_*`, `EE_SCREENS_SEUNX_*`), private or not.
+- **clippy `-D warnings` is required on composition modules.** A dropped glob import (`use super::consts::*`) left
+  every `EE_..._X =>` arm of a `match` a catch-all binding (a name pattern binds anything): it compiled with
+  warnings only, and the first arm answered every op. clippy with `-D warnings` turns those into errors; run it on
+  every composition module, not only `cargo test`.
+- **`GetHerdsOfType` and `GetNodeIDs` append.** A static vector replacing the original's function-local one must be
+  cleared by its own statement before each fill (`sSMEHerds`, `sSepxIDs`, `sSeetTechs`, the run's `mNodeIDs`);
+  round 3's tripled tech lists were the same bug.
+- **A friend extern "C" function needs `friend int32_t (::name)(...)`.** The statement hosts reach private members
+  of the classes they serve (the terrain list boxes, the terrain tab). The friend must name the global extern "C"
+  declaration by its qualified name, and `friend int32_t ::name(...)` parses as `int32_t::name`: the parentheses,
+  `friend int32_t(::ee_screenscpp_setnx)(...)`, keep the `::` with the name (`ee/EEUIFSETerrain.h`).
+- **Give parallel forks their op ranges up front.** Forks sb and sc both took `EE_SCENARIO_IO_* = 22` on the stream
+  channel (sb's manager statements 22..31, sc's trigger). Each built and passed alone; merged, C++'s `StreamIO`
+  answered 22 as the trigger before the manager's cases were reached. The merge moved the trigger to 32. The world
+  channel's ranges (WX, WC, WK, RX, WY, WZ) were disjoint by luck; the progress file now lists every range.
+
+### What exercises what
+
+- The oracle runs `EEScenarioManager::Update` and EEEvent's handlers (every tech event of every game, with their
+  EVAT/EVRN capture records in place); the scenario capture profile (43 digests) and scenario_check (27/27) run the
+  effects, the texts and dialogue, the manager's save/load and the trigger's members; the saveload runs save and load
+  the manager's lists and dialog messages.
+- The editor gate (14,448 lines) drives the form, every tab, the trigger screens, terrain and placement through
+  EE-SIM without drawing; the editor tour draws the editor's first frame.
+- Only a person reaches: the load thread's posts, the text export/import dialogs, the unit tab's mouse previews and
+  hold/cancel, the terrain paint control's drag, the diplomacy events' clicks, the drawing of every tab past the
+  first frame.
+
+### Behaviour changes
+
+- A damaged save whose dialog message count fails to read now resizes the message vector to 0 (the original resized
+  it to the uninitialised count). No other change observed.
+
+### Gates
+
+On the final tree (the round merged with origin/rust a84903ce6, batch 12): the `--sim` build 0/0 (EE-AOC, EE-SIM) and
+the test profile 0/0; the Rust gate PASS (5,437 tests, no reruns needed); the oracle at seeds 2-7 identical; the
+twelve capture profiles at seeds 2-3 PASS (scenario 43, oracle 212, late 214, space 210, calamity 222, units 175,
+effects 6, missile 22, app 26, transport 185, groups 2, placement 4 digests); the plain saveload (`--seeds 2-7 --at
+600,1350,2100`) 18/18 identical, exit 0; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+tools/saveload_expect.txt`) exit 0, `saveload expect: PASS` (calamity 3/4, next 2/4 as the expect file has them);
+scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS;
+the editor tour PASS, its frames equal to the base build's (origin/rust 0d42f70a3) but for the game view and the mini
+map (the blank map's grass varies by run) and the main menu's version number, the UI state files equal but for the
+clocks; `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap
+PT 13629` units [4, 43, 42] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2747
+joiner=2750`, GATES PASS. The same set passed on the tree merged with origin/rust 0d42f70a3 before batch 12 landed.
