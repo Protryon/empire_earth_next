@@ -164,15 +164,17 @@ impl EeUtilPool {
         if self.chunk_count >= self.max_chunks {
             return false;
         }
-        if self.chunks.is_none() {
-            self.set_size(self.chunk_size, self.max_chunks, 1);
-        } else {
-            let i = self.chunk_count as usize;
+        let i = self.chunk_count as usize;
+        if self.chunks.is_some() {
             let chunk = Chunk::new(&self.host, self.chunk_size);
-            self.chunks.as_mut().expect("chunks")[i] = Some(chunk);
+            if let Some(chunks) = &mut self.chunks {
+                chunks[i] = Some(chunk);
+            }
             self.current = Some(i);
             self.last = Some(i as isize);
             self.chunk_count += 1;
+        } else {
+            self.set_size(self.chunk_size, self.max_chunks, 1);
         }
         true
     }
@@ -230,7 +232,7 @@ impl EeUtilPool {
     }
 
     /// `Delete`: back to its chunk, or `delete` for an object of `new T`.
-    pub fn delete(&mut self, object: *mut c_void) {
+    pub(crate) fn delete(&mut self, object: *mut c_void) {
         for i in 0..self.chunk_count as usize {
             let index = self.index_in(object, i);
             if index < self.chunk_size {
@@ -277,7 +279,9 @@ impl EeUtilPool {
         if self.chunks.is_some() {
             for i in (0..self.chunk_count as usize).rev() {
                 let c = self.chunk(i);
-                out.extend(c.used().into_iter().map(|u| (c.objects as *mut u8).wrapping_add(u * self.elem) as *mut c_void));
+                out.extend(
+                    c.used().into_iter().map(|u| (c.objects as *mut u8).wrapping_add(u * self.elem) as *mut c_void),
+                );
             }
         }
         out
@@ -423,7 +427,11 @@ pub unsafe extern "C" fn ee_util_pool_dump_stats(pool: *mut EeUtilPool, type_nam
         return;
     }
     // SAFETY: the contract
-    let name = if type_name.is_null() { String::new() } else { unsafe { CStr::from_ptr(type_name) }.to_string_lossy().into_owned() };
+    let name = if type_name.is_null() {
+        String::new()
+    } else {
+        unsafe { CStr::from_ptr(type_name) }.to_string_lossy().into_owned()
+    };
     let text = with_pool!(pool, return, |p| p.stats(&name));
     let mut bytes = text.into_bytes();
     bytes.push(0);

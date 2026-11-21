@@ -143,7 +143,7 @@ macro_rules! cpp_shims {
         }
 
         #[cfg(not(test))]
-        #[allow(clippy::too_many_arguments)]
+        #[allow(clippy::too_many_arguments, clippy::not_unsafe_ptr_arg_deref)]
         impl $trait for $crate::shim::ShimFfi {
             $( fn $name(&mut self, $($arg: $ty),*) $(-> $ret)? {
                 extern "C" {

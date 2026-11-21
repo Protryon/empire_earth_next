@@ -394,8 +394,11 @@ mod ffi {
     /// `values` holds `count`.
     #[no_mangle]
     pub unsafe extern "C" fn ee_ne_record_fill_u32(record: *mut c_void, values: *const u32, count: usize) {
-        let v: Vec<i64> =
-            if count == 0 { Vec::new() } else { unsafe { core::slice::from_raw_parts(values, count) }.iter().map(|&x| x as i64).collect() };
+        let v: Vec<i64> = if count == 0 {
+            Vec::new()
+        } else {
+            unsafe { core::slice::from_raw_parts(values, count) }.iter().map(|&x| x as i64).collect()
+        };
         unsafe { fill(&mut Ffi, record as usize, &v, &[]) }
     }
 

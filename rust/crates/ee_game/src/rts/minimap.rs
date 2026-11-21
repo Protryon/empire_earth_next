@@ -46,7 +46,13 @@ const FORMAT_A4R4G4B4: c_ulong = 2;
 const MIP_NONE: c_ulong = 0;
 const ADDRESSING_CLAMP: c_ulong = 0;
 
-fn description(kind: c_ulong, format: c_ulong, depth: c_ulong, volatility: c_ulong, side: c_ulong) -> ee_render::ge::texobj::EeGeSurfaceDescription {
+fn description(
+    kind: c_ulong,
+    format: c_ulong,
+    depth: c_ulong,
+    volatility: c_ulong,
+    side: c_ulong,
+) -> ee_render::ge::texobj::EeGeSurfaceDescription {
     ee_render::ge::texobj::EeGeSurfaceDescription {
         kind,
         pixel_format: format,
@@ -194,7 +200,13 @@ mod ffi {
             let mut e = expression.to_vec();
             e.push(0);
             // SAFETY: C strings
-            unsafe { ee_base::error::ee_error_verify(c"C:\\EEX\\RTS Engine\\Map\\RTSMiniMap.cpp".as_ptr(), line, e.as_ptr().cast()) };
+            unsafe {
+                ee_base::error::ee_error_verify(
+                    c"C:\\EEX\\RTS Engine\\Map\\RTSMiniMap.cpp".as_ptr(),
+                    line,
+                    e.as_ptr().cast(),
+                )
+            };
         }
     }
 
@@ -257,7 +269,9 @@ mod tests {
         let (mut w, mut h): (c_long, c_long) = (0, 0);
         let mut grid = vec![1u8; 0x1000];
         let mut c = ShimFake::default();
-        for (i, n) in ["terrain_slot", "world_slot", "unit_slot", "terrain_lock_slot", "unit_lock_slot"].into_iter().enumerate() {
+        for (i, n) in
+            ["terrain_slot", "world_slot", "unit_slot", "terrain_lock_slot", "unit_lock_slot"].into_iter().enumerate()
+        {
             c.answer(n, &[&mut slots[i] as *mut _ as i64; 4]);
         }
         c.answer("flags_slot", &[&mut flags_slot as *mut _ as i64]);

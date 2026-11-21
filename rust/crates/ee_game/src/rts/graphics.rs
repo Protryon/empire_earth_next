@@ -171,8 +171,13 @@ pub trait GraphicsPlat {
     fn thread_set_priority(&mut self, thread: *mut c_void, priority: i32) -> c_long;
     fn thread_set_name(&mut self, thread: *mut c_void, name: *const c_char);
     fn thread_post(&mut self, thread: *mut c_void, message: c_ulong, first: usize, second: usize) -> c_long;
-    fn thread_receive(&mut self, thread: *mut c_void, message: &mut c_ulong, first: &mut usize, second: &mut usize)
-        -> c_long;
+    fn thread_receive(
+        &mut self,
+        thread: *mut c_void,
+        message: &mut c_ulong,
+        first: &mut usize,
+        second: &mut usize,
+    ) -> c_long;
     fn fp_precision24(&mut self);
     fn fp_check24(&mut self);
     fn time(&mut self) -> c_ulong;
@@ -325,7 +330,13 @@ pub unsafe fn main_pass<C: GraphicsCpp, P: GraphicsPlat>(c: &mut C, p: &mut P, g
 ///
 /// # Safety
 /// `graphics` is the live object.
-pub unsafe fn handle_message<C: GraphicsCpp>(c: &mut C, graphics: usize, message: c_ulong, first: usize, second: usize) {
+pub unsafe fn handle_message<C: GraphicsCpp>(
+    c: &mut C,
+    graphics: usize,
+    message: c_ulong,
+    first: usize,
+    second: usize,
+) {
     let f = c.fields(graphics);
     let on = first != 0;
     unsafe {
@@ -485,6 +496,8 @@ pub unsafe fn render_lobby<C: GraphicsCpp, P: GraphicsPlat>(c: &mut C, p: &mut P
     let units = (target_width / 4).min(target_height / 3).max(1);
     let (box_width, box_height) = (units * 4, units * 3);
     let (box_left, box_top) = ((target_width - box_width) / 2, (target_height - box_height) / 2);
+    // the original's std::max(1, std::min(x, 4)), min then max (clamp panics on no input here, but keep the shape)
+    #[allow(clippy::manual_clamp)]
     let pixel_scale = (box_height as f32 * scale / lobby_height as f32).min(4.0).max(1.0);
     c.lobby_set_presentation(
         pixel_scale,
@@ -659,7 +672,9 @@ impl GraphicsPlat for Plat {
     }
     fn thread_post(&mut self, thread: *mut c_void, message: c_ulong, first: usize, second: usize) -> c_long {
         // SAFETY: a live thread
-        unsafe { ee_base::ts::ee_ts_thread_post(thread.cast(), message, first as *mut c_void, second as *mut c_void, true) }
+        unsafe {
+            ee_base::ts::ee_ts_thread_post(thread.cast(), message, first as *mut c_void, second as *mut c_void, true)
+        }
     }
     fn thread_receive(
         &mut self,
@@ -698,7 +713,11 @@ impl GraphicsPlat for Plat {
             e.push(0);
             // SAFETY: C strings
             unsafe {
-                ee_base::error::ee_error_verify(c"C:\\EEX\\RTS Engine\\Graphics\\RTSGraphics.cpp".as_ptr(), line, e.as_ptr().cast())
+                ee_base::error::ee_error_verify(
+                    c"C:\\EEX\\RTS Engine\\Graphics\\RTSGraphics.cpp".as_ptr(),
+                    line,
+                    e.as_ptr().cast(),
+                )
             };
         }
     }
@@ -937,13 +956,34 @@ mod tests {
         let mut c = fake(&mut f);
         c.answer("u38", &[0x81]);
         unsafe { render(&mut c, 1, true, true) };
-        let order: Vec<&str> = c.log.iter().map(|l| l.split('(').next().unwrap()).filter(|n| *n != "fields" && *n != "rasterizer" && *n != "surface" && *n != "mouse").collect();
+        let order: Vec<&str> = c
+            .log
+            .iter()
+            .map(|l| l.split('(').next().unwrap())
+            .filter(|n| *n != "fields" && *n != "rasterizer" && *n != "surface" && *n != "mouse")
+            .collect();
         assert_eq!(
             order,
             [
-                "frame_starting", "scene_starting", "lobby_lock", "lobby_shown", "raster_begin", "render_scene",
-                "raster_end", "lobby_unlock", "frame_done", "surf_text_unlock", "mouse_begin_frame", "mouse_save_under",
-                "mouse_draw", "lobby_lock", "lobby_shown", "raster_show", "lobby_unlock", "u38", "mouse_restore_under",
+                "frame_starting",
+                "scene_starting",
+                "lobby_lock",
+                "lobby_shown",
+                "raster_begin",
+                "render_scene",
+                "raster_end",
+                "lobby_unlock",
+                "frame_done",
+                "surf_text_unlock",
+                "mouse_begin_frame",
+                "mouse_save_under",
+                "mouse_draw",
+                "lobby_lock",
+                "lobby_shown",
+                "raster_show",
+                "lobby_unlock",
+                "u38",
+                "mouse_restore_under",
                 "mouse_end_frame"
             ]
         );

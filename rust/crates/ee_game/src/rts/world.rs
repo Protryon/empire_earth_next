@@ -58,7 +58,12 @@ fn count<C: WorldCpp>(c: &mut C, world: usize) -> c_ulong {
 ///
 /// # Safety
 /// `world` is the C++ object under construction.
-pub unsafe fn construct<C: WorldCpp>(c: &mut C, world: usize, new_lock: &mut dyn FnMut(*mut *mut c_void) -> c_long, verify: &mut dyn FnMut(bool)) {
+pub unsafe fn construct<C: WorldCpp>(
+    c: &mut C,
+    world: usize,
+    new_lock: &mut dyn FnMut(*mut *mut c_void) -> c_long,
+    verify: &mut dyn FnMut(bool),
+) {
     let r = new_lock(c.lock_slot(world));
     verify(r == 0);
     for i in 0..PLAYERS {
@@ -102,7 +107,7 @@ pub unsafe fn update_population_limit<C: WorldCpp>(c: &mut C, world: usize, reco
     }
     unsafe {
         *c.player_population_limit(world) =
-            if active > 0 { (*c.population_limit(world) as c_ulong / active) as c_long } else { 0 };
+            (*c.population_limit(world) as c_ulong).checked_div(active).map_or(0, |v| v as c_long);
     }
     if !recount {
         return;
@@ -431,8 +436,12 @@ mod tests {
         assert_eq!(unsafe { unit(&mut c, 1, 0x0700_0005) }, 0);
         let mut c = fake(&mut w);
         unsafe { checksum(&mut c, 1, 9) };
-        let names: Vec<&str> = c.log.iter().map(|l| l.split('(').next().unwrap()).filter(|n| n.contains("checksum")).collect();
-        assert_eq!(names, ["player_checksum", "player_checksum", "player_checksum", "map_checksum", "checksum_add_world"]);
+        let names: Vec<&str> =
+            c.log.iter().map(|l| l.split('(').next().unwrap()).filter(|n| n.contains("checksum")).collect();
+        assert_eq!(
+            names,
+            ["player_checksum", "player_checksum", "player_checksum", "map_checksum", "checksum_add_world"]
+        );
         let mut c = fake(&mut w);
         unsafe { set_player(&mut c, 1, 3, 13) };
         assert_eq!(c.count("player_delete"), 0);

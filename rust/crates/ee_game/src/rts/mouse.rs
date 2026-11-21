@@ -113,7 +113,11 @@ static MIN_X: AtomicI32 = AtomicI32::new(100);
 static MIN_Y: AtomicI32 = AtomicI32::new(100);
 
 /// The pointer's description: `kind`, the screen mode's format and depth, 32x32.
-fn description(mode: &EeRtsVideoMode, volatility: c_ulong, transparent: bool) -> ee_render::ge::texobj::EeGeSurfaceDescription {
+fn description(
+    mode: &EeRtsVideoMode,
+    volatility: c_ulong,
+    transparent: bool,
+) -> ee_render::ge::texobj::EeGeSurfaceDescription {
     ee_render::ge::texobj::EeGeSurfaceDescription {
         kind: SURFACE_OFFSCREEN,
         pixel_format: mode.pixel_format,
@@ -199,13 +203,18 @@ unsafe fn load_pack_pointer_named<C: MouseCpp>(
     let shift = c.pack_shift();
     let drop = c.pack_drop();
     let mut found = 0usize;
-    if shift <= 0 || !c.pack_name(file.as_ptr(), pack) || c.find_text(screen, pack, ShimOut::of(&mut found)) != OK || found == 0 {
+    if shift <= 0
+        || !c.pack_name(file.as_ptr(), pack)
+        || c.find_text(screen, pack, ShimOut::of(&mut found)) != OK
+        || found == 0
+    {
         return NOT_FOUND;
     }
     let (mut width, mut height, mut depth) = (0 as c_ulong, 0 as c_ulong, 0 as c_ulong);
     let mut result = c.file_open_read(found);
     if result == OK {
-        result = c.file_png_attributes(found, ShimOut::of(&mut width), ShimOut::of(&mut height), ShimOut::of(&mut depth));
+        result =
+            c.file_png_attributes(found, ShimOut::of(&mut width), ShimOut::of(&mut height), ShimOut::of(&mut depth));
     }
     if result == OK {
         result = c.file_rewind(found);
@@ -288,7 +297,12 @@ fn pack_text<C: MouseCpp>(c: &mut C, text: usize) -> String {
 ///
 /// # Safety
 /// `screen` is a live screen, `slot` a pointer slot.
-pub unsafe fn load_pointer<C: MouseCpp>(c: &mut C, file: &core::ffi::CStr, screen: usize, slot: *mut *mut c_void) -> c_long {
+pub unsafe fn load_pointer<C: MouseCpp>(
+    c: &mut C,
+    file: &core::ffi::CStr,
+    screen: usize,
+    slot: *mut *mut c_void,
+) -> c_long {
     let mut mode = EeRtsVideoMode::default();
     c.screen_mode(screen, &mut mode);
     let d = description(&mode, 1, true);
@@ -438,7 +452,11 @@ mod ffi {
             e.push(0);
             // SAFETY: C strings
             unsafe {
-                ee_base::error::ee_error_verify(c"C:\\EEX\\RTS Engine\\Graphics\\RTSMouse.cpp".as_ptr(), line, e.as_ptr().cast())
+                ee_base::error::ee_error_verify(
+                    c"C:\\EEX\\RTS Engine\\Graphics\\RTSMouse.cpp".as_ptr(),
+                    line,
+                    e.as_ptr().cast(),
+                )
             };
         }
     }
@@ -469,7 +487,11 @@ mod ffi {
     /// # Safety
     /// `file` a C string, `screen` a live screen, `slot` a surface slot.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_mouse_load_pointer(file: *const c_char, screen: *mut c_void, slot: *mut *mut c_void) -> c_long {
+    pub unsafe extern "C" fn ee_rts_mouse_load_pointer(
+        file: *const c_char,
+        screen: *mut c_void,
+        slot: *mut *mut c_void,
+    ) -> c_long {
         unsafe { load_pointer(&mut Ffi, core::ffi::CStr::from_ptr(file), screen as usize, slot) }
     }
 
@@ -481,7 +503,8 @@ mod ffi {
     pub unsafe extern "C" fn ee_rts_mouse_load(mouse: *mut c_void, screen: *mut c_void) -> c_long {
         let m = mouse as usize;
         let s = screen as usize;
-        let mut one = |c: &mut Ffi, file: &core::ffi::CStr, slot: *mut *mut c_void| unsafe { load_pointer(c, file, s, slot) };
+        let mut one =
+            |c: &mut Ffi, file: &core::ffi::CStr, slot: *mut *mut c_void| unsafe { load_pointer(c, file, s, slot) };
         unsafe { load(&mut Ffi, m, s, &mut one, &mut verify) }
     }
 
@@ -635,16 +658,26 @@ mod tests {
         let mut seen = Vec::new();
         let mut one = |_: &mut ShimFake, file: &core::ffi::CStr, _slot: *mut *mut c_void| {
             seen.push(file.to_str().unwrap().to_string());
-            if seen.len() == 3 { 5 } else { 0 }
+            if seen.len() == 3 {
+                5
+            } else {
+                0
+            }
         };
         let r = unsafe { load(&mut c, 1, 2, &mut one, &mut |_, _, _| {}) };
         assert_eq!(r, 5);
-        assert_eq!(seen, ["Textures\\Normal Pointer.png", "Textures\\Attack Pointer.png", "Textures\\Invalid Target Pointer.png"]);
+        assert_eq!(
+            seen,
+            ["Textures\\Normal Pointer.png", "Textures\\Attack Pointer.png", "Textures\\Invalid Target Pointer.png"]
+        );
         assert_eq!(c.count("screen_create_surface"), 0);
         assert!(c.calls().ends_with("frame_call(1, 7, 0, 0x0, false)"));
         // all ten: the two save-under surfaces are created
         let mut c = ShimFake::default();
-        c.answer("slot", &(0..12).map(|i| base + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 24, 25][i as usize] * 8).collect::<Vec<_>>());
+        c.answer(
+            "slot",
+            &(0..12).map(|i| base + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 24, 25][i as usize] * 8).collect::<Vec<_>>(),
+        );
         let mut ok = |_: &mut ShimFake, _: &core::ffi::CStr, _: *mut *mut c_void| 0;
         let mut lines = Vec::new();
         let r = unsafe { load(&mut c, 1, 2, &mut ok, &mut |ok, l, _| lines.push((ok, l))) };
@@ -668,8 +701,17 @@ mod tests {
         assert_eq!(
             names,
             [
-                "screen_mode", "text_new", "pack_shift", "pack_drop", "text_delete", "screen_create_surface",
-                "find_file", "surf_load_png", "file_close", "file_delete", "surf_set_transparency"
+                "screen_mode",
+                "text_new",
+                "pack_shift",
+                "pack_drop",
+                "text_delete",
+                "screen_create_surface",
+                "find_file",
+                "surf_load_png",
+                "file_close",
+                "file_delete",
+                "surf_set_transparency"
             ]
         );
         // a missing file: not found, nothing loaded

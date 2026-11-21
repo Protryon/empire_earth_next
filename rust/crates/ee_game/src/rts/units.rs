@@ -516,7 +516,8 @@ pub fn remove_killed_units<C: UnitsCpp>(c: &mut C, player: usize) {
 /// next id).
 pub fn player_checksum<C: UnitsCpp>(c: &mut C, player: usize, checksum: usize) {
     let f = c.player_fields(player);
-    let value = unsafe { (*f).mPlayerID.wrapping_mul(10).wrapping_add((*f).mUnitCount).wrapping_add((*f).mNextUniqueID) };
+    let value =
+        unsafe { (*f).mPlayerID.wrapping_mul(10).wrapping_add((*f).mUnitCount).wrapping_add((*f).mNextUniqueID) };
     c.name_checksum(player, checksum);
     c.checksum_add(checksum, c"RTSPlayer-HashChecksum".as_ptr(), 0);
     c.checksum_add(checksum, c"RTSPlayer".as_ptr(), value);
@@ -743,7 +744,12 @@ mod ffi {
 
     /// `RTSPlayer::SaveUnits`.
     #[no_mangle]
-    pub extern "C" fn ee_rts_player_save_units(player: *mut c_void, major: c_ulong, minor: c_ulong, file: *mut c_void) -> c_long {
+    pub extern "C" fn ee_rts_player_save_units(
+        player: *mut c_void,
+        major: c_ulong,
+        minor: c_ulong,
+        file: *mut c_void,
+    ) -> c_long {
         save_units(&mut Ffi, player as usize, major, minor, file as usize)
     }
 }
@@ -763,6 +769,8 @@ mod tests {
         prev: BTreeMap<usize, Box<usize>>,
         tile: BTreeMap<usize, Box<usize>>,
         owner: BTreeMap<usize, Box<usize>>,
+        // boxed: the links' addresses stay put as the vector grows
+        #[allow(clippy::vec_box)]
         links: Vec<Box<[usize; 2]>>,
         player: Box<EeUnitsRtsPlayerFields>,
         buckets: Vec<EeRtsUnitBucket>,
@@ -783,8 +791,7 @@ mod tests {
             }
         }
         fn unit(&mut self, u: usize) {
-            let mut f = EeUnitsRtsUnitFields::default();
-            f.mIsValid = true;
+            let f = EeUnitsRtsUnitFields { mIsValid: true, ..Default::default() };
             self.fields.insert(u, Box::new(f));
             for m in [&mut self.node, &mut self.next, &mut self.prev, &mut self.tile, &mut self.owner] {
                 m.insert(u, Box::new(0));
@@ -824,7 +831,11 @@ mod tests {
             &mut **self.owner.get_mut(&unit).unwrap()
         }
         fn dummy_head(&mut self, link: usize) -> usize {
-            if self.heads.contains_key(&link) { link } else { 0 }
+            if self.heads.contains_key(&link) {
+                link
+            } else {
+                0
+            }
         }
         fn head_first_slot(&mut self, head: usize) -> *mut usize {
             &mut **self.heads.get_mut(&head).unwrap()
@@ -852,7 +863,11 @@ mod tests {
             panic!("{}", unsafe { core::ffi::CStr::from_ptr(what) }.to_string_lossy());
         }
         fn map_tile(&mut self, _map: usize, x: c_long, _y: c_long) -> usize {
-            if x < 0 { 0 } else { 0x77 }
+            if x < 0 {
+                0
+            } else {
+                0x77
+            }
         }
         fn sight_on(&mut self, unit: usize) {
             self.note(format!("sight_on({unit})"));

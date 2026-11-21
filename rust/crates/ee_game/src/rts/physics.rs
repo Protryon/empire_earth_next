@@ -100,8 +100,13 @@ pub trait PhysicsPlat {
     fn thread_free(&mut self, thread: *mut c_void);
     fn thread_set_priority(&mut self, thread: *mut c_void, priority: i32) -> c_long;
     fn thread_set_name(&mut self, thread: *mut c_void, name: *const c_char);
-    fn thread_receive(&mut self, thread: *mut c_void, message: &mut c_ulong, first: &mut usize, second: &mut usize)
-        -> c_long;
+    fn thread_receive(
+        &mut self,
+        thread: *mut c_void,
+        message: &mut c_ulong,
+        first: &mut usize,
+        second: &mut usize,
+    ) -> c_long;
     fn timer_stop(&mut self, timer: *mut c_void);
     fn timer_start(&mut self, timer: *mut c_void) -> c_long;
     fn timer_set_interval(&mut self, timer: *mut c_void, interval: c_ulong);
@@ -432,7 +437,9 @@ pub unsafe fn main_loop<C: PhysicsCpp, P: PhysicsPlat>(c: &mut C, p: &mut P, phy
                     p.timer_stop(t);
                     p.timer_set_interval(t, unsafe { (*f).mTimerInterval });
                     p.timer_start(t);
-                    c.debug_out(c"!RTSPhysics::Main: the timer wasn't ticking. Performed a hard reset on the timer.\n".as_ptr());
+                    c.debug_out(
+                        c"!RTSPhysics::Main: the timer wasn't ticking. Performed a hard reset on the timer.\n".as_ptr(),
+                    );
                 }
                 if r != WAIT_TIMEOUT {
                     break;
@@ -515,7 +522,9 @@ impl PhysicsPlat for Plat {
     }
     fn thread_new(&mut self, slot: *mut *mut c_void, parameter: usize) -> c_long {
         // SAFETY: the C++ object's thread slot; the thread's parameter is the object
-        unsafe { ee_base::ts::ee_ts_thread_new(slot.cast(), Some(ee_rts_physics_main), parameter as *mut c_void, 0, false) }
+        unsafe {
+            ee_base::ts::ee_ts_thread_new(slot.cast(), Some(ee_rts_physics_main), parameter as *mut c_void, 0, false)
+        }
     }
     fn thread_free(&mut self, thread: *mut c_void) {
         // SAFETY: the constructor's thread
@@ -562,7 +571,8 @@ impl PhysicsPlat for Plat {
     fn timer_set_event(&mut self, timer: *mut c_void, event: *mut c_void) {
         // SAFETY: as timer_stop; TMTimer::SetEvent hands the event's platform handle
         unsafe {
-            let handle = if event.is_null() { core::ptr::null_mut() } else { ee_base::ts::ee_ts_event_handle(event.cast()) };
+            let handle =
+                if event.is_null() { core::ptr::null_mut() } else { ee_base::ts::ee_ts_event_handle(event.cast()) };
             ee_base::time::ee_time_timer_set_event(timer.cast(), handle.cast());
         }
     }
@@ -601,7 +611,11 @@ impl PhysicsPlat for Plat {
             e.push(0);
             // SAFETY: C strings
             unsafe {
-                ee_base::error::ee_error_verify(c"C:\\EEX\\RTS Engine\\Physics\\RTSPhysics.cpp".as_ptr(), line, e.as_ptr().cast())
+                ee_base::error::ee_error_verify(
+                    c"C:\\EEX\\RTS Engine\\Physics\\RTSPhysics.cpp".as_ptr(),
+                    line,
+                    e.as_ptr().cast(),
+                )
             };
         }
     }
@@ -624,7 +638,15 @@ pub unsafe extern "C" fn ee_rts_physics_construct(
     priority: c_long,
 ) {
     unsafe {
-        construct(&mut Ffi, &mut Plat, physics as usize, graphics as usize, timer as usize, default_ticks_per_second, priority)
+        construct(
+            &mut Ffi,
+            &mut Plat,
+            physics as usize,
+            graphics as usize,
+            timer as usize,
+            default_ticks_per_second,
+            priority,
+        )
     }
 }
 
@@ -733,7 +755,11 @@ mod tests {
         }
         fn event_wait(&mut self, _e: *mut c_void, t: u32) -> c_long {
             self.note(format!("event_wait({t})"));
-            if self.waits.is_empty() { 0 } else { self.waits.remove(0) }
+            if self.waits.is_empty() {
+                0
+            } else {
+                self.waits.remove(0)
+            }
         }
         fn section_new(&mut self, slot: *mut *mut c_void) {
             self.note("section_new".into());
@@ -787,7 +813,11 @@ mod tests {
         fn fp_precision53(&mut self) {}
         fn fp_check53(&mut self) {}
         fn time(&mut self) -> c_ulong {
-            if self.times.is_empty() { 0 } else { self.times.remove(0) }
+            if self.times.is_empty() {
+                0
+            } else {
+                self.times.remove(0)
+            }
         }
         fn sleep(&mut self, ms: u32) {
             self.note(format!("sleep({ms})"));
@@ -825,9 +855,8 @@ mod tests {
     fn fake(f: &mut EeRtsPhysicsFields, slots: &mut [*mut c_void; 6]) -> ShimFake {
         let mut c = ShimFake::default();
         c.answer("fields", &[f as *mut _ as i64; 64]);
-        for (i, name) in ["thread_slot", "created_slot", "start_slot", "done_slot", "tick_slot", "lock_slot"]
-            .into_iter()
-            .enumerate()
+        for (i, name) in
+            ["thread_slot", "created_slot", "start_slot", "done_slot", "tick_slot", "lock_slot"].into_iter().enumerate()
         {
             c.answer(name, &[&mut slots[i] as *mut _ as i64; 64]);
         }

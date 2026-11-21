@@ -45,8 +45,13 @@ pub trait PointerPlat {
     fn thread_free(&mut self, thread: *mut c_void);
     fn thread_set_priority(&mut self, thread: *mut c_void, priority: i32) -> c_long;
     fn thread_set_name(&mut self, thread: *mut c_void, name: *const c_char);
-    fn thread_receive(&mut self, thread: *mut c_void, message: &mut c_ulong, first: &mut usize, second: &mut usize)
-        -> c_long;
+    fn thread_receive(
+        &mut self,
+        thread: *mut c_void,
+        message: &mut c_ulong,
+        first: &mut usize,
+        second: &mut usize,
+    ) -> c_long;
     fn fp_precision53(&mut self);
     fn fp_check53(&mut self);
     fn sleep(&mut self, milliseconds: u32);
@@ -61,7 +66,13 @@ const MESSAGE_QUIT: c_ulong = 0x401;
 ///
 /// # Safety
 /// `pointer` is the C++ object under construction.
-pub unsafe fn construct<C: PointerCpp, P: PointerPlat>(c: &mut C, p: &mut P, pointer: usize, mouse: usize, priority: c_long) {
+pub unsafe fn construct<C: PointerCpp, P: PointerPlat>(
+    c: &mut C,
+    p: &mut P,
+    pointer: usize,
+    mouse: usize,
+    priority: c_long,
+) {
     let r = p.event_new(c.created_slot(pointer));
     p.verify(r == OK, 44, b"TSScheduler::CreateEvent(this->mThreadCreated) == keseOK");
     let r = p.event_new(c.done_slot(pointer));
@@ -182,7 +193,15 @@ mod ffi {
         }
         fn thread_new(&mut self, slot: *mut *mut c_void, parameter: usize) -> c_long {
             // SAFETY: the C++ object's thread slot
-            unsafe { ee_base::ts::ee_ts_thread_new(slot.cast(), Some(ee_rts_mouse_pointer_main), parameter as *mut c_void, 0, false) }
+            unsafe {
+                ee_base::ts::ee_ts_thread_new(
+                    slot.cast(),
+                    Some(ee_rts_mouse_pointer_main),
+                    parameter as *mut c_void,
+                    0,
+                    false,
+                )
+            }
         }
         fn thread_free(&mut self, thread: *mut c_void) {
             // SAFETY: the constructor's thread
@@ -245,7 +264,11 @@ mod ffi {
     /// # Safety
     /// `pointer` is the C++ object under construction.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_mouse_pointer_construct(pointer: *mut c_void, mouse: *mut c_void, priority: c_long) {
+    pub unsafe extern "C" fn ee_rts_mouse_pointer_construct(
+        pointer: *mut c_void,
+        mouse: *mut c_void,
+        priority: c_long,
+    ) {
         unsafe { construct(&mut Ffi, &mut Plat, pointer as usize, mouse as usize, priority) }
     }
 
@@ -272,7 +295,11 @@ mod ffi {
     /// # Safety
     /// `pointer` is the live object.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_mouse_pointer_handle_message(pointer: *mut c_void, message: c_ulong, first: *mut c_void) {
+    pub unsafe extern "C" fn ee_rts_mouse_pointer_handle_message(
+        pointer: *mut c_void,
+        message: c_ulong,
+        first: *mut c_void,
+    ) {
         unsafe { handle_message(&mut Ffi, pointer as usize, message, first as usize) }
     }
 }

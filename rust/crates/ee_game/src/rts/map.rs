@@ -73,7 +73,14 @@ pub unsafe fn construct<C: MapCpp>(c: &mut C, map: usize, scale: f32, new_lock: 
 ///
 /// # Safety
 /// `map` is the live object.
-pub unsafe fn create<C: MapCpp>(c: &mut C, map: usize, width: c_long, height: c_long, players: c_ulong, create_tiles: bool) {
+pub unsafe fn create<C: MapCpp>(
+    c: &mut C,
+    map: usize,
+    width: c_long,
+    height: c_long,
+    players: c_ulong,
+    create_tiles: bool,
+) {
     let f = c.fields(map);
     let mut right = height;
     let mut left = height - 1;
@@ -182,7 +189,13 @@ mod ffi {
     /// # Safety
     /// `map` is the live object.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_map_create(map: *mut c_void, width: c_long, height: c_long, players: c_ulong, create_tiles: bool) {
+    pub unsafe extern "C" fn ee_rts_map_create(
+        map: *mut c_void,
+        width: c_long,
+        height: c_long,
+        players: c_ulong,
+        create_tiles: bool,
+    ) {
         unsafe { create(&mut Ffi, map as usize, width, height, players, create_tiles) }
     }
 
@@ -234,7 +247,15 @@ mod tests {
         c.answer("mesh_valid_point", &[1, 1, 0, 1, 1]);
         apply_vertex_colors(&mut c, 1);
         let sets: Vec<_> = c.log.iter().filter(|l| l.starts_with("mesh_set_color")).cloned().collect();
-        assert_eq!(sets, ["mesh_set_color(1, 5, 0, 20)", "mesh_set_color(1, 0, 0, 10)", "mesh_set_color(1, 0, 1, 12)", "mesh_set_color(1, 1, 1, 13)"]);
+        assert_eq!(
+            sets,
+            [
+                "mesh_set_color(1, 5, 0, 20)",
+                "mesh_set_color(1, 0, 0, 10)",
+                "mesh_set_color(1, 0, 1, 12)",
+                "mesh_set_color(1, 1, 1, 13)"
+            ]
+        );
         assert!(c.calls().ends_with("colors_clear(1)"));
     }
 }

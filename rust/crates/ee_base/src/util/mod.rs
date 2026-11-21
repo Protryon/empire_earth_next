@@ -14,8 +14,8 @@ pub mod fractal;
 #[cfg(test)]
 mod golden;
 pub mod graph;
-pub mod pool;
 mod language_strings;
+pub mod pool;
 pub mod strings;
 pub mod system;
 
