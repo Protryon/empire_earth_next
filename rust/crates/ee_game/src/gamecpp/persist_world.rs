@@ -8,7 +8,8 @@
 //! The helper's plain members from `mTimeOfDay` to `mUsingCarbon` are read in place ([`EePWorldHelperFields`]).
 
 #![allow(non_snake_case)]
-#![allow(clippy::unnecessary_cast, clippy::missing_safety_doc)]
+// the C++'s `inMajorVersion <= 0` on unsigned versions, kept as written
+#![allow(clippy::unnecessary_cast, clippy::missing_safety_doc, clippy::absurd_extreme_comparisons)]
 
 use std::ffi::{c_long, c_ulong, c_void};
 use std::ptr::addr_of_mut;
@@ -917,7 +918,7 @@ fn load_tile_types(file: Pf) -> i64 {
             r = PF_BEYOND_END;
         }
         if r == PF_OK {
-            types.extend(std::iter::repeat(t).take(run as usize));
+            types.extend(std::iter::repeat_n(t, run as usize));
         }
     }
     if r != PF_OK {

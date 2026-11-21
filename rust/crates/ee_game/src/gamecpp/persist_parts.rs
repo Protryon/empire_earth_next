@@ -7,7 +7,8 @@
 //! ([`super::EeGameCpp`]'s lane C section); the methods forward here.
 
 #![allow(non_snake_case)]
-#![allow(clippy::unnecessary_cast)]
+// the C++'s `inMajorVersion <= 0` on unsigned versions, kept as written
+#![allow(clippy::unnecessary_cast, clippy::absurd_extreme_comparisons)]
 
 use std::ffi::{c_long, c_ulong, c_void, CStr};
 
@@ -88,8 +89,11 @@ pub extern "C" fn ee_gamecpp_pph_checksum(helper: *const c_void, checksum: *mut 
 }
 
 /// `EEPPlayerHelper::GetLocalPlayerIndex`: the loaded local player index; 13 unless the chunk was loaded.
+///
+/// # Safety
+/// `out` is the caller's live value.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_pph_local_index(helper: *mut c_void, out: *mut c_long) -> c_long {
+pub unsafe extern "C" fn ee_gamecpp_pph_local_index(helper: *mut c_void, out: *mut c_long) -> c_long {
     let f = *fields(helper as P);
     if f.mIsForLoading && f.mLoaded {
         // SAFETY: the caller's out value

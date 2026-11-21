@@ -10,65 +10,6 @@
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 
-/// The string ids (ee/EEStringIDs.h, ee/EESaveLoad.h; EESaveLoad.cpp's static_assert).
-constexpr static const int64_t PS_IDS_FILE_COULDNT_BE_OPENED = 7152;
-
-constexpr static const int64_t PS_IDS_SAVE_GAME_INCOMPATIBLE = 7154;
-
-constexpr static const int64_t PS_IDS_SAVE_GAME_INVALID_DATA = 7156;
-
-constexpr static const int64_t PS_IDS_SAVE_GAME_MISSING_DATA = 7157;
-
-constexpr static const int64_t PS_IDS_TOO_MANY_PLAYERS_IN_LOBBY = 10034;
-
-constexpr static const int64_t PS_IDS_PLAYER_NOT_IN_SAVED = 10037;
-
-constexpr static const int64_t PS_IDS_SAVED_GAME_REQUIRES_PLAYERS = 10038;
-
-constexpr static const int64_t PS_IDS_TOO_MANY_PLAYERS_TO_PLAY = 10039;
-
-constexpr static const int64_t PS_IDS_NOT_VALID_MULTIPLAYER_SCENARIO = 10040;
-
-constexpr static const int64_t PS_IDS_ERROR_CREATING_FILE = 10049;
-
-constexpr static const int64_t PS_IDS_ERROR_SAVING_FILE = 10050;
-
-constexpr static const int64_t PS_IDS_INVALID_FILE_NAME = 10068;
-
-constexpr static const int64_t PS_KEESL_SAVE_GAME_INVALID = 7153;
-
-/// The chunk tags (ee/EEPersistentTag.h): `kPersistentChecksum` .. `kPersistentCalamities`.
-constexpr static const int64_t PS_TAG_CHECKSUM = 1;
-
-constexpr static const int64_t PS_TAG_SEED = 2;
-
-constexpr static const int64_t PS_TAG_CAMERA = 3;
-
-constexpr static const int64_t PS_TAG_MAP = 4;
-
-constexpr static const int64_t PS_TAG_PLAYERS = 5;
-
-constexpr static const int64_t PS_TAG_SCENARIO = 6;
-
-constexpr static const int64_t PS_TAG_WORLD = 7;
-
-constexpr static const int64_t PS_TAG_EFFECTS = 10;
-
-constexpr static const int64_t PS_TAG_MULTIPLAYER = 11;
-
-constexpr static const int64_t PS_TAG_ENVIRONMENT = 12;
-
-constexpr static const int64_t PS_TAG_CALAMITIES = 13;
-
-/// `kErrorOK`.
-constexpr static const int64_t PF_OK = 0;
-
-/// `kErrorFailed`.
-constexpr static const int64_t PF_FAILED = 9;
-
-/// `kErrorBeyondEnd`.
-constexpr static const int64_t PF_BEYOND_END = 10;
-
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
   UnRts = 1,
@@ -2588,6 +2529,9 @@ void ee_gamecpp_pph_from_world(void *helper,
 void ee_gamecpp_pph_checksum(const void *helper, void *checksum);
 
 /// `EEPPlayerHelper::GetLocalPlayerIndex`: the loaded local player index; 13 unless the chunk was loaded.
+///
+/// # Safety
+/// `out` is the caller's live value.
 long ee_gamecpp_pph_local_index(void *helper,
                                 long *out);
 

@@ -20,32 +20,32 @@ use super::{h, hd, hf, hp, pa, ptr, rec, Owned, O, P};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// The string ids (ee/EEStringIDs.h, ee/EESaveLoad.h; EESaveLoad.cpp's static_assert).
-pub const PS_IDS_FILE_COULDNT_BE_OPENED: i64 = 7152;
-pub const PS_IDS_SAVE_GAME_INCOMPATIBLE: i64 = 7154;
-pub const PS_IDS_SAVE_GAME_INVALID_DATA: i64 = 7156;
-pub const PS_IDS_SAVE_GAME_MISSING_DATA: i64 = 7157;
-pub const PS_IDS_TOO_MANY_PLAYERS_IN_LOBBY: i64 = 10034;
-pub const PS_IDS_PLAYER_NOT_IN_SAVED: i64 = 10037;
-pub const PS_IDS_SAVED_GAME_REQUIRES_PLAYERS: i64 = 10038;
-pub const PS_IDS_TOO_MANY_PLAYERS_TO_PLAY: i64 = 10039;
-pub const PS_IDS_NOT_VALID_MULTIPLAYER_SCENARIO: i64 = 10040;
-pub const PS_IDS_ERROR_CREATING_FILE: i64 = 10049;
-pub const PS_IDS_ERROR_SAVING_FILE: i64 = 10050;
-pub const PS_IDS_INVALID_FILE_NAME: i64 = 10068;
-pub const PS_KEESL_SAVE_GAME_INVALID: i64 = 0x1bf1;
+const PS_IDS_FILE_COULDNT_BE_OPENED: i64 = 7152;
+const PS_IDS_SAVE_GAME_INCOMPATIBLE: i64 = 7154;
+const PS_IDS_SAVE_GAME_INVALID_DATA: i64 = 7156;
+const PS_IDS_SAVE_GAME_MISSING_DATA: i64 = 7157;
+const PS_IDS_TOO_MANY_PLAYERS_IN_LOBBY: i64 = 10034;
+const PS_IDS_PLAYER_NOT_IN_SAVED: i64 = 10037;
+const PS_IDS_SAVED_GAME_REQUIRES_PLAYERS: i64 = 10038;
+const PS_IDS_TOO_MANY_PLAYERS_TO_PLAY: i64 = 10039;
+const PS_IDS_NOT_VALID_MULTIPLAYER_SCENARIO: i64 = 10040;
+const PS_IDS_ERROR_CREATING_FILE: i64 = 10049;
+const PS_IDS_ERROR_SAVING_FILE: i64 = 10050;
+const PS_IDS_INVALID_FILE_NAME: i64 = 10068;
+const PS_KEESL_SAVE_GAME_INVALID: i64 = 0x1bf1;
 
 /// The chunk tags (ee/EEPersistentTag.h): `kPersistentChecksum` .. `kPersistentCalamities`.
-pub const PS_TAG_CHECKSUM: i64 = 1;
-pub const PS_TAG_SEED: i64 = 2;
-pub const PS_TAG_CAMERA: i64 = 3;
-pub const PS_TAG_MAP: i64 = 4;
-pub const PS_TAG_PLAYERS: i64 = 5;
-pub const PS_TAG_SCENARIO: i64 = 6;
-pub const PS_TAG_WORLD: i64 = 7;
-pub const PS_TAG_EFFECTS: i64 = 10;
-pub const PS_TAG_MULTIPLAYER: i64 = 8;
-pub const PS_TAG_ENVIRONMENT: i64 = 12;
-pub const PS_TAG_CALAMITIES: i64 = 11;
+const PS_TAG_CHECKSUM: i64 = 1;
+const PS_TAG_SEED: i64 = 2;
+const PS_TAG_CAMERA: i64 = 3;
+const PS_TAG_MAP: i64 = 4;
+const PS_TAG_PLAYERS: i64 = 5;
+const PS_TAG_SCENARIO: i64 = 6;
+const PS_TAG_WORLD: i64 = 7;
+const PS_TAG_EFFECTS: i64 = 10;
+const PS_TAG_MULTIPLAYER: i64 = 8;
+const PS_TAG_ENVIRONMENT: i64 = 12;
+const PS_TAG_CALAMITIES: i64 = 11;
 
 /// `kFileAccessRead`, `kFileAccessWrite`.
 const PS_READ: i64 = 1;

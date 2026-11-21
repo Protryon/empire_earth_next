@@ -12,11 +12,11 @@ use std::ffi::{c_long, c_ulong};
 use super::{h, O, P};
 
 /// `kErrorOK`.
-pub const PF_OK: i64 = 0;
+pub(super) const PF_OK: i64 = 0;
 /// `kErrorFailed`.
-pub const PF_FAILED: i64 = 9;
+pub(super) const PF_FAILED: i64 = 9;
 /// `kErrorBeyondEnd`.
-pub const PF_BEYOND_END: i64 = 0xa;
+pub(super) const PF_BEYOND_END: i64 = 0xa;
 
 /// An `FSFile*` (any of its kinds: the memory file of a save, a file spec).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
