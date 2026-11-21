@@ -139,6 +139,12 @@ pub(crate) fn answer(op: i32, io: &mut EeAStarCmIo) -> Option<i64> {
     unsafe {
         Some(match op {
             cm_io::EE_ASTAR_CM_CONTAINS => contains(io.h[0], x, y) as i64,
+            // a town's or herd's owner (cm_restore.rs; the game only: it reads the players)
+            #[cfg(not(test))]
+            cm_io::EE_ASTAR_CM_OWNER => {
+                crate::astar::cm_restore::owner(io.h[0], io);
+                0
+            }
             cm_io::EE_ASTAR_CM_MAP_SIZE => {
                 let t = token();
                 map(&t).map_or(-1, |m| m.size())

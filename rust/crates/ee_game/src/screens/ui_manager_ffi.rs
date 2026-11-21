@@ -23,6 +23,12 @@ impl UiHost for ManagerHost {
             crate::screens::ui_objects_ffi::manager_forms();
             return 0;
         }
+        // the cases that are Rust's over the C++ shims (ui_manager_calls.rs), else the C++ host
+        if let Some(r) =
+            crate::screens::ui_manager_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, c)
+        {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_ui_manager(self.0, op, a, b, c) }
     }
 }

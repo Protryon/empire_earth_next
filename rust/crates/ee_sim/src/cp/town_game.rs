@@ -10,7 +10,7 @@ use super::town::{EeTownFields, Town, TownHost, TownIo};
 
 extern "C" {
     /// The town's world (EETown.cpp): `town` the `EETown*`.
-    fn ee_cp_town_host(town: *mut c_void, op: i32, a: u64, b: u64, io: *mut TownIo) -> i64;
+    pub(crate) fn ee_cp_town_host(town: *mut c_void, op: i32, a: u64, b: u64, io: *mut TownIo) -> i64;
     /// An area's operations the random point asks (EEHerd.cpp): `area` the `EEAIArea*`.
     fn ee_cp_area_host(area: *mut c_void, op: i32, io: *mut EeHerdIo) -> i64;
 }
@@ -26,12 +26,20 @@ impl TownHost for Game {
         if let Some(r) = unsafe { area_op(self.area as u64, op, a, io) } {
             return r;
         }
+        // SAFETY: as above
+        if let Some(r) = unsafe { super::town_world::town_op(self.town as u64, op, a, io) } {
+            return r;
+        }
         // SAFETY: the town is live for the call
         unsafe { ee_cp_town_host(self.town, op, a, b, io) }
     }
     fn area(&mut self, op: i32, v: &[i64]) -> (i64, EeHerdIo) {
         let mut io = EeHerdIo::default();
         io.v[..v.len()].copy_from_slice(v);
+        // SAFETY: as above
+        if let Some(r) = unsafe { super::herd_world::area_op(self.area as u64, op, &mut io) } {
+            return (r, io);
+        }
         // SAFETY: as above
         let r = unsafe { ee_cp_area_host(self.area, op, &mut io) };
         (r, io)

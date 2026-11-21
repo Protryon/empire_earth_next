@@ -18,6 +18,9 @@
 #include "ee/EEUnit.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEImprovementIDs.h"
+#include "ee/EEPlayer.h"            // EESavePrimitive
+#include "lle/FSFile.h"
+#include "rust/sim/units.h"
 
 namespace {
 
@@ -37,9 +40,7 @@ const float* StepFactors(EEUnitClass* inClass, float* outFactors)
 // Creates the improvement levels with every improvement at level 1 and no points spent
 EEUnitClassImprovement::EEUnitClassImprovement()
 {
-    for (long i = 0; i < 16; i++)
-        this->mLevels[i] = 1;
-    this->mTotalCost = 0;
+    ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_RESET, this->mLevels, &this->mTotalCost, NULL, &EEImprovementHost, 0, 0);
 }
 
 // Destroys the improvement levels (nothing to release)
@@ -56,10 +57,8 @@ bool EEUnitClassImprovement::CanUpgrade(EEUnitClass* inUnitClass, long inImprove
 // Raises another record's improvements by this record's levels above 1, one level at a time, moving its upgrade's stats
 void EEUnitClassImprovement::CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget)
 {
-    for (unsigned long i = 0; i < 16; i++) {
-        for (long j = 0; j < this->mLevels[i] - 1; j++)
-            inTarget->ChangeLevel(inUpgrade->mUnitClass, inUpgrade, i, 1);
-    }
+    ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_COPY_LEVELS, this->mLevels, &this->mTotalCost,
+                         EEImprovementContext{inTarget, inUpgrade->mUnitClass, inUpgrade, NULL}, &EEImprovementHost, 0, 0);
 }
 
 // Returns the level of an improvement
@@ -119,14 +118,8 @@ void EEUnitClassImprovement::ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUp
 // are recounted)
 void EEUnitClassImprovement::Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade)
 {
-    this->mTotalCost = 0;
-    for (unsigned long i = 0; i < 16; i++) {
-        if (!(this->mLevels[i] > 1))
-            continue;
-        long theDelta = this->mLevels[i] - 1;
-        this->mLevels[i] = 1;
-        this->ChangeLevel(inUnitClass, inUpgrade, i, theDelta);
-    }
+    ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_REAPPLY, this->mLevels, &this->mTotalCost,
+                         EEImprovementContext{this, inUnitClass, inUpgrade, NULL}, &EEImprovementHost, 0, 0);
 }
 
 static_assert(sizeof(EEUnitClassImprovement::mLevels) == 0x40, "saved levels: 16 4-byte words on every target");
@@ -138,40 +131,28 @@ static_assert(sizeof(EEUnitClassImprovement::mLevels) == 0x40, "saved levels: 16
 long EEUnitClassImprovement::Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade,
                                   unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theRead;
-    int32_t theOld[16];   // 0x40 raw bytes, as mLevels
-    long theResult;
-    bool theOldSave = inMajorVersion == 0 && inMinorVersion <= 0xd8;
-    if (theOldSave && inMinorVersion > 0x17 && inMinorVersion <= 0x6a) {
-        inFile.Read((char*)this->mLevels, 0x40, theRead);
-        theResult = inFile.Read(reinterpret_cast<char*>(theOld), 0x40, theRead);
-    } else {
-        theResult = inFile.Read((char*)this->mLevels, 0x40, theRead);
-        if (!(theOldSave && inMinorVersion <= 0xa0) && theResult == 0) {
-            theResult = inFile.Read(this->mTotalCost);
-            this->mTotalCost = 0;
-        }
-    }
-    for (unsigned long i = 0; i < 16; i++) {
-        if (theOldSave && i == kImprovementLeadership) {
-            this->mLevels[i] = 1;
-            continue;
-        }
-        long theLevel = this->mLevels[i];
-        if (theLevel > 1) {
-            this->mLevels[i] = 1;
-            this->ChangeLevel(inUnitClass, inUpgrade, i, theLevel - 1);
-        }
-    }
-    return theResult;
+    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_LOAD, this->mLevels, &this->mTotalCost,
+                                EEImprovementContext{this, inUnitClass, inUpgrade, &inFile}, &EEImprovementHost,
+                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Writes the levels and the points spent to the saved game; returns the first write error
 long EEUnitClassImprovement::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theWritten;
-    long theResult = outFile.Write((const char*)this->mLevels, 0x40, theWritten);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mTotalCost);
-    return theResult;
+    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_SAVE, this->mLevels, &this->mTotalCost,
+                                EEImprovementContext{this, NULL, NULL, &outFile}, &EEImprovementHost, 0, 0);
+}
+
+// The C++ the record's Rust bodies call (ee_units improvement.rs): ChangeLevel on the context's record, the upgrade's
+// name, the file's primitives (ee/EEPlayer.h EESavePrimitive)
+int32_t EEImprovementHost(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEImprovementContext& c = *static_cast<EEImprovementContext*>(inContext);
+    switch (inOp) {
+    case EE_UNITS_IMPROVEMENT_CHANGE_LEVEL: c.mImprovement->ChangeLevel(c.mClass, c.mUpgrade, (long)inIndex, (long)io->i);
+        return 0;
+    case EE_UNITS_IMPROVEMENT_NAME_LOAD: return c.mUpgrade->mName.Load(*c.mFile);
+    case EE_UNITS_IMPROVEMENT_NAME_SAVE: return c.mUpgrade->mName.Save(*c.mFile);
+    }
+    return EESavePrimitive(*c.mFile, inOp, io);
 }

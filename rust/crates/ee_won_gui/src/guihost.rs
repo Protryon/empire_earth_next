@@ -824,6 +824,72 @@ pub enum EeWonGuiOp {
     /// a component's member, virtual method or service (`a` an `EeWonComp`; `b` the receiver, `c`, `d` its
     /// arguments).
     Comp = 622,
+    // ---- the constructors' statements (R6 WONLobby round 30: `guictor`; the receiver the component constructed)
+    /// `mTextColor = 0x8000000e` (the text area, input box and list area).
+    CtorTextColor = 700,
+    /// the class's named font: the text area's `SetFont(GetNamedFont("TextArea"))`, the input box's
+    /// `mFont = GetNamedFont("InputBox")`, the label's `mWrappedText->SetFont(GetNamedFont("Label"))`, the list
+    /// area's `mFont = GetNamedFont("ListArea")`.
+    CtorFontNamed,
+    /// `mLinkColor = 0x0000ff`.
+    CtorLinkColor,
+    /// `SetLinkFont(GetNamedFont("TextAreaLink"))`.
+    CtorLinkFontNamed,
+    /// `mLinkFont.get() == GetRoot()->GetWindowManager()->GetDefaultFont()` (0 or 1).
+    CtorLinkFontIsDefault,
+    /// `SetLinkFont(GetFont(the font's descriptor underlined))`.
+    CtorLinkFontUnderline,
+    /// `SetComponentFlags(a, true)`.
+    CtorSetFlags,
+    /// `SetPads(a, a, a, a)`.
+    CtorPads,
+    /// `Reset(false)`.
+    CtorReset,
+    /// `mDisabledTextColor = (int)0x80000006`.
+    CtorDisabledTextColor,
+    /// `mDisabledBackground.SetColor((int)0x80000001)`.
+    CtorDisabledBackground,
+    /// `mUseDisabledColors = true`.
+    CtorUseDisabledColors,
+    /// `mInputFilter = NULL`.
+    CtorNoFilter,
+    /// `mWrappedText = new WrappedText`.
+    CtorWrapNew,
+    /// `mBackground.SetColor(-1)`.
+    CtorBackgroundNone,
+    /// `mViewport = new ScrollAreaViewport(this)`.
+    CtorViewportNew,
+    /// `AddChild(mViewport.get())`.
+    CtorAddViewport,
+    /// `mSortFunc = NULL`.
+    CtorNoSortFunc,
+    /// `SetNumColumns(a)` (the multi-column list).
+    CtorMultiColumns,
+    /// `SetMultiListArea((MultiListArea*)a)` (the header).
+    CtorHeaderArea,
+    /// the popup menu's `SetFont(GetNamedFont("Menu"))`.
+    CtorMenuFont,
+    /// `SetListFlags(0x806, true)`.
+    CtorMenuListFlags,
+    /// `SetBackground(WONShellNew(EeWonShellKind::MsPopup))`.
+    CtorMenuBackground,
+    /// `mTextColor = 0x8000000c`.
+    CtorMenuTextColor,
+    /// `SetBorderPadding(4, 4, 4, 4)`.
+    CtorMenuBorderPadding,
+    // the text area's segments (guictor.rs)
+    /// `new TextSegment`.
+    SegNew,
+    /// `Seg(a)->mText.mData = ((const GUIString*)b)->mData`.
+    SegSetText,
+    /// `Seg(a)->mColor = b`.
+    SegSetColor,
+    /// `Seg(a)->mFont = (Font*)b`.
+    SegSetFont,
+    /// `Seg(a)->mLineBreak = b != 0`.
+    SegSetLineBreak,
+    /// `AddSegment(Seg(a))`.
+    AddSegmentOf,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).

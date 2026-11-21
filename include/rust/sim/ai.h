@@ -187,6 +187,15 @@ constexpr static const int32_t EE_AI_NEXT_HOST_STARTED = 61;
 /// shared random seed, the inputs processed
 constexpr static const int32_t EE_AI_NEXT_HOST_SIM_HASH = 62;
 
+/// `EECPTraceOut(player, (const char*)b, "%s", (const char*)c)`
+constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_OUT = 63;
+
+/// unit `a`'s `SetGoal(NewAttackUnit(a, b, false, false), 0, 0)`; `SetGoal(NewLocation(GE2DPoint(b, c), true, true,
+/// false, 0, false, false), 0, 0)`
+constexpr static const int32_t EE_AI_NEXT_HOST_SET_ATTACK = 64;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SET_LOCATION = 65;
+
 /// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
 constexpr static const long THREAT_RANGE = 9;
 
@@ -550,6 +559,108 @@ constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TAKE = 93;
 /// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
 /// computed twice (the shore's GetTilesNextTo and FindPath are captured).
 constexpr static const int32_t EE_AI_UNITS_HOST_TILES_AGAIN = 94;
+
+/// `((EEUnitGoal*)a)->GetGoalLocation(*(GE3DPoint*)out)`
+constexpr static const int32_t EE_AI_UNITS_HOST_GOAL_LOCATION = 95;
+
+/// the complex unit `a`'s class is no building and moves (`GetMaxVelocity() > 0`)
+constexpr static const int32_t EE_AI_UNITS_HOST_MOVES = 96;
+
+/// the complex unit `a`'s `GetTerrainFlags`: forest (bit 0) and cliff (bit 1)
+constexpr static const int32_t EE_AI_UNITS_HOST_CROSSES = 97;
+
+/// `EEUnitBehavior::sTable.size()`, `sTable[a]`
+constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIORS = 98;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIOR_AT = 99;
+
+/// `EEDoesWallGateFitOnUnit(a, b, c, units)`
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_FITS = 100;
+
+/// unit `a` is a living piece of the player's finished wall (`GetIsWall()`, `GetHitPoints() > 0`, its player, built)
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_WALL = 124;
+
+/// ai.tuning's C++ values: `IsDeathmatch()`, the game options' resources, epoch start, epoch end, the space map
+constexpr static const int32_t EE_AI_UNITS_HOST_T_DEATHMATCH = 101;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_RESOURCES = 102;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_EPOCH_START = 103;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_EPOCH_END = 104;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_SPACE = 105;
+
+/// `EEPlayer::GetPopulationLimit(0)`; `EECPCheatOn(player, a)`; the personality's id into `out` (128 bytes)
+constexpr static const int32_t EE_AI_UNITS_HOST_T_POP_LIMIT = 106;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_CHEAT = 107;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_ID = 108;
+
+/// the personality's floats into `*(float*)out`: epoch pressure start, full, surplus cut, max citizen share,
+/// standing army, army floor, floor `a`; `EECPStoneSpan`, `EECPSafeBonus`
+constexpr static const int32_t EE_AI_UNITS_HOST_T_PRESSURE_START = 109;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_PRESSURE_FULL = 110;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_SURPLUS_CUT = 111;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_MAX_CITIZEN_SHARE = 112;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_STANDING_ARMY = 113;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_ARMY_FLOOR = 114;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_FLOOR = 115;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_STONE_SPAN = 116;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_SAFE_BONUS = 117;
+
+/// the personality's integers: surplus, low stock, wood slots, moves per cycle
+constexpr static const int32_t EE_AI_UNITS_HOST_T_SURPLUS = 118;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_LOW_STOCK = 119;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_WOOD_SLOTS = 120;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_T_MOVES_PER_CYCLE = 121;
+
+/// the switches: `EECPDemandSplitOn` .. `EECPNavalFleeOn` (`a` picks one, EE_AI_UNITS_SWITCH_*)
+constexpr static const int32_t EE_AI_UNITS_HOST_T_SWITCH = 122;
+
+/// `gCPBehaviors`
+constexpr static const int32_t EE_AI_UNITS_HOST_T_BEHAVIORS = 123;
+
+/// [`EE_AI_UNITS_HOST_T_SWITCH`]'s switches, in ai.tuning's order.
+constexpr static const int64_t EE_AI_UNITS_SWITCH_DEMAND_SPLIT = 0;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_COAST_FISHING = 1;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_FORAGE_PATCHES = 2;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_CLAIM_RANGE = 3;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_CLAIM_NEEDED = 4;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_EARLY_TOWN_CENTERS = 5;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_EARLY_TRAINERS = 6;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_PATCH_EXPAND = 7;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_MILITIA = 8;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_MILITIA_TOWERS = 9;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_PREHISTORIC_ARMY = 10;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_PREHISTORIC_PEACE = 11;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_STONE_PEACE = 12;
+
+constexpr static const int64_t EE_AI_UNITS_SWITCH_NAVAL_FLEE = 13;
 
 constexpr static const long EV_ATTACKED = 1;
 

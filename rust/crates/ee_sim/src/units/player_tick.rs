@@ -67,6 +67,77 @@ pub const EE_UNITS_PLAYER_TICK_UNIT_NEXT: i32 = 20;
 pub const EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS: i32 = 21;
 /// unit `io.i`'s `SetHitPoints(index as long)`
 pub const EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS: i32 = 22;
+// the compound operations' one-statement parts (the groups lane, round 2: [`split`])
+/// `mViewedUnit` is there and held by the player only
+pub const EE_UNITS_PLAYER_TICK_X_VIEWED_ALONE: i32 = 40;
+/// `UpdateSelection(NULL, true)`
+pub const EE_UNITS_PLAYER_TICK_X_UNVIEW: i32 = 41;
+/// `mSelectedViewedUnit` is there and held by the player only
+pub const EE_UNITS_PLAYER_TICK_X_SELECTED_VIEWED_ALONE: i32 = 42;
+/// `SetSelectedViewedUnit(NULL)`
+pub const EE_UNITS_PLAYER_TICK_X_SELECTED_UNVIEW: i32 = 43;
+/// `ee_units_groups_player(this, 4)` (group_obj.rs validate_player)
+pub const EE_UNITS_PLAYER_TICK_X_VALIDATE_GROUPS: i32 = 44;
+/// `UpdateAirTraffic()`
+pub const EE_UNITS_PLAYER_TICK_X_AIR: i32 = 45;
+/// `mEvents.TickEvents(this, gPhysics->mTickTime)`
+pub const EE_UNITS_PLAYER_TICK_X_EVENTS: i32 = 46;
+/// `kWorldWonderHealAmount` into `io.i`
+pub const EE_UNITS_PLAYER_TICK_X_HEAL_AMOUNT: i32 = 47;
+/// the tech tree's `mCurrentEpoch` into `io.i`
+pub const EE_UNITS_PLAYER_TICK_X_EPOCH: i32 = 48;
+/// `kWorldWonderHealEpochStep` into `io.i`
+pub const EE_UNITS_PLAYER_TICK_X_HEAL_STEP: i32 = 49;
+/// `kWorldWonderHealEpochFactor` into `io.f`
+pub const EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR: i32 = 50;
+/// the first unit (`io.i` 0) or the one after unit `io.i`, into `io.i`
+pub const EE_UNITS_PLAYER_TICK_X_NEXT_UNIT: i32 = 51;
+/// `mHealedUnitSet->Contains(unit io.i's class's mUnitType)`
+pub const EE_UNITS_PLAYER_TICK_X_HEALED: i32 = 52;
+
+/// Operation `op` over the one-statement operations of `f` when it is a compound one (its answer); `None` for the
+/// others. The bodies and their tests ask the compound ones.
+pub(crate) fn split(
+    op: i32,
+    index: u32,
+    io: &mut EeUnitsPlayerSaveIo,
+    f: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
+) -> Option<i32> {
+    let ask = |f: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32, op: i32| {
+        f(op, 0, &mut EeUnitsPlayerSaveIo::default())
+    };
+    match op {
+        EE_UNITS_PLAYER_TICK_VALIDATE => {
+            if ask(f, EE_UNITS_PLAYER_TICK_X_VIEWED_ALONE) != 0 {
+                ask(f, EE_UNITS_PLAYER_TICK_X_UNVIEW);
+            }
+            if ask(f, EE_UNITS_PLAYER_TICK_X_SELECTED_VIEWED_ALONE) != 0 {
+                ask(f, EE_UNITS_PLAYER_TICK_X_SELECTED_UNVIEW);
+            }
+            ask(f, EE_UNITS_PLAYER_TICK_X_VALIDATE_GROUPS);
+            Some(0)
+        }
+        EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS => {
+            ask(f, EE_UNITS_PLAYER_TICK_X_AIR);
+            ask(f, EE_UNITS_PLAYER_TICK_X_EVENTS);
+            Some(0)
+        }
+        EE_UNITS_PLAYER_TICK_HEAL_VALUE => {
+            let x = match index {
+                0 => EE_UNITS_PLAYER_TICK_X_HEAL_AMOUNT,
+                1 => EE_UNITS_PLAYER_TICK_X_EPOCH,
+                2 => EE_UNITS_PLAYER_TICK_X_HEAL_STEP,
+                _ => EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR,
+            };
+            Some(f(x, 0, io))
+        }
+        EE_UNITS_PLAYER_TICK_UNIT_NEXT => {
+            f(EE_UNITS_PLAYER_TICK_X_NEXT_UNIT, 0, io);
+            Some(if io.i != 0 && f(EE_UNITS_PLAYER_TICK_X_HEALED, 0, io) != 0 { 1 } else { 0 })
+        }
+        _ => None,
+    }
+}
 
 /// `kPlayerHealInterval` (ms)
 pub const EE_UNITS_PLAYER_HEAL_INTERVAL: f32 = 10000.0;
@@ -305,8 +376,14 @@ impl PlayerTickHost for FnHost {
                 return v as i32;
             }
         }
-        // SAFETY: the C++ callback's contract
-        unsafe { (self.f)(self.ctx, op, index, io) }
+        let (ctx, f) = (self.ctx, self.f);
+        // SAFETY (both): the C++ callback's contract
+        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
+        // the compound operations as the C++'s one-statement ones ([`split`])
+        if let Some(r) = split(op, index, io, &mut call) {
+            return r;
+        }
+        call(op, index, io)
     }
 }
 
@@ -338,3 +415,59 @@ pub unsafe extern "C" fn ee_units_player_reset(rec: *mut EeUnitsPlayerSaved, pla
 #[cfg(test)]
 #[path = "player_tick_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod split_tests {
+    use super::*;
+
+    fn run(op: i32, index: u32, i: i64, answers: &[(i32, i32, i64)]) -> (Option<i32>, i64, Vec<i32>) {
+        let mut log = Vec::new();
+        let mut queue = answers.to_vec();
+        let mut f = |op: i32, _index: u32, io: &mut EeUnitsPlayerSaveIo| {
+            log.push(op);
+            match queue.iter().position(|a| a.0 == op) {
+                Some(k) => {
+                    let (_, r, v) = queue.remove(k);
+                    io.i = v;
+                    r
+                }
+                None => 0,
+            }
+        };
+        let mut io = EeUnitsPlayerSaveIo { i, ..Default::default() };
+        let r = split(op, index, &mut io, &mut f);
+        (r, io.i, log)
+    }
+
+    #[test]
+    fn the_tick_operations_split_in_the_original_order() {
+        let (_, _, log) =
+            run(EE_UNITS_PLAYER_TICK_VALIDATE, 0, 0, &[(EE_UNITS_PLAYER_TICK_X_SELECTED_VIEWED_ALONE, 1, 0)]);
+        assert_eq!(
+            log,
+            vec![
+                EE_UNITS_PLAYER_TICK_X_VIEWED_ALONE,
+                EE_UNITS_PLAYER_TICK_X_SELECTED_VIEWED_ALONE,
+                EE_UNITS_PLAYER_TICK_X_SELECTED_UNVIEW,
+                EE_UNITS_PLAYER_TICK_X_VALIDATE_GROUPS,
+            ]
+        );
+        assert_eq!(
+            run(EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS, 0, 0, &[]).2,
+            vec![EE_UNITS_PLAYER_TICK_X_AIR, EE_UNITS_PLAYER_TICK_X_EVENTS]
+        );
+        assert_eq!(run(EE_UNITS_PLAYER_TICK_HEAL_VALUE, 2, 0, &[]).2, vec![EE_UNITS_PLAYER_TICK_X_HEAL_STEP]);
+        assert_eq!(run(EE_UNITS_PLAYER_TICK_HEAL_VALUE, 3, 0, &[]).2, vec![EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR]);
+        // the next unit, healed; the end of the list asks no set
+        let r = run(
+            EE_UNITS_PLAYER_TICK_UNIT_NEXT,
+            0,
+            0,
+            &[(EE_UNITS_PLAYER_TICK_X_NEXT_UNIT, 0, 0x40), (EE_UNITS_PLAYER_TICK_X_HEALED, 1, 0x40)],
+        );
+        assert_eq!((r.0, r.1), (Some(1), 0x40));
+        let r = run(EE_UNITS_PLAYER_TICK_UNIT_NEXT, 0, 0x40, &[(EE_UNITS_PLAYER_TICK_X_NEXT_UNIT, 0, 0)]);
+        assert_eq!((r.0, r.1, r.2.len()), (Some(0), 0, 1));
+        assert_eq!(run(EE_UNITS_PLAYER_TICK_HERD_COUNT, 0, 0, &[]).0, None);
+    }
+}

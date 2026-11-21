@@ -34,6 +34,8 @@ constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
 
 constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
 
+constexpr static const uint32_t TYPE_PATH_POINT = 223;
+
 constexpr static const uint8_t MOVEMENT_SEA = 4;
 
 constexpr static const uint8_t MOVEMENT_SEA_OR_SPACE = (4 | 8);

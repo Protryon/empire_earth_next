@@ -32,17 +32,9 @@ bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName);
 // would run on the live player)
 bool EECPUnitsUsed(const EEComputerPlayer* inPlayer);
 
-// the events (EEComputerPlayer's handlers; nothing is decided there: they are queued for the script)
-void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit);
 // a hit one of the player's units dealt to inVictim (EEUnit::TakeHit): the lost layer's "dealt" side
 void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim);
-void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
-void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
 void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend);
-void EECPUnitsOnFlare(EEComputerPlayer* inPlayer, long inPlayerID, long inX, long inY);
-void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool inSwapped);
-void EECPUnitsOnGoalDone(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
-void EECPUnitsOnSwapped(EEComputerPlayer* inPlayer, std::vector<EEPUnitSwap>& ioSwaps);
 
 // every physics tick (EEArtificialIntelligence::Update): the enemy memory once a game second (what the player sees
 // now) and the scripts' `micro` every 250 game ms

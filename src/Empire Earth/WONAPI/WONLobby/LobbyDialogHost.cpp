@@ -196,18 +196,7 @@ void LobbyRustDialog::InitComponent(ComponentInit& inInit)
 
 void LobbyRustDialog::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    EeWonLobbyDlgEvent aType = EeWonLobbyDlgEvent::Other;
-    if (inEvent->mType == ComponentEvent_InputTextChanged)
-        aType = EeWonLobbyDlgEvent::InputTextChanged;
-    else if (inEvent->mType == ComponentEvent_ButtonPressed)
-        aType = EeWonLobbyDlgEvent::ButtonPressed;
-    else if (inEvent->mType == ComponentEvent_ComboSelChanged)
-        aType = EeWonLobbyDlgEvent::ComboSelChanged;
-    else if (inEvent->mType == LobbyEvent_GotHTTPDocument)
-        aType = EeWonLobbyDlgEvent::GotHttpDocument;
-    else if (inEvent->mType == ComponentEvent_ListItemClicked)
-        aType = EeWonLobbyDlgEvent::ListItemClicked;
-    this->LCall(EeWonLobbyDlgCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
+    this->LCall(EeWonLobbyDlgCall::RawEvent, (intptr_t)inEvent, inEvent->mType, (intptr_t)inEvent->mComponent);
 }
 
 const GUIString& LobbyRustDialog::InputText(int inMember)
@@ -491,10 +480,7 @@ LobbyRustPopup::~LobbyRustPopup() { ee_won_lobbypopup_free(this->mLobbyPopup); }
 
 void LobbyRustPopup::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    EeWonLobbyPopupEvent aType = inEvent->mType == ComponentEvent_ListItemUpClicked
-                                     ? EeWonLobbyPopupEvent::ItemUpClicked
-                                     : EeWonLobbyPopupEvent::Other;
-    this->PCall(EeWonLobbyPopupCall::Event, (intptr_t)inEvent, (intptr_t)aType);
+    this->PCall(EeWonLobbyPopupCall::RawEvent, (intptr_t)inEvent, inEvent->mType);
 }
 
 static intptr_t Held(RefCount* inObject)

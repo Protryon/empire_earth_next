@@ -579,12 +579,12 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the groups and formations
     case O::GroupCount: return ((EEGroup*)p)->GetNumUnits();
     case O::GroupUnit: return P64(((EEGroup*)p)->GetUnit((unsigned long)a[0]));
-    case O::GroupFormationType: return ((EEGroup*)p)->mFormation->mType;
+    case O::GroupFormationType: return ((EEGroup*)p)->GetFormation()->mType;
     case O::GroupSetFormation: ((EEGroup*)p)->SetFormation((EEFormation*)a[0]);
         break;
     case O::SelGroupSetFormation: SEL->SetFormation((EEFormation*)a[0]);
         break;
-    case O::SelGroupSavedGroup: return P64(SEL->mSavedGroup);
+    case O::SelGroupSavedGroup: return P64(SEL->GetSavedGroup());
     case O::SelGroupSelectSaved: SEL->SelectSavedGroup((EEGroup*)a[0], a[1] != 0);
         break;
     case O::SelGroupFirstUnit: return P64(SEL->GetFirstUnit());

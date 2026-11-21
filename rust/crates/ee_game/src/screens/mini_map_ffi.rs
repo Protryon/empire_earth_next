@@ -10,6 +10,19 @@ struct MapHost(*mut c_void);
 
 impl UiHost for MapHost {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        // the RustOp cases that are Rust's over the C++ shims (mini_map_calls.rs)
+        let mouse = if op == mini_map::EE_SCREENS_MM_OP_READ_MOUSE {
+            // SAFETY: c is the caller's live EeScreensMiniMapMouse
+            Some(unsafe { &mut *(c as *mut mini_map::EeScreensMiniMapMouse) })
+        } else {
+            None
+        };
+        let map = self.0 as usize;
+        if let Some(r) =
+            crate::screens::mini_map_calls::rust_op(&mut crate::screens::game_cpp::Ffi, map, op, a, b, mouse)
+        {
+            return r;
+        }
         let (op, a) = mini_map::hud_op(op, a);
         let mut none = [0.0f32; 0];
         // the mouse's read hands its record (c) as the op's floats

@@ -83,208 +83,6 @@ UIControl* EEUIFMGStatusBox::GetBoxControl(int64_t inControl) const
     return static_cast<UIControl*>(ee_screens_status_box_control(this, inControl));   // (the record's slots)
 }
 
-// two f32s of one host argument (status_box.rs pack: the first in the low 32 bits)
-static float EEBoxFloat(int64_t inPair, int inHigh)
-{
-    uint32_t theBits = (uint32_t)(inHigh ? (uint64_t)inPair >> 32 : (uint64_t)inPair);
-    float theValue;
-    memcpy(&theValue, &theBits, 4);
-    return theValue;
-}
-
-// ee_screens status_box.rs's host (EE_SCREENS_BOX_OP_*): one read or call of the original's status box functions
-int64_t EEUIFMGStatusBox::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
-    EEUIFMGStatusBox* theBox = theCall.mBox;
-    switch (inOp) {
-    case EE_SCREENS_BOX_OP_QUEUED: {
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA));
-        if (theButton->mNumQueued != (long)inB)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = (long)inB;
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_ATTRIBUTE:
-        return static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->mAttribute;
-    case EE_SCREENS_BOX_OP_SET_ATTRIBUTE:
-        static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->mAttribute = (long)inB;
-        return 0;
-    case EE_SCREENS_BOX_OP_COST_LABEL:
-        static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->mCostLabel =
-            inB < 0 ? NULL : static_cast<UITextLabel*>(theBox->GetBoxControl(inB));
-        return 0;
-    case EE_SCREENS_BOX_OP_NAME: {
-        // Fill compares the stats' name with the pooled empty string, Refresh with ""
-        EEUnit* theUnit = theCall.mUnit;
-        UWideString theSuffix;
-        EEUnitClass* theClass = theUnit->GetUnitClass();
-        if (inA == 0 ? theUnit->mStats->mName == gEmptyString : theUnit->GetStats()->mName == "")
-            gResource->GetString(theClass->mNameStringID, theCall.mText);
-        else
-            theCall.mText = theUnit->GetStats()->mName;
-        if ((inA == 0 ? theUnit->mUnitClass->mCategory : theUnit->GetUnitClass()->mCategory) == kUnitCategoryGate) {
-            if (theUnit->mComplexUnit->mIsLocked)
-                gResource->GetString(IDS_MSG_LOCKED, theSuffix);
-            else
-                gResource->GetString(IDS_MSG_UNLOCKED, theSuffix);
-            theCall.mText += theSuffix;
-        }
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_CIV:
-        theCall.mText = theCall.mUnit->GetPlayer()->mCivilization.mName;
-        return 0;
-    case EE_SCREENS_BOX_OP_BAR_ICON:
-        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))
-            ->SetIconBitmap(sIconBitmaps[inB].mBitmap, sIconBitmaps[inB].mRectangle);
-        return 0;
-    case EE_SCREENS_BOX_OP_BAR_RANGE:
-        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mBar->SetRange(0, (unsigned long)(long)inB);
-        return 0;
-    case EE_SCREENS_BOX_OP_BAR_VALUE:
-        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mBar->SetCurrentRangeValue((long)inB);
-        return 0;
-    case EE_SCREENS_BOX_OP_BAR_COLOR:
-        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))
-            ->mBar->SetStatusBarColor(inB == 1 ? kStatusColor1 : inB == 2 ? kStatusColor2 : kStatusColor3);
-        return 0;
-    case EE_SCREENS_BOX_OP_BAR_ENABLED:
-        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mEnabled = inB != 0;
-        return 0;
-    case EE_SCREENS_BOX_OP_STRETCH: {
-        EEUIFMGAttribute* theRectangle = static_cast<EEUIFMGAttribute*>(theBox->GetBoxControl(inB));
-        sIconBitmaps[inA].mBitmap->ComputeStretchedCoordsAndScale(theRectangle->GetIconRectangle(),
-                                                                  theRectangle->GetIconRectangle(),
-                                                                  sIconBitmaps[inA].mRectangle,
-                                                                  theBox->GetBoxControl(inC)->GetScreenIndex());
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_SET_BITMAP: {
-        UIButton* theButton = static_cast<UIButton*>(theBox->GetBoxControl(inA));
-        if (inB == 0)
-            theButton->SetNormalBitmap(sIconBitmaps[inC].mBitmap);
-        else
-            theButton->SetPressedBitmap(sIconBitmaps[inC].mBitmap);
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_BITMAP_IS: {
-        UIButton* theButton = static_cast<UIButton*>(theBox->GetBoxControl(inA));
-        return (inB == 0 ? theButton->GetNormalBitmap() : theButton->GetPressedBitmap()) == sIconBitmaps[inC].mBitmap;
-    }
-    case EE_SCREENS_BOX_OP_PORTRAIT:
-        static_cast<EEUICPortrait*>(theBox->mC8C)->SetUnit(inA != 0 ? theCall.mUnit : NULL);
-        return 0;
-    case EE_SCREENS_BOX_OP_PORTRAIT_UPDATE:
-        static_cast<EEUICPortrait*>(theBox->mC8C)->Update();
-        return 0;
-    case EE_SCREENS_BOX_OP_VERIFY:
-        if (inA == 367)
-            ESVerify(__FILE__, 367, "this->mArmorAttributeCount <= keeuifmgsbMaxAttributes");
-        else
-            ESVerify(__FILE__, 708, "this->mAttributeCount <= keeuifmgsbMaxAttributes");
-        return 0;
-    case EE_SCREENS_BOX_OP_BACKGROUND: {
-        UIBackground* theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID((unsigned long)inA);
-        if (theBackground != NULL)
-            theBackground->SetVisibility(inB != 0);
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_VALUE_DIFFERS: {
-        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA));
-        return theCall.mText != (inB == 0 ? theBar->GetValueText() : theBar->GetValue2Text());
-    }
-    case EE_SCREENS_BOX_OP_SET_VALUE: {
-        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA));
-        (inB == 0 ? theBar->mValue : theBar->mValue2)->SetText(theCall.mText);
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_UPDATE_COST:
-        static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->UpdateCost(theCall.mText);
-        return 0;
-    case EE_SCREENS_BOX_OP_ARMOR: {
-        EEUnitClassUpgrade* theStats = theCall.mUnit->mStats;
-        if (inB == 1)
-            return theCall.mUnit->GetUnitClass()->mArmor[inA];
-        if (inB == 2)
-            return theStats->mUnitClass->mArmor[inA];
-        float theArmor = theStats->mArmor[inA];
-        uint32_t theBits;
-        memcpy(&theBits, &theArmor, 4);
-        return theBits;
-    }
-    case EE_SCREENS_BOX_OP_UNIT_TYPE:
-        return theCall.mComplex->GetUnitClass()->mUnitType;
-    case EE_SCREENS_BOX_OP_COUNT_QUEUED:
-        return theCall.mComplex->GetPlayer()->CountQueuedImprovements((unsigned long)inA, (long)inB);
-    case EE_SCREENS_BOX_OP_NEW_BITMAP:
-        sIconBitmaps[inA].mBitmap = new GEBitmap;
-        return 0;
-    case EE_SCREENS_BOX_OP_DESCRIPTION: {
-        GETextureDescription theDescription = {1, 0, 0x10, 0, false, false, true, true};
-        theDescription.mCreateMIPMaps = false;
-        theDescription.mPixelDepth = gTexturePixelDepth;
-        theDescription.mHasAlpha = true;
-        theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() <= 800;
-        theCall.mDescription = theDescription;
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_LOAD_TEXTURE: {
-        static const char* const kNames[4] = {"", "textures\\unit improvements_01", "textures\\unit improvements_02",
-                                              "textures\\unit upgrades_03"};
-        GETexture* theTexture = gTextureManager->LoadTexture(UString(kNames[inA]), theCall.mDescription);
-        theTexture->SetStageAlphaMode(kStageOpModulate, -1);
-        theTexture->SetStageColorMode(kStageOpModulate, -1);
-        theTexture->SetStageMinFilterMode(1, -1);
-        theTexture->SetStageMagFilterMode(1, -1);
-        theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-        theTexture->SetStageMipMapBias(-0.75f, -1);
-        theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
-        theCall.mTextures[inA] = theTexture;
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_SET_RECT:
-        sIconBitmaps[inA].mRectangle =
-            GERectangle(EEBoxFloat(inB, 0), EEBoxFloat(inB, 1), EEBoxFloat(inC, 0), EEBoxFloat(inC, 1));
-        return 0;
-    case EE_SCREENS_BOX_OP_TEXTURE_SIZE: {
-        GETexture* theTexture = theCall.mTextures[inA];
-        uint64_t theWidth = (uint32_t)theTexture->GetSurface()->GetWidth();
-        return (int64_t)(theWidth << 32 | (uint32_t)theTexture->GetSurface()->GetHeight());
-    }
-    case EE_SCREENS_BOX_OP_BITMAP_TEXTURE: {
-        GETextureCoordinate theTopLeft;
-        GETextureCoordinate theTopRight;
-        GETextureCoordinate theBottomLeft;
-        GETextureCoordinate theBottomRight;
-        theTopLeft.mU = EEBoxFloat(inB, 0);
-        theTopLeft.mV = EEBoxFloat(inB, 1);
-        theBottomRight.mU = EEBoxFloat(inC, 0);
-        theBottomRight.mV = EEBoxFloat(inC, 1);
-        theTopRight.mU = theBottomRight.mU;
-        theTopRight.mV = theTopLeft.mV;
-        theBottomLeft.mU = theTopLeft.mU;
-        theBottomLeft.mV = theBottomRight.mV;
-        GEBitmap* theBitmap = sIconBitmaps[inA & 0xff].mBitmap;
-        theBitmap->SetTexture(theCall.mTextures[inA >> 8], gScreenIndex);
-        theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        return 0;
-    }
-    case EE_SCREENS_BOX_OP_BITMAP_SCALE:
-        sIconBitmaps[inA].mBitmap->SetXYScale(EEBoxFloat(inB, 0), EEBoxFloat(inB, 1));
-        return 0;
-    case EE_SCREENS_BOX_OP_ICONS_LOADED:
-        sIconsLoaded = true;
-        return 0;
-    }
-    return 0;
-}
-
-extern "C" int64_t ee_screenscpp_status_box(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    return EEUIFMGStatusBox::HostOp(inCall, inOp, inA, inB, inC);
-}
-
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
 // EEStatusBoxView), and whether the box has its third and fourth bars
 extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
@@ -295,6 +93,142 @@ extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
 }
 
 
+// ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
+// EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
+#define SBC(x) (*reinterpret_cast<EEUIFMGStatusBoxCall*>(x))
+#define SBX(x, i) SBC(x).mBox->GetBoxControl(i)
+#define SBBAR(x, i) static_cast<EEUIFMGStatusBar*>(SBX(x, i))
+static const GEColor* const kSBBarColors[3] = {&kStatusColor3, &kStatusColor1, &kStatusColor2};
+static const char* const kSBTextureNames[4] = {"", "textures\\unit improvements_01", "textures\\unit improvements_02",
+                                               "textures\\unit upgrades_03"};
+static UWideString sSBSuffix;                 // the gate's lock state (the original's local)
+static GETextureDescription sSBReload;        // ReloadIcons' description
+extern "C" int64_t ee_screenscpp_sb_upgrade_queued(uintptr_t inCall, int64_t inCtl)
+{ return static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mNumQueued; }
+extern "C" void ee_screenscpp_sb_control_set_dirty(uintptr_t inCall, int64_t inCtl)
+{ SBX(inCall, inCtl)->SetDirty(true); }
+extern "C" void ee_screenscpp_sb_upgrade_set_queued(uintptr_t inCall, int64_t inCtl, int64_t inCount)
+{ static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mNumQueued = (long)inCount; }
+extern "C" int64_t ee_screenscpp_sb_upgrade_attribute(uintptr_t inCall, int64_t inCtl)
+{ return static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mAttribute; }
+extern "C" void ee_screenscpp_sb_upgrade_set_attribute(uintptr_t inCall, int64_t inCtl, int64_t inValue)
+{ static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mAttribute = (long)inValue; }
+extern "C" void ee_screenscpp_sb_upgrade_cost_label_clear(uintptr_t inCall, int64_t inCtl)
+{ static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mCostLabel = NULL; }
+extern "C" void ee_screenscpp_sb_upgrade_cost_label(uintptr_t inCall, int64_t inCtl, int64_t inLabel)
+{ static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mCostLabel = static_cast<UITextLabel*>(SBX(inCall, inLabel)); }
+extern "C" void ee_screenscpp_sb_upgrade_update_cost(uintptr_t inCall, int64_t inCtl)
+{ static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->UpdateCost(SBC(inCall).mText); }
+extern "C" bool ee_screenscpp_sb_name_empty_fill(uintptr_t inCall)
+{ return SBC(inCall).mUnit->mStats->mName == gEmptyString; }
+extern "C" bool ee_screenscpp_sb_name_empty(uintptr_t inCall) { return SBC(inCall).mUnit->GetStats()->mName == ""; }
+extern "C" void ee_screenscpp_sb_text_class_name(uintptr_t inCall)
+{ gResource->GetString(SBC(inCall).mUnit->GetUnitClass()->mNameStringID, SBC(inCall).mText); }
+extern "C" void ee_screenscpp_sb_text_stats_name(uintptr_t inCall)
+{ SBC(inCall).mText = SBC(inCall).mUnit->GetStats()->mName; }
+extern "C" bool ee_screenscpp_sb_is_gate_fill(uintptr_t inCall)
+{ return SBC(inCall).mUnit->mUnitClass->mCategory == kUnitCategoryGate; }
+extern "C" bool ee_screenscpp_sb_is_gate(uintptr_t inCall)
+{ return SBC(inCall).mUnit->GetUnitClass()->mCategory == kUnitCategoryGate; }
+extern "C" bool ee_screenscpp_sb_gate_locked(uintptr_t inCall) { return SBC(inCall).mUnit->mComplexUnit->mIsLocked; }
+extern "C" void ee_screenscpp_sb_suffix_clear() { sSBSuffix = UWideString(); }
+extern "C" void ee_screenscpp_sb_suffix_locked() { gResource->GetString(IDS_MSG_LOCKED, sSBSuffix); }
+extern "C" void ee_screenscpp_sb_suffix_unlocked() { gResource->GetString(IDS_MSG_UNLOCKED, sSBSuffix); }
+extern "C" void ee_screenscpp_sb_text_append_suffix(uintptr_t inCall) { SBC(inCall).mText += sSBSuffix; }
+extern "C" void ee_screenscpp_sb_text_civ(uintptr_t inCall)
+{ SBC(inCall).mText = SBC(inCall).mUnit->GetPlayer()->mCivilization.mName; }
+extern "C" uintptr_t ee_screenscpp_sb_bar_control(uintptr_t inCall, int64_t inCtl)
+{ return (uintptr_t)SBBAR(inCall, inCtl); }
+extern "C" uintptr_t ee_screenscpp_sb_icon_rect(int64_t inIcon)
+{ return (uintptr_t)&EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle; }
+extern "C" void ee_screenscpp_sb_bar_range(uintptr_t inCall, int64_t inCtl, int64_t inValue)
+{ SBBAR(inCall, inCtl)->mBar->SetRange(0, (unsigned long)(long)inValue); }
+extern "C" void ee_screenscpp_sb_bar_value(uintptr_t inCall, int64_t inCtl, int64_t inValue)
+{ SBBAR(inCall, inCtl)->mBar->SetCurrentRangeValue((long)inValue); }
+extern "C" void ee_screenscpp_sb_bar_color(uintptr_t inCall, int64_t inCtl, uint32_t inColor)
+{ SBBAR(inCall, inCtl)->mBar->SetStatusBarColor(*kSBBarColors[inColor]); }
+extern "C" void ee_screenscpp_sb_bar_enabled(uintptr_t inCall, int64_t inCtl, bool inEnabled)
+{ SBBAR(inCall, inCtl)->mEnabled = inEnabled; }
+extern "C" void ee_screenscpp_sb_stretch(uintptr_t inCall, int64_t inIcon, int64_t inRectangle, int64_t inCtl)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->ComputeStretchedCoordsAndScale(static_cast<EEUIFMGAttribute*>(SBX(inCall, inRectangle))->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(SBX(inCall, inRectangle))->GetIconRectangle(), EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle, SBX(inCall, inCtl)->GetScreenIndex()); }
+extern "C" void ee_screenscpp_sb_button_set_normal(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
+{ static_cast<UIButton*>(SBX(inCall, inCtl))->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap); }
+extern "C" void ee_screenscpp_sb_button_set_pressed(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
+{ static_cast<UIButton*>(SBX(inCall, inCtl))->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap); }
+extern "C" bool ee_screenscpp_sb_button_normal_is(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
+{ return static_cast<UIButton*>(SBX(inCall, inCtl))->GetNormalBitmap() == EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap; }
+extern "C" bool ee_screenscpp_sb_button_pressed_is(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
+{ return static_cast<UIButton*>(SBX(inCall, inCtl))->GetPressedBitmap() == EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap; }
+extern "C" void ee_screenscpp_sb_portrait_set_unit(uintptr_t inCall)
+{ static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->SetUnit(SBC(inCall).mUnit); }
+extern "C" void ee_screenscpp_sb_portrait_clear(uintptr_t inCall)
+{ static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->SetUnit(NULL); }
+extern "C" void ee_screenscpp_sb_portrait_update(uintptr_t inCall)
+{ static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->Update(); }
+extern "C" void ee_screenscpp_sb_verify_armor_count()
+{ ESVerify(__FILE__, 367, "this->mArmorAttributeCount <= keeuifmgsbMaxAttributes"); }
+extern "C" void ee_screenscpp_sb_verify_count()
+{ ESVerify(__FILE__, 708, "this->mAttributeCount <= keeuifmgsbMaxAttributes"); }
+extern "C" uintptr_t ee_screenscpp_sb_main_background(uint32_t inId)
+{ return (uintptr_t)gUIManager->GetMainGameForm()->GetBackgroundByID(inId); }
+extern "C" void ee_screenscpp_sb_background_set_visible(uintptr_t inBackground, bool inVisible)
+{ reinterpret_cast<UIBackground*>(inBackground)->SetVisibility(inVisible); }
+extern "C" bool ee_screenscpp_sb_value_differs(uintptr_t inCall, int64_t inCtl)
+{ return SBC(inCall).mText != SBBAR(inCall, inCtl)->GetValueText(); }
+extern "C" bool ee_screenscpp_sb_value2_differs(uintptr_t inCall, int64_t inCtl)
+{ return SBC(inCall).mText != SBBAR(inCall, inCtl)->GetValue2Text(); }
+extern "C" void ee_screenscpp_sb_set_value(uintptr_t inCall, int64_t inCtl)
+{ SBBAR(inCall, inCtl)->mValue->SetText(SBC(inCall).mText); }
+extern "C" void ee_screenscpp_sb_set_value2(uintptr_t inCall, int64_t inCtl)
+{ SBBAR(inCall, inCtl)->mValue2->SetText(SBC(inCall).mText); }
+extern "C" int64_t ee_screenscpp_sb_class_armor(uintptr_t inCall, int64_t inIndex)
+{ return SBC(inCall).mUnit->GetUnitClass()->mArmor[inIndex]; }
+extern "C" int64_t ee_screenscpp_sb_stats_class_armor(uintptr_t inCall, int64_t inIndex)
+{ return SBC(inCall).mUnit->mStats->mUnitClass->mArmor[inIndex]; }
+extern "C" float ee_screenscpp_sb_stats_armor(uintptr_t inCall, int64_t inIndex)
+{ return SBC(inCall).mUnit->mStats->mArmor[inIndex]; }
+extern "C" int64_t ee_screenscpp_sb_complex_unit_type(uintptr_t inCall)
+{ return SBC(inCall).mComplex->GetUnitClass()->mUnitType; }
+extern "C" int64_t ee_screenscpp_sb_count_queued(uintptr_t inCall, int64_t inImprovement, int64_t inKind)
+{ return SBC(inCall).mComplex->GetPlayer()->CountQueuedImprovements((unsigned long)inImprovement, (long)inKind); }
+extern "C" void ee_screenscpp_sb_new_bitmap(int64_t inIcon)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap = new GEBitmap; }
+extern "C" uint32_t ee_screenscpp_sb_primary_width()
+{ return (uint32_t)gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth(); }
+extern "C" void ee_screenscpp_sb_set_description(uintptr_t inCall, int32_t inDrop)
+{ SBC(inCall).mDescription = GETextureDescription{1, 0, gTexturePixelDepth, inDrop, false, false, true, false}; }
+extern "C" uintptr_t ee_screenscpp_sb_description(uintptr_t inCall) { return (uintptr_t)&SBC(inCall).mDescription; }
+extern "C" void ee_screenscpp_sb_set_texture(uintptr_t inCall, int64_t inIndex, uintptr_t inTexture)
+{ SBC(inCall).mTextures[inIndex] = reinterpret_cast<GETexture*>(inTexture); }
+extern "C" void ee_screenscpp_sb_set_rect(int64_t inIcon, float inLeft, float inTop, float inRight, float inBottom)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle = GERectangle(inLeft, inTop, inRight, inBottom); }
+extern "C" uint32_t ee_screenscpp_sb_texture_width(uintptr_t inCall, int64_t inIndex)
+{ return (uint32_t)SBC(inCall).mTextures[inIndex]->GetSurface()->GetWidth(); }
+extern "C" uint32_t ee_screenscpp_sb_texture_height(uintptr_t inCall, int64_t inIndex)
+{ return (uint32_t)SBC(inCall).mTextures[inIndex]->GetSurface()->GetHeight(); }
+extern "C" void ee_screenscpp_sb_bitmap_set_texture(int64_t inIcon, uintptr_t inCall, int64_t inIndex)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->SetTexture(SBC(inCall).mTextures[inIndex], gScreenIndex); }
+extern "C" void ee_screenscpp_sb_bitmap_set_coordinates(int64_t inIcon, float inU0, float inV0, float inU1, float inV1)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->SetTextureCoordinates(GETextureCoordinate(inU0, inV0), GETextureCoordinate(inU1, inV0), GETextureCoordinate(inU1, inV1), GETextureCoordinate(inU0, inV1)); }
+extern "C" void ee_screenscpp_sb_bitmap_scale(int64_t inIcon, float inX, float inY)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->SetXYScale(inX, inY); }
+extern "C" void ee_screenscpp_sb_icons_set_loaded(bool inLoaded) { sIconsLoaded = inLoaded; }
+extern "C" uintptr_t ee_screenscpp_sb_bitmap(int64_t inIcon)
+{ return (uintptr_t)EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap; }
+extern "C" void ee_screenscpp_sb_bitmap_dereference(int64_t inIcon)
+{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->Dereference(); }
+extern "C" void ee_screenscpp_sb_bitmap_clear(int64_t inIcon) { EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap = NULL; }
+extern "C" void ee_screenscpp_sb_set_reload_description(int32_t inDrop)
+{ sSBReload = GETextureDescription{1, 0, gTexturePixelDepth, inDrop, false, false, true, false}; }
+extern "C" int64_t ee_screenscpp_sb_reload(int64_t inIndex)
+{ return gTextureManager->ReloadTexture(UString(kSBTextureNames[inIndex]), sSBReload); }
+extern "C" void ee_screenscpp_sb_bar_bitmap(uintptr_t inBar, uintptr_t inBitmap)
+{ reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->SetBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
+extern "C" void ee_screenscpp_sb_bar_stretch(uintptr_t inBar, uintptr_t inBitmap, uintptr_t inRectangle)
+{ reinterpret_cast<GEBitmap*>(inBitmap)->ComputeStretchedCoordsAndScale(reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->GetRectangle(), reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->GetRectangle(), *reinterpret_cast<const GERectangle*>(inRectangle), reinterpret_cast<EEUIFMGStatusBar*>(inBar)->GetScreenIndex()); }
+extern "C" void ee_screenscpp_sb_bar_dirty(uintptr_t inBar)
+{ reinterpret_cast<EEUIFMGStatusBar*>(inBar)->SetDirty(true); }
+
 // (FillArmorAttributes 0x66ae16, UpdateArmorTexts 0x66c91d and GetAttributeText 0x66cb84 are Rust's: status_box.rs
 // fill_armor_attributes, update_armor_texts; hud.rs attribute_text)
 
@@ -304,16 +238,6 @@ void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
 {
     EEUIFMGStatusBoxCall theCall = {this, inUnit, NULL};
     ee_screens_status_box_fill(&theCall, inUnit != NULL);   // ee_screens status_box.rs fill
-}
-
-// Sets the status bar button's icon bitmap, stretched to the icon area
-// EEUIFMGStatusBar's icon (inline in the real header? first user here) (provisional name)
-void EEUIFMGStatusBar::SetIconBitmap(GEBitmap* inBitmap, const GERectangle& inTextureRectangle)
-{
-    this->mIcon->SetBitmap(inBitmap);
-    inBitmap->ComputeStretchedCoordsAndScale(this->mIcon->GetRectangle(), this->mIcon->GetRectangle(), inTextureRectangle,
-                                             this->GetScreenIndex());
-    this->SetDirty(true);
 }
 
 // Hides the status box's background panels (all but panel 0x7c)
@@ -331,16 +255,9 @@ void EEUIFMGStatusBox::LoadIcons()
 }
 
 // Releases the 50 attribute icon bitmaps
-// (an index loop: the strength-reduced pointer is compared signed, `jl`)
 void EEUIFMGStatusBox::UnloadIcons()
 {
-    for (long i = 0; i < 50; i++) {
-        if (EEUIFMGStatusBox::sIconBitmaps[i].mBitmap) {
-            EEUIFMGStatusBox::sIconBitmaps[i].mBitmap->Dereference();
-            EEUIFMGStatusBox::sIconBitmaps[i].mBitmap = NULL;
-        }
-    }
-    sIconsLoaded = false;
+    ee_screens_sb_unload_icons();   // (status_box_calls.rs)
 }
 // Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
 // or power, garrison, and the resource it carries
@@ -360,23 +277,7 @@ void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovem
 // Reloads the three unit improvement textures (after a device loss); returns the first error
 long EEUIFMGStatusBox::ReloadIcons()
 {
-    GETextureDescription theDescription;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mCreateMIPMaps = false;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mHasAlpha = true;
-    theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() <= 800;
-    long theResult = gTextureManager->ReloadTexture(UString("textures\\unit improvements_01"), theDescription);
-    if (theResult == 0) {
-        theResult = gTextureManager->ReloadTexture(UString("textures\\unit improvements_02"), theDescription);
-        if (theResult == 0)
-            theResult = gTextureManager->ReloadTexture(UString("textures\\unit upgrades_03"), theDescription);
-    }
-    return theResult;
+    return (long)ee_screens_sb_reload_icons();   // (status_box_calls.rs)
 }
 
 EEUIFMGStatusBox::~EEUIFMGStatusBox()
