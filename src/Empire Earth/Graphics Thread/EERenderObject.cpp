@@ -51,10 +51,11 @@
 #include "ee/EEMouse.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EERenderCapture.h"     // RFIL (TEST ONLY)
-#include "rust/base/math.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/units.h"
+#include "ee/EEWheel.h"
+#include "ee/EEUnitClassKinds.h"
+#include "ee/EEAreaEffectTemplate.h"
+#include "lle/GEPhysicalModel.h"
+#include "rust/game/gamecpp.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -72,15 +73,11 @@ float gU4E9330;                            // 0x4e9330 (no init chain)
 // the three per-time-of-day tables (0x4e92ec, 0x4e92a8, 0x4e9264; 17 entries): ee_gfx scene.rs initial_tables
 // 0x4413ac: EEInitialiseScene's 0.549f is a literal (__real COMDAT; the fst chain of a literal, not a static const reload)
 // Fn10C036's constants (.rdata 0x441334..0x4413c4: the view band, the clocks' rates, the moon's hours, the fill share):
-// ee_gfx scene.rs
-static uint32_t sSwayClock;                 // 0x529084 (+2 every 33 ms: FillRenderLists; the objects' sway; provisional name)
+// ee_gfx scene.rs; the sway clock 0x529084 (and its last time 0x529094), the music check's last time 0x529090, the
+// frame counter 0x52908c, the cliff textures' names 0x4be37c, EEInitialiseScene's flag 0x529064 and bitmap 0x529060:
+// gamecpp render_object.rs
 // 0x441344 (degrees to radians), 0x441354 (the objects' size step): ee_gfx capture.rs
-bool GetTileHasTree(EETile* inTile);
-static unsigned long sU529090;              // 0x529090 (the music check's last time; provisional name)
-static uint32_t sU529094;                   // 0x529094 (the sway clock's last time; provisional name)
-static unsigned long sL52908C;              // 0x52908c (the frame counter; provisional name)
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
-static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
 
 // 0x4e9240 (the three fill lights) and its init chain: ee_gfx scene.rs initial_tables
 std::vector<unsigned long> gU4E9230;
@@ -94,22 +91,14 @@ unsigned long gU4E9190;                     // 0x4e9190 (gU4E9198's index in the
 
 GEViewport gU4E8F08;
 
+// the space-cliff textures (0x4e8ef0; loaded once by LoadCliffTextures, handed to the terrain mesh) (provisional name)
+std::vector<GETexture*> gU4E8EF0;
+
 // the light fade (0x4be368 sLightFade, 0x4be36c its start, 0x529070.. its direction, rate and time) and the
 // letterbox (0x4be370 its direction, 0x4be378 its start, 0x52907c.. its rate and time, 0x529088 the bars to clear
 // again): ee_gfx scene.rs (RUST_PLAN R4.4), which steps them; the C++ keeps the storage
 static EeGfxSceneFade sSceneFade = {1.0f, 1.0f, 0, 0.0f, 0.0f, 1, 1.0f, 0.0f, 0.0f, false};
-static float& sLightFade = sSceneFade.light_fade;
 float gF4BE374 = 1.0f;                     // 0x4be374 the letterbox's zoom (EEScenarioManager.cpp reads it)
-// the space-cliff and cliff-edge texture names (0x4be37c; .data, the literals follow it) (provisional name)
-static const char* sCliffTextures[13] = {
-    "textures\\spacecliff_1", "textures\\spacecliff_2", "textures\\spacecliff_3", "textures\\spacecliff_4",
-    "textures\\spacecliff_5", "textures\\spacecliff_6", "textures\\spacecliff_7", "textures\\spacecliff_8",
-    "textures\\cliffedge_1", "textures\\cliffedge_2", "textures\\cliffedge_3", "textures\\cliffedge_4",
-    "textures\\cliffedge_5"
-};
-// EEInitialiseScene's state (provisional names)
-static GEBitmap* sU529060;
-static bool sSceneInitialised;              // 0x529064 (EEInitialiseScene ran)
 // the unit's other .bss globals (declared in ee/EERenderLists.h, ee/EEGraphics.h, ee/EmpireEarth.h; their address
 // neighbours and references are this unit's) (provisional names)
 bool gB529065;
@@ -127,315 +116,22 @@ RTSRenderObject::~RTSRenderObject()
 {
 }
 
-// Sets the light and time-of-day colour tables to their defaults and creates the shared bitmap, once per scene
-void EEInitialiseScene()
-{
-    if (sSceneInitialised)
-        return;
-    gU4E9198.SetAttenuation0(1.0f);
-    gU4E9198.SetAttenuation1(0.0f);
-    gRenderEnvironment.mTimeOfDay = -100.0f;
-    gU4E9198.SetStyle(1);
-    gU4E9198.SetAttenuation2(0.0f);
-    gU4E9338.SetRed(0.663f);
-    gU4E9338.SetGreen(0.784f);
-    gU4E9338.SetBlue(1.0f);
-    // the key frames (gU4E9348, gU4E92EC, gU4E92A8, gU4E9264) and the fill lights (gU4E9240): ee_gfx scene.rs
-    ee_gfx_scene_reset(&sSceneFade);
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
-    gF4BE374 = 1.0f;
-    ee_gfx_effect_queues_clear(false);   // the effects' render queues (ee_gfx effect_obj.rs)
-    for (unsigned long j = 0; j < 0x200; j++)
-        EERenderLists::sInstance.mRenderUnits[j].mHealthBars.resize(1, 0.0f);
-    sSceneInitialised = true;
-    sU529060 = new GEBitmap;
-}
-
-// Starts closing the letterbox bars over the given number of frames (at once for 0)
-void EEStartLetterboxOut(unsigned long inFrames)
-{
-    ee_gfx_scene_start_letterbox(&sSceneFade, true, (uint32_t)inFrames, gF4BE374);
-}
-
-// Starts opening the letterbox bars over the given number of frames (at once for 0)
-void EEStartLetterboxIn(unsigned long inFrames)
-{
-    ee_gfx_scene_start_letterbox(&sSceneFade, false, (uint32_t)inFrames, gF4BE374);
-}
-
-// Returns whether a unit is drawn this frame: seen by the current player (or the free camera) and in the
-// view; a unit whose footprint spans several tiles counts once (ioDrawn)
-bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn)
-{
-    // the facts are ee_gfx fill.rs's over the world views, the decisions walk.rs's; the drawn set and the view tests
-    // are answered here
-    struct Ask {
-        EEUnit* mUnit;
-        std::set<EEUnit*>* mDrawn;
-        static bool First(void* inAsk) { return static_cast<Ask*>(inAsk)->mDrawn->insert(static_cast<Ask*>(inAsk)->mUnit).second; }
-        static bool Complex(void* inAsk)
-        {
-            return static_cast<Ask*>(inAsk)->mUnit->mComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
-        }
-        static bool Model(void* inAsk, float inX, float inY)
-        {
-            EEUnit* theUnit = static_cast<Ask*>(inAsk)->mUnit;
-            GEPhysicalModel theModel;
-            GETransformation theTransformation(false);
-            float theZ = gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
-            theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
-            theTransformation.SetPosition(inX, inY, theZ);
-            theTransformation.SetElement(3, 0, 0.0f);
-            theTransformation.SetElement(3, 1, 0.0f);
-            theTransformation.SetElement(3, 2, 0.0f);
-            theTransformation.SetElement(3, 3, 1.0f);
-            theModel.SetModel(theUnit->GetModel()->mModels[0]);
-            theModel.SetFrame(0);
-            theModel.SetLocationAndScale(theTransformation, theUnit->mStats->GetScale());
-            return theModel.Intersects(gViewport, gOrthographicView);
-        }
-    } theAsk = {inUnit, &ioDrawn};
-    // the facts: ee_gfx fill.rs over the world views; the decisions walk.rs's
-    EeGfxDrawnHost theHost = {&theAsk, Ask::First, Ask::Complex, Ask::Model};
-    return ee_gfx_fill_unit_drawn((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTile,
-                                  (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer(), gFreeCamera,
-                                  (uint32_t)EERenderLists::sInstance.mRenderUnitCount,
-                                  (uint32_t)EERenderLists::sInstance.mRenderShadowCount, &theHost);
-}
-
-// Unloads the media of every pooled map object and empties the pool
-void UnloadRenderShadows(EERenderShadow* inObjects, unsigned long& ioCount)
-{
-    for (unsigned long i = 0; i < ioCount; i++)
-        inObjects[i].mObject->UnloadMedia();
-    ioCount = 0;
-}
-
-// Unloads the media of every pooled render unit, resets its bars and turning parts, clears the pointed-at
-// unit and object, and empties the pool
-void UnloadRenderUnits(EERenderUnit* inUnits, unsigned long& ioCount)
-{
-    for (unsigned long i = 0; i < ioCount; i++) {
-        inUnits[i].mSource->UnloadMedia();
-        if (inUnits[i].mSource2 != NULL)
-            inUnits[i].mSource2->UnloadMedia();
-        if (inUnits[i].mHealthBars.size() != 1)
-            inUnits[i].mHealthBars.resize(1, 0.0f);
-        inUnits[i].mTurretAngles.clear();
-        inUnits[i].mTurretModels.clear();
-        inUnits[i].mOrbitalAngles.clear();
-        inUnits[i].mOrbitalModels.clear();
-        inUnits[i].mWheelAngles.clear();
-        inUnits[i].mWheelModels.clear();
-    }
-    EERenderLists::sInstance.mSelectedUnit = NULL;
-    EERenderLists::sInstance.mSelectedObject = NULL;
-    ioCount = 0;
-}
-
-// Empties the ghost render records from the back, unloading each one's media
-void UnloadGhostRecords()
-{
-    EERenderUnitRecord theRecord;
-    while (EERenderLists::sInstance.mGhostRecords.size() > 0) {
-        theRecord = EERenderLists::sInstance.mGhostRecords.back();
-        EERenderLists::sInstance.mGhostRecords.pop_back();
-        theRecord.mUnit.mSource->UnloadMedia();
-    }
-}
-
-// Queues a 50-segment ground circle of a radius around a location as 3D lines with the area-effect
-// texture (mode 2 only)
-void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float inRadius, long inMode)
-{
-    EERenderLine theLine;
-    std::pair<GE3DPoint, float> theVertex;
-    if (inMode == 1 || inMode != 2)
-        return;
-    gU529050.push_back(theLine);
-    EERenderLine& theBack = gU529050[gU529050.size() - 1];
-    theBack.mWidth = gU4E9330;
-    theBack.mTexture = gAreaEffectTexture;
-    gAreaEffectTexture->Reference();
-    // the 50 points on the ground and the first again, the strip's width: ee_gfx capture.rs
-    EeGe3DPoint thePoints[0x33];
-    EeGfxParticleGround theGround = ee_gfx_particle_ground();
-    theVertex.second = ee_gfx_capture_ground_circle(&theGround, inLocation.GetX(), inLocation.GetY(), inRadius, thePoints);
-    theBack.mPoints.resize(0x33, std::pair<GE3DPoint, float>());
-    for (unsigned long i = 0; i < 0x33; i++) {
-        theVertex.first.mX = thePoints[i].x;
-        theVertex.first.mY = thePoints[i].y;
-        theVertex.first.mZ = thePoints[i].z;
-        theBack.mPoints[i] = theVertex;
-    }
-}
-
-// Rebuilds the effect render queues (ee_gfx effect_obj.rs): drops last frame's, then queues the effects of every map
-// region under a visible tile row (the rows' y, first and last x)
-void EERenderObject::QueueEffects()
-{
-    GETerrainMesh* theMesh = &gWorld.mMap->mTerrainMesh;
-    unsigned long theCount = theMesh->GetNumVisibleTileRows();
-    std::vector<int64_t> theRows(theCount * 3);
-    for (unsigned long j = 0; j < theCount; j++) {
-        long theY, theFirst, theLast;
-        theMesh->GetVisibleTileRow(j, theY, theFirst, theLast);
-        theRows[j * 3] = theY;
-        theRows[j * 3 + 1] = theFirst;
-        theRows[j * 3 + 2] = theLast;
-    }
-    ee_gfx_effect_queues_fill(theRows.empty() ? NULL : &theRows[0], theCount);
-}
-
-// Updates the per-frame render state: grid animation, cloud and sky clocks, light fade, letterbox and
-// view zoom, camera and viewport, and the light colours on a time-of-day change
-// (the view zoom covers the letterbox and the UI backgrounds; light colours blend the 17 key frames)
-void EERenderObject::Fn10C036()
-{
-    GERectangle theRectangle;
-    GEColor theBlack(0.0f, 0.0f, 0.0f);
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    float theTimeOfDay = gWorld.mTimeOfDay;
-    static unsigned long sLastTime = TMGetTime();
-    if (gB529066)
-        return;
-    unsigned long theNow = TMGetTime();
-    float theElapsed = (float)(theNow - sLastTime);
-    sLastTime = theNow;
-    // the clocks, the fade and the letterbox: ee_gfx scene.rs (the progress in double, as the x87 build's: see there)
-    gRenderEnvironment.mWindSpeed = gWorld.mEnvironmentManager->mWind;
-    EeGfxSceneClocks theClocks = {gU4E9330, gRenderEnvironment.mWaterPhase, gRenderEnvironment.mCloudOffset};
-    ee_gfx_scene_step_clocks(&theClocks, theElapsed, gRenderEnvironment.mWindSpeed);
-    gU4E9330 = theClocks.grid_phase;
-    gRenderEnvironment.mWaterPhase = theClocks.water_phase;
-    gRenderEnvironment.mCloudOffset = theClocks.cloud_offset;
-    EeGfxSceneStep theStep = ee_gfx_scene_step(&sSceneFade, theElapsed, gF4BE374);
-    EeGfxLetterbox theBox = ee_gfx_scene_letterbox(theStep.zoom, (float)gGameWindowHeight);
-    theRectangle.mLeft = 0.0f;
-    theRectangle.mRight = (float)gGameWindowWidth;
-    if (theStep.clear_bars) {
-        theRectangle.mTop = 0.0f;
-        theRectangle.mBottom = theBox.top_bar_end;
-        gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        theRectangle.mTop = theBox.bottom_bar_start;
-        theRectangle.mBottom = (float)gGameWindowHeight;
-        gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-    }
-    // the zoom changed: the view band, the bars cleared (one row more at the top), the UI's backgrounds at full view
-    if (theStep.set_view) {
-        GERectangle theView;
-        theView.mLeft = theBox.left;
-        theView.mRight = theBox.right;
-        theView.mTop = theBox.top;
-        theView.mBottom = theBox.bottom;
-        EESetGameViewRectangle(theView);
-        theRectangle.mTop = 0.0f;
-        theRectangle.mBottom = theBox.top_bar_end + 1.0f;
-        gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        theRectangle.mTop = theBox.bottom_bar_start;
-        theRectangle.mBottom = (float)gGameWindowHeight;
-        gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        if (theStep.show_backgrounds) {
-            gUIManager->GetMainGameForm()->ShowAllBackgrounds();
-            gUIManager->RedrawAll();
-        }
-        if (theStep.hide_backgrounds) {
-            gUIManager->GetMainGameForm()->HideAllBackgrounds();
-            gUIManager->RedrawAll();
-        }
-    }
-    gF4BE374 = theStep.zoom;
-    gViewport.SetCamera(gWorld.mTransformation);
-    gRasterizer->SetViewport(gViewport, gScreenIndex);
-    gU4E8F08 = gViewport;
-    gWorld.mTransformation.Apply(theForward, theDirection);
-    gRenderEnvironment.mCameraYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    gRenderEnvironment.mDirection = gWorld.mWindDirection;
-    gRenderEnvironment.mSeaLevel = 0.0f;
-    gRenderEnvironment.mB8C = false;
-    if (gRenderEnvironment.mTimeOfDay != theTimeOfDay) {
-        gRenderEnvironment.mTimeOfDay = theTimeOfDay;
-        gRenderEnvironment.mTimeOfDayChanged = true;
-        // the blend of the 17 key frames, the lit direction and the prelit colour: ee_gfx scene.rs
-        EeGfxDaylightTables theTables = ee_gfx_scene_daylight_tables();
-        theTables.ambient_color = {gU4E9338.mRed, gU4E9338.mGreen, gU4E9338.mBlue};
-        theTables.sun = {gWorld.mSunDirection.mX, gWorld.mSunDirection.mY, gWorld.mSunDirection.mZ};
-        theTables.moon = {gWorld.mMoonDirection.mX, gWorld.mMoonDirection.mY, gWorld.mMoonDirection.mZ};
-        EeGfxDaylight theLight = ee_gfx_scene_daylight(&theTables, theTimeOfDay);
-        gU4E9210.mX = theLight.direction.x;
-        gU4E9210.mY = theLight.direction.y;
-        gU4E9210.mZ = theLight.direction.z;
-        GEColor theBlend(theLight.light.red, theLight.light.green, theLight.light.blue);
-        GEColor thePrelit(theLight.prelit.red, theLight.prelit.green, theLight.prelit.blue);
-        gRenderEnvironment.mTerrainLightColor = theBlend;
-        gRenderEnvironment.mUnitLightColor = theBlend;
-        gRenderEnvironment.mTerrainAmbientColor = gU4E9338;
-        gRenderEnvironment.mUnitAmbientColor = gU4E9338;
-        gRenderEnvironment.mTerrainLightIntensity = theLight.light_intensity;
-        gRenderEnvironment.mUnitLightIntensity = theLight.light_intensity;
-        gRenderEnvironment.mTerrainAmbientIntensity = theLight.ambient_intensity;
-        gRenderEnvironment.mUnitAmbientIntensity = theLight.unit_ambient_intensity;
-        gRenderEnvironment.mPrelitColor = thePrelit;
-        gRenderEnvironment.mDimPrelitColor =
-            GEColor(theLight.dim_prelit.red, theLight.dim_prelit.green, theLight.dim_prelit.blue);
-        gRenderEnvironment.mColor54 = thePrelit;
-    } else {
-        gRenderEnvironment.mTimeOfDayChanged = false;
-        if (!theStep.fade_changed)
-            goto done;
-    }
-    if (gCameraFollowing) {
-        SetTerrainLighting();
-        gRasterizer->Light(gWorld.mMap->mTerrainMesh, gScreenIndex);
-    }
-done:
-    gRenderEnvironment.mShowHiddenUnits = gHiddenUnitsMode;
-    gB529066 = true;
-}
-
-// Queues a render record for every ghost unit, when the ghost units changed
-void EERenderObject::FillGhostRecords()
-{
-    EERenderUnitRecord theRecord;
-    gWorld.mGhostUnitsLock->Enter();
-    if (gGhostUnitsChanged) {
-        for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
-            EEGhostUnit* theGhost = gWorld.mGhostUnits[i];
-            theRecord.mUnit.mSource = theGhost->GetModel();
-            theRecord.mUnit.mSource->LoadMedia();
-            theRecord.mUnit.mFraction = 0.0f;
-            theRecord.mUnit.mCurrentFrame = theGhost->mFrame;
-            theRecord.mUnit.mNextFrame = theGhost->mFrame;
-            theRecord.mUnit.mAnimation = theGhost->mAnimation;
-            theRecord.mUnit.mSource2 = NULL;
-            theRecord.mUnit.mIsFogged = false;
-            theRecord.mUnit.mScale = theGhost->GetScale();
-            theRecord.mUnit.mCanPlace = theGhost->mCanPlace;
-            theRecord.mUnit.mCategory = theGhost->mUnitClass->mCategory;
-            theRecord.mUnit.mGridSize = theGhost->mUnitClass->mTileSize;
-            theRecord.mUnit.mPlayerColor = theGhost->mPlayer->mColor;
-            theRecord.mUnit.mInfo = theGhost->mUnitClass;
-            theRecord.mUnit.mCategory = theGhost->mUnitClass->mCategory;
-            theRecord.mUnit.mIsTinted = false;
-            theRecord.mUnit.mHasSubModelOffset = false;
-            theRecord.mTileX = theGhost->mTileX;
-            theRecord.mTileY = theGhost->mTileY;
-            memcpy(theRecord.mCells, theGhost->mFootprint, sizeof(theRecord.mCells));
-            memcpy(theRecord.mHeights, theGhost->mHeights, sizeof(theRecord.mHeights));
-            theRecord.mUnit.mTransformation = theGhost->mTransformation;
-            theRecord.mUnit.mTransformation.SetZ(theRecord.mUnit.mTransformation.GetZ() + 0.001f);
-            if (theGhost->mUnitClass->GetUnitType() == kUnitTypeSpaceTurret)
-                theRecord.mUnit.mTransformation.SetZ(theRecord.mUnit.mTransformation.GetZ() + gSpaceTurretHeight);
-            else if (theGhost->mUnitClass->GetUnitType() == kUnitTypeOrbitalSpaceStation)
-                theRecord.mUnit.mTransformation.SetZ(theRecord.mUnit.mTransformation.GetZ() + gSpaceStationHeight);
-            EERenderLists::sInstance.mGhostRecords.push_back(theRecord);
-        }
-    }
-    gWorld.mGhostUnitsLock->Leave();
-}
+// The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
+void EEInitialiseScene() { ee_gamecpp_ro_initialise_scene(); }
+void EEReleaseScene() { ee_gamecpp_ro_release_scene(); }
+void EEStartLetterboxOut(unsigned long inFrames) { ee_gamecpp_ro_letterbox(true, inFrames); }
+void EEStartLetterboxIn(unsigned long inFrames) { ee_gamecpp_ro_letterbox(false, inFrames); }
+void EEStartLightFadeIn(unsigned long inFrames) { ee_gamecpp_ro_light_fade(false, inFrames); }
+void EEStartLightFadeOut(unsigned long inFrames) { ee_gamecpp_ro_light_fade(true, inFrames); }
+void EERenderObject::QueueEffects() { ee_gamecpp_ro_queue_effects(this); }
+void EERenderObject::Fn10C036() { ee_gamecpp_ro_fn10c036(this); }
+void EERenderObject::Fn10E8D1() { ee_gamecpp_ro_fn10e8d1(this); }
+void EERenderObject::FillRenderLists() { ee_gamecpp_ro_fill_render_lists(this); }
+void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }
+void SetLightingOff() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Off); }
+void SetTerrainLighting() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Terrain); }
+void EEPostGraphicsAll() { ee_gamecpp_ro_post_render_objects(true); }
+void EEResetGraphicsValues() { ee_gamecpp_ro_post_render_objects(false); }
 
 // Returns the ghost unit's model through its player's upgrade of its unit class
 // (inline in the real header)
@@ -505,717 +201,6 @@ static_assert(offsetof(EERenderUnit, mTransformation) == offsetof(EeGfxFillUnit,
               && offsetof(EERenderUnit, mSecondFullOpacity) == offsetof(EeGfxFillUnit, second_full_opacity),
               "the render unit's head");
 
-// the render fill's host and frame (defined with FillUnit, after its classes' includes)
-static const EeGfxFillHost* EEFillHost();
-static EeGfxFillFrame EEFillFrame(const EERenderFrameInfo& inInfo);
-
-static bool FillObjectFields(EEUnit* inUnit, EERenderShadow* outObject, EERenderFrameInfo& ioInfo,
-                             GETransformation& outTransformation);
-
-// Fills a render object for a map object (a class with mIsTree: trees, rocks ...) and files it by texture,
-// in the picker and in the shadow lists
-void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERenderShadowMap& ioMap,
-                              EERenderFrameInfo& ioInfo)
-{
-    // the calls into other objects (the ambient counter, the media, the selected list, the texture maps and the
-    // picker) are made here in the original's order; FillObjectFields makes every read and field write between
-    GETransformation theTransformation(false);
-    if (ioInfo.mAmbient)
-        gAmbientSoundManager.mAnalyzer.CountTree(inUnit);
-    outObject->mObject = inUnit->GetModel();
-    outObject->mObject->LoadMedia();
-    if (FillObjectFields(inUnit, outObject, ioInfo, theTransformation))
-        EERenderLists::sInstance.mSelectedObjects.push_back(outObject);
-    ioMap.insert(EERenderShadowMap::value_type(outObject->mObject->mTextures[outObject->mModelIndex], outObject));
-    gUnitPicker.AddUnit(inUnit, theTransformation, outObject->mOpacity);
-    EERenderLists::sInstance.mShadows2.insert(EERenderShadowMap::value_type(outObject->mObject->mShadowTexture,
-                                                                            outObject));
-}
-
-// FillObject's reads and field writes: ee_gfx fill.rs over the world's views (outObject->mObject is set and loaded).
-// Writes the picker's transformation; returns whether the object is selected.
-static bool FillObjectFields(EEUnit* inUnit, EERenderShadow* outObject, EERenderFrameInfo& ioInfo,
-                             GETransformation& outTransformation)
-{
-    EeGfxFillFrame theFrame = EEFillFrame(ioInfo);
-    return ee_gfx_fill_object_fields((uint64_t)(uintptr_t)inUnit, reinterpret_cast<EeGfxFillObject*>(outObject), &theFrame,
-                                     reinterpret_cast<EeGeTransformation*>(&outTransformation), EEFillHost());
-}
-
-// Returns whether any unit on a tile is a map object (its class has mIsTree)
-bool GetTileHasTree(EETile* inTile)
-{
-    bool theResult = false;
-    if (inTile != NULL) {
-        for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL && !theResult; theNode = theNode->mNext)
-            theResult = theNode->mUnit->mUnitClass->mIsTree;
-    }
-    return theResult;
-}
-
-// Fills a render object for a remembered map object on a tile the current player cannot see, when the
-// pool has room and the model is in the view
-void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERenderShadow* outObject, unsigned long& ioCount,
-                              EERenderShadowMap& ioMap, unsigned long inMaximum, long inX, long inY,
-                              EERenderFrameInfo& ioInfo)
-{
-    GEPhysicalModel theModel;
-    GETransformation theTransformation(false);
-    EEMap* theMap = gWorld.mMap;
-    float theScale = inDoppelganger->mUnit->mUnitClass->mScale;
-    long theID = inDoppelganger->mUnit->GetUnitID();
-    long theSize = inDoppelganger->mUnit->mUnitClass->mTileSize;
-    EeGe2DPoint thePlace = ee_gfx_capture_object_place((int32_t)theID, (int32_t)theSize, (int32_t)inX, (int32_t)inY);
-    outObject->mLocation.mX = thePlace.x;
-    outObject->mLocation.mY = thePlace.y;
-    outObject->mLocation.mZ = theMap->mTerrainMesh.GetMeshZ(outObject->mLocation.GetX(), outObject->mLocation.GetY());
-    theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
-    theTransformation.SetPosition(outObject->mLocation.GetX(), outObject->mLocation.GetY(), outObject->mLocation.mZ);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theModel.SetModel(inDoppelganger->GetModel()->mModels[inDoppelganger->GetAnimation()]);
-    theModel.SetFrame(0);
-    theModel.SetLocationAndScale(theTransformation, theScale);
-    if (!(ioCount < inMaximum) || !theModel.Intersects(gViewport, gOrthographicView))
-        return;
-    long theMaximum = inDoppelganger->GetPlayer()->GetUpgrade(inDoppelganger->mUnit->mUnitClass->GetUnitType())
-                          ->mMaxHitPoints;
-    outObject->mModelScale = theScale;
-    outObject->mHealth = (float)inDoppelganger->GetHitPoints() / theMaximum;
-    outObject->mIsFogged = true;
-    outObject->mOpacity = 1.0f;
-    outObject->mModelScale = ee_gfx_capture_object_scale((int32_t)inDoppelganger->mUnit->GetUnitID()) * theScale;
-    outObject->mObject = inDoppelganger->GetModel();
-    outObject->mObject->LoadMedia();
-    if (!GetTileHasTree(theMap->GetTile(inX - 1, inY - 1)) || !GetTileHasTree(theMap->GetTile(inX + 1, inY + 1))) {
-        outObject->mScale = inDoppelganger->mUnit->mUnitClass->GetShadowScale();
-        outObject->mF1C = inDoppelganger->mUnit->mUnitClass->GetF170();
-    } else {
-        outObject->mScale = 0.0f;
-        outObject->mF1C = 0.0f;
-    }
-    outObject->mModelIndex = inDoppelganger->GetAnimation();
-    unsigned long theFrame = inDoppelganger->GetFrame();
-    outObject->mCurrentFrame = theFrame;
-    outObject->mNextFrame = theFrame;
-    if (theFrame + 1 < outObject->mObject->mModels[outObject->mModelIndex]->GetFrameCount()) {
-        outObject->mCurrentFrame = theFrame + 1;
-        outObject->mFraction = ee_gfx_capture_sway_fraction(sSwayClock, (int32_t)inDoppelganger->mUnit->GetUnitID());
-    } else {
-        outObject->mFraction = 0.0f;
-    }
-    if (ioInfo.mAmbient)
-        gAmbientSoundManager.mAnalyzer.CountTree(inDoppelganger->mUnit);
-    ioMap.insert(EERenderShadowMap::value_type(outObject->mObject->mTextures[0], outObject));
-    gUnitPicker.AddUnit(inDoppelganger->mUnit, theTransformation, outObject->mOpacity);
-    EERenderLists::sInstance.mShadows2.insert(EERenderShadowMap::value_type(outObject->mObject->mShadowTexture,
-                                                                            outObject));
-    ioCount++;
-}
-
-// FillUnit's classes, included here (after the unit's init chains) so their statics do not renumber the chains
-#include "ee/EEWheel.h"
-#include "ee/EEUnitClassKinds.h"
-#include "ee/EEAreaEffectTemplate.h"
-
-// (0x50d3ad FillUnit: defined after the space-cliff textures' chain below: it needs ee/EEUnitGoal.h, whose class static
-// renumbers that chain when included earlier)
-
-// Fills a render unit for a remembered unit on a tile the current player cannot see, when the pool has
-// room and the model is in the view
-// Uses the remembered location (or the tile's centre on the ground), the class's orientation flag and the model;
-// sets the render unit's fields, the ground height (0 over water) and the build progress scale
-void EERenderObject::FillDoppelgangerUnit(EEDoppelganger* inDoppelganger, EERenderUnit* outUnit, unsigned long& ioCount,
-                              EERenderUnitMap& ioMap, unsigned long inMaximum, long inX, long inY,
-                              EERenderFrameInfo& ioInfo)
-{
-    GE3DPoint thePoint;
-    GE3DPoint theGround;
-    GEPhysicalModel theModel;
-    GETransformation theTransformation(false);
-    EEMap* theMap = gWorld.mMap;
-    float theScale = inDoppelganger->GetScale();
-    if (inDoppelganger->IsComplex() == true) {
-        inDoppelganger->GetTransformation(theTransformation);
-    } else {
-        theTransformation.MakeIdentity();
-        thePoint.mX = inDoppelganger->mUnit->mUnitClass->mTileSize * 0.5f + inX;
-        thePoint.mY = inDoppelganger->mUnit->mUnitClass->mTileSize * 0.5f + inY;
-        thePoint.mZ = theMap->mTerrainMesh.GetMeshZ(thePoint.GetX(), thePoint.GetY());
-        theTransformation.SetPosition(thePoint.GetX(), thePoint.GetY(), thePoint.mZ);
-    }
-    if (inDoppelganger->mUnit->mUnitClass->mFacesCamera == true)
-        theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
-    if (inDoppelganger->mUnit->mUnitClass->mFacesCamera == true)
-        theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
-    theModel.SetModel(inDoppelganger->GetModel()->mModels[inDoppelganger->GetAnimation()]);
-    theModel.SetFrame(0);
-    theModel.SetLocationAndScale(theTransformation, theScale);
-    if (!(ioCount < inMaximum) || !theModel.Intersects(gViewport, gOrthographicView))
-        return;
-    outUnit->mInfo = inDoppelganger->mUnit->mUnitClass;
-    outUnit->mCategory = inDoppelganger->mUnit->mUnitClass->mCategory;
-    outUnit->mUnitClassIndex = inDoppelganger->mUnit->mUnitClass->GetUnitType();
-    outUnit->mL118 = inDoppelganger->mUnit->mUnitClass->mFamily;
-    outUnit->mShadowScale = !inDoppelganger->IsFoundation() ? inDoppelganger->mUnit->mUnitClass->GetShadowScale() : 0.0f;
-    outUnit->mFF4 = inDoppelganger->mUnit->mUnitClass->GetF170();
-    outUnit->mName.Clear();
-    outUnit->mSource2 = NULL;
-    outUnit->mPlayerColor = inDoppelganger->GetPlayer()->mColor;
-    outUnit->mAreaEffectStrength = 0;
-    outUnit->mScale = theScale;
-    outUnit->mOpacity = 1.0f;
-    outUnit->mSource2 = NULL;
-    outUnit->mIsTinted = false;
-    outUnit->mHasSubModelOffset = false;
-    outUnit->mGridSize = inDoppelganger->mUnit->mUnitClass->mTileSize;
-    outUnit->mIsFogged = true;
-    outUnit->mSource = inDoppelganger->GetModel();
-    if (!inDoppelganger->IsBuilt() && inDoppelganger->GetHitPoints() > 1) {
-        if (outUnit->mInfo->mScaffoldingClass != NULL)
-            outUnit->mSource2 = gWorld.mPlayers[outUnit->mPlayerID]->GetUpgrade(outUnit->mInfo->mScaffoldingClass->GetUnitType())
-                                  ->mModel;
-        if (outUnit->mSource2 != NULL)
-            outUnit->mSource2->LoadMedia();
-    }
-    outUnit->mSource->LoadMedia();
-    outUnit->mTransformation = theTransformation;
-    if (theMap->mTerrainMesh.GetIsWaterTile(UMFloor(theTransformation.GetX()), UMFloor(theTransformation.GetY()))
-        && outUnit->mTransformation.GetZ() >= 0.0f) {
-        outUnit->mGroundZ = 0.0f;
-    } else {
-        thePoint.mX = outUnit->mTransformation.GetX();
-        thePoint.mY = outUnit->mTransformation.GetY();
-        thePoint.mZ = outUnit->mTransformation.GetZ();
-        theMap->GetGroundPoint(thePoint, theGround);
-        outUnit->mGroundZ = theGround.GetZ();
-    }
-    if (!inDoppelganger->IsBuilt() && inDoppelganger->GetHitPoints() != 1) {
-        long theMaximum = inDoppelganger->GetPlayer()->GetUpgrade(inDoppelganger->mUnit->mUnitClass->GetUnitType())
-                              ->mMaxHitPoints;
-        outUnit->mTransformation.Scale(1.0f, 1.0f, (float)inDoppelganger->GetHitPoints() / theMaximum);
-    }
-    outUnit->mCurrentFrame = inDoppelganger->GetFrame();
-    outUnit->mNextFrame = inDoppelganger->GetFrame();
-    outUnit->mFraction = 0.0f;
-    outUnit->mAnimation = inDoppelganger->GetAnimation();
-    outUnit->mCommandType = 0;
-    gUnitPicker.AddUnit(inDoppelganger->mUnit, outUnit->mTransformation, outUnit->mOpacity);
-    ioMap.insert(EERenderUnitMap::value_type(outUnit->mSource->mTextures[0], outUnit));
-    EERenderLists::sInstance.mUnits2.insert(EERenderUnitMap::value_type(outUnit->mSource->mShadowTexture,
-                                                                        outUnit));
-    ioCount++;
-}
-
-// the space-cliff textures (0x4e8ef0; loaded once by LoadCliffTextures, handed to the terrain mesh) (provisional name)
-std::vector<GETexture*> gU4E8EF0;
-
-// FillUnit reads the goal's kind
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/units.h"
-#include "rust/game/gamecpp.h"
-
-// the render fill's answers that are not world views (ee_gfx fill.rs FillHost) and its frame
-static EEComplexUnit* EEFillComplex(uint64_t inUnit)
-{
-    return reinterpret_cast<EEUnit*>((uintptr_t)inUnit)->GetComplexUnit();
-}
-static EERenderUnit* EEFillOut(EeGfxFillUnit* inUnit)
-{
-    return reinterpret_cast<EERenderUnit*>(inUnit);
-}
-static float EEFillMeshZ(void*, float inX, float inY)
-{
-    return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
-}
-static uint64_t EEFillModelFrames(void*, uint64_t inObject, uint64_t inIndex)
-{
-    return reinterpret_cast<EEGraphicObject*>((uintptr_t)inObject)->mModels[inIndex]->GetFrameCount();
-}
-static bool EEFillWaterTile(void*, long inX, long inY)
-{
-    return gWorld.mMap->mTerrainMesh.GetIsWaterTile(inX, inY);
-}
-static bool EEFillValidTile(void*, long inX, long inY)
-{
-    return gWorld.mMap->mTerrainMesh.GetIsValidTile(inX, inY);
-}
-static float EEFillGroundZ(void*, float inX, float inY, float inZ)
-{
-    GE3DPoint thePoint(inX, inY, inZ);
-    GE3DPoint theGround;
-    gWorld.mMap->GetGroundPoint(thePoint, theGround);
-    return theGround.mZ;
-}
-static float EEFillPhysicalScale(void*, uint64_t inUnit)
-{
-    return EEFillComplex(inUnit)->mPhysicalModel.GetScale();
-}
-static unsigned long EEFillPhysicalFrame(void*, uint64_t inUnit)
-{
-    return EEFillComplex(inUnit)->mPhysicalModel.GetFrame();
-}
-static EeGfxColor EEFillTint(void*, uint64_t inUnit)
-{
-    const GEColor& theColor = EEFillComplex(inUnit)->mColor;
-    return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
-}
-static bool EEFillSidePart(void*, uint64_t inUnit)
-{
-    EEComplexUnit* theComplex = EEFillComplex(inUnit);
-    return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass)->IsSidePart(theComplex);
-}
-static bool EEFillLandBuilding(void*, uint64_t inClass)
-{
-    return reinterpret_cast<EEUnitClass*>((uintptr_t)inClass)->IsLandBuilding();
-}
-static void EEFillGroundLocation(void*, uint64_t inClass, float* ioPoint)
-{
-    GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
-    reinterpret_cast<EEUnitClass*>((uintptr_t)inClass)->GroundLocation(thePoint);
-    ioPoint[0] = thePoint.mX;
-    ioPoint[1] = thePoint.mY;
-    ioPoint[2] = thePoint.mZ;
-}
-static bool EEFillGroupContains(void*, uint64_t inPlayer, uint64_t inUnit)
-{
-    return reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)->mSelectedGroup->Contains(EEFillComplex(inUnit));
-}
-static void EEFillParts(void*, EeGfxFillUnit* inOut, uint64_t inUnit)
-{
-    EERenderUnit* outUnit = EEFillOut(inOut);
-    EEComplexUnit* theComplex = EEFillComplex(inUnit);
-    unsigned long theCount = theComplex->GetModel()->mTurretParts.size();
-    outUnit->mTurretAngles.resize(theCount, 0.0f);
-    outUnit->mTurretModels.resize(theCount, 0);
-    unsigned long i;
-    for (i = 0; i < theCount; i++) {
-        outUnit->mTurretAngles[i] = theComplex->mTurretAngles[i];
-        outUnit->mTurretModels[i] = outUnit->mSource->mTurretParts[i]->mModel;
-    }
-    theCount = theComplex->mNumOrbitals;
-    outUnit->mOrbitalAngles.resize(theCount, 0.0f);
-    outUnit->mOrbitalModels.resize(theCount, 0);
-    for (i = 0; i < theCount; i++) {
-        outUnit->mOrbitalAngles[i] = theComplex->mOrbitals[i]->mAngle;
-        outUnit->mOrbitalModels[i] = theComplex->mOrbitals[i]->mModel;
-    }
-    theCount = theComplex->mNumWheels;
-    outUnit->mWheelAngles.resize(theCount, 0.0f);
-    outUnit->mWheelModels.resize(theCount, 0);
-    for (i = 0; i < theCount; i++) {
-        EEWheel* theWheel = theComplex->mWheels[i];
-        outUnit->mWheelAngles[i] = theWheel->mAngle;
-        outUnit->mWheelModels[i] = theWheel->mModel;
-    }
-}
-static void EEFillBarsResize(void*, EeGfxFillUnit* inOut, size_t inCount)
-{
-    EEFillOut(inOut)->mHealthBars.resize(inCount, 0.0f);
-}
-static void EEFillBarsSet(void*, EeGfxFillUnit* inOut, size_t inIndex, float inValue)
-{
-    EEFillOut(inOut)->mHealthBars[inIndex] = inValue;
-}
-static void EEFillBarsClear(void*, EeGfxFillUnit* inOut)
-{
-    EEFillOut(inOut)->mHealthBars.clear();
-}
-static void EEFillNameClear(void*, EeGfxFillUnit* inOut)
-{
-    EEFillOut(inOut)->mName.Clear();
-}
-static void EEFillNameFromStats(void*, EeGfxFillUnit* inOut, uint64_t inUnit)
-{
-    EEFillOut(inOut)->mName = EEFillComplex(inUnit)->mStats->mName;
-}
-static void EEFillSelect(void*, EeGfxFillUnit* inOut)
-{
-    EERenderLists::sInstance.mSelectedUnits.push_back(EEFillOut(inOut));
-}
-static void EEFillPointAt(void*, EeGfxFillUnit* inOut)
-{
-    EERenderLists::sInstance.mSelectedUnit = EEFillOut(inOut);
-}
-static void EEFillLabel(void*, EeGfxFillUnit* inOut, uint64_t inPlayer)
-{
-    EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer);
-    gU529044 = EEFillOut(inOut);
-    if (!thePlayer->IsHuman() && !thePlayer->mCivilization.GetUnchanged())
-        gU529030 = thePlayer->mCivilization.mName;
-    else
-        gU529030 = thePlayer->mName;
-}
-static EeGfxFillMorale EEFillMorale(void*, uint64_t inUnit)
-{
-    EEComplexUnit* theComplex = EEFillComplex(inUnit);
-    EeGfxFillMorale theMorale = {};
-    for (std::vector<EEAreaEffect*>::iterator it = theComplex->mAffectingAreaEffects.mItems.begin();
-         it != theComplex->mAffectingAreaEffects.mItems.end(); it++) {
-        long theKind = (*it)->mTemplate->mKind;
-        if (theKind == kAreaEffectMoraleFromBuildings || theKind == kAreaEffectMoraleFromMilitaryHeroes || theKind == kAreaEffectMorale) {
-            theMorale.found = true;
-            theMorale.strength = (*it)->GetStrength();
-            break;
-        }
-    }
-    return theMorale;
-}
-static uint64_t EEFillScaffolding(void*, long inPlayer, uint64_t inClass)
-{
-    EEUnitClass* theClass = reinterpret_cast<EEUnitClass*>((uintptr_t)inClass);
-    if (theClass->mScaffoldingClass == NULL)
-        return 0;
-    return (uint64_t)(uintptr_t)gWorld.mPlayers[inPlayer]->GetUpgrade(theClass->mScaffoldingClass->GetUnitType())->mModel;
-}
-static uint64_t EEFillUnit(void*, long inID)
-{
-    return (uint64_t)(uintptr_t)static_cast<EEUnit*>(gWorld.GetUnit(inID));
-}
-static EeGfxFillPoint EEFillWaypoint(void*, uint64_t inCarrier, long inX, long inY)
-{
-    EeGfxFillPoint thePoint = {};
-    const EEComplexUnitWaypoint* theWaypoint;
-    if (reinterpret_cast<EEComplexUnit*>((uintptr_t)inCarrier)->FindWaypointAtTile(inX, inY, theWaypoint)) {
-        thePoint.found = true;
-        thePoint.point[0] = theWaypoint->mLocation.mX;
-        thePoint.point[1] = theWaypoint->mLocation.mY;
-        thePoint.point[2] = theWaypoint->mLocation.mZ;
-    }
-    return thePoint;
-}
-static const EeGfxFillHost* EEFillHost()
-{
-    static const EeGfxFillHost sHost = {NULL, EEFillMeshZ, EEFillModelFrames, EEFillWaterTile, EEFillValidTile, EEFillGroundZ,
-                                        EEFillPhysicalScale, EEFillPhysicalFrame, EEFillTint, EEFillSidePart, EEFillLandBuilding,
-                                        EEFillGroundLocation, EEFillGroupContains, EEFillParts, EEFillBarsResize, EEFillBarsSet,
-                                        EEFillBarsClear, EEFillNameClear, EEFillNameFromStats, EEFillSelect, EEFillPointAt,
-                                        EEFillLabel, EEFillMorale, EEFillScaffolding, EEFillUnit, EEFillWaypoint};
-    return &sHost;
-}
-static EeGfxFillFrame EEFillFrame(const EERenderFrameInfo& inInfo)
-{
-    EeGfxFillFrame theFrame = {};
-    theFrame.yaw = inInfo.mYaw;
-    theFrame.free_camera = gFreeCamera;
-    theFrame.sway_clock = sSwayClock;
-    theFrame.player = (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer();
-    theFrame.map = (uint64_t)(uintptr_t)gWorld.mMap;
-    theFrame.picked = gU4E9230.empty() ? NULL : &gU4E9230[0];
-    theFrame.picked_count = gU4E9230.size();
-    theFrame.world_player = (uint64_t)(uintptr_t)gWorld.mPlayers[0];
-    theFrame.pointed = (uint64_t)(uintptr_t)inInfo.mPickedUnit;
-    theFrame.music_follows_battle = gMusicFollowsBattle;
-    theFrame.collision_spheres = gCollisionSphereMode != 0;
-    theFrame.sea_level = gRenderEnvironment.mSeaLevel;
-    theFrame.space_turret_height = gSpaceTurretHeight;
-    theFrame.space_station_height = gSpaceStationHeight;
-    return theFrame;
-}
-
-static bool FillUnitFields(EEUnit* inUnit, EERenderUnit* outUnit, EERenderFrameInfo& ioInfo);
-
-// Fills a render unit for a unit and files it in the picker and the texture maps
-// (out of address order: see the note at 0x50d3ad above)
-// The class's fields, the team colour, the ring and shadow sizes, then for a complex unit its scale, flash colour,
-// gate offset, the selection bars (selected, the player's own pick, or a listed unit), the picked unit's name and
-// owner, the animation frames, the orientation on slopes, the hit area-effect ring, the build-progress scale and
-// the wall heights; for a placed object its footprint centre (or its carrier's waypoint) and a debug colour;
-// finally the ground height (0 over water)
-void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUnitMap& ioMap, EERenderFrameInfo& ioInfo)
-{
-    // the calls into other objects (the ambient counters, the media, the priest tower's circle, the picker and the
-    // texture maps) are made here in the original's order; FillUnitFields makes every read and field write between
-    EEComplexUnit* theComplex = inUnit->GetComplexUnit();
-    if (theComplex != NULL) {
-        if (ioInfo.mAmbient)
-            gAmbientSoundManager.mAnalyzer.CountUnit(theComplex);
-    } else if (ioInfo.mAmbient) {
-        gAmbientSoundManager.mAnalyzer.CountTree(inUnit);
-    }
-    outUnit->mSource = inUnit->GetModel();
-    outUnit->mSource->LoadMedia();
-    if (FillUnitFields(inUnit, outUnit, ioInfo))
-        this->DrawGroundCircle(theComplex->mPhysicalModel.GetLocation(), inUnit->mStats->mRange, 2);
-    if (outUnit->mSource2 != NULL)
-        outUnit->mSource2->LoadMedia();
-    gUnitPicker.AddUnit(inUnit, outUnit->mTransformation, outUnit->mOpacity);
-    ioMap.insert(EERenderUnitMap::value_type(outUnit->mSource->mTextures[outUnit->mAnimation], outUnit));
-    if (theComplex != NULL && !theComplex->IsFoundation())
-        EERenderLists::sInstance.mUnits2.insert(EERenderUnitMap::value_type(outUnit->mSource->mShadowTexture, outUnit));
-}
-
-// FillUnit's reads and field writes: ee_gfx fill.rs over the world's views (outUnit->mSource is set and loaded).
-// Returns whether the priest tower's range circle is drawn (a built one in the current player's selection).
-static bool FillUnitFields(EEUnit* inUnit, EERenderUnit* outUnit, EERenderFrameInfo& ioInfo)
-{
-    EeGfxFillFrame theFrame = EEFillFrame(ioInfo);
-    EeGfxFillUnitResult theResult = ee_gfx_fill_unit_fields((uint64_t)(uintptr_t)inUnit, reinterpret_cast<EeGfxFillUnit*>(outUnit),
-                                                            &theFrame, EEFillHost());
-    ioInfo.mNumFightingUnits += theResult.fighting;
-    return theResult.circle;
-}
-
-
-// loads the space-cliff and cliff-edge textures into gU4E8EF0 (a static function: emitted after its user)
-static void LoadCliffTextures()
-{
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    for (long i = 0; i < 13; i++) {
-        GETexture* theTexture = gTextureManager->LoadTexture(sCliffTextures[i], theDescription);
-        theTexture->SetStageAlphaMode(kStageOpModulate, -1);
-        theTexture->SetStageColorMode(kStageOpModulate, -1);
-        theTexture->Reference();
-        gU4E8EF0.push_back(theTexture);
-    }
-}
-
-// Sets up the terrain pass: frame state, space-cliff textures, the visible terrain and its lighting, then
-// the camera transform (at most every 100 ms while the camera follows a unit)
-void EERenderObject::Fn10E8D1()
-{
-    static unsigned long sLastTime = TMGetTime();
-    GEViewport& theViewport = gRasterizer->GetViewport(gScreenIndex);
-    EEMap* theMap = gWorld.mMap;
-    unsigned long theNow = TMGetTime();
-    unsigned long theElapsed = theNow - sLastTime;
-    if (!gCameraFollowing) {
-        this->Fn10C036();
-        if (theMap->mTerrainMesh.GetIsSpaceMap() && theMap->mTerrainMesh.NumSpaceCliffTextures() < 1) {
-            if (gU4E8EF0.size() == 0)
-                LoadCliffTextures();
-            theMap->mTerrainMesh.SetSpaceCliffTextures(gU4E8EF0);
-        }
-        theMap->mTerrainMesh.UpdateVisibleTerrain(gWorld.mTransformation, theViewport, 2, 1, 3, gOrthographicView);
-        SetTerrainLighting();
-        gRasterizer->Light(theMap->mTerrainMesh, gScreenIndex);
-    }
-    if (!gCameraFollowing || theElapsed >= 100) {
-        gRasterizer->TransformToCamera(theMap->mTerrainMesh, theViewport, theElapsed / 1000.0f, gCameraFollowing,
-                                       gOrthographicView);
-        sLastTime = theNow;
-    }
-    gCameraFollowing = true;
-}
-
-// Builds the frame's render lists: resets the pools, picks units, walks the visible tiles (units, map
-// objects, remembered ones) and the ghost units, and updates the music intensity and ambient sounds
-void EERenderObject::FillRenderLists()
-{
-    std::set<EEUnit*> theUnits;
-    std::set<EEDoppelganger*> theDoppelgangers;
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    EEMap* theMap = gWorld.mMap;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEUICSelectUnits* theSelection
-        = dynamic_cast<EEUICSelectUnits*>(gUIManager->GetMainGameForm()->GetControl(kMainGameSelectUnits));
-    EERenderFrameInfo theInfo;
-    float theCount = 0.0f;
-    unsigned long theTime = TMGetTime();
-    if (!gB529068) {
-        ee_gfx_capture_sway_tick(&sSwayClock, &sU529094, (uint32_t)theTime);
-        this->Fn10E8D1();
-        UnloadRenderShadows(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
-        UnloadRenderUnits(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
-        for (unsigned long i = 0; i < gU529050.size(); i++)
-            gU529050[i].mTexture->Dereference();
-        gU529050.clear();
-        EERenderLists::sInstance.mShadows0.clear();
-        EERenderLists::sInstance.mUnits0.clear();
-        EERenderLists::sInstance.mShadows1.clear();
-        EERenderLists::sInstance.mUnits1.clear();
-        EERenderLists::sInstance.mShadows2.clear();
-        EERenderLists::sInstance.mUnits2.clear();
-        EERenderLists::sInstance.mSelectedObjects.clear();
-        EERenderLists::sInstance.mSelectedUnits.clear();
-        UnloadGhostRecords();
-        gU529044 = NULL;
-        if (!gFreeCamera) {
-            if (theSelection->GetIsDrawn())
-                gUnitPicker.PickUnits(theSelection->GetSelectionRectangle(), thePlayer, 0, gU4E9230);
-            else
-                gU4E9230.clear();
-        } else {
-            EEUICSelectUnits* theEditorSelection = gUIManager->GetScenarioEditorForm() != NULL ?
-                gUIManager->GetScenarioEditorForm()->GetSelectUnits() : NULL;
-            EESEUICTriggerSelectUnits* theTriggerSelection = dynamic_cast<EESEUICTriggerSelectUnits*>(
-                gUIManager->GetScenarioEditorForm()->GetControlById(kSETSObjectSelectUnits));
-            if (theEditorSelection != NULL && theEditorSelection->GetIsDrawn())
-                gUnitPicker.PickUnitsInRectangle(theEditorSelection->GetSelectionRectangle(), 0, gU4E9230);
-            else if (theTriggerSelection != NULL && theTriggerSelection->GetIsDrawn())
-                gUnitPicker.PickUnitsInRectangle(theTriggerSelection->GetSelectionRectangle(), 0, gU4E9230);
-            else
-                gU4E9230.clear();
-        }
-        theInfo.mNumFightingUnits = 0.0f;
-        if (!gFreeCamera) {
-            gAmbientSoundManager.mFrameCount++;
-            if (gAmbientSoundManager.IsUpdateDue())
-                theInfo.mAmbient = true;
-            else
-                theInfo.mAmbient = false;
-        } else {
-            theInfo.mAmbient = false;
-        }
-        gWorld.mTransformation.Apply(theForward, theDirection);
-        theInfo.mYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY()) - 0.78539819f;
-        sL52908C = (gB529065 ? sL52908C : gPhysics->mTicksRun) + 1;
-        theInfo.mFrame = sL52908C;
-        // port (R5a.3): no reference: the unit is only compared and read while the world's lock is held
-        theInfo.mPickedUnit = !gFreeCamera ? gUnitPicker.PickUnitUnreferenced(gMouse->mPosition, 1) : NULL;
-        if (theInfo.mPickedUnit != NULL && theInfo.mPickedUnit->GetHitPoints() <= 0)
-            theInfo.mPickedUnit = NULL;
-        gUnitPicker.GetLock()->Enter();
-        gUnitPicker.Reset();
-        unsigned long theRows = theMap->mTerrainMesh.GetNumVisibleTileRows();
-        for (unsigned long theRow = 0; theRow < theRows; theRow++) {
-            long theY;
-            long theFirst;
-            long theLast;
-            theMap->mTerrainMesh.GetVisibleTileRow(theRow, theY, theFirst, theLast);
-            for (long theX = theFirst; theX <= theLast; theX++) {
-                EETile* theTile = theMap->GetTile(theX, theY);
-                if (!theTile->IsVisibleTo(thePlayer) && !gFreeCamera)
-                    continue;
-                for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                    EEUnit* theUnit = theNode->mUnit;
-                    if (theUnit->mComplexUnit != NULL) {
-                        theUnit = theUnit->mComplexUnit;
-                        while (static_cast<EEComplexUnit*>(theUnit)->mPreviousPart != NULL)
-                            theUnit = static_cast<EEComplexUnit*>(theUnit)->mPreviousPart;
-                    }
-                    do {
-                        if (this->IsUnitDrawn(theUnit, theTile, theUnits) && !gUnitPicker.Contains(theUnit)) {
-                            if (!theUnit->GetUnitClass()->mIsTree) {
-                                if (theUnit->mComplexUnit != NULL)
-                                    theCount += 1.0f;
-                                EERenderUnit* theRenderUnit
-                                    = &EERenderLists::sInstance.mRenderUnits[EERenderLists::sInstance.mRenderUnitCount];
-                                this->FillUnit(theUnit, theRenderUnit,
-                                         this->GetUnitOpacity(theUnit, theRenderUnit->mOpacity) ? EERenderLists::sInstance.mUnits1
-                                                                                     : EERenderLists::sInstance.mUnits0,
-                                         theInfo);
-                                EERenderLists::sInstance.mRenderUnitCount++;
-                            } else {
-                                EERenderShadow* theObject
-                                    = &EERenderLists::sInstance.mRenderShadows[EERenderLists::sInstance.mRenderShadowCount];
-                                this->FillObject(theUnit, theObject,
-                                         this->GetUnitOpacity(theUnit, theObject->mOpacity) ? EERenderLists::sInstance.mShadows1
-                                                                                 : EERenderLists::sInstance.mShadows0,
-                                         theInfo);
-                                EERenderLists::sInstance.mRenderShadowCount++;
-                            }
-                        }
-                        theUnit = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->mNextPart : NULL;
-                    } while (theUnit != NULL);
-                }
-                if (!theTile->IsSeenBy(thePlayer) && !gFreeCamera) {
-                    for (unsigned long k = 0; k < theTile->GetNumDoppelgangers(); k++) {
-                        EEDoppelganger* theDoppelganger = theTile->mDoppelgangers[k];
-                        if (theDoppelganger->mPlayer != thePlayer)
-                            continue;
-                        if (theDoppelganger->mUnit->mTileNode != NULL && theDoppelganger->mUnit->mComplexUnit->IsFoundation()
-                            && theDoppelganger->GetPlayer() != thePlayer)
-                            continue;
-                        if (theDoppelganger->mUnit->GetUnitClass()->mTileSize > 1) {
-                            if (theDoppelgangers.find(theDoppelganger) != theDoppelgangers.end())
-                                continue;
-                            theDoppelgangers.insert(theDoppelganger);
-                        }
-                        if (!theDoppelganger->mUnit->GetUnitClass()->mIsTree) {
-                            this->FillDoppelgangerUnit(theDoppelganger,
-                                     &EERenderLists::sInstance.mRenderUnits[EERenderLists::sInstance.mRenderUnitCount],
-                                     EERenderLists::sInstance.mRenderUnitCount,
-                                     theDoppelganger->mUnit->GetUnitClass()->mIsObstacle ? EERenderLists::sInstance.mUnits1
-                                                                                : EERenderLists::sInstance.mUnits0,
-                                     0x200, theX, theY, theInfo);
-                        } else {
-                            this->FillDoppelgangerObject(theDoppelganger,
-                                     &EERenderLists::sInstance.mRenderShadows[EERenderLists::sInstance.mRenderShadowCount],
-                                     EERenderLists::sInstance.mRenderShadowCount, EERenderLists::sInstance.mShadows0,
-                                     0x600, theX, theY, theInfo);
-                        }
-                    }
-                }
-            }
-        }
-        gUnitPicker.GetLock()->Leave();
-        this->FillGhostRecords();
-        // port (R5a.3): what EEROUnits::DrawUnitModel read from the live unit after the lock was released, read here
-        // with the same lookup (a pure one: the player's id table); the doppelgangers' render units keep the id their
-        // pool slot had, as before
-        for (unsigned long i = 0; i < EERenderLists::sInstance.mRenderUnitCount; i++) {
-            EERenderUnit& theRenderUnit = EERenderLists::sInstance.mRenderUnits[i];
-            EEUnit* theLive;
-            theRenderUnit.mSecondFullOpacity = theRenderUnit.mUnitClassIndex == kUnitTypeRoboticFarm
-                && ((theLive = static_cast<EEUnit*>(gWorld.GetUnit(theRenderUnit.mUnitId))) == NULL
-                    || theLive->mHitPoints == 1);
-        }
-        if (gEERenderCaptureFill != NULL)
-            gEERenderCaptureFill(theInfo, sSwayClock, theCount);   // RFIL (TEST ONLY)
-        gB529068 = true;
-        if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
-            sU529090 = theTime;
-            gMusicManager->SetIntensity(ee_gfx_capture_music_intensity((uint32_t)gMusicManager->mIntensity,
-                                                                       theInfo.mNumFightingUnits, theCount));
-        }
-        if (theInfo.mAmbient)
-            gAmbientSoundManager.Update();
-    }
-}
-
-// Releases the scene: drops the effect queues' references, empties the render pools and lists, releases
-// the shared bitmap and resets the unit picker (only after EEInitialiseScene)
-void EEReleaseScene()
-{
-    if (!sSceneInitialised)
-        return;
-    gWorld.mLock->ReadLock();
-    ee_gfx_effect_queues_clear(true);
-    gWorld.mLock->ReadUnlock();
-    UnloadRenderShadows(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
-    UnloadRenderUnits(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
-    EERenderLists::sInstance.mShadows0.clear();
-    EERenderLists::sInstance.mUnits0.clear();
-    EERenderLists::sInstance.mShadows1.clear();
-    EERenderLists::sInstance.mUnits1.clear();
-    EERenderLists::sInstance.mShadows2.clear();
-    EERenderLists::sInstance.mUnits2.clear();
-    EERenderLists::sInstance.mSelectedObjects.clear();
-    EERenderLists::sInstance.mSelectedUnits.clear();
-    EERenderLists::sInstance.mRenderUnitCount = 0;
-    EERenderLists::sInstance.mRenderShadowCount = 0;
-    UnloadGhostRecords();
-    sU529060->Dereference();
-    gUnitPicker.Reset();
-    sSceneInitialised = false;
-}
-
-// Starts fading the lights up to full over the given number of frames (at once for 0)
-void EEStartLightFadeIn(unsigned long inFrames)
-{
-    ee_gfx_scene_start_fade(&sSceneFade, false, (uint32_t)inFrames);
-}
-
-// Starts fading the lights down to black over the given number of frames (at once for 0)
-void EEStartLightFadeOut(unsigned long inFrames)
-{
-    ee_gfx_scene_start_fade(&sSceneFade, true, (uint32_t)inFrames);
-}
-
 // GetUnitOpacity's calls (ee_gfx fill.rs EeGfxOpacityHost)
 static EEUnit* EEOpacityUnit(uint64_t inUnit)
 {
@@ -1257,61 +242,6 @@ static const EeGfxOpacityHost* EEOpacityHost()
     return &sHost;
 }
 
-// Computes a unit's opacity this frame (see-through modes, its own fade, and buildings fading in front of
-// the near clipping plane); returns whether it is drawn translucent
-bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
-{
-    // ee_gfx fill.rs over the world views; the virtual and model calls here
-    return ee_gfx_fill_unit_opacity((uint64_t)(uintptr_t)inUnit, gRenderEnvironment.mShowHiddenUnits, gWorld.mInCinematic,
-                                    gOrthographicView, reinterpret_cast<const EeGeViewport*>(&gViewport), EEOpacityHost(),
-                                    &outOpacity);
-}
-
-// The lighting set-ups below: their rasterizer calls are ee_gfx lighting.rs's (RUST_PLAN R4.4), applied in order
-static void ApplyLighting(EeGfxLighting inKind)
-{
-    EeGfxLightingInputs theIn;
-    EeGfxColor* theColors[] = {&theIn.fog_color, &theIn.prelit, &theIn.dim_prelit, &theIn.cloud, &theIn.terrain_ambient,
-                                     &theIn.terrain_light, &theIn.unit_ambient, &theIn.unit_light};
-    const GEColor* theSources[] = {&gU4E9220, &gRenderEnvironment.mPrelitColor, &gRenderEnvironment.mDimPrelitColor,
-                                   &gRenderEnvironment.mColor54, &gRenderEnvironment.mTerrainAmbientColor,
-                                   &gRenderEnvironment.mTerrainLightColor, &gRenderEnvironment.mUnitAmbientColor,
-                                   &gRenderEnvironment.mUnitLightColor};
-    for (int i = 0; i < 8; i++)
-        *theColors[i] = EeGfxColor{theSources[i]->mRed, theSources[i]->mGreen, theSources[i]->mBlue};
-    theIn.light_fade = sLightFade;
-    theIn.orthographic = gOrthographicView;
-    theIn.unit_lighting = gUnitLighting;
-    theIn.rear_clipping = gViewport.GetRearClippingDistance();
-    theIn.zoom_lock = gZoomLock;
-    theIn.terrain_ambient_intensity = gRenderEnvironment.mTerrainAmbientIntensity;
-    theIn.terrain_light_intensity = gRenderEnvironment.mTerrainLightIntensity;
-    theIn.unit_ambient_intensity = gRenderEnvironment.mUnitAmbientIntensity;
-    theIn.unit_light_intensity = gRenderEnvironment.mUnitLightIntensity;
-    theIn.sun = EeGeVector{gU4E9210.mX, gU4E9210.mY, gU4E9210.mZ};
-    EeGfxRasterOps theOps = ee_gfx_lighting(inKind, &theIn);
-    unsigned long theScreen = gScreenIndex;
-    for (uint32_t i = 0; i < theOps.count; i++) {
-        const EeGfxRasterOp& theOp = theOps.ops[i];
-        GEColor theColor(theOp.f[0], theOp.f[1], theOp.f[2]);
-        switch (theOp.kind) {
-        case EeGfxRasterOpKind::Fog: gRasterizer->SetFog(theOp.value, theScreen); break;
-        case EeGfxRasterOpKind::FogColor: gRasterizer->SetFogColor(theColor, theScreen); break;
-        case EeGfxRasterOpKind::FogRange: gRasterizer->SetFogRange(theOp.f[0], theOp.f[1], theScreen); break;
-        case EeGfxRasterOpKind::FogType: gRasterizer->SetFogType(theOp.value, theScreen); break;
-        case EeGfxRasterOpKind::AmbientColor: gRasterizer->SetAmbientColor(theColor, theScreen); break;
-        case EeGfxRasterOpKind::AmbientIntensity: gRasterizer->SetAmbientIntensity(theOp.f[0], theScreen); break;
-        case EeGfxRasterOpKind::RemoveLights: gRasterizer->RemoveAllLights(theScreen); break;
-        case EeGfxRasterOpKind::Lighting: gRasterizer->SetLighting(theOp.value, theScreen); break;
-        case EeGfxRasterOpKind::LightColor: gU4E9198.SetColor(theColor); break;
-        case EeGfxRasterOpKind::LightIntensity: gU4E9198.SetIntensity(theOp.f[0]); break;
-        case EeGfxRasterOpKind::LightDirection: gU4E9198.SetDirection(GEVector(theOp.f[0], theOp.f[1], theOp.f[2])); break;
-        case EeGfxRasterOpKind::AddLight: gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190); break;
-        case EeGfxRasterOpKind::UpdateLight: gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen); break;
-        }
-    }
-}
-
 // EEROUnits.cpp's screen point (0x118676; the goal's countdown)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 
@@ -1333,30 +263,6 @@ static void EERasterStoreMesh(void* inModel, const EeGfxMeshVertex* inVertices, 
 {
     EEStoreMesh(static_cast<GEModel*>(inModel), inVertices, inVertexCount, inTriangles, inTriangleCount);
 }
-// a texture loaded with its stage settings (ee_gfx raster.rs load_texture: the effects' and render objects' media)
-static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* inLoad)
-{
-    GETextureDescription theDescription;
-    theDescription.mSurfaceVolatility = inLoad->volatility;
-    theDescription.mFrameFormat = inLoad->frame_format;
-    theDescription.mPixelDepth = inLoad->pixel_depth;
-    theDescription.mNumMipLevelsToDrop = (long)inLoad->mip_levels_to_drop;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = inLoad->has_alpha;
-    theDescription.mCreateMIPMaps = inLoad->mip_maps;
-    GETexture* theTexture = gTextureManager->LoadTexture(UString(reinterpret_cast<const char*>(inName)), theDescription);
-    if (inLoad->reference)
-        theTexture->Reference();
-    theTexture->SetStageAlphaMode(inLoad->alpha_mode, -1);
-    theTexture->SetStageColorMode(inLoad->color_mode, -1);
-    theTexture->SetStageMinFilterMode(inLoad->min_filter, -1);
-    theTexture->SetStageMagFilterMode(inLoad->mag_filter, -1);
-    theTexture->SetStageMipFilterMode(inLoad->mip_filter, -1);
-    theTexture->SetStageMipMapBias(inLoad->mip_bias, -1);
-    theTexture->SetStageTextureAddressingMode(inLoad->addressing, -1);
-    return theTexture;
-}
 
 // EEEffect.cpp's quad batches' quad and draw
 void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex);
@@ -1368,132 +274,474 @@ int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, f
 void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
                     const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom);
 
+// Computes a unit's opacity this frame (see-through modes, its own fade, and buildings fading in front of the near
+// clipping plane); returns whether it is drawn translucent (ee_gfx fill.rs over the world views; the calls here)
+static bool EEGetUnitOpacity(EEUnit* inUnit, float& outOpacity)
+{
+    return ee_gfx_fill_unit_opacity((uint64_t)(uintptr_t)inUnit, gRenderEnvironment.mShowHiddenUnits, gWorld.mInCinematic,
+                                    gOrthographicView, reinterpret_cast<const EeGeViewport*>(&gViewport), EEOpacityHost(),
+                                    &outOpacity);
+}
+
 const EeGfxRaster gEERustRaster = {
-    [](EeGfxLighting inKind) { ApplyLighting(inKind); },
-    [](const EeGe3DPoint* inLocation, uint32_t inFog) {
-        float theValue;
-        GetFogFactor(GE3DPoint(inLocation->x, inLocation->y, inLocation->z), inFog, theValue);
-        return theValue;
-    },
-    [](void* inModel, float inOpacity) -> int32_t {
-        bool theSorted = gOrthographicView;
-        return gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, theSorted);
-    },
+    [](EeGfxLighting inKind) { ee_gamecpp_ro_lighting((uint32_t)inKind); },
+    [](const EeGe3DPoint* inLocation, uint32_t inFog) { return ee_gamecpp_ro_fog_factor(&inLocation->x, inFog); },
+    [](void* inModel, float inOpacity) { return (int32_t)gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, gOrthographicView); },
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
-    [](float inNear, float inFar) {
-        gU4E8F08.SetDepthRange(inNear, inFar);
-        gRasterizer->SetViewport(gU4E8F08, gScreenIndex);
-    },
-    []() -> float { return gRenderSnapshot.mCameraYaw; },
-    [](const EeGe3DPoint* inPoint, float* outX, float* outY) {
-        GE2DPoint theScreenPoint;
-        GetScreenPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), theScreenPoint);
-        *outX = theScreenPoint.GetX();
-        *outY = theScreenPoint.GetY();
-    },
+    ee_gamecpp_ro_depth_range,
+    []() { return gRenderSnapshot.mCameraYaw; },
+    [](const EeGe3DPoint* inPoint, float* outX, float* outY) { ee_gamecpp_ro_screen_point(&inPoint->x, outX, outY); },
     // EEE3DGoal::DrawPass3's text (0xf13db)
-    [](float inX, float inY, const uint8_t* inText, EeGfxColor inColor) {
-        GERectangle theRectangle = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
-        GEText theText(gFontTahoma10);
-        theText.SetIsTransparent(true);
-        theText.SetFgColor(GEColor(inColor.red, inColor.green, inColor.blue));
-        theText.SetAlignment(kTextAlignCenter);
-        theText.SetText(UWideString(reinterpret_cast<const char*>(inText)));
-        GE2DPoint thePoint;
-        thePoint.SetX(inX);
-        thePoint.SetY(inY);
-        theText.SetLocation(thePoint);
-        if (!gFreeCamera)
-            gUIManager->GetMainGameForm()->DrawClippedText(theRectangle, &theText, NULL);
-        else
-            gUIManager->GetScenarioEditorForm()->DrawClippedText(theRectangle, &theText, NULL);
-    },
+    [](float inX, float inY, const uint8_t* inText, EeGfxColor inColor) { ee_gamecpp_ro_draw_text(inX, inY, inText, inColor.red, inColor.green, inColor.blue); },
     EERasterCreateModel,
     EERasterCreateSubModel,
     EERasterStoreMesh,
-    EERasterLoadTexture,
-    // EEE3DMarchingLine::DrawPass4's line (0xf3c68): a GELine between two screen points, its opacity per vertex
-    [](float inX0, float inY0, float inX1, float inY1, float inOpacity0, float inOpacity1) -> int32_t {
-        GELine theLine;
-        GE2DPoint thePoint;
-        thePoint.SetX(inX0);
-        thePoint.SetY(inY0);
-        theLine.SetStartPoint(thePoint);
-        thePoint.SetX(inX1);
-        thePoint.SetY(inY1);
-        theLine.SetEndPoint(thePoint);
-        theLine.SetOpacityPerVertex(inOpacity0, inOpacity1);
-        return gRasterizer->Draw(&theLine, 1, gScreenIndex);
-    },
-    [](float inDistance) -> float {
-        float theOld = gU4E8F08.GetRearClippingDistance();
-        gU4E8F08.SetRearClippingDistance(inDistance);
-        return theOld;
-    },
-    [](void* inModel, bool inSorted) -> int32_t {
-        return gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted);
-    },
-    []() -> bool { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
+    [](const uint8_t* inName, const EeGfxTextureLoad* inLoad) { return ee_gamecpp_ro_load_texture(inName, inLoad); },
+    // EEE3DMarchingLine::DrawPass4's line (0xf3c68)
+    ee_gamecpp_ro_screen_line,
+    ee_gamecpp_ro_rear_clipping,
+    [](void* inModel, bool inSorted) { return (int32_t)gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted); },
+    []() { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
     EEROUnitsBarSet,
     EEROUnitsBarDraw,
     EEROUnitsScreenLines,
     EEROUnitsLabel,
     // the effects' quad batches (ee_gfx effect_batch.rs; EEEffect.cpp's arrays)
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()); },
-    []() -> float { return gRenderSnapshot.mCameraPitch; },
+    []() { return gRenderSnapshot.mCameraPitch; },
     EEEffectBatchQuad,
     EEEffectBatchDraw,
     // the screen the models' textures are set for (raster_direct.rs: the model, material and texture calls are Rust's)
-    []() -> uint32_t { return (uint32_t)gScreenIndex; },
+    []() { return (uint32_t)gScreenIndex; },
     // gRasterizer's Rust objects (raster_direct.rs: the state calls the lambdas made on it)
-    [](void** outBase) -> void* { return DX7Rasterizer::RustObjects(gRasterizer, outBase); },
+    [](void** outBase) { return DX7Rasterizer::RustObjects(gRasterizer, outBase); },
 };
-
-// Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
-// (off in the orthographic view)
-void SetSceneFog() { ApplyLighting(EeGfxLighting::SceneFog); }
-
-// Turns lighting off (no ambient light, no lights)
-void SetLightingOff() { ApplyLighting(EeGfxLighting::Off); }
-
-// Sets the terrain lighting: the environment's terrain ambient light and the sun light, dimmed by the fade
-void SetTerrainLighting() { ApplyLighting(EeGfxLighting::Terrain); }
-
-// Posts the game's render objects, the user interface's last, to the graphics thread
-void EEPostGraphicsAll()
-{
-    gGraphics->PostClearRenderObjects();
-    gGraphics->PostPushRenderObject(gU565360);
-    gGraphics->PostPushRenderObject(gU56535C);
-    gGraphics->PostPushRenderObject(gU565358);
-    gGraphics->PostPushRenderObject(gU565354);
-    gGraphics->PostPushRenderObject(gU565350);
-    gGraphics->PostPushRenderObject(gU56534C);
-}
-
-// Posts the game's render objects without the user interface's to the graphics thread
-void EEResetGraphicsValues()
-{
-    gGraphics->PostClearRenderObjects();
-    gGraphics->PostPushRenderObject(gU565360);
-    gGraphics->PostPushRenderObject(gU56535C);
-    gGraphics->PostPushRenderObject(gU565358);
-    gGraphics->PostPushRenderObject(gU565354);
-    gGraphics->PostPushRenderObject(gU565350);
-}
 
 // ------------------------------------------------------------------------- round 9, lane A: this file's bodies' C++
 
-int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+// the unit picker's cases (EEUnitPicker.cpp), then lane B's
+int64_t EEPickerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEPickerOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
-// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane A section): one statement each
+// the mirrors and constants of gamecpp render_object.rs
+static_assert(offsetof(EERenderEnvironment, mCameraYaw) == 0x84 && offsetof(EERenderEnvironment, mColor54) == 0x54
+              && offsetof(EERenderEnvironment, mTimeOfDayChanged) == 0x89 + sizeof(long), "render_object.rs RenderEnv");
+static_assert(offsetof(EERenderFrameInfo, mYaw) == sizeof(void*) && offsetof(EERenderFrameInfo, mFrame) == sizeof(void*) + 8
+              && offsetof(EERenderFrameInfo, mAmbient) == sizeof(void*) + 8 + sizeof(long), "render_object.rs FrameInfo");
+static_assert(offsetof(GETextureDescription, mIs3DRenderable) == 4 * sizeof(long)
+              && offsetof(GETextureDescription, mUseTexturePack) == 4 * sizeof(long) + 4, "render_object.rs TextureDescription");
+static_assert(kUnitTypeRoboticFarm == 0x33a && kUnitTypeSpaceTurret == 0x302 && kUnitTypeOrbitalSpaceStation == 0x31f
+              && kAreaEffectMorale == 2 && kAreaEffectMoraleFromBuildings == 5 && kAreaEffectMoraleFromMilitaryHeroes == 6
+              && kStageOpModulate == 2 && (int)EeGfxLighting::DimUnit == 10, "render_object.rs constants");
+
+#define RO_P64(x) ((int64_t)(intptr_t)(x))
+#define RS (EERenderLists::sInstance)
+#define RU ((EERenderUnit*)p)
+#define RO_UN ((EEUnit*)p)
+#define RO_CX ((EEUnit*)p)->GetComplexUnit()
+#define RO_UC ((EEUnitClass*)p)
+#define RO_DG ((EEDoppelganger*)p)
+#define RO_GH ((EEGhostUnit*)p)
+#define RO_GOBJ ((EEGraphicObject*)p)
+#define RO_LINE ((EERenderLine*)p)
+#define RO_TEX ((GETexture*)p)
+#define RO_TEXT ((GEText*)p)
+#define RO_GELINE ((GELine*)p)
+#define RO_SHADOWS(k) ((k) == 0 ? RS.mShadows0 : (k) == 1 ? RS.mShadows1 : RS.mShadows2)
+#define RO_UNITS(k) ((k) == 0 ? RS.mUnits0 : (k) == 1 ? RS.mUnits1 : RS.mUnits2)
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp render_object.rs; EeGameCpp's lane A section): one
+// statement each
 int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore9OpB(inOp, p, a, f);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the render globals
+    case O::RoEnvironment: return RO_P64(&gRenderEnvironment);
+    case O::RoSceneFade: return RO_P64(&sSceneFade);
+    case O::RoGridPhase: return RO_P64(&gU4E9330);
+    case O::RoLetterboxZoom: return RO_P64(&gF4BE374);
+    case O::RoAmbientColor: return RO_P64(&gU4E9338);
+    case O::RoFogColor: return RO_P64(&gU4E9220);
+    case O::RoSunDirection: return RO_P64(&gU4E9210);
+    case O::RoFlag529065: return RO_P64(&gB529065);
+    case O::RoFlag529066: return RO_P64(&gB529066);
+    case O::RoFlag529068: return RO_P64(&gB529068);
+    case O::RoCameraFollowing: return RO_P64(&gCameraFollowing);
+    case O::RoWorldTransformation: return RO_P64(&gWorld.mTransformation);
+    case O::RoWindDirection: return RO_P64(&gWorld.mWindDirection);
+    case O::RoOrthographic: return gOrthographicView;
+    case O::RoUnitLighting: return gUnitLighting;
+    case O::RoHiddenUnitsMode: return gHiddenUnitsMode;
+    case O::RoPhysicsTicks: return gPhysics->mTicksRun;
+    case O::RoMusicFollowsBattle: return gMusicFollowsBattle;
+    case O::RoMusicIntensity: return gMusicManager->mIntensity;
+    case O::RoCollisionSphereMode: return gCollisionSphereMode;
+    case O::RoLightAttenuation0: gU4E9198.SetAttenuation0(f[0]);
+        break;
+    case O::RoLightAttenuation1: gU4E9198.SetAttenuation1(f[0]);
+        break;
+    case O::RoLightAttenuation2: gU4E9198.SetAttenuation2(f[0]);
+        break;
+    case O::RoLightStyle: gU4E9198.SetStyle((unsigned long)a[0]);
+        break;
+    case O::RoNewBitmap: return RO_P64(new GEBitmap);
+    case O::RoBitmapDereference: ((GEBitmap*)p)->Dereference();
+        break;
+    // the render lists
+    case O::RoUnitCount: return RO_P64(&RS.mRenderUnitCount);
+    case O::RoObjectCount: return RO_P64(&RS.mRenderShadowCount);
+    case O::RoRenderUnit: return RO_P64(&RS.mRenderUnits[a[0]]);
+    case O::RoRenderObject: return RO_P64(&RS.mRenderShadows[a[0]]);
+    case O::RoUnitBarsResize: RU->mHealthBars.resize((size_t)a[0], 0.0f);
+        break;
+    case O::RoUnitBarsCount: return (int64_t)RU->mHealthBars.size();
+    case O::RoUnitBarSet: RU->mHealthBars[a[0]] = f[0];
+        break;
+    case O::RoUnitBarsClear: RU->mHealthBars.clear();
+        break;
+    case O::RoUnitPartsClear: RU->mTurretAngles.clear(), RU->mTurretModels.clear(), RU->mOrbitalAngles.clear(), RU->mOrbitalModels.clear(), RU->mWheelAngles.clear(), RU->mWheelModels.clear();
+        break;
+    case O::RoUnitTurretsResize: RU->mTurretAngles.resize((size_t)a[0], 0.0f), RU->mTurretModels.resize((size_t)a[0], 0);
+        break;
+    case O::RoUnitOrbitalsResize: RU->mOrbitalAngles.resize((size_t)a[0], 0.0f), RU->mOrbitalModels.resize((size_t)a[0], 0);
+        break;
+    case O::RoUnitWheelsResize: RU->mWheelAngles.resize((size_t)a[0], 0.0f), RU->mWheelModels.resize((size_t)a[0], 0);
+        break;
+    case O::RoUnitTurretSet: RU->mTurretAngles[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mTurretAngles[a[1]], RU->mTurretModels[a[1]] = RU->mSource->mTurretParts[a[1]]->mModel;
+        break;
+    case O::RoUnitOrbitalSet: RU->mOrbitalAngles[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mOrbitals[a[1]]->mAngle, RU->mOrbitalModels[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mOrbitals[a[1]]->mModel;
+        break;
+    case O::RoUnitWheelSet: RU->mWheelAngles[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mWheels[a[1]]->mAngle, RU->mWheelModels[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mWheels[a[1]]->mModel;
+        break;
+    case O::RoUnitNameClear: RU->mName.Clear();
+        break;
+    case O::RoUnitNameFromStats: RU->mName = ((EEUnit*)a[0])->GetComplexUnit()->mStats->mName;
+        break;
+    case O::RoObjectsClear: RO_SHADOWS(a[0]).clear();
+        break;
+    case O::RoUnitsClear: RO_UNITS(a[0]).clear();
+        break;
+    case O::RoObjectsInsert: RO_SHADOWS(a[0]).insert(EERenderShadowMap::value_type((GETexture*)a[1], (EERenderShadow*)p));
+        break;
+    case O::RoUnitsInsert: RO_UNITS(a[0]).insert(EERenderUnitMap::value_type((GETexture*)a[1], RU));
+        break;
+    case O::RoSelectedObjectsClear: RS.mSelectedObjects.clear();
+        break;
+    case O::RoSelectedUnitsClear: RS.mSelectedUnits.clear();
+        break;
+    case O::RoSelectedObjectsPush: RS.mSelectedObjects.push_back((EERenderShadow*)p);
+        break;
+    case O::RoSelectedUnitsPush: RS.mSelectedUnits.push_back(RU);
+        break;
+    case O::RoSetSelectedUnit: RS.mSelectedUnit = RU;
+        break;
+    case O::RoSelectedClear: RS.mSelectedUnit = NULL, RS.mSelectedObject = NULL;
+        break;
+    case O::RoSetLabelUnit: gU529044 = RU;
+        break;
+    case O::RoObjectUnloadMedia: ((EERenderShadow*)p)->mObject->UnloadMedia();
+        break;
+    case O::RoGhostRecordsCount: return (int64_t)RS.mGhostRecords.size();
+    case O::RoGhostRecordsBackSource: return RO_P64(RS.mGhostRecords.back().mUnit.mSource);
+    case O::RoGhostRecordsPop: RS.mGhostRecords.pop_back();
+        break;
+    case O::RoGhostRecordsPush: RS.mGhostRecords.push_back(*(EERenderUnitRecord*)p);
+        break;
+    case O::RoGhostRecordNew: return RO_P64(new EERenderUnitRecord());
+    case O::RoGhostRecordDelete: delete (EERenderUnitRecord*)p;
+        break;
+    case O::RoGhostRecordCopy: ((EERenderUnitRecord*)p)->mTileX = ((EEGhostUnit*)a[0])->mTileX, ((EERenderUnitRecord*)p)->mTileY = ((EEGhostUnit*)a[0])->mTileY, memcpy(((EERenderUnitRecord*)p)->mCells, ((EEGhostUnit*)a[0])->mFootprint, sizeof(((EERenderUnitRecord*)p)->mCells)), memcpy(((EERenderUnitRecord*)p)->mHeights, ((EEGhostUnit*)a[0])->mHeights, sizeof(((EERenderUnitRecord*)p)->mHeights));
+        break;
+    case O::RoPickedIds: return (*(const unsigned long**)a[0] = gU4E9230.empty() ? NULL : &gU4E9230[0], (int64_t)gU4E9230.size());
+    case O::RoPickedClear: gU4E9230.clear();
+        break;
+    case O::RoCaptureFillPresent: return gEERenderCaptureFill != NULL;
+    case O::RoCaptureFill: gEERenderCaptureFill(*(const EERenderFrameInfo*)a[0], (uint32_t)a[1], f[0]);
+        break;
+    // the 3D lines
+    case O::RoLinesCount: return (int64_t)gU529050.size();
+    case O::RoLineDereference: gU529050[a[0]].mTexture->Dereference();
+        break;
+    case O::RoLinesClear: gU529050.clear();
+        break;
+    case O::RoLinesPushBack: gU529050.push_back(EERenderLine());
+        break;
+    case O::RoLinesBack: return RO_P64(&gU529050[gU529050.size() - 1]);
+    case O::RoLineSetWidth: RO_LINE->mWidth = gU4E9330;
+        break;
+    case O::RoLineSetTexture: RO_LINE->mTexture = gAreaEffectTexture;
+        break;
+    case O::RoAreaEffectTextureReference: gAreaEffectTexture->Reference();
+        break;
+    case O::RoLinePointsResize: RO_LINE->mPoints.resize((size_t)a[0], std::pair<GE3DPoint, float>());
+        break;
+    case O::RoLinePointSet: RO_LINE->mPoints[a[0]] = std::pair<GE3DPoint, float>(*(const GE3DPoint*)a[1], f[0]);
+        break;
+    // the units, classes, players, tiles and graphic objects
+    case O::RoUnitId: return RO_UN->GetUnitID();
+    case O::RoUnitIsTree: return RO_UN->GetUnitClass()->mIsTree;
+    case O::RoUnitTileSize: return RO_UN->GetUnitClass()->mTileSize;
+    case O::RoUnitIsObstacle: return RO_UN->GetUnitClass()->mIsObstacle;
+    case O::RoUnitComplexIsFoundation: return RO_UN->mComplexUnit->IsFoundation();
+    case O::RoUnitNextPart: return RO_P64(RO_UN->mComplexUnit->mNextPart);
+    case O::RoUnitHitPoints: return RO_UN->GetHitPoints();
+    case O::RoUnitHitPointsIsOne: return RO_UN->mHitPoints == 1;
+    case O::RoUnitPhysicalFrame: return RO_CX->mPhysicalModel.GetFrame();
+    case O::RoUnitTint: *(GEColor*)a[0] = RO_CX->mColor;
+        break;
+    case O::RoUnitSidePart: return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(RO_CX->mUnitClass)->IsSidePart(RO_CX);
+    case O::RoTurretPartCount: return (int64_t)RO_CX->GetModel()->mTurretParts.size();
+    case O::RoOrbitalCount: return RO_CX->mNumOrbitals;
+    case O::RoWheelCount: return RO_CX->mNumWheels;
+    case O::RoUnitAreaEffectCount: return (int64_t)RO_CX->mAffectingAreaEffects.mItems.size();
+    case O::RoUnitAreaEffectKind: return RO_CX->mAffectingAreaEffects.mItems[a[0]]->mTemplate->mKind;
+    case O::RoUnitAreaEffectStrength: return RO_CX->mAffectingAreaEffects.mItems[a[0]]->GetStrength();
+    case O::RoComplexInView: return RO_UN->mComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
+    case O::RoComplexLocation: return RO_P64(&((EEComplexUnit*)p)->mPhysicalModel.GetLocation());
+    case O::RoComplexIsFoundation: return ((EEComplexUnit*)p)->IsFoundation();
+    case O::RoWorldUnit: return RO_P64(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)a[0])));
+    case O::RoFindWaypoint: return ((EEComplexUnit*)p)->FindWaypointAtTile((long)a[0], (long)a[1], *(const EEComplexUnitWaypoint**)a[2]);
+    case O::RoWaypointLocation: *(GE3DPoint*)a[0] = ((const EEComplexUnitWaypoint*)p)->mLocation;
+        break;
+    case O::RoClassCategory: return RO_UC->mCategory;
+    case O::RoClassTileSize: return RO_UC->mTileSize;
+    case O::RoClassUnitType: return RO_UC->GetUnitType();
+    case O::RoClassFamily: return RO_UC->mFamily;
+    case O::RoClassFacesCamera: return RO_UC->mFacesCamera == true;
+    case O::RoScaffoldingModel: return RO_UC->mScaffoldingClass == NULL ? 0 : RO_P64(gWorld.mPlayers[a[0]]->GetUpgrade(RO_UC->mScaffoldingClass->GetUnitType())->mModel);
+    case O::RoGroupContains: return ((EEPlayer*)p)->mSelectedGroup->Contains(((EEUnit*)a[0])->GetComplexUnit());
+    case O::RoCivilizationUnchanged: return ((EEPlayer*)p)->mCivilization.GetUnchanged();
+    case O::RoLabelCivilizationName: gU529030 = ((EEPlayer*)p)->mCivilization.mName;
+        break;
+    case O::RoLabelPlayerName: gU529030 = ((EEPlayer*)p)->mName;
+        break;
+    case O::RoTileFirstNode: return RO_P64(((EETile*)p)->mUnits);
+    case O::RoTileSeenBy: return ((EETile*)p)->IsSeenBy((EEPlayer*)a[0]);
+    case O::RoTileDoppelgangerCount: return ((EETile*)p)->GetNumDoppelgangers();
+    case O::RoTileDoppelganger: return RO_P64(((EETile*)p)->mDoppelgangers[a[0]]);
+    case O::RoNodeNext: return RO_P64(((RTSTileUnitNode*)p)->mNext);
+    case O::RoNodeUnit: return RO_P64(((RTSTileUnitNode*)p)->mUnit);
+    case O::RoNodeUnitIsTree: return ((RTSTileUnitNode*)p)->mUnit->mUnitClass->mIsTree;
+    case O::RoDoppelUnit: return RO_P64(RO_DG->mUnit);
+    case O::RoDoppelModel: return RO_P64(RO_DG->GetModel());
+    case O::RoDoppelAnimation: return RO_DG->GetAnimation();
+    case O::RoDoppelFrame: return RO_DG->GetFrame();
+    case O::RoDoppelHitPoints: return RO_DG->GetHitPoints();
+    case O::RoDoppelMaxHitPoints: return RO_DG->GetPlayer()->GetUpgrade(RO_DG->mUnit->mUnitClass->GetUnitType())->mMaxHitPoints;
+    case O::RoDoppelIsBuilt: return RO_DG->IsBuilt();
+    case O::RoDoppelIsComplex: return RO_DG->IsComplex() == true;
+    case O::RoDoppelIsFoundation: return RO_DG->IsFoundation();
+    case O::RoDoppelTransformation: RO_DG->GetTransformation(*(GETransformation*)a[0]);
+        break;
+    case O::RoDoppelPlayerColor: *(GEColor*)a[0] = RO_DG->GetPlayer()->mColor;
+        break;
+    case O::RoDoppelPlayer: return RO_P64(RO_DG->GetPlayer());
+    case O::RoDoppelPlayerMember: return RO_P64(RO_DG->mPlayer);
+    case O::RoGhostLock: gWorld.mGhostUnitsLock->Enter();
+        break;
+    case O::RoGhostUnlock: gWorld.mGhostUnitsLock->Leave();
+        break;
+    case O::RoGhostUnitsChanged: return gGhostUnitsChanged;
+    case O::RoGhostCount: return (int64_t)gWorld.GetNumGhostUnits();
+    case O::RoGhostAt: return RO_P64(gWorld.mGhostUnits[a[0]]);
+    case O::RoGhostModel: return RO_P64(RO_GH->GetModel());
+    case O::RoGhostFrame: return RO_GH->mFrame;
+    case O::RoGhostAnimation: return RO_GH->mAnimation;
+    case O::RoGhostCanPlace: return RO_GH->mCanPlace;
+    case O::RoGhostClass: return RO_P64(RO_GH->mUnitClass);
+    case O::RoGhostPlayerColor: *(GEColor*)a[0] = RO_GH->mPlayer->mColor;
+        break;
+    case O::RoGhostTransformation: *(GETransformation*)a[0] = RO_GH->mTransformation;
+        break;
+    case O::GobjLoadMedia: RO_GOBJ->LoadMedia();
+        break;
+    case O::GobjUnloadMedia: RO_GOBJ->UnloadMedia();
+        break;
+    case O::RoGobjFrameCount: return RO_GOBJ->mModels[a[0]]->GetFrameCount();
+    case O::RoGobjModel: return RO_P64(RO_GOBJ->mModels[a[0]]);
+    case O::RoGobjTexture: return RO_P64(RO_GOBJ->mTextures[a[0]]);
+    case O::RoGobjShadowTexture: return RO_P64(RO_GOBJ->mShadowTexture);
+    case O::RoMeshWaterTile: return gWorld.mMap->mTerrainMesh.GetIsWaterTile((long)a[0], (long)a[1]);
+    case O::RoModelInView: return GEPhysicalModel((GEModel*)p, *(const GETransformation*)a[0], f[0]).Intersects(gViewport, gOrthographicView);
+    case O::RoUnitOpacity: return EEGetUnitOpacity(RO_UN, *(float*)a[0]);
+    // the picker, the selection, the ambient sounds
+    case O::RoPickerAdd: gUnitPicker.AddUnit(RO_UN, *(const GETransformation*)a[0], f[0]);
+        break;
+    case O::RoPickerContains: return gUnitPicker.Contains(RO_UN);
+    case O::RoPickUnitUnreferenced: return RO_P64(gUnitPicker.PickUnitUnreferenced(gMouse->mPosition, 1));
+    case O::RoMainSelectUnits: return RO_P64(dynamic_cast<EEUICSelectUnits*>(gUIManager->GetMainGameForm()->GetControl(kMainGameSelectUnits)));
+    case O::RoEditorSelectUnits: return RO_P64(gUIManager->GetScenarioEditorForm() != NULL ? gUIManager->GetScenarioEditorForm()->GetSelectUnits() : NULL);
+    case O::RoTriggerSelectUnits: return RO_P64(dynamic_cast<EESEUICTriggerSelectUnits*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSETSObjectSelectUnits)));
+    case O::RoSelectionIsDrawn: return ((EEUICSelectUnits*)p)->GetIsDrawn();
+    case O::RoTriggerSelectionIsDrawn: return ((EESEUICTriggerSelectUnits*)p)->GetIsDrawn();
+    case O::RoPickUnits: gUnitPicker.PickUnits(((EEUICSelectUnits*)p)->GetSelectionRectangle(), (EEPlayer*)a[0], 0, gU4E9230);
+        break;
+    case O::RoPickUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EEUICSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+        break;
+    case O::RoPickTriggerUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+        break;
+    case O::RoAmbientCountUnit: gAmbientSoundManager.mAnalyzer.CountUnit((EEComplexUnit*)p);
+        break;
+    case O::RoAmbientCountTree: gAmbientSoundManager.mAnalyzer.CountTree(RO_UN);
+        break;
+    case O::RoAmbientFrameCountIncrement: gAmbientSoundManager.mFrameCount++;
+        break;
+    case O::RoAmbientUpdateDue: return gAmbientSoundManager.IsUpdateDue();
+    case O::RoAmbientUpdate: gAmbientSoundManager.Update();
+        break;
+    // the terrain, the viewport, the rasterizer
+    case O::RoVisibleRowCount: return gWorld.mMap->mTerrainMesh.GetNumVisibleTileRows();
+    case O::RoVisibleRow: gWorld.mMap->mTerrainMesh.GetVisibleTileRow((unsigned long)a[0], ((long*)a[1])[0], ((long*)a[1])[1], ((long*)a[1])[2]);
+        break;
+    case O::RoMeshCliffTextureCount: return gWorld.mMap->mTerrainMesh.NumSpaceCliffTextures();
+    case O::RoMeshSetCliffTextures: gWorld.mMap->mTerrainMesh.SetSpaceCliffTextures(gU4E8EF0);
+        break;
+    case O::RoCliffTexturesCount: return (int64_t)gU4E8EF0.size();
+    case O::RoCliffTexturesPush: gU4E8EF0.push_back(RO_TEX);
+        break;
+    case O::RoUpdateVisibleTerrain: gWorld.mMap->mTerrainMesh.UpdateVisibleTerrain(gWorld.mTransformation, *(GEViewport*)p, 2, 1, 3, gOrthographicView);
+        break;
+    case O::RoTransformToCamera: gRasterizer->TransformToCamera(gWorld.mMap->mTerrainMesh, *(GEViewport*)p, f[0], gCameraFollowing, gOrthographicView);
+        break;
+    case O::RoRastViewport: return RO_P64(&gRasterizer->GetViewport(gScreenIndex));
+    case O::RoRastLightMesh: gRasterizer->Light(gWorld.mMap->mTerrainMesh, gScreenIndex);
+        break;
+    case O::RoRastClearBlack: gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), *(const GERectangle*)a[0], gScreenIndex);
+        break;
+    case O::RoSetGameViewRectangle: EESetGameViewRectangle(*(const GERectangle*)a[0]);
+        break;
+    case O::RoShowAllBackgrounds: gUIManager->GetMainGameForm()->ShowAllBackgrounds();
+        break;
+    case O::RoHideAllBackgrounds: gUIManager->GetMainGameForm()->HideAllBackgrounds();
+        break;
+    case O::RoViewportSetCamera: gViewport.SetCamera(gWorld.mTransformation);
+        break;
+    case O::RoRastSetViewport: gRasterizer->SetViewport(gViewport, gScreenIndex);
+        break;
+    case O::RoCopyViewport: gU4E8F08 = gViewport;
+        break;
+    case O::RoMainViewportDepthRange: gU4E8F08.SetDepthRange(f[0], f[1]);
+        break;
+    case O::RoRastSetMainViewport: gRasterizer->SetViewport(gU4E8F08, gScreenIndex);
+        break;
+    case O::RoMainViewportSetRearClipping: gU4E8F08.SetRearClippingDistance(f[0]);
+        break;
+    case O::RoRastViewRectangle: *(GERectangle*)a[0] = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
+        break;
+    case O::RoScreenPoint: GetScreenPoint(*(const GE3DPoint*)a[0], *(GE2DPoint*)a[1]);
+        break;
+    case O::RoRastFog: gRasterizer->SetFog((unsigned long)a[0], gScreenIndex);
+        break;
+    case O::RoRastFogColor: gRasterizer->SetFogColor(GEColor(f[0], f[1], f[2]), gScreenIndex);
+        break;
+    case O::RoRastFogRange: gRasterizer->SetFogRange(f[0], f[1], gScreenIndex);
+        break;
+    case O::RoRastFogType: gRasterizer->SetFogType((unsigned long)a[0], gScreenIndex);
+        break;
+    case O::RoRastAmbientColor: gRasterizer->SetAmbientColor(GEColor(f[0], f[1], f[2]), gScreenIndex);
+        break;
+    case O::RoRastAmbientIntensity: gRasterizer->SetAmbientIntensity(f[0], gScreenIndex);
+        break;
+    case O::RoRastRemoveLights: gRasterizer->RemoveAllLights(gScreenIndex);
+        break;
+    case O::RoRastLighting: gRasterizer->SetLighting((unsigned long)a[0], gScreenIndex);
+        break;
+    case O::RoLightColor: gU4E9198.SetColor(GEColor(f[0], f[1], f[2]));
+        break;
+    case O::RoLightIntensity: gU4E9198.SetIntensity(f[0]);
+        break;
+    case O::RoLightDirection: gU4E9198.SetDirection(GEVector(f[0], f[1], f[2]));
+        break;
+    case O::RoRastAddLight: gRasterizer->AddLight(gU4E9198, gScreenIndex, gU4E9190);
+        break;
+    case O::RoRastUpdateLight: gRasterizer->UpdateLight(gU4E9190, gU4E9198, gScreenIndex);
+        break;
+    // the textures, the text and the screen line the raster table makes
+    case O::RoLoadTexture: return RO_P64(gTextureManager->LoadTexture(UString((const char*)a[0]), *(const GETextureDescription*)a[1]));
+    case O::RoTexReference: RO_TEX->Reference();
+        break;
+    case O::RoTexAlphaMode: RO_TEX->SetStageAlphaMode((unsigned long)a[0], -1);
+        break;
+    case O::RoTexColorMode: RO_TEX->SetStageColorMode((unsigned long)a[0], -1);
+        break;
+    case O::RoTexMinFilter: RO_TEX->SetStageMinFilterMode((unsigned long)a[0], -1);
+        break;
+    case O::RoTexMagFilter: RO_TEX->SetStageMagFilterMode((unsigned long)a[0], -1);
+        break;
+    case O::RoTexMipFilter: RO_TEX->SetStageMipFilterMode((unsigned long)a[0], -1);
+        break;
+    case O::RoTexMipBias: RO_TEX->SetStageMipMapBias(f[0], -1);
+        break;
+    case O::RoTexAddressing: RO_TEX->SetStageTextureAddressingMode((unsigned long)a[0], -1);
+        break;
+    case O::RoTextNew: return RO_P64(new GEText(gFontTahoma10));
+    case O::RoTextDelete: delete RO_TEXT;
+        break;
+    case O::RoTextSetTransparent: RO_TEXT->SetIsTransparent(true);
+        break;
+    case O::RoTextSetColor: RO_TEXT->SetFgColor(GEColor(f[0], f[1], f[2]));
+        break;
+    case O::RoTextSetCentred: RO_TEXT->SetAlignment(kTextAlignCenter);
+        break;
+    case O::RoTextSetText: RO_TEXT->SetText(UWideString((const char*)a[0]));
+        break;
+    case O::RoTextSetLocation: RO_TEXT->SetLocation(GE2DPoint(f[0], f[1]));
+        break;
+    case O::RoMainGameDrawText: gUIManager->GetMainGameForm()->DrawClippedText(*(GERectangle*)a[0], RO_TEXT, NULL);
+        break;
+    case O::RoEditorDrawText: gUIManager->GetScenarioEditorForm()->DrawClippedText(*(GERectangle*)a[0], RO_TEXT, NULL);
+        break;
+    case O::RoGeLineNew: return RO_P64(new GELine);
+    case O::RoGeLineDelete: delete RO_GELINE;
+        break;
+    case O::RoGeLineStart: RO_GELINE->SetStartPoint(GE2DPoint(f[0], f[1]));
+        break;
+    case O::RoGeLineEnd: RO_GELINE->SetEndPoint(GE2DPoint(f[0], f[1]));
+        break;
+    case O::RoGeLineOpacity: RO_GELINE->SetOpacityPerVertex(f[0], f[1]);
+        break;
+    case O::RoGeLineDraw: return gRasterizer->Draw(RO_GELINE, 1, gScreenIndex);
+    // RFIL's world key (TEST ONLY)
+    case O::RoPlayerId: return ((EEPlayer*)p)->GetPlayerID();
+    case O::RoViewedUnitId: return ((EEPlayer*)p)->mViewedUnit != NULL ? ((EEPlayer*)p)->mViewedUnit->GetUnitID() : 0;
+    case O::RoSelectedViewedUnitId: return ((EEPlayer*)p)->mSelectedViewedUnit != NULL ? ((EEPlayer*)p)->mSelectedViewedUnit->GetUnitID() : 0;
+    case O::RoGroupContainsComplex: return ((EEPlayer*)p)->mSelectedGroup->Contains((EEComplexUnit*)a[0]);
+    case O::RoUnitHitPointsValue: return RO_UN->mHitPoints;
+    case O::RoUnitResourceAmount: return RO_UN->mResourceAmount;
+    case O::RoCxFrame: return ((EEComplexUnit*)p)->mPhysicalModel.GetFrame();
+    case O::RoCxNextFrame: return ((EEComplexUnit*)p)->mNextFrame;
+    case O::RoCxAnimation: return ((EEComplexUnit*)p)->mAnimation;
+    case O::RoCxCommandType: return ((EEComplexUnit*)p)->mCommand != NULL ? ((EEComplexUnit*)p)->mCommand->mType : 0;
+    case O::RoCxIsBuilt: return ((EEComplexUnit*)p)->mIsBuilt;
+    case O::RoPostClearRenderObjects: gGraphics->PostClearRenderObjects();
+        break;
+    case O::RoPostPushRenderObject: gGraphics->PostPushRenderObject(a[0] == 0 ? gU565360 : a[0] == 1 ? gU56535C : a[0] == 2 ? gU565358 : a[0] == 3 ? gU565354 : a[0] == 4 ? gU565350 : gU56534C);
+        break;
+    default: return EEPickerOp(inOp, p, a, f);
+    }
+    return 0;
 }
 
 double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore9OpBF(inOp, p, a, f);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::RoEnvironmentWind: return gWorld.mEnvironmentManager->mWind;
+    case O::RoViewportRearClipping: return gViewport.GetRearClippingDistance();
+    case O::RoMainViewportRearClipping: return gU4E8F08.GetRearClippingDistance();
+    case O::RoZoomLock: return gZoomLock;
+    case O::RoSpaceTurretHeight: return gSpaceTurretHeight;
+    case O::RoSpaceStationHeight: return gSpaceStationHeight;
+    case O::RoUnitStatsScale: return RO_UN->mStats->GetScale();
+    case O::RoUnitStatsRange: return RO_UN->mStats->mRange;
+    case O::RoUnitPhysicalScale: return RO_CX->mPhysicalModel.GetScale();
+    case O::RoClassScale: return RO_UC->mScale;
+    case O::RoClassShadowScale: return RO_UC->GetShadowScale();
+    case O::RoClassF170: return RO_UC->GetF170();
+    case O::RoDoppelScale: return RO_DG->GetScale();
+    case O::RoGhostScale: return RO_GH->GetScale();
+    case O::RoCxAnimationFraction: return ((EEComplexUnit*)p)->mAnimationFraction;
+    default: return EEPickerOpF(inOp, p, a, f);
+    }
 }
