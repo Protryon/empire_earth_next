@@ -524,7 +524,9 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             h(O::AttackPlayers, 0, &[i[1], i[2] as u8 as i64]);
         }
         EE_NETMSG_WACT_BUILD_GATE => {
-            h(O::BuildGate, 0, &[f[0] as c_long as i64, f[1] as c_long as i64, i[1], i[2], i[3]]);
+            // the EETileCoordinate (two longs) the C++ takes by reference
+            let mut tile: [c_long; 2] = [f[0] as c_long, f[1] as c_long];
+            h(O::BuildGate, 0, &[ptr(&mut tile), i[1], i[2], i[3]]);
         }
         EE_NETMSG_WACT_EDICT => {
             h(O::VotingPropose, 0, &[i[1] as u16 as i64]);
