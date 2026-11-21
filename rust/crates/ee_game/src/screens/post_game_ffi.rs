@@ -8,13 +8,7 @@ use crate::screens::post_game::{EeScreensPgsHistory, EeScreensPgsRecord, PostGam
 
 /// cbindgen:ignore
 mod sys {
-    use crate::screens::post_game::{EeScreensPgsHistory, EeScreensPgsRecord};
-
     extern "C" {
-        /// `gWorld.mStatistics` into `out`.
-        pub fn ee_screenscpp_pgs_history(out: *mut EeScreensPgsHistory);
-        /// Record `index` of the statistics into `out`.
-        pub fn ee_screenscpp_pgs_record(index: u32, out: *mut EeScreensPgsRecord);
         /// `gPhysics->GetGameTime()`.
         pub fn ee_screenscpp_game_time() -> u32;
     }
@@ -48,8 +42,7 @@ impl PostGameHost for Form {
 /// `gWorld.mStatistics` (traced: SGVW `PH`).
 fn history() -> EeScreensPgsHistory {
     let begun = crate::screens::sgvw::begin();
-    let mut out = EeScreensPgsHistory::default();
-    unsafe { sys::ee_screenscpp_pgs_history(&mut out) };
+    let out = crate::screens::post_game_calls::history(&mut crate::screens::game_cpp::Ffi);
     if let Some(g) = begun {
         crate::screens::sgvw::record(g, &format!("PH {out:?}"));
     }
@@ -59,8 +52,7 @@ fn history() -> EeScreensPgsHistory {
 /// Record `index` of the statistics (traced: SGVW `PR`).
 fn record(index: u32) -> EeScreensPgsRecord {
     let begun = crate::screens::sgvw::begin();
-    let mut out = EeScreensPgsRecord::default();
-    unsafe { sys::ee_screenscpp_pgs_record(index, &mut out) };
+    let out = crate::screens::post_game_calls::record(&mut crate::screens::game_cpp::Ffi, index);
     if let Some(g) = begun {
         crate::screens::sgvw::record(g, &format!("PR {index} {out:?}"));
     }
