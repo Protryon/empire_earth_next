@@ -1359,6 +1359,87 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  RunRustInit,
+  RunFixtureConfigure,
+  RunSplashNew,
+  RunSplashDelete,
+  RunSplashStart,
+  RunSplashStop,
+  RunInstanceMutex,
+  RunSetEventPump,
+  RunNativeHook,
+  RunComInit,
+  RunComUninit,
+  RunFloatingPoint,
+  RunSqrtTable,
+  RunSetInstance,
+  RunEsInitialize,
+  RunFsInitialize,
+  RunNewResource,
+  RunDefaultSettings,
+  RunPreferencesLoad,
+  RunSimPreferences,
+  RunUserInterface,
+  RunUShutdown,
+  RunReleaseDataPath,
+  RunReleaseCivilizationPath,
+  EntrySpecFirstFile,
+  EntrySpecNextFile,
+  EntryDecryptExcluded,
+  EntrySpecFileIsNot,
+  EntrySpecVecNew,
+  EntrySpecVecDelete,
+  EntrySpecVecPush,
+  EntrySpecVecSort,
+  EntrySpecVecSize,
+  EntrySpecVecGet,
+  EntrySpecOpenRead,
+  EntrySpecLength,
+  EntrySpecRead,
+  EntrySpecClose,
+  EntrySpecFullPath,
+  EntryUStrData,
+  EntryUStrSet,
+  EntrySetNetworkFolder,
+  EntryNeInitialize,
+  EntryRegisterNeMessages,
+  EntryRegisterEeMessages,
+  EntryRegisterEmptyShutdown,
+  EntryArchiveCount,
+  EntryArchiveTimestamp,
+  EntryStrData,
+  EntrySetBinaryChecksum,
+  EntryVersionTrim,
+  EntryVersionAppend,
+  EntryNewClient,
+  EntryClientSetTries,
+  EntryClientStartThreads,
+  EntryDeleteCommunicationsKeep,
+  EntryNullCommunications,
+  EntrySetPlayerName,
+  EntrySetHostGameName,
+  EntryPushMainMenu,
+  EntryNewMultiPlayerEvent,
+  EntryProcessOnMainMenu,
+  EntryDereferenceEvent,
+  EntryNewJoinOrHost,
+  EntryPostAction,
+  EntryDereferenceAction,
+  EntryOpenSavedGame,
+  EntryOptionsWriteLock,
+  EntryOptionsWriteUnlock,
+  EntryOptionsLoadType,
+  EntryOptionsMapTypeOf,
+  EntryNotMultiplayer,
+  EntryNewServer,
+  EntryServerStartThreads,
+  EntryServerNoLoadResponses,
+  EntrySetGameStateLoadType,
+  EntryServerStopPing,
+  EntryServerLoadState,
+  EntryNotInEditor,
+  EntryStartLoadingInput,
+  EntryUpdateSavedGames,
 };
 
 extern "C" {
@@ -2113,6 +2194,38 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// EEGetFileChecksum: the checksum over the directory's files matching the pattern, in file name order (one encrypted
+/// name skipped): each file's bytes, or with `use_file_times` its write time's high word plus its size. A file that
+/// cannot be opened is skipped; a read that returns nothing ends that file (the port's fix of two endless loops).
+///
+/// # Safety
+/// `directory` is a live FSFileSpec, `pattern` a live UString.
+unsigned long ee_gamecpp_entry_file_checksum(void *directory,
+                                             const void *pattern,
+                                             long use_file_times);
+
+/// EEInitializeNetwork: the network engine started and its message types registered, then the checksum of the exe,
+/// the db tables, the unit AI scripts, the models, the computer players' AIs and the archives' timestamps, its low 13
+/// bits appended to the game version.
+void ee_gamecpp_entry_initialize_network();
+
+/// EEParseCommandLine: the command line's commands run in order; without one a client and the main menu. False when
+/// the game should quit (update_saved_games).
+///
+/// # Safety
+/// `line` is a terminated C string.
+bool ee_gamecpp_entry_parse_command_line(const char *line);
+
+/// EERun: the game's run from its entry point (WinMain, main): the Rust library's start, the fixture's switches, the
+/// single instance, the window system, the engine's initialisation, the splash screen around the start-up, the menus,
+/// the threads, the command line and the user interface's run, then the shutdown. 1 when the window system cannot
+/// start, else 0.
+///
+/// # Safety
+/// `command_line` is a terminated C string; `instance` the module's.
+int32_t ee_gamecpp_entry_run(void *instance,
+                             const char *command_line);
 
 }  // extern "C"
 
