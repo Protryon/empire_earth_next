@@ -34,7 +34,7 @@ public:
     void GetTiles(std::vector<U2DPoint<long> >& outTiles);   // 0x1ba495: real typed cache/output family
     const UWideString& GetName() const { return this->mName; }  // inline (DuplicateArea 0x5b120d)
     bool IsUnset() const { return ee_scenario_area_is_unset(this); }
-    bool IsOffMap() const { return ee_scenario_area_is_off_map(this); }   // 0x1ba473 (provisional name)
+    bool IsOffMap() const { return ee_scenario_area_is_off_map(this); }
     // inline (COMDAT 0x17d381, first emitted by the editor's area screen; Reset 0x1afbb1 calls it) (provisional name)
     void SetAnchor(const U2DPoint<long>& inAnchor) { ee_scenario_en_area_set_anchor(this, inAnchor.mX, inAnchor.mY); }
     // inline (COMDAT 0x17d34c, before SetAnchor's: the editor's area screen 0x17d272 calls both) (provisional name)
