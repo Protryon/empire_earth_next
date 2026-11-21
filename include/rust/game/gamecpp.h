@@ -1172,6 +1172,8 @@ enum class EeGameCpp : uint32_t {
   RastSetScreenID,
   Screen32BitDevice,
   PrefSetGameBitDepth16,
+  PrefGameBitDepthValid,
+  PrefTextureBitDepthValid,
   PrefTextureBitDepth,
   Screen32BitTexture,
   PrefSetTextureBitDepth16,

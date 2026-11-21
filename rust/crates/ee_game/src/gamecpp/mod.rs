@@ -1214,6 +1214,8 @@ pub enum EeGameCpp {
     RastSetScreenID,
     Screen32BitDevice,
     PrefSetGameBitDepth16,
+    PrefGameBitDepthValid,
+    PrefTextureBitDepthValid,
     PrefTextureBitDepth,
     Screen32BitTexture,
     PrefSetTextureBitDepth16,

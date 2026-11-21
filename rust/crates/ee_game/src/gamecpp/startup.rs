@@ -699,12 +699,13 @@ pub extern "C" fn ee_gamecpp_startup_display() -> bool {
         h(O::SetScreenIndexZero, 0, &[]);
     }
     h(O::RastSetScreenID, 0, &[]);
-    for (depth, support, set16) in [
-        (O::PrefGameBitDepth, O::Screen32BitDevice, O::PrefSetGameBitDepth16),
-        (O::PrefTextureBitDepth, O::Screen32BitTexture, O::PrefSetTextureBitDepth16),
+    // (a depth's validity is a C++ case: the test profile's overlay accepts and stores 32 where 16 is, build.py)
+    for (depth, valid, support, set16) in [
+        (O::PrefGameBitDepth, O::PrefGameBitDepthValid, O::Screen32BitDevice, O::PrefSetGameBitDepth16),
+        (O::PrefTextureBitDepth, O::PrefTextureBitDepthValid, O::Screen32BitTexture, O::PrefSetTextureBitDepth16),
     ] {
         let bits = h(depth, 0, &[]);
-        if (bits != 32 && bits != 16) || (bits == 32 && h(support, 0, &[]) == 0) {
+        if h(valid, 0, &[]) == 0 || (bits == 32 && h(support, 0, &[]) == 0) {
             h(set16, 0, &[]);
         }
     }

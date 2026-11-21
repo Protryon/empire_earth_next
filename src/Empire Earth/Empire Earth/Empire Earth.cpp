@@ -1355,6 +1355,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PrefScreenIDRaw: return SETTINGS.mScreenID;
     case O::PrefGameBitDepth: return SETTINGS.mGameBitDepth;
     case O::PrefTextureBitDepth: return SETTINGS.mTextureBitDepth;
+    case O::PrefGameBitDepthValid: return !(SETTINGS.mGameBitDepth != 32 && SETTINGS.mGameBitDepth != 16);
+    case O::PrefTextureBitDepthValid: return !(SETTINGS.mTextureBitDepth != 32 && SETTINGS.mTextureBitDepth != 16);
     case O::PrefSetGameBitDepth16: SETTINGS.mGameBitDepth = 16;
         break;
     case O::PrefSetTextureBitDepth16: SETTINGS.mTextureBitDepth = 16;
