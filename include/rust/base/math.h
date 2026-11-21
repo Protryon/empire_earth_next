@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `GE2DPoint` (sizeof 8).
+struct EeGe2DPoint {
+  float x;
+  float y;
+};
+
 /// `GEQuaternion` (sizeof 0x10).
 struct EeGeQuaternion {
   float x;
@@ -44,12 +50,6 @@ struct EeGe3DLine {
 struct EeGe3DPlane {
   EeGe3DPoint point;
   EeGeVector normal;
-};
-
-/// `GE2DPoint` (sizeof 8).
-struct EeGe2DPoint {
-  float x;
-  float y;
 };
 
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 
 /// `RTSPhysics`' plain members (`ee/EEPhysics.h`), in the class's order: a base of the class.
 struct EeRtsPhysicsFields {
@@ -31,7 +32,251 @@ struct EeRtsPhysicsFields {
   bool mSlowPlayback;
 };
 
+/// `RTSGraphics`' plain members (`ee/RTSGraphics.h`), in the class's order: a base of the class.
+struct EeRtsGraphicsFields {
+  /// the rasterizer's screen
+  unsigned long mScreen;
+  /// message 0x40e: the overdraw display mode
+  bool mShowOverdraw;
+  long mL50;
+  /// message 0x408 (clearing it redraws the UI)
+  bool mB54;
+  /// (= true; volatile)
+  bool mIsPaused;
+  /// PostResume waits for it to clear (volatile)
+  bool mIsPausePending;
+  /// PostPause waits for it to clear (volatile)
+  bool mIsResumePending;
+  /// message 0x401: the thread ends
+  bool mIsQuitting;
+  bool mIsWindowed;
+  /// message 0x40a
+  bool mIsSlowPlayback;
+  /// RenderLobby: the lobby frame packed into the frame surface
+  uint32_t mLobbySerial;
+  /// RenderLobby: the back buffer's size last given to the lobby
+  unsigned long mLobbySecondaryWidth;
+  unsigned long mLobbySecondaryHeight;
+  /// RenderLobby: `TMGetTime` of the last ShowScene
+  unsigned long mLobbyShownTime;
+};
+
+/// `EELobbyLockFrame`'s outputs.
+struct EeRtsLobbyFrame {
+  const uint32_t *pixels;
+  int width;
+  int height;
+  int pitch;
+  int logical_width;
+  int logical_height;
+  uint32_t serial;
+};
+
+/// `RTSMouse`' plain members (`ee/RTSMouse.h`), in the class's order: a base of the class.
+struct EeRtsMouseFields {
+  float mSensitivity;
+  /// the desktop's height (unsigned: Update divides by it)
+  unsigned long mDesktopHeight;
+  unsigned long mDesktopWidth;
+  long mWheel;
+  /// the pointer picture (volatile)
+  long mPointer;
+  /// the overlay picture (= 8; volatile)
+  long mOverlay;
+  /// the local player's shift mode (volatile)
+  bool mShiftMode;
+  bool mBA2;
+  bool mIsFrozen;
+};
+
+/// `GEVideoMode`.
+struct EeRtsVideoMode {
+  unsigned long width;
+  unsigned long height;
+  unsigned long refresh_rate;
+  unsigned long bit_count;
+  unsigned long pixel_format;
+};
+
+/// `RTSUnitBucket`: the first unit of the bucket's chain and its count.
+struct EeRtsUnitBucket {
+  size_t first;
+  unsigned long count;
+};
+
 extern "C" {
+
+/// `RTSGraphics::Main` (the C++ loop over [`ee_rts_graphics_pass`] and `Sleep(1)`).
+extern unsigned long ee_rtsgcpp_main(void *graphics);
+
+/// `RTSGraphics::RTSGraphics`.
+///
+/// # Safety
+/// `graphics` is the C++ object under construction.
+void ee_rts_graphics_construct(void *graphics,
+                               void *rasterizer,
+                               unsigned long screen,
+                               void *mouse,
+                               void *ui_manager,
+                               bool full_screen,
+                               long priority);
+
+/// `RTSGraphics::~RTSGraphics`.
+///
+/// # Safety
+/// `graphics` is the C++ object being destroyed.
+void ee_rts_graphics_destruct(void *graphics);
+
+/// `RTSGraphics::Main`'s start.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_start(void *graphics);
+
+/// One pass of `RTSGraphics::Main`'s loop; false at its end.
+///
+/// # Safety
+/// `graphics` is the live object.
+bool ee_rts_graphics_pass(void *graphics);
+
+/// `RTSGraphics::HandleMessage`.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_handle_message(void *graphics,
+                                    unsigned long message,
+                                    void *first,
+                                    void *second);
+
+/// `RTSGraphics::Render`.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_render(void *graphics, bool draw_mouse, bool show_scene);
+
+/// The render objects' passes (`FrameStarting` 0, `SceneStarting` 1, `RenderScene` 2, `FrameDone` 3).
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_objects_pass(void *graphics,
+                                  uint32_t which);
+
+/// `RTSGraphics::RenderLobby`.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_render_lobby(void *graphics);
+
+/// `RTSGraphics::PostPause`.
+///
+/// # Safety
+/// `graphics` is the live object.
+long ee_rts_graphics_post_pause(void *graphics);
+
+/// `RTSGraphics::Shutdown`.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_shutdown(void *graphics);
+
+/// `RTSGraphics::PostResume`.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_post_resume(void *graphics);
+
+/// `RTSGraphics::SetSurface`.
+///
+/// # Safety
+/// `graphics` is the live object.
+void ee_rts_graphics_set_surface(void *graphics, void *surface);
+
+/// `RTSMiniMap::RTSMiniMap`.
+///
+/// # Safety
+/// `map` is the C++ object under construction, `screen` a live screen.
+void ee_rts_minimap_construct(void *map, void *player, void *screen);
+
+/// `RTSMiniMap::~RTSMiniMap`.
+///
+/// # Safety
+/// `map` is the C++ object being destroyed.
+void ee_rts_minimap_destruct(void *map);
+
+/// `RTSMiniMap::Ping`.
+///
+/// # Safety
+/// `map` is the live object.
+void ee_rts_minimap_ping(void *map, const EeGe2DPoint *point);
+
+/// `RTSMouse::RTSMouse` (after `mFrame`).
+///
+/// # Safety
+/// `mouse` is the C++ object under construction.
+void ee_rts_mouse_construct(void *mouse);
+
+/// `RTSMouse::~RTSMouse`: the locks.
+///
+/// # Safety
+/// `mouse` is the C++ object being destroyed.
+void ee_rts_mouse_destruct(void *mouse);
+
+/// `RTSMouse::LoadPointer`.
+///
+/// # Safety
+/// `file` a C string, `screen` a live screen, `slot` a surface slot.
+long ee_rts_mouse_load_pointer(const char *file, void *screen, void **slot);
+
+/// `RTSMouse::Load`.
+///
+/// # Safety
+/// `mouse` is the live object, `screen` a live screen.
+long ee_rts_mouse_load(void *mouse, void *screen);
+
+/// `gISMouse`.
+extern const void *ee_rtsmcpp_is_mouse();
+
+/// `RTSMouse::Update`.
+///
+/// # Safety
+/// `mouse` is the live object.
+void ee_rts_mouse_update(void *mouse);
+
+/// `RTSMouse::BeginFrame`.
+///
+/// # Safety
+/// `mouse` is the live object.
+void ee_rts_mouse_begin_frame(void *mouse);
+
+/// `RTSMouse::EndFrame`.
+///
+/// # Safety
+/// `mouse` is the live object.
+void ee_rts_mouse_end_frame(void *mouse);
+
+/// `RTSMousePointer::RTSMousePointer`.
+///
+/// # Safety
+/// `pointer` is the C++ object under construction.
+void ee_rts_mouse_pointer_construct(void *pointer, void *mouse, long priority);
+
+/// `RTSMousePointer::~RTSMousePointer`.
+///
+/// # Safety
+/// `pointer` is the C++ object being destroyed.
+void ee_rts_mouse_pointer_destruct(void *pointer);
+
+/// `RTSMousePointer::Main` (the thread's function).
+///
+/// # Safety
+/// `pointer` is the live object.
+unsigned long ee_rts_mouse_pointer_main(void *pointer);
+
+/// `RTSMousePointer::HandleMessage`.
+///
+/// # Safety
+/// `pointer` is the live object.
+void ee_rts_mouse_pointer_handle_message(void *pointer, unsigned long message, void *first);
 
 /// `RTSPhysics::RTSPhysics`.
 ///
@@ -84,6 +329,180 @@ void ee_rts_physics_set_speed(void *physics, float speed);
 /// # Safety
 /// `physics` is the live `RTSPhysics*`.
 void ee_rts_physics_handle_message(void *physics, unsigned long message);
+
+/// `RTSTile::GetChecksum`.
+long ee_rts_tile_checksum(const void *tile, unsigned long players);
+
+/// `RTSTile::Load`.
+long ee_rts_tile_load(void *tile, void *file, unsigned long players);
+
+/// `RTSTile::Save`.
+long ee_rts_tile_save(void *tile, void *file, unsigned long players);
+
+/// `RTSTile::Dump`.
+void ee_rts_tile_dump(const void *tile, void *file, unsigned long players);
+
+/// `RTSTile::RemoveAllUnits`.
+///
+/// # Safety
+/// `tile` is a live tile.
+void ee_rts_tile_remove_all_units(void *tile);
+
+/// `RTSTile::RemoveUnit`.
+///
+/// # Safety
+/// `tile` is a live tile.
+void ee_rts_tile_remove_unit(void *tile, void *unit);
+
+/// `RTSTile::HasUnit`.
+///
+/// # Safety
+/// `tile` is a live tile.
+bool ee_rts_tile_has_unit(void *tile, void *unit);
+
+/// `RTSUnit::RTSUnit`'s body.
+void ee_rts_unit_construct(void *unit);
+
+/// `RTSUnit::Initialize`.
+void ee_rts_unit_initialize(void *unit, long linked);
+
+/// `RTSUnit::Reset`.
+void ee_rts_unit_reset(void *unit);
+
+/// `RTSUnit::Clear`.
+void ee_rts_unit_clear(void *unit);
+
+/// `RTSUnit::RemoveFromList`.
+void ee_rts_unit_remove_from_list(void *unit);
+
+/// `RTSUnit::InsertAfter`.
+void ee_rts_unit_insert_after(void *unit, void *after);
+
+/// `RTSUnit::Link`.
+void ee_rts_unit_link(void *unit, void *after);
+
+/// `RTSUnit::Unlink`.
+void ee_rts_unit_unlink(void *unit);
+
+/// `RTSUnit::Invalidate`.
+void ee_rts_unit_invalidate(void *unit);
+
+/// `RTSUnit::FreeNode`.
+void ee_rts_unit_free_node(void *unit);
+
+/// `RTSUnit::UpdateTile`.
+void ee_rts_unit_update_tile(void *unit, void *map);
+
+/// `RTSCheckUnitList`.
+void ee_rts_unit_check_list(const void *head, const char *where_);
+
+/// `RTSPlayer::Reset`.
+void ee_rts_player_reset(void *player);
+
+/// `RTSPlayer::AddPendingUnits`.
+void ee_rts_player_add_pending_units(void *player, bool keep_id, bool release);
+
+/// `RTSPlayer::ReleasePendingUnits`.
+void ee_rts_player_release_pending_units(void *player);
+
+/// `RTSPlayer::AddUnit`.
+void ee_rts_player_add_unit(void *player, void *unit, bool keep_id);
+
+/// `RTSPlayer::InsertUnit`.
+void ee_rts_player_insert_unit(void *player, void *unit);
+
+/// `RTSPlayer::RemoveKilledUnits`.
+void ee_rts_player_remove_killed_units(void *player);
+
+/// `RTSPlayer::GetChecksum`.
+void ee_rts_player_checksum(void *player, void *checksum);
+
+/// `RTSPlayer::GetPendingUnit`.
+void *ee_rts_player_pending_unit(void *player, unsigned long index);
+
+/// `RTSPlayer::GetUnit`.
+void *ee_rts_player_unit(void *player, unsigned long id);
+
+/// `RTSPlayer::KillUnit`.
+void ee_rts_player_kill_unit(void *player, void *unit, bool force);
+
+/// `RTSPlayer::RepairPointers`.
+long ee_rts_player_repair_pointers(void *player, unsigned long first, unsigned long second);
+
+/// `RTSPlayer::SaveUnits`.
+long ee_rts_player_save_units(void *player, unsigned long major, unsigned long minor, void *file);
+
+/// `RTSWorld::RTSWorld`.
+///
+/// # Safety
+/// `world` is the C++ object under construction.
+void ee_rts_world_construct(void *world);
+
+/// `RTSWorld::~RTSWorld`.
+///
+/// # Safety
+/// `world` is the C++ object being destroyed.
+void ee_rts_world_destruct(void *world);
+
+/// `RTSWorld::UpdatePlayerPopulationLimit`.
+///
+/// # Safety
+/// `world` is the live object.
+void ee_rts_world_update_population_limit(void *world, bool recount);
+
+/// `RTSWorld::Clear`.
+///
+/// # Safety
+/// `world` is the live object.
+void ee_rts_world_clear(void *world);
+
+/// `RTSWorld::Reset`.
+///
+/// # Safety
+/// `world` is the live object.
+void ee_rts_world_reset(void *world);
+
+/// `RTSWorld::GetChecksum`.
+///
+/// # Safety
+/// `world` is the live object, `checksum` an `ESChecksum*`.
+void ee_rts_world_checksum(void *world, void *checksum);
+
+/// `RTSWorld::GetPlayerIndex`.
+///
+/// # Safety
+/// `world` is the live object.
+long ee_rts_world_player_index(void *world, void *player);
+
+/// `RTSWorld::GetUnit`.
+///
+/// # Safety
+/// `world` is the live object.
+void *ee_rts_world_unit(void *world, unsigned long id);
+
+/// `RTSWorld::FlushQueuedPlacements`.
+///
+/// # Safety
+/// `world` is the live object.
+void ee_rts_world_flush_queued_placements(void *world);
+
+/// `RTSWorld::AddUnitEntry`.
+///
+/// # Safety
+/// `world` is the live object, `unit` a live unit.
+void ee_rts_world_add_unit_entry(void *world, void *unit, void *after);
+
+/// `RTSWorld::SetPlayer`.
+///
+/// # Safety
+/// `world` is the live object; `index` < 17.
+void ee_rts_world_set_player(void *world, long index, void *player);
+
+/// `RTSWorld::SetNumPlayers`.
+///
+/// # Safety
+/// `world` is the live object.
+void ee_rts_world_set_num_players(void *world, unsigned long n);
 
 }  // extern "C"
 

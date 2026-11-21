@@ -6,6 +6,7 @@
 #define EE_RTSMOUSE_H
 
 #include "lle/GERectangle.h"           // RTSMouse::mBounds
+#include "rust/game/rts.h"              // EeRtsMouseFields (RTSMouse' plain members)
 
 class GEScreen;
 class GESurface;
@@ -13,7 +14,9 @@ class TSCriticalSection;
 
 struct EeGfxMouseFrame;                      // ee_gfx mouse_frame.rs
 
-class RTSMouse {
+// LLE round 8: the bodies are Rust (ee_game rts mouse.rs); the plain members are its record EeRtsMouseFields, a base
+// (mSensitivity, mDesktopHeight, mDesktopWidth, mWheel, mPointer, mOverlay, mShiftMode, mBA2, mIsFrozen).
+class RTSMouse : public EeRtsMouseFields {
 public:
     RTSMouse();
     virtual ~RTSMouse();                    // +0x00 (??_G 0x11acbe)
@@ -49,15 +52,6 @@ public:
     EeGfxMouseFrame* mFrame;
     TSCriticalSection* mRenderLock;         // +0x78
     TSCriticalSection* mInputLock;          // +0x7c
-    float mSensitivity;                     // +0x88
-    unsigned long mDesktopHeight;           // +0x8c (the desktop height; unsigned: Update divides by it through a zero-extended qword temp)
-    unsigned long mDesktopWidth;            // +0x90 (the desktop width; unsigned, likewise)
-    long mWheel;                            // +0x94
-    volatile long mPointer;                 // +0x98 (volatile: EEMSavedGroupSelect stores `mov dword ptr [x], 0`)
-    volatile long mOverlay;                 // +0x9c (= 8; volatile like mPointer: BeginFrame keeps the push next to the call, 0x11b240)
-    volatile bool mShiftMode;               // +0xa0 (volatile: `mov byte ptr [x], 0`, 0xbe1b7) set with the local player's shift mode (0xbe076; provisional name)
-    bool mBA2;                              // +0xa2
-    bool mIsFrozen;                         // +0xa4
 };
 
 // New (R5a.6): the mouse the input side updates, the game's gMouse (defined in Empire Earth.cpp), so that the RTS

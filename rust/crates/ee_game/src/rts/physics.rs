@@ -124,6 +124,7 @@ const WAIT_TIMEOUT: c_long = 0x11;
 /// `kThreadMessageQuit`.
 const MESSAGE_QUIT: c_ulong = 0x401;
 /// `kFPPrecision53`'s `_PC_53`.
+#[cfg(not(test))]
 const FP_PRECISION_53: c_ulong = 0x10000;
 
 /// `RTSPhysics::RTSPhysics`: the events, a stopped timer, the thread (waited for until it starts) and the server
