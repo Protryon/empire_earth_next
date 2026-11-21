@@ -67,6 +67,11 @@ impl FormHost for Host {
                 return 0;
             }
         }
+        if let Some(r) =
+            crate::screens::main_form_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, io)
+        {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_main_form(self.0, op, a, b, io) }
     }
     fn set_text(&mut self, text: &[u8]) {

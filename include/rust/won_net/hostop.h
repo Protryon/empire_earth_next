@@ -501,6 +501,8 @@ enum class EeWonCoreSocketOp {
   RecvBytes = 8,
   /// `new RecvCRMsgOp(socket)`
   RecvCrMsg = 9,
+  /// `new AcceptOp(socket)`
+  Accept = 10,
 };
 
 /// `AsyncOp`'s state, lock, completion and container.

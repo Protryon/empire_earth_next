@@ -123,6 +123,10 @@ pub type EeWonEeXferHostFn =
 const CHUNK: usize = 0x2000;
 
 fn host_call(host: EeWonEeXferHostFn, obj: *mut c_void, op: EeWonEeXferOp, a: isize, b: isize, c: isize) -> isize {
+    // the ops on the network objects, on their Rust objects in the game (netops.rs)
+    if let Some(r) = crate::netops::xfer_op(op, a) {
+        return r;
+    }
     match host {
         // SAFETY: the host's contract (an op on its own object)
         Some(h) => unsafe { h(obj, op, a, b, c) },

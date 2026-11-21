@@ -17,6 +17,7 @@ use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use crate::buffer::{EeWonByteBuffer, EeWonWriteBuffer};
+use crate::cppcore::EeWonCoreSocketOp;
 use crate::ipaddr::Addr;
 use crate::ipobj::{self, EeWonIpAddr};
 use crate::netstats::{self, Counter};
@@ -82,9 +83,13 @@ pub struct RecvFromState {
 /// An op's own state.
 #[derive(Default)]
 pub enum OpKind {
-    /// a socket op without state of its own here (`CloseOp`, `RecvCRMsgOp`, the lobby's and the tests' ops)
+    /// a socket op of a C++ class of its own (the lobby's `SendFileOp`, the tests' ops): its virtual `Continue`
     #[default]
     Base,
+    /// `CloseOp`: its `Continue` closes the socket
+    Close,
+    /// the queue socket's queued close (`QueueCloseOp`): its `Continue` succeeds, with or without a socket
+    Nothing,
     Send(SendState),
     SendTo(SendToState),
     Recv(Box<RecvState>),
@@ -100,7 +105,7 @@ pub enum OpKind {
 /// The C++ object references a state holds (released with it).
 fn refs(kind: &OpKind) -> Vec<usize> {
     match kind {
-        OpKind::Base | OpKind::Connect(_) => vec![],
+        OpKind::Base | OpKind::Close | OpKind::Nothing | OpKind::Connect(_) => vec![],
         OpKind::Send(s) => vec![s.data, s.message],
         OpKind::SendTo(s) => vec![s.data],
         OpKind::Recv(r) => vec![r.received, r.progress, r.message],
@@ -240,6 +245,73 @@ impl EeWonSocketOp {
         self.set_kind(OpKind::Line(0));
     }
 
+    /// The op of a class (the original's constructors, CloseOp .. RecvBytesFromOp, kinds since R6 WONLobby round 28):
+    /// the wait flags the constructor set, then its members. `bytes` is the class's `ByteBuffer` (a reference taken),
+    /// `addr` its address, `size` its length.
+    pub fn init_kind(&self, kind: EeWonCoreSocketOp, bytes: usize, addr: Option<&EeWonIpAddr>, size: u32) {
+        type K = EeWonCoreSocketOp;
+        let none = EeWonIpAddr::default();
+        let addr = addr.unwrap_or(&none);
+        match kind {
+            K::RecvFrom | K::RecvMsg | K::RecvBytes | K::RecvCrMsg | K::Accept => self.set_wait_for_event(0, true),
+            K::SendTo | K::SendMsg | K::SendBytes => self.set_wait_for_event(1, true),
+            K::Connect => {
+                self.set_wait_for_event(1, true);
+                self.set_wait_for_event(2, true);
+            }
+            K::Close | K::QueueClose => {}
+        }
+        match kind {
+            K::Close => self.set_kind(OpKind::Close),
+            K::QueueClose => self.set_kind(OpKind::Nothing),
+            K::RecvFrom => self.init_recv_from(size as u16),
+            K::SendTo => self.init_send_to(bytes, addr),
+            K::RecvMsg => self.init_recv(0, true),
+            K::SendMsg => self.init_send(0, bytes, true),
+            K::Connect => self.init_connect(addr),
+            K::SendBytes => self.init_send(bytes, 0, false),
+            K::RecvBytes => self.init_recv(size, false),
+            K::RecvCrMsg => self.init_line(),
+            K::Accept => self.init_accept(),
+        }
+    }
+
+    /// The op's class as a kind (-1: a C++ class of its own).
+    pub fn class_kind(&self) -> i32 {
+        type K = EeWonCoreSocketOp;
+        let k = match self.kind() {
+            OpKind::Base => return -1,
+            OpKind::Close => K::Close,
+            OpKind::Nothing => K::QueueClose,
+            OpKind::Send(s) if s.is_msg => K::SendMsg,
+            OpKind::Send(_) => K::SendBytes,
+            OpKind::SendTo(_) => K::SendTo,
+            OpKind::Recv(r) if r.is_msg => K::RecvMsg,
+            OpKind::Recv(_) => K::RecvBytes,
+            OpKind::RecvFrom(_) => K::RecvFrom,
+            OpKind::Connect(_) => K::Connect,
+            OpKind::Accept(_) => K::Accept,
+            OpKind::Line(_) => K::RecvCrMsg,
+        };
+        k as i32
+    }
+
+    /// The class's virtual `Duplicate`: a new op of the class on the same socket (`AcceptOp` 0x291ab7, `RecvBytesOp`
+    /// 2b4f00 with the same length, `RecvMsgOp` 2ab3d0, `RecvCRMsgOp` 2b2180, `RecvBytesFromOp` 2b5660 with the same
+    /// size), none for the others (no reference yet).
+    pub fn duplicate(&self) -> *mut c_void {
+        type K = EeWonCoreSocketOp;
+        let (kind, size) = match self.kind() {
+            OpKind::Accept(_) => (K::Accept, 0),
+            OpKind::Recv(r) if r.is_msg => (K::RecvMsg, 0),
+            OpKind::Recv(r) => (K::RecvBytes, r.length),
+            OpKind::Line(_) => (K::RecvCrMsg, 0),
+            OpKind::RecvFrom(r) => (K::RecvFrom, r.max as u32),
+            _ => return null_mut(),
+        };
+        crate::cppcore::new_socket_op(kind, self.socket(), null_mut(), std::ptr::null(), size)
+    }
+
     fn set_kind(&self, kind: OpKind) {
         let old = std::mem::replace(self.kind(), kind);
         self.release_kind(old);
@@ -288,10 +360,17 @@ impl EeWonSocketOp {
 
     /// The virtual `Continue` of the op's class.
     pub fn op_continue(&self, timing: OpTiming) -> Status {
+        if matches!(self.kind(), OpKind::Nothing) {
+            return WS_SUCCESS;
+        }
         let Some(sock) = self.socket_object() else { return WS_ASYNC_SOCKET_INVALID_SOCKET };
         let left = || timing.time_left(ops::tick());
         match self.kind() {
-            OpKind::Base => WS_SUCCESS,
+            OpKind::Base | OpKind::Nothing => WS_SUCCESS,
+            OpKind::Close => {
+                sock.close();
+                WS_SUCCESS
+            }
             OpKind::Send(s) => {
                 let (data, mut pos, is_msg) = (s.data, s.pos, s.is_msg);
                 let st = ops::send_all(&sock.locked(), self.bytes_of(data), &mut pos, timing);
@@ -844,6 +923,38 @@ pub unsafe extern "C" fn ee_won_socketop_init_accept(o: *const EeWonSocketOp) {
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_socketop_init_line(o: *const EeWonSocketOp) {
     op!(o).init_line()
+}
+/// The op of a class (`kind`): its wait flags and members (`bytes` null or a live `ByteBuffer`, `addr` null or a
+/// live value).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_socketop_init_kind(
+    o: *const EeWonSocketOp,
+    kind: EeWonCoreSocketOp,
+    bytes: *mut c_void,
+    addr: *const EeWonIpAddr,
+    size: u32,
+) {
+    // SAFETY: the caller's value
+    op!(o).init_kind(kind, bytes as usize, unsafe { addr.as_ref() }, size)
+}
+/// The op's class (`EeWonCoreSocketOp`), or -1 for a C++ class of its own.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_socketop_class(o: *const EeWonSocketOp) -> i32 {
+    op!(o).class_kind()
+}
+/// The class's `Duplicate`: a new op (no reference yet) or null.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_socketop_duplicate(o: *const EeWonSocketOp) -> *mut c_void {
+    op!(o).duplicate()
 }
 /// The op class's `Start`.
 ///

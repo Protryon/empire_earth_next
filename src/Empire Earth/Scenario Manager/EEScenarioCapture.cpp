@@ -1,5 +1,7 @@
 // New (port), TEST ONLY: the scenario manager's capture records (ee/EEScenarioCapture.h; tools/sim_capture.py
-// --profile scenario). Reads only: nothing here changes the game.
+// --profile scenario). The records are built in Rust (ee_sim scenario sm_capture.rs, moved whole from here in the
+// scenario editor lane's round 3); this unit keeps the hooks' forwards and the world's reads, one statement each.
+// Reads only: nothing here changes the game.
 #include <windows.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
@@ -23,577 +25,235 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEEnvironmentManager.h"
+#include "rust/sim/scenario.h"
 
 namespace {
 
-thread_local int sObjectDepth = 0;
-
-unsigned long long Fnv(unsigned long long inHash, const void* inData, size_t inSize)
-{
-    const unsigned char* theBytes = (const unsigned char*)inData;
-    for (size_t i = 0; i < inSize; i++)
-        inHash = (inHash ^ theBytes[i]) * 0x100000001b3ULL;
-    return inHash;
-}
-
-const unsigned long long kFnvStart = 0xcbf29ce484222325ULL;
-
-unsigned long long TextHash(const UWideString& inText)
-{
-    const char* theText = (const char*)inText;
-    return Fnv(kFnvStart, theText, theText ? strlen(theText) : 0);
-}
-
-void U64(EESimCaptureRecord& ioRecord, unsigned long long inValue)
-{
-    ioRecord.Bytes(&inValue, 8);
-}
-
-void Units(EESimCaptureRecord& ioRecord, const std::vector<unsigned long>& inUnits)
-{
-    unsigned long long theHash = kFnvStart;
-    for (unsigned long u : inUnits) {
-        unsigned int theID = (unsigned int)u;
-        theHash = Fnv(theHash, &theID, 4);
-    }
-    ioRecord.U32((unsigned int)inUnits.size());
-    U64(ioRecord, theHash);
-}
-
-void TimedEffects(EESimCaptureRecord& ioRecord, EEScenarioManager* inManager)
-{
-    ioRecord.U32((unsigned int)inManager->GetNumTimedEffects());
-    for (unsigned long i = 0; i < inManager->GetNumTimedEffects(); i++) {
-        EeScenarioTimedEntry e = inManager->GetTimedEntry(i);
-        ioRecord.U32((unsigned int)e.mEffectIndex);
-        ioRecord.U32((unsigned int)e.mTime);
-        ioRecord.U32((e.mIsInCinematic ? 1u : 0u) | (e.mHasRun ? 2u : 0u));
-    }
-}
-
-long IndexOf(EESMObject* inObject)
-{
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    for (unsigned long i = 0; theManager && i < theManager->mObjects.size(); i++)
-        if (theManager->mObjects[i] == inObject)
-            return (long)i;
-    return -1;
-}
-
-long IndexOf(EESMArea* inArea)
-{
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    for (unsigned long i = 0; theManager && i < theManager->mAreas.size(); i++)
-        if (theManager->mAreas[i] == inArea)
-            return (long)i;
-    return -1;
-}
+EEScenarioManager* SM(const void* p) { return (EEScenarioManager*)p; }
+EESMTrigger* ST(const void* p) { return (EESMTrigger*)p; }
+EESMCondition* SC(const void* p) { return (EESMCondition*)p; }
+EESMEffect* SE(const void* p) { return (EESMEffect*)p; }
+EESMObject* SO(const void* p) { return (EESMObject*)p; }
+EESMArea* SA(const void* p) { return (EESMArea*)p; }
+EEUnit* SU(const void* p) { return (EEUnit*)p; }
+EEComplexUnit* SX(const void* p) { return (EEComplexUnit*)p; }
+EEPlayer* SP(const void* p) { return (EEPlayer*)p; }
+EEComputerPlayer* SCP(const void* p) { return (EEComputerPlayer*)p; }
+FSMemoryFile& SF(int64_t inFile) { return *(FSMemoryFile*)(intptr_t)inFile; }
+const std::vector<long>* SV(const void* p) { return (const std::vector<long>*)p; }
+int64_t P(const void* p) { return (int64_t)(intptr_t)p; }
+unsigned long Major(int64_t inVersion) { return (unsigned long)(inVersion >> 32); }
+unsigned long Minor(int64_t inVersion) { return (unsigned long)(uint32_t)inVersion; }
+int64_t Version(unsigned long inMajor, unsigned long inMinor) { return ((int64_t)inMajor << 32) | inMinor; }
+int64_t SaveVersion() { return Version(kSaveGameMajorVersion, kSaveGameMinorVersion); }
 
 }   // namespace
 
-static unsigned int EESMCaptureSeedImpl()
+// the records' reads (sm_capture.rs EE_SCENARIO_CAP_*): inP an object, inA and inB numbers
+extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_t inA, int64_t inB)
 {
-    return gPhysics != NULL ? (unsigned int)gPhysics->mRandom.GetSeed() : 0u;
+    switch (inOp) {
+    case EE_SCENARIO_CAP_SEED: return gPhysics != NULL ? (unsigned int)gPhysics->mRandom.GetSeed() : 0u;
+    case EE_SCENARIO_CAP_MANAGER: return P(gWorld.mScenarioManager);
+    case EE_SCENARIO_CAP_TRIGGERS: return (int64_t)SM(inP)->mTriggers.size();
+    case EE_SCENARIO_CAP_TRIGGER_AT: return P(SM(inP)->GetTrigger((unsigned long)inA));
+    case EE_SCENARIO_CAP_CONDITIONS: return (int64_t)SM(inP)->mConditions.size();
+    case EE_SCENARIO_CAP_CONDITION_AT: return P(SM(inP)->GetCondition((unsigned long)inA));
+    case EE_SCENARIO_CAP_EFFECTS: return (int64_t)SM(inP)->mEffects.size();
+    case EE_SCENARIO_CAP_EFFECT_AT: return P(SM(inP)->GetEffect((unsigned long)inA));
+    case EE_SCENARIO_CAP_OBJECTS: return (int64_t)SM(inP)->mObjects.size();
+    case EE_SCENARIO_CAP_OBJECT_AT: return P(SM(inP)->GetScenarioObject((unsigned long)inA));
+    case EE_SCENARIO_CAP_AREAS: return (int64_t)SM(inP)->mAreas.size();
+    case EE_SCENARIO_CAP_AREA_AT: return P(SM(inP)->GetArea((unsigned long)inA));
+    case EE_SCENARIO_CAP_PENDING: return (int64_t)SM(inP)->mPendingEffects.size();
+    case EE_SCENARIO_CAP_PENDING_AT: return P(SM(inP)->mPendingEffects[(size_t)inA]);
+    case EE_SCENARIO_CAP_SAVE_TRIGGER: return ST(inP)->Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_SAVE_CONDITION: return SC(inP)->Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_SAVE_EFFECT: return SE(inP)->Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_SAVE_OBJECT: return SO(inP)->Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_SAVE_AREA: return SA(inP)->Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_SAVE_MANAGER: return SM(inP)->Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_SAVE_GROUPS: return SP(inP)->mSavedGroups.Save(Major(inB), Minor(inB), SF(inA));
+    case EE_SCENARIO_CAP_FILE_NEW: return P(new FSMemoryFile((EeFsMemFile*)inP, false));
+    case EE_SCENARIO_CAP_FILE_FREE: delete (FSMemoryFile*)inP;
+        return 0;
+    case EE_SCENARIO_CAP_MANAGER_FIELDS: return P(static_cast<EeScenarioManagerFields*>(SM(inP)));
+    case EE_SCENARIO_CAP_LAST_CHAT: return P((const char*)SM(inP)->mLastChatText);
+    case EE_SCENARIO_CAP_MEDIA_SECTION: return P((const char*)SM(inP)->mMediaStrings.GetSection((unsigned long)inA));
+    case EE_SCENARIO_CAP_MESSAGES: return (int64_t)SM(inP)->mMessages.size();
+    case EE_SCENARIO_CAP_TIMED: return P(SM(inP)->mTimedEffects);
+    case EE_SCENARIO_CAP_CAMERA_KEYS: return (int64_t)gWorld.mCameraControl.mKeys.size();
+    case EE_SCENARIO_CAP_CAMERA_PATH: return (int64_t)gWorld.mCameraControl.mPathIndex;
+    case EE_SCENARIO_CAP_CONDITION_FIELDS: return P(static_cast<EeScenarioConditionFields*>(SC(inP)));
+    case EE_SCENARIO_CAP_CONDITION_CHAT: return P((const char*)SC(inP)->mChatText);
+    case EE_SCENARIO_CAP_TRIGGER_FIELDS: return P(static_cast<EeScenarioTriggerFields*>(ST(inP)));
+    case EE_SCENARIO_CAP_TRIGGER_CONDITIONS: return (int64_t)ST(inP)->mConditions.size();
+    case EE_SCENARIO_CAP_TRIGGER_EFFECTS: return (int64_t)ST(inP)->mEffects.size();
+    case EE_SCENARIO_CAP_OBJECT_FIELDS: return P(static_cast<EeScenarioObjectFields*>(SO(inP)));
+    case EE_SCENARIO_CAP_OBJECT_UNITS: return (int64_t)SO(inP)->mUnits.size();
+    case EE_SCENARIO_CAP_OBJECT_UNIT: return (int64_t)(uint32_t)SO(inP)->mUnits[(size_t)inA];
+    case EE_SCENARIO_CAP_EFFECT_FIELDS: return P(static_cast<EeScenarioEffectFields*>(SE(inP)));
+    case EE_SCENARIO_CAP_AREA_ID: return (int64_t)SA(inP)->mID;
+    case EE_SCENARIO_CAP_AREA_SELECT: return (int64_t)SA(inP)->mSelectMode;
+    case EE_SCENARIO_CAP_AREA_ANCHOR_X: return (int64_t)SA(inP)->mAnchor.mX;
+    case EE_SCENARIO_CAP_AREA_ANCHOR_Y: return (int64_t)SA(inP)->mAnchor.mY;
+    case EE_SCENARIO_CAP_IN_CINEMATIC: return gWorld.mInCinematic;
+    case EE_SCENARIO_CAP_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
+    case EE_SCENARIO_CAP_PLAYER: return P(gWorld.mPlayers[(size_t)inA]);
+    case EE_SCENARIO_CAP_TIME_OF_DAY_RUNS: return gPhysics->mTimeOfDayRuns;
+    case EE_SCENARIO_CAP_WEATHER: return gWorld.mEnvironmentManager != NULL && gWorld.mEnvironmentManager->mIsEnabled;
+    case EE_SCENARIO_CAP_LAST_SUM: return (int64_t)gPhysics->mLastOutOfSynchChecksum;
+    case EE_SCENARIO_CAP_SUM: return (int64_t)gPhysics->GetOutOfSynchChecksum(false, (unsigned long)inA);
+    case EE_SCENARIO_CAP_SET_LAST_SUM: return (int64_t)(gPhysics->mLastOutOfSynchChecksum = (unsigned long)inA);
+    case EE_SCENARIO_CAP_CP_SUM: return (int64_t)EECPOutOfSynchChecksum();
+    case EE_SCENARIO_CAP_FIRST_UNIT: return P(static_cast<EEUnit*>(gWorld.mUnits.mFirst));
+    case EE_SCENARIO_CAP_NEXT_UNIT: return P(static_cast<EEUnit*>(SU(inP)->mTileNode->mNext));
+    case EE_SCENARIO_CAP_PLAYER_RESULT: return (int64_t)SP(inP)->mGameResult;
+    case EE_SCENARIO_CAP_PLAYER_SEES_ALL: return SP(inP)->mSeesAll;
+    case EE_SCENARIO_CAP_PLAYER_OBSERVER: return SP(inP)->mObserverMode;
+    case EE_SCENARIO_CAP_PLAYER_ENEMY: return (int64_t)SP(inP)->mEnemies[(size_t)inA];
+    case EE_SCENARIO_CAP_PLAYER_PENDING_GROUPS: return (int64_t)SP(inP)->mPendingGroups.size();
+    case EE_SCENARIO_CAP_PLAYER_RUNNING_GROUPS: return (int64_t)SP(inP)->mRunningGroups.size();
+    case EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS: return (int64_t)SP(inP)->mPatrolGroups.size();
+    case EE_SCENARIO_CAP_PLAYER_CIV_AVAILABLE: return (int64_t)SP(inP)->mCivilization.mAvailablePoints;
+    case EE_SCENARIO_CAP_PLAYER_CIV_MAX: return (int64_t)SP(inP)->mCivilization.mMaxPoints;
+    case EE_SCENARIO_CAP_PLAYER_COMPUTER: return P(SP(inP)->mComputerPlayer);
+    case EE_SCENARIO_CAP_COMPUTER_LAND: return (int64_t)SCP(inP)->mFavoriteLandType;
+    case EE_SCENARIO_CAP_COMPUTER_SEA: return (int64_t)SCP(inP)->mFavoriteSeaType;
+    case EE_SCENARIO_CAP_COMPUTER_AIR: return (int64_t)SCP(inP)->mFavoriteAirType;
+    case EE_SCENARIO_CAP_PLAYER_RESOURCE: return (int64_t)SP(inP)->mResourceCaps[(size_t)inA];
+    case EE_SCENARIO_CAP_PLAYER_SHARE_BONUS: return (int64_t)SP(inP)->mShareBonus;
+    case EE_SCENARIO_CAP_COMPUTER_DIFFICULTY: return (int64_t)SCP(inP)->mDifficulty;
+    case EE_SCENARIO_CAP_PLAYER_VARIABLE: return (int64_t)SP(inP)->mScenarioVariables[(size_t)inA];
+    case EE_SCENARIO_CAP_PLAYER_TRIBUTE: return (int64_t)SP(inP)->mTributes[(size_t)inA];
+    case EE_SCENARIO_CAP_PLAYER_MINING_LIMIT: return (int64_t)SP(inP)->mMiningLimit;
+    case EE_SCENARIO_CAP_PLAYER_ID: return (int64_t)SP(inP)->mPlayerID;
+    case EE_SCENARIO_CAP_UNIT: return P(gWorld.GetUnit((unsigned long)inA));
+    case EE_SCENARIO_CAP_UNIT_PLAYER: return P(SU(inP)->mPlayer);
+    case EE_SCENARIO_CAP_UNIT_HIT_POINTS: return (int64_t)SU(inP)->GetHitPoints();
+    case EE_SCENARIO_CAP_UNIT_TILE_X: return (int64_t)SU(inP)->mTileX;
+    case EE_SCENARIO_CAP_UNIT_TILE_Y: return (int64_t)SU(inP)->mTileY;
+    case EE_SCENARIO_CAP_UNIT_TILE_NODE: return P(SU(inP)->mTileNode);
+    case EE_SCENARIO_CAP_UNIT_NAME: return P((const char*)SU(inP)->GetStats()->mName);
+    case EE_SCENARIO_CAP_UNIT_COMPLEX: return P(SU(inP)->mComplexUnit);
+    case EE_SCENARIO_CAP_UNIT_CHECKSUM: return (int64_t)SU(inP)->GetChecksum(3);
+    case EE_SCENARIO_CAP_UNIT_ID: return (int64_t)SU(inP)->mUnitID;
+    case EE_SCENARIO_CAP_UNIT_RESOURCE_AMOUNT: return (int64_t)SU(inP)->mResourceAmount;
+    case EE_SCENARIO_CAP_UNIT_RESOURCE_TYPE: return (int64_t)SU(inP)->mResourceType;
+    case EE_SCENARIO_CAP_COMMAND: return (int64_t)SX(inP)->GetCommandType();
+    case EE_SCENARIO_CAP_GOAL: return P(SX(inP)->GetGoal());
+    case EE_SCENARIO_CAP_GOAL_KIND: return (int64_t)((EEUnitGoal*)inP)->mKind;
+    case EE_SCENARIO_CAP_QUEUES: return (int64_t)SX(inP)->mGoalQueues.size();
+    case EE_SCENARIO_CAP_QUEUE_LEN: return (int64_t)SX(inP)->mGoalQueues[(size_t)inA].mGoals.size();
+    case EE_SCENARIO_CAP_QUEUE_GOAL: return P(SX(inP)->mGoalQueues[(size_t)inA].mGoals[(size_t)inB]);
+    case EE_SCENARIO_CAP_DISABLED: return SX(inP)->mIsDisabled;
+    case EE_SCENARIO_CAP_COMMANDABLE: return SX(inP)->mIsCommandable;
+    case EE_SCENARIO_CAP_DELETABLE: return SX(inP)->mIsDeletable;
+    case EE_SCENARIO_CAP_LOCKED: return SX(inP)->mIsLocked;
+    case EE_SCENARIO_CAP_DETACHED: return SX(inP)->mIsDetachedFromAI;
+    case EE_SCENARIO_CAP_BEHAVIOR: return P(SX(inP)->mBehavior);
+    case EE_SCENARIO_CAP_BEHAVIORS: return (int64_t)EEUnitBehavior::sTable.size();
+    case EE_SCENARIO_CAP_BEHAVIOR_AT: return P(EEUnitBehavior::sTable[(size_t)inA]);
+    case EE_SCENARIO_CAP_CONTAINER: return P(SX(inP)->mContainer);
+    case EE_SCENARIO_CAP_FLIGHT_TIME: return (int64_t)SX(inP)->mFlightTime;
+    case EE_SCENARIO_CAP_AMMUNITION: return (int64_t)SX(inP)->mAmmunition;
+    case EE_SCENARIO_CAP_CARGO: return (int64_t)SX(inP)->mCargo.size();
+    case EE_SCENARIO_CAP_LOCATION: return P(&SX(inP)->mPhysicalModel.GetLocation().mMatrix);
+    case EE_SCENARIO_CAP_GARRISON: return (int64_t)SX(inP)->mGarrisonCount;
+    case EE_SCENARIO_CAP_RELOAD_TIMER: return (int64_t)SX(inP)->mReloadTimer;
+    case EE_SCENARIO_CAP_POWER: return (int64_t)SX(inP)->mPower;
+    case EE_SCENARIO_CAP_ROTTING: return (int64_t)SX(inP)->mRottingAwayTime;
+    case EE_SCENARIO_CAP_BUILT: return SX(inP)->mIsBuilt;
+    case EE_SCENARIO_CAP_PAUSED: return SX(inP)->mIsAnimationPaused;
+    case EE_SCENARIO_CAP_VARIABLES: return (int64_t)SX(inP)->mUnitVariables.size();
+    case EE_SCENARIO_CAP_VARIABLE_AT: return (int64_t)SX(inP)->mUnitVariables[(size_t)inA];
+    case EE_SCENARIO_CAP_UPGRADE_FIELDS: return P(static_cast<EeUnitsUnitClassUpgradeFields*>((EEUnitClassUpgrade*)inP));
+    case EE_SCENARIO_CAP_LONGS: return (int64_t)SV(inP)->size();
+    case EE_SCENARIO_CAP_LONGS_AT: return (int64_t)(*SV(inP))[(size_t)inA];
+    }
+    return 0;
 }
 
+// the records' float reads
+extern "C" double ee_scenariocpp_capture_f(uint32_t inOp, const void* inP)
+{
+    switch (inOp) {
+    case EE_SCENARIO_CAP_AREA_LEFT: return SA(inP)->mRect.GetLeft();
+    case EE_SCENARIO_CAP_AREA_TOP: return SA(inP)->mRect.GetTop();
+    case EE_SCENARIO_CAP_AREA_RIGHT: return SA(inP)->mRect.GetRight();
+    case EE_SCENARIO_CAP_AREA_BOTTOM: return SA(inP)->mRect.GetBottom();
+    case EE_SCENARIO_CAP_TIME_OF_DAY: return gWorld.GetTimeOfDay();
+    case EE_SCENARIO_CAP_GAME_SPEED: return gWorld.mGameSpeed;
+    case EE_SCENARIO_CAP_SCALE: return SX(inP)->mPhysicalModel.GetScale();
+    }
+    return 0.0;
+}
+
+// the hooks (ee/EEScenarioCapture.h): each the Rust record's
+static unsigned int EESMCaptureSeedImpl() { return (unsigned int)ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0); }
 static void EESMCaptureConditionImpl(EESMCondition* inCondition, bool inResult, unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMCE"));
-    r.U32((unsigned int)inCondition->mID);
-    r.U32((unsigned int)inCondition->mType);
-    r.U32((unsigned int)inCondition->mOperator);
-    r.U32((unsigned int)inCondition->mDifficulty);
-    r.U32((unsigned int)inCondition->mDiplomacy);
-    r.U32((unsigned int)inCondition->mAttribute);
-    r.U32((unsigned int)inCondition->mOtherAttribute);
-    r.I32((int)inCondition->mTechnology);
-    r.U32((unsigned int)inCondition->mAmount);
-    r.U32((unsigned int)inCondition->mObjectIndex);
-    r.U32((unsigned int)inCondition->mPlayer);
-    r.U32((unsigned int)inCondition->mOtherPlayer);
-    r.U32((unsigned int)inCondition->mMinTime);
-    r.U32((unsigned int)inCondition->mMaxTime);
-    r.U32((unsigned int)inCondition->mHour);
-    r.U32((unsigned int)inCondition->mTrigger);
-    r.U32((inCondition->mIsTriggerOn ? 1u : 0u) | (inCondition->mHasTriggerFired ? 2u : 0u) |
-          (inCondition->mUsesDifficulty ? 4u : 0u) | (inCondition->mUsesElapsedTime ? 8u : 0u) |
-          (inCondition->mUsesHour ? 16u : 0u) | (inCondition->mUsesPlayerAttribute ? 32u : 0u));
-    U64(r, TextHash(inCondition->mChatText));
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    U64(r, theManager ? TextHash(theManager->mLastChatText) : 0);
-    r.F32(theManager ? theManager->mTime : 0.0f);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    r.U32(inResult ? 1u : 0u);
-    r.Commit();
+    ee_scenario_cap_condition(inCondition, inResult, inSeed);
 }
-
 static EESMCaptureTriggerState EESMCaptureTriggerBeforeImpl(EESMTrigger* inTrigger)
 {
-    EESMCaptureTriggerState theState;
-    theState.mIsOn = inTrigger->mIsOn;
-    theState.mHasFired = inTrigger->mHasFired;
-    theState.mStart = inTrigger->mConditionStartTime;
-    return theState;
+    return ee_scenario_cap_trigger_before(inTrigger);
 }
-
 static void EESMCaptureTriggerImpl(EESMTrigger* inTrigger, const EESMCaptureTriggerState& inBefore, float inTime,
                                    unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMTE"));
-    r.U32((unsigned int)inTrigger->mID);
-    r.U32((inBefore.mIsOn ? 1u : 0u) | (inBefore.mHasFired ? 2u : 0u));
-    r.U32((unsigned int)inBefore.mStart);
-    r.F32(inTime);
-    r.U32((unsigned int)inTrigger->mConditionDuration);
-    r.U32((inTrigger->mIsLooping ? 1u : 0u) | (inTrigger->mIsInCinematic ? 2u : 0u) | (gWorld.mInCinematic ? 4u : 0u));
-    r.U32((unsigned int)inTrigger->mConditions.size());
-    r.U32((unsigned int)inTrigger->mEffects.size());
-    r.U32((inTrigger->mIsOn ? 1u : 0u) | (inTrigger->mHasFired ? 2u : 0u));
-    r.U32((unsigned int)inTrigger->mConditionStartTime);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    if (gWorld.mScenarioManager)
-        TimedEffects(r, gWorld.mScenarioManager);
-    r.Commit();
+    ee_scenario_cap_trigger(inTrigger, &inBefore, inTime, inSeed);
 }
-
 static EESMCaptureObjectState EESMCaptureObjectBeginImpl(EESMObject* inObject)
 {
-    EESMCaptureObjectState theState;
-    theState.mCount = (unsigned int)inObject->mUnits.size();
-    theState.mHash = kFnvStart;
-    for (unsigned long u : inObject->mUnits) {
-        unsigned int theID = (unsigned int)u;
-        theState.mHash = Fnv(theState.mHash, &theID, 4);
-    }
-    theState.mSeed = EESMCaptureSeed();
-    sObjectDepth++;
-    return theState;
+    return ee_scenario_cap_object_begin(inObject);
 }
-
 static void EESMCaptureObjectEndImpl(EESMObject* inObject, bool inIncludeDead, bool inResult,
                                      const EESMCaptureObjectState& inBefore)
 {
-    sObjectDepth--;
-    EESimCaptureRecord r(EECaptureTag("SMOB"));
-    r.I32((int)IndexOf(inObject));
-    r.U32((unsigned int)inObject->mL64);
-    r.U32((unsigned int)inObject->mOwner);
-    r.U32((unsigned int)inObject->mFamily);
-    r.U32((unsigned int)inObject->mClass);
-    r.U32((unsigned int)inObject->mMinCount);
-    r.U32((unsigned int)inObject->mMaxCount);
-    r.U32((unsigned int)inObject->mArea);
-    r.U32((unsigned int)inObject->mNearMode);
-    r.U32((unsigned int)inObject->mNearObject);
-    r.U32((unsigned int)inObject->mParent);
-    r.U32((unsigned int)inObject->mAttribute);
-    r.U32((unsigned int)inObject->mAttributeMin);
-    r.U32((unsigned int)inObject->mAttributeMax);
-    r.U32((unsigned int)inObject->mVisibleByPlayer);
-    r.U32((unsigned int)inObject->mState);
-    r.U32((unsigned int)inObject->mSelectedByPlayer);
-    r.U32((unsigned int)inObject->mInAreaCheck);
-    r.U32((unsigned int)inObject->mNearCheck);
-    r.U32((unsigned int)inObject->mHasAttributeCheck);
-    r.U32((unsigned int)inObject->mVisibleByCheck);
-    r.U32((unsigned int)inObject->mHasStateCheck);
-    r.U32((unsigned int)inObject->mSelectedByCheck);
-    r.U32((inObject->mIsAttributePercent ? 1u : 0u) | (inIncludeDead ? 2u : 0u));
-    r.U32(inBefore.mCount);
-    U64(r, inBefore.mHash);
-    r.U32(inBefore.mSeed);
-    r.U32(inResult ? 1u : 0u);
-    Units(r, inObject->mUnits);
-    r.U32((inObject->mIsSelectOnMap ? 1u : 0u) | (inObject->mIsDynamic ? 2u : 0u));
-    r.U32(EESMCaptureSeed());
-    r.Commit();
+    ee_scenario_cap_object_end(inObject, inIncludeDead, inResult, &inBefore);
 }
-
 static void EESMCapturePlayersImpl(long inType, bool inSingle, long inResult, const void* inPlayers,
                                    unsigned int inSeed)
 {
-    if (sObjectDepth > 0)
-        return;
-    const std::vector<long>* thePlayers = (const std::vector<long>*)inPlayers;
-    EESimCaptureRecord r(EECaptureTag("SMCP"));
-    r.I32((int)inType);
-    r.U32(inSingle ? 1u : 0u);
-    r.I32((int)inResult);
-    r.U32(thePlayers ? (unsigned int)thePlayers->size() : 0xffffffffu);
-    if (thePlayers)
-        for (long p : *thePlayers)
-            r.I32((int)p);
-    r.U32((unsigned int)gWorld.mNumPlayers);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    r.Commit();
+    ee_scenario_cap_players(inType, inSingle, inResult, inPlayers, inSeed);
 }
-
 static void EESMCaptureAreaImpl(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY,
                                 unsigned long long inHash)
 {
-    if (sObjectDepth > 0)
-        return;
-    EESimCaptureRecord r(EECaptureTag("SMAR"));
-    r.I32((int)inKind);
-    r.I32((int)IndexOf(inArea));
-    r.U32((unsigned int)inArea->mID);
-    r.U32((unsigned int)inArea->mSelectMode);
-    r.I32((int)inArea->mAnchor.mX);
-    r.I32((int)inArea->mAnchor.mY);
-    r.F32(inArea->mRect.GetLeft());
-    r.F32(inArea->mRect.GetTop());
-    r.F32(inArea->mRect.GetRight());
-    r.F32(inArea->mRect.GetBottom());
-    r.I32((int)inA);
-    r.I32((int)inB);
-    r.I32((int)inX);
-    r.I32((int)inY);
-    U64(r, inHash);
-    r.Commit();
+    ee_scenario_cap_area(inArea, inKind, inA, inB, inX, inY, inHash);
 }
-
 static void EESMCaptureEffectImpl(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMEX"));
-    r.U32((unsigned int)inEffect->mID);
-    r.U32((unsigned int)inEffect->mType);
-    r.U32((unsigned int)inEffect->mAIAction);
-    r.U32((unsigned int)inEffect->mMediaAction);
-    r.U32((unsigned int)inEffect->mPlayerAction);
-    r.U32((unsigned int)inEffect->mObjectAction);
-    r.U32((unsigned int)inEffect->mGameAction);
-    r.U32((unsigned int)inEffect->mObject);
-    r.U32((unsigned int)inEffect->mPlayer);
-    r.U32(inIsCinematic ? 1u : 0u);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    r.I32(theManager ? (int)theManager->mGameResult : 0);
-    r.U32(gWorld.mInCinematic ? 1u : 0u);
-    if (theManager)
-        TimedEffects(r, theManager);
-    r.Commit();
-    EESMCaptureEffectWorld(inEffect);
+    ee_scenario_cap_effect(inEffect, inIsCinematic, inSeed, SaveVersion());
 }
-
-namespace {
-
-// the FNV-1a of a memory file's bytes
-unsigned long long FileHash(FSMemoryFile& inFile)
-{
-    unsigned long theLength = 0;
-    inFile.GetLength(theLength);
-    return Fnv(kFnvStart, inFile.GetData(), theLength);
-}
-
-// a unit of an effect's objects as SMEW reads it: its checksum and the state the effects write
-void EffectUnit(EESimCaptureRecord& ioRecord, unsigned long inID)
-{
-    EEUnit* theUnit = gWorld.GetUnit(inID);
-    ioRecord.U32((unsigned int)inID);
-    ioRecord.U32(theUnit != NULL ? 1u : 0u);
-    if (theUnit == NULL)
-        return;
-    ioRecord.I32((int)theUnit->GetChecksum(3));
-    ioRecord.I32(theUnit->mPlayer != NULL ? (int)theUnit->mPlayer->mPlayerID : -1);
-    ioRecord.I32((int)theUnit->GetHitPoints());
-    ioRecord.I32((int)theUnit->mTileX);
-    ioRecord.I32((int)theUnit->mTileY);
-    ioRecord.U32(theUnit->mTileNode != NULL ? 1u : 0u);
-    U64(ioRecord, TextHash(theUnit->GetStats()->mName));
-    EEComplexUnit* theComplex = theUnit->mComplexUnit;
-    ioRecord.U32(theComplex != NULL ? 1u : 0u);
-    if (theComplex == NULL)
-        return;
-    ioRecord.U32((unsigned int)theComplex->GetCommandType());
-    EEUnitGoal* theGoal = theComplex->GetGoal();
-    ioRecord.I32(theGoal != NULL ? (int)theGoal->mKind : -1);
-    ioRecord.U32((unsigned int)theComplex->mGoalQueues.size());
-    for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
-        ioRecord.U32((unsigned int)theComplex->mGoalQueues[q].mGoals.size());
-        for (size_t g = 0; g < theComplex->mGoalQueues[q].mGoals.size(); g++)
-            ioRecord.I32(theComplex->mGoalQueues[q].mGoals[g] != NULL ? (int)theComplex->mGoalQueues[q].mGoals[g]->mKind : -1);
-    }
-    ioRecord.U32((theComplex->mIsDisabled ? 1u : 0u) | (theComplex->mIsCommandable ? 2u : 0u) |
-                 (theComplex->mIsDeletable ? 4u : 0u) | (theComplex->mIsLocked ? 8u : 0u) |
-                 (theComplex->mIsDetachedFromAI ? 16u : 0u));
-    long theBehavior = -1;
-    for (size_t b = 0; b < EEUnitBehavior::sTable.size(); b++)
-        if (EEUnitBehavior::sTable[b] == theComplex->mBehavior)
-            theBehavior = (long)b;
-    ioRecord.I32((int)theBehavior);
-    ioRecord.I32(theComplex->mContainer != NULL ? (int)theComplex->mContainer->mUnitID : -1);
-    ioRecord.I32((int)theComplex->mFlightTime);
-    ioRecord.I32((int)theComplex->mAmmunition);
-    ioRecord.U32((unsigned int)theComplex->mCargo.size());
-    const GETransformation& theLocation = theComplex->mPhysicalModel.GetLocation();
-    ioRecord.Bytes(&theLocation.mMatrix, sizeof(theLocation.mMatrix));
-}
-
-void EffectObject(EESimCaptureRecord& ioRecord, unsigned long inIndex)
-{
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(inIndex);
-    ioRecord.U32(theObject != NULL ? (unsigned int)theObject->mUnits.size() : 0xffffffffu);
-    if (theObject != NULL)
-        for (unsigned long u : theObject->mUnits)
-            EffectUnit(ioRecord, u);
-}
-
-}   // namespace
-
-void EESMCaptureEffectWorld(EESMEffect* inEffect)
-{
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    if (theManager == NULL)
-        return;
-    EESimCaptureRecord r(EECaptureTag("SMEW"));
-    r.U32((unsigned int)inEffect->mID);
-    {
-        FSMemoryFile theFile;
-        r.I32((int)inEffect->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile));
-        U64(r, FileHash(theFile));
-    }
-    // the world's out-of-synch sums as EE-SIM's --checksum-trace reads them (reads only)
-    unsigned long theSaved = gPhysics->mLastOutOfSynchChecksum;
-    r.U32((unsigned int)gPhysics->GetOutOfSynchChecksum(false, 0x1 | 0x2 | 0x10 | 0x40 | 0x100));
-    gPhysics->mLastOutOfSynchChecksum = theSaved;
-    unsigned long theUnits = 0;
-    unsigned long theCount = 0;
-    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-        theUnits += (unsigned long)static_cast<EEUnit*>(theUnit)->GetChecksum(3);
-        theCount++;
-    }
-    r.U32((unsigned int)theCount);
-    r.U32((unsigned int)theUnits);
-    r.U32((unsigned int)EECPOutOfSynchChecksum());
-    // the units of the objects an effect names
-    const unsigned long theObjects[] = {inEffect->mObject, inEffect->mTaskObject, inEffect->mPlaceObject,
-                                        inEffect->mTargetObject, inEffect->mLocationObject};
-    for (unsigned long theIndex : theObjects)
-        EffectObject(r, theIndex);
-    // the players
-    r.U32((unsigned int)gWorld.mNumPlayers);
-    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        r.U32(thePlayer != NULL ? 1u : 0u);
-        if (thePlayer == NULL)
-            continue;
-        r.U32((unsigned int)thePlayer->mGameResult);
-        r.U32((thePlayer->mSeesAll ? 1u : 0u) | (thePlayer->mObserverMode ? 2u : 0u));
-        for (unsigned long q = 0; q < gWorld.mNumPlayers; q++)
-            r.I32((int)thePlayer->mEnemies[q]);
-        r.U32((unsigned int)thePlayer->GetNumPendingGroups());
-        r.U32((unsigned int)thePlayer->GetNumRunningGroups());
-        r.U32((unsigned int)thePlayer->mPatrolGroups.size());
-        r.U32((unsigned int)thePlayer->mCivilization.mAvailablePoints);
-        r.U32((unsigned int)thePlayer->mCivilization.mMaxPoints);
-        EEComputerPlayer* theComputer = thePlayer->mComputerPlayer;
-        r.U32(theComputer != NULL ? 1u : 0u);
-        if (theComputer != NULL) {
-            r.U32((unsigned int)theComputer->mFavoriteLandType);
-            r.U32((unsigned int)theComputer->mFavoriteSeaType);
-            r.U32((unsigned int)theComputer->mFavoriteAirType);
-        }
-    }
-    // the manager, the world and the camera
-    U64(r, TextHash(theManager->mMediaStrings.GetSection(0)));
-    U64(r, TextHash(theManager->mMediaStrings.GetSection(3)));
-    U64(r, TextHash(theManager->mMediaStrings.GetSection(2)));
-    r.U32((unsigned int)theManager->mMessages.size());
-    r.U32((unsigned int)theManager->mPendingEffects.size());
-    r.U32((unsigned int)theManager->mTriggers.size());
-    for (EESMTrigger* t : theManager->mTriggers)
-        r.U32(t ? ((t->mIsOn ? 1u : 0u) | (t->mHasFired ? 2u : 0u)) | ((unsigned int)t->mConditionStartTime << 2) : 0xffffffffu);
-    r.F32(gWorld.GetTimeOfDay());
-    r.F32(gWorld.mGameSpeed);
-    r.U32((gPhysics->mTimeOfDayRuns ? 1u : 0u) | (gWorld.mInCinematic ? 2u : 0u) |
-          (gWorld.mEnvironmentManager != NULL && gWorld.mEnvironmentManager->mIsEnabled ? 4u : 0u));
-    r.U32((unsigned int)gWorld.mCameraControl.mKeys.size());
-    r.U32((unsigned int)gWorld.mCameraControl.mPathIndex);
-    r.Commit();
-}
-
-namespace {
-
-// a list's count, the first error and the hash of its elements' Saves
-template<class T> void SavedList(EESimCaptureRecord& ioRecord, const std::vector<T*>& inList, unsigned long inMajor,
-                                 unsigned long inMinor)
-{
-    FSMemoryFile theFile;
-    long theResult = kErrorOK;
-    for (T* theElement : inList)
-        if (theElement != NULL && theResult == kErrorOK)
-            theResult = theElement->Save(inMajor, inMinor, theFile);
-    ioRecord.U32((unsigned int)inList.size());
-    ioRecord.I32((int)theResult);
-    U64(ioRecord, FileHash(theFile));
-}
-
-}   // namespace
-
 static void EESMCaptureSavedImpl(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
                                  unsigned long inMinorVersion)
 {
-    EESimCaptureRecord r(EECaptureTag("SMSV"));
-    r.I32((int)inKind);
-    r.I32((int)inResult);
-    SavedList(r, inManager->mTriggers, inMajorVersion, inMinorVersion);
-    SavedList(r, inManager->mConditions, inMajorVersion, inMinorVersion);
-    SavedList(r, inManager->mEffects, inMajorVersion, inMinorVersion);
-    SavedList(r, inManager->mObjects, inMajorVersion, inMinorVersion);
-    SavedList(r, inManager->mAreas, inMajorVersion, inMinorVersion);
-    SavedList(r, inManager->mPendingEffects, inMajorVersion, inMinorVersion);
-    FSMemoryFile theFile;
-    r.I32((int)inManager->Save(inMajorVersion, inMinorVersion, theFile));
-    U64(r, FileHash(theFile));
-    r.Commit();
+    ee_scenario_cap_saved(inManager, inKind, inResult, Version(inMajorVersion, inMinorVersion));
 }
-
 static void EESMCaptureUpdateImpl(EEScenarioManager* inManager, bool inHumanPlaying)
 {
-    static unsigned long sRounds = 0;
-    if (++sRounds % 120 == 0)
-        EESMCaptureSaved(inManager, 1, 0, kSaveGameMajorVersion, kSaveGameMinorVersion);
-    EESimCaptureRecord r(EECaptureTag("SMUP"));
-    r.F32(inManager->mTime);
-    r.F32(inManager->mTriggerTimer);
-    r.U32((inHumanPlaying ? 1u : 0u) | (gWorld.mInCinematic ? 2u : 0u) | (inManager->mIsMovingCamera ? 4u : 0u) |
-          (inManager->mIsShowingDialog ? 8u : 0u) | (inManager->mIsEndingCinematic ? 16u : 0u));
-    r.U32((unsigned int)inManager->mTriggers.size());
-    for (EESMTrigger* t : inManager->mTriggers)
-        r.U32(t ? ((t->mIsOn ? 1u : 0u) | (t->mHasFired ? 2u : 0u)) : 0xffffffffu);
-    TimedEffects(r, inManager);
-    r.U32((unsigned int)inManager->mMessages.size());
-    r.I32((int)inManager->mGameResult);
-    r.U32(EESMCaptureSeed());
-    r.Commit();
+    ee_scenario_cap_update(inManager, inHumanPlaying, SaveVersion());
 }
-
 static void EESMCapturePlayerAttributeImpl(long inPlayer, unsigned long inAttribute, long inMode, long inAmount,
                                            unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMPA"));
-    r.I32((int)inPlayer);
-    r.U32((unsigned int)inAttribute);
-    r.I32((int)inMode);
-    r.I32((int)inAmount);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    EEPlayer* thePlayer = inPlayer >= 0 && inPlayer < (long)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0]))
-                              ? gWorld.mPlayers[inPlayer] : NULL;
-    r.U32(thePlayer != NULL ? 1u : 0u);
-    if (thePlayer != NULL) {
-        for (int i = 0; i < 7; i++)
-            r.I32((int)thePlayer->mResourceCaps[i]);
-        r.I32((int)thePlayer->mShareBonus);
-        r.I32(thePlayer->mComputerPlayer != NULL ? (int)thePlayer->mComputerPlayer->mDifficulty : -1);
-        for (int i = 0; i < 10; i++)
-            r.U32((unsigned int)thePlayer->mScenarioVariables[i]);
-        for (int i = 0; i < 10; i++)
-            r.U32((unsigned int)thePlayer->mTributes[i]);
-        r.I32((int)thePlayer->mMiningLimit);
-        FSMemoryFile theFile;
-        r.I32((int)thePlayer->mSavedGroups.Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile));
-        U64(r, FileHash(theFile));
-    }
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    if (theManager != NULL)
-        SavedList(r, theManager->mPendingEffects, kSaveGameMajorVersion, kSaveGameMinorVersion);
-    r.Commit();
+    ee_scenario_cap_player_attribute(inPlayer, inAttribute, inMode, inAmount, inSeed, SaveVersion());
 }
-
 static void EESMCaptureTokensImpl(const UWideString& inText, const UWideString& outText, unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMTK"));
-    U64(r, TextHash(inText));
-    U64(r, TextHash(outText));
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    r.Commit();
+    ee_scenario_cap_tokens((const char*)inText, (const char*)outText, inSeed);
 }
-
 static void EESMCapturePlacementImpl(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult,
                                      float inX, float inY, unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMFP"));
-    r.I32((int)IndexOf(inObject));
-    r.U32((unsigned int)inUnitType);
-    r.U32((inTryRandom ? 1u : 0u) | (inResult ? 2u : 0u));
-    r.F32(inX);
-    r.F32(inY);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    r.Commit();
+    ee_scenario_cap_placement(inObject, inUnitType, inTryRandom, inResult, inX, inY, inSeed);
 }
-
 static void EESMCaptureUnitChangeImpl(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
                                       EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
 {
-    EESimCaptureRecord r(EECaptureTag("SMCU"));
-    r.I32((int)inKind);
-    for (int i = 0; i < 7; i++)
-        r.I32((int)inArgs[i]);
-    r.U32(inSeed);
-    r.U32(EESMCaptureSeed());
-    if (inKind == 0) {
-        r.U32(inUnit != NULL ? 1u : 0u);
-        if (inUnit != NULL) {
-            r.U32((unsigned int)inUnit->mUnitID);
-            r.I32((int)inUnit->GetChecksum(3));
-            r.I32((int)inUnit->GetHitPoints());
-            r.I32((int)inUnit->mResourceAmount);
-            r.I32((int)inUnit->mResourceType);
-            r.U32(inUnit->mTileNode != NULL ? 1u : 0u);
-            EEComplexUnit* c = inUnit->mComplexUnit;
-            r.U32(c != NULL ? 1u : 0u);
-            if (c != NULL) {
-                r.I32((int)c->mFlightTime);
-                r.I32((int)c->mGarrisonCount);
-                r.U32((unsigned int)c->mAmmunition);
-                r.F32(c->mPhysicalModel.GetScale());
-                r.I32((int)c->mReloadTimer);
-                r.I32((int)c->mPower);
-                r.I32((int)c->mRottingAwayTime);
-                r.U32((c->mIsBuilt ? 1u : 0u) | (c->mIsAnimationPaused ? 2u : 0u));
-                for (size_t v = 0; v < c->mUnitVariables.size(); v++)
-                    r.I32((int)c->mUnitVariables[v]);
-                r.U32((unsigned int)c->GetCommandType());
-                r.U32((unsigned int)c->mGoalQueues.size());
-                for (size_t q = 0; q < c->mGoalQueues.size(); q++)
-                    r.U32((unsigned int)c->mGoalQueues[q].mGoals.size());
-            }
-        }
-    } else {
-        r.I32(inPlayer != NULL ? (int)inPlayer->mPlayerID : -1);
-        r.U32(inUpgrade != NULL ? 1u : 0u);
-        if (inUpgrade != NULL) {
-            for (int i = 0; i < 6; i++)
-                r.F32(inUpgrade->mArmor[i]);
-            r.I32((int)inUpgrade->mReloadTime);
-            r.F32(inUpgrade->mAttack);
-            r.I32((int)inUpgrade->mWorkRate);
-            r.I32((int)inUpgrade->mFlightTime);
-            r.F32(inUpgrade->mLeadership);
-            r.I32((int)inUpgrade->mMaxObjectCarry);
-            r.I32((int)inUpgrade->mRepairRate);
-            r.I32((int)inUpgrade->mMaxHitPoints);
-            r.I32((int)inUpgrade->mCarryAmount);
-            r.I32((int)inUpgrade->mHealingPoints);
-            r.F32(inUpgrade->mRange);
-            r.F32(inUpgrade->mLineOfSight);
-            r.F32(inUpgrade->mMaxVelocity);
-            r.I32((int)inUpgrade->mPower);
-            r.U32(inUpgrade->mIsInitialized ? 1u : 0u);
-            r.F32(inUpgrade->mCameraFocus);
-        }
-    }
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    if (theManager != NULL)
-        SavedList(r, theManager->mPendingEffects, kSaveGameMajorVersion, kSaveGameMinorVersion);
-    r.Commit();
+    ee_scenario_cap_unit_change(inKind, inArgs, inUnit, inPlayer, inUpgrade, inSeed, SaveVersion());
 }
 
 // The game calls these through the header's hook pointers, set here before main: the game's units name no

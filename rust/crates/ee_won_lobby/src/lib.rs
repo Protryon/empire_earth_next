@@ -33,6 +33,7 @@ pub mod logics;
 pub mod model;
 pub mod modelobj;
 pub mod netctl;
+pub mod netops;
 pub mod persist;
 pub mod persistobj;
 pub mod prefsobj;

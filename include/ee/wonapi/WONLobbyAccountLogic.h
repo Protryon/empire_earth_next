@@ -45,7 +45,7 @@ public:
     EeWonLogic* mRust; // mErrors (0x88), mIgnoredErrors (0x8c)
     SmartPtr<HTTPSession> mHTTPSession; // 0x40
     std::string mCrossPromotion; // 0x44, narrow string (assigned at 0x7ddaf1)
-    SmartPtr<AcceptOp> mAcceptOp; // 0x54
+    SmartPtr<SocketOp> mAcceptOp; // 0x54
     SmartPtr<AsyncSocket> mFirewallSocket; // 0x58
     IPAddr mFirewallAddress; // 0x5c
     SmartPtr<LobbyRustDialog> mNetworkAdapterDialog; // 0x84
