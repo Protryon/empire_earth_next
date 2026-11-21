@@ -244,7 +244,7 @@ static void EECPUnitsTilesIn(const EeAiUnitsTiles& inTiles, std::vector<U2DPoint
 // the classic wall manager's area utilities (EECPWallManager.cpp declares them the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 
-// the request and the wall path's tiles (x low, y high: units_world.rs)
+// a request's path tile (x low, y high: units_world.rs)
 static int64_t EECPUnitsPack(const U2DPoint<long>& inTile)
 {
     return (int64_t)(((uint64_t)(uint32_t)inTile.mY << 32) | (uint32_t)inTile.mX);
@@ -254,20 +254,6 @@ static int64_t EECPUnitsPack(const U2DPoint<long>& inTile)
 static int64_t EECPUnitsEffectBits(const EEEventEffect* inEffect)
 {
     return inEffect == NULL ? -1 : (int64_t)(((uint64_t)(inEffect->mKind & 0xffff) << 48) | ((uint64_t)(uint32_t)inEffect->mUnitClass << 16) | (uint64_t)(inEffect->mAttribute & 0xffff));
-}
-
-// the wall path FindPath gave (EE_AI_UNITS_HOST_WALL_FIND .. _TILE)
-static std::vector<U2DPoint<long> > sUnitsWallPath;
-
-// the terrain a unit crosses (EEUnitClass::GetTerrainFlags, the classic's sub-group common move flags): forest bit 0,
-// cliff bit 1
-static int64_t EECPUnitsCrosses(EEComplexUnit* inUnit)
-{
-    EECPASGFlags theFlags;
-    memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
-    theFlags.mPlayerID = 0;
-    inUnit->mUnitClass->GetTerrainFlags(inUnit, theFlags);
-    return (theFlags.mFlags[kAITileForest] != 0 ? 1 : 0) | (theFlags.mFlags[kAITileCliff] != 0 ? 2 : 0);
 }
 
 // the units a gate's fit asks about (EE_AI_UNITS_HOST_GATE_FITS: emptied for each side)
@@ -426,8 +412,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return 0;
     case EE_AI_UNITS_HOST_MOVES:
         return !((EEComplexUnit*)(uintptr_t)a)->mUnitClass->IsBuilding() && ((EEComplexUnit*)(uintptr_t)a)->mUnitClass->GetMaxVelocity() > 0.0f ? 1 : 0;
-    case EE_AI_UNITS_HOST_CROSSES:
-        return EECPUnitsCrosses((EEComplexUnit*)(uintptr_t)a);
     case EE_AI_UNITS_HOST_BEHAVIORS:
         return (int64_t)EEUnitBehavior::sTable.size();
     case EE_AI_UNITS_HOST_BEHAVIOR_AT:
@@ -457,8 +441,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     }
     case EE_AI_UNITS_HOST_ROUTE_NEW:
         return (int64_t)(uintptr_t)gPathManager.RequestPath((long)a, EETileCoordinate(((EeAiUnitsTiles*)outRecord)->from[0], ((EeAiUnitsTiles*)outRecord)->from[1]), EETileCoordinate(((EeAiUnitsTiles*)outRecord)->to[0], ((EeAiUnitsTiles*)outRecord)->to[1]), (EECPASGFlags*)(uintptr_t)b, 2, -1, (EeAStarModifier*)(uintptr_t)c, 1);
-    case EE_AI_UNITS_HOST_CITIZEN_FLAGS: gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, *(EECPASGFlags*)outRecord);
-        return 0;
     case EE_AI_UNITS_HOST_ROUTE_DONE:
         return ((EEAutoPathRequest*)(uintptr_t)a)->mIsDone ? 1 : 0;
     case EE_AI_UNITS_HOST_ROUTE_LEN:
@@ -467,12 +449,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return EECPUnitsPack(((EEAutoPathRequest*)(uintptr_t)a)->mPath[(size_t)b]);
     case EE_AI_UNITS_HOST_ROUTE_DEREF: ((EEAutoPathRequest*)(uintptr_t)a)->Dereference();
         return 0;
-    case EE_AI_UNITS_HOST_WALL_FIND: gPathManager.FindPath((EEComplexUnit*)(uintptr_t)a, gWorld.mMap, U2DPoint<long>(((EeAiUnitsTiles*)outRecord)->from[0], ((EeAiUnitsTiles*)outRecord)->from[1]), U2DPoint<long>(((EeAiUnitsTiles*)outRecord)->to[0], ((EeAiUnitsTiles*)outRecord)->to[1]), *(const EEAIAStarBounds*)(uintptr_t)b, sUnitsWallPath, 1, 0x32, (EeAStarModifier*)(uintptr_t)c, NULL);
-        return 0;
-    case EE_AI_UNITS_HOST_WALL_LEN:
-        return (int64_t)sUnitsWallPath.size();
-    case EE_AI_UNITS_HOST_WALL_TILE:
-        return EECPUnitsPack(sUnitsWallPath[(size_t)a]);
     case EE_AI_UNITS_HOST_NODE_EVENT:
         return ((EETechTreeNode*)(uintptr_t)a)->mData->mResearchedEvent;
     case EE_AI_UNITS_HOST_EVENT_EFFECTS:

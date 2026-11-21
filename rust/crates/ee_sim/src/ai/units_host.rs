@@ -21,8 +21,6 @@ use crate::world::{UnitView, WorldRead};
 pub const EE_AI_UNITS_HOST_GOAL_LOCATION: i32 = 95;
 /// the complex unit `a`'s class is no building and moves (`GetMaxVelocity() > 0`)
 pub const EE_AI_UNITS_HOST_MOVES: i32 = 96;
-/// the complex unit `a`'s `GetTerrainFlags`: forest (bit 0) and cliff (bit 1)
-pub const EE_AI_UNITS_HOST_CROSSES: i32 = 97;
 /// `EEUnitBehavior::sTable.size()`, `sTable[a]`
 pub const EE_AI_UNITS_HOST_BEHAVIORS: i32 = 98;
 pub const EE_AI_UNITS_HOST_BEHAVIOR_AT: i32 = 99;
@@ -49,6 +47,9 @@ mod k {
     pub(super) const ACTION_WAIT_FOR_SITE: u32 = 4012;
     pub(super) const CATEGORY_WATER: std::os::raw::c_long = 2;
     pub(super) const CATEGORY_GATE: u64 = 0x19;
+    /// `kAITileCliff`, `kAITileForest`
+    pub(super) const TILE_CLIFF: usize = 3;
+    pub(super) const TILE_FOREST: usize = 4;
 }
 
 fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
@@ -211,9 +212,11 @@ unsafe fn facts(me: *mut c_void, unit: u64, f: &mut EeAiUnitsFacts) {
     }
     if cpp(EE_AI_UNITS_HOST_MOVES, me, unit as i64, 0, 0, std::ptr::null_mut()) != 0 {
         f.moves = true;
-        let crosses = cpp(EE_AI_UNITS_HOST_CROSSES, me, unit as i64, 0, 0, std::ptr::null_mut());
-        f.crosses_forest = crosses & 1 != 0;
-        f.crosses_cliff = crosses & 2 != 0;
+        // the terrain it crosses (EEUnitClass::GetTerrainFlags, the classic's sub-group common move flags)
+        let class = u.class().map_or(0, |c| c.handle());
+        let crosses = crate::units::gather_spot::class_terrain_flags(class, unit);
+        f.crosses_forest = crosses[k::TILE_FOREST];
+        f.crosses_cliff = crosses[k::TILE_CLIFF];
     }
     f.garrisoned = crate::world_field!(u.complex(), mGarrisonCount) as c_long;
     let behavior = u.behavior_handle();

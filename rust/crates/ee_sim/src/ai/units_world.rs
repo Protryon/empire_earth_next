@@ -21,18 +21,11 @@ use crate::world::{PlayerView, UnitView, WorldRead, WorldView};
 /// `gPathManager.RequestPath(a, from, to, (EECPASGFlags*)b, 2, -1, (EeAStarModifier*)c, 1)` (`out` the
 /// `EeAiUnitsTiles` with the ends) -> the request (0: none)
 pub const EE_AI_UNITS_HOST_ROUTE_NEW: i32 = 125;
-/// `gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, *(EECPASGFlags*)out)`
-pub const EE_AI_UNITS_HOST_CITIZEN_FLAGS: i32 = 126;
 /// the request `a`'s `mIsDone`, `mPath.size()`, `mPath[b]` (x low, y high), `Dereference()`
 pub const EE_AI_UNITS_HOST_ROUTE_DONE: i32 = 127;
 pub const EE_AI_UNITS_HOST_ROUTE_LEN: i32 = 128;
 pub const EE_AI_UNITS_HOST_ROUTE_TILE: i32 = 129;
 pub const EE_AI_UNITS_HOST_ROUTE_DEREF: i32 = 130;
-/// `gPathManager.FindPath(a, gWorld.mMap, from, to, *(EEAIAStarBounds*)b, path, 1, 0x32, (EeAStarModifier*)c,
-/// NULL)` into the C++'s wall path (`out` the `EeAiUnitsTiles` with the ends); its size, its tile `a`
-pub const EE_AI_UNITS_HOST_WALL_FIND: i32 = 131;
-pub const EE_AI_UNITS_HOST_WALL_LEN: i32 = 132;
-pub const EE_AI_UNITS_HOST_WALL_TILE: i32 = 133;
 /// the tech node `a`'s researched event; the event `a`'s effect count (-1: no event), its effect `b`; the effect
 /// `a`'s kind (bits 48..63), unit class (16..47) and attribute (0..15) (-1: none)
 pub const EE_AI_UNITS_HOST_NODE_EVENT: i32 = 134;
@@ -44,7 +37,10 @@ pub const EE_AI_UNITS_HOST_TAKE_RESOURCE: i32 = 138;
 pub const EE_AI_UNITS_HOST_ADD_RESOURCE: i32 = 139;
 pub const EE_AI_UNITS_HOST_ADD_TRIBUTE: i32 = 140;
 
-/// `EECPASGFlags` (ee/EECPASGFlags.h: the player id, the 17 terrain flags), zeroed as its constructor.
+/// `kUnitTypeCitizen`
+const TYPE_CITIZEN: usize = 0x20;
+
+/// `EECPASGFlags` (ee/EECPASGFlags.h: the player id, the 17 terrain flags).
 #[repr(C)]
 struct AsgFlags {
     player_id: c_long,
@@ -68,7 +64,7 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *
     let _ = c;
     Some(match op {
         // SAFETY: the caller's record
-        more::EE_AI_UNITS_HOST_WALL_PATH => wall_path(me, a, unsafe { &mut *(out as *mut EeAiUnitsTiles) }),
+        more::EE_AI_UNITS_HOST_WALL_PATH => wall_path(a, unsafe { &mut *(out as *mut EeAiUnitsTiles) }),
         // SAFETY: as above
         more::EE_AI_UNITS_HOST_ROUTE_REQUEST => route_request(me, a, unsafe { &mut *(out as *mut EeAiUnitsTiles) }),
         more::EE_AI_UNITS_HOST_ROUTE_STATE => {
@@ -225,8 +221,12 @@ fn write_tiles(t: &mut EeAiUnitsTiles, n: i64, tile: impl Fn(i64) -> i64) {
 /// wall planner for the enemy `enemy`.
 fn route_request(me: *mut c_void, enemy: i64, t: &mut EeAiUnitsTiles) -> i64 {
     release_routes(state(me));
-    let mut flags = AsgFlags { player_id: 0, flags: [false; 17] };
-    cpp(EE_AI_UNITS_HOST_CITIZEN_FLAGS, me, 0, 0, 0, (&mut flags as *mut AsgFlags).cast());
+    // the citizens' terrain flags (EEUnitClass::GetTerrainFlags of no unit)
+    let citizen = {
+        let t = unsafe { WorldRead::begin() };
+        crate::world::ClassView::by_index(&t, TYPE_CITIZEN).map_or(0, |c| c.handle())
+    };
+    let mut flags = AsgFlags { player_id: 0, flags: crate::units::gather_spot::class_terrain_flags(citizen, 0) };
     let planner = ee_astar_modifier_new_wall_planner(enemy as u32, 0);
     let flags_at = &mut flags as *mut AsgFlags as usize as i64;
     let request = cpp(
@@ -261,18 +261,30 @@ fn route_take(me: *mut c_void, handle: c_long, t: &mut EeAiUnitsTiles) -> i64 {
 
 /// `ai.wall_path`: the unit's path inside the box of the two ends (U2DRectangle's Set then Extend) with the wall
 /// pather -> its length (a list past the caller's room is kept for TILES_AGAIN).
-fn wall_path(me: *mut c_void, unit: i64, t: &mut EeAiUnitsTiles) -> i64 {
+fn wall_path(unit: i64, t: &mut EeAiUnitsTiles) -> i64 {
     let (from, to) = (t.from, t.to);
     // EEAIAStarBounds: mBottom, mLeft, mRight, mTop
     let bounds: [c_long; 4] = [from[1].max(to[1]), from[0].min(to[0]), from[0].max(to[0]), from[1].min(to[1])];
+    let window = crate::astar::pm_entry::EePathWindow {
+        top: bounds[3] as i32,
+        left: bounds[1] as i32,
+        bottom: bounds[0] as i32,
+        right: bounds[2] as i32,
+    };
+    let map = {
+        let t = unsafe { WorldRead::begin() };
+        WorldView::global(&t).and_then(|w| w.map()).map_or(0, |m| m.handle())
+    };
     let pather = ee_astar_modifier_new_wall_pather();
-    let out = (t as *mut EeAiUnitsTiles).cast();
-    cpp(EE_AI_UNITS_HOST_WALL_FIND, me, unit, bounds.as_ptr() as usize as i64, pather as usize as i64, out);
+    let from = (from[0] as i32, from[1] as i32);
+    let to = (to[0] as i32, to[1] as i32);
+    // SAFETY: the live unit and map; the pather made above (FindPath's PMRQ record is the search's own)
+    let path = unsafe {
+        crate::astar::pm_entry::find_path(unit as u64, map, from, to, window, 1, 0x32, pather as usize as u64)
+    };
     // SAFETY: the pather made above
     unsafe { ee_astar_modifier_release(pather) };
-    let n = cpp(EE_AI_UNITS_HOST_WALL_LEN, me, 0, 0, 0, std::ptr::null_mut());
-    let tiles: Vec<(c_long, c_long)> =
-        (0..n).map(|k| unpack(cpp(EE_AI_UNITS_HOST_WALL_TILE, me, k, 0, 0, std::ptr::null_mut()))).collect();
+    let tiles: Vec<(c_long, c_long)> = path.iter().map(|p| (p.x as c_long, p.y as c_long)).collect();
     super::host_ops::tiles_out(t, tiles)
 }
 

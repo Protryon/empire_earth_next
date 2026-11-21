@@ -558,9 +558,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_GOAL_LOCATION = 95;
 /// the complex unit `a`'s class is no building and moves (`GetMaxVelocity() > 0`)
 constexpr static const int32_t EE_AI_UNITS_HOST_MOVES = 96;
 
-/// the complex unit `a`'s `GetTerrainFlags`: forest (bit 0) and cliff (bit 1)
-constexpr static const int32_t EE_AI_UNITS_HOST_CROSSES = 97;
-
 /// `EEUnitBehavior::sTable.size()`, `sTable[a]`
 constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIORS = 98;
 
@@ -593,9 +590,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_T_BEHAVIORS = 123;
 /// `EeAiUnitsTiles` with the ends) -> the request (0: none)
 constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_NEW = 125;
 
-/// `gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, *(EECPASGFlags*)out)`
-constexpr static const int32_t EE_AI_UNITS_HOST_CITIZEN_FLAGS = 126;
-
 /// the request `a`'s `mIsDone`, `mPath.size()`, `mPath[b]` (x low, y high), `Dereference()`
 constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_DONE = 127;
 
@@ -604,14 +598,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_LEN = 128;
 constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TILE = 129;
 
 constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_DEREF = 130;
-
-/// `gPathManager.FindPath(a, gWorld.mMap, from, to, *(EEAIAStarBounds*)b, path, 1, 0x32, (EeAStarModifier*)c,
-/// NULL)` into the C++'s wall path (`out` the `EeAiUnitsTiles` with the ends); its size, its tile `a`
-constexpr static const int32_t EE_AI_UNITS_HOST_WALL_FIND = 131;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_WALL_LEN = 132;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_WALL_TILE = 133;
 
 /// the tech node `a`'s researched event; the event `a`'s effect count (-1: no event), its effect `b`; the effect
 /// `a`'s kind (bits 48..63), unit class (16..47) and attribute (0..15) (-1: none)
