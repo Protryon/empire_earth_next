@@ -231,6 +231,100 @@ constexpr static const uint32_t FILTER_HEIGHT_MAP = 10000;
 
 constexpr static const uint32_t TESTING_LAND_DISTRIBUTION = 10001;
 
+/// The world's calls (p: the C++ context, `EERMWorld`: the `EEMap`, the game's players and options; or the object a
+/// call names). Each is one statement of `ee_rmap_cpp` (`_f`: a float answer), see `EERandomMap.cpp`.
+enum class EeRmapCpp : uint32_t {
+  /// `mMap->mL195610` (the map's height in tiles)
+  MapHeight = 1,
+  /// `mMap->mL195614`
+  MapWidth,
+  MapTileCount,
+  /// `mMap->mSize`
+  MapSize,
+  /// `mMap->GetF1955F4()` (float)
+  MapTileUnit,
+  /// `mMap->GetTile(a0, a1)` (a pointer, 0 off the map)
+  MapTile,
+  MapIsEdgeTile,
+  MapPaintTerrain,
+  MapSetCliffTexture,
+  /// `UpdateCliffs(0, mSize, 0, mSize)`
+  MapUpdateCliffs,
+  MapSetCharacteristics,
+  MapRaisedCorners,
+  /// `mTerrainMesh.GetZ` (float)
+  MeshZ,
+  MeshSetZ,
+  MeshValidPoint,
+  MeshValidTile,
+  MeshWaterColorSet,
+  MeshVertexNormal,
+  MeshSetIsWater,
+  MeshShorelines,
+  TileTerrain,
+  /// `GetHeight()` (float)
+  TileHeight,
+  TileSetHeight,
+  /// `mUnits` (a pointer)
+  TileUnitNode,
+  /// `mUnits->mUnit`
+  TileFirstUnit,
+  PlayerCount,
+  /// `(*mGamePlayers)[a0]`
+  Player,
+  PlayerId,
+  PlayerEnemy,
+  PlayerMaxCitizens,
+  StartEpoch,
+  RuleMapSizeCount,
+  RuleMapSizeTiles,
+  RuleMapSizeScript,
+  ClassCount,
+  /// `gUnitClassTable[a0]`
+  Class,
+  ClassEnabled,
+  /// the name's bytes into the sink a0
+  ClassName,
+  ClassTileSizeMember,
+  ClassGetTileSize,
+  ClassIsLandCitizen,
+  ClassIsWall,
+  ClassAllowsTerrain,
+  ClassAIKind,
+  /// `CreateUnitAtPoint(a0 player, f0, f1, a1 map, f2)`
+  ClassCreateAtPoint,
+  /// `CreateUnitAtTile(a0 player, a1, a2, a3 map, f0)`
+  ClassCreateAtTile,
+  TerrainCount,
+  Terrain,
+  TerrainName,
+  TerrainUnitCount,
+  TerrainAmbientChance,
+  TerrainUnitClass,
+  CliffCount,
+  Cliff,
+  CliffName,
+  UnitComplex,
+  UnitGetComplex,
+  UnitPlayer,
+  UnitClassOf,
+  UnitResourceType,
+  UnitResourceAmount,
+  CxSetBuilt,
+  CxIsPaidFor,
+  CxSetPaidFor,
+  CxAnimation,
+  /// `gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\"` into the sink a0
+  ScriptDirectory,
+  /// `PlatFOpen(a0, "r")`'s whole text into the sink a1 -> false when missing
+  ReadText,
+  SetUsingCarbon,
+  LoadProgress,
+  /// `ESDebugOut("%s", a0)`
+  DebugOut,
+  Time,
+};
+
 /// The sink `EeRmapGameHost::wall_tiles` fills.
 struct EeRmapGameTiles;
 
@@ -511,8 +605,8 @@ struct EeRmapGameForest {
 struct EeRmapGameState {
   uint32_t grid_n;
   float *const *heights;
-  /// `mTiles`: `unsigned long` cells (the values fit 32 bits).
-  unsigned long *const *tiles;
+  /// `mTiles`: 32-bit cells (the generator writes `uint32_t`s).
+  uint32_t *const *tiles;
   uint8_t *const *claimed_tiles;
   uint8_t *const *valid_tiles;
   /// `mGridSize` (the grids hold one more row and column).
@@ -932,6 +1026,19 @@ uint32_t ee_rmap_game_grid_size(uint32_t height, uint32_t width, uint32_t curren
 
 /// `CreateGrids`' rings (see [`rings`]).
 EeRmapGameRings ee_rmap_game_rings(EeRmapRect flat_area, int32_t map_size, EeRmapGameRadii radii);
+
+/// The static `EERandomMap::CreateRandomMap` (its generator found): `context` the C++ world (`EERMWorld`), `map` its
+/// `EEMap*`, `script` the generator's script name (`length` bytes); the start location into `out` (x, y, z).
+///
+/// # Safety
+/// `script` holds `length` bytes; `out` has room for three floats; `context` is the world `ee_rmap_cpp` expects.
+void ee_rmap_create_random_map(void *context,
+                               void *map,
+                               uint32_t player,
+                               const uint8_t *script,
+                               size_t length,
+                               uint32_t seed,
+                               float *out);
 
 /// Appends `length` bytes to a read's file text.
 ///

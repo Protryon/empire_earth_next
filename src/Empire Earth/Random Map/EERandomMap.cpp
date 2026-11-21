@@ -1,9 +1,8 @@
 // C:\EEX\Empire Earth\Random Map\EERandomMap.cpp (__FILE__ at 0x28655a). The game's random map: the generator list
-// (EERandomMap::Initialize over the "rmap" PIMs and Data\Random Map Scripts\*.rmv), and one EERandomMap per try:
-// the generator PIM steps on the shared state (ee/EERandomMap.h, seen here as EERandomMapData), then the game-side
-// passes that turn the state into the EEMap's tiles, terrain and units. Those passes are Rust (ee_rmap game.rs, R6
-// data round 2) over the state's grid rows and the host below; the PIM steps, the generator list, the state's set-up
-// and PlaceWall stay here. Header: ee/EERandomMapClass.h.
+// (EERandomMap::Initialize over Data\Random Map Scripts\*.rmv) and CreateRandomMap. The random map itself is Rust
+// (ee_sim rmap object.rs, world lane round 1): the generator state, a try's set-up, the generator's steps, the game's
+// passes, PlaceWall and the retries; ee_rmap_cpp below answers its calls into the map, the players, the tables and the
+// game, one statement each. Header: ee/EERandomMapClass.h.
 #include <windows.h>
 #include <mbstring.h>
 #include <string.h>
@@ -25,475 +24,172 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
-#include "ee/EERandomMapView.h"
-#include "rust/sim/units.h"
-
-// EETerrainTable::sCliffTable[inIndex] (its COMDAT 0x28aaf7 follows the unit's code; provisional name)
-inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
-{
-    return EETerrainTable::sCliffTable[inIndex];
-}
+#include "rust/sim/rmap.h"
 
 std::vector<EERMGenerator> EERandomMap::sRandomMapGenerators;
 
-// gSpaceTerrain: the terrain named "Space" (0x5655f0; provisional name)
-unsigned long gSpaceTerrain;
-
-// ---- the game passes in Rust (ee_rmap game.rs): the state's grids by their rows, its lists copied, and the host
-// below for the map, the mesh, the tables and the players
-
-// A wall line's tiles (the feature claims' and PlaceWall's): a point every tile along the line, truncated to tiles,
-// the diagonal corners dropped (a line only), then the repeats
-static void EERMWallLineTiles(const GE2DPoint& inStart, const GE2DPoint& inEnd, std::vector<EETileCoordinate>& outTiles)
-{
-    std::vector<GE2DPoint> thePoints;
-    EETileCoordinate theTile;
-    outTiles.clear();
-    if (inStart != inEnd) {
-        inStart.InterpolateTo(inEnd, 1.0f, thePoints);
-        for (unsigned long i = 0; i < thePoints.size(); i++) {
-            theTile.mX = (long)thePoints[i].GetX();
-            theTile.mY = (long)thePoints[i].GetY();
-            outTiles.push_back(theTile);
-        }
-        ee_units_uu_drop_tiles(0, &outTiles);
-    } else {
-        theTile.mX = (long)inStart.GetX();
-        theTile.mY = (long)inStart.GetY();
-        outTiles.push_back(theTile);
-    }
-    ee_units_uu_drop_tiles(1, &outTiles);
-}
-
-// What the host's callbacks reach: the map, the game's players, the random map (PlaceWall, the water points)
-struct EERMGameContext {
+// The world a random map is made in (ee_rmap_cpp's p)
+struct EERMWorld {
     EEMap* mMap;
     std::vector<EEPlayer*>* mPlayers;
-    EERandomMap* mRandomMap;
+    EEGameOptions* mOptions;
 };
 
-static GE2DPoint EERMToPoint(EeRmapPoint inPoint)
+// A text into the Rust side's sink
+static void EERMText(int64_t inSink, const UString& inText)
 {
-    return GE2DPoint(inPoint.x, inPoint.y);
+    ee_rmap_script_bytes_push((EeRmapScriptBytes*)inSink, (const uint8_t*)(const char*)inText, inText.GetLength());
 }
 
-static EEMap* EERMMap(void* inContext)
+// A file's whole text as the C runtime's text mode reads it (fgets in the original script reader) -> false when missing
+static bool EERMReadText(const char* inPath, EeRmapScriptBytes* ioSink)
 {
-    return static_cast<EERMGameContext*>(inContext)->mMap;
+    FILE* theStream = PlatFOpen(inPath, "r");
+    if (!theStream)
+        return false;
+    char theBuffer[0x1000];
+    size_t theCount;
+    while ((theCount = fread(theBuffer, 1, sizeof(theBuffer), theStream)) != 0)
+        ee_rmap_script_bytes_push(ioSink, (const uint8_t*)theBuffer, theCount);
+    fclose(theStream);
+    return true;
 }
 
-static EEPlayer* EERMPlayerAt(void* inContext, uint32_t inIndex)
-{
-    return (*static_cast<EERMGameContext*>(inContext)->mPlayers)[inIndex];
-}
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define W ((EERMWorld*)p)
+#define TILE ((EEMapTile*)p)
+#define PL ((EEPlayer*)p)
+#define UC ((EEUnitClass*)p)
+#define TT ((EETerrainTable*)p)
+#define UN ((EEUnit*)p)
+#define CX ((EEComplexUnit*)p)
 
-static uint8_t EERMHostTile(void* inContext, uint32_t inX, uint32_t inY, EeRmapGameTile* outTile)
-{
-    EEMapTile* theTile = EERMMap(inContext)->GetTile(inX, inY);
-    if (theTile == NULL)
-        return 0;
-    outTile->terrain_type = (int32_t)theTile->mTerrainType;
-    outTile->height = theTile->GetHeight();
-    return 1;
-}
+extern "C" double ee_rmap_cpp_f(EeRmapCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
-static uint8_t EERMHostIsEdgeTile(void* inContext, int32_t inX, int32_t inY)
+// The random map's calls (ee_sim rmap object.rs EeRmapCpp): p the world or the object named, a the integers, f the floats
+extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EERMMap(inContext)->IsEdgeTile(inX, inY);
-}
-
-static void EERMHostPaintTerrain(void* inContext, int32_t inX, int32_t inY, int32_t inTexture)
-{
-    EERMMap(inContext)->PaintTerrain(inX, inY, inTexture);
-}
-
-static uint8_t EERMHostTerrain(void*, int32_t inTexture, EeRmapGameTerrainInfo* outInfo)
-{
-    EETerrainTable* theTable = EETerrainTable::Get(inTexture);
-    if (theTable == NULL)
-        return 0;
-    outInfo->unit_count = (uint32_t)theTable->GetNumUnitClasses();
-    outInfo->ambient_chance = (int32_t)theTable->mAmbientUnitChance;
-    return 1;
-}
-
-static int32_t EERMHostTerrainUnitClass(void*, int32_t inTexture, uint32_t inIndex)
-{
-    return (int32_t)EETerrainTable::Get(inTexture)->GetUnitClass(inIndex);
-}
-
-static float EERMHostMeshZ(void* inContext, uint32_t inX, uint32_t inY)
-{
-    return EERMMap(inContext)->mTerrainMesh.GetZ(inX, inY);
-}
-
-static void EERMHostMeshSetZ(void* inContext, uint32_t inX, uint32_t inY, float inZ)
-{
-    EERMMap(inContext)->mTerrainMesh.SetZ(inX, inY, inZ);
-}
-
-static uint8_t EERMHostMeshValidPoint(void* inContext, uint32_t inX, uint32_t inY)
-{
-    return EERMMap(inContext)->mTerrainMesh.GetIsValidPoint(inX, inY);
-}
-
-static uint8_t EERMHostMeshValidTile(void* inContext, uint32_t inX, uint32_t inY)
-{
-    return EERMMap(inContext)->mTerrainMesh.GetIsValidTile(inX, inY);
-}
-
-static void EERMHostMeshWaterColorSet(void* inContext, uint32_t inX, uint32_t inY)
-{
-    EERMMap(inContext)->mTerrainMesh.SetWaterColorSet(inX, inY);
-}
-
-static void EERMHostMeshVertexNormal(void* inContext, uint32_t inX, uint32_t inY)
-{
-    EERMMap(inContext)->mTerrainMesh.ComputeVertexNormal(inX, inY);
-}
-
-static void EERMHostMeshSetIsWater(void* inContext, uint32_t inX, uint32_t inY, uint8_t inIsWater)
-{
-    EERMMap(inContext)->mTerrainMesh.SetIsWater(inX, inY, inIsWater != 0);
-}
-
-static void EERMHostMeshShorelines(void* inContext, uint32_t inX, uint32_t inY)
-{
-    EERMMap(inContext)->mTerrainMesh.ComputeShorelines(inX, inY);
-}
-
-static void EERMHostSetTileHeight(void* inContext, uint32_t inX, uint32_t inY, float inHeight)
-{
-    EERMMap(inContext)->GetTile(inX, inY)->mHeight = inHeight;
-}
-
-static uint32_t EERMHostUnitClassCount(void*)
-{
-    return (uint32_t)EEUnitClassCount();
-}
-
-static uint8_t EERMHostUnitClass(void*, uint32_t inClass, EeRmapGameClass* outClass)
-{
-    EEUnitClass* theClass = inClass < EEUnitClassCount() ? gUnitClassTable[inClass] : NULL;
-    if (theClass == NULL)
-        return 0;
-    outClass->tile_size = (int32_t)theClass->GetTileSize();
-    outClass->is_land_citizen = EEUnitClassOfKind<EE_CLASS_KIND_LAND_CITIZEN>(theClass) != NULL;
-    outClass->is_wall = theClass->mIsWall;
-    return 1;
-}
-
-static uint8_t EERMHostClassAllowsTerrain(void*, uint32_t inClass, int32_t inTerrainType)
-{
-    return gUnitClassTable[inClass]->mTerrainTypes[inTerrainType];
-}
-
-static int32_t EERMHostMaxStartingCitizens(void* inContext, uint32_t inPlayer)
-{
-    return (int32_t)EERMPlayerAt(inContext, inPlayer)->mMaxStartingCitizens;
-}
-
-// A start unit: a complex unit is built and paid for; a resource unit with an amount answers its resource type (the
-// pass paints that resource's terrain under it)
-static int32_t EERMHostCreateUnitAtPoint(void* inContext, uint32_t inOwner, uint32_t inClass, float inX, float inY,
-                                         float inHeading)
-{
-    EEUnit* theUnit = gUnitClassTable[inClass]->CreateUnitAtPoint(EERMPlayerAt(inContext, inOwner), inX, inY,
-                                                                  EERMMap(inContext), inHeading);
-    if (theUnit == NULL)
-        return -1;
-    if (theUnit->mComplexUnit) {
-        theUnit->mComplexUnit->SetBuilt(1, 0, 0);
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (theComplexUnit->mIsPaidFor != true)
-            theComplexUnit->mIsPaidFor = true;
-        return -1;
+    typedef EeRmapCpp O;
+    switch (inOp) {
+    case O::MapHeight: return W->mMap->mL195610;
+    case O::MapWidth: return W->mMap->mL195614;
+    case O::MapTileCount: return W->mMap->GetTileCount();
+    case O::MapSize: return W->mMap->mSize;
+    case O::MapTile: return P64(W->mMap->GetTile((unsigned long)a[0], (unsigned long)a[1]));
+    case O::MapIsEdgeTile: return W->mMap->IsEdgeTile((long)a[0], (long)a[1]);
+    case O::MapPaintTerrain: W->mMap->PaintTerrain((long)a[0], (long)a[1], (long)a[2]);
+        break;
+    case O::MapSetCliffTexture: W->mMap->SetCliffTexture((long)a[0]);
+        break;
+    case O::MapUpdateCliffs: W->mMap->UpdateCliffs(0, W->mMap->mSize, 0, W->mMap->mSize);
+        break;
+    case O::MapSetCharacteristics: W->mMap->mMapCharacteristics = (unsigned long)a[0];
+        break;
+    case O::MapRaisedCorners: return W->mMap->GetNumRaisedCorners((unsigned long)a[0], (unsigned long)a[1]);
+    case O::MeshSetZ: W->mMap->mTerrainMesh.SetZ((unsigned long)a[0], (unsigned long)a[1], f[0]);
+        break;
+    case O::MeshValidPoint: return W->mMap->mTerrainMesh.GetIsValidPoint((unsigned long)a[0], (unsigned long)a[1]);
+    case O::MeshValidTile: return W->mMap->mTerrainMesh.GetIsValidTile((unsigned long)a[0], (unsigned long)a[1]);
+    case O::MeshWaterColorSet: W->mMap->mTerrainMesh.SetWaterColorSet((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::MeshVertexNormal: W->mMap->mTerrainMesh.ComputeVertexNormal((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::MeshSetIsWater: W->mMap->mTerrainMesh.SetIsWater((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
+        break;
+    case O::MeshShorelines: W->mMap->mTerrainMesh.ComputeShorelines((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::TileTerrain: return TILE->mTerrainType;
+    case O::TileSetHeight: TILE->mHeight = f[0];
+        break;
+    case O::TileUnitNode: return P64(TILE->mUnits);
+    case O::TileFirstUnit: return P64(TILE->mUnits->mUnit);
+    case O::PlayerCount: return (int64_t)W->mPlayers->size();
+    case O::Player: return P64((*W->mPlayers)[(size_t)a[0]]);
+    case O::PlayerId: return PL->GetPlayerID();
+    case O::PlayerEnemy: return PL->mEnemies[a[0]];
+    case O::PlayerMaxCitizens: return PL->mMaxStartingCitizens;
+    case O::StartEpoch: return W->mOptions->mEpochStart;
+    case O::RuleMapSizeCount: return (int64_t)EEGetRules().mGameOptions.mMapSizes.size();
+    case O::RuleMapSizeTiles: return EEGetRules().mGameOptions.mMapSizes[(size_t)a[0]].mTiles;
+    case O::RuleMapSizeScript: return EEGetRules().mGameOptions.mMapSizes[(size_t)a[0]].mScriptSize;
+    case O::ClassCount: return EEUnitClassCount();
+    case O::Class: return P64(gUnitClassTable[a[0]]);
+    case O::ClassEnabled: return UC->mIsEnabled;
+    case O::ClassName: EERMText(a[0], UC->mName);
+        break;
+    case O::ClassTileSizeMember: return UC->mTileSize;
+    case O::ClassGetTileSize: return UC->GetTileSize();
+    case O::ClassIsLandCitizen: return EEUnitClassOfKind<EE_CLASS_KIND_LAND_CITIZEN>(UC) != NULL;
+    case O::ClassIsWall: return UC->mIsWall;
+    case O::ClassAllowsTerrain: return UC->mTerrainTypes[a[0]];
+    case O::ClassAIKind: return UC->mAIKind;
+    case O::ClassCreateAtPoint: return P64(UC->CreateUnitAtPoint((EEPlayer*)a[0], f[0], f[1], (EEMap*)a[1], f[2]));
+    case O::ClassCreateAtTile: return P64(UC->CreateUnitAtTile((EEPlayer*)a[0], (long)a[1], (long)a[2], (EEMap*)a[3], f[0]));
+    case O::TerrainCount: return EETerrainTable::GetNumTables();
+    case O::Terrain: return P64(EETerrainTable::Get((unsigned long)a[0]));
+    case O::TerrainName: EERMText(a[0], TT->mName);
+        break;
+    case O::TerrainUnitCount: return TT->GetNumUnitClasses();
+    case O::TerrainAmbientChance: return TT->mAmbientUnitChance;
+    case O::TerrainUnitClass: return TT->GetUnitClass((unsigned long)a[0]);
+    case O::CliffCount: return EETerrainTable::GetNumCliffTerrains();
+    case O::Cliff: return P64(EETerrainTable::sCliffTable[a[0]]);
+    case O::CliffName: EERMText(a[0], ((EECliffTerrainTable*)p)->mName);
+        break;
+    case O::UnitComplex: return P64(UN->mComplexUnit);
+    case O::UnitGetComplex: return P64(UN->GetComplexUnit());
+    case O::UnitPlayer: return P64(UN->GetPlayer());
+    case O::UnitClassOf: return P64(UN->GetUnitClass());
+    case O::UnitResourceType: return UN->mResourceType;
+    case O::UnitResourceAmount: return UN->mResourceAmount;
+    case O::CxSetBuilt: CX->SetBuilt((long)a[0], (long)a[1], (long)a[2]);
+        break;
+    case O::CxIsPaidFor: return CX->mIsPaidFor;
+    case O::CxSetPaidFor: CX->mIsPaidFor = true;
+        break;
+    case O::CxAnimation: return CX->GetAnimation();
+    case O::ScriptDirectory: EERMText(a[0], gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\");
+        break;
+    case O::ReadText: return EERMReadText((const char*)a[0], (EeRmapScriptBytes*)a[1]);
+    case O::SetUsingCarbon: gUsingCarbon = a[0] != 0;
+        break;
+    case O::LoadProgress: gUserInterface->SetLoadProgress(f[0]);
+        break;
+    case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
+        break;
+    case O::Time: return TMGetTime();
+    default: return (int64_t)ee_rmap_cpp_f(inOp, p, a, f);
     }
-    if (theUnit->mResourceType >= kResourceFood && theUnit->mResourceType < 7 && theUnit->mResourceAmount > 0)
-        return (int32_t)theUnit->mResourceType;
-    return -1;
-}
-
-static void EERMHostCreateUnitAtTile(void* inContext, uint32_t inOwner, uint32_t inClass, int32_t inX, int32_t inY,
-                                     float inHeading)
-{
-    gUnitClassTable[inClass]->CreateUnitAtTile(EERMPlayerAt(inContext, inOwner), inX, inY, EERMMap(inContext), inHeading);
-}
-
-static void EERMHostPlaceWall(void* inContext, uint32_t inClass, EeRmapPoint inStart, EeRmapPoint inEnd,
-                              uint32_t inPlayer)
-{
-    static_cast<EERMGameContext*>(inContext)->mRandomMap->PlaceWall(
-        gUnitClassTable[inClass], EERMToPoint(inStart), EERMToPoint(inEnd), EERMPlayerAt(inContext, inPlayer));
-}
-
-static void EERMHostWallTiles(void*, EeRmapPoint inStart, EeRmapPoint inEnd, EeRmapGameTiles* ioSink)
-{
-    std::vector<EETileCoordinate> theTiles;
-    EERMWallLineTiles(EERMToPoint(inStart), EERMToPoint(inEnd), theTiles);
-    for (unsigned long i = 0; i < theTiles.size(); i++)
-        ee_rmap_game_tiles_push(ioSink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
-}
-
-static void EERMHostPushWaterPoint(void* inContext, float inX, float inY)
-{
-    GE2DPoint thePoint;
-    thePoint.SetX(inX);
-    thePoint.SetY(inY);
-    static_cast<EERMGameContext*>(inContext)->mRandomMap->mData.mWaterPoints.push_back(thePoint);
-}
-
-static EeRmapGameHost EERMHost(EERMGameContext* inContext)
-{
-    EeRmapGameHost theHost = {inContext, EERMHostTile, EERMHostIsEdgeTile, EERMHostPaintTerrain, EERMHostTerrain,
-        EERMHostTerrainUnitClass, EERMHostMeshZ, EERMHostMeshSetZ, EERMHostMeshValidPoint, EERMHostMeshValidTile,
-        EERMHostMeshWaterColorSet, EERMHostMeshVertexNormal, EERMHostMeshSetIsWater, EERMHostMeshShorelines,
-        EERMHostSetTileHeight, EERMHostUnitClassCount, EERMHostUnitClass, EERMHostClassAllowsTerrain,
-        EERMHostMaxStartingCitizens, EERMHostCreateUnitAtPoint, EERMHostCreateUnitAtTile, EERMHostPlaceWall,
-        EERMHostWallTiles, EERMHostPushWaterPoint};
-    return theHost;
-}
-
-// Runs one of the Rust passes over this map's state
-void EERandomMap::RunGamePass(void (*inPass)(EeRmapGameState* ioState, EeRmapGameHost* inHost))
-{
-    EERMGameContext theContext = {this->mMap, this->mGamePlayers, this};
-    EeRmapGameHost theHost = EERMHost(&theContext);
-    EERMGameView theView(this->mData, this->mMap->GetF1955F4(), gSpaceTerrain);
-    inPass(&theView.mState, &theHost);
-    theView.StoreSeeds(this->mData);
-}
-
-// Runs the generator's steps in order (positions, land and water, heights, terrain, resources, trees, features) with
-// load progress; returns the first step error, or 9 when the players end up cut off. The game's passes between them
-// are Rust's (ee_rmap game.rs): the water points and the space fill (Fn284149), the smoothing, the heights onto the
-// mesh (Fn288839), the painting with the ambient units, the feature claims, the start units and walls, the resource
-// objects (Fn288426).
-long EERandomMap::Generate()
-{
-    long theResult;
-    if ((this->mData.mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) {
-        this->mData.mNumTerrainBands = (unsigned long)(this->mData.mTerrainRegions[this->mData.mTerrainRegions.size() - 1].mTo + 1) / 100;
-        this->mData.mTerrainBandOffset = this->mData.mRandomIntegers.Generate(0, this->mData.mNumTerrainBands);
-    }
-    gUsingCarbon = (this->mData.mMapCharacteristics & kRMMapMarsMap) == kRMMapMarsMap;
-    theResult = EERMPIMGeneratePlayerPositions(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.1f);
-    theResult = EERMPIMGenerateNeutralPositions(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.14f);
-    theResult = EERMPIMCreatePlayerLandWaterMap(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.18f);
-    theResult = EERMPIMCreateNeutralLandWaterMap(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.22f);
-    this->mData.mWaterPoints.clear();
-    this->RunGamePass(ee_rmap_game_water_points);
-    theResult = EERMPIMCreateFlatMap(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.26f);
-    theResult = EERMPIMCreateHeightMap(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.3f);
-    theResult = EERMPIMGenerateShallows(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.34f);
-    theResult = this->FilterHeightMap();
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.38f);
-    this->RunGamePass(ee_rmap_game_smooth_heights);
-    this->mMap->SetCliffTexture(this->mData.mCliffTexture);
-    this->RunGamePass(ee_rmap_game_apply_heights);
-    if (!EERMArePlayersConnected(this->mData, this->mMap))
-        return 9;
-    unsigned long theStart = TMGetTime();
-    this->RunGamePass(ee_rmap_game_paint_tiles);
-    ESDebugOut("EERandomMap::PaintTiles Processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
-    this->mMap->UpdateCliffs(0, this->mMap->mSize, 0, this->mMap->mSize);
-    this->RunGamePass(ee_rmap_game_mark_features);
-    theResult = EERMPIMGenerateResources(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.4f + 0.02f);
-    theResult = EERMPIMCreateTrees(&this->mData);
-    if (theResult != 0)
-        return theResult;
-    gUserInterface->SetLoadProgress(0.46f);
-    this->RunGamePass(ee_rmap_game_place_features);
-    this->RunGamePass(ee_rmap_game_place_objects);
-    this->mMap->mMapCharacteristics = this->mData.mMapCharacteristics;
     return 0;
 }
 
-// Checks that every player's start area is dry, non-space land and that no two players stand closer than
-// kRMMinimumPlayerDistance (Rust: ee_rmap game.rs)
-bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
+extern "C" double ee_rmap_cpp_f(EeRmapCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    EERMGameContext theContext = {inGameMap, NULL, NULL};
-    EeRmapGameHost theHost = EERMHost(&theContext);
-    EERMGameView theView(inMap, inGameMap->GetF1955F4(), gSpaceTerrain);
-    return ee_rmap_game_players_connected(&theView.mState, &theHost);
-}
-
-// Creates a random map for the game options and the players (the generator is the Default one, linked in)
-EERandomMap::EERandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers)
-    : mGamePlayers(inPlayers), mOptions(inOptions)
-{
-}
-
-// Destroys the random map (members only)
-EERandomMap::~EERandomMap()
-{
-}
-
-// Sets up and generates the map from a generator and seed, and returns the player's start point (the centre for 0)
-void EERandomMap::CreateRandomMap(unsigned long inPlayer, unsigned long inGenerator, unsigned long inSeed,
-                                  EEMap* inMap, GE3DPoint& outLocation)
-{
-    unsigned long theStart = TMGetTime();
-    this->SetUp(inGenerator, inMap, inSeed);
-    this->Generate();
-    if (inPlayer > 0) {
-        outLocation.SetX(this->mData.mPlayers[inPlayer - 1].mPosition.GetX() + 0.5f);
-        outLocation.SetY(this->mData.mPlayers[inPlayer - 1].mPosition.GetY() + 0.5f);
-        outLocation.SetZ(this->mMap->GetTile(UMFloorUnsigned(outLocation.GetX()), UMFloorUnsigned(outLocation.GetY()))->GetHeight());
-    } else {
-        outLocation.SetX((inMap->mSize + 1.0f) * 0.5f);
-        outLocation.SetY((inMap->mSize + 1.0f) * 0.5f);
-        outLocation.SetZ(this->mMap->GetTile(inMap->mSize / 2, inMap->mSize / 2)->GetHeight());
+    typedef EeRmapCpp O;
+    switch (inOp) {
+    case O::MapTileUnit: return W->mMap->GetF1955F4();
+    case O::MeshZ: return W->mMap->mTerrainMesh.GetZ((unsigned long)a[0], (unsigned long)a[1]);
+    case O::TileHeight: return TILE->GetHeight();
+    default: ESVERIFY_AT(false, 1);
     }
-    ESDebugOut("EERandomMap::CreateRandomMap processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
+    return 0.0;
 }
 
-// Groups the players into teams: each player not yet placed starts a team with the later players it is not at war with
-void EERandomMap::CreateTeams()
-{
-    std::vector<unsigned char> theAssigned;
-    EERMTeam theTeam;
-    this->mData.mTeams.resize(0);
-    theAssigned.resize(this->mGamePlayers->size(), 0);
-    std::fill(theAssigned.begin(), theAssigned.end(), (unsigned char)false);
-    for (unsigned long i = 1; i < this->mGamePlayers->size(); i++) {
-        if (theAssigned[i])
-            continue;
-        theTeam.mPlayers.clear();
-        theTeam.mPositions.clear();
-        theTeam.mPlayers.push_back(i);
-        theTeam.mPositions.push_back(GE2DPoint());
-        theAssigned[i] = true;
-        for (unsigned long j = i + 1; j < this->mGamePlayers->size(); j++) {
-            if (theAssigned[j])
-                continue;
-            unsigned long theID = (*this->mGamePlayers)[j]->GetPlayerID();
-            if ((*this->mGamePlayers)[i]->mEnemies[theID] == 0) {
-                theTeam.AddPlayer(j);
-                theAssigned[j] = true;
-            }
-        }
-        this->mData.mTeams.push_back(theTeam);
-    }
-}
-
-// Adds a player to the team, with an unset position
-void EERMTeam::AddPlayer(long inPlayer)
-{
-    this->mPlayers.push_back(inPlayer);
-    this->mPositions.push_back(GE2DPoint());
-}
-
-// Marks which grid points are valid terrain-mesh points, logging the count
-void EERandomMap::CreateValidMap()
-{
-    unsigned long theCount = 0;
-    GETerrainMesh& theMesh = this->mMap->mTerrainMesh;
-    for (unsigned long x = 0; x < this->mData.mGridSize + 1; x++) {
-        for (unsigned long y = 0; y < this->mData.mGridSize + 1; y++) {
-            this->mData.mValidTiles[x][y] = theMesh.GetIsValidPoint(x, y);
-            if (this->mData.mValidTiles[x][y])
-                theCount++;
-        }
-    }
-    ESDebugOut("EERandomMap::CreateValidMap %ld valid tiles found\n", theCount);
-}
-
-// Builds a player's wall along a line: drops cliff and edge tiles, places shaped pieces on free dry tiles and joins
-// the player's fortifications already on the line
-void EERandomMap::PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, const GE2DPoint& inEnd,
-                            EEPlayer* inPlayer)
-{
-    std::vector<EETileCoordinate> theTiles;
-    std::vector<long> theCorners;
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EETileCoordinate> thePlaced;
-    EETileCoordinate theTile;
-    EERMWallLineTiles(inStart, inEnd, theTiles);
-    for (unsigned long j = 0; j < theTiles.size(); j++) {
-        long theX = theTiles[j].GetX();
-        long theY = theTiles[j].mY;
-        EEMapTile* theMapTile = this->mMap->GetTile(theX, theY);
-        if (theMapTile == NULL || theMapTile->mTerrainType == kTerrainCliff || this->mMap->IsEdgeTile(theX, theY)) {
-            theTiles.erase(theTiles.begin() + j);
-            j--;
-        }
-    }
-    EEPickWallPieces(theTiles, theCorners, this->mMap);
-    for (unsigned long k = 0; k < theTiles.size(); k++) {
-        long theX = theTiles[k].GetX();
-        long theY = theTiles[k].GetY();
-        EEMapTile* theMapTile = this->mMap->GetTile(theX, theY);
-        if (theMapTile == NULL)
-            continue;
-        if (theMapTile->mUnits == NULL) {
-            if (theMapTile->GetTerrainType() == kTerrainDeepWater || theMapTile->GetTerrainType() == kTerrainShallowWater)
-                continue;
-            EEComplexUnit* theUnit = inClass->CreateUnitAtTile(inPlayer, theX, theY, this->mMap, 3.1415927f)->GetComplexUnit();
-            theUnit->SetBuilt(1, 0, 0);
-            this->mMap->GetTile(theX, theY);
-            theTile.SetX(theX);
-            theTile.SetY(theY);
-            thePlaced.push_back(theTile);
-            long theRaised = this->mMap->GetNumRaisedCorners(theX, theY);
-            ee_units_uu_shape_wall((uint64_t)(uintptr_t)theUnit, theCorners[k], theRaised);
-        } else {
-            EEUnit* theOther = theMapTile->mUnits->mUnit;
-            EEComplexUnit* theComplexUnit = theOther->GetComplexUnit();
-            if (theOther->GetPlayer() == inPlayer && theOther->GetUnitClass()->mAIKind == kAIKindFortification && theComplexUnit &&
-                theComplexUnit->GetAnimation() != 0xb)
-                theUnits.push_back(theComplexUnit);
-        }
-    }
-    EEMakeWallJunctions(theUnits, thePlaced, inPlayer, this->mMap);
-}
-
-// Runs the generator's height-map filter when the script asks for it; returns its result
-long EERandomMap::FilterHeightMap()
-{
-    long theResult = 0;
-    if (this->mData.mFilterHeightMap)
-        theResult = EERMPIMFilterHeightMap(&this->mData);
-    return theResult;
-}
+#undef W
+#undef TILE
+#undef PL
+#undef UC
+#undef TT
+#undef UN
+#undef CX
 
 // Finds the named generator and generates the map, retrying with a new seed (11 tries at most) until the players
-// are connected; kErrorNoMoreFiles when its script names a generator other than the linked one (Default)
+// are connected (ee_sim rmap object.rs); kErrorNoMoreFiles when its script names a generator other than the linked
+// one (Default)
 long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>& inPlayers, unsigned long inPlayer,
                                   const UWideString& inGenerator, unsigned long inSeed, EEMap* inMap,
                                   GE3DPoint& outLocation)
 {
-    unsigned long theAttempts = 0;
-    long theWidth;
-    long theHeight;
-    inOptions->GetMapDimensions(theWidth, theHeight);
     unsigned long theGeneratorIndex = 0;
     while (theGeneratorIndex < EERandomMap::sRandomMapGenerators.size()) {
         if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)EERandomMap::sRandomMapGenerators[theGeneratorIndex].mName),
@@ -503,18 +199,16 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
     }
     ESVERIFY_AT(theGeneratorIndex < EERandomMap::sRandomMapGenerators.size(), 1340);
     EERMGenerator& theGenerator = EERandomMap::sRandomMapGenerators.begin()[theGeneratorIndex];
-    if (PlatStrICmp(theGenerator.mModuleName, EERMPIMGetName()) != 0)
+    if (PlatStrICmp(theGenerator.mModuleName, kEERMGeneratorName) != 0)
         return kErrorNoMoreFiles;
-    bool theConnected;
-    do {
-        EERandomMap* theMap = new EERandomMap(inOptions, &inPlayers);
-        theMap->CreateRandomMap(inPlayer, theGeneratorIndex, inSeed, inMap, outLocation);
-        theConnected = EERMArePlayersConnected(theMap->mData, inMap);
-        inSeed = theMap->mData.mRandomIntegers.Generate(0, 2000000);
-        theAttempts++;
-        delete theMap;
-    } while (!theConnected && theAttempts <= 10);
-    ESDebugOut("!Playable random map created after %ld attempts.\n", theAttempts);
+    EERMWorld theWorld = {inMap, &inPlayers, inOptions};
+    UString theScript(theGenerator.mName);
+    float theLocation[3];
+    ee_rmap_create_random_map(&theWorld, inMap, (uint32_t)inPlayer, (const uint8_t*)(const char*)theScript,
+                              theScript.GetLength(), (uint32_t)inSeed, theLocation);
+    outLocation.SetX(theLocation[0]);
+    outLocation.SetY(theLocation[1]);
+    outLocation.SetZ(theLocation[2]);
     return kErrorOK;
 }
 
@@ -571,8 +265,8 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
     FSFileSpec theFile;
     EERMGenerator theGenerator;
     EERandomMap::sRandomMapGenerators.clear();
-    theValidPlugIns.push_back(EERMPIMGetName());
-    ESDebugOut("EERandomMap::Initialize: %s random map generator detected.\n", (const char*)EERMPIMGetName());
+    theValidPlugIns.push_back(kEERMGeneratorName);
+    ESDebugOut("EERandomMap::Initialize: %s random map generator detected.\n", kEERMGeneratorName);
 
     theDirectory.SetVolume(gStartupVolume);
     theDirectory.SetDirectory(gStartupDirectory + "Data\\Random Map Scripts\\");
@@ -610,147 +304,6 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
     // a predicate: the sort COMDATs pass a 4-byte P (0x68b733 _Unguarded_insert, _Adjust_heap); provisional name
     std::sort(EERandomMap::sRandomMapGenerators.begin(), EERandomMap::sRandomMapGenerators.end(), std::less<EERMGenerator>());
     return 0;
-}
-
-// A name as the scripts name it: its words joined (ee_rmap rmv.rs); false for a name of spaces only
-static bool EERMScriptName(const UString& inName, UString& outName)
-{
-    std::vector<char> theJoined(inName.GetLength() + 1);
-    intptr_t theLength = ee_rmap_script_name(inName, inName.GetLength(), theJoined.data());
-    if (theLength < 0)
-        return false;
-    outName.Copy(theJoined.data(), 0, (unsigned long)theLength, 0, true);
-    return true;
-}
-
-// Fills the generator state from the game: seeds, map dimensions and size class, players, start epoch, and the unit,
-// terrain and cliff names (spaces removed) the scripts refer to
-void EERandomMap::InitializeValues(unsigned long inSeed)
-{
-    UString theName;
-    EERMNamedValue theCliff;
-    EERMNamedValue theTerrain;
-    EERMNamedEntry theUnit;
-    unsigned long i;
-    this->mData.mSeed = inSeed;
-    this->mData.mRandom.mSeed = inSeed;
-    this->mData.mRandomIntegers.mSeed = inSeed;
-    this->mData.mMaximumY = this->mMap->mL195610 << 1;
-    this->mData.mMaximumX = this->mMap->mL195614 << 1;
-    FSFileSpec& theDirectory = this->mData.mScriptDirectory;
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "Data\\Random Map Scripts\\");
-    this->mData.mTileCount = this->mMap->GetTileCount();
-    this->mData.mClumpCircles.resize(0);
-    this->mData.mPlayerCount = this->mGamePlayers->size() - 1;
-    this->mData.mStartEpoch = this->mOptions->mEpochStart;
-    unsigned long theHeight = this->mMap->mL195610;
-    {   // the scripts' size class: that of the smallest map size (gameoptions.yaml) at least this high
-        long theBest = -1;
-        for (const EEMapSizeRule& theSize : EEGetRules().mGameOptions.mMapSizes)
-            if ((unsigned long)theSize.mTiles >= theHeight &&
-                (theBest < 0 || theSize.mTiles < EEGetRules().mGameOptions.mMapSizes[theBest].mTiles))
-                theBest = &theSize - &EEGetRules().mGameOptions.mMapSizes[0];
-        if (theBest >= 0)
-            this->mData.mMapSize = EEGetRules().mGameOptions.mMapSizes[theBest].mScriptSize;
-        else
-            ESVERIFY_AT(false, 1735);
-    }
-    for (i = 0; i < EEUnitClassCount(); i++) {
-        EEUnitClass* theClass = gUnitClassTable[i];
-        if (theClass == NULL || !theClass->mIsEnabled)
-            continue;
-        if (!EERMScriptName(theClass->mName, theUnit.mName))
-            continue;
-        theUnit.mUnitClass = i;
-        theUnit.mSize = theClass->mTileSize <= 1 ? 1 : theClass->mTileSize;
-        this->mData.mUnitNames.push_back(theUnit);
-    }
-    this->mData.mFeatures.clear();
-    this->mData.mTerrainNames.clear();
-    for (i = 0; i < EETerrainTable::GetNumTables(); i++) {
-        EETerrainTable* theTable = EETerrainTable::Get(i);
-        if (theTable == NULL)
-            continue;
-        if (!EERMScriptName(theTable->mName, theName))
-            continue;
-        theTerrain.mName = theName;
-        theTerrain.mValue = i;
-        this->mData.mTerrainNames.push_back(theTerrain);
-        if (PlatStrICmp(theName, "Space") == 0)
-            gSpaceTerrain = i;
-    }
-    std::vector<EERMNamedValue>& theCliffs = this->mData.mCliffNames;
-    theCliffs.clear();
-    for (i = 0; i < EETerrainTable::GetNumCliffTerrains(); i++) {
-        EECliffTerrainTable* theTable = EEGetCliffTerrainTable(i);
-        if (theTable == NULL)
-            continue;
-        if (!EERMScriptName(theTable->mName, theCliff.mName))
-            continue;
-        theCliff.mValue = i;
-        theCliffs.push_back(theCliff);
-    }
-}
-
-// Sizes the generator grids to the power of two above the map (64 to 1024), resets them to the initial elevation and
-// sets up the player, neutral and moon rings (the size and the rings: ee_rmap game.rs)
-void EERandomMap::CreateGrids()
-{
-    this->mData.mGridSize = ee_rmap_game_grid_size((uint32_t)(this->mMap->mL195610), (uint32_t)(this->mMap->mL195614),
-                                                   (uint32_t)this->mData.mGridSize);
-    this->mData.mClaimedTiles.resize(this->mData.mGridSize + 1);
-    this->mData.mTiles.resize(this->mData.mGridSize + 1);
-    this->mData.mHeights.resize(this->mData.mGridSize + 1);
-    this->mData.mFlatTiles.resize(this->mData.mGridSize + 1);
-    this->mData.mValidTiles.resize(this->mData.mGridSize + 1);
-    unsigned long x;
-    for (x = 0; x < this->mData.mGridSize + 1; x++) {
-        this->mData.mClaimedTiles[x].resize(this->mData.mGridSize + 1, 0);
-        this->mData.mTiles[x].resize(this->mData.mGridSize + 1, 0);
-        this->mData.mHeights[x].resize(this->mData.mGridSize + 1, 0.0f);
-        this->mData.mFlatTiles[x].resize(this->mData.mGridSize + 1, 0);
-        this->mData.mValidTiles[x].resize(this->mData.mGridSize + 1, 0);
-    }
-    for (x = 0; x < this->mData.mGridSize + 1; x++) {
-        for (unsigned long y = 0; y < this->mData.mGridSize + 1; y++) {
-            this->mData.mClaimedTiles[x][y] = 0;
-            this->mData.mTiles[x][y] = 0;
-            this->mData.mHeights[x][y] = this->mData.mInitialElevation;
-            this->mData.mFlatTiles[x][y] = 0;
-            this->mData.mValidTiles[x][y] = 0;
-        }
-    }
-    EeRmapRect theFlat = {this->mData.mFlatArea.GetLeft(), this->mData.mFlatArea.GetBottom(),
-                          this->mData.mFlatArea.GetRight(), this->mData.mFlatArea.GetTop()};
-    EeRmapGameRadii theRadii = {this->mData.mPlayerInnerRadius, this->mData.mPlayerOuterRadius,
-                                this->mData.mNeutralInnerRadius, this->mData.mNeutralOuterRadius};
-    EeRmapGameRings theRings = ee_rmap_game_rings(theFlat, (int32_t)this->mMap->mSize, theRadii);
-    EERMRing* theOut[3] = {&this->mData.mRing, &this->mData.mNeutralRing, &this->mData.mMoonRing};
-    const EeRmapRing* theIn[3] = {&theRings.ring, &theRings.neutral_ring, &theRings.moon_ring};
-    this->mData.mHalfMapSize = theRings.half_map_size;
-    for (int i = 0; i < 3; i++) {
-        theOut[i]->mCenter = GE2DPoint(theIn[i]->center.x, theIn[i]->center.y);
-        theOut[i]->mMinRadius = theIn[i]->min_radius;
-        theOut[i]->mMaxRadius = theIn[i]->max_radius;
-    }
-}
-
-// Prepares a generation: fills the state, applies the generator script's values, then builds the grids, valid map and
-// teams; returns the script status
-long EERandomMap::SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long inSeed)
-{
-    UString theScript;
-    this->mMap = inMap;
-    this->InitializeValues(inSeed);
-    theScript = EERandomMap::sRandomMapGenerators[inGenerator].mName;
-    long theResult = EERMPIMSetRandomMapValues(&this->mData, theScript);
-    if (theResult == 0) {
-        this->CreateGrids();
-        this->CreateValidMap();
-        this->CreateTeams();
-    }
-    return theResult;
 }
 
 // Drops the registered random-map generators (at Empire Earth.cpp's shutdown); returns 0

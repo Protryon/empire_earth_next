@@ -1,4 +1,6 @@
-// C:\EEX\Empire Earth\Random Map\Random Map Generators\Default\Default.cpp: the plug-in's entry points, the "rmap" PIM.
+// The rmap gate's C++ adapter: the game's Random Map Generators\Default\Default.cpp (the "rmap" PIM's entry points) until
+// the world lane's round 1 moved the random map whole to Rust (ee_sim rmap object.rs); the gate drives the generator
+// through it.
 // The generator itself is Rust (rust/crates/ee_sim/src/rmap, RUST_PLAN R3.4): each step copies EERandomMap into flat arrays,
 // runs in Rust and copies the result back (ee_rmap::ffi, EeRmapState); the .rmv script reader is Rust too
 // (ee_rmap rmv.rs, over the host below).
@@ -11,7 +13,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/U2DGeometry.h"
-#include "ee/EERandomMap.h"
+#include "rmap_state.h"
 #include "rust/sim/rmap.h"
 
 static UString gName("Default");
