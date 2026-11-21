@@ -1450,11 +1450,9 @@ extern "C" void ee_screenscpp_sc_pgs_new_manager(uintptr_t inForm) { F(inForm)->
 extern "C" bool ee_screenscpp_sc_pgs_is_bitmap(uintptr_t inForm, uint32_t inControl)
 { return dynamic_cast<UIBitmap*>(F(inForm)->GetControl(inControl)) != NULL; }
 extern "C" void ee_screenscpp_sc_pgs_protocol() { NEProtocol::GetProtocol(0, sPgsProtocol); }
-extern "C" void ee_screenscpp_sc_pgs_sci_delete() { EEUISCIFormManager::Get()->DeleteObjects(); }
 extern "C" int32_t ee_screenscpp_sc_preferences_save() { return (int32_t)gGamePreferences.Save(); }
 extern "C" void ee_screenscpp_sc_pdcs_fill(uintptr_t inForm, uint32_t inControl)
 { gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(F(inForm)->GetControl(inControl))); }
-extern "C" void ee_screenscpp_sc_pause_game() { gWorld.PauseGame(); }
 extern "C" uintptr_t ee_screenscpp_sc_pdcs_control(uint32_t inIndex)
 { return (uintptr_t)EEScreensPdcsControl(inIndex); }
 extern "C" void ee_screenscpp_sc_pdcs_clear_stats() { EEScreensPdcsControl(4)->DeleteAllEntries(); }
@@ -1644,7 +1642,6 @@ extern "C" void ee_screenscpp_tt_generator_display(uint32_t inIndex, void* inOut
 { EEShimOut(inOut, UWideString((const char*)EERMGetGeneratorDisplayName((unsigned long)inIndex))); }
 extern "C" void ee_screenscpp_tt_generator_name(uint32_t inIndex, void* inOut)
 { EEShimOut(inOut, UWideString(EERMGetGeneratorName(inIndex))); }
-extern "C" uintptr_t ee_screenscpp_tt_engine_ai(uint32_t inChoice) { return (uintptr_t)EECPAIByChoice(inChoice); }
 extern "C" void ee_screenscpp_tt_engine_ai_name(uintptr_t inAi, void* inOut)
 { EEShimOut(inOut, UWideString(EECPAIText(reinterpret_cast<const EECPAIEntry*>(inAi)->name, reinterpret_cast<const EECPAIEntry*>(inAi)->name_len).c_str())); }
 
@@ -1657,7 +1654,6 @@ extern "C" void ee_screenscpp_rc_ui_music_volume(float inVolume) { gUIManager->S
 extern "C" void ee_screenscpp_rc_music_start() { gMusicManager->Start(); }
 extern "C" void ee_screenscpp_rc_music_stop() { gMusicManager->Stop(); }
 extern "C" void ee_screenscpp_rc_mouse_sensitivity(float inValue) { gMouse->SetSensitivity(inValue); }
-extern "C" void ee_screenscpp_rc_left_handed(bool inLeft) { UIManager::SetMouseLeftHanded(inLeft); }
 extern "C" void ee_screenscpp_rc_apply_port() { EEApplyPortSettings(gGamePreferences.GetSettings()); }
 extern "C" void ee_screenscpp_rc_mip_filter(uint32_t inMode) { gTextureManager->UpdateMIPFilterMode(inMode); }
 extern "C" void ee_screenscpp_rc_texture_resolution(int32_t inValue) { EESetTextureResolution(inValue); }
@@ -1666,10 +1662,6 @@ extern "C" uint32_t ee_screenscpp_rc_display_rasterizers() { return (uint32_t)gD
 extern "C" uint32_t ee_screenscpp_rc_display_screens(uint32_t inRasterizer)
 { return (uint32_t)gDisplayRasterizers[inRasterizer].mScreens.size(); }
 extern "C" void ee_screenscpp_rc_external_lobby() { EEStartExternalLobby(); }
-extern "C" void ee_screenscpp_rc_delete_editor(uintptr_t inManager)
-{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->DeleteScenarioEditor(); }
-extern "C" void ee_screenscpp_rc_create_editor(uintptr_t inManager)
-{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->CreateScenarioEditor(); }
 extern "C" void ee_screenscpp_rc_start_editor(uintptr_t inManager)
 { static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->StartScenarioEditor(); }
 extern "C" void ee_screenscpp_rc_forget_main_form() { gSavedMainGameForm = NULL; }
@@ -1679,9 +1671,6 @@ extern "C" void ee_screenscpp_rc_campaign_all_open(bool inOpen)
 extern "C" void ee_screenscpp_rc_save_send() { EEScreensSendSave(sSaveObject); }
 extern "C" void ee_screenscpp_rc_save_post() { EEScreensPostSave(sSaveObject); }
 extern "C" void ee_screenscpp_rc_open_saved_main_form() { gUserInterface->OpenForm(gSavedMainGameForm); }
-extern "C" void ee_screenscpp_rc_si_blink_off() { EEUISCIFormManager::Get()->SetBlinking(false); }
-extern "C" uint32_t ee_screenscpp_rc_si_open_map() { return (uint32_t)EEUISCIFormManager::Get()->OpenMap(); }
-extern "C" uint32_t ee_screenscpp_rc_si_open_sound() { return (uint32_t)EEUISCIFormManager::Get()->OpenSound(); }
 extern "C" uint32_t ee_screenscpp_rc_si_get_scenario()
 { return (uint32_t)EEUISCIFormManager::Get()->GetScenario(EEScreensScenario()); }
 extern "C" void ee_screenscpp_rc_si_post_load() { gUserInterface->PostLoadSavedGame(EEScreensScenario()); }

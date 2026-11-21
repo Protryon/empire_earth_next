@@ -751,8 +751,6 @@ extern "C" void ee_screenscpp_mf_cancel_button_up(uintptr_t inRec, uintptr_t inE
 { R(inRec)->mForm->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerButtonUp, reinterpret_cast<UIEvent*>(inEvent)); }
 extern "C" void ee_screenscpp_mf_cancel_right_button_up(uintptr_t inRec, uintptr_t inEvent)
 { R(inRec)->mForm->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerRightButtonUp, reinterpret_cast<UIEvent*>(inEvent)); }
-extern "C" void ee_screenscpp_intro_set_blinking(bool inBlinking)
-{ EEUISCIFormManager::Get()->SetBlinking(inBlinking); }
 extern "C" void ee_screenscpp_mf_main_group_open(uintptr_t inRec)
 { static_cast<EEUIFMGMainGroup*>(R(inRec)->mForm->mGroups[0])->Open(R(inRec)->mForm); }
 extern "C" void ee_screenscpp_mf_main_group_clear_l20(uintptr_t inRec)

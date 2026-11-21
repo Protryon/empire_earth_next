@@ -781,7 +781,6 @@ shims! {
     fn gfx_clear_render_objects() = ee_screenscpp_gfx_clear_render_objects;
     fn mf_cancel_button_up(rec: usize, event: usize) = ee_screenscpp_mf_cancel_button_up;
     fn mf_cancel_right_button_up(rec: usize, event: usize) = ee_screenscpp_mf_cancel_right_button_up;
-    fn intro_set_blinking(blinking: bool) = ee_screenscpp_intro_set_blinking;
     fn mf_main_group_open(rec: usize) = ee_screenscpp_mf_main_group_open;
     fn mf_main_group_clear_l20(rec: usize) = ee_screenscpp_mf_main_group_clear_l20;
     fn post_graphics_all() = ee_screenscpp_post_graphics_all;
@@ -1731,10 +1730,10 @@ shims! {
     fn sc_pgs_new_manager(form: usize) = ee_screenscpp_sc_pgs_new_manager;
     fn sc_pgs_is_bitmap(form: usize, control: u32) -> bool = ee_screenscpp_sc_pgs_is_bitmap;
     fn sc_pgs_protocol() = ee_screenscpp_sc_pgs_protocol;
-    fn sc_pgs_sci_delete() = ee_screenscpp_sc_pgs_sci_delete;
     fn sc_preferences_save() -> i32 = ee_screenscpp_sc_preferences_save;
     fn sc_pdcs_fill(form: usize, control: u32) = ee_screenscpp_sc_pdcs_fill;
-    fn sc_pause_game() = ee_screenscpp_sc_pause_game;
+    // (the shim sweep: Rust called directly, by its symbol)
+    fn world_pause(pause: bool) -> core::ffi::c_long = ee_gamecpp_world_pause;
     fn sc_pdcs_control(index: u32) -> usize = ee_screenscpp_sc_pdcs_control;
     fn sc_pdcs_clear_stats() = ee_screenscpp_sc_pdcs_clear_stats;
     fn sc_pdcs_set_upgrades() = ee_screenscpp_sc_pdcs_set_upgrades;
@@ -1845,7 +1844,7 @@ shims! {
     fn tt_text_out(out: EeScreensShimOut) = ee_screenscpp_tt_text_out;
     fn tt_generator_display(index: u32, out: EeScreensShimOut) = ee_screenscpp_tt_generator_display;
     fn tt_generator_name(index: u32, out: EeScreensShimOut) = ee_screenscpp_tt_generator_name;
-    fn tt_engine_ai(choice: u32) -> usize = ee_screenscpp_tt_engine_ai;
+    fn tt_engine_ai(choice: u64) -> usize = ee_cp_engine_by_choice;
     fn tt_engine_ai_name(ai: usize, out: EeScreensShimOut) = ee_screenscpp_tt_engine_ai_name;
     // EEScreens.cpp's root calls (screens_calls.rs)
     fn rc_resize_menu() = ee_screenscpp_rc_resize_menu;
@@ -1855,7 +1854,7 @@ shims! {
     fn rc_music_start() = ee_screenscpp_rc_music_start;
     fn rc_music_stop() = ee_screenscpp_rc_music_stop;
     fn rc_mouse_sensitivity(value: f32) = ee_screenscpp_rc_mouse_sensitivity;
-    fn rc_left_handed(left: bool) = ee_screenscpp_rc_left_handed;
+    fn rc_left_handed(left: bool) = ee_ui_manager_set_mouse_left_handed;
     fn rc_apply_port() = ee_screenscpp_rc_apply_port;
     fn rc_mip_filter(mode: u32) = ee_screenscpp_rc_mip_filter;
     fn rc_texture_resolution(value: i32) = ee_screenscpp_rc_texture_resolution;
@@ -1863,8 +1862,8 @@ shims! {
     fn rc_display_rasterizers() -> u32 = ee_screenscpp_rc_display_rasterizers;
     fn rc_display_screens(rasterizer: u32) -> u32 = ee_screenscpp_rc_display_screens;
     fn rc_external_lobby() = ee_screenscpp_rc_external_lobby;
-    fn rc_delete_editor(manager: usize) = ee_screenscpp_rc_delete_editor;
-    fn rc_create_editor(manager: usize) = ee_screenscpp_rc_create_editor;
+    fn rc_delete_editor(manager: usize) = ee_screens_um_delete_editor;
+    fn rc_create_editor(manager: usize) = ee_screens_um_create_editor;
     fn rc_start_editor(manager: usize) = ee_screenscpp_rc_start_editor;
     fn rc_forget_main_form() = ee_screenscpp_rc_forget_main_form;
     fn rc_show_single_player() = ee_screenscpp_rc_show_single_player;
@@ -1872,9 +1871,6 @@ shims! {
     fn rc_save_send() = ee_screenscpp_rc_save_send;
     fn rc_save_post() = ee_screenscpp_rc_save_post;
     fn rc_open_saved_main_form() = ee_screenscpp_rc_open_saved_main_form;
-    fn rc_si_blink_off() = ee_screenscpp_rc_si_blink_off;
-    fn rc_si_open_map() -> u32 = ee_screenscpp_rc_si_open_map;
-    fn rc_si_open_sound() -> u32 = ee_screenscpp_rc_si_open_sound;
     fn rc_si_get_scenario() -> u32 = ee_screenscpp_rc_si_get_scenario;
     fn rc_si_post_load() = ee_screenscpp_rc_si_post_load;
     fn rc_campaign_update_checksum() = ee_screenscpp_rc_campaign_update_checksum;
