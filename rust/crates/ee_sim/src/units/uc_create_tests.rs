@@ -253,3 +253,10 @@ fn tile_pairs_round_trip_negative_tiles() {
     assert_eq!(p as i32, -10000);
     assert_eq!((p >> 32) as i32, 7);
 }
+
+#[test]
+fn the_launch_tags_are_ee_combat_tags() {
+    // EE_COMBAT_TAG(a, b, c, d) = a | b << 8 | c << 16 | d << 24
+    assert_eq!(TAG_CBLS, 0x534c_4243);
+    assert_eq!(TAG_CBLT, 0x544c_4243);
+}

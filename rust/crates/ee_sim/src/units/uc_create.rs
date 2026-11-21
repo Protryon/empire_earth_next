@@ -270,8 +270,9 @@ const ACTION_PREPARE_TO_MOVE: i64 = 8000;
 /// `kWorldTileStrayDistance` (the world table's row)
 const WORLD_TILE_STRAY_DISTANCE: i64 = 78;
 /// `EE_COMBAT_TAG('C', 'B', 'L', 'S')`, `EE_COMBAT_TAG('C', 'B', 'L', 'T')`
-const TAG_CBLS: u64 = u32::from_be_bytes(*b"CBLS") as u64;
-const TAG_CBLT: u64 = u32::from_be_bytes(*b"CBLT") as u64;
+/// `EE_COMBAT_TAG('C', 'B', 'L', 'S')`: the first letter in the low byte
+const TAG_CBLS: u64 = u32::from_le_bytes(*b"CBLS") as u64;
+const TAG_CBLT: u64 = u32::from_le_bytes(*b"CBLT") as u64;
 /// `EE_COMBAT_LAUNCH_KIND_SHOT`, `EE_COMBAT_LAUNCH_KIND_TURRET`
 const LAUNCH_KIND_SHOT: i32 = crate::combat::launch::EE_COMBAT_LAUNCH_KIND_SHOT;
 const LAUNCH_KIND_TURRET: i32 = crate::combat::launch::EE_COMBAT_LAUNCH_KIND_TURRET;
