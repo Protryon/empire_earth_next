@@ -195,8 +195,7 @@ fn an_icbm_dies_silently() {
 
 #[test]
 fn a_safe_location_is_sought_by_computer_players_only() {
-    let mut h = Mock::default();
-    h.escape = Some([1.0, 2.0]);
+    let mut h = Mock { escape: Some([1.0, 2.0]), ..Default::default() };
     find_safe_location(&mut h, 1, 2);
     assert_eq!(h.ops(), [EE_UNITS_UC_COMPUTER_PLAYER]);
     let mut h = Mock::default().answer(EE_UNITS_UC_COMPUTER_PLAYER, 9).answer(EE_UNITS_UC_NEW_LOCATION_2D, 44);
