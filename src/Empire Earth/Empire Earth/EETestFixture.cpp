@@ -680,8 +680,8 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
         if (thePlayer == NULL || thePlayer->mActiveGroup == NULL)
             return 0;
-        for (EEComplexUnit* theUnit : thePlayer->mActiveGroup->mUnits)
-            ee_fixture_sink_id(c->sink, Handle(theUnit));
+        for (unsigned long u = 0; u < thePlayer->mActiveGroup->GetNumUnits(); u++)
+            ee_fixture_sink_id(c->sink, Handle(thePlayer->mActiveGroup->GetUnit(u)));
         return 1;
     }
     case EeFixtureOp::UnitById:

@@ -36203,3 +36203,98 @@ On the final tree (merged with origin/rust 9e024ffb3, batch 10: a clean merge, n
 - The chain's first attempt checked the captures without `--seeds 2-3` (a false FAIL on the missing seeds 4-7) and a
   killed chain kept running under its bash and held EE-SIM.exe through the next build's link: stop a chain's whole
   process tree (by its PIDs under the worktree), never by image name (other lanes' EE-SIMs).
+## The groups lane, round 1: EEGroup and its kinds as Rust objects; EEPlayer's group, selection and RefreshUpgrades bodies and EEUnitClassUpgrade's media in Rust (ee_sim units group_obj.rs, group_host.rs, selection.rs, upgrade_media.rs; branch rust-groups1, 2026-11-20)
+
+A new lane carved out of the Units and Game core lanes for one round. Numbers: docs/progress/groups.md. Net -2,121 C++
+lines (src and include, the generated include/rust aside: 2,585 deleted, 464 added, nearly all of the added lines
+one-statement shims, one-call forwarders and comments); the target was 3,000.
+
+- **A C++ class can name a Rust allocation.** `EEGroup` is `class EEGroup : public EeUnitsGroup` with no data, a
+  deleted constructor and destructor and every member one inline call; `EESavedGroup`, `EESelectedGroup` and
+  `EEActiveGroup` derive from it with no data either, so a `static_cast` between them is the identity and every
+  `EEGroup*` in the game (the players' vectors, a unit's `mActiveGroup`, the hot-key array) holds the Rust object's
+  address. The cbindgen'd head `EeUnitsGroup` carries what the C++ reads in place (the player, the formation, the
+  kind flags, a selection's saved group and change time, an active group's goal and its `mFields` record); the
+  allocation is `#[repr(C)] struct Alloc { head, data }`, the rest (Vecs, BTreeMaps) Rust's only. `New` replaces
+  `new`; the last `Dereference` destroys it with its kind's destructor first.
+- **Virtual calls inside a body stay the kind's.** The original's base bodies call virtuals (`EEGroup::RepairPointers`
+  and `CopyUnits` call `this->Add`, `this->Clear`); the Rust bodies dispatch on `mGroupKind` at the same places.
+  One consequence kept on purpose: a selection's `RepairPointers` adds its units through `AddIfAbsent`, which forgets
+  the saved group, so a repaired selection with units always ends with `mGroups[0]` as its saved group.
+- **Iterate a map that the callee may change by key, not by iterator.** `MoveAlongFoundPaths` erases a request and
+  then calls `MoveAlong` (C++ units): the Rust loop takes the next key above the last one each time, which visits
+  exactly what the original's `it = erase(it)` visited.
+- **`std::sort` stays MSVC's.** Both sorters (EESGUnitSorter, EEAGIncreasingVelocityUnitSorter) have ties (units of
+  one class and health, equal speeds); `units::msvc_sort` reproduces the order. The keys are read once per unit
+  before the sort (the comparisons only read).
+- **One host for many C++ objects.** `ee_units_group_host` (EEGroup.cpp) is ~60 one-statement cases: the units'
+  and formations' and paths' reference counts, `EEFormation::Create`/`Place`, the path and continent managers, the
+  interface's posts, the map's outlines, the saved path requests, `EEAwaitAutoPathRequest`/`EEAfterLoad` (each a
+  lambda calling one Rust entry point), the selection's sounds and doppelgangers, RefreshUpgrades' setters.
+  Everything a body only reads (a unit's hit points, class, stats, tile; the current player; the player's units)
+  comes from the world views.
+- **cbindgen sees `extern` blocks**: declaring a Rust `#[no_mangle]` function of another module in an `extern "C"`
+  block duplicated it in the header ("declared twice"); call it by its Rust path (`pub(crate) mod game`).
+- **`improper_ctypes`**: a `*mut RustStruct` in a `#[repr(C)]` record passed to an `extern` C function is refused;
+  the list pointer is a `*mut c_void`.
+- **header_consts' check** reads a const named like `GOAL_UNLOAD` as `kGoalUnload`; name the copy after the C++
+  constant (`GOAL_UNLOAD_TRANSPORT`).
+- **Media under two locks from Rust.** EEUnitClassUpgrade's media bodies run on the loading threads: Rust reads the
+  C++ busy flags with `read_volatile`/`write_volatile` through the member's address, the eight media members as one
+  pointer array (static_asserts of their contiguity), the counts in the record; the locks and `PlatSleep(1)` are host
+  cases. Only a game with media exercises it (EE-SIM loads none).
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Where the original read out of bounds
+  or dereferenced an end iterator, the Rust answers nothing: a saved-group index past the 20 slots on a repair gives
+  none, `GetContinent` of an empty selection 0, a removed unit whose type has no count changes no count. A duplicate
+  path request id is still dropped and its request never released, as `std::map::insert` did.
+- **Only the tours exercise**: the selection members' sounds and the HUD's group reads (GroupView over the objects),
+  the area outlines of a selected building, the media loads and unloads, the hot-key buttons' posts.
+- **Call-site edits outside the lane** (each a line or two): EEARust.cpp (GetFirstUnit's definition gone),
+  EEMessage.cpp (GetSavedGroup, GetFormation), EETestFixture.cpp (the active group's units by GetUnit),
+  EESMEffect.cpp and EEActiveGroupSweep.cpp (`New`, `mFields.mAction`), EEComplexUnit.cpp (RefreshPath by
+  GetUnitPath; an out-of-synch line's `mFields.mAction`), EEUGRustCombat.cpp (an include), EEUnitHost.cpp (21 group
+  functions deleted), the HUD's test (hud_views_tests.rs: a real group), pick_sweep.rs (`pub(crate) mod game`).
+## The groups lane, round 2: the player's group lists as a Rust object; EEPlayer's bodies, its hosts' compound cases and EEUnitClassImprovement in Rust (ee_sim units group_obj.rs, player_body.rs, player_split.rs, player_save_split.rs, improvement.rs; branch rust-groups2, 2026-11-20)
+
+Numbers: docs/progress/groups.md. C++ logic lines (logic_lines.py) 85,852 -> 85,080 (-772); lines -224 (944 deleted, 720
+added: 269 one-statement host cases, the list accessors, one-call members); the target was -3,000. The merge of
+rust-batch10 kept units round 5's deletion of EEActiveGroupSweep.cpp: its host (EEPhysicsSweep.cpp) makes the groups
+as the group objects.
+
+- **A compound host case becomes one-statement cases without touching its callers.** The player's Rust bodies
+  (player.rs, player_units.rs, player_diplomacy.rs, player_save.rs, player_tick.rs) and their tests' mock hosts ask
+  operations such as `EE_UNITS_PLAYER_CAMOUFLAGE(on)` or `EE_UNITS_PLAYER_SAVE_TECH_LOAD`, whose C++ cases held an
+  if/else, a loop or several statements. The game's callback wrapper (`FnHost::call`, `FfiHost::call`) now runs a
+  `split` first: the compound operation becomes the C++ statements it was (`EE_UNITS_PLAYER_X_*`,
+  `EE_UNITS_PLAYER_SAVE_X_*`, `EE_UNITS_PLAYER_TICK_X_*`), the choice and the loop in Rust, in the original's order;
+  the bodies, their tests and their op logs are unchanged. Each split has its own tests (the op sequence per flag).
+- **A C++ statement that reads a value twice is still one read.** The splits ask a getter again where the original
+  kept a local (`GetTile`, `GetPathSubSectorAt`, `mNumCapitols`, `EESaveHasLiveState`): each is a pure read, so the
+  calls are the same. Where the original evaluated a size once (`for (long i = size - 1; ...)`) the Rust takes the
+  count once; where it compared against `size()` each pass (the patrols' and herds' repairs) the Rust asks each pass.
+- **A body that runs in a constructor or destructor.** `EEPlayer`'s constructors and destructor are one call into
+  Rust (`ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT | DESTROY, ...)`); the members they create and
+  free are host cases, so the Rust objects (the queue, the wonder state, the private lists, the group lists) are made
+  and freed in the original's order. Inside the destructor the virtuals the host calls resolve to EEPlayer's, as
+  they did.
+- **The group lists hold no references.** The original's vectors never counted their groups (the bodies reference
+  and release them); `EeUnitsPlayerGroups` is three `Vec<u64>` with `push`, `clear`, the first match's erase and
+  `AddPendingUnits`' copy of the pending groups into the running ones (the pending list kept until
+  `ReleasePendingUnits`, as the original's was).
+- **cbindgen**: an `Option<fn alias>` in an exported function's signature became `template<typename T = void> struct
+  Option`, which the header splitter cannot name ("cannot name the header item"); take the plain function pointer.
+- **Floats through an i64 host.** The player body's host answers `int64_t`: a float goes as its bits
+  (`EEPlayerFloatBits`, `EEPlayerBitsFloat`) and Rust's `f32::from_bits`/`to_bits`, never a cast.
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). `ExecuteSelectionMessage`,
+  `SwapClassButtonMedia`, `ApplyMapRestrictions`' hot keys, `RefreshTerrainVisibility`, the media loads and
+  unloads, the formation state and the area outlines are only exercised by a game with a user interface (the tour,
+  the LAN game).
+- **Call-site edits outside the lane** (each a line): EEPhysics.cpp (`GetRunningGroup`), EEPhysicsSweep.cpp (the
+  merge's group objects; `GetNumPendingGroups`, `AddPendingGroup`), EESMEffect.cpp (3 × `AddPendingGroup`),
+  EEScenarioCapture.cpp (the two list sizes), EEWorldLayout.cpp (`player_group_lists`, `player_lists`).
+- **Gates** (the final tree): both builds and the test profile 0/0; the Rust gate PASS (5,100 tests; its first run
+  failed ee_won_lobby's eecolor golden_replay under load, which passed alone and on the rerun); the oracle seeds 2-7
+  identical; the twelve capture profiles at seeds 2-3 PASS; the plain saveload 18/18 identical (exit 0); the matrix
+  `--expect` PASS (exit 0); scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
+  the tour `--exercise random-game --box-select --orders --seed 7` PASS; `gates.sh` GATES PASS (tour; ai-game
+  time-cap PT 12011, units [4, 36, 37], alive [2, 3], classic_lua x 2; lan-game PT 2874/2873).
