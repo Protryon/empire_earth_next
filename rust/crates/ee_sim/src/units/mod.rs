@@ -168,6 +168,7 @@ pub mod unit_save;
 pub mod unit_save_views;
 pub mod unit_sweep;
 pub mod unload;
+pub mod upd_split;
 pub mod update;
 pub mod update_views;
 pub mod upgrade_media;

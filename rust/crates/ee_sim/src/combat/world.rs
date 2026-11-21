@@ -691,6 +691,18 @@ impl WorldHost for EeCombatWorldHost {
                 return r;
             }
         }
+        // `EEWorldOp`'s compound cases, its statements in order (cg_world.rs)
+        #[cfg(not(test))]
+        if let Some(r) = crate::combat::cg_world::split(
+            &mut crate::combat::cg_world::Game(self),
+            code,
+            object,
+            other,
+            self.class,
+            args,
+        ) {
+            return r;
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.op)(self.query.ctx, code, object, other, args) }
     }

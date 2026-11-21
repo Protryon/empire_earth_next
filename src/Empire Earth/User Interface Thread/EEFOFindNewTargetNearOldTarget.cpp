@@ -210,22 +210,8 @@ bool EEUUUnitIDEqual::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 
 // (the TU's own sort-and-unique keys, highest unit id first: ee_units uu.rs sort_unique_by_id_descending)
 
-// Built without /Og (frame 0x54: the locals of the two undone DistanceSquaredToTile / DistanceSquared2D expansions);
-// the pragma alone makes 0x63ddc1 and 0x63de0f exact (r37_big, with packet B1)
-#pragma optimize("g", off)
-// Orders tiles by their distance from a unit (the nearer first)
-bool EEUUTileNearerToUnit::operator()(const U2DPoint<long>& inFirst,
-                                    const U2DPoint<long>& inSecond) const
-{
-    float theFirstDistance = this->mUnit->DistanceSquaredToTile(inFirst);
-    float theSecondDistance = this->mUnit->DistanceSquaredToTile(inSecond);
-    bool theResult = theFirstDistance < theSecondDistance;
-    return theResult;
-}
-
+// (0x63ddc1, EEUUTileNearerToUnit, the firing ring's sort order: ee_sim combat cg_world.rs)
 // (0x63de0f, EEUUPointNearerToUnit, EEFindOpenSpot's sort order: ee_units uu_spots.rs find_open_spot)
-
-#pragma optimize("g", on)
 
 // (0x63deae, EEUUTileNearerToPoint, EEGetSortedRingTiles' sort order: ee_units uu.rs sorted_ring_tiles)
 

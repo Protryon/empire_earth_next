@@ -10911,6 +10911,112 @@ constexpr static const int64_t TRANSPORT_CLASS = 1;
 
 constexpr static const int64_t AIRPLANE_CLASS = 2;
 
+/// `theUnit->SetOpenFraction(the float of bits a)`
+constexpr static const int32_t EE_UNITS_UPD_X_OPEN_FRACTION = 340;
+
+/// `theClass->GetLastLinkedCarrier(theUnit)->SetOpenFraction(the float of bits a)`
+constexpr static const int32_t EE_UNITS_UPD_X_CARRIER_OPEN_FRACTION = 341;
+
+/// `theClass->GetLastLinked(theUnit)->SetOpenFraction(the float of bits a)`
+constexpr static const int32_t EE_UNITS_UPD_X_LINKED_OPEN_FRACTION = 342;
+
+/// `theUnit->SetGoal(EEUGRust::NewLocation(&mInitialContactLocation, false, false, true, mInitialContactHeading,
+/// false, false), a != 0, 0)`
+constexpr static const int32_t EE_UNITS_UPD_X_RETURN_TO_CONTACT = 343;
+
+/// unit `a`'s `mNextPart`
+constexpr static const int32_t EE_UNITS_UPD_X_NEXT_PART_OF = 344;
+
+/// unit `a`'s `StartAction(b)`
+constexpr static const int32_t EE_UNITS_UPD_X_START_ACTION_OF = 345;
+
+/// unit `a`'s `mUnitClass->ActionChanged(unit a)`
+constexpr static const int32_t EE_UNITS_UPD_X_ACTION_CHANGED_OF = 346;
+
+/// `theUnit->mPlayer->KillUnit(unit a, false)`
+constexpr static const int32_t EE_UNITS_UPD_X_KILL_UNIT = 347;
+
+/// `theContext->mHealee = NULL`
+constexpr static const int32_t EE_UNITS_UPD_X_CLEAR_HEALEE = 348;
+
+/// `theClass->FindTargetNear(theUnit, theUnit->mStats->GetLineOfSight(), &theContext->mHealee)`
+constexpr static const int32_t EE_UNITS_UPD_X_FIND_HEALEE = 349;
+
+/// `theUnit->SetGoal(EEUGRust::NewHealUnit(theContext->mHealee, false), a != 0, 0)`
+constexpr static const int32_t EE_UNITS_UPD_X_SET_HEAL_GOAL = 350;
+
+/// `theUnit->mStats->mDeathSound`
+constexpr static const int32_t EE_UNITS_UPD_X_DEATH_SOUND = 351;
+
+/// `theClass->GetSoundParameters(theUnit, sound a, the three floats at b)`
+constexpr static const int32_t EE_UNITS_UPD_X_SOUND_PARAMETERS = 352;
+
+/// `gSoundManager->Play(sound a's mSampleID, the three floats at b, its mLooping, NULL)`
+constexpr static const int32_t EE_UNITS_UPD_X_PLAY_SAMPLE = 353;
+
+/// `theClass->FindStorage(theUnit, a != 0)`
+constexpr static const int32_t EE_UNITS_UPD_X_FIND_STORAGE = 354;
+
+/// `theUnit->SetGoal(EEUGRust::NewGather(NULL, storage a, false), 0, 0)`
+constexpr static const int32_t EE_UNITS_UPD_X_GATHER_AT = 355;
+
+/// `EEAttackUnitCast(theUnit->GetGoal())`
+constexpr static const int32_t EE_UNITS_UPD_X_ATTACK_GOAL = 356;
+
+/// goal `a`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_UPD_X_ATTACK_TARGET = 357;
+
+/// `theClass->FindNearestTargetBuilding(unit a)`
+constexpr static const int32_t EE_UNITS_UPD_X_NEAREST_TARGET_BUILDING = 358;
+
+/// goal `a`'s `SetAttackTarget(unit b)`
+constexpr static const int32_t EE_UNITS_UPD_X_SET_ATTACK_TARGET = 359;
+
+/// `theUnit->FindPassenger(theUnit->mExitingUnitID)`
+constexpr static const int32_t EE_UNITS_UPD_X_EXITING_PASSENGER = 360;
+
+/// `ee_units_atc_queue_request(cargo a's player's mAirTraffic[its class's mAirTrafficType - 1], theUnit, a, 0)`
+constexpr static const int32_t EE_UNITS_UPD_X_QUEUE_TAKEOFF = 361;
+
+/// `EESoundObject::Get(kSoundGate)`
+constexpr static const int32_t EE_UNITS_UPD_X_GATE_SOUND = 362;
+
+/// sound `a`'s `Play(the three floats at b)`
+constexpr static const int32_t EE_UNITS_UPD_X_PLAY_SOUND = 363;
+
+/// the point at `a` = theUnit's location (x, y, z)
+constexpr static const int32_t EE_UNITS_UPD_X_LOCATION = 364;
+
+/// `theUnit->GetNextWaypointPoint(the point at a)`
+constexpr static const int32_t EE_UNITS_UPD_X_NEXT_WAYPOINT_POINT = 365;
+
+/// `theUnit->SetHeight(theClass->GetHeightAt(theUnit, the point at a))`
+constexpr static const int32_t EE_UNITS_UPD_X_SET_HEIGHT_AT = 366;
+
+/// `EEAirAnimalDeathRoll(theClass, theUnit)`
+constexpr static const int32_t EE_UNITS_UPD_X_AIR_ANIMAL_DEATH_ROLL = 367;
+
+/// `EELandableActionOperation(a, theClass, theUnit, b, &theContext->mAirport)`
+constexpr static const int32_t EE_UNITS_UPD_X_LANDABLE = 368;
+
+/// `EEHelicopterPathToGoal(theClass, theUnit)`
+constexpr static const int32_t EE_UNITS_UPD_X_HELICOPTER_PATH = 369;
+
+/// `EEHelicopterTransportPathToGoal(theClass, theUnit)`
+constexpr static const int32_t EE_UNITS_UPD_X_HELICOPTER_TRANSPORT_PATH = 370;
+
+/// `EEHelicopterPriestPathToGoal(theClass, theUnit)`
+constexpr static const int32_t EE_UNITS_UPD_X_HELICOPTER_PRIEST_PATH = 371;
+
+/// `EEAirplaneHoldingPattern(theClass, theUnit)`
+constexpr static const int32_t EE_UNITS_UPD_X_AIRPLANE_HOLDING = 372;
+
+/// `EEPlanetSpaceshipHoldingPattern(theClass, theUnit)`
+constexpr static const int32_t EE_UNITS_UPD_X_SPACESHIP_HOLDING = 373;
+
+/// theUnit (the host's unit)
+constexpr static const int32_t EE_UNITS_UPD_X_UNIT = 374;
+
 constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
 
 constexpr static const int32_t EE_UNITS_UPDATE_NAVAL = 2;

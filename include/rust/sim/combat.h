@@ -40,6 +40,213 @@ constexpr static const uint32_t EE_COMBAT_FOLD_X_ACTIONS = 4;
 
 constexpr static const uint32_t EE_COMBAT_FOLD_GOAL_OBJECTS = 5;
 
+/// `object->mIgnoredTargets[a[0]].mTileX`
+constexpr static const int32_t EE_COMBAT_W_IGN_TILE_X = 100;
+
+/// `.mTileY` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_TILE_Y = 101;
+
+/// `.mFromX` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_FROM_X = 102;
+
+/// `.mFromY` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_FROM_Y = 103;
+
+/// `.mUnitID` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_UNIT_ID = 104;
+
+/// `.mTime` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_TIME = 105;
+
+/// `object->mIgnoredTargets.erase(begin() + a[0], end())`
+constexpr static const int32_t EE_COMBAT_W_IGN_ERASE_TO_END = 106;
+
+/// `object->mIgnoredTargets.erase(begin() + a[0], begin() + a[1])`
+constexpr static const int32_t EE_COMBAT_W_IGN_ERASE_RANGE = 107;
+
+/// `object->mIgnoredTargets.push_front(EEComplexUnitAttacker())`
+constexpr static const int32_t EE_COMBAT_W_IGN_PUSH_FRONT = 108;
+
+/// `object->mIgnoredTargets[0].mTileX = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_TILE_X = 109;
+
+/// `[0].mTileY = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_TILE_Y = 110;
+
+/// `[0].mFromX = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_FROM_X = 111;
+
+/// `[0].mFromY = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_FROM_Y = 112;
+
+/// `[0].mUnitID = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_UNIT_ID = 113;
+
+/// `[0].mTime = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_TIME = 114;
+
+/// `mAttackedGoal = EEUGRust::NewLocation(other's x, y, 0, false, false, false, 0, false, 0)`
+constexpr static const int32_t EE_COMBAT_W_AG_NEW_LOCATION = 115;
+
+/// `mAttackedGoal = EEUGRust::NewAttackUnit(object, other, false, false)`
+constexpr static const int32_t EE_COMBAT_W_AG_NEW_ATTACK = 116;
+
+/// `object->SetGoal(mAttackedGoal, 1, 0)`
+constexpr static const int32_t EE_COMBAT_W_AG_SET_GOAL = 117;
+
+/// the context's `&mNear` (Attacked's units near)
+constexpr static const int32_t EE_COMBAT_W_NEAR_LIST = 118;
+
+/// `mHelpGoal = mAttackedGoal->Clone()`
+constexpr static const int32_t EE_COMBAT_W_HELP_CLONE = 119;
+
+/// `object->GetClass()->FindAction(mHelpGoal->GetStartAction()) != NULL`
+constexpr static const int32_t EE_COMBAT_W_HELP_HAS_ACTION = 120;
+
+/// `object->SetGoal(mHelpGoal, 1, 0)`
+constexpr static const int32_t EE_COMBAT_W_HELP_SET_GOAL = 121;
+
+/// `object->StartAction(mHelpGoal->GetStartAction())`
+constexpr static const int32_t EE_COMBAT_W_HELP_START_ACTION = 122;
+
+/// `object->GetUnitClass()->ActionChanged(object)`
+constexpr static const int32_t EE_COMBAT_W_ACTION_CHANGED = 123;
+
+/// `object->mLastAttacker != NULL`
+constexpr static const int32_t EE_COMBAT_W_HAS_LAST_ATTACKER = 124;
+
+/// `object->mLastAttacker->Dereference()`
+constexpr static const int32_t EE_COMBAT_W_DEREFERENCE_LAST_ATTACKER = 125;
+
+/// `object->mLastAttacker = NULL`
+constexpr static const int32_t EE_COMBAT_W_CLEAR_LAST_ATTACKER = 126;
+
+/// `EEIsLineToUnitBlocked(object, other, a[0] (EEUnit**), a[1] (long*), a[2] (long*))`
+constexpr static const int32_t EE_COMBAT_W_LINE_BLOCKED_AT = 127;
+
+/// the bits of `gToHitTable.GetAttackFactor(a[0], other's class, object's player id, other's player id)`
+constexpr static const int32_t EE_COMBAT_W_DI_ATTACK_FACTOR = 128;
+
+/// the bits of `gWeaponToHitFactors[other's class's mWeapon][a[0]]`
+constexpr static const int32_t EE_COMBAT_W_DI_WEAPON_FACTOR = 129;
+
+/// combat.yaml's `mMinimumDamage`
+constexpr static const int32_t EE_COMBAT_W_RULE_MINIMUM_DAMAGE = 130;
+
+/// the bits of `EERuleFloat(mFanaticFactor)`
+constexpr static const int32_t EE_COMBAT_W_RULE_FANATIC_FACTOR = 131;
+
+/// the bits of `mElevationStep`
+constexpr static const int32_t EE_COMBAT_W_RULE_ELEVATION_STEP = 132;
+
+/// the bits of `mAllyFactor`
+constexpr static const int32_t EE_COMBAT_W_RULE_ALLY_FACTOR = 133;
+
+/// the bits of `mHerdAllyFactor`
+constexpr static const int32_t EE_COMBAT_W_RULE_HERD_ALLY_FACTOR = 134;
+
+/// `mTrampleDamage`
+constexpr static const int32_t EE_COMBAT_W_RULE_TRAMPLE_DAMAGE = 135;
+
+/// the bits of `mTrampleThreshold`
+constexpr static const int32_t EE_COMBAT_W_RULE_TRAMPLE_THRESHOLD = 136;
+
+/// the bits of `mDeadFoodShare`
+constexpr static const int32_t EE_COMBAT_W_RULE_DEAD_FOOD_SHARE = 137;
+
+/// `object->mUnitClass->mCategory`
+constexpr static const int32_t EE_COMBAT_W_HC_CATEGORY = 138;
+
+/// `object->mIsSpecialAttack`
+constexpr static const int32_t EE_COMBAT_W_HC_SPECIAL_ATTACK = 139;
+
+/// `object->mLauncherClass`
+constexpr static const int32_t EE_COMBAT_W_HC_LAUNCHER = 140;
+
+/// `gUnitClassTable[kUnitTypeCapitalShipSpecialWeapon]`
+constexpr static const int32_t EE_COMBAT_W_HC_SPECIAL_WEAPON = 141;
+
+/// `object->mPlayer->GetUpgrade(class a[0]'s mUnitType)`
+constexpr static const int32_t EE_COMBAT_W_HC_UPGRADE = 142;
+
+/// the bits of upgrade `a[0]`'s `GetAttack()`
+constexpr static const int32_t EE_COMBAT_W_HC_UPGRADE_ATTACK = 143;
+
+/// the bits of upgrade `a[0]`'s `mAreaEffect`
+constexpr static const int32_t EE_COMBAT_W_HC_UPGRADE_AREA = 144;
+
+/// the bits of class `a[0]`'s `mAttack`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_ATTACK = 145;
+
+/// the bits of class `a[0]`'s `mAreaEffect`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_AREA = 146;
+
+/// class `a[0]`'s `mAmmoType`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_AMMO = 147;
+
+/// class `a[0]`'s `mWeapon`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_WEAPON = 148;
+
+/// class `a[0]`'s `mCategory`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_CATEGORY = 149;
+
+/// the bits of class `a[0]`'s `mFriendlyDamageFactor`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_FRIENDLY = 150;
+
+/// the host's class's `mShotEffect != NULL`
+constexpr static const int32_t EE_COMBAT_W_HC_SHOT_EFFECT = 151;
+
+/// `mEffect = NULL`
+constexpr static const int32_t EE_COMBAT_W_UE_CLEAR = 152;
+
+/// `object->GetEffect(3, mEffect)`
+constexpr static const int32_t EE_COMBAT_W_UE_GET = 153;
+
+/// `mEffect != NULL`
+constexpr static const int32_t EE_COMBAT_W_UE_HAS = 154;
+
+/// `gEffectManager->CreateUnitEffect(object, mEffect, NULL, false, 0, 0)`
+constexpr static const int32_t EE_COMBAT_W_UE_CREATE = 155;
+
+/// `object->GetPathStart(the point at a[0], the float at a[1])`
+constexpr static const int32_t EE_COMBAT_W_PATH_START_AT = 156;
+
+/// unit `other`'s `GetTileX()`
+constexpr static const int32_t EE_COMBAT_W_RING_TILE_X = 157;
+
+/// unit `other`'s `GetTileY()`
+constexpr static const int32_t EE_COMBAT_W_RING_TILE_Y = 158;
+
+/// unit `other`'s `GetUnitClass()->GetTileSize()`
+constexpr static const int32_t EE_COMBAT_W_RING_TILE_SIZE = 159;
+
+/// `mFootprint[a[0]].mX`
+constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_X = 160;
+
+/// `mFootprint[a[0]].mY`
+constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_Y = 161;
+
+/// `::gWorld.mMap->GetTileAtLocation(EETileLocation(a[0], a[1]))`
+constexpr static const int32_t EE_COMBAT_W_TS_TILE_AT_LOCATION = 162;
+
+/// `::gWorld.mMap->GetTile(a[0], a[1])`
+constexpr static const int32_t EE_COMBAT_W_TS_TILE = 163;
+
+/// tile `a[0]`'s `IsSeenBy(player object)`
+constexpr static const int32_t EE_COMBAT_W_TS_SEEN = 164;
+
+/// tile `a[0]`'s `GetVisibility(player object's GetPlayerID()) > 1`
+constexpr static const int32_t EE_COMBAT_W_TS_VISIBLE = 165;
+
+/// `object->mActiveGoal->GetGoalLocation(the point at a[0])`
+constexpr static const int32_t EE_COMBAT_W_GOAL_LOCATION_AT = 166;
+
+/// unit `object`'s `GetModel()->mModel != NULL`
+constexpr static const int32_t EE_COMBAT_W_DM_HAS_MODEL = 167;
+
+/// the point at `a[0]` = unit `object`'s `GetModel()->mDefaultPoint`
+constexpr static const int32_t EE_COMBAT_W_DM_DEFAULT_POINT = 168;
+
 /// `EEUnit::mResourceAmount` (the store's).
 constexpr static const int32_t EE_COMBAT_Q_RESOURCE_AMOUNT = 68;
 
