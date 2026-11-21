@@ -15,7 +15,7 @@ pub const EE_SCENARIO_IO_READ_ULONG: u32 = 0;
 pub const EE_SCENARIO_IO_READ_LONG: u32 = 1;
 /// `FSFile::Read(float&)` into `*value`.
 pub const EE_SCENARIO_IO_READ_FLOAT: u32 = 2;
-/// `FSFile::Read(bool&)` into `*value`.
+/// `FSFile::Read(bool&)` into `*value` (a byte: the Rust reads any byte other than 0 as true).
 pub const EE_SCENARIO_IO_READ_BOOL: u32 = 3;
 /// `FSFile::Write(const unsigned long&)` of `*value`.
 pub const EE_SCENARIO_IO_WRITE_ULONG: u32 = 4;
@@ -56,6 +56,9 @@ pub const EE_SCENARIO_IO_ELEMENT_COUNT: u32 = 19;
 pub const EE_SCENARIO_IO_MEDIA: u32 = 20;
 /// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
 pub const EE_SCENARIO_IO_MESSAGES: u32 = 21;
+/// The stream's trigger (`EESMTrigger*`) into `*value` (a pointer): the entries are its members'
+/// (trigger_members.rs).
+pub const EE_SCENARIO_IO_TRIGGER: u32 = 22;
 
 /// The manager's element lists: triggers, conditions, effects, objects, areas, pending effects.
 pub const EE_SCENARIO_ELEMENT_TRIGGERS: u32 = 0;
@@ -133,6 +136,15 @@ impl EeScenarioStream {
     }
 }
 
+impl EeScenarioStream {
+    /// The stream's trigger (`EE_SCENARIO_IO_TRIGGER`).
+    fn trigger(&mut self) -> i64 {
+        let mut t: *mut c_void = std::ptr::null_mut();
+        self.call(EE_SCENARIO_IO_TRIGGER, 0, 0, (&mut t as *mut *mut c_void).cast());
+        t as usize as i64
+    }
+}
+
 impl Stream for EeScenarioStream {
     fn read_ulong(&mut self, value: &mut c_ulong) -> i32 {
         self.call(EE_SCENARIO_IO_READ_ULONG, 0, 0, (value as *mut c_ulong).cast())
@@ -144,7 +156,12 @@ impl Stream for EeScenarioStream {
         self.call(EE_SCENARIO_IO_READ_FLOAT, 0, 0, (value as *mut f32).cast())
     }
     fn read_bool(&mut self, value: &mut bool) -> i32 {
-        self.call(EE_SCENARIO_IO_READ_BOOL, 0, 0, (value as *mut bool).cast())
+        // the file's byte into a byte (the C++ reads it as a bool): any byte other than 0 is true, the value kept
+        // when nothing is read
+        let mut byte = *value as u8;
+        let r = self.call(EE_SCENARIO_IO_READ_BOOL, 0, 0, (&mut byte as *mut u8).cast());
+        *value = byte != 0;
+        r
     }
     fn write_ulong(&mut self, mut value: c_ulong) -> i32 {
         self.call(EE_SCENARIO_IO_WRITE_ULONG, 0, 0, (&mut value as *mut c_ulong).cast())
@@ -181,17 +198,27 @@ impl Stream for EeScenarioStream {
         value
     }
     fn entry_count(&mut self, slot: u32) -> c_ulong {
-        let mut value: c_ulong = 0;
-        self.call(EE_SCENARIO_IO_ENTRY_COUNT, slot, 0, (&mut value as *mut c_ulong).cast());
-        value
+        let t = self.trigger();
+        let b = crate::scenario::trigger_members::list(slot as i64);
+        crate::scenario::trigger_members::game(b + crate::scenario::trigger_members::EE_SCENARIO_TR_COUNT, t, 0, 0)
+            as c_ulong
     }
     fn entry_at(&mut self, slot: u32, index: c_ulong) -> EeScenarioEntry {
-        let mut e = EeScenarioEntry::default();
-        self.call(EE_SCENARIO_IO_ENTRY_AT, slot, index, (&mut e as *mut EeScenarioEntry).cast());
-        e
+        use crate::scenario::trigger_members::*;
+        let (t, b, i) = (self.trigger(), list(slot as i64), index as i64);
+        EeScenarioEntry {
+            first: game(b + EE_SCENARIO_TR_FIRST, t, i, 0) as c_ulong,
+            op: game(b + EE_SCENARIO_TR_OPERATOR, t, i, 0) as c_long,
+            value: game(b + EE_SCENARIO_TR_SECOND, t, i, 0) as c_ulong,
+        }
     }
-    fn entry_set(&mut self, slot: u32, index: c_ulong, mut entry: EeScenarioEntry) {
-        self.call(EE_SCENARIO_IO_ENTRY_SET, slot, index, (&mut entry as *mut EeScenarioEntry).cast());
+    fn entry_set(&mut self, slot: u32, index: c_ulong, entry: EeScenarioEntry) {
+        use crate::scenario::trigger_members::*;
+        let (t, k, i) = (self.trigger(), slot as i64, index as i64);
+        // a condition's first number is its negation flag (`first != 0`), an effect's its delay (`(long)first`)
+        let first = if k == 0 { (entry.first != 0) as i64 } else { entry.first as c_long as c_ulong as i64 };
+        set_entry(&mut game, t, k, i, first, entry.value as i64);
+        set_operator(&mut game, t, k, i, entry.op as i64);
     }
     fn element_load(&mut self, kind: u32) -> i32 {
         self.call(EE_SCENARIO_IO_ELEMENT_LOAD, kind, 0, std::ptr::null_mut())

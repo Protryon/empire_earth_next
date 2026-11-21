@@ -969,6 +969,7 @@ int64_t SMEAtomWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
 // an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*): each the original's statement or
 // statement sequence at its place, on the units by id, the players by index
 int64_t SMEReadWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);   // EEScenarioHost.cpp
+int64_t SMEObjectWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);   // EESMObject.cpp
 int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
 {
     if (inOp >= EE_SCENARIO_WORLD_CU_RANDOM && inOp <= EE_SCENARIO_WORLD_CU_SET)   // EEChangeUnit's (no effect run)
@@ -977,6 +978,8 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         return SMEClassWorld(inOp, a);
     if (inOp >= EE_SCENARIO_RX_TECH_NODE && inOp <= EE_SCENARIO_RX_EFFECT_COPY)   // the host's reads (read_compose.rs)
         return SMEReadWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
+    if (inOp >= EE_SCENARIO_WZ_UNIT && inOp <= EE_SCENARIO_WZ_TILE_Y)   // the object reads (object_reads.rs)
+        return SMEObjectWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     if (inOp >= EE_SCENARIO_WC_CLASS && inOp <= EE_SCENARIO_WC_SOUND_PLAY)   // Create Units' (no effect run)
         return SMECreateWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     EESMEffectRun* theRun = static_cast<EESMEffectRun*>(static_cast<EESMHostContext*>(inContext));

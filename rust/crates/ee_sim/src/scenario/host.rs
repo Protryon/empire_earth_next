@@ -208,6 +208,9 @@ impl Host for EeScenarioHost {
         if let Some(value) = crate::scenario::read_compose::compose(&mut w, op, a, b) {
             return value;
         }
+        if let Some(value) = crate::scenario::object_reads::compose(&mut w, op, a, b, c) {
+            return value;
+        }
         // SAFETY: as above
         unsafe { read(ctx, op, a, b, c, d) }
     }
@@ -238,6 +241,14 @@ impl Host for EeScenarioHost {
         unsafe { (self.write)(self.ctx, op, player, b, c, d) }
     }
     fn tiles(&mut self, op: u32, a: i32, b: i32, c: i32) -> Vec<(i32, i32)> {
+        // the lists composed in Rust (object_reads.rs): the side and corner lists ee_sim units', the others the
+        // world channel's statements
+        let (world, ctx) = (self.world, self.ctx);
+        // SAFETY: as `read`; `args` lives through the call
+        let mut w = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
+        if let Some(list) = crate::scenario::object_reads::tiles(&mut w, op, a, b, c) {
+            return list;
+        }
         let mut list = EeScenarioTiles(Vec::new());
         // SAFETY: as `read`; `list` lives through the call
         unsafe { (self.tiles)(self.ctx, op, a, b, c, &mut list) };
