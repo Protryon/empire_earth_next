@@ -18,6 +18,9 @@ public:
     void DeleteObjects();                   // 0x1e7205: deletes the three files (the original's four, with the movie) (the post-game Open calls it)
     static EEUISCIFormManager* Get();
     UWideString GetBriefing();              // 0x1e72cf (mMediaStrings.mInstructions)
+    // the map's and the sound's file names (sci_calls.rs' shims: the strings are private to the friends)
+    const UWideString& MapFileName() const { return this->mMediaStrings.mMapFile; }
+    const UWideString& SoundFileName() const { return this->mMediaStrings.mSoundFile; }
     bool OpenMap();                         // 0x1e72e4 (mMapFile + ".jpg", else ".png", in "Scenarios\")
     // (0x1e73bd OpenMovie and GetMovie: the scenario's movie, gone with the movies; its name stays in mMediaStrings)
     bool OpenScenario();                    // 0x1e7444 (mFile's own name, in "Scenarios\" or the data path)

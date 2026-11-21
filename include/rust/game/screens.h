@@ -13349,6 +13349,39 @@ int64_t ee_screens_status_button_op(void *call,
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
 
+/// `EEUISCIFormManager::Clear`.
+void ee_screens_sci_clear(size_t m);
+
+/// `EEUISCIFormManager::DeleteObjects`.
+void ee_screens_sci_delete_objects(size_t m);
+
+/// `EEUISCIFormManager::Get`: the manager (an `EEUISCIFormManager*`).
+size_t ee_screens_sci_get();
+
+/// `EEUISCIFormManager::OpenMap`.
+bool ee_screens_sci_open_map(size_t m);
+
+/// `EEUISCIFormManager::OpenScenario`.
+bool ee_screens_sci_open_scenario(size_t m);
+
+/// `EEUISCIFormManager::OpenSound`.
+bool ee_screens_sci_open_sound(size_t m);
+
+/// `EEUISCIFormManager::GetMap` (`spec` the `FSFileSpec*` out).
+bool ee_screens_sci_get_map(size_t m, size_t spec);
+
+/// `EEUISCIFormManager::GetScenario`.
+bool ee_screens_sci_get_scenario(size_t m, size_t spec);
+
+/// `EEUISCIFormManager::GetSound`.
+bool ee_screens_sci_get_sound(size_t m, size_t spec);
+
+/// `EEUISCIFormManager::HasMedia`.
+bool ee_screens_sci_has_media(size_t m);
+
+/// `EEUISCIFormManager::SetBlinking`.
+void ee_screens_sci_set_blinking(bool blinking);
+
 /// `EEUIFMGStatusBar`'s constructor's body (`rect` the `GERectangle*`, `form` the `UIForm*`).
 void ee_screens_sba_construct(size_t bar, size_t rect, size_t form, bool editor, bool large_icon);
 
