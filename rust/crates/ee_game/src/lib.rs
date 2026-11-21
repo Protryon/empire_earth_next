@@ -459,3 +459,6 @@ pub mod physics;
 
 // the data pre-loading thread's bodies (EEDataPreLoading.cpp; world lane round 1)
 pub mod preload;
+
+// a player's campaign progress (EECampaignProgress whole; world lane round 1)
+pub mod campaign;
