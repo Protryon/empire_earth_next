@@ -180,10 +180,15 @@ pub extern "C" fn ee_gamecpp_startup_attack_players(player: c_long, flag: u8) {
         }
         let computer = hp(O::PlComputerPlayer, other, &[]);
         // SAFETY: as pid
-        let observer = unsafe { (*super::rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, other)).mObserverMode };
+        let observer = unsafe {
+            (*super::rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, other)).mObserverMode
+        };
         if computer != 0 && !observer {
             // SAFETY: the player's saved numbers
-            let enemy = unsafe { (*super::rec::<ee_sim::world::player_fields::EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies[pid(computer) as usize] };
+            let enemy = unsafe {
+                (*super::rec::<ee_sim::world::player_fields::EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies
+                    [pid(computer) as usize]
+            };
             let is_enemy = computer != pl && enemy != 0;
             if !is_enemy {
                 allies.push(computer);
@@ -271,7 +276,8 @@ pub extern "C" fn ee_gamecpp_startup_graphics() {
     // kPixelFormatZPrefer16
     let r = h(O::RastActivateScreen, 0, &[0, PIXEL_FORMAT_Z_PREFER_16]);
     verify(r == KESE_OK, 1346);
-    ee_gamecpp_startup_game_view(&START_VIEW);
+    // SAFETY: a constant rectangle
+    unsafe { ee_gamecpp_startup_game_view(&START_VIEW) };
     render_states(screen(), true);
     for op in [O::NewRoTerrain, O::NewRoGroundShadows, O::NewRoUnits, O::NewRoWater, O::NewRoEffects] {
         h(op, 0, &[]);
@@ -317,7 +323,14 @@ pub extern "C" fn ee_gamecpp_startup_persistents() {
 /// shadows' media.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_load_media() {
-    for op in [O::UiLoadIcons, O::UiMiniMapLoadMedia, O::CreatePlaneModels, O::RoUnitsLoadMedia, O::RoSkyCreate, O::RoShadowCreate] {
+    for op in [
+        O::UiLoadIcons,
+        O::UiMiniMapLoadMedia,
+        O::CreatePlaneModels,
+        O::RoUnitsLoadMedia,
+        O::RoSkyCreate,
+        O::RoShadowCreate,
+    ] {
         h(op, 0, &[]);
     }
 }
@@ -325,7 +338,14 @@ pub extern "C" fn ee_gamecpp_startup_load_media() {
 /// EEUnloadGameMedia: the same released.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_unload_media() {
-    for op in [O::UiUnloadIcons, O::UiMiniMapUnloadMedia, O::ReleasePlaneModels, O::RoUnitsReleaseMedia, O::RoSkyRelease, O::RoShadowRelease] {
+    for op in [
+        O::UiUnloadIcons,
+        O::UiMiniMapUnloadMedia,
+        O::ReleasePlaneModels,
+        O::RoUnitsReleaseMedia,
+        O::RoSkyRelease,
+        O::RoShadowRelease,
+    ] {
         h(op, 0, &[]);
     }
 }
@@ -364,8 +384,11 @@ pub extern "C" fn ee_gamecpp_startup_data_paths() {
 
 /// EESetGameViewRectangle: the viewport set to the rectangle (in 1600x1200 layout units, scaled to the window and
 /// rounded unless the camera is free); the camera stops following.
+///
+/// # Safety
+/// `rectangle` is the caller's rectangle.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_startup_game_view(rectangle: *const GeRectangle) {
+pub unsafe extern "C" fn ee_gamecpp_startup_game_view(rectangle: *const GeRectangle) {
     // SAFETY: the caller's rectangle
     let input = unsafe { *rectangle };
     let mut r = GeRectangle::default();
@@ -445,7 +468,10 @@ pub extern "C" fn ee_gamecpp_startup_video_mode(width: c_ulong, height: c_ulong,
     h(O::WindowResize, 0, &[width as i64, height as i64]);
     let mut origin = [0f32; 2];
     h(O::WindowClientOrigin, 0, &[ptr(&mut origin)]);
-    let end = [origin[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32, origin[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32];
+    let end = [
+        origin[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32,
+        origin[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32,
+    ];
     if h(O::RastPrimaryPresent, 0, &[screen]) != 0 {
         h(O::RastPrimaryClear, 0, &[screen, cptr(&window_rect(&origin, &end))]);
     }
@@ -532,7 +558,14 @@ pub extern "C" fn ee_gamecpp_startup_graphics_shutdown() {
     h(O::DeleteGameWindow, 0, &[]);
     h(O::DeleteEffectBatchBuffers, 0, &[]);
     h(O::RastDeactivate, 0, &[]);
-    for op in [O::DeleteRoWater, O::DeleteRoGroundShadows, O::DeleteRo4C, O::DeleteRoTerrain, O::DeleteRoUnits, O::DeleteRoEffects] {
+    for op in [
+        O::DeleteRoWater,
+        O::DeleteRoGroundShadows,
+        O::DeleteRo4C,
+        O::DeleteRoTerrain,
+        O::DeleteRoUnits,
+        O::DeleteRoEffects,
+    ] {
         h(op, 0, &[]);
     }
     h(O::DeleteTextureManager, 0, &[]);
@@ -574,7 +607,9 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     let mut origin = [0f32; 2];
     h(O::WindowClientOrigin, 0, &[ptr(&mut origin)]);
     let screen = screen();
-    let window_end = |o: &[f32; 2]| [o[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32, o[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32];
+    let window_end = |o: &[f32; 2]| {
+        [o[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32, o[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32]
+    };
     let old_end = window_end(&origin);
     let precision = h(O::FpPrecision, 0, &[]);
     let mut had_pointer = false;
@@ -606,7 +641,8 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     }
     h(O::CameraResetZoom, 0, &[]);
     h(O::CameraSetChanged, 0, &[]);
-    ee_gamecpp_startup_game_view(&START_VIEW);
+    // SAFETY: a constant rectangle
+    unsafe { ee_gamecpp_startup_game_view(&START_VIEW) };
     render_states(screen, false);
     let end = window_end(&origin);
     h(O::RastPrimaryClear, 0, &[screen, cptr(&window_rect(&origin, &end))]);
@@ -677,7 +713,11 @@ pub extern "C" fn ee_gamecpp_startup_display() -> bool {
     h(O::GameSizeFromPreferences, 0, &[]);
     let modes = h(O::ScreenModeCount, 0, &[screen()]) as c_ulong;
     let mut mode = [0 as c_ulong; 5];
-    let (w, hgt, bits) = (h(O::GameWindowWidth, 0, &[]) as c_ulong, h(O::GameWindowHeight, 0, &[]) as c_ulong, h(O::PrefGameBitDepth, 0, &[]) as c_ulong);
+    let (w, hgt, bits) = (
+        h(O::GameWindowWidth, 0, &[]) as c_ulong,
+        h(O::GameWindowHeight, 0, &[]) as c_ulong,
+        h(O::PrefGameBitDepth, 0, &[]) as c_ulong,
+    );
     let mut index: c_ulong = 0;
     while index < modes {
         h(O::ScreenMode, 0, &[screen(), index as i64, ptr(&mut mode)]);
@@ -1005,7 +1045,13 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
 /// # Safety
 /// `name` is a UString, `sample` and `instance` the caller's.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_startup_load_sound(name: *const c_void, kind: c_ulong, sample: *mut c_ulong, instance: *mut c_ulong, flag: c_ulong) {
+pub unsafe extern "C" fn ee_gamecpp_startup_load_sound(
+    name: *const c_void,
+    kind: c_ulong,
+    sample: *mut c_ulong,
+    instance: *mut c_ulong,
+    flag: c_ulong,
+) {
     let name = name as P;
     let mut s: c_ulong = c_ulong::MAX;
     let mut i: c_ulong = c_ulong::MAX;

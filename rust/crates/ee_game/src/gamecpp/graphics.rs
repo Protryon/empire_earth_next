@@ -4,7 +4,7 @@
 //!
 //! Only a game with a window runs these (the tour, gates.sh): EE-SIM draws nothing.
 
-#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::unnecessary_cast, clippy::if_same_then_else)]
 
 use std::ffi::{c_long, c_void, CString};
 

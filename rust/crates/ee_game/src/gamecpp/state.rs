@@ -463,7 +463,8 @@ fn create_new(st: P, opt: P, l: &Locals) {
     }
     // the speed option's factor (gameoptions.yaml speeds; an unknown option: the default speed's)
     let speeds = h(O::RulesSpeedCount, 0, &[]) as c_ulong;
-    let speed = if opts(opt).mGameSpeed < speeds { opts(opt).mGameSpeed } else { h(O::RulesSpeedDefault, 0, &[]) as c_ulong };
+    let speed =
+        if opts(opt).mGameSpeed < speeds { opts(opt).mGameSpeed } else { h(O::RulesSpeedDefault, 0, &[]) as c_ulong };
     tail(st).mGameSpeed = hd(O::RulesSpeedFactor, 0, &[speed as i64], &[]);
     let (mut width, mut height): (c_long, c_long) = (0, 0);
     h(O::OptGetMapDimensions, opt, &[ptr(&mut width), ptr(&mut height)]);

@@ -9,7 +9,14 @@
 
 #![allow(non_snake_case)]
 // the C++'s own casts, kept as written
-#![allow(clippy::unnecessary_cast, clippy::bool_comparison, clippy::nonminimal_bool, clippy::collapsible_else_if)]
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::bool_comparison,
+    clippy::nonminimal_bool,
+    clippy::collapsible_else_if,
+    clippy::collapsible_match,
+    clippy::manual_is_multiple_of
+)]
 
 use std::ffi::{c_long, c_ulong, c_void};
 
@@ -339,7 +346,11 @@ fn saved_group_select(m: P) {
     let main_group = hp(O::MainFormGroup0, 0, &[]);
     let slot = h(O::MsgOrigin, m, &[]);
     let local_slot = h(O::PlGetSlot, current(), &[]);
-    h(O::SelGroupSelectSaved, hp(O::PlActiveGroup, pl, &[]), &[pa(hp(O::PlSavedGroupAt, pl, &[get::<u8>(m, 1) as i64])), 1]);
+    h(
+        O::SelGroupSelectSaved,
+        hp(O::PlActiveGroup, pl, &[]),
+        &[pa(hp(O::PlSavedGroupAt, pl, &[get::<u8>(m, 1) as i64])), 1],
+    );
     if slot == local_slot && *wm::<bool>(O::WExecutingLocalSelection) {
         h(O::MouseSetPointer, 0, &[0]);
         h(O::GameUiShowCommands, main_group, &[]);
@@ -384,7 +395,11 @@ fn set_diplomatic_stance(m: P) {
     let is_now = new_str();
     let text = Owned::new(O::StrNew1K, O::StrFree);
     let pl = sender(m);
-    h(O::WSetDiplomaticStanceCall, world(), &[prts(pl).mPlayerID as i64, get::<i32>(m, 1) as i64, get::<i32>(m, 2) as i64]);
+    h(
+        O::WSetDiplomaticStanceCall,
+        world(),
+        &[prts(pl).mPlayerID as i64, get::<i32>(m, 1) as i64, get::<i32>(m, 2) as i64],
+    );
     res(&ally, IDS_HOSTILE);
     res(&enemy, IDS_FRIENDLY);
     res(&is_now, IDS_CHANGES_DIPLOMATIC_STANCE_TO);
@@ -494,7 +509,13 @@ pub extern "C" fn ee_gamecpp_msg_load_or_save(m: *mut c_void) -> c_long {
 /// # Safety
 /// `i` points to the host call's integers, `f` to its floats.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_msg_world_act(m: *mut c_void, i: *const i64, f: *const f32, a: *mut c_void, b: *mut c_void) {
+pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
+    m: *mut c_void,
+    i: *const i64,
+    f: *const f32,
+    a: *mut c_void,
+    b: *mut c_void,
+) {
     let (m, a, b) = (m as P, a as P, b as P);
     // SAFETY: the host's arrays (at least five integers and two floats)
     let (i, f) = unsafe { (std::slice::from_raw_parts(i, 8), std::slice::from_raw_parts(f, 2)) };
@@ -570,10 +591,15 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(m: *mut c_void, i: *const i64,
             h(O::LobbyWriteLock, 0, &[]);
             h(O::OptPlayerAssign, slot.0, &[pa(hp(O::LobbyOptPlayer, 0, &[i[1]]))]);
             // SAFETY: the slot's plain members
-            let s = unsafe { &mut *rec::<crate::app::game_options::EeAppOptionsPlayerFields>(O::OptPlayerFields, slot.0) };
+            let s =
+                unsafe { &mut *rec::<crate::app::game_options::EeAppOptionsPlayerFields>(O::OptPlayerFields, slot.0) };
             match i[2] {
                 6 => {
-                    s.mEngine = if (value as i64) < h(O::CpEngineChoiceCount, 0, &[]) { value as c_ulong } else { ENGINE_CLASSIC };
+                    s.mEngine = if (value as i64) < h(O::CpEngineChoiceCount, 0, &[]) {
+                        value as c_ulong
+                    } else {
+                        ENGINE_CLASSIC
+                    };
                 }
                 5 => s.mIsReady = value > 0,
                 4 => s.mStartingCitizens = value as c_ulong,
@@ -1017,7 +1043,13 @@ pub extern "C" fn ee_gamecpp_msg_can_place(pl: *mut c_void, unit_type: i64, x: i
 /// EESendGroupCommand: the local command markers of a group order (move 0xb8, attack 0xb9, target 0xba, unload
 /// 0xbb) shown on the goal the units just queued, else on the first unit whose last goal fits.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_msg_group_command(group: *mut c_void, target: *mut c_void, player_id: c_ulong, command: c_long, goal_queue: c_long) {
+pub extern "C" fn ee_gamecpp_msg_group_command(
+    group: *mut c_void,
+    target: *mut c_void,
+    player_id: c_ulong,
+    command: c_long,
+    goal_queue: c_long,
+) {
     let (group, target) = (group as P, target as P);
     let mut location = Ge3DPoint::default();
     let mut ground = Ge3DPoint::default();
@@ -1066,7 +1098,10 @@ pub extern "C" fn ee_gamecpp_msg_group_command(group: *mut c_void, target: *mut 
             continue;
         }
         let class = ucf(unit_class(unit));
-        if class.mAIKind == AI_KIND_AIRCRAFT_CARRIER || class.mAIKind == AI_KIND_SPACE_CARRIER || class.mUnitType == UNIT_TYPE_AIRPORT {
+        if class.mAIKind == AI_KIND_AIRCRAFT_CARRIER
+            || class.mAIKind == AI_KIND_SPACE_CARRIER
+            || class.mUnitType == UNIT_TYPE_AIRPORT
+        {
             let mut j: c_ulong = 0;
             while (j as i64) < h(O::CxNumGoalQueues, unit, &[]) {
                 if h(O::CxQueueSize, unit, &[j as i64]) == 0 {
@@ -1138,7 +1173,10 @@ pub extern "C" fn ee_gamecpp_msg_group_command(group: *mut c_void, target: *mut 
             continue;
         }
         if target != 0 {
-            if h(O::GoalIsBuildRepair, goal, &[]) != 0 || h(O::GoalIsGather, goal, &[]) != 0 || h(O::GoalIsLoadGarrison, goal, &[]) != 0 {
+            if h(O::GoalIsBuildRepair, goal, &[]) != 0
+                || h(O::GoalIsGather, goal, &[]) != 0
+                || h(O::GoalIsLoadGarrison, goal, &[]) != 0
+            {
                 break;
             }
             h(O::EffUnit, target, &[pa(target_effect), ptr(&mut handle), 0, 0, index as i64]);
@@ -1160,10 +1198,12 @@ pub extern "C" fn ee_gamecpp_msg_group_command(group: *mut c_void, target: *mut 
             i += 1;
             continue;
         }
-        let goal = if h(O::CxQueueSize, unit, &[index as i64]) > 0 { hp(O::CxQueueBack, unit, &[index as i64]) } else { 0 };
+        let goal =
+            if h(O::CxQueueSize, unit, &[index as i64]) > 0 { hp(O::CxQueueBack, unit, &[index as i64]) } else { 0 };
         if goal == 0
             || command == 0xb8
-            || ((command != 0xb9 || h(O::GoalHasLocation, goal, &[]) == 0) && (command != 0xba || h(O::GoalHasLocation, goal, &[]) == 0))
+            || ((command != 0xb9 || h(O::GoalHasLocation, goal, &[]) == 0)
+                && (command != 0xba || h(O::GoalHasLocation, goal, &[]) == 0))
         {
             i += 1;
             continue;
