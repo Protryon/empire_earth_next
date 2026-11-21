@@ -349,7 +349,8 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
     // SAFETY: gRenderEnvironment, gU4E9330 (no C++ call between the reads and the writes)
     let step = unsafe {
         (*e).wind_speed = wind;
-        let mut clocks = EeGfxSceneClocks { grid_phase: *grid, water_phase: (*e).water_phase, cloud_offset: (*e).cloud_offset };
+        let mut clocks =
+            EeGfxSceneClocks { grid_phase: *grid, water_phase: (*e).water_phase, cloud_offset: (*e).cloud_offset };
         scene::step_clocks(&mut clocks, elapsed, (*e).wind_speed);
         *grid = clocks.grid_phase;
         (*e).water_phase = clocks.water_phase;
@@ -1328,7 +1329,8 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
                             // SAFETY: the pool's count
                             let out = hp(O::RoRenderUnit, 0, &[unsafe { *units } as i64]);
                             // SAFETY: the render unit's head
-                            let translucent = unit_opacity(unit, unsafe { &mut (*(out as *mut EeGfxFillUnit)).opacity });
+                            let translucent =
+                                unit_opacity(unit, unsafe { &mut (*(out as *mut EeGfxFillUnit)).opacity });
                             fill_unit(unit, out, translucent as i64, &mut info);
                             // SAFETY: as above
                             unsafe { *units += 1 };
@@ -1398,7 +1400,8 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
         unsafe { (*head).second_full_opacity = second };
     }
     if h(O::RoCaptureFillPresent, 0, &[]) != 0 {
-        hf(O::RoCaptureFill, 0, &[ptr(&mut info), SWAY_CLOCK.load(Relaxed) as i64], &[count]); // RFIL (TEST ONLY)
+        // RFIL (TEST ONLY)
+        hf(O::RoCaptureFill, 0, &[ptr(&mut info), SWAY_CLOCK.load(Relaxed) as i64], &[count]);
     }
     set_flag(O::RoFlag529068, true);
     let music_due = {
@@ -1431,7 +1434,13 @@ fn draw_ground_circle(location: &GeTransformation, radius: f32, mode: c_long) {
     let ground = ee_render::gfx::effect_obj::ee_gfx_particle_ground();
     // SAFETY: the ground's answers and room for the ring's points
     let width = unsafe {
-        ee_render::gfx::ffi_scene::ee_gfx_capture_ground_circle(&ground, location.x(), location.y(), radius, points.as_mut_ptr())
+        ee_render::gfx::ffi_scene::ee_gfx_capture_ground_circle(
+            &ground,
+            location.x(),
+            location.y(),
+            radius,
+            points.as_mut_ptr(),
+        )
     };
     h(O::RoLinePointsResize, line, &[RO_RING_POINTS as i64]);
     for (i, p) in points.iter().enumerate() {

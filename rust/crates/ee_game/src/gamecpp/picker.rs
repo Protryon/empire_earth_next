@@ -258,9 +258,11 @@ mod tests {
 
     #[test]
     fn the_fog_attributes_mirror_the_rasterizer_s() {
-        assert_eq!(offset_of!(FogAttributes, kind), 0x0c);
-        assert_eq!(offset_of!(FogAttributes, start), 0x10 + size_of::<c_ulong>() + 4);
-        assert_eq!(offset_of!(FogAttributes, scale), 0x18 + size_of::<c_ulong>() + 4);
+        // +0x00 the colour, +0x0c the type, then the four floats (the 32-bit long of the Windows build)
+        let kind = offset_of!(FogAttributes, kind);
+        assert_eq!(kind, 0x0c_usize.next_multiple_of(std::mem::align_of::<c_ulong>()));
+        assert_eq!(offset_of!(FogAttributes, start), kind + size_of::<c_ulong>() + 4);
+        assert_eq!(offset_of!(FogAttributes, scale), kind + size_of::<c_ulong>() + 12);
     }
 
     #[test]
