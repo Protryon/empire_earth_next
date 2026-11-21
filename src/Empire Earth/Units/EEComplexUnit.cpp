@@ -597,82 +597,7 @@ static void EEDumpWrite(void* inFile, const char* inText, size_t inLength)
 // Writes the unit's goals, physics, class stats, waypoints and area effects to the out-of-sync dump
 void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
 {
-    GE3DPoint theLocation;
-    std::deque<EEUnitGoal*> theGoals;
-    // the record's lines (ee_units unit_bulk.rs dump, parts 0 and 1), the goals', waypoints' and area effects' here
-    EeUnitsComplexDumpIn theIn;
-    theIn.player_id = this->mPlayer->mPlayerID;
-    theIn.tile_x = this->GetTileX();
-    theIn.tile_y = this->GetTileY();
-    theIn.angular_velocity[0] = this->mAngularVelocity.GetYaw();
-    theIn.angular_velocity[1] = this->mAngularVelocity.GetPitch();
-    theIn.angular_velocity[2] = this->mAngularVelocity.GetRoll();
-    theIn.build_queue = this->mBuildQueue.size();
-    theIn.citizen_build_queue = this->mCitizenBuildQueue.size();
-    theIn.collision_tile[0] = this->mCollisionTile.mX;
-    theIn.collision_tile[1] = this->mCollisionTile.GetY();
-    theIn.frame = this->mPhysicalModel.GetFrame();
-    theIn.projectile_start[0] = this->mProjectileStart.GetX();
-    theIn.projectile_start[1] = this->mProjectileStart.GetY();
-    theIn.projectile_start[2] = this->mProjectileStart.GetZ();
-    for (unsigned long r = 0; r < 4; r++)
-        for (unsigned long c = 0; c < 4; c++)
-            theIn.location[r][c] = this->mPhysicalModel.GetLocation().GetElement(r, c);
-    EEUnitClass* theClass = this->GetUnitClass();
-    ee_units_complex_dump(0, this, this, this, theClass, this->GetStats(), &theIn, &EEDumpWrite, inFile);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(this->GetComplexUnit()->GetCommandType()),
-        this->GetComplexUnit()->GetCommandType());
-    if (this->GetComplexUnit()->mActiveGroup == NULL)
-        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has no active group\n");
-    else
-        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->GetComplexUnit()->mActiveGroup->mFields.mAction);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n");
-    for (unsigned long i = 0; i < this->GetComplexUnit()->mGoalQueues.size(); ++i) {
-        theGoals = this->GetComplexUnit()->mGoalQueues[i].mGoals.Get();
-        fprintf(inFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", i, theGoals.size());
-        for (unsigned long j = 0; j < theGoals.size(); ++j) {
-            fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", j, (theGoals[j])->mKind);
-            (theGoals[j])->DumpOutOfSynch(inFile);
-            (theGoals[j])->GetGoalLocation(theLocation);
-            fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)theLocation.GetX());
-            fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)theLocation.GetY());
-            fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)theLocation.GetZ());
-            if ((theGoals[j])->mKind == kGoalLocation) {
-                if (static_cast<EEUGRust*>(theGoals[j])->GetIsAutoWaypoint() == true)
-                    fprintf(inFile, "OUT OF SYNCH DUMP:  Location Goal Is An AutoWaypoint\n");
-                else
-                    fprintf(inFile, "OUT OF SYNCH DUMP:  Location Goal Is Not An AutoWaypoint\n");
-            }
-            (theGoals[j])->DumpOutOfSynch(inFile);
-        }
-    }
-    if (this->GetComplexUnit()->mGoalState != NULL) {
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Current Goal:\t%6d\n", this->GetComplexUnit()->mGoalState->mKind);
-        this->GetComplexUnit()->mGoalState->GetGoalLocation(theLocation);
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)theLocation.GetX());
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)theLocation.GetY());
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)theLocation.GetZ());
-    }
-    ee_units_complex_dump(1, this, this, this, theClass, this->GetStats(), &theIn, &EEDumpWrite, inFile);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint Size:%zu\n", this->GetComplexUnit()->mWaypoints.size());
-    for (unsigned long theWaypoint = 0; theWaypoint < this->GetComplexUnit()->mWaypoints.size(); ++theWaypoint)
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint[%ld]: X:%f, Y:%f, Z:%f\n", theWaypoint,
-            (double)this->GetComplexUnit()->mWaypoints[theWaypoint].mLocation.GetX(),
-            (double)this->GetComplexUnit()->mWaypoints[theWaypoint].mLocation.GetY(),
-            (double)this->GetComplexUnit()->mWaypoints[theWaypoint].mLocation.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects ********************\n\n");
-    if (this->mAffectingAreaEffects.GetSize() != 0) {
-        fprintf(inFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects Affected By ********************\n");
-        for (std::vector<EEAreaEffect*>::iterator theEffect = this->mAffectingAreaEffects.mItems.begin();
-             theEffect != this->mAffectingAreaEffects.mItems.end(); ++theEffect)
-            (*theEffect)->Dump(inFile);
-    }
-    if (this->mAreaEffects.GetSize() == 0)
-        return;
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  **************************** Unit Area Effects Generated ********************\n");
-    for (std::vector<EEAreaEffect*>::iterator theEffect = this->mAreaEffects.mItems.begin();
-         theEffect != this->mAreaEffects.mItems.end(); ++theEffect)
-        (*theEffect)->Dump(inFile);
+    ee_units_cu_out_of_synch_dump(this, inFile);   // cu_dump.rs
 }
 
 // Applies the built unit's area effects to the units within the largest effect radius
@@ -755,28 +680,7 @@ EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
 // Appends a debug description: action, collision state, velocity and the current goal
 void EEComplexUnit::Describe(UWideString& ioString)
 {
-    UWideString theString;
-    EEUnitGoal* theGoal = this->mGoalState;
-    EEUnit::Describe(theString);
-    ioString += theString;
-    if (this->mCommand) {
-        sprintf(theString, "act %s:", (const char*)EEUnitAction::GetActionName(this->mCommand->mType));
-        ioString += theString;
-    }
-    sprintf(theString, "coll %d", this->mCollisionState);
-    ioString += theString;
-    if (this->mCollisionState != 0) {
-        sprintf(theString, " / tile(%ld,%ld)", this->mCollisionTile.GetX(), this->mCollisionTile.GetY());
-        ioString += theString;
-    }
-    ioString += ":";
-    sprintf(theString, "vel %.4f:", this->mVelocity);
-    ioString += theString;
-    if (!theGoal)
-        return;
-    theString.Clear();
-    theGoal->GetDebugLine(theString);
-    ioString += theString;
+    ee_units_cu_describe(this, &ioString);   // cu_dump.rs
 }
 
 // Returns the unit's (or its container's) tile, or a nearby tile on a continent of the wanted kind
@@ -1096,38 +1000,21 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
         return 0;
     case EE_UNITS_SIGHT_ALLIED:
         return thePlayer->IsAlliedWith((EEPlayer*)(uintptr_t)inB);
-    case EE_UNITS_SIGHT_CIRCLE:
-        if (inOn)
-            EEAddSightCircle(f[0], f[1], f[2], thePlayer);
-        else
-            EERemoveSightCircle(f[0], f[1], f[2], thePlayer);
-        return 0;
-    case EE_UNITS_SIGHT_TILE_SIGHT:
-        if (inOn)
-            ((EEMapTile*)(uintptr_t)inA)->AddSight((EEPlayer*)(uintptr_t)inB);
-        else
-            ((EEMapTile*)(uintptr_t)inA)->RemoveSight((EEPlayer*)(uintptr_t)inB);
-        return 0;
-    case EE_UNITS_SIGHT_SHARED:
-        if (inOn)
-            thePlayer->AddSharedSight((EEMapTile*)(uintptr_t)inB, (long)inC, (long)inD);
-        else
-            thePlayer->RemoveSharedSight((EEMapTile*)(uintptr_t)inB);
-        return 0;
-    case EE_UNITS_SIGHT_SHOW:
-        if (inOn) {
-            gMiniMap->CountCellOn((long)inC, (long)inD);
-            ::gWorld.mMap->mTerrainMesh.ReferenceTile((long)inC, (long)inD);
-        } else {
-            gMiniMap->CountCellOff((long)inC, (long)inD);
-            ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD);
-        }
-        return 0;
+    case EE_UNITS_SIGHT_CIRCLE: EEAddSightCircle(f[0], f[1], f[2], thePlayer); return 0;
+    case EE_UNITS_SIGHT_CIRCLE_OFF: EERemoveSightCircle(f[0], f[1], f[2], thePlayer); return 0;
+    case EE_UNITS_SIGHT_TILE_SIGHT: ((EEMapTile*)(uintptr_t)inA)->AddSight((EEPlayer*)(uintptr_t)inB); return 0;
+    case EE_UNITS_SIGHT_TILE_SIGHT_OFF: ((EEMapTile*)(uintptr_t)inA)->RemoveSight((EEPlayer*)(uintptr_t)inB); return 0;
+    case EE_UNITS_SIGHT_SHARED: thePlayer->AddSharedSight((EEMapTile*)(uintptr_t)inB, (long)inC, (long)inD); return 0;
+    case EE_UNITS_SIGHT_SHARED_OFF: thePlayer->RemoveSharedSight((EEMapTile*)(uintptr_t)inB); return 0;
+    case EE_UNITS_SIGHT_SHOW: gMiniMap->CountCellOn((long)inC, (long)inD); return 0;
+    case EE_UNITS_SIGHT_SHOW_TILE: ::gWorld.mMap->mTerrainMesh.ReferenceTile((long)inC, (long)inD); return 0;
+    case EE_UNITS_SIGHT_SHOW_OFF: gMiniMap->CountCellOff((long)inC, (long)inD); return 0;
+    case EE_UNITS_SIGHT_SHOW_TILE_OFF: ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_WONDER:
-        if (inOn)
-            ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
-        else
-            ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
+        ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
+        return 0;
+    case EE_UNITS_SIGHT_WONDER_OFF:
+        ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
         return 0;
     }
     return 0;
@@ -1536,6 +1423,34 @@ static void EECuSetTransformationAtZ(EEComplexUnit* inUnit, const GETransformati
     inUnit->SetTransformation(theLocation, true);
 }
 
+// cu_dump.rs's scratch values: the dump's input record and goal location, Describe's text (the originals' locals)
+static EeUnitsComplexDumpIn sCuDumpIn;
+static GE3DPoint sCuDumpLocation;
+static UWideString sCuText;
+
+// the out-of-sync dump's input record from the unit (the record's lines: ee_units unit_bulk.rs dump)
+static void EECuDumpFill(EEComplexUnit* inUnit)
+{
+    EeUnitsComplexDumpIn& theIn = sCuDumpIn;
+    theIn.player_id = inUnit->mPlayer->mPlayerID;
+    theIn.tile_x = inUnit->GetTileX();
+    theIn.tile_y = inUnit->GetTileY();
+    theIn.angular_velocity[0] = inUnit->mAngularVelocity.GetYaw();
+    theIn.angular_velocity[1] = inUnit->mAngularVelocity.GetPitch();
+    theIn.angular_velocity[2] = inUnit->mAngularVelocity.GetRoll();
+    theIn.build_queue = inUnit->mBuildQueue.size();
+    theIn.citizen_build_queue = inUnit->mCitizenBuildQueue.size();
+    theIn.collision_tile[0] = inUnit->mCollisionTile.mX;
+    theIn.collision_tile[1] = inUnit->mCollisionTile.GetY();
+    theIn.frame = inUnit->mPhysicalModel.GetFrame();
+    theIn.projectile_start[0] = inUnit->mProjectileStart.GetX();
+    theIn.projectile_start[1] = inUnit->mProjectileStart.GetY();
+    theIn.projectile_start[2] = inUnit->mProjectileStart.GetZ();
+    for (unsigned long r = 0; r < 4; r++)
+        for (unsigned long c = 0; c < 4; c++)
+            theIn.location[r][c] = inUnit->mPhysicalModel.GetLocation().GetElement(r, c);
+}
+
 // cu_world.rs's scratch values: CanReachTile's destination, attach point, position and pitch, MoveToLocation's
 // waypoint point, ApplyAreaEffects' location, ReleaseConversionEffect's handle (the originals' locals)
 static GE3DPoint sCuDestination;
@@ -1622,6 +1537,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     EEModel* theModel = EECuObject<EEModel>(inA);
     EETechTreeNode* theNode = EECuObject<EETechTreeNode>(inA);
     EEPlayer* thePlayer = EECuObject<EEPlayer>(inA);
+    FILE* theFile = EECuObject<FILE>(inA);
     float* f = *ioF;
     switch (inOp) {
     // Kill's
@@ -1660,13 +1576,11 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_OWNER: return (uint64_t)(uintptr_t)theUnit->mOwner;
     case EE_UNITS_CU_CLEAR_OWNER: theUnit->mOwner = NULL; return 0;
     case EE_UNITS_CU_UPDATE_JIT: theUnit->UpdateJITManufacturing(); return 0;
-    case EE_UNITS_CU_CLEAR_CONTACTS: theUnit->ClearContacts(); return 0;
     case EE_UNITS_CU_KILL_CARGO: theUnit->KillCargo(); return 0;
     case EE_UNITS_CU_CLEAR_GARRISON: theUnit->ClearGarrison(); return 0;
     case EE_UNITS_CU_HOLDER: return (uint64_t)(uintptr_t)theUnit->mHolder;
     case EE_UNITS_CU_HOLDER_RELEASE: theUnit->mHolder->ReleaseHeld(theUnit); return 0;
     case EE_UNITS_CU_CLEAR_HOLDER_FIELD: theUnit->mHolder = NULL; return 0;
-    case EE_UNITS_CU_RELEASE_HELD_UNITS: theUnit->ReleaseHeldUnits(); return 0;
     case EE_UNITS_CU_CANCEL_PATHS: gPathManager.CancelPaths(theUnit, true); return 0;
     case EE_UNITS_CU_DROP_PATH: theUnit->DropPath(); return 0;
     case EE_UNITS_CU_AIR_TRAFFIC_TYPE: return theUnit->GetUnitClass()->mAirTrafficType;
@@ -1687,8 +1601,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CONTAINER: return (uint64_t)(uintptr_t)theUnit->mContainer;
     case EE_UNITS_CU_CONTAINER_RELEASE: theUnit->mContainer->ReleaseCargo(theUnit); return 0;
     case EE_UNITS_CU_CLEAR_GATHERED: theUnit->SetGatheredResource(NULL); return 0;
-    case EE_UNITS_CU_CLEAR_BLOCKING: theUnit->SetBlockingUnit(NULL); return 0;
-    case EE_UNITS_CU_CLEAR_LAST_RESOURCE: theUnit->SetLastResource(NULL); return 0;
     case EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION: theUnit->CancelQueuedProduction(); return 0;
     case EE_UNITS_CU_GOAL_QUEUE_COUNT: return theUnit->mGoalQueues.size();
     case EE_UNITS_CU_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
@@ -2040,7 +1952,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CLEAR_FIRE_EFFECT: theUnit->mFireEffect.mValue = 0; return 0;
     case EE_UNITS_CU_CLASS_TYPE_FIELD: return theUnit->GetUnitClass()->mUnitType;
     case EE_UNITS_CU_REMOVE_CLOAK_EFFECT: EERemoveCloakEffect(theUnit); return 0;
-    case EE_UNITS_CU_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets(); return 0;
     case EE_UNITS_CU_ATC_CLEAR_AIRPORT_QUEUE:
         ee_units_atc_clear_airport_queue(theUnit->mPlayer->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theUnit, (uint32_t)inB);
         return 0;
@@ -2061,6 +1972,73 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_REFRESH_ACTIVE_GOAL: theUnit->RefreshActiveGoal(); return 0;
     case EE_UNITS_CU_CIRCLES:
         return theUnit->GetUnitClass()->mCategory == kUnitCategoryAirplane || theUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
+    // cu_dump.rs's
+    case EE_UNITS_CU_DUMP_FILL: EECuDumpFill(theUnit); return 0;
+    case EE_UNITS_CU_DUMP_PART:
+        ee_units_complex_dump((uint32_t)inB, theUnit, theUnit, theUnit, theUnit->GetUnitClass(), theUnit->GetStats(), &sCuDumpIn, &EEDumpWrite, theFile);
+        return 0;
+    case EE_UNITS_CU_DUMP_ACTION:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n",
+                (const char*)EEUnitAction::GetActionName(theUnit->GetComplexUnit()->GetCommandType()), theUnit->GetComplexUnit()->GetCommandType());
+        return 0;
+    case EE_UNITS_CU_NO_ACTIVE_GROUP: return theUnit->GetComplexUnit()->mActiveGroup == NULL;
+    case EE_UNITS_CU_DUMP_NO_GROUP: fprintf(theFile, "OUT OF SYNCH DUMP:  This unit has no active group\n"); return 0;
+    case EE_UNITS_CU_DUMP_GROUP:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", theUnit->GetComplexUnit()->mActiveGroup->mFields.mAction);
+        return 0;
+    case EE_UNITS_CU_DUMP_GOALS: fprintf(theFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n"); return 0;
+    case EE_UNITS_CU_DUMP_QUEUE:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", (long)inB,
+                theUnit->GetComplexUnit()->mGoalQueues[(size_t)inB].mGoals.size());
+        return 0;
+    case EE_UNITS_CU_DUMP_GOAL_KIND:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", (long)inC, theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->mKind);
+        return 0;
+    case EE_UNITS_CU_DUMP_GOAL: theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->DumpOutOfSynch(theFile); return 0;
+    case EE_UNITS_CU_DUMP_GOAL_LOCATION: theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->GetGoalLocation(sCuDumpLocation); return 0;
+    case EE_UNITS_CU_DUMP_STATE_LOCATION: theUnit->GetComplexUnit()->mGoalState->GetGoalLocation(sCuDumpLocation); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)sCuDumpLocation.GetX()); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION_Y: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)sCuDumpLocation.GetY()); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION_Z: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)sCuDumpLocation.GetZ()); return 0;
+    case EE_UNITS_CU_GOAL_AUTO_WAYPOINT:
+        return static_cast<EEUGRust*>(theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC])->GetIsAutoWaypoint() == true;
+    case EE_UNITS_CU_DUMP_AUTO_WAYPOINT: fprintf(theFile, "OUT OF SYNCH DUMP:  Location Goal Is An AutoWaypoint\n"); return 0;
+    case EE_UNITS_CU_DUMP_NOT_AUTO_WAYPOINT: fprintf(theFile, "OUT OF SYNCH DUMP:  Location Goal Is Not An AutoWaypoint\n"); return 0;
+    case EE_UNITS_CU_HAS_GOAL_STATE_NOW: return theUnit->GetComplexUnit()->mGoalState != NULL;
+    case EE_UNITS_CU_DUMP_GOAL_STATE:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  Current Goal:\t%6d\n", theUnit->GetComplexUnit()->mGoalState->mKind);
+        return 0;
+    case EE_UNITS_CU_DUMP_WAYPOINT_SIZE: fprintf(theFile, "OUT OF SYNCH DUMP:  Waypoint Size:%zu\n", theUnit->GetComplexUnit()->mWaypoints.size()); return 0;
+    case EE_UNITS_CU_DUMP_WAYPOINT:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  Waypoint[%ld]: X:%f, Y:%f, Z:%f\n", (long)inB,
+                (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetX(),
+                (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetY(),
+                (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetZ());
+        return 0;
+    case EE_UNITS_CU_DUMP_AREA_HEADER:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects ********************\n\n");
+        return 0;
+    case EE_UNITS_CU_AFFECTING_SIZE: return (int64_t)theUnit->mAffectingAreaEffects.GetSize();
+    case EE_UNITS_CU_DUMP_AFFECTING_HEADER:
+        fprintf(theFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects Affected By ********************\n");
+        return 0;
+    case EE_UNITS_CU_DUMP_AFFECTING: theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->Dump(theFile); return 0;
+    case EE_UNITS_CU_DUMP_GENERATED_HEADER:
+        fprintf(theFile, "\nOUT OF SYNCH DUMP:  **************************** Unit Area Effects Generated ********************\n");
+        return 0;
+    case EE_UNITS_CU_DUMP_AREA_EFFECT: theUnit->mAreaEffects.mItems[(size_t)inB]->Dump(theFile); return 0;
+    case EE_UNITS_CU_DESCRIBE_BASE: theUnit->EEUnit::Describe(sCuText = UWideString()); return 0;
+    case EE_UNITS_CU_DESCRIBE_APPEND: *EECuObject<UWideString>(inA) += sCuText; return 0;
+    case EE_UNITS_CU_DESCRIBE_ACTION: sprintf(sCuText, "act %s:", (const char*)EEUnitAction::GetActionName(theUnit->mCommand->mType)); return 0;
+    case EE_UNITS_CU_DESCRIBE_COLLISION: sprintf(sCuText, "coll %d", theUnit->mCollisionState); return 0;
+    case EE_UNITS_CU_COLLISION_STATE: return theUnit->mCollisionState;
+    case EE_UNITS_CU_DESCRIBE_COLLISION_TILE:
+        sprintf(sCuText, " / tile(%ld,%ld)", theUnit->mCollisionTile.GetX(), theUnit->mCollisionTile.GetY());
+        return 0;
+    case EE_UNITS_CU_DESCRIBE_COLON: *EECuObject<UWideString>(inA) += ":"; return 0;
+    case EE_UNITS_CU_DESCRIBE_VELOCITY: sprintf(sCuText, "vel %.4f:", theUnit->mVelocity); return 0;
+    case EE_UNITS_CU_DESCRIBE_CLEAR: sCuText.Clear(); return 0;
+    case EE_UNITS_CU_DESCRIBE_GOAL: theUnit->mGoalState->GetDebugLine(sCuText); return 0;
     // cu_world.rs's
     case EE_UNITS_CU_ATTACK_GOAL_OF: return (uint64_t)(uintptr_t)EEAttackUnitCast(theOther->GetGoal());
     case EE_UNITS_CU_ATTACK_TARGET_IS_THIS: return EECuObject<EEUGRust>(inA)->GetAttackTarget() == theUnit;

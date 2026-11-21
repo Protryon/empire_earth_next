@@ -712,7 +712,7 @@ pub fn reset<H: CuHost + ?Sized>(h: &mut H, unit: u64, goal_queues: i64, random_
     }
     s.qb(EE_UNITS_CU_CLEAR_FIELD, EE_UNITS_CU_FIELD_MINE);
     s.qb(EE_UNITS_CU_RESIZE_GOAL_QUEUES, goal_queues);
-    s.q(EE_UNITS_CU_RELEASE_HELD_UNITS);
+    crate::units::cu_world::release_held_units(s.h, unit);
     s.qb(EE_UNITS_CU_CLEAR_FIELD, EE_UNITS_CU_FIELD_HERD);
     s.qb(EE_UNITS_CU_CLEAR_FIELD, EE_UNITS_CU_FIELD_HOLDER);
     s.q(EE_UNITS_CU_RESET_FIRE_EFFECT);

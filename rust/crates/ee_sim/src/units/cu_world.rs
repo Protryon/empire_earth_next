@@ -682,7 +682,7 @@ pub fn move_to_location<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: f32, y: f32
     let moved = s.yes(EE_UNITS_CU_IS_COLLIDABLE) && (tx != s.q(EE_UNITS_CU_GET_TILE_X) || ty != s.q(EE_UNITS_CU_TILE_Y));
     s.qabc(EE_UNITS_CU_MOVE_TO_UPDATE, u64::from(update), tx, ty);
     if moved {
-        s.q(EE_UNITS_CU_CLEAR_CONTACTS);
+        clear_contacts(s.h, unit);
         crate::units::cu_body::find_contacts(s.h, unit);
     }
     if old_tile != s.obj(EE_UNITS_CU_TILE_POINTER)
@@ -977,6 +977,16 @@ fn set_link<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64, get: i32, set:
         s.qa(set, other);
         s.qa(EE_UNITS_CU_REFERENCE, other);
     }
+}
+
+/// `SetBlockingUnit(other)`: the unit blocking this one (reference counted).
+pub fn set_blocking_unit<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64) {
+    set_link(h, unit, other, EE_UNITS_CU_BLOCKING_UNIT, EE_UNITS_CU_SET_BLOCKING_FIELD);
+}
+
+/// `SetLastResource(other)`: the last resource the unit gathered from (reference counted).
+pub fn set_last_resource<H: CuHost + ?Sized>(h: &mut H, unit: u64, other: u64) {
+    set_link(h, unit, other, EE_UNITS_CU_LAST_RESOURCE, EE_UNITS_CU_SET_LAST_RESOURCE_FIELD);
 }
 
 /// `SetHomeBase(base)`: the unit's home base (reference counted).

@@ -219,7 +219,7 @@ fn a_move_refreshes_the_contacts_and_the_swim_animation() {
         .answer(EE_UNITS_CU_ANIMATION, 0, 0, ANIMATION_WALK);
     move_to_location(&mut h, U, 3.5, 0.0, true);
     assert!(h.asked(EE_UNITS_CU_MOVE_TO_UPDATE, 1, 3));
-    assert_eq!(h.count(EE_UNITS_CU_CLEAR_CONTACTS), 1);
+    assert_eq!(h.count(EE_UNITS_CU_CONTACTS_CLEAR), 1);
     assert!(h.asked(EE_UNITS_CU_SET_ANIMATION_STATE, 0, ANIMATION_SWIM));
 }
 

@@ -105,7 +105,7 @@ fn reset_draws_the_heading_and_clears_every_field() {
     assert_eq!(h.count(EE_UNITS_CU_CLEAR_FIELD), 22);
     assert!(h.asked(EE_UNITS_CU_RESIZE_GOAL_QUEUES, 0, 4));
     assert!(h.at(EE_UNITS_CU_RANDOM) < h.at(EE_UNITS_CU_COMPLEX_RESET));
-    assert!(h.at(EE_UNITS_CU_RELEASE_HELD_UNITS) > h.at(EE_UNITS_CU_RESIZE_GOAL_QUEUES));
+    assert!(h.at(crate::units::cu_world::EE_UNITS_CU_HELD_CLEAR) > h.at(EE_UNITS_CU_RESIZE_GOAL_QUEUES));
     // no random heading: no draw, no class: the default behaviour
     let mut h = Mock::default().answer(EE_UNITS_CU_BEHAVIOR_TABLE, 0, BEHAVIOR_DEFAULT, 9);
     reset(&mut h, 1, 1, false);

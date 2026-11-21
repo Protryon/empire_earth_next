@@ -2153,6 +2153,120 @@ constexpr static const int32_t EE_UNITS_CU_DO_ADD_BUILD_TARGET = 36;
 
 constexpr static const int32_t EE_UNITS_CU_DO_ADD_CONTACT = 37;
 
+/// the dump's input record filled from the unit (its tile, physics and queues; `EECuDumpIn`)
+constexpr static const int32_t EE_UNITS_CU_DUMP_FILL = 900;
+
+/// `ee_units_complex_dump(b, this, this, this, GetUnitClass(), GetStats(), the input, EEDumpWrite, (FILE*)a)`
+constexpr static const int32_t EE_UNITS_CU_DUMP_PART = 901;
+
+/// the action line
+constexpr static const int32_t EE_UNITS_CU_DUMP_ACTION = 902;
+
+/// `mActiveGroup == NULL`
+constexpr static const int32_t EE_UNITS_CU_NO_ACTIVE_GROUP = 903;
+
+/// the "no active group" line
+constexpr static const int32_t EE_UNITS_CU_DUMP_NO_GROUP = 904;
+
+/// the active group's action line
+constexpr static const int32_t EE_UNITS_CU_DUMP_GROUP = 905;
+
+/// the goals' header line
+constexpr static const int32_t EE_UNITS_CU_DUMP_GOALS = 906;
+
+/// queue `b`'s header line (its number of goals)
+constexpr static const int32_t EE_UNITS_CU_DUMP_QUEUE = 907;
+
+/// goal (`b`, `c`)'s kind line
+constexpr static const int32_t EE_UNITS_CU_DUMP_GOAL_KIND = 908;
+
+/// goal (`b`, `c`)'s `DumpOutOfSynch(file)`
+constexpr static const int32_t EE_UNITS_CU_DUMP_GOAL = 909;
+
+/// goal (`b`, `c`)'s `GetGoalLocation(the scratch location)`
+constexpr static const int32_t EE_UNITS_CU_DUMP_GOAL_LOCATION = 910;
+
+/// the scratch location's x line
+constexpr static const int32_t EE_UNITS_CU_DUMP_LOCATION = 911;
+
+/// goal (`b`, `c`)'s `GetIsAutoWaypoint() == true`
+constexpr static const int32_t EE_UNITS_CU_GOAL_AUTO_WAYPOINT = 912;
+
+/// the "is an auto waypoint" line
+constexpr static const int32_t EE_UNITS_CU_DUMP_AUTO_WAYPOINT = 913;
+
+/// the current goal's line
+constexpr static const int32_t EE_UNITS_CU_DUMP_GOAL_STATE = 914;
+
+/// the waypoints' size line
+constexpr static const int32_t EE_UNITS_CU_DUMP_WAYPOINT_SIZE = 915;
+
+/// waypoint `b`'s line
+constexpr static const int32_t EE_UNITS_CU_DUMP_WAYPOINT = 916;
+
+/// the area effects' header line
+constexpr static const int32_t EE_UNITS_CU_DUMP_AREA_HEADER = 917;
+
+/// `mAffectingAreaEffects.GetSize()`
+constexpr static const int32_t EE_UNITS_CU_AFFECTING_SIZE = 918;
+
+/// the "affected by" header line
+constexpr static const int32_t EE_UNITS_CU_DUMP_AFFECTING_HEADER = 919;
+
+/// `mAffectingAreaEffects.mItems[b]->Dump(file)`
+constexpr static const int32_t EE_UNITS_CU_DUMP_AFFECTING = 920;
+
+/// the "generated" header line
+constexpr static const int32_t EE_UNITS_CU_DUMP_GENERATED_HEADER = 921;
+
+/// `mAreaEffects.mItems[b]->Dump(file)`
+constexpr static const int32_t EE_UNITS_CU_DUMP_AREA_EFFECT = 922;
+
+/// `mGoalState != NULL`
+constexpr static const int32_t EE_UNITS_CU_HAS_GOAL_STATE_NOW = 923;
+
+/// `EEUnit::Describe(the scratch text = UWideString())`
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_BASE = 924;
+
+/// the action text (`"act %s:"`) into the scratch text
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_ACTION = 925;
+
+/// the collision state text (`"coll %d"`) into the scratch text
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_COLLISION = 926;
+
+/// `mCollisionState`
+constexpr static const int32_t EE_UNITS_CU_COLLISION_STATE = 927;
+
+/// the collision tile text (`" / tile(%ld,%ld)"`) into the scratch text
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_COLLISION_TILE = 928;
+
+/// `*(UWideString*)a += ":"`
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_COLON = 929;
+
+/// the velocity text (`"vel %.4f:"`) into the scratch text
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_VELOCITY = 930;
+
+/// the goal state's `GetDebugLine(the scratch text)`
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_GOAL = 931;
+
+/// the goal state's `GetGoalLocation(the scratch location)`
+constexpr static const int32_t EE_UNITS_CU_DUMP_STATE_LOCATION = 932;
+
+/// the scratch location's y line
+constexpr static const int32_t EE_UNITS_CU_DUMP_LOCATION_Y = 933;
+
+/// the scratch location's z line
+constexpr static const int32_t EE_UNITS_CU_DUMP_LOCATION_Z = 934;
+
+/// the "is not an auto waypoint" line
+constexpr static const int32_t EE_UNITS_CU_DUMP_NOT_AUTO_WAYPOINT = 935;
+
+/// `*(UWideString*)a += the scratch text`
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_APPEND = 936;
+
+/// the scratch text's `Clear()`
+constexpr static const int32_t EE_UNITS_CU_DESCRIBE_CLEAR = 937;
+
 /// `mProjectileStart = a->mProjectileStart`
 constexpr static const int32_t EE_UNITS_CU_COPY_PROJECTILE_START = 500;
 
@@ -8160,6 +8274,27 @@ constexpr static const int32_t EE_UNITS_SIGHT_NUM_PLAYERS = 16;
 /// `gWorld.mPlayers[c]`
 constexpr static const int32_t EE_UNITS_SIGHT_PLAYER = 17;
 
+/// `EERemoveSightCircle(f[0], f[1], f[2], player a)` (`EE_UNITS_SIGHT_CIRCLE` is the add)
+constexpr static const int32_t EE_UNITS_SIGHT_CIRCLE_OFF = 20;
+
+/// tile `a`'s `RemoveSight(player b)` (`EE_UNITS_SIGHT_TILE_SIGHT` is the add)
+constexpr static const int32_t EE_UNITS_SIGHT_TILE_SIGHT_OFF = 21;
+
+/// player `a`'s `RemoveSharedSight(tile b)` (`EE_UNITS_SIGHT_SHARED` is the add)
+constexpr static const int32_t EE_UNITS_SIGHT_SHARED_OFF = 22;
+
+/// the terrain mesh's `ReferenceTile(c, d)` (`EE_UNITS_SIGHT_SHOW` is the minimap's `CountCellOn`)
+constexpr static const int32_t EE_UNITS_SIGHT_SHOW_TILE = 23;
+
+/// `gMiniMap->CountCellOff(c, d)`
+constexpr static const int32_t EE_UNITS_SIGHT_SHOW_OFF = 24;
+
+/// the terrain mesh's `DereferenceTile(c, d)`
+constexpr static const int32_t EE_UNITS_SIGHT_SHOW_TILE_OFF = 25;
+
+/// `gWorld.mMap->RemoveSight(player a, f[0], f[1], the wonder sight radius, false)` (`EE_UNITS_SIGHT_WONDER` the add)
+constexpr static const int32_t EE_UNITS_SIGHT_WONDER_OFF = 26;
+
 /// The kinds of countdown (`ee_units_step_countdown`'s `which`).
 constexpr static const uint32_t EE_UNITS_STEP_RELOAD = 1;
 
@@ -11514,6 +11649,18 @@ extern int64_t ee_units_cu_host(int32_t op,
 /// # Safety
 /// `unit` is a live `EEComplexUnit`, on the simulation thread.
 int64_t ee_units_cu_body(int32_t what, void *unit, int64_t a, int64_t b, int64_t c);
+
+/// `EEComplexUnit::OutOfSynchDump(file, flags)` on `unit`.
+///
+/// # Safety
+/// `unit` is a live `EEComplexUnit`, `file` an open `FILE*`.
+void ee_units_cu_out_of_synch_dump(void *unit, void *file);
+
+/// `EEComplexUnit::Describe(text)` on `unit`.
+///
+/// # Safety
+/// `unit` is a live `EEComplexUnit`, `text` a live `UWideString`.
+void ee_units_cu_describe(void *unit, void *text);
 
 /// `EEComplexUnit::Init(class, placement, player, goal_queues)` on `unit` (more arguments than
 /// `ee_units_cu_body` carries).

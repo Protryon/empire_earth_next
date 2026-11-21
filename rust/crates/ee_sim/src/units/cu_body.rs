@@ -528,7 +528,7 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
     }
     s(h, EE_UNITS_CU_CLEAR_OWNER, unit);
     s(h, EE_UNITS_CU_UPDATE_JIT, unit);
-    s(h, EE_UNITS_CU_CLEAR_CONTACTS, unit);
+    crate::units::cu_world::clear_contacts(h, unit);
     s(h, EE_UNITS_CU_KILL_CARGO, unit);
     s(h, EE_UNITS_CU_CLEAR_GARRISON, unit);
     if s(h, EE_UNITS_CU_HOLDER, unit) != 0 {
@@ -539,7 +539,7 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
         }
         s(h, EE_UNITS_CU_CLEAR_HOLDER_FIELD, unit);
     } else {
-        s(h, EE_UNITS_CU_RELEASE_HELD_UNITS, unit);
+        crate::units::cu_world::release_held_units(h, unit);
     }
     s(h, EE_UNITS_CU_CANCEL_PATHS, unit);
     s(h, EE_UNITS_CU_DROP_PATH, unit);
@@ -577,8 +577,8 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
         s(h, EE_UNITS_CU_CONTAINER_RELEASE, unit);
     }
     s(h, EE_UNITS_CU_CLEAR_GATHERED, unit);
-    s(h, EE_UNITS_CU_CLEAR_BLOCKING, unit);
-    s(h, EE_UNITS_CU_CLEAR_LAST_RESOURCE, unit);
+    crate::units::cu_world::set_blocking_unit(h, unit, 0);
+    crate::units::cu_world::set_last_resource(h, unit, 0);
     if !keep_research {
         s(h, EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION, unit);
     }
@@ -664,14 +664,14 @@ pub fn invalidate<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
     release_set(h, unit, EE_UNITS_CU_MINE, EE_UNITS_CU_CLEAR_MINE);
     release(h, unit, EE_UNITS_CU_OWNER, EE_UNITS_CU_CLEAR_OWNER);
     release(h, unit, EE_UNITS_CU_LAST_ATTACKER, EE_UNITS_CU_CLEAR_LAST_ATTACKER);
-    s(h, EE_UNITS_CU_CLEAR_CONTACTS, unit);
+    crate::units::cu_world::clear_contacts(h, unit);
     s(h, EE_UNITS_CU_CLEAR_ACTIVE_GOAL, unit);
     s(h, EE_UNITS_CU_CLEAR_GOAL_STATE, unit);
     if s(h, EE_UNITS_CU_HOLDER, unit) != 0 {
         s(h, EE_UNITS_CU_HOLDER_RELEASE, unit);
         s(h, EE_UNITS_CU_CLEAR_HOLDER, unit);
     } else {
-        s(h, EE_UNITS_CU_RELEASE_HELD_UNITS, unit);
+        crate::units::cu_world::release_held_units(h, unit);
     }
     s(h, EE_UNITS_CU_IGNORED_CLEAR, unit);
     if s(h, EE_UNITS_CU_SOUND, unit) != 0 {

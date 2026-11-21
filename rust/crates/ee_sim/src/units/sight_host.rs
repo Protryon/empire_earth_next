@@ -40,6 +40,20 @@ pub const EE_UNITS_SIGHT_WONDER: i32 = 15;
 pub const EE_UNITS_SIGHT_NUM_PLAYERS: i32 = 16;
 /// `gWorld.mPlayers[c]`
 pub const EE_UNITS_SIGHT_PLAYER: i32 = 17;
+/// `EERemoveSightCircle(f[0], f[1], f[2], player a)` (`EE_UNITS_SIGHT_CIRCLE` is the add)
+pub const EE_UNITS_SIGHT_CIRCLE_OFF: i32 = 20;
+/// tile `a`'s `RemoveSight(player b)` (`EE_UNITS_SIGHT_TILE_SIGHT` is the add)
+pub const EE_UNITS_SIGHT_TILE_SIGHT_OFF: i32 = 21;
+/// player `a`'s `RemoveSharedSight(tile b)` (`EE_UNITS_SIGHT_SHARED` is the add)
+pub const EE_UNITS_SIGHT_SHARED_OFF: i32 = 22;
+/// the terrain mesh's `ReferenceTile(c, d)` (`EE_UNITS_SIGHT_SHOW` is the minimap's `CountCellOn`)
+pub const EE_UNITS_SIGHT_SHOW_TILE: i32 = 23;
+/// `gMiniMap->CountCellOff(c, d)`
+pub const EE_UNITS_SIGHT_SHOW_OFF: i32 = 24;
+/// the terrain mesh's `DereferenceTile(c, d)`
+pub const EE_UNITS_SIGHT_SHOW_TILE_OFF: i32 = 25;
+/// `gWorld.mMap->RemoveSight(player a, f[0], f[1], the wonder sight radius, false)` (`EE_UNITS_SIGHT_WONDER` the add)
+pub const EE_UNITS_SIGHT_WONDER_OFF: i32 = 26;
 
 extern "C" {
     fn ee_units_sight_host(
@@ -113,23 +127,30 @@ impl SightHost for Game {
         with_player(player, |p| (0..p.sight_sharers_len()).map(|i| p.sight_sharer_handle(i)).collect())
     }
     fn circle(&mut self, on: bool, x: f32, y: f32, radius: f32, player: u64) {
-        self.op(EE_UNITS_SIGHT_CIRCLE, on, player, 0, 0, 0, &mut [x, y, radius]);
+        let op = if on { EE_UNITS_SIGHT_CIRCLE } else { EE_UNITS_SIGHT_CIRCLE_OFF };
+        self.op(op, on, player, 0, 0, 0, &mut [x, y, radius]);
     }
     fn tile(&mut self, x: i32, y: i32) -> u64 {
         // `gWorld.mMap->GetTile(x, y)`
         with_world(|w| w.map().and_then(|m| m.tile(i64::from(x), i64::from(y))).map_or(0, |t| t.handle()))
     }
     fn tile_sight(&mut self, on: bool, tile: u64, player: u64) {
-        self.op(EE_UNITS_SIGHT_TILE_SIGHT, on, tile, player, 0, 0, &mut [0.0; 3]);
+        let op = if on { EE_UNITS_SIGHT_TILE_SIGHT } else { EE_UNITS_SIGHT_TILE_SIGHT_OFF };
+        self.op(op, on, tile, player, 0, 0, &mut [0.0; 3]);
     }
     fn shared_sight(&mut self, on: bool, player: u64, tile: u64, x: i32, y: i32) {
-        self.op(EE_UNITS_SIGHT_SHARED, on, player, tile, x as i64, y as i64, &mut [0.0; 3]);
+        let op = if on { EE_UNITS_SIGHT_SHARED } else { EE_UNITS_SIGHT_SHARED_OFF };
+        self.op(op, on, player, tile, x as i64, y as i64, &mut [0.0; 3]);
     }
     fn show(&mut self, on: bool, x: i32, y: i32) {
-        self.op(EE_UNITS_SIGHT_SHOW, on, 0, 0, x as i64, y as i64, &mut [0.0; 3]);
+        let (cell, mesh) =
+            if on { (EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_TILE) } else { (EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE_OFF) };
+        self.op(cell, on, 0, 0, x as i64, y as i64, &mut [0.0; 3]);
+        self.op(mesh, on, 0, 0, x as i64, y as i64, &mut [0.0; 3]);
     }
     fn wonder_sight(&mut self, on: bool, player: u64, x: f32, y: f32) {
-        self.op(EE_UNITS_SIGHT_WONDER, on, player, 0, 0, 0, &mut [x, y, 0.0]);
+        let op = if on { EE_UNITS_SIGHT_WONDER } else { EE_UNITS_SIGHT_WONDER_OFF };
+        self.op(op, on, player, 0, 0, 0, &mut [x, y, 0.0]);
     }
     fn num_players(&mut self) -> u32 {
         with_world(|w| w.num_players() as u32)
