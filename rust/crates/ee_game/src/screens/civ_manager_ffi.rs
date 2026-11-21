@@ -98,3 +98,9 @@ pub unsafe extern "C" fn ee_screens_civm_to_legacy(upgrade: u32, out: *mut c_ulo
     result
 }
 
+/// `EELoadCivilization(name, directory, out name, out upgrades)` (`civ_load.rs`; the `UString*`s, the
+/// `UWideString*` and the `std::vector<EECivUpgrade>*`) -> its result.
+#[no_mangle]
+pub extern "C" fn ee_screens_civl_load(name: usize, directory: usize, out_name: usize, out_upgrades: usize) -> c_long {
+    crate::screens::civ_load::load_civilization(&mut Ffi, name, directory, out_name, out_upgrades)
+}

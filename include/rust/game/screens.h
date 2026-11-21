@@ -10209,12 +10209,10 @@ constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_GENERATED = 5;
 constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_AFFECTED = 6;
 
 /// The tables a load fills: the civilization builder's categories (with the powers' extra cost), the premade
-/// civilizations, the powers.
+/// civilizations; any other `which` the powers.
 constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_TABLES = 0;
 
 constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_PREMADE = 1;
-
-constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_POWERS = 2;
 
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
@@ -13876,6 +13874,13 @@ bool ee_screens_civm_category_name_id(uint32_t category, long *out);
 
 /// `ToLegacy(upgrade, out)`.
 bool ee_screens_civm_to_legacy(uint32_t upgrade, unsigned long *out);
+
+/// `EELoadCivilization(name, directory, out name, out upgrades)` (`civ_load.rs`; the `UString*`s, the
+/// `UWideString*` and the `std::vector<EECivUpgrade>*`) -> its result.
+long ee_screens_civl_load(size_t name,
+                          size_t directory,
+                          size_t out_name,
+                          size_t out_upgrades);
 
 /// `EEUISCIFormManager::Clear`.
 void ee_screens_sci_clear(size_t m);

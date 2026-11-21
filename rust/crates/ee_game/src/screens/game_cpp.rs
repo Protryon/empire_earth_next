@@ -3032,4 +3032,24 @@ shims! {
     fn civm_civs_push(list: usize, entry: usize) = ee_screenscpp_civm_civs_push;
     fn civm_purchased_count(player: usize) -> usize = ee_screenscpp_civm_purchased_count;
     fn civm_purchased_data(player: usize) -> usize = ee_screenscpp_civm_purchased_data;
+    // the civilization file load (civ_load.rs, UI lane round 12)
+    fn civl_string(string: usize, out: EeScreensShimOut) = ee_screenscpp_civl_string;
+    fn civl_global_close() = ee_screenscpp_civl_global_close;
+    fn civl_find(path: EeScreensShimText, out: EeScreensShimPtrOut) -> i32 = ee_screenscpp_civl_find;
+    fn civl_spec_new() -> usize = ee_screenscpp_civl_spec_new;
+    fn civl_global_volume() = ee_screenscpp_civl_global_volume;
+    fn civl_global_directory(directory: EeScreensShimText) = ee_screenscpp_civl_global_directory;
+    fn civl_global_file(file: EeScreensShimText) = ee_screenscpp_civl_global_file;
+    fn civl_spec_assign_global(spec: usize) = ee_screenscpp_civl_spec_assign_global;
+    fn civl_open(spec: usize) -> i32 = ee_screenscpp_civl_open;
+    fn civl_length(spec: usize, out: EeScreensShimULongOut) -> i32 = ee_screenscpp_civl_length;
+    fn civl_buffer_resize(size: u64) = ee_screenscpp_civl_buffer_resize;
+    fn civl_read(spec: usize, size: u64) -> i32 = ee_screenscpp_civl_read;
+    fn civl_buffer(out: EeScreensShimOut) = ee_screenscpp_civl_buffer;
+    fn civl_set_name(name: usize, text: EeScreensShimText) = ee_screenscpp_civl_set_name;
+    fn civl_upgrade_push(list: usize, upgrade: u32) = ee_screenscpp_civl_upgrade_push;
+    fn civl_message(text: EeScreensShimText) = ee_screenscpp_civl_message;
+    fn civl_close(spec: usize) = ee_screenscpp_civl_close;
+    fn civl_delete(spec: usize) = ee_screenscpp_civl_delete;
+    fn civl_capture(name: usize, directory: usize, result: i64, out_name: usize, out_upgrades: usize) = ee_screenscpp_civl_capture;
 }

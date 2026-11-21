@@ -373,6 +373,7 @@ pub(crate) mod civ_capture;
 #[cfg(not(test))]
 mod civ_capture_ffi;
 pub(crate) mod civ_file_calls;
+pub(crate) mod civ_load;
 pub(crate) mod civ_manager_obj;
 #[cfg(not(test))]
 mod civ_manager_ffi;
