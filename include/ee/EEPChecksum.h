@@ -6,6 +6,7 @@
 // Requires lle/LowLevelEngine.h (ESChecksum), lle/FSRestorable.h, lle/FSPersistent.h.
 #ifndef EE_EEPCHECKSUM_H
 #define EE_EEPCHECKSUM_H
+#include "rust/base/error.h"
 
 class EEPChecksum : public ESChecksum, public FSPersistent {
 public:
