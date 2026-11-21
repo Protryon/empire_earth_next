@@ -28,6 +28,7 @@ impl Mock {
 }
 
 impl UcHost for Mock {
+    #[allow(clippy::too_many_arguments)]
     fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
         assert_eq!((class, unit), (100, 1));
         self.log.push((op, a, b, c));

@@ -86,7 +86,6 @@ static const float kFleeDistanceScale = 1.5f;
 static const float k447AF0 = 0.01f;
 static const float kLargeUnitScale = 1.5f;
 static const float kMinConstructionScale = 0.1f;
-static const float k447AFC = 10.0f;
 static const float kMinWaypointDistanceSquared = 36.0f;
 static const float kMinDamageRoll = 0.05f;
 static const float kMaxDamageRoll = 0.2f;
@@ -338,192 +337,7 @@ void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound,
 // the rally point and hands it the queued goals; returns false at the population cap or with no room
 bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool inArg)
 {
-    GETransformation thePlacement;
-    GETransformation theAdjusted;
-    GEOrientation theOrientation;
-    GE3DPoint theGoalPosition;
-    GE3DPoint theGoalPoint;
-//
-    std::vector<EETileCoordinate> theLineTiles;
-    EEPlayer* thePlayer = inUnit->GetPlayer();
-    EEComplexUnit* theCreated = NULL;
-    unsigned long theQueue = 1;
-    bool theLoaded = false;
-    bool theSuccess = true;
-    bool theHaveGoalPoint = false;
-    long theLimit = thePlayer->GetExtraPopulation(inClass->GetUnitType());
-    theLimit += thePlayer->GetPopulationLimit(0);
-    long theNeeded = thePlayer->GetTotalPopulation(true, false);
-    theNeeded += inClass->GetPopulationCost();
-    if (!(theNeeded > theLimit)) {
-        if ((inUnit->GetUnitClass()->GetUnitType() == kUnitTypeCpMissileBase && inClass->GetCategory() == kUnitCategoryMissile) ||
-            inClass->IsAircraft() || inClass->GetCategory() == kUnitCategoryProjectile) {
-            EeUnitsAtc* theTraffic = inClass->mAirTrafficType != 0 ? thePlayer->mAirTraffic[inClass->mAirTrafficType - 1] : 0;
-            bool theCanLoad;
-            if (theTraffic != NULL) {
-                theNeeded = inClass->mWeight;
-                theCanLoad = ee_units_atc_cargo(theTraffic, 1) + theNeeded <= ee_units_atc_cargo(theTraffic, 0);
-                if (theCanLoad)
-                    theCanLoad = ee_units_atc_free_cargo_weight(theTraffic, inUnit) >= theNeeded;
-            } else {
-                long theCapacity = inUnit->GetUnitClass()->mTransportCapacity;
-                theCanLoad = inClass->mWeight - inUnit->mCargoRoom + theCapacity <= theCapacity;
-            }
-            if (theCanLoad) {
-                thePlacement.SetX(-10000.0f);
-                thePlacement.SetY(-10000.0f);
-                theCreated = inClass->CreateUnitAt(thePlacement, thePlayer->GetPlayerID(), false, inUnit)->mComplexUnit;
-                inUnit->LoadCargo(theCreated, true, 0);
-                theLoaded = true;
-                if (theCreated->GetUnitClass()->mIsParatrooperBomber)
-                    EECreateCarrierAircraft(theCreated, -1);
-            } else {
-                theSuccess = false;
-            }
-        } else {
-            theQueue = inClass->mFamily == kUnitFamilyHelicopter && inUnit->GetUnitClass()->GetUnitType() != kUnitTypeNavyYard ? 2 : 1;
-            long theRings = 1;
-            if (!thePlayer->IsHuman())
-                theRings = 5;
-            if (inUnit->GetQueuedGoal(theQueue) != NULL) {
-                if (this->mUnitType != kUnitTypeAirport) {
-                    inUnit->GetQueuedGoal(theQueue)->GetGoalLocation(theGoalPoint);
-                    theHaveGoalPoint = true;
-                } else {
-                    EEUnitGoal* theGoal = inUnit->GetQueuedGoal(theQueue);
-                    if (theGoal->mKind != kGoalAttackUnit) {
-                        // The original does not set the flag on this branch.
-                        theGoal->GetGoalLocation(theGoalPoint);
-                    } else {
-                        EEUnit* theTarget = EEAttackUnitCast(theGoal)->GetAttackTarget();
-                        if (theTarget == NULL) {
-                            theHaveGoalPoint = false;
-                        } else {
-                            if (theTarget->GetComplexUnit() != NULL && theTarget->GetComplexUnit()->mContainer != NULL)
-                                theTarget->GetComplexUnit()->mContainer->GetPosition(theGoalPoint);
-                            else
-                                theTarget->GetPosition(theGoalPoint);
-                            theHaveGoalPoint = true;
-                        }
-                    }
-                }
-            }
-            bool thePlaced;
-            if ((inClass->mDomains & kMovementSea) != 0)
-                thePlaced = ee_units_uu_dock_ship_placement((const float(*)[3])&theGoalPoint.mX, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit, theHaveGoalPoint, true, (float(*)[4][4])&thePlacement.mMatrix[0][0]);
-            else if ((inClass->mDomains & kMovementSpace) != 0)
-                thePlaced = ee_units_uu_dock_ship_placement((const float(*)[3])&theGoalPoint.mX, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit, theHaveGoalPoint, false, (float(*)[4][4])&thePlacement.mMatrix[0][0]);
-            else
-                thePlaced = ee_units_uu_find_placement((const float(*)[3])&theGoalPoint.mX, 0, (uint64_t)(uintptr_t)inClass, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), theRings, !thePlayer->IsHuman(), false, theHaveGoalPoint, false, (float(*)[4][4])&thePlacement.mMatrix[0][0], (uint64_t)(uintptr_t)inUnit);
-            if (!thePlaced) {
-                theSuccess = false;
-            } else {
-                theCreated = inClass->CreateUnitAt(thePlacement, thePlayer->GetPlayerID(), false, inUnit)->mComplexUnit;
-                if ((inClass->mDomains & kMovementSea) != 0) {
-                    theAdjusted = theCreated->mPhysicalModel.GetLocation();
-                    thePlacement.ConvertToOrientation(theOrientation);
-                    theAdjusted.SetOrientationYPR(theOrientation.GetYaw(), 0.0f, 0.0f);
-                    theCreated->SetTransformation(theAdjusted, true);
-                }
-                if (inClass->FliesOver()) {
-                    theAdjusted = theCreated->mPhysicalModel.GetLocation();
-                    thePlacement.ConvertToOrientation(theOrientation);
-                    theAdjusted.SetOrientationYPR(theOrientation.GetYaw(), 0.0f, 0.0f);
-                    theCreated->SetTransformation(theAdjusted, true);
-                }
-                EEAreaEffect* theEffect = gAEManager.FindEffectAtTile(8, theCreated->GetTileX(), theCreated->GetTileY(),
-                    theCreated->GetPlayer()->GetPlayerID());
-                if (theEffect != NULL && theEffect->mUnit != NULL) {
-                    EEComplexUnit* theOwner = theEffect->mUnit;
-                    GE2DPoint thePoint;
-                    thePoint = GE2DPoint(theOwner->mPhysicalModel.GetLocation().GetX(), theOwner->mPhysicalModel.GetLocation().GetY());
-                    if (theEffect->Covers(theOwner->GetPlayer()->GetPlayerID(), theCreated, thePoint))
-                        theCreated->SetCloakableChain(true);
-                }
-            }
-        }
-        if (theCreated == NULL) {
-            theSuccess = false;
-        } else {
-            if (!theLoaded && inUnit->GetQueuedGoal(theQueue) != NULL) {
-                theCreated->ClearGoalQueue(0);
-                const EEGoalDeque& theGoals = inUnit->GetQueueGoals(theQueue);
-                for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
-                    EEUnitGoal* theGoal;
-                    if ((*i)->Suits(theCreated)) {
-                        if ((*i)->mKind == kGoalBuildRepair) {
-                            theCreated->AddBuildTarget(EEBuildRepairGoalCast(*i)->GetBuildTarget());
-                            continue;
-                        } else if ((*i)->mKind == kGoalLoadGarrison) {
-                            EEUGRust* theLoad = EELoadGarrisonGoalCast(*i);
-                            if (theCreated->GetUnitClass()->mCanGarrison) {
-                                theGoal = theLoad->Clone();
-                                if (theGoal->IsLoadGoal())
-                                    theGoal->AddCreatedUnit(theCreated);
-                                if (theLoad->GetLoadContainer()->mActiveGoal != NULL)
-                                    EELoadGarrisonGoalCast(theLoad->GetLoadContainer()->mActiveGoal)->AddLoadUnit(theCreated);
-                            } else {
-                                if (theLoad->GetLoadContainer() == NULL)
-                                    continue;
-                                theLoad->GetLoadContainer()->GetPosition(theGoalPosition);
-                                theGoal = EEUGRust::NewLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
-                            }
-                        } else {
-                            theGoal = (*i)->Clone();
-                            if (theGoal->IsLoadGoal())
-                                theGoal->AddCreatedUnit(theCreated);
-                        }
-                    } else {
-                        (*i)->GetGoalLocation(theGoalPosition);
-                        theGoal = EEUGRust::NewLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
-                    }
-                    if (theGoal == NULL)
-                        continue;
-                    if (theGoal->mKind == kGoalLocation) {
-                        theGoal->GetGoalLocation(theGoalPosition);
-                        EEGetTileLine(theCreated->GetTileX(), theCreated->GetTileY(), UMFloor(theGoalPosition.GetX()),
-                                   UMFloor(theGoalPosition.GetY()), &theLineTiles, 1, 1);
-                        long theIndex;
-                        for (theIndex = (long)theLineTiles.size() - 1; theIndex >= 0; --theIndex)
-                            if (ee_units_uu_can_stand_on(theLineTiles[theIndex].mX, theLineTiles[theIndex].mY, (uint64_t)(uintptr_t)theCreated))
-                                break;
-                        if (theIndex >= 0) {
-                            long theRings = UMFloatToLong(theCreated->GetUnitClass()->mOuterCollisionSphere * k447AFC);
-                            GE3DPoint theOrigin = inUnit->mPhysicalModel.GetLocation().GetPosition();
-    //
-    //
-                            if (ee_units_uu_find_placement((const float(*)[3])&theOrigin.mX, (uint64_t)(uintptr_t)theCreated, 0, theLineTiles[theIndex].mX, theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, (float(*)[4][4])&theAdjusted.mMatrix[0][0], 0))
-                                static_cast<EEUGRust*>(theGoal)->SetLocation(theAdjusted.GetPosition());
-                        }
-                    }
-                    if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
-                        EEUnit* theTarget = EEAttackUnitCast(theGoal)->GetAttackTarget();
-                        if (theCreated->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, true)) {
-                            EEUnitGoal* theGather = EEUGRust::NewGather(theTarget, 0, true);
-                            delete theGoal;
-                            theGoal = theGather;
-                            theCreated->SetBehavior(EEUnitBehavior::sTable[5]);
-                        }
-                    }
-                    theCreated->QueueGoal(theGoal, 0);
-                }
-                if (theCreated->mGoalState != NULL) {
-                    theCreated->StartAction(theCreated->mGoalState->GetStartAction());
-                    theCreated->GetUnitClass()->ActionChanged(theCreated);
-                }
-            }
-            if (thePlayer == gWorld.mPlayers[gWorld.mCurrentPlayer]) {
-                EESoundObject* theSound = theCreated->GetStats()->mCreationSound;
-                if (theSound != NULL)
-                    gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
-            }
-            if (inArg)
-                inUnit->PlayEffect(100000);
-        }
-    } else {
-        theSuccess = false;
-    }
-    return theSuccess;
+    return ee_units_uc_produce(this, inUnit, inClass, inArg);   // uc_produce.rs
 }
 
 // CreateUnitAtTile's and CreateUnitAtPoint's body: a unit of the class for a player at a map point (its tile the
@@ -2132,6 +1946,30 @@ static void EEUcLocationOut(const GETransformation& inLocation, float* outFloats
     outFloats[2] = inLocation.GetZ();
 }
 
+// ProduceUnit's tile line (EE_UNITS_UC_LINE_RESET, EE_UNITS_UC_TILE_LINE and its reads)
+static std::vector<EETileCoordinate> sUcLine;
+
+// a float's bits as a uc_produce.rs answer
+static int64_t EEUcBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, sizeof(theBits));
+    return theBits;
+}
+
+// ProduceUnit's ship and flier: outAdjusted = the unit's location at the placement's yaw (no pitch or roll), set
+static void EEUcAlignYaw(EEComplexUnit* inUnit, GETransformation& inPlacement, GETransformation& outAdjusted)
+{
+    GEOrientation theOrientation;
+    outAdjusted = inUnit->mPhysicalModel.GetLocation();
+    inPlacement.ConvertToOrientation(theOrientation);
+    outAdjusted.SetOrientationYPR(theOrientation.GetYaw(), 0.0f, 0.0f);
+    inUnit->SetTransformation(outAdjusted, true);
+}
+
+// the goal points uc_produce.rs hands in place (three floats)
+static_assert(sizeof(GE3DPoint) == 3 * sizeof(float), "a GE3DPoint is three floats");
+
 // Heal's local effect handle (EE_UNITS_UC_RESET_HANDLE, the creations, EE_UNITS_UC_HANDLE)
 static EEEffectHandle sUcHandle;
 
@@ -2168,6 +2006,94 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_SET_HEAL_HANDLE: theUnit->mHealEffect.mValue = (uint32_t)inB; return 0;
     case EE_UNITS_UC_RESET_HANDLE: sUcHandle.mValue = 0; return 0;
     case EE_UNITS_UC_HANDLE: return sUcHandle.mValue;
+    // ProduceUnit's (uc_produce.rs; inA a class, a goal or a unit)
+    case EE_UNITS_UC_EXTRA_POPULATION: return theUnit->GetPlayer()->GetExtraPopulation((long)inB);
+    case EE_UNITS_UC_POPULATION_LIMIT: return theUnit->GetPlayer()->GetPopulationLimit(0);
+    case EE_UNITS_UC_TOTAL_POPULATION: return theUnit->GetPlayer()->GetTotalPopulation(true, false);
+    case EE_UNITS_UC_CLASS_UNIT_TYPE: return EEUcObject<EEUnitClass>(inA)->GetUnitType();
+    case EE_UNITS_UC_CLASS_POPULATION_COST: return EEUcObject<EEUnitClass>(inA)->GetPopulationCost();
+    case EE_UNITS_UC_PRODUCER_TYPE: return theUnit->GetUnitClass()->GetUnitType();
+    case EE_UNITS_UC_CLASS_CATEGORY: return EEUcObject<EEUnitClass>(inA)->GetCategory();
+    case EE_UNITS_UC_CLASS_IS_AIRCRAFT: return EEUcObject<EEUnitClass>(inA)->IsAircraft();
+    case EE_UNITS_UC_CLASS_AIR_TRAFFIC: return EEUcObject<EEUnitClass>(inA)->mAirTrafficType;
+    case EE_UNITS_UC_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[inB - 1], (int32_t)inC);
+    case EE_UNITS_UC_ATC_FREE_WEIGHT: return ee_units_atc_free_cargo_weight(theUnit->GetPlayer()->mAirTraffic[inB - 1], theUnit);
+    case EE_UNITS_UC_CLASS_WEIGHT: return EEUcObject<EEUnitClass>(inA)->mWeight;
+    case EE_UNITS_UC_TRANSPORT_CAPACITY: return theUnit->GetUnitClass()->mTransportCapacity;
+    case EE_UNITS_UC_CARGO_ROOM: return theUnit->mCargoRoom;
+    case EE_UNITS_UC_CREATE_AT:
+        return (uint64_t)(uintptr_t)EEUcObject<EEUnitClass>(inA)
+            ->CreateUnitAt(*EEUcObject<GETransformation>((uint64_t)inB), theUnit->GetPlayer()->GetPlayerID(), false, theUnit)->mComplexUnit;
+    case EE_UNITS_UC_LOAD_CARGO: theUnit->LoadCargo(theOther, true, 0); return 0;
+    case EE_UNITS_UC_PARATROOPER_BOMBER: return theOther->GetUnitClass()->mIsParatrooperBomber;
+    case EE_UNITS_UC_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, -1); return 0;
+    case EE_UNITS_UC_CLASS_FAMILY: return EEUcObject<EEUnitClass>(inA)->mFamily;
+    case EE_UNITS_UC_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
+    case EE_UNITS_UC_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
+    case EE_UNITS_UC_THIS_UNIT_TYPE: return theClass->mUnitType;
+    case EE_UNITS_UC_GOAL_LOCATION: EEUcObject<EEUnitGoal>(inA)->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_GOAL_KIND: return EEUcObject<EEUnitGoal>(inA)->mKind;
+    case EE_UNITS_UC_ATTACK_TARGET: return (uint64_t)(uintptr_t)EEAttackUnitCast(EEUcObject<EEUnitGoal>(inA))->GetAttackTarget();
+    case EE_UNITS_UC_COMPLEX_OF: return (uint64_t)(uintptr_t)EEUcObject<EEUnit>(inA)->GetComplexUnit();
+    case EE_UNITS_UC_CONTAINER_OF: return (uint64_t)(uintptr_t)theOther->mContainer;
+    case EE_UNITS_UC_POSITION: EEUcObject<EEUnit>(inA)->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_CLASS_DOMAINS: return EEUcObject<EEUnitClass>(inA)->mDomains;
+    case EE_UNITS_UC_TILE_SIZE: return theClass->GetTileSize();
+    case EE_UNITS_UC_ALIGN_YAW:
+        EEUcAlignYaw(theOther, *EEUcObject<GETransformation>((uint64_t)inB), *EEUcObject<GETransformation>((uint64_t)inC));
+        return 0;
+    case EE_UNITS_UC_CLASS_FLIES_OVER: return EEUcObject<EEUnitClass>(inA)->FliesOver();
+    case EE_UNITS_UC_AREA_EFFECT_AT:
+        return (uint64_t)(uintptr_t)gAEManager.FindEffectAtTile(8, theOther->GetTileX(), theOther->GetTileY(), theOther->GetPlayer()->GetPlayerID());
+    case EE_UNITS_UC_EFFECT_OWNER: return (uint64_t)(uintptr_t)EEUcObject<EEAreaEffect>(inA)->mUnit;
+    case EE_UNITS_UC_EFFECT_COVERS:
+        return EEUcObject<EEAreaEffect>(inA)->Covers(EEUcObject<EEAreaEffect>(inA)->mUnit->GetPlayer()->GetPlayerID(),
+                                                     EEUcObject<EEComplexUnit>((uint64_t)inB),
+                                                     GE2DPoint(EEUcObject<EEAreaEffect>(inA)->mUnit->mPhysicalModel.GetLocation().GetX(),
+                                                               EEUcObject<EEAreaEffect>(inA)->mUnit->mPhysicalModel.GetLocation().GetY()));
+    case EE_UNITS_UC_CLOAKABLE_CHAIN: theOther->SetCloakableChain(true); return 0;
+    case EE_UNITS_UC_CLEAR_GOAL_QUEUE: theOther->ClearGoalQueue(0); return 0;
+    case EE_UNITS_UC_QUEUE_LEN: return theUnit->GetQueueGoals((unsigned long)inB).size();
+    case EE_UNITS_UC_QUEUE_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC];
+    case EE_UNITS_UC_GOAL_SUITS: return EEUcObject<EEUnitGoal>(inA)->Suits(EEUcObject<EEComplexUnit>((uint64_t)inB));
+    case EE_UNITS_UC_ADD_BUILD_TARGET:
+        theOther->AddBuildTarget(EEBuildRepairGoalCast(EEUcObject<EEUnitGoal>((uint64_t)inB))->GetBuildTarget());
+        return 0;
+    case EE_UNITS_UC_CAN_GARRISON: return theOther->GetUnitClass()->mCanGarrison;
+    case EE_UNITS_UC_GOAL_CLONE: return (uint64_t)(uintptr_t)EEUcObject<EEUnitGoal>(inA)->Clone();
+    case EE_UNITS_UC_GOAL_IS_LOAD: return EEUcObject<EEUnitGoal>(inA)->IsLoadGoal();
+    case EE_UNITS_UC_GOAL_ADD_CREATED: EEUcObject<EEUnitGoal>(inA)->AddCreatedUnit(EEUcObject<EEComplexUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UC_LOAD_CONTAINER: return (uint64_t)(uintptr_t)EELoadGarrisonGoalCast(EEUcObject<EEUnitGoal>(inA))->GetLoadContainer();
+    case EE_UNITS_UC_ACTIVE_GOAL: return (uint64_t)(uintptr_t)theOther->mActiveGoal;
+    case EE_UNITS_UC_ADD_LOAD_UNIT:
+        EELoadGarrisonGoalCast(EEUcObject<EEUnitGoal>(inA))->AddLoadUnit(EEUcObject<EEComplexUnit>((uint64_t)inB));
+        return 0;
+    case EE_UNITS_UC_NEW_LOCATION:
+        return (uint64_t)(uintptr_t)EEUGRust::NewLocation(reinterpret_cast<GE3DPoint*>(f), false, true, false, 0.0f, false, 0);
+    case EE_UNITS_UC_GOAL_SET_LOCATION: static_cast<EEUGRust*>(EEUcObject<EEUnitGoal>(inA))->SetLocation(GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UC_LINE_RESET: sUcLine.clear(); return 0;
+    case EE_UNITS_UC_TILE_LINE: EEGetTileLine(theOther->GetTileX(), theOther->GetTileY(), (long)inB, (long)inC, &sUcLine, 1, 1); return 0;
+    case EE_UNITS_UC_LINE_LEN: return (long)sUcLine.size();
+    case EE_UNITS_UC_LINE_X: return sUcLine[(size_t)inB].mX;
+    case EE_UNITS_UC_LINE_Y: return sUcLine[(size_t)inB].mY;
+    case EE_UNITS_UC_OUTER_SPHERE: return EEUcBits(theOther->GetUnitClass()->mOuterCollisionSphere);
+    case EE_UNITS_UC_UNIT_CATEGORY: return theOther->GetUnitClass()->GetCategory();
+    case EE_UNITS_UC_CAN_GATHER:
+        return theOther->CanGather(EEUcObject<EEUnit>((uint64_t)inB), EEUcObject<EEUnit>((uint64_t)inB)->GetTileX(),
+                                   EEUcObject<EEUnit>((uint64_t)inB)->GetTileY(), false, true);
+    case EE_UNITS_UC_NEW_GATHER: return (uint64_t)(uintptr_t)EEUGRust::NewGather(EEUcObject<EEUnit>(inA), 0, true);
+    case EE_UNITS_UC_DELETE_GOAL: delete EEUcObject<EEUnitGoal>(inA); return 0;
+    case EE_UNITS_UC_GATHER_BEHAVIOR: theOther->SetBehavior(EEUnitBehavior::sTable[5]); return 0;
+    case EE_UNITS_UC_QUEUE_GOAL_ON: theOther->QueueGoal(EEUcObject<EEUnitGoal>((uint64_t)inB), 0); return 0;
+    case EE_UNITS_UC_GOAL_STATE: return (uint64_t)(uintptr_t)theOther->mGoalState;
+    case EE_UNITS_UC_START_GOAL_ACTION: theOther->StartAction(theOther->mGoalState->GetStartAction()); return 0;
+    case EE_UNITS_UC_PRODUCER_IS_CURRENT: return theUnit->GetPlayer() == gWorld.mPlayers[gWorld.mCurrentPlayer];
+    case EE_UNITS_UC_CREATION_SOUND: return (uint64_t)(uintptr_t)theOther->GetStats()->mCreationSound;
+    case EE_UNITS_UC_PLAY_SAMPLE:
+        gSoundManager->Play(EEUcObject<EESoundObject>(inA)->mSampleID, EEUcObject<EESoundObject>(inA)->mVolume, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_UNITS_UC_PRODUCER_TILE_X: return theUnit->GetTileX();
+    case EE_UNITS_UC_PRODUCER_TILE_Y: return theUnit->GetTileY();
     // UpdateBuilding's
     case EE_UNITS_UC_DISABLED: return theUnit->mIsDisabled;
     case EE_UNITS_UC_HIT_POINTS: return theUnit->mHitPoints;

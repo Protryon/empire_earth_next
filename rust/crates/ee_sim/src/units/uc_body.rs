@@ -179,6 +179,7 @@ const ACTION_ADVANCE: i64 = 10003;
 /// The C++ statements of the bodies.
 pub trait UcHost {
     /// one statement (`EE_UNITS_UC_*`) of class `class`'s body on unit `unit`
+    #[allow(clippy::too_many_arguments)]
     fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64;
 }
 
@@ -349,6 +350,7 @@ pub fn refresh_sound<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
 
 /// `CreateDeathUnit(unit)`: the class's death unit spawned on the unit's (or its container's) tile, launched at
 /// that point (a ground attack from there, owned by the dying unit), with the muzzle flash.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // the original's `!(z > 0)`: a NaN height is raised too
 pub fn create_death_unit<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     let mut b = Body { h, class, unit };
     let spawn = b.s(EE_UNITS_UC_DEATH_SPAWN_CLASS) as u64;
@@ -391,7 +393,7 @@ pub fn run<H: UcHost + ?Sized>(h: &mut H, what: i32, class: u64, unit: u64) {
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
@@ -407,9 +409,11 @@ mod game {
         ) -> i64;
     }
 
-    struct Game;
+    /// The game's host (`ee_units_uc_host`).
+    pub(crate) struct Game;
 
     impl UcHost for Game {
+        #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
