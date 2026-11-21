@@ -87,9 +87,7 @@ extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its c
 
 // (the unit tab's controls are shell kinds: ee_game shells_unit.rs)
 
-// The unit type buttons' cell width: a plain (non-folded) .rdata float in the original (0x444e7c), read by the ctor
-// only (provisional name)
-static const float kSEUButtonWidth = 35.0f;
+// (the unit type buttons' cell width, the .rdata float 0x444e7c: editor_seunx.rs's W)
 
 // The shared control maker's unit tab lists (ee_game editor_sepl.rs make)
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
@@ -125,357 +123,48 @@ EESEARust* SeunAction(void* inAction)
     return static_cast<EESEARust*>(static_cast<EEAction*>(inAction));
 }
 
-// one unit type button with its normal and pressed bitmaps (the tab's ctor's loop body)
-void SeunTypeButton(void** outMade, EEUIFScenarioEditor* inForm, UIEvent* inEvent, const int32_t* i, const float* f)
-{
-    GETexture* theTexture = inForm->GetButtonTexture();
-    float theSize = (float)theTexture->GetWidth();
-    GETextureCoordinate theTopLeft, theTopRight, theBottomLeft, theBottomRight;
-    float theYScale = 25.0f / theSize;
-    float theXScale = kSEUButtonWidth / theSize;
-    GE2DPoint thePosition((float)(unsigned long)i[3], 0.0f);
-    GEBitmap* theNormal = new GEBitmap;
-    GEBitmap* thePressed = new GEBitmap;
-    GEBitmap* theBitmaps[2] = {theNormal, thePressed};
-    theNormal->SetTexture(theTexture, inForm->GetManager()->GetScreen());
-    thePressed->SetTexture(theTexture, inForm->GetManager()->GetScreen());
-    for (int k = 0; k < 2; k++) {
-        float theX = f[k * 2];
-        float theY = f[k * 2 + 1];
-        theTopLeft.SetU(theX / theSize);
-        theTopLeft.SetV(theY / theSize);
-        theBottomRight.SetU((theX + kSEUButtonWidth) / theSize);
-        theBottomRight.SetV((theY + 25.0f) / theSize);
-        theTopRight.SetU(theBottomRight.GetU());
-        theTopRight.SetV(theTopLeft.GetV());
-        theBottomLeft.SetU(theTopLeft.GetU());
-        theBottomLeft.SetV(theBottomRight.GetV());
-        theBitmaps[k]->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    }
-    theNormal->SetXYScale(theXScale, theYScale);
-    thePressed->SetXYScale(theXScale, theYScale);
-    long theIndex = i[1];
-    UIRadioButton* theButton = new EEUIShellRadio(EE_SCREENS_SK_UNIT_TYPE_BUTTON, {}, theIndex + 0x406, UWideString(""),
-                                                  gU531930, GERectangle(thePosition, 35.0f, 25.0f), inForm,
-                                                  (unsigned long)i[0], 0, true, theIndex == 0, false);
-    theButton->SetUpCheckedBitmap(thePressed);
-    theButton->SetDownCheckedBitmap(thePressed);
-    theButton->SetDownUncheckedBitmap(thePressed);
-    theButton->SetUpUncheckedBitmap(theNormal);
-    theButton->SetFocusedBitmap(NULL);
-    theButton->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
-    theButton->SetTriggerEvent(kControlTriggerButtonUp, inEvent);
-    theButton->SetStringTableID((unsigned long)i[2]);
-    inForm->AddControl(theButton, 6);
-    outMade[0] = theButton;
-    outMade[1] = theNormal;
-    outMade[2] = thePressed;
-}
-
-// Update's wall ghosts: the wall tool's first tile, or the tiles from its start to the mouse
-void SeunPreviewWall(EESEUnit* inTab)
-{
-    std::vector<EETileCoordinate> theTiles;
-    std::vector<GE2DPoint> thePoints;
-    EETile* theUnit;
-    long theX;
-    long theY;
-    GE2DPoint theLocation;
-    EEPointUnitOrTileXY(gMouse->mPosition, theUnit, theX, theY, true);
-    theLocation.SetXY((float)theX, (float)theY);
-    if (inTab->mBuildWall.mState == 0) {
-        theLocation.SetX(theLocation.GetX() + 0.5f);
-        theLocation.SetY(theLocation.GetY() + 0.5f);
-        theTiles.clear();
-        theTiles.push_back(EETileCoordinate((long)theLocation.GetX(), (long)theLocation.GetY()));
-        gWorld.mGhostUnitsLock->Enter();
-        EEPreviewWall(theTiles, inTab->mBuildWall.mTechnology, inTab->mBuildWall.mPlayer);
-        gWorld.mGhostUnitsLock->Leave();
-    }
-    if (inTab->mBuildWall.mState == 1) {
-        theLocation.SetX(theLocation.GetX() + 0.5f);
-        theLocation.SetY(theLocation.GetY() + 0.5f);
-        theTiles.clear();
-        inTab->mBuildWall.mStart.InterpolateTo(theLocation, 1.0f, thePoints);
-        for (unsigned long i = 0; i < thePoints.size(); i++) {
-            GE2DPoint& thePoint = thePoints[i];
-            theTiles.push_back(EETileCoordinate((long)thePoint.GetX(), (long)thePoint.GetY()));
-        }
-        gWorld.mGhostUnitsLock->Enter();
-        EEPreviewWall(theTiles, inTab->mBuildWall.mTechnology, inTab->mBuildWall.mPlayer);
-        gWorld.mGhostUnitsLock->Leave();
-    }
-}
-
-// Update's gate: a gate ghost on the wall under the mouse, else no ghost
-void SeunPreviewGate(EESEUnit* inTab)
-{
-    EETile* theUnit;
-    long theX;
-    long theY;
-    EEPointUnitOrTileXY(gMouse->mPosition, theUnit, theX, theY, true);
-    long theDirection = inTab->mBuildGate.mDirection;
-    EETileCoordinate theTile(theX, theY);
-    if (EEFindGateWall(theTile, theDirection)) {
-        EEGhostUnit::CreateGate(0.0f, inTab->mBuildGate.mUnitClass, gWorld.GetPlayer(inTab->mBuildGate.mPlayer));
-        EEGhostUnit::PreviewGate(gMouse->mPosition, theDirection);
-        inTab->mBuildGate.mDirection = theDirection;
-    } else {
-        gWorld.mGhostUnitsLock->Enter();
-        gWorld.ClearGhostUnits();
-        gWorld.mGhostUnitsLock->Leave();
-    }
-}
-
-// SelectUnitType's look-up: the player, the list line's class and its technology's node (the original's order)
-struct SeunPick {
-    EEPlayer* mPlayer;
-    EEUnitClass* mClass;
-    EETechTreeNode* mNode;
-};
-
-SeunPick SeunPickClass(UIControl* inList, long inPlayer, unsigned long inLine)
-{
-    SeunPick thePick;
-    thePick.mPlayer = gWorld.GetPlayer(inPlayer);
-    long theType = (long)EEUIShell::Op(inList, EE_SCREENS_SKOP_UL_TYPE_AT, inLine);
-    EEUnitClass* theTypeClass = gUnitClassTable[theType];
-    long theTech;
-    if (theTypeClass != NULL)
-        theTech = theTypeClass->mTechnology;
-    else
-        theTech = 100000;
-    thePick.mNode = thePick.mPlayer->GetTechTree()->Get(theTech);
-    thePick.mClass = gUnitClassTable[theType];
-    return thePick;
-}
-
 EEUIFScenarioEditor* SeunEditor(void* inControl)
 {
     return static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(inControl)->GetForm());
 }
 
+EESEUnit* SeunTab(void* inTab)
+{
+    return static_cast<EESEUnit*>(inTab);
+}
+
+// the statements' locals (editor_seunx.rs): a string, the wall's tiles, the panel's clipped rectangle
+UWideString sSeunxText;
+std::vector<EETileCoordinate> sSeunxTiles;
+GERectangle sSeunxRect;
+
 }   // namespace
 
 // The ops (editor_unit.rs; p: three handles, i: four integers, f: four floats). The class table's count and
-// placement flags are Rust's (ee_game editor_world.rs).
+// placement flags are Rust's (ee_game editor_world.rs); the statement sequences are composed in Rust
+// (editor_seunx.rs) of ee_screenscpp_seunx's statements.
 extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     EESEUnit* theTab = static_cast<EESEUnit*>(p[0]);
-    UIForm* theForm = static_cast<UIForm*>(p[1]);
     UILBString* theList = static_cast<UILBString*>(p[0]);
     UIControl* theShell = static_cast<UIControl*>(p[0]);
     void** theOut = static_cast<void**>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEUN_OP_SORT_EVENT: *theOut = static_cast<UIEvent*>(new EESEERust(kSEESortUnitList)); return 0;
-    case EE_SCREENS_SEUN_OP_TYPE_BUTTON:
-        SeunTypeButton(theOut, static_cast<EEUIFScenarioEditor*>(theForm), static_cast<UIEvent*>(p[2]), i, f);
-        return 0;
-    case EE_SCREENS_SEUN_OP_REMOVE_CARGO: {
-        UWideString theText;
-        gResource->GetString(IDS_SE_REMOVE, theText);
-        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_REMOVE_CARGO, {}, 0x3f4, NULL, NULL, NULL,
-                                          GERectangle(GE2DPoint(f[0], 707.0f), 100.0f, 25.0f), theForm, (unsigned long)i[0], 2);
-        t->SetText(theText, gSeplScreenFont);
-        t->SetBgOpacity(1.0f);
-        GEText* theGEText = t->GetGEText();
-        theGEText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-        theGEText->SetIsTransparent(true);
-        theForm->AddControl(t, 6);
-        *theOut = t;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_ROTATION: {
-        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_ROTATION, {}, 0x3f5, NULL, NULL, NULL,
-                                          GERectangle(GE2DPoint(500.0f, 633.0f), 50.0f, 50.0f), theForm, (unsigned long)i[0], 0);
-        t->SetStringTableID(IDS_ROTATE);
-        theForm->AddControl(t, 6);
-        *theOut = t;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_ACTION: {
-        EEAction* theAction = NULL;
-        switch (i[0]) {
-        case EE_SCREENS_SEUN_ACTION_CLICK: theAction = new EESEAMouseClick; break;
-        case EE_SCREENS_SEUN_ACTION_LASSO: theAction = new EESEALasso; break;
-        case EE_SCREENS_SEUN_ACTION_PLACE_UNIT: theAction = new EESEARust(kSEAPlaceUnit); break;
-        case EE_SCREENS_SEUN_ACTION_PLACE_GATE: theAction = new EESEARust(kSEAPlaceGate); break;
-        case EE_SCREENS_SEUN_ACTION_PLACE_WALL: theAction = new EESEARust(kSEAPlaceWall); break;
-        default: theAction = new EESEARust(kSEAMoveUnit); break;
-        }
-        *theOut = theAction;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_SELECT_UNITS: {
-        void* const* theTools = static_cast<void* const*>(p[2]);
-        EEUICSelectUnits* t = new EEUICSelectUnits(
-            theForm, 0x3f6, (unsigned long)i[0], static_cast<EESEAMouseClick*>(static_cast<EEAction*>(theTools[0])),
-            static_cast<EESEALasso*>(static_cast<EEAction*>(theTools[1])));
-        theForm->AddControl(t, 0);
-        *theOut = t;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_COMMAND_UNITS: {
-        EESEUICCommandUnits* t = new EESEUICCommandUnits(
-            theForm, 0x3f7, (unsigned long)i[0], static_cast<EESEAMouseClick*>(static_cast<EEAction*>(p[2])));
-        theForm->AddControl(t, 0);
-        *theOut = t;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_BACKGROUND: {
-        GETextureDescription theDescription = {1, 0, gTexturePixelDepth, 0, false, false, true, true};
-        theDescription.mCreateMIPMaps = false;
-        GETexture* theTexture = gTextureManager->LoadTexture("textures\\scenunit", theDescription);
-        theTexture->SetFrame(0);
-        theTexture->SetStageAlphaMode(kStageOpTexture, -1);
-        theTexture->SetStageColorMode(kStageOpTexture, -1);
-        theTexture->SetStageMinFilterMode(0, -1);
-        theTexture->SetStageMagFilterMode(0, -1);
-        theTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-        theTexture->SetStageMipMapBias(-1.0f, -1);
-        theTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-        GEBitmap* theBackground = new GEBitmap;
-        theBackground->SetTexture(theTexture, gScreenIndex);
-        *theOut = theBackground;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_UPGRADE_PANEL: {
-        unsigned long theID = 0x41a;
-        unsigned long theIndex = (unsigned long)i[0];
-        *theOut = new EEUIFSEUpgradePanel(theID, theIndex, static_cast<EEUIFScenarioEditor*>(theForm));
-        i[0] = (int32_t)theIndex;
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_RELEASE:
-        switch (i[0]) {
-        case 0: static_cast<EEAction*>(p[0])->Dereference(); break;
-        case 1: static_cast<GEBitmap*>(p[0])->Dereference(); break;
-        case 2: static_cast<UIEvent*>(p[0])->Dereference(); break;
-        default: delete static_cast<EEUIFSEUpgradePanel*>(p[0]); break;
-        }
-        return 0;
-    case EE_SCREENS_SEUN_OP_PLACE_WALL: {
-        GE2DPoint theStart(theTab->mBuildWall.mStart);
-        GE2DPoint theEnd(theTab->mBuildWall.mEnd);
-        ee_screens_sew_wall(SeunAction(p[1])->mAction, theStart.GetX(), theStart.GetY(), theEnd.GetX(), theEnd.GetY(),
-                            i[0], theTab->mBuildWall.mTechnology);
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_PLACE_GATE:
-        ee_screens_sew_gate(SeunAction(p[1])->mAction, theTab->mBuildGate.mTileX, theTab->mBuildGate.mTileY, i[0],
-                            theTab->mBuildGate.mTechnology, theTab->mBuildGate.mDirection);
-        return 0;
-    case EE_SCREENS_SEUN_OP_CLEAR_GHOSTS:
-        if (i[0])
-            gWorld.mGhostUnitsLock->Enter();
-        gWorld.ClearGhostUnits();
-        if (i[0])
-            gWorld.mGhostUnitsLock->Leave();
-        return 0;
     case EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS:
         EEClearGateHighlights(gWorld.GetPlayer(theTab->mBuildGate.mPlayer), theTab->mBuildGate.mWallType);
         return 0;
-    case EE_SCREENS_SEUN_OP_PREVIEW:
-        if (i[0] == 0)
-            EEPreviewPlacement(gMouse->mPosition);
-        else if (i[0] == 1)
-            SeunPreviewWall(theTab);
-        else
-            SeunPreviewGate(theTab);
-        return 0;
-    case EE_SCREENS_SEUN_OP_GAME_VIEW:
-        if (i[0])
-            EESetGameViewRectangle(GERectangle(225.0f, 0.0f, 1024.0f, 606.0f));
-        else
-            EESetGameViewRectangle(GERectangle(0.0f, 0.0f, 1024.0f, 606.0f));
-        gB529066 = false;
-        gCameraFollowing = false;
-        gB529068 = false;
-        if (gMiniMap != NULL)
-            gMiniMap->RefreshView();
-        gUIManager->RedrawAll();
-        gUIManager->GetCurrentForm()->SetAllControlsDirty();
-        return 0;
     case EE_SCREENS_SEUN_OP_REDRAW: static_cast<UIControl*>(p[0])->GetForm()->GetManager()->RedrawAll(); return 0;
     case EE_SCREENS_SEUN_OP_CLEAR_SELECTION: SeunEditor(p[0])->ClearSelection(); return 0;
-    case EE_SCREENS_SEUN_OP_MOVING: return ee_screens_sew_moving(SeunAction(p[0])->mAction) ? 1 : 0;
-    case EE_SCREENS_SEUN_OP_CANCEL_MOVE: ee_screens_sew_cancel(SeunAction(p[0])->mAction); return 0;
-    case EE_SCREENS_SEUN_OP_PICK_UP: ee_screens_sew_pick_up(SeunAction(p[0])->mAction, i[0]); return 0;
-    case EE_SCREENS_SEUN_OP_PUT_DOWN: ee_screens_sew_put_down(SeunAction(p[0])->mAction); return 0;
-    case EE_SCREENS_SEUN_OP_PLACE_UNIT: ee_screens_sew_place_unit(SeunAction(p[0])->mAction, i[0]); return 0;
     case EE_SCREENS_SEUN_OP_SHOW_UNIT:
         static_cast<EEUIFSEUpgradePanel*>(p[0])->ShowUnit(static_cast<EEUnit*>(p[1]));
         return 0;
-    case EE_SCREENS_SEUN_OP_DRAW: {
-        GERectangle theRectangle;
-        if (theTab->mPanelRectangle.And(*static_cast<const GERectangle*>(p[2]), theRectangle))
-            theTab->mForm->DrawBackground(static_cast<GEBitmap*>(p[1]), theRectangle,
-                                          GERectangle(0.0f, 0.0f, 255.0f, 255.0f), theTab->mPanelRectangle);
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_ANGLE: {
-        uint32_t theBits = (uint32_t)EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_ROTATION_ANGLE);
-        memcpy(&f[0], &theBits, 4);
-        return 0;
-    }
     case EE_SCREENS_SEUN_OP_TYPE_MODE: return ee_screens_shell_unit_type_mode();
-    case EE_SCREENS_SEUN_OP_DIRTY: {
-        EESEUnit* theShell = static_cast<EESEUnit*>(p[1]);
-        theShell->mPanelRectangle.SetLeft(0.0f);
-        theShell->mPanelRectangle.SetTop(0.0f);
-        theShell->mPanelRectangle.SetRight(224.0f);
-        theShell->mPanelRectangle.SetBottom(605.0f);
-        UIForm* theComboForm = static_cast<UIControl*>(p[0])->GetForm();
-        theComboForm->GetManager()->AddDirtyRectangle(theShell->mPanelRectangle, theComboForm);
-        return 0;
-    }
     case EE_SCREENS_SEUN_OP_LIST_TOP: theList->SetScrollBarCurrentRange(0); return 0;
-    case EE_SCREENS_SEUN_OP_CANCEL_BUILD:
-        if (i[0])
-            theTab->mBuildGate.Cancel();
-        else
-            theTab->mBuildWall.Cancel();
-        return 0;
-    case EE_SCREENS_SEUN_OP_PLACE_INFO: {
-        SeunPick thePick = SeunPickClass(theShell, i[0], (unsigned long)i[1]);
-        long theID = thePick.mPlayer->GetPlayerID();
-        i[1] = !((theID != 0 || !thePick.mClass->mIsGaiaPlaceable) &&
-                 (!(theID > 0) || !thePick.mClass->mIsPlayerPlaceable));
-        if (thePick.mNode != NULL && thePick.mNode->mData->mKind == 6)
-            i[2] = EE_SCREENS_SEUN_KIND_WALL;
-        else if (thePick.mClass != NULL && thePick.mClass->mCategory == kUnitCategoryGate)
-            i[2] = EE_SCREENS_SEUN_KIND_GATE;
-        else
-            i[2] = EE_SCREENS_SEUN_KIND_UNIT;
-        return (int32_t)theID;
-    }
-    case EE_SCREENS_SEUN_OP_START_BUILD: {
-        SeunPick thePick = SeunPickClass(static_cast<UIControl*>(p[1]), i[0], (unsigned long)i[1]);
-        if (i[2] == 0) {
-            theTab->mBuildWall.mTechnology = thePick.mNode->mData->mID;
-            theTab->mBuildWall.Initialize(thePick.mPlayer->GetPlayerID());
-        } else {
-            theTab->mBuildGate.mTechnology = thePick.mNode->mData->mID;
-            theTab->mBuildGate.mWallType = thePick.mNode->GetUnitClass(0);
-            theTab->mBuildGate.mUnitClass = thePick.mClass;
-            theTab->mBuildGate.Initialize(thePick.mPlayer->GetPlayerID());
-        }
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_POST_GHOST: {
-        long theType = (long)EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_UL_TYPE_AT, (uint32_t)i[0]);
-        SeunEditor(p[0])->GetLoadThread()->Post402(reinterpret_cast<void*>(theType),
-                                               reinterpret_cast<void*>((long)i[1]));
-        return 0;
-    }
     case EE_SCREENS_SEUN_OP_CARGO_CLEAR:
         EEUIShell::Op(theShell, EE_SCREENS_SKOP_CARGO_CLEAR);
         return 0;
     case EE_SCREENS_SEUN_OP_SELECTED_COUNT: return (int32_t)SeunEditor(p[1])->GetSelectedUnitCount();
-    case EE_SCREENS_SEUN_OP_CARGO_COUNT: {
-        EEComplexUnit* theUnit = SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit;
-        return theUnit != NULL ? (int32_t)theUnit->GetNumCargoUnits() : 0;
-    }
     case EE_SCREENS_SEUN_OP_CARGO_ADD:
     {
         EEUnit* theUnit = SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit->mCargo[(unsigned long)i[1]];
@@ -486,70 +175,393 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEUN_OP_LIST_EMPTY: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_CLEAR); return 0;
     case EE_SCREENS_SEUN_OP_LIST_ADD: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_ADD, i[0]); return 0;
     case EE_SCREENS_SEUN_OP_IN_VIEW: return gViewport.GetViewRectangle().Contains(GE2DPoint(f[0], f[1])) ? 1 : 0;
-    case EE_SCREENS_SEUN_OP_MOUSE: {
-        int32_t theButtons = 0;
-        if (UIManager::GetLMouseButton()->JustDoublePressed()) theButtons |= EE_SCREENS_SEUN_MOUSE_L_DOUBLE;
-        if (UIManager::GetLMouseButton()->JustPressed()) theButtons |= EE_SCREENS_SEUN_MOUSE_L_PRESSED;
-        if (UIManager::GetLMouseButton()->JustUnpressed()) theButtons |= EE_SCREENS_SEUN_MOUSE_L_RELEASED;
-        if (UIManager::GetLMouseButton()->GetValue() != 0) theButtons |= EE_SCREENS_SEUN_MOUSE_L_DOWN;
-        if (UIManager::GetRMouseButton()->JustPressed()) theButtons |= EE_SCREENS_SEUN_MOUSE_R_PRESSED;
-        if (UIManager::GetRMouseButton()->JustUnpressed()) theButtons |= EE_SCREENS_SEUN_MOUSE_R_RELEASED;
-        return theButtons;
-    }
-    case EE_SCREENS_SEUN_OP_PICK: {
-        EEUnit* theUnit = gUnitPicker.PickUnit(GE2DPoint(f[0], f[1]), 0);
-        if (theUnit == NULL)
-            return -1;
-        int32_t theID = (int32_t)theUnit->mUnitID;
-        i[1] = theUnit->mUnitClass->mCategory == kUnitCategoryGate;
-        theUnit->Dereference();
-        return theID;
-    }
-    case EE_SCREENS_SEUN_OP_HOLD_GATE: {
-        EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)(uint32_t)i[0]));
-        theTab->mBuildGate.mTechnology = theUnit->mUnitClass->mTechnology;
-        theTab->mBuildGate.mWallType = theUnit->GetTechTreeNode()->GetUnitClass(0);
-        theTab->mBuildGate.mUnitClass = theUnit->mUnitClass;
-        theUnit->Kill(0, 0, 0);
-        theTab->mBuildGate.Initialize(theUnit->mPlayer->mPlayerID);
-        return 0;
-    }
-    case EE_SCREENS_SEUN_OP_BUILD_UPDATE:
-        if (i[0])
-            theTab->mBuildGate.Update(GE2DPoint(f[0], f[1]));
-        else
-            theTab->mBuildWall.Update(GE2DPoint(f[0], f[1]));
-        return 0;
     case EE_SCREENS_SEUN_OP_START_SELECTION:
         static_cast<EEUICSelectUnits*>(p[0])->StartSelection(GE2DPoint(f[0], f[1]));
         return 0;
     case EE_SCREENS_SEUN_OP_START_COMMAND:
         static_cast<EESEUICCommandUnits*>(p[0])->StartCommand(GE2DPoint(f[0], f[1]));
         return 0;
-    case EE_SCREENS_SEUN_OP_LOCK:
-        if (i[0])
-            gWorld.mGhostUnitsLock->Enter();
-        else
-            gWorld.mGhostUnitsLock->Leave();
-        return 0;
-    case EE_SCREENS_SEUN_OP_KEYS: {
-        ISEntity* theKey;
-        int32_t theKeys = 0;
-        gISKeyboard->GetEntity(kKeyDelete, theKey);
-        if (theKey->JustPressed()) {
-            theKeys |= 1;
-            gISKeyboard->GetEntity(kKeyShift, theKey);
-            if (theKey->GetValue() != 0)
-                theKeys |= 2;
-        }
-        return theKeys;
-    }
-    case EE_SCREENS_SEUN_OP_DELETE_SELECTION: {
-        EESEARust* theAction = new EESEARust(kSEADeleteUnit, NULL, -1, gWorld.GetCurrentPlayer()->GetPlayerID(), i[0] != 0);
-        theAction->Dereference();
-        return 0;
-    }
     case EE_SCREENS_SEUN_OP_ROTATION_KEYS: static_cast<UIControl*>(p[0])->UpdateKeyboard(); return 0;
+    }
+    return 0;
+}
+
+// the unit tab's single statements (editor_seunx.rs EE_SCREENS_SEUNX_*: p0 the made object's out slot, else as
+// named; the Rust composes the host's sequences)
+extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    void** theOut = static_cast<void**>(p[0]);
+    UIForm* theForm = static_cast<UIForm*>(p[1]);
+    UIRadioButton* theRadio = static_cast<UIRadioButton*>(p[1]);
+    UIButton* theButton = static_cast<UIButton*>(p[1]);
+    GETexture* theTexture = static_cast<GETexture*>(p[1]);
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(p[1]);
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(p[1]);
+    EETechTreeNode* theNode = static_cast<EETechTreeNode*>(p[1]);
+    EEUnit* theUnit = static_cast<EEUnit*>(p[1]);
+    EEUnit* theOperand = static_cast<EEUnit*>(p[2]);
+    switch (inOp) {
+    case EE_SCREENS_SEUNX_NEW_BITMAP:
+        *theOut = new GEBitmap;
+        return 0;
+    case EE_SCREENS_SEUNX_BUTTON_TEXTURE:
+        *theOut = static_cast<EEUIFScenarioEditor*>(theForm)->GetButtonTexture();
+        return 0;
+    case EE_SCREENS_SEUNX_TEXTURE_WIDTH: return (int32_t)theTexture->GetWidth();
+    case EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM:
+        static_cast<GEBitmap*>(p[0])->SetTexture(theTexture, static_cast<UIForm*>(p[2])->GetManager()->GetScreen());
+        return 0;
+    case EE_SCREENS_SEUNX_BITMAP_COORDS:
+        static_cast<GEBitmap*>(p[1])->SetTextureCoordinates(GETextureCoordinate(f[0], f[1]), GETextureCoordinate(f[2], f[1]),
+                                                            GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[2], f[3]));
+        return 0;
+    case EE_SCREENS_SEUNX_BITMAP_SCALE:
+        static_cast<GEBitmap*>(p[1])->SetXYScale(f[0], f[1]);
+        return 0;
+    case EE_SCREENS_SEUNX_TYPE_RADIO:
+        *theOut = static_cast<UIRadioButton*>(new EEUIShellRadio(
+            EE_SCREENS_SK_UNIT_TYPE_BUTTON, {}, (long)i[1] + 0x406, UWideString(""), gU531930,
+            GERectangle(GE2DPoint((float)(unsigned long)i[3], 0.0f), 35.0f, 25.0f), theForm, (unsigned long)i[0], 0, true,
+            i[1] == 0, false));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_UP_CHECKED:
+        theRadio->SetUpCheckedBitmap(static_cast<GEBitmap*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_DOWN_CHECKED:
+        theRadio->SetDownCheckedBitmap(static_cast<GEBitmap*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_DOWN_UNCHECKED:
+        theRadio->SetDownUncheckedBitmap(static_cast<GEBitmap*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_UP_UNCHECKED:
+        theRadio->SetUpUncheckedBitmap(static_cast<GEBitmap*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_NO_FOCUS:
+        theRadio->SetFocusedBitmap(NULL);
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_DRAW_OFFSET:
+        theRadio->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_TRIGGER:
+        theRadio->SetTriggerEvent(kControlTriggerButtonUp, static_cast<UIEvent*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEUNX_RADIO_STRING_ID:
+        theRadio->SetStringTableID((unsigned long)i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_ADD_RADIO:
+        theForm->AddControl(static_cast<UIRadioButton*>(p[2]), (unsigned long)i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_STRING_REMOVE:
+        gResource->GetString(IDS_SE_REMOVE, sSeunxText);
+        return 0;
+    case EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON:
+        *theOut = static_cast<UIButton*>(new EEUIShellButton(EE_SCREENS_SK_REMOVE_CARGO, {}, 0x3f4, NULL, NULL, NULL,
+                                                             GERectangle(GE2DPoint(f[0], 707.0f), 100.0f, 25.0f), theForm,
+                                                             (unsigned long)i[0], 2));
+        return 0;
+    case EE_SCREENS_SEUNX_BUTTON_SET_TEXT:
+        theButton->SetText(sSeunxText, gSeplScreenFont);
+        return 0;
+    case EE_SCREENS_SEUNX_BUTTON_OPAQUE:
+        theButton->SetBgOpacity(1.0f);
+        return 0;
+    case EE_SCREENS_SEUNX_BUTTON_TEXT_WHITE:
+        theButton->GetGEText()->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
+        return 0;
+    case EE_SCREENS_SEUNX_BUTTON_TEXT_TRANSPARENT:
+        theButton->GetGEText()->SetIsTransparent(true);
+        return 0;
+    case EE_SCREENS_SEUNX_ADD_BUTTON:
+        theForm->AddControl(static_cast<UIButton*>(p[2]), (unsigned long)i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_ROTATION_BUTTON:
+        *theOut = static_cast<UIButton*>(new EEUIShellButton(EE_SCREENS_SK_ROTATION, {}, 0x3f5, NULL, NULL, NULL,
+                                                             GERectangle(GE2DPoint(500.0f, 633.0f), 50.0f, 50.0f), theForm,
+                                                             (unsigned long)i[0], 0));
+        return 0;
+    case EE_SCREENS_SEUNX_ROTATION_STRING:
+        theButton->SetStringTableID(IDS_ROTATE);
+        return 0;
+    case EE_SCREENS_SEUNX_ACTION_CLICK:
+        *theOut = static_cast<EEAction*>(new EESEAMouseClick);
+        return 0;
+    case EE_SCREENS_SEUNX_ACTION_LASSO:
+        *theOut = static_cast<EEAction*>(new EESEALasso);
+        return 0;
+    case EE_SCREENS_SEUNX_ACTION_PLACE_UNIT:
+        *theOut = static_cast<EEAction*>(new EESEARust(kSEAPlaceUnit));
+        return 0;
+    case EE_SCREENS_SEUNX_ACTION_PLACE_GATE:
+        *theOut = static_cast<EEAction*>(new EESEARust(kSEAPlaceGate));
+        return 0;
+    case EE_SCREENS_SEUNX_ACTION_PLACE_WALL:
+        *theOut = static_cast<EEAction*>(new EESEARust(kSEAPlaceWall));
+        return 0;
+    case EE_SCREENS_SEUNX_ACTION_MOVE_UNIT:
+        *theOut = static_cast<EEAction*>(new EESEARust(kSEAMoveUnit));
+        return 0;
+    case EE_SCREENS_SEUNX_SELECT_UNITS:
+        *theOut = new EEUICSelectUnits(
+            theForm, 0x3f6, (unsigned long)i[0],
+            static_cast<EESEAMouseClick*>(static_cast<EEAction*>(static_cast<void* const*>(p[2])[0])),
+            static_cast<EESEALasso*>(static_cast<EEAction*>(static_cast<void* const*>(p[2])[1])));
+        return 0;
+    case EE_SCREENS_SEUNX_ADD_SELECT_UNITS:
+        theForm->AddControl(static_cast<EEUICSelectUnits*>(p[2]), 0);
+        return 0;
+    case EE_SCREENS_SEUNX_COMMAND_UNITS:
+        *theOut = new EESEUICCommandUnits(theForm, 0x3f7, (unsigned long)i[0],
+                                          static_cast<EESEAMouseClick*>(static_cast<EEAction*>(p[2])));
+        return 0;
+    case EE_SCREENS_SEUNX_ADD_COMMAND_UNITS:
+        theForm->AddControl(static_cast<EESEUICCommandUnits*>(p[2]), 0);
+        return 0;
+    case EE_SCREENS_SEUNX_LOAD_SCENUNIT:
+        *theOut = gTextureManager->LoadTexture("textures\\scenunit",
+                                               GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, false});
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_FRAME:
+        theTexture->SetFrame(0);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_ALPHA:
+        theTexture->SetStageAlphaMode(kStageOpTexture, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_COLOR:
+        theTexture->SetStageColorMode(kStageOpTexture, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_MIN:
+        theTexture->SetStageMinFilterMode(0, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_MAG:
+        theTexture->SetStageMagFilterMode(0, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_MIP:
+        theTexture->SetStageMipFilterMode(kMipFilterNone, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_BIAS:
+        theTexture->SetStageMipMapBias(-1.0f, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_TEX_WRAP:
+        theTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
+        return 0;
+    case EE_SCREENS_SEUNX_BITMAP_TEXTURE_SCREEN:
+        static_cast<GEBitmap*>(p[1])->SetTexture(static_cast<GETexture*>(p[2]), gScreenIndex);
+        return 0;
+    case EE_SCREENS_SEUNX_UPGRADE_PANEL:
+        *theOut = new EEUIFSEUpgradePanel(static_cast<unsigned long*>(p[2])[0], static_cast<unsigned long*>(p[2])[1],
+                                          static_cast<EEUIFScenarioEditor*>(theForm));
+        return 0;
+    case EE_SCREENS_SEUNX_RELEASE_ACTION:
+        static_cast<EEAction*>(p[1])->Dereference();
+        return 0;
+    case EE_SCREENS_SEUNX_RELEASE_BITMAP:
+        static_cast<GEBitmap*>(p[1])->Dereference();
+        return 0;
+    case EE_SCREENS_SEUNX_RELEASE_EVENT:
+        static_cast<UIEvent*>(p[1])->Dereference();
+        return 0;
+    case EE_SCREENS_SEUNX_DELETE_PANEL:
+        delete static_cast<EEUIFSEUpgradePanel*>(p[1]);
+        return 0;
+    case EE_SCREENS_SEUNX_SEW_ACTION:
+        *theOut = SeunAction(p[1])->mAction;
+        return 0;
+    case EE_SCREENS_SEUNX_WALL_START:
+        memcpy(f, &SeunTab(p[1])->mBuildWall.mStart, sizeof(GE2DPoint));
+        return 0;
+    case EE_SCREENS_SEUNX_WALL_END:
+        memcpy(f, &SeunTab(p[1])->mBuildWall.mEnd, sizeof(GE2DPoint));
+        return 0;
+    case EE_SCREENS_SEUNX_WALL_TECH: return (int32_t)SeunTab(p[1])->mBuildWall.mTechnology;
+    case EE_SCREENS_SEUNX_WALL_PLAYER: return (int32_t)SeunTab(p[1])->mBuildWall.mPlayer;
+    case EE_SCREENS_SEUNX_WALL_STATE: return (int32_t)SeunTab(p[1])->mBuildWall.mState;
+    case EE_SCREENS_SEUNX_GATE_TILE_X: return (int32_t)SeunTab(p[1])->mBuildGate.mTileX;
+    case EE_SCREENS_SEUNX_GATE_TILE_Y: return (int32_t)SeunTab(p[1])->mBuildGate.mTileY;
+    case EE_SCREENS_SEUNX_GATE_TECH: return (int32_t)SeunTab(p[1])->mBuildGate.mTechnology;
+    case EE_SCREENS_SEUNX_GATE_DIRECTION: return (int32_t)SeunTab(p[1])->mBuildGate.mDirection;
+    case EE_SCREENS_SEUNX_LOCK_ENTER:
+        gWorld.mGhostUnitsLock->Enter();
+        return 0;
+    case EE_SCREENS_SEUNX_LOCK_LEAVE:
+        gWorld.mGhostUnitsLock->Leave();
+        return 0;
+    case EE_SCREENS_SEUNX_CLEAR_GHOSTS:
+        gWorld.ClearGhostUnits();
+        return 0;
+    case EE_SCREENS_SEUNX_PREVIEW_PLACEMENT:
+        EEPreviewPlacement(gMouse->mPosition);
+        return 0;
+    case EE_SCREENS_SEUNX_MOUSE_TILE:
+        EEPointUnitOrTileXY(gMouse->mPosition, *static_cast<EETile**>(p[0]), *static_cast<long*>(p[1]),
+                            *static_cast<long*>(p[2]), true);
+        return 0;
+    case EE_SCREENS_SEUNX_TILES_CLEAR:
+        sSeunxTiles.clear();
+        return 0;
+    case EE_SCREENS_SEUNX_TILES_PUSH:
+        sSeunxTiles.push_back(EETileCoordinate((long)i[0], (long)i[1]));
+        return 0;
+    case EE_SCREENS_SEUNX_PREVIEW_WALL:
+        EEPreviewWall(sSeunxTiles, SeunTab(p[1])->mBuildWall.mTechnology, SeunTab(p[1])->mBuildWall.mPlayer);
+        return 0;
+    case EE_SCREENS_SEUNX_FIND_GATE_WALL:
+        return EEFindGateWall(EETileCoordinate((long)i[0], (long)i[1]), *static_cast<long*>(p[2]));
+    case EE_SCREENS_SEUNX_CREATE_GATE:
+        EEGhostUnit::CreateGate(0.0f, SeunTab(p[1])->mBuildGate.mUnitClass, gWorld.GetPlayer(SeunTab(p[1])->mBuildGate.mPlayer));
+        return 0;
+    case EE_SCREENS_SEUNX_PREVIEW_GATE:
+        EEGhostUnit::PreviewGate(gMouse->mPosition, *static_cast<long*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEUNX_SET_DIRECTION:
+        SeunTab(p[1])->mBuildGate.mDirection = (long)i[0];
+        return 0;
+    case EE_SCREENS_SEUNX_GAME_VIEW:
+        EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3]));
+        return 0;
+    case EE_SCREENS_SEUNX_CLEAR_B529066:
+        gB529066 = false;
+        return 0;
+    case EE_SCREENS_SEUNX_CLEAR_FOLLOWING:
+        gCameraFollowing = false;
+        return 0;
+    case EE_SCREENS_SEUNX_CLEAR_B529068:
+        gB529068 = false;
+        return 0;
+    case EE_SCREENS_SEUNX_MINIMAP: return gMiniMap != NULL;
+    case EE_SCREENS_SEUNX_MINIMAP_REFRESH:
+        gMiniMap->RefreshView();
+        return 0;
+    case EE_SCREENS_SEUNX_REDRAW_ALL:
+        gUIManager->RedrawAll();
+        return 0;
+    case EE_SCREENS_SEUNX_ALL_DIRTY:
+        gUIManager->GetCurrentForm()->SetAllControlsDirty();
+        return 0;
+    case EE_SCREENS_SEUNX_PANEL_AND:
+        return SeunTab(p[1])->mPanelRectangle.And(*static_cast<const GERectangle*>(p[2]), sSeunxRect);
+    case EE_SCREENS_SEUNX_DRAW_PANEL:
+        SeunTab(p[1])->mForm->DrawBackground(static_cast<GEBitmap*>(p[2]), sSeunxRect, GERectangle(0.0f, 0.0f, 255.0f, 255.0f),
+                                             SeunTab(p[1])->mPanelRectangle);
+        return 0;
+    case EE_SCREENS_SEUNX_ROTATION_ANGLE:
+        return (int32_t)(uint32_t)EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_ROTATION_ANGLE);
+    case EE_SCREENS_SEUNX_PANEL_LEFT:
+        SeunTab(p[1])->mPanelRectangle.SetLeft(f[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_PANEL_TOP:
+        SeunTab(p[1])->mPanelRectangle.SetTop(f[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_PANEL_RIGHT:
+        SeunTab(p[1])->mPanelRectangle.SetRight(f[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_PANEL_BOTTOM:
+        SeunTab(p[1])->mPanelRectangle.SetBottom(f[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_PANEL_DIRTY:
+        static_cast<UIControl*>(p[2])->GetForm()->GetManager()->AddDirtyRectangle(SeunTab(p[1])->mPanelRectangle,
+                                                                                 static_cast<UIControl*>(p[2])->GetForm());
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_CANCEL:
+        SeunTab(p[1])->mBuildGate.Cancel();
+        return 0;
+    case EE_SCREENS_SEUNX_WALL_CANCEL:
+        SeunTab(p[1])->mBuildWall.Cancel();
+        return 0;
+    case EE_SCREENS_SEUNX_PLAYER:
+        *theOut = gWorld.GetPlayer(i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_TYPE_AT:
+        return (int32_t)(long)EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_UL_TYPE_AT, (unsigned long)i[0]);
+    case EE_SCREENS_SEUNX_CLASS_EXISTS: return gUnitClassTable[i[0]] != NULL;
+    case EE_SCREENS_SEUNX_CLASS_TECH: return (int32_t)gUnitClassTable[i[0]]->mTechnology;
+    case EE_SCREENS_SEUNX_TREE_NODE:
+        *theOut = thePlayer->GetTechTree()->Get(i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_CLASS:
+        *theOut = gUnitClassTable[i[0]];
+        return 0;
+    case EE_SCREENS_SEUNX_PLAYER_ID: return (int32_t)thePlayer->GetPlayerID();
+    case EE_SCREENS_SEUNX_GAIA_PLACEABLE: return theClass->mIsGaiaPlaceable;
+    case EE_SCREENS_SEUNX_PLAYER_PLACEABLE: return theClass->mIsPlayerPlaceable;
+    case EE_SCREENS_SEUNX_CLASS_IS_GATE: return theClass->mCategory == kUnitCategoryGate;
+    case EE_SCREENS_SEUNX_NODE_KIND: return (int32_t)theNode->mData->mKind;
+    case EE_SCREENS_SEUNX_NODE_ID: return (int32_t)theNode->mData->mID;
+    case EE_SCREENS_SEUNX_NODE_UNIT_CLASS: return (int32_t)theNode->GetUnitClass(0);
+    case EE_SCREENS_SEUNX_WALL_SET_TECH:
+        SeunTab(p[1])->mBuildWall.mTechnology = i[0];
+        return 0;
+    case EE_SCREENS_SEUNX_WALL_INITIALIZE:
+        SeunTab(p[1])->mBuildWall.Initialize(i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_SET_TECH:
+        SeunTab(p[1])->mBuildGate.mTechnology = i[0];
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_SET_WALL_TYPE:
+        SeunTab(p[1])->mBuildGate.mWallType = i[0];
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_SET_CLASS:
+        SeunTab(p[1])->mBuildGate.mUnitClass = static_cast<EEUnitClass*>(p[2]);
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_INITIALIZE:
+        SeunTab(p[1])->mBuildGate.Initialize(i[0]);
+        return 0;
+    case EE_SCREENS_SEUNX_POST_402:
+        SeunEditor(p[1])->GetLoadThread()->Post402(reinterpret_cast<void*>((long)i[0]), reinterpret_cast<void*>((long)i[1]));
+        return 0;
+    case EE_SCREENS_SEUNX_SELECTED_COMPLEX:
+        *theOut = SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit;
+        return 0;
+    case EE_SCREENS_SEUNX_CARGO_UNITS: return (int32_t)static_cast<EEComplexUnit*>(p[1])->GetNumCargoUnits();
+    case EE_SCREENS_SEUNX_L_DOUBLE: return UIManager::GetLMouseButton()->JustDoublePressed();
+    case EE_SCREENS_SEUNX_L_PRESSED: return UIManager::GetLMouseButton()->JustPressed();
+    case EE_SCREENS_SEUNX_L_RELEASED: return UIManager::GetLMouseButton()->JustUnpressed();
+    case EE_SCREENS_SEUNX_L_DOWN: return UIManager::GetLMouseButton()->GetValue() != 0;
+    case EE_SCREENS_SEUNX_R_PRESSED: return UIManager::GetRMouseButton()->JustPressed();
+    case EE_SCREENS_SEUNX_R_RELEASED: return UIManager::GetRMouseButton()->JustUnpressed();
+    case EE_SCREENS_SEUNX_PICK_UNIT:
+        *theOut = gUnitPicker.PickUnit(GE2DPoint(f[0], f[1]), 0);
+        return 0;
+    case EE_SCREENS_SEUNX_UNIT_ID: return (int32_t)theUnit->mUnitID;
+    case EE_SCREENS_SEUNX_UNIT_IS_GATE: return theUnit->mUnitClass->mCategory == kUnitCategoryGate;
+    case EE_SCREENS_SEUNX_UNIT_DEREFERENCE:
+        theUnit->Dereference();
+        return 0;
+    case EE_SCREENS_SEUNX_GET_UNIT:
+        *theOut = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)(uint32_t)i[0]));
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_TECH_OF_UNIT:
+        SeunTab(p[1])->mBuildGate.mTechnology = theOperand->mUnitClass->mTechnology;
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_WALL_OF_UNIT:
+        SeunTab(p[1])->mBuildGate.mWallType = theOperand->GetTechTreeNode()->GetUnitClass(0);
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_CLASS_OF_UNIT:
+        SeunTab(p[1])->mBuildGate.mUnitClass = theOperand->mUnitClass;
+        return 0;
+    case EE_SCREENS_SEUNX_UNIT_KILL:
+        theUnit->Kill(0, 0, 0);
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_INITIALIZE_OF_UNIT:
+        SeunTab(p[1])->mBuildGate.Initialize(theOperand->mPlayer->mPlayerID);
+        return 0;
+    case EE_SCREENS_SEUNX_GATE_UPDATE:
+        SeunTab(p[1])->mBuildGate.Update(GE2DPoint(f[0], f[1]));
+        return 0;
+    case EE_SCREENS_SEUNX_WALL_UPDATE:
+        SeunTab(p[1])->mBuildWall.Update(GE2DPoint(f[0], f[1]));
+        return 0;
+    case EE_SCREENS_SEUNX_KEY_DELETE:
+        gISKeyboard->GetEntity(kKeyDelete, *reinterpret_cast<ISEntity**>(theOut));
+        return 0;
+    case EE_SCREENS_SEUNX_KEY_SHIFT:
+        gISKeyboard->GetEntity(kKeyShift, *reinterpret_cast<ISEntity**>(theOut));
+        return 0;
+    case EE_SCREENS_SEUNX_KEY_PRESSED: return static_cast<ISEntity*>(p[1])->JustPressed();
+    case EE_SCREENS_SEUNX_KEY_DOWN: return static_cast<ISEntity*>(p[1])->GetValue() != 0;
+    case EE_SCREENS_SEUNX_DELETE_ACTION:
+        *theOut = static_cast<EEAction*>(
+            new EESEARust(kSEADeleteUnit, NULL, -1, gWorld.GetCurrentPlayer()->GetPlayerID(), i[0] != 0));
+        return 0;
     }
     return 0;
 }

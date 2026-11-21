@@ -13,10 +13,37 @@ mod sys {
 
     extern "C" {
         pub fn ee_screenscpp_seun(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
+        pub fn ee_screenscpp_seunx(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }
 
 struct Host;
+
+/// The placement action's calls (`ee_screens_sew_*`, editor_whole_ffi.rs) for the composed ops.
+fn sew(call: crate::screens::editor_seunx::SewCall) -> i32 {
+    use crate::screens::editor_seunx::SewCall;
+    use crate::screens::editor_whole::EeScreensSewAction as A;
+    use crate::screens::editor_whole_ffi::*;
+    // SAFETY: each action is the tab's live `EESEARust`'s Rust action (or NULL), as the C++ passed it
+    unsafe {
+        match call {
+            SewCall::Wall(a, x0, y0, x1, y1, player, tech) => {
+                ee_screens_sew_wall(a as *mut A, x0, y0, x1, y1, player, tech)
+            }
+            SewCall::Gate(a, x, y, player, tech, direction) => {
+                ee_screens_sew_gate(a as *mut A, x, y, player, tech, direction);
+            }
+            SewCall::Moving(a) => return ee_screens_sew_moving(a as *const A) as i32,
+            SewCall::Cancel(a) => ee_screens_sew_cancel(a as *mut A),
+            SewCall::PickUp(a, id) => ee_screens_sew_pick_up(a as *mut A, id),
+            SewCall::PutDown(a) => ee_screens_sew_put_down(a as *mut A),
+            SewCall::PlaceUnit(a, player) => {
+                ee_screens_sew_place_unit(a as *mut A, player);
+            }
+        }
+    }
+    0
+}
 
 impl SeplHost for Host {
     fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
@@ -27,7 +54,14 @@ impl SeplHost for Host {
                     return r;
                 }
                 crate::screens::editor_world::host(op, i, f, |i, f| {
-                    sys::ee_screenscpp_seun(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+                    // the statement sequences composed in Rust (editor_seunx.rs) over the C++'s single statements
+                    let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+                        let p = p.map(|v| v as *mut c_void);
+                        sys::ee_screenscpp_seunx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+                    };
+                    let q = p.map(|v| v as usize);
+                    crate::screens::editor_seunx::compose(&mut x, &mut sew, op, q, i, f)
+                        .unwrap_or_else(|| sys::ee_screenscpp_seun(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()))
                 })
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {

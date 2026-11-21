@@ -1360,15 +1360,8 @@ pub const EE_AI_UNITS_HOST_WALL_BLOCKED: i32 = 87;
 pub const EE_AI_UNITS_HOST_FOREST_AT: i32 = 88;
 /// `EEAreTilesLevel` of the five tiles `out` (a `EeAiUnitsTiles`).
 pub const EE_AI_UNITS_HOST_TILES_LEVEL: i32 = 89;
-/// The own unit `a`'s wall path from `from` to `to` (`EeAiUnitsTiles` in `out`) -> the count.
-pub const EE_AI_UNITS_HOST_WALL_PATH: i32 = 90;
-/// A wall route's request for the enemy `a` from `from` to `to` (`EeAiUnitsTiles` in `out`; the old request
-/// dropped) -> its handle (0: none).
-pub const EE_AI_UNITS_HOST_ROUTE_REQUEST: i32 = 91;
-/// The route `a`: -2 not held, -1 running, else its path's length.
-pub const EE_AI_UNITS_HOST_ROUTE_STATE: i32 = 92;
-/// The route `a`'s path into `out` (a `EeAiUnitsTiles`) -> its length; then the route is dropped.
-pub const EE_AI_UNITS_HOST_ROUTE_TAKE: i32 = 93;
+// (90..93 were the wall path and the wall routes' request, state and take: Rust since the paths lane's round 2,
+// wall_path_tiles and the route functions below over ee_sim::astar pm_entry.rs and request.rs)
 
 /// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
 /// computed twice (the shore's GetTilesNextTo and FindPath are captured).
@@ -1871,7 +1864,7 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_wall_path(l: *mut c_void) -> c_i
         return 1;
     }
     let ends = [[int_at(l, 2), int_at(l, 3)], [int_at(l, 4), int_at(l, 5)]];
-    let n = fill_tiles(EE_AI_UNITS_HOST_WALL_PATH, me_ptr, s, unit as i64, ends);
+    let n = wall_path_tiles(s, unit, ends);
     let area = ((ends[1][0] - ends[0][0]).abs() + 1) * ((ends[1][1] - ends[0][1]).abs() + 1);
     charge(l, s, COST_CALL + area as i64 * COST_SCAN + n * COST_FIELD * 2);
     push_tiles(l, s);
@@ -1904,15 +1897,14 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_wall_route(l: *mut c_void) -> c_
         lua_pushnil(l);
         return 1;
     }
-    let mut t = EeAiUnitsTiles {
+    let t = EeAiUnitsTiles {
         xy: std::ptr::null_mut(),
         len: 0,
         cap: 0,
         from: [int_at(l, 2), int_at(l, 3)],
         to: [int_at(l, 4), int_at(l, 5)],
     };
-    let route = EE_AI_UNITS_HOST_ROUTE_REQUEST;
-    let handle = ee_ai_units_host(route, me_ptr, enemy as i64, 0, 0, (&mut t as *mut EeAiUnitsTiles).cast());
+    let handle = route_request(s, enemy as i64, t.from, t.to);
     if handle == 0 {
         lua_pushnil(l);
         return 1;
@@ -1929,7 +1921,7 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_wall_route_result(l: *mut c_void
     let me_ptr = me_of(l);
     let s = state_of(me_ptr);
     charge(l, s, COST_CALL);
-    let state = if is_int(l, 1) { host(EE_AI_UNITS_HOST_ROUTE_STATE, me_ptr, int_at(l, 1) as i64, 0, 0) } else { -2 };
+    let state = if is_int(l, 1) { route_state(s, int_at(l, 1) as i64) } else { -2 };
     if state == -2 {
         lua_pushboolean(l, 0);
         return 1;
@@ -1941,7 +1933,115 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_wall_route_result(l: *mut c_void
     charge(l, s, state * COST_FIELD * 2);
     lua_createtable(l, state as c_int, 0);
     (*s).tiles.reserve(state as usize);
-    fill_tiles(EE_AI_UNITS_HOST_ROUTE_TAKE, me_ptr, s, int_at(l, 1) as i64, [[0; 2]; 2]);
+    route_take(s, int_at(l, 1) as i64);
     push_tiles(l, s);
     1
+}
+
+/// `ai.wall_path`'s search: the own unit's FindPath inside the box of the two tiles (kind 1, 0x32 revs, the wall
+/// pather; its PMRQ record) into `s.tiles` -> its length.
+#[cfg(not(test))]
+unsafe fn wall_path_tiles(s: *mut UnitsState, unit: u64, ends: [[c_long; 2]; 2]) -> i64 {
+    use crate::astar::modifier_obj::{ee_astar_modifier_new_wall_pather, ee_astar_modifier_release};
+    let map = {
+        let t = WorldRead::begin();
+        WorldView::global(&t).and_then(|w| w.map()).map_or(0, |m| m.handle())
+    };
+    let (from, to) = ((ends[0][0] as i32, ends[0][1] as i32), (ends[1][0] as i32, ends[1][1] as i32));
+    // `EEAIAStarBounds::Set(from)` then `Extend(to)`
+    let window = crate::astar::pm_entry::EePathWindow {
+        top: from.1.min(to.1),
+        left: from.0.min(to.0),
+        bottom: from.1.max(to.1),
+        right: from.0.max(to.0),
+    };
+    let pather = ee_astar_modifier_new_wall_pather();
+    let path = crate::astar::pm_entry::find_path(unit, map, from, to, window, 1, 0x32, pather as u64);
+    ee_astar_modifier_release(pather);
+    let v = &mut (*s).tiles;
+    v.clear();
+    v.extend(path.iter().map(|p| (p.x as c_long, p.y as c_long)));
+    v.len() as i64
+}
+
+#[cfg(test)]
+unsafe fn wall_path_tiles(s: *mut UnitsState, _unit: u64, _ends: [[c_long; 2]; 2]) -> i64 {
+    (*s).tiles.clear();
+    0
+}
+
+/// The wall routes' requests dropped (a new request, the state's end).
+pub(crate) unsafe fn routes_clear(s: *mut UnitsState) {
+    for (_, r) in std::mem::take(&mut (*s).routes) {
+        // SAFETY: the state's reference
+        crate::astar::request::dereference(r);
+    }
+}
+
+/// `ai.wall_route`'s request (one at a time: a new one drops the old): the path manager's request for the enemy
+/// from `from` to `to` on the citizen class's terrain (`RequestPath(enemy, from, to, flags, 2, -1, the wall
+/// planner, 1)`) -> its handle (0: none).
+#[cfg(not(test))]
+unsafe fn route_request(s: *mut UnitsState, enemy: i64, from: [c_long; 2], to: [c_long; 2]) -> i64 {
+    use crate::astar::modifier_obj::{ee_astar_modifier_new_wall_planner, ee_astar_modifier_release};
+    use crate::astar::request;
+    routes_clear(s);
+    let citizen = {
+        let t = WorldRead::begin();
+        ClassView::by_index(&t, TYPE_CITIZEN as usize).map_or(0, |c| c.handle())
+    };
+    let flags =
+        request::EePathAsgFlags { player: 0, flags: crate::units::gather_spot::class_terrain_flags(citizen, 0) };
+    let planner = ee_astar_modifier_new_wall_planner(enemy as u32, 0);
+    let r = request::request_path(
+        enemy as c_long as i64,
+        (i64::from(from[0]), i64::from(from[1])),
+        (i64::from(to[0]), i64::from(to[1])),
+        &flags,
+        2,
+        -1,
+        planner as u64,
+        true,
+    );
+    ee_astar_modifier_release(planner);
+    if r == 0 {
+        return 0;
+    }
+    (*s).next_route += 1;
+    let handle = i64::from((*s).next_route);
+    (*s).routes.insert(handle, r);
+    handle
+}
+
+#[cfg(test)]
+unsafe fn route_request(_s: *mut UnitsState, _enemy: i64, _from: [c_long; 2], _to: [c_long; 2]) -> i64 {
+    0
+}
+
+/// The route `handle`: -2 not held, -1 running, else its path's length.
+unsafe fn route_state(s: *mut UnitsState, handle: i64) -> i64 {
+    match (*s).routes.get(&handle) {
+        None => -2,
+        Some(&r) => {
+            // SAFETY: the state's live request
+            let q = crate::astar::request::get(r);
+            if q.r.done {
+                q.path.len() as i64
+            } else {
+                -1
+            }
+        }
+    }
+}
+
+/// The route `handle`'s path into `s.tiles`; then the route is dropped.
+unsafe fn route_take(s: *mut UnitsState, handle: i64) {
+    (*s).tiles.clear();
+    if let Some(r) = (*s).routes.remove(&handle) {
+        // SAFETY: the state's live request, then its reference
+        let tiles: Vec<(c_long, c_long)> =
+            crate::astar::request::get(r).path.iter().map(|t| (t[0] as c_long, t[1] as c_long)).collect();
+        (*s).tiles.extend(tiles);
+        crate::astar::request::dereference(r);
+    }
 }

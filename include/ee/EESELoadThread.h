@@ -51,12 +51,7 @@ public:
     // a terrain type's media to unload
     void Post409(void* inParameter) { this->mThread->Post(0x409, inParameter, NULL, true); }
 
-    // the handlers (names inferred from the message numbers)
-    void Handle406(unsigned long inPlayer, unsigned long inCount);
-    void Handle408(unsigned long inArg1, bool inFlag);       // 0x172433 (0x409 passes true)
-    void Handle402(unsigned long inUnitClass, unsigned long inPlayer);
-    void Handle403(unsigned long inPlayer, bool inFlag);
-    void Handle407(unsigned long inPlayer, unsigned long inArg2);
+    // (the handlers Handle402..Handle408 and the bodies: ee_game screens editor_selt.rs)
 
     EEUIFScenarioEditor* mEditor;           // +0x00 (the ctor's first argument: the editor; Handle402 reads its mTabGroups[3], mouse location)
     TSThread* mThread;                      // +0x04

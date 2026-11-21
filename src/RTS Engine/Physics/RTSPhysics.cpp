@@ -1,7 +1,8 @@
 // C:\EEX\RTS Engine\Physics\RTSPhysics.cpp (__FILE__ 0x4c26c4). The simulation thread's engine side (RTTI
-// RTSPhysics, vtable 0x442988): 0x16100f..0x161825 (the "RTSPhysics Data" key's init chain, the class in definition
-// order, the deque<long>::pop_back COMDAT the ICF kept here; EEPlayer.cpp's key chains open the next unit at
-// 0x161825). Unit flags: the exe's module set.
+// RTSPhysics, vtable 0x442988). LLE round 8: the bodies are Rust (rust/crates/ee_game/src/rts/physics.rs: the
+// construction, the teardown, the thread's loop, the messages, Load, Save, SetSpeed, the integer draw); the members
+// forward, and the shims below are the C++ calls those bodies make (one statement each). The original's addresses
+// and the bodies' history: git history before LLE round 8.
 #include <windows.h>
 #include <deque>
 
@@ -14,309 +15,67 @@
 #include "ee/RTSGraphics.h"
 #include "ee/EEPhysics.h"
 #include "ee/EECommunications.h"
-// chain at 0x56100f (wrapper)
-//   object 0x931d90  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
+#include "rust/game/rts.h"
+
 UString gRTSPhysicsDataKey("RTSPhysics Data");
 
-// Creates the simulation with its events, a stopped timer and its thread; waits until the thread starts
 RTSPhysics::RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefaultTicksPerSecond, long inThreadPriority)
     : mRandom(1)
 {
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadCreated) == keseOK, 49);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadDone) == keseOK, 50);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mStartThreadMainLoop) == keseOK, 51);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mTimerTick,false) == keseOK, 52);
-    this->mGraphics = inGraphics;
-    this->mSpeed = 1.0f;
-    this->mDefaultTicksPerSecond = inDefaultTicksPerSecond;
-    this->mTicksPerSecond = 1;
-    this->mTimerInterval = 1000;
-    this->mTicksRun = 0;
-    this->mTicksOwed = 0;
-    this->mL28 = 0;
-    this->mTimerRunning = false;
-    this->mStopThread = false;
-    this->mRandom.SetSeed(1);
-    this->mTimer = inTimer;
-    this->mTimer->Stop();
-    this->mTimer->SetTimerType(1);
-    this->mTimer->SetEvent(this->mTimerTick);
-    this->mTimer->SetInterval(this->mTimerInterval, 0);
-    this->mSlowPlayback = true;
-
-    ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, RTSPhysics::Main, (void*)this) == keseOK, 81);
-    ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 82);
-    this->mThreadCreated->Wait(kTSWaitInfinite);
-    this->mThread->SetName(gPhysicsThreadName);
-
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mServerMessageQueueLock) == keseOK, 91);
+    ee_rts_physics_construct(this, inGraphics, inTimer, inDefaultTicksPerSecond, inThreadPriority);
 }
 
-// Stops the timer, destroys the thread and its events and releases every queued server message
-RTSPhysics::~RTSPhysics()
-{
-    this->mTimer->Stop();
-    TSScheduler::DestroyEvent(this->mThreadCreated);
-    TSScheduler::DestroyEvent(this->mThreadDone);
-    TSScheduler::DestroyEvent(this->mStartThreadMainLoop);
-    TSScheduler::DestroyEvent(this->mTimerTick);
-    TSScheduler::DestroyThread(this->mThread);
-    this->mServerMessageQueueLock->Enter();
-    while (this->mServerMessages.size() > 0) {
-        NEMessage* theMessage = this->mServerMessages.front();
-        this->mServerMessages.pop_front();
-        theMessage->Dereference();
-    }
-    this->mServerMessageQueueLock->Leave();
-    TSScheduler::DestroyCriticalSection(this->mServerMessageQueueLock);
-}
+RTSPhysics::~RTSPhysics() { ee_rts_physics_destruct(this); }
+float RTSPhysics::GetRandom() { return this->mRandom.Generate(); }
+float RTSPhysics::GetRandom(float inMinimum, float inMaximum) { return this->mRandom.Generate() * (inMaximum - inMinimum) + inMinimum; }
+long RTSPhysics::GetRandom(long inMinimum, long inMaximum) { return ee_rts_physics_random_range(this, inMinimum, inMaximum); }
+long RTSPhysics::Load(unsigned long, unsigned long, FSFile& inFile) { return ee_rts_physics_load(this, &inFile); }
+unsigned long RTSPhysics::Main(void* inPointer) { return ee_rts_physics_main(inPointer); }
+void RTSPhysics::HandleMessage(unsigned long inMessage, void*, void*) { ee_rts_physics_handle_message(this, inMessage); }
+long RTSPhysics::Save(unsigned long, unsigned long, FSFile& outFile) { return ee_rts_physics_save(this, &outFile); }
+void RTSPhysics::SetSpeed(float inSpeed) { ee_rts_physics_set_speed(this, inSpeed); }
 
-// Returns the simulation's next random number between 0 and 1
-// (`add ecx, 0x18; jmp __imp_Generate`: its body was folded into an identical AI-range function)
-float RTSPhysics::GetRandom()
-{
-    return this->mRandom.Generate();
-}
+// The shims physics.rs calls (PhysicsCpp)
+extern "C" {
+EeRtsPhysicsFields* ee_rtsphyscpp_fields(RTSPhysics* inPhysics) { return inPhysics; }
+void** ee_rtsphyscpp_thread_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mThread); }
+void** ee_rtsphyscpp_created_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mThreadCreated); }
+void** ee_rtsphyscpp_start_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mStartThreadMainLoop); }
+void** ee_rtsphyscpp_done_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mThreadDone); }
+void** ee_rtsphyscpp_tick_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mTimerTick); }
+void** ee_rtsphyscpp_lock_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mServerMessageQueueLock); }
+void ee_rtsphyscpp_set_graphics(RTSPhysics* inPhysics, RTSGraphics* inGraphics) { inPhysics->mGraphics = inGraphics; }
+void* ee_rtsphyscpp_render_now(RTSPhysics* inPhysics) { return inPhysics->mGraphics->mRenderNow; }
+void ee_rtsphyscpp_set_timer(RTSPhysics* inPhysics, TMTimer* inTimer) { inPhysics->mTimer = inTimer; }
+void* ee_rtsphyscpp_timer(RTSPhysics* inPhysics) { return inPhysics->mTimer->Rust(); }
+const char* ee_rtsphyscpp_thread_name() { return gPhysicsThreadName; }
+uint32_t ee_rtsphyscpp_random_seed(RTSPhysics* inPhysics) { return inPhysics->mRandom.GetSeed(); }
+void ee_rtsphyscpp_set_random_seed(RTSPhysics* inPhysics, uint32_t inSeed) { inPhysics->mRandom.SetSeed(inSeed); }
+float ee_rtsphyscpp_random(RTSPhysics* inPhysics) { return inPhysics->mRandom.Generate(); }
+size_t ee_rtsphyscpp_messages_size(RTSPhysics* inPhysics) { return inPhysics->mServerMessages.size(); }
+NEMessage* ee_rtsphyscpp_messages_front(RTSPhysics* inPhysics) { return inPhysics->mServerMessages.front(); }
+void ee_rtsphyscpp_messages_pop_front(RTSPhysics* inPhysics) { inPhysics->mServerMessages.pop_front(); }
+void ee_rtsphyscpp_message_dereference(NEMessage* inMessage) { inMessage->Dereference(); }
+void ee_rtsphyscpp_handle_message(RTSPhysics* inPhysics, unsigned long inMessage, void* inFirst, void* inSecond) { inPhysics->HandleMessage(inMessage, inFirst, inSecond); }
+void ee_rtsphyscpp_lock(RTSPhysics* inPhysics) { inPhysics->Lock(); }
+void ee_rtsphyscpp_unlock(RTSPhysics* inPhysics) { inPhysics->Unlock(); }
+void ee_rtsphyscpp_tick(RTSPhysics* inPhysics) { inPhysics->Tick(); }
+void ee_rtsphyscpp_idle(RTSPhysics* inPhysics) { inPhysics->Idle(); }
+void ee_rtsphyscpp_update_timing(RTSPhysics* inPhysics) { inPhysics->UpdateTiming(); }
+EEPhysics* ee_rtsphyscpp_ee_physics(RTSPhysics* inPhysics) { return dynamic_cast<EEPhysics*>(inPhysics); }
+unsigned long ee_rtsphyscpp_ticks_to_process(EEPhysics* inPhysics) { return inPhysics->mTicksToProcess; }
+NESynchronousServer* ee_rtsphyscpp_sim_server() { return dynamic_cast<NESynchronousServer*>(gCommunications); }
+void ee_rtsphyscpp_sim_communications_tick(NESynchronousServer* inServer) { inServer->SimCommunicationsTick(); }
+void (*ee_rtsphyscpp_after_tick_hook())() { return gPhysicsAfterTickHook; }
+unsigned long ee_rtsphyscpp_cts_processed() { return gCommunications->GetNumberOfCTsProcessedInPhysics(); }
+unsigned long ee_rtsphyscpp_current_ct() { return gCommunications->GetCurrentCommunicationsTick(); }
+void ee_rtsphyscpp_debug_out(const char* inText) { ESDebugOut("%s", inText); }
 
-// Returns a simulation random number between the minimum and the maximum
-float RTSPhysics::GetRandom(float inMinimum, float inMaximum)
-{
-    return this->mRandom.Generate() * (inMaximum - inMinimum) + inMinimum;
-}
-
-// Returns a simulation random integer from the minimum to the maximum inclusive
-long RTSPhysics::GetRandom(long inMinimum, long inMaximum)
-{
-    long theLimit = inMaximum + 1;
-    long theResult = UMFloatToLong(this->mRandom.Generate() * (theLimit - inMinimum) + inMinimum);
-    if (theResult == theLimit)
-        theResult = inMaximum;
-    return theResult;
-}
-
-// Reads the random seed, speed, tick counters and flags and resets the timer, restarting it only if it was
-// already running (the saved running flag is read but dropped); returns the first read error
-long RTSPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    long theResult;
-    unsigned long theSeed;
-    bool theTimerRunning;
-    bool theStopThread;
-    theResult = inFile.Read(theSeed);
-    if (theResult == kErrorOK) {
-        this->mRandom.SetSeed(theSeed);
-        theResult = inFile.Read(this->mL28);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theTimerRunning);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mSpeed);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mTimerInterval);
-                    if (theResult == kErrorOK) {
-                        theResult = inFile.Read(this->mTicksPerSecond);
-                        if (theResult == kErrorOK) {
-                            theResult = inFile.Read(this->mTicksRun);
-                            if (theResult == kErrorOK) {
-                                theResult = inFile.Read(this->mDefaultTicksPerSecond);
-                                if (theResult == kErrorOK) {
-                                    theResult = inFile.Read(theStopThread);
-                                    if (theResult == kErrorOK) {
-                                        this->mStopThread = theStopThread;
-                                        theResult = inFile.Read(this->mSlowPlayback);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    this->mTicksOwed = 0;
-    this->mTimer->Stop();
-    this->mTimer->SetInterval(this->mTimerInterval, 0);
-    if (this->mTimerRunning)
-        theResult = this->mTimer->Start();
-    return theResult;
-}
-
-// Runs the simulation thread: handles its messages and, while the timer runs, ticks the game (at most twice
-// per timer tick, limited by the communication ticks) and wakes the renderer; idles otherwise
-unsigned long RTSPhysics::Main(void* inPointer)
-{
-    RTSPhysics* thePhysics = static_cast<RTSPhysics*>(inPointer);
-    unsigned long theLastTime = 0;
-    unsigned long theMessage;
-    void* theParameter1;
-    void* theParameter2;
-    long theResult;
-    thePhysics->mThreadCreated->Set();
-    thePhysics->mStartThreadMainLoop->Wait(kTSWaitInfinite);
-    UMSetFloatingPointPrecision(kFPPrecision53);
-    while (!thePhysics->mStopThread) {
-        theResult = thePhysics->mThread->Receive(theMessage, theParameter1, theParameter2);
-        if (UMGetFloatingPointPrecision() != kFPPrecision53)
-            UMSetFloatingPointPrecision(kFPPrecision53);
-        if (UMGetFloatingPointRoundingMode() != 0)
-            UMSetFloatingPointRoundingMode(0);
-        if (theResult == kErrorOK)
-            thePhysics->HandleMessage(theMessage, theParameter1, theParameter2);
-        if (thePhysics->mTimerRunning && !thePhysics->mStopThread && gPlatSimMode) {
-            // TEST ONLY: the headless simulation (platform/PlatSim.h) runs the game as fast as it goes: the next
-            // communications tick is sent at once (no timer, no send interval) and its physics ticks run back to back
-            EEPhysics* theEEPhysics = dynamic_cast<EEPhysics*>(thePhysics);
-            NESynchronousServer* theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
-            if (!gPlatSimRun || theEEPhysics == NULL || theServer == NULL) {
-                PlatSleep(1);
-                continue;
-            }
-            theServer->SimCommunicationsTick();
-            while (true) {
-                thePhysics->Lock();
-                thePhysics->Tick();
-                thePhysics->mTicksRun++;
-                if (gPhysicsAfterTickHook)   // TEST ONLY: EE-SIM's per-tick state dumps (ee/EEPhysics.h)
-                    gPhysicsAfterTickHook();
-                bool theMore = theEEPhysics->mTicksToProcess > 0 && thePhysics->mTimerRunning && !thePhysics->mStopThread;
-                if (!theMore && gPlatSimAfterTick)
-                    gPlatSimAfterTick();
-                thePhysics->Unlock();
-                if (!theMore)
-                    break;
-                // one of the thread's messages after each physics tick, as the timer loop handles them (a message a
-                // tick sent, e.g. the autosave, takes effect at the same tick as in the game)
-                if (thePhysics->mThread->Receive(theMessage, theParameter1, theParameter2) == kErrorOK)
-                    thePhysics->HandleMessage(theMessage, theParameter1, theParameter2);
-            }
-        } else if (thePhysics->mTimerRunning && !thePhysics->mStopThread) {
-            unsigned long theTicks = (TMGetTime() - theLastTime) / thePhysics->mTimerInterval;
-            if (theTicks > 1)
-                thePhysics->mTicksOwed += theTicks - 1;
-            do {
-                theResult = thePhysics->mTimerTick->Wait(3000);
-                theLastTime = TMGetTime();
-                if (theResult == 0x11) {
-                    thePhysics->mTimer->Stop();
-                    thePhysics->mTimer->SetInterval(thePhysics->mTimerInterval, 0);
-                    theResult = thePhysics->mTimer->Start();
-                    ESDebugOut("!RTSPhysics::Main: the timer wasn't ticking. Performed a hard reset on the timer.\n");
-                }
-            } while (theResult == 0x11);
-            thePhysics->Lock();
-            thePhysics->mTicksOwed++;
-            EEPhysics* theEEPhysics = dynamic_cast<EEPhysics*>(thePhysics);
-            bool theBehind = gCommunications->GetNumberOfCTsProcessedInPhysics() + 1
-                < gCommunications->GetCurrentCommunicationsTick();
-            if (theBehind)
-                thePhysics->mTicksOwed = 100000;
-            if (!theBehind && theEEPhysics != NULL && theEEPhysics->mTicksToProcess < thePhysics->mTicksOwed) {
-                thePhysics->mTicksOwed = theEEPhysics->mTicksToProcess;
-                if (thePhysics->mTicksOwed == 0)
-                    thePhysics->mTicksOwed = 1;
-            }
-            if (thePhysics->mTicksOwed > 0 && thePhysics->mTimerRunning) {
-                thePhysics->Tick();
-                thePhysics->mTicksRun++;
-                thePhysics->mTicksOwed--;
-                if (thePhysics->mTicksOwed > 0 && thePhysics->mTimerRunning) {
-                    thePhysics->Tick();
-                    thePhysics->mTicksRun++;
-                    thePhysics->mTicksOwed--;
-                }
-            }
-            thePhysics->mGraphics->mRenderNow->Set();
-            thePhysics->Unlock();
-        } else {
-            thePhysics->Idle();
-            thePhysics->mGraphics->mRenderNow->Set();
-            PlatSleep(1);
-        }
-    }
-    thePhysics->mThreadDone->Set();
-    // no assert string in .data, no twin): a compiled-away debug check stood in by 
-    return 0;
-}
-
-// Handles a thread message: quit, stop the timer, stop it and reset the speed, or start the timer
-void RTSPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-{
-    switch (inMessage) {
-    case kThreadMessageQuit:
-        this->mStopThread = true;
-        break;
-    case 0x402:
-        this->mTimerRunning = false;
-        this->mTimer->Stop();
-        this->mTimerTick->Clear();
-        this->mTicksRun = 0;
-        this->mTicksOwed = 0;
-        break;
-    case 0x403:
-        this->mTimerRunning = false;
-        this->mTimer->Stop();
-        this->mTimerTick->Clear();
-        this->SetSpeed(1.0f / this->mDefaultTicksPerSecond);
-        this->mTicksRun = 0;
-        this->mTicksOwed = 0;
-        break;
-    case 0x404:
-        this->mTicksRun = 0;
-        this->mTicksOwed = 0;
-        this->mTimerTick->Clear();
-        this->mTimer->Start();
-        this->mTimerRunning = true;
-        break;
-    }
-}
-
-// Writes the random seed, timer flags, speed and tick counters; returns the first write error
-long RTSPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    long theResult;
-    bool theTimerRunning = this->mTimerRunning;
-    bool theStopThread = this->mStopThread;
-    unsigned long theSeed = this->mRandom.GetSeed();
-    theResult = outFile.Write(theSeed);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mL28);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theTimerRunning);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mSpeed);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTimerInterval);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTicksPerSecond);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTicksRun);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mDefaultTicksPerSecond);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theStopThread);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSlowPlayback);
-    return theResult;
-}
-
-// Sets the seconds per tick, reprogramming the timer when it changes, then updates the timing
-void RTSPhysics::SetSpeed(float inSpeed)
-{
-    if (inSpeed != this->mSpeed) {
-        this->mSpeed = inSpeed;
-        this->mTimerInterval = UMFloorUnsigned(inSpeed * 1000.0f);
-        this->mTicksPerSecond = UMFloorUnsigned(1.0f / inSpeed);
-        this->mTimer->Stop();
-        this->mTimer->SetInterval(this->mTimerInterval, 0);
-        if (this->mTimerRunning)
-            this->mTimer->Start();
-    }
-    this->UpdateTiming();
+// an FSFile's typed reads and writes (the RTS Engine's Rust bodies)
+long ee_rtscpp_read_ulong(FSFile* inFile, unsigned long* outValue) { return inFile->Read(*outValue); }
+long ee_rtscpp_read_bool(FSFile* inFile, bool* outValue) { return inFile->Read(*outValue); }
+long ee_rtscpp_read_float(FSFile* inFile, float* outValue) { return inFile->Read(*outValue); }
+long ee_rtscpp_write_ulong(FSFile* inFile, unsigned long inValue) { return inFile->Write(inValue); }
+long ee_rtscpp_write_bool(FSFile* inFile, bool inValue) { return inFile->Write(inValue); }
+long ee_rtscpp_write_float(FSFile* inFile, float inValue) { return inFile->Write(inValue); }
 }

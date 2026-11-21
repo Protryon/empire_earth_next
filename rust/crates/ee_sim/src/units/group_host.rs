@@ -10,11 +10,17 @@
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
+use crate::astar::pm::{FileIn, FileOut, Item, RequestRecord};
+use crate::astar::request;
 use crate::units::group_obj::{
     self as go, EeUnitsGroup, EeUnitsPlayerGroups, FormationState, GroupHost, GroupUnit, PathWaits, SavedGroup,
     SavedPaths, G,
 };
-use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, PlayerSaveHost};
+use crate::units::player_save::{
+    EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, PlayerSaveHost, EE_UNITS_PLAYER_SAVE_READ_BOOL,
+    EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_READ_ULONG, EE_UNITS_PLAYER_SAVE_WRITE_BOOL,
+    EE_UNITS_PLAYER_SAVE_WRITE_LONG, EE_UNITS_PLAYER_SAVE_WRITE_ULONG,
+};
 use crate::world::layout::layout;
 use crate::world::{UnitView, WorldRead, WorldView};
 use crate::world_field;
@@ -93,28 +99,20 @@ pub const EE_UNITS_GROUP_OP_FORMATION_CENTER: i32 = 8;
 pub const EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: i32 = 9;
 /// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
 pub const EE_UNITS_GROUP_OP_FORMATION_PLACE: i32 = 10;
-/// unit `a`'s class's `GetTerrainFlags(a, flags)` into `io.flags`
-pub const EE_UNITS_GROUP_OP_TERRAIN_FLAGS: i32 = 13;
+// (13 was terrain_flags: Rust since the paths lane's round 2)
 /// `gContinentManager.GetContinentID(a)`
 pub const EE_UNITS_GROUP_OP_CONTINENT_OF: i32 = 14;
 /// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
 pub const EE_UNITS_GROUP_OP_CONTINENT_AT: i32 = 15;
 /// `gContinentManager.GetPathAreaIDAt(c, d)`
 pub const EE_UNITS_GROUP_OP_PATH_AREA_AT: i32 = 17;
-/// `gPathManager.RequestPath(c, (io.a, io.b), (io.c, io.d), flags io.flags, 1, -1, NULL, 0)`
-pub const EE_UNITS_GROUP_OP_PATH_REQUEST: i32 = 19;
-/// `gPathManager.CancelAutoPathRequest(a)`
-pub const EE_UNITS_GROUP_OP_PATH_CANCEL: i32 = 20;
-/// path `a`'s `Reference()`
-pub const EE_UNITS_GROUP_OP_PATH_REFERENCE: i32 = 21;
-/// path `a`'s `Dereference()`
-pub const EE_UNITS_GROUP_OP_PATH_DEREFERENCE: i32 = 22;
-/// path `a`'s `mIsDone`
-pub const EE_UNITS_GROUP_OP_PATH_DONE: i32 = 23;
-/// path `a`'s `mRequestID`
-pub const EE_UNITS_GROUP_OP_PATH_ID: i32 = 24;
-/// path `a`'s `mPath` tiles pushed
-pub const EE_UNITS_GROUP_OP_PATH_TILES: i32 = 25;
+// (19 was path_request: Rust since the paths lane's round 2)
+// (20 was path_cancel: Rust since the paths lane's round 2)
+// (21 was path_reference: Rust since the paths lane's round 2)
+// (22 was path_dereference: Rust since the paths lane's round 2)
+// (23 was path_done: Rust since the paths lane's round 2)
+// (24 was path_id: Rust since the paths lane's round 2)
+// (25 was path_tiles: Rust since the paths lane's round 2)
 /// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
 pub const EE_UNITS_GROUP_OP_SET_GROUP_PATH: i32 = 26;
 /// unit `a`'s `ClearBuildTargets()`
@@ -131,12 +129,9 @@ pub const EE_UNITS_GROUP_OP_CLEAR_AREAS: i32 = 34;
 pub const EE_UNITS_GROUP_OP_AREA_OUTLINES: i32 = 35;
 /// `gAEManager.mTemplates[c]->mRadius` into `io.f`
 pub const EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: i32 = 36;
-/// `EESaveAutoPathRequest(file a, path b)`
-pub const EE_UNITS_GROUP_OP_SAVE_PATH: i32 = 37;
-/// `EELoadAutoPathRequest(file a, io.a)`: the error
-pub const EE_UNITS_GROUP_OP_LOAD_PATH: i32 = 38;
-/// `EEAwaitAutoPathRequest(c, ...)` calling `ee_units_group_path_resolved(b, d, request)`
-pub const EE_UNITS_GROUP_OP_AWAIT_PATH: i32 = 39;
+// (37 was save_path: Rust since the paths lane's round 2)
+// (38 was load_path: Rust since the paths lane's round 2)
+// (39 was await_path: Rust since the paths lane's round 2)
 /// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
 pub const EE_UNITS_GROUP_OP_AFTER_LOAD: i32 = 40;
 /// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
@@ -351,9 +346,10 @@ impl GroupHost for GameGroups {
         self.op(EE_UNITS_GROUP_OP_FORMATION_SET_B5C, formation, 0, i64::from(s.b5c), 0);
     }
     fn terrain_flags(&mut self, unit: u64) -> [u8; 17] {
-        let mut io = EeUnitsGroupIo::default();
-        self.io(EE_UNITS_GROUP_OP_TERRAIN_FLAGS, unit, 0, 0, 0, &mut io);
-        io.flags
+        // the unit's class's GetTerrainFlags (gather_spot.rs)
+        // SAFETY: a live unit
+        let class = read(|t| unsafe { UnitView::of(t, unit) }.and_then(|u| u.class()).map_or(0, |c| c.handle()));
+        crate::units::gather_spot::class_terrain_flags(class, unit).map(u8::from)
     }
     fn continent_of(&mut self, unit: u64) -> u16 {
         self.op(EE_UNITS_GROUP_OP_CONTINENT_OF, unit, 0, 0, 0) as u16
@@ -379,27 +375,32 @@ impl GroupHost for GameGroups {
         }
     }
     fn path_request(&mut self, player_id: i64, from: (i64, i64), to: (i64, i64), flags: &[u8; 17]) -> u64 {
-        let mut io = EeUnitsGroupIo { a: from.0, b: from.1, c: to.0, d: to.1, flags: *flags, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_PATH_REQUEST, 0, 0, player_id, 0, &mut io) as u64
+        // `RequestPath(player, from, to, flags, 1, -1, NULL, 0)` (the flags' player 0)
+        let f = request::EePathAsgFlags { player: 0, flags: flags.map(|b| b != 0) };
+        request::request_path(player_id as c_long as i64, from, to, &f, 1, -1, 0, false)
     }
     fn path_cancel(&mut self, path: u64) {
-        self.op(EE_UNITS_GROUP_OP_PATH_CANCEL, path, 0, 0, 0);
+        request::cancel(path);
     }
     fn path_reference(&mut self, path: u64) {
-        self.op(EE_UNITS_GROUP_OP_PATH_REFERENCE, path, 0, 0, 0);
+        // SAFETY: the group's live request
+        unsafe { request::reference(path) };
     }
     fn path_dereference(&mut self, path: u64) {
-        self.op(EE_UNITS_GROUP_OP_PATH_DEREFERENCE, path, 0, 0, 0);
+        // SAFETY: the group's reference
+        unsafe { request::dereference(path) };
     }
     fn path_done(&mut self, path: u64) -> bool {
-        self.op(EE_UNITS_GROUP_OP_PATH_DONE, path, 0, 0, 0) != 0
+        // SAFETY: the group's live request
+        unsafe { request::get(path) }.r.done
     }
     fn path_id(&mut self, path: u64) -> i64 {
-        self.op(EE_UNITS_GROUP_OP_PATH_ID, path, 0, 0, 0)
+        // SAFETY: the group's live request
+        i64::from(unsafe { request::get(path) }.r.id)
     }
     fn path_tiles(&mut self, path: u64) -> Vec<(i64, i64)> {
-        let mut io = EeUnitsGroupIo::default();
-        self.fill(EE_UNITS_GROUP_OP_PATH_TILES, path, 0, &mut io).into_iter().map(|(x, y, _)| (x, y)).collect()
+        // SAFETY: the group's live request
+        unsafe { request::get(path) }.path.iter().map(|t| (i64::from(t[0]), i64::from(t[1]))).collect()
     }
     fn set_group_path(&mut self, unit: u64, points: &[[f32; 3]]) {
         let mut io = EeUnitsGroupIo { list: points.as_ptr().cast(), len: points.len(), ..Default::default() };
@@ -674,7 +675,15 @@ pub unsafe extern "C" fn ee_units_selection(
 
 impl PathWaits for GameGroups {
     fn await_path(&mut self, request_id: i64, group: G, key: i64) {
-        self.op(EE_UNITS_GROUP_OP_AWAIT_PATH, 0, group as u64, request_id, key);
+        // the group referenced for the wait (group_obj.rs restore_active); the attach releases it
+        let g = group as u64;
+        request::await_request(
+            request_id as c_long as i64,
+            Box::new(move |r| {
+                // SAFETY: the waiting group, referenced until now
+                unsafe { go::path_resolved(&mut GameGroups, g as G, key, r) }
+            }),
+        );
     }
 }
 
@@ -695,14 +704,74 @@ impl PlayerSaveHost for SaveFile {
     }
 }
 
+impl SaveFile {
+    fn read_value(&mut self, op: i32) -> Result<EeUnitsPlayerSaveIo, i32> {
+        let mut io = EeUnitsPlayerSaveIo::default();
+        match self.call(op, 0, &mut io) {
+            0 => Ok(io),
+            e => Err(e),
+        }
+    }
+}
+
+/// A request's record through the file's primitives (`FSFile`'s `long`, `unsigned long` and `bool`: the bytes of
+/// the original's typed calls).
+impl FileOut for SaveFile {
+    fn put(&mut self, item: Item) {
+        let mut io = EeUnitsPlayerSaveIo::default();
+        let op = match item {
+            Item::I32(v) => {
+                io.i = i64::from(v);
+                EE_UNITS_PLAYER_SAVE_WRITE_LONG
+            }
+            Item::U32(v) => {
+                io.i = i64::from(v);
+                EE_UNITS_PLAYER_SAVE_WRITE_ULONG
+            }
+            Item::Bool(v) => {
+                io.b = u8::from(v);
+                EE_UNITS_PLAYER_SAVE_WRITE_BOOL
+            }
+            _ => unreachable!("a request's record is longs, unsigned longs and bools"),
+        };
+        self.call(op, 0, &mut io);
+    }
+}
+
+impl FileIn for SaveFile {
+    fn u32(&mut self) -> Result<u32, i32> {
+        self.read_value(EE_UNITS_PLAYER_SAVE_READ_ULONG).map(|io| io.i as u32)
+    }
+    fn i32(&mut self) -> Result<i32, i32> {
+        self.read_value(EE_UNITS_PLAYER_SAVE_READ_LONG).map(|io| io.i as i32)
+    }
+    fn u16(&mut self) -> Result<u16, i32> {
+        unreachable!("not in a request's record")
+    }
+    fn bool(&mut self) -> Result<bool, i32> {
+        self.read_value(EE_UNITS_PLAYER_SAVE_READ_BOOL).map(|io| io.b != 0)
+    }
+    fn f32(&mut self) -> Result<f32, i32> {
+        unreachable!("not in a request's record")
+    }
+    fn bytes(&mut self, _len: usize) -> Result<Vec<u8>, i32> {
+        unreachable!("not in a request's record")
+    }
+}
+
 impl SavedPaths for SaveFile {
     fn save_path(&mut self, path: u64) {
-        GameGroups.op(EE_UNITS_GROUP_OP_SAVE_PATH, self.file as u64, path, 0, 0);
+        // `EESaveAutoPathRequest`: every field (save 0.277)
+        // SAFETY: the group's live request
+        let rr = unsafe { request::record(path) };
+        rr.write(self);
     }
     fn load_path(&mut self) -> (i32, u64) {
-        let mut io = EeUnitsGroupIo::default();
-        let e = GameGroups.io(EE_UNITS_GROUP_OP_LOAD_PATH, self.file as u64, 0, 0, 0, &mut io);
-        (e as i32, io.a as u64)
+        // `EELoadAutoPathRequest`: a new request (one reference, the caller's), none on an error
+        match RequestRecord::read(self) {
+            Ok(rr) => (0, request::from_record(&rr)),
+            Err(e) => (e, 0),
+        }
     }
 }
 
@@ -994,16 +1063,6 @@ pub unsafe extern "C" fn ee_units_groups_player(player: *mut c_void, op: i32) {
         4 => go::validate_player(h, p),
         _ => {}
     }
-}
-
-/// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).
-///
-/// # Safety
-/// `g` the waiting group (referenced); `request` 0 or a request with the caller's reference.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_path_resolved(g: *mut EeUnitsGroup, key: i64, request: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe { go::path_resolved(&mut GameGroups, g, key, request as u64) }
 }
 
 /// `EESaveActiveGroups(file)` over the player save's primitive `f`.

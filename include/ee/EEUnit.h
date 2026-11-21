@@ -749,7 +749,7 @@ public:
     void ReleaseConversionEffect();         // 0x1f6f99: the mL2C0 effect off
     void KillCargo();                       // 0x1f8af6: unloads every cargo unit (Virtual60(0, 0, 0)), statistics
     static void ReleasePool();              // 0x1f8be7 (cdecl; 0x144295): the pool's stats, then Release
-    void RefreshPath();                     // 0x1f8c2d (0x22e47a): the group's path request and the path manager
+    // 0x1f8c2d RefreshPath (0x22e47a): Rust (ee_units waypoints.rs refresh_path; its callers are Rust)
     void SetScaledModel(GEModel* inModel);  // 0x1fe405 (0xf127d): the model, scaled by the class's mL28C
     void ClearCollisionState();             // 0x138e29 (out of line, another unit's range; TakeOffMap calls it first) (provisional name)
     void UpdateCamouflage(long inAction);   // 0x1ff6b4 (before mCommand changes: StartAction, AIStep) (provisional name)

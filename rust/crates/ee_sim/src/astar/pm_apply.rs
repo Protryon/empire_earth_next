@@ -7,8 +7,7 @@
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
 #![allow(clippy::unnecessary_cast)]
 
-/// request `h1`'s path: the tiles `h2[..i0]` (x, y pairs), its length `i1`, done
-pub const EE_PATH_REQUEST_SET_PATH: i32 = 170;
+// (170 was the request's path set: request.rs)
 /// map `h1`'s `GetClosestTile` of the point of float bits (`i0`, `i1`) -> (`i0`, `i1`)
 pub const EE_PATH_CLOSEST_TILE: i32 = 171;
 
@@ -73,13 +72,6 @@ mod game {
         unsafe { WorldRead::begin() }
     }
 
-    fn op(raw: Raw<'_>, code: i32, h: [u64; 3], i: [i64; 2]) -> i64 {
-        let mut io = EePathIo::default();
-        io.h[..3].copy_from_slice(&h);
-        io.i[..2].copy_from_slice(&i);
-        raw(code, &mut io)
-    }
-
     /// Sub sector `id`'s location (`GetPathSubSector(id)->GetLocation()`).
     fn sub_location(id: i32) -> (i32, i32) {
         let r = crate::astar::world_view::cm().expect("the continent manager");
@@ -101,7 +93,7 @@ mod game {
     ///
     /// # Safety
     /// `unit` 0 or a live complex unit; `request` 0 or a live request; `from` 0 or a live sub sector.
-    pub unsafe fn request_unit_paths(raw: Raw<'_>, unit: u64, request: u64, path: &[i32], from: u64) {
+    pub unsafe fn request_unit_paths(unit: u64, request: u64, path: &[i32], from: u64) {
         if unit != 0 {
             let goal = goal_of(unit);
             // SAFETY: the unit's live goal (each read below of a live goal)
@@ -163,13 +155,8 @@ mod game {
                 (l.x as i32, l.y as i32)
             });
             let (tiles, length) = request_path(&locations, start);
-            let flat: Vec<i32> = tiles.iter().flat_map(|t| [t.0, t.1]).collect();
-            op(
-                raw,
-                EE_PATH_REQUEST_SET_PATH,
-                [0, request, flat.as_ptr() as u64],
-                [tiles.len() as i64, i64::from(length)],
-            );
+            // SAFETY: the caller's live request
+            unsafe { crate::astar::request::set_path(request, &tiles, length) };
         }
     }
 
