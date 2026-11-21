@@ -10,7 +10,12 @@
 //! order, and so is every random draw (RUST_PLAN 2.1).
 
 // the C++'s own casts (`long` and `unsigned long` are 32-bit here, 64-bit on LP64)
-#![allow(clippy::unnecessary_cast)]
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::excessive_precision,
+    clippy::collapsible_if,
+    clippy::neg_cmp_op_on_partial_ord
+)]
 
 use std::ffi::{c_char, c_long, c_ulong, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
