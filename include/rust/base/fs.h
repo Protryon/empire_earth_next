@@ -317,6 +317,28 @@ int32_t ee_fs_mem_delete(EeFsMemFile *file);
 /// `file` is live.
 uint32_t ee_fs_mem_length(const EeFsMemFile *file);
 
+/// `GetLength(outLength)`: always `kErrorOK`.
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+int32_t ee_fs_mem_get_length(const EeFsMemFile *file, unsigned long *out);
+
+/// `GetPosition(outPosition)`: always `kErrorOK` (-1 closed or empty).
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+int32_t ee_fs_mem_get_position(const EeFsMemFile *file, long *out);
+
+/// `Compress(level, outLength)` as FSMemoryFile.h has it: a PKWARE implode error (0x15) is a failed verification at
+/// `source` (the C++ header's `__FILE__`), line 140.
+///
+/// # Safety
+/// `file` is live, `out_length` valid for a write, `source` a zero-terminated name.
+int32_t ee_fs_mem_compress_checked(EeFsMemFile *file,
+                                   unsigned long level,
+                                   unsigned long *out_length,
+                                   const char *source);
+
 /// `GetPosition`.
 ///
 /// # Safety
@@ -342,7 +364,7 @@ const uint8_t *ee_fs_mem_data(const EeFsMemFile *file);
 int32_t ee_fs_mem_read(EeFsMemFile *file,
                        uint8_t *out,
                        size_t length,
-                       uint32_t *out_read);
+                       unsigned long *out_read);
 
 /// `Write`.
 ///
@@ -351,7 +373,7 @@ int32_t ee_fs_mem_read(EeFsMemFile *file,
 int32_t ee_fs_mem_write(EeFsMemFile *file,
                         const uint8_t *data,
                         size_t length,
-                        uint32_t *out_written);
+                        unsigned long *out_written);
 
 /// `SetPosition`.
 ///
