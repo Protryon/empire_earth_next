@@ -36658,3 +36658,7 @@ PORT_LEARNINGS.md's appended sections, both kept; strip_markers --check 0 files;
 - `bash tools/gates.sh` through its own slot (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game
   time-cap PT 12590, units [4, 38, 39], alive [2, 3], classic_lua x 2; lan-game PT 3135/3136).
 - Not run: the POSIX builds.
+- Merged with origin/rust a84903ce6 (batch 12; 6a73c167a): PORT_LEARNINGS.md only (the appended sections, round 8's
+  duplicated by the merge and dropped, this section moved to the end); on the merged tree both builds 0/0 (EE-AOC
+  414 inputs, EE-SIM 415), the test profile 0/0, the header current (293), the oracle seeds 2-7 identical, the
+  Rust gate PASS (5,331 tests). The captures, saveload, tours and gates.sh ran on the batch 11 merge (above).
