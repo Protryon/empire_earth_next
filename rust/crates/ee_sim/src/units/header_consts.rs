@@ -33,6 +33,7 @@ mod tests {
     const RENAMES: &[(&str, &str)] = &[
         ("UNIT_TYPE_RADIO_MAN", "kUnitTypeInf10RadioMan"),
         ("MOVEMENT_SEA_OR_SPACE", "kMovementSeaOrSpace"),
+        ("UNIT_TYPE_MARKET_CP", "kUnitTypeMarketCP"),
         ("TRIGGER_ENEMY_UNIT_IN_LOS", "kTriggerEnemyUnitInLOS"),
         ("TRIGGER_CAN_I_PURSUE_PAST_INITIAL_CONTACT_LOS", "kTriggerCanIPursuePastInitialContactLOS"),
         ("TRIGGER_ENEMY_INSIDE_INITIAL_CONTACT_LOS", "kTriggerEnemyInsideInitialContactLOS"),

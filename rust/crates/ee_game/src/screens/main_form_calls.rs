@@ -452,6 +452,300 @@ pub(crate) fn call<C: Cpp + ?Sized>(
             io.f[0] = c.mf_fps(rec);
             0
         }
+        // ---- the rest of the original host (UI lane round 9): with these EEUIFMainGame::HostOp and the mouse
+        // modes' EEMouseModeOp are gone
+        EE_SCREENS_MF_OP_FIELD | EE_SCREENS_MF_OP_SET_FIELD => {
+            // (the fields of EeScreensMainFormFields are main_form_fields.rs')
+            let set = op == EE_SCREENS_MF_OP_SET_FIELD;
+            match a {
+                EE_SCREENS_MF_FIELD_GATE_DIRECTION => {
+                    if set {
+                        c.mf_set_gate_direction(rec, b);
+                    }
+                    c.mf_gate_direction(rec)
+                }
+                EE_SCREENS_MF_FIELD_WALL_STATE => {
+                    if set {
+                        c.mf_set_wall_state(rec, b);
+                    }
+                    c.mf_wall_state(rec)
+                }
+                EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW => {
+                    if set {
+                        c.mf_set_tooltip_shadow(rec, b != 0);
+                    }
+                    c.mf_tooltip_shadow(rec) as i64
+                }
+                EE_SCREENS_MF_FIELD_BUILD_TECH => {
+                    if set {
+                        c.mf_set_build_tech(rec, b);
+                    }
+                    c.mf_build_tech(rec)
+                }
+                _ => 0,
+            }
+        }
+        EE_SCREENS_MF_OP_LOG_LINE => {
+            c.mf_log_line(rec, a);
+            0
+        }
+        EE_SCREENS_MF_OP_POLL => c.mf_poll(rec),
+        EE_SCREENS_MF_OP_SCROLL => {
+            c.mf_scroll(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_FIND_GATE_WALL => {
+            // the wall at tile (a, b) and its direction (io.n[0] in and out)
+            c.mf_tile_x(a);
+            c.mf_tile_y(b);
+            let mut direction = io.n[0] as c_long;
+            let found = c.mf_find_gate_wall(OutL::of(&mut direction));
+            io.n[0] = direction as i64;
+            found as i64
+        }
+        EE_SCREENS_MF_OP_CLEAR_GHOSTS => {
+            c.mf_clear_ghosts();
+            0
+        }
+        EE_SCREENS_MF_OP_PREVIEW_WALL => {
+            // the a tiles at b (x, y pairs) previewed with the running placement's (or the form's) wall
+            // SAFETY: the tiles main_form.rs hands with the op (a live slice of a pairs)
+            let tiles = unsafe { core::slice::from_raw_parts(b as usize as *const [i32; 2], a.max(0) as usize) };
+            c.mf_tiles_clear();
+            for t in tiles {
+                c.mf_tile_x(t[0] as i64);
+                c.mf_tile_y(t[1] as i64);
+                c.mf_tiles_add();
+            }
+            if c.mf_has_wall(rec) {
+                c.mf_preview_wall_call(rec);
+            } else {
+                c.mf_preview_wall_form(rec);
+            }
+            0
+        }
+        EE_SCREENS_MF_OP_PREVIEW_PLACEMENT => {
+            c.mf_preview_placement_mouse();
+            0
+        }
+        EE_SCREENS_MF_OP_POPULATION => c.mf_population(),
+        EE_SCREENS_MF_OP_POPULATION_LIMIT => c.mf_population_limit(),
+        EE_SCREENS_MF_OP_NUM_TEAMS => c.mf_num_teams(),
+        EE_SCREENS_MF_OP_LABEL_PLAYER_COLOR => {
+            c.mf_label_player_color(rec, a, b);
+            0
+        }
+        EE_SCREENS_MF_OP_TEXT_WONDER => {
+            c.mf_wonder_format();
+            c.mf_wonder_print(rec, a, b);
+            0
+        }
+        EE_SCREENS_MF_OP_TEXT_TIME => {
+            c.mf_text_time(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_HAS_COMMS => c.gv_comms() as i64,
+        EE_SCREENS_MF_OP_COMMS_PAUSED => c.mf_comms_paused() as i64,
+        EE_SCREENS_MF_OP_HAS_TEAMS => c.mf_has_teams() as i64,
+        EE_SCREENS_MF_OP_PAUSE_TEXT => {
+            c.mf_pause_text(rec, a);
+            0
+        }
+        EE_SCREENS_MF_OP_LAG_STATUS => c.mf_lag_status(),
+        EE_SCREENS_MF_OP_LAG_COLOR => {
+            c.mf_lag_color(rec, a, b);
+            0
+        }
+        EE_SCREENS_MF_OP_HAS_INSTRUCTIONS => c.mf_has_instructions() as i64,
+        EE_SCREENS_MF_OP_UPDATE_CURSOR => {
+            c.mf_update_cursor(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_INFO_DURATION => c.mf_info_duration(rec),
+        EE_SCREENS_MF_OP_CHAT_TOP => {
+            c.mf_chat_top(rec, a);
+            0
+        }
+        EE_SCREENS_MF_OP_HIDE_MESSAGES => {
+            c.mf_hide_messages(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_CREATE_ERROR_LOCK => {
+            c.mf_create_error_lock(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_CREATE_GROUP => {
+            c.mf_create_group(rec, a);
+            0
+        }
+        EE_SCREENS_MF_OP_NEW_UNIT_HACK => {
+            c.mf_new_unit_hack(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_BUILD_TERMINATE => {
+            if a == 0 {
+                c.mf_wall_terminate(rec);
+            } else {
+                c.mf_gate_terminate(rec);
+            }
+            0
+        }
+        EE_SCREENS_MF_OP_NODE => {
+            c.mf_node_load(rec, a);
+            c.mf_has_node(rec) as i64
+        }
+        EE_SCREENS_MF_OP_NODE_CLASS => (c.mf_has_node(rec) && c.mf_node_class_exists(rec)) as i64,
+        EE_SCREENS_MF_OP_CAN_PRODUCE => c.mf_can_produce(rec, a),
+        EE_SCREENS_MF_OP_PLAY_SOUND => {
+            c.mf_play_sound(a);
+            0
+        }
+        EE_SCREENS_MF_OP_CHAT_LOG_ERROR => {
+            c.mf_chat_log_error(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_SELECTED_COUNT => c.mf_selected_count(),
+        EE_SCREENS_MF_OP_NODE_CALAMITY => c.mf_node_calamity(rec),
+        EE_SCREENS_MF_OP_CALAMITY_CLASS => {
+            c.mf_calamity_load(rec, a);
+            c.mf_has_calamity(rec) as i64
+        }
+        EE_SCREENS_MF_OP_CALAMITY_CAST => {
+            c.mf_calamity_cast(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_MOUSE_FREEZE => {
+            c.sc_cam_freeze(a != 0);
+            0
+        }
+        EE_SCREENS_MF_OP_USER_PAUSED => c.mf_user_paused() as i64,
+        EE_SCREENS_MF_OP_IS_SERVER => c.gv_is_server() as i64,
+        EE_SCREENS_MF_OP_MASTER_VOLUME => {
+            c.mf_master_volume();
+            0
+        }
+        EE_SCREENS_MF_OP_MOUSE_POSITION => {
+            c.mf_mouse_position(x, y);
+            0
+        }
+        EE_SCREENS_MF_OP_FILL_HACK => {
+            c.mf_fill_hack(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_HAS_TECHS => c.mf_has_techs() as i64,
+        EE_SCREENS_MF_OP_TEXT_EPOCH_TITLE => {
+            c.mf_text_epoch_title(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_UNIT_INFO_BACKGROUND => {
+            c.mf_unit_info_background(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_MEDIA_OLD => {
+            c.mf_media_old_load(rec);
+            c.mf_has_media_old(rec) as i64
+        }
+        EE_SCREENS_MF_OP_PLAYER_MEDIA_ID => c.mf_player_media_id(),
+        EE_SCREENS_MF_OP_USING_CARBON => c.mf_using_carbon() as i64,
+        EE_SCREENS_MF_OP_MEDIA => {
+            c.mf_media_get(rec, a);
+            c.mf_has_media(rec) as i64
+        }
+        EE_SCREENS_MF_OP_BG_TEXTURE => {
+            c.mf_bg_texture(rec, a, b);
+            0
+        }
+        EE_SCREENS_MF_OP_POST_SHOW_DIALOG => {
+            c.sc_mg_show_dialog();
+            0
+        }
+        // the mouse modes' (mouse_modes.rs): the picked unit, the first selected unit and the pointed tile held in
+        // the call; io.f[0..2] the mouse location where an op takes one
+        EE_SCREENS_MF_OP_MD_CAPTURED => c.md_captured(rec) as i64,
+        EE_SCREENS_MF_OP_MD_POINTER => {
+            c.sc_mg_pointer(a as i32);
+            0
+        }
+        EE_SCREENS_MF_OP_MD_POINT => {
+            if a == 0 {
+                c.md_point_reset();
+                let found = c.md_point(rec, x, y);
+                io.f[0] = c.md_point_x();
+                io.f[1] = c.md_point_y();
+                io.f[2] = c.md_point_z();
+                found as i64
+            } else {
+                let (mut tx, mut ty): (c_long, c_long) = (-10000, -10000);
+                let found = c.md_point_xy(rec, x, y, OutL::of(&mut tx), OutL::of(&mut ty));
+                io.n[0] = tx as i64;
+                io.n[1] = ty as i64;
+                found as i64
+            }
+        }
+        EE_SCREENS_MF_OP_MD_TILE_SEEN => c.md_tile_seen(rec) as i64,
+        EE_SCREENS_MF_OP_MD_PICK => c.md_pick(rec, x, y) as i64,
+        // (the unit's plain fields, and the first unit's, are hud_views.rs mouse_mode's)
+        EE_SCREENS_MF_OP_MD_UNIT => match a {
+            EE_SCREENS_MF_UNIT_CAN_BE_ATTACKED => c.md_can_be_attacked(rec) as i64,
+            EE_SCREENS_MF_UNIT_IN_WONDER_SET => c.md_in_wonder_set(rec) as i64,
+            _ => 0,
+        },
+        EE_SCREENS_MF_OP_MD_DAMAGE => {
+            io.f[0] = c.md_damage(a, b);
+            0
+        }
+        EE_SCREENS_MF_OP_MD_FIRST_FIELD => {
+            if a == EE_SCREENS_MF_FIRST_IS_CASTER {
+                c.md_is_caster(rec) as i64
+            } else {
+                0
+            }
+        }
+        EE_SCREENS_MF_OP_MD_CAN_CONVERT => {
+            c.md_in_range_set(b != 0);
+            let found = c.md_can_convert(rec, a);
+            (found as i64) | ((c.md_in_range() as i64) << 1)
+        }
+        EE_SCREENS_MF_OP_MD_SEND => {
+            // (the airport's, the attack ground's and the flare's are hud_sends.rs')
+            match a {
+                EE_SCREENS_MF_SEND_LOAD_GARRISON => c.md_send_load_garrison(rec),
+                EE_SCREENS_MF_SEND_UNLOAD => c.md_send_unload(rec, io.n[0], io.n[1]),
+                EE_SCREENS_MF_SEND_HEAL => c.md_send_heal(rec),
+                EE_SCREENS_MF_SEND_CONVERT => c.md_send_convert(rec, b != 0),
+                _ => c.md_send_rally(rec, x, y, io.n[0], io.n[1]),
+            }
+            0
+        }
+        EE_SCREENS_MF_OP_MD_ORDER_AT => {
+            // no unit, the picked unit or the picked unit's complex one
+            match a {
+                0 => c.md_order_at_none(x, y),
+                1 => c.md_order_at_picked(rec, x, y),
+                _ if c.md_has_picked(rec) => c.md_order_at_complex(rec, x, y),
+                _ => c.md_order_at_none(x, y),
+            }
+            0
+        }
+        EE_SCREENS_MF_OP_MD_CALAMITY_EFFECT => {
+            c.md_calamity_effect(rec, x, y, io.f[2]);
+            0
+        }
+        EE_SCREENS_MF_OP_MD_PREVIEW => {
+            c.md_preview(rec);
+            0
+        }
+        EE_SCREENS_MF_OP_MD_CALAMITY_CHECK => c.md_calamity_check(rec, x, y),
+        EE_SCREENS_MF_OP_MD_IN_GAME_VIEW => c.md_in_game_view(rec, x, y) as i64,
+        EE_SCREENS_MF_OP_MD_ENTITY_ENABLED => c.md_entity_enabled(rec, a) as i64,
+        EE_SCREENS_MF_OP_MD_SET_ENTITY_GROUP => {
+            c.md_set_entity_group(rec, a);
+            0
+        }
+        EE_SCREENS_MF_OP_MD_GATE_CLEAR => {
+            c.md_gate_clear(rec);
+            0
+        }
         _ => return None,
     })
 }
