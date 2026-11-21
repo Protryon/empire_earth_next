@@ -143,9 +143,9 @@ pub struct UnitsState {
     /// tiles as (x, y) (the continent and wall bindings: units_more.rs), the water sites (distance, y, x)
     pub tiles: Vec<(c_long, c_long)>,
     pub sites: Vec<(c_long, c_long, c_long)>,
-    /// ai.wall_route's path requests by handle (the path manager's `EEAutoPathRequest*`; not saved: a loaded game
-    /// forgets them) and the next handle
-    pub routes: BTreeMap<c_long, u64>,
+    /// ai.wall_route's path requests by handle (ee_sim::astar request.rs; held until read, not saved: a loaded game
+    /// forgets them), the last handle given
+    pub routes: BTreeMap<i64, u64>,
     pub next_route: c_long,
 }
 
@@ -187,7 +187,7 @@ impl Default for UnitsState {
             tiles: Vec::new(),
             sites: Vec::new(),
             routes: BTreeMap::new(),
-            next_route: 1,
+            next_route: 0,
         }
     }
 }

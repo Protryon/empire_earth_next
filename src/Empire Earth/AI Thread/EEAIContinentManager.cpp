@@ -34,7 +34,7 @@
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
 // scenario manager, and the forests' two members that make units.
 
-// (CNTQ, the queries' capture records: ee_sim::astar cm_capture.rs; the last queries here moved: cm_unit.rs, cm_world.rs)
+// (CNTQ, the queries' capture records: ee_sim::astar cm_capture.rs; the last queries here moved: cm_unit.rs)
 
 // Resets the global continent manager and frees its tile grids (Rust: cm_passes.rs)
 void EEAIContinentManager::Shutdown()
@@ -108,13 +108,6 @@ void EEAIContinentManager::BuildRegions(EEMap* inMap)
                               theIDs.empty() ? NULL : &theIDs[0], theInputs.size(), theKeep);
 }
 
-// Rebuilds the sub-sectors of one pending sector, re-links them, repairs the path areas of its changed tiles and
-// refiles the new sub-sectors; returns true when no sector is left pending (Rust: cm_passes.rs)
-bool EEAIContinentManager::Rebuild()
-{
-    return ee_astar_cm_rebuild(&this->mRecord, (uint64_t)(uintptr_t)gWorld.mMap, EEAIRegionSize());
-}
-
 // CanGetTo's C++ (ee_sim::astar cm_unit.rs): 0 the map is a space map; 1 the aircraft's planet id, its land
 // continent when it had none
 extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
@@ -128,13 +121,6 @@ extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
         theUnit->mPlanetID = EEGetLandContinentOf(theUnit);
     }
     return theUnit->mPlanetID;
-}
-
-// Queues the footprint tiles of a finished blocking unit or gate for a sector rebuild and tells the path manager
-// (inNow: at once); skipped while clearing or before regions exist (Rust: cm_world.rs, with its CNTQ record)
-void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
-{
-    ee_astar_cm_update_wall_unit(&this->mRecord, (uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit), inNow);
 }
 
 // When inTile is in the forest, creates inCount units of type 0x147 at random forest tiles within inRadius of

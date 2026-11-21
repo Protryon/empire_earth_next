@@ -173,9 +173,9 @@ public:
     }
     void ShowAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS); }   // 0x26568e (EERenderObject's)
     void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }
-    // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,
-    // ShowInformation); a member for UIForm's protected GetMouseCaptured and CopyData
-    static int64_t HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo);
+    // UIForm's protected members the host's shims call (main_form_calls.rs)
+    using UIForm::GetDrawToolTipShadow;
+    using UIForm::SetDrawToolTipShadow;
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
     GE3DPoint mPoint470;                    // +0x470 (the inline ctor's zeros)

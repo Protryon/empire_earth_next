@@ -1,31 +1,20 @@
 //! The classic_lua units host's operations whose bodies moved to Rust in the AI Thread cluster's round 8 (were
-//! EECPNextUnits.cpp's): the wall path (the path manager's FindPath with the wall pather), the wall routes (the
-//! path manager's requests, held by handle in the player's state until read), the enemies near a tile through the
-//! fog (the influence table's region sums and the regions' units), the citizen upgrade test, the tribute. What
-//! only C++ holds is one `ee_ai_units_host_cpp` case each (EE_AI_UNITS_HOST_* from 125).
+//! EECPNextUnits.cpp's): the enemies near a tile through the fog (the influence table's region sums and the regions'
+//! units), the citizen upgrade test, the tribute, the epoch's wall and gate classes and the Lua verbs' placement
+//! search. What only C++ holds is one `ee_ai_units_host_cpp` case each (EE_AI_UNITS_HOST_* from 134). (The wall path
+//! and the wall routes are the Paths lane's: units_more.rs over ee_sim::astar pm_entry.rs, request.rs.)
 
 #![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
 
 use std::ffi::c_void;
 use std::os::raw::c_long;
 
-use super::more::{self, EeAiUnitsTiles};
+use super::more;
 use super::*;
-use crate::astar::modifier_obj::{
-    ee_astar_mod_host_influence, ee_astar_modifier_new_wall_pather, ee_astar_modifier_new_wall_planner,
-    ee_astar_modifier_release,
-};
+use crate::astar::modifier_obj::ee_astar_mod_host_influence;
 use crate::world::{PlayerView, UnitView, WorldRead, WorldView};
 
 // ---- the C++ host's cases these bodies ask (EECPNextUnits.cpp ee_ai_units_host_cpp)
-/// `gPathManager.RequestPath(a, from, to, (EECPASGFlags*)b, 2, -1, (EeAStarModifier*)c, 1)` (`out` the
-/// `EeAiUnitsTiles` with the ends) -> the request (0: none)
-pub const EE_AI_UNITS_HOST_ROUTE_NEW: i32 = 125;
-/// the request `a`'s `mIsDone`, `mPath.size()`, `mPath[b]` (x low, y high), `Dereference()`
-pub const EE_AI_UNITS_HOST_ROUTE_DONE: i32 = 127;
-pub const EE_AI_UNITS_HOST_ROUTE_LEN: i32 = 128;
-pub const EE_AI_UNITS_HOST_ROUTE_TILE: i32 = 129;
-pub const EE_AI_UNITS_HOST_ROUTE_DEREF: i32 = 130;
 /// the tech node `a`'s researched event; the event `a`'s effect count (-1: no event), its effect `b`; the effect
 /// `a`'s kind (bits 48..63), unit class (16..47) and attribute (0..15) (-1: none)
 pub const EE_AI_UNITS_HOST_NODE_EVENT: i32 = 134;
@@ -37,23 +26,9 @@ pub const EE_AI_UNITS_HOST_TAKE_RESOURCE: i32 = 138;
 pub const EE_AI_UNITS_HOST_ADD_RESOURCE: i32 = 139;
 pub const EE_AI_UNITS_HOST_ADD_TRIBUTE: i32 = 140;
 
-/// `kUnitTypeCitizen`
-const TYPE_CITIZEN: usize = 0x20;
-
-/// `EECPASGFlags` (ee/EECPASGFlags.h: the player id, the 17 terrain flags).
-#[repr(C)]
-struct AsgFlags {
-    player_id: c_long,
-    flags: [bool; 17],
-}
-
 fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
     // SAFETY: the C++ switch over the live game, on the simulation thread
     unsafe { ee_ai_units_host_cpp(op, me, a, b, c, out) }
-}
-
-fn unpack(v: i64) -> (c_long, c_long) {
-    (v as i32 as c_long, (v >> 32) as i32 as c_long)
 }
 
 /// The operations whose bodies are Rust (None: the others').
@@ -63,20 +38,6 @@ fn unpack(v: i64) -> (c_long, c_long) {
 pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> Option<i64> {
     let _ = c;
     Some(match op {
-        // SAFETY: the caller's record
-        more::EE_AI_UNITS_HOST_WALL_PATH => wall_path(a, unsafe { &mut *(out as *mut EeAiUnitsTiles) }),
-        // SAFETY: as above
-        more::EE_AI_UNITS_HOST_ROUTE_REQUEST => route_request(me, a, unsafe { &mut *(out as *mut EeAiUnitsTiles) }),
-        more::EE_AI_UNITS_HOST_ROUTE_STATE => {
-            let Some(r) = route(me, a as c_long) else { return Some(-2) };
-            if cpp(EE_AI_UNITS_HOST_ROUTE_DONE, me, r as i64, 0, 0, std::ptr::null_mut()) != 0 {
-                cpp(EE_AI_UNITS_HOST_ROUTE_LEN, me, r as i64, 0, 0, std::ptr::null_mut())
-            } else {
-                -1
-            }
-        }
-        // SAFETY: as above
-        more::EE_AI_UNITS_HOST_ROUTE_TAKE => route_take(me, a as c_long, unsafe { &mut *(out as *mut EeAiUnitsTiles) }),
         more::EE_AI_UNITS_HOST_ENEMY_NEAR_ALL => enemy_near_all(me, a as c_long, b as c_long) as i64,
         more::EE_AI_UNITS_HOST_CITIZEN_UPGRADE => i64::from(citizen_upgrade(me, a)),
         more::EE_AI_UNITS_HOST_TRIBUTE => {
@@ -183,109 +144,6 @@ unsafe fn place(me: *mut c_void, p: &mut more::EeAiUnitsPlace) -> bool {
     // SAFETY: the open scope; the live computer player
     unsafe { crate::cp::place_capture::ee_cp_scope_centers(scope.0, me as u64) };
     result
-}
-
-/// The player's state (`EECPUnitsGet`: made when missing).
-fn state(me: *mut c_void) -> &'static mut crate::ai::units_state::UnitsState {
-    let s = cpp(EE_AI_UNITS_HOST_STATE, me, 0, 0, 0, std::ptr::null_mut()) as usize;
-    // SAFETY: the player's live state; no other reference to it lives across these bodies
-    unsafe { &mut *(s as *mut crate::ai::units_state::UnitsState) }
-}
-
-fn route(me: *mut c_void, handle: c_long) -> Option<u64> {
-    state(me).routes.get(&handle).copied().filter(|&r| r != 0)
-}
-
-/// Drops every route the state holds (a new request, the state's end).
-pub(super) fn release_routes(s: &mut crate::ai::units_state::UnitsState) {
-    for (_, r) in std::mem::take(&mut s.routes) {
-        if r != 0 {
-            cpp(EE_AI_UNITS_HOST_ROUTE_DEREF, std::ptr::null_mut(), r as i64, 0, 0, std::ptr::null_mut());
-        }
-    }
-}
-
-/// The path's tiles (`n` of them, through `tile(k)`) into the caller's room.
-fn write_tiles(t: &mut EeAiUnitsTiles, n: i64, tile: impl Fn(i64) -> i64) {
-    for k in 0..(n.max(0) as usize).min(t.cap) {
-        let (x, y) = unpack(tile(k as i64));
-        // SAFETY: the caller's room of `cap` pairs
-        unsafe {
-            *t.xy.add(2 * k) = x;
-            *t.xy.add(2 * k + 1) = y;
-        }
-    }
-}
-
-/// `ai.wall_route`'s request: one a player at a time (a new one drops the old); the citizens' terrain flags and the
-/// wall planner for the enemy `enemy`.
-fn route_request(me: *mut c_void, enemy: i64, t: &mut EeAiUnitsTiles) -> i64 {
-    release_routes(state(me));
-    // the citizens' terrain flags (EEUnitClass::GetTerrainFlags of no unit)
-    let citizen = {
-        let t = unsafe { WorldRead::begin() };
-        crate::world::ClassView::by_index(&t, TYPE_CITIZEN).map_or(0, |c| c.handle())
-    };
-    let mut flags = AsgFlags { player_id: 0, flags: crate::units::gather_spot::class_terrain_flags(citizen, 0) };
-    let planner = ee_astar_modifier_new_wall_planner(enemy as u32, 0);
-    let flags_at = &mut flags as *mut AsgFlags as usize as i64;
-    let request = cpp(
-        EE_AI_UNITS_HOST_ROUTE_NEW,
-        me,
-        enemy,
-        flags_at,
-        planner as usize as i64,
-        (t as *mut EeAiUnitsTiles).cast(),
-    );
-    // SAFETY: the planner made above (the request holds its own reference)
-    unsafe { ee_astar_modifier_release(planner) };
-    if request == 0 {
-        return 0;
-    }
-    let s = state(me);
-    let handle = s.next_route;
-    s.next_route += 1;
-    s.routes.insert(handle, request as u64);
-    handle as i64
-}
-
-/// `ai.wall_route_result`'s path: its tiles into the caller's room, then the route dropped -> the path's length.
-fn route_take(me: *mut c_void, handle: c_long, t: &mut EeAiUnitsTiles) -> i64 {
-    let Some(r) = route(me, handle) else { return 0 };
-    let n = cpp(EE_AI_UNITS_HOST_ROUTE_LEN, me, r as i64, 0, 0, std::ptr::null_mut());
-    write_tiles(t, n, |k| cpp(EE_AI_UNITS_HOST_ROUTE_TILE, me, r as i64, k, 0, std::ptr::null_mut()));
-    cpp(EE_AI_UNITS_HOST_ROUTE_DEREF, me, r as i64, 0, 0, std::ptr::null_mut());
-    state(me).routes.remove(&handle);
-    n
-}
-
-/// `ai.wall_path`: the unit's path inside the box of the two ends (U2DRectangle's Set then Extend) with the wall
-/// pather -> its length (a list past the caller's room is kept for TILES_AGAIN).
-fn wall_path(unit: i64, t: &mut EeAiUnitsTiles) -> i64 {
-    let (from, to) = (t.from, t.to);
-    // EEAIAStarBounds: mBottom, mLeft, mRight, mTop
-    let bounds: [c_long; 4] = [from[1].max(to[1]), from[0].min(to[0]), from[0].max(to[0]), from[1].min(to[1])];
-    let window = crate::astar::pm_entry::EePathWindow {
-        top: bounds[3] as i32,
-        left: bounds[1] as i32,
-        bottom: bounds[0] as i32,
-        right: bounds[2] as i32,
-    };
-    let map = {
-        let t = unsafe { WorldRead::begin() };
-        WorldView::global(&t).and_then(|w| w.map()).map_or(0, |m| m.handle())
-    };
-    let pather = ee_astar_modifier_new_wall_pather();
-    let from = (from[0] as i32, from[1] as i32);
-    let to = (to[0] as i32, to[1] as i32);
-    // SAFETY: the live unit and map; the pather made above (FindPath's PMRQ record is the search's own)
-    let path = unsafe {
-        crate::astar::pm_entry::find_path(unit as u64, map, from, to, window, 1, 0x32, pather as usize as u64)
-    };
-    // SAFETY: the pather made above
-    unsafe { ee_astar_modifier_release(pather) };
-    let tiles: Vec<(c_long, c_long)> = path.iter().map(|p| (p.x as c_long, p.y as c_long)).collect();
-    super::host_ops::tiles_out(t, tiles)
 }
 
 /// The classic build manager's HasEnemyNear through the fog (the manifest's "sees_all"): every armed unit not the

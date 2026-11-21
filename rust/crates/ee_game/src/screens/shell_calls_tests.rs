@@ -116,3 +116,95 @@ fn the_paint_areas() {
     run(&mut f, EE_SCREENS_SH_MOUSE_AT, 0, 0, [0.0; 4]);
     assert_eq!(f.calls(), "shell_mouse_x(128)\nshell_mouse_y(128)");
 }
+
+#[test]
+fn the_rest_of_the_shells_round_9() {
+    // the listed files, their extensions cut; the numbered lines
+    let mut f = Fake::default();
+    f.answer("sh_files_count", &[2]);
+    run(&mut f, EE_SCREENS_SH_FILE_APPEND_LISTED, 0x10, 0x20, [0.0; 4]);
+    assert_eq!(
+        f.calls(),
+        "sh_files_clear()\nsh_files_list(16, 32)\nsh_files_snapshot()\nsh_files_count()\nsh_text_from_file(0)\n\
+         sh_text_trim4()\nsh_combo_append_text(128)\nsh_text_from_file(1)\nsh_text_trim4()\nsh_combo_append_text(128)"
+    );
+    let mut f = Fake::default();
+    run(&mut f, EE_SCREENS_SH_APPEND_NUMBERED, 7, 2, [0.0; 4]);
+    assert!(f.calls().ends_with("sh_numbered_print(2)\nsh_combo_append_text(128)"));
+    // the selections: -1 without one
+    let mut f = Fake::default();
+    f.answer("sh_form_list_selection", &[1]).answer("sh_list_current", &[1, 1]);
+    assert_eq!(run(&mut f, EE_SCREENS_SH_LIST_SELECTION, 3, 0, [0.0; 4]).0, Some(-1));
+    assert_eq!(run(&mut f, EE_SCREENS_SH_LIST_CURRENT, 0, 0, [0.0; 4]).0, Some(-1));
+    assert_eq!(run(&mut f, EE_SCREENS_SH_LIST_CURRENT, 1, 0, [0.0; 4]).0, Some(0));
+    // the tech tree of the editor's player: its selection + 1
+    let mut f = Fake::default();
+    f.out("sh_editor_player", 2).answer("sh_player_tree", &[0x90]).answer("sh_tree_data_id", &[44]);
+    run(&mut f, EE_SCREENS_SH_TECH_DEPENDS, (5i64 << 32) | 6, 1, [0.0; 4]);
+    assert_eq!(
+        f.calls(),
+        "sh_editor_player(out)\nsh_player_tree(2)\nsh_tree_data_id(144, 5)\nsh_tree_depends(144, 6, 44)"
+    );
+    // the rotation: the turning ghosts only, inside the lock
+    let mut f = Fake::default();
+    f.answer("sh_ghost_count", &[2]).answer("sh_ghost_turns", &[0, 1]);
+    run(&mut f, EE_SCREENS_SH_ROTATE, 1, 0, [0.5, 0.0, 0.0, 0.0]);
+    assert_eq!(
+        f.calls(),
+        "sh_ghosts_enter()\nsh_ghost_count()\nsh_ghost_turns(0)\nsh_ghost_turns(1)\nsh_tr_from_ghost(1)\n\
+         sh_tr_orient(0.5)\nsh_tr_to_ghost(1)\nsh_ghosts_leave()"
+    );
+    let mut f = Fake::default();
+    f.answer("sh_editor_selected_count", &[1]).answer("sh_editor_selected", &[0x70]);
+    f.answer("sh_unit_has_complex", &[1]).answer("sh_unit_turns", &[1]);
+    run(&mut f, EE_SCREENS_SH_ROTATE, 0, 0, [0.25, 0.0, 0.0, 0.0]);
+    assert!(f.calls().ends_with("sh_tr_from_unit(112)\nsh_tr_orient(0.25)\nsh_tr_to_unit(112)"));
+    // the keys: GetEntity's result << 8 | the press state
+    let mut f = Fake::default();
+    f.answer("sh_key_load", &[1]).answer("sh_key_just_unpressed", &[1]);
+    assert_eq!(run(&mut f, EE_SCREENS_SH_KEY, 1, 0, [0.0; 4]).0, Some(0x102));
+    let mut f = Fake::default();
+    f.answer("sh_key_value", &[1]);
+    assert_eq!(run(&mut f, EE_SCREENS_SH_SPACE, 0, 0, [0.0; 4]).0, Some(1));
+    assert_eq!(f.calls(), "sh_key_load(2)\nsh_key_value()");
+    // the list line: 4,499 bytes at most, zero padded
+    let mut f = Fake::default();
+    f.text("sh_list_data", b"abc");
+    let mut line = [0xffu8; 4500];
+    run(&mut f, EE_SCREENS_SH_LIST_LINE, 0, line.as_mut_ptr() as i64, [0.0; 4]);
+    assert_eq!((&line[..4], line[4499]), (&b"abc\0"[..], 0));
+    let mut out = [0.0f32; 6];
+    let mut f = Fake::default();
+    f.answer("sh_line_direction_z", &[3]);
+    run(&mut f, EE_SCREENS_SH_SCREEN_LINE, out.as_mut_ptr() as i64, 0, [1.0, 2.0, 0.0, 0.0]);
+    assert_eq!(out[5], 3.0);
+    for op in [
+        EE_SCREENS_SH_CLEAR_RADIO_BITMAPS,
+        EE_SCREENS_SH_EDITOR_PLAYER,
+        EE_SCREENS_SH_TECH_TREE_MOVE,
+        EE_SCREENS_SH_LIST_OF_COMBO_SELECTION,
+        EE_SCREENS_SH_NEW_BITMAP,
+        EE_SCREENS_SH_BITMAP_COORDS,
+        EE_SCREENS_SH_TEXTURE_SIZE,
+        EE_SCREENS_SH_SELECT_TAB,
+        EE_SCREENS_SH_FORM_CHECKED,
+        EE_SCREENS_SH_TECH_NAME_ID,
+        EE_SCREENS_SH_TECH_OBSOLETE,
+        EE_SCREENS_SH_TECH_OBSOLETED,
+        EE_SCREENS_SH_TECH_MARK_PLAYER,
+        EE_SCREENS_SH_UNIT_CLASS,
+        EE_SCREENS_SH_LIST_INSERT_BYTES,
+        EE_SCREENS_SH_UNIT_NAME_AND_ID,
+        EE_SCREENS_SH_MOUSE_BUTTONS,
+        EE_SCREENS_SH_SLIDER_OF,
+        EE_SCREENS_SH_FILL,
+        EE_SCREENS_SH_MAP_CREATE,
+    ] {
+        let mut f = Fake::default();
+        assert!(run(&mut f, op, 1, 2, [0.0; 4]).0.is_some(), "{op}");
+    }
+    let rect = [0i32; 4];
+    let mut f = Fake::default();
+    run(&mut f, EE_SCREENS_SH_PAINT_AREA, 0x50, rect.as_ptr() as i64, [0.0; 4]);
+    assert_eq!(f.calls(), "sh_paint_area(80, 0, 0, 0, 0)");
+}
