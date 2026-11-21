@@ -131,7 +131,6 @@ std::vector<unsigned long> sSeobUnits;   // EE_SCREENS_SEOB_OP_SELECT_OBJECT_UNI
 // the screen's own ops (editor_trigx.rs composes the sequences and the ops on a scenario object)
 extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SEOB_OP_UNIT_SET_COUNT: return (int32_t)gUnitSetManager.GetSize();
     case EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN:

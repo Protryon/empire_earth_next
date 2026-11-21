@@ -29,7 +29,5 @@ struct EESEUnit {
     UIForm* mForm;
 };
 
-UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
-                            unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
 #endif

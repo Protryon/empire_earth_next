@@ -82,10 +82,7 @@ extern bool gSightUpdatesEnabled;
 // TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
 long EESETestSaveTriggersOnly(UIForm* inForm)
 {
-    UIEvent* theEvent = new EESEERust(EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY);
-    long theResult = theEvent->ProcessEvent(inForm, NULL);
-    theEvent->Dereference();
-    return theResult;
+    return ee_screens_sefm_call(static_cast<EEUIFScenarioEditor*>(inForm)->mRust, EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, NULL, NULL);
 }
 
 // Creates the editor form (id 1000, 15 control groups): button texture, edge scroll, mini map, player combo box,
@@ -94,13 +91,7 @@ long EESETestSaveTriggersOnly(UIForm* inForm)
 EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     : UIForm(1000, 0xf, inManager, -1, true)
 {
-    UWideString theText;
-    this->SetRectangle(GERectangle(0.0f, 0.0f, 1023.0f, 767.0f));
-    this->mRust = ee_screens_sefm_new(this);
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_BUILD, 0, NULL, NULL);
-    this->mC1A0.SetPointsAndMax(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
-    gResource->GetString(IDS_SE_MAP_NONE, theText);
-    this->SetMusicFileName(theText);
+    ee_screens_sefm_construct(this, &this->mRust);   // (editor_form.rs construct)
 }
 
 // Destroys the editor form, releasing its events, textures and edge scroll and deleting its tabs and controls
@@ -114,8 +105,7 @@ EEUIFScenarioEditor::~EEUIFScenarioEditor()
 // current tab group and the edge scroll (unless full view or a control holds the mouse) (editor_form.rs)
 long EEUIFScenarioEditor::CopyData()
 {
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_COPY_DATA, 0, NULL, NULL);
-    return UIForm::CopyData();
+    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_COPY_DATA_WHOLE, 0, NULL, NULL);
 }
 
 // Draws the full-view background or the bottom panel, then the current tab group; returns the full view's result
@@ -143,17 +133,13 @@ void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsU
 // else the tab group's and the form's keys; nothing while suspended (editor_form.rs)
 long EEUIFScenarioEditor::UpdateKeyboard()
 {
-    if (ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_KEYBOARD, 0, NULL, NULL) == 0)
-        return 0;
-    return UIForm::UpdateKeyboard();
+    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_KEYBOARD_WHOLE, 0, NULL, NULL);
 }
 
 // Passes the mouse to the current tab group unless a control captured it; does nothing while suspended
 long EEUIFScenarioEditor::UpdateMouse()
 {
-    if (ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_MOUSE, 0, NULL, NULL) == 0)
-        return 0;
-    return UIForm::UpdateMouse();
+    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_MOUSE_WHOLE, 0, NULL, NULL);
 }
 
 // ---- the form's host (editor_form.rs: the ops from 800)
@@ -166,19 +152,7 @@ const unsigned long sSefmKeys[EE_SCREENS_SEFM_KEY_COUNT] = {
     kKeySemicolon, kKeySlash, kKeyT, kKeyShift, kKeyAlt, kKey1, kKey2, kKey3, kKey4, kKey5, kKey6, kKey7, kKey8,
     kKeyRBracket, kKeyLBracket, kKeyGrave, kKeyHome, kKeyS, kKeyL, kKeyTab, kKeyD, kKeyControl, kKeyNone};
 
-GETextureDescription SefmDescription(unsigned long inPixelDepth, bool inHasAlpha)
-{
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = inPixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = inHasAlpha;
-    theDescription.mCreateMIPMaps = true;
-    return theDescription;
-}
+GETextureDescription SefmDescription(unsigned long inPixelDepth, bool inHasAlpha) { return GETextureDescription{1, 0, inPixelDepth, 0, false, false, inHasAlpha, true}; }
 
 }   // namespace
 
@@ -297,6 +271,15 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEFMX_NEW_UNDO_ACTION: return EESEOut(i, static_cast<EEAction*>(new EEARust(kEEAEditorUndo)));
     case EE_SCREENS_SEFMX_NEW_REDO_ACTION: return EESEOut(i, static_cast<EEAction*>(new EEARust(kEEAEditorRedo)));
     case EE_SCREENS_SEFMX_NEW_ACTION_BUTTON: return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_ACTION_BUTTON, {(int64_t)p[0]}, i[0], NULL, NULL, NULL, GERectangle(GE2DPoint(f[0], f[1]), 65.0f, 25.0f), theForm, (unsigned long)i[1], 0)));
+    case EE_SCREENS_SEFMX_BASE_COPY_DATA: return (int32_t)theForm->UIForm::CopyData();
+    case EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD: return (int32_t)theForm->UIForm::UpdateKeyboard();
+    case EE_SCREENS_SEFMX_BASE_UPDATE_MOUSE: return (int32_t)theForm->UIForm::UpdateMouse();
+    case EE_SCREENS_SEFMX_SET_RECTANGLE: theForm->SetRectangle(GERectangle(f[0], f[1], f[2], f[3]));
+        return 0;
+    case EE_SCREENS_SEFMX_CIVILIZATION_POINTS: theForm->mC1A0.SetPointsAndMax(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
+        return 0;
+    case EE_SCREENS_SEFMX_MUSIC_TEXT: theForm->SetMusicFileName(gSefxText);
+        return 0;
     case EE_SCREENS_SEFMX_STRING: gResource->GetString((unsigned long)i[0], gSefxText);
         return 0;
     case EE_SCREENS_SEFMX_BUTTON_TEXT: static_cast<UIButton*>(c)->SetText(gSefxText, gU531930);

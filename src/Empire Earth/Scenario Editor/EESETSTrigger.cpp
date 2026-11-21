@@ -61,8 +61,6 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
 // the screen's own ops (editor_trigx.rs composes the sequences and the ops on a trigger)
 extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)i;
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SETR_OP_GET_NAMES:
         gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0]));
@@ -91,7 +89,6 @@ UWideString sSetrText;   // the kept remove button's text (EE_SCREENS_SETRX_FORM
 // word of a found object or a text's buffer (capacity i3), a text p1's i0 bytes)
 extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)f;
     void** theOut = static_cast<void**>(p[2]);
     EESMTrigger* t = static_cast<EESMTrigger*>(p[0]);
     switch (inOp) {

@@ -193,11 +193,9 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
 
 extern "C" int32_t ee_screenscpp_sein(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SEIN_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
     }
-    (void)i;
     return 0;
 }
 

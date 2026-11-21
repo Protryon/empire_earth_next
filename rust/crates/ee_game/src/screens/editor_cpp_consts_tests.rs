@@ -360,3 +360,9 @@ fn eeuifscenarioeditor_cpp_editor_form_rs_s_numbers() {
     assert_eq!(EE_SCREENS_SE_TOOLBAR_BUTTON_EXIT as i64, 15);
     assert_eq!(c("IDS_CIVILIZATION_BUILDER_TOOL"), EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL as i64);
 }
+
+/// The constructor's music file name (`ee_screens_sefm_construct`).
+#[test]
+fn the_form_music_none() {
+    assert_eq!(EE_SCREENS_SEFM_IDS_SE_MAP_NONE as i64, c("IDS_SE_MAP_NONE"));
+}

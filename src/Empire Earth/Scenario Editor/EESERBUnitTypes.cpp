@@ -78,8 +78,6 @@ static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTe
 
 // the screen's font while a screen's object makes its controls (the player tab, the trigger screens' objects)
 // the unit tab's lists (EESEUnit.cpp; declared in ee/EESEUnit.h)
-UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
-                            unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
 // Performs the action: sets gMaxPlayers to the new player count
 void EESEAChangeWorldPlayerCount::Virtual4()
@@ -367,7 +365,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_MAKE_LIST_OBJECT:
         return EESEOut(i, static_cast<UIControl*>(new EEUIShellList(EE_SCREENS_SK_UNIT_LIST, {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_LIST_UNIT:
-        return EESEOut(i, static_cast<UIControl*>(EESEUnitNewList(C(p).extra[0], C(p).id, SepxFont(p), GE2DPoint(C(p).x, C(p).y), (unsigned long)C(p).w, (unsigned long)C(p).h, F(p), C(p).index)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellList((uint32_t)i[0], {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_ALIGN: static_cast<UITextLabel*>(H(p))->SetAlignment((unsigned long)i[0]);
         return 0;
     case EE_SCREENS_SEPX_BG: H(p)->SetBgOpacity(f[0]);

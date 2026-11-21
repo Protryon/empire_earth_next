@@ -86,17 +86,6 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x21
 
 // (the unit type buttons' cell width, the .rdata float 0x444e7c: editor_seunx.rs's W)
 
-// The shared control maker's unit tab lists (ee_game editor_sepl.rs make)
-UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
-                            unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex)
-{
-    std::vector<UWideString> theNone;
-    if (inKind == EE_SCREENS_SEPL_LIST_UNIT_TYPES)
-        return new EEUIShellList(EE_SCREENS_SK_UNIT_CLASS_LIST, {}, inID, theNone, inFont, false,
-                                 GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, 3);
-    return new EEUIShellList(EE_SCREENS_SK_CARGO_LIST, {}, inID, theNone, inFont, false,
-                             GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, 3);
-}
 
 
 // ---- the unit tab's host (editor_unit.rs; EE_SCREENS_SEUN_OP_*): the tab's own controls, the actions, the world,
@@ -153,10 +142,19 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEUN_OP_SELECTED_COUNT: return (int32_t)SeunEditor(p[1])->GetSelectedUnitCount();
     case EE_SCREENS_SEUN_OP_CARGO_ADD:
-    {
-        EEUnit* theUnit = SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit->mCargo[(unsigned long)i[1]];
-        EEUIShell::Op(theShell, EE_SCREENS_SKOP_CARGO_ADD, (int64_t)theUnit);
-    }
+        EEUIShell::Op(theShell, EE_SCREENS_SKOP_CARGO_ADD, (int64_t)SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit->mCargo[(unsigned long)i[1]]);
+        return 0;
+    case EE_SCREENS_SEUN_OP_GATE_PLAYER:   // (the build tools' Cancel: editor_unit.rs cancel_gate, cancel_wall)
+        *theOut = gWorld.mPlayers[static_cast<EESEUIBuildGate*>(p[1])->mPlayer];
+        return 0;
+    case EE_SCREENS_SEUN_OP_WALL_PLAYER:
+        *theOut = gWorld.mPlayers[static_cast<EESEUIBuildWall*>(p[1])->mPlayer];
+        return 0;
+    case EE_SCREENS_SEUN_OP_UNLOAD_GATE:
+        static_cast<EEPlayer*>(p[1])->UnloadUnitClassMedia(static_cast<EESEUIBuildGate*>(p[2])->mUnitClass->mUnitType);
+        return 0;
+    case EE_SCREENS_SEUN_OP_UNLOAD_WALL:
+        static_cast<EEPlayer*>(p[1])->UnloadUnitClassMedia(static_cast<EEPlayer*>(p[1])->mTechnologies->GetData(static_cast<EESEUIBuildWall*>(p[2])->mTechnology)->mUnitClass);
         return 0;
     case EE_SCREENS_SEUN_OP_LIST_SORT: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_SORT, i[0]); return 0;
     case EE_SCREENS_SEUN_OP_LIST_EMPTY: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_CLEAR); return 0;
@@ -561,9 +559,7 @@ void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 
 void EESEUIBuildGate::Cancel()
 {
-    EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_END_GATE);
-    thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
+    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_CANCEL_GATE, 0, this);   // (editor_unit.rs cancel_gate)
 }
 
 void EESEUIBuildWall::Build()
@@ -573,8 +569,5 @@ void EESEUIBuildWall::Build()
 
 void EESEUIBuildWall::Cancel()
 {
-    EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_END_WALL);
-    long theTechnology = this->mTechnology;
-    thePlayer->UnloadUnitClassMedia(thePlayer->mTechnologies->GetData(theTechnology)->mUnitClass);
+    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_CANCEL_WALL, 0, this);   // (editor_unit.rs cancel_wall)
 }

@@ -64,8 +64,6 @@ const GERectangle kSetsPanel(0.0f, 448.0f, 1023.0f, 606.0f);   // the tab's +0x1
 // sequences)
 extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    (void)p;
-    (void)f;
     switch (inOp) {
     case EE_SCREENS_SETS_OP_FONT_HEIGHT: return (int32_t)gU531930->GetHeight();
     case EE_SCREENS_SETS_OP_DEBUG_IDS: return gWorld.mScenarioManager->mShowDebugIDs ? 1 : 0;
