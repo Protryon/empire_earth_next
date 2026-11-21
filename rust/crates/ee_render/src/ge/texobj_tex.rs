@@ -32,13 +32,16 @@ const MIP_FILTER_POINT: c_ulong = 1;
 /// `kSurfaceTexture` (a file has one MIP level: frame format 1's surfaces are never `kSurfaceMipMappedTexture`).
 const SURFACE_TEXTURE: c_ulong = 5;
 
-/// `GETStage` (lle/GETexture.h), field for field.
+/// `GETStage` (lle/GETexture.h's name for it, so C++ names its fields).
+/// cbindgen:field-names=[mTexture, mColorMode, mAlphaMode, mTextureAddressingMode, mMinFilterMode, mMagFilterMode, mMipFilterMode, mMipMapBias]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeGeTStage {
-    /// `mTexture` (`GETexture*`).
+    /// `mTexture` (`GETexture*`, GetStageTexture).
     pub texture: *mut c_void,
+    /// SetStageColorMode.
     pub color_mode: c_ulong,
+    /// SetStageAlphaMode.
     pub alpha_mode: c_ulong,
     pub texture_addressing_mode: c_ulong,
     pub min_filter_mode: c_ulong,

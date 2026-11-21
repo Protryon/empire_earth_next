@@ -45,16 +45,9 @@
 #include "lle/FSPath.h"
 #include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
 #include "lle/GETextureSet.h"
-extern "C" {
-}
-
 // the Rust mirrors (texobj_tex.rs), field for field
-static_assert(sizeof(EeGeTStage) == sizeof(GETStage), "GETStage");
-static_assert(offsetof(EeGeTStage, mip_filter_mode) == offsetof(GETStage, mMipFilterMode), "GETStage");
-static_assert(offsetof(EeGeTStage, mip_map_bias) == offsetof(GETStage, mMipMapBias), "GETStage");
 static_assert(sizeof(EeGeTexCoord) == sizeof(GETextureCoordinate), "GETextureCoordinate");
 static_assert(offsetof(EeGeTexCoord, v) == offsetof(GETextureCoordinate, mV), "GETextureCoordinate");
-static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "GESurfaceDescription");
 
 // port (D9): stores one decoded frame (top row first, R, G, B(, A)) into a surface as the original's Targa reader
 // (GESurface::LoadTGA, removed) stored a texture file's frame (the pixel loop is Rust: ee_ge pixel.rs, store_frame):
@@ -201,17 +194,11 @@ GETexture::~GETexture()
     ee_ge_tex_destroy(this->mRust);
 }
 
-
-
 // (the SetStage* setters: inline in lle/GETexture.h)
 
 // ---- GETextureManager (GETextureManager.cpp, folded here in R4.3 part 16)
 
 // the Rust mirrors of the descriptions (texobj.rs), field for field
-static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "GESurfaceDescription");
-static_assert(offsetof(EeGeSurfaceDescription, mip_level_count) == offsetof(GESurfaceDescription, mMipLevelCount), "");
-static_assert(offsetof(EeGeSurfaceDescription, pixel_depth) == offsetof(GESurfaceDescription, mPixelDepth), "");
-static_assert(offsetof(EeGeSurfaceDescription, no_alpha) == offsetof(GESurfaceDescription, mNoAlpha), "");
 static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "GETextureDescription");
 static_assert(offsetof(EeGeTextureDescription, num_mip_levels_to_drop) == offsetof(GETextureDescription, mNumMipLevelsToDrop), "");
 static_assert(offsetof(EeGeTextureDescription, use_texture_pack) == offsetof(GETextureDescription, mUseTexturePack), "");

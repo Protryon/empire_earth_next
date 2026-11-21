@@ -128,7 +128,7 @@ pub struct Light {
     pub attenuation: [f32; 3],
 }
 
-/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+/// `GESurfaceDescription` (`lle/GESurface.h`: the GE's `EeGeSurfaceDescription`, pinned below).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SurfaceDescription {
@@ -144,6 +144,22 @@ pub struct SurfaceDescription {
     pub mIsTransparencyEnabled: bool,
     pub mNoAlpha: bool,
 }
+
+// The GE's surface description (`ge::texobj::EeGeSurfaceDescription`, the C++ `GESurfaceDescription`), field for field.
+const _: () = {
+    use crate::ge::texobj::EeGeSurfaceDescription as G;
+    use core::mem::{offset_of, size_of};
+    type S = SurfaceDescription;
+    assert!(size_of::<S>() == size_of::<G>());
+    assert!(offset_of!(S, mType) == offset_of!(G, kind) && offset_of!(S, mPixelFormat) == offset_of!(G, pixel_format));
+    assert!(offset_of!(S, mSurfaceVolatility) == offset_of!(G, surface_volatility));
+    assert!(offset_of!(S, mWidth) == offset_of!(G, width) && offset_of!(S, mHeight) == offset_of!(G, height));
+    assert!(offset_of!(S, m14) == offset_of!(G, m14) && offset_of!(S, mMipLevelCount) == offset_of!(G, mip_level_count));
+    assert!(offset_of!(S, mPixelDepth) == offset_of!(G, pixel_depth));
+    assert!(offset_of!(S, mIs3DRenderable) == offset_of!(G, is_3d_renderable));
+    assert!(offset_of!(S, mIsTransparencyEnabled) == offset_of!(G, is_transparency_enabled));
+    assert!(offset_of!(S, mNoAlpha) == offset_of!(G, no_alpha));
+};
 
 /// The GX calls of the plug-in. `s`/`o` are `GXSurface*`, `b` a `GXVertexBuffer*`, `dd` a `GXDirectDraw*`, `d` a
 /// `GXDevice*`.

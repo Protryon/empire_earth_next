@@ -101,31 +101,14 @@ inline void ESDebugOut(const char* inFormat, ...)
 #define ESVERIFY_AT(expr, line) if (!(expr)) ESVerify(__FILE__, line, #expr)
 
 // ---- Timing (TM): Time Manager unit 0x53701..0x53819 (folder/file name inferred)
-struct TMTime {                             // filled from the local time by TMGetTimeOfDay 0x5376c
-    unsigned long mMonth;                   // +0x00 0-based (wMonth - 1)
-    unsigned long mDay;                     // +0x04
-    unsigned long mYear;                    // +0x08
-    unsigned long mHour;                    // +0x0c
-    unsigned long mMinute;                  // +0x10
-    unsigned long mSecond;                  // +0x14
-};
+typedef EeTimeOfDay TMTime;                 // filled from the local time by TMGetTimeOfDay 0x5376c (rust/base/time.h)
 // The Time Manager is Rust's (rust/crates/ee_base/src/time): TMInitialize sets 1 ms timer resolution and registers
 // the shutdown; TMGetTime is milliseconds (a time pinned on this thread instead: EE-SIM's scripted editor,
 // ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local clock (month counted from 0)
 inline long TMInitialize() { return ee_time_system_initialize(); }
 inline unsigned long TMGetTime() { return ee_time_get(); }
 inline int64_t TMGetMicroTime() { return ee_time_get_micro(); }
-inline void TMGetTimeOfDay(TMTime& outTime)
-{
-    EeTimeOfDay theTime;
-    ee_time_of_day(&theTime);
-    outTime.mMonth = theTime.mMonth;
-    outTime.mDay = theTime.mDay;
-    outTime.mYear = theTime.mYear;
-    outTime.mHour = theTime.mHour;
-    outTime.mMinute = theTime.mMinute;
-    outTime.mSecond = theTime.mSecond;
-}
+inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
 // TMPoll.h / TMTimer.h are NOT included here: every static data member of a class a unit sees consumes a VC6
 // `$E` number (probe: one per member; extern objects consume none), and the plug-ins' $E numbering proves they
 // saw no engine-class static data members (TMPoll::sCounterFrequency was one; it is ee_time's state now). Engine units include them directly.

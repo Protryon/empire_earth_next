@@ -371,28 +371,6 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
 
 #include "lle/LowLevelEngine.h"
 #include <stddef.h>
-#define DX7_SAME_OFFSET(cpp, rust, field) static_assert(offsetof(cpp, field) == offsetof(rust, field), #field)
-
-// --- GESurfaceDescription: filled by Rust (ee_dx7/src/api.rs SurfaceDescription) --------------------------------------
-static_assert(sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription), "ee_dx7/src/api.rs SurfaceDescription");
-static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode), "ee_dx7/src/screen.rs VideoMode");
-DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mWidth);
-DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mHeight);
-DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mRefreshRate);
-DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mBitCount);
-DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mPixelFormat);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mType);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelFormat);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mSurfaceVolatility);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mWidth);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mHeight);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, m14);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mMipLevelCount);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelDepth);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mIs3DRenderable);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mIsTransparencyEnabled);
-DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mNoAlpha);
-
 extern "C" void ee_dx7cpp_record_native_error(long inError) { ESRecordNativeError((unsigned long)inError); }
 
 // --- DX7Screen and DX7Surface: whole in Rust (ee_dx7 scrobj.rs, surfobj.rs); the calls they make on C++ objects ------

@@ -2,6 +2,7 @@
 // gives the slot order); the protected virtual dtor is the last slot (0x4c). All non-virtual members are inline.
 #ifndef LLE_GESCREEN_H
 #define LLE_GESCREEN_H
+#include "rust/render/dx7.h"
 
 class UString;
 class GE2DPoint;
@@ -12,13 +13,7 @@ class GEWindow;
 struct GESurfaceDescription;
 // A display mode (DX7HRDisplay: DX7Screen::EnumVideoModeCallback 0x1000dc67 fills it from a DDSURFACEDESC2, SetMode
 // 0x1000de5d and the ctor read it back; vector element stride 0x14). Names are provisional.
-struct GEVideoMode {
-    unsigned long mWidth;                   // +0x00
-    unsigned long mHeight;                  // +0x04
-    unsigned long mRefreshRate;             // +0x08
-    unsigned long mBitCount;                // +0x0c
-    unsigned long mPixelFormat;             // +0x10 GE pixel format index (14 when no known format matches)
-};
+typedef EeDx7VideoMode GEVideoMode;          // the record is Rust's (ee_render dx7 screen.rs)
 struct HINSTANCE__;
 
 class LLE_API GEScreen {                    // sizeof 0xc (copy ctor 0xe331)

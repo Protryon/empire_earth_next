@@ -9,7 +9,8 @@
 use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 use ee_base::math::um::{um_arctan, um_cos, um_sin, um_tan};
 
-/// `GEViewport` (sizeof 0x288), in the C++'s member order.
+/// `GEViewport` (sizeof 0x288): the C++ class derives from it (lle/GEViewport.h), so C++ names its fields.
+/// cbindgen:field-names=[mOrthographicRectangle, mViewRectangle, mFrontPlane, mRearPlane, mLeftPlane, mRightPlane, mTopPlane, mBottomPlane, mCamera, mCameraInverse, mOrthographicDenormalization, mPerspectiveDenormalization, mOrthographicProjection, mPerspectiveProjection, mCameraLookAtVector, mOrthographicScale, mOrthographicDepthScale, mOrthographicDepthOffset, mPerspectiveScale, mPerspectiveDepthScale, mPerspectiveDepthOffset, mAspectRatio, mAspectRatioMultiplier, mFieldOfView, mFieldOfViewMultiplier, mFrontClippingDistance, mHalfHeight, mHalfWidth, mRearClippingDistance, mXCenter, mYCenter, mYClippingPlane, mNearDepth, mFarDepth]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GeViewport {
@@ -233,6 +234,18 @@ impl GeViewport {
     /// `DenormalizePerspectivePoint`: the point scaled by `w`, through the perspective screen-to-world matrix.
     pub fn denormalize_perspective_point(&self, p: Ge3DPoint, w: f32) -> Ge3DPoint {
         self.perspective_denormalization.apply_point(Ge3DPoint::new(p.x * w, p.y * w, p.z * w))
+    }
+
+    /// `NormalizeOrthographicCameraPoint` / `NormalizePerspectiveCameraPoint`: (x * scale, z * scale, y * depth
+    /// scale + depth offset) and w (1, or the point's y in perspective).
+    pub fn normalize_camera_point(&self, p: Ge3DPoint, perspective: bool) -> (Ge3DPoint, f32) {
+        if perspective {
+            let z = p.y * self.perspective_depth_scale + self.perspective_depth_offset;
+            (Ge3DPoint::new(p.x * self.perspective_scale, p.z * self.perspective_scale, z), p.y)
+        } else {
+            let z = p.y * self.orthographic_depth_scale + self.orthographic_depth_offset;
+            (Ge3DPoint::new(p.x * self.orthographic_scale, p.z * self.orthographic_scale, z), 1.0)
+        }
     }
 
     /// `DenormalizeOrthographicPoint`.

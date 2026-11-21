@@ -1156,34 +1156,45 @@ using EeGeTexHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
 
-/// `GESurfaceDescription` (lle/GESurface.h), field for field.
+/// `GESurfaceDescription`: the C++ struct derives from it (lle/GESurface.h), so C++ names its fields.
 struct EeGeSurfaceDescription {
-  /// `mType`.
-  unsigned long kind;
-  unsigned long pixel_format;
-  unsigned long surface_volatility;
-  unsigned long width;
-  unsigned long height;
+  /// `mType` +0x00: GETexture::Load: 5 texture, 6 texture with a mip chain.
+  unsigned long mType;
+  /// +0x04 GetPixelFormat.
+  unsigned long mPixelFormat;
+  /// +0x08 GetSurfaceVolatility.
+  unsigned long mSurfaceVolatility;
+  /// +0x0c GETexture::Load (the file header's width).
+  unsigned long mWidth;
+  /// +0x10.
+  unsigned long mHeight;
+  /// +0x14 GETexture::Load stores 0.
   unsigned long m14;
-  long mip_level_count;
-  unsigned long pixel_depth;
-  bool is_3d_renderable;
-  bool is_transparency_enabled;
-  /// The constructor's one store (false).
-  bool no_alpha;
+  /// +0x18 signed (GETexture::Load's mip loop: jl).
+  long mMipLevelCount;
+  /// +0x1c GetPixelDepth.
+  unsigned long mPixelDepth;
+  /// +0x20 GetIs3DRenderable.
+  bool mIs3DRenderable;
+  /// +0x21 GetIsTransparencyEnabled.
+  bool mIsTransparencyEnabled;
+  /// +0x22 32-bit surfaces only: !GETextureDescription::mHasAlpha; the constructor's one store (false).
+  bool mNoAlpha;
 };
 
-/// `GETStage` (lle/GETexture.h), field for field.
+/// `GETStage` (lle/GETexture.h's name for it, so C++ names its fields).
 struct EeGeTStage {
-  /// `mTexture` (`GETexture*`).
-  void *texture;
-  unsigned long color_mode;
-  unsigned long alpha_mode;
-  unsigned long texture_addressing_mode;
-  unsigned long min_filter_mode;
-  unsigned long mag_filter_mode;
-  unsigned long mip_filter_mode;
-  float mip_map_bias;
+  /// `mTexture` (`GETexture*`, GetStageTexture).
+  void *mTexture;
+  /// SetStageColorMode.
+  unsigned long mColorMode;
+  /// SetStageAlphaMode.
+  unsigned long mAlphaMode;
+  unsigned long mTextureAddressingMode;
+  unsigned long mMinFilterMode;
+  unsigned long mMagFilterMode;
+  unsigned long mMipFilterMode;
+  float mMipMapBias;
 };
 
 /// `GETextureCoordinate`: u, v.

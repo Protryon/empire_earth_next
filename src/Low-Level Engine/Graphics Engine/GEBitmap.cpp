@@ -186,7 +186,6 @@ GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
 // and the host, which makes each call the original made on another object (the rasterizer, the font, the working
 // text, the drawing bitmap, the textures, surfaces and screens). Floats cross the host as their bits.
 
-static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "ee_ge texobj.rs EeGeSurfaceDescription");
 
 // (the working text's and the drawing bitmap's members and the two draws are the Rust object's own: fbobj.rs
 // direct_op, on the 2D draw list)

@@ -3,6 +3,7 @@
 #ifndef LLE_GESURFACE_H
 #define LLE_GESURFACE_H
 #include "rust/render/gestate.h"
+#include "rust/render/ge.h"
 
 class FSFileSpec;
 class GEColor;
@@ -13,20 +14,8 @@ struct HDC__;
 // How a surface is created (GEScreen::CreateSurface). Fields from GETextureManager::LoadTexture/RefreshAllTextures
 // (0x33cd4, 0x341d9), which fill it from a GETextureDescription or from an existing surface's getters, and from
 // GETexture::Load (0x32ec4: type, size, mip levels). Names are provisional; sizeof 0x24 (copied with rep movsd 9).
-struct GESurfaceDescription {
+struct GESurfaceDescription : EeGeSurfaceDescription {   // the record is Rust's (ee_render ge texobj.rs)
     GESurfaceDescription() { this->mNoAlpha = false; }  // the only store before the fields are filled in
-
-    unsigned long mType;                    // +0x00 GETexture::Load: 5 texture, 6 texture with a mip chain
-    unsigned long mPixelFormat;             // +0x04 GetPixelFormat
-    unsigned long mSurfaceVolatility;       // +0x08 GetSurfaceVolatility
-    unsigned long mWidth;                   // +0x0c GETexture::Load (file header width)
-    unsigned long mHeight;                  // +0x10
-    unsigned long m14;                      // +0x14 GETexture::Load stores 0
-    long mMipLevelCount;                    // +0x18 signed (GETexture::Load's mip loop: jl)
-    unsigned long mPixelDepth;              // +0x1c GetPixelDepth
-    bool mIs3DRenderable;                   // +0x20 GetIs3DRenderable
-    bool mIsTransparencyEnabled;            // +0x21 GetIsTransparencyEnabled
-    bool mNoAlpha;                          // +0x22 32-bit surfaces only: !GETextureDescription::mHasAlpha
 };
 
 class LLE_API GESurface : public UReferenceCounter {   // sizeof 8 (vector deleting dtor 0xdf58)
