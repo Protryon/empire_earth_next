@@ -3052,4 +3052,19 @@ shims! {
     fn civl_close(spec: usize) = ee_screenscpp_civl_close;
     fn civl_delete(spec: usize) = ee_screenscpp_civl_delete;
     fn civl_capture(name: usize, directory: usize, result: i64, out_name: usize, out_upgrades: usize) = ee_screenscpp_civl_capture;
+    // the settings form's display questions (display_modes.rs, UI lane round 12)
+    fn disp_rasterizer_count() -> usize = ee_screenscpp_disp_rasterizer_count;
+    fn disp_rasterizer_index(r: usize) -> u64 = ee_screenscpp_disp_rasterizer_index;
+    fn disp_screen_count(r: usize) -> usize = ee_screenscpp_disp_screen_count;
+    fn disp_screen_index(r: usize, s: usize) -> u64 = ee_screenscpp_disp_screen_index;
+    fn disp_mode_count(r: usize, s: usize) -> usize = ee_screenscpp_disp_mode_count;
+    fn disp_mode_width(r: usize, s: usize, m: usize) -> u64 = ee_screenscpp_disp_mode_width;
+    fn disp_mode_height(r: usize, s: usize, m: usize) -> u64 = ee_screenscpp_disp_mode_height;
+    fn disp_mode_refresh(r: usize, s: usize, m: usize) -> u64 = ee_screenscpp_disp_mode_refresh;
+    fn disp_mode_bits(r: usize, s: usize, m: usize) -> u64 = ee_screenscpp_disp_mode_bits;
+    fn disp_current_width(screen: u32) -> u64 = ee_screenscpp_disp_current_width;
+    fn disp_current_height(screen: u32) -> u64 = ee_screenscpp_disp_current_height;
+    fn disp_current_refresh(screen: u32) -> u64 = ee_screenscpp_disp_current_refresh;
+    fn disp_current_bits(screen: u32) -> u64 = ee_screenscpp_disp_current_bits;
+    fn disp_game_size(percent: u32, windowed: bool, width: EeScreensShimULongOut, height: EeScreensShimULongOut) = ee_screenscpp_disp_game_size;
 }

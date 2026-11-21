@@ -332,6 +332,7 @@ pub(crate) mod sgvw;
 // the shells' moved host cases (UI lane round 7)
 pub(crate) mod shell_calls;
 pub(crate) mod shell_factories;
+pub(crate) mod display_modes;
 pub(crate) mod hud_bodies;
 #[cfg(not(test))]
 mod hud_bodies_ffi;
