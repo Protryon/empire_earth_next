@@ -1545,6 +1545,101 @@ constexpr static const uint32_t EE_SCENARIO_IO_MESSAGE_LOAD = 30;
 
 constexpr static const uint32_t EE_SCENARIO_IO_MESSAGE_SAVE = 31;
 
+/// `gWorld.GetUnit((uint32_t)a0)`; unit a0's `GetHitPoints()`, `mUnitClass->mIsTree`, `mComplexUnit != NULL`,
+/// `mComplexUnit->mPreviousPart != NULL`.
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT = 900;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT_HIT_POINTS = 901;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT_IS_TREE = 902;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT_COMPLEX = 903;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT_CARRIED = 904;
+
+/// `gWorld.mPlayers[a0]`; player a0's `mActiveGroup->Contains(unit a1's mComplexUnit)`, `mViewedUnit == unit a1`,
+/// `mFirstUnit`; unit a0's `mNext`.
+constexpr static const uint32_t EE_SCENARIO_WZ_PLAYER_SLOT = 905;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_GROUP_CONTAINS = 906;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_VIEWED_UNIT = 907;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_FIRST_UNIT = 908;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_NEXT_UNIT = 909;
+
+/// The context's `mCursor`, its `mCursor = a0`, `SMChainUnit(a0)`.
+constexpr static const uint32_t EE_SCENARIO_WZ_CURSOR = 910;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_SET_CURSOR = 911;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_CHAIN_UNIT = 912;
+
+/// The manager's `GetArea(a0)`; area a0's `ContainsUnit(unit a1)`.
+constexpr static const uint32_t EE_SCENARIO_WZ_AREA = 913;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_AREA_CONTAINS_UNIT = 914;
+
+/// `gWorld.mMap->GetTile(a0, a1)`; tile a0's `mTerrainType`.
+constexpr static const uint32_t EE_SCENARIO_WZ_TILE = 915;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILE_TERRAIN = 916;
+
+/// The bits of `EEGetFootprintDistance(unit a0 as complex, a1, a2, the longs at a3, a4)`; unit a0's
+/// `GetNearestFootprintTile(unit a1, the longs at a2, a3)`.
+constexpr static const uint32_t EE_SCENARIO_WZ_FOOTPRINT_DISTANCE = 917;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_NEAREST_TILE = 918;
+
+/// The chat test's two texts (the C++'s locals): text a0 set to the context condition's `mChatText` (a0 0) or the
+/// manager's `mLastChatText` (1); text a0 lowered (`PlatMbsLwr`); text 1's `Find(text 0, 0) != GetLength()`.
+constexpr static const uint32_t EE_SCENARIO_WZ_CHAT_TEXT = 919;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_CHAT_LAST = 920;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TEXT_LOWER = 921;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TEXT_FOUND = 922;
+
+/// The point (the C++'s local): `gContinentManager.GetContinentCenter((unsigned short)a0, it)`, `= gWorld.GetPlayer(
+/// a0)->mTowns[a1]->GetHullCenter()`, its x, its y; the context unit's complex unit's `mU0DC.GetX()`, `GetY()`.
+constexpr static const uint32_t EE_SCENARIO_WZ_CONTINENT_CENTER = 923;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TOWN_CENTER = 924;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_POINT_X = 925;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_POINT_Y = 926;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_PREVIOUS_X = 927;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_PREVIOUS_Y = 928;
+
+/// The context unit's complex unit's `mUnitVariables[a0]`; the bits of its `mPhysicalModel.GetScale()`.
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT_VARIABLE = 929;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_UNIT_SCALE = 930;
+
+/// The tile list (the C++'s local vector): cleared; filled by area a0's `GetTiles`, `gContinentManager.
+/// GetContinentTiles((unsigned short)a0, ..)`, `gWorld.GetPlayer(a0)->mTowns[a1]->GetTiles`,
+/// `ee_units_uu_get_tiles_near_point(the point at a0, float a1, ..)`; its size; tile a0's x, y.
+constexpr static const uint32_t EE_SCENARIO_WZ_TILES_CLEAR = 931;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILES_AREA = 932;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILES_CONTINENT = 933;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILES_TOWN = 934;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILES_NEAR_POINT = 935;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILES_COUNT = 936;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILE_X = 937;
+
+constexpr static const uint32_t EE_SCENARIO_WZ_TILE_Y = 938;
+
 /// The context object's `mUnits.size()`.
 constexpr static const uint32_t EE_SCENARIO_READ_OBJ_UNIT_COUNT = 53;
 
@@ -2159,7 +2254,7 @@ constexpr static const uint32_t EE_SCENARIO_IO_READ_LONG = 1;
 /// `FSFile::Read(float&)` into `*value`.
 constexpr static const uint32_t EE_SCENARIO_IO_READ_FLOAT = 2;
 
-/// `FSFile::Read(bool&)` into `*value`.
+/// `FSFile::Read(bool&)` into `*value` (a byte: the Rust reads any byte other than 0 as true).
 constexpr static const uint32_t EE_SCENARIO_IO_READ_BOOL = 3;
 
 /// `FSFile::Write(const unsigned long&)` of `*value`.
@@ -2217,6 +2312,10 @@ constexpr static const uint32_t EE_SCENARIO_IO_MEDIA = 20;
 
 /// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
 constexpr static const uint32_t EE_SCENARIO_IO_MESSAGES = 21;
+
+/// The stream's trigger (`EESMTrigger*`) into `*value` (a pointer): the entries are its members'
+/// (trigger_members.rs). 32: manager_compose.rs's statements hold 22..31.
+constexpr static const uint32_t EE_SCENARIO_IO_TRIGGER = 32;
 
 /// The manager's element lists: triggers, conditions, effects, objects, areas, pending effects.
 constexpr static const uint32_t EE_SCENARIO_ELEMENT_TRIGGERS = 0;
@@ -2468,6 +2567,74 @@ constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 constexpr static const int32_t EE_SCENARIO_OPERATOR_AND = 1;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_OR = 2;
+
+/// `size()`; `push_back(new wrapper)`; `back() != NULL`; `delete back()`; `pop_back()`; `delete [i]`;
+/// `erase(begin() + i)`; `[i]`'s first number set to v (a condition's `mIsNot = v != 0`, an effect's `mDelay`), its
+/// second (`mValue`, `mEffectIndex`), its `mOperator`; the same three read; `[i]` itself.
+constexpr static const uint32_t EE_SCENARIO_TR_COUNT = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TR_PUSH_NEW = 1;
+
+constexpr static const uint32_t EE_SCENARIO_TR_BACK_EXISTS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_TR_DELETE_BACK = 3;
+
+constexpr static const uint32_t EE_SCENARIO_TR_POP = 4;
+
+constexpr static const uint32_t EE_SCENARIO_TR_DELETE_AT = 5;
+
+constexpr static const uint32_t EE_SCENARIO_TR_ERASE = 6;
+
+constexpr static const uint32_t EE_SCENARIO_TR_SET_FIRST = 7;
+
+constexpr static const uint32_t EE_SCENARIO_TR_SET_SECOND = 8;
+
+constexpr static const uint32_t EE_SCENARIO_TR_SET_OPERATOR = 9;
+
+constexpr static const uint32_t EE_SCENARIO_TR_FIRST = 10;
+
+constexpr static const uint32_t EE_SCENARIO_TR_SECOND = 11;
+
+constexpr static const uint32_t EE_SCENARIO_TR_OPERATOR = 12;
+
+constexpr static const uint32_t EE_SCENARIO_TR_AT = 13;
+
+/// The lists' bases.
+constexpr static const uint32_t EE_SCENARIO_TR_CONDITIONS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TR_EFFECTS = 20;
+
+/// `SetName("")`, `SetText("")`; `mName = (trigger i)->mName`, `mText = ...`; the trigger as its
+/// `EeScenarioTriggerFields*`; `gWorld.mScenarioManager->AddTimedEffect(i, v, mIsInCinematic)`; `gWorld.mInCinematic`.
+constexpr static const uint32_t EE_SCENARIO_TR_NAME_EMPTY = 40;
+
+constexpr static const uint32_t EE_SCENARIO_TR_TEXT_EMPTY = 41;
+
+constexpr static const uint32_t EE_SCENARIO_TR_COPY_NAME = 42;
+
+constexpr static const uint32_t EE_SCENARIO_TR_COPY_TEXT = 43;
+
+constexpr static const uint32_t EE_SCENARIO_TR_FIELDS = 44;
+
+constexpr static const uint32_t EE_SCENARIO_TR_ADD_TIMED = 45;
+
+constexpr static const uint32_t EE_SCENARIO_TR_WORLD_CINEMATIC = 46;
+
+/// The constructor; the destructor; `Copy(*from i)`; `Delete*(i)`; `Set*(i, first a, second b)`; `Set*Operator(i,
+/// a)`; `Get*(i)` (the wrapper or null).
+constexpr static const uint32_t EE_SCENARIO_TRM_CONSTRUCT = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TRM_DESTROY = 1;
+
+constexpr static const uint32_t EE_SCENARIO_TRM_COPY = 2;
+
+constexpr static const uint32_t EE_SCENARIO_TRM_DELETE = 3;
+
+constexpr static const uint32_t EE_SCENARIO_TRM_SET = 4;
+
+constexpr static const uint32_t EE_SCENARIO_TRM_SET_OPERATOR = 5;
+
+constexpr static const uint32_t EE_SCENARIO_TRM_GET = 6;
 
 /// `gPhysics->GetRandom(a, b)` (both inclusive; the physics stream).
 constexpr static const uint32_t EE_SCENARIO_WORLD_CU_RANDOM = 190;
@@ -4061,6 +4228,12 @@ void ee_scenario_object_changed(const EeScenarioListHost *host,
                                 bool parent,
                                 long value);
 
+/// [`tiles_hash`] of `count` tiles (`U2DPoint<long>`s: x, y) at `xy`.
+///
+/// # Safety
+/// `xy` must point to `2 * count` longs (or be anything when `count` is 0).
+uint64_t ee_scenario_tiles_hash(const long *xy, size_t count);
+
 /// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
 extern int64_t ee_scenariocpp_capture(uint32_t op, const void *p, int64_t a, int64_t b);
 
@@ -4175,6 +4348,22 @@ long ee_scenario_text_export(const EeScenarioTextHost *host);
 /// # Safety
 /// As [`ee_scenario_text_export`].
 long ee_scenario_text_import(const EeScenarioTextHost *host, unsigned long kind, bool validate);
+
+/// `EESMTrigger`'s member `member` (`EE_SCENARIO_TRM_*`) on `trigger`; k the list (0 conditions, 1 effects).
+int64_t ee_scenario_trigger_member(void *trigger,
+                                   uint32_t member,
+                                   int64_t k,
+                                   int64_t i,
+                                   int64_t a,
+                                   int64_t b);
+
+/// `EESMTrigger::EvaluateUncaptured` on `trigger` with the conditions' host `host`.
+///
+/// # Safety
+/// `host` must be valid for the call, `trigger` a live trigger.
+void ee_scenario_trigger_evaluate_member(const EeScenarioHost *host, void *trigger, float time);
+
+extern int64_t ee_scenariocpp_trigger(uint32_t op, void *trigger, int64_t i, int64_t v);
 
 }  // extern "C"
 

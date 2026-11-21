@@ -26,6 +26,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECombatGoals.h"
 #include "rust/sim/units.h"
+#include "ee/EESMCondition.h"
 // 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
 // (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
@@ -113,36 +114,12 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
     case EE_SCENARIO_READ_OBJ_UNIT_COUNT: return (int64_t)theObject->mUnits.size();
     case EE_SCENARIO_READ_OBJ_UNIT_AT: return (int64_t)(uint32_t)theObject->GetUnitAt((unsigned long)inA);
     case EE_SCENARIO_READ_OBJ_EVALUATE: return theManager->GetScenarioObject((unsigned long)inA)->Evaluate(inB != 0);
-    case EE_SCENARIO_READ_UNIT_FLAGS: {
-        EEUnit* theUnit = SMUnit(inA);
-        if (theUnit == NULL)
-            return 0;
-        return 1 | (theUnit->GetHitPoints() > 0 ? 2 : 0) | (theUnit->mUnitClass->mIsTree ? 4 : 0)
-               | (theUnit->mComplexUnit != NULL ? 8 : 0)
-               | (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mPreviousPart != NULL ? 16 : 0);
-    }
     case EE_SCENARIO_READ_UNIT_CLASS_TYPE: return SMUnit(inA)->mUnitClass->mUnitType;
     case EE_SCENARIO_READ_UNIT_PLAYER: return SMUnit(inA)->mPlayer->GetPlayerID();
     case EE_SCENARIO_READ_UNIT_COMMAND: return SMUnit(inA)->mComplexUnit->GetCommandType();
     case EE_SCENARIO_READ_UNIT_ATTRIBUTE:
         return theObject->GetUnitAttribute((unsigned long)inB, inC != 0, SMUnit(inA), 0, 0);
-    case EE_SCENARIO_READ_UNIT_SELECTED_BY: {
-        EEPlayer* thePlayer = gWorld.mPlayers[inA];
-        EEUnit* theUnit = SMUnit(inB);
-        return thePlayer->mActiveGroup->Contains(theUnit->mComplexUnit) || thePlayer->mViewedUnit == theUnit;
-    }
     case EE_SCENARIO_READ_UNIT_SEEN_BY: return EECombatIsSeenBy(SMUnit(inA), gWorld.mPlayers[inB], false);
-    case EE_SCENARIO_READ_AREA_CONTAINS_UNIT: {
-        EESMArea* theArea = theManager->GetArea((unsigned long)inA);
-        return theArea == NULL ? -1 : theArea->ContainsUnit(SMUnit(inB));
-    }
-    case EE_SCENARIO_READ_PLAYER_UNIT:
-        if (inB == 0) {
-            EEPlayer* thePlayer = gWorld.mPlayers[inA];
-            inContext->mCursor = thePlayer != NULL ? thePlayer->mFirstUnit : NULL;
-        } else
-            inContext->mCursor = static_cast<EEUnit*>(inContext->mCursor->mNext);
-        return SMChainUnit(inContext->mCursor);
     case EE_SCENARIO_READ_MAP_SIZE: return SMPack((long)gWorld.mMap->mL195610, (long)gWorld.mMap->mL195614);
     case EE_SCENARIO_READ_AREA_CONTAINS_TILE:
         return theManager->GetArea((unsigned long)inA)->ContainsTile(U2DPoint<long>(inB, inC));
@@ -156,28 +133,74 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
     case EE_SCENARIO_READ_UNIT_TILE_SIZE: return SMUnit(inA)->mUnitClass->mTileSize;
     case EE_SCENARIO_READ_CLASS_TILE_SIZE: return gUnitClassTable[inA]->mTileSize;
     case EE_SCENARIO_READ_BLOCK_TAKES: return ee_units_uu_block_takes(0, inA, inB, inC, inD, inD, 0);
-    case EE_SCENARIO_READ_MAP_TILE_DRY: {
-        EEMapTile* theTile = gWorld.mMap->GetTile(inA, inB);
-        return theTile != NULL && theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainShallowWater;
-    }
     case EE_SCENARIO_READ_MAP_TILE_EXISTS: return gWorld.mMap->GetTile(inA, inB) != NULL;
-    case EE_SCENARIO_READ_FOOTPRINT_DISTANCE: {
-        long theX = 0;
-        long theY = 0;
-        return SMFloat(EEGetFootprintDistance(static_cast<EEComplexUnit*>(SMUnit(inA)), inB, inC, &theX, &theY));
-    }
     case EE_SCENARIO_READ_UNIT_CAN_REACH_TILE:
         return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->CanReachTile(inB, inC);
-    case EE_SCENARIO_READ_UNIT_NEAREST_TILE: {
-        long theX;
-        long theY;
-        SMUnit(inA)->GetNearestFootprintTile(SMUnit(inB), &theX, &theY);
-        return SMPack(theX, theY);
-    }
     case EE_SCENARIO_READ_UNIT_IN_REACH:
         return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->IsInReach(SMUnit(inB));
     }
     return 0;
+}
+
+// the object reads' single statements (ee_scenario object_reads.rs EE_SCENARIO_WZ_*: the Rust composes the
+// sequences of Evaluate's, FindPlacement's and the conditions' reads), on handles; through the world channel
+static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10, "object_reads.rs's numbers");
+UWideString sWZText[2];        // the chat test's two texts (the original's locals)
+extern U2DPoint<long> sWZPoint;   // the centres' point (EEScenarioHost.cpp)
+extern std::vector<U2DPoint<long> > sWZTiles;   // the host's tile list (EEScenarioHost.cpp)
+float SMEFloatBits(int64_t inBits) { float theValue; uint32_t theBits = (uint32_t)inBits; memcpy(&theValue, &theBits, 4); return theValue; }
+template<class T> T* SMWzOf(int64_t inHandle) { return (T*)(intptr_t)inHandle; }
+int64_t SMWzPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
+int64_t SMEHostWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);
+int64_t SMEObjectWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+{
+    switch (inOp) {
+    case EE_SCENARIO_WZ_UNIT: return SMWzPtr(SMUnit((int32_t)a[0]));
+    case EE_SCENARIO_WZ_UNIT_HIT_POINTS: return SMWzOf<EEUnit>(a[0])->GetHitPoints();
+    case EE_SCENARIO_WZ_UNIT_IS_TREE: return SMWzOf<EEUnit>(a[0])->mUnitClass->mIsTree;
+    case EE_SCENARIO_WZ_UNIT_COMPLEX: return SMWzOf<EEUnit>(a[0])->mComplexUnit != NULL;
+    case EE_SCENARIO_WZ_UNIT_CARRIED: return SMWzOf<EEUnit>(a[0])->mComplexUnit->mPreviousPart != NULL;
+    case EE_SCENARIO_WZ_PLAYER_SLOT: return SMWzPtr(gWorld.mPlayers[a[0]]);
+    case EE_SCENARIO_WZ_GROUP_CONTAINS: return SMWzOf<EEPlayer>(a[0])->mActiveGroup->Contains(SMWzOf<EEUnit>(a[1])->mComplexUnit);
+    case EE_SCENARIO_WZ_VIEWED_UNIT: return SMWzOf<EEPlayer>(a[0])->mViewedUnit == SMWzOf<EEUnit>(a[1]);
+    case EE_SCENARIO_WZ_FIRST_UNIT: return SMWzPtr(SMWzOf<EEPlayer>(a[0])->mFirstUnit);
+    case EE_SCENARIO_WZ_NEXT_UNIT: return SMWzPtr(static_cast<EEUnit*>(SMWzOf<EEUnit>(a[0])->mNext));
+    case EE_SCENARIO_WZ_CURSOR: return SMWzPtr(inContext->mCursor);
+    case EE_SCENARIO_WZ_SET_CURSOR: inContext->mCursor = SMWzOf<EEUnit>(a[0]);
+        return 0;
+    case EE_SCENARIO_WZ_CHAIN_UNIT: return SMChainUnit(SMWzOf<EEUnit>(a[0]));
+    case EE_SCENARIO_WZ_AREA: return SMWzPtr(gWorld.mScenarioManager->GetArea((unsigned long)a[0]));
+    case EE_SCENARIO_WZ_AREA_CONTAINS_UNIT: return SMWzOf<EESMArea>(a[0])->ContainsUnit(SMWzOf<EEUnit>(a[1]));
+    case EE_SCENARIO_WZ_TILE: return SMWzPtr(gWorld.mMap->GetTile((long)a[0], (long)a[1]));
+    case EE_SCENARIO_WZ_TILE_TERRAIN: return SMWzOf<EEMapTile>(a[0])->mTerrainType;
+    case EE_SCENARIO_WZ_FOOTPRINT_DISTANCE:
+        return SMFloat(EEGetFootprintDistance(static_cast<EEComplexUnit*>(SMWzOf<EEUnit>(a[0])), (long)a[1], (long)a[2], SMWzOf<long>(a[3]), SMWzOf<long>(a[4])));
+    case EE_SCENARIO_WZ_NEAREST_TILE: SMWzOf<EEUnit>(a[0])->GetNearestFootprintTile(SMWzOf<EEUnit>(a[1]), SMWzOf<long>(a[2]), SMWzOf<long>(a[3]));
+        return 0;
+    case EE_SCENARIO_WZ_CHAT_TEXT: sWZText[0] = inContext->mCondition->mChatText;
+        return 0;
+    case EE_SCENARIO_WZ_CHAT_LAST: sWZText[1] = gWorld.mScenarioManager->mLastChatText;
+        return 0;
+    case EE_SCENARIO_WZ_TEXT_LOWER: PlatMbsLwr((unsigned char*)(const char*)sWZText[a[0]]);
+        return 0;
+    case EE_SCENARIO_WZ_TEXT_FOUND: return sWZText[1].Find(sWZText[0], 0) != sWZText[1].GetLength();
+    case EE_SCENARIO_WZ_POINT_X: return sWZPoint.mX;
+    case EE_SCENARIO_WZ_POINT_Y: return sWZPoint.mY;
+    case EE_SCENARIO_WZ_PREVIOUS_X: return (long)inContext->mUnit->GetComplexUnit()->mU0DC.GetX();
+    case EE_SCENARIO_WZ_PREVIOUS_Y: return (long)inContext->mUnit->GetComplexUnit()->mU0DC.GetY();
+    case EE_SCENARIO_WZ_UNIT_VARIABLE: return inContext->mUnit->GetComplexUnit()->mUnitVariables[(size_t)a[0]];
+    case EE_SCENARIO_WZ_UNIT_SCALE: return SMFloat(inContext->mUnit->GetComplexUnit()->mPhysicalModel.GetScale());
+    case EE_SCENARIO_WZ_TILES_CLEAR: sWZTiles.clear();
+        return 0;
+    case EE_SCENARIO_WZ_TILES_AREA: gWorld.mScenarioManager->GetArea((unsigned long)a[0])->GetTiles(sWZTiles);
+        return 0;
+    case EE_SCENARIO_WZ_TILES_NEAR_POINT: ee_units_uu_get_tiles_near_point(SMWzOf<const float[3]>(a[0]), SMEFloatBits(a[1]), &sWZTiles);
+        return 0;
+    case EE_SCENARIO_WZ_TILES_COUNT: return (int64_t)sWZTiles.size();
+    case EE_SCENARIO_WZ_TILE_X: return sWZTiles[(size_t)a[0]].mX;
+    case EE_SCENARIO_WZ_TILE_Y: return sWZTiles[(size_t)a[0]].mY;
+    }
+    return SMEHostWorld(inContext, inOp, a);   // the continents' and towns' (EEScenarioHost.cpp)
 }
 
 // Evaluate's changes of the object's list (objeval.rs EE_SCENARIO_WRITE_OBJ_*)
@@ -193,22 +216,6 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     case EE_SCENARIO_WRITE_OBJ_PUSH: theUnits.push_back((unsigned long)(uint32_t)inB); break;
     case EE_SCENARIO_WRITE_OBJ_SHUFFLE: EEAIRandomShuffle(theUnits.begin(), theUnits.end()); break;
     case EE_SCENARIO_WRITE_OBJ_TRUNCATE: theUnits.erase(theUnits.begin() + (size_t)inB, theUnits.end()); break;
-    }
-}
-
-// FindPlacement's tile lists (placement.rs EE_SCENARIO_TILES_NEAR_POINT, _SIDE, _CORNER)
-void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::vector<U2DPoint<long> >& outTiles)
-{
-    float theRadius;
-    memcpy(&theRadius, &inC, 4);
-    switch (inOp) {
-    case EE_SCENARIO_TILES_NEAR_POINT: {
-        const float thePoint[3] = {(float)inA, (float)inB, 0.0f};
-        ee_units_uu_get_tiles_near_point(&thePoint, theRadius, &outTiles);
-        break;
-    }
-    case EE_SCENARIO_TILES_SIDE: ee_units_uu_square_ring(inA, inB, inC, inC, 1, &outTiles); break;
-    case EE_SCENARIO_TILES_CORNER: ee_units_uu_ring_corners(0, inA, inB, inC, inC, 1, &outTiles); break;
     }
 }
 
@@ -264,20 +271,6 @@ long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEU
     return ee_scenario_unit_attribute(&theHost, (uint32_t)inAttribute, inPercent);
 }
 
-// a unit's member for GetUnitAttribute that no record holds (ee_scenario attribute.rs; unit_views.rs reads the others
-// from the world views): the unit variables (mUnitVariables[inField - EE_SCENARIO_UNIT_VARIABLE]) and the physical
-// model's scale (EE_SCENARIO_UNIT_SCALE, its bits)
-int64_t EESMUnitField(EEUnit* inUnit, int32_t inField)
-{
-    EEComplexUnit* theComplex = inUnit->GetComplexUnit();
-    int32_t theField = inField >= EE_SCENARIO_OF_STATS ? inField - EE_SCENARIO_OF_STATS : inField;
-    if (theField >= EE_SCENARIO_UNIT_VARIABLE && theField < EE_SCENARIO_UNIT_VARIABLE + 3)
-        return theComplex->mUnitVariables[theField - EE_SCENARIO_UNIT_VARIABLE];
-    float theScale = theComplex->mPhysicalModel.GetScale();
-    uint32_t theBits;
-    memcpy(&theBits, &theScale, 4);
-    return theBits;
-}
 
 // Copies the object's unit ids out
 void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const
@@ -366,76 +359,34 @@ void EESMObject::SetUnits(const std::vector<unsigned long>& inUnits)
     this->mUnits = inUnits;
 }
 
+// ---- the trigger's members (ee_scenario trigger_members.rs: each a forward; the vectors and strings stay here, reached
+// by ee_scenariocpp_trigger's single statements)
+
+static_assert(EE_SCENARIO_TR_EFFECTS - EE_SCENARIO_TR_CONDITIONS == 20 && kSMTriggerOperatorEnd == 0,
+              "trigger_members.rs's numbers");
+
 // Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry
-EESMTrigger::EESMTrigger()
-{
-    EESMTConditionWrapper* theCondition;
-    EESMTEffectWrapper* theEffect;
-    this->SetName("");
-    this->SetText("");
-    this->mIsOn = true;
-    this->mHasFired = false;
-    this->mIsInCinematic = false;
-    this->mIsLooping = false;
-    this->mConditionDuration = 0;
-    this->mConditionStartTime = 0;
-    theCondition = new EESMTConditionWrapper;
-    this->mConditions.push_back(theCondition);
-    this->SetCondition(0, false, 0);
-    this->SetConditionOperator(0, 0);
-    theEffect = new EESMTEffectWrapper;
-    this->mEffects.push_back(theEffect);
-    this->SetEffect(0, 0, 0);
-    this->SetEffectOperator(0, 0);
-    this->mID = 0;
-}
+EESMTrigger::EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_CONSTRUCT, 0, 0, 0, 0); }
 
-// Destroys the trigger and its condition and effect entries
-EESMTrigger::~EESMTrigger()
-{
-    while (this->mConditions.size() > 0) {
-        if (this->mConditions.back() != NULL)
-            delete this->mConditions.back();
-        this->mConditions.pop_back();
-    }
-    while (this->mEffects.size() > 0) {
-        if (this->mEffects.back() != NULL)
-            delete this->mEffects.back();
-        this->mEffects.pop_back();
-    }
-}
+// Destroys the trigger, deleting all its condition and effect entries
+EESMTrigger::~EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DESTROY, 0, 0, 0, 0); }
 
-// Copies another trigger's name, text, conditions, effects and flags (not its condition start time)
+// Copies a trigger: texts, entries, the flags, the condition duration and the id
 void EESMTrigger::Copy(const EESMTrigger& inTrigger)
 {
-    this->mName = inTrigger.mName;
-    this->mText = inTrigger.mText;
-    this->CopyConditions(inTrigger.mConditions);
-    this->CopyEffects(inTrigger.mEffects);
-    this->mIsOn = inTrigger.mIsOn;
-    this->mHasFired = inTrigger.mHasFired;
-    this->mIsLooping = inTrigger.mIsLooping;
-    this->mConditionDuration = inTrigger.mConditionDuration;
-    this->mID = inTrigger.mID;
-    this->mIsInCinematic = inTrigger.mIsInCinematic;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_COPY, 0, (int64_t)(intptr_t)&inTrigger, 0, 0);
 }
 
-// Deletes a condition entry; deleting the last one makes the previous entry end the list
+// Deletes a condition entry; the new last one ends the chain
 void EESMTrigger::DeleteCondition(unsigned long inIndex)
 {
-    delete this->mConditions[inIndex];
-    this->mConditions.erase(this->mConditions.begin() + inIndex);
-    if (inIndex == this->mConditions.size())
-        this->mConditions[inIndex - 1]->mOperator = kSMTriggerOperatorEnd;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 0, (int64_t)inIndex, 0, 0);
 }
 
-// Deletes an effect entry; deleting the last one makes the previous entry end the list
+// Deletes an effect entry; the new last one ends the chain
 void EESMTrigger::DeleteEffect(unsigned long inIndex)
 {
-    delete this->mEffects[inIndex];
-    this->mEffects.erase(this->mEffects.begin() + inIndex);
-    if (inIndex == this->mEffects.size())
-        this->mEffects[inIndex - 1]->mOperator = kSMTriggerOperatorEnd;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 1, (int64_t)inIndex, 0, 0);
 }
 
 // Fires the trigger when its AND/OR condition chain has held for the set duration: queues all effects, or one random
@@ -453,49 +404,24 @@ void EESMTrigger::Evaluate(float inTime)
     EESMCaptureTrigger(this, theBefore, inTime, theSeed);
 }
 
-// Evaluate's body (Evaluate adds the simulation capture's SMTE record: ee/EEScenarioCapture.h)
+// Evaluate's body: trigger.rs evaluate over the entries (trigger_members.rs)
 void EESMTrigger::EvaluateUncaptured(float inTime)
 {
-    // the chain, the duration and the effects' choice are Rust's (ee_scenario trigger.rs); the C++ schedules them
-    EeScenarioTriggerState theState = {this->mIsOn, this->mHasFired, this->mIsLooping, this->mIsInCinematic,
-                                       (uint32_t)this->mConditionDuration, (uint32_t)this->mConditionStartTime};
-    std::vector<EeScenarioConditionEntry> theConditions(this->mConditions.size());
-    for (size_t i = 0; i < theConditions.size(); i++)
-        theConditions[i] = {(uint32_t)this->mConditions[i]->mValue, (int32_t)this->mConditions[i]->mOperator,
-                            this->mConditions[i]->mIsNot};
-    std::vector<EeScenarioEffectEntry> theEffects(this->mEffects.size());
-    for (size_t k = 0; k < theEffects.size(); k++)
-        theEffects[k] = {(int32_t)this->mEffects[k]->mOperator, (uint32_t)this->mEffects[k]->mDelay,
-                         (uint32_t)this->mEffects[k]->mEffectIndex};
-    std::vector<EeScenarioTimedEffect> theTimed(theEffects.size() + 1);
-    size_t theCount = 0;
     EESMHostContext theContext = {NULL, NULL};
     EeScenarioHost theHost = EESMHost(&theContext);
-    ee_scenario_trigger_evaluate(&theHost, &theState, gWorld.mInCinematic, theConditions.data(), theConditions.size(),
-                                 theEffects.data(), theEffects.size(), inTime, theTimed.data(), &theCount);
-    this->mIsOn = theState.is_on;
-    this->mHasFired = theState.has_fired;
-    this->mConditionStartTime = theState.condition_start_time;
-    for (size_t t = 0; t < theCount; t++)
-        gWorld.mScenarioManager->AddTimedEffect((long)theTimed[t].effect, theTimed[t].time, this->mIsInCinematic);
+    ee_scenario_trigger_evaluate_member(&theHost, this, inTime);
 }
 
-// Returns the condition entry at an index, or NULL
+// Returns condition entry inIndex, or NULL past the end
 EESMTConditionWrapper* EESMTrigger::GetCondition(unsigned long inIndex)
 {
-    EESMTConditionWrapper* theWrapper = NULL;
-    if (inIndex < this->mConditions.size())
-        theWrapper = this->mConditions[inIndex];
-    return theWrapper;
+    return (EESMTConditionWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 0, (int64_t)inIndex, 0, 0);
 }
 
-// Returns the effect entry at an index, or NULL
+// Returns effect entry inIndex, or NULL past the end
 EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
 {
-    EESMTEffectWrapper* theWrapper = NULL;
-    if (inIndex < this->mEffects.size())
-        theWrapper = this->mEffects[inIndex];
-    return theWrapper;
+    return (EESMTEffectWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 1, (int64_t)inIndex, 0, 0);
 }
 
 // Reads the trigger's settings, condition entries and effect entries (id -1 becomes 0); returns the first error
@@ -518,56 +444,87 @@ long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     return ee_scenario_trigger_save(&theTable, this);
 }
 
-// Sets a condition entry's condition index and NOT flag
+// Sets condition entry inIndex
 void EESMTrigger::SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition)
 {
-    this->mConditions[inIndex]->mIsNot = inNot;
-    this->mConditions[inIndex]->mValue = inCondition;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 0, (int64_t)inIndex, inNot, (int64_t)inCondition);
 }
 
-// Sets a condition entry's operator; a non-end operator on the last entry appends an empty entry
+// Sets condition entry inIndex's operator (appending an entry after the last when it gets one)
 void EESMTrigger::SetConditionOperator(unsigned long inIndex, long inOperator)
 {
-    if (inIndex == this->mConditions.size() - 1 && inOperator != 0)
-        this->mConditions.push_back(new EESMTConditionWrapper);
-    this->mConditions[inIndex]->mOperator = inOperator;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 0, (int64_t)inIndex, inOperator, 0);
 }
 
-// Replaces the trigger's condition entries by copies of the given ones
-void EESMTrigger::CopyConditions(const std::vector<EESMTConditionWrapper*>& inConditions)
-{
-    while (this->mConditions.size() > 1)
-        this->DeleteCondition(1);
-    for (unsigned long i = 0; i < inConditions.size(); i++) {
-        EESMTConditionWrapper* theWrapper = inConditions[i];
-        this->SetCondition(i, theWrapper->mIsNot, theWrapper->mValue);
-        this->SetConditionOperator(i, theWrapper->mOperator);
-    }
-}
-
-// Sets an effect entry's effect index and delay
+// Sets effect entry inIndex
 void EESMTrigger::SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect)
 {
-    this->mEffects[inIndex]->mDelay = inDelay;
-    this->mEffects[inIndex]->mEffectIndex = inEffect;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 1, (int64_t)inIndex, (int64_t)(unsigned long)inDelay, (int64_t)inEffect);
 }
 
-// Sets an effect entry's operator; a non-end operator on the last entry appends an empty entry
+// Sets effect entry inIndex's operator (appending an entry after the last when it gets one)
 void EESMTrigger::SetEffectOperator(unsigned long inIndex, long inType)
 {
-    if (inIndex == this->mEffects.size() - 1 && inType != 0)
-        this->mEffects.push_back(new EESMTEffectWrapper);
-    this->mEffects[inIndex]->mOperator = inType;
+    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 1, (int64_t)inIndex, inType, 0);
 }
 
-// Replaces the trigger's effect entries by copies of the given ones
-void EESMTrigger::CopyEffects(const std::vector<EESMTEffectWrapper*>& inEffects)
+// the trigger members' single statements (trigger_members.rs EE_SCENARIO_TR_*): on trigger inTrigger, entry i, value v
+extern "C" int64_t ee_scenariocpp_trigger(uint32_t inOp, void* inTrigger, int64_t i, int64_t v)
 {
-    while (this->mEffects.size() > 1)
-        this->DeleteEffect(1);
-    for (unsigned long i = 0; i < inEffects.size(); i++) {
-        EESMTEffectWrapper* theWrapper = inEffects[i];
-        this->SetEffect(i, theWrapper->mDelay, theWrapper->mEffectIndex);
-        this->SetEffectOperator(i, theWrapper->mOperator);
+    EESMTrigger* t = static_cast<EESMTrigger*>(inTrigger);
+    std::vector<EESMTConditionWrapper*>& c = t->mConditions;
+    std::vector<EESMTEffectWrapper*>& e = t->mEffects;
+    switch (inOp) {
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_COUNT: return (int64_t)c.size();
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_PUSH_NEW: c.push_back(new EESMTConditionWrapper);
+        return 0;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_BACK_EXISTS: return c.back() != NULL;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_DELETE_BACK: delete c.back();
+        return 0;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_POP: c.pop_back();
+        return 0;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_DELETE_AT: delete c[(size_t)i];
+        return 0;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_ERASE: c.erase(c.begin() + (size_t)i);
+        return 0;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_FIRST: return c[(size_t)i]->mIsNot = v != 0;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_SECOND: return (int64_t)(c[(size_t)i]->mValue = (unsigned long)v);
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_OPERATOR: return c[(size_t)i]->mOperator = (long)v;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_FIRST: return c[(size_t)i]->mIsNot;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SECOND: return (int64_t)c[(size_t)i]->mValue;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_OPERATOR: return c[(size_t)i]->mOperator;
+    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_AT: return (int64_t)(intptr_t)c[(size_t)i];
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_COUNT: return (int64_t)e.size();
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_PUSH_NEW: e.push_back(new EESMTEffectWrapper);
+        return 0;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_BACK_EXISTS: return e.back() != NULL;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_DELETE_BACK: delete e.back();
+        return 0;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_POP: e.pop_back();
+        return 0;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_DELETE_AT: delete e[(size_t)i];
+        return 0;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_ERASE: e.erase(e.begin() + (size_t)i);
+        return 0;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_FIRST: return (int64_t)(e[(size_t)i]->mDelay = (unsigned long)v);
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_SECOND: return (int64_t)(e[(size_t)i]->mEffectIndex = (unsigned long)v);
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_OPERATOR: return e[(size_t)i]->mOperator = (long)v;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_FIRST: return (int64_t)e[(size_t)i]->mDelay;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SECOND: return (int64_t)e[(size_t)i]->mEffectIndex;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_OPERATOR: return e[(size_t)i]->mOperator;
+    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_AT: return (int64_t)(intptr_t)e[(size_t)i];
+    case EE_SCENARIO_TR_NAME_EMPTY: t->SetName("");
+        return 0;
+    case EE_SCENARIO_TR_TEXT_EMPTY: t->SetText("");
+        return 0;
+    case EE_SCENARIO_TR_COPY_NAME: t->mName = static_cast<EESMTrigger*>((void*)(intptr_t)i)->mName;
+        return 0;
+    case EE_SCENARIO_TR_COPY_TEXT: t->mText = static_cast<EESMTrigger*>((void*)(intptr_t)i)->mText;
+        return 0;
+    case EE_SCENARIO_TR_FIELDS: return (int64_t)(intptr_t) static_cast<EeScenarioTriggerFields*>(t);
+    case EE_SCENARIO_TR_ADD_TIMED: gWorld.mScenarioManager->AddTimedEffect((long)i, (unsigned long)v, t->mIsInCinematic);
+        return 0;
+    case EE_SCENARIO_TR_WORLD_CINEMATIC: return gWorld.mInCinematic;
     }
+    return 0;
 }
