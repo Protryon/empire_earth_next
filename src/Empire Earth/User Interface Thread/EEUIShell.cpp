@@ -311,46 +311,6 @@ long EEUIShellList::DrawBars(const uint32_t* inLines, size_t inCount)
     return theResult;
 }
 
-// the edited player's tech tree (the player tab's player)
-static EETechTree* EEShellTree()
-{
-    unsigned long theSelection;   // (the player combo box's selection + 1 indexes gWorld.mPlayers)
-    gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(theSelection);
-    return gWorld.mPlayers[theSelection + 1]->GetTechTree();
-}
-
-// Turns every placement ghost (inGhosts) or selected unit whose class can turn to the yaw inAngle (once
-// EEUIFSEBRotation's RotateGhosts and RotateSelection)
-static void EEShellRotate(UIControl* inControl, bool inGhosts, float inAngle)
-{
-    GETransformation theTransformation;
-    if (inGhosts) {
-        gWorld.mGhostUnitsLock->Enter();
-        unsigned long theCount = gWorld.GetNumGhostUnits();
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEGhostUnit* theGhost = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[i]);
-            if (!(gUnitClassTable[theGhost->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f))
-                continue;
-            theTransformation = theGhost->mTransformation;
-            theTransformation.SetOrientationYPR(inAngle, 0.0f, 0.0f);
-            theGhost->mTransformation = theTransformation;
-        }
-        gWorld.mGhostUnitsLock->Leave();
-        return;
-    }
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(inControl->GetForm());
-    unsigned long theCount = theEditor->GetSelectedUnitCount();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit* theUnit = theEditor->GetSelectedUnit(i);
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (theComplexUnit == NULL || !(theUnit->mUnitClass->mAngularAcceleration > 0.0f))
-            continue;
-        theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
-        theTransformation.SetOrientationYPR(inAngle, 0.0f, 0.0f);
-        theComplexUnit->SetTransformation(theTransformation, true);
-    }
-}
-
 // the control's text (inWhich 0: its own GEText, 1: its label's)
 static GEText* EEShellText(UIControl* inControl, int64_t inWhich)
 {
@@ -392,27 +352,8 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_SELECTED_OPACITY: static_cast<UILBString*>(c)->GetSelectedBackground()->SetOpacity(f[0]); break;
     case EE_SCREENS_SH_SELECTION_INDEX: return (int64_t)(uint32_t)static_cast<EEUIShellCombo*>(c)->Selection();
     case EE_SCREENS_SH_SET_SELECTION: static_cast<UIComboBox*>(c)->SetCurrentSelection((unsigned long)a); break;
-    case EE_SCREENS_SH_FILE_APPEND_LISTED: {
-        std::set<UString> theFiles;
-        reinterpret_cast<FSPath*>(a)->ListFiles(UString(reinterpret_cast<const char*>(b)), theFiles);
-        for (std::set<UString>::const_iterator it = theFiles.begin(); it != theFiles.end(); ++it) {
-            theText = *it;
-            theText.InsertString("", theText.GetLength() - 4, true);
-            static_cast<UIComboBox*>(c)->AppendLine(theText);
-        }
-        break;
-    }
     case EE_SCREENS_SH_FILE_PATH_RELEASE: reinterpret_cast<FSPath*>(a)->Dereference(); break;
     case EE_SCREENS_SH_DELETE_ALL: static_cast<UIComboBox*>(c)->DeleteAllEntries(); break;
-    case EE_SCREENS_SH_APPEND_NUMBERED: {
-        UWideString theLine;
-        gResource->GetString((unsigned long)a, theText);
-        for (unsigned long i = 1; i <= (unsigned long)b; i++) {
-            sprintf(theLine, theText, i);
-            static_cast<UIComboBox*>(c)->AppendLine(theLine);
-        }
-        break;
-    }
     case EE_SCREENS_SH_SCROLL_CAPTURED: return static_cast<UILBString*>(c)->GetScrollBarCaptured();
     case EE_SCREENS_SH_RELEASE_MOUSE: c->ReleaseCapturedMouse(); break;
     case EE_SCREENS_SH_FIRE: c->FireTriggerEvent((unsigned long)a); break;
@@ -424,30 +365,8 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_BUTTON_TEXT_BYTES:
         static_cast<UIButton*>(c)->SetText(UWideString(reinterpret_cast<const char*>(a)), reinterpret_cast<GEFont*>(b));
         break;
-    case EE_SCREENS_SH_CLEAR_RADIO_BITMAPS: {
-        UIRadioButton* r = static_cast<UIRadioButton*>(c);
-        r->SetDownCheckedBitmap(NULL);
-        r->SetUpCheckedBitmap(NULL);
-        r->SetDownUncheckedBitmap(NULL);
-        r->SetUpUncheckedBitmap(NULL);
-        break;
-    }
     case EE_SCREENS_SH_LIST_COUNT:
         return static_cast<UIListBox<UWideString>*>(c->GetForm()->GetControlById((unsigned long)a))->GetLineCount();
-    case EE_SCREENS_SH_LIST_SELECTION: {
-        unsigned long s;
-        UIListBox<UWideString>* l = static_cast<UIListBox<UWideString>*>(c->GetForm()->GetControlById((unsigned long)a));
-        return l->GetCurrentSelection(s) != 0 ? -1 : (int64_t)s;
-    }
-    case EE_SCREENS_SH_EDITOR_PLAYER: {
-        unsigned long s;
-        gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(s);
-        return (int64_t)s;
-    }
-    case EE_SCREENS_SH_TECH_TREE_MOVE:
-        (new EESEARust(kSEATechTree, NULL, (int32_t)(uint32_t)a, (int32_t)(uint32_t)(a >> 32), (int32_t)(uint32_t)b,
-                       (b >> 32) != 0))->Dereference();
-        break;
     case EE_SCREENS_SH_PLAYER_PAGE:
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)a);
         break;
@@ -455,47 +374,12 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_SET_PLAYER_COUNT:
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)a);
         break;
-    case EE_SCREENS_SH_LIST_OF_COMBO_SELECTION: {
-        unsigned long s;
-        const_cast<UILBString*>(static_cast<UIComboBox*>(c)->GetListBox())->GetCurrentSelection(s);
-        return (int64_t)s;
-    }
-    case EE_SCREENS_SH_MAP_CREATE:   // a the map tab's group
-        ee_screens_semp_call((EeScreensSeMap*)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a)),
-                             EE_SCREENS_SEMP_CREATE_MAP, 0);
-        break;
-    case EE_SCREENS_SH_NEW_BITMAP: {
-        GEBitmap* theBitmap = new GEBitmap;
-        theBitmap->SetTexture(reinterpret_cast<GETexture*>(a), b != 0 ? c->GetForm()->GetManager()->GetScreen() : gScreenIndex);
-        return (int64_t)theBitmap;
-    }
-    case EE_SCREENS_SH_BITMAP_COORDS:
-        reinterpret_cast<GEBitmap*>(a)->SetTextureCoordinates(GETextureCoordinate(f[0], f[1]), GETextureCoordinate(f[2], f[1]),
-                                                               GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[2], f[3]));
-        break;
     case EE_SCREENS_SH_BITMAP_SCALE: reinterpret_cast<GEBitmap*>(a)->SetXYScale(f[0], f[1]); break;
     case EE_SCREENS_SH_BITMAP_RELEASE: reinterpret_cast<GEBitmap*>(a)->Dereference(); break;
-    case EE_SCREENS_SH_TEXTURE_SIZE:
-        f[0] = (float)reinterpret_cast<GETexture*>(a)->GetWidth();
-        f[1] = (float)reinterpret_cast<GETexture*>(a)->GetHeight();
-        break;
     case EE_SCREENS_SH_SET_NORMAL: static_cast<UIButton*>(c)->SetNormalBitmap(reinterpret_cast<GEBitmap*>(a)); break;
     case EE_SCREENS_SH_SET_PRESSED: static_cast<UIButton*>(c)->SetPressedBitmap(reinterpret_cast<GEBitmap*>(a)); break;
     case EE_SCREENS_SH_BITMAP_OFFSET: static_cast<UIButton*>(c)->SetBitmapDrawOffset(GE2DPoint(f[0], f[1])); break;
-    case EE_SCREENS_SH_SELECT_TAB: {
-        EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(c->GetForm());
-        if (a == 0 && gUserInterface)
-            gUserInterface->PostSelectEditorTab((unsigned char)(b >> 32), (long)(int32_t)b);
-        else
-            theEditor->SelectTab((unsigned char)(b >> 32), (long)(int32_t)b);
-        break;
-    }
     // the tech lists' (EESEUITechListBox)
-    case EE_SCREENS_SH_LIST_CURRENT: {
-        unsigned long s;
-        long r = static_cast<UILBString*>(c)->GetCurrentSelection(s);
-        return a != 0 || r == kErrorOK ? (int64_t)s : -1;
-    }
     case EE_SCREENS_SH_LIST_VIEW: return static_cast<EEUIShellList*>(c)->View();
     case EE_SCREENS_SH_LIST_DELETE_ALL: static_cast<UILBString*>(c)->DeleteAllEntries(); break;
     case EE_SCREENS_SH_LIST_APPEND_BYTES:
@@ -504,82 +388,24 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_LIST_LINE_COUNT: return static_cast<UILBString*>(c)->GetLineCount();
     case EE_SCREENS_SH_LIST_START_LINE: static_cast<UILBString*>(c)->SetStartingDisplayLine((unsigned long)a); break;
     case EE_SCREENS_SH_LIST_SELECT_SCROLL: static_cast<UILBString*>(c)->ChangeSelectionIndex((unsigned long)a, false, true); break;
-    case EE_SCREENS_SH_FORM_CHECKED: {
-        UIControl* theControl = c->GetForm()->GetControlById((unsigned long)a);
-        if (UIRadioButton* r = dynamic_cast<UIRadioButton*>(theControl))
-            return r->GetIsChecked();
-        return static_cast<UICheckBox*>(theControl)->GetIsChecked();
-    }
     case EE_SCREENS_SH_FORM_CONTROL: return (int64_t)c->GetForm()->GetControlById((unsigned long)a);
-    case EE_SCREENS_SH_TECH_NAME_ID: {
-        EETechTreeNode* theNode = gTechTree.Get((long)a);
-        return b != 0 ? theNode->mData->mNameID : gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID;
-    }
     case EE_SCREENS_SH_TECH_EPOCH: return EETechTreeEpochOf((long)a);
     case EE_SCREENS_SH_TECH_DATA_ID: return gTechTree.Get((long)a)->mData->mID;
-    case EE_SCREENS_SH_TECH_DEPENDS: {
-        EETechTree* theTree = EEShellTree();
-        long theOn = (long)(int32_t)(a >> 32);
-        if (b != 0)
-            theOn = theTree->Get(theOn)->mData->mID;
-        return theTree->Get((long)(int32_t)(uint32_t)a)->DependsOn(theOn);
-    }
-    case EE_SCREENS_SH_TECH_OBSOLETE: {
-        EETechTree* theTree = EEShellTree();
-        theTree->Get((long)a)->SetScenEditorObsoleted(b != 0, true);
-        return theTree->Get((long)a)->mEpoch <= theTree->mCurrentEpoch;
-    }
-    case EE_SCREENS_SH_TECH_OBSOLETED: return EEShellTree()->Get((long)a)->mScenEditorObsoleted;
-    case EE_SCREENS_SH_TECH_MARK_PLAYER:
-        gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_MARK_CHANGED, EEShellTree()->GetPlayer()->mPlayerID, false);
-        break;
     case EE_SCREENS_SH_TECH_BARS:
         return static_cast<EEUIShellList*>(c)->DrawBars(reinterpret_cast<const uint32_t*>(a), (size_t)b);
     // the unit tab's (EEUIFSELBUnitList, EEUIFSELBCargoList, EEUIFSEBRotation)
-    case EE_SCREENS_SH_UNIT_CLASS: {
-        EEUnitClass* theClass = gUnitClassTable[(long)a];
-        return b == 0 ? theClass->mNameStringID : b == 1 ? theClass->mEpoch : theClass->mFamily;
-    }
-    case EE_SCREENS_SH_LIST_INSERT_BYTES: {
-        UILBNoSort<UWideString> theNoSort;
-        static_cast<UILBString*>(c)->InsertLine(UWideString(reinterpret_cast<const char*>(a)), (unsigned long)b, theNoSort);
-        break;
-    }
-    case EE_SCREENS_SH_LIST_LINE: {
-        const char* theLine = static_cast<UILBString*>(c)->GetData((unsigned long)a);
-        strncpy(reinterpret_cast<char*>(b), theLine, 4499);
-        reinterpret_cast<char*>(b)[4499] = 0;
-        break;
-    }
     case EE_SCREENS_SH_UNIT_SELECT_TYPE:
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT);
         break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
-    case EE_SCREENS_SH_UNIT_NAME_AND_ID: {
-        EEUnit* theUnit = reinterpret_cast<EEUnit*>(a);
-        return (int64_t)theUnit->mUnitClass->mNameStringID << 32 | (uint32_t)theUnit->GetUnitID();
-    }
     case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(kSEADeleteUnit, NULL, (int32_t)a))->Dereference(); break;
     case EE_SCREENS_SH_BITMAP_ROTATION: reinterpret_cast<GEBitmap*>(a)->SetRotation(f[0]); break;
-    case EE_SCREENS_SH_ROTATE:
-        if (a == 2)
-            return gWorld.GetNumGhostUnits() > 0;
-        EEShellRotate(c, a != 0, f[0]);
-        break;
-    case EE_SCREENS_SH_KEY: {
-        ISEntity* theKey;
-        long theResult = gISKeyboard->GetEntity(a == 0 ? kKeyComma : kKeyPeriod, theKey);
-        return (int64_t)theResult << 8 | (theKey->JustPressed() ? 1 : theKey->JustUnpressed() ? 2 : 0);
-    }
     case EE_SCREENS_SH_SELF: return EEUIShell::Of(c)->SelfCall((uint32_t)a);
     case EE_SCREENS_SH_KEYBOARD: EEUIShell::Of(c)->Keyboard(a != 0); break;
     case EE_SCREENS_SH_ALWAYS_DIRTY: c->SetAlwaysDirty(a != 0); break;
     case EE_SCREENS_SH_EDITOR_TEXTURE: return (int64_t) static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetButtonTexture();
     // the message box's buttons' (shells_dialog.rs)
     case EE_SCREENS_SH_FOCUSED_TEXT_COLOR: static_cast<UIButton*>(c)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); break;
-    case EE_SCREENS_SH_FILL:
-        return ee_ge_draw2d_fill(c->GetRasterizer(), c->GetScreenIndex(),
-                                 reinterpret_cast<const EeGeRectangle*>(&c->GetCopiedDrawRectangle()), f, f[3]);
     case EE_SCREENS_SH_CLOSE_FORM: gUserInterface->CloseForm(reinterpret_cast<UIForm*>(a)); break;
     // the saved-group buttons' (shells_saved.rs)
     case EE_SCREENS_SH_SG_NEW_PORTRAIT: return (int64_t) new GEBitmap;
@@ -592,25 +418,11 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     // the chat line's (shells_chat.rs): its texts deleted, as its destructor did
     // the paint areas' (shells_paint.rs)
     case EE_SCREENS_SH_MAP_HALF: f[0] = gWorld.GetMap()->GetF1955F4(); break;
-    case EE_SCREENS_SH_SCREEN_LINE: {
-        GE3DLine theLine;
-        gWorld.mMap->GetScreenLine(GE2DPoint(f[0], f[1]), theLine);
-        float* o = reinterpret_cast<float*>(a);
-        o[0] = theLine.GetStart().GetX(); o[1] = theLine.GetStart().GetY(); o[2] = theLine.GetStart().GetZ();
-        o[3] = theLine.GetDirection().GetX(); o[4] = theLine.GetDirection().GetY(); o[5] = theLine.GetDirection().GetZ();
-        break;
-    }
     case EE_SCREENS_SH_WINDOW_SIZE: return (int64_t)gGameWindow->GetWidth() | (int64_t)gGameWindow->GetHeight() << 32;
     case EE_SCREENS_SH_MOUSE_BOUNDS: gMouse->SetBounds(GERectangle(f[0], f[1], f[2], f[3])); break;
     case EE_SCREENS_SH_SCROLL_EDGES: reinterpret_cast<EEAScroll*>(a)->mEdges = GERectangle(f[0], f[1], f[2], f[3]); break;
     case EE_SCREENS_SH_CAPTURE_MOUSE: static_cast<EEUIShellControl*>(c)->Capture(); break;
-    case EE_SCREENS_SH_MOUSE_BUTTONS:
-        return (c->GetRightMouseButtonDown() ? 1 : 0) | (c->GetLeftMouseButtonDown() ? 2 : 0) | (c->GetHasMouseCapture() ? 4 : 0);
     case EE_SCREENS_SH_PAINT_NEW: return (int64_t) static_cast<EESEAPaint*>(new EESEAPaintRust((uint32_t)a, (char)b));
-    case EE_SCREENS_SH_PAINT_AREA: {
-        const int32_t* r = reinterpret_cast<const int32_t*>(b);
-        return reinterpret_cast<EESEAPaint*>(a)->SetArea(r[0], r[1], r[2], r[3]);
-    }
     case EE_SCREENS_SH_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EESEAPaint*>(a)); break;
     case EE_SCREENS_SH_ACTION_RELEASE: reinterpret_cast<EESEAPaint*>(a)->Dereference(); break;
     // the scenario editor lane's (0xa0..): the diplomacy buttons' state, an action's post and release
@@ -619,15 +431,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_SE_ACTION_RELEASE: reinterpret_cast<EEAction*>(a)->Dereference(); break;
     case EE_SCREENS_SH_BRUSH_HIGHLIGHT: gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(f[0], f[1], a != 0); break;
     case EE_SCREENS_SH_BRUSH_GROUP_SIZE: return reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize;
-    case EE_SCREENS_SH_SPACE: {
-        ISEntity* theKey;
-        return gISKeyboard->GetEntity(kKeySpace, theKey) == 0 && theKey->GetValue() > 0;
-    }
     case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a));
-    case EE_SCREENS_SH_SLIDER_OF: {
-        UISlider* theSlider = static_cast<UISlider*>(c->GetForm()->GetControlById((unsigned long)a));
-        return (int64_t)theSlider->GetMaxRange() << 32 | (uint32_t)theSlider->GetCurrentRangeValue();
-    }
     // the game's
     case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->TriggerSubSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
@@ -737,3 +541,152 @@ extern "C" float ee_screenscpp_view_top() { return gViewport.GetViewRectangle().
 extern "C" float ee_screenscpp_view_right() { return gViewport.GetViewRectangle().GetRight(); }
 extern "C" float ee_screenscpp_view_bottom() { return gViewport.GetViewRectangle().GetBottom(); }
 // end shims6
+
+// ---- the rest of the multi-statement cases (UI lane round 9: shell_calls.rs), each one statement, and the
+// cases' locals (EEShellTree and EEShellRotate are Rust's)
+#define TREE(inTree) reinterpret_cast<EETechTree*>(inTree)
+static std::set<UString> sShFiles;              // FILE_APPEND_LISTED's files, in order, and the line
+static std::vector<UString> sShLines;
+static UWideString sShText;
+static UWideString sShFormat;                   // APPEND_NUMBERED's format
+static UILBNoSort<UWideString> sShNoSort;       // LIST_INSERT_BYTES' order
+static GETransformation sShTransformation;      // ROTATE's
+static ISEntity* sShKey;                        // KEY's and SPACE's
+static const unsigned long kShKeys[] = {kKeyComma, kKeyPeriod, kKeySpace};
+static GE3DLine sShLine;                        // SCREEN_LINE's
+extern "C" void ee_screenscpp_sh_files_clear() { sShFiles.clear(); }
+extern "C" void ee_screenscpp_sh_files_list(uintptr_t inPath, uintptr_t inPattern)
+{ reinterpret_cast<FSPath*>(inPath)->ListFiles(UString(reinterpret_cast<const char*>(inPattern)), sShFiles); }
+extern "C" void ee_screenscpp_sh_files_snapshot() { sShLines.assign(sShFiles.begin(), sShFiles.end()); }
+extern "C" uint32_t ee_screenscpp_sh_files_count() { return (uint32_t)sShLines.size(); }
+extern "C" void ee_screenscpp_sh_text_from_file(uint32_t inIndex) { sShText = sShLines[inIndex]; }
+extern "C" void ee_screenscpp_sh_text_trim4() { sShText.InsertString("", sShText.GetLength() - 4, true); }
+extern "C" void ee_screenscpp_sh_combo_append_text(uintptr_t inControl)
+{ static_cast<UIComboBox*>(C(inControl))->AppendLine(sShText); }
+extern "C" void ee_screenscpp_sh_numbered_format(int64_t inId) { gResource->GetString((unsigned long)inId, sShFormat); }
+extern "C" void ee_screenscpp_sh_numbered_print(uint32_t inNumber)
+{ sprintf(sShText, sShFormat, (unsigned long)inNumber); }
+extern "C" void ee_screenscpp_sh_radio_clear_down_checked(uintptr_t inControl)
+{ static_cast<UIRadioButton*>(C(inControl))->SetDownCheckedBitmap(NULL); }
+extern "C" void ee_screenscpp_sh_radio_clear_up_checked(uintptr_t inControl)
+{ static_cast<UIRadioButton*>(C(inControl))->SetUpCheckedBitmap(NULL); }
+extern "C" void ee_screenscpp_sh_radio_clear_down_unchecked(uintptr_t inControl)
+{ static_cast<UIRadioButton*>(C(inControl))->SetDownUncheckedBitmap(NULL); }
+extern "C" void ee_screenscpp_sh_radio_clear_up_unchecked(uintptr_t inControl)
+{ static_cast<UIRadioButton*>(C(inControl))->SetUpUncheckedBitmap(NULL); }
+extern "C" int64_t ee_screenscpp_sh_form_list_selection(uintptr_t inControl, int64_t inId, unsigned long* inSelection)
+{ return (int64_t)static_cast<UIListBox<UWideString>*>(C(inControl)->GetForm()->GetControlById((unsigned long)inId))->GetCurrentSelection(*inSelection); }
+extern "C" void ee_screenscpp_sh_editor_player(unsigned long* inSelection)
+{ gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(*inSelection); }
+extern "C" void ee_screenscpp_sh_tech_tree_move(int32_t inA, int32_t inB, int32_t inC, bool inFlag)
+{ (new EESEARust(kSEATechTree, NULL, inA, inB, inC, inFlag))->Dereference(); }
+extern "C" void ee_screenscpp_sh_combo_list_selection(uintptr_t inControl, unsigned long* inSelection)
+{ const_cast<UILBString*>(static_cast<UIComboBox*>(C(inControl))->GetListBox())->GetCurrentSelection(*inSelection); }
+extern "C" uintptr_t ee_screenscpp_sh_bitmap_new() { return (uintptr_t)new GEBitmap; }
+extern "C" void ee_screenscpp_sh_bitmap_texture_form(uintptr_t inBitmap, uintptr_t inTexture, uintptr_t inControl)
+{ reinterpret_cast<GEBitmap*>(inBitmap)->SetTexture(reinterpret_cast<GETexture*>(inTexture), C(inControl)->GetForm()->GetManager()->GetScreen()); }
+extern "C" void ee_screenscpp_sh_bitmap_texture_global(uintptr_t inBitmap, uintptr_t inTexture)
+{ reinterpret_cast<GEBitmap*>(inBitmap)->SetTexture(reinterpret_cast<GETexture*>(inTexture), gScreenIndex); }
+extern "C" void ee_screenscpp_sh_bitmap_coords(uintptr_t inBitmap, float inLeft, float inTop, float inRight, float inBottom)
+{ reinterpret_cast<GEBitmap*>(inBitmap)->SetTextureCoordinates(GETextureCoordinate(inLeft, inTop), GETextureCoordinate(inRight, inTop), GETextureCoordinate(inLeft, inBottom), GETextureCoordinate(inRight, inBottom)); }
+extern "C" float ee_screenscpp_sh_texture_width(uintptr_t inTexture)
+{ return (float)reinterpret_cast<GETexture*>(inTexture)->GetWidth(); }
+extern "C" float ee_screenscpp_sh_texture_height(uintptr_t inTexture)
+{ return (float)reinterpret_cast<GETexture*>(inTexture)->GetHeight(); }
+extern "C" bool ee_screenscpp_sh_has_user_interface() { return gUserInterface != NULL; }
+extern "C" void ee_screenscpp_sh_post_select_tab(uint8_t inTab, int32_t inPage)
+{ gUserInterface->PostSelectEditorTab((unsigned char)inTab, (long)inPage); }
+extern "C" void ee_screenscpp_sh_select_tab(uintptr_t inControl, uint8_t inTab, int32_t inPage)
+{ static_cast<EEUIFScenarioEditor*>(C(inControl)->GetForm())->SelectTab((unsigned char)inTab, (long)inPage); }
+extern "C" int64_t ee_screenscpp_sh_list_current(uintptr_t inControl, unsigned long* inSelection)
+{ return (int64_t)static_cast<UILBString*>(C(inControl))->GetCurrentSelection(*inSelection); }
+extern "C" uintptr_t ee_screenscpp_sh_form_control(uintptr_t inControl, int64_t inId)
+{ return (uintptr_t)C(inControl)->GetForm()->GetControlById((unsigned long)inId); }
+extern "C" bool ee_screenscpp_sh_is_radio(uintptr_t inControl)
+{ return dynamic_cast<UIRadioButton*>(C(inControl)) != NULL; }
+extern "C" bool ee_screenscpp_sh_radio_checked(uintptr_t inControl)
+{ return dynamic_cast<UIRadioButton*>(C(inControl))->GetIsChecked(); }
+extern "C" bool ee_screenscpp_sh_check_checked(uintptr_t inControl)
+{ return static_cast<UICheckBox*>(C(inControl))->GetIsChecked(); }
+extern "C" int64_t ee_screenscpp_sh_tech_name_id(int64_t inTechnology)
+{ return (int64_t)gTechTree.Get((long)inTechnology)->mData->mNameID; }
+extern "C" int64_t ee_screenscpp_sh_tech_class_name_id(int64_t inTechnology)
+{ return (int64_t)gUnitClassTable[gTechTree.Get((long)inTechnology)->mData->mUnitClass]->mNameStringID; }
+extern "C" uintptr_t ee_screenscpp_sh_player_tree(uint32_t inSelection)
+{ return (uintptr_t)gWorld.mPlayers[inSelection + 1]->GetTechTree(); }
+extern "C" int64_t ee_screenscpp_sh_tree_data_id(uintptr_t inTree, int64_t inTechnology)
+{ return (int64_t)TREE(inTree)->Get((long)inTechnology)->mData->mID; }
+extern "C" int64_t ee_screenscpp_sh_tree_depends(uintptr_t inTree, int64_t inTechnology, int64_t inOn)
+{ return (int64_t)TREE(inTree)->Get((long)inTechnology)->DependsOn((long)inOn); }
+extern "C" void ee_screenscpp_sh_tree_set_obsoleted(uintptr_t inTree, int64_t inTechnology, bool inObsoleted)
+{ TREE(inTree)->Get((long)inTechnology)->SetScenEditorObsoleted(inObsoleted, true); }
+extern "C" bool ee_screenscpp_sh_tree_epoch_reached(uintptr_t inTree, int64_t inTechnology)
+{ return TREE(inTree)->Get((long)inTechnology)->mEpoch <= TREE(inTree)->mCurrentEpoch; }
+extern "C" int64_t ee_screenscpp_sh_tree_obsoleted(uintptr_t inTree, int64_t inTechnology)
+{ return (int64_t)TREE(inTree)->Get((long)inTechnology)->mScenEditorObsoleted; }
+extern "C" void ee_screenscpp_sh_tree_mark_player(uintptr_t inTree)
+{ gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_MARK_CHANGED, TREE(inTree)->GetPlayer()->mPlayerID, false); }
+extern "C" int64_t ee_screenscpp_sh_class_name_id(int64_t inUnitClass)
+{ return (int64_t)gUnitClassTable[(long)inUnitClass]->mNameStringID; }
+extern "C" int64_t ee_screenscpp_sh_class_epoch(int64_t inUnitClass)
+{ return (int64_t)gUnitClassTable[(long)inUnitClass]->mEpoch; }
+extern "C" int64_t ee_screenscpp_sh_class_family(int64_t inUnitClass)
+{ return (int64_t)gUnitClassTable[(long)inUnitClass]->mFamily; }
+extern "C" void ee_screenscpp_sh_list_insert(uintptr_t inControl, uintptr_t inText, int64_t inIndex)
+{ static_cast<UILBString*>(C(inControl))->InsertLine(UWideString(reinterpret_cast<const char*>(inText)), (unsigned long)inIndex, sShNoSort); }
+extern "C" void ee_screenscpp_sh_list_data(uintptr_t inControl, int64_t inIndex, void* inOut)
+{ EEShimOutC(inOut, (const char*)static_cast<UILBString*>(C(inControl))->GetData((unsigned long)inIndex)); }
+extern "C" int64_t ee_screenscpp_sh_unit_name_id(uintptr_t inUnit)
+{ return (int64_t)reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mNameStringID; }
+extern "C" uint32_t ee_screenscpp_sh_unit_id(uintptr_t inUnit)
+{ return (uint32_t)reinterpret_cast<EEUnit*>(inUnit)->GetUnitID(); }
+extern "C" uint32_t ee_screenscpp_sh_ghost_count() { return (uint32_t)gWorld.GetNumGhostUnits(); }
+extern "C" void ee_screenscpp_sh_ghosts_enter() { gWorld.mGhostUnitsLock->Enter(); }
+extern "C" void ee_screenscpp_sh_ghosts_leave() { gWorld.mGhostUnitsLock->Leave(); }
+extern "C" bool ee_screenscpp_sh_ghost_turns(uint32_t inIndex)
+{ return gUnitClassTable[static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f; }
+extern "C" void ee_screenscpp_sh_tr_from_ghost(uint32_t inIndex)
+{ sShTransformation = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation; }
+extern "C" void ee_screenscpp_sh_tr_orient(float inAngle) { sShTransformation.SetOrientationYPR(inAngle, 0.0f, 0.0f); }
+extern "C" void ee_screenscpp_sh_tr_to_ghost(uint32_t inIndex)
+{ static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation = sShTransformation; }
+extern "C" uint32_t ee_screenscpp_sh_editor_selected_count(uintptr_t inControl)
+{ return (uint32_t)static_cast<EEUIFScenarioEditor*>(C(inControl)->GetForm())->GetSelectedUnitCount(); }
+extern "C" uintptr_t ee_screenscpp_sh_editor_selected(uintptr_t inControl, uint32_t inIndex)
+{ return (uintptr_t)static_cast<EEUIFScenarioEditor*>(C(inControl)->GetForm())->GetSelectedUnit(inIndex); }
+extern "C" bool ee_screenscpp_sh_unit_has_complex(uintptr_t inUnit)
+{ return reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit != NULL; }
+extern "C" bool ee_screenscpp_sh_unit_turns(uintptr_t inUnit)
+{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mAngularAcceleration > 0.0f; }
+extern "C" void ee_screenscpp_sh_tr_from_unit(uintptr_t inUnit)
+{ sShTransformation = reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit->mPhysicalModel.GetLocation(); }
+extern "C" void ee_screenscpp_sh_tr_to_unit(uintptr_t inUnit)
+{ reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit->SetTransformation(sShTransformation, true); }
+extern "C" int64_t ee_screenscpp_sh_key_load(uint32_t inWhich)
+{ return (int64_t)gISKeyboard->GetEntity(kShKeys[inWhich], sShKey); }
+extern "C" bool ee_screenscpp_sh_key_just_pressed() { return sShKey->JustPressed() != 0; }
+extern "C" bool ee_screenscpp_sh_key_just_unpressed() { return sShKey->JustUnpressed() != 0; }
+extern "C" int64_t ee_screenscpp_sh_key_value() { return (int64_t)sShKey->GetValue(); }
+extern "C" void ee_screenscpp_sh_screen_line(float inX, float inY)
+{ gWorld.mMap->GetScreenLine(GE2DPoint(inX, inY), sShLine); }
+extern "C" float ee_screenscpp_sh_line_start_x() { return sShLine.GetStart().GetX(); }
+extern "C" float ee_screenscpp_sh_line_start_y() { return sShLine.GetStart().GetY(); }
+extern "C" float ee_screenscpp_sh_line_start_z() { return sShLine.GetStart().GetZ(); }
+extern "C" float ee_screenscpp_sh_line_direction_x() { return sShLine.GetDirection().GetX(); }
+extern "C" float ee_screenscpp_sh_line_direction_y() { return sShLine.GetDirection().GetY(); }
+extern "C" float ee_screenscpp_sh_line_direction_z() { return sShLine.GetDirection().GetZ(); }
+extern "C" bool ee_screenscpp_sh_right_down(uintptr_t inControl) { return C(inControl)->GetRightMouseButtonDown(); }
+extern "C" bool ee_screenscpp_sh_left_down(uintptr_t inControl) { return C(inControl)->GetLeftMouseButtonDown(); }
+extern "C" bool ee_screenscpp_sh_has_capture(uintptr_t inControl) { return C(inControl)->GetHasMouseCapture(); }
+extern "C" int64_t ee_screenscpp_sh_paint_area(uintptr_t inPaint, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom)
+{ return (int64_t)reinterpret_cast<EESEAPaint*>(inPaint)->SetArea(inLeft, inTop, inRight, inBottom); }
+extern "C" int64_t ee_screenscpp_sh_slider_max(uintptr_t inControl, int64_t inId)
+{ return (int64_t)static_cast<UISlider*>(C(inControl)->GetForm()->GetControlById((unsigned long)inId))->GetMaxRange(); }
+extern "C" uint32_t ee_screenscpp_sh_slider_current(uintptr_t inControl, int64_t inId)
+{ return (uint32_t)static_cast<UISlider*>(C(inControl)->GetForm()->GetControlById((unsigned long)inId))->GetCurrentRangeValue(); }
+extern "C" uintptr_t ee_screenscpp_sh_rasterizer(uintptr_t inControl)
+{ return (uintptr_t)C(inControl)->GetRasterizer(); }
+extern "C" uint32_t ee_screenscpp_sh_screen_index(uintptr_t inControl)
+{ return (uint32_t)C(inControl)->GetScreenIndex(); }
+extern "C" uintptr_t ee_screenscpp_sh_copied_draw_rectangle(uintptr_t inControl)
+{ return (uintptr_t)&C(inControl)->GetCopiedDrawRectangle(); }

@@ -29,7 +29,7 @@ fn the_mouse_modes() {
     let mut f = Fake::default();
     f.answer("picked_owner_hostile", &[1]).answer("picked_seen_by_current", &[1]);
     assert_eq!(run(&mut f, EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_HOSTILE_SEEN, 0).0, Some(1));
-    assert_eq!(run(&mut Fake::default(), EE_SCREENS_MF_OP_MD_UNIT, 0, 0).0, None);
+    assert_eq!(run(&mut Fake::default(), EE_SCREENS_MF_OP_MD_UNIT, 0, 0).0, Some(0));
     let mut f = Fake::default();
     f.answer("mf_first_selected", &[1]).answer("mf_has_first", &[1]);
     assert_eq!(run(&mut f, EE_SCREENS_MF_OP_MD_FIRST, 0, 0).0, Some(3));
@@ -127,4 +127,95 @@ fn the_form() {
     f.answer("graphics", &[1]);
     run(&mut f, EE_SCREENS_MF_OP_GRAPHICS_UI, 0, 0);
     assert_eq!(f.calls(), "graphics()\ngfx_clear_render_objects()\ngfx_push_ui_render_object()");
+}
+
+#[test]
+fn the_rest_of_the_host_round_9() {
+    // a field read and set; the gate's wall search keeps its direction in io.n[0]
+    let mut f = Fake::default();
+    f.answer("mf_wall_state", &[6]);
+    assert_eq!(run(&mut f, EE_SCREENS_MF_OP_SET_FIELD, EE_SCREENS_MF_FIELD_WALL_STATE, 6).0, Some(6));
+    assert_eq!(f.calls(), "mf_set_wall_state(64, 6)\nmf_wall_state(64)");
+    let mut f = Fake::default();
+    f.answer("mf_find_gate_wall", &[1]).out("mf_find_gate_wall", 3);
+    let (r, io) = run(&mut f, EE_SCREENS_MF_OP_FIND_GATE_WALL, 10, 11);
+    assert_eq!((r, io.n[0]), (Some(1), 3));
+    assert_eq!(f.calls(), "mf_tile_x(10)\nmf_tile_y(11)\nmf_find_gate_wall(out)");
+    // the wall's preview: each tile, then the running placement's wall or the form's
+    let tiles: [[i32; 2]; 2] = [[1, 2], [3, 4]];
+    let mut f = Fake::default();
+    run(&mut f, EE_SCREENS_MF_OP_PREVIEW_WALL, 2, tiles.as_ptr() as i64);
+    assert_eq!(
+        f.calls(),
+        "mf_tiles_clear()\nmf_tile_x(1)\nmf_tile_y(2)\nmf_tiles_add()\nmf_tile_x(3)\nmf_tile_y(4)\nmf_tiles_add()\n\
+         mf_has_wall(64)\nmf_preview_wall_form(64)"
+    );
+    // a node, the produce check, the media
+    let mut f = Fake::default();
+    f.answer("mf_has_node", &[1, 1]).answer("mf_node_class_exists", &[1]);
+    assert_eq!(run(&mut f, EE_SCREENS_MF_OP_NODE, 5, 0).0, Some(1));
+    assert_eq!(run(&mut f, EE_SCREENS_MF_OP_NODE_CLASS, 0, 0).0, Some(1));
+    assert_eq!(f.calls(), "mf_node_load(64, 5)\nmf_has_node(64)\nmf_has_node(64)\nmf_node_class_exists(64)");
+    let mut f = Fake::default();
+    run(&mut f, EE_SCREENS_MF_OP_BUILD_TERMINATE, 1, 0);
+    run(&mut f, EE_SCREENS_MF_OP_TEXT_WONDER, 9, 30);
+    assert_eq!(f.calls(), "mf_gate_terminate(64)\nmf_wonder_format()\nmf_wonder_print(64, 9, 30)");
+}
+
+#[test]
+fn the_mouse_modes_round_9() {
+    // the point: the map point into io.f, or the tile into io.n (from -10000)
+    let mut f = Fake::default();
+    f.answer("md_point", &[1]).answer("md_point_x", &[5]).answer("md_point_z", &[2]);
+    let (r, io) = run(&mut f, EE_SCREENS_MF_OP_MD_POINT, 0, 0);
+    assert_eq!((r, io.f[0], io.f[1], io.f[2]), (Some(1), 5.0, 0.0, 2.0));
+    assert!(f.calls().starts_with("md_point_reset()\nmd_point(64, 1.0, 2.0)"));
+    let mut f = Fake::default();
+    let (_, io) = run(&mut f, EE_SCREENS_MF_OP_MD_POINT, 1, 0);
+    assert_eq!(io.n, [0, 0]);
+    assert_eq!(f.calls(), "md_point_xy(64, 1.0, 2.0, out, out)");
+    // the convert check's two bits, the sends, the order at the cursor
+    let mut f = Fake::default();
+    f.answer("md_can_convert", &[1]).answer("md_in_range", &[1]);
+    assert_eq!(run(&mut f, EE_SCREENS_MF_OP_MD_CAN_CONVERT, 2, 1).0, Some(3));
+    let mut f = Fake::default();
+    run(&mut f, EE_SCREENS_MF_OP_MD_SEND, EE_SCREENS_MF_SEND_UNLOAD, 0);
+    run(&mut f, EE_SCREENS_MF_OP_MD_SEND, 99, 0);
+    run(&mut f, EE_SCREENS_MF_OP_MD_ORDER_AT, 2, 0);
+    run(&mut f, EE_SCREENS_MF_OP_MD_CALAMITY_EFFECT, 0, 0);
+    assert_eq!(
+        f.calls(),
+        "md_send_unload(64, 7, 8)\nmd_send_rally(64, 1.0, 2.0, 7, 8)\nmd_has_picked(64)\nmd_order_at_none(1.0, 2.0)\n\
+         md_calamity_effect(64, 1.0, 2.0, 3.0)"
+    );
+    let mut f = Fake::default();
+    f.answer("md_damage", &[2]);
+    assert_eq!(run(&mut f, EE_SCREENS_MF_OP_MD_DAMAGE, 1, 2).1.f[0], 2.0);
+    for op in [
+        EE_SCREENS_MF_OP_MD_CAPTURED,
+        EE_SCREENS_MF_OP_MD_POINTER,
+        EE_SCREENS_MF_OP_MD_TILE_SEEN,
+        EE_SCREENS_MF_OP_MD_PICK,
+        EE_SCREENS_MF_OP_MD_PREVIEW,
+        EE_SCREENS_MF_OP_MD_CALAMITY_CHECK,
+        EE_SCREENS_MF_OP_MD_IN_GAME_VIEW,
+        EE_SCREENS_MF_OP_MD_ENTITY_ENABLED,
+        EE_SCREENS_MF_OP_MD_SET_ENTITY_GROUP,
+        EE_SCREENS_MF_OP_MD_GATE_CLEAR,
+        EE_SCREENS_MF_OP_POLL,
+        EE_SCREENS_MF_OP_LOG_LINE,
+        EE_SCREENS_MF_OP_SCROLL,
+        EE_SCREENS_MF_OP_POPULATION,
+        EE_SCREENS_MF_OP_LAG_COLOR,
+        EE_SCREENS_MF_OP_PLAY_SOUND,
+        EE_SCREENS_MF_OP_MEDIA,
+        EE_SCREENS_MF_OP_MEDIA_OLD,
+        EE_SCREENS_MF_OP_BG_TEXTURE,
+        EE_SCREENS_MF_OP_CALAMITY_CLASS,
+        EE_SCREENS_MF_OP_POST_SHOW_DIALOG,
+    ] {
+        let mut f = Fake::default();
+        assert!(run(&mut f, op, 1, 2).0.is_some(), "{op}");
+        assert!(!f.log.is_empty(), "{op}");
+    }
 }
