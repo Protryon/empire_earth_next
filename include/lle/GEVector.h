@@ -48,20 +48,7 @@ public:
         ESVERIFY_AT(theVector != NULL, 383);
         return theVector;
     }
-    void Normalize()
-    {
-        float theMagnitude = this->GetMagnitude();
-        if (theMagnitude >= -0.0001f && theMagnitude <= 0.0001f) {
-            this->mX = 0.0f;
-            this->mY = 0.0f;
-            this->mZ = 0.0f;
-        } else {
-            float theScale = 1.0f / theMagnitude;
-            this->mX *= theScale;
-            this->mY *= theScale;
-            this->mZ *= theScale;
-        }
-    }
+    void Normalize() { ee_ge_vector_normalize(GERust(*this)); }
     // inline (no import in Default.dll; LLE's exported body 0xc3d4 is this expression; 0xc29f keeps the scale in
     // st0 across the three products, its tail-merged branches load only the scale)
     void Scale(float inScale, GEVector& outVector) const

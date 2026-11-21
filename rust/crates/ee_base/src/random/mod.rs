@@ -55,6 +55,81 @@ pub fn float_to_long(value: f32) -> i32 {
     value.round_ties_even() as i32
 }
 
+/// The C++ `URandom` (`include/lle/URandom.h`, sizeof 16): the seed and the generator's own constants, which its
+/// `Generate` uses (always the constants above in the game; `operator=` copies them).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EeURandom {
+    pub seed: u32,
+    pub multiplier: u32,
+    pub modulus: u32,
+    pub increment: u32,
+}
+
+impl EeURandom {
+    /// `NextInSeries`.
+    pub fn next_in_series(&mut self) -> u32 {
+        self.seed = self.multiplier.wrapping_mul(self.seed).wrapping_add(self.increment) % self.modulus;
+        self.seed
+    }
+}
+
+/// `gURandomTraceHook` (TEST ONLY, EESim.cpp's RNG trace): called after each `Generate` draw.
+pub type EeURandomTraceHook = Option<unsafe extern "C" fn(random: *mut EeURandom)>;
+
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod hook {
+    extern "C" {
+        pub static gURandomTraceHook: super::EeURandomTraceHook;
+    }
+}
+
+/// `URandom::NextInSeries()`.
+///
+/// # Safety
+/// `r` is a live `URandom`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_urandom_next(r: *mut EeURandom) -> u32 {
+    // SAFETY: the caller's contract
+    unsafe { (*r).next_in_series() }
+}
+
+/// `URandom::Generate()`: the next value in [0, 1), divided in `double` by the generator's modulus; the trace hook
+/// sees the generator after the draw.
+///
+/// # Safety
+/// `r` is a live `URandom`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_urandom_generate(r: *mut EeURandom) -> f32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        (*r).next_in_series();
+        #[cfg(not(test))]
+        if let Some(trace) = hook::gURandomTraceHook {
+            trace(r);
+        }
+        (f64::from((*r).seed) / f64::from((*r).modulus)) as f32
+    }
+}
+
+/// `URandomIntegers::Generate(inMinimum, inMaximum)`: integers in `min..=max` (`long` arithmetic, `UMFloatToLong`).
+///
+/// # Safety
+/// `r` is a live `URandom`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_urandom_generate_int(r: *mut EeURandom, min: std::ffi::c_long, max: std::ffi::c_long) -> std::ffi::c_long {
+    let limit = max.wrapping_add(1);
+    // SAFETY: the caller's contract
+    let value = unsafe { ee_urandom_generate(r) } * limit.wrapping_sub(min) as f32 + min as f32;
+    let result = value.round_ties_even() as std::ffi::c_long;
+    if result == limit {
+        max
+    } else {
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,5 +215,21 @@ mod tests {
             let v = r.generate_int(3, 5);
             assert!((3..=5).contains(&v));
         }
+    }
+
+    #[test]
+    fn the_cpp_record_draws_the_same_series() {
+        let mut r = EeURandom { seed: 1, multiplier: MULTIPLIER, modulus: MODULUS, increment: INCREMENT };
+        let mut u = URandom::new(1);
+        for _ in 0..100 {
+            // SAFETY: a local record
+            assert_eq!(unsafe { ee_urandom_generate(&mut r) }.to_bits(), u.generate().to_bits());
+        }
+        for _ in 0..100 {
+            // SAFETY: as above
+            assert_eq!(unsafe { ee_urandom_generate_int(&mut r, -5, 17) } as i32, u.generate_int(-5, 17));
+        }
+        // SAFETY: as above
+        assert_eq!(unsafe { ee_urandom_next(&mut r) }, u.next_in_series());
     }
 }

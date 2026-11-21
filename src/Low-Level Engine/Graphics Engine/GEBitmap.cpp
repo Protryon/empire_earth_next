@@ -49,23 +49,9 @@
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-// Advances the random generator one step and returns the new seed as a fraction in [0, 1)
-void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
+// The RNG trace hook (the draws are Rust: ee_base random)
+extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
 
-float URandom::Generate()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    if (gURandomTraceHook != NULL)
-        gURandomTraceHook(this);
-    return (float)((double)this->mSeed / (double)this->mModulus);
-}
-
-// Advances the random generator one step and returns the new seed
-unsigned long URandom::NextInSeries()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return this->mSeed;
-}
 
 // ---- GEBitmap (0x1000f3a4..). Vertex order: 0 top left, 1 top right, 2 bottom left, 3 bottom right.
 //
