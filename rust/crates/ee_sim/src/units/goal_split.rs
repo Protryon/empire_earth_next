@@ -247,7 +247,7 @@ const ACTION_FIND_NEW_STORAGE: u32 = 4007;
 /// `kResourceStone`
 const RESOURCE_STONE: u64 = 4;
 /// the hunt's action (0x7e0)
-const ACTION_HUNT: i64 = 0x7e0;
+const HUNT_ACTION: i64 = 0x7e0;
 
 /// A unit's plain member the splits read (the world views').
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -655,12 +655,12 @@ pub fn split<H: GoalSplitHost + ?Sized>(h: &mut H, op: i32, a: u64, b: u64, io: 
         }
         EE_UNITS_GOAL_HOST_HUNT => {
             if !(h.read(b, UnitRead::HitPoints) > 0
-                && op_ints(h, EE_UNITS_GOAL_HOST_X_FIND_ACTION, a, 0, &[ACTION_HUNT]) != 0)
+                && op_ints(h, EE_UNITS_GOAL_HOST_X_FIND_ACTION, a, 0, &[HUNT_ACTION]) != 0)
             {
                 return Some(0);
             }
             op_ints(h, EE_UNITS_GOAL_HOST_X_SET_ATTACK_GOAL, a, b, &[io.i[0]]);
-            op_ints(h, EE_UNITS_GOAL_HOST_X_START_ACTION, a, 0, &[ACTION_HUNT]);
+            op_ints(h, EE_UNITS_GOAL_HOST_X_START_ACTION, a, 0, &[HUNT_ACTION]);
             op0(h, EE_UNITS_GOAL_HOST_ACTION_CHANGED, a, 0);
             1
         }
