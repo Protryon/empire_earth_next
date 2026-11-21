@@ -112,6 +112,10 @@ struct R<'a, H: SaveHost> {
     flag: u8,
     /// `theState` (a `long`)
     state: i64,
+    /// the file's minor version (the build queue's entries)
+    minor: u32,
+    /// the file carries the running state (the live state's counters and contacts)
+    running: bool,
 }
 
 impl<H: SaveHost> R<'_, H> {
@@ -148,13 +152,6 @@ impl<H: SaveHost> R<'_, H> {
     fn section(&mut self, index: u32) -> (i32, bool) {
         let mut io = EeUnitsUnitSaveIo::default();
         let r = self.host.op(EE_UNITS_UNIT_LOAD_SECTION, index, &mut io);
-        (r, io.b != 0)
-    }
-    /// A section that reads into the original's `theValue` (the citizen queue, the cargo, the held units).
-    fn section_value(&mut self, index: u32) -> (i32, bool) {
-        let mut io = EeUnitsUnitSaveIo { i: self.value, ..Default::default() };
-        let r = self.host.op(EE_UNITS_UNIT_LOAD_SECTION, index, &mut io);
-        self.value = io.i;
         (r, io.b != 0)
     }
     fn part(&mut self, index: u32) -> i32 {
@@ -243,7 +240,7 @@ macro_rules! chain {
 /// # Safety
 /// `rts` points to a live record.
 pub unsafe fn rts_load<H: SaveHost>(host: &mut H, rts: *mut EeUnitsRtsUnitFields) -> i32 {
-    let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0 };
+    let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0, minor: 0, running: false };
     let r = rd_long!(rd, rts, mTileX);
     if r != 0 {
         return r;
@@ -281,7 +278,7 @@ pub unsafe fn unit_load<H: SaveHost>(
     // SAFETY: the caller's contract
     let mut r = unsafe { rts_load(host, rts) };
     if r == 0 {
-        let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0 };
+        let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0, minor: 0, running: false };
         r = rd_ulong!(rd, unit, mResourceType);
         if r == 0 {
             r = rd.fraction();
@@ -309,7 +306,7 @@ pub unsafe fn complex_load_rest<H: SaveHost>(
     inp: &EeUnitsUnitSaveIn,
     base: i32,
 ) -> i32 {
-    let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0 };
+    let mut rd = R { host, value: 0, fraction: 0.0, flag: 0, state: 0, minor: inp.minor, running: inp.running_state != 0 };
     let (major, minor) = (inp.major, inp.minor);
     let mut r = base;
     if r == 0 {
@@ -409,7 +406,7 @@ pub unsafe fn complex_load_rest<H: SaveHost>(
             rd.value();
             rd.set(EE_UNITS_UNIT_LOAD_SET_HOLDER, rd.value, 0.0);
         }
-        let (res, jumped) = rd.section_value(EE_UNITS_UNIT_LOAD_SECTION_HELD_UNITS);
+        let (res, jumped) = crate::units::dop_load::held_units(rd.host, &mut rd.value);
         r = res;
         if !jumped {
             r = load_to_late(&mut rd, cx);
@@ -419,9 +416,7 @@ pub unsafe fn complex_load_rest<H: SaveHost>(
             r = rd_bool!(rd, cx, mIsFoundation);
             if r == 0 && (major != 0 || minor >= 0xcd) {
                 // (its loop reads into the original's `theState`)
-                let mut io = EeUnitsUnitSaveIo { i: rd.state, ..Default::default() };
-                r = rd.host.op(EE_UNITS_UNIT_LOAD_SECTION, EE_UNITS_UNIT_LOAD_SECTION_UNIT_VARIABLES, &mut io);
-                rd.state = io.i;
+                r = crate::units::dop_load::unit_variables(rd.host, &mut rd.state);
             }
         }
         if minor >= 0xd3 && r == 0 {
@@ -464,7 +459,7 @@ pub unsafe fn complex_load_rest<H: SaveHost>(
         r = rd_ulong!(rd, cx, mU32C);
     }
     if r == 0 && inp.live_state != 0 {
-        r = rd.section(EE_UNITS_UNIT_LOAD_SECTION_LIVE_STATE).0;
+        r = crate::units::dop_load::live_state(rd.host, rd.running);
     }
     r
 }
@@ -476,9 +471,10 @@ fn load_to_flags<H: SaveHost>(rd: &mut R<'_, H>, cx: *mut EeUnitsComplexUnitFiel
     rd.set(EE_UNITS_UNIT_LOAD_SET_DEFAULT_BEHAVIOR, 0, 0.0);
     // each section's count read starts a new result: the build queue's, the citizen queue's and the cargo's errors
     // are not tested
-    rd.section(EE_UNITS_UNIT_LOAD_SECTION_BUILD_QUEUE);
-    rd.section_value(EE_UNITS_UNIT_LOAD_SECTION_CITIZEN_QUEUE);
-    rd.section_value(EE_UNITS_UNIT_LOAD_SECTION_CARGO);
+    use crate::units::dop_load as dl;
+    dl::build_queue(rd.host, rd.minor);
+    dl::ids(rd.host, dl::EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_CLEAR, dl::EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_PUSH, &mut rd.value);
+    dl::ids(rd.host, dl::EE_UNITS_UNIT_LOAD_SET_CARGO_CLEAR, dl::EE_UNITS_UNIT_LOAD_SET_CARGO_PUSH, &mut rd.value);
     let mut r = rd.section(EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS).0;
     if r != 0 {
         return r;
