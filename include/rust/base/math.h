@@ -46,6 +46,14 @@ struct EeGe3DPlane {
   EeGeVector normal;
 };
 
+/// `GERectangle` (sizeof 0x10), in the C++'s member order.
+struct EeGeRectangle {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
 /// `GE2DPoint` (sizeof 8).
 struct EeGe2DPoint {
   float x;
@@ -72,14 +80,6 @@ struct EeGeBoundingBox {
   float width;
   float height;
   float depth;
-};
-
-/// `GERectangle` (sizeof 0x10), in the C++'s member order.
-struct EeGeRectangle {
-  float bottom;
-  float left;
-  float right;
-  float top;
 };
 
 /// Receives one rectangle of a split.

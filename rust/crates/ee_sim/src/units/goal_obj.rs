@@ -199,8 +199,12 @@ pub unsafe extern "C" fn base_host_op(context: *mut c_void, op: i32, a: u64, b: 
             }
             0
         }
-        // SAFETY: the wrapped table's contract
-        _ => unsafe { (inner.op)(inner.context, op, a, b, io) },
+        // the compound operations in their statements (goal_split.rs), the rest one statement of the wrapped table
+        _ => {
+            let mut h = crate::units::goal_split::FfiSplit(inner);
+            crate::units::goal_split::split(&mut h, op, a, b, io)
+                .unwrap_or_else(|| crate::units::goal_split::GoalSplitHost::raw(&mut h, op, a, b, io))
+        }
     }
 }
 
