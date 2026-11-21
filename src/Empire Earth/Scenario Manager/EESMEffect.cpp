@@ -84,25 +84,11 @@ extern "C" int64_t ee_scenariocpp_effect(uint32_t inOp, void* a, const void* b, 
 
 // Sets, raises or lowers a player value: a resource, the population cap (also queued as a pending effect), difficulty,
 // a scenario variable, a tribute or other statistic or the mining limit; any/all resources recurse per resource
+// (ee_scenario player.rs: the plan of writes, EEScenarioHost.cpp's write callback; the any/all resources come back
+// here; entry.rs adds the simulation capture's SMPA record)
 void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
 {
-    if (!EESimCaptureRecord::Active()) {
-        this->SetPlayerAttributeUncaptured(inPlayer, inAttribute, inMode, inAmount);
-        return;
-    }
-    unsigned int theSeed = EESMCaptureSeed();
-    this->SetPlayerAttributeUncaptured(inPlayer, inAttribute, inMode, inAmount);
-    EESMCapturePlayerAttribute(inPlayer, inAttribute, inMode, inAmount, theSeed);
-}
-
-// SetPlayerAttribute's body (SetPlayerAttribute adds the simulation capture's SMPA record: ee/EEScenarioCapture.h)
-void EESMEffect::SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
-{
-    // ee_scenario player.rs: the plan of writes (EEScenarioHost.cpp's Write; the any/all resources come back here
-    // through SetPlayerAttribute)
-    EESMHostContext theContext = {NULL, NULL, this};
-    EeScenarioHost theHost = EESMHost(&theContext);
-    ee_scenario_set_player_attribute(&theHost, inPlayer, inAttribute, inMode, inAmount);
+    ee_scenario_en_effect_set_player_attribute(this, inPlayer, inAttribute, inMode, inAmount);
 }
 
 #include "lle/GETerrainMesh.h"
@@ -148,53 +134,32 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
 // media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
+// (entry.rs: ExecuteUncaptured with the simulation capture's SMEX record)
 void EESMEffect::Execute(bool inIsCinematic)
 {
-    if (!EESimCaptureRecord::Active()) {
-        this->ExecuteUncaptured(inIsCinematic);
-        return;
-    }
-    unsigned int theSeed = EESMCaptureSeed();
-    this->ExecuteUncaptured(inIsCinematic);
-    EESMCaptureEffect(this, inIsCinematic, theSeed);
+    ee_scenario_en_effect_execute(this, inIsCinematic);
 }
 
 // Copies a message text, replacing each /#OA, /#PA or /#OC tag and its 4-digit id with an object's attribute value,
 // a player condition's current value or an object's unit count
+// (ee_scenario tokens.rs expand_tokens; entry.rs adds the simulation capture's SMTK record)
 void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
 {
-    bool theCapture = EESimCaptureRecord::Active();
-    unsigned int theSeed = theCapture ? EESMCaptureSeed() : 0;
-    UWideString theText(inText);
-    EESMHostContext theContext = {NULL, NULL, this, NULL, NULL};
-    EeScenarioHost theHost = EESMHost(&theContext);   // ee_scenario tokens.rs expand_tokens
-    char* theResult = ee_scenario_expand_tokens(&theHost, (const char*)inText);
-    outText = theResult;
-    ee_scenario_text_free(theResult);
-    if (theCapture)
-        EESMCaptureTokens(theText, outText, theSeed);   // TEST ONLY: SMTK
+    ee_scenario_en_effect_expand_tokens(this, (void*)&inText, &outText);
 }
 
 // Reads the effect from a scenario file, renumbering player actions and unit attributes of older files; returns the
 // first read error (ee_scenario save.rs effect_load)
 long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mMessage, &this->mS64, &this->mS78,
-                                 &this->mNewName, &this->mFileName, &this->mDescription};
-    EESMStream theStream = {&inFile, theStrings, &this->mObjects};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    return ee_scenario_effect_load(&theTable, this, inMajorVersion, inMinorVersion);
+    return ee_scenario_en_effect_io(this, &inFile, inMajorVersion, inMinorVersion, false);
 }
 
 // Writes the effect to a scenario file (civ points from minor version 0x2a, mB193 from 0x14); returns the first write
 // error (ee_scenario save.rs effect_save)
 long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mMessage, &this->mS64, &this->mS78,
-                                 &this->mNewName, &this->mFileName, &this->mDescription};
-    EESMStream theStream = {&outFile, theStrings, &this->mObjects};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
+    return ee_scenario_en_effect_io(this, &outFile, inMajorVersion, inMinorVersion, true);
 }
 
 
@@ -376,11 +341,6 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
 // a class attribute's and Set AI Variable's world calls (ca_compose.rs, ai_store.rs EE_SCENARIO_WK_*: the Rust
 // composes EE_SCENARIO_WORLD_CA_* and _AI_STORE and reads and writes the upgrade's, class's and computer player's
 // records itself): one statement each, on handles
-static_assert(EE_SCENARIO_SM_EFFECT_OBJECT == 1 && EE_SCENARIO_SM_OBJECT_ACTION_UNIT_ATTRIBUTE == 8 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_SHOCK_ARMOR_PLUS == 20 &&
-                  EE_SCENARIO_SM_UNIT_ATTRIBUTE_RELOAD_TIME_PLUS == 26 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_RANGE_PLUS == 36 &&
-                  EE_SCENARIO_SM_UNIT_ATTRIBUTE_LINE_OF_SIGHT_PLUS == 37 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_MAX_VELOCITY_PLUS == 38 &&
-                  EE_SCENARIO_SM_UNIT_ATTRIBUTE_ANIMAL_AI_ACTIVE_PLUS == 40 && EE_SCENARIO_SM_UNIT_ATTRIBUTE_CAMERA_FOCUS_PLUS == 41,
-              "ca_compose.rs's numbers");
 std::vector<EEHerd*> sSMEHerds;   // GetHerdsOfType's list (the original's local)
 EEPlayer* SMEPlayerOf(int64_t inHandle) { return (EEPlayer*)(intptr_t)inHandle; }
 EEUnitClassUpgrade* SMEUpgradeOf(int64_t inHandle) { return (EEUnitClassUpgrade*)(intptr_t)inHandle; }
@@ -1035,7 +995,7 @@ int64_t SMEYWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
 
 int64_t SMEReadWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);   // EEScenarioHost.cpp
 int64_t SMEObjectWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);   // EESMObject.cpp
-int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
+extern "C" int64_t ee_scenariocpp_host_world(void* inContext, uint32_t inOp, const int64_t* a)
 {
     if (inOp >= EE_SCENARIO_WORLD_CU_RANDOM && inOp <= EE_SCENARIO_WORLD_CU_SET)   // EEChangeUnit's (no effect run)
         return SMEChangeUnitWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
