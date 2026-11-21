@@ -28,11 +28,6 @@ public:
     EECPPlacement(EEComputerPlayer* inPlayer);
     ~EECPPlacement();
     static const UString sData;             // "EECPBuildManager-Data" (the original's key)
-    // a unit the player gained: the first of a class that is not a land building sets the town centre tile while
-    // there is none (the original unit manager's UnitAdded rule)
-    void UnitAdded(EEComplexUnit* inUnit);
-    void Reset();                           // no town centre tile
-    long Restore();                         // the site tiles collected again
     long Load(FSFile& inFile);              // the town centre tile
     long Save(FSFile& outFile);
 
@@ -50,7 +45,5 @@ long EECPFishingBoatClass(EEComputerPlayer* inPlayer);
 long EECPGateClass(EEComputerPlayer* inPlayer);
 long EECPTowerClass(EEComputerPlayer* inPlayer);
 long EECPWallClass(EEComputerPlayer* inPlayer);
-// the player's living units of a class
-long EECPCountOwn(EEComputerPlayer* inPlayer, long inType);
 
 #endif

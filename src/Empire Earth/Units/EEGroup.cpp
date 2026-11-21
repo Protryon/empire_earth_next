@@ -1,7 +1,9 @@
 // C:\EEX\Empire Earth\Units\EEGroup.cpp (file name inferred: no __FILE__). A group of units: 0x205eda..0x20834c.
-// Order: the two key statics' `$E` chains, EEGroupPathRequest (ctor, ??_G, dtor,
-// Cancel), EEGroup's members and vtable slots, MakeClusters, then the template COMDATs (EEGroupCluster's inline ctor,
-// map<long, EEGroupPathRequest*>, map<unsigned short, vector<EEComplexUnit*> >, vector<vector<GE3DPoint> >).
+// port (the groups lane, round 1): the groups are Rust objects (ee_units group_obj.rs: EEGroup, EESavedGroup,
+// EESelectedGroup, EEActiveGroup with their path requests and clusters; ee/EEPlayer.h names them). This unit is the
+// C++ their bodies call (ee_units_group_host: the reference counts, the formation, the path and continent managers,
+// the user interface, the map's outlines, the saved game's path requests), EEGroup::GetFlags and the active groups'
+// saved-game entry points.
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +24,7 @@
 #include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GERectangle.h"
+#include "lle/FSFile.h"
 
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
@@ -36,282 +39,16 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEAutoPathRequest.h"
-#include "ee/EEGroupPathRequest.h"
-#include "ee/EEGroupCluster.h"
-
-const UString EEGroup::sNumSelectedUnitsStringID("EEGroup-NumSelectedUnitsStringID");
-const UString EEGroup::sUnitIDStringID("EEGroup-UnitIDStringID");
-
-// Creates a group path request holding the path (referenced) and the ids of the units that follow it
-EEGroupPathRequest::EEGroupPathRequest(EEAutoPathRequest* inPath, const std::vector<long>& inUnitIDs, long inArg3)
-    : mPath(NULL)
-{
-    if (inPath)
-        inPath->Reference();
-    this->mPath = inPath;
-    this->mUnitIDs = inUnitIDs;
-    this->mL30 = inArg3;
-}
-
-// Destroys the request, releasing its path
-EEGroupPathRequest::~EEGroupPathRequest()
-{
-    if (this->mPath)
-        this->mPath->Dereference();
-}
-
-// Cancels the pending path with the path manager and releases it
-void EEGroupPathRequest::Cancel()
-{
-    if (!this->mPath)
-        return;
-    gPathManager.CancelAutoPathRequest(this->mPath);
-    this->mPath->Dereference();
-    this->mPath = NULL;
-}
-
-// Creates an empty group for a player with the default formation
-EEGroup::EEGroup(EEPlayer* inPlayer)
-{
-    this->mPlayer = inPlayer;
-    this->mFormation = EEFormation::Create(0);
-    this->mKindFlags = 0;
-}
-
-// Destroys the group, cancelling and deleting its path requests and releasing its formation
-EEGroup::~EEGroup()
-{
-    std::map<long, EEGroupPathRequest*>::iterator it;
-    for (it = this->mPathRequests.begin(); it != this->mPathRequests.end(); it++) {
-        gPathManager.CancelAutoPathRequest(it->second->mPath);
-        delete it->second;
-    }
-    if (this->mFormation)
-        this->mFormation->Dereference();
-}
-
-// Copies another group's units, type counts and kind flags, moving the unit references over
-EEGroup& EEGroup::CopyGroup(EEGroup* inGroup)
-{
-    std::vector<EEComplexUnit*>::iterator it;
-    for (it = this->mUnits.begin(); it != this->mUnits.end(); it++)
-        (*it)->Dereference();
-    this->mUnitTypeCounts = inGroup->mUnitTypeCounts;
-    this->mUnits = inGroup->mUnits;
-    this->mKindFlags = inGroup->mKindFlags;
-    for (it = this->mUnits.begin(); it != this->mUnits.end(); it++)
-        (*it)->Reference();
-    return *this;
-}
-
-// Adds a unit (referenced) and counts its type and kind flags
-void EEGroup::Add(EEComplexUnit* inUnit)
-{
-    long theType = inUnit->mUnitClass->mUnitType;
-    this->mUnits.push_back(inUnit);
-    inUnit->Reference();
-    this->mKindFlags |= inUnit->mUnitClass->mKindFlags;
-    std::map<long, long>::iterator it = this->mUnitTypeCounts.find(theType);
-    if (it != this->mUnitTypeCounts.end())
-        it->second++;
-    else
-        this->mUnitTypeCounts.insert(std::map<long, long>::value_type(theType, 1));
-}
-
-// Returns the rectangle around the group's units that are on the map
-void EEGroup::GetBounds(GERectangle& outBounds)
-{
-    bool theFirst = false;
-    GE2DPoint thePoint;
-    for (unsigned long i = 0; i < this->GetNumUnits(); i++) {
-        EEComplexUnit* theUnit = this->GetUnit(i);
-        float theX = theUnit->mPhysicalModel.GetLocation().GetX();
-        thePoint.SetX(theX);
-        thePoint.SetY(theUnit->mPhysicalModel.GetLocation().GetY());
-        if (theUnit->mTile == NULL || theUnit->mTileX == -10000)
-            continue;
-        if (theFirst) {
-            outBounds.Extend(thePoint);
-        } else {
-            theFirst = true;
-            outBounds.SetBottom(thePoint.GetY());
-            outBounds.SetRight(theX);
-            outBounds.SetTop(thePoint.GetY());
-            outBounds.SetLeft(theX);
-        }
-    }
-}
-
-// Cancels and deletes the path request with the given id
-void EEGroup::Remove(long inPathID)
-{
-    std::map<long, EEGroupPathRequest*>::iterator it = this->mPathRequests.find(inPathID);
-    if (it == this->mPathRequests.end())
-        return;
-    EEGroupPathRequest* theRequest = it->second;
-    theRequest->Cancel();
-    this->mPathRequests.erase(it);
-    delete theRequest;
-}
-
-// Returns the terrain flags every unit in the group shares
-EECPASGFlags EEGroup::GetFlags()
-{
-    EECPASGFlags theResult;
-    EECPASGFlags theUnitFlags;
-    memset(theResult.mFlags, 1, sizeof(theResult.mFlags));
-    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        memset(theUnitFlags.mFlags, 0, sizeof(theUnitFlags.mFlags));
-        theUnitFlags.mPlayerID = 0;
-        this->GetUnitAt(i)->mUnitClass->GetTerrainFlags(this->GetUnitAt(i), theUnitFlags);
-        theResult.And(theUnitFlags);
-    }
-    return theResult;
-}
-
-// Returns whether the unit is in the group
-bool EEGroup::Contains(EEComplexUnit* inUnit)
-{
-    std::vector<EEComplexUnit*>::iterator theEnd = this->mUnits.end();
-    std::vector<EEComplexUnit*>::iterator it;
-    for (it = this->mUnits.begin(); it != theEnd; it++) {
-        if (*it == inUnit)
-            break;
-    }
-    return it != theEnd;
-}
-
-// Replaces the group's units and formation with another group's, keeping only valid units on the map
-void EEGroup::CopyUnits(EEGroup* inGroup)
-{
-    unsigned long theCount = inGroup->GetNumUnits();
-    this->Clear();
-    this->SetFormation(inGroup->mFormation);
-    this->mUnits.reserve(theCount);
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = inGroup->GetUnit(i);
-        if (theUnit->mIsValid && theUnit->mTileX != -10000 && theUnit->mTileY != -10000)
-            this->Add(theUnit);
-    }
-}
-
-// Returns the first unit of a category, or NULL
-EEComplexUnit* EEGroup::FindUnitOfCategory(long inCategory)
-{
-    EEComplexUnit* theResult = NULL;
-    for (std::vector<EEComplexUnit*>::iterator it = this->mUnits.begin(); it != this->mUnits.end(); it++) {
-        if ((*it)->mUnitClass->mCategory == inCategory) {
-            theResult = *it;
-            break;
-        }
-    }
-    return theResult;
-}
-
-// Returns the first unit whose class has any of the kind flags, or NULL
-EEComplexUnit* EEGroup::FindUnitWithFlags(unsigned long inFlags)
-{
-    EEComplexUnit* theResult = NULL;
-    if ((this->mKindFlags & inFlags) > 0) {
-        for (std::vector<EEComplexUnit*>::iterator it = this->mUnits.begin(); it != this->mUnits.end(); it++) {
-            if (((*it)->mUnitClass->mKindFlags & inFlags) > 0) {
-                theResult = *it;
-                break;
-            }
-        }
-    } else {
-        theResult = NULL;
-    }
-    return theResult;
-}
-
-// Counts the group's units of a category
-long EEGroup::CountUnitsOfKind(long inKind)
-{
-    long theCount = 0;
-    for (std::vector<EEComplexUnit*>::iterator it = this->mUnits.begin(); it != this->mUnits.end(); it++) {
-        if ((*it)->mUnitClass->mCategory == inKind)
-            theCount++;
-    }
-    return theCount;
-}
-
-// Returns the pending path request that carries the unit, or NULL
-EEGroupPathRequest* EEGroup::FindPathRequest(EEComplexUnit* inUnit)
-{
-    EEGroupPathRequest* theResult = NULL;
-    std::map<long, EEGroupPathRequest*>::iterator it;
-    for (it = this->mPathRequests.begin(); it != this->mPathRequests.end(); it++) {
-        EEGroupPathRequest* theRequest = it->second;
-        std::vector<long>::iterator theID;
-        for (theID = theRequest->mUnitIDs.begin(); theID != theRequest->mUnitIDs.end(); theID++) {
-            if (*theID == (long)inUnit->mUnitID) {
-                theResult = it->second;
-                break;
-            }
-        }
-        if (theResult != NULL)
-            break;
-    }
-    return theResult;
-}
-
-// port (R5b.4, round 30): Load's and Save's bodies are Rust (ee_units group_save.rs) over these parts and the file's
-// primitives (EESavePrimitive)
-struct EEGroupSaveContext {
-    EEGroup* mGroup;
-    FSFile* mFile;
-};
-
-static int32_t EEGroupSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
-{
-    EEGroupSaveContext& theContext = *static_cast<EEGroupSaveContext*>(inContext);
-    EEGroup* theGroup = theContext.mGroup;
-    switch (inOp) {
-    case EE_UNITS_GROUP_SAVE_FORMATION_SET: {
-        EEFormation* theFormation = EEFormation::Create((unsigned long)io->i);
-        if (theFormation) {
-            if (theGroup->mFormation)
-                theGroup->mFormation->Dereference();
-            theGroup->mFormation = theFormation;
-        }
-        return 0;
-    }
-    case EE_UNITS_GROUP_SAVE_PUSH_ID: theGroup->mUnits.push_back(reinterpret_cast<EEComplexUnit*>((unsigned long)io->i)); return 0;
-    case EE_UNITS_GROUP_SAVE_KIND: io->i = theGroup->mFormation ? (int64_t)theGroup->mFormation->mType : 8; return 0;
-    case EE_UNITS_GROUP_SAVE_COUNT: io->i = (int64_t)theGroup->mUnits.size(); return 0;
-    case EE_UNITS_GROUP_SAVE_UNIT_ID: io->i = (int64_t)theGroup->GetUnitAt(inIndex)->mUnitID; return 0;
-    }
-    return EESavePrimitive(*theContext.mFile, inOp, io);
-}
-
-// Reads the formation kind (8 = keep the current one) and appends the unit ids from the saved game;
-// returns the first count or id read error
-long EEGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    EEGroupSaveContext theContext = {this, &inFile};
-    return ee_units_group_load(&theContext, &EEGroupSaveOperation);
-}
-
-// Requests one path for a cluster's units; follows it at once if it is already found, else keeps the request
-void EEGroup::RequestPath(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, EEGroupCluster* inCluster)
-{
-    std::vector<long> theIDs;
-    if (inCluster->mUnits.size() != 0) {
-        for (long i = inCluster->mUnits.size() - 1; i >= 0; i--)
-            theIDs.push_back(inCluster->mUnits[i]->mUnitID);
-        EEAutoPathRequest* thePath = gPathManager.RequestPath(this->mPlayer->GetPlayerID(), inFrom, inTo, &inCluster->mFlags, 1, -1, NULL, 0);
-        EEGroupPathRequest* theRequest = new EEGroupPathRequest(thePath, theIDs, 0);
-        thePath->Dereference();
-        if (thePath && thePath->mIsDone) {
-            this->MoveAlong(theRequest);
-            delete theRequest;
-        } else {
-            this->mPathRequests.insert(std::map<long, EEGroupPathRequest*>::value_type(thePath->mRequestID, theRequest));
-        }
-    }
-}
-
+#include "ee/EEUserInterface.h"
+#include "ee/EEMap.h"
+#include "ee/EEAEManager.h"
+#include "ee/EEAreaEffectTemplate.h"
+#include "ee/EEAIKindIDs.h"
+#include "ee/EESaveGameFiles.h"
+#include "ee/EEDoppelgangerManager.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
 #include <math.h>
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
@@ -320,10 +57,12 @@ void EEGroup::RequestPath(const EETileCoordinate& inFrom, const EETileCoordinate
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEMapDimensions.h"
+#include "rust/sim/units.h"
+
+static_assert(sizeof(GERectangle) == 4 * sizeof(float), "GetBounds hands Rust the rectangle's four floats");
 
 // EEAIContinentManager::GetPathAreaIDAt (inline, its out-of-line COMDAT 0x208334 follows this unit's template
-// block; MoveAlong's first site calls it, the second expands it): the path area's id at inTile, 0 if none.
-// The ternary is unsigned short on both arms (mov ax, not movzx: 0x208341).
+// block): the path area's id at inTile, 0 if none. The ternary is unsigned short on both arms.
 // not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
 unsigned short EEAIContinentManager::GetPathAreaIDAt(const EETileLocation& inTile)
 {
@@ -331,297 +70,201 @@ unsigned short EEAIContinentManager::GetPathAreaIDAt(const EETileLocation& inTil
     return theArea != NULL ? theArea->GetID() : (unsigned short)0;
 }
 
-// The (x, y) overload: MoveAlong's first site passes UMFloor values (copied into the parameter slots
-// [ebp-0x80]/[ebp-0x1c], 0x2069e1); nested under it, the U2DPoint ctor (0x2069fb) and the tile overload (0x206a03)
-// are refused by the depth-2 budget share, which emits the 0x208334 COMDAT.
+// The (x, y) overload (the group path's step: UMFloor values)
 inline unsigned short EEAIContinentManager::GetPathAreaIDAt(long inX, long inY)
 {
     return this->GetPathAreaIDAt(EETileLocation(inX, inY));
 }
 
-// Gives each living group unit carried by a found path its waypoints: its formation slot at each step, or
-// the step's centre when the slot lies in another path area; an empty path when none was found
-void EEGroup::MoveAlong(EEGroupPathRequest* inRequest)
+// Returns the terrain flags every unit in the group shares (ee_units group_obj.rs flags)
+EECPASGFlags EEGroup::GetFlags()
 {
-    EEComplexUnit* theUnit;
-    EEAIPathSubSector* theSubSector;
-    unsigned short theAreaID;
-    unsigned short theSlotAreaID;
-    std::vector<EEFormationSlot> theSlots;
-    GE3DPoint thePoint;
-    GE3DPoint theOriginalCenter;
-    std::vector<GE3DPoint> thePath;
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<std::vector<GE3DPoint> > theUnitPaths;
-    std::vector<GE3DPoint> theEmptyPath;
-    EETileLocation theLocation;
+    EECPASGFlags theResult;
+    ee_units_group_flags(this, reinterpret_cast<uint8_t(*)[17]>(theResult.mFlags));
+    return theResult;
+}
 
-    for (long i = (long)inRequest->mUnitIDs.size() - 1; i >= 0; i--) {
-        theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(inRequest->mUnitIDs[i]));
-        if (theUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mIsDisabled != false
-            || theUnit->mTile == NULL || !this->Contains(theUnit))
-            continue;
-        theUnits.push_back(theUnit);
-        std::vector<GE3DPoint> theEmpty;
-        theUnitPaths.push_back(theEmpty);
+// The active groups in a saved game (save 0.279, EESaveHasActiveGroups; ee_units group_obj.rs save_all, load_all)
+void EESaveActiveGroups(FSFile& outFile)
+{
+    ee_units_groups_save_active(&outFile, &EESaveFilePrimitive);
+}
+
+long EELoadActiveGroups(FSFile& inFile)
+{
+    return ee_units_groups_load_active(&inFile, &EESaveFilePrimitive);
+}
+
+// The groups' host (ee_units group_host.rs; EE_UNITS_GROUP_OP_*): each operation one C++ statement of the original
+// bodies
+extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsGroupIo* io)
+{
+    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inA));
+    EEFormation* theFormation = reinterpret_cast<EEFormation*>(static_cast<uintptr_t>(inA));
+    EEAutoPathRequest* thePath = reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(inA));
+    EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inA));
+    EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
+    switch (inOp) {
+    case EE_UNITS_GROUP_OP_UNIT_REFERENCE: theUnit->Reference();
+        return 0;
+    case EE_UNITS_GROUP_OP_UNIT_DEREFERENCE: theUnit->Dereference();
+        return 0;
+    case EE_UNITS_GROUP_OP_WORLD_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit((long)inC);
+    case EE_UNITS_GROUP_OP_FORMATION_NEW: return (int64_t)(uintptr_t)EEFormation::Create((long)inC);
+    case EE_UNITS_GROUP_OP_FORMATION_REFERENCE: theFormation->Reference();
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE: theFormation->Dereference();
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_KIND: return theFormation->mType;
+    case EE_UNITS_GROUP_OP_FORMATION_CENTER: memcpy(io->p, &theFormation->mCenter, sizeof io->p);
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: memcpy(&theFormation->mCenter, io->p, sizeof io->p);
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_PLACE: {
+        EEComplexUnit* const* theList = static_cast<EEComplexUnit* const*>(io->list);
+        std::vector<EEComplexUnit*> theUnits(theList, theList + io->len);
+        std::vector<EEFormationSlot> theSlots;
+        theFormation->Place(theUnits, theSlots);
+        for (size_t i = 0; i < theSlots.size(); i++)
+            ee_units_group_push(io->out, 0, 0, reinterpret_cast<const float(*)[3]>(&theSlots[i].mPosition.mX));
+        return 0;
     }
-    if (this->mFormation != NULL) {
-        theOriginalCenter.mX = this->mFormation->mCenter.GetX();
-        theOriginalCenter.mY = this->mFormation->mCenter.GetY();
-        theOriginalCenter.mZ = this->mFormation->mCenter.mZ;
+    case EE_UNITS_GROUP_OP_TERRAIN_FLAGS: {
+        EECPASGFlags theFlags;
+        theUnit->mUnitClass->GetTerrainFlags(theUnit, theFlags);
+        memcpy(io->flags, theFlags.mFlags, 17);
+        return 0;
     }
-    if (inRequest->mPath != NULL && inRequest->mPath->mPath.size() > 1) {
-        if (theUnits.size() > 0) {
-            for (long i = 1; i < (long)inRequest->mPath->mPath.size() - 1; i++) {
-                const EETileCoordinate& theTile = inRequest->mPath->mPath[i];
-                theSubSector = gContinentManager.GetPathSubSectorAt(theTile.GetX(), theTile.GetY());
-                GE3DPoint theCenter((float)theSubSector->GetLocation().GetX() + 0.5f,
-                                    (float)theSubSector->GetLocation().GetY() + 0.5f, 0.0f);
-                thePath.push_back(theCenter);
-            }
-            for (long p = 0; p < (long)thePath.size(); p++) {
-                thePoint = thePath[p];
-                theSlots.clear();
-                if (this->mFormation != NULL && p < (long)thePath.size()) {
-                    // The original stores a GE3DPoint at +48. These genuine existing scalar fields cover that point.
-                    this->mFormation->mCenter.mX = thePoint.GetX();
-                    this->mFormation->mCenter.mY = thePoint.GetY();
-                    this->mFormation->mCenter.mZ = thePoint.mZ;
-                    this->mFormation->Place(theUnits, theSlots);
-                }
-                if (theSlots.size() == 0) {
-                    EEFormationSlot theSlot;
-                    theSlot.mPosition = thePoint;
-                    theSlot.mUnit = NULL;
-                    theSlot.mHeading = 0.0f;
-                    theSlots.push_back(theSlot);
-                }
-                theAreaID = gContinentManager.GetPathAreaIDAt(UMFloor(thePoint.GetX()), UMFloor(thePoint.GetY()));
-                for (long u = (long)theUnitPaths.size() - 1; u >= 0; u--) {
-                    EETileLocation theSlotTile(UMFloor(theSlots.back().mPosition.GetX()),
-                                              UMFloor(theSlots.back().mPosition.GetY()));
-                    theLocation = theSlotTile;
-                    if ((unsigned long)theSlotTile.GetX() < gMapWidth && (unsigned long)theSlotTile.GetY() < gMapHeight) {
-                        theSlotAreaID = gContinentManager.GetPathAreaIDAt(theLocation);
-                        if (theSlotAreaID == theAreaID)
-                            (theUnitPaths[u]).push_back(theSlots.back().mPosition);
-                        else
-                            (theUnitPaths[u]).push_back(thePoint);
-                    } else
-                        (theUnitPaths[u]).push_back(thePoint);
-                    if (theSlots.size() > 1)
-                        theSlots.pop_back();
-                }
-            }
-            for (long u = (long)theUnits.size() - 1; u >= 0; u--)
-                (theUnits[u])->SetGroupPathGoals(theUnitPaths[u]);
+    case EE_UNITS_GROUP_OP_CONTINENT_OF: return gContinentManager.GetContinentID(theUnit);
+    case EE_UNITS_GROUP_OP_CONTINENT_AT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
+    case EE_UNITS_GROUP_OP_SUBSECTOR_X: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetX();
+    case EE_UNITS_GROUP_OP_SUBSECTOR_Y: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetY();
+    case EE_UNITS_GROUP_OP_MAP_WIDTH: return (int64_t)gMapWidth;
+    case EE_UNITS_GROUP_OP_MAP_HEIGHT: return (int64_t)gMapHeight;
+    case EE_UNITS_GROUP_OP_FORMATION_ORIENTATION: memcpy(const_cast<void*>(io->list), &theFormation->mOrientation, 16 * sizeof(float));
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION: memcpy(&theFormation->mOrientation, io->list, 16 * sizeof(float));
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_HEADING: io->f = theFormation->mHeading;
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_HEADING: theFormation->mHeading = io->f;
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_B5C: return theFormation->mB5C;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_B5C: theFormation->mB5C = inC != 0;
+        return 0;
+    case EE_UNITS_GROUP_OP_INTERFACE: return gUserInterface != NULL;
+    case EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO: gUserInterface->PostRefreshSavedGroup((long)inC);
+        return 0;
+    case EE_UNITS_GROUP_OP_PATH_AREA_AT: return gContinentManager.GetPathAreaIDAt((long)inC, (long)inD);
+    case EE_UNITS_GROUP_OP_PATH_REQUEST: {
+        EETileCoordinate theFrom;
+        EETileCoordinate theTo;
+        theFrom.mX = (long)io->a;
+        theFrom.mY = (long)io->b;
+        theTo.mX = (long)io->c;
+        theTo.mY = (long)io->d;
+        EECPASGFlags theFlags;
+        memcpy(theFlags.mFlags, io->flags, 17);
+        return (int64_t)(uintptr_t)gPathManager.RequestPath((long)inC, theFrom, theTo, &theFlags, 1, -1, NULL, 0);
+    }
+    case EE_UNITS_GROUP_OP_PATH_CANCEL: gPathManager.CancelAutoPathRequest(thePath);
+        return 0;
+    case EE_UNITS_GROUP_OP_PATH_REFERENCE: thePath->Reference();
+        return 0;
+    case EE_UNITS_GROUP_OP_PATH_DEREFERENCE: thePath->Dereference();
+        return 0;
+    case EE_UNITS_GROUP_OP_PATH_DONE: return thePath->mIsDone;
+    case EE_UNITS_GROUP_OP_PATH_ID: return thePath->mRequestID;
+    case EE_UNITS_GROUP_OP_PATH_TILES:
+        for (size_t i = 0; i < thePath->mPath.size(); i++)
+            ee_units_group_push(io->out, thePath->mPath[i].GetX(), thePath->mPath[i].GetY(), NULL);
+        return 0;
+    case EE_UNITS_GROUP_OP_SET_GROUP_PATH: {
+        const float* thePoints = static_cast<const float*>(io->list);
+        std::vector<GE3DPoint> thePoints3;
+        for (size_t i = 0; i < io->len; i++)
+            thePoints3.push_back(GE3DPoint(thePoints[3 * i], thePoints[3 * i + 1], thePoints[3 * i + 2]));
+        theUnit->SetGroupPathGoals(thePoints3);
+        return 0;
+    }
+    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets();
+        return 0;
+    case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
+    case EE_UNITS_GROUP_OP_POST_SELECTION: gUserInterface->PostMessage424Once();
+        return 0;
+    case EE_UNITS_GROUP_OP_PLAYER_GROUP: return inC >= 0 && inC < 20 ? (int64_t)(uintptr_t)thePlayer->mGroups[inC] : 0;
+    // the selection's (selection.rs)
+    case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
+    case EE_UNITS_GROUP_OP_SELECTABLE:
+        return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
+    case EE_UNITS_GROUP_OP_DOPPELGANGER: return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theTarget->mTile), theTarget, thePlayer->GetPlayerID());
+    case EE_UNITS_GROUP_OP_LOCAL_SELECTION: return gWorld.mExecutingLocalSelection;
+    case EE_UNITS_GROUP_OP_PLAY_SOUND: EEPlayForLocalPlayer(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
+        return 0;
+    case EE_UNITS_GROUP_OP_ACK_DELAY: return (int64_t)(unsigned long)gWorldTable.GetLongValue(kWorldAcknowledgementDelay);
+    case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB));
+        return 0;
+    // RefreshUpgrades' (selection.rs)
+    case EE_UNITS_GROUP_OP_CLASS_COUNT: return (int64_t)EEUnitClassCount();
+    case EE_UNITS_GROUP_OP_UPGRADE: return (int64_t)(uintptr_t)thePlayer->GetUpgrade((long)inC);
+    case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init();
+        return 0;
+    case EE_UNITS_GROUP_OP_SET_HIT_POINTS: reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inA))->SetHitPoints((long)inC);
+        return 0;
+    case EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: theUnit->SetFlightTime((long)inC);
+        return 0;
+    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects();
+        return 0;
+    case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
+        return 0;
+    case EE_UNITS_GROUP_OP_PLAYER_SELECTION:
+        return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
+    case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC();
+        return 0;
+    case EE_UNITS_GROUP_OP_AREA_OUTLINES: {
+        const int64_t* theAreas = static_cast<const int64_t*>(io->list);
+        const unsigned short* theContinentIDs = static_cast<const unsigned short*>(io->list2);
+        std::vector<U2DRectangle<long> > theRectangles;
+        std::vector<unsigned short> theContinents;
+        for (size_t i = 0; i < io->len; i++) {
+            U2DRectangle<long> theArea;
+            theArea.mLeft = (long)theAreas[4 * i];
+            theArea.mRight = (long)theAreas[4 * i + 1];
+            theArea.mTop = (long)theAreas[4 * i + 2];
+            theArea.mBottom = (long)theAreas[4 * i + 3];
+            theRectangles.push_back(theArea);
+            theContinents.push_back(theContinentIDs[i]);
         }
-    } else {
-        for (long u = (long)theUnits.size() - 1; u >= 0; u--)
-            (theUnits[u])->SetGroupPathGoals(theEmptyPath);
+        gWorld.mMap->BuildAreaOutlines(theRectangles, theContinents);
+        return 0;
     }
-    if (this->mFormation != NULL) {
-        this->mFormation->mCenter.mX = theOriginalCenter.GetX();
-        this->mFormation->mCenter.mY = theOriginalCenter.GetY();
-        this->mFormation->mCenter.mZ = theOriginalCenter.mZ;
+    case EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: io->f = gAEManager.mTemplates[inC]->mRadius;
+        return 0;
+    case EE_UNITS_GROUP_OP_SAVE_PATH:
+        EESaveAutoPathRequest(*reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inA)),
+                              *reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(inB)));
+        return 0;
+    case EE_UNITS_GROUP_OP_LOAD_PATH: {
+        EEAutoPathRequest* theRequest = NULL;
+        long theResult = EELoadAutoPathRequest(*reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inA)), theRequest);
+        io->a = (int64_t)(uintptr_t)theRequest;
+        return theResult;
     }
-}
-
-// Recomputes the group's kind flags from its units
-void EEGroup::UpdateKindFlags()
-{
-    this->mKindFlags = 0;
-    unsigned long theCount = this->GetNumUnits();
-    for (unsigned long i = 0; i < theCount; i++)
-        this->mKindFlags |= this->GetUnit(i)->mUnitClass->mKindFlags;
-}
-
-// Removes and releases every unit and resets the type counts and kind flags
-void EEGroup::Clear()
-{
-    while (this->mUnits.size() > 0) {
-        this->mUnits[0]->Dereference();
-        this->mUnits.erase(this->mUnits.begin());
+    case EE_UNITS_GROUP_OP_AWAIT_PATH: {
+        // the group referenced for the wait (group_obj.rs restore_active); the attach releases it
+        EeUnitsGroup* theGroup = reinterpret_cast<EeUnitsGroup*>(static_cast<uintptr_t>(inB));
+        int64_t theKey = inD;
+        EEAwaitAutoPathRequest((long)inC, [theGroup, theKey](EEAutoPathRequest* inRequest) {
+            ee_units_group_path_resolved(theGroup, theKey, inRequest);
+        });
+        return 0;
     }
-    this->mKindFlags = 0;
-    this->mUnitTypeCounts.clear();
-}
-
-// Cancels and deletes the path request with the given id (as Remove)
-void EEGroup::CancelPathRequest(long inPathID)
-{
-    std::map<long, EEGroupPathRequest*>::iterator it = this->mPathRequests.find(inPathID);
-    if (it == this->mPathRequests.end())
-        return;
-    it->second->Cancel();
-    EEGroupPathRequest* theRequest = it->second;
-    this->mPathRequests.erase(it);
-    delete theRequest;
-}
-
-// Removes the unit from the group if it is in it
-void EEGroup::RemoveUnit(EEComplexUnit* inUnit)
-{
-    for (std::vector<EEComplexUnit*>::iterator it = this->mUnits.begin(); it != this->mUnits.end(); it++) {
-        if (*it == inUnit) {
-            this->RemoveAt(it - this->mUnits.begin());
-            break;
-        }
+    case EE_UNITS_GROUP_OP_AFTER_LOAD: {
+        // at the first tick (the units are back), before the graph searches are resolved (EEAfterLoadLast)
+        void* theSaved = reinterpret_cast<void*>(static_cast<uintptr_t>(inA));
+        EEAfterLoad([theSaved]() { ee_units_group_restore_saved(theSaved); });
+        return 0;
     }
-}
-
-// Removes and releases the unit at an index; recomputes the kind flags when its type's last unit leaves
-void EEGroup::RemoveAt(long inIndex)
-{
-    long theType = this->mUnits[inIndex]->GetUnitClass()->mUnitType;
-    std::map<long, long>::iterator it = this->mUnitTypeCounts.find(theType);
-    this->mUnits[inIndex]->Dereference();
-    this->mUnits.erase(this->mUnits.begin() + inIndex);
-    if (--it->second == 0) {
-        this->mUnitTypeCounts.erase(it);
-        this->UpdateKindFlags();
-    }
-}
-
-// Turns the loaded unit ids back into units, dropping any that no longer exist; returns 0
-long EEGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    std::vector<long> theIDs;
-    for (std::vector<EEComplexUnit*>::iterator it = this->mUnits.begin(); it != this->mUnits.end(); it++)
-        theIDs.push_back((int32_t)USavedID(*it));
-    this->mUnits.clear();
-    for (unsigned long i = 0; i < theIDs.size(); i++) {
-        EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(*(theIDs.begin() + i)));
-        if (theUnit && theUnit->mComplexUnit)
-            this->Add(theUnit->mComplexUnit);
     }
     return 0;
-}
-
-// Writes the formation kind (8 = none), unit count and unit ids to the saved game; returns the first error
-long EEGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EEGroupSaveContext theContext = {this, &outFile};
-    return ee_units_group_save(&theContext, &EEGroupSaveOperation);
-}
-
-// Sets the group's formation, moving the reference from the old one
-void EEGroup::SetFormation(EEFormation* inFormation)
-{
-    if (inFormation == this->mFormation)
-        return;
-    if (this->mFormation)
-        this->mFormation->Dereference();
-    this->mFormation = inFormation;
-    if (inFormation)
-        inFormation->Reference();
-}
-
-// U2DRectangle<long>::GetClosestCorner(point) (inline in lle/U2DRectangle.h, exe view; its out-of-line COMDAT
-// 0x208164 follows MakeClusters, the only user)
-
-// Splits units into path clusters: land buildings and flyers by continent, the rest by shared terrain
-// flags and distance to a cluster's bounds (squared when asked)
-// NEAR: ours expands the bounds' GetClosestCorner inline; the original calls its COMDAT 0x208164.
-// The bounds are the declared four longs (no layout alias). theBoats holds the flyers (domain bit 1).
-void EEGroup::MakeClusters(std::vector<EEComplexUnit*>& inUnits, std::vector<EEGroupCluster*>& outClusters,
-                           long inDistance, bool inSquare)
-{
-    EEComplexUnit* theUnit;
-    unsigned short theContinent;
-    bool theNewCluster;
-    bool theNear;
-    typedef std::map<unsigned short, std::vector<EEComplexUnit*> > UnitMap;
-    UnitMap theContinents;
-    UnitMap theBoats;
-    EECPASGFlags theFlags;
-    EEGroupCluster* theCluster = NULL;
-    U2DPoint<long> theCenter;
-    if (inSquare)
-        inDistance *= inDistance;
-    for (long i = inUnits.size() - 1; i >= 0; i--) {
-        theUnit = inUnits[i];
-        theContinent = gContinentManager.GetContinentID(theUnit);
-        if (theUnit->mUnitClass->IsLandBuilding()) {
-            UnitMap::iterator theIt = theContinents.find(theContinent);
-            if (theIt == theContinents.end())
-                theIt = theContinents.insert(std::pair<unsigned short, std::vector<EEComplexUnit*> >(theContinent,
-                                       std::vector<EEComplexUnit*>())).first;
-            if (theIt != theContinents.end())
-                theIt->second.push_back(theUnit);
-        } else if (theUnit->mUnitClass->mDomains & kMovementAir) {
-            UnitMap::iterator theIt = theBoats.find(theContinent);
-            if (theIt == theBoats.end())
-                theIt = theBoats.insert(std::pair<unsigned short, std::vector<EEComplexUnit*> >(theContinent,
-                                       std::vector<EEComplexUnit*>())).first;
-            if (theIt != theBoats.end())
-                theIt->second.push_back(theUnit);
-        } else {
-            theUnit->mUnitClass->GetTerrainFlags(theUnit, theFlags);
-            theNewCluster = true;
-            U2DPoint<long> theTile(theUnit->mTileX, theUnit->mTileY);
-            for (long j = outClusters.size() - 1; j >= 0; j--) {
-                theCluster = outClusters[j];
-                if (memcmp(theCluster->mFlags.mFlags, theFlags.mFlags, 17) != 0)
-                    continue;
-                theNear = !inSquare || inDistance < 1;
-                if (!theNear) {
-                    EETileCoordinate theCenterTile;
-                    theCluster->mBounds.GetCenter(theCenterTile);
-                    theCenter.SetXY(theCenterTile.GetX(), theCenterTile.GetY());
-                    if (theCluster->mBounds.Contains(theTile.GetX(), theTile.GetY())
-                        || theCenter.DistanceToSquared(theTile) <= inDistance) {
-                        theNear = true;
-                    } else {
-                        U2DPoint<long> theClosest = theCluster->mBounds.GetClosestCorner(theTile);
-                        theNear = theTile.DistanceToSquared(theClosest) <= inDistance;
-                    }
-                }
-                if (!theNear)
-                    continue;
-                theNewCluster = false;
-                theCluster->mUnits.push_back(theUnit);
-                theCluster->mBounds.Extend(theTile);
-                break;
-            }
-            if (theNewCluster) {
-                theCluster = new EEGroupCluster;
-                theCluster->mUnits.push_back(theUnit);
-                theCluster->mFlags = theFlags;
-                theCluster->mKind = 1;
-                theCluster->mBounds.Set(theTile);
-                outClusters.push_back(theCluster);
-            }
-        }
-    }
-    for (UnitMap::iterator c = theContinents.begin(); c != theContinents.end(); c++) {
-        theCluster = new EEGroupCluster;
-        theCluster->mUnits = c->second;
-        theCluster->mKind = 3;
-        theCluster->mContinentID = c->first;
-        outClusters.push_back(theCluster);
-    }
-    for (UnitMap::iterator b = theBoats.begin(); b != theBoats.end(); b++) {
-        theCluster = new EEGroupCluster;
-        theCluster->mUnits = b->second;
-        theCluster->mKind = 2;
-        theCluster->mContinentID = b->first;
-        outClusters.push_back(theCluster);
-    }
-}
-
-// Moves the units of every path request whose path is found and deletes those requests
-void EEGroup::MoveAlongFoundPaths()
-{
-    std::map<long, EEGroupPathRequest*>::iterator it;
-    for (it = this->mPathRequests.begin(); it != this->mPathRequests.end();) {
-        EEGroupPathRequest* theRequest = it->second;
-        if (!theRequest->mPath->mIsDone) {
-            it++;
-        } else {
-            it = this->mPathRequests.erase(it);
-            this->MoveAlong(theRequest);
-            delete theRequest;
-        }
-    }
 }

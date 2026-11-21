@@ -168,14 +168,22 @@ pub(crate) unsafe fn string_append(out: *mut c_void, bytes: &[u8]) {
 }
 
 fn host(op: i32, me: *mut c_void, a: i64, b: i64, c: i64) -> i64 {
-    // SAFETY: the C++ switch over the live game (the simulation thread, inside a call from it)
-    unsafe { ee_ai_next_host(op, me, a, b, c, std::ptr::null_mut()) }
+    // SAFETY: the C++ switch over the live game (the simulation thread, inside a call from it); the Rust bodies first
+    unsafe {
+        next_host::op(op, me, a, b, c, std::ptr::null_mut())
+            .unwrap_or_else(|| ee_ai_next_host(op, me, a, b, c, std::ptr::null_mut()))
+    }
 }
 
 fn host_out<T>(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: &mut T) -> i64 {
+    let out = out as *mut T as *mut c_void;
     // SAFETY: as above; `out` is the op's record
-    unsafe { ee_ai_next_host(op, me, a, b, c, out as *mut T as *mut c_void) }
+    unsafe { next_host::op(op, me, a, b, c, out).unwrap_or_else(|| ee_ai_next_host(op, me, a, b, c, out)) }
 }
+
+// the host's operations whose bodies are Rust (AI Thread cluster round 7; were EECPNext.cpp's)
+#[path = "next_host.rs"]
+mod next_host;
 
 /// Appends bytes to a `Vec<u8>` the host was given (`out` of the byte ops).
 ///
@@ -2651,9 +2659,9 @@ pub unsafe extern "C" fn ee_ai_next_drop_ready(
 
 // the reflexes (EECPReflexes.cpp before)
 #[path = "next_reflex.rs"]
-mod reflex;
+pub mod reflex;
 
 // the stats lines, the losses' counters, the profile, the sim hash, the out-of-synch checksum and its dump
 // (EECPTrace.cpp before)
 #[path = "next_trace.rs"]
-mod trace;
+pub mod trace;

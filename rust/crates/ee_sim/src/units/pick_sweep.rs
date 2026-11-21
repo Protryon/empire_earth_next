@@ -65,7 +65,7 @@ pub fn fill_cases(own: &[u32]) -> Vec<(u32, i64, Vec<u32>)> {
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
 
     /// "USPK"

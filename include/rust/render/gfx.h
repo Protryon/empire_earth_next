@@ -317,8 +317,6 @@ constexpr static const uint32_t CATEGORY_AMBIENT = 0;
 
 constexpr static const uint32_t FAMILY_AA_BUILDING = 46;
 
-constexpr static const uint32_t TYPE_PATH_POINT = 223;
-
 constexpr static const uint32_t TYPE_CP_ICBM = 750;
 
 /// The effect quads of `sprite`: `AddGlowSprite` (the camera batch), `AddGroundSprite`, `AddBlendedSprite`.

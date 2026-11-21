@@ -705,150 +705,6 @@ constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
 
-/// The host calls. "Target" is the unit the slot was given (the covered, ticked, cloaked unit), "owner" the
-/// effect's own unit.
-enum class EeAreaEffectOp {
-  /// Whether the target's unit type is in unit set `a` (`gUnitSetManager.Contains`).
-  TargetInSet = 0,
-  /// Whether player `a`'s tech tree node of the target's class technology is of kind 4.
-  TargetTechKind4 = 1,
-  /// Players `a` and `b` (ids into the world's table): value the `EE_AREA_EFFECT_SAME/ALLIED/AT_WAR` flags.
-  Relation = 2,
-  /// Whether the target is built.
-  TargetBuilt = 3,
-  /// Whether the target can be healed (`IsRepairable`).
-  TargetRepairable = 4,
-  /// The target's position (x, y of its physical model's location).
-  TargetPosition = 5,
-  /// The continent of tile (`a`, `b`) for the ground paths: value.
-  Continent = 6,
-  /// ok when the target is a space dock or turret carried by a complex unit: value that unit's planet.
-  TargetCarrierPlanet = 7,
-  /// The target's hit points: value.
-  TargetHitPoints = 8,
-  /// The target's maximum hit points: value.
-  TargetMaxHitPoints = 9,
-  /// Whether a cinematic runs (the free camera flag).
-  InCinematic = 10,
-  /// The target's `SetHitPoints(a)`.
-  TargetSetHitPoints = 11,
-  /// The target's `SetCloakableChain(true)` (the cloaking's `AppliedTo`).
-  TargetCloak = 12,
-  /// The cloaking's `RemovedFrom` on the target (the camouflage power's test, the uncloak, the mini map).
-  TargetUncloak = 13,
-  /// ok when the effect has an owner unit: x its area-effect scale.
-  OwnerScale = 14,
-  /// The owner's hit points: value.
-  OwnerHitPoints = 15,
-  /// The owner's leadership: x.
-  OwnerLeadership = 16,
-  /// The owner class's garrison bonus: x.
-  OwnerGarrisonBonus = 17,
-  /// The owner player's living, built morale buildings in rectangle (`a` left, `b` top, `c` right, `d` bottom):
-  /// shape `e` 1 those whose footprint meets it, else those whose tile is within `x` (squared) of tile (`f`, `g`):
-  /// value their count.
-  CountBuildings = 18,
-};
-
-/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
-enum class EeCalamityCastMode : int32_t {
-  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
-  Base = 0,
-  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
-  Global,
-  /// `EELocationCalamityClass`: the base, then the class's location.
-  Location,
-  /// `EEUnitCalamityClass`: the base, then the class's target.
-  Unit,
-  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
-  SpecialAttack,
-};
-
-/// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
-/// the others to the upgrade of every unit class the effect names.
-enum class EeTechAttributeOp : uint32_t {
-  /// an attribute no case names: the result 9
-  Unknown = 0,
-  /// 22, 24, 25, 34, 35: nothing
-  Nothing,
-  /// 23: the population limit bonus ([`population_bonus`])
-  PopulationBonus,
-  /// 38: the tribute fee, set to the factor
-  TributeFee,
-  /// 39: the player's flag `mBB44`
-  PlayerFlag,
-  /// 1: attack (float; the class's integer attack as the base value)
-  Attack,
-  /// 2: reload time (integer)
-  ReloadTime,
-  /// 3: range (float, through `SetRange`)
-  Range,
-  /// 4: line of sight (float), the player's units of the type off the sight grid and back
-  LineOfSight,
-  /// 5: area effect (float)
-  AreaEffect,
-  /// 6: maximum hit points ([`max_hit_points`]), the living built units rescaled
-  MaxHitPoints,
-  /// 9: maximum velocity (float, through `SetMaxVelocity`)
-  MaxVelocity,
-  /// 10: flight time (integer), the flying units rescaled
-  FlightTime,
-  /// 11: leadership (float; the class's integer leadership as the base value)
-  Leadership,
-  /// 16..21: one armour (float; the class's integer armour as the base); `index` is the armour's slot
-  Armor,
-  /// 26..29, 31..33: one gather time ([`gather_time`]); `index` is the resource's slot
-  GatherTime,
-  /// 36: converts priests
-  ConvertsPriests,
-  /// 37: converts buildings
-  ConvertsBuildings,
-  /// 40: the area effect template, the living units' area effects rebuilt
-  AreaEffectTemplate,
-  /// 41: power regeneration (integer)
-  PowerRegeneration,
-  /// 42: a terrain type allowed or forbidden ([`terrain_mask`])
-  Terrain,
-  /// 43: regeneration (integer)
-  Regeneration,
-  /// 44: power (integer)
-  Power,
-  /// 45: the upgrade's name, the string `lrintf(value)`
-  Name,
-};
-
-/// `EEEvent::RunEffect`'s dispatch: which handler runs an effect of a kind.
-enum class EeTechEffectHandler : uint32_t {
-  /// a bad effect index, or an effect that does not run while a saved game loads: the result 9
-  Refused = 0,
-  /// an unknown kind: the result 3
-  UnknownKind,
-  /// the result 0 without a handler (kind 22; kind 19 while events are off or a saved game loads)
-  Nothing,
-  /// kind 7: `EEEventKind7` (an empty handler)
-  Kind7,
-  /// kind 2: `ApplyEventAttribute`
-  Attribute,
-  /// kind 8: `SetEventPrerequisite`
-  Prerequisite,
-  /// kind 9: `MakeEventTechnologyObsolete`
-  Obsolete,
-  /// kind 6: `SetEventUnitModel`
-  UnitModel,
-  /// kinds 12..14: `SetEventTechTreeMedia`
-  TechTreeMedia,
-  /// kind 10: `ResearchEventTechnology`
-  Research,
-  /// kind 1: `SetEventButton`
-  Button,
-  /// kind 11: `PlayEventSound`
-  Sound,
-  /// kinds 15..18, 20, 21: `SetEventUnitSound`
-  UnitSound,
-  /// kind 19: `ConvertEventUnits`
-  ConvertUnits,
-};
-
 /// The host calls (`EeCalamityCall::op`). Each names what the C++ does and what it answers.
 enum class EeCalamityOp : int32_t {
   /// The contagion helper `index`'s `Update(x)` (if it exists).
@@ -1024,6 +880,150 @@ enum class EeCalamityOp : int32_t {
   WorldHandle = 83,
 };
 
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
+};
+
+/// The host calls. "Target" is the unit the slot was given (the covered, ticked, cloaked unit), "owner" the
+/// effect's own unit.
+enum class EeAreaEffectOp {
+  /// Whether the target's unit type is in unit set `a` (`gUnitSetManager.Contains`).
+  TargetInSet = 0,
+  /// Whether player `a`'s tech tree node of the target's class technology is of kind 4.
+  TargetTechKind4 = 1,
+  /// Players `a` and `b` (ids into the world's table): value the `EE_AREA_EFFECT_SAME/ALLIED/AT_WAR` flags.
+  Relation = 2,
+  /// Whether the target is built.
+  TargetBuilt = 3,
+  /// Whether the target can be healed (`IsRepairable`).
+  TargetRepairable = 4,
+  /// The target's position (x, y of its physical model's location).
+  TargetPosition = 5,
+  /// The continent of tile (`a`, `b`) for the ground paths: value.
+  Continent = 6,
+  /// ok when the target is a space dock or turret carried by a complex unit: value that unit's planet.
+  TargetCarrierPlanet = 7,
+  /// The target's hit points: value.
+  TargetHitPoints = 8,
+  /// The target's maximum hit points: value.
+  TargetMaxHitPoints = 9,
+  /// Whether a cinematic runs (the free camera flag).
+  InCinematic = 10,
+  /// The target's `SetHitPoints(a)`.
+  TargetSetHitPoints = 11,
+  /// The target's `SetCloakableChain(true)` (the cloaking's `AppliedTo`).
+  TargetCloak = 12,
+  /// The cloaking's `RemovedFrom` on the target (the camouflage power's test, the uncloak, the mini map).
+  TargetUncloak = 13,
+  /// ok when the effect has an owner unit: x its area-effect scale.
+  OwnerScale = 14,
+  /// The owner's hit points: value.
+  OwnerHitPoints = 15,
+  /// The owner's leadership: x.
+  OwnerLeadership = 16,
+  /// The owner class's garrison bonus: x.
+  OwnerGarrisonBonus = 17,
+  /// The owner player's living, built morale buildings in rectangle (`a` left, `b` top, `c` right, `d` bottom):
+  /// shape `e` 1 those whose footprint meets it, else those whose tile is within `x` (squared) of tile (`f`, `g`):
+  /// value their count.
+  CountBuildings = 18,
+};
+
+/// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
+/// the others to the upgrade of every unit class the effect names.
+enum class EeTechAttributeOp : uint32_t {
+  /// an attribute no case names: the result 9
+  Unknown = 0,
+  /// 22, 24, 25, 34, 35: nothing
+  Nothing,
+  /// 23: the population limit bonus ([`population_bonus`])
+  PopulationBonus,
+  /// 38: the tribute fee, set to the factor
+  TributeFee,
+  /// 39: the player's flag `mBB44`
+  PlayerFlag,
+  /// 1: attack (float; the class's integer attack as the base value)
+  Attack,
+  /// 2: reload time (integer)
+  ReloadTime,
+  /// 3: range (float, through `SetRange`)
+  Range,
+  /// 4: line of sight (float), the player's units of the type off the sight grid and back
+  LineOfSight,
+  /// 5: area effect (float)
+  AreaEffect,
+  /// 6: maximum hit points ([`max_hit_points`]), the living built units rescaled
+  MaxHitPoints,
+  /// 9: maximum velocity (float, through `SetMaxVelocity`)
+  MaxVelocity,
+  /// 10: flight time (integer), the flying units rescaled
+  FlightTime,
+  /// 11: leadership (float; the class's integer leadership as the base value)
+  Leadership,
+  /// 16..21: one armour (float; the class's integer armour as the base); `index` is the armour's slot
+  Armor,
+  /// 26..29, 31..33: one gather time ([`gather_time`]); `index` is the resource's slot
+  GatherTime,
+  /// 36: converts priests
+  ConvertsPriests,
+  /// 37: converts buildings
+  ConvertsBuildings,
+  /// 40: the area effect template, the living units' area effects rebuilt
+  AreaEffectTemplate,
+  /// 41: power regeneration (integer)
+  PowerRegeneration,
+  /// 42: a terrain type allowed or forbidden ([`terrain_mask`])
+  Terrain,
+  /// 43: regeneration (integer)
+  Regeneration,
+  /// 44: power (integer)
+  Power,
+  /// 45: the upgrade's name, the string `lrintf(value)`
+  Name,
+};
+
+/// `EEEvent::RunEffect`'s dispatch: which handler runs an effect of a kind.
+enum class EeTechEffectHandler : uint32_t {
+  /// a bad effect index, or an effect that does not run while a saved game loads: the result 9
+  Refused = 0,
+  /// an unknown kind: the result 3
+  UnknownKind,
+  /// the result 0 without a handler (kind 22; kind 19 while events are off or a saved game loads)
+  Nothing,
+  /// kind 7: `EEEventKind7` (an empty handler)
+  Kind7,
+  /// kind 2: `ApplyEventAttribute`
+  Attribute,
+  /// kind 8: `SetEventPrerequisite`
+  Prerequisite,
+  /// kind 9: `MakeEventTechnologyObsolete`
+  Obsolete,
+  /// kind 6: `SetEventUnitModel`
+  UnitModel,
+  /// kinds 12..14: `SetEventTechTreeMedia`
+  TechTreeMedia,
+  /// kind 10: `ResearchEventTechnology`
+  Research,
+  /// kind 1: `SetEventButton`
+  Button,
+  /// kind 11: `PlayEventSound`
+  Sound,
+  /// kinds 15..18, 20, 21: `SetEventUnitSound`
+  UnitSound,
+  /// kind 19: `ConvertEventUnits`
+  ConvertUnits,
+};
+
 /// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
 enum class EeTechUnitWalk : uint32_t {
   /// The player's units, for the hit point rescale (built ones only).
@@ -1123,6 +1123,103 @@ struct EeContagionUnitList;
 /// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
 /// `mSavedSOLs`), applied by `ApplySavedState`.
 struct EeTechTreeSaved;
+
+/// The calamity's members an update reads and writes (`EECalamity`).
+struct EeCalamityState {
+  float time_alive;
+  float float1;
+  float float2;
+  int32_t int1;
+  int32_t int2;
+  float target[3];
+  float epicenter_factor;
+  uint32_t effect_handle;
+  bool bool1;
+  bool bool2;
+  uint8_t pad[2];
+};
+
+/// One host call.
+struct EeCalamityCall {
+  EeCalamityOp op;
+  int32_t index;
+  int32_t value;
+  /// A second index (the casts' tile y).
+  int32_t index2;
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// The host's answer.
+struct EeCalamityReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  uint64_t key;
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// What the C++ knows of the class's effects and sounds when it asks: which are set
+/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
+/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
+struct EeCalamityClassMedia {
+  uint32_t present;
+  uint32_t duration[4];
+  float size[4];
+  uint32_t time1[4];
+  float quake_damage_factor;
+};
+
+/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
+/// `ee/EECalamityClass.h`; 236 bytes on every target).
+struct EeCalamityData {
+  uint8_t mLabel[100];
+  float mFloatParam1;
+  float mFloatParam2;
+  float mQuakeMinimumStrength;
+  float mQuakeStrength;
+  float mUnused1;
+  float mRange;
+  int32_t mUnusedDatabaseID;
+  int32_t mID;
+  int32_t mClassEnum;
+  int32_t mUnusedTargetKind;
+  int32_t mLifeTime;
+  int32_t mUnused2;
+  int32_t mGraphicEffectID1;
+  int32_t mGraphicEffectID2;
+  int32_t mGraphicEffectID3;
+  int32_t mGraphicEffectID4;
+  int32_t mUnused3;
+  int32_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnitClassIndex;
+  int32_t mIntParam1;
+  int32_t mIntParam2;
+  int32_t mIntParam3;
+  int32_t mIntParam4;
+  int32_t mIntParam5;
+  int32_t mIntParam6;
+  bool mUnused6;
+  bool mBoolParam1;
+  bool mUnused7;
+  bool mUnused8;
+  bool mIsCastByAllSelected;
+  bool mIsBlockedByImmunity;
+  int32_t mSoundID;
+  int32_t mSecondarySoundID;
+  int32_t mCost;
+  uint32_t mUnitSet;
+  int32_t mNameID;
+  bool mUnusedClassFlag;
+};
 
 /// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
 /// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
@@ -1325,61 +1422,6 @@ struct EeCalamityClassFields {
   float mMinimumInterval;
   float mMaximumInterval;
   float mSightBonus;
-};
-
-/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
-/// `ee/EECalamityClass.h`; 236 bytes on every target).
-struct EeCalamityData {
-  uint8_t mLabel[100];
-  float mFloatParam1;
-  float mFloatParam2;
-  float mQuakeMinimumStrength;
-  float mQuakeStrength;
-  float mUnused1;
-  float mRange;
-  int32_t mUnusedDatabaseID;
-  int32_t mID;
-  int32_t mClassEnum;
-  int32_t mUnusedTargetKind;
-  int32_t mLifeTime;
-  int32_t mUnused2;
-  int32_t mGraphicEffectID1;
-  int32_t mGraphicEffectID2;
-  int32_t mGraphicEffectID3;
-  int32_t mGraphicEffectID4;
-  int32_t mUnused3;
-  int32_t mUnused4;
-  int32_t mUnused5;
-  int32_t mUnitClassIndex;
-  int32_t mIntParam1;
-  int32_t mIntParam2;
-  int32_t mIntParam3;
-  int32_t mIntParam4;
-  int32_t mIntParam5;
-  int32_t mIntParam6;
-  bool mUnused6;
-  bool mBoolParam1;
-  bool mUnused7;
-  bool mUnused8;
-  bool mIsCastByAllSelected;
-  bool mIsBlockedByImmunity;
-  int32_t mSoundID;
-  int32_t mSecondarySoundID;
-  int32_t mCost;
-  uint32_t mUnitSet;
-  int32_t mNameID;
-  bool mUnusedClassFlag;
-};
-
-/// What the C++ knows of the class's effects and sounds when it asks: which are set
-/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
-/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
-struct EeCalamityClassMedia {
-  uint32_t present;
-  uint32_t duration[4];
-  float size[4];
-  uint32_t time1[4];
-  float quake_damage_factor;
 };
 
 /// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
@@ -1838,48 +1880,6 @@ struct EeCalamityAge {
   float time_alive;
   bool done;
   uint8_t pad[3];
-};
-
-/// The calamity's members an update reads and writes (`EECalamity`).
-struct EeCalamityState {
-  float time_alive;
-  float float1;
-  float float2;
-  int32_t int1;
-  int32_t int2;
-  float target[3];
-  float epicenter_factor;
-  uint32_t effect_handle;
-  bool bool1;
-  bool bool2;
-  uint8_t pad[2];
-};
-
-/// One host call.
-struct EeCalamityCall {
-  EeCalamityOp op;
-  int32_t index;
-  int32_t value;
-  /// A second index (the casts' tile y).
-  int32_t index2;
-  float x;
-  float y;
-  float z;
-  float w;
-};
-
-/// The host's answer.
-struct EeCalamityReply {
-  bool ok;
-  uint8_t pad[3];
-  uint32_t flags;
-  int32_t value;
-  uint32_t id;
-  uint64_t key;
-  float x;
-  float y;
-  float z;
-  float w;
 };
 
 /// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++

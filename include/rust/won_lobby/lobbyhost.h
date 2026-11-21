@@ -399,6 +399,135 @@ enum class EeWonLobbyOp : uint32_t {
   LanRecvFromAddr,
   /// a ClientOptionsPopup for `a` (this player's client `b`, room spec `c`).
   LanClientOptions,
+  /// `st->mJoinOp.get() != NULL`.
+  StJoinOpIs = 600,
+  /// `st->mJoinOp.get()`.
+  StJoinOpGet,
+  /// `st->mJoinOp->Finish(WS_Success)`.
+  StJoinOpFinishSuccess,
+  /// `st->mJoinOp = NULL`.
+  StJoinOpClear,
+  /// `st->mJoinOp->Kill(true)`.
+  StJoinOpKillNow,
+  /// `LobbyRunOpWithStatus((AsyncOp*)a, title, details, 1, 0)` (`c` the two resource rows, as `MessageBox`'s).
+  RunOpWithStatusRows,
+  /// `st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, true)`.
+  StCreateDialogResetAll,
+  /// `LobbyNetLogout()`.
+  NetLogout,
+  /// `LobbyKillPings(0)`.
+  KillPings,
+  /// `LobbyShowLoginScreen()`.
+  ShowLoginScreen,
+  /// `LobbySaveGlobalPrefs(false)`.
+  SaveGlobalPrefs,
+  /// `LobbySaveUserPrefs(false)`.
+  SaveUserPrefs,
+  /// `LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop()`.
+  LogonSoundStop,
+  /// `g->ClearPlayers()`.
+  GameClearPlayers,
+  /// `st->mMyClient = NULL`.
+  StClearMyClient,
+  /// `g->PreNetLeaveGame()`.
+  GamePreNetLeave,
+  /// `LobbyNetLeaveGame(g)`.
+  NetLeaveGame,
+  /// `g->PostNetLeaveGame()`.
+  GamePostNetLeave,
+  /// `g->SetInProgress(c != 0)`.
+  GameSetInProgress,
+  /// `LobbyNetSetGameInProgress(c != 0)`.
+  NetSetGameInProgress,
+  /// `LobbyPingGame(a, true)`.
+  LanPingGameNotify,
+  /// `LobbyQueryGameDetails(a)`.
+  QueryGameDetails,
+  /// `g->SetShowDetails(c != 0)`.
+  GameSetShowDetails,
+  /// `GetLobbyConfig()`.
+  LobbyConfigGet,
+  /// `((LobbyConfig*)a)->mAllowJoinGameWithoutPing`.
+  ConfigAllowJoinWithoutPing,
+  /// `GetLobbyAuthContext()`.
+  AuthGet,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(c != 0)`.
+  AuthSetAutoRefresh,
+  /// `LobbyGetChatSoundEffects()`.
+  ChatSoundEffects,
+  /// `LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_WhisperRecv_Sound).get())`.
+  PlayWhisperSound,
+  /// `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`.
+  ParserSetInputName,
+  /// `LobbySetLanName(l->mLanNameDialog->InputText(0))`.
+  LanSetLanNameFromDialog,
+  /// `LobbySetLanBroadcastPort(c)`.
+  LanSetBroadcastPortTo,
+  /// `LobbyIsCDKeyValid()`.
+  CdKeyValid,
+  /// `LobbyMessageBox(title, details)` (`c` the two resource rows).
+  MessageBoxRows,
+  /// `((AuthContext*)a)->IsExpired(c)`.
+  AuthIsExpired,
+  /// `((AuthContext*)a)->SetUserName(std::wstring(gEmptyWideString))`.
+  AuthClearUserName,
+  /// `((AuthContext*)a)->SetPassword(std::wstring(gEmptyWideString))`.
+  AuthClearPassword,
+  /// `new GetCertOp((AuthContext*)a)` with a reference.
+  GetCertNew,
+  /// `((AsyncOp*)a)->GetStatus()` (netops).
+  OpStatusOf,
+  /// `l->RunTrackedOp(new PeerAuthServerOp((AuthContext*)b, (LobbyLanSocket*)a), HandlePeerAuthDone, 30000)`.
+  LanRunPeerAuth,
+  /// `((AsyncOp*)a)->Succeeded()` (netops).
+  OpSucceededOf,
+  /// `((AuthContext*)a)->GetPeerData()->GetFirstCommunity()`.
+  AuthCommunity,
+  /// `((PeerAuthServerOp*)a)->ClientPermits((DWORD)c)`.
+  PeerAuthPermits,
+  /// `((LobbyLanSocket*)a)->Fn2B0D90(LobbyGetLobbyPort(), 0)` (the bind's status).
+  LanBindLobbyPort,
+  /// `LobbyDoErrorDialog(gLobbyResources[c].mString, (WONStatus)d)`.
+  ErrorDialogRow,
+  /// `((AsyncSocket*)a)->Listen(c)` (netops).
+  SocketListen,
+  /// `a->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleAccept, l))`.
+  LanArmAcceptCompletion,
+  /// `a->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::Accept))`.
+  LanArmAcceptOp,
+  /// `*(EeWonIpAddr*)a = IPAddr::GetBroadcastAddr(LobbyGetLanBroadcastPort())`.
+  LanBroadcastAddrAssign,
+  /// `new QueueSocket(1)` with a reference.
+  LanNewQueueSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(LobbyGetLanBroadcastPort(), 1)` (the bind's status).
+  LanBindBroadcast,
+  /// `a->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleDiscoveryRecv, l))`.
+  LanArmDiscoveryCompletion,
+  /// `a->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::RecvFrom, NULL, NULL, NULL, 1024))`.
+  LanArmDiscoveryOp,
+  /// `new PeerAuthOp(g->GetAddress(), (AuthContext*)c, AUTH_TYPE_PERSISTENT, (LobbyLanSocket*)b, true)` with a reference.
+  LanNewPeerAuthConnect,
+  /// `new SocketOp(EeWonCoreSocketOp::Connect, (LobbyLanSocket*)b, NULL, &address)` of the game `a`'s address, with a reference.
+  LanNewConnect,
+  /// `new SocketOp(EeWonCoreSocketOp::RecvMsg, (LobbyLanSocket*)a)` with a reference.
+  LanNewRecvMsg,
+  /// `a->SetCloseCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleSocketClosed, l))`.
+  LanArmCloseCompletion,
+  /// `a->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleRecvMsg, l))`.
+  LanArmRecvCompletion,
+  /// `a->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::RecvMsg))`.
+  LanArmRecvOp,
+  /// `l->mDirectConnectDialog->InputText(0).length()`.
+  LanDirectInputLength,
+  /// `g->SetName(l->mDirectConnectDialog->InputText(c))`.
+  GameSetDirectName,
+  /// `LobbyAddDirectConnect(Addr(b), l->mDirectConnectDialog->InputText(c))`.
+  AddDirectConnectNamed,
+  /// LanLogic::HandlePeerAuthDone's checks of the op `a` (lobbyops.rs): its socket when accepted, 0 (the socket
+  /// closed, or no context).
+  LanPeerAuthDone,
+  /// `(LobbyLanSocket*)((PeerAuthServerOp*)a)->GetSocket()`.
+  PeerAuthSocket,
 };
 
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler

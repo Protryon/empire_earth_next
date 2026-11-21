@@ -11,7 +11,6 @@
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EECPPlacement;                        // ee/EECPPlacement.h
-class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
 
 // port (lane B of the AI Thread): the plain members (the tuning values, timers and flags Init sets and Load and Save
@@ -25,8 +24,6 @@ public:
     virtual ~EEComputerPlayer();            // +0x00 (??_G 0x2d021, dtor 0x2d0bb)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x2fd50 (no /Og)
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // +0x20 0x3cff8
-    // port: RepairPointers' managers part, run by EEWorld::CreatePlayers once every player is repaired (gDeferComputerPlayerRestore)
-    long RestoreManagers(unsigned long inMajorVersion, unsigned long inMinorVersion, long inResult);
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x3d677
     // the computer player's overrides (ret N from the bodies) and members (provisional names)
     EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID);
@@ -52,13 +49,8 @@ public:
     virtual void UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps);  // +0x9c 0x3ced7 (the EEPlayer slot)
     virtual void PayImprovement(EEUnitClass* inClass, long inImprovement);  // same EEPlayer slot, 0x3edc0
     virtual void RefreshTownGroups();       // +0x90 0x3cec9
-    // 0x2dccf/0x2de60/0x2df8c/0x2e0b8: a random favorite unit class per screener flag into mFavoriteAirType/mFavoriteLandType/mFavoriteSeaType/mFavoriteSpaceType,
-    // recorded with the epoch in mBA0 (EnterEpoch calls all four) (provisional names)
-    void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
-    void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
     void UpdateGroups();
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
-    void ChooseCivilization();              // 0x3ca49 (Update, unless gGameOptions.mLoadType) (provisional name)
     virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
     virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction);   // +0xb4 0x3ed98 (epochs: free)
@@ -66,7 +58,6 @@ public:
     virtual void UnitPlaced(EEComplexUnit* inUnit);  // +0xc0 0x3ef5d
     virtual void UnitTaken(RTSUnit* inUnit, bool inSwapped);  // +0xc4 0x3ef91 (the EEPlayer slot: a unit leaves)
     virtual void UnitGoalDone(EEComplexUnit* inUnit); // original ret4, Player slot C8
-    void SendToNearestBase(EEComplexUnit* inUnit); // original thiscall ret4
     virtual void EpochMediaUnloaded(long inEpoch);  // +0xcc 0x3f142
     virtual bool AvoidsEnemies(EEComplexUnit* inUnit);  // +0xd0 0x3f73e (a citizen, or a transport holding only citizens)
     virtual void WonderStarted(EEComplexUnit* inUnit);  // +0xd4 0x3f7ba
@@ -78,10 +69,6 @@ public:
     void SetIslandExpansionTimer(unsigned long inValue) { ee_cp_set_by_difficulty(this, 2, 0.0f, inValue); }
     virtual void RefreshResourceCenters();  // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
-    // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
-    // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
-    // Provisional name
-    void SetNextIslandExpansionTime();      // 0x3d652 (EECPResourceManager 0x8ecfd) (provisional name)
     // inline float getters: the AI compares load them onto the x87 stack (fld [mAidThreatThreshold]; fld st(1); fcompp) instead of
     // comparing against a memory operand (EECPMilitaryAidPackage 0x485892..0x485a2d) (provisional names)
     void SetCanAttack(bool inValue) { this->mCanAttack = inValue; }  // inline (EESMEffect::SetAIToggle 0x5c26da: 7 free sites set the budget)
@@ -106,15 +93,15 @@ public:
     // stage 6 (docs/AI_LUA_VERBS.md): the original civilization manager (+0xbc4) and its unit, build, resource,
     // research and wall managers are gone (the Lua verbs, data/ai/lib/verbs.lua); what the engine and the helper
     // queries still need: the placement searches (with the town centre tile)
-    EECPPlacement* mPlacement;
+    EECPPlacement* mPlacement = NULL;
     // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
     // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage
     // 5; EEGameState::Create sets the AI from the lobby, EEPPlayerHelper saves it), in the padding
     unsigned char mEngine = 1;
     char _gapF57[0xf58 - 0xf57];
-    struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
-    struct EECPUnitsState* mUnitsState;     // new: the per-unit Lua interface's state (ee/EECPNextUnits.h; NULL until used)
+    struct EECPNextState* mNextState = NULL;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
+    struct EECPUnitsState* mUnitsState = NULL;     // new: the per-unit Lua interface's state (ee/EECPNextUnits.h; NULL until used)
 };
 
 // Computer player difficulty (EEComputerPlayer::mDifficulty, from the game options).

@@ -24,6 +24,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEContagionManager.h"
 #include "rust/sim/tech.h"   // ee_tech_capture_* (ee_sim tech capture_rec.rs)
+#include "rust/game/gamecpp.h"   // the calamities' records (ee_game gamecpp calamity_capture.rs)
 
 // the node's, epoch's and tree's states: their Rust records (ee_sim tech capture_rec.rs)
 static void EETechCaptureNodeImpl(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
@@ -128,50 +129,10 @@ bool SumCostsSafe(EETechTree* inTree, long inID, std::set<long>& ioVisiting)
 
 }   // namespace
 
-namespace {
-
-EEUnit* FirstLivingUnit(EEPlayer* inPlayer)
-{
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
-            return theUnit;
-    return NULL;
-}
-
-}   // namespace
-
+// the calamities' game (EE-SIM --calamities: ee_game gamecpp calamity_capture.rs)
 static void EETechCaptureCastCalamitiesImpl(long inCall)
 {
-    if (inCall == 0)
-        EECalamityCaptureClasses();   // CALI (ee/EECalamityCapture.h)
-    EECalamityCaptureSaves();   // CALK
-    EECalamityManager* theManager = EECalamityManager::GetInstance();
-    unsigned long n = gWorld.GetNumPlayers();
-    for (unsigned long theRow = 0; theRow < 64; theRow++) {
-        if ((long)(theRow % 8) != inCall % 8)
-            continue;
-        EECalamityClass* theClass = theManager->GetCalamityClass(theRow);
-        if (theClass == NULL)
-            continue;
-        long theKind = theClass->GetTargetKind();
-        for (unsigned long p = 2; p < n; p++) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(p);
-            EEPlayer* theOther = gWorld.GetPlayer(p + 1 < n ? p + 1 : 2);
-            if (thePlayer == NULL || theOther == NULL)
-                continue;
-            EEUnit* theCaster = FirstLivingUnit(thePlayer);
-            EEUnit* theTarget = FirstLivingUnit(theOther);
-            if (theCaster == NULL || theTarget == NULL)
-                continue;
-            if (theKind == 3)
-                theManager->CreateUnitCalamity(theRow, theCaster->mUnitID, theTarget->mUnitID, thePlayer->mPlayerID);
-            else if (theKind == 2)
-                theManager->CreateLocationCalamity(theRow, theCaster->mUnitID, theTarget->GetTileX(), theTarget->GetTileY(),
-                                                   thePlayer->mPlayerID);
-            else if (theKind == 1)
-                theManager->CreateGlobalCalamity(theRow, theCaster->mUnitID, thePlayer->mPlayerID);
-        }
-    }
+    ee_gamecpp_capture_cast_calamities(inCall);
 }
 
 static void EETechCaptureSweepImpl()
@@ -236,194 +197,39 @@ static void EETechCaptureSweepImpl()
     }
 }
 
-// ---- CALW: a calamity's update with its world calls --------------------------------------------------------------
-
-namespace {
-
-std::vector<unsigned char> sCalamityEvents;
-unsigned int sCalamityEventCount = 0;
-long sCalamityCollecting = 0;
-long sCanCastDepth = 0;
-
-void Append(std::vector<unsigned char>& ioBytes, const void* inData, unsigned int inSize)
-{
-    const unsigned char* theBytes = (const unsigned char*)inData;
-    ioBytes.insert(ioBytes.end(), theBytes, theBytes + inSize);
-}
-
-unsigned int UnitID(EEUnit* inUnit)
-{
-    return inUnit != NULL ? inUnit->mUnitID : 0xffffffffu;
-}
-
-// the calamity's numeric state (no pointers: whether the units are set, and their ids)
-void CalamityState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
-{
-    ioRecord.F32(inCalamity->mTimeAlive);
-    ioRecord.F32(inCalamity->mFloatPlaceHolder1);
-    ioRecord.F32(inCalamity->mFloatPlaceHolder2);
-    ioRecord.I32(inCalamity->mIntPlaceHolder1);
-    ioRecord.I32(inCalamity->mIntPlaceHolder2);
-    ioRecord.U32((inCalamity->mBoolPlaceHolder1 ? 1u : 0u) | (inCalamity->mBoolPlaceHolder2 ? 2u : 0u) |
-                 (inCalamity->mInitialized ? 4u : 0u) | (inCalamity->mHasTargetLocation ? 8u : 0u) |
-                 (inCalamity->mHasTargetUnit ? 16u : 0u) | (inCalamity->mTargetUnit != NULL ? 32u : 0u) |
-                 (inCalamity->mCasterUnit != NULL ? 64u : 0u));
-    ioRecord.F32(inCalamity->mTargetLocation.mX);
-    ioRecord.F32(inCalamity->mTargetLocation.mY);
-    ioRecord.F32(inCalamity->mTargetLocation.mZ);
-    ioRecord.F32(inCalamity->mShakeLocation.mX);
-    ioRecord.F32(inCalamity->mShakeLocation.mY);
-    ioRecord.F32(inCalamity->mShakeLocation.mZ);
-    ioRecord.U32(inCalamity->mEffectHandle.mValue);
-    ioRecord.F32(inCalamity->mEpicenterFactor);
-    ioRecord.F32(inCalamity->mHeight);
-    ioRecord.F32(inCalamity->mDiscreteUpdateTime);
-    ioRecord.F32(inCalamity->mTimeElapsedSinceLastUpdate);
-    ioRecord.I32((long)inCalamity->mTilePlaceHolder1.mX);
-    ioRecord.I32((long)inCalamity->mTilePlaceHolder1.mY);
-    ioRecord.U32(UnitID(inCalamity->mTargetUnit));
-    ioRecord.U32(UnitID(inCalamity->mCasterUnit));
-    ioRecord.U32(inCalamity->mPlayerNumber);
-}
-
-}   // namespace
+// ---- CALW, CCAS, CALT, CONT: the calamities' runs (their records: ee_game gamecpp calamity_capture.rs) -----------
 
 static void EECalamityCaptureEventImpl(long inOp, long inA, long inB, float inC, float inD)
 {
-    if (sCalamityCollecting == 0)
-        return;
-    int theInts[3] = {(int)inOp, (int)inA, (int)inB};
-    float theFloats[2] = {inC, inD};
-    Append(sCalamityEvents, theInts, sizeof(theInts));
-    Append(sCalamityEvents, theFloats, sizeof(theFloats));
-    sCalamityEventCount++;
+    ee_gamecpp_capture_calamity_event(inOp, inA, inB, inC, inD);
 }
 
 static long EECalamityCaptureUpdateImpl(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime)
 {
-    if (!EESimCaptureRecord::Active())
-        return inClass->Update(inCalamity, inElapsedTime);
-    EESimCaptureRecord theRecord(EECaptureTag("CALW"));
-    theRecord.I32(inClass->mClassEnum);
-    CalamityState(theRecord, inCalamity);
-    theRecord.F32(inElapsedTime);
-    sCalamityEvents.clear();
-    sCalamityEventCount = 0;
-    sCalamityCollecting++;
-    long theResult = inClass->Update(inCalamity, inElapsedTime);
-    sCalamityCollecting--;
-    CalamityState(theRecord, inCalamity);
-    theRecord.I32(theResult);
-    theRecord.U32(sCalamityEventCount);
-    if (!sCalamityEvents.empty())
-        theRecord.Bytes(sCalamityEvents.data(), (unsigned int)sCalamityEvents.size());
-    theRecord.Commit();
-    sCalamityEvents.clear();
-    sCalamityEventCount = 0;
-    return theResult;
+    return ee_gamecpp_capture_calamity_update(inClass, inCalamity, inElapsedTime);
 }
 
-// ---- CCAS: CanCastAt ----------------------------------------------------------------------------------------------
-
-// EECalamityCanCastScope's construction: whether it is the outermost
 static bool CanCastEnter()
 {
-    return sCanCastDepth++ == 0;
+    return ee_gamecpp_capture_can_cast_enter();
 }
 
 static void CanCastLeave()
 {
-    sCanCastDepth--;
+    ee_gamecpp_capture_can_cast_leave();
 }
-
-namespace {
-
-void CanCastRecord(long inKind, EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation,
-                   unsigned long inX, unsigned long inY, bool inCheck, EEUnit* inTargetUnit, long inResult)
-{
-    EESimCaptureRecord theRecord(EECaptureTag("CCAS"));
-    theRecord.I32(inKind);
-    theRecord.I32(inClass->mClassEnum);
-    theRecord.U32(UnitID(inUnit));
-    theRecord.F32(inLocation.mX);
-    theRecord.F32(inLocation.mY);
-    theRecord.F32(inLocation.mZ);
-    theRecord.U32((unsigned int)inX);
-    theRecord.U32((unsigned int)inY);
-    theRecord.U32(inCheck ? 1 : 0);
-    theRecord.U32(UnitID(inTargetUnit));
-    theRecord.I32(inResult);
-    theRecord.Commit();
-}
-
-EEUnit* LivingUnit(EEPlayer* inPlayer, long inSkip)
-{
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0 && inSkip-- == 0)
-            return theUnit;
-    return NULL;
-}
-
-}   // namespace
 
 static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
                               const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
                               EEUnit* inTargetUnit, long inResult)
 {
-    if (inOutermost && EESimCaptureRecord::Active())
-        CanCastRecord(0, inClass, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, inResult);
-    return inResult;
+    return ee_gamecpp_capture_can_cast_record(inOutermost, inClass, inUnit, (const float(*)[3])&inLocation.mX, inX, inY,
+                                              inCheck, inTargetUnit, inResult);
 }
 
 static void EECalamityCaptureSweepImpl()
 {
-    EECalamityManager* theManager = EECalamityManager::GetInstance();
-    unsigned long n = gWorld.GetNumPlayers();
-    long theSize = gWorld.mMap->GetSize();
-    for (unsigned long theRow = 0; theRow < theManager->GetCalamityClassCount(); theRow++) {
-        EECalamityClass* theClass = theManager->GetCalamityClass(theRow);
-        if (theClass == NULL)
-            continue;
-        for (unsigned long p = 1; p < n; p++) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(p);
-            EEPlayer* theOther = gWorld.GetPlayer(p + 1 < n ? p + 1 : 1);
-            if (thePlayer == NULL || theOther == NULL)
-                continue;
-            EEUnit* theCaster = LivingUnit(thePlayer, 0);
-            if (theCaster == NULL)
-                continue;
-            EEUnit* theTargets[4] = {NULL, LivingUnit(theOther, 0), theCaster, LivingUnit(thePlayer, 1)};
-            EEUnit* theFar = LivingUnit(theOther, 3);
-            long thePoints[6][2] = {
-                {theCaster->GetTileX(), theCaster->GetTileY()},
-                {theTargets[1] != NULL ? theTargets[1]->GetTileX() : theSize / 2,
-                 theTargets[1] != NULL ? theTargets[1]->GetTileY() : theSize / 2},
-                {theSize / 2, theSize / 2},
-                {theCaster->GetTileX() + 3, theCaster->GetTileY() - 2},
-                {theFar != NULL ? theFar->GetTileX() : 1, theFar != NULL ? theFar->GetTileY() : theSize / 2},
-                {theSize + 5, theSize + 5},
-            };
-            for (long i = 0; i < 6; i++) {
-                for (long t = 0; t < 4; t++) {
-                    unsigned long theX = (unsigned long)thePoints[i][0];
-                    unsigned long theY = (unsigned long)thePoints[i][1];
-                    GE3DPoint theLocation((long)theX + 0.5f, (long)theY + 0.5f, 0.0f);
-                    EEComplexUnit* theUnit = theCaster->mComplexUnit;
-                    long theResult = theClass->CanCastAt(theUnit, theLocation, theX, theY, true, theTargets[t]);
-                    CanCastRecord(1, theClass, theUnit, theLocation, theX, theY, true, theTargets[t], theResult);
-                    if (t == 1 && i < 2) {
-                        theResult = theClass->CanCastAt(theUnit, theLocation, theX, theY, false, theTargets[t]);
-                        CanCastRecord(1, theClass, theUnit, theLocation, theX, theY, false, theTargets[t], theResult);
-                    }
-                    // nature's cast (no caster): only the classes cast at no location or unit read no caster
-                    if (t == 0 && theClass->GetTargetKind() == 1) {
-                        theResult = theClass->CanCastAt(NULL, theLocation, theX, theY, true, NULL);
-                        CanCastRecord(1, theClass, NULL, theLocation, theX, theY, true, NULL, theResult);
-                    }
-                }
-            }
-        }
-    }
+    ee_gamecpp_capture_calamity_sweep();
 }
 
 // ---- EVUN: the units an effect walks (the collection: ee_sim tech capture_rec.rs) ----------------------------------
@@ -440,190 +246,34 @@ static void EETechCaptureUnitStepImpl(EEUnit* inUnit, bool inApplies, long inVal
                               theComplex != NULL ? (long)theComplex->mFlightTime : 0, inApplies, inValue);
 }
 
-// ---- CALT: a calamity's Start and Stop ----------------------------------------------------------------------------
-
-namespace {
-
-std::vector<unsigned char> sStartEvents;
-unsigned int sStartEventCount = 0;
-long sStartCollecting = 0;
-std::vector<unsigned char> sContagionEvents;
-unsigned int sContagionEventCount = 0;
-long sContagionCollecting = 0;
-
-void Event(std::vector<unsigned char>& ioEvents, unsigned int& ioCount, long inOp, long inA, long inB, float inC,
-           float inD)
-{
-    int theInts[3] = {(int)inOp, (int)inA, (int)inB};
-    float theFloats[2] = {inC, inD};
-    Append(ioEvents, theInts, sizeof(theInts));
-    Append(ioEvents, theFloats, sizeof(theFloats));
-    ioCount++;
-}
-
-// what a start or stop changes on a unit (none: its id 0xffffffff)
-void UnitState(EESimCaptureRecord& ioRecord, EEUnit* inUnit)
-{
-    ioRecord.U32(UnitID(inUnit));
-    if (inUnit == NULL)
-        return;
-    ioRecord.I32(inUnit->mHitPoints);
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    ioRecord.U32(theUnit != NULL ? 1 : 0);
-    if (theUnit == NULL)
-        return;
-    ioRecord.U32((theUnit->mIsDisabled ? 1u : 0u) | (theUnit->mIsTinted ? 2u : 0u) | (theUnit->mIsDeletable ? 4u : 0u));
-    ioRecord.U32(theUnit->mDisabledReason);
-    ioRecord.F32(theUnit->mSight);
-    ioRecord.I32(theUnit->mPositiveMorale);
-    ioRecord.I32(theUnit->mNegativeMorale);
-    ioRecord.U32(theUnit->mCloaked);
-    ioRecord.U32(theUnit->mCalamityFlags);
-    ioRecord.U32(theUnit->mFireEffect.mValue);
-    ioRecord.U32(theUnit->mNumAreaEffects);
-}
-
-void StartState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
-{
-    CalamityState(ioRecord, inCalamity);
-    ioRecord.F32(inCalamity->mRectangle.GetLeft());
-    ioRecord.F32(inCalamity->mRectangle.GetTop());
-    ioRecord.F32(inCalamity->mRectangle.GetRight());
-    ioRecord.F32(inCalamity->mRectangle.GetBottom());
-    ioRecord.U32((inCalamity->mSound != NULL ? 1u : 0u) | (inCalamity->mSecondarySound != NULL ? 2u : 0u));
-    UnitState(ioRecord, inCalamity->mTargetUnit);
-    UnitState(ioRecord, inCalamity->mCasterUnit);
-    EEContagionManager* theManager = ::gWorld.GetContagionManager();
-    ioRecord.U32((unsigned int)ee_contagion_manager_count(theManager->mRust));
-    ioRecord.I32(ee_contagion_manager_next_id(theManager->mRust));
-    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->Count() : 0u);
-    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->DestroyedCount() : 0u);
-}
-
-void StartRecord(long inKind, EECalamityClass* inClass, EECalamity* inCalamity, EESimCaptureRecord& ioRecord)
-{
-    ioRecord.I32(inKind);
-    ioRecord.I32(inClass->mClassEnum);
-    StartState(ioRecord, inCalamity);
-    sStartEvents.clear();
-    sStartEventCount = 0;
-}
-
-void StartCommit(EECalamity* inCalamity, EESimCaptureRecord& ioRecord, long inResult)
-{
-    StartState(ioRecord, inCalamity);
-    ioRecord.I32(inResult);
-    ioRecord.U32(sStartEventCount);
-    if (!sStartEvents.empty())
-        ioRecord.Bytes(sStartEvents.data(), (unsigned int)sStartEvents.size());
-    ioRecord.Commit();
-    sStartEvents.clear();
-    sStartEventCount = 0;
-}
-
-}   // namespace
-
 static void EECalamityCaptureStartEventImpl(long inOp, long inA, long inB, float inC, float inD)
 {
-    if (sStartCollecting == 0)
-        return;
-    Event(sStartEvents, sStartEventCount, inOp, inA, inB, inC, inD);
+    ee_gamecpp_capture_start_event(inOp, inA, inB, inC, inD);
 }
 
 static void EECalamityCaptureStartPointImpl(long inWhich, float inX, float inY, float inZ)
 {
-    if (sStartCollecting == 0)
-        return;
-    int theZ;
-    memcpy(&theZ, &inZ, 4);
-    Event(sStartEvents, sStartEventCount, kCalamityStartEffect, inWhich, theZ, inX, inY);
+    ee_gamecpp_capture_start_point(inWhich, inX, inY, inZ);
 }
 
 static bool EECalamityCaptureStartImpl(EECalamityClass* inClass, EECalamity* inCalamity)
 {
-    if (!EESimCaptureRecord::Active() || sStartCollecting != 0)
-        return inClass->Start(inCalamity);
-    EESimCaptureRecord theRecord(EECaptureTag("CALT"));
-    StartRecord(0, inClass, inCalamity, theRecord);
-    sStartCollecting++;
-    bool theResult = inClass->Start(inCalamity);
-    sStartCollecting--;
-    StartCommit(inCalamity, theRecord, theResult ? 1 : 0);
-    return theResult;
+    return ee_gamecpp_capture_calamity_start(inClass, inCalamity, false);
 }
 
 static void EECalamityCaptureStopImpl(EECalamityClass* inClass, EECalamity* inCalamity)
 {
-    if (!EESimCaptureRecord::Active() || sStartCollecting != 0) {
-        inClass->Stop(inCalamity);
-        return;
-    }
-    EESimCaptureRecord theRecord(EECaptureTag("CALT"));
-    StartRecord(1, inClass, inCalamity, theRecord);
-    sStartCollecting++;
-    inClass->Stop(inCalamity);
-    sStartCollecting--;
-    StartCommit(inCalamity, theRecord, 0);
+    ee_gamecpp_capture_calamity_start(inClass, inCalamity, true);
 }
-
-// ---- CONT: a contagion helper's Update ----------------------------------------------------------------------------
-
-namespace {
-
-EECalamity* HelperCalamity(EeContagionHelper* inHelper)
-{
-    return reinterpret_cast<EECalamity*>((uintptr_t)ee_contagion_helper_calamity(inHelper));
-}
-
-void HelperState(EESimCaptureRecord& ioRecord, EeContagionHelper* inHelper)
-{
-    EeContagionHelperFields theFields = ee_contagion_helper_fields(inHelper);
-    EECalamity* theCalamity = HelperCalamity(inHelper);
-    ioRecord.I32(theFields.mHelperID);
-    ioRecord.F32(theFields.mTimeSinceLastSpread);
-    ioRecord.F32(theFields.mTimeSinceLastUpdate);
-    ioRecord.F32(theCalamity != NULL ? theCalamity->mTimeElapsedSinceLastUpdate : 0.0f);
-    ioRecord.F32(theCalamity != NULL ? theCalamity->mDiscreteUpdateTime : 0.0f);
-    ioRecord.U32((unsigned int)ee_contagion_helper_count(inHelper, false));
-    for (size_t i = 0; i < ee_contagion_helper_count(inHelper, false); i++) {
-        EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)ee_contagion_helper_unit(inHelper, false, i));
-        ioRecord.U32(theUnit->mUnitID);
-        ioRecord.I32(theUnit->mHitPoints);
-        ioRecord.U32(theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->mCalamityFlags : 0xffffffffu);
-    }
-}
-
-}   // namespace
 
 static void EECalamityCaptureContagionEventImpl(long inOp, long inA, long inB, float inC, float inD)
 {
-    if (sContagionCollecting == 0)
-        return;
-    Event(sContagionEvents, sContagionEventCount, inOp, inA, inB, inC, inD);
+    ee_gamecpp_capture_contagion_event(inOp, inA, inB, inC, inD);
 }
 
 static void EECalamityCaptureContagionImpl(EeContagionHelper* inHelper, float inElapsedTime)
 {
-    if (!EESimCaptureRecord::Active() || sContagionCollecting != 0) {
-        EEContagionHelperUpdate(inHelper, inElapsedTime);
-        return;
-    }
-    EESimCaptureRecord theRecord(EECaptureTag("CONT"));
-    theRecord.I32(HelperCalamity(inHelper) != NULL ? HelperCalamity(inHelper)->mClass->mClassEnum : -1);
-    HelperState(theRecord, inHelper);
-    theRecord.F32(inElapsedTime);
-    sContagionEvents.clear();
-    sContagionEventCount = 0;
-    sContagionCollecting++;
-    EEContagionHelperUpdate(inHelper, inElapsedTime);
-    sContagionCollecting--;
-    HelperState(theRecord, inHelper);
-    theRecord.U32(sContagionEventCount);
-    if (!sContagionEvents.empty())
-        theRecord.Bytes(sContagionEvents.data(), (unsigned int)sContagionEvents.size());
-    theRecord.Commit();
-    sContagionEvents.clear();
-    sContagionEventCount = 0;
+    ee_gamecpp_capture_contagion(inHelper, inElapsedTime);
 }
 
 // The game calls these through the header's hook pointers, set here before main: the game's units name no

@@ -42,7 +42,6 @@
 #include "ee/EETileLocation.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathArea.h"

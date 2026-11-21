@@ -28,7 +28,6 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUIManager.h"

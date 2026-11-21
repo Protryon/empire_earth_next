@@ -223,6 +223,8 @@ pub enum EeWonLobbyPopupCall {
     Event,
     /// a member: 0 the menu, 1 the subject, 2 the room flags.
     Field,
+    /// `HandleComponentEvent(a)` with `b` the event's `mType` (evmap.rs chooses the kind).
+    RawEvent,
 }
 
 /// The host: `(popup, op, a, b, c) -> result`.
@@ -514,6 +516,7 @@ impl EeWonLobbyPopup {
                 Kind::Friend => self.friend_init(a, b as i32),
             },
             C::Event => self.event(a, b as u32),
+            C::RawEvent => self.event(a, crate::evmap::popup_event_of(b as i32) as u32),
             C::Field => {
                 return match a {
                     0 => self.menu.get(),

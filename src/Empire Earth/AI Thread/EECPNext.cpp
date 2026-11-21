@@ -142,53 +142,6 @@ extern "C" void ee_cp_engine_debug_out(const char* inText)
     ESDebugOut("%s", inText);
 }
 
-// EEComputerPlayer::CanAfford: the plain check (EEPlayer::CanAfford), an epoch free with the epochs cheat (stage 6: the
-// strategy's reserve is the Lua verbs' own check, data/ai/lib/verbs.lua)
-bool EECPNextCanAfford(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inUnitType, long inCount)
-{
-    bool theEpoch = inNode != NULL && inNode->mData != NULL && EEIsEpochID(inNode->mData->mID);
-    if (theEpoch && inPlayer->mTechnologies != NULL && EECPCheatOn(inPlayer, kAICheatEpochs))
-        return true;
-    return inPlayer->EEPlayer::CanAfford(inNode, inUnitType, inCount);
-}
-
-void EECPNextIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
-{
-    if (inPlayer->mNextState != NULL)
-        ee_ai_next_income(inPlayer->mNextState, inResource - kResourceFood, inAmount);
-}
-
-void EECPNextEventAdd(const EEComputerPlayer* inPlayer, long inKind, long inType, long inCount)
-{
-    if (inPlayer->mNextState != NULL)
-        ee_ai_next_event_add(inPlayer->mNextState, inKind, inType, inCount);
-}
-
-// the next engine's tick: the bookkeeping the classic tick does first (EEComputerPlayer::Update): new units into
-// resource centres, the combat state's decay and the population cap (WorkOutPopulation; GetPopulationLimit reads it).
-// EnableManagers does not run: its flags gate only classic decisions. Then the engine (ee_ai_next_update): the
-// reflexes' danger zones, the army's scan, one strategy step on a fresh view.
-void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
-{
-    EECPNextGetState(inPlayer);
-    if (inPlayer->mPlacement == NULL || inPlayer->mTechnologies == NULL)
-        return;
-    if (inPlayer->mRegroupPending) {
-        inPlayer->UpdateGroups();
-        inPlayer->mRegroupPending = false;
-    }
-    if (inPlayer->mCombatState == 2 && inPlayer->mNumAttacks == 0 && inTime - inPlayer->mLastDamagedTime > 60000) {
-        inPlayer->SetCombatState(1);
-        inPlayer->mBuildingDamaged = false;
-        inPlayer->mCitizenDamaged = false;
-    }
-    if (inTime >= (unsigned long)inPlayer->mNextPopulationTime) {
-        inPlayer->WorkOutPopulation();
-        inPlayer->mNextPopulationTime = inTime + 60000;
-    }
-    ee_ai_next_update(inPlayer, inTime);
-}
-
 bool EECPNextPrepare(EEComputerPlayer* inPlayer)
 {
     return ee_ai_next_prepare(inPlayer);
@@ -251,32 +204,6 @@ long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inN
 long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCause)
 {
     return ee_ai_next_site_blocked(inPlayer, EECPNextHandle(inUnit), outCause);
-}
-
-void EECPNextTraceHit(EEComputerPlayer* inPlayer, long inAttacker, EEUnit* inUnit)
-{
-    ee_ai_next_trace_hit(inPlayer, inAttacker, EECPNextHandle(inUnit));
-}
-
-void EECPNextTraceDeath(EEComputerPlayer* inPlayer, EEUnit* inUnit)
-{
-    ee_ai_next_trace_death(inPlayer, EECPNextHandle(inUnit));
-}
-
-// the reflexes (ee/EECPReflexes.h; ee_ai next_reflex.rs)
-void EECPRMNoteDanger(EEComputerPlayer* inPlayer, EEUnit* inCitizen, unsigned long inAttacker)
-{
-    ee_ai_next_note_danger(inPlayer, EECPNextHandle(inCitizen), inAttacker);
-}
-
-void EECPRMNavalFlee(EEComputerPlayer* inPlayer, EEUnit* inVictim, EEComplexUnit* inAttacker)
-{
-    ee_ai_next_naval_flee(inPlayer, EECPNextHandle(inVictim), EECPNextHandle(inAttacker));
-}
-
-void EECPRMFleeRaids(EEComputerPlayer* inPlayer)
-{
-    ee_ai_next_flee_raids(inPlayer);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -383,12 +310,11 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return (int64_t)gPhysics->mGameTime;
     case EE_AI_NEXT_HOST_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
-    case EE_AI_NEXT_HOST_TRACE:
-        if (a != 0) {
-            EECPTraceScope theScope((const char*)(uintptr_t)a);
-            EECPTraceOut(me, (const char*)(uintptr_t)b, "%s", (const char*)(uintptr_t)c);
-        } else
-            EECPTraceOut(me, (const char*)(uintptr_t)b, "%s", (const char*)(uintptr_t)c);
+    case EE_AI_NEXT_HOST_TRACE_OUT: EECPTraceOut(me, (const char*)(uintptr_t)b, "%s", (const char*)(uintptr_t)c);
+        return 0;
+    case EE_AI_NEXT_HOST_SET_ATTACK: ((EEComplexUnit*)(uintptr_t)a)->SetGoal(EEUGRust::NewAttackUnit((EEComplexUnit*)(uintptr_t)a, (EEComplexUnit*)(uintptr_t)b, false, false), 0, 0);
+        return 0;
+    case EE_AI_NEXT_HOST_SET_LOCATION: ((EEComplexUnit*)(uintptr_t)a)->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)b, (float)c), true, true, false, 0.0f, false, false), 0, 0);
         return 0;
     case EE_AI_NEXT_HOST_GAME_LOG_ON:
         return EEGameLogOn() ? 1 : 0;
@@ -432,51 +358,14 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     }
     case EE_AI_NEXT_HOST_UNITS_STATE:
         return (int64_t)(uintptr_t)EECPUnitsRust(me);
-    case EE_AI_NEXT_HOST_TOWN:
-        if (me->mPlacement == NULL)
-            return 0;
-        out[0] = me->mPlacement->mTownCenterTile.mX;
-        out[1] = me->mPlacement->mTownCenterTile.mY;
-        return 1;
-    case EE_AI_NEXT_HOST_POPULATION:
-        switch (a) {
-        case 0: return me->GetTotalPopulation(true, false);
-        case 1: return me->GetPopulationLimit(0);
-        case 2: return me->GetTotalPopulation(true, true);
-        case 3: return me->EEPlayer::GetPopulationLimit(0);
-        case 4: return me->mPopulationCap;
-        default: return me->mDropOffDistance;
-        }
     case EE_AI_NEXT_HOST_PENDING_EPOCH:
         return EECPPendingEpoch(me);
     case EE_AI_NEXT_HOST_CAN_GATHER:
         return me->mCanGather ? 1 : 0;
     case EE_AI_NEXT_HOST_RC_COUNT:   // the centres (ee_sim::cp lists.rs)
         return (int64_t)ee_cp_center_count(me);
-    case EE_AI_NEXT_HOST_RC: {
-        EeCpPlaceCtx theContext = EECPPlaceContext(me);
-        ee_cp_center_info(&theContext, (size_t)a, out);
-        return 0;
-    }
-    case EE_AI_NEXT_HOST_RC_UNIT: {
-        EeCpPlaceCtx theContext = EECPPlaceContext(me);
-        return (int64_t)ee_cp_center_unit(&theContext, (size_t)a, (size_t)b);
-    }
-    case EE_AI_NEXT_HOST_RC_CENTER: {
-        EeCpPlaceCtx theContext = EECPPlaceContext(me);
-        int32_t theTile[2] = {0, 0};
-        ee_cp_center_get_center_at(&theContext, (size_t)a, theTile);
-        out[0] = theTile[0];
-        out[1] = theTile[1];
-        return 0;
-    }
     case EE_AI_NEXT_HOST_RESOURCE_USERS:
         return (int64_t)gWorld.GetResourceUsers((EEUnit*)(uintptr_t)a);
-    case EE_AI_NEXT_HOST_GOAL_UNIT: {
-        EEUGRust* theGoal = static_cast<EEUGRust*>((EEUnitGoal*)(uintptr_t)a);
-        EEUnit* theUnit = b == 0 ? theGoal->GetGatherResource() : b == 1 ? theGoal->GetAttackTarget() : theGoal->GetBuildTarget();
-        return (int64_t)EECPNextHandle(theUnit);
-    }
     case EE_AI_NEXT_HOST_CONTINENT_OF:
         return (int64_t)gContinentManager.GetContinent((EEUnit*)(uintptr_t)a, kAIPathLandMass);
     case EE_AI_NEXT_HOST_AREA_HULL: {
@@ -521,13 +410,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return (int64_t)EECPNextHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
     case EE_AI_NEXT_HOST_STATE:
         return (int64_t)(uintptr_t)EECPNextGetState(me);
-    case EE_AI_NEXT_HOST_MICRO_PLAYER: {
-        EEPlayer* thePlayer = gWorld.mPlayers[(unsigned long)a];
-        EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
-        if (theCP == NULL || theCP->mUnitsState == NULL || theCP->mNextState == NULL || !theCP->mActive)
-            return 0;
-        return (int64_t)(uintptr_t)theCP;
-    }
     case EE_AI_NEXT_HOST_STATE_OF:
         return (int64_t)(uintptr_t)me->mNextState;
     case EE_AI_NEXT_HOST_DEBUG_OUT:
@@ -540,56 +422,12 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     }
     case EE_AI_NEXT_HOST_PLAYER_ID:
         return (int64_t)me->mPlayerID;
-    case EE_AI_NEXT_HOST_DANGER_COUNT:   // the danger zones (ee_sim::cp lists.rs)
-        return (int64_t)ee_cp_zone_count(me);
-    case EE_AI_NEXT_HOST_DANGER: {
-        EeCpDangerZone theZone = ee_cp_zone_at(me, (size_t)a);
-        out[0] = theZone.x;
-        out[1] = theZone.y;
-        out[2] = (int64_t)theZone.time;
-        return 0;
-    }
-    case EE_AI_NEXT_HOST_DANGER_ADD:
-        ee_cp_zone_push(me, EeCpDangerZone{(long)a, (long)b, (unsigned long)c});
-        return 0;
-    case EE_AI_NEXT_HOST_DANGER_ERASE:
-        ee_cp_zone_erase(me, (size_t)a);
-        return 0;
-    case EE_AI_NEXT_HOST_ORDER: {
-        // the reflexes' orders (ee_ai next_reflex.rs): attack a unit, or go to a tile
-        EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)a;
-        if (out[4] != 0)
-            theUnit->Reference();
-        theUnit->ClearGoalQueue(0);
-        if (out[0] == 0)
-            theUnit->SetGoal(EEUGRust::NewAttackUnit(theUnit, (EEComplexUnit*)(uintptr_t)out[1], false, false), 0, 0);
-        else
-            theUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)out[2], (float)out[3]), true, true, false, 0.0f, false, false), 0, 0);
-        theUnit->StartAction(kActionPrepareToMove);
-        theUnit->GetUnitClass()->ActionChanged(theUnit);
-        if (out[4] != 0)
-            theUnit->Dereference();
-        return 0;
-    }
-    case EE_AI_NEXT_HOST_UNITS_OF_TYPE: {
-        std::vector<EEUnit*> theUnits;
-        ee_units_uu_player_units_of_type((long)a, (long)b, &theUnits);
-        for (size_t k = 0; k < theUnits.size(); k++)
-            ee_ai_next_push_handle(outRecord, EECPNextHandle(theUnits[k]));
-        return 0;
-    }
     case EE_AI_NEXT_HOST_CITIZEN_QUEUE:
         return (int64_t)((EEComplexUnit*)(uintptr_t)a)->mCitizenBuildQueue.size();
     case EE_AI_NEXT_HOST_IS_HUMAN:
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
     case EE_AI_NEXT_HOST_SWITCH:
         return (a == 0 ? EECPMilitiaOn(me) : EECPMilitiaTowersOn(me)) ? 1 : 0;
-    case EE_AI_NEXT_HOST_DISTANCE2: {
-        float theDistance = ((EEComplexUnit*)(uintptr_t)a)->DistanceSquaredToUnit((EEUnit*)(uintptr_t)b);
-        uint32_t theBits;
-        memcpy(&theBits, &theDistance, sizeof(theBits));
-        return (int64_t)theBits;
-    }
     case EE_AI_NEXT_HOST_COMPUTER:
         return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mComputerPlayer;
     case EE_AI_NEXT_HOST_AREAS: {
@@ -626,14 +464,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         out[2] = (int64_t)theUnits;
         out[3] = (int64_t)(unsigned long)gPhysics->mRandom.GetSeed();
         out[4] = (int64_t)gPhysics->mInputMessagesProcessed;
-        return 0;
-    }
-    case EE_AI_NEXT_HOST_FORMAT_F2: {
-        double theValue;
-        memcpy(&theValue, &a, sizeof(theValue));
-        char theText[64];
-        snprintf(theText, sizeof(theText), "%.2f", theValue);
-        ee_ai_next_append(outRecord, (const uint8_t*)theText, strlen(theText));
         return 0;
     }
     default:

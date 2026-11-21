@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <math.h>
+#include <stddef.h>
 
 #include "lle/LowLevelEngine.h"
 
@@ -18,12 +19,17 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEAEManager.h"
 #include "EEDatabase.h"
+#include "platform/PlatTime.h"
+#include "rust/sim/units.h"
+
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#endif
 
 // Second unguarded lock chain at 0x23b664; independent technology-media readers use 0x564458.
 static EEDatabaseLock sUnitClassUpgradeLock;
 
-static unsigned long sModel74Index;         // 0x564460 (GetAcknowledgeSound's round robin; provisional name)
-static unsigned long sModel7CIndex;         // 0x564464 (GetSelectionSound's; provisional name)
+// (the sounds' round robins 0x564460, 0x564464 are Rust's: upgrade_media.rs)
 
 // Creates a player's copy of a unit class's stats, unnamed, with no media or buttons loaded
 EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
@@ -38,26 +44,67 @@ EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
     this->Init();
 }
 
+// port (the groups lane, round 1): the media bodies are Rust (ee_units upgrade_media.rs) over the eight media members
+// (mButton .. mSelectionSounds[1], contiguous), the busy flags and the record's counts; each C++ call is one case of
+// ee_units_upgrade_host
+static_assert(offsetof(EEUnitClassUpgrade, mSelectionSounds) + sizeof(void*) == offsetof(EEUnitClassUpgrade, mButton) + 7 * sizeof(void*),
+              "the eight media members are contiguous");
+static_assert(offsetof(EEUnitClassUpgrade, mIsLoadingButtons) == offsetof(EEUnitClassUpgrade, mIsLoadingMedia) + 1,
+              "the busy flags are adjacent");
+
+static uint64_t EEUpgradeMedia(EEUnitClassUpgrade* inUpgrade, int32_t inOp, long inArg, EEPlayer* inPlayer, void* inValue)
+{
+    EeUnitsUpgradeMedia theMedia = {reinterpret_cast<void**>(&inUpgrade->mButton), const_cast<bool*>(&inUpgrade->mIsLoadingMedia),
+                                    static_cast<EeUnitsUnitClassUpgradeFields*>(inUpgrade), inUpgrade, inPlayer};
+    return ee_units_upgrade_media(&theMedia, inOp, inArg, inValue);
+}
+
+// The C++ the media bodies call (ee_units upgrade_media.rs; EE_UNITS_UPGRADE_OP_*)
+extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObject, void* inPlayer)
+{
+    EEUnitClassUpgrade* theUpgrade = static_cast<EEUnitClassUpgrade*>(inUpgrade);
+    switch (inOp) {
+    case EE_UNITS_UPGRADE_OP_SOUND_LOAD: return static_cast<EESoundObject*>(inObject)->LoadMedia();
+    case EE_UNITS_UPGRADE_OP_SOUND_UNLOAD: static_cast<EESoundObject*>(inObject)->UnloadMedia();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_MODEL_LOAD: static_cast<EEModel*>(inObject)->LoadMedia();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_MODEL_UNLOAD: static_cast<EEModel*>(inObject)->UnloadMedia();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_BUTTON_ACQUIRE: static_cast<EEButtonObject*>(inObject)->Acquire();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_BUTTON_RELEASE: static_cast<EEButtonObject*>(inObject)->Release();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD: gAEManager.LoadTemplateMedia((unsigned long)(uintptr_t)inObject);
+        return 0;
+    case EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD: gAEManager.UnloadTemplateMedia((unsigned long)(uintptr_t)inObject);
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_LOAD_MEDIA: theUpgrade->mUnitClass->LoadMedia(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_MEDIA: theUpgrade->mUnitClass->UnloadMedia(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_LOAD_BUTTONS: theUpgrade->mUnitClass->LoadButtons(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_BUTTONS: theUpgrade->mUnitClass->UnloadButtons(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_DATABASE_ENTER: sDatabaseLock.mLock->Enter();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_DATABASE_LEAVE: sDatabaseLock.mLock->Leave();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_UPGRADE_ENTER: sUnitClassUpgradeLock.mLock->Enter();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_UPGRADE_LEAVE: sUnitClassUpgradeLock.mLock->Leave();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_SLEEP: PlatSleep(1);
+        return 0;
+    }
+    return 0;
+}
+
 // Destroys the copy, unloading its sounds and model while its media is loaded
 EEUnitClassUpgrade::~EEUnitClassUpgrade()
 {
-    if (this->mMediaCount > 0) {
-        long i;
-        for (i = 0; i < 2; i++) {
-            if (this->mAcknowledgeSounds[i] != NULL)
-                this->mAcknowledgeSounds[i]->UnloadMedia();
-        }
-        for (i = 0; i < 2; i++) {
-            if (this->mSelectionSounds[i] != NULL)
-                this->mSelectionSounds[i]->UnloadMedia();
-        }
-        if (this->mDeathSound != NULL)
-            this->mDeathSound->UnloadMedia();
-        if (this->mCreationSound != NULL)
-            this->mCreationSound->UnloadMedia();
-        if (this->mModel != NULL)
-            this->mModel->UnloadMedia();
-    }
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_DESTROY, 0, NULL, NULL);
 }
 
 // Raises another copy's improvements by this copy's levels above 1, moving its stats
@@ -77,11 +124,7 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 // Returns acknowledge sound inIndex; -1 alternates between the two (one turn shared by every class)
 EESoundObject* EEUnitClassUpgrade::GetAcknowledgeSound(long inIndex)
 {
-    if (inIndex == -1) {
-        inIndex = sModel74Index;
-        sModel74Index = (inIndex - 1) & 1;
-    }
-    return this->mAcknowledgeSounds[inIndex];
+    return reinterpret_cast<EESoundObject*>(EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_ACKNOWLEDGE_SOUND, inIndex, NULL, NULL));
 }
 
 // Returns the copy's improvement levels
@@ -93,11 +136,7 @@ EEUnitClassImprovement* EEUnitClassUpgrade::GetImprovement()
 // Returns selection sound inIndex; -1 alternates between the two (one turn shared by every class)
 EESoundObject* EEUnitClassUpgrade::GetSelectionSound(long inIndex)
 {
-    if (inIndex == -1) {
-        inIndex = sModel7CIndex;
-        sModel7CIndex = (inIndex - 1) & 1;
-    }
-    return this->mSelectionSounds[inIndex];
+    return reinterpret_cast<EESoundObject*>(EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SELECTION_SOUND, inIndex, NULL, NULL));
 }
 
 // Builds the upgrade button's " + n" help text for an improvement's next level
@@ -149,135 +188,54 @@ void EEUnitClassUpgrade::Init()
 // Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error
 long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = this->mName.Load(inFile);
-    if (theResult == 0)
-        theResult = this->mImprovement.Load(this->mUnitClass, this, inMajorVersion, inMinorVersion, inFile);
-    return theResult;
+    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_LOAD, this->mImprovement.mLevels, &this->mImprovement.mTotalCost,
+                                EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &inFile}, &EEImprovementHost,
+                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);   // ee_units improvement.rs
 }
 
 // Loads the class's buttons on the first request; later requests are counted and wait while the first one loads
 void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
 {
-    sUnitClassUpgradeLock.mLock->Enter();
-    if (this->mButtonLoadCount == 0) {
-        this->mButtonLoadCount = 1;
-        this->mIsLoadingButtons = true;
-        sUnitClassUpgradeLock.mLock->Leave();
-        this->mUnitClass->LoadButtons(inPlayer);
-        sUnitClassUpgradeLock.mLock->Enter();
-        this->mIsLoadingButtons = false;
-    } else {
-        this->mButtonLoadCount++;
-        sUnitClassUpgradeLock.mLock->Leave();
-        while (this->mIsLoadingButtons == true)
-            PlatSleep(1);
-        sUnitClassUpgradeLock.mLock->Enter();
-    }
-    sUnitClassUpgradeLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_LOAD_BUTTONS, 0, inPlayer, NULL);
 }
 
 // On the first request loads the sounds and model chosen by inMediaFlags (dropping sounds that fail), the button,
 // the area-effect templates and the class's media; later requests are counted and wait while the first one loads
 void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
 {
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount == 0) {
-        this->mMediaCount = 1;
-        this->mIsLoadingMedia = true;
-        sDatabaseLock.mLock->Leave();
-        if ((inMediaFlags & kMediaAcknowledgeSound1) != 0 && this->mAcknowledgeSounds[0] != NULL && this->mAcknowledgeSounds[0]->LoadMedia() != 0)
-            this->mAcknowledgeSounds[0] = NULL;
-        if ((inMediaFlags & kMediaAcknowledgeSound2) != 0 && this->mAcknowledgeSounds[1] != NULL && this->mAcknowledgeSounds[1]->LoadMedia() != 0)
-            this->mAcknowledgeSounds[1] = NULL;
-        if ((inMediaFlags & kMediaSelectionSound1) != 0 && this->mSelectionSounds[0] != NULL && this->mSelectionSounds[0]->LoadMedia() != 0)
-            this->mSelectionSounds[0] = NULL;
-        if ((inMediaFlags & kMediaSelectionSound2) != 0 && this->mSelectionSounds[1] != NULL && this->mSelectionSounds[1]->LoadMedia() != 0)
-            this->mSelectionSounds[1] = NULL;
-        if ((inMediaFlags & kMediaDeathSound) != 0 && this->mDeathSound != NULL && this->mDeathSound->LoadMedia() != 0)
-            this->mDeathSound = NULL;
-        if ((inMediaFlags & kMediaCreationSound) != 0 && this->mCreationSound != NULL && this->mCreationSound->LoadMedia() != 0)
-            this->mCreationSound = NULL;
-        if ((inMediaFlags & kMediaModel) != 0 && this->mModel != NULL)
-            this->mModel->LoadMedia();
-        this->mButton->Acquire();
-        for (long i = 0; i < 4; i++)
-            gAEManager.LoadTemplateMedia(this->mAreaEffectTemplates[i]);
-        this->mUnitClass->LoadMedia(inPlayer);
-        sDatabaseLock.mLock->Enter();
-        this->mIsLoadingMedia = false;
-    } else {
-        this->mMediaCount++;
-        sDatabaseLock.mLock->Leave();
-        while (this->mIsLoadingMedia == true)
-            PlatSleep(1);
-        sDatabaseLock.mLock->Enter();
-    }
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_LOAD, inMediaFlags, inPlayer, NULL);
 }
 
 // Writes the copy's name and improvement levels to the saved game; returns the first write error
 long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mName.Save(outFile);
-    if (theResult == 0)
-        theResult = this->mImprovement.Save(inMajorVersion, inMinorVersion, outFile);
-    return theResult;
+    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_SAVE, this->mImprovement.mLevels, &this->mImprovement.mTotalCost,
+                                EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &outFile}, &EEImprovementHost,
+                                0, 0);   // ee_units improvement.rs
 }
 
 // Replaces acknowledge sound inIndex; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetAcknowledgeSound(EESoundObject* inSound, long inIndex)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount > 0 && this->mAcknowledgeSounds[inIndex] != NULL)
-        this->mAcknowledgeSounds[inIndex]->UnloadMedia();
-    this->mAcknowledgeSounds[inIndex] = inSound;
-    if (this->mMediaCount > 0 && inSound != NULL)
-        inSound->LoadMedia();
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_ACKNOWLEDGE + inIndex, NULL, inSound);
 }
 
 // Replaces the creation sound; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount > 0 && this->mCreationSound != NULL)
-        this->mCreationSound->UnloadMedia();
-    this->mCreationSound = inSound;
-    if (this->mMediaCount > 0 && inSound != NULL)
-        inSound->LoadMedia();
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_CREATION, NULL, inSound);
 }
 
 // Replaces the death sound; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount > 0 && this->mDeathSound != NULL)
-        this->mDeathSound->UnloadMedia();
-    this->mDeathSound = inSound;
-    if (this->mMediaCount > 0 && inSound != NULL)
-        inSound->LoadMedia();
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_DEATH, NULL, inSound);
 }
 
 // Replaces the model; while media is loaded, unloads the old model and loads the new one
 void EEUnitClassUpgrade::SetModel(EEModel* inModel)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount > 0 && this->mModel != NULL)
-        this->mModel->UnloadMedia();
-    this->mModel = inModel;
-    if (this->mMediaCount > 0 && inModel != NULL)
-        inModel->LoadMedia();
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_MODEL, NULL, inModel);
 }
 
 // Sets the top speed and scales acceleration and turn rates (turret too) by its ratio to the class's; updates the
@@ -290,15 +248,7 @@ void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
 // Replaces the button; while media is loaded, releases the old button and acquires the new one
 void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount > 0 && this->mButton != NULL)
-        this->mButton->Release();
-    this->mButton = inButton;
-    if (this->mMediaCount > 0 && inButton != NULL)
-        inButton->Acquire();
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_BUTTON, NULL, inButton);
 }
 
 // Sets the range and the projectile's launch speed to reach it at 45 degrees (a bomb: its top speed; a Roman
@@ -311,61 +261,17 @@ void EEUnitClassUpgrade::SetRange(float inValue)
 // Replaces selection sound inIndex; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetSelectionSound(EESoundObject* inSound, long inIndex)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount > 0 && this->mSelectionSounds[inIndex] != NULL)
-        this->mSelectionSounds[inIndex]->UnloadMedia();
-    this->mSelectionSounds[inIndex] = inSound;
-    if (this->mMediaCount > 0 && inSound != NULL)
-        inSound->LoadMedia();
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_SELECTION + inIndex, NULL, inSound);
 }
 
 // Drops one button request; the last one unloads the class's buttons
 void EEUnitClassUpgrade::UnloadButtons(EEPlayer* inPlayer)
 {
-    while (this->mIsLoadingButtons == true)
-        PlatSleep(1);
-    sUnitClassUpgradeLock.mLock->Enter();
-    if (this->mButtonLoadCount == 1) {
-        this->mButtonLoadCount = 0;
-        this->mUnitClass->UnloadButtons(inPlayer);
-    } else
-        this->mButtonLoadCount--;
-    sUnitClassUpgradeLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_UNLOAD_BUTTONS, 0, inPlayer, NULL);
 }
 
 // Drops one media request; the last one unloads the sounds, model, button, area-effect templates and class media
 void EEUnitClassUpgrade::UnloadMedia(EEPlayer* inPlayer)
 {
-    while (this->mIsLoadingMedia == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount != 0) {
-        if (this->mMediaCount == 1) {
-            this->mMediaCount = 0;
-            long i;
-            for (i = 0; i < 2; i++) {
-                if (this->mAcknowledgeSounds[i] != NULL)
-                    this->mAcknowledgeSounds[i]->UnloadMedia();
-            }
-            for (i = 0; i < 2; i++) {
-                if (this->mSelectionSounds[i] != NULL)
-                    this->mSelectionSounds[i]->UnloadMedia();
-            }
-            if (this->mDeathSound != NULL)
-                this->mDeathSound->UnloadMedia();
-            if (this->mCreationSound != NULL)
-                this->mCreationSound->UnloadMedia();
-            if (this->mModel != NULL)
-                this->mModel->UnloadMedia();
-            this->mButton->Release();
-            for (i = 0; i < 4; i++)
-                gAEManager.UnloadTemplateMedia(this->mAreaEffectTemplates[i]);
-            this->mUnitClass->UnloadMedia(inPlayer);
-        } else
-            this->mMediaCount--;
-    }
-    sDatabaseLock.mLock->Leave();
+    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_UNLOAD, 0, inPlayer, NULL);
 }

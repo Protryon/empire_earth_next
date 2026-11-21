@@ -27,7 +27,6 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAreaEffectKindIDs.h"
-#include "ee/EEUnitCollector.h"
 #include "rust/sim/cp.h"
 
 static uint64_t EECPRCHandle(const void* inObject)
@@ -40,52 +39,13 @@ template <class T> static T* EECPRCObject(uint64_t inHandle)
     return reinterpret_cast<T*>((uintptr_t)inHandle);
 }
 
-// Returns the squared distance from this unit's position to another unit's position (its tile if not a complex unit)
+// the squared distance to another unit (0x8bdb4; ee_sim::cp place_world.rs distance_squared_to_unit)
 float EEComplexUnit::DistanceSquaredToUnit(EEUnit* inOther)
 {
-    float theDeltaY;
-    float theDeltaX;
-    EEComplexUnit* theOther = inOther->mComplexUnit;
-    if (theOther != NULL) {
-        theDeltaY = this->mPhysicalModel.GetLocation().GetY() - theOther->mPhysicalModel.GetLocation().GetY();
-        theDeltaX = this->mPhysicalModel.GetLocation().GetX() - theOther->mPhysicalModel.GetLocation().GetX();
-    } else {
-        theDeltaY = this->mPhysicalModel.GetLocation().GetY() - inOther->GetTileY();
-        theDeltaX = this->mPhysicalModel.GetLocation().GetX() - inOther->GetTileX();
-    }
-    return theDeltaX * theDeltaX + theDeltaY * theDeltaY;
+    return ee_cp_distance_squared_to_unit(EECPRCHandle(static_cast<EEUnit*>(this)), EECPRCHandle(inOther));
 }
 
-// The owner's living, unfinished houses (unit type 0x25, +0x34c clear) whose tile lies in mRect (0x8da4d, out of
-// line) (provisional name; layout inferred: 0x14 bytes on GetMoraleFill's frame)
-struct EECPRCBuildingInRectangle {
-    EECPRCBuildingInRectangle(EEPlayer* inPlayer, const U2DRectangle<long>& inRect) : mPlayer(inPlayer), mRect(inRect) {}
-    bool operator()(EEComplexUnit* inUnit) const
-    {
-        return inUnit->mPlayer == this->mPlayer && inUnit->GetUnitClass()->mUnitType == kUnitTypeHouse && !inUnit->mIsBuilt &&
-               inUnit->mHitPoints > 0 && this->mRect.Contains(U2DPoint<long>(inUnit->GetTileX(), inUnit->GetTileY()));
-    }
-
-    EEPlayer* mPlayer;                      // +0x00
-    U2DRectangle<long> mRect;               // +0x04
-};
-
-// The owner's living houses (unit type 0x25) whose tile lies in mRect, finished or not (0x8d6e0, out of line;
-// EECPRCBuildingInRectangle without the +0x34c test) (provisional name; layout inferred: 0x14 bytes on FindBuildSite's
-// frame)
-struct EECPRCLiveBuildingInRectangle {
-    EECPRCLiveBuildingInRectangle(EEPlayer* inPlayer, const U2DRectangle<long>& inRect) : mPlayer(inPlayer), mRect(inRect) {}
-    bool operator()(EEComplexUnit* inUnit) const
-    {
-        return inUnit->mPlayer == this->mPlayer && inUnit->GetUnitClass()->mUnitType == kUnitTypeHouse && inUnit->mHitPoints > 0 &&
-               this->mRect.Contains(U2DPoint<long>(inUnit->GetTileX(), inUnit->GetTileY()));
-    }
-
-    EEPlayer* mPlayer;                      // +0x00
-    U2DRectangle<long> mRect;               // +0x04
-};
-
-// the unit's first morale-from-buildings effect (NULL: none)
+// the unit's morale-from-buildings area effect (NULL: none)
 static EEAreaEffect* EECPRCMoraleEffect(EEComplexUnit* inUnit)
 {
     for (std::vector<EEAreaEffect*>::iterator theIterator = inUnit->mAreaEffects.mItems.begin();
@@ -102,65 +62,33 @@ extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp
     EeCpPlaceIo* io)
 {
     EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(EECPRCObject<EEPlayer>(inContext->player));
+    EEAreaEffect* theEffect = EECPRCObject<EEAreaEffect>(inB);
     const int64_t* v = io->v;
     switch (inOp) {
-    case EE_CP_CENTER_UNIT_REFERENCE:
-        EECPRCObject<EEUnit>(inA)->Reference();
+    case EE_CP_CENTER_UNIT_REFERENCE: EECPRCObject<EEUnit>(inA)->Reference();
         return 0;
-    case EE_CP_CENTER_UNIT_DEREFERENCE:
-        EECPRCObject<EEUnit>(inA)->Dereference();
+    case EE_CP_CENTER_UNIT_DEREFERENCE: EECPRCObject<EEUnit>(inA)->Dereference();
         return 0;
     case EE_CP_CENTER_WORLD_COMPLEX:
         return (int64_t)EECPRCHandle(static_cast<EEUnit*>(dynamic_cast<EEComplexUnit*>(gWorld.GetUnit((uint32_t)v[0]))));
-    case EE_CP_CENTER_DISTANCE_TO_UNIT:
-        io->f[0] = static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))->DistanceSquaredToUnit(EECPRCObject<EEUnit>(inB));
-        return 0;
     case EE_CP_CENTER_HAS_AREA_EFFECT:
         return gAEManager.HasAreaEffect((long)v[0], (long)v[1], (long)v[2], (long)v[3]) ? 1 : 0;
-    case EE_CP_CENTER_MORALE_RADIUS: {
-        EEAreaEffect* theEffect = EECPRCMoraleEffect(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA)));
-        if (theEffect == NULL)
-            return 0;
-        io->f[0] = theEffect->GetRadius();
-        return 1;
-    }
-    case EE_CP_CENTER_MORALE_RECOUNT: {
-        EEAreaEffect* theEffect = EECPRCMoraleEffect(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA)));
-        if (theEffect == NULL)
-            return 0;
-        theEffect->MarkDirty();
-        theEffect->Recount(0);
-        io->v[0] = theEffect->GetLevel();
-        io->v[1] = theEffect->mTemplate->mMaxLevel;
-        io->f[0] = theEffect->GetRadius();
-        return 1;
-    }
-    case EE_CP_CENTER_EFFECT_TEMPLATES: {
-        EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[(long)v[0]];
-        for (unsigned long i = 0; i < 4; i++)
-            io->v[i] = (int64_t)(uint32_t)theUpgrade->mAreaEffectTemplates[i];
+    case EE_CP_CENTER_TEMPLATE_RADIUS: io->f[0] = gAEManager.mTemplates[(unsigned long)v[0]]->mRadius;
         return 0;
-    }
-    case EE_CP_CENTER_TEMPLATE_RADIUS:
-        io->f[0] = gAEManager.mTemplates[(unsigned long)v[0]]->mRadius;
+    case EE_CP_CENTER_MORALE_EFFECT:
+        return (int64_t)EECPRCHandle(EECPRCMoraleEffect(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))));
+    case EE_CP_CENTER_EFFECT_RADIUS: io->f[0] = theEffect->GetRadius();
         return 0;
-    case EE_CP_PLACE_UNITS_IN_RECT: {
-        U2DRectangle<long> theRect;
-        theRect.mLeft = (long)v[0];
-        theRect.mTop = (long)v[1];
-        theRect.mRight = (long)v[2];
-        theRect.mBottom = (long)v[3];
-        std::vector<EEComplexUnit*> theUnits;
-        for (size_t i = 0; i < io->input_len; i++)
-            theUnits.push_back(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>((uint64_t)io->input[2 * i])));
-        if (v[4] == 1)
-            EEGetUnitsInRectangle(theRect, theUnits, EECPRCLiveBuildingInRectangle(thePlayer, theRect), true);
-        else
-            EEGetUnitsInRectangle(theRect, theUnits, EECPRCBuildingInRectangle(thePlayer, theRect), true);
-        for (size_t i = 0; i < theUnits.size(); i++)
-            ee_cp_place_push(io->list, (int64_t)EECPRCHandle(static_cast<EEUnit*>(theUnits[i])), 0);
+    case EE_CP_CENTER_EFFECT_DIRTY: theEffect->MarkDirty();
         return 0;
-    }
+    case EE_CP_CENTER_EFFECT_RECOUNT: theEffect->Recount(0);
+        return 0;
+    case EE_CP_CENTER_EFFECT_LEVEL:
+        return theEffect->GetLevel();
+    case EE_CP_CENTER_EFFECT_MAX_LEVEL:
+        return theEffect->mTemplate->mMaxLevel;
+    case EE_CP_CENTER_UPGRADE:
+        return (int64_t)EECPRCHandle(thePlayer->mUnitClassUpgrades[(long)v[0]]);
     }
     return 0;
 }

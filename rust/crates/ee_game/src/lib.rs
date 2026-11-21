@@ -451,3 +451,5 @@ pub mod game_log;
 pub mod cp_engine;
 // the capture's tile sight record, TSGT (TEST ONLY; ee/EESightCapture.h)
 pub mod sight_capture;
+// the game's own bodies over one-statement C++ cases (EEGameOps.cpp): the calamity classes' world steps, ...
+pub mod gamecpp;

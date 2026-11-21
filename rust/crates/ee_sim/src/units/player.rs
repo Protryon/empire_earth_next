@@ -836,8 +836,14 @@ impl PlayerHost for FnHost {
         if let Some(v) = unsafe { crate::units::player_views::answer(self.player as u64, op, io) } {
             return v;
         }
-        // SAFETY: the C++ callback's contract
-        unsafe { (self.f)(self.player, op, io) }
+        let (player, f) = (self.player, self.f);
+        // SAFETY (both): the C++ callback's contract
+        let mut call = |op: i32, io: &mut EeUnitsPlayerIo| unsafe { f(player, op, io) };
+        // the compound operations as the C++'s one-statement ones (player_split.rs)
+        if let Some(v) = crate::units::player_split::split(op, io, &mut call) {
+            return v;
+        }
+        call(op, io)
     }
 }
 

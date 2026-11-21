@@ -33,11 +33,6 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
 #endif
     ;
 void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime);   // every 30 game s per player
-void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount);   // counted into the next income line
-// TEST ONLY (EE_AI_EXP spending, docs/AI_RESEARCH.md §8.51): what a payment bought (kinds: 0 citizens, 1 soldiers,
-// 2 buildings, 3 techs, 4 epochs, 5 boats, 6 improvements, 7 other), counted into the next "spend" line
-void EECPTraceSpend(EEComputerPlayer* inPlayer, long inKind, const long inCost[5]);
-void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit);       // counted into the next stats line
 void EECPTraceHash(unsigned long inTime);   // every 10 game s: the out-of-synch checksum's parts ("sim hash")
 void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long long inMicroseconds);
 // a new game (EEWorld, before its players are made): the per-player state the computer players keep in file statics
