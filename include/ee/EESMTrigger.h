@@ -28,10 +28,8 @@ public:
     void EvaluateUncaptured(float inTime);  // Evaluate's body (Evaluate adds the capture's SMTE record)
     void SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition);
     void SetConditionOperator(unsigned long inIndex, long inOperator);  // 0x1ca2c3 (appends a wrapper after the last)
-    void CopyConditions(const std::vector<EESMTConditionWrapper*>& inConditions);
     void SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect);
     void SetEffectOperator(unsigned long inIndex, long inType);  // 0x1ca3c1 (appends a wrapper after the last)
-    void CopyEffects(const std::vector<EESMTEffectWrapper*>& inEffects);
     // inline (COMDAT 0x196dff after its first user, EESETSTrigger.cpp; the effect count is ICF-folded into 0x88ce9)
     // (provisional names)
     unsigned long GetConditionCount() { return this->mConditions.size(); }

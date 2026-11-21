@@ -1,7 +1,8 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESEIAExport.cpp (file name inferred: no __FILE__; RTTI EESEIAExport). The trigger
 // text export/import actions: 0x16ff5f..0x1705a2 (EESEIAExport::Virtual4, the export question's answer, EESEIAExport's
 // ??_G, EESEIEExport::ProcessEvent, EESEIAImport::Virtual4). After EESEEvents.cpp (0x16f892..0x16ff5f), before
-// EESEInstructions.cpp (0x1705a2). Unit flags: the exe module set.
+// EESEInstructions.cpp (0x1705a2). Unit flags: the exe module set. The bodies are Rust's (ee_game screens
+// editor_selt.rs; their statements are EESELoadThread.cpp's ee_screenscpp_seltx).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -36,178 +37,37 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEIAExport.h"
+#include "rust/game/screens.h"
 unsigned long gSETextVersion = 1;           // 0x4c2cb8 (.data = 1; ee/EESEIAExport.h)
 
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-static void EESEImportTextAnswer(UIForm* inInfo);   // the import question's answer (below)
-
-// Writes the scenario's text to the chosen .lcl file under a {Version_1} header and reports success
-// (noting a changed file name) or a file error
 void EESEIAExport::Virtual4()
 {
-    UWideString theName;
-    UWideString theError;
-    UWideString theMessage;
-
-    if (this->mFile.FOpen("w") == 0) {
-        gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup();
-        if ((unsigned long)fprintf((FILE*)this->mFile, "{Version_%ld}\n\n", gSETextVersion) > 0) {
-            if (gWorld.mScenarioManager->ExportText(this->mFile) != 0) {
-                gResource->GetString(IDS_FILE_ERROR, theError);
-                gUIManager->DisplayMessage(theError, 1, NULL, NULL, true);
-            } else {
-                gResource->GetString(IDS_FILE_EXPORTED_SUCCESSFULLY, theMessage);
-                theName = this->mFile.GetFile();
-                if (theName != gWorld.mScenarioManager->mExportFileName) {
-                    gResource->GetString(IDS_EXPORTED_FILE_NAME_HAS_CHANGED, theError);
-                    theMessage += "\n";
-                    theMessage += theError;
-                }
-                gWorld.mScenarioManager->mExportFileName = theName;
-                gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-            }
-            this->mFile.Close();
-            return;
-        }
-    }
-    gResource->GetString(IDS_FILE_ERROR, theError);
-    gUIManager->DisplayMessage(theError, 1, NULL, NULL, true);
+    ee_screens_seia_run(this, false);
 }
 
-// Posts the export action for the given file spec and frees the spec (the replace question's yes)
-static void EESEExportTextAnswer(UIForm* inFile)
+// the export question's yes (and the export of a new file): the export action posted, the spec freed
+void EESEExportTextAnswer(UIForm* inFile)
 {
-    FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(inFile);
-    gUserInterface->PostAction(new EESEIAExport(*theFile));
-    delete theFile;
+    ee_screens_seia_answer(inFile, false);
 }
 
-// Exports the scenario text to data\Scenarios\<name>.lcl, asking first when the file exists; complains
-// when no name is entered; returns the open result (nonzero when the file was new)
 long EESEIEExport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    FSFileSpec theFile;
-    UWideString theName;
-    UWideString theMessage;
-    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
-    long theResult;
-
-    UIEditBox* theBox = static_cast<UIEditBox*>(inForm->GetControlById(kSEInstructionsLocalizationEditBox));
-    theResult = 0;
-    theName = theBox->GetText(0);
-    if (theName.GetLength() > 0) {
-        theName += ".lcl";
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        theFile.SetFile((const char*)theName);
-        theResult = theFile.FOpen("r");
-        if (theResult == 0) {
-            theFile.Close();
-            gResource->GetString(IDS_REPLACE_FILE_ON_DISK, theMessage);
-            theManager->DisplayQuestion(theMessage, 1, (UIForm*)new FSFileSpec(theFile), EESEExportTextAnswer, NULL);
-        } else
-            EESEExportTextAnswer((UIForm*)new FSFileSpec(theFile));
-    } else {
-        gResource->GetString(IDS_YOU_MUST_ENTER_FILE_NAME_BEFORE, theMessage);
-        theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-    }
-    return theResult;
+    return ee_screens_seia_event(inForm, false);
 }
 
-// Imports trigger text from the .lcl file after checking its {Version_n} header; a validation run lists the
-// errors and asks to import anyway; the file is closed on every path
 void EESEIAImport::Virtual4()
 {
-    UWideString theUnused;
-    UWideString theLine;
-    UWideString theMessage;
-    char theBuffer[0x200];
-    unsigned long thePosition;
-
-    if (this->mFile.FOpen("r") == 0 && !feof((FILE*)this->mFile)) {
-        theLine = fgets(theBuffer, 0x200, (FILE*)this->mFile);
-        thePosition = theLine.Find("{Version_", 0);
-        if (thePosition <= theLine.GetLength()) {
-            theLine = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition + 9);
-            thePosition = theLine.Find("}", 0);
-            if (thePosition <= theLine.GetLength()) {
-                char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition);
-                strcpy(theEnd, gEmptyString);
-                unsigned long theVersion = atoi(theLine);
-                if (theVersion <= gSETextVersion) {
-                    EEScenarioManager* theManager = gWorld.mScenarioManager;
-                    if (theManager->ImportTriggerText(this->mFile, theVersion, this->mValidate)) {
-                        if (this->mValidate == true) {
-                            gResource->GetString(IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING, theLine);
-                            theLine += "\n\n";
-                            for (unsigned long i = 0; i < gWorld.mScenarioManager->mImportErrors.size(); i++) {
-                                theLine += gWorld.mScenarioManager->mImportErrors[i];
-                                theLine += "\n\n";
-                            }
-                            EESEImportInfo* theInfo = new EESEImportInfo;
-                            theInfo->mFile = this->mFile;
-                            theInfo->mValidate = false;
-                            gUIManager->DisplayQuestion(theLine, 1, reinterpret_cast<UIForm*>(theInfo), EESEImportTextAnswer, NULL);
-                        }
-                    } else {
-                        gResource->GetString(IDS_FILE_IMPORTED_SUCCESSFULLY, theMessage);
-                        gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-                    }
-                    gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
-                    this->mFile.Close();
-                    return;
-                }
-            }
-        }
-        gResource->GetString(IDS_LCL_FILE_HAS_INVALID_VERSION, theLine);
-    } else
-        gResource->GetString(IDS_FILE_ERROR, theLine);
-    this->mFile.Close();    // an empty file or a bad version left the file open (Close does nothing when it is not)
-    gUIManager->DisplayMessage(theLine, 1, NULL, NULL, true);
+    ee_screens_seia_run(this, true);
 }
 
-// (0x1705a2.., once EESEInstructions.cpp's: the import question's answer and the import button's event)
-// Posts the import action for the file the question carries (the import question's yes) and frees
-// the question's import info
-static void EESEImportTextAnswer(UIForm* inInfo)
+// the import question's yes: the import action posted, the info freed
+void EESEImportTextAnswer(UIForm* inInfo)
 {
-    EESEImportInfo* theInfo = reinterpret_cast<EESEImportInfo*>(inInfo);
-    gUserInterface->PostAction(new EESEIAImport(theInfo->mFile, theInfo->mValidate));
-    delete theInfo;
+    ee_screens_seia_answer(inInfo, true);
 }
 
-// Starts importing data\Scenarios\<name>.lcl: asks to confirm, then validates first; complains when no
-// name is entered or the file is missing; returns the open result
 long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    FSFileSpec theFile;
-    UWideString theName;
-    UWideString theMessage;
-    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
-    long theResult;
-    UIEditBox* theBox = static_cast<UIEditBox*>(inForm->GetControlById(kSEInstructionsLocalizationEditBox));
-    theResult = 0;
-    theName = theBox->GetText(0);
-    if (theName.GetLength() > 0) {
-        theName += ".lcl";
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        theFile.SetFile((const char*)theName);
-        theResult = theFile.FOpen("r");
-        if (theResult == 0) {
-            EESEImportInfo* theInfo = new EESEImportInfo;
-            theInfo->mFile = theFile;
-            theInfo->mValidate = true;
-            gResource->GetString(IDS_IMPORTING_FILE_REPLACES_ALL_TEXT, theMessage);
-            theManager->DisplayQuestion(theMessage, 1, reinterpret_cast<UIForm*>(theInfo), EESEImportTextAnswer, NULL);
-            theFile.Close();
-        } else {
-            gResource->GetString(IDS_FILE_NAME_NOT_FOUND, theMessage);
-            theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-        }
-    } else {
-        gResource->GetString(IDS_YOU_MUST_ENTER_FILE_NAME_BEFORE, theMessage);
-        theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-    }
-    return theResult;
+    return ee_screens_seia_event(inForm, true);
 }

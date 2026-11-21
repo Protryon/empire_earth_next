@@ -101,7 +101,6 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
 {
     EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inA));
     EEFormation* theFormation = reinterpret_cast<EEFormation*>(static_cast<uintptr_t>(inA));
-    EEAutoPathRequest* thePath = reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(inA));
     EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inA));
     EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
     switch (inOp) {
@@ -129,12 +128,6 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
             ee_units_group_push(io->out, 0, 0, reinterpret_cast<const float(*)[3]>(&theSlots[i].mPosition.mX));
         return 0;
     }
-    case EE_UNITS_GROUP_OP_TERRAIN_FLAGS: {
-        EECPASGFlags theFlags;
-        theUnit->mUnitClass->GetTerrainFlags(theUnit, theFlags);
-        memcpy(io->flags, theFlags.mFlags, 17);
-        return 0;
-    }
     case EE_UNITS_GROUP_OP_CONTINENT_OF: return gContinentManager.GetContinentID(theUnit);
     case EE_UNITS_GROUP_OP_CONTINENT_AT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     case EE_UNITS_GROUP_OP_SUBSECTOR_X: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetX();
@@ -156,29 +149,8 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO: gUserInterface->PostRefreshSavedGroup((long)inC);
         return 0;
     case EE_UNITS_GROUP_OP_PATH_AREA_AT: return gContinentManager.GetPathAreaIDAt((long)inC, (long)inD);
-    case EE_UNITS_GROUP_OP_PATH_REQUEST: {
-        EETileCoordinate theFrom;
-        EETileCoordinate theTo;
-        theFrom.mX = (long)io->a;
-        theFrom.mY = (long)io->b;
-        theTo.mX = (long)io->c;
-        theTo.mY = (long)io->d;
-        EECPASGFlags theFlags;
-        memcpy(theFlags.mFlags, io->flags, 17);
-        return (int64_t)(uintptr_t)gPathManager.RequestPath((long)inC, theFrom, theTo, &theFlags, 1, -1, NULL, 0);
-    }
-    case EE_UNITS_GROUP_OP_PATH_CANCEL: gPathManager.CancelAutoPathRequest(thePath);
-        return 0;
-    case EE_UNITS_GROUP_OP_PATH_REFERENCE: thePath->Reference();
-        return 0;
-    case EE_UNITS_GROUP_OP_PATH_DEREFERENCE: thePath->Dereference();
-        return 0;
-    case EE_UNITS_GROUP_OP_PATH_DONE: return thePath->mIsDone;
-    case EE_UNITS_GROUP_OP_PATH_ID: return thePath->mRequestID;
-    case EE_UNITS_GROUP_OP_PATH_TILES:
-        for (size_t i = 0; i < thePath->mPath.size(); i++)
-            ee_units_group_push(io->out, thePath->mPath[i].GetX(), thePath->mPath[i].GetY(), NULL);
-        return 0;
+    // the path requests (their request, cancel, references, fields, save, load and the loaded ones' waits) and
+    // the terrain flags: Rust (group_host.rs over ee_sim::astar request.rs)
     case EE_UNITS_GROUP_OP_SET_GROUP_PATH: {
         const float* thePoints = static_cast<const float*>(io->list);
         std::vector<GE3DPoint> thePoints3;
@@ -240,25 +212,6 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     }
     case EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: io->f = gAEManager.mTemplates[inC]->mRadius;
         return 0;
-    case EE_UNITS_GROUP_OP_SAVE_PATH:
-        EESaveAutoPathRequest(*reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inA)),
-                              *reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(inB)));
-        return 0;
-    case EE_UNITS_GROUP_OP_LOAD_PATH: {
-        EEAutoPathRequest* theRequest = NULL;
-        long theResult = EELoadAutoPathRequest(*reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inA)), theRequest);
-        io->a = (int64_t)(uintptr_t)theRequest;
-        return theResult;
-    }
-    case EE_UNITS_GROUP_OP_AWAIT_PATH: {
-        // the group referenced for the wait (group_obj.rs restore_active); the attach releases it
-        EeUnitsGroup* theGroup = reinterpret_cast<EeUnitsGroup*>(static_cast<uintptr_t>(inB));
-        int64_t theKey = inD;
-        EEAwaitAutoPathRequest((long)inC, [theGroup, theKey](EEAutoPathRequest* inRequest) {
-            ee_units_group_path_resolved(theGroup, theKey, inRequest);
-        });
-        return 0;
-    }
     case EE_UNITS_GROUP_OP_AFTER_LOAD: {
         // at the first tick (the units are back), before the graph searches are resolved (EEAfterLoadLast)
         void* theSaved = reinterpret_cast<void*>(static_cast<uintptr_t>(inA));

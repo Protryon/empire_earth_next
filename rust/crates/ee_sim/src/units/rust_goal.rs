@@ -199,7 +199,7 @@ pub const EE_UNITS_GOAL_HOST_LINE_OF_SIGHT: i32 = 75;
 pub const EE_UNITS_GOAL_HOST_TILE_SCREEN: i32 = 77;
 pub const EE_UNITS_GOAL_HOST_CELL_TAKEN: i32 = 78;
 pub const EE_UNITS_GOAL_HOST_CAN_STAND: i32 = 79;
-pub const EE_UNITS_GOAL_HOST_PATH_REACHABLE: i32 = 80;
+// (80 was the path reach test: ee_sim::astar request.rs path_reachable)
 pub const EE_UNITS_GOAL_HOST_MAP_DIMENSIONS: i32 = 82;
 pub const EE_UNITS_GOAL_HOST_CONTINENT_POINT: i32 = 83;
 pub const EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: i32 = 85;
@@ -1038,8 +1038,16 @@ impl ExploreHost for OpHost<'_> {
         crate::units::uu_direct::can_stand_on(x, y, unit)
     }
     fn path_reachable(&mut self, unit: u64, from: (i32, i32), to: (i32, i32)) -> bool {
-        let ints = [i64::from(from.0), i64::from(from.1), i64::from(to.0), i64::from(to.1)];
-        self.op_ints(EE_UNITS_GOAL_HOST_PATH_REACHABLE, unit, 0, &ints) != 0
+        #[cfg(not(test))]
+        {
+            // SAFETY: the goal's live unit
+            unsafe { crate::astar::request::path_reachable(unit, from, to) }
+        }
+        #[cfg(test)]
+        {
+            let _ = (unit, from, to);
+            false
+        }
     }
     fn path_area_id(&mut self, x: i32, y: i32) -> u16 {
         crate::units::uu_direct::with_game(|g| g.path_area_id(x, y))

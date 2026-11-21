@@ -1,6 +1,8 @@
 // C:\EEX\RTS Engine\RTS Engine\RTSWorld.cpp (__FILE__ 0x4c1304). The engine-side world (RTTI RTSWorld, vtable
-// 0x4421bc), the base of EEWorld: 0x147dfd..0x148291 (the ctor to RTSDummyHeader<RTSUnit>'s ??_G; the exe's own
-// naked `_ftol` 0x148291..0x1482e4 follows, a separate object). Unit flags: the exe's module set.
+// 0x4421bc), the base of EEWorld. LLE round 8: the bodies are Rust (rust/crates/ee_game/src/rts/world.rs: the
+// construction, the teardown, the population split, Clear, Reset, the checksum, the lookups, the placement queue, the
+// player slots); the members forward, and the shims below are the C++ calls those bodies make (one statement each).
+// The original's addresses and the bodies' history: git history before LLE round 8.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -12,144 +14,18 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSUnit.h"
+#include "rust/game/rts.h"
 
-// Creates an empty world: no players or map, normal game speed, a population limit of 800
-RTSWorld::RTSWorld()
-{
-    ESVERIFY_AT(TSScheduler::CreateReadWriteLock(this->mLock) == keseOK, 49);
-    for (long i = 0; i < 17; i++) {
-        this->mPlayers[i] = NULL;
-    }
-    this->mGameSpeed = 1.0f;
-    this->mCameraYaw = 0.0f;
-    this->mMap = NULL;
-    this->mCameraPitch = 0.0f;
-    this->mNumPlayers = 0;
-    this->mPopulationLimit = 800;
-}
-
-// Destroys the world's lock and its map
-RTSWorld::~RTSWorld()
-{
-    TSScheduler::DestroyReadWriteLock(this->mLock);
-    if (this->mMap != NULL) {
-        delete this->mMap;
-    }
-}
-
-// Splits the population limit among the active players (player 0 excluded), optionally recounting each
-// player's population
-void RTSWorld::UpdatePlayerPopulationLimit(bool inRecount)
-{
-    unsigned long theCount = 0;
-    unsigned long i;
-    for (i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL && this->mPlayers[i]->IsActive() == true) {
-            theCount++;
-        }
-    }
-    if (theCount > 0) {
-        this->mPlayerPopulationLimit = this->mPopulationLimit / theCount;
-    } else {
-        this->mPlayerPopulationLimit = 0;
-    }
-    if (inRecount != true)
-        return;
-    for (i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL) {
-            this->mPlayers[i]->RecountPopulation();
-        }
-    }
-}
-
-// Deletes every player and the map
-void RTSWorld::Clear()
-{
-    for (long i = 0; i < 17; i++) {
-        if (this->mPlayers[i] != NULL) {
-            delete this->mPlayers[i];
-        }
-        this->mPlayers[i] = NULL;
-    }
-    if (this->mMap != NULL) {
-        delete this->mMap;
-    }
-    this->mMap = NULL;
-}
-
-// Adds every player, the map and the player count to the sync checksum
-void RTSWorld::GetChecksum(ESChecksum& ioChecksum)
-{
-    unsigned long theNumPlayers;
-    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL) {
-            this->mPlayers[i]->GetChecksum(ioChecksum);
-        }
-    }
-    if (this->mMap != NULL) {
-        // the engine's member is an RTSMap* (ee/RTSWorld.h declares the game's EEMap* view, whose FSPersistent base
-        // makes the name ambiguous): the call is RTSMap's slot 0
-        static_cast<RTSMap*>(this->mMap)->GetChecksum(ioChecksum);
-    }
-    theNumPlayers = this->mNumPlayers;
-    ioChecksum.AddChecksum("RTSWorld", theNumPlayers);
-}
-
-// Returns the player's index in the world, -1 if absent
-long RTSWorld::GetPlayerIndex(EEPlayer* inPlayer)
-{
-    long theResult = -1;
-    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] == inPlayer) {
-            theResult = i;
-        }
-    }
-    return theResult;
-}
-
-// Finds a unit by id through the player in the id's top byte; NULL for an out-of-range player
-RTSUnit* RTSWorld::GetUnit(unsigned long inUnitID)
-{
-    unsigned long thePlayerIndex = inUnitID >> 24;
-    if (thePlayerIndex < this->mNumPlayers) {
-        return this->mPlayers[thePlayerIndex]->GetUnit(inUnitID);
-    }
-    return NULL;
-}
-
-// Places the queued units, then releases and empties the placement queue
-void RTSWorld::FlushQueuedPlacements()
-{
-    this->PlaceQueuedUnits();
-    for (unsigned long i = 0; i < this->mQueuedPlacements.size(); i++) {
-        this->mQueuedPlacements[i].mUnit->Dereference();
-    }
-    this->mQueuedPlacements.clear();
-}
-
-// Queues a referenced unit for placement after another unit
-void RTSWorld::AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter)
-{
-    RTSWorldUnitEntry theEntry;
-    inUnit->Reference();
-    theEntry.mUnit = inUnit;
-    theEntry.mInsertAfter = inInsertAfter;
-    this->mQueuedPlacements.push_back(theEntry);
-}
-
-// Clears every player and deletes the map
-void RTSWorld::Reset()
-{
-    for (long i = 0; i < 17; i++) {
-        if (this->mPlayers[i] != NULL) {
-            this->mPlayers[i]->Clear();
-        }
-    }
-    if (this->mMap != NULL) {
-        delete this->mMap;
-    }
-    this->mMap = NULL;
-}
+RTSWorld::RTSWorld() { ee_rts_world_construct(this); }
+RTSWorld::~RTSWorld() { ee_rts_world_destruct(this); }
+void RTSWorld::UpdatePlayerPopulationLimit(bool inRecount) { ee_rts_world_update_population_limit(this, inRecount); }
+void RTSWorld::Clear() { ee_rts_world_clear(this); }
+void RTSWorld::GetChecksum(ESChecksum& ioChecksum) { ee_rts_world_checksum(this, &ioChecksum); }
+long RTSWorld::GetPlayerIndex(EEPlayer* inPlayer) { return ee_rts_world_player_index(this, inPlayer); }
+RTSUnit* RTSWorld::GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_world_unit(this, inUnitID)); }
+void RTSWorld::FlushQueuedPlacements() { ee_rts_world_flush_queued_placements(this); }
+void RTSWorld::AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter) { ee_rts_world_add_unit_entry(this, inUnit, inInsertAfter); }
+void RTSWorld::Reset() { ee_rts_world_reset(this); }
 
 // Sets the camera, deriving its view line, yaw and pitch, and reports the change
 void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
@@ -166,26 +42,37 @@ void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
     this->CameraChanged(inTransformation);
 }
 
-// Puts a player in a slot, deleting the slot's previous player
-void RTSWorld::SetPlayer(long inIndex, EEPlayer* inPlayer)
-{
-    if (inPlayer == this->mPlayers[inIndex])
-        return;
-    if (this->mPlayers[inIndex] != NULL) {
-        delete this->mPlayers[inIndex];
-    }
-    this->mPlayers[inIndex] = inPlayer;
-}
+void RTSWorld::SetPlayer(long inIndex, EEPlayer* inPlayer) { ee_rts_world_set_player(this, inIndex, inPlayer); }
+void RTSWorld::SetNumPlayers(unsigned long inNumPlayers) { ee_rts_world_set_num_players(this, inNumPlayers); }
+void RTSWorld::SetPopulationLimit(unsigned long inLimit) { this->mPopulationLimit = inLimit; }
 
-// Sets the player count, then re-splits the population limit and recounts every player's population
-void RTSWorld::SetNumPlayers(unsigned long inNumPlayers)
-{
-    this->mNumPlayers = inNumPlayers;
-    this->UpdatePlayerPopulationLimit(true);
-}
-
-// Sets the world's total population limit
-void RTSWorld::SetPopulationLimit(unsigned long inLimit)
-{
-    this->mPopulationLimit = inLimit;
+// The shims world.rs calls (WorldCpp)
+extern "C" {
+EEPlayer** ee_rtswcpp_players(RTSWorld* inWorld) { return inWorld->mPlayers; }
+unsigned long* ee_rtswcpp_num_players(RTSWorld* inWorld) { return &inWorld->mNumPlayers; }
+long* ee_rtswcpp_population_limit(RTSWorld* inWorld) { return &inWorld->mPopulationLimit; }
+long* ee_rtswcpp_player_population_limit(RTSWorld* inWorld) { return &inWorld->mPlayerPopulationLimit; }
+EEMap** ee_rtswcpp_map_slot(RTSWorld* inWorld) { return &inWorld->mMap; }
+void** ee_rtswcpp_lock_slot(RTSWorld* inWorld) { return reinterpret_cast<void**>(&inWorld->mLock); }
+float* ee_rtswcpp_game_speed(RTSWorld* inWorld) { return &inWorld->mGameSpeed; }
+float* ee_rtswcpp_camera_yaw(RTSWorld* inWorld) { return &inWorld->mCameraYaw; }
+float* ee_rtswcpp_camera_pitch(RTSWorld* inWorld) { return &inWorld->mCameraPitch; }
+bool ee_rtswcpp_player_is_active(EEPlayer* inPlayer) { return inPlayer->IsActive() == true; }
+void ee_rtswcpp_player_recount(EEPlayer* inPlayer) { inPlayer->RecountPopulation(); }
+void ee_rtswcpp_player_delete(EEPlayer* inPlayer) { delete inPlayer; }
+void ee_rtswcpp_player_clear(EEPlayer* inPlayer) { inPlayer->Clear(); }
+void ee_rtswcpp_player_checksum(EEPlayer* inPlayer, ESChecksum* ioChecksum) { inPlayer->GetChecksum(*ioChecksum); }
+RTSUnit* ee_rtswcpp_player_unit(EEPlayer* inPlayer, unsigned long inUnitID) { return inPlayer->GetUnit(inUnitID); }
+void ee_rtswcpp_map_delete(EEMap* inMap) { delete inMap; }
+// the engine's member is an RTSMap* (EEMap's FSPersistent base makes the name ambiguous): RTSMap's slot 0
+void ee_rtswcpp_map_checksum(EEMap* inMap, ESChecksum* ioChecksum) { static_cast<RTSMap*>(inMap)->GetChecksum(*ioChecksum); }
+void ee_rtswcpp_checksum_add_world(ESChecksum* ioChecksum, unsigned long inPlayers) { ioChecksum->AddChecksum("RTSWorld", inPlayers); }
+void ee_rtswcpp_update_population_limit(RTSWorld* inWorld, bool inRecount) { inWorld->UpdatePlayerPopulationLimit(inRecount); }
+void ee_rtswcpp_place_queued_units(RTSWorld* inWorld) { inWorld->PlaceQueuedUnits(); }
+size_t ee_rtswcpp_queued_size(RTSWorld* inWorld) { return inWorld->mQueuedPlacements.size(); }
+RTSUnit* ee_rtswcpp_queued_unit(RTSWorld* inWorld, size_t inIndex) { return inWorld->mQueuedPlacements[inIndex].mUnit; }
+void ee_rtswcpp_queued_clear(RTSWorld* inWorld) { inWorld->mQueuedPlacements.clear(); }
+void ee_rtswcpp_queued_push(RTSWorld* inWorld, RTSUnit* inUnit, RTSUnit* inAfter) { inWorld->mQueuedPlacements.push_back(RTSWorldUnitEntry{inUnit, inAfter}); }
+void ee_rtswcpp_unit_reference(RTSUnit* inUnit) { inUnit->Reference(); }
+void ee_rtswcpp_unit_dereference(RTSUnit* inUnit) { inUnit->Dereference(); }
 }

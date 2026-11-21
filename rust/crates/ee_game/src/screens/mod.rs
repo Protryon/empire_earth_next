@@ -87,6 +87,9 @@
 //!   game options page): the controls it makes as tables, its pages, rows, diplomacy grid, load and store.
 //! - [`editor_trigger`]: the scenario editor's trigger tab trigger screen whole in Rust (`EESETSTrigger`): its
 //!   controls, condition and effect rows, operators, store and load.
+//! - [`editor_trigx`]: the trigger tab family's host ops that were C++ statement sequences (the generic effect and
+//!   condition host, the object, trigger, area and instructions screens, the trigger tab, the place fills, the tech
+//!   names), composed of single C++ statements (`ee_screenscpp_seetx` .. `_seinx`).
 //! - [`editor_tscreen`]: the scenario editor's trigger tab whole in Rust (`EESETriggerScreen`): its controls, entry
 //!   list and buttons, sub-tabs, the open entry's store and load.
 //! - [`editor_groups`]: the scenario editor's seven tab groups as Rust objects (once `EEUIFSEMainGroup` and its
@@ -181,6 +184,7 @@ pub mod editor_area;
 #[cfg(not(test))]
 mod editor_area_ffi;
 pub mod editor_brush;
+mod editor_calls;
 pub mod editor_conditions;
 pub mod editor_controls;
 mod editor_direct;
@@ -216,16 +220,27 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_sefmx;
+pub mod editor_selt;
+#[cfg(not(test))]
+mod editor_selt_ffi;
 pub mod editor_sepl;
+pub mod editor_seplx;
+pub mod editor_setnx;
+pub mod editor_seunx;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
+pub mod editor_tabsx;
 pub mod editor_terrain;
 #[cfg(not(test))]
 mod editor_terrain_ffi;
 pub mod editor_trigger;
 #[cfg(not(test))]
 mod editor_trigger_ffi;
+pub mod editor_trigx;
+#[cfg(not(test))]
+mod editor_trigx_ffi;
 pub mod editor_tscreen;
 #[cfg(not(test))]
 mod editor_tscreen_ffi;
