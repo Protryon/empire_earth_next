@@ -72,6 +72,8 @@ pub mod game_over_host;
 pub mod gather;
 pub mod gather_spot;
 pub mod gather_world;
+pub mod ghost_body;
+pub mod ghost_make;
 pub mod goal_obj;
 pub mod goal_spec;
 pub mod goal_split;
