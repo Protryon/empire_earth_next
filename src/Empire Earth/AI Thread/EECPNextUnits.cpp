@@ -154,63 +154,10 @@ void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVicti
         ee_ai_units_on_dealt(inPlayer->mUnitsState->mRust, inPlayer, inAmount, EECPUnitsHandle(inVictim));
 }
 
-void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_damage(inPlayer->mUnitsState->mRust, inPlayer, inAttackerPlayer, inAmount, EECPUnitsHandle(inUnit));
-}
-
-void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 3, EECPUnitsHandle(inUnit));   // created
-}
-
 void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend)
 {
     if (inPlayer->mUnitsState != NULL)
         ee_ai_units_on_player(inPlayer->mUnitsState->mRust, inDefend ? 9 : 8, inPlayerID, 0, 0);
-}
-
-void EECPUnitsOnFlare(EEComputerPlayer* inPlayer, long inPlayerID, long inX, long inY)
-{
-    if (inPlayer->mUnitsState != NULL)
-        ee_ai_units_on_player(inPlayer->mUnitsState->mRust, 10, inPlayerID, inX, inY);
-}
-
-void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 4, EECPUnitsHandle(inUnit));   // built
-}
-
-void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool inSwapped)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL && !inSwapped)
-        ee_ai_units_on_taken(inPlayer->mUnitsState->mRust, inPlayer, EECPUnitsHandle(inUnit));
-}
-
-void EECPUnitsOnGoalDone(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
-        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 5, EECPUnitsHandle(inUnit));   // idle
-}
-
-void EECPUnitsOnSwapped(EEComputerPlayer* inPlayer, std::vector<EEPUnitSwap>& ioSwaps)
-{
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL)
-        return;
-    long theNow = (long)gPhysics->mGameTime;
-    for (unsigned long k = 0; k < ioSwaps.size(); k++) {
-        if (ioSwaps[k].mOld == NULL || ioSwaps[k].mNew == NULL)
-            continue;
-        if (ioSwaps[k].mOld->mPlayer != inPlayer && ioSwaps[k].mNew->mPlayer != inPlayer)
-            continue;
-        ee_ai_units_on_swap(s->mRust, (long)ioSwaps[k].mOld->mUnitID, (long)ioSwaps[k].mNew->mUnitID,
-            ioSwaps[k].mNew->mPlayer == inPlayer, ioSwaps[k].mNew->mUnitClass->mUnitType, theNow);
-    }
-    ee_ai_units_forward_expire(s->mRust, theNow);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -266,28 +213,6 @@ static bool EECPUnitsImproveCost(EEComputerPlayer* inPlayer, long inType, long i
     return true;
 }
 
-// the side (1..4) a gate fits on over the player's finished wall at the tile, as the classic wall manager picks it;
-// 0: none
-static long EECPUnitsGateSide(EEComputerPlayer* me, long x, long y)
-{
-    std::vector<EEUnit*> theUnits;
-    ee_units_uu_units_on_tile(x, y, &theUnits);
-    EEUnit* theWall = NULL;
-    for (unsigned long k = 0; k < theUnits.size() && theWall == NULL; k++)
-        if (theUnits[k]->GetUnitClass()->GetIsWall() && theUnits[k]->GetHitPoints() > 0 && theUnits[k]->mPlayer == me
-            && theUnits[k]->GetComplexUnit() != NULL && theUnits[k]->GetComplexUnit()->GetIsBuilt())
-            theWall = theUnits[k];
-    if (theWall == NULL)
-        return 0;
-    long theWallType = theWall->GetUnitClass()->GetUnitType();
-    for (long side = 1; side <= 4; side++) {
-        theUnits.clear();
-        if (EEDoesWallGateFitOnUnit(static_cast<EEComplexUnit*>(theWall), side, theWallType, theUnits))
-            return side;
-    }
-    return 0;
-}
-
 // the classic build manager's HasEnemyNear through the fog (the manifest's "sees_all"): every armed unit not the
 // player's in the influence regions round the tile (one tile on small island and planet maps), idle searchers left
 // out -> their count
@@ -324,64 +249,6 @@ static long EECPUnitsEnemyNearAll(EEComputerPlayer* me, long inX, long inY)
             theCount++;
     }
     return theCount;
-}
-
-// ai.tuning's values beyond the computer player's record: the game's options, the map, the continents, the
-// manifest's switches, the cheats, the personality with the TEST ONLY experiments' switches, the behaviour table
-static void EECPUnitsTuning(EEComputerPlayer* me, EeAiUnitsTuning& t)
-{
-    t.deathmatch = me->IsDeathmatch();
-    t.all_managers = gWorld.mGameOptions.mResources == 5;
-    t.epoch_start = gWorld.mGameOptions.mEpochStart;
-    t.epoch_end = gWorld.mGameOptions.mEpochEnd;
-    t.space = gWorld.mMap != NULL && gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    t.water_tiles = gContinentManager.GetNumWaterTiles();
-    t.land_tiles = gContinentManager.GetNumLandTiles();
-    t.space_tiles = gContinentManager.GetNumSpaceTiles();
-    t.largest_sea = gContinentManager.GetLargestContinent(kContinentCategoryWater);
-    t.fills_garrison = EECPEngineFillsGarrison(me);
-    t.sees_all = EECPEngineSeesAll(me);
-    t.population_limit = me->EEPlayer::GetPopulationLimit(0);
-    for (long k = 0; k < 7; k++)
-        t.cheats[k] = EECPCheatOn(me, 1L << k);
-    const EEAIPersonalityRule& p = EECPPersonality(me);
-    snprintf(t.id, sizeof(t.id), "%s", p.mID.c_str());
-    t.epoch_pressure_start = p.mEpochPressureStart;
-    t.epoch_pressure_full = p.mEpochPressureFull;
-    t.stone_span = EECPStoneSpan(me);
-    t.safe_bonus = EECPSafeBonus(me);
-    t.surplus = p.mSurplus;
-    t.surplus_cut = p.mSurplusCut;
-    t.low_stock = p.mLowStock;
-    for (long k = 0; k < 5; k++)
-        t.floor[k] = p.mFloor[k];
-    t.max_citizen_share = p.mMaxCitizenShare;
-    t.wood_slots = p.mWoodSlots;
-    t.moves_per_cycle = p.mMovesPerCycle;
-    t.demand_split = EECPDemandSplitOn(me);
-    t.coast_fishing = EECPCoastFishingOn(me);
-    t.forage_patches = EECPForagePatchesOn(me);
-    t.claim_range = EECPClaimRangeOn(me);
-    t.claim_needed = EECPClaimNeededOn(me);
-    t.early_town_centers = EECPEarlyTownCenters(me);
-    t.early_trainers = EECPEarlyTrainers(me);
-    t.patch_expand = EECPPatchExpandOn(me);
-    t.standing_army = p.mStandingArmy;
-    t.army_floor = p.mArmyFloor;
-    t.militia = EECPMilitiaOn(me);
-    t.militia_towers = EECPMilitiaTowersOn(me);
-    t.prehistoric_army = EECPPrehistoricArmy(me);
-    t.prehistoric_peace = EECPPrehistoricPeaceOn(me);
-    t.stone_peace = EECPStonePeaceOn(me);
-    t.naval_flee = EECPNavalFleeOn(me);
-    t.epoch_advance_time_scale = gCPBehaviors[kCPBehaviorEpochAdvanceTimeScale].mFloatValue;
-    const EECPBehavior& f = gCPBehaviors[kCPBehaviorCarrierFightersToMaintain];
-    const EECPBehavior& d = gCPBehaviors[kCPBehaviorCarrierFightersToMaintainDM];
-    long theFighters[6] = {f.mIntValue1, f.mIntValue2, (long)f.mFloatValue, d.mIntValue1, d.mIntValue2, (long)d.mFloatValue};
-    for (long k = 0; k < 6; k++)
-        t.carrier_fighters[k] = theFighters[k];
-    t.population_cap_own_weight = gCPBehaviors[kCPBehaviorPopulationCapOwnWeight].mFloatValue;
-    t.population_cap_other_weight = gCPBehaviors[kCPBehaviorPopulationCapOtherWeight].mFloatValue;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -514,157 +381,19 @@ static void EECPUnitsTilesIn(const EeAiUnitsTiles& inTiles, std::vector<U2DPoint
         outTiles.push_back(U2DPoint<long>(inTiles.xy[2 * k], inTiles.xy[2 * k + 1]));
 }
 
-// a forest's, a hill's or a choke point's random point (ai.forest_point, ai.hill_point, ai.choke_point)
-template <class T>
-static void EECPUnitsPickOf(std::vector<T*>& inFound, EeAiUnitsAreaPick& p)
-{
-    p.found = (long)inFound.size();
-    if (inFound.empty())
-        return;
-    long thePick = (long)(p.pick % (int64_t)inFound.size());
-    if (thePick < 0)
-        thePick += (long)inFound.size();
-    T* theArea = inFound[thePick];
-    if (!(theArea->GetNumTiles() > 0))
-        return;
-    URandom theRandom((unsigned long)p.seed);
-    U2DPoint<long> thePoint = theArea->GetTileSet().GetRandomPoint(theRandom);
-    p.ok = true;
-    p.px = thePoint.mX;
-    p.py = thePoint.mY;
-}
-
-static void EECPUnitsAreaPick(EeAiUnitsAreaPick& p)
-{
-    EEAIContinent* theLand = (EEAIContinent*)(uintptr_t)p.land;
-    U2DPoint<long> theFrom(p.x, p.y);
-    long r = p.r;
-    if (p.kind == 0) {
-        std::vector<EEAIForest*> theForests;
-        for (size_t i = 0; i < theLand->GetForestIDs().size(); i++) {
-            unsigned short theID = theLand->GetForestIDs()[i];
-            EEAIForest* theForest = theID < gContinentManager.GetForests().size() ? gContinentManager.GetForests()[theID] : NULL;
-            if (theForest != NULL && (theForest->HullContains(theFrom)
-                    || theForest->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
-                theForests.push_back(theForest);
-        }
-        p.total = (long)theLand->GetForestIDs().size();
-        EECPUnitsPickOf(theForests, p);
-    } else if (p.kind == 1) {
-        std::vector<EEAIHill*> theHills;
-        for (size_t i = 0; i < theLand->GetHillIDs().size(); i++) {
-            unsigned short theID = theLand->GetHillIDs()[i];
-            EEAIHill* theHill = theID < gContinentManager.GetHills().size() ? gContinentManager.GetHills()[theID] : NULL;
-            if (theHill != NULL && (theHill->HullContains(theFrom)
-                    || theHill->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
-                theHills.push_back(theHill);
-        }
-        p.total = (long)theLand->GetHillIDs().size();
-        EECPUnitsPickOf(theHills, p);
-    } else {
-        // the choke points of the land; of the `r` nearest (by their closest point) when r is above 0
-        std::vector<EEAIChokePoint*> theChokePoints;
-        gContinentManager.GetChokePoints(theChokePoints, theLand->GetID(), false);
-        p.total = (long)theChokePoints.size();
-        if (r > 0 && !theChokePoints.empty()) {
-            std::multimap<long, EEAIChokePoint*> theMap;
-            while (!theChokePoints.empty()) {
-                U2DPoint<long> theClosest = theChokePoints.back()->GetClosestPoint(theFrom);
-                theMap.insert(std::make_pair((long)theClosest.DistanceToSquared(theFrom), theChokePoints.back()));
-                theChokePoints.pop_back();
-            }
-            long theCount = 0;
-            for (std::multimap<long, EEAIChokePoint*>::iterator it = theMap.begin(); it != theMap.end() && theCount < r;
-                 ++it, ++theCount)
-                theChokePoints.push_back(it->second);
-        }
-        EECPUnitsPickOf(theChokePoints, p);
-    }
-}
-
-// the largest water body's shore tiles next to the land mass at the tile (EECPBuildManager::CollectSiteTiles(2)); -1
-// when that water body does not touch it
-static int64_t EECPUnitsWaterShore(EeAiUnitsTiles& t)
-{
-    unsigned short theWaterID = (unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater);
-    EEAIContinent* theWater = theWaterID != 0 ? gContinentManager.GetContinentFromID(theWaterID) : NULL;
-    EEAIContinent* theLand = gContinentManager.GetContinentAt(t.from[0], t.from[1]);
-    if (theWater == NULL || theLand == NULL
-        || !gContinentManager.AreAdjacent(theWaterID, theLand->GetID()))
-        return -1;
-    std::vector<U2DPoint<long> > theShore;
-    theWater->GetShoreNextTo(theLand->GetID(), theShore);
-    EECPUnitsTilesOut(t, theShore);
-    return (int64_t)theShore.size();
-}
-
 // the classic wall manager's area utilities (EECPWallManager.cpp declares them the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
-
-// IsPathBlocked (EECPWallManager::PlanWall): a land building stands on the line or within 2 tiles of it, the
-// player's own wall pieces on the line excepted
-static bool EECPUnitsWallBlocked(EEComputerPlayer* me, const EeAiUnitsTiles& t)
-{
-    std::vector<U2DPoint<long> > theLine, theAll, theAround;
-    EECPUnitsTilesIn(t, theLine);
-    for (size_t k = 0; k < theLine.size(); k++) {
-        theAll.push_back(theLine[k]);
-        for (long r = 1; r <= 2; r++) {
-            ee_units_uu_square_ring_tiles(theLine[k].mX, theLine[k].mY, r, &theAround);
-            theAll.insert(theAll.end(), theAround.begin(), theAround.end());
-        }
-    }
-    std::sort(theAll.begin(), theAll.end());
-    theAll.erase(std::unique(theAll.begin(), theAll.end()), theAll.end());
-    std::vector<EEUnit*> theUnits;
-    ee_units_uu_units_on(0, &theAll, &theUnits);
-    bool theBlocked = false;
-    for (size_t k = 0; k < theUnits.size() && !theBlocked; k++) {
-        EEUnit* u = theUnits[k];
-        if (!u->mUnitClass->IsLandBuilding())
-            continue;
-        theBlocked = true;
-        if (u->mPlayer == me && u->mUnitClass->mIsWall && u->mUnitClass->mCategory != kUnitCategoryGate
-            && std::find(theLine.begin(), theLine.end(), U2DPoint<long>(u->mTileX, u->mTileY)) != theLine.end())
-            theBlocked = false;
-    }
-    return theBlocked;
-}
 
 static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a, int64_t b, void* outRecord)
 {
     EECPUnitsState* s = inOp >= EE_AI_UNITS_HOST_ROUTE_REQUEST ? EECPUnitsGet(me) : NULL;   // the routes' (me given)
     switch (inOp) {
-    case EE_AI_UNITS_HOST_AREA_POINT: {
-        EEAIContinent* theArea = (EEAIContinent*)(uintptr_t)a;
-        if (!(theArea->GetNumTiles() > 0))
-            return 0;
-        URandom theRandom((unsigned long)b);
-        U2DPoint<long> thePoint = theArea->GetTileSet().GetRandomPoint(theRandom);
-        ((EeAiUnitsArea*)outRecord)->x = thePoint.mX;
-        ((EeAiUnitsArea*)outRecord)->y = thePoint.mY;
-        return 1;
-    }
-    case EE_AI_UNITS_HOST_AREA_PICK:
-        EECPUnitsAreaPick(*(EeAiUnitsAreaPick*)outRecord);
-        return 0;
     case EE_AI_UNITS_HOST_TILES_AGAIN: {
         std::vector<U2DPoint<long> > theTiles;
         theTiles.swap(sUnitsLastTiles);
         EECPUnitsTilesOut(*(EeAiUnitsTiles*)outRecord, theTiles);
         return (int64_t)theTiles.size();
     }
-    case EE_AI_UNITS_HOST_WATER_SHORE:
-        return EECPUnitsWaterShore(*(EeAiUnitsTiles*)outRecord);
-    case EE_AI_UNITS_HOST_WALL_LINE: {
-        EeAiUnitsTiles& t = *(EeAiUnitsTiles*)outRecord;
-        std::vector<U2DPoint<long> > theTiles;
-        ee_units_uu_wall_line(t.from[0], t.from[1], t.to[0], t.to[1], &theTiles);
-        EECPUnitsTilesOut(t, theTiles);
-        return (int64_t)theTiles.size();
-    }
-    case EE_AI_UNITS_HOST_WALL_BLOCKED:
-        return EECPUnitsWallBlocked(me, *(EeAiUnitsTiles*)outRecord) ? 1 : 0;
     case EE_AI_UNITS_HOST_TILES_LEVEL: {
         std::vector<U2DPoint<long> > theFive;
         EECPUnitsTilesIn(*(EeAiUnitsTiles*)outRecord, theFive);
@@ -733,6 +462,42 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     }
 }
 
+// the terrain a unit crosses (EEUnitClass::GetTerrainFlags, the classic's sub-group common move flags): forest bit 0,
+// cliff bit 1
+static int64_t EECPUnitsCrosses(EEComplexUnit* inUnit)
+{
+    EECPASGFlags theFlags;
+    memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
+    theFlags.mPlayerID = 0;
+    inUnit->mUnitClass->GetTerrainFlags(inUnit, theFlags);
+    return (theFlags.mFlags[kAITileForest] != 0 ? 1 : 0) | (theFlags.mFlags[kAITileCliff] != 0 ? 2 : 0);
+}
+
+// ai.tuning's switches (ee_ai units_host.rs EE_AI_UNITS_SWITCH_*)
+static int64_t EECPUnitsSwitch(EEComputerPlayer* me, int64_t inSwitch)
+{
+    switch (inSwitch) {
+    case EE_AI_UNITS_SWITCH_DEMAND_SPLIT: return EECPDemandSplitOn(me);
+    case EE_AI_UNITS_SWITCH_COAST_FISHING: return EECPCoastFishingOn(me);
+    case EE_AI_UNITS_SWITCH_FORAGE_PATCHES: return EECPForagePatchesOn(me);
+    case EE_AI_UNITS_SWITCH_CLAIM_RANGE: return EECPClaimRangeOn(me);
+    case EE_AI_UNITS_SWITCH_CLAIM_NEEDED: return EECPClaimNeededOn(me);
+    case EE_AI_UNITS_SWITCH_EARLY_TOWN_CENTERS: return EECPEarlyTownCenters(me);
+    case EE_AI_UNITS_SWITCH_EARLY_TRAINERS: return EECPEarlyTrainers(me);
+    case EE_AI_UNITS_SWITCH_PATCH_EXPAND: return EECPPatchExpandOn(me);
+    case EE_AI_UNITS_SWITCH_MILITIA: return EECPMilitiaOn(me);
+    case EE_AI_UNITS_SWITCH_MILITIA_TOWERS: return EECPMilitiaTowersOn(me);
+    case EE_AI_UNITS_SWITCH_PREHISTORIC_ARMY: return EECPPrehistoricArmy(me);
+    case EE_AI_UNITS_SWITCH_PREHISTORIC_PEACE: return EECPPrehistoricPeaceOn(me);
+    case EE_AI_UNITS_SWITCH_STONE_PEACE: return EECPStonePeaceOn(me);
+    case EE_AI_UNITS_SWITCH_NAVAL_FLEE: return EECPNavalFleeOn(me);
+    }
+    return 0;
+}
+
+// the units a gate's fit asks about (EE_AI_UNITS_HOST_GATE_FITS: emptied for each side)
+static std::vector<EEUnit*> sGateUnits;
+
 // (the world's and the continent manager's reads are Rust's: units_bind.rs world_op)
 extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
 {
@@ -779,57 +544,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return 0;
     case EE_AI_UNITS_HOST_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
-    case EE_AI_UNITS_HOST_FACTS: {
-        EEComplexUnit* c = (EEComplexUnit*)(uintptr_t)a;
-        EeAiUnitsFacts& f = *(EeAiUnitsFacts*)outRecord;
-        ee_ai_units_facts_reset(&f);
-        EEUnitGoal* g = c->GetGoalState();
-        if (g != NULL) {
-            f.has_goal = true;
-            GE3DPoint thePlace;
-            g->GetGoalLocation(thePlace);
-            f.tx = UMFloor(thePlace.GetX());
-            f.ty = UMFloor(thePlace.GetY());
-            // the goal's target unit (AI_LUA_UNITS §2.3 `target`): the resource gathered, the building built or
-            // repaired, the unit attacked; and a gatherer's resource kind
-            EEUnit* theTarget = NULL;
-            if (EEUGRust* theGather = EEGatherGoalCast(g)) {
-                theTarget = theGather->GetGatherResource();
-                long r = (long)c->mResourceType - kResourceFood;
-                if (r >= 0 && r < 5)
-                    f.gathers = r;
-                // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
-                f.waiting = theGather->IsGatherWaiting() && c->mCurrentPhysicsAction != 0;
-            } else if (EEUGRust* theBuild = EEBuildRepairGoalCast(g)) {
-                theTarget = theBuild->GetBuildTarget();
-                // a builder waiting for its foundation's site to clear while another unit holds it (the classic's
-                // FindStalledBuilder: CancelStalledBuilds cancels these)
-                f.stalled = (c->mCommand ? c->mCommand->mType : 0) == kActionWaitForBuildSiteToClear && theTarget != NULL
-                    && theTarget->mComplexUnit != NULL && !theTarget->mComplexUnit->mIsBuilt && theBuild->IsBuildSiteTaken();
-            } else if (EEUGRust* theAttack = EEAttackUnitCast(g))
-                theTarget = theAttack->GetAttackTarget();
-            if (theTarget != NULL && theTarget->mIsValid)
-                f.target = (long)theTarget->mUnitID;
-        }
-        // an own aircraft's home base (the airport or carrier it returns to; the classic air sub-group's reach)
-        if (c->mHomeBase != NULL && c->mHomeBase->mIsValid)
-            f.home_base = (long)c->mHomeBase->mUnitID;
-        if (!c->mUnitClass->IsBuilding() && c->mUnitClass->GetMaxVelocity() > 0.0f) {
-            // the terrain the unit can cross (EEUnitClass::GetTerrainFlags: the classic's sub-group common move flags)
-            f.moves = true;
-            EECPASGFlags theFlags;
-            memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
-            theFlags.mPlayerID = 0;
-            c->mUnitClass->GetTerrainFlags(c, theFlags);
-            f.crosses_forest = theFlags.mFlags[kAITileForest] != 0;
-            f.crosses_cliff = theFlags.mFlags[kAITileCliff] != 0;
-        }
-        f.garrisoned = c->mGarrisonCount;   // citizens inside a town centre, capitol or settlement
-        for (unsigned long k = 0; k < EEUnitBehavior::sTable.size(); k++)
-            if (EEUnitBehavior::sTable[k] == c->mBehavior)
-                f.stance = (long)k;
-        return 0;
-    }
     case EE_AI_UNITS_HOST_ASSIGNED:
         return EECPNextAssigned(me, (EEUnit*)(uintptr_t)a);
     case EE_AI_UNITS_HOST_HAS_ROOM:
@@ -930,8 +644,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return EECPGateClass(me);
     case EE_AI_UNITS_HOST_IS_GATE_CLASS:
         return EEUnitClassOfKind<EE_CLASS_KIND_GATE>((EEUnitClass*)(uintptr_t)a) != NULL ? 1 : 0;
-    case EE_AI_UNITS_HOST_GATE_SIDE:
-        return EECPUnitsGateSide(me, (long)a, (long)b);
     case EE_AI_UNITS_HOST_TRIBUTE: {
         EEPlayer* theTo = gWorld.mPlayers[(long)a];
         me->TakeResource((long)b, (long)c);
@@ -963,11 +675,66 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     }
     case EE_AI_UNITS_HOST_FILLS_GARRISON:
         return EECPEngineFillsGarrison(me) ? 1 : 0;
-    case EE_AI_UNITS_HOST_TUNING:
-        EECPUnitsTuning(me, *(EeAiUnitsTuning*)outRecord);
+    case EE_AI_UNITS_HOST_GOAL_LOCATION: reinterpret_cast<EEUGRust*>((uintptr_t)a)->GetGoalLocation(*(GE3DPoint*)outRecord);
         return 0;
-    case EE_AI_UNITS_HOST_AREA_POINT: case EE_AI_UNITS_HOST_AREA_PICK: case EE_AI_UNITS_HOST_WATER_SHORE:
-    case EE_AI_UNITS_HOST_WALL_LINE: case EE_AI_UNITS_HOST_WALL_BLOCKED:
+    case EE_AI_UNITS_HOST_MOVES:
+        return !((EEComplexUnit*)(uintptr_t)a)->mUnitClass->IsBuilding() && ((EEComplexUnit*)(uintptr_t)a)->mUnitClass->GetMaxVelocity() > 0.0f ? 1 : 0;
+    case EE_AI_UNITS_HOST_CROSSES:
+        return EECPUnitsCrosses((EEComplexUnit*)(uintptr_t)a);
+    case EE_AI_UNITS_HOST_BEHAVIORS:
+        return (int64_t)EEUnitBehavior::sTable.size();
+    case EE_AI_UNITS_HOST_BEHAVIOR_AT:
+        return (int64_t)(uintptr_t)EEUnitBehavior::sTable[(size_t)a];
+    case EE_AI_UNITS_HOST_GATE_FITS:
+        return EEDoesWallGateFitOnUnit((EEComplexUnit*)(uintptr_t)a, (long)b, (long)c, sGateUnits = std::vector<EEUnit*>()) ? 1 : 0;
+    case EE_AI_UNITS_HOST_GATE_WALL:
+        return ((EEUnit*)(uintptr_t)a)->GetUnitClass()->GetIsWall() && ((EEUnit*)(uintptr_t)a)->GetHitPoints() > 0 && ((EEUnit*)(uintptr_t)a)->mPlayer == me && ((EEUnit*)(uintptr_t)a)->GetComplexUnit() != NULL && ((EEUnit*)(uintptr_t)a)->GetComplexUnit()->GetIsBuilt() ? 1 : 0;
+    case EE_AI_UNITS_HOST_T_DEATHMATCH:
+        return me->IsDeathmatch() ? 1 : 0;
+    case EE_AI_UNITS_HOST_T_RESOURCES:
+        return gWorld.mGameOptions.mResources;
+    case EE_AI_UNITS_HOST_T_EPOCH_START:
+        return gWorld.mGameOptions.mEpochStart;
+    case EE_AI_UNITS_HOST_T_EPOCH_END:
+        return gWorld.mGameOptions.mEpochEnd;
+    case EE_AI_UNITS_HOST_T_SPACE:
+        return gWorld.mMap != NULL && gWorld.mMap->mTerrainMesh.GetIsSpaceMap() ? 1 : 0;
+    case EE_AI_UNITS_HOST_T_POP_LIMIT:
+        return me->EEPlayer::GetPopulationLimit(0);
+    case EE_AI_UNITS_HOST_T_CHEAT:
+        return EECPCheatOn(me, (long)a) ? 1 : 0;
+    case EE_AI_UNITS_HOST_T_ID: snprintf((char*)outRecord, 128, "%s", EECPPersonality(me).mID.c_str());
+        return 0;
+    case EE_AI_UNITS_HOST_T_PRESSURE_START: *(float*)outRecord = EECPPersonality(me).mEpochPressureStart;
+        return 0;
+    case EE_AI_UNITS_HOST_T_PRESSURE_FULL: *(float*)outRecord = EECPPersonality(me).mEpochPressureFull;
+        return 0;
+    case EE_AI_UNITS_HOST_T_SURPLUS_CUT: *(float*)outRecord = EECPPersonality(me).mSurplusCut;
+        return 0;
+    case EE_AI_UNITS_HOST_T_MAX_CITIZEN_SHARE: *(float*)outRecord = EECPPersonality(me).mMaxCitizenShare;
+        return 0;
+    case EE_AI_UNITS_HOST_T_STANDING_ARMY: *(float*)outRecord = EECPPersonality(me).mStandingArmy;
+        return 0;
+    case EE_AI_UNITS_HOST_T_ARMY_FLOOR: *(float*)outRecord = EECPPersonality(me).mArmyFloor;
+        return 0;
+    case EE_AI_UNITS_HOST_T_FLOOR: *(float*)outRecord = EECPPersonality(me).mFloor[(size_t)a];
+        return 0;
+    case EE_AI_UNITS_HOST_T_STONE_SPAN: *(float*)outRecord = EECPStoneSpan(me);
+        return 0;
+    case EE_AI_UNITS_HOST_T_SAFE_BONUS: *(float*)outRecord = EECPSafeBonus(me);
+        return 0;
+    case EE_AI_UNITS_HOST_T_SURPLUS:
+        return EECPPersonality(me).mSurplus;
+    case EE_AI_UNITS_HOST_T_LOW_STOCK:
+        return EECPPersonality(me).mLowStock;
+    case EE_AI_UNITS_HOST_T_WOOD_SLOTS:
+        return EECPPersonality(me).mWoodSlots;
+    case EE_AI_UNITS_HOST_T_MOVES_PER_CYCLE:
+        return EECPPersonality(me).mMovesPerCycle;
+    case EE_AI_UNITS_HOST_T_SWITCH:
+        return EECPUnitsSwitch(me, a);
+    case EE_AI_UNITS_HOST_T_BEHAVIORS:
+        return (int64_t)(uintptr_t)gCPBehaviors;
     case EE_AI_UNITS_HOST_TILES_LEVEL: case EE_AI_UNITS_HOST_WALL_PATH: case EE_AI_UNITS_HOST_ROUTE_REQUEST:
     case EE_AI_UNITS_HOST_ROUTE_STATE: case EE_AI_UNITS_HOST_ROUTE_TAKE: case EE_AI_UNITS_HOST_TILES_AGAIN:
         return EECPUnitsWallsHost(me, inOp, a, b, outRecord);

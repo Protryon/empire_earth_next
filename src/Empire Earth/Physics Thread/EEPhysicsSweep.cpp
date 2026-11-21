@@ -31,7 +31,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
-#include "ee/EEActiveGroup.h"
 #include "ee/EEFormation.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
@@ -73,9 +72,9 @@ void Record(long inCase, EEPlayer* inPlayer, EEActiveGroup* inGroup, EEComplexUn
     r.U32((unsigned int)inGroup->GetNumUnits());
     for (unsigned long i = 0; i < inGroup->GetNumUnits(); i++)
         r.U32((unsigned int)inGroup->GetUnit(i)->mUnitID);
-    r.F32s(&inGroup->mSpeed, 17);
-    r.U32(inGroup->mMovesTogether);
-    r.U32((unsigned int)inPlayer->mPendingGroups.size());
+    r.F32s(&inGroup->mFields.mSpeed, 17);
+    r.U32(inGroup->mFields.mMovesTogether);
+    r.U32((unsigned int)inPlayer->GetNumPendingGroups());
     for (size_t i = 0; i < inCount; i++) {
         EEComplexUnit* u = inUnits[i];
         r.U32((unsigned int)u->mUnitID);
@@ -171,7 +170,7 @@ extern "C" int64_t ee_units_sweep_host(int32_t inOp, uint64_t inA, uint64_t inB,
         return 0;
     }
     case EE_UNITS_SWEEP_OP_NEW_GROUP: {
-        EEActiveGroup* theGroup = new EEActiveGroup(Of<EEPlayer>(inA));
+        EEActiveGroup* theGroup = EEActiveGroup::New(Of<EEPlayer>(inA));
         const uint64_t* theUnits = Of<const uint64_t>(inB);
         for (int64_t i = 0; i < inC; i++) {
             EEComplexUnit* theUnit = Of<EEComplexUnit>(theUnits[i]);
@@ -188,11 +187,11 @@ extern "C" int64_t ee_units_sweep_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_SWEEP_OP_RUN: {
         EEActiveGroup* theGroup = Of<EEActiveGroup>(inA);
         if (inC & 2)
-            theGroup->mIsSpecialAttack = true;
+            theGroup->mFields.mIsSpecialAttack = true;
         theGroup->SetGoal(Of<EEUnitGoal>(inB), (inC & 1) != 0);
         if (inD >= 0) {   // the commands' way: the action, into the pending groups, Plan
-            theGroup->mAction = (long)inD;
-            theGroup->mPlayer->mPendingGroups.push_back(theGroup);
+            theGroup->mFields.mAction = (long)inD;
+            theGroup->GetPlayer()->AddPendingGroup(theGroup);
             theGroup->Plan();
         }
         return 0;

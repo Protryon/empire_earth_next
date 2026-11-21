@@ -14,6 +14,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EECalamity.h"
+#include "rust/game/gamecpp.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEGameSound.h"
@@ -31,120 +32,59 @@ const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");
 EECalamity::EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit)
     : mEffectGeneration(6), mTilePlaceHolder1(0, 0)
 {
-    this->mTargetUnit = NULL;
-    this->mCasterUnit = NULL;
-    this->mSound = NULL;
-    this->mSecondarySound = NULL;
-    this->Reset();
-    this->mClass = inClass;
-    this->SetCasterUnit(inCasterUnit);
-    this->mClass->LoadMedia(inCasterUnit != NULL ? inCasterUnit->mPlayer : ::gWorld.mPlayers[0], true);
+    ee_gamecpp_calamity_construct(this, inClass, inCasterUnit, true);   // (ee_game gamecpp calamity_objects.rs)
 }
 
 // Creates an empty calamity with no class, target or caster (for loading)
 EECalamity::EECalamity()
     : mEffectGeneration(6), mTilePlaceHolder1(0, 0)
 {
-    this->mTargetUnit = NULL;
-    this->mCasterUnit = NULL;
-    this->mSound = NULL;
-    this->mSecondarySound = NULL;
-    this->Reset();
+    ee_gamecpp_calamity_construct(this, NULL, NULL, false);
 }
 
 // Destroys the calamity: stops its sounds, unloads its class's media unless it has a caster id but no caster unit,
 // and releases its units
 EECalamity::~EECalamity()
 {
-    this->StopSound();
-    this->StopSecondarySound();
-    if (UIsNone32(this->mOriginatingUnitID) || this->mCasterUnit != NULL)
-        this->mClass->UnloadMedia(this->mCasterUnit != NULL ? this->mCasterUnit->mPlayer : ::gWorld.mPlayers[0]);
-    this->Reset();
+    ee_gamecpp_calamity_destruct(this);
 }
 
 // Stops the calamity's main sound and releases it
 void EECalamity::StopSound()
 {
-    if (this->mSound != NULL) {
-        gSoundManager->Stop(this->mSound, false);
-        this->ReleaseSound();
-    }
+    ee_gamecpp_calamity_stop_sound(this, false);
 }
 
 // Releases the calamity's main sound without stopping it
 void EECalamity::ReleaseSound()
 {
-    if (this->mSound != NULL)
-        this->mSound->Dereference();
-    this->mSound = NULL;
+    ee_gamecpp_calamity_release_sound(this, false);
 }
 
 // Stops the calamity's secondary sound and releases it (folded with EEE2DFire::StopSound in the original, whose
 // mSound sat at the same offset)
 void EECalamity::StopSecondarySound()
 {
-    if (this->mSecondarySound) {
-        gSoundManager->Stop(this->mSecondarySound, false);
-        this->ReleaseSecondarySound();
-    }
+    ee_gamecpp_calamity_stop_sound(this, true);
 }
 
 // Releases the calamity's secondary sound without stopping it
 void EECalamity::ReleaseSecondarySound()
 {
-    if (this->mSecondarySound != NULL)
-        this->mSecondarySound->Dereference();
-    this->mSecondarySound = NULL;
+    ee_gamecpp_calamity_release_sound(this, true);
 }
 
 // Clears the calamity: no class, target or caster (both released), sounds released, the effect generations and
 // handle zeroed; every timer, flag and placeholder as a new calamity's (ee_tech calamity_record.rs reset)
 void EECalamity::Reset()
 {
-    this->mClass = NULL;
-    if (this->mTargetUnit != NULL) {
-        this->mTargetUnit->Dereference();
-        this->mTargetUnit = NULL;
-    }
-    if (this->mCasterUnit != NULL) {
-        this->mCasterUnit->Dereference();
-        this->mCasterUnit = NULL;
-    }
-    for (long i = 0; i < 6; i++)
-        *(this->mEffectGeneration.begin() + i) = 0;
-    this->ReleaseSound();
-    this->ReleaseSecondarySound();
-    this->mEffectHandle.mValue = 0;
-    ee_calamity_record_reset(this);
+    ee_gamecpp_calamity_reset(this);
 }
 
 // Writes the calamity's state to the out-of-sync dump
 void EECalamity::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Calamity Class is %ld\n", this->mClass->mClassEnum);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location X: %6.6f\n", this->mTargetLocation.GetX());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location Y: %6.6f\n", this->mTargetLocation.GetY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location Z: %6.6f\n", this->mTargetLocation.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 X: %ld\n", this->mTilePlaceHolder1.mX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 Y: %ld\n", this->mTilePlaceHolder1.mY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder1 %ld\n", this->mIntPlaceHolder1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder2 %ld\n", this->mIntPlaceHolder2);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Unit ID #%08lx\n", this->mTargetUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Caster Unit ID #%08lx\n", this->mOriginatingUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Player Number %ld\n", this->mPlayerNumber);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool PlaceHolder 1 has a value of %d\n", this->mBoolPlaceHolder1 == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool PlaceHolder 2 has a value of %d\n", this->mBoolPlaceHolder2 == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool Initialized has a value of %d\n", this->mInitialized == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool HasTargetLocation has a value of %d\n",
-            this->mHasTargetLocation == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool HasTargetUnit has a value of %d\n", this->mHasTargetUnit == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Float PlaceHolder 1 is %6.6f\n", this->mFloatPlaceHolder1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Float PlaceHolder 2 is %6.6f\n", this->mFloatPlaceHolder2);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Height is %6.6f\n", this->mHeight);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Discrete Update Time is %6.6f\n", this->mDiscreteUpdateTime);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Time Elapsed Since Last Update is %6.6f\n",
-            this->mTimeElapsedSinceLastUpdate);
+    ee_gamecpp_calamity_dump(this, inFile);
 }
 
 // (empty: folded into a shared empty function)
@@ -156,29 +96,19 @@ void EECalamity::Virtual18(unsigned long)
 // calamity_record.rs checksum)
 long EECalamity::GetOutOfSynchChecksum()
 {
-    return ee_calamity_record_checksum(this, this->mTargetLocation.GetX(), this->mTargetLocation.GetY(),
-                                       this->mTargetLocation.GetZ(), this->mTilePlaceHolder1.mX, this->mTilePlaceHolder1.mY);
+    return ee_gamecpp_calamity_checksum(this);
 }
 
 // Returns how many whole discrete update periods have elapsed and keeps the remainder
 unsigned long EECalamity::GetDiscreteUpdates()
 {
-    // the periods and the time left are Rust (ee_tech contagion.rs discrete_updates)
-    EeCalamityDiscrete theDiscrete = ee_calamity_discrete_updates(this->mTimeElapsedSinceLastUpdate, this->mDiscreteUpdateTime);
-    this->mTimeElapsedSinceLastUpdate = theDiscrete.elapsed;
-    return theDiscrete.updates;
+    return ee_gamecpp_calamity_discrete_updates(this);
 }
 
 // Returns the target unit through the argument (NULL if none) and whether there is one
 bool EECalamity::GetTargetUnit(EEUnit*& outUnit)
 {
-    bool theResult = false;
-    if (this->mTargetUnit != NULL) {
-        outUnit = this->mTargetUnit;
-        theResult = true;
-    } else
-        outUnit = NULL;
-    return theResult;
+    return (outUnit = this->mTargetUnit) != NULL;
 }
 
 namespace {
@@ -268,57 +198,30 @@ long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 // Plays the calamity's sound through its class
 void EECalamity::PlaySound()
 {
-    if (this->mClass != NULL)
-        this->mClass->PlaySound(this);
+    ee_gamecpp_calamity_play_sound(this);
 }
 
 // Sets the caster unit, moving the reference and the originating unit id to it (-1 when cleared)
 void EECalamity::SetCasterUnit(EEUnit* inUnit)
 {
-    if (this->mCasterUnit != NULL) {
-        this->mCasterUnit->Dereference();
-        this->mOriginatingUnitID = -1;
-    }
-    this->mCasterUnit = inUnit;
-    if (inUnit != NULL) {
-        this->mCasterUnit->Reference();
-        this->mOriginatingUnitID = this->mCasterUnit->mUnitID;
-    }
+    ee_gamecpp_calamity_set_unit(this, inUnit, false);
 }
 
 // Stops the current main sound and keeps a referenced new one
 void EECalamity::SetSound(SESMInstanceNode* inSound)
 {
-    this->StopSound();
-    this->mSound = inSound;
-    if (inSound != NULL)
-        inSound->Reference();
+    ee_gamecpp_calamity_set_sound(this, inSound, false);
 }
 
 // Stops the current secondary sound and keeps a referenced new one
 void EECalamity::SetSecondarySound(SESMInstanceNode* inSound)
 {
-    this->StopSecondarySound();
-    this->mSecondarySound = inSound;
-    if (inSound != NULL)
-        inSound->Reference();
+    ee_gamecpp_calamity_set_sound(this, inSound, true);
 }
 
 // Sets the target unit, moving the reference and the target id to it, and whether the calamity has a target unit
 void EECalamity::SetTargetUnit(EEUnit* inUnit)
 {
-    if (this->mTargetUnit != NULL) {
-        this->mTargetUnit->Dereference();
-        this->mTargetUnitID = -1;
-    }
-    this->mTargetUnit = inUnit;
-    if (inUnit != NULL) {
-        this->mTargetUnit->Reference();
-        this->mTargetUnitID = this->mTargetUnit->mUnitID;
-    }
-    if (this->mTargetUnit != NULL)
-        this->mHasTargetUnit = true;
-    else
-        this->mHasTargetUnit = false;
+    ee_gamecpp_calamity_set_unit(this, inUnit, true);
 }
 

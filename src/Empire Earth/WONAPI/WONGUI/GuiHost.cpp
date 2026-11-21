@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guictor.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guitext.h"
@@ -82,6 +83,7 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
     case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
     case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
+    case Op::CtorSetFlags: c->SetComponentFlags((int)a, true); return 0;
     case Op::FireEvent:
         // the type is Rust's map, which the goldens check against the enum (round 23's lists fired ListSelChanged
         // through a switch here as InputTextChanged: the LAN lobby's Join Game stayed disabled)
@@ -98,6 +100,12 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
 }
 
 static TextSegment* Seg(intptr_t a) { return (TextSegment*)a; }
+// a font's descriptor with the underline style (the text area's link font)
+static FontDescriptor Underlined(FontDescriptor inDescriptor)
+{
+    inDescriptor.mStyle |= FontStyle_Underline;
+    return inDescriptor;
+}
 
 extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
@@ -146,28 +154,32 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
         WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
         return 0;
     }
+    // the constructor's statements (guictor.rs)
+    case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
+    case Op::CtorFontNamed: t->SetFont(t->GetNamedFont("TextArea")); return 0;
+    case Op::CtorLinkColor: t->mLinkColor=0x0000ff; return 0;
+    case Op::CtorLinkFontNamed: t->SetLinkFont(t->GetNamedFont("TextAreaLink")); return 0;
+    case Op::CtorLinkFontIsDefault: return t->mLinkFont.get()==t->GetRoot()->GetWindowManager()->GetDefaultFont();
+    case Op::CtorLinkFontUnderline: t->SetLinkFont(t->GetFont(Underlined(t->mFont->GetDescriptor()))); return 0;
+    case Op::CtorPads: t->SetPads((int)a,(int)a,(int)a,(int)a); return 0;
+    case Op::CtorReset: t->Reset(false); return 0;
+    case Op::SegNew: return (intptr_t)new TextSegment;
+    case Op::SegSetText: Seg(a)->mText.mData=((const GUIString*)b)->mData; return 0;
+    case Op::SegSetColor: Seg(a)->mColor=(int)b; return 0;
+    case Op::SegSetFont: Seg(a)->mFont=(Font*)b; return 0;
+    case Op::SegSetLineBreak: Seg(a)->mLineBreak=b!=0; return 0;
+    case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
 
 namespace WONAPI {
 // Creates an empty text area with word wrap and selection on, the named TextArea/TextAreaLink fonts
+// (the Rust area holds the flags, limits, indent and alignment; the statements are guictor.rs's)
 TextArea::TextArea()
 {
-    this->mRust=ee_won_text_new(this,ee_won_guicpp_text_call); // the flags, limits, indent and alignment
-    this->mTextColor=0x8000000e;
-    this->SetFont(this->GetNamedFont("TextArea"));
-    this->mLinkColor=0x0000ff;
-    this->SetLinkFont(this->GetNamedFont("TextAreaLink"));
-    if(this->mLinkFont.get()==this->GetRoot()->GetWindowManager()->GetDefaultFont())
-    {
-        FontDescriptor descriptor=this->mFont->GetDescriptor();
-        descriptor.mStyle|=FontStyle_Underline;
-        this->SetLinkFont(this->GetFont(descriptor));
-    }
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->SetPads(5,5,5,5);
-    this->Reset(false);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mRust), ee_won_text_new(this, ee_won_guicpp_text_call), this,
+                         ee_won_guicpp_text_call, EeWonGuiCtor::TextArea, 0);
 }
 // Destroys the text area: the Rust area gives its segments back
 TextArea::~TextArea() { ee_won_text_free(this->mRust); }
@@ -180,22 +192,12 @@ void TextArea::AddSegment(const GUIString& text,bool lineBreak)
 // Appends a text segment in the given colour and the area's font (the body at 0x00713c80)
 void TextArea::AddSegment(const GUIString& text,int color,bool lineBreak)
 {
-    SmartPtr<TextSegment> seg=new TextSegment;
-    seg->mText.mData=text.mData;
-    seg->mColor=color;
-    seg->mFont=this->mFont;
-    seg->mLineBreak=lineBreak;
-    this->AddSegment(seg.get());
+    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, this->mFont.get(), lineBreak);
 }
 // Appends a text segment in the given colour and font (the body at 0x00713da0)
 void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBreak)
 {
-    SmartPtr<TextSegment> seg=new TextSegment;
-    seg->mText.mData=text.mData;
-    seg->mColor=color;
-    seg->mFont=font;
-    seg->mLineBreak=lineBreak;
-    this->AddSegment(seg.get());
+    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, font, lineBreak);
 }
 
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
@@ -256,6 +258,13 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
         WONDrawOne(g, o, aSlots, aBackground);
         return 0;
     }
+    // the constructor's statements (guictor.rs)
+    case Op::CtorFontNamed: t->mFont=t->GetNamedFont("InputBox"); return 0;
+    case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
+    case Op::CtorDisabledTextColor: t->mDisabledTextColor=(int)0x80000006; return 0;
+    case Op::CtorDisabledBackground: t->mDisabledBackground.SetColor((int)0x80000001); return 0;
+    case Op::CtorUseDisabledColors: t->mUseDisabledColors=true; return 0;
+    case Op::CtorNoFilter: t->mInputFilter=NULL; return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -281,15 +290,8 @@ bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
 // rest: the 500 ms blink, the 100-entry input history, the padding)
 InputBox::InputBox()
 {
-    this->mRust=ee_won_input_new(this,ee_won_guicpp_input_call);
-    this->mFont=this->GetNamedFont("InputBox");
-    this->SetComponentFlags(0x4008,true);
-    this->mTextColor=0x8000000e;
-    this->mDisabledTextColor=(int)0x80000006;
-    this->mDisabledBackground.SetColor((int)0x80000001);
-    this->mUseDisabledColors=true;
-    this->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_IBeam));
-    this->mInputFilter=NULL;
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mRust), ee_won_input_new(this, ee_won_guicpp_input_call), this,
+                         ee_won_guicpp_input_call, EeWonGuiCtor::InputBox, 0);
 }
 // Destroys the input box: the Rust box goes
 InputBox::~InputBox() { ee_won_input_free(this->mRust); }
@@ -315,6 +317,10 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
         WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
         return 0;
     }
+    // the constructor's statements (guictor.rs)
+    case Op::CtorWrapNew: t->mWrappedText=new WrappedText; return 0;
+    case Op::CtorFontNamed: t->mWrappedText->SetFont(t->GetNamedFont("Label")); return 0;
+    case Op::CtorBackgroundNone: t->mBackground.SetColor(-1); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -324,12 +330,8 @@ namespace WONAPI {
 // the colour, the top-left alignment and the zero padding)
 Label::Label()
 {
-    this->mRust=ee_won_label_new(this,ee_won_guicpp_label_call);
-    this->mWrappedText=new WrappedText;
-    this->mWrappedText->SetFont(this->GetNamedFont("Label"));
-    this->mWrappedText->SetWrap(false);
-    this->SetComponentFlags(ComponentFlag_Clip,true);
-    this->mBackground.SetColor(-1);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mRust), ee_won_label_new(this, ee_won_guicpp_label_call), this,
+                         ee_won_guicpp_label_call, EeWonGuiCtor::Label, 0);
 }
 // Destroys the label: the Rust label goes
 Label::~Label() { ee_won_label_free(this->mRust); }
@@ -384,8 +386,8 @@ intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
 // Creates an empty clipping splitter (the Rust splitter holds the split at 50% / 50% and no minimum pane sizes)
 Splitter::Splitter()
 {
-    this->mRust=ee_won_split_new(this,ee_won_guicpp_split_call);
-    this->SetComponentFlags(ComponentFlag_Clip,true);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mRust), ee_won_split_new(this, ee_won_guicpp_split_call), this,
+                         ee_won_guicpp_split_call, EeWonGuiCtor::Splitter, 0);
 }
 // Destroys the splitter: the Rust splitter gives its buttons and drag handles back
 Splitter::~Splitter() { ee_won_split_free(this->mRust); }
@@ -472,6 +474,9 @@ extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::ScrollerSetScrollbar:
         static_cast<ScrollbarScroller*>(Comp(a))->SetScrollbar(static_cast<Scrollbar*>(Comp(b)));
         return 0;
+    // the constructor's statements (guictor.rs)
+    case Op::CtorViewportNew: t->mViewport=new ScrollAreaViewport(t); return 0;
+    case Op::CtorAddViewport: t->AddChild(t->mViewport.get()); return 0;
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -481,9 +486,8 @@ namespace WONAPI {
 // other number 0, no scroller)
 ScrollArea::ScrollArea()
 {
-    this->mPane=ee_won_pane_new(this,ee_won_guicpp_pane_call);
-    this->mViewport=new ScrollAreaViewport(this);
-    this->AddChild(this->mViewport.get());
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mPane), ee_won_pane_new(this, ee_won_guicpp_pane_call), this,
+                         ee_won_guicpp_pane_call, EeWonGuiCtor::ScrollArea, 0);
 }
 // Destroys the scroll area: the Rust area goes (the implicit destructor 0x002fa790)
 ScrollArea::~ScrollArea() { ee_won_pane_free(this->mPane); }
@@ -622,6 +626,17 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
         return 0;
     }
     case Op::MenuTryKeyDown: return ((PopupMenu*)a)->TryKeyDown((int)b) ? 1 : 0;
+    // the constructors' statements (guictor.rs: the list area's, the multi-column list's, the menu's)
+    case Op::CtorTextColor: t->mTextColor=(int)0x8000000e; return 0;
+    case Op::CtorFontNamed: t->mFont=t->GetNamedFont("ListArea"); return 0;
+    case Op::CtorPads: t->SetPads((int)a,(int)a,(int)a,(int)a); return 0;
+    case Op::CtorNoSortFunc: t->mSortFunc=NULL; return 0;
+    case Op::CtorMultiColumns: static_cast<MultiListArea*>(t)->SetNumColumns((int)a); return 0;
+    case Op::CtorMenuFont: static_cast<PopupMenu*>(t)->SetFont(t->GetNamedFont("Menu")); return 0;
+    case Op::CtorMenuListFlags: static_cast<PopupMenu*>(t)->SetListFlags(0x806,true); return 0;
+    case Op::CtorMenuBackground: static_cast<PopupMenu*>(t)->SetBackground(WONShellNew(EeWonShellKind::MsPopup)); return 0;
+    case Op::CtorMenuTextColor: t->mTextColor=0x8000000c; return 0;
+    case Op::CtorMenuBorderPadding: static_cast<PopupMenu*>(t)->SetBorderPadding(4,4,4,4); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -649,12 +664,8 @@ int ListItem::Compare(const ListItem* other,ListArea*) const { return this<other
 // default flags: highlighted icons, full-row select, partial lines shown)
 ListArea::ListArea()
 {
-    this->mRust=ee_won_list_new(this,ee_won_guicpp_list_call);
-    this->mTextColor=(int)0x8000000e;
-    this->mFont=this->GetNamedFont("ListArea");
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->SetPads(2,2,2,2);
-    this->mSortFunc=NULL;
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mRust), ee_won_list_new(this, ee_won_guicpp_list_call), this,
+                         ee_won_guicpp_list_call, EeWonGuiCtor::ListArea, 0);
 }
 // Destroys the list box, closing an open item tooltip first; the Rust list gives its items back
 ListArea::~ListArea()
@@ -711,6 +722,7 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
     }
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
     case Op::CursorIs: return t->GetCurrentCursor() == CursorOf(a) ? 1 : 0;
+    case Op::CtorHeaderArea: t->SetMultiListArea((MultiListArea*)a); return 0; // the constructor's (guictor.rs)
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -720,8 +732,8 @@ namespace WONAPI {
 // border, no dynamic column, no width cap and auto grow off; the original reserved room for 11000 items)
 MultiListArea::MultiListArea(int columns)
 {
-    this->mMulti=ee_won_multi_new(this,ee_won_guicpp_list_call,this->mRust);
-    this->SetNumColumns(columns);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mMulti), ee_won_multi_new(this, ee_won_guicpp_list_call, this->mRust), this,
+                         ee_won_guicpp_list_call, EeWonGuiCtor::MultiListArea, columns);
 }
 // Destroys the list: the Rust list gives its columns' viewports back (the ListArea base then its rows)
 MultiListArea::~MultiListArea() { ee_won_multi_free(this->mMulti); }
@@ -741,11 +753,11 @@ MultiListItem::MultiListItem() { this->mRow=ee_won_mrow_new(this,ee_won_guicpp_m
 MultiListItem::~MultiListItem() { ee_won_mrow_free(this->mRow); }
 
 // Creates a clipped list header with sort arrows on, no sort column, attached to a list area
+// (the Rust header: no drag, no sort column, sort arrows on)
 MultiListHeader::MultiListHeader(MultiListArea* area)
 {
-    this->mHead=ee_won_mhead_new(this,ee_won_guicpp_mhead_call); // no drag, no sort column, sort arrows on
-    this->SetComponentFlags(ComponentFlag_Clip,true);
-    this->SetMultiListArea(area);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mHead), ee_won_mhead_new(this, ee_won_guicpp_mhead_call), this,
+                         ee_won_guicpp_mhead_call, EeWonGuiCtor::MultiListHeader, (intptr_t)area);
 }
 // Destroys the header: the Rust header goes (its buttons are the container's children)
 MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
@@ -798,8 +810,8 @@ TreeItem::~TreeItem() { ee_won_tnode_free(this->mNode); }
 // Creates an empty tree with an open root row, list flags 0x30 off and 0x200 on, and tree flags 3 (the Rust tree)
 TreeArea::TreeArea()
 {
-    this->mTree=ee_won_tree_new(this,ee_won_guicpp_list_call,this->mRust);
-    this->TCall(EeWonTreeCall::Init);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mTree), ee_won_tree_new(this, ee_won_guicpp_list_call, this->mRust), this,
+                         ee_won_guicpp_list_call, EeWonGuiCtor::TreeArea, 0);
 }
 // Destroys the tree: the Rust tree gives its root back (and so every row's)
 TreeArea::~TreeArea() { ee_won_tree_free(this->mTree); }
@@ -823,12 +835,8 @@ namespace WONAPI {
 // no submenu, the timer at 0 and mouse mode)
 PopupMenu::PopupMenu()
 {
-    this->mMenu=ee_won_menu_new(this,ee_won_guicpp_list_call,this->mRust);
-    this->SetFont(this->GetNamedFont("Menu"));
-    this->SetListFlags(0x806,true);
-    this->SetBackground(WONShellNew(EeWonShellKind::MsPopup));
-    this->mTextColor=0x8000000c;
-    this->SetBorderPadding(4,4,4,4);
+    ee_won_gui_construct(reinterpret_cast<void**>(&this->mMenu), ee_won_menu_new(this, ee_won_guicpp_list_call, this->mRust), this,
+                         ee_won_guicpp_list_call, EeWonGuiCtor::PopupMenu, 0);
 }
 // Destroys the menu: the Rust menu gives the submenu's item and the submenu back
 PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }

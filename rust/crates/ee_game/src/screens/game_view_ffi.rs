@@ -1,4 +1,5 @@
-//! The view's host in the game (`game_view.rs`): the two C++ fills (`UI Events/EEScreens.cpp`), the sound manager's
+//! The view's host in the game (`game_view.rs`): the two fills (`game_view_calls.rs` over `UI Events/EEScreens.cpp`'s
+//! shims), the sound manager's
 //! and the conductor's Rust objects (`ee_sound`), the chat log's store, the toolkit's Rust controls (`ee_ui
 //! direct.rs`) and the lobby's slot record.
 // `c_ulong` is `u32` on Windows and `u64` on LP64: the casts between it and the host's `u32` stay
@@ -20,19 +21,10 @@ use crate::screens::game_view::{
 use crate::screens::lobby_form::{LobbyHost, EE_SCREENS_LE_SOURCE_LOBBY};
 use crate::screens::menus_ffi::Form;
 
-extern "C" {
-    /// The values of `group` (`EE_SCREENS_VIEW_*`) for `arg` into `out`.
-    fn ee_screenscpp_game_view(group: u32, arg: u32, out: *mut EeScreensGameView);
-    /// The texts of `group` (`EE_SCREENS_VIEW_TEXTS_*`) for `arg`, each ended by a 0 byte, into `out` (up to
-    /// `capacity` bytes); their length.
-    fn ee_screenscpp_game_texts(group: u32, arg: u32, out: *mut u8, capacity: usize) -> usize;
-}
-
 impl ViewHost for Form {
     fn view(&mut self, group: u32, arg: u32) -> EeScreensGameView {
-        let mut v = EeScreensGameView::default();
-        // SAFETY: the host's fill writes the record
-        unsafe { ee_screenscpp_game_view(group, arg, &mut v) };
+        // the C++ reads (game_view_calls.rs over EEScreens.cpp's shims)
+        let mut v = crate::screens::game_view_calls::view(&mut crate::screens::game_cpp::Ffi, group, arg);
         // the world's and a player's members from the world's views (the C++ fill keeps the camera, the game
         // options, the world table, the main game form and the selected group's airport)
         if group == EE_SCREENS_VIEW_WORLD || group == EE_SCREENS_VIEW_PLAYER {
@@ -51,15 +43,7 @@ impl ViewHost for Form {
         v
     }
     fn texts(&mut self, group: u32, arg: u32) -> Vec<u8> {
-        let mut out = vec![0u8; 1024];
-        // SAFETY: the host writes at most `capacity` bytes and answers the whole length
-        let n = unsafe { ee_screenscpp_game_texts(group, arg, out.as_mut_ptr(), out.len()) };
-        if n > out.len() {
-            out.resize(n, 0);
-            unsafe { ee_screenscpp_game_texts(group, arg, out.as_mut_ptr(), out.len()) };
-        }
-        out.truncate(n);
-        out
+        crate::screens::game_view_calls::texts(&mut crate::screens::game_cpp::Ffi, group, arg)
     }
     fn conductor(&mut self, c: usize, op: Sound, value: u32) -> u32 {
         let c = c as *const EeSoundConductor;

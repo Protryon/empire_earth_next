@@ -67,6 +67,19 @@ impl FormHost for Host {
                 return 0;
             }
         }
+        // the command buttons' ops: Rust over the C++ shims (status_button_calls.rs)
+        if op >= crate::screens::status_button::EE_SCREENS_MF_OP_SB {
+            let sb = op - crate::screens::status_button::EE_SCREENS_MF_OP_SB;
+            let rec = self.0 as usize;
+            return crate::screens::status_button_calls::call(
+                &mut crate::screens::game_cpp::Ffi,
+                rec,
+                sb,
+                a,
+                b,
+                io.n[0],
+            );
+        }
         if let Some(r) =
             crate::screens::main_form_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, io)
         {

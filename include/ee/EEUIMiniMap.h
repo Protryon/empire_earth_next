@@ -31,6 +31,11 @@ public:
     // coordinates and sBounds from inMiniMap's transformations, gMiniMapTransformation = its +0x64 (provisional name)
     static void Update(EEMiniMap* inMiniMap);
     static GERectangle sBounds;
+    // (public for the shims of ee_screens mini_map_calls.rs: the members, CenterCamera and the base's mouse)
+    using UIControl::CaptureMouse;
+    using UIControl::GetMouseLocation;
+    // 0x2760ec: centres the camera on the mini-map point under the mouse (EEAMiniMap mode 0) (provisional name)
+    void CenterCamera();
 protected:
     // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*, EEUIRustControl's the
     // toolkit's)
@@ -40,9 +45,7 @@ protected:
     virtual long MouseMove(const GE2DPoint& inLocation);    // +0x40 0x2760af
     virtual long MouseRButtonDown();        // +0x44 0x275e45
     virtual long MouseRButtonUp();          // +0x48 0x275523
-    // 0x2760ec: centres the camera on the mini-map point under the mouse (EEAMiniMap mode 0) (provisional name)
-    void CenterCamera();
-
+public:
     GE2DPoint mOrigin;                      // +0x0a0 the map's top-left (the location plus the border)
     GELine mLines[4];                       // +0x0a8 the camera view's edges
     EEAMiniMap* mAction;                    // +0x0d8 (new EEAMiniMap; dereferenced by the dtor)

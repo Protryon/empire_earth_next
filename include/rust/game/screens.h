@@ -7286,6 +7286,12 @@ constexpr static const uint32_t EE_SCREENS_MGR_DO_SPECIAL_BUTTONS = 7;
 
 constexpr static const uint32_t EE_SCREENS_MGR_DO_UPDATE = 8;
 
+/// `kMainGameActionButton1`: the stop button's control.
+constexpr static const uint32_t EE_SCREENS_MGC_ACTION_BUTTON1 = 78;
+
+/// `kMainGameUnitIconBar`.
+constexpr static const uint32_t EE_SCREENS_MGC_UNIT_ICON_BAR = 222;
+
 /// The main menu's open event (form event 1).
 constexpr static const uint32_t EE_SCREENS_MAIN_OPEN = 3073;
 
@@ -10601,6 +10607,50 @@ constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
 
 constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
 
+/// `kFormMainGame` (the form `CreateForm` makes as the game's class).
+constexpr static const uint32_t EE_SCREENS_UMC_FORM_MAIN_GAME = 11;
+
+/// `kControlEventWNSCancel` (WON's server select form's cancel).
+constexpr static const uint32_t EE_SCREENS_UMC_WNS_CANCEL = 106;
+
+/// `kBackgroundGeneric` (the background table's type the game makes).
+constexpr static const uint32_t EE_SCREENS_UMC_BACKGROUND_GENERIC = 101;
+
+/// The game's control types (`kDbControl*`, `CreateUserDefinedControl`'s cases).
+constexpr static const uint32_t EE_SCREENS_UMC_STATUS_BUTTON = 1000;
+
+constexpr static const uint32_t EE_SCREENS_UMC_MINI_MAP = 1001;
+
+constexpr static const uint32_t EE_SCREENS_UMC_ERROR_LOG = 1003;
+
+constexpr static const uint32_t EE_SCREENS_UMC_ATTRIBUTE = 1005;
+
+constexpr static const uint32_t EE_SCREENS_UMC_MAIN_GAME_STATUS_BAR = 1006;
+
+constexpr static const uint32_t EE_SCREENS_UMC_SELECT_UNITS = 1007;
+
+constexpr static const uint32_t EE_SCREENS_UMC_COMMAND_UNITS = 1008;
+
+constexpr static const uint32_t EE_SCREENS_UMC_PORTRAIT = 1009;
+
+constexpr static const uint32_t EE_SCREENS_UMC_CHAT_LINE = 1010;
+
+constexpr static const uint32_t EE_SCREENS_UMC_CB_LIST_BOX = 1011;
+
+constexpr static const uint32_t EE_SCREENS_UMC_WON_STAT_BOX = 1013;
+
+constexpr static const uint32_t EE_SCREENS_UMC_UNIT_ICON_BAR = 1014;
+
+constexpr static const uint32_t EE_SCREENS_UMC_SAVED_GROUP = 1015;
+
+constexpr static const uint32_t EE_SCREENS_UMC_PGS_LINE_GRAPH = 1016;
+
+constexpr static const uint32_t EE_SCREENS_UMC_PING = 1017;
+
+constexpr static const uint32_t EE_SCREENS_UMC_WON_ROOMS_BOX = 1018;
+
+constexpr static const uint32_t EE_SCREENS_UMC_WON_GAMES_BOX = 1019;
+
 /// The thread messages' ids the posts use (the UI thread's, `ui_thread.rs`' switch).
 constexpr static const uint32_t EE_SCREENS_UI_POST_START_LOADING = 1031;
 
@@ -11367,70 +11417,6 @@ struct EeScreensGaFields {
   bool mWriteToFile;
 };
 
-/// The values of a group (only the group's fields are filled, the rest are 0).
-struct EeScreensGameView {
-  size_t sound_manager;
-  size_t conductor;
-  /// `gRasterizer`'s index among `GERasterizer::GetRasterizer` (0 when it is none of them).
-  uint32_t current_rasterizer;
-  /// `gDisplayRasterizers.size()`.
-  uint32_t rasterizer_count;
-  bool not_korean;
-  /// The settings' `mLastOpenPostGameStatsPage`, `mTakeEndGameScreenshots`, `GetGrabScrollSpeed()`, `mZoomEnabled`.
-  int32_t pgs_page;
-  bool pgs_screenshots;
-  float grab_scroll_speed;
-  bool settings_zoom_enabled;
-  /// `gZoomEnabled`, `gDifficultyLevel`, `gFreeCamera`, `gGameScreenActive`, `gSavedMainGameForm != NULL`,
-  /// `gCameraMaxZoom`, `gHiddenUnitsMode`.
-  bool zoom_enabled;
-  int32_t difficulty;
-  bool free_camera;
-  bool screen_active;
-  bool saved_main_form;
-  float max_zoom;
-  int32_t hidden_mode;
-  /// The loaded header's `mNumPlayers` (0 without one).
-  uint32_t header_players;
-  bool is_server;
-  bool is_client;
-  bool multiplayer_session;
-  uint32_t cts_processed;
-  /// The server migrating, or the client a playback session.
-  bool cannot_exit;
-  uint32_t humans;
-  uint32_t ghosts;
-  bool has_player;
-  int32_t camera_mode;
-  bool lock_speed;
-  float game_speed;
-  bool cinematic;
-  float zoom;
-  bool user_paused;
-  uint32_t players;
-  int32_t current;
-  bool teams_locked;
-  bool cheats;
-  /// `gWorld.GetGameOptions().GetIsScenarioGame()`.
-  bool scenario_game;
-  /// `gWorldTable`'s game speed step and range (`kWorldGameSpeedStep`, `kWorldGameSpeedRange` and its second).
-  float speed_step;
-  float speed_low;
-  float speed_high;
-  /// The manager's main game form's `mHotKeyMode` (0 without the form).
-  uint32_t hot_key_mode;
-  bool present;
-  bool observer;
-  uint32_t chat_type;
-  /// An airport among the player's selected group.
-  bool airport_selected;
-  float colour[3];
-  uint32_t campaign_checksum;
-  bool all_scenarios_open;
-  /// `EE_SCREENS_SI_FLAG_*` of the intro manager's four flags.
-  uint32_t si_flags;
-};
-
 /// `EEUICPing`'s members (its protected base) but the bars.
 struct EeScreensPingFields {
   /// The lit bars less one (`SetPing`'s quality times 5).
@@ -12078,6 +12064,10 @@ constexpr static const int32_t EE_SCREENS_SETS_GROUPS[5] = { 9, 12, 13, 10, 11, 
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
+/// The timed rally buttons (`kMainGameTimedFighterRally`, `kMainGameTimedBomberRally`,
+/// `kMainGameTimedAtomicBomberRally`).
+constexpr static const uint32_t EE_SCREENS_MGC_TIMED_RALLIES[3] = { 208, 209, 210, };
+
 extern "C" {
 
 /// `EEUserInterface::PostAction`: queues the action (`EEAction*`) with a reference of its own.
@@ -12102,16 +12092,6 @@ void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The campaign editor's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_campaign_editor_event_for(unsigned long id);
-
-extern uint32_t ee_screenscpp_ce_campaign(uint32_t op,
-                                          uint32_t a,
-                                          const uint8_t *text,
-                                          size_t length);
-
-extern size_t ee_screenscpp_ce_campaign_text(uint32_t which,
-                                             uint32_t arg,
-                                             uint8_t *out,
-                                             size_t capacity);
 
 /// The model's ops for a caller without the events (the golden driver): `kind` 0 a call (`which` the op, `a` its
 /// argument), 1 a text (written to `out` up to `capacity`; its length), 2 a put; `usize::MAX` for an op it does
@@ -13213,6 +13193,26 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
 /// As `ee_screens_ga_init`.
 void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 
+/// `EEUIBGenericBackground`'s constructor's body (`color` the `GEColor*`).
+void ee_screens_gb_construct(size_t bg,
+                             float opacity,
+                             uint32_t flags,
+                             size_t color,
+                             float sx,
+                             float sy);
+
+/// `EEUIBGenericBackground::Open`.
+void ee_screens_gb_open(size_t bg);
+
+/// `EEUIBMapBackground::LoadBackground`.
+int64_t ee_screens_mb_load(size_t bg);
+
+/// `EEUICCommandUnits`' constructor's body after the record and the display mode.
+void ee_screens_cu_construct(size_t cu, size_t listener);
+
+/// `~EEUICCommandUnits`' body.
+void ee_screens_cu_destroy(size_t cu);
+
 /// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
 ///
 /// # Safety
@@ -13220,16 +13220,6 @@ void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 void ee_screens_shim_out(void *out,
                          const uint8_t *text,
                          size_t length);
-
-/// The values of `group` (`EE_SCREENS_VIEW_*`) for `arg` into `out`.
-extern void ee_screenscpp_game_view(uint32_t group, uint32_t arg, EeScreensGameView *out);
-
-/// The texts of `group` (`EE_SCREENS_VIEW_TEXTS_*`) for `arg`, each ended by a 0 byte, into `out` (up to
-/// `capacity` bytes); their length.
-extern size_t ee_screenscpp_game_texts(uint32_t group,
-                                       uint32_t arg,
-                                       uint8_t *out,
-                                       size_t capacity);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
@@ -13416,12 +13406,48 @@ void ee_screens_main_form_fields(void *form,
 /// `EEUIFMGMainGroup`'s constructor: the group `group` and its record `fields`.
 void ee_screens_main_group_fields(void *group, EeScreensMainGroupFields *fields);
 
+/// `EEUIFMGMainGroup::ShowCommands(unit)`.
+void ee_screens_mg_show_commands(size_t group, size_t unit);
+
+/// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
+void ee_screens_mg_hot_key_event(size_t event);
+
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.
 int64_t ee_screens_main_group_member(void *group,
                                      uint32_t which,
                                      void *unit,
                                      int64_t b);
+
+/// `EEUIMiniMap`'s constructor's body (`rect` the `GERectangle*`).
+void ee_screens_mm_construct(size_t map, size_t rect, uint32_t border);
+
+/// `~EEUIMiniMap`'s body.
+void ee_screens_mm_destroy(size_t map);
+
+/// `EEUIMiniMap::CopyData`.
+int64_t ee_screens_mm_copy_data(size_t map);
+
+/// `EEUIMiniMap::LoadMedia`.
+void ee_screens_mm_load_media();
+
+/// `EEUIMiniMap::UnloadMedia`.
+void ee_screens_mm_unload_media();
+
+/// `EEUIMiniMap::DrawPolygons`.
+int64_t ee_screens_mm_draw_polygons(size_t map);
+
+/// `EEUIMiniMap::MouseRButtonDown`.
+int64_t ee_screens_mm_mouse_r_down(size_t map);
+
+/// `EEUIMiniMap::CenterCamera`.
+void ee_screens_mm_center_camera(size_t map);
+
+/// `EEUIMiniMap::SetLocation`.
+void ee_screens_mm_set_location(size_t map, float x, float y);
+
+/// `EEUIMiniMap::Update` (`minimap` the `EEMiniMap*`).
+void ee_screens_mm_update(size_t minimap);
 
 /// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`) from `entity`; `kErrorOK` (0).
 long ee_screens_event(uint32_t event,
@@ -13586,6 +13612,58 @@ int64_t ee_screens_status_button_op(void *call,
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
 
+/// `EEUIFMGStatusBar`'s constructor's body (`rect` the `GERectangle*`, `form` the `UIForm*`).
+void ee_screens_sba_construct(size_t bar, size_t rect, size_t form, bool editor, bool large_icon);
+
+/// `~EEUIFMGStatusBar`'s body.
+void ee_screens_sba_destroy(size_t bar);
+
+/// `EEUIFMGStatusBar::CopyData`.
+int64_t ee_screens_sba_copy_data(size_t bar);
+
+/// `EEUIFMGStatusBar::DrawPolygons`.
+int64_t ee_screens_sba_draw_polygons(size_t bar);
+
+/// `EEUIFMGStatusBar::DrawTextA`.
+int64_t ee_screens_sba_draw_text(size_t bar);
+
+/// `EEUIFMGStatusBox::UnloadIcons`.
+void ee_screens_sb_unload_icons();
+
+/// `EEUIFMGStatusBox::ReloadIcons`: the first error.
+int64_t ee_screens_sb_reload_icons();
+
+/// `EEUIFMGStatusButton`'s constructor's body (`rectangle` the `GERectangle*`, `table` the
+/// `UIControlsTable*`).
+void ee_screens_sbt_construct(size_t button, size_t manager, size_t rectangle, size_t table);
+
+/// `~EEUIFMGStatusButton`'s body.
+void ee_screens_sbt_destroy(size_t button);
+
+/// `EEUIFMGStatusButton::ReleaseButton`.
+void ee_screens_sbt_release(size_t button);
+
+/// `EEUIFMGStatusButton::DrawPolygons`.
+int64_t ee_screens_sbt_draw_polygons(size_t button);
+
+/// `EEUIFMGStatusButton::DrawTextA`.
+int64_t ee_screens_sbt_draw_text(size_t button);
+
+/// `EEUIFMGStatusButton::HotKeyUp`.
+void ee_screens_sbt_hot_key_up(size_t button);
+
+/// `EEUIFMGStatusButton::SetCommandButton`.
+void ee_screens_sbt_set_command(size_t button, uint32_t index);
+
+/// `EEUIFMGStatusButton::SetTechButton`.
+void ee_screens_sbt_set_tech(size_t button, int64_t technology, uint32_t kind, uint32_t id);
+
+/// `EEUIFMGStatusButton::SetLocation`.
+void ee_screens_sbt_set_location(size_t button, float x, float y);
+
+/// `EEUIManager::Fn26FA6A` (`set`) / `Fn26FA55`.
+void ee_screens_sbt_main_group_refill(bool set);
+
 /// `EEUserInterface::ChangeRasterizer`.
 void ee_screens_ui_change_rasterizer(long rasterizer, long screen);
 
@@ -13630,6 +13708,31 @@ void ee_screens_ui_member(void *ui,
 /// message through the host's string and chat log texts; the lobby's lag button (control 0x111) by index.
 void ee_screens_ui_show_lag_status(uint32_t player,
                                    bool lagging);
+
+/// `EECreateGameEvent(form, id)`: the event (a `UIEvent*`) or 0.
+size_t ee_screens_um_game_event(size_t form, uint32_t id);
+
+/// `EECreateFormEvent(manager, id)`.
+size_t ee_screens_um_form_event(uint32_t id);
+
+/// `EECreateWonNetServerSelectEvent(form, id)`.
+size_t ee_screens_um_wns_event(uint32_t id);
+
+/// `EEUIManager::CreateScenarioEditor` (`manager` the `EEUIManager*`).
+void ee_screens_um_create_editor(size_t manager);
+
+/// `EEUIManager::DeleteScenarioEditor`.
+void ee_screens_um_delete_editor(size_t manager);
+
+/// `EEUIManager::CreateForm` (`data` the `UIDbDataForms*`): the form (a `UIForm*`).
+size_t ee_screens_um_create_form(size_t manager, size_t data);
+
+/// `EEUIManager::CreateUserDefinedBackground` (`table` the `UIBackgroundTable*`): a `UIBackground*` or 0.
+size_t ee_screens_um_create_background(size_t manager,
+                                       size_t table);
+
+/// `EEUIManager::CreateUserDefinedControl` (`table` the `UIControlsTable*`): a `UIControl*` or 0.
+size_t ee_screens_um_create_control(size_t manager, size_t table);
 
 /// `EEUIManager`'s constructor's work after its base, on the host's call record `call`.
 void ee_screens_ui_manager_construct(void *call);
