@@ -12187,6 +12187,31 @@ long ee_screens_aes_load(void *ctx, EeScreensAesIo call);
 /// `state` is a live `EeAreaEffectRunning`.
 void ee_screens_aes_restore(const void *state);
 
+/// `EEAreaEffectTemplate::Load(on_demand)` and `Unload` on the template (`area_effect_lists.rs`).
+void ee_screens_ael_template_load(void *template_, bool on_demand);
+
+void ee_screens_ael_template_unload(void *template_);
+
+/// `EEUnitAreaEffectList::AddAreaEffect(effect)` on the list.
+void ee_screens_ael_add(void *list, void *effect);
+
+/// `EEUnitAreaEffectList::ApplyModifiers(kind, value, out, unit)` on the list (`value` and `out` the caller's longs).
+void ee_screens_ael_apply_modifiers(void *list,
+                                    long kind,
+                                    const long *value,
+                                    long *out,
+                                    void *unit);
+
+/// `EEUnitAreaEffectList::Remove(kind)` on the list -> whether one was removed.
+bool ee_screens_ael_remove(void *list, long kind);
+
+/// `EEUnitAreaEffectList::MarkDirty`, `MoveAndUpdate(x, y, value)` and `Tick(unit, elapsed)` on the list.
+void ee_screens_ael_mark_dirty(void *list);
+
+void ee_screens_ael_move_and_update(void *list, float x, float y, float value);
+
+void ee_screens_ael_tick(void *list, void *unit, float elapsed);
+
 /// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
 void ee_screens_civ_fill_list(void *list);
 

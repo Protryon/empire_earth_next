@@ -11,6 +11,7 @@
 #include <string>
 #include "lle/UString.h"
 #include "lle/UWideString.h"
+#include "rust/ui/obj.h"
 
 enum class EeUiOp : uint32_t;
 
