@@ -59,6 +59,7 @@ pub mod cu_cargo;
 pub mod cu_life;
 pub mod cu_misc;
 pub mod cu_world;
+pub mod dm_body;
 pub mod dop_file;
 pub mod dop_load;
 pub mod dop_repair;
