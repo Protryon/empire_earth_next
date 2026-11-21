@@ -122,10 +122,6 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         return (int64_t)EECPHandle(static_cast<EeTownFields*>(EECPObject<EETown>(inA)));
     case EE_CP_PLACE_HAS_PATHFINDING:
         return gCivPowersManager.HasPower(thePlayer, kCivPowerPathfinding) ? 1 : 0;
-    case EE_CP_PLACE_CLAIM_RANGE_ON:
-        return EECPClaimRangeOn(thePlayer) ? 1 : 0;
-    case EE_CP_PLACE_CLAIM_RANGE:
-        return EECPClaimRange(thePlayer);
     case EE_CP_PLACE_HAS_PLAYER0:
         return gWorld.mPlayers[0] != NULL ? 1 : 0;
     case EE_CP_PLACE_WORLD_UNIT:

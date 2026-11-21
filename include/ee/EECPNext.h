@@ -103,6 +103,7 @@ struct EECPNextState;                                                 // (Rust's
 EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer);        // created when missing
 void EECPNextDeleteState(EEComputerPlayer* inPlayer);
 std::string EECPNextAI(const EEComputerPlayer* inPlayer);           // the AI's id ("" none or no state)
+void EECPNextAppend(void* outBytes, const std::string& inText);   // to a Rust Vec<u8> (ee_ai_next_append)
 void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI);
 
 // a class or a tech by its data id (dbobjects / dbtechtree "id"; "dbobjects_<n>" when the data has no ids) -> -1: none

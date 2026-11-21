@@ -282,7 +282,7 @@ std::string EECPNextTechName(long inTech)
 
 EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer);   // EECPPlacement.cpp
 
-static void EECPNextAppend(void* outBytes, const std::string& inText)
+void EECPNextAppend(void* outBytes, const std::string& inText)
 {
     ee_ai_next_append(outBytes, (const uint8_t*)inText.data(), inText.size());
 }
@@ -310,8 +310,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return (int64_t)gPhysics->mGameTime;
     case EE_AI_NEXT_HOST_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
-    case EE_AI_NEXT_HOST_TRACE_OUT: EECPTraceOut(me, (const char*)(uintptr_t)b, "%s", (const char*)(uintptr_t)c);
-        return 0;
     case EE_AI_NEXT_HOST_SET_ATTACK: ((EEComplexUnit*)(uintptr_t)a)->SetGoal(EEUGRust::NewAttackUnit((EEComplexUnit*)(uintptr_t)a, (EEComplexUnit*)(uintptr_t)b, false, false), 0, 0);
         return 0;
     case EE_AI_NEXT_HOST_SET_LOCATION: ((EEComplexUnit*)(uintptr_t)a)->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)b, (float)c), true, true, false, 0.0f, false, false), 0, 0);
@@ -404,8 +402,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return EEEpochCount();
     case EE_AI_NEXT_HOST_EPOCH_END:
         return gWorld.mGameOptions.mEpochEnd;
-    case EE_AI_NEXT_HOST_EXPERIMENT:
-        return EECPExperiment(me, (const char*)(uintptr_t)a) ? 1 : 0;
     case EE_AI_NEXT_HOST_LAST_ATTACKER:
         return (int64_t)EECPNextHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
     case EE_AI_NEXT_HOST_STATE:
@@ -415,19 +411,12 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     case EE_AI_NEXT_HOST_DEBUG_OUT:
         ESDebugOut("%s", (const char*)(uintptr_t)a);
         return 0;
-    case EE_AI_NEXT_HOST_SCOPE: {
-        const char* theSaved = gCPTraceManager;
-        gCPTraceManager = (const char*)(uintptr_t)a;
-        return (int64_t)(uintptr_t)theSaved;
-    }
     case EE_AI_NEXT_HOST_PLAYER_ID:
         return (int64_t)me->mPlayerID;
     case EE_AI_NEXT_HOST_CITIZEN_QUEUE:
         return (int64_t)((EEComplexUnit*)(uintptr_t)a)->mCitizenBuildQueue.size();
     case EE_AI_NEXT_HOST_IS_HUMAN:
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
-    case EE_AI_NEXT_HOST_SWITCH:
-        return (a == 0 ? EECPMilitiaOn(me) : EECPMilitiaTowersOn(me)) ? 1 : 0;
     case EE_AI_NEXT_HOST_COMPUTER:
         return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mComputerPlayer;
     case EE_AI_NEXT_HOST_AREAS: {

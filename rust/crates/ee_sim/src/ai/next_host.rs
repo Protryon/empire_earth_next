@@ -15,8 +15,6 @@ use crate::cp::place_game::{self as pg, EeCpPlaceIo};
 use crate::cp::place_host::EeCpUnitInfo;
 use crate::cp::player_game::{self as pl, ctx_of};
 
-/// `EECPTraceOut(player, (const char*)b, "%s", (const char*)c)`
-pub const EE_AI_NEXT_HOST_TRACE_OUT: i32 = 63;
 /// unit `a`'s `SetGoal(NewAttackUnit(a, b, false, false), 0, 0)`; `SetGoal(NewLocation(GE2DPoint(b, c), true, true,
 /// false, 0, false, false), 0, 0)`
 pub const EE_AI_NEXT_HOST_SET_ATTACK: i32 = 64;
@@ -64,16 +62,6 @@ fn player_op(me: *mut c_void, op: i32, a: u64, v: &[i64]) -> i64 {
 pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> Option<i64> {
     let out64 = out as *mut i64;
     Some(match op {
-        EE_AI_NEXT_HOST_TRACE => {
-            if a != 0 {
-                let saved = cpp(EE_AI_NEXT_HOST_SCOPE, me, a, 0, 0, std::ptr::null_mut());
-                cpp(EE_AI_NEXT_HOST_TRACE_OUT, me, 0, b, c, std::ptr::null_mut());
-                cpp(EE_AI_NEXT_HOST_SCOPE, me, saved, 0, 0, std::ptr::null_mut());
-            } else {
-                cpp(EE_AI_NEXT_HOST_TRACE_OUT, me, 0, b, c, std::ptr::null_mut());
-            }
-            0
-        }
         EE_AI_NEXT_HOST_TOWN => {
             // SAFETY: the live computer player
             let ctx = unsafe { ctx_of(me as u64) };
