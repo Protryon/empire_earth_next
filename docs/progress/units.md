@@ -238,7 +238,10 @@ units::cu_cargo (`CuCargoHost`, `Placement`), units::cu_misc, units::uc_body (`U
 units::uc_produce (`UcRust`, `FindPlacement`, `ee_units_uc_produce`); each with its tests (op sequences over
 recording mocks: 18 + 13 + 11 + 8 + 7 + 5).
 
-Gates: see PORT_LEARNINGS.md "The units' lane, round 6".
+Gates (origin/rust a84903ce6 merged): builds and the test profile 0/0, oracle 2-7 identical, Rust gate PASS (5,360
+tests), the twelve capture profiles PASS, saveload 18/18 and the matrix PASS (exit 0), scenario_check 27/27, sim_editor
+and `--civbuilder` PASS, eedata check and cppgate PASS, the tour PASS, gates.sh GATES PASS: see PORT_LEARNINGS.md
+"The units' lane, round 6".
 
 ## What is left (behaviour)
 
