@@ -1016,13 +1016,17 @@ pub fn run<H: crate::units::cu_cargo::CuCargoHost + ?Sized>(
         EE_UNITS_CU_DO_SET_ANIMATION => set_animation(h, unit, a, b, c != 0),
         EE_UNITS_CU_DO_PAY_INSURANCE => pay_insurance(h, unit, float(a)),
         EE_UNITS_CU_DO_FIND_CONTACTS => find_contacts(h, unit),
-        _ => return crate::units::cu_cargo::run(h, what, unit, a, b, c).unwrap_or(0),
+        _ => {
+            return crate::units::cu_cargo::run(h, what, unit, a, b, c)
+                .or_else(|| crate::units::cu_life::run(h, what, unit, a, b, c))
+                .unwrap_or(0)
+        }
     }
     0
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
@@ -1030,7 +1034,8 @@ mod game {
         fn ee_units_cu_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64, f: *mut [f32; 4]) -> i64;
     }
 
-    struct Game;
+    /// the game's host (the other cu_* modules' extern functions use it too)
+    pub(crate) struct Game;
 
     impl crate::units::cu_cargo::CuCargoHost for Game {
         fn find_placement(&mut self, p: &crate::units::cu_cargo::Placement, m: &mut [[f32; 4]; 4]) -> bool {
