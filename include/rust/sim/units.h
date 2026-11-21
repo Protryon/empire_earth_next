@@ -5035,6 +5035,13 @@ struct EeUnitsPlayerStats;
 /// The deque (`std::deque<EEComplexUnitWaypoint>` until this round).
 struct EeUnitsWaypoints;
 
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
 /// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
 /// count) or reads (`cap` entries).
 struct EeUnitsWorldIo {
@@ -5045,13 +5052,6 @@ struct EeUnitsWorldIo {
   float m[16];
   uint64_t *list;
   size_t cap;
-};
-
-/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsPlayerSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
 };
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
