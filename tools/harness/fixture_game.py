@@ -128,7 +128,7 @@ def stage(a, tree):
         pins += [f'network.pt_rate.min={a.pt_rate}', f'network.pt_rate.max={a.pt_rate}']
     pins += a.config
     (STAGE / 'config.yaml').write_bytes(config_yaml.config_text(pins).encode('cp1252'))
-    if a.exercise == 'editor':
+    if getattr(a, 'exercise', None) == 'editor':   # (lan_game.py stages through here too)
         stage_campaign_scenarios(tree)
     files = json.loads((tree / 'open_data.json').read_text()).get('files') if (tree / 'open_data.json').exists() else '?'
     print(f'data: {tree} ({files} files) staged in {STAGE}', flush=True)
