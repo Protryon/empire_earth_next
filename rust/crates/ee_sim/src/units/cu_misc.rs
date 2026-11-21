@@ -480,7 +480,7 @@ pub fn release_fire_effect<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
 /// `Halt()`: the build targets, the first goal queue and the goals cleared (an air base's queue too); circling or
 /// idle.
 pub fn halt<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
-    s(h, EE_UNITS_CU_CLEAR_BUILD_TARGETS, unit);
+    crate::units::cu_world::clear_build_targets(h, unit);
     sb(h, EE_UNITS_CU_CLEAR_GOAL_QUEUE, unit, 0);
     s(h, crate::units::cu_cargo::EE_UNITS_CU_CLEAR_GOALS, unit);
     if s(h, EE_UNITS_CU_IS_AIR_BASE, unit) != 0 {
