@@ -603,6 +603,7 @@ unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
                 }
                 _ => {
                     // the unit tab's lists (once EESEUnitNewList): the class list or the cargo list by kind
+                    use crate::screens::shells_unit::{EE_SCREENS_SK_CARGO_LIST, EE_SCREENS_SK_UNIT_CLASS_LIST};
                     let kind = if c.extra[0] == EE_SCREENS_SEPL_LIST_UNIT_TYPES {
                         EE_SCREENS_SK_UNIT_CLASS_LIST
                     } else {

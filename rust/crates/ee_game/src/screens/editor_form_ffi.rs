@@ -178,4 +178,3 @@ pub unsafe extern "C" fn ee_screens_sefm_call(
 pub(crate) fn save_triggers() -> i32 {
     EditorForm::save_triggers(&mut Host)
 }
-

@@ -2,6 +2,9 @@
 //! (`ee/EEStringIDs.h`), the UI framework's alignments, display modes and control triggers (`lle/GETextAlignment.h`,
 //! `lle/UIControl.h`), the unit categories and movements (`ee/EEUnitClassIDs.h`), read from the headers themselves.
 
+// the Rust numbers' types differ (u32, i32, i64): each is widened to compare
+#![allow(clippy::unnecessary_cast)]
+
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
@@ -19,8 +22,12 @@ use crate::screens::editor_tscreen::*;
 use crate::screens::editor_unit::*;
 
 /// The headers the C++ names come from.
-const EE_SCREENS_SECC_HEADERS: [&str; 4] =
-    ["include/ee/EEStringIDs.h", "include/lle/GETextAlignment.h", "include/lle/UIControl.h", "include/ee/EEUnitClassIDs.h"];
+const EE_SCREENS_SECC_HEADERS: [&str; 4] = [
+    "include/ee/EEStringIDs.h",
+    "include/lle/GETextAlignment.h",
+    "include/lle/UIControl.h",
+    "include/ee/EEUnitClassIDs.h",
+];
 
 /// A C++ constant's value: `#define NAME value` or an enumerator `NAME = value,` of the headers.
 fn c(name: &str) -> i64 {
@@ -65,7 +72,10 @@ fn eeseloadthread_cpp_editor_selt_rs_s_numbers() {
     assert_eq!(EE_SCREENS_SELTX_IDS_EXPORTED_FILE_NAME_HAS_CHANGED as i64, c("IDS_EXPORTED_FILE_NAME_HAS_CHANGED"));
     assert_eq!(EE_SCREENS_SELTX_IDS_FILE_IMPORTED_SUCCESSFULLY as i64, c("IDS_FILE_IMPORTED_SUCCESSFULLY"));
     assert_eq!(EE_SCREENS_SELTX_IDS_IMPORTING_FILE_REPLACES_ALL_TEXT as i64, c("IDS_IMPORTING_FILE_REPLACES_ALL_TEXT"));
-    assert_eq!(EE_SCREENS_SELTX_IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING as i64, c("IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING"));
+    assert_eq!(
+        EE_SCREENS_SELTX_IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING as i64,
+        c("IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING")
+    );
     assert_eq!(EE_SCREENS_SELTX_IDS_LCL_FILE_HAS_INVALID_VERSION as i64, c("IDS_LCL_FILE_HAS_INVALID_VERSION"));
     assert_eq!(EE_SCREENS_SELTX_LOCALIZATION_EDIT as i64, EE_SCREENS_SE_INSTRUCTIONS_LOCALIZATION_EDIT_BOX as i64);
 }

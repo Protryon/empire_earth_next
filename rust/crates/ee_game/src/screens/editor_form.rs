@@ -1490,11 +1490,7 @@ pub fn trigger_report<R: ScenarioRecords + ?Sized>(r: &mut R) -> Vec<u8> {
 }
 
 /// The constructor's sequence over the form's statements `x`; `make` makes, stores and builds the object.
-pub fn construct(
-    x: &mut dyn FnMut(u32, [usize; 3], &mut [i32; 4], &mut [f32; 4]) -> i32,
-    shell: usize,
-    make: impl FnOnce(),
-) {
+pub fn construct(x: &mut crate::screens::editor_sepl::Sepx, shell: usize, make: impl FnOnce()) {
     use crate::screens::editor_sefmx::*;
     x(EE_SCREENS_SEFMX_SET_RECTANGLE, [0, shell, 0], &mut [0; 4], &mut [0.0, 0.0, 1023.0, 767.0]);
     make();
@@ -1505,12 +1501,7 @@ pub fn construct(
 
 /// A C++ member whole (`EE_SCREENS_SEFM_COPY_DATA_WHOLE` ..): the form's part `own` (whether `UIForm`'s runs, for
 /// the input), then the base's statement `base` on the form.
-pub fn whole(
-    x: &mut dyn FnMut(u32, [usize; 3], &mut [i32; 4], &mut [f32; 4]) -> i32,
-    shell: usize,
-    own: bool,
-    base: u32,
-) -> i32 {
+pub fn whole(x: &mut crate::screens::editor_sepl::Sepx, shell: usize, own: bool, base: u32) -> i32 {
     if !own {
         return 0;
     }

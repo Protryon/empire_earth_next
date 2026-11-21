@@ -189,7 +189,6 @@ pub mod editor_conditions;
 pub mod editor_controls;
 #[cfg(test)]
 mod editor_cpp_consts_tests;
-pub mod editor_ids;
 mod editor_direct;
 pub mod editor_effects;
 #[cfg(not(test))]
@@ -210,6 +209,7 @@ mod editor_form_ffi;
 pub mod editor_groups;
 #[cfg(not(test))]
 mod editor_groups_ffi;
+pub mod editor_ids;
 pub mod editor_instructions;
 #[cfg(not(test))]
 mod editor_instructions_ffi;
