@@ -29,6 +29,7 @@ public:
     long SetTimerType(unsigned long inType) { return ee_time_timer_set_type(this->mTimer, (uint32_t)inType); }
     long Start() { return ee_time_timer_start(this->mTimer); }
     long Stop() { return ee_time_timer_stop(this->mTimer); }
+    EeTimeTimer* Rust() const { return this->mTimer; }   // the Rust timer (ee_game rts physics.rs)
     long Stop(unsigned long& outElapsed, unsigned long& outRemaining)
     {
         uint32_t theElapsed, theRemaining;

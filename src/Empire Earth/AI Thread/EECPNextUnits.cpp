@@ -60,7 +60,7 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EECPNextUnits.h"
-#include "ee/EEAutoPathRequest.h"
+#include "ee/EECPASGFlags.h"
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_units_*: the save block's format (units_save.rs), the bindings' Lua helpers (units_lua.rs)
 #include "rust/sim/units.h"
@@ -243,12 +243,6 @@ static void EECPUnitsTilesIn(const EeAiUnitsTiles& inTiles, std::vector<U2DPoint
 
 // the classic wall manager's area utilities (EECPWallManager.cpp declares them the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
-
-// a request's path tile (x low, y high: units_world.rs)
-static int64_t EECPUnitsPack(const U2DPoint<long>& inTile)
-{
-    return (int64_t)(((uint64_t)(uint32_t)inTile.mY << 32) | (uint32_t)inTile.mX);
-}
 
 // an event effect's kind, unit class and attribute (units_world.rs EE_AI_UNITS_HOST_EFFECT_FIELDS)
 static int64_t EECPUnitsEffectBits(const EEEventEffect* inEffect)
@@ -439,16 +433,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         EECPUnitsTilesIn(*(EeAiUnitsTiles*)outRecord, theFive);
         return EEAreTilesLevel(theFive) ? 1 : 0;
     }
-    case EE_AI_UNITS_HOST_ROUTE_NEW:
-        return (int64_t)(uintptr_t)gPathManager.RequestPath((long)a, EETileCoordinate(((EeAiUnitsTiles*)outRecord)->from[0], ((EeAiUnitsTiles*)outRecord)->from[1]), EETileCoordinate(((EeAiUnitsTiles*)outRecord)->to[0], ((EeAiUnitsTiles*)outRecord)->to[1]), (EECPASGFlags*)(uintptr_t)b, 2, -1, (EeAStarModifier*)(uintptr_t)c, 1);
-    case EE_AI_UNITS_HOST_ROUTE_DONE:
-        return ((EEAutoPathRequest*)(uintptr_t)a)->mIsDone ? 1 : 0;
-    case EE_AI_UNITS_HOST_ROUTE_LEN:
-        return (int64_t)((EEAutoPathRequest*)(uintptr_t)a)->mPath.size();
-    case EE_AI_UNITS_HOST_ROUTE_TILE:
-        return EECPUnitsPack(((EEAutoPathRequest*)(uintptr_t)a)->mPath[(size_t)b]);
-    case EE_AI_UNITS_HOST_ROUTE_DEREF: ((EEAutoPathRequest*)(uintptr_t)a)->Dereference();
-        return 0;
     case EE_AI_UNITS_HOST_NODE_EVENT:
         return ((EETechTreeNode*)(uintptr_t)a)->mData->mResearchedEvent;
     case EE_AI_UNITS_HOST_EVENT_EFFECTS:

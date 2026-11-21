@@ -92,9 +92,6 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
     case EE_ASTAR_CM_REGROW_UNIT: return (int64_t)(uintptr_t)static_cast<RTSUnit*>(gUnitClassTable[kUnitTypeResEagle]->CreateUnit((long)io->i[0], (long)io->i[1], 0, false, NULL)->mComplexUnit);
     case EE_ASTAR_CM_SET_REGROWING: ((EEComplexUnit*)(uintptr_t)io->h[0])->mIsRegrowing = true;
         return 0;
-    case EE_ASTAR_CM_IS_FOUNDATION: return ((EEUnit*)(uintptr_t)io->h[0])->IsFoundation() ? 1 : 0;
-    case EE_ASTAR_CM_REGION_UPDATES: gPathManager.SetRegionUpdates(true, io->i[0] != 0);
-        return 0;
     case EE_ASTAR_CM_AREA_CREATE: {   // a herd's (the other kinds' are Rust's: cm_host.rs)
         const U2DPoint<long>* thePoints = (const U2DPoint<long>*)(uintptr_t)io->h[1];
         ((EEAIArea*)(uintptr_t)io->h[0])->Create(std::vector<U2DPoint<long> >(thePoints, thePoints + io->i[0]));

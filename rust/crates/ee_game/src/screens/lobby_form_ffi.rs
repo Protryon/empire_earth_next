@@ -11,28 +11,6 @@ use crate::screens::menus::EE_SCREENS_TEXT_STRING;
 use crate::screens::menus_ffi::{sys, Form};
 use crate::screens::scenario_screens_ffi::ee_screenscpp_form;
 
-extern "C" {
-    /// A slot of `source` (`EE_SCREENS_LE_SOURCE_*`) into `out`, its name into `name` (up to `capacity` bytes); the
-    /// name's length.
-    fn ee_screenscpp_lobby_player(
-        source: u32,
-        index: u32,
-        out: *mut EeScreensLobbyPlayerRecord,
-        name: *mut u8,
-        capacity: usize,
-    ) -> usize;
-    /// A slot of `source` from a record and a name.
-    fn ee_screenscpp_put_lobby_player(
-        source: u32,
-        index: u32,
-        player: *const EeScreensLobbyPlayerRecord,
-        name: *const u8,
-        length: usize,
-    );
-    /// The options of `source` into `out`.
-    fn ee_screenscpp_lobby_options(source: u32, out: *mut EeScreensLobbyOptionsRecord);
-}
-
 /// The lobby's state (the UI thread's; locked only around its own reads and writes).
 static LOBBY: Mutex<LobbyForm> = Mutex::new(LobbyForm::new());
 
@@ -74,23 +52,13 @@ impl LobbyHost for Form {
         (result == 0, out)
     }
     fn player(&mut self, source: u32, index: u32) -> LobbyPlayer {
-        let mut r = EeScreensLobbyPlayerRecord::default();
-        let mut name = vec![0u8; 256];
-        let n = unsafe { ee_screenscpp_lobby_player(source, index, &mut r, name.as_mut_ptr(), name.len()) };
-        if n > name.len() {
-            name.resize(n, 0);
-            unsafe { ee_screenscpp_lobby_player(source, index, &mut r, name.as_mut_ptr(), name.len()) };
-        }
-        name.truncate(n);
-        LobbyPlayer { r, name }
+        crate::screens::lobby_calls::player(&mut crate::screens::game_cpp::Ffi, source, index)
     }
     fn put_player(&mut self, source: u32, index: u32, player: &LobbyPlayer) {
-        unsafe { ee_screenscpp_put_lobby_player(source, index, &player.r, player.name.as_ptr(), player.name.len()) };
+        crate::screens::lobby_calls::put_player(&mut crate::screens::game_cpp::Ffi, source, index, player)
     }
     fn options(&mut self, source: u32) -> EeScreensLobbyOptionsRecord {
-        let mut o = EeScreensLobbyOptionsRecord::default();
-        unsafe { ee_screenscpp_lobby_options(source, &mut o) };
-        o
+        crate::screens::lobby_calls::options(&mut crate::screens::game_cpp::Ffi, source)
     }
 }
 

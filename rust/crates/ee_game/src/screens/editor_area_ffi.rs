@@ -29,6 +29,9 @@ impl SeplHost for Host {
                 f[1] = y;
                 0
             } else if op >= 600 {
+                if let Some(r) = crate::screens::editor_trigx_ffi::sear(op, p.map(|x| x as usize), i, f) {
+                    return r;
+                }
                 sys::ee_screenscpp_sear(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {

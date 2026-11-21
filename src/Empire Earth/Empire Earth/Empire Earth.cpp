@@ -3,6 +3,7 @@
 // then the functions). Unit flags: the exe's module set. Global names are provisional unless another unit already
 // bound them.
 #include <windows.h>
+#include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp)
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
@@ -372,39 +373,14 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
 // (every game thread calls it first, passing its name)
 void EESetThreadFloatingPoint(const char* inThreadName)
 {
-    if (UMGetFloatingPointPrecision() != kFPPrecision53)
-        UMSetFloatingPointPrecision(kFPPrecision53);
-    if (UMGetFloatingPointRoundingMode() != 0)
-        UMSetFloatingPointRoundingMode(0);
+    ee_gamecpp_startup_thread_fp();
 }
 
 // Makes every computer player at war with the given player attack it; with the flag set, the others (its allies
 // and its own computer player) defend it
 void EEAttackPlayers(long inPlayer, unsigned char inFlag)
 {
-    std::vector<EEComputerPlayer*> theAllies;
-    std::vector<EEComputerPlayer*> theEnemies;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    if (thePlayer != NULL) {
-        for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-            EEPlayer* theOther = gWorld.mPlayers[i];
-            if (theOther != NULL && theOther->mComputerPlayer != NULL && theOther->mObserverMode == false) {
-                EEPlayer* theComputer = theOther->mComputerPlayer;
-                bool theIsEnemy = theComputer != thePlayer && thePlayer->mEnemies[theComputer->mPlayerID] != 0;
-                if (!theIsEnemy)
-                    theAllies.push_back(static_cast<EEComputerPlayer*>(theComputer));
-                else
-                    theEnemies.push_back(static_cast<EEComputerPlayer*>(theComputer));
-            }
-        }
-        long j;
-        // port: every computer player's Lua AI gets the order as an event (the original's combat managers took it)
-        for (j = theEnemies.size() - 1; j >= 0; j--)
-            EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
-        if (inFlag)
-            for (j = theAllies.size() - 1; j >= 0; j--)
-                EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
-    }
+    ee_gamecpp_startup_attack_players(inPlayer, inFlag);
 }
 
 // Sums a checksum over the directory's files matching the pattern (name order, one encrypted name skipped): file
@@ -481,18 +457,7 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 // Reads the five campaign checksums from string resources 0x32..0x34, 0x37, 0x36; a missing string keeps the value
 void EELoadNetworkSettings()
 {
-    UWideString theString;
-    char* theEnd;
-    if (gResource->GetString(IDS_0x32, theString) == kErrorOK)
-        gAOCRomanChecksum = strtoul(theString, &theEnd, 10);
-    if (gResource->GetString(IDS_0x33, theString) == kErrorOK)
-        gAOCPacificChecksum = strtoul(theString, &theEnd, 10);
-    if (gResource->GetString(IDS_0x34, theString) == kErrorOK)
-        gAOCAsianChecksum = strtoul(theString, &theEnd, 10);
-    if (gResource->GetString(IDS_0x37, theString) == kErrorOK)
-        gEEDemoChecksum = strtoul(theString, &theEnd, 10);
-    if (gResource->GetString(IDS_0x36, theString) == kErrorOK)
-        gEELearningChecksum = strtoul(theString, &theEnd, 10);
+    ee_gamecpp_startup_network_settings();
 }
 
 #include "lle/FSArchive.h"
@@ -539,46 +504,7 @@ void EEInitializeGameObjects();
 // database, game objects and the user interface; returns false (after a message box) when sound fails
 bool EEInitializePart1()
 {
-    long theResult = URegisterShutdown(EEReleaseInstanceMutex);
-
-    ESVERIFY_AT(theResult == keseOK, 796);
-    theResult = TSInitialize();
-
-    ESVERIFY_AT(theResult == keseOK, 805);
-    EESetThreadFloatingPoint("EEInitializePart1:TSInitialize");
-    theResult = TMInitialize();
-
-    ESVERIFY_AT(theResult == keseOK, 810);
-    EESetThreadFloatingPoint("EEInitializePart1:TMInitialize");
-    bool theInitialized = EEInitializeDisplay();
-    if (theInitialized) {
-        EEInitializeGraphics();
-        EESetThreadFloatingPoint("EEInitializePart1:EEInitializeGraphics");
-        theResult = ISInitialize(gInstance, gGameWindow, gResource, 100, 250);
-
-        ESVERIFY_AT(theResult == keseOK, 823);
-        EESetThreadFloatingPoint("EEInitializePart1:ISInitialize");
-        if (EEInitializeSounds() == false) {
-            PlatWindowShow(gGameWindow->GetOSRepresentation(), 0);
-            UWideString theMessage;
-            UWideString theTitle;
-            gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND, theMessage);
-            gResource->GetString(IDS_ERROR_CANT_RUN_16EA, theTitle);
-            PlatMessageShow(theTitle, theMessage, PLAT_MESSAGE_ERROR | PLAT_MESSAGE_SYSTEM_MODAL | PLAT_MESSAGE_FOREGROUND);
-            return false;
-        }
-        EESetThreadFloatingPoint("EEInitializePart1:InitializeSounds");
-        EEInitializeNetwork();
-        EESetThreadFloatingPoint("EEInitializePart1:EEInitializeNetwork");
-        EEInitializeDatabase();
-        EESetThreadFloatingPoint("EEInitializePart1:EEInitializeDatabase");
-        EEInitializeGameObjects();
-        EESetThreadFloatingPoint("EEInitializePart1:EEInitializeGameObjects");
-        gUserInterface = new EEUserInterface;
-
-        if (gUserInterface == NULL) ESVerify(__FILE__, 853, "gUserInterfaceThread != NULL");
-    }
-    return theInitialized;
+    return ee_gamecpp_startup_part1();
 }
 
 #include "lle/GERhombus.h"
@@ -627,177 +553,7 @@ void EEShutdownThreads(bool inShutdown); // registered as a shutdown routine (0x
 // creates the render objects and every UI font, and registers the graphics shutdown
 void EEInitializeGraphics()
 {
-    UWideString theResourceName;
-    UString theFontName;
-
-    GERectangle theGameView;
-    gTextureManager = new GETextureManager(gDataPath);
-
-    ESVERIFY_AT(gTextureManager != NULL, 1332);
-    gModelManager = new GEModelManager(gDataPath);
-
-    ESVERIFY_AT(gModelManager != NULL, 1336);
-    EESetVideoMode(640, 480, gGamePreferences.mSettings.mGameBitDepth, true);
-    gGameWindow->Resize(640, 480);
-    long theResult = gRasterizer->ActivateScreen(gGamePreferences.mSettings.GetScreenID(), gTextureManager, gGameWindow,
-                                                gGamePreferences.mSettings.GetScreenMode(), false, kPixelFormatZPrefer16);
-
-    ESVERIFY_AT(theResult == keseOK, 1346);
-    theGameView.SetLeft(kStartViewLeft); theGameView.SetRight(kStartViewRight); theGameView.SetTop(kStartViewTop); theGameView.SetBottom(kStartViewBottom);
-    EESetGameViewRectangle(theGameView);
-    gRasterizer->SetFog(0, gGamePreferences.mSettings.GetScreenID());
-    GEColor theColor(0.0f, 0.0f, 0.0f);
-    gRasterizer->SetFogColor(theColor, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetFogType(0, gGamePreferences.mSettings.GetScreenID());
-    theColor = GEColor(1.0f, 1.0f, 1.0f);
-    gRasterizer->SetAmbientColor(theColor, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetAmbientIntensity(0.0f, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetColorKeying(1, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetCulling(kCullCW);
-    gRasterizer->SetLighting(1, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetProjectionMode(1, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetShading(1, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetSpecular(0, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetZBuffer(kZBufferDisabled, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetZCompare(kCompareLessEqual, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetDithering(1, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetAntiAliasing(gGamePreferences.mSettings.mAntiAliasing != false, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetAlphaTesting(1, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetAlphaTestingCompareState(kCompareGreater, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetAlphaTestingRefValue(0.0f, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetWaitForVSync(gGamePreferences.mSettings.mWaitForVSync, gGamePreferences.mSettings.GetScreenID());
-    gRasterizer->SetWaterRippleEffect(kWaterRipplePeriod, kWaterRippleSpeed, kWaterRippleAmplitude);
-    gU56535C = new EEROTerrain;
-    gU565358 = new EEROGroundShadows;
-    gU565354 = new EEROUnits;
-    gU565350 = new EEROWater;
-    gU565360 = new EEROEffects;
-    gResource->GetString(IDS_ARIAL, theResourceName);
-    theFontName = (const char*)theResourceName;
-    gFontArial8 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 8);
-
-    ESVERIFY_AT(gFontArial8, 1399);
-    gFontArial9 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 9);
-
-    ESVERIFY_AT(gFontArial9, 1402);
-    gU531930 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 10);
-
-    if (!gU531930) ESVerify(__FILE__, 1405, "gFontArial10"); // Preserve original assert spelling over provisional external identity.
-    gU531934 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 12);
-
-    if (!gU531934) ESVerify(__FILE__, 1408, "gFontArial12"); // Preserve original assert spelling over provisional external identity.
-    gU531938 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 14);
-
-    if (!gU531938) ESVerify(__FILE__, 1411, "gFontArial14"); // Preserve original assert spelling over provisional external identity.
-    gFontArial16 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 16);
-
-    ESVERIFY_AT(gFontArial16, 1414);
-    gFontArial18 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 18);
-
-    ESVERIFY_AT(gFontArial18, 1417);
-    gFontArial20 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 20);
-
-    ESVERIFY_AT(gFontArial20, 1420);
-    gFontArial24 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 24);
-
-    ESVERIFY_AT(gFontArial24, 1423);
-    gFontArial36 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 36);
-
-    ESVERIFY_AT(gFontArial36, 1426);
-    gFontArial48 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 48);
-
-    ESVERIFY_AT(gFontArial48, 1429);
-    gFontArial72 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 72);
-
-    ESVERIFY_AT(gFontArial72, 1432);
-    // Each bold font is checked after it is created (the checks below tested the regular fonts again).
-    gFontArialBold8 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 8);
-
-    ESVERIFY_AT(gFontArialBold8, 1435);
-    gFontArialBold9 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 9);
-
-    ESVERIFY_AT(gFontArialBold9, 1438);
-    gFontArialBold10 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 10);
-
-    ESVERIFY_AT(gFontArialBold10, 1441);
-    gFontArialBold12 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 12);
-
-    ESVERIFY_AT(gFontArialBold12, 1444);
-    gFontArialBold14 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 14);
-
-    ESVERIFY_AT(gFontArialBold14, 1447);
-    gFontArialBold16 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 16);
-
-    ESVERIFY_AT(gFontArialBold16, 1450);
-    gResource->GetString(IDS_TIMES_NEW_ROMAN, theResourceName);
-    theFontName = (const char*)theResourceName;
-    gFontTimesNewRoman9 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 9);
-
-    ESVERIFY_AT(gFontTimesNewRoman9, 1457);
-    gFontTimesNewRoman10 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 10);
-
-    ESVERIFY_AT(gFontTimesNewRoman10, 1460);
-    gFontTimesNewRoman12 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 12);
-
-    ESVERIFY_AT(gFontTimesNewRoman12, 1463);
-    gFontTimesNewRoman14 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 14);
-
-    ESVERIFY_AT(gFontTimesNewRoman14, 1466);
-    gResource->GetString(IDS_COURIER_NEW, theResourceName);
-    theFontName = (const char*)theResourceName;
-    gFontCourier8 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 8);
-
-    ESVERIFY_AT(gFontCourier8, 1473);
-    gFontCourier10 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 10);
-
-    ESVERIFY_AT(gFontCourier10, 1476);
-    gFontCourier12 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 12);
-
-    ESVERIFY_AT(gFontCourier12, 1479);
-    gFontCourier14 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 14);
-
-    ESVERIFY_AT(gFontCourier14, 1482);
-    gResource->GetString(IDS_TAHOMA, theResourceName);
-    theFontName = (const char*)theResourceName;
-    gFontTahoma8 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 8);
-
-    ESVERIFY_AT(gFontTahoma8, 1489);
-    gU531994 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 9);
-
-    if (!gU531994) ESVerify(__FILE__, 1492, "gFontTahoma9"); // Preserve original assert spelling over provisional external identity.
-    gFontTahoma10 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 10);
-
-    ESVERIFY_AT(gFontTahoma10, 1495);
-    gFontTahoma12 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 12);
-
-    ESVERIFY_AT(gFontTahoma12, 1498);
-    gFontTahoma14 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 14);
-
-    ESVERIFY_AT(gFontTahoma14, 1501);
-    gFontTahoma16 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 16);
-
-    ESVERIFY_AT(gFontTahoma16, 1504);
-    gFontTahoma18 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 18);
-
-    ESVERIFY_AT(gFontTahoma18, 1507);
-    gFontTahoma20 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 20);
-
-    ESVERIFY_AT(gFontTahoma20, 1510);
-    gFontTahoma24 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 24);
-
-    ESVERIFY_AT(gFontTahoma24, 1513);
-    gFontTahoma36 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 36);
-
-    ESVERIFY_AT(gFontTahoma36, 1516);
-    gFontTahoma48 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 48);
-
-    ESVERIFY_AT(gFontTahoma48, 1519);
-    gFontTahoma72 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 72);
-
-    ESVERIFY_AT(gFontTahoma72, 1522);
-    theResult = URegisterShutdown(EEGraphicsShutdown);
-
-    ESVERIFY_AT(theResult == keseOK, 1526);
+    ee_gamecpp_startup_graphics();
 }
 
 // Starts the network engine, registers the message types and checksums the engine DLLs, databases, AI scripts,
@@ -860,20 +616,7 @@ void EEInitializeNetwork()
 // (called from the start-up 0x540d73)
 void EERegisterPersistents()
 {
-    std::vector<EETeam> theUnused;
-    FSPersistentList::RegisterPersistent(new EEPChecksum(true));
-    FSPersistentList::RegisterPersistent(new EEPTGeneric<unsigned long>(2));
-    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEMap>(4));
-    FSPersistentList::RegisterPersistent(new EEPTRestorable<GE3DPoint>(GE3DPoint(), 3));
-    FSPersistentList::RegisterPersistent(new EEPPlayerHelper);
-    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEScenarioManager>(6));
-    FSPersistentList::RegisterPersistent(new EEPWorldHelper);
-    FSPersistentList::RegisterPersistent(new EEPMultiplayerHelper);
-    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEEffectManager>(0xa));
-    FSPersistentList::RegisterPersistent(new EEPCalamityHelper);
-    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEEnvironmentManager>(0xc));
-    long theResult = URegisterShutdown(FSPersistentList::Shutdown);
-    ESVERIFY_AT(theResult == keseOK, 1863);
+    ee_gamecpp_startup_persistents();
 }
 
 // Creates the game timer
@@ -889,12 +632,7 @@ void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffec
 // Loads the status box icons, mini map, effect, unit, sky and ground shadow media
 void EELoadGameMedia()
 {
-    gEEGameUI.mLoadIcons();   // EEUIFMGStatusBox::LoadIcons, EEUIMiniMap::LoadMedia (ee/EEGameUI.h)
-    gEEGameUI.mMiniMapLoadMedia();
-    CreatePlaneModels();
-    EEROUnits::LoadMedia();
-    EEROTerrain::CreateSkyModel();
-    EEROGroundShadows::CreateShadowModel();
+    ee_gamecpp_startup_load_media();
 }
 
 
@@ -906,30 +644,7 @@ void EELoadGameMedia()
 // needed. A Data\data.ssa is still mounted when present (an install copy), behind the folder as before.
 void EEShowSinglePlayerScreen()
 {
-    FSArchive theArchive;
-    FSFileSpec theArchiveFile;
-    FSFileSpec theDirectory;
-    FSPath* theDataPath = new FSPath;
-    FSPath* theCivilizationPath = new FSPath;
-    theArchiveFile.SetVolume(gStartupVolume);
-    theArchiveFile.SetDirectory(gStartupDirectory + "data\\");
-    theArchiveFile.SetFile("data" + gU530B88);
-    if (PlatPathGetAttributes(gStartupVolume + gStartupDirectory + "data\\data" + gU530B88) != PLAT_ATTR_INVALID) {
-        theArchive.SetArchive(theArchiveFile);
-        theDataPath->AddArchive(theArchive, true);
-    }
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "data\\");
-    theDataPath->AddDirectory(theDirectory, true);
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(EEGetCivilizationDirectory(true));
-    theCivilizationPath->AddDirectory(theDirectory, true);
-    if (gDataPath != NULL)
-        gDataPath->Dereference();
-    if (gCivilizationDataPath != NULL)
-        gCivilizationDataPath->Dereference();
-    gCivilizationDataPath = theCivilizationPath;
-    gDataPath = theDataPath;
+    ee_gamecpp_startup_data_paths();
 }
 
 // Creates the game state, empty
@@ -953,109 +668,28 @@ static const float kGameViewScaleY = 0.00083333335f;
 // free) and stops camera following
 void EESetGameViewRectangle(const GERectangle& inRectangle)
 {
-    GERectangle theRectangle;
-    if (gFreeCamera == false) {
-        float theWidth = (float)gGameWindowWidth;
-        theRectangle.SetLeft(inRectangle.GetLeft() * kGameViewScaleX * theWidth);
-        theRectangle.SetRight(inRectangle.GetRight() * kGameViewScaleX * theWidth);
-        float theHeight = (float)gGameWindowHeight;
-        theRectangle.SetTop(inRectangle.GetTop() * kGameViewScaleY * theHeight);
-        theRectangle.SetBottom(inRectangle.GetBottom() * kGameViewScaleY * theHeight);
-        theRectangle.RoundToNearest();
-    } else
-        theRectangle = inRectangle;
-    gViewport.SetViewRectangle(theRectangle);
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
+    ee_gamecpp_startup_game_view(reinterpret_cast<const EeGeRectangle*>(&inRectangle));
 }
 
 
 // Creates the music manager, mouse pointer, graphics, data preloading and physics threads; registers their shutdown
 void EEInitializeThreads()
 {
-    gMusicManager = new EEMusicManager(&gConductor->GetConductor(), 0);
-
-    ESVERIFY_AT(gMusicManager != NULL, 2006);
-    gMousePointer = new RTSMousePointer(gMouse, gGameWindow, 0);
-
-    if (gMousePointer == NULL) ESVerify(__FILE__, 2010, "gMousePointerThread != NULL");
-    gGraphics = new EEGraphics(gRasterizer, gGamePreferences.mSettings.GetScreenID(), gMouse, gUIManager, 0);
-
-    if (gGraphics == NULL) ESVerify(__FILE__, 2018, "gGraphicsThread != NULL");
-    gDataPreLoading = new EEDataPreLoading(0);
-
-    if (gDataPreLoading == NULL) ESVerify(__FILE__, 2022, "gDataPreLoadingThread != NULL");
-    gPhysics = new EEPhysics(gGraphics, sTimer);
-
-    if (gPhysics == NULL) ESVerify(__FILE__, 2026, "gPhysicsThread != NULL");
-    long theResult = URegisterShutdown(EEShutdownThreads);
-
-    ESVERIFY_AT(theResult == keseOK, 2030);
+    ee_gamecpp_startup_threads();
 }
 
 // Switches the screen to the mode of that size and depth (optionally the lowest refresh above 60 Hz), resizes
 // the window and clears both surfaces; does nothing when the mode is already active
 void EESetVideoMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount, bool inPreferRefresh)
 {
-    unsigned long theModeCount = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->GetModeCount();
-    unsigned long theScreen = gGamePreferences.mSettings.GetScreenID();
-    unsigned long theRefresh = 0;
-    GEVideoMode theVideoMode = gRasterizer->GetScreen(theScreen)->GetCurrentMode();
-    bool theChanged = theVideoMode.mWidth != inWidth || theVideoMode.mHeight != inHeight || theVideoMode.mBitCount != inBitCount;
-    if (theChanged) {
-    unsigned long theMode;
-    if (inPreferRefresh) {
-        theMode = theModeCount;
-        for (unsigned long i = 0; i < theModeCount; i++) {
-            theVideoMode = gRasterizer->GetScreen(theScreen)->GetMode(i);
-            if (theVideoMode.mWidth == inWidth && theVideoMode.mHeight == inHeight && theVideoMode.mBitCount == inBitCount
-                && (theMode == theModeCount || (theRefresh == 60 && theVideoMode.mRefreshRate > 60)
-                    || (theVideoMode.mRefreshRate > 60 && theVideoMode.mRefreshRate < theRefresh))) {
-                theRefresh = theVideoMode.mRefreshRate;
-                theMode = i;
-            }
-        }
-    } else {
-        for (theMode = 0; theMode < theModeCount; theMode++) {
-            theVideoMode = gRasterizer->GetScreen(theScreen)->GetMode(theMode);
-            if (theVideoMode.mWidth == inWidth && theVideoMode.mHeight == inHeight && theVideoMode.mBitCount == inBitCount)
-                break;
-        }
-    }
-
-    ESVERIFY_AT(theMode < theModeCount, 2477);
-    gRasterizer->GetScreen(theScreen)->SetMode(theMode);
-    gGameWindow->Resize(inWidth, inHeight);
-    GE2DPoint theOrigin = gGameWindow->GetClientOrigin();
-    GE2DPoint theEnd(theOrigin.GetX() + (float)gGameWindow->GetWidth(), theOrigin.GetY() + (float)gGameWindow->GetHeight());
-    if (gRasterizer->GetPrimarySurface(theScreen) != NULL) {
-        GEColor theBlack(0.0f, 0.0f, 0.0f);
-        GERectangle theRectangle(theOrigin, theEnd);
-        gRasterizer->GetPrimarySurface(theScreen)->Clear(theRectangle, theBlack, 1.0f);
-    }
-    if (gRasterizer->GetSecondarySurface(theScreen) != NULL) {
-        GEColor theBlack(0.0f, 0.0f, 0.0f);
-        GERectangle theRectangle(theOrigin, theEnd);
-        gRasterizer->GetSecondarySurface(theScreen)->Clear(theRectangle, theBlack, 1.0f);
-    }
-    theVideoMode = gRasterizer->GetScreen(theScreen)->GetMode(theMode);
-    ESDebugOut("!::EESetVideoMode: Video mode changed to %ldx%ldx%ld at %ldHz.\n",
-               theVideoMode.mWidth, theVideoMode.mHeight, theVideoMode.mBitCount, theVideoMode.mRefreshRate);
-    } else {
-        ESDebugOut("!::EESetVideoMode: Requested video mode is already active.\n");
-    }
+    ee_gamecpp_startup_video_mode(inWidth, inHeight, inBitCount, inPreferRefresh);
 }
 
 // Stops the music, ambient sounds (disabling them) and every one-shot sound
 // (EEWorld::Clear and the main game form call it)
 void EEStopAllSounds()
 {
-    if (gMusicManager)
-        gMusicManager->Stop();
-    gAmbientSoundManager.StopSounds();
-    gAmbientSoundManager.SetEnabled(false);
-    gSoundManager->StopAllOneShotSounds();
+    ee_gamecpp_startup_stop_sounds();
 }
 
 void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
@@ -1063,12 +697,7 @@ void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
 void EEUnloadGameMedia()
 {
-    gEEGameUI.mUnloadIcons();   // EEUIFMGStatusBox::UnloadIcons, EEUIMiniMap::UnloadMedia (ee/EEGameUI.h)
-    gEEGameUI.mMiniMapUnloadMedia();
-    ReleasePlaneModels();
-    EEROUnits::ReleaseMedia();
-    EEROTerrain::ReleaseSkyModels();
-    EEROGroundShadows::ReleaseShadowModel();
+    ee_gamecpp_startup_unload_media();
 }
 
 // Points the texture, model and sound managers at the data search path
@@ -1084,44 +713,19 @@ void EESetDataPaths()
 // clears the world and game state under the world lock
 void EEClearGame()
 {
-    gGraphics->PostPause();
-    for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-        PlatSleep(1);
-    gPhysics->mThread->Post(0x402, NULL, NULL, true);
-    while (gPhysics->mTimerRunning)
-        PlatSleep(1);
-    gGraphics->PostReleaseScene();
-    gGraphics->PostMessage50AAndWait();
-    gDataPreLoading->WaitForMessageQueue();
-    if (gCommunications != NULL) {
-        NESynchronousCommunications* theCommunications = gCommunications;
-        gCommunications = NULL;
-        delete theCommunications;
-    }
-    gWorld.mLock->WriteLock();
-    gWorld.Clear();
-    gGameState.Clear();
-    gPhysics->PostInit();
-    gGameScreenActive = false;
-    gWorld.mLock->WriteUnlock();
+    ee_gamecpp_startup_clear_game();
 }
 
 // Creates the game threads and registers the saved game's persistent sections
 void EEInitializePart2()
 {
-    EEInitializeThreads();
-    EESetThreadFloatingPoint("EEInitializePart2:EEInitializeThreads");
-    EERegisterPersistents();
-    EESetThreadFloatingPoint("EEInitializePart2:EEInitializePersistentList");
+    ee_gamecpp_startup_part2();
 }
 
 // Sizes the memory pools for tile unit lists, sounds, doppelgangers and 2D/3D particles
 void EEInitGamePools()
 {
-    EETile::SetUnitListPoolSize(500, 100);
-    SESoundManager::InitializeSoundsPool(500, 100, 10);
-    gDoppelgangerManager.SetPoolSize(500, 100);
-    gDoppelgangerManager.SetComplexPoolSize(100, 100);
+    ee_gamecpp_startup_game_pools();
 }
 
 
@@ -1155,18 +759,7 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
 // here first (unless the command line hosted or joined a game); the port has no movie player and plays none.
 void EEStartMenuScreen()
 {
-    GERectangle theRectangle(0.0f, 0.0f, 640.0f, 480.0f);
-    PlatWindowRaise(gGameWindow->GetOSRepresentation());
-    gISMouse->Resume();
-    gISKeyboard->Resume();
-    gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), theRectangle, gGamePreferences.mSettings.GetScreenID());
-
-    gRasterizer->ShowScene(gGamePreferences.mSettings.GetScreenID());
-    // port: the menus run at EEMenuWidth x EEMenuHeight (the original's 1024x768)
-    EEChangeGameScreen(EEMenuWidth(), EEMenuHeight(), false);
-    gISMouse->Suspend();
-    gISKeyboard->Suspend();
-    gRasterizer->SetWaitForVSync(gGamePreferences.mSettings.mWaitForVSync, gGamePreferences.mSettings.GetScreenID());
+    ee_gamecpp_startup_menu_screen();
 }
 
 // Closes the single-instance mutex and saves the preferences
@@ -1192,71 +785,7 @@ static unsigned long sOriginalVideoMode; // 0x52a1a8: the video mode index found
 // the render objects and the texture and model managers
 void EEGraphicsShutdown(bool inShutdown)
 {
-    gModelManager->RemoveAllModels();
-    for (unsigned long i = 0; i < gU4E8EF0.size(); i++)
-        gU4E8EF0[i]->Dereference();
-    gTextureManager->RemoveAllTextures();
-    gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->SetMode(sOriginalVideoMode);
-    gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Release(gGameWindow);
-    gFontTimesNewRoman9->Dereference();
-    gFontTimesNewRoman10->Dereference();
-    gFontTimesNewRoman12->Dereference();
-    gFontTimesNewRoman14->Dereference();
-    gFontArial8->Dereference();
-    gFontArial9->Dereference();
-    gU531930->Dereference();
-    gU531934->Dereference();
-    gU531938->Dereference();
-    gFontArial16->Dereference();
-    gFontArial18->Dereference();
-    gFontArial20->Dereference();
-    gFontArial24->Dereference();
-    gFontArial36->Dereference();
-    gFontArial48->Dereference();
-    gFontArial72->Dereference();
-    gFontArialBold8->Dereference();
-    gFontArialBold9->Dereference();
-    gFontArialBold10->Dereference();
-    gFontArialBold12->Dereference();
-    gFontArialBold14->Dereference();
-    gFontArialBold16->Dereference();
-    gFontCourier8->Dereference();
-    gFontCourier10->Dereference();
-    gFontCourier12->Dereference();
-    gFontCourier14->Dereference();
-    gFontTahoma8->Dereference();
-    gU531994->Dereference();
-    gFontTahoma10->Dereference();
-    gFontTahoma12->Dereference();
-    gFontTahoma14->Dereference();
-    gFontTahoma16->Dereference();
-    gFontTahoma18->Dereference();
-    gFontTahoma20->Dereference();
-    gFontTahoma24->Dereference();
-    gFontTahoma36->Dereference();
-    gFontTahoma48->Dereference();
-    gFontTahoma72->Dereference();
-    gDisplayRasterizers.clear();
-    delete gGameWindow;
-    gGameWindow = NULL;
-    DeleteEffectBatchBuffers();
-    gRasterizer->Deactivate();
-    delete gU565350;
-    gU565350 = NULL;
-    delete gU565358;
-    gU565358 = NULL;
-    delete gU56534C;
-    gU56534C = NULL;
-    delete gU56535C;
-    gU56535C = NULL;
-    delete gU565354;
-    gU565354 = NULL;
-    delete gU565360;
-    gU565360 = NULL;
-    delete gTextureManager;
-    gTextureManager = NULL;
-    delete gModelManager;
-    gModelManager = NULL;
+    ee_gamecpp_startup_graphics_shutdown();
 }
 
 #include "ee/EEMiniMap.h"
@@ -1285,10 +814,7 @@ void EEEmptyShutdown(bool inShutdown)
 // (no direct caller: registered as a shutdown routine)
 void EEDeleteSoundManager(bool inShutdown)
 {
-    SESoundManager::Destroy(gSoundManager);
-    gSoundManager = NULL;
-    SESoundManager::DumpMemoryPoolInfo();
-    SESoundManager::CleanupMemoryPoolAndDestroyCriticalSections();
+    ee_gamecpp_startup_delete_sound_manager();
 }
 
 #include "ee/EEWonNet.h"
@@ -1298,37 +824,7 @@ void EEDeleteSoundManager(bool inShutdown)
 // preloading, graphics and mouse pointer threads, the music manager and the user interface
 void EEShutdownThreads(bool inShutdown)
 {
-    gPhysics->mThread->Post(0x402, NULL, NULL, true);
-    while (gPhysics->mTimerRunning)
-        PlatSleep(1);
-    delete gCommunications;
-    gCommunications = NULL;
-    EEWonNet* theWonNet = gWonNet;
-    gWonNet = NULL;
-    delete theWonNet;
-    gMousePointer->mThread->Post(0x402, NULL, NULL, true);
-    while (gMousePointer->mIsShown)
-        PlatSleep(1);
-    gGraphics->PostPause();
-    for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-        PlatSleep(1);
-    gPhysics->Shutdown();
-    delete gPhysics;
-    gPhysics = NULL;
-    gDataPreLoading->Shutdown();
-    delete gDataPreLoading;
-    gDataPreLoading = NULL;
-    gGraphics->Shutdown();
-    delete gGraphics;
-    gGraphics = NULL;
-    gMousePointer->Shutdown();
-    delete gMousePointer;
-    gMousePointer = NULL;
-    delete gMusicManager;
-    gMusicManager = NULL;
-    delete gUserInterface;
-    gUserInterface = NULL;
-    gUnitPicker.Reset();
+    ee_gamecpp_startup_shutdown_threads();
 }
 
 #include "ee/EEButtonObject.h"
@@ -1358,100 +854,7 @@ unsigned long EEMenuWidth()
 
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen)
 {
-    GERectangle theGameView;
-    GE2DPoint theOrigin = gGameWindow->GetClientOrigin();
-    unsigned long theScreen = gGamePreferences.mSettings.GetScreenID();
-    GERectangle theOldRectangle(theOrigin, GE2DPoint(theOrigin.mX + (float)gGameWindow->GetWidth(),
-                                                    theOrigin.GetY() + (float)gGameWindow->GetHeight()));
-    unsigned long thePrecision = UMGetFloatingPointPrecision();
-    bool theHadPointer = false;
-    if (gMousePointer != NULL) {
-        theHadPointer = true;
-        gMousePointer->Shutdown();
-        delete gMousePointer;
-        gMousePointer = NULL;
-    }
-    gMouse->Release();
-    if (gRasterizer->GetIsActivated()) {
-        GEColor theBlack(0.0f, 0.0f, 0.0f);
-        gRasterizer->GetPrimarySurface(theScreen)->Clear(theOldRectangle, theBlack, 1.0f);
-        theBlack = GEColor(0.0f, 0.0f, 0.0f);
-        gRasterizer->GetSecondarySurface(theScreen)->Clear(theOldRectangle, theBlack, 1.0f);
-        gRasterizer->GetScreen(theScreen)->Release(gGameWindow);
-        DeleteEffectBatchBuffers();
-        gRasterizer->Deactivate();
-    }
-    long theResult = gRasterizer->Activate();
-
-    ESVERIFY_AT(theResult == keseOK, 2978);
-    CreateEffectBatchBuffers();
-    theResult = gRasterizer->GetScreen(theScreen)->Capture(gGameWindow, gGamePreferences.mSettings.GetFullScreen());
-
-    ESVERIFY_AT(theResult == keseOK, 2987);
-    EESetVideoMode(inWidth, inHeight, gGamePreferences.mSettings.mGameBitDepth, true);
-    gGameWindow->Resize(inWidth, inHeight);
-    theResult = gRasterizer->ActivateScreen(theScreen, gTextureManager, gGameWindow,
-                                           gGamePreferences.mSettings.GetScreenMode(), inFullScreen,
-                                           gGamePreferences.mSettings.mGameBitDepth == 16 ? 12 : 13);
-
-    ESVERIFY_AT(theResult == keseOK, 3004);
-    if (gGraphics != NULL)
-        gGraphics->SetSurface(gRasterizer->GetSecondarySurface(theScreen));
-    gWorld.mCameraControl.ResetZoom();
-    gWorld.mCameraControl.SetChanged();
-    theGameView.SetLeft(kStartViewLeft); theGameView.SetRight(kStartViewRight); theGameView.SetTop(kStartViewTop); theGameView.SetBottom(kStartViewBottom);
-    EESetGameViewRectangle(theGameView);
-    gRasterizer->SetFog(0, theScreen);
-    GEColor theColor(0.0f, 0.0f, 0.0f);
-    gRasterizer->SetFogColor(theColor, theScreen);
-    gRasterizer->SetFogType(0, theScreen);
-    theColor = GEColor(1.0f, 1.0f, 1.0f);
-    gRasterizer->SetAmbientColor(theColor, theScreen);
-    gRasterizer->SetAmbientIntensity(0.0f, theScreen);
-    gRasterizer->SetColorKeying(1, theScreen);
-    gRasterizer->SetCulling(kCullCW);
-    gRasterizer->SetLighting(1, theScreen);
-    gRasterizer->SetShading(1, theScreen);
-    gRasterizer->SetSpecular(0, theScreen);
-    gRasterizer->SetZBuffer(kZBufferDisabled, theScreen);
-    gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    gRasterizer->SetDithering(1, theScreen);
-    gRasterizer->SetAntiAliasing(gGamePreferences.mSettings.mAntiAliasing != false, theScreen);
-    gRasterizer->SetAlphaTesting(1, theScreen);
-    gRasterizer->SetAlphaTestingCompareState(kCompareGreater, theScreen);
-    gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
-    gRasterizer->SetWaitForVSync(gGamePreferences.mSettings.mWaitForVSync, theScreen);
-    gRasterizer->SetWaterRippleEffect(kWaterRipplePeriod, kWaterRippleSpeed, kWaterRippleAmplitude);
-    GERectangle theRectangle(theOrigin, GE2DPoint(theOrigin.mX + (float)gGameWindow->GetWidth(),
-                                                 theOrigin.mY + (float)gGameWindow->GetHeight()));
-    theColor = GEColor(0.0f, 0.0f, 0.0f);
-    gRasterizer->GetPrimarySurface(theScreen)->Clear(theRectangle, theColor, 1.0f);
-    theColor = GEColor(0.0f, 0.0f, 0.0f);
-    theRectangle = GERectangle(theOrigin, GE2DPoint(theOrigin.mX + (float)gGameWindow->GetWidth(),
-                                                 theOrigin.mY + (float)gGameWindow->GetHeight()));
-    gRasterizer->GetSecondarySurface(theScreen)->Clear(theRectangle, theColor, 1.0f);
-    theRectangle = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    gMouse->SetBounds(theRectangle);
-    gMouse->Load(gRasterizer->GetScreen(theScreen));
-    theResult = gTextureManager->RefreshAllTextures();
-
-    ESVERIFY_AT(theResult == keseOK, 3070);
-    EEButtonObject::Reload();
-    if (sIconsLoaded == true) {
-        gEEGameUI.mReloadIcons();   // EEUIFMGStatusBox's (ee/EEGameUI.h)
-        gEEGameUI.mUnloadIcons();
-        gEEGameUI.mLoadIcons();
-    }
-    if (theHadPointer) {
-        gMousePointer = new RTSMousePointer(gMouse, gGameWindow, 0);
-
-        if (gMousePointer == NULL) ESVerify(__FILE__, 3094, "gMousePointerThread != NULL");
-    }
-    if (gMousePointer != NULL)
-        gMousePointer->mThread->Post(0x405, gRasterizer->GetPrimarySurface(gGamePreferences.mSettings.GetScreenID()), NULL, true);
-    UMSetFloatingPointPrecision(thePrecision);
-    if (UMGetFloatingPointRoundingMode() != 0)
-        UMSetFloatingPointRoundingMode(0);
+    ee_gamecpp_startup_change_screen(inWidth, inHeight, inFullScreen);
 }
 
 #include "lle/Graphics Engine.h"
@@ -1463,90 +866,7 @@ void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 // back to 800x600x16), creates and captures the game window; returns true
 bool EEInitializeDisplay()
 {
-    GE2DPoint theOrigin;
-    FSFileSpec theDirectory;
-    theDirectory.SetDirectory(gStartupDirectory);
-    long theResult = GEInitialize(theDirectory, gInstance);
-
-    ESVERIFY_AT(theResult == keseOK, 3369);
-    EEEnumerateDisplayDevices();
-    unsigned long theRasterizer;
-    for (theRasterizer = 0; theRasterizer < GERasterizer::GetRasterizerCount(); theRasterizer++) {
-        gRasterizer = GERasterizer::GetRasterizer(theRasterizer);
-        if (gRasterizer->GetName() == gGamePreferences.mSettings.mRasterizerName)
-            break;
-    }
-    if (theRasterizer < GERasterizer::GetRasterizerCount()) {
-        gRasterizer = GERasterizer::GetRasterizer(theRasterizer);
-    } else {
-        gRasterizer = GERasterizer::GetRasterizer(0);
-        gGamePreferences.mSettings.mRasterizerName = gRasterizer->GetName();
-    }
-    theResult = gRasterizer->Activate();
-
-    ESVERIFY_AT(theResult == keseOK, 3402);
-    if (gRasterizer->GetScreenCount() <= gGamePreferences.mSettings.mScreenID)
-        gScreenIndex = 0;
-    gRasterizer->SetScreenID(gGamePreferences.mSettings.GetScreenID());
-    if ((gGamePreferences.mSettings.mGameBitDepth != 32 && gGamePreferences.mSettings.mGameBitDepth != 16)
-        || (gGamePreferences.mSettings.mGameBitDepth == 32 && !gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Get32BitDeviceSupport()))
-        gGamePreferences.mSettings.mGameBitDepth = 16;
-    if ((gGamePreferences.mSettings.mTextureBitDepth != 32 && gGamePreferences.mSettings.mTextureBitDepth != 16)
-        || (gGamePreferences.mSettings.mTextureBitDepth == 32 && !gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Get32BitTextureSupport()))
-        gGamePreferences.mSettings.mTextureBitDepth = 16;
-    GEScreen* theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
-    // port: the game's resolution follows the UI scale (the display's logical size divided by it; windowed: of a
-    // window of 80% of the display), not a resolution list: the render scale fills the display's pixels
-    GXGameSize((unsigned long)gGamePreferences.mSettings.mUIScale, !gGamePreferences.mSettings.GetFullScreen(),
-               &gGameWindowWidth, &gGameWindowHeight);
-    unsigned long theMode;
-    for (theMode = 0; theMode < theScreen->GetModeCount(); theMode++) {
-        if (theScreen->GetMode(theMode).mWidth == gGameWindowWidth
-            && theScreen->GetMode(theMode).mHeight == gGameWindowHeight
-            && theScreen->GetMode(theMode).mBitCount == gGamePreferences.mSettings.mGameBitDepth)
-            break;
-    }
-    if (theScreen->GetModeCount() <= theMode) {
-        gGameWindowWidth = 800;
-        gGameWindowHeight = 600;
-        gGamePreferences.mSettings.mGameBitDepth = 16;
-    }
-    gGamePreferences.Save();
-    CreateEffectBatchBuffers();
-    // the window class (name, icon 0x66) is the platform window system's (PlatWindowSetAppName in WinMain); its
-    // events go to EEUserInterface::HandleEvent (TSThread::SetEventPump)
-    GERectangle theDesktop = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->GetDesktopRectangle();
-    theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
-    theOrigin.SetXY(theDesktop.GetLeft(), theDesktop.GetTop());
-    if (gGamePreferences.mSettings.GetFullScreen() == false) {
-        // port: windowed, a window of 80% of the display that keeps its size (GXGameSize; the frames scale to it)
-        int32_t theWindowWidth = 0, theWindowHeight = 0;
-        if (!PlatWindowGetDisplayLogicalSize(NULL, &theWindowWidth, &theWindowHeight) || theWindowWidth <= 0) {
-            theWindowWidth = 800;
-            theWindowHeight = 600;
-        } else {
-            theWindowWidth = theWindowWidth * 4 / 5;
-            theWindowHeight = theWindowHeight * 4 / 5;
-        }
-        theResult = theScreen->CreateAWindow(theOrigin, (unsigned long)theWindowWidth, (unsigned long)theWindowHeight,
-                                             UString("Empire Earth Expansion"),
-                                             UString("Empire Earth: The Art of Conquest"), gGameWindow, 1, NULL);
-        if (theResult == keseOK)
-            PlatWindowSetFixedSize(gGameWindow->GetOSRepresentation(), 1);
-    } else {
-        theResult = theScreen->CreateAWindow(theOrigin, (unsigned long)theDesktop.GetWidth(),
-                                             (unsigned long)theDesktop.GetHeight(), UString("Empire Earth Expansion"),
-                                             UString("Empire Earth: The Art of Conquest"), gGameWindow, 0, NULL);
-    }
-
-    ESVERIFY_AT(theResult == keseOK, 3523);
-    // typed text always arrives (WM_CHAR did): the window's text input is on from the start
-    PlatTextInputStart(gGameWindow->GetOSRepresentation(), 0, 0, 0, 0);
-    theResult = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Capture(gGameWindow, gGamePreferences.mSettings.GetFullScreen());
-
-    ESVERIFY_AT(theResult == keseOK, 3527);
-    sOriginalVideoMode = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->GetCurrentModeIndex();
-    return true;
+    return ee_gamecpp_startup_display();
 }
 
 #ifdef _WIN32
@@ -1870,35 +1190,7 @@ int main(int argc, char** argv)
 void EELoadSound(const UString& inName, unsigned long inType, unsigned long& outSample,
                  unsigned long& outInstance, unsigned long inFlag)
 {
-    FSFileSpec theUnusedFile;
-    UString theOtherName;
-    UString theName;
-    unsigned long theSample = (unsigned long)-1;
-    unsigned long theInstance = (unsigned long)-1;
-    if (inName.GetLength() > 4 &&
-        (inName.GetSubstring(inName.GetLength() - 4, 4).EqualsIgnoreCase(".wav", 4) ||
-         inName.GetSubstring(inName.GetLength() - 4, 4).EqualsIgnoreCase(".mp3", 4))) {
-        theSample = gSoundManager->Load(inName, inType, 1);
-        if (!UIsNone32(theSample)) {
-            theInstance = gSoundManager->Play(theSample, 1.0f, 0.0f, 1.0f, false, NULL);
-            if (UIsNone32(theInstance)) {
-                gSoundManager->Unload(theSample);
-                theSample = (unsigned long)-1;
-            } else if ((unsigned char)inFlag == 1)
-                gSoundManager->RegisterOneShotSound(theSample, theInstance);
-        }
-    } else {
-        theName = inName;
-        theName += ".wav";
-        EELoadSound(theName, inType, theSample, theInstance, inFlag);
-        if (UIsNone32(theSample)) {
-            theName = inName;
-            theName += ".mp3";
-            EELoadSound(theName, inType, theSample, theInstance, inFlag);
-        }
-    }
-    outSample = theSample;
-    outInstance = theInstance;
+    ee_gamecpp_startup_load_sound(&inName, inType, &outSample, &outInstance, inFlag);
 }
 
 #include "ee/EEDbObject.h"
@@ -1932,237 +1224,27 @@ long EEClearRandomMapGenerators(); // clears the random-map generator list; retu
 // if the sound engine fails, else true
 bool EEInitializeSounds()
 {
-    FSFileSpec theStartupDirectory;
-    FSFileSpec theUnusedFile;
-    UWideString theMusicDirectory(260);
-    theStartupDirectory.SetDirectory(gStartupDirectory);
-    if (SEInitialize(theStartupDirectory, gGameWindow) != kErrorOK)
-        return false;
-    long theResult = SEMixer::GetMixer(0, gConductor);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x770, "theResult == keseOK");
-    theResult = SEMixer::UseMixer(gConductor);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x772, "theResult == keseOK");
-    theResult = gConductor->GetConductor().SetChannelGroupCount(8);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x775, "theResult == keseOK");
-    if (gGamePreferences.mSettings.mMusicEnabled) {
-        theResult = gConductor->GetConductor().SetConductorState(1);
-        if (theResult != kErrorOK && theResult != 2)
-            ESVerify(__FILE__, 0x77a, "theResult == keseOK || theResult == keseAlready");
-    } else {
-        theResult = gConductor->GetConductor().SetConductorState(0);
-        if (theResult != kErrorOK) ESVerify(__FILE__, 0x77f, "theResult == keseOK");
-    }
-    if (gGamePreferences.mSettings.mReverbEnabled) gConductor->GetConductor().SetReverb(1); else gConductor->GetConductor().SetReverb(0);
-    gConductor->GetConductor().SetVolume(gGamePreferences.mSettings.mMusicVolume);
-    gConductor->GetConductor().SetIntensity(0, false);
-    // the music is the game's own Data\Music (the original read the original Empire Earth's)
-    sprintf(theMusicDirectory, "%s%s%s", (const char*)gStartupVolume, (const char*)gStartupDirectory, "Data\\Music\\");
-    theResult = gConductor->GetConductor().SetMusicFolder(theMusicDirectory);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x7a4, "theResult == keseOK");
-    gSoundManager = SESoundManager::Create(gDataPath, gConductor, 50, 0);
-    if (gSoundManager == NULL) ESVerify(__FILE__, 0x7a8, "gSoundManager");
-    float theChannels = (float)gSoundManager->GetMaxChannels() * gGamePreferences.mSettings.GetMaxNumberOfSounds();
-    unsigned long theMaximum = UMFloatToLong(theChannels);
-    gSoundManager->SetMaxChannels(theMaximum < 8 ? 8 : theMaximum);
-    gSoundManager->SetMasterVolume(gGamePreferences.mSettings.mSoundVolume);
-    gSoundManager->SetCategoryPriority(0x31, 0);
-    gSoundManager->SetCategoryPercentage(0x31, 1.0f);
-    gSoundManager->SetLatency(200);
-    theResult = URegisterShutdown(EEDeleteSoundManager);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x7c4, "theResult == keseOK");
-    return true;    // the success path returned no value (the caller tested whatever AL held)
+    return ee_gamecpp_startup_sounds();
 }
 
 // Loads every database table in start-up order, creates the user folders (campaigns, saved games, scenarios,
 // users), loads the ambient sounds, sizes the game pools and registers the database shutdown
-// One db table to load: its text form found (EEDbFindFile), then loaded; a failure stops the game (ESVerify at the
-// original's lines: mLine the find, + 1 the file, + 3 the load)
-struct EEDbTableLoad {
-    const UString* mName;
-    long (*mLoad)(FSFileSpec* inFile);
-    unsigned long mLine;
-};
-
-static void EELoadDbTables(const EEDbTableLoad* inTables, size_t inCount)
-{
-    for (size_t k = 0; k < inCount; k++) {
-        FSFileSpec* theDbFile = NULL;
-        long theResult = EEDbFindFile(gDataPath, *inTables[k].mName, theDbFile);
-        if (theResult != kErrorOK) ESVerify(__FILE__, inTables[k].mLine, "theResult == keseOK");
-        if (theDbFile == NULL) ESVerify(__FILE__, inTables[k].mLine + 1, "theDbFile != NULL");
-        theResult = inTables[k].mLoad(theDbFile);
-        if (theResult != kErrorOK) ESVerify(__FILE__, inTables[k].mLine + 3, "theResult == keseOK");
-        delete theDbFile;
-    }
-}
-
 void EEInitializeDatabase()
 {
-    FSFileSpec theDirectory;
-    UString thePath;
-    UWideString theUserDirectory;
-    FSFileSpec* theDbFile;
-    long theResult;
-    EELoadRules(gDataPath);   // the rules documents (ee/EERules.h), before the tables that use them
-    {
-        static const EEDbTableLoad kTables[] = {
-            {&kDbStartingResourcesFile, [](FSFileSpec* f) { return (long)EEStartingResources::Load(f); }, 909},
-            {&kDbUnitBehaviorFile, [](FSFileSpec* f) { return (long)EEUnitBehavior::Load(f); }, 917},
-            {&kDbSoundsFile, [](FSFileSpec* f) { return (long)EESoundObject::LoadTable(f); }, 925},
-            {&kDbGraphicsFile, [](FSFileSpec* f) { return (long)EEGraphicObject::LoadTable(f); }, 933},
-            {&kDbGfxEffectsFile, [](FSFileSpec* f) { return (long)EEGraphicEffect::LoadTable(f); }, 941},
-            {&kDbMusicFile, [](FSFileSpec* f) { return (long)EEMusicObject::LoadTable(f); }, 949},
-            {&kDbWorldFile, [](FSFileSpec* f) { return (long)gWorldTable.Load(f); }, 962},
-            {&kDbFamilyFile, [](FSFileSpec* f) { return (long)EETerrainTypeTable::LoadDamageTables(f); }, 970},
-            {&kDbButtonsFile, [](FSFileSpec* f) { return (long)EEButtonObject::Load(f); }, 978},
-            {&kDbTechTreeFile, [](FSFileSpec* f) { return (long)gTechTree.Load(*f); }, 986},
-        };
-        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
-    }
-    FSFileSpec* theEvents;
-    FSFileSpec* theEffects;
-    theResult = EEDbFindFile(gDataPath, kDbEventsFile, theEvents);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x3e2, "theResult == keseOK");
-    if (theEvents == NULL) ESVerify(__FILE__, 0x3e3, "theDbEventsFile");
-    theResult = EEDbFindFile(gDataPath, kDbEffectsFile, theEffects);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x3e5, "theResult == keseOK");
-    if (theEffects == NULL) ESVerify(__FILE__, 0x3e6, "theDbEffectsFile");
-    theResult = EEEvent::LoadEvents(*theEvents, *theEffects);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x3e8, "theResult == keseOK");
-    delete theEvents;
-    delete theEffects;
-    {
-        static const EEDbTableLoad kTables[] = {
-            {&kDbAnimalsFile, [](FSFileSpec* f) { return (long)EEAnimal::Load(f); }, 1006},
-            {&kDbColorTableFile, [](FSFileSpec* f) { return (long)EEColorTable::Load(f); }, 1014},
-            {&kDbAIUnitTargetingFile, [](FSFileSpec* f) { return (long)EEAIUnitTargetingTable::Load(f); }, 1022},
-            {&kDbTerrainFile, [](FSFileSpec* f) { return (long)EETerrainTable::Load(f); }, 1030},
-        };
-        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
-    }
-    theResult = EETerrainColorTable::Load();
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x40e, "theResult == keseOK");
-    {
-        static const EEDbTableLoad kTables[] = {
-            {&kDbTerrainTypeFile, [](FSFileSpec* f) { return (long)EETerrainTypeTable::Load(f); }, 1042},
-            {&kDbCliffTerrainFile, [](FSFileSpec* f) { return (long)EECliffTerrainTable::Load(f); }, 1050},
-            {&kDbCivPowersFile, [](FSFileSpec* f) { return (long)gCivPowersManager.Load(f); }, 1058},
-            {&kDbCivilizationFile, [](FSFileSpec* f) { return (long)gCivilizationManager.Load(f); }, 1066},
-        };
-        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
-    }
-    // (the original read db\dbrandommap.dat here into EERandomMapTable, dropping every record's contents and reading
-    // nothing of the table afterwards; the file has no text form and is not loaded: RUST_PLAN D9)
-    {
-        static const EEDbTableLoad kTables[] = {
-            {&kDbWeaponToHitFile, [](FSFileSpec* f) { return (long)EEToHitTable::Load(f); }, 1082},
-            {&kDbCalamityFile, [](FSFileSpec* f) { return (long)EECalamityManager::GetInstance()->LoadCalamityClasses(f); }, 1090},
-            {&kDbUnitSetFile, [](FSFileSpec* f) { return (long)gUnitSetManager.Load(f); }, 1098},
-            {&kDbAreaEffectFile, [](FSFileSpec* f) { return (long)gAEManager.Load(f); }, 1106},
-            {&kDbUpgradeFile, [](FSFileSpec* f) { return (long)EEUCUpgradeTable::Load(f); }, 1114},
-            {&kDbCPBehaviorFile, [](FSFileSpec* f) { return (long)EECPBehavior::Load(f); }, 1122},
-            {&kDbGameVariantFile, [](FSFileSpec* f) { return (long)EEGameVariant::Load(f); }, 1130},
-            {&kDbPremadeCivsFile, [](FSFileSpec* f) { return (long)gCivilizationManager.LoadPremadeCivilizations(f); }, 1138},
-        };
-        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
-    }
-    theResult = UIInitialize();
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x47a, "theResult == keseOK");
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\");
-    if (!theDirectory.IsDirectory()) theDirectory.CreateDirectory();
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Saved Games\\");
-    if (!theDirectory.IsDirectory()) theDirectory.CreateDirectory();
-    theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-    if (!theDirectory.IsDirectory()) theDirectory.CreateDirectory();
-    theDirectory.SetDirectory(gStartupDirectory + "Users\\");
-    if (!theDirectory.IsDirectory()) theDirectory.CreateDirectory();
-    thePath = gStartupDirectory + "Users\\default\\";
-    theDirectory.SetDirectory(thePath);
-    if (!theDirectory.IsDirectory()) theDirectory.CreateDirectory();
-    theResult = gResource->GetString(IDS_CIVILIZATIONS, theUserDirectory);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x4a8, "theResult == keseOK");
-    thePath = thePath + (const char*)theUserDirectory + "\\";
-    theDirectory.SetDirectory(thePath);
-    if (!theDirectory.IsDirectory()) theDirectory.CreateDirectory();
-    theResult = EEDbFindFile(gDataPath, kDbAmbientSoundsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x4b3, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 0x4b4, "theDbFile != NULL");
-    gAmbientSoundManager.Load(*theDbFile);
-    delete theDbFile;
-    if (EESoundObject::Get(kSoundHotKeyAlarm) != NULL)
-        EESoundObject::Get(kSoundHotKeyAlarm)->LoadMedia();
-    EEGraphicEffect::SortMediaByKind();
-    theResult = EEFn0FCA98();
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x4c1, "theResult == keseOK");
-    CreatePlaneModels();
-    EEInitGamePools();
-    EEDumpRules();   // EE_DUMP_CONTENT: the rules, after dbmusic filled the binary load's songs
-    theResult = URegisterShutdown(EEDeleteDatabase);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x4cb, "theResult == keseOK");
+    ee_gamecpp_startup_database();
 }
 
 // Sets up random maps, game options, physics models and sight rings, creates the mouse, unit classes, UI
 // manager, AI, cheat codes and game timer, and registers their shutdown
 void EEInitializeGameObjects()
 {
-    FSFileSpec theDirectory;
-    theDirectory.SetDirectory(gStartupDirectory);
-    EERandomMap::Initialize(theDirectory);
-    gGameOptions.SetDefaults();
-    gWorld.mGameOptions.SetDefaults();
-    EEInitPhysicsModels();
-    gMouse = new EEMouse;
-    if (gMouse == NULL) ESVerify(__FILE__, 0x4ee, "gMouse != NULL");
-    long theResult = gMouse->Load(gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID()));
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x4f2, "theResult == keseOK");
-    gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
-    gMouse->SetPosition(GE2DPoint(512.0f, 384.0f));
-    gMouse->SetSensitivity(gGamePreferences.mSettings.mMouseSensitivity);
-    gMouse->mPointer = 0;
-    EEUnitClass::CreateUnitClasses();
-    EETechTree::BuildUnitClassInfo();
-    gUIManager = gEEGameUI.mNewManager(gRasterizer, gGamePreferences.mSettings.GetScreenMode() + 1,   // ee/EEGameUI.h
-                                       gGamePreferences.mSettings.GetScreenID(), "db\\");
-    if (gUIManager == NULL) ESVerify(__FILE__, 0x50a, "gUIManager != NULL");
-    UIManager::SetMouseLeftHanded(gGamePreferences.mSettings.mRightHandMouseOrientation == false);
-    UIControl::SetBorderColors(GEColor(0.34765625f, 0.39453125f, 0.390625f),
-                              GEColor(0.69140625f, 0.76171875f, 0.7578125f));
-    gArtificialIntelligence = new EEArtificialIntelligence;
-    if (gArtificialIntelligence == NULL) ESVerify(__FILE__, 0x514, "gArtificialIntelligence != NULL");
-    gCheatCodes = new EECheatCodes;
-    if (gCheatCodes == NULL) ESVerify(__FILE__, 0x518, "gCheatCodes != NULL");
-    EECreateGameTimer();
-    theResult = URegisterShutdown(EEDeleteGameObjects);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 0x51f, "theResult == keseOK");
-    // GERasterizer::GetScreen and GERectangle::operator= out of line and emits the EEArtificialIntelligence ctor 0x54260b)
+    ee_gamecpp_startup_game_objects();
 }
 
 // Deletes the game timer, AI, cheat codes, UI manager, mouse and mini map and clears the world and game state
 void EEDeleteGameObjects(bool inShutdown)
 {
-    delete sTimer;
-    sTimer = NULL;
-    EEAIContinentManager::Shutdown();
-    delete gCheatCodes;
-    gCheatCodes = NULL;
-    delete gArtificialIntelligence;
-    gArtificialIntelligence = NULL;
-    delete gUIManager;
-    gUIManager = NULL;
-    gMouse->Release();
-    delete gMouse;
-    gMouse = NULL;
-    gWorld.Clear();
-    if (gMiniMap != NULL) {
-        delete gMiniMap;
-        gMiniMap = NULL;
-    }
-    gAEManager.Clear();
-    gGameState.Clear();
-    EEFreePhysicsModels();
-    EEClearRandomMapGenerators();
+    ee_gamecpp_startup_delete_game_objects();
 }
 
 
@@ -2173,40 +1255,686 @@ void EEDeleteMediaTable();
 // Unloads every database table and its media, deletes the calamity manager and language resources, frees the pools
 void EEDeleteDatabase(bool inShutdown)
 {
-    gPathManager.Clear();
-    EEReleaseUnitPools();
-    EEReportLeakingUnits();
-    EEUnitAction::DeleteScripts();
-    EEUnitClass::ReleaseUnitClasses();
-    EEFn0FCA98();
-    unsigned long theSound = 962;
-    if (EESoundObject::Get(theSound) != NULL)
-        EESoundObject::Get(theSound)->UnloadMedia();
-    EEAnimal::Unload();
-    gAmbientSoundManager.ClearSounds();
-    EETerrainTypeTable::ClearDamageTables();
-    EECalamityManager::GetInstance()->DestroyCalamityClasses(inShutdown);
-    gDatabaseObjects.Clear();
-    EEButtonObject::Unload();
-    EEGraphicEffect::UnloadTable();
-    EEDeleteMediaTable();
-    EEMusicObject::ClearAll();
-    EESoundObject::UnloadTable();
-    EEColorTable::Unload();
-    EEAIUnitTargetingTable::Unload();
-    EETerrainTable::Unload();
-    EETerrainColorTable::Unload();
-    EETerrainTypeTable::Unload();
-    EECliffTerrainTable::Unload();
-    EEUCUpgradeTable::Unload();
-    EEUnitBehavior::Unload();
-    EEStartingResources::Unload();
-    EEGameVariant::Unload();
-    gWorldTable.Clear();
-    gTechTree.UnloadAll();
-    USingleton<EECalamityManager>::DestroyInstance();
-    delete gResource;
-    EEReleaseGamePools(true);
+    ee_gamecpp_startup_delete_database(inShutdown);
+}
+
+// ------------------------------------------------------------------------- the start-up's C++ (gamecpp startup.rs)
+
+#include <utility>
+
+int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the constants startup.rs passes
+static_assert(IDS_ARIAL == 1 && IDS_TIMES_NEW_ROMAN == 2 && IDS_COURIER_NEW == 3 && IDS_TAHOMA == 4 && IDS_CIVILIZATIONS == 29783 && IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND == 5865 && IDS_ERROR_CANT_RUN_16EA == 5866 && kSoundHotKeyAlarm == 0x3c2 && kPixelFormatZPrefer16 == 12, "gamecpp startup.rs");
+static_assert(sizeof(GEVideoMode) == 5 * sizeof(unsigned long) && sizeof(GE2DPoint) == 2 * sizeof(float) && sizeof(GERectangle) == sizeof(EeGeRectangle), "gamecpp startup.rs");
+
+// the game's fonts in creation order (startup.rs FONTS, index for index)
+static GEFont** const kFonts[38] = {
+    &gFontArial8, &gFontArial9, &gU531930, &gU531934, &gU531938, &gFontArial16, &gFontArial18, &gFontArial20,
+    &gFontArial24, &gFontArial36, &gFontArial48, &gFontArial72, &gFontArialBold8, &gFontArialBold9, &gFontArialBold10,
+    &gFontArialBold12, &gFontArialBold14, &gFontArialBold16, &gFontTimesNewRoman9, &gFontTimesNewRoman10,
+    &gFontTimesNewRoman12, &gFontTimesNewRoman14, &gFontCourier8, &gFontCourier10, &gFontCourier12, &gFontCourier14,
+    &gFontTahoma8, &gU531994, &gFontTahoma10, &gFontTahoma12, &gFontTahoma14, &gFontTahoma16, &gFontTahoma18,
+    &gFontTahoma20, &gFontTahoma24, &gFontTahoma36, &gFontTahoma48, &gFontTahoma72};
+// the campaign checksums EELoadNetworkSettings reads (string resources 0x32..0x34, 0x37, 0x36)
+static long* const kCampaignChecksums[5] = {&gAOCRomanChecksum, &gAOCPacificChecksum, &gAOCAsianChecksum, &gEEDemoChecksum, &gEELearningChecksum};
+// the db tables' names in start-up order (startup.rs TABLES_1..3)
+static const UString* const kDbTableNames[26] = {
+    &kDbStartingResourcesFile, &kDbUnitBehaviorFile, &kDbSoundsFile, &kDbGraphicsFile, &kDbGfxEffectsFile,
+    &kDbMusicFile, &kDbWorldFile, &kDbFamilyFile, &kDbButtonsFile, &kDbTechTreeFile, &kDbAnimalsFile,
+    &kDbColorTableFile, &kDbAIUnitTargetingFile, &kDbTerrainFile, &kDbTerrainTypeFile, &kDbCliffTerrainFile,
+    &kDbCivPowersFile, &kDbCivilizationFile, &kDbWeaponToHitFile, &kDbCalamityFile, &kDbUnitSetFile,
+    &kDbAreaEffectFile, &kDbUpgradeFile, &kDbCPBehaviorFile, &kDbGameVariantFile, &kDbPremadeCivsFile};
+// the start-up directory as a file spec (the engines' initialisations take one)
+static FSFileSpec& EEStartupDirectorySpec()
+{
+    static FSFileSpec theDirectory;
+    theDirectory.SetDirectory(gStartupDirectory);
+    return theDirectory;
+}
+// the start-up's user folders (startup.rs FileSpecSetDirStartupSub): data, its campaigns, saved games and scenarios,
+// Users and its default
+static const char* const kStartupFolders[6] = {"data\\", "data\\Campaigns\\", "data\\Saved Games\\", "data\\Scenarios\\", "Users\\", "Users\\default\\"};
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define WSTR (*(UWideString*)p)
+#define USTR (*(UString*)p)
+#define SPEC ((FSFileSpec*)p)
+#define SETTINGS gGamePreferences.mSettings
+#define SCREEN_ID gGamePreferences.mSettings.GetScreenID()
+static GEColor sStartupBlack(0.0f, 0.0f, 0.0f);   // the surfaces' clear colour
+
+// The start-up's C++ calls and members (EeGameCpp's start-up section; EEMessage.cpp's EEMessageOp default): one
+// statement each
+int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the floating point, the engines
+    case O::FpPrecision: return UMGetFloatingPointPrecision();
+    case O::FpPrecision53: return kFPPrecision53;
+    case O::FpSetPrecision53: UMSetFloatingPointPrecision(kFPPrecision53);
+        break;
+    case O::FpSetPrecision: UMSetFloatingPointPrecision((unsigned long)a[0]);
+        break;
+    case O::FpRounding: return UMGetFloatingPointRoundingMode();
+    case O::FpSetRoundingNearest: UMSetFloatingPointRoundingMode(0);
+        break;
+    case O::TsInitialize: return TSInitialize();
+    case O::TmInitialize: return TMInitialize();
+    case O::IsInitialize: return ISInitialize(gInstance, gGameWindow, gResource, 100, 250);
+    case O::GeInitialize: return GEInitialize(EEStartupDirectorySpec(), gInstance);
+    case O::SeInitialize: return SEInitialize(EEStartupDirectorySpec(), gGameWindow);
+    case O::InitializeNetwork: EEInitializeNetwork();
+        break;
+    case O::RegisterShutdownMutex: return URegisterShutdown(EEReleaseInstanceMutex);
+    case O::RegisterShutdownGraphics: return URegisterShutdown(EEGraphicsShutdown);
+    case O::RegisterShutdownPersistents: return URegisterShutdown(FSPersistentList::Shutdown);
+    case O::RegisterShutdownThreads: return URegisterShutdown(EEShutdownThreads);
+    case O::RegisterShutdownSound: return URegisterShutdown(EEDeleteSoundManager);
+    case O::RegisterShutdownDatabase: return URegisterShutdown(EEDeleteDatabase);
+    case O::RegisterShutdownGameObjects: return URegisterShutdown(EEDeleteGameObjects);
+    case O::WindowHide: PlatWindowShow(gGameWindow->GetOSRepresentation(), 0);
+        break;
+    case O::MessageShowError: PlatMessageShow(WSTR, *(UWideString*)a[0], PLAT_MESSAGE_ERROR | PLAT_MESSAGE_SYSTEM_MODAL | PLAT_MESSAGE_FOREGROUND);
+        break;
+    case O::NewUserInterface: gUserInterface = new EEUserInterface;
+        break;
+    case O::SetCampaignChecksum: *kCampaignChecksums[a[0]] = strtoul(WSTR, NULL, 10);
+        break;
+    // the graphics: the managers, the window, the render objects, the fonts
+    case O::NewTextureManager: gTextureManager = new GETextureManager(gDataPath);
+        break;
+    case O::TextureManagerPresent: return gTextureManager != NULL;
+    case O::NewModelManager: gModelManager = new GEModelManager(gDataPath);
+        break;
+    case O::ModelManagerPresent: return gModelManager != NULL;
+    case O::PrefScreenID: return SCREEN_ID;
+    case O::PrefScreenIDRaw: return SETTINGS.mScreenID;
+    case O::PrefGameBitDepth: return SETTINGS.mGameBitDepth;
+    case O::PrefTextureBitDepth: return SETTINGS.mTextureBitDepth;
+    case O::PrefGameBitDepthValid: return !(SETTINGS.mGameBitDepth != 32 && SETTINGS.mGameBitDepth != 16);
+    case O::PrefTextureBitDepthValid: return !(SETTINGS.mTextureBitDepth != 32 && SETTINGS.mTextureBitDepth != 16);
+    case O::PrefSetGameBitDepth16: SETTINGS.mGameBitDepth = 16;
+        break;
+    case O::PrefSetTextureBitDepth16: SETTINGS.mTextureBitDepth = 16;
+        break;
+    case O::PrefFullScreen: return SETTINGS.GetFullScreen();
+    case O::PrefSave: gGamePreferences.Save();
+        break;
+    case O::PrefSetRasterizerName: SETTINGS.mRasterizerName = gRasterizer->GetName();
+        break;
+    case O::PrefMusicEnabled: return SETTINGS.mMusicEnabled;
+    case O::PrefReverbEnabled: return SETTINGS.mReverbEnabled;
+    case O::WindowResize: gGameWindow->Resize((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::WindowWidth: return gGameWindow->GetWidth();
+    case O::WindowHeight: return gGameWindow->GetHeight();
+    case O::WindowClientOrigin: *(GE2DPoint*)a[0] = gGameWindow->GetClientOrigin();
+        break;
+    case O::WindowRaise: PlatWindowRaise(gGameWindow->GetOSRepresentation());
+        break;
+    case O::WindowSetFixedSize: PlatWindowSetFixedSize(gGameWindow->GetOSRepresentation(), 1);
+        break;
+    case O::WindowTextInputStart: PlatTextInputStart(gGameWindow->GetOSRepresentation(), 0, 0, 0, 0);
+        break;
+    case O::DisplayLogicalSize: return PlatWindowGetDisplayLogicalSize(NULL, (int32_t*)a[0], (int32_t*)a[1]);
+    case O::CreateGameWindow: return gRasterizer->GetScreen(SCREEN_ID)->CreateAWindow(GE2DPoint(f[0], f[1]), (unsigned long)a[0], (unsigned long)a[1], UString("Empire Earth Expansion"), UString("Empire Earth: The Art of Conquest"), gGameWindow, (long)a[2], NULL);
+    case O::DeleteGameWindow: delete std::exchange(gGameWindow, nullptr);
+        break;
+    case O::GameSizeFromPreferences: GXGameSize((unsigned long)SETTINGS.mUIScale, !SETTINGS.GetFullScreen(), &gGameWindowWidth, &gGameWindowHeight);
+        break;
+    case O::GameWindowWidth: return gGameWindowWidth;
+    case O::GameWindowHeight: return gGameWindowHeight;
+    case O::SetGameWindowFallback: gGameWindowWidth = 800, gGameWindowHeight = 600, SETTINGS.mGameBitDepth = 16;
+        break;
+    case O::MenuWidth: return EEMenuWidth();
+    case O::MenuHeight: return EEMenuHeight();
+    case O::FreeCamera: return gFreeCamera;
+    case O::RectRoundToNearest: ((GERectangle*)a[0])->RoundToNearest();
+        break;
+    case O::ViewportSetViewRectangle: gViewport.SetViewRectangle(*(GERectangle*)a[0]);
+        break;
+    case O::SceneFlagsClear: gB529066 = false, gCameraFollowing = false, gB529068 = false;
+        break;
+    case O::EnumerateDisplayDevices: EEEnumerateDisplayDevices();
+        break;
+    case O::DisplayRasterizersClear: gDisplayRasterizers.clear();
+        break;
+    case O::RasterizerCount: return GERasterizer::GetRasterizerCount();
+    case O::RasterizerSelect: gRasterizer = GERasterizer::GetRasterizer((unsigned long)a[0]);
+        break;
+    case O::RasterizerIsPreferred: return gRasterizer->GetName() == SETTINGS.mRasterizerName;
+    case O::RastActivate: return gRasterizer->Activate();
+    case O::RastIsActivated: return gRasterizer->GetIsActivated();
+    case O::RastDeactivate: gRasterizer->Deactivate();
+        break;
+    case O::RastScreenCount: return gRasterizer->GetScreenCount();
+    case O::RastSetScreenID: gRasterizer->SetScreenID(SCREEN_ID);
+        break;
+    case O::SetScreenIndexZero: gScreenIndex = 0;
+        break;
+    case O::RastActivateScreen: return gRasterizer->ActivateScreen(SCREEN_ID, gTextureManager, gGameWindow, SETTINGS.GetScreenMode(), a[0] != 0, (long)a[1]);
+    case O::RastClearStart: gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), GERectangle(0.0f, 0.0f, 640.0f, 480.0f), (unsigned long)a[0]);
+        break;
+    case O::RastShowScene: gRasterizer->ShowScene((unsigned long)a[0]);
+        break;
+    case O::RastPrimaryPresent: return gRasterizer->GetPrimarySurface((unsigned long)a[0]) != NULL;
+    case O::RastSecondaryPresent: return gRasterizer->GetSecondarySurface((unsigned long)a[0]) != NULL;
+    case O::RastPrimaryClear: gRasterizer->GetPrimarySurface((unsigned long)a[0])->Clear(*(GERectangle*)a[1], sStartupBlack, 1.0f);
+        break;
+    case O::RastSecondaryClear: gRasterizer->GetSecondarySurface((unsigned long)a[0])->Clear(*(GERectangle*)a[1], sStartupBlack, 1.0f);
+        break;
+    case O::RastSetFog: gRasterizer->SetFog((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetFogColor: gRasterizer->SetFogColor(GEColor(f[0], f[1], f[2]), (unsigned long)a[0]);
+        break;
+    case O::RastSetFogType: gRasterizer->SetFogType((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetAmbientColor: gRasterizer->SetAmbientColor(GEColor(f[0], f[1], f[2]), (unsigned long)a[0]);
+        break;
+    case O::RastSetAmbientIntensity: gRasterizer->SetAmbientIntensity(f[0], (unsigned long)a[0]);
+        break;
+    case O::RastSetColorKeying: gRasterizer->SetColorKeying((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetCullingCW: gRasterizer->SetCulling(kCullCW);
+        break;
+    case O::RastSetLighting: gRasterizer->SetLighting((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetProjectionMode: gRasterizer->SetProjectionMode((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetShading: gRasterizer->SetShading((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetSpecular: gRasterizer->SetSpecular((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetZBufferOff: gRasterizer->SetZBuffer(kZBufferDisabled, (unsigned long)a[0]);
+        break;
+    case O::RastSetZCompareLessEqual: gRasterizer->SetZCompare(kCompareLessEqual, (unsigned long)a[0]);
+        break;
+    case O::RastSetDithering: gRasterizer->SetDithering((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetAntiAliasingPref: gRasterizer->SetAntiAliasing(SETTINGS.mAntiAliasing != false, (unsigned long)a[0]);
+        break;
+    case O::RastSetAlphaTesting: gRasterizer->SetAlphaTesting((long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RastSetAlphaCompareGreater: gRasterizer->SetAlphaTestingCompareState(kCompareGreater, (unsigned long)a[0]);
+        break;
+    case O::RastSetAlphaRef: gRasterizer->SetAlphaTestingRefValue(f[0], (unsigned long)a[0]);
+        break;
+    case O::RastSetVSyncPref: gRasterizer->SetWaitForVSync(SETTINGS.mWaitForVSync, (unsigned long)a[0]);
+        break;
+    case O::RastSetWaterRipple: gRasterizer->SetWaterRippleEffect(f[0], f[1], f[2]);
+        break;
+    case O::ScreenModeCount: return gRasterizer->GetScreen((unsigned long)a[0])->GetModeCount();
+    case O::ScreenCurrentMode: *(GEVideoMode*)a[1] = gRasterizer->GetScreen((unsigned long)a[0])->GetCurrentMode();
+        break;
+    case O::ScreenMode: *(GEVideoMode*)a[2] = gRasterizer->GetScreen((unsigned long)a[0])->GetMode((unsigned long)a[1]);
+        break;
+    case O::ScreenSetMode: gRasterizer->GetScreen((unsigned long)a[0])->SetMode((unsigned long)a[1]);
+        break;
+    case O::ScreenCapture: return gRasterizer->GetScreen(SCREEN_ID)->Capture(gGameWindow, SETTINGS.GetFullScreen());
+    case O::ScreenReleaseWindow: gRasterizer->GetScreen(SCREEN_ID)->Release(gGameWindow);
+        break;
+    case O::ScreenRestoreOriginalMode: gRasterizer->GetScreen(SCREEN_ID)->SetMode(sOriginalVideoMode);
+        break;
+    case O::SaveOriginalVideoMode: sOriginalVideoMode = gRasterizer->GetScreen(SCREEN_ID)->GetCurrentModeIndex();
+        break;
+    case O::ScreenDesktopRect: *(GERectangle*)a[0] = gRasterizer->GetScreen(SCREEN_ID)->GetDesktopRectangle();
+        break;
+    case O::Screen32BitDevice: return gRasterizer->GetScreen(SCREEN_ID)->Get32BitDeviceSupport();
+    case O::Screen32BitTexture: return gRasterizer->GetScreen(SCREEN_ID)->Get32BitTextureSupport();
+    case O::DebugVideoModeActive: ESDebugOut("!::EESetVideoMode: Requested video mode is already active.\n");
+        break;
+    case O::DebugVideoModeChanged: ESDebugOut("!::EESetVideoMode: Video mode changed to %ldx%ldx%ld at %ldHz.\n", ((GEVideoMode*)a[0])->mWidth, ((GEVideoMode*)a[0])->mHeight, ((GEVideoMode*)a[0])->mBitCount, ((GEVideoMode*)a[0])->mRefreshRate);
+        break;
+    case O::CreateEffectBatchBuffers: CreateEffectBatchBuffers();
+        break;
+    case O::DeleteEffectBatchBuffers: DeleteEffectBatchBuffers();
+        break;
+    case O::NewRoTerrain: gU56535C = new EEROTerrain;
+        break;
+    case O::NewRoGroundShadows: gU565358 = new EEROGroundShadows;
+        break;
+    case O::NewRoUnits: gU565354 = new EEROUnits;
+        break;
+    case O::NewRoWater: gU565350 = new EEROWater;
+        break;
+    case O::NewRoEffects: gU565360 = new EEROEffects;
+        break;
+    case O::DeleteRoWater: delete std::exchange(gU565350, nullptr);
+        break;
+    case O::DeleteRoGroundShadows: delete std::exchange(gU565358, nullptr);
+        break;
+    case O::DeleteRo4C: delete std::exchange(gU56534C, nullptr);
+        break;
+    case O::DeleteRoTerrain: delete std::exchange(gU56535C, nullptr);
+        break;
+    case O::DeleteRoUnits: delete std::exchange(gU565354, nullptr);
+        break;
+    case O::DeleteRoEffects: delete std::exchange(gU565360, nullptr);
+        break;
+    case O::DeleteTextureManager: delete std::exchange(gTextureManager, nullptr);
+        break;
+    case O::DeleteModelManager: delete std::exchange(gModelManager, nullptr);
+        break;
+    case O::ModelsRemoveAll: gModelManager->RemoveAllModels();
+        break;
+    case O::TexturesRemoveAll: gTextureManager->RemoveAllTextures();
+        break;
+    case O::TexturesRefreshAll: return gTextureManager->RefreshAllTextures();
+    case O::EffectTextureCount: return (int64_t)gU4E8EF0.size();
+    case O::EffectTextureDereference: gU4E8EF0[a[0]]->Dereference();
+        break;
+    case O::UStrNew: return P64(new UString);
+    case O::UStrFree: delete (UString*)p;
+        break;
+    case O::UStrFromW: USTR = (const char*)*(UWideString*)a[0];
+        break;
+    case O::FontCreate: *kFonts[a[0]] = UIFontTable::FindOrCreateFont(USTR, (unsigned long)a[1], 2, (unsigned long)a[2]);
+        break;
+    case O::FontAt: return P64(*kFonts[a[0]]);
+    case O::FontDereference: (*kFonts[a[0]])->Dereference();
+        break;
+    case O::PersistChecksum: FSPersistentList::RegisterPersistent(new EEPChecksum(true));
+        break;
+    case O::PersistGeneric2: FSPersistentList::RegisterPersistent(new EEPTGeneric<unsigned long>(2));
+        break;
+    case O::PersistMap: FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEMap>(4));
+        break;
+    case O::PersistPoint3: FSPersistentList::RegisterPersistent(new EEPTRestorable<GE3DPoint>(GE3DPoint(), 3));
+        break;
+    case O::PersistPlayers: FSPersistentList::RegisterPersistent(new EEPPlayerHelper);
+        break;
+    case O::PersistScenario: FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEScenarioManager>(6));
+        break;
+    case O::PersistWorld: FSPersistentList::RegisterPersistent(new EEPWorldHelper);
+        break;
+    case O::PersistMultiplayer: FSPersistentList::RegisterPersistent(new EEPMultiplayerHelper);
+        break;
+    case O::PersistEffects: FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEEffectManager>(0xa));
+        break;
+    case O::PersistCalamity: FSPersistentList::RegisterPersistent(new EEPCalamityHelper);
+        break;
+    case O::PersistEnvironment: FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEEnvironmentManager>(0xc));
+        break;
+    // the media
+    case O::UiLoadIcons: gEEGameUI.mLoadIcons();
+        break;
+    case O::UiUnloadIcons: gEEGameUI.mUnloadIcons();
+        break;
+    case O::UiReloadIcons: gEEGameUI.mReloadIcons();
+        break;
+    case O::UiMiniMapLoadMedia: gEEGameUI.mMiniMapLoadMedia();
+        break;
+    case O::UiMiniMapUnloadMedia: gEEGameUI.mMiniMapUnloadMedia();
+        break;
+    case O::IconsLoaded: return sIconsLoaded == true;
+    case O::CreatePlaneModels: CreatePlaneModels();
+        break;
+    case O::ReleasePlaneModels: ReleasePlaneModels();
+        break;
+    case O::RoUnitsLoadMedia: EEROUnits::LoadMedia();
+        break;
+    case O::RoUnitsReleaseMedia: EEROUnits::ReleaseMedia();
+        break;
+    case O::RoSkyCreate: EEROTerrain::CreateSkyModel();
+        break;
+    case O::RoSkyRelease: EEROTerrain::ReleaseSkyModels();
+        break;
+    case O::RoShadowCreate: EEROGroundShadows::CreateShadowModel();
+        break;
+    case O::RoShadowRelease: EEROGroundShadows::ReleaseShadowModel();
+        break;
+    case O::ButtonsReload: EEButtonObject::Reload();
+        break;
+    // the data paths and folders
+    case O::NewFsPath: return P64(new FSPath);
+    case O::FsPathAddArchive: ((FSPath*)p)->AddArchive(*(FSArchive*)a[0], true);
+        break;
+    case O::FsPathAddDirectory: ((FSPath*)p)->AddDirectory(*(FSFileSpec*)a[0], true);
+        break;
+    case O::FileSpecSetDirStartupSub: SPEC->SetDirectory(gStartupDirectory + kStartupFolders[a[0]]);
+        break;
+    case O::FileSpecSetArchiveName: SPEC->SetFile("data" + gU530B88);
+        break;
+    case O::FileSpecSetCivilizationDir: SPEC->SetDirectory(EEGetCivilizationDirectory(true));
+        break;
+    case O::FileSpecSetUserCivilizationsDir: SPEC->SetDirectory(gStartupDirectory + "Users\\default\\" + (const char*)*(UWideString*)a[0] + "\\");
+        break;
+    case O::FileSpecIsDirectory: return SPEC->IsDirectory();
+    case O::FileSpecCreateDirectory: SPEC->CreateDirectory();
+        break;
+    case O::DataArchivePresent: return PlatPathGetAttributes(gStartupVolume + gStartupDirectory + "data\\data" + gU530B88) != PLAT_ATTR_INVALID;
+    case O::DataPathPresent: return gDataPath != NULL;
+    case O::DataPathDereference: gDataPath->Dereference();
+        break;
+    case O::CivPathPresent: return gCivilizationDataPath != NULL;
+    case O::CivPathDereference: gCivilizationDataPath->Dereference();
+        break;
+    case O::SetDataPath: gDataPath = (FSPath*)p;
+        break;
+    case O::SetCivPath: gCivilizationDataPath = (FSPath*)p;
+        break;
+    // the threads
+    case O::NewMusicManager: gMusicManager = new EEMusicManager(&gConductor->GetConductor(), 0);
+        break;
+    case O::MusicManagerPresent: return gMusicManager != NULL;
+    case O::MusicManagerDelete: delete std::exchange(gMusicManager, nullptr);
+        break;
+    case O::MusicStop: gMusicManager->Stop();
+        break;
+    case O::NewMousePointer: gMousePointer = new RTSMousePointer(gMouse, gGameWindow, 0);
+        break;
+    case O::MousePointerPresent: return gMousePointer != NULL;
+    case O::MousePointerPost: gMousePointer->mThread->Post((unsigned long)a[0], NULL, NULL, true);
+        break;
+    case O::MousePointerShown: return gMousePointer->mIsShown;
+    case O::MousePointerShutdown: gMousePointer->Shutdown();
+        break;
+    case O::MousePointerDelete: delete std::exchange(gMousePointer, nullptr);
+        break;
+    case O::MousePointerPostSurface: gMousePointer->mThread->Post(0x405, gRasterizer->GetPrimarySurface(SCREEN_ID), NULL, true);
+        break;
+    case O::NewGraphics: gGraphics = new EEGraphics(gRasterizer, SCREEN_ID, gMouse, gUIManager, 0);
+        break;
+    case O::GraphicsPresent: return gGraphics != NULL;
+    case O::GfxShutdown: gGraphics->Shutdown();
+        break;
+    case O::GfxDelete: delete std::exchange(gGraphics, nullptr);
+        break;
+    case O::GfxPostReleaseScene: gGraphics->PostReleaseScene();
+        break;
+    case O::GfxPostMessage50AAndWait: gGraphics->PostMessage50AAndWait();
+        break;
+    case O::GfxSetSecondarySurface: gGraphics->SetSurface(gRasterizer->GetSecondarySurface(SCREEN_ID));
+        break;
+    case O::NewDataPreLoading: gDataPreLoading = new EEDataPreLoading(0);
+        break;
+    case O::DataPreLoadingPresent: return gDataPreLoading != NULL;
+    case O::PreloadShutdown: gDataPreLoading->Shutdown();
+        break;
+    case O::PreloadDelete: delete std::exchange(gDataPreLoading, nullptr);
+        break;
+    case O::PreloadWaitForQueue: gDataPreLoading->WaitForMessageQueue();
+        break;
+    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, sTimer);
+        break;
+    case O::PhysShutdown: gPhysics->Shutdown();
+        break;
+    case O::PhysDelete: delete std::exchange(gPhysics, nullptr);
+        break;
+    case O::PhysTimerRunning: return gPhysics->mTimerRunning;
+    case O::PhysPostInit: gPhysics->PostInit();
+        break;
+    case O::CommDelete: delete gCommunications;
+        break;
+    case O::CommDeleteDetached: delete std::exchange(gCommunications, nullptr);
+        break;
+    case O::WonNetDeleteDetached: delete std::exchange(gWonNet, nullptr);
+        break;
+    case O::UserInterfaceDelete: delete std::exchange(gUserInterface, nullptr);
+        break;
+    case O::WorldClear: gWorld.Clear();
+        break;
+    case O::GameStateClear: gGameState.Clear();
+        break;
+    case O::SetGameScreenActive: gGameScreenActive = a[0] != 0;
+        break;
+    case O::IsMouseResume: gISMouse->Resume();
+        break;
+    case O::IsMouseSuspend: gISMouse->Suspend();
+        break;
+    case O::IsKeyboardResume: gISKeyboard->Resume();
+        break;
+    case O::IsKeyboardSuspend: gISKeyboard->Suspend();
+        break;
+    // the sound
+    case O::MixerGet: return SEMixer::GetMixer(0, gConductor);
+    case O::MixerUse: return SEMixer::UseMixer(gConductor);
+    case O::ConductorSetChannelGroups: return gConductor->GetConductor().SetChannelGroupCount((unsigned long)a[0]);
+    case O::ConductorSetState: return gConductor->GetConductor().SetConductorState((long)a[0]);
+    case O::ConductorSetReverb: gConductor->GetConductor().SetReverb((long)a[0]);
+        break;
+    case O::ConductorSetVolumePref: gConductor->GetConductor().SetVolume(SETTINGS.mMusicVolume);
+        break;
+    case O::ConductorSetIntensity0: gConductor->GetConductor().SetIntensity(0, false);
+        break;
+    case O::StrFormatMusicFolder: sprintf(WSTR, "%s%s%s", (const char*)gStartupVolume, (const char*)gStartupDirectory, "Data\\Music\\");
+        break;
+    case O::ConductorSetMusicFolder: return gConductor->GetConductor().SetMusicFolder(WSTR);
+    case O::NewSoundManager: gSoundManager = SESoundManager::Create(gDataPath, gConductor, 50, 0);
+        break;
+    case O::SoundMaxChannels: return gSoundManager->GetMaxChannels();
+    case O::SoundSetMaxChannels: gSoundManager->SetMaxChannels((unsigned long)a[0]);
+        break;
+    case O::SoundSetMasterVolumePref: gSoundManager->SetMasterVolume(SETTINGS.mSoundVolume);
+        break;
+    case O::SoundSetCategoryPriority: gSoundManager->SetCategoryPriority((unsigned long)a[0], (long)a[1]);
+        break;
+    case O::SoundSetCategoryPercentage: gSoundManager->SetCategoryPercentage((unsigned long)a[0], f[0]);
+        break;
+    case O::SoundSetLatency: gSoundManager->SetLatency((unsigned long)a[0]);
+        break;
+    case O::SoundStopOneShots: gSoundManager->StopAllOneShotSounds();
+        break;
+    case O::SoundManagerDestroy: SESoundManager::Destroy(std::exchange(gSoundManager, nullptr));
+        break;
+    case O::SoundPoolDump: SESoundManager::DumpMemoryPoolInfo();
+        break;
+    case O::SoundPoolCleanup: SESoundManager::CleanupMemoryPoolAndDestroyCriticalSections();
+        break;
+    case O::SoundsPoolInit: SESoundManager::InitializeSoundsPool((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2]);
+        break;
+    case O::SoundLoad: return gSoundManager->Load(USTR, (unsigned long)a[0], 1);
+    case O::SoundPlaySample: return gSoundManager->Play((unsigned long)a[0], 1.0f, 0.0f, 1.0f, false, NULL);
+    case O::SoundRegisterOneShot: gSoundManager->RegisterOneShotSound((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::UStrHasSoundExtension: return USTR.GetLength() > 4 && (USTR.GetSubstring(USTR.GetLength() - 4, 4).EqualsIgnoreCase(".wav", 4) || USTR.GetSubstring(USTR.GetLength() - 4, 4).EqualsIgnoreCase(".mp3", 4));
+    case O::UStrWithExtension: USTR = *(const UString*)a[0] + (a[1] ? ".mp3" : ".wav");
+        break;
+    case O::AmbientStop: gAmbientSoundManager.StopSounds();
+        break;
+    case O::AmbientSetEnabled: gAmbientSoundManager.SetEnabled(a[0] != 0);
+        break;
+    case O::AmbientLoad: gAmbientSoundManager.Load(*SPEC);
+        break;
+    case O::AmbientClearSounds: gAmbientSoundManager.ClearSounds();
+        break;
+    // the database
+    case O::LoadRules: EELoadRules(gDataPath);
+        break;
+    case O::DumpRules: EEDumpRules();
+        break;
+    case O::DbFindTable: return EEDbFindFile(gDataPath, *kDbTableNames[a[0]], *(FSFileSpec**)a[1]);
+    case O::DbFindEvents: return EEDbFindFile(gDataPath, kDbEventsFile, *(FSFileSpec**)a[0]);
+    case O::DbFindEffects: return EEDbFindFile(gDataPath, kDbEffectsFile, *(FSFileSpec**)a[0]);
+    case O::DbFindAmbientSounds: return EEDbFindFile(gDataPath, kDbAmbientSoundsFile, *(FSFileSpec**)a[0]);
+    case O::LoadEvents: return EEEvent::LoadEvents(*SPEC, *(FSFileSpec*)a[0]);
+    case O::TerrainColorsLoad: return EETerrainColorTable::Load();
+    case O::DbLoadStartingResources: return EEStartingResources::Load(SPEC);
+    case O::DbLoadUnitBehavior: return EEUnitBehavior::Load(SPEC);
+    case O::DbLoadSounds: return EESoundObject::LoadTable(SPEC);
+    case O::DbLoadGraphics: return EEGraphicObject::LoadTable(SPEC);
+    case O::DbLoadGfxEffects: return EEGraphicEffect::LoadTable(SPEC);
+    case O::DbLoadMusic: return EEMusicObject::LoadTable(SPEC);
+    case O::DbLoadWorld: return gWorldTable.Load(SPEC);
+    case O::DbLoadFamily: return EETerrainTypeTable::LoadDamageTables(SPEC);
+    case O::DbLoadButtons: return EEButtonObject::Load(SPEC);
+    case O::DbLoadTechTree: return gTechTree.Load(*SPEC);
+    case O::DbLoadAnimals: return EEAnimal::Load(SPEC);
+    case O::DbLoadColorTable: return EEColorTable::Load(SPEC);
+    case O::DbLoadAIUnitTargeting: return EEAIUnitTargetingTable::Load(SPEC);
+    case O::DbLoadTerrain: return EETerrainTable::Load(SPEC);
+    case O::DbLoadTerrainType: return EETerrainTypeTable::Load(SPEC);
+    case O::DbLoadCliffTerrain: return EECliffTerrainTable::Load(SPEC);
+    case O::DbLoadCivPowers: return gCivPowersManager.Load(SPEC);
+    case O::DbLoadCivilization: return gCivilizationManager.Load(SPEC);
+    case O::DbLoadWeaponToHit: return EEToHitTable::Load(SPEC);
+    case O::DbLoadCalamity: return EECalamityManager::GetInstance()->LoadCalamityClasses(SPEC);
+    case O::DbLoadUnitSet: return gUnitSetManager.Load(SPEC);
+    case O::DbLoadAreaEffect: return gAEManager.Load(SPEC);
+    case O::DbLoadUpgrade: return EEUCUpgradeTable::Load(SPEC);
+    case O::DbLoadCPBehavior: return EECPBehavior::Load(SPEC);
+    case O::DbLoadGameVariant: return EEGameVariant::Load(SPEC);
+    case O::DbLoadPremadeCivs: return gCivilizationManager.LoadPremadeCivilizations(SPEC);
+    case O::UiInitialize: return UIInitialize();
+    case O::GfxEffectsSortMedia: EEGraphicEffect::SortMediaByKind();
+        break;
+    case O::TileSetUnitListPool: EETile::SetUnitListPoolSize((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::TileReleaseUnitListPool: EETile::ReleaseUnitListPool();
+        break;
+    case O::DoppelgangerSetPool: gDoppelgangerManager.SetPoolSize((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::DoppelgangerSetComplexPool: gDoppelgangerManager.SetComplexPoolSize((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::DoppelgangerRelease: gDoppelgangerManager.Release();
+        break;
+    case O::PathManagerClear: gPathManager.Clear();
+        break;
+    case O::ReportLeakingUnits: EEReportLeakingUnits();
+        break;
+    case O::UnitActionDeleteScripts: EEUnitAction::DeleteScripts();
+        break;
+    case O::ReleaseUnitClasses: EEUnitClass::ReleaseUnitClasses();
+        break;
+    case O::AnimalsUnload: EEAnimal::Unload();
+        break;
+    case O::DamageTablesClear: EETerrainTypeTable::ClearDamageTables();
+        break;
+    case O::CalamityClassesDestroy: EECalamityManager::GetInstance()->DestroyCalamityClasses(a[0] != 0);
+        break;
+    case O::DatabaseObjectsClear: gDatabaseObjects.Clear();
+        break;
+    case O::ButtonsUnload: EEButtonObject::Unload();
+        break;
+    case O::GfxEffectsUnloadTable: EEGraphicEffect::UnloadTable();
+        break;
+    case O::DeleteMediaTable: EEDeleteMediaTable();
+        break;
+    case O::MusicObjectsClear: EEMusicObject::ClearAll();
+        break;
+    case O::SoundObjectsUnloadTable: EESoundObject::UnloadTable();
+        break;
+    case O::ColorTableUnload: EEColorTable::Unload();
+        break;
+    case O::TargetingTableUnload: EEAIUnitTargetingTable::Unload();
+        break;
+    case O::TerrainTableUnload: EETerrainTable::Unload();
+        break;
+    case O::TerrainColorsUnload: EETerrainColorTable::Unload();
+        break;
+    case O::TerrainTypesUnload: EETerrainTypeTable::Unload();
+        break;
+    case O::CliffTerrainUnload: EECliffTerrainTable::Unload();
+        break;
+    case O::UpgradeTableUnload: EEUCUpgradeTable::Unload();
+        break;
+    case O::UnitBehaviorUnload: EEUnitBehavior::Unload();
+        break;
+    case O::StartingResourcesUnload: EEStartingResources::Unload();
+        break;
+    case O::GameVariantUnload: EEGameVariant::Unload();
+        break;
+    case O::WorldTableClear: gWorldTable.Clear();
+        break;
+    case O::TechTreeUnloadAll: gTechTree.UnloadAll();
+        break;
+    case O::CalamityManagerDestroy: USingleton<EECalamityManager>::DestroyInstance();
+        break;
+    case O::DeleteResource: delete gResource;
+        break;
+    case O::ComplexUnitReleasePool: EEComplexUnit::ReleasePool();
+        break;
+    case O::NodePoolDumpStats: UList<EEComplexUnit*>::sNodePool.DumpStats(false);
+        break;
+    // the game objects
+    case O::RandomMapInitialize: EERandomMap::Initialize(EEStartupDirectorySpec());
+        break;
+    case O::LobbyOptionsSetDefaults: gGameOptions.SetDefaults();
+        break;
+    case O::WorldOptionsSetDefaults: gWorld.mGameOptions.SetDefaults();
+        break;
+    case O::InitPhysicsModels: EEInitPhysicsModels();
+        break;
+    case O::FreePhysicsModels: EEFreePhysicsModels();
+        break;
+    case O::ClearRandomMapGenerators: EEClearRandomMapGenerators();
+        break;
+    case O::NewMouse: gMouse = new EEMouse;
+        break;
+    case O::MousePresent: return gMouse != NULL;
+    case O::MouseLoad: return gMouse->Load(gRasterizer->GetScreen(SCREEN_ID));
+    case O::MouseRelease: gMouse->Release();
+        break;
+    case O::DeleteMouse: delete std::exchange(gMouse, nullptr);
+        break;
+    case O::MouseSetWindowBounds: gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
+        break;
+    case O::MouseSetPositionXY: gMouse->SetPosition(GE2DPoint(f[0], f[1]));
+        break;
+    case O::MouseSetSensitivityPref: gMouse->SetSensitivity(SETTINGS.mMouseSensitivity);
+        break;
+    case O::CreateUnitClasses: EEUnitClass::CreateUnitClasses();
+        break;
+    case O::TechBuildUnitClassInfo: EETechTree::BuildUnitClassInfo();
+        break;
+    case O::NewUIManager: gUIManager = gEEGameUI.mNewManager(gRasterizer, SETTINGS.GetScreenMode() + 1, SCREEN_ID, "db\\");
+        break;
+    case O::DeleteUIManager: delete std::exchange(gUIManager, nullptr);
+        break;
+    case O::UiSetLeftHandedPref: UIManager::SetMouseLeftHanded(SETTINGS.mRightHandMouseOrientation == false);
+        break;
+    case O::UiSetBorderColors: UIControl::SetBorderColors(GEColor(f[0], f[1], f[2]), GEColor(f[3], f[4], f[5]));
+        break;
+    case O::NewArtificialIntelligence: gArtificialIntelligence = new EEArtificialIntelligence;
+        break;
+    case O::ArtificialIntelligencePresent: return gArtificialIntelligence != NULL;
+    case O::DeleteArtificialIntelligence: delete std::exchange(gArtificialIntelligence, nullptr);
+        break;
+    case O::NewCheatCodes: gCheatCodes = new EECheatCodes;
+        break;
+    case O::CheatCodesPresent: return gCheatCodes != NULL;
+    case O::DeleteCheatCodes: delete std::exchange(gCheatCodes, nullptr);
+        break;
+    case O::NewGameTimer: sTimer = new TMTimer(0, 0, true);
+        break;
+    case O::GameTimerPresent: return sTimer != NULL;
+    case O::DeleteGameTimer: delete std::exchange(sTimer, nullptr);
+        break;
+    case O::ContinentsShutdown: EEAIContinentManager::Shutdown();
+        break;
+    case O::MiniMapPresent: return gMiniMap != NULL;
+    case O::AeManagerClear: gAEManager.Clear();
+        break;
+    case O::CpOnAttackPlayer: EECPUnitsOnAttackPlayer((EEComputerPlayer*)p, (long)a[0], a[1] != 0);
+        break;
+    default: return EEStartupOpNext(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PrefMaxSounds: return gGamePreferences.mSettings.GetMaxNumberOfSounds();
+    default: return EEStartupOpNextF(inOp, p, a, f);
+    }
+}
+
+// the graphics bodies' (EEGraphics.cpp)
+int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EEGraphicsOp(inOp, p, a, f);
+}
+
+double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
+    return 0.0;
 }
 
 // The deferred COMDATs at the end of the unit (0x14494d..0x14622a: the inline-class deleting dtors and every template

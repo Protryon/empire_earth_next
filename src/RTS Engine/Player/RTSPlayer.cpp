@@ -1,7 +1,8 @@
 // C:\EEX\RTS Engine\Player\RTSPlayer.cpp (file name inferred: no __FILE__; the six "RTSPlayer-*" key chains). The
-// engine-side player (RTTI RTSPlayer, vtable 0x442b5c; class in ee/EEPlayer.h): 0x16ef03..0x16f892 (its key chains
-// to the push_back COMDAT 0x16f866; EESEEvents.cpp's ShowTab 0x16f892 opens the next unit). Unit flags: the exe's
-// module set.
+// engine-side player (RTTI RTSPlayer, vtable 0x442b5c; class in ee/EEPlayer.h). LLE round 8: the unit list's bodies
+// are Rust (rust/crates/ee_game/src/rts/units.rs: the pending and killed units, the id buckets, the checksum, the
+// units' save order, Reset); the members forward, and the shims below are the C++ calls those bodies make (one
+// statement each). The bodies' history: git history before LLE round 8.
 
 #include <windows.h>
 
@@ -11,7 +12,9 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitHandle.h"
 #include "lle/NEMessageID.h"
+#include "rust/game/rts.h"
 
+static_assert(sizeof(RTSUnitBucket) == sizeof(EeRtsUnitBucket), "a bucket");
 
 // Creates an empty player with no units
 RTSPlayer::RTSPlayer()
@@ -34,143 +37,15 @@ RTSPlayer::~RTSPlayer()
     EEUnitStoreClearPlayer(this);   // New (R5b.4): its list's records leave the unit store (ee/EEUnitStore.h)
 }
 
-// Adds every pending unit to the player, optionally releasing the pending list afterwards
-void RTSPlayer::AddPendingUnits(bool inKeepID, bool inRelease)
-{
-    for (unsigned long i = 0; i < this->mPendingUnits.size(); ++i)
-        this->AddUnit(this->mPendingUnits[i], inKeepID);
-    if (inRelease)
-        this->ReleasePendingUnits();
-}
-
-// Adds a unit to the player; unless it keeps its id, gives it a new unit id (player id in the top byte) and
-// puts its sight on its tile
-void RTSPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
-{
-    if (!inKeepID) {
-        inUnit->mUnitID = this->mPlayerID * 0x1000000 + this->mNextUniqueID;
-        this->mNextUniqueID = (this->mNextUniqueID + 1) & 0xffffff;
-        if (inUnit->mTileNode != NULL)
-            inUnit->SightOnHere();
-    }
-    this->InsertUnit(inUnit);
-}
-
-// Takes every unit queued as killed out of the player's unit list and hash buckets, then invalidates and
-// releases it
-void RTSPlayer::RemoveKilledUnits()
-{
-    for (unsigned long i = 0; i < this->mKilledUnits.size(); i++) {
-        RTSUnit* theUnit = this->mKilledUnits[i];
-        unsigned long theBucket = theUnit->mUnitID & 0x7f;
-        if (theUnit->mTileNode != NULL && this->mSaveVisMap)
-            theUnit->SightOffHere();
-        this->RemovingUnit(theUnit);
-        if (this->mFirstUnit == theUnit)
-            this->mFirstUnit = static_cast<EEUnit*>(theUnit->mNext);
-        if (this->mLastUnit == theUnit)
-            this->mLastUnit = static_cast<EEUnit*>(theUnit->mPrevious);
-        this->mUnitBuckets[theBucket].mCount--;
-        if (this->mUnitBuckets[theBucket].mCount != 0 && this->mUnitBuckets[theBucket].mFirst == theUnit)
-            this->mUnitBuckets[theBucket].mFirst = static_cast<EEUnit*>(theUnit->mNext);
-        else if (this->mUnitBuckets[theBucket].mCount == 0)
-            this->mUnitBuckets[theBucket].mFirst = NULL;
-        theUnit->RemoveFromList();
-        EEUnitStoreRemove(theUnit);   // New (R5b.4): out of the list, out of the unit store (ee/EEUnitStore.h)
-        this->UnitRemoved(theUnit);
-        this->mUnitCount--;
-        theUnit->Invalidate();
-        theUnit->Dereference();
-    }
-    this->RemovalsDone();
-    this->mKilledUnits.clear();
-}
-
-// Releases and empties the pending units
-void RTSPlayer::ReleasePendingUnits()
-{
-    for (unsigned long i = 0; i < this->mPendingUnits.size(); ++i)
-        this->mPendingUnits[i]->Dereference();
-    this->mPendingUnits.clear();
-}
-
-// Adds the player's name, id, unit count and next unit id to the sync checksum
-void RTSPlayer::GetChecksum(ESChecksum& ioChecksum)
-{
-    unsigned long theChecksum = this->mPlayerID * 10 + this->mUnitCount + this->mNextUniqueID;
-    this->mName.GetChecksum(ioChecksum);
-    ioChecksum.AddChecksum("RTSPlayer-HashChecksum", 0);
-    ioChecksum.AddChecksum("RTSPlayer", theChecksum);
-}
-
-// Returns a pending unit by index, NULL past the end
-RTSUnit* RTSPlayer::GetPendingUnit(unsigned long inIndex)
-{
-    RTSUnit* theResult = NULL;
-    if (inIndex < this->mPendingUnits.size())
-        theResult = this->mPendingUnits[inIndex];
-    return theResult;
-}
-
-// Finds one of the player's units by unit id in its hash bucket; NULL if none
-RTSUnit* RTSPlayer::GetUnit(unsigned long inUnitID)
-{
-    unsigned long theBucket = inUnitID & 0x7f;
-    unsigned long theCount = this->mUnitBuckets[theBucket].mCount;
-    RTSUnit* theResult = NULL;
-    RTSUnit* theUnit = this->mUnitBuckets[theBucket].mFirst;
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (theUnit->mUnitID == inUnitID) {
-            theResult = theUnit;
-            break;
-        }
-        theUnit = theUnit->mNext;
-    }
-    return theResult;
-}
-
-// Clears the player's slot, unit list, ids, unit count and vision flags
-void RTSPlayer::Reset()
-{
-    this->mSlot = kSlotNone;
-    this->mFirstUnit = NULL;
-    this->mLastUnit = NULL;
-    this->mNextUniqueID = 0;
-    this->mPlayerID = 0;
-    this->mUnitCount = 0;
-    this->mSeesAll = false;
-    this->mSaveVisMap = false;
-    this->mObserverMode = false;
-}
-
-// Links a referenced unit into the player's unit list beside the other units of its hash bucket
-void RTSPlayer::InsertUnit(RTSUnit* inUnit)
-{
-    unsigned long theBucket = inUnit->mUnitID;
-    inUnit->Reference();
-    RTSRegisterUnit(inUnit);   // New (R5a.4): its id resolves to it from here (ee/EEUnitHandle.h)
-    inUnit->mPlayer = static_cast<EEPlayer*>(this);
-    EEUnitStoreInsert(inUnit, this->mPlayerID, this);   // New (R5b.4): its record, seeded from the object (ee/EEUnitStore.h)
-    this->mUnitCount++;
-    theBucket &= 0x7f;
-    if (this->mFirstUnit == NULL) {
-        inUnit->InsertAfter(NULL);
-        this->mFirstUnit = static_cast<EEUnit*>(inUnit);
-        this->mLastUnit = static_cast<EEUnit*>(inUnit);
-        this->mUnitBuckets[theBucket].mFirst = static_cast<EEUnit*>(inUnit);
-        this->mUnitBuckets[theBucket].mCount = 1;
-    } else if (this->mUnitBuckets[theBucket].mCount == 0) {
-        inUnit->InsertAfter(this->mLastUnit);
-        this->mLastUnit = static_cast<EEUnit*>(inUnit);
-        this->mUnitBuckets[theBucket].mFirst = static_cast<EEUnit*>(inUnit);
-        this->mUnitBuckets[theBucket].mCount = 1;
-    } else {
-        inUnit->InsertAfter(this->mUnitBuckets[theBucket].mFirst);
-        if (inUnit->mNext == NULL)
-            this->mLastUnit = static_cast<EEUnit*>(inUnit);
-        this->mUnitBuckets[theBucket].mCount++;
-    }
-}
+void RTSPlayer::AddPendingUnits(bool inKeepID, bool inRelease) { ee_rts_player_add_pending_units(this, inKeepID, inRelease); }
+void RTSPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID) { ee_rts_player_add_unit(this, inUnit, inKeepID); }
+void RTSPlayer::RemoveKilledUnits() { ee_rts_player_remove_killed_units(this); }
+void RTSPlayer::ReleasePendingUnits() { ee_rts_player_release_pending_units(this); }
+void RTSPlayer::GetChecksum(ESChecksum& ioChecksum) { ee_rts_player_checksum(this, &ioChecksum); }
+RTSUnit* RTSPlayer::GetPendingUnit(unsigned long inIndex) { return static_cast<RTSUnit*>(ee_rts_player_pending_unit(this, inIndex)); }
+RTSUnit* RTSPlayer::GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_player_unit(this, inUnitID)); }
+void RTSPlayer::Reset() { ee_rts_player_reset(this); }
+void RTSPlayer::InsertUnit(RTSUnit* inUnit) { ee_rts_player_insert_unit(this, inUnit); }
 
 // Reads the player's vision flags, ids, color (deriving the shade color), name, units and observer mode;
 // returns the first read error.
@@ -214,64 +89,42 @@ long RTSPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                                     (uint32_t)inMinorVersion);
 }
 
-// Queues a unit for removal unless it is already queued (forced queues it again)
-void RTSPlayer::KillUnit(RTSUnit* inUnit, bool inForce)
-{
-    if (!inUnit->mIsQueuedForDelete || inForce) {
-        inUnit->mIsQueuedForDelete = true;
-        this->mKilledUnits.push_back(inUnit);
-    }
-}
+void RTSPlayer::KillUnit(RTSUnit* inUnit, bool inForce) { ee_rts_player_kill_unit(this, inUnit, inForce); }
+long RTSPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond) { return ee_rts_player_repair_pointers(this, inFirst, inSecond); }
 
-// Repairs the loaded pointers of every unit of the player; always succeeds
-long RTSPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
-{
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        theUnit->RepairPointers(inFirst, inSecond);
-    return 0;
-}
-
-// Writes the player's vision flags, ids, color, name, unit count, units and observer mode; returns the first
-// write error (the body: ee_units rts_player_save.rs `save`)
 long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     RTSPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};
     return ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, this);
 }
 
-// Writes each hash bucket's unit count and units (the first, then the rest from last to second); returns the first
-// write error
-long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    long theResult;
-    unsigned long theTotal = 0;
-    for (long i = 0; i < 0x80; i++) {
-        unsigned long theCount = this->mUnitBuckets[i].mCount;
-        theResult = outFile.Write(theCount);
-        if (theResult != 0)
-            return theResult;
-        unsigned long theSaved = 0;
-        RTSUnit* theUnit = this->mUnitBuckets[i].mFirst;
-        if (theUnit != NULL) {
-            theResult = this->SaveUnit(theUnit, inMajorVersion, inMinorVersion, outFile);
-            theSaved = 1;
-            unsigned long j;
-            for (j = 0; j < theCount - 1; j++)
-                theUnit = theUnit->mNext;
-            // stop at the first failed unit write (each result used to overwrite the previous one)
-            for (j = 0; j < theCount - 1 && theResult == 0; j++) {
-                theResult = this->SaveUnit(theUnit, inMajorVersion, inMinorVersion, outFile);
-                theSaved++;
-                theUnit = theUnit->mPrevious;
-            }
-            if (theResult != 0)
-                return theResult;
-        }
-        theTotal += theSaved;
-    }
-    return theResult;
-}
+long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_rts_player_save_units(this, inMajorVersion, inMinorVersion, &outFile); }
 
 void RTSPlayer::Clear()
 {
+}
+
+
+// The shims units.rs calls (UnitsCpp: the player's side)
+extern "C" {
+EeUnitsRtsPlayerFields* ee_rtspcpp_player_fields(RTSPlayer* inPlayer) { return inPlayer; }
+RTSUnitBucket* ee_rtspcpp_buckets(RTSPlayer* inPlayer) { return inPlayer->mUnitBuckets; }
+EEUnit** ee_rtspcpp_first_slot(RTSPlayer* inPlayer) { return &inPlayer->mFirstUnit; }
+EEUnit** ee_rtspcpp_last_slot(RTSPlayer* inPlayer) { return &inPlayer->mLastUnit; }
+size_t ee_rtspcpp_pending_size(RTSPlayer* inPlayer) { return inPlayer->mPendingUnits.size(); }
+RTSUnit* ee_rtspcpp_pending_at(RTSPlayer* inPlayer, size_t inIndex) { return inPlayer->mPendingUnits[inIndex]; }
+void ee_rtspcpp_pending_clear(RTSPlayer* inPlayer) { inPlayer->mPendingUnits.clear(); }
+size_t ee_rtspcpp_killed_size(RTSPlayer* inPlayer) { return inPlayer->mKilledUnits.size(); }
+RTSUnit* ee_rtspcpp_killed_at(RTSPlayer* inPlayer, size_t inIndex) { return inPlayer->mKilledUnits[inIndex]; }
+void ee_rtspcpp_killed_clear(RTSPlayer* inPlayer) { inPlayer->mKilledUnits.clear(); }
+void ee_rtspcpp_killed_push(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->mKilledUnits.push_back(inUnit); }
+void ee_rtspcpp_add_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, bool inKeepID) { inPlayer->AddUnit(inUnit, inKeepID); }
+void ee_rtspcpp_release_pending(RTSPlayer* inPlayer) { inPlayer->ReleasePendingUnits(); }
+void ee_rtspcpp_removing_unit(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->RemovingUnit(inUnit); }
+void ee_rtspcpp_unit_removed(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->UnitRemoved(inUnit); }
+void ee_rtspcpp_removals_done(RTSPlayer* inPlayer) { inPlayer->RemovalsDone(); }
+long ee_rtspcpp_save_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, unsigned long inMajor, unsigned long inMinor, FSFile* inFile) { return inPlayer->SaveUnit(inUnit, inMajor, inMinor, *inFile); }
+void ee_rtspcpp_name_checksum(RTSPlayer* inPlayer, ESChecksum* ioChecksum) { inPlayer->mName.GetChecksum(*ioChecksum); }
+void ee_rtspcpp_checksum_add(ESChecksum* ioChecksum, const char* inName, unsigned long inValue) { ioChecksum->AddChecksum(inName, inValue); }
+void ee_rtsucpp_store_insert(RTSUnit* inUnit, unsigned long inOwner, RTSPlayer* inPlayer) { EEUnitStoreInsert(inUnit, inOwner, inPlayer); }
 }

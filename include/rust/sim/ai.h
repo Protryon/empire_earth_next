@@ -535,19 +535,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_FOREST_AT = 88;
 /// `EEAreTilesLevel` of the five tiles `out` (a `EeAiUnitsTiles`).
 constexpr static const int32_t EE_AI_UNITS_HOST_TILES_LEVEL = 89;
 
-/// The own unit `a`'s wall path from `from` to `to` (`EeAiUnitsTiles` in `out`) -> the count.
-constexpr static const int32_t EE_AI_UNITS_HOST_WALL_PATH = 90;
-
-/// A wall route's request for the enemy `a` from `from` to `to` (`EeAiUnitsTiles` in `out`; the old request
-/// dropped) -> its handle (0: none).
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_REQUEST = 91;
-
-/// The route `a`: -2 not held, -1 running, else its path's length.
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_STATE = 92;
-
-/// The route `a`'s path into `out` (a `EeAiUnitsTiles`) -> its length; then the route is dropped.
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TAKE = 93;
-
 /// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
 /// computed twice (the shore's GetTilesNextTo and FindPath are captured).
 constexpr static const int32_t EE_AI_UNITS_HOST_TILES_AGAIN = 94;
@@ -585,19 +572,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_T_POP_LIMIT = 106;
 
 /// `gCPBehaviors`
 constexpr static const int32_t EE_AI_UNITS_HOST_T_BEHAVIORS = 123;
-
-/// `gPathManager.RequestPath(a, from, to, (EECPASGFlags*)b, 2, -1, (EeAStarModifier*)c, 1)` (`out` the
-/// `EeAiUnitsTiles` with the ends) -> the request (0: none)
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_NEW = 125;
-
-/// the request `a`'s `mIsDone`, `mPath.size()`, `mPath[b]` (x low, y high), `Dereference()`
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_DONE = 127;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_LEN = 128;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TILE = 129;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_DEREF = 130;
 
 /// the tech node `a`'s researched event; the event `a`'s effect count (-1: no event), its effect `b`; the effect
 /// `a`'s kind (bits 48..63), unit class (16..47) and attribute (0..15) (-1: none)

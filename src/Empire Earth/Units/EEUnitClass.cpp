@@ -86,7 +86,6 @@ static const float kFleeDistanceScale = 1.5f;
 static const float k447AF0 = 0.01f;
 static const float kLargeUnitScale = 1.5f;
 static const float kMinConstructionScale = 0.1f;
-static const float k447AFC = 10.0f;
 static const float kMinWaypointDistanceSquared = 36.0f;
 static const float kMinDamageRoll = 0.05f;
 static const float kMaxDamageRoll = 0.2f;
@@ -314,192 +313,7 @@ void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound,
 // the rally point and hands it the queued goals; returns false at the population cap or with no room
 bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool inArg)
 {
-    GETransformation thePlacement;
-    GETransformation theAdjusted;
-    GEOrientation theOrientation;
-    GE3DPoint theGoalPosition;
-    GE3DPoint theGoalPoint;
-//
-    std::vector<EETileCoordinate> theLineTiles;
-    EEPlayer* thePlayer = inUnit->GetPlayer();
-    EEComplexUnit* theCreated = NULL;
-    unsigned long theQueue = 1;
-    bool theLoaded = false;
-    bool theSuccess = true;
-    bool theHaveGoalPoint = false;
-    long theLimit = thePlayer->GetExtraPopulation(inClass->GetUnitType());
-    theLimit += thePlayer->GetPopulationLimit(0);
-    long theNeeded = thePlayer->GetTotalPopulation(true, false);
-    theNeeded += inClass->GetPopulationCost();
-    if (!(theNeeded > theLimit)) {
-        if ((inUnit->GetUnitClass()->GetUnitType() == kUnitTypeCpMissileBase && inClass->GetCategory() == kUnitCategoryMissile) ||
-            inClass->IsAircraft() || inClass->GetCategory() == kUnitCategoryProjectile) {
-            EeUnitsAtc* theTraffic = inClass->mAirTrafficType != 0 ? thePlayer->mAirTraffic[inClass->mAirTrafficType - 1] : 0;
-            bool theCanLoad;
-            if (theTraffic != NULL) {
-                theNeeded = inClass->mWeight;
-                theCanLoad = ee_units_atc_cargo(theTraffic, 1) + theNeeded <= ee_units_atc_cargo(theTraffic, 0);
-                if (theCanLoad)
-                    theCanLoad = ee_units_atc_free_cargo_weight(theTraffic, inUnit) >= theNeeded;
-            } else {
-                long theCapacity = inUnit->GetUnitClass()->mTransportCapacity;
-                theCanLoad = inClass->mWeight - inUnit->mCargoRoom + theCapacity <= theCapacity;
-            }
-            if (theCanLoad) {
-                thePlacement.SetX(-10000.0f);
-                thePlacement.SetY(-10000.0f);
-                theCreated = inClass->CreateUnitAt(thePlacement, thePlayer->GetPlayerID(), false, inUnit)->mComplexUnit;
-                inUnit->LoadCargo(theCreated, true, 0);
-                theLoaded = true;
-                if (theCreated->GetUnitClass()->mIsParatrooperBomber)
-                    EECreateCarrierAircraft(theCreated, -1);
-            } else {
-                theSuccess = false;
-            }
-        } else {
-            theQueue = inClass->mFamily == kUnitFamilyHelicopter && inUnit->GetUnitClass()->GetUnitType() != kUnitTypeNavyYard ? 2 : 1;
-            long theRings = 1;
-            if (!thePlayer->IsHuman())
-                theRings = 5;
-            if (inUnit->GetQueuedGoal(theQueue) != NULL) {
-                if (this->mUnitType != kUnitTypeAirport) {
-                    inUnit->GetQueuedGoal(theQueue)->GetGoalLocation(theGoalPoint);
-                    theHaveGoalPoint = true;
-                } else {
-                    EEUnitGoal* theGoal = inUnit->GetQueuedGoal(theQueue);
-                    if (theGoal->mKind != kGoalAttackUnit) {
-                        // The original does not set the flag on this branch.
-                        theGoal->GetGoalLocation(theGoalPoint);
-                    } else {
-                        EEUnit* theTarget = EEAttackUnitCast(theGoal)->GetAttackTarget();
-                        if (theTarget == NULL) {
-                            theHaveGoalPoint = false;
-                        } else {
-                            if (theTarget->GetComplexUnit() != NULL && theTarget->GetComplexUnit()->mContainer != NULL)
-                                theTarget->GetComplexUnit()->mContainer->GetPosition(theGoalPoint);
-                            else
-                                theTarget->GetPosition(theGoalPoint);
-                            theHaveGoalPoint = true;
-                        }
-                    }
-                }
-            }
-            bool thePlaced;
-            if ((inClass->mDomains & kMovementSea) != 0)
-                thePlaced = ee_units_uu_dock_ship_placement((const float(*)[3])&theGoalPoint.mX, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit, theHaveGoalPoint, true, (float(*)[4][4])&thePlacement.mMatrix[0][0]);
-            else if ((inClass->mDomains & kMovementSpace) != 0)
-                thePlaced = ee_units_uu_dock_ship_placement((const float(*)[3])&theGoalPoint.mX, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit, theHaveGoalPoint, false, (float(*)[4][4])&thePlacement.mMatrix[0][0]);
-            else
-                thePlaced = ee_units_uu_find_placement((const float(*)[3])&theGoalPoint.mX, 0, (uint64_t)(uintptr_t)inClass, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), theRings, !thePlayer->IsHuman(), false, theHaveGoalPoint, false, (float(*)[4][4])&thePlacement.mMatrix[0][0], (uint64_t)(uintptr_t)inUnit);
-            if (!thePlaced) {
-                theSuccess = false;
-            } else {
-                theCreated = inClass->CreateUnitAt(thePlacement, thePlayer->GetPlayerID(), false, inUnit)->mComplexUnit;
-                if ((inClass->mDomains & kMovementSea) != 0) {
-                    theAdjusted = theCreated->mPhysicalModel.GetLocation();
-                    thePlacement.ConvertToOrientation(theOrientation);
-                    theAdjusted.SetOrientationYPR(theOrientation.GetYaw(), 0.0f, 0.0f);
-                    theCreated->SetTransformation(theAdjusted, true);
-                }
-                if (inClass->FliesOver()) {
-                    theAdjusted = theCreated->mPhysicalModel.GetLocation();
-                    thePlacement.ConvertToOrientation(theOrientation);
-                    theAdjusted.SetOrientationYPR(theOrientation.GetYaw(), 0.0f, 0.0f);
-                    theCreated->SetTransformation(theAdjusted, true);
-                }
-                EEAreaEffect* theEffect = gAEManager.FindEffectAtTile(8, theCreated->GetTileX(), theCreated->GetTileY(),
-                    theCreated->GetPlayer()->GetPlayerID());
-                if (theEffect != NULL && theEffect->mUnit != NULL) {
-                    EEComplexUnit* theOwner = theEffect->mUnit;
-                    GE2DPoint thePoint;
-                    thePoint = GE2DPoint(theOwner->mPhysicalModel.GetLocation().GetX(), theOwner->mPhysicalModel.GetLocation().GetY());
-                    if (theEffect->Covers(theOwner->GetPlayer()->GetPlayerID(), theCreated, thePoint))
-                        theCreated->SetCloakableChain(true);
-                }
-            }
-        }
-        if (theCreated == NULL) {
-            theSuccess = false;
-        } else {
-            if (!theLoaded && inUnit->GetQueuedGoal(theQueue) != NULL) {
-                theCreated->ClearGoalQueue(0);
-                const EEGoalDeque& theGoals = inUnit->GetQueueGoals(theQueue);
-                for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
-                    EEUnitGoal* theGoal;
-                    if ((*i)->Suits(theCreated)) {
-                        if ((*i)->mKind == kGoalBuildRepair) {
-                            theCreated->AddBuildTarget(EEBuildRepairGoalCast(*i)->GetBuildTarget());
-                            continue;
-                        } else if ((*i)->mKind == kGoalLoadGarrison) {
-                            EEUGRust* theLoad = EELoadGarrisonGoalCast(*i);
-                            if (theCreated->GetUnitClass()->mCanGarrison) {
-                                theGoal = theLoad->Clone();
-                                if (theGoal->IsLoadGoal())
-                                    theGoal->AddCreatedUnit(theCreated);
-                                if (theLoad->GetLoadContainer()->mActiveGoal != NULL)
-                                    EELoadGarrisonGoalCast(theLoad->GetLoadContainer()->mActiveGoal)->AddLoadUnit(theCreated);
-                            } else {
-                                if (theLoad->GetLoadContainer() == NULL)
-                                    continue;
-                                theLoad->GetLoadContainer()->GetPosition(theGoalPosition);
-                                theGoal = EEUGRust::NewLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
-                            }
-                        } else {
-                            theGoal = (*i)->Clone();
-                            if (theGoal->IsLoadGoal())
-                                theGoal->AddCreatedUnit(theCreated);
-                        }
-                    } else {
-                        (*i)->GetGoalLocation(theGoalPosition);
-                        theGoal = EEUGRust::NewLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
-                    }
-                    if (theGoal == NULL)
-                        continue;
-                    if (theGoal->mKind == kGoalLocation) {
-                        theGoal->GetGoalLocation(theGoalPosition);
-                        EEGetTileLine(theCreated->GetTileX(), theCreated->GetTileY(), UMFloor(theGoalPosition.GetX()),
-                                   UMFloor(theGoalPosition.GetY()), &theLineTiles, 1, 1);
-                        long theIndex;
-                        for (theIndex = (long)theLineTiles.size() - 1; theIndex >= 0; --theIndex)
-                            if (ee_units_uu_can_stand_on(theLineTiles[theIndex].mX, theLineTiles[theIndex].mY, (uint64_t)(uintptr_t)theCreated))
-                                break;
-                        if (theIndex >= 0) {
-                            long theRings = UMFloatToLong(theCreated->GetUnitClass()->mOuterCollisionSphere * k447AFC);
-                            GE3DPoint theOrigin = inUnit->mPhysicalModel.GetLocation().GetPosition();
-    //
-    //
-                            if (ee_units_uu_find_placement((const float(*)[3])&theOrigin.mX, (uint64_t)(uintptr_t)theCreated, 0, theLineTiles[theIndex].mX, theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, (float(*)[4][4])&theAdjusted.mMatrix[0][0], 0))
-                                static_cast<EEUGRust*>(theGoal)->SetLocation(theAdjusted.GetPosition());
-                        }
-                    }
-                    if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
-                        EEUnit* theTarget = EEAttackUnitCast(theGoal)->GetAttackTarget();
-                        if (theCreated->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, true)) {
-                            EEUnitGoal* theGather = EEUGRust::NewGather(theTarget, 0, true);
-                            delete theGoal;
-                            theGoal = theGather;
-                            theCreated->SetBehavior(EEUnitBehavior::sTable[5]);
-                        }
-                    }
-                    theCreated->QueueGoal(theGoal, 0);
-                }
-                if (theCreated->mGoalState != NULL) {
-                    theCreated->StartAction(theCreated->mGoalState->GetStartAction());
-                    theCreated->GetUnitClass()->ActionChanged(theCreated);
-                }
-            }
-            if (thePlayer == gWorld.mPlayers[gWorld.mCurrentPlayer]) {
-                EESoundObject* theSound = theCreated->GetStats()->mCreationSound;
-                if (theSound != NULL)
-                    gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
-            }
-            if (inArg)
-                inUnit->PlayEffect(100000);
-        }
-    } else {
-        theSuccess = false;
-    }
-    return theSuccess;
+    return ee_units_uc_produce(this, inUnit, inClass, inArg);   // uc_produce.rs
 }
 
 // CreateUnitAtTile's and CreateUnitAtPoint's body: a unit of the class for a player at a map point (its tile the
@@ -1023,55 +837,7 @@ void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>
 // The heal effect is drawn between the two units or on the target, by the graphic effect's kind
 void EEUnitClass::Heal(EEComplexUnit* inUnit)
 {
-    EEEffectHandle theHandle;
-    theHandle.mValue = 0;
-    EEUGRust* theGoal = EEHealGoalCast(inUnit->GetGoal());   // (the original cast any goal)
-    inUnit->DropPath();
-    if (theGoal == NULL || !EECombatHealInRange(inUnit, theGoal->GetHealTarget()))
-        return;
-    inUnit->SetAnimation(3, -1, 0);
-    EEGraphicEffect* theEffect = inUnit->mUnitClass->mHealEffect;
-    if (theEffect == NULL)
-        return;
-    switch (static_cast<unsigned long>(theEffect->mKind)) {
-    case 0x14:
-    case 0x16:
-    case 0x21:
-    case 0x26:
-    case 0x40:
-        if (::gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theGoal->GetHealTarget(), theEffect, &theHandle) != 0)
-            return;
-        break;
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-    case 9:
-    case 0xa:
-    case 0xd:
-    case 0xe:
-    case 0xf:
-    case 0x10:
-    case 0x12:
-    case 0x1e:
-    case 0x23:
-    case 0x24:
-    case 0x27:
-    case 0x28:
-    case 0x29:
-    case 0x2b:
-    case 0x2c:
-    case 0x3a:
-    case 0x3b:
-        if (::gWorld.GetEffectManager()->CreateUnitEffect(theGoal->GetHealTarget(), theEffect, &theHandle, false, 0, 0) != 0)
-            return;
-        break;
-    }
-    if (inUnit->mHealEffect != theHandle)
-        inUnit->mHealEffect = theHandle;
+    ee_units_uc_body(EE_UNITS_UC_DO_HEAL, this, inUnit);   // uc_body.rs
 }
 
 // Sets up a new unit: full hit points, ammunition, behaviour, heal timer, standing still and idle
@@ -1466,8 +1232,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         return theTile != NULL;
     }
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
-    case EE_UNITS_CLS_MV_DIRECTION_TO:
-        return ee_units_uu_tile_direction(inUnit->GetTileX(), inUnit->GetTileY(), theOther->GetTileX(), theOther->GetTileY());
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
     case EE_UNITS_CLS_MV_GOAL: {
         const void* theMembers[4] = {inUnit->mGoalState, inUnit->mActiveGoal, inUnit->mBlockingUnit, inUnit->mLastAttacker};
@@ -1524,16 +1288,8 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         if (inUnit->mInitialContactLocation != thePoint)
             inUnit->mInitialContactLocation = thePoint;
         return 0;
-    case EE_UNITS_CLS_MV_REQUEST_PATH: {
-        EeAStarModifier* theModifier = NULL;
-        if (inUnit->mPlayer->AvoidsEnemies(inUnit))
-            theModifier = ee_astar_modifier_new_enemy_avoidance((uint32_t)inUnit->mPlayer->GetPlayerID());
-        theGoal->mPathAttempts++;
-        gPathManager.RequestUnitPath(inUnit, inUnit->GetTile(), EETileCoordinate((long)io->a, (long)io->b), false,
-                                     (long)inC, (inD & 1) != 0, theModifier, (inD & 2) != 0);
-        ee_astar_modifier_release(theModifier);
-        return 0;
-    }
+    // PathToGoal's request: Rust (cls_move_host.rs) but the player's virtual
+    case EE_UNITS_CLS_MV_AVOIDS_ENEMIES: return inUnit->mPlayer->AvoidsEnemies(inUnit);
     case EE_UNITS_CLS_CR_TAG: {   // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)
         EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
         if (theTags == NULL || theTags->mPoints.size() == 0)
@@ -1698,39 +1454,7 @@ void EEUnitClass::CreateRemainsUnit(EEComplexUnit* inUnit)
 // Spawns the class's death unit where the unit (or its container) was and launches it at that ground point
 void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
 {
-    EEUnitClass* theClass = this->mDeathSpawnClass;
-    if (theClass == NULL)
-        return;
-    GETransformation theTransformation(false);
-    long theX, theY;
-    if (inUnit->mContainer == NULL) {
-        theTransformation = inUnit->mPhysicalModel.GetLocation();
-        theX = inUnit->GetTileX();
-        theY = inUnit->GetTileY();
-    } else {
-        theTransformation = inUnit->mContainer->mPhysicalModel.GetLocation();
-        theX = inUnit->mContainer->GetTileX();
-        theY = inUnit->mContainer->GetTileY();
-    }
-    if (!(theTransformation.GetZ() > 0.0f))
-        theTransformation.SetZ(0.3f);
-    EEUnit* theCreated = theClass->CreateUnit(theX, theY, inUnit->mPlayer->GetPlayerID(), false, NULL);
-    EEComplexUnit* theComplex = theCreated->GetComplexUnit();
-    EEUnitGoal* theGoal = EEUGRust::NewAttackGround(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
-                                                         theTransformation.GetZ()), false);
-    theComplex->SetVelocity(0.0f);
-    theComplex->SetLauncherClass(theCreated->GetUnitClass());
-    // the dying unit owns its death unit, as a shooter owns its shot (FireProjectile)
-    theComplex->SetOwner(inUnit);
-    theComplex->SetProjectileStart(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
-                                      theTransformation.GetZ()));
-    theComplex->SetGoal(theGoal, 0, 0);
-    theComplex->StartAction(kActionAdvance);
-    theComplex->mUnitClass->ActionChanged(theComplex);
-    if (theComplex->mUnitClass->mMuzzleFlashEffect != NULL) {
-        gEffectManager->CreatePlacedEffect(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
-                                                     theTransformation.GetZ()), theComplex->mUnitClass->mMuzzleFlashEffect, NULL);
-    }
+    ee_units_uc_body(EE_UNITS_UC_DO_CREATE_DEATH_UNIT, this, inUnit);   // uc_body.rs
 }
 
 // Fires the class's projectile from the unit's turret weapon point at a target or ground location;
@@ -2051,69 +1775,13 @@ extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's 
 
 void EEUnitClass::UpdateBuilding(EEComplexUnit* inUnit)
 {
-    if (inUnit->mIsDisabled && inUnit->mHitPoints > 0)
-        return;
-    if (inUnit->mProductionTime > 0 && inUnit->mHitPoints > 0 && !gInCinematic) {
-        long theStep = gPhysics->mTickTimeMs;
-        if (theStep == 0)
-            theStep = 1;
-        EEPlayer* thePlayer = inUnit->mPlayer;
-        long theLeft = inUnit->mProductionTime - theStep;
-        if (thePlayer->mInstantBuild && theLeft >= 0)
-            theLeft = -1;
-        if (theLeft <= 0) {
-            theLeft = 0;
-            RTSTechTreeNodeData* theData = thePlayer->mTechnologies->Get(inUnit->mCurrentResearch)->mData;
-            if (theData->mMakesUnit) {
-                EEUnitClass* theClass = gUnitClassTable[theData->mUnitClass];
-                if (!theClass->IsLandBuilding() && !this->ProduceUnit(inUnit, theClass, true))
-                    theLeft = 5000;
-            } else {
-                thePlayer->mTechnologies->Research(inUnit->mCurrentResearch, inUnit);
-                inUnit->PlayEffect(100000);
-            }
-        }
-        inUnit->SetProductionTime(theLeft);
-    }
-    inUnit->UpdateOrbitals();
-    this->UpdateCamouflageTimer(inUnit);
-    this->UpdateEffects(inUnit);
-    if ((inUnit->mCommand != NULL ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        long theTime = inUnit->UpdateRottingAwayTime();
-        for (EEComplexUnit* theLinked = inUnit->mNextPart; theLinked != NULL; theLinked = theLinked->mNextPart)
-            theLinked->SetRottingAwayTime(theTime);
-    }
-    inUnit->ContinueProduction();
-    this->HealGarrison(inUnit);
+    ee_units_uc_body(EE_UNITS_UC_DO_UPDATE_BUILDING, this, inUnit);   // uc_body.rs
 }
 
 // Ticks an animal: physics, effects, timers and animation; fires on attack frames and lets its carcass rot
 void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
 {
-    unsigned long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    long theResult = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    switch (inUnit->GetCommandType()) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theResult, theFrame);
-        break;
-    case kActionResourcesRotting:
-        inUnit->UpdateResourcesRotting();
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    this->UpdateDone(inUnit);
+    ee_units_uc_body(EE_UNITS_UC_DO_UPDATE_ANIMAL, this, inUnit);   // uc_body.rs
 }
 
 // Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
@@ -2131,27 +1799,7 @@ extern bool& gOrthographicView;
 // Updates the volume, pan and pitch of a unit's animation sound every third tick (off-screen every 21st)
 void EEUnitClass::RefreshSound(EEComplexUnit* inUnit)
 {
-    SESMInstanceNode* theInstance = inUnit->mSound;
-    if (theInstance == NULL || UIsNone32(gSoundManager->GetInstanceID(theInstance)))
-        return;
-    unsigned long theTick = gPhysics->mNumTicksDone;
-    if (inUnit->mUnitID % 3 != theTick % 3)
-        return;
-    if (inUnit->mUnitID % 0x15 != theTick % 0x15 &&
-        !inUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView))
-        return;
-    unsigned long theSample = gSoundManager->GetSampleID(theInstance);
-    EESoundObject* theSound = inUnit->GetModel()->mSounds1[inUnit->GetAnimation()];
-    if (theSound == NULL || theSample != theSound->mSampleID) {
-        theSound = inUnit->GetModel()->mSounds2[inUnit->mAnimation];
-        if (theSound == NULL || theSample != theSound->mSampleID)
-            theSound = NULL;
-    }
-    if (theSound == NULL)
-        return;
-    float theVolume, thePan, thePitch;
-    this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-    gSoundManager->SetSoundParameters(theInstance, theVolume, thePan, thePitch);
+    ee_units_uc_body(EE_UNITS_UC_DO_REFRESH_SOUND, this, inUnit);   // uc_body.rs
 }
 
 // Heals the living units garrisoned in a living unit by its healing points each second
@@ -2222,4 +1870,238 @@ bool EEUnitClass::Virtual4C(unsigned long)
 
 void EEUnitClass::Virtual50(unsigned long)
 {
+}
+
+// a location's X, Y and Z into a body's floats
+static void EEUcLocationOut(const GETransformation& inLocation, float* outFloats)
+{
+    outFloats[0] = inLocation.GetX();
+    outFloats[1] = inLocation.GetY();
+    outFloats[2] = inLocation.GetZ();
+}
+
+// ProduceUnit's tile line (EE_UNITS_UC_LINE_RESET, EE_UNITS_UC_TILE_LINE and its reads)
+static std::vector<EETileCoordinate> sUcLine;
+
+// a float's bits as a uc_produce.rs answer
+static int64_t EEUcBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, sizeof(theBits));
+    return theBits;
+}
+
+// ProduceUnit's ship and flier: outAdjusted = the unit's location at the placement's yaw (no pitch or roll), set
+static void EEUcAlignYaw(EEComplexUnit* inUnit, GETransformation& inPlacement, GETransformation& outAdjusted)
+{
+    GEOrientation theOrientation;
+    outAdjusted = inUnit->mPhysicalModel.GetLocation();
+    inPlacement.ConvertToOrientation(theOrientation);
+    outAdjusted.SetOrientationYPR(theOrientation.GetYaw(), 0.0f, 0.0f);
+    inUnit->SetTransformation(outAdjusted, true);
+}
+
+// the goal points uc_produce.rs hands in place (three floats)
+static_assert(sizeof(GE3DPoint) == 3 * sizeof(float), "a GE3DPoint is three floats");
+
+// Heal's local effect handle (EE_UNITS_UC_RESET_HANDLE, the creations, EE_UNITS_UC_HANDLE)
+static EEEffectHandle sUcHandle;
+
+template <class T> static T* EEUcObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// The C++ of EEUnitClass's Rust bodies (ee_units uc_body.rs; EE_UNITS_UC_*): one statement of the original bodies
+// each, in their order; inClass the class the body runs on, inUnit its unit, inA an object, inB and inC values, ioF
+// floats in and out
+extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
+                                    float (*ioF)[4])
+{
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EEUcObject<EEComplexUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    // Heal's
+    case EE_UNITS_UC_HEAL_GOAL: return (uint64_t)(uintptr_t)EEHealGoalCast(theUnit->GetGoal());
+    case EE_UNITS_UC_DROP_PATH: theUnit->DropPath(); return 0;
+    case EE_UNITS_UC_HEAL_IN_RANGE: return EECombatHealInRange(theUnit, EEUcObject<EEUGRust>(inA)->GetHealTarget());
+    case EE_UNITS_UC_SET_ANIMATION: theUnit->SetAnimation((long)inB, -1, 0); return 0;
+    case EE_UNITS_UC_HEAL_EFFECT: return (uint64_t)(uintptr_t)theUnit->mUnitClass->mHealEffect;
+    case EE_UNITS_UC_EFFECT_KIND: return static_cast<unsigned long>(EEUcObject<EEGraphicEffect>(inA)->mKind);
+    case EE_UNITS_UC_HEAL_BETWEEN:
+        return ::gWorld.GetEffectManager()->CreateEffectBetweenUnits(theUnit, EEUcObject<EEUGRust>((uint64_t)inB)->GetHealTarget(),
+                                                                     EEUcObject<EEGraphicEffect>(inA), &sUcHandle) != 0;
+    case EE_UNITS_UC_HEAL_ON_TARGET:
+        return ::gWorld.GetEffectManager()->CreateUnitEffect(EEUcObject<EEUGRust>((uint64_t)inB)->GetHealTarget(),
+                                                             EEUcObject<EEGraphicEffect>(inA), &sUcHandle, false, 0, 0) != 0;
+    case EE_UNITS_UC_HEAL_HANDLE: return theUnit->mHealEffect.mValue;
+    case EE_UNITS_UC_SET_HEAL_HANDLE: theUnit->mHealEffect.mValue = (uint32_t)inB; return 0;
+    case EE_UNITS_UC_RESET_HANDLE: sUcHandle.mValue = 0; return 0;
+    case EE_UNITS_UC_HANDLE: return sUcHandle.mValue;
+    // ProduceUnit's (uc_produce.rs; inA a class, a goal or a unit)
+    case EE_UNITS_UC_EXTRA_POPULATION: return theUnit->GetPlayer()->GetExtraPopulation((long)inB);
+    case EE_UNITS_UC_POPULATION_LIMIT: return theUnit->GetPlayer()->GetPopulationLimit(0);
+    case EE_UNITS_UC_TOTAL_POPULATION: return theUnit->GetPlayer()->GetTotalPopulation(true, false);
+    case EE_UNITS_UC_CLASS_UNIT_TYPE: return EEUcObject<EEUnitClass>(inA)->GetUnitType();
+    case EE_UNITS_UC_CLASS_POPULATION_COST: return EEUcObject<EEUnitClass>(inA)->GetPopulationCost();
+    case EE_UNITS_UC_PRODUCER_TYPE: return theUnit->GetUnitClass()->GetUnitType();
+    case EE_UNITS_UC_CLASS_CATEGORY: return EEUcObject<EEUnitClass>(inA)->GetCategory();
+    case EE_UNITS_UC_CLASS_IS_AIRCRAFT: return EEUcObject<EEUnitClass>(inA)->IsAircraft();
+    case EE_UNITS_UC_CLASS_AIR_TRAFFIC: return EEUcObject<EEUnitClass>(inA)->mAirTrafficType;
+    case EE_UNITS_UC_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[inB - 1], (int32_t)inC);
+    case EE_UNITS_UC_ATC_FREE_WEIGHT: return ee_units_atc_free_cargo_weight(theUnit->GetPlayer()->mAirTraffic[inB - 1], theUnit);
+    case EE_UNITS_UC_CLASS_WEIGHT: return EEUcObject<EEUnitClass>(inA)->mWeight;
+    case EE_UNITS_UC_TRANSPORT_CAPACITY: return theUnit->GetUnitClass()->mTransportCapacity;
+    case EE_UNITS_UC_CARGO_ROOM: return theUnit->mCargoRoom;
+    case EE_UNITS_UC_CREATE_AT:
+        return (uint64_t)(uintptr_t)EEUcObject<EEUnitClass>(inA)
+            ->CreateUnitAt(*EEUcObject<GETransformation>((uint64_t)inB), theUnit->GetPlayer()->GetPlayerID(), false, theUnit)->mComplexUnit;
+    case EE_UNITS_UC_LOAD_CARGO: theUnit->LoadCargo(theOther, true, 0); return 0;
+    case EE_UNITS_UC_PARATROOPER_BOMBER: return theOther->GetUnitClass()->mIsParatrooperBomber;
+    case EE_UNITS_UC_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, -1); return 0;
+    case EE_UNITS_UC_CLASS_FAMILY: return EEUcObject<EEUnitClass>(inA)->mFamily;
+    case EE_UNITS_UC_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
+    case EE_UNITS_UC_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
+    case EE_UNITS_UC_THIS_UNIT_TYPE: return theClass->mUnitType;
+    case EE_UNITS_UC_GOAL_LOCATION: EEUcObject<EEUnitGoal>(inA)->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_GOAL_KIND: return EEUcObject<EEUnitGoal>(inA)->mKind;
+    case EE_UNITS_UC_ATTACK_TARGET: return (uint64_t)(uintptr_t)EEAttackUnitCast(EEUcObject<EEUnitGoal>(inA))->GetAttackTarget();
+    case EE_UNITS_UC_COMPLEX_OF: return (uint64_t)(uintptr_t)EEUcObject<EEUnit>(inA)->GetComplexUnit();
+    case EE_UNITS_UC_CONTAINER_OF: return (uint64_t)(uintptr_t)theOther->mContainer;
+    case EE_UNITS_UC_POSITION: EEUcObject<EEUnit>(inA)->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_CLASS_DOMAINS: return EEUcObject<EEUnitClass>(inA)->mDomains;
+    case EE_UNITS_UC_TILE_SIZE: return theClass->GetTileSize();
+    case EE_UNITS_UC_ALIGN_YAW:
+        EEUcAlignYaw(theOther, *EEUcObject<GETransformation>((uint64_t)inB), *EEUcObject<GETransformation>((uint64_t)inC));
+        return 0;
+    case EE_UNITS_UC_CLASS_FLIES_OVER: return EEUcObject<EEUnitClass>(inA)->FliesOver();
+    case EE_UNITS_UC_AREA_EFFECT_AT:
+        return (uint64_t)(uintptr_t)gAEManager.FindEffectAtTile(8, theOther->GetTileX(), theOther->GetTileY(), theOther->GetPlayer()->GetPlayerID());
+    case EE_UNITS_UC_EFFECT_OWNER: return (uint64_t)(uintptr_t)EEUcObject<EEAreaEffect>(inA)->mUnit;
+    case EE_UNITS_UC_EFFECT_COVERS:
+        return EEUcObject<EEAreaEffect>(inA)->Covers(EEUcObject<EEAreaEffect>(inA)->mUnit->GetPlayer()->GetPlayerID(),
+                                                     EEUcObject<EEComplexUnit>((uint64_t)inB),
+                                                     GE2DPoint(EEUcObject<EEAreaEffect>(inA)->mUnit->mPhysicalModel.GetLocation().GetX(),
+                                                               EEUcObject<EEAreaEffect>(inA)->mUnit->mPhysicalModel.GetLocation().GetY()));
+    case EE_UNITS_UC_CLOAKABLE_CHAIN: theOther->SetCloakableChain(true); return 0;
+    case EE_UNITS_UC_CLEAR_GOAL_QUEUE: theOther->ClearGoalQueue(0); return 0;
+    case EE_UNITS_UC_QUEUE_LEN: return theUnit->GetQueueGoals((unsigned long)inB).size();
+    case EE_UNITS_UC_QUEUE_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC];
+    case EE_UNITS_UC_GOAL_SUITS: return EEUcObject<EEUnitGoal>(inA)->Suits(EEUcObject<EEComplexUnit>((uint64_t)inB));
+    case EE_UNITS_UC_ADD_BUILD_TARGET:
+        theOther->AddBuildTarget(EEBuildRepairGoalCast(EEUcObject<EEUnitGoal>((uint64_t)inB))->GetBuildTarget());
+        return 0;
+    case EE_UNITS_UC_CAN_GARRISON: return theOther->GetUnitClass()->mCanGarrison;
+    case EE_UNITS_UC_GOAL_CLONE: return (uint64_t)(uintptr_t)EEUcObject<EEUnitGoal>(inA)->Clone();
+    case EE_UNITS_UC_GOAL_IS_LOAD: return EEUcObject<EEUnitGoal>(inA)->IsLoadGoal();
+    case EE_UNITS_UC_GOAL_ADD_CREATED: EEUcObject<EEUnitGoal>(inA)->AddCreatedUnit(EEUcObject<EEComplexUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UC_LOAD_CONTAINER: return (uint64_t)(uintptr_t)EELoadGarrisonGoalCast(EEUcObject<EEUnitGoal>(inA))->GetLoadContainer();
+    case EE_UNITS_UC_ACTIVE_GOAL: return (uint64_t)(uintptr_t)theOther->mActiveGoal;
+    case EE_UNITS_UC_ADD_LOAD_UNIT:
+        EELoadGarrisonGoalCast(EEUcObject<EEUnitGoal>(inA))->AddLoadUnit(EEUcObject<EEComplexUnit>((uint64_t)inB));
+        return 0;
+    case EE_UNITS_UC_NEW_LOCATION:
+        return (uint64_t)(uintptr_t)EEUGRust::NewLocation(reinterpret_cast<GE3DPoint*>(f), false, true, false, 0.0f, false, 0);
+    case EE_UNITS_UC_GOAL_SET_LOCATION: static_cast<EEUGRust*>(EEUcObject<EEUnitGoal>(inA))->SetLocation(GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UC_LINE_RESET: sUcLine.clear(); return 0;
+    case EE_UNITS_UC_TILE_LINE: EEGetTileLine(theOther->GetTileX(), theOther->GetTileY(), (long)inB, (long)inC, &sUcLine, 1, 1); return 0;
+    case EE_UNITS_UC_LINE_LEN: return (long)sUcLine.size();
+    case EE_UNITS_UC_LINE_X: return sUcLine[(size_t)inB].mX;
+    case EE_UNITS_UC_LINE_Y: return sUcLine[(size_t)inB].mY;
+    case EE_UNITS_UC_OUTER_SPHERE: return EEUcBits(theOther->GetUnitClass()->mOuterCollisionSphere);
+    case EE_UNITS_UC_UNIT_CATEGORY: return theOther->GetUnitClass()->GetCategory();
+    case EE_UNITS_UC_CAN_GATHER:
+        return theOther->CanGather(EEUcObject<EEUnit>((uint64_t)inB), EEUcObject<EEUnit>((uint64_t)inB)->GetTileX(),
+                                   EEUcObject<EEUnit>((uint64_t)inB)->GetTileY(), false, true);
+    case EE_UNITS_UC_NEW_GATHER: return (uint64_t)(uintptr_t)EEUGRust::NewGather(EEUcObject<EEUnit>(inA), 0, true);
+    case EE_UNITS_UC_DELETE_GOAL: delete EEUcObject<EEUnitGoal>(inA); return 0;
+    case EE_UNITS_UC_GATHER_BEHAVIOR: theOther->SetBehavior(EEUnitBehavior::sTable[5]); return 0;
+    case EE_UNITS_UC_QUEUE_GOAL_ON: theOther->QueueGoal(EEUcObject<EEUnitGoal>((uint64_t)inB), 0); return 0;
+    case EE_UNITS_UC_GOAL_STATE: return (uint64_t)(uintptr_t)theOther->mGoalState;
+    case EE_UNITS_UC_START_GOAL_ACTION: theOther->StartAction(theOther->mGoalState->GetStartAction()); return 0;
+    case EE_UNITS_UC_PRODUCER_IS_CURRENT: return theUnit->GetPlayer() == gWorld.mPlayers[gWorld.mCurrentPlayer];
+    case EE_UNITS_UC_CREATION_SOUND: return (uint64_t)(uintptr_t)theOther->GetStats()->mCreationSound;
+    case EE_UNITS_UC_PLAY_SAMPLE:
+        gSoundManager->Play(EEUcObject<EESoundObject>(inA)->mSampleID, EEUcObject<EESoundObject>(inA)->mVolume, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_UNITS_UC_PRODUCER_TILE_X: return theUnit->GetTileX();
+    case EE_UNITS_UC_PRODUCER_TILE_Y: return theUnit->GetTileY();
+    // UpdateBuilding's
+    case EE_UNITS_UC_DISABLED: return theUnit->mIsDisabled;
+    case EE_UNITS_UC_HIT_POINTS: return theUnit->mHitPoints;
+    case EE_UNITS_UC_PRODUCTION_TIME: return theUnit->mProductionTime;
+    case EE_UNITS_UC_IN_CINEMATIC: return gInCinematic;
+    case EE_UNITS_UC_TICK_MS: return gPhysics->mTickTimeMs;
+    case EE_UNITS_UC_INSTANT_BUILD: return theUnit->mPlayer->mInstantBuild;
+    case EE_UNITS_UC_RESEARCH_MAKES_UNIT: return theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mMakesUnit;
+    case EE_UNITS_UC_RESEARCH_CLASS:
+        return (uint64_t)(uintptr_t)gUnitClassTable[theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mUnitClass];
+    case EE_UNITS_UC_IS_LAND_BUILDING: return EEUcObject<EEUnitClass>(inA)->IsLandBuilding();
+    case EE_UNITS_UC_PRODUCE_UNIT: return theClass->ProduceUnit(theUnit, EEUcObject<EEUnitClass>(inA), true);
+    case EE_UNITS_UC_RESEARCH: theUnit->mPlayer->mTechnologies->Research(theUnit->mCurrentResearch, theUnit); return 0;
+    case EE_UNITS_UC_PLAY_NO_EFFECT: theUnit->PlayEffect(100000); return 0;
+    case EE_UNITS_UC_SET_PRODUCTION_TIME: theUnit->SetProductionTime((long)inB); return 0;
+    case EE_UNITS_UC_UPDATE_ORBITALS: theUnit->UpdateOrbitals(); return 0;
+    case EE_UNITS_UC_UPDATE_CAMOUFLAGE_TIMER: theClass->UpdateCamouflageTimer(theUnit); return 0;
+    case EE_UNITS_UC_UPDATE_EFFECTS: theClass->UpdateEffects(theUnit); return 0;
+    case EE_UNITS_UC_COMMAND_KIND: return theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0;
+    case EE_UNITS_UC_UPDATE_ROTTING: return (long)theUnit->UpdateRottingAwayTime();
+    case EE_UNITS_UC_NEXT_PART: return (uint64_t)(uintptr_t)(inA != 0 ? theOther : theUnit)->mNextPart;
+    case EE_UNITS_UC_SET_ROTTING: theOther->SetRottingAwayTime((long)inB); return 0;
+    case EE_UNITS_UC_CONTINUE_PRODUCTION: theUnit->ContinueProduction(); return 0;
+    case EE_UNITS_UC_HEAL_GARRISON: theClass->HealGarrison(theUnit); return 0;
+    // UpdateAnimal's
+    case EE_UNITS_UC_FRAME: return theUnit->mPhysicalModel.GetFrame();
+    case EE_UNITS_UC_KEEP_LAST_HIT_POINTS: theUnit->SetLastHitPoints(theUnit->mHitPoints); return 0;
+    case EE_UNITS_UC_HAS_PHYSICS_MODEL: return theClass->mPhysicsModel != NULL;
+    case EE_UNITS_UC_TILE_X: return theUnit->GetTileX();
+    case EE_UNITS_UC_PHYSICS_STEP: theClass->mPhysicsModel->Step(theUnit); return 0;
+    case EE_UNITS_UC_UPDATE_RELOAD_TIMER: theUnit->UpdateReloadTimer(); return 0;
+    case EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER: theUnit->UpdateTargetSearchTimer(); return 0;
+    case EE_UNITS_UC_ANIMATE: return theClass->Animate(theUnit);
+    case EE_UNITS_UC_REFRESH_SOUND: theClass->RefreshSound(theUnit); return 0;
+    case EE_UNITS_UC_COMMAND_TYPE: return theUnit->GetCommandType();
+    case EE_UNITS_UC_FIRE_ON_ATTACK_FRAME: theClass->FireOnAttackFrame(theUnit, (long)inB, (long)inC); return 0;
+    case EE_UNITS_UC_UPDATE_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
+    case EE_UNITS_UC_UPDATE_DONE: theClass->UpdateDone(theUnit); return 0;
+    // RefreshSound's
+    case EE_UNITS_UC_HAS_SOUND: return theUnit->mSound != NULL;
+    case EE_UNITS_UC_SOUND_NONE: return UIsNone32(gSoundManager->GetInstanceID(theUnit->mSound));
+    case EE_UNITS_UC_TICKS_DONE: return gPhysics->mNumTicksDone;
+    case EE_UNITS_UC_UNIT_ID: return theUnit->mUnitID;
+    case EE_UNITS_UC_IN_VIEW: return theUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
+    case EE_UNITS_UC_SOUND_SAMPLE: return gSoundManager->GetSampleID(theUnit->mSound);
+    case EE_UNITS_UC_MODEL_SOUND1: return (uint64_t)(uintptr_t)theUnit->GetModel()->mSounds1[theUnit->GetAnimation()];
+    case EE_UNITS_UC_MODEL_SOUND2: return (uint64_t)(uintptr_t)theUnit->GetModel()->mSounds2[theUnit->mAnimation];
+    case EE_UNITS_UC_SAMPLE_ID: return EEUcObject<EESoundObject>(inA)->mSampleID;
+    case EE_UNITS_UC_SOUND_PARAMETERS:
+        theClass->GetSoundParameters(theUnit, EEUcObject<EESoundObject>(inA), &f[0], &f[1], &f[2]);
+        return 0;
+    case EE_UNITS_UC_SET_SOUND_PARAMETERS: gSoundManager->SetSoundParameters(theUnit->mSound, f[0], f[1], f[2]); return 0;
+    // CreateDeathUnit's
+    case EE_UNITS_UC_DEATH_SPAWN_CLASS: return (uint64_t)(uintptr_t)theClass->mDeathSpawnClass;
+    case EE_UNITS_UC_CONTAINER: return (uint64_t)(uintptr_t)theUnit->mContainer;
+    case EE_UNITS_UC_LOCATION:
+        EEUcLocationOut(theOther->mPhysicalModel.GetLocation(), f);
+        return 0;
+    case EE_UNITS_UC_UNIT_TILE_X: return theOther->GetTileX();
+    case EE_UNITS_UC_UNIT_TILE_Y: return theOther->GetTileY();
+    case EE_UNITS_UC_CREATE_UNIT:
+        return (uint64_t)(uintptr_t)EEUcObject<EEUnitClass>(inA)->CreateUnit((long)inB, (long)inC, theUnit->mPlayer->GetPlayerID(), false, NULL)->GetComplexUnit();
+    case EE_UNITS_UC_NEW_ATTACK_GROUND: return (uint64_t)(uintptr_t)EEUGRust::NewAttackGround(GE3DPoint(f[0], f[1], f[2]), false);
+    case EE_UNITS_UC_STOP: theOther->SetVelocity(0.0f); return 0;
+    case EE_UNITS_UC_OWN_LAUNCHER_CLASS: theOther->SetLauncherClass(theOther->GetUnitClass()); return 0;
+    case EE_UNITS_UC_SET_OWNER: theOther->SetOwner(theUnit); return 0;
+    case EE_UNITS_UC_SET_PROJECTILE_START: theOther->SetProjectileStart(GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UC_SET_GOAL: theOther->SetGoal(EEUcObject<EEUnitGoal>((uint64_t)inB), 0, 0); return 0;
+    case EE_UNITS_UC_START_ACTION: theOther->StartAction((long)inB); return 0;
+    case EE_UNITS_UC_ACTION_CHANGED: theOther->mUnitClass->ActionChanged(theOther); return 0;
+    case EE_UNITS_UC_MUZZLE_FLASH: return (uint64_t)(uintptr_t)theOther->mUnitClass->mMuzzleFlashEffect;
+    case EE_UNITS_UC_PLACED_EFFECT:
+        gEffectManager->CreatePlacedEffect(GE3DPoint(f[0], f[1], f[2]), EEUcObject<EEGraphicEffect>(inA), NULL);
+        return 0;
+    }
+    return 0;
 }

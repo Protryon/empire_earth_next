@@ -37,28 +37,6 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-// the vector Load/Save helpers (cdecl template COMDATs 0x1b5faf / 0x1b5fff: the count, then each element's slot)
-template<class T> long EESMLoadVector(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                                      std::vector<T>& outVector)
-{
-    unsigned long theCount;
-    long theResult = inFile.Read(theCount);
-    outVector.resize(theCount);
-    for (std::vector<T>::iterator theIterator = outVector.begin(); theIterator != outVector.end() && theResult == kErrorOK;
-         theIterator++)
-        theResult = theIterator->Load(inMajorVersion, inMinorVersion, inFile);
-    return theResult;
-}
-template<class T> long EESMSaveVector(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile,
-                                      std::vector<T>& inVector)
-{
-    unsigned long theCount = inVector.size();
-    long theResult = outFile.Write(theCount);
-    for (std::vector<T>::iterator theIterator = inVector.begin(); theIterator != inVector.end() && theResult == 0;
-         theIterator++)
-        theResult = theIterator->Save(inMajorVersion, inMinorVersion, outFile);
-    return theResult;
-}
 
 bool gScenarioSimDialogs = false;
 
@@ -97,15 +75,7 @@ void EEScenarioManager::Reset()
 // object, area and pending effect
 EEScenarioManager::~EEScenarioManager()
 {
-    ee_scenario_unload_media(EESMRoundHost(this), false);   // (cinematic.rs unload_media)
-    DeleteVectorContents(this->mTriggers);
-    DeleteVectorContents(this->mConditions);
-    DeleteVectorContents(this->mEffects);
-    DeleteVectorContents(this->mObjects);
-    DeleteVectorContents(this->mAreas);
-    ee_scenario_timed_free(this->mTimedEffects);
-    this->mTimedEffects = NULL;
-    DeleteVectorContents(this->mPendingEffects);
+    ee_scenario_manager_destroy(EESMRoundHost(this));   // ee_scenario manager_compose.rs destroy
 }
 
 // Queues a dialog message for ShowDialogMessage
@@ -118,11 +88,7 @@ void EEScenarioManager::AddMessage(const EESMDialogMessage& inMessage)
 // ApplyPendingEffects has run)
 void EEScenarioManager::AddV134Effect(const EESMEffect& inEffect)
 {
-    if (this->mB234)
-        return;
-    EESMEffect* theEffect = new EESMEffect;
-    theEffect->Copy(inEffect);
-    this->mPendingEffects.push_back(theEffect);
+    ee_scenario_add_pending(EESMRoundHost(this), &inEffect);   // ee_scenario manager_compose.rs add_pending
 }
 
 // Schedules an effect (by index) to run at the given scenario time, keeping the timed effects sorted by time
@@ -162,6 +128,8 @@ void EEScenarioManager::StartCinematic()
 
 namespace {
 
+GE3DPoint sRoundStart;   // MoveCameraToStart's point (the original's local; manager_compose.rs)
+
 int64_t RoundFloatBits(float inValue)
 {
     uint32_t theBits;
@@ -186,9 +154,35 @@ int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float 
     case EE_SCENARIO_ROUND_EFFECT_EXISTS: return theManager->mEffects[(unsigned long)inA] != NULL;
     case EE_SCENARIO_ROUND_EXECUTE: theManager->mEffects[(unsigned long)inA]->Execute(inB != 0); return 0;
     case EE_SCENARIO_ROUND_CLEAR_CHAT: theManager->mLastChatText.Clear(); return 0;
-    case EE_SCENARIO_ROUND_CAPTURE:
-        if (EESimCaptureRecord::Active())
-            EESMCaptureUpdate(theManager, inA != 0);
+    case EE_SCENARIO_ROUND_CAPTURE_RECORD: EESMCaptureUpdate(theManager, inA != 0);   // TEST ONLY (SMUP)
+        return 0;
+    case EE_SCENARIO_ROUND_DELETE_TRIGGERS: DeleteVectorContents(theManager->mTriggers);
+        return 0;
+    case EE_SCENARIO_ROUND_DELETE_CONDITIONS: DeleteVectorContents(theManager->mConditions);
+        return 0;
+    case EE_SCENARIO_ROUND_DELETE_EFFECTS: DeleteVectorContents(theManager->mEffects);
+        return 0;
+    case EE_SCENARIO_ROUND_DELETE_OBJECTS: DeleteVectorContents(theManager->mObjects);
+        return 0;
+    case EE_SCENARIO_ROUND_DELETE_AREAS: DeleteVectorContents(theManager->mAreas);
+        return 0;
+    case EE_SCENARIO_ROUND_DELETE_PENDING: DeleteVectorContents(theManager->mPendingEffects);
+        return 0;
+    case EE_SCENARIO_ROUND_TIMED_FREE: ee_scenario_timed_free(theManager->mTimedEffects);
+        return 0;
+    case EE_SCENARIO_ROUND_TIMED_FORGET: theManager->mTimedEffects = NULL;
+        return 0;
+    case EE_SCENARIO_ROUND_EFFECT_NEW: return (int64_t)(intptr_t) new EESMEffect;
+    case EE_SCENARIO_ROUND_EFFECT_COPY: ((EESMEffect*)(intptr_t)inA)->Copy(*(const EESMEffect*)(intptr_t)inB);
+        return 0;
+    case EE_SCENARIO_ROUND_PENDING_PUSH: theManager->mPendingEffects.push_back((EESMEffect*)(intptr_t)inA);
+        return 0;
+    case EE_SCENARIO_ROUND_EFFECTS: return (int64_t)theManager->mEffects.size();
+    case EE_SCENARIO_ROUND_EFFECT_AT: return (int64_t)(intptr_t)theManager->mEffects[(size_t)inA];
+    case EE_SCENARIO_ROUND_LINE_START: return (int64_t)(intptr_t)&(sRoundStart = gWorld.mLine.GetStart());
+    case EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD: return RoundFloatBits(gWorld.mCameraControl.mZoom);
+    case EE_SCENARIO_ROUND_SIDE_SCROLL_SPEED: return RoundFloatBits(gSideScrollSpeed);
+    case EE_SCENARIO_ROUND_CAMERA_SET_START: gWorld.mCameraControl.SetLocation(sRoundStart, false, true);
         return 0;
     case EE_SCENARIO_ROUND_LETTERBOX: return RoundFloatBits(gF4BE374);
     case EE_SCENARIO_ROUND_LATENCY: gSoundManager->SetLatency((long)inA);
@@ -356,27 +350,17 @@ long EEScenarioManager::LoadUncaptured(unsigned long inMajorVersion, unsigned lo
 
 namespace {
 
-// a new element of a manager list read by its Load and kept as Load kept it: an "object 0" condition is freed, a
-// pending effect only kept when a saved game (not a scenario) loads; freed on an error
-template<class T> long EESMLoadElement(EESMStream* inStream, std::vector<T*>& ioList, uint32_t inKind)
-{
-    T* theElement = new T;
-    long theResult = theElement->Load(inStream->mMajor, inStream->mMinor, *inStream->mFile);
-    bool theKeep = theResult == kErrorOK;
-    if (theKeep && inKind == EE_SCENARIO_ELEMENT_PENDING)
-        theKeep = !GetIsLoadingScenario();
-    if (theKeep)
-        ioList.push_back(theElement);
-    else
-        delete theElement;
-    return theResult;
-}
-
 template<class T> int32_t EESMListIO(EESMStream* inStream, std::vector<T*>& ioList, uint32_t inOp, uint32_t inKind,
                                      unsigned long inIndex, void* ioValue)
 {
     switch (inOp) {
-    case EE_SCENARIO_IO_ELEMENT_LOAD: return (int32_t)EESMLoadElement(inStream, ioList, inKind);
+    case EE_SCENARIO_IO_ELEMENT_NEW: *static_cast<void**>(ioValue) = new T;
+        return 0;
+    case EE_SCENARIO_IO_ELEMENT_READ: return (int32_t)static_cast<T*>(ioValue)->Load(inStream->mMajor, inStream->mMinor, *inStream->mFile);
+    case EE_SCENARIO_IO_ELEMENT_KEEP: ioList.push_back(static_cast<T*>(ioValue));
+        return 0;
+    case EE_SCENARIO_IO_ELEMENT_FREE: delete static_cast<T*>(ioValue);
+        return 0;
     case EE_SCENARIO_IO_ELEMENT_SAVE:
         return (int32_t)ioList[inIndex]->Save(inStream->mMajor, inStream->mMinor, *inStream->mFile);
     case EE_SCENARIO_IO_ELEMENT_COUNT: *static_cast<unsigned long*>(ioValue) = ioList.size(); return 0;
@@ -386,6 +370,12 @@ template<class T> int32_t EESMListIO(EESMStream* inStream, std::vector<T*>& ioLi
 
 }   // namespace
 
+// a loaded condition naming object 0 (it is dropped)
+static bool EESMConditionNamesObjectZero(EESMCondition* inCondition)
+{
+    return inCondition->mType == kSMConditionObject && inCondition->mObjectIndex == 0;
+}
+
 int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
 {
     EEScenarioManager* theManager = inStream->mManager;
@@ -393,18 +383,15 @@ int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsi
     if (inOp == EE_SCENARIO_IO_MEDIA)
         return (int32_t)(inSlot == 0 ? theManager->mMediaStrings.Load(inStream->mMajor, inStream->mMinor, theFile)
                                      : theManager->mMediaStrings.Save(inStream->mMajor, inStream->mMinor, theFile));
-    if (inOp == EE_SCENARIO_IO_MESSAGES)
-        return (int32_t)(inSlot == 0 ? EESMLoadVector(inStream->mMajor, inStream->mMinor, theFile, theManager->mMessages)
-                                     : EESMSaveVector(inStream->mMajor, inStream->mMinor, theFile, theManager->mMessages));
-    if (inOp == EE_SCENARIO_IO_ELEMENT_LOAD && inSlot == EE_SCENARIO_ELEMENT_CONDITIONS) {
-        // a condition naming object 0 is dropped (freed: it leaked)
-        EESMCondition* theCondition = new EESMCondition;
-        long theResult = theCondition->Load(inStream->mMajor, inStream->mMinor, theFile);
-        if (theResult == kErrorOK && (theCondition->mType != kSMConditionObject || theCondition->mObjectIndex != 0))
-            theManager->mConditions.push_back(theCondition);
-        else
-            delete theCondition;
-        return (int32_t)theResult;
+    switch (inOp) {   // the manager's own (manager_compose.rs element_load, messages)
+    case EE_SCENARIO_IO_LOADING_SCENARIO: return GetIsLoadingScenario();
+    case EE_SCENARIO_IO_CONDITION_OBJECT_ZERO: return EESMConditionNamesObjectZero(static_cast<EESMCondition*>(ioValue));
+    case EE_SCENARIO_IO_MESSAGES_COUNT: *static_cast<unsigned long*>(ioValue) = theManager->mMessages.size();
+        return 0;
+    case EE_SCENARIO_IO_MESSAGES_RESIZE: theManager->mMessages.resize(*static_cast<unsigned long*>(ioValue));
+        return 0;
+    case EE_SCENARIO_IO_MESSAGE_LOAD: return (int32_t)theManager->mMessages[inIndex].Load(inStream->mMajor, inStream->mMinor, theFile);
+    case EE_SCENARIO_IO_MESSAGE_SAVE: return (int32_t)theManager->mMessages[inIndex].Save(inStream->mMajor, inStream->mMinor, theFile);
     }
     switch (inSlot) {
     case EE_SCENARIO_ELEMENT_TRIGGERS: return EESMListIO(inStream, theManager->mTriggers, inOp, inSlot, inIndex, ioValue);
@@ -422,10 +409,7 @@ int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsi
 // Sets the run flag of the first timed entry of an effect whose flag differs
 void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
 {
-    // an entry's effect is inEffect when its index is inEffect's place in mEffects (GetEffect: NULL past the end)
-    unsigned long theIndex = std::find(this->mEffects.begin(), this->mEffects.end(), inEffect) - this->mEffects.begin();
-    ee_scenario_timed_set_has_run(this->mTimedEffects, inEffect != NULL && theIndex < this->mEffects.size(), theIndex,
-                                  inFlag);
+    ee_scenario_set_timed_has_run(EESMRoundHost(this), inEffect, inFlag);   // manager_compose.rs set_timed_has_run
 }
 
 // Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
@@ -452,13 +436,7 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
 // step: ee_scenario round.rs camera_step)
 void EEScenarioManager::MoveCameraToStart()
 {
-    GE3DPoint theLocation = gWorld.mLine.GetStart();
-    float theFocus[2] = {theLocation.GetX(), theLocation.GetY()};
-    if (!ee_scenario_camera_step(this, &theFocus, (gWorld.mCameraControl.mZoom + 0.5f) * gSideScrollSpeed))
-        return;
-    theLocation.SetX(theFocus[0]);
-    theLocation.SetY(theFocus[1]);
-    gWorld.mCameraControl.SetLocation(theLocation, false, true);
+    ee_scenario_move_camera_to_start(EESMRoundHost(this));   // manager_compose.rs move_camera_to_start
 }
 
 // Creates an empty dialog message: no unit or duration, no camera move (scroll speed -1), not for a cinematic
@@ -471,80 +449,27 @@ EESMDialogMessage::EESMDialogMessage()
     this->mIsCinematic = false;
 }
 
-// Creates a copy of a dialog message
-EESMDialogMessage::EESMDialogMessage(const EESMDialogMessage& inMessage)
+// a dialog message's Load and Save (ee_scenario save.rs message_io): the text, unit type, sound, duration, unit,
+// scroll speed, and (a save, or a load from version 0.200 on) the cinematic flag; the first error
+static long EESMMessageIO(EESMDialogMessage* inMessage, unsigned long inMajor, unsigned long inMinor, FSFile& inFile,
+                          bool inSave)
 {
-    this->mText = inMessage.mText;
-    this->mUnitType = inMessage.mUnitType;
-    this->mSound = inMessage.mSound;
-    this->mDuration = inMessage.mDuration;
-    this->mUnitID = inMessage.mUnitID;
-    this->mScrollSpeed = inMessage.mScrollSpeed;
-    this->mIsCinematic = inMessage.mIsCinematic;
+    UWideString* theStrings[] = {&inMessage->mText, &inMessage->mSound};
+    EESMStream theStream = {&inFile, theStrings, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    EeScenarioMessageNumbers theNumbers = {&inMessage->mScrollSpeed, &inMessage->mUnitType, &inMessage->mDuration,
+                                           &inMessage->mUnitID, &inMessage->mIsCinematic};
+    return ee_scenario_message_io(&theTable, &theNumbers, inMajor, inMinor, inSave);
 }
 
-// Copies another dialog message's text, unit, sound, duration, scroll speed and cinematic flag
-void EESMDialogMessage::operator=(const EESMDialogMessage& inMessage)
-{
-    this->mText = inMessage.mText;
-    this->mUnitType = inMessage.mUnitType;
-    this->mSound = inMessage.mSound;
-    this->mDuration = inMessage.mDuration;
-    this->mUnitID = inMessage.mUnitID;
-    this->mScrollSpeed = inMessage.mScrollSpeed;
-    this->mIsCinematic = inMessage.mIsCinematic;
-}
-
-// Reads the dialog message (text, unit type, sound, duration, unit, scroll speed, and from version 0.200 on
-// the cinematic flag) from the saved scenario; returns the first read error
 long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    if (inMajorVersion <= 0 && inMinorVersion <= 199) {
-        if ((theResult = this->mText.Load(inFile)) != 0)
-            return theResult;
-        if ((theResult = inFile.Read(this->mUnitType)) != 0)
-            return theResult;
-        if ((theResult = this->mSound.Load(inFile)) != 0)
-            return theResult;
-        if ((theResult = inFile.Read(this->mDuration)) != 0)
-            return theResult;
-        if ((theResult = inFile.Read(this->mUnitID)) != 0)
-            return theResult;
-        return inFile.Read(this->mScrollSpeed);
-    }
-    if ((theResult = this->mText.Load(inFile)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mUnitType)) != 0)
-        return theResult;
-    if ((theResult = this->mSound.Load(inFile)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mDuration)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mUnitID)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mScrollSpeed)) != 0)
-        return theResult;
-    return inFile.Read(this->mIsCinematic);
+    return EESMMessageIO(this, inMajorVersion, inMinorVersion, inFile, false);
 }
 
-// Writes the dialog message, cinematic flag included, to the saved scenario; returns the first write error
 long EESMDialogMessage::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult;
-    if ((theResult = this->mText.Save(outFile)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mUnitType)) != 0)
-        return theResult;
-    if ((theResult = this->mSound.Save(outFile)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mDuration)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mUnitID)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mScrollSpeed)) != 0)
-        return theResult;
-    return outFile.Write(this->mIsCinematic);
+    return EESMMessageIO(this, inMajorVersion, inMinorVersion, outFile, true);
 }
 
 // ------------------------------------------------------------------------------------------------ the lists
@@ -591,6 +516,9 @@ template<class T> void* EESMListEdit(std::vector<T*>& ioList, uint32_t inOp, siz
     return NULL;
 }
 
+static_assert(IDS_NONE == 13001 && IDS_COPY == 13002 && IDS_EXISTS == 13003 && IDS_ALWAYS_TRUE == 13004 &&
+                  IDS_DO_NOTHING == 13005 && IDS_OFF_MAP == 13006 && IDS_PREVIOUS_LOCATION == 13007,
+              "lists.rs EE_SCENARIO_STRING_IDS");
 void* EESMListOp(void* inContext, uint32_t inOp, uint32_t inList, uintptr_t inIndex, void* inElement, const char* inText)
 {
     EESMListContext* theContext = static_cast<EESMListContext*>(inContext);
@@ -603,21 +531,13 @@ void* EESMListOp(void* inContext, uint32_t inOp, uint32_t inList, uintptr_t inIn
         return (void*)(uintptr_t)(inList ? theTrigger->mEffects.size() : theTrigger->mConditions.size());
     case EE_SCENARIO_LIST_OP_ENTRY:
         return inList ? (void*)&theTrigger->mEffects[inIndex]->mEffectIndex : (void*)&theTrigger->mConditions[inIndex]->mValue;
-    case EE_SCENARIO_LIST_OP_RESOURCE: {
-        static const unsigned long kStrings[] = {IDS_COPY, IDS_EXISTS, IDS_ALWAYS_TRUE, IDS_DO_NOTHING, IDS_NONE,
-                                                 IDS_OFF_MAP, IDS_PREVIOUS_LOCATION};   // EE_SCENARIO_STRING_*
-        gResource->GetString(kStrings[inIndex], theContext->mText);
-        return (void*)(const char*)theContext->mText;
-    }
-    case EE_SCENARIO_LIST_OP_MEDIA: {
-        EEPlayer* thePlayer = gWorld.GetPlayer(inList);
-        thePlayer->mUnitClassUpgrades[inIndex]->LoadMedia(thePlayer, 0x7f);
-        EESMUnitClassMedia theMedia;
-        theMedia.mPlayer = (long)inList;
-        theMedia.mUnitClass = (long)inIndex;
-        m->mUnitClassMedia.push_back(theMedia);
+    case EE_SCENARIO_LIST_OP_RESOURCE: gResource->GetString((unsigned long)inIndex, theContext->mText);
         return NULL;
-    }
+    case EE_SCENARIO_LIST_OP_TEXT: return (void*)(const char*)theContext->mText;
+    case EE_SCENARIO_LIST_OP_MEDIA: gWorld.GetPlayer(inList)->mUnitClassUpgrades[inIndex]->LoadMedia(gWorld.GetPlayer(inList), 0x7f);
+        return NULL;
+    case EE_SCENARIO_LIST_OP_MEDIA_KEEP: m->mUnitClassMedia.push_back({(long)inList, (long)inIndex});
+        return NULL;
     case EE_SCENARIO_LIST_OP_ANCHOR:
         static_cast<EESMArea*>(inElement)->SetAnchor(U2DPoint<long>((long)(int32_t)inList, (long)(intptr_t)inIndex));
         return NULL;
@@ -723,10 +643,7 @@ long EEScenarioManager::GetObjectIndex(EESMObject* inObject)
 void EEScenarioManager::ObjectChanged(EESMObject* inObject, bool inParent, long inValue)
 {
     EESMLists theLists(this);
-    if (inParent)
-        ee_scenario_list_set_parent(&theLists.mHost, inObject, inValue);
-    else
-        ee_scenario_list_rename_object_conditions(&theLists.mHost, inObject);
+    ee_scenario_object_changed(&theLists.mHost, inObject, inParent, inValue);   // manager_compose.rs
 }
 
 // ------------------------------------------------------------------------------------------------ the text file
@@ -741,6 +658,8 @@ struct EESMTextContext {
     EEScenarioManager* mManager;
     FSFileSpec* mFile;
     char mBuffer[0x200];
+    UWideString mFormat;    // an import error's format and message (text.rs HostText::error)
+    UWideString mMessage;
 };
 
 // an element's text by slot (EE_SCENARIO_TEXT_*: an effect's three, a condition's chat text)
@@ -755,13 +674,12 @@ UWideString& EESMText(void* inElement, uint32_t inSlot)
     return static_cast<EESMCondition*>(inElement)->mChatText;
 }
 
-// the import's messages by EE_SCENARIO_TEXT_ERROR_*
-const unsigned long kSMTextErrors[] = {IDS_IS_INVALID_TOKEN, IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN,
-                                       IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN,
-                                       IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS,
-                                       IDS_IS_INVALID_CONDITION_ID_FOR_TOKEN, IDS_IS_INVALID_CONDITION_TYPE_TO_BE_TOKEN,
-                                       IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS_2747,
-                                       IDS_INVALID_PLAYER_NUMBER_FOR_THIS_SCENARIO};
+static_assert(IDS_IS_INVALID_TOKEN == 10027 && IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN == 10028 &&
+                  IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN == 10029 && IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS == 10030 &&
+                  IDS_IS_INVALID_CONDITION_ID_FOR_TOKEN == 10054 && IDS_IS_INVALID_CONDITION_TYPE_TO_BE_TOKEN == 10053 &&
+                  IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS_2747 == 10055 &&
+                  IDS_INVALID_PLAYER_NUMBER_FOR_THIS_SCENARIO == 10056,
+              "text.rs ERROR_FORMATS");
 
 void* EESMTextOp(void* inContext, uint32_t inOp, uint32_t inSlot, long inValue, void* inElement, const char* inText,
                  const char* inText2)
@@ -782,18 +700,14 @@ void* EESMTextOp(void* inContext, uint32_t inOp, uint32_t inSlot, long inValue, 
     case EE_SCENARIO_TEXT_OP_EOF: return feof(theFile) ? theContext : NULL;
     case EE_SCENARIO_TEXT_OP_READ: return fgets(theContext->mBuffer, sizeof(theContext->mBuffer), theFile);
     case EE_SCENARIO_TEXT_OP_CLEAR_ERRORS: m->mImportErrors.clear(); break;
-    case EE_SCENARIO_TEXT_OP_ERROR: {
-        UWideString theFormat;
-        UWideString theMessage;
-        gResource->GetString(kSMTextErrors[inSlot], theFormat);
-        if (inSlot == EE_SCENARIO_TEXT_ERROR_EFFECT_ID || inSlot == EE_SCENARIO_TEXT_ERROR_CONDITION_ID
-            || inSlot == EE_SCENARIO_TEXT_ERROR_PLAYER)
-            sprintf(theMessage, theFormat, inValue, inText);
-        else
-            sprintf(theMessage, theFormat, inText, inText2);
-        m->mImportErrors.push_back(theMessage);
+    case EE_SCENARIO_TEXT_OP_ERROR_FORMAT: gResource->GetString((unsigned long)inValue, theContext->mFormat);
         break;
-    }
+    case EE_SCENARIO_TEXT_OP_ERROR_PRINT_ID: sprintf(theContext->mMessage, theContext->mFormat, inValue, inText);
+        break;
+    case EE_SCENARIO_TEXT_OP_ERROR_PRINT_TEXTS: sprintf(theContext->mMessage, theContext->mFormat, inText, inText2);
+        break;
+    case EE_SCENARIO_TEXT_OP_ERROR_PUSH: m->mImportErrors.push_back(theContext->mMessage);
+        break;
     case EE_SCENARIO_TEXT_OP_MEDIA: return (void*)(const char*)m->mMediaStrings.GetSection(inSlot);
     case EE_SCENARIO_TEXT_OP_SET_MEDIA: m->mMediaStrings.GetSection(inSlot) = inText; break;
     }

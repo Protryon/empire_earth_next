@@ -304,8 +304,7 @@ pub const EE_CP_HERD_MAP_Z: i32 = 46;
 pub const EE_CP_HERD_MAP_SIZE: i32 = 47;
 /// a young one of animal `b` born by parent `a` (`CreateUnit`, its growth, grow time, search timer, `HoldUnit`)
 pub const EE_CP_HERD_BIRTH: i32 = 48;
-/// `gPathManager.CancelAutoPathRequest(a)`, then `a->Dereference()`
-pub const EE_CP_HERD_CANCEL_PATH: i32 = 49;
+// (49 was the path request's cancel: ee_sim::astar request.rs)
 /// the herds of player `a` (`EEPlayer::GetHerds`' order: from the last), pushed (`EEHerd*`)
 pub const EE_CP_HERD_PLAYER_HERDS: i32 = 50;
 /// herd `a`'s record (`static_cast<EeHerdFields*>`)
@@ -640,7 +639,9 @@ impl<'h, H: HerdHost + ?Sized> Herd<'h, H> {
         self.f().mPlayer = 0;
         let request = self.f().mPathRequest;
         if request != 0 {
-            self.op0(EE_CP_HERD_CANCEL_PATH, request, 0);
+            // `gPathManager.CancelAutoPathRequest(request)`, then `request->Dereference()` (request.rs)
+            // SAFETY: the herd's reference to its live request
+            unsafe { crate::astar::request::cancel_and_release(request) };
             self.f().mPathRequest = 0;
         }
         self.release_leader();

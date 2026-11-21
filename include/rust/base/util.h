@@ -14,6 +14,9 @@ struct EeUtilFractal;
 /// their addresses.
 struct EeUtilGraph;
 
+/// A pool (`UMemoryPool<T>`): its chunks and statistics.
+struct EeUtilPool;
+
 /// A `UGraphSeries`: its points sorted by x then y, its colour, range and enabled flag.
 struct EeUtilSeries;
 
@@ -36,6 +39,31 @@ struct EeUtilRange {
   long max_x;
   long min_y;
   long max_y;
+};
+
+/// What the C++ does for a pool's `T` (one-statement static members of `UMemoryPool<T>`).
+struct EeUtilPoolHost {
+  /// `new T[count]`.
+  void *(*new_array)(size_t count);
+  /// `delete[] (T*)objects`.
+  void (*delete_array)(void *objects);
+  /// `new T`.
+  void *(*new_one)();
+  /// `delete (T*)object`.
+  void (*delete_one)(void *object);
+};
+
+/// A node of a `UList<T*>` (`UListNode<T*>`: the data, then the links).
+struct EeUtilListNode {
+  void *data;
+  EeUtilListNode *prev;
+  EeUtilListNode *next;
+};
+
+/// A `UList<T*>`: its head and count.
+struct EeUtilList {
+  EeUtilListNode *head;
+  unsigned long count;
 };
 
 /// A shutdown function (`void (*)(bool inForced)`).
@@ -246,6 +274,101 @@ void ee_util_graph_remove_series(EeUtilGraph *graph, unsigned long index);
 /// # Safety
 /// `graph` is a live graph; `index` is below its series count.
 void ee_util_graph_set_enabled(EeUtilGraph *graph, unsigned long index, bool enabled);
+
+/// A new pool of `elem`-byte objects (`UMemoryPool<T>::UMemoryPool`).
+EeUtilPool *ee_util_pool_new(size_t elem, EeUtilPoolHost host);
+
+/// `~UMemoryPool`: `Release`, then the pool itself (chunks still in use are left alive, as the C++ left them).
+///
+/// # Safety
+/// `pool` is null or from [`ee_util_pool_new`], not used afterwards.
+void ee_util_pool_free(EeUtilPool *pool);
+
+/// `SetSize`.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`].
+bool ee_util_pool_set_size(EeUtilPool *pool,
+                           unsigned long chunk_size,
+                           unsigned long max_chunks,
+                           unsigned long chunk_count);
+
+/// `New`.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`].
+void *ee_util_pool_new_object(EeUtilPool *pool);
+
+/// `Delete`.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`]; `object` from its `New`.
+void ee_util_pool_delete(EeUtilPool *pool, void *object);
+
+/// `AddChunk`.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`].
+bool ee_util_pool_add_chunk(EeUtilPool *pool);
+
+/// `Release`.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`].
+bool ee_util_pool_release(EeUtilPool *pool);
+
+/// `CountUsed`.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`].
+long ee_util_pool_count_used(EeUtilPool *pool);
+
+/// `GetUsed`: `push(list, object)` for every object in use (`std::vector<T*>::push_back`).
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`]; `push` takes `list`.
+void ee_util_pool_get_used(EeUtilPool *pool, void *list, void (*push)(void *list, void *object));
+
+/// `DumpStats`: the statistics to the debugger output, or (as the original's compiled-away trace) nowhere.
+///
+/// # Safety
+/// `pool` from [`ee_util_pool_new`]; `type_name` a C string (`typeid(T).name()`).
+void ee_util_pool_dump_stats(EeUtilPool *pool,
+                             const char *type_name,
+                             bool to_debugger);
+
+/// `UList::InsertAfter`: a node from the list's pool holding `data`, after `previous` (null: at the head).
+///
+/// # Safety
+/// `list` a live list whose nodes come from `pool`; `previous` null or one of its nodes.
+void ee_util_list_insert_after(EeUtilList *list,
+                               EeUtilPool *pool,
+                               EeUtilListNode *previous,
+                               void *data);
+
+/// `UList::AddHead`.
+///
+/// # Safety
+/// As [`ee_util_list_insert_after`].
+void ee_util_list_add_head(EeUtilList *list, EeUtilPool *pool, void *data);
+
+/// `UList::Remove`: the node out of the list and back to the pool.
+///
+/// # Safety
+/// `node` a node of `list`, from `pool`.
+void ee_util_list_remove(EeUtilList *list, EeUtilPool *pool, EeUtilListNode *node);
+
+/// `UList::Clear`.
+///
+/// # Safety
+/// `list` a live list whose nodes come from `pool`.
+void ee_util_list_clear(EeUtilList *list, EeUtilPool *pool);
+
+/// `UList::Find`: the first node holding `data`, or null.
+///
+/// # Safety
+/// `list` a live list.
+EeUtilListNode *ee_util_list_find(const EeUtilList *list, void *data);
 
 /// The strings' Windows LANGID, or 0 when the table is empty (the caller then asks the system).
 uint16_t ee_util_resource_strings_language();

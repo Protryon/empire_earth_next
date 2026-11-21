@@ -298,10 +298,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         return 0;
     case EE_CP_HERD_HOLD_UNIT: theUnit->HoldUnit(EEHerdUnit(inB));
         return 0;
-    case EE_CP_HERD_CANCEL_REQUEST: gPathManager.CancelAutoPathRequest(reinterpret_cast<UReferenceCounter*>((uintptr_t)inA));
-        return 0;
-    case EE_CP_HERD_REQUEST_DEREF: reinterpret_cast<UReferenceCounter*>((uintptr_t)inA)->Dereference();
-        return 0;
     case EE_CP_HERD_MEDIA_LOAD: reinterpret_cast<EEMedia*>((uintptr_t)inA)->LoadMedia();
         return 0;
     case EE_CP_HERD_MEDIA_UNLOAD: reinterpret_cast<EEMedia*>((uintptr_t)inA)->UnloadMedia();
