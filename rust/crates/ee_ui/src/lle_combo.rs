@@ -192,25 +192,16 @@ pub(crate) fn construct<C: Cpp + ?Sized>(
     let t = ee_ui_combo_text_rect(own, args.rect, drop_width as c_ulong);
     let (mut label, mut edit) = (0usize, 0usize);
     let text_box = if args.text_box_type == 1 {
-        label = c.combo_new_label(combo, args.font, t.left, t.top, t.right, t.bottom, args.border as u32);
+        label = c.combo_new_label(combo, args.font, t.left, t.top, t.right, t.bottom, args.border);
         label
     } else {
-        edit = c.combo_new_edit(
-            combo,
-            args.font,
-            args.max_chars as u32,
-            t.left,
-            t.top,
-            t.right,
-            t.bottom,
-            args.border as u32,
-        );
+        edit = c.combo_new_edit(combo, args.font, args.max_chars, t.left, t.top, t.right, t.bottom, args.border);
         edit
     };
     let own = rect_of(c, combo);
     let text_bottom = rect_of(c, text_box).bottom;
     let l = ee_ui_combo_list_rect(own, text_bottom, args.max_list_height);
-    let list = c.combo_new_list(combo, args.data, args.font, l.left, l.top, l.right, l.bottom, args.border as u32);
+    let list = c.combo_new_list(combo, args.data, args.font, l.left, l.top, l.right, l.bottom, args.border);
     let mut rgb = [0.0f32; 4];
     c.list_selected_color(list, F32Out(rgb.as_mut_ptr()));
     let selection = if c.list_line_count(list) > 0 { 0 } else { c_ulong::MAX };

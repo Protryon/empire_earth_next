@@ -44,8 +44,8 @@ pub(crate) fn load_ui_texture<C: Cpp + ?Sized>(c: &mut C, m: usize, name: &[u8])
 }
 
 /// Two 32-bit numbers in one answer (low, high).
-fn pack(low: u32, high: u32) -> isize {
-    (low as u64 | (high as u64) << 32) as isize
+fn pack(low: u64, high: u64) -> isize {
+    (low | high << 32) as isize
 }
 
 /// The manager's host's moved cases (`UIManager::HostOp`); `None` for the C++ host's.
@@ -83,12 +83,12 @@ pub(crate) fn manager_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<i
         Op::MgrWindowSize => {
             let window = c.mgr_window(m);
             let width = c.window_width(window);
-            pack(width, c.window_height(window))
+            pack(u64::from(width), u64::from(c.window_height(window)))
         }
         Op::MgrBlending => {
             let (mut source, mut destination) = (0, 0);
             c.mgr_blending(m, ULongOut::of(&mut source), ULongOut::of(&mut destination));
-            pack(source as u32, destination as u32)
+            pack(u64::from(source), u64::from(destination))
         }
         Op::MgrTextureLoad => {
             c.mgr_rasterizer_screen(m);
@@ -155,7 +155,7 @@ pub(crate) fn event_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isi
         Op::BgtFileCount => {
             let mut count = 0;
             let result = c.file_read_count(h.obj, ULongOut::of(&mut count));
-            h.set_f_bits(0, count as u32);
+            h.set_f_bits(0, u64::from(count) as u32);
             result as isize
         }
         Op::EvOwner => {

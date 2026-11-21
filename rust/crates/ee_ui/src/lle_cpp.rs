@@ -518,9 +518,9 @@ shims! {
     fn form_scaled_manager_bitmap(form: usize, index: u32, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_form_scaled_manager_bitmap;
     fn combo_new_drop(combo: usize, normal: usize, pressed: usize, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_combo_new_drop;
     fn control_width(control: usize) -> u32 = ee_uicpp_control_width;
-    fn combo_new_label(combo: usize, font: usize, left: f32, top: f32, right: f32, bottom: f32, border: u32) -> usize = ee_uicpp_combo_new_label;
-    fn combo_new_edit(combo: usize, font: usize, max_chars: u32, left: f32, top: f32, right: f32, bottom: f32, border: u32) -> usize = ee_uicpp_combo_new_edit;
-    fn combo_new_list(combo: usize, data: usize, font: usize, left: f32, top: f32, right: f32, bottom: f32, border: u32) -> usize = ee_uicpp_combo_new_list;
+    fn combo_new_label(combo: usize, font: usize, left: f32, top: f32, right: f32, bottom: f32, border: c_ulong) -> usize = ee_uicpp_combo_new_label;
+    fn combo_new_edit(combo: usize, font: usize, max_chars: c_ulong, left: f32, top: f32, right: f32, bottom: f32, border: c_ulong) -> usize = ee_uicpp_combo_new_edit;
+    fn combo_new_list(combo: usize, data: usize, font: usize, left: f32, top: f32, right: f32, bottom: f32, border: c_ulong) -> usize = ee_uicpp_combo_new_list;
     fn list_selected_color(list: usize, rgb: EeUiShimF32Out) = ee_uicpp_list_selected_color;
     fn list_line_count(list: usize) -> u32 = ee_uicpp_list_line_count;
     fn combo_set_rust(combo: usize, rust: usize) = ee_uicpp_combo_set_rust;

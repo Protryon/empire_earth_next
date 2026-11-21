@@ -11,8 +11,6 @@ use crate::screens::single_player::EeScreensSinglePlayerSlot;
 
 /// cbindgen:ignore
 pub(crate) mod sys {
-    use core::ffi::c_void;
-
     extern "C" {
         // the settings form's (settings_form_ffi.rs)
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);

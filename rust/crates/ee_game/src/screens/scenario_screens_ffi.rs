@@ -7,7 +7,7 @@ use core::ffi::{c_ulong, c_void};
 use std::sync::Mutex;
 
 use crate::screens::menus::EE_SCREENS_TEXT_STRING;
-use crate::screens::menus_ffi::{sys, Form};
+use crate::screens::menus_ffi::Form;
 use crate::screens::scenario_screens::*;
 
 /// The manager's form of an id (`gUIManager->GetFormByID`, on the manager's Rust object: `ee_ui direct.rs`).

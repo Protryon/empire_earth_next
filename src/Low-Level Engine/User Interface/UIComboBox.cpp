@@ -106,11 +106,11 @@ extern "C" uintptr_t ee_uicpp_form_scaled_manager_bitmap(uintptr_t inForm, uint3
 extern "C" uintptr_t ee_uicpp_combo_new_drop(uintptr_t inCombo, uintptr_t inNormal, uintptr_t inPressed, float inLeft, float inTop, float inRight, float inBottom)
 { return (uintptr_t) new UIButton(COMBO(inCombo)->GetId(), BMP(inNormal), NULL, BMP(inPressed), GERectangle(inLeft, inTop, inRight, inBottom), COMBO(inCombo)->GetForm(), COMBO(inCombo)->GetIndex(), 0); }
 extern "C" uint32_t ee_uicpp_control_width(uintptr_t inControl) { return (uint32_t)CTL(inControl)->GetWidth(); }
-extern "C" uintptr_t ee_uicpp_combo_new_label(uintptr_t inCombo, uintptr_t inFont, float inLeft, float inTop, float inRight, float inBottom, uint32_t inBorder)
+extern "C" uintptr_t ee_uicpp_combo_new_label(uintptr_t inCombo, uintptr_t inFont, float inLeft, float inTop, float inRight, float inBottom, unsigned long inBorder)
 { return (uintptr_t) new UITextLabel(UWideString(""), reinterpret_cast<GEFont*>(inFont), COMBO(inCombo)->GetId(), GERectangle(inLeft, inTop, inRight, inBottom), COMBO(inCombo)->GetForm(), 0, COMBO(inCombo)->GetIndex(), inBorder); }
-extern "C" uintptr_t ee_uicpp_combo_new_edit(uintptr_t inCombo, uintptr_t inFont, uint32_t inMaxChars, float inLeft, float inTop, float inRight, float inBottom, uint32_t inBorder)
+extern "C" uintptr_t ee_uicpp_combo_new_edit(uintptr_t inCombo, uintptr_t inFont, unsigned long inMaxChars, float inLeft, float inTop, float inRight, float inBottom, unsigned long inBorder)
 { return (uintptr_t) new UIEditBox(COMBO(inCombo)->GetId(), reinterpret_cast<GEFont*>(inFont), inMaxChars, false, GERectangle(inLeft, inTop, inRight, inBottom), COMBO(inCombo)->GetForm(), COMBO(inCombo)->GetIndex(), inBorder, false, false); }
-extern "C" uintptr_t ee_uicpp_combo_new_list(uintptr_t inCombo, uintptr_t inData, uintptr_t inFont, float inLeft, float inTop, float inRight, float inBottom, uint32_t inBorder)
+extern "C" uintptr_t ee_uicpp_combo_new_list(uintptr_t inCombo, uintptr_t inData, uintptr_t inFont, float inLeft, float inTop, float inRight, float inBottom, unsigned long inBorder)
 { return (uintptr_t) new UILBString(COMBO(inCombo)->GetId(), *reinterpret_cast<const std::vector<UWideString>*>(inData), reinterpret_cast<GEFont*>(inFont), true, GERectangle(inLeft, inTop, inRight, inBottom), COMBO(inCombo)->GetForm(), COMBO(inCombo)->GetIndex(), inBorder); }
 extern "C" void ee_uicpp_list_selected_color(uintptr_t inList, float* inRgb)
 { LIST(inList)->GetSelectedBackground()->GetColorPerVertex(*reinterpret_cast<GEColor*>(inRgb), *reinterpret_cast<GEColor*>(inRgb), *reinterpret_cast<GEColor*>(inRgb), *reinterpret_cast<GEColor*>(inRgb)); }
