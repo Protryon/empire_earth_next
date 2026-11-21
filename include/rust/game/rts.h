@@ -104,6 +104,15 @@ struct EeRtsUnitBucket {
   unsigned long count;
 };
 
+/// `RTSMapVertexColors`: a rectangle of colour-table indices (x in [left, right), y in [bottom, top), row-major).
+struct EeRtsMapVertexColors {
+  long bottom;
+  long left;
+  long right;
+  long top;
+  const uint8_t *indices;
+};
+
 extern "C" {
 
 /// `RTSGraphics::Main` (the C++ loop over [`ee_rts_graphics_pass`] and `Sleep(1)`).
@@ -190,6 +199,31 @@ void ee_rts_graphics_post_resume(void *graphics);
 /// # Safety
 /// `graphics` is the live object.
 void ee_rts_graphics_set_surface(void *graphics, void *surface);
+
+/// `RTSMap::RTSMap`.
+///
+/// # Safety
+/// `map` is the C++ object under construction.
+void ee_rts_map_construct(void *map, float scale);
+
+/// `RTSMap::~RTSMap`: the tiles, then the lock.
+///
+/// # Safety
+/// `map` is the C++ object being destroyed.
+void ee_rts_map_destruct(void *map);
+
+/// `RTSMap::Create`.
+///
+/// # Safety
+/// `map` is the live object.
+void ee_rts_map_create(void *map,
+                       long width,
+                       long height,
+                       unsigned long players,
+                       bool create_tiles);
+
+/// `RTSMap::ApplyVertexColors`.
+void ee_rts_map_apply_vertex_colors(void *map);
 
 /// `RTSMiniMap::RTSMiniMap`.
 ///

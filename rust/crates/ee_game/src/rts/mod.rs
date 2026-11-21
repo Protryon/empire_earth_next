@@ -3,6 +3,7 @@
 //! bodies make are one-statement shims in the classes' own units (`ee_base::cpp_shims!`).
 
 pub mod graphics;
+pub mod map;
 pub mod minimap;
 pub mod mouse;
 pub mod mouse_pointer;
