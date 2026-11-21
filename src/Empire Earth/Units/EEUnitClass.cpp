@@ -1292,7 +1292,6 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_NEXT_PART: return (uint64_t)(uintptr_t)(inA != 0 ? theOther : theUnit)->mNextPart;
     case EE_UNITS_UC_SET_ROTTING: theOther->SetRottingAwayTime((long)inB); return 0;
     case EE_UNITS_UC_CONTINUE_PRODUCTION: theUnit->ContinueProduction(); return 0;
-    case EE_UNITS_UC_HEAL_GARRISON: theClass->HealGarrison(theUnit); return 0;
     // UpdateAnimal's
     case EE_UNITS_UC_FRAME: return theUnit->mPhysicalModel.GetFrame();
     case EE_UNITS_UC_KEEP_LAST_HIT_POINTS: theUnit->SetLastHitPoints(theUnit->mHitPoints); return 0;
@@ -1301,10 +1300,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_PHYSICS_STEP: theClass->mPhysicsModel->Step(theUnit); return 0;
     case EE_UNITS_UC_UPDATE_RELOAD_TIMER: theUnit->UpdateReloadTimer(); return 0;
     case EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER: theUnit->UpdateTargetSearchTimer(); return 0;
-    case EE_UNITS_UC_ANIMATE: return theClass->Animate(theUnit);
-    case EE_UNITS_UC_REFRESH_SOUND: theClass->RefreshSound(theUnit); return 0;
     case EE_UNITS_UC_COMMAND_TYPE: return theUnit->GetCommandType();
-    case EE_UNITS_UC_FIRE_ON_ATTACK_FRAME: theClass->FireOnAttackFrame(theUnit, (long)inB, (long)inC); return 0;
     case EE_UNITS_UC_UPDATE_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
     case EE_UNITS_UC_UPDATE_DONE: theClass->UpdateDone(theUnit); return 0;
     // RefreshSound's

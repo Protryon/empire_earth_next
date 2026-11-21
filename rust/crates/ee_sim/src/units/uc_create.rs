@@ -16,6 +16,7 @@ use crate::units::uc_produce::*;
 use ee_base::math::transform::RotationOrder;
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 use ee_base::math::um::{floor, um_arctan2};
+use std::f32::consts::{FRAC_PI_2, PI};
 use std::os::raw::c_long;
 
 // ---- the statements (from 300; `class` the body's class, `unit` its unit, `a` an object, `b`, `c` values)
@@ -275,9 +276,9 @@ const TAG_CBLT: u64 = u32::from_be_bytes(*b"CBLT") as u64;
 const LAUNCH_KIND_SHOT: i32 = crate::combat::launch::EE_COMBAT_LAUNCH_KIND_SHOT;
 const LAUNCH_KIND_TURRET: i32 = crate::combat::launch::EE_COMBAT_LAUNCH_KIND_TURRET;
 /// the wall pieces' yaws (`kWallRotations`)
-const WALL_ROTATIONS: [f32; 4] = [0.0, 3.1415927, -1.5707964, 1.5707964];
+const WALL_ROTATIONS: [f32; 4] = [0.0, PI, -FRAC_PI_2, FRAC_PI_2];
 /// `3.1415927f` (the created unit's yaw)
-const YAW_PI: f32 = 3.1415927;
+const YAW_PI: f32 = PI;
 
 /// The unit utilities' Rust these bodies call (their FFI functions, as the C++ called them) and the launch chain.
 pub trait UcCreateRust: UcRust {
@@ -774,14 +775,14 @@ pub fn launch_shot<H: UcCreateRust + ?Sized>(
         input.kind = LAUNCH_KIND_SHOT;
         input.special = s.s(EE_UNITS_UC_SPECIAL_ATTACK) as i32;
         input.has_special = s.s(EE_UNITS_UC_HAS_SPECIAL_ATTACK) as i32;
-        input.capital = i32::from(unit_type == UNIT_TYPE_SP15_CAPITAL_SHIP || unit_type == UNIT_TYPE_CAPITAL_SHIP_YAMATO);
+        input.capital =
+            i32::from(unit_type == UNIT_TYPE_SP15_CAPITAL_SHIP || unit_type == UNIT_TYPE_CAPITAL_SHIP_YAMATO);
         input.legionnaire = i32::from(unit_type == UNIT_TYPE_X04_ROMAN_LEGIONNAIRE);
         input.point_count = if list != 0 { s.a(EE_UNITS_UC_TAG_COUNT, list) as i32 } else { 0 };
         input.weapon_index = s.s(EE_UNITS_UC_WEAPON_TAG) as i32;
         input.building = i32::from(s.a(EE_UNITS_UC_CLASS_CATEGORY_FIELD, class) == CATEGORY_BUILDING);
         let projectile = s.s(EE_UNITS_UC_PROJECTILE_CLASS) as u64;
-        input.turn =
-            i32::from(projectile == 0 || s.a(EE_UNITS_UC_CLASS_CATEGORY_FIELD, projectile) != CATEGORY_BOMB);
+        input.turn = i32::from(projectile == 0 || s.a(EE_UNITS_UC_CLASS_CATEGORY_FIELD, projectile) != CATEGORY_BOMB);
         let mut here = GeTransformation::IDENTITY;
         s.ab(EE_UNITS_UC_LOCATION_MATRIX, unit, addr(&mut here.m) as i64);
         input.location = flatten(&here);
@@ -841,7 +842,6 @@ pub fn launch_from_turret<H: UcCreateRust + ?Sized>(h: &mut H, class: u64, unit:
         let mut s = S { h: &mut *h, class, unit };
         index = s.s(EE_UNITS_UC_WEAPON_TAG);
         if s.s(EE_UNITS_UC_FIND_TURRET_PART) != 0 {
-            drop(s);
             launch_shot(h, class, unit, target, location, 0);
             return;
         }
@@ -1059,7 +1059,8 @@ pub(crate) mod game {
             if count <= 0 {
                 return Vec::new();
             }
-            let data = self.uc(EE_UNITS_UC_CHAIN_DATA, class, unit, 0, 0, 0, &mut [0.0; 4]) as usize as *const [f32; 16];
+            let data =
+                self.uc(EE_UNITS_UC_CHAIN_DATA, class, unit, 0, 0, 0, &mut [0.0; 4]) as usize as *const [f32; 16];
             // SAFETY: the host's chain holds `count` matrices (EECombatTagPointChain counted them in)
             unsafe { std::slice::from_raw_parts(data, count as usize) }.to_vec()
         }

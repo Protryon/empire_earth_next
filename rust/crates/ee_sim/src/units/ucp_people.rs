@@ -315,7 +315,7 @@ pub fn play_unit_effect<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64, te
     }
     s.f(EE_UNITS_UCP_SOUND_PLAY, sound, 0, 0, &mut f);
     let every = s.s(EE_UNITS_UCP_THUNDER_EVERY) as u32;
-    if every == 0 || (s.s(EE_UNITS_UC_UNIT_ID) as u32) % every != 0 {
+    if every == 0 || !(s.s(EE_UNITS_UC_UNIT_ID) as u32).is_multiple_of(every) {
         return;
     }
     let thunder = s.s(EE_UNITS_UCP_THUNDER_SOUND) as u64;
@@ -497,10 +497,7 @@ pub fn can_convert<H: UcHost + ?Sized>(h: &mut H, priest: u64, target: u64) -> (
     let mut s = S { h, class: 0, unit: priest };
     let cost = s.a(EE_UNITS_UCP_CONVERSION_COST, priest);
     let r = |s: &mut S<'_, H>, which: i64| s.ab(EE_UNITS_UCP_CAN_CONVERT_READ, target, which);
-    let mut i = EeCombatCanConvertIn {
-        crusader: r(&mut s, EE_UNITS_UCP_CC_CRUSADER) as i32,
-        ..Default::default()
-    };
+    let mut i = EeCombatCanConvertIn { crusader: r(&mut s, EE_UNITS_UCP_CC_CRUSADER) as i32, ..Default::default() };
     i.building_priest = i32::from(r(&mut s, EE_UNITS_UCP_CC_PRIEST_CATEGORY) == CATEGORY_BUILDING_PRIEST);
     i.adaptation = r(&mut s, EE_UNITS_UCP_CC_ADAPTATION) as i32;
     i.same_player = r(&mut s, EE_UNITS_UCP_CC_SAME_PLAYER) as i32;
@@ -731,7 +728,8 @@ mod game {
         fn countdown(&mut self, id: u32, object: u64, which: u32, member: i64, tick_ms: i64) -> Option<i64> {
             let mut out = 0i64;
             // SAFETY: the output is live for the call
-            let written = unsafe { crate::units::step::ee_units_step_countdown(id, object, which, member, tick_ms, &mut out) };
+            let written =
+                unsafe { crate::units::step::ee_units_step_countdown(id, object, which, member, tick_ms, &mut out) };
             written.then_some(out)
         }
         fn heal_step(&mut self, id: u32, object: u64, member: f32, tick_time: f32) -> Option<f32> {
@@ -743,7 +741,14 @@ mod game {
         fn rotting(&mut self, id: u32, object: u64, member: i64, tick_ms: i64) -> i64 {
             crate::units::step::ee_units_step_rotting(id, object, member, tick_ms)
         }
-        fn resources_rotting(&mut self, id: u32, object: u64, time: i64, amount: i64, tick_ms: i64) -> (i64, Option<i64>) {
+        fn resources_rotting(
+            &mut self,
+            id: u32,
+            object: u64,
+            time: i64,
+            amount: i64,
+            tick_ms: i64,
+        ) -> (i64, Option<i64>) {
             let (mut t, mut a) = (0i64, 0i64);
             // SAFETY: the outputs are live for the call
             let lost = unsafe {
@@ -763,7 +768,13 @@ mod game {
     /// # Safety
     /// `class` NULL or a live `EEUnitClass`, `unit` a live `EEComplexUnit`, on the simulation thread.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_ucp_call(what: i32, class: *mut c_void, unit: *mut c_void, a: u64, b: i64) -> i64 {
+    pub unsafe extern "C" fn ee_units_ucp_call(
+        what: i32,
+        class: *mut c_void,
+        unit: *mut c_void,
+        a: u64,
+        b: i64,
+    ) -> i64 {
         run(&mut GameP, what, class as usize as u64, unit as usize as u64, a, b)
     }
 
@@ -773,7 +784,11 @@ mod game {
     /// # Safety
     /// `priest` and `target` are live `EEComplexUnit`s, `flag` a live bool, on the simulation thread.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_ucp_can_convert(priest: *mut c_void, target: *mut c_void, flag: *mut bool) -> bool {
+    pub unsafe extern "C" fn ee_units_ucp_can_convert(
+        priest: *mut c_void,
+        target: *mut c_void,
+        flag: *mut bool,
+    ) -> bool {
         let (result, written) = can_convert(&mut GameP, priest as usize as u64, target as usize as u64);
         if let Some(value) = written {
             // SAFETY: the caller's flag

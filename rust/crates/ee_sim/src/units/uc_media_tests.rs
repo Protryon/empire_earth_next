@@ -58,7 +58,8 @@ fn unloading_a_granary_unloads_its_farms() {
 
 #[test]
 fn destruction_releases_effects_then_the_related_classes() {
-    let mut h = Mock::default().sequence(EE_UNITS_UC_EFFECT_AT, &[3]).sequence(EE_UNITS_UC_RELATED_CLASS, &[0, 0, 0, 0, 22]);
+    let mut h =
+        Mock::default().sequence(EE_UNITS_UC_EFFECT_AT, &[3]).sequence(EE_UNITS_UC_RELATED_CLASS, &[0, 0, 0, 0, 22]);
     destroy(&mut h, 1);
     assert_eq!(h.args(EE_UNITS_UC_EFFECT_DEREFERENCE), [(3, 0, 0)]);
     assert_eq!(h.args(EE_UNITS_UC_CLASS_DEREFERENCE), [(22, 0, 0)]);

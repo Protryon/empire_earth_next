@@ -109,7 +109,8 @@ fn a_teleporter_spends_faith_by_the_cargo_unloaded() {
     fortress_unload_at(&mut h, 1, 2, 3, 4);
     // 6 aboard, then 2: 4 / 8 of 100 faith
     assert_eq!(h.args(EE_UNITS_UCX_SET_POWER), [(0, 200, 0)]);
-    let mut h = Mock::default().answer(EE_UNITS_UCX_TYPE_OF, UNIT_TYPE_TELEPORTER).answer(EE_UNITS_UCX_UNLOAD_COST, 100);
+    let mut h =
+        Mock::default().answer(EE_UNITS_UCX_TYPE_OF, UNIT_TYPE_TELEPORTER).answer(EE_UNITS_UCX_UNLOAD_COST, 100);
     fortress_unload_at(&mut h, 1, 2, 3, 4);
     assert_eq!(h.args(EE_UNITS_UCX_UNLOAD_EVENT), [(0, 3, 4)]);
     assert!(!h.has(EE_UNITS_UCX_UNLOAD_AT_TILE));

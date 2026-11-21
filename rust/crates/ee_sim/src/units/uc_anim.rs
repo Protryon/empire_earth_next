@@ -412,7 +412,10 @@ pub fn turn_turrets<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     let goal = s.s(EE_UNITS_UC_GOAL_STATE_SELF) as u64;
     let kind = if goal != 0 { s.a(EE_UNITS_UC_GOAL_KIND, goal) } else { -1 };
     if goal == 0
-        || (kind != GOAL_ATTACK_UNIT && kind != GOAL_ATTACK_GROUND && kind != GOAL_CAST_CALAMITY && kind != GOAL_HEAL_UNIT)
+        || (kind != GOAL_ATTACK_UNIT
+            && kind != GOAL_ATTACK_GROUND
+            && kind != GOAL_CAST_CALAMITY
+            && kind != GOAL_HEAL_UNIT)
     {
         turn_turrets_back(h, class, unit);
         return;
@@ -481,6 +484,8 @@ pub fn update_ripples<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
 
 /// `CreateRipples(unit)`: the class's ripple effect at the model's ripple tag points under water, when the player
 /// sees the unit.
+// the original's `!(a < 0.0f)` tests (a NaN height passes them)
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn create_ripples<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     let mut s = S { h, class, unit };
     let mut effect = GeTransformation::IDENTITY;

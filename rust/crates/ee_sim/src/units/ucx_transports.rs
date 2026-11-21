@@ -170,7 +170,8 @@ pub fn transport_created<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
 pub fn unload_at<H: UcHost + ?Sized>(h: &mut H, class: u64, transport: u64, x: i64, y: i64) {
     let mut s = S { h, class, unit: transport };
     let unit_type = s.a(EE_UNITS_UC_CLASS_UNIT_TYPE, class);
-    let tower = unit_type == UNIT_TYPE_SIEGE04_TOWER || s.a(EE_UNITS_UC_CLASS_UNIT_TYPE, class) == UNIT_TYPE_SIEGE06_HEAVY_TOWER;
+    let tower = unit_type == UNIT_TYPE_SIEGE04_TOWER
+        || s.a(EE_UNITS_UC_CLASS_UNIT_TYPE, class) == UNIT_TYPE_SIEGE06_HEAVY_TOWER;
     s.abc(EE_UNITS_UCX_UNLOAD_AT_TILE, u64::from(tower), x, y);
 }
 

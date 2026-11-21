@@ -80,7 +80,7 @@ fn a_released_unit_copies_its_own_queue_and_takes_off() {
         .answer(EE_UNITS_UC_GOAL_SUITS, 1)
         .answer(EE_UNITS_UC_GOAL_CLONE, 88);
     release_unit(&mut h, 1, 2);
-    assert_eq!(h.floats_of(EE_UNITS_UC_SET_ORIENTATION)[0][0], 3.1415927);
+    assert_eq!(h.floats_of(EE_UNITS_UC_SET_ORIENTATION)[0][0], std::f32::consts::PI);
     assert_eq!(h.args(EE_UNITS_UC_QUEUE_GOAL_ON), [(70, 88, 0), (70, 88, 0)]);
     assert_eq!(h.args(EE_UNITS_UC_START_ACTION), [(70, ACTION_TAKEOFF, 0)]);
     assert!(h.at(EE_UNITS_UCB_SET_HOME_BASE) < h.at(EE_UNITS_UC_START_ACTION));
@@ -131,9 +131,8 @@ fn a_disabled_armed_building_skips_its_tick() {
 
 #[test]
 fn an_armed_building_ticks_and_rots() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_UC_HAS_PHYSICS_MODEL, 1)
-        .answer(EE_UNITS_UC_COMMAND_KIND, ACTION_UNIT_ROTTING);
+    let mut h =
+        Mock::default().answer(EE_UNITS_UC_HAS_PHYSICS_MODEL, 1).answer(EE_UNITS_UC_COMMAND_KIND, ACTION_UNIT_ROTTING);
     update_armed(&mut h, 1, 2);
     assert!(h.has(EE_UNITS_UC_PHYSICS_STEP));
     assert!(h.has(EE_UNITS_UCB_UPDATE_TURRETS));

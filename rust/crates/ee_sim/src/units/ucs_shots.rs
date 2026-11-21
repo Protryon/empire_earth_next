@@ -96,7 +96,7 @@ const UNIT_TYPE_BOMB_FOR_SAS_EXPLOSIVE_EXPERT: i64 = 0x305;
 const GOAL_ATTACK_UNIT: i64 = 2;
 /// the flight animation
 const ANIMATION_FLIGHT: i64 = 0xd;
-const HALF_PI: f32 = 1.5707964;
+const HALF_PI: f32 = std::f32::consts::FRAC_PI_2;
 
 fn position(t: &GeTransformation) -> [f32; 3] {
     [t.m[0][3], t.m[1][3], t.m[2][3]]
@@ -183,12 +183,8 @@ pub fn bomb_launch<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) -> bool
     let speed = s.float(EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED, 0, 0);
     let (direction, yaw) = forward(&t);
     let tilt = s.float(EE_UNITS_UCS_LAUNCH_PITCH, 0, 0);
-    let mut pitch = um_arccos(-direction.z) - HALF_PI + tilt;
-    if pitch > 0.0 {
-        pitch = 0.0;
-    } else if pitch < -HALF_PI {
-        pitch = -HALF_PI;
-    }
+    // held to 0..-90 degrees (a NaN stays one, as in the original's two tests)
+    let pitch = (um_arccos(-direction.z) - HALF_PI + tilt).clamp(-HALF_PI, 0.0);
     launch(&mut s, &mut t, yaw, pitch, um_cos(pitch) * speed);
     true
 }

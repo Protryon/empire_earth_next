@@ -12,7 +12,14 @@ impl UcpRust for Mock {
     fn rotting(&mut self, _id: u32, _object: u64, member: i64, tick_ms: i64) -> i64 {
         (member - tick_ms).max(0)
     }
-    fn resources_rotting(&mut self, _id: u32, _object: u64, time: i64, amount: i64, tick_ms: i64) -> (i64, Option<i64>) {
+    fn resources_rotting(
+        &mut self,
+        _id: u32,
+        _object: u64,
+        time: i64,
+        amount: i64,
+        tick_ms: i64,
+    ) -> (i64, Option<i64>) {
         let t = time + tick_ms;
         if t > 4000 {
             (t - 4000, Some(amount - 1))

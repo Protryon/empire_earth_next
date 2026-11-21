@@ -16,6 +16,7 @@ use crate::units::uc_produce::*;
 use ee_base::math::transform::RotationOrder;
 use ee_base::math::types::GeTransformation;
 use ee_base::math::um::{floor, floor_unsigned, um_cos};
+use std::f32::consts::{FRAC_PI_2, PI};
 use std::os::raw::c_long;
 
 // ---- the statements (from 1000; `unit` the building)
@@ -230,8 +231,8 @@ const GOAL_HEAL_UNIT: i64 = 15;
 /// `kBuildingLift` (a building sits just above the ground)
 const BUILDING_LIFT: f32 = 0.001;
 /// the yaws of the four map quarters (kQuarterYaws; the exiting unit's by its base's facing)
-const FACING_YAWS: [f32; 4] = [0.0, 3.1415927, -1.5707964, 1.5707964];
-const HALF_PI: f32 = 1.5707964;
+const FACING_YAWS: [f32; 4] = [0.0, PI, -FRAC_PI_2, FRAC_PI_2];
+const HALF_PI: f32 = FRAC_PI_2;
 
 /// The unit utilities' Rust the buildings call (their FFI functions, as the C++ called them).
 pub trait UcbRust {
@@ -792,7 +793,14 @@ pub fn space_create_unit<H: UcHost + ?Sized>(
 
 /// `BuildingGetSurroundingTiles(unit, tiles, corners, append)`: the tiles around a building; an airport's include
 /// its runway (four times its size toward its facing).
-pub fn surrounding_tiles<H: UcHost + UcbRust + ?Sized>(h: &mut H, class: u64, unit: u64, tiles: u64, corners: i64, append: bool) {
+pub fn surrounding_tiles<H: UcHost + UcbRust + ?Sized>(
+    h: &mut H,
+    class: u64,
+    unit: u64,
+    tiles: u64,
+    corners: i64,
+    append: bool,
+) {
     let mut s = st(h, class, unit);
     let (mut top, mut left, mut bottom, mut right) = (0.0f32, 0.0f32, 0.0f32, 0.0f32);
     if !append {

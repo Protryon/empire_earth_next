@@ -6139,9 +6139,6 @@ constexpr static const int32_t EE_UNITS_UC_SET_ROTTING = 30;
 /// `unit->ContinueProduction()`
 constexpr static const int32_t EE_UNITS_UC_CONTINUE_PRODUCTION = 31;
 
-/// `class->HealGarrison(unit)`
-constexpr static const int32_t EE_UNITS_UC_HEAL_GARRISON = 32;
-
 /// `unit->mPhysicalModel.GetFrame()`
 constexpr static const int32_t EE_UNITS_UC_FRAME = 33;
 
@@ -6163,17 +6160,8 @@ constexpr static const int32_t EE_UNITS_UC_UPDATE_RELOAD_TIMER = 38;
 /// `unit->UpdateTargetSearchTimer()`
 constexpr static const int32_t EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER = 39;
 
-/// `class->Animate(unit)`
-constexpr static const int32_t EE_UNITS_UC_ANIMATE = 40;
-
-/// `class->RefreshSound(unit)`
-constexpr static const int32_t EE_UNITS_UC_REFRESH_SOUND = 41;
-
 /// `unit->GetCommandType()`
 constexpr static const int32_t EE_UNITS_UC_COMMAND_TYPE = 42;
-
-/// `class->FireOnAttackFrame(unit, b, c)`
-constexpr static const int32_t EE_UNITS_UC_FIRE_ON_ATTACK_FRAME = 43;
 
 /// `unit->UpdateResourcesRotting()`
 constexpr static const int32_t EE_UNITS_UC_UPDATE_RESOURCES_ROTTING = 44;

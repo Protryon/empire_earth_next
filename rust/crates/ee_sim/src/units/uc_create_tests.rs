@@ -186,7 +186,8 @@ fn a_dying_unit_spawns_plays_and_stops() {
 
 #[test]
 fn an_icbm_dies_silently() {
-    let mut h = Mock::default().answer(EE_UNITS_UC_PRODUCER_TYPE, UNIT_TYPE_CP_ICBM).answer(EE_UNITS_UC_UNIT_IS_WALL, 1);
+    let mut h =
+        Mock::default().answer(EE_UNITS_UC_PRODUCER_TYPE, UNIT_TYPE_CP_ICBM).answer(EE_UNITS_UC_UNIT_IS_WALL, 1);
     unit_died(&mut h, 1, 2);
     assert!(!h.has(EE_UNITS_UC_DEATH_SOUND));
     assert!(!h.has(EE_UNITS_UC_SET_ANIMATION));

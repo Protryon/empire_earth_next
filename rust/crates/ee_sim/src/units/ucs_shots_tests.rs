@@ -29,9 +29,8 @@ fn an_icbm_waits_stopped() {
 
 #[test]
 fn a_projectile_launches_at_the_ballistic_pitch() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_UCS_BALLISTIC_PITCH, 1)
-        .float(EE_UNITS_UCS_LAUNCH_SPEED, [10.0, 0.0, 0.0, 0.0]);
+    let mut h =
+        Mock::default().answer(EE_UNITS_UCS_BALLISTIC_PITCH, 1).float(EE_UNITS_UCS_LAUNCH_SPEED, [10.0, 0.0, 0.0, 0.0]);
     assert!(projectile_launch(&mut h, 1, 2, [5.0, 5.0, 0.0]));
     assert_eq!(h.args(EE_UNITS_UCS_SET_FLIGHT_TIME), [(0, 0, 0)]);
     // the identity faces y: yaw 0; the pitch 0 (the host wrote none): full launch speed

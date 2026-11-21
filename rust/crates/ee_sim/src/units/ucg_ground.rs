@@ -83,7 +83,7 @@ const ACTION_RESOURCES_ROTTING: i64 = 6001;
 const ACTION_UNIT_ROTTING: i64 = 6002;
 const GOAL_LOCATION: i64 = 1;
 /// `3.1415927f` (the paratroop plane's yaw)
-const YAW_PI: f32 = 3.1415927;
+const YAW_PI: f32 = std::f32::consts::PI;
 /// a slow request's speed (`NavalHasArrived`)
 const ARRIVED_SPEED: f32 = 0.05;
 
@@ -211,6 +211,8 @@ pub fn naval_created<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
 
 /// `NavalHasArrived(unit, value)`: whether the ship may stop (already sinking, a slow request, or at the path's end
 /// tile with its speed reached).
+// the original's `mCollisionRadius < inValue ? false : true` (a NaN arrives)
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn naval_arrived<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64, value: f32) -> bool {
     let mut s = S { h, class, unit };
     if s.s(EE_UNITS_UCG_COLLISION_STATE) == 8 || value <= ARRIVED_SPEED {
@@ -313,7 +315,13 @@ mod game {
     /// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0), on the
     /// simulation thread.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_ucg_call(what: i32, class: *mut c_void, unit: *mut c_void, a: u64, f: f32) -> i64 {
+    pub unsafe extern "C" fn ee_units_ucg_call(
+        what: i32,
+        class: *mut c_void,
+        unit: *mut c_void,
+        a: u64,
+        f: f32,
+    ) -> i64 {
         run(&mut GameG, what, class as usize as u64, unit as usize as u64, a, f)
     }
 }
