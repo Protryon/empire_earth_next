@@ -54,9 +54,8 @@ protected:
 
     GETextureManager* mTextureManager;      // +0x04
     unsigned long mRasterizerIndex;         // +0x08
-private:
-    friend LLE_API long GEInitialize(class FSFileSpec& inDirectory, HINSTANCE__* const inInstance);   // sets sInstance
-    static HINSTANCE__* sInstance;          // exported ?sInstance@GEScreen@@0PAUHINSTANCE__@@A
+public:
+    static HINSTANCE__* sInstance;          // (private in the original) GEInitialize sets it (ee_render ge startup.rs)
 };
 
 #endif

@@ -2685,6 +2685,9 @@ void *ee_ge_win_os(const EeGeWin *p);
 /// `p` is live.
 void ee_ge_win_resize(EeGeWin *p, unsigned long width, unsigned long height);
 
+/// `GEInitialize(directory, instance)` (the directory is not read).
+long ee_ge_initialize(void *instance);
+
 /// Turns the arrays' capture on or off.
 void ee_ge_store_capture(bool on);
 
@@ -3283,6 +3286,31 @@ unsigned long ee_ge_tm_register_color_set(EeGeTerrainMesh *p,
 /// `p` is live.
 unsigned long ee_ge_tm_register_texture_set(EeGeTerrainMesh *p, void *set);
 
+/// `RegisterColorSet(set, outID)` as the C++ returns it: the id into `out`, 0.
+///
+/// # Safety
+/// `p` is live; `colors` holds `count` values; `out` is valid for a write.
+long ee_ge_tm_register_color_set_out(EeGeTerrainMesh *p,
+                                     const unsigned long *colors,
+                                     size_t count,
+                                     unsigned long *out);
+
+/// `RegisterTextureSet(set, outID)` as the C++ returns it: the id into `out`, 0.
+///
+/// # Safety
+/// `p` is live; `out` is valid for a write.
+long ee_ge_tm_register_texture_set_out(EeGeTerrainMesh *p, void *set, unsigned long *out);
+
+/// Two of the mesh's values (`GetTerrainVisibleBottomLeftIndices`, `GetTerrainVisibleTileDimensions`).
+///
+/// # Safety
+/// `p` is live; the outs are valid for a write.
+void ee_ge_tm_get_pair(const EeGeTerrainMesh *p,
+                       EeGeTmVal a,
+                       EeGeTmVal b,
+                       unsigned long *out_a,
+                       unsigned long *out_b);
+
 /// `GetRegisteredTextureSet(id)` (NULL past the registered ones).
 ///
 /// # Safety
@@ -3349,6 +3377,16 @@ long ee_ge_tm_save(const EeGeTerrainMesh *p, const EeGeFieldIo *io);
 /// # Safety
 /// `p` is live; the row exists; `out` holds three values.
 void ee_ge_tm_visible_row(const EeGeTerrainMesh *p, unsigned long index, long *out);
+
+/// `GetVisibleTileRow(index, outY, outStartX, outEndX)`: the row's three values.
+///
+/// # Safety
+/// `p` is live, `index` one of its rows; the outs are valid for a write.
+void ee_ge_tm_visible_row_parts(const EeGeTerrainMesh *p,
+                                unsigned long index,
+                                long *out_y,
+                                long *out_start_x,
+                                long *out_end_x);
 
 /// The render vertex array (`GetTerrainRenderVertexArray`, or with `water` `GetWaterRenderVertexArray`):
 /// `[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]`.

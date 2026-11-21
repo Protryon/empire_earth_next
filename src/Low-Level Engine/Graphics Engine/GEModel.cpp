@@ -493,34 +493,6 @@ GETerrainMesh::GETerrainMesh() { this->mRust = ee_ge_tm_new(TerrainMeshHost, thi
 
 GETerrainMesh::~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
-
-
-
-
-
-
-
-long GETerrainMesh::RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
-{
-    outID = ee_ge_tm_register_color_set(this->mRust, inColorSet.data(), inColorSet.size());
-    return 0;
-}
-
-long GETerrainMesh::RegisterTextureSet(GETextureSet* inTextureSet, unsigned long& outID)
-{
-    outID = ee_ge_tm_register_texture_set(this->mRust, inTextureSet);
-    return 0;
-}
-
-
-
-
-
-
-
-
-
-
 long GETerrainMesh::Load(unsigned long, unsigned long, FSFile& inFile)
 {
     EeGeFieldIo theIO = GERustFieldIO(inFile);
@@ -533,21 +505,3 @@ long GETerrainMesh::Save(FSFile& inFile) const
     return ee_ge_tm_save(this->mRust, &theIO);
 }
 
-void GETerrainMesh::GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const
-{
-    outX = ee_ge_tm_get(this->mRust, EeGeTmVal::BottomLeftX);
-    outY = ee_ge_tm_get(this->mRust, EeGeTmVal::BottomLeftY);
-}
-void GETerrainMesh::GetTerrainVisibleTileDimensions(unsigned long& outWidth, unsigned long& outHeight) const
-{
-    outWidth = ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileWidth);
-    outHeight = ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileHeight);
-}
-void GETerrainMesh::GetVisibleTileRow(unsigned long inIndex, long& outY, long& outStartX, long& outEndX) const
-{
-    long theRow[3];
-    ee_ge_tm_visible_row(this->mRust, inIndex, theRow);
-    outY = theRow[0];
-    outStartX = theRow[1];
-    outEndX = theRow[2];
-}

@@ -174,31 +174,19 @@ HINSTANCE__* GEScreen::sInstance;
 // The renderer linked into the game: the T&L DX7 rasterizer (DX7Rasterizer.cpp; the plug-in boundary went in part 14)
 GERasterizer* DX7TnLRasterizer();
 
-// Shuts the graphics engine down: forgets the rasterizers
-static void GEShutdown(bool inForced)
-{
-    GERasterizer::ClearRasterizers();
+// The start-up (GEInitialize, GEShutdown) is Rust's (ee_render ge startup.rs); its calls on the C++ objects
+extern "C" {
+bool ee_gecpp_fonts_register_builtin() { return PlatFontRegisterBuiltIn() != 0; }
+void ee_gecpp_fonts_missing() { ESVerify(__FILE__, __LINE__, "PlatFontRegisterBuiltIn() (the fonts built into the program: PlatFontData.c)"); }
+void ee_gecpp_set_instance(void* inInstance) { GEScreen::sInstance = static_cast<HINSTANCE__*>(inInstance); }
+void* ee_gecpp_tnl_rasterizer() { return DX7TnLRasterizer(); }
+long ee_gecpp_rast_activate(void* inRasterizer) { return static_cast<GERasterizer*>(inRasterizer)->Activate(); }
+unsigned long ee_gecpp_rast_screen_count(void* inRasterizer) { return static_cast<GERasterizer*>(inRasterizer)->GetScreenCount(); }
+void ee_gecpp_rast_deactivate(void* inRasterizer) { static_cast<GERasterizer*>(inRasterizer)->Deactivate(); }
 }
 
-// Starts the graphics engine: registers the shutdown hook and adds the rasterizer when it activates and finds a screen
-// (the original's PIMIsValid: activate, count the screens, deactivate)
-long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
-{
-    URegisterShutdown(GEShutdown);
-    // the faces the fonts are made from (GDI's system fonts before). If one does not register, its fonts fall back to
-    // another face, or with none every GEFont has no platform font and a height of 0, and only missing text would
-    // show it: stop here (PlatFontData.c also refuses an empty font file at compile time)
-    if (!PlatFontRegisterBuiltIn())
-        ESVerify(__FILE__, __LINE__, "PlatFontRegisterBuiltIn() (the fonts built into the program: PlatFontData.c)");
-    GEScreen::sInstance = inInstance;
-    GERasterizer::ClearRasterizers();
-    GERasterizer* theRasterizer = DX7TnLRasterizer();
-    bool theValid = theRasterizer->Activate() == kErrorOK && theRasterizer->GetScreenCount() > 0;
-    theRasterizer->Deactivate();
-    if (theValid)
-        GERasterizer::AddRasterizer(theRasterizer);
-    return kErrorOK;
-}
+// Starts the graphics engine (the directory is not read)
+long GEInitialize(FSFileSpec&, HINSTANCE__* const inInstance) { return ee_ge_initialize(inInstance); }
 
 // The pixel formats (ee_ge pixel.rs): a colour and alpha (0..1 floats, or 8 bits each) packed into a pixel, a
 // pixel's channels scaled to 8 bits
