@@ -7,7 +7,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/game/app.h"
+#include "rust/render/gfx.h"
 #include "rust/sim/tech.h"
+#include "rust/sim/units.h"
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
@@ -1359,6 +1362,284 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  FxTileTerrainType,
+  FxNextTile,
+  FxLandRipple,
+  FxWorldPlacedEffect,
+  FxTerrainColor,
+  FxVertexColor,
+  FxVertexNormal,
+  FxComputeSound,
+  FxSetSoundParameters,
+  FxPlayAnimationSound,
+  FxPlayNodeNamed,
+  FxSoundStop,
+  FxSoundObjectUnload,
+  FxSoundObjectLoad,
+  FxCxGetClass,
+  FxGatePart,
+  FxDynComplex,
+  FxIsFoundation,
+  FxCxIsSidePart,
+  FxCxTileX,
+  FxCxTileY,
+  FxUnitTile,
+  FxDoppelgangerGet,
+  FxDoppelgangerIsBuilt,
+  FxHasDoppelganger,
+  FxFreeCamera,
+  FxUnitOpacity,
+  FxGeffObject,
+  FxGeffLinked2,
+  FxGeffLinked1TagKind,
+  FxQueueGoalCount,
+  FxQueueGoalAt,
+  FxQueueGoalGetAt,
+  FxLocationGoalCast,
+  FxLoadGarrisonCast,
+  FxAttackUnitCast,
+  FxGoalForcedMove,
+  FxGoalAutoWaypoint,
+  FxGoalLocation,
+  FxGoalLoadContainer,
+  FxGoalAttackTarget,
+  FxCxActiveGoal,
+  FxCxFnE123D,
+  FxCxGetAnimation,
+  FxCxIsCloaked,
+  FxCxGetPlayer,
+  FxUnGetHitPoints,
+  FxUnMaxHitPoints,
+  FxTileVisibleTo,
+  FxTileSeenBy,
+  FxPlIsAlly,
+  FxPlSelectedGroup,
+  FxPlCurrentEpoch,
+  FxGroupHasType,
+  FxGroupUnit,
+  FxGroupNumUnits,
+  FxVisibleBottomLeft,
+  FxVisibleDimensions,
+  FxTagPoints,
+  FxModelTagList,
+  FxTagCount,
+  FxWeaponPoint,
+  FxCreateSurface,
+  FxFindTexture,
+  FxSurfaceLoadPng,
+  FxFileSpecDelete,
+  FxSurfaceLock,
+  FxSurfaceMemory,
+  FxSurfaceBytesPerRow,
+  FxSurfaceUnlock,
+  FxSurfaceDereference,
+  FxCreateVolcanoModel,
+  FxModelReference,
+  FxMaterialPolygonStart,
+  FxMaterialPolygonLength,
+  FxMaterialVertexStart,
+  FxMaterialVertexLength,
+  FxStoreMesh,
+  FxModelComputeNormals,
+  FxModelComputeBounds,
+  FxModelSetPostTransform,
+  FxModelPrepare,
+  FxModelCenter,
+  FxModelSetTexture,
+  FxSetEffectDetail,
+  FxEffectDetail,
+  FxMemoryLength,
+  FxMemoryData,
+  FxBatchSetVertex,
+  FxBatchPolygonsNew,
+  FxPolygonSetIndices,
+  FxBatchVerticesNew,
+  FxBatchPolygonsDelete,
+  FxBatchVerticesDelete,
+  FxAmbientEffects,
+  FxDrawBlood,
+  FxShellHoleEffect,
+  FxBloodStainEffect,
+  MpRts,
+  MpFields,
+  MpWorldMap,
+  MpUnitRegionsFree,
+  MpEffectRegionsFree,
+  MpSetUnitRegions,
+  MpSetEffectRegions,
+  MpDeleteTiles,
+  MpTileArray,
+  MpSetTiles,
+  MpNewTiles,
+  MpWords,
+  MpSetWords,
+  MpTileAt,
+  MpTileSetVisibility,
+  MpTileSize,
+  MpRtsTile,
+  MpGetTile,
+  MpGroundPoint,
+  MpRtsCreate,
+  MpTileChecksum,
+  MpSightEnabled,
+  MpTileVecNew,
+  MpTileVecDelete,
+  MpUpdateCliffs,
+  MpSeedRandom,
+  MpGlobalWaterSet,
+  MpTextureSetId,
+  MpValidTile,
+  MpSetTextureSet,
+  MpMeshRust,
+  MpClosestTileToPoint,
+  MpClosestTileToLine,
+  MpTileSetHeight,
+  MpTileLoad,
+  MpTileSave,
+  MpTileDump,
+  MpTileSetTerrainType,
+  MpFileReadUlong,
+  MpDumpTitle,
+  MpDumpTileTitle,
+  MpDumpNewLine,
+  MpDefaultTerrain,
+  MpTerrainCount,
+  MpTerrainGet,
+  MpTerrainExists,
+  MpTerrainTextureSet,
+  MpTerrainLoad,
+  MpTerrainUnload,
+  MpTerrainTextureSetOf,
+  MpTerrainTypeOf,
+  MpTerrainColorType,
+  MpTerrainIsWater,
+  MpTerrainWaterPeriod,
+  MpTerrainAttach,
+  MpTerrainSetTextureSet,
+  MpNewTextureSet,
+  MpRegisterTextureSet,
+  MpTypeCount,
+  MpTypeGet,
+  MpTypeFirstColor,
+  MpTypeLastColor,
+  MpTypeSetColorSet,
+  MpTypeColorSet,
+  MpColorSetNew,
+  MpColorSetDelete,
+  MpColorSetClear,
+  MpColorSetPush,
+  MpRegisterColorSet,
+  MpColorCount,
+  MpColorExists,
+  MpColorsNew,
+  MpColorsDelete,
+  MpColorsPush,
+  MpSetWaterState,
+  MpSetColorTable,
+  MpCliffFirst,
+  MpCliffLast,
+  MpUnitGetClass,
+  MpPlaceOnGround,
+  MpLocalPlayer,
+  MpPlAlliedWith,
+  MpPlSharedLos,
+  MpAddSharedSight,
+  MpRemoveSharedSight,
+  MpAddOwnSight,
+  MpRemoveOwnSight,
+  MpTileVecClear,
+  MpTileVecData,
+  MpTileVecSize,
+  MpCountCellOn,
+  MpCountCellOff,
+  MpOrthographic,
+  MpDenormalizePerspective,
+  MpDenormalizeOrthographic,
+  MpLineDefine,
+  MpLineSolveForZ,
+  MpMeshZ,
+  MpTerrainWaterDepth,
+  MpViewHalfWidth,
+  MpViewXCenter,
+  MpViewYCenter,
+  MpViewFrontClip,
+  MpViewRearClip,
+  MmTail,
+  MmRust,
+  MmSetRust,
+  MmTransforms,
+  MmCorners,
+  MmSetPixels,
+  MmSetPixelsPerRow,
+  MmUnitLock,
+  MmUnitUnlock,
+  MmUnitMemory,
+  MmUnitBytesPerRow,
+  MmUnitCopyToWorld,
+  MmUnitClear,
+  MmTerrainEnter,
+  MmTerrainLeave,
+  MmTerrainLock,
+  MmTerrainUnlock,
+  MmTerrainMemory,
+  MmTerrainBytesPerRow,
+  MmUiUpdate,
+  MmLight,
+  MmLightSet,
+  MmLightNormalize,
+  MmViewport,
+  MmNumPlayers,
+  MmDoppUnit,
+  MmDoppPlayer,
+  MmDoppPlayerField,
+  MmDoppIsComplex,
+  MmDoppOnTile,
+  MmPackDark,
+  MmPackColor2,
+  MmPackShade,
+  MmPackPlayerColor,
+  MmTileVisibility,
+  MmTileDoppCount,
+  MmTileDopp,
+  MmNodeUnit,
+  MmNodeNext,
+  MmTerrainColor,
+  TlRtsChecksum,
+  TlRtsLoad,
+  TlRtsSave,
+  TlRtsDump,
+  TlLoadImage,
+  TlImageSetTile,
+  TlImageValid,
+  TlImageTileNull,
+  TlImageSave,
+  TlEraseImage,
+  TlDumpImage,
+  TlWriteUlong,
+  TlDynMap,
+  TlSetIsSpace,
+  TlValidPoint,
+  TlSetTerrainTypeField,
+  TlHeight,
+  TlMapTileSize,
+  TlMeshZ,
+  CgUnitReference,
+  CgUnitDereference,
+  CgClassFlags,
+  CgUnitsNew,
+  CgUnitsDelete,
+  CgUnitsCount,
+  CgUnitsAt,
+  CgUnitsInArea,
+  CgCaptureContagion,
+  CgCalamityIndex,
+  CgWriteClassId,
+  CgFileReadLong,
+  CgFileWriteLong,
+  CgSetClass,
+  CgTileAddr,
+  FxGeffSize,
+  FxGeffParam2,
 };
 
 extern "C" {
@@ -2113,6 +2394,423 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// EE_CONTAGION_WORLD_REFERENCE: the unit referenced (`add`) or dereferenced.
+int64_t ee_gamecpp_contagion_reference(uint64_t unit, uint64_t add);
+
+/// EE_CONTAGION_WORLD_MARK: the calamity's class flags set on (`set`) or cleared from the unit's complex unit.
+int64_t ee_gamecpp_contagion_mark(uint64_t unit,
+                                  uint64_t calamity,
+                                  uint64_t set);
+
+/// EE_CONTAGION_WORLD_NEAR (GetUnitsInArea): the units in the square of the radius around the unit, unless it is
+/// inside a carrier.
+int64_t ee_gamecpp_contagion_near(uint64_t unit,
+                                  float radius,
+                                  void *list);
+
+/// EE_CONTAGION_WORLD_IMMUNE: the unit is immune (its effect 3 played on it, CONT's record first).
+int64_t ee_gamecpp_contagion_immune(uint64_t unit);
+
+/// EE_CONTAGION_WORLD_CALAMITY_INDEX: the calamity's index in the manager (-1: none).
+int64_t ee_gamecpp_contagion_calamity_index(uint64_t calamity);
+
+/// EE_CALAMITY_IO_CLASS: the class saved by id, or read by id and looked up.
+long ee_gamecpp_calamity_io_class(void *calamity, void *file, bool loading);
+
+/// EE_CALAMITY_IO_TILE_X / _Y: the place holder's coordinate saved as a long, or read into it.
+long ee_gamecpp_calamity_io_tile(void *calamity, void *file, bool loading, bool y);
+
+/// The tile is deep or shallow water (false off the map).
+bool ee_gamecpp_fx_storm_is_water(void*, int32_t x, int32_t y);
+
+/// `EEGetNextTile(from, EEGetTileDirection(from, to), 1)` into `out`.
+void ee_gamecpp_fx_storm_step_toward(void*,
+                                     int32_t fx,
+                                     int32_t fy,
+                                     int32_t tx,
+                                     int32_t ty,
+                                     int32_t *out);
+
+/// The land ripple where a drop hit the water.
+void ee_gamecpp_fx_storm_ripple(void*, float x, float y);
+
+/// The frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd).
+void ee_gamecpp_fx_animation_sound(void *ask, uint32_t frame, bool changed);
+
+/// The energy wall's posts on a gate: its two end parts (EEE3DEnergyWall::Place, 0xed784).
+bool ee_gamecpp_fx_wall_gate_posts(void *ask, EeGe3DPoint *first, EeGe3DPoint *second);
+
+/// The height of the last living, finished wall piece or gate side part of the wall's owner on a tile (0xee00c).
+bool ee_gamecpp_fx_wall_piece(void *ask,
+                              int32_t x,
+                              int32_t y,
+                              float *z);
+
+/// The volcano's model over the record's mesh lists (EEE3DVolcano::BuildModel, 0xfe79d): each tile of its area split
+/// 3x3, following the terrain, coloured by terrain and lighting and blended into textures\Volcano.png near the centre,
+/// and the cone heights from the image's alpha (ee_gfx volcano.rs); the model made and referenced, placed at its
+/// centre, the bounding radius to the cone's top, the texture.
+int32_t ee_gamecpp_fx_volcano_build(void *ask,
+                                    EeGe3DPoint *points,
+                                    float *heights,
+                                    uint32_t count);
+
+/// The terrain under a farm field (the world's mesh).
+EeGfxFarmTerrain ee_gamecpp_fx_farm_terrain(void*);
+
+/// The farm's drop site: the first drop site's tile.
+bool ee_gamecpp_fx_farm_drop_site(void *ask, int32_t *x, int32_t *y);
+
+/// The current player's doppelganger of the farm: 1 built, 0 not, -1 none (or the free camera, or a player who sees
+/// everything).
+int32_t ee_gamecpp_fx_farm_doppelganger(void *ask);
+
+/// The farm's draw opacity (Fn23CEE2).
+float ee_gamecpp_fx_farm_opacity(void *ask, float opacity);
+
+/// The earthquake's ground under a point (EEE3DEarthquake, 0xec6e4..0xed606).
+EeGe3DPoint ee_gamecpp_fx_ground_point(void*, const EeGe3DPoint *point);
+
+/// The rain's sounds (EEE3DRain::StartSounds, 0xf8195): the loop at the start or after a load, the thunder `rumble`
+/// (1 or 2), both levels.
+void ee_gamecpp_fx_rain_sounds(void *ask,
+                               bool start,
+                               int32_t rumble);
+
+/// The emitter's animation sound at its place (its graphic effect's object, if any).
+void ee_gamecpp_fx_emitter_sound(void *ask, const EeGe3DPoint *location, bool first);
+
+/// The goal a state-0 confirmation shows: the last goal of the unit's goal queue as a location goal (on the tile at
+/// the effect: blocked when the unit cannot stand there and its player sees it; forced; a move), else whether its
+/// active goal unloads a transport (EEE3DCommandConfirmation::SetUp).
+EeGfxConfirmGoal ee_gamecpp_fx_confirm_goal(void *ask,
+                                            uint32_t queue,
+                                            int32_t tx,
+                                            int32_t ty);
+
+/// The kept object's (`part0`: the first part's) animation sound for the frame at the location, kept as the effect's
+/// (EEE2DImpact::Step and SetSound, 0xe166b / 0xe17ed).
+void ee_gamecpp_fx_part_sound(void *ask,
+                              EeGe3DPoint at,
+                              uint32_t frame,
+                              bool changed,
+                              bool part0);
+
+/// The unit's area effects count set (`FnE123D` at 0).
+void ee_gamecpp_fx_set_area_effects(void *ask, int32_t count);
+
+/// The unit's type is in its player's active group; a town centre or capitol also with 0x23 or 0x29 there.
+bool ee_gamecpp_fx_icons_selected(void *ask);
+
+/// The ground point under `at` when its tile is on the map.
+EeGfx2DPoint ee_gamecpp_fx_ground_at(void*, EeGe3DPoint at);
+
+/// The glow's area: the visible terrain's bottom left and size, the unit's tile.
+EeGfxGlowArea ee_gamecpp_fx_glow_area(void *ask);
+
+/// EEEDamagedEffect::Step's facts (0x10225c): its graphic effect's, then its unit's (the outer part on the map), the
+/// damage tag points of linked effect 1's kind, its health, hidden when cloaked to the current player's enemy.
+EeGfxDamagedTick ee_gamecpp_fx_damaged_tick(EffectPtr e);
+
+EeGfxGoalPlayer ee_gamecpp_fx_goal_player(void*, uint32_t player);
+
+EeGfxGoalUnit ee_gamecpp_fx_goal_facts(void*, uint32_t unit);
+
+uint32_t ee_gamecpp_fx_goal_count(void*, uint32_t unit, uint32_t queue);
+
+/// A goal's kind, automatic waypoint, garrison container or attack target, and location.
+EeGfxGoalStep ee_gamecpp_fx_goal_step(void*, uint32_t unit, uint32_t queue, uint32_t goal);
+
+bool ee_gamecpp_fx_goal_location(void*,
+                                 uint32_t unit,
+                                 uint32_t queue,
+                                 uint32_t goal,
+                                 EeGe3DPoint *out);
+
+EeGe3DPoint ee_gamecpp_fx_goal_unit_location(void*, uint32_t unit, bool on_tile);
+
+/// A placed target's outer part; a land building's: the goal's point on its centre's tile corner.
+void *ee_gamecpp_fx_goal_target(void*, void *target, EeGe3DPoint *to);
+
+bool ee_gamecpp_fx_goal_ground(void*, const EeGe3DPoint *point, EeGe3DPoint *out);
+
+/// The capture's records (EESimCaptureRecord) as the manager's captures write them.
+uint32_t ee_gamecpp_fx_capture(EeGfxCaptureOp op, uint32_t tag, const uint8_t *data, uint32_t len);
+
+/// A sound node stopped and dereferenced.
+void ee_gamecpp_fx_sound_release(uint64_t node);
+
+void ee_gamecpp_fx_sound_object_unload(uint32_t id);
+
+void ee_gamecpp_fx_sound_object_load(uint32_t id);
+
+/// The map tile at (x, y): -1 none, else whether the current player sees it.
+int32_t ee_gamecpp_fx_tile_seen(int64_t x, int64_t y);
+
+/// The current player's doppelganger of the unit (or its complex unit) on the tile at (x, y).
+bool ee_gamecpp_fx_doppelganger(int64_t x, int64_t y, uint64_t unit, bool complex);
+
+/// A shooter's weapon point (ee_combat's weapon_point with its CBEW capture): with the tag points at its animation
+/// when `test_list` finds them, else assumed.
+EeGe3DPoint ee_gamecpp_fx_weapon_point(uint64_t unit,
+                                       int32_t site,
+                                       bool test_list,
+                                       bool *tagged);
+
+/// `gEffectDetail` (`set` >= 0: set it first).
+uint32_t ee_gamecpp_fx_effect_detail(int64_t set);
+
+/// An `FSMemoryFile`'s bytes and length.
+const uint8_t *ee_gamecpp_fx_memory_file_data(void *file, uint32_t *len);
+
+/// A batch's quad: its four vertices from `index` on (the raster table's batch_quad; AddEffectQuad).
+void ee_gamecpp_fx_batch_quad(uint32_t which,
+                              const EeGfxEffectQuad *quad,
+                              uint32_t index);
+
+/// The quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays.
+void ee_gamecpp_fx_batch_create();
+
+/// The quad batches' arrays deleted.
+void ee_gamecpp_fx_batch_delete();
+
+/// Up to N shell-hole decals of the unit's class around a point (ambient effects on; ee_gfx effect_placement.rs).
+void ee_gamecpp_fx_place_impact_decal(void *cx,
+                                      const EeGe3DPoint *at);
+
+/// The unit class's blood-stain decal under the unit if ambient effects and blood are on (moved forward along the
+/// heading for giraffes and horses).
+void ee_gamecpp_fx_place_track_decal(void *cx);
+
+/// EEMap::~EEMap: the region tables, tiles and visibility words freed, the terrain textures unloaded.
+void ee_gamecpp_map_destroy(void *map);
+
+/// EEMap::CreateTile: the next reserved tile at the height, with its slice of the visibility words.
+void *ee_gamecpp_map_create_tile(void *map, float height);
+
+/// EEMap::ReserveTiles: the tiles and cleared visibility words (two players a word), the old ones dropped.
+void ee_gamecpp_map_reserve_tiles(void *map,
+                                  unsigned long count);
+
+/// EEMap::SetPlayerCount: every tile's visibility words resized, the visibility kept.
+void ee_gamecpp_map_set_player_count(void *map, unsigned long players);
+
+/// EEMap::GetTileCount (ee_app map.rs).
+unsigned long ee_gamecpp_map_tile_count(void *map);
+
+/// EEMap::PlaceUnitOnGround: a placed unit dropped onto the ground at its position (camera objects excluded).
+void ee_gamecpp_map_place_on_ground(void *unit);
+
+/// EEMap::CreateMap's body (after its capture scope): the base map, fresh region tables, every tile on the base
+/// terrain (ee_app map.rs).
+void ee_gamecpp_map_create_map(void *map,
+                               long width,
+                               long height,
+                               unsigned long players);
+
+/// EEMap::GetScreenLine.
+void ee_gamecpp_map_screen_line(const EeGe2DPoint *at, EeGe3DLine *out);
+
+/// EEMap::GetTileAt: the tile under a screen point and its coordinates (in orthographic view, where the ray meets z 0).
+void *ee_gamecpp_map_tile_at(void *map,
+                             const EeGe2DPoint *at,
+                             long *x,
+                             long *y);
+
+/// EEMap::GetTileLocation: the ground point at a tile's centre; false without the tile.
+bool ee_gamecpp_map_tile_location(void *map, long x, long y, EeGe3DPoint *out);
+
+/// EEMap::GetTerrainPitch: from the ground heights 0.65 ahead of and behind the location.
+float ee_gamecpp_map_terrain_pitch(void *map, const EeGeTransformation *t);
+
+/// EEMap::GetTerrainRoll: from the ground heights 0.65 to either side of the location.
+float ee_gamecpp_map_terrain_roll(void *map, const EeGeTransformation *t);
+
+/// EEMap::Initialize: empty (no tiles or region tables), its random generator seeded, the terrain sets registered.
+void ee_gamecpp_map_initialize(void *map);
+
+/// EEMap::SetTileTerrain: a tile's texture set, the new terrain's textures loaded (the old one's unloaded first).
+void ee_gamecpp_map_set_tile_terrain(void *map,
+                                     long x,
+                                     long y,
+                                     long set,
+                                     bool unload);
+
+/// EEMap::LoadTile: the next tile from the saved game (saves up to 0.46 also carry its terrain).
+void *ee_gamecpp_map_load_tile(void *map,
+                               unsigned long major,
+                               unsigned long minor,
+                               void *file,
+                               long x,
+                               long y);
+
+/// EEMap::DumpOutOfSynch: every tile's state to the out-of-sync dump file.
+void ee_gamecpp_map_dump(void *map, void *file);
+
+/// EEMap::RegisterTerrainSets: every terrain's texture set and every terrain type's colour set registered with the
+/// terrain mesh, then the water state and the colour table.
+void ee_gamecpp_map_register_terrain_sets(void *map);
+
+/// TILE_SAVE: the tile at (x, y), if any, saved.
+int32_t ee_gamecpp_map_save_tile(void *map, void *file, long x, long y);
+
+/// PICK_DEFAULT: the load's default terrain (the map's base terrain when saved, made valid; else the default).
+int32_t ee_gamecpp_map_pick_default(void *map,
+                                    size_t *default_,
+                                    uint8_t saved);
+
+/// TERRAIN_TYPE: the tile's terrain table (kept for TERRAIN_LOAD), whether there is one and its type.
+int32_t ee_gamecpp_map_save_terrain_type(void *map,
+                                         size_t *terrain,
+                                         long x,
+                                         long y,
+                                         EeUnitsPlayerSaveIo *io);
+
+/// SET_TYPE (and the map host's SET_TERRAIN_TYPE): the tile's terrain type.
+int32_t ee_gamecpp_map_set_terrain_type(void *map, long x, long y, long kind);
+
+/// SET_DEFAULT: the tile on the default terrain (its texture set, then its type).
+int32_t ee_gamecpp_map_save_set_default(void *map, size_t default_, long x, long y);
+
+/// FINISH: fresh region tables, the cliffs over the whole map.
+int32_t ee_gamecpp_map_save_finish(void *map);
+
+/// TERRAIN: a terrain's texture set, type and colour type.
+void ee_gamecpp_map_host_terrain(EeAppMapIo *io);
+
+/// CLIFF: a cliff terrain's first and last terrain.
+void ee_gamecpp_map_host_cliff(EeAppMapIo *io);
+
+/// LOCAL_SEES: the local player sees through the player (itself, or with shared sight between allies).
+void ee_gamecpp_map_host_local_sees(void *player,
+                                    EeAppMapIo *io);
+
+/// TILES_NEAR: the tiles near a point (the context's vector), their coordinates and number.
+void ee_gamecpp_map_host_tiles_near(void *tiles, EeAppMapIo *io);
+
+/// SIGHT_AT: the player's own or shared sight added at or removed from the tile.
+void ee_gamecpp_map_host_sight_at(void *player, const EeAppMapIo *io);
+
+/// COUNT_CELL: the mini map's cell counted on or off.
+void ee_gamecpp_map_host_count_cell(const EeAppMapIo *io);
+
+/// The sight capture's record for the world's map, with the tile's index in the map's tile array (-1: not one of
+/// them).
+void ee_gamecpp_map_sight_record(uint32_t shape,
+                                 uint32_t kind,
+                                 uint64_t player,
+                                 uint64_t tile,
+                                 long tile_x,
+                                 long tile_y,
+                                 unsigned long value,
+                                 const float *args);
+
+/// One of the map's edits (ee_app_map_edit's entries: 0 the water, 1 the base terrain's fill, 2 the cliffs, 3 the
+/// flat cliffs, 4 a tile's paint, 5 a rectangle's).
+void ee_gamecpp_map_edit(void *map,
+                         uint32_t what,
+                         long a,
+                         long b,
+                         long c,
+                         long d,
+                         long e,
+                         long f);
+
+/// EEMap::AddSight / RemoveSight's body (between their capture scopes): a player's own or shared sight of the
+/// mesh-flagged tiles within a radius (ee_app map.rs).
+void ee_gamecpp_map_sight(void *map,
+                          void *player,
+                          float x,
+                          float y,
+                          float radius,
+                          bool shared,
+                          bool add);
+
+/// EEMap::ComputeChecksum: the next 64 x 64 window's tile and corner-height checksums, the window advanced (MAPK).
+long ee_gamecpp_map_checksum(void *map);
+
+/// EEMiniMap's constructor's body: the Rust half, the map attached if given, the terrain light.
+void ee_gamecpp_minimap_construct(void *mm, void *map);
+
+/// EEMiniMap's destructor's body.
+void ee_gamecpp_minimap_destroy(void *mm);
+
+/// AddDoppelganger (4) and RemoveDoppelganger (5): a building image's dot (a wall's next three segments too).
+void ee_gamecpp_minimap_doppelganger(void *mm,
+                                     void *d,
+                                     long x,
+                                     long y,
+                                     bool wall,
+                                     bool add);
+
+/// MoveUnit: a unit's dot between cells (-10000: off the map).
+void ee_gamecpp_minimap_move_unit(void *mm, void *unit, long ox, long oy, long x, long y);
+
+/// CountCellOff (0) and CountCellOn (1).
+void ee_gamecpp_minimap_count_cell(void *mm, long x, long y, bool on);
+
+/// UpdateWorldTexture: the 64 x 64 unit layer copied into the world texture and locked again.
+void ee_gamecpp_minimap_update_world_texture(void *mm);
+
+/// LockUnitLayer: the unit layer locked, its pixels to the Rust half.
+void ee_gamecpp_minimap_lock_unit_layer(void *mm);
+
+/// SetMap: the map/pixel and map/cell transformations (rotated 45 degrees, centred), the map size of one pixel, the
+/// mini map redrawn (ee_gfx minimap.rs).
+void ee_gamecpp_minimap_set_map(void *mm,
+                                void *map);
+
+/// Redraw: the unit layer and every dot cleared, every tile's sight and contents read again (ee_app minimap.rs).
+void ee_gamecpp_minimap_redraw(void *mm);
+
+/// Recolor: every player's dots in their current colours (units in the player colour, buildings in the shade).
+void ee_gamecpp_minimap_recolor(void *mm);
+
+/// Refresh: the camera's view trapezoid on the mini map (ee_gfx minimap.rs).
+void ee_gamecpp_minimap_refresh(void *mm);
+
+/// RedrawAll: every terrain pixel recomputed, the terrain texture flagged changed.
+void ee_gamecpp_minimap_redraw_all(void *mm);
+
+/// RedrawRect: the terrain pixels covering a map rectangle recomputed, the texture flagged changed.
+void ee_gamecpp_minimap_redraw_rect(void *mm, long left, long right, long bottom, long top);
+
+/// RedrawPixels: each pixel's terrain colour in a texture rectangle (ee_app minimap.rs), MMPX's record.
+void ee_gamecpp_minimap_redraw_pixels(void *mm,
+                                      long left,
+                                      long right,
+                                      long bottom,
+                                      long top);
+
+/// EETile::GetChecksum: the tile's base checksum plus the unit ids of its building images.
+long ee_gamecpp_tile_checksum(const void *tile, unsigned long players);
+
+/// EETile::Load: the tile and its building images from the saved game; the image count's read result.
+long ee_gamecpp_tile_load(void *tile,
+                          unsigned long major,
+                          unsigned long minor,
+                          void *file,
+                          unsigned long players);
+
+/// EETile::Dump: the building images' unit ids, then the base state, to the out-of-sync dump.
+void ee_gamecpp_tile_dump(const void *tile, void *file, unsigned long players);
+
+/// EETile::RemoveDoppelganger: the image removed from the tile, if it is there.
+void ee_gamecpp_tile_remove_image(void *tile, void *image);
+
+/// EETile::Save: the tile and its valid building images that belong to it (or to none); the first error.
+long ee_gamecpp_tile_save(void *tile,
+                          void *file,
+                          unsigned long players);
+
+/// EETile::SetTerrainType: the terrain type and the mesh's space flag; a tile below sea level becomes deep water when
+/// deep, else shallow water unless three of its corners are dry.
+void ee_gamecpp_tile_set_terrain_type(void *tile,
+                                      long kind,
+                                      long x,
+                                      long y,
+                                      void *map);
 
 }  // extern "C"
 

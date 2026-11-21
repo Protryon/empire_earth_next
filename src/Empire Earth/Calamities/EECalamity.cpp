@@ -142,33 +142,17 @@ long EECalamityIoCall(void* inContext, uint32_t inOp, void* ioValue)
     case EE_CALAMITY_IO_SHAKE_LOCATION:
         return theIo.mLoading ? theCalamity->mShakeLocation.Load(theFile) : theCalamity->mShakeLocation.Save(theFile);
     case EE_CALAMITY_IO_EFFECT_GENERATION:
-        if (theIo.mLoading)
-            return FSLoadVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-        return FSSaveVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-    case EE_CALAMITY_IO_CLASS: {
-        if (!theIo.mLoading)
-            return theFile.Write((unsigned long)theCalamity->mClass->mID);
-        long theClassID = 0;
-        long theResult = theFile.Read(theClassID);
-        theCalamity->mClass = EECalamityManager::GetInstance()->GetCalamityClass(theClassID);
-        return theResult;
-    }
+        return theIo.mLoading ? FSLoadVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID)
+                              : FSSaveVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+    case EE_CALAMITY_IO_CLASS: return ee_gamecpp_calamity_io_class(theCalamity, &theFile, theIo.mLoading);
     case EE_CALAMITY_IO_TARGET_ID:
         *static_cast<unsigned long*>(ioValue) = theCalamity->mTargetUnit != NULL ? theCalamity->mTargetUnit->GetUnitID() : -1;
         return kErrorOK;
     case EE_CALAMITY_IO_CASTER_ID:
         *static_cast<unsigned long*>(ioValue) = theCalamity->mCasterUnit != NULL ? theCalamity->mCasterUnit->GetUnitID() : -1;
         return kErrorOK;
-    case EE_CALAMITY_IO_TILE_X:
-    case EE_CALAMITY_IO_TILE_Y: {
-        unsigned long& theTile = inOp == EE_CALAMITY_IO_TILE_X ? theCalamity->mTilePlaceHolder1.mX : theCalamity->mTilePlaceHolder1.mY;
-        if (!theIo.mLoading)
-            return theFile.Write((long)theTile);
-        long theValue = 0;
-        long theResult = theFile.Read(theValue);
-        theTile = theValue;
-        return theResult;
-    }
+    case EE_CALAMITY_IO_TILE_X: return ee_gamecpp_calamity_io_tile(theCalamity, &theFile, theIo.mLoading, false);
+    case EE_CALAMITY_IO_TILE_Y: return ee_gamecpp_calamity_io_tile(theCalamity, &theFile, theIo.mLoading, true);
     case EE_CALAMITY_IO_EFFECT_HANDLE:
         return theIo.mLoading ? theFile.Read(theCalamity->mEffectHandle.mValue) : theFile.Write(theCalamity->mEffectHandle.mValue);
     }
