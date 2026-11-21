@@ -374,7 +374,7 @@ pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: 
             c.options_from_lobby_copy();
             0
         }
-        _ => return None,
+        _ => return crate::screens::screens_calls::call(c, form, op, a, b, cc, d),
     })
 }
 

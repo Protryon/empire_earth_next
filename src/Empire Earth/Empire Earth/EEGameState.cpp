@@ -40,387 +40,47 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
-// Deletes the map, the scenario, effect, calamity and weather managers and every player, then resets the state
-void EEGameState::Clear()
-{
-    delete this->mMap;
-    this->mMap = NULL;
-    delete this->mScenarioManager;
-    this->mScenarioManager = NULL;
-    delete this->mEffectManager;
-    this->mEffectManager = NULL;
-    delete this->mCalamityHelper;
-    this->mCalamityHelper = NULL;
-    delete this->mEnvironmentManager;
-    this->mEnvironmentManager = NULL;
-    this->mRestorables.clear();
-    for (unsigned long i = 0; i < this->mPlayers.size(); i++)
-        delete this->mPlayers[i];
-    this->mPlayers.clear();
-    this->Init();
-    this->Reset();
-}
-
-// Lets every restorable object repair its pointers with the loaded save's version
-void EEGameState::RepairRestorables()
-{
-    for (unsigned long i = 0; i < this->mRestorables.size(); i++) {
-        FSRestorable*& theRestorable = this->mRestorables[i]; theRestorable->RepairPointers(this->mMajorVersion, this->mMinorVersion); }
-}
-
-// Resets the game state's settings to their defaults (normal speed and zoom, no map, managers, teams or
-// loaded players, a fresh checksum)
-void EEGameState::Init()
-{
-    this->mGameSpeed = 1.0f;
-    this->mMap = NULL;
-    this->mZoom = 1.0f;
-    this->mScenarioManager = NULL;
-    this->mEnvironmentManager = NULL;
-    this->mEffectManager = NULL;
-    this->mCalamityHelper = NULL;
-    this->mLocalPlayer = 0;
-    this->mRandomSeed = 0;
-    this->mMajorVersion = 0;
-    this->mMinorVersion = 0;
-    this->mTimeOfDay = 0.35f;
-    this->mNumPlayersMade = 3;
-    this->mC4FA = 0;
-    this->mB4FB = false;
-    this->mIsLoadedGame = false;
-    this->mInScenarioEditor = false;
-    this->mTeamsLocked = true;
-    this->mUnitImprovementsAllowed = true;
-    this->mUsingCarbon = false;
-    this->mRevealMap = false;
-    this->mB501 = false;
-    this->mTownIDCounter = 0;
-    this->mHerdIDCounter = 0;
-    this->mTeams.clear();
-    this->mLoadedPlayers.clear();
-    { ESChecksum theChecksum(false); this->mChecksum = theChecksum; }
-}
+#include "ee/EEEffectManager.h"
+#include "ee/EERules.h"
+#include "rust/game/gamecpp.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
 
-// Builds a new game from the options: loads a saved game, scenario or campaign scenario (setting the error
-// message on failure), or creates the players, teams, managers and random map; returns whether it succeeded
+// The bodies are Rust (ee_game gamecpp state.rs) over the cases below (EEGameStateOp)
+void EEGameState::Clear()
+{
+    ee_gamecpp_state_clear(this);
+}
+
+void EEGameState::RepairRestorables()
+{
+    ee_gamecpp_state_repair_restorables(this);
+}
+
+void EEGameState::Init()
+{
+    ee_gamecpp_state_init(this);
+}
+
 bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
 {
-    std::vector<EEPlayer*> thePlayers;
-    URandomIntegers theRandom;
-    EEGameStateLoader theLoader(&gGameState);
-    EEGameOptionsPlayer theSlot;
-    EEGameOptionsPlayer theOther;
-    FSArchive theArchive;
-    UWideString theCampaignFile;
-    UWideString theMapName;
-    UWideString theComputerName;
-    GE3DPoint theCenter;
-    EECampaign theCampaign;
-    FSFileSpec* theFile = new FSFileSpec;
-    FSFileSpec* theArchiveFile = NULL;
-    unsigned long theLocalIndex = 0;
-    bool theResult = true;
-
-    this->Init();
-    if (gPhysics != NULL)
-        EEComplexUnit::SetPoolSize(500, 40);
-    if (inOptions.mLoadType == 5)
-        inOptions.mLoadType = 3;
-    if (inOptions.mLoadType != 0 && inOptions.mLoadType != 3 && inOptions.mLoadType != 5) {
-        gUserInterface->SetLoadProgress(0.1f);
-        gUserInterface->SetLoadingText(IDS_LOADING_GAME);
-        theFile->SetVolume(gStartupVolume);
-        if (inOptions.mLoadType == 2) {
-            theFile->SetDirectory(gStartupDirectory + "data\\" + "Saved Games\\");
-            theFile->SetFile((const char*)inOptions.mMapType);
-        } else if (inOptions.mLoadType == 4) {
-            delete theFile;
-            theFile = NULL;
-            long theError = gDataPath->FindFile(UString(inOptions.mMapType), theFile);
-            if (theError != 0) {
-                theCampaignFile = UWideString("Campaigns\\") + inOptions.mCampaignName + gCampaignExtension;
-                if (theCampaign.Load(theCampaignFile, outErrorMessage, false)) {
-                    delete theArchiveFile;
-                    theArchiveFile = NULL;
-                    theError = gDataPath->FindFile(UString(theCampaignFile), theArchiveFile);
-                    if (theError == 0) {
-                        theArchive.SetArchive(*theArchiveFile);
-                        gDataPath->AddArchive(theArchive, true);
-                        EESetDataPaths();
-                        delete theArchiveFile;
-                        delete theFile;
-                        theFile = NULL;
-                        gDataPath->FindFile(UString(inOptions.mMapType), theFile);
-                    } else {
-                        gResource->GetString(keeCouldntOpenFile, outErrorMessage);
-                        sprintf(outErrorMessage, "%s\n\"%s\"", (const char*)outErrorMessage,
-                                (const char*)theCampaignFile);
-                    }
-                } else {
-                    gResource->GetString(keeCouldntOpenFile, outErrorMessage);
-                    sprintf(outErrorMessage, "%s\n\"%s\"", (const char*)outErrorMessage,
-                            (const char*)theCampaignFile);
-                }
-            }
-        } else {
-            theFile->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-            theFile->SetFile((const char*)inOptions.mMapType);
-        }
-        theResult = false;
-        long theError = theFile != NULL ? theFile->Open(kFileAccessRead) : 9;
-        if (theError == 0) {
-            if (EEValidateSaveGameFile(*theFile, outErrorMessage)) {
-                if (theLoader.Load(*theFile)) {
-                    theResult = true;
-                } else {
-                    ESVERIFY_AT(::gResource->GetString(keeslSaveGameInvalid, outErrorMessage) == keseOK, 759);
-                }
-            }
-        } else {
-            ESVERIFY_AT(::gResource->GetString(keeCouldntOpenFile, outErrorMessage) == keseOK, 765);
-        }
-        if (theResult) {
-            if (inOptions.mLoadType == 2) {
-                if (this->mGameOptions.mCampaignName.GetLength() > 0 && this->mGameOptions.mCampaignChecksum > 0) {
-                    theCampaignFile = UWideString("Campaigns\\") + this->mGameOptions.mCampaignName + gCampaignExtension;
-                    if (theCampaign.Load(theCampaignFile, outErrorMessage, false)) {
-                        delete theFile;
-                        theFile = NULL;
-                        if (gDataPath->FindFile(UString(theCampaignFile), theFile) == 0) {
-                            theArchive.SetArchive(*theFile);
-                            gDataPath->AddArchive(theArchive, true);
-                            EESetDataPaths();
-                        } else {
-                            theResult = false;
-                            gResource->GetString(keeCouldntOpenFile, outErrorMessage);
-                            sprintf(outErrorMessage, "%s\n\"%s\"", (const char*)outErrorMessage,
-                                    (const char*)theCampaignFile);
-                        }
-                    } else {
-                        gResource->GetString(keeCouldntOpenFile, outErrorMessage);
-                        sprintf(outErrorMessage, "%s\n\"%s\"", (const char*)outErrorMessage,
-                                (const char*)theCampaignFile);
-                        theResult = false;
-                    }
-                }
-            } else if (inOptions.mLoadType == 4) {
-                if (!inOptions.GetCampaignMapName(theMapName))
-                    theMapName = gEmptyString;
-                this->mGameOptions.mCampaignChecksum = inOptions.mCampaignChecksum;
-                this->mGameOptions.mCampaignName = inOptions.mCampaignName;
-                this->mGameOptions.mScenarioName = inOptions.mScenarioName;
-                this->mGameOptions.mMapName = theMapName;
-                this->mGameOptions.mIsScenarioGame = true;
-                this->mGameOptions.mDifficulty = inOptions.mDifficulty;
-            } else {
-                this->mGameOptions.mIsScenarioGame = true;
-                unsigned long thePlayerIndex = 1;
-                for (unsigned long i = 0; i < 16; i++) {
-                    theSlot = inOptions.mPlayers[i];
-                    if (theSlot.mType != 1 && theSlot.mType != 2)
-                        continue;
-                    unsigned long k;
-                    for (k = thePlayerIndex - 1; k < 16 && k != 0 && this->mGameOptions.mPlayers[k].mB36; k++)
-                        ;
-                    thePlayerIndex = k + 1;
-                    if (this->mPlayers[thePlayerIndex]->IsHuman()) {
-                        this->mPlayers[thePlayerIndex]->mName = theSlot.mName;
-                    } else {
-                        this->mPlayers[thePlayerIndex]->mName = theSlot.mName;
-                        this->mPlayers[thePlayerIndex]->mComputerPlayer->mReplaceOnLoad = true;
-                    }
-                    theOther = this->mGameOptions.mPlayers[i];
-                    theOther.mType = theSlot.mType;
-                    theOther.mName = theSlot.mName;
-                    this->mGameOptions.mPlayers[i] = theOther;
-                    thePlayerIndex++;
-                }
-            }
-        }
-    } else {
-        gUserInterface->SetLoadProgress(0.1f);
-        gUserInterface->SetLoadingText(IDS_CREATING_WORLD);
-        bool theUsedColors[16];
-        memset(theUsedColors, 0, sizeof(theUsedColors));
-        unsigned long i;
-        for (i = 0; i < 16; i++) {
-            theSlot = inOptions.mPlayers[i];
-            if (theSlot.mType == 1)
-                theUsedColors[theSlot.mColor] = true;
-        }
-        this->mPlayers.resize(1);
-        this->mNumPlayersMade = 1;
-        this->mPlayers[0] = new EEHumanPlayer(UWideString("World"), 0);
-        unsigned long thePlayerID = 1;
-        unsigned long theColor = 0;
-        long theEngines[16];   // port: the computer slots' resolved engine choices (-1: not a computer slot)
-        for (i = 0; i < 16; i++)
-            theEngines[i] = -1;
-        for (i = 0; i < 16; i++) {
-            theSlot = inOptions.mPlayers[i];
-            if (theSlot.mType != 1 && theSlot.mType != 0 && theSlot.mType != 2)
-                continue;
-            EEPlayer* thePlayer;
-            if (theSlot.mType == 0) {
-                while (theUsedColors[theColor])
-                    theColor++;
-                theSlot.mColor = theColor++;
-                gResource->GetString(IDS_COMPUTER, theComputerName);
-                EEComputerPlayer* theComputer = new EEComputerPlayer(theComputerName, thePlayerID);
-                // port: the slot's engine, random drawn here (the seed is every peer's; ee/EECPEngine.h)
-                unsigned long theChoice = EECPEngineResolve(theSlot.mEngine, gUserInterface->mRandomSeed, i,
-                                                            thePlayerID);
-                EECPEngineSet(theComputer, theChoice);
-                theEngines[i] = (long)theChoice;
-                thePlayer = theComputer;
-            } else {
-                if (theSlot.mType == 2) {
-                    while (theUsedColors[theColor])
-                        theColor++;
-                    theSlot.mColor = theColor++;
-                }
-                thePlayer = new EEHumanPlayer(theSlot.mName, thePlayerID);
-                if (theSlot.mIsLocal)
-                    this->mLocalPlayer = thePlayerID;
-                if (theSlot.mType == 2) {
-                    thePlayer->mObserverMode = true;
-                    thePlayer->mSeesAll = true;
-                    theSlot.mTeam = 0;
-                }
-            }
-            thePlayer->SetColor(EEGetPlayerColor(theSlot.mColor));
-            if (inOptions.mLoadType == 0 && !thePlayer->mObserverMode)
-                thePlayer->SetCivilizationPoints(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
-            thePlayer->mMaxStartingCitizens = theSlot.mStartingCitizens;
-            for (long j = 1; j < 6; j++)
-                thePlayer->mResourceCaps[j + 1] = EEGetResourceLevel(inOptions.mResources)->mAmounts[j - 1];
-            this->mPlayers.resize(thePlayerID + 1);
-            this->mNumPlayersMade = thePlayerID + 1;
-            this->mPlayers[thePlayerID] = thePlayer;
-            thePlayerID++;
-        }
-        thePlayerID = 1;
-        for (i = 0; i < 16; i++) {
-            theSlot = inOptions.mPlayers[i];
-            if (theSlot.mType != 1 && theSlot.mType != 0 && theSlot.mType != 2)
-                continue;
-            if (theSlot.mTeam > 0 && theSlot.mType != 2) {
-                unsigned long theOtherID = 1;
-                for (unsigned long j = 0; j < 16; j++) {
-                    theOther = inOptions.mPlayers[j];
-                    if (theOther.mType != 1 && theOther.mType != 0 && theOther.mType != 2)
-                        continue;
-                    if (theOther.mType != 2 && j != i && theOther.mTeam == theSlot.mTeam
-                        && this->mPlayers[thePlayerID] != this->mPlayers[theOtherID])
-                        this->mPlayers[thePlayerID]->SetDiplomaticStance(this->mPlayers[theOtherID], 0, NULL);
-                    theOtherID++;
-                }
-            }
-            thePlayerID++;
-        }
-        for (i = 0; i < this->mPlayers.size(); i++) {
-            this->mPlayers[i]->mChatType = 0;
-            if (this->mPlayers[i]->mAllies.size() > 0) {
-                for (unsigned long j = 0; j < this->mPlayers[i]->mAllies.size(); j++) {
-                    if (this->mPlayers[i]->mAllies[j]->IsHuman() == true) {
-                        this->mPlayers[i]->mChatType = 1;
-                        break;
-                    }
-                }
-            }
-        }
-        {   // the speed option's factor (gameoptions.yaml speeds; an unknown option: the default speed's)
-            const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
-            unsigned long theSpeed = inOptions.mGameSpeed < theRules.mSpeeds.size() ? inOptions.mGameSpeed
-                                                                                   : theRules.mSpeedDefault;
-            this->mGameSpeed = EERuleFloat(theRules.mSpeeds[theSpeed].mFactor);
-        }
-        long theWidth;
-        long theHeight;
-        inOptions.GetMapDimensions(theWidth, theHeight);
-        this->mMap = new EEMap(theWidth, theHeight, this->mPlayers.size(), gDefaultTerrain);
-        float theMiddle = 0.5f + (unsigned long)(theWidth + theHeight) * 0.5f;
-        this->mMapCenter.mX = theMiddle;
-        this->mMapCenter.mY = theMiddle;
-        this->mMapCenter.mZ = 0.0f;
-        this->mScenarioManager = new EEScenarioManager;
-        this->mEffectManager = new EEEffectManager;
-        this->mCalamityHelper = new EEPCalamityHelper;
-        this->mEnvironmentManager = new EEEnvironmentManager;
-        for (i = 0; i < this->mPlayers.size(); i++) {
-            EEPlayer* thePlayer = this->mPlayers[i];
-            if (i == 0)
-                thePlayer->mSlot = kSlotNone;
-            if (i == 1)
-                thePlayer->mSlot = kSlotServer;
-        }
-        if (inOptions.mLoadType == 0) {
-            for (i = 0; i < this->mPlayers.size(); i++) {
-                if (this->mPlayers[i]->mObserverMode)
-                    continue;
-                thePlayers.push_back(this->mPlayers[i]);
-                if (i == this->mLocalPlayer)
-                    theLocalIndex = thePlayers.size() - 1;
-            }
-            this->mRandomSeed = gUserInterface->mRandomSeed;
-            EERandomMap::CreateRandomMap(&inOptions, thePlayers, theLocalIndex, inOptions.mMapType, this->mRandomSeed, this->mMap,
-                                         theCenter);
-            this->mMapCenter = theCenter;
-        }
-        if (inOptions.mLoadType == 3)
-            this->mNumPlayersMade = 3;
-        this->mGameOptions = inOptions;
-        for (i = 0; i < 16; i++)   // port: the game's options hold the engines played (a saved game shows them)
-            if (theEngines[i] >= 0)
-                this->mGameOptions.mPlayers[i].mEngine = (unsigned long)theEngines[i];
-        if (inOptions.mEpochStart == EEEpochCount()) {   // random
-            theRandom.SetSeed(gUserInterface->mRandomSeed);
-            this->mGameOptions.mEpochStart = theRandom.Generate(0, inOptions.mEpochEnd);
-        }
-        if (inOptions.mRevealMap)
-            this->mRevealMap = true;
-        gGameOptions.mLock->WriteLock();
-        if (inOptions.mLoadType == 3) {
-            gGameOptions.mLoadType = 1;
-            gGameOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
-        }
-        gGameOptions.mLock->WriteUnlock();
-    }
-    delete theFile;
-    return theResult;
+    return ee_gamecpp_state_create(this, &inOptions, &outErrorMessage);
 }
 
-// Forgets the map, the managers and the player list without deleting them
 void EEGameState::Reset()
 {
-    this->mMap = NULL;
-    this->mScenarioManager = NULL;
-    this->mEnvironmentManager = NULL;
-    this->mEffectManager = NULL;
-    this->mPlayers.clear();
-    this->mCalamityHelper = NULL;
+    ee_gamecpp_state_reset(this);
 }
 
-// Replaces the calamity helper, resetting and deleting the old one
 void EEGameState::SetCalamityHelper(EEPCalamityHelper* inHelper)
 {
-    if (inHelper == this->mCalamityHelper)
-        return;
-    if (this->mCalamityHelper != NULL) {
-        this->mCalamityHelper->Reset();
-        delete this->mCalamityHelper;
-    }
-    this->mCalamityHelper = inHelper;
+    ee_gamecpp_state_set_calamity_helper(this, inHelper);
 }
 
-// Replaces the weather manager, deleting the old one
 void EEGameState::SetEnvironmentManager(EEEnvironmentManager* inManager)
 {
-    delete this->mEnvironmentManager;
-    this->mEnvironmentManager = inManager;
+    ee_gamecpp_state_set_environment(this, inManager);
 }
 
 // Returns the colour of a player colour index (the default colour past the table's end)
@@ -447,4 +107,179 @@ EETeam::~EETeam()
 // hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
 void EEGameState::FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
+}
+
+// ------------------------------------------------------------------------- the state bodies' C++ (gamecpp state.rs)
+
+int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define ST ((EEGameState*)p)
+#define OPT ((EEGameOptions*)p)
+#define SLOT ((EEGameOptionsPlayer*)p)
+#define PL ((EEPlayer*)p)
+#define WSTR(i) (*(UWideString*)a[i])
+
+// The game state's C++ calls and members (EeGameCpp's state section; EEWorld.cpp's EEWorldOp default): one statement
+// each
+int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::StTail: return P64(&ST->mMap);
+    case O::StTeamsClear: ST->mTeams.clear();
+        break;
+    case O::StLoadedPlayersClear: ST->mLoadedPlayers.clear();
+        break;
+    case O::StChecksumReset: ST->mChecksum = ESChecksum(false);
+        break;
+    case O::StPlayersClear: ST->mPlayers.clear();
+        break;
+    case O::StDeleteMap: delete ST->mMap;
+        break;
+    case O::StDeleteScenario: delete ST->mScenarioManager;
+        break;
+    case O::StDeleteEffects: delete ST->mEffectManager;
+        break;
+    case O::StDeleteCalamity: delete ST->mCalamityHelper;
+        break;
+    case O::StDeleteEnvironment: delete ST->mEnvironmentManager;
+        break;
+    case O::StRestorablesClear: ST->mRestorables.clear();
+        break;
+    case O::StRestorableCount: return (int64_t)ST->mRestorables.size();
+    case O::StRestorableRepair: ST->mRestorables[a[0]]->RepairPointers((long)a[1], (unsigned long)a[2]);
+        break;
+    case O::StOptionsPtr: return P64(&ST->mGameOptions);
+    case O::StPlayersResize: ST->mPlayers.resize((size_t)a[0]);
+        break;
+    case O::StPlayerSet: ST->mPlayers[a[0]] = (EEPlayer*)a[1];
+        break;
+    case O::StNewMap: ST->mMap = new EEMap((long)a[0], (long)a[1], (unsigned long)a[2], gDefaultTerrain);
+        break;
+    case O::StNewScenarioManager: ST->mScenarioManager = new EEScenarioManager;
+        break;
+    case O::StNewEffectManager: ST->mEffectManager = new EEEffectManager;
+        break;
+    case O::StNewCalamityHelper: ST->mCalamityHelper = new EEPCalamityHelper;
+        break;
+    case O::StNewEnvironmentManager: ST->mEnvironmentManager = new EEEnvironmentManager;
+        break;
+    case O::CalamityHelperReset: ((EEPCalamityHelper*)p)->Reset();
+        break;
+    // the options and their slots
+    case O::OptFields: return P64(static_cast<EeAppOptionsFields*>(OPT));
+    case O::OptPlayer: return P64(&OPT->mPlayers[a[0]]);
+    case O::OptPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(SLOT));
+    case O::OptPlayerAssign: *SLOT = *(EEGameOptionsPlayer*)a[0];
+        break;
+    case O::OptPlayerCopyName: SLOT->mName = ((EEGameOptionsPlayer*)a[0])->mName;
+        break;
+    case O::OptMapType: return P64(&OPT->mMapType);
+    case O::OptCampaignNameLength: return OPT->mCampaignName.GetLength();
+    case O::OptGetCampaignMapName: return OPT->GetCampaignMapName(WSTR(0));
+    case O::OptCopyCampaignName: OPT->mCampaignName = ((EEGameOptions*)a[0])->mCampaignName;
+        break;
+    case O::OptCopyScenarioName: OPT->mScenarioName = ((EEGameOptions*)a[0])->mScenarioName;
+        break;
+    case O::OptSetMapName: OPT->mMapName = WSTR(0);
+        break;
+    case O::OptGetMapDimensions: OPT->GetMapDimensions(*(long*)a[0], *(long*)a[1]);
+        break;
+    case O::OptAssign: *OPT = *(EEGameOptions*)a[0];
+        break;
+    // the strings, the files and the data path
+    case O::ResString: return gResource->GetString((long)a[0], *(UWideString*)p);
+    case O::ResStringVerify: ESVERIFY_AT(::gResource->GetString((long)a[0], *(UWideString*)p) == keseOK, (long)a[1]);
+        break;
+    case O::StrFormatFileError: sprintf(*(UWideString*)p, "%s\n\"%s\"", (const char*)*(UWideString*)p, (const char*)WSTR(0));
+        break;
+    case O::StrAssignEmpty: *(UWideString*)p = gEmptyString;
+        break;
+    case O::ArchiveNew: return P64(new FSArchive);
+    case O::ArchiveDelete: delete (FSArchive*)p;
+        break;
+    case O::ArchiveSet: ((FSArchive*)p)->SetArchive(*(FSFileSpec*)a[0]);
+        break;
+    case O::DataPathAddArchive: gDataPath->AddArchive(*(FSArchive*)p, true);
+        break;
+    case O::DataPathFindFile: return gDataPath->FindFile(UString(WSTR(0)), *(FSFileSpec**)a[1]);
+    case O::SetDataPaths: EESetDataPaths();
+        break;
+    case O::UiSetLoadingText: gUserInterface->SetLoadingText((long)a[0]);
+        break;
+    case O::UiRandomSeed: return gUserInterface->mRandomSeed;
+    case O::FileSpecNew: return P64(new FSFileSpec);
+    case O::FileSpecDelete: delete (FSFileSpec*)p;
+        break;
+    case O::FileSpecSetVolumeStartup: ((FSFileSpec*)p)->SetVolume(gStartupVolume);
+        break;
+    case O::FileSpecSetStartupData: ((FSFileSpec*)p)->SetDirectory(gStartupDirectory + "data\\" + (a[0] ? "Saved Games\\" : "Scenarios\\"));
+        break;
+    case O::FileSpecSetFileW: ((FSFileSpec*)p)->SetFile((const char*)WSTR(0));
+        break;
+    case O::FileOpenReadSpec: return ((FSFileSpec*)p)->Open(kFileAccessRead);
+    case O::CampaignNew: return P64(new EECampaign);
+    case O::CampaignDelete: delete (EECampaign*)p;
+        break;
+    case O::CampaignFileName: *(UWideString*)p = UWideString("Campaigns\\") + ((EEGameOptions*)a[0])->mCampaignName + gCampaignExtension;
+        break;
+    case O::CampaignLoad: return ((EECampaign*)p)->Load(WSTR(0), WSTR(1), false);
+    case O::ValidateSaveGameFile: return EEValidateSaveGameFile(*(FSFileSpec*)p, WSTR(0));
+    case O::LoaderNew: return P64(new EEGameStateLoader(&gGameState));
+    case O::LoaderDelete: delete (EEGameStateLoader*)p;
+        break;
+    case O::LoaderLoad: return ((EEGameStateLoader*)p)->Load(*(FSFileSpec*)a[0]);
+    // the players
+    case O::PlSetNameFromSlot: PL->mName = ((EEGameOptionsPlayer*)a[0])->mName;
+        break;
+    case O::CpSetReplaceOnLoad: ((EEComputerPlayer*)p)->mReplaceOnLoad = a[0] != 0;
+        break;
+    case O::NewWorldPlayer: return P64(static_cast<EEPlayer*>(new EEHumanPlayer(UWideString("World"), 0)));
+    case O::NewHumanPlayerNamed: return P64(static_cast<EEPlayer*>(new EEHumanPlayer(SLOT->mName, (unsigned long)a[0])));
+    case O::CpEngineResolve: return EECPEngineResolve((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
+    case O::CpEngineSet: EECPEngineSet((EEComputerPlayer*)p, (unsigned long)a[0]);
+        break;
+    case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);
+    case O::PlSetCivilizationPoints: PL->SetCivilizationPoints((long)a[0]);
+        break;
+    case O::ResourceLevelAmount: return EEGetResourceLevel((long)a[0])->mAmounts[a[1]];
+    case O::RulesSpeedCount: return (int64_t)EEGetRules().mGameOptions.mSpeeds.size();
+    case O::RulesSpeedDefault: return EEGetRules().mGameOptions.mSpeedDefault;
+    case O::VecPlayersNew: return P64(new std::vector<EEPlayer*>);
+    case O::VecPlayersDelete: delete (std::vector<EEPlayer*>*)p;
+        break;
+    case O::VecPlayersPush: ((std::vector<EEPlayer*>*)p)->push_back((EEPlayer*)a[0]);
+        break;
+    case O::VecPlayersSize: return (int64_t)((std::vector<EEPlayer*>*)p)->size();
+    case O::CreateRandomMap: return EERandomMap::CreateRandomMap(OPT, *(std::vector<EEPlayer*>*)a[0], (unsigned long)a[1], OPT->mMapType, (unsigned long)a[2], (EEMap*)a[3], *(GE3DPoint*)a[4]);
+    case O::EpochCount: return EEEpochCount();
+    case O::RandomNew: return P64(new URandomIntegers);
+    case O::RandomDelete: delete (URandomIntegers*)p;
+        break;
+    case O::RandomSetSeed: ((URandomIntegers*)p)->SetSeed((long)a[0]);
+        break;
+    case O::RandomGenerate: return ((URandomIntegers*)p)->Generate((long)a[0], (long)a[1]);
+    case O::LobbyWriteLock: gGameOptions.mLock->WriteLock();
+        break;
+    case O::LobbyWriteUnlock: gGameOptions.mLock->WriteUnlock();
+        break;
+    case O::LobbyMapTypeScenDefault: gGameOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
+        break;
+    case O::PhysicsPresent: return gPhysics != NULL;
+    case O::CxSetPoolSize: EEComplexUnit::SetPoolSize((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    default: return EEMessageOp(inOp, p, a, f);   // the message bodies' (EEMessage.cpp)
+    }
+    return 0;
+}
+
+double EEGameStateOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::RulesSpeedFactor: return EERuleFloat(EEGetRules().mGameOptions.mSpeeds[a[0]].mFactor);
+    default: return EEMessageOpF(inOp, p, a, f);
+    }
 }
