@@ -1829,6 +1829,627 @@ constexpr static const int32_t EE_UNITS_CU_DO_PAY_INSURANCE = 7;
 
 constexpr static const int32_t EE_UNITS_CU_DO_FIND_CONTACTS = 8;
 
+/// `GetPlayer()->GetTechTree()->Get(mCurrentResearch)`
+constexpr static const int32_t EE_UNITS_CU_CURRENT_NODE = 200;
+
+/// node `a`'s `mData->mUnitClass`
+constexpr static const int32_t EE_UNITS_CU_NODE_CLASS_INDEX = 201;
+
+/// node `a`'s `mIsAllowed = b != 0`
+constexpr static const int32_t EE_UNITS_CU_SET_NODE_ALLOWED = 202;
+
+/// node `a`'s `mIsAllowed`
+constexpr static const int32_t EE_UNITS_CU_NODE_ALLOWED = 203;
+
+/// class `a`'s `mAIKind`
+constexpr static const int32_t EE_UNITS_CU_CLASS_AI_KIND = 204;
+
+/// `GetPlayer()->mNumHeroesInProduction`
+constexpr static const int32_t EE_UNITS_CU_HEROES_IN_PRODUCTION = 205;
+
+/// `GetPlayer()->mNumHeroesInProduction = b`
+constexpr static const int32_t EE_UNITS_CU_SET_HEROES_IN_PRODUCTION = 206;
+
+/// `mBuildQueue.size()`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_SIZE = 207;
+
+/// `mBuildQueue.back().mTechnology`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_BACK_TECHNOLOGY = 208;
+
+/// `mBuildQueue.pop_back()`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_POP_BACK = 209;
+
+/// `mPlayer->mTechnologies->Get(b)`
+constexpr static const int32_t EE_UNITS_CU_PLAYER_NODE = 210;
+
+/// `mPlayer->RefundTechnology(node a, GetUnitClass()->mUnitType, 1.0f)`
+constexpr static const int32_t EE_UNITS_CU_REFUND_ONE = 211;
+
+/// `SetProductionTime(b)`
+constexpr static const int32_t EE_UNITS_CU_SET_PRODUCTION_TIME_FIELD = 212;
+
+/// `mBuildQueue.clear()`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_CLEAR = 213;
+
+/// `mBuildQueue.push_back({b, c != 0})`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_PUSH_BACK = 214;
+
+/// `mBuildQueue.insert(mBuildQueue.begin(), {b, c != 0})`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_PUSH_FRONT = 215;
+
+/// `mBuildQueue[b].mTechnology`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_TECHNOLOGY_AT = 216;
+
+/// `mBuildQueue[b].mTechnology = c`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_SET_TECHNOLOGY_AT = 217;
+
+/// `mBuildQueue.erase(mBuildQueue.begin() + b)`
+constexpr static const int32_t EE_UNITS_CU_QUEUE_ERASE_AT = 218;
+
+/// `GetPlayer()->CanAfford(node a, GetUnitClass()->GetUnitType(), true)`
+constexpr static const int32_t EE_UNITS_CU_CAN_AFFORD = 219;
+
+/// `gWorld.mGameOptions.mIsScenarioGame`
+constexpr static const int32_t EE_UNITS_CU_SCENARIO_GAME = 220;
+
+/// `mPlayer->mHeroLimit`
+constexpr static const int32_t EE_UNITS_CU_HERO_LIMIT = 221;
+
+/// `mPlayer->GetHeroCount(1, 1)`
+constexpr static const int32_t EE_UNITS_CU_HERO_COUNT = 222;
+
+/// `mPlayer->mJITManufacturing`
+constexpr static const int32_t EE_UNITS_CU_JIT_MANUFACTURING = 223;
+
+/// `mPlayer->Pay(node a, GetUnitClass()->GetUnitType(), 1.0f)`
+constexpr static const int32_t EE_UNITS_CU_PAY = 224;
+
+/// node `a`'s `mData->mKind`
+constexpr static const int32_t EE_UNITS_CU_NODE_KIND = 225;
+
+/// complex unit `a`'s `mUnitClass->mWeight`
+constexpr static const int32_t EE_UNITS_CU_UNIT_WEIGHT = 226;
+
+/// `mCargoRoom`
+constexpr static const int32_t EE_UNITS_CU_CARGO_ROOM = 227;
+
+/// `mCargoRoom = b`
+constexpr static const int32_t EE_UNITS_CU_SET_CARGO_ROOM = 228;
+
+/// `mCargo.push_back(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_CARGO_PUSH = 229;
+
+/// unit `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_CU_REFERENCE = 230;
+
+/// complex unit `a`'s `mContainer`
+constexpr static const int32_t EE_UNITS_CU_UNIT_CONTAINER = 231;
+
+/// complex unit `a`'s `mContainer = this`
+constexpr static const int32_t EE_UNITS_CU_SET_CONTAINER_THIS = 232;
+
+/// complex unit `a`'s `TakeOffMap()`
+constexpr static const int32_t EE_UNITS_CU_TAKE_OFF_MAP = 233;
+
+/// complex unit `a`'s `mPlayer->GetOffMapInfo(a)`
+constexpr static const int32_t EE_UNITS_CU_OFF_MAP_INFO = 234;
+
+/// off-map info `a`'s `mReason = b`
+constexpr static const int32_t EE_UNITS_CU_SET_OFF_MAP_REASON = 235;
+
+/// `GetUnitClass()->IsTransport()`
+constexpr static const int32_t EE_UNITS_CU_IS_TRANSPORT = 236;
+
+/// `GetUnitClass()->CargoAdded(this, a, b != 0)`
+constexpr static const int32_t EE_UNITS_CU_CARGO_ADDED = 237;
+
+/// `mPlayer->mActiveGroup->Contains(unit a)`
+constexpr static const int32_t EE_UNITS_CU_ACTIVE_GROUP_HAS = 238;
+
+/// `gUserInterface->PostMessage424Once()`
+constexpr static const int32_t EE_UNITS_CU_POST_424 = 239;
+
+/// complex unit `a`'s `mHitPoints`
+constexpr static const int32_t EE_UNITS_CU_UNIT_HIT_POINTS = 240;
+
+/// complex unit `a`'s `mUnitClass->GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_CU_UNIT_POPULATION_COST = 241;
+
+/// `GetUnitClass()->mGarrisonCapacity`
+constexpr static const int32_t EE_UNITS_CU_GARRISON_CAPACITY = 242;
+
+/// `mGarrisonCount`
+constexpr static const int32_t EE_UNITS_CU_GARRISON_COUNT = 243;
+
+/// `mGarrisonCount = b`
+constexpr static const int32_t EE_UNITS_CU_SET_GARRISON_COUNT = 244;
+
+/// `mGarrisonPopulation`
+constexpr static const int32_t EE_UNITS_CU_GARRISON_POPULATION = 245;
+
+/// `mGarrisonPopulation = b`
+constexpr static const int32_t EE_UNITS_CU_SET_GARRISON_POPULATION = 246;
+
+/// complex unit `a`'s `Kill(0, 0, 0)`
+constexpr static const int32_t EE_UNITS_CU_KILL_UNIT = 247;
+
+/// `EEAddDeadUnitStatistic(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_DEAD_STATISTIC = 248;
+
+/// `mCargo.size()`
+constexpr static const int32_t EE_UNITS_CU_CARGO_COUNT = 249;
+
+/// `mCargo[b]` (`GetCargo(b)`)
+constexpr static const int32_t EE_UNITS_CU_CARGO_AT = 250;
+
+/// complex unit `a`'s `mPreviousPart`
+constexpr static const int32_t EE_UNITS_CU_UNIT_PREVIOUS_PART = 251;
+
+/// complex unit `a`'s `mUnitClass->GetUnitType()`
+constexpr static const int32_t EE_UNITS_CU_UNIT_UNIT_TYPE = 252;
+
+/// complex unit `a`'s `mUnitClass->mCategory`
+constexpr static const int32_t EE_UNITS_CU_UNIT_CATEGORY = 253;
+
+/// complex unit `a`'s `mPlayer->mSavedGroups.Reset(b, 1)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_STATS_RESET = 254;
+
+/// complex unit `a`'s `mPlayer->mSavedGroups.Lower(b, 1)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_STATS_LOWER = 255;
+
+/// `GetUnitClass()->CargoRemoved(this, a)`
+constexpr static const int32_t EE_UNITS_CU_CARGO_REMOVED = 256;
+
+/// `mCargo.erase(mCargo.begin() + b)`
+constexpr static const int32_t EE_UNITS_CU_CARGO_ERASE_AT = 257;
+
+/// complex unit `a`'s `mContainer->Dereference()`
+constexpr static const int32_t EE_UNITS_CU_UNIT_CONTAINER_DEREFERENCE = 258;
+
+/// complex unit `a`'s `mContainer = NULL`
+constexpr static const int32_t EE_UNITS_CU_UNIT_CLEAR_CONTAINER = 259;
+
+/// `mCargo[b] = complex unit a`
+constexpr static const int32_t EE_UNITS_CU_CARGO_SET_AT = 260;
+
+/// `GetUnitClass()->CargoUnloaded(this, a)`
+constexpr static const int32_t EE_UNITS_CU_CARGO_UNLOADED = 261;
+
+/// complex unit `a`'s `SetTransformation(the transformation at b, true)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_SET_TRANSFORMATION = 262;
+
+/// complex unit `a`'s `mUnitClass->mDomains`
+constexpr static const int32_t EE_UNITS_CU_UNIT_DOMAINS = 263;
+
+/// complex unit `a`'s `mPlanetID = EEGetLandContinentOf(a)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_SET_PLANET = 264;
+
+/// complex unit `a`'s `mUnitClass->GetCruiseAltitude()` (its bits)
+constexpr static const int32_t EE_UNITS_CU_UNIT_CRUISE_ALTITUDE = 265;
+
+/// complex unit `a`'s `SetTransformation(a copy of the transformation at b with Z the float of the bits c, true)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z = 266;
+
+/// complex unit `a`'s `GetTileX()`
+constexpr static const int32_t EE_UNITS_CU_UNIT_TILE_X = 267;
+
+/// `gWorld.ActivateUnit(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_ACTIVATE_UNIT = 268;
+
+/// `gWorld.DeactivateUnit(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_DEACTIVATE_UNIT = 269;
+
+/// complex unit `a`'s `mPlayer->IsHuman()`
+constexpr static const int32_t EE_UNITS_CU_UNIT_IS_HUMAN = 270;
+
+/// complex unit `a`'s `StartAction(b)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_START_ACTION = 271;
+
+/// complex unit `a`'s `mUnitClass->ActionChanged(a)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_ACTION_CHANGED = 272;
+
+/// complex unit `a`'s `mReferenceCount`
+constexpr static const int32_t EE_UNITS_CU_UNIT_REFERENCE_COUNT = 273;
+
+/// `GetStats()->mRange` (its bits)
+constexpr static const int32_t EE_UNITS_CU_STATS_RANGE = 274;
+
+/// the transport class's `HasRoom(this, complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_TRANSPORT_HAS_ROOM = 275;
+
+/// the transport class's `mUnloadRange` (its bits)
+constexpr static const int32_t EE_UNITS_CU_TRANSPORT_UNLOAD_RANGE = 276;
+
+/// `UnloadCargoAt(b, the transformation at a)` (its answer)
+constexpr static const int32_t EE_UNITS_CU_UNLOAD_CARGO_AT = 277;
+
+/// `CreateUnitEffect(complex unit a, kGraphicEffectCalamityTeleportIn, NULL, false, 0, 0)`
+constexpr static const int32_t EE_UNITS_CU_TELEPORT_IN_EFFECT = 278;
+
+/// `ReleaseCargo(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_RELEASE_CARGO = 279;
+
+/// the transport class's `GetUnloadFailedTextID()`
+constexpr static const int32_t EE_UNITS_CU_UNLOAD_FAILED_TEXT = 280;
+
+/// `mPlayer->mEvents.AddEvent(this's tile, 2, mPlayer, b, false)`
+constexpr static const int32_t EE_UNITS_CU_ADD_EVENT = 281;
+
+/// `gUnitSetManager.GetSet(99)->Contains(GetUnitClass()->GetUnitType())`
+constexpr static const int32_t EE_UNITS_CU_SET99_HAS_TYPE = 282;
+
+/// the transport class's `mDomains`
+constexpr static const int32_t EE_UNITS_CU_TRANSPORT_DOMAINS = 283;
+
+/// `mTileX`
+constexpr static const int32_t EE_UNITS_CU_TILE_X_FIELD = 284;
+
+/// `GetTileY()`
+constexpr static const int32_t EE_UNITS_CU_TILE_Y = 285;
+
+/// `GetUnitClass()->GetTileSize()`
+constexpr static const int32_t EE_UNITS_CU_TILE_SIZE = 286;
+
+/// `mGoalState != NULL && mGoalState->mKind == kGoalBuildRepair`
+constexpr static const int32_t EE_UNITS_CU_GOAL_IS_BUILD = 287;
+
+/// `EEBuildRepairGoalCast(GetGoal())->GetBuildTarget()`
+constexpr static const int32_t EE_UNITS_CU_BUILD_GOAL_TARGET = 288;
+
+/// `mCitizenBuildQueue.push_front(unit a)`
+constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_PUSH_FRONT = 289;
+
+/// `mCitizenBuildQueue.push_back(unit a)`
+constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK = 290;
+
+/// the index of unit `a` in `mCitizenBuildQueue` (`std::find`; -1: none)
+constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_FIND = 291;
+
+/// `mCitizenBuildQueue.erase(mCitizenBuildQueue.begin() + b)` (the single-iterator erase)
+constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_ERASE_AT = 292;
+
+/// `DropFinishedGoals(0)`
+constexpr static const int32_t EE_UNITS_CU_DROP_FINISHED_GOALS = 293;
+
+/// `ClearGoals(0)`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_GOALS = 294;
+
+/// `mHasShiftQueuedBuild = false`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_SHIFT_QUEUED = 295;
+
+/// `mContacts.Find(complex unit a) == 0`
+constexpr static const int32_t EE_UNITS_CU_CONTACT_MISSING = 296;
+
+/// `mContacts.AddHead(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_CONTACT_ADD_HEAD = 297;
+
+/// `this->Reference()`
+constexpr static const int32_t EE_UNITS_CU_REFERENCE_THIS = 298;
+
+/// `EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(GetUnitClass())` (0: not that kind)
+constexpr static const int32_t EE_UNITS_CU_TRANSPORT_CLASS = 299;
+
+constexpr static const int32_t EE_UNITS_CU_DO_UPDATE_JIT = 20;
+
+constexpr static const int32_t EE_UNITS_CU_DO_CANCEL_QUEUED_PRODUCTION = 21;
+
+constexpr static const int32_t EE_UNITS_CU_DO_TOGGLE_JIT = 22;
+
+constexpr static const int32_t EE_UNITS_CU_DO_REMOVE_RESEARCH = 23;
+
+constexpr static const int32_t EE_UNITS_CU_DO_REPLACE_RESEARCH = 24;
+
+constexpr static const int32_t EE_UNITS_CU_DO_QUEUE_RESEARCH = 25;
+
+constexpr static const int32_t EE_UNITS_CU_DO_LOAD_CARGO = 26;
+
+constexpr static const int32_t EE_UNITS_CU_DO_GARRISON_UNIT = 27;
+
+constexpr static const int32_t EE_UNITS_CU_DO_ADD_GARRISON = 28;
+
+constexpr static const int32_t EE_UNITS_CU_DO_KILL_CARGO = 29;
+
+constexpr static const int32_t EE_UNITS_CU_DO_RELEASE_CARGO = 30;
+
+constexpr static const int32_t EE_UNITS_CU_DO_REPLACE_CARGO = 31;
+
+constexpr static const int32_t EE_UNITS_CU_DO_UNLOAD_CARGO_AT = 32;
+
+constexpr static const int32_t EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE = 33;
+
+constexpr static const int32_t EE_UNITS_CU_DO_UNLOAD_CARGO_NOW = 34;
+
+constexpr static const int32_t EE_UNITS_CU_DO_ORDER_REPAIR = 35;
+
+constexpr static const int32_t EE_UNITS_CU_DO_ADD_BUILD_TARGET = 36;
+
+constexpr static const int32_t EE_UNITS_CU_DO_ADD_CONTACT = 37;
+
+/// `GetPosition(mLastMapPosition)`
+constexpr static const int32_t EE_UNITS_CU_KEEP_MAP_POSITION = 300;
+
+/// `mPlayer->DeselectUnit(complex unit a)`
+constexpr static const int32_t EE_UNITS_CU_DESELECT = 301;
+
+/// player `b`'s `mViewedUnit == complex unit a`
+constexpr static const int32_t EE_UNITS_CU_PLAYER_VIEWS = 302;
+
+/// player `b`'s `UpdateSelection(NULL, true)`
+constexpr static const int32_t EE_UNITS_CU_PLAYER_UPDATE_SELECTION = 303;
+
+/// player `b`'s `mSelectedViewedUnit == complex unit a`
+constexpr static const int32_t EE_UNITS_CU_PLAYER_SELECTED_VIEWS = 304;
+
+/// player `b`'s `SetSelectedViewedUnit(NULL)`
+constexpr static const int32_t EE_UNITS_CU_PLAYER_CLEAR_SELECTED_VIEWED = 305;
+
+/// complex unit `a`'s `GetPosition(a->mLastMapPosition)`
+constexpr static const int32_t EE_UNITS_CU_PART_KEEP_MAP_POSITION = 306;
+
+/// complex unit `a`'s `SetLocation((-10000, -10000, its location's Z), true)`
+constexpr static const int32_t EE_UNITS_CU_PART_SET_AWAY = 307;
+
+/// `mGoalState != NULL`
+constexpr static const int32_t EE_UNITS_CU_HAS_GOAL_STATE = 308;
+
+/// `mGoalState->mKind`
+constexpr static const int32_t EE_UNITS_CU_GOAL_KIND = 309;
+
+/// `EECastCalamityGoalCast(GetGoal())->GetCalamityType()`
+constexpr static const int32_t EE_UNITS_CU_CAST_CALAMITY_TYPE = 310;
+
+/// `SetVelocity(0.0f)`
+constexpr static const int32_t EE_UNITS_CU_STOP = 311;
+
+/// `GetUnitClass()->mDomains`
+constexpr static const int32_t EE_UNITS_CU_CLASS_DOMAINS = 312;
+
+/// `mTile` (0: none)
+constexpr static const int32_t EE_UNITS_CU_TILE = 313;
+
+/// tile `a`'s `mTerrainType`
+constexpr static const int32_t EE_UNITS_CU_TILE_TERRAIN = 314;
+
+/// tile `a`'s `mAIValue` as a signed char
+constexpr static const int32_t EE_UNITS_CU_TILE_LEVEL = 315;
+
+/// `GetUnitClass()->mWaterKind`
+constexpr static const int32_t EE_UNITS_CU_WATER_KIND = 316;
+
+/// `mWaterState = b`
+constexpr static const int32_t EE_UNITS_CU_SET_WATER_STATE = 317;
+
+/// `EEUnit::LoadMedia(b != 0)`
+constexpr static const int32_t EE_UNITS_CU_UNIT_LOAD_MEDIA = 318;
+
+/// `GetPlayer()->LoadUnitClassButtons(GetUnitClass()->GetUnitType())`
+constexpr static const int32_t EE_UNITS_CU_LOAD_BUTTONS = 319;
+
+/// `mIsFoundation = b != 0`
+constexpr static const int32_t EE_UNITS_CU_SET_FOUNDATION = 320;
+
+/// `mPhysicalModel.SetModel(EEGetPlayerClassGraphic(GetPlayer(), GetUnitClass())->mModel)`
+constexpr static const int32_t EE_UNITS_CU_PM_SET_FOUNDATION_MODEL = 321;
+
+/// `mPhysicalModel.SetModel(model a's mModels[mAnimation])`
+constexpr static const int32_t EE_UNITS_CU_PM_SET_ANIMATION_MODEL = 322;
+
+/// `mTurretAngles = NULL`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_TURRET_ANGLES = 323;
+
+/// `ResizeTurretAngles(model a's GetNumParts())`
+constexpr static const int32_t EE_UNITS_CU_RESIZE_TURRET_ANGLES = 324;
+
+/// model `a`'s `GetOrbitalCount()`
+constexpr static const int32_t EE_UNITS_CU_MODEL_ORBITAL_COUNT = 325;
+
+/// `mNumOrbitals = b`
+constexpr static const int32_t EE_UNITS_CU_SET_ORBITAL_COUNT = 326;
+
+/// `mOrbitals = NULL`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_ORBITALS = 327;
+
+/// `mOrbitals = new EEOrbital*[mNumOrbitals]`
+constexpr static const int32_t EE_UNITS_CU_NEW_ORBITALS = 328;
+
+/// `mOrbitals[b] = new EEOrbital(*model a's mOrbitals[b])`
+constexpr static const int32_t EE_UNITS_CU_NEW_ORBITAL = 329;
+
+/// model `a`'s `GetWheelCount()`
+constexpr static const int32_t EE_UNITS_CU_MODEL_WHEEL_COUNT = 330;
+
+/// `mNumWheels = b`
+constexpr static const int32_t EE_UNITS_CU_SET_WHEEL_COUNT = 331;
+
+/// `mWheels = NULL`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_WHEELS = 332;
+
+/// `mWheels = new EEWheel*[mNumWheels]`
+constexpr static const int32_t EE_UNITS_CU_NEW_WHEELS = 333;
+
+/// `mWheels[b] = new EEWheel(*model a's mWheels[b])`
+constexpr static const int32_t EE_UNITS_CU_NEW_WHEEL = 334;
+
+/// `mWheels[b]->mAngle = 0.0f`
+constexpr static const int32_t EE_UNITS_CU_WHEEL_ANGLE_ZERO = 335;
+
+/// `mIsDisabled`
+constexpr static const int32_t EE_UNITS_CU_DISABLED = 336;
+
+/// `mIsDisabled = b != 0`
+constexpr static const int32_t EE_UNITS_CU_SET_DISABLED_FIELD = 337;
+
+/// `mDisabledReason = b`
+constexpr static const int32_t EE_UNITS_CU_SET_DISABLED_REASON = 338;
+
+/// `ee_units_atc_add_airport(mPlayer->mAirTraffic[b - 1], this)`
+constexpr static const int32_t EE_UNITS_CU_ATC_ADD_AIRPORT = 339;
+
+/// `SetIsTinted(b != 0)`
+constexpr static const int32_t EE_UNITS_CU_SET_TINTED = 340;
+
+/// `SetColor(kTimeWarpColor)`
+constexpr static const int32_t EE_UNITS_CU_TIME_WARP_COLOR = 341;
+
+/// `IsCloaked()`
+constexpr static const int32_t EE_UNITS_CU_IS_CLOAKED = 342;
+
+/// `gCivPowersManager.HasPower(GetPlayer(), kCivPowerCamouflage)`
+constexpr static const int32_t EE_UNITS_CU_HAS_CAMOUFLAGE = 343;
+
+/// `gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)`
+constexpr static const int32_t EE_UNITS_CU_CAMOUFLAGE_SET = 344;
+
+/// `mPlayer->mNumVitalBuildings`
+constexpr static const int32_t EE_UNITS_CU_VITAL_BUILDINGS = 345;
+
+/// `mIsCloakable`
+constexpr static const int32_t EE_UNITS_CU_CLOAKABLE = 346;
+
+/// `mIsCloaked`
+constexpr static const int32_t EE_UNITS_CU_CLOAKED_FIELD = 347;
+
+/// `ee_units_uu_cloaked_enemy(this, gWorld.GetCurrentPlayer())`
+constexpr static const int32_t EE_UNITS_CU_CLOAKED_ENEMY = 348;
+
+/// `gMiniMap->MoveUnit(this, -10000, -10000, GetTileX(), GetTileY())`
+constexpr static const int32_t EE_UNITS_CU_MINIMAP_REMOVE = 349;
+
+/// `mIsCloakable = false; mIsCloaked = false` (the two stores in order)
+constexpr static const int32_t EE_UNITS_CU_CLEAR_CLOAKABLE = 350;
+
+constexpr static const int32_t EE_UNITS_CU_CLEAR_CLOAKED = 351;
+
+/// `mCamouflageTimer = b`
+constexpr static const int32_t EE_UNITS_CU_SET_CAMOUFLAGE_TIMER = 352;
+
+/// `mU32C = b`
+constexpr static const int32_t EE_UNITS_CU_SET_U32C = 353;
+
+/// `gWorldTable.GetLongValue2(kWorldCamouflageTiming)`
+constexpr static const int32_t EE_UNITS_CU_CAMOUFLAGE_TIMING2 = 354;
+
+/// `gWorldTable.GetLongValue(kWorldCamouflageTiming)`
+constexpr static const int32_t EE_UNITS_CU_CAMOUFLAGE_TIMING = 355;
+
+/// `mGatheredResource`
+constexpr static const int32_t EE_UNITS_CU_GATHERED = 356;
+
+/// `gWorld.ReleaseResourceUser(mGatheredResource)`
+constexpr static const int32_t EE_UNITS_CU_RELEASE_RESOURCE_USER = 357;
+
+/// `mGatheredResource->mIsValid`
+constexpr static const int32_t EE_UNITS_CU_GATHERED_VALID = 358;
+
+/// `EEGetWaitingGatherer(mGatheredResource)`
+constexpr static const int32_t EE_UNITS_CU_WAITING_GATHERER = 359;
+
+/// `mGatheredResource = unit a` (0: NULL)
+constexpr static const int32_t EE_UNITS_CU_SET_GATHERED_FIELD = 360;
+
+/// `gWorld.AddResourceUser(mGatheredResource)`
+constexpr static const int32_t EE_UNITS_CU_ADD_RESOURCE_USER = 361;
+
+/// `gDataPreLoading->PostUnloadTechnology(mPlayer->mPlayerID, mCurrentResearch)`
+constexpr static const int32_t EE_UNITS_CU_POST_UNLOAD_TECHNOLOGY = 362;
+
+/// `GetPlayer()->GetTechTree()->Get(mCurrentResearch)->UnloadMedia(GetPlayer())`
+constexpr static const int32_t EE_UNITS_CU_UNLOAD_TECHNOLOGY_MEDIA = 363;
+
+/// `mCurrentResearch = b`
+constexpr static const int32_t EE_UNITS_CU_SET_CURRENT_RESEARCH = 364;
+
+/// `gDataPreLoading->PostLoadTechnology(mPlayer->mPlayerID, b)`
+constexpr static const int32_t EE_UNITS_CU_POST_LOAD_TECHNOLOGY = 365;
+
+/// `GetUnitClass()->mIsWall`
+constexpr static const int32_t EE_UNITS_CU_IS_WALL = 366;
+
+/// `mFireEffect.mValue`
+constexpr static const int32_t EE_UNITS_CU_FIRE_EFFECT = 367;
+
+/// `gEffectManager->DestroyEffect(mFireEffect)`; `mFireEffect.mValue = 0` (in order)
+constexpr static const int32_t EE_UNITS_CU_DESTROY_FIRE_EFFECT = 368;
+
+constexpr static const int32_t EE_UNITS_CU_CLEAR_FIRE_EFFECT = 369;
+
+/// `GetUnitClass()->mUnitType`
+constexpr static const int32_t EE_UNITS_CU_CLASS_TYPE_FIELD = 370;
+
+/// `EERemoveCloakEffect(this)`
+constexpr static const int32_t EE_UNITS_CU_REMOVE_CLOAK_EFFECT = 371;
+
+/// `ClearBuildTargets()`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_BUILD_TARGETS = 372;
+
+/// `ee_units_atc_clear_airport_queue(mPlayer->mAirTraffic[GetUnitClass()->mAirTrafficType - 1], this, b)`
+constexpr static const int32_t EE_UNITS_CU_ATC_CLEAR_AIRPORT_QUEUE = 373;
+
+/// `mPlayer->mComputerPlayer != NULL`
+constexpr static const int32_t EE_UNITS_CU_HAS_COMPUTER_PLAYER = 374;
+
+/// `EEGetRandomPointAhead(this, &point)` (the point into `f[0..2]`)
+constexpr static const int32_t EE_UNITS_CU_RANDOM_POINT_AHEAD = 375;
+
+/// `SetGoal(EEUGRust::NewLocation(GE2DPoint(f[0], f[1]), true, true, false, 0.0f, false, false), 0, 0)`
+constexpr static const int32_t EE_UNITS_CU_FLEE_GOAL = 376;
+
+/// `mPreviousPart->mNextPart`
+constexpr static const int32_t EE_UNITS_CU_PREVIOUS_NEXT = 377;
+
+/// `mPreviousPart->mNextPart = NULL`
+constexpr static const int32_t EE_UNITS_CU_CLEAR_PREVIOUS_NEXT = 378;
+
+/// `mPreviousPart = complex unit a`
+constexpr static const int32_t EE_UNITS_CU_SET_PREVIOUS_PART = 379;
+
+/// `mPreviousPart->mNextPart = this`
+constexpr static const int32_t EE_UNITS_CU_SET_PREVIOUS_NEXT_THIS = 380;
+
+/// `mGoalQueues[0].mGoals.size()`
+constexpr static const int32_t EE_UNITS_CU_FIRST_QUEUE_LEN = 381;
+
+/// `mGoalQueues[0].GetGoalAt(b)->Abandon(this)`
+constexpr static const int32_t EE_UNITS_CU_ABANDON_GOAL = 382;
+
+/// `mGoalQueues[b].Clear()`
+constexpr static const int32_t EE_UNITS_CU_GOAL_QUEUE_CLEAR = 383;
+
+/// `GetUnitClass() != NULL`
+constexpr static const int32_t EE_UNITS_CU_HAS_CLASS = 384;
+
+/// `RefreshGoals()`; `RefreshActiveGoal()`
+constexpr static const int32_t EE_UNITS_CU_REFRESH_GOALS = 385;
+
+constexpr static const int32_t EE_UNITS_CU_REFRESH_ACTIVE_GOAL = 386;
+
+/// `GetUnitClass()->mCategory` is the airplane's or the planet spaceship's
+constexpr static const int32_t EE_UNITS_CU_CIRCLES = 387;
+
+constexpr static const int32_t EE_UNITS_CU_DO_TAKE_OFF_MAP = 40;
+
+constexpr static const int32_t EE_UNITS_CU_DO_UPDATE_WATER_STATE = 41;
+
+constexpr static const int32_t EE_UNITS_CU_DO_LOAD_MEDIA = 42;
+
+constexpr static const int32_t EE_UNITS_CU_DO_SET_DISABLED = 43;
+
+constexpr static const int32_t EE_UNITS_CU_DO_UPDATE_CAMOUFLAGE = 44;
+
+constexpr static const int32_t EE_UNITS_CU_DO_SET_GATHERED_RESOURCE = 45;
+
+constexpr static const int32_t EE_UNITS_CU_DO_PLAY_EFFECT = 46;
+
+constexpr static const int32_t EE_UNITS_CU_DO_RELEASE_FIRE_EFFECT = 47;
+
+constexpr static const int32_t EE_UNITS_CU_DO_HALT = 48;
+
+constexpr static const int32_t EE_UNITS_CU_DO_FLEE_AFTER_CALAMITY = 49;
+
+constexpr static const int32_t EE_UNITS_CU_DO_LINK_PART = 50;
+
+constexpr static const int32_t EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE = 51;
+
 /// `kUnitTypeTownCenter`, `kUnitTypeCapitol`
 constexpr static const uint64_t TOWN_CENTER = 35;
 
@@ -5366,6 +5987,212 @@ constexpr static const int32_t EE_UNITS_UC_DO_UPDATE_ANIMAL = 3;
 constexpr static const int32_t EE_UNITS_UC_DO_REFRESH_SOUND = 4;
 
 constexpr static const int32_t EE_UNITS_UC_DO_CREATE_DEATH_UNIT = 5;
+
+/// `unit->GetPlayer()->GetExtraPopulation(b)`
+constexpr static const int32_t EE_UNITS_UC_EXTRA_POPULATION = 100;
+
+/// `unit->GetPlayer()->GetPopulationLimit(0)`
+constexpr static const int32_t EE_UNITS_UC_POPULATION_LIMIT = 101;
+
+/// `unit->GetPlayer()->GetTotalPopulation(true, false)`
+constexpr static const int32_t EE_UNITS_UC_TOTAL_POPULATION = 102;
+
+/// class `a`'s `GetUnitType()`
+constexpr static const int32_t EE_UNITS_UC_CLASS_UNIT_TYPE = 103;
+
+/// class `a`'s `GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_UC_CLASS_POPULATION_COST = 104;
+
+/// `unit->GetUnitClass()->GetUnitType()`
+constexpr static const int32_t EE_UNITS_UC_PRODUCER_TYPE = 105;
+
+/// class `a`'s `GetCategory()`
+constexpr static const int32_t EE_UNITS_UC_CLASS_CATEGORY = 106;
+
+/// class `a`'s `IsAircraft()`
+constexpr static const int32_t EE_UNITS_UC_CLASS_IS_AIRCRAFT = 107;
+
+/// class `a`'s `mAirTrafficType`
+constexpr static const int32_t EE_UNITS_UC_CLASS_AIR_TRAFFIC = 108;
+
+/// `ee_units_atc_cargo(unit->GetPlayer()->mAirTraffic[b - 1], c)`
+constexpr static const int32_t EE_UNITS_UC_ATC_CARGO = 109;
+
+/// `ee_units_atc_free_cargo_weight(unit->GetPlayer()->mAirTraffic[b - 1], unit)`
+constexpr static const int32_t EE_UNITS_UC_ATC_FREE_WEIGHT = 110;
+
+/// class `a`'s `mWeight`
+constexpr static const int32_t EE_UNITS_UC_CLASS_WEIGHT = 111;
+
+/// `unit->GetUnitClass()->mTransportCapacity`
+constexpr static const int32_t EE_UNITS_UC_TRANSPORT_CAPACITY = 112;
+
+/// `unit->mCargoRoom`
+constexpr static const int32_t EE_UNITS_UC_CARGO_ROOM = 113;
+
+/// class `a`'s `CreateUnitAt(the transformation at b, unit->GetPlayer()->GetPlayerID(), false, unit)->mComplexUnit`
+constexpr static const int32_t EE_UNITS_UC_CREATE_AT = 114;
+
+/// `unit->LoadCargo(complex unit a, true, 0)`
+constexpr static const int32_t EE_UNITS_UC_LOAD_CARGO = 115;
+
+/// complex unit `a`'s `GetUnitClass()->mIsParatrooperBomber`
+constexpr static const int32_t EE_UNITS_UC_PARATROOPER_BOMBER = 116;
+
+/// `EECreateCarrierAircraft(complex unit a, -1)`
+constexpr static const int32_t EE_UNITS_UC_CARRIER_AIRCRAFT = 117;
+
+/// class `a`'s `mFamily`
+constexpr static const int32_t EE_UNITS_UC_CLASS_FAMILY = 118;
+
+/// `unit->GetPlayer()->IsHuman()`
+constexpr static const int32_t EE_UNITS_UC_IS_HUMAN = 119;
+
+/// `unit->GetQueuedGoal(b)`
+constexpr static const int32_t EE_UNITS_UC_QUEUED_GOAL = 120;
+
+/// `class->mUnitType`
+constexpr static const int32_t EE_UNITS_UC_THIS_UNIT_TYPE = 121;
+
+/// goal `a`'s `GetGoalLocation` into `f[0..3]`
+constexpr static const int32_t EE_UNITS_UC_GOAL_LOCATION = 122;
+
+/// goal `a`'s `mKind`
+constexpr static const int32_t EE_UNITS_UC_GOAL_KIND = 123;
+
+/// `EEAttackUnitCast(goal a)->GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_UC_ATTACK_TARGET = 124;
+
+/// unit `a`'s `GetComplexUnit()`
+constexpr static const int32_t EE_UNITS_UC_COMPLEX_OF = 125;
+
+/// complex unit `a`'s `mContainer`
+constexpr static const int32_t EE_UNITS_UC_CONTAINER_OF = 126;
+
+/// unit `a`'s `GetPosition` into `f[0..3]`
+constexpr static const int32_t EE_UNITS_UC_POSITION = 127;
+
+/// class `a`'s `mDomains`
+constexpr static const int32_t EE_UNITS_UC_CLASS_DOMAINS = 128;
+
+/// `class->GetTileSize()`
+constexpr static const int32_t EE_UNITS_UC_TILE_SIZE = 129;
+
+/// the transformation at `c` = complex unit `a`'s location turned to the yaw of the transformation at `b` (pitch
+/// and roll 0), then `a`'s `SetTransformation(it, true)`
+constexpr static const int32_t EE_UNITS_UC_ALIGN_YAW = 130;
+
+/// class `a`'s `FliesOver()`
+constexpr static const int32_t EE_UNITS_UC_CLASS_FLIES_OVER = 131;
+
+/// `gAEManager.FindEffectAtTile(8, complex unit a's tile, its player's id)`
+constexpr static const int32_t EE_UNITS_UC_AREA_EFFECT_AT = 132;
+
+/// area effect `a`'s `mUnit`
+constexpr static const int32_t EE_UNITS_UC_EFFECT_OWNER = 133;
+
+/// area effect `a`'s `Covers(its owner's player id, complex unit b, its owner's location as a GE2DPoint)`
+constexpr static const int32_t EE_UNITS_UC_EFFECT_COVERS = 134;
+
+/// complex unit `a`'s `SetCloakableChain(true)`
+constexpr static const int32_t EE_UNITS_UC_CLOAKABLE_CHAIN = 135;
+
+/// complex unit `a`'s `ClearGoalQueue(0)`
+constexpr static const int32_t EE_UNITS_UC_CLEAR_GOAL_QUEUE = 136;
+
+/// `unit->GetQueueGoals(b).size()`
+constexpr static const int32_t EE_UNITS_UC_QUEUE_LEN = 137;
+
+/// `unit->GetQueueGoals(b)[c]`
+constexpr static const int32_t EE_UNITS_UC_QUEUE_GOAL = 138;
+
+/// goal `a`'s `Suits(complex unit b)`
+constexpr static const int32_t EE_UNITS_UC_GOAL_SUITS = 139;
+
+/// complex unit `a`'s `AddBuildTarget(EEBuildRepairGoalCast(goal b)->GetBuildTarget())`
+constexpr static const int32_t EE_UNITS_UC_ADD_BUILD_TARGET = 140;
+
+/// complex unit `a`'s `GetUnitClass()->mCanGarrison`
+constexpr static const int32_t EE_UNITS_UC_CAN_GARRISON = 141;
+
+/// goal `a`'s `Clone()`
+constexpr static const int32_t EE_UNITS_UC_GOAL_CLONE = 142;
+
+/// goal `a`'s `IsLoadGoal()`
+constexpr static const int32_t EE_UNITS_UC_GOAL_IS_LOAD = 143;
+
+/// goal `a`'s `AddCreatedUnit(complex unit b)`
+constexpr static const int32_t EE_UNITS_UC_GOAL_ADD_CREATED = 144;
+
+/// `EELoadGarrisonGoalCast(goal a)->GetLoadContainer()`
+constexpr static const int32_t EE_UNITS_UC_LOAD_CONTAINER = 145;
+
+/// complex unit `a`'s `mActiveGoal`
+constexpr static const int32_t EE_UNITS_UC_ACTIVE_GOAL = 146;
+
+/// `EELoadGarrisonGoalCast(goal a)->AddLoadUnit(complex unit b)`
+constexpr static const int32_t EE_UNITS_UC_ADD_LOAD_UNIT = 147;
+
+/// `EEUGRust::NewLocation(&f[0..3], false, true, false, 0.0f, false, 0)`
+constexpr static const int32_t EE_UNITS_UC_NEW_LOCATION = 148;
+
+/// `static_cast<EEUGRust*>(goal a)->SetLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UC_GOAL_SET_LOCATION = 149;
+
+/// the tile line's clear (ProduceUnit's `theLineTiles`, the host's)
+constexpr static const int32_t EE_UNITS_UC_LINE_RESET = 150;
+
+/// `EEGetTileLine(complex unit a's tile, b, c, &the line, 1, 1)`
+constexpr static const int32_t EE_UNITS_UC_TILE_LINE = 151;
+
+/// the line's `size()`
+constexpr static const int32_t EE_UNITS_UC_LINE_LEN = 152;
+
+/// the line's `[b].mX`, `[b].mY`
+constexpr static const int32_t EE_UNITS_UC_LINE_X = 153;
+
+constexpr static const int32_t EE_UNITS_UC_LINE_Y = 154;
+
+/// complex unit `a`'s `GetUnitClass()->mOuterCollisionSphere` (its bits)
+constexpr static const int32_t EE_UNITS_UC_OUTER_SPHERE = 155;
+
+/// complex unit `a`'s `GetUnitClass()->GetCategory()`
+constexpr static const int32_t EE_UNITS_UC_UNIT_CATEGORY = 156;
+
+/// complex unit `a`'s `CanGather(unit b, b's tile, false, true)`
+constexpr static const int32_t EE_UNITS_UC_CAN_GATHER = 157;
+
+/// `EEUGRust::NewGather(unit a, 0, true)`
+constexpr static const int32_t EE_UNITS_UC_NEW_GATHER = 158;
+
+/// `delete goal a`
+constexpr static const int32_t EE_UNITS_UC_DELETE_GOAL = 159;
+
+/// complex unit `a`'s `SetBehavior(EEUnitBehavior::sTable[5])`
+constexpr static const int32_t EE_UNITS_UC_GATHER_BEHAVIOR = 160;
+
+/// complex unit `a`'s `QueueGoal(goal b, 0)`
+constexpr static const int32_t EE_UNITS_UC_QUEUE_GOAL_ON = 161;
+
+/// complex unit `a`'s `mGoalState`
+constexpr static const int32_t EE_UNITS_UC_GOAL_STATE = 162;
+
+/// complex unit `a`'s `StartAction(a->mGoalState->GetStartAction())`
+constexpr static const int32_t EE_UNITS_UC_START_GOAL_ACTION = 163;
+
+/// `unit->GetPlayer() == gWorld.mPlayers[gWorld.mCurrentPlayer]`
+constexpr static const int32_t EE_UNITS_UC_PRODUCER_IS_CURRENT = 164;
+
+/// complex unit `a`'s `GetStats()->mCreationSound`
+constexpr static const int32_t EE_UNITS_UC_CREATION_SOUND = 165;
+
+/// `gSoundManager->Play(sound a's sample, its volume, 0, 1, false, NULL)`
+constexpr static const int32_t EE_UNITS_UC_PLAY_SAMPLE = 166;
+
+/// `unit->GetTileX()`, `unit->GetTileY()`
+constexpr static const int32_t EE_UNITS_UC_PRODUCER_TILE_X = 167;
+
+constexpr static const int32_t EE_UNITS_UC_PRODUCER_TILE_Y = 168;
 
 /// `ResetEEComplexUnit`'s heading of no initial contact (0x446db4).
 constexpr static const float EE_UNITS_NO_HEADING = -10000.0;
@@ -10137,6 +10964,15 @@ extern int64_t ee_units_uc_host(int32_t op,
 /// # Safety
 /// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit`, on the simulation thread.
 void ee_units_uc_body(int32_t what, void *class_, void *unit);
+
+/// `EEUnitClass::ProduceUnit(unit, made, arg)` of `class`.
+///
+/// # Safety
+/// `class` and `made` are live `EEUnitClass`es, `unit` a live `EEComplexUnit`, on the simulation thread.
+bool ee_units_uc_produce(void *class_,
+                         void *unit,
+                         void *made,
+                         bool arg);
 
 /// `ResetEEComplexUnit`'s record members.
 ///

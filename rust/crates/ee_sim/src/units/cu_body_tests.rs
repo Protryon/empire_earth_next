@@ -46,6 +46,12 @@ impl CuHost for Mock {
     }
 }
 
+impl crate::units::cu_cargo::CuCargoHost for Mock {
+    fn find_placement(&mut self, _p: &crate::units::cu_cargo::Placement, _m: &mut [[f32; 4]; 4]) -> bool {
+        unreachable!("no body here searches")
+    }
+}
+
 #[test]
 fn a_dead_unit_is_not_killed_again() {
     let mut h = Mock::default();
@@ -95,10 +101,11 @@ fn kill_releases_the_world_in_order() {
 
 #[test]
 fn a_research_keeping_kill_suppresses_the_death_units_and_keeps_production() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_CU_HIT_POINTS, 0, 10)
-        .answer(EE_UNITS_CU_HAS_DEATH_SPAWN, 0, 1)
-        .answer(EE_UNITS_CU_SWAP_KIND, 0, 1);
+    let mut h = Mock::default().answer(EE_UNITS_CU_HIT_POINTS, 0, 10).answer(EE_UNITS_CU_HAS_DEATH_SPAWN, 0, 1).answer(
+        EE_UNITS_CU_SWAP_KIND,
+        0,
+        1,
+    );
     kill(&mut h, 1, false, true, false);
     assert_eq!(h.count(EE_UNITS_CU_CREATE_DEATH_UNIT), 0);
     assert_eq!(h.count(EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION), 0);

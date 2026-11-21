@@ -228,72 +228,19 @@ EEComplexUnitAttacker::EEComplexUnitAttacker()
 // Loads a living unit as cargo if there is room (or room is ignored), taking it off the map; returns 0 or 7
 long EEComplexUnit::LoadCargo(EEComplexUnit* inCargo, bool inIgnoreRoom, bool inArg3)
 {
-    long theResult;
-    long theCost = inCargo->mUnitClass->mWeight;
-    if ((this->mCargoRoom >= theCost || inIgnoreRoom) && inCargo->mHitPoints > 0) {
-        this->mCargoRoom -= theCost;
-        this->mCargo.push_back(inCargo);
-        inCargo->Reference();
-        if (inCargo->mContainer != this) {
-            inCargo->mContainer = this;
-            inCargo->mContainer->Reference();
-        }
-        inCargo->TakeOffMap();
-        EEWUnitsOffMapInfo* theInfo = inCargo->mPlayer->GetOffMapInfo(inCargo);
-        if (theInfo != NULL) {
-            if (this->GetUnitClass()->IsTransport()) {
-                if (this->GetUnitClass()->GetUnitType() != kUnitTypeFortress)
-                    theInfo->mReason = 1;
-                else
-                    theInfo->mReason = 6;
-            } else if (this->GetUnitClass()->GetUnitType() == kUnitTypeAirport)
-                theInfo->mReason = 5;
-        }
-        this->GetUnitClass()->CargoAdded(this, inCargo, inArg3);
-        theResult = 0;
-        if (this->mPlayer == ::gWorld.GetCurrentPlayer()) {
-            if (this->mPlayer->mActiveGroup->Contains(this) || this->mPlayer->mActiveGroup->Contains(inCargo))
-                gUserInterface->PostMessage424Once();
-        }
-    } else
-        theResult = 7;
-    return theResult;
+    return ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, this, (int64_t)(uintptr_t)inCargo, inIgnoreRoom, inArg3);   // cu_cargo.rs
 }
 
 // Garrisons a unit if capacity allows: adds its weight and population, then removes it as a dead unit
 bool EEComplexUnit::GarrisonUnit(EEComplexUnit* inCargo)
 {
-    long theCost = inCargo->mUnitClass->mWeight;
-    long theValue = inCargo->mUnitClass->GetPopulationCost();
-    bool theResult = false;
-    if (this->GetUnitClass()->mGarrisonCapacity - this->mGarrisonCount >= theCost) {
-        this->mGarrisonCount += theCost;
-        this->mGarrisonPopulation += theValue;
-        inCargo->TakeOffMap();
-        EEWUnitsOffMapInfo* theInfo = inCargo->mPlayer->GetOffMapInfo(inCargo);
-        if (theInfo != NULL)
-            theInfo->mReason = 7;
-        inCargo->Kill(0, 0, 0);
-        long theSeries = EEAddDeadUnitStatistic(inCargo);
-        if (theSeries != 0)
-            this->mPlayer->mSavedGroups.Lower(theSeries, 1);
-        theResult = true;
-    }
-    return theResult;
+    return ee_units_cu_body(EE_UNITS_CU_DO_GARRISON_UNIT, this, (int64_t)(uintptr_t)inCargo, 0, 0) != 0;   // cu_cargo.rs
 }
 
 // Adds garrison weight (never below 0) and sets the garrisoned population, if capacity allows
 bool EEComplexUnit::AddGarrison(long inAmount, long inGarrisonPopulation)
 {
-    bool theResult = false;
-    if (this->GetUnitClass()->mGarrisonCapacity - this->mGarrisonCount >= inAmount) {
-        this->mGarrisonCount += inAmount;
-        if (this->mGarrisonCount < 0)
-            this->mGarrisonCount = 0;
-        this->mGarrisonPopulation = inGarrisonPopulation;
-        theResult = true;
-    }
-    return theResult;
+    return ee_units_cu_body(EE_UNITS_CU_DO_ADD_GARRISON, this, inAmount, inGarrisonPopulation, 0) != 0;   // cu_cargo.rs
 }
 
 // Queues and pays for a technology or unit at this building (front or back), honouring the hero limit
@@ -317,76 +264,25 @@ void EEComplexUnit::QueueResearch(long inTechnology, bool inFront)
 
 void EEComplexUnit::QueueResearchUncaptured(long inTechnology, bool inFront)
 {
-    // the queue entry (technology, flag): an EEProductionEntry, mBuildQueue's 8-byte element (inferred)
-    EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(inTechnology);
-    if (!this->GetPlayer()->CanAfford(theNode, this->GetUnitClass()->GetUnitType(), true))
-        return;
-    bool theAllowed = theNode->mIsAllowed;
-    if (theAllowed && theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] != NULL
-        && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero && !::gWorld.mGameOptions.mIsScenarioGame) {
-        long theLimit = this->mPlayer->mHeroLimit;
-        theAllowed = this->mPlayer->GetHeroCount(1, 1) < theLimit;
-    }
-    if (!theAllowed)
-        return;
-    EEProductionEntry theEntry;
-    bool theFlag = this->mPlayer->mJITManufacturing;
-    theEntry.mTechnology = inTechnology;
-    theEntry.mFlag = theFlag != 0;
-    if (inFront)
-        this->mBuildQueue.insert(this->mBuildQueue.begin(), theEntry);
-    else
-        this->mBuildQueue.push_back(theEntry);
-    if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] != NULL
-        && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
-        this->mPlayer->mNumHeroesInProduction++;
-    this->mPlayer->Pay(theNode, this->GetUnitClass()->GetUnitType(), 1.0f);
-    if ((theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL) && theNode->mData->mKind != 3) {
-        theNode->mIsAllowed = false;
-        gUserInterface->UpdateJITManufacturing();
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0);   // cu_cargo.rs
 }
 
 // Stops the citizen's goals and puts the target first in its build queue, keeping a current build target
 void EEComplexUnit::OrderRepair(EEUnit* inTarget)
 {
-    EEUnit* theTarget;
-    if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalBuildRepair) {
-        theTarget = EEBuildRepairGoalCast(this->GetGoal())->GetBuildTarget();
-        theTarget->Reference();
-        this->mCitizenBuildQueue.push_front(theTarget);
-    }
-    this->DropFinishedGoals(0);
-    this->ClearGoals(0);
-    this->StartAction(kActionIdle);
-    this->GetUnitClass()->ActionChanged(this);
-    std::deque<EEUnit*>::iterator theIterator = std::find(this->mCitizenBuildQueue.begin(), this->mCitizenBuildQueue.end(), inTarget);
-    if (theIterator == this->mCitizenBuildQueue.end())
-        inTarget->Reference();
-    else
-        this->mCitizenBuildQueue.erase(theIterator);  // the single-iterator erase COMDAT 0x2001b5 (Dinkum deque erase(P))
-    this->mCitizenBuildQueue.push_front(inTarget);
-    // Port: an order at once (no shift) brings back the smart task after the build
-    this->mHasShiftQueuedBuild = false;
+    ee_units_cu_body(EE_UNITS_CU_DO_ORDER_REPAIR, this, (int64_t)(uintptr_t)inTarget, 0, 0);   // cu_cargo.rs
 }
 
 // Appends a building to the citizen's build queue unless it is already queued
 void EEComplexUnit::AddBuildTarget(EEUnit* inTarget)
 {
-    std::deque<EEUnit*>::iterator theIterator = std::find(this->mCitizenBuildQueue.begin(), this->mCitizenBuildQueue.end(), inTarget);
-    if (theIterator == this->mCitizenBuildQueue.end()) {
-        inTarget->Reference();
-        this->mCitizenBuildQueue.push_back(inTarget);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, this, (int64_t)(uintptr_t)inTarget, 0, 0);   // cu_cargo.rs
 }
 
 // Adds a unit to the contact (collision) list unless it is already there
 void EEComplexUnit::AddContact(EEComplexUnit* inUnit)
 {
-    if (this->mContacts.Find(inUnit) == 0) {
-        inUnit->Reference();
-        this->mContacts.AddHead(inUnit);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_ADD_CONTACT, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_cargo.rs
 }
 
 // Appends a waypoint with its running path distance (off-map points are snapped or refused)
@@ -527,31 +423,7 @@ void EEComplexUnit::RemoveAffectingAreaEffects()
 // Refunds the current research and every queued item, re-allowing techs and updating the hero count
 void EEComplexUnit::UpdateJITManufacturing()
 {
-    bool theChanged = false;
-    EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(this->mCurrentResearch);
-    if (theNode != NULL) {
-        if (theNode->mData->mUnitClass <= 0) {
-            theNode->mIsAllowed = true;
-            theChanged = true;
-        } else if (gUnitClassTable[theNode->mData->mUnitClass] != NULL && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero
-                   && this->GetPlayer()->mNumHeroesInProduction > 0)
-            this->GetPlayer()->mNumHeroesInProduction--;
-    }
-    while (this->mBuildQueue.size() != 0) {
-        theNode = this->GetPlayer()->GetTechTree()->Get(this->mBuildQueue.back().mTechnology);
-        if (theNode != NULL) {
-            if (theNode->mData->mUnitClass <= 0) {
-                theNode->mIsAllowed = true;
-                theChanged = true;
-            } else if (gUnitClassTable[theNode->mData->mUnitClass] != NULL && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero
-                       && this->GetPlayer()->mNumHeroesInProduction > 0)
-                this->GetPlayer()->mNumHeroesInProduction--;
-        }
-        this->GetPlayer()->RefundTechnology(theNode, this->GetUnitClass()->GetUnitType(), 1.0f);
-        this->mBuildQueue.pop_back();
-    }
-    if (theChanged && !UShutdownInProgress())
-        gUserInterface->UpdateJITManufacturing();
+    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_JIT, this, 0, 0, 0);   // cu_cargo.rs
 }
 
 // Empties the citizen's build queue, releasing each building
@@ -587,18 +459,7 @@ void EEComplexUnit::ReleaseConversionEffect()
 // Clears one goal queue (abandoning the main queue's goals first) and frees the unit's airport slot
 void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
 {
-    if (inIndex == 0) {
-        for (unsigned long i = 0; i < this->mGoalQueues[0].mGoals.size(); i++)
-            this->mGoalQueues[0].GetGoalAt(i)->Abandon(this);
-    }
-    this->mGoalQueues[inIndex].Clear();
-    this->SetGatheredResource(NULL);
-    if (this->GetUnitClass() != NULL) {
-        if (this->GetUnitClass()->IsAirBase() && this->GetUnitClass()->mAirTrafficType != 0)
-            ee_units_atc_clear_airport_queue(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this, inIndex);
-        this->RefreshGoals();
-        this->RefreshActiveGoal();
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, this, inIndex, 0, 0);   // cu_misc.rs
 }
 
 // Destroys the unit's heal graphic effect, if any
@@ -614,16 +475,7 @@ void EEComplexUnit::ReleaseHealEffect()
 // Destroys the fire effect of a citizen, gate or wall, or removes a cloak effect from a CP market
 void EEComplexUnit::ReleaseFireEffect()
 {
-    EEUnitClass* theClass = this->GetUnitClass();
-    long theCategory = theClass->mCategory;
-    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryGate || theClass->mIsWall) {
-        EEEffectHandle theHandle = this->mFireEffect;
-        if (theHandle.mValue > 0) {
-            gEffectManager->DestroyEffect(theHandle);
-            this->mFireEffect.mValue = 0;
-        }
-    } else if (theClass->mUnitType == kUnitTypeMarketCP)
-        EERemoveCloakEffect(this);
+    ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_FIRE_EFFECT, this, 0, 0, 0);   // cu_misc.rs
 }
 
 // Drops the unit's waypoints (the original stepped through them instead while its never-set waypoint marking flag
@@ -790,38 +642,7 @@ void EEComplexUnit::ResizeTurretAngles(unsigned long inCount)
 // Sets the water state of a sea or space unit from its class's water kind (and the tile's depth level)
 void EEComplexUnit::UpdateWaterState(bool inArg)
 {
-    if (inArg) {
-        if (this->GetUnitClass()->mDomains & kMovementSeaOrSpace) {
-            RTSTile* theTile = this->mTile;
-            if (theTile != NULL) {
-                long theType = theTile->mTerrainType;
-                if (theType == kTerrainDeepWater || theType == kTerrainShallowWater || theType == kTerrainSpace) {
-                    // NEAR: the original compares the byte signed (`jl`): the tile's +0x14 is a signed char there
-                    char theLevel = theTile->mAIValue;
-                    long theMode = this->GetUnitClass()->mWaterKind;
-                    if (theLevel >= 0 && theMode != 0) {
-                        if ((theLevel > 0 && theMode == 2) || theMode == 1) {
-                            this->mWaterState = 2;
-                            return;
-                        }
-                        if (theMode == 2) {
-                            this->mWaterState = 3;
-                            return;
-                        }
-                    }
-                    this->mWaterState = 0;
-                }
-            }
-        }
-    } else if (this->GetUnitClass()->mDomains & kMovementSeaOrSpace) {
-        if (this->GetUnitClass()->mWaterKind == 1)
-            this->mWaterState = 2;
-        else if (this->GetUnitClass()->mWaterKind == 2)
-            this->mWaterState = 3;
-        else
-            this->mWaterState = 0;
-    } else
-        this->mWaterState = 0;
+    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_WATER_STATE, this, inArg, 0, 0);   // cu_misc.rs
 }
 
 // Adds the unit's sight at a tile for its player, sight sharers and allies, revealing it on the minimap (ee_units
@@ -881,28 +702,7 @@ void EEComplexUnit::FreeNode()
 // Kills every cargo unit and records each as a dead unit in its player's statistics
 void EEComplexUnit::KillCargo()
 {
-    // NEAR: the original keeps this in a frame slot and &mCargo in ebx (a frame: push ebp/leave)
-    while (this->mCargo.size() != 0) {
-        EEComplexUnit* theCargo = this->mCargo.back();
-        theCargo->Kill(0, 0, 0);
-        if (theCargo->mPreviousPart != NULL || UShutdownInProgress())
-            continue;
-        long theKind = gPhysics->GetUnitSwapKind(this);
-        if (theKind == 1)
-            continue;
-        if (theCargo->mUnitClass->GetUnitType() != kUnitTypePathPoint && theKind != 5 && theKind != 6 && theKind != 7
-            && theKind != 8) {
-            long theCategory = theCargo->mUnitClass->mCategory;
-            if (theCategory == kUnitCategoryBuilding || theCategory == kUnitCategoryBuilding19 || theCategory == kUnitCategoryGate || theCategory == kUnitCategoryMiningBuilding
-                || theCategory == kUnitCategoryFortress)
-                theCargo->mPlayer->mSavedGroups.Reset(1, 1);
-            else
-                theCargo->mPlayer->mSavedGroups.Reset(4, 1);
-        }
-        long theSeries = EEAddDeadUnitStatistic(theCargo);
-        if (theSeries != 0)
-            theCargo->mPlayer->mSavedGroups.Lower(theSeries, 1);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_KILL_CARGO, this, 0, 0, 0);   // cu_cargo.rs
 }
 
 // Empties the garrison count and population
@@ -1667,37 +1467,7 @@ void EEComplexUnit::LastDereference()
 // and, except for land buildings, the player's buttons for its class
 void EEComplexUnit::LoadMedia(bool inIsFoundation)
 {
-    EEUnit::LoadMedia(inIsFoundation);
-    if (!this->GetUnitClass()->IsLandBuilding())
-        this->GetPlayer()->LoadUnitClassButtons(this->GetUnitClass()->GetUnitType());
-    this->mIsFoundation = inIsFoundation;
-    if (inIsFoundation == true) {
-        this->mPhysicalModel.SetModel(EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass())->mModel);
-    } else {
-        const EEGraphicObject* theModel = this->GetModel();
-        this->mPhysicalModel.SetModel(theModel->mModels[this->mAnimation]);
-        this->mTurretAngles = NULL;
-        this->ResizeTurretAngles(theModel->GetNumParts());
-        this->mNumOrbitals = theModel->GetOrbitalCount();
-        if (this->mNumOrbitals == 0)
-            this->mOrbitals = NULL;
-        else {
-            this->mOrbitals = new EEOrbital*[this->mNumOrbitals];
-            for (unsigned long i = 0; i < this->mNumOrbitals; ++i)
-                this->mOrbitals[i] = new EEOrbital(*theModel->mOrbitals[i]);
-        }
-        this->mNumWheels = theModel->GetWheelCount();
-        if (this->mNumWheels == 0)
-            this->mWheels = NULL;
-        else {
-            this->mWheels = new EEWheel*[this->mNumWheels];
-            for (unsigned long i = 0; i < this->mNumWheels; ++i) {
-                this->mWheels[i] = new EEWheel(*theModel->mWheels[i]);
-                if (i < this->mNumWheels)
-                    this->mWheels[i]->mAngle = 0.0f;
-            }
-        }
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_LOAD_MEDIA, this, inIsFoundation, 0, 0);   // cu_misc.rs
 }
 
 // Moves an idle or gathering unit to a random free tile around a footprint being placed (a waiting gatherer looks for
@@ -1834,19 +1604,7 @@ EEUnit* EEComplexUnit::PopBuildTarget()
 // a human's unit walks to a random point ahead (unless inArg is set)
 void EEComplexUnit::FleeAfterCalamity(long inArg)
 {
-    if (this->mPlayer->mComputerPlayer != NULL) {
-        // (the original's AI prophet in an attack sub group stepped away from the cast; stage 5 deleted the groups)
-        this->StartAction(kActionIdle);
-    } else {
-        if ((unsigned char)inArg != 0)
-            return;
-        GE2DPoint thePoint(0.0f, 0.0f);
-        if (!EEGetRandomPointAhead(this, &thePoint))
-            return;
-        this->SetGoal(EEUGRust::NewLocation(thePoint, true, true, false, 0.0f, false, false), 0, 0);
-        this->StartAction(kActionPrepareToMove);
-    }
-    this->GetUnitClass()->ActionChanged(this);
+    ee_units_cu_body(EE_UNITS_CU_DO_FLEE_AFTER_CALAMITY, this, inArg, 0, 0);   // cu_misc.rs
 }
 
 // Turns a group path into location goals for the unit (replacing its location goal, or after its attack goal),
@@ -2066,151 +1824,34 @@ bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
 // Removes a unit from the cargo and gives its room back; refreshes the icon bar if the transport is selected
 void EEComplexUnit::ReleaseCargo(EEComplexUnit* inCargo)
 {
-    long theIndex = this->mCargo.size() - 1;
-    while (theIndex >= 0 && this->mCargo[theIndex] != inCargo)
-        theIndex--;
-    if (theIndex < 0)
-        return;
-    EEComplexUnit* theCargo = this->mCargo[theIndex];
-    this->GetUnitClass()->CargoRemoved(this, theCargo);
-    this->mCargo.erase(this->mCargo.begin() + theIndex);
-    this->mCargoRoom += theCargo->GetUnitClass()->mWeight;
-    if (this->mPlayer == ::gWorld.GetCurrentPlayer() && this->mPlayer->mActiveGroup->Contains(this))
-        gUserInterface->PostMessage424Once();
-    theCargo->Dereference();
-    theCargo->mContainer->Dereference();
-    theCargo->mContainer = NULL;
+    ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CARGO, this, (int64_t)(uintptr_t)inCargo, 0, 0);   // cu_cargo.rs
 }
 
 // Unloads every cargo unit that fits near the tile (teleporters show the teleport effect) and drops dead ones;
 // posts an unload-failed event if any stay aboard
 void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
 {
-    GETransformation theTransformation;
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    long theEvent = -1;
-    EEUnitClass* theTransportClass = NULL;
-    if (this->GetUnitClass()->IsTransport())
-        theTransportClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(this->GetUnitClass());
-    for (long i = this->mCargo.size() - 1; i >= 0; i--) {
-        EEComplexUnit* theCargo = this->GetCargo(i);
-        if (this->GetUnitClass()->IsTransport() && (theTransportClass == NULL
-            || !theTransportClass->HasRoom(this, theCargo->GetComplexUnit())))
-            continue;
-        if (!(theCargo->mHitPoints < 1)) {
-            long theRings = UMFloatToLong(theTransportClass != NULL ? theTransportClass->mUnloadRange : this->GetStats()->mRange);
-            if (ee_units_uu_find_placement((const float(*)[3])&thePoint.mX, (uint64_t)(uintptr_t)theCargo, 0, inX, inY, 1, theRings, inArg, true, false, false, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
-                this->UnloadCargoAt(i, theTransformation);
-                if (this->GetUnitClass()->GetUnitType() == kUnitTypeTeleporter)
-                    gWorld.GetEffectManager()->CreateUnitEffect(theCargo, EEGraphicEffect::Get(kGraphicEffectCalamityTeleportIn), NULL, false, 0, 0);
-            }
-        } else {
-            this->ReleaseCargo(theCargo);
-        }
-    }
-    if (this->GetNumCargoUnits() != 0) {
-        if (theTransportClass != NULL)
-            theEvent = theTransportClass->GetUnloadFailedTextID();
-        U2DPoint<long> theTile(this->GetTileX(), this->GetTileY());
-        this->mPlayer->mEvents.AddEvent(theTile, 2, this->mPlayer, theEvent, false);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, this, inX, inY, inArg);   // cu_cargo.rs
 }
 
 // Empties the build queue, refunding each entry and allowing its technology again
 void EEComplexUnit::CancelQueuedProduction()
 {
-    if (this->mBuildQueue.size() <= 0)
-        return;
-    while (this->mBuildQueue.size() > 0) {
-        long theTechnology = this->mBuildQueue.front().mTechnology;
-        this->mBuildQueue.erase(this->mBuildQueue.begin());
-        EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get(theTechnology);
-        theNode->mIsAllowed = true;
-        if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] != NULL
-            && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero && this->mPlayer->mNumHeroesInProduction > 0)
-            this->mPlayer->mNumHeroesInProduction--;
-        this->mPlayer->RefundTechnology(this->mPlayer->mTechnologies->Get(theTechnology), this->GetUnitClass()->mUnitType, 1.0f);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_CANCEL_QUEUED_PRODUCTION, this, 0, 0, 0);   // cu_cargo.rs
 }
 
 // Unloads a cargo unit at the location (aircraft at cruise altitude) and sets it idle; returns it if something else
 // still references it, else NULL
 EEComplexUnit* EEComplexUnit::UnloadCargoAt(unsigned long inIndex, const GETransformation& inLocation)
 {
-    EEComplexUnit* theCargo = this->GetCargo(inIndex);
-    if (theCargo->mHitPoints > 0) {
-        this->GetUnitClass()->CargoUnloaded(this, theCargo);
-        theCargo->SetTransformation(inLocation, true);
-        if (theCargo->mUnitClass->mDomains & kMovementAir) {
-            theCargo->mPlanetID = EEGetLandContinentOf(theCargo);
-            if (!this->GetUnitClass()->IsAirBase()) {
-                GETransformation theLocation(inLocation);
-                theLocation.SetZ(theLocation.GetZ() + theCargo->mUnitClass->GetCruiseAltitude());
-                theCargo->SetTransformation(theLocation, true);
-            }
-        }
-        if (theCargo->mPreviousPart == NULL) {
-            if (theCargo->GetTileX() != -10000)
-                ::gWorld.ActivateUnit(theCargo);
-            else
-                ::gWorld.DeactivateUnit(theCargo);
-        }
-    }
-    long theCategory = theCargo->mUnitClass->mCategory;
-    if (!theCargo->mPlayer->IsHuman() && (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)) {
-        if (theCargo->mContainer != NULL)
-            theCargo->mContainer->Dereference();
-        theCargo->mContainer = NULL;
-    }
-    if (theCargo->mHitPoints > 0 && (theCargo->mPlayer->IsHuman()
-        || (!(theCargo->mUnitClass->mDomains & kMovementAir) && theCargo->mUnitClass->GetUnitType() != kUnitTypeSp15SpaceFighter))) {
-        theCargo->StartAction(kActionIdle);
-        theCargo->mUnitClass->ActionChanged(theCargo);
-    }
-    theCategory = theCargo->mUnitClass->mCategory;
-    if (theCargo->mPlayer->IsHuman() || (theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen)) {
-        if (theCargo->mContainer != NULL)
-            theCargo->mContainer->Dereference();
-        theCargo->mContainer = NULL;
-    }
-    this->mCargo.erase(this->mCargo.begin() + inIndex);
-    this->mCargoRoom += theCargo->mUnitClass->mWeight;
-    unsigned long theReferences = theCargo->mReferenceCount;
-    if (this->mPlayer == ::gWorld.GetCurrentPlayer() && this->mPlayer->mActiveGroup->Contains(this))
-        gUserInterface->PostMessage424Once();
-    theCargo->Dereference();
-    return theReferences > 1 ? theCargo : 0;
+    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(
+        ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT, this, inIndex, (int64_t)(uintptr_t)&inLocation, 0)));   // cu_cargo.rs
 }
 
 // Unloads one cargo unit next to the transport now (a dead one is just released); returns true on success
 bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
 {
-    GETransformation theTransformation;
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EEUnitSet* theSet = gUnitSetManager.GetSet(99);
-    bool theResult = false;
-    EEUnitClass* theTransportClass = NULL;
-    if (this->GetUnitClass()->IsTransport())
-        theTransportClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(this->GetUnitClass());
-    long theIndex = this->mCargo.size() - 1;
-    while (theIndex >= 0 && this->GetCargo(theIndex) != inCargo)
-        theIndex--;
-    if (theIndex >= 0
-        && (!this->GetUnitClass()->IsTransport() || (theTransportClass != NULL && theTransportClass->HasRoom(this, inCargo)))) {
-        if (inCargo->mHitPoints > 0) {
-            long theRings = theTransportClass != NULL ? UMFloatToLong(theTransportClass->mUnloadRange)
-                                                   : UMFloatToLong(this->GetStats()->mRange);
-            bool theFlag = theTransportClass != NULL ? (theTransportClass->mDomains >> 2) & 1 : false;
-            if (ee_units_uu_find_placement((const float(*)[3])&thePoint.mX, (uint64_t)(uintptr_t)inCargo, 0, this->mTileX, this->GetTileY(), this->GetUnitClass()->GetTileSize(), theRings, theSet->Contains(this->GetUnitClass()->GetUnitType()), true, false, theFlag, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
-                this->UnloadCargoAt(theIndex, theTransformation);
-                theResult = true;
-            }
-        } else {
-            this->ReleaseCargo(inCargo);
-            theResult = true;
-        }
-    }
-    return theResult;
+    return ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, this, (int64_t)(uintptr_t)inCargo, 0, 0) != 0;   // cu_cargo.rs
 }
 
 // Unloads the cargo unit with the given unit id at the location; returns what UnloadCargoAt returns, or NULL
@@ -2319,81 +1960,20 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
 // Cancels the building's current research or production, refunding it and clearing the production time
 void EEComplexUnit::ToggleJITManufacturing()
 {
-    if (this->mCurrentResearch == kTechNone)
-        return;
-    EETechTreeNode* theNode = this->mPlayer->GetTechTree()->Get(this->mCurrentResearch);
-    theNode->mIsAllowed = true;
-    if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] != NULL
-        && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero && this->mPlayer->mNumHeroesInProduction > 0)
-        this->mPlayer->mNumHeroesInProduction--;
-    this->mPlayer->RefundTechnology(theNode, this->GetUnitClass()->GetUnitType(), 1.0f);
-    this->PlayEffect(100000);
-    this->SetProductionTime(0);
+    ee_units_cu_body(EE_UNITS_CU_DO_TOGGLE_JIT, this, 0, 0, 0);   // cu_cargo.rs
 }
 
 // Removes a technology from the build queue with a refund (the first match only unless inRemoveAll); if none was
 // queued, cancels it when it is the building's current research
 void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
 {
-    std::vector<EEProductionEntry> theKept;
-    bool theRetained = false;
-    bool theKeepNext = true;
-    if (this->mBuildQueue.size() > 0) {
-        while (this->mBuildQueue.size() > 0) {
-            EEProductionEntry theTechnology = this->mBuildQueue.front();
-            this->mBuildQueue.erase(this->mBuildQueue.begin());
-            if (!ee_units_uu_is_same_research(theTechnology.mTechnology, inTechnology) || !theKeepNext)
-                theKept.push_back(theTechnology);
-            else {
-                EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get(theTechnology.mTechnology);
-                theNode->mIsAllowed = true;
-                long theType = theNode->mData->mUnitClass;
-                theKeepNext = (unsigned char)inRemoveAll != 0;
-                theRetained = true;
-                if (theType > 0 && gUnitClassTable[theType] != NULL
-                    && gUnitClassTable[theType]->mAIKind == kAIKindHero && this->mPlayer->mNumHeroesInProduction > 0)
-                    --this->mPlayer->mNumHeroesInProduction;
-                this->mPlayer->RefundTechnology(this->mPlayer->mTechnologies->Get(theTechnology.mTechnology), this->GetUnitClass()->mUnitType, 1.0f);
-            }
-        }
-        this->mBuildQueue = theKept;
-        if (theRetained && (unsigned char)inRemoveAll == 0)
-            return;
-    }
-    if (this->GetUnitClass()->IsLandBuilding() && ee_units_uu_is_same_research(this->mCurrentResearch, inTechnology))
-        this->ToggleJITManufacturing();
+    ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_RESEARCH, this, inTechnology, inRemoveAll, 0);   // cu_cargo.rs
 }
 
 // Takes the unit and its parts off the map (deselected, moved to -10000, deactivated) and sets it idle
 void EEComplexUnit::TakeOffMap()
 {
-    this->GetPosition(this->mLastMapPosition);
-    this->DropPath();
-    this->ClearCollisionState();
-    for (EEComplexUnit* theUnit = this; theUnit != NULL; theUnit = theUnit->mNextPart) {
-        this->mPlayer->DeselectUnit(theUnit);
-        for (unsigned long i = 1; i < ::gWorld.mNumPlayers; i++) {
-            EEPlayer* thePlayer = ::gWorld.mPlayers[i];
-            if (thePlayer->mViewedUnit == theUnit)
-                thePlayer->UpdateSelection(NULL, true);
-            if (thePlayer->mSelectedViewedUnit == theUnit)
-                thePlayer->SetSelectedViewedUnit(NULL);
-        }
-        theUnit->GetPosition(theUnit->mLastMapPosition);
-        GE3DPoint theAway(-10000.0f, -10000.0f, theUnit->mPhysicalModel.GetLocation().GetZ());
-        theUnit->SetLocation(theAway, true);
-        ::gWorld.DeactivateUnit(theUnit);
-    }
-    if (this->mGoalState != NULL
-        && (this->mGoalState->mKind != kGoalCastCalamity || EECastCalamityGoalCast(this->GetGoal())->GetCalamityType() != 0x77c)) {
-        this->StartAction(kActionIdle);
-        this->GetUnitClass()->ActionChanged(this);
-    }
-    this->SetVelocity(0.0f);
-    this->ReleaseConversionEffect();
-    this->ReleaseHealEffect();
-    this->ClearTint();
-    this->ReleaseFireEffect();
+    ee_units_cu_body(EE_UNITS_CU_DO_TAKE_OFF_MAP, this, 0, 0, 0);   // cu_misc.rs
 }
 
 // Starts the next build-queue entry the built building can produce (a citizen may come out female), dropping and
@@ -2454,23 +2034,7 @@ void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButt
 // Sets the resource the unit gathers, releasing the old one and sending a gatherer waiting for it
 void EEComplexUnit::SetGatheredResource(EEUnit* inUnit)
 {
-    if (this->mGatheredResource != NULL) {
-        ::gWorld.ReleaseResourceUser(this->mGatheredResource);
-        if (this->mGatheredResource->mIsValid && this->mCommand != NULL && this->mCommand->mType != kActionWaitForOpenPosition) {
-            EEComplexUnit* theUnit = EEGetWaitingGatherer(this->mGatheredResource);
-            if (theUnit != NULL) {
-                theUnit->StartAction(kActionMoveToResource);
-                theUnit->mUnitClass->ActionChanged(theUnit);
-            }
-        }
-        this->mGatheredResource->Dereference();
-        this->mGatheredResource = NULL;
-    }
-    if (inUnit == NULL)
-        return;
-    this->mGatheredResource = inUnit;
-    inUnit->Reference();
-    ::gWorld.AddResourceUser(this->mGatheredResource);
+    ee_units_cu_body(EE_UNITS_CU_DO_SET_GATHERED_RESOURCE, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_misc.rs
 }
 
 // Sets the unit's model, scaled by its class tile size
@@ -2516,24 +2080,7 @@ void EEComplexUnit::SetGrowth(float inScale)
 // Disables or re-enables the unit for a reason, updating its airport and the time-warp tint
 void EEComplexUnit::SetDisabled(bool inAway, long inReason)
 {
-    if (this->mIsDisabled == inAway)
-        return;
-    long theAirport = this->GetUnitClass()->mAirTrafficType;
-    this->mIsDisabled = inAway;
-    this->mDisabledReason = inReason;
-    if (theAirport != 0 && this->GetUnitClass()->IsAirBase()) {
-        if (this->mIsDisabled)
-            ee_units_atc_remove_airport(this->mPlayer->mAirTraffic[theAirport - 1], this);
-        else
-            ee_units_atc_add_airport(this->mPlayer->mAirTraffic[theAirport - 1], this);
-    }
-    if (inAway) {
-        if (inReason == 0x1a || inReason == 0x1c) {
-            this->SetIsTinted(true);
-            this->SetColor(kTimeWarpColor);
-        }
-    } else if (!this->IsCloaked())
-        this->SetIsTinted(false);
+    ee_units_cu_body(EE_UNITS_CU_DO_SET_DISABLED, this, inAway, inReason, 0);   // cu_misc.rs
 }
 
 // Sets the last resource the unit gathered from (reference counted)
@@ -2598,18 +2145,7 @@ void EEComplexUnit::SetTransformation(const GETransformation& inTransformation, 
 // Links the unit as the next part of another unit, unlinking it from its previous part
 void EEComplexUnit::LinkPart(EEComplexUnit* inUnit)
 {
-    if (this->mPreviousPart) {
-        if (this->mPreviousPart->mNextPart)
-            this->mPreviousPart->mNextPart->Dereference();
-        this->mPreviousPart->mNextPart = NULL;
-        this->mPreviousPart->Dereference();
-    }
-    this->mPreviousPart = inUnit;
-    if (!inUnit)
-        return;
-    inUnit->Reference();
-    this->mPreviousPart->mNextPart = this;
-    this->mPreviousPart->mNextPart->Reference();
+    ee_units_cu_body(EE_UNITS_CU_DO_LINK_PART, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_misc.rs
 }
 
 // Sets the unit's patrol group (reference counted)
@@ -2649,19 +2185,7 @@ void EEComplexUnit::SetRandomReloadTimer(long inReloadTime)
 // Sets the building's current research, unloading the old one's media and preloading the new one's (100000 = none)
 void EEComplexUnit::PlayEffect(long inTechnology)
 {
-    if (this->mCurrentResearch != kTechNone) {
-        EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(this->mCurrentResearch);
-        if (theNode != NULL && theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] != NULL
-            && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero && this->mPlayer->mNumHeroesInProduction > 0)
-            this->mPlayer->mNumHeroesInProduction--;
-        if (!gWorldClearing)
-            gDataPreLoading->PostUnloadTechnology(this->mPlayer->mPlayerID, this->mCurrentResearch);
-        else
-            this->GetPlayer()->GetTechTree()->Get(this->mCurrentResearch)->UnloadMedia(this->GetPlayer());
-    }
-    this->mCurrentResearch = inTechnology;
-    if (inTechnology != 100000)
-        gDataPreLoading->PostLoadTechnology(this->mPlayer->mPlayerID, inTechnology);
+    ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, this, inTechnology, 0, 0);   // cu_misc.rs
 }
 
 // Returns true when a unit on an auto waypoint has a finished path that is short or ends in a neighbouring sector,
@@ -2700,23 +2224,7 @@ bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
 // Replaces a cargo unit with another, adjusting the cargo room
 void EEComplexUnit::ReplaceCargo(EEComplexUnit* inOld, EEComplexUnit* inNew)
 {
-    std::vector<EEComplexUnit*>::iterator theIterator = std::find(this->mCargo.begin(), this->mCargo.end(), inOld);
-    long theCost = inNew->mUnitClass->mWeight;
-    if (theIterator == this->mCargo.end())
-        return;
-    EEComplexUnit* theOld = *theIterator;
-    this->mCargoRoom += theOld->mUnitClass->mWeight;
-    theOld->Dereference();
-    theOld->mContainer->Dereference();
-    theOld->mContainer = NULL;
-    *theIterator = inNew;
-    this->mCargoRoom -= theCost;
-    this->mCargoRoom = this->mCargoRoom > 0 ? this->mCargoRoom : 0;
-    inNew->Reference();
-    if (inNew->mContainer != this) {
-        inNew->mContainer = this;
-        this->Reference();
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_CARGO, this, (int64_t)(uintptr_t)inOld, (int64_t)(uintptr_t)inNew, 0);   // cu_cargo.rs
 }
 
 // Turns the unit level to face a point
@@ -2767,16 +2275,7 @@ void EEComplexUnit::FaceTarget(EEUnit* inTarget)
 // Stops the unit: clears its build targets, goals and airport queue and sets it idle (aircraft circle)
 void EEComplexUnit::Halt()
 {
-    this->ClearBuildTargets();
-    this->ClearGoalQueue(0);
-    this->ClearGoals(0);
-    if (this->GetUnitClass()->IsAirBase())
-        ee_units_atc_clear_airport_queue(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this, 0);
-    if (this->GetUnitClass()->mCategory == kUnitCategoryAirplane || this->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship)
-        this->StartAction(kActionCircle);
-    else
-        this->StartAction(kActionIdle);
-    this->GetUnitClass()->ActionChanged(this);
+    ee_units_cu_body(EE_UNITS_CU_DO_HALT, this, 0, 0, 0);   // cu_misc.rs
 }
 
 // Returns true if the unit can hit a target from where it stands (melee contact, range, or a ballistic shot from
@@ -2922,28 +2421,7 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
 // the unit loses its cloak
 void EEComplexUnit::UpdateCamouflage(long inAction)
 {
-    if (gCivPowersManager.HasPower(this->GetPlayer(), kCivPowerCamouflage) &&
-        gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL &&
-        gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(this->GetUnitClass()->GetUnitType())) {
-        if (this->mPlayer->mNumVitalBuildings < 1) {
-            bool theCloaked = this->mIsCloakable ? this->mIsCloaked : false;
-            if (theCloaked && ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer())))
-                gMiniMap->MoveUnit(this, -10000, -10000, this->GetTileX(), this->GetTileY());
-            this->mIsCloakable = false;
-            this->mIsCloaked = false;
-            this->mCamouflageTimer = 0;
-            this->mU32C = 0;
-        } else if (this->GetCommandType() == kActionIdle && inAction != 5000) {
-            this->mCamouflageTimer = 0;
-            this->mU32C = gWorldTable.GetLongValue2(kWorldCamouflageTiming);
-        } else if (this->GetCommandType() != kActionIdle && inAction == 5000) {
-            this->mCamouflageTimer = gWorldTable.GetLongValue(kWorldCamouflageTiming);
-            this->mU32C = 0;
-        }
-    } else {
-        this->mCamouflageTimer = 0;
-        this->mU32C = 0;
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_CAMOUFLAGE, this, inAction, 0, 0);   // cu_misc.rs
 }
 
 // Moves the unit's area effects to its position and updates them for the elapsed time
@@ -3042,28 +2520,7 @@ void EEComplexUnit::SwapGraphic(EEGraphicObject* inOldModel, EEGraphicObject* in
 // Replaces a technology in the current research and the build queue with another (100000 removes it)
 void EEComplexUnit::ReplaceResearch(long inTechnology, long inNewTechnology)
 {
-    if (this->mCurrentResearch == inTechnology) {
-        this->PlayEffect(inNewTechnology);
-        if (inNewTechnology == 100000)
-            this->SetProductionTime(0);
-        else {
-            EETechTreeNode* theNode = this->mPlayer->GetTechTree()->Get(inNewTechnology);
-            if (theNode != NULL && theNode->mData->mUnitClass > 0 &&
-                gUnitClassTable[theNode->mData->mUnitClass] != NULL &&
-                gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
-                this->mPlayer->mNumHeroesInProduction++;
-        }
-    }
-    if (this->mBuildQueue.size() <= 0)
-        return;
-    for (long i = this->mBuildQueue.size() - 1; i >= 0; i--) {
-        if (this->mBuildQueue[i].mTechnology != inTechnology)
-            continue;
-        if (inNewTechnology != 100000)
-            this->mBuildQueue[i].mTechnology = inNewTechnology;
-        else
-            this->mBuildQueue.erase(this->mBuildQueue.begin() + i);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_RESEARCH, this, inTechnology, inNewTechnology, 0);   // cu_cargo.rs
 }
 
 // Recreates the unit's area effects from the four area-effect templates in its stats
@@ -3129,8 +2586,35 @@ static void EEInsuranceChat(EEPlayer* inPlayer, unsigned long inResource, long i
     gUserInterface->AddChatLogEntry(inPlayer->mColor, UWideString(gEmptyString), theText, 5000, 2);
 }
 
+// FleeAfterCalamity's point ahead is the body's first two floats
+static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "a GE2DPoint is two floats");
+
 // Kill's civilization power (EE_UNITS_CU_GET_INSURANCE fills it for the two reads after it)
 static EECivPower sInsurancePower;
+
+// a build queue entry of cu_cargo.rs's (technology, flag)
+static EEProductionEntry EECuEntry(int64_t inTechnology, int64_t inFlag)
+{
+    EEProductionEntry theEntry;
+    theEntry.mTechnology = (long)inTechnology;
+    theEntry.mFlag = inFlag != 0;
+    return theEntry;
+}
+
+// the index of a unit in a deque (std::find; -1: not there)
+static int64_t EECuFind(const std::deque<EEUnit*>& inUnits, EEUnit* inUnit)
+{
+    std::deque<EEUnit*>::const_iterator theIterator = std::find(inUnits.begin(), inUnits.end(), inUnit);
+    return theIterator == inUnits.end() ? -1 : (int64_t)(theIterator - inUnits.begin());
+}
+
+// UnloadCargoAt's aircraft at cruise altitude: a copy of the location at height inZ
+static void EECuSetTransformationAtZ(EEComplexUnit* inUnit, const GETransformation& inLocation, float inZ)
+{
+    GETransformation theLocation(inLocation);
+    theLocation.SetZ(inZ);
+    inUnit->SetTransformation(theLocation, true);
+}
 
 template <class T> static T* EECuObject(uint64_t inHandle)
 {
@@ -3369,6 +2853,223 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_DOMAINS: return theClass->mDomains;
     case EE_UNITS_CU_CLASS_CATEGORY: return theClass->mCategory;
     case EE_UNITS_CU_ADD_CONTACT: theOther->AddContact(EECuObject<EEComplexUnit>((uint64_t)inB)); return 0;
+    // the production queue's (cu_cargo.rs; inA a node or class)
+    case EE_UNITS_CU_CURRENT_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
+    case EE_UNITS_CU_NODE_CLASS_INDEX: return theNode->mData->mUnitClass;
+    case EE_UNITS_CU_SET_NODE_ALLOWED: theNode->mIsAllowed = inB != 0; return 0;
+    case EE_UNITS_CU_NODE_ALLOWED: return theNode->mIsAllowed;
+    case EE_UNITS_CU_CLASS_AI_KIND: return theClass->mAIKind;
+    case EE_UNITS_CU_HEROES_IN_PRODUCTION: return theUnit->GetPlayer()->mNumHeroesInProduction;
+    case EE_UNITS_CU_SET_HEROES_IN_PRODUCTION: theUnit->GetPlayer()->mNumHeroesInProduction = (long)inB; return 0;
+    case EE_UNITS_CU_QUEUE_SIZE: return theUnit->mBuildQueue.size();
+    case EE_UNITS_CU_QUEUE_BACK_TECHNOLOGY: return theUnit->mBuildQueue.back().mTechnology;
+    case EE_UNITS_CU_QUEUE_POP_BACK: theUnit->mBuildQueue.pop_back(); return 0;
+    case EE_UNITS_CU_PLAYER_NODE: return (uint64_t)(uintptr_t)theUnit->mPlayer->mTechnologies->Get((long)inB);
+    case EE_UNITS_CU_REFUND_ONE: theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->mUnitType, 1.0f); return 0;
+    case EE_UNITS_CU_SET_PRODUCTION_TIME_FIELD: theUnit->SetProductionTime((long)inB); return 0;
+    case EE_UNITS_CU_QUEUE_CLEAR: theUnit->mBuildQueue.clear(); return 0;
+    case EE_UNITS_CU_QUEUE_PUSH_BACK: theUnit->mBuildQueue.push_back(EECuEntry(inB, inC)); return 0;
+    case EE_UNITS_CU_QUEUE_PUSH_FRONT: theUnit->mBuildQueue.insert(theUnit->mBuildQueue.begin(), EECuEntry(inB, inC)); return 0;
+    case EE_UNITS_CU_QUEUE_TECHNOLOGY_AT: return theUnit->mBuildQueue[(size_t)inB].mTechnology;
+    case EE_UNITS_CU_QUEUE_SET_TECHNOLOGY_AT: theUnit->mBuildQueue[(size_t)inB].mTechnology = (long)inC; return 0;
+    case EE_UNITS_CU_QUEUE_ERASE_AT: theUnit->mBuildQueue.erase(theUnit->mBuildQueue.begin() + (size_t)inB); return 0;
+    case EE_UNITS_CU_CAN_AFFORD: return theUnit->GetPlayer()->CanAfford(theNode, theUnit->GetUnitClass()->GetUnitType(), true);
+    case EE_UNITS_CU_SCENARIO_GAME: return ::gWorld.mGameOptions.mIsScenarioGame;
+    case EE_UNITS_CU_HERO_LIMIT: return theUnit->mPlayer->mHeroLimit;
+    case EE_UNITS_CU_HERO_COUNT: return theUnit->mPlayer->GetHeroCount(1, 1);
+    case EE_UNITS_CU_JIT_MANUFACTURING: return theUnit->mPlayer->mJITManufacturing;
+    case EE_UNITS_CU_PAY: theUnit->mPlayer->Pay(theNode, theUnit->GetUnitClass()->GetUnitType(), 1.0f); return 0;
+    case EE_UNITS_CU_NODE_KIND: return theNode->mData->mKind;
+    // the cargo's (inA another unit)
+    case EE_UNITS_CU_UNIT_WEIGHT: return theOther->mUnitClass->mWeight;
+    case EE_UNITS_CU_CARGO_ROOM: return theUnit->mCargoRoom;
+    case EE_UNITS_CU_SET_CARGO_ROOM: theUnit->mCargoRoom = (long)inB; return 0;
+    case EE_UNITS_CU_CARGO_PUSH: theUnit->mCargo.push_back(theOther); return 0;
+    case EE_UNITS_CU_REFERENCE: EECuObject<RTSUnit>(inA)->Reference(); return 0;
+    case EE_UNITS_CU_UNIT_CONTAINER: return (uint64_t)(uintptr_t)theOther->mContainer;
+    case EE_UNITS_CU_SET_CONTAINER_THIS: theOther->mContainer = theUnit; return 0;
+    case EE_UNITS_CU_TAKE_OFF_MAP: theOther->TakeOffMap(); return 0;
+    case EE_UNITS_CU_OFF_MAP_INFO: return (uint64_t)(uintptr_t)theOther->mPlayer->GetOffMapInfo(theOther);
+    case EE_UNITS_CU_SET_OFF_MAP_REASON: EECuObject<EEWUnitsOffMapInfo>(inA)->mReason = (long)inB; return 0;
+    case EE_UNITS_CU_IS_TRANSPORT: return theUnit->GetUnitClass()->IsTransport();
+    case EE_UNITS_CU_CARGO_ADDED: theUnit->GetUnitClass()->CargoAdded(theUnit, theOther, inB != 0); return 0;
+    case EE_UNITS_CU_ACTIVE_GROUP_HAS: return theUnit->mPlayer->mActiveGroup->Contains(theOther);
+    case EE_UNITS_CU_POST_424: gUserInterface->PostMessage424Once(); return 0;
+    case EE_UNITS_CU_UNIT_HIT_POINTS: return theOther->mHitPoints;
+    case EE_UNITS_CU_UNIT_POPULATION_COST: return theOther->mUnitClass->GetPopulationCost();
+    case EE_UNITS_CU_GARRISON_CAPACITY: return theUnit->GetUnitClass()->mGarrisonCapacity;
+    case EE_UNITS_CU_GARRISON_COUNT: return theUnit->mGarrisonCount;
+    case EE_UNITS_CU_SET_GARRISON_COUNT: theUnit->mGarrisonCount = (long)inB; return 0;
+    case EE_UNITS_CU_GARRISON_POPULATION: return theUnit->mGarrisonPopulation;
+    case EE_UNITS_CU_SET_GARRISON_POPULATION: theUnit->mGarrisonPopulation = (long)inB; return 0;
+    case EE_UNITS_CU_KILL_UNIT: theOther->Kill(0, 0, 0); return 0;
+    case EE_UNITS_CU_UNIT_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theOther);
+    case EE_UNITS_CU_CARGO_COUNT: return theUnit->mCargo.size();
+    case EE_UNITS_CU_CARGO_AT: return (uint64_t)(uintptr_t)theUnit->GetCargo((unsigned long)inB);
+    case EE_UNITS_CU_UNIT_PREVIOUS_PART: return (uint64_t)(uintptr_t)theOther->mPreviousPart;
+    case EE_UNITS_CU_UNIT_UNIT_TYPE: return theOther->mUnitClass->GetUnitType();
+    case EE_UNITS_CU_UNIT_CATEGORY: return theOther->mUnitClass->mCategory;
+    case EE_UNITS_CU_UNIT_STATS_RESET: theOther->mPlayer->mSavedGroups.Reset((long)inB, 1); return 0;
+    case EE_UNITS_CU_UNIT_STATS_LOWER: theOther->mPlayer->mSavedGroups.Lower((long)inB, 1); return 0;
+    case EE_UNITS_CU_CARGO_REMOVED: theUnit->GetUnitClass()->CargoRemoved(theUnit, theOther); return 0;
+    case EE_UNITS_CU_CARGO_ERASE_AT: theUnit->mCargo.erase(theUnit->mCargo.begin() + (size_t)inB); return 0;
+    case EE_UNITS_CU_UNIT_CONTAINER_DEREFERENCE: theOther->mContainer->Dereference(); return 0;
+    case EE_UNITS_CU_UNIT_CLEAR_CONTAINER: theOther->mContainer = NULL; return 0;
+    case EE_UNITS_CU_CARGO_SET_AT: theUnit->mCargo[(size_t)inB] = theOther; return 0;
+    case EE_UNITS_CU_CARGO_UNLOADED: theUnit->GetUnitClass()->CargoUnloaded(theUnit, theOther); return 0;
+    case EE_UNITS_CU_UNIT_SET_TRANSFORMATION: theOther->SetTransformation(*EECuObject<GETransformation>((uint64_t)inB), true); return 0;
+    case EE_UNITS_CU_UNIT_DOMAINS: return theOther->mUnitClass->mDomains;
+    case EE_UNITS_CU_UNIT_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
+    case EE_UNITS_CU_UNIT_CRUISE_ALTITUDE: return EECuBits(theOther->mUnitClass->GetCruiseAltitude());
+    case EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z:
+        EECuSetTransformationAtZ(theOther, *EECuObject<GETransformation>((uint64_t)inB), EECuFloat(inC));
+        return 0;
+    case EE_UNITS_CU_UNIT_TILE_X: return theOther->GetTileX();
+    case EE_UNITS_CU_ACTIVATE_UNIT: ::gWorld.ActivateUnit(theOther); return 0;
+    case EE_UNITS_CU_DEACTIVATE_UNIT: ::gWorld.DeactivateUnit(theOther); return 0;
+    case EE_UNITS_CU_UNIT_IS_HUMAN: return theOther->mPlayer->IsHuman();
+    case EE_UNITS_CU_UNIT_START_ACTION: theOther->StartAction((long)inB); return 0;
+    case EE_UNITS_CU_UNIT_ACTION_CHANGED: theOther->mUnitClass->ActionChanged(theOther); return 0;
+    case EE_UNITS_CU_UNIT_REFERENCE_COUNT: return theOther->mReferenceCount;
+    case EE_UNITS_CU_STATS_RANGE: return EECuBits(theUnit->GetStats()->mRange);
+    case EE_UNITS_CU_TRANSPORT_HAS_ROOM:
+        return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->HasRoom(theUnit, theOther->GetComplexUnit());
+    case EE_UNITS_CU_TRANSPORT_UNLOAD_RANGE: return EECuBits(EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->mUnloadRange);
+    case EE_UNITS_CU_UNLOAD_CARGO_AT:
+        return (uint64_t)(uintptr_t)theUnit->UnloadCargoAt((unsigned long)inB, *EECuObject<GETransformation>(inA));
+    case EE_UNITS_CU_TELEPORT_IN_EFFECT:
+        ::gWorld.GetEffectManager()->CreateUnitEffect(theOther, EEGraphicEffect::Get(kGraphicEffectCalamityTeleportIn), NULL, false, 0, 0);
+        return 0;
+    case EE_UNITS_CU_RELEASE_CARGO: theUnit->ReleaseCargo(theOther); return 0;
+    case EE_UNITS_CU_UNLOAD_FAILED_TEXT: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->GetUnloadFailedTextID();
+    case EE_UNITS_CU_ADD_EVENT:
+        theUnit->mPlayer->mEvents.AddEvent(U2DPoint<long>(theUnit->GetTileX(), theUnit->GetTileY()), 2, theUnit->mPlayer, (long)inB, false);
+        return 0;
+    case EE_UNITS_CU_SET99_HAS_TYPE: return gUnitSetManager.GetSet(99)->Contains(theUnit->GetUnitClass()->GetUnitType());
+    case EE_UNITS_CU_TRANSPORT_DOMAINS: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->mDomains;
+    case EE_UNITS_CU_TILE_X_FIELD: return theUnit->mTileX;
+    case EE_UNITS_CU_TILE_Y: return theUnit->GetTileY();
+    case EE_UNITS_CU_TILE_SIZE: return theUnit->GetUnitClass()->GetTileSize();
+    case EE_UNITS_CU_TRANSPORT_CLASS: return (uint64_t)(uintptr_t)EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass());
+    // the build queue's and contacts'
+    case EE_UNITS_CU_GOAL_IS_BUILD: return theUnit->mGoalState != NULL && theUnit->mGoalState->mKind == kGoalBuildRepair;
+    case EE_UNITS_CU_BUILD_GOAL_TARGET: return (uint64_t)(uintptr_t)EEBuildRepairGoalCast(theUnit->GetGoal())->GetBuildTarget();
+    case EE_UNITS_CU_BUILD_QUEUE_PUSH_FRONT: theUnit->mCitizenBuildQueue.push_front(EECuObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK: theUnit->mCitizenBuildQueue.push_back(EECuObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_CU_BUILD_QUEUE_FIND: return EECuFind(theUnit->mCitizenBuildQueue, EECuObject<EEUnit>(inA));
+    case EE_UNITS_CU_BUILD_QUEUE_ERASE_AT:
+        theUnit->mCitizenBuildQueue.erase(theUnit->mCitizenBuildQueue.begin() + (size_t)inB);   // (Dinkum deque erase(P))
+        return 0;
+    case EE_UNITS_CU_DROP_FINISHED_GOALS: theUnit->DropFinishedGoals(0); return 0;
+    case EE_UNITS_CU_CLEAR_GOALS: theUnit->ClearGoals(0); return 0;
+    case EE_UNITS_CU_CLEAR_SHIFT_QUEUED: theUnit->mHasShiftQueuedBuild = false; return 0;
+    case EE_UNITS_CU_CONTACT_MISSING: return theUnit->mContacts.Find(theOther) == 0;
+    case EE_UNITS_CU_CONTACT_ADD_HEAD: theUnit->mContacts.AddHead(theOther); return 0;
+    case EE_UNITS_CU_REFERENCE_THIS: theUnit->Reference(); return 0;
+    // cu_misc.rs's (inA a part or a model, inB a player index)
+    case EE_UNITS_CU_KEEP_MAP_POSITION: theUnit->GetPosition(theUnit->mLastMapPosition); return 0;
+    case EE_UNITS_CU_DESELECT: theUnit->mPlayer->DeselectUnit(theOther); return 0;
+    case EE_UNITS_CU_PLAYER_VIEWS: return EECuObject<EEPlayer>((uint64_t)inB)->mViewedUnit == theOther;
+    case EE_UNITS_CU_PLAYER_UPDATE_SELECTION: EECuObject<EEPlayer>((uint64_t)inB)->UpdateSelection(NULL, true); return 0;
+    case EE_UNITS_CU_PLAYER_SELECTED_VIEWS: return EECuObject<EEPlayer>((uint64_t)inB)->mSelectedViewedUnit == theOther;
+    case EE_UNITS_CU_PLAYER_CLEAR_SELECTED_VIEWED: EECuObject<EEPlayer>((uint64_t)inB)->SetSelectedViewedUnit(NULL); return 0;
+    case EE_UNITS_CU_PART_KEEP_MAP_POSITION: theOther->GetPosition(theOther->mLastMapPosition); return 0;
+    case EE_UNITS_CU_PART_SET_AWAY:
+        theOther->SetLocation(GE3DPoint(-10000.0f, -10000.0f, theOther->mPhysicalModel.GetLocation().GetZ()), true);
+        return 0;
+    case EE_UNITS_CU_HAS_GOAL_STATE: return theUnit->mGoalState != NULL;
+    case EE_UNITS_CU_GOAL_KIND: return theUnit->mGoalState->mKind;
+    case EE_UNITS_CU_CAST_CALAMITY_TYPE: return EECastCalamityGoalCast(theUnit->GetGoal())->GetCalamityType();
+    case EE_UNITS_CU_STOP: theUnit->SetVelocity(0.0f); return 0;
+    case EE_UNITS_CU_CLASS_DOMAINS: return theUnit->GetUnitClass()->mDomains;
+    case EE_UNITS_CU_TILE: return (uint64_t)(uintptr_t)theUnit->mTile;
+    case EE_UNITS_CU_TILE_TERRAIN: return EECuObject<RTSTile>(inA)->mTerrainType;
+    case EE_UNITS_CU_TILE_LEVEL: return (char)EECuObject<RTSTile>(inA)->mAIValue;   // (the original's signed compare)
+    case EE_UNITS_CU_WATER_KIND: return theUnit->GetUnitClass()->mWaterKind;
+    case EE_UNITS_CU_SET_WATER_STATE: theUnit->mWaterState = (long)inB; return 0;
+    case EE_UNITS_CU_UNIT_LOAD_MEDIA: theUnit->EEUnit::LoadMedia(inB != 0); return 0;
+    case EE_UNITS_CU_LOAD_BUTTONS: theUnit->GetPlayer()->LoadUnitClassButtons(theUnit->GetUnitClass()->GetUnitType()); return 0;
+    case EE_UNITS_CU_SET_FOUNDATION: theUnit->mIsFoundation = inB != 0; return 0;
+    case EE_UNITS_CU_PM_SET_FOUNDATION_MODEL:
+        theUnit->mPhysicalModel.SetModel(EEGetPlayerClassGraphic(theUnit->GetPlayer(), theUnit->GetUnitClass())->mModel);
+        return 0;
+    case EE_UNITS_CU_PM_SET_ANIMATION_MODEL: theUnit->mPhysicalModel.SetModel(theModel->mModels[theUnit->mAnimation]); return 0;
+    case EE_UNITS_CU_CLEAR_TURRET_ANGLES: theUnit->mTurretAngles = NULL; return 0;
+    case EE_UNITS_CU_RESIZE_TURRET_ANGLES: theUnit->ResizeTurretAngles(theModel->GetNumParts()); return 0;
+    case EE_UNITS_CU_MODEL_ORBITAL_COUNT: return theModel->GetOrbitalCount();
+    case EE_UNITS_CU_SET_ORBITAL_COUNT: theUnit->mNumOrbitals = (unsigned long)inB; return 0;
+    case EE_UNITS_CU_CLEAR_ORBITALS: theUnit->mOrbitals = NULL; return 0;
+    case EE_UNITS_CU_NEW_ORBITALS: theUnit->mOrbitals = new EEOrbital*[theUnit->mNumOrbitals]; return 0;
+    case EE_UNITS_CU_NEW_ORBITAL: theUnit->mOrbitals[inB] = new EEOrbital(*theModel->mOrbitals[inB]); return 0;
+    case EE_UNITS_CU_MODEL_WHEEL_COUNT: return theModel->GetWheelCount();
+    case EE_UNITS_CU_SET_WHEEL_COUNT: theUnit->mNumWheels = (unsigned long)inB; return 0;
+    case EE_UNITS_CU_CLEAR_WHEELS: theUnit->mWheels = NULL; return 0;
+    case EE_UNITS_CU_NEW_WHEELS: theUnit->mWheels = new EEWheel*[theUnit->mNumWheels]; return 0;
+    case EE_UNITS_CU_NEW_WHEEL: theUnit->mWheels[inB] = new EEWheel(*theModel->mWheels[inB]); return 0;
+    case EE_UNITS_CU_WHEEL_ANGLE_ZERO: theUnit->mWheels[inB]->mAngle = 0.0f; return 0;
+    case EE_UNITS_CU_DISABLED: return theUnit->mIsDisabled;
+    case EE_UNITS_CU_SET_DISABLED_FIELD: theUnit->mIsDisabled = inB != 0; return 0;
+    case EE_UNITS_CU_SET_DISABLED_REASON: theUnit->mDisabledReason = (long)inB; return 0;
+    case EE_UNITS_CU_ATC_ADD_AIRPORT: ee_units_atc_add_airport(theUnit->mPlayer->mAirTraffic[inB - 1], theUnit); return 0;
+    case EE_UNITS_CU_SET_TINTED: theUnit->SetIsTinted(inB != 0); return 0;
+    case EE_UNITS_CU_TIME_WARP_COLOR: theUnit->SetColor(kTimeWarpColor); return 0;
+    case EE_UNITS_CU_IS_CLOAKED: return theUnit->IsCloaked();
+    case EE_UNITS_CU_HAS_CAMOUFLAGE: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerCamouflage);
+    case EE_UNITS_CU_CAMOUFLAGE_SET:
+        return (uint64_t)(uintptr_t)gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet);
+    case EE_UNITS_CU_VITAL_BUILDINGS: return theUnit->mPlayer->mNumVitalBuildings;
+    case EE_UNITS_CU_CLOAKABLE: return theUnit->mIsCloakable;
+    case EE_UNITS_CU_CLOAKED_FIELD: return theUnit->mIsCloaked;
+    case EE_UNITS_CU_CLOAKED_ENEMY:
+        return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer()));
+    case EE_UNITS_CU_MINIMAP_REMOVE: gMiniMap->MoveUnit(theUnit, -10000, -10000, theUnit->GetTileX(), theUnit->GetTileY()); return 0;
+    case EE_UNITS_CU_CLEAR_CLOAKABLE: theUnit->mIsCloakable = false; return 0;
+    case EE_UNITS_CU_CLEAR_CLOAKED: theUnit->mIsCloaked = false; return 0;
+    case EE_UNITS_CU_SET_CAMOUFLAGE_TIMER: theUnit->mCamouflageTimer = (unsigned long)inB; return 0;
+    case EE_UNITS_CU_SET_U32C: theUnit->mU32C = (unsigned long)inB; return 0;
+    case EE_UNITS_CU_CAMOUFLAGE_TIMING2: return gWorldTable.GetLongValue2(kWorldCamouflageTiming);
+    case EE_UNITS_CU_CAMOUFLAGE_TIMING: return gWorldTable.GetLongValue(kWorldCamouflageTiming);
+    case EE_UNITS_CU_GATHERED: return (uint64_t)(uintptr_t)theUnit->mGatheredResource;
+    case EE_UNITS_CU_RELEASE_RESOURCE_USER: ::gWorld.ReleaseResourceUser(theUnit->mGatheredResource); return 0;
+    case EE_UNITS_CU_GATHERED_VALID: return theUnit->mGatheredResource->mIsValid;
+    case EE_UNITS_CU_WAITING_GATHERER: return (uint64_t)(uintptr_t)EEGetWaitingGatherer(theUnit->mGatheredResource);
+    case EE_UNITS_CU_SET_GATHERED_FIELD: theUnit->mGatheredResource = EECuObject<EEUnit>(inA); return 0;
+    case EE_UNITS_CU_ADD_RESOURCE_USER: ::gWorld.AddResourceUser(theUnit->mGatheredResource); return 0;
+    case EE_UNITS_CU_POST_UNLOAD_TECHNOLOGY:
+        gDataPreLoading->PostUnloadTechnology(theUnit->mPlayer->mPlayerID, theUnit->mCurrentResearch);
+        return 0;
+    case EE_UNITS_CU_UNLOAD_TECHNOLOGY_MEDIA:
+        theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch)->UnloadMedia(theUnit->GetPlayer());
+        return 0;
+    case EE_UNITS_CU_SET_CURRENT_RESEARCH: theUnit->mCurrentResearch = (long)inB; return 0;
+    case EE_UNITS_CU_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->mPlayer->mPlayerID, (long)inB); return 0;
+    case EE_UNITS_CU_IS_WALL: return theUnit->GetUnitClass()->mIsWall;
+    case EE_UNITS_CU_FIRE_EFFECT: return theUnit->mFireEffect.mValue;
+    case EE_UNITS_CU_DESTROY_FIRE_EFFECT: gEffectManager->DestroyEffect(theUnit->mFireEffect); return 0;
+    case EE_UNITS_CU_CLEAR_FIRE_EFFECT: theUnit->mFireEffect.mValue = 0; return 0;
+    case EE_UNITS_CU_CLASS_TYPE_FIELD: return theUnit->GetUnitClass()->mUnitType;
+    case EE_UNITS_CU_REMOVE_CLOAK_EFFECT: EERemoveCloakEffect(theUnit); return 0;
+    case EE_UNITS_CU_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets(); return 0;
+    case EE_UNITS_CU_ATC_CLEAR_AIRPORT_QUEUE:
+        ee_units_atc_clear_airport_queue(theUnit->mPlayer->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theUnit, (uint32_t)inB);
+        return 0;
+    case EE_UNITS_CU_HAS_COMPUTER_PLAYER: return theUnit->mPlayer->mComputerPlayer != NULL;
+    case EE_UNITS_CU_RANDOM_POINT_AHEAD: return EEGetRandomPointAhead(theUnit, reinterpret_cast<GE2DPoint*>(f));
+    case EE_UNITS_CU_FLEE_GOAL:
+        theUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(f[0], f[1]), true, true, false, 0.0f, false, false), 0, 0);
+        return 0;
+    case EE_UNITS_CU_PREVIOUS_NEXT: return (uint64_t)(uintptr_t)theUnit->mPreviousPart->mNextPart;
+    case EE_UNITS_CU_CLEAR_PREVIOUS_NEXT: theUnit->mPreviousPart->mNextPart = NULL; return 0;
+    case EE_UNITS_CU_SET_PREVIOUS_PART: theUnit->mPreviousPart = theOther; return 0;
+    case EE_UNITS_CU_SET_PREVIOUS_NEXT_THIS: theUnit->mPreviousPart->mNextPart = theUnit; return 0;
+    case EE_UNITS_CU_FIRST_QUEUE_LEN: return theUnit->mGoalQueues[0].mGoals.size();
+    case EE_UNITS_CU_ABANDON_GOAL: theUnit->mGoalQueues[0].GetGoalAt((unsigned long)inB)->Abandon(theUnit); return 0;
+    case EE_UNITS_CU_GOAL_QUEUE_CLEAR: theUnit->mGoalQueues[(size_t)inB].Clear(); return 0;
+    case EE_UNITS_CU_HAS_CLASS: return theUnit->GetUnitClass() != NULL;
+    case EE_UNITS_CU_REFRESH_GOALS: theUnit->RefreshGoals(); return 0;
+    case EE_UNITS_CU_REFRESH_ACTIVE_GOAL: theUnit->RefreshActiveGoal(); return 0;
+    case EE_UNITS_CU_CIRCLES:
+        return theUnit->GetUnitClass()->mCategory == kUnitCategoryAirplane || theUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
     }
     return 0;
 }

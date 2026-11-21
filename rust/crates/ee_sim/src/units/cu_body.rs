@@ -506,14 +506,16 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
             }
         }
     }
-    if refund && killed && !suppress && s(h, EE_UNITS_CU_HAS_INSURANCE, unit) != 0 {
-        if s(h, EE_UNITS_CU_GET_INSURANCE, unit) != 0
-            && s(h, EE_UNITS_CU_INSURANCE_COVERS, unit) != 0
-            && (s(h, EE_UNITS_CU_UNIT_TYPE, unit) != UNIT_TYPE_FARM || s(h, EE_UNITS_CU_IS_BUILT, unit) != 0)
-        {
-            let amount = s(h, EE_UNITS_CU_INSURANCE_AMOUNT, unit);
-            sb(h, EE_UNITS_CU_PAY_INSURANCE, unit, amount);
-        }
+    if refund
+        && killed
+        && !suppress
+        && s(h, EE_UNITS_CU_HAS_INSURANCE, unit) != 0
+        && s(h, EE_UNITS_CU_GET_INSURANCE, unit) != 0
+        && s(h, EE_UNITS_CU_INSURANCE_COVERS, unit) != 0
+        && (s(h, EE_UNITS_CU_UNIT_TYPE, unit) != UNIT_TYPE_FARM || s(h, EE_UNITS_CU_IS_BUILT, unit) != 0)
+    {
+        let amount = s(h, EE_UNITS_CU_INSURANCE_AMOUNT, unit);
+        sb(h, EE_UNITS_CU_PAY_INSURANCE, unit, amount);
     }
     let attacker = s(h, EE_UNITS_CU_LAST_ATTACKER, unit) as u64;
     if attacker != 0 {
@@ -883,6 +885,7 @@ pub fn set_animation<H: CuHost + ?Sized>(h: &mut H, unit: u64, part: i64, frame:
 /// `PayInsurance(fraction)`: the class's technology refunded to the player by `fraction`, its five resources'
 /// insurance totals raised by what came back; the current player sees the emitter and a notice per resource
 /// whose total grew (past 20, only when it passes one of the thresholds, the highest passed shown).
+#[allow(clippy::needless_range_loop)] // the original's index loops over its two copies
 pub fn pay_insurance<H: CuHost + ?Sized>(h: &mut H, unit: u64, fraction: f32) {
     let player = s(h, EE_UNITS_CU_PLAYER, unit) as u64;
     let node = sa(h, EE_UNITS_CU_CLASS_TECH_NODE, unit, player) as u64;
@@ -996,7 +999,14 @@ pub fn find_contacts<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
 
 /// Runs body `what` on the complex unit `unit` (`a`, `b`, `c` its arguments as its C++ member takes them; a float
 /// as its bits).
-pub fn run<H: CuHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: i64, b: i64, c: i64) -> i64 {
+pub fn run<H: crate::units::cu_cargo::CuCargoHost + ?Sized>(
+    h: &mut H,
+    what: i32,
+    unit: u64,
+    a: i64,
+    b: i64,
+    c: i64,
+) -> i64 {
     match what {
         EE_UNITS_CU_DO_KILL => kill(h, unit, a & 1 != 0, a & 2 != 0, a & 4 != 0),
         EE_UNITS_CU_DO_INVALIDATE => invalidate(h, unit),
@@ -1006,7 +1016,7 @@ pub fn run<H: CuHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: i64, b: i64, 
         EE_UNITS_CU_DO_SET_ANIMATION => set_animation(h, unit, a, b, c != 0),
         EE_UNITS_CU_DO_PAY_INSURANCE => pay_insurance(h, unit, float(a)),
         EE_UNITS_CU_DO_FIND_CONTACTS => find_contacts(h, unit),
-        _ => {}
+        _ => return crate::units::cu_cargo::run(h, what, unit, a, b, c).unwrap_or(0),
     }
     0
 }
@@ -1021,6 +1031,30 @@ mod game {
     }
 
     struct Game;
+
+    impl crate::units::cu_cargo::CuCargoHost for Game {
+        fn find_placement(&mut self, p: &crate::units::cu_cargo::Placement, m: &mut [[f32; 4]; 4]) -> bool {
+            let origin = [0.0f32; 3];
+            // SAFETY: the buffers are live for the call; the unit is the body's cargo, live
+            unsafe {
+                crate::units::uu_ffi::ee_units_uu_find_placement(
+                    &origin,
+                    p.unit,
+                    0,
+                    p.x,
+                    p.y,
+                    p.size,
+                    p.rings,
+                    u8::from(p.corners),
+                    u8::from(p.include_center),
+                    u8::from(p.face_point),
+                    u8::from(p.linked),
+                    m,
+                    0,
+                ) != 0
+            }
+        }
+    }
 
     impl CuHost for Game {
         fn cu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
