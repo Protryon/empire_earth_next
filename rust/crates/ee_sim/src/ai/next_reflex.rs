@@ -193,7 +193,7 @@ fn militia(g: &G<'_>, citizen: &UnitView<'_>, attacker: &PlayerView<'_>) {
     // military.militia_towers: the own built towers within kMilitiaTowerRange count in the defence, and a raid the
     // town cannot fight sends the citizens to the nearest tower within kDefendRange instead of the far drop site
     let mut tower: Option<UnitView<'_>> = None;
-    if host(EE_AI_NEXT_HOST_SWITCH, me, 1, 0, 0) != 0 {
+    if super::super::personality::militia_towers_on(player_id(me) as u64) {
         let mut best: c_long = -1;
         for u in g.me.units() {
             let Some(c) = u.complex_unit() else { continue };
@@ -327,7 +327,7 @@ pub unsafe extern "C" fn ee_ai_next_note_danger(me: *mut c_void, citizen: u64, a
         return;
     }
     let Some(foe) = g.world.player(attacker as usize) else { return };
-    if host(EE_AI_NEXT_HOST_SWITCH, me, 0, 0, 0) != 0 && reflex_on(me, c"militia") {
+    if super::super::personality::militia_on(player_id(me) as u64) && reflex_on(me, c"militia") {
         militia(&g, &citizen, &foe); // (ai.reflex{militia = false}: a script's own militia instead)
         return;
     }

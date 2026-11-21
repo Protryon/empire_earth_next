@@ -62,8 +62,6 @@ pub const EE_CP_PLACE_RANGE: i32 = 3;
 /// `GetTechTree()->Get(v0)`: its `mData->mKind` into `v0`, whether there is one returned
 pub const EE_CP_PLACE_TECH_KIND: i32 = 4;
 pub const EE_CP_PLACE_HAS_PATHFINDING: i32 = 5;
-pub const EE_CP_PLACE_CLAIM_RANGE_ON: i32 = 6;
-pub const EE_CP_PLACE_CLAIM_RANGE: i32 = 7;
 /// the player's units from `mFirstUnit` (pushed)
 pub const EE_CP_PLACE_OWN_UNITS: i32 = 8;
 /// player 0's units (pushed); 0 returned without a player 0
@@ -141,7 +139,6 @@ pub const EE_CP_CENTER_WORLD_COMPLEX: i32 = 115;
 // the player's (EEComputerPlayer.cpp; `a`, `b` units or centres)
 pub const EE_CP_PLAYER_BEHAVIOR_FLOAT: i32 = 300;
 pub const EE_CP_PLAYER_BASE_POP_LIMIT: i32 = 301;
-pub const EE_CP_PLAYER_CHEAT_ON: i32 = 303;
 pub const EE_CP_PLAYER_NUM_TEAMS: i32 = 304;
 pub const EE_CP_PLAYER_TEAM_WONDERS: i32 = 305;
 pub const EE_CP_PLAYER_TEAM_CONTAINS: i32 = 306;
@@ -322,10 +319,10 @@ impl PlaceHost for Game {
         self.q(EE_CP_PLACE_HAS_PATHFINDING, 0, &[]) != 0
     }
     fn claim_range_on(&mut self) -> bool {
-        self.q(EE_CP_PLACE_CLAIM_RANGE_ON, 0, &[]) != 0
+        crate::ai::personality::claim_range_on(self.ctx().player_id as u64)
     }
     fn claim_range(&mut self) -> i32 {
-        self.q(EE_CP_PLACE_CLAIM_RANGE, 0, &[]) as i32
+        crate::ai::personality::CLAIM_RANGE as i32
     }
     fn own_units(&mut self) -> Vec<u64> {
         self.handles(EE_CP_PLACE_OWN_UNITS, 0, &[], &[]).1
@@ -653,7 +650,7 @@ impl PlayerHost for Game {
         unsafe { super::player_game::ee_cp_pl_is_deathmatch(self.ctx().player) }
     }
     fn cheat_on(&mut self, cheat: i32) -> bool {
-        self.q(EE_CP_PLAYER_CHEAT_ON, 0, &[cheat as i64]) != 0
+        crate::ai::personality::cheat_on(self.ctx().player_id as u64, cheat as std::os::raw::c_long)
     }
     fn num_teams(&mut self) -> u32 {
         self.q(EE_CP_PLAYER_NUM_TEAMS, 0, &[]) as u32

@@ -37068,3 +37068,83 @@ the windowed game (the tours, the gates' ai-game).
 - Not run: the POSIX builds; `xbuild.py test` builds but its Windows plat_test does not link here (20 undefined
   `SDL_*` symbols: no SDL for the Windows host in this checkout, nothing of this round's); the legacy debugger harness
   (`gates.sh --legacy`), whose frame cap the C++ `RTSGraphics::Main` keeps.
+
+## AI Thread cluster, round 8: the personality's switches, the trace line, the units host's walls and routes, the computer players' schedule and the continent regions' file part in Rust (ee_sim::ai personality.rs, trace_line.rs, units_world.rs, next_schedule.rs; astar cm_file.rs, cm_world.rs; branch rust-aicluster8, 2026-11-20)
+
+The eighth round of the cluster lane (docs/progress/ai-thread-cluster.md), from 62e0aaec3 (round 7's tip), merged
+with origin/rust 0d42f70a3 (batch 11, which brought the Paths lane's round 1: CanGetTo, AreConnectedForUnit and
+FindPath in Rust) and then a84903ce6 (batch 12, which brought round 7; fad3fb937).
+
+| Commit | What | Logic lines | Net lines (src, include/ee, include/lle) |
+|---|---|---|---|
+| 758ab31e8 | personality.rs, trace_line.rs, units_world.rs: the switches, the trace line, the routes, wall path, enemies near, citizen upgrade, tribute | -263 | -466 |
+| cdae54518 | cm_file.rs, cm_world.rs: the regions block's file part, UpdateWallUnit, RegrowTrees | -94 | -114 |
+| 49847e9c4 | next_schedule.rs (EEArtificialIntelligence.cpp deleted), the epoch classes, the placement search, AREAS, forests, file reads | -137 | -173 |
+| eca0c3c6e | merge of origin/rust (batch 11); the resolution deleted the CNTQ capture class the Paths lane and this round left without a user | (merge) | (merge) |
+| 286624bb0 | the wall path over the Paths lane's Rust FindPath, the terrain flags over the Units lane's | -7 | -24 |
+| d36b2d831 | trace_line.rs's clippy allow | 0 | 0 |
+| fad3fb937 | merge of origin/rust (batch 12) | (merge) | (merge) |
+| | **round** (logic_lines.py: 85,572 -> 85,078 before the merge, 79,467 -> 79,460 after it) | **-501** | **-777** |
+
+Shims: about 31 one-statement host cases and 6 one-statement helpers added (the units host's route, tribute, event
+and effect reads, the next host's game log tick, trace hash flag and Update, the continent host's random range,
+regrow unit, regrowing flag, IsFoundation, region updates, the trace's init and difficulty); 76 host cases deleted
+(the personality and switch cases of four hosts, the units host's walls host, the next host's trace, scope,
+experiment, switch, forests, AREAS, files, the placement's claim range).
+
+- **What moved.** (1) EECPTrace.cpp's personality, every switch with its experiments, the cheats and the first
+  environment read (`personality.rs`, over the game's Rust rules `tech::civ::rules()`); the Rust bodies call it
+  directly, so the hosts' personality and switch cases went (the units host's T_* cases and EECPUnitsSwitch, the
+  next host's EXPERIMENT and SWITCH, the computer player's CHEAT_ON, NAVAL_FLEE_ON, MILITIA_ON, EXPERIMENT, the
+  placement's CLAIM_RANGE cases). (2) EECPTraceOut's line and `gCPTraceManager` (`trace_line.rs`; EECPTraceScope
+  gone); the start's trace line is Rust (`trace_start`). (3) The units host's wall path (now over the Paths lane's
+  Rust FindPath), wall routes (held by handle in the Rust state: EECPUnitsState gone, `mUnitsState` is the Rust
+  state), the enemies near through the fog, the citizen upgrade test, the tribute, the epoch's wall and gate
+  classes and the Lua verbs' placement search with their PLCE records, the crossed terrain (the Units lane's
+  `class_terrain_flags`) (`units_world.rs`, `units_host.rs`). (4) EEArtificialIntelligence whole
+  (`next_schedule.rs`; the .cpp deleted, the class two inline forwarders). (5) The next host's forests, forest
+  points, AREAS dump and file reads (`next_host.rs`). (6) The continent regions' file part and the kept block
+  (`cm_file.rs`), UpdateWallUnit with its CNTQ record and RegrowTrees (`cm_world.rs`). Deleted besides: three
+  unused epoch-class functions, EECPNextPlaceSearch, two EETileDistanceLess overloads without a caller, the unused
+  held-set accessors of EECPNextUnits.h.
+- **Lesson: a Python heredoc eats a backslash-newline in a Rust string literal.** A `"...\` + newline + indent`
+  continuation written through `python - <<'EOF'` with `"""` strings arrived as a newline and the indentation inside
+  the format string: the trace start line had ten spaces where the C++ had one, and the oracle's line 3 differed
+  on both seeds. Write such text with the Write tool or Python raw strings, and run the oracle on every trace change
+  (the oracle compares the trace).
+- **Lesson: TaskStop stops the shell, not a script it started.** A gate chain (`bash gates.sh`) stopped with
+  TaskStop kept running its loop; the restarted chain appended to the same log, and its EE-SIM link failed while the
+  old chain's capture ran the exe (`rc 1`, one link line). List the processes by command line and stop the whole
+  tree (and give each chain run its own log name) before restarting.
+- **Lesson: one source of the rules.** `EEGetRules()` is a C++ copy refreshed from its Rust owner
+  (`EERules::mRust`), which the civilization manager binds for Rust (`tech::civ::rules()`); the personality reads
+  the Rust owner, and the C++ EECPPersonality indexes the C++ copy at the position Rust chose, so both name the
+  same rule.
+- **What runs it.** Every game: the personality and switches (ai.tuning, the reflexes, the placement, the computer
+  player's events), the trace line (the oracle's trace), the schedule (every tick), the units host's walls and
+  routes (classic_lua's wall planner), the placement search (PLCE), UpdateWallUnit (CNTQ), RegrowTrees (felled
+  trees); a save and load: the regions block. Nothing of it draws.
+- **Behaviour.** None intended. Not kept: the units host's start check that the C++ and Rust records have the same
+  sizes (the Rust gate's header check covers a stale header).
+- **Call-site edits outside the lane**: Persistent's EEPWorldHelper.cpp (the schedule's two save cases call
+  `ee_ai_schedule_get/_set`), include/ee/EEAreaUtilities.h (two EETileDistanceLess declarations without a
+  definition left), link/exe/units.txt (EEArtificialIntelligence.cpp's line). Rust outside the lane's modules: none
+  changed; the Units lane's `class_terrain_flags`, `uu_ffi::unit_tiles`, the Paths lane's `pm_entry::find_path`,
+  `tech::civ::rules` are called; `modifier_obj`'s influence host declaration is `pub(crate)`.
+
+- **Gates**, all on the final tree fad3fb937 (the round merged with origin/rust a84903ce6; strip_markers --check clean,
+  no conflict marker): the `--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (5,305
+  tests; no flake this time); the oracle at seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS (oracle
+  212, late 214, space 210, calamity 222, transport 185, missile 22, effects 6, scenario 43, app 26, units 175, groups
+  2, placement 4 digests equal to their goldens); the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18
+  identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0,
+  `saveload expect: PASS` (calamity 3/4, next 2/4, the rest 4/4, as the expect file allows); scenario_check 27/27;
+  sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062 lines); `gates.sh` (EE_GATES_TREE the main
+  checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13713` units [4, 43, 43]
+  alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2753 joiner=2750`, GATES PASS. The
+  same chain passed on d36b2d831 (before the batch 12 merge) with the same numbers but the ai-game's (PT 12812, units
+  [4, 39, 40]). The POSIX builds were not run (this machine builds Windows only).
+
+- **Left**: the progress file's "Left": the units host's messages (EEMRecord by count), the improvement cost, the
+  names tables and seat helpers, SIM_HASH, BuildRegions' scenario inputs, the herd's formation placement.
+- **The batch 14 merge (rust-batch14 2aaba63df into this branch).** The Paths lane's round 2 moved the wall path, the wall routes and UpdateWallUnit to Rust in parallel (units_more.rs over astar request.rs; cm_unit.rs), with no C++ left for them: those were kept, and this round's copies (units_world.rs's route and wall-path bodies, their five ROUTE_* C++ cases and the pack helper, cm_world.rs's UpdateWallUnit with its IS_FOUNDATION and REGION_UPDATES cases, the C++ member) were deleted. Kept from this round: the personality, the trace line, the schedule, the enemies near, citizen upgrade, tribute, epoch classes and placement search, the regions block's file part, RegrowTrees, and EECPUnitsState's removal (`mUnitsState` is the Rust state; the routes' release at the state's end is `more::routes_clear`).

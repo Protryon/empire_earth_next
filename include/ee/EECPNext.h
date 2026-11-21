@@ -103,6 +103,7 @@ struct EECPNextState;                                                 // (Rust's
 EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer);        // created when missing
 void EECPNextDeleteState(EEComputerPlayer* inPlayer);
 std::string EECPNextAI(const EEComputerPlayer* inPlayer);           // the AI's id ("" none or no state)
+void EECPNextAppend(void* outBytes, const std::string& inText);   // to a Rust Vec<u8> (ee_ai_next_append)
 void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI);
 
 // a class or a tech by its data id (dbobjects / dbtechtree "id"; "dbobjects_<n>" when the data has no ids) -> -1: none
@@ -123,7 +124,5 @@ bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes);
 // build manager's FindSite for the class; dock: the shore by the nearest fish within kNextDockReach of the town that
 // no dock of the player's serves (outGap: the fish's x * 65536 + y)
 enum { kNextPlaceRing = 0, kNextPlaceTower, kNextPlaceAdjacent, kNextPlaceCentre, kNextPlaceClassic, kNextPlaceDock };
-bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
-    long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap);
 
 #endif

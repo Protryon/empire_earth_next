@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/fs.h"
 #include "rust/base/sparse.h"
 
 /// A tile of an area of its own (`0x36`).
@@ -100,6 +101,14 @@ constexpr static const uint64_t CATEGORY_PLANET_SPACESHIP = 34;
 
 /// the space terrain (`CanMoveOnTerrain(unit, 0xc)`)
 constexpr static const int32_t TERRAIN_SPACE = 12;
+
+/// `gPhysics->GetRandom(i0, i1)` (the longs')
+constexpr static const int32_t EE_ASTAR_CM_RANDOM_RANGE = 46;
+
+/// `gUnitClassTable[kUnitTypeResEagle]->CreateUnit(i0, i1, 0, false, NULL)->mComplexUnit`; its `mIsRegrowing = true`
+constexpr static const int32_t EE_ASTAR_CM_REGROW_UNIT = 47;
+
+constexpr static const int32_t EE_ASTAR_CM_SET_REGROWING = 48;
 
 /// The id lists, by `EeAStarContinentList`'s numbers.
 constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
@@ -1936,6 +1945,21 @@ void ee_astar_cntq_i(int32_t v);
 /// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
 void ee_astar_cntq_leave(bool on);
 
+/// `EESaveContinentRegions`: the manager's regions into the save.
+///
+/// # Safety
+/// `r` is the manager's live record; `ops` serves the save's file.
+int32_t ee_astar_cm_save_regions(const EeAStarCmRecord *r, EeFsFileOps ops);
+
+/// `EELoadContinentRegions`: the save's block, kept for the start of the game.
+///
+/// # Safety
+/// `ops` serves the save's file.
+int32_t ee_astar_cm_load_regions(EeFsFileOps ops);
+
+/// `EEContinentRegionsPending`: a loaded block waits.
+bool ee_astar_cm_regions_pending();
+
 /// `EEAIArea::UpdateHull()` for the C++.
 ///
 /// # Safety
@@ -2367,6 +2391,13 @@ uint16_t ee_astar_cm_adjacent_area_id(const EeAStarCmRecord *r,
                                       long y,
                                       int32_t area_kind);
 
+/// `EERestoreContinentRegions`: the regions of the save being loaded put back (its block taken: `cm_file.rs`); false
+/// without one.
+///
+/// # Safety
+/// `r` is the manager's live record.
+bool ee_astar_cm_restore_loaded(EeAStarCmRecord *r);
+
 /// `EERestoreContinentRegions` after its block was taken: false when the block could not be read (the regions are
 /// built again).
 ///
@@ -2398,6 +2429,17 @@ uint16_t ee_astar_cm_footprint_continent(uint64_t unit, long kind);
 /// (`EEGetLandContinentOf`, with the original's trace) when 0 (EEAIContinentManager.cpp)
 extern uint32_t ee_astar_cm_unit_host(int32_t what,
                                       uint64_t unit);
+
+/// `EEAIForest::RegrowTrees`: when the tile is in the forest, `count` trees (unit type 0x147) at random forest
+/// tiles within `radius` of it (11 tries each, else the tile), flagged as regrowing -> whether it is in the forest.
+///
+/// # Safety
+/// `forest` is a live forest.
+bool ee_astar_forest_regrow(uint64_t forest,
+                            long x,
+                            long y,
+                            long radius,
+                            long count);
 
 /// The adjacent continents and their count; valid until they next change.
 ///
