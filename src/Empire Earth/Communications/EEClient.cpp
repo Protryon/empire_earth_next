@@ -17,6 +17,7 @@
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
+#include "rust/game/gamecpp.h"
 
 // 0x4e6058: default-constructed (its init chain 0xb71b5 opens the unit; use inferred, provisional name)
 UWideString gU4E6058;
@@ -56,12 +57,7 @@ EEClient::~EEClient()
 // Boots this client from the canceled game when the host's slot (0) has become open, else refreshes the slot's line
 void EEClient::HandleSlotUpdate(unsigned char inSlot, EEGameOptionsPlayer& inPlayer)
 {
-    if (inPlayer.mSlot == 0 && inPlayer.mType == 3) {
-        EEAction* theAction = new EEABootClientFromCanceledGame;
-        gUserInterface->PostAction(theAction);
-        theAction->Dereference();
-    } else
-        gUserInterface->PostLobbyUpdatePlayer(inSlot, 8);
+    ee_gamecpp_client_slot_update(inSlot, static_cast<EeAppOptionsPlayerFields*>(&inPlayer));
 }
 
 // Returns whether connection timeouts are ignored (set once this client is booted)
@@ -83,55 +79,7 @@ void EEClient::SetConnectionState(long inState)
 // exact, so it is not used); on the short-name exit theFile is NULL there, so the original crashes; exit tails differ
 FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize)
 {
-    EEPSaveGameHeader theHeader;
-    UWideString theExtension;
-    FSFileSpec* theFile = NULL;
-    bool theOK;
-    if (inName.GetLength() >= 5) {
-        theExtension = inName.GetIndexedSubstring(inName.GetLength() - 4, inName.GetLength());
-        theFile = new FSFileSpec;
-        theFile->SetVolume(gStartupVolume);
-        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
-                     reinterpret_cast<const unsigned char*>((const char*)gSavedGameExtension)) == 0)
-            theFile->SetDirectory(gStartupDirectory + "data\\" + "Saved Games\\");
-        else if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
-                          reinterpret_cast<const unsigned char*>((const char*)gScenarioExtension)) == 0)
-            theFile->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        else if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
-                          reinterpret_cast<const unsigned char*>((const char*)gCampaignExtension)) == 0)
-            theFile->SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\");
-        else {
-            delete theFile;
-            return NULL;
-        }
-        theFile->SetFile((const char*)inName);
-
-        if (theFile->Open(kFileAccessRead) == kErrorOK) {
-            theFile->Close();
-            theHeader.SetMajorVersion(kSaveGameMajorVersion);
-            theHeader.SetMinorVersion(kSaveGameMinorVersion);
-            theHeader.LoadFromFile(*theFile);
-            unsigned long theSize = theHeader.mChecksum;
-
-            if (theSize == inSize)
-                theOK = false;
-            else {
-                theFile->Delete();
-                // the re-created file must be created AND opened for writing, as in the no-file branch below
-                theOK = theFile->Create() == kErrorOK && theFile->Open(kFileAccessWrite) == kErrorOK;
-            }
-        } else {
-            theFile->Delete();
-            theOK = theFile->Create() == kErrorOK && theFile->Open(kFileAccessWrite) == kErrorOK;
-        }
-
-        if (!theOK) {
-            delete theFile;
-            theFile = NULL;
-        }
-    }
-
-    return theFile;
+    return (FSFile*)ee_gamecpp_client_xfer_file(&inName, inSize);
 }
 
 // A player's removal: the host's starts the server migration, ours cancels the game, another's is announced
@@ -209,14 +157,7 @@ unsigned long EEClient::HandleStartGame(unsigned long inParameter)
 // Shows the server migration's countdown in the chat log (host not responding, %d seconds)
 void EEClient::HandleConnectionTimeoutWarning(unsigned long inRemaining)
 {
-    UWideString theText;
-    UWideString theSeconds;
-    UWideString theFormat;
-    gResource->GetString(IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT, theText);
-    gResource->GetString(IDS_SECONDS, theSeconds);
-    theFormat = theText + UWideString("  (%d ") + theSeconds + UWideString(")");
-    sprintf(theText, theFormat, inRemaining / 1000);
-    gUserInterface->AddChatLogEntry(theText, 1);
+    ee_gamecpp_client_timeout_warning(inRemaining);
 }
 
 void EEClient::HandleStopGame()
@@ -231,4 +172,54 @@ bool EEClient::IsClient()
 bool EEClient::IsServer()
 {
     return false;
+}
+
+// ------------------------------------------------------------------------- round 9, lane D: the client's bodies' C++
+
+int64_t EECore9OpD4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEAEManager.cpp
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define FILESPEC ((FSFileSpec*)a[0])
+#define WSTR(k) (*(UWideString*)a[k])
+
+// the C++ calls of the client's bodies in Rust (gamecpp server.rs; EEServer.cpp's EECore9OpD2 default): one statement
+// each
+int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::ClNewBootDefault: return P64(static_cast<EEAction*>(new EEABootClientFromCanceledGame));
+    case O::ClNameLength: return WSTR(0).GetLength();
+    case O::ClExtension: WSTR(1) = WSTR(0).GetIndexedSubstring(WSTR(0).GetLength() - 4, WSTR(0).GetLength());
+        break;
+    case O::ClExtIsSaved: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gSavedGameExtension)) == 0;
+    case O::ClExtIsScenario: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gScenarioExtension)) == 0;
+    case O::ClExtIsCampaign: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gCampaignExtension)) == 0;
+    case O::ClNewFileSpec: return P64(new FSFileSpec);
+    case O::ClFileSetVolume: FILESPEC->SetVolume(gStartupVolume);
+        break;
+    case O::ClFileSetDirectory: FILESPEC->SetDirectory(gStartupDirectory + "data\\" + (a[1] == 0 ? "Saved Games\\" : a[1] == 1 ? "Scenarios\\" : "Campaigns\\"));
+        break;
+    case O::ClFileSetFile: FILESPEC->SetFile((const char*)WSTR(1));
+        break;
+    case O::ClFileFree: delete FILESPEC;
+        break;
+    case O::ClFileOpenRead: return FILESPEC->Open(kFileAccessRead) == kErrorOK;
+    case O::ClFileClose: FILESPEC->Close();
+        break;
+    case O::ClFileDeleteOnDisk: FILESPEC->Delete();
+        break;
+    case O::ClFileCreateWrite: return FILESPEC->Create() == kErrorOK && FILESPEC->Open(kFileAccessWrite) == kErrorOK;
+    case O::ClHeaderLoad: ((EEPSaveGameHeader*)a[1])->LoadFromFile(*FILESPEC);
+        break;
+    case O::ClHeaderChecksum: return (long long)((EEPSaveGameHeader*)a[0])->mChecksum;
+    case O::ClIdsNotResponding: return IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT;
+    case O::ClIdsSeconds: return IDS_SECONDS;
+    case O::ClTimeoutFormat: WSTR(0) = WSTR(1) + UWideString("  (%d ") + WSTR(2) + UWideString(")");
+        break;
+    case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);
+        break;
+    default: return EECore9OpD4(inOp, p, a, f);
+    }
+    return 0;
 }

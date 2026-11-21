@@ -27,6 +27,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
+#include "rust/game/gamecpp.h"
 // Creates an empty tech node, allowed and obsolete only after the space epoch
 EETechTreeNode::EETechTreeNode()
     : mTree(NULL), mButton(NULL)
@@ -92,40 +93,7 @@ long EETechTreeNode::GetCost(long inResource, long inUnitClass, float inScale)
 
 long EETechTreeNode::GetCostUncaptured(long inResource, long inUnitClass, float inScale)
 {
-    // the arithmetic is the Rust tech logic's (ee_tech tree.rs node_cost); this reads the factors where the C++ read
-    // them (a unit-making node's only for one)
-    EEPlayer* thePlayer = this->mTree->GetPlayer();
-    std::map<long, long*>::iterator theCosts = this->mData->mClassCosts.find(inUnitClass);
-    EeTechCostInput theInput{};
-    if (theCosts != this->mData->mClassCosts.end())
-        theInput.cost = (int32_t)theCosts->second[inResource];
-    else
-        theInput.cost = (int32_t)this->mData->mCosts[inResource];
-    theInput.scale = inScale;
-    theInput.makes_unit = this->mData->mMakesUnit;
-    if (this->mData->mMakesUnit) {
-        EEUnitStats* theStats = thePlayer->mUnitClassUpgrades[this->mData->mUnitClass];
-        theInput.wonder_epoch_scaled = this->mData->mKind == 4 && this->mEpoch != 0;
-        if (theInput.wonder_epoch_scaled) {
-            theInput.epochs_since = (int32_t)(this->mTree->mCurrentEpoch - this->mEpoch);
-            theInput.epoch_cost_factor = gWorldTable.GetFloatValue(kWorldUnitEpochCostFactor);
-        }
-        EEGameVariant* theVariant = EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant);
-        EEUnitSet* theSet = gUnitSetManager.GetSet(theVariant->mCostSet);
-        theInput.in_cost_set = theSet != NULL && theSet->Contains(this->mData->mUnitClass);
-        if (theInput.in_cost_set)
-            theInput.cost_set_factor = theVariant->GetCostSetFactor();
-        theInput.has_upgrade = theStats != NULL;
-        if (theStats != NULL)
-            theInput.cost_scale = theStats->GetCostScale();
-        theInput.jit = thePlayer->mJITManufacturing && gUnitClassTable[inUnitClass] != NULL &&
-                       gUnitClassTable[inUnitClass]->HasRallyPoint();
-        if (theInput.jit)
-            theInput.jit_factor = gWorld.mGameOptions.mResources == 4
-                                      ? gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactorDeathmatch)
-                                      : gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactor);
-    }
-    return ee_tech_node_cost(&theInput);
+    return ee_gamecpp_tech_node_cost(this, inResource, inUnitClass, inScale);
 }
 
 // Builds the "Food: n Gold: n ..." cost text of the node for a unit class (wood shown as carbon when used; ee_sim
@@ -297,4 +265,68 @@ UIHotKey* EETechTreeNode::GetHotKey()
     if (this->mData->mHotKey > 0 && this->mData->mHotKey < (long)UIHotKey::GetHotKeyCount())
         return UIHotKey::GetHotKey(this->mData->mHotKey);
     return NULL;
+}
+
+// ------------------------------------------------------------------------- round 9, lane D: the nodes' and epochs' C++
+
+int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define TNODE ((EETechTreeNode*)p)
+#define TEPOCH ((EETechTreeEpoch*)p)
+#define TVARIANT EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)
+
+// the C++ calls and members of the nodes' and epochs' bodies in Rust (gamecpp tech.rs; p the node or the epoch, the
+// player for the Pl ops): one statement each
+int64_t EECore9OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TkNodeFields: return P64(static_cast<EeTechNodeFields*>(TNODE));
+    case O::TkNodeData: return P64(static_cast<EeTechNodeDataFields*>(TNODE->mData));
+    case O::TkNodeTree: return P64(TNODE->mTree);
+    case O::TkClassCosts: return P64(TNODE->mData->mClassCosts.count((long)a[0]) != 0 ? TNODE->mData->mClassCosts[(long)a[0]] : NULL);
+    case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
+    case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);
+    case O::TkPlayerJit: return ((EEPlayer*)p)->mJITManufacturing;
+    case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
+    case O::TkNodeCount: return (int64_t)TEPOCH->mNodes.size();
+    case O::TkNodeAt: return P64(std::next(TEPOCH->mNodes.begin(), a[0])->second);
+    case O::TkNodeKeyAt: return std::next(TEPOCH->mNodes.begin(), a[0])->first;
+    case O::TkNodeUnload: TNODE->Unload();
+        break;
+    case O::TkNodeDelete: delete TNODE;
+        break;
+    case O::TkNodesClear: TEPOCH->mNodes.clear();
+        break;
+    case O::TkEpochDeleteData: delete std::exchange(TEPOCH->mData, nullptr);
+        break;
+    case O::TkPushId: ((std::vector<long>*)a[0])->push_back((long)a[1]);
+        break;
+    case O::TkLoadedClassesPush: TEPOCH->mLoadedUnitClasses.push_back((long)a[0]);
+        break;
+    case O::TkLoadedClassesCount: return (int64_t)TEPOCH->mLoadedUnitClasses.size();
+    case O::TkLoadedClassAt: return TEPOCH->mLoadedUnitClasses[a[0]];
+    case O::TkLoadedClassesClear: TEPOCH->mLoadedUnitClasses.clear();
+        break;
+    case O::TkNodeLoadMedia: TEPOCH->EETechTreeNode::LoadMedia((EEPlayer*)a[0]);
+        break;
+    case O::TkNodeUnloadMedia: TEPOCH->EETechTreeNode::UnloadMedia((EEPlayer*)a[0]);
+        break;
+    default: return EECore9OpE(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TkEpochCostFactor: return gWorldTable.GetFloatValue(kWorldUnitEpochCostFactor);
+    case O::TkCostSetFactor: return TVARIANT->GetCostSetFactor();
+    case O::TkStatsCostScale: return ((EEUnitStats*)p)->GetCostScale();
+    case O::TkJitFactor: return gWorld.mGameOptions.mResources == 4 ? gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactorDeathmatch) : gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactor);
+    default: return EECore9OpEF(inOp, p, a, f);
+    }
 }

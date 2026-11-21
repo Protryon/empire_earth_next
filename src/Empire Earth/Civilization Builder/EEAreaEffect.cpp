@@ -36,6 +36,7 @@
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "rust/sim/units.h"
+#include "rust/game/gamecpp.h"
 
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
@@ -84,108 +85,25 @@ struct EEAEMFBBuildingInRange {
     float mRangeSquared;
 };
 
-// The world of an area effect's Rust slots (ee_tech area_effect.rs EeAreaEffectOp): the effect (its owner unit and
-// player; NULL for a template's test) and the unit the slot was given (NULL when none)
+// The world of an area effect's Rust slots (ee_tech area_effect.rs EeAreaEffectOp; answered by gamecpp civ.rs's
+// ee_gamecpp_ae_host over the cases at the end of this file): the effect (its owner unit and player; NULL for a
+// template's test) and the unit the slot was given (NULL when none)
 struct EEAEHost {
     EEAEHost(EEAreaEffect* inEffect, EEComplexUnit* inTarget) : mEffect(inEffect), mTarget(inTarget)
     {
         this->mFfi.ctx = this;
-        this->mFfi.call = &EEAEHost::Call;
+        this->mFfi.call = (void (*)(void*, const EeAreaEffectCall*, EeAreaEffectReply*))&ee_gamecpp_ae_host;
     }
-    static void Call(void* inContext, const EeAreaEffectCall* c, EeAreaEffectReply* r);
 
     EEAreaEffect* mEffect;
     EEComplexUnit* mTarget;
     EeAreaEffectHostFfi mFfi;
 };
 
-void EEAEHost::Call(void* inContext, const EeAreaEffectCall* c, EeAreaEffectReply* r)
+// a temporary's address for the full expression (the building counts' vector)
+template <class T> static T* EETemporary(T&& inObject)
 {
-    EEAEHost* h = static_cast<EEAEHost*>(inContext);
-    EEComplexUnit* t = h->mTarget;
-    EEComplexUnit* theOwner = h->mEffect != NULL ? h->mEffect->mUnit : NULL;
-    switch (c->op) {
-    case EeAreaEffectOp::TargetInSet:
-        r->ok = gUnitSetManager.Contains(t->GetUnitClass()->GetUnitType(), c->a);
-        break;
-    case EeAreaEffectOp::TargetTechKind4: {
-        EETechTreeNode* theNode = gWorld.mPlayers[c->a]->GetTechTree()->Get(t->GetUnitClass()->mTechnology);
-        r->ok = theNode != NULL && theNode->mData->mKind == 4;
-        break;
-    }
-    case EeAreaEffectOp::Relation: {
-        EEPlayer* thePlayer = gWorld.mPlayers[c->a];
-        EEPlayer* theOther = gWorld.mPlayers[c->b];
-        r->value = (theOther == thePlayer ? 1 : 0) | (thePlayer->IsAlliedWith(theOther) ? 2 : 0) |
-                   (thePlayer->mEnemies[theOther->mPlayerID] != 0 ? 4 : 0);
-        break;
-    }
-    case EeAreaEffectOp::TargetBuilt: r->ok = t->mIsBuilt; break;
-    case EeAreaEffectOp::TargetRepairable: r->ok = t->IsRepairable(); break;
-    case EeAreaEffectOp::TargetPosition: {
-        GE3DPoint thePosition = t->mPhysicalModel.GetLocation().GetPosition();
-        r->x = thePosition.GetX();
-        r->y = thePosition.GetY();
-        break;
-    }
-    case EeAreaEffectOp::Continent: {
-        EETileCoordinate theTile;
-        theTile.mX = c->a;
-        theTile.mY = c->b;
-        r->value = gContinentManager.GetContinent(theTile, kAIPathNonSpace);
-        break;
-    }
-    case EeAreaEffectOp::TargetCarrierPlanet: {
-        EEComplexUnit* theCarrier = t->mComplexUnit;
-        unsigned long theType = theCarrier != NULL ? t->mUnitClass->GetUnitType() : 0;
-        r->ok = theCarrier != NULL && (theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret);
-        r->value = r->ok ? (int)theCarrier->mPlanetID : 0;
-        break;
-    }
-    case EeAreaEffectOp::TargetHitPoints: r->value = t->mHitPoints; break;
-    case EeAreaEffectOp::TargetMaxHitPoints: r->value = t->mStats->mMaxHitPoints; break;
-    case EeAreaEffectOp::InCinematic: r->ok = gInCinematic; break;
-    case EeAreaEffectOp::TargetSetHitPoints: t->SetHitPoints(c->a); break;
-    case EeAreaEffectOp::TargetCloak: t->SetCloakableChain(true); break;
-    case EeAreaEffectOp::TargetUncloak: {
-        // the cloaking's RemovedFrom 0x27ab53: a Camouflage civ power keeps an idle or hidden unit cloaked; a visible
-        // cloaked enemy leaves the mini map
-        if (gCivPowersManager.HasPower(t->GetPlayer(), kCivPowerCamouflage) &&
-            gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL &&
-            gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(t->mUnitClass->mUnitType)) {
-            if (t->GetCommandType() == kActionIdle && (t->mCamouflageTimer & 0x7fffffff) == 0 || t->mU32C > 0)
-                break;
-        }
-        bool theVisible = ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)t, (uint64_t)(uintptr_t)(gWorld.mPlayers[gWorld.mCurrentPlayer]));
-        t->SetCloakableChain(t->mUnitClass->mIsCloakable);
-        if (theVisible)
-            gMiniMap->MoveUnit(t, -10000, -10000, t->mTileX, t->mTileY);
-        break;
-    }
-    case EeAreaEffectOp::OwnerScale:
-        r->ok = theOwner != NULL;
-        r->x = theOwner != NULL ? theOwner->mStats->mAreaEffectScale : 1.0f;
-        break;
-    case EeAreaEffectOp::OwnerHitPoints: r->value = theOwner->mHitPoints; break;
-    case EeAreaEffectOp::OwnerLeadership: r->x = theOwner->mStats->mLeadership; break;
-    case EeAreaEffectOp::OwnerGarrisonBonus: r->x = theOwner->mUnitClass->mGarrisonBonus; break;
-    case EeAreaEffectOp::CountBuildings: {
-        // the morale from buildings' collection 0x27b95b (EEGetUnitsInRectangle 0x27bae8 / 0x27bcfc)
-        std::vector<EEComplexUnit*> theUnits;
-        U2DRectangle<long> theRect;
-        theRect.mTop = c->b;
-        theRect.mLeft = c->a;
-        theRect.mRight = c->c;
-        theRect.mBottom = c->d;
-        EEPlayer* thePlayer = gWorld.mPlayers[h->mEffect->mPlayer];
-        if (c->e == 1)
-            r->value = EEGetUnitsInRectangle(theRect, theUnits, EEAEMFBBuildingInRectangle(theRect, thePlayer), true);
-        else
-            r->value = EEGetUnitsInRectangle(theRect, theUnits,
-                                             EEAEMFBBuildingInRange(U2DPoint<long>(c->f, c->g), thePlayer, c->x), true);
-        break;
-    }
-    }
+    return &inObject;
 }
 
 }   // namespace
@@ -398,4 +316,74 @@ bool EEAreaEffectTemplate::Init(const EEAreaEffectData& inData)
     }
     this->mMedia = inData.mMedia > 0 ? EEMedia::Get(inData.mMedia) : NULL;
     return true;
+}
+
+// ------------------------------------------------------------------------- round 9, lane D: the area effects' host
+
+int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTree.cpp
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
+double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(kUnitTypeSpaceDock == 0x2d8 && kUnitTypeSpaceTurret == 0x302, "gamecpp civ.rs AH_SPACE_DOCK, AH_SPACE_TURRET");
+static_assert(sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(U2DRectangle<long>) == 4 * sizeof(long),
+              "gamecpp civ.rs: a tile's and a rectangle's longs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define AH ((EEAEHost*)p)
+#define AT (AH->mTarget)
+#define AOWNER ((EEComplexUnit*)a[0])
+#define ARECT (*(U2DRectangle<long>*)a[0])
+
+// the C++ calls and members of the area effects' host in Rust (gamecpp civ.rs ee_gamecpp_ae_host; p the EEAEHost):
+// one statement each
+int64_t EECore9OpD5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::AhTargetInSet: return gUnitSetManager.Contains(AT->GetUnitClass()->GetUnitType(), (long)a[0]);
+    case O::AhTargetTechNode: return P64(gWorld.mPlayers[a[0]]->GetTechTree()->Get(AT->GetUnitClass()->mTechnology));
+    case O::AhNodeKind: return ((EETechTreeNode*)a[0])->mData->mKind;
+    case O::AhPlayer: return P64(gWorld.mPlayers[a[0]]);
+    case O::AhAllied: return ((EEPlayer*)a[0])->IsAlliedWith((EEPlayer*)a[1]);
+    case O::AhAtWar: return ((EEPlayer*)a[0])->mEnemies[((EEPlayer*)a[1])->mPlayerID] != 0;
+    case O::AhTargetBuilt: return AT->mIsBuilt;
+    case O::AhTargetRepairable: return AT->IsRepairable();
+    case O::AhTargetPosition: *(GE3DPoint*)a[0] = AT->mPhysicalModel.GetLocation().GetPosition();
+        break;
+    case O::AhContinent: return gContinentManager.GetContinent(*(EETileCoordinate*)a[0], kAIPathNonSpace);
+    case O::AhTargetCarrier: return P64(AT->mComplexUnit);
+    case O::AhTargetType: return (int64_t)AT->mUnitClass->GetUnitType();
+    case O::AhPlanet: return (int)((EEComplexUnit*)a[0])->mPlanetID;
+    case O::AhTargetHitPoints: return AT->mHitPoints;
+    case O::AhTargetMaxHitPoints: return AT->mStats->mMaxHitPoints;
+    case O::AhInCinematic: return gInCinematic;
+    case O::AhTargetSetHitPoints: AT->SetHitPoints((long)a[0]);
+        break;
+    case O::AhTargetCloak: AT->SetCloakableChain(true);
+        break;
+    case O::AhCamouflaged: return gCivPowersManager.HasPower(AT->GetPlayer(), kCivPowerCamouflage) && gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL && gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(AT->mUnitClass->mUnitType);
+    case O::AhStaysHidden: return AT->GetCommandType() == kActionIdle && (AT->mCamouflageTimer & 0x7fffffff) == 0 || AT->mU32C > 0;
+    case O::AhCloakedEnemy: return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)AT, (uint64_t)(uintptr_t)(gWorld.mPlayers[gWorld.mCurrentPlayer]));
+    case O::AhTargetCloakOwn: AT->SetCloakableChain(AT->mUnitClass->mIsCloakable);
+        break;
+    case O::AhMiniMapHide: gMiniMap->MoveUnit(AT, -10000, -10000, AT->mTileX, AT->mTileY);
+        break;
+    case O::AhOwner: return P64(AH->mEffect != NULL ? AH->mEffect->mUnit : NULL);
+    case O::AhOwnerHitPoints: return AOWNER->mHitPoints;
+    case O::AhCountInRect: return EEGetUnitsInRectangle(ARECT, *EETemporary(std::vector<EEComplexUnit*>()), EEAEMFBBuildingInRectangle(ARECT, gWorld.mPlayers[AH->mEffect->mPlayer]), true);
+    case O::AhCountInRange: return EEGetUnitsInRectangle(ARECT, *EETemporary(std::vector<EEComplexUnit*>()), EEAEMFBBuildingInRange(U2DPoint<long>((long)a[1], (long)a[2]), gWorld.mPlayers[AH->mEffect->mPlayer], f[0]), true);
+    default: return EECore9OpD6(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::AhOwnerScale: return AOWNER->mStats->mAreaEffectScale;
+    case O::AhOwnerLeadership: return AOWNER->mStats->mLeadership;
+    case O::AhOwnerGarrisonBonus: return AOWNER->mUnitClass->mGarrisonBonus;
+    default: return EECore9OpD7F(inOp, p, a, f);
+    }
 }

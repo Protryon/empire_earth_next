@@ -29,6 +29,7 @@
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEAECapture.h"
+#include "rust/game/gamecpp.h"
 #include <memory>
 #include <stdint.h>
 
@@ -112,49 +113,13 @@ void EEAEManager::ApplyGeneratedAreaEffects()
 void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned long inPlayerID,
                            EEUnitAreaEffectList* inList, EEComplexUnit* inUnit)
 {
-    std::vector<EEComplexUnit*> theUnits;
-    GE2DPoint theCenter = inLocation;
-    long theBottom = UMFloor(theCenter.mY + inRadius);
-    long theRight = UMFloor(theCenter.mX + inRadius);
-    long theTop = UMFloor(theCenter.mY - inRadius);
-    long theLeft = UMFloor(theCenter.mX - inRadius);
-    U2DRectangle<long> theRect;
-    theRect.mTop = theTop;
-    theRect.mLeft = theLeft;
-    theRect.mBottom = theBottom;
-    theRect.mRight = theRight;
-    EEGetUnitsInRectangle(theRect, theUnits, EEAEAliveUnit(), true);
-    for (std::vector<EEAreaEffect*>::iterator theIterator = inList->mItems.begin(); theIterator != inList->mItems.end();
-         ++theIterator) {
-        EEAreaEffect* theEffect = *theIterator;
-        if (theEffect->mUnit != NULL && theEffect->mUnit->IsProtected())
-            continue;
-        if (theEffect->mTemplate->mRadius <= 0.0f) {
-            SetAffectedByAreaEffectFunctor theFunctor(theEffect, inPlayerID, inLocation);
-            EEForEachPlayersUnit(&theFunctor);
-        } else {
-            unsigned long theCount = theUnits.size();
-            for (unsigned long i = 0; i < theCount; i++) {
-                EEComplexUnit* theUnit = theUnits[i]->mComplexUnit;
-                if (!theEffect->Covers(inPlayerID, theUnit, inLocation) ||
-                    (theUnit == inUnit && theEffect->mTemplate->mKind == kAreaEffectHealing))
-                    continue;
-                theUnit->mAffectingAreaEffects.Add(theEffect);
-                theEffect->AppliedTo(theUnit);
-                if (theEffect->mTemplate->mKind == kAreaEffectHealing)
-                    theEffect->ShowOn(theUnit);
-            }
-        }
-    }
+    ee_gamecpp_ae_collect_effects(this, inRadius, &inLocation, inPlayerID, inList, inUnit);
 }
 
 // Adds the effect to a covered unit's affecting effects and applies it
 void SetAffectedByAreaEffectFunctor::Apply(EEComplexUnit* inUnit)
 {
-    if (this->mEffect->Covers(this->mPlayer, inUnit, this->mLocation)) {
-        inUnit->mAffectingAreaEffects.Add(this->mEffect);
-        this->mEffect->AppliedTo(inUnit);
-    }
+    ee_gamecpp_ae_set_affected(this->mEffect, this->mPlayer, inUnit, &this->mLocation);
 }
 
 // Clears the affecting area effects of every unit
@@ -167,56 +132,21 @@ void EEAEManager::ClearAreaEffects()
 // Empties the list of active area effects
 void EEAEManager::ClearEffects()
 {
-    UReferenceContainer<EEAreaEffect*>& theEffects = this->mEffects;
-    theEffects.Clear();
-    theEffects.mItems.clear();
+    ee_gamecpp_ae_clear_effects(this);
 }
 
 // Reads the area-effect templates from the area-effect file (an empty slot for records with id 0); returns 3
 // when a template fails to initialize
 long EEAEManager::Load(FSFile* inFile)
 {
-    EEAreaEffectTemplate* theTemplate = NULL;
-    unsigned long theCount = 0;
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEAreaEffectData theData;
-            unsigned long theRead;
-            memset(&theData, 0, sizeof(theData));
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            if (theData.mID > 0) {
-                theTemplate = new EEAreaEffectTemplate;
-                if (!theTemplate->Init(theData)) {
-                    ESDebugOut("Error reading area effect template %s...fix me in EEAEManager.cpp!\n", theData.mName);
-                    theResult = 3;
-                }
-            } else {
-                theTemplate = NULL;
-            }
-            this->mTemplates.push_back(theTemplate);
-        }
-    }
-    inFile->Close();
-    return theResult;
+    return ee_gamecpp_ae_load(this, inFile);
 }
 
 // Creates the area effect of the template at an index (its kind's: healing, morale, calamity and conversion immunity,
 // morale from buildings, from military heroes, economy from units, cloaking) for a unit; NULL for an unknown kind
 EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit* inUnit)
 {
-    EEAreaEffect* theEffect = NULL;
-    if (inIndex < this->mTemplates.size()) {
-        EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-        if (ee_area_effect_known_kind(theTemplate->mKind))
-            theEffect = new EEAreaEffect(theTemplate);
-        if (theEffect != NULL) {
-            theEffect->SetUnit(inUnit);
-            theEffect->mPlayer = inUnit->mPlayer->mPlayerID;
-        }
-    }
-    return theEffect;
+    return (EEAreaEffect*)ee_gamecpp_ae_create(this, inIndex, inUnit);
 }
 
 // Finds an active effect of a kind covering a point that affects the player (immunities only, by the
@@ -224,33 +154,7 @@ EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit
 EEAreaEffect* EEAEManager::FindEffect(long inKind, float inX, float inY, unsigned long inPlayer, bool inMode,
                                     EEUnitAreaEffectList* inExclude)
 {
-    GE2DPoint thePoint(inX, inY);
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mEffects.mItems.begin(); ; ++theIterator) {
-        if (theIterator == this->mEffects.mItems.end())
-            break;
-        EEAreaEffect* theEffect = *theIterator;
-        if (theEffect->mUnit != NULL && theEffect->mUnit->IsProtected())
-            continue;
-        if (inExclude != NULL) {
-            std::vector<EEAreaEffect*>::iterator theOther = inExclude->mItems.begin();
-            for (; theOther != inExclude->mItems.end(); ++theOther) {
-                if (*theOther == theEffect)
-                    break;
-            }
-            if (theOther != inExclude->mItems.end())
-                continue;
-        }
-        if (inMode && !theEffect->IsImmunity())
-            continue;
-        if (theEffect->mTemplate->mKind != inKind)
-            continue;
-        if (!(!inMode ? theEffect->mTemplate->AffectsPlayer(theEffect->mPlayer, inPlayer) :
-                        theEffect->mTemplate->AffectsPlayerReversed(theEffect->mPlayer, inPlayer)))
-            continue;
-        if (theEffect->IsInRange(thePoint))
-            return theEffect;
-    }
-    return NULL;
+    return (EEAreaEffect*)ee_gamecpp_ae_find(this, inKind, inX, inY, inPlayer, inMode, inExclude);
 }
 
 // Tells whether a point lies in the effect's scaled area around its location
@@ -293,11 +197,7 @@ EEAreaEffect* EEAEManager::FindEffectAtTile(long inKind, long inX, long inY, uns
 // Loads the media of the template at an index, if any
 void EEAEManager::LoadTemplateMedia(unsigned long inIndex)
 {
-    if (inIndex >= this->mTemplates.size())
-        return;
-    EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-    if (theTemplate != NULL)
-        theTemplate->Load(false);
+    ee_gamecpp_ae_template_media(this, inIndex, true);
 }
 
 // Rebuilds the list of active area effects from every built unit's own effects
@@ -309,10 +209,9 @@ void EEAEManager::RebuildAreaEffectRegionList()
 
 // Starts a rebuild of the active effect list by emptying it
 RebuildAreaEffectRegionListFunctor::RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects)
+    : mEffects(inEffects)
 {
-    this->mEffects = inEffects;
-    inEffects->Clear();
-    inEffects->mItems.clear();
+    ee_gamecpp_ae_container_empty(inEffects);
 }
 
 // Keeps only each unit's strongest affecting effect of each kind
@@ -325,25 +224,13 @@ void EEAEManager::RemoveRedundantAreaEffects()
 // Releases every template and empties the active effect list
 void EEAEManager::Clear()
 {
-    for (std::vector<EEAreaEffectTemplate*>::iterator theIterator = this->mTemplates.begin();
-         theIterator != this->mTemplates.end(); ++theIterator) {
-        if (*theIterator != NULL)
-            (*theIterator)->Dereference();
-    }
-    this->mTemplates.clear();
-    UReferenceContainer<EEAreaEffect*>& theEffects = this->mEffects;
-    theEffects.Clear();
-    theEffects.mItems.clear();
+    ee_gamecpp_ae_clear(this);
 }
 
 // Unloads the media of the template at an index, if any
 void EEAEManager::UnloadTemplateMedia(unsigned long inIndex)
 {
-    if (inIndex >= this->mTemplates.size())
-        return;
-    EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-    if (theTemplate != NULL)
-        theTemplate->Unload();
+    ee_gamecpp_ae_template_media(this, inIndex, false);
 }
 
 // Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
@@ -375,11 +262,7 @@ void EEAEManager::UpdateAffectedByAreaEffects(float inElapsed)
 // Adds a built unit's own area effects to the active effect list
 void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
 {
-    if (!inUnit->mIsBuilt)
-        return;
-    for (std::vector<EEAreaEffect*>::iterator theIterator = inUnit->mAreaEffects.mItems.begin();
-         theIterator != inUnit->mAreaEffects.mItems.end(); ++theIterator)
-        this->mEffects->Add(*theIterator);
+    ee_gamecpp_ae_rebuild_add(this->mEffects, inUnit);
 }
 
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
@@ -407,119 +290,131 @@ long EEAEIoCall(void* inContext, uint32_t inOp, void* ioValue)
     return 1;
 }
 
-EeAreaEffectSavedRef EEAERefOf(EEAreaEffect* inEffect)
-{
-    EeAreaEffectSavedRef theRef = {(unsigned long)-1, -1};
-    EEComplexUnit* theOwner = inEffect->mUnit;
-    if (theOwner == NULL)
-        return theRef;
-    theRef.mOwner = theOwner->GetUnitID();
-    for (size_t i = 0; i < theOwner->mAreaEffects.mItems.size(); i++)
-        if (theOwner->mAreaEffects.mItems[i] == inEffect)
-            theRef.mIndex = (long)i;
-    return theRef;
-}
-
-EEAreaEffect* EEAEEffectOf(const EeAreaEffectSavedRef& inRef)
-{
-    if (inRef.mIndex < 0)
-        return NULL;
-    EEUnit* theUnit = ::gWorld.GetUnit(inRef.mOwner);
-    EEComplexUnit* theOwner = theUnit != NULL ? theUnit->mComplexUnit : NULL;
-    if (theOwner == NULL || (size_t)inRef.mIndex >= theOwner->mAreaEffects.mItems.size())
-        return NULL;
-    return theOwner->mAreaEffects.mItems[inRef.mIndex];
-}
-
-EEComplexUnit* EEAEComplexUnit(unsigned long inID)
-{
-    EEUnit* theUnit = ::gWorld.GetUnit(inID);
-    return theUnit != NULL ? theUnit->mComplexUnit : NULL;
-}
 }
 
 void EEAESaveRunningState(FSFile& outFile)
 {
-    EeAreaEffectRunning* theState = ee_area_effect_running_new();
-    for (unsigned long p = 1; p < ::gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = ::gWorld.mPlayers[p];
-        if (thePlayer == NULL)
-            continue;
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* u = theUnit->mComplexUnit;
-            if (u == NULL || (u->mAreaEffects.mItems.size() == 0 && u->mAffectingAreaEffects.mItems.size() == 0))
-                continue;
-            ee_area_effect_running_add_unit(theState, (unsigned long)u->GetUnitID());
-            for (size_t i = 0; i < u->mAreaEffects.mItems.size(); i++) {
-                EEAreaEffect* e = u->mAreaEffects.mItems[i];
-                bool theIsMorale = e->mKind == kAreaEffectMoraleFromBuildings;
-                EeAreaEffectSavedOwn theOwn = {e->mLocation.mX, e->mLocation.mY, theIsMorale, theIsMorale && e->mDirty,
-                                               theIsMorale ? e->mCount : 0};
-                ee_area_effect_running_add_own(theState, theOwn);
-            }
-            for (size_t i = 0; i < u->mAffectingAreaEffects.mItems.size(); i++)
-                ee_area_effect_running_add_ref(theState, EEAERefOf(u->mAffectingAreaEffects.mItems[i]), false);
-        }
-    }
-    for (size_t i = 0; i < gAEManager.mEffects.mItems.size(); i++)
-        ee_area_effect_running_add_ref(theState, EEAERefOf(gAEManager.mEffects.mItems[i]), true);
-    EeCalamityIoFfi theIo = {&outFile, &EEAEIoCall};
-    ee_area_effect_running_save(theState, theIo);
-    ee_area_effect_running_free(theState);
+    ee_gamecpp_ae_save_running(&outFile);
 }
 
 long EEAELoadRunningState(FSFile& inFile)
 {
-    EeCalamityIoFfi theIo = {&inFile, &EEAEIoCall};
-    long theResult = 0;
-    std::shared_ptr<EeAreaEffectRunning> theState(ee_area_effect_running_load(theIo, &theResult),
-                                                  ee_area_effect_running_free);
-    if (theResult == 0)
-        EEAfterLoad([theState]() {
-            const EeAreaEffectRunning* s = theState.get();
-            unsigned long theLost = 0;
-            size_t theUnits = ee_area_effect_running_count(s, false), theOwn = 0, theAffecting = 0;
-            for (size_t u = 0; u < theUnits; u++) {
-                EEComplexUnit* theUnit = EEAEComplexUnit(ee_area_effect_running_unit(s, u, &theOwn, &theAffecting));
-                if (theUnit == NULL || theUnit->mAreaEffects.mItems.size() != theOwn) {
-                    theLost++;
-                    continue;
-                }
-                for (size_t i = 0; i < theOwn; i++) {
-                    EeAreaEffectSavedOwn theSaved = ee_area_effect_running_own(s, u, i);
-                    EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
-                    theEffect->mLocation.mX = theSaved.mX;
-                    theEffect->mLocation.mY = theSaved.mY;
-                    if (theEffect->mKind == kAreaEffectMoraleFromBuildings && theSaved.mIsMorale) {
-                        theEffect->mDirty = theSaved.mDirty;
-                        theEffect->mCount = theSaved.mCount;
-                    }
-                }
-            }
-            // the effects acting on each unit (every list is empty after a load), in their saved order
-            for (size_t u = 0; u < theUnits; u++) {
-                EEComplexUnit* theUnit = EEAEComplexUnit(ee_area_effect_running_unit(s, u, &theOwn, &theAffecting));
-                if (theUnit == NULL)
-                    continue;
-                theUnit->mAffectingAreaEffects.Clear();
-                for (size_t i = 0; i < theAffecting; i++) {
-                    EEAreaEffect* theEffect = EEAEEffectOf(ee_area_effect_running_ref(s, u, i));
-                    if (theEffect != NULL)
-                        theUnit->mAffectingAreaEffects.Add(theEffect);
-                    else
-                        theLost++;
-                }
-            }
-            gAEManager.ClearEffects();
-            for (size_t i = 0; i < ee_area_effect_running_count(s, true); i++) {
-                EEAreaEffect* theEffect = EEAEEffectOf(ee_area_effect_running_ref(s, SIZE_MAX, i));
-                if (theEffect != NULL)
-                    gAEManager.mEffects.Add(theEffect);
-                else
-                    theLost++;
-            }
-            if (theLost != 0)
-                ESDebugOut("EEAEManager: %lu saved area effects are not the loaded ones\n", theLost);
-        });
-    return theResult;
+    return ee_gamecpp_ae_load_running(&inFile);
+}
+
+// ------------------------------------------------------------------------- round 9, lane D: the area effects' C++
+
+int64_t EECore9OpD5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEAreaEffect.cpp
+
+static_assert(kAreaEffectHealing == EE_AREA_EFFECT_HEALING && kAreaEffectMoraleFromBuildings == EE_AREA_EFFECT_MORALE_FROM_BUILDINGS,
+              "gamecpp civ.rs");
+static_assert(sizeof(EEAreaEffectData) == sizeof(EeAreaEffectData), "the area effect record");
+static_assert(sizeof(U2DRectangle<long>) == 4 * sizeof(long) && offsetof(U2DRectangle<long>, mBottom) == 0
+              && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "gamecpp civ.rs AeUnitsInRect");
+static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "gamecpp civ.rs: a location's two floats");
+
+// a temporary's address for the full expression (the functor passes)
+template <class T> static T* EETemporary(T&& inObject)
+{
+    return &inObject;
+}
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define AE ((EEAreaEffect*)p)
+#define CX ((EEComplexUnit*)p)
+#define MGR ((EEAEManager*)p)
+#define LIST ((UReferenceContainer<EEAreaEffect*>*)p)
+#define UVEC (*(std::vector<EEComplexUnit*>*)p)
+#define AFILE ((FSFile*)p)
+
+// the C++ calls and members of the area effects' bodies in Rust (gamecpp civ.rs): one statement each
+int64_t EECore9OpD4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the effects (p an EEAreaEffect*), their templates and the units' lists (p a container)
+    case O::AeFields: return P64(static_cast<EeAreaEffectFields*>(AE));
+    case O::AeTemplateFields: return P64(static_cast<EeAreaEffectTemplateFields*>(AE->mTemplate));
+    case O::AeTplFields: return P64(static_cast<EeAreaEffectTemplateFields*>((EEAreaEffectTemplate*)p));
+    case O::AeOwner: return P64(AE->mUnit);
+    case O::AeLocation: return P64(&AE->mLocation);
+    case O::AeIsImmunity: return AE->IsImmunity();
+    case O::AeAffectsPlayer: return AE->mTemplate->AffectsPlayer((long)a[0], (long)a[1]);
+    case O::AeAffectsPlayerReversed: return AE->mTemplate->AffectsPlayerReversed((long)a[0], (long)a[1]);
+    case O::AeIsInRange: return AE->IsInRange(GE2DPoint(f[0], f[1]));
+    case O::AeCovers: return AE->Covers((unsigned long)a[0], (EEComplexUnit*)a[1], *(GE2DPoint*)a[2]);
+    case O::AeAppliedTo: AE->AppliedTo((EEComplexUnit*)a[0]);
+        break;
+    case O::AeShowOn: AE->ShowOn((EEComplexUnit*)a[0]);
+        break;
+    case O::AeSetUnit: AE->SetUnit((EEComplexUnit*)a[0]);
+        break;
+    case O::AeSetAffectedAll: EEForEachPlayersUnit(EETemporary(SetAffectedByAreaEffectFunctor(AE, (unsigned long)a[0], *(GE2DPoint*)a[1])));
+        break;
+    case O::AeNew: return P64(new EEAreaEffect((EEAreaEffectTemplate*)a[0]));
+    case O::AeListCount: return (int64_t)LIST->mItems.size();
+    case O::AeListAt: return P64(LIST->mItems[a[0]]);
+    case O::AeListAdd: LIST->Add((EEAreaEffect*)a[0]);
+        break;
+    case O::AeListDereference: LIST->Clear();
+        break;
+    case O::AeListEmpty: LIST->mItems.clear();
+        break;
+    // the units (p an EEComplexUnit*, an EEUnit* for the Unit ops)
+    case O::AeUnitProtected: return CX->IsProtected();
+    case O::AeUnitBuilt: return CX->mIsBuilt;
+    case O::AeUnitOwnList: return P64(static_cast<UReferenceContainer<EEAreaEffect*>*>(&CX->mAreaEffects));
+    case O::AeUnitAffectingList: return P64(static_cast<UReferenceContainer<EEAreaEffect*>*>(&CX->mAffectingAreaEffects));
+    case O::AeUnitAffectingAdd: CX->mAffectingAreaEffects.Add((EEAreaEffect*)a[0]);
+        break;
+    case O::AeUnitPlayerId: return (int64_t)CX->mPlayer->mPlayerID;
+    case O::AeUnitId: return (int64_t)CX->GetUnitID();
+    case O::AeUnitComplex: return P64(((EEUnit*)p)->mComplexUnit);
+    case O::AeUnitNext: return P64(static_cast<EEUnit*>(((EEUnit*)p)->mNext));
+    case O::AeWorldUnit: return P64(::gWorld.GetUnit((unsigned long)a[0]));
+    case O::AeWorldNumPlayers: return (int64_t)::gWorld.mNumPlayers;
+    case O::AeWorldPlayer: return P64(::gWorld.mPlayers[a[0]]);
+    case O::AePlFirstUnit: return P64(((EEPlayer*)p)->mFirstUnit);
+    // the unit searches (p a vector the Rust made)
+    case O::AeNewUnitVec: return P64(new std::vector<EEComplexUnit*>);
+    case O::AeDeleteUnitVec: delete &UVEC;
+        break;
+    case O::AeUnitsInRect: EEGetUnitsInRectangle(*(U2DRectangle<long>*)a[0], UVEC, EEAEAliveUnit(), true);
+        break;
+    case O::AeVecCount: return (int64_t)UVEC.size();
+    case O::AeVecComplexAt: return P64(UVEC[a[0]]->mComplexUnit);
+    // the manager (p the EEAEManager)
+    case O::AeManager: return P64(&gAEManager);
+    case O::AeManagerEffects: return P64(&MGR->mEffects);
+    case O::AeTemplateCount: return (int64_t)MGR->mTemplates.size();
+    case O::AeTemplateAt: return P64(MGR->mTemplates[a[0]]);
+    case O::AeTemplatesClear: MGR->mTemplates.clear();
+        break;
+    case O::AeTemplatePush: MGR->mTemplates.push_back((EEAreaEffectTemplate*)a[0]);
+        break;
+    case O::AeTemplateDereference: ((EEAreaEffectTemplate*)a[0])->Dereference();
+        break;
+    case O::AeTemplateLoad: ((EEAreaEffectTemplate*)a[0])->Load(false);
+        break;
+    case O::AeTemplateUnload: ((EEAreaEffectTemplate*)a[0])->Unload();
+        break;
+    case O::AeNewTemplate: return P64(new EEAreaEffectTemplate);
+    case O::AeTemplateInit: return ((EEAreaEffectTemplate*)a[0])->Init(*(const EEAreaEffectData*)a[1]);
+    case O::AeTemplateError: ESDebugOut("Error reading area effect template %s...fix me in EEAEManager.cpp!\n", ((EEAreaEffectData*)a[0])->mName);
+        break;
+    // the area effects file (p an FSFile*) and the running state's
+    case O::AeFileOpenRead: AFILE->Open(kFileAccessRead);
+        break;
+    case O::AeFileReadULong: return AFILE->Read(*(unsigned long*)a[0]);
+    case O::AeFileReadData: return AFILE->Read((unsigned char*)a[0], sizeof(EEAreaEffectData), *(unsigned long*)a[1]);
+    case O::AeFileClose: AFILE->Close();
+        break;
+    case O::AeIoCall: return P64(&EEAEIoCall);
+    case O::AeAfterLoad: EEAfterLoad([theState = std::shared_ptr<EeAreaEffectRunning>((EeAreaEffectRunning*)a[0], ee_area_effect_running_free)]() { ee_gamecpp_ae_restore_running(theState.get()); });
+        break;
+    case O::AeLostRefs: ESDebugOut("EEAEManager: %lu saved area effects are not the loaded ones\n", (unsigned long)a[0]);
+        break;
+    default: return EECore9OpD5(inOp, p, a, f);
+    }
+    return 0;
 }
