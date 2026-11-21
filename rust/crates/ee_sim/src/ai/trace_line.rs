@@ -7,6 +7,8 @@
 //! for one manager's call and puts the previous one back); the resources are the player's `mResourceCaps`. The
 //! C++'s buffers are kept: the text is cut at 639 bytes, the line at 799.
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use std::ffi::{c_char, c_void, CStr};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
