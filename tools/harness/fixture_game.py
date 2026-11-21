@@ -36,7 +36,11 @@ fixture_driver.py's, shared with posix_game.py.
   random-game  the tour without the settings
   editor       the main menu's Editors, the Scenario Editor (its load, the editor form over its default map: the first
                frame captured and checked), then the exit without saving (the form's destructor) back to a menu
-               (the fixture's clickevent and screenevent commands)
+               (the fixture's clickevent and screenevent commands); then the Campaign Editor from the editors' menu:
+               two scenarios added (synthetic ones the run stages in Data/Scenarios, tools/harness/synth_scenario.py
+               from the tree's Pacific campaign), the campaign named (the fixture's editnum) and saved, a new
+               campaign, the saved one selected and opened again with its two scenarios, then its Back to the menus
+               ("CAMPAIGN EDITOR PASS ...")
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
                (outcome time-cap) or --play-seconds of wall time
@@ -124,6 +128,8 @@ def stage(a, tree):
         pins += [f'network.pt_rate.min={a.pt_rate}', f'network.pt_rate.max={a.pt_rate}']
     pins += a.config
     (STAGE / 'config.yaml').write_bytes(config_yaml.config_text(pins).encode('cp1252'))
+    if a.exercise == 'editor':
+        stage_campaign_scenarios(tree)
     files = json.loads((tree / 'open_data.json').read_text()).get('files') if (tree / 'open_data.json').exists() else '?'
     print(f'data: {tree} ({files} files) staged in {STAGE}', flush=True)
     return pins
@@ -380,6 +386,124 @@ EDITOR_FORMS = (0xffffffff, 0xffffffffffffffff)
 EXIT_WITHOUT_SAVING = 0x242d
 
 
+# the campaign editor step (form 24, ee_screens campaign_editor.rs): its events and controls
+CAMPAIGN_EDITOR_OPEN, CAMPAIGN_EDITOR = 0x0903, 24
+CE_ADD_SCENARIO, CE_SAVE, CE_SELECTED, CE_NEW, CE_MAIN_SCREEN = 0x1803, 0x1807, 0x1809, 0x180c, 0x180d
+CE_NAME_EDIT, CE_FILE_LIST, CE_AVAILABLE_LIST, CE_SCENARIOS_LIST = 2, 10, 14, 40
+CE_SCENARIOS = ('UI Test A', 'UI Test B')
+CE_NAME = 4242   # the campaign's name (the fixture's editnum: a number into the name box)
+MESSAGE_BOX = 0xffffffff   # the message box (EEUIFError: UIForm id -1 as the fixture prints it)
+
+
+def stage_campaign_scenarios(tree):
+    """Two synthetic scenarios in the stage's Data/Scenarios (TEST ONLY, never committed: derived from the tree's
+    Pacific campaign by tools/harness/synth_scenario.py) for the campaign editor step."""
+    import synth_scenario
+    folder = STAGE / 'Data' / 'Scenarios'
+    folder.mkdir(parents=True, exist_ok=True)
+    first = folder / f'{CE_SCENARIOS[0]}.scn'
+    argv = sys.argv
+    sys.argv = ['synth_scenario', '--out', str(first), '--ssa', str(tree / 'Data' / 'Campaigns' / 'AOCPacific.ssa'),
+                '--no-media']
+    try:
+        synth_scenario.main()
+    finally:
+        sys.argv = argv
+    shutil.copy(first, folder / f'{CE_SCENARIOS[1]}.scn')
+
+
+def window_size(g):
+    """The game window's size in the game's pixels ("window <w> <h>" in ui-state.txt)."""
+    for line in g.raw().splitlines():
+        part = line.split(' ')
+        if part[0] == 'window' and len(part) >= 3:
+            return int(part[1]), int(part[2])
+    raise RuntimeError('no window size in the fixture state')
+
+
+def ui_lists(g):
+    """The top form's lists ("list <i> sel <s> lines <n> a|b|.." in ui-state.txt): {index: (selection, lines)}."""
+    out = {}
+    for line in g.raw().splitlines():
+        part = line.split(' ')
+        if part[0] != 'list' or len(part) < 6:
+            continue
+        head, _, tail = line.partition(' lines ')
+        count, _, names = tail.partition(' ')
+        lines = names.split('|') if count.isdigit() and int(count) else []
+        out[int(part[1])] = (int(head.split()[3]), lines)
+    return out
+
+
+def campaign_editor(g, results, form):
+    """The campaign editor from the editors' menu: two scenarios added, the campaign named, saved, a new one, the
+    saved one opened again (its two scenarios back), Back to the menus."""
+    if form != EDITORS:
+        screen_click(g, MAIN, EDITORS_OPEN, (EDITORS,), 'the editors menu again')
+    screen_click(g, EDITORS, CAMPAIGN_EDITOR_OPEN, (CAMPAIGN_EDITOR,), 'the campaign editor', 120)
+
+    boxes = []
+
+    def lists_where(pred, what, timeout=60):
+        end = time.monotonic() + timeout
+        while True:
+            g.check_alive()
+            st = g.state()
+            if st['form'] == MESSAGE_BOX:
+                # a message the editor shows (none expected: the synthetic scenarios name no media): its OK, then on
+                # its OK button (no trigger event to fire): a click at the button, centred, 62% down the window
+                w, h = window_size(g)
+                g.command(f'lclick {MESSAGE_BOX} {w // 2} {int(h * 0.621)}')
+                g.wait(lambda s: s['form'] != MESSAGE_BOX, 'the message box closed', 30)
+                boxes.append(what)
+                g.note(f'UI campaign editor: a message box answered OK ({what})')
+                continue
+            lists = ui_lists(g)
+            if st['form'] == CAMPAIGN_EDITOR and pred(lists):
+                return lists
+            if time.monotonic() > end:
+                try:   # evidence: what the form shows (a message box)
+                    fixture_driver.capture_frame(g, 'campaign-editor-timeout')
+                except RuntimeError:
+                    pass
+                raise RuntimeError(f'timeout waiting for {what}: form {st["form"]} lists {lists}')
+            time.sleep(0.25)
+
+    def has(lists, control, name):
+        return any(name.lower() in v.lower() for v in lists.get(control, (0, []))[1])
+
+    def run(text, verdict, what):
+        seq = g.command(text)
+        g.wait(lambda s: s['command'] >= seq, what)
+        if verdict is not None and g.verdict(seq) != verdict:
+            raise RuntimeError(f'{what}: the fixture says {g.verdict(seq)!r}')
+
+    lists = lists_where(lambda l: all(has(l, CE_AVAILABLE_LIST, n) for n in CE_SCENARIOS), 'the staged scenarios')
+    milestone(g, results, 'campaign-editor', CAMPAIGN_EDITOR, differ='editor-closed')
+    for name in CE_SCENARIOS:
+        lists = ui_lists(g)
+        index = next(i for i, v in enumerate(lists[CE_AVAILABLE_LIST][1]) if name.lower() in v.lower())
+        run(f'lselect {CAMPAIGN_EDITOR} {CE_AVAILABLE_LIST} {index}', 'list-selected', f'{name} selected')
+        run(f'screenevent {CAMPAIGN_EDITOR} {CE_ADD_SCENARIO}', None, f'{name} added')
+        lists = lists_where(lambda l, n=name: has(l, CE_SCENARIOS_LIST, n), f'{name} in the campaign')
+        g.note(f'UI campaign editor: {name} added ({lists[CE_SCENARIOS_LIST][1]})')
+    run(f'editnum {CAMPAIGN_EDITOR} {CE_NAME_EDIT} {CE_NAME}', 'edit-set', 'the campaign named')
+    run(f'screenevent {CAMPAIGN_EDITOR} {CE_SAVE}', None, 'the campaign saved')
+    lists = lists_where(lambda l: has(l, CE_FILE_LIST, str(CE_NAME)), 'the saved campaign', 120)
+    g.note(f'UI campaign editor: saved ({lists[CE_FILE_LIST][1]})')
+    run(f'screenevent {CAMPAIGN_EDITOR} {CE_NEW}', None, 'a new campaign')
+    lists = lists_where(lambda l: not l.get(CE_SCENARIOS_LIST, (0, []))[1], 'a new campaign (no scenarios)')
+    index = next(i for i, v in enumerate(lists[CE_FILE_LIST][1]) if str(CE_NAME) in v)
+    run(f'lselect {CAMPAIGN_EDITOR} {CE_FILE_LIST} {index}', 'list-selected', 'the saved campaign selected')
+    run(f'screenevent {CAMPAIGN_EDITOR} {CE_SELECTED}', None, 'the saved campaign opened')
+    lists = lists_where(lambda l: all(has(l, CE_SCENARIOS_LIST, n) for n in CE_SCENARIOS), 'the campaign reloaded')
+    milestone(g, results, 'campaign-reloaded', CAMPAIGN_EDITOR)
+    g.note(f'CAMPAIGN EDITOR PASS: {CE_NAME} saved and reloaded with {lists[CE_SCENARIOS_LIST][1]}')
+    seq = g.command(f'screenevent {CAMPAIGN_EDITOR} {CE_MAIN_SCREEN}')
+    st = g.wait(lambda s: s['command'] >= seq and s['form'] in (MAIN, EDITORS), 'a menu after the campaign editor', 120)
+    return {'name': CE_NAME, 'scenarios': lists[CE_SCENARIOS_LIST][1], 'form': st['form'], 'message_boxes': boxes}
+
+
 def screen_click(g, form, code, then, what, timeout=60):
     """The fixture's clickevent (the control whose button-up event is the screen event code), then a form of then."""
     seq = g.command(f'clickevent {form} {code}')
@@ -409,6 +533,7 @@ def editor(g, a, summary):
     milestone(g, results, 'editor-closed', st['form'])
     if g.proc.poll() is not None:
         raise RuntimeError(f'the game exited ({g.proc.returncode}) after the editor closed')
+    summary['campaign_editor'] = campaign_editor(g, results, st['form'])
     summary['result'] = 'PASS'
 
 

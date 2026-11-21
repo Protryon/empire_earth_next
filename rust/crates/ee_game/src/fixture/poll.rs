@@ -419,6 +419,8 @@ fn execute(dir: &str, form: u64, form_id: u64, count: u64, last: &mut u64) {
         result = super::orders::start(seq, b);
     } else if has_control && op == "lselect" && five && control_op(Op::ListSelect, c) {
         result = "list-selected";
+    } else if has_control && op == "editnum" && five && control_op(Op::EditNumber, c) {
+        result = "edit-set";
     }
     verdict(result, op, b, c, a, seq, form_id);
 }

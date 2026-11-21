@@ -109,7 +109,7 @@ extern "C" void ee_screenscpp_dlg_edit_cursor_color(uintptr_t inEdit)
 extern "C" float ee_screenscpp_dlg_float(uint32_t inIndex) { return sDialogFloats[inIndex]; }
 extern "C" void ee_screenscpp_dlg_box_set_layout(uintptr_t inDialog) { DLG_BOX(inDialog)->SetLayout(sDialogLayout); }
 extern "C" uintptr_t ee_screenscpp_dlg_new_background(uintptr_t inDialog)
-{ return (uintptr_t) new EEUIBGenericBackground(0, "textures\EEGenericBack_Gold", GETextureDescription{1, 0, DLG_BOX(inDialog)->GetManager()->GetUITextureBitDepth(), 0, false, false, true, true}, sDialogLayout, DLG_BOX(inDialog), 0, GEColor(sDialogFloats[4], sDialogFloats[5], sDialogFloats[6]), true, 1.0f, 1.0f, 1.0f, 3); }
+{ return (uintptr_t) new EEUIBGenericBackground(0, "textures\\EEGenericBack_Gold", GETextureDescription{1, 0, DLG_BOX(inDialog)->GetManager()->GetUITextureBitDepth(), 0, false, false, true, true}, sDialogLayout, DLG_BOX(inDialog), 0, GEColor(sDialogFloats[4], sDialogFloats[5], sDialogFloats[6]), true, 1.0f, 1.0f, 1.0f, 3); }
 extern "C" void ee_screenscpp_dlg_delete(uintptr_t inControl) { delete DLG_CTL(inControl); }
 extern "C" void ee_screenscpp_dlg_scale_background(uintptr_t inBackground)
 { reinterpret_cast<EEUIBGenericBackground*>(inBackground)->SetScale((float)gGameWindow->GetWidth() * (1.0f / 1024.0f), (float)gGameWindow->GetHeight() * (1.0f / 768.0f)); }
