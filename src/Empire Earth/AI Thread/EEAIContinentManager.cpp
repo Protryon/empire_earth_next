@@ -35,7 +35,7 @@
 // scenario manager, and the forests' two members that make units.
 
 // TEST ONLY: CNTQ (the record of an outermost query; ee_sim::astar cm_capture.rs, whose scope depth this shares)
-// for the three queries left here (they read the units' classes)
+// for the two queries left here (they read the units' classes)
 class EEContinentQueryCapture {
 public:
     explicit EEContinentQueryCapture(unsigned int inKind) : mOn(ee_astar_cntq_enter(inKind)) {}
@@ -43,11 +43,10 @@ public:
     void I(long inValue) { if (this->mOn) ee_astar_cntq_i((int)inValue); }
     void Unit(const EEUnit* inUnit) { this->I(inUnit != NULL ? (long)inUnit->mUnitID : -1); }
     void Area(const EEAIArea* inArea) { if (this->mOn) ee_astar_cntq_area((uint64_t)(uintptr_t)inArea); }
-    void State() { if (this->mOn) ee_astar_cntq_state(&gContinentManager.mRecord); }
     bool mOn;
 };
 
-enum { kQueryCanGetTo = 6, kQueryConnectedForUnit = 13, kQueryUpdateWallUnit = 24 };
+enum { kQueryCanGetTo = 6, kQueryConnectedForUnit = 13 };
 
 // Resets the global continent manager and frees its tile grids (Rust: cm_passes.rs)
 void EEAIContinentManager::Shutdown()
@@ -228,55 +227,16 @@ bool EEAIContinentManager::AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* in
 }
 
 // Queues the footprint tiles of a finished blocking unit or gate for a sector rebuild and tells the path manager
-// (inNow: at once); skipped while clearing or before regions exist
+// (inNow: at once); skipped while clearing or before regions exist (Rust: cm_world.rs, with its CNTQ record)
 void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
 {
-    EEContinentQueryCapture q(kQueryUpdateWallUnit);   // TEST ONLY
-    q.Unit(inUnit); q.I(inNow);
-    [&]() {
-    std::vector<EETileCoordinate> theTiles;
-    if (this->GetAreas().size() <= 0 || this->mRecord.clearing || !gWorld.mMap)
-        return;
-    if (inUnit->IsFoundation() || (!inUnit->GetUnitClass()->mBlocksTile && inUnit->GetUnitClass()->mCategory != kUnitCategoryGate))
-        return;
-    ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)inUnit, &theTiles);
-    ee_astar_cm_add_sector_tiles(&this->mRecord, theTiles.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&theTiles[0]),
-                                 theTiles.size());   // Rust: cm_passes.rs
-    gPathManager.SetRegionUpdates(true, inNow);
-    }();
-    q.State();
+    ee_astar_cm_update_wall_unit(&this->mRecord, (uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit), inNow);
 }
-
-// 0x563bc8 (.bss) = gUnitClassTable[0x147] (0x563bc8 - 0x5636ac = 0x51c): the unit class RegrowTrees creates
-// (its vtable +0x30 is EEUnitClass::CreateUnit(x, y, player, bool, creator)); no store to it is known in the exe
 
 // When inTile is in the forest, creates inCount units of type 0x147 at random forest tiles within inRadius of
-// inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest
-// (EEUnit 0x22a3fd calls it)
+// inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest (EEUnit 0x22a3fd
+// calls it; Rust: cm_world.rs)
 bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount)
 {
-    U2DRectangle<long> theArea;
-    U2DPoint<long> thePoint;
-    bool theResult = this->Contains(inTile);
-    if (theResult) {
-        theArea.Set(inTile);
-        theArea.Grow(inRadius, true);
-        for (long i = inCount - 1; i >= 0; i--) {
-            bool theFound = false;
-            for (long theTries = 10; theTries >= 0 && !theFound; theTries--) {
-                long theY = gPhysics->GetRandom(theArea.mTop, theArea.mBottom);
-                thePoint.mX = gPhysics->GetRandom(theArea.mLeft, theArea.mRight);
-                thePoint.mY = theY;
-                theFound = this->Contains(thePoint);
-            }
-            if (!theFound)
-                thePoint = inTile;
-            EEComplexUnit* theUnit = gUnitClassTable[kUnitTypeResEagle]->CreateUnit(thePoint.mX, thePoint.mY, 0, false, NULL)->mComplexUnit;
-            if (theUnit->mIsRegrowing != true)
-                theUnit->mIsRegrowing = true;
-        }
-    }
-    return theResult;
+    return ee_astar_forest_regrow((uint64_t)(uintptr_t)this, inTile.mX, inTile.mY, inRadius, inCount);
 }
-
-

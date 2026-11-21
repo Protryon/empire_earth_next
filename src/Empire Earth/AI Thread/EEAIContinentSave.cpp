@@ -35,6 +35,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
+#include "lle/FSMemoryFile.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
@@ -50,12 +51,13 @@
 #include "ee/EEAIChokePoint.h"
 #include "ee/EETown.h"
 #include "ee/EEHerd.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEUnit.h"
+#include "ee/EEPathManager.h"
 
 extern long& gEEAIRegionSize;
 
 namespace {
-
-std::vector<unsigned char> sLoadedRegions;   // the block of the save being loaded (EELoadContinentRegions)
 
 template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
 {
@@ -86,6 +88,13 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
         return 0;
     }
     case EE_ASTAR_CM_RANDOM: return EEGetRandomInt(0, (long)io->i[0], *(URandom*)(uintptr_t)io->h[0]);
+    case EE_ASTAR_CM_RANDOM_RANGE: return gPhysics->GetRandom((long)io->i[0], (long)io->i[1]);
+    case EE_ASTAR_CM_REGROW_UNIT: return (int64_t)(uintptr_t)static_cast<RTSUnit*>(gUnitClassTable[kUnitTypeResEagle]->CreateUnit((long)io->i[0], (long)io->i[1], 0, false, NULL)->mComplexUnit);
+    case EE_ASTAR_CM_SET_REGROWING: ((EEComplexUnit*)(uintptr_t)io->h[0])->mIsRegrowing = true;
+        return 0;
+    case EE_ASTAR_CM_IS_FOUNDATION: return ((EEUnit*)(uintptr_t)io->h[0])->IsFoundation() ? 1 : 0;
+    case EE_ASTAR_CM_REGION_UPDATES: gPathManager.SetRegionUpdates(true, io->i[0] != 0);
+        return 0;
     case EE_ASTAR_CM_AREA_CREATE: {   // a herd's (the other kinds' are Rust's: cm_host.rs)
         const U2DPoint<long>* thePoints = (const U2DPoint<long>*)(uintptr_t)io->h[1];
         ((EEAIArea*)(uintptr_t)io->h[0])->Create(std::vector<U2DPoint<long> >(thePoints, thePoints + io->i[0]));
@@ -144,46 +153,25 @@ bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outAre
     return ee_astar_cm_read_area((uint64_t)(uintptr_t)&outArea, inBytes.empty() ? NULL : &inBytes[0], inBytes.size());
 }
 
+// the block's file part and the block a load keeps are Rust's (ee_sim::astar cm_file.rs)
 long EESaveContinentRegions(FSFile& outFile)
 {
-    EeAStarCmBytes* theBytes = ee_astar_cm_write_regions(&gContinentManager.mRecord);
-    size_t theCount;
-    const uint8_t* theData = ee_astar_cm_bytes_data(theBytes, &theCount);
-    unsigned long theWritten = 0;
-    long theResult = outFile.Write((unsigned long)theCount);
-    if (theResult == kErrorOK && theCount != 0)
-        theResult = outFile.Write((const unsigned char*)theData, (unsigned long)theCount, theWritten);
-    ee_astar_cm_bytes_free(theBytes);
-    return theResult;
+    return ee_astar_cm_save_regions(&gContinentManager.mRecord, FSMemoryFile::Ops(outFile));
 }
 
 long EELoadContinentRegions(FSFile& inFile)
 {
-    unsigned long theSize = 0;
-    unsigned long theRead = 0;
-    sLoadedRegions.clear();
-    long theResult = inFile.Read(theSize);
-    if (theResult == kErrorOK && theSize > 0) {
-        sLoadedRegions.resize(theSize);
-        theResult = inFile.Read(&sLoadedRegions[0], theSize, theRead);
-        if (theResult == kErrorOK && theRead != theSize)
-            theResult = kErrorBeyondEnd;
-    }
-    if (theResult != kErrorOK)
-        sLoadedRegions.clear();
-    return theResult;
+    return ee_astar_cm_load_regions(FSMemoryFile::Ops(inFile));
 }
 
 bool EEContinentRegionsPending()
 {
-    return !sLoadedRegions.empty();
+    return ee_astar_cm_regions_pending();
 }
 
 bool EERestoreContinentRegions()
 {
-    std::vector<unsigned char> theBytes;
-    theBytes.swap(sLoadedRegions);
-    return !theBytes.empty() && ee_astar_cm_restore_regions(&gContinentManager.mRecord, &theBytes[0], theBytes.size());
+    return ee_astar_cm_restore_loaded(&gContinentManager.mRecord);
 }
 
 unsigned long EEContinentRegionsDigest()
