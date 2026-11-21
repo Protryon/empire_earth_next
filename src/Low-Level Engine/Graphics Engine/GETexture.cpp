@@ -138,15 +138,9 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     }
     case EeGeTexOp::ScreenCreateSurface:
         return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
-    case EeGeTexOp::FileInfo: {
-        EeOfTextureInfo theInfo;
-        ee_of_texture_info((const EeOfTexture*)inObj, &theInfo);
-        uint32_t* theOut = (uint32_t*)a;
-        theOut[0] = theInfo.width;
-        theOut[1] = theInfo.height;
-        theOut[2] = theInfo.frame_count;
+    case EeGeTexOp::FileInfo:
+        ee_of_texture_info((const EeOfTexture*)inObj, (EeOfTextureInfo*)a);
         return 0;
-    }
     case EeGeTexOp::StoreFrame: {
         EeOfTextureFrame theFrame;
         ee_of_texture_frame((const EeOfTexture*)a, (uint32_t)b, &theFrame);
