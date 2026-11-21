@@ -1857,6 +1857,9 @@ void ee_gamecpp_startup_data_paths();
 
 /// EESetGameViewRectangle: the viewport set to the rectangle (in 1600x1200 layout units, scaled to the window and
 /// rounded unless the camera is free); the camera stops following.
+///
+/// # Safety
+/// `rectangle` is the caller's rectangle.
 void ee_gamecpp_startup_game_view(const EeGeRectangle *rectangle);
 
 /// EEInitializeThreads: the music manager, the mouse pointer, graphics, data preloading and physics threads; their
