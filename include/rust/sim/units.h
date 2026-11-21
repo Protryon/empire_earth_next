@@ -4858,6 +4858,27 @@ constexpr static const int32_t EE_UNITS_PM_AIR_ANIMAL = 10;
 
 constexpr static const int32_t EE_UNITS_PM_SPACESHIP = 11;
 
+/// `GetMaxVelocity()`
+constexpr static const int32_t EE_UNITS_PM_RATE_MAX_VELOCITY = 0;
+
+/// `GetAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_ACCELERATION = 1;
+
+/// `GetInverseAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_INVERSE_ACCELERATION = 2;
+
+/// `GetAngularAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_ANGULAR_ACCELERATION = 3;
+
+/// `GetMaxAngularVelocity()`
+constexpr static const int32_t EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY = 4;
+
+/// `GetInverseAngularAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_INVERSE_ANGULAR_ACCELERATION = 5;
+
+/// "PMST"
+constexpr static const uint32_t PM_STEP_TAG = 1414745424;
+
 /// `mColor.Load(inFile)`, the result
 constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_COLOR_LOAD = 201;
 
@@ -7710,38 +7731,6 @@ struct EeUnitsStatPoint {
 /// The host: `(ctx, op, index, io) -> the operation's result`.
 using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
-/// A complex unit: the object and its three records (the C++ object's bases; `static_cast`s of one pointer).
-struct EeUnitsPmUnit {
-  /// the `EEComplexUnit*` (its `EEUnit` and `RTSUnit` bases at the same address)
-  uint64_t obj;
-  EeUnitsRtsUnitFields *rts;
-  EeUnitsUnitFields *unit;
-  EeUnitsComplexUnitFields *cx;
-};
-
-/// The tick's values (`gPhysics`'s, `gWorld`'s and the unit's globals), read once per call from the C++.
-struct EeUnitsPmTick {
-  /// `mTickSeconds`, `mTicksPerGameSecond`, `GetTickTime()` (the tick in game ms, a float)
-  float tick_seconds;
-  float ticks_per_second;
-  float tick_time;
-  /// `mGameTime`
-  int32_t game_time;
-  /// `gCollisionPeriod`, `gWorld.mCollisionDetectionFlags`
-  uint32_t collision_period;
-  uint32_t detection_flags;
-  /// `gPhysicsModelsF` (world table entry 79: the trample's minimum squared distance), `kHeightEpsilon`
-  float trample_min;
-  float height_epsilon;
-};
-
-/// A tile's values (`RTSTile`'s; zeros for no tile).
-struct EeUnitsPmTile {
-  int32_t terrain_type;
-  int8_t ai_value;
-  float height;
-};
-
 /// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
 struct EeUnitsGoalHost {
   void *context;
@@ -8154,6 +8143,29 @@ struct EeUnitsPmStats {
   float angular_acceleration;
   float max_angular_velocity;
   float scale;
+};
+
+/// The tick's values (`gPhysics`'s, `gWorld`'s and the unit's globals), read once per call from the C++.
+struct EeUnitsPmTick {
+  /// `mTickSeconds`, `mTicksPerGameSecond`, `GetTickTime()` (the tick in game ms, a float)
+  float tick_seconds;
+  float ticks_per_second;
+  float tick_time;
+  /// `mGameTime`
+  int32_t game_time;
+  /// `gCollisionPeriod`, `gWorld.mCollisionDetectionFlags`
+  uint32_t collision_period;
+  uint32_t detection_flags;
+  /// `gPhysicsModelsF` (world table entry 79: the trample's minimum squared distance), `kHeightEpsilon`
+  float trample_min;
+  float height_epsilon;
+};
+
+/// A tile's values (`RTSTile`'s; zeros for no tile).
+struct EeUnitsPmTile {
+  int32_t terrain_type;
+  int8_t ai_value;
+  float height;
 };
 
 /// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
@@ -10536,26 +10548,36 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *enemies,
                                size_t count);
 
-/// `EEPhysicsModel::Step(unit)` of the kind's model.
+/// `EEPhysicsModel::Step(unit)` of the kind's model, then (TEST ONLY) its PMST note while the capture runs.
 ///
 /// # Safety
-/// `unit`'s records point into a live complex unit; the call runs on the physics thread under the world lock.
+/// `obj` is a live complex unit; the call runs on the physics thread under the world lock.
 void ee_units_pm_step(int32_t kind,
-                      EeUnitsPmUnit unit);
+                      void *obj);
 
 /// The kind's `Step0(unit)` alone (EE-SIM's missile sweep).
 ///
 /// # Safety
 /// As [`ee_units_pm_step`].
-void ee_units_pm_step0(int32_t kind, EeUnitsPmUnit unit);
+void ee_units_pm_step0(int32_t kind, void *obj);
 
 /// The kind's `ComputeRoll(unit, value)` (the airplane classes' death roll).
 ///
 /// # Safety
 /// As [`ee_units_pm_step`].
-float ee_units_pm_compute_roll(int32_t kind, EeUnitsPmUnit unit, float value);
+float ee_units_pm_compute_roll(int32_t kind, void *obj, float value);
 
-extern void ee_units_pm_host_tick(EeUnitsPmTick *out);
+/// `EEInitPhysicsModels`: the world table's trample minimum.
+void ee_units_pm_set_trample_min(float value);
+
+/// `EEComplexUnit::GetMaxAngularVelocity()` .. `GetInverseAngularAcceleration()` (the `EE_UNITS_PM_RATE_*`).
+///
+/// # Safety
+/// As [`unit_rate`].
+float ee_units_pm_unit_rate(const void *unit,
+                            int32_t which);
+
+extern uint32_t ee_units_pm_host_collision(uint8_t flags);
 
 extern void ee_units_pm_host_set_transformation(uint64_t obj, const float *m);
 
@@ -10567,23 +10589,15 @@ extern void ee_units_pm_host_set_location_point(uint64_t obj, float x, float y, 
 
 extern void ee_units_pm_host_set_location_xy(uint64_t obj, float x, float y);
 
-extern void ee_units_pm_host_update_tile(uint64_t obj, const float *m);
+extern void ee_units_pm_host_update_tile(uint64_t obj, float *m, long *tile);
 
 extern void ee_units_pm_host_set_scale(uint64_t obj, float s);
-
-extern float ee_units_pm_host_rate(uint64_t obj, int32_t which);
 
 extern int32_t ee_units_pm_host_model_parts(uint64_t obj);
 
 extern uint32_t ee_units_pm_host_frame_time(uint64_t obj, uint32_t animation);
 
 extern uint64_t ee_units_pm_host_tile_of(uint64_t obj);
-
-extern uint64_t ee_units_pm_host_goal_unit(uint64_t obj, int32_t which);
-
-extern void ee_units_pm_host_goal_point(uint64_t obj, int32_t which, float *out);
-
-extern uint8_t ee_units_pm_host_goal_facing(uint64_t obj, float *yaw);
 
 extern uint8_t ee_units_pm_host_flies_over(uint64_t unit);
 
@@ -10609,17 +10623,11 @@ extern uint8_t ee_units_pm_host_can_stand_on(uint64_t obj, int32_t x, int32_t y)
 
 extern uint8_t ee_units_pm_host_friendly(uint64_t obj, uint64_t other);
 
-extern void ee_units_pm_host_trample(uint64_t obj, uint64_t other);
+extern uint8_t ee_units_pm_host_trample_damage(uint64_t obj, uint64_t other, long *amount);
 
-extern uint64_t ee_units_pm_host_list(int32_t which, uint64_t of);
-
-extern int32_t ee_units_pm_host_contact_count(uint64_t obj);
-
-extern int32_t ee_units_pm_host_contact_gate(uint64_t obj);
+extern void ee_units_pm_host_take_hit(uint64_t obj, uint64_t attacker, long amount);
 
 extern uint64_t ee_units_pm_host_tile(int32_t x, int32_t y);
-
-extern void ee_units_pm_host_tile_info(uint64_t tile, EeUnitsPmTile *out);
 
 extern uint8_t ee_units_pm_host_is_edge_tile(int32_t x, int32_t y);
 
@@ -10633,21 +10641,37 @@ extern void ee_units_pm_host_ground_point(float x, float y, float z, float *out)
 
 extern float ee_units_pm_host_terrain_tilt(const float *m, uint8_t roll);
 
-extern void ee_units_pm_host_edge_planes(float *out);
-
-extern float ee_units_pm_host_mesh_ground(float x, float y);
-
-extern void ee_units_pm_host_adjust_dive_depth(uint64_t obj, float *io);
-
-extern void ee_units_pm_host_effect(uint64_t obj, int32_t which, float x, float y, float z);
-
-extern int32_t ee_units_pm_host_carrier_tag(uint64_t carrier, int32_t index, float *out);
+extern uint64_t ee_units_pm_host_carrier(int32_t which,
+                                         uint64_t carrier,
+                                         int32_t index,
+                                         float *m,
+                                         float *out);
 
 extern void ee_units_pm_host_route_dock_waypoint(uint64_t obj);
 
-extern uint8_t ee_units_pm_host_gate_links(uint64_t obj, uint64_t *carrier, uint64_t *last);
+extern uint64_t ee_units_pm_host_goal(int32_t which, uint64_t goal, float *out);
 
-extern void ee_units_pm_host_kind_step(uint64_t obj, int32_t which);
+extern void ee_units_pm_host_path_start(uint64_t obj, float *out, float *length);
+
+extern uint8_t ee_units_pm_host_is_gate_class(uint64_t obj);
+
+extern const float *ee_units_pm_host_edge_plane(int32_t which);
+
+extern float ee_units_pm_host_mesh(int32_t which, float x, float y);
+
+extern void ee_units_pm_host_effect(int32_t which, uint64_t obj, float *point);
+
+extern uint64_t ee_units_pm_host_gate_link(int32_t which, uint64_t obj);
+
+extern float ee_units_pm_host_launch_speed(uint64_t obj, uint8_t launcher);
+
+extern const float *ee_units_pm_host_projectile_start(uint64_t obj);
+
+extern void ee_units_pm_host_set_velocity(uint64_t obj, float v);
+
+extern void ee_units_pm_host_drop_target(uint64_t obj, float *out);
+
+extern uint32_t ee_units_pm_host_blocking_id(uint64_t obj);
 
 /// `RTSPlayer::Load`: the record `rec` (the player's `EeUnitsRtsPlayerFields` base) and its C++ parts through `f`.
 ///
