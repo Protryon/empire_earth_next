@@ -17,9 +17,6 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "rust/game/screens.h"   // ee_screens_upgrade_bar_mouse's constants (ee_screens upgrade.rs)
 
-const float kScenarioEditorInset = 0.43f;
-const float kInset = 0.46f;
-
 // Creates an improvement button drawn as an icon, a green status bar and two value labels (and a queued
 // count), laid out for the main game or the scenario editor
 EEUIFMGStatusBar::EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout,
@@ -29,144 +26,32 @@ EEUIFMGStatusBar::EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UI
                    (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inScenarioEditor == true),
       mEnabled(inEnabled)
 {
-    float theInset;
-    float theIconSize;
-    float theBarLeft;
-    this->mPressed = false;
-    if (inScenarioEditor) {
-        theIconSize = theInset = inRectangle.GetHeight() * kScenarioEditorInset;
-        theBarLeft = inRectangle.GetLeft() + this->GetBorderThickness();
-    } else if (inArg10) {
-        theIconSize = theInset = inRectangle.GetHeight() * kInset;
-        theBarLeft = inRectangle.GetLeft() + this->GetBorderThickness();
-    } else {
-        theInset = inRectangle.GetHeight() * kInset;
-        theIconSize = min(inRectangle.GetWidth(), inRectangle.GetHeight());
-        theIconSize -= this->GetBorderThickness() * 2.0f + 0.125f;
-        theBarLeft = inRectangle.GetLeft() + theIconSize;
-    }
-    GERectangle theRectangle;
-    float theLeft = inRectangle.GetLeft() + this->GetBorderThickness();
-    theRectangle.SetLeft(theLeft);
-    theRectangle.SetTop(inRectangle.GetTop() + this->GetBorderThickness());
-    theRectangle.SetRight(theLeft + theIconSize);
-    theRectangle.SetBottom(theRectangle.GetTop() + theIconSize);
-    this->mIcon = new UIBitmap(this->GetId(), NULL, theRectangle, inForm, this->GetIndex());
-    theRectangle.SetLeft(theBarLeft);
-    theRectangle.SetTop(inRectangle.GetTop() + theInset);
-    theRectangle.SetRight(inRectangle.GetRight() - (this->GetBorderThickness() + 2.0f));
-    theRectangle.SetBottom(inRectangle.GetBottom() - theInset);
-    this->mBar = new UIStatusBar(this->GetId(), theRectangle, inForm, this->GetIndex(), 0);
-    ESVERIFY_AT(this->mBar, 125);
-
-    this->mBar->SetStatusBarColor(GEColor(0.0f, 1.0f, 0.0f));
-    this->mBar->SetBgColor(GEColor(0.5f, 0.5f, 0.5f));
-    this->mBar->SetBgOpacity(1.0f);
-    theRectangle.SetLeft(inRectangle.GetLeft() + this->GetBorderThickness());
-    theRectangle.SetTop(this->mBar->GetRectangle().GetBottom() + 2.0f);
-    theRectangle.SetRight(inRectangle.GetRight() - this->GetBorderThickness());
-    theRectangle.SetBottom(inRectangle.GetBottom() - this->GetBorderThickness());
-    GEFont* theFont = UIFontTable::CreateClosestFont(1, (unsigned long)theRectangle.GetHeight());
-    if (theFont && !theFont->GetFontBitmap() && !inForm->GetUseGDIForText()) {
-        GEFontBitmap* theBitmap = new GEFontBitmap(inForm->GetManager()->GetRasterizer(), theFont,
-                                                   inForm->GetManager()->GetScreen());
-        theBitmap->Dereference();
-    }
-    this->mValue = new UITextLabel(UWideString("888"), theFont, this->GetId(), theRectangle, inForm, 0, this->GetIndex(), 0);
-    ESVERIFY_AT(this->mValue, 148);
-    this->mValue->SetAlignment(kTextAlignRight);
-    GEText* theText = this->mValue->GetGEText();
-    theText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-    theText->SetIsTransparent(true);
-    theRectangle.SetLeft(inRectangle.GetLeft() + this->GetBorderThickness());
-    theRectangle.SetTop(inRectangle.GetTop() + this->GetBorderThickness() + 2.0f);
-    theRectangle.SetRight(inRectangle.GetRight() - this->GetBorderThickness());
-    theRectangle.SetBottom(this->mBar->GetRectangle().GetTop());
-    theFont = UIFontTable::CreateClosestFont(1, (unsigned long)theRectangle.GetHeight());
-    if (theFont && !theFont->GetFontBitmap() && !inForm->GetUseGDIForText()) {
-        GEFontBitmap* theBitmap = new GEFontBitmap(inForm->GetManager()->GetRasterizer(), theFont,
-                                                   inForm->GetManager()->GetScreen());
-        theBitmap->Dereference();
-    }
-    this->mValue2 = new UITextLabel(UWideString("888"), theFont, this->GetId(), theRectangle, inForm, 0, this->GetIndex(), 0);
-    theFont->Dereference();
-    this->mValue2->SetAlignment(kTextAlignRight);
-    theText = this->mValue2->GetGEText();
-    theText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-    theText->SetIsTransparent(true);
-    this->mBitmap140 = new GEBitmap();
-    this->mBitmap144 = new GEBitmap();
-    this->mCount = new GEText(theFont);
-    this->mCount->SetLocation(this->GetRectangle().GetLeft() + this->GetBorderThickness() * 2.0f,
-                        this->GetRectangle().GetTop() + this->GetBorderThickness() * 2.0f);
-    this->mCount->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-    this->mCount->SetIsTransparent(true);
-    this->mShowCount = false;
-    if (inScenarioEditor) {
-        this->SetBgColor(GEColor(0.0f, 0.0f, 0.0f));
-        this->SetBgOpacity(1.0f);
-    }
+    ee_screens_sba_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uintptr_t)inForm, inScenarioEditor,
+                             inArg10);   // (status_bar_calls.rs)
 }
 
 // Destroys the status bar button and its parts
 EEUIFMGStatusBar::~EEUIFMGStatusBar()
 {
-    delete this->mBar;
-    delete this->mIcon;
-    delete this->mValue;
-    delete this->mValue2;
-    this->mBitmap140->Dereference();
-    this->mBitmap144->Dereference();
-    delete this->mCount;
+    ee_screens_sba_destroy((uintptr_t)this);
 }
 
 // Snapshots the button and its parts for drawing; shows the number of queued improvements
 long EEUIFMGStatusBar::CopyData()
 {
-    EEUIBUpgrade::CopyData();
-    this->mBar->CopyData();
-    this->mIcon->CopyData();
-    this->mValue->CopyData();
-    long theResult = this->mValue2->CopyData();
-    if (this->mNumQueued > 0) {
-        char theBuffer[32];
-        PlatIToA(this->mNumQueued, theBuffer, 10);
-        this->mCount->SetText(UWideString(theBuffer));
-        this->mShowCount = true;
-    } else
-        this->mShowCount = false;
-    this->mCopiedEnabled = this->mEnabled;
-    return theResult;
+    return (long)ee_screens_sba_copy_data((uintptr_t)this);
 }
 
 // Draws the button face (when enabled), the icon, the bar and the labels
 long EEUIFMGStatusBar::DrawPolygons()
 {
-    if (this->mCopiedEnabled)
-        UIButton::DrawPolygons();
-    this->mIcon->DrawPolygons();
-    this->mBar->DrawPolygons();
-    this->mValue->DrawPolygons();
-    return this->mValue2->DrawPolygons();
+    return (long)ee_screens_sba_draw_polygons((uintptr_t)this);
 }
 
 // Draws the parts' texts, the second label when it has text, and the queued count
-// NEAR: the original copies the count's location y first and stores the rectangle's top later (schedule only)
 long EEUIFMGStatusBar::DrawTextA()
 {
-    GE2DPoint theBottomRight = this->mCount->GetLocation();
-    theBottomRight.mY += this->GetHeight();
-    theBottomRight.mX += this->GetWidth();
-    GERectangle theRectangle(this->mCount->GetLocation(), theBottomRight);
-    UIControl::DrawTextA();
-    this->mBar->DrawTextA();
-    this->mIcon->DrawTextA();
-    long theResult = this->mValue->DrawTextA();
-    if (this->mValue2->GetText(0).GetLength() > 0)
-        theResult = this->mValue2->DrawTextA();
-    if (this->mShowCount)
-        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mCount, this);
-    return theResult;
+    return (long)ee_screens_sba_draw_text((uintptr_t)this);
 }
 
 // The presses and the drag: inside an enabled button the icon nudged down-right as pressed (left and right presses),
@@ -177,3 +62,99 @@ long EEUIFMGStatusBar::MouseLButtonUp() { return this->BarMouse(EE_SCREENS_UP_BA
 long EEUIFMGStatusBar::MouseMove(const GE2DPoint& inLocation) { return this->BarMouse(EE_SCREENS_UP_BAR_MOVE, &inLocation); }
 long EEUIFMGStatusBar::MouseRButtonDown() { return this->BarMouse(EE_SCREENS_UP_BAR_R_DOWN, NULL); }
 long EEUIFMGStatusBar::MouseRButtonUp() { return this->BarMouse(EE_SCREENS_UP_BAR_R_UP, NULL); }
+
+// ---- the one-statement shims of ee_screens status_bar_calls.rs (UI lane round 8: the constructor's layout, the
+// destructor, CopyData, DrawPolygons, DrawTextA): each one call, no logic
+#include "ee/EEScreensShims.h"
+#define SBA(x) reinterpret_cast<EEUIFMGStatusBar*>(x)
+#define SBAR(x) (*reinterpret_cast<const GERectangle*>(x))
+#define SBAF(x) reinterpret_cast<UIForm*>(x)
+static UITextLabel* EEUIFMGStatusBar::* const kSBAValues[2] = {&EEUIFMGStatusBar::mValue, &EEUIFMGStatusBar::mValue2};
+extern "C" void ee_screenscpp_sba_set_pressed(uintptr_t inBar, bool inPressed) { SBA(inBar)->mPressed = inPressed; }
+extern "C" float ee_screenscpp_sba_border(uintptr_t inBar) { return (float)SBA(inBar)->GetBorderThickness(); }
+extern "C" float ee_screenscpp_sba_rect_left(uintptr_t inRect) { return SBAR(inRect).GetLeft(); }
+extern "C" float ee_screenscpp_sba_rect_top(uintptr_t inRect) { return SBAR(inRect).GetTop(); }
+extern "C" float ee_screenscpp_sba_rect_right(uintptr_t inRect) { return SBAR(inRect).GetRight(); }
+extern "C" float ee_screenscpp_sba_rect_bottom(uintptr_t inRect) { return SBAR(inRect).GetBottom(); }
+extern "C" float ee_screenscpp_sba_rect_width(uintptr_t inRect) { return SBAR(inRect).GetWidth(); }
+extern "C" float ee_screenscpp_sba_rect_height(uintptr_t inRect) { return SBAR(inRect).GetHeight(); }
+extern "C" void ee_screenscpp_sba_icon_new(uintptr_t inBar, uintptr_t inForm, float inLeft, float inTop, float inRight, float inBottom)
+{ SBA(inBar)->mIcon = new UIBitmap(SBA(inBar)->GetId(), NULL, GERectangle(inLeft, inTop, inRight, inBottom), SBAF(inForm), SBA(inBar)->GetIndex()); }
+extern "C" void ee_screenscpp_sba_bar_new(uintptr_t inBar, uintptr_t inForm, float inLeft, float inTop, float inRight, float inBottom)
+{ SBA(inBar)->mBar = new UIStatusBar(SBA(inBar)->GetId(), GERectangle(inLeft, inTop, inRight, inBottom), SBAF(inForm), SBA(inBar)->GetIndex(), 0); }
+extern "C" void ee_screenscpp_sba_bar_verify(uintptr_t inBar) { ESVERIFY_AT(SBA(inBar)->mBar, 125); }
+extern "C" void ee_screenscpp_sba_bar_green(uintptr_t inBar)
+{ SBA(inBar)->mBar->SetStatusBarColor(GEColor(0.0f, 1.0f, 0.0f)); }
+extern "C" void ee_screenscpp_sba_bar_grey(uintptr_t inBar) { SBA(inBar)->mBar->SetBgColor(GEColor(0.5f, 0.5f, 0.5f)); }
+extern "C" void ee_screenscpp_sba_bar_opaque(uintptr_t inBar) { SBA(inBar)->mBar->SetBgOpacity(1.0f); }
+extern "C" float ee_screenscpp_sba_bar_top(uintptr_t inBar) { return SBA(inBar)->mBar->GetRectangle().GetTop(); }
+extern "C" float ee_screenscpp_sba_bar_bottom(uintptr_t inBar) { return SBA(inBar)->mBar->GetRectangle().GetBottom(); }
+extern "C" uintptr_t ee_screenscpp_sba_closest_font(uint32_t inHeight)
+{ return (uintptr_t)UIFontTable::CreateClosestFont(1, (unsigned long)inHeight); }
+extern "C" bool ee_screenscpp_sba_font_has_bitmap(uintptr_t inFont)
+{ return reinterpret_cast<GEFont*>(inFont)->GetFontBitmap() != NULL; }
+extern "C" bool ee_screenscpp_sba_form_gdi(uintptr_t inForm) { return SBAF(inForm)->GetUseGDIForText(); }
+extern "C" void ee_screenscpp_sba_font_bitmap_new(uintptr_t inFont, uintptr_t inForm)
+{ (new GEFontBitmap(SBAF(inForm)->GetManager()->GetRasterizer(), reinterpret_cast<GEFont*>(inFont), SBAF(inForm)->GetManager()->GetScreen()))->Dereference(); }
+extern "C" void ee_screenscpp_sba_font_dereference(uintptr_t inFont)
+{ reinterpret_cast<GEFont*>(inFont)->Dereference(); }
+extern "C" void ee_screenscpp_sba_value_new(uintptr_t inBar, uint32_t inWhich, uintptr_t inFont, uintptr_t inForm, float inLeft, float inTop, float inRight, float inBottom)
+{ SBA(inBar)->*kSBAValues[inWhich] = new UITextLabel(UWideString("888"), reinterpret_cast<GEFont*>(inFont), SBA(inBar)->GetId(), GERectangle(inLeft, inTop, inRight, inBottom), SBAF(inForm), 0, SBA(inBar)->GetIndex(), 0); }
+extern "C" void ee_screenscpp_sba_value_verify(uintptr_t inBar) { ESVERIFY_AT(SBA(inBar)->mValue, 148); }
+extern "C" void ee_screenscpp_sba_value_right(uintptr_t inBar, uint32_t inWhich)
+{ (SBA(inBar)->*kSBAValues[inWhich])->SetAlignment(kTextAlignRight); }
+extern "C" void ee_screenscpp_sba_value_white(uintptr_t inBar, uint32_t inWhich)
+{ (SBA(inBar)->*kSBAValues[inWhich])->GetGEText()->SetFgColor(GEColor(1.0f, 1.0f, 1.0f)); }
+extern "C" void ee_screenscpp_sba_value_transparent(uintptr_t inBar, uint32_t inWhich)
+{ (SBA(inBar)->*kSBAValues[inWhich])->GetGEText()->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_sba_bitmap140_new(uintptr_t inBar) { SBA(inBar)->mBitmap140 = new GEBitmap(); }
+extern "C" void ee_screenscpp_sba_bitmap144_new(uintptr_t inBar) { SBA(inBar)->mBitmap144 = new GEBitmap(); }
+extern "C" void ee_screenscpp_sba_count_new(uintptr_t inBar, uintptr_t inFont)
+{ SBA(inBar)->mCount = new GEText(reinterpret_cast<GEFont*>(inFont)); }
+extern "C" float ee_screenscpp_sba_left(uintptr_t inBar) { return SBA(inBar)->GetRectangle().GetLeft(); }
+extern "C" float ee_screenscpp_sba_top(uintptr_t inBar) { return SBA(inBar)->GetRectangle().GetTop(); }
+extern "C" void ee_screenscpp_sba_count_at(uintptr_t inBar, float inX, float inY)
+{ SBA(inBar)->mCount->SetLocation(inX, inY); }
+extern "C" void ee_screenscpp_sba_count_white(uintptr_t inBar)
+{ SBA(inBar)->mCount->SetFgColor(GEColor(1.0f, 1.0f, 1.0f)); }
+extern "C" void ee_screenscpp_sba_count_transparent(uintptr_t inBar) { SBA(inBar)->mCount->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_sba_set_show_count(uintptr_t inBar, bool inShow) { SBA(inBar)->mShowCount = inShow; }
+extern "C" void ee_screenscpp_sba_black(uintptr_t inBar) { SBA(inBar)->SetBgColor(GEColor(0.0f, 0.0f, 0.0f)); }
+extern "C" void ee_screenscpp_sba_bg_opaque(uintptr_t inBar) { SBA(inBar)->SetBgOpacity(1.0f); }
+extern "C" void ee_screenscpp_sba_bar_delete(uintptr_t inBar) { delete SBA(inBar)->mBar; }
+extern "C" void ee_screenscpp_sba_icon_delete(uintptr_t inBar) { delete SBA(inBar)->mIcon; }
+extern "C" void ee_screenscpp_sba_value_delete(uintptr_t inBar, uint32_t inWhich)
+{ delete (SBA(inBar)->*kSBAValues[inWhich]); }
+extern "C" void ee_screenscpp_sba_bitmap140_dereference(uintptr_t inBar) { SBA(inBar)->mBitmap140->Dereference(); }
+extern "C" void ee_screenscpp_sba_bitmap144_dereference(uintptr_t inBar) { SBA(inBar)->mBitmap144->Dereference(); }
+extern "C" void ee_screenscpp_sba_count_delete(uintptr_t inBar) { delete SBA(inBar)->mCount; }
+extern "C" int64_t ee_screenscpp_sba_base_copy_data(uintptr_t inBar) { return SBA(inBar)->EEUIBUpgrade::CopyData(); }
+extern "C" int64_t ee_screenscpp_sba_bar_copy_data(uintptr_t inBar) { return SBA(inBar)->mBar->CopyData(); }
+extern "C" int64_t ee_screenscpp_sba_icon_copy_data(uintptr_t inBar) { return SBA(inBar)->mIcon->CopyData(); }
+extern "C" int64_t ee_screenscpp_sba_value_copy_data(uintptr_t inBar, uint32_t inWhich)
+{ return (SBA(inBar)->*kSBAValues[inWhich])->CopyData(); }
+extern "C" int64_t ee_screenscpp_sba_queued(uintptr_t inBar) { return SBA(inBar)->mNumQueued; }
+extern "C" void ee_screenscpp_sba_count_text(uintptr_t inBar, EeScreensShimText inText)
+{ SBA(inBar)->mCount->SetText(EEShimText(inText)); }
+extern "C" void ee_screenscpp_sba_copy_enabled(uintptr_t inBar) { SBA(inBar)->mCopiedEnabled = SBA(inBar)->mEnabled; }
+extern "C" bool ee_screenscpp_sba_copied_enabled(uintptr_t inBar) { return SBA(inBar)->mCopiedEnabled; }
+extern "C" int64_t ee_screenscpp_sba_button_draw_polygons(uintptr_t inBar)
+{ return SBA(inBar)->UIButton::DrawPolygons(); }
+extern "C" int64_t ee_screenscpp_sba_icon_draw_polygons(uintptr_t inBar) { return SBA(inBar)->mIcon->DrawPolygons(); }
+extern "C" int64_t ee_screenscpp_sba_bar_draw_polygons(uintptr_t inBar) { return SBA(inBar)->mBar->DrawPolygons(); }
+extern "C" int64_t ee_screenscpp_sba_value_draw_polygons(uintptr_t inBar, uint32_t inWhich)
+{ return (SBA(inBar)->*kSBAValues[inWhich])->DrawPolygons(); }
+extern "C" float ee_screenscpp_sba_count_x(uintptr_t inBar) { return SBA(inBar)->mCount->GetLocation().mX; }
+extern "C" float ee_screenscpp_sba_count_y(uintptr_t inBar) { return SBA(inBar)->mCount->GetLocation().mY; }
+extern "C" float ee_screenscpp_sba_width(uintptr_t inBar) { return SBA(inBar)->GetWidth(); }
+extern "C" float ee_screenscpp_sba_height(uintptr_t inBar) { return SBA(inBar)->GetHeight(); }
+extern "C" int64_t ee_screenscpp_sba_control_draw_text(uintptr_t inBar) { return SBA(inBar)->UIControl::DrawTextA(); }
+extern "C" int64_t ee_screenscpp_sba_bar_draw_text(uintptr_t inBar) { return SBA(inBar)->mBar->DrawTextA(); }
+extern "C" int64_t ee_screenscpp_sba_icon_draw_text(uintptr_t inBar) { return SBA(inBar)->mIcon->DrawTextA(); }
+extern "C" int64_t ee_screenscpp_sba_value_draw_text(uintptr_t inBar, uint32_t inWhich)
+{ return (SBA(inBar)->*kSBAValues[inWhich])->DrawTextA(); }
+extern "C" bool ee_screenscpp_sba_value2_has_text(uintptr_t inBar)
+{ return SBA(inBar)->mValue2->GetText(0).GetLength() > 0; }
+extern "C" bool ee_screenscpp_sba_show_count(uintptr_t inBar) { return SBA(inBar)->mShowCount; }
+extern "C" int64_t ee_screenscpp_sba_draw_count(uintptr_t inBar, float inLeft, float inTop, float inRight, float inBottom)
+{ return SBA(inBar)->GetForm()->DrawClippedText(GERectangle(inLeft, inTop, inRight, inBottom), SBA(inBar)->mCount, SBA(inBar)); }

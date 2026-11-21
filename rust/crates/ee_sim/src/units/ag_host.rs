@@ -7,6 +7,8 @@
 use std::ffi::c_void;
 
 use crate::units::ag::{self, AgHost, EeUnitsAgGroup, EeUnitsAgUnit, LocationFields, NewLocation, Rect, Slot};
+use crate::units::group_host::GameGroups;
+use crate::units::group_obj as go;
 
 /// One host operation's values.
 #[repr(C)]
@@ -55,32 +57,13 @@ pub struct EeUnitsAgListHandle {
 pub const EE_UNITS_AG_GROUP: i32 = 1;
 /// group `a`'s `GetUnit(c)`
 pub const EE_UNITS_AG_GROUP_UNIT: i32 = 2;
-/// group `a`'s `RemoveUnit(b)`
-pub const EE_UNITS_AG_REMOVE: i32 = 3;
-/// group `a`'s `Finish()`
-pub const EE_UNITS_AG_FINISH: i32 = 4;
 /// group `a`'s `mMovesTogether = true`
 pub const EE_UNITS_AG_MOVES_TOGETHER: i32 = 5;
-/// group `a`'s `RequestAllPaths()`
-pub const EE_UNITS_AG_REQUEST_ALL: i32 = 6;
-/// group `a`'s `RequestPaths(units)`: the `c` units at `io.list`
-pub const EE_UNITS_AG_REQUEST_PATHS: i32 = 7;
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 pub const EE_UNITS_AG_SEND: i32 = 8;
 /// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
 /// heading)
 pub const EE_UNITS_AG_ARRANGE: i32 = 9;
-/// `new EEActiveGroup(a's mPlayer)`
-pub const EE_UNITS_AG_NEW_GROUP: i32 = 10;
-/// group `a`'s `Add(b)`
-pub const EE_UNITS_AG_ADD: i32 = 11;
-/// group `a`'s `SetFormation(b's mFormation)`
-pub const EE_UNITS_AG_SET_FORMATION: i32 = 12;
-/// group `b` launched from `a` (ag.rs `AgHost::launch`): goal `io.a`, target `io.b`, action `io.c`, command
-/// `io.d`, queued `c`
-pub const EE_UNITS_AG_LAUNCH: i32 = 13;
-/// group `a`'s `mDestinations` (pushed: id, point)
-pub const EE_UNITS_AG_DESTINATIONS: i32 = 14;
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 pub const EE_UNITS_AG_WORLD_SPHERE: i32 = 15;
 /// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
@@ -101,14 +84,8 @@ pub const EE_UNITS_AG_CLEAR_GOALS: i32 = 23;
 pub const EE_UNITS_AG_QUEUE_GOAL: i32 = 24;
 /// unit `a`'s `SetGoal(b, 0, c)`
 pub const EE_UNITS_AG_SET_GOAL: i32 = 25;
-/// unit `a`'s `mGoalQueues[c].Add(b)`, `RefreshGoals()`, `RefreshActiveGoal()`
-pub const EE_UNITS_AG_QUEUE_ADD: i32 = 26;
 /// unit `a`'s `mGoalQueues[1].AddTime(1)`
 pub const EE_UNITS_AG_ADD_TIME: i32 = 27;
-/// unit `a`'s `StartAction(c)`, then its class's `ActionChanged(a)`
-pub const EE_UNITS_AG_ACT: i32 = 28;
-/// unit `a`'s `QueueSquadronGoals(b, c & 1)` (`c & 2`) or `SetSquadronGoals(b, c & 1)`
-pub const EE_UNITS_AG_SQUADRON: i32 = 29;
 /// unit `a`'s `SetGatheredResource(NULL)`
 pub const EE_UNITS_AG_CLEAR_GATHERED: i32 = 30;
 /// unit `a`'s `mIsSpecialAttack = c`
@@ -121,8 +98,6 @@ pub const EE_UNITS_AG_CAN_TAKE: i32 = 33;
 pub const EE_UNITS_AG_FOOTPRINT: i32 = 34;
 /// `gWorld.mMap->GetTile(c, d) != NULL`
 pub const EE_UNITS_AG_HAS_TILE: i32 = 35;
-/// the tile at `io.p` (`UMFloorUnsigned`): 1 and its height in `io.f`, terrain in `io.a`; 0 for none
-pub const EE_UNITS_AG_TILE_AT: i32 = 36;
 /// `gContinentManager.CanGetTo(a, c, d)`
 pub const EE_UNITS_AG_CAN_GET_TO: i32 = 37;
 /// `EECanConvert(a, b, flag)`, the flag in and out in `io.a`
@@ -135,8 +110,6 @@ pub const EE_UNITS_AG_HAS_ACTION: i32 = 40;
 pub const EE_UNITS_AG_COMMAND_TYPE: i32 = 41;
 /// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
 pub const EE_UNITS_AG_NUM_CARGO: i32 = 42;
-/// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
-pub const EE_UNITS_AG_ANGLE: i32 = 44;
 /// the units of tile (c, d) (pushed)
 pub const EE_UNITS_AG_TILE_UNITS: i32 = 45;
 /// unit `a`'s `IsPassableBy(b)`
@@ -145,62 +118,50 @@ pub const EE_UNITS_AG_PASSABLE: i32 = 46;
 pub const EE_UNITS_AG_SEEN_BY: i32 = 47;
 /// `EECanPriestConvert(a, b)`
 pub const EE_UNITS_AG_PRIEST_CONVERT: i32 = 48;
-/// unit `a`'s `GetPower() >= calamity b's GetCost() && node c's Contains(its type)`
-pub const EE_UNITS_AG_CAN_CAST: i32 = 49;
-/// unit `a`'s `Reference()`
-pub const EE_UNITS_AG_REFERENCE: i32 = 50;
-/// unit `a`'s `Dereference()`
-pub const EE_UNITS_AG_DEREFERENCE: i32 = 51;
 /// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
 /// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
 pub const EE_UNITS_AG_RECT_CLOSEST: i32 = 52;
 /// goal `a`'s `mKind` (-1: none)
 pub const EE_UNITS_AG_GOAL_KIND: i32 = 60;
-/// goal `a`'s `Clone()`
-pub const EE_UNITS_AG_CLONE: i32 = 61;
-/// `delete` goal `a`
-pub const EE_UNITS_AG_DELETE: i32 = 62;
-/// location goal `a`'s `GetB1C()` (`io.a`), `GetIsForcedMove()` (`io.b`), `GetShouldFace()` (`io.c`), `GetYaw()`
-/// (`io.f`)
-pub const EE_UNITS_AG_LOCATION_FIELDS: i32 = 63;
-/// goal `a`'s `GetB1C()`
-pub const EE_UNITS_AG_GOAL_B1C: i32 = 64;
 /// goal `a`'s `GetGoalLocation(io.p)`
 pub const EE_UNITS_AG_GOAL_LOCATION: i32 = 65;
 /// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
 pub const EE_UNITS_AG_NEW_LOCATION: i32 = 66;
-/// `EEUGRust::NewUnloadTransport(a, c, d, true)`
-pub const EE_UNITS_AG_NEW_UNLOAD: i32 = 67;
-/// unload goal `a`'s `CanUnloadAtDestination()`
-pub const EE_UNITS_AG_CAN_UNLOAD_DEST: i32 = 68;
-/// unload goal `a`'s `GetUnloadTransport(&io.a, &io.b)`
-pub const EE_UNITS_AG_UNLOAD_DEST: i32 = 69;
-/// goal `a`'s `mB1D = true`
-pub const EE_UNITS_AG_SET_B1D: i32 = 70;
-/// location goal `a`'s `SetGroupPathState(0)`
-pub const EE_UNITS_AG_CLEAR_PATH_STATE: i32 = 71;
 /// gather goal `a`'s `GetGatherStorage()`
 pub const EE_UNITS_AG_GATHER_STORAGE: i32 = 72;
 /// gather goal `a`'s `GetGatherResource()`
 pub const EE_UNITS_AG_GATHER_RESOURCE: i32 = 73;
-/// gather goal `a`'s `SetGatherStorage(b)`
-pub const EE_UNITS_AG_SET_GATHER_STORAGE: i32 = 74;
-/// attack goal `a`'s `GetAttackTarget()`
-pub const EE_UNITS_AG_ATTACK_TARGET: i32 = 75;
-/// attack goal `a`'s `IsConvertAttack()`
-pub const EE_UNITS_AG_IS_CONVERT_ATTACK: i32 = 76;
-/// attack goal `a`'s `SetAttacker(NULL)`
-pub const EE_UNITS_AG_CLEAR_ATTACKER: i32 = 77;
-/// heal goal `a`'s `GetHealTarget()`
-pub const EE_UNITS_AG_HEAL_TARGET: i32 = 78;
-/// heal goal `a`'s `Suits(b)`
-pub const EE_UNITS_AG_SUITS: i32 = 79;
-/// explore goal `a`'s `SetExploreTile(c, d)`
-pub const EE_UNITS_AG_SET_EXPLORE_TILE: i32 = 80;
 /// patrol goal `a`'s `GetPatrolTarget()`, else `GetPatrolGroup()->GetLast()`
 pub const EE_UNITS_AG_PATROL_POINT: i32 = 81;
-/// `EEUGRust::NewAttackUnit(a, b, true, false)`
-pub const EE_UNITS_AG_NEW_ATTACK_UNIT: i32 = 82;
+// the compound statements as one-statement operations (the groups lane, round 2)
+/// unit `a`'s `mGoalQueues[c].Add(goal b)`
+pub const EE_UNITS_AG_QUEUE_ADD_ONLY: i32 = 90;
+/// unit `a`'s `RefreshGoals()`
+pub const EE_UNITS_AG_REFRESH_GOALS: i32 = 91;
+/// unit `a`'s `RefreshActiveGoal()`
+pub const EE_UNITS_AG_REFRESH_ACTIVE_GOAL: i32 = 92;
+/// unit `a`'s `StartAction(c)`
+pub const EE_UNITS_AG_START_ACTION: i32 = 93;
+/// unit `a`'s class's `ActionChanged(unit)`
+pub const EE_UNITS_AG_ACTION_CHANGED: i32 = 94;
+/// unit `a`'s `QueueSquadronGoals(goal b, c)`
+pub const EE_UNITS_AG_QUEUE_SQUADRON: i32 = 95;
+/// unit `a`'s `SetSquadronGoals(goal b, c)`
+pub const EE_UNITS_AG_SET_SQUADRON: i32 = 96;
+/// unit `a`'s `GetPower()`
+pub const EE_UNITS_AG_POWER: i32 = 97;
+/// calamity class `a`'s `GetCost()`
+pub const EE_UNITS_AG_CALAMITY_COST: i32 = 98;
+/// tech node `a`'s `Contains(unit b's class's mUnitType)`
+pub const EE_UNITS_AG_NODE_HAS_TYPE: i32 = 99;
+/// `gPhysics->GetRandom(c, d)`
+pub const EE_UNITS_AG_RANDOM: i32 = 100;
+/// the map tile at `UMFloorUnsigned` of `p` is there
+pub const EE_UNITS_AG_TILE_PRESENT: i32 = 101;
+/// that tile's `GetHeight()` into `f`
+pub const EE_UNITS_AG_TILE_HEIGHT: i32 = 102;
+/// that tile's `mTerrainType`
+pub const EE_UNITS_AG_TILE_TERRAIN: i32 = 103;
 
 extern "C" {
     fn ee_units_ag_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsAgIo) -> i64;
@@ -266,20 +227,23 @@ impl AgHost for AgGame {
         unsafe { GroupView::of(&t, g) }.map_or(0, |v| v.unit_handle(i as usize))
     }
     fn remove(&mut self, g: u64, u: u64) {
-        self.op(EE_UNITS_AG_REMOVE, g, u, 0, 0);
+        // SAFETY: a live group and unit (the group object, group_obj.rs)
+        unsafe { go::remove_unit(&mut GameGroups, g as go::G, u) }
     }
     fn finish(&mut self, g: u64) {
-        self.op(EE_UNITS_AG_FINISH, g, 0, 0, 0);
+        // SAFETY: as above
+        unsafe { go::finish(&mut GameGroups, g as go::G) }
     }
     fn set_moves_together(&mut self, g: u64) {
         with_group_fields(g, |f| f.mMovesTogether = true);
     }
     fn request_all_paths(&mut self, g: u64) {
-        self.op(EE_UNITS_AG_REQUEST_ALL, g, 0, 0, 0);
+        // SAFETY: as above
+        unsafe { go::request_all_paths(&mut GameGroups, g as go::G) }
     }
     fn request_paths(&mut self, g: u64, units: &[u64]) {
-        let mut io = EeUnitsAgIo { list: units.as_ptr() as *mut c_void, ..Default::default() };
-        self.io(EE_UNITS_AG_REQUEST_PATHS, g, 0, units.len() as i64, 0, &mut io);
+        // SAFETY: as above
+        unsafe { go::request_paths(&mut GameGroups, g as go::G, units) };
     }
     fn send_command(&mut self, g: u64, target: u64, command: u32) {
         self.op(EE_UNITS_AG_SEND, g, target, command as i64, 0);
@@ -290,23 +254,40 @@ impl AgHost for AgGame {
         items.into_iter().map(|(unit, position, heading)| Slot { position, unit, heading }).collect()
     }
     fn new_group(&mut self, g: u64) -> u64 {
-        self.op(EE_UNITS_AG_NEW_GROUP, g, 0, 0, 0) as u64
+        // SAFETY: as above
+        let player = unsafe { (*(g as go::G)).mPlayer } as u64;
+        go::new(&mut GameGroups, go::EE_UNITS_GROUP_KIND_ACTIVE, player, 0) as u64
     }
     fn add(&mut self, g: u64, u: u64) {
-        self.op(EE_UNITS_AG_ADD, g, u, 0, 0);
+        // SAFETY: as above
+        unsafe { go::add(&mut GameGroups, g as go::G, u) }
     }
     fn set_formation(&mut self, ng: u64, g: u64) {
-        self.op(EE_UNITS_AG_SET_FORMATION, ng, g, 0, 0);
+        // SAFETY: as above
+        unsafe {
+            let formation = (*(g as go::G)).mFormation as u64;
+            go::set_formation(&mut GameGroups, ng as go::G, formation)
+        }
     }
     #[allow(clippy::too_many_arguments)] // as the trait's
     fn launch(&mut self, g: u64, ng: u64, goal: u64, queued: bool, action: i32, target: u64, command: u32) {
-        let mut io =
-            EeUnitsAgIo { a: goal as i64, b: target as i64, c: action as i64, d: command as i64, ..Default::default() };
-        self.io(EE_UNITS_AG_LAUNCH, g, ng, queued as i64, 0, &mut io);
+        // SAFETY (all): the live groups the body holds
+        let player = unsafe { (*(g as go::G)).mPlayer } as u64;
+        unsafe { go::set_goal(&mut GameGroups, ng as go::G, goal, queued) };
+        with_group_fields(ng, |f| f.mAction = action as std::os::raw::c_long);
+        GameGroups.player_groups_push(player, go::EE_UNITS_PLAYER_GROUPS_PENDING, ng);
+        crate::units::ag::plan(self, ng);
+        self.send_command(ng, target, command);
+        let n = unsafe { go::len(ng as go::G) } as i64;
+        if n > 0 {
+            let i = self.op(EE_UNITS_AG_RANDOM, 0, 0, 0, n - 1);
+            let unit = unsafe { go::unit_at(ng as go::G, i as std::os::raw::c_long as usize) };
+            crate::units::selection::play_acknowledgement(&mut GameGroups, player, unit);
+        }
     }
     fn destinations(&mut self, g: u64) -> Vec<(u32, [f32; 3])> {
-        let mut io = EeUnitsAgIo::default();
-        self.list(EE_UNITS_AG_DESTINATIONS, g, 0, 0, &mut io).into_iter().map(|(id, p, _)| (id as u32, p)).collect()
+        // SAFETY: as above
+        unsafe { go::destinations(g as go::G) }
     }
     fn world_unit_sphere(&mut self, id: u32) -> Option<f32> {
         // `gWorld.GetUnit(id)`'s class's inner collision sphere
@@ -355,16 +336,20 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_SET_GOAL, u, goal, q as i64, 0);
     }
     fn queue_add(&mut self, u: u64, goal: u64, q: u32) {
-        self.op(EE_UNITS_AG_QUEUE_ADD, u, goal, q as i64, 0);
+        self.op(EE_UNITS_AG_QUEUE_ADD_ONLY, u, goal, q as i64, 0);
+        self.op(EE_UNITS_AG_REFRESH_GOALS, u, 0, 0, 0);
+        self.op(EE_UNITS_AG_REFRESH_ACTIVE_GOAL, u, 0, 0, 0);
     }
     fn add_time(&mut self, u: u64) {
         self.op(EE_UNITS_AG_ADD_TIME, u, 0, 0, 0);
     }
     fn act(&mut self, u: u64, action: i32) {
-        self.op(EE_UNITS_AG_ACT, u, 0, action as i64, 0);
+        self.op(EE_UNITS_AG_START_ACTION, u, 0, action as i64, 0);
+        self.op(EE_UNITS_AG_ACTION_CHANGED, u, 0, 0, 0);
     }
     fn squadron(&mut self, u: u64, goal: u64, flag: bool, queued: bool) {
-        self.op(EE_UNITS_AG_SQUADRON, u, goal, flag as i64 | (queued as i64) << 1, 0);
+        let op = if queued { EE_UNITS_AG_QUEUE_SQUADRON } else { EE_UNITS_AG_SET_SQUADRON };
+        self.op(op, u, goal, flag as i64, 0);
     }
     fn clear_gathered(&mut self, u: u64) {
         self.op(EE_UNITS_AG_CLEAR_GATHERED, u, 0, 0, 0);
@@ -395,7 +380,12 @@ impl AgHost for AgGame {
     }
     fn tile_at(&mut self, p: [f32; 3]) -> Option<(f32, i32)> {
         let mut io = EeUnitsAgIo { p, ..Default::default() };
-        (self.io(EE_UNITS_AG_TILE_AT, 0, 0, 0, 0, &mut io) != 0).then_some((io.f, io.a as i32))
+        if self.io(EE_UNITS_AG_TILE_PRESENT, 0, 0, 0, 0, &mut io) == 0 {
+            return None;
+        }
+        self.io(EE_UNITS_AG_TILE_HEIGHT, 0, 0, 0, 0, &mut io);
+        let terrain = self.io(EE_UNITS_AG_TILE_TERRAIN, 0, 0, 0, 0, &mut io);
+        Some((io.f, terrain as i32))
     }
     fn can_get_to(&mut self, u: u64, x: i32, y: i32) -> bool {
         self.op(EE_UNITS_AG_CAN_GET_TO, u, 0, x as i64, y as i64) != 0
@@ -427,9 +417,9 @@ impl AgHost for AgGame {
         crate::units::unit_geom::position_of(u)
     }
     fn angle_from_north(&mut self, from: [f32; 3], to: [f32; 3]) -> f32 {
-        let mut io = EeUnitsAgIo { p: from, q: to, ..Default::default() };
-        self.io(EE_UNITS_AG_ANGLE, 0, 0, 0, 0, &mut io);
-        io.f
+        // `EEGetAngleFromNorth(from, to)` (uu_ffi.rs)
+        // SAFETY: two points for the call
+        unsafe { crate::units::uu_ffi::ee_units_uu_angle(1, 0, 0, &from, &to) }
     }
     fn tile_units(&mut self, x: i32, y: i32) -> Vec<u64> {
         // the tile's nodes' units in order (a NULL unit as 0)
@@ -448,13 +438,14 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_PRIEST_CONVERT, u, target, 0, 0) != 0
     }
     fn can_cast(&mut self, u: u64, calamity: u64, node: u64) -> bool {
-        self.op(EE_UNITS_AG_CAN_CAST, u, calamity, node as i64, 0) != 0
+        self.op(EE_UNITS_AG_POWER, u, 0, 0, 0) >= self.op(EE_UNITS_AG_CALAMITY_COST, calamity, 0, 0, 0)
+            && self.op(EE_UNITS_AG_NODE_HAS_TYPE, node, u, 0, 0) != 0
     }
     fn reference(&mut self, u: u64) {
-        self.op(EE_UNITS_AG_REFERENCE, u, 0, 0, 0);
+        GameGroups.reference_unit(u)
     }
     fn dereference(&mut self, u: u64) {
-        self.op(EE_UNITS_AG_DEREFERENCE, u, 0, 0, 0);
+        GameGroups.dereference_unit(u)
     }
     fn rect_closest(&mut self, r: Rect, p: [f32; 2]) -> [f32; 2] {
         let mut io = EeUnitsAgIo { p: [r.top, r.left, r.bottom], q: [r.right, p[0], p[1]], ..Default::default() };
@@ -464,19 +455,22 @@ impl AgHost for AgGame {
     fn goal_kind(&mut self, goal: u64) -> i32 {
         goal_kind_of(goal)
     }
+    // the goals are Rust objects (goal_obj.rs): the goal calls are the C++ accessors' (ee/EEUnitGoal.h)
     fn clone_goal(&mut self, goal: u64) -> u64 {
-        self.op(EE_UNITS_AG_CLONE, goal, 0, 0, 0) as u64
+        // `Clone()`: the kind's clone with the goal's mB1C
+        let b1c = goal_b1c(goal);
+        goal_call(EE_UNITS_GOAL_CLONE, goal, 0, b1c as u64, &mut EeUnitsGoalIo::default()) as u64
     }
     fn delete_goal(&mut self, goal: u64) {
-        self.op(EE_UNITS_AG_DELETE, goal, 0, 0, 0);
+        // SAFETY: a goal the body owns, used by no one after
+        unsafe { crate::units::goal_obj::goal_delete(goal) }
     }
     fn location_fields(&mut self, goal: u64) -> LocationFields {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_LOCATION_FIELDS, goal, 0, 0, 0, &mut io);
-        LocationFields { b1c: io.a != 0, forced: io.b != 0, should_face: io.c != 0, yaw: io.f }
+        let l = crate::units::location::get(goal);
+        LocationFields { b1c: goal_b1c(goal), forced: l.forced_move, should_face: l.should_face, yaw: l.yaw }
     }
     fn goal_b1c(&mut self, goal: u64) -> bool {
-        self.op(EE_UNITS_AG_GOAL_B1C, goal, 0, 0, 0) != 0
+        goal_b1c(goal)
     }
     fn goal_location(&mut self, goal: u64) -> [f32; 3] {
         let mut io = EeUnitsAgIo::default();
@@ -489,21 +483,31 @@ impl AgHost for AgGame {
         self.io(EE_UNITS_AG_NEW_LOCATION, 0, 0, 0, 0, &mut io) as u64
     }
     fn new_unload(&mut self, u: u64, x: i32, y: i32) -> u64 {
-        self.op(EE_UNITS_AG_NEW_UNLOAD, u, 0, x as i64, y as i64) as u64
+        // `NewUnloadTransport(u, x, y, true)`
+        let goal = crate::units::goal_obj::goal_new(GOAL_UNLOAD_TRANSPORT, true);
+        let mut io = EeUnitsGoalIo::default();
+        io.i[0] = x as i64;
+        io.i[1] = y as i64;
+        goal_call(EE_UNITS_GOAL_NEW_UNLOAD, goal, u, 0, &mut io);
+        goal
     }
     fn can_unload_at_destination(&mut self, goal: u64) -> bool {
-        self.op(EE_UNITS_AG_CAN_UNLOAD_DEST, goal, 0, 0, 0) != 0
+        goal_call(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD, goal, 0, 0, &mut EeUnitsGoalIo::default()) != 0
     }
     fn unload_destination(&mut self, goal: u64) -> (i32, i32) {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_UNLOAD_DEST, goal, 0, 0, 0, &mut io);
-        (io.a as i32, io.b as i32)
+        // `GetUnloadTransport(&x, &y)`'s tile (as `long`)
+        let mut io = EeUnitsGoalIo::default();
+        goal_call(EE_UNITS_GOAL_UNLOAD_FIELDS, goal, 0, 0, &mut io);
+        (io.i[0] as i32, io.i[1] as i32)
     }
     fn set_b1d(&mut self, goal: u64) {
-        self.op(EE_UNITS_AG_SET_B1D, goal, 0, 0, 0);
+        // SAFETY: a live goal's base record
+        unsafe { crate::units::goal_obj::base(goal) }.b1d = true;
     }
     fn clear_group_path_state(&mut self, goal: u64) {
-        self.op(EE_UNITS_AG_CLEAR_PATH_STATE, goal, 0, 0, 0);
+        // `SetGroupPathState(0)`
+        let l = crate::units::location::get(goal);
+        crate::units::location::put(goal, crate::units::location::EeUnitsLocationGoal { group_path_state: 0, ..l });
     }
     fn gather_storage(&mut self, goal: u64) -> u64 {
         // `GetGatherStorage()`: the gather goal's record (another kind's answer: none)
@@ -521,25 +525,32 @@ impl AgHost for AgGame {
         }
     }
     fn set_gather_storage(&mut self, goal: u64, storage: u64) {
-        self.op(EE_UNITS_AG_SET_GATHER_STORAGE, goal, storage, 0, 0);
+        goal_call(EE_UNITS_GOAL_GATHER_SET_STORAGE, goal, storage, 0, &mut EeUnitsGoalIo::default());
     }
     fn attack_target(&mut self, goal: u64) -> u64 {
-        self.op(EE_UNITS_AG_ATTACK_TARGET, goal, 0, 0, 0) as u64
+        crate::combat::goal_attack::attack_of(goal).target
     }
     fn is_convert_attack(&mut self, goal: u64) -> bool {
-        self.op(EE_UNITS_AG_IS_CONVERT_ATTACK, goal, 0, 0, 0) != 0
+        crate::combat::goal_attack::attack_of(goal).convert != 0
     }
     fn clear_attacker(&mut self, goal: u64) {
-        self.op(EE_UNITS_AG_CLEAR_ATTACKER, goal, 0, 0, 0);
+        // `SetAttacker(NULL)`
+        let a = crate::combat::goal_attack::attack_of(goal);
+        let cleared = crate::combat::goal_attack::EeCombatAttackGoal { attacker: 0, ..a };
+        // SAFETY: a live attack goal's record
+        unsafe { crate::combat::goal_attack::ee_combat_attack_set(goal, &cleared) }
     }
     fn heal_target(&mut self, goal: u64) -> u64 {
-        self.op(EE_UNITS_AG_HEAL_TARGET, goal, 0, 0, 0) as u64
+        crate::combat::goal_heal::heal_of(goal).target
     }
     fn suits(&mut self, goal: u64, u: u64) -> bool {
-        self.op(EE_UNITS_AG_SUITS, goal, u, 0, 0) != 0
+        goal_call(EE_UNITS_GOAL_SUITS, goal, u, 0, &mut EeUnitsGoalIo::default()) != 0
     }
     fn set_explore_tile(&mut self, goal: u64, x: i32, y: i32) {
-        self.op(EE_UNITS_AG_SET_EXPLORE_TILE, goal, 0, x as i64, y as i64);
+        let mut io = EeUnitsGoalIo::default();
+        io.i[0] = x as i64;
+        io.i[1] = y as i64;
+        goal_call(EE_UNITS_GOAL_EXPLORE_SET_TILE, goal, 0, 0, &mut io);
     }
     fn patrol_point(&mut self, goal: u64) -> u64 {
         // `GetPatrolTarget()`, else `ee_units_pg_last(GetPatrolGroup())` (a patrol goal's)
@@ -554,8 +565,39 @@ impl AgHost for AgGame {
         }
     }
     fn new_attack_unit(&mut self, first: u64, target: u64) -> u64 {
-        self.op(EE_UNITS_AG_NEW_ATTACK_UNIT, first, target, 0, 0) as u64
+        // `NewAttackUnit(first, target, true, false)`
+        let goal = crate::units::goal_obj::goal_new(GOAL_ATTACK_UNIT, true);
+        goal_call(
+            crate::combat::goal_dispatch::EE_COMBAT_GOAL_NEW_ATTACK,
+            goal,
+            first,
+            target,
+            &mut EeUnitsGoalIo::default(),
+        );
+        goal
     }
+}
+
+use crate::units::group_obj::GroupHost;
+use crate::units::rust_goal::{
+    EeUnitsGoalIo, EE_UNITS_GOAL_CLONE, EE_UNITS_GOAL_EXPLORE_SET_TILE, EE_UNITS_GOAL_GATHER_SET_STORAGE,
+    EE_UNITS_GOAL_NEW_UNLOAD, EE_UNITS_GOAL_SUITS, EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD, EE_UNITS_GOAL_UNLOAD_FIELDS,
+};
+
+/// `kGoalUnloadTransport`, `kGoalAttackUnit`
+const GOAL_UNLOAD_TRANSPORT: u8 = 8;
+const GOAL_ATTACK_UNIT: u8 = 2;
+
+/// One body of a goal (`EEUnitGoal::Call`).
+fn goal_call(op: i32, goal: u64, a: u64, b: u64, io: &mut EeUnitsGoalIo) -> i64 {
+    // SAFETY: a live goal; io lives for the call
+    unsafe { crate::units::goal_obj::call(op, goal, a, b, io) }
+}
+
+/// A goal's `mB1C`.
+fn goal_b1c(goal: u64) -> bool {
+    // SAFETY: a live goal's base record
+    unsafe { crate::units::goal_obj::base(goal) }.b1c
 }
 
 // ---- the entry points (the `EEActiveGroup` members; `group` is the group's address)

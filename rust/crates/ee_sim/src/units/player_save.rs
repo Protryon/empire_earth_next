@@ -52,6 +52,9 @@ pub const EE_UNITS_PLAYER_SAVE_WRITE_ULONG: i32 = 5;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_LONG: i32 = 6;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_FLOAT: i32 = 7;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_BOOL: i32 = 8;
+/// a record's 16 levels as 0x40 raw bytes (`FSFile::Read(char*, 0x40, read)`; io.i their address: improvement.rs)
+pub const EE_UNITS_PLAYER_SAVE_READ_LEVELS: i32 = 96;
+pub const EE_UNITS_PLAYER_SAVE_WRITE_LEVELS: i32 = 97;
 /// the units' `unsigned short` (unit_save.rs, unit_load.rs)
 pub const EE_UNITS_PLAYER_SAVE_READ_USHORT: i32 = 98;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_USHORT: i32 = 99;
@@ -866,6 +869,13 @@ impl FfiHost {
 
 impl PlayerSaveHost for FfiHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        // the compound operations as the C++'s one-statement ones (player_save_split.rs)
+        let (ctx, f) = (self.ctx, self.f);
+        // SAFETY: the C++ callback with its own context; io lives for the call
+        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
+        if let Some(r) = crate::units::player_save_split::split(op, index, io, &mut call) {
+            return r;
+        }
         // the goals' counter is Rust's (goal_obj.rs)
         match op {
             EE_UNITS_PLAYER_SAVE_SET_GOAL_COUNTER => {

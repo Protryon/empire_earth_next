@@ -7,76 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
-enum class EeWonLobbyCtlType : uint32_t {
-  Button = 0,
-  Label = 1,
-  Combo = 2,
-  Input = 3,
-  Browser = 4,
-  MultiList = 5,
-  /// `ImageComponent`
-  Image = 6,
-  /// `Container`
-  Container = 7,
-  /// `Component`
-  Component = 8,
-  /// `EELobbyColorButton` (round 5)
-  ColorButton = 9,
-  /// `TextArea` (round 13)
-  TextArea = 10,
-  /// `TreeArea`
-  TreeArea = 11,
-  /// `ListArea`
-  ListArea = 12,
-  /// `ScreenContainer`
-  ScreenContainer = 13,
-  /// `ServerListCtrl`
-  ServerListCtrl = 14,
-};
-
-/// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
-enum class EeWonLobbyCtlKind : uint32_t {
-  Browser = 0,
-  Staging = 1,
-  /// `LobbyOptionsCtrl(true)`
-  LanOptions = 2,
-  /// `LobbyOptionsCtrl(false)`
-  NetOptions = 3,
-  UserList = 4,
-  /// EELobbyGameOptionsCtrl (the EE game room's options panel)
-  GameOptions = 5,
-  /// EELobbyPlayerOptionsCtrl (the EE game room's eight player rows; round 5)
-  PlayerOptions = 6,
-  /// ServerListCtrl (the game lists; round 13, srvlistctl.rs)
-  ServerList = 7,
-  /// ChatCtrl (a chat panel; round 13, chatctl.rs)
-  Chat = 8,
-  /// RoomCtrl (the room tree; round 13, netctl.rs from here)
-  Room = 9,
-  /// FriendsListCtrl
-  Friends = 10,
-  /// UserListCtrl (the room's users)
-  Users = 11,
-  /// QuickPlayCtrl (a `Dialog`)
-  QuickPlay = 12,
-  /// LoginCtrl (a `Dialog`)
-  Login = 13,
-  CreateAccount = 14,
-  UpdateAccount = 15,
-  LostPassword = 16,
-  LostUserName = 17,
-  LoginHelp = 18,
-  LoginStatus = 19,
-  InitFailed = 20,
-  /// MOTDCtrl
-  Motd = 21,
-  LoginScreen = 22,
-  DirectConnect = 23,
-  /// RoomLabelCtrl
-  RoomLabel = 24,
-};
-
 /// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
 enum class EeWonLobbyCtlOp : uint32_t {
   /// `dynamic_cast<T*>(ComponentConfigGet(a, slot->name))` of the slot `b`'s type, its absence reported
@@ -781,6 +711,123 @@ enum class EeWonLobbyCtlOp : uint32_t {
   /// `((ImageComponent*)a)->SetImage(gLobbyResources[b].mImage.get())` (R6 WONLobby round 17: `IconSetImage`'s
   /// picture as its resource row in the game, rows.rs icon_res).
   IconSetRes,
+  /// `GetLobbyConfig()`.
+  LobbyConfigGet = 1500,
+  /// `((LobbyConfig*)a)->mPingCeiling`.
+  ConfigPingCeiling,
+  /// `((LobbyConfig*)a)->mPublic`.
+  ConfigPublic,
+  /// `((TextListItem*)a)->mText.append(GUIString(b))`.
+  ItemTextAppend,
+  /// `((FilterListItem*)a)->mSelPos = b`.
+  FilterSetSelPos,
+  /// `((FilterListItem*)a)->mIsAdd = b != 0`.
+  FilterSetIsAdd,
+  /// `((FilterListItem*)a)->mFilterText = GUIString(b)`.
+  FilterSetText,
+  /// `((FilterListItem*)a)->mFilterText = GUIString("")`.
+  FilterClearText,
+  /// `((Label*)a)->SetText(LobbyFormatString(gLobbyResources[b].mString, GUIString(c)), true)`.
+  LabelSetFormatRes,
+  /// `((Label*)a)->SetText(LobbyFormatString2(gLobbyResources[b].mString, GUIString(c[0]), GUIString(c[1])), true)`
+  /// (`c` a `const intptr_t[2]`).
+  LabelSetFormat2Res,
+  /// `LobbyGetFilterCount(GUIString(a))`.
+  FilterCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetFilterValueAt(GUIString(b), c), -1)`.
+  ComboAddFilterValue,
+  /// `DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(a)), (unsigned long)b), false)`.
+  DeliverJoinRoomAt,
+  /// `DeliverEvent(CreateRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(a))), false)`.
+  DeliverCreateRoomAt,
+  /// `DeliverEvent(CreateRoomEvent(IPAddr()), false)`.
+  DeliverCreateRoomAny,
+  /// `((ComponentEvent*)a)->mType`.
+  EvType,
+  /// `((ComboSelChangedEvent*)a)->mItem.get()`.
+  EvComboItem,
+  /// `((TreeItemOpenedEvent*)a)->mItem.get()`.
+  EvTreeItem,
+  /// `((ListItemClickedEvent*)a)->mItem.get()`.
+  EvListItem,
+  /// `((Label*)a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), GUIString(b)))`.
+  LabelSetPercentText,
+  /// `EELobbyGetFileDialog()`.
+  FileDialogGet,
+  /// `((EELobbyFileDialog*)a)->ListFiles(EELobbyFn2988E9(), ".ees")`.
+  FileDialogListSaves,
+  /// `LobbyDoDialog((EELobbyFileDialog*)a)`.
+  DoDialog,
+};
+
+/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
+enum class EeWonLobbyCtlType : uint32_t {
+  Button = 0,
+  Label = 1,
+  Combo = 2,
+  Input = 3,
+  Browser = 4,
+  MultiList = 5,
+  /// `ImageComponent`
+  Image = 6,
+  /// `Container`
+  Container = 7,
+  /// `Component`
+  Component = 8,
+  /// `EELobbyColorButton` (round 5)
+  ColorButton = 9,
+  /// `TextArea` (round 13)
+  TextArea = 10,
+  /// `TreeArea`
+  TreeArea = 11,
+  /// `ListArea`
+  ListArea = 12,
+  /// `ScreenContainer`
+  ScreenContainer = 13,
+  /// `ServerListCtrl`
+  ServerListCtrl = 14,
+};
+
+/// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
+enum class EeWonLobbyCtlKind : uint32_t {
+  Browser = 0,
+  Staging = 1,
+  /// `LobbyOptionsCtrl(true)`
+  LanOptions = 2,
+  /// `LobbyOptionsCtrl(false)`
+  NetOptions = 3,
+  UserList = 4,
+  /// EELobbyGameOptionsCtrl (the EE game room's options panel)
+  GameOptions = 5,
+  /// EELobbyPlayerOptionsCtrl (the EE game room's eight player rows; round 5)
+  PlayerOptions = 6,
+  /// ServerListCtrl (the game lists; round 13, srvlistctl.rs)
+  ServerList = 7,
+  /// ChatCtrl (a chat panel; round 13, chatctl.rs)
+  Chat = 8,
+  /// RoomCtrl (the room tree; round 13, netctl.rs from here)
+  Room = 9,
+  /// FriendsListCtrl
+  Friends = 10,
+  /// UserListCtrl (the room's users)
+  Users = 11,
+  /// QuickPlayCtrl (a `Dialog`)
+  QuickPlay = 12,
+  /// LoginCtrl (a `Dialog`)
+  Login = 13,
+  CreateAccount = 14,
+  UpdateAccount = 15,
+  LostPassword = 16,
+  LostUserName = 17,
+  LoginHelp = 18,
+  LoginStatus = 19,
+  InitFailed = 20,
+  /// MOTDCtrl
+  Motd = 21,
+  LoginScreen = 22,
+  DirectConnect = 23,
+  /// RoomLabelCtrl
+  RoomLabel = 24,
 };
 
 /// The inward calls.
@@ -809,6 +856,8 @@ enum class EeWonLobbyCtlCall : uint32_t {
   SetField,
   /// LoginScreen's page `a` shown (0 the message of the day, 1 create account, 2 lost password, 3 lost user name).
   Page,
+  /// `HandleComponentEvent(a)` with `b` the event's `mType` (evmap.rs chooses the kind), `c` its `mComponent`.
+  RawEvent,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -1080,6 +1129,13 @@ enum class EeWonLobbyCtlEvField : uint32_t {
 /// One control's Rust half.
 struct EeWonLobbyCtl;
 
+/// The host: `(control, op, a, b, c) -> result`.
+using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
+                                         EeWonLobbyCtlOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
 /// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
 /// the control id `SafeGetComponent` set (-1: none) and the member it fills (-1: LobbyOptionsCtrl's local button).
 struct EeWonLobbyCtlSlot {
@@ -1090,13 +1146,6 @@ struct EeWonLobbyCtlSlot {
   int32_t control_id;
   int32_t member;
 };
-
-/// The host: `(control, op, a, b, c) -> result`.
-using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
-                                         EeWonLobbyCtlOp op,
-                                         ptrdiff_t a,
-                                         ptrdiff_t b,
-                                         ptrdiff_t c);
 
 extern "C" {
 

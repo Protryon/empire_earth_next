@@ -542,6 +542,8 @@ pub enum EeWonLobbyDlgCall {
     ConnectSetConnected,
     /// EELobbyFileDialog: `ListFiles(a, b)` (the directory and the extension, NUL-terminated).
     FileListFiles,
+    /// `HandleComponentEvent(a)` with `b` the event's `mType` (evmap.rs chooses the kind), `c` its component.
+    RawEvent,
 }
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
@@ -1221,6 +1223,7 @@ impl EeWonLobbyDlg {
         match call {
             C::Init => self.init(a),
             C::Event => self.event(a, b as u32, c),
+            C::RawEvent => self.event(a, crate::evmap::dlg_event_of(b as i32) as u32, c),
             C::Reset => self.reset(a, b),
             C::Slot => return if (a as usize) < MAX_SLOTS { self.ctl(a as usize) } else { 0 },
             C::CheckInput => self.check_input(),

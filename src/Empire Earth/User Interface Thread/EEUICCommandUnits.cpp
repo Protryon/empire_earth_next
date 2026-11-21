@@ -35,67 +35,21 @@ extern GEViewport gU4E8F08;                 // 0x4e8f08 the game view viewport (
 extern float& gCameraZoom;                   // 0x5317f0 (the arrow scale less 0.5) (provisional name)
 
 // Creates the main game view's right-drag command control, hidden, with its facing arrow: a textured quad model
-// (CreateModel) and the "Unit Facing Arrow" texture, clamped and alpha-blended (LoadTexture)
+// (CreateModel) and the "Unit Facing Arrow" texture, clamped and alpha-blended (LoadTexture; command_units_calls.rs)
 EEUICCommandUnits::EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
                                      EEAMouseClick* inListener)
     : EEUIRustControl(inId, GERectangle(gViewport.GetViewRectangle().GetTopLeft(), 2.0f, 2.0f), inForm, inIndex, 0),
       EeScreensCommandUnitsFields()
 {
-    static const float kPoints[4][3] = {{-0.25f, 0.5f, 0.0f}, {0.25f, 0.5f, 0.0f}, {0.25f, 0.0f, 0.0f}, {-0.25f, 0.0f, 0.0f}};
-    static const float kCoordinates[4][2] = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
     this->Rust(EE_SCREENS_CU_DO_INIT);
     this->StoreDisplayMode(kDisplayModeHidden);
-    this->mListener = inListener;
-    this->mListener->Reference();
-    this->SetAlwaysDirty(true);
-    GEModel* theModel = gModelManager->CreateModel(2, 4, 1, 0, 1, 0, "Unit Direction Model", 1);
-    this->mModel = theModel;
-    theModel->Reference();
-    for (unsigned long i = 0; i < 4; i++)
-        theModel->GetVertexArray(0)->SetPoint(GE3DPoint(kPoints[i][0], kPoints[i][1], kPoints[i][2]), i);
-    for (unsigned long i = 0; i < 4; i++)
-        theModel->GetVertexArray(0)->SetNormal(GEVector(0.0f, 0.0f, 1.0f), i);
-    for (unsigned long i = 0; i < 4; i++)
-        theModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(kCoordinates[i][0], kCoordinates[i][1]), i);
-    for (unsigned long i = 0; i < 2; i++) {
-        theModel->GetPolygonArray(0)->SetVertexIndex1(i, 0);
-        theModel->GetPolygonArray(0)->SetVertexIndex2(i, i + 1);
-        theModel->GetPolygonArray(0)->SetVertexIndex3(i, i + 2);
-    }
-    theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    theModel->GetMaterial(0)->SetPolygonRangeLength(2, 0);
-    theModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    theModel->GetMaterial(0)->SetVertexRangeLength(4);
-    theModel->ComputeBoundingVolumes();
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    this->mTexture = gTextureManager->LoadTexture(UString("textures\\Unit Facing Arrow"), theDescription);
-    if (this->mTexture) {
-        this->mTexture->Reference();
-        this->mTexture->SetStageAlphaMode(kStageOpTexture, -1);
-        this->mTexture->SetStageColorMode(kStageOpTexture, -1);
-        this->mTexture->SetStageMinFilterMode(1, -1);
-        this->mTexture->SetStageMagFilterMode(1, -1);
-        this->mTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-        this->mTexture->SetStageMipMapBias(-1.0f, -1);
-        this->mTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
-    }
-    this->mModel->GetMaterial(0)->SetTexture(this->mTexture, gScreenIndex);
+    ee_screens_cu_construct((uintptr_t)this, (uintptr_t)inListener);   // (command_units_calls.rs)
 }
 
 // Destroys the command control, its arrow model and texture
 EEUICCommandUnits::~EEUICCommandUnits()
 {
-    this->mListener->Dereference();
-    this->mModel->Dereference();
-    this->mTexture->Dereference();
+    ee_screens_cu_destroy((uintptr_t)this);
 }
 
 // ComputeAngle, CopyData, DrawPolygons, the drag, the release and StartCommand: ee_screens command_units.rs
@@ -200,3 +154,51 @@ int64_t EEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float
     }
     return 0;
 }
+
+// ---- the one-statement shims of ee_screens command_units_calls.rs (UI lane round 8: the constructor's arrow, the
+// destructor): each one call, no logic
+#include "ee/EEScreensShims.h"
+#define CU(x) reinterpret_cast<EEUICCommandUnits*>(x)
+static GETextureDescription sCUDescription;   // the arrow texture's description
+extern "C" void ee_screenscpp_cu_set_listener(uintptr_t inCu, uintptr_t inListener)
+{ CU(inCu)->mListener = reinterpret_cast<EEAMouseClick*>(inListener); }
+extern "C" void ee_screenscpp_cu_listener_reference(uintptr_t inCu) { CU(inCu)->mListener->Reference(); }
+extern "C" void ee_screenscpp_cu_always_dirty(uintptr_t inCu) { CU(inCu)->SetAlwaysDirty(true); }
+extern "C" void ee_screenscpp_cu_model_new(uintptr_t inCu)
+{ CU(inCu)->mModel = gModelManager->CreateModel(2, 4, 1, 0, 1, 0, "Unit Direction Model", 1); }
+extern "C" void ee_screenscpp_cu_model_reference(uintptr_t inCu) { CU(inCu)->mModel->Reference(); }
+extern "C" void ee_screenscpp_cu_point(uintptr_t inCu, uint32_t inIndex, float inX, float inY, float inZ)
+{ CU(inCu)->mModel->GetVertexArray(0)->SetPoint(GE3DPoint(inX, inY, inZ), inIndex); }
+extern "C" void ee_screenscpp_cu_normal(uintptr_t inCu, uint32_t inIndex)
+{ CU(inCu)->mModel->GetVertexArray(0)->SetNormal(GEVector(0.0f, 0.0f, 1.0f), inIndex); }
+extern "C" void ee_screenscpp_cu_coordinate(uintptr_t inCu, uint32_t inIndex, float inU, float inV)
+{ CU(inCu)->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(inU, inV), inIndex); }
+extern "C" void ee_screenscpp_cu_vertex1(uintptr_t inCu, uint32_t inPolygon, uint32_t inVertex)
+{ CU(inCu)->mModel->GetPolygonArray(0)->SetVertexIndex1(inPolygon, inVertex); }
+extern "C" void ee_screenscpp_cu_vertex2(uintptr_t inCu, uint32_t inPolygon, uint32_t inVertex)
+{ CU(inCu)->mModel->GetPolygonArray(0)->SetVertexIndex2(inPolygon, inVertex); }
+extern "C" void ee_screenscpp_cu_vertex3(uintptr_t inCu, uint32_t inPolygon, uint32_t inVertex)
+{ CU(inCu)->mModel->GetPolygonArray(0)->SetVertexIndex3(inPolygon, inVertex); }
+extern "C" void ee_screenscpp_cu_polygon_start(uintptr_t inCu)
+{ CU(inCu)->mModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0); }
+extern "C" void ee_screenscpp_cu_polygon_length(uintptr_t inCu)
+{ CU(inCu)->mModel->GetMaterial(0)->SetPolygonRangeLength(2, 0); }
+extern "C" void ee_screenscpp_cu_vertex_start(uintptr_t inCu)
+{ CU(inCu)->mModel->GetMaterial(0)->SetVertexStartingIndex(0); }
+extern "C" void ee_screenscpp_cu_vertex_length(uintptr_t inCu)
+{ CU(inCu)->mModel->GetMaterial(0)->SetVertexRangeLength(4); }
+extern "C" void ee_screenscpp_cu_bounds(uintptr_t inCu) { CU(inCu)->mModel->ComputeBoundingVolumes(); }
+extern "C" void ee_screenscpp_cu_set_description()
+{ sCUDescription = GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, true}; }
+extern "C" uintptr_t ee_screenscpp_cu_description() { return (uintptr_t)&sCUDescription; }
+extern "C" void ee_screenscpp_cu_set_texture(uintptr_t inCu, uintptr_t inTexture)
+{ CU(inCu)->mTexture = reinterpret_cast<GETexture*>(inTexture); }
+extern "C" void ee_screenscpp_texture_alpha_texture(uintptr_t inTexture)
+{ reinterpret_cast<GETexture*>(inTexture)->SetStageAlphaMode(kStageOpTexture, -1); }
+extern "C" void ee_screenscpp_texture_color_texture(uintptr_t inTexture)
+{ reinterpret_cast<GETexture*>(inTexture)->SetStageColorMode(kStageOpTexture, -1); }
+extern "C" void ee_screenscpp_cu_material_texture(uintptr_t inCu)
+{ CU(inCu)->mModel->GetMaterial(0)->SetTexture(CU(inCu)->mTexture, gScreenIndex); }
+extern "C" void ee_screenscpp_cu_listener_dereference(uintptr_t inCu) { CU(inCu)->mListener->Dereference(); }
+extern "C" void ee_screenscpp_cu_model_dereference(uintptr_t inCu) { CU(inCu)->mModel->Dereference(); }
+extern "C" void ee_screenscpp_cu_texture_dereference(uintptr_t inCu) { CU(inCu)->mTexture->Dereference(); }

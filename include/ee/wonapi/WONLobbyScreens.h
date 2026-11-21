@@ -18,7 +18,6 @@ public:
     GUIString mHomeLocation;
 };
 class QueryAccountResultEvent;
-void DrawLobbyPing(Graphics*,unsigned short,int,int,int); // 0x7c12b0; draws a ping indicator
 
 // Login screen and its panels.
 class RustServerOp;

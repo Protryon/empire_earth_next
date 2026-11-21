@@ -44,13 +44,7 @@
 // holds a C++ button, so it stays with the panel that makes it.
 long EEUIEMGHotKeyStatusButton::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    if (!this->mButton)
-        return kErrorOK;
-    if (this->mPressed) {
-        this->mButton->HotKeyDown();
-        gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, 1);
-    } else
-        this->mButton->HotKeyUp();
+    ee_screens_mg_hot_key_event((uintptr_t)this);   // (main_group_calls.rs)
     return kErrorOK;
 }
 
@@ -85,216 +79,11 @@ bool EEUIFMGMainGroup::WantsRefresh()
     return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0;
 }
 
-// A hot key pressing a status button (inHow 0: always firing, its events), added to the form's group 2 (1), or its
-// copy with Shift held, pressing the button, added (2)
-static void EEMainGroupHotKey(EEUIFMainGame* inForm, UIHotKey* inHotKey, EEUIFMGStatusButton* inButton, int64_t inHow)
-{
-    auto Events = [inButton](UIHotKey* inKey) {
-        UIEvent* theEvent = new EEUIEMGHotKeyStatusButton(inButton, true);
-        inKey->SetJustPressedEvent(theEvent);
-        theEvent->Dereference();
-        theEvent = new EEUIEMGHotKeyStatusButton(inButton, false);
-        inKey->SetJustUnpressedEvent(theEvent);
-        theEvent->Dereference();
-    };
-    if (inHow == 0) {
-        inHotKey->SetAlwaysFire(true);
-        Events(inHotKey);
-    } else if (inHow == 1) {
-        inForm->AddHotKey(*inHotKey, 2);
-    } else {
-        UIHotKey theHotKey(inForm, *inHotKey);
-        theHotKey.SetModifier(kKeyShift, 0);
-        Events(&theHotKey);
-        inForm->AddHotKey(theHotKey, 2);
-    }
-}
-
-// The main group's host (ee_screens main_group.rs, EE_SCREENS_MGR_OP_*): units as handles (EEUnit*). Its world reads
-// and toolkit calls are hud_views.rs' (the world's views, the toolkit's direct path)
-extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(inGroup);
-    EEUIFMainGame* theForm = theGroup->mOwner;
-    EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
-    EEUIFMGStatusBox* theBox = theGroup->mStatusBox;
-    auto Button = [&]() { return static_cast<EEUIFMGStatusButton*>(theForm->GetControl((unsigned long)inA)); };
-    switch (inOp) {
-    case EE_SCREENS_MGR_OP_FORMS: return inA == 0 ? (int64_t)theForm : (int64_t)gUIManager->GetMainGameForm();
-    case EE_SCREENS_MGR_OP_WORLD_UNIT: return reinterpret_cast<int64_t>(gWorld.GetUnit((unsigned long)inA));
-    case EE_SCREENS_MGR_OP_PLAYER_UNIT:
-        return reinterpret_cast<int64_t>(gWorld.GetCurrentPlayer()->GetUnit((unsigned long)inA));
-    case EE_SCREENS_MGR_OP_CLOAK:
-        if (inA == 0)
-            EERemoveCloakEffect(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inB)));
-        else
-            EEAddCloakEffect(reinterpret_cast<EEUnit*>(inB));
-        return 0;
-    case EE_SCREENS_MGR_OP_BOX: {
-        EEUnit* theTarget = reinterpret_cast<EEUnit*>(inB);
-        if (inA == EE_SCREENS_MGR_BOX_FILL)
-            theBox->Fill(theTarget);
-        else if (inA == EE_SCREENS_MGR_BOX_REFRESH)
-            theBox->Refresh(theTarget);
-        else if (inA == EE_SCREENS_MGR_BOX_HIDE)
-            theBox->HideBackgrounds();
-        else
-            theBox->UpdateQueuedCounts(theTarget->GetComplexUnit(), theTarget->GetComplexUnit()->GetPlayer()->GetResearchedImprovement(
-                                                                        theTarget->GetComplexUnit()->GetClass()->GetUnitType()));
-        return 0;
-    }
-    case EE_SCREENS_MGR_OP_BOX_BIND: {
-        void** const theSlots[8] = {&theBox->mC8C, &theBox->mC94, &theBox->mC90, &theBox->mC84,
-                                    &theBox->mC88, &theBox->mC98, &theBox->mCAC, &theBox->mCA8};
-        *theSlots[inA] = theForm->GetControl((unsigned long)inB);
-        return 0;
-    }
-    case EE_SCREENS_MGR_OP_BOX_PAIR:
-        theBox->SetControls((long)inA, theForm->GetControl((unsigned long)inA + 0x45), theForm->GetControl((unsigned long)inA + 0x20));
-        return 0;
-    case EE_SCREENS_MGR_OP_ICON_BAR: {
-        UIControl* theIconBar = theForm->GetControl(kMainGameUnitIconBar);
-        if (theIconBar)
-            EEUIShell::Op(theIconBar, EE_SCREENS_SKOP_IB_UPDATE);
-        return 0;
-    }
-    case EE_SCREENS_MGR_OP_SHOW_COMMANDS: theGroup->ShowCommands(theUnit); return 0;
-    case EE_SCREENS_MGR_OP_BUTTON_OBJECT: return EEButtonObject::Get((unsigned long)inA) != NULL;
-    case EE_SCREENS_MGR_OP_SET_COMMAND: Button()->SetCommandButton((unsigned long)inB); return 0;
-    case EE_SCREENS_MGR_OP_BEHAVIOR: {
-        EEComplexUnit* theComplex = theUnit ? theUnit->GetComplexUnit() : NULL;
-        static const long kBehaviors[4] = {0, 1, 2, 5};
-        for (long k : kBehaviors)
-            if (theComplex->GetBehavior() == EEUnitBehavior::Get(k))
-                return k;
-        return -1;
-    }
-    case EE_SCREENS_MGR_OP_FORMATION: return gWorld.GetCurrentPlayer()->GetSelectedGroup()->GetFormation()->GetType();
-    case EE_SCREENS_MGR_OP_VERIFY: ESVERIFY_AT(false, (long)inA); return 0;
-    case EE_SCREENS_MGR_OP_HAS_HOT_KEY: return EEButtonObject::Get((unsigned long)inA)->GetHotKey() != NULL;
-    case EE_SCREENS_MGR_OP_HOT_KEY:
-        EEMainGroupHotKey(theForm, EEButtonObject::Get((unsigned long)inA)->GetHotKey(),
-                          static_cast<EEUIFMGStatusButton*>(theForm->GetControl((unsigned long)inC)), inB);
-        return 0;
-    case EE_SCREENS_MGR_OP_TIME_LEFT: return theUnit->mComplexUnit->mGoalQueues[inB].GetTimeLeft();
-    case EE_SCREENS_MGR_OP_TIMER_TEXT: {
-        UWideString theText;
-        unsigned long theMinutes;
-        unsigned long theSeconds;
-        gPhysics->GetMinutesAndSeconds(&theMinutes, &theSeconds, (unsigned long)inB);
-        sprintf(theText, "%ld:%.2ld", theMinutes, theSeconds);
-        UIButton* theTimer = static_cast<UIButton*>(theForm->GetControl((unsigned long)inA));
-        theTimer->SetDisplayMode(kDisplayModeShown);
-        theTimer->SetText(theText, gU531930);
-        return 0;
-    }
-    // (the production queue's size and keys, inB 0, are hud_views.rs'; these are the citizen's build queue's)
-    case EE_SCREENS_MGR_OP_QUEUE_SIZE: return theUnit->GetComplexUnit()->mCitizenBuildQueue.size();
-    case EE_SCREENS_MGR_OP_QUEUE_KEY: return theUnit->GetComplexUnit()->GetCitizenBuildTarget((unsigned long)inC)->GetClass()->GetTechnology();
-    }
-    return 0;
-}
-
 // Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
-// commands, its available techs with hot keys, airport timers); hides them all for others
-// NEAR: the first mResearchTechnologies[m] calls begin()/operator+ out of line in the original (inline budget), the frame is 8 bytes
-// larger for their temporaries; the free-slot search loop rotates differently
+// commands, its available techs with hot keys, airport timers); hides them all for others (main_group_calls.rs)
 void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
 {
-    EEComplexUnit* theComplex = inUnit ? inUnit->mComplexUnit : NULL;
-    this->mOwner->RemoveAllHotKeysForAGroup(2);
-    unsigned long i; for (i = 0x6e; i < 0xce; i++) {
-        this->mOwner->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
-        static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(i))->ReleaseButton();
-    }
-    for (i = 0x4e; i < 0x57; i++) {
-        this->mOwner->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
-        static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(i))->ReleaseButton();
-    }
-    this->mOwner->GetControl(kMainGameTimedFighterRally)->SetDisplayMode(kDisplayModeHidden);
-    this->mOwner->GetControl(kMainGameTimedBomberRally)->SetDisplayMode(kDisplayModeHidden);
-    this->mOwner->GetControl(kMainGameTimedAtomicBomberRally)->SetDisplayMode(kDisplayModeHidden);
-    EEPlayer* theLocalPlayer = gWorld.GetCurrentPlayer();
-    EEPlayer* thePlayer = theLocalPlayer->mObserverMode ? NULL : theLocalPlayer;
-    // the layout is Rust's (ee_screens command_panel.rs panel_buttons) over what the C++ reads here
-    EeScreensPanelView theView;
-    memset(&theView, 0, sizeof(theView));
-    theView.unit = inUnit != NULL;
-    theView.complex = theComplex != NULL;
-    if (inUnit != NULL && theComplex != NULL) {
-        theView.built = theComplex->mIsBuilt;
-        theView.alive = inUnit->mHitPoints != 0;
-        theView.commandable = theComplex->mIsCommandable;
-        theView.owned = inUnit->mPlayer == thePlayer;
-    }
-    theView.cancel_hidden = this->mOwner->GetControl(kMainGameCancelUIMode)->GetDisplayMode() == kDisplayModeHidden;
-    theView.player = thePlayer != NULL;
-    if (!ee_screens_panel_gate(&theView))
-        return;
-    theView.human = thePlayer->IsHuman() == true;
-    if (!ee_screens_panel_shown(&theView))
-        return;
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    EETechTree* theTree = thePlayer->GetTechTree();
-    theView.mode = this->mMode;
-    if (this->mMode == 1 || this->mMode == 3) {
-        theView.fanatic = gCivPowersManager.HasPower(thePlayer, kCivPowerFanaticism) &&
-                          gUnitSetManager.GetSet(0x2f)->Contains(inUnit->mUnitClass->mUnitType);
-        theView.jit = gCivPowersManager.HasPower(thePlayer, kCivPowerJustInTimeManufacturing) &&
-                      theComplex->mUnitClass->HasRallyPoint();
-        theView.jit_on = thePlayer->mJITManufacturing;
-        EEButtonObject* theObjects[3] = {EEButtonObject::Get(0x28), EEButtonObject::Get(0x29), EEButtonObject::Get(0x2a)};
-        theView.fanatic_position = theObjects[0] ? theObjects[0]->mPosition : 0;
-        theView.jit_positions[0] = theObjects[1] ? theObjects[1]->mPosition : 0;
-        theView.jit_positions[1] = theObjects[2] ? theObjects[2]->mPosition : 0;
-    } else if (this->mMode == 4) {
-        for (long j = 0; j < 8; j++)
-            theView.trade_positions[j] = EEButtonObject::Get(0x5dc + j)->mPosition;
-    }
-    for (unsigned long k = 0; k < 9; k++)
-        theView.commands[k] = theClass->mCommands[k];
-    std::vector<EeScreensPanelResearch> theResearch;
-    std::vector<EETechTreeNode*> theNodes;
-    if (this->mMode == 2 || this->mMode == 3) {
-        for (long m = 0; m < theClass->GetNumResearchTechnologies(); m++) {
-            EETechTreeNode* theNode = theTree->Get(theClass->mResearchTechnologies[m]);
-            EEButtonObject* theObject = theNode->mButton;
-            EeScreensPanelResearch theEntry;
-            theEntry.position = theObject->mPosition;
-            theEntry.command = theObject->mID;
-            theEntry.kind = theNode->mData->mKind;
-            theEntry.eligible = theObject->mPosition >= 0 && theObject->mPosition < 10000 && theNode->GetIsAvailable() &&
-                                (theNode->mIsAllowed || theComplex->IsResearchQueued(theNode->mData->mID));
-            theResearch.push_back(theEntry);
-            theNodes.push_back(theNode);
-        }
-    }
-    std::vector<EeScreensPanelButton> theButtons(8 + 2 + 9 + theResearch.size() + 1);
-    unsigned long theCount = ee_screens_panel_buttons(&theView, theResearch.empty() ? NULL : &theResearch[0],
-                                                      theResearch.size(), &theButtons[0], theButtons.size());
-    for (unsigned long b = 0; b < theCount; b++) {
-        const EeScreensPanelButton& theEntry = theButtons[b];
-        if (theEntry.kind == EE_SCREENS_PANEL_COMMAND) {
-            ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_COMMAND_BUTTON, inUnit,
-                                         (int64_t)theEntry.button | (int64_t)theEntry.control << 32);
-        } else if (theEntry.kind == EE_SCREENS_PANEL_STOP) {
-            static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(kMainGameActionButton1))->SetCommandButton(3);
-            this->mOwner->GetControl(kMainGameActionButton1)->SetDisplayMode(kDisplayModeShown);
-        } else {
-            long m = theEntry.research;
-            EETechTreeNode* theNode = theNodes[m];
-            EEUIFMGStatusButton* theButton = static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(theEntry.control));
-            theButton->SetTechButton(theClass->mResearchTechnologies[m], theClass->mUnitType, inUnit->mUnitID);
-            this->mOwner->GetControl(theEntry.control)->SetDisplayMode(kDisplayModeShown);
-            if (theNode->GetHotKey()) {
-                EEMainGroupHotKey(this->mOwner, theNode->GetHotKey(), theButton, 0);
-                EEMainGroupHotKey(this->mOwner, theNode->GetHotKey(), theButton, 2);
-                EEMainGroupHotKey(this->mOwner, theNode->GetHotKey(), theButton, 1);
-            }
-        }
-    }
-    if (theComplex->mUnitClass->mUnitType == kUnitTypeAirport)
-        ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SPECIAL_BUTTONS, inUnit, 0);
+    ee_screens_mg_show_commands((uintptr_t)this, (uintptr_t)inUnit);   // (main_group_calls.rs)
 }
 
 // (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
@@ -371,6 +160,139 @@ void EEUIFMGGRust::Select()
 {
     ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_SELECT);
 }
+
+// ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
+// the status buttons' hot keys): each one call, no logic
+#include "ee/EEScreensShims.h"
+#define MG(x) reinterpret_cast<EEUIFMGMainGroup*>(x)
+#define MGU(x) reinterpret_cast<EEUnit*>(x)
+#define MGC(x) reinterpret_cast<EEComplexUnit*>(x)
+#define MGP(x) reinterpret_cast<EEPlayer*>(x)
+#define MGK(x) reinterpret_cast<UIHotKey*>(x)
+#define SBN(x) reinterpret_cast<EETechTreeNode*>(x)
+#define SBB(x) reinterpret_cast<EEUIFMGStatusButton*>(x)
+// the status box's control slots EE_SCREENS_MGR_OP_BOX_BIND binds (main_group.rs' order)
+static void* EEUIFMGStatusBox::* const kMGBoxSlots[8] = {
+    &EEUIFMGStatusBox::mC8C, &EEUIFMGStatusBox::mC94, &EEUIFMGStatusBox::mC90, &EEUIFMGStatusBox::mC84,
+    &EEUIFMGStatusBox::mC88, &EEUIFMGStatusBox::mC98, &EEUIFMGStatusBox::mCAC, &EEUIFMGStatusBox::mCA8};
+static_assert(EE_SCREENS_MGC_ACTION_BUTTON1 == kMainGameActionButton1 && EE_SCREENS_MGC_UNIT_ICON_BAR == kMainGameUnitIconBar &&
+                  kMainGameTimedFighterRally == 208 && kMainGameTimedBomberRally == 209 &&
+                  kMainGameTimedAtomicBomberRally == 210,
+              "main_group_calls.rs' controls");
+extern "C" uintptr_t ee_screenscpp_mg_owner(uintptr_t inGroup) { return (uintptr_t)MG(inGroup)->mOwner; }
+extern "C" uintptr_t ee_screenscpp_mg_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
+extern "C" void ee_screenscpp_mg_remove_hot_keys(uintptr_t inGroup)
+{ MG(inGroup)->mOwner->RemoveAllHotKeysForAGroup(2); }
+extern "C" void ee_screenscpp_mg_hide(uintptr_t inGroup, uint32_t inControl)
+{ MG(inGroup)->mOwner->GetControl(inControl)->SetDisplayMode(kDisplayModeHidden); }
+extern "C" void ee_screenscpp_mg_show(uintptr_t inGroup, uint32_t inControl)
+{ MG(inGroup)->mOwner->GetControl(inControl)->SetDisplayMode(kDisplayModeShown); }
+extern "C" uintptr_t ee_screenscpp_mg_button(uintptr_t inGroup, uint32_t inControl)
+{ return (uintptr_t)static_cast<EEUIFMGStatusButton*>(MG(inGroup)->mOwner->GetControl(inControl)); }
+extern "C" uintptr_t ee_screenscpp_mg_control(uintptr_t inGroup, uint32_t inControl)
+{ return (uintptr_t)MG(inGroup)->mOwner->GetControl(inControl); }
+extern "C" bool ee_screenscpp_mg_cancel_hidden(uintptr_t inGroup)
+{ return MG(inGroup)->mOwner->GetControl(kMainGameCancelUIMode)->GetDisplayMode() == kDisplayModeHidden; }
+extern "C" int64_t ee_screenscpp_mg_mode(uintptr_t inGroup) { return MG(inGroup)->mMode; }
+extern "C" uintptr_t ee_screenscpp_mg_unit_complex(uintptr_t inUnit) { return (uintptr_t)MGU(inUnit)->mComplexUnit; }
+extern "C" bool ee_screenscpp_mg_unit_alive(uintptr_t inUnit) { return MGU(inUnit)->mHitPoints != 0; }
+extern "C" uintptr_t ee_screenscpp_mg_unit_player(uintptr_t inUnit) { return (uintptr_t)MGU(inUnit)->mPlayer; }
+extern "C" bool ee_screenscpp_mg_unit_in_fanatic_set(uintptr_t inUnit)
+{ return gUnitSetManager.GetSet(0x2f)->Contains(MGU(inUnit)->mUnitClass->mUnitType); }
+extern "C" uint32_t ee_screenscpp_mg_unit_class_type(uintptr_t inUnit)
+{ return (uint32_t)MGU(inUnit)->mUnitClass->mUnitType; }
+extern "C" uint32_t ee_screenscpp_mg_unit_id(uintptr_t inUnit) { return (uint32_t)MGU(inUnit)->mUnitID; }
+extern "C" uint64_t ee_screenscpp_mg_class_command(uintptr_t inUnit, uint32_t inIndex)
+{ return MGU(inUnit)->mUnitClass->mCommands[inIndex]; }
+extern "C" int64_t ee_screenscpp_mg_research_count(uintptr_t inUnit)
+{ return MGU(inUnit)->mUnitClass->GetNumResearchTechnologies(); }
+extern "C" int64_t ee_screenscpp_mg_research_tech(uintptr_t inUnit, int64_t inIndex)
+{ return MGU(inUnit)->mUnitClass->mResearchTechnologies[inIndex]; }
+extern "C" bool ee_screenscpp_mg_complex_built(uintptr_t inComplex) { return MGC(inComplex)->mIsBuilt; }
+extern "C" bool ee_screenscpp_mg_complex_commandable(uintptr_t inComplex) { return MGC(inComplex)->mIsCommandable; }
+extern "C" bool ee_screenscpp_mg_complex_rally(uintptr_t inComplex)
+{ return MGC(inComplex)->mUnitClass->HasRallyPoint(); }
+extern "C" bool ee_screenscpp_mg_complex_airport(uintptr_t inComplex)
+{ return MGC(inComplex)->mUnitClass->mUnitType == kUnitTypeAirport; }
+extern "C" bool ee_screenscpp_mg_research_queued(uintptr_t inComplex, uintptr_t inNode)
+{ return MGC(inComplex)->IsResearchQueued(SBN(inNode)->mData->mID); }
+extern "C" uintptr_t ee_screenscpp_mg_current_player() { return (uintptr_t)gWorld.GetCurrentPlayer(); }
+extern "C" bool ee_screenscpp_mg_player_observer(uintptr_t inPlayer) { return MGP(inPlayer)->mObserverMode; }
+extern "C" bool ee_screenscpp_mg_player_human(uintptr_t inPlayer) { return MGP(inPlayer)->IsHuman() == true; }
+extern "C" bool ee_screenscpp_mg_player_fanaticism(uintptr_t inPlayer)
+{ return gCivPowersManager.HasPower(MGP(inPlayer), kCivPowerFanaticism); }
+extern "C" bool ee_screenscpp_mg_player_jit(uintptr_t inPlayer)
+{ return gCivPowersManager.HasPower(MGP(inPlayer), kCivPowerJustInTimeManufacturing); }
+extern "C" bool ee_screenscpp_mg_player_jit_on(uintptr_t inPlayer) { return MGP(inPlayer)->mJITManufacturing; }
+extern "C" uintptr_t ee_screenscpp_mg_player_node(uintptr_t inPlayer, int64_t inTechnology)
+{ return (uintptr_t)MGP(inPlayer)->GetTechTree()->Get(inTechnology); }
+extern "C" uintptr_t ee_screenscpp_mg_button_object(uint32_t inIndex)
+{ return (uintptr_t)EEButtonObject::Get(inIndex); }
+extern "C" int64_t ee_screenscpp_mg_object_position(uintptr_t inObject)
+{ return reinterpret_cast<EEButtonObject*>(inObject)->mPosition; }
+extern "C" int64_t ee_screenscpp_mg_object_id(uintptr_t inObject)
+{ return reinterpret_cast<EEButtonObject*>(inObject)->mID; }
+extern "C" uintptr_t ee_screenscpp_mg_node_object(uintptr_t inNode) { return (uintptr_t)SBN(inNode)->mButton; }
+extern "C" bool ee_screenscpp_mg_node_available(uintptr_t inNode) { return SBN(inNode)->GetIsAvailable(); }
+extern "C" bool ee_screenscpp_mg_node_allowed(uintptr_t inNode) { return SBN(inNode)->mIsAllowed; }
+extern "C" void ee_screenscpp_mg_hot_key_always_fire(uintptr_t inKey) { MGK(inKey)->SetAlwaysFire(true); }
+extern "C" void ee_screenscpp_mg_add_hot_key(uintptr_t inGroup, uintptr_t inKey)
+{ MG(inGroup)->mOwner->AddHotKey(*MGK(inKey), 2); }
+extern "C" uintptr_t ee_screenscpp_mg_hot_key_copy(uintptr_t inGroup, uintptr_t inKey)
+{ return (uintptr_t)new UIHotKey(MG(inGroup)->mOwner, *MGK(inKey)); }
+extern "C" void ee_screenscpp_mg_hot_key_shift(uintptr_t inKey) { MGK(inKey)->SetModifier(kKeyShift, 0); }
+extern "C" void ee_screenscpp_mg_hot_key_delete(uintptr_t inKey) { delete MGK(inKey); }
+extern "C" uintptr_t ee_screenscpp_mg_hot_key_event_new(uintptr_t inButton, bool inPressed)
+{ return (uintptr_t)static_cast<UIEvent*>(new EEUIEMGHotKeyStatusButton(SBB(inButton), inPressed)); }
+extern "C" void ee_screenscpp_mg_hot_key_pressed_event(uintptr_t inKey, uintptr_t inEvent)
+{ MGK(inKey)->SetJustPressedEvent(reinterpret_cast<UIEvent*>(inEvent)); }
+extern "C" void ee_screenscpp_mg_hot_key_unpressed_event(uintptr_t inKey, uintptr_t inEvent)
+{ MGK(inKey)->SetJustUnpressedEvent(reinterpret_cast<UIEvent*>(inEvent)); }
+extern "C" uintptr_t ee_screenscpp_mg_event_button(uintptr_t inEvent)
+{ return (uintptr_t)reinterpret_cast<EEUIEMGHotKeyStatusButton*>(inEvent)->mButton; }
+extern "C" bool ee_screenscpp_mg_event_pressed(uintptr_t inEvent)
+{ return reinterpret_cast<EEUIEMGHotKeyStatusButton*>(inEvent)->mPressed; }
+extern "C" void ee_screenscpp_mg_button_hot_key_down(uintptr_t inButton) { SBB(inButton)->HotKeyDown(); }
+extern "C" void ee_screenscpp_mg_saved_groups_reset() { gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, 1); }
+extern "C" void ee_screenscpp_mg_remove_cloak(uintptr_t inUnit)
+{ EERemoveCloakEffect(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inUnit))); }
+extern "C" void ee_screenscpp_mg_add_cloak(uintptr_t inUnit) { EEAddCloakEffect(MGU(inUnit)); }
+extern "C" void ee_screenscpp_mg_box_fill(uintptr_t inGroup, uintptr_t inUnit)
+{ MG(inGroup)->mStatusBox->Fill(MGU(inUnit)); }
+extern "C" void ee_screenscpp_mg_box_refresh(uintptr_t inGroup, uintptr_t inUnit)
+{ MG(inGroup)->mStatusBox->Refresh(MGU(inUnit)); }
+extern "C" void ee_screenscpp_mg_box_hide(uintptr_t inGroup) { MG(inGroup)->mStatusBox->HideBackgrounds(); }
+extern "C" void ee_screenscpp_mg_box_queued(uintptr_t inGroup, uintptr_t inUnit)
+{ MG(inGroup)->mStatusBox->UpdateQueuedCounts(MGU(inUnit)->GetComplexUnit(), MGU(inUnit)->GetComplexUnit()->GetPlayer()->GetResearchedImprovement(MGU(inUnit)->GetComplexUnit()->GetClass()->GetUnitType())); }
+extern "C" void ee_screenscpp_mg_box_bind(uintptr_t inGroup, uint32_t inSlot, uint32_t inControl)
+{ MG(inGroup)->mStatusBox->*kMGBoxSlots[inSlot] = MG(inGroup)->mOwner->GetControl(inControl); }
+extern "C" void ee_screenscpp_mg_box_pair(uintptr_t inGroup, uint32_t inIndex)
+{ MG(inGroup)->mStatusBox->SetControls((long)inIndex, MG(inGroup)->mOwner->GetControl(inIndex + 0x45), MG(inGroup)->mOwner->GetControl(inIndex + 0x20)); }
+extern "C" void ee_screenscpp_mg_icon_bar_update(uintptr_t inControl)
+{ EEUIShell::Op(reinterpret_cast<UIControl*>(inControl), EE_SCREENS_SKOP_IB_UPDATE); }
+extern "C" bool ee_screenscpp_mg_unit_behavior_is(uintptr_t inUnit, int64_t inBehavior)
+{ return MGU(inUnit)->GetComplexUnit()->GetBehavior() == EEUnitBehavior::Get(inBehavior); }
+extern "C" bool ee_screenscpp_mg_object_has_hot_key(uint32_t inIndex)
+{ return EEButtonObject::Get(inIndex)->GetHotKey() != NULL; }
+extern "C" uintptr_t ee_screenscpp_mg_object_hot_key(uint32_t inIndex)
+{ return (uintptr_t)EEButtonObject::Get(inIndex)->GetHotKey(); }
+extern "C" void ee_screenscpp_mg_minutes_seconds(uint32_t inTime, unsigned long* inMinutes, unsigned long* inSeconds)
+{ gPhysics->GetMinutesAndSeconds(inMinutes, inSeconds, inTime); }
+extern "C" void ee_screenscpp_mg_timer_text(uintptr_t inGroup, uint32_t inControl, EeScreensShimText inText)
+{ static_cast<UIButton*>(MG(inGroup)->mOwner->GetControl(inControl))->SetText(EEShimText(inText), gU531930); }
+extern "C" uintptr_t ee_screenscpp_mg_world_unit(uint32_t inId)
+{ return (uintptr_t)gWorld.GetUnit((unsigned long)inId); }
+extern "C" uintptr_t ee_screenscpp_mg_player_unit(uint32_t inId)
+{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetUnit((unsigned long)inId); }
+extern "C" int64_t ee_screenscpp_mg_formation_type()
+{ return gWorld.GetCurrentPlayer()->GetSelectedGroup()->GetFormation()->GetType(); }
+extern "C" void ee_screenscpp_mg_verify(int64_t inLine) { ESVERIFY_AT(false, (long)inLine); }
+extern "C" int64_t ee_screenscpp_mg_time_left(uintptr_t inUnit, int64_t inQueue)
+{ return MGU(inUnit)->mComplexUnit->mGoalQueues[inQueue].GetTimeLeft(); }
+extern "C" int64_t ee_screenscpp_mg_queue_size(uintptr_t inUnit)
+{ return (int64_t)MGU(inUnit)->GetComplexUnit()->mCitizenBuildQueue.size(); }
+extern "C" int64_t ee_screenscpp_mg_queue_key(uintptr_t inUnit, uint32_t inIndex)
+{ return MGU(inUnit)->GetComplexUnit()->GetCitizenBuildTarget(inIndex)->GetClass()->GetTechnology(); }
 
 // the command buttons as the rest of the game shows them (the saved group's selection: ee/EEGameUI.h)
 #include "ee/EEGameUI.h"
