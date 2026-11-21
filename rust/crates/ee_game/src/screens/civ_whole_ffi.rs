@@ -121,6 +121,63 @@ pub unsafe extern "C" fn ee_screens_aes_restore(state: *const c_void) {
     unsafe { crate::screens::area_effect_running::restore(&mut crate::screens::game_cpp::Ffi, state) }
 }
 
+/// `EEAreaEffectTemplate::Load(on_demand)` and `Unload` on the template (`area_effect_lists.rs`).
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_template_load(template: *mut c_void, on_demand: bool) {
+    crate::screens::area_effect_lists::template_load(&mut crate::screens::game_cpp::Ffi, template as usize, on_demand)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_template_unload(template: *mut c_void) {
+    crate::screens::area_effect_lists::template_unload(&mut crate::screens::game_cpp::Ffi, template as usize)
+}
+
+/// `EEUnitAreaEffectList::AddAreaEffect(effect)` on the list.
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_add(list: *mut c_void, effect: *mut c_void) {
+    crate::screens::area_effect_lists::add_area_effect(
+        &mut crate::screens::game_cpp::Ffi,
+        list as usize,
+        effect as usize,
+    )
+}
+
+/// `EEUnitAreaEffectList::ApplyModifiers(kind, value, out, unit)` on the list (`value` and `out` the caller's longs).
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_apply_modifiers(
+    list: *mut c_void,
+    kind: c_long,
+    value: *const c_long,
+    out: *mut c_long,
+    unit: *mut c_void,
+) {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    let (l, v, o) = (list as usize, value as usize, out as usize);
+    crate::screens::area_effect_lists::apply_modifiers(ffi, l, kind as i64, v, o, unit as usize)
+}
+
+/// `EEUnitAreaEffectList::Remove(kind)` on the list -> whether one was removed.
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_remove(list: *mut c_void, kind: c_long) -> bool {
+    crate::screens::area_effect_lists::remove(&mut crate::screens::game_cpp::Ffi, list as usize, kind as i64)
+}
+
+/// `EEUnitAreaEffectList::MarkDirty`, `MoveAndUpdate(x, y, value)` and `Tick(unit, elapsed)` on the list.
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_mark_dirty(list: *mut c_void) {
+    crate::screens::area_effect_lists::mark_dirty(&mut crate::screens::game_cpp::Ffi, list as usize)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_move_and_update(list: *mut c_void, x: f32, y: f32, value: f32) {
+    crate::screens::area_effect_lists::move_and_update(&mut crate::screens::game_cpp::Ffi, list as usize, x, y, value)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_tick(list: *mut c_void, unit: *mut c_void, elapsed: f32) {
+    crate::screens::area_effect_lists::tick(&mut crate::screens::game_cpp::Ffi, list as usize, unit as usize, elapsed)
+}
+
 /// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
 #[no_mangle]
 pub extern "C" fn ee_screens_civ_fill_list(list: *mut c_void) {

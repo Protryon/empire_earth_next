@@ -2813,4 +2813,23 @@ shims! {
     fn aes_templates_push(manager: usize, t: usize) = ee_screenscpp_aes_templates_push;
     fn aes_file_close(file: usize) = ee_screenscpp_aes_file_close;
     fn aem_manager() -> usize = ee_screenscpp_aem_manager;
+    // EEAreaEffectTemplate.cpp's (area_effect_lists.rs)
+    fn ael_count(list: usize) -> usize = ee_screenscpp_ael_count;
+    fn ael_at(list: usize, index: usize) -> usize = ee_screenscpp_ael_at;
+    fn ael_strength(effect: usize) -> i64 = ee_screenscpp_ael_strength;
+    fn ael_remove(list: usize, effect: usize) = ee_screenscpp_ael_remove;
+    fn ael_add(list: usize, effect: usize) = ee_screenscpp_ael_add;
+    fn ael_modify(effect: usize, kind: i64, value: usize, out: usize) -> bool = ee_screenscpp_ael_modify;
+    fn ael_show_on(effect: usize, unit: usize) = ee_screenscpp_ael_show_on;
+    fn ael_mark_dirty(effect: usize) = ee_screenscpp_ael_mark_dirty;
+    fn ael_set_location(effect: usize, x: f32, y: f32) = ee_screenscpp_ael_set_location;
+    fn ael_recount(effect: usize, value: f32) = ee_screenscpp_ael_recount;
+    fn ael_tick(effect: usize, unit: usize, elapsed: f32) = ee_screenscpp_ael_tick;
+    fn ael_t_effect(t: usize) -> usize = ee_screenscpp_ael_t_effect;
+    fn ael_t_effect18(t: usize) -> usize = ee_screenscpp_ael_t_effect18;
+    fn ael_t_media(t: usize) -> usize = ee_screenscpp_ael_t_media;
+    fn ael_effect_load(effect: usize, on_demand: bool) = ee_screenscpp_ael_effect_load;
+    fn ael_effect_unload(effect: usize) = ee_screenscpp_ael_effect_unload;
+    fn ael_media_load(media: usize) = ee_screenscpp_ael_media_load;
+    fn ael_media_unload(media: usize) = ee_screenscpp_ael_media_unload;
 }
