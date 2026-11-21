@@ -33,9 +33,8 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
-extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's fonts)
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
+#include "ee/EECivilization.h"
+#include "ee/EEUIFScenarioEditor.h"
 
 // ---- the tab's host (editor_instructions.rs: the ops from 700; editor_trigx.rs composes the sequences over the
 // single statements below, EE_SCREENS_SEINX_*)

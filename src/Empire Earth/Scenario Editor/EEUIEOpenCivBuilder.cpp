@@ -22,8 +22,6 @@
 #include "ee/EEGraphics.h"
 
 // The render-list API and object (defined in EERenderObject.cpp)
-void EEPostGraphicsAll();
-extern RTSRenderObject* gU56534C;
 
 // The seven editor tabs, original VA 0x8c46d0, stride 0x20 (provisional names).
 // 0x19eba9 reads order/help/normal+pressed cells/flag while constructing the buttons;
@@ -66,12 +64,8 @@ struct EESEToolbarButton {
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIEditBox.h"
-extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
-extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
-extern GEFont* gU531938;
 #include "rust/game/screens.h"
 
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 static_assert(sizeof(EEUIFSEBrushGroup) == sizeof(EeScreensSeBrushGroup) &&
                   offsetof(EEUIFSEBrushGroup, mButtons) == offsetof(EeScreensSeBrushGroup, buttons) &&

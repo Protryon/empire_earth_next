@@ -57,7 +57,6 @@ void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBo
 // the exit question's answers (on the question's form)
 static void EESESaveBeforeExit(UIForm* inForm) { ee_screens_event(EE_SCREENS_SE_SAVE_BEFORE_EXIT, inForm, NULL); }
 static void EESEExitWithoutSaving(UIForm* inForm) { ee_screens_event(EE_SCREENS_SE_EXIT_WITHOUT_SAVING, inForm, NULL); }
-extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
 
 extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB)
 {
@@ -73,12 +72,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 
 namespace {
 
-int32_t SexOut(int32_t* i, const void* inObject)
-{
-    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
-    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
-    return 0;
-}
 EEUIFScenarioEditor* SexEditor(void* const* p) { return static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[1])); }
 
 }   // namespace
@@ -90,7 +83,7 @@ extern "C" int32_t ee_screenscpp_sex(uint32_t inOp, void* const* p, int32_t* i, 
     case EE_SCREENS_SEX_DEBUG_IDS: return gWorld.mScenarioManager->mShowDebugIDs;
     case EE_SCREENS_SEX_SET_DEBUG_IDS: gWorld.mScenarioManager->mShowDebugIDs = i[0] != 0;
         return 0;
-    case EE_SCREENS_SEX_NEW_CENTER: return SexOut(i, static_cast<EEAction*>(new EEACenterCamera));
+    case EE_SCREENS_SEX_NEW_CENTER: return EESEOut(i, static_cast<EEAction*>(new EEACenterCamera));
     case EE_SCREENS_SEX_CENTER_UNIT: static_cast<EEACenterCamera*>(static_cast<EEAction*>(p[0]))->SetUnit(SexEditor(p)->GetSelectedUnit((unsigned long)(uint32_t)i[0]));
         return 0;
     case EE_SCREENS_SEX_CENTER_LOCATION: static_cast<EEACenterCamera*>(static_cast<EEAction*>(p[0]))->SetLocation((long)i[0], (long)i[1]);
@@ -99,8 +92,8 @@ extern "C" int32_t ee_screenscpp_sex(uint32_t inOp, void* const* p, int32_t* i, 
         return 0;
     case EE_SCREENS_SEX_PLACE_FIRST: static_cast<UIComboBox*>(SexEditor(p)->GetControlById(0x999))->SetCurrentSelection(0);
         return 0;
-    case EE_SCREENS_SEX_NEW_SAVE_ACTION: return SexOut(i, static_cast<EEAction*>(new EESEARust(kSEASave)));
-    case EE_SCREENS_SEX_NEW_TEST_ACTION: return SexOut(i, static_cast<EEAction*>(new EESEARust(kSEATest)));
+    case EE_SCREENS_SEX_NEW_SAVE_ACTION: return EESEOut(i, static_cast<EEAction*>(new EESEARust(kSEASave)));
+    case EE_SCREENS_SEX_NEW_TEST_ACTION: return EESEOut(i, static_cast<EEAction*>(new EESEARust(kSEATest)));
     case EE_SCREENS_SEX_ASK_EXIT: gUIManager->DisplayYesNoCancel(gSefxText, 1, NULL, EESESaveBeforeExit, EESEExitWithoutSaving);
         return 0;
     case EE_SCREENS_SEX_CHECK_ID: return (int32_t)static_cast<UIControl*>(static_cast<UIEntity*>(p[0]))->GetId();

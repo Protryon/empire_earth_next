@@ -66,8 +66,6 @@
 void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);  // 0x23eb4c (wall ghosts)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x2116a2: a gate fits on inTile's wall
-void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the ghost at the mouse)
-extern unsigned long& gTexturePixelDepth;
 
 // The upgrade panel is a real 0x60-byte class (new at 0x59b976 in the tab's ctor); both its ctor counters
 // are mutable
@@ -83,7 +81,6 @@ extern unsigned long& gTexturePixelDepth;
 // The sort radio buttons' event (RTTI EEUIFSEESortUnitList > UIEvent; vtable 0x444e88; new 0xc): an EESEERust
 // (ee_screens editor_events.rs)
 
-extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its controls (EESERBUnitTypes.cpp)
 
 // (the unit tab's controls are shell kinds: ee_game shells_unit.rs)
 
@@ -105,16 +102,6 @@ UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, con
 // ---- the unit tab's host (editor_unit.rs; EE_SCREENS_SEUN_OP_*): the tab's own controls, the actions, the world,
 // the mouse, the build tools and the unit classes
 
-static_assert(EE_SCREENS_SEUN_IDS_ALPHA == IDS_ALPHA && EE_SCREENS_SEUN_IDS_ALPHA + 1 == IDS_SE_EPOCH &&
-                  EE_SCREENS_SEUN_IDS_ALPHA + 2 == IDS_FAMILY && EE_SCREENS_SEUN_IDS_CARGO == IDS_CARGO &&
-                  EE_SCREENS_SEUN_IDS_SORT == IDS_SORT && EE_SCREENS_SEUN_IDS_WORLD_PLAYER == IDS_WORLD_PLAYER,
-              "the strings");
-static_assert(EE_SCREENS_SEUN_PALETTE_LAND == EE_SCREENS_SE_UNIT_PALETTE_LAND_UNITS && EE_SCREENS_SEUN_PALETTE_AIR == EE_SCREENS_SE_UNIT_PALETTE_AIR_UNITS &&
-                  EE_SCREENS_SEUN_PALETTE_NAVAL == EE_SCREENS_SE_UNIT_PALETTE_NAVAL_UNITS &&
-                  EE_SCREENS_SEUN_PALETTE_STRUCTURES == EE_SCREENS_SE_UNIT_PALETTE_STRUCTURES &&
-                  EE_SCREENS_SEUN_PALETTE_HEROES == EE_SCREENS_SE_UNIT_PALETTE_HEROES &&
-                  EE_SCREENS_SEUN_PALETTE_RESOURCES == EE_SCREENS_SE_UNIT_PALETTE_RESOURCES,
-              "the palettes");
 
 namespace {
 

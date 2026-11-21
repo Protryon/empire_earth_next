@@ -43,7 +43,6 @@
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
 
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 // The terrain name order (0x1aee71): compares the localized terrain names without case. It has no state and
 // returns via ret 8 (provisional name).
 struct EESETerrainNameLess {
@@ -106,13 +105,6 @@ long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // ---- the tab's host (editor_terrain.rs: the ops from 1000)
 
-static_assert(IDS_SE_TERRAIN == 20508 && IDS_BULLDOZER == 20510 && IDS_TERRAIN_TYPE == 20511 &&
-                  IDS_TERRAIN_COLOR == 20542 && EE_SCREENS_SE_TERRAIN_TERRAIN_BUTTON == 0xc8 && EE_SCREENS_SE_TERRAIN_BITMAP == 0xc9 &&
-                  EE_SCREENS_SE_TERRAIN_MOUNTAINS_BUTTON == 0xca && EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE_LABEL == 0xcb &&
-                  EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE == 0xcc && EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE_LABEL == 0xce &&
-                  EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE == 0xcf && IDS_BRUSH_SIZE == 20500 && IDS_SE_TINY == 20501 &&
-                  IDS_SE_HUGE == 20505,
-              "editor_terrain.rs's ids");
 
 extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {

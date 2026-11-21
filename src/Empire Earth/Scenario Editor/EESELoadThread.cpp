@@ -60,22 +60,6 @@ void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, 
     ee_screens_selt_message(this, inMessage, inParameter1, inParameter2);
 }
 
-static_assert(EE_SCREENS_SELTX_IDS_LOADING_EPOCH_FOR_PLAYER == IDS_LOADING_EPOCH_FOR_PLAYER &&
-                  EE_SCREENS_SELTX_IDS_LOADING_FOR_PLAYER == IDS_LOADING_FOR_PLAYER &&
-                  EE_SCREENS_SELTX_IDS_LOADING_TERRAIN == IDS_LOADING_TERRAIN &&
-                  EE_SCREENS_SELTX_IDS_YOU_MUST_ENTER_FILE_NAME_BEFORE == IDS_YOU_MUST_ENTER_FILE_NAME_BEFORE &&
-                  EE_SCREENS_SELTX_IDS_REPLACE_FILE_ON_DISK == IDS_REPLACE_FILE_ON_DISK &&
-                  EE_SCREENS_SELTX_IDS_FILE_NAME_NOT_FOUND == IDS_FILE_NAME_NOT_FOUND &&
-                  EE_SCREENS_SELTX_IDS_FILE_ERROR == IDS_FILE_ERROR &&
-                  EE_SCREENS_SELTX_IDS_FILE_EXPORTED_SUCCESSFULLY == IDS_FILE_EXPORTED_SUCCESSFULLY &&
-                  EE_SCREENS_SELTX_IDS_EXPORTED_FILE_NAME_HAS_CHANGED == IDS_EXPORTED_FILE_NAME_HAS_CHANGED &&
-                  EE_SCREENS_SELTX_IDS_FILE_IMPORTED_SUCCESSFULLY == IDS_FILE_IMPORTED_SUCCESSFULLY &&
-                  EE_SCREENS_SELTX_IDS_IMPORTING_FILE_REPLACES_ALL_TEXT == IDS_IMPORTING_FILE_REPLACES_ALL_TEXT &&
-                  EE_SCREENS_SELTX_IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING ==
-                      IDS_FOLLOWING_ERRORS_OCCURRED_WHILE_IMPORTING &&
-                  EE_SCREENS_SELTX_IDS_LCL_FILE_HAS_INVALID_VERSION == IDS_LCL_FILE_HAS_INVALID_VERSION &&
-                  EE_SCREENS_SELTX_LOCALIZATION_EDIT == EE_SCREENS_SE_INSTRUCTIONS_LOCALIZATION_EDIT_BOX,
-              "editor_selt.rs's numbers");
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)
 void EESEExportTextAnswer(UIForm* inFile);
@@ -96,12 +80,7 @@ UWideString Text(const uintptr_t* p, const int64_t* a) { return UWideString(std:
 EEUIFErrorCallback Answer(const int64_t* a) { return a[0] != 0 ? EESEImportTextAnswer : EESEExportTextAnswer; }
 
 // a text into the caller's buffer (p2, a3 bytes): its whole length
-int64_t Write(const UWideString& inText, const uintptr_t* p, const int64_t* a)
-{
-    int64_t theLength = (int64_t)inText.GetTCHARLength();
-    memcpy((void*)p[2], (const char*)inText, (size_t)(theLength < a[3] ? theLength : a[3]));
-    return theLength;
-}
+int64_t Write(const UWideString& inText, const uintptr_t* p, const int64_t* a) { return EESEWrite((void*)p[2], (int32_t)a[3], inText); }
 
 }   // namespace
 

@@ -11,21 +11,7 @@
 #include "ee/EEUIBuildGate.h"
 #include "ee/EESEUIBuildWall.h"
 
-class EEUnit;
-class EEUIFScenarioEditor;
-class EEUIFSELBUnitList;
-class EEUIFSELBCargoList;
-class EEUIFSEBUnitType;
-class EEUIFSEBRotation;
-class EEUIFSEBRemoveCargo;
-class EEUIFSEUpgradePanel;
-class EEUICSelectUnits;
-class EESEUICCommandUnits;
-class EESEAMouseClick;
-class EESEALasso;
-class EESEARust;
 class GEFont;
-class UIComboBox;
 class UIForm;
 class UILBString;
 

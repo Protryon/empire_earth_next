@@ -47,8 +47,6 @@
 #include "rust/game/screens.h"
 #include "rust/sim/scenario.h"
 
-extern GEViewport gViewport;
-extern GEFont* gSeplScreenFont;   // the screen's font while a screen makes its controls (EESERBUnitTypes.cpp)
 
 // Sets the map rectangle the editor highlights
 // (defined in this unit: every caller calls it out of line)
@@ -71,12 +69,6 @@ UWideString SearBytes(const void* inBytes, int32_t inLength)
     return UWideString(std::string(static_cast<const char*>(inBytes), (size_t)(inLength > 0 ? inLength : 0)).c_str());
 }
 
-int32_t SearWrite(void* outBuffer, int32_t inCapacity, const char* inText)
-{
-    size_t theLength = strlen(inText);
-    memcpy(outBuffer, inText, (std::min)(theLength, (size_t)(inCapacity > 0 ? inCapacity : 0)));
-    return (int32_t)theLength;
-}
 
 // the point a pick or ground read takes, its tile's coordinates, the screen line and its ground location (the
 // originals' locals)
@@ -119,8 +111,8 @@ extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEARX_AREA:
         *theOut = gWorld.mScenarioManager->GetArea((unsigned long)i[0]);
         return 0;
-    case EE_SCREENS_SEARX_NAME: return SearWrite(p[2], i[3], theArea->GetName());
-    case EE_SCREENS_SEARX_TEXT: return SearWrite(p[2], i[3], theArea->GetText());
+    case EE_SCREENS_SEARX_NAME: return EESEWrite(p[2], i[3], theArea->GetName());
+    case EE_SCREENS_SEARX_TEXT: return EESEWrite(p[2], i[3], theArea->GetText());
     case EE_SCREENS_SEARX_RECT + 0:
         f[0] = theArea->GetRect().GetLeft();
         return 0;

@@ -187,6 +187,8 @@ pub mod editor_brush;
 mod editor_calls;
 pub mod editor_conditions;
 pub mod editor_controls;
+#[cfg(test)]
+mod editor_cpp_consts_tests;
 pub mod editor_ids;
 mod editor_direct;
 pub mod editor_effects;
