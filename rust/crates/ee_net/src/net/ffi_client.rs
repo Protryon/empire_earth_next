@@ -2,7 +2,7 @@
 //! `EeNetClient*` and forwards each member; the client's calls out go to the class's host function by `EeNetClOp`,
 //! the queues' common ones (the clock, events, threads, messages) to its `EeNetQOp` host.
 
-use std::ffi::c_void;
+use std::ffi::{c_ulong, c_void};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::net::client::*;
@@ -50,11 +50,11 @@ pub enum EeNetClOp {
     XferExportSize = 15,
     /// a message -> GetType()
     MsgType = 16,
-    /// a message, a flag (EeNetClMsgFlag) -> the virtual flag
-    MsgFlag = 17,
-    /// a message, 0 SetForSpecificSlot / 1 SetOriginatingSlot, a slot
-    MsgSetSlot = 18,
-    /// a message, an uint32_t* -> GetSendToAllAndWaitMessageID(*out)
+    /// a message -> GetCountsTowardsPlayerInputThrottle()
+    MsgCountsTowardsThrottle = 17,
+    /// a message, a slot: SetOriginatingSlot
+    MsgSetOriginatingSlot = 18,
+    /// a message, an unsigned long* (in and out) -> GetSendToAllAndWaitMessageID(*out)
     MsgS2awId = 19,
     /// an engine message, a member (NEMRecord's numbering) -> its value (a block: its address)
     MsgGet = 20,
@@ -62,11 +62,11 @@ pub enum EeNetClOp {
     MsgNew = 21,
     /// a tick response, an input -> AddPlayerInput(input)
     MsgAddInput = 22,
-    /// a message, an uint32_t* size -> ExportMessage's data (C++ new[]), its size in *size
+    /// a message, an unsigned char** data, an unsigned long* size: ExportMessage (the data C++ new[])
     MsgExportNew = 23,
     /// an export: deleted
     BytesFree = 24,
-    /// an FSFile*, data, its size, an uint32_t* written -> Write(data, size, written)
+    /// an FSFile*, data, its size, an unsigned long* written (in and out) -> Write(data, size, *written)
     FsWrite = 25,
     /// an FSFile*: Close()
     FsClose = 26,
@@ -102,6 +102,12 @@ pub enum EeNetClOp {
     ProcessLocalUserInput = 41,
     /// received bytes -> new NEMRecord(bytes) (the transfer message)
     MsgImport = 42,
+    /// a message -> GetCanSendWhilePaused()
+    MsgCanSendWhilePaused = 43,
+    /// a message -> GetIsAvailableToSend()
+    MsgIsAvailableToSend = 44,
+    /// a message, a slot: SetForSpecificSlot
+    MsgSetForSpecificSlot = 45,
 }
 
 /// A message's virtual flags
@@ -341,13 +347,22 @@ impl ClientHost for ClFfiHost {
         self.call(EeNetClOp::MsgType, m, 0, 0, 0) as u8
     }
     fn msg_flag(&self, m: Msg, f: MsgFlag) -> bool {
-        self.call(EeNetClOp::MsgFlag, m, f as usize, 0, 0) != 0
+        let op = match f {
+            MsgFlag::CountsTowardsPlayerInputThrottle => EeNetClOp::MsgCountsTowardsThrottle,
+            MsgFlag::CanSendWhilePaused => EeNetClOp::MsgCanSendWhilePaused,
+            MsgFlag::IsAvailableToSend => EeNetClOp::MsgIsAvailableToSend,
+        };
+        self.call(op, m, 0, 0, 0) != 0
     }
     fn msg_set_slot(&self, m: Msg, originating: bool, slot: u8) {
-        self.call(EeNetClOp::MsgSetSlot, m, originating as usize, slot as usize, 0);
+        let op = if originating { EeNetClOp::MsgSetOriginatingSlot } else { EeNetClOp::MsgSetForSpecificSlot };
+        self.call(op, m, slot as usize, 0, 0);
     }
     fn msg_s2aw_id(&self, m: Msg, out: &mut u32) -> bool {
-        self.call(EeNetClOp::MsgS2awId, m, out as *mut u32 as usize, 0, 0) != 0
+        let mut id = *out as c_ulong;
+        let r = self.call(EeNetClOp::MsgS2awId, m, &mut id as *mut c_ulong as usize, 0, 0) != 0;
+        *out = id as u32;
+        r
     }
     fn msg_get(&self, m: Msg, i: u32) -> usize {
         self.call(EeNetClOp::MsgGet, m, i as usize, 0, 0) as usize
@@ -362,13 +377,19 @@ impl ClientHost for ClFfiHost {
         self.call(EeNetClOp::MsgAddInput, response, input, 0, 0) as i32
     }
     fn msg_export_new(&self, m: Msg, size: &mut u32) -> usize {
-        self.call(EeNetClOp::MsgExportNew, m, size as *mut u32 as usize, 0, 0) as usize
+        let (mut data, mut n): (usize, c_ulong) = (0, 0);
+        self.call(EeNetClOp::MsgExportNew, m, &mut data as *mut usize as usize, &mut n as *mut c_ulong as usize, 0);
+        *size = n as u32;
+        data
     }
     fn bytes_free(&self, data: usize) {
         self.call(EeNetClOp::BytesFree, data, 0, 0, 0);
     }
     fn fsfile_write(&self, f: FileH, data: usize, size: u32, written: &mut u32) -> i32 {
-        self.call(EeNetClOp::FsWrite, f, data, size as usize, written as *mut u32 as usize) as i32
+        let mut n = *written as c_ulong;
+        let r = self.call(EeNetClOp::FsWrite, f, data, size as usize, &mut n as *mut c_ulong as usize) as i32;
+        *written = n as u32;
+        r
     }
     fn fsfile_close(&self, f: FileH) {
         self.call(EeNetClOp::FsClose, f, 0, 0, 0);

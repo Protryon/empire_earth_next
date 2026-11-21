@@ -156,15 +156,15 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
         return gPlatSimMode;
     case EeNetSvOp::MsgType:
         return theMessage->GetType();
-    case EeNetSvOp::MsgSetSlot:
-        if (b != 0)
-            theMessage->SetOriginatingSlot((unsigned char)c);
-        else
-            theMessage->SetForSpecificSlot((unsigned char)c);
+    case EeNetSvOp::MsgSetOriginatingSlot:
+        theMessage->SetOriginatingSlot((unsigned char)b);
         return 0;
-    case EeNetSvOp::MsgFlag:
-        if ((EeNetSvMsgFlag)b == EeNetSvMsgFlag::CanSendWhilePaused)
-            return theMessage->GetCanSendWhilePaused();
+    case EeNetSvOp::MsgSetForSpecificSlot:
+        theMessage->SetForSpecificSlot((unsigned char)b);
+        return 0;
+    case EeNetSvOp::MsgCanSendWhilePaused:
+        return theMessage->GetCanSendWhilePaused();
+    case EeNetSvOp::MsgIsAvailableToSend:
         return theMessage->GetIsAvailableToSend();
     case EeNetSvOp::MsgSlot:
         return theMessage->GetOriginatingSlot();
@@ -172,24 +172,16 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
         return (ptrdiff_t)theRecord->Value((uint32_t)b);
     case EeNetSvOp::MsgNew:
         return (ptrdiff_t) new NEMRecord((unsigned char)a, reinterpret_cast<const uint32_t*>(b), c);
-    case EeNetSvOp::MsgTickResponseInput: {
-        NEMessage* theInput = NULL;
-        long theResult = theRecord->GetPlayerInput((unsigned long)b, theInput);
-        *reinterpret_cast<NEMessage**>(c) = theInput;
-        return theResult;
-    }
+    case EeNetSvOp::MsgTickResponseInput:
+        return theRecord->GetPlayerInput((unsigned long)b, *reinterpret_cast<NEMessage**>(c));
     case EeNetSvOp::MsgAddInput:
         return theRecord->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
     case EeNetSvOp::MsgSetS2awId:
         theMessage->SetSendToAllAndWaitMessageID((unsigned long)b);
         return 0;
-    case EeNetSvOp::MsgExportNew: {
-        unsigned char* theData = NULL;
-        unsigned long theSize = 0;
-        theMessage->ExportMessage(&theData, theSize);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)theSize;
-        return (ptrdiff_t)theData;
-    }
+    case EeNetSvOp::MsgExportNew:
+        theMessage->ExportMessage(reinterpret_cast<unsigned char**>(b), *reinterpret_cast<unsigned long*>(c));
+        return 0;
     case EeNetSvOp::BytesFree:
         delete[] reinterpret_cast<unsigned char*>(a);
         return 0;

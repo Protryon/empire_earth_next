@@ -36,28 +36,20 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
         return (ptrdiff_t)NEMRecord::XferExportSize();
     case EeNetClOp::MsgType:
         return theMessage->GetType();
-    case EeNetClOp::MsgFlag:
-        switch ((EeNetClMsgFlag)b) {
-        case EeNetClMsgFlag::CountsTowardsPlayerInputThrottle:
-            return theMessage->GetCountsTowardsPlayerInputThrottle();
-        case EeNetClMsgFlag::CanSendWhilePaused:
-            return theMessage->GetCanSendWhilePaused();
-        case EeNetClMsgFlag::IsAvailableToSend:
-            return theMessage->GetIsAvailableToSend();
-        }
+    case EeNetClOp::MsgCountsTowardsThrottle:
+        return theMessage->GetCountsTowardsPlayerInputThrottle();
+    case EeNetClOp::MsgCanSendWhilePaused:
+        return theMessage->GetCanSendWhilePaused();
+    case EeNetClOp::MsgIsAvailableToSend:
+        return theMessage->GetIsAvailableToSend();
+    case EeNetClOp::MsgSetOriginatingSlot:
+        theMessage->SetOriginatingSlot((unsigned char)b);
         return 0;
-    case EeNetClOp::MsgSetSlot:
-        if (b != 0)
-            theMessage->SetOriginatingSlot((unsigned char)c);
-        else
-            theMessage->SetForSpecificSlot((unsigned char)c);
+    case EeNetClOp::MsgSetForSpecificSlot:
+        theMessage->SetForSpecificSlot((unsigned char)b);
         return 0;
-    case EeNetClOp::MsgS2awId: {
-        unsigned long theID = *reinterpret_cast<uint32_t*>(b);
-        bool theResult = theMessage->GetSendToAllAndWaitMessageID(theID);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)theID;
-        return theResult;
-    }
+    case EeNetClOp::MsgS2awId:
+        return theMessage->GetSendToAllAndWaitMessageID(*reinterpret_cast<unsigned long*>(b));
     case EeNetClOp::MsgGet:
         return (ptrdiff_t)theRecord->Value((uint32_t)b);
     case EeNetClOp::MsgNew:
@@ -66,22 +58,14 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
         return (ptrdiff_t) new NEMRecord(reinterpret_cast<unsigned char*>(a));
     case EeNetClOp::MsgAddInput:
         return theRecord->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
-    case EeNetClOp::MsgExportNew: {
-        unsigned char* thePayload = NULL;
-        unsigned long thePayloadSize = 0;
-        theMessage->ExportMessage(&thePayload, thePayloadSize);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)thePayloadSize;
-        return (ptrdiff_t)thePayload;
-    }
+    case EeNetClOp::MsgExportNew:
+        theMessage->ExportMessage(reinterpret_cast<unsigned char**>(b), *reinterpret_cast<unsigned long*>(c));
+        return 0;
     case EeNetClOp::BytesFree:
         delete[] reinterpret_cast<unsigned char*>(a);
         return 0;
-    case EeNetClOp::FsWrite: {
-        unsigned long theWritten = *reinterpret_cast<uint32_t*>(d);
-        long theResult = theFile->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, theWritten);
-        *reinterpret_cast<uint32_t*>(d) = (uint32_t)theWritten;
-        return theResult;
-    }
+    case EeNetClOp::FsWrite:
+        return theFile->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, *reinterpret_cast<unsigned long*>(d));
     case EeNetClOp::FsClose:
         theFile->Close();
         return 0;

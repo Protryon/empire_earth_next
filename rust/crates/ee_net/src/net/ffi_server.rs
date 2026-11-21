@@ -2,7 +2,7 @@
 //! its members; the Rust's calls out go to three host functions: the server's (`EeNetSvOp`), the message manager's
 //! that reach the C++ (`EeNetMmOp`: NESynchronousServer::MessageManagerHost) and the queues' common ones (`EeNetQOp`).
 
-use std::ffi::c_void;
+use std::ffi::{c_ulong, c_void};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::net::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
@@ -53,21 +53,21 @@ pub enum EeNetSvOp {
     ServerClose = 14,
     /// a message -> GetType()
     MsgType = 15,
-    /// a message, originating (else for a specific slot), a slot
-    MsgSetSlot = 16,
-    /// a message, a flag (EeNetSvMsgFlag)
-    MsgFlag = 17,
+    /// a message, a slot: SetOriginatingSlot
+    MsgSetOriginatingSlot = 16,
+    /// a message -> GetCanSendWhilePaused()
+    MsgCanSendWhilePaused = 17,
     /// an engine message, a member (NEMRecord's numbering) -> its value (the players' inputs: their count)
     MsgGet = 18,
     /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
     MsgNew = 19,
-    /// a tick response, an index, an NEMessage** -> GetPlayerInput(i, out)
+    /// a tick response, an index, an NEMessage** (NULL before the call) -> GetPlayerInput(i, *out)
     MsgTickResponseInput = 20,
     /// a tick, an input -> AddPlayerInput
     MsgAddInput = 21,
     /// a message, an id: SetSendToAllAndWaitMessageID
     MsgSetS2awId = 22,
-    /// a message, a uint32_t* size -> ExportMessage's buffer (new[])
+    /// a message, an unsigned char** data, an unsigned long* size: ExportMessage (the buffer new[])
     MsgExportNew = 23,
     /// a buffer: delete[]
     BytesFree = 24,
@@ -97,6 +97,10 @@ pub enum EeNetSvOp {
     ProcessLocalUserInput = 36,
     /// a message -> GetOriginatingSlot()
     MsgSlot = 37,
+    /// a message, a slot: SetForSpecificSlot
+    MsgSetForSpecificSlot = 38,
+    /// a message -> GetIsAvailableToSend()
+    MsgIsAvailableToSend = 39,
 }
 
 /// The fields the accessors read (`ee_net_sv_get`)
@@ -462,10 +466,15 @@ impl ServerHost for SvFfiHost {
         self.call(EeNetSvOp::MsgType, m, 0, 0, 0) as u8
     }
     fn msg_set_slot(&self, m: Msg, originating: bool, slot: u8) {
-        self.call(EeNetSvOp::MsgSetSlot, m, originating as usize, slot as usize, 0);
+        let op = if originating { EeNetSvOp::MsgSetOriginatingSlot } else { EeNetSvOp::MsgSetForSpecificSlot };
+        self.call(op, m, slot as usize, 0, 0);
     }
     fn msg_flag(&self, m: Msg, f: EeNetSvMsgFlag) -> bool {
-        self.call(EeNetSvOp::MsgFlag, m, f as usize, 0, 0) != 0
+        let op = match f {
+            EeNetSvMsgFlag::CanSendWhilePaused => EeNetSvOp::MsgCanSendWhilePaused,
+            EeNetSvMsgFlag::IsAvailableToSend => EeNetSvOp::MsgIsAvailableToSend,
+        };
+        self.call(op, m, 0, 0, 0) != 0
     }
     fn msg_slot(&self, m: Msg) -> u8 {
         self.call(EeNetSvOp::MsgSlot, m, 0, 0, 0) as u8
@@ -477,7 +486,10 @@ impl ServerHost for SvFfiHost {
         self.call(EeNetSvOp::MsgNew, message_type as usize, values.as_ptr() as usize, values.len(), 0) as Msg
     }
     fn msg_tick_response_input(&self, m: Msg, i: u32, out: &mut Msg) -> i32 {
-        self.call(EeNetSvOp::MsgTickResponseInput, m, i as usize, out as *mut Msg as usize, 0) as i32
+        let mut input: Msg = 0;
+        let r = self.call(EeNetSvOp::MsgTickResponseInput, m, i as usize, &mut input as *mut Msg as usize, 0) as i32;
+        *out = input;
+        r
     }
     fn msg_add_input(&self, tick: Msg, input: Msg) -> i32 {
         self.call(EeNetSvOp::MsgAddInput, tick, input, 0, 0) as i32
@@ -486,7 +498,10 @@ impl ServerHost for SvFfiHost {
         self.call(EeNetSvOp::MsgSetS2awId, m, id as usize, 0, 0);
     }
     fn msg_export_new(&self, m: Msg, size: &mut u32) -> usize {
-        self.call(EeNetSvOp::MsgExportNew, m, size as *mut u32 as usize, 0, 0) as usize
+        let (mut data, mut n): (usize, c_ulong) = (0, 0);
+        self.call(EeNetSvOp::MsgExportNew, m, &mut data as *mut usize as usize, &mut n as *mut c_ulong as usize, 0);
+        *size = n as u32;
+        data
     }
     fn bytes_free(&self, data: usize) {
         self.call(EeNetSvOp::BytesFree, data, 0, 0, 0);
