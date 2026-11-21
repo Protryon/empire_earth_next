@@ -280,25 +280,10 @@ std::string EECPNextTechName(long inTech)
 // the resource centres, the danger zones), a goal's target, the continent manager's areas and forests (lane C
 // re-points these), the tech nodes' methods with bodies, the trace, the game log and the files
 
-EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer);   // EECPPlacement.cpp
 
 void EECPNextAppend(void* outBytes, const std::string& inText)
 {
     ee_ai_next_append(outBytes, (const uint8_t*)inText.data(), inText.size());
-}
-
-static bool EECPNextReadFile(const char* inPath, void* outBytes)
-{
-    FILE* f = PlatFOpen(inPath, "rb");
-    if (f == NULL)
-        return false;
-    char theBuffer[4096];
-    size_t n;
-    while ((n = fread(theBuffer, 1, sizeof(theBuffer), f)) > 0)
-        ee_ai_next_append(outBytes, (const uint8_t*)theBuffer, n);
-    bool theOK = !ferror(f);
-    fclose(f);
-    return theOK;
 }
 
 extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
@@ -330,15 +315,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return 0;
     case EE_AI_NEXT_HOST_GAME_SEED:
         return (int64_t)gUserInterface->mRandomSeed;
-    case EE_AI_NEXT_HOST_READ:
-        return EECPNextReadFile((const char*)(uintptr_t)a, outRecord) ? 1 : 0;
-    case EE_AI_NEXT_HOST_EXISTS: {
-        FILE* f = PlatFOpen((const char*)(uintptr_t)a, "rb");
-        if (f == NULL)
-            return 0;
-        fclose(f);
-        return 1;
-    }
     case EE_AI_NEXT_HOST_CLASS_NAME:
         EECPNextAppend(outRecord, EECPNextClassName((long)a));
         return 0;
@@ -378,20 +354,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         out[1] = theClosest.mY;
         return 1;
     }
-    case EE_AI_NEXT_HOST_FORESTS:
-        return (int64_t)gContinentManager.GetForests().size();
-    case EE_AI_NEXT_HOST_FOREST: {
-        EEAIForest* theForest = gContinentManager.GetForests()[(unsigned short)a];
-        return theForest != NULL ? (int64_t)theForest->GetID() : -1;
-    }
-    case EE_AI_NEXT_HOST_FOREST_POINT: {
-        EEAIForest* theForest = gContinentManager.GetForests()[(unsigned short)a];
-        U2DPoint<long> theFrom((long)b, (long)c);
-        U2DPoint<long> thePoint = out[2] != 0 ? theForest->GetClosestHullPoint(theFrom) : theForest->GetClosestPoint(theFrom);
-        out[0] = thePoint.mX;
-        out[1] = thePoint.mY;
-        return 0;
-    }
     case EE_AI_NEXT_HOST_UNIT:
         return (int64_t)EECPNextHandle(gWorld.GetUnit((unsigned long)a));
     case EE_AI_NEXT_HOST_NODE_COST:
@@ -419,26 +381,12 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
     case EE_AI_NEXT_HOST_COMPUTER:
         return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mComputerPlayer;
-    case EE_AI_NEXT_HOST_AREAS: {
-        // the continent manager's areas (serial/kind), its serial counter and its lists' sizes (EE-SIM's dumps)
-        char theLine[256];
-        snprintf(theLine, sizeof(theLine),
-                 "AREAS digest=%08lx last=%lu continents=%zu hills=%zu pathareas=%zu sectors=%zu subsectors=%zu chokepoints=%zu forests=%zu areas=%zu:",
-                 EEContinentRegionsDigest(), (unsigned long)gContinentManager.GetLastSerial(), gContinentManager.GetContinents().size(),
-                 gContinentManager.GetHills().size(), gContinentManager.GetPathAreas().size(), gContinentManager.GetPathSectors().size(),
-                 gContinentManager.GetPathSubSectors().size(), gContinentManager.GetChokePoints().size(), gContinentManager.GetForests().size(),
-                 gContinentManager.GetAreas().size());
-        ee_ai_next_append(outRecord, (const uint8_t*)theLine, strlen(theLine));
-        EEAIListView<EeAStarCmArea> theAreas = gContinentManager.GetAreas();
-        for (const EeAStarCmArea* theIt = theAreas.begin(); theIt != theAreas.end(); ++theIt) {
-            EEAIArea* theArea = (EEAIArea*)(uintptr_t)theIt->area;
-            snprintf(theLine, sizeof(theLine), " %lu/%ld", (unsigned long)theIt->serial,
-                     theArea != NULL ? (long)theArea->GetAreaType() : -1L);
-            ee_ai_next_append(outRecord, (const uint8_t*)theLine, strlen(theLine));
-        }
-        ee_ai_next_append(outRecord, (const uint8_t*)"\n", 1);
+    case EE_AI_NEXT_HOST_GAME_LOG_TICK: EEGameLogTick((unsigned long)a);
         return 0;
-    }
+    case EE_AI_NEXT_HOST_TRACE_HASH_ON:
+        return gCPTraceHashOn ? 1 : 0;
+    case EE_AI_NEXT_HOST_CP_UPDATE: me->Update((unsigned long)a);
+        return 0;
     case EE_AI_NEXT_HOST_STARTED:
         return me->mIsStarted ? 1 : 0;
     case EE_AI_NEXT_HOST_SIM_HASH: {

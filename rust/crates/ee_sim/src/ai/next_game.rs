@@ -2667,3 +2667,8 @@ pub mod reflex;
 // (EECPTrace.cpp before)
 #[path = "next_trace.rs"]
 pub mod trace;
+
+// the computer players' schedule: collected after a game is set up, one Update per interval (EEArtificialIntelligence.cpp
+// before)
+#[path = "next_schedule.rs"]
+pub mod schedule;

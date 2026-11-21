@@ -95,8 +95,98 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *
             cpp(EE_AI_UNITS_HOST_ADD_TRIBUTE, me, to, (1 << 32) | (b & 0xffff_ffff), c, std::ptr::null_mut());
             0
         }
+        EE_AI_UNITS_HOST_WALL_CLASS => epoch_class(me, PLCE_WALL_CLASS, crate::cp::place_game::ee_cp_wall_class),
+        more::EE_AI_UNITS_HOST_GATE_CLASS => epoch_class(me, PLCE_GATE_CLASS, crate::cp::place_game::ee_cp_gate_class),
+        // SAFETY: the caller's record
+        more::EE_AI_UNITS_HOST_PLACE => i64::from(unsafe { place(me, &mut *(out as *mut more::EeAiUnitsPlace)) }),
         _ => return None,
     })
+}
+
+/// PLCE's methods (ee/EECPPlaceCapture.h kPlce*)
+const PLCE_GATE_CLASS: u32 = 43;
+const PLCE_WALL_CLASS: u32 = 45;
+const PLCE_NEXT_PLACE_SEARCH: u32 = 47;
+
+/// A PLCE scope (TEST ONLY), closed when dropped.
+struct Plce(*mut crate::cp::place_capture::EeCpPlaceScope);
+
+impl Plce {
+    fn open(me: *mut c_void, method: u32) -> Plce {
+        // SAFETY: the live computer player
+        Plce(unsafe { crate::cp::place_capture::ee_cp_scope_begin(me as u64, method, false) })
+    }
+    fn i(&self, w: i64) -> &Self {
+        // SAFETY: this open scope
+        unsafe { crate::cp::place_capture::ee_cp_scope_word(self.0, w as u32) };
+        self
+    }
+}
+
+impl Drop for Plce {
+    fn drop(&mut self) {
+        // SAFETY: the scope this opened
+        unsafe { crate::cp::place_capture::ee_cp_scope_end(self.0, false) }
+    }
+}
+
+/// `EECPWallClass`, `EECPGateClass`: the class of the player's epoch.
+fn epoch_class(me: *mut c_void, method: u32, class: extern "C" fn(i32) -> i32) -> i64 {
+    let scope = Plce::open(me, method);
+    let epoch = {
+        let t = unsafe { WorldRead::begin() };
+        // SAFETY: the live computer player
+        unsafe { PlayerView::of(&t, me as u64) }.and_then(|p| p.tech_tree()).map_or(0, |tree| tree.current_epoch())
+    };
+    let r = class(epoch as i32) as i64;
+    scope.i(r);
+    r
+}
+
+/// `EECPNextPlaceSearch`: the Lua verbs' placement search (ee_sim::cp::placement next_place_search).
+///
+/// # Safety
+/// `me` the live computer player.
+unsafe fn place(me: *mut c_void, p: &mut more::EeAiUnitsPlace) -> bool {
+    let scope = Plce::open(me, PLCE_NEXT_PLACE_SEARCH);
+    let units: Vec<i64> = if p.units_len == 0 {
+        Vec::new()
+    } else {
+        // SAFETY: the caller's `units_len` ids
+        unsafe { std::slice::from_raw_parts(p.units, p.units_len) }.iter().map(|&u| u as i64).collect()
+    };
+    scope.i(p.unit_type as i64).i(p.mode as i64).i(p.x as i64).i(p.y as i64).i(p.first as i64).i(p.last as i64);
+    scope.i(units.len() as i64);
+    for &u in &units {
+        scope.i(u);
+    }
+    scope.i(p.site as i64);
+    // SAFETY: the live computer player
+    let ctx = unsafe { crate::cp::player_game::ctx_of(me as u64) };
+    let units_at = if units.is_empty() { std::ptr::null() } else { units.as_ptr() };
+    // SAFETY: the context and the ids above
+    let found = unsafe {
+        crate::cp::place_game::ee_cp_next_place_search(
+            &ctx,
+            p.unit_type as i32,
+            p.mode as i32,
+            p.x as i32,
+            p.y as i32,
+            p.first as i32,
+            p.last as i32,
+            units_at,
+            units.len(),
+            p.site as i32,
+        )
+    };
+    p.out_x = found.x as c_long;
+    p.out_y = found.y as c_long;
+    p.out_gap = found.gap as c_long;
+    let result = found.found != 0;
+    scope.i(i64::from(result)).i(p.out_x as i64).i(p.out_y as i64).i(p.out_gap as i64);
+    // SAFETY: the open scope; the live computer player
+    unsafe { crate::cp::place_capture::ee_cp_scope_centers(scope.0, me as u64) };
+    result
 }
 
 /// The player's state (`EECPUnitsGet`: made when missing).

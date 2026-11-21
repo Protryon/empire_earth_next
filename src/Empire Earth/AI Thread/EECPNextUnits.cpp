@@ -364,8 +364,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     }
     case EE_AI_UNITS_HOST_HAS_TREE:
         return me->mTechnologies != NULL ? 1 : 0;
-    case EE_AI_UNITS_HOST_WALL_CLASS:
-        return EECPWallClass(me);
     case EE_AI_UNITS_HOST_NODE_AFFORD: {
         EETechTreeNode* theNode = me->mTechnologies->Get((long)a);
         if (theNode == NULL)
@@ -407,8 +405,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return EECPUnitsImproveCost(me, (long)a, (long)b, *(EeAiUnitsImproveCost*)outRecord) ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_BUY:
         return me->CanBuy((long)a, (long)b, NULL) ? 1 : 0;
-    case EE_AI_UNITS_HOST_GATE_CLASS:
-        return EECPGateClass(me);
     case EE_AI_UNITS_HOST_IS_GATE_CLASS:
         return EEUnitClassOfKind<EE_CLASS_KIND_GATE>((EEUnitClass*)(uintptr_t)a) != NULL ? 1 : 0;
     case EE_AI_UNITS_HOST_STANCE:
@@ -424,12 +420,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return EECPNextBuildUnsafe(me, (long)a, (long)b);
     case EE_AI_UNITS_HOST_SITE_THREAT:
         return EECPNextSiteThreat(me, (long)a, (long)b, false, NULL);
-    case EE_AI_UNITS_HOST_PLACE: {
-        EeAiUnitsPlace& p = *(EeAiUnitsPlace*)outRecord;
-        std::vector<long> theUnits(p.units, p.units + p.units_len);
-        return EECPNextPlaceSearch(me, p.unit_type, p.mode, p.x, p.y, p.first, p.last, theUnits, p.site, p.out_x, p.out_y,
-            p.out_gap) ? 1 : 0;
-    }
     case EE_AI_UNITS_HOST_FILLS_GARRISON:
         return EECPEngineFillsGarrison(me) ? 1 : 0;
     case EE_AI_UNITS_HOST_GOAL_LOCATION: reinterpret_cast<EEUGRust*>((uintptr_t)a)->GetGoalLocation(*(GE3DPoint*)outRecord);

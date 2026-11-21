@@ -124,7 +124,5 @@ bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes);
 // build manager's FindSite for the class; dock: the shore by the nearest fish within kNextDockReach of the town that
 // no dock of the player's serves (outGap: the fish's x * 65536 + y)
 enum { kNextPlaceRing = 0, kNextPlaceTower, kNextPlaceAdjacent, kNextPlaceCentre, kNextPlaceClassic, kNextPlaceDock };
-bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
-    long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap);
 
 #endif

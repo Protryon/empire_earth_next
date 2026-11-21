@@ -47,38 +47,6 @@
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPPlacement::sData("EECPPlacement-Data");
 
-// Orders two (continent, town) pairs by the distance of the continent's centre from the reference tile
-// Built without /Og (frame locals, `this` spilled to [ebp-0x3c]); the -4 -> -0x20 bool copy is the inline (tile, tile)
-// operator's own result. NEAR: #pragma optimize("g", off) alone gives 45 (frame 0x20 vs 0x3c), not exact: removed
-bool EETileDistanceLess::operator()(const std::pair<EEAIContinent*, EETown*>& inFirst,
-    const std::pair<EEAIContinent*, EETown*>& inSecond) const
-{
-    const U2DPoint<long>& theFirstCenter = inFirst.first->GetHullCenter();
-    EETileCoordinate theFirst;
-    theFirst.mX = theFirstCenter.mX;
-    theFirst.mY = theFirstCenter.mY;
-    const U2DPoint<long>& theSecondCenter = inSecond.first->GetHullCenter();
-    EETileCoordinate theSecond;
-    theSecond.mX = theSecondCenter.mX;
-    theSecond.mY = theSecondCenter.mY;
-    return (*this)(theFirst, theSecond);
-}
-
-// Orders two choke points by the distance of their centre from the reference tile
-// Built without /Og, as 0x466b6d
-bool EETileDistanceLess::operator()(EEAIChokePoint* inFirst, EEAIChokePoint* inSecond) const
-{
-    const U2DPoint<long>& theFirstCenter = inFirst->GetHullCenter();
-    EETileCoordinate theFirst;
-    theFirst.mX = theFirstCenter.mX;
-    theFirst.mY = theFirstCenter.mY;
-    const U2DPoint<long>& theSecondCenter = inSecond->GetHullCenter();
-    EETileCoordinate theSecond;
-    theSecond.mX = theSecondCenter.mX;
-    theSecond.mY = theSecondCenter.mY;
-    return (*this)(theFirst, theSecond);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The Rust bodies' context and world
 
@@ -90,19 +58,6 @@ static uint64_t EECPHandle(const void* inObject)
 template <class T> static T* EECPObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>((uintptr_t)inHandle);
-}
-
-EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer)
-{
-    EeCpPlaceCtx theContext;
-    theContext.player = EECPHandle(static_cast<EEPlayer*>(inPlayer));
-    theContext.player_id = (uint32_t)inPlayer->mPlayerID;
-    theContext.fields = static_cast<EeCpFields*>(inPlayer);
-    EECPPlacement* thePlacement = inPlayer->mPlacement;
-    theContext.town = thePlacement != NULL ? &thePlacement->mTownCenterTile.mX : NULL;
-    theContext.placement = thePlacement != NULL ? thePlacement->mRust : NULL;
-    theContext.capture = EESimCaptureRecord::Active() ? 1 : 0;
-    return theContext;
 }
 
 // The placement's world (ee_sim::cp::place_game's EE_CP_PLACE_* operations): the original's calls, one each
@@ -216,42 +171,4 @@ long EECPPlacement::Save(FSFile& outFile)
     return theResult;
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// The free functions
-
-// the epoch's classes (the original civilization manager's GetAntiAirClass .. GetWallClass)
-#define EECP_EPOCH_CLASS(name, kind, call)                                                                              \
-    long name(EEComputerPlayer* inPlayer)                                                                              \
-    {                                                                                                                  \
-        EECPPlaceScope theScope(kind, inPlayer);   /* PLCE (TEST ONLY) */                                              \
-        long theResult = call((int32_t)inPlayer->mTechnologies->mCurrentEpoch);                                        \
-        theScope.I(theResult);                                                                                         \
-        return theResult;                                                                                              \
-    }
-EECP_EPOCH_CLASS(EECPAntiAirClass, kPlceAntiAirClass, ee_cp_anti_air_class)
-EECP_EPOCH_CLASS(EECPFishingBoatClass, kPlceFishingBoatClass, ee_cp_fishing_boat_class)
-EECP_EPOCH_CLASS(EECPGateClass, kPlceGateClass, ee_cp_gate_class)
-EECP_EPOCH_CLASS(EECPTowerClass, kPlceTowerClass, ee_cp_tower_class)
-EECP_EPOCH_CLASS(EECPWallClass, kPlceWallClass, ee_cp_wall_class)
-
-// The placement searches of the Lua verbs (ai.place; ee_sim::cp::placement next_place_search)
-bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
-    long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap)
-{
-    EECPPlaceScope theScope(kPlceNextPlaceSearch, inPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inType).I(inMode).I(inX).I(inY).I(inFirst).I(inLast).I((long)inUnits.size());
-    for (size_t theScopeK = 0; theScopeK < inUnits.size(); theScopeK++)
-        theScope.I(inUnits[theScopeK]);
-    theScope.I(inSite);
-    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
-    std::vector<int64_t> theUnits(inUnits.begin(), inUnits.end());
-    EeCpPlaceResult theFound = ee_cp_next_place_search(&theContext, (int32_t)inType, (int32_t)inMode, (int32_t)inX,
-        (int32_t)inY, (int32_t)inFirst, (int32_t)inLast, theUnits.empty() ? NULL : &theUnits[0], theUnits.size(),
-        (int32_t)inSite);
-    outX = theFound.x;
-    outY = theFound.y;
-    outGap = theFound.gap;
-    bool theResult = theFound.found != 0;
-    theScope.I(theResult).I(outX).I(outY).I(outGap).Centers(inPlayer);
-    return theResult;
-}
+// (the epoch's classes and the Lua verbs' placement search are Rust: ee_sim::ai units_world.rs)

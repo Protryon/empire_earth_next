@@ -447,14 +447,8 @@ static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io)
     }
     case EE_UNITS_WORLD_FOREST_SET_RENEWAL: reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->SetNextRenewal((unsigned long)io->b); return 0;
     case EE_UNITS_WORLD_FOREST_SIZE: return (int64_t)(unsigned long)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetNumTiles();
-    case EE_UNITS_WORLD_AI_SCHEDULE:
-        io->a = (int64_t)gArtificialIntelligence->mNextPlayer;
-        io->b = (int64_t)gArtificialIntelligence->mNextUpdateTime;
-        return (int64_t)gArtificialIntelligence->mComputerPlayers.size();
-    case EE_UNITS_WORLD_AI_SET_SCHEDULE:
-        gArtificialIntelligence->mNextPlayer = (unsigned long)io->a;
-        gArtificialIntelligence->mNextUpdateTime = (unsigned long)io->b;
-        return 0;
+    case EE_UNITS_WORLD_AI_SCHEDULE: return ee_ai_schedule_get(&io->a, &io->b);   // ee_sim::ai next_schedule.rs
+    case EE_UNITS_WORLD_AI_SET_SCHEDULE: return ee_ai_schedule_set(io->a, io->b);
     case EE_UNITS_WORLD_TILE_COUNT: return theMap != NULL ? (int64_t)theMap->mSize * theMap->mSize : 0;
     case EE_UNITS_WORLD_TILE_UNITS:
     case EE_UNITS_WORLD_TILE_SET: {

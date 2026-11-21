@@ -10,6 +10,7 @@ use std::ffi::c_void;
 use std::os::raw::c_long;
 
 use super::*;
+use crate::astar::cm::EeAStarCmTable;
 use crate::cp::lists::{self, EeCpDangerZone};
 use crate::cp::place_game::{self as pg, EeCpPlaceIo};
 use crate::cp::place_host::EeCpUnitInfo;
@@ -62,6 +63,71 @@ fn player_op(me: *mut c_void, op: i32, a: u64, v: &[i64]) -> i64 {
 pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> Option<i64> {
     let out64 = out as *mut i64;
     Some(match op {
+        EE_AI_NEXT_HOST_FORESTS => cm_table(EeAStarCmTable::Forests).len() as i64,
+        EE_AI_NEXT_HOST_FOREST => {
+            let h = cm_table(EeAStarCmTable::Forests).get(a as u16 as usize).copied().unwrap_or(0);
+            // SAFETY: the table's live forest
+            if h != 0 {
+                unsafe { crate::astar::cm_io::forest(h) }.id as i64
+            } else {
+                -1
+            }
+        }
+        EE_AI_NEXT_HOST_FOREST_POINT => {
+            let h = cm_table(EeAStarCmTable::Forests).get(a as u16 as usize).copied().unwrap_or(0);
+            if h == 0 {
+                return Some(0);
+            }
+            // SAFETY: the caller's three i64; the table's live forest
+            let p = unsafe {
+                if *out64.add(2) != 0 {
+                    let q = crate::astar::area_ops::ee_astar_area_closest_hull_point(
+                        crate::astar::cm_io::area(h),
+                        crate::astar::hull::EeHullPoint { x: b as c_long, y: c as c_long },
+                    );
+                    (q.x as i64, q.y as i64)
+                } else {
+                    let q = ee_base::sparse::ee_sparse_closest_point(
+                        crate::astar::cm_io::area_tiles(h),
+                        b as c_long as i32,
+                        c as c_long as i32,
+                    );
+                    (q.x as i64, q.y as i64)
+                }
+            };
+            // SAFETY: as above
+            unsafe {
+                *out64 = p.0;
+                *out64.add(1) = p.1;
+            }
+            0
+        }
+        EE_AI_NEXT_HOST_READ => {
+            // SAFETY: the caller's C string path and Vec<u8>
+            match unsafe { read_file(a as usize as *const std::ffi::c_char) } {
+                Some(bytes) => {
+                    // SAFETY: as above
+                    unsafe { (*(out as *mut Vec<u8>)).extend_from_slice(&bytes) };
+                    1
+                }
+                None => 0,
+            }
+        }
+        EE_AI_NEXT_HOST_EXISTS => {
+            // SAFETY: the caller's C string path
+            let f = unsafe { sys::PlatFOpen(a as usize as *const std::ffi::c_char, c"rb".as_ptr()) };
+            if f.is_null() {
+                return Some(0);
+            }
+            // SAFETY: the open stream
+            unsafe { sys::fclose(f) };
+            1
+        }
+        EE_AI_NEXT_HOST_AREAS => {
+            // SAFETY: the caller's Vec<u8>
+            unsafe { (*(out as *mut Vec<u8>)).extend_from_slice(&areas_line()) };
+            0
+        }
         EE_AI_NEXT_HOST_TOWN => {
             // SAFETY: the live computer player
             let ctx = unsafe { ctx_of(me as u64) };
@@ -227,3 +293,72 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *
 
 /// `kActionPrepareToMove`
 const ACTION_PREPARE_TO_MOVE: i64 = 8000;
+
+fn cm_table(t: crate::astar::cm::EeAStarCmTable) -> &'static [u64] {
+    crate::astar::world_view::cm().map_or(&[], |r| &r.tables().tables[t as usize][..])
+}
+
+/// EE-SIM's AREAS line: the continent manager's areas (serial/kind), its serial counter and its lists' sizes.
+fn areas_line() -> Vec<u8> {
+    let Some(r) = crate::astar::world_view::cm() else { return b"\n".to_vec() };
+    let n = |t| cm_table(t).len();
+    let areas = &r.tables().areas;
+    let mut l = format!(
+        "AREAS digest={:08x} last={} continents={} hills={} pathareas={} sectors={} subsectors={} chokepoints={} forests={} areas={}:",
+        crate::astar::cm_io::regions_digest(r) as u32,
+        r.last_serial as u32,
+        n(EeAStarCmTable::Continents),
+        n(EeAStarCmTable::Hills),
+        n(EeAStarCmTable::PathAreas),
+        n(EeAStarCmTable::PathSectors),
+        n(EeAStarCmTable::PathSubSectors),
+        n(EeAStarCmTable::ChokePoints),
+        n(EeAStarCmTable::Forests),
+        areas.len(),
+    );
+    for a in areas.iter() {
+        // SAFETY: the serial table's live areas
+        let kind = if a.area != 0 { unsafe { crate::astar::cm_io::area(a.area) }.area_type as i64 } else { -1 };
+        l.push_str(&format!(" {}/{}", a.serial as u32, kind));
+    }
+    l.push('\n');
+    l.into_bytes()
+}
+
+/// cbindgen:ignore
+mod sys {
+    use std::ffi::{c_char, c_void};
+    extern "C" {
+        pub(super) fn PlatFOpen(path: *const c_char, mode: *const c_char) -> *mut c_void;
+        pub(super) fn fread(buffer: *mut c_void, size: usize, count: usize, stream: *mut c_void) -> usize;
+        pub(super) fn ferror(stream: *mut c_void) -> i32;
+        pub(super) fn fclose(stream: *mut c_void) -> i32;
+    }
+}
+
+/// The whole file in binary mode (None: it does not open or a read fails; the bytes read before a failure are
+/// dropped with it).
+///
+/// # Safety
+/// `path` is a C string.
+unsafe fn read_file(path: *const std::ffi::c_char) -> Option<Vec<u8>> {
+    // SAFETY: the caller's path; the mode
+    let f = unsafe { sys::PlatFOpen(path, c"rb".as_ptr()) };
+    if f.is_null() {
+        return None;
+    }
+    let mut out = Vec::new();
+    let mut buffer = [0u8; 4096];
+    loop {
+        // SAFETY: the open stream, the buffer's room
+        let n = unsafe { sys::fread(buffer.as_mut_ptr().cast(), 1, buffer.len(), f) };
+        if n == 0 {
+            break;
+        }
+        out.extend_from_slice(&buffer[..n]);
+    }
+    // SAFETY: the open stream, closed once
+    let ok = unsafe { sys::ferror(f) } == 0;
+    unsafe { sys::fclose(f) };
+    ok.then_some(out)
+}

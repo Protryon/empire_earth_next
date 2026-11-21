@@ -181,6 +181,13 @@ constexpr static const int32_t EE_AI_NEXT_HOST_SET_ATTACK = 64;
 
 constexpr static const int32_t EE_AI_NEXT_HOST_SET_LOCATION = 65;
 
+/// `EEGameLogTick(a)`; `gCPTraceHashOn`; the computer player's `Update(a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_GAME_LOG_TICK = 66;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_HASH_ON = 67;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_CP_UPDATE = 68;
+
 /// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
 constexpr static const long THREAT_RANGE = 9;
 
@@ -1448,6 +1455,26 @@ void ee_ai_out_of_synch_dump(void *out);
 /// `EECPTraceHash` (with the trace): every 10 game s, the parts of the out-of-synch checksum, as a compared trace
 /// line ("EE-AI <ms> p0 sim hash ...").
 void ee_ai_trace_hash(unsigned long time);
+
+/// `CollectComputerPlayers` (after a game is set up): the players' computer players in slot order.
+void ee_ai_collect_computer_players();
+
+/// `Update` (the physics tick): the game log's tick, the sim hash, the micro step, then the computer player whose
+/// turn it is.
+///
+/// # Safety
+/// The simulation thread, the game set up.
+void ee_ai_update();
+
+/// The save's part (EEPWorldHelper: `EE_UNITS_WORLD_AI_SCHEDULE`): the next player and time -> the player count.
+///
+/// # Safety
+/// `next_player` and `next_time` are writable.
+int64_t ee_ai_schedule_get(int64_t *next_player,
+                           int64_t *next_time);
+
+/// A load's schedule (`EE_UNITS_WORLD_AI_SET_SCHEDULE`) -> 0.
+int64_t ee_ai_schedule_set(int64_t next_player, int64_t next_time);
 
 /// `EECPTraceInit()` (EECPTrace.cpp: `ee_ai_trace_init` over the C++'s trace flags)
 extern void ee_ai_host_trace_init();
