@@ -84,6 +84,10 @@ pub fn lobby_op(op: Op, a: *mut c_void, b: *mut c_void, c: isize, d: isize) -> O
             0
         }
         Op::LanRecvOk => net::op_succeeded(a) as isize,
+        // R6 WONLobby round 29: lobbyops.rs's
+        Op::OpStatusOf => net::op_status(a) as isize,
+        Op::OpSucceededOf => net::op_succeeded(a) as isize,
+        Op::SocketListen => net::socket_listen(a, c as i32) as isize,
         Op::LanRecvMsgTake => {
             let m = net::socketop_message(a);
             sink(b, m);
