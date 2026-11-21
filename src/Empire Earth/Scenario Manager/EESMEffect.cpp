@@ -63,6 +63,7 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
 }
 
 // Reset's and Copy's single statements (effect_copy.rs EE_SCENARIO_EC_*): the texts by number, the record, the objects
+extern UWideString EESMEffect::* const kSMETexts[EE_SCENARIO_EC_TEXTS];   // (EEScenarioHost.cpp reads it)
 UWideString EESMEffect::* const kSMETexts[EE_SCENARIO_EC_TEXTS] = {&EESMEffect::mName, &EESMEffect::mText, &EESMEffect::mMessage, &EESMEffect::mS64, &EESMEffect::mS78, &EESMEffect::mNewName, &EESMEffect::mFileName, &EESMEffect::mDescription};
 EESMEffect* SMEEffectOf(void* inEffect) { return static_cast<EESMEffect*>(inEffect); }
 const EESMEffect* SMEEffectOf(const void* inEffect) { return static_cast<const EESMEffect*>(inEffect); }
