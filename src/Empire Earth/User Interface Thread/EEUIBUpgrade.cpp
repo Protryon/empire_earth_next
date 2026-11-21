@@ -178,47 +178,20 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
 {
     EEUIBUpgrade* theButton = ioCall.mButton;
     EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
-    long* theFields[5] = {&theButton->mAttribute, NULL, &theButton->mLevel, NULL, (long*)&theButton->mLastMessageTime};
     long theAttribute = theButton->mAttribute;
-    float theFloat;
-    uint32_t theBits;
     switch (inOp) {
-    case EE_SCREENS_UP_OP_FIELD:
-        if (inA == EE_SCREENS_UP_FIELD_EDITOR || inA == EE_SCREENS_UP_FIELD_DISABLED)
-            return inA == EE_SCREENS_UP_FIELD_EDITOR ? theButton->mScenarioEditor : theButton->mDisabled;
-        return *theFields[inA];
-    case EE_SCREENS_UP_OP_SET_FIELD:
-        if (inA == EE_SCREENS_UP_FIELD_DISABLED)
-            theButton->mDisabled = inB != 0;
-        else
-            *theFields[inA] = (long)inB;
-        return 0;
     case EE_SCREENS_UP_OP_ALLOWED:
         return gUnitImprovementsAllowed == true;
     case EE_SCREENS_UP_OP_CAN_BUY:
         return theUnit->mPlayer->CanBuy(theUnit->mUnitClass->GetUnitType(), theAttribute, ioCall.mOut);
     case EE_SCREENS_UP_OP_EDITOR_UNIT:
         return (int64_t) static_cast<EEUIFScenarioEditor*>(theButton->GetForm())->GetFirstSelectedUnit();
-    case EE_SCREENS_UP_OP_EDITOR_COMPLEX:
-        return (int64_t) static_cast<EEUnit*>(
-            static_cast<EEUIFScenarioEditor*>(theButton->GetForm())->GetFirstSelectedUnit()->GetComplexUnit());
     case EE_SCREENS_UP_OP_CAN_RAISE:
         return theUnit->mStats->mImprovement.CanUpgrade(theUnit->mStats->mUnitClass, theAttribute) == true;
     case EE_SCREENS_UP_OP_MAXED:
         return theUnit->mPlayer->IsImprovementMaxed(theUnit->mUnitClass->GetUnitType(), theAttribute);
-    case EE_SCREENS_UP_OP_STEP:
-    case EE_SCREENS_UP_OP_COST_FACTOR:
-        theFloat = inOp == EE_SCREENS_UP_OP_STEP ? theUnit->mUnitClass->mImprovements->mEntries[theAttribute].mStepFactor
-                                                 : theUnit->mUnitClass->mImprovements->mEntries[theAttribute].mCostFactor;
-        memcpy(&theBits, &theFloat, 4);
-        return theBits;
     case EE_SCREENS_UP_OP_LEVEL:
         return theUnit->GetPlayer()->GetImprovementLevel(theUnit->mUnitClass->GetUnitType(), theAttribute);
-    case EE_SCREENS_UP_OP_NODE: {
-        long theType = theUnit->mUnitClass->GetUnitType();
-        return (int64_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get(
-            gUnitClassTable[theType] ? gUnitClassTable[theType]->GetTechnology() : 100000);
-    }
     case EE_SCREENS_UP_OP_TEXT_NAME:
         theUnit->GetStats()->GetImprovementName(ioCall.mText, theAttribute);
         return 0;
@@ -227,12 +200,6 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         return 0;
     case EE_SCREENS_UP_OP_TEXT_STRING:
         gResource->GetString((long)inA, ioCall.mText);
-        return 0;
-    case EE_SCREENS_UP_OP_TEXT_COST:
-        theBits = (uint32_t)inC;
-        memcpy(&theFloat, &theBits, 4);
-        reinterpret_cast<EETechTreeNode*>(inA)->GetCostString(
-            ioCall.mText, reinterpret_cast<EEUnit*>(inB)->mUnitClass->GetUnitType(), theFloat);
         return 0;
     case EE_SCREENS_UP_OP_OUT_APPEND:
         *ioCall.mOut += ioCall.mText;
@@ -245,10 +212,6 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         return 0;
     case EE_SCREENS_UP_OP_BASE_HELP:
         theButton->UIControl::GetHelpString(inA == 0 ? *ioCall.mOut : ioCall.mText);
-        return 0;
-    case EE_SCREENS_UP_OP_SOUND:
-        gSoundManager->Play(EESoundObject::Get(inA == 1 ? kSoundButton1 : kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f,
-                            false, NULL);
         return 0;
     case EE_SCREENS_UP_OP_UPGRADE:
         (new EEAUpgradeImprovement(theUnit, theAttribute, inB != 0, !theButton->mScenarioEditor))->Dereference();
@@ -275,10 +238,6 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
     case EE_SCREENS_UP_OP_HELP_TEXT:
         theButton->GetHelpString(ioCall.mText);
         return 0;
-    case EE_SCREENS_UP_OP_HELP_LABEL:
-        if (theButton->GetForm()->GetHelpTextLabel() != NULL)
-            theButton->GetForm()->GetHelpTextLabel()->SetText(ioCall.mText);
-        return 0;
     case EE_SCREENS_UP_OP_CONTAINS:
         return theButton->GetRectangle().Contains(theButton->GetMouseLocation());
     case EE_SCREENS_UP_OP_RELEASE_MOUSE:
@@ -292,31 +251,71 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
     case EE_SCREENS_UP_OP_DIRTY:
         theButton->SetDirty(true);
         return 0;
-    case EE_SCREENS_UP_OP_BG_OPACITY:
-    case EE_SCREENS_UP_OP_BORDER_OPACITY:
-        theBits = (uint32_t)inA;
-        memcpy(&theFloat, &theBits, 4);
-        inOp == EE_SCREENS_UP_OP_BG_OPACITY ? theButton->SetBgOpacity(theFloat) : theButton->SetBorderOpacity(theFloat);
-        return 0;
     case EE_SCREENS_UP_OP_BORDER_THICKNESS:
         theButton->SetBorderThickness((unsigned long)inA);
         return 0;
-    case EE_SCREENS_UP_OP_BAR_FIELD: {
-        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theButton);
-        return inA == 0 ? theBar->mEnabled : inA == 1 ? theBar->mPressed : theButton->GetHasMouseCapture();
-    }
     case EE_SCREENS_UP_OP_BAR_SET_PRESSED: static_cast<EEUIFMGStatusBar*>(theButton)->mPressed = inA != 0; return 0;
-    case EE_SCREENS_UP_OP_BAR_INSIDE:
-        return theButton->GetRectangle().Contains(inA == 0 ? theButton->GetForm()->GetMouseLocation() : *ioCall.mLocation);
     case EE_SCREENS_UP_OP_BAR_BASE:
         return inA == 0 ? theButton->UIButton::MouseLButtonDown()
              : inA == 1 ? theButton->UIButton::MouseLButtonUp() : theButton->EEUIBUpgrade::MouseRButtonDown();
-    case EE_SCREENS_UP_OP_BAR_ICON: {
-        UIBitmap* theIcon = static_cast<EEUIFMGStatusBar*>(theButton)->mIcon;
-        GE2DPoint theTopLeft = theIcon->GetRectangle().GetTopLeft();
-        theIcon->SetLocation(GE2DPoint(theTopLeft.GetX() + (float)inA, theTopLeft.GetY() + (float)inA));
-        return 0;
-    }
     }
     return 0;
 }
+
+// ---- the host's multi-statement cases (UI lane round 9: ee_game screens upgrade_calls.rs), each one statement on
+// the call record's button
+#include "ee/EEScreensShims.h"
+#define UPC(inCall) (*reinterpret_cast<EEUIBUpgradeCall*>(inCall))
+#define UPB(inCall) UPC(inCall).mButton
+static const unsigned long kUpSounds[] = {kSoundButton2, kSoundButton1};
+extern "C" int64_t ee_screenscpp_up_attribute(uintptr_t inCall) { return (int64_t)UPB(inCall)->mAttribute; }
+extern "C" void ee_screenscpp_up_set_attribute(uintptr_t inCall, int64_t inValue)
+{ UPB(inCall)->mAttribute = (long)inValue; }
+extern "C" int64_t ee_screenscpp_up_level(uintptr_t inCall) { return (int64_t)UPB(inCall)->mLevel; }
+extern "C" void ee_screenscpp_up_set_level(uintptr_t inCall, int64_t inValue) { UPB(inCall)->mLevel = (long)inValue; }
+extern "C" int64_t ee_screenscpp_up_last_message(uintptr_t inCall)
+{ return (int64_t)(long)UPB(inCall)->mLastMessageTime; }
+extern "C" void ee_screenscpp_up_set_last_message(uintptr_t inCall, int64_t inValue)
+{ UPB(inCall)->mLastMessageTime = (unsigned long)(long)inValue; }
+extern "C" bool ee_screenscpp_up_editor(uintptr_t inCall) { return UPB(inCall)->mScenarioEditor; }
+extern "C" bool ee_screenscpp_up_disabled(uintptr_t inCall) { return UPB(inCall)->mDisabled; }
+extern "C" void ee_screenscpp_up_set_disabled(uintptr_t inCall, bool inValue) { UPB(inCall)->mDisabled = inValue; }
+extern "C" uintptr_t ee_screenscpp_up_editor_complex(uintptr_t inCall)
+{ return (uintptr_t)static_cast<EEUnit*>(static_cast<EEUIFScenarioEditor*>(UPB(inCall)->GetForm())->GetFirstSelectedUnit()->GetComplexUnit()); }
+extern "C" float ee_screenscpp_up_step(uintptr_t inCall, uintptr_t inUnit)
+{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mImprovements->mEntries[UPB(inCall)->mAttribute].mStepFactor; }
+extern "C" float ee_screenscpp_up_cost_factor(uintptr_t inCall, uintptr_t inUnit)
+{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mImprovements->mEntries[UPB(inCall)->mAttribute].mCostFactor; }
+extern "C" int64_t ee_screenscpp_up_unit_type(uintptr_t inUnit)
+{ return (int64_t)reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(); }
+extern "C" bool ee_screenscpp_up_class_exists(int64_t inUnitType) { return gUnitClassTable[(long)inUnitType] != NULL; }
+extern "C" int64_t ee_screenscpp_up_class_technology(int64_t inUnitType)
+{ return (int64_t)gUnitClassTable[(long)inUnitType]->GetTechnology(); }
+extern "C" uintptr_t ee_screenscpp_up_node(int64_t inTechnology)
+{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inTechnology); }
+extern "C" void ee_screenscpp_up_text_cost(uintptr_t inCall, uintptr_t inNode, uintptr_t inUnit, float inFactor)
+{ reinterpret_cast<EETechTreeNode*>(inNode)->GetCostString(UPC(inCall).mText, reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(), inFactor); }
+extern "C" void ee_screenscpp_up_sound(uint32_t inWhich)
+{ gSoundManager->Play(EESoundObject::Get(kUpSounds[inWhich])->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL); }
+extern "C" uintptr_t ee_screenscpp_up_help_label(uintptr_t inCall)
+{ return (uintptr_t)UPB(inCall)->GetForm()->GetHelpTextLabel(); }
+extern "C" void ee_screenscpp_up_help_label_set(uintptr_t inLabel, uintptr_t inCall)
+{ reinterpret_cast<UITextLabel*>(inLabel)->SetText(UPC(inCall).mText); }
+extern "C" void ee_screenscpp_up_bg_opacity(uintptr_t inCall, float inOpacity) { UPB(inCall)->SetBgOpacity(inOpacity); }
+extern "C" void ee_screenscpp_up_border_opacity(uintptr_t inCall, float inOpacity)
+{ UPB(inCall)->SetBorderOpacity(inOpacity); }
+extern "C" bool ee_screenscpp_up_bar_enabled(uintptr_t inCall)
+{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mEnabled; }
+extern "C" bool ee_screenscpp_up_bar_pressed(uintptr_t inCall)
+{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mPressed; }
+extern "C" bool ee_screenscpp_up_has_capture(uintptr_t inCall) { return UPB(inCall)->GetHasMouseCapture(); }
+extern "C" bool ee_screenscpp_up_inside_form_mouse(uintptr_t inCall)
+{ return UPB(inCall)->GetRectangle().Contains(UPB(inCall)->GetForm()->GetMouseLocation()); }
+extern "C" bool ee_screenscpp_up_inside_location(uintptr_t inCall)
+{ return UPB(inCall)->GetRectangle().Contains(*UPC(inCall).mLocation); }
+extern "C" float ee_screenscpp_up_icon_left(uintptr_t inCall)
+{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetX(); }
+extern "C" float ee_screenscpp_up_icon_top(uintptr_t inCall)
+{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetY(); }
+extern "C" void ee_screenscpp_up_icon_set_location(uintptr_t inCall, float inX, float inY)
+{ static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->SetLocation(GE2DPoint(inX, inY)); }

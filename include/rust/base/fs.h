@@ -566,6 +566,34 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t length,
                                   EeFsMemFile **out_file);
 
+/// `FSMemoryFile::Close`: the memory file closed; an `FOpen` stream closed and its temporary file deleted.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`.
+int32_t ee_fs_mem_close_disk(EeFsMemFile *file,
+                             void **stream,
+                             const EeFsString *temporary);
+
+/// `FSMemoryFile::Copy(inDestination, inFailIfExists, ...)`: the contents written to a disk file; kErrorAlreadyExists
+/// when asked to fail on an existing file, kErrorNativeError when it cannot be created. The position is reset.
+///
+/// # Safety
+/// `file` is live, `destination` a C string.
+int32_t ee_fs_mem_copy_disk(EeFsMemFile *file,
+                            const char *destination,
+                            bool fail_if_exists);
+
+/// `FSMemoryFile::FOpen(inMode)`: the contents copied to a new temporary file (`EE_` in the temporary directory),
+/// reopened with `mode` into `*stream` (its name in `temporary`); kErrorNativeError (the platform's error recorded)
+/// when that fails. The memory file is open while the stream is.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`; `mode` a C string.
+int32_t ee_fs_mem_fopen_disk(EeFsMemFile *file,
+                             const char *mode,
+                             void **stream,
+                             EeFsString *temporary);
+
 /// `FSPath()`.
 ///
 /// # Safety

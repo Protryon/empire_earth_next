@@ -24,43 +24,19 @@
 #include "ee/EESMMediaStrings.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUISCIFormManager.h"
+// The manager's bodies are Rust's (UI lane round 9: ee_game screens sci_calls.rs) over the one-statement shims at
+// the end of this file; each member is one forward
+#include "ee/EEScreensShims.h"
+#include "rust/game/screens.h"   // ee_screens_sci_* (sci_calls.rs)
+
 // Resets the scenario intro manager: no open files and every flag cleared
-void EEUISCIFormManager::Clear()
-{
-    this->mMap = NULL;
-    this->mFile = NULL;
-    this->mSound = NULL;
-    this->mIsLoadingFromGame = false;
-    this->mIsInGame = false;
-    this->mBA0 = false;
-    this->mIsCampaign = false;
-    this->mScrollBriefingToEnd = false;
-}
+void EEUISCIFormManager::Clear() { ee_screens_sci_clear((uintptr_t)this); }
 
 // Closes and deletes the manager's map, scenario and sound files
-void EEUISCIFormManager::DeleteObjects()
-{
-    delete this->mMap;
-    this->mMap = NULL;
-    delete this->mFile;
-    this->mFile = NULL;
-    delete this->mSound;
-    this->mSound = NULL;
-}
+void EEUISCIFormManager::DeleteObjects() { ee_screens_sci_delete_objects((uintptr_t)this); }
 
 // Returns the scenario intro form's manager, creating and attaching it on first use
-EEUISCIFormManager* EEUISCIFormManager::Get()
-{
-    EEUISCIFormManager* theManager;
-    UIForm* theForm = gUIManager->GetFormByID(kFormScenarioIntro);
-    if (theForm->GetFormManager())
-        theManager = static_cast<EEUISCIFormManager*>(theForm->GetFormManager());
-    else {
-        theManager = new EEUISCIFormManager;
-        theForm->SetFormManager(theManager);
-    }
-    return theManager;
-}
+EEUISCIFormManager* EEUISCIFormManager::Get() { return reinterpret_cast<EEUISCIFormManager*>(ee_screens_sci_get()); }
 
 // Returns the scenario's briefing text
 UWideString EEUISCIFormManager::GetBriefing()
@@ -70,63 +46,13 @@ UWideString EEUISCIFormManager::GetBriefing()
 
 // Opens the scenario's map picture (.jpg, else .png; the original's second choice was .tga) from Scenarios; returns
 // whether one was found
-bool EEUISCIFormManager::OpenMap()
-{
-    UString theName;
-    bool theResult = false;
-    long theJPEG;
-    long thePNG;
-    if (this->mMap)
-        delete this->mMap;
-    this->mMap = NULL;
-    theName = this->mMediaStrings.mMapFile;
-    theName += ".jpg";
-    theJPEG = EEOpenSaveGameFile(theName, "Scenarios\\", this->mMap);
-    if (theJPEG != kErrorOK) {
-        theName = this->mMediaStrings.mMapFile;
-        theName += ".png";
-        thePNG = EEOpenSaveGameFile(theName, "Scenarios\\", this->mMap);
-        if (thePNG == kErrorOK)
-            theResult = true;
-    } else
-        theResult = true;
-    return theResult;
-}
+bool EEUISCIFormManager::OpenMap() { return ee_screens_sci_open_map((uintptr_t)this); }
 
 // Reopens the scenario file by name from Scenarios or the data path; returns whether it was found
-bool EEUISCIFormManager::OpenScenario()
-{
-    UString theName;
-    bool theResult = false;
-    long theError;
-    // Without a scenario file there is nothing to reopen (the name was read before the NULL test).
-    if (this->mFile == NULL)
-        return false;
-    theName = this->mFile->GetFile();
-    delete this->mFile;
-    this->mFile = NULL;
-    theError = EEOpenSaveGameFile(theName, "Scenarios\\", this->mFile);
-    if (theError == kErrorOK || gDataPath->FindFile(theName, this->mFile) == kErrorOK)
-        theResult = true;
-    return theResult;
-}
+bool EEUISCIFormManager::OpenScenario() { return ee_screens_sci_open_scenario((uintptr_t)this); }
 
 // Opens the scenario's sound (.mp3) from Sounds; returns whether it was found
-bool EEUISCIFormManager::OpenSound()
-{
-    UString theName;
-    bool theResult = false;
-    long theError;
-    if (this->mSound)
-        delete this->mSound;
-    this->mSound = NULL;
-    theName = this->mMediaStrings.mSoundFile;
-    theName += ".mp3";
-    theError = EEOpenSaveGameFile(theName, "Sounds\\", this->mSound);
-    if (theError == kErrorOK)
-        theResult = true;
-    return theResult;
-}
+bool EEUISCIFormManager::OpenSound() { return ee_screens_sci_open_sound((uintptr_t)this); }
 
 // Returns the scenario's history text
 UWideString EEUISCIFormManager::GetHistory()
@@ -140,65 +66,80 @@ UWideString EEUISCIFormManager::GetHints()
     return this->mMediaStrings.mHints;
 }
 
-// Opens the scenario's map picture and copies its file spec; returns whether it was found
-bool EEUISCIFormManager::GetMap(FSFileSpec& outSpec)
-{
-    bool theResult = false;
-    if (this->OpenMap()) {
-        theResult = true;
-        outSpec = *this->mMap;
-    }
-    return theResult;
-}
-
-// Reopens the scenario file and copies its file spec; returns whether it was found
+// Opens the scenario's map picture, the scenario file or the sound and copies its file spec; returns whether it was
+// found
+bool EEUISCIFormManager::GetMap(FSFileSpec& outSpec) { return ee_screens_sci_get_map((uintptr_t)this, (uintptr_t)&outSpec); }
 bool EEUISCIFormManager::GetScenario(FSFileSpec& outSpec)
 {
-    bool theResult = false;
-    if (this->OpenScenario()) {
-        theResult = true;
-        outSpec = *this->mFile;
-    }
-    return theResult;
+    return ee_screens_sci_get_scenario((uintptr_t)this, (uintptr_t)&outSpec);
 }
-
-// Opens the scenario's sound and copies its file spec; returns whether it was found
 bool EEUISCIFormManager::GetSound(FSFileSpec& outSpec)
 {
-    bool theResult = false;
-    if (this->OpenSound()) {
-        theResult = true;
-        outSpec = *this->mSound;
-    }
-    return theResult;
+    return ee_screens_sci_get_sound((uintptr_t)this, (uintptr_t)&outSpec);
 }
 
 // Returns whether the scenario has any briefing, hints, history, map or sound (the original counted its movie too;
 // no movie plays)
-bool EEUISCIFormManager::HasMedia()
-{
-    bool theResult = false;
-    if (this->mMediaStrings.mInstructions.GetLength() > 0 || this->mMediaStrings.mHints.GetLength() > 0
-        || this->mMediaStrings.mHistory.GetLength() > 0 || this->OpenMap() || this->OpenSound())
-        theResult = true;
-    return theResult;
-}
+bool EEUISCIFormManager::HasMedia() { return ee_screens_sci_has_media((uintptr_t)this); }
 
 // Starts or stops the main game's briefing button blinking, showing the large briefing alert while it blinks
-void EEUISCIFormManager::SetBlinking(bool inBlinking)
-{
-    EEUIFMainGame* theForm = gUIManager->GetMainGameForm();
-    UIBlinkingButton* theButton = static_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameGameInfoBriefing));
-    UIBlinkingButton* theOther = static_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameLargeScenBriefingAlert));
-    theForm->mInfoBlinking = inBlinking;
-    if (!theButton)
-        return;
-    theButton->SetIsBlinking(inBlinking);
-    if (!theOther)
-        return;
-    if (inBlinking)
-        theOther->SetDisplayMode(kDisplayModeShown);
-    else
-        theOther->SetDisplayMode(kDisplayModeHidden);
-    theOther->SetIsBlinking(inBlinking);
-}
+void EEUISCIFormManager::SetBlinking(bool inBlinking) { ee_screens_sci_set_blinking(inBlinking); }
+
+// ---- the shims (sci_calls.rs), each one statement on the manager (inM) or the main game form
+#define SCI(inM) reinterpret_cast<EEUISCIFormManager*>(inM)
+extern "C" void ee_screenscpp_sci_clear_loading(uintptr_t inM) { SCI(inM)->mIsLoadingFromGame = false; }
+extern "C" void ee_screenscpp_sci_clear_in_game(uintptr_t inM) { SCI(inM)->mIsInGame = false; }
+extern "C" void ee_screenscpp_sci_clear_ba0(uintptr_t inM) { SCI(inM)->mBA0 = false; }
+extern "C" void ee_screenscpp_sci_clear_campaign(uintptr_t inM) { SCI(inM)->mIsCampaign = false; }
+extern "C" void ee_screenscpp_sci_clear_scroll(uintptr_t inM) { SCI(inM)->mScrollBriefingToEnd = false; }
+extern "C" uintptr_t ee_screenscpp_sci_map(uintptr_t inM) { return (uintptr_t)SCI(inM)->mMap; }
+extern "C" uintptr_t ee_screenscpp_sci_file(uintptr_t inM) { return (uintptr_t)SCI(inM)->mFile; }
+extern "C" uintptr_t ee_screenscpp_sci_sound(uintptr_t inM) { return (uintptr_t)SCI(inM)->mSound; }
+extern "C" void ee_screenscpp_sci_delete_map(uintptr_t inM) { delete SCI(inM)->mMap; }
+extern "C" void ee_screenscpp_sci_delete_file(uintptr_t inM) { delete SCI(inM)->mFile; }
+extern "C" void ee_screenscpp_sci_delete_sound(uintptr_t inM) { delete SCI(inM)->mSound; }
+extern "C" void ee_screenscpp_sci_map_null(uintptr_t inM) { SCI(inM)->mMap = NULL; }
+extern "C" void ee_screenscpp_sci_file_null(uintptr_t inM) { SCI(inM)->mFile = NULL; }
+extern "C" void ee_screenscpp_sci_sound_null(uintptr_t inM) { SCI(inM)->mSound = NULL; }
+extern "C" uintptr_t ee_screenscpp_sci_form() { return (uintptr_t)gUIManager->GetFormByID(kFormScenarioIntro); }
+extern "C" uintptr_t ee_screenscpp_sci_form_manager(uintptr_t inForm)
+{ return (uintptr_t)static_cast<EEUISCIFormManager*>(reinterpret_cast<UIForm*>(inForm)->GetFormManager()); }
+extern "C" uintptr_t ee_screenscpp_sci_new() { return (uintptr_t)new EEUISCIFormManager; }
+extern "C" void ee_screenscpp_sci_form_set_manager(uintptr_t inForm, uintptr_t inM)
+{ reinterpret_cast<UIForm*>(inForm)->SetFormManager(SCI(inM)); }
+extern "C" void ee_screenscpp_sci_map_name(uintptr_t inM, void* inOut)
+{ EEShimOut(inOut, SCI(inM)->MapFileName()); }
+extern "C" void ee_screenscpp_sci_sound_name(uintptr_t inM, void* inOut)
+{ EEShimOut(inOut, SCI(inM)->SoundFileName()); }
+extern "C" void ee_screenscpp_sci_file_name(uintptr_t inM, void* inOut)
+{ EEShimOut(inOut, SCI(inM)->mFile->GetFile()); }
+extern "C" int64_t ee_screenscpp_sci_open_map(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)EEOpenSaveGameFile(EEShimString(inName), "Scenarios\\", SCI(inM)->mMap); }
+extern "C" int64_t ee_screenscpp_sci_open_file(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)EEOpenSaveGameFile(EEShimString(inName), "Scenarios\\", SCI(inM)->mFile); }
+extern "C" int64_t ee_screenscpp_sci_find_file(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)gDataPath->FindFile(EEShimString(inName), SCI(inM)->mFile); }
+extern "C" int64_t ee_screenscpp_sci_open_sound(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)EEOpenSaveGameFile(EEShimString(inName), "Sounds\\", SCI(inM)->mSound); }
+extern "C" void ee_screenscpp_sci_spec_from_map(uintptr_t inM, uintptr_t inSpec)
+{ *reinterpret_cast<FSFileSpec*>(inSpec) = *SCI(inM)->mMap; }
+extern "C" void ee_screenscpp_sci_spec_from_file(uintptr_t inM, uintptr_t inSpec)
+{ *reinterpret_cast<FSFileSpec*>(inSpec) = *SCI(inM)->mFile; }
+extern "C" void ee_screenscpp_sci_spec_from_sound(uintptr_t inM, uintptr_t inSpec)
+{ *reinterpret_cast<FSFileSpec*>(inSpec) = *SCI(inM)->mSound; }
+extern "C" bool ee_screenscpp_sci_has_instructions(uintptr_t inM)
+{ return SCI(inM)->mMediaStrings.GetSection(3).GetLength() > 0; }
+extern "C" bool ee_screenscpp_sci_has_hints(uintptr_t inM) { return SCI(inM)->mMediaStrings.GetSection(0).GetLength() > 0; }
+extern "C" bool ee_screenscpp_sci_has_history(uintptr_t inM)
+{ return SCI(inM)->mMediaStrings.GetSection(2).GetLength() > 0; }
+extern "C" uintptr_t ee_screenscpp_sci_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
+extern "C" uintptr_t ee_screenscpp_sci_main_control(uintptr_t inForm, uint32_t inControl)
+{ return (uintptr_t)static_cast<UIBlinkingButton*>(reinterpret_cast<EEUIFMainGame*>(inForm)->GetControl(inControl)); }
+extern "C" void ee_screenscpp_sci_set_info_blinking(uintptr_t inForm, bool inBlinking)
+{ reinterpret_cast<EEUIFMainGame*>(inForm)->mInfoBlinking = inBlinking; }
+extern "C" void ee_screenscpp_sci_button_blinking(uintptr_t inButton, bool inBlinking)
+{ reinterpret_cast<UIBlinkingButton*>(inButton)->SetIsBlinking(inBlinking); }
+extern "C" void ee_screenscpp_sci_button_shown(uintptr_t inButton)
+{ reinterpret_cast<UIBlinkingButton*>(inButton)->SetDisplayMode(kDisplayModeShown); }
+extern "C" void ee_screenscpp_sci_button_hidden(uintptr_t inButton)
+{ reinterpret_cast<UIBlinkingButton*>(inButton)->SetDisplayMode(kDisplayModeHidden); }

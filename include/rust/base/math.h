@@ -52,6 +52,14 @@ struct EeGe3DPlane {
   EeGeVector normal;
 };
 
+/// `GERectangle` (sizeof 0x10), in the C++'s member order.
+struct EeGeRectangle {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
 using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
 
@@ -72,14 +80,6 @@ struct EeGeBoundingBox {
   float width;
   float height;
   float depth;
-};
-
-/// `GERectangle` (sizeof 0x10), in the C++'s member order.
-struct EeGeRectangle {
-  float bottom;
-  float left;
-  float right;
-  float top;
 };
 
 /// Receives one rectangle of a split.

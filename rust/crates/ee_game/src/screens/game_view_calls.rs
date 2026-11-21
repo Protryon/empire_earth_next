@@ -131,7 +131,10 @@ pub(crate) fn texts(c: &mut impl Cpp, group: u32, arg: u32) -> Vec<u8> {
                     add(&mut |o| c.gt_record_name(arg, o));
                 }
             }
-            EE_SCREENS_VIEW_TEXTS_MAP_TYPE => add(&mut |o| c.gt_map_type(arg, o)),
+            EE_SCREENS_VIEW_TEXTS_MAP_TYPE => {
+                let options = crate::screens::lobby_calls::options_of(c, arg);
+                add(&mut |o| c.gt_map_type(options, o))
+            }
             _ => {}
         }
     }

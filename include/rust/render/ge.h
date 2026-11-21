@@ -875,6 +875,9 @@ struct EeGeTexture;
 /// The texture manager.
 struct EeGeTextureManager;
 
+/// The grid (`mTextures[x][y]`) and its sizes.
+struct EeGeTextureSet;
+
 /// The window.
 struct EeGeWin;
 
@@ -1144,6 +1147,9 @@ struct EeGeTextureDescription {
   bool create_mipmaps;
   bool use_texture_pack;
 };
+
+/// `static_cast<GETexture*>(texture)->Dereference()`.
+using EeGeTextureDereferenceFn = void(*)(void *texture);
 
 /// The host: `owner` is the C++ texture of the object calling.
 using EeGeTexHostFn = ptrdiff_t(*)(void *owner,
@@ -2838,6 +2844,39 @@ void ee_ge_texman_set_path(EeGeTextureManager *p, void *path);
 /// # Safety
 /// `p` is live.
 void ee_ge_texman_update_mip_filter(EeGeTextureManager *p, unsigned long mode);
+
+/// `GETextureSet(inNumTexturesInWidth, inNumTexturesInHeight, inTextureTileCoverage)`: every slot empty.
+EeGeTextureSet *ee_ge_tset_new(unsigned long width,
+                               unsigned long height,
+                               unsigned long coverage,
+                               EeGeTextureDereferenceFn dereference);
+
+/// `~GETextureSet`: every texture in the grid released, column by column.
+///
+/// # Safety
+/// `p` is live and not used again.
+void ee_ge_tset_free(EeGeTextureSet *p);
+
+/// `SetTexture(inX, inY, inTexture)`: the old texture released, the new one referenced.
+///
+/// # Safety
+/// `p` is live, the slot inside the grid, `texture` null or a live `GETexture`.
+void ee_ge_tset_set(EeGeTextureSet *p, unsigned long x, unsigned long y, void *texture);
+
+/// `GetTextureAt(inColumn, inRow)` (`slot` false) or `GetTexture(inX, inY)` (`slot`: the tile's slot in the grid).
+///
+/// # Safety
+/// `p` is live, the slot inside the grid.
+void *ee_ge_tset_get(const EeGeTextureSet *p,
+                     unsigned long x,
+                     unsigned long y,
+                     bool slot);
+
+/// `GetNumTexturesInWidth()` (0), `GetNumTexturesInHeight()` (1), `GetTextureTileCoverage()` (2).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_tset_size(const EeGeTextureSet *p, uint32_t which);
 
 /// `GETexture::GETexture(manager)`: the object of the C++ texture `owner`.
 ///
