@@ -549,7 +549,15 @@ mod tests {
         let mut h = grid(|_, _| TERRAIN_SPACE);
         assert!(!space_dock_site_open(&mut h, 5, 5, 9));
         // inner (4..5, 4..5) one land tile, the border land, the rest space
-        let mut h = grid(|x, y| if (3..=6).contains(&x) && (3..=6).contains(&y) && !((4..=5).contains(&x) && (4..=5).contains(&y)) { 1 } else if (x, y) == (4, 4) { 1 } else { TERRAIN_SPACE });
+        let mut h = grid(|x, y| {
+            if (3..=6).contains(&x) && (3..=6).contains(&y) && !((4..=5).contains(&x) && (4..=5).contains(&y)) {
+                1
+            } else if (x, y) == (4, 4) {
+                1
+            } else {
+                TERRAIN_SPACE
+            }
+        });
         // a space inner tile's 3 x 3 has at least five land tiles
         assert!(space_dock_site_open(&mut h, 5, 5, 9));
         let placed = h.log.iter().filter(|e| e.0 == EE_UNITS_CK_CAN_PLACE_DOCK).count();

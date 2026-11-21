@@ -1022,17 +1022,15 @@ pub fn end_game<H: PhHost + ?Sized>(h: &mut H, r: &Rec, victory: bool) {
 /// original's unused time-of-day conversions are pure and left out).
 pub fn time_string<H: PhHost + ?Sized>(h: &mut H, text: u64) {
     let time = flt(s(h, EE_UNITS_PH_GAME_CLOCK));
-    let hours: c_ulong = if time >= 3_600_000.0 {
-        ee_base::math::um::floor_unsigned(time * 2.7777778e-07) as c_ulong
-    } else {
-        0
-    };
+    let hours: c_ulong =
+        if time >= 3_600_000.0 { ee_base::math::um::floor_unsigned(time * 2.7777778e-07) as c_ulong } else { 0 };
     let mut minutes: c_ulong = 0;
     if time >= 60000.0 {
         minutes = truncate_ulong(time).wrapping_sub(hours.wrapping_mul(3_600_000)) / 60000;
     }
     let seconds =
-        truncate_ulong(time).wrapping_sub(hours.wrapping_mul(3_600_000)).wrapping_sub(minutes.wrapping_mul(60000)) / 1000;
+        truncate_ulong(time).wrapping_sub(hours.wrapping_mul(3_600_000)).wrapping_sub(minutes.wrapping_mul(60000))
+            / 1000;
     let wide = hours >= 100;
     // c: the hours, d: the minutes and seconds (low 32 bits each), b: the wide format
     h.ph(

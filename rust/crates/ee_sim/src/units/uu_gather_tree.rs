@@ -88,7 +88,9 @@ pub fn gather_next_tree<H: GtHost + ?Sized>(h: &mut H, unit: u64, resource: u64)
     {
         sa(h, EE_UNITS_GT_CLEAR_RESOURCE_AMOUNT, unit);
     }
-    if !(sa(h, EE_UNITS_GT_RESOURCE_TYPE, resource) == RESOURCE_WOOD && sab(h, EE_UNITS_GT_FREE_SPOT, unit, resource) == 0) {
+    if !(sa(h, EE_UNITS_GT_RESOURCE_TYPE, resource) == RESOURCE_WOOD
+        && sab(h, EE_UNITS_GT_FREE_SPOT, unit, resource) == 0)
+    {
         if sa(h, EE_UNITS_GT_FAMILY, resource) != FAMILY_ANIMAL {
             sab(h, EE_UNITS_GT_SET_GATHERED, unit, resource);
         }

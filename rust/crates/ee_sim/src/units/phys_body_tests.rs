@@ -227,9 +227,7 @@ fn the_checksum_sums_its_parts_in_unsigned_long() {
 fn the_dump_walks_the_players_then_the_units() {
     let mut saved = record();
     let r = Rec(&mut *saved);
-    let mut h = Mock::default()
-        .sequence(EE_UNITS_PH_NUM_PLAYERS, &[1, 0, 0])
-        .answer(EE_UNITS_PH_FIRST_UNIT, 0, 70);
+    let mut h = Mock::default().sequence(EE_UNITS_PH_NUM_PLAYERS, &[1, 0, 0]).answer(EE_UNITS_PH_FIRST_UNIT, 0, 70);
     out_of_synch_checksum(&mut h, &r, true, 0x10);
     assert_eq!(h.count(EE_UNITS_PH_DUMP_AIR_TRAFFIC), 4);
     assert_eq!(h.count(EE_UNITS_PH_DUMP_CALAMITIES), 1);
@@ -332,9 +330,11 @@ fn the_area_effects_and_shift_clocks_wrap() {
 fn the_timing_follows_the_speed() {
     let mut saved = record();
     let r = Rec(&mut *saved);
-    let mut h = Mock::default()
-        .answer(EE_UNITS_PH_TICKS_PER_SECOND, 0, 8)
-        .answer(EE_UNITS_PH_GAME_SPEED, 0, i64::from(2.0f32.to_bits()));
+    let mut h = Mock::default().answer(EE_UNITS_PH_TICKS_PER_SECOND, 0, 8).answer(
+        EE_UNITS_PH_GAME_SPEED,
+        0,
+        i64::from(2.0f32.to_bits()),
+    );
     update_timing(&mut h, &r);
     assert_eq!(saved.mTicksPerGameSecond, 4.0);
     assert_eq!(saved.mTickSeconds, 0.25);

@@ -214,7 +214,10 @@ fn update_unit_tile_snaps_an_off_map_unit_and_follows_its_waypoint_height() {
         .answer(EE_UNITS_UB_HEIGHT_AT, UNIT, bits(4.0));
     update_unit_tile(&mut h, 50, UNIT, 100, 101);
     // UMFloor(-1.5) = -2, UMFloor(2.5) = 2
-    assert_eq!(h.find(EE_UNITS_UB_SET_LONG), vec![(EE_UNITS_UB_SET_LONG, 100, 0, -2, 0, 0), (EE_UNITS_UB_SET_LONG, 101, 0, 2, 0, 0)]);
+    assert_eq!(
+        h.find(EE_UNITS_UB_SET_LONG),
+        vec![(EE_UNITS_UB_SET_LONG, 100, 0, -2, 0, 0), (EE_UNITS_UB_SET_LONG, 101, 0, 2, 0, 0)]
+    );
     assert_eq!(h.count(EE_UNITS_UB_SET_TRANSFORMATION), 0);
     assert_eq!(h.find(EE_UNITS_UB_MOVE_TO)[0].3, 0);
     assert_eq!(h.find(EE_UNITS_UB_MOVE_TO)[0].4, 3);
@@ -223,9 +226,11 @@ fn update_unit_tile_snaps_an_off_map_unit_and_follows_its_waypoint_height() {
 
 #[test]
 fn update_unit_tile_moves_a_unit_on_the_map() {
-    let mut h = Mock::default()
-        .floats(EE_UNITS_UB_TRANSFORMATION_POSITION, [1.5, 2.5, 0.0, 0.0])
-        .answer(EE_UNITS_UB_TILE_EXISTS, 0, 1);
+    let mut h = Mock::default().floats(EE_UNITS_UB_TRANSFORMATION_POSITION, [1.5, 2.5, 0.0, 0.0]).answer(
+        EE_UNITS_UB_TILE_EXISTS,
+        0,
+        1,
+    );
     update_unit_tile(&mut h, 50, UNIT, 100, 101);
     assert_eq!(h.find(EE_UNITS_UB_SET_TRANSFORMATION), vec![(EE_UNITS_UB_SET_TRANSFORMATION, UNIT, 50, 0, 0, 0)]);
     assert_eq!(h.count(EE_UNITS_UB_CLOSEST_TILE), 0);
@@ -288,9 +293,11 @@ fn the_functor_scales_a_living_unit_of_its_type() {
 
 #[test]
 fn the_upgrade_text_needs_both_strings() {
-    let mut h = Mock::default()
-        .floats(EE_UNITS_UB_LOOKUP_LEVEL, [0.105, 0.0, 0.0, 0.0])
-        .answer(EE_UNITS_UB_CATEGORY_NAME_ID, 0, 1);
+    let mut h = Mock::default().floats(EE_UNITS_UB_LOOKUP_LEVEL, [0.105, 0.0, 0.0, 0.0]).answer(
+        EE_UNITS_UB_CATEGORY_NAME_ID,
+        0,
+        1,
+    );
     assert!(upgrade_text(&mut h, 9, 70));
     // (long)(0.105 * 100 + 0.5) = 11
     assert_eq!(h.find(EE_UNITS_UB_LEVEL_TEXT), vec![(EE_UNITS_UB_LEVEL_TEXT, 70, 0, 11, 0, 0)]);
@@ -354,7 +361,8 @@ fn a_lone_target_searches_two_tiles_around_it() {
 #[test]
 fn the_constants_are_the_headers() {
     // CIV_POWER_* are checked here (header_consts.rs does not know the prefix)
-    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EECivPowerIDs.h")).unwrap();
+    let text =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EECivPowerIDs.h")).unwrap();
     for (name, value) in [
         ("kCivPowerFlamingArrows", CIV_POWER_FLAMING_ARROWS),
         ("kCivPowerCrusaders", CIV_POWER_CRUSADERS),
@@ -363,7 +371,11 @@ fn the_constants_are_the_headers() {
     ] {
         let line = text.lines().find(|l| l.trim_start().starts_with(&format!("{name} ="))).unwrap();
         let v = line.split('=').nth(1).unwrap().split(',').next().unwrap().trim();
-        let parsed = if let Some(hex) = v.strip_prefix("0x") { i64::from_str_radix(hex, 16).unwrap() } else { v.parse().unwrap() };
+        let parsed = if let Some(hex) = v.strip_prefix("0x") {
+            i64::from_str_radix(hex, 16).unwrap()
+        } else {
+            v.parse().unwrap()
+        };
         assert_eq!(parsed, value, "{name}");
     }
 }

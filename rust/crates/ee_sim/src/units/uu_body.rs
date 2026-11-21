@@ -721,13 +721,14 @@ pub fn convert_unit<H: UbHost + ?Sized>(h: &mut H, unit: u64, player_index: i64,
         let unit_class = obj(h, EE_UNITS_UB_UNIT_CLASS, unit);
         if sa(h, EE_UNITS_UB_CLASS_TYPE, unit_class) != UNIT_TYPE_PATH_POINT {
             let category = sa(h, EE_UNITS_UB_CATEGORY, unit_class);
-            let series = if [CATEGORY_BUILDING, CATEGORY_BUILDING19, CATEGORY_GATE, CATEGORY_MINING_BUILDING, CATEGORY_FORTRESS]
-                .contains(&category)
-            {
-                1
-            } else {
-                4
-            };
+            let series =
+                if [CATEGORY_BUILDING, CATEGORY_BUILDING19, CATEGORY_GATE, CATEGORY_MINING_BUILDING, CATEGORY_FORTRESS]
+                    .contains(&category)
+                {
+                    1
+                } else {
+                    4
+                };
             sac(h, EE_UNITS_UB_UNIT_STATS_RESET, unit, series);
         }
     }
@@ -765,7 +766,9 @@ fn adaptation<H: UbHost + ?Sized>(h: &mut H, unit: u64, player: u64) {
     let first = 0x26u32;
     let mut i = first;
     while i < (s(h, EE_UNITS_UB_NUM_POWERS) as u32).wrapping_add(first) {
-        if yes(sac(h, EE_UNITS_UB_UNIT_HAS_POWER, unit, i64::from(i))) && !yes(sac(h, EE_UNITS_UB_HAS_POWER, player, i64::from(i))) {
+        if yes(sac(h, EE_UNITS_UB_UNIT_HAS_POWER, unit, i64::from(i)))
+            && !yes(sac(h, EE_UNITS_UB_HAS_POWER, player, i64::from(i)))
+        {
             upgrade = sc(h, EE_UNITS_UB_MAKE_POWER_UPGRADE, i64::from(i));
             sc(h, EE_UNITS_UB_POWER_NAME, i64::from(i));
             granted = true;
@@ -1011,7 +1014,9 @@ pub fn find_new_target_near_old<H: UbHost + ?Sized>(h: &mut H, unit: u64, target
     let mut link = obj(h, EE_UNITS_UB_NEXT_PART, carrier);
     while obj(h, EE_UNITS_UB_NEXT_PART, link) != 0 {
         let class = obj(h, EE_UNITS_UB_UNIT_CLASS, link);
-        if !yes(sab(h, EE_UNITS_UB_PART_LEFT_OUT, class, link)) && !yes(sabc(h, EE_UNITS_UB_TARGET_IGNORED, unit, link, 0)) {
+        if !yes(sab(h, EE_UNITS_UB_PART_LEFT_OUT, class, link))
+            && !yes(sabc(h, EE_UNITS_UB_TARGET_IGNORED, unit, link, 0))
+        {
             let goal = obj(h, EE_UNITS_UB_LOAD_ATTACK_GOAL, unit);
             retarget_attack(h, unit, goal, link);
             return;
@@ -1291,11 +1296,14 @@ pub fn find_target_near<H: UbHost + ?Sized>(h: &mut H, unit: u64, x: i64, y: i64
     sc(h, EE_UNITS_UB_AREA_LEFT, i64::from((x as i32).wrapping_sub(r)));
     sc(h, EE_UNITS_UB_AREA_RIGHT, i64::from(r.wrapping_add(x as i32)));
     let class = obj(h, EE_UNITS_UB_UNIT_CLASS, unit);
-    let attacks = flt(sa(h, EE_UNITS_UB_ATTACK, unit)) != 0.0 || sa(h, EE_UNITS_UB_CATEGORY, class) == CATEGORY_BUILDING_PRIEST;
+    let attacks =
+        flt(sa(h, EE_UNITS_UB_ATTACK, unit)) != 0.0 || sa(h, EE_UNITS_UB_CATEGORY, class) == CATEGORY_BUILDING_PRIEST;
     if !attacks {
         return 0;
     }
-    if sa(h, EE_UNITS_UB_AMMO_TYPE, class) == AMMO_ANTI_AIR || sc(h, EE_UNITS_UB_SUM_OTHERS_INFLUENCE, player_id) as i32 > 0 {
+    if sa(h, EE_UNITS_UB_AMMO_TYPE, class) == AMMO_ANTI_AIR
+        || sc(h, EE_UNITS_UB_SUM_OTHERS_INFLUENCE, player_id) as i32 > 0
+    {
         return h.ub(EE_UNITS_UB_SEARCH_TARGET, unit, 0, x, y, bits(scale), &mut [0.0; 4]) as u64;
     }
     0
