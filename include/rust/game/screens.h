@@ -11298,6 +11298,9 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
+/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
+using EeScreensAesIo = long(*)(void *ctx, uint32_t op, void *value);
+
 /// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
 /// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
 struct EeScreensCommandMode {
@@ -12143,6 +12146,46 @@ void ee_screens_civ_host(const void *call,
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
+
+/// The area effects' host (`EEAEHost::Call`: `effect` the `EEAreaEffect*`, `target` the `EEComplexUnit*`, either
+/// NULL; `call` an `EeAreaEffectCall*`, `reply` an `EeAreaEffectReply*`; `area_effect_host.rs`).
+void ee_screens_ae_host(void *effect,
+                        void *target,
+                        const void *call,
+                        void *reply);
+
+/// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
+/// the `EEComplexUnit*`; `area_effect_manager.rs`).
+void ee_screens_aem_collect(float radius,
+                            float x,
+                            float y,
+                            unsigned long player,
+                            void *list,
+                            void *unit);
+
+/// `EEAEManager::FindEffect(kind, x, y, player, mode, exclude)` on the manager -> the `EEAreaEffect*` or NULL.
+void *ee_screens_aem_find(void *manager,
+                          long kind,
+                          float x,
+                          float y,
+                          unsigned long player,
+                          bool mode,
+                          void *exclude);
+
+/// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
+long ee_screens_aes_load_templates(void *manager, void *file);
+
+/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
+void ee_screens_aes_save(void *ctx, EeScreensAesIo call);
+
+/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
+long ee_screens_aes_load(void *ctx, EeScreensAesIo call);
+
+/// The running state's fix-up after a load (`aes_after_load`'s registered call; `state` the record).
+///
+/// # Safety
+/// `state` is a live `EeAreaEffectRunning`.
+void ee_screens_aes_restore(const void *state);
 
 /// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
 void ee_screens_civ_fill_list(void *list);

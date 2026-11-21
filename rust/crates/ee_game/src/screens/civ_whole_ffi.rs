@@ -4,7 +4,7 @@
 //! (`civ_host.rs`, over the C++ shims of `Civilization Builder/EECivilizationBuilder.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_long, c_void};
+use core::ffi::{c_long, c_ulong, c_void};
 
 use crate::screens::civ_list;
 use crate::screens::civ_whole::{self, CbHost, EeScreensCbOut};
@@ -36,6 +36,89 @@ pub unsafe extern "C" fn ee_screens_civ_file_host(ctx: *mut c_void, call: *const
     // SAFETY: the simulation's call and reply, live for the call
     let (call, reply) = unsafe { (&*(call as *const EeTechCivFileCall), &mut *(reply as *mut EeTechCivFileReply)) };
     crate::screens::civ_file_calls::host(&mut crate::screens::game_cpp::Ffi, ctx as usize, call, reply)
+}
+
+/// The area effects' host (`EEAEHost::Call`: `effect` the `EEAreaEffect*`, `target` the `EEComplexUnit*`, either
+/// NULL; `call` an `EeAreaEffectCall*`, `reply` an `EeAreaEffectReply*`; `area_effect_host.rs`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_ae_host(
+    effect: *mut c_void,
+    target: *mut c_void,
+    call: *const c_void,
+    reply: *mut c_void,
+) {
+    use ee_sim::tech::area_effect::{EeAreaEffectCall, EeAreaEffectReply};
+    // SAFETY: the simulation's call and reply, live for the call
+    let (call, reply) = unsafe { (&*(call as *const EeAreaEffectCall), &mut *(reply as *mut EeAreaEffectReply)) };
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    crate::screens::area_effect_host::host(ffi, effect as usize, target as usize, call, reply)
+}
+
+/// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
+/// the `EEComplexUnit*`; `area_effect_manager.rs`).
+#[no_mangle]
+pub extern "C" fn ee_screens_aem_collect(
+    radius: f32,
+    x: f32,
+    y: f32,
+    player: c_ulong,
+    list: *mut c_void,
+    unit: *mut c_void,
+) {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    crate::screens::area_effect_manager::collect_effects(ffi, radius, x, y, player as u64, list as usize, unit as usize)
+}
+
+/// `EEAEManager::FindEffect(kind, x, y, player, mode, exclude)` on the manager -> the `EEAreaEffect*` or NULL.
+#[no_mangle]
+pub extern "C" fn ee_screens_aem_find(
+    manager: *mut c_void,
+    kind: c_long,
+    x: f32,
+    y: f32,
+    player: c_ulong,
+    mode: bool,
+    exclude: *mut c_void,
+) -> *mut c_void {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    let m = manager as usize;
+    crate::screens::area_effect_manager::find_effect(ffi, m, kind as i64, x, y, player as u64, mode, exclude as usize)
+        as *mut c_void
+}
+
+/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
+pub type EeScreensAesIo = Option<unsafe extern "C" fn(ctx: *mut c_void, op: u32, value: *mut c_void) -> c_long>;
+
+/// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
+#[no_mangle]
+pub extern "C" fn ee_screens_aes_load_templates(manager: *mut c_void, file: *mut c_void) -> c_long {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    crate::screens::area_effect_running::load_templates(ffi, manager as usize, file as usize) as c_long
+}
+
+/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
+#[no_mangle]
+pub extern "C" fn ee_screens_aes_save(ctx: *mut c_void, call: EeScreensAesIo) {
+    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx, call };
+    crate::screens::area_effect_running::save(&mut crate::screens::game_cpp::Ffi, io)
+}
+
+/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
+#[no_mangle]
+pub extern "C" fn ee_screens_aes_load(ctx: *mut c_void, call: EeScreensAesIo) -> c_long {
+    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx, call };
+    crate::screens::area_effect_running::load(&mut crate::screens::game_cpp::Ffi, io)
+}
+
+/// The running state's fix-up after a load (`aes_after_load`'s registered call; `state` the record).
+///
+/// # Safety
+/// `state` is a live `EeAreaEffectRunning`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_aes_restore(state: *const c_void) {
+    let state = state as *const ee_sim::tech::area_effect_save::EeAreaEffectRunning;
+    // SAFETY: the caller's record
+    unsafe { crate::screens::area_effect_running::restore(&mut crate::screens::game_cpp::Ffi, state) }
 }
 
 /// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
