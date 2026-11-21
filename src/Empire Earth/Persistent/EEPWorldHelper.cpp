@@ -45,29 +45,18 @@
 #include "rust/sim/units.h"
 
 
-static long LoadTeams(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                      std::vector<EETeam>& outTeams);
-static long SaveTeams(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile,
-                      std::vector<EETeam>& inTeams);
+#include "rust/game/gamecpp.h"
+
+// The saved world's bodies are ee_game gamecpp persist_world.rs (game core lane, round 9): the constructors, Load,
+// Save, Restore, the teams' load and save, the host of ee_sim's world_save.rs (the running state from save 0.254 on),
+// its two parts of this file (the tech nodes not allowed, 0.282; the tiles' terrain types, 0.283) and the loaded
+// ghosts' making. Their C++ calls and members are EEPWorldOp's cases below.
 
 // Creates an empty saved-world chunk (no teams, improvements, team lock and cheats allowed)
 EEPWorldHelper::EEPWorldHelper()
     : FSPersistent(kPersistentWorld)
 {
-    this->mScenarioManager = NULL;
-    this->mTimeOfDay = 0.0f;
-    this->mZoom = 0.0f;
-    this->mGameSpeed = 0.0f;
-    this->mPopulationLimit = 0;
-    this->mNumberOfWondersToWin = 0;
-    this->mC36 = 0;
-    this->mVictoryEnabled = false;
-    this->mTownIDCounter = 0;
-    this->mHerdIDCounter = 0;
-    this->mUsingCarbon = false;
-    this->mUnitImprovementsAllowed = true;
-    this->mTeamsLocked = true;
-    this->mCheatsEnabled = true;
+    ee_gamecpp_pwh_init(this);
 }
 
 // Creates the saved-world chunk from the world's teams, time of day, zoom, speed, limits, victory and cheat settings
@@ -75,471 +64,13 @@ EEPWorldHelper::EEPWorldHelper()
 EEPWorldHelper::EEPWorldHelper(EEWorld& inWorld)
     : FSPersistent(kPersistentWorld)
 {
-    this->mScenarioManager = NULL;
-    this->mTimeOfDay = inWorld.GetTimeOfDay();
-    this->mZoom = gWorld.mCameraControl.GetZoom();
-    this->mGameSpeed = inWorld.GetGameSpeed();
-    this->mPopulationLimit = inWorld.mPopulationLimit;
-    this->mNumberOfWondersToWin = inWorld.mNumberOfWondersToWin;
-    this->mC36 = 0;
-
-    this->mTeams = inWorld.mTeams;
-    this->mVictoryEnabled = inWorld.mVictoryEnabled;
-    this->mUnitImprovementsAllowed = inWorld.mUnitImprovementsAllowed;
-    this->mTeamsLocked = inWorld.mTeamsLocked;
-    this->mCheatsEnabled = inWorld.mCheatsEnabled;
-    this->mTownIDCounter = inWorld.mTownIDCounter;
-    this->mHerdIDCounter = inWorld.mHerdIDCounter;
-    this->mUsingCarbon = inWorld.mUsingCarbon;
+    ee_gamecpp_pwh_from_world(this, &inWorld);
 }
 
 // Creates an empty saved-world chunk (persistent factory)
 FSPersistent* EEPWorldHelper::CreateDefault() const
 {
     return new EEPWorldHelper;
-}
-
-// port (save versions 0.254 to 0.279): the world's running state the original did not save (the order of the unit
-// chain, the stepped units, the tiles', regions' and players' units; the forests' renewals; the computer players'
-// schedule; the dead units the living hold; the other systems' parts in their places) is ee_units world_save.rs's,
-// over this host: the file (EESavePrimitive), the version's predicates, the other systems' parts, the first tick's
-// restores (EEAfterLoad) and the world's units by address.
-struct EEPWorldContext {
-    FSFile* mFile;
-    unsigned long mMajor;
-    unsigned long mMinor;
-};
-
-static int64_t EEPWorldFill(EeUnitsWorldIo* io, size_t inIndex, uint64_t inValue)
-{
-    if (inIndex < io->cap)
-        io->list[inIndex] = inValue;
-    return 0;
-}
-
-template <class V> static int64_t EEPWorldFillAll(EeUnitsWorldIo* io, const V& inItems)
-{
-    for (size_t i = 0; i < inItems.size(); i++)
-        EEPWorldFill(io, i, (uint64_t)(uintptr_t)inItems[i]);
-    return (int64_t)inItems.size();
-}
-
-// 0.272/0.275: a unit a goal holds out of the world, once (simple units too: a gathered tree or mine gone)
-static void AddHeldGhost(EEUnit* inUnit, std::vector<EEComplexUnit*>& ioComplex, std::vector<EEUnit*>& ioSimple)
-{
-    if (inUnit == NULL || gWorld.GetUnit(inUnit->mUnitID) == inUnit)
-        return;
-    EEComplexUnit* theComplex = dynamic_cast<EEComplexUnit*>(inUnit);   // (a removed unit's store fields read 0)
-    if (theComplex != NULL) {
-        if (std::find(ioComplex.begin(), ioComplex.end(), theComplex) == ioComplex.end())
-            ioComplex.push_back(theComplex);
-    } else if (std::find(ioSimple.begin(), ioSimple.end(), inUnit) == ioSimple.end())
-        ioSimple.push_back(inUnit);
-}
-
-// 0.262: the dead attackers the units hold, those the gatherer lists hold, then (0.272, 0.275) the goals' resources,
-// drop sites and attack targets out of the world: the complex ones first, then the simple ones
-static void GatherGhosts(std::vector<EEComplexUnit*>& outDead, std::vector<EEUnit*>& outSimple)
-{
-    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theAttacker = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->mLastAttacker : NULL;
-            if (theAttacker == NULL || gWorld.GetUnit(theAttacker->mUnitID) == theAttacker
-                || std::find(outDead.begin(), outDead.end(), theAttacker) != outDead.end())
-                continue;
-            outDead.push_back(theAttacker);
-        }
-    }
-    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            for (size_t q = 0; theComplex != NULL && q < theComplex->mGoalQueues.size(); q++) {
-                const EEGoalDeque& theGoals = theComplex->mGoalQueues[q].mGoals;
-                for (size_t g = 0; g < theGoals.size(); g++) {
-                    if (EEUGRust* theAttack = EEAttackUnitCast(theGoals[g])) {
-                        AddHeldGhost(theAttack->GetAttackTarget(), outDead, outSimple);
-                    } else if (EEUGRust* theGather = EEGatherGoalCast(theGoals[g])) {
-                        AddHeldGhost(theGather->GetGatherResource(), outDead, outSimple);
-                        AddHeldGhost(theGather->GetGatherStorage(), outDead, outSimple);
-                    }
-                }
-            }
-        }
-    }
-}
-
-// 0.282 (EESaveHasTechAllowed): per player, the ids of its tech nodes that are not allowed (EETechTreeNode::mIsAllowed
-// false: a one-off technology queued or researched, EEComplexUnit::QueueResearch; a building the map or the capitol
-// count forbids). The tech tree's own block holds only the researched and obsolete ids, so a load had every node
-// allowed again: a computer player that asks for a researched one-off technology each second (classic_lua and the
-// town centre's garrison storage) researched it a second time. The flags go back at the first tick, after the load's
-// own passes (EETechTree::ApplySavedState, the map restrictions): every node of each tree as it was saved.
-static long EESaveTechAllowed(FSFile& outFile)
-{
-    unsigned long thePlayers = gWorld.mNumPlayers;
-    long theResult = outFile.Write(thePlayers);
-    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        EETechTree* theTree = thePlayer != NULL ? thePlayer->GetTechTree() : NULL;
-        std::vector<long> theIDs, theOff;
-        if (theTree != NULL)
-            theTree->GetNodeIDs(theIDs);
-        for (unsigned long k = 0; k < theIDs.size(); k++) {
-            EETechTreeNode* theNode = theTree->Get(theIDs[k]);
-            if (theNode != NULL && !theNode->mIsAllowed)
-                theOff.push_back(theIDs[k]);
-        }
-        std::sort(theOff.begin(), theOff.end());
-        unsigned long theCount = (unsigned long)theOff.size();
-        theResult = outFile.Write(theCount);
-        for (unsigned long k = 0; k < theCount && theResult == kErrorOK; k++)
-            theResult = outFile.Write(theOff[k]);
-    }
-    return theResult;
-}
-
-static long EELoadTechAllowed(FSFile& inFile)
-{
-    std::shared_ptr<std::vector<std::vector<long> > > theLists = std::make_shared<std::vector<std::vector<long> > >();
-    unsigned long thePlayers = 0;
-    long theResult = inFile.Read(thePlayers);
-    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
-        unsigned long theCount = 0;
-        theResult = inFile.Read(theCount);
-        theLists->push_back(std::vector<long>());
-        for (unsigned long k = 0; k < theCount && theResult == kErrorOK; k++) {
-            long theID = 0;
-            theResult = inFile.Read(theID);
-            theLists->back().push_back(theID);
-        }
-        std::sort(theLists->back().begin(), theLists->back().end());
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    EEAfterLoad([theLists]() {
-        for (unsigned long p = 0; p < theLists->size() && p < gWorld.mNumPlayers; p++) {
-            EEPlayer* thePlayer = gWorld.mPlayers[p];
-            EETechTree* theTree = thePlayer != NULL ? thePlayer->GetTechTree() : NULL;
-            if (theTree == NULL)
-                continue;
-            const std::vector<long>& theOff = (*theLists)[p];
-            std::vector<long> theIDs;
-            theTree->GetNodeIDs(theIDs);
-            for (unsigned long k = 0; k < theIDs.size(); k++) {
-                EETechTreeNode* theNode = theTree->Get(theIDs[k]);
-                if (theNode != NULL)
-                    theNode->mIsAllowed = !std::binary_search(theOff.begin(), theOff.end(), theIDs[k]);
-            }
-        }
-    });
-    return kErrorOK;
-}
-
-// 0.283 (EESaveHasTileTypes): every map tile's terrain type, row by row (y outer, x inner), as runs of a count and a
-// type (-1: no tile). EEMap::Load re-types each tile from the terrain table of its mesh vertex's texture, which is
-// not always the type the map's painting gave it (EEMap::PaintTerrain types the four tiles around the vertex it
-// paints): about 1,000 tiles of a random map came back as another type, and movement (CanMoveOnTerrain), the path
-// searches and the placement read the type. The saved types go back at once (the units and the analysis the load
-// reads next see them) and again at the first tick, after the load's own passes.
-static void EEApplyTileTypes(const std::vector<long>& inTypes)
-{
-    EEMap* theMap = gWorld.mMap;
-    if (theMap == NULL || (long)inTypes.size() != theMap->mSize * theMap->mSize)
-        return;
-    for (long y = 0; y < theMap->mSize; y++)
-        for (long x = 0; x < theMap->mSize; x++) {
-            EEMapTile* theTile = theMap->GetTile(x, y);
-            long theType = inTypes[y * theMap->mSize + x];
-            if (theTile != NULL && theType >= 0)
-                theTile->mTerrainType = theType;
-        }
-}
-
-static long EESaveTileTypes(FSFile& outFile)
-{
-    EEMap* theMap = gWorld.mMap;
-    long theSize = theMap != NULL ? theMap->mSize : 0;
-    long theResult = outFile.Write(theSize);
-    unsigned long theRun = 0;
-    long theRunType = -1;
-    for (long i = 0; i < theSize * theSize && theResult == kErrorOK; i++) {
-        EEMapTile* theTile = theMap->GetTile(i % theSize, i / theSize);
-        long theType = theTile != NULL ? theTile->mTerrainType : -1;
-        if (theRun != 0 && theType != theRunType) {
-            theResult = outFile.Write(theRun);
-            if (theResult == kErrorOK)
-                theResult = outFile.Write(theRunType);
-            theRun = 0;
-        }
-        theRunType = theType;
-        theRun++;
-    }
-    if (theRun != 0 && theResult == kErrorOK) {
-        theResult = outFile.Write(theRun);
-        if (theResult == kErrorOK)
-            theResult = outFile.Write(theRunType);
-    }
-    return theResult;
-}
-
-static long EELoadTileTypes(FSFile& inFile)
-{
-    long theSize = 0;
-    long theResult = inFile.Read(theSize);
-    if (theResult != kErrorOK)
-        return theResult;
-    if (theSize < 0 || theSize > 0x4000)
-        return kErrorBeyondEnd;
-    std::shared_ptr<std::vector<long> > theTypes = std::make_shared<std::vector<long> >();
-    theTypes->reserve((size_t)(theSize * theSize));
-    while ((long)theTypes->size() < theSize * theSize && theResult == kErrorOK) {
-        unsigned long theRun = 0;
-        long theType = -1;
-        theResult = inFile.Read(theRun);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theType);
-        if (theResult == kErrorOK && (theRun == 0 || theRun > (unsigned long)(theSize * theSize) - theTypes->size()))
-            theResult = kErrorBeyondEnd;
-        if (theResult == kErrorOK)
-            theTypes->insert(theTypes->end(), theRun, theType);
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    EEApplyTileTypes(*theTypes);
-    EEAfterLoad([theTypes]() { EEApplyTileTypes(*theTypes); });
-    return kErrorOK;
-}
-
-static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io);
-
-static int64_t EEPWorldPart(EEPWorldContext& inContext, bool inLoad, int64_t inPart, bool inTownAreas)
-{
-    FSFile& theFile = *inContext.mFile;
-    switch (inPart) {
-    case EE_UNITS_WORLD_PART_PATH_RUNNING: if (inLoad) return gPathManager.LoadRunningState(theFile); gPathManager.SaveRunningState(theFile); return 0;
-    case EE_UNITS_WORLD_PART_AREA_EFFECTS: if (inLoad) return EEAELoadRunningState(theFile); EEAESaveRunningState(theFile); return 0;
-    case EE_UNITS_WORLD_PART_EXPERIMENT_TIMERS: if (inLoad) return EECPLoadExperimentTimers(theFile); EECPSaveExperimentTimers(theFile); return 0;
-    case EE_UNITS_WORLD_PART_TOWNS: if (inLoad) return EELoadTowns(theFile, inTownAreas); EESaveTowns(theFile); return 0;
-    case EE_UNITS_WORLD_PART_CONTINENT_REGIONS: if (inLoad) return EELoadContinentRegions(theFile); EESaveContinentRegions(theFile); return 0;
-    case EE_UNITS_WORLD_PART_RESOURCE_STATE: if (inLoad) return EECPLoadResourceState(theFile); EECPSaveResourceState(theFile); return 0;
-    case EE_UNITS_WORLD_PART_PATH_SEARCHES: if (inLoad) return gPathManager.LoadSearches(theFile); gPathManager.SaveSearches(theFile); return 0;
-    case EE_UNITS_WORLD_PART_ACTIVE_GROUPS: if (inLoad) return EELoadActiveGroups(theFile); EESaveActiveGroups(theFile); return 0;
-    case EE_UNITS_WORLD_PART_GRAPH_SEARCHES: if (inLoad) return gPathManager.LoadGraphSearches(theFile); gPathManager.SaveGraphSearches(theFile); return 0;
-    case EE_UNITS_WORLD_PART_TECH_ALLOWED: if (inLoad) return EELoadTechAllowed(theFile); EESaveTechAllowed(theFile); return 0;
-    case EE_UNITS_WORLD_PART_TILE_TYPES: if (inLoad) return EELoadTileTypes(theFile); EESaveTileTypes(theFile); return 0;
-    }
-    return 0;
-}
-
-static bool EEPWorldHas(const EEPWorldContext& inContext, int64_t inWhich)
-{
-    unsigned long theMajor = inContext.mMajor;
-    unsigned long theMinor = inContext.mMinor;
-    switch (inWhich) {
-    case EE_UNITS_WORLD_HAS_RUNNING_STATE: return EESaveHasRunningState(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_REGION_ORDER: return EESaveHasRegionOrder(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_EXPERIMENT_TIMERS: return EESaveHasExperimentTimers(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_TOWNS: return EESaveHasTowns(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_TOWN_AREAS: return EESaveHasTownAreas(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_GHOSTS: return EESaveHasGhosts(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_GHOST_RESOURCES: return EESaveHasGhostResources(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_GOAL_GHOSTS: return EESaveHasGoalGhosts(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_CONTINENT_REGIONS: return EESaveHasContinentRegions(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_RESOURCE_STATE: return EESaveHasResourceState(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_PLAYER_UNIT_ORDER: return EESaveHasPlayerUnitOrder(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_PATH_SEARCHES: return EESaveHasPathSearches(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_ACTIVE_GROUPS: return EESaveHasActiveGroups(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_GRAPH_SEARCHES: return EESaveHasGraphSearches(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_TECH_ALLOWED: return EESaveHasTechAllowed(theMajor, theMinor);
-    case EE_UNITS_WORLD_HAS_TILE_TYPES: return EESaveHasTileTypes(theMajor, theMinor);
-    }
-    return false;
-}
-
-static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io)
-{
-    EEPWorldContext* theContext = static_cast<EEPWorldContext*>(inContext);
-    if (EESaveIsPrimitive(inOp)) {
-        EeUnitsPlayerSaveIo theIo = {io->a, io->f, (uint8_t)(io->b != 0 ? 1 : 0)};
-        int32_t theResult = EESavePrimitive(*theContext->mFile, inOp, &theIo);
-        io->a = theIo.i;
-        io->f = theIo.f;
-        io->b = theIo.b;
-        return theResult;
-    }
-    RTSUnit* theUnit = reinterpret_cast<RTSUnit*>((uintptr_t)io->a);
-    EEMap* theMap = gWorld.mMap;
-    switch (inOp) {
-    case EE_UNITS_WORLD_HAS: return EEPWorldHas(*theContext, io->a) ? 1 : 0;
-    case EE_UNITS_WORLD_PART_LOAD: return EEPWorldPart(*theContext, true, io->a, io->b != 0);
-    case EE_UNITS_WORLD_PART_SAVE: return EEPWorldPart(*theContext, false, io->a, false);
-    case EE_UNITS_WORLD_AFTER_LOAD: {
-        void* thePending = reinterpret_cast<void*>((uintptr_t)io->a);
-        EEAfterLoad([thePending]() { ee_units_world_restore(thePending, NULL, &EEPWorldHost); });
-        return 0;
-    }
-    case EE_UNITS_WORLD_DEBUG: ESDebugOut("%s", reinterpret_cast<const char*>(io->list)); return 0;
-    case EE_UNITS_WORLD_UNIT_ID: return (int64_t)theUnit->mUnitID;
-    case EE_UNITS_WORLD_CHAIN: {
-        size_t theCount = 0;
-        for (RTSUnit* theChain = gWorld.mUnits.mFirst; theChain != NULL; theChain = theChain->mTileNode->mNext)
-            EEPWorldFill(io, theCount++, (uint64_t)(uintptr_t)theChain);
-        return (int64_t)theCount;
-    }
-    case EE_UNITS_WORLD_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit((unsigned long)io->a);
-    case EE_UNITS_WORLD_IN_CHAIN:
-        return theUnit->mTileNode != NULL && (theUnit->mTileNode->mPrev != NULL || gWorld.mUnits.mFirst == theUnit);
-    case EE_UNITS_WORLD_TILE_X: return theUnit->mTileX;
-    case EE_UNITS_WORLD_LINK:
-        theUnit->Link(io->b != 0 ? reinterpret_cast<RTSUnit*>((uintptr_t)io->b) : reinterpret_cast<RTSUnit*>(&gWorld.mUnits));
-        return 0;
-    case EE_UNITS_WORLD_STEP_LIST:
-    case EE_UNITS_WORLD_STEP_SET:
-    case EE_UNITS_WORLD_STEP_DROP:
-    case EE_UNITS_WORLD_STEP_ADD: {
-        // the active unit lists (ee_sim app active.rs: 0 stepped, 1 activation, 2 deactivation) as units
-        uint32_t theWhich = (uint32_t)io->a;
-        EEComplexUnit* theComplex = reinterpret_cast<EEComplexUnit*>((uintptr_t)io->b);
-        if (inOp == EE_UNITS_WORLD_STEP_LIST) {
-            std::vector<uint32_t> theIDs(ee_app_active_list(theWhich, NULL, 0));
-            ee_app_active_list(theWhich, theIDs.data(), theIDs.size());
-            for (size_t i = 0; i < theIDs.size(); i++)
-                EEPWorldFill(io, i, (uint64_t)(uintptr_t)(EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID(theIDs[i]));
-            return (int64_t)theIDs.size();
-        }
-        if (inOp == EE_UNITS_WORLD_STEP_SET) {   // the references UpdateActiveUnits keeps: the ops below
-            std::vector<uint32_t> theIDs;
-            for (size_t i = 0; i < io->cap; i++)
-                theIDs.push_back(EEUnitHandleID(reinterpret_cast<EEComplexUnit*>((uintptr_t)io->list[i])));
-            ee_app_active_set_list(theWhich, theIDs.data(), theIDs.size());
-        } else if (inOp == EE_UNITS_WORLD_STEP_DROP) {
-            theComplex->Dereference();
-            if (theWhich == 0) {
-                theComplex->Dereference();
-                ee_app_active_set((uint32_t)theComplex->mUnitID, false);
-            }
-        } else {
-            theComplex->Reference();
-            if (theWhich == 0) {
-                theComplex->Reference();
-                ee_app_active_set((uint32_t)theComplex->mUnitID, true);
-            }
-        }
-        return 0;
-    }
-    case EE_UNITS_WORLD_COMPLEX: return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->a)));
-    case EE_UNITS_WORLD_FORESTS: return EEPWorldFillAll(io, gContinentManager.GetForests());
-    case EE_UNITS_WORLD_FOREST_RENEWAL: return (int64_t)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetNextRenewal();
-    case EE_UNITS_WORLD_FOREST_TILES: {
-        std::vector<U2DPoint<long> > theTiles;
-        reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetTileSet().BuildPointList(theTiles, 1);
-        for (size_t t = 0; t < theTiles.size(); t++)
-            EEPWorldFill(io, t, (uint64_t)(uint32_t)theTiles[t].mX | ((uint64_t)(uint32_t)theTiles[t].mY << 32));
-        return (int64_t)theTiles.size();
-    }
-    case EE_UNITS_WORLD_FOREST_AT: {
-        U2DPoint<long> theTile;
-        theTile.mX = (long)io->a;
-        theTile.mY = (long)io->b;
-        return (int64_t)(uintptr_t)gContinentManager.GetForestAt(theTile);
-    }
-    case EE_UNITS_WORLD_FOREST_SET_RENEWAL: reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->SetNextRenewal((unsigned long)io->b); return 0;
-    case EE_UNITS_WORLD_FOREST_SIZE: return (int64_t)(unsigned long)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetNumTiles();
-    case EE_UNITS_WORLD_AI_SCHEDULE:
-        io->a = (int64_t)gArtificialIntelligence->mNextPlayer;
-        io->b = (int64_t)gArtificialIntelligence->mNextUpdateTime;
-        return (int64_t)gArtificialIntelligence->mComputerPlayers.size();
-    case EE_UNITS_WORLD_AI_SET_SCHEDULE:
-        gArtificialIntelligence->mNextPlayer = (unsigned long)io->a;
-        gArtificialIntelligence->mNextUpdateTime = (unsigned long)io->b;
-        return 0;
-    case EE_UNITS_WORLD_TILE_COUNT: return theMap != NULL ? (int64_t)theMap->mSize * theMap->mSize : 0;
-    case EE_UNITS_WORLD_TILE_UNITS:
-    case EE_UNITS_WORLD_TILE_SET: {
-        EEMapTile* theTile = theMap->mTiles[io->a];
-        size_t theCount = 0;
-        for (RTSTileUnitNode* theNode = theTile != NULL ? theTile->mUnits : NULL; theNode != NULL; theNode = theNode->mNext, theCount++) {
-            if (inOp == EE_UNITS_WORLD_TILE_UNITS)
-                EEPWorldFill(io, theCount, (uint64_t)(uintptr_t)theNode->mUnit);
-            else if ((int64_t)theCount == io->b)
-                theNode->mUnit = reinterpret_cast<EEUnit*>((uintptr_t)io->list[0]);
-        }
-        return (int64_t)theCount;
-    }
-    case EE_UNITS_WORLD_REGION_ORDER:
-    case EE_UNITS_WORLD_REGION_RESTORE: {
-        EeCombatUnitRegions* theTable = theMap != NULL ? theMap->mUnitRegions : NULL;
-        if (inOp == EE_UNITS_WORLD_REGION_RESTORE) {
-            std::vector<uint32_t> theIDs;
-            for (size_t i = 0; i < io->cap; i++)
-                theIDs.push_back((uint32_t)io->list[i]);
-            return ee_combat_regions_restore(theTable, (uint32_t)io->a, theIDs.data(), theIDs.size());
-        }
-        std::vector<uint32_t> theOrder(ee_combat_regions_order(theTable, NULL, 0));
-        ee_combat_regions_order(theTable, theOrder.data(), theOrder.size());
-        for (size_t k = 0; k < theOrder.size(); k++)
-            EEPWorldFill(io, k, theOrder[k]);
-        return (int64_t)theOrder.size();
-    }
-    case EE_UNITS_WORLD_GHOSTS: {
-        std::vector<EEComplexUnit*> theDead;
-        std::vector<EEUnit*> theSimple;
-        GatherGhosts(theDead, theSimple);
-        std::vector<EEUnit*> theAll(theDead.begin(), theDead.end());
-        theAll.insert(theAll.end(), theSimple.begin(), theSimple.end());
-        io->a = (int64_t)theDead.size();
-        return EEPWorldFillAll(io, theAll);
-    }
-    case EE_UNITS_WORLD_GHOST_FIELDS: {
-        EEUnit* theGhost = static_cast<EEUnit*>(theUnit);
-        io->v[0] = (int64_t)theGhost->mUnitID;
-        io->v[1] = theGhost->mUnitClass != NULL ? (int64_t)theGhost->mUnitClass->mUnitType : -1;
-        io->v[2] = theGhost->mPlayer != NULL ? (int64_t)theGhost->mPlayer->mPlayerID : -1;
-        io->v[3] = theGhost->mHitPoints;
-        io->v[4] = theGhost->mTileX;
-        io->v[5] = theGhost->mTileY;
-        io->v[7] = (int64_t)theGhost->mResourceType;
-        io->a = (long)theGhost->mResourceAmount;
-        if (io->b != 0) {   // a complex unit: built flag and placement
-            EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theGhost);
-            io->v[6] = theComplex->mIsBuilt;
-            GETransformation thePlacement = theComplex->mPhysicalModel.GetLocation();
-            memcpy(io->m, thePlacement.mMatrix, sizeof(io->m));
-        }
-        return 0;
-    }
-    case EE_UNITS_WORLD_DEREFERENCE: static_cast<EEUnit*>(theUnit)->Dereference(); return 0;
-    case EE_UNITS_WORLD_PLAYER_COUNT: return (int64_t)gWorld.mNumPlayers;
-    case EE_UNITS_WORLD_PLAYER_UNITS:
-    case EE_UNITS_WORLD_PLAYER_UNIT:
-    case EE_UNITS_WORLD_PLAYER_SET_LIST:
-    case EE_UNITS_WORLD_PLAYER_SET_BUCKET: {
-        EEPlayer* thePlayer = gWorld.mPlayers[io->a];
-        if (inOp == EE_UNITS_WORLD_PLAYER_UNIT)
-            return thePlayer != NULL ? (int64_t)(uintptr_t)thePlayer->GetUnit((unsigned long)io->b) : 0;
-        if (inOp == EE_UNITS_WORLD_PLAYER_SET_BUCKET) {
-            thePlayer->mUnitBuckets[io->b].mFirst = reinterpret_cast<EEUnit*>((uintptr_t)io->list[0]);
-            return 0;
-        }
-        if (inOp == EE_UNITS_WORLD_PLAYER_SET_LIST) {
-            RTSUnit** theOrder = reinterpret_cast<RTSUnit**>(io->list);
-            for (size_t i = 0; i < io->cap; i++) {
-                theOrder[i]->mPrevious = i > 0 ? theOrder[i - 1] : NULL;
-                theOrder[i]->mNext = i + 1 < io->cap ? theOrder[i + 1] : NULL;
-            }
-            thePlayer->mFirstUnit = io->cap == 0 ? NULL : static_cast<EEUnit*>(theOrder[0]);
-            thePlayer->mLastUnit = io->cap == 0 ? NULL : static_cast<EEUnit*>(theOrder[io->cap - 1]);
-            return 0;
-        }
-        size_t theCount = 0;
-        for (RTSUnit* theOwned = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theOwned != NULL; theOwned = theOwned->mNext)
-            EEPWorldFill(io, theCount++, (uint64_t)(uintptr_t)theOwned);
-        return (int64_t)theCount;
-    }
-    }
-    return 0;
 }
 
 // port (save version 0.262): the dead attackers (and from 0.272/0.275 the units the goals hold out of the world). A
@@ -552,156 +83,223 @@ EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
     return dynamic_cast<EEComplexUnit*>(EEFindLoadedGhostUnit(inID));
 }
 
-static unsigned long EEGhostUnitID(void* inUnit)
-{
-    return static_cast<EEUnit*>(inUnit)->mUnitID;
-}
-
 EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
 {
-    if (void* theMade = ee_units_world_ghost_made_find(inID, &EEGhostUnitID))
-        return static_cast<EEUnit*>(theMade);
-    EeUnitsWorldGhost theGhost;
-    if (!ee_units_world_ghost_find(inID, &theGhost))
-        return NULL;
-    EEUnitClass* theClass = theGhost.unit_type < EEUnitClassCount() ? gUnitClassTable[theGhost.unit_type] : NULL;
-    EEPlayer* thePlayer = theGhost.player < gWorld.mNumPlayers ? gWorld.mPlayers[theGhost.player] : NULL;
-    if (theClass == NULL || thePlayer == NULL)
-        return NULL;
-    EEUnit* theUnit;   // one reference, world_save.rs's until the first tick
-    if (theGhost.is_complex) {
-        EEComplexUnit* theComplex = EEComplexUnit::Create();
-        theComplex->EEUnit::Init(theClass, thePlayer);
-        theComplex->mIsBuilt = theGhost.is_built;
-        GETransformation thePlacement = theComplex->mPhysicalModel.GetLocation();
-        memcpy(thePlacement.mMatrix, theGhost.placement, sizeof(thePlacement.mMatrix));
-        theComplex->mPhysicalModel.SetLocation(thePlacement);
-        theUnit = theComplex;
-    } else {   // 0.275: a simple unit, off the map as the load makes one (EEPlayer's Load: tile -10000)
-        theUnit = EEUnit::Create();
-        theUnit->Init(theClass, -10000, -10000, thePlayer);
-    }
-    theUnit->mUnitID = theGhost.id;
-    theUnit->mHitPoints = theGhost.hit_points;
-    theUnit->mTileX = theGhost.tile_x;
-    theUnit->mTileY = theGhost.tile_y;
-    // a used-up simple resource keeps its tile pointer, off the tile's lists (the gather goal's ResourceAccessible
-    // reads its terrain), as MoveTo sets it without adding the unit to the tile
-    if (!theGhost.is_complex && gWorld.mMap != NULL)
-        theUnit->mTile = gWorld.mMap->GetTile(theGhost.tile_x, theGhost.tile_y);
-    if (theGhost.resource_type != (unsigned long)-1) {   // 0.272
-        theUnit->mResourceType = theGhost.resource_type;
-        theUnit->mResourceAmount = theGhost.resource_amount;
-    }
-    theUnit->mIsValid = false;     // out of the world, as the dead unit was (FreeNode asserts it)
-    RTSRegisterUnit(theUnit);      // the running game's handles still resolve a dead unit's id until its last reference
-    ee_units_world_ghost_made(theUnit);
-    return theUnit;
+    return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
 }
 
 // Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), the running state (from 0.254:
 // world_save.rs), then the chat log and the main game form; returns only the main game form's error
 long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    LoadTeams(inMajorVersion, inMinorVersion, inFile, this->mTeams);
-    inFile.Read(this->mNumberOfWondersToWin);
-    inFile.Read(this->mTimeOfDay);
-    inFile.Read(this->mC36);
-    inFile.Read(this->mZoom);
-    inFile.Read(this->mPopulationLimit);
-    inFile.Read(this->mGameSpeed);
-    inFile.Read(this->mVictoryEnabled);
-    inFile.Read(this->mUnitImprovementsAllowed);
-    inFile.Read(this->mTeamsLocked);
-    inFile.Read(this->mCheatsEnabled);
-    inFile.Read(this->mTownIDCounter);
-    inFile.Read(this->mHerdIDCounter);
-    if (inMajorVersion <= 0 && inMinorVersion < 0xef)
-        this->mUsingCarbon = false;
-    else
-        inFile.Read(this->mUsingCarbon);
-    if (EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-        EEPWorldContext theContext = {&inFile, inMajorVersion, inMinorVersion};
-        ee_units_world_load_live(&theContext, &EEPWorldHost);
-    }
-    EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
-    return gUIManager->GetMainGameForm()->Load(inMajorVersion, inMinorVersion, inFile);
+    return ee_gamecpp_pwh_load(this, inMajorVersion, inMinorVersion, &inFile);
 }
 
 // Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
 void EEPWorldHelper::Restore(EEGameState& ioState)
 {
-    if (this->mScenarioManager != NULL)
-        ioState.SetScenarioManager(this->mScenarioManager);
-    ioState.mTeams = this->mTeams;
-    ioState.mGameOptions.mWondersForVictory = this->mNumberOfWondersToWin;
-    ioState.mTimeOfDay = this->GetTimeOfDay();
-    ioState.mC4FA = this->mC36;
-    ioState.mZoom = this->GetZoom();
-    ioState.mGameOptions.mUnitLimit = this->mPopulationLimit;
-    ioState.mGameSpeed = this->GetGameSpeed();
-    ioState.mGameOptions.mVictory = this->mVictoryEnabled;
-    ioState.mUnitImprovementsAllowed = this->mUnitImprovementsAllowed;
-    ioState.mGameOptions.mCheatCodes = this->mCheatsEnabled;
-    ioState.mTeamsLocked = this->mTeamsLocked;
-    ioState.mTownIDCounter = this->mTownIDCounter;
-    ioState.mHerdIDCounter = this->mHerdIDCounter;
-    ioState.mUsingCarbon = this->mUsingCarbon;
+    ee_gamecpp_pwh_restore(this, &ioState);
 }
 
 // Writes the teams, world settings, id counters and Carbon flag, the running state (from 0.254: world_save.rs),
 // then the chat log and the main game form; returns only the main game form's error
 long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    SaveTeams(inMajorVersion, inMinorVersion, outFile, this->mTeams);
-    outFile.Write(this->mNumberOfWondersToWin);
-    outFile.Write(this->mTimeOfDay);
-    outFile.Write(this->mC36);
-    outFile.Write(this->mZoom);
-    outFile.Write(this->mPopulationLimit);
-    outFile.Write(this->mGameSpeed);
-    outFile.Write(this->mVictoryEnabled);
-    outFile.Write(this->mUnitImprovementsAllowed);
-    outFile.Write(this->mTeamsLocked);
-    outFile.Write(this->mCheatsEnabled);
-    outFile.Write(this->mTownIDCounter);
-    outFile.Write(this->mHerdIDCounter);
-    outFile.Write(this->mUsingCarbon);
-    if (EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-        EEPWorldContext theContext = {&outFile, inMajorVersion, inMinorVersion};
-        ee_units_world_save_live(&theContext, &EEPWorldHost);
-    }
-    EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
-    return gUIManager->GetMainGameForm()->Save(inMajorVersion, inMinorVersion, outFile);
-}
-
-// Reads the team count and that many teams; returns the first read error
-static long LoadTeams(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                      std::vector<EETeam>& outTeams)
-{
-    unsigned long theCount;
-    long theResult = inFile.Read(theCount);
-    // A failed count read leaves theCount unset: do not resize to it.
-    if (theResult != kErrorOK)
-        return theResult;
-    outTeams.resize(theCount);
-    for (std::vector<EETeam>::iterator it = outTeams.begin(); it != outTeams.end() && theResult == kErrorOK; ++it)
-        theResult = it->Load(inMajorVersion, inMinorVersion, inFile);
-    return theResult;
-}
-
-// Writes the team count and each team; returns the first write error
-static long SaveTeams(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile,
-                      std::vector<EETeam>& inTeams)
-{
-    unsigned long theCount = inTeams.size();
-    long theResult = outFile.Write(theCount);
-    for (std::vector<EETeam>::iterator it = inTeams.begin(); it != inTeams.end() && theResult == kErrorOK; ++it)
-        theResult = it->Save(inMajorVersion, inMinorVersion, outFile);
-    return theResult;
+    return ee_gamecpp_pwh_save(this, inMajorVersion, inMinorVersion, &outFile);
 }
 
 // Adds nothing to the checksum (empty: folded into a shared empty function)
 void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
 {
+}
+
+// ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
+
+int64_t EEPLoaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define PWH ((EEPWorldHelper*)p)
+#define FILE_ (*(FSFile*)p)
+#define VERSION (unsigned long)a[0], (unsigned long)a[1]
+#define UNIT ((EEUnit*)p)
+#define RTS ((RTSUnit*)p)
+#define CX ((EEComplexUnit*)p)
+#define PL ((EEPlayer*)p)
+#define FOREST ((EEAIForest*)p)
+#define POINTS (*(std::vector<U2DPoint<long> >*)p)
+
+// The saved world's C++ calls and members (EESaveLoad.cpp's EECore9OpC default): one statement each
+int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PwhFields: return P64(&PWH->mTimeOfDay);
+    case O::PwhScenario: return P64(PWH->mScenarioManager);
+    case O::PwhSetScenario: PWH->mScenarioManager = (EEScenarioManager*)a[0];
+        break;
+    case O::PwhTeamsFromWorld: PWH->mTeams = ((EEWorld*)a[0])->mTeams;
+        break;
+    case O::PwhTeamsCount: return (int64_t)PWH->mTeams.size();
+    case O::PwhTeamsResize: PWH->mTeams.resize((size_t)a[0]);
+        break;
+    case O::PwhTeamLoad: return PWH->mTeams[a[0]].Load((unsigned long)a[1], (unsigned long)a[2], *(FSFile*)a[3]);
+    case O::PwhTeamSave: return PWH->mTeams[a[0]].Save((unsigned long)a[1], (unsigned long)a[2], *(FSFile*)a[3]);
+    case O::PwWorldPopulationLimit: return P64(&((EEWorld*)p)->mPopulationLimit);
+    case O::PwStSetScenario: ((EEGameState*)p)->SetScenarioManager((EEScenarioManager*)a[0]);
+        break;
+    case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
+        break;
+    case O::PwHasLiveState: return EESaveHasLiveState(VERSION);
+    case O::PwChatLogLoad: return EEUIECLEFormManager::Load(VERSION, FILE_);
+    case O::PwChatLogSave: return EEUIECLEFormManager::Save(VERSION, FILE_);
+    case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
+    case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
+    case O::PwPrimitive: return EESavePrimitive(FILE_, (int32_t)a[0], (EeUnitsPlayerSaveIo*)a[1]);
+    case O::PwHasRunningState: return EESaveHasRunningState(VERSION);
+    case O::PwHasRegionOrder: return EESaveHasRegionOrder(VERSION);
+    case O::PwHasExperimentTimers: return EESaveHasExperimentTimers(VERSION);
+    case O::PwHasTowns: return EESaveHasTowns(VERSION);
+    case O::PwHasTownAreas: return EESaveHasTownAreas(VERSION);
+    case O::PwHasGhosts: return EESaveHasGhosts(VERSION);
+    case O::PwHasGhostResources: return EESaveHasGhostResources(VERSION);
+    case O::PwHasGoalGhosts: return EESaveHasGoalGhosts(VERSION);
+    case O::PwHasContinentRegions: return EESaveHasContinentRegions(VERSION);
+    case O::PwHasResourceState: return EESaveHasResourceState(VERSION);
+    case O::PwHasPlayerUnitOrder: return EESaveHasPlayerUnitOrder(VERSION);
+    case O::PwHasPathSearches: return EESaveHasPathSearches(VERSION);
+    case O::PwHasActiveGroups: return EESaveHasActiveGroups(VERSION);
+    case O::PwHasGraphSearches: return EESaveHasGraphSearches(VERSION);
+    case O::PwHasTechAllowed: return EESaveHasTechAllowed(VERSION);
+    case O::PwHasTileTypes: return EESaveHasTileTypes(VERSION);
+    case O::PwPathRunningLoad: return gPathManager.LoadRunningState(FILE_);
+    case O::PwPathRunningSave: gPathManager.SaveRunningState(FILE_);
+        break;
+    case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);
+    case O::PwAreaEffectsSave: EEAESaveRunningState(FILE_);
+        break;
+    case O::PwExperimentTimersLoad: return EECPLoadExperimentTimers(FILE_);
+    case O::PwExperimentTimersSave: EECPSaveExperimentTimers(FILE_);
+        break;
+    case O::PwTownsLoad: return EELoadTowns(FILE_, a[0] != 0);
+    case O::PwTownsSave: EESaveTowns(FILE_);
+        break;
+    case O::PwContinentRegionsLoad: return EELoadContinentRegions(FILE_);
+    case O::PwContinentRegionsSave: EESaveContinentRegions(FILE_);
+        break;
+    case O::PwResourceStateLoad: return EECPLoadResourceState(FILE_);
+    case O::PwResourceStateSave: EECPSaveResourceState(FILE_);
+        break;
+    case O::PwPathSearchesLoad: return gPathManager.LoadSearches(FILE_);
+    case O::PwPathSearchesSave: gPathManager.SaveSearches(FILE_);
+        break;
+    case O::PwActiveGroupsLoad: return EELoadActiveGroups(FILE_);
+    case O::PwActiveGroupsSave: EESaveActiveGroups(FILE_);
+        break;
+    case O::PwGraphSearchesLoad: return gPathManager.LoadGraphSearches(FILE_);
+    case O::PwGraphSearchesSave: gPathManager.SaveGraphSearches(FILE_);
+        break;
+    case O::PwDebugText: ESDebugOut("%s", (const char*)a[0]);
+        break;
+    case O::PwChainFirst: return P64(gWorld.mUnits.mFirst);
+    case O::PwChainHead: return P64(reinterpret_cast<RTSUnit*>(&gWorld.mUnits));
+    case O::PwTileNodeNext: return P64(RTS->mTileNode->mNext);
+    case O::PwNodePrev: return P64(((RTSUnitLink*)p)->mPrev);
+    case O::PwLink: RTS->Link((RTSUnit*)a[0]);
+        break;
+    case O::PwComplexOfSavedId: return P64((EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0]));
+    case O::PwHandleId: return EEUnitHandleID(CX);
+    case O::PwUnitReference: UNIT->Reference();
+        break;
+    case O::PwUnitDereference: UNIT->Dereference();
+        break;
+    case O::PwComplexOfId: return P64(dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)a[0]))));
+    case O::PwForestCount: return (int64_t)gContinentManager.GetForests().size();
+    case O::PwForestAt: return P64(gContinentManager.GetForests()[a[0]]);
+    case O::PwForestRenewal: return (int64_t)FOREST->GetNextRenewal();
+    case O::PwForestSetRenewal: FOREST->SetNextRenewal((unsigned long)a[0]);
+        break;
+    case O::PwForestSize: return (int64_t)(unsigned long)FOREST->GetNumTiles();
+    case O::PwForestTiles: FOREST->GetTileSet().BuildPointList(*(std::vector<U2DPoint<long> >*)a[0], 1);
+        break;
+    case O::PwForestAtTile: return P64(gContinentManager.GetForestAt(U2DPoint<long>((long)a[0], (long)a[1])));
+    case O::PwPointsNew: return P64(new std::vector<U2DPoint<long> >);
+    case O::PwPointsDelete: delete &POINTS;
+        break;
+    case O::PwPointsCount: return (int64_t)POINTS.size();
+    case O::PwPointX: return POINTS[a[0]].mX;
+    case O::PwPointY: return POINTS[a[0]].mY;
+    case O::PwAiNextPlayer: return P64(&gArtificialIntelligence->mNextPlayer);
+    case O::PwAiNextUpdateTime: return P64(&gArtificialIntelligence->mNextUpdateTime);
+    case O::PwAiPlayerCount: return (int64_t)gArtificialIntelligence->mComputerPlayers.size();
+    case O::PwMap: return P64(gWorld.mMap);
+    case O::PwMapSize: return ((EEMap*)p)->mSize;
+    case O::PwMapTileAt: return P64(((EEMap*)p)->mTiles[a[0]]);
+    case O::PwMapRegions: return P64(((EEMap*)p)->mUnitRegions);
+    case O::PwNodeUnit: return P64(((RTSTileUnitNode*)p)->mUnit);
+    case O::PwNodeSetUnit: ((RTSTileUnitNode*)p)->mUnit = (EEUnit*)a[0];
+        break;
+    case O::PwNodeNext: return P64(((RTSTileUnitNode*)p)->mNext);
+    case O::PwTileSetTerrainType: ((EEMapTile*)p)->mTerrainType = (long)a[0];
+        break;
+    case O::PwNumPlayers: return (int64_t)gWorld.mNumPlayers;
+    case O::PwPlayerFirstUnit: return P64(PL->mFirstUnit);
+    case O::PwPlayerGetUnit: return P64(PL->GetUnit((unsigned long)a[0]));
+    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].mFirst = (EEUnit*)a[1];
+        break;
+    case O::PwPlayerSetFirstUnit: PL->mFirstUnit = (EEUnit*)a[0];
+        break;
+    case O::PwPlayerSetLastUnit: PL->mLastUnit = (EEUnit*)a[0];
+        break;
+    case O::PwUnitNext: return P64(RTS->mNext);
+    case O::PwUnitSetPrevious: RTS->mPrevious = (RTSUnit*)a[0];
+        break;
+    case O::PwUnitSetNext: RTS->mNext = (RTSUnit*)a[0];
+        break;
+    case O::PwDynComplex: return P64(dynamic_cast<EEComplexUnit*>(UNIT));
+    case O::PwCxLastAttacker: return P64(CX->mLastAttacker);
+    case O::PwCxGoalQueueCount: return (int64_t)CX->mGoalQueues.size();
+    case O::PwCxGoalCount: return (int64_t)CX->mGoalQueues[a[0]].mGoals.size();
+    case O::PwCxGoalAt: return P64(CX->mGoalQueues[a[0]].mGoals[a[1]]);
+    case O::PwAttackUnitCast: return P64(EEAttackUnitCast((EEUnitGoal*)p));
+    case O::PwAttackTarget: return P64(((EEUGRust*)p)->GetAttackTarget());
+    case O::PwGatherGoalCast: return P64(EEGatherGoalCast((EEUnitGoal*)p));
+    case O::PwGatherResource: return P64(((EEUGRust*)p)->GetGatherResource());
+    case O::PwGatherStorage: return P64(((EEUGRust*)p)->GetGatherStorage());
+    case O::PwCxGetPlacement: *(GETransformation*)a[0] = CX->mPhysicalModel.GetLocation();
+        break;
+    case O::PwCxSetPlacement: CX->mPhysicalModel.SetLocation(*(GETransformation*)a[0]);
+        break;
+    case O::PwUnitClassCount: return (int64_t)EEUnitClassCount();
+    case O::PwUnitClassAt: return P64(gUnitClassTable[a[0]]);
+    case O::PwComplexCreate: return P64(EEComplexUnit::Create());
+    case O::PwCxInitUnit: CX->EEUnit::Init((EEUnitClass*)a[0], (EEPlayer*)a[1]);
+        break;
+    case O::PwUnitCreate: return P64(EEUnit::Create());
+    case O::PwUnitInit: UNIT->Init((EEUnitClass*)a[0], (long)a[1], (long)a[2], (EEPlayer*)a[3]);
+        break;
+    case O::PwUnitSetTile: UNIT->mTile = (EEMapTile*)a[0];
+        break;
+    case O::PwRegisterUnit: RTSRegisterUnit(UNIT);
+        break;
+    case O::PwPlayerTechTree: return P64(PL->GetTechTree());
+    case O::PwTreeNodeIds: ((EETechTree*)p)->GetNodeIDs(*(std::vector<long>*)a[0]);
+        break;
+    case O::PwTreeGet: return P64(((EETechTree*)p)->Get((long)a[0]));
+    case O::PwNodeAllowed: return ((EETechTreeNode*)p)->mIsAllowed;
+    case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
+        break;
+    default: return EEPLoaderOp(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PwCameraZoom: return gWorld.mCameraControl.GetZoom();
+    case O::PwWorldGameSpeed: return ((EEWorld*)p)->GetGameSpeed();
+    default: return EEPLoaderOpF(inOp, p, a, f);
+    }
 }
