@@ -57,8 +57,6 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     switch (inOp) {
     case EE_SCENARIO_READ_CONTEXT_UNIT: return (int64_t)(uintptr_t)theContext->mUnit;
     case EE_SCENARIO_READ_WORLD: return (int64_t)(uintptr_t)&gWorld;
-    // the unit variables and the model's scale (the unit fields no record holds)
-    case EE_SCENARIO_READ_UNIT_FIELD: return EESMUnitField(theContext->mUnit, inA);
     case EE_SCENARIO_READ_PLAYER_HUMAN: return thePlayer != NULL && thePlayer->mHumanPlayer != NULL;
     case EE_SCENARIO_READ_PLAYER_COMPUTER: return thePlayer != NULL && thePlayer->mComputerPlayer != NULL;
     case EE_SCENARIO_READ_RANDOM: return gPhysics->GetRandom((long)inA, (long)inB);
@@ -69,91 +67,19 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
     case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
     case EE_SCENARIO_READ_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
-    case EE_SCENARIO_READ_TECH_NODE: {
-        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(inB);
-        return theNode == NULL ? -1 : (theNode->mData->mMakesUnit ? 1 : 0) | (theNode->mIsResearched ? 2 : 0);
-    }
-    case EE_SCENARIO_READ_TECH_AVAILABLE: {
-        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(inB);
-        bool theResearched = theNode->mIsResearched;
-        theNode->mIsResearched = false;
-        bool theResult = theNode->GetIsAvailable();
-        theNode->mIsResearched = theResearched;
-        return theResult;
-    }
-    case EE_SCENARIO_READ_OBJECT: {
-        EESMObject* theObject = theManager->GetScenarioObject((unsigned long)inA);
-        return theObject == NULL ? -1 : theObject->Evaluate(0);
-    }
-    case EE_SCENARIO_READ_TRIGGER: {
-        EESMTrigger* theTrigger = theManager->GetTrigger((unsigned long)inA);
-        return theTrigger == NULL ? -1 : (theTrigger->mHasFired ? 1 : 0) | (theTrigger->mIsOn ? 2 : 0);
-    }
     case EE_SCENARIO_READ_TIME: return FloatBits(theManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return FloatBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;
-    case EE_SCENARIO_READ_CHAT_CONTAINS: {
-        UWideString theText(theCondition->mChatText);
-        UWideString theChat(theManager->mLastChatText);
-        PlatMbsLwr((unsigned char*)(const char*)theText);
-        PlatMbsLwr((unsigned char*)(const char*)theChat);
-        return theChat.Find(theText, 0) != theChat.GetLength();
-    }
     case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? (int64_t)EESMCaptureSeed() : -1;
     case EE_SCENARIO_READ_CONTINENT: return gContinentManager.GetContinentID(inA, inB);
-    case EE_SCENARIO_READ_CONTINENT_CENTER: {
-        U2DPoint<long> theTile;
-        gContinentManager.GetContinentCenter((unsigned short)inA, theTile);
-        return Pack(theTile.mX, theTile.mY);
-    }
     case EE_SCENARIO_READ_TOWN_COUNT: return gWorld.GetPlayer(inA)->GetNumTowns();
     case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->mTowns[inB]->HullContains(U2DPoint<long>(inC, inD));
-    case EE_SCENARIO_READ_TOWN_CENTER: {
-        U2DPoint<long> theCenter = gWorld.GetPlayer(inA)->mTowns[inB]->GetHullCenter();
-        return Pack(theCenter.mX, theCenter.mY);
-    }
-    case EE_SCENARIO_READ_UNIT_PREVIOUS_TILE: {
-        EEComplexUnit* theUnit = theContext->mUnit->GetComplexUnit();
-        return Pack(theUnit->mU0DC.GetX(), theUnit->mU0DC.GetY());
-    }
     case EE_SCENARIO_READ_CATEGORY_IN_SET: return gUnitSetManager.Contains((long)inA, (unsigned long)inB);
     case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
-    case EE_SCENARIO_READ_UNIT_SET_HAS: {
-        EEUnitSet* theSet = gUnitSetManager.GetSet((unsigned long)inA);
-        return theSet == NULL ? -1 : theSet->Contains((unsigned long)inB);
-    }
     case EE_SCENARIO_READ_OBJECT_EXISTS: return theManager->GetScenarioObject((unsigned long)inA) != NULL;
     case EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: return theManager->GetScenarioObject((unsigned long)inA)->GetIsSelectOnMap();
-    case EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE: {
-        std::vector<unsigned long> theUnits;
-        theManager->GetScenarioObject((unsigned long)inA)->GetUnits(theUnits);
-        EEUnit* theUnit = theUnits.size() > 0 ? gWorld.GetUnit(theUnits[0]) : NULL;
-        return theUnit != NULL ? theUnit->mUnitClass->GetUnitType() : -1;
-    }
     case EE_SCENARIO_READ_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
-    case EE_SCENARIO_READ_TOKEN_OBJECT: {
-        EESMObject* theObject = theManager->FindObjectByID(inA);
-        if (theObject == NULL || (inB != 0 && theObject->mHasAttributeCheck == 0))
-            return -1;
-        theObject->Evaluate(0);
-        return (int64_t)theObject->mUnits.size();
-    }
-    case EE_SCENARIO_READ_TOKEN_VALUE: {
-        EESMObject* theObject = theManager->FindObjectByID(inA);
-        return theObject->GetUnitAttribute(theObject->GetAttribute(), theObject->GetIsAttributePercent(),
-                                           gWorld.GetUnit(theObject->GetUnitAt(0)), 0, 0);
-    }
-    case EE_SCENARIO_READ_TOKEN_CONDITION: {
-        EESMCondition* theToken = theManager->FindConditionByID(inA);
-        if (theToken == NULL || theToken->mType != kSMConditionPlayerAttribute)
-            return -1;
-        return inB == 0 ? (int64_t)theToken->mPlayer : (int64_t)theToken->mAttribute;
-    }
-    case EE_SCENARIO_READ_CONDITION: {
-        EESMCondition* theOther = theManager->GetCondition((unsigned long)inA);
-        return theOther == NULL ? -1 : theOther->Evaluate();
-    }
     }
     return EESMObjectRead(theContext, inOp, inA, inB, inC, inD);   // the objects' and units' reads
 }
@@ -169,15 +95,6 @@ void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t i
         break;
     case EE_SCENARIO_WRITE_RESOURCE: thePlayer->mResourceCaps[inB] = (long)inC; break;
     case EE_SCENARIO_WRITE_SHARE_BONUS: thePlayer->mShareBonus = (long)inB; break;
-    case EE_SCENARIO_WRITE_PENDING_POPULATION: {
-        EESMEffect theEffect;
-        theEffect.Copy(*theContext->mEffect);
-        theEffect.mPlayer = (unsigned long)inB;
-        theEffect.mPlayerAttributeMode = 0;
-        theEffect.mPlayerAttributeAmount = (unsigned long)inC;
-        gWorld.mScenarioManager->AddV134Effect(theEffect);
-        break;
-    }
     case EE_SCENARIO_WRITE_DIFFICULTY: thePlayer->mComputerPlayer->mDifficulty = (long)inB; break;
     case EE_SCENARIO_WRITE_VARIABLE: thePlayer->mScenarioVariables[inB] = (unsigned long)inC; break;
     case EE_SCENARIO_WRITE_TRIBUTE: thePlayer->mTributes[inB] = (unsigned long)inC; break;
@@ -190,19 +107,8 @@ void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t i
     }
 }
 
-// a tile list (ee_scenario placement.rs EE_SCENARIO_TILES_*), handed over tile by tile
-void Tiles(void*, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, EeScenarioTiles* outList)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    switch (inOp) {
-    case EE_SCENARIO_TILES_AREA: gWorld.mScenarioManager->GetArea((unsigned long)inA)->GetTiles(theTiles); break;
-    case EE_SCENARIO_TILES_CONTINENT: gContinentManager.GetContinentTiles((unsigned short)inA, theTiles); break;
-    case EE_SCENARIO_TILES_TOWN: gWorld.GetPlayer(inA)->mTowns[inB]->GetTiles(theTiles); break;
-    default: EESMObjectTiles(inOp, inA, inB, inC, theTiles); break;
-    }
-    for (const U2DPoint<long>& theTile : theTiles)
-        ee_scenario_tiles_push(outList, (int32_t)theTile.mX, (int32_t)theTile.mY);
-}
+// the tile lists: every list is the Rust's (object_reads.rs tiles: ee_sim units' and the EE_SCENARIO_WZ_TILES_* statements)
+void Tiles(void*, uint32_t, int32_t, int32_t, int32_t, EeScenarioTiles*) {}
 
 // TEST ONLY: a player choice's SMCP record (ee/EEScenarioCapture.h)
 void Players(void*, int32_t inKind, bool inSingle, int32_t inResult, bool inListed, const int32_t* inPlayers,
@@ -222,13 +128,8 @@ int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long 
     case EE_SCENARIO_IO_READ_ULONG: return (int32_t)theFile.Read(*static_cast<unsigned long*>(ioValue));
     case EE_SCENARIO_IO_READ_LONG: return (int32_t)theFile.Read(*static_cast<long*>(ioValue));
     case EE_SCENARIO_IO_READ_FLOAT: return (int32_t)theFile.Read(*static_cast<float*>(ioValue));
-    case EE_SCENARIO_IO_READ_BOOL: {
-        // a byte other than 0 or 1 is read as true (the Rust field is a bool)
-        bool theValue = *static_cast<bool*>(ioValue);
-        long theResult = theFile.Read(theValue);
-        *static_cast<bool*>(ioValue) = *reinterpret_cast<unsigned char*>(&theValue) != 0;
-        return (int32_t)theResult;
-    }
+    // (into the Rust's byte: a byte other than 0 or 1 is read as true there, stream.rs read_bool)
+    case EE_SCENARIO_IO_READ_BOOL: return (int32_t)theFile.Read(*static_cast<bool*>(ioValue));
     case EE_SCENARIO_IO_WRITE_ULONG: return (int32_t)theFile.Write(*static_cast<const unsigned long*>(ioValue));
     case EE_SCENARIO_IO_WRITE_LONG: return (int32_t)theFile.Write(*static_cast<const long*>(ioValue));
     case EE_SCENARIO_IO_WRITE_FLOAT: return (int32_t)theFile.Write(*static_cast<const float*>(ioValue));
@@ -239,44 +140,84 @@ int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long 
     case EE_SCENARIO_IO_LIST_PUSH: theStream->mList->push_back(*static_cast<unsigned long*>(ioValue)); return 0;
     case EE_SCENARIO_IO_LIST_COUNT: *static_cast<unsigned long*>(ioValue) = theStream->mList->size(); return 0;
     case EE_SCENARIO_IO_LIST_AT: *static_cast<unsigned long*>(ioValue) = (*theStream->mList)[inIndex]; return 0;
-    case EE_SCENARIO_IO_ENTRY_COUNT:
-        *static_cast<unsigned long*>(ioValue) = inSlot == EE_SCENARIO_ENTRIES_CONDITIONS
-                                                    ? theStream->mTrigger->GetConditionCount()
-                                                    : theStream->mTrigger->GetEffectCount();
-        return 0;
-    case EE_SCENARIO_IO_ENTRY_AT: {
-        EeScenarioEntry& theEntry = *static_cast<EeScenarioEntry*>(ioValue);
-        if (inSlot == EE_SCENARIO_ENTRIES_CONDITIONS) {
-            EESMTConditionWrapper* theWrapper = theStream->mTrigger->GetConditionAt(inIndex);
-            theEntry = {(unsigned long)theWrapper->mIsNot, theWrapper->mOperator, theWrapper->mValue};
-        } else {
-            EESMTEffectWrapper* theWrapper = theStream->mTrigger->GetEffectAt(inIndex);
-            theEntry = {theWrapper->mDelay, theWrapper->mOperator, theWrapper->mEffectIndex};
-        }
+    case EE_SCENARIO_IO_TRIGGER: *static_cast<EESMTrigger**>(ioValue) = theStream->mTrigger;
         return 0;
     }
-    case EE_SCENARIO_IO_ENTRY_SET: {
-        const EeScenarioEntry& theEntry = *static_cast<const EeScenarioEntry*>(ioValue);
-        if (inSlot == EE_SCENARIO_ENTRIES_CONDITIONS) {
-            theStream->mTrigger->SetCondition(inIndex, theEntry.first != 0, theEntry.value);
-            theStream->mTrigger->SetConditionOperator(inIndex, theEntry.op);
-        } else {
-            theStream->mTrigger->SetEffect(inIndex, (long)theEntry.first, theEntry.value);
-            theStream->mTrigger->SetEffectOperator(inIndex, theEntry.op);
-        }
+    // the manager's lists, media strings and dialog messages (EEScenarioManager.cpp)
+    return inOp >= EE_SCENARIO_IO_ELEMENT_SAVE ? EESMManagerIO(theStream, inOp, inSlot, inIndex, ioValue) : 0;
+}
+
+}   // namespace
+
+// the reads' and the pending population write's single statements (ee_scenario read_compose.rs EE_SCENARIO_RX_*:
+// the Rust composes the sequences), on handles; reached through the world channel (EESMEffectWorld)
+std::vector<unsigned long> sSMReadIDs;   // GetUnits' list (the original's local)
+template<class T> T* SMReadOf(int64_t inHandle) { return (T*)(intptr_t)inHandle; }
+int64_t SMReadPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
+int64_t SMEReadWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    switch (inOp) {
+    case EE_SCENARIO_RX_TECH_NODE: return SMReadPtr(Player((int32_t)a[0])->GetTechTree()->Get((long)a[1]));
+    case EE_SCENARIO_RX_NODE_MAKES_UNIT: return SMReadOf<EETechTreeNode>(a[0])->mData->mMakesUnit;
+    case EE_SCENARIO_RX_NODE_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched;
+    case EE_SCENARIO_RX_NODE_SET_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched = a[1] != 0;
+    case EE_SCENARIO_RX_NODE_AVAILABLE: return SMReadOf<EETechTreeNode>(a[0])->GetIsAvailable();
+    case EE_SCENARIO_RX_OBJECT: return SMReadPtr(m->GetScenarioObject((unsigned long)a[0]));
+    case EE_SCENARIO_RX_FIND_OBJECT: return SMReadPtr(m->FindObjectByID((long)a[0]));
+    case EE_SCENARIO_RX_OBJECT_EVALUATE: return SMReadOf<EESMObject>(a[0])->Evaluate(0);
+    case EE_SCENARIO_RX_OBJECT_HAS_ATTRIBUTE_CHECK: return SMReadOf<EESMObject>(a[0])->mHasAttributeCheck;
+    case EE_SCENARIO_RX_OBJECT_UNIT_COUNT: return (int64_t)SMReadOf<EESMObject>(a[0])->mUnits.size();
+    case EE_SCENARIO_RX_OBJECT_UNIT_AT: return (int64_t)SMReadOf<EESMObject>(a[0])->GetUnitAt((unsigned long)a[1]);
+    case EE_SCENARIO_RX_OBJECT_ATTRIBUTE: return (int64_t)SMReadOf<EESMObject>(a[0])->GetAttribute();
+    case EE_SCENARIO_RX_OBJECT_ATTRIBUTE_PERCENT: return SMReadOf<EESMObject>(a[0])->GetIsAttributePercent();
+    case EE_SCENARIO_RX_OBJECT_UNIT_ATTRIBUTE:
+        return SMReadOf<EESMObject>(a[0])->GetUnitAttribute((unsigned long)a[1], a[2] != 0, SMReadOf<EEUnit>(a[3]), 0, 0);
+    case EE_SCENARIO_RX_OBJECT_GET_UNITS:
+        SMReadOf<EESMObject>(a[0])->GetUnits(sSMReadIDs);
         return 0;
-    }
-    case EE_SCENARIO_IO_ELEMENT_LOAD:
-    case EE_SCENARIO_IO_ELEMENT_SAVE:
-    case EE_SCENARIO_IO_ELEMENT_COUNT:
-    case EE_SCENARIO_IO_MEDIA:
-    case EE_SCENARIO_IO_MESSAGES:
-        return EESMManagerIO(theStream, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_RX_IDS_CLEAR:
+        sSMReadIDs.clear();
+        return 0;
+    case EE_SCENARIO_RX_IDS_COUNT: return (int64_t)sSMReadIDs.size();
+    case EE_SCENARIO_RX_IDS_AT: return (int64_t)sSMReadIDs[(size_t)a[0]];
+    case EE_SCENARIO_RX_UNIT: return SMReadPtr(gWorld.GetUnit((unsigned long)a[0]));
+    case EE_SCENARIO_RX_UNIT_TYPE: return SMReadOf<EEUnit>(a[0])->mUnitClass->GetUnitType();
+    case EE_SCENARIO_RX_TRIGGER: return SMReadPtr(m->GetTrigger((unsigned long)a[0]));
+    case EE_SCENARIO_RX_TRIGGER_FIRED: return SMReadOf<EESMTrigger>(a[0])->mHasFired;
+    case EE_SCENARIO_RX_TRIGGER_ON: return SMReadOf<EESMTrigger>(a[0])->mIsOn;
+    case EE_SCENARIO_RX_UNIT_SET: return SMReadPtr(gUnitSetManager.GetSet((unsigned long)a[0]));
+    case EE_SCENARIO_RX_SET_CONTAINS: return SMReadOf<EEUnitSet>(a[0])->Contains((unsigned long)a[1]);
+    case EE_SCENARIO_RX_CONDITION: return SMReadPtr(m->GetCondition((unsigned long)a[0]));
+    case EE_SCENARIO_RX_FIND_CONDITION: return SMReadPtr(m->FindConditionByID((long)a[0]));
+    case EE_SCENARIO_RX_CONDITION_EVALUATE: return SMReadOf<EESMCondition>(a[0])->Evaluate();
+    case EE_SCENARIO_RX_CONDITION_TYPE: return (int64_t)SMReadOf<EESMCondition>(a[0])->mType;
+    case EE_SCENARIO_RX_CONDITION_PLAYER: return (int64_t)SMReadOf<EESMCondition>(a[0])->mPlayer;
+    case EE_SCENARIO_RX_CONDITION_ATTRIBUTE: return (int64_t)SMReadOf<EESMCondition>(a[0])->mAttribute;
+    case EE_SCENARIO_RX_EFFECT_COPY:
+        SMReadOf<EESMEffect>(a[0])->Copy(*inContext->mEffect);
+        return 0;
     }
     return 0;
 }
 
-}   // namespace
+// the object reads' statements on the continents and towns (object_reads.rs EE_SCENARIO_WZ_*; SMEObjectWorld's rest)
+U2DPoint<long> sWZPoint;   // the centres' point (the original's local)
+std::vector<U2DPoint<long> > sWZTiles;   // the host's tile list (the original's local)
+int64_t SMEHostWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+{
+    switch (inOp) {
+    case EE_SCENARIO_WZ_CONTINENT_CENTER: gContinentManager.GetContinentCenter((unsigned short)a[0], sWZPoint);
+        return 0;
+    case EE_SCENARIO_WZ_TOWN_CENTER: sWZPoint = gWorld.GetPlayer((unsigned long)a[0])->mTowns[(size_t)a[1]]->GetHullCenter();
+        return 0;
+    case EE_SCENARIO_WZ_TILES_CONTINENT: gContinentManager.GetContinentTiles((unsigned short)a[0], sWZTiles);
+        return 0;
+    case EE_SCENARIO_WZ_TILES_TOWN: gWorld.GetPlayer((unsigned long)a[0])->mTowns[(size_t)a[1]]->GetTiles(sWZTiles);
+        return 0;
+    }
+    return 0;
+}
 
 EeScenarioStream EESMStreamTable(EESMStream* inStream)
 {

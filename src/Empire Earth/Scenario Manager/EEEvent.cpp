@@ -19,13 +19,15 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
-#include "rust/sim/units.h"
+#include "rust/sim/scenario.h"
 
+// The pathfinding functor of attribute 42 (its step: ee_sim scenario event.rs)
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
 public:
     EEUnitSetFunctorModifyPathfindingBehavior(EEPlayer* inPlayer, long inType, bool inEnabled)
         : mPlayer(inPlayer), mType(inType), mEnabled(inEnabled) {}
-    virtual bool Execute(long inUnitType);
+    virtual bool Execute(long inUnitType) { return ee_scenario_ev_pathfinding(this->mPlayer, this->mType, this->mEnabled, inUnitType); }
+    void ForEachIn(EEUnitSet* inSet) { inSet->ForEach(this); }
     EEPlayer* mPlayer;
     long mType;
     bool mEnabled;
@@ -57,642 +59,233 @@ EEEvent::~EEEvent()
 std::vector<std::unique_ptr<EEEvent>> EEEvent::sEvents;
 
 // Loads every event effect and every event with its effect list (as many as the files hold: the original read
-// exactly 2000 effects and 1500 events); returns the last read's result
+// exactly 2000 effects and 1500 events); returns the last read's result (ee_sim scenario event.rs)
 long EEEvent::LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects)
 {
-    unsigned long theRead = 0;
-    long theResult = kErrorOK;
-    char theName[100];
-    inEvents.Open(kFileAccessRead);
-    inEffects.Open(kFileAccessRead);
-    unsigned long theLength = 0;
-    inEffects.GetLength(theLength);
-    gEventEffects.assign(theLength / sizeof(EEEventEffect), EEEventEffect());
-    if (!gEventEffects.empty())
-        inEffects.Read((char*)&gEventEffects[0], (unsigned long)(gEventEffects.size() * sizeof(EEEventEffect)), theRead);
-    inEvents.GetLength(theLength);
-    EEEvent::sEvents.clear();
-    unsigned long thePosition = 0;
-    while (thePosition + 108 <= theLength) {
-        EEEvent* theEvent = new EEEvent;
-        EEEvent::sEvents.emplace_back(theEvent);
-        inEvents.Read(theName, 100, theRead);
-        inEvents.Read(theEvent->mID);
-        theResult = inEvents.Read(theEvent->mNumEffects);
-        thePosition += 108 + 4 * theEvent->mNumEffects;
-        if (theEvent->mNumEffects > 0) {
-            theEvent->mEffects = new int32_t[theEvent->mNumEffects];
-            theResult = inEvents.Read(reinterpret_cast<char*>(theEvent->mEffects), theEvent->mNumEffects * 4, theRead);
-        } else
-            theEvent->mEffects = NULL;
-    }
-    return theResult;
+    return ee_scenario_ev_load(&inEvents, &inEffects);
 }
 
 // (EEUnloadBuiltInGraphicObjects 0x1ca6d9 unloaded four graphic objects outside the media table: nothing ever set
 // them, so it is gone with them; data lane round 3)
 
-// Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result
+// Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result.
+// RunEffect 0x1ca7cf and its handlers (the stats, button, model, sounds, research, unit conversion, with the EVRN
+// and EVAT records) are ee_sim scenario event.rs, over the statements below
 long EEEvent::Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
 {
-    long theResult = 0;
-    long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
-    // every dbevents row is an event (the original: 0..1499; event 1500 used to read one entry past it)
-    if (inEvent >= 0 && (unsigned long)inEvent < EEEvent::sEvents.size()) {
-        EEEvent* theEvent = EEEvent::sEvents[inEvent].get();
-        if (theEvent != NULL && theEvent->mEffects != NULL) {
-            for (unsigned long i = 0; i < theEvent->mNumEffects; i++)
-                theResult = EEEvent::RunEffect(theEvent->mEffects[i], thePlayerIndex, inID, inPlayer, inUnit);
-        }
-    }
-    return theResult;
-}
-
-long SetEventButton(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer);
-long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer);
-void ApplyEventGatherRate(EEEventEffect* inEffect, long inIndex, EEPlayer* inPlayer, EEUnitClass* inClass, EEUnitClassUpgrade* inUpgrade);
-long SetEventUnitModel(EEEventEffect* inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer);
-long SetEventUnitSound(EEEventEffect* inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer);
-long ConvertEventUnits(EEEventEffect* inEffect, long inPlayerIndex, long inID, EEComplexUnit* inUnit);
-long SetEventTechTreeMedia(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer);
-long PlayEventSound(EEEventEffect* inEffect);
-long ResearchEventTechnology(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer);
-long MakeEventTechnologyObsolete(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer);
-long SetEventPrerequisite(EEEventEffect* inEffect, long inPlayerIndex, long inPrerequisite, EEPlayer* inPlayer);
-// kind 7: an empty handler (`return 0`, ICF-folded into 0xfca98; provisional name, defined at the end of the unit)
-long EEEventKind7(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer);
-
-// Runs one event effect by kind (stats, button, model, sounds, research, unit upgrade ...); returns 9 for a bad id or
-// while loading a save unless the effect runs on load, 3 for an unknown kind
-long EEEvent::RunEffect(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("EVRN"));
-        theRecord.U32(inEffect);
-        bool theKnown = inEffect < gEventEffects.size();
-        theRecord.I32(theKnown ? gEventEffects[inEffect].mKind : -1);
-        theRecord.I32(theKnown ? gEventEffects[inEffect].mAttribute : -1);
-        theRecord.I32(inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex);
-        theRecord.I32(inID);
-        theRecord.I32(inUnit != NULL ? (long)inUnit->mUnitID : -1);
-        theRecord.U32((gLoadingSavedGame ? 1u : 0u) | (gEventsEnabled ? 2u : 0u));
-        long theResult = EEEvent::RunEffectUncaptured(inEffect, inPlayerIndex, inID, inPlayer, inUnit);
-        theRecord.I32(theResult);
-        theRecord.Commit();
-        return theResult;
-    }
-    return EEEvent::RunEffectUncaptured(inEffect, inPlayerIndex, inID, inPlayer, inUnit);
-}
-
-long EEEvent::RunEffectUncaptured(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    long theResult = 9;
-    long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
-    bool theKnown = inEffect < gEventEffects.size();
-    // which handler runs the effect is the Rust tech logic's (ee_tech effect_handler)
-    switch (ee_tech_effect_handler(theKnown, theKnown ? (int32_t)gEventEffects[inEffect].mKind : 0, gLoadingSavedGame,
-                                   theKnown ? gEventEffects[inEffect].mRunOnLoad : 0, gEventsEnabled)) {
-    case EeTechEffectHandler::Refused:
-        theResult = 9;
-        break;
-    case EeTechEffectHandler::UnknownKind:
-        theResult = 3;
-        break;
-    case EeTechEffectHandler::Nothing:   // kind 22; kind 19 while it may not run
-        theResult = 0;
-        break;
-    case EeTechEffectHandler::Kind7:
-        theResult = EEEventKind7(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-        break;
-    case EeTechEffectHandler::Attribute:
-        theResult = ApplyEventAttribute(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-        break;
-    case EeTechEffectHandler::Prerequisite:
-        theResult = SetEventPrerequisite(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
-        break;
-    case EeTechEffectHandler::Obsolete:
-        theResult = MakeEventTechnologyObsolete(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-        break;
-    case EeTechEffectHandler::UnitModel:
-        theResult = SetEventUnitModel(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
-        break;
-    case EeTechEffectHandler::TechTreeMedia:
-        theResult = SetEventTechTreeMedia(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-        break;
-    case EeTechEffectHandler::Research:
-        theResult = ResearchEventTechnology(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-        break;
-    case EeTechEffectHandler::Button:
-        theResult = SetEventButton(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-        break;
-    case EeTechEffectHandler::Sound:
-        theResult = PlayEventSound(&gEventEffects[inEffect]);
-        break;
-    case EeTechEffectHandler::UnitSound:
-        theResult = SetEventUnitSound(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
-        break;
-    case EeTechEffectHandler::ConvertUnits:
-        theResult = ConvertEventUnits(&gEventEffects[inEffect], thePlayerIndex, inID, inUnit);
-        break;
-    }
-    return theResult;
-}
-
-// New (port): what the Rust effect logic reads of a unit an effect walks (ee_tech effects.rs)
-static EeTechUnitView EETechUnitViewOf(EEUnit* inUnit)
-{
-    EeTechUnitView theView;
-    EEComplexUnit* theComplex = inUnit->mComplexUnit;
-    theView.unit_type = (int32_t)inUnit->mUnitClass->mUnitType;
-    theView.hit_points = (int32_t)inUnit->GetHitPoints();
-    theView.flight_time = theComplex != NULL ? (int32_t)theComplex->mFlightTime : 0;
-    theView.flags = (theComplex != NULL ? EE_TECH_UNIT_COMPLEX : 0) |
-                    (theComplex != NULL && theComplex->mIsBuilt == true ? EE_TECH_UNIT_BUILT : 0) |
-                    (inUnit->mTileNode != NULL ? EE_TECH_UNIT_ON_TILE : 0) |
-                    (theComplex != NULL && theComplex->mPreviousPart != NULL ? EE_TECH_UNIT_CARRIED : 0);
-    return theView;
-}
-
-// Sets the unit type's area effect template and rebuilds the area effects of the player's living units of that type
-long SetEventAreaEffect(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer,
-              EEUnitClass* inClass, EEUnitClassUpgrade* inUpgrade)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    if (inClass != NULL) {
-        inUpgrade->mAreaEffectTemplates[0] = inEffect->mAreaEffect;
-        if (!gLoadingSavedGame) {
-            for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL;
-                 theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                EeTechUnitView theView = EETechUnitViewOf(theUnit);
-                bool theApplies = ee_tech_area_effect_applies(&theView, (int32_t)inClass->mUnitType);
-                EETechCaptureUnitStep(theUnit, theApplies, 0);   // TEST ONLY (ee/EETechCapture.h)
-                if (theApplies)
-                    theUnit->mComplexUnit->MakeAreaEffects();
-            }
-            EETechCaptureUnitWalk(6, (long)(inEffect - &gEventEffects[0]), inClass->mUnitType);   // TEST ONLY (ee/EETechCapture.h)
-        }
-    }
-    return 0;
-}
-
-// Gives a tech node and its unit class a new command button, refreshing the local player's saved groups of that
-// class; returns 9 for a missing node or button
-long SetEventButton(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    EETechTreeNode* theNode = inPlayer->GetTechTree()->Get(inEffect->mTechnology);
-    EEButtonObject* theButton = EEButtonObject::Get(inEffect->mButton);
-    long theResult = 9;
-    if (theNode != NULL && theButton != NULL) {
-        theNode->SetButton(inEffect->mButton);
-        EEUnitClass* theClass = gUnitClassTable[theNode->mData->mUnitClass];
-        if (theClass != NULL) {
-            inPlayer->SetClassButton(theClass->mUnitType, theButton);
-            if (!gLoadingSavedGame && inPlayer == gWorld.GetCurrentPlayer()) {
-                for (unsigned long i = 0; i < 20; i++) {
-                    if (inPlayer->mGroups[i]->GetFirstUnit() != NULL && inPlayer->mGroups[i]->GetFirstUnit()->mUnitClass == theClass
-                        && gUserInterface != NULL)
-                        gUserInterface->PostRefreshSavedGroup(i + 1);
-                }
-            }
-        }
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// Sets the player's tech tree background media and posts a background refresh (twice for the local player)
-long SetEventTechTreeMedia(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    if (inPlayer == NULL)
-        return 0;
-    inPlayer->GetTechTree()->mMediaID = inEffect->mMediaIndex;
-    gUserInterface->PostUpdateBackgroundMedia();
-    if (inPlayer == gWorld.GetCurrentPlayer())
-        gUserInterface->PostUpdateBackgroundMedia();
-    return 0;
-}
-
-// Swaps the unit type's model for the player when this is its latest model effect, updating its units; 9 on failure
-long SetEventUnitModel(EEEventEffect* inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    EEUnitClass* theClass = gUnitClassTable[inEffect->mUnitClass];
-    if (theClass == NULL || !EETechTree::IsLatestEffect(inPlayer->GetTechTree(), inID,
-                                               theClass->GetUnitType(), inEffect->mKind))
-        return 9;
-    EEUnitClassUpgrade* theUpgrade = inPlayer->mUnitClassUpgrades[theClass->GetUnitType()];
-    if (theUpgrade == NULL)
-        return 9;
-    EEGraphicObject* theModel = static_cast<EEGraphicObject*>(EEMedia::Get(inEffect->mMediaIndex));
-    if (theModel == NULL)
-        return 9;
-    EEGraphicObject* theOldModel = theUpgrade->mModel;
-    inPlayer->SetClassModel(theClass->GetUnitType(), theModel);
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL;
-         theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->GetUnitClass() == theClass &&
-            theUpgrade->GetMediaCount() > 0)
-            theUnit->GetComplexUnit()->SwapGraphic(theOldModel, theModel);
-    }
-    return 0;
-    return 9;
-}
-
-// Sets a unit type's acknowledge, creation, death or selection sound when this is its latest such effect; 9 on failure
-long SetEventUnitSound(EEEventEffect* inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    EEUnitClass* theClass = gUnitClassTable[inEffect->mUnitClass];
-    long theResult = 9;
-    if (theClass != NULL) {
-        if (EETechTree::IsLatestEffect(inPlayer->GetTechTree(), inID, theClass->GetUnitType(), inEffect->mKind)) {
-            EEUnitClassUpgrade* theUpgrade = inPlayer->GetUpgrade(theClass->GetUnitType());
-            if (theUpgrade != NULL) {
-                EESoundObject* theSound = EESoundObject::Get(inEffect->mSoundID);
-                if (theSound != NULL) {
-                    switch (inEffect->mKind) {
-                    case 0xf:
-                        inPlayer->SetClassAcknowledgeSound(theClass->GetUnitType(), theSound, 0);
-                        break;
-                    case 0x10:
-                        inPlayer->SetClassCreationSound(theClass->GetUnitType(), theSound);
-                        break;
-                    case 0x11:
-                        inPlayer->SetClassDeathSound(theClass->GetUnitType(), theSound);
-                        break;
-                    case 0x12:
-                        inPlayer->SetClassSelectionSound(theClass->GetUnitType(), theSound, 0);
-                        break;
-                    case 0x14:
-                        inPlayer->SetClassAcknowledgeSound(theClass->GetUnitType(), theSound, 1);
-                        break;
-                    case 0x15:
-                        inPlayer->SetClassSelectionSound(theClass->GetUnitType(), theSound, 1);
-                        break;
-                    }
-                    theResult = 0;
-                }
-            }
-        }
-    }
-    return theResult;
+    return ee_scenario_ev_trigger(inEvent, inPlayerIndex, inID, inPlayer, inUnit);
 }
 
 void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology);  // 0x244deb (ee/EEUnitUtilities.h)
 
-// Replaces the player's units of one class by the effect's new class (kind 0x13), or only inUnit when it is in the
-// effect's unit set and inID is a kind-3 tech node; returns 3 when no unit qualifies
-long ConvertEventUnits(EEEventEffect* inEffect, long inPlayerIndex, long inID, EEComplexUnit* inUnit)
+namespace {
+
+unsigned long sEvRead = 0;   // a read's byte count (LoadEvents' theRead)
+char sEvName[100];           // an event's name (read and dropped)
+
+float EvFloat(int64_t inBits)
 {
-    std::vector<EEUnit*> theUnits;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayerIndex];
-    unsigned long theFrom = inEffect->mUnitClass;
-    bool theInSet = false;
-    unsigned long theTo = inEffect->mNewUnitClass;
-    long theResult = 0;
-    if (inUnit != NULL && thePlayer != NULL && thePlayer->GetTechTree()->Get(inID) != NULL
-        && thePlayer->GetTechTree()->Get(inID)->mData->mKind == 3) {
-        theFrom = inUnit->GetClass()->mUnitType;
-        theInSet = gUnitSetManager.GetSet(inEffect->mUnitSet)->Contains(theFrom);
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, 4);
+    return theValue;
+}
+
+int64_t EvBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+unsigned long EvLength(FSFileSpec* inFile, unsigned long inPrevious)
+{
+    unsigned long theLength = inPrevious;
+    inFile->GetLength(theLength);
+    return theLength;
+}
+
+void EvSetName(EEUnitClassUpgrade* inUpgrade, float inValue)
+{
+    UWideString theName;
+    gResource->GetString(UMFloatToLong(inValue), theName);
+    inUpgrade->SetName(theName);
+}
+
+}   // namespace
+
+#define P(T, k) reinterpret_cast<T*>((uintptr_t)a[k])
+#define R(x) (int64_t)(uintptr_t)(x)
+
+// the events' single statements (ee_sim scenario event.rs EE_SCENARIO_EV_*: the Rust composes the effects)
+extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
+{
+    switch (inOp) {
+    case EE_SCENARIO_EV_EFFECTS_DATA: return R(gEventEffects.data());
+    case EE_SCENARIO_EV_EFFECTS_COUNT: return (int64_t)gEventEffects.size();
+    case EE_SCENARIO_EV_LOADING: return gLoadingSavedGame;
+    case EE_SCENARIO_EV_EVENTS_ENABLED: return gEventsEnabled;
+    case EE_SCENARIO_EV_PLAYER: return R(gWorld.mPlayers[a[0]]);
+    case EE_SCENARIO_EV_CURRENT_PLAYER: return R(gWorld.GetCurrentPlayer());
+    case EE_SCENARIO_EV_PLAYER_ID: return (int64_t)P(EEPlayer, 0)->mPlayerID;
+    case EE_SCENARIO_EV_PLAYER_FIELDS: return R(static_cast<EeUnitsPlayerFields*>(P(EEPlayer, 0)));
+    case EE_SCENARIO_EV_CLASS: return R(gUnitClassTable[a[0]]);
+    case EE_SCENARIO_EV_CLASS_FIELDS: return R(static_cast<EeUnitsUnitClassFields*>(P(EEUnitClass, 0)));
+    case EE_SCENARIO_EV_CLASS_COUNT: return (int64_t)EEUnitClassCount();
+    case EE_SCENARIO_EV_UPGRADE: return R(P(EEPlayer, 0)->mUnitClassUpgrades[a[1]]);
+    case EE_SCENARIO_EV_GET_UPGRADE: return R(P(EEPlayer, 0)->GetUpgrade(a[1]));
+    case EE_SCENARIO_EV_UPGRADE_FIELDS: return R(static_cast<EeUnitsUnitClassUpgradeFields*>(P(EEUnitClassUpgrade, 0)));
+    case EE_SCENARIO_EV_UPGRADE_CLASS: return R(P(EEUnitClassUpgrade, 0)->mUnitClass);
+    case EE_SCENARIO_EV_FIRST_UNIT: return R(P(EEPlayer, 0)->mFirstUnit);
+    case EE_SCENARIO_EV_NEXT_UNIT: return R(static_cast<EEUnit*>(P(EEUnit, 0)->mNext));
+    case EE_SCENARIO_EV_PENDING_COUNT: return (int64_t)P(EEPlayer, 0)->GetNumPendingUnits();
+    case EE_SCENARIO_EV_PENDING_UNIT: return R(static_cast<EEUnit*>(P(EEPlayer, 0)->GetPendingUnit((unsigned long)a[1])));
+    case EE_SCENARIO_EV_UNIT_TYPE: return (int64_t)P(EEUnit, 0)->mUnitClass->mUnitType;
+    case EE_SCENARIO_EV_UNIT_HIT_POINTS: return (int64_t)P(EEUnit, 0)->GetHitPoints();
+    case EE_SCENARIO_EV_UNIT_COMPLEX: return R(P(EEUnit, 0)->mComplexUnit);
+    case EE_SCENARIO_EV_COMPLEX_FLIGHT: return (int64_t)P(EEComplexUnit, 0)->mFlightTime;
+    case EE_SCENARIO_EV_COMPLEX_BUILT: return P(EEComplexUnit, 0)->mIsBuilt == true;
+    case EE_SCENARIO_EV_UNIT_ON_TILE: return P(EEUnit, 0)->mTileNode != NULL;
+    case EE_SCENARIO_EV_COMPLEX_CARRIED: return P(EEComplexUnit, 0)->mPreviousPart != NULL;
+    case EE_SCENARIO_EV_UNIT_ID: return (int64_t)P(EEUnit, 0)->mUnitID;
+    case EE_SCENARIO_EV_MAKE_AREA_EFFECTS:
+        P(EEUnit, 0)->mComplexUnit->MakeAreaEffects();
+        return 0;
+    case EE_SCENARIO_EV_SIGHT_OFF:
+        P(EEUnit, 0)->SightOffHere();
+        return 0;
+    case EE_SCENARIO_EV_SIGHT_ON:
+        P(EEUnit, 0)->SightOnHere();
+        return 0;
+    case EE_SCENARIO_EV_SET_FLIGHT:
+        P(EEUnit, 0)->mComplexUnit->SetFlightTime((long)a[1]);
+        return 0;
+    case EE_SCENARIO_EV_SET_HIT_POINTS:
+        P(EEUnit, 0)->SetHitPoints((long)a[1]);
+        return 0;
+    case EE_SCENARIO_EV_GET_COMPLEX: return R(P(EEUnit, 0)->GetComplexUnit());
+    case EE_SCENARIO_EV_COMPLEX_CLASS: return R(P(EEComplexUnit, 0)->GetUnitClass());
+    case EE_SCENARIO_EV_COMPLEX_CLASS_TYPE: return (int64_t)P(EEComplexUnit, 0)->GetClass()->mUnitType;
+    case EE_SCENARIO_EV_COMPLEX_AS_UNIT: return R(static_cast<EEUnit*>(P(EEComplexUnit, 0)));
+    case EE_SCENARIO_EV_UNIT_CLASS: return R(P(EEUnit, 0)->mUnitClass);
+    case EE_SCENARIO_EV_TREE_NODE: return R(P(EEPlayer, 0)->GetTechTree()->Get(a[1]));
+    case EE_SCENARIO_EV_NODE_SET_BUTTON:
+        P(EETechTreeNode, 0)->SetButton(a[1]);
+        return 0;
+    case EE_SCENARIO_EV_NODE_UNIT_CLASS: return (int64_t)P(EETechTreeNode, 0)->mData->mUnitClass;
+    case EE_SCENARIO_EV_NODE_KIND: return (int64_t)P(EETechTreeNode, 0)->mData->mKind;
+    case EE_SCENARIO_EV_NODE_DELAY: return (int64_t)P(EETechTreeNode, 0)->mResearchDelay++;
+    case EE_SCENARIO_EV_RESEARCH_NODE: return (int64_t)P(EETechnology, 0)->ResearchNode(NULL);
+    case EE_SCENARIO_EV_BUTTON: return R(EEButtonObject::Get((unsigned long)a[0]));
+    case EE_SCENARIO_EV_SET_CLASS_BUTTON:
+        P(EEPlayer, 0)->SetClassButton((unsigned long)a[1], P(EEButtonObject, 2));
+        return 0;
+    case EE_SCENARIO_EV_GROUP_FIRST: return R(P(EEPlayer, 0)->mGroups[a[1]]->GetFirstUnit());
+    case EE_SCENARIO_EV_UI_EXISTS: return gUserInterface != NULL;
+    case EE_SCENARIO_EV_POST_REFRESH_GROUP:
+        gUserInterface->PostRefreshSavedGroup(a[0]);
+        return 0;
+    case EE_SCENARIO_EV_TREE_SET_MEDIA: return (int64_t)(P(EEPlayer, 0)->GetTechTree()->mMediaID = a[1]);
+    case EE_SCENARIO_EV_POST_BACKGROUND:
+        gUserInterface->PostUpdateBackgroundMedia();
+        return 0;
+    case EE_SCENARIO_EV_IS_LATEST: return EETechTree::IsLatestEffect(P(EEPlayer, 0)->GetTechTree(), a[1], a[2], a[3]);
+    case EE_SCENARIO_EV_MEDIA: return R(static_cast<EEGraphicObject*>(EEMedia::Get(a[0])));
+    case EE_SCENARIO_EV_UPGRADE_MODEL: return R(P(EEUnitClassUpgrade, 0)->mModel);
+    case EE_SCENARIO_EV_SET_CLASS_MODEL:
+        P(EEPlayer, 0)->SetClassModel((unsigned long)a[1], P(EEGraphicObject, 2));
+        return 0;
+    case EE_SCENARIO_EV_SWAP_GRAPHIC:
+        P(EEComplexUnit, 0)->SwapGraphic(P(EEGraphicObject, 1), P(EEGraphicObject, 2));
+        return 0;
+    case EE_SCENARIO_EV_SOUND: return R(EESoundObject::Get(a[0]));
+    case EE_SCENARIO_EV_SET_ACKNOWLEDGE:
+        P(EEPlayer, 0)->SetClassAcknowledgeSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]);
+        return 0;
+    case EE_SCENARIO_EV_SET_CREATION:
+        P(EEPlayer, 0)->SetClassCreationSound((unsigned long)a[1], P(EESoundObject, 2));
+        return 0;
+    case EE_SCENARIO_EV_SET_DEATH:
+        P(EEPlayer, 0)->SetClassDeathSound((unsigned long)a[1], P(EESoundObject, 2));
+        return 0;
+    case EE_SCENARIO_EV_SET_SELECTION:
+        P(EEPlayer, 0)->SetClassSelectionSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]);
+        return 0;
+    case EE_SCENARIO_EV_PLAY:
+        P(EESoundObject, 0)->Play();
+        return 0;
+    case EE_SCENARIO_EV_MAKE_OBSOLETE:
+        P(EEPlayer, 0)->mTechnologies->MakeObsolete(a[1]);
+        return 0;
+    case EE_SCENARIO_EV_SET_PREREQUISITE:
+        P(EEPlayer, 0)->mTechnologies->SetPrerequisite(a[1], a[2]);
+        return 0;
+    case EE_SCENARIO_EV_SET_CONTAINS: return gUnitSetManager.GetSet(a[0])->Contains(a[1]);
+    case EE_SCENARIO_EV_COPY_LEVELS:
+        P(EEUnitClassUpgrade, 0)->CopyUpgradeLevels(P(EEUnitClassUpgrade, 1));
+        return 0;
+    case EE_SCENARIO_EV_REPLACE_QUEUED:
+        EEReplaceQueuedTechnology(P(EEPlayer, 0), P(EEUnitClass, 1), (long)a[2]);
+        return 0;
+    case EE_SCENARIO_EV_MOVE_QUEUED:
+        P(EEPlayer, 0)->MoveQueuedImprovements((unsigned long)a[1], (unsigned long)a[2]);
+        return 0;
+    case EE_SCENARIO_EV_REPLACE_UNIT:
+        return R(EEReplaceUnit(static_cast<EEComplexUnit*>(P(EEUnit, 0)), (unsigned long)a[1], P(EEUnitClass, 2)));
+    case EE_SCENARIO_EV_SET_BEHAVIOR:
+        P(EEComplexUnit, 0)->SetBehavior(P(EEComplexUnit, 0)->GetClass()->mBehavior);
+        return 0;
+    case EE_SCENARIO_EV_VARIANT_FACTOR: return EvBits(gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(a[0]));
+    case EE_SCENARIO_EV_CLASSES_NEW: return R(new std::vector<EEUnitClass*>);
+    case EE_SCENARIO_EV_CLASSES_IN_SET:
+        EEUnitClass::GetClassesInSet((unsigned long)a[1], *P(std::vector<EEUnitClass*>, 0));
+        return 0;
+    case EE_SCENARIO_EV_CLASSES_SIZE: return (int64_t)P(std::vector<EEUnitClass*>, 0)->size();
+    case EE_SCENARIO_EV_CLASSES_AT: return R((*P(std::vector<EEUnitClass*>, 0))[(size_t)a[1]]);
+    case EE_SCENARIO_EV_CLASSES_FREE:
+        delete P(std::vector<EEUnitClass*>, 0);
+        return 0;
+    case EE_SCENARIO_EV_SET_RANGE:
+        P(EEUnitClassUpgrade, 0)->SetRange(EvFloat(a[1]));
+        return 0;
+    case EE_SCENARIO_EV_SET_MAX_VELOCITY:
+        P(EEUnitClassUpgrade, 0)->SetMaxVelocity(EvFloat(a[1]));
+        return 0;
+    case EE_SCENARIO_EV_UNIT_SET: return R(gUnitSetManager.GetSet(a[0]));
+    case EE_SCENARIO_EV_PATHFINDING:
+        EEUnitSetFunctorModifyPathfindingBehavior(P(EEPlayer, 1), (long)a[2], a[3] != 0).ForEachIn(P(EEUnitSet, 0));
+        return 0;
+    case EE_SCENARIO_EV_SET_NAME:
+        EvSetName(P(EEUnitClassUpgrade, 0), EvFloat(a[1]));
+        return 0;
+    case EE_SCENARIO_EV_EVENT_COUNT: return (int64_t)EEEvent::sEvents.size();
+    case EE_SCENARIO_EV_EVENT_AT: return R(EEEvent::sEvents[(size_t)a[0]].get());
+    case EE_SCENARIO_EV_EVENT_EFFECTS: return R(P(EEEvent, 0)->mEffects);
+    case EE_SCENARIO_EV_EVENT_NUM: return (int64_t)P(EEEvent, 0)->mNumEffects;
+    case EE_SCENARIO_EV_FILE_OPEN: return P(FSFileSpec, 0)->Open(kFileAccessRead);
+    case EE_SCENARIO_EV_FILE_LENGTH: return (int64_t)EvLength(P(FSFileSpec, 0), (unsigned long)a[1]);
+    case EE_SCENARIO_EV_EFFECTS_ASSIGN:
+        gEventEffects.assign((size_t)a[0], EEEventEffect());
+        return 0;
+    case EE_SCENARIO_EV_EFFECTS_READ:
+        return P(FSFileSpec, 0)->Read((char*)&gEventEffects[0], (unsigned long)(gEventEffects.size() * sizeof(EEEventEffect)), sEvRead);
+    case EE_SCENARIO_EV_EVENTS_CLEAR:
+        EEEvent::sEvents.clear();
+        return 0;
+    case EE_SCENARIO_EV_EVENT_NEW: return R(EEEvent::sEvents.emplace_back(new EEEvent).get());
+    case EE_SCENARIO_EV_READ_NAME: return P(FSFileSpec, 0)->Read(sEvName, 100, sEvRead);
+    case EE_SCENARIO_EV_READ_ID: return P(FSFileSpec, 0)->Read(P(EEEvent, 1)->mID);
+    case EE_SCENARIO_EV_READ_COUNT: return P(FSFileSpec, 0)->Read(P(EEEvent, 1)->mNumEffects);
+    case EE_SCENARIO_EV_EVENT_ALLOC: return R(P(EEEvent, 0)->mEffects = new int32_t[(size_t)a[1]]);
+    case EE_SCENARIO_EV_READ_EFFECTS:
+        return P(FSFileSpec, 0)->Read(reinterpret_cast<char*>(P(EEEvent, 1)->mEffects), P(EEEvent, 1)->mNumEffects * 4, sEvRead);
+    case EE_SCENARIO_EV_EVENT_NO_EFFECTS: return R(P(EEEvent, 0)->mEffects = NULL);
     }
-    // which units convert and what follows is the Rust effect logic's (ee_tech effects.rs)
-    EeTechConversion theConversion = ee_tech_conversion(inUnit != NULL, theInSet, true, (int32_t)inID);
-    if (theConversion.single)
-        theUnits.push_back(inUnit);
-    else {
-        EEUnitClassUpgrade* theToUpgrade = thePlayer->mUnitClassUpgrades[theTo];
-        EEUnitClassUpgrade* theFromUpgrade = thePlayer->mUnitClassUpgrades[theFrom];
-        theFromUpgrade->CopyUpgradeLevels(theToUpgrade);
-        EEReplaceQueuedTechnology(thePlayer, theFromUpgrade->mUnitClass, theToUpgrade->mUnitClass->mTechnology);
-        ee_units_uu_player_units_of_type(theFrom, inPlayerIndex, &theUnits);
-    }
-    if (theUnits.size() != 0) {
-        EEUnitClass* theClass = gUnitClassTable[theTo];
-        if (theClass != NULL && theConversion.delay_new_class) {
-            EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theClass->GetTechnology());
-            if (theNode != NULL)
-                theNode->mResearchDelay++;
-        }
-        if (theConversion.move_queued)
-            thePlayer->MoveQueuedImprovements(theFrom, theTo);
-        bool theSetBehavior = theConversion.set_behavior;
-        EEComplexUnit* theNew = NULL;
-        for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
-            EEUnit* theUnit = *it;
-            EeTechUnitView theView = EETechUnitViewOf(theUnit);
-            uint32_t theStep = ee_tech_conversion_unit(&theView);
-            if (theStep == 0) {
-                EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
-                continue;
-            }
-            bool theReplace = theStep == 2;
-            EETechCaptureUnitStep(theUnit, theReplace, theNew != NULL);   // TEST ONLY (ee/EETechCapture.h)
-            if (theReplace)
-                theNew = EEReplaceUnit(static_cast<EEComplexUnit*>(theUnit), inPlayerIndex, theClass);
-            if (theSetBehavior && theNew != NULL)
-                theNew->SetBehavior(theNew->GetClass()->mBehavior);
-        }
-    } else
-        theResult = 3;
-    EETechCaptureUnitWalk(7, (long)(inEffect - &gEventEffects[0]), (long)theFrom,
-                          (inUnit != NULL ? 1 : 0) | (theInSet ? 2 : 0) | (theResult == 3 ? 4 : 0) |
-                          (inID == 0x413 || inID == 0x138d ? 8 : 0), (long)theTo);   // TEST ONLY (ee/EETechCapture.h)
-    return theResult;
+    return 0;
 }
 
-// one unit of a rescale walk (a new maximum of hit points or, inFlight, flight time; which units and their new
-// value: the Rust effect logic's, ee_tech effects.rs)
-static void EERescaleUnit(EEUnit* theUnit, bool inFlight, EeTechUnitWalk inWalk, EEUnitClass* theClass,
-                          unsigned long inOld, long inNew, bool inCapture)
-{
-    EeTechUnitView theView = EETechUnitViewOf(theUnit);
-    EeTechUnitStep theStep = ee_tech_unit_step(inWalk, &theView, (int32_t)theClass->mUnitType, (uint32_t)inOld, (int32_t)inNew);
-    if (!theStep.rescaled) {
-        EETechCaptureUnitStep(theUnit, false, 0);   // TEST ONLY (ee/EETechCapture.h)
-        return;
-    }
-    if (inCapture)   // TEST ONLY (ee/EETechCapture.h)
-        EETechCaptureRescale(inFlight ? 1 : 0, theUnit->mUnitID,
-                             inFlight ? (long)theUnit->mComplexUnit->mFlightTime : theUnit->GetHitPoints(), inOld, inNew,
-                             theStep.amount);
-    EETechCaptureUnitStep(theUnit, theStep.applies, theStep.value);   // TEST ONLY (ee/EETechCapture.h)
-    if (theStep.applies && inFlight)
-        theUnit->mComplexUnit->SetFlightTime(theStep.value);
-    else if (theStep.applies)
-        theUnit->SetHitPoints(theStep.value);
-}
-
-// a new maximum's rescale over the player's units, then its pending units (the capture's walks 2-3, flight 4-5)
-static void EERescaleUnits(EEPlayer* thePlayer, bool inFlight, EEUnitClass* theClass, unsigned long inOld, long inNew,
-                           bool inCapture, long inEffect)
-{
-    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        EERescaleUnit(theUnit, inFlight, inFlight ? EeTechUnitWalk::FlightTime : EeTechUnitWalk::HitPoints, theClass,
-                      inOld, inNew, inCapture);
-    EETechCaptureUnitWalk(inFlight ? 4 : 2, inEffect, theClass->mUnitType, (long)inOld, inNew);   // TEST ONLY
-    for (unsigned long j = 0; j < thePlayer->GetNumPendingUnits(); j++)
-        EERescaleUnit(static_cast<EEUnit*>(thePlayer->GetPendingUnit(j)), inFlight,
-                      inFlight ? EeTechUnitWalk::FlightTime : EeTechUnitWalk::PendingHitPoints, theClass, inOld, inNew,
-                      inCapture);
-    EETechCaptureUnitWalk(inFlight ? 5 : 3, inEffect, theClass->mUnitType, (long)inOld, inNew);   // TEST ONLY
-}
-
-// Applies an event's stat change to a unit class or unit set for the player (attack, range, sight, hit points, armor,
-// gather rates, terrain ...) or to the player (population bonus, tribute fee); 9 for an unknown stat
-long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
-{
-    EEPlayer* thePlayer = inPlayer;
-    if (thePlayer == NULL)
-        thePlayer = gWorld.mPlayers[inPlayerIndex];
-    std::vector<EEUnitClass*> theClasses;
-    EEUnitClass* theClass = NULL;
-    long theResult = 0;
-    bool theCapture = EESimCaptureRecord::Active();   // TEST ONLY (ee/EETechCapture.h)
-    EESimCaptureRecord theCallRecord(EECaptureTag("EVAT"));
-    if (theCapture) {
-        theCallRecord.U32(0);
-        theCallRecord.I32((long)(inEffect - &gEventEffects[0]));
-        theCallRecord.I32(inEffect->mAttribute);
-        theCallRecord.I32(inPlayerIndex);
-        EETechCapturePlayer(theCallRecord, thePlayer);
-    }
-    // which stat the attribute changes, and how, are the Rust tech logic's (ee_tech effects.rs); the members stay here
-    EeTechEffectValues theValues = EETechEffectView(inEffect);
-    EeTechAttribute theOp = ee_tech_attribute((int32_t)inEffect->mAttribute);
-    if (thePlayer != NULL) {
-        if (theOp.op == EeTechAttributeOp::PopulationBonus)
-            thePlayer->mPopulationLimitBonus = ee_tech_population_bonus((int32_t)thePlayer->mPopulationLimitBonus, &theValues);
-        else if (theOp.op == EeTechAttributeOp::TributeFee)
-            thePlayer->mTributeFee = inEffect->mFactor;
-        else if (theOp.op == EeTechAttributeOp::PlayerFlag)
-            thePlayer->mBB44 = true;
-        else {
-            if (inEffect->mUnitClass != -1) {
-                theClass = gUnitClassTable[inEffect->mUnitClass];
-                theClasses.push_back(theClass);
-            }
-            if (theClass == NULL && inEffect->mUnitSet != -1)
-                EEUnitClass::GetClassesInSet(inEffect->mUnitSet, theClasses);
-        }
-        for (unsigned long i = 0; i < theClasses.size(); i++) {
-            theClass = theClasses[i];
-            EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[theClass->GetUnitType()];
-            EESimCaptureRecord theClassRecord(EECaptureTag("EVAT"));
-            if (theCapture) {
-                theClassRecord.U32(1);
-                theClassRecord.I32((long)(inEffect - &gEventEffects[0]));
-                theClassRecord.I32(theClass->GetUnitType());
-                EETechCaptureUpgrade(theClassRecord, theUpgrade);
-            }
-            switch (theOp.op) {
-            case EeTechAttributeOp::Attack:
-                theUpgrade->mAttack = ee_tech_effect_f32((float)theClass->GetAttack(), theUpgrade->GetAttack(), &theValues);
-                break;
-            case EeTechAttributeOp::ReloadTime:
-                theUpgrade->mReloadTime = ee_tech_effect_i32((int32_t)theClass->mReloadTime, (int32_t)theUpgrade->mReloadTime, &theValues);
-                break;
-            case EeTechAttributeOp::Range:
-                theUpgrade->SetRange(ee_tech_effect_f32(theClass->mRange, theUpgrade->GetRange(), &theValues));
-                break;
-            case EeTechAttributeOp::LineOfSight: {
-                for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
-                     theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    EeTechUnitView theView = EETechUnitViewOf(theUnit);
-                    bool theApplies = ee_tech_sight_applies(&theView, (int32_t)theClass->mUnitType);
-                    EETechCaptureUnitStep(theUnit, theApplies, 0);   // TEST ONLY (ee/EETechCapture.h)
-                    if (theApplies)
-                        theUnit->SightOffHere();
-                }
-                EETechCaptureUnitWalk(0, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType);   // TEST ONLY (ee/EETechCapture.h)
-                theUpgrade->mLineOfSight = ee_tech_effect_f32(theClass->mLineOfSight, theUpgrade->GetLineOfSight(), &theValues);
-                for (EEUnit* theNext = thePlayer->mFirstUnit; theNext != NULL;
-                     theNext = static_cast<EEUnit*>(theNext->mNext)) {
-                    EeTechUnitView theView = EETechUnitViewOf(theNext);
-                    bool theApplies = ee_tech_sight_applies(&theView, (int32_t)theClass->mUnitType);
-                    EETechCaptureUnitStep(theNext, theApplies, 0);   // TEST ONLY (ee/EETechCapture.h)
-                    if (theApplies)
-                        theNext->SightOnHere();
-                }
-                EETechCaptureUnitWalk(1, (long)(inEffect - &gEventEffects[0]), theClass->mUnitType);   // TEST ONLY (ee/EETechCapture.h)
-                break;
-            }
-            case EeTechAttributeOp::AreaEffect:
-                theUpgrade->mAreaEffect = ee_tech_effect_f32(theClass->mAreaEffect, theUpgrade->mAreaEffect, &theValues);
-                break;
-            case EeTechAttributeOp::MaxHitPoints: {
-                unsigned long theOldMaximum = theUpgrade->mMaxHitPoints;
-                theUpgrade->mMaxHitPoints = ee_tech_max_hit_points((int32_t)theClass->mHitPoints,
-                    gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(theUpgrade->mUnitClass->mUnitType),
-                    (uint32_t)theOldMaximum, &theValues);
-                if (theOldMaximum != 0 && !gLoadingSavedGame)
-                    EERescaleUnits(thePlayer, false, theClass, theOldMaximum, theUpgrade->mMaxHitPoints, theCapture,
-                                   (long)(inEffect - &gEventEffects[0]));
-                break;
-            }
-            case EeTechAttributeOp::MaxVelocity:
-                theUpgrade->SetMaxVelocity(ee_tech_effect_f32(theClass->mMaxVelocity, theUpgrade->mMaxVelocity, &theValues));
-                break;
-            case EeTechAttributeOp::FlightTime: {
-                unsigned long theOldMaximum = theUpgrade->mFlightTime;
-                theUpgrade->mFlightTime = ee_tech_effect_i32((int32_t)theClass->mFlightTime, (int32_t)theUpgrade->mFlightTime, &theValues);
-                if (theOldMaximum != 0 && !gLoadingSavedGame)
-                    EERescaleUnits(thePlayer, true, theClass, theOldMaximum, theUpgrade->mFlightTime, theCapture,
-                                   (long)(inEffect - &gEventEffects[0]));
-                break;
-            }
-            case EeTechAttributeOp::Leadership:
-                theUpgrade->mLeadership = ee_tech_effect_f32((float)theClass->mLeadership, theUpgrade->mLeadership, &theValues);
-                break;
-            case EeTechAttributeOp::Armor:
-                theUpgrade->mArmor[theOp.index] =
-                    ee_tech_effect_f32((float)theClass->mArmor[theOp.index], theUpgrade->mArmor[theOp.index], &theValues);
-                break;
-            case EeTechAttributeOp::Nothing:
-                break;
-            case EeTechAttributeOp::GatherTime:
-                ApplyEventGatherRate(inEffect, theOp.index, thePlayer, theClass, theUpgrade);
-                break;
-            case EeTechAttributeOp::ConvertsPriests:
-                theUpgrade->mConvertsPriests = true;
-                break;
-            case EeTechAttributeOp::ConvertsBuildings:
-                theUpgrade->mConvertsBuildings = true;
-                break;
-            case EeTechAttributeOp::AreaEffectTemplate:
-                theResult = SetEventAreaEffect(inEffect, inPlayerIndex, inPlayer, theClass, theUpgrade);
-                break;
-            case EeTechAttributeOp::PowerRegeneration:
-                theUpgrade->mPowerRegeneration =
-                    ee_tech_effect_i32((int32_t)theClass->mPowerRegeneration, (int32_t)theUpgrade->mPowerRegeneration, &theValues);
-                break;
-            case EeTechAttributeOp::Terrain:
-                if (ee_tech_terrain_type_valid((int32_t)inEffect->mTerrainType)) {
-                    if (theUpgrade != NULL)
-                        theUpgrade->mTerrainMask = ee_tech_terrain_mask((uint32_t)theUpgrade->mTerrainMask,
-                                                                        (int32_t)inEffect->mTerrainType, inEffect->mValue != 0.0f);
-                    EEUnitSet* theSet = gUnitSetManager.GetSet(inEffect->mUnitSet);
-                    if (theSet != NULL) {
-                        EEUnitSetFunctorModifyPathfindingBehavior theFunctor(thePlayer, inEffect->mTerrainType, inEffect->mValue == 1.0f);
-                        theSet->ForEach(&theFunctor);
-                    }
-                }
-                break;
-            case EeTechAttributeOp::Regeneration:
-                theUpgrade->mRegeneration = ee_tech_effect_i32((int32_t)theClass->mRegeneration, (int32_t)theUpgrade->mRegeneration, &theValues);
-                break;
-            case EeTechAttributeOp::Power:
-                theUpgrade->mPower = ee_tech_effect_i32((int32_t)theClass->mPower, (int32_t)theUpgrade->mPower, &theValues);
-                break;
-            case EeTechAttributeOp::Name: {
-                UWideString theName;
-                gResource->GetString(UMFloatToLong(inEffect->mValue), theName);
-                theUpgrade->SetName(theName);
-                break;
-            }
-            default:   // an unknown attribute (and the player's, which build no class list)
-                theResult = 9;
-                break;
-            }
-            if (theCapture) {
-                theClassRecord.I32(theResult);
-                EETechCaptureUpgrade(theClassRecord, theUpgrade);
-                theClassRecord.Commit();
-            }
-        }
-    } else
-        theResult = 9;
-    if (theCapture) {
-        theCallRecord.U32((unsigned int)theClasses.size());
-        theCallRecord.I32(theResult);
-        EETechCapturePlayer(theCallRecord, thePlayer);
-        theCallRecord.Commit();
-    }
-    return theResult;
-}
-
-
-// Allows or forbids the terrain type in the player's upgrade of a unit type; always continues the set walk
-bool EEUnitSetFunctorModifyPathfindingBehavior::Execute(long inUnitType)
-{
-    if ((unsigned long)inUnitType < EEUnitClassCount()) {
-        EEUnitClassUpgrade* theUpgrade = this->mPlayer->GetUpgrade(inUnitType);
-        if (theUpgrade != NULL)
-            theUpgrade->mTerrainMask = ee_tech_terrain_mask((uint32_t)theUpgrade->mTerrainMask, (int32_t)this->mType, this->mEnabled);
-    }
-    return true;
-}
-
-
-// Plays the event's sound; returns 9 if it does not exist
-long PlayEventSound(EEEventEffect* inEffect)
-{
-    EESoundObject* theSound = EESoundObject::Get(inEffect->mSoundID);
-    long theResult = 9;
-    if (theSound != NULL) {
-        theSound->Play();
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// Researches the event's technology for the player at once; returns 9 without a player
-long ResearchEventTechnology(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
-{
-    long theResult = 0;
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    if (inPlayer != NULL) {
-        EETechnology* theTechnology = inPlayer->GetTechTree()->Get(inEffect->mTechnology);
-        if (theTechnology != NULL)
-            theResult = theTechnology->ResearchNode(NULL);
-    } else
-        theResult = 9;
-    return theResult;
-}
-
-// Makes the event's technology obsolete for the player; returns 9 without a player
-long MakeEventTechnologyObsolete(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    long theResult = 0;
-    if (inPlayer != NULL)
-        inPlayer->mTechnologies->MakeObsolete(inEffect->mTechnology);
-    else
-        theResult = 9;
-    return theResult;
-}
-
-// Sets a prerequisite of the event's technology for the player; returns 9 without a player
-long SetEventPrerequisite(EEEventEffect* inEffect, long inPlayerIndex, long inPrerequisite, EEPlayer* inPlayer)
-{
-    if (inPlayer == NULL)
-        inPlayer = gWorld.mPlayers[inPlayerIndex];
-    long theResult = 0;
-    if (inPlayer != NULL)
-        inPlayer->mTechnologies->SetPrerequisite(inEffect->mTechnology, inPrerequisite);
-    else
-        theResult = 9;
-    return theResult;
-}
-
-// Changes one gather rate of the unit type's upgrade by the event: offset, factor of the class rate, or set value
-void ApplyEventGatherRate(EEEventEffect* inEffect, long inIndex, EEPlayer* inPlayer,
-              EEUnitClass* inClass, EEUnitClassUpgrade* inUpgrade)
-{
-    if (inUpgrade == NULL)
-        return;
-    EeTechEffectValues theValues = EETechEffectView(inEffect);
-    inUpgrade->mGatherTimes[inIndex] =
-        ee_tech_gather_time((int32_t)inUpgrade->mGatherTimes[inIndex], (int32_t)inClass->mGatherTimes[inIndex], &theValues);
-}
+#undef P
+#undef R
 
 // Returns the button object with the given index, or NULL when out of range
 EEButtonObject* EEButtonObject::Get(unsigned long inIndex)
@@ -700,9 +293,4 @@ EEButtonObject* EEButtonObject::Get(unsigned long inIndex)
     if (inIndex < EEButtonObject::sTable.size())
         return EEButtonObject::sTable[inIndex];
     return NULL;
-}
-
-long EEEventKind7(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
-{
-    return 0;
 }

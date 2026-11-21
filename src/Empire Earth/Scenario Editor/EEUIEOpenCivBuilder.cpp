@@ -73,24 +73,20 @@ extern GEFont* gU531938;
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
+static_assert(sizeof(EEUIFSEBrushGroup) == sizeof(EeScreensSeBrushGroup) &&
+                  offsetof(EEUIFSEBrushGroup, mButtons) == offsetof(EeScreensSeBrushGroup, buttons) &&
+                  offsetof(EEUIFSEBrushGroup, mTitle) == offsetof(EeScreensSeBrushGroup, title) &&
+                  offsetof(EEUIFSEBrushGroup, mBrushSize) == offsetof(EeScreensSeBrushGroup, brush_size) &&
+                  offsetof(EEUIFSEBrushGroup, mIsCentered) == offsetof(EeScreensSeBrushGroup, centered),
+              "editor_seplx.rs's brush group");
+
 // Builds the brush size group (title and tiny to huge radio buttons, tiny checked) on the terrain and elevation tabs
-// (editor_brush.rs)
+// (editor_seplx.rs, editor_brush.rs)
 EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inLocation,
                                    UIForm* inForm, GEFont* inFont)
 {
-    this->mIsHighlightShown = false;
-    GEFont* theScreenFont = gSeplScreenFont;
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    size_t theControls[6];
-    ee_screens_sebr_build(this, inForm, inLocation.GetX(), inLocation.GetY(), &theIndex, theControls);
-    gSeplScreenFont = theScreenFont;
-    ioIndex = theIndex;
-    this->mTitle = static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(theControls[0]));
-    for (unsigned long i = 0; i < 5; i++)
-        this->mButtons[i] = reinterpret_cast<UIControl*>(theControls[i + 1]);
-    this->mBrushSize = (unsigned long)EEUIShell::Op(this->mButtons[0], EE_SCREENS_SKOP_BRUSH_SIZE);
-    this->mIsCentered = false;
+    ee_screens_sebr_group_new(reinterpret_cast<EeScreensSeBrushGroup*>(this), &ioIndex, inLocation.GetX(), inLocation.GetY(),
+                              inForm, inFont);
 }
 
 // Destroys the brush group, deleting its five buttons and title
@@ -102,14 +98,7 @@ EEUIFSEBrushGroup::~EEUIFSEBrushGroup()
 }
 
 // Sets the highlighted brush square around a map position, one tile larger to the top left when centered
-// (editor_brush.rs)
 void EEUIFSEBrushGroup::SetHighlight(float inX, float inY, bool inIsCentered)
 {
-    float r[4];
-    ee_screens_sebr_highlight(inX, inY, (uint32_t)this->mBrushSize, inIsCentered, r);
-    this->mRectangle.SetLeft(r[0]);
-    this->mRectangle.SetTop(r[1]);
-    this->mRectangle.SetRight(r[2]);
-    this->mRectangle.SetBottom(r[3]);
-    this->mIsCentered = inIsCentered;
+    ee_screens_sebr_group_highlight(reinterpret_cast<EeScreensSeBrushGroup*>(this), inX, inY, inIsCentered);
 }

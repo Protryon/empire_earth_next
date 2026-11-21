@@ -1,22 +1,13 @@
 //! `extern "C"` for the scenario editor's main form whole in Rust (`editor_form.rs`): the object
 //! `EEUIFScenarioEditor` holds, made, built, called and freed by it, its slots read and set by its accessors, its
 //! selection read by `GetSelectedUnit`, and the trigger-only save run by its Ctrl+S event. The shared control ops
-//! (below 100) are `ee_screenscpp_sepl` (`Scenario Editor/EESERBUnitTypes.cpp`), the form's own `ee_screenscpp_sefm`
-//! (`Scenario Editor/EEUIFScenarioEditor.cpp`).
+//! (below 100) are `ee_screenscpp_sepl` (`Scenario Editor/EESERBUnitTypes.cpp`), the form's own `editor_sefmx.rs`
+//! (over `ee_screenscpp_sefmx`, `Scenario Editor/EEUIFScenarioEditor.cpp`).
 
 use core::ffi::c_void;
 
 use crate::screens::editor_form::*;
 use crate::screens::editor_players::SeplHost;
-
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_sefm(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
-    }
-}
 
 struct Host;
 
@@ -25,10 +16,11 @@ impl SeplHost for Host {
         let p = p.map(|x| x as *mut c_void);
         unsafe {
             if op >= 800 {
-                if let Some(r) = crate::screens::editor_direct::sefm(op, p.map(|x| x as usize), i) {
+                let p = p.map(|x| x as usize);
+                if let Some(r) = crate::screens::editor_direct::sefm(op, p, i) {
                     return r;
                 }
-                sys::ee_screenscpp_sefm(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+                crate::screens::editor_sefmx::compose(&mut crate::screens::editor_sefmx::cpp, op, p, i, f)
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {
                     crate::screens::editor_direct::sepl(op, p.as_ptr(), i, f)
