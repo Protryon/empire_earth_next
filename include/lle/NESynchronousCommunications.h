@@ -4,6 +4,7 @@
 // Inline members are exported COMDATs emitted by NEMessageManager.cpp (0x4012f..0x4027f, declaration order).
 #ifndef LLE_NESYNCHRONOUSCOMMUNICATIONS_H
 #define LLE_NESYNCHRONOUSCOMMUNICATIONS_H
+#include "rust/net/msgid.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,13 +12,6 @@
 
 class NEMessage;
 enum class EeNetQOp : uint32_t;             // the queues' calls out (rust/ee_net.h)
-
-// The recorder's mode (ee_net recplay.rs, NERecordPlayback whole in Rust; the game only ever passes)
-enum NERecordPlaybackMode {
-    kRecordModePassing = 1,                 // messages go straight to the callback
-    kRecordModeRecording = 2,
-    kRecordModePlaying = 3,
-};
 
 // Its state is Rust's (ee_net comms.rs; PORT_LEARNINGS "LLE Network Engine, round 5"): the class keeps the type the
 // game holds, its pure virtuals and one-line forwarders. The original layout (sizeof 0x30) went with its fields;

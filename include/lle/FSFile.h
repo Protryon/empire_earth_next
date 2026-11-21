@@ -12,6 +12,7 @@
 // float/double. Saved games, record files and network buffers are the same bytes on every platform.
 #ifndef LLE_FSFILE_H
 #define LLE_FSFILE_H
+#include "rust/base/lle_enums.h"
 
 #include <stdint.h>
 #include "lle/UString.h"       // their Load and Save (below)
@@ -101,12 +102,5 @@ inline long UString::Load(FSFile& inFile) { return ee_ustring_load_file(&this->m
 inline long UString::Save(FSFile& inFile) const { return ee_ustring_save_file(&this->mState, &inFile); }
 inline long UWideString::Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
 inline long UWideString::Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
-
-// FSFile::SetPosition inOrigin: FSFileSpec::SetPosition maps it to the SetFilePointer move method
-enum FSFileOrigin {
-    kFileOriginBegin = 0,  // FSFileSpec::SetPosition -> FILE_BEGIN
-    kFileOriginEnd = 1,    // FSFileSpec::SetPosition -> FILE_END
-    kFileOriginCurrent = 2,  // FSFileSpec::SetPosition -> FILE_CURRENT
-};
 
 #endif

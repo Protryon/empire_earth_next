@@ -14,6 +14,8 @@ pub mod ge;
 pub mod geval;
 /// The crate ee_gfx before the restructure.
 pub mod gfx;
+/// The Graphics Engine's named constants (render states, pixel formats, fonts, clip planes) for its C++ headers.
+pub mod gestate;
 /// The crate ee_gx before the restructure.
 /// cbindgen:ignore
 pub mod gx;

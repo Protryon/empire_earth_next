@@ -5,6 +5,7 @@
 // FSBasicFile and FSFileSpec (0x10001000..0x1000144b).
 #ifndef LLE_LOWLEVELENGINECORE_H
 #define LLE_LOWLEVELENGINECORE_H
+#include "rust/base/lle_enums.h"
 
 // The engine's own units are built with LOWLEVELENGINE_EXPORTS (VC6 DLL-wizard convention). EE_STATIC: everything is
 // linked into one exe, so the other units neither import nor export. The engine units still declare their classes
@@ -248,20 +249,5 @@ inline unsigned long UMCeilUnsigned(float inValue)
 #endif
 
 // ---- Startup paths gStartupVolume, gStartupDirectory (above; File System.cpp defines them)
-
-// UMSetFloatingPointPrecision / UMGetFloatingPointPrecision: the float.h _PC_* precision-control value (_controlfp(x, _MCW_PC), UMath.cpp)
-enum UMFloatingPointPrecision {
-    kFPPrecision64 = 0,      // float.h _PC_64
-    kFPPrecision53 = 0x10000,  // float.h _PC_53
-    kFPPrecision24 = 0x20000,  // float.h _PC_24
-};
-
-// UGetOSType (Utilities.cpp 0x100837eb) results from GetVersion. Names are provisional.
-enum UOSType {
-    kOSWindows95 = 1,  // UGetOSType 0x100837eb returns 1 for Win32 platform, version 4.0..4.9 (95) (provisional name)
-    kOSWindows98 = 2,  // UGetOSType 0x100837eb returns 2 for Win32 platform, 4.10+ (98/ME) (provisional name)
-    kOSWindowsNT5 = 3,  // UGetOSType 0x100837eb returns 3 for NT platform, major >= 5 (2000/XP) (provisional name)
-    kOSWindowsNT4 = 4,  // UGetOSType 0x100837eb returns 4 for NT major < 5, or Win32s/major < 4 (provisional name)
-};
 
 #endif

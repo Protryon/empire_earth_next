@@ -2,6 +2,7 @@
 // (DX7HRDisplay DX7Surface); slot order and signatures from DX7Surface's vtable (0x104c4) and exports.
 #ifndef LLE_GESURFACE_H
 #define LLE_GESURFACE_H
+#include "rust/render/gestate.h"
 
 class FSFileSpec;
 class GEColor;
@@ -94,15 +95,6 @@ protected:
     unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
     unsigned long mLogicalWidth = 0;        // port: see SetLogicalSize (0: none)
     unsigned long mLogicalHeight = 0;
-};
-
-// GESurface::Load/Save/GetImageFileAttributes inType: the per-format exported member each case calls
-enum GEImageFileType {
-    kImageFileTGA = 0,  // the original's Targa: no longer read or written (RUST_PLAN D9)
-    kImageFileBMP = 1,  // saved (24-bit, bottom up); never loaded
-    kImageFileJPG = 2,  // quality 80 (ee_base's jpeg decodes, the jpeg-encoder crate writes: openformats surface_file.rs)
-    kImageFileJPG2 = 3,  // two JPEGs (colour, alpha) behind a two-word offset header
-    kImageFilePNG = 4,  // port: loaded only
 };
 
 #endif
