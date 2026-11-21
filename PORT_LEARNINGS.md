@@ -36568,3 +36568,87 @@ type enums (376 enumerator lines) are declarations, not logic, but the tool coun
   buffers, EELobbyGameHost.cpp), the glue host's own multi-statement cases, the Internet logics' hosts (AccountLogic,
   InitLogic, RoutingLogic: a golden over round 29's lobbyops world), the control configs as cfgtab kinds, round 28's
   list (the UDP subclasses, ServerConnectionConnectOp, RecvChunkOp, the routing completions).
+
+## The game core lane, round 8: the game state, the messages' C++ bodies, the start-up and shutdown and the graphics thread's frame in Rust over chained op switches (ee_game gamecpp state.rs, message.rs, startup.rs, graphics.rs; branch rust-core8, 2026-11-20)
+
+The brief: round 7's method on its "Left" (EEMessage.cpp, EERenderObject.cpp, EEServer.cpp, EEEffectHost.cpp,
+EEMap.cpp, EEGraphics.cpp, EEGameState.cpp, Empire Earth.cpp, EETestFixture.cpp's host), target -3,000 C++ logic
+lines. The round took EEGameState.cpp, EEMessage.cpp's C++ bodies, Empire Earth.cpp's start-up and shutdown and
+EEGraphics.cpp's frame: -1,767 logic lines (`logic_lines.py`: 82,035 at f9e0902fc, 80,268 at 7dd19e8ed; the later
+commits 0), net -751 lines. It fell short of the target: EERenderObject.cpp, EEEffectHost.cpp, EEServer.cpp and EETestFixture.cpp's
+host are hosts of Rust already (ee_gfx's fills, the session's cases, the WON lobby walk), so what is left in them is
+two- and three-statement callbacks, each a case and a Rust function for a line or two of logic.
+
+| Commit | What | C++ logic | net lines |
+|---|---|---|---|
+| 82c6397e0 | the game state's bodies (EEGameState.cpp) and the messages' C++ bodies and actions (EEMessage.cpp) | -843 | -457 |
+| 7dd19e8ed | the start-up and shutdown wiring (Empire Earth.cpp) and the graphics thread's frame (EEGraphics.cpp) | -924 | -296 |
+| 9fe53646b, 1c008ecdb | clippy's allows and rustfmt; gamecpp.h regenerated | 0 | 0 |
+| cabc329af | merge origin/rust 0d42f70a3 (batch 11; PORT_LEARNINGS' end the only conflict) | 0 | 0 |
+| 394309289 | the display's bit-depth checks as C++ cases (build.py's test profile overlays them) | 0 | +2 |
+| 04c52d1e6 | the gate's tile passed by address (EEBuildGate) | 0 | 0 |
+| 767288c63 | merge origin/rust a84903ce6 (batch 12: the groups as Rust objects; two cases follow EEGroup's getters) | 0 | 0 |
+
+- **The cases chain by file**: `ee_gamecpp`'s default goes to EEWorld.cpp's `EEWorldOp`, its default to
+  EEGameState.cpp's `EEGameStateOp`, then EEMessage.cpp's `EEMessageOp`, Empire Earth.cpp's `EEStartupOp` and
+  EEGraphics.cpp's `EEGraphicsOp`, whose `EEGraphicsOpNext` is the chain's end (the assert); the float twins the
+  same. Each file's cases sit beside the statics they read (the fonts' and the db tables' names as two C++ tables, the
+  chat texts, sOriginalVideoMode, sTimer). One enum (`EeGameCpp`), so the unit, player, effect and string ops of
+  round 7 answer the new bodies too; 687 cases and about 45 forwarders added this round; 69 cases of EENetMsgHost deleted (their bodies moved).
+- **Two cross-checks, as scripts** (build/core8/opcheck.py and ptrcheck.py in the worktree; worth a tool): every
+  `O::X` the Rust names must be a `case O::X:` of an integer switch (`h`, `hp`, `hf`, `rec`) or of a float switch
+  (`hd`); and every argument a case reads as an address (`*(T*)a[k]`, `WSTRA(k)`) must be passed by `pa`, `ptr` or
+  `cptr` in the Rust. The second came late: the late and space captures (`--cheats all`) crashed in EEBuildGate,
+  whose case reads a[0] as the EETileCoordinate's address while the Rust passed the two coordinates (04c52d1e6).
+  Neither the oracle nor seed 3 reaches it.
+- **build.py's test profile patches the C++ text** (`windowed-software`: 32 where Empire Earth.cpp said 16 for the
+  display's bit depths): a check moved to Rust escapes the overlay and the profile's build stops ("matches 0 times").
+  The checks are C++ cases again (`PrefGameBitDepthValid`), with the overlay's counts unchanged.
+- **Pitfalls met**:
+  - an op answering a member's address (`WGameScreenActive`, `WExecutingLocalSelection`, `WUsingCarbon`) read as
+    a value (`h(...) != 0`: always true); round 7's address ops are read through `rec`.
+  - C++ virtuals taking non-const references (`GESurface::Clear(GERectangle&, GEColor&)`, `GEInitialize(FSFileSpec&)`,
+    `AddUpgrades(std::vector&)`, `SelectUnits(std::vector<long>&)`) cannot take a temporary in a one-statement case:
+    the Rust holds the value (a `GeRectangle`, a C++ vector made by a case) and passes its address.
+  - `delete X; X = NULL;` is one statement as `delete std::exchange(X, nullptr);` (the null first, then the delete:
+    the same except where the deleted object reads the global; gCommunications in EEShutdownThreads keeps the
+    delete-then-null order with two cases).
+  - private Rust constants are not exported, but a name another crate exports (`ACTION_IDLE`, `OK`) moved that
+    crate's constant into rust/common.h on the header run: the round's constants carry a prefix (`MSG_`, `ST_`,
+    `KESE_OK`, `START_`).
+  - the record layout test of `EeGameStateTail` (the members mMap..mRevealMap read in place) was off by one in the
+    test itself: the 32-bit offsets (+0x4c0..+0x502) are the check.
+- **Behaviour changes**: none intended. ESVERIFY_AT's file in a failure report names the op switch's file
+  (EEGameOps.cpp for the start-up's asserts) and its text the case's expression; the line numbers are the original's.
+  The Rust start-up calls EEInitializeNetwork, EEReleaseGamePools' and EEReleaseUnitPools' bodies inline (the same
+  calls in the same order). The tribute line's numbers are formatted by Rust (`PlatIToA`'s decimal digits).
+- **What only a live game exercises**: the network halves of the messages (the lobby's player info and options lock,
+  the start game, the all-loaded and load responses, the migration's slots, the chat and tribute lines, the lag),
+  which the LAN game runs; the start-up's window, graphics, fonts, video modes, the menus' screen and the new screen
+  size (EEChangeGameScreen), the graphics thread's frame, restore and screenshot (the tour and gates.sh); the
+  campaign branches of EEGameState::Create (load type 4 and a saved campaign game) and EELoadOrSave's auto-save
+  rotation: no gate reaches them. EE-SIM runs the start-up without a window (the oracle passes through
+  EEInitializePart1/2, the database, the game objects) and EEGameState::Create for new games, scenarios and saved
+  games (the oracle, scenario_check, saveload).
+- **Tests**: state 1 (the tail's layout), message 1 (the tables), startup 2 (the fonts' order and lines, the tables'
+  count).
+- **Gates**: both builds 0/0 on the merge of batch 12 (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0; on the
+  merge of batch 11 (after the BuildGate fix): the oracle identical on seeds 2-7, the 12 capture profiles at seeds
+  2-3 PASS (oracle 212 digests, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, units 175,
+  app 26, groups 2, placement 4, transport 185), the plain saveload PASS (18 identical, exit 0), the matrix
+  (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0 `saveload expect: PASS`,
+  scenario_check 27/27, sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062), `eedata.py check` PASS and
+  `cppgate` PASS, the Rust gate PASS (5,199 tests, 0 failed); on the merge of batch 12 (767288c63): the oracle identical on seeds 2-7,
+  the captures oracle (212), late (214), space (210), calamity (222) PASS at seeds 2-3, the plain saveload PASS
+  (exit 0), the Rust gate PASS (5,301 tests, 0 failed; no load flake this time), the tour through slot.py `RESULT
+  PASS tour` (RENDER CHECK gameplay 84.6% lit, 3,873 colours; the main menu and the first frame of the game looked at:
+  the menu's buttons and art, the town center, the citizens, the HUD and the minimap drawn), `bash tools/gates.sh`
+  (EE_GATES_TREE the main checkout's tree): `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12722` units
+  [4, 39, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2805 joiner=2798`, GATES PASS. Not
+  run: the POSIX builds.
+- **Edits outside the lane**: none (the lead moved src/Low-Level Engine, include/lle, gx, dx7 and src/RTS Engine to
+  a new LLE lane mid-round; this round touched none of them). `rust_includes.py` after the batch 12 merge wanted
+  two includes in tests/won/won_sockop_kinds.h (the WON lane's): not taken.
+- **Left** (docs/progress/game-leaves.md): EERenderObject.cpp, EEEffectHost.cpp, EETestFixture.cpp's host,
+  EEServer.cpp and EEClient.cpp, EEMap.cpp, EEGraphics::RenderTo, EEGetFileChecksum, EEInitializeNetwork, the start
+  screen and the entry points, the persistent helpers.

@@ -1,7 +1,7 @@
-# The game core lane (was the game's leaves): src/Empire Earth/Empire Earth, Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread, Map; src/RTS Engine; src/Low-Level Engine but its User Interface
+# The game core lane (was the game's leaves): src/Empire Earth/Empire Earth, Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread, Map (src/Low-Level Engine, include/lle, gx, dx7 and src/RTS Engine went to the LLE lane on 2026-11-20)
 
 The lane's state. Each round rewrites this file to the current state; each round's story goes in PORT_LEARNINGS.md
-("The game's leaves, round 1/2", "The game core lane, round 3/4/5/6/7"). The census is `python -I tools/cpp_deps.py report`
+("The game's leaves, round 1/2", "The game core lane, round 3/4/5/6/7/8"). The census is `python -I tools/cpp_deps.py report`
 (after a build: it reads the objects): `leaves.txt`, `near_leaves.txt`, `waves.txt`; `cpp_deps.py unit FILE` names
 one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the directories above and nothing else.
 
@@ -9,6 +9,11 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 | C++ (deleted or shrunk) | Rust home | What callers keep |
 |---|---|---|
+| **Round 8** (branch `rust-core8`; the same host, its cases chained by file: EEGameOps.cpp -> EEWorld.cpp -> EEGameState.cpp -> EEMessage.cpp -> Empire Earth.cpp -> EEGraphics.cpp) | | |
+| EEGameState.cpp: Create (the saved game's, the scenario's and the campaign's loads, a new game's players, teams, managers and random map), Init, Clear, Reset, RepairRestorables, SetCalamityHelper, SetEnvironmentManager | ee_game gamecpp `state.rs` (`EeGameStateTail`: the members mMap..mRevealMap read in place) | the methods forward; `EEGameStateOp` (EEGameState.cpp) |
+| EEMessage.cpp: the Execute bodies the C++ kept (kNetMsgBodies: the civilization's upgrades, the cargo unload, the improvement, the main screen, the load or save, the cheat unit, the host migration's slots, the saved group, the flare, the stance, the loading's start, the formation), the host's world, unit and player actions, the fast selection, the select lists, the resources, the disband and delete refunds, the placement test, EESendGroupCommand's markers, EELoadOrSave | ee_game gamecpp `message.rs` | EENetMsgHost's cases are one call each; EEStartLoading stays a C++ symbol (the legacy harness's seed pin); `EEMessageOp` |
+| Empire Earth.cpp: the start-up (EEInitializePart1/2, the display, the graphics and its 38 fonts, the sounds, the database's 26 tables, the game objects, the threads, the persistents, the data paths, the menus' screen, the video mode, a new screen size, the game view), the shutdown routines (the graphics, the threads, the sound manager, the game objects, the database), EEClearGame, EEAttackPlayers, EELoadNetworkSettings, EELoadSound, the media loads | ee_game gamecpp `startup.rs` | the functions forward (one statement); `EEStartupOp` (the font and table names as two C++ tables) |
+| EEGraphics.cpp: FrameStarting, FrameDone, HandleMessage, RestoreSurfaces, SaveScreenShot | ee_game gamecpp `graphics.rs` | the methods forward; `EEGraphicsOp` |
 | **Round 7** (branch `rust-core7`; the game's own bodies over one host, EEGameOps.cpp's `ee_gamecpp`, `EeGameCpp`) | | |
 | EECalamityUpdate.cpp's host (the calls every class shares, each class's world steps: the quake's cracks, the storm, the volcano and its cleared footprint, the time warp, the teleport, the logic bomb, the cloak and its capitols, the meteors, the area effects, the leprosy) | ee_game gamecpp `calamity.rs` | EECalamityUpdate.cpp: the run's C++ objects (`EECalamityUpdateHost`, its state in and out); `EeCalamityHostFfi::call` is `ee_gamecpp_calamity_call` |
 | EECalamity, EECalamityManager, EECalamityClass (all but the ctor, GetCost, GetUnitSet, GetContagionFunctor and the save Io host), the contagion functors' ctor, Update, Infect, Cure, Apply; EECalamityCast.cpp (deleted) | ee_game gamecpp `calamity_objects.rs` | the methods forward (one statement each); `DestroyCalamity(iterator)` gone (Update erases by index) |
@@ -49,13 +54,14 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
   handlers and EESimMain; EETestFixture.cpp's EEFixtureHost (about 400 lines: each case several C++ calls; the Rust
   fixture's `Call` API would take finer operations; only harness sessions run it) and its WON lobby walk (WONAPI's
   C++ components).
-- **The game's own bodies not reached** (round 7 took the calamities and the world): Empire Earth.cpp's start-up and
-  shutdown (1,444 logic lines; POSIX and Windows branches, only the tour and gates.sh run them), EERenderObject.cpp
-  (956; the tour only), EEMessage.cpp's executes (744; the oracle runs them, the LAN game their network halves),
-  EEServer.cpp (445; LAN only), EETestFixture.cpp's host (615; harness only), EEEffectHost.cpp (588), the RTS
-  Engine's classes, EEMap.cpp (409), EEGraphics.cpp (318), EEGameState.cpp (315), the tech capture's TSWP sweep and
-  node records (EETechCapture.cpp, about 140). Each moves the same way: a Rust body over EEGameOps.cpp's cases (the
-  generic unit, player, class, world and effect ops are there already).
+- **The game's own bodies not reached** (round 7 took the calamities and the world, round 8 the game state, the
+  messages' bodies, the start-up and shutdown and the graphics thread's frame): EERenderObject.cpp (943 logic lines;
+  the per-frame fill, FillRenderLists, Fn10C036, the doppelgangers' fills: the tour only, over ee_gfx's hosts already),
+  EEEffectHost.cpp (588; the effects' world host), EETestFixture.cpp's host (615; its WON lobby walk is WONAPI C++),
+  EEServer.cpp (384; the session's host cases, LAN only), EEClient.cpp, EEMap.cpp (409; its hosts of the Rust map),
+  EEGraphics::RenderTo (the post-game map capture's tiles), Empire Earth.cpp's EEGetFileChecksum, EEInitializeNetwork,
+  the start screen, EERun and main, the persistent helpers (EEPWorldHelper.cpp 451, EESaveLoad.cpp 371). Each moves
+  the same way: a Rust body over a file's op switch, chained at EEGraphicsOpNext.
 - **What round 7 left in the moved files**: EEWorld::RecordStatistics (the records' strings and the Rust statistics'
   host callbacks), the teams' mirror (EEMirrorTeams) and the setters that delete and replace a manager; EECalamity's
   save Io host (EECalamityIoCall) and the contagion world host (ee_contagion_world: the Rust contagion manager's C++
@@ -89,9 +95,9 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
   lookups and the rules' load are 100 lines; the C++ structs are decoded from the Rust's bytes (EERulesGenDecode.h)
   and read as members by 20 units, so the lookups could only become inline readers (EECivBuilderRules::FindID and
   FindCategory have no caller, but EERulesGen.h is generated: tools/eedata/rules.py).
-- **RTSWorld, RTSPlayer, RTSPhysics, RTSGraphics, RTSMouse** (1,600): C++ virtuals of the game's classes and their
+- **RTSWorld, RTSPlayer, RTSPhysics, RTSGraphics, RTSMouse** (1,600; the LLE lane's since 2026-11-20): C++ virtuals of the game's classes and their
   lists; the same.
-- **GERasterizer's setters** (130 lines of forwarders): rust/render/ge.h is 3,300 lines and GERasterizer.h has 100
+- **GERasterizer's setters** (the LLE lane's since 2026-11-20; 130 lines of forwarders): rust/render/ge.h is 3,300 lines and GERasterizer.h has 100
   includers; they need a header of their own (a module of ee_render's ge split for them). **DX7Rasterizer's
   forwarders** (130): two of the draws use a .cpp helper and DX7Surface; DX7Rasterizer.h would include dx7.h.
 - **AEFX** (EEAECapture.cpp), **the app sweeps** (EEAppCaptureWorld.cpp), **the message capture**
@@ -107,6 +113,6 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 EEPlayer shrinks with the classes it calls (Left, above): the towns' and herds' host cases into ee_sim::cp once the
 world layout has EeTownFields' and EeHerdFields' base offsets; the selection methods and the groups' parts once the
 groups are Rust objects; the improvement cases once EEUnitClassUpgrade is a Rust record. In the lane meanwhile: the
-camera's forwarders over a host Rust names, GERasterizer's setters over a small rast header (ee_render ge split),
-EEPChecksum's load and save over FSMemoryFile::Ops, the media objects as Rust objects; and the game's own bodies of
-"Left" over EEGameOps.cpp (EEMessage.cpp's executes and EERenderObject.cpp next: the oracle and the tour check them).
+camera's forwarders over a host Rust names, EEPChecksum's load and save over FSMemoryFile::Ops, the media objects as
+Rust objects; and the game's own bodies of "Left" over the chained op switches (EERenderObject.cpp's
+FillRenderLists and Fn10C036 next: the tour checks them; then EEServer.cpp and EEClient.cpp: the LAN game).
