@@ -14,8 +14,9 @@
 class EESMDialogMessage {
 public:
     EESMDialogMessage();
-    EESMDialogMessage(const EESMDialogMessage& inMessage);
-    void operator=(const EESMDialogMessage& inMessage);   // 0x1b9f4a (void: its four callers discard eax, and its body returns no value)
+    // the copies are member-wise (the original's 0x1b9ee9 / 0x1b9f4a copied field by field)
+    EESMDialogMessage(const EESMDialogMessage& inMessage) = default;
+    EESMDialogMessage& operator=(const EESMDialogMessage& inMessage) = default;
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1af92b
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x04 0x1afa14
 
