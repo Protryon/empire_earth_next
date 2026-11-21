@@ -35,10 +35,26 @@ struct EERMWorld {
     EEGameOptions* mOptions;
 };
 
+// The generator list's script search (Initialize)
+struct EERMFind {
+    EERMFind() { mDirectory.SetVolume(gStartupVolume); mDirectory.SetDirectory(gStartupDirectory + "Data\\Random Map Scripts\\"); }
+    FSFileSpec mDirectory;
+    FSFileSpec mFile;
+};
+
 // A text into the Rust side's sink
 static void EERMText(int64_t inSink, const UString& inText)
 {
     ee_rmap_script_bytes_push((EeRmapScriptBytes*)inSink, (const uint8_t*)(const char*)inText, inText.GetLength());
+}
+
+// A string-table string into the Rust side's sink -> GetString's result
+static long EERMResourceString(int64_t inSink, unsigned long inID)
+{
+    UWideString theText;
+    long theResult = gResource->GetString(inID, theText);
+    ee_rmap_script_bytes_push((EeRmapScriptBytes*)inSink, (const uint8_t*)(const char*)theText, theText.GetTCHARLength());
+    return theResult;
 }
 
 // A file's whole text as the C runtime's text mode reads it (fgets in the original script reader) -> false when missing
@@ -158,6 +174,30 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;
     case O::Time: return TMGetTime();
+    // the generator list
+    case O::GeneratorsClear: EERandomMap::sRandomMapGenerators.clear();
+        break;
+    // a predicate: the sort COMDATs pass a 4-byte P (0x68b733 _Unguarded_insert, _Adjust_heap); provisional name
+    case O::GeneratorsSort: std::sort(EERandomMap::sRandomMapGenerators.begin(), EERandomMap::sRandomMapGenerators.end(), std::less<EERMGenerator>());
+        break;
+    case O::GeneratorCount: return (int64_t)EERandomMap::sRandomMapGenerators.size();
+    case O::GeneratorMatches: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)EERandomMap::sRandomMapGenerators[(size_t)a[0]].mName), reinterpret_cast<const unsigned char*>((const char*)*(const UWideString*)a[1])) == 0;
+    case O::GeneratorIsDefault: return PlatStrICmp(EERandomMap::sRandomMapGenerators[(size_t)a[0]].mModuleName, kEERMGeneratorName) == 0;
+    case O::GeneratorName: EERMText(a[0], UString((const char*)EERandomMap::sRandomMapGenerators[(size_t)a[1]].mName));
+        break;
+    case O::GeneratorPush: EERandomMap::sRandomMapGenerators.push_back(EERMGenerator{UWideString((const char*)a[0]), UWideString((const char*)a[2]), UString((const char*)a[1])});
+        break;
+    case O::FindNew: return P64(new EERMFind);
+    case O::FindDelete: delete (EERMFind*)p;
+        break;
+    case O::FindFirst: return ((EERMFind*)p)->mDirectory.GetFirstFile("*.rmv", ((EERMFind*)p)->mFile);
+    case O::FindNext: return ((EERMFind*)p)->mDirectory.GetNextFile(((EERMFind*)p)->mFile);
+    case O::FindName: EERMText(a[0], ((EERMFind*)p)->mFile.GetFile());
+        break;
+    case O::FindText: return EERMReadText((const char*)(((EERMFind*)p)->mFile.GetVolume() + ((EERMFind*)p)->mFile.GetDirectory() + ((EERMFind*)p)->mFile.GetFile()), (EeRmapScriptBytes*)a[0]);
+    case O::ResourceString: return EERMResourceString(a[0], (unsigned long)a[1]);
+    case O::Verify: ESVERIFY_AT(a[0] != 0, (long)a[1]);
+        break;
     default: return (int64_t)ee_rmap_cpp_f(inOp, p, a, f);
     }
     return 0;
@@ -190,26 +230,8 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
                                   const UWideString& inGenerator, unsigned long inSeed, EEMap* inMap,
                                   GE3DPoint& outLocation)
 {
-    unsigned long theGeneratorIndex = 0;
-    while (theGeneratorIndex < EERandomMap::sRandomMapGenerators.size()) {
-        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)EERandomMap::sRandomMapGenerators[theGeneratorIndex].mName),
-                     reinterpret_cast<const unsigned char*>((const char*)inGenerator)) == 0)
-            break;
-        theGeneratorIndex++;
-    }
-    ESVERIFY_AT(theGeneratorIndex < EERandomMap::sRandomMapGenerators.size(), 1340);
-    EERMGenerator& theGenerator = EERandomMap::sRandomMapGenerators.begin()[theGeneratorIndex];
-    if (PlatStrICmp(theGenerator.mModuleName, kEERMGeneratorName) != 0)
-        return kErrorNoMoreFiles;
     EERMWorld theWorld = {inMap, &inPlayers, inOptions};
-    UString theScript(theGenerator.mName);
-    float theLocation[3];
-    ee_rmap_create_random_map(&theWorld, inMap, (uint32_t)inPlayer, (const uint8_t*)(const char*)theScript,
-                              theScript.GetLength(), (uint32_t)inSeed, theLocation);
-    outLocation.SetX(theLocation[0]);
-    outLocation.SetY(theLocation[1]);
-    outLocation.SetZ(theLocation[2]);
-    return kErrorOK;
+    return ee_rmap_create_random_map(&theWorld, inMap, (uint32_t)inPlayer, &inGenerator, (uint32_t)inSeed, &outLocation.mX);
 }
 
 // Returns the number of random-map generators
@@ -256,53 +278,11 @@ long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex)
     return theResult;
 }
 
-// Lists the random-map generators: each .rmv script naming the linked generator (Default), with its string-table display name,
-// sorted; asserts that both exist
+// Lists the random-map generators: each .rmv script naming the linked generator (Default), with its string-table
+// display name, sorted; asserts that there is one (ee_sim rmap object.rs initialize_generators)
 long EERandomMap::Initialize(const FSFileSpec& inDirectory)
 {
-    std::vector<UString> theValidPlugIns;
-    FSFileSpec theDirectory;
-    FSFileSpec theFile;
-    EERMGenerator theGenerator;
-    EERandomMap::sRandomMapGenerators.clear();
-    theValidPlugIns.push_back(kEERMGeneratorName);
-    ESDebugOut("EERandomMap::Initialize: %s random map generator detected.\n", kEERMGeneratorName);
-
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "Data\\Random Map Scripts\\");
-    if (theDirectory.GetFirstFile("*.rmv", theFile) == 0) {
-        do {
-            if (theFile.FOpen("r") != 0)
-                continue;
-            std::string theText;            // the script, as the C runtime's text mode reads it
-            char theBuffer[0x1000];
-            size_t theRead;
-            while ((theRead = fread(theBuffer, 1, sizeof(theBuffer), (FILE*)theFile)) != 0)
-                theText.append(theBuffer, theRead);
-            theFile.Close();
-            // its UseMapGenerator and StringTableID lines (ee_rmap rmv.rs)
-            const UString& theFileName = theFile.GetFile();
-            EeRmapScriptGenerator theScript;
-            void* theHandle = NULL;
-            bool theHasGenerator = ee_rmap_script_generator(theFileName, theFileName.GetLength(), theText.data(),
-                                                            theText.size(), &theScript, &theHandle);
-            if (theHasGenerator) {
-                theGenerator.mName = UString().Copy(theScript.name, 0, (unsigned long)theScript.name_length, 0, true);
-                theGenerator.mModuleName = UString().Copy(theScript.module, 0, (unsigned long)theScript.module_length, 0, true);
-                ee_rmap_script_generator_free(theHandle);
-            }
-            if (theHasGenerator &&
-                std::find(theValidPlugIns.begin(), theValidPlugIns.end(), theGenerator.mModuleName) !=
-                    theValidPlugIns.end()) {
-                if (!theScript.has_string_id || gResource->GetString(theScript.string_id, theGenerator.mDisplayName) != 0)
-                    theGenerator.mDisplayName = theGenerator.mName;
-                EERandomMap::sRandomMapGenerators.push_back(theGenerator);
-            }
-        } while (theDirectory.GetNextFile(theFile) == 0);
-    }
-    ESVERIFY_AT(EERandomMap::sRandomMapGenerators.size() > 0, 1652);
-    // a predicate: the sort COMDATs pass a 4-byte P (0x68b733 _Unguarded_insert, _Adjust_heap); provisional name
-    std::sort(EERandomMap::sRandomMapGenerators.begin(), EERandomMap::sRandomMapGenerators.end(), std::less<EERMGenerator>());
+    ee_rmap_initialize_generators();
     return 0;
 }
 

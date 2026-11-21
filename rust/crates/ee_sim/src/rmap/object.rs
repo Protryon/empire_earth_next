@@ -33,8 +33,8 @@ use crate::rmap::map::{
 };
 use crate::rmap::math::Point;
 use crate::rmap::rmv::{
-    read_script, script_name, EeRmapScriptBytes, EeRmapScriptRegion, EeRmapScriptScalars, EeRmapScriptTerrain,
-    EeRmapScriptWall, ScriptHost, ScriptTables,
+    read_script, script_generator, script_name, EeRmapScriptBytes, EeRmapScriptRegion, EeRmapScriptScalars,
+    EeRmapScriptTerrain, EeRmapScriptWall, ScriptHost, ScriptTables,
 };
 use crate::units::uu_note::Note;
 use crate::units::uu_tiles::{self, Tile};
@@ -142,6 +142,31 @@ pub enum EeRmapCpp {
     /// `ESDebugOut("%s", a0)`
     DebugOut,
     Time,
+    // ---- the generator list (EERandomMap::sRandomMapGenerators; p: the script search, EERMFind)
+    GeneratorsClear,
+    GeneratorsSort,
+    GeneratorCount,
+    /// `PlatMbsICmp(sRandomMapGenerators[a0].mName, *(UWideString*)a1) == 0`
+    GeneratorMatches,
+    /// `PlatStrICmp(sRandomMapGenerators[a0].mModuleName, "Default") == 0`
+    GeneratorIsDefault,
+    /// the generator's name into the sink a1
+    GeneratorName,
+    /// a generator pushed: its name, module and display name (C strings a0, a1, a2)
+    GeneratorPush,
+    FindNew,
+    FindDelete,
+    /// `mDirectory.GetFirstFile("*.rmv", mFile)`
+    FindFirst,
+    FindNext,
+    /// the found file's name into the sink a0
+    FindName,
+    /// the found file's text into the sink a0 -> false when it does not open
+    FindText,
+    /// `gResource->GetString(a1, display)` into the sink a0 -> its result
+    ResourceString,
+    /// `ESVERIFY_AT(a0 != 0, a1)`
+    Verify,
 }
 
 pub use EeRmapCpp as O;
@@ -1120,6 +1145,97 @@ fn debug_out(line: &str) {
     h(O::DebugOut, 0, &[bytes.as_ptr() as usize as i64]);
 }
 
+/// `EERandomMap::Initialize`: the generator list, every `.rmv` script of `Data\Random Map Scripts` that names the
+/// linked generator (Default), with its string table display name (else its name), sorted by display name (the C++'s
+/// `std::sort`); at least one.
+pub fn initialize_generators() {
+    h(O::GeneratorsClear, 0, &[]);
+    debug_out(
+        "EERandomMap::Initialize: Default random map generator detected.
+",
+    );
+    let find = h(O::FindNew, 0, &[]) as usize;
+    if h(O::FindFirst, find, &[]) == 0 {
+        loop {
+            let mut sink = EeRmapScriptBytes(Vec::new());
+            if h(O::FindText, find, &[&mut sink as *mut EeRmapScriptBytes as usize as i64]) != 0 {
+                let file = text(O::FindName, find, &[]);
+                if let Some(g) = script_generator(&file, &sink.0) {
+                    // the valid plug-ins' find: a C string compare with the linked generator's name
+                    if g.module.split(|&c| c == 0).next() == Some(&b"Default"[..]) {
+                        let display = match g.string_id {
+                            Some(id) => {
+                                let mut out = EeRmapScriptBytes(Vec::new());
+                                let ptr = &mut out as *mut EeRmapScriptBytes as usize as i64;
+                                if h(O::ResourceString, 0, &[ptr, id as i64]) == 0 {
+                                    out.0
+                                } else {
+                                    g.name.clone()
+                                }
+                            }
+                            None => g.name.clone(),
+                        };
+                        let c = |b: &[u8]| {
+                            let mut v = b.to_vec();
+                            v.push(0);
+                            v
+                        };
+                        let (name, module, display) = (c(&g.name), c(&g.module), c(&display));
+                        let at = |v: &Vec<u8>| v.as_ptr() as usize as i64;
+                        h(O::GeneratorPush, 0, &[at(&name), at(&module), at(&display)]);
+                    }
+                }
+            }
+            if h(O::FindNext, find, &[]) != 0 {
+                break;
+            }
+        }
+    }
+    h(O::FindDelete, find, &[]);
+    h(O::Verify, 0, &[(h(O::GeneratorCount, 0, &[]) > 0) as i64, 1652]);
+    h(O::GeneratorsSort, 0, &[]);
+}
+
+/// `EERandomMap::Initialize` (its directory argument is unused, as the original's).
+#[no_mangle]
+pub extern "C" fn ee_rmap_initialize_generators() {
+    initialize_generators()
+}
+
+/// The static `EERandomMap::CreateRandomMap`: the generator found by name (`generator` the C++'s `UWideString*`,
+/// compared as the C++ did); 7 (`kErrorNoMoreFiles`) when its script names another generator, else the map made and
+/// its start location in `out` -> 0.
+///
+/// # Safety
+/// `out` has room for three floats; `generator` is a live `UWideString`; `context` is the world `ee_rmap_cpp` expects.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rmap_create_random_map(
+    context: *mut c_void,
+    map: *mut c_void,
+    player: u32,
+    generator: *const c_void,
+    seed: u32,
+    out: *mut f32,
+) -> i32 {
+    let count = h(O::GeneratorCount, 0, &[]);
+    let mut index = 0;
+    while index < count {
+        if h(O::GeneratorMatches, 0, &[index, generator as usize as i64]) != 0 {
+            break;
+        }
+        index += 1;
+    }
+    h(O::Verify, 0, &[(index < count) as i64, 1340]);
+    if h(O::GeneratorIsDefault, 0, &[index]) == 0 {
+        return 7;
+    }
+    let script = text(O::GeneratorName, 0, &[index]);
+    let location = create_random_map(World { context: context as usize, map: map as usize }, player, &script, seed);
+    // SAFETY: the caller's guarantee
+    unsafe { std::ptr::copy_nonoverlapping(location.as_ptr(), out, 3) };
+    0
+}
+
 /// The static `EERandomMap::CreateRandomMap` after the generator's lookup: a new map per try, retried with a fresh
 /// seed (11 tries at most) until the players are connected; the start location of the last try.
 pub fn create_random_map(world: World, player: u32, script: &[u8], mut seed: u32) -> [f32; 3] {
@@ -1137,28 +1253,6 @@ pub fn create_random_map(world: World, player: u32, script: &[u8], mut seed: u32
     }
     debug_out(&format!("!Playable random map created after {attempts} attempts.\n"));
     location
-}
-
-/// The static `EERandomMap::CreateRandomMap` (its generator found): `context` the C++ world (`EERMWorld`), `map` its
-/// `EEMap*`, `script` the generator's script name (`length` bytes); the start location into `out` (x, y, z).
-///
-/// # Safety
-/// `script` holds `length` bytes; `out` has room for three floats; `context` is the world `ee_rmap_cpp` expects.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_create_random_map(
-    context: *mut c_void,
-    map: *mut c_void,
-    player: u32,
-    script: *const u8,
-    length: usize,
-    seed: u32,
-    out: *mut f32,
-) {
-    // SAFETY: the caller's guarantee
-    let script = if length == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(script, length) } };
-    let location = create_random_map(World { context: context as usize, map: map as usize }, player, script, seed);
-    // SAFETY: the caller's guarantee
-    unsafe { std::ptr::copy_nonoverlapping(location.as_ptr(), out, 3) };
 }
 
 #[cfg(test)]

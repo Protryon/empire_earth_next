@@ -26,6 +26,8 @@
 #include "rust/game/fixture.h"
 #include "rust/game/game_log.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
+#include "rust/game/preload.h"
 #include "rust/game/screens.h"
 #include "rust/game/sight_capture.h"
 #include "rust/game/sim_driver.h"

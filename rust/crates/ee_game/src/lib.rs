@@ -453,3 +453,9 @@ pub mod cp_engine;
 pub mod sight_capture;
 // the game's own bodies over one-statement C++ cases (EEGameOps.cpp): the calamity classes' world steps, ...
 pub mod gamecpp;
+
+// the physics thread's bodies (EEPhysics.cpp's methods; world lane round 1)
+pub mod physics;
+
+// the data pre-loading thread's bodies (EEDataPreLoading.cpp; world lane round 1)
+pub mod preload;

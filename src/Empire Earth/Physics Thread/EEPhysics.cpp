@@ -92,19 +92,13 @@
 #include <functional>
 #include "ee/EEGameLog.h"
 #include "ee/EECPNext.h"
+#include "rust/game/physics.h"
+#include "rust/sim/app.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gPhysicsDataKey("EEPhysics Data");
 
-// the unit's other data (provisional names): the area effects' update period (0x4422f8, a unit-local .rdata float)
-// (the physics totals 0x531cf0 / 0x531cf4 are EEPhysics::mInputMessagesProcessed / mLastOutOfSynchChecksum)
-static const float kAreaEffectInterval = 2000.0f;
-static unsigned long sReportedFirst;
-static unsigned long sReportedSecond;
-static unsigned long sReportPeriod;
-static bool sFirstReport = true;            // 0x4c1e34 (.data)
 extern UString gCampaignUser;              // 0x531cd0 (defined at the end of this unit; provisional name)
-// EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h (the main game form's blinking buttons)
 unsigned long EEGetCivTimerLimit();         // 0x27ffae (cdecl: 300000; the civ timer limits, EEUIFMainGame.cpp's range)
 unsigned long EEGetCivTimerSecondWarning();  // 0x27ffba (270000) (provisional names)
 unsigned long EEGetCivTimerFirstWarning();  // 0x27ffb4 (240000)
@@ -126,350 +120,53 @@ EEPhysics::~EEPhysics()
     TSScheduler::DestroyCriticalSection(this->mSaveGameLock);
 }
 
-// Autosaves when autosaves are on: names the file "AutoSave <date - time>", records it in the preferences
-// and sends every player the save request (waiting up to 15 s)
-void EEPhysics::AutoSave()
-{
-    UWideString theName;
-    if (gGamePreferences.mSettings.mNumberOfAutoSaves > 0) {
-        TMTime theTime;
-        TMGetTimeOfDay(theTime);
-        sprintf(theName, "%s %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds%s", "AutoSave", theTime.mYear, theTime.mMonth + 1,
-                theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
-        gGamePreferences.mSettings.mLastAutoSave = theName;
-        gGamePreferences.Save();
-        static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(
-            new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, theName}),
-            15000, 12);
-    }
-}
-
-// Drops every queued server message (under the server queue lock)
-void EEPhysics::ClearServerMessages()
-{
-    this->mServerMessageQueueLock->Enter();
-    while (this->mServerMessages.size() > 0) {
-        NEMessage* theMessage = this->mServerMessages.front();
-        this->mServerMessages.pop_front();
-        theMessage->Dereference();
-    }
-    this->mServerMessageQueueLock->Leave();
-}
-
-// Places the queued units, adds every player's pending units, applies the queued unit swaps, then removes
-// every player's killed units
-void EEPhysics::FlushWorld()
-{
-    unsigned long theNumPlayers = gWorld.mNumPlayers;
-    RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
-    gWorld.FlushQueuedPlacements();
-    unsigned long i;
-    for (i = 0; i < theNumPlayers; i++) {
-        if (gWorld.mPlayers[i] != NULL)
-            gWorld.mPlayers[i]->AddPendingUnits(0, 1);
-    }
-    gWorld.QueueBornDeactivations();   // port: the units given an id just now (EEWorld::DeactivateUnit)
-    this->ProcessUnitSwaps();
-    for (i = 0; i < theNumPlayers; i++) {
-        if (gWorld.mPlayers[i] != NULL)
-            gWorld.mPlayers[i]->RemoveKilledUnits();
-    }
-}
-
-// Runs every owed physics tick, draining the input queue for more whenever none are left
-void EEPhysics::RunOwedTicks()
-{
-    if (this->mTicksToProcess == 0)
-        this->DrainInput();
-    while (this->mTicksToProcess > 0) {
-        this->Tick();
-        if (this->mTicksToProcess == 0)
-            this->DrainInput();
-    }
-}
-
-// Ends the game: every non-observer player but player 0 wins or loses, a won campaign scenario is recorded,
-// the in-game options button blinks, the teams are cleared and a server pauses the game
-void EEPhysics::EndGame(bool inIsVictory)
-{
-    EECampaignProgress theProgress;
-    EEGameOptionsPlayer thePlayer;
-    long theResult;
-    unsigned long i;
-    gB529065 = true;
-    for (i = 1; i < gWorld.mNumPlayers; i++) {
-        if (gWorld.mPlayers[i]->mObserverMode == false) {
-            gWorld.RemovePlayerFromGame(inIsVictory, i);
-            gWorld.mPlayers[i]->SetGameResult(inIsVictory == true ? 1 : 2);
-        }
-    }
-    if (gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0
-        && gWorld.GetCurrentPlayer()->mGameResult == 1) {
-        theResult = theProgress.Load(UWideString(gCampaignUser), gWorld.mGameOptions.mCampaignName,
-                                     gWorld.mGameOptions.mCampaignChecksum, true);
-        if (theResult == kErrorOK)
-            theProgress.SaveCompletedScenario(UWideString(gCampaignUser), gWorld.mGameOptions.mCampaignName,
-                                 gWorld.mGameOptions.mScenarioName, gWorld.mGameOptions.mCampaignChecksum);
-    }
-    if (gWorld.GetCurrentPlayer()->mGameResult != 0) {
-        EESetCivBuilderButtonBlinking(false);
-        if (dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL)
-            (static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
-    }
-    gWorld.mTeams.clear();
-    ee_app_teams_clear();   // (the teams: ee_sim app teams.rs)
-    if (gCommunications->IsServer() == true)
-        (static_cast<NESynchronousServer*>(gCommunications))->PauseGame();
-    this->mGameOver = true;
-}
-
-// Returns the world's out-of-synch checksum (inFlags picks the parts: map, calamities, air traffic, continents,
-// selections); inDump also writes everything to "OOS <date>.log"
-// NEAR: frame 8 bytes smaller (two temporaries of the out-of-line begin()/operator+); register choice
+// The methods' bodies are Rust (ee_game physics.rs, world lane round 1); each C++ call they make is a case of
+// ee_physcpp below
+void EEPhysics::AutoSave() { ee_physics_auto_save(this); }
+void EEPhysics::ClearServerMessages() { ee_physics_clear_server_messages(this); }
+void EEPhysics::FlushWorld() { ee_physics_flush_world(this); }
+void EEPhysics::RunOwedTicks() { ee_physics_run_owed_ticks(this); }
+void EEPhysics::EndGame(bool inIsVictory) { ee_physics_end_game(this, inIsVictory); }
 unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlags)
-{
-    UWideString theName;
-    unsigned long j;
-    unsigned long i;
-    unsigned long m;
-    FILE* theFile;
-    EEPlayer* thePlayer;
-    EESelectedGroup* theGroup;
-    EEGroup* theActiveGroup;
-    RTSUnit* theUnit;
-    unsigned long theChecksum = 0;
-    TMGetTime();
-    if (inDump == true) {
-        TMTime theTime;
-        TMGetTimeOfDay(theTime);
-        sprintf(theName, "OOS %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds.log", theTime.mYear, theTime.mMonth + 1, theTime.mDay,
-                theTime.mHour, theTime.mMinute, theTime.mSecond);
-        theFile = PlatFOpen(theName, "w");
-        ESVERIFY_AT(theFile != NULL, 544);
-        for (i = 0; i < gWorld.mNumPlayers; i++) {
-            thePlayer = gWorld.mPlayers[i];
-            fprintf(theFile, "\n");
-            fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Player Number: %ld  *************\n",
-                    thePlayer->mPlayerID);
-            theGroup = thePlayer->mActiveGroup;
-            if (theGroup != NULL) {
-                fprintf(theFile, "\n");
-                fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Selected Group Count: %ld  *************\n",
-                        theGroup->GetNumUnits());
-                for (j = 0; j < theGroup->GetNumUnits(); j++) {
-                    unsigned long theID = theGroup->GetUnit(j)->mUnitID;
-                    fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%ld has an id of %ld(%08lx)\n", j, theID, theID);
-                }
-            }
-            fprintf(theFile, "\n");
-            fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Active Group Count: %ld  *************\n",
-                    thePlayer->GetNumRunningGroups());
-            for (j = 0; j < thePlayer->GetNumRunningGroups(); j++) {
-                theActiveGroup = thePlayer->GetRunningGroup(j);
-                fprintf(theFile, "\n");
-                fprintf(theFile, "OUT OF SYNCH DUMP:  Active Group #%ld has a unit count of %ld\n", j,
-                        theActiveGroup->GetNumUnits());
-                for (m = 0; m < theActiveGroup->GetNumUnits(); m++) {
-                    unsigned long theID = theActiveGroup->GetUnit(m)->mUnitID;
-                    fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%ld has an id of %ld(%08lx)\n", m, theID, theID);
-                }
-            }
-            ee_units_atc_dump(thePlayer->mAirTraffic[0], theFile);
-            ee_units_atc_dump(thePlayer->mAirTraffic[1], theFile);
-            ee_units_atc_dump(thePlayer->mAirTraffic[2], theFile);
-            ee_units_atc_dump(thePlayer->mAirTraffic[3], theFile);
-        }
-        gPathManager.DumpOutOfSynch(theFile);
-        if (inFlags & 4)
-            gWorld.mMap->DumpOutOfSynch(theFile);
-        if (inFlags & 0x10) {
-            EECalamityManager::GetInstance()->DumpOutOfSynch(theFile);
-            gWorld.GetContagionManager()->DumpOutOfSynch(theFile);
-        }
-        for (theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext)
-            (static_cast<EEUnit*>(theUnit))->OutOfSynchDump(theFile, inFlags);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Dumped on PT %ld *******\n", this->mNumTicksDone);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Current PT %ld *******\n", this->mCurrentTick);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Continent Manager Checksum: %ld *******\n", gContinentManagerChecksum);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Overall Checksum: %d *******\n", 0);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* this->mRandomNumberGenerator.GetSeed(): %ld *******\n",
-                this->mRandom.GetSeed());
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of user-input messages processed: %ld *******\n",
-                this->mInputMessagesProcessed);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of Messages in Server Queue: %zu *******\n",
-                gPhysics->mServerMessages.size());
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of CT Physics Ticks To Process: %ld *******\n",
-                gPhysics->mTicksToProcess);
-        fclose(theFile);
-    }
-    // New (R5b.4): the units' flags 1 (hit points + tile y + tile x of every complex unit on the map) and 2 (the times
-    // updated, the active group, the command's type, the location and the height) are the unit store's sums over its
-    // records on the map (ee_units store.rs checksum_flag1, checksum_flag2; USCK checks both against this walk's
-    // GetChecksum); the walk keeps the other unit flags (0x20, 8). The sums wrap and commute, so the total is the
-    // original's. The game's own out-of-sync check (flag 1 alone) walks no unit.
-    if (inFlags & 1)
-        theChecksum += (unsigned long)ee_units_store_checksum_flag1();
-    if (inFlags & 2)
-        theChecksum += (unsigned long)ee_units_store_checksum_flag2();
-    const unsigned long theUnitFlags = inFlags & ~3ul;
-    if (theUnitFlags & (0x20 | 8)) {
-        for (theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext)
-            theChecksum += static_cast<EEUnit*>(theUnit)->GetChecksum(theUnitFlags);
-    }
-    for (i = 0; i < gWorld.mNumPlayers; i++) {
-        thePlayer = gWorld.mPlayers[i];
-        if (inFlags & 0x200) {
-            theGroup = thePlayer->mActiveGroup;
-            if (theGroup != NULL) {
-                for (j = 0; j < theGroup->GetNumUnits(); j++)
-                    theChecksum += theGroup->GetUnit(j)->mUnitID * thePlayer->mPlayerID;
-            }
-        }
-        if (!(inFlags & 0x40))
-            continue;
-        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[0]);
-        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[1]);
-        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[2]);
-        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[3]);
-    }
-    theChecksum += this->mCurrentTick + this->mRandom.GetSeed() + this->mInputMessagesProcessed;
-    theChecksum += EECPOutOfSynchChecksum();   // new: the players' resources and the AI's state (ee/EECPTrace.h)
-    if (inFlags & 4)
-        theChecksum += gWorld.mMap->ComputeChecksum();
-    if (inFlags & 0x100)
-        theChecksum += gContinentManagerChecksum;
-    if (inFlags & 0x10)
-        theChecksum += EECalamityManager::GetInstance()->GetOutOfSynchChecksum();
-    TMGetTime();
-    this->mLastOutOfSynchChecksum = theChecksum;
-    return theChecksum;
-}
+    { return ee_physics_out_of_synch_checksum(this, inDump, inFlags); }
+void EEPhysics::GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime)
+    { ee_physics_minutes_and_seconds(this, outMinutes, outSeconds, inTime); }
+long EEPhysics::GetUnitSwapKind(EEComplexUnit* inUnit) { return ee_physics_unit_swap_kind(this, inUnit); }
+void EEPhysics::Init() { ee_physics_init(this); }
+void EEPhysics::Lock() { gWorld.mLock->WriteLock(); }
+void EEPhysics::QueueServerMessage(NEMessage* inMessage) { this->mServerMessages.push_back(inMessage); }
+void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
+    { ee_physics_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
+void EEPhysics::Idle() { ee_physics_idle(this); }
+void EEPhysics::Tick() { ee_physics_tick(this); }
+void EEPhysics::QueueMessage(NEMessage* inMessage) { ee_physics_queue_message(this, inMessage); }
+void EEPhysics::SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
+void EEPhysics::ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
+void EEPhysics::DrainInput() { ee_physics_drain_input(this); }
+void EEPhysics::ReportStatistics() { ee_physics_report_statistics(this); }
+long EEPhysics::PostAutoSave() { return ee_physics_post(this, 0x50a); }
+long EEPhysics::PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
+long EEPhysics::PostInit() { return ee_physics_post(this, 0x509); }
+void EEPhysics::UpdateTiming() { ee_physics_update_timing(this); }
+void EEPhysics::QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew) { ee_physics_queue_unit_swap(this, inOld, inNew); }
+void EEPhysics::Unlock() { gWorld.mLock->WriteUnlock(); }
+void EEPhysics::UpdateAreaEffectsClock() { ee_physics_update_area_effects_clock(this); }
+void EEPhysics::UpdateCivTimer() { ee_physics_update_civ_timer(this); }
+void EEPhysics::ServeLoadSaveRequests() { ee_physics_serve_load_save_requests(this); }
+void EEPhysics::CheckShiftMode() { ee_physics_check_shift_mode(this); }
+void EEPhysics::UpdateWeather() { ee_physics_update_weather(this); }
 
-// Returns the game speed and elapsed game time as text ("<speed> hh:mm:ss"); the time-of-day conversions are
-// computed and unused
-// NEAR: the time of day is also copied to a frame float (fld [ebp-4]) in the original
+// Returns the game speed and elapsed game time as text ("<speed> hh:mm:ss")
 UWideString EEPhysics::GetTimeString()
 {
-    UWideString theString;
-    long theDayHours = UMFloatToLong(gWorld.GetTimeOfDay() * 24.0f);
-    float theTimeOfDay = gWorld.GetTimeOfDay();
-    unsigned long theHourOfDay = UMFloatToLong(gWorld.GetTimeOfDay() * 24.0f);
-    long theMinuteOfDay = UMFloatToLong(theTimeOfDay * 24.0f - theHourOfDay * 60.0f);
-    float theTime = gPhysics->mGameClock;
-    unsigned long theHours;
-    theHours = theTime >= 3600000.0f ? UMFloorUnsigned(theTime * 2.7777778e-07f) : 0;
-    unsigned long theMinutes = 0;
-    if (theTime >= 60000.0f)
-        theMinutes = ((unsigned long)theTime - theHours * 3600000) / 60000;
-    unsigned long theSeconds = ((unsigned long)theTime - theHours * 3600000 - theMinutes * 60000) / 1000;
-    if (theHours < 100)
-        sprintf(theString, "%03.2f %02ld:%02ld:%02ld", gWorld.mGameSpeed, theHours, theMinutes, theSeconds);
-    else
-        sprintf(theString, "%03.2f %03ld:%02ld:%02ld", gWorld.mGameSpeed, theHours, theMinutes, theSeconds);
-    return theString;
+    char theText[64];
+    ee_physics_time_string(this, theText, sizeof theText);
+    return UWideString(theText);
 }
 
-// Splits a game time in ms (0: the current one) into whole minutes and the seconds past them
-void EEPhysics::GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime)
-{
-    if (inTime == 0)
-        inTime = this->mGameTime;
-    *outMinutes = inTime / 1000 / 60;
-    *outSeconds = (inTime - *outMinutes * 60000) / 1000;
-}
-
-// Returns the unit's role in the queued unit swaps (the earliest wins): old 1, new 3; other owner 2 / 4;
-// citizen to non-citizen 5 / 7, non-citizen to citizen 6 / 8; 0 when it is not swapped
-// NEAR: inline budget: the original calls begin() out of line from the second mSound2Index7[i] on; mIsCitizen through a cast
-// (EEPUnitSwap holds EEUnit*)
-long EEPhysics::GetUnitSwapKind(EEComplexUnit* inUnit)
-{
-    long theResult = 0;
-    for (long i = this->mUnitSwaps.size() - 1; i >= 0; i--) {
-        if (this->mUnitSwaps[i].mOld == inUnit) {
-            EEPlayer* theOldPlayer = this->mUnitSwaps[i].mOld->GetPlayer();
-            if (theOldPlayer == this->mUnitSwaps[i].mNew->GetPlayer()) {
-                theResult = 1;
-                if (static_cast<EEComplexUnit*>(this->mUnitSwaps[i].mOld)->mIsCitizen) {
-                    if (!static_cast<EEComplexUnit*>(this->mUnitSwaps[i].mNew)->mIsCitizen)
-                        theResult = 5;
-                } else {
-                    if (static_cast<EEComplexUnit*>(this->mUnitSwaps[i].mNew)->mIsCitizen)
-                        theResult = 6;
-                }
-            } else
-                theResult = 2;
-        } else if (this->mUnitSwaps[i].mNew == inUnit) {
-            EEPlayer* theOldPlayer = this->mUnitSwaps[i].mOld->GetPlayer();
-            if (theOldPlayer == this->mUnitSwaps[i].mNew->GetPlayer()) {
-                theResult = 3;
-                if (static_cast<EEComplexUnit*>(this->mUnitSwaps[i].mOld)->mIsCitizen) {
-                    if (!static_cast<EEComplexUnit*>(this->mUnitSwaps[i].mNew)->mIsCitizen)
-                        theResult = 7;
-                } else {
-                    if (static_cast<EEComplexUnit*>(this->mUnitSwaps[i].mNew)->mIsCitizen)
-                        theResult = 8;
-                }
-            } else
-                theResult = 4;
-        }
-    }
-    return theResult;
-}
-
-// Resets the simulation's clocks, tick counters and game flags and drops the queued server messages and
-// load/save requests
-void EEPhysics::Init()
-{
-    this->mCurrentTick = 0;
-    this->mNumTicksDone = 0;
-    this->mF84 = 0.0f;
-    this->mTicksPerGameSecond = 0.0f;
-    this->mGameTime = 0;
-    this->mTickSeconds = 0.0f;
-    this->mTickRandom = 0;
-    this->mTimeOfDayStep = 0.0f;
-    this->mTickTime = 0.0f;
-    this->mGameClock = 0.0f;
-    this->mTickStartTime = TMGetTime();
-    this->mPreviousTickStartTime = TMGetTime();
-    this->mAreaEffectsClock = 0.0f;
-    this->mTickTimeMs = 0;
-    this->mShiftModeClock = 0.0f;
-    this->mTicksToProcess = 0;
-    this->mTickGapSum = 0;
-    this->mTickGapCount = 0;
-    this->mTickWorkSum = 0;
-    this->mTickWorkCount = 0;
-    this->mAveragePhysicsUpdateTime = 0;
-    this->mAverageTimeBetweenPhysicsTicks = 0;
-    this->mLD4 = 0;
-    this->mTimeOfDayRuns = false;
-    this->mGameStarted = false;
-    this->mBE2 = false;
-    this->mCivTimerRuns = true;
-    this->mCivTimerFirstWarning = false;
-    this->mCivTimerSecondWarning = false;
-    this->mGameOver = false;
-    this->mBE7 = false;
-    this->mResourceTimerPending = true;
-    this->ClearServerMessages();
-    this->mSaveGameLock->Enter();
-    for (unsigned long i = 0; i < this->mLoadSaveRequests.size(); i++)
-        this->mLoadSaveRequests[i]->Dereference();
-    this->mLoadSaveRequests.clear();
-    this->mSaveGameLock->Leave();
-    this->mInputMessagesProcessed = 0;
-    this->SetSpeed(this->mSpeed);
-}
-
-// port: the random seed a saved game was saved with, put back at the loaded game's first tick. The physics chunk is
-// read before the load has finished: rebuilding the players draws from the physics random numbers afterwards (the
-// computer players' favourite unit types as their epochs are entered again, herds, patrol points, the lobby's
-// player records), so the loaded game played on from another seed than the game that was saved (R5a.2, "load
-// equals continue"). Not saved state: a load sets it, the first tick spends it.
-static unsigned long sLoadedSeed = 0;
-static bool sLoadedSeedPending = false;
+// port: the loaded values the load's rebuilding set again (EEAfterLoad), then those that wait for the others
+// (EEAfterLoadLast), run at the loaded game's first tick (R5a.2, "load equals continue"; the loaded seed is Rust's:
+// ee_physics_loaded_seed)
 static std::vector<std::function<void()> > sAfterLoad;   // EEAfterLoad's (ee/EESaveGameFiles.h)
 
 void EEAfterLoad(std::function<void()> inFixup)
@@ -482,6 +179,23 @@ static std::vector<std::function<void()> > sAfterLoadLast;   // EEAfterLoadLast'
 void EEAfterLoadLast(std::function<void()> inFixup)
 {
     sAfterLoadLast.push_back(inFixup);
+}
+
+static void EEPhysicsRunAfterLoad()
+{
+    if (!sAfterLoad.empty()) {
+        std::vector<std::function<void()> > theFixups;
+        theFixups.swap(sAfterLoad);
+        for (size_t i = 0; i < theFixups.size(); i++)
+            theFixups[i]();
+        EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
+    }
+    if (!sAfterLoadLast.empty()) {
+        std::vector<std::function<void()> > theFixups;
+        theFixups.swap(sAfterLoadLast);
+        for (size_t i = 0; i < theFixups.size(); i++)
+            theFixups[i]();
+    }
 }
 
 // New (R5b.4, round 28): the C++ parts of EEPhysics::Load and Save (ee_units physics_save.rs): the file's primitives
@@ -512,240 +226,17 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
     EEPhysicsSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
     long theResult = ee_units_physics_load(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this),
                                            (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-    if (theResult == kErrorOK) {   // port: the loaded seed comes back at the first tick (sLoadedSeed)
-        sLoadedSeed = this->mRandom.GetSeed();
-        sLoadedSeedPending = true;
-    }
+    if (theResult == kErrorOK)   // port: the loaded seed comes back at the first tick (ee_game physics.rs)
+        ee_physics_loaded_seed(this->mRandom.GetSeed());
     return theResult;
 }
 
-// Takes the world's write lock
-void EEPhysics::Lock()
+// Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
+// to the saved game; returns the first write error
+long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    gWorld.mLock->WriteLock();
-}
-
-// Appends a message to the server message queue (no lock taken)
-void EEPhysics::QueueServerMessage(NEMessage* inMessage)
-{
-    this->mServerMessages.push_back(inMessage);
-}
-
-// Handles the physics thread's messages: start (restarts the tick clock), time of day toggle / reset, scenario
-// dialog, re-init, autosave, a load/save request (queued with no lock), 0x50c; passes the rest to the base
-void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-{
-    switch (inMessage) {
-    case 0x404:
-        this->mPreviousTickStartTime = this->mTickStartTime = TMGetTime();
-        RTSPhysics::HandleMessage(0x404, inParameter1, inParameter2);
-        break;
-    case 0x502:
-        this->mTimeOfDayRuns = !this->mTimeOfDayRuns;
-        break;
-    case 0x503:
-        this->mTimeOfDayRuns = false;
-        gWorld.mLock->WriteLock();
-        gWorld.SetTimeOfDay(0.35f);
-        gWorld.mLock->WriteUnlock();
-        break;
-    case 0x508:
-        if (gWorld.mScenarioManager && !gScenarioSimDialogs)
-            gWorld.mScenarioManager->ShowDialogMessage();
-        break;
-    case 0x509:
-        this->Init();
-        break;
-    case 0x50a:
-        this->AutoSave();
-        break;
-    case 0x50b:
-        this->mLoadSaveRequests.push_back(static_cast<NEMessage*>(inParameter1));
-        break;
-    case 0x50c:
-        this->mLD4 = (long)reinterpret_cast<intptr_t>(inParameter1);
-        this->mBE7 = true;
-        break;
-    default:
-        RTSPhysics::HandleMessage(inMessage, inParameter1, inParameter2);
-        break;
-    }
-}
-
-// With the free camera on, drains the input queue and flushes the world under the world lock
-void EEPhysics::Idle()
-{
-    if (gFreeCamera != true)
-        return;
-    this->Lock();
-    this->DrainInput();
-    this->FlushWorld();
-    this->Unlock();
-}
-
-// Runs one physics tick: game clock, civ and resource timers, weather, paths, area effects, units, effects,
-// calamities, AI, scenario and game over; then the timing averages and, on a server, the autosave clock
-// NEAR: GetLongValue(0x5e) out of line and signed in the original (fild dword); TMGetTime hoisted into ebx
-void EEPhysics::Tick()
-{
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY: the unit store equals the objects (ee/EEUnitStore.h)
-        EEUnitStoreCheck(0);
-        // TEST ONLY: the world views' check (VWCK; ee_sim world check.rs)
-        ee_world_view_check(reinterpret_cast<uintptr_t>(&gWorld), gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
-    }
-    if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
-        sLoadedSeedPending = false;
-        this->mRandom.SetSeed(sLoadedSeed);
-    }
-    if (!sAfterLoad.empty()) {   // port: the loaded values the load's rebuilding set again (EEAfterLoad)
-        std::vector<std::function<void()> > theFixups;
-        theFixups.swap(sAfterLoad);
-        for (size_t i = 0; i < theFixups.size(); i++)
-            theFixups[i]();
-        EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
-    }
-    if (!sAfterLoadLast.empty()) {   // port: then those that wait for the others (EEAfterLoadLast)
-        std::vector<std::function<void()> > theFixups;
-        theFixups.swap(sAfterLoadLast);
-        for (size_t i = 0; i < theFixups.size(); i++)
-            theFixups[i]();
-    }
-    this->ReportStatistics();
-    if (this->mTicksToProcess == 0) {
-        this->DrainInput();
-        this->ServeLoadSaveRequests();
-    }
-    if (this->mTicksToProcess != 0 || gCommunications->GetIsGamePaused() || this->mGameOver == true || gWorld.mCameraControl.mUnitA == NULL)
-        gWorld.mCameraControl.Update(this->mSpeed);
-    if (!(this->mTicksToProcess > 0))
-        return;
-    this->mGameClock = this->GetTickTime() + this->mGameClock;
-    this->mGameTime = (long)this->mGameClock;
-    this->mTickRandom = UMFloatToLong(this->mRandom.Generate());
-    this->mPreviousTickStartTime = this->mTickStartTime;
-    this->mTickStartTime = TMGetTime();
-    this->mTicksToProcess--;
-    if (this->mGameOver != false)
-        return;
-    gWorld.UpdateActiveUnits();
-    if (this->mCivTimerRuns)
-        this->UpdateCivTimer();
-    if (this->mResourceTimerPending) {
-        long theResourceTime = gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000;
-        if (theResourceTime <= this->mGameClock) {
-            this->mResourceTimerPending = false;
-            if (gWorld.mGameOptions.mResources == 4
-                && gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing)) {
-                UWideString theText;
-                gResource->GetString(IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW, theText);
-                gUserInterface->AddChatLogEntry(theText, 0);
-            }
-        }
-    }
-    this->UpdateWeather();
-    gPathManager.Update();
-    this->UpdateAreaEffectsClock();
-    this->CheckShiftMode();
-    this->UpdateUnits();
-    gEffectManager->Update();
-    EECalamityManager::GetInstance()->Update(this->mTickTime);
-    gArtificialIntelligence->Update();
-    long theResult = 0;
-    if (!gWorld.mInCinematic)
-        theResult = gWorld.mScenarioManager->mGameResult;
-    gWorld.mScenarioManager->Update();
-    long theNewResult = gWorld.mInCinematic ? 0 : gWorld.mScenarioManager->mGameResult;
-    if (theNewResult == 0) {
-        if (!gWorld.mInCinematic) {
-            theNewResult = gWorld.CheckGameOver();
-            if (theNewResult != 0) {
-                gWorld.mScenarioManager->mGameResult = theNewResult;
-                this->EndGame(theNewResult == 1);
-            }
-        }
-    } else if (theResult == 0)
-        this->EndGame(theNewResult == 1);
-    this->FlushWorld();
-    unsigned long theStart = this->mTickStartTime;
-    this->mTickWorkSum += TMGetTime() - theStart;
-    this->mTickWorkCount++;
-    if (this->mTickWorkSum >= 1000) {
-        this->mAveragePhysicsUpdateTime = this->mTickWorkSum / this->mTickWorkCount;
-        this->mTickWorkSum = 0;
-        this->mTickWorkCount = 0;
-    }
-    this->mTickGapSum += theStart - this->mPreviousTickStartTime;
-    this->mTickGapCount++;
-    if (this->mTickGapSum >= 1000) {
-        this->mAverageTimeBetweenPhysicsTicks = this->mTickGapSum / this->mTickGapCount;
-        this->mTickGapSum = 0;
-        this->mTickGapCount = 0;
-    }
-    this->mNumTicksDone++;
-    if (this->mGameStarted) {
-        this->mGameStarted = false;
-        if ((gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0)
-            || gWorld.mGameOptions.mIsScenarioGame)
-            if (static_cast<unsigned long>(gWorld.GetCurrentPlayer()->mCivilization.GetAvailablePoints()) > 0)
-                EESetCivBuilderButtonBlinking(true);
-    }
-    if (gCommunications->IsServer() != true || !(gGamePreferences.mSettings.mAutoSaveInMilliseconds > 0))
-        return;
-    this->mAutoSaveClock += this->mTimerInterval;
-    if (!(this->mAutoSaveClock > gGamePreferences.mSettings.mAutoSaveInMilliseconds) || gWorld.mInCinematic
-        || gWorld.mScenarioManager->mIsShowingDialog)
-        return;
-    this->mAutoSaveClock = 0;
-    gPhysics->PostAutoSave();
-    gCommunications->GetCurrentCommunicationsTick();
-    gCommunications->GetCurrentCommunicationsTick();
-}
-
-// Queues a load/save request under the save-game lock, taking a reference to it
-void EEPhysics::QueueMessage(NEMessage* inMessage)
-{
-    this->mSaveGameLock->Enter();
-    this->mLoadSaveRequests.push_back(inMessage);
-    inMessage->Reference();
-    this->mSaveGameLock->Leave();
-}
-
-// Applies one unit swap: the camera follows the new unit (or drops the old one), and the contagions, the
-// scenario and the effects switch to it
-// NEAR: the original loads mUnitA into eax first and only the else branch keeps &gWorld.mCameraControl in ebx
-void EEPhysics::SwapUnit(EEUnit* inOld, EEUnit* inNew)
-{
-    EEUnit* theUnitA = gWorld.mCameraControl.mUnitA;
-    if (gWorld.mCameraControl.mUnitB == inOld && theUnitA == inOld)
-        gWorld.mCameraControl.Follow(inNew, gWorld.mCameraControl.mIsFollowingUnitB, 1.0f,
-                                       gWorld.mCameraControl.mTurnYaw, gWorld.mCameraControl.mTurnPitch);
-    else {
-        EECameraControl& theCamera = gWorld.mCameraControl;
-        if (theUnitA == inOld)
-            theCamera.ClearUnitA();
-        if (theCamera.mUnitB == inOld)
-            theCamera.ClearUnitB();
-    }
-    gWorld.GetContagionManager()->SwapUnit(inOld, inNew);
-    gWorld.mScenarioManager->ReplaceUnit(inOld->mUnitID, inNew->mUnitID);
-    gEffectManager->ReplaceUnit(inOld, inNew);
-}
-
-// Applies the queued unit swaps: tells every player but player 0, swaps each pair, releases both units, clears
-void EEPhysics::ProcessUnitSwaps()
-{
-    if (this->mUnitSwaps.size() <= 0)
-        return;
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++)
-        gWorld.mPlayers[i]->UnitsSwapped(this->mUnitSwaps);
-    for (std::vector<EEPUnitSwap>::iterator it = this->mUnitSwaps.begin(); it != this->mUnitSwaps.end(); it++) {
-        EEUnit* theOld = it->mOld;
-        EEUnit* theNew = it->mNew;
-        this->SwapUnit(theOld, theNew);
-        theOld->Dereference();
-        theNew->Dereference();
-    }
-    this->mUnitSwaps.clear();
+    EEPhysicsSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};   // port: ee_units physics_save.rs
+    return ee_units_physics_save(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this));
 }
 
 // TEST ONLY: the UI fixture's view of each executed input (EETestFixtureOrders.cpp: the orders' verdicts), called
@@ -767,285 +258,356 @@ extern "C" size_t ee_units_order_log_host(uint8_t inOp, int64_t inKey, uint8_t* 
     return theLength;
 }
 
-static void EEPhysicsLog(NEMessage* inMessage, unsigned long inTime, uint8_t inSelect)
+// The just-in-time manufacturing chat line (Tick's resource timer)
+static void EEPhysicsJitChat()
 {
-    EEPlayer* thePlayer = EEGameLogOn() ? gWorld.GetPlayerBySlot(inMessage->GetOriginatingSlot()) : NULL;
-    EEMessage* theRecord = thePlayer != NULL ? EEGameMessageCast(inMessage) : NULL;
-    if (thePlayer != NULL)
-        ee_units_order_log((uint64_t)(uintptr_t)thePlayer, (uint64_t)(uintptr_t)thePlayer->mActiveGroup, inMessage->GetType(),
-                           theRecord != NULL ? static_cast<EEMRecord*>(theRecord)->mRecord : NULL, (uint32_t)inTime, inSelect);
+    UWideString theText;
+    gResource->GetString(IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW, theText);
+    gUserInterface->AddChatLogEntry(theText, 0);
 }
 
-// Runs the queued physics tick messages (one while the timer runs): checksums or dumps the world when asked,
-// takes the owed ticks and speed, executes the tick's player inputs; a stray non-tick message at the head is dropped
-// NEAR: inline budget: the original calls deque::begin() out of line for the first front(); esi/ebx/edi roles
-void EEPhysics::DrainInput()
+// A won campaign scenario recorded in the campaign progress (EndGame)
+static void EEPhysicsCampaignWin()
 {
-    this->mServerMessageQueueLock->Enter();
-    while (this->mServerMessages.size() > 0) {
-        if (this->mTicksToProcess != 0 && this->mTimerRunning)
-            break;
-        NEMessage* theMessage = this->mServerMessages.front();
-        if (theMessage->GetType() != kNetMessagePhysicsTick) {
-            // player inputs are consumed with their tick, so the head should always be a tick; drop a stray
-            // message instead of spinning on it for ever while holding the queue lock
-            this->mServerMessages.pop_front();
-            theMessage->Dereference();
-            continue;
-        }
-        this->mServerMessages.pop_front();
-        // the inputs that follow, the PTs to perform, the checksum and dump flags, the PTs per second (not on the wire)
-        NEMRecord* theTick = static_cast<NEMRecord*>(theMessage);
-        if (theTick->Get<bool>(2) == true) {
-            if (gCommunications->IsServer() == true
-                || (gCommunications->IsClient() == true && static_cast<EEClient*>(gCommunications)->mHasLeftGame == 0)) {
-                bool theDump = theTick->Get<bool>(3);
-                unsigned long theChecksum = this->GetOutOfSynchChecksum(theDump, 1);
-                if (!theDump) {
-                    unsigned long theTick2 = gCommunications->GetNumberOfCTsProcessedInPhysics();
-                    NEMRecord* theResponse = new NEMRecord(kNetMessageWorldDatabaseChecksumResponse, {theTick2, theChecksum});
-                    theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->mSlot);
-                    if (gCommunications->IsClient())
-                        gCommunications->ProcessLocalUserInput(theResponse, kSlotNone);
-                    else {
-                        static_cast<NESynchronousServer*>(gCommunications)->LogChecksumResponse(theResponse);
-                        theResponse->Dereference();
-                    }
-                }
-            }
-        }
-        gCommunications->IncrementNumberOfCTsProcessedInPhysics();
-        gCommunications->SetAveragePhysicsUpdateTime(this->mAveragePhysicsUpdateTime);
-        gCommunications->SetAverageTimeBetweenPhysicsTicks(this->mAverageTimeBetweenPhysicsTicks);
-        this->mCurrentTick += theTick->Get<unsigned char>(1);
-        this->mTicksToProcess = theTick->Get<unsigned char>(1);
-        this->SetSpeed(1.0f / theTick->Get<unsigned char>(4));
-        unsigned long theCount = theTick->Get<uint32_t>(0);
-        theTick->Dereference();
-        gCommunications->GetNumberOfCTsProcessedInPhysics();
-        for (; theCount > 0; theCount--) {
-            NEMessage* theInput = this->mServerMessages.front();
-            this->mServerMessages.pop_front();
-            theInput->GetMessageLabel();
-            if (theInput->GetForSpecificSlot() == kSlotNone)
-                this->mInputMessagesProcessed++;
-            EEMessageCaptureExecuted(theInput);   // TEST ONLY: the simulation capture's NMEX record (off by default)
-            if (EESimCaptureRecord::Active())   // TEST ONLY: the unit store equals the objects before the message
-                EEUnitStoreCheck(theInput->GetType());
-            if (gEEMessageExecutedTestHook != NULL)   // TEST ONLY: the UI fixture's orders (EETestFixtureOrders.cpp)
-                gEEMessageExecutedTestHook(theInput, 0);
-            switch (theInput->GetType()) {
-            case kNetMessageRemovePlayer: {
-                NEMRecord* theRemove = static_cast<NEMRecord*>(theInput);   // the player, out of synch, exiting, booted
-                gCommunications->ExecuteRemovePlayer(theRemove->Get<unsigned char>(0), theRemove->Get<bool>(3),
-                                                      theRemove->Get<bool>(1), theRemove->Get<bool>(2));
-                break;
-            }
-            case kMessageSelectUnit:
-            case kMessageAddUnitToSelectedGroup:
-            case kMessageRemoveUnitFromSelectedGroup:
-            case kMessageUnselectAllUnits:
-            case kMessageSelectUnits:
-            case kMessageAddUnitsToSelectedGroup:
-            case kMessageAddAndRemoveUnitsFromSelectedGroup:
-            case kMessageAlwaysAddUnitToSelectedGroup:
-            case kMessageSavedGroupAddSelection:
-            case kMessageSavedGroupSelect:
-            case kMessageSelectTheseUnits:
-                EEGameMessageCast(theInput)->ExecuteSelectionMessage();
-                EEPhysicsLog(theInput, this->mGameTime, 1);   // new (port): the game log's human selection
-                break;
-            default: {
-                EEPhysicsLog(theInput, this->mGameTime, 0);   // new (port): the game log's human orders
-                EEMessage* theGameMessage = EEGameMessageCast(theInput);
-                if (theGameMessage != NULL)
-                    theGameMessage->ExecuteMessage();
-                else
-                    theInput->Execute();
-                break;
-            }
-            }
-            if (gEEMessageExecutedTestHook != NULL)
-                gEEMessageExecutedTestHook(theInput, 1);
-            theInput->Dereference();
-        }
-    }
-    this->mServerMessageQueueLock->Leave();
+    EECampaignProgress theProgress;
+    if (theProgress.Load(UWideString(gCampaignUser), gWorld.mGameOptions.mCampaignName, gWorld.mGameOptions.mCampaignChecksum,
+                         true) == kErrorOK)
+        theProgress.SaveCompletedScenario(UWideString(gCampaignUser), gWorld.mGameOptions.mCampaignName,
+                                          gWorld.mGameOptions.mScenarioName, gWorld.mGameOptions.mCampaignChecksum);
 }
 
-// Every 2.5..5 s (a random period drawn once) sends the current player's two statistics to the others when
-// they changed
-// (Virtual20's; provisional names)
-void EEPhysics::ReportStatistics()
+// The Shift key (0xe1) is up (CheckShiftMode)
+static bool EEPhysicsShiftKeyUp()
 {
-    static unsigned long sLastReport = TMGetTime();
-    unsigned long theTime = TMGetTime();
-    if (sFirstReport) {
-        sFirstReport = false;
-        srand(TMGetTime());
-        sReportPeriod = rand() % 2500u + 2500u;
-    }
-    if (!(theTime - sLastReport > sReportPeriod))
-        return;
-    sLastReport = theTime;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    unsigned long theFirst = thePlayer->mSavedGroups.GetLastValue(0x14);
-    unsigned long theSecond = thePlayer->mSavedGroups.GetLastValue(0x15);
-    if (theFirst == sReportedFirst && theSecond == sReportedSecond)
-        return;
-    sReportedFirst = theFirst;
-    sReportedSecond = theSecond;
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReportStatistics, {theFirst, theSecond}), kSlotNone);
-}
-
-// Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
-// to the saved game; returns the first write error
-long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EEPhysicsSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};   // port: ee_units physics_save.rs
-    return ee_units_physics_save(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this));
-}
-
-// Posts the autosave message (0x50a) to the physics thread; returns the post result (0 with no thread)
-long EEPhysics::PostAutoSave()
-{
-    long theResult = 0;
-    if (this->mThread != NULL)
-        theResult = this->mThread->Post(0x50a, NULL, NULL, true);
-    return theResult;
-}
-
-// Posts the show-scenario-dialog message (0x508) to the physics thread; returns the post result (0 with no thread)
-long EEPhysics::PostShowDialogMessage()
-{
-    long theResult = 0;
-    if (this->mThread != NULL)
-        theResult = this->mThread->Post(0x508, NULL, NULL, true);
-    return theResult;
-}
-
-// Posts the re-init message (0x509) to the physics thread; returns the post result (0 with no thread)
-long EEPhysics::PostInit()
-{
-    long theResult = 0;
-    if (this->mThread != NULL)
-        theResult = this->mThread->Post(0x509, NULL, NULL, true);
-    return theResult;
-}
-
-// Recomputes the ticks per game second and the tick length (s and ms) from the tick rate and the game speed
-void EEPhysics::UpdateTiming()
-{
-    this->mTicksPerGameSecond = this->mTicksPerSecond / gWorld.GetGameSpeed();
-    this->mTickSeconds = 1.0f / this->mTicksPerGameSecond;
-    this->mTickTime = this->mTickSeconds * 1000.0f;
-    this->mTickTimeMs = UMFloatToLong(this->mTickTime);
-}
-
-// Queues a unit swap (inOld replaced by inNew), taking a reference to both units
-void EEPhysics::QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew)
-{
-    inOld->Reference();
-    inNew->Reference();
-    EEPUnitSwap theSwap;
-    theSwap.mOld = inOld;
-    theSwap.mNew = inNew;
-    this->mUnitSwaps.push_back(theSwap);
-}
-
-// Releases the world's write lock
-void EEPhysics::Unlock()
-{
-    gWorld.mLock->WriteUnlock();
-}
-
-// Advances the area effects clock and ticks the area effects once per 2 s of game time
-void EEPhysics::UpdateAreaEffectsClock()
-{
-    this->mAreaEffectsClock += this->mTickTime;
-    if (this->mAreaEffectsClock >= kAreaEffectInterval) {
-        gAEManager.Tick(kAreaEffectInterval);
-        this->mAreaEffectsClock -= kAreaEffectInterval;
-    }
-}
-
-// Runs the civilization timer on a server: warnings at 240 s and 270 s, expiry at 300 s, and the civ builder
-// button blinks for a player with no civilization; elsewhere (or with no civ buying) the timer stops
-void EEPhysics::UpdateCivTimer()
-{
-    if (gCommunications != NULL && gCommunications->IsServer()) {
-        if (gWorld.mGameOptions.CanBuyCivilization()) {
-            if (this->mTickWorkCount == 0 && !gWorld.GetCurrentPlayer()->mCivilizationChosen && !gWorld.GetCurrentPlayer()->mObserverMode)
-                EESetCivBuilderButtonBlinking(true);
-            EEMRecord* theMessage;
-            if (this->mGameTime > EEGetCivTimerLimit()) {
-                this->mCivTimerRuns = false;
-                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)0});
-            } else if (this->mGameTime > EEGetCivTimerSecondWarning() && !this->mCivTimerSecondWarning) {
-                this->mCivTimerSecondWarning = true;
-                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)1});
-            } else if (this->mGameTime > EEGetCivTimerFirstWarning() && !this->mCivTimerFirstWarning) {
-                this->mCivTimerFirstWarning = true;
-                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)1});
-            } else
-                return;
-            if (theMessage != NULL)
-                gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-        } else
-            this->mCivTimerRuns = false;
-    } else {
-        this->mCivTimerRuns = false;
-        if (gWorld.mGameOptions.CanBuyCivilization() && !gWorld.GetCurrentPlayer()->mCivilizationChosen && !gWorld.GetCurrentPlayer()->mObserverMode)
-            EESetCivBuilderButtonBlinking(true);
-    }
-}
-
-// Between ticks runs every queued load/save request (under the save-game lock) and sends one response with
-// the last result (logged on a server); with ticks owed it waits
-// NEAR: the original inlines the EEMLoadOrSaveGameResponse ctor (ee/EEMessage.h declares it out of line, 0xc1025)
-// and so calls _Ptrit::operator+ out of line
-void EEPhysics::ServeLoadSaveRequests()
-{
-    this->mSaveGameLock->Enter();
-    if (this->mLoadSaveRequests.size() > 0) {
-        if (this->mTicksToProcess == 0) {
-            long theResult = 0;
-            for (unsigned long i = 0; i < this->mLoadSaveRequests.size(); i++) {
-                theResult = EELoadOrSave(static_cast<EEMRecord*>(this->mLoadSaveRequests[i]));
-                this->mLoadSaveRequests[i]->Dereference();
-                this->mLoadSaveRequests[i] = NULL;
-            }
-            this->mLoadSaveRequests.clear();
-            EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {theResult});
-            theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->GetSlot());
-            if (gCommunications->IsServer()) {
-                static_cast<NESynchronousServer*>(gCommunications)->LogResponse(theResponse);
-                theResponse->Dereference();
-            } else
-                gCommunications->ProcessLocalUserInput(theResponse, kSlotServer);
-        } else {
-            gCommunications->GetNumberOfCTsProcessedInPhysics();
-            gCommunications->GetCurrentCommunicationsTick();
-        }
-    }
-    this->mSaveGameLock->Leave();
-}
-
-// Every 4 s of game time takes the current player out of shift mode when the Shift key (0xe1) is up
-// (Virtual20's; provisional name)
-void EEPhysics::CheckShiftMode()
-{
-    this->mShiftModeClock += this->mTickTime;
-    if (!(this->mShiftModeClock >= 4000.0f))
-        return;
-    this->mShiftModeClock -= 4000.0f;
-    if (!gWorld.GetCurrentPlayer()->mShiftMode)
-        return;
-    ISKeyboard* theKeyboard = gISKeyboard;
     ISEntity* theKey;
-    if (theKeyboard != NULL && theKeyboard->GetEntity(kKeyShift, theKey) == kErrorOK && theKey->GetValue() == 0)
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {this->mGameTime}), kSlotNone);
+    return gISKeyboard != NULL && gISKeyboard->GetEntity(kKeyShift, theKey) == kErrorOK && theKey->GetValue() == 0;
 }
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define PH ((EEPhysics*)p)
+#define MSG ((NEMessage*)p)
+#define REC ((NEMRecord*)p)
+#define PL ((EEPlayer*)p)
+#define CX ((EEComplexUnit*)p)
+#define FP(i) ((FILE*)a[i])
+#define SERVER (static_cast<NESynchronousServer*>(gCommunications))
+
+extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// The physics' calls (ee_game physics.rs EePhysCpp): p the physics or the object named, a the integers, f the floats
+extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EePhysCpp O;
+    switch (inOp) {
+    // the physics
+    case O::Rec: return P64(static_cast<EeUnitsPhysicsSaved*>(PH));
+    case O::SetSpeed: PH->SetSpeed(f[0]);
+        break;
+    case O::TimerInterval: return PH->mTimerInterval;
+    case O::TicksPerSecond: return PH->mTicksPerSecond;
+    case O::TimerRunning: return PH->mTimerRunning;
+    case O::RandomSeed: return PH->mRandom.GetSeed();
+    case O::SetRandomSeed: PH->mRandom.SetSeed((unsigned long)a[0]);
+        break;
+    case O::InputMessages: return PH->mInputMessagesProcessed;
+    case O::SetInputMessages: PH->mInputMessagesProcessed = (long)a[0];
+        break;
+    case O::SetLastChecksum: PH->mLastOutOfSynchChecksum = (unsigned long)a[0];
+        break;
+    case O::ThreadPost: return PH->mThread != NULL ? PH->mThread->Post((unsigned long)a[0], NULL, NULL, true) : 0;
+    case O::RtsHandleMessage: PH->RTSPhysics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
+        break;
+    case O::UpdateUnits: return PH->UpdateUnits();
+    case O::RunAfterLoad: EEPhysicsRunAfterLoad();
+        break;
+    case O::ServerLockEnter: PH->mServerMessageQueueLock->Enter();
+        break;
+    case O::ServerLockLeave: PH->mServerMessageQueueLock->Leave();
+        break;
+    case O::ServerQueueSize: return (int64_t)PH->mServerMessages.size();
+    case O::ServerQueueFront: return P64(PH->mServerMessages.front());
+    case O::ServerQueuePopFront: PH->mServerMessages.pop_front();
+        break;
+    case O::SaveLockEnter: PH->mSaveGameLock->Enter();
+        break;
+    case O::SaveLockLeave: PH->mSaveGameLock->Leave();
+        break;
+    case O::LoadSaveCount: return (int64_t)PH->mLoadSaveRequests.size();
+    case O::LoadSaveAt: return P64(PH->mLoadSaveRequests[(size_t)a[0]]);
+    case O::LoadSaveSetNull: PH->mLoadSaveRequests[(size_t)a[0]] = NULL;
+        break;
+    case O::LoadSaveClear: PH->mLoadSaveRequests.clear();
+        break;
+    case O::LoadSavePush: PH->mLoadSaveRequests.push_back((NEMessage*)a[0]);
+        break;
+    case O::SwapCount: return (int64_t)PH->mUnitSwaps.size();
+    case O::SwapOld: return P64(PH->mUnitSwaps[(size_t)a[0]].mOld);
+    case O::SwapNew: return P64(PH->mUnitSwaps[(size_t)a[0]].mNew);
+    case O::SwapPush: PH->mUnitSwaps.push_back(EEPUnitSwap{(EEComplexUnit*)a[0], (EEComplexUnit*)a[1]});
+        break;
+    case O::SwapClear: PH->mUnitSwaps.clear();
+        break;
+    // a message
+    case O::MsgType: return MSG->GetType();
+    case O::MsgReference: MSG->Reference();
+        break;
+    case O::MsgDereference: MSG->Dereference();
+        break;
+    case O::MsgForSpecificSlot: return MSG->GetForSpecificSlot();
+    case O::MsgOriginatingSlot: return MSG->GetOriginatingSlot();
+    case O::MsgSetOriginatingSlot: MSG->SetOriginatingSlot((unsigned char)a[0]);
+        break;
+    case O::RecBool: return REC->Get<bool>((unsigned long)a[0]);
+    case O::RecU8: return REC->Get<unsigned char>((unsigned long)a[0]);
+    case O::RecU32: return REC->Get<uint32_t>((unsigned long)a[0]);
+    case O::GameCast: return P64(EEGameMessageCast(MSG));
+    case O::ExecuteSelection: EEGameMessageCast(MSG)->ExecuteSelectionMessage();
+        break;
+    case O::ExecuteGame: ((EEMessage*)p)->ExecuteMessage();
+        break;
+    case O::Execute: MSG->Execute();
+        break;
+    case O::RecordBytes: return P64(static_cast<EEMRecord*>((EEMessage*)p)->mRecord);
+    case O::RemovePlayer: gCommunications->ExecuteRemovePlayer(REC->Get<unsigned char>(0), REC->Get<bool>(3), REC->Get<bool>(1), REC->Get<bool>(2));
+        break;
+    case O::NewChecksumResponse: return P64(new NEMRecord(kNetMessageWorldDatabaseChecksumResponse, {(unsigned long)a[0], (unsigned long)a[1]}));
+    case O::NewLoadSaveResponse: return P64(new EEMRecord(kMessageLoadOrSaveGameResponse, {(long)a[0]}));
+    case O::NewReportStatistics: return P64(new EEMRecord(kMessageReportStatistics, {(unsigned long)a[0], (unsigned long)a[1]}));
+    case O::NewExitShiftMode: return P64(new EEMRecord(kMessageExitShiftMode, {(long)a[0]}));
+    case O::NewCivTimerExpired: return P64(new EEMRecord(kMessageCivTimerExpired, {(unsigned char)a[0]}));
+    // the captures (TEST ONLY)
+    case O::CaptureExecuted: EEMessageCaptureExecuted(MSG);
+        break;
+    case O::SimCaptureActive: return EESimCaptureRecord::Active();
+    case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
+        break;
+    case O::WorldViewCheck: ee_world_view_check(reinterpret_cast<uintptr_t>(&gWorld), (uint32_t)a[0]);
+        break;
+    case O::TestHookSet: return gEEMessageExecutedTestHook != NULL;
+    case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
+        break;
+    case O::OrderLog: ee_units_order_log((uint64_t)a[0], (uint64_t)a[1], (uint8_t)a[2], (const uint8_t*)a[3], (uint32_t)a[4], (uint8_t)a[5]);
+        break;
+    case O::GameLogOn: return EEGameLogOn();
+    // the communications
+    case O::IsServer: return gCommunications->IsServer();
+    case O::IsClient: return gCommunications->IsClient();
+    case O::CommsIsServer: return gCommunications != NULL && gCommunications->IsServer();
+    case O::ClientHasLeft: return static_cast<EEClient*>(gCommunications)->mHasLeftGame;
+    case O::CtsInPhysics: return gCommunications->GetNumberOfCTsProcessedInPhysics();
+    case O::IncrementCts: gCommunications->IncrementNumberOfCTsProcessedInPhysics();
+        break;
+    case O::SetAverageUpdate: gCommunications->SetAveragePhysicsUpdateTime((long)a[0]);
+        break;
+    case O::SetAverageGap: gCommunications->SetAverageTimeBetweenPhysicsTicks((long)a[0]);
+        break;
+    case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput(MSG, (unsigned char)a[0]);
+        break;
+    case O::LogChecksumResponse: SERVER->LogChecksumResponse(REC);
+        break;
+    case O::LogResponse: SERVER->LogResponse(MSG);
+        break;
+    case O::IsPaused: return gCommunications->GetIsGamePaused();
+    case O::CurrentCommsTick: return gCommunications->GetCurrentCommunicationsTick();
+    case O::PauseGame: SERVER->PauseGame();
+        break;
+    case O::SendAutoSave: SERVER->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, UWideString((const char*)a[0])}), 15000, 12);
+        break;
+    // the world
+    case O::NumPlayers: return gWorld.mNumPlayers;
+    case O::Player: return P64(gWorld.mPlayers[a[0]]);
+    case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
+    case O::PlayerBySlot: return P64(gWorld.GetPlayerBySlot((unsigned char)a[0]));
+    case O::FlushQueuedPlacements: gWorld.FlushQueuedPlacements();
+        break;
+    case O::QueueBornDeactivations: gWorld.QueueBornDeactivations();
+        break;
+    case O::UpdateActiveUnits: gWorld.UpdateActiveUnits();
+        break;
+    case O::RemovePlayerFromGame: gWorld.RemovePlayerFromGame(a[0] != 0, (unsigned long)a[1]);
+        break;
+    case O::CheckGameOver: return gWorld.CheckGameOver();
+    case O::InCinematic: return gWorld.mInCinematic;
+    case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
+    case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
+        break;
+    case O::ScenarioUpdate: gWorld.mScenarioManager->Update();
+        break;
+    case O::ScenarioShowingDialog: return gWorld.mScenarioManager->mIsShowingDialog;
+    case O::ScenarioCanShowDialog: return gWorld.mScenarioManager && !gScenarioSimDialogs;
+    case O::ScenarioShowDialog: gWorld.mScenarioManager->ShowDialogMessage();
+        break;
+    case O::ScenarioReplaceUnit: gWorld.mScenarioManager->ReplaceUnit((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::TeamsClear: gWorld.mTeams.clear();
+        break;
+    case O::CameraUnitA: return P64(gWorld.mCameraControl.mUnitA.Get());
+    case O::CameraUnitB: return P64(gWorld.mCameraControl.mUnitB.Get());
+    case O::CameraFollow: gWorld.mCameraControl.Follow((EEUnit*)a[0], gWorld.mCameraControl.mIsFollowingUnitB, 1.0f, gWorld.mCameraControl.mTurnYaw, gWorld.mCameraControl.mTurnPitch);
+        break;
+    case O::CameraClearA: gWorld.mCameraControl.ClearUnitA();
+        break;
+    case O::CameraClearB: gWorld.mCameraControl.ClearUnitB();
+        break;
+    case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
+        break;
+    case O::SetTimeOfDay: gWorld.SetTimeOfDay(f[0]);
+        break;
+    case O::SetWindYaw: gWorld.mWindYaw = f[0];
+        break;
+    case O::SetWindDirection: gWorld.mWindDirection = GEVector(f[0], f[1], f[2]);
+        break;
+    case O::EnvironmentTick: gWorld.mEnvironmentManager->Tick((unsigned long)a[0]);
+        break;
+    case O::WorldWriteLock: gWorld.mLock->WriteLock();
+        break;
+    case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
+        break;
+    case O::UnitsFirst: return P64(gWorld.mUnits.mFirst);
+    case O::UnitNext: return P64(((RTSUnit*)p)->mTileNode->mNext);
+    case O::UnitChecksum: return static_cast<EEUnit*>((RTSUnit*)p)->GetChecksum((unsigned long)a[0]);
+    case O::UnitDump: static_cast<EEUnit*>((RTSUnit*)p)->OutOfSynchDump(FP(0), (unsigned long)a[1]);
+        break;
+    case O::ContagionSwapUnit: gWorld.GetContagionManager()->SwapUnit((EEUnit*)a[0], (EEUnit*)a[1]);
+        break;
+    case O::ContagionDump: gWorld.GetContagionManager()->DumpOutOfSynch(FP(0));
+        break;
+    case O::MapChecksum: return gWorld.mMap->ComputeChecksum();
+    case O::MapDump: gWorld.mMap->DumpOutOfSynch(FP(0));
+        break;
+    case O::CampaignNameLength: return gWorld.mGameOptions.mCampaignName.GetLength();
+    case O::CampaignChecksum: return gWorld.mGameOptions.mCampaignChecksum;
+    case O::IsScenarioGame: return gWorld.mGameOptions.mIsScenarioGame;
+    case O::Resources: return gWorld.mGameOptions.mResources;
+    case O::CanBuyCivilization: return gWorld.mGameOptions.CanBuyCivilization();
+    case O::CheckUnitList: RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
+        break;
+    case O::SetGameOverFlag: gB529065 = true;
+        break;
+    // a player
+    case O::PlayerObserver: return PL->mObserverMode;
+    case O::PlayerSetGameResult: PL->SetGameResult((long)a[0]);
+        break;
+    case O::PlayerGameResult: return PL->mGameResult;
+    case O::PlayerAddPendingUnits: PL->AddPendingUnits(0, 1);
+        break;
+    case O::PlayerRemoveKilledUnits: PL->RemoveKilledUnits();
+        break;
+    case O::PlayerUnitsSwapped: PL->UnitsSwapped(((EEPhysics*)a[0])->mUnitSwaps);
+        break;
+    case O::PlayerCivChosen: return PL->mCivilizationChosen;
+    case O::PlayerShiftMode: return PL->mShiftMode;
+    case O::PlayerAvailablePoints: return static_cast<unsigned long>(PL->mCivilization.GetAvailablePoints());
+    case O::PlayerSavedGroupLast: return PL->mSavedGroups.GetLastValue((unsigned long)a[0]);
+    case O::PlayerId: return PL->mPlayerID;
+    case O::PlayerSlot: return PL->mSlot;
+    case O::PlayerGetSlot: return PL->GetSlot();
+    case O::PlayerActiveGroup: return P64(PL->mActiveGroup);
+    case O::PlayerRunningGroups: return PL->GetNumRunningGroups();
+    case O::PlayerRunningGroup: return P64(PL->GetRunningGroup((unsigned long)a[0]));
+    case O::PlayerAirTraffic: return P64(PL->mAirTraffic[a[0]]);
+    // the groups
+    case O::SelectedCount: return ((EESelectedGroup*)p)->GetNumUnits();
+    case O::SelectedUnitId: return ((EESelectedGroup*)p)->GetUnit((unsigned long)a[0])->mUnitID;
+    case O::GroupCount: return ((EEGroup*)p)->GetNumUnits();
+    case O::GroupUnitId: return ((EEGroup*)p)->GetUnit((unsigned long)a[0])->mUnitID;
+    // a unit
+    case O::UnitPlayer: return P64(CX->GetPlayer());
+    case O::UnitIsCitizen: return CX->mIsCitizen;
+    case O::UnitReference: CX->Reference();
+        break;
+    case O::UnitDereference: CX->Dereference();
+        break;
+    case O::UnitId: return ((EEUnit*)p)->mUnitID;
+    // the other systems
+    case O::FreeCamera: return gFreeCamera == true;
+    case O::PathManagerUpdate: gPathManager.Update();
+        break;
+    case O::PathManagerDump: gPathManager.DumpOutOfSynch(FP(0));
+        break;
+    case O::AreaEffectsTick: gAEManager.Tick(f[0]);
+        break;
+    case O::EffectManagerUpdate: gEffectManager->Update();
+        break;
+    case O::EffectReplaceUnit: gEffectManager->ReplaceUnit((EEUnit*)a[0], (EEUnit*)a[1]);
+        break;
+    case O::CalamityUpdate: EECalamityManager::GetInstance()->Update(f[0]);
+        break;
+    case O::CalamityDump: EECalamityManager::GetInstance()->DumpOutOfSynch(FP(0));
+        break;
+    case O::CalamityChecksum: return EECalamityManager::GetInstance()->GetOutOfSynchChecksum();
+    case O::AiUpdate: gArtificialIntelligence->Update();
+        break;
+    case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);
+    case O::HasJitPower: return gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing);
+    case O::JitChat: EEPhysicsJitChat();
+        break;
+    case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
+        break;
+    case O::IsMainGameForm: return dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL;
+    case O::OptionsButtonBlink: (static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
+        break;
+    case O::CivTimerLimit: return EEGetCivTimerLimit();
+    case O::CivTimerSecondWarning: return EEGetCivTimerSecondWarning();
+    case O::CivTimerFirstWarning: return EEGetCivTimerFirstWarning();
+    case O::ShiftKeyUp: return EEPhysicsShiftKeyUp();
+    case O::AutoSaves: return gGamePreferences.mSettings.mNumberOfAutoSaves;
+    case O::AutoSaveMilliseconds: return gGamePreferences.mSettings.mAutoSaveInMilliseconds;
+    case O::SetLastAutoSave: gGamePreferences.mSettings.mLastAutoSave = UWideString((const char*)a[0]);
+        break;
+    case O::SavePreferences: gGamePreferences.Save();
+        break;
+    case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
+        break;
+    case O::LoadOrSave: return EELoadOrSave(static_cast<EEMRecord*>(MSG));
+    case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));
+    case O::FilePuts: fputs((const char*)a[0], (FILE*)p);
+        break;
+    case O::FileClose: fclose((FILE*)p);
+        break;
+    case O::AtcChecksum: return ee_units_atc_checksum((EeUnitsAtc*)p);
+    case O::AtcDump: ee_units_atc_dump((EeUnitsAtc*)p, FP(0));
+        break;
+    case O::CpChecksum: return EECPOutOfSynchChecksum();
+    case O::ContinentChecksum: return gContinentManagerChecksum;
+    case O::StoreChecksumFlag1: return (int64_t)ee_units_store_checksum_flag1();
+    case O::StoreChecksumFlag2: return (int64_t)ee_units_store_checksum_flag2();
+    case O::CampaignWin: EEPhysicsCampaignWin();
+        break;
+    case O::AppTeamsClear: ee_app_teams_clear();   // (the teams: ee_sim app teams.rs)
+        break;
+    case O::Srand: srand((unsigned int)a[0]);
+        break;
+    case O::Rand: return rand();
+    case O::Verify: ESVERIFY_AT(a[0] != 0, (long)a[1]);
+        break;
+    default: return (int64_t)ee_physcpp_f(inOp, p, a, f);
+    }
+    return 0;
+}
+
+extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EePhysCpp O;
+    switch (inOp) {
+    case O::Speed: return PH->mSpeed;
+    case O::Random: return PH->mRandom.Generate();
+    case O::GameSpeed: return gWorld.GetGameSpeed();
+    case O::WorldGameSpeed: return gWorld.mGameSpeed;
+    case O::TimeOfDay: return gWorld.GetTimeOfDay();
+    case O::WindYaw: return gWorld.mWindYaw;
+    default: ESVERIFY_AT(false, 1);
+    }
+    return 0.0;
+}
+
+#undef PH
+#undef MSG
+#undef REC
+#undef PL
+#undef CX
+#undef FP
+#undef SERVER
 
 // Sets the collision period (the active units spread over gCollisionDetectionUnit ticks, at least 1), updates
 // every player, then steps each active unit (last first); returns the unit count
@@ -1088,37 +650,6 @@ unsigned long EEPhysics::UpdateUnits()
 }
 
 // (gPhysicsSteppingUnit and gPhysicsAfterTickHook, TEST ONLY, are EEGlobals.cpp's)
-
-static const float kWindDrift = 0.005f;   // 0x442370 (unit-local const: the wind direction random walk step; provisional name)
-
-// Advances the day/night clock (when it runs) and the wind direction's random walk, then ticks the environment
-// EEEnvironmentManager::Tick is an out-of-line member defined at the end of this file (0x55439f)
-void EEPhysics::UpdateWeather()
-{
-    GETransformation theTransformation;
-    GEVector theNorth(0.0f, 0.001f, 0.0f);
-    GEVector theWind(0.0f, 0.0f, 0.0f);
-    if (this->mTimeOfDayRuns) {
-        float theTime = this->GetTickSeconds() * 0.0016666667f + this->mTimeOfDayStep;
-        if (theTime >= 0.0f) {
-            float theTimeOfDay = theTime + gWorld.GetTimeOfDay();
-            if (theTimeOfDay >= 1.0f)
-                theTimeOfDay = 0.0f;
-            gWorld.SetTimeOfDay(theTimeOfDay);
-            theTime = 0.0f;
-        }
-        this->mTimeOfDayStep = theTime;
-    }
-    float theAngle = gWorld.mWindYaw;
-    URandom& theRandom = gPhysics->mRandom;
-    float theElapsed = this->GetTickTime();
-    gWorld.mWindYaw = ((theRandom.Generate() * 2.0f - 1.0f) * theElapsed) * kWindDrift + theAngle;
-    float theYaw = gWorld.mWindYaw;
-    theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-    theTransformation.Apply(theNorth, theWind);
-    gWorld.mWindDirection = theWind;
-    gWorld.mEnvironmentManager->Tick(this->mGameTime);
-}
 
 // the unit's last global (0x531cd0, "default" 0x4b5210): its init chain follows the template COMDATs
 // (EndGame: the campaign progress's user; not EEUIECampaignSelectScreenEvents.cpp's gCampaignDefaultUser 0x562ee0)
