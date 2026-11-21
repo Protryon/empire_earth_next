@@ -36662,3 +36662,105 @@ PORT_LEARNINGS.md's appended sections, both kept; strip_markers --check 0 files;
   duplicated by the merge and dropped, this section moved to the end); on the merged tree both builds 0/0 (EE-AOC
   414 inputs, EE-SIM 415), the test profile 0/0, the header current (293), the oracle seeds 2-7 identical, the
   Rust gate PASS (5,331 tests). The captures, saveload, tours and gates.sh ran on the batch 11 merge (above).
+
+## The UI lane, round 10: the LLE toolkit's hosts in Rust (UIManager, UIForm, UIControl, UIControlsTable, UIComboBox) over ee_ui's own shim list; the unit hack's, cursor's and message box's hosts; the first shim sweep; the editor tour's campaign editor step (ee_ui lle_cpp.rs, lle_manager.rs, lle_form.rs, lle_control.rs, lle_table.rs, lle_combo.rs; ee_game screens unit_hack_calls.rs, cursor_calls.rs, dialog_calls.rs, screens_more_calls.rs; branch rust-ui10, 2026-11-20)
+
+The brief: the LLE UI toolkit first (round 9's plan: a shims list inside ee_ui, plugged in before the C++ hosts, out
+of the goldens' test builds), then the lane's remaining C++ files, the first sweep of shims whose callee is now
+Rust, and a campaign editor step in the editor tour; score the C++ logic lines removed (`logic_lines.py`), target
+-3,000. **Logic -856** (whole tree, base 74d548875 -> 3c5b19721, one run of the script: 70,708 -> 69,852), net
+C++ lines -417 (+862 -1,279) in src and include (the generated include/rust headers not counted), about 264 one-statement shims
+added, 10 deleted by the sweep, 7 multi-statement C++ hosts deleted (`ee_uicpp_control_mouse`, `ee_screenscpp_cl_read`,
+`_cl_last`, `_cl_write`, `_hot_key_target`, `_hot_key_keep`, `_selection`). The target was not reached;
+docs/progress/ui-cluster.md lists what is left, file by file. Per commit (logic, one run): 6fbc60190 -630 (the
+LLE toolkit), d9fca2136 -177 (the unit hack, cursor, message box), cc56b8ded -54 (the chat log, hot keys,
+selections), 7ffc9d5f4 0 (the sweep: shims only), 9e60ffe82 +5 (the fixture's edit op), the rest docs and tools.
+
+### What moved
+
+- ee_ui `lle_cpp.rs`: the toolkit's shim list (ee_game's `shims!` macro and fake, `EeUiShim*` types, the C++ side's
+  `lle/UIShims.h`) and `lle_host!`: a Rust `extern "C"` host that answers the moved ops and hands the rest to the
+  C++ `HostOp` through one statement. The C++ classes pass the Rust host (`ee_ui_manager_host`, `_event_host`,
+  `_form_host`, `_control_host`, `_table_host`, `_combo_host`) where they passed their `HostOp`; the goldens build
+  their objects over their own hosts, so nothing of theirs changed.
+- `lle_manager.rs`: the manager's host's multi-call cases, the UI texture's load and stages (shared with the table's
+  `CreateBitmap`), `LoadDatabase` (the seven tables, the original's assert lines), `RemoveDatabase`, the mouse
+  buttons; the events' host. `lle_form.rs`: the form's host's multi-call cases, `UIForm::Create` (the forms file),
+  the IME and typed-key passes, the key and layout packs. `lle_control.rs`: the event case, the 24 shared keys, the
+  mouse dispatch's calls (`mouse_ffi.rs` now calls the shims), the manager bitmap table. `lle_table.rs`: the table's
+  host's cases, `CreateBitmap`, `SetupStringArray`. `lle_combo.rs`: the combo box's queries and actions and its
+  constructor's part making. The forwarders' float buffers go through one `CallRect` helper per class.
+- ee_game: the unit hack's, cursor's (the aim's f32 arithmetic) and message box's host cases; the chat log's file;
+  the hot keys' target and units; the forms' selections.
+- The sweep: a shim list entry may name a Rust symbol (`fn world_pause(pause: bool) -> c_long =
+  ee_gamecpp_world_pause;`): five shims went that way (the world's pause, the engines' choice, the left-handed
+  mouse, the editor's create and delete), five more were `EEUISCIFormManager::Get()->X()` compositions now written
+  in Rust over `sci_calls.rs`.
+
+### Lessons
+
+- **A Rust host before the C++ one keeps the goldens.** The toolkit's objects call `Host::op_f`, and the goldens'
+  hosts are fakes: changing the function pointer the C++ hands in (not the objects) moved the cases with no golden
+  edit. A host's one-statement cases stay in its C++ switch, which is then a dispatch table; only the multi-call
+  cases and the switch's locals move.
+- **Backslashes in a generated shim**: a spec line written through a bash heredoc lost one backslash of
+  `"textures\\EEGenericBack_Gold"`; the message box's background then failed to load and `UIBackgroundHost::Op`
+  dereferenced the NULL texture. No gate showed a message box until this round's campaign editor step, which
+  crashed on the first one; write such specs with the Write tool (as round 9 said for Rust tests) and grep the
+  diff for a lone backslash in a string.
+- **`no_cpp` makes the FFI hosts' logic dead**: ee_game's tests build ee_ui with `no_cpp`, so the `lle_*` modules
+  carry `#![cfg_attr(feature = "no_cpp", allow(dead_code))]`, and the shim traits `#[cfg_attr(test,
+  allow(dead_code))]` (some shims are only the FFI hosts').
+- **Clashing extern declarations**: a shim list naming an existing `ee_uicpp_*` symbol with other Rust types
+  (`usize` for `*mut c_void`) trips `clashing_extern_declarations`; the old declaration (hotkeyobj.rs) now calls
+  the list's.
+- **`c_ulong` arguments**: a shim taking `u32` for a `c_ulong` field needs a cast clippy calls unnecessary on
+  Windows; declare the shim's argument `c_ulong` (`unsigned long` in C++).
+
+### The campaign editor step
+
+`fixture_game.py --exercise editor` now goes on after the scenario editor: the Campaign Editor from the editors'
+menu (0x0903, form 24), two synthetic scenarios added (`synth_scenario.py --no-media` writes them into the run's
+stage: the Pacific base without media names, so the editor's missing-file check passes), the campaign named
+through the fixture's new `editnum` command (an edit box's `SetText(unsigned long)`: `EeFixtureOp::EditNumber`),
+saved, a new campaign, the saved one selected and opened again with both scenarios, Back ("CAMPAIGN EDITOR PASS
+..."). A message box the editor shows is answered OK by a click at its button. The save shows one.
+
+### What only the tours (or a person) exercise
+
+Cumulative with rounds 7-9 ("The UI lane, round 9"):
+- Every tour: the toolkit's hosts (the manager's, forms', controls', tables', combo boxes'), the database's load,
+  the UI texture, the mouse dispatch, the shared keys. The orders game: the cursor's aim and questions, the unit
+  hack's host is not (the hack needs its cheat).
+- The editor tour: the campaign editor's lists, add, save, load, its message box (dialog_calls.rs' plan).
+- Only a person: the unit hack (placing, the object list), the combo boxes' typed keys and IME passes, the chat
+  log's save and load in a saved game, the aircraft hot keys' target.
+
+### Gates
+
+On the final tree (3c5b19721; origin/rust a84903ce6 was already in the base 74d548875: nothing to merge):
+- both builds 0/0 (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0 (414); `rust_build.py header` current
+  (299 headers);
+- the Rust gate: tests 5,373 passed and clippy clean, its rustfmt step failed on the screens' module order
+  (6545d5924); on the final tree its first run failed only `ee_base plat_core::time::tests::a_new_factor_continues_the_clocks_without_a_jump`
+  (a clock timing test under load; it passed alone), the next PASS (5,373 tests; test, clippy, rustfmt, header);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests), checked with `--seeds 2-3`;
+- the plain saveload PASS (exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062);
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RESULT PASS), `--exercise editor` with the campaign step
+  (CAMPAIGN EDITOR PASS, RESULT PASS), `random-game --box-select --orders --seed 7` (BOX SELECT PASS; ORDERS PASS:
+  gather, repair, repair-queued, move; RESULT PASS). The tour's menu captures against the base build's (the main
+  checkout's test profile): the settings tabs, single player and random map set-up equal pixel for pixel, the main
+  menu and the closed settings differ only in the build label (151 pixels); the game frames differ as two live
+  games do;
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): the first run failed its LAN game before the game
+  started (lan_game.py stages through fixture_game.stage, which read the new `a.exercise`: 3c5b19721); the rerun
+  GATES PASS (tour; ai-game time-cap PT 12863, units [4, 39, 40], alive [2, 3], classic_lua x 2; lan-game PT
+  2788/2792);
+- the harness selftest ALL PASS (its first run failed the slot test's concurrent runs while other lanes held slots;
+  the reruns passed).
+- Not run: the POSIX builds.
