@@ -54,9 +54,7 @@ pub const EE_CP_HERD_TO_COMPLEX: i32 = 92;
 /// unit `a`'s `SetTargetSearchTimer(v0)`, `HoldUnit(b)`
 pub const EE_CP_HERD_SET_TARGET_SEARCH: i32 = 93;
 pub const EE_CP_HERD_HOLD_UNIT: i32 = 94;
-/// `gPathManager.CancelAutoPathRequest(a)`; the request `a`'s `Dereference()`
-pub const EE_CP_HERD_CANCEL_REQUEST: i32 = 95;
-pub const EE_CP_HERD_REQUEST_DEREF: i32 = 96;
+// (95, 96 were the path request's cancel and Dereference: herd.rs over ee_sim::astar request.rs)
 
 /// cbindgen:ignore
 #[cfg_attr(test, allow(dead_code))]
@@ -214,11 +212,6 @@ mod game {
             }
             EE_CP_HERD_BIRTH => {
                 birth(herd, a, b);
-                0
-            }
-            EE_CP_HERD_CANCEL_PATH => {
-                cpp0(herd, EE_CP_HERD_CANCEL_REQUEST, a, 0);
-                cpp0(herd, EE_CP_HERD_REQUEST_DEREF, a, 0);
                 0
             }
             EE_CP_HERD_UNITS_IN_RECT => {

@@ -677,6 +677,7 @@ pub extern "C" fn ee_ai_units_state_new() -> *mut c_void {
 #[no_mangle]
 pub unsafe extern "C" fn ee_ai_units_state_free(s: *mut c_void) {
     if !s.is_null() {
+        more::routes_clear(s as *mut UnitsState);
         drop(Box::from_raw(s as *mut UnitsState));
     }
 }

@@ -151,7 +151,7 @@ pub const EE_PATH_BOUNDED_FREE: i32 = 49;
 pub const EE_PATH_FREE_POOLS: i32 = 50;
 /// a new request (`i0` id, `i1` player, from (`i2`, `i3`), to (`i4`, `i5`), the flags `h1`) -> it
 pub const EE_PATH_REQUEST_NEW: i32 = 51;
-/// request `h0` into the request record `h1` (`ee_path_request_record_set`)
+/// request `h0` into the request record `h1` (a `RequestRecord`)
 pub const EE_PATH_REQUEST_SAVE: i32 = 52;
 /// tile machine `h0` (in `mPaths`) as the saved game holds it into the record `h1` -> whether it can be saved
 pub const EE_PATH_PM_SAVE: i32 = 53;
@@ -2152,88 +2152,6 @@ pub unsafe extern "C" fn ee_path_manager_file(
     })
 }
 
-/// A request's record written (`EESaveAutoPathRequest`); `path` its `len` tiles.
-///
-/// # Safety
-/// `r` live, `path` readable for `len` tiles; `f` called with `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_request_write(
-    r: *const EePathRequestRecord,
-    path: *const i32,
-    len: u32,
-    f: EePathFileFn,
-    ctx: *mut c_void,
-) {
-    let mut file = CFile { f, ctx };
-    let mut rr = RequestRecord { r: *r, path: Vec::new() };
-    for k in 0..len as usize {
-        rr.path.push([*path.add(2 * k), *path.add(2 * k + 1)]);
-    }
-    rr.write(&mut file);
-}
-
-/// A request's record read (`EELoadAutoPathRequest`): the file's error, or 0 with the record in `out` and its path
-/// in the list `path` (an [`ee_path_tiles_push`] list).
-///
-/// # Safety
-/// `out` writable, `path` a live list; `f` called with `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_request_read(
-    out: *mut EePathRequestRecord,
-    path: *mut c_void,
-    f: EePathFileFn,
-    ctx: *mut c_void,
-) -> i32 {
-    let mut file = CFile { f, ctx };
-    match RequestRecord::read(&mut file) {
-        Ok(rr) => {
-            *out = rr.r;
-            let list = &mut *(path as *mut Vec<[i32; 2]>);
-            list.clear();
-            list.extend(rr.path);
-            0
-        }
-        Err(e) => e,
-    }
-}
-
-/// A request record's (`RequestRecord`, as the host gets it) fields into `out` and its path's length; `path`
-/// receives up to `cap` tiles.
-///
-/// # Safety
-/// `r` a live `RequestRecord` (from a host operation), `out` writable, `path` writable for `cap` tiles.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_request_record_get(
-    r: *const c_void,
-    out: *mut EePathRequestRecord,
-    path: *mut i32,
-    cap: u32,
-) -> u32 {
-    let r = &*(r as *const RequestRecord);
-    *out = r.r;
-    for (k, p) in r.path.iter().take(cap as usize).enumerate() {
-        *path.add(2 * k) = p[0];
-        *path.add(2 * k + 1) = p[1];
-    }
-    r.path.len() as u32
-}
-
-/// A request record's fields and path set from the C++ request (`SaveGraphSearches`).
-///
-/// # Safety
-/// `r` a live `RequestRecord`, `rec` readable, `path` readable for `len` tiles.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_request_record_set(
-    r: *mut c_void,
-    rec: *const EePathRequestRecord,
-    path: *const i32,
-    len: u32,
-) {
-    let r = &mut *(r as *mut RequestRecord);
-    r.r = *rec;
-    r.path = (0..len as usize).map(|k| [*path.add(2 * k), *path.add(2 * k + 1)]).collect();
-}
-
 /// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
 /// the end; `push` appends (x, y).
 ///
@@ -2292,7 +2210,7 @@ pub unsafe extern "C" fn ee_path_saved_storage(lists: *mut EePathSavedLists) -> 
     &mut (*lists).storage as *mut Vec<u8> as *mut c_void
 }
 
-/// A tile list for [`ee_path_request_read`]: new, its tiles, freed.
+/// A tile list (`EEPathManager::FindPath`'s): new, its tiles, freed.
 #[no_mangle]
 pub extern "C" fn ee_path_tiles_new() -> *mut c_void {
     Box::into_raw(Box::new(Vec::<[i32; 2]>::new())) as *mut c_void

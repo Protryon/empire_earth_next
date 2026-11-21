@@ -552,11 +552,80 @@ pub fn strings<S: Stream>(s: &mut S, count: u32, save: bool) -> i32 {
     q.r
 }
 
+/// A dialog message's numbers (`EESMDialogMessage`'s members, each the C++ member's address).
+#[repr(C)]
+pub struct EeScenarioMessageNumbers {
+    pub scroll_speed: *mut c_long,
+    pub unit_type: *mut c_ulong,
+    pub duration: *mut c_ulong,
+    pub unit_id: *mut c_ulong,
+    pub cinematic: *mut bool,
+}
+
+/// `EESMDialogMessage::Load` (`save` false: the text (string 0), the unit type, the sound (string 1), the duration,
+/// the unit, the scroll speed, and from version 0.200 on the cinematic flag) or `::Save` (all of them): the first
+/// error.
+pub fn message_io<S: Stream>(s: &mut S, n: &mut MessageNumbers, major: c_ulong, minor: c_ulong, save: bool) -> i32 {
+    let mut q = Seq::new(s);
+    if save {
+        q.put_string(0);
+        q.put_ulong(n.unit_type);
+        q.put_string(1);
+        q.put_ulong(n.duration);
+        q.put_ulong(n.unit_id);
+        q.put_long(n.scroll_speed);
+        q.put_bool(n.cinematic);
+        return q.r;
+    }
+    q.string(0);
+    q.ulong(&mut n.unit_type);
+    q.string(1);
+    q.ulong(&mut n.duration);
+    q.ulong(&mut n.unit_id);
+    q.long(&mut n.scroll_speed);
+    if !(major == 0 && minor <= 199) {
+        q.bool(&mut n.cinematic);
+    }
+    q.r
+}
+
+/// A dialog message's numbers as values ([`message_io`]'s).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct MessageNumbers {
+    pub scroll_speed: c_long,
+    pub unit_type: c_ulong,
+    pub duration: c_ulong,
+    pub unit_id: c_ulong,
+    pub cinematic: bool,
+}
+
 #[cfg(test)]
 #[allow(clippy::field_reassign_with_default)] // the tests set a few fields of a sample
 mod tests {
     use super::*;
     use crate::scenario::stream::Bytes;
+
+    #[test]
+    fn a_dialog_message_round_trips_and_old_files_have_no_cinematic_flag() {
+        let n = MessageNumbers { scroll_speed: -3, unit_type: 17, duration: 4000, unit_id: 99, cinematic: true };
+        let mut b = Bytes::default();
+        b.strings = vec![b"hi".to_vec(), b"snd".to_vec()];
+        assert_eq!(message_io(&mut b, &mut n.clone(), 0, 200, true), 0);
+        let data = b.data.clone();
+        let mut r = Bytes::over(data.clone());
+        let mut got = MessageNumbers::default();
+        assert_eq!(message_io(&mut r, &mut got, 0, 200, false), 0);
+        assert_eq!(got, n);
+        assert_eq!(r.strings, vec![b"hi".to_vec(), b"snd".to_vec()]);
+        // 0.199: the same reads without the flag (it stays as it was)
+        let mut r = Bytes::over(data);
+        let mut old = MessageNumbers::default();
+        assert_eq!(message_io(&mut r, &mut old, 0, 199, false), 0);
+        assert_eq!(old, MessageNumbers { cinematic: false, ..n });
+        // a short file stops at the first error
+        let mut r = Bytes::over(vec![]);
+        assert_ne!(message_io(&mut r, &mut MessageNumbers::default(), 1, 0, false), 0);
+    }
 
     fn effect_sample() -> EeScenarioEffectFields {
         let mut f = effect_defaults();

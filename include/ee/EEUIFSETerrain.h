@@ -10,6 +10,9 @@
 
 struct EeScreensSeGroup;
 
+// the terrain tab's statements (editor_setnx.rs: the list boxes' draws and copies are composed in Rust)
+extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i, float* f);
+
 // one line of the terrain type list (0x1c bytes: UIListBox<EESEUITTData>, the dtor's 0x1c stride)
 struct EESEUITTData {
     // user ctor (vector::resize(n)'s `_Ty()` 0x1ade81 zeroes +0x18 then +0x14)
@@ -30,14 +33,9 @@ public:
     {
     }
     virtual ~EESEUITerrainColorLB() {}      // +0x00 (??_G 0x1ac32e: its own vptr first)
-    // +0x14 0x1ac31d (inline COMDAT): the base CopyData, then the copied focus flag set
-    virtual long CopyData()
-    {
-        long theResult = UIListBox<std::vector<GEColor> >::CopyData();
-        this->SetCopiedHasFocus(true);
-        return theResult;
-    }
+    virtual long CopyData();                // +0x14 0x1ac31d (inline COMDAT): the base's, the copied focus set
     virtual long DrawPolygons();            // +0x18 0x1aaad4 (each line's colours as rhombi)
+    friend int32_t(::ee_screenscpp_setnx)(uint32_t inOp, void* const* p, int32_t* i, float* f);
 };
 
 // the terrain type list (RTTI EESEUITerrainTypeLB > UIListBox<EESEUITTData>; vtable 0x445c2c, sizeof 0x144)
@@ -69,7 +67,7 @@ public:
     virtual long CopyData();                // +0x14 0x1aacf2
     virtual long DrawPolygons();            // +0x18 0x1aade1 (each line's texture)
     virtual long DrawTextA();               // +0x1c 0x1ab1a2 (the names)
-    void SetTexture(GETexture* inTexture, unsigned long inLine);
+    friend int32_t(::ee_screenscpp_setnx)(uint32_t inOp, void* const* p, int32_t* i, float* f);
 
     GEText* mText;                          // +0x134
     GEText* mCopyText;                      // +0x138

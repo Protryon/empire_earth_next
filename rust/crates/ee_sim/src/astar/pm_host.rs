@@ -196,7 +196,7 @@ fn continent_at(x: i64, y: i64) -> u64 {
 }
 
 /// The manager's `GetPathSubSectorAt(x, y)`: 0 for none.
-fn sub_sector_at(x: i64, y: i64) -> u64 {
+pub(crate) fn sub_sector_at(x: i64, y: i64) -> u64 {
     let Some(r) = cm_record() else { return 0 };
     match crate::astar::cm_io::sub_sector_id_at(r, x as c_long, y as c_long) {
         0 => 0,
@@ -267,6 +267,22 @@ pub fn answer(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePathIo
         EE_PATH_UNIT_REFERENCE | EE_PATH_UNIT_DEREFERENCE => {
             reference(h, op == EE_PATH_UNIT_REFERENCE);
             0
+        }
+        EE_PATH_REQUEST_REFERENCE
+        | EE_PATH_REQUEST_DEREFERENCE
+        | EE_PATH_REQUEST_NEW
+        | EE_PATH_REQUEST_SAVE
+        | EE_PATH_REQUEST_LOAD
+        | EE_PATH_AWAIT
+        | EE_PATH_QUEUE_RESOLVE => request_op(op, io),
+        EE_PATH_REBUILD => {
+            // `gContinentManager.Rebuild()` (cm_passes.rs) on the world's map
+            let map = WorldView::global(&t).and_then(|w| w.map()).map_or(0, |m| m.handle());
+            let region = crate::astar::modifier_obj::influence_region_size() as c_long;
+            // SAFETY: the registered global record; the rebuild reads the world as the C++ member did
+            i64::from(unsafe {
+                crate::astar::cm_passes::ee_astar_cm_rebuild(crate::astar::world_view::cm_ptr(), map, region)
+            })
         }
         EE_PATH_GAME_TIME => WorldView::global(&t).map_or(0, |w| i64::from(w.game_time() as u32)),
         EE_PATH_SUB_SECTORS => cm_table(EeAStarCmTable::PathSubSectors).len() as i64,
@@ -376,11 +392,8 @@ pub fn answer(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePathIo
         EE_PATH_GRAPH_OBJECT => sub_sector(io.i[0]) as i64,
         crate::astar::graph_search::EE_PATH_REQUEST_FLAGS => {
             // the goal's flags = the request's (`EECPASGFlags::operator=`), from the request's record
-            let mut r = RequestRecord::default();
-            let mut c = EePathIo::default();
-            c.h[0] = h;
-            c.h[1] = &mut r as *mut RequestRecord as u64;
-            raw(EE_PATH_REQUEST_SAVE, &mut c);
+            // SAFETY: the operation's live request
+            let r = unsafe { crate::astar::request::record(h) };
             // SAFETY: `h1` is the search's live goal record
             let goal = unsafe { &mut *(io.h[1] as *mut crate::astar::graph_search::EeAStarGraphGoalRec) };
             goal.flags_player = r.r.flags_player;
@@ -521,7 +534,7 @@ fn unit_path_op(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePath
             let n = io.i[0] as usize;
             let ids: &[i32] =
                 if n == 0 { &[] } else { unsafe { std::slice::from_raw_parts(io.h[0] as *const i32, n) } };
-            unsafe { crate::astar::pm_apply::request_unit_paths(raw, io.h[1], io.h[2], ids, io.h[3]) };
+            unsafe { crate::astar::pm_apply::request_unit_paths(io.h[1], io.h[2], ids, io.h[3]) };
             Some(0)
         }
         EE_PATH_UNIT_COUNT_REQUEST => Some(unsafe { crate::astar::pm_apply::count_request(h) }),
@@ -549,6 +562,27 @@ fn unit_path_op(op: i32, io: &mut EePathIo, raw: &mut dyn FnMut(i32, &mut EePath
         }
         _ => None,
     }
+}
+
+/// The requests' operations (request.rs: the requests are Rust records).
+fn request_op(op: i32, io: &mut EePathIo) -> i64 {
+    use crate::astar::request;
+    let h = io.h[0];
+    let tile = |k: usize| [io.i[k] as i32, io.i[k + 1] as i32];
+    // SAFETY (each arm): the operation's request is live; `h1` the operation's flags or record
+    match op {
+        EE_PATH_REQUEST_REFERENCE => unsafe { request::reference(h) },
+        EE_PATH_REQUEST_DEREFERENCE => unsafe { request::dereference(h) },
+        EE_PATH_REQUEST_NEW => {
+            let f = unsafe { &*(io.h[1] as *const request::EePathAsgFlags) };
+            return request::new(io.i[0] as i32, io.i[1] as i32, tile(2), tile(4), &f.flags) as i64;
+        }
+        EE_PATH_REQUEST_SAVE => unsafe { *(io.h[1] as *mut RequestRecord) = request::record(h) },
+        EE_PATH_REQUEST_LOAD => return request::from_record(unsafe { &*(h as *const RequestRecord) }) as i64,
+        EE_PATH_AWAIT => return request::await_op(io),
+        _ => request::queue_resolve(),
+    }
+    0
 }
 
 /// `ClampTile` (pm_apply.rs; `map` 0: the world's).

@@ -49,10 +49,10 @@ pub const EE_UNITS_WP_ACTION_CHANGED: i32 = 5;
 /// the first goal queue's length and last goal
 pub const EE_UNITS_WP_QUEUE_LENGTH: i32 = 6;
 pub const EE_UNITS_WP_QUEUE_BACK: i32 = 7;
-/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `RefreshPath()`; `gEEAIRegionSize`
+/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `gEEAIRegionSize`
 pub const EE_UNITS_WP_IS_HUMAN: i32 = 8;
 pub const EE_UNITS_WP_CLEAR_BOUNDED: i32 = 9;
-pub const EE_UNITS_WP_REFRESH_PATH: i32 = 10;
+// (10 was RefreshPath: refresh_path)
 pub const EE_UNITS_WP_REGION_SIZE: i32 = 11;
 /// `EELocationGoalPoint(arg)` into the point; the world map's closest tile to the point (x | y << 32)
 pub const EE_UNITS_WP_GOAL_POINT: i32 = 12;
@@ -241,6 +241,33 @@ mod game {
         unsafe { crate::astar::pm::ee_path_manager_call(crate::astar::pm::global(), what, &mut io) }
     }
 
+    /// `EEComplexUnit::RefreshPath`: the unit's pending group path completed (`CompleteAutoPath` of its active
+    /// group's request for it, while not done) and, with at most two waypoints left, its own (`CompletePath`).
+    ///
+    /// # Safety
+    /// `unit` a live complex unit.
+    pub unsafe fn refresh_path(unit: u64) {
+        let (group, id) = {
+            let t = token();
+            // SAFETY: the caller's contract
+            unsafe { UnitView::of(&t, unit) }.map_or((0, 0), |u| (u.active_group_handle(), u.id()))
+        };
+        if group != 0 {
+            // the group's GetUnitPath (group_obj.rs)
+            // SAFETY: the unit's live active group
+            let path =
+                unsafe { crate::units::group_host::ee_units_group_get(group as *mut _, 6, i64::from(id)) } as u64;
+            // SAFETY: the group's live request
+            if path != 0 && !unsafe { crate::astar::request::get(path) }.r.done {
+                manager_call(10, path, &[]);
+            }
+        }
+        // SAFETY: the caller's contract
+        if unsafe { list(unit) }.len() <= 2 {
+            manager_call(9, unit, &[]);
+        }
+    }
+
     /// `gPathManager.IsPathDone(unit)`, `HasAutoPath(unit)`, `CancelPaths(unit, true)`
     pub fn is_path_done(unit: u64) -> bool {
         manager_call(12, unit, &[]) != 0
@@ -328,18 +355,18 @@ mod game {
             0 => {
                 let mut f = len() == 0;
                 if f && (!has_auto_path(unit) || !is_path_done(unit)) {
-                    host(EE_UNITS_WP_REFRESH_PATH, unit, 0);
+                    refresh_path(unit);
                     f = len() == 0;
                 }
                 f
             }
             1 => {
                 if len() == 0 {
-                    host(EE_UNITS_WP_REFRESH_PATH, unit, 0);
+                    refresh_path(unit);
                     return i64::from(len() > 0);
                 }
                 if len() == 1 {
-                    host(EE_UNITS_WP_REFRESH_PATH, unit, 0);
+                    refresh_path(unit);
                 }
                 return 1;
             }
