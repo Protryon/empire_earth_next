@@ -35135,6 +35135,37 @@ hosts' calls whose answers were Rust already; no class moved wholly.
   unit (`ee_units_host_unit_research_state`, `_unit_goal_clone` with no goal), the Rust answers zeros or none.
 - **Not done**: no class moved wholly; unit creation, the class bodies, the TEST ONLY sweeps and the hosts' world
   calls stay (docs/progress/units.md "What is left").
+
+## The units' lane, round 5: the game log's orders, the two capture sweeps, the gather spot search and four capture builders whole in Rust (ee_sim units order_log.rs, unit_sweep.rs, ag_sweep.rs, gather_spot.rs, landing.rs; combat capture_units.rs; branch rust-units5, 2026-11-20)
+
+The brief: net -3,000 C++ lines from whole bodies. Numbers: docs/progress/units.md ("Round 5"). Net -887 C++ lines
+(src, include/ee): every body whose callees were Rust or views moved; the rest of the hosts calls other lanes' C++.
+
+- **A body moves whole when its callees are Rust already, not when its host is big.** The host cases left are calls
+  into other classes (the path manager, the tech tree, the player, sounds, calamities, the class's virtuals); what
+  moved is what reads only views, the Rust continent manager (the AI lane's round 5 made `gContinentManager`'s
+  lookups inline wrappers over ee_astar, so `GetPathSubSectorAt`, `IsNeighbor`, `InSameContinent` and
+  `GetContinent` are callable from ee_sim::units with `astar::world_view::cm()`), the unit utilities and the
+  unit sets (`ee_unit_sets_contains`).
+- **A TEST ONLY driver moves over one host.** The two capture sweeps (unit_sweep.rs, ag_sweep.rs) read the units and
+  classes through the views and ask one C++ switch (`ee_units_sweep_host`) to create, produce, group, make goals and
+  write the AGPL record; the units and groups captures (175 and 2 digests) are their golden.
+- **Keep the order of every noted call.** The UCBD record is a per-tick count and digest of the class bodies' notes
+  (EEUCNote, C++ only): calling Rust's `citizen::has_gather_point` instead of the C++ `HasGatherPoint` dropped one
+  note per call and changed the oracle profile's UCBD digests (count equal, digest not). The fix calls the C++
+  member through the uu host's world case 18. The continent manager's queries (`ee_astar_cmq_*`) record CM captures:
+  call the same FFI functions in the same order, not their inner Rust.
+- **cbindgen writes `extern "C"` imports into the header.** Declaring `ee_game_log_on` (an ee_game export) in
+  ee_sim made the header check fail ("declared twice"); a crate below ee_game asks its C++ host instead.
+  A `#[repr(i32)]` enum no exported function names is not written at all: use `pub const EE_..._OP_*`.
+- **c_long is 32 bits on Windows**: `x.into()` to `c_long` and `as u32` of a `c_ulong` are clippy errors here and
+  needed elsewhere; `#[allow(clippy::unnecessary_cast)]` with `as`.
+- **Gates** (the final tree, origin/rust fa7e8674a merged: no conflict): both builds and the test profile 0/0; the
+  oracle seeds 2-7 identical; the plain saveload 18/18 identical (exit 0); the Rust gate PASS (5,022 tests); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--exercise random-game --box-select --orders --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
+- **Call-site edits outside the lane**: EESim.cpp (the two sweeps by their Rust names).
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). The game log's order lines read a
+  target through the unit store (`UnitView::by_id`) where the C++ read `gWorld.GetUnit` (both a player's listed
+  units). Only a game with the game log on runs order_log.rs; EE-SIM never does.
 ## The game core lane, round 4: the tech tree's ids, captures and media walk, the app capture's cheat sweep, the GE objects over hosts Rust names (ee_sim tech tech_ids.rs, nodes_capture.rs, node_media.rs; ee_game app cheat_capture.rs, world_capture.rs; ee_render ge game_hosts.rs; branch rust-core4, 2026-11-19)
 
 The lane's fourth round, on rust-core3 (origin/rust 4fb6c7119 in it; origin/rust had not moved at the end, so the
@@ -35400,36 +35431,6 @@ collapsing, net -3,000 C++ lines from real moves. It did not get there: the roun
   lane's round 5); the seed alone was identical, and the final run had no fault.
 - **Not run**: the POSIX builds (no platform code changed).
 
-## The units' lane, round 5: the game log's orders, the two capture sweeps, the gather spot search and four capture builders whole in Rust (ee_sim units order_log.rs, unit_sweep.rs, ag_sweep.rs, gather_spot.rs, landing.rs; combat capture_units.rs; branch rust-units5, 2026-11-20)
-
-The brief: net -3,000 C++ lines from whole bodies. Numbers: docs/progress/units.md ("Round 5"). Net -887 C++ lines
-(src, include/ee): every body whose callees were Rust or views moved; the rest of the hosts calls other lanes' C++.
-
-- **A body moves whole when its callees are Rust already, not when its host is big.** The host cases left are calls
-  into other classes (the path manager, the tech tree, the player, sounds, calamities, the class's virtuals); what
-  moved is what reads only views, the Rust continent manager (the AI lane's round 5 made `gContinentManager`'s
-  lookups inline wrappers over ee_astar, so `GetPathSubSectorAt`, `IsNeighbor`, `InSameContinent` and
-  `GetContinent` are callable from ee_sim::units with `astar::world_view::cm()`), the unit utilities and the
-  unit sets (`ee_unit_sets_contains`).
-- **A TEST ONLY driver moves over one host.** The two capture sweeps (unit_sweep.rs, ag_sweep.rs) read the units and
-  classes through the views and ask one C++ switch (`ee_units_sweep_host`) to create, produce, group, make goals and
-  write the AGPL record; the units and groups captures (175 and 2 digests) are their golden.
-- **Keep the order of every noted call.** The UCBD record is a per-tick count and digest of the class bodies' notes
-  (EEUCNote, C++ only): calling Rust's `citizen::has_gather_point` instead of the C++ `HasGatherPoint` dropped one
-  note per call and changed the oracle profile's UCBD digests (count equal, digest not). The fix calls the C++
-  member through the uu host's world case 18. The continent manager's queries (`ee_astar_cmq_*`) record CM captures:
-  call the same FFI functions in the same order, not their inner Rust.
-- **cbindgen writes `extern "C"` imports into the header.** Declaring `ee_game_log_on` (an ee_game export) in
-  ee_sim made the header check fail ("declared twice"); a crate below ee_game asks its C++ host instead.
-  A `#[repr(i32)]` enum no exported function names is not written at all: use `pub const EE_..._OP_*`.
-- **c_long is 32 bits on Windows**: `x.into()` to `c_long` and `as u32` of a `c_ulong` are clippy errors here and
-  needed elsewhere; `#[allow(clippy::unnecessary_cast)]` with `as`.
-- **Gates** (the final tree, origin/rust fa7e8674a merged: no conflict): both builds and the test profile 0/0; the
-  oracle seeds 2-7 identical; the plain saveload 18/18 identical (exit 0); the Rust gate PASS (5,022 tests); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--exercise random-game --box-select --orders --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
-- **Call-site edits outside the lane**: EESim.cpp (the two sweeps by their Rust names).
-- **Behaviour changes**: none observed (oracle, captures, saveloads identical). The game log's order lines read a
-  target through the unit store (`UnitView::by_id`) where the C++ read `gWorld.GetUnit` (both a player's listed
-  units). Only a game with the game log on runs order_log.rs; EE-SIM never does.
 ## R6 WONLobby, round 27: the table setters that call a widget's Rust object in Rust (ee_won_gui cfgset.rs; branch rust-wonlobby27, 2026-11-20)
 
 Round 26 left the table reader's setters (include/ee/wonapi/WONCfgTable.inl: one case of the C++ host's apply per
@@ -35615,3 +35616,413 @@ the Paths lane's EEPathManager.cpp holds 448; the rest is listed in the progress
   Windows only).
 - **Not moved**: see the progress file's "Left": the Paths lane's path manager slice, the units host's messages and
   wall routes, the improvement cost, citizen upgrade and enemy-near-all, EECPNext's names tables and dumps.
+## The game core lane, round 6: EE-SIM's scripted editor, its civilization builder steps and the driver's host bodies whole in Rust over one-statement C++ cases (ee_game sim_driver sed_steps.rs, sed_digest.rs, sed_civ.rs, sed_host.rs, sim_host.rs, sim_ops.rs; branch rust-core6, 2026-11-20)
+
+The brief: the owner's new rule (a C++ call from Rust is a one-statement shim, the score is C++ logic lines) applied to
+the bodies rounds 4 and 5 left because they call only C++; target -3,000 logic lines. The round moved the TEST ONLY
+drivers first (their gates compare the output line for line or digest by digest): -2,068 logic lines
+(`logic_lines.py`: 91,787 at 840aeb3c0, 89,719 at c7ccae8f7), net -1,943 lines (src, include/ee, include/lle).
+
+| Commit | What | C++ logic | net lines |
+|---|---|---|---|
+| b969f72e3 | EESimEditor.cpp's steps and digests, EESimCivBuilder.cpp (deleted), ee/EESimEditor.h (deleted) | -1,686 | -1,636 |
+| faa10ec7e | the civ manager head's test independent of the test order (the lead's item) | 0 | 0 |
+| c7ccae8f7 | EESim.cpp's host bodies and the capture's sweeps | -382 | -307 |
+
+- **The host shape that kept the shims small: one switch per C++ file, a Rust enum of operations.** Each C++ call or
+  member is one `case O::X: return ...;` (or a void call and `break;`) of `ee_simcpp_sed(op, p, a, f, s)` (an
+  integer or pointer answer), `ee_simcpp_sed_text` (a text copied into one static `std::string`, so a `UWideString`
+  temporary never dangles) and `ee_simcpp_sed_float`; the enum (`EeSimDriverSed`, `EeSimDriverSim`) is cbindgen's
+  `enum class`, exported through `[export] include`. 594 cases in the two files replace about 2,100 logic lines;
+  the logic_lines heuristic counts a case as a shim only when its statement is alone on the case's line or followed
+  by a lone `break;`/`return`.
+- **Plain C++ layouts are read in place, not through cases**: the scenario's numbers are Rust structs already
+  (`EeScenarioEffectFields`, `...ConditionFields`, `...ObjectFields`, `...TriggerFields`: one case answers the base
+  class's address and Rust reads and writes the fields), the trigger screens' control sets are pointer arrays
+  (`CondControls`, `EffControls`: 23 and 46 pointers, `static_assert`ed in the C++), GERectangle (bottom, left,
+  right, top), GEColor and GETransformation by address. The editor's own Rust objects (`ee_screens_sets_*`,
+  `_seun_*`, `_sew_*`, `_setn_get`, `_sear_*`, `_segr_*`, `_cb_*`) are called straight from Rust (declared in a
+  `cbindgen:ignore` module: cbindgen emits an `extern "C"` block's declarations into the header otherwise, "declared
+  twice").
+- **A pointer crosses as the type the next case casts it back to**: controls as `UIControl*` (every UI class has it
+  first), actions as `EEAction*` (EEARust's first base), messages as `EEMessage*`. The tile list's `mUnit` is an
+  `EEUnit*` (RTSTUnitList), not the RTSUnit* its typedef's name suggests (the one compile error of the round).
+- **A step's closure runs on the UI thread while the driver waits**: `ee_simcpp_sed_run(fn, ctx)` wraps the Rust
+  `FnMut(&mut Vec<String>)` in the C++ step action (the action, the marker's rounds, the clock pin stay C++: they are
+  EEAction and UIEvent subclasses). The text formats are the C library's: `%g` (ee_render cformat's `format_g`),
+  `std::to_string(float)` (`{:.6}`), Windows `long` arithmetic (`c_long`, `as u32 as c_ulong as c_long` where the
+  C++ cast through unsigned long), the FNV hash's basis 1469598103934665603 (0x14650fb0739d0383, not FNV-1a's
+  standard basis).
+- **The sweeps keep the C++'s call order**: every capture record is written by a C++ callee (CreateUnit,
+  LaunchProjectile, Step0, the impact tests, EESearchTargetAlongList, AddSight), called from Rust in the order and
+  with the float values the C++ computed (`z + 1.5`, `size * 0.5`, `radius * 0.5`: f32, no FMA). The unit lists are
+  read live, the human's allies copied first (as the C++ copied the vector).
+- **The civ manager head's test** (the lead's item): the WON lanes' branches lacked 41dbcdf89 (the test under
+  civ_tests.rs's lock), and another test's premade civilization landed between the test's two heads (7,332 against
+  7,200 bytes: one 120-byte record and its era's 12). Under the lock the tables are the reset, empty ones: the test
+  now asserts that before and after and compares the heads byte for byte. The full `cargo test -p ee_sim` ran 5
+  times in a row without a failure.
+- **Tests**: sed_digest 3 (the chunk lines, the formats, the import files), sed_steps 3 (sscanf's "%ld,%ld", the
+  elevation pattern, the placement matrix), sed_host 1 (the layouts), sed_civ 1 (hex, words, upgrades), sim_host 1
+  (the capture tags).
+- **Behaviour changes**: none intended. The editor gate's step that times out (a minute) leaves the Rust closure
+  pointing at the driver's stack, as the C++ lambda did with its output vector (the run ends with exit 3).
+- **What only harness sessions exercise**: the driver's UI reads under the UI lock (the menus and the lobby: every
+  EE-SIM run uses them, so the oracle does too); nothing of the round is reached by the game's own exe.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EESim.cpp's DumpState and ChecksumText (no gate reads
+  --dump-at's text), EETestFixture.cpp's host (each case several C++ calls behind the Rust fixture's `Call` API;
+  harness only), and the game's own bodies of the brief (EECalamityUpdate.cpp, Empire Earth.cpp, EEWorld.cpp,
+  EERenderObject.cpp, the network hosts, the RTS Engine): the next rounds' work, by the same pattern.
+- **Gates** (on c7ccae8f7; origin/rust 781d6cd0c is older than the round's base, so the merge was empty): both builds
+  0/0 (EE-AOC 417 inputs, EE-SIM 418) and the test profile 0/0; the Rust gate PASS (5,077 tests, 0 failed, no flake
+  this time); the oracle identical on seeds 2-7; the 12 capture profiles at seeds 2-3 PASS (oracle 212 digests, late
+  214, space 210, calamity 222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4,
+  transport 185); the plain saveload PASS (18 identical); the matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448
+  lines) and `--civbuilder` PASS (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT
+  PASS tour` (RENDER CHECK ok, INPUT CHECK ok); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree):
+  `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12986` units [4, 40, 40] alive [2, 3] engines
+  classic_lua x 2, `RESULT PASS lan-game PT host=2773 joiner=2772`, GATES PASS. Not run: the POSIX builds (no platform
+  code changed).
+## The UI lane, round 7: the screens', the UI thread's, the main game form's and the shells' host cases in Rust over one-statement C++ shims (ee_game screens game_cpp.rs, game_calls.rs, game_calls_more.rs, game_texts.rs, ui_calls.rs, main_form_calls.rs, shell_calls.rs; branch rust-ui7, 2026-11-20)
+
+The brief: with the owner's "calling C++ from Rust is fine" (2026-11-20), move the screens' and the HUD's C++ logic
+to Rust and reach the world through one-statement shims; score the C++ logic lines removed (`logic_lines.py`),
+target -3,000. **Logic -1,415** (whole tree, base 840aeb3c0 -> HEAD: 91,787 -> 90,372), net C++ lines
+-631 (+1025 -1656 in src and include), 605 shims added, none deleted. docs/progress/ui-cluster.md has the
+commits and what is left.
+
+### The pattern
+
+- **One list makes three things.** `game_cpp.rs`'s `shims!` takes `fn name(args) -> ret = symbol;` lines and makes
+  the trait `Cpp`, the FFI implementation (`Ffi`: an `extern "C"` block, `#[cfg(not(test))]`) and a recording fake
+  (`Fake`: `name(args)` per call, answers, out numbers and out texts from per-shim queues). The moved logic is
+  generic over `Cpp`, so its unit tests assert each case's C++ call order on the fake.
+- **Where the logic plugs in.** Every host already had an adapter in Rust that answered some ops before the C++
+  host (`Form::op`, `get_checked`, `put`, the UI hosts, the main form's, the shells'). The moved cases are one
+  more `if let Some(r) = module::call(&mut Ffi, ...)` right before the C++ call, so the hosts' traits and the
+  screens' replay goldens did not change, and the SGVW trace (recorded after the answer) is the same.
+- **A shim is one statement and no choice.** Two-way cases became two shims and the `if` in Rust
+  (`game_window` / `game_window_os`, `last_auto_save` / `last_quick_save`, `send_enter_shift` / `send_exit_shift`).
+  A temporary the C++ case built on its stack (an `FSFileSpec`, `FSPath`, `FSArchive`, `EEPSaveGameHeader`,
+  `UIHotKey`, `EEChatLogEntry`) is a `new` shim and a `delete` shim at the same places; a local the call writes
+  (a protocol, a tile, a point, WON's game info, a validation message) is a file static the shims share,
+  reset by a shim where the local was constructed.
+- **Texts both ways.** `EeScreensShimText` (pointer, length; `EEShimText`/`EEShimString` rebuild the string up
+  to its first NUL, as the cases' `UWideString(const char*)` did); `EeScreensShimOut` is a `Vec<u8>` the C++
+  appends to (`ee_screens_shim_out`, `EEShimOut`). Strings concatenated in the cases (`"Scenarios\\" + prefix +
+  name + extension`) are byte concatenations in Rust.
+- **A generator, kept scratch.** `name(arg: T) [-> R] | C++ statement` lines made both sides (the Rust list entry
+  and the `extern "C"` one-liner); cases were cut by label with a small script that keeps the file's line ends.
+
+### Lessons
+
+- **cbindgen sees private consts too when a name is shared.** A private `const SHOWN` in a new module moved
+  ee_ui's exported `SHOWN` from `ui/form_state.h` to `common.h` (cbindgen dedups by name across the crate graph).
+  Give a module's consts names no other module exports, and `/// cbindgen:ignore` the ones that look generic.
+- **Test function names shadow the module's.** A `#[test] fn resize_game_screen()` in a `use super::*` test file
+  hides the function under test (E0061 "takes 0 arguments"); name tests by what they check.
+- **The language strings are real in unit tests.** `resource_string(20009)` answers "<NONE>" in a test binary:
+  assert a text through `string(id)` rather than a literal.
+- **`logic_lines.py` counts a one-statement case written on three lines (`case X:`, the call, `break;`) as three
+  logic lines**, and `case X: call(); return 0;` as one. The owner's definition makes both shims. This round moved
+  only cases with more than one statement; the one-statement cases left are about a hundred in EEScreens.cpp alone.
+- **Measure the callee set before promising.** The cases whose calls were already Rust objects (textures, the
+  sound manager, the toolkit) took the same shim as the others: a shim is cheaper than finding the Rust object's
+  handle through a C++ shell (`GETexture::mRust` is private).
+
+### What only the tours (or a person) exercise
+
+- The tours: the settings' slider labels, game view, window mode and test sound; the single player and random map
+  set-up (`TEXT_SERVER`, `SI_*` for scenarios); the UI thread's `UpdateInterface`, `PauseGraphics`,
+  `ResizeGameScreen` and the game starts' cases; the main form's per-frame cases (group refresh, pick, cursor
+  modes, hot keys, cancel event, poll, scroll); the box selection and orders (the mouse modes' buttons, keys,
+  first unit, build, view); the chat line's free.
+- EE-SIM: the civilization builder (`GAME_CIV_BUILDER`, `UG_OP_CB_MUSIC`, `CIV_CHOOSE`), the editor's paint areas
+  (`SH_PICK`, `SH_MAP_TILE`, `SH_MOUSE_AT`, `SH_VIEW_RECT`).
+- Only a person: the campaign screens (backdrops, start, difficulty, archive, scenario header), the lobby (start
+  server, boot, transfer, rejoin, colours, random map options), the save and load screens (file list, exists,
+  load, quick load, saved game, scenario intro), the post-game summary (bars, star, screenshot, campaign set-up,
+  send), the civilization choice, the debug sound label, the WON message of the day and server selection, the
+  rasterizer change, the information messages' portrait and sound, the saved groups' buttons.
+
+### Gates
+
+Per commit (logic over the whole tree; net C++ lines in src and include): 56a9f7e56 -287 / -132, 25d4044d1 -217 /
+-132, e152dbfdb -261 / -108, cc8e670dc -281 / -150, 6dc3daa5c -278 / -83, 9bf340d65 -91 / -26; c6f61e135 is clippy
+only (Rust). Each piece: build `--sim` 0/0, the moved modules' unit tests, oracle seeds 2-3 identical (after
+pieces 1 and 4), the tour (after 3) and the orders game (after 5), sim_editor and `--civbuilder` (after 6).
+
+On the final tree (c6f61e135; origin/rust 781d6cd0c was already in the base 840aeb3c0: nothing to merge):
+- both builds 0/0 (EE-AOC 418 inputs, EE-SIM 419) and the test profile 0/0 (418); `rust_build.py header` current;
+- the Rust gate PASS (5,115 tests; test, clippy, rustfmt, header). The first run failed clippy only (two shim
+  traits unused outside the fake, LP64 casts, two tests' io records): c6f61e135;
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175,
+  effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests);
+- the plain saveload PASS (exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062);
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RESULT PASS), `--exercise editor` (RESULT PASS),
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS); no GX errors. The menu captures equal the base build's pixel for pixel but the build label (156
+  pixels at the top left); the box-selected frame and the editor's map tab looked at;
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT 11846,
+  units [4, 36, 37], alive [2, 3], classic_lua x 2; lan-game PT 2790/2789).
+- Not run: the POSIX builds.
+## The scenario editor lane, round 3: the scenario capture records whole in Rust; the effect run's world sequences, Create Units' unit, the cinematics and the shared maker composed in Rust over one-statement C++ (ee_sim scenario sm_capture.rs, world_compose.rs, cinematic.rs; ee_game editor_sepl.rs; branch rust-seditor3, 2026-11-20)
+
+The brief: under the owner's new rule ("Calling C++ from Rust is fine"), move the editor's and the trigger manager's
+C++ logic to Rust, reaching the world through one-statement shims; score in C++ logic lines (`logic_lines.py`),
+target -3,000. **Logic lines -1,352** (91,787 -> 90,435), net C++ lines -722 (+1,064 / -1,786), Rust +4,209 (tests
+included). About 590 shim cases were added (capture reads 123, effect statements 236, Create Units 33, round 56, the
+shared maker 140) and about 25 one-statement helpers; the composed ops' one-line C++ cases (about 12) went.
+
+### The pattern: compose below the trait, at the C ABI adapter
+
+The scenario logic already called the world by operation (`Host::world(op, args)`, `Round::op`), and the editor's
+Rust by host op (`ee_screenscpp_*`). A C++ case that was a statement sequence is now split into single statements
+with new op numbers, and the sequence is rebuilt in Rust in the *adapter* that turns the trait call into the C ABI
+call (`EeScenarioHost::world` / `::write`, `EeScenarioRoundHost::op`, `editor_direct::sepl`): `compose(op, args)`
+answers the old op from the new ones, or `None` for the C++'s own. So effect.rs, task.rs, round.rs and the editor's
+screens, and all their unit tests (recorded op streams), are unchanged by construction; the new modules have their own
+stream tests. The C++ keeps every object a sequence builds (the run's group, goals, transformations, the gate part,
+the town, the tile node, the made control) in the context it already passed, or hands a pointer back as an opaque
+handle the next statement takes.
+
+### Lessons
+
+- **A statement that made a local in the C++ needs a home that lives as long as the old local, and no longer.** The
+  effect run's context (`EESMEffectRun`) got members for each sequence's objects (`mGroupGoal`, `mUnitGoal`, `mHeld`,
+  `mFace`, `mGround`, ...), separate from the members the original's later statements read (`mTransformation`,
+  `mPitch`, `mRoll` are the original's "locals that the next unit's pass starts from" and must not be reused as
+  scratch). A shared static that replaced a function-local vector kept growing: `gTechTree.GetNodeIDs` *appends*, so
+  the editor's tech lists tripled until a "clear" statement was added before it (the editor gate caught it: n=624
+  instead of 208).
+- **Keep a held pointer where the C++ held one.** The Kill sequence re-reading the unit by id after `Kill` could miss
+  a unit the kill took off the lookup; it holds the `EEUnit*` in the context (`WX_HOLD`). Likewise the group's found
+  citizen and naval citizen: both searches run first, as the original's two locals, then the tests.
+- **cbindgen renames are global, again**: a `pub type Version = i64` in the capture module rewrote another crate's
+  header (`struct Version;` appeared in won_net/adminop.h). Prefix every exported type (`EeScenarioCapVersion`).
+- **A memory file the record hashes can be Rust's**: `FSMemoryFile(EeFsMemFile*, false)` wraps a Rust-owned state,
+  so the capture's saves write into a Rust file whose bytes Rust hashes, and the C++ statement is one `new`.
+- **The float math moves with its exact operations**: `GERectangle(point, w, h)` is `right = left + (w - 1)`;
+  `GEVector::Normalize` and `UMArcTan2` are ee_base's (the C++ inlines call the same Rust), so the aircraft heading
+  of Create Units and the facing test are computed in Rust with the same operations.
+- **The counter's one-liners**: `case X: stmt; return 0;` on one line is logic to `logic_lines.py` (two semicolons),
+  a statement and its return on two lines a shim. The new shims are written two-line; the lane's existing one-liners
+  (about 150) were left as they were, not reformatted for the count.
+
+### What moved (commits)
+
+| Commit | What | Logic | Net C++ |
+|---|---|---|---|
+| db6ac6ee5 | the scenario capture records whole in Rust (`sm_capture.rs`, `sm_capture_game.rs`; 6 tests) | -457 | -348 |
+| 5f81a50d7 | the effect run's world sequences, Create Units' unit, Task-Area's placements, Modify Tech Tree's add, the class tests (`world_compose.rs`; 17 tests); the cinematics, the round's messages, the pending effects, the media unloads, ReplaceUnit (`cinematic.rs`; 7 tests) | -556 | -203 |
+| 89aec3c92 | the shared maker's controls (`SeplMake`) and its host's sequences (`editor_sepl.rs`; 9 tests) | -339 | -171 |
+
+### What exercises what
+
+- The scenario capture profile (43 digests equal golden_cpp_scenario.txt) and scenario_check (27/27) run the
+  effects, the cinematics, Create Units and the capture records; the oracle runs none of the scenario code (random
+  maps) but every game's `EEScenarioManager::Update`.
+- The editor gate (14,448 lines) dumps every control `SeplMake` makes (rectangles, colours, opacity, texts, groups)
+  and drives the player tab (world and player values, tech lists, colour, events); the editor tour's first frame
+  equals the base build's outside the game view and the mini map (the blank map's grass varies by run).
+- Only a person reaches: the load thread's posts, the mini map redraw, the diplomacy events' clicks, the dialog
+  messages' camera moves outside EE-SIM's scenario dialogs.
+
+### Gates
+
+On the final tree (acaaf7603; origin/rust 781d6cd0c is already in the round's base, so its merge is a no-op): the
+`--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (5,107 tests; its first run failed
+clippy on the round's modules, fixed in acaaf7603); the oracle at seeds 2-7 identical; the twelve capture profiles at
+seeds 2-3 PASS (scenario 43, oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26,
+transport 185, groups 2, placement 4 digests); the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical,
+exit 0; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload
+expect: PASS` (calamity 3/4, next 2/4 as the expect file has them); scenario_check 27/27; sim_editor PASS (14,448
+lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the editor tour PASS, its first frame equal to
+the base build's outside the game view and the mini map; `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT
+PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12883` units [4, 39, 40] alive_computers [2, 3] engines
+classic_lua x 2, `RESULT PASS lan-game PT host=2780 joiner=2782`, GATES PASS. Per step: the build `--sim` 0/0, the
+oracle at seeds 2-3, the editor and civilization gates, scenario_check, the scenario capture at seeds 2-3 (its first
+run failed SMCE: the record's first field, the condition's id, was missing). Behaviour changes: none observed.
+## R6 WONLobby, round 28: the socket op classes as kinds, the lobby hosts' network cases on the Rust objects (ee_won_net sockops.rs, cppnet.rs; ee_won_lobby netops.rs; branch rust-wonlobby28, 2026-11-20)
+
+The lead asked for the biggest whole pieces bottom-up (WONRouting.h's classes, RoutingLogic.cpp, AsyncOp) after round
+27's -167. What WONRouting.h holds now is almost all the C++ ends of Rust objects (AsyncOp, the sockets, the queue
+socket, the UDP manager and ops, the server and routing connections, ServerContext, the tracker, the threads): one-line
+forwards that the lobby's hosts, EEWonNet.cpp and the drivers call. A class goes when nothing C++ names it. This round
+took the pieces whose callers could go with them.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| d5fc7c7d7 | the socket op classes as kinds of one SocketOp (sockops.rs `init_kind`, `class_kind`, `duplicate`) | -157 |
+| 4a2183499 | the lobby hosts' network cases on the Rust objects (netops.rs over cppnet.rs) | -63 |
+| 352e83e4f | the EE game host's AddRef and Release put back (below); won_host_coverage.py knows netops.rs and the transfer's ops | +2 |
+| the clippy and docs commits | cppnet.rs's allow; this section, the progress file | 0 |
+
+Round total: WON C++ 25,098 -> 24,880 (-218). Far short of the -2,000 aim. Under the owner's new score (C++ logic lines
+removed, one-statement shims not counted; the rule arrived at the end of this round) the round removed about 45 logic
+lines (the eleven classes' Duplicate choices, RecvBytesFromOp's RunHook and RecvBytesOp's CleanupHook overrides, the
+accept and receive checks, the routing op's recipient and data type reads); the rest were shims. Shims added: none in
+C++ (the kind constructor replaces eleven); Rust driver entries `ee_won_netops_*` (5) for the golden.
+
+### The socket op kinds
+
+- CloseOp, AcceptOp, ConnectOp, RecvBytesOp, RecvMsgOp, RecvCRMsgOp, SendBytesOp, SendMsgOp, SendBytesToOp,
+  RecvBytesFromOp and the queue socket's QueueCloseOp were C++ subclasses whose state and steps were already Rust
+  (sockops.rs); what each class still decided was its constructor's wait flags and members, its Duplicate, and two
+  hook overrides. Those are Rust now: `SocketOp(EeWonCoreSocketOp kind, socket, bytes, addr, size)` runs
+  `ee_won_socketop_init_kind` (the flags, then the original constructor's init), `Duplicate` asks
+  `ee_won_socketop_duplicate` (a new op of the kind through the core table's `new_socket_op`; none for the others),
+  `ee_won_socketop_run_hook` prepares a datagram receive's buffer first (RecvBytesFromOp::RunHook), and
+  `SocketOp::CleanupHook` closes a receive's file (RecvBytesOp::CleanupHook; a no-op for the other kinds).
+  `OpKind::Close` and `OpKind::Nothing` are the two classes that had no state (CloseOp's Continue closes the socket;
+  the queued close's succeeds with or without a socket). `EeWonCoreSocketOp::Accept` is new.
+- The accessors the callers used on the subclasses (GetMsg, GetBytes, GetAddr, GetAcceptedSocket, GetBytesRead,
+  SetProgressCompletion, SetFilePath) are SocketOp's, answered by the kind. A C++ class of its own (the lobby's
+  SendFileOp) has no kind: its virtual Continue as before.
+- Callers changed: AsyncOp.cpp's `CoreNewSocketOp` (one constructor), LanLogicHost.cpp, EELobbyGameHost.cpp,
+  InitLogic.cpp, WONLobbyAccountLogic.h (`SmartPtr<SocketOp> mAcceptOp`).
+- Drivers: tests/won/won_sockop_kinds.h keeps the original constructors' signatures over the kinds (`new
+  RecvMsgOp(s)` is `new SocketOp(RecvMsg, s)`), `WonSocketOpIs` and `WonSocketOpClass` replace the drivers'
+  dynamic_casts and typeid names for the ops Rust makes (a Duplicate is a plain SocketOp of the kind).
+
+### The hosts' network cases
+
+- LanLogicHost.cpp's 17 cases on an op, a socket op, a queue socket or a byte buffer (LanOpSocket, LanSocketClose,
+  LanSocketSend, LanSendTo, ClientHold, ClientRelease, RefHold, RefRelease, LanRecvOk, LanRecvMsgTake,
+  LanDiscoveryTake, LanAcceptedSocket, LanOpOnSocket, LanRecvFromAddr, LanSocketKill, LanTimerKill, LanRunTimer),
+  the saved game transfer's 7 (Succeeded, OpSocket, AcceptedSocket, AddRef, Release, Kill, Listen) and
+  RoutingLogic.cpp's 13 (AddRef, Release, OpStatus, OpKilled, OpKill, OpFinish, AsyncOpNew, OpSocket, RNum,
+  RRecipient, RIsGameData, Now, Tick) are answered in ee_won_lobby `netops.rs` over ee_won_net `cppnet.rs`: the C++
+  object's Rust object through the core table's `object_of`, then the call the shim made. lobbyhost.rs's `Host::op`
+  (the game's logics), eexfer.rs's `host_call` and routelogic.rs's `h` ask netops first.
+- They are answered only while the core table is bound (the game binds it with WONAPICore, before any logic runs);
+  the drivers' scripted hosts (no WON C++ linked) never bind it, so their goldens are unchanged.
+- The lesson of the third commit: the first commit removed the transfer's `case Op::AddRef:` and `case Op::Release:`
+  lines with a text replace that also matched the EE game host's identical lines in the same file (both hosts call
+  their enum `Op`). won_host_coverage.py caught it (two EeWonEeGameOp values without an answer) before any harness
+  session; the game would have leaked or freed the lobby game's references. Delete host cases by their switch, not
+  by text.
+
+### Tests and mutations
+
+- `won_sockobj_test` (the socket classes' golden, golden_sockobj.txt recorded over the C++ classes): 497 lines
+  identical over the kinds. won_core_test (174), won_ops_test, won_servconn_test (202), won_opcore_test (110),
+  won_hostsock_test (103), won_routeops_test (544), won_smartroute_test (668) and the others unchanged.
+- `won_netops_test` (new): the deleted cases as they were (tests/won/won_netops_orig.h) against netops.rs over the
+  real classes on 127.0.0.1: two worlds made alike (a listener, a client, the accepted socket, a message, a datagram, a
+  timed-out receive, a succeeded-then-killed op, a killed op, a timer, two routing ops, a buffer), six seeds of 300
+  random steps plus the destructive ends; the result, the take ops' bytes, the addresses, what the peer receives and a
+  census of both worlds after every step: 3,871 checks, 0 mismatches. Mutations (LanRecvOk without the kill flag,
+  LanAcceptedSocket's socket, OpKill without finishing, RRecipient's field): 4 of 4 caught; SendBytes for SendMsg is
+  equivalent on sockets without transforms (the LAN game's authenticated sockets have them).
+- cargo: sockops_tests.rs `kinds_are_the_original_constructors`, cppnet.rs `null_objects_do_nothing`, netops.rs's
+  two.
+
+### Behaviour changes
+
+- None intended. A moved case on a NULL object is a no-op where the original's call dereferenced it (only
+  LanSocketClose had a NULL check). A Duplicate of a kind is a plain SocketOp (no C++ code asked for the subclass).
+
+### What runs it
+
+- The LAN game (lan_game.py) runs every LanLogic case moved and the socket kinds; the saved game transfer's cases run
+  only when a saved game is shared (not in the gates); RoutingLogic's only on the Internet lobby (no server left).
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at every code commit |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py header` | 286 headers current |
+| `rust_build.py gate` | three runs stopped at `ee_sim` `tech::capture_rec::tests::the_civ_manager_head` (the known order-dependent size; passes alone); the rest run by hand: 5,025 tests passed, 0 failed, clippy -D warnings clean, rustfmt clean |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (oracle: PASS) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 162 programs exit 0, peak 558 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13097` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2728 joiner=2727`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe) | every lobby capture identical (host: lobby open, LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging); only the game's frames differ. Both runs `RESULT PASS lan-game` (PT 2720/2719 this round, 2715/2714 the start exe) |
+
+### Left
+
+- WONRouting.h's other shims go with their callers: the UDP family (UDPManagerSendRecvOp's two subclasses,
+  RoutingGetUserStatusOp and PingGameOp, could be kinds the same way), ServerConnectionConnectOp, the routing
+  connection classes (RoutingLogic.cpp's ConnNew, ConnDo, StatusOp* cases and EEWonNet.cpp), RecvChunkOp, the
+  completions (RoutingOpCompletion and the LogicCompletions could be Rust completions over `cppcore::completion`).
+- Under the new rule (C++ bodies to Rust over one-statement shims), the big hosts' callers and the widgets' C++
+  bodies (GuiHost.cpp, LobbyNetCtrlHost.cpp's DrawLobbyPing and ChatLink, LobbyDialogHost.cpp, EELobbyGlueHost.cpp's
+  logic) can move next round.
+
+## The paths lane, round 1: the waypoint deque, CanGetTo, the bounded searches' entries and RequestUnitPaths in Rust, the hosts' path cases (ee_sim units waypoints.rs; astar cm_unit.rs, pm_entry.rs, pm_apply.rs; branch rust-paths1, 2026-11-20)
+
+A new lane that crosses the AI and Units lanes on purpose: their remaining C++ called each other's (the units' hosts
+the path manager, the path manager the units' and goals' methods). State: docs/progress/paths.md.
+
+| Commit | What | C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 514f31e8b | the waypoint deque and its bodies (waypoints.rs), CanGetTo / AreConnectedForUnit / GetFootprintContinent (cm_unit.rs), FindPath and FindBoundedPath (pm_entry.rs), RequestUnitPaths, the request count, the path-done flag, ClampTile (pm_apply.rs), GetTerrainFlags, the hosts' path cases | +144 / -1,064 (net -920; code lines: 969 deleted, 124 added, all one-statement shims, inline forwarders, `EEWaypointList` and the FindPath copy wrapper) |
+| a80082034 | origin/rust (781d6cd0c) merged: no conflict; strip_markers changed nothing | 0 |
+| the docs commit | this section, docs/progress/paths.md | 0 |
+
+Round total: 200,059 -> 199,139 C++ lines (-920; the brief's -2,500 not reached). Logic lines removed: 969 (every
+deleted code line was a body or a host case's logic; the 124 added are shims). EEPathManager.cpp 756 -> 440,
+EEAIContinentManager.cpp 284 -> 200, EEComplexUnit.cpp -267. Shims added: `ee_units_wp_host` (14 cases),
+`ee_astar_cm_unit_host` (2), `ee_units_wp_host_sea_animal_path`, `EE_PATH_CLOSEST_TILE`, `EE_PATH_REQUEST_SET_PATH`
+(`EESetRequestPath`). Host code deleted: `ee_units_uu_host_continent` (14 cases), `ee_units_uu_host_find_path`, the
+physics model host's four waypoint reads, the path manager host's unit cases (`EEPathBoundedHost` whole), the
+class, combat, trigger, update and landing hosts' path cases.
+
+- **A C++ container becomes a Rust object behind a member that keeps the container's names.** `mWaypoints` was a
+  `std::deque<EEComplexUnitWaypoint>` read in 20 files (several of them other lanes'). It is now `EEWaypointList`:
+  the Rust list's handle plus `size`, `empty`, `operator[]`, `back`, `clear`, `push_back` and assignment over Rust
+  calls, `operator[]` a reference into the Rust element (valid until the list changes, as the deque's mostly were).
+  Every reader compiles unchanged, so the Groups lane's files (EEPlayer.cpp, RefreshPath) needed no edit; the
+  bodies that change the list are Rust, and Rust reaches a unit's list through the world layout (one new offset,
+  `complex_waypoints`, the member's first word). Element layout pinned by a static_assert and a Rust test.
+- **A Rust answer placed in a pre-dispatcher only runs if the dispatcher asks it.** The combat world host asks
+  `world_views::world_op` only for the codes `answers(code)` lists; the first build put the reach and FindPath
+  answers inside `world_op` without listing them, so the C++ host (its cases deleted) answered 0 and a combat
+  unit never searched its path. The oracle diverged at seed 3 tick 546 (`rng`, `units`). `sim_oracle run
+  --checksums` on the previous and the new exe and `ticks` named the tick; a seed-3 oracle capture of both exes and
+  a first-differing-record script (`build/pa1/firstdiff.py`: walk both files record by record) showed an `ASRN`
+  then a `PMRQ` kind 3 present in the old run and missing in the new: a FindPath not made.
+- **The act host notes every operation; a Rust answer must note it too.** EEUnitUpdate.cpp's `EEUpdateAct` writes
+  USST kind 12/13 (`ee_units_note_update`/`_action`) for every code before its switch; the update host's Rust
+  answers (`view_act`) call `notes::host_op` first. Moving CANCEL_PATHS and NEXT_WAYPOINT without it left the
+  oracle identical and changed only USST's digests (count equal): the fix notes them first, then runs them.
+- **A query the C++ made from inside another stays the manager's entry point.** CanGetTo's inner lookups
+  (`GetContinent` = `ee_astar_cmq_region_id`, `AreConnected`) and GetFootprintContinent's `EEGetFootprintTiles`
+  (its UUNT note) are called through the same Rust entry points the C++ inline members called, so CNTQ's depth
+  (one record per outermost query) and the notes are unchanged. The planet-id fix-up keeps its trace in C++.
+- **Calling C++ from Rust is one-statement shims.** `ee_units_wp_host` (EEComplexUnit.cpp) is the units' calls the
+  path bodies make (SetGoal, Insert, the queue's length and back, RefreshGoals, RefreshActiveGoal, StartAction,
+  ActionChanged, IsHuman, the bounded tiles' clear, RefreshPath, gEEAIRegionSize, EELocationGoalPoint, the map's
+  closest tile); RequestUnitPaths (pm_apply.rs) and SetGroupPathGoals (waypoints.rs) share it. A body re-reads the
+  unit's goal where the C++ did (`GetGoal()` after each SetGoal), and reads a replaced goal's record by its
+  handle as the C++ did (a freed goal's location record is gone: `forced_move` false either way).
+- **What runs it.** Every game: the waypoints (every moving unit), the path manager's unit operations (PMRQ, ASRN,
+  ASGR), CanGetTo (CNTQ), the combat reach tests and FindPath, the triggers' waypoint answers (USST). Only a drawn
+  game runs `FindWaypointAtTile` (the renderer's carrier waypoint fill: EERenderObject.cpp) and the C++ FindPath
+  wrapper's storm caller in a game with storms; the tour exercises the first.
+- **Call-site edits outside the lane's scope**: EEWorldLayout.cpp (Groups lane: one line, `complex_waypoints`),
+  EERenderObject.cpp (Game core: the waypoint pointer is const), EEFOFindNewTargetNearOldTarget.cpp (the uu
+  continent and find-path hosts deleted, EEAdjustNavalPath deleted). EEGroup.cpp, EEActiveGroup.cpp,
+  EESelectedGroup, EEUnitClassUpgrade, EEPlayer.cpp: none.
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). `AddWaypoint` no longer calls the
+  map's `GetClosestTile` when snapping an off-map point: its answer was never read (the original computed and
+  dropped it).
+- **Gates** (the final tree a80082034, the round merged with origin/rust 781d6cd0c): both builds 0/0 (EE-AOC 418
+  inputs, EE-SIM 419) and the test profile 0/0; the Rust gate PASS (5,077 tests, no flake this time); the oracle
+  seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222,
+  units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the plain
+  saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical, exit 0; the matrix (`--settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor
+  PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `fixture_game.py --exercise random-game --box-select --orders --seed 7` (through slot.py) RESULT PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12368` units [4, 38, 39] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2777 joiner=2783`, GATES PASS. Per step: the
+  `--sim` build 0/0 and the oracle at seeds 2-3; the oracle capture after the waypoints, after the reach and
+  FindPath move (where the two lessons above were found) and at the end with units, transport and groups.

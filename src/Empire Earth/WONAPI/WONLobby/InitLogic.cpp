@@ -202,11 +202,11 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::IsAcceptOp: return reinterpret_cast<AsyncOp*>(a) == aLogic->mAcceptOp.get();
     case O::ClearAcceptOp: aLogic->mAcceptOp = NULL; return 0;
     case O::AcceptedFromFirewall:
-        return static_cast<AcceptOp*>(reinterpret_cast<AsyncOp*>(a))->GetAcceptedSocket()->GetDestAddr().GetHost() ==
+        return static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetAcceptedSocket()->GetDestAddr().GetHost() ==
                aLogic->mFirewallAddress.GetHost();
     case O::SetBehindFirewall: LobbySetBehindFirewall(a != 0); return 0;
     case O::RestartAccept:
-        aLogic->mAcceptOp = new AcceptOp(static_cast<AcceptOp*>(reinterpret_cast<AsyncOp*>(a))->GetSocket());
+        aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetSocket());
         aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic),
                       gLobbyAcceptTimeout);
         return 0;
@@ -216,7 +216,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::HasFirewallSocket: return aLogic->mFirewallSocket.get() != NULL;
     case O::StartAccept:
         aLogic->mFirewallAddress = static_cast<DetectFirewallOp*>(reinterpret_cast<AsyncOp*>(a))->GetCurAddr();
-        aLogic->mAcceptOp = new AcceptOp(aLogic->mFirewallSocket.get());
+        aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->mFirewallSocket.get());
         aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic),
                       gLobbyAcceptTimeout);
         aLogic->mFirewallSocket = NULL;

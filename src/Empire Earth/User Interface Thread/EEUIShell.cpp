@@ -386,20 +386,10 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_BG_OPACITY: c->SetBgOpacity(f[0]); break;
     case EE_SCREENS_SH_BG_COLOR: c->SetBgColor(GEColor(f[0], f[1], f[2])); break;
     case EE_SCREENS_SH_BG_PLAYER_COLOR: c->SetBgColor(EEGetPlayerColor((unsigned long)a)); break;
-    case EE_SCREENS_SH_TEXT_FG: {
-        GEText* t = EEShellText(c, a);
-        t->SetFgColor(GEColor(f[0], f[1], f[2]));
-        t->SetIsTransparent(true);
-        break;
-    }
     case EE_SCREENS_SH_SELECTED_COLOR:
         static_cast<UILBString*>(c)->GetSelectedBackground()->SetColor(GEColor(f[0], f[1], f[2]));
         break;
     case EE_SCREENS_SH_SELECTED_OPACITY: static_cast<UILBString*>(c)->GetSelectedBackground()->SetOpacity(f[0]); break;
-    case EE_SCREENS_SH_BUTTON_TEXT:
-        gResource->GetString((unsigned long)a, theText);
-        static_cast<UIButton*>(c)->SetText(theText, reinterpret_cast<GEFont*>(b));
-        break;
     case EE_SCREENS_SH_SELECTION_INDEX: return (int64_t)(uint32_t)static_cast<EEUIShellCombo*>(c)->Selection();
     case EE_SCREENS_SH_SET_SELECTION: static_cast<UIComboBox*>(c)->SetCurrentSelection((unsigned long)a); break;
     case EE_SCREENS_SH_FILE_APPEND_LISTED: {
@@ -412,19 +402,8 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         }
         break;
     }
-    case EE_SCREENS_SH_FILE_FIND_LINE: {
-        const UILBString* theList = static_cast<UIComboBox*>(c)->GetListBox();
-        for (unsigned long i = 0; i < theList->GetLineCount(); i++)
-            if (theList->GetData(i) == *reinterpret_cast<const UWideString*>(a))
-                return i;
-        return -1;
-    }
     case EE_SCREENS_SH_FILE_PATH_RELEASE: reinterpret_cast<FSPath*>(a)->Dereference(); break;
     case EE_SCREENS_SH_DELETE_ALL: static_cast<UIComboBox*>(c)->DeleteAllEntries(); break;
-    case EE_SCREENS_SH_APPEND_STRING:
-        gResource->GetString((unsigned long)a, theText);
-        static_cast<UIComboBox*>(c)->AppendLine(theText);
-        break;
     case EE_SCREENS_SH_APPEND_NUMBERED: {
         UWideString theLine;
         gResource->GetString((unsigned long)a, theText);
@@ -604,102 +583,14 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_CLOSE_FORM: gUserInterface->CloseForm(reinterpret_cast<UIForm*>(a)); break;
     // the saved-group buttons' (shells_saved.rs)
     case EE_SCREENS_SH_SG_NEW_PORTRAIT: return (int64_t) new GEBitmap;
-    case EE_SCREENS_SH_SG_SOUND: {
-        EESoundObject* theSound = EESoundObject::Get(a == 0 ? kSoundButton1 : kSoundButton2);
-        if (theSound == NULL)
-            return 0;
-        if (b != 0) {
-            theSound->UnloadMedia();
-            return 0;
-        }
-        theSound->LoadMedia();
-        return (int64_t)theSound->GetSampleID();
-    }
     case EE_SCREENS_SH_SG_PLAY: gSoundManager->Play((unsigned long)a, 1.0f, 0.0f, 1.0f, false, NULL); break;
     case EE_SCREENS_SH_SG_PLAYER: return (int64_t)gWorld.GetCurrentPlayer();
-    case EE_SCREENS_SH_SG_FIRST_UNIT: {
-        EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-        if (b == 0)
-            return (int64_t)thePlayer->mSelectedGroup->GetFirstUnit();
-        EEGroup* theGroup = thePlayer->mGroups[a];
-        return theGroup && theGroup->GetNumUnits() > 0 ? (int64_t)theGroup->GetFirstUnit() : 0;
-    }
-    case EE_SCREENS_SH_SG_SEND: {
-        unsigned long theGroup = (unsigned long)(b & 0xff);
-        EEMessage* theMessage = a == 0   ? new EEMRecord(kMessageSavedGroupSelect, {theGroup, (b >> 8) != 0})
-                              : a == 1   ? new EEMRecord(kMessageSavedGroupAddSelection, {theGroup})
-                              : a == 2   ? new EEMRecord(kMessageSavedGroupCreate, {theGroup})
-                                         : new EEMRecord(kMessageSavedGroupClear, {theGroup});
-        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-        break;
-    }
     case EE_SCREENS_SH_SG_SHIFT: return UIControl::ShiftKeyPressed();
     case EE_SCREENS_SH_SG_INDEX: return (int64_t)c->GetIndex();
-    case EE_SCREENS_SH_SG_FACE: {
-        EEButtonObject* theButton = reinterpret_cast<EEComplexUnit*>(a)->mStats->mButton;
-        theButton->SetFaceBitmap(reinterpret_cast<GEBitmap*>(b), c->GetRectangle(), gScreenIndex);
-        f[0] = theButton->GetCellU();
-        f[1] = theButton->GetCellV();
-        return (int64_t)theButton->GetTexture();
-    }
-    case EE_SCREENS_SH_SG_TEXTURE_REF:
-        if (a != 0) {
-            if (b != 0) reinterpret_cast<GETexture*>(a)->Reference();
-            else reinterpret_cast<GETexture*>(a)->Dereference();
-        }
-        break;
     case EE_SCREENS_SH_SG_SET_TEXTURE: reinterpret_cast<GEBitmap*>(a)->SetTexture(reinterpret_cast<GETexture*>(b), c->GetScreenIndex()); break;
-    case EE_SCREENS_SH_SG_DRAW:
-        reinterpret_cast<GEBitmap*>(a)->SetLocation(static_cast<UIButton*>(c)->GetBitmapLocation());
-        c->GetRasterizer()->Draw(reinterpret_cast<GEBitmap*>(a), c->GetScreenIndex());
-        break;
     // the icon bar's (shells_icon_bar.rs): the slots let go as its destructor did
-    case EE_SCREENS_SH_IB_FREE: {
-        EEUIShellControl* theBar = static_cast<EEUIShellControl*>(c);
-        for (int i = 0; i < 2; i++)
-            if (EESoundObject* theSound = EESoundObject::Get(i == 0 ? kSoundButton1 : kSoundButton2))
-                theSound->UnloadMedia();
-        if (theBar->mSlots[0]) static_cast<GEBitmap*>(theBar->mSlots[0])->Dereference();
-        if (theBar->mSlots[1]) static_cast<GEBitmap*>(theBar->mSlots[1])->Dereference();
-        theBar->mSlots[0] = theBar->mSlots[1] = NULL;
-        break;
-    }
     // the chat line's (shells_chat.rs): its texts deleted, as its destructor did
-    case EE_SCREENS_SH_CHAT_FREE:
-        for (int i = 0; i < 4; i++)
-            delete static_cast<GEText*>(static_cast<EEUIShellControl*>(c)->mSlots[i]);
-        break;
-    case EE_SCREENS_SH_SIZE:
-        f[0] = c->GetRectangle().GetWidth();
-        f[1] = c->GetRectangle().GetHeight();
-        break;
     // the paint areas' (shells_paint.rs)
-    case EE_SCREENS_SH_PICK: {
-        EETile* theTile = NULL;
-        GE3DPoint thePoint;
-        long theX = 0, theY = 0;
-        if (a == 1) {
-            bool theResult = EEPointUnitOrTileXY(GE2DPoint(f[0], f[1]), theTile, theX, theY, false);
-            f[0] = (float)theX;
-            f[1] = (float)theY;
-            f[2] = theTile != NULL ? theTile->GetHeight() : 0.0f;
-            return theResult;
-        }
-        if (a == 2)
-            theTile = gWorld.GetMap()->GetLocationAt(GE2DPoint(f[0], f[1]), thePoint, false);
-        else
-            EEPointUnitOrTile(GE2DPoint(f[0], f[1]), theTile, thePoint, false);
-        f[0] = thePoint.GetX();
-        f[1] = thePoint.GetY();
-        f[2] = thePoint.GetZ();
-        f[3] = theTile != NULL ? theTile->GetHeight() : 0.0f;
-        return theTile != NULL;
-    }
-    case EE_SCREENS_SH_MAP_TILE: {
-        EEMapTile* theTile = gWorld.mMap->GetTile((unsigned long)a, (unsigned long)b);
-        f[0] = theTile != NULL ? theTile->GetHeight() : 0.0f;
-        return theTile != NULL;
-    }
     case EE_SCREENS_SH_MAP_HALF: f[0] = gWorld.GetMap()->GetF1955F4(); break;
     case EE_SCREENS_SH_SCREEN_LINE: {
         GE3DLine theLine;
@@ -707,17 +598,6 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         float* o = reinterpret_cast<float*>(a);
         o[0] = theLine.GetStart().GetX(); o[1] = theLine.GetStart().GetY(); o[2] = theLine.GetStart().GetZ();
         o[3] = theLine.GetDirection().GetX(); o[4] = theLine.GetDirection().GetY(); o[5] = theLine.GetDirection().GetZ();
-        break;
-    }
-    case EE_SCREENS_SH_MOUSE_AT: {
-        GE2DPoint thePoint = a != 0 ? gMouse->mPosition : static_cast<EEUIShellControl*>(c)->MouseLocation();
-        f[0] = thePoint.GetX();
-        f[1] = thePoint.GetY();
-        break;
-    }
-    case EE_SCREENS_SH_VIEW_RECT: {
-        const GERectangle& r = gViewport.GetViewRectangle();
-        f[0] = r.GetLeft(); f[1] = r.GetTop(); f[2] = r.GetRight(); f[3] = r.GetBottom();
         break;
     }
     case EE_SCREENS_SH_WINDOW_SIZE: return (int64_t)gGameWindow->GetWidth() | (int64_t)gGameWindow->GetHeight() << 32;
@@ -763,3 +643,97 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     }
     return 0;
 }
+
+// ---- the shims of the moved cases (UI lane round 7: ee_game screens shell_calls.rs, game_cpp.rs), each one C++
+// statement on the shell's control or the world
+#include "ee/EEScreensShims.h"
+static UIControl* C(uintptr_t inControl) { return reinterpret_cast<UIControl*>(inControl); }
+static EETile* sShimTile;          // the paint areas' pick: its tile and point (locals of the original case)
+static GE3DPoint sShimPoint;
+static EEMapTile* sShimMapTile;    // the map tile read's
+// shims6
+extern "C" void ee_screenscpp_shell_text_fg(uintptr_t inControl, uint32_t inWhich, float inRed, float inGreen, float inBlue)
+{ EEShellText(C(inControl), inWhich)->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
+extern "C" void ee_screenscpp_shell_text_transparent(uintptr_t inControl, uint32_t inWhich)
+{ EEShellText(C(inControl), inWhich)->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_shell_button_set_text(uintptr_t inControl, EeScreensShimText inText, uintptr_t inFont)
+{ static_cast<UIButton*>(C(inControl))->SetText(EEShimText(inText), reinterpret_cast<GEFont*>(inFont)); }
+extern "C" void ee_screenscpp_shell_combo_append(uintptr_t inControl, EeScreensShimText inText)
+{ static_cast<UIComboBox*>(C(inControl))->AppendLine(EEShimText(inText)); }
+extern "C" uint32_t ee_screenscpp_shell_combo_line_count(uintptr_t inControl)
+{ return (uint32_t)static_cast<UIComboBox*>(C(inControl))->GetListBox()->GetLineCount(); }
+extern "C" bool ee_screenscpp_shell_combo_line_is(uintptr_t inControl, uint32_t inLine, uintptr_t inText)
+{ return static_cast<UIComboBox*>(C(inControl))->GetListBox()->GetData(inLine) == *reinterpret_cast<const UWideString*>(inText); }
+extern "C" void ee_screenscpp_sound_unload_media(uintptr_t inSound)
+{ reinterpret_cast<EESoundObject*>(inSound)->UnloadMedia(); }
+extern "C" uint32_t ee_screenscpp_sound_sample_id(uintptr_t inSound)
+{ return (uint32_t)reinterpret_cast<EESoundObject*>(inSound)->GetSampleID(); }
+extern "C" uintptr_t ee_screenscpp_selected_first_unit()
+{ return (uintptr_t)gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit(); }
+extern "C" uintptr_t ee_screenscpp_player_group(uint32_t inGroup)
+{ return (uintptr_t)gWorld.GetCurrentPlayer()->mGroups[inGroup]; }
+extern "C" uint32_t ee_screenscpp_group_count(uintptr_t inGroup)
+{ return (uint32_t)reinterpret_cast<EEGroup*>(inGroup)->GetNumUnits(); }
+extern "C" uintptr_t ee_screenscpp_group_first_unit(uintptr_t inGroup)
+{ return (uintptr_t)reinterpret_cast<EEGroup*>(inGroup)->GetFirstUnit(); }
+extern "C" void ee_screenscpp_send_saved_group_select(uint32_t inGroup, bool inAdd)
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupSelect, {(unsigned long)inGroup, inAdd}), kSlotNone); }
+extern "C" void ee_screenscpp_send_saved_group_add_selection(uint32_t inGroup)
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupAddSelection, {(unsigned long)inGroup}), kSlotNone); }
+extern "C" void ee_screenscpp_send_saved_group_create(uint32_t inGroup)
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupCreate, {(unsigned long)inGroup}), kSlotNone); }
+extern "C" void ee_screenscpp_send_saved_group_clear(uint32_t inGroup)
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupClear, {(unsigned long)inGroup}), kSlotNone); }
+extern "C" uintptr_t ee_screenscpp_unit_stats_button(uintptr_t inUnit)
+{ return (uintptr_t)reinterpret_cast<EEComplexUnit*>(inUnit)->mStats->mButton; }
+extern "C" void ee_screenscpp_button_set_face(uintptr_t inButton, uintptr_t inBitmap, uintptr_t inControl)
+{ reinterpret_cast<EEButtonObject*>(inButton)->SetFaceBitmap(reinterpret_cast<GEBitmap*>(inBitmap), C(inControl)->GetRectangle(), gScreenIndex); }
+extern "C" float ee_screenscpp_button_cell_u(uintptr_t inButton)
+{ return reinterpret_cast<EEButtonObject*>(inButton)->GetCellU(); }
+extern "C" float ee_screenscpp_button_cell_v(uintptr_t inButton)
+{ return reinterpret_cast<EEButtonObject*>(inButton)->GetCellV(); }
+extern "C" uintptr_t ee_screenscpp_button_texture(uintptr_t inButton)
+{ return (uintptr_t)reinterpret_cast<EEButtonObject*>(inButton)->GetTexture(); }
+extern "C" void ee_screenscpp_texture_reference(uintptr_t inTexture)
+{ reinterpret_cast<GETexture*>(inTexture)->Reference(); }
+extern "C" void ee_screenscpp_texture_dereference(uintptr_t inTexture)
+{ reinterpret_cast<GETexture*>(inTexture)->Dereference(); }
+extern "C" void ee_screenscpp_bitmap_at_button(uintptr_t inBitmap, uintptr_t inControl)
+{ reinterpret_cast<GEBitmap*>(inBitmap)->SetLocation(static_cast<UIButton*>(C(inControl))->GetBitmapLocation()); }
+extern "C" void ee_screenscpp_shell_draw_bitmap(uintptr_t inControl, uintptr_t inBitmap)
+{ C(inControl)->GetRasterizer()->Draw(reinterpret_cast<GEBitmap*>(inBitmap), C(inControl)->GetScreenIndex()); }
+extern "C" uintptr_t ee_screenscpp_shell_slot(uintptr_t inControl, uint32_t inSlot)
+{ return (uintptr_t)static_cast<EEUIShellControl*>(C(inControl))->mSlots[inSlot]; }
+extern "C" void ee_screenscpp_shell_clear_slot(uintptr_t inControl, uint32_t inSlot)
+{ static_cast<EEUIShellControl*>(C(inControl))->mSlots[inSlot] = NULL; }
+extern "C" void ee_screenscpp_text_delete(uintptr_t inText) { delete reinterpret_cast<GEText*>(inText); }
+extern "C" float ee_screenscpp_control_width(uintptr_t inControl) { return C(inControl)->GetRectangle().GetWidth(); }
+extern "C" float ee_screenscpp_control_height(uintptr_t inControl) { return C(inControl)->GetRectangle().GetHeight(); }
+extern "C" void ee_screenscpp_shim_tile_clear() { sShimTile = NULL; }
+extern "C" void ee_screenscpp_shim_point_clear() { sShimPoint = GE3DPoint(); }
+extern "C" bool ee_screenscpp_pick_tile_xy(float inX, float inY, long* inTileX, long* inTileY)
+{ return EEPointUnitOrTileXY(GE2DPoint(inX, inY), sShimTile, *inTileX, *inTileY, false); }
+extern "C" bool ee_screenscpp_shim_tile_exists() { return sShimTile != NULL; }
+extern "C" float ee_screenscpp_shim_tile_height() { return sShimTile->GetHeight(); }
+extern "C" void ee_screenscpp_pick_map_location(float inX, float inY)
+{ sShimTile = gWorld.GetMap()->GetLocationAt(GE2DPoint(inX, inY), sShimPoint, false); }
+extern "C" void ee_screenscpp_pick_unit_or_tile(float inX, float inY)
+{ EEPointUnitOrTile(GE2DPoint(inX, inY), sShimTile, sShimPoint, false); }
+extern "C" float ee_screenscpp_shim_point_x() { return sShimPoint.GetX(); }
+extern "C" float ee_screenscpp_shim_point_y() { return sShimPoint.GetY(); }
+extern "C" float ee_screenscpp_shim_point_z() { return sShimPoint.GetZ(); }
+extern "C" void ee_screenscpp_map_tile_load(uint32_t inX, uint32_t inY)
+{ sShimMapTile = gWorld.mMap->GetTile((unsigned long)inX, (unsigned long)inY); }
+extern "C" bool ee_screenscpp_shim_map_tile_exists() { return sShimMapTile != NULL; }
+extern "C" float ee_screenscpp_shim_map_tile_height() { return sShimMapTile->GetHeight(); }
+extern "C" float ee_screenscpp_mouse_x() { return gMouse->mPosition.GetX(); }
+extern "C" float ee_screenscpp_mouse_y() { return gMouse->mPosition.GetY(); }
+extern "C" float ee_screenscpp_shell_mouse_x(uintptr_t inControl)
+{ return static_cast<EEUIShellControl*>(C(inControl))->MouseLocation().GetX(); }
+extern "C" float ee_screenscpp_shell_mouse_y(uintptr_t inControl)
+{ return static_cast<EEUIShellControl*>(C(inControl))->MouseLocation().GetY(); }
+extern "C" float ee_screenscpp_view_left() { return gViewport.GetViewRectangle().GetLeft(); }
+extern "C" float ee_screenscpp_view_top() { return gViewport.GetViewRectangle().GetTop(); }
+extern "C" float ee_screenscpp_view_right() { return gViewport.GetViewRectangle().GetRight(); }
+extern "C" float ee_screenscpp_view_bottom() { return gViewport.GetViewRectangle().GetBottom(); }
+// end shims6

@@ -22,6 +22,9 @@ struct Host;
 
 impl ActionHost for Host {
     fn call(&mut self, op: u32, action: Action) -> u32 {
+        if let Some(r) = crate::screens::ui_calls::action(&mut crate::screens::game_cpp::Ffi, op) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_action(op, action as *mut c_void) }
     }
 }

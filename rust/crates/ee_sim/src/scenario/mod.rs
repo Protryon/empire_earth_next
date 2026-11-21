@@ -18,6 +18,7 @@
 //!   defaults and index upkeep); [`save`]: their `Load` and `Save` over [`stream`], the `FSFile` calls by operation.
 //! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
 //!   its `Load` and `Save`.
+//! - [`cinematic`]: the cinematics' start, end and exit, the round's dialog messages, the pending effects' replay.
 //! - [`round`]: `EEScenarioManager::Update`, the clocks and the trigger round with the timed effects.
 //! - [`create`]: the Create Units effect's counts, owners and classes (`EESMEffect::CreateUnits`).
 //! - [`placement`]: where a Create effect places a unit (`EESMObject::FindPlacement`), `IsNearTile`, `IsNearUnit`.
@@ -32,11 +33,14 @@
 //! - [`text`]: the trigger text file (the editor's export and import of the scenario's translatable texts).
 //! - [`effect`]: a trigger effect's run (`EESMEffect::Execute` and its helpers) over the world's calls by
 //!   operation; [`effect_ai`] the AI's military effects, [`task`] the two task effects.
+//! - [`world_compose`]: the effect run's world calls that were C++ statement sequences, of single statements.
 //! - [`ffi`]: the C ABI the C++ classes call.
+//! - [`sm_capture`]: TEST ONLY, the simulation capture's scenario records (SMCE .. SMCU) over the C++ reads.
 
 pub mod aivar;
 pub mod area;
 pub mod attribute;
+pub mod cinematic;
 pub mod class_attribute;
 pub mod condition;
 pub mod create;
@@ -53,6 +57,8 @@ pub mod placement;
 pub mod player;
 pub mod round;
 pub mod save;
+pub mod sm_capture;
+pub mod sm_capture_game;
 pub mod stream;
 pub mod task;
 pub mod text;
@@ -60,6 +66,7 @@ pub mod tokens;
 pub mod trigger;
 pub mod unit_change;
 pub mod unit_views;
+pub mod world_compose;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the
 /// conversion's "indefinite" value `i32::MIN` for NaN or a value out of range (`as i32` would saturate).

@@ -165,7 +165,7 @@ pub fn accessible(
 // ------------------------------------------------------------------------------------------------ the game's world
 
 #[cfg(not(test))]
-pub use game::{game_accessible, game_find_spot};
+pub use game::{class_terrain_flags, game_accessible, game_find_spot};
 
 #[cfg(not(test))]
 mod game {
@@ -262,6 +262,47 @@ mod game {
             // the gates' unit set (`gUnitSetManager.GetSet(0x62)`)
             UuGame.unit_set_contains(ty, 0x62)
         })
+    }
+
+    /// `EEUnitClass::GetTerrainFlags(unit, flags)` of class `class` (`unit` 0: the class's own).
+    pub fn class_terrain_flags(class: u64, unit: u64) -> [bool; 17] {
+        // SAFETY: the callers hold the world (the simulation thread)
+        let t = unsafe { WorldRead::begin() };
+        // SAFETY: a live class
+        let c = unsafe { crate::world::ClassView::of(&t, class) }.expect("a live class");
+        let f = c.fields();
+        let tc = TerrainClass {
+            domains: crate::world_field!(f, mDomains),
+            water_kind: crate::world_field!(f, mWaterKind) as i64,
+            can_cross_forest: crate::world_field!(f, mCanCrossForest),
+            unit_type: c.unit_type() as u32,
+        };
+        // SAFETY: 0 or a live unit
+        let stats = unsafe { UnitView::of(&t, unit) }.and_then(|u| u.stats());
+        let mask = stats.map_or(0, |s| crate::world_field!(s.fields(), mTerrainMask) as u64);
+        let class_fields = f.ptr();
+        let stats_fields = stats.map(|s| s.fields().ptr());
+        terrain_flags(
+            tc,
+            unit,
+            mask,
+            // SAFETY: live records of the class and the unit's stats (`CanMoveOnTerrain`)
+            &mut |terrain| unsafe {
+                crate::units::cls_answers::can_move_on_terrain(&*class_fields, stats_fields.map(|p| &*p), terrain)
+            },
+            &mut |ty| UuGame.unit_set_contains(ty, 0x62),
+        )
+    }
+
+    /// `EEUnitClass::GetTerrainFlags(unit, flags)`: `out` the 17 flags (`EECPASGFlags::mFlags`).
+    ///
+    /// # Safety
+    /// `class` a live class, `unit` 0 or a live unit, `out` 17 writable flags.
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_units_terrain_flags(class: u64, unit: u64, out: *mut bool) {
+        let f = class_terrain_flags(class, unit);
+        // SAFETY: the caller's contract
+        unsafe { std::ptr::copy_nonoverlapping(f.as_ptr(), out, 17) };
     }
 
     /// The goal host's `GATHER_SPOT`.

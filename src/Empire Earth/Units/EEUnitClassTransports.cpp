@@ -119,14 +119,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         ioIo->b = theGoal->GetLoadUnitTile().mY;
         return 1;
     }
-    case EE_UNITS_CLS_WAYPOINTS:
-        return (int64_t)theUnit->mWaypoints.size();
-    case EE_UNITS_CLS_NEXT_WAYPOINT: {
-        GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-        long theAnswer = theUnit->GetNextWaypointPoint(thePoint);
-        ioIo->p[0] = thePoint.mX; ioIo->p[1] = thePoint.mY; ioIo->p[2] = thePoint.mZ;
-        return theAnswer;
-    }
+    // the waypoints' operations: Rust (cls_host.rs waypoint_op)
     case EE_UNITS_CLS_GROUND_HEIGHT: {
         GE3DPoint thePoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]);
         ((EEUnitClass*)(uintptr_t)inB)->GetGroundHeight(thePoint, &ioIo->f);
@@ -199,9 +192,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         ioIo->p[0] = theTarget.mX; ioIo->p[1] = theTarget.mY; ioIo->p[2] = theTarget.mZ;
         return 1;
     }
-    case EE_UNITS_CLS_DROP_PATH:
-        theUnit->DropPath();
-        return 0;
     case EE_UNITS_CLS_ADD_WAYPOINT:
         ((EEUnitClass*)(uintptr_t)inB)->AddWaypointAt(theUnit, ioIo->p[0], ioIo->p[1], ioIo->p[2], inC != 0);
         return 0;

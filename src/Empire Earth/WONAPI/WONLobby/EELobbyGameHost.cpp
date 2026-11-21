@@ -84,37 +84,30 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::GameProgress:
         static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->UpdateTransferProgress((int)b, (int)c);
         return 0;
-    case Op::Succeeded: return anOp->Succeeded() ? 1 : 0;
-    case Op::OpSocket: return (intptr_t) static_cast<SocketOp*>(anOp)->GetSocket();
-    case Op::AcceptedSocket: return (intptr_t) static_cast<AcceptOp*>(anOp)->GetAcceptedSocket();
     case Op::BytesRead: return (intptr_t) static_cast<RecvChunkOp*>(anOp)->GetRecvOp()->GetBytesRead();
-    case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
-    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case Op::Kill: reinterpret_cast<AsyncSocket*>(a)->Kill(); return 0;
     case Op::NewSocket: {
         QueueSocket* aNew = new QueueSocket(0);
         aNew->AddRef();
         return (intptr_t) static_cast<AsyncSocket*>(aNew);
     }
     case Op::Bind: return aSocket->Fn2B0D90((unsigned short)b, 0);
-    case Op::Listen: return aSocket->Listen(1000);
     case Op::RepeatAccept:
         aSocket->SetRepeatCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientAccepted));
-        aSocket->SetRepeatOp(new AcceptOp(NULL));
+        aSocket->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::Accept));
         return 0;
     case Op::QueueSend:
         aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientClosed));
         aSocket->QueueOp(new SendFileOp(std::string(reinterpret_cast<const char*>(b), (size_t)c)), -1);
-        aSocket->QueueOp(new CloseOp(NULL), -1);
+        aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Close), -1);
         return 0;
     case Op::HostValid: return aTransfer->mHost.IsValid() ? 1 : 0;
     case Op::QueueDownload: {
         aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientClosed));
-        SmartPtr<RecvBytesOp> theOp = new RecvBytesOp(0, NULL);
+        SmartPtr<SocketOp> theOp = new SocketOp(EeWonCoreSocketOp::RecvBytes);
         theOp->SetCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnFileReceived));
         theOp->SetFilePath(std::string(reinterpret_cast<const char*>(b), (size_t)c));
         theOp->SetProgressCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnProgress), 10000);
-        aSocket->QueueOp(new ConnectOp(aTransfer->mHost), -1);
+        aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, &aTransfer->mHost), -1);
         aSocket->QueueOp(theOp.mPtr, -1);
         return 0;
     }

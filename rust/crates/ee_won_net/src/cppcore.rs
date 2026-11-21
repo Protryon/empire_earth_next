@@ -107,6 +107,8 @@ pub enum EeWonCoreSocketOp {
     RecvBytes = 8,
     /// `new RecvCRMsgOp(socket)`
     RecvCrMsg = 9,
+    /// `new AcceptOp(socket)`
+    Accept = 10,
 }
 
 /// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`

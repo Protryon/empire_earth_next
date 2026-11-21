@@ -73,8 +73,6 @@ pub const EE_PATH_UNIT_SNAP: i32 = 126;
 pub const EE_PATH_CAPTURE_ACTIVE: i32 = 127;
 /// a capture record of tag `i0`: the bytes `h1[..i1]`
 pub const EE_PATH_CAPTURE_COMMIT: i32 = 128;
-/// the points `h2[..i0]` appended to the C++ vector `h1` (`std::vector<GE3DPoint>`)
-pub const EE_PATH_POINTS_OUT: i32 = 129;
 
 /// PMSP and its kinds
 const PMSP: i64 = 0x5053_4d50;
@@ -527,11 +525,6 @@ pub fn find_bounded_path(
     op(host, EE_PATH_BM_RELEASE_MODIFIER, &[], &[]);
     op(host, EE_PATH_BM_RESET, &[], &[]);
     (reached, out)
-}
-
-/// The points appended to the C++ vector `out` (`std::vector<GE3DPoint>*`).
-pub fn points_out(host: &mut dyn PathHost, out: u64, path: &[EePathPoint]) {
-    op(host, EE_PATH_POINTS_OUT, &[0, out, path.as_ptr() as u64], &[path.len() as i64]);
 }
 
 /// Appends `count` points to a Rust point list (a host operation's list in `h1`).

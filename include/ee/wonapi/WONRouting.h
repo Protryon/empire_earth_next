@@ -293,8 +293,13 @@ private:
 
 
 
-// a WON operation on a socket (RTTI SocketOp > AsyncOp, vtable 0x84c424; its inline members are emitted by
-// EELobbyFileTransfer.cpp 0x29151c..0x291555, 0x2914c2)
+// a WON operation on a socket (RTTI SocketOp > AsyncOp, vtable 0x84c424). A Rust object since round 14
+// (rust/crates/ee_won_net/src/sockop.rs EeWonSocketOp: the socket thread flag, the event indices, the socket, the
+// wait flags and RunHook); since R6 WONLobby round 28 the original's op classes (CloseOp, AcceptOp, ConnectOp,
+// RecvBytesOp, RecvMsgOp, RecvCRMsgOp, SendBytesOp, SendMsgOp, SendBytesToOp, RecvBytesFromOp and the queue socket's
+// QueueCloseOp) are kinds of this one class (sockops.rs: each constructor's wait flags and members, Start, Continue,
+// Duplicate, RecvBytesFromOp's RunHook and RecvBytesOp's CleanupHook by the kind): New makes one. A C++ class of its
+// own (the lobby's SendFileOp) has no kind and its virtual Continue.
 class SocketOp : public AsyncOp {
 public:
     static bool mRunAsyncImmediatelyDef; //WON SDK bool static at 565f08, zero-initialized
@@ -307,147 +312,60 @@ public:
         this->SetSocket(inSocket);
         this->SetRunAsyncImmediately(SocketOp::mRunAsyncImmediatelyDef);
     }
+    // an op of a class on the socket: the class's bytes (a reference taken), address and length or size
+    SocketOp(EeWonCoreSocketOp inKind, AsyncSocket* inSocket = NULL, const ByteBuffer* inBytes = NULL,
+             const IPAddr* inAddr = NULL, unsigned long inSize = 0) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore()))
+    {
+        this->SetSocket(inSocket);
+        this->SetRunAsyncImmediately(inKind != EeWonCoreSocketOp::QueueClose && SocketOp::mRunAsyncImmediatelyDef);
+        ee_won_socketop_init_kind(this->mSockOp, inKind, const_cast<RefCount*>(static_cast<const RefCount*>(inBytes)),
+                                  inAddr != NULL ? inAddr->GetValue() : NULL, static_cast<uint32_t>(inSize));
+    }
     virtual ~SocketOp() { ee_won_socketop_free(this->mSockOp); } // the original's was implicit, 29153d
     // +0x04 0x2b6070: started (finished InvalidSocket first without a socket); a pending start goes to the socket
     // thread (async) or is continued and finished (blocking), any other result finishes it
     virtual void RunHook() { ee_won_socketop_run_hook(this->mSockOp); }
     virtual void CleanupHook();             // +0x08 0x2b60c0: out of the socket thread (AsyncOp.cpp)
-    //: +0x0c starts the operation, +0x10 continues it (SendFileOp 0x2915d2 / 0x291613 return a WONStatus). Since net
-    // round 23 the socket op classes' own Start and Continue (ConnectOp, AcceptOp, the send and receive ops,
-    // RecvCRMsgOp: one-line forwarders each) are these: the op's Rust object runs its class's step (sockops.rs); a
-    // class without one of its own starts by the virtual Continue, as the original's Start (0x29151c) did
+    //: +0x0c starts the operation, +0x10 continues it: the kind's (SendFileOp 0x2915d2 / 0x291613 its own)
     virtual WONStatus Start() { return ee_won_socketop_start(this->mSockOp,this->GetTiming()); }
     virtual WONStatus Continue() { return ee_won_socketop_continue(this->mSockOp,this->GetTiming()); }
-    // +0x14 (vtable 0x84c424: 0x1ad67e `xor eax, eax`, ICF): a fresh copy of the op, none by default (AcceptOp's
-    // 0x291ab7 news one on the same socket; provisional name)
-    virtual AsyncOp* Duplicate() { return NULL; }
+    // +0x14: a fresh op of the kind on the same socket, none for the others (provisional name)
+    virtual AsyncOp* Duplicate()
+    { return static_cast<AsyncOp*>(static_cast<RefCount*>(ee_won_socketop_duplicate(this->mSockOp))); }
 
     bool IsInSocketThread() const { return ee_won_socketop_in_socket_thread(this->mSockOp); }
     void SetWaitForEvent(int i,bool inFlag) { ee_won_socketop_set_wait_for_event(this->mSockOp,i,inFlag); }
     EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
+    int GetKind() const { return ee_won_socketop_class(this->mSockOp); } // an EeWonCoreSocketOp, -1 for none
     static void HookAddToSocketThread(void* inOp); // WONAPICore's friend (AsyncOp.cpp: the core table's)
+    // the kinds' members: a receive's bytes or datagram, a message or line, the address (a copy), the accepted
+    // socket, the bytes read, the progress completion called after every interval bytes
+    ByteBufferPtr GetBytes() const
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_received(this->mSockOp))); }
+    ByteBufferPtr GetMsg() const
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->mSockOp))); }
+    IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->mSockOp)); }
+    AsyncSocket* GetAcceptedSocket()
+    { return static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_socketop_accepted(this->mSockOp))); }
+    unsigned long GetBytesRead() const { return ee_won_socketop_bytes_read(this->mSockOp); }
+    void SetProgressCompletion(CompletionBase<SmartPtr<AsyncOp> >* completion, long interval)
+    { ee_won_socketop_set_progress(this->mSockOp, static_cast<void*>(completion), static_cast<int32_t>(interval)); }
+    void SetFilePath(const std::string& theFilePath) // a receive's target file
+    { ee_won_socketop_set_path(this->mSockOp,reinterpret_cast<const uint8_t*>(theFilePath.data()),theFilePath.size()); }
 private:
-    // A Rust object since round 14 (rust/crates/ee_won_net/src/sockop.rs EeWonSocketOp): the socket thread flag (+0x44),
-    // the event indices (+0x48), the socket (+0x54, a reference) and the wait flags (+0x58), and RunHook
     EeWonSocketOp* mSockOp;
 };
 
-// closes its socket
-class CloseOp : public SocketOp {
-public:
-    CloseOp(AsyncSocket* inSocket) : SocketOp(inSocket) {}
-    virtual WONStatus Continue() { this->GetSocket()->Close(); return 0; }  // +0x10 0x291993
-};
-
-// waits for a connection on its (listening) socket
-// (a Rust object since round 15, rust/crates/ee_won_net/src/sockops.rs: the accepted socket, +0x5c, a reference held)
-class AcceptOp : public SocketOp {
-public:
-    AcceptOp(AsyncSocket* inSocket) : SocketOp(inSocket)
-    { this->SetWaitForEvent(0,true); ee_won_socketop_init_accept(this->GetSocketOpObject()); }
-    AsyncSocket* GetAcceptedSocket()
-    { return static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_socketop_accepted(this->GetSocketOpObject()))); }
-    virtual AsyncOp* Duplicate() { return new AcceptOp(this->GetSocket()); }  // +0x14 0x291ab7
-};
-
-// connects its socket to an address (RTTI ConnectOp > SocketOp, vtable 0x84c480; 0x84 bytes: EELobbyFileTransfer
-// 0x291b79 news it and inlines the ctor: SocketOp(NULL), the IPAddr copy ctor 0x291d59 at +0x5c, the vptr, then
-// +0x59 and +0x5a = true; argument order inferred). A Rust object since round 15 (sockops.rs: the address, +0x5c)
-class ConnectOp : public SocketOp {
-public:
-    ConnectOp(const IPAddr& inAddr, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
-    {
-        this->SetWaitForEvent(1,true);
-        this->SetWaitForEvent(2,true);
-        ee_won_socketop_init_connect(this->GetSocketOpObject(),inAddr.GetValue());
-    }
-    // a copy (the original returned a reference to the member)
-    IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->GetSocketOpObject())); }
-};
-
-// receives bytes from its socket into a buffer or a file. A Rust object since round 15 (sockops.rs: the write buffer
-// +0x5c, the received bytes +0x74, the length, count, skip flag, file, path, file flags and modify time +0x78..+0x9c,
-// the progress completion, interval and count +0xa0..+0xa8; RecvMsgOp's message +0xac and stage +0xb0; and StartRecv
-// 0x2b5000, ContinueRecv 0x2b50c0, CloseFile 0x2b5410, FinishRecv 0x2b54a0, StartRecvBody 0x2b5b50, FinishRecvMsg
-// 0x2b5d20)
-class RecvBytesOp : public SocketOp {
-public:
-    // the number of bytes (0: until the peer closes) into memory (2b4de0)
-    RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
-    {
-        this->SetWaitForEvent(0,true);
-        ee_won_socketop_init_recv(this->GetSocketOpObject(), static_cast<uint32_t>(inLength), false);
-    }
-    // out of the socket thread, the target file closed (2b5580)
-    virtual void CleanupHook()
-    {
-        SocketOp::CleanupHook();
-        ee_won_socketop_close_file(this->GetSocketOpObject(), this->GetStatus());
-    }
-    virtual AsyncOp* Duplicate() //2b4f00: the same length and socket
-    { return new RecvBytesOp(ee_won_socketop_length(this->GetSocketOpObject()),this->GetSocket()); }
-    // the completion called after every interval bytes (2b4f90)
-    void SetProgressCompletion(CompletionBase<AsyncOpPtr>* completion, long interval)
-    {
-        ee_won_socketop_set_progress(this->GetSocketOpObject(), static_cast<void*>(completion), // its RefCount
-                                     static_cast<int32_t>(interval));
-    }
-    ByteBufferPtr GetBytes() const //2b1df0 (folded)
-    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))); }
-    void SetFilePath(const std::string& theFilePath)
-    { ee_won_socketop_set_path(this->GetSocketOpObject(),reinterpret_cast<const uint8_t*>(theFilePath.data()),theFilePath.size()); }
-    void SetAppendFile(bool theVal) { ee_won_socketop_set_flag(this->GetSocketOpObject(),0,theVal); }
-    void SetBinaryFile(bool isBinary) { ee_won_socketop_set_flag(this->GetSocketOpObject(),1,isBinary); }
-    void SetFileModifyTime(time_t theTime) { ee_won_socketop_set_modify_time(this->GetSocketOpObject(),static_cast<int64_t>(theTime)); }
-    void SetSkipBytes(bool skip) { ee_won_socketop_set_flag(this->GetSocketOpObject(),2,skip); }
-    std::string GetFilePath() const // a copy (the original returned a reference to the member)
-    {
-        std::string aPath;
-        ee_won_socketop_path(this->GetSocketOpObject(), [](void* inContext, const uint8_t* inBytes, size_t inLength) {
-            static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
-        }, &aPath);
-        return aPath;
-    }
-    unsigned long GetBytesRead() const { return ee_won_socketop_bytes_read(this->GetSocketOpObject()); }
-protected:
-    struct MessageTag {};
-    RecvBytesOp(AsyncSocket* inSocket, MessageTag) : SocketOp(inSocket) // RecvMsgOp's: length-prefixed messages
-    {
-        this->SetWaitForEvent(0,true);
-        ee_won_socketop_init_recv(this->GetSocketOpObject(), 0, true);
-    }
-};
-class RecvMsgOp : public RecvBytesOp {
-public:
-    RecvMsgOp(AsyncSocket* inSocket = NULL) : RecvBytesOp(inSocket, MessageTag()) {}
-    virtual AsyncOp* Duplicate() { return new RecvMsgOp(this->GetSocket()); } //2ab3d0
-    ByteBufferPtr GetMsg() const //2ab770
-    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->GetSocketOpObject()))); }
-};
-
-// vtable 44ca78, six slots. The line so far (the original's WriteBuffer at 0x5c) and the message (+0x74) are the
-// op's Rust object's (sockop.rs, sockops.rs)
-class RecvCRMsgOp : public SocketOp {
-public:
-    RecvCRMsgOp(AsyncSocket* inSocket=NULL) : SocketOp(inSocket)
-    { this->SetWaitForEvent(0,true); ee_won_socketop_init_line(this->GetSocketOpObject()); }
-    virtual AsyncOp* Duplicate() {return new RecvCRMsgOp(this->GetSocket());} //2b2180, 209 bytes
-    ByteBufferPtr GetMsg() const //accessor 2b1df0 (ICF-folded)
-    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->GetSocketOpObject()))); }
-};
-
-// what a RecvBytesOp's progress completion (+0xa0) gets: 0x2b520d news one (0x48 bytes; RTTI RecvChunkOp : AsyncOp,
-// vtable 0x84cae4) with +0x44 = the receiving op
+// what a receive's progress completion gets: 0x2b520d news one (0x48 bytes; RTTI RecvChunkOp : AsyncOp, vtable
+// 0x84cae4) with +0x44 = the receiving op
 class RecvChunkOp : public AsyncOp {
 public:
-    RecvChunkOp(RecvBytesOp* inOp) : mRecvOp(inOp) {} //0x48 bytes: AsyncOp (0x44) plus the owning pointer at 0x44
-    RecvBytesOp* GetRecvOp() const { return this->mRecvOp.get(); }
+    RecvChunkOp(SocketOp* inOp) : mRecvOp(inOp) {}
+    SocketOp* GetRecvOp() const { return this->mRecvOp.get(); }
     virtual void RunHook() { this->Finish(0); }  //2b5370, 8-byte override of slot 04
-
 private:
-    SmartPtr<RecvBytesOp> mRecvOp;          // +0x44
+    SmartPtr<SocketOp> mRecvOp;          // +0x44
 };
-
 
 
 // the completion interface (vtable 0x43e4a0: ??_G, pure Complete)
@@ -523,66 +441,6 @@ public:
     // IMPLICIT destructor normal2aad90(375B), no own-vptr; inlines Queue members
     // then calls AsyncSocket::~AsyncSocket 2b04a0. Scalar deleting 2b1bf0.
     virtual AsyncSocket* Duplicate() { return new BlockingSocket(this->GetType()); } //2aab50: a new, unopened one
-};
-
-// further socket operations and managers
-
-// TD4d4198, VT44c9bc, total6c. A Rust object since round 15 (sockops.rs: the bytes +0x68, a reference held, and the
-// read position of the original's ReadBuffer +0x5c)
-class SendBytesOp : public SocketOp {
-public:
-    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL) : SocketOp(inSocket) // NULL sends nothing
-    {
-        this->SetWaitForEvent(1,true);
-        ee_won_socketop_init_send(this->GetSocketOpObject(), const_cast<ByteBuffer*>(inData), NULL, false);
-    }
-};
-
-// TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's): through the socket's send transforms
-class SendMsgOp : public SendBytesOp {
-public:
-    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL) : SendBytesOp(NULL, inSocket)
-    { ee_won_socketop_init_send(this->GetSocketOpObject(), NULL, const_cast<ByteBuffer*>(inMessage), true); }
-};
-
-// TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's): to the address, or on
-// the connection when the socket is connected
-class SendBytesToOp : public SocketOp {
-public:
-    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
-    {
-        this->SetWaitForEvent(1,true);
-        ee_won_socketop_init_send_to(this->GetSocketOpObject(), const_cast<ByteBuffer*>(inData), inAddress.GetValue());
-    }
-};
-
-// TD4d4440, VT44caf4, total90. Original out-of-line constructor2b55a0. A Rust object since round 15 (sockops.rs:
-// the buffer +0x5c, the datagram +0x60, the size +0x64, the sender +0x68)
-class RecvBytesFromOp : public SocketOp {
-public:
-    RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL) : SocketOp(inSocket) // one datagram
-    {
-        this->SetWaitForEvent(0,true);
-        ee_won_socketop_init_recv_from(this->GetSocketOpObject(), inMaxLength);
-    }
-    virtual ~RecvBytesFromOp() {} //2b56f0: the buffer goes with the Rust object
-    // the buffer allocated if needed, the last datagram cleared, then the run (2b57d0)
-    virtual void RunHook()
-    {
-        ee_won_socketop_recv_from_prepare(this->GetSocketOpObject());
-        SocketOp::RunHook();
-    }
-    virtual AsyncOp* Duplicate() //2b5660: the same size and socket
-    {
-        return new RecvBytesFromOp(static_cast<unsigned short>(ee_won_socketop_length(this->GetSocketOpObject())),
-                                   this->GetSocket());
-    }
-    SmartPtr<ByteBuffer> GetBytes() const //2aa920
-    {
-        return const_cast<ByteBuffer*>(static_cast<const ByteBuffer*>(
-            static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))));
-    }
-    IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->GetSocketOpObject())); } // a copy
 };
 
 // AoC UDP records: four slots each; the archived UDP header's extra

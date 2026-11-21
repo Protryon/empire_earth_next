@@ -93,6 +93,15 @@ constexpr static const int32_t EE_ASTAR_CM_REGISTER = 44;
 /// `ESDebugOut("%s", (const char*)h[0])`
 constexpr static const int32_t EE_ASTAR_CM_DEBUG_OUT = 45;
 
+/// `EEUnitClass::mDomains`' bits
+constexpr static const uint8_t MOVEMENT_AIR = 1;
+
+/// `kUnitCategoryPlanetSpaceship`, `kUnitTypeAirport`
+constexpr static const uint64_t CATEGORY_PLANET_SPACESHIP = 34;
+
+/// the space terrain (`CanMoveOnTerrain(unit, 0xc)`)
+constexpr static const int32_t TERRAIN_SPACE = 12;
+
 /// `gPhysics->GetRandom(i0, i1)` (the longs')
 constexpr static const int32_t EE_ASTAR_CM_RANDOM_RANGE = 46;
 
@@ -158,9 +167,6 @@ constexpr static const int32_t EE_PATH_BLOCKED_TILES = 133;
 
 /// `CollectUnitTiles`: a sea unit `h0`'s tiles appended to the tile list `h1`
 constexpr static const int32_t EE_PATH_UNIT_TILES = 134;
-
-/// the tiles `h2[..i0]` appended to the C++ vector `h1` (`std::vector<U2DPoint<long> >`)
-constexpr static const int32_t EE_PATH_TILES_OUT = 140;
 
 /// `EEUnitHandle::kNone`: no unit.
 constexpr static const uint32_t EE_PATH_NO_UNIT = 4294967295;
@@ -382,6 +388,12 @@ constexpr static const int32_t EE_PATH_MODIFIER_STORM_RAIN = 9;
 
 constexpr static const int32_t EE_PATH_MODIFIER_STORM_SNOW = 10;
 
+/// request `h1`'s path: the tiles `h2[..i0]` (x, y pairs), its length `i1`, done
+constexpr static const int32_t EE_PATH_REQUEST_SET_PATH = 170;
+
+/// map `h1`'s `GetClosestTile` of the point of float bits (`i0`, `i1`) -> (`i0`, `i1`)
+constexpr static const int32_t EE_PATH_CLOSEST_TILE = 171;
+
 /// `PrepareBoundedMachine(h1 map)` -> the bounded machine
 constexpr static const int32_t EE_PATH_BM_PREPARE = 100;
 
@@ -470,9 +482,6 @@ constexpr static const int32_t EE_PATH_CAPTURE_ACTIVE = 127;
 
 /// a capture record of tag `i0`: the bytes `h1[..i1]`
 constexpr static const int32_t EE_PATH_CAPTURE_COMMIT = 128;
-
-/// the points `h2[..i0]` appended to the C++ vector `h1` (`std::vector<GE3DPoint>`)
-constexpr static const int32_t EE_PATH_POINTS_OUT = 129;
 
 /// A unit's goals as the record reads them (the C++ host's `EE_PATH_UNIT_CAPTURE`): the first queue's length into
 /// the answer; `i0` whether the goal is a location goal, `i1`, `i2` its location's x and y (f32 bits).
@@ -1297,6 +1306,14 @@ struct EePathRequestRecord {
   bool done;
   int32_t flags_player;
   bool flags[17];
+};
+
+/// A bounded tile search's window (`EEAIAStarBounds`: top, left, bottom, right).
+struct EePathWindow {
+  int32_t top;
+  int32_t left;
+  int32_t bottom;
+  int32_t right;
 };
 
 /// `EEAIPathSector`'s members.
@@ -2410,6 +2427,29 @@ bool ee_astar_cm_restore_regions(EeAStarCmRecord *r,
                                  const uint8_t *data,
                                  size_t len);
 
+/// `EEAIContinentManager::CanGetTo(unit, x, y)`.
+///
+/// # Safety
+/// `unit` a live unit.
+bool ee_astar_cm_can_get_to(uint64_t unit, long x, long y);
+
+/// `EEAIContinentManager::AreConnectedForUnit(unit, first, second)`.
+///
+/// # Safety
+/// `unit` 0 or a live unit; the continents live areas or 0.
+bool ee_astar_cm_connected_for_unit(uint64_t unit, uint64_t first, uint64_t second);
+
+/// `EEComplexUnit::GetFootprintContinent(kind)`.
+///
+/// # Safety
+/// `unit` a live complex unit.
+uint16_t ee_astar_cm_footprint_continent(uint64_t unit, long kind);
+
+/// 0: the terrain mesh's `GetIsSpaceMap()`; 1: complex unit `unit`'s `mPlanetID`, given its land continent
+/// (`EEGetLandContinentOf`, with the original's trace) when 0 (EEAIContinentManager.cpp)
+extern uint32_t ee_astar_cm_unit_host(int32_t what,
+                                      uint64_t unit);
+
 /// `EEAIContinentManager::UpdateWallUnit`: the footprint of a finished blocking unit or gate queued for a sector
 /// rebuild and the path manager told (`now`: at once); skipped while clearing or before regions exist.
 ///
@@ -3092,7 +3132,8 @@ const void *ee_path_manager_bounded(EePathManager *p);
 /// 16 `RequestPendingPath(h0, (i0, i1))`, 17 `AddPending(unit i0, (i1, i2))`, 18 the loaded running state
 /// put back, 19 the graph searches' resolve, 20 the pending count, 21 the queued count, 22 `mLCC`,
 /// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back,
-/// 27 `FindPath` (pm_bounded.rs), 28 `FindBoundedPath` (its points appended to the C++ vector `i6`).
+/// 27 `FindPath` (pm_bounded.rs; the path and visited tiles appended to the `Vec<EePoint>`s `h2` and `h3`),
+/// 28 `FindBoundedPath` (its points appended to the `Vec<EePathPoint>` `i6`): pm_entry.rs makes both.
 ///
 /// # Safety
 /// `p` a live manager, `io` live; the handles live objects of their kinds.
@@ -3238,6 +3279,22 @@ void ee_path_capture_word(uint32_t bits);
 /// # Safety
 /// `p` a live manager.
 void ee_path_capture_close(EePathManager *p);
+
+/// `EEPathManager::FindPath` for the C++ callers: the path's tiles into the tile list `path` and, when `visited`
+/// is not null, the visited tiles into it (`ee_path_tiles_new` lists).
+///
+/// # Safety
+/// `p` the live manager; the handles as [`find_path_on`]'s; the lists live.
+void ee_path_find_path(EePathManager *p,
+                       uint64_t unit,
+                       uint64_t map,
+                       const int32_t *ends,
+                       EePathWindow window,
+                       int32_t kind,
+                       int32_t revs,
+                       uint64_t modifier,
+                       void *path,
+                       void *visited);
 
 /// The C++ view's notes (`EEAIAStarView::Note`): a no-op unless a run is captured on this thread.
 void ee_astar_capture_note(uint8_t kind,

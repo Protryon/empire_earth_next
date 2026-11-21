@@ -285,24 +285,6 @@ void EEUnitClass::NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& 
     outY = UMFloor(thePoint.GetY());
 }
 
-// Thins the boat's path to every n-th point and both ends when inSmooth is set (n: inner collision sphere, min 1)
-void EEUnitClass::NavalCitizenAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
-{
-    std::vector<GE3DPoint> thePath;
-    long theCount = ioPath.size();
-    long theStep = UMFloatToLong(this->mInnerCollisionSphere);
-    if (inSmooth != true)
-        return;
-    thePath.reserve(ioPath.size());
-    if (theStep <= 0)
-        theStep = 1;
-    for (long i = 0; i < theCount; i++) {
-        if (i == theCount - 1 || i == 0 || i % theStep == 0)
-            thePath.push_back(ioPath[i]);
-    }
-    ioPath = thePath;
-}
-
 // Creates a fishing boat on a tile at sea level
 EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -660,26 +642,6 @@ void EEUnitClass::LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* in
 // unit class: 0x21880c..0x218a45 (after EEUCNavalCitizen's slots; EEUCNavalTransport.cpp's +0x04 0x218a45 follows).
 // Unit flags: the exe's module set. Its ctor is out of line (vtable 0x44724c), followed by the ??_G every priest class
 // shares (EEUCBasicPriest's inline dtor), then its own slots +0x0c, +0x34, +0xa0.
-
-// Thins the priest ship's path to every n-th point and both ends when inSmooth is set (n: its inner collision sphere)
-void EEUnitClass::NavalPriestAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
-{
-    std::vector<GE3DPoint> thePath;
-    long theCount = ioPath.size();
-    long theStep = UMFloatToLong(this->mInnerCollisionSphere);
-    if (inSmooth != true)
-        return;
-    thePath.reserve(ioPath.size());
-    // a collision sphere that rounds to 0 keeps every point (it used to divide by zero); as in
-    // EEUnitClass::AdjustPath
-    if (theStep == 0)
-        theStep = 1;
-    for (long i = 0; i < theCount; i++) {
-        if (i == theCount - 1 || i == 0 || i % theStep == 0)
-            thePath.push_back(ioPath[i]);
-    }
-    ioPath = thePath;
-}
 
 // Creates a priest ship at a placement on the water plane (z 0)
 EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,

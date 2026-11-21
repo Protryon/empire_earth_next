@@ -487,6 +487,9 @@ WON_TESTS = {
     # the socket thread (golden: rust/crates/ee_won_net/src/golden_core.txt, recorded over QueueSocket.cpp, UDPManager.cpp,
     # SocketThread.cpp and AsyncOp.cpp before their hooks were answered in Rust, net round 25)
     "won_core_test": "won_ops_test",
+    # the lobby hosts' network cases answered in Rust (ee_won_lobby netops.rs) against the deleted cases
+    # (tests/won/won_netops_orig.h) over the real classes on 127.0.0.1
+    "won_netops_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
     # rust/crates/ee_won_net/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
     # and reply dispatch; its units are won_ops_test's (ServerConnection is header-only since R6 WONLobby round 12;

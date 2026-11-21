@@ -213,6 +213,14 @@ impl Host for EeScenarioHost {
         unsafe { (self.players)(self.ctx, kind, single, result, listed, at, count, seed) }
     }
     fn write(&mut self, op: u32, player: c_long, b: i64, c: i64, d: i64) {
+        if op == crate::scenario::create::EE_SCENARIO_WRITE_CREATE_UNIT {
+            // the unit's statements composed in Rust (world_compose.rs create_unit) over the world's calls
+            let (world, ctx) = (self.world, self.ctx);
+            // SAFETY: as `read`; `args` lives through the call
+            let mut cpp = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
+            crate::scenario::world_compose::create_unit(&mut cpp, player as i64, b, c != 0, d);
+            return;
+        }
         // SAFETY: as `read`
         unsafe { (self.write)(self.ctx, op, player, b, c, d) }
     }
@@ -223,8 +231,14 @@ impl Host for EeScenarioHost {
         list.0
     }
     fn world(&mut self, op: u32, args: [i64; 6]) -> i64 {
+        let (world, ctx) = (self.world, self.ctx);
         // SAFETY: as `read`; `args` lives through the call
-        unsafe { (self.world)(self.ctx, op, args.as_ptr()) }
+        let mut cpp = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
+        // the statement sequences composed in Rust (world_compose.rs); the C++ answers the rest
+        if let Some(value) = crate::scenario::world_compose::compose(&mut cpp, op, args) {
+            return value;
+        }
+        cpp(op, args)
     }
     fn object(&mut self, index: i32) -> Option<crate::scenario::fields::EeScenarioObjectFields> {
         // SAFETY: as `read`; a non-null answer points to the live object's numbers, copied at once

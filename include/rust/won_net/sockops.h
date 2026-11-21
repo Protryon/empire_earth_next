@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_net/ffi.h"
+#include "rust/won_net/hostop.h"
 #include "rust/won_net/ipobj.h"
 #include "rust/won_net/ops.h"
 #include "rust/won_net/sockop.h"
@@ -57,6 +58,29 @@ void ee_won_socketop_init_accept(const EeWonSocketOp *o);
 /// # Safety
 /// As `ee_won_socketop_init_send`.
 void ee_won_socketop_init_line(const EeWonSocketOp *o);
+
+/// The op of a class (`kind`): its wait flags and members (`bytes` null or a live `ByteBuffer`, `addr` null or a
+/// live value).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_kind(const EeWonSocketOp *o,
+                               EeWonCoreSocketOp kind,
+                               void *bytes,
+                               const EeWonIpAddr *addr,
+                               uint32_t size);
+
+/// The op's class (`EeWonCoreSocketOp`), or -1 for a C++ class of its own.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+int32_t ee_won_socketop_class(const EeWonSocketOp *o);
+
+/// The class's `Duplicate`: a new op (no reference yet) or null.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_duplicate(const EeWonSocketOp *o);
 
 /// The op class's `Start`.
 ///

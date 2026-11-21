@@ -61,7 +61,100 @@ pub fn answers(code: i32) -> bool {
             | EE_COMBAT_W_DAMAGE_CAPTURE
             | EE_COMBAT_W_AREA_CAPTURE
             | EE_COMBAT_W_HIT_CAPTURE
-    )
+    ) || cfg!(not(test))
+        && matches!(
+            code,
+            crate::combat::world::EE_COMBAT_W_CAN_GET_TO_UNIT
+                | crate::combat::world::EE_COMBAT_W_CONTINENT_AT
+                | crate::combat::world::EE_COMBAT_W_CONTINENT_LINK
+                | crate::combat::world::EE_COMBAT_W_CONNECTED_FOR_UNIT
+                | crate::combat::world::EE_COMBAT_W_FIND_PATH
+        )
+}
+
+/// The reach tests' continent manager queries (the paths lane's round 1: ee_sim::astar cm_unit.rs and the manager's
+/// record): `CanGetToUnit`, `GetContinentAt(unit)`, `AreAdjacent` of two continents' ids, `AreConnectedForUnit`.
+#[cfg(not(test))]
+fn reach_op(t: &WorldRead, code: i32, object: u64, other: u64, a: &mut EeCombatWorldArgs) -> Option<u64> {
+    use crate::astar::cm::EeAStarCmTable;
+    use crate::combat::world::{
+        EE_COMBAT_W_CAN_GET_TO_UNIT, EE_COMBAT_W_CONNECTED_FOR_UNIT, EE_COMBAT_W_CONTINENT_AT,
+        EE_COMBAT_W_CONTINENT_LINK, EE_COMBAT_W_FIND_PATH,
+    };
+    let r = crate::astar::world_view::cm();
+    Some(match code {
+        EE_COMBAT_W_CAN_GET_TO_UNIT => {
+            // SAFETY: the operation's live units
+            let (x, y) = unsafe { UnitView::of(t, other) }?.tile_xy();
+            // SAFETY: as above
+            u64::from(unsafe { crate::astar::cm_unit::can_get_to_unit(object, x as c_long, y as c_long) })
+        }
+        EE_COMBAT_W_CONTINENT_AT => {
+            // SAFETY: as above
+            let (x, y) = unsafe { UnitView::of(t, object) }?.tile_xy();
+            let r = r?;
+            if (x as c_ulong) >= r.width || (y as c_ulong) >= r.height {
+                return Some(0);
+            }
+            match crate::astar::cm_io::continent_id_at(r, x as c_long, y as c_long) {
+                0 => 0,
+                id => r.tables().tables[EeAStarCmTable::Continents as usize].get(id as usize).copied().unwrap_or(0),
+            }
+        }
+        EE_COMBAT_W_CONTINENT_LINK => {
+            let r = r?;
+            // SAFETY: the operation's live continents; the flags grid is mFlagsWidth squared
+            unsafe {
+                let (from, to) = (crate::astar::cm_io::continent(object).id, crate::astar::cm_io::continent(other).id);
+                u64::from(*r.tile_flags.add(from as usize * r.flags_width as usize + to as usize))
+            }
+        }
+        EE_COMBAT_W_FIND_PATH => {
+            // FindPath(object, the map, a0 a1, a2 a3, the window a4..a7, kind 0xb, revs a8, an attackable modifier):
+            // the first tile into a0 a1, the path's length
+            let map = WorldView::global(t).and_then(|w| w.map()).map_or(0, |m| m.handle());
+            // SAFETY: the operation's live units
+            let modifier = unsafe { crate::astar::modifier_obj::ee_astar_modifier_new_attackable(object, other) };
+            let window = crate::astar::pm_entry::EePathWindow {
+                top: a[4] as c_long as i32,
+                left: a[5] as c_long as i32,
+                bottom: a[6] as c_long as i32,
+                right: a[7] as c_long as i32,
+            };
+            let (from, to) =
+                ((a[0] as c_long as i32, a[1] as c_long as i32), (a[2] as c_long as i32, a[3] as c_long as i32));
+            // SAFETY: as above; the live map and the modifier made here
+            let path = unsafe {
+                crate::astar::pm_entry::find_path(
+                    object,
+                    map,
+                    from,
+                    to,
+                    window,
+                    0xb,
+                    a[8] as c_long as i32,
+                    modifier as u64,
+                )
+            };
+            if let Some(p) = path.first() {
+                a[0] = i64::from(p.x);
+                a[1] = i64::from(p.y);
+            }
+            // SAFETY: made above
+            unsafe { crate::astar::modifier_obj::ee_astar_modifier_release(modifier) };
+            path.len() as u64
+        }
+        // SAFETY: as above (the unit in a[0])
+        EE_COMBAT_W_CONNECTED_FOR_UNIT => {
+            u64::from(unsafe { crate::astar::cm_unit::connected_for_unit(a[0] as u64, object, other) })
+        }
+        _ => return None,
+    })
+}
+
+#[cfg(test)]
+fn reach_op(_t: &WorldRead, _code: i32, _object: u64, _other: u64, _a: &mut EeCombatWorldArgs) -> Option<u64> {
+    None
 }
 
 /// `EE_COMBAT_XA_APPLY_HIT`, `EE_COMBAT_XA_AREA_DAMAGE` (ee/EECombatGoals.h)
@@ -170,6 +263,9 @@ pub unsafe fn world_op(
     class: u64,
     a: &mut EeCombatWorldArgs,
 ) -> Option<u64> {
+    if let Some(v) = reach_op(t, code, object, other, a) {
+        return Some(v);
+    }
     if !answers(code) {
         return None;
     }
