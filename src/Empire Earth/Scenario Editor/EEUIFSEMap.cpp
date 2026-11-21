@@ -98,9 +98,9 @@ extern "C" int32_t ee_screenscpp_sempx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEMPX_NEW_FILE_COMBO: return SempxOut(i, static_cast<UIControl*>(EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), UString("*") + ".dat", EE_SCREENS_SE_MAP_ELEVATION_FILE, gSeplScreenFont, GE2DPoint(f[0], f[1]), 200, theForm, (unsigned long)i[2])));
     case EE_SCREENS_SEMPX_FILE_COMBO_HELP: static_cast<UIControl*>(p[0])->SetStringTableID(IDS_ELEVATION_FILE_TO_USE_WITH_BLANK);
         return 0;
-    case EE_SCREENS_SEMPX_BLANK_MAP: (new EESEARust(kSEABlankMap, NULL, i[0], i[1], i[2]))->Dereference();
+    case EE_SCREENS_SEMPX_BLANK_MAP: (new EESEARust(EE_SCREENS_SEW_BLANK_MAP, NULL, i[0], i[1], i[2]))->Dereference();
         return 0;
-    case EE_SCREENS_SEMPX_RANDOM_MAP: (new EESEARust(kSEARandomMap, NULL, i[0], i[1]))->Dereference();
+    case EE_SCREENS_SEMPX_RANDOM_MAP: (new EESEARust(EE_SCREENS_SEW_RANDOM_MAP, NULL, i[0], i[1]))->Dereference();
         return 0;
     case EE_SCREENS_SEMPX_RANDOM_NEW: return SempxOut(i, new URandomIntegers);
     case EE_SCREENS_SEMPX_RANDOM_SEED: static_cast<URandomIntegers*>(p[0])->SetSeed(TMGetTime());

@@ -308,7 +308,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_AI_SET + 5: return SepxAI(i)->mCanExplore = i[3] != 0;
     case EE_SCREENS_SEPX_AI_SET + 6: return SepxAI(i)->mIgnoreOthers = i[3] != 0;
     case EE_SCREENS_SEPX_AI_SET + 7: return SepxAI(i)->mCanGather = i[3] != 0;
-    case EE_SCREENS_SEPX_EVENT_START_EPOCH: return SepxHandle(i, static_cast<UIEvent*>(new EESEERust(kSEEStartEpoch, p[1])));
+    case EE_SCREENS_SEPX_EVENT_START_EPOCH: return SepxHandle(i, static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_START_EPOCH, p[1])));
     case EE_SCREENS_SEPX_EVENT_SLIDER:
         return SepxHandle(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
     case EE_SCREENS_SEPX_EVENT_UNIT_LIMIT:

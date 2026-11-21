@@ -7439,6 +7439,423 @@ constexpr static const uint32_t EE_SCREENS_SEUN_GET_LISTED_LAYER = 26;
 /// Handles: the selection tool.
 constexpr static const uint32_t EE_SCREENS_SEUN_GET_SELECT_UNITS = 27;
 
+/// `gUserInterface->PostAction(p)` (an `EEAction*`).
+constexpr static const uint32_t EE_SCREENS_SEAX_POST_ACTION = 3000;
+
+/// The action p released.
+constexpr static const uint32_t EE_SCREENS_SEAX_DEREFERENCE_ACTION = 3001;
+
+/// `gB529066 = false`, `gCameraFollowing = false`, `gB529068 = false` (each its own statement).
+constexpr static const uint32_t EE_SCREENS_SEAX_FOLLOW_529066 = 3002;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CAMERA_FOLLOWING = 3003;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_FOLLOW_529068 = 3004;
+
+/// -> whether the mesh point (i0, i1) is valid; its height -> f0.
+constexpr static const uint32_t EE_SCREENS_SEAX_MESH_VALID_POINT = 3005;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MESH_Z = 3006;
+
+/// The terrain i0's table entry: -> ambients only, its unit class count, its ambient unit chance.
+constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_AMBIENTS_ONLY = 3007;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_NUM_CLASSES = 3008;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TERRAIN_CHANCE = 3009;
+
+/// -> whether the world player may place the class i0 on the tile (i1, i2); the unit made there.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLANT_CAN_PLACE = 3010;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLANT_CREATE = 3011;
+
+/// -> whether the editor's radio button of id i0 is checked.
+constexpr static const uint32_t EE_SCREENS_SEAX_RADIO_CHECKED = 3012;
+
+/// The statics' longs (`sSeaxLong[i0] = i1`, -> `sSeaxLong[i0]`) and `EEMap::Raise` over them (f0..f3, i0 != 0).
+constexpr static const uint32_t EE_SCREENS_SEAX_LONG_SET = 3013;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_LONG_GET = 3014;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_RAISE = 3015;
+
+/// -> the map's tile (i0, i1) (`EEMapTile*`), its first unit node, a node's next and unit.
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE = 3016;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE_FIRST_NODE = 3017;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NODE_NEXT = 3018;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NODE_UNIT = 3019;
+
+/// The unit p (`EEUnit*`): -> on a tile's list; -> its complex unit's previous part (an `EEUnit*`); referenced;
+/// -> a path point; -> a resource; emptied; killed; taken from its player; released.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_ON_TILE = 3020;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PREVIOUS_PART = 3021;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_REFERENCE = 3022;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PATH_POINT = 3023;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_RESOURCE = 3024;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_EMPTY = 3025;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_KILL = 3026;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PLAYER_KILL = 3027;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_DEREFERENCE = 3028;
+
+/// -> the screen event i0 (`EECreateScreenEvent`); the event p posted; released.
+constexpr static const uint32_t EE_SCREENS_SEAX_SCREEN_EVENT_NEW = 3030;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EVENT_POST = 3031;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EVENT_DEREFERENCE = 3032;
+
+/// The quick save p (`EEAQuickSaveLoad`): not a load; written to its file.
+constexpr static const uint32_t EE_SCREENS_SEAX_QUICK_SAVE_NOT_LOAD = 3033;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_QUICK_SAVE_WRITE = 3034;
+
+/// The tech list of id i0 filled with the lines i1..i2.
+constexpr static const uint32_t EE_SCREENS_SEAX_TECH_FILL = 3035;
+
+/// The editor's paint area `GERectangle(left i0, top i1, right i2, bottom i3)`.
+constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_AREA = 3036;
+
+/// The pause's statements: posted; the world's write lock and the UI copy lock let go; -> paused; `PlatSleep(1)`;
+/// the locks taken again.
+constexpr static const uint32_t EE_SCREENS_SEAX_PAUSE_POST = 3037;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_WRITE_UNLOCK = 3038;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UI_UNLOCK = 3039;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_PAUSED = 3040;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SLEEP = 3041;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UI_LOCK = 3042;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_WRITE_LOCK = 3043;
+
+/// The world reset; a new scenario manager; a new environment manager.
+constexpr static const uint32_t EE_SCREENS_SEAX_WORLD_RESET = 3044;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NEW_SCENARIO_MANAGER = 3045;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_NEW_ENVIRONMENT_MANAGER = 3046;
+
+/// -> a new map (i0..i3); verified; set as the world's.
+constexpr static const uint32_t EE_SCREENS_SEAX_MAP_NEW = 3047;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MAP_VERIFY = 3048;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MAP_SET = 3049;
+
+/// The mesh tile (i0, i1) water when i2; the tile's height f0.
+constexpr static const uint32_t EE_SCREENS_SEAX_MESH_SET_WATER = 3050;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE_SET_HEIGHT = 3051;
+
+/// -> a terrain paint of the terrain i0 (an `EEAction*`); its area (i0..i3).
+constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_NEW = 3052;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PAINT_SET_AREA = 3053;
+
+/// The minimap: given the map; `EEUIMiniMap::Update`; `RedrawAll`; `Redraw`; `Refresh`.
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_SET_MAP = 3054;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_UPDATE = 3055;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REDRAW_ALL = 3056;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REDRAW = 3057;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_MINIMAP_REFRESH = 3058;
+
+/// The renderer: the scene released; made again; resumed.
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_RELEASE_SCENE = 3059;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_INITIALISE_SCENE = 3060;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GRAPHICS_RESUME = 3061;
+
+/// -> new game options; p's map size i0; its start epoch i0; its map dimensions into the longs 0, 1; deleted.
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_NEW = 3062;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_MAP_SIZE = 3063;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_EPOCH = 3064;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_DIMENSIONS = 3065;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_OPTIONS_DELETE = 3066;
+
+/// -> the player i0 (`EEPlayer*`); p's observer flag, whether it is human, its tech tree's start epoch.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER = 3067;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_OBSERVER = 3068;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_HUMAN = 3069;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_START_EPOCH = 3070;
+
+/// The random map: its players cleared, the player i0 added; the location zeroed; `CreateRandomMap(options p,
+/// the players, local i0, the generator of style i1, the seed, the map, the location)`; the location's x, y, z.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYERS_CLEAR = 3071;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYERS_PUSH = 3072;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_ZERO = 3073;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_RANDOM_MAP = 3075;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_X = 3076;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_Y = 3077;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_POINT_Z = 3078;
+
+/// The player p's pending units: their count; -> the unit i0; the unit p's media loaded; the pending unit i0 added
+/// to the world; -> the unit p is a built land building; the player p loads the unit q's class buttons.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_PENDING_COUNT = 3079;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PENDING = 3081;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_LOAD_MEDIA = 3082;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_ADD_UNIT_ENTRY = 3083;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_BUILT_LAND_BUILDING = 3084;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_LOAD_BUTTONS = 3085;
+
+/// The wall plan's list cleared; `EEPlanWall` from (f0, f1) to (f2, f3) of the player i0's class of the technology i1.
+constexpr static const uint32_t EE_SCREENS_SEAX_WALLS_CLEAR = 3086;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAN_WALL = 3087;
+
+/// The ghosts: their lock taken; let go; -> their count; -> the ghost i0 (`EEGhostUnit*`).
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_ENTER = 3088;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_LEAVE = 3089;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_COUNT = 3090;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST = 3091;
+
+/// `EEBuildGate` on the tile (i0, i1) for the player i2, the technology i3, the direction i4.
+constexpr static const uint32_t EE_SCREENS_SEAX_BUILD_GATE = 3092;
+
+/// -> the world's unit of id i0 (an `RTSUnit*`); -> p's player's id.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_BY_ID = 3093;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_RTS_UNIT_PLAYER_ID = 3094;
+
+/// The elevation file pair: the map tab's list selection read; -> it; -> a new file spec; its directory; its file
+/// (the selection's name, i0 ".txt" else ".dat"); -> its `Open` result; i0 bytes read into q; -> the count read;
+/// closed; deleted; -> the edit box i0's number.
+constexpr static const uint32_t EE_SCREENS_SEAX_ELEVATION_SELECTION = 3095;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SELECTION_GET = 3096;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_NEW = 3097;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_DIRECTORY = 3098;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_FILE = 3099;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_OPEN = 3100;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_READ = 3101;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_READ_COUNT = 3102;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_CLOSE = 3103;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SPEC_DELETE = 3104;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EDIT_INT = 3105;
+
+/// The ghost p: -> its class's type; -> the class of type i0 (`EEUnitClass*`); the class p: -> small; -> flies over;
+/// its cruise altitude -> f0; the ghost p's tile, class tile size, animation, transformation (-> t), can place.
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TYPE = 3111;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS = 3112;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_SMALL = 3113;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_FLIES = 3114;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_CRUISE = 3115;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TILE_X = 3116;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TILE_Y = 3117;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_CLASS_TILE_SIZE = 3118;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_ANIMATION = 3119;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_TRANSFORMATION = 3120;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_GHOST_CAN_PLACE = 3121;
+
+/// The tile p's height -> f0.
+constexpr static const uint32_t EE_SCREENS_SEAX_TILE_HEIGHT = 3122;
+
+/// -> the unit of id i0 (the placements' handles: `EEUnit*`, `EEComplexUnit*`).
+constexpr static const uint32_t EE_SCREENS_SEAX_SEP_UNIT = 3123;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEP_COMPLEX = 3124;
+
+/// The unit p: -> its complex unit; -> its player.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_COMPLEX = 3125;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_PLAYER = 3126;
+
+/// -> the complex unit p's player is q; -> the unit p's class transports; -> the complex unit p has room for the
+/// class q; -> the class p can enter the complex unit q's class.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_PLAYER_IS = 3127;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_TRANSPORTS = 3128;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ROOM_FOR = 3129;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_CAN_ENTER = 3130;
+
+/// The complex unit p referenced; -> its id.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_REFERENCE = 3131;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ID = 3132;
+
+/// -> the class p's type; -> a unit of it made at t (or at the world's transformation) for the player i0.
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_TYPE = 3133;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CREATE_AT = 3134;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CREATE_AT_WORLD = 3135;
+
+/// The unit p's chain cloakable; cloaked; t's closest tile into the longs 0, 1; the unit's tile x, y from them; its
+/// tile updated.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLOAKABLE = 3136;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLOAKED = 3137;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLOSEST_TILE = 3138;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_TILE_X = 3139;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_TILE_Y = 3140;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_UPDATE_TILE = 3141;
+
+/// The player p releases the media of the unit type i0.
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_UNLOAD_MEDIA = 3142;
+
+/// -> the class p is a land building.
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_LAND_BUILDING = 3143;
+
+/// The unit p's complex unit: built; the animation i0; -> its stats' power is above 0; given its power.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_BUILT = 3144;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_ANIMATION = 3145;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_POWERED = 3146;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_SET_POWER = 3147;
+
+/// The player p's pending units grown by one (`AddPendingUnits(0, 1)`).
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_ADD_PENDING = 3148;
+
+/// The complex unit p loads the unit q's complex unit (`GetComplexUnit`).
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOAD_UNIT = 3149;
+
+/// -> the complex unit p is editor-selected; the editor selects it; the unit tab's selection updated; p released.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_EDITOR_SELECTED = 3150;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EDITOR_SELECT_COMPLEX = 3151;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_EDITOR_UPDATE_SELECTION = 3152;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_DEREFERENCE = 3153;
+
+/// -> the unit p's id; -> the complex unit p's next part; -> the unit p's class; -> the class p pitches.
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_ID = 3154;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_NEXT = 3155;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_CLASS = 3156;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_CLASS_PITCHES = 3157;
+
+/// The complex unit p's location -> t; -> its class.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOCATION = 3158;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_CLASS = 3159;
+
+/// The complex unit p loads the unit q's `mComplexUnit`.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_LOAD_COMPLEX = 3160;
+
+/// `MoveTo(i0, i1, true)` of the complex unit p; of the unit p.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_MOVE_TO = 3161;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_UNIT_MOVE_TO = 3162;
+
+/// The complex unit p: -> its facing quarter; -> its facing; its facing set to i0; its class levels the ground at
+/// its tile (f0 in and out).
+constexpr static const uint32_t EE_SCREENS_SEAX_FACING_QUARTER = 3163;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_FACING = 3164;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SET_FACING = 3165;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_LEVEL_GROUND = 3166;
+
+/// The rotation: the unit p's complex unit's location into the statics' transformation; its orientation the yaw f0;
+/// set as the complex unit's.
+constexpr static const uint32_t EE_SCREENS_SEAX_T_FROM_LOCATION = 3170;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_T_YPR = 3171;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_T_APPLY = 3172;
+
+/// -> the complex unit p is an air traffic building; it leaves its player's air traffic list.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_ATC_AIRPORT = 3173;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_ATC_REMOVE = 3174;
+
+/// The complex unit p killed; the player p takes the complex unit q off.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_KILL = 3175;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PLAYER_KILL_COMPLEX = 3176;
+
+/// The complex unit p's cargo q (an index) unloaded at a copy of its location.
+constexpr static const uint32_t EE_SCREENS_SEAX_COMPLEX_UNLOAD = 3177;
+
+/// The lasso's ids: cleared; the units of type i0 in the rectangle p picked; -> their count; -> the id i0.
+constexpr static const uint32_t EE_SCREENS_SEAX_IDS_CLEAR = 3178;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_PICK = 3179;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_IDS_COUNT = 3180;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_ID = 3181;
+
+/// The unit types the placements test (`kUnitTypeAirport`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved`,
+/// `kUnitTypeCameraObject`; the C++ static_asserts them).
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_AIRPORT = 66;
+
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY = 52;
+
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED = 698;
+
+constexpr static const int32_t EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT = 359;
+
 /// `EESEASaveScenario`.
 constexpr static const uint32_t EE_SCREENS_SEW_SAVE = 1;
 

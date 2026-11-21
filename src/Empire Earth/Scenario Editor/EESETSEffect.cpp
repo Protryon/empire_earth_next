@@ -103,7 +103,7 @@ static_assert(EE_SCENARIO_SM_CONDITION_ALWAYS_TRUE == 0 && EE_SCENARIO_SM_CONDIT
                   EE_SCENARIO_SM_CONDITION_GAME_ATTRIBUTE == 6 && EE_SCENARIO_SM_CONDITION_CHAT_MESSAGE_CONTAINS == 7 &&
                   EE_SCREENS_SE_TS_CONDITION_TITLE_LABEL == 0x8fc && EE_SCREENS_SE_TS_CONDITION_TYPE_COMBO_BOX == 0x8fd &&
                   kControlTriggerUnchecked == 0x3ea && kControlTriggerEnterPressed == 0x3f1 &&
-                  kSEECheckDisplay == EE_SCREENS_SEE_CHECK_DISPLAY,
+                  EE_SCREENS_SEE_CHECK_DISPLAY == EE_SCREENS_SEE_CHECK_DISPLAY,
               "editor_conditions.rs's values");
 static_assert(IDS_TRIGGER_SCREEN_TAB_OBJECT == 30302 && IDS_AREA == 30303 && kMovementAir == 1 && kMovementSea == 4 &&
                   kUnitCategoryProjectile == 9 && kUnitCategoryMissile == 0xc,

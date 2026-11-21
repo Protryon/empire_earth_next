@@ -445,7 +445,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         return (int64_t)s;
     }
     case EE_SCREENS_SH_TECH_TREE_MOVE:
-        (new EESEARust(kSEATechTree, NULL, (int32_t)(uint32_t)a, (int32_t)(uint32_t)(a >> 32), (int32_t)(uint32_t)b,
+        (new EESEARust(EE_SCREENS_SEW_TECH_TREE, NULL, (int32_t)(uint32_t)a, (int32_t)(uint32_t)(a >> 32), (int32_t)(uint32_t)b,
                        (b >> 32) != 0))->Dereference();
         break;
     case EE_SCREENS_SH_PLAYER_PAGE:
@@ -559,7 +559,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         EEUnit* theUnit = reinterpret_cast<EEUnit*>(a);
         return (int64_t)theUnit->mUnitClass->mNameStringID << 32 | (uint32_t)theUnit->GetUnitID();
     }
-    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(kSEADeleteUnit, NULL, (int32_t)a))->Dereference(); break;
+    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, (int32_t)a))->Dereference(); break;
     case EE_SCREENS_SH_BITMAP_ROTATION: reinterpret_cast<GEBitmap*>(a)->SetRotation(f[0]); break;
     case EE_SCREENS_SH_ROTATE:
         if (a == 2)

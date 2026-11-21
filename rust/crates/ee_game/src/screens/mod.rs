@@ -187,7 +187,6 @@ pub mod editor_brush;
 mod editor_calls;
 pub mod editor_conditions;
 pub mod editor_controls;
-pub mod editor_ids;
 mod editor_direct;
 pub mod editor_effects;
 #[cfg(not(test))]
@@ -208,6 +207,7 @@ mod editor_form_ffi;
 pub mod editor_groups;
 #[cfg(not(test))]
 mod editor_groups_ffi;
+pub mod editor_ids;
 pub mod editor_instructions;
 #[cfg(not(test))]
 mod editor_instructions_ffi;
@@ -221,6 +221,9 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_seax;
+#[cfg(not(test))]
+mod editor_seax_ffi;
 pub mod editor_sefmx;
 pub mod editor_selt;
 #[cfg(not(test))]

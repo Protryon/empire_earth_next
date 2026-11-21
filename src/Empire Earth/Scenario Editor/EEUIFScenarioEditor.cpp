@@ -186,8 +186,8 @@ static_assert(EEUIFScenarioEditor::kSlotButtonTexture == EE_SCREENS_SEFM_BUTTON_
 static_assert(EE_SCENARIO_SM_CONDITION_OBJECT == 1 && EE_SCENARIO_SM_CONDITION_PLAYER_ATTRIBUTE == 2 && EE_SCENARIO_SM_EFFECT_NONE == 0 &&
                   EE_SCENARIO_SM_EFFECT_OBJECT == 1 && EE_SCENARIO_SM_EFFECT_PLAYER == 2 && EE_SCENARIO_SM_OBJECT_ACTION_CLASS_NAME == 10 &&
                   EE_SCENARIO_SM_OBJECT_ACTION_CLASS_ATTRIBUTE == 12 && EE_SCENARIO_SM_PLAYER_ACTION_MODIFY_TECH_TREE == 5 &&
-                  EE_SCENARIO_SM_TRIGGER_OPERATOR_AND == 1 && EE_SCENARIO_SM_TRIGGER_OPERATOR_OR == 2 && kSEAExit == 3 && kSEEHideUI == 1 &&
-                  kSEEQuickLoad == 3 && kSEEQuickSave == 4 && EE_SCREENS_SE_TOOLBAR_BUTTON_EXIT == 15 &&
+                  EE_SCENARIO_SM_TRIGGER_OPERATOR_AND == 1 && EE_SCENARIO_SM_TRIGGER_OPERATOR_OR == 2 && EE_SCREENS_SEW_EXIT == 3 && EE_SCREENS_SEE_HIDE_UI == 1 &&
+                  EE_SCREENS_SEE_QUICK_LOAD == 3 && EE_SCREENS_SEE_QUICK_SAVE == 4 && EE_SCREENS_SE_TOOLBAR_BUTTON_EXIT == 15 &&
                   IDS_CIVILIZATION_BUILDER_TOOL == EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL,
               "editor_form.rs's numbers");
 
@@ -508,7 +508,7 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEFMX_FORM_CLOSE: theForm->UIForm::Close();
         return 0;
-    case EE_SCREENS_SEFMX_NEW_EXIT_ACTION: return SefxOut(i, static_cast<EEAction*>(new EESEARust(kSEAExit)));
+    case EE_SCREENS_SEFMX_NEW_EXIT_ACTION: return SefxOut(i, static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_EXIT)));
     case EE_SCREENS_SEFMX_POST_ACTION: gUserInterface->PostAction(static_cast<EEAction*>(p[0]));
         return 0;
     case EE_SCREENS_SEFMX_PREVIEW_PLACEMENT: EEPreviewPlacement(gMouse->mPosition);
