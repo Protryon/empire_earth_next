@@ -131,49 +131,11 @@ public:
         return theResult;
     }
     // the contents from inLength bytes of another file (on failure empty and closed), or from a length-prefixed block
-    long Load(FSFile& inFile, unsigned long inLength)
-    {
-        EeFsFileOps theOps = Ops(inFile);
-        return ee_fs_mem_load(this->mState, &theOps, inLength);
-    }
-    long Load(FSFile& inFile)
-    {
-        EeFsFileOps theOps = Ops(inFile);
-        return ee_fs_mem_load_prefixed(this->mState, &theOps);
-    }
+    long Load(FSFile& inFile, unsigned long inLength) { return ee_fs_mem_load(this->mState, &inFile, inLength); }
+    long Load(FSFile& inFile) { return ee_fs_mem_load_prefixed(this->mState, &inFile); }
     // the first inLength bytes to another file, or the length and then the compacted contents (the second write's result)
-    long Save(FSFile& outFile, unsigned long inLength)
-    {
-        EeFsFileOps theOps = Ops(outFile);
-        return ee_fs_mem_save(this->mState, &theOps, inLength);
-    }
-    long Save(FSFile& outFile)
-    {
-        EeFsFileOps theOps = Ops(outFile);
-        return ee_fs_mem_save_prefixed(this->mState, &theOps);
-    }
-
-    // the table of an FSFile's reads and writes that the Rust File System calls (also FSChunk's)
-    static EeFsFileOps Ops(FSFile& inFile)
-    {
-        EeFsFileOps theOps;
-        theOps.context = &inFile;
-        theOps.read_u32 = [](void* c, uint32_t* v) -> int32_t { return (int32_t) static_cast<FSFile*>(c)->Read(*v); };
-        theOps.read_bytes = [](void* c, uint8_t* d, size_t n, uint32_t* r) -> int32_t {
-            unsigned long theRead = 0;
-            int32_t theResult = (int32_t) static_cast<FSFile*>(c)->Read(d, (unsigned long)n, theRead);
-            *r = (uint32_t)theRead;
-            return theResult;
-        };
-        theOps.write_u32 = [](void* c, uint32_t v) -> int32_t { return (int32_t) static_cast<FSFile*>(c)->Write(v); };
-        theOps.write_bytes = [](void* c, const uint8_t* d, size_t n, uint32_t* w) -> int32_t {
-            unsigned long theWritten = 0;
-            int32_t theResult = (int32_t) static_cast<FSFile*>(c)->Write(d, (unsigned long)n, theWritten);
-            *w = (uint32_t)theWritten;
-            return theResult;
-        };
-        return theOps;
-    }
+    long Save(FSFile& outFile, unsigned long inLength) { return ee_fs_mem_save(this->mState, &outFile, inLength); }
+    long Save(FSFile& outFile) { return ee_fs_mem_save_prefixed(this->mState, &outFile); }
 
 protected:
     template <typename T> long MemRead(T& outValue)

@@ -11,6 +11,7 @@
 mod archive;
 pub mod archive_obj;
 mod chunk;
+pub mod cppfile;
 pub mod ffi;
 mod file;
 mod memfile;
@@ -22,6 +23,7 @@ pub mod spec;
 
 pub use archive::{tokenize_star, Archive, FatEntry, ARCHIVE_IDENTIFIER, ARCHIVE_RESERVED, ARCHIVE_VERSION};
 pub use chunk::EeFsChunk;
+pub use cppfile::{CppFile, EeFsFileCalls};
 pub use file::{EeFsFileOps, FsFile, FsWrite};
 pub use memfile::EeFsMemFile;
 

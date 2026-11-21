@@ -51,14 +51,24 @@ struct EeFsArchiveObj {
   unsigned long view_length;
 };
 
-/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
-/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
-struct EeFsFileOps {
-  void *context;
-  int32_t (*read_u32)(void *context, uint32_t *value);
-  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
-  int32_t (*write_u32)(void *context, uint32_t value);
-  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
+/// The C++ `FSFile`'s calls (File System.cpp): each the one virtual call it names; the counts are the C++
+/// `unsigned long` out arguments.
+struct EeFsFileCalls {
+  /// `Read(uint32_t&)`.
+  int32_t (*read_u32)(void *file, uint32_t *value);
+  /// `Read(unsigned char*, length, read)`.
+  int32_t (*read_bytes)(void *file, uint8_t *out, unsigned long length, unsigned long *read);
+  /// `Read(char*, length, read)`.
+  int32_t (*read_text)(void *file, char *out, unsigned long length, unsigned long *read);
+  /// `Write(const uint32_t&)`.
+  int32_t (*write_u32)(void *file, uint32_t value);
+  /// `Write(const unsigned char*, length, written)`.
+  int32_t (*write_bytes)(void *file,
+                         const uint8_t *data,
+                         unsigned long length,
+                         unsigned long *written);
+  /// `Write(const char*, length, written)`.
+  int32_t (*write_text)(void *file, const char *data, unsigned long length, unsigned long *written);
 };
 
 /// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
@@ -72,6 +82,16 @@ struct EeFsChunk {
   bool data_loaded;
   bool header_loaded;
   bool decompressed;
+};
+
+/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
+/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
+struct EeFsFileOps {
+  void *context;
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
 };
 
 /// Receives a NUL-terminated byte string, valid during the call. `context` is the caller's.
@@ -190,6 +210,12 @@ long ee_fs_arch_extract_all(EeFsArchiveObj *a,
                             const EeFsString *startup_volume,
                             const EeFsString *startup_directory);
 
+/// Registers the C++ `FSFile` calls (File System.cpp's static initializer); returns true.
+///
+/// # Safety
+/// `calls` lives for the rest of the process.
+bool ee_fs_file_register(const EeFsFileCalls *calls);
+
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
 
@@ -301,26 +327,26 @@ void ee_fs_mem_set_open(EeFsMemFile *file, bool open);
 /// `Load(inFile, inLength)`.
 ///
 /// # Safety
-/// `file` is live, `ops` valid and its callbacks live for the call.
-int32_t ee_fs_mem_load(EeFsMemFile *file, const EeFsFileOps *ops, size_t length);
+/// `file` is live, `ops` the live C++ `FSFile` (any subclass).
+int32_t ee_fs_mem_load(EeFsMemFile *file, void *file_obj, size_t length);
 
 /// `Load(inFile)`.
 ///
 /// # Safety
 /// As `ee_fs_mem_load`.
-int32_t ee_fs_mem_load_prefixed(EeFsMemFile *file, const EeFsFileOps *ops);
+int32_t ee_fs_mem_load_prefixed(EeFsMemFile *file, void *file_obj);
 
 /// `Save(outFile, inLength)`.
 ///
 /// # Safety
 /// As `ee_fs_mem_load`.
-int32_t ee_fs_mem_save(const EeFsMemFile *file, const EeFsFileOps *ops, size_t length);
+int32_t ee_fs_mem_save(const EeFsMemFile *file, void *file_obj, size_t length);
 
 /// `Save(outFile)`.
 ///
 /// # Safety
 /// As `ee_fs_mem_load`.
-int32_t ee_fs_mem_save_prefixed(EeFsMemFile *file, const EeFsFileOps *ops);
+int32_t ee_fs_mem_save_prefixed(EeFsMemFile *file, void *file_obj);
 
 /// `FSChunk()`: fills the embedded state.
 ///
@@ -343,26 +369,26 @@ bool ee_fs_chunk_size(const EeFsChunk *chunk, uint32_t *out_size);
 /// `LoadChunkHeader`.
 ///
 /// # Safety
-/// `chunk` is valid; `ops` valid and its callbacks live for the call.
-int32_t ee_fs_chunk_load_header(EeFsChunk *chunk, const EeFsFileOps *ops);
+/// `chunk` is valid; `ops` the live C++ `FSFile` (any subclass).
+int32_t ee_fs_chunk_load_header(EeFsChunk *chunk, void *file_obj);
 
 /// `LoadChunkFromFile`.
 ///
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
-int32_t ee_fs_chunk_load_from_file(EeFsChunk *chunk, const EeFsFileOps *ops);
+int32_t ee_fs_chunk_load_from_file(EeFsChunk *chunk, void *file_obj);
 
 /// `SaveChunkToFile`.
 ///
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
-int32_t ee_fs_chunk_save_to_file(EeFsChunk *chunk, const EeFsFileOps *ops);
+int32_t ee_fs_chunk_save_to_file(EeFsChunk *chunk, void *file_obj);
 
 /// `SkipChunk`.
 ///
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
-int32_t ee_fs_chunk_skip(EeFsChunk *chunk, const EeFsFileOps *ops);
+int32_t ee_fs_chunk_skip(EeFsChunk *chunk, void *file_obj);
 
 /// `SavePersistentToChunk`'s first half: a new payload, or null when the chunk has one already.
 ///

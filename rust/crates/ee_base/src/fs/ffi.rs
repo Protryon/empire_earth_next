@@ -6,6 +6,7 @@ use std::slice;
 
 use crate::fs::archive::{Archive, FatEntry};
 use crate::fs::chunk::EeFsChunk;
+use crate::fs::cppfile::CppFile;
 use crate::fs::file::EeFsFileOps;
 use crate::fs::memfile::EeFsMemFile;
 use crate::fs::status;
@@ -232,11 +233,11 @@ pub unsafe extern "C" fn ee_fs_mem_set_open(file: *mut EeFsMemFile, open: bool) 
 /// `Load(inFile, inLength)`.
 ///
 /// # Safety
-/// `file` is live, `ops` valid and its callbacks live for the call.
+/// `file` is live, `ops` the live C++ `FSFile` (any subclass).
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_load(file: *mut EeFsMemFile, ops: *const EeFsFileOps, length: usize) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_load(file: *mut EeFsMemFile, file_obj: *mut c_void, length: usize) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&mut *file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &mut *file }, &mut CppFile(file_obj));
     file.load(ops, length)
 }
 
@@ -245,9 +246,9 @@ pub unsafe extern "C" fn ee_fs_mem_load(file: *mut EeFsMemFile, ops: *const EeFs
 /// # Safety
 /// As `ee_fs_mem_load`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_load_prefixed(file: *mut EeFsMemFile, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_load_prefixed(file: *mut EeFsMemFile, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&mut *file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &mut *file }, &mut CppFile(file_obj));
     file.load_prefixed(ops)
 }
 
@@ -256,9 +257,9 @@ pub unsafe extern "C" fn ee_fs_mem_load_prefixed(file: *mut EeFsMemFile, ops: *c
 /// # Safety
 /// As `ee_fs_mem_load`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_save(file: *const EeFsMemFile, ops: *const EeFsFileOps, length: usize) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_save(file: *const EeFsMemFile, file_obj: *mut c_void, length: usize) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&*file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &*file }, &mut CppFile(file_obj));
     file.save(ops, length)
 }
 
@@ -267,9 +268,9 @@ pub unsafe extern "C" fn ee_fs_mem_save(file: *const EeFsMemFile, ops: *const Ee
 /// # Safety
 /// As `ee_fs_mem_load`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_save_prefixed(file: *mut EeFsMemFile, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_save_prefixed(file: *mut EeFsMemFile, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&mut *file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &mut *file }, &mut CppFile(file_obj));
     file.save_prefixed(ops)
 }
 
@@ -315,11 +316,11 @@ pub unsafe extern "C" fn ee_fs_chunk_size(chunk: *const EeFsChunk, out_size: *mu
 /// `LoadChunkHeader`.
 ///
 /// # Safety
-/// `chunk` is valid; `ops` valid and its callbacks live for the call.
+/// `chunk` is valid; `ops` the live C++ `FSFile` (any subclass).
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_load_header(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_load_header(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.load_header(ops)
 }
 
@@ -328,9 +329,9 @@ pub unsafe extern "C" fn ee_fs_chunk_load_header(chunk: *mut EeFsChunk, ops: *co
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_load_from_file(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_load_from_file(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.load_from_file(ops)
 }
 
@@ -339,9 +340,9 @@ pub unsafe extern "C" fn ee_fs_chunk_load_from_file(chunk: *mut EeFsChunk, ops: 
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_save_to_file(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_save_to_file(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.save_to_file(ops)
 }
 
@@ -350,9 +351,9 @@ pub unsafe extern "C" fn ee_fs_chunk_save_to_file(chunk: *mut EeFsChunk, ops: *c
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_skip(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_skip(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.skip(ops)
 }
 
