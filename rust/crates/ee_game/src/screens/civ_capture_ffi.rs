@@ -37,7 +37,7 @@ pub unsafe extern "C" fn ee_screens_civc_apply_end(state: *mut c_void, result: b
         return;
     }
     // SAFETY: the state `ee_screens_civc_apply_begin` handed out, taken back once
-    let a = unsafe { Box::from_raw(state as *mut Apply) };
+    let a = unsafe { *Box::from_raw(state as *mut Apply) };
     civ_capture::apply_end(&mut Ffi, a, result, &mut ee_sim::app::capture::commit)
 }
 

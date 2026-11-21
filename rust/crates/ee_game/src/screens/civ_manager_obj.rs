@@ -4,6 +4,8 @@
 //! halves around the simulation's apply, its world [`Host`] the civilization host `civ_manager_calls.rs`), the
 //! powers' test of a player, and the out-parameter members (the premade match, a category's name id and record, the
 //! legacy id, an upgrade's split). The C++ members are one forward each.
+#![allow(clippy::unnecessary_cast)]
+// c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 // the forwards are the FFI module's (absent from a test binary)
 #![cfg_attr(test, allow(dead_code))]

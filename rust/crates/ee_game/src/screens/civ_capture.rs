@@ -209,12 +209,7 @@ pub(crate) fn apply_begin<C: Cpp + ?Sized>(
 }
 
 /// CVAP's second half with `ApplyUpgrade`'s result.
-pub(crate) fn apply_end<C: Cpp + ?Sized>(
-    c: &mut C,
-    mut a: Box<Apply>,
-    result: bool,
-    commit: &mut impl FnMut(u32, &[u8]),
-) {
+pub(crate) fn apply_end<C: Cpp + ?Sized>(c: &mut C, mut a: Apply, result: bool, commit: &mut impl FnMut(u32, &[u8])) {
     a.record.u32(result as u32);
     let p = player_of(c, a.player);
     player_fields(c, &mut a.record, p);
@@ -344,7 +339,10 @@ mod tests {
         load(&mut fake, b"ab", b"dir", 3, b"N", &[7], &mut |t, p: &[u8]| records.push((t, p.to_vec())));
         load(&mut fake, b"ab", b"dir", 3, b"N", &[], &mut |t, p: &[u8]| records.push((t, p.to_vec())));
         assert_eq!(records[0].0, tag(b"CVLD"));
-        assert_eq!(records[0].1, [2, 0, 0, 0, b'a', b'b', 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, b'N', 1, 0, 0, 0, 7, 0, 0, 0]);
+        assert_eq!(
+            records[0].1,
+            [2, 0, 0, 0, b'a', b'b', 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, b'N', 1, 0, 0, 0, 7, 0, 0, 0]
+        );
         assert_eq!(records[1].1[6..17], [0, 0, 0, 0, 3, 0, 0, 0, b'd', b'i', b'r'][..11]);
     }
 
@@ -355,7 +353,10 @@ mod tests {
         let mut records = Vec::new();
         apply_file(&mut fake, b"x", 0, -2, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
         assert_eq!(records, [(tag(b"CVAF"), vec![1, 0, 0, 0, b'x', b'P', b'P', 0xfe, 0xff, 0xff, 0xff])]);
-        assert_eq!(fake.calls(), "aec_active()\ncivc_rec_new()\ncivc_rec_player(60, 0)\ncivc_rec_bytes(60, out)\ncivc_rec_free(60)");
+        assert_eq!(
+            fake.calls(),
+            "aec_active()\ncivc_rec_new()\ncivc_rec_player(60, 0)\ncivc_rec_bytes(60, out)\ncivc_rec_free(60)"
+        );
     }
 
     #[test]
@@ -365,7 +366,7 @@ mod tests {
         fake.answer("aec_active", &[1]);
         let a = apply_begin(&mut fake, 0x10002, 20, &done, &mut |_, _: &[u8]| panic!()).unwrap();
         let mut records = Vec::new();
-        apply_end(&mut fake, a, true, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
+        apply_end(&mut fake, *a, true, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
         assert_eq!(records[0].0, tag(b"CVAP"));
         assert_eq!(records[0].1, [2, 0, 1, 0, 20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]);
         assert!(!fake.calls().contains("civc_player("));

@@ -204,7 +204,9 @@ mod tests {
     fn the_upgrade_button() {
         let mut fake = Fake::default();
         upgrade_construct(&mut fake, 4);
-        assert!(fake.calls().contains("upb_bg_opacity(4, 0.15)\nupb_border_opacity(4, 0.45000002)\nupb_border_thickness(4, 1)"));
+        assert!(fake
+            .calls()
+            .contains("upb_bg_opacity(4, 0.15)\nupb_border_opacity(4, 0.45000002)\nupb_border_thickness(4, 1)"));
         let mut fake = Fake::default();
         fake.answer("upb_disabled", &[1, 0]);
         upgrade_button_down(&mut fake, 4);
@@ -239,7 +241,9 @@ mod tests {
         let mut selected = Vec::new();
         cb_list_construct(&mut fake, 1, 2, true, |l| selected.push(l));
         assert_eq!(selected, [2]);
-        assert!(fake.calls().ends_with("cbb_set_tabable(2, true)\ncbb_scroll_bg_colour(2, 1.0, 1.0, 1.0)\ncbb_scroll_bg_opacity(2, 0.2)"));
+        assert!(fake.calls().ends_with(
+            "cbb_set_tabable(2, true)\ncbb_scroll_bg_colour(2, 1.0, 1.0, 1.0)\ncbb_scroll_bg_opacity(2, 0.2)"
+        ));
         let mut fake = Fake::default();
         fake.answer("cbb_lines_count", &[2, 2, 2]).text("cbb_line", b"a").text("cbb_line", b"b");
         let mut lines = Vec::new();

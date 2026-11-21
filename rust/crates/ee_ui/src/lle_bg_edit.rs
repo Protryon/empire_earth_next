@@ -113,6 +113,8 @@ mod tests {
         assert_eq!((f[0], f[1]), (3.0, 0.0));
         edit_call(&mut fake, &HostArgs::new(5, EeUiOp::TextFgColor, [8, 0, 0, 0], &mut f));
         assert_eq!(&f[..3], &[0.0, 1.0, 0.0]);
-        assert!(fake.calls().starts_with("edit_key_fetch(1, out)\nentity_just_pressed(9)\nline_new_black()\nline_new()\nedit_form_mouse_x(5)"));
+        assert!(fake.calls().starts_with(
+            "edit_key_fetch(1, out)\nentity_just_pressed(9)\nline_new_black()\nline_new()\nedit_form_mouse_x(5)"
+        ));
     }
 }

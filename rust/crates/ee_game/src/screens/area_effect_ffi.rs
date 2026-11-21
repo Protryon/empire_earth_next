@@ -3,6 +3,7 @@
 //! `EEUnitAreaEffectList::KeepStrongest`) and the capture's hook (`area_effect_capture.rs`). The objects cross as
 //! addresses (`EEAreaEffect*`, `EEAreaEffectTemplate*`, `EEComplexUnit*`, `EEAEManager*`), as the shims take them;
 //! the entries some shim lists name (`aem_covers`, `ael_strength`, ...) keep those shims' types.
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::{c_long, c_ulong};

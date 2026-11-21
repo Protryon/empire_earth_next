@@ -8,9 +8,7 @@
 
 use core::ffi::{c_long, c_ulong};
 
-use crate::screens::game_cpp::{
-    Cpp, EeScreensShimOut, EeScreensShimPtrOut, EeScreensShimText, EeScreensShimULongOut,
-};
+use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimPtrOut, EeScreensShimText, EeScreensShimULongOut};
 
 /// `kCivKey`: a civilization file's extension.
 const CIV_KEY: &[u8] = b".civ";
@@ -81,8 +79,13 @@ mod tests {
         fake.answer("civl_find", &[2]).answer("civl_spec_new", &[40]).answer("civl_open", &[5]);
         assert_eq!(load_civilization(&mut fake, 1, 2, 3, 4), 5);
         let calls = fake.calls();
-        assert!(calls.contains("civl_find(\"Civilizations\\\\cbgate1.civ\", out)\ncivl_spec_new()\ncivl_global_volume()"));
-        assert!(calls.ends_with("civl_open(40)\ncivl_close(40)\ncivl_delete(40)\ncivl_capture(1, 2, 5, 3, 4)"), "{calls}");
+        assert!(
+            calls.contains("civl_find(\"Civilizations\\\\cbgate1.civ\", out)\ncivl_spec_new()\ncivl_global_volume()")
+        );
+        assert!(
+            calls.ends_with("civl_open(40)\ncivl_close(40)\ncivl_delete(40)\ncivl_capture(1, 2, 5, 3, 4)"),
+            "{calls}"
+        );
     }
 
     #[test]

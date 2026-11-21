@@ -7,6 +7,8 @@
 //! answers them through `area_effect_host.rs` (the old C++ `EEAEHost` is gone). The C++ objects' numbers are their
 //! Rust records (`EeAreaEffectFields`, `EeAreaEffectTemplateFields`), read through the shims' base pointers and
 //! copied for each call, as the old forwarders copied them.
+#![allow(clippy::unnecessary_cast)]
+// c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 // the forwards are the FFI module's (absent from a test binary)
 #![cfg_attr(test, allow(dead_code))]
@@ -392,7 +394,14 @@ mod tests {
     use ee_sim::tech::area_effect::{EE_AREA_EFFECT_HEALING, EE_AREA_EFFECT_MORALE};
 
     fn template(kind: c_long) -> EeAreaEffectTemplateFields {
-        EeAreaEffectTemplateFields { mKind: kind, mMaxLevel: 4, mLevel: 3, mRadius: 2.0, mMode: 4, ..Default::default() }
+        EeAreaEffectTemplateFields {
+            mKind: kind,
+            mMaxLevel: 4,
+            mLevel: 3,
+            mRadius: 2.0,
+            mMode: 4,
+            ..Default::default()
+        }
     }
 
     #[test]
@@ -455,16 +464,21 @@ mod tests {
     #[test]
     fn init_takes_the_records_effects_and_media() {
         let mut t = EeAreaEffectTemplateFields::default();
-        let mut d = EeAreaEffectData { mKind: EE_AREA_EFFECT_HEALING as i32, mGraphicEffect18: 5, mMedia: 7, ..Default::default() };
+        let mut d = EeAreaEffectData {
+            mKind: EE_AREA_EFFECT_HEALING as i32,
+            mGraphicEffect18: 5,
+            mMedia: 7,
+            ..Default::default()
+        };
         d.mRadius = 3.0;
         let mut fake = Fake::default();
         fake.answer("ae_template_fields", &[&mut t as *mut _ as i64]).answer("ae_graphic_effect_get", &[0]);
         fake.answer("ae_media_get", &[70]);
         assert!(template_init(&mut fake, 20, &d));
         assert_eq!(t.mRadius, 3.0);
-        assert!(fake.calls().ends_with(
-            "ae_graphic_effect_get(5)\naet_set_effect18(20, 0)\nae_media_get(7)\naet_set_media(20, 70)"
-        ));
+        assert!(fake
+            .calls()
+            .ends_with("ae_graphic_effect_get(5)\naet_set_effect18(20, 0)\nae_media_get(7)\naet_set_media(20, 70)"));
         let mut fake = Fake::default();
         fake.answer("ael_t_effect", &[40]);
         template_destroy(&mut fake, 20);
@@ -523,7 +537,9 @@ mod tests {
         assert_eq!(create(&mut fake, 9, 0, 30), 50);
         assert_eq!(create(&mut fake, 9, 1, 30), 0);
         assert_eq!(create(&mut fake, 9, 2, 30), 0);
-        assert!(fake.calls().contains("aem_effect_new(20)\nae_set_unit(50, 30)\nae_unit_reference(30)\naem_set_effect_player(50, 30)"));
+        assert!(fake
+            .calls()
+            .contains("aem_effect_new(20)\nae_set_unit(50, 30)\nae_unit_reference(30)\naem_set_effect_player(50, 30)"));
         let mut fake = Fake::default();
         fake.answer("aem_templates_count", &[2, 2, 2]).answer("aem_template_at", &[0, 21]);
         manager_clear(&mut fake, 9);

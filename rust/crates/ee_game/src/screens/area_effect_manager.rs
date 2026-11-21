@@ -37,7 +37,14 @@ pub(crate) fn collect_effects<C: Cpp + ?Sized>(
             continue;
         }
         if c.aem_effect_radius(effect) <= 0.0 {
-            c.aem_for_each(crate::screens::area_effect_obj::EE_SCREENS_AEM_PASS_SET_AFFECTED, effect, player, 0.0, x, y);
+            c.aem_for_each(
+                crate::screens::area_effect_obj::EE_SCREENS_AEM_PASS_SET_AFFECTED,
+                effect,
+                player,
+                0.0,
+                x,
+                y,
+            );
             continue;
         }
         let units = c.aem_units_count();
@@ -119,9 +126,7 @@ mod tests {
         collect_effects(&mut fake, 2.0, 10.5, 20.5, 3, 7, 9);
         let calls = fake.calls();
         assert!(calls.starts_with("aem_floor(22.5)\naem_floor(12.5)\naem_floor(18.5)\naem_floor(8.5)"));
-        assert!(calls.ends_with(
-            "aem_effect_radius(50)\naem_for_each(1, 50, 3, 0.0, 10.5, 20.5)"
-        ));
+        assert!(calls.ends_with("aem_effect_radius(50)\naem_for_each(1, 50, 3, 0.0, 10.5, 20.5)"));
     }
 
     #[test]

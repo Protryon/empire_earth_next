@@ -69,7 +69,9 @@ pub extern "C" fn ee_screens_cbb_construct(table: usize, list: usize, tabable: b
 #[no_mangle]
 pub extern "C" fn ee_screens_cbb_append(list: usize, lines: usize) {
     // SAFETY: the line's bytes live for the call
-    b::cb_list_append(&mut Ffi, list, lines, |l, t| unsafe { ee_screens_cbl_add_line(l as *mut c_void, t.as_ptr(), t.len()) })
+    b::cb_list_append(&mut Ffi, list, lines, |l, t| unsafe {
+        ee_screens_cbl_add_line(l as *mut c_void, t.as_ptr(), t.len())
+    })
 }
 
 #[no_mangle]

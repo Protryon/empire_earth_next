@@ -85,7 +85,9 @@ mod tests {
         fake.answer("sf_sound", &[0, 30]).answer("sf_sound_sample", &[7]);
         assert_eq!(icon_bar(&mut fake, 1, 2), 10);
         let calls = fake.calls();
-        assert!(calls.starts_with("sf_icon_bar_new(1, 2)\nsf_shell_op(10, 137, 0, 0, out)\nsf_bitmap_new()\nsf_slot_set(10, 0, 20)\n"));
+        assert!(calls.starts_with(
+            "sf_icon_bar_new(1, 2)\nsf_shell_op(10, 137, 0, 0, out)\nsf_bitmap_new()\nsf_slot_set(10, 0, 20)\n"
+        ));
         assert!(calls.ends_with(
             "sf_slot_set(10, 1, 21)\nsf_sound(519)\nsf_sound(520)\nsf_sound_load(30)\nsf_sound_sample(30)\nsf_slot_set(10, 3, 7)"
         ));
@@ -105,7 +107,9 @@ mod tests {
     #[test]
     fn the_bars_follow_the_lines() {
         let mut fake = Fake::default();
-        fake.answer("bars_rhombus_new", &[50]).answer("bars_line_height", &[12, 12, 12, 12]).answer("bars_draw", &[0, 3]);
+        fake.answer("bars_rhombus_new", &[50])
+            .answer("bars_line_height", &[12, 12, 12, 12])
+            .answer("bars_draw", &[0, 3]);
         assert_eq!(draw_bars(&mut fake, 1, &[0, 2]), 3);
         assert!(fake.calls().contains("bars_rhombus_rect(50, 0.0, 24.0, 0.0, 36.0)"));
         let mut fake = Fake::default();

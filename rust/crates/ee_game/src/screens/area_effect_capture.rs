@@ -102,7 +102,7 @@ fn own<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, effect: usize) {
     let (x, y) = (c.aes_effect_x(effect), c.aes_effect_y(effect));
     r.f32(x);
     r.f32(y);
-    r.i32(c.aec_checksum(effect) as i64);
+    r.i32(c.aec_checksum(effect));
     r.i32(obj::strength(c, effect) as i64);
     r.f32(obj::radius(c, effect));
     r.f32(obj::scale(c, effect));
@@ -145,7 +145,11 @@ fn templates<C: Cpp + ?Sized>(c: &mut C, commit: &mut impl FnMut(u32, &[u8])) {
                 r.f32(v);
             }
             r.u32(
-                f.mB64 as u32 | (f.mB65 as u32) << 1 | (f.mB66 as u32) << 2 | (f.mB67 as u32) << 3 | (f.mB68 as u32) << 4,
+                f.mB64 as u32
+                    | (f.mB65 as u32) << 1
+                    | (f.mB66 as u32) << 2
+                    | (f.mB67 as u32) << 3
+                    | (f.mB68 as u32) << 4,
             );
             for v in [f.mColorRed, f.mColorGreen, f.mColorBlue, f.mColorAlpha] {
                 r.f32(v);

@@ -1,6 +1,7 @@
 //! The settings form's display questions in Rust over one-statement shims (UI lane round 12; were `EEScreens.cpp`'s
 //! `ee_screenscpp_modes`, `_current_mode` and `_game_size`): a rasterizer's screen's video modes (the display devices'
 //! table, `gDisplayRasterizers`), a screen's current mode, the game's window size at a percentage.
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 use core::ffi::c_ulong;
 
