@@ -52,55 +52,6 @@ public:
 
 namespace WONAPI {
 
-// ---- DrawLobbyPing (MOTDCtrl.cpp's): the game list's and the game room's ping bars
-// The ping ceiling (0x8df4cc) starts at 5000 and is taken from the lobby config while it is still 5000
-static unsigned long sLobbyPingCeiling=5000;
-// The text is always empty, so its branches never draw anything (as in the original)
-// Draws a ping as 1-10 green bars scaled by the config's ping ceiling, or the searching or failed icon
-void DrawLobbyPing(Graphics* inGraphics,unsigned short inPing,int inHeight,int inAlignment,int inWidth)
-{
-    if(inPing==0xfffe) return;
-    if(sLobbyPingCeiling==5000) {
-        LobbyConfig* config=GetLobbyConfig();
-        if(config!=NULL) sLobbyPingCeiling=config->mPingCeiling;
-    }
-    GUIString text(GetEmptyGUIStringData());
-    SmartPtr<Image> image;
-    int bars=0;
-    if(inPing==0xfffd) image=LOBBY_IMAGE(LobbyGlobal_Searching_Image).get();
-    else if(inPing==0xfffc) { image=LOBBY_IMAGE(LobbyGlobal_Searching_Image); image=image.get(); }
-    else if(inPing==0xffff) image=LOBBY_IMAGE(ServerListCtrl_PingFailed_Image).get();
-    else {
-        bars=10-int((static_cast<unsigned long>(inPing)*10)/sLobbyPingCeiling);
-        if(bars<1) bars=1;
-        else if(bars>10) bars=10;
-    }
-    int x=0;
-    if(inAlignment!=0) {
-        int width;
-        if(text.length()!=0) width=inGraphics->mFont->GetStringWidth(text,0,text.length());
-        else if(image.get()!=NULL) width=image->GetWidth();
-        else width=bars*3;
-        if(inAlignment==1) x=(inWidth-width)/2;
-        else x=inWidth-width;
-        if(x<0) x=0;
-    }
-    if(text.length()!=0) inGraphics->DrawString(text,x,0);
-    else if(image.get()!=NULL) {
-        int y=(inHeight-image->GetHeight())/2;
-        if(y<0) y=0;
-        inGraphics->DrawImage(image.get(),x,y);
-    } else {
-        inGraphics->SetColor(0x10d810);
-        int height=inHeight-2;
-        while(bars>0) {
-            inGraphics->FillRect(x,1,2,height);
-            x+=3;
-            --bars;
-        }
-    }
-}
-
 // ---- the host
 
 static GUIString Txt(intptr_t inData) { return inData != 0 ? GUIString((GUIStringData*)inData) : GUIString(); }
@@ -270,19 +221,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     InputBox* anInput = reinterpret_cast<InputBox*>(a);
     Label* aLabel = reinterpret_cast<Label*>(a);
     switch (inOp) {
-    case Op::DeliverJoinRoom: {
-        // the row's address and room id (rows.rs)
-        const EeWonIpAddr* anAddress = (const EeWonIpAddr*)ee_won_lobby_rows_ctl_op(Op::RoomItemAddr, a, 0, 0);
-        unsigned long anId = (unsigned long)ee_won_lobby_rows_ctl_op(Op::RoomItemGroupId, a, 0, 0);
-        inCtl->DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(anAddress)), anId), false);
-        return 0;
-    }
-    case Op::DeliverCreateRoom: {
-        IPAddr anAddress;
-        if (a != 0) anAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a));
-        inCtl->DeliverEvent(CreateRoomEvent(anAddress), false);
-        return 0;
-    }
     case Op::DeliverQueryGroups:
         inCtl->DeliverEvent(QueryServerGroupsEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a))), false);
         return 0;
@@ -296,7 +234,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         return 0;
     case Op::DeliverQuickPlay: inCtl->DeliverEvent(QuickPlayEvent((int)a), false); return 0;
     case Op::ComboAddUserName: return (intptr_t)aCombo->AddString(LobbyGetUserNameAt((size_t)b), -1);
-    case Op::ConfigIsPublic: { LobbyConfig* aConfig = GetLobbyConfig(); return aConfig != NULL && aConfig->mPublic ? 1 : 0; }
     case Op::UserPassword: return Held(LobbyGetUserPassword(Txt(a)));
     case Op::AddUser: LobbyAddUser(Txt(a), Txt(b), true); return 0;
     case Op::ComboSetTextFlag: aCombo->SetText(Txt(b), c != 0); return 0;
@@ -462,13 +399,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::RowTextCalc: aText->TextListItem::CalcDimensions(reinterpret_cast<ListArea*>(b)); return 0;
     case Op::RowTextCompare: return aText->TextListItem::Compare(reinterpret_cast<ListItem*>(b), reinterpret_cast<ListArea*>(c));
     case Op::ItemSetTextRes: aText->mText = ResText(b); return 0;
-    case Op::ItemSetTextCount: {
-        char aCount[50];
-        sprintf(aCount, " (%d)", Lo(c));
-        aText->mText = Txt(b);
-        if (Hi(c) != 0) aText->mText.append(aCount);
-        return 0;
-    }
     case Op::ItemTextErase: aText->mText.erase(); return 0;
     case Op::ItemImage: return (intptr_t)aText->mImage.get();
     case Op::ItemFont: return (intptr_t)aText->mFont.get();
@@ -501,7 +431,44 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxDrawText: g->DrawString(Txt(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawResText: g->DrawString(ResText(b), Lo(c), Hi(c)); return 0;
     case Op::GfxTextWidth: return g->mFont->GetStringWidth(Txt(b));
-    case Op::GfxDrawPing: DrawLobbyPing(g, (unsigned short)b, (int)c, 0, 0); return 0;
+    // the statements of the cases hostops.rs answers (R6 WONLobby round 29: the ping bars, the rows' counts, the
+    // summaries, the filter row, the room events, the event items, the numbers, the saved game dialog)
+    case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
+    case Op::ConfigPingCeiling: return reinterpret_cast<LobbyConfig*>(a)->mPingCeiling;
+    case Op::ConfigPublic: return reinterpret_cast<LobbyConfig*>(a)->mPublic ? 1 : 0;
+    case Op::ItemTextAppend: aText->mText.append(Txt(b));
+        return 0;
+    case Op::FilterSetSelPos: aFilter->mSelPos = (int)b;
+        return 0;
+    case Op::FilterSetIsAdd: aFilter->mIsAdd = b != 0;
+        return 0;
+    case Op::FilterSetText: aFilter->mFilterText = Txt(b);
+        return 0;
+    case Op::FilterClearText: aFilter->mFilterText = GUIString("");
+        return 0;
+    case Op::LabelSetFormatRes: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(ResText(b), Txt(c)), true);
+        return 0;
+    case Op::LabelSetFormat2Res: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString2(ResText(b), Txt(reinterpret_cast<const intptr_t*>(c)[0]), Txt(reinterpret_cast<const intptr_t*>(c)[1])), true);
+        return 0;
+    case Op::FilterCount: return (intptr_t)LobbyGetFilterCount(Txt(a));
+    case Op::ComboAddFilterValue: aCombo->AddString(LobbyGetFilterValueAt(Txt(b), (size_t)c), -1);
+        return 0;
+    case Op::DeliverJoinRoomAt: inCtl->DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a)), (unsigned long)b), false);
+        return 0;
+    case Op::DeliverCreateRoomAt: inCtl->DeliverEvent(CreateRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a))), false);
+        return 0;
+    case Op::DeliverCreateRoomAny: inCtl->DeliverEvent(CreateRoomEvent(IPAddr()), false);
+        return 0;
+    case Op::EvType: return anEvent->mType;
+    case Op::EvComboItem: return (intptr_t) static_cast<ComboSelChangedEvent*>(anEvent)->mItem.get();
+    case Op::EvTreeItem: return (intptr_t) static_cast<TreeItemOpenedEvent*>(anEvent)->mItem.get();
+    case Op::EvListItem: return (intptr_t) static_cast<ListItemClickedEvent*>(anEvent)->mItem.get();
+    case Op::LabelSetPercentText: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), Txt(b)));
+        return 0;
+    case Op::FileDialogGet: return (intptr_t)EELobbyGetFileDialog();
+    case Op::FileDialogListSaves: reinterpret_cast<EELobbyFileDialog*>(a)->ListFiles(EELobbyFn2988E9(), ".ees");
+        return 0;
+    case Op::DoDialog: return LobbyDoDialog(reinterpret_cast<EELobbyFileDialog*>(a));
     case Op::GfxDrawLine: g->DrawLine(Lo(b), Hi(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawImage: g->DrawImage(reinterpret_cast<Image*>(b), Lo(c), Hi(c)); return 0;
     case Op::TextNew: {
@@ -529,37 +496,13 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::DeliverJoinGame: inCtl->DeliverEvent(JoinGameEvent(reinterpret_cast<LobbyGame*>(a)), false); return 0;
     case Op::EventX: return static_cast<ListItemClickedEvent*>(anEvent)->mX;
     case Op::EventY: return static_cast<ListItemClickedEvent*>(anEvent)->mY;
-    case Op::EventItem:
-        if (anEvent->mType == ComponentEvent_ComboSelChanged)
-            return (intptr_t) static_cast<ComboSelChangedEvent*>(anEvent)->mItem.get();
-        if (anEvent->mType == ComponentEvent_TreeItemOpened)
-            return (intptr_t) static_cast<TreeItemOpenedEvent*>(anEvent)->mItem.get();
-        return (intptr_t) static_cast<ListItemClickedEvent*>(anEvent)->mItem.get();
     case Op::EventActiveSel: return static_cast<ComboSelChangedEvent*>(anEvent)->mActiveSel ? 1 : 0;
-    case Op::LabelSetPingSummary: {
-        char aShown[33];
-        sprintf(aShown, "%d", (int)b);
-        reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(LOBBY_STRING(ServerListCtrl_ListPingSummary_String), aShown), true);
-        return 0;
-    }
-    case Op::LabelSetListSummary: {
-        char aShown[33], aTotal[33];
-        sprintf(aTotal, "%d", (int)c);
-        sprintf(aShown, "%d", (int)b);
-        reinterpret_cast<Label*>(a)->SetText(LobbyFormatString2(LOBBY_STRING(ServerListCtrl_ListSummary_String), aShown, aTotal), true);
-        return 0;
-    }
     case Op::ButtonSetRes: reinterpret_cast<Button*>(a)->SetText(ResText(b), true); return 0;
     case Op::LabelSetRes: reinterpret_cast<Label*>(a)->SetText(ResText(b), true); return 0;
     case Op::ComboInsertNoFilter:
         aCombo->InsertItem(new TextListItem(LOBBY_STRING(ServerListCtrl_NoFilter_String), reinterpret_cast<Font*>(b)), -1);
         return 0;
     case Op::ComboInsertFilterRow: aCombo->InsertItem(new FilterListItem(Txt(b), reinterpret_cast<Font*>(c)), -1); return 0;
-    case Op::ComboAddFilterValues: {
-        GUIString aColumn = Txt(b);
-        for (size_t i = 0, n = LobbyGetFilterCount(aColumn); i < n; ++i) aCombo->AddString(LobbyGetFilterValueAt(aColumn, i), -1);
-        return 0;
-    }
     case Op::ComboItem: return (intptr_t)aCombo->mListArea->GetItem((int)b);
     case Op::ComboCount: return aCombo->mListArea->GetNumItems();
     case Op::ComboItemPos: return aCombo->mListArea->GetItemPos(reinterpret_cast<ListItem*>(b));
@@ -572,24 +515,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::FilterSelPos: return aFilter->mSelPos;
     case Op::FilterText: return Dat(aFilter->mFilterText);
     case Op::FilterColumn: return Dat(aFilter->mColumnName);
-    case Op::FilterClear:
-        aFilter->mText = LOBBY_STRING(ServerListCtrl_AddRemove_String);
-        aFilter->mIsAdd = true;
-        aFilter->mFilterText = GUIString("");
-        aFilter->mSelPos = 0;
-        return 0;
-    case Op::FilterSet: {
-        aFilter->mSelPos = Lo(b);
-        aFilter->mIsAdd = Hi(b) != 0;
-        aFilter->mFilterText = Txt(c);
-        GUIString aLabel;
-        if (aFilter->mIsAdd) aLabel = LOBBY_STRING(ServerListCtrl_Add_String);
-        else aLabel = LOBBY_STRING(ServerListCtrl_Remove_String);
-        aLabel.append(Txt(c));
-        aLabel.append(GUIString(new GUIStringData("\")")));
-        aFilter->mText = aLabel;
-        return 0;
-    }
     case Op::AddFilterValue: LobbyAddFilterValue(Txt(a), Txt(b)); return 0;
     case Op::RemoveFilterValue: LobbyRemoveFilterValue(Txt(a), Txt(b)); return 0;
     case Op::EeColumn:

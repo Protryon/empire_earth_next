@@ -18,8 +18,6 @@ class EEComplexUnit;
 class EEUnit;
 class EETechTreeNode;
 
-// The next engine's tick (EEComputerPlayer::Update calls it instead of the managers' decisions)
-void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime);
 
 // ---------------------------------------------------------------------------------------------------------------
 // Results (the script's view.results; ee_ai names.rs)
@@ -88,10 +86,6 @@ long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inN
 // why the next engine's gatherer finders pass a resource unit over (kNextBlocked*); outCause: the unit id that blocks it
 long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCause);
 
-// the citizens' losses in the AI trace (trace on only; nothing the game reads): a hit on a land citizen (inAttacker
-// the attacker's player id) and a citizen lost: next.death and next.raid lines
-void EECPNextTraceHit(EEComputerPlayer* inPlayer, long inAttacker, EEUnit* inUnit);
-void EECPNextTraceDeath(EEComputerPlayer* inPlayer, EEUnit* inUnit);
 
 // ---------------------------------------------------------------------------------------------------------------
 // The per-player state (EEComputerPlayer::mNextState: an opaque Rust record, ee_ai next_state.rs; created on its first
@@ -110,10 +104,6 @@ EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer);        // created w
 void EECPNextDeleteState(EEComputerPlayer* inPlayer);
 std::string EECPNextAI(const EEComputerPlayer* inPlayer);           // the AI's id ("" none or no state)
 void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI);
-// the hooks of the classic code
-bool EECPNextCanAfford(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inUnitType, long inCount);
-void EECPNextIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount);
-void EECPNextEventAdd(const EEComputerPlayer* inPlayer, long inKind, long inType, long inCount);
 
 // a class or a tech by its data id (dbobjects / dbtechtree "id"; "dbobjects_<n>" when the data has no ids) -> -1: none
 long EECPNextClassByName(const std::string& inName);

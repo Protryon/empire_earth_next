@@ -131,15 +131,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::StSetMyClientFromNet: st->mMyClient = LobbyGetNetMyClient(); return (intptr_t)st->mMyClient.get();
     case EeWonLobbyOp::StSetGame: st->mGame = g; return 0;
     case EeWonLobbyOp::StJoinOpNew: st->mJoinOp = new AsyncOp; return 0;
-    case EeWonLobbyOp::StJoinOpFinish: if (st->mJoinOp.get() != NULL) st->mJoinOp->Finish(WS_Success); return 0;
-    case EeWonLobbyOp::StJoinOpRun:
-        LobbyRunOpWithStatus(st->mJoinOp.get(), LOBBY_STRING(GameStagingLogic_GettingGameInfoTitle_String),
-                             LOBBY_STRING(GameStagingLogic_GettingGameInfoDetails_String), 1, 0);
-        st->mJoinOp = NULL;
-        return 0;
-    case EeWonLobbyOp::StJoinOpKill:
-        if (st->mJoinOp.get() != NULL) { st->mJoinOp->Kill(true); st->mJoinOp = NULL; }
-        return 0;
     case EeWonLobbyOp::StSendJoinRequest: {
         ConstSmartPtr<ByteBuffer> aMessage = st->mGame->GetJoinRequest();
         st->SendToCaptain(aMessage.get());
@@ -155,15 +146,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         st->mGame = aGame;
         return Held(aGame.get());
     }
-    case EeWonLobbyOp::StLogoutTail:
-        st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, true);
-        LobbyNetLogout();
-        LobbyKillPings(0);
-        LobbyShowLoginScreen();
-        LobbySaveGlobalPrefs(false);
-        LobbySaveUserPrefs(false);
-        LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
-        return 0;
     case EeWonLobbyOp::StClientModerated:
         LobbyBroadcastEvent(ClientModeratedEvent(cl, (int)inC, st->mGame->GetName(), (int)(inD >> 1), 0,
                                                      (inD & 1) != 0, gEmptyGUIString), true);
@@ -182,19 +164,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::GamePostNetCreate: return g->PostNetCreateGame();
     case EeWonLobbyOp::GamePreNetJoin: return g->PreNetJoinGame();
     case EeWonLobbyOp::GamePostNetJoin: return g->PostNetJoinGame();
-    case EeWonLobbyOp::GameLeaveNet:
-        g->ClearPlayers();
-        st->mMyClient = NULL;
-        g->PreNetLeaveGame();
-        LobbyNetLeaveGame(g);
-        g->PostNetLeaveGame();
-        return 0;
     case EeWonLobbyOp::GameHandlePlayerJoined: g->HandlePlayerJoined(clB); return 0;
-    case EeWonLobbyOp::GameSetInProgressNet:
-        g->SetInProgress(inC != 0);
-        LobbyNetSetGameInProgress(inC != 0);
-        LobbyNetAdvertiseGame();
-        return 0;
     case EeWonLobbyOp::GameResetReadyFlags: {
         LobbyClientSetIterator anItr(g->GetClients().get());
         while (anItr.HasMore()) {
@@ -222,19 +192,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
     case EeWonLobbyOp::GameShowStatus:
         LobbyMessageBox(LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), g->GetStatusString((short)inC));
-        return 0;
-    case EeWonLobbyOp::GamePingAndNotify:
-        LobbyPingGame(g, true);
-        LobbyBroadcastEvent(GameChangedEvent(g, 2), true);
-        return 0;
-    case EeWonLobbyOp::GameShowDetails:
-        LobbyQueryGameDetails(g);
-        g->SetShowDetails(true);
-        LobbyBroadcastEvent(GameChangedEvent(g, 2), true);
-        return 0;
-    case EeWonLobbyOp::GameHideDetails:
-        g->SetShowDetails(false);
-        LobbyBroadcastEvent(GameChangedEvent(g, 2), true);
         return 0;
     case EeWonLobbyOp::GameDirectConnect: LobbyDispatchEvent(ChangeDirectConnectEvent(1, g)); return 0;
     case EeWonLobbyOp::GameShowOptions: {
@@ -292,10 +249,56 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::FirewallTestDone: return LobbyIsFirewallTestDone();
     case EeWonLobbyOp::BehindFirewall: return LobbyIsBehindFirewall();
     case EeWonLobbyOp::GameScreenType: return LobbyGetGameScreenType();
-    case EeWonLobbyOp::AllowJoinWithoutPing: {
-        LobbyConfig* aConfig = GetLobbyConfig();
-        return aConfig == NULL ? -1 : aConfig->mAllowJoinGameWithoutPing;
-    }
+    // the statements of the cases lobbyops.rs answers (R6 WONLobby round 29: the join op, the logout, leaving a game,
+    // the game's progress and details, the join without a ping)
+    case EeWonLobbyOp::StJoinOpIs: return st->mJoinOp.get() != NULL;
+    case EeWonLobbyOp::StJoinOpGet: return (intptr_t)st->mJoinOp.get();
+    case EeWonLobbyOp::StJoinOpFinishSuccess: st->mJoinOp->Finish(WS_Success);
+        return 0;
+    case EeWonLobbyOp::StJoinOpClear: st->mJoinOp = NULL;
+        return 0;
+    case EeWonLobbyOp::StJoinOpKillNow: st->mJoinOp->Kill(true);
+        return 0;
+    case EeWonLobbyOp::RunOpWithStatusRows: LobbyRunOpWithStatus(static_cast<AsyncOp*>(static_cast<RefCount*>(inA)), aTitle, aDetails, 1, 0);
+        return 0;
+    case EeWonLobbyOp::MessageBoxRows: LobbyMessageBox(aTitle, aDetails);
+        return 0;
+    case EeWonLobbyOp::StCreateDialogResetAll: st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, true);
+        return 0;
+    case EeWonLobbyOp::NetLogout: LobbyNetLogout();
+        return 0;
+    case EeWonLobbyOp::KillPings: LobbyKillPings(0);
+        return 0;
+    case EeWonLobbyOp::ShowLoginScreen: LobbyShowLoginScreen();
+        return 0;
+    case EeWonLobbyOp::SaveGlobalPrefs: LobbySaveGlobalPrefs(false);
+        return 0;
+    case EeWonLobbyOp::SaveUserPrefs: LobbySaveUserPrefs(false);
+        return 0;
+    case EeWonLobbyOp::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
+        return 0;
+    case EeWonLobbyOp::GameClearPlayers: g->ClearPlayers();
+        return 0;
+    case EeWonLobbyOp::StClearMyClient: st->mMyClient = NULL;
+        return 0;
+    case EeWonLobbyOp::GamePreNetLeave: g->PreNetLeaveGame();
+        return 0;
+    case EeWonLobbyOp::NetLeaveGame: LobbyNetLeaveGame(g);
+        return 0;
+    case EeWonLobbyOp::GamePostNetLeave: g->PostNetLeaveGame();
+        return 0;
+    case EeWonLobbyOp::GameSetInProgress: g->SetInProgress(inC != 0);
+        return 0;
+    case EeWonLobbyOp::NetSetGameInProgress: LobbyNetSetGameInProgress(inC != 0);
+        return 0;
+    case EeWonLobbyOp::LanPingGameNotify: LobbyPingGame(g, true);
+        return 0;
+    case EeWonLobbyOp::QueryGameDetails: LobbyQueryGameDetails(g);
+        return 0;
+    case EeWonLobbyOp::GameSetShowDetails: g->SetShowDetails(inC != 0);
+        return 0;
+    case EeWonLobbyOp::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
+    case EeWonLobbyOp::ConfigAllowJoinWithoutPing: return static_cast<LobbyConfig*>(inA)->mAllowJoinGameWithoutPing;
     case EeWonLobbyOp::Exit: LobbyExit((int)inC); return 0;
     case EeWonLobbyOp::Now: return (intptr_t)time(NULL);
     default: return LanLogicHostCall(static_cast<LanLogic*>(inLogic), inOp, inA, inB, inC, inD);

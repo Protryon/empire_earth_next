@@ -158,15 +158,16 @@ mod tests {
 
     #[test]
     fn the_cpp_status_constants_are_the_rust_table() {
-        // include/ee/wonapi/WONStatus.h's enum, the names the C++ callers use, against status.rs's table
-        let header = include_str!("../../../../include/ee/wonapi/WONStatus.h");
+        // the constants the C++ callers use (WONStatus.h includes the generated status_codes.h since R6 WONLobby
+        // round 30) against status.rs's table
+        let header = include_str!("../../../../include/rust/won_net/status_codes.h");
         let mut seen = 0;
         for line in header.lines() {
             let line = line.trim();
-            let Some(rest) = line.strip_prefix("WS_") else { continue };
+            let Some(rest) = line.strip_prefix("constexpr static const int32_t WS_") else { continue };
             let Some((name, value)) = rest.split_once('=') else { continue };
             let value: status::Status =
-                value.split(',').next().unwrap().trim().parse().unwrap_or_else(|_| panic!("{line}"));
+                value.split(';').next().unwrap().trim().parse().unwrap_or_else(|_| panic!("{line}"));
             let want = format!("WS_{}", name.trim());
             assert_eq!(status::named(value).map(|n| n.to_str().unwrap().to_string()), Some(want), "{line}");
             seen += 1;

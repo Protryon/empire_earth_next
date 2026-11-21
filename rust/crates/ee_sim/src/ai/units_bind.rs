@@ -121,6 +121,9 @@ extern "C" {
 /// # Safety
 /// The operation's objects are live; `out` is its record (or null).
 unsafe fn ee_ai_units_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
+    if let Some(r) = host_ops::op(op, player, a, b, c, out) {
+        return r;
+    }
     match world_op(op, a, b, c, out) {
         Some(r) => r,
         None => ee_ai_units_host_cpp(op, player, a, b, c, out),
@@ -3565,3 +3568,7 @@ pub unsafe extern "C" fn ee_ai_units_load(me: *mut c_void, data: *const u8, len:
 // the rest of the bindings (lane A round 2)
 #[path = "units_more.rs"]
 mod more;
+
+// the host's operations whose bodies are Rust (AI Thread cluster round 7; were EECPNextUnits.cpp's)
+#[path = "units_host.rs"]
+mod host_ops;
