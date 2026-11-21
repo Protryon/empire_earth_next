@@ -137,68 +137,25 @@ uint32_t FloatBits(float inValue)
 extern "C" int64_t ee_contagion_world(uint32_t inOp, uint64_t inA, uint64_t inB, uint64_t inC, float inX, void* ioValue)
 {
     switch (inOp) {
-    case EE_CONTAGION_WORLD_REFERENCE:
-        if (inB != 0)
-            Object<EEUnit>(inA)->Reference();
-        else
-            Object<EEUnit>(inA)->Dereference();
-        return 0;
-    case EE_CONTAGION_WORLD_MARK: {
-        EEComplexUnit* theUnit = Object<EEUnit>(inA)->mComplexUnit;
-        unsigned long theFlags = Object<EECalamity>(inB)->mClass->mClassFlags;
-        if (theUnit != NULL)
-            theUnit->mCalamityFlags = inC != 0 ? theUnit->mCalamityFlags | theFlags : theUnit->mCalamityFlags & ~theFlags;
-        return 0;
-    }
+    case EE_CONTAGION_WORLD_REFERENCE: return ee_gamecpp_contagion_reference(inA, inB);
+    case EE_CONTAGION_WORLD_MARK: return ee_gamecpp_contagion_mark(inA, inB, inC);
     case EE_CONTAGION_WORLD_INFECT: Object<EEContagionFunctor>(inA)->Infect(Object<EEUnit>(inB), Object<EECalamity>(inC)); return 0;
     case EE_CONTAGION_WORLD_CURE: Object<EEContagionFunctor>(inA)->Cure(Object<EEUnit>(inB), Object<EECalamity>(inC)); return 0;
     case EE_CONTAGION_WORLD_APPLY:
         Object<EEContagionFunctor>(inA)->Apply(Object<EEUnit>(inB), inX, Object<EECalamity>(inC));
         return 0;
     case EE_CONTAGION_WORLD_FUNCTOR_UPDATE: Object<EEContagionFunctor>(inA)->Update(inX, Object<EECalamity>(inC)); return 0;
-    case EE_CONTAGION_WORLD_NEAR: {
-        // GetUnitsInArea: the square of the radius around the unit, unless it is inside a carrier
-        EEComplexUnit* theUnit = Object<EEComplexUnit>(inA);
-        GE3DPoint thePosition;
-        theUnit->GetPosition(thePosition);
-        if (theUnit->mContainer != NULL)
-            return 0;
-        EETileArea theArea;
-        theArea.mLeft = UMFloor(thePosition.GetX() - inX);
-        theArea.mTop = UMFloor(thePosition.GetY() - inX);
-        theArea.mRight = UMFloor(thePosition.GetX() + inX);
-        theArea.mBottom = UMFloor(thePosition.GetY() + inX);
-        std::vector<EEComplexUnit*> theUnits;
-        EEAnyUnit theFilter;
-        EEGetUnitsInRectangle(theArea, theUnits, theFilter, true);
-        for (EEComplexUnit* theNear : theUnits)
-            ee_contagion_unit_list_push(static_cast<EeContagionUnitList*>(ioValue), (uint64_t)(uintptr_t)theNear);
-        return 0;
-    }
-    case EE_CONTAGION_WORLD_CAN_INFECT: {
-        EEUnit* theUnit = Object<EEUnit>(inB);
-        return Object<EEContagionFunctor>(inA)->CanInfectType(theUnit->mUnitClass->GetCategory(), theUnit->mUnitClass->GetUnitType());
-    }
-    case EE_CONTAGION_WORLD_IMMUNE: {
-        EEUnit* theUnit = Object<EEUnit>(inA);
-        EEGraphicEffect* theEffect = NULL;
-        if (!theUnit->mComplexUnit->GetEffect(3, theEffect))
-            return 0;
-        EECalamityCaptureContagionEvent(kContagionNew, theUnit->mUnitID, 2);   // CONT (TEST ONLY)
-        if (theEffect != NULL)
-            gEffectManager->CreateUnitEffect(theUnit->mComplexUnit, theEffect, NULL, 0, 0, 0);
-        return 1;
-    }
+    case EE_CONTAGION_WORLD_NEAR: return ee_gamecpp_contagion_near(inA, inX, ioValue);   // GetUnitsInArea
+    case EE_CONTAGION_WORLD_CAN_INFECT:
+        return Object<EEContagionFunctor>(inA)->CanInfectType(Object<EEUnit>(inB)->mUnitClass->GetCategory(), Object<EEUnit>(inB)->mUnitClass->GetUnitType());
+    case EE_CONTAGION_WORLD_IMMUNE: return ee_gamecpp_contagion_immune(inA);
     case EE_CONTAGION_WORLD_RANDOM: return FloatBits(gPhysics->mRandom.Generate());
     case EE_CONTAGION_WORLD_DISTANCE:
         return FloatBits(Object<EEComplexUnit>(inA)->mPhysicalModel.GetLocation().DistanceSquaredTo(
             Object<EEComplexUnit>(inB)->mPhysicalModel.GetLocation()));
     case EE_CONTAGION_WORLD_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit((unsigned long)inA);
     case EE_CONTAGION_WORLD_CALAMITY_CHECKSUM: return Object<EECalamity>(inA)->GetOutOfSynchChecksum();
-    case EE_CONTAGION_WORLD_CALAMITY_INDEX: {
-        long theIndex = 0;
-        return EECalamityManager::GetInstance()->GetCalamityIndex(Object<EECalamity>(inA), theIndex) ? theIndex : -1;
-    }
+    case EE_CONTAGION_WORLD_CALAMITY_INDEX: return ee_gamecpp_contagion_calamity_index(inA);
     case EE_CONTAGION_WORLD_CALAMITY_FUNCTOR:
         return (int64_t)(uintptr_t)Object<EECalamity>(inA)->mClass->GetContagionFunctor();
     case EE_CONTAGION_WORLD_CALAMITY_DUMP: Object<EECalamity>(inA)->DumpOutOfSynch(Object<FILE>(inB)); return 0;
@@ -221,4 +178,51 @@ extern "C" int64_t ee_contagion_world(uint32_t inOp, uint64_t inA, uint64_t inB,
     }
     ESVERIFY_AT(false, 1);
     return 0;
+}
+
+// ------------------------------------------------------------------------- round 9, lane B: the hosts' compound cases' C++
+
+int64_t EECore9OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(kContagionNew == 4, "gamecpp calamity_hosts.rs");
+static_assert(sizeof(EETileArea) == 4 * sizeof(long), "gamecpp calamity_hosts.rs: the area by address");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+
+// The C++ calls and members of the contagion world's and the calamity record's compound cases in Rust (gamecpp
+// calamity_hosts.rs; EeGameCpp's lane B section, after EETile.cpp's EECore9OpB4): one statement each
+int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::CgUnitReference: ((EEUnit*)p)->Reference();
+        break;
+    case O::CgUnitDereference: ((EEUnit*)p)->Dereference();
+        break;
+    case O::CgClassFlags: return ((EECalamity*)p)->mClass->mClassFlags;
+    case O::CgUnitsNew: return P64(new std::vector<EEComplexUnit*>);
+    case O::CgUnitsDelete: delete (std::vector<EEComplexUnit*>*)p;
+        break;
+    case O::CgUnitsCount: return (int64_t)((std::vector<EEComplexUnit*>*)p)->size();
+    case O::CgUnitsAt: return P64((*(std::vector<EEComplexUnit*>*)p)[a[0]]);
+    case O::CgUnitsInArea: EEGetUnitsInRectangle(*(const EETileArea*)a[0], *(std::vector<EEComplexUnit*>*)p, EEAnyUnit(), true);
+        break;
+    case O::CgCaptureContagion: EECalamityCaptureContagionEvent((long)a[0], (long)a[1], (long)a[2]);   // CONT (TEST ONLY)
+        break;
+    case O::CgCalamityIndex: return EECalamityManager::GetInstance()->GetCalamityIndex((EECalamity*)p, *(long*)a[0]);
+    case O::CgWriteClassId: return ((FSFile*)a[0])->Write((unsigned long)((EECalamity*)p)->mClass->mID);
+    case O::CgFileReadLong: return ((FSFile*)p)->Read(*(long*)a[0]);
+    case O::CgFileWriteLong: return ((FSFile*)p)->Write((long)a[0]);
+    case O::CgSetClass: ((EECalamity*)p)->mClass = EECalamityManager::GetInstance()->GetCalamityClass((long)a[0]);
+        break;
+    case O::CgTileAddr: return P64(a[0] != 0 ? &((EECalamity*)p)->mTilePlaceHolder1.mY : &((EECalamity*)p)->mTilePlaceHolder1.mX);
+    default: return EECore9OpC(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpCF(inOp, p, a, f);
 }
