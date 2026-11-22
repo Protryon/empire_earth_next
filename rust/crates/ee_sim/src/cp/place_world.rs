@@ -28,6 +28,7 @@ pub const EE_CP_CENTER_EFFECT_COUNT: i32 = 123;
 pub const EE_CP_CENTER_EFFECT_AT: i32 = 124;
 pub const EE_CP_CENTER_EFFECT_KIND: i32 = 125;
 /// `kAreaEffectMoraleFromBuildings` (ee/EEAreaEffectKindIDs.h)
+#[cfg(not(test))]
 const AREA_EFFECT_MORALE_FROM_BUILDINGS: i64 = 5;
 
 /// `EEComplexUnit::DistanceSquaredToUnit` (0x...: EECPResourceCenter.cpp's): from this unit's location to the other's
@@ -295,7 +296,10 @@ mod game {
                         q.v[0] = i;
                         cpp(ctx, EE_CP_CENTER_EFFECT_AT, a, 0, &mut q)
                     })
-                    .find(|&e| cpp(ctx, EE_CP_CENTER_EFFECT_KIND, 0, e as u64, &mut pg::place_io()) == AREA_EFFECT_MORALE_FROM_BUILDINGS)
+                    .find(|&e| {
+                        cpp(ctx, EE_CP_CENTER_EFFECT_KIND, 0, e as u64, &mut pg::place_io())
+                            == AREA_EFFECT_MORALE_FROM_BUILDINGS
+                    })
                     .unwrap_or(0)
             }
             // the id of the path area at tile (v0, v1), 0 for none (GetPathAreaAt's CNTQ record as the C++ asked it)

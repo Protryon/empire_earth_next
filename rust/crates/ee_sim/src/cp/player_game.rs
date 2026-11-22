@@ -1557,34 +1557,24 @@ fn restore_managers(cp: &Cp, major: c_ulong, minor: c_ulong, result: c_long) -> 
 // ---------------------------------------------------------------------------------------------------------------
 // The load and the save
 
-/// `EECPPlacement` (ee/EECPPlacement.h, a view of this record; the original's build manager, of which only the town
-/// centre tile, the player and the Rust placement are left): made by `Init`, freed by the destructor.
-#[repr(C)]
-pub struct EeCpPlacementObj {
-    /// `mTownCenterTile` (-10000, -10000: none)
-    pub town: [c_long; 2],
-    /// `mPlayer` (the `EEComputerPlayer*`)
-    pub player: *mut c_void,
-    /// `mRust`: the site tiles and the classes seen (place_game.rs)
-    pub rust: *mut super::placement::EeCpPlacement,
-}
-
 /// `new EECPPlacement(player)` into `mPlacement`: no town centre tile, a new Rust placement.
 fn placement_new(player: u64) {
     let l = layout();
     assert!(
-        l.placement_town as usize == std::mem::offset_of!(EeCpPlacementObj, town)
-            && l.placement_rust as usize == std::mem::offset_of!(EeCpPlacementObj, rust),
+        l.placement_town as usize == std::mem::offset_of!(super::placement::EeCpPlacementObj, town)
+            && l.placement_rust as usize == std::mem::offset_of!(super::placement::EeCpPlacementObj, rust),
         "ee_sim::cp: EECPPlacement is a view of EeCpPlacementObj"
     );
     // the `EEComputerPlayer*` of the `EEPlayer*` (its first base)
-    let object = Box::new(EeCpPlacementObj {
+    let object = Box::new(super::placement::EeCpPlacementObj {
         town: [-10000, -10000],
         player: player as usize as *mut c_void,
         rust: pg::ee_cp_placement_new(),
     });
     // SAFETY: the player's `mPlacement` slot (the layout's)
-    unsafe { std::ptr::write((player as usize + l.cp_placement as usize) as *mut usize, Box::into_raw(object) as usize) };
+    unsafe {
+        std::ptr::write((player as usize + l.cp_placement as usize) as *mut usize, Box::into_raw(object) as usize)
+    };
 }
 
 /// `delete mPlacement` (the slot keeps the pointer, as the C++ did).
@@ -1596,7 +1586,7 @@ unsafe fn placement_delete(player: u64) {
     unsafe {
         let at = std::ptr::read((player as usize + layout().cp_placement as usize) as *const usize);
         if at != 0 {
-            let object = Box::from_raw(at as *mut EeCpPlacementObj);
+            let object = Box::from_raw(at as *mut super::placement::EeCpPlacementObj);
             pg::ee_cp_placement_free(object.rust);
         }
     }

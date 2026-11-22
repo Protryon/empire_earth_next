@@ -303,7 +303,11 @@ pub unsafe extern "C" fn ee_cp_town_refresh_patrol_group(town: *mut c_void, area
 /// # Safety
 /// As `with`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_town_random_point(town: *mut c_void, area: *mut c_void, f: *mut EeTownFields) -> EeHerdPoint {
+pub unsafe extern "C" fn ee_cp_town_random_point(
+    town: *mut c_void,
+    area: *mut c_void,
+    f: *mut EeTownFields,
+) -> EeHerdPoint {
     // SAFETY: the caller's contract
     unsafe { with(town, area, f, |t| t.random_point()) }
 }
