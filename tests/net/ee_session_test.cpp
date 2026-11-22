@@ -95,11 +95,6 @@ extern "C" unsigned long ee_error_record_native(unsigned long inError)
 extern "C" void ee_error_checksum_add(EeErrorChecksum*, const char*, unsigned long)
 {
 }
-float URandom::Generate()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return (float)((double)this->mSeed / (double)this->mModulus);
-}
 extern "C" uint32_t ee_time_get()
 {
     T("time");
