@@ -382,11 +382,9 @@ pub const EE_UNITS_PG_UNIT_ID: i32 = 5;
 pub const EE_UNITS_PG_FIND_UNIT: i32 = 6;
 pub const EE_UNITS_PG_SELECT: i32 = 7;
 pub const EE_UNITS_PG_SELECT_FLAG: i32 = 8;
-/// The selectors of `ee_units_pg_host_file`
+/// The selectors of `ee_units_pg_host_write`
 pub const EE_UNITS_PG_WRITE_U32: i32 = 0;
 pub const EE_UNITS_PG_WRITE_BOOL: i32 = 1;
-pub const EE_UNITS_PG_READ_U32: i32 = 2;
-pub const EE_UNITS_PG_READ_BOOL: i32 = 3;
 
 // ---- the group's state (the units' state lane, round 1: the C++ class is gone; a group is this object)
 
@@ -454,13 +452,22 @@ pub fn set_group_fields(group: u64, fields: GroupFields) {
 
 #[cfg(not(test))]
 extern "C" {
-    fn ee_units_pg_host_unit_tile(unit: u64, out_x: *mut i32, out_y: *mut i32);
     fn ee_units_pg_host_distance(unit: u64, x: i32, y: i32) -> f32;
-    fn ee_units_pg_host_tile_at(x: f32, y: f32, probe: u64, out_height: *mut f32) -> u8;
-    fn ee_units_pg_host_create_point(group: u64, x: f32, y: f32, player: u32) -> u64;
+    fn ee_units_pg_host_tile_has(x: f32, y: f32, probe: u64) -> u8;
+    fn ee_units_pg_host_create_point(x: f32, y: f32, player: u32) -> u64;
     fn ee_units_pg_host_unit(which: i32, unit: u64, other: u64) -> u64;
     fn ee_units_pg_host_live_state(major: u32, minor: u32) -> u8;
-    fn ee_units_pg_host_file(file: u64, which: i32, io: *mut u32) -> i32;
+    fn ee_units_pg_host_write(file: u64, which: i32, value: u32) -> i32;
+    fn ee_units_pg_host_read_u32(file: u64, value: *mut std::ffi::c_ulong) -> i32;
+    fn ee_units_pg_host_read_bool(file: u64, value: *mut bool) -> i32;
+}
+
+/// Unit `unit`'s view (`f` over it; the default for none).
+#[cfg(not(test))]
+fn with_view<R: Default>(unit: u64, f: impl FnOnce(&crate::world::UnitView<'_>) -> R) -> R {
+    // SAFETY: the patrol group's calls run inside the C++ caller's hold of the world; `unit` is a live unit
+    let t = unsafe { crate::world::WorldRead::begin() };
+    unsafe { crate::world::UnitView::of(&t, unit) }.map_or_else(R::default, |u| f(&u))
 }
 
 /// A route's points (`mPatrolPoints`, unit handles; the dry host's route words, dry.rs).
@@ -490,20 +497,30 @@ impl PatrolGroupHost for Ffi {
         set_group_fields(group, fields)
     }
     fn unit_tile(&mut self, unit: u64) -> (i64, i64) {
-        let (mut x, mut y) = (0i32, 0i32);
-        unsafe { ee_units_pg_host_unit_tile(unit, &mut x, &mut y) };
-        (i64::from(x), i64::from(y))
+        // `GetTileX()`, `GetTileY()`
+        with_view(unit, |u| u.tile_xy())
     }
     fn distance_squared_to_tile(&mut self, unit: u64, x: i64, y: i64) -> f32 {
         unsafe { ee_units_pg_host_distance(unit, x as i32, y as i32) }
     }
     fn tile_at(&mut self, x: f32, y: f32, probe: u64) -> (f32, bool) {
-        let mut height = 0.0f32;
-        let has = unsafe { ee_units_pg_host_tile_at(x, y, probe, &mut height) };
-        (height, has != 0)
+        // the map's tile at ((long)x, (long)y): its height; whether it `HasUnit(probe)` (AddPoint's first point)
+        let height = {
+            // SAFETY: as [`with_view`]
+            let t = unsafe { crate::world::WorldRead::begin() };
+            crate::world::WorldView::global(&t)
+                .and_then(|w| w.map())
+                .and_then(|m| m.tile(x as std::ffi::c_long as i64, y as std::ffi::c_long as i64))
+                .map_or(0.0, |tile| tile.height())
+        };
+        (height, probe != 0 && unsafe { ee_units_pg_host_tile_has(x, y, probe) } != 0)
     }
     fn create_point(&mut self, group: u64, x: f32, y: f32, player: u32) -> u64 {
-        unsafe { ee_units_pg_host_create_point(group, x, y, player) }
+        // a path point of the player's at the point (`CreateUnit`), its complex unit, its group set
+        let created = unsafe { ee_units_pg_host_create_point(x, y, player) };
+        let unit = with_view(created, |u| u.complex_unit_handle());
+        self.set_patrol_group(unit, group);
+        unit
     }
     fn set_patrol_group(&mut self, unit: u64, group: u64) {
         unsafe { ee_units_pg_host_unit(EE_UNITS_PG_SET_GROUP, unit, group) };
@@ -512,8 +529,10 @@ impl PatrolGroupHost for Ffi {
         unsafe { ee_units_pg_host_unit(EE_UNITS_PG_GROUP_OF, unit, 0) }
     }
     fn kill_unit(&mut self, unit: u64, kill: bool) {
-        let which = if kill { EE_UNITS_PG_KILL } else { EE_UNITS_PG_KILL_UNIT };
-        unsafe { ee_units_pg_host_unit(which, unit, 0) };
+        if kill {
+            unsafe { ee_units_pg_host_unit(EE_UNITS_PG_KILL, unit, 0) };
+        }
+        unsafe { ee_units_pg_host_unit(EE_UNITS_PG_KILL_UNIT, unit, 0) };
     }
     fn remove_from_player(&mut self, unit: u64, group: u64) {
         unsafe { ee_units_pg_host_unit(EE_UNITS_PG_REMOVE_GROUP, unit, group) };
@@ -532,21 +551,19 @@ impl PatrolGroupHost for Ffi {
         unsafe { ee_units_pg_host_live_state(major, minor) != 0 }
     }
     fn write_u32(&mut self, value: u32) -> i32 {
-        let mut v = value;
-        unsafe { ee_units_pg_host_file(self.file, EE_UNITS_PG_WRITE_U32, &mut v) }
+        unsafe { ee_units_pg_host_write(self.file, EE_UNITS_PG_WRITE_U32, value) }
     }
     fn write_bool(&mut self, value: bool) -> i32 {
-        let mut v = value as u32;
-        unsafe { ee_units_pg_host_file(self.file, EE_UNITS_PG_WRITE_BOOL, &mut v) }
+        unsafe { ee_units_pg_host_write(self.file, EE_UNITS_PG_WRITE_BOOL, u32::from(value)) }
     }
     fn read_u32(&mut self, value: &mut u32) -> i32 {
-        unsafe { ee_units_pg_host_file(self.file, EE_UNITS_PG_READ_U32, value) }
+        let mut v = *value as std::ffi::c_ulong;
+        let r = unsafe { ee_units_pg_host_read_u32(self.file, &mut v) };
+        *value = v as u32;
+        r
     }
     fn read_bool(&mut self, value: &mut bool) -> i32 {
-        let mut v = *value as u32;
-        let r = unsafe { ee_units_pg_host_file(self.file, EE_UNITS_PG_READ_BOOL, &mut v) };
-        *value = v != 0;
-        r
+        unsafe { ee_units_pg_host_read_bool(self.file, value) }
     }
 }
 
@@ -633,12 +650,12 @@ pub fn run(op: i32, group: u64, args: EeUnitsPgArgs, host: &mut dyn PatrolGroupH
 /// `SetPatrolPoints`'s tiles (`inPoints`, U2DPoint<long> pairs) for the group of player `player`.
 ///
 /// # Safety
-/// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
+/// `tiles` holds `count` (x, y) pairs of `long`s (or is null with `count` 0), valid for the call.
 #[cfg(not(test))]
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_pg_set_points(
     group: *mut EeUnitsPatrolGroup,
-    tiles: *const i32,
+    tiles: *const std::ffi::c_long,
     count: u32,
     player: u32,
 ) {
@@ -647,7 +664,7 @@ pub unsafe extern "C" fn ee_units_pg_set_points(
     } else {
         // SAFETY: the function's contract
         let raw = unsafe { std::slice::from_raw_parts(tiles, count as usize * 2) };
-        raw.chunks(2).map(|c| (i64::from(c[0]), i64::from(c[1]))).collect()
+        raw.chunks(2).map(|c| (c[0] as i64, c[1] as i64)).collect()
     };
     set_points(group as usize as u64, &pairs, player, &mut Ffi { file: 0 });
 }

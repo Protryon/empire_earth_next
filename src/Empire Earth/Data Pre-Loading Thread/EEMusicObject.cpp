@@ -23,6 +23,7 @@
 #include "ee/EEMediaUse.h"
 #include "ee/EETechTreeTechID.h"
 #include "ee/EERules.h"
+#include "rust/game/preload_media.h"
 
 URandomIntegers gMusicRandom;
 
@@ -30,26 +31,7 @@ URandomIntegers gMusicRandom;
 // record (ee_data tables.rs); returns 0 when the file was read
 long EEMusicObject::ReadNewMusic(unsigned char* outRecord)
 {
-    FSFileSpec theDirectory;
-    FSFileSpec theFile;
-    char theName[0x100];
-    float theReverb[4];
-    FILE* theHandle;
-    theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "Data\Music\\");
-    long theResult = theDirectory.GetFirstFile("New Music.txt", theFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = theFile.FOpen("r");
-    if (theResult == 0) {
-        theHandle = theFile;
-        fscanf(theHandle, "%255s\n", theName);
-        for (int k = 0; k < 4; k++)
-            fscanf(theHandle, "%f\n", &theReverb[k]);
-        ee_data_new_music_record(theName, theReverb, outRecord);
-        theResult = theFile.Close();
-    }
-    return theResult;
+    return ee_preload_read_new_music(outRecord);
 }
 
 // Creates an unloaded song from its record (name + ".sgt", reverb, epochs; the space epoch copies nano's flag: the
@@ -89,23 +71,9 @@ long EEMusicObject::LoadTable(FSFile* inFile)
                 ee_data_music_epoch_flags(inRow, theFlags);
                 theRules.SetMusicFromFlags((long)inIndex, theFlags, 14);   // (no-op when epochs.yaml has them)
             });
-        for (unsigned long j = 0; j < theRules.mEpochs.size(); j++) {
-            for (long theRow : theRules.mEpochs[j].mMusic) {
-                if (theRow < 0 || (unsigned long)theRow >= theSongs.size())
-                    continue;
-                ee_data_songs_add(j, theSongs[theRow]);
-                theSongs[theRow]->Reference();
-            }
-        }
-        for (EEMusicObject* s : theSongs)
-            s->Dereference();
+        ee_preload_add_epoch_songs(reinterpret_cast<void* const*>(theSongs.data()), theSongs.size());   // preload_media.rs
     } else {
-        EEMusicObject* theSong = new EEMusicObject(theRecord.data());
-        for (unsigned long j = 0; j < theRules.mEpochs.size(); j++) {   // the override plays in every epoch
-            ee_data_songs_add(j, theSong);
-            theSong->Reference();
-        }
-        theSong->Dereference();
+        ee_preload_add_song_to_every_epoch(new EEMusicObject(theRecord.data()));   // the override plays in every epoch
     }
     return theResult;
 }

@@ -31,21 +31,13 @@ constexpr static const uint32_t FORM_SCENARIO_INTRO = 19;
 
 constexpr static const uint32_t FORM_EDITORS = 9;
 
-constexpr static const uint64_t AMBIENT = 0;
-
-constexpr static const uint64_t RESOURCE = 1;
-
 constexpr static const uint64_t BUILDING = 2;
 
 constexpr static const uint64_t AIRPLANE = 3;
 
 constexpr static const uint64_t NAVAL = 4;
 
-constexpr static const uint64_t LAND_CITIZEN = 6;
-
 constexpr static const uint64_t HELICOPTER = 7;
-
-constexpr static const uint64_t PROJECTILE = 9;
 
 constexpr static const uint64_t SUBMERGED_NAVAL = 10;
 
@@ -54,8 +46,6 @@ constexpr static const uint64_t HELICOPTER_TRANSPORT = 17;
 constexpr static const uint64_t NAVAL_TRANSPORT = 18;
 
 constexpr static const uint64_t NAVAL_BUILDING = 21;
-
-constexpr static const uint64_t NAVAL_CITIZEN = 22;
 
 constexpr static const uint64_t MINING_BUILDING = 24;
 

@@ -35,16 +35,12 @@ static int64_t EEATCHost(void* inContext, int32_t inOp, void* inUnit, void* inOt
     case EE_UNITS_ATC_REFERENCE: theUnit->Reference(); return 0;
     case EE_UNITS_ATC_DEREFERENCE: theUnit->Dereference(); return 0;
     case EE_UNITS_ATC_SET_CLEARANCE: theUnit->SetB342(io->a != 0); return 0;
-    case EE_UNITS_ATC_RELEASE_EXITING:   // ClearAirportQueue: the airport's exiting unit when it is the dropped plane
-        if (theUnit->mExitingUnitID != -1 && theOther == theUnit->FindPassenger(theUnit->mExitingUnitID))
-            theUnit->SetExitingUnitID(-1);
-        return 0;
+    case EE_UNITS_ATC_FIND_PASSENGER: return (int64_t)(intptr_t)theUnit->FindPassenger(io->a);
+    case EE_UNITS_ATC_CLEAR_EXITING: theUnit->SetExitingUnitID(-1); return 0;
     case EE_UNITS_ATC_KILL: theUnit->Kill(1, 0, 0); return 0;
-    case EE_UNITS_ATC_REROUTE:
-        theUnit->SetHomeBase(theOther);
-        theUnit->StartAction(kActionRequestLanding);
-        theUnit->GetUnitClass()->ActionChanged(theUnit);
-        return 0;
+    case EE_UNITS_ATC_SET_HOME_BASE: theUnit->SetHomeBase(theOther); return 0;
+    case EE_UNITS_ATC_REQUEST_LANDING: theUnit->StartAction(kActionRequestLanding); return 0;
+    case EE_UNITS_ATC_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
     case EE_UNITS_ATC_RESOLVE: return (int64_t)(intptr_t)EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((uint32_t)io->a));
     case EE_UNITS_ATC_DUMP_LINE: fputs(static_cast<const char*>(inUnit), static_cast<FILE*>(inContext)); return 0;
     }
@@ -57,13 +53,8 @@ EeUnitsAtc* EEATCNew()
     return ee_units_atc_new(&EEATCHost);
 }
 
-// Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared for the air traffic)
-float EEUnit::GetTileDistanceSquared(EEUnit* inOther)
-{
-    long theDeltaY = this->mTileY - inOther->mTileY;
-    long theDeltaX = this->mTileX - inOther->mTileX;
-    return (float)(theDeltaX * theDeltaX + theDeltaY * theDeltaY);
-}
+// Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared)
+float EEUnit::GetTileDistanceSquared(EEUnit* inOther) { return ee_units_atc_tile_distance_squared(this, inOther); }
 
 // The file's primitives for Load and Save (EESavePrimitive) and a unit's id for Save
 static int32_t EEATCFile(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
@@ -91,13 +82,7 @@ long EEATCSave(EeUnitsAtc* inATC, FSFile* inFile)
 // Hands replaced aircraft's cargo weight and queue entries to their replacements
 void EEATCReplaceUnits(EeUnitsAtc* inATC, std::vector<EEPUnitSwap>& inSwaps)
 {
-    std::vector<void*> theOld;
-    std::vector<void*> theNew;
-    for (size_t i = 0; i < inSwaps.size(); i++) {
-        theOld.push_back(inSwaps[i].mOld);
-        theNew.push_back(inSwaps[i].mNew);
-    }
-    ee_units_atc_replace(inATC, theOld.data(), theNew.data(), theOld.size());
+    ee_units_atc_replace(inATC, reinterpret_cast<const EeAStarUnit*>(inSwaps.data()), inSwaps.size());
 }
 
 // The original's BlocksTakeoffs (ICF-folded into 0x4bb118), UpdateLandings 0x550277 and UpdateTakeoffs 0x550487:

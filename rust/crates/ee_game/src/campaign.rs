@@ -18,12 +18,10 @@ pub enum EeCampaignCpp {
     /// `new FSPath`
     PathNew,
     PathDereference,
-    /// `AddDirectory` of "<startup>Users\<a0>\"
-    PathAddUserDirectory,
+    /// `AddDirectory(*(FSFileSpec*)a0, true)`
+    PathAddDirectory,
     /// `FindFile(UString(a0), *(FSFileSpec**)a1)`
     PathFindFile,
-    /// a new `FSFileSpec` of "<startup>Users\<a0>\" with the file a1
-    SpecNewUser,
     SpecDelete,
     /// `Delete()` of the file
     SpecRemove,
@@ -31,8 +29,6 @@ pub enum EeCampaignCpp {
     ArchiveOpen,
     ArchiveClose,
     ArchiveDelete,
-    /// `GetTag(a0, value)` with the value a1 in and out (the sink a2) -> the result
-    ArchiveGetTag,
     ArchiveSetTag,
     /// `FindFile(UString(a0), *(FSMemoryFile**)a1)`
     ArchiveFindFile,
@@ -54,6 +50,7 @@ pub enum EeCampaignCpp {
     CivBuilderEdit,
     CivBuilderSave,
     CivBuilderFree,
+    /// `EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer())`
     ApplyCivilization,
     // ---- EECampaign::Load (p: the EECampaign, or the UWideString or file named)
     MemberRequiredCiv,
@@ -70,19 +67,94 @@ pub enum EeCampaignCpp {
     DataPathExists,
     /// `GetTag(a0, *(UWideString*)a1)`
     ArchiveGetTagInto,
-    /// a line of the list file into the sink a0 -> `UString::Load`'s result
+    /// `new UString(a0)`
+    LineNew,
+    /// `((UString*)p)->Load(*(FSMemoryFile*)a0)`
     LineLoad,
+    /// the `UString`'s text into the sink a0
+    LineText,
+    LineDelete,
     MemoryDelete,
-    /// `*(UWideString*)a1 = DecryptPassword(a0)`
-    Decrypt,
-    /// `GetScenarioListFile()` into the sink a0
-    ScenarioListFile,
     ScenariosClear,
     /// the scenario without its extension (the last four characters) pushed
     ScenariosPushStripped,
     ErrorReadingTag,
     ErrorCouldntOpen,
-    ErrorScenarioMissing,
+    // ---- EECampaign's editor side (Save, the file lists; p: the object named)
+    /// a `UWideString`'s text into the sink a0
+    WideText,
+    /// `*(UWideString*)p += a0`
+    WideAppend,
+    /// `new UWideString`
+    WideNew,
+    WideDelete,
+    MemberDirectory,
+    MemberScenarios,
+    /// `new std::vector<UWideString>`
+    WideListNew,
+    WideListDelete,
+    WideListLen,
+    /// element a1 into the sink a0
+    WideListAt,
+    /// `std::find` of a0 (`operator==`) in the list
+    WideListContains,
+    /// `gScenarioExtension` into the sink a0
+    ScenarioExtension,
+    /// `gCampaignExtension` into the sink a0
+    CampaignExtension,
+    /// `gU52A280` (the campaign scenarios' prefix) into the sink a0
+    ScenarioPrefix,
+    /// `gResource->GetString(a0, *(UWideString*)p)`
+    ResourceString,
+    /// `sprintf(*(UWideString*)p, *(UWideString*)a0, a1, a2)`
+    Sprintf,
+    /// `new FSFileSpec`
+    SpecNew,
+    SpecSetStartupVolume,
+    SpecSetDirectory,
+    SpecSetFile,
+    SpecCreate,
+    SpecOpenWrite,
+    SpecClose,
+    /// `Copy(UString(a0), false, false)`
+    SpecCopy,
+    /// volume + directory + file into the sink a0
+    SpecPathText,
+    /// `UString(a0).Save(*(FSFileSpec*)p)`
+    LineSave,
+    /// `gDataPath->GetFileArchiveStatus(a0, *(bool*)a1)`
+    ArchiveStatus,
+    /// `new EEPSaveGameHeader`
+    HeaderNew,
+    /// `LoadFromFile(*(FSFileSpec*)a0)`
+    HeaderLoad,
+    /// a copy of the header's media strings' `ListMediaFiles(a0, list a1, error a2, prefixed a3)`
+    HeaderListMedia,
+    HeaderDelete,
+    /// `EELoadPersistent(a0, 6, *(FSPersistent**)a1)`
+    PersistentLoad,
+    /// the restorable's scenario manager, or 0
+    PersistentManager,
+    ManagerEffects,
+    ManagerEffect,
+    /// a media effect that plays a sound or sends a dialogue
+    EffectIsSound,
+    /// the effect's file name into the sink a0
+    EffectFileName,
+    /// the restorable's manager deleted (its pointer cleared)
+    PersistentFreeManager,
+    PersistentDelete,
+    // ---- EECampaignFormManager (p: the manager)
+    /// `&mCampaignName`
+    FormCampaignName,
+    /// `mChecksum = a0`
+    FormSetChecksum,
+    /// `EEGetFileChecksum(*(FSFileSpec*)p, UString(a0), 0)`
+    FileChecksum,
+    /// built-in campaign a1's name (gCampaignAOCRoman .. gCampaignEELearning) into the sink a0
+    BuiltInName,
+    /// built-in campaign a0's checksum (gAOCRomanChecksum ..)
+    BuiltInChecksum,
 }
 
 use EeCampaignCpp as O;
@@ -211,13 +283,34 @@ pub struct EeCampaignProgress {
 
 /// A tag's value through the C++'s `GetTag`, which writes it only when the tag is there (`value` in and out).
 fn get_tag(archive: P, name: &[u8], value: &mut Vec<u8>) -> c_long {
-    let name = C::new(name);
-    let current = C::new(value);
-    let mut sink = EeCampaignText(Vec::new());
-    let result =
-        h(O::ArchiveGetTag, archive, &[name.a(), current.a(), &mut sink as *mut EeCampaignText as usize as i64]);
-    *value = sink.0;
-    result as c_long
+    let wide = h(O::WideNew, 0, &[]) as P;
+    set_wide(wide, value);
+    let result = tag_into(archive, name, wide);
+    *value = wide_text(wide);
+    h(O::WideDelete, wide, &[]);
+    result
+}
+
+/// "<startup volume><startup directory>Users\<user>\<file>" as a new spec (the caller deletes it).
+fn user_spec(user: &[u8], file: &[u8]) -> P {
+    let directory = cat(&[&text(O::StartupDirectory, 0, &[]), b"Users\\", user, b"\\"]);
+    new_spec(&directory, file)
+}
+
+/// The player's folder added to a path.
+fn add_user_directory(path: P, user: &[u8]) {
+    let spec = user_spec(user, b"");
+    h(O::PathAddDirectory, path, &[spec as i64]);
+    h(O::SpecDelete, spec, &[]);
+}
+
+/// A `UString` of `value` for one call (`EEApplyCivilizationFile` takes a non-const one), deleted after.
+fn with_line<T>(value: &[u8], f: impl FnOnce(P) -> T) -> T {
+    let value = C::new(value);
+    let line = h(O::LineNew, 0, &[value.a()]) as P;
+    let result = f(line);
+    h(O::LineDelete, line, &[]);
+    result
 }
 
 fn user_file(user: &[u8], tail: &[&[u8]]) -> Vec<u8> {
@@ -240,8 +333,7 @@ impl EeCampaignProgress {
     pub fn load(&mut self, user: &[u8], campaign: &[u8], checksum: c_ulong, extract: bool) -> c_long {
         let checksum_text = format!("{}", checksum as c_long);
         let path = h(O::PathNew, 0, &[]) as P;
-        let user_c = C::new(user);
-        h(O::PathAddUserDirectory, path, &[user_c.a()]);
+        add_user_directory(path, user);
         let file = C::new(&cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]));
         let mut spec: usize = 0;
         let mut result = h(O::PathFindFile, path, &[file.a(), &mut spec as *mut usize as usize as i64]) as c_long;
@@ -317,8 +409,7 @@ impl EeCampaignProgress {
         let mut result = self.load(user, campaign, checksum, false);
         if result == ERROR_OK {
             let checksum_text = format!("{}", checksum as c_long);
-            let user_c = C::new(user);
-            h(O::PathAddUserDirectory, path, &[user_c.a()]);
+            add_user_directory(path, user);
             let file = C::new(&cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]));
             let mut spec: usize = 0;
             result = h(O::PathFindFile, path, &[file.a(), &mut spec as *mut usize as usize as i64]) as c_long;
@@ -357,8 +448,7 @@ impl EeCampaignProgress {
                             result = h(O::MemoryCopy, memory, &[destination.a()]) as c_long;
                             if result == ERROR_OK {
                                 extracted = true;
-                                let key_c = C::new(&key);
-                                result = h(O::ApplyCivilization, 0, &[key_c.a()]) as c_long;
+                                result = with_line(&key, |line| h(O::ApplyCivilization, line, &[]) as c_long);
                                 if result == ERROR_OK && available > 0 {
                                     h(O::AddPoints, 0, &[available as i64]);
                                 }
@@ -398,8 +488,7 @@ impl EeCampaignProgress {
         let key = make_key(campaign, scenario, checksum);
         let checksum_text = format!("{}", checksum as c_long);
         let path = h(O::PathNew, 0, &[]) as P;
-        let user_c = C::new(user);
-        h(O::PathAddUserDirectory, path, &[user_c.a()]);
+        add_user_directory(path, user);
         let available = h(O::AvailablePoints, 0, &[]) as c_long;
         let already = self.completed.iter().any(|c| c.as_slice() == scenario);
         h(O::CivBuilderEdit, 0, &[]);
@@ -412,8 +501,8 @@ impl EeCampaignProgress {
                 self.keys.push(key.clone());
                 self.points.push(available);
             }
-            let file = C::new(&cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]));
-            let spec = h(O::SpecNewUser, 0, &[user_c.a(), file.a()]) as P;
+            let file = cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]);
+            let spec = user_spec(user, &file);
             let archive = h(O::ArchiveNew, spec, &[]) as P;
             let set = |name: &[u8], value: &[u8]| {
                 let (n, v) = (C::new(name), C::new(value));
@@ -507,12 +596,11 @@ pub fn campaign_load(campaign: P, file: &[u8], error: P, check: bool) -> bool {
                 get_tag(archive, b"CampaignPassword", &mut password);
                 let member = h(O::MemberPassword, campaign, &[]) as P;
                 if !password.is_empty() {
-                    let password = C::new(&password);
-                    h(O::Decrypt, campaign, &[password.a(), member as i64]);
+                    set_wide(member, &decrypt_password(&password));
                 } else {
                     set_wide(member, b"");
                 }
-                let list_file = C::new(&text(O::ScenarioListFile, campaign, &[]));
+                let list_file = C::new(&scenario_list_file());
                 let mut list: usize = 0;
                 if h(O::ArchiveFindFile, archive, &[list_file.a(), &mut list as *mut usize as usize as i64]) as c_long
                     == ERROR_OK
@@ -521,9 +609,12 @@ pub fn campaign_load(campaign: P, file: &[u8], error: P, check: bool) -> bool {
                     result = true;
                     loop {
                         let mut sink = EeCampaignText(Vec::new());
-                        if h(O::LineLoad, list, &[&mut sink as *mut EeCampaignText as usize as i64]) as c_long
-                            != ERROR_OK
-                        {
+                        let loaded = with_line(b"", |line| {
+                            let loaded = h(O::LineLoad, line, &[list as i64]) as c_long;
+                            h(O::LineText, line, &[&mut sink as *mut EeCampaignText as usize as i64]);
+                            loaded
+                        });
+                        if loaded != ERROR_OK {
                             break;
                         }
                         let scenario = C::new(&sink.0);
@@ -532,7 +623,7 @@ pub fn campaign_load(campaign: P, file: &[u8], error: P, check: bool) -> bool {
                             if h(O::DataPathExists, 0, &[path.a()]) != 0 {
                                 h(O::ScenariosPushStripped, campaign, &[scenario.a()]);
                             } else {
-                                h(O::ErrorScenarioMissing, error, &[scenario.a()]);
+                                format_error(error, IDS_SCENARIO_DIDNT_EXIST_ON_DISK, &[&sink.0]);
                                 h(O::ScenariosClear, campaign, &[]);
                                 result = false;
                                 break;
@@ -572,6 +663,533 @@ pub unsafe extern "C" fn ee_campaign_load(
 ) -> bool {
     // SAFETY: the caller's guarantee
     campaign_load(campaign as P, unsafe { bytes(file) }, error as P, check)
+}
+
+// ---- EECampaign's editor side (the campaign editor's Save and file list)
+
+/// The string ids the editor side reads (ee/EEStringIDs.h).
+const IDS_THERE_WAS_ERROR_WRITING_CAMPAIGN: i64 = 7115;
+const IDS_YOU_MUST_ENTER_NAME_FOR_YOUR_CAMPAIGN: i64 = 7120;
+const IDS_COULDNT_OPEN_CAMPAIGN_FOR_WRITING: i64 = 7125;
+const IDS_FILES_BELOW_ARE_USED_IN_SCENARIO: i64 = 7126;
+const IDS_SCENARIO_DIDNT_EXIST_ON_DISK: i64 = 7163;
+const IDS_SE_MAP_NONE: i64 = 20009;
+const IDS_CAMPAIGN_HAS_SCENARIO_WHICH_DIFFERS: i64 = 31847;
+
+/// The archive's tag keys (the original's kEECampaign*Key).
+const TAG_REQUIRED_CIV: &[u8] = b"RequiredCivName";
+const TAG_BACKGROUND_IMAGE: &[u8] = b"BackgroundImage";
+const TAG_CAMPAIGN_NAME: &[u8] = b"CampaignName";
+const TAG_DESCRIPTION: &[u8] = b"CampaignDescription";
+const TAG_AUTHOR_NAME: &[u8] = b"AuthorName";
+const TAG_AUTHOR_EMAIL: &[u8] = b"AuthorEmail";
+const TAG_PASSWORD: &[u8] = b"CampaignPassword";
+const SCENARIO_LIST_KEY: &[u8] = b"ScenarioList.txt";
+
+fn wide_text(wide: P) -> Vec<u8> {
+    text(O::WideText, wide, &[])
+}
+
+fn member_text(op: O, campaign: P) -> Vec<u8> {
+    wide_text(h(op, campaign, &[]) as P)
+}
+
+fn wide_append(wide: P, value: &[u8]) {
+    let value = C::new(value);
+    h(O::WideAppend, wide, &[value.a()]);
+}
+
+fn list_items(list: P) -> Vec<Vec<u8>> {
+    (0..h(O::WideListLen, list, &[])).map(|i| text(O::WideListAt, list, &[i])).collect()
+}
+
+fn list_push(list: P, value: &[u8]) {
+    let value = C::new(value);
+    h(O::WidePush, list, &[value.a()]);
+}
+
+fn list_contains(list: P, value: &[u8]) -> bool {
+    let value = C::new(value);
+    h(O::WideListContains, list, &[value.a()]) != 0
+}
+
+/// `gDataPath->FindFile(UString(file), spec)`: the found spec (the caller deletes it).
+fn find_data(file: &[u8]) -> Option<P> {
+    let file = C::new(file);
+    let mut spec: usize = 0;
+    (h(O::DataPathFindFile, 0, &[file.a(), &mut spec as *mut usize as usize as i64]) as c_long == ERROR_OK)
+        .then_some(spec)
+}
+
+fn data_exists(file: &[u8]) -> bool {
+    let file = C::new(file);
+    h(O::DataPathExists, 0, &[file.a()]) != 0
+}
+
+/// `NotArchived`: the file lies outside the game's archives.
+fn not_archived(file: &[u8]) -> bool {
+    let file = C::new(file);
+    let mut archived = false;
+    h(O::ArchiveStatus, 0, &[file.a(), &mut archived as *mut bool as usize as i64]);
+    !archived
+}
+
+/// `ToLower` (`PlatMbsLwr`: the UTF-8 fold in place).
+fn lower(text: &[u8]) -> Vec<u8> {
+    let mut v = text.to_vec();
+    ee_base::plat_core::utf8::map_in_place(&mut v, ee_base::plat_core::utf8::fold);
+    v
+}
+
+/// `UString::Find(needle, 0)`: the first position, or the length.
+fn find(text: &[u8], needle: &[u8]) -> usize {
+    ee_base::ustring::find(text, needle, 0) as usize
+}
+
+/// `sprintf(*error, <string id>, args...)` (at most two `%s` arguments).
+fn format_error(error: P, id: i64, args: &[&[u8]]) {
+    let format = h(O::WideNew, 0, &[]) as P;
+    h(O::ResourceString, format, &[id]);
+    let first = C::new(args.first().copied().unwrap_or(b""));
+    let second = C::new(args.get(1).copied().unwrap_or(b""));
+    h(O::Sprintf, error, &[format as i64, first.a(), second.a()]);
+    h(O::WideDelete, format, &[]);
+}
+
+fn resource_text(id: i64) -> Vec<u8> {
+    let wide = h(O::WideNew, 0, &[]) as P;
+    h(O::ResourceString, wide, &[id]);
+    let value = wide_text(wide);
+    h(O::WideDelete, wide, &[]);
+    value
+}
+
+/// The codec's output into a `Vec<u8>` (the context).
+unsafe extern "C" fn codec_sink(context: *mut c_void, bytes: *const u8, length: usize) {
+    // SAFETY: the context is the caller's vector; the codec hands `length` bytes
+    let out = unsafe { &mut *(context as *mut Vec<u8>) };
+    out.clear();
+    if length != 0 {
+        out.extend_from_slice(unsafe { std::slice::from_raw_parts(bytes, length) });
+    }
+}
+
+/// The codec's text as the C++'s `UString` kept it: up to its first NUL.
+fn up_to_nul(mut text: Vec<u8>) -> Vec<u8> {
+    if let Some(end) = text.iter().position(|&c| c == 0) {
+        text.truncate(end);
+    }
+    text
+}
+
+/// `EECampaign::EncryptPassword` (`UEEncryptUString` of a `UString` made from the text: capacity length + 1).
+pub fn encrypt_password(password: &[u8]) -> Vec<u8> {
+    let password = up_to_nul(password.to_vec());
+    let mut out = Vec::new();
+    // SAFETY: the bytes and the sink's vector live through the call
+    unsafe {
+        ee_base::codec::ffi::ee_ue_encrypt_ustring(
+            password.as_ptr(),
+            password.len(),
+            password.len() + 1,
+            codec_sink,
+            &mut out as *mut Vec<u8> as *mut c_void,
+        )
+    };
+    up_to_nul(out)
+}
+
+/// `EECampaign::DecryptPassword` (`UEDecryptUString`; a failed checksum still gives its text).
+pub fn decrypt_password(password: &[u8]) -> Vec<u8> {
+    let password = up_to_nul(password.to_vec());
+    let mut out = Vec::new();
+    // SAFETY: as encrypt_password
+    unsafe {
+        ee_base::codec::ffi::ee_ue_decrypt_ustring(
+            password.as_ptr(),
+            password.len(),
+            codec_sink,
+            &mut out as *mut Vec<u8> as *mut c_void,
+        )
+    };
+    up_to_nul(out)
+}
+
+/// `GetScenarioListFile`: "Campaigns\<prefix>ScenarioList.txt".
+fn scenario_list_file() -> Vec<u8> {
+    cat(&[b"Campaigns\\", &text(O::ScenarioPrefix, 0, &[]), SCENARIO_LIST_KEY])
+}
+
+/// A spec of "<startup volume><directory><file>".
+fn new_spec(directory: &[u8], file: &[u8]) -> P {
+    let spec = h(O::SpecNew, 0, &[]) as P;
+    h(O::SpecSetStartupVolume, spec, &[]);
+    let directory = C::new(directory);
+    h(O::SpecSetDirectory, spec, &[directory.a()]);
+    let file = C::new(file);
+    h(O::SpecSetFile, spec, &[file.a()]);
+    spec
+}
+
+/// The file name a sound effect's file has on disk: as it is when it ends in .wav or .mp3, else with .wav, else
+/// with .mp3; empty when none exists (`exists` answers for the data path).
+pub fn sound_file(name: &[u8], exists: &mut dyn FnMut(&[u8]) -> bool) -> Vec<u8> {
+    let n = name.len();
+    if n > 4 && (name[n - 4..].eq_ignore_ascii_case(b".wav") || name[n - 4..].eq_ignore_ascii_case(b".mp3")) {
+        return if exists(name) { name.to_vec() } else { Vec::new() };
+    }
+    for extension in [&b".wav"[..], b".mp3"] {
+        let file = cat(&[name, extension]);
+        if exists(&file) {
+            return file;
+        }
+    }
+    Vec::new()
+}
+
+/// `inPrefixed`'s file name: the prefix inserted where the sound's name starts (unchanged when it is not there).
+pub fn prefixed_at(file: &[u8], name: &[u8], prefix: &[u8]) -> Vec<u8> {
+    let position = find(file, name);
+    if position == file.len() {
+        return file.to_vec();
+    }
+    cat(&[&file[..position], prefix, &file[position..]])
+}
+
+/// `ListEffectSound`: a play-sound or dialogue effect's sound (.wav or .mp3, optionally prefixed) into the list
+/// unless archived or listed; false with its name as the error when the sound is missing.
+fn list_effect_sound(effect: P, files: P, error: &mut Vec<u8>, prefixed: bool) -> bool {
+    if h(O::EffectIsSound, effect, &[]) == 0 {
+        return true;
+    }
+    let sound = text(O::EffectFileName, effect, &[]);
+    if sound.is_empty() {
+        return true;
+    }
+    let name = cat(&[b"Sounds\\", &sound]);
+    let mut file = sound_file(&name, &mut |file| data_exists(file));
+    if file.is_empty() {
+        *error = cat(&[&name, b"\n"]);
+        return false;
+    }
+    if not_archived(&file) {
+        if prefixed {
+            file = prefixed_at(&file, &sound, &text(O::ScenarioPrefix, 0, &[]));
+        }
+        if !list_contains(files, &file) {
+            list_push(files, &file);
+        }
+    }
+    true
+}
+
+/// `ListEffectSounds`: the sounds of every effect of the scenario's saved scenario manager; the missing ones'
+/// names appended to `error` (a `UWideString`).
+fn list_effect_sounds(file: &[u8], files: P, error: P, prefixed: bool) -> bool {
+    let mut result = false;
+    let file = C::new(file);
+    let mut persistent: usize = 0;
+    if h(O::PersistentLoad, 0, &[file.a(), &mut persistent as *mut usize as usize as i64]) as c_long == ERROR_OK {
+        let manager = h(O::PersistentManager, persistent, &[]) as P;
+        if manager != 0 {
+            result = true;
+            let mut missing = Vec::new();
+            for i in 0..h(O::ManagerEffects, manager, &[]) {
+                let effect = h(O::ManagerEffect, manager, &[i]) as P;
+                if !list_effect_sound(effect, files, &mut missing, prefixed) {
+                    result = false;
+                    wide_append(error, &missing);
+                }
+            }
+            h(O::PersistentFreeManager, persistent, &[]);
+        }
+        h(O::PersistentDelete, persistent, &[]);
+    }
+    result
+}
+
+/// `ListScenarioMedia`: a scenario's media files (lower case) and effect sounds that are not archived into the list
+/// (no duplicates); false with an error naming the missing ones (or the differing scenario).
+fn list_scenario_media(campaign: P, file: &[u8], files: P, error: P, prefixed: bool) -> bool {
+    let media_error = h(O::WideNew, 0, &[]) as P;
+    let mut result = false;
+    let mut media_failed = false;
+    if let Some(spec) = find_data(file) {
+        let header = h(O::HeaderNew, 0, &[]) as P;
+        if h(O::HeaderLoad, header, &[spec as i64]) as c_long == ERROR_OK {
+            let media = h(O::WideListNew, 0, &[]) as P;
+            let name = C::new(file);
+            if h(O::HeaderListMedia, header, &[name.a(), media as i64, media_error as i64, prefixed as i64]) != 0 {
+                for item in list_items(media) {
+                    if !not_archived(&item) {
+                        continue;
+                    }
+                    let item = lower(&item);
+                    if !list_contains(files, &item) {
+                        list_push(files, &item);
+                    }
+                }
+                result = true;
+            } else {
+                media_failed = true;
+            }
+            h(O::WideListDelete, media, &[]);
+            if !list_effect_sounds(file, files, media_error, prefixed) {
+                result = false;
+                media_failed = true;
+            }
+        }
+        h(O::HeaderDelete, header, &[]);
+        h(O::SpecDelete, spec, &[]);
+    }
+    if !result {
+        if media_failed {
+            format_error(error, IDS_FILES_BELOW_ARE_USED_IN_SCENARIO, &[file]);
+            wide_append(error, &cat(&[b"\n\n", &wide_text(media_error)]));
+        } else {
+            let name = member_text(O::MemberCampaignName, campaign);
+            format_error(error, IDS_CAMPAIGN_HAS_SCENARIO_WHICH_DIFFERS, &[&name, file]);
+        }
+    }
+    h(O::WideDelete, media_error, &[]);
+    result
+}
+
+/// `ListScenarioFiles`: every scenario file (when `add`; optionally prefixed) with its media and sounds, then the
+/// background image; false at the first scenario whose files are missing.
+pub fn list_scenario_files(campaign: P, files: P, error: P, add: bool, prefixed: bool) -> bool {
+    let extension = text(O::ScenarioExtension, 0, &[]);
+    let prefix = text(O::ScenarioPrefix, 0, &[]);
+    let mut result = true;
+    for scenario in list_items(h(O::MemberScenarios, campaign, &[]) as P) {
+        let file = cat(&[b"Scenarios\\", &scenario, &extension]);
+        if add {
+            list_push(
+                files,
+                &if prefixed { cat(&[b"Scenarios\\", &prefix, &scenario, &extension]) } else { file.clone() },
+            );
+        }
+        if !list_scenario_media(campaign, &file, files, error, prefixed) {
+            result = false;
+            break;
+        }
+    }
+    let none = resource_text(IDS_SE_MAP_NONE);
+    let background = member_text(O::MemberBackgroundImage, campaign);
+    if !background.is_empty() && background != none {
+        list_push(files, &cat(&[b"Scenarios\\", if prefixed { &prefix } else { b"" }, &background]));
+    }
+    result
+}
+
+/// `CopyScenarioFiles`: each file of `sources` copied beside itself under the prefixed name `copies` gets (the
+/// prefixed list, filled here); whether every one was copied.
+fn copy_scenario_files(campaign: P, sources: P, copies: P) -> bool {
+    let error = h(O::WideNew, 0, &[]) as P;
+    let mut result = false;
+    if list_scenario_files(campaign, copies, error, true, true) {
+        let sources = list_items(sources);
+        let copies = list_items(copies);
+        let mut copied = 0;
+        for (k, copy) in copies.iter().enumerate() {
+            let Some(source) = sources.get(k) else { break };
+            let Some(spec) = find_data(source) else { break };
+            let path = text(O::SpecPathText, spec, &[]);
+            let position = find(&lower(&path), &lower(source)).min(path.len());
+            let destination = C::new(&cat(&[&path[..position], copy]));
+            let failed = h(O::SpecCopy, spec, &[destination.a()]) as c_long != ERROR_OK;
+            h(O::SpecDelete, spec, &[]);
+            if failed {
+                break;
+            }
+            copied += 1;
+        }
+        result = copied == copies.len();
+    }
+    h(O::WideDelete, error, &[]);
+    result
+}
+
+/// `CreateScenarioList`: the scenario list (a scenario file name per line) written to `file` in the campaign's
+/// directory; false with an error text.
+fn create_scenario_list(campaign: P, file: &[u8], error: P) -> bool {
+    let spec = new_spec(&member_text(O::MemberDirectory, campaign), file);
+    h(O::SpecRemove, spec, &[]);
+    let mut result = h(O::SpecCreate, spec, &[]) as c_long;
+    if result == ERROR_OK {
+        result = h(O::SpecOpenWrite, spec, &[]) as c_long;
+    }
+    if result == ERROR_OK {
+        let extension = text(O::ScenarioExtension, 0, &[]);
+        for scenario in list_items(h(O::MemberScenarios, campaign, &[]) as P) {
+            if result != ERROR_OK {
+                break;
+            }
+            let line = C::new(&cat(&[&scenario, &extension]));
+            result = h(O::LineSave, spec, &[line.a()]) as c_long;
+        }
+        if result != ERROR_OK {
+            h(O::ResourceString, error, &[IDS_THERE_WAS_ERROR_WRITING_CAMPAIGN]);
+        }
+    } else {
+        h(O::ResourceString, error, &[IDS_COULDNT_OPEN_CAMPAIGN_FOR_WRITING]);
+    }
+    let written = result == ERROR_OK && h(O::SpecClose, spec, &[]) as c_long == ERROR_OK;
+    h(O::SpecDelete, spec, &[]);
+    written
+}
+
+/// `SaveArchive`: the archive made of the scenario list file and the copies of every scenario file, the copies
+/// deleted afterwards.
+fn save_archive(campaign: P, archive: P, error: P) -> bool {
+    let files = h(O::WideListNew, 0, &[]) as P;
+    let copied = h(O::WideListNew, 0, &[]) as P;
+    let mut result = false;
+    if list_scenario_files(campaign, files, error, true, false) {
+        let list_file = scenario_list_file();
+        if create_scenario_list(campaign, &list_file, error) {
+            if copy_scenario_files(campaign, files, copied) {
+                let names = h(O::NamesNew, 0, &[]) as P;
+                for name in list_items(copied).iter().chain(std::iter::once(&list_file)) {
+                    let name = C::new(name);
+                    h(O::NamesPush, names, &[name.a()]);
+                }
+                let directory = h(O::SpecNew, 0, &[]) as P;
+                let path = C::new(&member_text(O::MemberDirectory, campaign));
+                h(O::SpecSetDirectory, directory, &[path.a()]);
+                if h(O::ArchiveCreate, archive, &[directory as i64, names as i64]) as c_long == ERROR_OK {
+                    result = true;
+                } else {
+                    h(O::ResourceString, error, &[IDS_THERE_WAS_ERROR_WRITING_CAMPAIGN]);
+                }
+                h(O::SpecDelete, directory, &[]);
+                h(O::NamesDelete, names, &[]);
+            }
+            if !list_file.is_empty() {
+                list_push(copied, &list_file);
+            }
+            for name in list_items(copied) {
+                if let Some(spec) = find_data(&name) {
+                    h(O::SpecRemove, spec, &[]);
+                    h(O::SpecDelete, spec, &[]);
+                }
+            }
+        }
+    }
+    h(O::WideListDelete, files, &[]);
+    h(O::WideListDelete, copied, &[]);
+    result
+}
+
+/// `EECampaign::Save`: the archive "Campaigns\<name><extension>" in the campaign's directory with its tags (the
+/// password encrypted), then its files; needs a name; false with an error text.
+pub fn campaign_save(campaign: P, error: P) -> bool {
+    let name = member_text(O::MemberCampaignName, campaign);
+    if name.is_empty() {
+        h(O::ResourceString, error, &[IDS_YOU_MUST_ENTER_NAME_FOR_YOUR_CAMPAIGN]);
+        return false;
+    }
+    let extension = text(O::CampaignExtension, 0, &[]);
+    let spec = new_spec(&member_text(O::MemberDirectory, campaign), &cat(&[b"Campaigns\\", &name, &extension]));
+    let archive = h(O::ArchiveNew, spec, &[]) as P;
+    let mut required = member_text(O::MemberRequiredCiv, campaign);
+    if required.is_empty() {
+        required = b" ".to_vec();
+    }
+    let set_tag = |key: &[u8], value: &[u8]| {
+        let (key, value) = (C::new(key), C::new(value));
+        h(O::ArchiveSetTag, archive, &[key.a(), value.a()]) as c_long == ERROR_OK
+    };
+    let mut result = false;
+    if set_tag(TAG_REQUIRED_CIV, &required)
+        && set_tag(TAG_BACKGROUND_IMAGE, &member_text(O::MemberBackgroundImage, campaign))
+        && set_tag(TAG_CAMPAIGN_NAME, &name)
+        && set_tag(TAG_DESCRIPTION, &member_text(O::MemberDescription, campaign))
+        && set_tag(TAG_AUTHOR_NAME, &member_text(O::MemberAuthorName, campaign))
+        && set_tag(TAG_AUTHOR_EMAIL, &member_text(O::MemberAuthorEmail, campaign))
+    {
+        let password = member_text(O::MemberPassword, campaign);
+        let saved = password.is_empty() || set_tag(TAG_PASSWORD, &encrypt_password(&password));
+        if saved {
+            result = save_archive(campaign, archive, error);
+        }
+    }
+    h(O::ArchiveDelete, archive, &[]);
+    h(O::SpecDelete, spec, &[]);
+    result
+}
+
+/// `EECampaignFormManager::UpdateChecksum`: the chosen campaign file's checksum ("Campaigns\<name><extension>" on
+/// the data path; 0 when it is missing).
+pub fn update_checksum(manager: P) {
+    let name = cat(&[&wide_text(h(O::FormCampaignName, manager, &[]) as P), &text(O::CampaignExtension, 0, &[])]);
+    let checksum = match find_data(&cat(&[b"Campaigns\\", &name])) {
+        Some(spec) => {
+            let (empty, name) = (C::new(b""), C::new(&name));
+            h(O::SpecSetFile, spec, &[empty.a()]);
+            let checksum = h(O::FileChecksum, spec, &[name.a()]);
+            h(O::SpecDelete, spec, &[]);
+            checksum
+        }
+        None => 0,
+    };
+    h(O::FormSetChecksum, manager, &[checksum]);
+}
+
+/// The built-in campaigns (the three AoC campaigns, the demo, the tutorial: `BuiltInName`'s indices).
+const BUILT_IN_CAMPAIGNS: i64 = 5;
+
+/// `EECampaignFormManager::GetBuiltInCampaign`: the expected checksum of a built-in campaign (the last that matches,
+/// ignoring case), else 0.
+pub fn built_in_campaign(name: &[u8]) -> c_ulong {
+    let name = C::new(name);
+    let mut result: c_ulong = 0;
+    for index in 0..BUILT_IN_CAMPAIGNS {
+        let built_in = C::new(&text(O::BuiltInName, 0, &[index]));
+        if h(O::MbsICmp, 0, &[name.a(), built_in.a()]) == 0 {
+            result = h(O::BuiltInChecksum, 0, &[index]) as c_ulong;
+        }
+    }
+    result
+}
+
+/// # Safety
+/// `manager` is a live `EECampaignFormManager`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_campaign_update_checksum(manager: *mut c_void) {
+    update_checksum(manager as P)
+}
+
+/// # Safety
+/// `name` is a C string or null.
+#[no_mangle]
+pub unsafe extern "C" fn ee_campaign_built_in(name: *const c_char) -> c_ulong {
+    // SAFETY: the caller's guarantee
+    built_in_campaign(unsafe { bytes(name) })
+}
+
+/// `EECampaign::Save` (`campaign` the C++ object, `error` its `UWideString&`).
+///
+/// # Safety
+/// The objects are live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_campaign_save(campaign: *mut c_void, error: *mut c_void) -> bool {
+    campaign_save(campaign as P, error as P)
+}
+
+/// `EECampaign::ListScenarioFiles` (`files` a `std::vector<UWideString>*`, `error` a `UWideString*`).
+///
+/// # Safety
+/// The objects are live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_campaign_list_scenario_files(
+    campaign: *mut c_void,
+    files: *mut c_void,
+    error: *mut c_void,
+    add: bool,
+    prefixed: bool,
+) -> bool {
+    list_scenario_files(campaign as P, files as P, error as P, add, prefixed)
 }
 
 // ---- the C++ class's forwards (EECampaignProgress.cpp)
@@ -667,6 +1285,40 @@ pub unsafe extern "C" fn ee_campaign_progress_save(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_sound_is_found_as_named_or_with_an_extension() {
+        let have = |names: &'static [&'static [u8]]| move |file: &[u8]| names.contains(&file);
+        assert_eq!(sound_file(b"Sounds/a.WAV", &mut have(&[b"Sounds/a.WAV"])), b"Sounds/a.WAV");
+        assert_eq!(sound_file(b"Sounds/a.mp3", &mut have(&[])), b"");
+        assert_eq!(sound_file(b"Sounds/a", &mut have(&[b"Sounds/a.wav", b"Sounds/a.mp3"])), b"Sounds/a.wav");
+        assert_eq!(sound_file(b"Sounds/a", &mut have(&[b"Sounds/a.mp3"])), b"Sounds/a.mp3");
+        assert_eq!(sound_file(b"Sounds/a", &mut have(&[])), b"");
+        // four characters or fewer never count as an extension
+        assert_eq!(sound_file(b".wav", &mut have(&[b".wav.wav"])), b".wav.wav");
+    }
+
+    #[test]
+    fn the_prefix_goes_where_the_name_starts() {
+        assert_eq!(prefixed_at(b"Sounds/a.wav", b"a", b"Pre_"), b"Sounds/Pre_a.wav");
+        assert_eq!(prefixed_at(b"Sounds/b.wav", b"x", b"Pre_"), b"Sounds/b.wav");
+        assert_eq!(find(b"abcabc", b"c"), 2);
+        assert_eq!(find(b"abc", b"d"), 3);
+    }
+
+    #[test]
+    fn a_password_survives_its_encryption() {
+        for password in [&b"secret"[..], b"a", b"Pass word 123"] {
+            let encrypted = encrypt_password(password);
+            assert_ne!(encrypted, password);
+            assert_eq!(decrypt_password(&encrypted), password);
+        }
+    }
+
+    #[test]
+    fn lower_folds_as_platmbslwr() {
+        assert_eq!(lower(b"Scenarios/ABC.Scn"), b"scenarios/abc.scn");
+    }
+
     use super::*;
 
     #[test]

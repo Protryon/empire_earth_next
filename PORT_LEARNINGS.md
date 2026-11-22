@@ -38466,3 +38466,71 @@ eedata's area-effect record fixed after it):
 - `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 12224, units [4, 36, 38], alive [2, 3], classic_lua x 2;
   lan-game PT 3409/3401);
 - Not run: the POSIX builds, the lobby captures (lan_capture_compare; the LAN game passed).
+
+## The world lane, round 2: the physics model host, the player's bodies, the campaign editor side and the pre-loader's media objects in Rust (ee_sim units pm_flight.rs, pm_note.rs, save_prim.rs, player_econ.rs, player_rest.rs, player_split_more.rs, town_split.rs; ee_game campaign.rs, preload_media.rs; branch rust-world2, 2026-11-21)
+
+The round ran as the lead (Campaign, Data Pre-Loading Thread) and two forks in their own worktrees (Player:
+rust-world2p; Physics Thread but EEPhysics.cpp: rust-world2y), merged with `--no-ff`; every heavy job of the three
+took one shared lock directory (`build/w2heavy.lock`, mkdir-atomic) so only one build, gate or capture ran at a time.
+docs/progress/world.md has the lane's state.
+
+What moved:
+- The physics thread (dae093b54, 0887da6bb, e00a62706): the projectile and missile steps (pm_flight.rs behind a
+  `FlightHost` trait; their CBPA/CBPJ/CBPS/CBMA/CBMH records written in Rust at the C++'s points, in its order), the
+  group-aware rates, the TEST ONLY PMST note (pm_note.rs), the models as statics, every multi-statement
+  `ee_units_pm_host_*`; the sweeps' host one statement per case (unit_sweep.rs ops 10..47) and the AGPL record in
+  Rust (ag_sweep.rs); the patrol group's and the ATC's host bodies. EEPhysics.cpp itself untouched (units round 7/8).
+- The player (93e851f39): EESavePrimitive (save_prim.rs over 12 FSFile shims), the 18 economy and improvement members
+  with their PLEC record (player_econ.rs), about 30 bodies (player_rest.rs: ClearFootprint, ReloadTechTree,
+  SetGameResult's decisions, AdoptTownPatrol, GetNearestArea, GetChecksum, the wonder timers, the cloak chains,
+  DumpMedia, ...), every multi-statement case of EEPlayerHost, the town-save host, the event list's and the save
+  host's (a Rust split layer in the host wrapper keeps the old op codes); 22 EEPlayer members only the hosts called
+  are gone.
+- The campaign (42a5104a4, e5c7efb5a): EECampaign's editor side (Save, SaveArchive, CreateScenarioList,
+  CopyScenarioFiles, ListScenarioFiles, ListScenarioMedia, ListEffectSound(s), NotArchived, GetScenarioListFile, the
+  password crypt), EECampaignFormManager's UpdateChecksum and GetBuiltInCampaign, the progress' helpers (the user
+  spec, the tag read, the list line, the civilization file's UString), over one-statement `ee_campaigncpp` cases.
+- The pre-loader's media objects (05cafd4c0, 7dacdd3dc; preload_media.rs over `ee_preload_mediacpp`): the graphic
+  object table's dump and delete, FindTurretPart, the effects' links, DumpIDs, UnloadTable, GetMedia, the sounds'
+  dump, unload and one-shot Play, the "New Music.txt" override and the epochs' songs; the graphic object's and the
+  effect's pointer members got default member initializers (their constructors' NULL loops are gone).
+- Score (logic_lines.py, one run): 7f68eb2bc 64,931 -> the merged lane before origin/rust (e6df7ee45) 63,192:
+  -1,739 logic lines (lead -481, physics -532, player -726); net lines 156,171 -> 154,649 (-1,522). Short of the
+  -2,500 target: what is left is mostly declarations (EEPlayer.h's tech tree and RTSPlayer belong to other lanes'
+  .cpp), EEPhysics.cpp (held for the units merge) and the media objects' lifetimes over C++ templates.
+
+Lessons:
+- cbindgen writes a host enum only when it is in cbindgen.toml's `[export] include` (the host function is an import
+  in a `cbindgen:ignore` module): EePreloadMediaCpp had to join EePreloadCpp and EeCampaignCpp there, else the C++
+  switch sees an incomplete type. Imports a Rust module declares go into the generated header as they are: the C++
+  shim must match that signature exactly, and two modules declaring the same import fail the header check.
+- `UEEncryptUString` hands its result through `UESink`, which assigns `std::string(bytes, n).c_str()`: the text is
+  cut at its first NUL. The Rust password crypt calls ee_base's codec with the C++'s capacity (length + 1) and cuts
+  the same way.
+- EEMusicObject::ReadNewMusic's directory literal `"Data\Music\\"` has the unknown escape `\M` (an M): kept as
+  written (the override is read from "DataMusic\").
+- windows.h's `min` macro breaks `std::min` in game units: `(std::min)(...)`.
+- An int32 host return truncates pointers: return them through a 64-bit field. Cargo runs tests in parallel, so tests
+  that set process-global capture state (the PLEC thread) must be serialized.
+- On this machine Bash heredocs lost a level of backslashes in patch scripts holding Rust or C++ text (`b"Sounds\\"`
+  became `b"Sounds\"`); scripts written with the Write tool kept them.
+- clippy: a `pub fn` that dereferences a raw pointer argument must be `unsafe fn` (not_unsafe_ptr_arg_deref); the
+  `c_long` casts it calls unnecessary on Windows are needed on Linux (allow per function).
+
+Gates (the lane merged with origin/rust 8830a1187 at a0c05aa44 and gated whole; then merged again with origin/rust
+5143a9696, batch 15, which carries world round 1, at b361ed41c, and gated whole again; the numbers are the second):
+- `build.py -j 3 --sim`: EE-AOC 412 inputs, EE-SIM 413, 0 unresolved, 0 duplicates; the test profile 0/0 (412);
+- the Rust gate PASS (5,773 tests; 306 headers current);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile 22,
+  effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport 185 digests);
+- saveload plain PASS; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`
+  PASS; scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062); eedata check and cppgate
+  PASS;
+- through slot.py on the main checkout's tree: the tour `random-game --box-select --orders --seed 7` (BOX SELECT
+  PASS; ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS; no GX errors); `bash tools/gates.sh`: GATES
+  PASS (tour with F3 ok; ai-game time-cap PT 12657, units [4, 38, 40], alive [2, 3], classic_lua x 2; lan-game PT
+  2861/2862);
+- Not run: the POSIX builds.
+- `tools/rust_includes.py` on the merged tree wanted `#include "rust/audio/mixer.h"` in tests/sound/se_golden.cpp
+  (another lane's test, from origin/rust); left out of this branch.

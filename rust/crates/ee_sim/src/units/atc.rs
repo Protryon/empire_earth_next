@@ -127,6 +127,17 @@ pub const EE_UNITS_ATC_UNIT_ID: i32 = 22;
 pub const EE_UNITS_ATC_RESOLVE: i32 = 23;
 /// the dump's line: the NUL-terminated text at `unit`
 pub const EE_UNITS_ATC_DUMP_LINE: i32 = 24;
+/// the game's steps of the two composite calls (the FFI host makes them; the C++ answers each with one call):
+/// `FindPassenger(io.a)` of the airport `unit`
+pub const EE_UNITS_ATC_FIND_PASSENGER: i32 = 25;
+/// `SetExitingUnitID(-1)`
+pub const EE_UNITS_ATC_CLEAR_EXITING: i32 = 26;
+/// `SetHomeBase(other)`
+pub const EE_UNITS_ATC_SET_HOME_BASE: i32 = 27;
+/// `StartAction(kActionRequestLanding)`
+pub const EE_UNITS_ATC_REQUEST_LANDING: i32 = 28;
+/// the class's `ActionChanged(unit)`
+pub const EE_UNITS_ATC_ACTION_CHANGED: i32 = 29;
 
 // the families and the command `ClearAirportQueue` tests (ee/EEUnitKind.h, ee/EEUnit.h)
 const FAMILY_AIRCRAFT: i64 = 5;
@@ -805,9 +816,43 @@ impl AtcHost for FfiHost {
         if let Some(v) = crate::units::atc_views::view_call(op, unit, other, io) {
             return v;
         }
+        match op {
+            EE_UNITS_ATC_RELEASE_EXITING => {
+                // the airport's exiting unit cleared when it is the dropped plane
+                let exiting = exiting_unit_id(unit);
+                if exiting != -1 {
+                    let mut find = EeUnitsAtcIo { a: exiting, ..Default::default() };
+                    if self.ffi(EE_UNITS_ATC_FIND_PASSENGER, unit, std::ptr::null_mut(), &mut find) as usize
+                        == other as usize
+                    {
+                        self.ffi(EE_UNITS_ATC_CLEAR_EXITING, unit, std::ptr::null_mut(), io);
+                    }
+                }
+                0
+            }
+            EE_UNITS_ATC_REROUTE => {
+                self.ffi(EE_UNITS_ATC_SET_HOME_BASE, unit, other, io);
+                self.ffi(EE_UNITS_ATC_REQUEST_LANDING, unit, other, io);
+                self.ffi(EE_UNITS_ATC_ACTION_CHANGED, unit, other, io);
+                0
+            }
+            _ => self.ffi(op, unit, other, io),
+        }
+    }
+}
+
+impl FfiHost {
+    fn ffi(&mut self, op: i32, unit: Unit, other: Unit, io: &mut EeUnitsAtcIo) -> i64 {
         // SAFETY: the C++ callback with its own context; io lives for the call
         unsafe { (self.f)(self.ctx, op, unit, other, io) }
     }
+}
+
+/// The airport's `mExitingUnitID` (a live complex unit's record).
+fn exiting_unit_id(unit: Unit) -> i64 {
+    let at = unit as usize + crate::world::layout::layout().complex_unit_fields as usize;
+    // SAFETY: the live airport the control holds
+    unsafe { (*(at as *const crate::world::unit_fields::EeUnitsComplexUnitFields)).mExitingUnitID as i64 }
 }
 
 /// The C++ host every control calls (Physics Thread/EEAirTrafficControl.cpp), given by the first `ee_units_atc_new`.
@@ -978,19 +1023,47 @@ pub unsafe extern "C" fn ee_units_atc_dump(p: *mut EeUnitsAtc, file: *mut c_void
     h.ctx = file;
     dump(AtcRef(p), &mut h);
 }
-/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`
+/// `ReplaceUnits`: `count` (old, new) pairs at `swaps` (the physics' `EEPUnitSwap`s: two unit pointers each)
 ///
 /// # Safety
-/// See above; `olds` and `news` hold `count` units each.
+/// See above; `swaps` holds `2 * count` units (null with `count` 0).
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_atc_replace(p: *mut EeUnitsAtc, olds: *const Unit, news: *const Unit, count: usize) {
-    let swaps: Vec<(Unit, Unit)> = if count == 0 {
+pub unsafe extern "C" fn ee_units_atc_replace(p: *mut EeUnitsAtc, swaps: *const Unit, count: usize) {
+    let swaps: Vec<(Unit, Unit)> = if count == 0 || swaps.is_null() {
         Vec::new()
     } else {
         // SAFETY: the contract
-        unsafe { (0..count).map(|i| (*olds.add(i), *news.add(i))).collect() }
+        unsafe { (0..count).map(|i| (*swaps.add(2 * i), *swaps.add(2 * i + 1))).collect() }
     };
     replace_units(AtcRef(p), &mut host(), &swaps);
+}
+
+/// The units' tiles in place (`mTileX`, `mTileY`: the `RTSUnit` record), for [`tile_distance_squared`] alone.
+#[cfg(not(test))]
+struct Tiles;
+
+#[cfg(not(test))]
+impl AtcHost for Tiles {
+    fn call(&mut self, op: i32, unit: Unit, _other: Unit, io: &mut EeUnitsAtcIo) -> i64 {
+        if op == EE_UNITS_ATC_TILE {
+            let at = unit as usize + crate::world::layout::layout().rts_unit_fields as usize;
+            // SAFETY: a live unit's record (the caller's contract)
+            let r = unsafe { &*(at as *const crate::world::unit_fields::EeUnitsRtsUnitFields) };
+            io.a = r.mTileX as _;
+            io.b = r.mTileY as _;
+        }
+        0
+    }
+}
+
+/// `EEUnit::GetTileDistanceSquared(other)`.
+///
+/// # Safety
+/// `unit` and `other` are live units; the world layout is registered.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_tile_distance_squared(unit: Unit, other: Unit) -> f32 {
+    tile_distance_squared(&mut Tiles, unit, other)
 }
 
 /// The maximum (0) or the used (1) air cargo.
