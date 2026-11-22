@@ -460,5 +460,9 @@ pub mod physics;
 // the data pre-loading thread's bodies (EEDataPreLoading.cpp; world lane round 1)
 pub mod preload;
 
+// the pre-loading thread's media objects' bodies (EEGraphicObject, EEGraphicEffect, EESoundObject, EEMusicObject;
+// world lane round 2)
+pub mod preload_media;
+
 // a player's campaign progress (EECampaignProgress whole; world lane round 1)
 pub mod campaign;

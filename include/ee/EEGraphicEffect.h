@@ -45,10 +45,10 @@ public:
     // members (the ctor 0xd6ceb's stores, a database record copied field by field; types by width only,
     // provisional names; sizeof 0x90)
     EEGraphicObject* mGraphicObject;        // +0x0c
-    EEGraphicEffect* mLinkedEffect1;       // +0x10 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
-    EEGraphicEffect* mLinkedEffect2;       // +0x14 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
-    EEGraphicEffect* mLinkedEffect3;       // +0x18 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
-    long mNumLoads;                         // +0x80
+    EEGraphicEffect* mLinkedEffect1 = NULL;       // +0x10 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
+    EEGraphicEffect* mLinkedEffect2 = NULL;       // +0x14 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
+    EEGraphicEffect* mLinkedEffect3 = NULL;       // +0x18 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
+    long mNumLoads = 0;                         // +0x80
 };
 
 // dbgfxeffects.dat effects by table index (EEGraphicEffect::Get; LoadTable 0x4d6e9e fills sEffects in file order)
