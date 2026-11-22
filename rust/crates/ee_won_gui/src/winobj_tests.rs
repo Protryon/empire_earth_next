@@ -337,7 +337,10 @@ fn the_event_records_are_read_by_shape() {
     answer(Op::WinSizeEvHeight, 0, 480);
     answer(Op::WinMouseEvX, 0, 5);
     answer(Op::WinKeyEvKey, 0, 65);
-    assert_eq!(w.event_of(EeWonWinEventShape::Input, 9), EeWonWinEvent { kind: EV_SIZE_CHANGE, width: 640, height: 480, ..Default::default() });
+    assert_eq!(
+        w.event_of(EeWonWinEventShape::Input, 9),
+        EeWonWinEvent { kind: EV_SIZE_CHANGE, width: 640, height: 480, ..Default::default() }
+    );
     let ops: Vec<Op> = take().iter().map(|e| e.1).collect();
     assert_eq!(ops, [Op::WinEvType, Op::WinSizeEvWidth, Op::WinSizeEvHeight]);
     let m = w.event_of(EeWonWinEventShape::Mouse, 9);
@@ -369,7 +372,10 @@ fn the_font_cache_asks_the_platform_once() {
     let f = unsafe { w.get_font(map, 7, face.as_ptr(), face.len(), 0, 8) };
     assert_eq!(f, 0x50);
     let ops: Vec<(Op, isize)> = take().iter().map(|e| (e.1, e.2)).collect();
-    assert_eq!(ops, [(Op::WinPlatformFont, 7), (Op::WinHostFont, 0), (Op::WinFontHold, 0x50), (Op::WinHostFontClear, 0)]);
+    assert_eq!(
+        ops,
+        [(Op::WinPlatformFont, 7), (Op::WinHostFont, 0), (Op::WinFontHold, 0x50), (Op::WinHostFontClear, 0)]
+    );
     // SAFETY: as above
     assert_eq!(unsafe { w.get_font(map, 7, face.as_ptr(), face.len(), 0, 8) }, 0x50);
     assert!(take().is_empty());

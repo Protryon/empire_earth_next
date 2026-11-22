@@ -78,7 +78,14 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
 /// # Safety
 /// As the C++ host's: `comp` a `TextArea*`, the op's arguments as `EeWonGuiOp` says.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_text_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub unsafe extern "C" fn ee_won_gui_text_game(
+    comp: *mut c_void,
+    op: EeWonGuiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::Text, comp, op, a, b, c, d) }
 }
@@ -88,7 +95,14 @@ pub unsafe extern "C" fn ee_won_gui_text_game(comp: *mut c_void, op: EeWonGuiOp,
 /// # Safety
 /// As the C++ host's: `comp` an `InputBox*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_input_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub unsafe extern "C" fn ee_won_gui_input_game(
+    comp: *mut c_void,
+    op: EeWonGuiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::Input, comp, op, a, b, c, d) }
 }
@@ -98,7 +112,14 @@ pub unsafe extern "C" fn ee_won_gui_input_game(comp: *mut c_void, op: EeWonGuiOp
 /// # Safety
 /// As the C++ host's: `comp` a `Label*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_label_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub unsafe extern "C" fn ee_won_gui_label_game(
+    comp: *mut c_void,
+    op: EeWonGuiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::Label, comp, op, a, b, c, d) }
 }
@@ -108,7 +129,14 @@ pub unsafe extern "C" fn ee_won_gui_label_game(comp: *mut c_void, op: EeWonGuiOp
 /// # Safety
 /// As the C++ host's: `comp` a `Splitter*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_split_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub unsafe extern "C" fn ee_won_gui_split_game(
+    comp: *mut c_void,
+    op: EeWonGuiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::Split, comp, op, a, b, c, d) }
 }
@@ -118,7 +146,14 @@ pub unsafe extern "C" fn ee_won_gui_split_game(comp: *mut c_void, op: EeWonGuiOp
 /// # Safety
 /// As the C++ host's: `comp` a `ListArea*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_list_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub unsafe extern "C" fn ee_won_gui_list_game(
+    comp: *mut c_void,
+    op: EeWonGuiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::List, comp, op, a, b, c, d) }
 }
@@ -128,7 +163,14 @@ pub unsafe extern "C" fn ee_won_gui_list_game(comp: *mut c_void, op: EeWonGuiOp,
 /// # Safety
 /// As the C++ host's: `comp` a `WindowManager*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_wm_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub unsafe extern "C" fn ee_won_gui_wm_game(
+    comp: *mut c_void,
+    op: EeWonGuiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::Wm, comp, op, a, b, c, d) }
 }
@@ -434,7 +476,13 @@ mod tests {
         assert_eq!(r, Some(9));
         assert_eq!(
             log,
-            ["NewComponent 0 0 0 0", "ChildHold 9 0 0 0", "ChildLayoutDrag 4 9 0 0", "ChildAddEx 4 9 0 0", "ChildRelease 9 0 0 0"]
+            [
+                "NewComponent 0 0 0 0",
+                "ChildHold 9 0 0 0",
+                "ChildLayoutDrag 4 9 0 0",
+                "ChildAddEx 4 9 0 0",
+                "ChildRelease 9 0 0 0"
+            ]
         );
         let (_, log) = run(|o| split_op(Op::NewSizedComponent, 12, o), |_, _| 9);
         assert_eq!(log, ["NewComponent 0 0 0 0", "ChildHold 9 0 0 0", "ChildSetSize 9 12 12 0"]);
@@ -469,7 +517,10 @@ mod tests {
         o.kind = EE_WON_DRAW_CALL;
         o.b = 1;
         let ob = &o as *const EeWonDrawOp as isize;
-        assert_eq!(run(|f| input_op(Op::Draw, 3, ob, 0, f), |_, _| 0).1, [format!("InputPaintDisabledBack 3 {ob} 0 0")]);
+        assert_eq!(
+            run(|f| input_op(Op::Draw, 3, ob, 0, f), |_, _| 0).1,
+            [format!("InputPaintDisabledBack 3 {ob} 0 0")]
+        );
         o.b = 0;
         let ob = &o as *const EeWonDrawOp as isize;
         assert_eq!(run(|f| input_op(Op::Draw, 3, ob, 0, f), |_, _| 0).1, [format!("InputPaintBack 3 {ob} 0 0")]);
@@ -498,13 +549,23 @@ mod tests {
         let (_, log) = run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetMouse as isize, 6, mp, o), |_, _| 0);
         assert_eq!(
             log,
-            [format!("WmEvent {} 6 70 0", EeWonWmEvent::SetWindow as isize), "WmMouseEvSetX 6 11 0 0".into(), "WmMouseEvSetY 6 12 0 0".into()]
+            [
+                format!("WmEvent {} 6 70 0", EeWonWmEvent::SetWindow as isize),
+                "WmMouseEvSetX 6 11 0 0".into(),
+                "WmMouseEvSetY 6 12 0 0".into()
+            ]
         );
         // other events are the C++ host's
         assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Size as isize, 6, mp, o), |_, _| 0).0, None);
         // references
-        assert_eq!(run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Font as isize, 5, 1, o), |_, _| 0).1, ["WmFontHold 5 0 0 0"]);
-        assert_eq!(run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Image as isize, 5, 0, o), |_, _| 0).1, ["WmImageRelease 5 0 0 0"]);
+        assert_eq!(
+            run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Font as isize, 5, 1, o), |_, _| 0).1,
+            ["WmFontHold 5 0 0 0"]
+        );
+        assert_eq!(
+            run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Image as isize, 5, 0, o), |_, _| 0).1,
+            ["WmImageRelease 5 0 0 0"]
+        );
         assert_eq!(run(|o| wm_op(Op::WmRef, EeWonWmRefKind::NativeImage as isize, 5, 0, o), |_, _| 0).0, None);
         // the decodes: held only when found
         let (r, log) = run(|o| wm_op(Op::WmDecode, 1, 2, 3, o), |op, _| (op == Op::WmHostImage) as isize * 40);
