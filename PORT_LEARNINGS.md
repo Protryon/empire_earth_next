@@ -37140,18 +37140,23 @@ sides, height = bottom - top, width = right - left, the id (0 for no area). The 
 
 ### Gates
 
-On the merged tree (origin/rust 439543b4b in; tip after 1e368df56):
+On the tree merged with origin/rust 8830a1187 (batch 14; it brought round 4 in, so the round's diff against
+origin/rust is round 5 alone):
 
 - `build.py --sim` and `--test-profile windowed-software`: 0 unresolved, 0 duplicates (EE-AOC 414 inputs, EE-SIM 415).
-- `rust_build.py gate`: PASS, 5,598 tests (ee_sim `scenario::` 240); clippy clean.
-- `sim_oracle.py`: seeds 2-7 identical to ref (after the eedata fix again at seeds 2-3: 6,087 and 5,300 lines).
-- `sim_capture.py` at seeds 2-3, 12 profiles (oracle, late, space, calamity, missile, effects, scenario, app, units,
-  groups, placement, transport): PASS (scenario: 43 digests equal to the C++ golden, rerun after the eedata fix).
-- saveload plain (every save point identical) and matrix `--expect`: PASS.
+- `rust_build.py gate`: PASS, 5,641 tests; 295 headers current.
+- `eedata.py check` and `cppgate`: PASS (check failed before 1e368df56, see the lessons).
+- `sim_oracle.py`: seeds 2-7 identical to ref (6,087 / 5,300 / 6,072 / 7,649 / 7,842 / 6,540 lines).
+- `sim_capture.py` at seeds 2-3, 12 profiles: PASS (digests equal to the C++ goldens: scenario 43, oracle 212, late
+  214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, transport 185, groups 2, placement 4).
+- saveload plain (seeds 2-7 at 600, 1350, 2100 s; every save identical) and the matrix `--expect`: PASS.
 - `scenario_check`: 27/27. `sim_editor`: PASS (14,448 lines) and `--civbuilder` PASS (4,062 lines).
-- `eedata.py check` and `cppgate`: PASS (after 1e368df56).
-- The editor tour (`fixture_game.py --exercise editor`), round 5 against its base: RESULT PASS both; the menu frames
-  differ only in the build-number label, the editor frame's grass variants differ between two runs of the base too
-  (the blank map's tile variants vary from run to run), the UI state files are equal but for pid and clock.
-- `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12731, game_s 795, units [4, 39, 40], alive_computers
-  [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2950, joiner 2948).
+- The editor tour (`fixture_game.py --exercise editor`), round 5 against its base exe (build/s5/base-test): RESULT
+  PASS both; the UI state files are equal but for pid, clock and the comm turn count (base 31; the round's exe
+  100, then 32 on a rerun: it follows the wall time the editor takes to load); the editors menu and the closed editor are pixel identical, the main
+  menu differs only in the build-number label, and the editor frame's grass variants differ between two runs of
+  the base exe too.
+- `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12674, game_s 792, units [4, 38, 40],
+  alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 3080, joiner 3086). Before the batch 14
+  merge it passed as well (PT 12731, units [4, 39, 40]).
+- Not run: the POSIX builds, `gates.sh --legacy`.
