@@ -37258,6 +37258,7 @@ units' work alone on top of the world lane's round 1) 65,109 -> 60,486 (-4,623);
   ai-game time-cap PT 12471, units [4, 38, 39], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`;
   lan-game PT 2718/2718). The saveloads, scenario_check, the editor gates and eedata ran on the merged build before
   the tag fix (it changes only a TEST ONLY capture record's tag).
+
 ## The UI lane, round 10: the LLE toolkit's hosts in Rust (UIManager, UIForm, UIControl, UIControlsTable, UIComboBox) over ee_ui's own shim list; the unit hack's, cursor's and message box's hosts; the first shim sweep; the editor tour's campaign editor step (ee_ui lle_cpp.rs, lle_manager.rs, lle_form.rs, lle_control.rs, lle_table.rs, lle_combo.rs; ee_game screens unit_hack_calls.rs, cursor_calls.rs, dialog_calls.rs, screens_more_calls.rs; branch rust-ui10, 2026-11-20)
 
 The brief: the LLE UI toolkit first (round 9's plan: a shims list inside ee_ui, plugged in before the C++ hosts, out
@@ -37551,3 +37552,44 @@ between runs). EE-SIM covers URandom, the U2D algorithms, FSFile/UString loads a
   "main-menu: the window capture is blank" (tour and lan-game PASS); the rerun GATES PASS (tour; ai-game time-cap
   PT 13146, units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 3220/3223).
 - Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py), `gates.sh --legacy`.
+
+## The units' lane, round 8: EEUnitClassAir, the kinds, the class constructor, the gates and impact tests, the unit host, the save operation's sections, EEUnit's and EEComplexUnit's remaining bodies, the target searches, the line of fire and the combat goals' steps in Rust over one-statement hosts (ee_sim units uca_air.rs, uck_kinds.rs, uc_class.rs, ucb_gate.rs, ucs_impact.rs, uai_cond.rs, dop_save.rs, dop_more.rs, goal_more.rs, us_check.rs, uh_body.rs, eu_more.rs, cu_more.rs, upd_split.rs; combat cg_world.rs; branch rust-units8, 2026-11-22)
+
+Numbers: docs/progress/units.md ("Round 8"). C++ logic lines (logic_lines.py, 77c7ac956 -> the forks' merge
+4ef8cd8e5) 60,308 -> 57,339 (-2,969); lines -2,416; the target was -3,000.
+
+- **Three forks, disjoint files and op ranges, one heavy-job lock.** As in round 7: each fork owned whole files and a
+  number range in each host chain it touched (the UC chain passes unknown ops on, so its ranges must not overlap),
+  and the three branches merged without a conflict. All three forks stopped at the usage limit mid-chain; one left
+  its mkdir lock (`build/u8/heavy.lock`) behind and the other two waited on it until it was removed by hand: after
+  any stop, check the lock's owner against the live processes.
+- **A shared noted utility is not a twin of an unnoted body.** Fork A saw that the air animal's and the landable's
+  sound parameters were EEGetDopplerPitch's maths and pointed them at it. The maths is the same, but
+  EEGetDopplerPitch writes a UUTL note (kind 83) and the original's inline bodies never did. Each fork ran only the
+  oracle (and missile) capture profiles, and both passed. The calamity profile caught it on the merged tree: seed 2's
+  UUTL had the same record count but another digest. To find it, I bisected the merges with one-seed builds (B
+  alone passed, A+B failed), then diffed the UUTL records of the two captures. They differed at a single tick
+  (11401, 22 calls against 23). A temporary env-gated dump of that tick's note words showed the extra kind 83 call.
+  The fix is an unnoted entry point over the same maths (`ee_units_uu_doppler_pitch_unnoted`). Run every profile a
+  body's notes can reach before merging, not only oracle.
+- **Never hand an `EEUnitClass*` straight to a fields-taking Rust function**: the static_cast to the base shifts the
+  pointer (fork A's one crash); read the field through a host case instead.
+- **A body that runs before the unit is complete needs a host without the usual preamble**: EEUnit's Init and
+  constructor run before mPlayer is set, so eu_more.rs has its own host (`ee_units_eum_host`).
+- **Commits that do not build alone**: forks A and B committed a module list first and its modules after, so only
+  their tips build. Bisecting the round therefore had to step by merge commit.
+- **Call-site edits outside the lane**: none. The merge with origin/rust conflicted only in PORT_LEARNINGS.md (both
+  sides' sections kept). `rust_includes.py` narrowed tests/sound/se_golden.cpp (LLE's), and I reverted that edit.
+- **Behaviour changes**: none observed. The oracle, the captures (calamity after the fix), the saveloads and the
+  scenarios are identical. Only a drawn game reaches some paths, so the tours have to exercise them:
+  - from fork B: the cheat unit and building, the unload warning and player events, the mining beam effect, the
+    human move orders' path point, the patrol and rally hosts, the garrison rally load;
+  - from fork A: the class media and effects in the constructor fill, the gate highlights, the air sounds.
+- **Gates**: on the merge eabdfe150 and on the fix 5e3cdadaa. Numbers are in docs/progress/units.md "Round 8".
+  - Builds and the test profile: 0/0.
+  - Rust gate: PASS, 6,080 tests. One ee_audio real-time test failed once under load and passed on the rerun.
+  - Oracle seeds 2-7: identical.
+  - Captures: all twelve profiles PASS at seeds 2-3 (calamity after the fix).
+  - Saveloads: plain and matrix PASS.
+  - Editors and data: scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS.
+  - Harness: the tour PASS; gates.sh GATES PASS.
