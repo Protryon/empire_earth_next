@@ -33,29 +33,27 @@
 
 extern FSPath* gDataPath;
 
-// New (R5b.4 round 20): the reader of a script's file for the Rust parser (ee_units script.rs): Unit AI
-// Scripts\<name>.tai through the data path, its bytes pushed to the sink; false when it is missing or does not open
-static bool EEReadScript(void*, const uint8_t* inName, size_t inLength, void* inSink)
+// The script file's read (ee_units script.rs OpSource; EE_UNITS_SCRIPT_H_*): one statement of the original's each; its
+// locals (the name, the file, the length and the count read) are these
+static UString sScriptName;
+static FSFileSpec* sScriptFile;
+static unsigned long sScriptLength;
+static unsigned long sScriptCount;
+
+extern "C" int64_t ee_units_script_host(int32_t inOp, uint64_t inA, int64_t inB)
 {
-    UString theName;
-    theName.Copy((const char*)std::string((const char*)inName, inLength).c_str(), 0, (unsigned long)inLength, 0, true);
-    FSFileSpec* theFile = NULL;
-    bool theRead = false;
-    long theResult = gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile);
-    if (theResult == kErrorOK && theFile != NULL && theFile->Open(kFileAccessRead) == kErrorOK) {
-        unsigned long theLength = 0;
-        unsigned long theCount = 0;
-        theFile->GetLength(theLength);
-        std::vector<char> theBytes(theLength + 1);
-        theFile->Read(&theBytes[0], theLength, theCount);
-        ee_units_script_push(inSink, (const uint8_t*)&theBytes[0], theLength);
-        theRead = true;
+    switch (inOp) {
+    case EE_UNITS_SCRIPT_H_NAME: sScriptName.Copy((const char*)std::string((const char*)(uintptr_t)inA, (size_t)inB).c_str(), 0, (unsigned long)inB, 0, true); return 0;
+    case EE_UNITS_SCRIPT_H_FIND: return gDataPath->FindFile("Unit AI Scripts\\" + sScriptName + ".tai", sScriptFile = NULL);
+    case EE_UNITS_SCRIPT_H_HAS_FILE: return sScriptFile != NULL;
+    case EE_UNITS_SCRIPT_H_OPEN: return sScriptFile->Open(kFileAccessRead);
+    case EE_UNITS_SCRIPT_H_GET_LENGTH: sScriptFile->GetLength(sScriptLength = 0); return 0;
+    case EE_UNITS_SCRIPT_H_LENGTH: return (int64_t)sScriptLength;
+    case EE_UNITS_SCRIPT_H_READ: sScriptFile->Read((char*)(uintptr_t)inA, (unsigned long)inB, sScriptCount = 0); return 0;
+    case EE_UNITS_SCRIPT_H_CLOSE: sScriptFile->Close(); return 0;
+    case EE_UNITS_SCRIPT_H_DELETE: delete sScriptFile; return 0;
+    default: return 0;
     }
-    if (theFile != NULL) {
-        theFile->Close();
-        delete theFile;
-    }
-    return theRead;
 }
 
 long EEUnitAction::GetActionID(const char* inName)
@@ -70,9 +68,7 @@ const char* EEUnitAction::GetActionName(unsigned long inAction)
 
 void* EEUnitAction::GetScript(const UString& inName)
 {
-    EeUnitsScriptReader theReader = {NULL, EEReadScript};
-    return reinterpret_cast<void*>(static_cast<uintptr_t>(
-        ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength(), &theReader)));
+    return reinterpret_cast<void*>(static_cast<uintptr_t>(ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength())));   // script.rs
 }
 
 void EEUnitAction::DeleteScripts()

@@ -9221,6 +9221,33 @@ constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
 
 constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 
+/// `theName.Copy(the name's `b` bytes at `a`)` (the read's locals are the host's)
+constexpr static const int32_t EE_UNITS_SCRIPT_H_NAME = 4000;
+
+/// `gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile = NULL)`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_FIND = 4001;
+
+/// `theFile != NULL`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_HAS_FILE = 4002;
+
+/// `theFile->Open(kFileAccessRead)`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_OPEN = 4003;
+
+/// `theFile->GetLength(theLength = 0)`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_GET_LENGTH = 4004;
+
+/// `theLength`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_LENGTH = 4005;
+
+/// `theFile->Read((char*)a, b, theCount = 0)`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_READ = 4006;
+
+/// `theFile->Close()`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_CLOSE = 4007;
+
+/// `delete theFile`
+constexpr static const int32_t EE_UNITS_SCRIPT_H_DELETE = 4008;
+
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
@@ -16184,13 +16211,6 @@ struct EeUnitsGoalHost {
   int64_t (*op)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
 };
 
-/// The C++ reader of a script's file: `read(ctx, name, len, sink)` pushes the bytes (`ee_units_script_push`) and
-/// answers whether the file was found and opened.
-struct EeUnitsScriptReader {
-  void *ctx;
-  bool (*read)(void*, const uint8_t*, size_t, void*);
-};
-
 /// A unit as the body reads it.
 struct EeUnitsSightUnit {
   /// `GetLineOfSight()`
@@ -19252,18 +19272,6 @@ int64_t ee_units_rust_goal(int32_t op,
                            EeUnitsGoalIo *io,
                            const EeUnitsGoalHost *host);
 
-/// The reader appends a file's bytes to the sink it was handed.
-///
-/// # Safety
-/// `sink` is the sink of the read in progress; `data` points to `len` bytes.
-void ee_units_script_push(void *sink, const uint8_t *data, size_t len);
-
-/// `EEUnitAction::GetScript(name)`: the script's handle.
-///
-/// # Safety
-/// `name` points to `len` bytes; `reader` to a valid reader.
-uint64_t ee_units_script_get(const uint8_t *name, size_t len, const EeUnitsScriptReader *reader);
-
 /// The script's action of an id (0: none).
 uint64_t ee_units_script_find(uint64_t script, int32_t id);
 
@@ -19278,6 +19286,14 @@ int32_t ee_units_script_action_id(const char *name);
 
 /// The NUL-terminated name of an action id ("" unknown), static.
 const char *ee_units_script_action_name(uint32_t id);
+
+extern int64_t ee_units_script_host(int32_t op, uint64_t a, int64_t b);
+
+/// `EEUnitAction::GetScript(name)`: the script's handle (its file read through the data path).
+///
+/// # Safety
+/// `name` points to `len` bytes.
+uint64_t ee_units_script_get(const uint8_t *name, size_t len);
 
 extern int64_t ee_units_sight_host(int32_t op,
                                    uint8_t on,
