@@ -75,18 +75,7 @@ EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter,
 EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind,
                                    std::vector<EEUnit*>* ioUnits)
 {
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    long theRange = UMFloatToLong(inUnit->GetLineOfSight() * 5.0f);
-    EEUnit* theResult;
-    if (theGoal != NULL && theGoal->mKind == kGoalGather) {
-        EEUnit* theStorage = static_cast<EEUGRust*>(theGoal)->GetGatherResource();
-        if (theStorage != NULL && gContinentManager.CanGetToUnit(theStorage, inUnit)) {
-            theResult = this->FindResourceOfKind(inUnit, theStorage, inResource, theRange, inKind, ioUnits, true);
-            if (theResult != NULL)
-                return theResult;
-        }
-    }
-    return this->FindResourceOfKind(inUnit, inUnit, inResource, theRange, inKind, ioUnits, true);
+    return (EEUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_NEXT_RESOURCE, this, inUnit, EEObj(inResource), (int64_t)inKind, (int64_t)EEObj(ioUnits), NULL);   // uc_rest.rs
 }
 
 // Returns where the citizen drops its load: its goal's storage, else a farm's nearest drop site within 20, else the
@@ -242,25 +231,19 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
 // Loads the conversion indicator effect and the class's media
 void EEUnitClass::BasicPriestLoadMedia(EEPlayer* inPlayer)
 {
-    EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false);
-    this->BaseLoadMedia(inPlayer);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_PRIEST_LOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Unloads the conversion indicator effect and the class's media
 void EEUnitClass::BasicPriestUnloadMedia(EEPlayer* inPlayer)
 {
-    EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Unload();
-    this->BaseUnloadMedia(inPlayer);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_PRIEST_UNLOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Updates each of the unit's orbitals
 void EEComplexUnit::UpdateOrbitals()
 {
-    unsigned long theCount = this->mNumOrbitals;
-    if (theCount != 0) {
-        for (unsigned long i = 0; i < theCount; i++)
-            this->mOrbitals[i]->Update();
-    }
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_UPDATE_ORBITALS, NULL, this, 0, 0, 0, NULL);   // uc_rest.rs
 }
 
 // Counts the reload timer down by the tick, not below 0
@@ -332,10 +315,7 @@ void EEUnitClass::BasicPriestHideConversionEffects(EEComplexUnit* inUnit)
 void EEUnitClass::LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                                float* outPitch)
 {
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    if (theUnit != NULL && !EEIsSeen(theUnit))
-        *outVolume = 0.0f;
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_LAND_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
 }
 
 // ---- EEUCNavalPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval priest's
@@ -362,58 +342,25 @@ EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation,
 
 // 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way; 0x249560 / 0x2495f5: ee/EEUnitUtilities.h)
 // (provisional name)
-void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
 // Gets the sound parameters with a Doppler pitch; silent while the helicopter is on the map but not seen
 void EEUnitClass::HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                                      float* outPitch)
 {
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
-    if (inUnit->mTileNode != NULL && !EEIsSeen(inUnit->mComplexUnit))
-        *outVolume = 0.0f;
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_HELICOPTER_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
 }
 
 // New (R5b.4, the fourteenth round): EEUCHelicopterPriest::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
 void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEUnitClass* theClass = inClass;
-    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
-                          inUnit->mPhysicalModel.GetLocation().GetZ());
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    GE3DPoint theTarget;
-    GE3DPoint theEnemy;
-    EEUnit* theUnit;
-    if (theGoal->mKind == kGoalAttackUnit) {
-        theUnit = EECombatFindDropLocation(inUnit, NULL, theEnemy);
-        ee_units_uu_aim_point((uint64_t)(uintptr_t)inUnit, (const float(*)[3])&theEnemy.mX, (float(*)[3])&theTarget.mX);
-    } else if (theGoal->mKind == kGoalCastCalamity) {
-        theGoal->GetDestination(inUnit, theTarget);
-        EEGetHelicopterPriestDestination(inUnit, theTarget);
-    } else if (theGoal->mKind == kGoalHealUnit)
-        theGoal->GetGoalLocation(theTarget);
-    else
-        theGoal->GetDestination(inUnit, theTarget);
-    if (theGoal->mKind == kGoalExplore)
-        theTarget.SetZ(theClass->mCruiseAltitude);
-    EEFindLandingPoint(inUnit, &theTarget);
-    theClass->PathToward(inUnit, thePosition, theTarget, false);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_PATH, inClass, inUnit, 0, 0, 0, NULL);   // uc_rest.rs
 }
 
 // Sets up a new priest helicopter as a priest, then lifts it to its flying height
 void EEUnitClass::HelicopterPriestUnitCreated(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    this->BaseUnitCreated(inUnit);
-    thePosition.SetX(theTransformation.GetX());
-    thePosition.SetY(theTransformation.GetY());
-    thePosition.SetZ(theTransformation.GetZ());
-    float theZ = this->GetHeightAt(inUnit, thePosition);
-    theTransformation.SetZ(theZ);
-    inUnit->SetTransformation(theTransformation, true);
-    inUnit->SetHeight(theZ);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_CREATED, this, inUnit, 0, 0, 0, NULL);   // uc_rest.rs
 }
 
 // the people's scratch (ucp_people.rs): the effect handle, the Bundeswehr power, the area conversion's units

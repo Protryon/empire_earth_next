@@ -67,15 +67,7 @@ bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
 // Erupts a volcano: gives it an attack-ground goal at a random spot near it; returns true
 bool EEUnitClass::EruptVolcano(EEComplexUnit* inUnit)
 {
-    EECalamityClass* theVolcanoClass = NULL;
-    GE3DPoint thePosition;
-    GE3DPoint theTarget;
-    if (!USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, theVolcanoClass))
-        ESVerify(__FILE__, 261, "EECalamityManager::Instance()->FindCalamityClass(keectVolcano, theVolcanoClass)"); // the original assert text (provisional names here)
-    inUnit->GetPosition(thePosition);
-    theVolcanoClass->GetRandomLocation(thePosition, theTarget);
-    inUnit->SetGoal(EEUGRust::NewAttackGround(theTarget, false), 0, 0);
-    return true;
+    return ee_units_uc_rest(EE_UNITS_UC_DO_R_ERUPT_VOLCANO, this, inUnit, 0, 0, 0, NULL) != 0;   // uc_rest.rs
 }
 
 // Creates a building at a placement: docks and navy yards on the water plane, others (not the camera object) lifted
@@ -272,9 +264,7 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
 // Returns the first piece of a unit's linked chain (+0x1cc)
 EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit)
 {
-    while (inUnit->mPreviousPart != NULL)
-        inUnit = inUnit->mPreviousPart;
-    return inUnit;
+    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIRST_PART, NULL, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Returns the middle unit of a list (the lower of the two middles for an even count)
@@ -364,24 +354,20 @@ EEComplexUnit* EEUnitClass::GetLastLinkedCarrier(EEComplexUnit* inUnit)
 // piece, e.g. by a scenario effect)
 EEComplexUnit* EEUnitClass::GetSecondPart(EEComplexUnit* inGate)
 {
-    EEComplexUnit* theFourth = this->GetFourthPart(inGate);
-    return theFourth != NULL ? theFourth->mPreviousPart : NULL;
+    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_SECOND_PART, this, NULL, EEObj(inGate), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Returns the last piece of a unit's linked chain
 EEComplexUnit* EEUnitClass::GetLastLinked(EEComplexUnit* inUnit)
 {
-    while (inUnit->mNextPart != NULL)
-        inUnit = inUnit->mNextPart;
-    return inUnit;
+    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_LAST_LINKED, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Returns gate piece 3 (two pieces before the end of the chain); NULL when the chain is too short (a gate created
 // as a single piece, e.g. by a scenario effect)
 EEComplexUnit* EEUnitClass::GetFourthPart(EEComplexUnit* inGate)
 {
-    EEComplexUnit* theCarrier = this->GetLastLinkedCarrier(inGate);
-    return theCarrier != NULL ? theCarrier->mPreviousPart : NULL;
+    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FOURTH_PART, this, NULL, EEObj(inGate), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Restores the normal colour of a player's walls of a type and clears their gate direction (after gate placement)
@@ -527,6 +513,10 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     EEComplexUnit* theOther = EEUcbObject<EEComplexUnit>(inA);
     float* f = *ioF;
     switch (inOp) {
+    case EE_UNITS_UCB_R_VOLCANO_CLASS: return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, *EEUcbObject<EECalamityClass*>(inA));   // uc_rest.rs EruptVolcano
+    case EE_UNITS_UCB_R_VOLCANO_VERIFY: ESVerify(__FILE__, 261, "EECalamityManager::Instance()->FindCalamityClass(keectVolcano, theVolcanoClass)"); return 0; // the original assert text (provisional names here)
+    case EE_UNITS_UCB_R_RANDOM_LOCATION: EEUcbObject<EECalamityClass>(inA)->GetRandomLocation(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCB_R_ATTACK_GROUND: theUnit->SetGoal(EEUGRust::NewAttackGround(*reinterpret_cast<GE3DPoint*>(f), false), 0, 0); return 0;
     // the gates' (ucb_gate.rs)
     case EE_UNITS_UCB_UNITS_VEC: return EEObj(&sUcbUnits[inB]);
     case EE_UNITS_UCB_TILES_VEC: return EEObj(&sUcbTiles[inB]);

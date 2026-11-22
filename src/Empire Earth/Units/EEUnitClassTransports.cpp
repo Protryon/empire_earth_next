@@ -224,10 +224,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
 // Returns the squared 3D distance from the unit to a point
 float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
 {
-    float theDZ = this->mPhysicalModel.GetLocation().GetZ() - inPoint.GetZ();
-    float theDY = this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY();
-    float theDX = this->mPhysicalModel.GetLocation().GetX() - inPoint.GetX();
-    return theDX * theDX + theDY * theDY + theDZ * theDZ;
+    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_DISTANCE_3D, NULL, this, 0, inPoint.mX, inPoint.mY, inPoint.mZ);   // uc_rest.rs
 }
 
 // Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
@@ -317,8 +314,7 @@ void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
 void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
 {
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
 }
 
 void EEUnitClass::SpaceshipVirtual78(EEComplexUnit* inUnit)

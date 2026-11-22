@@ -161,6 +161,7 @@ pub mod uc_media;
 #[cfg(test)]
 mod uc_mock;
 pub mod uc_produce;
+pub mod uc_rest;
 pub mod uca_air;
 pub mod ucb_gate;
 pub mod ucb_release;

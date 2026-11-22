@@ -72,6 +72,9 @@
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
 
+void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
+static int64_t EEUcBits(float inValue);
+
 static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
 static const float kMaxLineOfSight = 32.0f;      // 0x447ac8 (the ctor: the largest line of sight)
 
@@ -125,29 +128,7 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
 float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
-    long theCategory = this->mCategory;
-    long theTargetCategory = inTarget->mUnitClass->mCategory;
-    bool theOwnHeight;
-    const EECombatRules& theRules = EEGetRules().mCombat;
-    if (theRules.IsElevationLauncher(theCategory)) {
-        theCategory = inUnit->mLauncherClass->mCategory;
-        theOwnHeight = false;
-    } else
-        theOwnHeight = true;
-    // which attackers and targets the height difference scales: combat.yaml's elevation categories
-    EeCombatElevationIn theIn = {};
-    theIn.applies = theRules.IsElevationAttacker(theCategory) && theRules.IsElevationTarget(theTargetCategory) &&
-                    inTarget != NULL;
-    if (theIn.applies) {
-        theIn.own_z = theOwnHeight ? inUnit->mPhysicalModel.GetLocation().GetZ() : inUnit->mHeight;
-        theIn.target_z = inTarget->mPhysicalModel.GetLocation().GetZ();
-        theIn.high_height = gWorldTable.GetFloatValue(kWorldHighGroundHeight);
-        theIn.low_height = gWorldTable.GetFloatValue(kWorldLowGroundHeight);
-        theIn.high_bonus = inUnit->mPlayer->mHighGroundBonus;
-        theIn.high_factor = gWorldTable.GetFloatValue(kWorldHighGroundAttackFactor);
-        theIn.low_factor = gWorldTable.GetFloatValue(kWorldLowGroundAttackFactor);
-    }
-    return EECombatElevation(theIn);
+    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_ELEVATION_FACTOR, this, inUnit, EEObj(inTarget), 0.0f, 0.0f, 0.0f);   // uc_rest.rs
 }
 
 // Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
@@ -160,19 +141,7 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                             float* outPitch)
 {
-    GE3DPoint theLocation;
-    EEComplexUnit* theOwner = inUnit->GetComplexUnit();
-    if (theOwner != NULL) {
-        theLocation.SetX(theOwner->mPhysicalModel.GetLocation().GetX());
-        theLocation.SetY(theOwner->mPhysicalModel.GetLocation().GetY());
-        theLocation.SetZ(theOwner->mPhysicalModel.GetLocation().GetZ());
-    } else {
-        theLocation.SetX((float)inUnit->GetTileX());
-        theLocation.SetY((float)inUnit->GetTileY());
-        theLocation.SetZ(inUnit->mTile->mHeight);
-    }
-    EEComputeSoundParameters(inSound != NULL ? inSound->mVolume : 1.0f, theLocation, *outVolume, *outPan, *outPitch,
-                             kSoundDistanceFactor);
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_BASE, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
 }
 
 // Produces a unit of inClass at the building inUnit: loads aircraft and missiles into it, else places the unit toward
@@ -227,8 +196,7 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
 // Releases every unit class in the class table
 void EEUnitClass::ReleaseUnitClasses()
 {
-    for (unsigned long i = 0; i < EEUnitClassCount(); i++)
-        EEUnitClass::ReleaseUnitClass(i);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_RELEASE_CLASSES, NULL, NULL, 0, 0, 0, NULL);   // uc_rest.rs
 }
 
 // Returns the unit a projectile hits: its attack target first, then the units of its region in storage order (walls,
@@ -330,47 +298,13 @@ void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EET
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
 bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget)
 {
-    std::vector<EEUnit*> theUnits;
-    bool theResult = false;
-    GE3DPoint thePosition;
-    float theRange = inRange == 0.0f ? inUnit->GetLineOfSight() : inRange;
-    inUnit->GetPosition(thePosition);
-    *outTarget = NULL;
-    if ((unsigned long)ee_units_uu_units_near((const float(*)[3])&thePosition.mX, theRange, &theUnits) > 0) {
-        for (long i = theUnits.size() - 1; i >= 0; i--) {
-            EEUnit* theUnit = theUnits[i];
-            if (!EECanHeal(inUnit, static_cast<EEComplexUnit*>(theUnit)) || !inUnit->CanReachUnit(theUnit))
-                continue;
-            *outTarget = theUnit;
-            theResult = true;
-            break;
-        }
-    }
-    return theResult;
+    return ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_TARGET_NEAR, this, inUnit, 0, EEUcBits(inRange), (int64_t)EEObj(outTarget), NULL) != 0;   // uc_rest.rs
 }
 
 // Returns a land continent beside the unit (the target's, when given); with no match, the last continent examined
 EEAIContinent* EEUnitClass::GetContainerContinent(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
-    std::vector<EETileCoordinate> theTiles;
-    bool theFound = false;
-    EEAIContinent* theContinent = NULL;
-    EEAIContinent* theTargetContinent = NULL;
-    if (inTarget != NULL)
-        theTargetContinent = gContinentManager.GetContinentAt(inTarget);
-    this->GetSurroundingTiles(inUnit, theTiles, 1, false);
-    if (theTiles.size() > 0) {
-        for (long i = theTiles.size() - 1; i >= 0 && !theFound; i--) {
-            theContinent = gContinentManager.GetContinentAt(theTiles[i].GetX(), theTiles[i].GetY());
-            EETile* theTile = gWorld.mMap->GetTileAtLocation(theTiles[i]);
-            if (theContinent != NULL && theTile != NULL && theContinent->GetCategory() == kContinentCategoryLand && theTile->mTerrainType != kTerrainCliff &&
-                (theTargetContinent == NULL || theContinent == theTargetContinent))
-                theFound = true;
-            else
-                theFound = false;
-        }
-    }
-    return theContinent;
+    return (EEAIContinent*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_CONTAINER_CONTINENT, this, inUnit, EEObj(inTarget), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Lists every unit class whose unit type is in a unit set
@@ -409,9 +343,7 @@ void EEUnitClass::BaseAddToRegion(EEUnit* inUnit)
 // Adds the unit to its tile's unit list
 void EEUnitClass::BaseAddToTile(EEUnit* inUnit)
 {
-    RTSTile* theTile = inUnit->mTile;
-    if (theTile != NULL)
-        theTile->mUnits = theTile->AddUnit(inUnit, theTile->mUnits);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_ADD_TO_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Adds waypoints along the line to a point at turning-radius steps and cruise altitude (a near point: one waypoint)
@@ -487,18 +419,13 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 // Counts one unit of the class gone and records the time when the last one goes
 void EEUnitClass::UnitRemoved()
 {
-    if (--this->mNumUnits == 0)
-        this->mLastUnitGoneTime = TMGetTime();
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_UNIT_REMOVED, this, NULL, 0, 0, 0, NULL);   // uc_rest.rs
 }
 
 // Adds a unit class to the class table under its unit type and to the list of unit types, keeping a reference
 void EEUnitClass::RegisterUnitClass(EEUnitClass* inClass)
 {
-    if (inClass == NULL)
-        return;
-    inClass->Reference();
-    gUnitClassTable[inClass->mUnitType] = inClass;
-    EEUnitClass::sUnitTypes.push_back(inClass->mUnitType);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_REGISTER_CLASS, NULL, NULL, EEObj(inClass), 0, 0, NULL);   // uc_rest.rs
 }
 
 // Removes a placed unit (not a path marker) from the map's unit region that holds its tile
@@ -511,18 +438,13 @@ void EEUnitClass::BaseRemoveFromRegion(EEUnit* inUnit)
 // Releases the class table's entry for a unit type and clears it
 void EEUnitClass::ReleaseUnitClass(unsigned long inUnitType)
 {
-    EEUnitClass*& theEntry = gUnitClassTable[inUnitType];
-    if (theEntry != NULL)
-        theEntry->Dereference();
-    theEntry = NULL;
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_RELEASE_CLASS, NULL, NULL, 0, (int64_t)inUnitType, 0, NULL);   // uc_rest.rs
 }
 
 // Removes a unit from the tile it stands on, if any
 void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
 {
-    RTSTile* theTile = inUnit->mTile;
-    if (theTile != NULL)
-        theTile->RemoveUnit(inUnit);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_REMOVE_FROM_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
 }
 
 // the closest tile's x and y (not read), the carrier's tag transformation, the area cloak's modifier
@@ -766,9 +688,7 @@ void EEUnitClass::UpdateRipples(EEComplexUnit* inUnit)
 // Returns one over the unit's top speed, its active group's when it moves in one
 float EEComplexUnit::GetInverseMaxVelocity()
 {
-    if (this->mActiveGroup != NULL)
-        return this->mActiveGroup->GetInverseMaxVelocity(this);
-    return this->mStats->mInverseMaxVelocity;
+    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_INVERSE_MAX_VELOCITY, NULL, this, 0, 0.0f, 0.0f, 0.0f);   // uc_rest.rs
 }
 
 // Ticks a building: finishes its production countdown (a unit, retried in 5 seconds when it cannot be placed,
@@ -790,10 +710,7 @@ void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
 // Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
 void EEComplexUnit::SetCamouflaged(bool inValue)
 {
-    if (inValue == true)
-        this->mCamouflageTimer |= 0x80000000;
-    else
-        this->mCamouflageTimer &= 0x7fffffff;
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_SET_CAMOUFLAGED, NULL, this, 0, inValue, 0, NULL);   // uc_rest.rs
 }
 
 extern GEViewport gViewport;
@@ -847,6 +764,7 @@ static void EEUcLocationOut(const GETransformation& inLocation, float* outFloats
 
 // ProduceUnit's tile line (EE_UNITS_UC_LINE_RESET, EE_UNITS_UC_TILE_LINE and its reads)
 static std::vector<EETileCoordinate> sUcLine;
+static std::vector<EETileCoordinate> sUcTiles9;   // GetContainerContinent's tiles (a local of the original)
 
 // a float's bits as a uc_produce.rs answer
 static int64_t EEUcBits(float inValue)
@@ -1040,6 +958,72 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
     case EE_UNITS_UC_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
     case EE_UNITS_UC_THIS_UNIT_TYPE: return theClass->mUnitType;
+    // round 9's bodies (uc_rest.rs: EE_UNITS_UC_R_*)
+    case EE_UNITS_UC_R_LINE_OF_SIGHT: f[0] = theUnit->GetLineOfSight(); return 0;
+    case EE_UNITS_UC_R_GATHER_RESOURCE: return EEObj(static_cast<EEUGRust*>(EEUcObject<EEUnitGoal>(inA))->GetGatherResource());
+    case EE_UNITS_UC_R_CAN_GET_TO_UNIT: return gContinentManager.CanGetToUnit(EEUcObject<EEUnit>(inA), theUnit);
+    case EE_UNITS_UC_R_FIND_RESOURCE_OF_KIND: return EEObj(theClass->FindResourceOfKind(theUnit, EEUcObject<EEUnit>(inA), EEUcObject<EEUnit>((uint64_t)inB), (long)(int32_t)EEUcBits(f[0]), (unsigned long)EEUcBits(f[1]), EEUcObject<std::vector<EEUnit*> >((uint64_t)inC), true));
+    case EE_UNITS_UC_R_FIND_DROP_LOCATION: EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_R_GOAL_DESTINATION: EEUcObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_R_PRIEST_DESTINATION: EEGetHelicopterPriestDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_R_CRUISE_ALTITUDE: f[0] = theClass->mCruiseAltitude; return 0;
+    case EE_UNITS_UC_R_LANDING_POINT: EEFindLandingPoint(theUnit, reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_R_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UC_R_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcObject<GETransformation>(inA), true); return 0;
+    case EE_UNITS_UC_R_SET_HEIGHT: theUnit->SetHeight(f[0]); return 0;
+    case EE_UNITS_UC_R_CATEGORY: return theClass->mCategory;
+    case EE_UNITS_UC_R_CATEGORY_OF: return theOther->mUnitClass->mCategory;
+    case EE_UNITS_UC_R_ELEVATION_LAUNCHER: return EEGetRules().mCombat.IsElevationLauncher((long)inB);
+    case EE_UNITS_UC_R_LAUNCHER_CATEGORY: return theUnit->mLauncherClass->mCategory;
+    case EE_UNITS_UC_R_ELEVATION_ATTACKER: return EEGetRules().mCombat.IsElevationAttacker((long)inB);
+    case EE_UNITS_UC_R_ELEVATION_TARGET: return EEGetRules().mCombat.IsElevationTarget((long)inB);
+    case EE_UNITS_UC_R_HEIGHT: f[0] = theUnit->mHeight; return 0;
+    case EE_UNITS_UC_R_WORLD_FLOAT: f[0] = gWorldTable.GetFloatValue((EEWorldConstant)inB); return 0;
+    case EE_UNITS_UC_R_HIGH_GROUND_BONUS: f[0] = theUnit->mPlayer->mHighGroundBonus; return 0;
+    case EE_UNITS_UC_R_ELEVATION: f[0] = EECombatElevation(*EEUcObject<EeCombatElevationIn>(inA)); return 0;
+    case EE_UNITS_UC_R_TILE_X_OF: return EEUcObject<EEUnit>(inA)->GetTileX();
+    case EE_UNITS_UC_R_TILE_Y_OF: return EEUcObject<EEUnit>(inA)->GetTileY();
+    case EE_UNITS_UC_R_TILE_HEIGHT_OF: f[0] = EEUcObject<EEUnit>(inA)->mTile->mHeight; return 0;
+    case EE_UNITS_UC_R_SOUND_VOLUME: f[0] = EEUcObject<EESoundObject>(inA)->mVolume; return 0;
+    case EE_UNITS_UC_R_COMPUTE_SOUND: EEComputeSoundParameters(f[3], GE3DPoint(f[0], f[1], f[2]), f[0], f[1], f[2], kSoundDistanceFactor); return 0;
+    case EE_UNITS_UC_R_IS_SEEN: return EEIsSeen(EEUcObject<EEUnit>(inA));
+    case EE_UNITS_UC_R_DOPPLER_PITCH: EEGetDopplerPitch(EEUcObject<EEUnit>(inA), EEUcObject<EESoundObject>((uint64_t)inB), &f[0], &f[1], &f[2]); return 0;
+    case EE_UNITS_UC_R_HAS_TILE_NODE: return EEUcObject<EEUnit>(inA)->mTileNode != NULL;
+    case EE_UNITS_UC_R_LOAD_INDICATOR: EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false); return 0;
+    case EE_UNITS_UC_R_UNLOAD_INDICATOR: EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Unload(); return 0;
+    case EE_UNITS_UC_R_BASE_LOAD_MEDIA: theClass->BaseLoadMedia(EEUcObject<EEPlayer>(inA)); return 0;
+    case EE_UNITS_UC_R_BASE_UNLOAD_MEDIA: theClass->BaseUnloadMedia(EEUcObject<EEPlayer>(inA)); return 0;
+    case EE_UNITS_UC_R_ORBITAL_COUNT: return theUnit->mNumOrbitals;
+    case EE_UNITS_UC_R_ORBITAL_UPDATE: theUnit->mOrbitals[inB]->Update(); return 0;
+    case EE_UNITS_UC_R_RTS_TILE_OF: return EEObj(EEUcObject<EEUnit>(inA)->mTile);
+    case EE_UNITS_UC_R_RTS_TILE_ADD: EEUcObject<RTSTile>(inA)->mUnits = EEUcObject<RTSTile>(inA)->AddUnit(EEUcObject<EEUnit>((uint64_t)inB), EEUcObject<RTSTile>(inA)->mUnits); return 0;
+    case EE_UNITS_UC_R_RTS_TILE_REMOVE: EEUcObject<RTSTile>(inA)->RemoveUnit(EEUcObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UC_R_CLASS_REFERENCE: EEUcObject<EEUnitClass>(inA)->Reference(); return 0;
+    case EE_UNITS_UC_R_CLASS_DEREFERENCE: EEUcObject<EEUnitClass>(inA)->Dereference(); return 0;
+    case EE_UNITS_UC_R_TABLE_GET: return EEObj(gUnitClassTable[(size_t)inB]);
+    case EE_UNITS_UC_R_TABLE_SET: gUnitClassTable[(size_t)inB] = EEUcObject<EEUnitClass>(inA); return 0;
+    case EE_UNITS_UC_R_TYPES_PUSH: EEUnitClass::sUnitTypes.push_back((unsigned long)inB); return 0;
+    case EE_UNITS_UC_R_CLASS_COUNT: return EEUnitClassCount();
+    case EE_UNITS_UC_R_UNIT_REMOVED: return --theClass->mNumUnits;
+    case EE_UNITS_UC_R_SET_GONE_TIME: theClass->mLastUnitGoneTime = TMGetTime(); return 0;
+    case EE_UNITS_UC_R_ACTIVE_GROUP: return EEObj(theUnit->mActiveGroup);
+    case EE_UNITS_UC_R_GROUP_INVERSE_VELOCITY: f[0] = EEUcObject<EEActiveGroup>(inA)->GetInverseMaxVelocity(theUnit); return 0;
+    case EE_UNITS_UC_R_STATS_INVERSE_VELOCITY: f[0] = theUnit->mStats->mInverseMaxVelocity; return 0;
+    case EE_UNITS_UC_R_CAMOUFLAGE_TIMER: return theUnit->mCamouflageTimer;
+    case EE_UNITS_UC_R_SET_CAMOUFLAGE_TIMER: theUnit->mCamouflageTimer = (unsigned long)inB; return 0;
+    case EE_UNITS_UC_R_NEXT_PART: return EEObj(theOther->mNextPart);
+    case EE_UNITS_UC_R_PREVIOUS_PART: return EEObj(theOther->mPreviousPart);
+    case EE_UNITS_UC_R_CAN_HEAL: return EECanHeal(theUnit, theOther);
+    case EE_UNITS_UC_R_CAN_REACH: return theUnit->CanReachUnit(EEUcObject<EEUnit>(inA));
+    case EE_UNITS_UC_R_CONTINENT_OF: return EEObj(gContinentManager.GetContinentAt(theOther));
+    case EE_UNITS_UC_R_TILES_CLEAR: sUcTiles9.clear(); return 0;
+    case EE_UNITS_UC_R_SURROUNDING_TILES: theClass->GetSurroundingTiles(theUnit, sUcTiles9, 1, false); return 0;
+    case EE_UNITS_UC_R_TILES_SIZE: return sUcTiles9.size();
+    case EE_UNITS_UC_R_CONTINENT_AT_TILE: return EEObj(gContinentManager.GetContinentAt(sUcTiles9[(size_t)inB].GetX(), sUcTiles9[(size_t)inB].GetY()));
+    case EE_UNITS_UC_R_MAP_TILE_AT_TILE: return EEObj(gWorld.mMap->GetTileAtLocation(sUcTiles9[(size_t)inB]));
+    case EE_UNITS_UC_R_CONTINENT_IS_LAND: return EEUcObject<EEAIContinent>(inA)->GetCategory() == kContinentCategoryLand;
+    case EE_UNITS_UC_R_TERRAIN_OF: return EEUcObject<EETile>(inA)->mTerrainType;
+    case EE_UNITS_UC_R_EDGE_TILE: return ::gWorld.mMap->IsEdgeTile((long)inB, (long)inC);
     case EE_UNITS_UC_GOAL_LOCATION: EEUcObject<EEUnitGoal>(inA)->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_GOAL_KIND: return EEUcObject<EEUnitGoal>(inA)->mKind;
     case EE_UNITS_UC_ATTACK_TARGET: return (uint64_t)(uintptr_t)EEAttackUnitCast(EEUcObject<EEUnitGoal>(inA))->GetAttackTarget();
