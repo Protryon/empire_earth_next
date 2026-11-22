@@ -116,89 +116,7 @@ EE_CONSTRUCT_GLOBAL_AS(std::vector<unsigned long>, EEUnitClassUnitTypes, EEUnitC
 // animal id, the AI script); the media, effects and the improvement table stay here, in the original's order.
 EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel)
 {
-    this->mPhysicsModel = inPhysicsModel;
-    this->mResearchTechnologies.resize(inRecord->mNumAttributes);   // (the original's fill value was never set; all overwritten)
-    for (unsigned long i = 0; i < inRecord->mNumAttributes; i++)
-        this->mResearchTechnologies[i] = inRecord->mAttributes[i];
-    this->mIsMediaLoaded = false;
-    this->mButton = EEButtonObject::Get(inRecord->mButton);
-    this->mModel = (EEModel*)EEMedia::Get(inRecord->mGraphic);
-    this->mCreationSound = EESoundObject::Get(inRecord->mCreationSound);
-    this->mAcknowledgeSounds[0] = EESoundObject::Get(inRecord->mAcknowledgeSound1);
-    this->mAcknowledgeSounds[1] = EESoundObject::Get(inRecord->mAcknowledgeSound2);
-    this->mSelectionSounds[0] = EESoundObject::Get(inRecord->mSelectionSound1);
-    this->mSelectionSounds[1] = EESoundObject::Get(inRecord->mSelectionSound2);
-    this->mDeathSound = EESoundObject::Get(inRecord->mDeathSound);
-    if (inRecord->mLineOfSight > kMaxLineOfSight)
-        ESDebugOut("EEUnitClass::EEUnitClass: unit %s has an LOS of %f.\n", inRecord->mName, inRecord->mLineOfSight);
-    this->mAIScriptName.Copy(inRecord->mAIScriptName, 0, strlen(inRecord->mAIScriptName), 0, true);
-    this->mName.Copy(inRecord->mName, 0, strlen(inRecord->mName), 0, true);
-    EeUnitsUnitClassFillIn theIn = {};
-    theIn.is_complex = inIsComplex;
-    EEAnimal* theAnimal = EEAnimal::Find(inRecord->mUnitType);
-    theIn.has_animal = theAnimal != NULL;
-    theIn.animal_id = theAnimal != NULL ? theAnimal->mAnimalID : 0;
-    EETechTreeNode* theNode = gTechTree.Get(inRecord->mTechnology);
-    theIn.has_tech_node = theNode != NULL;
-    theIn.tech_epoch = theNode != NULL ? theNode->mEpoch : 0;
-    for (unsigned long j = 0; j < this->GetNumResearchTechnologies() && !theIn.has_calamity_powers; j++) {
-        EETechTreeNode* theTechnology = gTechTree.Get(this->mResearchTechnologies[j]);
-        theIn.has_calamity_powers = theTechnology != NULL && theTechnology->mData->mKind == 5;
-    }
-    // (the two layouts must agree on every target: the entries and the maximum level at the same offsets)
-    static_assert(offsetof(EEUnitClassImprovementTable, mEntries) == offsetof(EEUCUpgradeTable, mFactors)
-        && offsetof(EEUnitClassImprovementTable, mMaxLevel) == offsetof(EEUCUpgradeTable, mMaxLevel)
-        && sizeof(EEUnitClassImprovementEntry) == sizeof(EEUCUpgradeFactor), "improvement table layout");
-    this->mImprovements = reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[inRecord->mUpgradeTableIndex]);
-    // each effect referenced as it is found, in the original's order
-    auto theEffect = [](long inID) {
-        EEGraphicEffect* theResult = EEGraphicEffect::Get(inID);
-        if (theResult != NULL)
-            theResult->Reference();
-        return theResult;
-    };
-    this->mDeathEffect = theEffect(inRecord->mDeathEffect);
-    this->mDamageEffect = theEffect(inRecord->mDamageEffect);
-    this->mHealEffect = theEffect(inRecord->mHealEffect);
-    this->mFireTrailEffect = theEffect(inRecord->mUnusedFireTrailEffect);
-    this->mTrailEffect = theEffect(inRecord->mTrailEffect);
-    this->mMuzzleFlashEffect = theEffect(inRecord->mMuzzleFlashEffect);
-    this->mRippleEffect = theEffect(inRecord->mRippleEffect);
-    this->mSplashEffect = theEffect(inRecord->mSplashEffect);
-    this->mImpactSparksEffect = theEffect(inRecord->mImpactSparksEffect);
-    this->mImpactBloodEffect = theEffect(inRecord->mImpactBloodEffect);
-    this->mAttachedEffect = theEffect(inRecord->mAttachedEffect);
-    this->mEffect090 = theEffect(inRecord->mUnusedEffect1);
-    this->mCreationEffect = theEffect(inRecord->mCreationEffect);
-    this->mEffect098 = theEffect(inRecord->mUnusedEffect2);
-    this->mEffect09C = theEffect(inRecord->mUnusedEffect3);
-    this->mEffect0A0 = theEffect(inRecord->mUnusedEffect4);
-    this->mEffect0A4 = theEffect(inRecord->mUnusedEffect5);
-    this->mEffect0A8 = theEffect(inRecord->mUnusedEffect6);
-    this->mSpecialAttackEffect = theEffect(inRecord->mSpecialAttackEffect);
-    this->mEffect0B0 = theEffect(inRecord->mUnusedEffect7);
-    this->mShotEffect = theEffect(inRecord->mShotEffect);
-    this->mLeprosyEffect = theEffect(inRecord->mLeprosyEffect);
-    this->mPlagueEffect = theEffect(inRecord->mPlagueEffect);
-    this->mPulseCannonEffect = theEffect(inRecord->mPulseCannonEffect);
-    this->mMoraleEffect = theEffect(inRecord->mMoraleEffect);
-    this->mBattleCryEffect = theEffect(inRecord->mBattleCryEffect);
-    this->mShellHoleEffect = theEffect(inRecord->mShellHoleEffect);
-    this->mEffect0D0 = theEffect(inRecord->mUnusedEffect8);
-    this->mBloodStainEffect = theEffect(inRecord->mBloodStainEffect);
-    this->mProjectileClass = NULL;
-    this->mScaffoldingClass = NULL;
-    this->mDeathClass = NULL;
-    this->mDeathSpawnClass = NULL;
-    this->mPackedClass = NULL;
-    this->mRemainsClass = NULL;
-    if (this->mAIScriptName.GetLength() > 0)
-        this->mAIScript = EEUnitAction::GetScript(this->mAIScriptName);
-    else
-        this->mAIScript = NULL;
-    theIn.ai_script = (uint64_t)(uintptr_t)this->mAIScript;
-    ee_units_unit_class_fill(static_cast<EeUnitsUnitClassFields*>(this), inRecord, &theIn);
-    this->mBehavior = EEUnitBehavior::sTable[inRecord->mBehavior];
+    ee_units_uc_class(EE_UNITS_UC_DO_CONSTRUCT, this, inRecord, inIsComplex, inPhysicsModel);   // uc_class.rs
 }
 
 // the class's effects as GetEffects' array (the members are contiguous: 29 pointers from mAttachedEffect)
@@ -572,94 +490,7 @@ static const signed char kCategoryPhysicsModels[0x23] = {
 // The cases are in the order the original lays their bodies out
 void EEUnitClass::CreateUnitClasses()
 {
-    FSFileSpec* theDbFile = NULL;
-    long theResult = EEDbFindFile(gDataPath, kDbObjectsFile, theDbFile);
-    ESVERIFY_AT(theResult == keseOK, 5710);
-    ESVERIFY_AT(theDbFile != NULL, 5711);
-    theResult = gDatabaseObjects.Load(theDbFile);
-    ESVERIFY_AT(theResult == keseOK, 5713);
-    if (theDbFile != NULL)
-        delete theDbFile;
-    // one class slot per unit type: as many as dbobjects has records, or the highest unit type + 1
-    unsigned long theSlots = gDatabaseObjects.GetCount();
-    for (unsigned long r = 0; r < gDatabaseObjects.GetCount(); r++) {
-        EEUnitClassRecord* theRecord = (EEUnitClassRecord*)gDatabaseObjects.GetEntry(r)->mRecord;
-        if (theRecord->mIsEnabled && theRecord->mUnitType >= 0 && (unsigned long)theRecord->mUnitType >= theSlots)
-            theSlots = (unsigned long)theRecord->mUnitType + 1;
-    }
-    gUnitClassTable.assign(theSlots, NULL);
-    unsigned long theCounts[0x23];
-    for (unsigned long theCategory = 0; theCategory < 0x23; theCategory++)
-        theCounts[theCategory] = 0;
-    unsigned long theCount = gDatabaseObjects.GetCount();
-    unsigned long i;
-    for (i = 0; i < theCount; i++) {
-        EEUnitClassRecord* theRecord = (EEUnitClassRecord*)gDatabaseObjects.GetEntry(i)->mRecord;
-        if (!theRecord->mIsEnabled || theRecord->mUnitType == -1)
-            continue;
-        // one EEUnitClass per record, of its category's kind (the EEUC* subclass the factory made until R5b.4 round
-        // 32), with that kind's physics model (its constructors' argument)
-        EEUnitClass* theClass = NULL;
-        unsigned long theCategory = theRecord->mCategory;
-        if (theCategory < 0x23 && EE_UNIT_CLASS_KINDS[theCategory] != 0) {
-            long theModel = kCategoryPhysicsModels[theCategory];
-            theClass = new EEUnitClass(theModel >= 0, theRecord, theModel >= 0 ? gPhysicsModels[theModel] : NULL);
-            theCounts[theCategory]++;
-        }
-        EEUnitClass::RegisterUnitClass(theClass);
-        if (theClass != NULL)
-            theClass->Dereference();
-    }
-    // links each class to its related classes, from its own record (the original paired class table slot i with
-    // record i, right only while every unit type equals its record's row)
-    for (i = 0; i < theCount; i++) {
-        EEDbObject* theObject = gDatabaseObjects.GetEntry(i);
-        EEUnitClassRecord* theRecord = (EEUnitClassRecord*)theObject->mRecord;
-        if (!theRecord->mIsEnabled || theRecord->mUnitType < 0)
-            continue;
-        EEUnitClass* theClass = gUnitClassTable[theRecord->mUnitType];
-        if (theClass == NULL)
-            continue;
-        if (theRecord->mProjectileType > 0) {
-            theClass->mProjectileClass = gUnitClassTable[theRecord->mProjectileType];
-            theClass->mProjectileClass->Reference();
-        }
-        if (theRecord->mScaffoldingType > 0) {
-            theClass->mScaffoldingClass = gUnitClassTable[theRecord->mScaffoldingType];
-            theClass->mScaffoldingClass->Reference();
-        }
-        if (theRecord->mDeathType > 0) {
-            theClass->mDeathClass = gUnitClassTable[theRecord->mDeathType];
-            theClass->mDeathClass->Reference();
-        }
-        if (theRecord->mDeathSpawnType > 0) {
-            theClass->mDeathSpawnClass = gUnitClassTable[theRecord->mDeathSpawnType];
-            theClass->mDeathSpawnClass->Reference();
-        }
-        if (theRecord->mPackedType > 0) {
-            theClass->mPackedClass = gUnitClassTable[theRecord->mPackedType];
-            theClass->mPackedClass->Reference();
-        }
-        if (theRecord->mRemainsType > 0) {
-            theClass->mRemainsClass = gUnitClassTable[theRecord->mRemainsType];
-            theClass->mRemainsClass->Reference();
-        }
-        theClass->mIsWall = gUnitSetManager.Contains(theClass->mUnitType, 9);
-        theClass->mIsCyber = gUnitSetManager.Contains(theClass->mUnitType, 0x38);
-        theClass->mIsHorse = gUnitSetManager.Contains(theClass->mUnitType, 0x6e);
-        theClass->mIsHuman = gUnitSetManager.Contains(theClass->mUnitType, 0x71);
-        theClass->mIsMedic = gUnitSetManager.Contains(theClass->mUnitType, 0x81);
-        theClass->mIsFlare = gUnitSetManager.Contains(theClass->mUnitType, 0x8a);
-        theClass->mIsBoobyTrap = gUnitSetManager.Contains(theClass->mUnitType, 0x97);
-        theClass->mIsParatrooperBomber = gUnitSetManager.Contains(theClass->mUnitType, 0x96);
-        theClass->mSkipsLineOfFireCheck = gUnitSetManager.Contains(theClass->mUnitType, 0x86);
-        theClass->mIsLandBuildingClass = theClass->IsLandBuilding();   // port: the unit store reads it (EEUnitStore.h)
-    }
-    unsigned long theTotal = 0;
-    for (unsigned long theKind = 0; theKind < 0x23; theKind++)
-        theTotal += theCounts[theKind];
-    gDatabaseObjects.Clear();
-    std::sort(EEUnitClass::sUnitTypes.begin(), EEUnitClass::sUnitTypes.end(), EEUnitClassNameLess());
+    ee_units_uc_class(EE_UNITS_UC_DO_CREATE_UNIT_CLASSES, NULL, NULL, 0, NULL);   // uc_class.rs
 }
 
 // Returns the class's AI script action for a key, or NULL when the class has no script or no such action
@@ -1092,6 +923,32 @@ template <class T> static T* EEUcObject(uint64_t inHandle)
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
 
+// the constructor's effects: the record's ids and the class's members, in the original's order (uc_class.rs)
+static int32_t EEUnitClassRecord::* const kUcEffectIds[29] = {&EEUnitClassRecord::mDeathEffect, &EEUnitClassRecord::mDamageEffect,
+    &EEUnitClassRecord::mHealEffect, &EEUnitClassRecord::mUnusedFireTrailEffect, &EEUnitClassRecord::mTrailEffect,
+    &EEUnitClassRecord::mMuzzleFlashEffect, &EEUnitClassRecord::mRippleEffect, &EEUnitClassRecord::mSplashEffect,
+    &EEUnitClassRecord::mImpactSparksEffect, &EEUnitClassRecord::mImpactBloodEffect, &EEUnitClassRecord::mAttachedEffect,
+    &EEUnitClassRecord::mUnusedEffect1, &EEUnitClassRecord::mCreationEffect, &EEUnitClassRecord::mUnusedEffect2,
+    &EEUnitClassRecord::mUnusedEffect3, &EEUnitClassRecord::mUnusedEffect4, &EEUnitClassRecord::mUnusedEffect5,
+    &EEUnitClassRecord::mUnusedEffect6, &EEUnitClassRecord::mSpecialAttackEffect, &EEUnitClassRecord::mUnusedEffect7,
+    &EEUnitClassRecord::mShotEffect, &EEUnitClassRecord::mLeprosyEffect, &EEUnitClassRecord::mPlagueEffect,
+    &EEUnitClassRecord::mPulseCannonEffect, &EEUnitClassRecord::mMoraleEffect, &EEUnitClassRecord::mBattleCryEffect,
+    &EEUnitClassRecord::mShellHoleEffect, &EEUnitClassRecord::mUnusedEffect8, &EEUnitClassRecord::mBloodStainEffect};
+static EEGraphicEffect* EEUnitClass::* const kUcEffects[29] = {&EEUnitClass::mDeathEffect, &EEUnitClass::mDamageEffect,
+    &EEUnitClass::mHealEffect, &EEUnitClass::mFireTrailEffect, &EEUnitClass::mTrailEffect, &EEUnitClass::mMuzzleFlashEffect,
+    &EEUnitClass::mRippleEffect, &EEUnitClass::mSplashEffect, &EEUnitClass::mImpactSparksEffect, &EEUnitClass::mImpactBloodEffect,
+    &EEUnitClass::mAttachedEffect, &EEUnitClass::mEffect090, &EEUnitClass::mCreationEffect, &EEUnitClass::mEffect098,
+    &EEUnitClass::mEffect09C, &EEUnitClass::mEffect0A0, &EEUnitClass::mEffect0A4, &EEUnitClass::mEffect0A8,
+    &EEUnitClass::mSpecialAttackEffect, &EEUnitClass::mEffect0B0, &EEUnitClass::mShotEffect, &EEUnitClass::mLeprosyEffect,
+    &EEUnitClass::mPlagueEffect, &EEUnitClass::mPulseCannonEffect, &EEUnitClass::mMoraleEffect, &EEUnitClass::mBattleCryEffect,
+    &EEUnitClass::mShellHoleEffect, &EEUnitClass::mEffect0D0, &EEUnitClass::mBloodStainEffect};
+// the record's related types (kUcRelated's order)
+static int32_t EEUnitClassRecord::* const kUcRelatedTypes[6] = {&EEUnitClassRecord::mProjectileType,
+    &EEUnitClassRecord::mScaffoldingType, &EEUnitClassRecord::mDeathType, &EEUnitClassRecord::mDeathSpawnType,
+    &EEUnitClassRecord::mPackedType, &EEUnitClassRecord::mRemainsType};
+// CreateUnitClasses' dbobjects file
+static FSFileSpec* sUcDbFile;
+
 // The C++ of EEUnitClass's Rust bodies (ee_units uc_body.rs; EE_UNITS_UC_*): one statement of the original bodies
 // each, in their order; inClass the class the body runs on, inUnit its unit, inA an object, inB and inC values, ioF
 // floats in and out
@@ -1103,6 +960,77 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     EEComplexUnit* theOther = EEUcObject<EEComplexUnit>(inA);
     float* f = *ioF;
     switch (inOp) {
+    // the constructor's (uc_class.rs; the unit is the class record)
+    case EE_UNITS_UC_SET_PHYSICS_MODEL: theClass->mPhysicsModel = EEUcObject<EEPhysicsModel>(inA); return 0;
+    case EE_UNITS_UC_RECORD_ATTRIBUTES: return static_cast<EEUnitClassRecord*>(inUnit)->mNumAttributes;
+    case EE_UNITS_UC_RESEARCH_RESIZE: theClass->mResearchTechnologies.resize((size_t)inB); return 0;
+    case EE_UNITS_UC_RESEARCH_SET: theClass->mResearchTechnologies[(size_t)inB] = static_cast<EEUnitClassRecord*>(inUnit)->mAttributes[inB]; return 0;
+    case EE_UNITS_UC_SET_BUTTON: theClass->mButton = EEButtonObject::Get(static_cast<EEUnitClassRecord*>(inUnit)->mButton); return 0;
+    case EE_UNITS_UC_SET_MODEL: theClass->mModel = (EEModel*)EEMedia::Get(static_cast<EEUnitClassRecord*>(inUnit)->mGraphic); return 0;
+    case EE_UNITS_UC_SET_CREATION_SOUND: theClass->mCreationSound = EESoundObject::Get(static_cast<EEUnitClassRecord*>(inUnit)->mCreationSound); return 0;
+    case EE_UNITS_UC_SET_ACKNOWLEDGE_SOUND:
+        theClass->mAcknowledgeSounds[inB] = EESoundObject::Get(inB == 0 ? static_cast<EEUnitClassRecord*>(inUnit)->mAcknowledgeSound1 : static_cast<EEUnitClassRecord*>(inUnit)->mAcknowledgeSound2);
+        return 0;
+    case EE_UNITS_UC_SET_SELECTION_SOUND:
+        theClass->mSelectionSounds[inB] = EESoundObject::Get(inB == 0 ? static_cast<EEUnitClassRecord*>(inUnit)->mSelectionSound1 : static_cast<EEUnitClassRecord*>(inUnit)->mSelectionSound2);
+        return 0;
+    case EE_UNITS_UC_SET_DEATH_SOUND: theClass->mDeathSound = EESoundObject::Get(static_cast<EEUnitClassRecord*>(inUnit)->mDeathSound); return 0;
+    case EE_UNITS_UC_LOS_TOO_FAR: return static_cast<EEUnitClassRecord*>(inUnit)->mLineOfSight > kMaxLineOfSight;
+    case EE_UNITS_UC_LOS_WARNING:
+        ESDebugOut("EEUnitClass::EEUnitClass: unit %s has an LOS of %f.\n", static_cast<EEUnitClassRecord*>(inUnit)->mName, static_cast<EEUnitClassRecord*>(inUnit)->mLineOfSight);
+        return 0;
+    case EE_UNITS_UC_COPY_SCRIPT_NAME:
+        theClass->mAIScriptName.Copy(static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName, 0, strlen(static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName), 0, true);
+        return 0;
+    case EE_UNITS_UC_COPY_NAME:
+        theClass->mName.Copy(static_cast<EEUnitClassRecord*>(inUnit)->mName, 0, strlen(static_cast<EEUnitClassRecord*>(inUnit)->mName), 0, true);
+        return 0;
+    case EE_UNITS_UC_FIND_ANIMAL: return EEObj(EEAnimal::Find(static_cast<EEUnitClassRecord*>(inUnit)->mUnitType));
+    case EE_UNITS_UC_ANIMAL_ID: return EEUcObject<EEAnimal>(inA)->mAnimalID;
+    case EE_UNITS_UC_RECORD_TECH_NODE: return EEObj(gTechTree.Get(static_cast<EEUnitClassRecord*>(inUnit)->mTechnology));
+    case EE_UNITS_UC_NODE_EPOCH: return EEUcObject<EETechTreeNode>(inA)->mEpoch;
+    case EE_UNITS_UC_NUM_RESEARCH: return theClass->GetNumResearchTechnologies();
+    case EE_UNITS_UC_RESEARCH_TECH_NODE: return EEObj(gTechTree.Get(theClass->mResearchTechnologies[(size_t)inB]));
+    case EE_UNITS_UC_SET_IMPROVEMENTS:
+        theClass->mImprovements = reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[static_cast<EEUnitClassRecord*>(inUnit)->mUpgradeTableIndex]);
+        return 0;
+    case EE_UNITS_UC_RECORD_EFFECT: return EEObj(EEGraphicEffect::Get(static_cast<EEUnitClassRecord*>(inUnit)->*kUcEffectIds[inB]));
+    case EE_UNITS_UC_EFFECT_REFERENCE: EEUcObject<EEGraphicEffect>(inA)->Reference(); return 0;
+    case EE_UNITS_UC_SET_EFFECT: theClass->*kUcEffects[inB] = EEUcObject<EEGraphicEffect>(inA); return 0;
+    case EE_UNITS_UC_SCRIPT_NAME_LENGTH: return theClass->mAIScriptName.GetLength();
+    case EE_UNITS_UC_SET_AI_SCRIPT: theClass->mAIScript = EEUnitAction::GetScript(theClass->mAIScriptName); return 0;
+    case EE_UNITS_UC_AI_SCRIPT: return EEObj(theClass->mAIScript);
+    case EE_UNITS_UC_CLASS_FILL: ee_units_unit_class_fill(static_cast<EeUnitsUnitClassFields*>(theClass), static_cast<EEUnitClassRecord*>(inUnit), EEUcObject<EeUnitsUnitClassFillIn>(inA)); return 0;
+    case EE_UNITS_UC_SET_CLASS_BEHAVIOR: theClass->mBehavior = EEUnitBehavior::sTable[static_cast<EEUnitClassRecord*>(inUnit)->mBehavior]; return 0;
+    // CreateUnitClasses' (uc_class.rs)
+    case EE_UNITS_UC_DB_FIND: return EEDbFindFile(gDataPath, kDbObjectsFile, sUcDbFile = NULL);
+    case EE_UNITS_UC_VERIFY: ESVERIFY_AT(inB != 0, (long)inC); return 0;
+    case EE_UNITS_UC_DB_FILE: return sUcDbFile != NULL;
+    case EE_UNITS_UC_DB_LOAD: return gDatabaseObjects.Load(sUcDbFile);
+    case EE_UNITS_UC_DB_DELETE: delete sUcDbFile; return 0;
+    case EE_UNITS_UC_DB_COUNT: return gDatabaseObjects.GetCount();
+    case EE_UNITS_UC_DB_RECORD: return EEObj(gDatabaseObjects.GetEntry((unsigned long)inB)->mRecord);
+    case EE_UNITS_UC_RECORD_ENABLED: return EEUcObject<EEUnitClassRecord>(inA)->mIsEnabled;
+    case EE_UNITS_UC_RECORD_TYPE: return EEUcObject<EEUnitClassRecord>(inA)->mUnitType;
+    case EE_UNITS_UC_RECORD_CATEGORY: return EEUcObject<EEUnitClassRecord>(inA)->mCategory;
+    case EE_UNITS_UC_TABLE_ASSIGN: gUnitClassTable.assign((size_t)inB, NULL); return 0;
+    case EE_UNITS_UC_NEW_CLASS: return EEObj(new EEUnitClass(inB >= 0, EEUcObject<EEUnitClassRecord>(inA), inB >= 0 ? gPhysicsModels[inB] : NULL));
+    case EE_UNITS_UC_REGISTER_CLASS: EEUnitClass::RegisterUnitClass(EEUcObject<EEUnitClass>(inA)); return 0;
+    case EE_UNITS_UC_RECORD_RELATED: return EEUcObject<EEUnitClassRecord>(inA)->*kUcRelatedTypes[inB];
+    case EE_UNITS_UC_SET_RELATED: EEUcObject<EEUnitClass>(inA)->*kUcRelated[inB] = gUnitClassTable[(size_t)inC]; return 0;
+    case EE_UNITS_UC_REFERENCE_RELATED: (EEUcObject<EEUnitClass>(inA)->*kUcRelated[inB])->Reference(); return 0;
+    case EE_UNITS_UC_SET_IS_WALL: EEUcObject<EEUnitClass>(inA)->mIsWall = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 9); return 0;
+    case EE_UNITS_UC_SET_IS_CYBER: EEUcObject<EEUnitClass>(inA)->mIsCyber = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x38); return 0;
+    case EE_UNITS_UC_SET_IS_HORSE: EEUcObject<EEUnitClass>(inA)->mIsHorse = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x6e); return 0;
+    case EE_UNITS_UC_SET_IS_HUMAN: EEUcObject<EEUnitClass>(inA)->mIsHuman = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x71); return 0;
+    case EE_UNITS_UC_SET_IS_MEDIC: EEUcObject<EEUnitClass>(inA)->mIsMedic = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x81); return 0;
+    case EE_UNITS_UC_SET_IS_FLARE: EEUcObject<EEUnitClass>(inA)->mIsFlare = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x8a); return 0;
+    case EE_UNITS_UC_SET_IS_BOOBY_TRAP: EEUcObject<EEUnitClass>(inA)->mIsBoobyTrap = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x97); return 0;
+    case EE_UNITS_UC_SET_IS_PARATROOPER_BOMBER: EEUcObject<EEUnitClass>(inA)->mIsParatrooperBomber = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x96); return 0;
+    case EE_UNITS_UC_SET_SKIPS_LINE_OF_FIRE: EEUcObject<EEUnitClass>(inA)->mSkipsLineOfFireCheck = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x86); return 0;
+    case EE_UNITS_UC_SET_LAND_BUILDING_CLASS: EEUcObject<EEUnitClass>(inA)->mIsLandBuildingClass = EEUcObject<EEUnitClass>(inA)->IsLandBuilding(); return 0;
+    case EE_UNITS_UC_DB_CLEAR: gDatabaseObjects.Clear(); return 0;
+    case EE_UNITS_UC_SORT_TYPES: std::sort(EEUnitClass::sUnitTypes.begin(), EEUnitClass::sUnitTypes.end(), EEUnitClassNameLess()); return 0;
     // Heal's
     case EE_UNITS_UC_HEAL_GOAL: return (uint64_t)(uintptr_t)EEHealGoalCast(theUnit->GetGoal());
     case EE_UNITS_UC_DROP_PATH: theUnit->DropPath(); return 0;
