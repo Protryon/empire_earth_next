@@ -181,6 +181,23 @@ constexpr static const int32_t EE_AI_NEXT_HOST_SET_ATTACK = 64;
 
 constexpr static const int32_t EE_AI_NEXT_HOST_SET_LOCATION = 65;
 
+/// the units' sim hash (round 9): `gWorld.mUnits.mFirst`; unit `a`'s `mTileNode->mNext`; its `GetChecksum(3)`;
+/// `gPhysics`'s `mCurrentTick`, `mRandom.GetSeed()`, `mInputMessagesProcessed`
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_FIRST_UNIT = 69;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_NEXT_UNIT = 70;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_CHECKSUM = 71;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_TICK = 72;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_SEED = 73;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_INPUTS = 74;
+
+/// player `a`'s `GetNearestArea(EETileCoordinate(b, c), true)` (an `EEAIArea*`)
+constexpr static const int32_t EE_AI_NEXT_HOST_NEAREST_AREA = 75;
+
 /// `EEGameLogTick(a)`; `gCPTraceHashOn`; the computer player's `Update(a)`
 constexpr static const int32_t EE_AI_NEXT_HOST_GAME_LOG_TICK = 66;
 
@@ -590,6 +607,56 @@ constexpr static const int32_t EE_AI_UNITS_HOST_ADD_RESOURCE = 139;
 
 constexpr static const int32_t EE_AI_UNITS_HOST_ADD_TRIBUTE = 140;
 
+/// player `a`'s `mUnitClassUpgrades.size()`, its element `b`
+constexpr static const int32_t EE_AI_UNITS_HOST_UPGRADE_COUNT = 141;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_UPGRADE_AT = 142;
+
+/// `EEGatherGoalCast(a->GetGoalState())` of unit `a`; the gather goal `a`'s `GetGatherResource()` (an `RTSUnit*`)
+constexpr static const int32_t EE_AI_UNITS_HOST_GATHER_GOAL = 143;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_GATHER_RESOURCE = 144;
+
+/// the player's `mActiveGroup`; its `Clear()`
+constexpr static const int32_t EE_AI_UNITS_HOST_ACTIVE_GROUP = 145;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_GROUP_CLEAR = 146;
+
+/// the message record `out` of type `a` built and run as the human's, from the slot `b` (0: as it is)
+constexpr static const int32_t EE_AI_UNITS_HOST_EXEC_RUN = 147;
+
+/// the player's `mSlot`; `mSlot = a`; `gWorld.GetPlayerBySlot(a) == me`
+constexpr static const int32_t EE_AI_UNITS_HOST_SLOT = 148;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_SET_SLOT = 149;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_SLOT_IS_ME = 150;
+
+/// the player's `mTechnologies->Get(a)`; `CanAfford(a, 0x20, 1)`
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_OF = 151;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_AFFORD = 152;
+
+/// unit `a`'s `AddGarrison(b, c)`
+constexpr static const int32_t EE_AI_UNITS_HOST_ADD_GARRISON = 153;
+
+/// the tech node `a`'s `mData != NULL`; its `mData->mCosts[kResourceFood + b]`
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_HAS_DATA = 154;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_COST_AT = 155;
+
+/// `gUnitClassTable[a]->mImprovements`; the table `a`'s `GetMaxLevel()`, its `mEntries[b].mCostFactor` (a float into
+/// `out`); the player's `GetImprovementLevel(a, b)`; the upgrade `a`'s `mCostScale` (a float into `out`)
+constexpr static const int32_t EE_AI_UNITS_HOST_CLASS_IMPROVEMENTS = 156;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_IMPROVE_MAX = 157;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_IMPROVE_FACTOR = 158;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_IMPROVE_LEVEL = 159;
+
+constexpr static const int32_t EE_AI_UNITS_HOST_COST_SCALE = 160;
+
 constexpr static const long EV_ATTACKED = 1;
 
 constexpr static const long EV_DIED = 2;
@@ -984,6 +1051,12 @@ struct EeAiUnitsFilter {
   long limit;
 };
 
+/// The message types of `EE_AI_UNITS_MSG_*` (ee/EEMessageID.h kMessage*: path to, attack unit, attack ground,
+/// gather, build, repair, load garrison, load transport, unload, research, behaviour, stop, explore, kill, heal,
+/// rally, remove tech, formation, pack, drop off, replant, smart farmers, cast, patrol point, lock, build wall,
+/// improve, hack a new unit, build gate, exchange).
+constexpr static const uint8_t MESSAGE_TYPES[31] = { 0, 77, 76, 159, 81, 86, 87, 123, 103, 104, 82, 158, 138, 121, 92, 146, 102, 83, 120, 171, 97, 129, 143, 117, 114, 140, 89, 119, 107, 134, 174, };
+
 extern "C" {
 
 /// Whether the binding trace is on.
@@ -1193,6 +1266,24 @@ bool ee_ai_military_class(uint64_t class_);
 
 /// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
 bool ee_ai_military_type(unsigned long unit_type);
+
+/// The row ids of a table just loaded from its text (dbobjects, dbtechtree; other tables: nothing): kept for the
+/// names tables (emptied first; a table that does not parse leaves what was read before the failure).
+///
+/// # Safety
+/// `content` is the db text content (an `EeDataContent*`), `table` NUL ended.
+void ee_ai_names_capture(void *content,
+                         const char *table);
+
+/// A name into `buf` (room for `cap`, truncated past it) -> its length: `op` 0 a class's, else a tech's (the game
+/// log's orders, EEPhysics.cpp `ee_units_order_log_host`).
+///
+/// # Safety
+/// `buf` holds `cap` writable bytes.
+size_t ee_ai_name_copy(uint8_t op,
+                       int64_t key,
+                       uint8_t *buf,
+                       size_t cap);
 
 extern int64_t ee_ai_next_host(int32_t op,
                                void *player,
