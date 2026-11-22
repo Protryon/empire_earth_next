@@ -131,6 +131,9 @@ CHECKS = [
          rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
+    # LobbyConfig::PostParse (R6 WON round 32: lobbycfg.rs; LobbyConfig.cpp's host)
+    dict(enum="EeWonLobbyCfgOp", header="won_lobby/lobbycfg.h",
+         hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
     # the lobby's network entry points (R6 WON round 32: netdisp.rs; LobbyStagingSupport.cpp's host)
     dict(enum="EeWonNetDispOp", header="won_lobby/netdisp.h",
          hosts=[LOBBY / "LobbyStagingSupport.cpp"], rust=[], allowed={}),
