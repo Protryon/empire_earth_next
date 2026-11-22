@@ -135,24 +135,7 @@ template long EEGetUnitsInRectangle<EEAnyUnit, std::vector<EEComplexUnit*> >(con
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
-// The unit's named float constants (.rdata 0x449b54..0x449ba0, around the vtable 0x449ba8) (provisional names)
-// (0x449b54..0x449b60, 0x449b98..0x449ba0: the sound's dead zone, falloffs and distances: ee_units uu_world.rs)
-static const float kUUSectorLow = -0.39269909f;  // 0x449bb8 (-pi/8)
-static const float kUUSectorScale = 1.2732395f;  // 0x449bbc (4/pi)
-static const float kUUSectorHigh = 0.39269909f;  // 0x449bc0 (pi/8)
-static const float kUUWorkReach = 1.5f;
-static const float kUUGatherReach = 1.42f;
-static const float kUUMinimumFacing = 0.1f;
-static const float kUUTwoOverPi = 0.63661975f;
-static const float kUUWallYaw10 = 5.4977875f;
-static const float kUUWallYaw9 = 3.926991f;
-static const float kUUWallYaw8 = 4.712389f;
-static const float kUUClearance = 0.1f;
-static const float kUUYawNudge = 0.0174f;        // 0x449b68 (0x24286a: about one degree)
-static const float kUUSearchTurns = 5.0f;
-static const float kUUCheckReach = 2.5f;
-static const float kUUWidthFactor = 0.5f;
-static const float kUUFacingStep = 0.2617994f;   // 0x449bb4 (pi/12)
+// (the unit's named float constants, .rdata 0x449b54..0x449bc0: the Rust bodies' (ee_units uu_world.rs, uu_body.rs))
 // (0x23dd54/0x23dd6e/0x23dd82, the dynamic initializers of the sound falloff factors gF564520/gF56451C/gF564518: ee_units
 // uu_world.rs sound_parameters computes them)
 
@@ -268,26 +251,11 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
     ee_units_ub_body(EE_UNITS_UB_DO_FIND_NEW_TARGET_NEAR_OLD, UUHandle(inUnit), UUHandle(inTarget), 0, 0, 0);   // uu_body.rs
 }
 
-// Accepts a living unit within the screen's distance of the old target (new: ee_combat's screen)
-// the old target's screen's candidate distance (asked by ee_combat's screen for a living candidate only)
-struct EENearOldScreenContext {
-    EEComplexUnit* mCandidate;
-    EEComplexUnit* mTarget;
-};
-
-static float EENearOldScreenDistance(void* inContext)
-{
-    EENearOldScreenContext* theContext = (EENearOldScreenContext*)inContext;
-    return theContext->mCandidate->DistanceSquaredTo(theContext->mTarget);
-}
-
+// Accepts a living unit within the screen's distance of the old target (ee_sim combat cg_query.rs near_old_screen, its
+// CBFS record)
 static bool EENearOldScreen(EEFOFindNewTargetNearOldTarget* inScreen, EEComplexUnit* inUnit)
 {
-    EENearOldScreenContext theContext = {inUnit, inScreen->mTarget};
-    EeCombatScreenIn in = {EE_COMBAT_SCREEN_KIND_NEAR_OLD, (int32_t)inUnit->mHitPoints, inScreen->mDistanceSquared, 0, 0.0f};
-    int32_t theResult = ee_combat_screen(&in, &theContext, EENearOldScreenDistance);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theResult);
-    return theResult != 0;
+    return ee_units_cgq_near_old_screen(UUHandle(inUnit), UUHandle(inScreen->mTarget), inScreen->mDistanceSquared);
 }
 
 bool EEFOFindNewTargetNearOldTarget::Virtual04(EEComplexUnit* inUnit)
@@ -322,12 +290,7 @@ bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 // it can (outTile)
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile)
 {
-    // ee_combat world.rs attack_reachable over the world host (EECombatGoals.cpp: the path search); CBXR records the
-    // outcome
-    bool theResult = EECombatWorld(EE_COMBAT_WORLD_ATTACK_REACHABLE, inUnit, inTarget, NULL, &outTile->mX, &outTile->mY) != 0;
-    EECombatCaptureXRead(EE_COMBAT_XR_ATTACK_REACHABLE, inUnit, inTarget, theResult, (uint32_t)outTile->mX,
-                         (uint32_t)outTile->mY);
-    return theResult;
+    return ee_units_cgq_is_attack_reachable(UUHandle(inUnit), UUHandle(inTarget), &outTile->mX, &outTile->mY);   // cg_query.rs (CBXR)
 }
 
 // Turns wall pieces with three or more neighbours into plain junction pieces
@@ -519,12 +482,7 @@ EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClas
 // Tells whether an enemy the unit may target is within its reach
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope;
-    // ee_combat reads.rs enemy_in_range over the C++ host (EECombatGoals.cpp); CBQR records the outcome
-    bool theInRange = EECombatIsEnemyWithinRange(inUnit);
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_ENEMY_IN_RANGE, inUnit, NULL, theInRange, (uint32_t)inUnit->mTargetSearchTimer);
-    return theInRange;
+    return ee_units_cgq_is_enemy_within_range(UUHandle(inUnit));   // cg_query.rs (CBQR)
 }
 
 // Finds the nearest free farm of the unit's player, ring by ring (the ring reached goes back)

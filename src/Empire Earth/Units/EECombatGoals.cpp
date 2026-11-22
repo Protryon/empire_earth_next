@@ -62,14 +62,9 @@ void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatCondi
     ee_combat_capture_condition(&in, &inOut);
 }
 
-namespace {
-
-thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
-
-}   // namespace
-
-EECombatHostReadScope::EECombatHostReadScope(int inSlot) : mSlot(inSlot), mOuter(sHostReadDepth[inSlot]++ == 0) {}
-EECombatHostReadScope::~EECombatHostReadScope() { sHostReadDepth[this->mSlot]--; }
+// (the depth is ee_sim combat cg_query.rs's)
+EECombatHostReadScope::EECombatHostReadScope(int inSlot) : mSlot(inSlot), mOuter(ee_combat_host_read_enter(inSlot)) {}
+EECombatHostReadScope::~EECombatHostReadScope() { ee_combat_host_read_leave(this->mSlot); }
 
 uint32_t EECombatCommandOf(const EEComplexUnit* inUnit)
 {
@@ -530,120 +525,80 @@ void EEFacingTurret(void* inContext, int32_t inIndex, EeCombatTurret* outTurret)
 
 }   // namespace
 
+// The query entry points: ee_sim combat cg_query.rs (the marshalling and the CBQR records) over one C++ context and
+// host per call, made here
+extern "C" void ee_units_cg_query(uint64_t inUnit, uint64_t inGoal, uint64_t inClass, void* inData,
+                                  void (*inBody)(void*, const EeCombatWorldHost*))
+{
+    EEQueryContext theContext = {EEQueryComplex(inUnit), EECgObject<EEUGRust>((int64_t)inGoal), NULL};
+    theContext.mClass = EECgObject<EEUnitClass>((int64_t)inClass);
+    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, inClass};
+    inBody(inData, &theHost);
+}
+
 EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    return EEQueryUnit(ee_combat_impact_unit(EEQueryHandleOf(inUnit), &theHost));
+    return EEQueryUnit(ee_units_cgq_impact_unit(EEQueryHandleOf(inUnit)));
 }
 
 int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass, long* ioX,
                       long* ioY)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    theContext.mClass = inClass;
-    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, (uint64_t)(uintptr_t)theContext.mClass};
-    int32_t theTile[2] = {ioX != NULL ? (int32_t)*ioX : 0, ioY != NULL ? (int32_t)*ioY : 0};
-    int32_t theResult = ee_combat_world(inFunction, EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), &theHost, &theTile);
-    if (ioX != NULL) {
-        *ioX = theTile[0];
-        *ioY = theTile[1];
-    }
-    return theResult;
+    return ee_units_cgq_world(inFunction, EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), EEObj(inClass), ioX, ioY);
 }
 
 bool EECombatComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, float inAttack, long inAmmo, long inWeapon,
                            float inFriendlyFactor, long& outAmount)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    theContext.mClass = inUnit->mUnitClass;
-    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, (uint64_t)(uintptr_t)theContext.mClass};
-    EeCombatDamageCall theCall = {inForm, inAttack, (int32_t)inAmmo, (int32_t)inWeapon, inFriendlyFactor, 0};
-    if (!ee_combat_compute_damage(&theCall, EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), &theHost))
-        return false;
-    outAmount = theCall.amount;
-    return true;
+    return ee_units_cgq_compute_damage(inForm, EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), EEObj(inUnit->mUnitClass),
+                                       inAttack, inAmmo, inWeapon, inFriendlyFactor, &outAmount);
 }
 
 void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation)
 {
-    EEQueryContext theContext = {inAttacker, NULL, NULL};
-    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, (uint64_t)(uintptr_t)theContext.mClass};
-    float thePoint[3] = {ioLocation.GetX(), ioLocation.GetY(), ioLocation.GetZ()};
-    ee_combat_attack_position(inFiring, EEQueryHandleOf(inAttacker), EEQueryHandleOf(inTarget), &theHost, &thePoint);
-    ioLocation = GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
+    ee_units_cgq_attack_position(inFiring, EEQueryHandleOf(inAttacker), EEQueryHandleOf(inTarget), (float(*)[3])&ioLocation.mX);
 }
 
 EEUnit* EECombatFindDropLocation(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, (uint64_t)(uintptr_t)theContext.mClass};
-    float thePoint[3];
-    EEUnit* theTarget = EEQueryUnit(ee_combat_find_drop_location(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget),
-                                                                 &theHost, &thePoint));
-    outLocation = GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
-    return theTarget;
+    return EEQueryUnit(ee_units_cgq_find_drop_location(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), (float(*)[3])&outLocation.mX));
 }
 
 float EECombatHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, (uint64_t)(uintptr_t)theContext.mClass};
-    return ee_combat_hit_distance_squared(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), inX, inY, &theHost);
+    return ee_units_cgq_hit_distance_squared(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), inX, inY);
 }
 
 bool EECombatIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
 {
-    EEQueryContext theContext = {NULL, NULL, NULL};
-    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, (uint64_t)(uintptr_t)theContext.mClass};
-    return ee_combat_is_seen_by(EEQueryHandleOf(inUnit), (uint64_t)(uintptr_t)inPlayer, inExplored, &theHost);
+    return ee_units_cgq_is_seen_by(EEQueryHandleOf(inUnit), (uint64_t)(uintptr_t)inPlayer, inExplored);
 }
 
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    return ee_combat_in_reach(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), &theHost) != 0;
+    return ee_units_cgq_in_reach(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget));
 }
 
-// EEUGAttackUnit::IsStillReachable (CBQR: the path attempts and the ignored targets' count after)
+// (with its CBQR record)
 bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal)
 {
-    EECombatHostReadScope theScope;
-    EEUnit* theTarget = inGoal->GetAttackTarget();
-    EEQueryContext theContext = {inUnit, inGoal, NULL};
-    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    bool theReachable = ee_combat_still_reachable(EEQueryHandleOf(inUnit), &theHost) != 0;
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_STILL_REACHABLE, inUnit, theTarget, theReachable, (uint32_t)inGoal->mPathAttempts,
-                                (uint32_t)inUnit->mIgnoredTargets.size());
-    return theReachable;
+    return ee_units_cgq_still_reachable(EEQueryHandleOf(inUnit), EEObj(inGoal));
 }
 
-// EEUGAttackUnit::IsGateClosed (CBQR)
+// (with its CBQR record)
 bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal)
 {
-    EECombatHostReadScope theScope;
-    EEQueryContext theContext = {inUnit, inGoal, NULL};
-    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    bool theClosed = ee_combat_gate_closed(EEQueryHandleOf(inUnit), &theHost) != 0;
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, inGoal->GetAttackTarget(), theClosed);
-    return theClosed;
+    return ee_units_cgq_gate_closed(EEQueryHandleOf(inUnit), EEObj(inGoal));
 }
 
 bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget)
 {
-    EEQueryContext theContext = {inHealer, NULL, NULL};
-    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    return ee_combat_heal_in_range(EEQueryHandleOf(inHealer), EEQueryHandleOf(inTarget), &theHost) != 0;
+    return ee_units_cgq_heal_in_range(EEQueryHandleOf(inHealer), EEQueryHandleOf(inTarget));
 }
 
 bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit)
 {
-    EEQueryContext theContext = {inUnit, NULL, NULL};
-    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    return ee_combat_enemy_in_range(EEQueryHandleOf(inUnit), &theHost) != 0;
+    return ee_units_cgq_enemy_in_range(EEQueryHandleOf(inUnit));
 }
 
 bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)

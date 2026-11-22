@@ -98,6 +98,8 @@ fn bytes(words: &[u32]) -> Vec<u8> {
 }
 
 #[cfg(not(test))]
+pub use game::ee_combat_capture_read;
+#[cfg(not(test))]
 pub use game::ee_combat_capture_x_action;
 
 #[cfg(not(test))]

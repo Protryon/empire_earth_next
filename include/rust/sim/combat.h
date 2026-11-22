@@ -169,6 +169,17 @@ constexpr static const int32_t EE_UNITS_CG_PATH_ATTEMPTS = 42;
 /// `unit->mIsFiringHigh`
 constexpr static const int32_t EE_UNITS_CG_FIRING_HIGH = 43;
 
+/// `EE_COMBAT_HR_STILL_REACHABLE`, `EE_COMBAT_HR_GATE_CLOSED` (ee/EECombatGoals.h)
+constexpr static const uint32_t HR_STILL_REACHABLE = 2;
+
+constexpr static const uint32_t HR_GATE_CLOSED = 3;
+
+/// `EE_COMBAT_HR_ENEMY_IN_RANGE`
+constexpr static const uint32_t HR_ENEMY_IN_RANGE = 4;
+
+/// `EE_COMBAT_XR_ATTACK_REACHABLE`
+constexpr static const uint32_t XR_ATTACK_REACHABLE = 4;
+
 /// `object->mIgnoredTargets[a[0]].mTileX`
 constexpr static const int32_t EE_COMBAT_W_IGN_TILE_X = 100;
 
@@ -2552,6 +2563,105 @@ int32_t ee_units_cg_condition(int32_t kind,
 
 /// `EECombatStep`
 void ee_units_cg_step(int32_t kind, uint64_t unit, uint64_t goal, uint64_t target);
+
+/// `EECombatHostReadScope(slot)`: one more nesting of the slot; whether it is the outermost (`depth++ == 0`).
+bool ee_combat_host_read_enter(int32_t slot);
+
+/// `~EECombatHostReadScope`: `depth--`.
+void ee_combat_host_read_leave(int32_t slot);
+
+/// `EECombatWorld(function, unit, target, class, ioX, ioY)`
+/// # Safety
+/// As above.
+int32_t ee_units_cgq_world(int32_t function,
+                           uint64_t unit,
+                           uint64_t target,
+                           uint64_t class_,
+                           long *io_x,
+                           long *io_y);
+
+/// `EECombatComputeDamage(form, unit, target, attack, ammo, weapon, friendly, outAmount)` (`class` the unit's)
+/// # Safety
+/// As above.
+bool ee_units_cgq_compute_damage(int32_t form,
+                                 uint64_t unit,
+                                 uint64_t target,
+                                 uint64_t class_,
+                                 float attack,
+                                 long ammo,
+                                 long weapon,
+                                 float friendly_factor,
+                                 long *out_amount);
+
+/// `EECombatAttackPosition(firing, attacker, target, ioLocation)` (the point's three floats)
+/// # Safety
+/// As above.
+void ee_units_cgq_attack_position(bool firing,
+                                  uint64_t attacker,
+                                  uint64_t target,
+                                  float (*point)[3]);
+
+/// `EECombatFindDropLocation(unit, target, outLocation)`
+/// # Safety
+/// As above.
+uint64_t ee_units_cgq_find_drop_location(uint64_t unit, uint64_t target, float (*point)[3]);
+
+/// `EECombatHitDistanceSquared(unit, target, x, y)`
+/// # Safety
+/// As above.
+float ee_units_cgq_hit_distance_squared(uint64_t unit, uint64_t target, float x, float y);
+
+/// `EECombatIsSeenBy(unit, player, explored)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_is_seen_by(uint64_t unit, uint64_t player, bool explored);
+
+/// `EECombatFindImpactUnit(unit)`
+/// # Safety
+/// As above.
+uint64_t ee_units_cgq_impact_unit(uint64_t unit);
+
+/// `EECombatIsInReach(unit, target)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_in_reach(uint64_t unit, uint64_t target);
+
+/// `EECombatIsStillReachable(unit, goal)` with its CBQR record
+/// # Safety
+/// As above.
+bool ee_units_cgq_still_reachable(uint64_t unit, uint64_t goal);
+
+/// `EECombatIsGateClosed(unit, goal)` with its CBQR record
+/// # Safety
+/// As above.
+bool ee_units_cgq_gate_closed(uint64_t unit, uint64_t goal);
+
+/// `EEIsEnemyWithinRange(unit)` with its CBQR record
+/// # Safety
+/// As above.
+bool ee_units_cgq_is_enemy_within_range(uint64_t unit);
+
+/// `EEIsAttackReachable(unit, target, outTile)` with its CBXR record (`x`, `y` the tile's longs)
+/// # Safety
+/// As above.
+bool ee_units_cgq_is_attack_reachable(uint64_t unit, uint64_t target, long *x, long *y);
+
+/// `EENearOldScreen`: a candidate of the old target's screen (`range` its `mDistanceSquared`) with its CBFS record
+/// # Safety
+/// As above.
+bool ee_units_cgq_near_old_screen(uint64_t candidate,
+                                  uint64_t target,
+                                  float range);
+
+/// `EECombatHealInRange(healer, target)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_heal_in_range(uint64_t healer, uint64_t target);
+
+/// `EECombatIsEnemyWithinRange(unit)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_enemy_in_range(uint64_t unit);
 
 /// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
 ///
