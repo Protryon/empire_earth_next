@@ -50,4 +50,5 @@ pub mod staging;
 pub mod stagingobj;
 pub mod statusstr;
 pub mod widgets;
+pub mod wonfront;
 pub mod wonnet;

@@ -55,6 +55,10 @@
 #include "ee/EEWorld.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUICWonNetRoomsBox.h"
+#include "rust/won_lobby/wonfront.h"
+
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs), over the screens' host
+// (EEUIEWonNetArenaGameEvents.cpp)
 
 // Creates the WON room list
 EEUICWonNetRoomsBox::EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation,
@@ -64,68 +68,10 @@ EEUICWonNetRoomsBox::EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, con
                                GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
                                inBorderThickness)
 {
-    this->mCopiedText = new GEText(inFont);
-    this->mText = new GEText(inFont);
-    this->mText->SetFgColor(GEColor());
-    this->mText->SetIsTransparent(true);
-    this->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.0f, 0.0f));
-    this->SetFocusedRectColor(GEColor(0.0f, 0.0f, 0.0f));
+    ee_won_front_call(EeWonFrontCall::RoomsConstruct, this, (intptr_t)inFont);
 }
 
-// Destroys the room list and its texts
-EEUICWonNetRoomsBox::~EEUICWonNetRoomsBox()
-{
-    delete this->mCopiedText;
-    delete this->mText;
-}
-
-// Snapshots the list and its text style for drawing
-long EEUICWonNetRoomsBox::CopyData()
-{
-    long theResult = UIListBox<EEUICWNRBLine>::CopyData();
-    *this->mCopiedText = *this->mText;
-    return theResult;
-}
-
-// Draws each room line: name, description, number of games and number of players
-long EEUICWonNetRoomsBox::DrawTextA()
-{
-    GERectangle theRect;
-    UWideString theText;
-    long theResult = this->DrawScrollBarText();
-    UIControl::DrawTextA();
-    theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->GetDrawCount(); i++) {
-        theRect.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->GetLineHeight() * i));
-        theRect.SetBottom(theRect.GetTop() + (float)this->GetLineHeight());
-        for (unsigned long j = 0; j < 4; j++) {
-            switch (j) {
-            case 0:
-                theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + 2.0f);
-                theRect.SetRight(theRect.GetLeft() + 198.0f);
-                this->mCopiedText->SetText(this->mCopyLineArray[i].mName);
-                break;
-            case 1:
-                theRect.SetLeft((long)(this->GetCopyTextRectangle().GetLeft() + 200.0f));
-                theRect.SetRight((long)(theRect.GetLeft() + 445.0f));
-                this->mCopiedText->SetText(this->mCopyLineArray[i].mDescription);
-                break;
-            case 2:
-                theRect.SetLeft((long)(this->GetCopyTextRectangle().GetLeft() + 645.0f));
-                theRect.SetRight((long)(theRect.GetLeft() + 185.0f));
-                sprintf(theText, "%ld", this->mCopyLineArray[i].mNumGames);
-                this->mCopiedText->SetText(theText);
-                break;
-            case 3:
-                theRect.SetLeft((long)(this->GetCopyTextRectangle().GetLeft() + 830.0f));
-                theRect.SetRight((long)(theRect.GetLeft() + 100.0f));
-                sprintf(theText, "%ld", this->mCopyLineArray[i].mNumPlayers);
-                this->mCopiedText->SetText(theText);
-                break;
-            }
-            this->mCopiedText->SetLocation(GE2DPoint(theRect.GetLeft(), theRect.GetTop()));
-            theResult = this->GetForm()->DrawClippedText(theRect, this->mCopiedText, this);
-        }
-    }
-    return theResult;
-}
+EEUICWonNetRoomsBox::~EEUICWonNetRoomsBox() { ee_won_front_call(EeWonFrontCall::RoomsDestruct, this, 0); }
+long EEUICWonNetRoomsBox::CopyData() { return (long)ee_won_front_call(EeWonFrontCall::RoomsCopyData, this, 0); }
+// four columns per visible line: name, description, number of games and number of players
+long EEUICWonNetRoomsBox::DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::RoomsDrawText, this, 0); }

@@ -132,6 +132,11 @@ CHECKS = [
     # the game's WON front end (R6 WON round 31: wonnet.rs; its host's statements are ee/EEWonNetHost.inl)
     dict(enum="EeWonNetOp", header="won_lobby/wonnet.h",
          hosts=[ROOT / "include" / "ee" / "EEWonNetHost.inl"], rust=[], allowed={}),
+    # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
+    dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+    dict(enum="EeWonFrontEvent", header="won_lobby/wonfront.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
 ]
 
 
