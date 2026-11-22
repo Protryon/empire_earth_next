@@ -71,6 +71,7 @@ pub mod dop_repair;
 pub mod dop_save;
 pub mod dry;
 pub mod eu_body;
+pub mod eu_describe;
 pub mod eu_hit;
 pub mod eu_more;
 pub mod explore;

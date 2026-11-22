@@ -286,7 +286,7 @@ pub fn run<H: EumHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: u64, b: i64,
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
@@ -294,7 +294,8 @@ mod game {
         fn ee_units_eum_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64) -> i64;
     }
 
-    struct Game;
+    /// the game's host (eu_describe.rs's too)
+    pub(crate) struct Game;
 
     impl EumHost for Game {
         fn eum(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64) -> i64 {

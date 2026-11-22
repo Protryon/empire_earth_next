@@ -5259,6 +5259,42 @@ constexpr static const int32_t EE_UNITS_EU_DO_SET_HIT_POINTS = 4;
 
 constexpr static const int32_t EE_UNITS_EU_DO_DEPLETE_RESOURCE = 5;
 
+/// `theString = UWideString()` (the originals' fresh local)
+constexpr static const int32_t EE_UNITS_EUM_TEXT_NEW = 4000;
+
+/// `RTSUnit::Describe(theString)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_RTS_DESCRIBE = 4001;
+
+/// `text a += theString`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_APPEND = 4002;
+
+/// `sprintf(theString, "res %ld / %ld:", mResourceType, mResourceAmount)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_RESOURCE = 4003;
+
+/// `sprintf(theString, "obj %ld:", mUnitClass->mUnitType)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_OBJECT = 4004;
+
+/// `sprintf(theString, "hp %ld:", mHitPoints)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_HIT_POINTS = 4005;
+
+/// `sprintf(theString, "\n======] SIMPLE UNIT [======\n")`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_SIMPLE = 4006;
+
+/// `RTSUnit::DescribeLong(theString)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_RTS_DESCRIBE_LONG = 4007;
+
+/// `sprintf(theString, "Object Type and Name: %ld, %s\n", the class's type and name)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_CLASS = 4008;
+
+/// `mResourceType != kResourceNone`
+constexpr static const int32_t EE_UNITS_EUM_HAS_RESOURCE = 4009;
+
+/// `sprintf(theString, "Resource Type/Amount:%ld / %ld\n", mResourceType, mResourceAmount)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_RESOURCE_LONG = 4010;
+
+/// `sprintf(theString, "Health: %ld / %ld (%.2f%%)\n", ...)`
+constexpr static const int32_t EE_UNITS_EUM_TEXT_HEALTH = 4011;
+
 /// `mComplexUnit`
 constexpr static const int32_t EE_UNITS_EU_COMPLEX = 1;
 
@@ -17122,6 +17158,12 @@ float ee_units_eu_nearest_footprint_tile(void *unit,
                                          void *other,
                                          long *out_x,
                                          long *out_y);
+
+/// `EEUnit::Describe(text)` (`long` false) or `DescribeLong(text)` on `unit`.
+///
+/// # Safety
+/// `unit` is a live `EEUnit`, `text` a live `UWideString`.
+void ee_units_eu_describe(void *unit, void *text, bool long_);
 
 extern int64_t ee_units_eu_host(int32_t op, void *unit, uint64_t a, int64_t b, int64_t c);
 
