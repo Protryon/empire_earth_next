@@ -208,17 +208,6 @@ void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
     EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, inTarget, 0, 0);
 }
 
-// Creates an empty ignored-target entry
-EEComplexUnitAttacker::EEComplexUnitAttacker()
-{
-    this->mTileX = 0;
-    this->mTileY = 0;
-    this->mFromX = 0;
-    this->mFromY = 0;
-    this->mUnitID = 0;
-    this->mTime = 0;
-}
-
 // Loads a living unit as cargo if there is room (or room is ignored), taking it off the map; returns 0 or 7
 long EEComplexUnit::LoadCargo(EEComplexUnit* inCargo, bool inIgnoreRoom, bool inArg3)
 {
@@ -503,42 +492,19 @@ void EEComplexUnit::ClearGarrison()
 // Dumps the unit pool's statistics and releases the pool
 void EEComplexUnit::ReleasePool()
 {
-    UWideString theReport(1000);
-    UWideString theLine;
     EEComplexUnit::sMemoryPool.DumpStats(false);
     EEComplexUnit::sMemoryPool.Release();
 }
 
-// Builds a "!Leaking Unit" line per used pool unit and clears its reference count (the report is gone)
-// The reference-counter buckets are walked too, their report compiled away (provisional name, from Empire Earth.cpp)
+// Clears every used pool unit's reference count. The original also built a "!Leaking Unit" line per unit and walked
+// the reference-counter buckets, but its report was compiled away: neither had an effect (provisional name, from
+// Empire Earth.cpp)
 void EEReportLeakingUnits()
 {
     std::vector<EEComplexUnit*> theUnits;
-    UReferenceCounter::CounterMap::iterator theCounter;
-    UReferenceCounter::FileCountMap::iterator theFile;
-    UWideString theText(1000);
-    UWideString theLine;
     EEComplexUnit::sMemoryPool.GetUsed(theUnits);
-    for (long i = (long)theUnits.size() - 1; i >= 0; i--) {
-        theText.Clear();
-        theLine = "!Leaking Unit: ";
-        sprintf(theText, "%s at (%ld,%ld). UnitID: %ld with action:%s\n", (const char*)theUnits[i]->GetUnitClass()->mName,
-                theUnits[i]->GetTileX(), theUnits[i]->GetTileY(), theUnits[i]->GetUnitID(),
-                (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType));
-        theLine += (const char*)theText;
+    for (long i = (long)theUnits.size() - 1; i >= 0; i--)
         theUnits[i]->mReferenceCount = 0;
-    }
-    UReferenceCounter::CounterMap* theCounters = UReferenceCounter::GetBucketMap(0);
-    if (theCounters == NULL)
-        return;
-    for (theCounter = theCounters->begin(); theCounter != theCounters->end(); theCounter++) {
-        UReferenceCounter::FileCountMap* theFiles = theCounter->second;
-        EEUnit* theUnit = dynamic_cast<EEUnit*>(theCounter->first);
-        if (theFiles != NULL && theUnit != NULL) {
-            for (theFile = theFiles->begin(); theFile != theFiles->end(); theFile++) {
-            }
-        }
-    }
 }
 
 // Writes every used pool unit to the dump file with its class, tile, id, action and growth
@@ -1251,19 +1217,6 @@ void EEComplexUnit::ReplaceResearch(long inTechnology, long inNewTechnology)
 void EEComplexUnit::MakeAreaEffects()
 {
     ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Copies an attacker record (tile, origin, unit id and time)
-// (ICF-folded with EESEAPlaceWallEntry's copy; the deque copies call it)
-EEComplexUnitAttacker& EEComplexUnitAttacker::operator=(const EEComplexUnitAttacker& inOther)
-{
-    this->mTileX = inOther.mTileX;
-    this->mTileY = inOther.mTileY;
-    this->mFromX = inOther.mFromX;
-    this->mFromY = inOther.mFromY;
-    this->mUnitID = inOther.mUnitID;
-    this->mTime = inOther.mTime;
-    return *this;
 }
 
 // Returns the number of wheels on the graphic object
