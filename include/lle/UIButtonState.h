@@ -2,12 +2,7 @@
 // (provisional name) marks an inferred one.
 #ifndef EE_UIBUTTONSTATE_H
 #define EE_UIBUTTONSTATE_H
+#include "rust/ui/ids.h"
 
-// UIButton::mState: UIButton::GetCurrentBitmap picks the bitmap named here
-enum UIButtonState {
-    kButtonStateNormal = 0,  // GetCurrentBitmap -> mNormalBitmap (provisional name)
-    kButtonStateFocused = 1,  // GetCurrentBitmap -> mFocusedBitmap (MouseMove/TabbedTo) (provisional name)
-    kButtonStatePressed = 2,  // GetCurrentBitmap -> mPressedBitmap (ButtonDown) (provisional name)
-};
-
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 #endif // EE_UIBUTTONSTATE_H

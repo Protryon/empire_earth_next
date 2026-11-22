@@ -19,6 +19,9 @@
 #include "rust/ui/obj.h"
 #include "rust/ui/rect.h"
 #include "lle/ISEntity.h"
+#include "rust/ui/mouse_ffi.h"
+#include "rust/ui/lle_control.h"
+#include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
 
 class GEFont;
@@ -44,20 +47,21 @@ public:
                                             unsigned long inCursor) { return kErrorFailed; }
     virtual void ChangeFont(GEFont* inFont) {}
     virtual long CloseIMECompositionString() { return kErrorFailed; }
-    static bool ControlKeyPressed() { return UIControl::sControlKey->GetValue() > 0; }
+    static bool ControlKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Control); }
     virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
-    static bool CopyKeyPressed() { return UIControl::sControlKey->GetValue() && UIControl::sCopyKey->GetValue(); }
-    static bool CutKeyPressed()
-    {
-        return UIControl::sControlKey->GetValue() && UIControl::sCutKey->GetValue() || UIControl::ShiftKeyPressed() && UIControl::sDeleteKey->GetValue();
-    }
-    static bool DeleteKeyPressed();
-    static bool DownKeyPressed();
+    static bool CopyKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Copy); }
+    static bool CutKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Cut); }
+    // Returns whether Delete (or keypad Del with Num Lock off) is held
+    static bool DeleteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Delete); }
+    // Returns whether Down (or keypad 2 with Num Lock off) is held
+    static bool DownKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Down); }
     virtual long DrawPolygons();
     virtual long DrawTextA() { this->mDrawCount--; return kErrorOK; }
-    static bool EndKeyPressed();
-    static bool EnterKeyPressed();
-    void FireTriggerEvent(unsigned long inEvent);
+    // Returns whether End (or keypad 1 with Num Lock off) is held
+    static bool EndKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::End); }
+    // Returns whether Enter or keypad Enter was just released
+    static bool EnterKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Enter); }
+    void FireTriggerEvent(unsigned long inEvent) { this->Call(EeUiControlCall::FireTrigger, inEvent); }
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
     float GetBorderOpacity() const { return this->mBorderOpacity; }
     unsigned long GetBorderThickness() { return this->mBorderThickness; }
@@ -75,26 +79,32 @@ public:
     UIForm* GetForm() const { return static_cast<UIForm*>(this->mForm); }
     bool GetHasMouseCapture() const { return this->Call(EeUiControlCall::HasMouseCapture) != 0; }
     unsigned long GetHeight() const { return UMFloor(this->GetRectangle().GetBottom() - this->GetRectangle().GetTop() + 1.0f); }
-    virtual bool GetHelpString(UWideString& outString) const;
+    virtual bool GetHelpString(UWideString& outString) const { return this->Call(EeUiControlCall::HelpString, (intptr_t)&outString) != 0; }
     UIHotKey* GetHotKey() const { return static_cast<UIHotKey*>(this->mHotKey); }
     unsigned long GetId() const { return this->mId; }
     virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
     bool GetIsDirty() const { return this->mIsDirty; }
     bool GetLeftMouseButtonDown() const { return this->Call(EeUiControlCall::LeftButtonDown) != 0; }
+    // Returns the UI manager's rasterizer
     GERasterizer* GetRasterizer() const;
     const GERectangle& GetRectangle() const { return UIControl::AsRect(this->mRectangle); }
     bool GetRightMouseButtonDown() const { return this->Call(EeUiControlCall::RightButtonDown) != 0; }
+    // (their bodies need the form's, the manager's or the background table's class)
+    // Returns the UI manager's screen index
     unsigned long GetScreenIndex() const;
+    // Returns the UI manager's sound manager
     SESoundManager* GetSoundManager() const;
     unsigned long GetStringTableID() const { return this->mStringTableID; }
     virtual bool GetTabable() const { return true; }
-    UIEvent* GetTriggerEvent(unsigned long inEvent);
+    UIEvent* GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(EeUiControlCall::TriggerEvent, inEvent); }
     virtual unsigned long GetType() const { return this->mControlType; }
     unsigned long GetWidth() const { return UMFloor(this->GetRectangle().GetWidth() + 1.0f); }
     virtual void HideControl() {}
-    static bool HomeKeyPressed();
-    static bool LeftKeyPressed();
+    // Returns whether Home (or keypad 7 with Num Lock off) is held
+    static bool HomeKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Home); }
+    // Returns whether Left (or keypad 4 with Num Lock off) is held
+    static bool LeftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Left); }
 public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
@@ -108,13 +118,11 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseRButtonUp() = 0;
     virtual long MouseWheelTurned(long inDelta) { return kErrorFailed; }
     virtual long OpenIMECompositionString() { return kErrorFailed; }
-    static bool PasteKeyPressed()
-    {
-        return UIControl::sControlKey->GetValue() && UIControl::sPasteKey->GetValue() || UIControl::ShiftKeyPressed() && UIControl::sInsertKey->GetValue();
-    }
+    static bool PasteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Paste); }
     virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
     virtual void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
-    static bool RightKeyPressed();
+    // Returns whether Right (or keypad 6 with Num Lock off) is held
+    static bool RightKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Right); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor)
     {
@@ -141,18 +149,25 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
     virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
     virtual void SetLocation(const GE2DPoint& inLocation);
-    virtual void SetRectangle(const GERectangle& inRectangle);
+    virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetRectangle, inRectangle); }
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
-    void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent);
-    static bool ShiftKeyPressed();
+    void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent) { this->Call(EeUiControlCall::SetTrigger, inEvent, (intptr_t)inTriggerEvent); }
+    // Returns whether Shift is held or was just pressed
+    static bool ShiftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Shift); }
     // (public: the game calls slot 0x74 on a form's control, chat 0x1d2e09; the toolkit's shims)
     virtual void TabbedTo() = 0;            // slot 0x74
     virtual void TabbedFrom() = 0;
 public:
     virtual long UpdateKeyboard() = 0;      // slot 0x7c
-    long UpdateMouse(const GE2DPoint& inLocation);
+    // Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
+    // (ee_ui mouse.rs)
+    long UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return kErrorOK; }
-    static bool UpKeyPressed();
+    // Returns whether Up (or keypad 8 with Num Lock off) is held
+    static bool UpKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Up); }
+    // the shared keys and mouse buttons: a Rust record of ISEntity pointers by EeUiKey (ee_ui lle_control.rs; once
+    // the 24 key statics here, UIForm's Tab and Shift and UIManager's mouse buttons and wheel)
+    static ISEntity*& Key(EeUiKey inKey) { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(inKey)); }
     virtual ~UIControl();
 protected:
     UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
@@ -160,11 +175,14 @@ protected:
     // The base's logic (ee_ui controlobj.rs)
     void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
-    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness);   // slot 0x84
+    // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
+    // Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
+    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness); // slot 0x84
 public:   // (the shims' access)
+    // Returns the form's mouse location
     const GE2DPoint& GetMouseLocation() const;
 protected:
-    void SetBgRectangle(const GERectangle& inRectangle);
+    void SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetBgRectangle, inRectangle); }
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
 private:
@@ -173,7 +191,7 @@ private:
     static const GERectangle& AsRect(const EeUiRect& inRect) { return *reinterpret_cast<const GERectangle*>(&inRect); }
     GERhombus* BgRhombus() const { return static_cast<GERhombus*>(this->mBgRhombus); }
     GERhombus* CopiedBgRhombus() const { return static_cast<GERhombus*>(this->mCopiedBgRhombus); }
-    intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const;
+    intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f); }
     intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const;
 public:
     // the record's calls out that are not Rust's (EeUiOp 5, 16, 17, 71..74, 169, 218, 245, 520..533; ee_ui
@@ -181,31 +199,6 @@ public:
     static intptr_t HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-public:   // (the key shims' access: UIControl.cpp)
-    static ISEntity* sSpaceKey;
-    static ISEntity* sAltKey;
-    static ISEntity* sEnterKey;
-    static ISEntity* sControlKey;
-    static ISEntity* sEndKey;
-    static ISEntity* sHomeKey;
-    static ISEntity* sLeftKey;
-    static ISEntity* sRightKey;
-    static ISEntity* sUpKey;
-    static ISEntity* sDownKey;
-    static ISEntity* sDeleteKey;
-    static ISEntity* sBackSpaceKey;
-    static ISEntity* sNumEndKey;
-    static ISEntity* sNumEnterKey;
-    static ISEntity* sNumHomeKey;
-    static ISEntity* sNumLeftKey;
-    static ISEntity* sNumRightKey;
-    static ISEntity* sNumUpKey;
-    static ISEntity* sNumDownKey;
-    static ISEntity* sNumDeleteKey;
-    static ISEntity* sCutKey;
-    static ISEntity* sCopyKey;
-    static ISEntity* sPasteKey;
-    static ISEntity* sInsertKey;
 private:
     static GEColor sLightBorder;
     static GEColor sDarkBorder;
@@ -213,48 +206,5 @@ private:
 };
 
 #include "lle/UIMultiByte.h"
-
-// UIControl trigger-event ids (FireTriggerEvent / SetTriggerEvent); provisional names from the lle firing sites
-enum UIControlTriggerID {
-    kControlTriggerRangeChanged = 0x3e8,     // UISlider::ChangeRange fires it (db: Game Settings Music Volume etc.) (provisional name)
-    kControlTriggerChecked = 0x3e9,          // UICheckBox::SetChecked(true), UIRadioButton::Check; UITriStateCheckBox::SetCheckState fires it for every state (db: Check Box ON) (provisional name)
-    kControlTriggerUnchecked = 0x3ea,        // UICheckBox::SetChecked(false), UIRadioButton::UnCheck (db: Check Box OFF, UnCheck Box) (provisional name)
-    kControlTriggerSelectionChanged = 0x3eb,  // UIListBox::ChangeSelectionIndex, UIComboBox::ChangeSelection (db: Change Focused File, Selected) (provisional name)
-    kControlTriggerDoubleClicked = 0x3ec,    // UIListBox::MouseLButtonDoublePressed (db: Load Game By DbClick) (provisional name)
-    kControlTriggerListOpened = 0x3ed,       // UIComboBox::OpenListBox (provisional name)
-    kControlTriggerListClosed = 0x3ee,       // UIComboBox::CloseListBox (provisional name)
-    kControlTriggerButtonDown = 0x3ef,       // UIButton::MouseLButtonDown / UpdateKeyboard key press, UIListBox::ButtonDown (next to ButtonDown()) (provisional name)
-    kControlTriggerButtonUp = 0x3f0,         // UIButton::MouseLButtonUp inside the rectangle / key release, UIListBox::ButtonUp (next to ButtonUp(); db: Load Game, Cancel Save) (provisional name)
-    kControlTriggerEnterPressed = 0x3f1,     // UIEditBox::ProcessEnterKey, UIListBox::UpdateKeyboard Enter (db: Save Game by Enter) (provisional name)
-    kControlTriggerMouseOver = 0x3f2,        // UIForm::SetMouseOverControl on the new control (db: SI Map Mouse Over) (provisional name)
-    kControlTriggerMouseOut = 0x3f3,         // UIForm::SetMouseOverControl on the old control (db: SI Map Mouse Out) (provisional name)
-    kControlTriggerScrollingFinished = 0x3f4,  // UITLScrolling::CopyData end poll / StopScrolling (db: SRM Chat Dialog Finished) (provisional name)
-    kControlTriggerRightButtonDown = 0x3f5,  // UIDualButton::MouseRButtonDown (provisional name)
-    kControlTriggerRightButtonUp = 0x3f6,    // UIDualButton::MouseRButtonUp inside the rectangle (provisional name)
-};
-
-// UIControl::GetType: the type each control class passes to the UIControl ctor (or its GetType override)
-enum UIControlType {
-    kControlTypeCustom = 0,           // the game's own controls (EEUIMiniMap, EEUICPortrait, EEUICPing, ...) pass 0 (provisional name)
-    kControlTypeButton = 1,           // UIButton ctor (provisional name)
-    kControlTypeCheckBox = 2,         // UICheckBox::GetType (provisional name)
-    kControlTypeComboBox = 3,         // UIComboBox ctor (provisional name)
-    kControlTypeEditBox = 4,          // UIEditBox ctor (provisional name)
-    kControlTypeListBox = 5,          // UIListBox ctor (provisional name)
-    kControlTypeRadioButton = 6,      // UIRadioButton::GetType (provisional name)
-    kControlTypeScrollBar = 7,        // UIScrollBar ctor (provisional name)
-    kControlTypeSlider = 8,           // UISlider ctor (provisional name)
-    kControlTypeStatusBar = 9,        // UIStatusBar ctor (provisional name)
-    kControlTypeBitmap = 10,          // UIBitmap ctor (UIMovie passes 10 too) (provisional name)
-    kControlTypeTextLabel = 11,       // UITextLabel ctor (provisional name)
-    kControlTypeTriStateCheckBox = 12,  // UITriStateCheckBox::GetType (provisional name)
-    kControlTypeGraph = 13,           // UIGraph ctor (provisional name)
-};
-
-// UIControl::mDisplayMode (+0x08, 1 at construction): SetDisplayMode(0) hides the control (HideControl, dirty rectangle, tab moves on); setrilo ui_framework.h "0 hidden, 1 shown".
-enum UIDisplayMode {
-    kDisplayModeHidden = 0,  // setrilo ui_framework.h displayMode_ "0 hidden"; UIControl::SetDisplayMode LLE 0x10065af5 hides the control on 0
-    kDisplayModeShown = 1,  // setrilo ui_framework.h displayMode_ "1 shown"; the UIControl ctor sets 1
-};
 
 #endif

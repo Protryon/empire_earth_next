@@ -16,12 +16,12 @@ public:
                        const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
                        const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible);
     virtual ~UIBitmapBackground();
-    virtual long DrawBackground(const GERectangle& inRectangle);
+    virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::BitmapDraw, inRectangle); }
     virtual long DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination);  // 0x1c
     GEBitmap* GetBitmap() { return static_cast<GEBitmap*>(this->mBitmap); }
-    virtual long LoadBackground();
-    void SetBitmapTexture(GETexture* inTexture);
-    virtual long UnloadBackground();
+    virtual long LoadBackground() { return (long)this->Call(EeUiBgCall::BitmapLoad); }
+    void SetBitmapTexture(GETexture* inTexture) { this->Call(EeUiBgCall::BitmapSetTexture, (intptr_t)inTexture); }
+    virtual long UnloadBackground() { return (long)this->Call(EeUiBgCall::BitmapUnload); }
 };
 
 #endif

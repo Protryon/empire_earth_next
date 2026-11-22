@@ -143,6 +143,53 @@ enum class EeUiFormCall : uint32_t {
 /// The Rust UIForm.
 struct EeUiForm;
 
+/// `UIDbDataForms`, the form record the database constructor reads (268 bytes on every target; UI round 13: the C++
+/// struct is this one, generated under its name with the C++ members' names; the field docs are the offsets).
+struct UIDbDataForms {
+  /// +0x000
+  uint8_t mLabel[100];
+  /// +0x064 "none" stops the music
+  uint8_t mMusicFile[100];
+  /// +0x0c8 (provisional name)
+  int32_t mUnusedID;
+  /// +0x0cc 0 or less: no form
+  int32_t mFormID;
+  /// +0x0d0
+  uint32_t mControlCount;
+  /// +0x0d4
+  uint32_t mControlGroupCount;
+  /// +0x0d8
+  float mLeftOffset;
+  /// +0x0dc
+  float mRightOffset;
+  /// +0x0e0
+  float mBottomOffset;
+  /// +0x0e4
+  float mTopOffset;
+  /// +0x0e8
+  uint32_t mDesignedWidth;
+  /// +0x0ec
+  uint32_t mDesignedHeight;
+  /// +0x0f0
+  uint32_t mHelpTextTimeDelay;
+  /// +0x0f4 (provisional name)
+  uint32_t mUnused;
+  /// +0x0f8
+  uint32_t mLeftOffsetType;
+  /// +0x0fc
+  uint32_t mRightOffsetType;
+  /// +0x100
+  uint32_t mTopOffsetType;
+  /// +0x104
+  uint32_t mBottomOffsetType;
+  /// +0x108
+  bool mTabbingOn;
+  /// +0x109
+  bool mUseToolTips;
+  /// +0x10a
+  bool mUseExclusiveCoords;
+};
+
 extern "C" {
 
 /// A new Rust form for the C++ `form`: `UIForm(controls, groups, manager, id, gdi)`.

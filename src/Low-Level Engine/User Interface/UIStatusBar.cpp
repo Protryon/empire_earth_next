@@ -55,17 +55,7 @@ struct UIStatusBarHost {
         }
         return 0;
     }
-    static intptr_t Call(const UIStatusBar* s, EeUiStatusBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_status_bar_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallF(const UIStatusBar* s, EeUiStatusBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_status_bar_call(s->mRust, c, 0, 0, f);
-    }
 };
-typedef EeUiStatusBarCall C;
 
 // Creates a progress bar control: empty range, black fill, white text and a text area inset by the border
 UIStatusBar::UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -76,30 +66,3 @@ UIStatusBar::UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIF
 }
 
 UIStatusBar::~UIStatusBar() { ee_ui_status_bar_free(this->mRust); }
-void UIStatusBar::ChangeFont(GEFont* inFont) { UIStatusBarHost::Call(this, C::ChangeFont, (intptr_t)inFont); }
-long UIStatusBar::CopyData() { return (long)UIStatusBarHost::Call(this, C::CopyData); }
-long UIStatusBar::DrawPolygons() { return (long)UIStatusBarHost::Call(this, C::DrawPolygons); }
-long UIStatusBar::DrawTextA() { return (long)UIStatusBarHost::Call(this, C::DrawText); }
-long UIStatusBar::GetCurrentRangeValue() const { return (long)UIStatusBarHost::Call(this, C::CurrentRangeValue); }
-GEText* UIStatusBar::GetGEText() { return reinterpret_cast<GEText*>(UIStatusBarHost::Call(this, C::Text)); }
-long UIStatusBar::GetMaxRange() const { return (long)UIStatusBarHost::Call(this, C::MaxRange); }
-unsigned long UIStatusBar::GetRange() const { return (unsigned long)UIStatusBarHost::Call(this, C::Range); }
-void UIStatusBar::SetCurrentRangeValue(long inValue) { UIStatusBarHost::Call(this, C::SetCurrentRangeValue, inValue); }
-void UIStatusBar::SetFocusedTextColor(const GEColor& inColor)
-{
-    UIStatusBarHost::CallF(this, C::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-}
-void UIStatusBar::SetLocation(const GE2DPoint& inLocation)
-{
-    UIStatusBarHost::CallF(this, C::SetLocation, inLocation.GetX(), inLocation.GetY());
-}
-void UIStatusBar::SetRange(unsigned long inMin, unsigned long inMax) { UIStatusBarHost::Call(this, C::SetRange, inMin, inMax); }
-void UIStatusBar::SetStatusBarOpacity(float inOpacity) { UIStatusBarHost::CallF(this, C::SetStatusBarOpacity, inOpacity); }
-void UIStatusBar::SetStatusBarColor(const GEColor& inColor)
-{
-    UIStatusBarHost::CallF(this, C::SetStatusBarColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-}
-void UIStatusBar::SetText(const UWideString& inText, GEFont* inFont)
-{
-    UIStatusBarHost::Call(this, C::SetText, (intptr_t)&inText, (intptr_t)inFont);
-}

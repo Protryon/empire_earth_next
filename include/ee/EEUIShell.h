@@ -242,7 +242,7 @@ public:
     }
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
     EE_SHELL_SELF
-    static bool EnterKey() { return UIControl::sEnterKey->GetValue() != 0; }
+    static bool EnterKey() { return UIControl::Key(EeUiKey::Enter)->GetValue() != 0; }
 };
 
 class EEUIShellEdit : public UIEditBox, public EEUIShell {

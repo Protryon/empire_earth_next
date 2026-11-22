@@ -60,13 +60,7 @@ struct UIGraphHost {
         }
         return 0;
     }
-    static intptr_t Call(const UIGraph* g, EeUiGraphCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0,
-                         float* f = NULL)
-    {
-        return ee_ui_graph_call(g->mRust, c, a, b, cc, f);
-    }
 };
-typedef EeUiGraphCall C;
 
 // Creates a graph control with a 15 x 10 grid, every label on, zoom 1 and no fonts yet
 UIGraph::UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -77,19 +71,13 @@ UIGraph::UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inF
 }
 
 UIGraph::~UIGraph() { ee_ui_graph_free(this->mRust); }
-long UIGraph::CopyData() { return (long)UIGraphHost::Call(this, C::CopyData); }
-long UIGraph::DrawPolygons() { return (long)UIGraphHost::Call(this, C::DrawPolygons); }
-long UIGraph::DrawTextA() { return (long)UIGraphHost::Call(this, C::DrawText); }
-void UIGraph::SetFont(GEFont* inFont) { UIGraphHost::Call(this, C::SetFont, (intptr_t)inFont); }
 void UIGraph::SetFontColor(const GEColor& inColor)
 {
     float f[4] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), 0.0f};
-    UIGraphHost::Call(this, C::SetFontColor, 0, 0, 0, f);
+    this->Call(EeUiGraphCall::SetFontColor, 0, 0, 0, f);
 }
 void UIGraph::AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor)
 {
     float f[4] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), 0.0f};
-    UIGraphHost::Call(this, C::AddGraphSeries, inGraph, (intptr_t)inPoints, inCount, f);
+    this->Call(EeUiGraphCall::AddGraphSeries, inGraph, (intptr_t)inPoints, inCount, f);
 }
-void UIGraph::TabbedTo() { UIGraphHost::Call(this, C::TabbedTo); }
-void UIGraph::TabbedFrom() { UIGraphHost::Call(this, C::TabbedFrom); }
