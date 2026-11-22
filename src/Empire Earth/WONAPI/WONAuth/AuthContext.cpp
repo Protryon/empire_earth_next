@@ -48,35 +48,5 @@ bool AuthContext::SetHashFile(const std::wstring& inCommunity)
 
 // WON SDK default registry path (no original address identified)
 const char* CDKey::mCDKeyPath = "SOFTWARE\\Sierra\\CDKeys";
-// The encrypted key's stores are Rust's (ee_won cdkeystore.rs: config.yaml through the Rust RegKey, the file's bytes)
-bool CDKey::LoadFromRegistry(long inRoot, const char* inPath)
-{
-    std::string aBytes;
-    return !this->mProduct.empty()
-        && ee_won_cdkey_registry_read(inRoot, inPath, WonBytes(this->mProduct), this->mProduct.size(), WonStringSink, &aBytes)
-        && this->InitEncrypted(aBytes.data(), aBytes.size());
-}
-bool CDKey::SaveToRegistry(long inRoot, const char* inPath)
-{
-    ByteBufferPtr anEncrypted = this->GetEncrypted();
-    return anEncrypted.get() != NULL
-        && ee_won_cdkey_registry_write(inRoot, inPath, WonBytes(this->mProduct), this->mProduct.size(),
-                                       reinterpret_cast<const uint8_t*>(anEncrypted->data()), anEncrypted->length());
-}
-void CDKey::ClearFromRegistry(long inRoot, const char* inPath)
-{
-    if (!this->mProduct.empty()) ee_won_cdkey_registry_clear(inRoot, inPath, WonBytes(this->mProduct), this->mProduct.size());
-}
-bool CDKey::SaveToFile(const std::string& inFileName)
-{
-    ByteBufferPtr anEncrypted = this->GetEncrypted();
-    return anEncrypted.get() != NULL
-        && ee_won_cdkey_file_write(inFileName.c_str(), reinterpret_cast<const uint8_t*>(anEncrypted->data()),
-                                   anEncrypted->length());
-}
-bool CDKey::LoadFromFile(const std::string& inFileName)
-{
-    std::string aBytes;
-    return ee_won_cdkey_file_read(inFileName.c_str(), WonStringSink, &aBytes) && this->InitEncrypted(aBytes.data(), aBytes.size());
-}
+// the key and its stores are Rust's (ee_won cdkeystore.rs EeWonCdKeyObj, R6 WON round 33: CDKey whole)
 }
