@@ -15,21 +15,35 @@ use crate::units::uu_host::Game;
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::{UnitView, WorldRead};
 
-/// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
+/// `gWorld.mInCinematic`
 pub const EE_UNITS_CLS_ST_CINEMATIC_INTERVAL: i32 = 95;
 /// `EEIsCloakedEnemyOf(unit a, the current player)`
 pub const EE_UNITS_CLS_ST_CLOAKED_ENEMY: i32 = 96;
-/// `gMiniMap->MoveUnit(a, ...)` onto its tile (c 1) or off it (c 0)
+/// `gMiniMap->MoveUnit(a, its tile, -10000, -10000)` (off it)
 pub const EE_UNITS_CLS_ST_MINI_MAP: i32 = 97;
-/// unit `a`'s `SetCloakableChain(d)` (c 0), `SetCloakedChain(d)` (c 1), `SetOpacityChain(io.f)` (c 2)
+/// unit `a`'s `SetCloakableChain(d != 0)`
 pub const EE_UNITS_CLS_ST_CHAIN: i32 = 98;
 /// class `b`'s `UpdateCloakDetection(unit a)`
 pub const EE_UNITS_CLS_ST_CLOAK_DETECTION: i32 = 99;
 
-/// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
+/// unit `a`'s area effects' `ApplyModifiers(3, the input, the radius, a)`
 pub const EE_UNITS_CLS_ST_AREA_CLOAK: i32 = 102;
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 pub const EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: i32 = 103;
+/// `EEGetRules().mCombat.mPowerRegenerationInterval`
+pub const EE_UNITS_CLS_ST_POWER_INTERVAL: i32 = 227;
+/// `gMiniMap->MoveUnit(a, -10000, -10000, its tile)`
+pub const EE_UNITS_CLS_ST_MINI_MAP_SHOW: i32 = 228;
+/// unit `a`'s `SetCloakedChain(d != 0)`
+pub const EE_UNITS_CLS_ST_CLOAKED_CHAIN: i32 = 229;
+/// unit `a`'s `SetOpacityChain(io.f)`
+pub const EE_UNITS_CLS_ST_OPACITY_CHAIN: i32 = 230;
+/// unit `a`'s `HasEffect(8)`
+pub const EE_UNITS_CLS_ST_HAS_AREA_CLOAK: i32 = 231;
+/// the modifier's input and radius = 0
+pub const EE_UNITS_CLS_ST_RESET_MODIFIERS: i32 = 232;
+/// the modifier's radius
+pub const EE_UNITS_CLS_ST_MODIFIER_RADIUS: i32 = 233;
 
 impl ClsGame {
     fn st(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, f: f32) -> (i64, EeUnitsClsIo) {
@@ -56,8 +70,13 @@ impl StatusHost for ClsGame {
         self.0.class(class).fields
     }
     fn area_cloak_radius(&mut self, unit: u64) -> Option<i64> {
-        let (r, io) = self.st(EE_UNITS_CLS_ST_AREA_CLOAK, unit, 0, 0, 0, 0.0);
-        (r != 0).then_some(io.a)
+        // the area effects' cloaking radius (modifier 3) when one covers the unit
+        if self.st(EE_UNITS_CLS_ST_HAS_AREA_CLOAK, unit, 0, 0, 0, 0.0).0 == 0 {
+            return None;
+        }
+        self.st(EE_UNITS_CLS_ST_RESET_MODIFIERS, unit, 0, 0, 0, 0.0);
+        self.st(EE_UNITS_CLS_ST_AREA_CLOAK, unit, 0, 0, 0, 0.0);
+        Some(self.st(EE_UNITS_CLS_ST_MODIFIER_RADIUS, unit, 0, 0, 0, 0.0).0)
     }
     fn camouflage_timing(&mut self) -> f32 {
         self.st(EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING, 0, 0, 0, 0, 0.0).1.f
@@ -98,25 +117,25 @@ impl StatusHost for ClsGame {
         Clock { tick_ms: w.tick_ms(), tick_time, game_time: w.game_time() }
     }
     fn in_cinematic(&mut self) -> bool {
-        self.st(EE_UNITS_CLS_ST_CINEMATIC_INTERVAL, 0, 0, 0, 0, 0.0).1.a != 0
+        self.st(EE_UNITS_CLS_ST_CINEMATIC_INTERVAL, 0, 0, 0, 0, 0.0).0 != 0
     }
     fn power_interval(&mut self) -> i64 {
-        self.st(EE_UNITS_CLS_ST_CINEMATIC_INTERVAL, 0, 0, 0, 0, 0.0).1.b
+        self.st(EE_UNITS_CLS_ST_POWER_INTERVAL, 0, 0, 0, 0, 0.0).0
     }
     fn cloaked_enemy(&mut self, unit: u64) -> bool {
         self.st(EE_UNITS_CLS_ST_CLOAKED_ENEMY, unit, 0, 0, 0, 0.0).0 != 0
     }
     fn mini_map_move(&mut self, unit: u64, show: bool) {
-        self.st(EE_UNITS_CLS_ST_MINI_MAP, unit, 0, i64::from(show), 0, 0.0);
+        self.st(if show { EE_UNITS_CLS_ST_MINI_MAP_SHOW } else { EE_UNITS_CLS_ST_MINI_MAP }, unit, 0, 0, 0, 0.0);
     }
     fn set_cloakable_chain(&mut self, unit: u64, on: bool) {
         self.st(EE_UNITS_CLS_ST_CHAIN, unit, 0, 0, i64::from(on), 0.0);
     }
     fn set_cloaked_chain(&mut self, unit: u64, on: bool) {
-        self.st(EE_UNITS_CLS_ST_CHAIN, unit, 0, 1, i64::from(on), 0.0);
+        self.st(EE_UNITS_CLS_ST_CLOAKED_CHAIN, unit, 0, 0, i64::from(on), 0.0);
     }
     fn set_opacity_chain(&mut self, unit: u64, opacity: f32) {
-        self.st(EE_UNITS_CLS_ST_CHAIN, unit, 0, 2, 0, opacity);
+        self.st(EE_UNITS_CLS_ST_OPACITY_CHAIN, unit, 0, 0, 0, opacity);
     }
     fn cloak_detection(&mut self, class: u64, unit: u64) {
         self.st(EE_UNITS_CLS_ST_CLOAK_DETECTION, unit, class, 0, 0, 0.0);

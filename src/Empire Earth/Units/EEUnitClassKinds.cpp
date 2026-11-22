@@ -26,21 +26,7 @@
 
 void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
 {
-    // the bodies' action kinds (ee_units actions.rs) by the dispatch row's answer; 15 and 17 the shots' members
-    static const int32_t kActions[] = {
-        EE_UNITS_ACTION_BASE, EE_UNITS_ACTION_AIR_ANIMAL, EE_UNITS_ACTION_AIRPLANE,
-        EE_UNITS_ACTION_BUILDING_PRIEST, EE_UNITS_ACTION_GATE, EE_UNITS_ACTION_HELICOPTER_PRIEST,
-        EE_UNITS_ACTION_HELICOPTER_TRANSPORT, EE_UNITS_ACTION_MINING_BUILDING, EE_UNITS_ACTION_PLANET_SPACESHIP,
-        EE_UNITS_ACTION_CITIZEN, EE_UNITS_ACTION_BASIC_PRIEST, EE_UNITS_ACTION_BUILDING,
-        EE_UNITS_ACTION_HELICOPTER, EE_UNITS_ACTION_LAND, EE_UNITS_ACTION_LANDABLE, EE_UNITS_ACTION_BASE,
-        EE_UNITS_ACTION_NAVAL, EE_UNITS_ACTION_BASE, EE_UNITS_ACTION_SPACESHIP, EE_UNITS_ACTION_SUBMERGED_NAVAL};
-    unsigned theBody = EEClassBody(this, EE_UNITS_BODY_ACTION_CHANGED);
-    if (theBody == 15)
-        this->MissileActionChanged(inUnit);
-    else if (theBody == 17)
-        this->ProjectileActionChanged(inUnit);
-    else
-        EEUnitClassActionChanged(kActions[theBody], this, inUnit);
+    ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, this, inUnit, 0, 0, 0, 0.0f);   // uck_kinds.rs
 }
 
 void EEUnitClass::AddToRegion(EEUnit* inUnit)
@@ -152,14 +138,7 @@ EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPla
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
 long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    int32_t theAnswer = ee_units_cls_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
-    if (theAnswer == -1)
-        return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
-    if (theAnswer == -2)
-        return this->MissileEvaluateCondition(inUnit, inEvent);
-    if (theAnswer == -3)
-        return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
-    return theAnswer;
+    return (long)ee_units_uck_call(EE_UNITS_UCK_DO_EVALUATE_CONDITION, this, inUnit, 0, (int64_t)inEvent, 0, 0.0f);   // uck_kinds.rs
 }
 
 void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected)
@@ -172,12 +151,7 @@ void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplex
 bool EEUnitClass::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inTransport, GE3DPoint& inLocation, GE3DPoint& outLocation)
 {
     EEUCNote theNote(32); theNote.C(this).U(inUnit).U(inTransport).P(inLocation);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R([&]() -> bool {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            return this->TransportFindBoardingLocation(inUnit, inTransport, inLocation, outLocation);
-        return false;
-    }());
+    bool theResult = theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_BOARDING_LOCATION, this, inUnit, EEObj(inTransport), (int64_t)EEObj(&inLocation), (int64_t)EEObj(&outLocation), 0.0f) != 0);   // uck_kinds.rs
     theNote.P(outLocation);
     return theResult;
 }
@@ -228,12 +202,12 @@ long EEUnitClass::GetPopulationCost()
 void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_GET_SOUND_PARAMETERS)) {
-    case 1: this->AirAnimalGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 1: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the air animal's: the same Doppler pitch
     case 2: this->HelicopterPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
     case 3: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
     case 4: this->LandPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
     case 5: this->SpaceshipVirtual2C(inUnit, inSound, outVolume, outPan, outPitch); return;
-    case 6: this->LandableGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 6: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the landable's: likewise
     }
     this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
 }
@@ -241,15 +215,7 @@ void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, flo
 void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
 {
     EEUCNote theNote(31); theNote.C(this).U(inUnit).I(inCorners).I(inAppend).Ts(outTiles);   // TEST ONLY (UCBD)
-    [&]() {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_GATE)
-            this->GateGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
-        else if (theKinds & EE_CLASS_KIND_BUILDING)
-            this->BuildingGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
-        else
-            this->BaseGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
-    }();
+    ee_units_uck_call(EE_UNITS_UCK_DO_SURROUNDING_TILES, this, inUnit, EEObj(&outTiles), inCorners, inAppend, 0.0f);   // uck_kinds.rs
     theNote.Ts(outTiles);
 }
 
@@ -277,35 +243,13 @@ void EEUnitClass::GroundLocation(GE3DPoint& ioLocation)
 bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
 {
     EEUCNote theNote(7); theNote.C(this).U(inUnit).F(inValue);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-            return ee_units_cls_landing_has_arrived(EEObj(this), EEObj(inUnit), inValue, true);
-        if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
-            return this->SpaceBuildingHasArrived(inUnit, inValue);
-        if (theKinds & EE_CLASS_KIND_NAVAL_TRANSPORT)
-            return ee_units_tr_naval_has_arrived(EEObj(inUnit), inValue);
-        if (theKinds & EE_CLASS_KIND_LANDABLE)
-            return ee_units_cls_landing_has_arrived(EEObj(this), EEObj(inUnit), inValue, false);
-        if (theKinds & EE_CLASS_KIND_NAVAL)
-            return this->NavalHasArrived(inUnit, inValue);
-        if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-            return this->SubmergedNavalHasArrived(inUnit, inValue);
-        return this->BaseHasArrived(inUnit, inValue);
-    }());
+    return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_HAS_ARRIVED, this, inUnit, 0, 0, 0, inValue) != 0);   // uck_kinds.rs
 }
 
 bool EEUnitClass::HasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
     EEUCNote theNote(10); theNote.C(this).U(inUnit).U(inCargo);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_FORTRESS)
-            return this->FortressHasRoom(inUnit, inCargo);
-        if (theKinds & (EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_LAND_TRANSPORT | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_SPACE_TRANSPORT))
-            return true;
-        return false;
-    }());
+    return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_HAS_ROOM, this, inUnit, EEObj(inCargo), 0, 0, 0.0f) != 0);   // uck_kinds.rs
 }
 
 bool EEUnitClass::HasSunk(EEComplexUnit* inUnit)
@@ -405,14 +349,7 @@ void EEUnitClass::RemoveFromTile(EEUnit* inUnit)
 bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
 {
     EEUCNote theNote(30); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
-            return this->NavalBuildingSelectUnitToRelease(inUnit);
-        if (theKinds & EE_CLASS_KIND_BUILDING)
-            return this->BuildingSelectUnitToRelease(inUnit);
-        return false;
-    }());
+    return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, 0.0f) != 0);   // uck_kinds.rs
 }
 
 void EEUnitClass::SimpleUnitCreated(EEUnit* inUnit)
@@ -463,46 +400,79 @@ void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
 
 void EEUnitClass::Update(EEComplexUnit* inUnit)
 {
-    // the sequences' kinds (ee_units update.rs) by the dispatch row's answer; -1 the members below
-    static const int32_t kUpdates[] = {
-        -1, EE_UNITS_UPDATE_AIR_ANIMAL, EE_UNITS_UPDATE_FORTRESS, -1, -1, EE_UNITS_UPDATE_GATE,
-        EE_UNITS_UPDATE_HELICOPTER_TRANSPORT, EE_UNITS_UPDATE_LAND_CITIZEN, EE_UNITS_UPDATE_LAND_TRANSPORT,
-        EE_UNITS_UPDATE_MINING_BUILDING, EE_UNITS_UPDATE_NAVAL_BUILDING, EE_UNITS_UPDATE_NAVAL_CITIZEN,
-        EE_UNITS_UPDATE_SPACE_BUILDING, -1, EE_UNITS_UPDATE_AMBIENT, -1, EE_UNITS_UPDATE_BASIC_PRIEST,
-        EE_UNITS_UPDATE_BUILDING, EE_UNITS_UPDATE_HELICOPTER, EE_UNITS_UPDATE_LAND, EE_UNITS_UPDATE_LANDABLE,
-        -1, EE_UNITS_UPDATE_NAVAL, -1, EE_UNITS_UPDATE_SPACESHIP, EE_UNITS_UPDATE_SUBMERGED_NAVAL,
-        EE_UNITS_UPDATE_TRANSPORT};
-    unsigned theBody = EEClassBody(this, EE_UNITS_BODY_UPDATE);
-    if (kUpdates[theBody] >= 0) {
-        EEUnitClassUpdate(kUpdates[theBody], this, inUnit);
-        return;
-    }
-    switch (theBody) {
-    case 3: this->BombUpdate(inUnit); return;
-    case 4: if (!inUnit->IsFoundation() || inUnit->mHitPoints <= 0 || inUnit->mCurrentPhysicsAction == 2) this->PriestVirtualB8(inUnit); return;
-    case 13: this->TorpedoUpdate(inUnit); return;
-    case 15: this->UpdateCitizen(inUnit); return;
-    case 21: this->MissileUpdate(inUnit); return;
-    case 23: this->ProjectileUpdate(inUnit); return;
-    }
+    ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE, this, inUnit, 0, 0, 0, 0.0f);   // uck_kinds.rs
 }
 
 void EEUnitClass::UpdateEffects(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_UPDATE_EFFECTS)) {
-    case 1: return;   // their overrides were empty
-    case 2: if (this->mRippleEffect != NULL && inUnit->mUnitClass->mUnitType == kUnitTypeCatalina && inUnit->mHitPoints != 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
-    case 3: if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
-    case 4: if ((this->mUnitType == kUnitTypeDock || this->mUnitType == kUnitTypeNavyYard) && this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
-    case 5: if (this->mRippleEffect != NULL && inUnit->mHitPoints > 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
-    case 6: if (inUnit->mHitPoints > 0 && this->mTrailEffect != NULL && inUnit->mVelocity != 0.0f && this->mTrailEffect->mDetailLevel <= gEffectDetail) this->UpdateTrail(inUnit); return;
-    case 7: this->ProjectileUpdateEffects(inUnit); return;
-    }
+    ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE_EFFECTS, this, inUnit, 0, 0, 0, 0.0f);   // uck_kinds.rs
 }
 
 long EEUnitClass::Virtual70()
 {
     return EEClassBody(this, EE_UNITS_BODY_VIRTUAL70);   // 1 a building, 2 a resource
+}
+
+template <class T> static T* EEUckObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// The bodies the kind dispatchers of ee_units uck_kinds.rs choose (EE_UNITS_UCK_*): one statement each; the class
+// host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
+extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
+                                     float (*ioF)[4])
+{
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_UCK_KINDS: return (int64_t)EEUnitClassKinds(theClass);
+    case EE_UNITS_UCK_BODY: return EEClassBody(theClass, (size_t)inB);
+    case EE_UNITS_UCK_MISSILE_ACTION_CHANGED: theClass->MissileActionChanged(theUnit); return 0;
+    case EE_UNITS_UCK_PROJECTILE_ACTION_CHANGED: theClass->ProjectileActionChanged(theUnit); return 0;
+    case EE_UNITS_UCK_ACTION_CHANGED: EEUnitClassActionChanged((int32_t)inB, theClass, theUnit); return 0;
+    case EE_UNITS_UCK_UPDATE: EEUnitClassUpdate((int32_t)inB, theClass, theUnit); return 0;
+    case EE_UNITS_UCK_BOMB_UPDATE: theClass->BombUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_PRIEST_UPDATES: return !theUnit->IsFoundation() || theUnit->mHitPoints <= 0 || theUnit->mCurrentPhysicsAction == 2;
+    case EE_UNITS_UCK_PRIEST_UPDATE: theClass->PriestVirtualB8(theUnit); return 0;
+    case EE_UNITS_UCK_TORPEDO_UPDATE: theClass->TorpedoUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_CITIZEN_UPDATE: theClass->UpdateCitizen(theUnit); return 0;
+    case EE_UNITS_UCK_MISSILE_UPDATE: theClass->MissileUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_RIPPLES_DUE:
+        return theClass->mRippleEffect != NULL && theUnit->mUnitClass->mUnitType == kUnitTypeCatalina && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_3:
+        return theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && (unsigned long)theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_4:
+        return (theClass->mUnitType == kUnitTypeDock || theClass->mUnitType == kUnitTypeNavyYard) && theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_5:
+        return theClass->mRippleEffect != NULL && theUnit->mHitPoints > 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_UPDATE_RIPPLES: theClass->UpdateRipples(theUnit); return 0;
+    case EE_UNITS_UCK_TRAIL_DUE:
+        return theUnit->mHitPoints > 0 && theClass->mTrailEffect != NULL && theUnit->mVelocity != 0.0f && theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_UPDATE_TRAIL: theClass->UpdateTrail(theUnit); return 0;
+    case EE_UNITS_UCK_PROJECTILE_EFFECTS: theClass->ProjectileUpdateEffects(theUnit); return 0;
+    case EE_UNITS_UCK_CONDITION: return ee_units_cls_condition(EEObj(theClass), EEObj(theUnit), (uint32_t)inB);
+    case EE_UNITS_UCK_TORPEDO_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
+    case EE_UNITS_UCK_MISSILE_CONDITION: return theClass->MissileEvaluateCondition(theUnit, (unsigned long)inB);
+    case EE_UNITS_UCK_PROJECTILE_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
+    case EE_UNITS_UCK_LANDING_ARRIVED: return ee_units_cls_landing_has_arrived(EEObj(theClass), EEObj(theUnit), f[0], inB != 0);
+    case EE_UNITS_UCK_SPACE_BUILDING_ARRIVED: return theClass->SpaceBuildingHasArrived(theUnit, f[0]);
+    case EE_UNITS_UCK_NAVAL_TRANSPORT_ARRIVED: return ee_units_tr_naval_has_arrived(EEObj(theUnit), f[0]);
+    case EE_UNITS_UCK_NAVAL_ARRIVED: return theClass->NavalHasArrived(theUnit, f[0]);
+    case EE_UNITS_UCK_SUBMERGED_ARRIVED: return theClass->SubmergedNavalHasArrived(theUnit, f[0]);
+    case EE_UNITS_UCK_BASE_ARRIVED: return theClass->BaseHasArrived(theUnit, f[0]);
+    case EE_UNITS_UCK_FORTRESS_HAS_ROOM: return theClass->FortressHasRoom(theUnit, EEUckObject<EEComplexUnit>(inA));
+    case EE_UNITS_UCK_NAVAL_SELECT: return theClass->NavalBuildingSelectUnitToRelease(theUnit);
+    case EE_UNITS_UCK_BUILDING_SELECT: return theClass->BuildingSelectUnitToRelease(theUnit);
+    case EE_UNITS_UCK_BOARDING_LOCATION:
+        return theClass->TransportFindBoardingLocation(theUnit, EEUckObject<EEComplexUnit>(inA), *EEUckObject<GE3DPoint>((uint64_t)inB), *EEUckObject<GE3DPoint>((uint64_t)inC));
+    case EE_UNITS_UCK_GATE_SURROUNDING: theClass->GateGetSurroundingTiles(theUnit, *EEUckObject<std::vector<EETileCoordinate> >(inA), (long)inB, inC != 0); return 0;
+    case EE_UNITS_UCK_BUILDING_SURROUNDING: theClass->BuildingGetSurroundingTiles(theUnit, *EEUckObject<std::vector<EETileCoordinate> >(inA), (long)inB, inC != 0); return 0;
+    case EE_UNITS_UCK_BASE_SURROUNDING: theClass->BaseGetSurroundingTiles(theUnit, *EEUckObject<std::vector<EETileCoordinate> >(inA), (long)inB, inC != 0); return 0;
+    default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
+    }
 }
 
 // TEST ONLY: the UCBD record (ee/EEUnitClassKinds.h EEUCNote; the unit utilities' UUTL record's pattern)

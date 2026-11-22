@@ -1135,7 +1135,6 @@ public:
     void UnloadAt(EEComplexUnit* inTransport, long inX, long inY);  // (EEUCTransport)
     // The kinds' bodies (the EEUC* classes' members until R5b.4 round 32: EEUnitClassAir, -Buildings,
     // -Transports, -Shots, -People and -Ground.cpp); the overrides' run behind the dispatchers
-    void AirAnimalGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void AirAnimalUnitCreated(EEComplexUnit* inUnit);
     bool AirAnimalReturnToAirport(EEComplexUnit* inUnit);
     void FlyOffMap(EEComplexUnit* inUnit);
@@ -1184,7 +1183,6 @@ public:
     void LandCallParatroopPlane(EEComplexUnit* inUnit);
     void LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void LandTransportBadlyHurt(EEUnit* inUnit);
-    void LandableGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void LandableUnitCreated(EEComplexUnit* inUnit);
     void FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit);
     unsigned long GetNextFlightState(EEComplexUnit* inUnit);

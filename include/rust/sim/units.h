@@ -669,13 +669,13 @@ constexpr static const int32_t EE_UNITS_CZ_CAN_TAKE = 27;
 /// player `a`'s units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_UNITS_CZ_PLAYER_UNITS = 31;
 
-/// the carrier `a`'s tag point `c` at plane `b`'s frame in its scaled location into `io.p` (0: no tag points)
+/// tag list `d`'s point `c` at plane `b`'s frame in the scratch transformation into `io.p`
 constexpr static const int32_t EE_UNITS_CLS_CR_TAG = 73;
 
 /// unit `a`'s `mOrientation = (io.p[0], io.p[1], io.p[2])`
 constexpr static const int32_t EE_UNITS_CLS_CR_SET_ORIENTATION = 74;
 
-/// unit `a`'s `SetTransformation(its location at io.p, true)`
+/// the scratch transformation's `SetPosition(io.p)`
 constexpr static const int32_t EE_UNITS_CLS_CR_SET_POSITION = 75;
 
 /// unit `a`'s `mPhysicalModel.SetScale(io.f)`
@@ -687,13 +687,13 @@ constexpr static const int32_t EE_UNITS_CLS_CR_ROUTE_DOCK = 77;
 /// unit `a`'s player's air traffic control of its class is not NULL
 constexpr static const int32_t EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC = 78;
 
-/// unit `a`'s approach goal at `io.p` (the location goal's point, else a new location goal)
+/// `EEUGRust::NewLocation(&io.p, false, true, false, 0.0f, false, false)`
 constexpr static const int32_t EE_UNITS_CLS_CR_DECK_GOAL = 79;
 
 /// `EELocationGoalPoint(unit a's goal)` into `io.p`
 constexpr static const int32_t EE_UNITS_CLS_CR_LOCATION_GOAL_POINT = 80;
 
-/// unit `a` without a home base: the first slot's airport, else killed; the home base after
+/// unit `a`'s `SetHomeBase(` its air traffic control's first slot's airport `)`
 constexpr static const int32_t EE_UNITS_CLS_CR_HOME_FIRST_SLOT = 81;
 
 /// `gPhysics->mRandom.Generate()` into `io.f`
@@ -701,6 +701,42 @@ constexpr static const int32_t EE_UNITS_CLS_CR_RANDOM = 82;
 
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_CR_HEIGHT_AT = 83;
+
+/// carrier `a`'s `GetModel()->mTagPoints[mAnimation]`
+constexpr static const int32_t EE_UNITS_CLS_CR_TAG_LIST = 215;
+
+/// tag list `b`'s `mPoints.size()`
+constexpr static const int32_t EE_UNITS_CLS_CR_TAG_COUNT = 216;
+
+/// the scratch transformation = unit `a`'s location
+constexpr static const int32_t EE_UNITS_CLS_CR_SCRATCH_LOCATION = 217;
+
+/// `EETagPointList::Scale(the scratch, a->GetStats()->GetScale())`
+constexpr static const int32_t EE_UNITS_CLS_CR_SCRATCH_SCALE = 218;
+
+/// unit `a`'s `SetTransformation(the scratch, true)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION = 219;
+
+/// unit `a`'s `GetGoal()`
+constexpr static const int32_t EE_UNITS_CLS_CR_GOAL = 220;
+
+/// `EEGoalHasLocation(goal b)`
+constexpr static const int32_t EE_UNITS_CLS_CR_HAS_LOCATION = 221;
+
+/// unit `a`'s `ClearGoalQueue(0)`
+constexpr static const int32_t EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE = 222;
+
+/// unit `a`'s `SetGoal(goal b, 0, 0)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_GOAL = 223;
+
+/// `EESetLocationGoalPoint(goal b, io.p)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_LOCATION_POINT = 224;
+
+/// `ee_units_atc_slot_count(a's air traffic control)`
+constexpr static const int32_t EE_UNITS_CLS_CR_ATC_SLOTS = 225;
+
+/// unit `a`'s `Kill(true, false, false)`
+constexpr static const int32_t EE_UNITS_CLS_CR_KILL = 226;
 
 /// unit `a`'s `mActiveGoal` (`c` 0) or `mGoalState` (`c` 1)
 constexpr static const int32_t EE_UNITS_COND_GOAL = 1;
@@ -1083,7 +1119,7 @@ constexpr static const int32_t EE_UNITS_CLS_LV_MESH_Z = 85;
 /// the mesh `a`'s `SetZ(c, d, io.f)`
 constexpr static const int32_t EE_UNITS_CLS_LV_SET_MESH_Z = 86;
 
-/// the tile `a`'s `mHeight = io.f`
+/// the tile `a`'s `mHeight = io.f` (not NULL)
 constexpr static const int32_t EE_UNITS_CLS_LV_SET_TILE_HEIGHT = 87;
 
 /// `&gWorld.mMap->mTerrainMesh`
@@ -1101,8 +1137,8 @@ constexpr static const int32_t EE_UNITS_CLS_LV_SET_FACING = 91;
 /// `gCameraFollowing = false`
 constexpr static const int32_t EE_UNITS_CLS_LV_CAMERA_OFF = 92;
 
-/// `gWorld.mMap->GetClosestTile(io.p, ...)`'s `mHeight` into `io.f` (0: no tile)
-constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT = 39;
+/// `gWorld.mMap->GetClosestTile(io.p, ...)`
+constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE = 39;
 
 /// `EEGetPursuerOf(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
@@ -1110,25 +1146,25 @@ constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
 
-/// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
+/// unit `a`'s `mGoalState`
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL = 45;
 
-/// unit `a`'s `mLastAttacker` dereferenced and cleared
+/// unit `a`'s `mLastAttacker = NULL`
 constexpr static const int32_t EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER = 46;
 
 /// goal `b`'s `mKind`
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_KIND = 47;
 
-/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) of `io.p` (both read it as an input) into `io.p`
+/// goal `b`'s `GetGoalLocation(io.p)`
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_LOCATION = 48;
 
-/// goal `b`'s `mB1C` (c 0), `mB1D` (1), `GetIsAutoWaypoint()` (2), `GetGroupPathState()` (3), a gather goal on wood (4)
+/// goal `b`'s `mB1C`
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_FLAG = 49;
 
 /// goal `b`'s `mPathAttempts += c`
 constexpr static const int32_t EE_UNITS_CLS_MV_PATH_ATTEMPTS = 50;
 
-/// goal `b`'s `GetSidestepCount()` (c -1), else `SetSidestepCount(c)`
+/// goal `b`'s `GetSidestepCount()`
 constexpr static const int32_t EE_UNITS_CLS_MV_SIDESTEP = 51;
 
 /// goal `b`'s `SetGroupPathState(c)`
@@ -1161,7 +1197,7 @@ constexpr static const int32_t EE_UNITS_CLS_MV_NEXT_WAYPOINT = 60;
 /// unit `a`'s `DistanceSquared3D(io.p)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_MV_DISTANCE_3D = 61;
 
-/// unit `a`'s `mBoundedPathTiles.clear()` (c 0) or `push_back((io.a, io.b))` (1)
+/// unit `a`'s `mBoundedPathTiles.clear()`
 constexpr static const int32_t EE_UNITS_CLS_MV_BOUNDED = 62;
 
 /// unit `a`'s `SetVelocity(io.f)`
@@ -1176,7 +1212,7 @@ constexpr static const int32_t EE_UNITS_CLS_MV_ACTION_CHANGED = 67;
 /// unit `a`'s `UpdateWaterState(true)`
 constexpr static const int32_t EE_UNITS_CLS_MV_UPDATE_WATER_STATE = 68;
 
-/// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
+/// unit `a`'s `mInitialContactLocation = io.p`
 constexpr static const int32_t EE_UNITS_CLS_MV_INITIAL_CONTACT = 70;
 
 /// unit `a`'s player's `AvoidsEnemies(a)` (a virtual: the computer player's CPEV record)
@@ -1185,26 +1221,89 @@ constexpr static const int32_t EE_UNITS_CLS_MV_AVOIDS_ENEMIES = 71;
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
 
-/// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
+/// `unit->mActiveGoal`
+constexpr static const int32_t EE_UNITS_CLS_MV_ACTIVE_GOAL = 200;
+
+/// `unit->mBlockingUnit`
+constexpr static const int32_t EE_UNITS_CLS_MV_BLOCKING_UNIT = 201;
+
+/// `unit->mLastAttacker`
+constexpr static const int32_t EE_UNITS_CLS_MV_LAST_ATTACKER = 202;
+
+/// `unit->mLastAttacker->Dereference()`
+constexpr static const int32_t EE_UNITS_CLS_MV_DEREFERENCE_LAST_ATTACKER = 203;
+
+/// goal `b`'s `GetDestination(unit, io.p)`
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_DESTINATION = 205;
+
+/// goal `b`'s `mB1D`
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_B1D = 206;
+
+/// goal `b`'s `GetIsAutoWaypoint()`
+constexpr static const int32_t EE_UNITS_CLS_MV_AUTO_WAYPOINT = 207;
+
+/// goal `b`'s `GetGroupPathState()`
+constexpr static const int32_t EE_UNITS_CLS_MV_GROUP_PATH_STATE = 208;
+
+/// `EEGatherGoalCast(goal b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_GATHER_GOAL = 209;
+
+/// gather goal `b`'s `GetGatherResource()`
+constexpr static const int32_t EE_UNITS_CLS_MV_GATHER_RESOURCE = 210;
+
+/// unit `b`'s `mResourceType == kResourceWood`
+constexpr static const int32_t EE_UNITS_CLS_MV_RESOURCE_IS_WOOD = 211;
+
+/// goal `b`'s `SetSidestepCount(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_SIDESTEP = 212;
+
+/// `unit->mBoundedPathTiles.push_back((io.a, io.b))`
+constexpr static const int32_t EE_UNITS_CLS_MV_PUSH_BOUNDED = 213;
+
+/// `unit->mInitialContactLocation != io.p`
+constexpr static const int32_t EE_UNITS_CLS_MV_CONTACT_DIFFERS = 214;
+
+/// `gWorld.mInCinematic`
 constexpr static const int32_t EE_UNITS_CLS_ST_CINEMATIC_INTERVAL = 95;
 
 /// `EEIsCloakedEnemyOf(unit a, the current player)`
 constexpr static const int32_t EE_UNITS_CLS_ST_CLOAKED_ENEMY = 96;
 
-/// `gMiniMap->MoveUnit(a, ...)` onto its tile (c 1) or off it (c 0)
+/// `gMiniMap->MoveUnit(a, its tile, -10000, -10000)` (off it)
 constexpr static const int32_t EE_UNITS_CLS_ST_MINI_MAP = 97;
 
-/// unit `a`'s `SetCloakableChain(d)` (c 0), `SetCloakedChain(d)` (c 1), `SetOpacityChain(io.f)` (c 2)
+/// unit `a`'s `SetCloakableChain(d != 0)`
 constexpr static const int32_t EE_UNITS_CLS_ST_CHAIN = 98;
 
 /// class `b`'s `UpdateCloakDetection(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_ST_CLOAK_DETECTION = 99;
 
-/// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
+/// unit `a`'s area effects' `ApplyModifiers(3, the input, the radius, a)`
 constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
 
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING = 103;
+
+/// `EEGetRules().mCombat.mPowerRegenerationInterval`
+constexpr static const int32_t EE_UNITS_CLS_ST_POWER_INTERVAL = 227;
+
+/// `gMiniMap->MoveUnit(a, -10000, -10000, its tile)`
+constexpr static const int32_t EE_UNITS_CLS_ST_MINI_MAP_SHOW = 228;
+
+/// unit `a`'s `SetCloakedChain(d != 0)`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOAKED_CHAIN = 229;
+
+/// unit `a`'s `SetOpacityChain(io.f)`
+constexpr static const int32_t EE_UNITS_CLS_ST_OPACITY_CHAIN = 230;
+
+/// unit `a`'s `HasEffect(8)`
+constexpr static const int32_t EE_UNITS_CLS_ST_HAS_AREA_CLOAK = 231;
+
+/// the modifier's input and radius = 0
+constexpr static const int32_t EE_UNITS_CLS_ST_RESET_MODIFIERS = 232;
+
+/// the modifier's radius
+constexpr static const int32_t EE_UNITS_CLS_ST_MODIFIER_RADIUS = 233;
 
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
@@ -9788,6 +9887,181 @@ constexpr static const int32_t EE_UNITS_UC_DO_REFRESH_SOUND = 4;
 
 constexpr static const int32_t EE_UNITS_UC_DO_CREATE_DEATH_UNIT = 5;
 
+/// `class->mPhysicsModel = ` model `a`
+constexpr static const int32_t EE_UNITS_UC_SET_PHYSICS_MODEL = 600;
+
+/// the record's `mNumAttributes`
+constexpr static const int32_t EE_UNITS_UC_RECORD_ATTRIBUTES = 601;
+
+/// `class->mResearchTechnologies.resize(b)`
+constexpr static const int32_t EE_UNITS_UC_RESEARCH_RESIZE = 602;
+
+/// `class->mResearchTechnologies[b] = record->mAttributes[b]`
+constexpr static const int32_t EE_UNITS_UC_RESEARCH_SET = 603;
+
+/// `class->mButton = EEButtonObject::Get(record->mButton)`
+constexpr static const int32_t EE_UNITS_UC_SET_BUTTON = 604;
+
+/// `class->mModel = (EEModel*)EEMedia::Get(record->mGraphic)`
+constexpr static const int32_t EE_UNITS_UC_SET_MODEL = 605;
+
+/// `class->mCreationSound = EESoundObject::Get(record->mCreationSound)`
+constexpr static const int32_t EE_UNITS_UC_SET_CREATION_SOUND = 606;
+
+/// `class->mAcknowledgeSounds[b] = EESoundObject::Get(record's acknowledge sound b + 1)`
+constexpr static const int32_t EE_UNITS_UC_SET_ACKNOWLEDGE_SOUND = 607;
+
+/// `class->mSelectionSounds[b] = EESoundObject::Get(record's selection sound b + 1)`
+constexpr static const int32_t EE_UNITS_UC_SET_SELECTION_SOUND = 608;
+
+/// `class->mDeathSound = EESoundObject::Get(record->mDeathSound)`
+constexpr static const int32_t EE_UNITS_UC_SET_DEATH_SOUND = 609;
+
+/// `record->mLineOfSight > kMaxLineOfSight`
+constexpr static const int32_t EE_UNITS_UC_LOS_TOO_FAR = 610;
+
+/// `ESDebugOut(` the line of sight's warning `)`
+constexpr static const int32_t EE_UNITS_UC_LOS_WARNING = 611;
+
+/// `class->mAIScriptName.Copy(record->mAIScriptName, ...)`
+constexpr static const int32_t EE_UNITS_UC_COPY_SCRIPT_NAME = 612;
+
+/// `class->mName.Copy(record->mName, ...)`
+constexpr static const int32_t EE_UNITS_UC_COPY_NAME = 613;
+
+/// `EEAnimal::Find(record->mUnitType)`
+constexpr static const int32_t EE_UNITS_UC_FIND_ANIMAL = 614;
+
+/// animal `a`'s `mAnimalID`
+constexpr static const int32_t EE_UNITS_UC_ANIMAL_ID = 615;
+
+/// `gTechTree.Get(record->mTechnology)`
+constexpr static const int32_t EE_UNITS_UC_RECORD_TECH_NODE = 616;
+
+/// node `a`'s `mEpoch`
+constexpr static const int32_t EE_UNITS_UC_NODE_EPOCH = 617;
+
+/// `class->GetNumResearchTechnologies()`
+constexpr static const int32_t EE_UNITS_UC_NUM_RESEARCH = 618;
+
+/// `gTechTree.Get(class->mResearchTechnologies[b])`
+constexpr static const int32_t EE_UNITS_UC_RESEARCH_TECH_NODE = 619;
+
+/// `class->mImprovements = ` the record's upgrade table
+constexpr static const int32_t EE_UNITS_UC_SET_IMPROVEMENTS = 620;
+
+/// `EEGraphicEffect::Get(` the record's effect `b`)` (the constructor's order)
+constexpr static const int32_t EE_UNITS_UC_RECORD_EFFECT = 621;
+
+/// effect `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_UC_EFFECT_REFERENCE = 622;
+
+/// the class's effect `b` (the constructor's order) `=` effect `a`
+constexpr static const int32_t EE_UNITS_UC_SET_EFFECT = 623;
+
+/// `class->mAIScriptName.GetLength()`
+constexpr static const int32_t EE_UNITS_UC_SCRIPT_NAME_LENGTH = 624;
+
+/// `class->mAIScript = EEUnitAction::GetScript(class->mAIScriptName)`
+constexpr static const int32_t EE_UNITS_UC_SET_AI_SCRIPT = 625;
+
+/// `class->mAIScript`
+constexpr static const int32_t EE_UNITS_UC_AI_SCRIPT = 626;
+
+/// `ee_units_unit_class_fill(static_cast<EeUnitsUnitClassFields*>(class), record, the fill input at a)`
+constexpr static const int32_t EE_UNITS_UC_CLASS_FILL = 627;
+
+/// `class->mBehavior = EEUnitBehavior::sTable[record->mBehavior]`
+constexpr static const int32_t EE_UNITS_UC_SET_CLASS_BEHAVIOR = 628;
+
+/// `EEDbFindFile(gDataPath, kDbObjectsFile, the file = NULL)`
+constexpr static const int32_t EE_UNITS_UC_DB_FIND = 640;
+
+/// `ESVERIFY_AT(b != 0, c)`
+constexpr static const int32_t EE_UNITS_UC_VERIFY = 641;
+
+/// the file `!= NULL`
+constexpr static const int32_t EE_UNITS_UC_DB_FILE = 642;
+
+/// `gDatabaseObjects.Load(the file)`
+constexpr static const int32_t EE_UNITS_UC_DB_LOAD = 643;
+
+/// `delete the file`
+constexpr static const int32_t EE_UNITS_UC_DB_DELETE = 644;
+
+/// `gDatabaseObjects.GetCount()`
+constexpr static const int32_t EE_UNITS_UC_DB_COUNT = 645;
+
+/// `gDatabaseObjects.GetEntry(b)->mRecord`
+constexpr static const int32_t EE_UNITS_UC_DB_RECORD = 646;
+
+/// record `a`'s `mIsEnabled`
+constexpr static const int32_t EE_UNITS_UC_RECORD_ENABLED = 647;
+
+/// record `a`'s `mUnitType`
+constexpr static const int32_t EE_UNITS_UC_RECORD_TYPE = 648;
+
+/// record `a`'s `mCategory`
+constexpr static const int32_t EE_UNITS_UC_RECORD_CATEGORY = 649;
+
+/// `gUnitClassTable.assign(b, NULL)`
+constexpr static const int32_t EE_UNITS_UC_TABLE_ASSIGN = 650;
+
+/// `new EEUnitClass(b >= 0, record a, b >= 0 ? gPhysicsModels[b] : NULL)`
+constexpr static const int32_t EE_UNITS_UC_NEW_CLASS = 651;
+
+/// `EEUnitClass::RegisterUnitClass(class a)`
+constexpr static const int32_t EE_UNITS_UC_REGISTER_CLASS = 652;
+
+/// record `a`'s related type `b` (projectile, scaffolding, death, death spawn, packed, remains)
+constexpr static const int32_t EE_UNITS_UC_RECORD_RELATED = 653;
+
+/// class `a`'s related class `b` `= gUnitClassTable[c]`
+constexpr static const int32_t EE_UNITS_UC_SET_RELATED = 654;
+
+/// class `a`'s related class `b`'s `Reference()`
+constexpr static const int32_t EE_UNITS_UC_REFERENCE_RELATED = 655;
+
+/// class `a`'s `mIsWall = gUnitSetManager.Contains(a->mUnitType, 9)`
+constexpr static const int32_t EE_UNITS_UC_SET_IS_WALL = 656;
+
+/// class `a`'s `mIsCyber` (set 0x38)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_CYBER = 657;
+
+/// class `a`'s `mIsHorse` (set 0x6e)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_HORSE = 658;
+
+/// class `a`'s `mIsHuman` (set 0x71)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_HUMAN = 659;
+
+/// class `a`'s `mIsMedic` (set 0x81)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_MEDIC = 660;
+
+/// class `a`'s `mIsFlare` (set 0x8a)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_FLARE = 661;
+
+/// class `a`'s `mIsBoobyTrap` (set 0x97)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_BOOBY_TRAP = 662;
+
+/// class `a`'s `mIsParatrooperBomber` (set 0x96)
+constexpr static const int32_t EE_UNITS_UC_SET_IS_PARATROOPER_BOMBER = 663;
+
+/// class `a`'s `mSkipsLineOfFireCheck` (set 0x86)
+constexpr static const int32_t EE_UNITS_UC_SET_SKIPS_LINE_OF_FIRE = 664;
+
+/// class `a`'s `mIsLandBuildingClass = a->IsLandBuilding()`
+constexpr static const int32_t EE_UNITS_UC_SET_LAND_BUILDING_CLASS = 665;
+
+/// `gDatabaseObjects.Clear()`
+constexpr static const int32_t EE_UNITS_UC_DB_CLEAR = 666;
+
+/// `std::sort(EEUnitClass::sUnitTypes, EEUnitClassNameLess())`
+constexpr static const int32_t EE_UNITS_UC_SORT_TYPES = 667;
+
+constexpr static const int32_t EE_UNITS_UC_DO_CONSTRUCT = 100;
+
+constexpr static const int32_t EE_UNITS_UC_DO_CREATE_UNIT_CLASSES = 101;
+
 /// `class->mIsComplex`
 constexpr static const int32_t EE_UNITS_UC_IS_COMPLEX = 300;
 
@@ -10471,6 +10745,605 @@ constexpr static const int32_t EE_UNITS_UC_PRODUCER_TILE_X = 167;
 
 constexpr static const int32_t EE_UNITS_UC_PRODUCER_TILE_Y = 168;
 
+/// `f[0..3]` = the unit's location's X, Y, Z
+constexpr static const int32_t EE_UNITS_UCA_LOCATION = 2000;
+
+/// `unit->mGoalState`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_STATE = 2001;
+
+/// `EEGoalHasLocation(goal a)`
+constexpr static const int32_t EE_UNITS_UCA_HAS_LOCATION = 2002;
+
+/// `EERustGoalCast(goal a, b)`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_CAST = 2003;
+
+/// `f[0..3] = EELocationGoalPoint(goal a)`
+constexpr static const int32_t EE_UNITS_UCA_LOCATION_POINT = 2004;
+
+/// goal `a`'s `GetPatrolTarget()->GetTileX()`
+constexpr static const int32_t EE_UNITS_UCA_PATROL_TILE_X = 2005;
+
+/// goal `a`'s `GetPatrolTarget()->GetTileY()`
+constexpr static const int32_t EE_UNITS_UCA_PATROL_TILE_Y = 2006;
+
+/// goal `a`'s `GetExploreTileCenter(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_EXPLORE_CENTER = 2007;
+
+/// `unit->StartAction(b)`
+constexpr static const int32_t EE_UNITS_UCA_START_ACTION = 2008;
+
+/// goal `a`'s `Step(unit)`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_STEP = 2009;
+
+/// `unit->mUnitClass->mAirTrafficType`
+constexpr static const int32_t EE_UNITS_UCA_AIR_TRAFFIC_TYPE = 2010;
+
+/// `f[0..3] = ` goal `a`'s `GetGroundTarget()`
+constexpr static const int32_t EE_UNITS_UCA_GROUND_TARGET = 2011;
+
+/// goal `a`'s `GetGoalLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_LOCATION = 2012;
+
+/// goal `a`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_UCA_ATTACK_TARGET = 2013;
+
+/// unit `a`'s `mComplexUnit`
+constexpr static const int32_t EE_UNITS_UCA_COMPLEX_OF = 2014;
+
+/// `unit->mUnitClass->mProjectileClass != NULL`
+constexpr static const int32_t EE_UNITS_UCA_HAS_PROJECTILE = 2015;
+
+/// `EECombatFindDropLocation(unit, NULL, f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_FIND_DROP = 2016;
+
+/// `f[0..3]` = complex unit `a`'s location's X, Y, Z
+constexpr static const int32_t EE_UNITS_UCA_LOCATION_OF = 2017;
+
+/// unit `a`'s `mUnitClass->GetTileSize()`
+constexpr static const int32_t EE_UNITS_UCA_TILE_SIZE_OF = 2018;
+
+/// unit `a`'s `GetTileX()`
+constexpr static const int32_t EE_UNITS_UCA_TILE_X_OF = 2019;
+
+/// unit `a`'s `GetTileY()`
+constexpr static const int32_t EE_UNITS_UCA_TILE_Y_OF = 2020;
+
+/// `f[0] = class->GetCruiseAltitude()`
+constexpr static const int32_t EE_UNITS_UCA_CRUISE = 2021;
+
+/// `EEFindLandingPoint(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_LANDING_POINT = 2022;
+
+/// `::gWorld.mMap->GetTile(b, c)`
+constexpr static const int32_t EE_UNITS_UCA_GET_TILE = 2023;
+
+/// `::gWorld.mMap->GetClosestTile(f[0..3], the scratch x, y)`
+constexpr static const int32_t EE_UNITS_UCA_CLOSEST_TILE = 2024;
+
+/// `f[0] = ` tile `a`'s `GetHeight()`
+constexpr static const int32_t EE_UNITS_UCA_TILE_HEIGHT_OF = 2025;
+
+/// `class->ApproachCarrier(unit, b != 0)`
+constexpr static const int32_t EE_UNITS_UCA_APPROACH_CARRIER = 2026;
+
+/// `unit->mPlayer->mAirTraffic[unit->mUnitClass->mAirTrafficType - 1]`
+constexpr static const int32_t EE_UNITS_UCA_ATC = 2027;
+
+/// `ee_units_atc_remove_plane(atc a, unit->mHomeBase, unit)`
+constexpr static const int32_t EE_UNITS_UCA_ATC_REMOVE_PLANE = 2028;
+
+/// `unit->mHomeBase->LoadCargo(unit, 1, 0)`
+constexpr static const int32_t EE_UNITS_UCA_HOME_LOAD = 2029;
+
+/// `unit->SetHomeBase(complex unit a)`
+constexpr static const int32_t EE_UNITS_UCA_SET_HOME_BASE = 2030;
+
+/// `unit->SetIsCommandable(b != 0)`
+constexpr static const int32_t EE_UNITS_UCA_SET_COMMANDABLE = 2031;
+
+/// `unit->SetHeight(f[0])`
+constexpr static const int32_t EE_UNITS_UCA_SET_HEIGHT = 2032;
+
+/// `class->TakeOffFromCarrier(unit)`
+constexpr static const int32_t EE_UNITS_UCA_TAKE_OFF_CARRIER = 2033;
+
+/// `ee_units_atc_find_nearest_airport(atc a, unit)`
+constexpr static const int32_t EE_UNITS_UCA_FIND_NEAREST_AIRPORT = 2034;
+
+/// `unit->mHomeBase`
+constexpr static const int32_t EE_UNITS_UCA_HOME_BASE = 2035;
+
+/// `unit->mHomeBase->mFacing`
+constexpr static const int32_t EE_UNITS_UCA_HOME_FACING = 2036;
+
+/// `class->ApproachRunway(unit, b, c)`
+constexpr static const int32_t EE_UNITS_UCA_APPROACH_RUNWAY = 2037;
+
+/// `unit->mBehavior->mCanTargetEnemies`
+constexpr static const int32_t EE_UNITS_UCA_TARGETS_ENEMIES = 2038;
+
+/// `EEFindTargetNear(unit, b, c, f[0])`
+constexpr static const int32_t EE_UNITS_UCA_FIND_TARGET_NEAR = 2039;
+
+/// goal `a`'s `SetAttackTarget(unit b)`
+constexpr static const int32_t EE_UNITS_UCA_SET_ATTACK_TARGET = 2040;
+
+/// `unit->ClearGoals(0)`
+constexpr static const int32_t EE_UNITS_UCA_CLEAR_GOALS = 2041;
+
+/// goal `a`'s `GetB1C()`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_B1C = 2042;
+
+/// `EEUGRust::NewLocation(f[0], f[1], f[2], b != 0, true, false, 0.0f, false, false)`
+constexpr static const int32_t EE_UNITS_UCA_NEW_LOCATION = 2043;
+
+/// `unit->SetGoal(goal a, 0, 0)`
+constexpr static const int32_t EE_UNITS_UCA_SET_GOAL = 2044;
+
+/// goal `a`'s `GetStartAction()`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_START_ACTION = 2045;
+
+/// `class->ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_UCA_ACTION_CHANGED = 2046;
+
+/// `ee_units_atc_slot_count(atc a)`
+constexpr static const int32_t EE_UNITS_UCA_ATC_SLOT_COUNT = 2047;
+
+/// `unit->Kill(true, false, false)`
+constexpr static const int32_t EE_UNITS_UCA_KILL = 2048;
+
+/// `unit->mContainer`
+constexpr static const int32_t EE_UNITS_UCA_CONTAINER = 2049;
+
+/// `ee_units_atc_slot_airport(atc a, b)`
+constexpr static const int32_t EE_UNITS_UCA_ATC_SLOT_AIRPORT = 2050;
+
+/// `class->LandableReturnToAirport(unit)`
+constexpr static const int32_t EE_UNITS_UCA_RETURN_TO_AIRPORT = 2051;
+
+/// `class->TakeOffFromRunway(unit, b, c)`
+constexpr static const int32_t EE_UNITS_UCA_TAKE_OFF_RUNWAY = 2052;
+
+/// `unit->SetFlightTime(unit->GetStats()->mFlightTime)`
+constexpr static const int32_t EE_UNITS_UCA_SET_STATS_FLIGHT_TIME = 2053;
+
+/// `class->mIsParatrooperBomber`
+constexpr static const int32_t EE_UNITS_UCA_PARATROOPER_BOMBER = 2054;
+
+/// `unit->SetAmmunition(class->mAmmunition)`
+constexpr static const int32_t EE_UNITS_UCA_SET_AMMUNITION = 2055;
+
+/// `unit->SetAnimation(b, -1, 0)`
+constexpr static const int32_t EE_UNITS_UCA_SET_ANIMATION = 2056;
+
+/// `unit->GetNextWaypointPoint(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_NEXT_WAYPOINT = 2057;
+
+/// `f[0] = class->GetHeightAt(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_HEIGHT_AT = 2058;
+
+/// `ee_units_atc_queue_request(atc a, unit->mHomeBase, unit, 1)`
+constexpr static const int32_t EE_UNITS_UCA_ATC_QUEUE_LANDING = 2059;
+
+/// `unit->SetGoal(EEUGRust::NewAttackGround(f[0..3], goal a->GetB1C()), 0, 0)`
+constexpr static const int32_t EE_UNITS_UCA_ATTACK_GROUND_GOAL = 2060;
+
+/// `f[0] = unit->mHeight`
+constexpr static const int32_t EE_UNITS_UCA_HEIGHT = 2061;
+
+/// `unit->mHeight = f[0]`
+constexpr static const int32_t EE_UNITS_UCA_SET_HEIGHT_FIELD = 2062;
+
+/// `unit->SetInitialContactLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_SET_CONTACT = 2063;
+
+/// `unit->mInitialContactLocation != f[0..3]`
+constexpr static const int32_t EE_UNITS_UCA_CONTACT_DIFFERS = 2064;
+
+/// `unit->mInitialContactLocation = f[0..3]`
+constexpr static const int32_t EE_UNITS_UCA_SET_CONTACT_FIELD = 2065;
+
+/// `f[0] = unit->mInitialContactHeading`
+constexpr static const int32_t EE_UNITS_UCA_CONTACT_HEADING = 2066;
+
+/// `unit->mInitialContactHeading = f[0]`
+constexpr static const int32_t EE_UNITS_UCA_SET_CONTACT_HEADING = 2067;
+
+/// goal `a`'s `mKind`
+constexpr static const int32_t EE_UNITS_UCA_GOAL_KIND = 2068;
+
+/// `f[0] = ` complex unit `a`'s `mVelocity`
+constexpr static const int32_t EE_UNITS_UCA_VELOCITY_OF = 2069;
+
+/// `f[0] = unit->GetStats()->mRange`
+constexpr static const int32_t EE_UNITS_UCA_RANGE = 2070;
+
+/// `f[0] = EECombatHitDistanceSquared(unit, unit a, -10000.0f, -10000.0f)`
+constexpr static const int32_t EE_UNITS_UCA_HIT_DISTANCE = 2071;
+
+/// goal `a`'s `GetDestination(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_DESTINATION = 2072;
+
+/// `class->mPhysicsModel != NULL && class->mPhysicsModel->IsAirplane()`
+constexpr static const int32_t EE_UNITS_UCA_AIRPLANE_MODEL = 2073;
+
+/// `unit->SetF220(class->mPhysicsModel->ComputeRoll(unit, f[0]))`
+constexpr static const int32_t EE_UNITS_UCA_COMPUTE_ROLL = 2074;
+
+/// `f[0..3] = unit->mAngularVelocity`'s yaw, pitch, roll
+constexpr static const int32_t EE_UNITS_UCA_ANGULAR_VELOCITY = 2075;
+
+/// `unit->mAngularVelocity = GEOrientation(f[0], f[1], f[2])`
+constexpr static const int32_t EE_UNITS_UCA_SET_ANGULAR_VELOCITY = 2076;
+
+/// `ee_units_atc_add_cargo_weight(unit->GetPlayer()->mAirTraffic[unit->GetUnitClass()->mAirTrafficType - 1], unit)`
+constexpr static const int32_t EE_UNITS_UCA_ATC_ADD_WEIGHT = 2077;
+
+/// the transformation at `a` = the unit's location
+constexpr static const int32_t EE_UNITS_UCA_LOCATION_MATRIX = 2078;
+
+/// `f[0] = unit->GetStats()->GetScale()`
+constexpr static const int32_t EE_UNITS_UCA_STATS_SCALE = 2079;
+
+/// `unit->GetModel()->mTagPoints[unit->mAnimation]`
+constexpr static const int32_t EE_UNITS_UCA_TAG_LIST = 2080;
+
+/// tag list `a`'s `mPoints.size()`
+constexpr static const int32_t EE_UNITS_UCA_TAG_COUNT = 2081;
+
+/// tag list `a`'s `mPoints[unit->mWeaponTagPoint]->GetOffset(unit->mPhysicalModel.GetFrame(), f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_TAG_OFFSET = 2082;
+
+/// `f[0] = class->mProjectileClass->mAcceleration`
+constexpr static const int32_t EE_UNITS_UCA_GRAVITY = 2083;
+
+/// `f[0] = unit->GetStats()->mLaunchSpeed`
+constexpr static const int32_t EE_UNITS_UCA_LAUNCH_SPEED = 2084;
+
+/// `f[0] = unit->GetStats()->mAreaEffect`
+constexpr static const int32_t EE_UNITS_UCA_AREA_EFFECT = 2085;
+
+/// `unit->mAmmunition`
+constexpr static const int32_t EE_UNITS_UCA_AMMUNITION = 2086;
+
+/// `unit->mPlayer->mPlayerID`
+constexpr static const int32_t EE_UNITS_UCA_PLAYER_ID = 2087;
+
+/// `::gWorld.mPlayers[b]`'s fighter tech `c` (Watchman, Guardian, Sentinel) available and allowed
+constexpr static const int32_t EE_UNITS_UCA_FIGHTER_USABLE = 2088;
+
+/// `::gWorld.mPlayers[b]`'s fighter tech `c`'s `mData->mUnitClass`
+constexpr static const int32_t EE_UNITS_UCA_FIGHTER_CLASS = 2089;
+
+/// `gUnitClassTable[b]`
+constexpr static const int32_t EE_UNITS_UCA_CLASS_AT = 2090;
+
+/// `unit->GetNumCargoUnits()`
+constexpr static const int32_t EE_UNITS_UCA_CARGO_COUNT = 2091;
+
+/// `unit->mUnitClass->mTransportCapacity`
+constexpr static const int32_t EE_UNITS_UCA_CAPACITY = 2092;
+
+/// class `a`'s `CreateUnitAt(the transformation at b, c, 0, unit)->mComplexUnit`
+constexpr static const int32_t EE_UNITS_UCA_CREATE_CARRIED = 2093;
+
+/// `unit->LoadCargo(complex unit a, 1, 0)`
+constexpr static const int32_t EE_UNITS_UCA_LOAD_CARGO = 2094;
+
+/// `unit->GetPosition(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCA_POSITION = 2095;
+
+/// `EEConvertUnit(unit, 0, 0)`
+constexpr static const int32_t EE_UNITS_UCA_CONVERT = 2096;
+
+/// complex unit `a`'s `SetFlightTime(b)`
+constexpr static const int32_t EE_UNITS_UCA_SET_FLIGHT_TIME_OF = 2097;
+
+/// complex unit `a`'s `DropPath()`
+constexpr static const int32_t EE_UNITS_UCA_DROP_PATH_OF = 2098;
+
+/// `unit->DropPath()`
+constexpr static const int32_t EE_UNITS_UCA_DROP_PATH = 2099;
+
+/// `f[0] = unit->mTile->GetHeight()`
+constexpr static const int32_t EE_UNITS_UCA_TILE_HEIGHT = 2100;
+
+/// `unit->mOrientation = GEOrientation(f[0], f[1], f[2])`
+constexpr static const int32_t EE_UNITS_UCA_SET_ORIENTATION = 2101;
+
+/// `f[0] = class->mCruiseAltitude`
+constexpr static const int32_t EE_UNITS_UCA_CRUISE_FIELD = 2103;
+
+/// `f[0] = ` complex unit `a`'s `mOpacity`
+constexpr static const int32_t EE_UNITS_UCA_OPACITY_OF = 2104;
+
+/// complex unit `a`'s `mOpacity = f[0]`
+constexpr static const int32_t EE_UNITS_UCA_SET_OPACITY_OF = 2105;
+
+/// complex unit `a`'s `mNextPart`
+constexpr static const int32_t EE_UNITS_UCA_NEXT_PART_OF = 2106;
+
+/// `unit->mHomeBase->GetTileX()`
+constexpr static const int32_t EE_UNITS_UCA_HOME_TILE_X = 2107;
+
+/// `unit->mHomeBase->GetTileY()`
+constexpr static const int32_t EE_UNITS_UCA_HOME_TILE_Y = 2108;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_FLY_TO_GOAL = 1;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_GROUND_HEIGHT = 2;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_LANDABLE_OP = 3;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_LANDABLE_CREATED = 4;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_BOMB_ON_TARGET = 5;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_CARRIER_AIRCRAFT = 6;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_FLY_OFF_MAP = 7;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_AIR_ANIMAL_RETURN = 8;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_AIR_ANIMAL_PATH = 9;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_AIR_ANIMAL_DEATH_ROLL = 10;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED = 11;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_SPACESHIP_HOLDING = 12;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_HELICOPTER_PATH = 13;
+
+constexpr static const int32_t EE_UNITS_UCA_DO_OPACITY_CHAIN = 14;
+
+/// `&sUcbUnits[b]` (a `std::vector<EEUnit*>`)
+constexpr static const int32_t EE_UNITS_UCB_UNITS_VEC = 1100;
+
+/// `&sUcbTiles[b]` (a `std::vector<U2DPoint<long> >`)
+constexpr static const int32_t EE_UNITS_UCB_TILES_VEC = 1101;
+
+/// unit vector `a`'s `size()`
+constexpr static const int32_t EE_UNITS_UCB_UNITS_SIZE = 1102;
+
+/// unit vector `a`'s `[b]`
+constexpr static const int32_t EE_UNITS_UCB_UNITS_AT = 1103;
+
+/// unit vector `a`'s `clear()`
+constexpr static const int32_t EE_UNITS_UCB_UNITS_CLEAR = 1104;
+
+/// tile vector `a`'s `clear()`
+constexpr static const int32_t EE_UNITS_UCB_GATE_TILES_CLEAR = 1106;
+
+/// tile vector `a`'s `size()`
+constexpr static const int32_t EE_UNITS_UCB_TILES_SIZE = 1107;
+
+/// tile vector `a`'s `[b].mX`
+constexpr static const int32_t EE_UNITS_UCB_TILE_X = 1108;
+
+/// tile vector `a`'s `[b].mY`
+constexpr static const int32_t EE_UNITS_UCB_TILE_Y = 1109;
+
+/// `EEGetWallGateTiles(U2DPoint<long>(b's low, high 32 bits), c, tile vector a)`
+constexpr static const int32_t EE_UNITS_UCB_WALL_GATE_TILES = 1110;
+
+/// `ee_units_uu_units_on(0, tile vector a, unit vector b)`
+constexpr static const int32_t EE_UNITS_UCB_UNITS_ON = 1111;
+
+/// unit `a`'s `GetUnitClass()`
+constexpr static const int32_t EE_UNITS_UCB_UNIT_CLASS_OF = 1112;
+
+/// class `a`'s `mIsWall`
+constexpr static const int32_t EE_UNITS_UCB_CLASS_IS_WALL = 1113;
+
+/// class `a`'s `GetUnitType()`
+constexpr static const int32_t EE_UNITS_UCB_CLASS_TYPE = 1114;
+
+/// `EEDoesWallGateFit(EETileCoordinate(b's low, high 32 bits), c's low 32 bits, c's high 32 bits, unit vector a)`
+constexpr static const int32_t EE_UNITS_UCB_WALL_GATE_FIT = 1115;
+
+/// `::gWorld.mPlayers[b]`
+constexpr static const int32_t EE_UNITS_UCB_PLAYER_AT = 1116;
+
+/// `gUnitClassTable[player a->mTechnologies->Get(b)->mData->mUnitClass]`
+constexpr static const int32_t EE_UNITS_UCB_TECH_CLASS = 1117;
+
+/// `f[0] = (float)` unit `a`'s `mHitPoints / mStats->mMaxHitPoints`
+constexpr static const int32_t EE_UNITS_UCB_HIT_RATIO = 1118;
+
+/// player `a`'s `GetPlayerID()`
+constexpr static const int32_t EE_UNITS_UCB_PLAYER_ID = 1119;
+
+/// `EEReplaceUnit(complex unit a, b, class c)`
+constexpr static const int32_t EE_UNITS_UCB_REPLACE_UNIT = 1120;
+
+/// `EETurnGatePart(the transformation at a, b, c)`
+constexpr static const int32_t EE_UNITS_UCB_TURN_GATE_PART = 1121;
+
+/// complex unit `a`'s `SetTransformation(the transformation at b, true)`
+constexpr static const int32_t EE_UNITS_UCB_SET_TRANSFORMATION_OF = 1122;
+
+/// complex unit `a`'s `SetGateDirection(b)`
+constexpr static const int32_t EE_UNITS_UCB_SET_GATE_DIRECTION_OF = 1123;
+
+/// unit `a`'s `GetComplexUnit()->GetPosition(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCB_POSITION_OF = 1124;
+
+/// `f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_UCB_MESH_Z = 1125;
+
+/// unit `a`'s `GetComplexUnit()->SetLocation(f[0..3], true)`
+constexpr static const int32_t EE_UNITS_UCB_SET_LOCATION_OF = 1126;
+
+/// unit `a`'s `GetComplexUnit()->LinkPart(unit b's GetComplexUnit())`
+constexpr static const int32_t EE_UNITS_UCB_LINK_PART = 1127;
+
+/// unit `a`'s `GetComplexUnit()->StartAction(b)`
+constexpr static const int32_t EE_UNITS_UCB_START_ACTION_OF = 1128;
+
+/// unit `a`'s `SetHitPoints(UMFloatToLong(a->GetStats()->mMaxHitPoints * f[0]))`
+constexpr static const int32_t EE_UNITS_UCB_SET_HEALTH = 1129;
+
+/// `gUIManager->mInScenarioEditor && !gGameScreenActive`
+constexpr static const int32_t EE_UNITS_UCB_IN_EDITOR = 1130;
+
+/// `::gWorld.FlushQueuedPlacements()`
+constexpr static const int32_t EE_UNITS_UCB_FLUSH_PLACEMENTS = 1131;
+
+/// player `a`'s `AddPendingUnits(0, true)`
+constexpr static const int32_t EE_UNITS_UCB_ADD_PENDING = 1132;
+
+/// player `a`'s `RemoveKilledUnits()`
+constexpr static const int32_t EE_UNITS_UCB_REMOVE_KILLED = 1133;
+
+/// player `a`'s `mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && class b->GetUnitType() != kUnitTypeGatePalisades`
+constexpr static const int32_t EE_UNITS_UCB_SPACE_GATES = 1134;
+
+/// `EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(unit a))`
+constexpr static const int32_t EE_UNITS_UCB_ENERGY_WALL = 1135;
+
+/// unit `a`'s `GetComplexUnit()->GetCommandType()`
+constexpr static const int32_t EE_UNITS_UCB_COMMAND_TYPE_OF = 1136;
+
+/// unit `a`'s `GetComplexUnit()->mGateDirection`
+constexpr static const int32_t EE_UNITS_UCB_GATE_DIRECTION_OF = 1137;
+
+/// `class->GetPart(complex unit a, b)`
+constexpr static const int32_t EE_UNITS_UCB_GET_PART = 1138;
+
+/// unit `a`'s `GetPlayer()->GetPlayerID()`
+constexpr static const int32_t EE_UNITS_UCB_UNIT_PLAYER_ID = 1139;
+
+/// unit `a`'s `GetComplexUnit()`
+constexpr static const int32_t EE_UNITS_UCB_COMPLEX_OF = 1140;
+
+/// the transformation at `b` = complex unit `a`'s `mPhysicalModel.GetLocation()`
+constexpr static const int32_t EE_UNITS_UCB_LOCATION_MATRIX_OF = 1141;
+
+/// complex unit `a`'s `SetAnimation(b, -1, 0)`
+constexpr static const int32_t EE_UNITS_UCB_SET_ANIMATION_OF = 1142;
+
+/// unit `a`'s `mComplexUnit->mIsBuilt && a->mHitPoints > 0`
+constexpr static const int32_t EE_UNITS_UCB_BUILT_ALIVE = 1143;
+
+/// `EEAreTilesLevel(tile vector a)`
+constexpr static const int32_t EE_UNITS_UCB_TILES_LEVEL = 1144;
+
+/// `ee_units_uu_units_of_type_on_tiles(tile vector a, b, unit vector c)`
+constexpr static const int32_t EE_UNITS_UCB_UNITS_OF_TYPE_ON_TILES = 1145;
+
+/// `ee_units_uu_player_units_of_type(b, c, unit vector a)`
+constexpr static const int32_t EE_UNITS_UCB_PLAYER_UNITS_OF_TYPE = 1146;
+
+/// unit `a`'s `mComplexUnit`
+constexpr static const int32_t EE_UNITS_UCB_COMPLEX_FIELD = 1147;
+
+/// complex unit `a`'s `SetColor(b != 0 ? the highlight : the normal colour)`
+constexpr static const int32_t EE_UNITS_UCB_SET_COLOR = 1148;
+
+/// complex unit `a`'s `SetIsTinted(b != 0)`
+constexpr static const int32_t EE_UNITS_UCB_SET_TINTED = 1149;
+
+/// complex unit `a`'s `mIsTinted`
+constexpr static const int32_t EE_UNITS_UCB_IS_TINTED = 1150;
+
+/// `EEDoesWallGateFitOnUnit(complex unit a, b's low 32 bits, b's high 32 bits, unit vector c)`
+constexpr static const int32_t EE_UNITS_UCB_FIT_ON_UNIT = 1151;
+
+/// player `a`'s `mPlayerID`
+constexpr static const int32_t EE_UNITS_UCB_PLAYER_ID_FIELD = 1152;
+
+/// `::gWorld.GetMap()->GetTile(b, c)`
+constexpr static const int32_t EE_UNITS_UCB_MAP_TILE = 1153;
+
+/// tile `a`'s `mUnits`
+constexpr static const int32_t EE_UNITS_UCB_TILE_NODES = 1154;
+
+/// node `a`'s `mUnit`
+constexpr static const int32_t EE_UNITS_UCB_GATE_NODE_UNIT = 1155;
+
+/// node `a`'s `mNext`
+constexpr static const int32_t EE_UNITS_UCB_GATE_NODE_NEXT = 1156;
+
+/// unit `a`'s `mUnitClass->mIsWall && mHitPoints > 0 && mTileNode != NULL && GetComplexUnit()->mIsTinted`
+constexpr static const int32_t EE_UNITS_UCB_TINTED_WALL = 1157;
+
+/// `ee_units_uu_square_ring_tiles(b's low, high 32 bits, c, tile vector a)`
+constexpr static const int32_t EE_UNITS_UCB_RING = 1158;
+
+/// unit `a`'s `GetTileX()`
+constexpr static const int32_t EE_UNITS_UCB_UNIT_TILE_X = 1159;
+
+/// unit `a`'s `GetTileY()`
+constexpr static const int32_t EE_UNITS_UCB_UNIT_TILE_Y = 1160;
+
+/// unit `a`'s `mUnitClass->IsLandBuilding() && mHitPoints > 0 && ee_units_uu_targetable(0, its class, 0)`
+constexpr static const int32_t EE_UNITS_UCB_TARGET_BUILDING = 1161;
+
+/// complex unit `a`'s `mPreviousPart`
+constexpr static const int32_t EE_UNITS_UCB_PREVIOUS_PART = 1162;
+
+/// complex unit `a`'s `mNextPart`
+constexpr static const int32_t EE_UNITS_UCB_NEXT_PART_OF = 1163;
+
+/// `class->IsPartLeftOut(complex unit a)`
+constexpr static const int32_t EE_UNITS_UCB_PART_LEFT_OUT = 1164;
+
+/// `class->BaseGetSurroundingTiles(complex unit a, tile vector b, c, true)`
+constexpr static const int32_t EE_UNITS_UCB_GATE_BASE_SURROUNDING = 1165;
+
+/// `EESortUnique(tile vector a, less, equal_to)`
+constexpr static const int32_t EE_UNITS_UCB_SORT_UNIQUE = 1166;
+
+/// `unit->mCollisionState`
+constexpr static const int32_t EE_UNITS_UCB_COLLISION_STATE = 1167;
+
+/// `unit->GetNextWaypointPoint(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCB_NEXT_WAYPOINT = 1168;
+
+/// `unit->GetTileX()`
+constexpr static const int32_t EE_UNITS_UCB_SELF_TILE_X = 1169;
+
+/// `unit->GetTileY()`
+constexpr static const int32_t EE_UNITS_UCB_SELF_TILE_Y = 1170;
+
+/// `class->BuildingUnitCreated(unit)`
+constexpr static const int32_t EE_UNITS_UCB_BUILDING_UNIT_CREATED = 1171;
+
+/// `unit->mPreviousPart == NULL && unit->mNextPart != NULL`
+constexpr static const int32_t EE_UNITS_UCB_CHAIN_HEAD = 1172;
+
+/// `unit->StartAction(b)`
+constexpr static const int32_t EE_UNITS_UCB_START_ACTION = 1173;
+
+/// `class->ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_UCB_ACTION_CHANGED = 1174;
+
+/// `unit->SetBuilt(1, 0, 1)`
+constexpr static const int32_t EE_UNITS_UCB_SPACE_SET_BUILT = 1175;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_BUILD_GATE = 1;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_GATE_REPLACED = 2;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_WALL_GATE_FIT = 3;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_HIGHLIGHT_GATE_WALLS = 4;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_CLEAR_GATE_HIGHLIGHTS = 5;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_FIND_GATE_WALL = 6;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_NEAREST_TARGET_BUILDING = 7;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_GATE_SURROUNDING = 8;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_GATE_UNIT_CREATED = 9;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_SPACE_ARRIVED = 10;
+
+constexpr static const int32_t EE_UNITS_UCB_DO_SPACE_UNIT_CREATED = 11;
+
 /// `unit->mCargo.size()`
 constexpr static const int32_t EE_UNITS_UCB_CARGO_SIZE = 1000;
 
@@ -10835,6 +11708,138 @@ constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_ARRIVED = 8;
 
 constexpr static const int32_t EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT = 9;
 
+/// `EEUnitClassKinds(class)`
+constexpr static const int32_t EE_UNITS_UCK_KINDS = 2200;
+
+/// `EEClassBody(class, b)`
+constexpr static const int32_t EE_UNITS_UCK_BODY = 2201;
+
+/// `class->MissileActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_UCK_MISSILE_ACTION_CHANGED = 2202;
+
+/// `class->ProjectileActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_UCK_PROJECTILE_ACTION_CHANGED = 2203;
+
+/// `EEUnitClassActionChanged(b, class, unit)`
+constexpr static const int32_t EE_UNITS_UCK_ACTION_CHANGED = 2204;
+
+/// `EEUnitClassUpdate(b, class, unit)`
+constexpr static const int32_t EE_UNITS_UCK_UPDATE = 2205;
+
+/// `class->BombUpdate(unit)`
+constexpr static const int32_t EE_UNITS_UCK_BOMB_UPDATE = 2206;
+
+/// `!unit->IsFoundation() || unit->mHitPoints <= 0 || unit->mCurrentPhysicsAction == 2`
+constexpr static const int32_t EE_UNITS_UCK_PRIEST_UPDATES = 2207;
+
+/// `class->PriestVirtualB8(unit)`
+constexpr static const int32_t EE_UNITS_UCK_PRIEST_UPDATE = 2208;
+
+/// `class->TorpedoUpdate(unit)`
+constexpr static const int32_t EE_UNITS_UCK_TORPEDO_UPDATE = 2209;
+
+/// `class->UpdateCitizen(unit)`
+constexpr static const int32_t EE_UNITS_UCK_CITIZEN_UPDATE = 2210;
+
+/// `class->MissileUpdate(unit)`
+constexpr static const int32_t EE_UNITS_UCK_MISSILE_UPDATE = 2211;
+
+/// `class->ProjectileUpdate(unit)`
+constexpr static const int32_t EE_UNITS_UCK_PROJECTILE_UPDATE = 2212;
+
+/// `class->mRippleEffect != NULL && unit->mUnitClass->mUnitType == kUnitTypeCatalina && unit->mHitPoints != 0 && class->mRippleEffect->mDetailLevel <= gEffectDetail` (`UpdateEffects` body 2)
+constexpr static const int32_t EE_UNITS_UCK_RIPPLES_DUE = 2213;
+
+/// body 3's: `class->mRippleEffect != NULL && unit->mHitPoints != 0 && (unsigned long)class->mRippleEffect->mDetailLevel <= gEffectDetail`
+constexpr static const int32_t EE_UNITS_UCK_RIPPLES_DUE_3 = 2235;
+
+/// body 4's: a dock's or navy yard's, `class->mRippleEffect != NULL && unit->mHitPoints != 0 && ...->mDetailLevel <= gEffectDetail`
+constexpr static const int32_t EE_UNITS_UCK_RIPPLES_DUE_4 = 2236;
+
+/// body 5's: `class->mRippleEffect != NULL && unit->mHitPoints > 0 && ...->mDetailLevel <= gEffectDetail`
+constexpr static const int32_t EE_UNITS_UCK_RIPPLES_DUE_5 = 2237;
+
+/// `class->UpdateRipples(unit)`
+constexpr static const int32_t EE_UNITS_UCK_UPDATE_RIPPLES = 2214;
+
+/// `unit->mHitPoints > 0 && class->mTrailEffect != NULL && unit->mVelocity != 0.0f && class->mTrailEffect->mDetailLevel <= gEffectDetail`
+constexpr static const int32_t EE_UNITS_UCK_TRAIL_DUE = 2215;
+
+/// `class->UpdateTrail(unit)`
+constexpr static const int32_t EE_UNITS_UCK_UPDATE_TRAIL = 2216;
+
+/// `class->ProjectileUpdateEffects(unit)`
+constexpr static const int32_t EE_UNITS_UCK_PROJECTILE_EFFECTS = 2217;
+
+/// `ee_units_cls_condition(class, unit, b)`
+constexpr static const int32_t EE_UNITS_UCK_CONDITION = 2218;
+
+/// `EECombatCondition(EE_COMBAT_GOAL_TORPEDO, unit, b, EECombatShotTarget(unit), NULL, class)`
+constexpr static const int32_t EE_UNITS_UCK_TORPEDO_CONDITION = 2219;
+
+/// `class->MissileEvaluateCondition(unit, b)`
+constexpr static const int32_t EE_UNITS_UCK_MISSILE_CONDITION = 2220;
+
+/// `EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, unit, b, EECombatShotTarget(unit), NULL, class)`
+constexpr static const int32_t EE_UNITS_UCK_PROJECTILE_CONDITION = 2221;
+
+/// `ee_units_cls_landing_has_arrived(class, unit, f[0], b != 0)`
+constexpr static const int32_t EE_UNITS_UCK_LANDING_ARRIVED = 2222;
+
+/// `class->SpaceBuildingHasArrived(unit, f[0])`
+constexpr static const int32_t EE_UNITS_UCK_SPACE_BUILDING_ARRIVED = 2223;
+
+/// `ee_units_tr_naval_has_arrived(unit, f[0])`
+constexpr static const int32_t EE_UNITS_UCK_NAVAL_TRANSPORT_ARRIVED = 2224;
+
+/// `class->NavalHasArrived(unit, f[0])`
+constexpr static const int32_t EE_UNITS_UCK_NAVAL_ARRIVED = 2225;
+
+/// `class->SubmergedNavalHasArrived(unit, f[0])`
+constexpr static const int32_t EE_UNITS_UCK_SUBMERGED_ARRIVED = 2226;
+
+/// `class->BaseHasArrived(unit, f[0])`
+constexpr static const int32_t EE_UNITS_UCK_BASE_ARRIVED = 2227;
+
+/// `class->FortressHasRoom(unit, complex unit a)`
+constexpr static const int32_t EE_UNITS_UCK_FORTRESS_HAS_ROOM = 2228;
+
+/// `class->NavalBuildingSelectUnitToRelease(unit)`
+constexpr static const int32_t EE_UNITS_UCK_NAVAL_SELECT = 2229;
+
+/// `class->BuildingSelectUnitToRelease(unit)`
+constexpr static const int32_t EE_UNITS_UCK_BUILDING_SELECT = 2230;
+
+/// `class->TransportFindBoardingLocation(unit, complex unit a, the point at b, the point at c)`
+constexpr static const int32_t EE_UNITS_UCK_BOARDING_LOCATION = 2231;
+
+/// `class->GateGetSurroundingTiles(unit, the tiles at a, b, c != 0)`
+constexpr static const int32_t EE_UNITS_UCK_GATE_SURROUNDING = 2232;
+
+/// `class->BuildingGetSurroundingTiles(unit, the tiles at a, b, c != 0)`
+constexpr static const int32_t EE_UNITS_UCK_BUILDING_SURROUNDING = 2233;
+
+/// `class->BaseGetSurroundingTiles(unit, the tiles at a, b, c != 0)`
+constexpr static const int32_t EE_UNITS_UCK_BASE_SURROUNDING = 2234;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_ACTION_CHANGED = 1;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_UPDATE = 2;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_UPDATE_EFFECTS = 3;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_EVALUATE_CONDITION = 4;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_HAS_ARRIVED = 5;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_HAS_ROOM = 6;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_SELECT_TO_RELEASE = 7;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_BOARDING_LOCATION = 8;
+
+constexpr static const int32_t EE_UNITS_UCK_DO_SURROUNDING_TILES = 9;
+
 /// `unit->mGoalQueues[0].mGoals.size()`
 constexpr static const int32_t EE_UNITS_UCP_QUEUE0_LEN = 1400;
 
@@ -11162,6 +12167,94 @@ constexpr static const int32_t EE_UNITS_UCP_DO_HEAL_SEARCH_TIMER = 10;
 constexpr static const int32_t EE_UNITS_UCP_DO_ROTTING_TIME = 11;
 
 constexpr static const int32_t EE_UNITS_UCP_DO_RESOURCES_ROTTING = 12;
+
+/// `unit->mGoalState`
+constexpr static const int32_t EE_UNITS_UCS_GOAL_STATE = 1230;
+
+/// `class->mCategory == kUnitCategoryBomb`
+constexpr static const int32_t EE_UNITS_UCS_IS_BOMB = 1231;
+
+/// `unit->mFlightTime`
+constexpr static const int32_t EE_UNITS_UCS_IMPACT_FLIGHT_TIME = 1232;
+
+/// `f[0] = unit->mProjectileStart.GetZ()`
+constexpr static const int32_t EE_UNITS_UCS_START_Z = 1233;
+
+/// `unit->GetPosition(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCS_POSITION = 1234;
+
+/// `::gWorld.mMap->GetTile(b, c) != NULL`
+constexpr static const int32_t EE_UNITS_UCS_TILE_PRESENT = 1235;
+
+/// goal `a`'s `mKind`
+constexpr static const int32_t EE_UNITS_UCS_GOAL_KIND = 1236;
+
+/// `unit->GetUnitClass()->mShellHoleEffect != NULL` (`b` 0), `unit->mUnitClass->...` (`b` 1)
+constexpr static const int32_t EE_UNITS_UCS_SHELL_HOLE = 1237;
+
+/// `EECombatCapture(CBWI when b != 0, else CBGI; the record at a, the outcome at c)`
+constexpr static const int32_t EE_UNITS_UCS_CAPTURE_IMPACT = 1238;
+
+/// `unit->SetGoal(EEUGRust::NewAttackGround(f[0..3], false), 0, 0)`
+constexpr static const int32_t EE_UNITS_UCS_ATTACK_GROUND = 1239;
+
+/// `EEPlaceImpactDecal(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UCS_DECAL = 1240;
+
+/// `f[0..3] = ` the unit's location's X, Y, Z
+constexpr static const int32_t EE_UNITS_UCS_LOCATION = 1241;
+
+/// `unit->mLauncherClass->mUnitType == kUnitTypeCpMissileBase`
+constexpr static const int32_t EE_UNITS_UCS_LAUNCHER_CP_BASE = 1242;
+
+/// `unit->mLauncherClass->mUnitType == kUnitTypeMissileBase`
+constexpr static const int32_t EE_UNITS_UCS_LAUNCHER_MISSILE_BASE = 1243;
+
+/// `unit->PlaceOnGround(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCS_PLACE_ON_GROUND = 1244;
+
+/// `::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), f[0..3])`
+constexpr static const int32_t EE_UNITS_UCS_GROUND_POINT = 1245;
+
+/// `f[0] = unit->mTile->GetHeight()`
+constexpr static const int32_t EE_UNITS_UCS_TILE_HEIGHT = 1246;
+
+/// `static_cast<EEUGRust*>(unit->mGoalState)->GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_UCS_ATTACK_TARGET = 1247;
+
+/// unit `a`'s class `IsLandBuilding() || mIsWall`
+constexpr static const int32_t EE_UNITS_UCS_TARGET_BUILDING = 1248;
+
+/// unit `a`'s `GetTileX()`
+constexpr static const int32_t EE_UNITS_UCS_IMPACT_TILE_X = 1249;
+
+/// unit `a`'s `GetTileY()`
+constexpr static const int32_t EE_UNITS_UCS_IMPACT_TILE_Y = 1250;
+
+/// unit `a`'s class's `mTileSize`
+constexpr static const int32_t EE_UNITS_UCS_IMPACT_TILE_SIZE = 1251;
+
+/// `unit->mGoalState->GetGoalLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCS_GOAL_LOCATION = 1252;
+
+/// `EEIsOnTargetTiles(unit, static_cast<EEUGRust*>(unit->GetGoal())->GetAttackTarget())`
+constexpr static const int32_t EE_UNITS_UCS_ON_TARGET_TILES = 1253;
+
+/// `::gWorld.mMap->GetTile(UMFloatToLong(f[0]), UMFloatToLong(f[1])) == unit->mTile`
+constexpr static const int32_t EE_UNITS_UCS_SAME_TILE = 1254;
+
+/// `class->CanMoveOnTerrain(unit, unit->mTile->mTerrainType)`
+constexpr static const int32_t EE_UNITS_UCS_CAN_MOVE = 1255;
+
+constexpr static const int32_t EE_UNITS_UCS_DO_PROJECTILE_GROUND = 1;
+
+constexpr static const int32_t EE_UNITS_UCS_DO_PROJECTILE_WATER = 2;
+
+constexpr static const int32_t EE_UNITS_UCS_DO_MISSILE_GROUND = 3;
+
+constexpr static const int32_t EE_UNITS_UCS_DO_MISSILE_WATER = 4;
+
+constexpr static const int32_t EE_UNITS_UCS_DO_TORPEDO_GROUND = 5;
 
 /// `unit->mInitialContactLocation = GE3DPoint(f[0], f[1], f[2])`
 constexpr static const int32_t EE_UNITS_UCS_SET_CONTACT_LOCATION = 1200;
@@ -17473,6 +18566,7 @@ bool ee_units_towns_repair(void *ctx,
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
 
+/// the class host (EEUnitClass.cpp; uc_class.rs's too)
 extern int64_t ee_units_uc_host(int32_t op,
                                 void *class_,
                                 void *unit,
@@ -17486,6 +18580,17 @@ extern int64_t ee_units_uc_host(int32_t op,
 /// # Safety
 /// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit`, on the simulation thread.
 void ee_units_uc_body(int32_t what, void *class_, void *unit);
+
+/// The class's constructor body (`EE_UNITS_UC_DO_CONSTRUCT`: `record` the `EEUnitClassRecord`, `b` is-complex,
+/// `model` the physics model) or `CreateUnitClasses` (`EE_UNITS_UC_DO_CREATE_UNIT_CLASSES`).
+///
+/// # Safety
+/// `class` is the `EEUnitClass` under construction (or NULL), `record` its live record, on the main thread.
+void ee_units_uc_class(int32_t what,
+                       void *class_,
+                       void *record,
+                       int64_t b,
+                       void *model);
 
 /// `EEUnitClass`'s body `what` (`EE_UNITS_UC_DO_*` from 20) of `class` on `unit`: `a` an object, `b`, `c`
 /// values, `f` a point (three floats, or NULL), `m` a transformation (or NULL); the created unit or 0.
@@ -17526,6 +18631,45 @@ bool ee_units_uc_produce(void *class_,
                          void *made,
                          bool arg);
 
+extern int64_t ee_units_uca_host(int32_t op,
+                                 void *class_,
+                                 void *unit,
+                                 uint64_t a,
+                                 int64_t b,
+                                 int64_t c,
+                                 float (*f)[4]);
+
+/// The air classes' body `what` (`EE_UNITS_UCA_DO_*`) of `class` on `unit`, with its arguments `a`, `b`, `c` and
+/// its floats `p` (three, in and out; NULL for none). For `EE_UNITS_UCA_DO_LANDABLE_OP`: `a` the airport slot's
+/// address, `b` the operation, `c` its argument; `EE_UNITS_UCA_DO_GROUND_HEIGHT`: `a` the output's address. The
+/// answer, or 0.
+///
+/// # Safety
+/// `class` is a live `EEUnitClass` (or NULL where the body takes none), `unit` a live `EEComplexUnit` (or NULL),
+/// `p` three floats (one for the opacity chain) or NULL, on the simulation thread.
+int64_t ee_units_uca_call(int32_t what,
+                          void *class_,
+                          void *unit,
+                          uint64_t a,
+                          int64_t b,
+                          int64_t c,
+                          float *p);
+
+/// The gates' and buildings' body `what` (`EE_UNITS_UCB_DO_*`): `class` and `unit` the member's, `a` an object
+/// (a unit, a player, a vector), `b` a tile pair (low, high 32 bits) or a value, `c` a value pair, `f` a value;
+/// the answer, or 0 (`EE_UNITS_UCB_DO_FIND_GATE_WALL`: whether found, the direction written to the `long` at `a`).
+///
+/// # Safety
+/// The objects are live, on the simulation thread.
+int64_t ee_units_ucb_gate(int32_t what,
+                          void *class_,
+                          void *unit,
+                          uint64_t a,
+                          int64_t b,
+                          int64_t c,
+                          float f);
+
+/// the buildings' host (EEUnitClassBuildings.cpp; ucb_gate.rs's too)
 extern int64_t ee_units_ucb_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -17574,6 +18718,27 @@ int64_t ee_units_ucg_call(int32_t what,
                           uint64_t a,
                           float f);
 
+extern int64_t ee_units_uck_host(int32_t op,
+                                 void *class_,
+                                 void *unit,
+                                 uint64_t a,
+                                 int64_t b,
+                                 int64_t c,
+                                 float (*f)[4]);
+
+/// The kind dispatcher `what` (`EE_UNITS_UCK_DO_*`) of `class` on `unit`: `a` an object (a cargo, a transport,
+/// a tile vector), `b`, `c` values or the caller's points, `f` a value; the answer, or 0.
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), on the simulation thread.
+int64_t ee_units_uck_call(int32_t what,
+                          void *class_,
+                          void *unit,
+                          uint64_t a,
+                          int64_t b,
+                          int64_t c,
+                          float f);
+
 extern int64_t ee_units_ucp_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -17602,6 +18767,13 @@ bool ee_units_ucp_can_convert(void *priest,
                               void *target,
                               bool *flag);
 
+/// The shots' impact test `what` (`EE_UNITS_UCS_DO_*`) of `class` on `unit`.
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit`, on the simulation thread.
+bool ee_units_ucs_impact(int32_t what, void *class_, void *unit);
+
+/// the shots' host (EEUnitClassShots.cpp; ucs_impact.rs's too)
 extern int64_t ee_units_ucs_host(int32_t op,
                                  void *class_,
                                  void *unit,
