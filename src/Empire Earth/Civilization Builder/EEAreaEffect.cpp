@@ -6,8 +6,9 @@
 // port (calamities lane, round 3): the eight kinds' classes are this one class over ee_tech area_effect.rs (their
 // units EEAECloaking.cpp 0x27aa0b.., EEAEEconomy.cpp 0x27ac2c.., EEAEHealing.cpp 0x27ace1..,
 // EEAEMoraleFromBuildings.cpp 0x27b911.., EEAEMoraleFromMilitaryHeroes.cpp 0x27bf0a.. and the inline kinds of
-// EEAEManager.cpp are gone); EEAEHost below answers their world calls, in the originals' order. The template's
-// members that ask the host (its ctor, dtor, player and area tests, Init: 0x27c0f3..0x27c5ab) are here too.
+// EEAEManager.cpp are gone). UI lane round 12: the members are Rust's (ee_game screens area_effect_obj.rs), each a
+// forward; the world calls of the simulation are area_effect_host.rs' over the shims below, in the originals' order.
+// The template's members that ask the host (its ctor, dtor, player and area tests, Init: 0x27c0f3..0x27c5ab) too.
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -36,6 +37,7 @@
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "rust/sim/units.h"
+#include "rust/game/screens.h"   // the host (area_effect_host.rs)
 
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
@@ -84,159 +86,117 @@ struct EEAEMFBBuildingInRange {
     float mRangeSquared;
 };
 
-// The world of an area effect's Rust slots (ee_tech area_effect.rs EeAreaEffectOp): the effect (its owner unit and
-// player; NULL for a template's test) and the unit the slot was given (NULL when none)
-struct EEAEHost {
-    EEAEHost(EEAreaEffect* inEffect, EEComplexUnit* inTarget) : mEffect(inEffect), mTarget(inTarget)
-    {
-        this->mFfi.ctx = this;
-        this->mFfi.call = &EEAEHost::Call;
-    }
-    static void Call(void* inContext, const EeAreaEffectCall* c, EeAreaEffectReply* r);
-
-    EEAreaEffect* mEffect;
-    EEComplexUnit* mTarget;
-    EeAreaEffectHostFfi mFfi;
-};
-
-void EEAEHost::Call(void* inContext, const EeAreaEffectCall* c, EeAreaEffectReply* r)
-{
-    EEAEHost* h = static_cast<EEAEHost*>(inContext);
-    EEComplexUnit* t = h->mTarget;
-    EEComplexUnit* theOwner = h->mEffect != NULL ? h->mEffect->mUnit : NULL;
-    switch (c->op) {
-    case EeAreaEffectOp::TargetInSet:
-        r->ok = gUnitSetManager.Contains(t->GetUnitClass()->GetUnitType(), c->a);
-        break;
-    case EeAreaEffectOp::TargetTechKind4: {
-        EETechTreeNode* theNode = gWorld.mPlayers[c->a]->GetTechTree()->Get(t->GetUnitClass()->mTechnology);
-        r->ok = theNode != NULL && theNode->mData->mKind == 4;
-        break;
-    }
-    case EeAreaEffectOp::Relation: {
-        EEPlayer* thePlayer = gWorld.mPlayers[c->a];
-        EEPlayer* theOther = gWorld.mPlayers[c->b];
-        r->value = (theOther == thePlayer ? 1 : 0) | (thePlayer->IsAlliedWith(theOther) ? 2 : 0) |
-                   (thePlayer->mEnemies[theOther->mPlayerID] != 0 ? 4 : 0);
-        break;
-    }
-    case EeAreaEffectOp::TargetBuilt: r->ok = t->mIsBuilt; break;
-    case EeAreaEffectOp::TargetRepairable: r->ok = t->IsRepairable(); break;
-    case EeAreaEffectOp::TargetPosition: {
-        GE3DPoint thePosition = t->mPhysicalModel.GetLocation().GetPosition();
-        r->x = thePosition.GetX();
-        r->y = thePosition.GetY();
-        break;
-    }
-    case EeAreaEffectOp::Continent: {
-        EETileCoordinate theTile;
-        theTile.mX = c->a;
-        theTile.mY = c->b;
-        r->value = gContinentManager.GetContinent(theTile, kAIPathNonSpace);
-        break;
-    }
-    case EeAreaEffectOp::TargetCarrierPlanet: {
-        EEComplexUnit* theCarrier = t->mComplexUnit;
-        unsigned long theType = theCarrier != NULL ? t->mUnitClass->GetUnitType() : 0;
-        r->ok = theCarrier != NULL && (theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret);
-        r->value = r->ok ? (int)theCarrier->mPlanetID : 0;
-        break;
-    }
-    case EeAreaEffectOp::TargetHitPoints: r->value = t->mHitPoints; break;
-    case EeAreaEffectOp::TargetMaxHitPoints: r->value = t->mStats->mMaxHitPoints; break;
-    case EeAreaEffectOp::InCinematic: r->ok = gInCinematic; break;
-    case EeAreaEffectOp::TargetSetHitPoints: t->SetHitPoints(c->a); break;
-    case EeAreaEffectOp::TargetCloak: t->SetCloakableChain(true); break;
-    case EeAreaEffectOp::TargetUncloak: {
-        // the cloaking's RemovedFrom 0x27ab53: a Camouflage civ power keeps an idle or hidden unit cloaked; a visible
-        // cloaked enemy leaves the mini map
-        if (gCivPowersManager.HasPower(t->GetPlayer(), kCivPowerCamouflage) &&
-            gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL &&
-            gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(t->mUnitClass->mUnitType)) {
-            if (t->GetCommandType() == kActionIdle && (t->mCamouflageTimer & 0x7fffffff) == 0 || t->mU32C > 0)
-                break;
-        }
-        bool theVisible = ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)t, (uint64_t)(uintptr_t)(gWorld.mPlayers[gWorld.mCurrentPlayer]));
-        t->SetCloakableChain(t->mUnitClass->mIsCloakable);
-        if (theVisible)
-            gMiniMap->MoveUnit(t, -10000, -10000, t->mTileX, t->mTileY);
-        break;
-    }
-    case EeAreaEffectOp::OwnerScale:
-        r->ok = theOwner != NULL;
-        r->x = theOwner != NULL ? theOwner->mStats->mAreaEffectScale : 1.0f;
-        break;
-    case EeAreaEffectOp::OwnerHitPoints: r->value = theOwner->mHitPoints; break;
-    case EeAreaEffectOp::OwnerLeadership: r->x = theOwner->mStats->mLeadership; break;
-    case EeAreaEffectOp::OwnerGarrisonBonus: r->x = theOwner->mUnitClass->mGarrisonBonus; break;
-    case EeAreaEffectOp::CountBuildings: {
-        // the morale from buildings' collection 0x27b95b (EEGetUnitsInRectangle 0x27bae8 / 0x27bcfc)
-        std::vector<EEComplexUnit*> theUnits;
-        U2DRectangle<long> theRect;
-        theRect.mTop = c->b;
-        theRect.mLeft = c->a;
-        theRect.mRight = c->c;
-        theRect.mBottom = c->d;
-        EEPlayer* thePlayer = gWorld.mPlayers[h->mEffect->mPlayer];
-        if (c->e == 1)
-            r->value = EEGetUnitsInRectangle(theRect, theUnits, EEAEMFBBuildingInRectangle(theRect, thePlayer), true);
-        else
-            r->value = EEGetUnitsInRectangle(theRect, theUnits,
-                                             EEAEMFBBuildingInRange(U2DPoint<long>(c->f, c->g), thePlayer, c->x), true);
-        break;
-    }
-    }
-}
-
 }   // namespace
 
-// Creates an area effect of its template's kind that holds a reference to the template, with no unit or player yet
-// (the morale from buildings' cap: the template's maximum level plus the game variant's morale bonus), and loads its
-// media
-EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate)
-{
-    this->mTemplate = inTemplate;
-    this->mTemplate->Reference();
-    this->mUnit = NULL;
-    long theKind = inTemplate->mKind;
-    long theBonus = theKind == kAreaEffectMoraleFromBuildings ? gWorld.GetGameVariant()->mMoraleBonus : 0;
-    ee_area_effect_init(this, theKind, inTemplate->mMaxLevel, theBonus);
-    this->LoadMedia(false);
-}
+#define AE_T(t) ((EEComplexUnit*)(t))
+#define AE_P(p) ((EEPlayer*)(p))
+#define AE_E(e) ((EEAreaEffect*)(e))
+static EETileCoordinate sAETile;                // the continent's tile
+static U2DRectangle<long> sAERect;              // the morale buildings' rectangle
+static std::vector<EEComplexUnit*> sAEUnits;    // and the units collected in it
+extern "C" bool ee_screenscpp_aeh_set_contains(uintptr_t inT, int32_t inSet)
+{ return gUnitSetManager.Contains(AE_T(inT)->GetUnitClass()->GetUnitType(), inSet); }
+extern "C" uintptr_t ee_screenscpp_aeh_tech_node(int32_t inPlayer, uintptr_t inT)
+{ return (uintptr_t)gWorld.mPlayers[inPlayer]->GetTechTree()->Get(AE_T(inT)->GetUnitClass()->mTechnology); }
+extern "C" int64_t ee_screenscpp_aeh_node_kind(uintptr_t inNode)
+{ return (int64_t)((EETechTreeNode*)inNode)->mData->mKind; }
+extern "C" uintptr_t ee_screenscpp_aeh_player(int32_t inIndex) { return (uintptr_t)gWorld.mPlayers[inIndex]; }
+extern "C" bool ee_screenscpp_aeh_allied(uintptr_t inPlayer, uintptr_t inOther)
+{ return AE_P(inPlayer)->IsAlliedWith(AE_P(inOther)); }
+extern "C" bool ee_screenscpp_aeh_enemy(uintptr_t inPlayer, uintptr_t inOther)
+{ return AE_P(inPlayer)->mEnemies[AE_P(inOther)->mPlayerID] != 0; }
+extern "C" bool ee_screenscpp_aeh_built(uintptr_t inT) { return AE_T(inT)->mIsBuilt; }
+extern "C" bool ee_screenscpp_aeh_repairable(uintptr_t inT) { return AE_T(inT)->IsRepairable(); }
+extern "C" float ee_screenscpp_aeh_position_x(uintptr_t inT)
+{ return AE_T(inT)->mPhysicalModel.GetLocation().GetPosition().GetX(); }
+extern "C" float ee_screenscpp_aeh_position_y(uintptr_t inT)
+{ return AE_T(inT)->mPhysicalModel.GetLocation().GetPosition().GetY(); }
+extern "C" void ee_screenscpp_aeh_tile_x(int32_t inV) { sAETile.mX = inV; }
+extern "C" void ee_screenscpp_aeh_tile_y(int32_t inV) { sAETile.mY = inV; }
+extern "C" int32_t ee_screenscpp_aeh_continent() { return gContinentManager.GetContinent(sAETile, kAIPathNonSpace); }
+extern "C" uintptr_t ee_screenscpp_aeh_carrier(uintptr_t inT)
+{ return (uintptr_t)(EEComplexUnit*)AE_T(inT)->mComplexUnit; }
+extern "C" uint64_t ee_screenscpp_aeh_unit_type(uintptr_t inT)
+{ return (uint64_t)AE_T(inT)->mUnitClass->GetUnitType(); }
+extern "C" int32_t ee_screenscpp_aeh_planet(uintptr_t inCarrier) { return (int)AE_T(inCarrier)->mPlanetID; }
+extern "C" int32_t ee_screenscpp_aeh_hit_points(uintptr_t inT) { return AE_T(inT)->mHitPoints; }
+extern "C" int32_t ee_screenscpp_aeh_max_hit_points(uintptr_t inT) { return AE_T(inT)->mStats->mMaxHitPoints; }
+extern "C" bool ee_screenscpp_aeh_in_cinematic() { return gInCinematic; }
+extern "C" void ee_screenscpp_aeh_set_hit_points(uintptr_t inT, int32_t inV) { AE_T(inT)->SetHitPoints(inV); }
+extern "C" void ee_screenscpp_aeh_cloak(uintptr_t inT) { AE_T(inT)->SetCloakableChain(true); }
+extern "C" bool ee_screenscpp_aeh_has_camouflage(uintptr_t inT)
+{ return gCivPowersManager.HasPower(AE_T(inT)->GetPlayer(), kCivPowerCamouflage); }
+extern "C" bool ee_screenscpp_aeh_camouflage_set_exists()
+{ return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL; }
+extern "C" bool ee_screenscpp_aeh_camouflage_set_contains(uintptr_t inT)
+{ return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(AE_T(inT)->mUnitClass->mUnitType); }
+extern "C" bool ee_screenscpp_aeh_idle(uintptr_t inT) { return AE_T(inT)->GetCommandType() == kActionIdle; }
+extern "C" uint64_t ee_screenscpp_aeh_camouflage_timer(uintptr_t inT) { return (uint64_t)AE_T(inT)->mCamouflageTimer; }
+extern "C" int64_t ee_screenscpp_aeh_u32c(uintptr_t inT) { return (int64_t)AE_T(inT)->mU32C; }
+extern "C" uintptr_t ee_screenscpp_aeh_current_player() { return (uintptr_t)(gWorld.mPlayers[gWorld.mCurrentPlayer]); }
+extern "C" void ee_screenscpp_aeh_set_cloakable_own(uintptr_t inT)
+{ AE_T(inT)->SetCloakableChain(AE_T(inT)->mUnitClass->mIsCloakable); }
+extern "C" void ee_screenscpp_aeh_minimap_hide(uintptr_t inT)
+{ gMiniMap->MoveUnit(AE_T(inT), -10000, -10000, AE_T(inT)->mTileX, AE_T(inT)->mTileY); }
+extern "C" uintptr_t ee_screenscpp_aeh_owner(uintptr_t inEffect) { return (uintptr_t)AE_E(inEffect)->mUnit; }
+extern "C" float ee_screenscpp_aeh_owner_scale(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mAreaEffectScale; }
+extern "C" float ee_screenscpp_aeh_leadership(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mLeadership; }
+extern "C" float ee_screenscpp_aeh_garrison_bonus(uintptr_t inOwner)
+{ return AE_T(inOwner)->mUnitClass->mGarrisonBonus; }
+extern "C" void ee_screenscpp_aeh_rect_top(int32_t inV) { sAERect.mTop = inV; }
+extern "C" void ee_screenscpp_aeh_rect_left(int32_t inV) { sAERect.mLeft = inV; }
+extern "C" void ee_screenscpp_aeh_rect_right(int32_t inV) { sAERect.mRight = inV; }
+extern "C" void ee_screenscpp_aeh_rect_bottom(int32_t inV) { sAERect.mBottom = inV; }
+extern "C" void ee_screenscpp_aeh_units_clear() { sAEUnits.clear(); }
+extern "C" int32_t ee_screenscpp_aeh_count_in_rect(uintptr_t inEffect)
+{ return EEGetUnitsInRectangle(sAERect, sAEUnits, EEAEMFBBuildingInRectangle(sAERect, gWorld.mPlayers[AE_E(inEffect)->mPlayer]), true); }
+extern "C" int32_t ee_screenscpp_aeh_count_in_range(uintptr_t inEffect, int32_t inX, int32_t inY, float inRange)
+{ return EEGetUnitsInRectangle(sAERect, sAEUnits, EEAEMFBBuildingInRange(U2DPoint<long>(inX, inY), gWorld.mPlayers[AE_E(inEffect)->mPlayer], inRange), true); }
 
-// Destroys the area effect, releasing its template and unit and unloading its media
-EEAreaEffect::~EEAreaEffect()
-{
-    this->mTemplate->Dereference();
-    if (this->mUnit != NULL)
-        this->mUnit->Dereference();
-    this->UnloadMedia();
-}
+// the effect's and the template's C++ objects for area_effect_obj.rs (UI lane round 12)
+extern "C" uintptr_t ee_screenscpp_ae_fields(uintptr_t inEffect)
+{ return (uintptr_t)static_cast<EeAreaEffectFields*>(AE_E(inEffect)); }
+extern "C" uintptr_t ee_screenscpp_ae_template(uintptr_t inEffect) { return (uintptr_t)AE_E(inEffect)->mTemplate; }
+extern "C" uintptr_t ee_screenscpp_ae_template_fields(uintptr_t inT)
+{ return (uintptr_t)static_cast<EeAreaEffectTemplateFields*>((EEAreaEffectTemplate*)inT); }
+extern "C" void ee_screenscpp_ae_set_template(uintptr_t inEffect, uintptr_t inT)
+{ AE_E(inEffect)->mTemplate = (EEAreaEffectTemplate*)inT; }
+extern "C" void ee_screenscpp_ae_template_reference(uintptr_t inT) { ((EEAreaEffectTemplate*)inT)->Reference(); }
+extern "C" void ee_screenscpp_ae_template_dereference(uintptr_t inT) { ((EEAreaEffectTemplate*)inT)->Dereference(); }
+extern "C" void ee_screenscpp_ae_set_unit(uintptr_t inEffect, uintptr_t inUnit)
+{ AE_E(inEffect)->mUnit = AE_T(inUnit); }
+extern "C" void ee_screenscpp_ae_unit_reference(uintptr_t inUnit) { AE_T(inUnit)->Reference(); }
+extern "C" void ee_screenscpp_ae_unit_dereference(uintptr_t inUnit) { AE_T(inUnit)->Dereference(); }
+extern "C" int64_t ee_screenscpp_ae_morale_bonus() { return (int64_t)gWorld.GetGameVariant()->mMoraleBonus; }
+extern "C" int32_t ee_screenscpp_ae_unit_player_id(uintptr_t inUnit)
+{ return (int32_t)AE_T(inUnit)->GetPlayer()->mPlayerID; }
+extern "C" void ee_screenscpp_ae_create_unit_effect(uintptr_t inUnit, uintptr_t inEffect)
+{ gEffectManager->CreateUnitEffect((EEUnit*)inUnit, (EEGraphicEffect*)inEffect, NULL, false, 0, 0); }
+extern "C" void ee_screenscpp_aet_set_effect(uintptr_t inT, uintptr_t inEffect)
+{ ((EEAreaEffectTemplate*)inT)->mGraphicEffect = (EEGraphicEffect*)inEffect; }
+extern "C" void ee_screenscpp_aet_set_effect18(uintptr_t inT, uintptr_t inEffect)
+{ ((EEAreaEffectTemplate*)inT)->mGraphicEffect18 = (EEGraphicEffect*)inEffect; }
+extern "C" void ee_screenscpp_aet_set_media(uintptr_t inT, uintptr_t inMedia)
+{ ((EEAreaEffectTemplate*)inT)->mMedia = (EEMedia*)inMedia; }
+extern "C" uintptr_t ee_screenscpp_ae_graphic_effect_get(int32_t inId) { return (uintptr_t)EEGraphicEffect::Get(inId); }
+extern "C" void ee_screenscpp_ae_graphic_effect_reference(uintptr_t inEffect)
+{ ((EEGraphicEffect*)inEffect)->Reference(); }
+extern "C" void ee_screenscpp_ae_graphic_effect_dereference(uintptr_t inEffect)
+{ ((EEGraphicEffect*)inEffect)->Dereference(); }
+extern "C" uintptr_t ee_screenscpp_ae_media_get(int32_t inId) { return (uintptr_t)EEMedia::Get(inId); }
 
-// Applies the effect to a unit (the cloaking makes it cloakable)
-void EEAreaEffect::AppliedTo(EEComplexUnit* inUnit)
-{
-    EEAEHost theHost(this, inUnit);
-    ee_area_effect_applied(this, &theHost.mFfi, false);
-}
-
-// Tells whether the effect, by its kind, covers the unit from a point for a player
+// The effect's and the template's members: Rust's (area_effect_obj.rs; UI lane round 12), each one forward; the
+// world calls the simulation asks are area_effect_host.rs' over the shims above
+EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }
+EEAreaEffect::~EEAreaEffect() { ee_screens_ae_destroy((uintptr_t)this); }
+void EEAreaEffect::AppliedTo(EEComplexUnit* inUnit) { ee_screens_ae_applied_to((uintptr_t)this, (uintptr_t)inUnit); }
 bool EEAreaEffect::Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint)
 {
-    EEAEHost theHost(this, inUnit);
-    return ee_area_effect_covers(this, this->mTemplate, &theHost.mFfi, (int32_t)inPlayer,
-                                 (int32_t)inUnit->GetPlayer()->mPlayerID, inPoint.mX, inPoint.mY);
+    return ee_screens_ae_covers((uintptr_t)this, inPlayer, (uintptr_t)inUnit, inPoint.mX, inPoint.mY);
 }
+void EEAreaEffect::ShowOn(EEUnit* inUnit) { ee_screens_ae_show_on((uintptr_t)this, (uintptr_t)inUnit); }
 
-// Plays the template's graphic effect on the unit, if it has one
-void EEAreaEffect::ShowOn(EEUnit* inUnit)
-{
-    EEGraphicEffect* theEffect = this->mTemplate->mGraphicEffect;
-    if (theEffect != NULL)
-        gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, false, 0, 0);
-}
-
-// Writes the effect's location, owning unit id and player to the out-of-sync dump
+// Writes the effect's location, owning unit and player to the out-of-synch dump
 void EEAreaEffect::Dump(FILE* inFile)
 {
     fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Position Location X: %6.6f\n", (double)this->mLocation.mX);
@@ -252,150 +212,39 @@ long EEAreaEffect::Checksum()
                                    this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);
 }
 
-// Returns the effect's strength by its kind
-long EEAreaEffect::GetStrength()
-{
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_strength(this, this->mTemplate, &theHost.mFfi);
-}
-
-// Returns a morale kind's level
-long EEAreaEffect::GetLevel()
-{
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_level(this, this->mTemplate, &theHost.mFfi);
-}
-
-// Returns the template's radius times the effect's scale
-float EEAreaEffect::GetRadius()
-{
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_radius(this->mTemplate, &theHost.mFfi);
-}
-
-// Tells whether the effect is an immunity
-bool EEAreaEffect::IsImmunity()
-{
-    return ee_area_effect_is_immunity(this);
-}
-
-// Returns the owning unit's area-effect scale, or 1 without a unit
-float EEAreaEffect::GetScale()
-{
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_scale(&theHost.mFfi);
-}
-
-// Sets the owning unit, taking a reference to it
-void EEAreaEffect::SetUnit(EEComplexUnit* inUnit)
-{
-    this->mUnit = inUnit;
-    if (inUnit != NULL)
-        inUnit->Reference();
-}
-
-// Loads the template's media
-void EEAreaEffect::LoadMedia(bool inIsOnDemand)
-{
-    this->mTemplate->Load(inIsOnDemand);
-}
-
-// Modifies a value of a kind by the effect's kind; false when it leaves it
+long EEAreaEffect::GetStrength() { return (long)ee_screens_ae_strength((uintptr_t)this); }
+long EEAreaEffect::GetLevel() { return (long)ee_screens_ae_level((uintptr_t)this); }
+float EEAreaEffect::GetRadius() { return ee_screens_ae_radius((uintptr_t)this); }
+bool EEAreaEffect::IsImmunity() { return ee_area_effect_is_immunity(this); }
+float EEAreaEffect::GetScale() { return ee_screens_ae_scale((uintptr_t)this); }
+void EEAreaEffect::SetUnit(EEComplexUnit* inUnit) { ee_screens_ae_set_unit((uintptr_t)this, (uintptr_t)inUnit); }
+void EEAreaEffect::LoadMedia(bool inIsOnDemand) { this->mTemplate->Load(inIsOnDemand); }
 bool EEAreaEffect::Modify(long inKind, long inValue, long& outValue)
 {
-    EEAEHost theHost(this, NULL);
-    return ee_area_effect_modify(this, this->mTemplate, &theHost.mFfi, inKind, inValue, &outValue);
+    return ee_screens_ae_modify((uintptr_t)this, inKind, (uintptr_t)&inValue, (uintptr_t)&outValue);
 }
-
-// Takes the effect off a unit (the cloaking gives back the unit's own cloakability)
-void EEAreaEffect::RemovedFrom(EEComplexUnit* inUnit)
-{
-    EEAEHost theHost(this, inUnit);
-    ee_area_effect_applied(this, &theHost.mFfi, true);
-}
-
-// Marks the morale from buildings for a recount
-void EEAreaEffect::MarkDirty()
-{
-    ee_area_effect_mark_dirty(this);
-}
-
-// Unloads the template's media
-void EEAreaEffect::UnloadMedia()
-{
-    this->mTemplate->Unload();
-}
-
-// Recounts the morale from buildings' buildings when marked
-void EEAreaEffect::Recount(long inArg)
-{
-    EEAEHost theHost(this, NULL);
-    ee_area_effect_recount(this, this->mTemplate, &theHost.mFfi, this->mLocation.mX, this->mLocation.mY);
-}
-
-// Ticks the effect on a unit it affects (the healing heals it)
+void EEAreaEffect::RemovedFrom(EEComplexUnit* inUnit) { ee_screens_ae_removed_from((uintptr_t)this, (uintptr_t)inUnit); }
+void EEAreaEffect::MarkDirty() { ee_area_effect_mark_dirty(this); }
+void EEAreaEffect::UnloadMedia() { this->mTemplate->Unload(); }
+void EEAreaEffect::Recount(long inArg) { ee_screens_ae_recount((uintptr_t)this, (float)inArg); }
 void EEAreaEffect::Tick(EEComplexUnit* inUnit, float inElapsed)
 {
-    EEAEHost theHost(this, inUnit);
-    ee_area_effect_tick(this, this->mTemplate, &theHost.mFfi, inElapsed);
+    ee_screens_ae_tick((uintptr_t)this, (uintptr_t)inUnit, inElapsed);
 }
 
-// Creates an empty template: square shape, radius 1, allied players, no unit set or graphics, white tint
-EEAreaEffectTemplate::EEAreaEffectTemplate()
-{
-    ee_area_effect_template_reset(this);
-    this->mGraphicEffect = NULL;
-    this->mGraphicEffect18 = NULL;
-    this->mMedia = NULL;
-}
-
-// Destroys the template, releasing its two graphic effects
-EEAreaEffectTemplate::~EEAreaEffectTemplate()
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Dereference();
-    if (this->mGraphicEffect18 != NULL)
-        this->mGraphicEffect18->Dereference();
-}
-
-// Tells whether the template's player mode (1 self, 2 allies, 3 enemies, 4 everyone) affects the other player
+EEAreaEffectTemplate::EEAreaEffectTemplate() { ee_screens_aet_construct((uintptr_t)this); }
+EEAreaEffectTemplate::~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }
 bool EEAreaEffectTemplate::AffectsPlayer(long inPlayer, long inOther)
 {
-    EEAEHost theHost(NULL, NULL);
-    return ee_area_effect_affects_player(this, &theHost.mFfi, inPlayer, inOther, false);
+    return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, false);
 }
-
-// Tells whether the other player falls outside the template's mode (1 others, 2 enemies, 3 friends)
 bool EEAreaEffectTemplate::AffectsPlayerReversed(long inPlayer, long inOther)
 {
-    EEAEHost theHost(NULL, NULL);
-    return ee_area_effect_affects_player(this, &theHost.mFfi, inPlayer, inOther, true);
+    return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, true);
 }
-
-// Tells whether a point lies in the square or circular area around a center on the same continent; a space
-// dock or turret carried by another unit also passes when the point is on its owner's planet
 bool EEAreaEffectTemplate::IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale,
                                     EEComplexUnit* inUnit)
 {
-    EEAEHost theHost(NULL, inUnit);
-    return ee_area_effect_is_within(this, &theHost.mFfi, inCenter.mX, inCenter.mY, inPoint.mX, inPoint.mY, inScale,
-                                    inUnit != NULL);
+    return ee_screens_aet_is_within((uintptr_t)this, inCenter.mX, inCenter.mY, inPoint.mX, inPoint.mY, inScale, (uintptr_t)inUnit);
 }
-
-// Fills the template from an area-effect file record, resolving its graphic effects and media
-bool EEAreaEffectTemplate::Init(const EEAreaEffectData& inData)
-{
-    ee_area_effect_template_init(this, reinterpret_cast<const EeAreaEffectData*>(&inData));
-    if (inData.mGraphicEffect > 0) {
-        this->mGraphicEffect = EEGraphicEffect::Get(inData.mGraphicEffect);
-        if (this->mGraphicEffect != NULL)
-            this->mGraphicEffect->Reference();
-    }
-    if (inData.mGraphicEffect18 > 0) {
-        this->mGraphicEffect18 = EEGraphicEffect::Get(inData.mGraphicEffect18);
-        if (this->mGraphicEffect18 != NULL)
-            this->mGraphicEffect18->Reference();
-    }
-    this->mMedia = inData.mMedia > 0 ? EEMedia::Get(inData.mMedia) : NULL;
-    return true;
-}
+bool EEAreaEffectTemplate::Init(const EEAreaEffectData& inData) { return ee_screens_aet_init((uintptr_t)this, (uintptr_t)&inData); }

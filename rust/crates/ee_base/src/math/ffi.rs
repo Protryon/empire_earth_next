@@ -207,6 +207,16 @@ pub unsafe extern "C" fn ee_ge_vector_magnitude(v: *const GeVector) -> f32 {
     unsafe { (*v).magnitude() }
 }
 
+/// `GEVector::Normalize` (a magnitude within 0.0001 of zero gives the zero vector).
+///
+/// # Safety
+/// `v` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_vector_normalize(v: *mut GeVector) {
+    // SAFETY: the function's contract
+    unsafe { (*v).normalize() }
+}
+
 /// `GEVector::GetMagnitudeSquared`.
 ///
 /// # Safety

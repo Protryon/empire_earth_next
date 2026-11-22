@@ -3,9 +3,10 @@
 //! EERestoreContinentRegions): a 32-bit size, then the bytes of `cm_io::write_regions`. A load keeps the block until
 //! the regions are put back at the game's start (`cm_restore.rs`); a failed read keeps none.
 
+use std::ffi::c_void;
 use std::sync::Mutex;
 
-use ee_base::fs::EeFsFileOps;
+use ee_base::fs::{CppFile, FsFile, FsWrite};
 
 use crate::astar::cm::EeAStarCmRecord;
 
@@ -21,35 +22,24 @@ fn loaded() -> std::sync::MutexGuard<'static, Vec<u8>> {
 }
 
 /// Writes the block: its size, then its bytes (none for an empty one) -> the file's result.
-///
-/// # Safety
-/// `ops` serves a file open for writing.
-pub unsafe fn save(ops: &EeFsFileOps, bytes: &[u8]) -> i32 {
-    // SAFETY: the caller's contract
-    let mut result = unsafe { (ops.write_u32)(ops.context, bytes.len() as u32) };
+pub fn save(file: &mut impl FsWrite, bytes: &[u8]) -> i32 {
+    let mut result = file.write_u32(bytes.len() as u32);
     if result == ERROR_OK && !bytes.is_empty() {
-        let mut written = 0u32;
-        // SAFETY: as above
-        result = unsafe { (ops.write_bytes)(ops.context, bytes.as_ptr(), bytes.len(), &mut written) };
+        result = file.write_bytes(bytes).0;
     }
     result
 }
 
 /// Reads a block (its size, then its bytes; a short read is `kErrorBeyondEnd`) -> the result and the bytes (none
 /// after a failure).
-///
-/// # Safety
-/// `ops` serves a file open for reading.
-pub unsafe fn load(ops: &EeFsFileOps) -> (i32, Vec<u8>) {
+pub fn load(file: &mut impl FsFile) -> (i32, Vec<u8>) {
     let mut size = 0u32;
-    // SAFETY: the caller's contract
-    let mut result = unsafe { (ops.read_u32)(ops.context, &mut size) };
+    let mut result = file.read_u32(&mut size);
     let mut bytes = Vec::new();
     if result == ERROR_OK && size > 0 {
         bytes.resize(size as usize, 0);
-        let mut read = 0u32;
-        // SAFETY: as above; room for `size` bytes
-        result = unsafe { (ops.read_bytes)(ops.context, bytes.as_mut_ptr(), bytes.len(), &mut read) };
+        let (status, read) = file.read_bytes(&mut bytes);
+        result = status;
         if result == ERROR_OK && read != size {
             result = ERROR_BEYOND_END;
         }
@@ -63,22 +53,21 @@ pub unsafe fn load(ops: &EeFsFileOps) -> (i32, Vec<u8>) {
 /// `EESaveContinentRegions`: the manager's regions into the save.
 ///
 /// # Safety
-/// `r` is the manager's live record; `ops` serves the save's file.
+/// `r` is the manager's live record; `file` is the save's C++ `FSFile*`, open for writing.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_save_regions(r: *const EeAStarCmRecord, ops: EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_astar_cm_save_regions(r: *const EeAStarCmRecord, file: *mut c_void) -> i32 {
     // SAFETY: the caller's contract
-    unsafe { save(&ops, &crate::astar::cm_io::write_regions(&*r)) }
+    save(&mut CppFile(file), &crate::astar::cm_io::write_regions(unsafe { &*r }))
 }
 
 /// `EELoadContinentRegions`: the save's block, kept for the start of the game.
 ///
 /// # Safety
-/// `ops` serves the save's file.
+/// `file` is the save's C++ `FSFile*`, open for reading.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_load_regions(ops: EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_astar_cm_load_regions(file: *mut c_void) -> i32 {
     loaded().clear();
-    // SAFETY: the caller's contract
-    let (result, bytes) = unsafe { load(&ops) };
+    let (result, bytes) = load(&mut CppFile(file));
     *loaded() = bytes;
     result
 }
@@ -97,62 +86,58 @@ pub fn take_loaded() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::c_void;
 
     struct Mem {
         data: Vec<u8>,
         at: usize,
     }
 
-    unsafe extern "C" fn read_u32(c: *mut c_void, v: *mut u32) -> i32 {
-        let m = unsafe { &mut *(c as *mut Mem) };
-        if m.at + 4 > m.data.len() {
-            return ERROR_BEYOND_END;
+    impl FsFile for Mem {
+        fn read_u32(&mut self, v: &mut u32) -> i32 {
+            if self.at + 4 > self.data.len() {
+                return ERROR_BEYOND_END;
+            }
+            *v = u32::from_le_bytes(self.data[self.at..self.at + 4].try_into().unwrap());
+            self.at += 4;
+            ERROR_OK
         }
-        unsafe { *v = u32::from_le_bytes(m.data[m.at..m.at + 4].try_into().unwrap()) };
-        m.at += 4;
-        ERROR_OK
-    }
-    unsafe extern "C" fn read_bytes(c: *mut c_void, out: *mut u8, n: usize, read: *mut u32) -> i32 {
-        let m = unsafe { &mut *(c as *mut Mem) };
-        let k = n.min(m.data.len() - m.at);
-        unsafe { std::ptr::copy_nonoverlapping(m.data[m.at..].as_ptr(), out, k) };
-        m.at += k;
-        unsafe { *read = k as u32 };
-        ERROR_OK
-    }
-    unsafe extern "C" fn write_u32(c: *mut c_void, v: u32) -> i32 {
-        unsafe { &mut *(c as *mut Mem) }.data.extend_from_slice(&v.to_le_bytes());
-        ERROR_OK
-    }
-    unsafe extern "C" fn write_bytes(c: *mut c_void, d: *const u8, n: usize, w: *mut u32) -> i32 {
-        unsafe { &mut *(c as *mut Mem) }.data.extend_from_slice(unsafe { std::slice::from_raw_parts(d, n) });
-        unsafe { *w = n as u32 };
-        ERROR_OK
+        fn read_bytes(&mut self, out: &mut [u8]) -> (i32, u32) {
+            let k = out.len().min(self.data.len() - self.at);
+            out[..k].copy_from_slice(&self.data[self.at..self.at + k]);
+            self.at += k;
+            (ERROR_OK, k as u32)
+        }
     }
 
-    fn ops(m: &mut Mem) -> EeFsFileOps {
-        EeFsFileOps { context: (m as *mut Mem).cast(), read_u32, read_bytes, write_u32, write_bytes }
+    impl FsWrite for Mem {
+        fn write_u32(&mut self, v: u32) -> i32 {
+            self.data.extend_from_slice(&v.to_le_bytes());
+            ERROR_OK
+        }
+        fn write_bytes(&mut self, d: &[u8]) -> (i32, u32) {
+            self.data.extend_from_slice(d);
+            (ERROR_OK, d.len() as u32)
+        }
     }
 
     #[test]
     fn a_block_reads_back_as_written() {
         let mut m = Mem { data: Vec::new(), at: 0 };
-        assert_eq!(unsafe { save(&ops(&mut m), b"regions") }, ERROR_OK);
+        assert_eq!(save(&mut m, b"regions"), ERROR_OK);
         assert_eq!(m.data, [7, 0, 0, 0, b'r', b'e', b'g', b'i', b'o', b'n', b's']);
-        assert_eq!(unsafe { load(&ops(&mut m)) }, (ERROR_OK, b"regions".to_vec()));
+        assert_eq!(load(&mut m), (ERROR_OK, b"regions".to_vec()));
         // an empty block is its size alone
         let mut e = Mem { data: Vec::new(), at: 0 };
-        unsafe { save(&ops(&mut e), b"") };
+        save(&mut e, b"");
         assert_eq!(e.data, [0, 0, 0, 0]);
-        assert_eq!(unsafe { load(&ops(&mut e)) }, (ERROR_OK, Vec::new()));
+        assert_eq!(load(&mut e), (ERROR_OK, Vec::new()));
     }
 
     #[test]
     fn a_short_block_keeps_nothing() {
         let mut m = Mem { data: vec![9, 0, 0, 0, 1, 2, 3], at: 0 };
-        assert_eq!(unsafe { load(&ops(&mut m)) }, (ERROR_BEYOND_END, Vec::new()));
+        assert_eq!(load(&mut m), (ERROR_BEYOND_END, Vec::new()));
         let mut none = Mem { data: vec![1, 0], at: 0 };
-        assert_eq!(unsafe { load(&ops(&mut none)) }.0, ERROR_BEYOND_END);
+        assert_eq!(load(&mut none).0, ERROR_BEYOND_END);
     }
 }

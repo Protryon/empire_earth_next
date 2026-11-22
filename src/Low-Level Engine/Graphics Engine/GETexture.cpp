@@ -45,16 +45,9 @@
 #include "lle/FSPath.h"
 #include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
 #include "lle/GETextureSet.h"
-extern "C" {
-}
-
 // the Rust mirrors (texobj_tex.rs), field for field
-static_assert(sizeof(EeGeTStage) == sizeof(GETStage), "GETStage");
-static_assert(offsetof(EeGeTStage, mip_filter_mode) == offsetof(GETStage, mMipFilterMode), "GETStage");
-static_assert(offsetof(EeGeTStage, mip_map_bias) == offsetof(GETStage, mMipMapBias), "GETStage");
 static_assert(sizeof(EeGeTexCoord) == sizeof(GETextureCoordinate), "GETextureCoordinate");
 static_assert(offsetof(EeGeTexCoord, v) == offsetof(GETextureCoordinate, mV), "GETextureCoordinate");
-static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "GESurfaceDescription");
 
 // port (D9): stores one decoded frame (top row first, R, G, B(, A)) into a surface as the original's Targa reader
 // (GESurface::LoadTGA, removed) stored a texture file's frame (the pixel loop is Rust: ee_ge pixel.rs, store_frame):
@@ -96,84 +89,76 @@ GERasterizer* GETexture::sRasterizer;
 // The calls the texture makes on other objects (EeGeTexOp), in the original's statements
 intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
-    GESurface* theSurface = (GESurface*)inObj;
-    GETexture* theTexture = (GETexture*)inObj;
     switch (inOp) {
     case EeGeTexOp::SurfReference:
-        theSurface->Reference();
+        ((GESurface*)inObj)->Reference();
         return 0;
     case EeGeTexOp::SurfDereference:
-        theSurface->Dereference();
+        ((GESurface*)inObj)->Dereference();
         return 0;
     case EeGeTexOp::SurfParentScreen:
-        return (intptr_t)theSurface->GetParentScreen();
+        return (intptr_t)((GESurface*)inObj)->GetParentScreen();
     case EeGeTexOp::SurfAllocatedSize:
-        return (intptr_t)theSurface->GetAllocatedSize();
+        return (intptr_t)((GESurface*)inObj)->GetAllocatedSize();
     case EeGeTexOp::SurfLogicalShift:
-        return (intptr_t)theSurface->GetLogicalShift();
+        return (intptr_t)((GESurface*)inObj)->GetLogicalShift();
     case EeGeTexOp::SurfSetLogicalShift:
-        theSurface->SetLogicalShift((unsigned long)a);
+        ((GESurface*)inObj)->SetLogicalShift((unsigned long)a);
         return 0;
     case EeGeTexOp::SurfLock:
-        return theSurface->Lock();
+        return ((GESurface*)inObj)->Lock();
     case EeGeTexOp::SurfUnlock:
-        return theSurface->Unlock();
+        return ((GESurface*)inObj)->Unlock();
     case EeGeTexOp::SurfMemory:
-        return (intptr_t)theSurface->GetMemoryAddress();
+        return (intptr_t)((GESurface*)inObj)->GetMemoryAddress();
     case EeGeTexOp::SurfBytesPerRow:
-        return (intptr_t)theSurface->GetBytesPerRow();
+        return (intptr_t)((GESurface*)inObj)->GetBytesPerRow();
     case EeGeTexOp::SurfDescription:
-        *(GESurfaceDescription*)a = theSurface->GetSurfaceDescription();
+        *(GESurfaceDescription*)a = ((GESurface*)inObj)->GetSurfaceDescription();
         return 0;
     case EeGeTexOp::SurfAttached:
-        return (intptr_t)theSurface->GetAttachedSurface(0);
+        return (intptr_t)((GESurface*)inObj)->GetAttachedSurface(0);
     case EeGeTexOp::SurfAttachedCount:
-        return (intptr_t)theSurface->GetAttachedSurfaceCount();
+        return (intptr_t)((GESurface*)inObj)->GetAttachedSurfaceCount();
     case EeGeTexOp::SurfWidth:
-        return (intptr_t)theSurface->GetWidth();
+        return (intptr_t)((GESurface*)inObj)->GetWidth();
     case EeGeTexOp::SurfHeight:
-        return (intptr_t)theSurface->GetHeight();
+        return (intptr_t)((GESurface*)inObj)->GetHeight();
     case EeGeTexOp::SurfCopyWithFilter: {
         const EeGeTexCopy* theCopy = (const EeGeTexCopy*)b;
         GERectangle theSource = GERectangleOf(theCopy->source);
         GERectangle theDestination = GERectangleOf(theCopy->destination);
-        return theSurface->CopyWithFilter((GESurface*)a, theSource, theDestination);
+        return ((GESurface*)inObj)->CopyWithFilter((GESurface*)a, theSource, theDestination);
     }
     case EeGeTexOp::SurfCopyTo: {
         const EeGeTexCopy* theCopy = (const EeGeTexCopy*)b;
         GERectangle theSource = GERectangleOf(theCopy->source);
         GERectangle theDestination = GERectangleOf(theCopy->destination);
-        return theSurface->CopyTo((GESurface*)a, theSource, theDestination, theCopy->transparent);
+        return ((GESurface*)inObj)->CopyTo((GESurface*)a, theSource, theDestination, theCopy->transparent);
     }
     case EeGeTexOp::ScreenCreateSurface:
         return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
-    case EeGeTexOp::FileInfo: {
-        EeOfTextureInfo theInfo;
-        ee_of_texture_info((const EeOfTexture*)inObj, &theInfo);
-        uint32_t* theOut = (uint32_t*)a;
-        theOut[0] = theInfo.width;
-        theOut[1] = theInfo.height;
-        theOut[2] = theInfo.frame_count;
+    case EeGeTexOp::FileInfo:
+        ee_of_texture_info((const EeOfTexture*)inObj, (EeOfTextureInfo*)a);
         return 0;
-    }
     case EeGeTexOp::StoreFrame: {
         EeOfTextureFrame theFrame;
         ee_of_texture_frame((const EeOfTexture*)a, (uint32_t)b, &theFrame);
-        return GEStoreFrame(theSurface, theFrame);
+        return GEStoreFrame(((GESurface*)inObj), theFrame);
     }
     case EeGeTexOp::TexNew:
         return (intptr_t)new GETexture((GETextureManager*)inObj);
     case EeGeTexOp::TexBaseDereference:
-        theTexture->UReferenceCounter::Dereference();
+        ((GETexture*)inObj)->UReferenceCounter::Dereference();
         return 0;
     case EeGeTexOp::ManagerRemove:
         return ((GETextureManager*)inObj)->RemoveTexture((GETexture*)a);
     case EeGeTexOp::ManagerPromote:
         return ((GETextureManager*)inObj)->PromoteTexture((GETexture*)a);
     case EeGeTexOp::RasterCreate:
-        return GETexture::sRasterizer->CreateTextureHandle(theTexture);
+        return GETexture::sRasterizer->CreateTextureHandle(((GETexture*)inObj));
     case EeGeTexOp::RasterDestroy:
-        GETexture::sRasterizer->DestroyTextureHandle(theTexture);
+        GETexture::sRasterizer->DestroyTextureHandle(((GETexture*)inObj));
         return 0;
     default:
         return 0;
@@ -201,41 +186,15 @@ GETexture::~GETexture()
     ee_ge_tex_destroy(this->mRust);
 }
 
-// Loads the texture (and its animation frames) from its decoded PNG frames (port, D9: the original read a texture or
-// .tga file), building or dropping MIP levels as asked; frames become separate textures (format 0) or cells of one
-// grid surface (format 1)
-long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
-                     bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat)
-{
-    return ee_ge_tex_load(this->mRust, inTexture, (EeGeSurfaceDescription*)&inDescription, inScreen, inCreateMIPMaps,
-                          inNumMipLevelsToDrop, inFrameFormat);
-}
-
-// Locks the texture's surface and returns its memory and row pitch
-long GETexture::Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
-{
-    return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow);
-}
-
 // (the SetStage* setters: inline in lle/GETexture.h)
 
 // ---- GETextureManager (GETextureManager.cpp, folded here in R4.3 part 16)
 
 // the Rust mirrors of the descriptions (texobj.rs), field for field
-static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "GESurfaceDescription");
-static_assert(offsetof(EeGeSurfaceDescription, mip_level_count) == offsetof(GESurfaceDescription, mMipLevelCount), "");
-static_assert(offsetof(EeGeSurfaceDescription, pixel_depth) == offsetof(GESurfaceDescription, mPixelDepth), "");
-static_assert(offsetof(EeGeSurfaceDescription, no_alpha) == offsetof(GESurfaceDescription, mNoAlpha), "");
 static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "GETextureDescription");
 static_assert(offsetof(EeGeTextureDescription, num_mip_levels_to_drop) == offsetof(GETextureDescription, mNumMipLevelsToDrop), "");
 static_assert(offsetof(EeGeTextureDescription, use_texture_pack) == offsetof(GETextureDescription, mUseTexturePack), "");
 
-// port: the texture pack (SetTexturePack): its settings live in Rust (ee_ge managers.rs, TexturePack). The directory
-// stays set when the pack is turned off, so a texture loaded from it is reloaded from it (RefreshAllTextures).
-void GETextureManager::SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
-{
-    ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop);
-}
 
 // The pack's name of a texture: "textures\x" -> "textures-4x\x"; false for a name outside "textures\" (or no pack
 // directory), for the pictures the game reads as data, and while the pack is off
@@ -248,21 +207,11 @@ bool GETextureManager::GetTexturePackName(const UString& inName, UString& outNam
     return true;
 }
 
-long GETextureManager::GetTexturePackLogicalShift()
-{
-    return ee_ge_texpack_logical_shift();
-}
 
-long GETextureManager::GetTexturePackMipLevelsToDrop()
-{
-    return ee_ge_texpack_mip_levels_to_drop();
-}
 
 // The calls the manager makes on other objects (EeGeManOp), in the original's statements
 intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
-    GETextureManager* theManager = (GETextureManager*)inOwner;
-    GETexture* theTexture = (GETexture*)inObj;
     switch (inOp) {
     case EeGeManOp::LockCreate: {
         TSCriticalSection* theLock = NULL;
@@ -285,14 +234,14 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
         ((FSPath*)inObj)->Dereference();
         return 0;
     case EeGeManOp::BaseDereference:
-        theTexture->UReferenceCounter::Dereference();
+        ((GETexture*)inObj)->UReferenceCounter::Dereference();
         return 0;
     case EeGeManOp::DumpHeader:
         fprintf(*(FSFileSpec*)inObj, "\n\n*********Texture Manager - Current Loaded Files In Memory*********\n\n");
         return 0;
     case EeGeManOp::DumpLine:
         fprintf(*(FSFileSpec*)b, "The %s texture file is loaded in memory with a reference count of %ld.\n",
-                (const char*)a, theTexture->mReferenceCount);
+                (const char*)a, ((GETexture*)inObj)->mReferenceCount);
         return 0;
     case EeGeManOp::TexFindFile:
         return ee_of_find_texture(&GEOpenFormatsHost, inObj, (const char*)a, (EeOfTexture**)c);
@@ -300,12 +249,12 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
         ee_of_texture_free((EeOfTexture*)inObj);
         return 0;
     case EeGeManOp::TexNew:
-        return (intptr_t)new GETexture(theManager);
+        return (intptr_t)new GETexture(((GETextureManager*)inOwner));
     case EeGeManOp::TexNewFromSurface:
-        return (intptr_t)new GETexture((GESurface*)inObj, theManager);
+        return (intptr_t)new GETexture((GESurface*)inObj, ((GETextureManager*)inOwner));
     case EeGeManOp::TexSurfaceDescription: {
         GESurfaceDescription* theDescription = (GESurfaceDescription*)a;
-        GESurface* theSurface = theTexture->GetSurface();
+        GESurface* theSurface = ((GETexture*)inObj)->GetSurface();
         theDescription->mPixelFormat = theSurface->GetPixelFormat();
         theDescription->mPixelDepth = theSurface->GetPixelDepth();
         theDescription->mSurfaceVolatility = theSurface->GetSurfaceVolatility();
@@ -316,19 +265,14 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     case EeGeManOp::TexPackLog:
         if (getenv("EE_TEXTURE_PACK_LOG"))   // port: the test's evidence (posix_game.py)
             fprintf(stderr, "texture pack: %s logical %lux%lu pixels %lux%lu (%ld MIP levels dropped)\n",
-                    (const char*)a, theTexture->GetWidth(), theTexture->GetHeight(),
-                    theTexture->GetSurface()->GetPixelWidth(), theTexture->GetSurface()->GetPixelHeight(), (long)b);
+                    (const char*)a, ((GETexture*)inObj)->GetWidth(), ((GETexture*)inObj)->GetHeight(),
+                    ((GETexture*)inObj)->GetSurface()->GetPixelWidth(), ((GETexture*)inObj)->GetSurface()->GetPixelHeight(), (long)b);
         return 0;
     default:
         return 0;
     }
 }
 
-// port: the cache's texture at an index, in the cache's (name) order: the store gate digests every cached texture
-GETexture* GETextureManager::GetTextureAt(unsigned long inIndex)
-{
-    return (GETexture*)ee_ge_texman_at(this->mRust, inIndex);
-}
 
 // Creates a texture manager on a search path (referenced), with no textures and its own lock
 GETextureManager::GETextureManager(FSPath* inTexturePath)
@@ -342,86 +286,41 @@ GETextureManager::~GETextureManager()
     ee_ge_texman_free(this->mRust);
 }
 
-unsigned long GETextureManager::GetMemoryFootprint()
-{
-    return ee_ge_texman_footprint(this->mRust);
-}
 
-// Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
-// name's stem; the original tried <name>.tga, then <name>.sst); NULL if it cannot be found or loaded
-// Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
-// looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
-long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
-{
-    return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
-}
 
 // ---- GETextureSet (GETextureSet.cpp, folded here in R4.3 part 16)
 
-// Creates a width x height grid of empty texture slots
-GETextureSet::GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight,
-                           unsigned long inTextureTileCoverage)
-{
-    this->mNumTexturesInWidth = inNumTexturesInWidth;
-    this->mNumTexturesInHeight = inNumTexturesInHeight;
-    this->mTextureTileCoverage = inTextureTileCoverage;
-    this->mTextures.resize(inNumTexturesInWidth);
-    for (unsigned long i = 0; i < inNumTexturesInWidth; i++)
-        this->mTextures[i].resize(inNumTexturesInHeight, NULL);
-}
-
-// Destroys the texture grid, releasing every texture in it
-GETextureSet::~GETextureSet()
-{
-    for (unsigned long i = 0; i < this->mNumTexturesInWidth; i++) {
-        for (unsigned long j = 0; j < this->mNumTexturesInHeight; j++) {
-            if (this->mTextures[i][j] != NULL)
-                this->mTextures[i][j]->Dereference();
-        }
-    }
-}
-
-// Puts a texture into a grid slot, releasing the old one and referencing the new one
-void GETextureSet::SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture)
-{
-    if (this->mTextures[inX][inY] != NULL)
-        this->mTextures[inX][inY]->Dereference();
-    this->mTextures[inX][inY] = inTexture;
-    if (this->mTextures[inX][inY] != NULL)
-        this->mTextures[inX][inY]->Reference();
-}
+void GETextureSet::Dereference(void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); }
 
 // ---- GESurface (GESurface.cpp, folded here in R4.3 part 16)
 
 // The calls the image members make on other objects (EeOfSurfOp), in the original's statements
 static intptr_t GESurfaceHost(EeOfSurfOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
-    GESurface* theSurface = (GESurface*)inObj;
-    FSFileSpec* theFile = (FSFileSpec*)inObj;
     unsigned long theWritten;
     switch (inOp) {
-    case EeOfSurfOp::Format: return (intptr_t)theSurface->GetPixelFormat();
-    case EeOfSurfOp::Depth: return (intptr_t)theSurface->GetPixelDepth();
-    case EeOfSurfOp::BytesPerRow: return (intptr_t)theSurface->GetBytesPerRow();
-    case EeOfSurfOp::Memory: return (intptr_t)theSurface->GetMemoryAddress();
-    case EeOfSurfOp::PixelWidth: return (intptr_t)theSurface->GetPixelWidth();
-    case EeOfSurfOp::PixelHeight: return (intptr_t)theSurface->GetPixelHeight();
-    case EeOfSurfOp::NoAlpha: return theSurface->GetSurfaceDescription().mNoAlpha;
-    case EeOfSurfOp::Lock: return theSurface->Lock();
-    case EeOfSurfOp::Unlock: return theSurface->Unlock();
-    case EeOfSurfOp::FileIsOpen: return theFile->GetIsOpen();
-    case EeOfSurfOp::FileAccess: return (intptr_t)theFile->GetFileAccess();
-    case EeOfSurfOp::FileOpen: return theFile->Open((unsigned long)a);
-    case EeOfSurfOp::FileClose: return theFile->Close();
-    case EeOfSurfOp::FileFOpen: return theFile->FOpen((char*)a);
-    case EeOfSurfOp::FileStream: return (intptr_t)(FILE*)*theFile;
-    case EeOfSurfOp::FilePosition: return theFile->GetPosition(*(long*)a);
-    case EeOfSurfOp::FileSetPosition: return theFile->SetPosition((long)a, (unsigned long)b, c != 0);
-    case EeOfSurfOp::FileWrite: return theFile->Write((const unsigned char*)a, (unsigned long)b, theWritten);
-    case EeOfSurfOp::FileWriteU16: return theFile->Write((unsigned short)a);
-    case EeOfSurfOp::FileWriteLong: return theFile->Write((long)a);
-    case EeOfSurfOp::FileRead: return theFile->Read((unsigned char*)a, (unsigned long)b, *(unsigned long*)c);
-    case EeOfSurfOp::FileLength: return theFile->GetLength(*(unsigned long*)a);
+    case EeOfSurfOp::Format: return (intptr_t)((GESurface*)inObj)->GetPixelFormat();
+    case EeOfSurfOp::Depth: return (intptr_t)((GESurface*)inObj)->GetPixelDepth();
+    case EeOfSurfOp::BytesPerRow: return (intptr_t)((GESurface*)inObj)->GetBytesPerRow();
+    case EeOfSurfOp::Memory: return (intptr_t)((GESurface*)inObj)->GetMemoryAddress();
+    case EeOfSurfOp::PixelWidth: return (intptr_t)((GESurface*)inObj)->GetPixelWidth();
+    case EeOfSurfOp::PixelHeight: return (intptr_t)((GESurface*)inObj)->GetPixelHeight();
+    case EeOfSurfOp::NoAlpha: return ((GESurface*)inObj)->GetSurfaceDescription().mNoAlpha;
+    case EeOfSurfOp::Lock: return ((GESurface*)inObj)->Lock();
+    case EeOfSurfOp::Unlock: return ((GESurface*)inObj)->Unlock();
+    case EeOfSurfOp::FileIsOpen: return ((FSFileSpec*)inObj)->GetIsOpen();
+    case EeOfSurfOp::FileAccess: return (intptr_t)((FSFileSpec*)inObj)->GetFileAccess();
+    case EeOfSurfOp::FileOpen: return ((FSFileSpec*)inObj)->Open((unsigned long)a);
+    case EeOfSurfOp::FileClose: return ((FSFileSpec*)inObj)->Close();
+    case EeOfSurfOp::FileFOpen: return ((FSFileSpec*)inObj)->FOpen((char*)a);
+    case EeOfSurfOp::FileStream: return (intptr_t)(FILE*)*((FSFileSpec*)inObj);
+    case EeOfSurfOp::FilePosition: return ((FSFileSpec*)inObj)->GetPosition(*(long*)a);
+    case EeOfSurfOp::FileSetPosition: return ((FSFileSpec*)inObj)->SetPosition((long)a, (unsigned long)b, c != 0);
+    case EeOfSurfOp::FileWrite: return ((FSFileSpec*)inObj)->Write((const unsigned char*)a, (unsigned long)b, theWritten);
+    case EeOfSurfOp::FileWriteU16: return ((FSFileSpec*)inObj)->Write((unsigned short)a);
+    case EeOfSurfOp::FileWriteLong: return ((FSFileSpec*)inObj)->Write((long)a);
+    case EeOfSurfOp::FileRead: return ((FSFileSpec*)inObj)->Read((unsigned char*)a, (unsigned long)b, *(unsigned long*)c);
+    case EeOfSurfOp::FileLength: return ((FSFileSpec*)inObj)->GetLength(*(unsigned long*)a);
     }
     return 0;
 }
@@ -430,12 +329,7 @@ static intptr_t GESurfaceHost(EeOfSurfOp inOp, void* inObj, intptr_t a, intptr_t
 long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
                                        unsigned long& outHeight, unsigned long& outDepth)
 {
-    unsigned long theOut[3] = {outWidth, outHeight, outDepth};
-    long theResult = ee_of_surf_attributes(&GESurfaceHost, &inFile, inType, &theOut);
-    outWidth = theOut[0];
-    outHeight = theOut[1];
-    outDepth = theOut[2];
-    return theResult;
+    return ee_of_surf_attributes(&GESurfaceHost, &inFile, inType, &outWidth, &outHeight, &outDepth);
 }
 
 // Loads an image file into the surface by file type (BMP: unsupported, JPG, JPG2, PNG; TGA: no longer read, D9)

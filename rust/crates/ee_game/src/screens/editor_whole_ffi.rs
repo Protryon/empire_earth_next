@@ -1,15 +1,19 @@
 //! `extern "C"` for the scenario editor's actions whole in Rust (`editor_whole.rs`): the record an `EESEARust`
 //! (`ee/EESEARust.h`) holds, made, begun, run and freed by it, and the calls of the actions' users (the rotation,
-//! the trigger area's corner, the wall and gate placements). The host is `ee_screenscpp_sew` and
-//! `ee_screenscpp_sew_elevation` (`Scenario Editor Actions/EESEARust.cpp`).
+//! the trigger area's corner, the wall and gate placements). The host is `ee_screenscpp_sew` (`Scenario Editor
+//! Actions/EESEARust.cpp`), its sequences composed in `editor_seax.rs`.
 
 use core::ffi::c_void;
 
 use ee_base::math::types::GeTransformation;
 
 use crate::screens::editor_events::{SeeHost, SeeKind};
-use crate::screens::editor_place::SepHost;
-use crate::screens::editor_whole::{EeScreensSewAction, SewAction, SewElevation, SewGate, SewHost, SewWall};
+use crate::screens::editor_place::{SepHost, EE_SCREENS_SEP_PARTS};
+use crate::screens::editor_seax;
+use crate::screens::editor_seax_ffi::Seax;
+use crate::screens::editor_whole::{
+    EeScreensSewAction, SewAction, SewElevation, SewGate, SewHost, SewWall, EE_SCREENS_SEW_OP_RANDOM_MAP,
+};
 
 /// cbindgen:ignore
 mod sys {
@@ -17,7 +21,6 @@ mod sys {
 
     extern "C" {
         pub fn ee_screenscpp_sew(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
-        pub fn ee_screenscpp_sew_elevation(data: *mut i16, capacity: usize, out: *mut i32) -> usize;
         pub fn ee_screenscpp_see(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sep(op: u32, p: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> i32;
     }
@@ -27,6 +30,14 @@ struct Host;
 
 impl SepHost for Host {
     fn sep(&mut self, op: u32, p: usize, t: &mut GeTransformation, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
+        if op == EE_SCREENS_SEP_PARTS {
+            // p: room for i1 ids (and one for a simple unit)
+            let out = unsafe { core::slice::from_raw_parts_mut(p as *mut i32, i[1].max(1) as usize) };
+            return editor_seax::parts(&mut Seax, i[0], i[1], out);
+        }
+        if let Some(r) = editor_seax::sep(&mut Seax, op, t, i, f) {
+            return r;
+        }
         // a transformation is sixteen floats, row by row (GETransformation's mMatrix)
         let t = t.m.as_mut_ptr().cast::<f32>();
         unsafe { sys::ee_screenscpp_sep(op, p as *mut c_void, t, i.as_mut_ptr(), f.as_mut_ptr()) }
@@ -35,36 +46,23 @@ impl SepHost for Host {
 
 impl SewHost for Host {
     fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
+        if op == EE_SCREENS_SEW_OP_RANDOM_MAP {
+            // p: the i0 players' indices
+            let players = unsafe { core::slice::from_raw_parts(p as *const i32, i[0].max(0) as usize) };
+            let at = editor_seax::random_map(&mut Seax, players, i[1], i[2], i[3], i[4]);
+            f[..3].copy_from_slice(&at);
+            return 0;
+        }
+        if let Some(r) = editor_seax::sew(&mut Seax, op, p, i, f) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_sew(op, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
     }
     fn delete(&mut self, what: crate::screens::editor_actions::SeuDelete) {
         crate::screens::editor_actions::delete_units(&mut crate::screens::editor_actions_ffi::Selection, what);
     }
     fn elevation(&mut self) -> Option<SewElevation> {
-        // the host reads the picked file pair; a second call with room for all its heights (none written when
-        // there was too little room)
-        let mut out = [0i32; 6];
-        let mut data: Vec<i16> = Vec::new();
-        loop {
-            let n = unsafe { sys::ee_screenscpp_sew_elevation(data.as_mut_ptr(), data.len(), out.as_mut_ptr()) };
-            if n == 0 {
-                return None;
-            }
-            if n <= data.len() {
-                data.truncate(n);
-                break;
-            }
-            data = vec![0; n];
-        }
-        Some(SewElevation {
-            width: out[0] as u32,
-            height: out[1] as u32,
-            data,
-            water_cutoff: out[2],
-            water_depth: out[3],
-            land_height: out[4],
-            land_cutoff: out[5],
-        })
+        editor_seax::elevation(&mut Seax)
     }
 }
 

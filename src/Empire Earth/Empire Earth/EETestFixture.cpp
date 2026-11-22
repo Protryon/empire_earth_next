@@ -499,6 +499,12 @@ int64_t EEFixtureHost(EeFixtureCall* c)
             theCheck->SetChecked(i[1] != 0);
         return theCheck != NULL;
     }
+    case EeFixtureOp::EditNumber: {   // the editor exercise's campaign name
+        UIEditBox* theEdit = dynamic_cast<UIEditBox*>(ControlOf(c));
+        if (theEdit != NULL)
+            theEdit->SetText((unsigned long)i[1]);
+        return theEdit != NULL;
+    }
     case EeFixtureOp::ListSelect: {
         UILBString* theList = dynamic_cast<UILBString*>(ControlOf(c));
         if (theList == NULL || (unsigned long)i[1] >= theList->GetLineCount())

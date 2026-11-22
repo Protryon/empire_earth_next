@@ -875,6 +875,9 @@ struct EeGeTexture;
 /// The texture manager.
 struct EeGeTextureManager;
 
+/// The grid (`mTextures[x][y]`) and its sizes.
+struct EeGeTextureSet;
+
 /// The window.
 struct EeGeWin;
 
@@ -917,6 +920,27 @@ struct EeGeTextOps {
   uint8_t *(*next_chars)(const uint8_t *text, size_t characters);
   int (*cp1252_byte_of)(uint32_t character);
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
+};
+
+/// `GELight`'s members in the C++'s order (sizeof 0x74).
+struct EeGeLight {
+  float color[3];
+  float computed_color[3];
+  float location[3];
+  float model_space_location[3];
+  float direction[3];
+  float model_space_direction[3];
+  float attenuation0;
+  float attenuation1;
+  float attenuation2;
+  float intensity;
+  float range;
+  float range_inverse;
+  float range_squared;
+  float model_space_range;
+  float model_space_range_inverse;
+  float model_space_range_squared;
+  unsigned long style;
 };
 
 /// One command as the executor reads it.
@@ -1132,34 +1156,45 @@ using EeGeTexHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
 
-/// `GESurfaceDescription` (lle/GESurface.h), field for field.
+/// `GESurfaceDescription`: the C++ struct derives from it (lle/GESurface.h), so C++ names its fields.
 struct EeGeSurfaceDescription {
-  /// `mType`.
-  unsigned long kind;
-  unsigned long pixel_format;
-  unsigned long surface_volatility;
-  unsigned long width;
-  unsigned long height;
+  /// `mType` +0x00: GETexture::Load: 5 texture, 6 texture with a mip chain.
+  unsigned long mType;
+  /// +0x04 GetPixelFormat.
+  unsigned long mPixelFormat;
+  /// +0x08 GetSurfaceVolatility.
+  unsigned long mSurfaceVolatility;
+  /// +0x0c GETexture::Load (the file header's width).
+  unsigned long mWidth;
+  /// +0x10.
+  unsigned long mHeight;
+  /// +0x14 GETexture::Load stores 0.
   unsigned long m14;
-  long mip_level_count;
-  unsigned long pixel_depth;
-  bool is_3d_renderable;
-  bool is_transparency_enabled;
-  /// The constructor's one store (false).
-  bool no_alpha;
+  /// +0x18 signed (GETexture::Load's mip loop: jl).
+  long mMipLevelCount;
+  /// +0x1c GetPixelDepth.
+  unsigned long mPixelDepth;
+  /// +0x20 GetIs3DRenderable.
+  bool mIs3DRenderable;
+  /// +0x21 GetIsTransparencyEnabled.
+  bool mIsTransparencyEnabled;
+  /// +0x22 32-bit surfaces only: !GETextureDescription::mHasAlpha; the constructor's one store (false).
+  bool mNoAlpha;
 };
 
-/// `GETStage` (lle/GETexture.h), field for field.
+/// `GETStage` (lle/GETexture.h's name for it, so C++ names its fields).
 struct EeGeTStage {
-  /// `mTexture` (`GETexture*`).
-  void *texture;
-  unsigned long color_mode;
-  unsigned long alpha_mode;
-  unsigned long texture_addressing_mode;
-  unsigned long min_filter_mode;
-  unsigned long mag_filter_mode;
-  unsigned long mip_filter_mode;
-  float mip_map_bias;
+  /// `mTexture` (`GETexture*`, GetStageTexture).
+  void *mTexture;
+  /// SetStageColorMode.
+  unsigned long mColorMode;
+  /// SetStageAlphaMode.
+  unsigned long mAlphaMode;
+  unsigned long mTextureAddressingMode;
+  unsigned long mMinFilterMode;
+  unsigned long mMagFilterMode;
+  unsigned long mMipFilterMode;
+  float mMipMapBias;
 };
 
 /// `GETextureCoordinate`: u, v.
@@ -1167,6 +1202,9 @@ struct EeGeTexCoord {
   float u;
   float v;
 };
+
+/// `static_cast<GETexture*>(texture)->Dereference()`.
+using EeGeTextureDereferenceFn = void(*)(void *texture);
 
 /// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
 struct EeGeStoreTarget {
@@ -1541,6 +1579,36 @@ EeGeFont *ee_ge_game_font_new(void *owner,
                               unsigned long size,
                               unsigned long style,
                               unsigned long quality);
+
+/// `GELight()`.
+///
+/// # Safety
+/// `l` is valid for a write.
+void ee_ge_light_init(EeGeLight *l);
+
+/// `operator=(inLight)`.
+///
+/// # Safety
+/// Both are live.
+void ee_ge_light_assign(EeGeLight *l, const EeGeLight *other);
+
+/// `SetColor(inColor)`.
+///
+/// # Safety
+/// `l` is live; `color` points at three floats.
+void ee_ge_light_set_color(EeGeLight *l, const float (*color)[3]);
+
+/// `SetDirection(inDirection)`.
+///
+/// # Safety
+/// `l` is live; `direction` points at three floats.
+void ee_ge_light_set_direction(EeGeLight *l, const float (*direction)[3]);
+
+/// `SetIntensity(inIntensity)`.
+///
+/// # Safety
+/// `l` is live.
+void ee_ge_light_set_intensity(EeGeLight *l, float intensity);
 
 /// The game's executor and the primitives' vertex host (`GEVertexHost`), set once by the C++ (`GERasterizer`'s
 /// constructor).
@@ -2245,6 +2313,12 @@ const EeGeRastColor *ee_ge_rast_color(EeGeRasterizer *p,
 /// `p` is live; `color` is valid.
 void ee_ge_rast_set_ambient_color(EeGeRasterizer *p, const EeGeRastColor *color);
 
+/// `GetAmbientIntensity()`.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_rast_ambient_intensity(EeGeRasterizer *p);
+
 /// `SetAmbientIntensity(inIntensity, ...)` (the screen is ignored).
 ///
 /// # Safety
@@ -2611,6 +2685,9 @@ void *ee_ge_win_os(const EeGeWin *p);
 /// `p` is live.
 void ee_ge_win_resize(EeGeWin *p, unsigned long width, unsigned long height);
 
+/// `GEInitialize(directory, instance)` (the directory is not read).
+long ee_ge_initialize(void *instance);
+
 /// Turns the arrays' capture on or off.
 void ee_ge_store_capture(bool on);
 
@@ -2928,6 +3005,39 @@ void *const *ee_ge_tex_frames(EeGeTexture *p);
 void *ee_ge_tex_frame_texture(EeGeTexture *p,
                               unsigned long frame);
 
+/// `GETextureSet(inNumTexturesInWidth, inNumTexturesInHeight, inTextureTileCoverage)`: every slot empty.
+EeGeTextureSet *ee_ge_tset_new(unsigned long width,
+                               unsigned long height,
+                               unsigned long coverage,
+                               EeGeTextureDereferenceFn dereference);
+
+/// `~GETextureSet`: every texture in the grid released, column by column.
+///
+/// # Safety
+/// `p` is live and not used again.
+void ee_ge_tset_free(EeGeTextureSet *p);
+
+/// `SetTexture(inX, inY, inTexture)`: the old texture released, the new one referenced.
+///
+/// # Safety
+/// `p` is live, the slot inside the grid, `texture` null or a live `GETexture`.
+void ee_ge_tset_set(EeGeTextureSet *p, unsigned long x, unsigned long y, void *texture);
+
+/// `GetTextureAt(inColumn, inRow)` (`slot` false) or `GetTexture(inX, inY)` (`slot`: the tile's slot in the grid).
+///
+/// # Safety
+/// `p` is live, the slot inside the grid.
+void *ee_ge_tset_get(const EeGeTextureSet *p,
+                     unsigned long x,
+                     unsigned long y,
+                     bool slot);
+
+/// `GetNumTexturesInWidth()` (0), `GetNumTexturesInHeight()` (1), `GetTextureTileCoverage()` (2).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_tset_size(const EeGeTextureSet *p, uint32_t which);
+
 /// `GEPackColor(format, red, green, blue, alpha)`.
 unsigned long ee_ge_pack_color(unsigned long format,
                                unsigned long red,
@@ -3176,6 +3286,31 @@ unsigned long ee_ge_tm_register_color_set(EeGeTerrainMesh *p,
 /// `p` is live.
 unsigned long ee_ge_tm_register_texture_set(EeGeTerrainMesh *p, void *set);
 
+/// `RegisterColorSet(set, outID)` as the C++ returns it: the id into `out`, 0.
+///
+/// # Safety
+/// `p` is live; `colors` holds `count` values; `out` is valid for a write.
+long ee_ge_tm_register_color_set_out(EeGeTerrainMesh *p,
+                                     const unsigned long *colors,
+                                     size_t count,
+                                     unsigned long *out);
+
+/// `RegisterTextureSet(set, outID)` as the C++ returns it: the id into `out`, 0.
+///
+/// # Safety
+/// `p` is live; `out` is valid for a write.
+long ee_ge_tm_register_texture_set_out(EeGeTerrainMesh *p, void *set, unsigned long *out);
+
+/// Two of the mesh's values (`GetTerrainVisibleBottomLeftIndices`, `GetTerrainVisibleTileDimensions`).
+///
+/// # Safety
+/// `p` is live; the outs are valid for a write.
+void ee_ge_tm_get_pair(const EeGeTerrainMesh *p,
+                       EeGeTmVal a,
+                       EeGeTmVal b,
+                       unsigned long *out_a,
+                       unsigned long *out_b);
+
 /// `GetRegisteredTextureSet(id)` (NULL past the registered ones).
 ///
 /// # Safety
@@ -3242,6 +3377,16 @@ long ee_ge_tm_save(const EeGeTerrainMesh *p, const EeGeFieldIo *io);
 /// # Safety
 /// `p` is live; the row exists; `out` holds three values.
 void ee_ge_tm_visible_row(const EeGeTerrainMesh *p, unsigned long index, long *out);
+
+/// `GetVisibleTileRow(index, outY, outStartX, outEndX)`: the row's three values.
+///
+/// # Safety
+/// `p` is live, `index` one of its rows; the outs are valid for a write.
+void ee_ge_tm_visible_row_parts(const EeGeTerrainMesh *p,
+                                unsigned long index,
+                                long *out_y,
+                                long *out_start_x,
+                                long *out_end_x);
 
 /// The render vertex array (`GetTerrainRenderVertexArray`, or with `water` `GetWaterRenderVertexArray`):
 /// `[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]`.

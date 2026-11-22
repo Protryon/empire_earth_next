@@ -228,7 +228,9 @@ public:
             return (int64_t)this->GetDisplayLine() | (int64_t)(this->GetNumberLinesDisplayed() + this->GetDisplayLine()) << 32;
         return (int64_t)this->GetNumLines() << 32;
     }
-    long DrawBars(const uint32_t* inLines, size_t inCount);   // EESEUITechListBox::DrawPolygons' blue bars
+    // EESEUITechListBox::DrawPolygons' blue bars (shell_factories.rs draw_bars)
+    using UILBString::GetCopyTextRectangle;
+    using UILBString::GetLineHeight;
     EE_SHELL_COMMON(UILBString)
     EE_SHELL_VOID(UILBString, ButtonUp, EE_SCREENS_SV_BUTTON_UP)
     virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
@@ -280,7 +282,7 @@ public:
 
 // a plain control (UIControl, its pure virtuals EEUIRustControl's: nothing, 0): the paint areas, the icon bar. Its
 // slots hold the C++ objects a kind's host cases need (the icon bar's bitmaps and sounds); EEUIRustControl's class
-// ops (RustOp) are the kind's host cases (EEUIShell.cpp)
+// ops are Rust's (the icon bar's: icon_bar_ops.rs over EEUIShell.cpp's shims)
 class EEUIShellControl : public EEUIRustControl, public EEUIShell {
 public:
     EEUIShellControl(uint32_t inKind, const std::vector<int64_t>& inArgs, unsigned long inId,
@@ -298,7 +300,6 @@ public:
     const GE2DPoint& MouseLocation() const { return this->GetMouseLocation(); }
     void Capture() { this->CaptureMouse(); }
 protected:
-    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 };
 
 // a form (UIForm): its virtuals the kind's when it overrides them; a kind reaches the form's base calls and its own
@@ -349,8 +350,6 @@ protected:
 };
 
 class UIControlsTable;
-UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
-UIControl* EEUIShellNewChatLine(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
 
 // the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
 // extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)

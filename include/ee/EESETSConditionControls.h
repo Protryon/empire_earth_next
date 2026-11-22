@@ -12,7 +12,6 @@ class UIRadioButton;
 class UISlider;
 class UITextLabel;
 class GEFont;
-class UIForm;
 
 extern GEFont* gU531934;                    // 0x531934 (the check boxes' font; a global of Empire Earth.cpp)
 extern GEFont* gU531930;                    // 0x531930 (the chat text edit box's font; Empire Earth.cpp's globals)

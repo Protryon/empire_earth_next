@@ -34,23 +34,12 @@
 #include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 // ---- the tab's host (editor_elevation.rs: the ops from 900)
 
-static_assert(kSEElevationPaint == 0xa1 && kSEElevationElevationSlider == 0x9d && kSEElevationStrengthSlider == 0xa2 &&
-                  kSEElevationRaiseButton == 0x96 && kSEElevationLevelButton == 0xa0 &&
-                  kSEElevationStrengthLabel == 0x9f && IDS_PAINT_HILLS == 30465 && IDS_SE_MAP_TERRAIN == 20018,
-              "editor_elevation.rs's ids");
 
 namespace {
 
-int32_t SeelxOut(int32_t* i, const void* inObject)
-{
-    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
-    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
-    return 0;
-}
 UISlider* SeelxSlider(void* const* p) { return static_cast<UISlider*>(static_cast<UIControl*>(p[0])); }
 EEUIFSEBrushGroup* SeelxBrushes(void* const* p) { return static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetBrushGroup(); }
 EETile* sSeelxTile;      // EE_SCREENS_SEELX_POINT's and _TILE's
@@ -66,9 +55,9 @@ extern "C" int32_t ee_screenscpp_seelx(uint32_t inOp, void* const* p, int32_t* i
 {
     UIForm* theForm = static_cast<UIForm*>(p[1]);
     switch (inOp) {
-    case EE_SCREENS_SEELX_NEW_PAINT: return SeelxOut(i, static_cast<UIControl*>(new EEUIShellControl(EE_SCREENS_SK_PAINT_ELEVATION, {(int64_t)static_cast<void* const*>(p[2])[0], (int64_t)static_cast<void* const*>(p[2])[1]}, kSEElevationPaint, GERectangle(GE2DPoint(0.0f, 0.0f), 1024.0f, 606.0f), theForm, (unsigned long)i[0], 0)));
-    case EE_SCREENS_SEELX_NEW_ELEVATION_SLIDER: return SeelxOut(i, static_cast<UIControl*>(new EEUIShellSlider(EE_SCREENS_SK_ELEVATION_SLIDER, {}, kSEElevationElevationSlider, GERectangle(GE2DPoint(f[0], f[1]), 20.0f, (float)(unsigned long)f[2]), 1, theForm, (unsigned long)i[0], 2)));
-    case EE_SCREENS_SEELX_NEW_STRENGTH_SLIDER: return SeelxOut(i, static_cast<UIControl*>(new UISlider(kSEElevationStrengthSlider, GERectangle(GE2DPoint(f[0], f[1]), 20.0f, f[2]), 1, theForm, (unsigned long)i[0], 2)));
+    case EE_SCREENS_SEELX_NEW_PAINT: return EESEOut(i, static_cast<UIControl*>(new EEUIShellControl(EE_SCREENS_SK_PAINT_ELEVATION, {(int64_t)static_cast<void* const*>(p[2])[0], (int64_t)static_cast<void* const*>(p[2])[1]}, EE_SCREENS_SE_ELEVATION_PAINT, GERectangle(GE2DPoint(0.0f, 0.0f), 1024.0f, 606.0f), theForm, (unsigned long)i[0], 0)));
+    case EE_SCREENS_SEELX_NEW_ELEVATION_SLIDER: return EESEOut(i, static_cast<UIControl*>(new EEUIShellSlider(EE_SCREENS_SK_ELEVATION_SLIDER, {}, EE_SCREENS_SE_ELEVATION_ELEVATION_SLIDER, GERectangle(GE2DPoint(f[0], f[1]), 20.0f, (float)(unsigned long)f[2]), 1, theForm, (unsigned long)i[0], 2)));
+    case EE_SCREENS_SEELX_NEW_STRENGTH_SLIDER: return EESEOut(i, static_cast<UIControl*>(new UISlider(EE_SCREENS_SE_ELEVATION_STRENGTH_SLIDER, GERectangle(GE2DPoint(f[0], f[1]), 20.0f, f[2]), 1, theForm, (unsigned long)i[0], 2)));
     case EE_SCREENS_SEELX_SLIDER_RANGE: SeelxSlider(p)->SetRange(0, i[0]);
         return 0;
     case EE_SCREENS_SEELX_SLIDER_MAX: return (int32_t)SeelxSlider(p)->GetMaxRange();
@@ -77,7 +66,7 @@ extern "C" int32_t ee_screenscpp_seelx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEELX_SLIDER_VALUE: return (int32_t)SeelxSlider(p)->GetCurrentRangeValue();
     case EE_SCREENS_SEELX_SLIDER_PAGE: SeelxSlider(p)->SetPageSize(1);
         return 0;
-    case EE_SCREENS_SEELX_NEW_SLIDER_CHANGE: return SeelxOut(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[2]), -4.0f, 0x28)));
+    case EE_SCREENS_SEELX_NEW_SLIDER_CHANGE: return EESEOut(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[2]), -4.0f, 0x28)));
     case EE_SCREENS_SEELX_MOUSE_X: f[0] = gMouse->mPosition.GetX();
         return 0;
     case EE_SCREENS_SEELX_MOUSE_Y: f[0] = gMouse->mPosition.GetY();

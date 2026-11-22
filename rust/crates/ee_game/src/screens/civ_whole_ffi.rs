@@ -1,38 +1,165 @@
 //! `extern "C"` for the civilization builder whole (`civ_whole.rs`, `civ_edit.rs`, `civ_list.rs`): its entry
 //! points (the game's open paths, the timer, the blinking button, the campaign's save, the edited civilization's
-//! end, the questions' answers), the list box's overrides (`EECBUIListBox`'s forwarders), and the one host,
-//! `ee_screenscpp_cb` (`Civilization Builder/EECivilizationBuilder.cpp`).
+//! end, the questions' answers), the list box's overrides (`EECBUIListBox`'s forwarders), and the one host
+//! (`civ_host.rs`, over the C++ shims of `Civilization Builder/EECivilizationBuilder.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_long, c_void};
+use core::ffi::{c_long, c_ulong, c_void};
 
 use crate::screens::civ_list;
 use crate::screens::civ_whole::{self, CbHost, EeScreensCbOut};
 
-/// cbindgen:ignore
-mod sys {
-    extern "C" {
-        pub fn ee_screenscpp_cb(
-            op: u32,
-            p: usize,
-            a: i64,
-            b: i64,
-            c: i64,
-            text: *const u8,
-            length: usize,
-            out: *mut core::ffi::c_void,
-        ) -> i64;
-    }
-}
-
-/// The C++ host.
+/// The host: its ops in Rust (`civ_host.rs`) over the one-statement C++ shims.
 pub(crate) struct Host;
 
 impl CbHost for Host {
     fn op(&mut self, op: u32, p: usize, a: i64, b: i64, c: i64, text: &[u8], out: &mut EeScreensCbOut) -> i64 {
-        let out = (out as *mut EeScreensCbOut).cast::<c_void>();
-        unsafe { sys::ee_screenscpp_cb(op, p, a, b, c, text.as_ptr(), text.len(), out) }
+        crate::screens::civ_host::op(&mut crate::screens::game_cpp::Ffi, op, p, a, b, c, text, out)
     }
+}
+
+/// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
+/// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_civ_file_host(ctx: *mut c_void, call: *const c_void, reply: *mut c_void) {
+    use ee_sim::tech::civ_file::{EeTechCivFileCall, EeTechCivFileReply};
+    // SAFETY: the simulation's call and reply, live for the call
+    let (call, reply) = unsafe { (&*(call as *const EeTechCivFileCall), &mut *(reply as *mut EeTechCivFileReply)) };
+    crate::screens::civ_file_calls::host(&mut crate::screens::game_cpp::Ffi, ctx as usize, call, reply)
+}
+
+/// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
+/// the `EEComplexUnit*`; `area_effect_manager.rs`).
+#[no_mangle]
+pub extern "C" fn ee_screens_aem_collect(
+    radius: f32,
+    x: f32,
+    y: f32,
+    player: c_ulong,
+    list: *mut c_void,
+    unit: *mut c_void,
+) {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    crate::screens::area_effect_manager::collect_effects(ffi, radius, x, y, player as u64, list as usize, unit as usize)
+}
+
+/// `EEAEManager::FindEffect(kind, x, y, player, mode, exclude)` on the manager -> the `EEAreaEffect*` or NULL.
+#[no_mangle]
+pub extern "C" fn ee_screens_aem_find(
+    manager: *mut c_void,
+    kind: c_long,
+    x: f32,
+    y: f32,
+    player: c_ulong,
+    mode: bool,
+    exclude: *mut c_void,
+) -> *mut c_void {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    let m = manager as usize;
+    crate::screens::area_effect_manager::find_effect(ffi, m, kind as i64, x, y, player as u64, mode, exclude as usize)
+        as *mut c_void
+}
+
+/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
+pub type EeScreensAesIo = Option<unsafe extern "C" fn(ctx: *mut c_void, op: u32, value: *mut c_void) -> c_long>;
+
+/// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
+#[no_mangle]
+pub extern "C" fn ee_screens_aes_load_templates(manager: *mut c_void, file: *mut c_void) -> c_long {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    crate::screens::area_effect_running::load_templates(ffi, manager as usize, file as usize) as c_long
+}
+
+/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
+#[no_mangle]
+pub extern "C" fn ee_screens_aes_save(ctx: *mut c_void, call: EeScreensAesIo) {
+    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx, call };
+    crate::screens::area_effect_running::save(&mut crate::screens::game_cpp::Ffi, io)
+}
+
+/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
+#[no_mangle]
+pub extern "C" fn ee_screens_aes_load(ctx: *mut c_void, call: EeScreensAesIo) -> c_long {
+    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx, call };
+    crate::screens::area_effect_running::load(&mut crate::screens::game_cpp::Ffi, io)
+}
+
+/// The running state's fix-up after a load (`aes_after_load`'s registered call; `state` the record).
+///
+/// # Safety
+/// `state` is a live `EeAreaEffectRunning`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_aes_restore(state: *const c_void) {
+    let state = state as *const ee_sim::tech::area_effect_save::EeAreaEffectRunning;
+    // SAFETY: the caller's record
+    unsafe { crate::screens::area_effect_running::restore(&mut crate::screens::game_cpp::Ffi, state) }
+}
+
+/// `EEAreaEffectTemplate::Load(on_demand)` and `Unload` on the template (`area_effect_lists.rs`).
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_template_load(template: *mut c_void, on_demand: bool) {
+    crate::screens::area_effect_lists::template_load(&mut crate::screens::game_cpp::Ffi, template as usize, on_demand)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_template_unload(template: *mut c_void) {
+    crate::screens::area_effect_lists::template_unload(&mut crate::screens::game_cpp::Ffi, template as usize)
+}
+
+/// `EEUnitAreaEffectList::AddAreaEffect(effect)` on the list.
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_add(list: *mut c_void, effect: *mut c_void) {
+    crate::screens::area_effect_lists::add_area_effect(
+        &mut crate::screens::game_cpp::Ffi,
+        list as usize,
+        effect as usize,
+    )
+}
+
+/// `EEUnitAreaEffectList::ApplyModifiers(kind, value, out, unit)` on the list (`value` and `out` the caller's longs).
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_apply_modifiers(
+    list: *mut c_void,
+    kind: c_long,
+    value: *const c_long,
+    out: *mut c_long,
+    unit: *mut c_void,
+) {
+    let ffi = &mut crate::screens::game_cpp::Ffi;
+    let (l, v, o) = (list as usize, value as usize, out as usize);
+    crate::screens::area_effect_lists::apply_modifiers(ffi, l, kind as i64, v, o, unit as usize)
+}
+
+/// `EEUnitAreaEffectList::Remove(kind)` on the list -> whether one was removed.
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_remove(list: *mut c_void, kind: c_long) -> bool {
+    crate::screens::area_effect_lists::remove(&mut crate::screens::game_cpp::Ffi, list as usize, kind as i64)
+}
+
+/// `EEUnitAreaEffectList::MarkDirty`, `MoveAndUpdate(x, y, value)` and `Tick(unit, elapsed)` on the list.
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_mark_dirty(list: *mut c_void) {
+    crate::screens::area_effect_lists::mark_dirty(&mut crate::screens::game_cpp::Ffi, list as usize)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_move_and_update(list: *mut c_void, x: f32, y: f32, value: f32) {
+    crate::screens::area_effect_lists::move_and_update(&mut crate::screens::game_cpp::Ffi, list as usize, x, y, value)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_screens_ael_tick(list: *mut c_void, unit: *mut c_void, elapsed: f32) {
+    crate::screens::area_effect_lists::tick(&mut crate::screens::game_cpp::Ffi, list as usize, unit as usize, elapsed)
+}
+
+/// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
+#[no_mangle]
+pub extern "C" fn ee_screens_civ_fill_list(list: *mut c_void) {
+    crate::screens::civ_manager_calls::fill_civilization_list(
+        &mut crate::screens::game_cpp::Ffi,
+        &mut Host,
+        list as usize,
+    )
 }
 
 unsafe fn bytes<'a>(text: *const u8, length: usize) -> &'a [u8] {

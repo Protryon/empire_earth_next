@@ -73,6 +73,7 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "ee/EEUIShell.h"
+#include "lle/UIObjHost.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
 {
@@ -129,100 +130,44 @@ int64_t EEUIShellForm::SelfCall(uint32_t inVirtual)
     return 0;
 }
 
-// The kinds' class ops (EEUIRustControl's host passes them on): the icon bar's (icon_bar.rs EE_SCREENS_IB_OP_*; once
-// EEUICUnitIconBar::RustOp), its slots 0 the icon, 1 the frame, 2 and 3 the press and release samples
-int64_t EEUIShellControl::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    if (this->mKind != EE_SCREENS_SK_ICON_BAR)
-        return 0;
-    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
-    EEButtonObject* theButton = reinterpret_cast<EEButtonObject*>(inA);
-    GEBitmap* theIcon = static_cast<GEBitmap*>(this->mSlots[0]);
-    GEBitmap* theFrame = static_cast<GEBitmap*>(this->mSlots[1]);
-    NEMessage* theMessage = NULL;
-    switch (inOp - EE_SCREENS_HC_CLASS) {
-    case EE_SCREENS_IB_OP_CLASS: {
-        EEUnitClass* theClass = theUnit->GetUnitClass();
-        return (theClass->IsTransport() ? EE_SCREENS_IB_CLASS_TRANSPORT : 0) |
-               (theClass->IsAirBase() ? EE_SCREENS_IB_CLASS_AIR_BASE : 0) |
-               (theClass->mIsParatrooperBomber ? EE_SCREENS_IB_CLASS_PARATROOPER_BOMBER : 0) | (int64_t)theClass->mFamily << 8;
-    }
-    case EE_SCREENS_IB_OP_QUEUED_GOAL: return theUnit->GetQueuedGoal((unsigned long)inB) != NULL;
-    case EE_SCREENS_IB_OP_NO_GOALS: return theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL;
-    case EE_SCREENS_IB_OP_SELECT_THESE: {
-        const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
-        std::vector<long> theList(theIDs, theIDs + inB);
-        theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
-        break;
-    }
-    case EE_SCREENS_IB_OP_SOUND:
-        gSoundManager->Play((unsigned long)(uintptr_t)this->mSlots[inA == 0 ? 2 : 3], 1.0f, 0.0f, 1.0f, false, NULL);
-        break;
-    case EE_SCREENS_IB_OP_CTRL: return UIControl::ControlKeyPressed();
-    case EE_SCREENS_IB_OP_SHIFT: return UIControl::ShiftKeyPressed();
-    case EE_SCREENS_IB_OP_MOUSE: ioF[0] = this->GetMouseLocation().GetX(); break;
-    case EE_SCREENS_IB_OP_CONTAINS: return this->GetRectangle().Contains(this->GetMouseLocation());
-    case EE_SCREENS_IB_OP_ACQUIRE: theButton->Acquire(); break;
-    case EE_SCREENS_IB_OP_RELEASE: theButton->Release(); break;
-    case EE_SCREENS_IB_OP_ICON:
-        theIcon->SetTexture(theButton->GetTexture(), this->GetScreenIndex());
-        theButton->SetFaceBitmap(theIcon, GERectangle(ioF[2], ioF[3], ioF[4], ioF[5]), gScreenIndex);
-        theIcon->SetLocation(GE2DPoint(ioF[0], ioF[1]));
-        this->GetRasterizer()->Draw(theIcon, this->GetScreenIndex());
-        break;
-    case EE_SCREENS_IB_OP_FRAME:
-        theFrame->SetLocation(GE2DPoint(ioF[0], ioF[1]));
-        return this->GetRasterizer()->Draw(theFrame, this->GetScreenIndex());
-    }
-    if (theMessage != NULL)
-        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-    return 0;
-}
-
-// A new selected-units icon bar (EEUICUnitIconBar: the user-defined control factory's): the icon bitmap, the
-// table's normal bitmap at one icon's rectangle as its frame, the two button sounds loaded
-UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
-{
-    EEUIShellControl* theBar = new EEUIShellControl(EE_SCREENS_SK_ICON_BAR, {}, inTable.GetID(), inRectangle, inForm,
-                                                    inTable.GetFormIndex(), 0);
-    float theIcon[4];
-    EEUIShell::Op(theBar, EE_SCREENS_SKOP_IB_ICON_RECT, 0, 0, theIcon);
-    theBar->mSlots[0] = new GEBitmap;
-    theBar->mSlots[1] = inTable.CreateNormalBitmap(inForm->GetManager(), GERectangle(theIcon[0], theIcon[1], theIcon[2], theIcon[3]));
-    for (int i = 0; i < 2; i++)
-        if (EESoundObject* theSound = EESoundObject::Get(i == 0 ? kSoundButton1 : kSoundButton2)) {
-            theSound->LoadMedia();
-            theBar->mSlots[2 + i] = (void*)(uintptr_t)theSound->GetSampleID();
-        }
-    return theBar;
-}
-
-// A new chat display line (EEUICChatLine: the user-defined control factory's; shells_chat.rs): the table's
-// background, then its bold name, the message and their drawn copies (the kind's record holds them; the name's two
-// at the line's top left)
-UIControl* EEUIShellNewChatLine(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
-{
-    float theOpacity = inTable.GetBackgroundOpacity();
-    uint32_t theBits;
-    memcpy(&theBits, &theOpacity, 4);
-    EEUIShellControl* theLine = new EEUIShellControl(EE_SCREENS_SK_CHAT_LINE, {(int64_t)theBits}, inTable.GetID(),
-                                                     inRectangle, inForm, inTable.GetFormIndex(),
-                                                     inTable.GetBorderThickness());
-    theLine->SetAlwaysDirty(inTable.GetAlwaysDirty());
-    theLine->SetBgColor(inTable.GetBackground());
-    theLine->SetBgOpacity(theOpacity);
-    GEFont* theFont = inTable.GetFont();
-    for (int i = 0; i < 4; i++) {   // the name, its copy, the message, its copy
-        GEText* theText = new GEText(i >= 2 ? theFont : UIFontTable::FindOrCreateFont(theFont->GetFontName(),
-                                     theFont->GetFontStyle() | kFontStyleBold, theFont->GetFontQuality(), theFont->GetFontSize()));
-        inTable.SetupGEText(theText);
-        if (i < 2)
-            theText->SetLocation(theLine->GetRectangle().GetTopLeft());
-        theLine->mSlots[i] = theText;
-    }
-    EEUIShell::Op(theLine, EE_SCREENS_SKOP_CHAT_PARTS, (int64_t)theLine->mSlots);
-    return theLine;
-}
+// The icon bar kind's own ops (the old RustOp: a unit's class flags and goals, the selection message, the sounds,
+// the keys, the mouse, the icons and the frame) are icon_bar_ops.rs' over the one-statement shims below (UI lane
+// round 11)
+#define IB(p) static_cast<EEUIShellControl*>((EEUIRustControl*)(p))
+#define IB_CU(u) ((EEComplexUnit*)(u))
+extern "C" bool ee_screenscpp_ib_class_transport(uintptr_t inUnit)
+{ return IB_CU(inUnit)->GetUnitClass()->IsTransport(); }
+extern "C" bool ee_screenscpp_ib_class_air_base(uintptr_t inUnit) { return IB_CU(inUnit)->GetUnitClass()->IsAirBase(); }
+extern "C" bool ee_screenscpp_ib_class_paratrooper_bomber(uintptr_t inUnit)
+{ return IB_CU(inUnit)->GetUnitClass()->mIsParatrooperBomber; }
+extern "C" int64_t ee_screenscpp_ib_class_family(uintptr_t inUnit)
+{ return (int64_t)IB_CU(inUnit)->GetUnitClass()->mFamily; }
+extern "C" bool ee_screenscpp_ib_queued_goal(uintptr_t inUnit, uint64_t inGoal)
+{ return IB_CU(inUnit)->GetQueuedGoal((unsigned long)inGoal) != NULL; }
+extern "C" bool ee_screenscpp_ib_goals_empty(uintptr_t inUnit) { return IB_CU(inUnit)->GetQueueGoals(1).size() == 0; }
+extern "C" bool ee_screenscpp_ib_goal_front_none(uintptr_t inUnit)
+{ return IB_CU(inUnit)->mGoalQueues[1].GetFront() == NULL; }
+extern "C" uintptr_t ee_screenscpp_ib_select_these(uintptr_t inIds, uint64_t inCount)
+{ return (uintptr_t) new EEMRecord(kMessageSelectTheseUnits, {std::vector<long>((const int32_t*)inIds, (const int32_t*)inIds + inCount)}); }
+extern "C" void ee_screenscpp_ib_send(uintptr_t inMessage)
+{ gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotNone); }
+extern "C" void ee_screenscpp_ib_sound(uintptr_t inP, uint32_t inSlot)
+{ gSoundManager->Play((unsigned long)(uintptr_t)IB(inP)->mSlots[inSlot], 1.0f, 0.0f, 1.0f, false, NULL); }
+extern "C" bool ee_screenscpp_ib_ctrl() { return UIControl::ControlKeyPressed(); }
+extern "C" bool ee_screenscpp_ib_shift() { return UIControl::ShiftKeyPressed(); }
+extern "C" float ee_screenscpp_ib_mouse_x(uintptr_t inP) { return IB(inP)->GetMouseLocation().GetX(); }
+extern "C" bool ee_screenscpp_ib_contains(uintptr_t inP)
+{ return IB(inP)->GetRectangle().Contains(IB(inP)->GetMouseLocation()); }
+extern "C" void ee_screenscpp_ib_button_acquire(uintptr_t inButton) { ((EEButtonObject*)inButton)->Acquire(); }
+extern "C" void ee_screenscpp_ib_button_release(uintptr_t inButton) { ((EEButtonObject*)inButton)->Release(); }
+extern "C" void ee_screenscpp_ib_icon_texture(uintptr_t inP, uintptr_t inButton)
+{ static_cast<GEBitmap*>(IB(inP)->mSlots[0])->SetTexture(((EEButtonObject*)inButton)->GetTexture(), IB(inP)->GetScreenIndex()); }
+extern "C" void ee_screenscpp_ib_icon_face(uintptr_t inP, uintptr_t inButton, float inLeft, float inTop, float inRight, float inBottom)
+{ ((EEButtonObject*)inButton)->SetFaceBitmap(static_cast<GEBitmap*>(IB(inP)->mSlots[0]), GERectangle(inLeft, inTop, inRight, inBottom), gScreenIndex); }
+extern "C" void ee_screenscpp_ib_slot_location(uintptr_t inP, uint32_t inSlot, float inX, float inY)
+{ static_cast<GEBitmap*>(IB(inP)->mSlots[inSlot])->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" int64_t ee_screenscpp_ib_slot_draw(uintptr_t inP, uint32_t inSlot)
+{ return IB(inP)->GetRasterizer()->Draw(static_cast<GEBitmap*>(IB(inP)->mSlots[inSlot]), IB(inP)->GetScreenIndex()); }
 
 // A new file combo box (EEUIFileComboBox: the editor's map, sound and elevation lists): the path referenced, the
 // list filled by the kind (shells_files.rs)
@@ -291,24 +236,6 @@ int64_t EEUIShellSlider::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, 
     case EE_SCREENS_SV_CHANGE_RANGE: UISlider::ChangeRange((unsigned long)inA); return 0;
     }
     return 0;
-}
-
-// a blue bar behind each line inLines names (EESEUITechListBox::DrawPolygons) -> the last draw's result
-long EEUIShellList::DrawBars(const uint32_t* inLines, size_t inCount)
-{
-    GERhombus theRhombus;
-    GERectangle theRectangle;
-    long theResult = kErrorOK;
-    theRhombus.SetColor(GEColor(0.0f, 0.0f, 1.0f));
-    theRectangle.SetLeft(this->GetCopyTextRectangle().GetLeft());
-    theRectangle.SetRight(this->GetCopyTextRectangle().GetRight());
-    for (size_t i = 0; i < inCount; i++) {
-        theRectangle.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(inLines[i] * this->GetLineHeight()));
-        theRectangle.SetBottom(theRectangle.GetTop() + (float)this->GetLineHeight());
-        theRhombus.SetRectangle(theRectangle);
-        theResult = this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
-    }
-    return theResult;
 }
 
 // the control's text (inWhich 0: its own GEText, 1: its label's)
@@ -391,14 +318,12 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_FORM_CONTROL: return (int64_t)c->GetForm()->GetControlById((unsigned long)a);
     case EE_SCREENS_SH_TECH_EPOCH: return EETechTreeEpochOf((long)a);
     case EE_SCREENS_SH_TECH_DATA_ID: return gTechTree.Get((long)a)->mData->mID;
-    case EE_SCREENS_SH_TECH_BARS:
-        return static_cast<EEUIShellList*>(c)->DrawBars(reinterpret_cast<const uint32_t*>(a), (size_t)b);
     // the unit tab's (EEUIFSELBUnitList, EEUIFSELBCargoList, EEUIFSEBRotation)
     case EE_SCREENS_SH_UNIT_SELECT_TYPE:
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT);
         break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
-    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(kSEADeleteUnit, NULL, (int32_t)a))->Dereference(); break;
+    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, (int32_t)a))->Dereference(); break;
     case EE_SCREENS_SH_BITMAP_ROTATION: reinterpret_cast<GEBitmap*>(a)->SetRotation(f[0]); break;
     case EE_SCREENS_SH_SELF: return EEUIShell::Of(c)->SelfCall((uint32_t)a);
     case EE_SCREENS_SH_KEYBOARD: EEUIShell::Of(c)->Keyboard(a != 0); break;
@@ -437,9 +362,9 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
     case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
     case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION:
-        EEShellTriggers()->TriggerSubOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
+        EEShellTriggers()->TriggerSubOp(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SEOB_UPDATE_SELECTION);
         break;
-    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(kSETriggerScreenObject, EE_SCREENS_SETS_SCREEN_STORE); break;
+    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SETS_SCREEN_STORE); break;
     case EE_SCREENS_SH_COPY_FIRST_TO_ALL:
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL);
         break;
@@ -579,7 +504,7 @@ extern "C" int64_t ee_screenscpp_sh_form_list_selection(uintptr_t inControl, int
 extern "C" void ee_screenscpp_sh_editor_player(unsigned long* inSelection)
 { gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(*inSelection); }
 extern "C" void ee_screenscpp_sh_tech_tree_move(int32_t inA, int32_t inB, int32_t inC, bool inFlag)
-{ (new EESEARust(kSEATechTree, NULL, inA, inB, inC, inFlag))->Dereference(); }
+{ (new EESEARust(EE_SCREENS_SEW_TECH_TREE, NULL, inA, inB, inC, inFlag))->Dereference(); }
 extern "C" void ee_screenscpp_sh_combo_list_selection(uintptr_t inControl, unsigned long* inSelection)
 { const_cast<UILBString*>(static_cast<UIComboBox*>(C(inControl))->GetListBox())->GetCurrentSelection(*inSelection); }
 extern "C" uintptr_t ee_screenscpp_sh_bitmap_new() { return (uintptr_t)new GEBitmap; }
@@ -690,3 +615,47 @@ extern "C" uint32_t ee_screenscpp_sh_screen_index(uintptr_t inControl)
 { return (uint32_t)C(inControl)->GetScreenIndex(); }
 extern "C" uintptr_t ee_screenscpp_sh_copied_draw_rectangle(uintptr_t inControl)
 { return (uintptr_t)&C(inControl)->GetCopiedDrawRectangle(); }
+
+// the icon bar's and chat line's factories and the tech list's bars: shell_factories.rs over these (UI lane round 12)
+#define SF(c) static_cast<EEUIShellControl*>(reinterpret_cast<UIControl*>(c))
+#define SFT(t) reinterpret_cast<UIControlsTable*>(t)
+extern "C" int64_t ee_screenscpp_sf_shell_op(uintptr_t inControl, uint32_t inOp, int64_t inA, int64_t inB, float* inF)
+{ return EEUIShell::Op(reinterpret_cast<UIControl*>(inControl), inOp, inA, inB, inF); }
+extern "C" void ee_screenscpp_sf_slot_set(uintptr_t inControl, uint32_t inSlot, uintptr_t inValue)
+{ SF(inControl)->mSlots[inSlot] = (void*)inValue; }
+extern "C" uintptr_t ee_screenscpp_sf_slots(uintptr_t inControl) { return (uintptr_t)SF(inControl)->mSlots; }
+extern "C" uintptr_t ee_screenscpp_sf_bitmap_new() { return (uintptr_t)new GEBitmap; }
+extern "C" uintptr_t ee_screenscpp_sf_normal_bitmap(uintptr_t inTable, uintptr_t inForm, float inLeft, float inTop, float inRight, float inBottom)
+{ return (uintptr_t)SFT(inTable)->CreateNormalBitmap(((UIForm*)inForm)->GetManager(), GERectangle(inLeft, inTop, inRight, inBottom)); }
+extern "C" uintptr_t ee_screenscpp_sf_sound(uint32_t inId) { return (uintptr_t)EESoundObject::Get(inId); }
+extern "C" void ee_screenscpp_sf_sound_load(uintptr_t inSound) { ((EESoundObject*)inSound)->LoadMedia(); }
+extern "C" uintptr_t ee_screenscpp_sf_sound_sample(uintptr_t inSound)
+{ return (uintptr_t)((EESoundObject*)inSound)->GetSampleID(); }
+extern "C" float ee_screenscpp_sf_table_bg_opacity(uintptr_t inTable) { return SFT(inTable)->GetBackgroundOpacity(); }
+extern "C" bool ee_screenscpp_sf_table_always_dirty(uintptr_t inTable) { return SFT(inTable)->GetAlwaysDirty(); }
+extern "C" uintptr_t ee_screenscpp_sf_table_font(uintptr_t inTable) { return (uintptr_t)SFT(inTable)->GetFont(); }
+extern "C" void ee_screenscpp_sf_set_always_dirty(uintptr_t inControl, bool inOn)
+{ SF(inControl)->SetAlwaysDirty(inOn); }
+extern "C" void ee_screenscpp_sf_bg_color_of_table(uintptr_t inControl, uintptr_t inTable)
+{ SF(inControl)->SetBgColor(SFT(inTable)->GetBackground()); }
+extern "C" void ee_screenscpp_sf_bg_opacity(uintptr_t inControl, float inOpacity)
+{ SF(inControl)->SetBgOpacity(inOpacity); }
+extern "C" uintptr_t ee_screenscpp_sf_bold_font(uintptr_t inFont)
+{ return (uintptr_t)UIFontTable::FindOrCreateFont(((GEFont*)inFont)->GetFontName(), ((GEFont*)inFont)->GetFontStyle() | kFontStyleBold, ((GEFont*)inFont)->GetFontQuality(), ((GEFont*)inFont)->GetFontSize()); }
+extern "C" uintptr_t ee_screenscpp_sf_text_new(uintptr_t inFont) { return (uintptr_t)new GEText((GEFont*)inFont); }
+extern "C" void ee_screenscpp_sf_table_setup_text(uintptr_t inTable, uintptr_t inText)
+{ SFT(inTable)->SetupGEText((GEText*)inText); }
+extern "C" void ee_screenscpp_sf_text_at_top_left(uintptr_t inText, uintptr_t inControl)
+{ ((GEText*)inText)->SetLocation(SF(inControl)->GetRectangle().GetTopLeft()); }
+extern "C" uintptr_t ee_screenscpp_bars_rhombus_new() { return (uintptr_t)new GERhombus; }
+extern "C" void ee_screenscpp_bars_rhombus_free(uintptr_t inRhombus) { delete (GERhombus*)inRhombus; }
+extern "C" void ee_screenscpp_bars_rhombus_color(uintptr_t inRhombus, float inRed, float inGreen, float inBlue)
+{ ((GERhombus*)inRhombus)->SetColor(GEColor(inRed, inGreen, inBlue)); }
+extern "C" void ee_screenscpp_bars_copy_text_rect(uintptr_t inControl, float* inOut)
+{ UIObjHost::PutRect(inOut, static_cast<EEUIShellList*>(reinterpret_cast<UIControl*>(inControl))->GetCopyTextRectangle()); }
+extern "C" uint64_t ee_screenscpp_bars_line_height(uintptr_t inControl)
+{ return (uint64_t)static_cast<EEUIShellList*>(reinterpret_cast<UIControl*>(inControl))->GetLineHeight(); }
+extern "C" void ee_screenscpp_bars_rhombus_rect(uintptr_t inRhombus, float inLeft, float inTop, float inRight, float inBottom)
+{ ((GERhombus*)inRhombus)->SetRectangle(GERectangle(inLeft, inTop, inRight, inBottom)); }
+extern "C" int64_t ee_screenscpp_bars_draw(uintptr_t inControl, uintptr_t inRhombus)
+{ return (int64_t)reinterpret_cast<UIControl*>(inControl)->GetRasterizer()->Draw((GERhombus*)inRhombus, reinterpret_cast<UIControl*>(inControl)->GetScreenIndex()); }

@@ -20,16 +20,7 @@ class GETextureManager;
 struct GESurfaceDescription;
 struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_openformats.h)
 
-struct GETStage {                           // sizeof 0x20 (copied with rep movsd in GETexture's copy ctor)
-    GETexture* mTexture;                    // +0x00 (GetStageTexture)
-    unsigned long mColorMode;               // +0x04 (SetStageColorMode)
-    unsigned long mAlphaMode;               // +0x08 (SetStageAlphaMode)
-    unsigned long mTextureAddressingMode;   // +0x0c
-    unsigned long mMinFilterMode;           // +0x10
-    unsigned long mMagFilterMode;           // +0x14
-    unsigned long mMipFilterMode;           // +0x18
-    float mMipMapBias;                      // +0x1c
-};
+typedef EeGeTStage GETStage;               // sizeof 0x20; the record is Rust's (ee_render ge texobj_tex.rs)
 
 class LLE_API GETexture : public UReferenceCounter {   // sizeof 0x6c (vector deleting dtor 0xe255)
 public:
@@ -43,7 +34,7 @@ public:
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
     unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
-    GETexture* GetStageTexture(unsigned long inStage) const { return this->GetStage()->mTexture; }
+    GETexture* GetStageTexture(unsigned long inStage) const { return (GETexture*)this->GetStage()->mTexture; }
     unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }
     bool HasChanged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::HasChanged) != 0; }
     long Promote() { return ee_ge_tex_promote(this->mRust); }
@@ -65,7 +56,8 @@ public:
     void Dereference() { ee_ge_tex_dereference(this->mRust); }
     // Returns the surface's allocated size, times the frame count when each frame has its own texture
     unsigned long GetAllocatedSize() { return ee_ge_tex_allocated_size(this->mRust); }
-    long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow);
+    long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
+        { return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow); }
     // (Save 0x10033749 wrote a texture file (.sst): retired under D9)
     // Shows the given animation frame: picks the frame texture, or moves the UV corner to its grid cell
     void SetFrame(unsigned long inFrame) { ee_ge_tex_set_frame(this->mRust, inFrame); }
@@ -97,7 +89,8 @@ private:
         { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameFormat); }
     // port (D9): the frames of a texture's PNG files, decoded by Rust (GEFindTextureFile), in place of a texture file
     long Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
-              bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat);
+              bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat)
+        { return ee_ge_tex_load(this->mRust, inTexture, (EeGeSurfaceDescription*)&inDescription, inScreen, inCreateMIPMaps, inNumMipLevelsToDrop, inFrameFormat); }
     // port: the members the friends read and write (the manager's host, the store gate's digest), this texture's own
     // (GetData, GetIsCompressed and GetIsPromoted read the current frame's)
     bool GetIsManaged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsManaged) != 0; }

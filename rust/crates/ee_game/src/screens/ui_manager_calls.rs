@@ -212,7 +212,7 @@ pub(crate) fn create_control(c: &mut impl Cpp, m: usize, t: usize) -> usize {
         EE_SCREENS_UMC_SELECT_UNITS => c.ct_new_select_units(m, t, form),
         EE_SCREENS_UMC_COMMAND_UNITS => c.ct_new_command_units(m, t, form),
         EE_SCREENS_UMC_PORTRAIT => c.ct_new_portrait(t, form),
-        EE_SCREENS_UMC_CHAT_LINE => c.ct_new_chat_line(t, form),
+        EE_SCREENS_UMC_CHAT_LINE => crate::screens::shell_factories::chat_line(c, t, form),
         EE_SCREENS_UMC_CB_LIST_BOX => {
             c.ct_setup_font(m, t);
             c.ct_new_cb_list_box(t, form)
@@ -230,7 +230,7 @@ pub(crate) fn create_control(c: &mut impl Cpp, m: usize, t: usize) -> usize {
             c.um_bitmap_dereference(bitmap);
             c.um_button_control(button)
         }
-        EE_SCREENS_UMC_UNIT_ICON_BAR => c.ct_new_icon_bar(t, form),
+        EE_SCREENS_UMC_UNIT_ICON_BAR => crate::screens::shell_factories::icon_bar(c, t, form),
         EE_SCREENS_UMC_PGS_LINE_GRAPH => {
             let graph = c.ct_new_pgs_graph(t, form);
             c.ct_graph_font(graph, t);

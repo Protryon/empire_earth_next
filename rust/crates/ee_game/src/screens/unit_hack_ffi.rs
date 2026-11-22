@@ -30,6 +30,18 @@ struct Host(*mut c_void);
 
 impl UnitHackHost for Host {
     fn op(&mut self, op: u32, a: i32, b: i32, f: &mut [f32; 2], out: &mut u32, text: &mut [u8]) -> i32 {
+        if let Some(r) = crate::screens::unit_hack_calls::call(
+            &mut crate::screens::game_cpp::Ffi,
+            self.0 as usize,
+            op,
+            a,
+            b,
+            f,
+            out,
+            text,
+        ) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_unit_hack(self.0, op, a, b, f.as_mut_ptr(), out, text.as_mut_ptr(), text.len()) }
     }
 }

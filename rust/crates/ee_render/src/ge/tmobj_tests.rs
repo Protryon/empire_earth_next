@@ -391,10 +391,10 @@ unsafe extern "C" fn wf(f: *mut c_void, v: f32) -> c_long {
     // SAFETY: as above
     unsafe { (*(f as *mut BufferIo)).write_f32(v) }
 }
-unsafe extern "C" fn rb(_: *mut c_void, _: *mut u8, _: u32, _: *mut u32) -> c_long {
+unsafe extern "C" fn rb(_: *mut c_void, _: *mut u8, _: std::ffi::c_ulong, _: *mut std::ffi::c_ulong) -> c_long {
     9
 }
-unsafe extern "C" fn wb(_: *mut c_void, _: *const u8, _: u32, _: *mut u32) -> c_long {
+unsafe extern "C" fn wb(_: *mut c_void, _: *const u8, _: std::ffi::c_ulong, _: *mut std::ffi::c_ulong) -> c_long {
     9
 }
 unsafe extern "C" fn gp(_: *mut c_void, _: *mut c_long) -> c_long {
@@ -485,5 +485,30 @@ fn a_loaded_tile_naming_an_unregistered_set_reads_zero() {
         ee_ge_tm_destroy(p);
         ee_ge_tm_destroy(q);
         take_log();
+    }
+}
+
+#[test]
+fn the_out_forms_write_what_the_plain_ones_return() {
+    // SAFETY: a live mesh and valid outs
+    unsafe {
+        let p = ee_ge_tm_new(host, std::ptr::null_mut());
+        let mut id: c_ulong = 99;
+        assert_eq!(ee_ge_tm_register_texture_set_out(p, 0x1221 as *mut c_void, &mut id), 0);
+        assert_eq!(id, 0);
+        let colors: [c_ulong; 2] = [1, 2];
+        assert_eq!(ee_ge_tm_register_color_set_out(p, colors.as_ptr(), 2, &mut id), 0);
+        assert_eq!(id, 0);
+        assert_eq!(ee_ge_tm_register_color_set_out(p, colors.as_ptr(), 2, &mut id), 0);
+        assert_eq!(id, 1);
+        let (mut x, mut y): (c_ulong, c_ulong) = (7, 7);
+        ee_ge_tm_get_pair(p, EeGeTmVal::BottomLeftX, EeGeTmVal::BottomLeftY, &mut x, &mut y);
+        assert_eq!((x, y), (ee_ge_tm_get(p, EeGeTmVal::BottomLeftX), ee_ge_tm_get(p, EeGeTmVal::BottomLeftY)));
+        let mesh = &mut *p;
+        mesh.visible_rows.push([3, -4, 5]);
+        let (mut r0, mut r1, mut r2): (c_long, c_long, c_long) = (0, 0, 0);
+        ee_ge_tm_visible_row_parts(p, 0, &mut r0, &mut r1, &mut r2);
+        assert_eq!((r0, r1, r2), (3, -4, 5));
+        ee_ge_tm_destroy(p);
     }
 }

@@ -12,6 +12,8 @@
 // float/double. Saved games, record files and network buffers are the same bytes on every platform.
 #ifndef LLE_FSFILE_H
 #define LLE_FSFILE_H
+#include "rust/base/lle_enums.h"
+#include "rust/base/fs.h"
 
 #include <stdint.h>
 #include "lle/UString.h"       // their Load and Save (below)
@@ -22,13 +24,9 @@ static_assert(sizeof(short) == 2 && sizeof(float) == 4 && sizeof(double) == 8 &&
 
 // Open() access modes (names from NERecordPlayback.cpp's assert texts; values from its calls: Open(1) to read a
 // playback file, Open(2) to write a record file; FSBasicFile +0x34 stores the mode)
-enum FSFileAccess {
-    kFileAccessRead = 1,
-    kfsaRead = kFileAccessRead,  // spelled this way in the original's assert strings
-    kFileAccessWrite = 2,
-    kfsaWrite = kFileAccessWrite,  // spelled this way in the original's assert strings
-    kFileAccessReadWrite = 3,  // FSFileSpec::Open maps modes other than 1/2/4 to GENERIC_READ|GENERIC_WRITE; Read/Write test the 1/2 bits; GESurface::SaveAsJPG2 reopens with 3 (provisional name)
-    kFileAccessAppend = 4,   // FSFileSpec::Open: 4 -> GENERIC_WRITE, then SetFilePointer(FILE_END) when inAccess & 4; GESurface::SaveAsJPG opens with 4 (provisional name)
+enum {                                      // FSFileAccess is Rust's (rust/base/lle_enums.h)
+    kfsaRead = kFileAccessRead,             // spelled this way in the original's assert strings
+    kfsaWrite = kFileAccessWrite
 };
 
 class LLE_API FSFile {
@@ -78,85 +76,16 @@ public:
     // long/unsigned long: 4 bytes in the file on every data model (see the top). The value goes through a 32-bit
     // copy that starts as the old value and is stored back even when the read fails, so a short read leaves what
     // the direct 4-byte read left on Windows. Derived classes bring these in with `using FSFile::Read/Write`.
-    long Read(long& outValue)
-    {
-        int32_t theValue = static_cast<int32_t>(outValue);
-        long theResult = this->Read(theValue);
-        outValue = theValue;
-        return theResult;
-    }
-    long Read(unsigned long& outValue)
-    {
-        uint32_t theValue = static_cast<uint32_t>(outValue);
-        long theResult = this->Read(theValue);
-        outValue = theValue;
-        return theResult;
-    }
+    long Read(long& outValue) { return ee_fs_read_long(this, &outValue); }   // (ee_base fs cppfile.rs)
+    long Read(unsigned long& outValue) { return ee_fs_read_ulong(this, &outValue); }
     long Write(const long& inValue) { return this->Write(static_cast<int32_t>(inValue)); }
     long Write(const unsigned long& inValue) { return this->Write(static_cast<uint32_t>(inValue)); }
 };
 
 // UString's and UWideString's file forms (lle/UString.h, lle/UWideString.h)
-inline long UString::Load(FSFile& inFile)
-{
-    unsigned long theLength = 0;   // (passed on below even when its read fails)
-    unsigned long theRead;
-    long theResult = inFile.Read(theLength);
-    if (theResult == kErrorOK && theLength != 0) {
-        theResult = inFile.Read(ee_ustring_load_buffer(&this->mState, theLength), theLength, theRead);
-        if (theResult == kErrorOK && theRead != theLength)
-            theResult = kErrorFailed;
-    }
-    ee_ustring_load_end(&this->mState, theResult == kErrorOK && theLength != 0, theLength);
-    return theResult;
-}
-inline long UString::Save(FSFile& inFile) const
-{
-    unsigned long theLength = this->GetLength() + 1;
-    long theResult = inFile.Write(theLength);
-    if (theResult != kErrorOK)
-        return theResult;
-    unsigned long theWritten;
-    theResult = inFile.Write(*this, theLength, theWritten);
-    if (theResult == kErrorOK && theWritten < theLength)
-        theResult = kErrorFailed;
-    return theResult;
-}
-inline long UWideString::Load(FSFile& inFile)
-{
-    unsigned long theSize = 0;
-    unsigned long theRead;
-    long theResult = inFile.Read(theSize);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(ee_uwstring_load_buffer(&this->mState, theSize), theSize, theRead);
-        if (theResult == kErrorOK) {
-            ee_uwstring_load_end(&this->mState, theSize);
-            if (theRead != theSize)
-                theResult = kErrorFailed;
-        }
-    }
-    if (theResult != kErrorOK)
-        this->Clear();
-    return theResult;
-}
-inline long UWideString::Save(FSFile& inFile) const
-{
-    unsigned long theSize = this->GetBytesUsedToSave() - 4;
-    unsigned long theWritten;
-    long theResult = inFile.Write(theSize);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(*this, theSize, theWritten);
-    if (theResult == kErrorOK && theWritten < theSize)
-        theResult = kErrorFailed;
-    return theResult;
-}
-
-// FSFile::SetPosition inOrigin: FSFileSpec::SetPosition maps it to the SetFilePointer move method
-enum FSFileOrigin {
-    kFileOriginBegin = 0,  // FSFileSpec::SetPosition -> FILE_BEGIN
-    kFileOriginEnd = 1,    // FSFileSpec::SetPosition -> FILE_END
-    kFileOriginCurrent = 2,  // FSFileSpec::SetPosition -> FILE_CURRENT
-};
+inline long UString::Load(FSFile& inFile) { return ee_ustring_load_file(&this->mState, &inFile); }
+inline long UString::Save(FSFile& inFile) const { return ee_ustring_save_file(&this->mState, &inFile); }
+inline long UWideString::Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
+inline long UWideString::Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
 
 #endif

@@ -8,6 +8,7 @@
 // to the Rust object with the protocol calls (round 7).
 #ifndef LLE_NESYNCHRONOUSSERVER_H
 #define LLE_NESYNCHRONOUSSERVER_H
+#include "rust/net/msgid.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -199,17 +200,10 @@ private:
     // the message manager's calls out that reach the C++ (ee_net's EeNetMmOp): the messages, the server, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
     // the queues' common calls out (ee_net's EeNetQOp)
-    static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
+    static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
+        { return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d); }
 
     EeNetServer* mRust;                     // the server, whole in Rust (ee_net server.rs)
-};
-
-// NESynchronousServer's game state (GetGameState); 2 is compared by EEServer only and stays unnamed
-enum NEServerGameState {
-    kServerStateOpen = 0,   // setrilo ne_synchronous.h gameState_ (0 lobby, 1 closed, 3 running, 4 paused); AllowNewPlayers(true); Main start
-    kServerStateClosed = 1,  // setrilo ne_synchronous.h gameState_ (0 lobby, 1 closed, 3 running, 4 paused); AllowNewPlayers(false)
-    kServerStateRunning = 3,  // setrilo ne_synchronous.h gameState_ (0 lobby, 1 closed, 3 running, 4 paused); Main: mStartGameEvent
-    kServerStatePaused = 4,  // setrilo ne_synchronous.h gameState_ (0 lobby, 1 closed, 3 running, 4 paused); Main: mPauseGameEvent
 };
 
 #endif

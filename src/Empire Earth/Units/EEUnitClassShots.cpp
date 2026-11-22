@@ -33,6 +33,7 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
+#include "ee/EEUnitClassKinds.h"   // EEObj (the host)
 
 // ---- EEUCProjectile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The projectile's unit
 // class (EEUCBomb derives from it and shares these slots by ICF): 0x219143..0x219c49 (after EEUCPlanetSpaceship.cpp;
@@ -111,47 +112,19 @@ void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
 // Sets up a new projectile: records its start point, sets it to full speed and starts it advancing
 void EEUnitClass::ProjectileUnitCreated(EEComplexUnit* inUnit)
 {
-    this->BaseUnitCreated(inUnit);
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    inUnit->mInitialContactLocation = GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    inUnit->SetVelocity(inUnit->mStats->GetMaxVelocity());
-    inUnit->SetAnimation(0xd, -1, 0);
-    inUnit->StartAction(kActionAdvance);
-    this->ActionChanged(inUnit);
+    ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_CREATED, this, inUnit, 0, NULL);   // ucs_shots.rs
 }
 
 // Launches the projectile toward a location at the ballistic pitch for its launcher's stats; returns whether one exists
 bool EEUnitClass::ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    GE3DPoint thePosition(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theDirection(0.0f, 0.0f, 0.0f);
-    EEUnitClassUpgrade* theStats = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mLauncherClass->mUnitType];
-    float theAngle;
-    bool theResult = EEGetBallisticPitch(inUnit->mOwner, theStats, &thePosition, &inLocation, &theAngle);
-    theTransformation.Apply(theUp, theDirection);
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    inUnit->SetFlightTime(0);
-    inUnit->mOrientation = GEOrientation(theYaw, theAngle, 0.0f);
-    inUnit->SetProjectileStart(thePosition);
-    inUnit->SetVelocity(UMCos(theAngle) * theStats->mLaunchSpeed);
-    theTransformation.SetOrientationYPR(theYaw, theAngle, 0.0f);
-    long theX;
-    long theY;
-    EEUpdateUnitTile(&theTransformation, inUnit, &theX, &theY);
-    return theResult;
+    return ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_LAUNCH, this, inUnit, 0, (const float(*)[3])&inLocation.mX) != 0;   // ucs_shots.rs
 }
 
 // Updates a living projectile's trail (when moving) and ripples when the effect detail allows them
 void EEUnitClass::ProjectileUpdateEffects(EEComplexUnit* inUnit)
 {
-    if (!(inUnit->mHitPoints > 0))
-        return;
-    if (this->mTrailEffect != NULL && inUnit->mVelocity != 0.0f && this->mTrailEffect->mDetailLevel <= gEffectDetail)
-        this->UpdateTrail(inUnit);
-    if (this->mRippleEffect != NULL && this->mRippleEffect->mDetailLevel <= gEffectDetail)
-        this->UpdateRipples(inUnit);
+    ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_EFFECTS, this, inUnit, 0, NULL);   // ucs_shots.rs
 }
 
 // Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
@@ -432,64 +405,19 @@ void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inU
 // -90 degrees), with the launch speed's horizontal part; always returns true
 bool EEUnitClass::BombLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    GE3DPoint thePosition(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    float theSpeed = inUnit->mPlayer->GetUpgrade(inUnit->mLauncherClass->mUnitType)->mLaunchSpeed;
-    theTransformation.Apply(theForward, theDirection);
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    float theTilt = inUnit->mLauncherClass->mLaunchPitch;
-    float thePitch = UMArcCos(-theDirection.GetZ()) - 1.5707964f + theTilt;
-    if (thePitch > 0.0f)
-        thePitch = 0.0f;
-    else if (thePitch < -1.5707964f)
-        thePitch = -1.5707964f;
-    float theVelocity = UMCos(thePitch) * theSpeed;
-    inUnit->SetFlightTime(0);
-    inUnit->mOrientation = GEOrientation(theYaw, thePitch, 0.0f);
-    inUnit->SetProjectileStart(thePosition);
-    inUnit->SetVelocity(theVelocity);
-    theTransformation.SetOrientationYPR(theYaw, thePitch, 0.0f);
-    long theX;
-    long theY;
-    EEUpdateUnitTile(&theTransformation, inUnit, &theX, &theY);
-    return true;
+    return ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_LAUNCH, this, inUnit, 0, NULL) != 0;   // ucs_shots.rs
 }
 
 // Flies the bomb; an SAS explosive (unit type 0x305) makes its target blink red every half second while it attacks
 void EEUnitClass::BombUpdate(EEComplexUnit* inUnit)
 {
-    static GEColor sColor(0.9f, 0.0f, 0.2f);
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeBombForSASExplosiveExpert && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit) {
-        EEUnit* theUnit = static_cast<EEUGRust*>(inUnit->mGoalState)->GetAttackTarget();
-        EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(theUnit);
-        if (theTarget != NULL) {
-            unsigned long theTime = inUnit->mFlightTime % 1000;
-            if (theTime > 500) {
-                theTarget->SetIsTinted(true);
-                theTarget->SetColor(sColor);
-            } else
-                theTarget->SetIsTinted(false);
-        }
-    }
-    this->ProjectileUpdate(inUnit);
+    ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_UPDATE, this, inUnit, 0, NULL);   // ucs_shots.rs
 }
 
 // Has a carrier drop its first cargo unit (a bomb) at its target and set it moving
 void EEUnitClass::LaunchStoredMissile(EEComplexUnit* inUnit)
 {
-    if (!(inUnit->GetNumCargoUnits() > 0))
-        return;
-    GE3DPoint theLocation;
-    EEUnit* theTarget;
-    theTarget = EECombatFindDropLocation(inUnit, NULL, theLocation);
-    EEComplexUnit* theCargo = inUnit->mCargo[0];
-    inUnit->UnloadCargoNow(theCargo);
-    this->LaunchShot(inUnit, theTarget, theLocation, theCargo);
-    theCargo->SetAnimation(0xd, -1, 0);
-    theCargo->StartAction(kActionAdvance);
-    theCargo->mUnitClass->ActionChanged(theCargo);
+    ee_units_ucs_call(EE_UNITS_UCS_DO_LAUNCH_STORED, this, inUnit, 0, NULL);   // ucs_shots.rs
 }
 
 // ---- EEUCMissile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The missile's unit
@@ -541,36 +469,7 @@ bool EEUnitClass::MissileCheckGroundImpact(EEComplexUnit* inUnit)
 // Returns whether a unit stands on one of the target's tiles (every part of a multi-part target, its whole footprint)
 bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
 {
-    EEComplexUnit* theUnit = inTarget->mComplexUnit;
-    RTSTile* theTile = inUnit->mTile;
-    bool theResult = false;
-    if (theUnit != NULL) {
-        while (theUnit->mPreviousPart != NULL)
-            theUnit = theUnit->mPreviousPart;
-        while (theUnit != NULL && !theResult) {
-            long theSize = theUnit->mUnitClass->mTileSize;
-            if (theSize == 1)
-                theResult = theTile == theUnit->mTile;
-            else {
-                unsigned long theX = theUnit->mTileX;
-                unsigned long theEndX = theX + theSize;
-                while (theX < theEndX && !theResult) {
-                    unsigned long theY = theUnit->mTileY;
-                    unsigned long theEndY = theY + theSize;
-                    while (true) {
-                        if (!(theY < theEndY && !theResult))
-                            break;
-                        theResult = theTile == ::gWorld.mMap->GetTile(theX, theY);
-                        ++theY;
-                    }
-                    ++theX;
-                }
-            }
-            theUnit = theUnit->mNextPart;
-        }
-    } else
-        theResult = theTile == inTarget->mTile;
-    return theResult;
+    return ee_units_ucs_call(EE_UNITS_UCS_DO_ON_TARGET_TILES, NULL, inUnit, EEObj(inTarget), NULL) != 0;   // ucs_shots.rs
 }
 
 // Returns whether the missile hit water (z 0 or below on terrain it cannot cross); if so, it attacks the ground there
@@ -679,32 +578,13 @@ void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
 // Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
 void EEUnitClass::MissileUnitCreated(EEComplexUnit* inUnit)
 {
-    this->BaseUnitCreated(inUnit);
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    inUnit->mInitialContactLocation = GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    inUnit->SetVelocity(0.0f);
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeCpICBM)
-        return;
-    inUnit->SetAnimation(0xd, -1, 0);
-    inUnit->StartAction(kActionAdvance);
-    this->ActionChanged(inUnit);
+    ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_CREATED, this, inUnit, 0, NULL);   // ucs_shots.rs
 }
 
 // Launches the missile: tilts it to its launcher's launch pitch and starts the launch delay and a 300 s lifetime; true
 bool EEUnitClass::MissileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
-    GETransformation theRotation;
-    EEUnitClass* theClass = inUnit->mLauncherClass;
-    theRotation.SetOrientationYPR(0.0f, theClass->mLaunchPitch, 0.0f);
-    GETransformation theTransformation(false);
-    inUnit->mPhysicalModel.GetLocation().Apply(theRotation, theTransformation);
-    long theX;
-    long theY;
-    EEUpdateUnitTile(&theTransformation, inUnit, &theX, &theY);
-    inUnit->SetFlightTime(theClass->mMissileDelayTime);
-    inUnit->mCloaked = 300000;
-    inUnit->SetVelocity(0.0f);
-    return true;
+    return ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_LAUNCH, this, inUnit, 0, NULL) != 0;   // ucs_shots.rs
 }
 
 // Answers the missile triggers: hit unit (attacks it; also true when its lifetime ran out), ground and water impact,
@@ -759,3 +639,54 @@ void EEUnitClass::TorpedoUpdate(EEComplexUnit* inUnit)
         EECombatCaptureShot(EE_COMBAT_SO_TORPEDO_UPDATE, inUnit, theBefore);
 }
 
+// BombUpdate's blink colour (its function static until round 7)
+static GEColor sBombBlinkColor(0.9f, 0.0f, 0.2f);
+
+template <class T> static T* EEUcsObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// The C++ of the shots' Rust bodies (ee_units ucs_shots.rs; EE_UNITS_UCS_*): one statement of the original bodies
+// each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
+extern "C" int64_t ee_units_ucs_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
+                                     float (*ioF)[4])
+{
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EEUcsObject<EEComplexUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_UCS_SET_CONTACT_LOCATION: theUnit->mInitialContactLocation = GE3DPoint(f[0], f[1], f[2]); return 0;
+    case EE_UNITS_UCS_FULL_SPEED: theUnit->SetVelocity(theUnit->mStats->GetMaxVelocity()); return 0;
+    case EE_UNITS_UCS_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
+    case EE_UNITS_UCS_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit->mOwner, theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType], EEUcsObject<GE3DPoint>(inA), EEUcsObject<GE3DPoint>((uint64_t)inB), &f[0]);
+    case EE_UNITS_UCS_SET_FLIGHT_TIME: theUnit->SetFlightTime((unsigned long)inB); return 0;
+    case EE_UNITS_UCS_LAUNCH_SPEED: f[0] = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType]->mLaunchSpeed; return 0;
+    case EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED: f[0] = theUnit->mPlayer->GetUpgrade(theUnit->mLauncherClass->mUnitType)->mLaunchSpeed; return 0;
+    case EE_UNITS_UCS_LAUNCH_PITCH: f[0] = theUnit->mLauncherClass->mLaunchPitch; return 0;
+    case EE_UNITS_UCS_HAS_TRAIL: return theClass->mTrailEffect != NULL;
+    case EE_UNITS_UCS_TRAIL_DETAILED: return theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCS_HAS_RIPPLE: return theClass->mRippleEffect != NULL;
+    case EE_UNITS_UCS_RIPPLE_DETAILED: return theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCS_COMPLEX_CAST: return EEObj(EEUnitCast<EEComplexUnit>(EEUcsObject<EEUnit>(inA)));
+    case EE_UNITS_UCS_FLIGHT_TIME: return theUnit->mFlightTime;
+    case EE_UNITS_UCS_SET_TINTED: theOther->SetIsTinted(inB != 0); return 0;
+    case EE_UNITS_UCS_SET_BLINK_COLOR: theOther->SetColor(sBombBlinkColor); return 0;
+    case EE_UNITS_UCS_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
+    case EE_UNITS_UCS_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)));
+    case EE_UNITS_UCS_FIRST_CARGO: return EEObj(theUnit->mCargo[0]);
+    case EE_UNITS_UCS_UNLOAD_NOW: theUnit->UnloadCargoNow(theOther); return 0;
+    case EE_UNITS_UCS_LAUNCH_SHOT: theClass->LaunchShot(theUnit, EEUcsObject<EEUnit>(inA), *reinterpret_cast<GE3DPoint*>(f), EEUcsObject<EEComplexUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCS_COMPLEX_FIELD: return EEObj(EEUcsObject<EEUnit>(inA)->mComplexUnit);
+    case EE_UNITS_UCS_TILE_OF: return EEObj(EEUcsObject<EEUnit>(inA)->mTile);
+    case EE_UNITS_UCS_PREVIOUS_PART: return EEObj(theOther->mPreviousPart);
+    case EE_UNITS_UCS_NEXT_PART: return EEObj(theOther->mNextPart);
+    case EE_UNITS_UCS_TILE_SIZE_OF: return theOther->mUnitClass->mTileSize;
+    case EE_UNITS_UCS_TILE_X_OF: return theOther->mTileX;
+    case EE_UNITS_UCS_TILE_Y_OF: return theOther->mTileY;
+    case EE_UNITS_UCS_SET_LIFETIME: theUnit->mCloaked = 300000; return 0;
+    case EE_UNITS_UCS_SET_LAUNCH_DELAY: theUnit->SetFlightTime(theUnit->mLauncherClass->mMissileDelayTime); return 0;
+    default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
+    }
+}

@@ -1051,7 +1051,7 @@ void EERenderObject::FillRenderLists()
             EEUICSelectUnits* theEditorSelection = gUIManager->GetScenarioEditorForm() != NULL ?
                 gUIManager->GetScenarioEditorForm()->GetSelectUnits() : NULL;
             EESEUICTriggerSelectUnits* theTriggerSelection = dynamic_cast<EESEUICTriggerSelectUnits*>(
-                gUIManager->GetScenarioEditorForm()->GetControlById(kSETSObjectSelectUnits));
+                gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS));
             if (theEditorSelection != NULL && theEditorSelection->GetIsDrawn())
                 gUnitPicker.PickUnitsInRectangle(theEditorSelection->GetSelectionRectangle(), 0, gU4E9230);
             else if (theTriggerSelection != NULL && theTriggerSelection->GetIsDrawn())

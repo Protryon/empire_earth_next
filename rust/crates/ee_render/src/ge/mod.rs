@@ -52,6 +52,7 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
+pub mod light;
 pub mod list2d;
 pub mod manager_ffi;
 /// cbindgen:ignore
@@ -70,6 +71,8 @@ pub mod pixel;
 pub mod prim;
 pub mod rastobj;
 pub mod smallobj;
+/// `GEInitialize` and `GEShutdown`: the engine's start-up over one-statement C++ shims.
+pub mod startup;
 /// TEST ONLY: the store gate's reads of the arrays' capture.
 pub mod store_capture;
 pub mod surface_px;
@@ -80,6 +83,7 @@ pub mod terrain_visible;
 pub mod terrain_volume;
 pub mod texobj;
 pub mod texobj_tex;
+pub mod texset;
 /// cbindgen:ignore
 pub mod texture;
 pub mod texture_ffi;

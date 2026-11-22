@@ -161,6 +161,8 @@ enum class EeFixtureOp : uint32_t {
   LobbyPost,
   /// the WON lobby's last snapshot into the sink (a new one asked for) -> 1, 0 the lobby is not open
   LobbySnapshot,
+  /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
+  EditNumber,
 };
 
 /// The texts and ids a call answers with (`ee_fixture_sink_text`, `ee_fixture_sink_id`).

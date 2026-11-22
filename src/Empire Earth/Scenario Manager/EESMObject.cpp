@@ -33,11 +33,9 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
-EESMObject::EESMObject()
+EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults())
 {
     gResource->GetString(IDS_NONE, this->mName);
-    this->mUnits.clear();
-    *static_cast<EeScenarioObjectFields*>(this) = ee_scenario_object_defaults();
 }
 
 // Destroys the object (members only)
@@ -45,34 +43,20 @@ EESMObject::~EESMObject()
 {
 }
 
-// Copies another object's name and filter settings, and its unit list when it picks units on the map
+// Copies another object's name and filter settings, and its unit list when it picks units on the map (ee_scenario
+// entry.rs)
 void EESMObject::Copy(const EESMObject& inObject)
 {
-    this->mName = inObject.mName;
-    *static_cast<EeScenarioObjectFields*>(this) = inObject;   // every number
-    if (this->mIsSelectOnMap)
-        this->mUnits = inObject.mUnits;
+    ee_scenario_en_object_copy(this, (void*)&inObject);
 }
 
 // Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
 // near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
+// (ee_scenario objeval.rs over the object's list and the world: EESMObjectRead / EESMObjectWrite below; entry.rs adds
+// the simulation capture's SMOB record)
 bool EESMObject::Evaluate(bool inIncludeDead)
 {
-    if (!EESimCaptureRecord::Active())
-        return this->EvaluateUncaptured(inIncludeDead);
-    EESMCaptureObjectState theBefore = EESMCaptureObjectBegin(this);
-    bool theResult = this->EvaluateUncaptured(inIncludeDead);
-    EESMCaptureObjectEnd(this, inIncludeDead, theResult, theBefore);
-    return theResult;
-}
-
-// Evaluate's body (Evaluate adds the simulation capture's SMOB record: ee/EEScenarioCapture.h): ee_scenario objeval.rs
-// over the object's list and the world (EESMObjectRead / EESMObjectWrite below)
-bool EESMObject::EvaluateUncaptured(bool inIncludeDead)
-{
-    EESMHostContext theContext = {NULL, NULL, NULL, this, NULL};
-    EeScenarioHost theHost = EESMHost(&theContext);
-    return ee_scenario_object_evaluate(&theHost, this, inIncludeDead);
+    return ee_scenario_en_object_evaluate(this, inIncludeDead);
 }
 
 namespace {
@@ -223,40 +207,15 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
 // class matching its epoch/family/AI kind/unit set filter; -1 if none
 long EESMObject::PickUnitType()
 {
-    EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs pick_unit_type
-    EeScenarioHost theHost = EESMHost(&theContext);
-    return ee_scenario_object_pick_unit_type(&theHost, this);
+    return ee_scenario_en_object_pick_unit_type(this);   // ee_scenario object.rs pick_unit_type
 }
 
 // Finds a free spot for a new unit of the type that meets the object's area and nearness filters (random tries for
-// 'not in/near' filters, then one retry without them); returns whether one was found
+// 'not in/near' filters, then one retry without them); returns whether one was found (ee_scenario placement.rs over
+// the area's record; entry.rs adds the simulation capture's SMFP record)
 bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
 {
-    if (!EESimCaptureRecord::Active())
-        return this->FindPlacementUncaptured(inUnitType, outLocation, inTryRandom);
-    unsigned int theSeed = EESMCaptureSeed();
-    bool theResult = this->FindPlacementUncaptured(inUnitType, outLocation, inTryRandom);
-    EESMCapturePlacement(this, inUnitType, inTryRandom, theResult, theResult ? outLocation.mX : 0.0f,
-                         theResult ? outLocation.mY : 0.0f, theSeed);
-    return theResult;
-}
-
-// FindPlacement's body (FindPlacement adds the simulation capture's SMFP record: ee/EEScenarioCapture.h): ee_scenario
-// placement.rs find_placement over the area's record; the retry without random tries goes through FindPlacement
-bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
-{
-    EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mArea);
-    EeScenarioAreaRecord theRecord = theArea != NULL ? EESMAreaRecord(*theArea) : EeScenarioAreaRecord();
-    EESMHostContext theContext = {};
-    EeScenarioHost theHost = EESMHost(&theContext);
-    float theLocation[2] = {outLocation.mX, outLocation.mY};
-    uint32_t theResult = ee_scenario_find_placement(&theHost, this, theArea != NULL ? &theRecord : NULL,
-                                                    (uint32_t)inUnitType, inTryRandom, &theLocation);
-    outLocation.mX = theLocation[0];
-    outLocation.mY = theLocation[1];
-    if (theResult == EE_SCENARIO_PLACEMENT_RETRY)
-        return this->FindPlacement(inUnitType, outLocation, false);
-    return theResult == EE_SCENARIO_PLACEMENT_FOUND;
+    return ee_scenario_en_find_placement(this, inUnitType, &outLocation.mX, &outLocation.mY, inTryRandom);
 }
 
 // Returns a unit's attribute for an object filter: current values, upgrade bonuses over the class, or totals,
@@ -264,11 +223,7 @@ bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& ou
 long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEUnit* inUnit,
     long inArg4, long inArg5)
 {
-    if (inUnit == NULL)
-        return 0;
-    EESMHostContext theContext = {NULL, inUnit, NULL, NULL, NULL};
-    EeScenarioHost theHost = EESMHost(&theContext);   // ee_scenario attribute.rs unit_attribute
-    return ee_scenario_unit_attribute(&theHost, (uint32_t)inAttribute, inPercent);
+    return ee_scenario_en_unit_attribute(inAttribute, inPercent, inUnit);   // ee_scenario attribute.rs unit_attribute
 }
 
 
@@ -282,75 +237,44 @@ void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const
 // Complete move up by 3); returns the first error (ee_scenario save.rs object_load)
 long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UWideString* theStrings[] = {&this->mName};
-    EESMStream theStream = {&inFile, theStrings, &this->mUnits};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    return ee_scenario_object_load(&theTable, this, inMajorVersion, inMinorVersion);
+    return ee_scenario_en_object_io(this, &inFile, inMajorVersion, inMinorVersion, false);
 }
 
 // Replaces every occurrence of a unit id in the object's unit list by a new id
 void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
 {
-    long theCount = this->mUnits.size();
-    for (long i = 0; i < theCount; i++) {
-        unsigned long& theUnit = this->mUnits[i];
-        if (theUnit == inOldUnit)
-            theUnit = inNewUnit;
-    }
+    ee_scenario_en_object_replace_unit(this, inOldUnit, inNewUnit);
 }
 
 // Writes the object's units and filter settings (the parent only for minor version >= 0x2a); returns the first error
 // (ee_scenario save.rs object_save)
 long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    UWideString* theStrings[] = {&this->mName};
-    EESMStream theStream = {&outFile, theStrings, &this->mUnits};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    return ee_scenario_object_save(&theTable, this, inMinorVersion);
+    return ee_scenario_en_object_io(this, &outFile, inMajorVersion, inMinorVersion, true);
 }
 
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
 // rot time, built state, variables) by a fixed, random or percentage amount
 // Original cdecl helper; random range and the percentage flag are independent of add/subtract/assign mode.
-static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
-                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode);
+// (the draws, the clamps and which value changes are ee_scenario unit_change.rs's, the unit's reads and writes
+// EESMEffect.cpp's EE_SCENARIO_WORLD_CU_*; entry.rs adds the simulation capture's SMCU record)
 void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
                 long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
 {
-    unsigned int theSeed = EESimCaptureRecord::Active() ? EESMCaptureSeed() : 0;
-    long theID = inUnit != NULL ? (long)inUnit->mUnitID : -1;   // the unit by id after (a kill may free it)
-    EEChangeUnitUncaptured(inAttribute, inPercentage, inUnit, inMinimum, inMaximum, inRandom, inMode);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
-        long theArgs[7] = {(long)inAttribute, inPercentage, theID, inMinimum, (long)inMaximum, inRandom, inMode};
-        EESMCaptureUnitChange(0, theArgs, theID >= 0 ? gWorld.GetUnit((unsigned long)theID) : NULL, NULL, NULL, theSeed);
-    }
-}
-
-// EEChangeUnit's body (EEChangeUnit adds the simulation capture's SMCU record): the draws, the clamps and which value
-// changes are ee_scenario unit_change.rs's, the unit's reads and writes EESMEffect.cpp's EE_SCENARIO_WORLD_CU_*
-static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
-                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
-{
-    EESMHostContext theContext = {NULL, inUnit};
-    EeScenarioHost theHost = EESMHost(&theContext);
-    ee_scenario_change_unit(&theHost, inAttribute, inPercentage, inMinimum, inMaximum, inRandom, inMode);
+    ee_scenario_en_change_unit(inAttribute, inPercentage, inUnit, inMinimum, inMaximum, inRandom, inMode);
 }
 
 // Renames the object and renames its object conditions to "<name> Exists" (ee_scenario lists.rs)
 void EESMObject::SetName(const UWideString& inName)
 {
-    this->mName = inName;
-    if (gWorld.mScenarioManager != NULL)
-        gWorld.mScenarioManager->ObjectChanged(this, false, 0);
+    ee_scenario_en_object_set_name(this, &inName);
 }
 
 // Sets the parent object; a parent chain that loops back to this object resets the parent to 0 (ee_scenario
 // lists.rs set_parent)
 void EESMObject::SetParent(long inParent)
 {
-    this->mParent = inParent;
-    if (gWorld.mScenarioManager != NULL)
-        gWorld.mScenarioManager->ObjectChanged(this, true, inParent);
+    ee_scenario_en_object_set_parent(this, inParent);
 }
 
 // Replaces the object's unit list
@@ -361,9 +285,6 @@ void EESMObject::SetUnits(const std::vector<unsigned long>& inUnits)
 
 // ---- the trigger's members (ee_scenario trigger_members.rs: each a forward; the vectors and strings stay here, reached
 // by ee_scenariocpp_trigger's single statements)
-
-static_assert(EE_SCENARIO_TR_EFFECTS - EE_SCENARIO_TR_CONDITIONS == 20 && kSMTriggerOperatorEnd == 0,
-              "trigger_members.rs's numbers");
 
 // Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry
 EESMTrigger::EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_CONSTRUCT, 0, 0, 0, 0); }
@@ -392,24 +313,10 @@ void EESMTrigger::DeleteEffect(unsigned long inIndex)
 // Fires the trigger when its AND/OR condition chain has held for the set duration: queues all effects, or one random
 // OR-separated group, at their delays, and turns a non-looping trigger off
 // (EEScenarioManager::Update 0x1b20e6)
+// (trigger.rs evaluate over the entries, trigger_members.rs; entry.rs adds the simulation capture's SMTE record)
 void EESMTrigger::Evaluate(float inTime)
 {
-    if (!EESimCaptureRecord::Active()) {
-        this->EvaluateUncaptured(inTime);
-        return;
-    }
-    EESMCaptureTriggerState theBefore = EESMCaptureTriggerBefore(this);
-    unsigned int theSeed = EESMCaptureSeed();
-    this->EvaluateUncaptured(inTime);
-    EESMCaptureTrigger(this, theBefore, inTime, theSeed);
-}
-
-// Evaluate's body: trigger.rs evaluate over the entries (trigger_members.rs)
-void EESMTrigger::EvaluateUncaptured(float inTime)
-{
-    EESMHostContext theContext = {NULL, NULL};
-    EeScenarioHost theHost = EESMHost(&theContext);
-    ee_scenario_trigger_evaluate_member(&theHost, this, inTime);
+    ee_scenario_en_trigger_evaluate(this, inTime);
 }
 
 // Returns condition entry inIndex, or NULL past the end
@@ -428,20 +335,14 @@ EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
 // (ee_scenario save.rs trigger_load)
 long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UWideString* theStrings[] = {&this->mName, &this->mText};
-    EESMStream theStream = {&inFile, theStrings, NULL, this};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    return ee_scenario_trigger_load(&theTable, this);
+    return ee_scenario_en_trigger_io(this, &inFile, false);
 }
 
 // Writes the trigger's settings, condition entries and effect entries; returns the first error
 // (ee_scenario save.rs trigger_save)
 long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    UWideString* theStrings[] = {&this->mName, &this->mText};
-    EESMStream theStream = {&outFile, theStrings, NULL, this};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    return ee_scenario_trigger_save(&theTable, this);
+    return ee_scenario_en_trigger_io(this, &outFile, true);
 }
 
 // Sets condition entry inIndex

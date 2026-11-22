@@ -200,11 +200,11 @@ pub const EE_SCREENS_SH_BRUSH_SIZE: u32 = 0x46;
 
 /// `kControlTriggerSelectionChanged` (lle/UIControl.h).
 const TRIGGER_SELECTION_CHANGED: i64 = 0x3eb;
-/// `kSETriggerScreenCondition`, `kSETriggerScreenEffect`, `kSETriggerScreenArea` (ee/EEScenarioEditorIDs.h).
+/// `kSETriggerScreenCondition`, `kSETriggerScreenEffect`, `kSETriggerScreenArea` (editor_ids.rs).
 const SCREEN_CONDITION: i64 = 1;
 const SCREEN_EFFECT: i64 = 2;
 const SCREEN_AREA: i64 = 4;
-/// `kSEElevationStrengthLabel` (ee/EEScenarioEditorIDs.h).
+/// `kSEElevationStrengthLabel` (editor_ids.rs).
 const ELEVATION_STRENGTH_LABEL: i64 = 0x9f;
 
 /// The shells' calls out: one op of `ee_screenscpp_shell` on the control `ctl`.
@@ -544,7 +544,7 @@ struct PlayerCombo {
     count: Cell<u32>,
 }
 
-/// The player list's entries by flag (`kPlayerListWorld` .. `kPlayerListAnyExcludeWorld`, ee/EEScenarioEditorIDs.h)
+/// The player list's entries by flag (`kPlayerListWorld` .. `kPlayerListAnyExcludeWorld`, editor_ids.rs)
 /// and their strings (`IDS_TRIGGER_PLAYER_WORLD`, `IDS_ANY_HUMAN`, `IDS_ANY_COMPUTER`, `IDS_ALL_HUMAN`,
 /// `IDS_ALL_COMPUTER`, `IDS_ANY_PLAYER`, `IDS_ANY_EXCLUDE_WORLD`).
 const PLAYER_LIST_ENTRIES: [(u32, i64); 7] =
