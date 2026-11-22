@@ -24,7 +24,6 @@ class EEUnit;
 
 // CBTC, CBGS (no record while the capture is off)
 void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut);
-void EECombatCaptureStep(const EeCombatStepIn& in);
 // writes the tests' last CBTC batch (EE-SIM at the game's end, before the capture closes)
 void EECombatCaptureFlush();
 

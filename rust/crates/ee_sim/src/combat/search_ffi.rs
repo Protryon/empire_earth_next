@@ -1,31 +1,31 @@
-//! The C ABI of the target searches (`search.rs`). The searches' world comes
-//! through `EeCombatSearchHost`, a table of C callbacks filled per call by the C++ (`ctx` is its state, every handle
-//! a C++ pointer). Nothing is kept after a call returns. A unit's tile is the unit store's (`store.rs`).
-
-use std::ffi::c_void;
+//! The target searches' world (`search.rs`) over the world views: the unit regions, the unit store's tiles, the
+//! candidates' own values and the plain tests; the other tests and the searching unit's calls through
+//! [`SearchCallbacks`] (the unit utilities' search bodies, units/uu_search.rs, over the C++'s statements). Every handle
+//! a C++ pointer; nothing is kept after a search returns. A unit's tile is the unit store's (`store.rs`).
 
 use crate::combat::search::*;
 use crate::combat::store;
 use crate::combat::walks::EeCombatHandle;
 
-/// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
-/// function of the right type.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeCombatSearchHost {
-    pub ctx: *mut c_void,
-    /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
+/// The calls of a search that are not reads of the views (see `SearchHost`).
+pub trait SearchCallbacks {
+    fn list_next(&mut self, unit: EeCombatHandle, prev: bool) -> EeCombatHandle;
+    fn dummy_head(&mut self, unit: EeCombatHandle) -> bool;
+    fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool;
+    fn hit_distance_squared(&mut self, unit: EeCombatHandle, x: f32, y: f32) -> f32;
+    fn attack_factor(&mut self, unit: EeCombatHandle) -> f32;
+    fn line_blocked(&mut self, unit: EeCombatHandle) -> bool;
+    fn reachable(&mut self, unit: EeCombatHandle) -> bool;
+    fn ignore(&mut self, unit: EeCombatHandle);
+    fn footprint_tile(&mut self, unit: EeCombatHandle) -> (i32, i32);
+    fn trace(&mut self, unit: EeCombatHandle, code: i32, score: i32);
+}
+
+/// The searches' world: the map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs, live for the search) and
+/// the callbacks.
+pub struct SearchWorld<'c, C: SearchCallbacks + ?Sized> {
     pub unit_regions: *const crate::combat::regions::EeCombatUnitRegions,
-    pub list_next: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, prev: i32) -> u64,
-    pub dummy_head: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub test: unsafe extern "C" fn(ctx: *mut c_void, test: u32, unit: u64) -> i32,
-    pub hit_distance_squared: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, x: f32, y: f32) -> f32,
-    pub attack_factor: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> f32,
-    pub line_blocked: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub reachable: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub ignore: unsafe extern "C" fn(ctx: *mut c_void, unit: u64),
-    pub footprint_tile: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [i32; 2]),
-    pub trace: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, code: i32, score: i32),
+    pub calls: &'c mut C,
 }
 
 /// `f` of the view of a candidate (a handle the C++ search gave: a live unit while the search runs).
@@ -36,16 +36,14 @@ fn with_unit<R>(unit: EeCombatHandle, f: impl FnOnce(crate::world::UnitView<'_>)
     f(unsafe { crate::world::UnitView::of(&t, unit) }.expect("a candidate"))
 }
 
-impl EeCombatSearchHost {
+impl<C: SearchCallbacks + ?Sized> SearchWorld<'_, C> {
     fn table(&self) -> &crate::combat::regions::EeCombatUnitRegions {
         // SAFETY: the table's contract: the regions are live for the call that handed them over
         unsafe { &*self.unit_regions }
     }
 }
 
-// SAFETY (every call below): the table's contract: `ctx` is live for the call that handed it over, and the
-// callbacks are callable with it.
-impl SearchHost for EeCombatSearchHost {
+impl<C: SearchCallbacks + ?Sized> SearchHost for SearchWorld<'_, C> {
     fn regions(&mut self, left: i32, top: i32, right: i32, bottom: i32) -> (i32, i32, i32, i32) {
         self.table().rect(left, top, right, bottom)
     }
@@ -67,10 +65,10 @@ impl SearchHost for EeCombatSearchHost {
         })
     }
     fn list_next(&mut self, unit: EeCombatHandle, prev: bool) -> EeCombatHandle {
-        unsafe { (self.list_next)(self.ctx, unit, prev as i32) }
+        self.calls.list_next(unit, prev)
     }
     fn dummy_head(&mut self, unit: EeCombatHandle) -> bool {
-        unsafe { (self.dummy_head)(self.ctx, unit) != 0 }
+        self.calls.dummy_head(unit)
     }
     fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool {
         // the plain reads, through the views; the others the C++'s
@@ -82,7 +80,7 @@ impl SearchHost for EeCombatSearchHost {
                 c.wall() && !tower
             }),
             EE_COMBAT_SEARCH_TEST_ALIVE => with_unit(unit, |u| u.hit_points() > 0),
-            _ => unsafe { (self.test)(self.ctx, test, unit) != 0 },
+            _ => self.calls.test(test, unit),
         }
     }
     fn target(&mut self, unit: EeCombatHandle) -> EeCombatSearchTarget {
@@ -100,53 +98,24 @@ impl SearchHost for EeCombatSearchHost {
         })
     }
     fn hit_distance_squared(&mut self, unit: EeCombatHandle, x: f32, y: f32) -> f32 {
-        unsafe { (self.hit_distance_squared)(self.ctx, unit, x, y) }
+        self.calls.hit_distance_squared(unit, x, y)
     }
     fn attack_factor(&mut self, unit: EeCombatHandle) -> f32 {
-        unsafe { (self.attack_factor)(self.ctx, unit) }
+        self.calls.attack_factor(unit)
     }
     fn line_blocked(&mut self, unit: EeCombatHandle) -> bool {
-        unsafe { (self.line_blocked)(self.ctx, unit) != 0 }
+        self.calls.line_blocked(unit)
     }
     fn reachable(&mut self, unit: EeCombatHandle) -> bool {
-        unsafe { (self.reachable)(self.ctx, unit) != 0 }
+        self.calls.reachable(unit)
     }
     fn ignore(&mut self, unit: EeCombatHandle) {
-        unsafe { (self.ignore)(self.ctx, unit) }
+        self.calls.ignore(unit)
     }
     fn footprint_tile(&mut self, unit: EeCombatHandle) -> (i32, i32) {
-        let mut out = [0i32; 2];
-        unsafe { (self.footprint_tile)(self.ctx, unit, &mut out) };
-        (out[0], out[1])
+        self.calls.footprint_tile(unit)
     }
     fn trace(&mut self, unit: EeCombatHandle, code: i32, score: i32) {
-        unsafe { (self.trace)(self.ctx, unit, code, score) }
+        self.calls.trace(unit, code, score)
     }
-}
-
-/// `EESearchTarget`.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_search_target(
-    input: *const EeCombatSearchIn,
-    host: *const EeCombatSearchHost,
-) -> EeCombatSearchOut {
-    let mut host = unsafe { *host };
-    search_target(unsafe { &*input }, &mut host)
-}
-
-/// `EESearchTargetAlongList` from `unit` (the searching unit's handle in the list).
-///
-/// # Safety
-/// As `ee_combat_search_target`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_search_along_list(
-    input: *const EeCombatSearchIn,
-    unit: u64,
-    host: *const EeCombatSearchHost,
-) -> EeCombatSearchOut {
-    let mut host = unsafe { *host };
-    search_along_list(unsafe { &*input }, unit, &mut host)
 }

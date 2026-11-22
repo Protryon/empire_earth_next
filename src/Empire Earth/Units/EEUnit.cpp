@@ -133,27 +133,13 @@ bool EEUnit::CanGather(EEUnit* inUnit, long inX, long inY, bool inIsVisible, boo
 // and deactivates it
 void EEUnit::Remove(bool inUnloadInBackground)
 {
-    this->mUnitClass->UnitRemoved();
-    if (inUnloadInBackground && UShutdownInProgress() != true && gWorld.mClearing != true)
-        gDataPreLoading->PostUnloadUnitClass(this->mPlayer->mPlayerID, this->mUnitClass->mUnitType);
-    else
-        this->mPlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
-    this->mHitPoints = 0;
-    if (this->mComplexUnit != NULL)
-        gWorld.DeactivateUnit(this->mComplexUnit);
-    RTSUnit::Invalidate();
+    ee_units_eu_more(EE_UNITS_EUM_DO_REMOVE, this, NULL, inUnloadInBackground, 0);   // eu_more.rs
 }
 
 // Copies another unit's resource type and amount and its health fraction (scaled to this unit's maximum hit points)
 void EEUnit::CopyFrom(RTSUnit* inUnit)
 {
-    EEUnit* theOther = dynamic_cast<EEUnit*>(inUnit);
-    this->mResourceType = theOther->mResourceType;
-    EEUnitClassUpgrade* theOtherStats = theOther->GetPlayer()->mUnitClassUpgrades[theOther->GetUnitClass()->mUnitType];
-    EEUnitClassUpgrade* theStats = this->GetPlayer()->mUnitClassUpgrades[this->GetUnitClass()->mUnitType];
-    this->mHitPoints = UMFloatToLong(theStats->mMaxHitPoints * ((float)theOther->GetHitPoints() / theOtherStats->mMaxHitPoints));
-    this->mResourceAmount = theOther->mResourceAmount;
-    RTSUnit::CopyFrom(inUnit);
+    ee_units_eu_more(EE_UNITS_EUM_DO_COPY_FROM, this, inUnit, 0, 0);   // eu_more.rs
 }
 
 // Rechecks, staggered by game-time phase, whether a unit or moving object stands on or beside this obstacle (a
@@ -187,9 +173,7 @@ void EEUnit::FreeNode()
 // Returns whether inUnit may pass the unit: non-blocking units, dead non-resources, and wood for forest-crossing units
 bool EEUnit::IsPassableBy(EEComplexUnit* inUnit)
 {
-    EEUnitClass* theClass = this->mUnitClass;
-    return !theClass->mBlocksTile || (this->mHitPoints == 0 && theClass->mCategory != kUnitCategoryResource)
-        || (theClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
+    return !this->mUnitClass->mBlocksTile || (this->mHitPoints == 0 && this->mUnitClass->mCategory != kUnitCategoryResource) || (this->mUnitClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
 }
 
 // Returns 0 (a simple unit adds nothing to the sync checksum)
@@ -260,53 +244,25 @@ void EEUnit::GetPosition(GE3DPoint& outPosition)
 // Initialises the unit as a simple unit of inClass for inPlayer and places it at tile (inX, inY)
 void EEUnit::Init(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
 {
-    this->Initialize(0);
-    this->ResetEEUnit();
-    if (this->mReferenceCount == 0)
-        this->mReferenceCount = 1;
-    this->mPlayer = inPlayer;
-    this->mUnitClass = inClass;
-    if (inClass != NULL)
-        this->mStats = inPlayer->mUnitClassUpgrades[inClass->mUnitType];
-    this->MoveTo(inX, inY, 0);
+    ee_units_eu_more(EE_UNITS_EUM_DO_INIT_AT, this, inClass, (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)(uintptr_t)inPlayer);   // eu_more.rs
 }
 
 // Initialises the unit part of a complex unit of inClass for inPlayer, with no resources or hit points yet
 void EEUnit::Init(EEUnitClass* inClass, EEPlayer* inPlayer)
 {
-    this->Initialize(1);
-    this->ResetEEUnit();
-    if (this->mReferenceCount == 0)
-        this->mReferenceCount = 1;
-    this->mPlayer = inPlayer;
-    this->mUnitClass = inClass;
-    this->mComplexUnit = static_cast<EEComplexUnit*>(this);
-    if (inClass != NULL)
-        this->mStats = inPlayer->mUnitClassUpgrades[inClass->mUnitType];
-    this->mResourceAmount = 0;
-    this->mResourceType = kResourceNone;
-    this->mHitPoints = 0;
+    ee_units_eu_more(EE_UNITS_EUM_DO_INIT_COMPLEX, this, inClass, 0, (int64_t)(uintptr_t)inPlayer);   // eu_more.rs
 }
 
 // Clears the unit's class, stats, resources, hit points and hidden flags
 void EEUnit::ResetEEUnit()
 {
-    this->mUnitClass = NULL;
-    this->mComplexUnit = NULL;
-    this->mResourceAmount = 0;
-    this->mResourceType = kResourceNone;
-    this->mHitPoints = 0;
-    this->mHiddenFlags = 0;
-    this->mStats = NULL;
+    ee_units_eu_more(EE_UNITS_EUM_DO_RESET, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Loads the unit class's media for the owner: at once, or for a foundation queued to the preloader
 void EEUnit::LoadMedia(bool inIsFoundation)
 {
-    if (!inIsFoundation)
-        this->mPlayer->SetUnitClassMedia(this->mUnitClass->mUnitType, 0x7f);
-    else
-        gDataPreLoading->PostLoadUnitClass(this->mPlayer->mPlayerID, this->mUnitClass->mUnitType);
+    ee_units_eu_more(EE_UNITS_EUM_DO_LOAD_MEDIA, this, NULL, inIsFoundation, 0);   // eu_more.rs
 }
 
 // Kills the unit: updates sight and doppelgangers, plays a simple unit's death effect and sound, empties farms and
@@ -457,9 +413,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_BADLY_HURT: theUnit->mUnitClass->BadlyHurt(theUnit); return 0;
     case EE_UNITS_EU_DAMAGE_TAKEN: thePlayer->DamageTaken((unsigned long)inB, (long)inC, theUnit); return 0;
     case EE_UNITS_EU_NUM_PLAYERS: return gWorld.mNumPlayers;
-    case EE_UNITS_EU_HAS_UNITS_STATE:
-        return gWorld.mPlayers[inB] != NULL && gWorld.mPlayers[inB]->mComputerPlayer != NULL
-            && gWorld.mPlayers[inB]->mComputerPlayer->mUnitsState != NULL;
+    case EE_UNITS_EU_HAS_UNITS_STATE: return gWorld.mPlayers[inB] != NULL && gWorld.mPlayers[inB]->mComputerPlayer != NULL && gWorld.mPlayers[inB]->mComputerPlayer->mUnitsState != NULL;
     case EE_UNITS_EU_ON_DEALT: EECPUnitsOnDealt(gWorld.mPlayers[inB]->mComputerPlayer, (long)inC, theUnit); return 0;
     case EE_UNITS_EU_TILE_X: return theOther->mTileX;
     case EE_UNITS_EU_TILE_Y: return theOther->mTileY;
@@ -469,19 +423,11 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         return 0;
     case EE_UNITS_EU_DAMAGE_EFFECT: return (uint64_t)(uintptr_t)theUnit->mUnitClass->mDamageEffect;
     case EE_UNITS_EU_SHOWS_DAMAGE: return theUnit->mTileNode == NULL || theUnit->mComplexUnit->mIsBuilt;
-    case EE_UNITS_EU_DAMAGE_EFFECT_FORMULA:
-        return EECombatDamageEffect(EeCombatDamageEffectIn{(int32_t)theUnit->mHitPoints, (int32_t)inB, (int32_t)theUnit->mStats->mMaxHitPoints,
-                                                           EEEuObject<EEGraphicEffect>(inA)->GetParam2()});
+    case EE_UNITS_EU_DAMAGE_EFFECT_FORMULA: return EECombatDamageEffect(EeCombatDamageEffectIn{(int32_t)theUnit->mHitPoints, (int32_t)inB, (int32_t)theUnit->mStats->mMaxHitPoints, EEEuObject<EEGraphicEffect>(inA)->GetParam2()});
     case EE_UNITS_EU_CATEGORY: return theUnit->mUnitClass->mCategory;
     case EE_UNITS_EU_EFFECT_ON_SELF: gEffectManager->CreateUnitEffect(theUnit, EEEuObject<EEGraphicEffect>(inA), NULL, false, 0, 0); return 0;
-    case EE_UNITS_EU_GATE_EFFECT_LINKED:
-        gEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinked(theUnit->mComplexUnit),
-                                         theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0);
-        return 0;
-    case EE_UNITS_EU_GATE_EFFECT_CARRIER:
-        gEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinkedCarrier(theUnit->mComplexUnit),
-                                         theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0);
-        return 0;
+    case EE_UNITS_EU_GATE_EFFECT_LINKED: gEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinked(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_GATE_EFFECT_CARRIER: gEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinkedCarrier(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_SET_HIT_POINTS: theUnit->mHitPoints = (long)inB; return 0;
     case EE_UNITS_EU_TARGET_SEARCH_TIMER: return theComplex->mTargetSearchTimer;
     case EE_UNITS_EU_CLEAR_TARGET_SEARCH_TIMER: theComplex->mTargetSearchTimer = 0; return 0;
@@ -523,9 +469,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_MARK_MOVED: theUnit->mHiddenFlags |= kHiddenFlagMoved; return 0;
     case EE_UNITS_EU_SET_TILE_Y: theUnit->mTileY = (long)inB; return 0;
     case EE_UNITS_EU_SET_TILE_X: theUnit->mTileX = (long)inB; return 0;
-    case EE_UNITS_EU_CLASS_HIDES:
-        return theUnit->mUnitClass->mIsObstacle && !(theUnit->mUnitClass->mDomains & kMovementAir) && !theUnit->mUnitClass->mIsProjectile
-            && theUnit->mUnitClass->mMaxVelocity == 0.0f;
+    case EE_UNITS_EU_CLASS_HIDES: return theUnit->mUnitClass->mIsObstacle && !(theUnit->mUnitClass->mDomains & kMovementAir) && !theUnit->mUnitClass->mIsProjectile && theUnit->mUnitClass->mMaxVelocity == 0.0f;
     case EE_UNITS_EU_UPDATE_HIDDEN: theUnit->UpdateHidden(); return 0;
     case EE_UNITS_EU_SET_TILE: theUnit->mTile = gWorld.mMap->GetTile((long)inB, (long)inC); return 0;
     case EE_UNITS_EU_ADD_TO_TILE: theUnit->mUnitClass->AddToTile(theUnit); return 0;
@@ -582,38 +526,72 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     default: return 0;
     }
 }
-// Remembers the unit's last attacker, moving the reference from the previous one
+
+// The statements of eu_more.rs's bodies (EE_UNITS_EUM_*; no preamble: Init and ResetEEUnit run on a unit whose
+// members are not set yet)
+extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC)
+{
+    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
+    switch (inOp) {
+    case EE_UNITS_EUM_UNIT_REMOVED: theUnit->mUnitClass->UnitRemoved(); return 0;
+    case EE_UNITS_EUM_SHUTDOWN: return UShutdownInProgress();
+    case EE_UNITS_EUM_CLEARING: return gWorld.mClearing;
+    case EE_UNITS_EUM_POST_UNLOAD: gDataPreLoading->PostUnloadUnitClass(theUnit->mPlayer->mPlayerID, theUnit->mUnitClass->mUnitType); return 0;
+    case EE_UNITS_EUM_UNLOAD_MEDIA: theUnit->mPlayer->UnloadUnitClassMedia(theUnit->mUnitClass->mUnitType); return 0;
+    case EE_UNITS_EUM_ZERO_HIT_POINTS: theUnit->mHitPoints = 0; return 0;
+    case EE_UNITS_EUM_HAS_COMPLEX: return theUnit->mComplexUnit != NULL;
+    case EE_UNITS_EUM_DEACTIVATE: gWorld.DeactivateUnit(theUnit->mComplexUnit); return 0;
+    case EE_UNITS_EUM_RTS_INVALIDATE: theUnit->RTSUnit::Invalidate(); return 0;
+    case EE_UNITS_EUM_AS_UNIT: return EEObj(dynamic_cast<EEUnit*>(EEEuObject<RTSUnit>(inA)));
+    case EE_UNITS_EUM_COPY_RESOURCE_TYPE: theUnit->mResourceType = EEEuObject<EEUnit>(inA)->mResourceType; return 0;
+    case EE_UNITS_EUM_UPGRADE_MAX_HIT_POINTS: return EEEuObject<EEUnit>(inA)->GetPlayer()->mUnitClassUpgrades[EEEuObject<EEUnit>(inA)->GetUnitClass()->mUnitType]->mMaxHitPoints;
+    case EE_UNITS_EUM_HIT_POINTS_OF: return EEEuObject<EEUnit>(inA)->GetHitPoints();
+    case EE_UNITS_EUM_SET_HIT_POINTS_FIELD: theUnit->mHitPoints = (long)inB; return 0;
+    case EE_UNITS_EUM_COPY_RESOURCE_AMOUNT: theUnit->mResourceAmount = EEEuObject<EEUnit>(inA)->mResourceAmount; return 0;
+    case EE_UNITS_EUM_RTS_COPY_FROM: theUnit->RTSUnit::CopyFrom(EEEuObject<RTSUnit>(inA)); return 0;
+    case EE_UNITS_EUM_INITIALIZE: theUnit->Initialize((long)inB); return 0;
+    case EE_UNITS_EUM_REFERENCE_COUNT: return theUnit->mReferenceCount;
+    case EE_UNITS_EUM_REFERENCE_ONE: theUnit->mReferenceCount = 1; return 0;
+    case EE_UNITS_EUM_SET_PLAYER: theUnit->mPlayer = EEEuObject<EEPlayer>(inA); return 0;
+    case EE_UNITS_EUM_SET_CLASS: theUnit->mUnitClass = EEEuObject<EEUnitClass>(inA); return 0;
+    case EE_UNITS_EUM_SET_STATS: theUnit->mStats = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mUnitClass->mUnitType]; return 0;
+    case EE_UNITS_EUM_MOVE_TO_TILE: theUnit->MoveTo((long)inB, (long)inC, 0); return 0;
+    case EE_UNITS_EUM_SET_COMPLEX_SELF: theUnit->mComplexUnit = static_cast<EEComplexUnit*>(theUnit); return 0;
+    case EE_UNITS_EUM_ZERO_RESOURCE_AMOUNT: theUnit->mResourceAmount = 0; return 0;
+    case EE_UNITS_EUM_RESOURCE_TYPE_NONE: theUnit->mResourceType = kResourceNone; return 0;
+    case EE_UNITS_EUM_CLEAR_CLASS: theUnit->mUnitClass = NULL; return 0;
+    case EE_UNITS_EUM_CLEAR_COMPLEX: theUnit->mComplexUnit = NULL; return 0;
+    case EE_UNITS_EUM_CLEAR_HIDDEN: theUnit->mHiddenFlags = 0; return 0;
+    case EE_UNITS_EUM_CLEAR_STATS: theUnit->mStats = NULL; return 0;
+    case EE_UNITS_EUM_CARBON_ROCK: return EEUnit::IsCarbonRock(theUnit->mUnitClass->mUnitType);
+    case EE_UNITS_EUM_FOREST: return EEObj(gContinentManager.GetForestAt(theUnit));
+    case EE_UNITS_EUM_GAME_TIME: return gPhysics->mGameTime;
+    case EE_UNITS_EUM_FOREST_DUE: return EEEuObject<EEAIForest>(inA)->GetNextRenewal() <= gPhysics->mGameTime;
+    case EE_UNITS_EUM_FOREST_TILES: return EEEuObject<EEAIForest>(inA)->GetNumTiles();
+    case EE_UNITS_EUM_CATEGORY_OF: return EEEuObject<EEComplexUnit>(inA)->mUnitClass->mCategory;
+    case EE_UNITS_EUM_RANDOM: return gPhysics->GetRandom((long)inB, (long)inC);
+    case EE_UNITS_EUM_REGROW: EEEuObject<EEAIForest>(inA)->RegrowTrees(U2DPoint<long>(theUnit->mTileX, theUnit->mTileY), (long)inB, (long)inC); return 0;
+    case EE_UNITS_EUM_SET_NEXT_RENEWAL: EEEuObject<EEAIForest>(inA)->SetNextRenewal((long)inB); return 0;
+    case EE_UNITS_EUM_SET_CLASS_MEDIA: theUnit->mPlayer->SetUnitClassMedia(theUnit->mUnitClass->mUnitType, 0x7f); return 0;
+    case EE_UNITS_EUM_POST_LOAD: gDataPreLoading->PostLoadUnitClass(theUnit->mPlayer->mPlayerID, theUnit->mUnitClass->mUnitType); return 0;
+    case EE_UNITS_EUM_LAST_ATTACKER: return EEObj(static_cast<EEComplexUnit*>(theUnit)->mLastAttacker);
+    case EE_UNITS_EUM_DEREFERENCE_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker->Dereference(); return 0;
+    case EE_UNITS_EUM_SET_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker = EEEuObject<EEComplexUnit>(inA); return 0;
+    case EE_UNITS_EUM_REFERENCE_OF: EEEuObject<EEComplexUnit>(inA)->Reference(); return 0;
+    default: return 0;
+    }
+}
+// Remembers the unit's last attacker, moving the reference from the previous one (eu_more.rs)
 void EEComplexUnit::SetLastAttacker(EEComplexUnit* inUnit)
 {
-    if (this->mLastAttacker == inUnit)
-        return;
-    if (this->mLastAttacker)
-        this->mLastAttacker->Dereference();
-    this->mLastAttacker = inUnit;
-    inUnit->Reference();
+    ee_units_eu_more(EE_UNITS_EUM_DO_SET_LAST_ATTACKER, static_cast<EEUnit*>(this), inUnit, 0, 0);
 }
 
 // Regrows trees in the forest of a cut tree when its renewal is due (fewer, nearer ones when a citizen cut it), then
-// schedules the next renewal 125-275 s ahead; never for carbon rock
+// schedules the next renewal 125-275 s ahead; never for carbon rock (eu_more.rs)
 void EEUnit::RegrowForest(EEComplexUnit* inUnit)
 {
-    if (EEUnit::IsCarbonRock(this->mUnitClass->mUnitType))
-        return;
-    EEAIForest* theForest = gContinentManager.GetForestAt(this);
-    long theCount = 3;
-    long theRadius = 3;
-    if (theForest == NULL || !(theForest->GetNextRenewal() <= gPhysics->mGameTime) ||
-        !(theForest->GetNumTiles() > 1))
-        return;
-    if (inUnit != NULL &&
-        (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen || inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)) {
-        theRadius = gPhysics->GetRandom(0L, 2L);
-        theCount = gPhysics->GetRandom(1L, 2L);
-    }
-    U2DPoint<long> theTile(this->mTileX, this->mTileY);
-    theForest->RegrowTrees(theTile, theRadius, theCount);
-    long theTime = gPhysics->mGameTime;
-    theForest->SetNextRenewal(theTime + gPhysics->GetRandom(125000L, 275000L));
+    ee_units_eu_more(EE_UNITS_EUM_DO_REGROW_FOREST, this, inUnit, 0, 0);
 }
 
 // Returns whether inUnitType is one of the carbon rock unit types

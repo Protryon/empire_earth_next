@@ -15,6 +15,8 @@
 pub mod capture;
 pub mod capture_fold;
 pub mod capture_units;
+pub mod cg_goal;
+pub mod cg_world;
 pub mod damage;
 pub mod damage_table;
 pub mod decide;

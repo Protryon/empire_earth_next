@@ -170,125 +170,37 @@ void EEUnitOrderReset()
     ee_units_order_reset(theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
 }
 
+// TEST ONLY: the check's body is Rust (the units' lane, round 8: ee_units us_check.rs), its world reads this host's
+// statements (EE_UNITS_US_*)
 unsigned long EEUnitStoreCheck(unsigned long inWhere)
 {
-    static std::vector<EeUnitRecord> sObjects;
-    sObjects.clear();
-    unsigned long theListed = 0;
-    for (unsigned long i = 0; i < 17; i++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[i];
-        if (thePlayer == NULL)
-            continue;
-        unsigned long theCount = 0;
-        for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext) {
-            EeUnitRecord theRecord;
-            Fill(theUnit, thePlayer->mPlayerID, static_cast<RTSPlayer*>(thePlayer), theRecord);
-            sObjects.push_back(theRecord);
-            theCount++;
-        }
-        theListed += theCount;
+    return (unsigned long)ee_units_us_check(inWhere);
+}
+
+static RTSUnit* UsUnit(uint64_t inUnit) { return reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inUnit)); }
+static EEPlayer* UsPlayer(uint64_t inPlayer) { return reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inPlayer)); }
+
+extern "C" int64_t ee_units_us_host(int32_t inOp, uint64_t inA, int64_t inB, uint64_t inC, void* outData)
+{
+    switch (inOp) {
+    case EE_UNITS_US_PLAYER: return (int64_t)reinterpret_cast<uintptr_t>(gWorld.mPlayers[inB]);
+    case EE_UNITS_US_PLAYER_ID: return UsPlayer(inA)->mPlayerID;
+    case EE_UNITS_US_PLAYER_RTS: return (int64_t)reinterpret_cast<uintptr_t>(static_cast<RTSPlayer*>(UsPlayer(inA)));
+    case EE_UNITS_US_FIRST_UNIT: return (int64_t)reinterpret_cast<uintptr_t>(UsPlayer(inA)->mFirstUnit);
+    case EE_UNITS_US_NEXT_UNIT: return (int64_t)reinterpret_cast<uintptr_t>(UsUnit(inA)->mNext);
+    case EE_UNITS_US_FILL: Fill(UsUnit(inA), (unsigned long)inB, reinterpret_cast<const void*>(static_cast<uintptr_t>(inC)), *static_cast<EeUnitRecord*>(outData)); return 0;
+    case EE_UNITS_US_UNIT_PLAYER: return (int64_t)reinterpret_cast<uintptr_t>(UsUnit(inA)->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(UsUnit(inA))->mPlayer : NULL);
+    case EE_UNITS_US_CHAIN_FIRST: return (int64_t)reinterpret_cast<uintptr_t>(gWorld.mUnits.mFirst);
+    case EE_UNITS_US_CHAIN_NEXT: return (int64_t)reinterpret_cast<uintptr_t>(UsUnit(inA)->mTileNode->mNext);
+    case EE_UNITS_US_UNIT_ID: return (uint32_t)UsUnit(inA)->mUnitID;
+    case EE_UNITS_US_CHECKSUM: return (uint32_t)static_cast<EEUnit*>(UsUnit(inA))->GetChecksum((unsigned long)inB);
+    case EE_UNITS_US_PLAYER_WORDS: PlayerWords(UsPlayer(inA), static_cast<uint32_t*>(outData)); return 0;
+    case EE_UNITS_US_ORDER_COUNT: return (int64_t)gWorld.GetNumUpdateUnits();
+    case EE_UNITS_US_ORDER_ID: return gWorld.GetUpdateUnitID((size_t)inB);
+    case EE_UNITS_US_TICK: return gPhysics != NULL ? (int64_t)gPhysics->mNumTicksDone : 0;
+    case EE_UNITS_US_EXIT: exit(3);
+    default: return 0;
     }
-    EeUnitStoreCheck theCheck;
-    ee_units_store_check(sObjects.empty() ? NULL : &sObjects[0], sObjects.size(), &theCheck);
-    // the unlisted units' records (the shots, a scenario's path points) against their objects; a difference counts
-    // like a field's (the compared count stays the listed units', so the USCK record is unchanged while there is none)
-    {
-        static std::vector<uint64_t> sUnlisted;
-        static std::vector<EeUnitRecord> sUnlistedRecords;
-        size_t theCount = ee_units_store_unlisted(NULL, 0);
-        sUnlisted.resize(theCount);
-        if (theCount != 0)
-            ee_units_store_unlisted(&sUnlisted[0], theCount);
-        sUnlistedRecords.clear();
-        for (size_t i = 0; i < theCount; i++) {
-            RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(sUnlisted[i]));
-            EEPlayer* thePlayer = theUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(theUnit)->mPlayer : NULL;
-            EeUnitRecord theRecord;
-            Fill(theUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), theRecord);
-            sUnlistedRecords.push_back(theRecord);
-        }
-        uint32_t theUnlistedBad = ee_units_store_check_unlisted(sUnlistedRecords.empty() ? NULL : &sUnlistedRecords[0],
-                                                                sUnlistedRecords.size(), &theCheck);
-        if (theUnlistedBad != 0) {
-            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu unlisted units differ from the store\n", theUnlistedBad, theCount);
-            theCheck.mismatches += theUnlistedBad;
-        }
-    }
-    // the world's unit chain (the out-of-sync checksum's walk) against the records' on-the-map flags, and the
-    // checksum's flag 1 over it (EEComplexUnit::GetChecksum(1)) against the store's sum; a mismatch counts like a
-    // field's (so the USCK record, and its digest, stay the same while there is none)
-    static std::vector<uint32_t> sChainIDs;
-    static std::vector<uint64_t> sChainObjects;
-    sChainIDs.clear();
-    sChainObjects.clear();
-    unsigned long theFlag1 = 0;
-    unsigned long theFlag2 = 0;
-    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-        sChainIDs.push_back(static_cast<uint32_t>(theUnit->mUnitID));
-        sChainObjects.push_back(reinterpret_cast<uintptr_t>(theUnit));
-        theFlag1 += static_cast<EEUnit*>(theUnit)->GetChecksum(1);
-        theFlag2 += static_cast<EEUnit*>(theUnit)->GetChecksum(2);
-    }
-    uint32_t theOffMap = ee_units_store_check_on_map(sChainIDs.empty() ? NULL : &sChainIDs[0],
-                                                     sChainObjects.empty() ? NULL : &sChainObjects[0], sChainIDs.size());
-    unsigned long theStoreFlag1 = (unsigned long)ee_units_store_checksum_flag1();
-    unsigned long theStoreFlag2 = (unsigned long)ee_units_store_checksum_flag2();
-    if (theOffMap != 0 || theStoreFlag1 != theFlag1 || theStoreFlag2 != theFlag2) {
-        fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
-                "%08lx over the chain, %08lx over the store; flag 2 %08lx, %08lx\n", sChainIDs.size(), theOffMap,
-                (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
-                (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
-        theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
-    }
-    // the world's players' diplomacy tables (ee_units players.rs); a difference counts like a field's
-    {
-        uint64_t theObjects[17];
-        uint32_t theIDs[17];
-        uint32_t theEnemies[17 * 17];
-        size_t theCount = 0;
-        for (unsigned long i = 0; i < 17; i++) {
-            EEPlayer* thePlayer = gWorld.mPlayers[i];
-            if (thePlayer == NULL)
-                continue;
-            theObjects[theCount] = reinterpret_cast<uintptr_t>(static_cast<RTSPlayer*>(thePlayer));
-            theIDs[theCount] = (uint32_t)thePlayer->mPlayerID;
-            PlayerWords(thePlayer, &theEnemies[17 * theCount]);
-            theCount++;
-        }
-        uint32_t theDiffer = ee_units_player_check(theObjects, theIDs, theEnemies, theCount);
-        if (theDiffer != 0) {
-            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu players' diplomacy tables differ from the store\n", theDiffer, theCount);
-            theCheck.mismatches += theDiffer;
-        }
-    }
-    // the stepped units' deque against the Rust list (ee_units order.rs), in order; a difference counts like a field's
-    static std::vector<uint32_t> sOrderIDs;
-    OrderIDs(sOrderIDs);
-    uint32_t theUnrecorded = 0;
-    uint32_t theOrderAt = ee_units_order_check(sOrderIDs.empty() ? NULL : &sOrderIDs[0], sOrderIDs.size(), &theUnrecorded);
-    if (theOrderAt != 0) {
-        fprintf(stderr, "EE-UNIT-STORE: the stepped units (%zu) and the Rust list (%u) differ at index %u\n",
-                sOrderIDs.size(), ee_units_order_count(), theOrderAt - 1);
-        theCheck.mismatches += 1;
-    }
-    static uint32_t sMostUnrecorded = 0;
-    if (theUnrecorded > sMostUnrecorded) {   // TEST ONLY: stepped units with no store record (the step's leaves read it)
-        sMostUnrecorded = theUnrecorded;
-        fprintf(stderr, "EE-UNIT-ORDER: %u stepped units without a store record at %lu (tick %lu)\n", theUnrecorded,
-                inWhere, gPhysics != NULL ? (unsigned long)gPhysics->mNumTicksDone : 0ul);
-    }
-    EESimCaptureRecord theRecord(0x4b435355u);   // "USCK"
-    theRecord.U32((unsigned int)inWhere);
-    theRecord.U32(theCheck.compared);
-    theRecord.U32(theCheck.mismatches);
-    theRecord.Commit();
-    if (theCheck.mismatches != 0) {
-        fprintf(stderr, "EE-UNIT-STORE: %u of %u units differ from the store (%u records) at %lu: first id 0x%08x field %u\n",
-                theCheck.mismatches, theCheck.compared, theCheck.records, inWhere, theCheck.first_id, theCheck.first_field);
-        EESimCaptureRecord::Flush();
-        exit(3);
-    }
-    return theListed;
 }
 
 // the box selection's pick over the unit store (ee_units select.rs: the loop of EEPlayer::SelectUnits 0x56a658 over the

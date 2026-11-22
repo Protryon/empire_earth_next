@@ -129,7 +129,22 @@ impl UpdateHost for ViewUpdateHost<'_> {
         if view_act(&t, self.unit, self.host.class, code, a, b) {
             return 0;
         }
+        // the C++ host's note of every operation (TEST ONLY: USST kinds 12, 13), then its compound cases split into
+        // their statements (upd_split.rs), which are not noted
+        crate::units::notes::host_op(code, EE_UNITS_ACT_RELEASE_HEAL_EFFECT, a, b);
+        if let Some(r) = crate::units::upd_split::split(&mut RawUpdateHost(self.host), code, a) {
+            return r;
+        }
         (self.host.act)(self.host.ctx, code, a, b)
+    }
+}
+
+/// The C++ update host's operations as they are (upd_split.rs's statements).
+struct RawUpdateHost<'h>(&'h EeUnitsUpdateHost);
+
+impl crate::units::upd_split::UpdSplitHost for RawUpdateHost<'_> {
+    fn act(&mut self, code: i32, a: i64, b: i64) -> i64 {
+        (self.0.act)(self.0.ctx, code, a, b)
     }
 }
 
