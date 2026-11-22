@@ -24,7 +24,6 @@ class EEComputerPlayer;
 
 extern bool gCPTraceHashOn;                 // EE_AI_TRACE set: the sim hash lines too (EEArtificialIntelligence)
 extern bool gCPTraceOn;                     // EE_AI_TRACE set (read at the first EECPTraceInit)
-extern const char* gCPTraceManager;         // the manager running now (EEComputerPlayer::Update sets it)
 
 void EECPTraceInit();                       // reads the environment once; every accessor calls it
 void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* inFormat, ...)
@@ -43,13 +42,6 @@ void EECPNewGame();   // ee_ai_new_game (ee_sim::ai next_trace.rs)
 #define EE_CP_TRACE(player, event, ...) \
     do { if (gCPTraceOn) EECPTraceOut((player), (event), __VA_ARGS__); } while (0)
 
-// The scope sets gCPTraceManager for one manager call and restores the previous name.
-struct EECPTraceScope {
-    explicit EECPTraceScope(const char* inName) : mSaved(gCPTraceManager) { gCPTraceManager = inName; }
-    ~EECPTraceScope() { gCPTraceManager = this->mSaved; }
-    const char* mSaved;
-};
-
 
 // the computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; not a trace: always on)
 unsigned long EECPOutOfSynchChecksum();
@@ -62,42 +54,9 @@ const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer);
 // TEST ONLY: EE_AI_EXP names experiments, "a,b" for every computer player or "set/set/..." in turn from player 1
 // (as EE_AI_CHEATS): code behind EECPExperiment(player, "a") is tried head to head before it becomes data
 bool EECPExperiment(const EEComputerPlayer* inPlayer, const char* inName);
-const char* EECPExperimentNames(const EEComputerPlayer* inPlayer);   // ",a,b," or "-" (the start line's exp=)
-bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);
-bool EECPMilitiaOn(const EEComputerPlayer* inPlayer);
-bool EECPCoastFishingOn(const EEComputerPlayer* inPlayer);  // economy.coast_fishing; TEST ONLY: EE_AI_EXP nofish
-bool EECPMilitiaTowersOn(const EEComputerPlayer* inPlayer); // military.militia_towers; TEST ONLY: EE_AI_EXP nomtower
-long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer); // military.prehistoric_army (0: none); TEST ONLY: EE_AI_EXP noprearmy
-// the §8.27 rules; TEST ONLY: EE_AI_EXP turns each on (foodeco, goldfix, navalflee, prepeace, stone22/stone30) or off
-// (nofoodeco, nogoldfix, nonavalflee, noprepeace, nostone)
-bool EECPForagePatchesOn(const EEComputerPlayer* inPlayer);   // economy.forage_patches
-bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer);     // economy.claim_needed
-bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer);       // military.naval_flee
-bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer);   // not military.prehistoric_attacks
-float EECPStoneSpan(const EEComputerPlayer* inPlayer);        // epoch_pressure.stone_span in minutes (0: the timer)
-// the §8.29 rules; TEST ONLY: EE_AI_EXP turns each on (noupgrade, fewbarracks, patchexpand, safedash, stonepeace) or
-// off (nonoupgrade, manybarracks, nopatchexpand, nosafedash, nostonepeace)
-long EECPEarlyTownCenters(const EEComputerPlayer* inPlayer);  // economy.early_town_centers (0: the original's timers)
-long EECPEarlyTrainers(const EEComputerPlayer* inPlayer);     // economy.early_trainers (0: no cap)
-bool EECPPatchExpandOn(const EEComputerPlayer* inPlayer);     // economy.patch_expand
-float EECPSafeBonus(const EEComputerPlayer* inPlayer);        // epoch_pressure.safe_bonus
-bool EECPStonePeaceOn(const EEComputerPlayer* inPlayer);      // not military.stone_attacks
-// economy.forage_patches: the land the AI claims and builds its drop sites on, in tiles from its town centre (the
-// owner: "stop claiming land it cannot defend"; docs/AI_RESEARCH.md §8.28): the strategy's claim_range, from
-// kEECPClaimRange to kEECPClaimRangeMax (the scripts' view: claim_range_step, the C++ classic's growth step)
-const long kEECPClaimRange = 25;
-const long kEECPClaimRangeStep = 5;
-const long kEECPClaimRangeMax = 45;
-long EECPClaimRange(const EEComputerPlayer* inPlayer);
-// ... and a worked forage patch has a drop site within this many tiles ("every patch should have 0 or 1 tile
-// distance to a settlement")
-const long kEECPPatchDropRange = 3;
-// economy.forage_patches with the claim range, the settlements on the patches and the drop site rule (TEST ONLY:
-// EE_AI_EXP oldpatches keeps forage_patches without them, as in §8.27)
-bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer);       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
-                                           // overrides it (0 or 1, or per player in turn from player 1, "0/1")
-
-bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)
+// the personality's switches (military.militia, economy.forage_patches, ...) with their experiments, the claim range
+// (kEECPClaimRange 25), the cheats that stay on (the difficulty's ai_cheats narrowed by EE_AI_CHEATS): ee_ai
+// personality.rs, which the Rust bodies call
 const char* EECPCheatNames(const EEComputerPlayer* inPlayer);               // the cheats that are on, for the trace ("cost,reveal,..." or "none")
 
 #endif

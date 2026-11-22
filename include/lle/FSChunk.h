@@ -27,11 +27,7 @@ public:
         return true;
     }
     // the header if needed, then the chunk data read and decompressed
-    long LoadChunkFromFile(FSFile& inFile)
-    {
-        EeFsFileOps theOps = FSMemoryFile::Ops(inFile);
-        return ee_fs_chunk_load_from_file(&this->mState, &theOps);
-    }
+    long LoadChunkFromFile(FSFile& inFile) { return ee_fs_chunk_load_from_file(&this->mState, &inFile); }
     // creates the persistent object registered for the chunk's tag and loads it from the chunk data
     long LoadPersistentFromChunk(FSPersistent*& outPersistent)
     {
@@ -44,16 +40,9 @@ public:
         return outPersistent->Load(this->mState.major, this->mState.minor, theData);
     }
     // the chunk header (versions, tag, size); a size of 2 GB or more fails
-    long LoadChunkHeader(FSFile& inFile)
-    {
-        EeFsFileOps theOps = FSMemoryFile::Ops(inFile);
-        return ee_fs_chunk_load_header(&this->mState, &theOps);
-    }
-    long SaveChunkToFile(FSFile& outFile)   // the header and the data
-    {
-        EeFsFileOps theOps = FSMemoryFile::Ops(outFile);
-        return ee_fs_chunk_save_to_file(&this->mState, &theOps);
-    }
+    long LoadChunkHeader(FSFile& inFile) { return ee_fs_chunk_load_header(&this->mState, &inFile); }
+    // the header and the data
+    long SaveChunkToFile(FSFile& outFile) { return ee_fs_chunk_save_to_file(&this->mState, &outFile); }
     // saves a persistent object into new compressed chunk data; the save's error when it fails
     long SavePersistentToChunk(unsigned long inMajorVersion, unsigned long inMinorVersion, FSPersistent* inPersistent)
     {
@@ -68,11 +57,8 @@ public:
                                 (int32_t)inPersistent->GetTagID());
         return kErrorOK;
     }
-    long SkipChunk(FSFile& inFile)   // over the chunk's data, loading the header first if needed
-    {
-        EeFsFileOps theOps = FSMemoryFile::Ops(inFile);
-        return ee_fs_chunk_skip(&this->mState, &theOps);
-    }
+    // over the chunk's data, loading the header first if needed
+    long SkipChunk(FSFile& inFile) { return ee_fs_chunk_skip(&this->mState, &inFile); }
 
 private:
     // The debug-file hooks (a never-set static text mirror, FSDebugFile) and the four static UString labels only it

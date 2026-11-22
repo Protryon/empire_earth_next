@@ -328,10 +328,6 @@ constexpr static const int32_t EE_CP_PLACE_TECH_KIND = 4;
 
 constexpr static const int32_t EE_CP_PLACE_HAS_PATHFINDING = 5;
 
-constexpr static const int32_t EE_CP_PLACE_CLAIM_RANGE_ON = 6;
-
-constexpr static const int32_t EE_CP_PLACE_CLAIM_RANGE = 7;
-
 /// the player's units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_CP_PLACE_OWN_UNITS = 8;
 
@@ -460,8 +456,6 @@ constexpr static const int32_t EE_CP_PLAYER_BEHAVIOR_FLOAT = 300;
 
 constexpr static const int32_t EE_CP_PLAYER_BASE_POP_LIMIT = 301;
 
-constexpr static const int32_t EE_CP_PLAYER_CHEAT_ON = 303;
-
 constexpr static const int32_t EE_CP_PLAYER_NUM_TEAMS = 304;
 
 constexpr static const int32_t EE_CP_PLAYER_TEAM_WONDERS = 305;
@@ -543,14 +537,8 @@ constexpr static const int32_t EE_CP_PLAYER_BASE_UNIT_TAKEN = 347;
 /// `EEPlayer::DamageTaken(v0, v1, a)`
 constexpr static const int32_t EE_CP_PLAYER_BASE_DAMAGE_TAKEN = 348;
 
-/// `EECPNavalFleeOn`, `EECPMilitiaOn`, `gCPTraceOn`, `EECPExperiment(player, (const char*)a)`
-constexpr static const int32_t EE_CP_PLAYER_NAVAL_FLEE_ON = 349;
-
-constexpr static const int32_t EE_CP_PLAYER_MILITIA_ON = 350;
-
+/// `gCPTraceOn`
 constexpr static const int32_t EE_CP_PLAYER_TRACE_ON = 351;
-
-constexpr static const int32_t EE_CP_PLAYER_EXPERIMENT = 352;
 
 /// `IsAlly((EEPlayer*)a)`
 constexpr static const int32_t EE_CP_PLAYER_IS_ALLY = 353;
@@ -658,13 +646,16 @@ constexpr static const int32_t EE_CP_PLAYER_SCENARIO_GAME = 395;
 
 constexpr static const int32_t EE_CP_PLAYER_LOAD_TYPE = 396;
 
-/// `gWorld.mMap->ExploreUnseen(player)`; the start's trace line
+/// `gWorld.mMap->ExploreUnseen(player)`
 constexpr static const int32_t EE_CP_PLAYER_EXPLORE_UNSEEN = 397;
 
-constexpr static const int32_t EE_CP_PLAYER_TRACE_START = 398;
+/// `EECPEngineName(player)` appended to the `Vec<u8>` `a`; `EECPEngineSeesAll(player)`,
+/// `EECPEngineFillsGarrison(player)`
+constexpr static const int32_t EE_CP_PLAYER_ENGINE_NAME = 398;
 
-/// `gCPTraceManager` set to `(const char*)a` -> the one before
-constexpr static const int32_t EE_CP_PLAYER_TRACE_MANAGER = 399;
+constexpr static const int32_t EE_CP_PLAYER_ENGINE_SEES_ALL = 399;
+
+constexpr static const int32_t EE_CP_PLAYER_ENGINE_FILLS_GARRISON = 430;
 
 /// `new EECPPlacement(player)` into `mPlacement`; `delete mPlacement`; `mComputerPlayer = player`
 constexpr static const int32_t EE_CP_PLAYER_NEW_PLACEMENT = 400;

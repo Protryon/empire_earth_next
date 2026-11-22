@@ -60,100 +60,91 @@ long EEUICCommandUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)
                                           inLocation ? inLocation->GetY() : 0.0f);
 }
 
-// NEAR: registers (the original keeps 0 in ebx for the bool tests and the unsigned conversion; the theFar.x copy is a mov)
-int64_t EEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    // (the selection's count and its units' categories are hud_ctl_ffi.rs')
-    switch (inOp) {
-    case EE_SCREENS_CU_DRAW_ARROW: {
-        GEColor theWhite(1.0f, 1.0f, 1.0f);
-        GEColor theAmbientColor = gRasterizer->GetAmbientColor();
-        GETransformation theTransformation;
-        GEViewport theViewport(gRasterizer->GetViewport(gScreenIndex));
-        unsigned long theScreen = gScreenIndex;
-        float theAmbientIntensity = gRasterizer->GetAmbientIntensity();
-        unsigned long theLighting = gRasterizer->GetLighting(theScreen);
-        unsigned long theZBuffer = gRasterizer->GetZBuffer(theScreen);
-        unsigned long theZCompare = gRasterizer->GetZCompare(theScreen);
-        gU4E8F08.SetDepthRange(0.0f, 0.0f);
-        gRasterizer->SetViewport(gU4E8F08, theScreen);
-        gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-        gRasterizer->SetZCompare(kCompareLess, theScreen);
-        gRasterizer->SetAmbientColor(theWhite, theScreen);
-        gRasterizer->SetAmbientIntensity(1.0f, theScreen);
-        gRasterizer->SetLighting(0, theScreen);
-        theTransformation.SetOrientationYPR(ioF[0], 0.0f, 0.0f);
-        theTransformation.SetPosition(ioF[1], ioF[2], ioF[3]);
-        this->mModel->SetGraphicsCurrentFrame(0);
-        float theZoom = gCameraZoom;
-        this->mModel->SetGraphicsScale(theZoom + 0.5f);
-        this->mModel->SetGraphicsPostModelTransform(theTransformation);
-        this->mModel->PrepareTransforms();
-        gRasterizer->Draw(this->mModel, theScreen, 1.0f, gOrthographicView);
-        gU4E8F08.SetDepthRange(0.0f, 1.0f);
-        gRasterizer->SetViewport(theViewport, theScreen);
-        gRasterizer->SetZBuffer(theZBuffer, theScreen);
-        gRasterizer->SetZCompare(theZCompare, theScreen);
-        gRasterizer->SetAmbientColor(theAmbientColor, theScreen);
-        gRasterizer->SetAmbientIntensity(theAmbientIntensity, theScreen);
-        gRasterizer->SetLighting(theLighting, theScreen);
-        break;
-    }
-    case EE_SCREENS_CU_GROUND: {
-        // the mouse's line from the front to the rear clipping plane, solved at the press's height
-        GE3DPoint theNear;
-        GE3DPoint theFar;
-        GE3DPoint theNearWorld;
-        GE3DPoint theFarWorld;
-        GE3DPoint theTarget;
-        GE3DLine theLine;
-        float theT;
-        float theScale = 1.0f / gU4E8F08.GetHalfWidth();
-        theNear.SetX((ioF[0] - gU4E8F08.GetXCenter()) * theScale);
-        theFar.SetX(theNear.GetX());
-        theNear.SetY(-((ioF[1] - gU4E8F08.GetYCenter()) * theScale));
-        theNear.SetZ(0.0f);
-        theFar.SetY(theNear.GetY());
-        theFar.SetZ(1.0f);
-        if (!gOrthographicView) {
-            gU4E8F08.DenormalizePerspectivePoint(theNear, gU4E8F08.GetFrontClippingDistance(), theNearWorld);
-            gU4E8F08.DenormalizePerspectivePoint(theFar, gU4E8F08.GetRearClippingDistance(), theFarWorld);
-        } else {
-            gU4E8F08.DenormalizeOrthographicPoint(theNear, theNearWorld);
-            gU4E8F08.DenormalizeOrthographicPoint(theFar, theFarWorld);
-        }
-        theLine.Define(theNearWorld, theFarWorld);
-        theLine.SolveForZ(ioF[2], theT, theTarget);
-        ioF[0] = theTarget.GetX();
-        ioF[1] = theTarget.GetY();
-        ioF[2] = theTarget.GetZ();
-        break;
-    }
-    case EE_SCREENS_CU_POINT_AT: {
-        EETile* theLocation;
-        GE3DPoint thePoint(ioF[2], ioF[3], ioF[4]);
-        bool theHit = EEPointUnitOrTile(GE2DPoint(ioF[0], ioF[1]), theLocation, thePoint, true);
-        ioF[2] = thePoint.GetX();
-        ioF[3] = thePoint.GetY();
-        ioF[4] = thePoint.GetZ();
-        return theHit;
-    }
-    case EE_SCREENS_CU_GROUP_CENTER: {
-        GERectangle theBounds;
-        GE2DPoint theCenter;
-        gWorld.GetCurrentPlayer()->mSelectedGroup->GetBounds(theBounds);
-        theBounds.GetCenter(theCenter);
-        ioF[0] = theCenter.GetX();
-        ioF[1] = theCenter.GetY();
-        break;
-    }
-    case EE_SCREENS_CU_EXECUTE:
-        this->mListener->Execute(ioF[0], ioF[1], (inB & EE_SCREENS_CU_EXECUTE_HIT) != 0, (unsigned long)inA,
-                                 (inB & EE_SCREENS_CU_EXECUTE_FACING) != 0, ioF[2], (inB & EE_SCREENS_CU_EXECUTE_DRAGGED) != 0);
-        break;
-    }
-    return 0;
-}
+// The class's own ops (the arrow's draw, the ground point, the pick, the group's centre, the click: the old RustOp)
+// are command_units_ops.rs' over the one-statement shims below (UI lane round 11)
+#define CU(c) static_cast<EEUICCommandUnits*>((EEUIRustControl*)(c))
+static GEColor sCUAmbientColor;         // the arrow's draw: the rasterizer's state put back after it
+static GEViewport sCUViewport;
+static GETransformation sCUTransformation;
+static GE3DPoint sCUNear;               // the ground point: the mouse's line
+static GE3DPoint sCUFar;
+static GE3DPoint sCUNearWorld;
+static GE3DPoint sCUFarWorld;
+static GE3DLine sCULine;
+static float sCUT;
+static GE3DPoint sCUTarget;             // the ground point, the point at the mouse
+static EETile* sCUTile;
+static GERectangle sCUBounds;           // the selected group's bounds and centre
+static GE2DPoint sCUCenter;
+
+extern "C" uint32_t ee_screenscpp_cu_screen() { return (uint32_t)gScreenIndex; }
+extern "C" void ee_screenscpp_cu_save_ambient_color() { sCUAmbientColor = gRasterizer->GetAmbientColor(); }
+extern "C" void ee_screenscpp_cu_save_viewport() { sCUViewport = gRasterizer->GetViewport(gScreenIndex); }
+extern "C" float ee_screenscpp_cu_ambient_intensity() { return gRasterizer->GetAmbientIntensity(); }
+extern "C" uint64_t ee_screenscpp_cu_lighting(uint32_t inScreen)
+{ return (uint64_t)gRasterizer->GetLighting(inScreen); }
+extern "C" uint64_t ee_screenscpp_cu_zbuffer(uint32_t inScreen) { return (uint64_t)gRasterizer->GetZBuffer(inScreen); }
+extern "C" uint64_t ee_screenscpp_cu_zcompare(uint32_t inScreen)
+{ return (uint64_t)gRasterizer->GetZCompare(inScreen); }
+extern "C" void ee_screenscpp_cu_depth_range(float inNear, float inFar) { gU4E8F08.SetDepthRange(inNear, inFar); }
+extern "C" void ee_screenscpp_cu_set_viewport_view(uint32_t inScreen) { gRasterizer->SetViewport(gU4E8F08, inScreen); }
+extern "C" void ee_screenscpp_cu_set_zbuffer_test_only(uint32_t inScreen)
+{ gRasterizer->SetZBuffer(kZBufferTestOnly, inScreen); }
+extern "C" void ee_screenscpp_cu_set_zcompare_less(uint32_t inScreen)
+{ gRasterizer->SetZCompare(kCompareLess, inScreen); }
+extern "C" void ee_screenscpp_cu_set_ambient_white(uint32_t inScreen)
+{ gRasterizer->SetAmbientColor(GEColor(1.0f, 1.0f, 1.0f), inScreen); }
+extern "C" void ee_screenscpp_cu_set_ambient_intensity(float inV, uint32_t inScreen)
+{ gRasterizer->SetAmbientIntensity(inV, inScreen); }
+extern "C" void ee_screenscpp_cu_set_lighting(uint64_t inV, uint32_t inScreen)
+{ gRasterizer->SetLighting((unsigned long)inV, inScreen); }
+extern "C" void ee_screenscpp_cu_set_zbuffer(uint64_t inV, uint32_t inScreen)
+{ gRasterizer->SetZBuffer((unsigned long)inV, inScreen); }
+extern "C" void ee_screenscpp_cu_set_zcompare(uint64_t inV, uint32_t inScreen)
+{ gRasterizer->SetZCompare((unsigned long)inV, inScreen); }
+extern "C" void ee_screenscpp_cu_restore_viewport(uint32_t inScreen)
+{ gRasterizer->SetViewport(sCUViewport, inScreen); }
+extern "C" void ee_screenscpp_cu_restore_ambient_color(uint32_t inScreen)
+{ gRasterizer->SetAmbientColor(sCUAmbientColor, inScreen); }
+extern "C" void ee_screenscpp_cu_transform_reset() { sCUTransformation = GETransformation(); }
+extern "C" void ee_screenscpp_cu_transform_yaw(float inYaw) { sCUTransformation.SetOrientationYPR(inYaw, 0.0f, 0.0f); }
+extern "C" void ee_screenscpp_cu_transform_position(float inX, float inY, float inZ)
+{ sCUTransformation.SetPosition(inX, inY, inZ); }
+extern "C" void ee_screenscpp_cu_model_frame(uintptr_t inCtl) { CU(inCtl)->mModel->SetGraphicsCurrentFrame(0); }
+extern "C" float ee_screenscpp_cu_camera_zoom() { return gCameraZoom; }
+extern "C" void ee_screenscpp_cu_model_scale(uintptr_t inCtl, float inV) { CU(inCtl)->mModel->SetGraphicsScale(inV); }
+extern "C" void ee_screenscpp_cu_model_transform(uintptr_t inCtl)
+{ CU(inCtl)->mModel->SetGraphicsPostModelTransform(sCUTransformation); }
+extern "C" void ee_screenscpp_cu_model_prepare(uintptr_t inCtl) { CU(inCtl)->mModel->PrepareTransforms(); }
+extern "C" void ee_screenscpp_cu_model_draw(uintptr_t inCtl, uint32_t inScreen)
+{ gRasterizer->Draw(CU(inCtl)->mModel, inScreen, 1.0f, gOrthographicView); }
+extern "C" float ee_screenscpp_cu_half_width() { return gU4E8F08.GetHalfWidth(); }
+extern "C" float ee_screenscpp_cu_x_center() { return gU4E8F08.GetXCenter(); }
+extern "C" float ee_screenscpp_cu_y_center() { return gU4E8F08.GetYCenter(); }
+extern "C" bool ee_screenscpp_cu_ortho() { return gOrthographicView; }
+extern "C" void ee_screenscpp_cu_near(float inX, float inY, float inZ) { sCUNear = GE3DPoint(inX, inY, inZ); }
+extern "C" void ee_screenscpp_cu_far(float inX, float inY, float inZ) { sCUFar = GE3DPoint(inX, inY, inZ); }
+extern "C" void ee_screenscpp_cu_denorm_persp_near()
+{ gU4E8F08.DenormalizePerspectivePoint(sCUNear, gU4E8F08.GetFrontClippingDistance(), sCUNearWorld); }
+extern "C" void ee_screenscpp_cu_denorm_persp_far()
+{ gU4E8F08.DenormalizePerspectivePoint(sCUFar, gU4E8F08.GetRearClippingDistance(), sCUFarWorld); }
+extern "C" void ee_screenscpp_cu_denorm_ortho_near() { gU4E8F08.DenormalizeOrthographicPoint(sCUNear, sCUNearWorld); }
+extern "C" void ee_screenscpp_cu_denorm_ortho_far() { gU4E8F08.DenormalizeOrthographicPoint(sCUFar, sCUFarWorld); }
+extern "C" void ee_screenscpp_cu_line_define() { sCULine.Define(sCUNearWorld, sCUFarWorld); }
+extern "C" void ee_screenscpp_cu_line_solve(float inZ) { sCULine.SolveForZ(inZ, sCUT, sCUTarget); }
+extern "C" float ee_screenscpp_cu_target_x() { return sCUTarget.GetX(); }
+extern "C" float ee_screenscpp_cu_target_y() { return sCUTarget.GetY(); }
+extern "C" float ee_screenscpp_cu_target_z() { return sCUTarget.GetZ(); }
+extern "C" void ee_screenscpp_cu_point_set(float inX, float inY, float inZ) { sCUTarget = GE3DPoint(inX, inY, inZ); }
+extern "C" bool ee_screenscpp_cu_point_at(float inX, float inY)
+{ return EEPointUnitOrTile(GE2DPoint(inX, inY), sCUTile, sCUTarget, true); }
+extern "C" void ee_screenscpp_cu_bounds_reset() { sCUBounds = GERectangle(); }
+extern "C" void ee_screenscpp_cu_group_bounds() { gWorld.GetCurrentPlayer()->mSelectedGroup->GetBounds(sCUBounds); }
+extern "C" void ee_screenscpp_cu_bounds_center() { sCUBounds.GetCenter(sCUCenter); }
+extern "C" float ee_screenscpp_cu_center_x() { return sCUCenter.GetX(); }
+extern "C" float ee_screenscpp_cu_center_y() { return sCUCenter.GetY(); }
+extern "C" void ee_screenscpp_cu_execute(uintptr_t inCtl, float inX, float inY, bool inHit, uint64_t inModifiers, bool inFacing, float inAngle, bool inDragged)
+{ CU(inCtl)->mListener->Execute(inX, inY, inHit, (unsigned long)inModifiers, inFacing, inAngle, inDragged); }
 
 // ---- the one-statement shims of ee_screens command_units_calls.rs (UI lane round 8: the constructor's arrow, the
 // destructor): each one call, no logic

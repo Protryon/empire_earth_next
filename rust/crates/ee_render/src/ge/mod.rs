@@ -52,6 +52,7 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
+pub mod light;
 pub mod list2d;
 pub mod manager_ffi;
 /// cbindgen:ignore
@@ -80,6 +81,7 @@ pub mod terrain_visible;
 pub mod terrain_volume;
 pub mod texobj;
 pub mod texobj_tex;
+pub mod texset;
 /// cbindgen:ignore
 pub mod texture;
 pub mod texture_ffi;

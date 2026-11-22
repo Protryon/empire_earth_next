@@ -34,8 +34,6 @@ use ee_base::math::um;
 pub const EE_AI_NEXT_HOST_NOW: i32 = 1;
 /// `gCPTraceOn`
 pub const EE_AI_NEXT_HOST_TRACE_ON: i32 = 2;
-/// `EECPTraceOut(player, b, "%s", c)` under the manager `a` (a C string; 0: the current one)
-pub const EE_AI_NEXT_HOST_TRACE: i32 = 3;
 /// `EEGameLogOn()`
 pub const EE_AI_NEXT_HOST_GAME_LOG_ON: i32 = 4;
 /// `EEGameLogLine(a)`
@@ -101,8 +99,6 @@ pub const EE_AI_NEXT_HOST_NODE_TEST: i32 = 36;
 pub const EE_AI_NEXT_HOST_EPOCH_COUNT: i32 = 37;
 /// `gWorld.mGameOptions.mEpochEnd`
 pub const EE_AI_NEXT_HOST_EPOCH_END: i32 = 38;
-/// `EECPExperiment(player, a)`
-pub const EE_AI_NEXT_HOST_EXPERIMENT: i32 = 39;
 /// the complex unit `a`'s `mLastAttacker` (0: none)
 pub const EE_AI_NEXT_HOST_LAST_ATTACKER: i32 = 40;
 /// `EECPNextGetState(player)` (made when missing)
@@ -113,8 +109,6 @@ pub const EE_AI_NEXT_HOST_MICRO_PLAYER: i32 = 44;
 pub const EE_AI_NEXT_HOST_STATE_OF: i32 = 45;
 /// `ESDebugOut("%s", a)`
 pub const EE_AI_NEXT_HOST_DEBUG_OUT: i32 = 47;
-/// `gCPTraceManager = a` (a static C string) -> the previous one
-pub const EE_AI_NEXT_HOST_SCOPE: i32 = 48;
 /// the player's `mPlayerID`
 pub const EE_AI_NEXT_HOST_PLAYER_ID: i32 = 49;
 /// `mDangerZones.size()`
@@ -136,8 +130,6 @@ pub const EE_AI_NEXT_HOST_UNITS_OF_TYPE: i32 = 53;
 pub const EE_AI_NEXT_HOST_CITIZEN_QUEUE: i32 = 54;
 /// the player `a`'s `IsHuman()`
 pub const EE_AI_NEXT_HOST_IS_HUMAN: i32 = 55;
-/// a: 0 `EECPMilitiaOn(player)`, 1 `EECPMilitiaTowersOn(player)`
-pub const EE_AI_NEXT_HOST_SWITCH: i32 = 56;
 /// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
 pub const EE_AI_NEXT_HOST_FORMAT_F2: i32 = 57;
 /// the complex unit `a`'s `DistanceSquaredToUnit(b)` (the float's bits)
@@ -227,9 +219,19 @@ fn trace_on() -> bool {
 
 /// `EE_CP_TRACE(player, event, "%s", text)` under `manager` (None: the current one); the caller tests the trace.
 fn trace_line(me: *mut c_void, manager: Option<&CStr>, event: &str, text: &[u8]) {
-    let e = cstr(event.as_bytes());
-    let t = cstr(text);
-    host(EE_AI_NEXT_HOST_TRACE, me, manager.map_or(0, |m| m.as_ptr() as i64), e.as_ptr() as i64, t.as_ptr() as i64);
+    let saved = manager.map(|m| super::trace_line::scope(m.as_ptr()));
+    super::trace_line::trace_out(me, cstr(event.as_bytes()).as_bytes(), cstr(text).as_bytes());
+    if let Some(saved) = saved {
+        super::trace_line::scope_end(saved);
+    }
+}
+
+/// A trace line to the debug output and, when a game log is open, the log (EECPTraceOut's end).
+pub(crate) fn debug_and_log(me: *mut c_void, line: &CStr) {
+    host(EE_AI_NEXT_HOST_DEBUG_OUT, std::ptr::null_mut(), line.as_ptr() as i64, 0, 0);
+    if host(EE_AI_NEXT_HOST_GAME_LOG_ON, me, 0, 0, 0) != 0 {
+        host(EE_AI_NEXT_HOST_GAME_LOG, me, line.as_ptr() as i64, 0, 0);
+    }
 }
 
 /// The binding trace's output (`ESDebugOut("%s", text)`).
@@ -249,12 +251,12 @@ fn trace(me: *mut c_void, manager: Option<&CStr>, event: &str, text: &str) {
 const NEXT: Option<&CStr> = Some(c"next");
 
 /// `gCPTraceManager = name` -> the previous manager (for `scope_end`)
-fn scope(name: &'static CStr) -> i64 {
-    host(EE_AI_NEXT_HOST_SCOPE, std::ptr::null_mut(), name.as_ptr() as i64, 0, 0)
+fn scope(name: &'static CStr) -> *const c_char {
+    super::trace_line::scope(name.as_ptr())
 }
 
-fn scope_end(saved: i64) {
-    host(EE_AI_NEXT_HOST_SCOPE, std::ptr::null_mut(), saved, 0, 0);
+fn scope_end(saved: *const c_char) {
+    super::trace_line::scope_end(saved);
 }
 
 fn player_id(me: *mut c_void) -> c_ulong {
@@ -266,7 +268,7 @@ fn class_name(t: c_long) -> Vec<u8> {
 }
 
 fn experiment(me: *mut c_void, name: &CStr) -> bool {
-    host(EE_AI_NEXT_HOST_EXPERIMENT, me, name.as_ptr() as i64, 0, 0) != 0
+    super::personality::experiment(player_id(me) as u64, name.to_str().unwrap_or(""))
 }
 
 fn in_danger(me: *mut c_void, x: c_long, y: c_long) -> bool {
@@ -2665,3 +2667,8 @@ pub mod reflex;
 // (EECPTrace.cpp before)
 #[path = "next_trace.rs"]
 pub mod trace;
+
+// the computer players' schedule: collected after a game is set up, one Update per interval (EEArtificialIntelligence.cpp
+// before)
+#[path = "next_schedule.rs"]
+pub mod schedule;

@@ -36,6 +36,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EECivCapture.h"
 #include "rust/sim/tech.h"
+#include "rust/game/screens.h"   // the host (civ_file_calls.rs)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fe94 (wrapper)
@@ -129,73 +130,66 @@ struct EECivFileContext {
     std::vector<EECivUpgrade> mUpgrades;
 };
 
+// the host: Rust's (civ_file_calls.rs) over the one-statement shims below (UI lane round 11)
 static void EECivFileCall(void* inCtx, const EeTechCivFileCall* c, EeTechCivFileReply* r)
 {
-    EECivFileContext& x = *static_cast<EECivFileContext*>(inCtx);
-    EECivilization* theCivilization = x.mPlayer != NULL ? &x.mPlayer->mCivilization : NULL;
-    unsigned long theCost;
-    switch (c->op) {
-    case EE_TECH_CIVF_OP_LOAD:
-        r->value = EELoadCivilization(*x.mFile, EEGetCivilizationDirectory(c->a != 0), x.mName, x.mUpgrades);
-        break;
-    case EE_TECH_CIVF_OP_STATE:
-        r->text = (const char*)x.mName;
-        r->characters = (uint32_t)x.mName.GetLength();
-        r->upgrades = x.mUpgrades.data();
-        r->count = x.mUpgrades.size();
-        break;
-    case EE_TECH_CIVF_OP_NAME_STRING:
-        gResource->GetString((long)c->a, x.mName);
-        break;
-    case EE_TECH_CIVF_OP_CIV_RESET:
-        theCivilization->mPurchasedUpgrades.clear();
-        theCivilization->mAvailablePoints = theCivilization->mMaxPoints;
-        theCivilization->SetPointsAndMax(0);
-        theCivilization->SetName(x.mName);
-        break;
-    case EE_TECH_CIVF_OP_CIV_BUY_FREE:
-        theCivilization->CanAfford((EECivUpgrade)c->a, &theCost, NULL);
-        theCivilization->SetPointsAndMax(theCivilization->GetMaxPoints() + theCost);
-        theCivilization->Buy((EECivUpgrade)c->a, x.mPlayer->mPlayerID, true);
-        break;
-    case EE_TECH_CIVF_OP_CIV_DONE:
-        theCivilization->SetPoints(0);
-        break;
-    case EE_TECH_CIVF_OP_CAN_BUY:
-        r->value = ::gWorld.mGameOptions.CanBuyCivilization();
-        break;
-    case EE_TECH_CIVF_OP_PURCHASED:
-        r->value = x.mPlayer->mCivUpgradesPurchased;
-        break;
-    case EE_TECH_CIVF_OP_ANY_CIV:
-        r->value = gAllowCustomCivs || gIsScenarioGame || gUIManager->GetInScenarioEditor();
-        break;
-    case EE_TECH_CIVF_OP_CAN_AFFORD_ALL:
-        r->value = theCivilization->CanAffordAll(x.mUpgrades);
-        break;
-    case EE_TECH_CIVF_OP_GRANT: {
-        EEMRecord* theMessage = new EEMRecord(kMessageCivUpgradesPurchased, {x.mPlayerIndex, (long)c->a, x.mUpgrades, x.mName});
-        if (gCommunications->GetIsMultiplayerSession())
-            gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-        else {
-            theMessage->Execute();
-            theMessage->Dereference();
-        }
-        break;
-    }
-    case EE_TECH_CIVF_OP_REFUSE: {
-        UWideString theFormat;
-        UWideString theText;
-        gResource->GetString(IDS_PLAYER_HAS_CIVILIZATION_NAMED_WHICH, theFormat);
-        sprintf(theText, theFormat, (const char*)x.mPlayer->mName, (const char*)x.mName,
-                (const char*)::gWorld.GetCurrentPlayer()->mName);
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectPlayerChatType, {0L}), kSlotNone);
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageInGameChat, {theText}), kSlotNone);
-        gPhysics->GetRandom(0L, 1L);
-        break;
-    }
-    }
+    ee_screens_civ_file_host(inCtx, c, r);
 }
+
+#define CF(x) static_cast<EECivFileContext*>((void*)(x))
+static unsigned long sCFCost = 0;       // an upgrade's cost (CanAfford's)
+static UWideString sCFFormat;           // the refusal's format and line
+static UWideString sCFText;
+extern "C" int64_t ee_screenscpp_civf_load(uintptr_t inCtx, bool inUser)
+{ return EELoadCivilization(*CF(inCtx)->mFile, EEGetCivilizationDirectory(inUser), CF(inCtx)->mName, CF(inCtx)->mUpgrades); }
+extern "C" uintptr_t ee_screenscpp_civf_name(uintptr_t inCtx) { return (uintptr_t)(const char*)CF(inCtx)->mName; }
+extern "C" uint32_t ee_screenscpp_civf_name_characters(uintptr_t inCtx)
+{ return (uint32_t)CF(inCtx)->mName.GetLength(); }
+extern "C" uintptr_t ee_screenscpp_civf_upgrades(uintptr_t inCtx) { return (uintptr_t)CF(inCtx)->mUpgrades.data(); }
+extern "C" uintptr_t ee_screenscpp_civf_upgrade_count(uintptr_t inCtx) { return CF(inCtx)->mUpgrades.size(); }
+extern "C" void ee_screenscpp_civf_name_string(uintptr_t inCtx, int64_t inId)
+{ gResource->GetString((long)inId, CF(inCtx)->mName); }
+extern "C" void ee_screenscpp_civf_civ_clear(uintptr_t inCtx)
+{ CF(inCtx)->mPlayer->mCivilization.mPurchasedUpgrades.clear(); }
+extern "C" void ee_screenscpp_civf_civ_points_to_max(uintptr_t inCtx)
+{ CF(inCtx)->mPlayer->mCivilization.mAvailablePoints = CF(inCtx)->mPlayer->mCivilization.mMaxPoints; }
+extern "C" void ee_screenscpp_civf_civ_set_points_and_max(uintptr_t inCtx, uint64_t inPoints)
+{ CF(inCtx)->mPlayer->mCivilization.SetPointsAndMax((unsigned long)inPoints); }
+extern "C" void ee_screenscpp_civf_civ_set_name(uintptr_t inCtx)
+{ CF(inCtx)->mPlayer->mCivilization.SetName(CF(inCtx)->mName); }
+extern "C" void ee_screenscpp_civf_civ_can_afford(uintptr_t inCtx, uint32_t inUpgrade)
+{ CF(inCtx)->mPlayer->mCivilization.CanAfford((EECivUpgrade)inUpgrade, &sCFCost, NULL); }
+extern "C" uint64_t ee_screenscpp_civf_cost() { return (uint64_t)sCFCost; }
+extern "C" uint64_t ee_screenscpp_civf_civ_max_points(uintptr_t inCtx)
+{ return (uint64_t)CF(inCtx)->mPlayer->mCivilization.GetMaxPoints(); }
+extern "C" void ee_screenscpp_civf_civ_buy(uintptr_t inCtx, uint32_t inUpgrade)
+{ CF(inCtx)->mPlayer->mCivilization.Buy((EECivUpgrade)inUpgrade, CF(inCtx)->mPlayer->mPlayerID, true); }
+extern "C" void ee_screenscpp_civf_civ_set_points(uintptr_t inCtx) { CF(inCtx)->mPlayer->mCivilization.SetPoints(0); }
+extern "C" bool ee_screenscpp_civf_can_buy() { return ::gWorld.mGameOptions.CanBuyCivilization(); }
+extern "C" bool ee_screenscpp_civf_purchased(uintptr_t inCtx) { return CF(inCtx)->mPlayer->mCivUpgradesPurchased; }
+extern "C" bool ee_screenscpp_civf_custom_civs() { return gAllowCustomCivs; }
+extern "C" bool ee_screenscpp_civf_scenario_game() { return gIsScenarioGame; }
+extern "C" bool ee_screenscpp_civf_in_scenario_editor() { return gUIManager->GetInScenarioEditor(); }
+extern "C" bool ee_screenscpp_civf_can_afford_all(uintptr_t inCtx)
+{ return CF(inCtx)->mPlayer->mCivilization.CanAffordAll(CF(inCtx)->mUpgrades); }
+extern "C" uintptr_t ee_screenscpp_civf_grant_new(uintptr_t inCtx, int64_t inPoints)
+{ return (uintptr_t) new EEMRecord(kMessageCivUpgradesPurchased, {CF(inCtx)->mPlayerIndex, (long)inPoints, CF(inCtx)->mUpgrades, CF(inCtx)->mName}); }
+extern "C" bool ee_screenscpp_civf_multiplayer() { return gCommunications->GetIsMultiplayerSession(); }
+extern "C" void ee_screenscpp_civf_send(uintptr_t inMessage)
+{ gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotNone); }
+extern "C" void ee_screenscpp_civf_execute(uintptr_t inMessage) { ((NEMessage*)inMessage)->Execute(); }
+extern "C" void ee_screenscpp_civf_release(uintptr_t inMessage) { ((NEMessage*)inMessage)->Dereference(); }
+extern "C" void ee_screenscpp_civf_refuse_format()
+{ gResource->GetString(IDS_PLAYER_HAS_CIVILIZATION_NAMED_WHICH, sCFFormat); }
+extern "C" void ee_screenscpp_civf_refuse_print(uintptr_t inCtx)
+{ sprintf(sCFText, sCFFormat, (const char*)CF(inCtx)->mPlayer->mName, (const char*)CF(inCtx)->mName, (const char*)::gWorld.GetCurrentPlayer()->mName); }
+extern "C" void ee_screenscpp_civf_chat_type()
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectPlayerChatType, {0L}), kSlotNone); }
+extern "C" void ee_screenscpp_civf_chat()
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageInGameChat, {sCFText}), kSlotNone); }
+extern "C" void ee_screenscpp_civf_random() { gPhysics->GetRandom(0L, 1L); }
+extern "C" void ee_screenscpp_civf_strings_clear() { sCFFormat = UWideString(); }
+extern "C" void ee_screenscpp_civf_text_clear() { sCFText = UWideString(); }
 
 // Gives a player the civilization from a file (the game's, else the user's), buying its upgrades at no cost;
 // a game file's premade civilization keeps its localized name (ee_tech civ_file.rs apply_file)

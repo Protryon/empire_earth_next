@@ -224,6 +224,19 @@ impl crate::screens::hud_ctl::HudHost for Views {
     }
 }
 
+/// The command control's host: its own ops in Rust (`command_units_ops.rs`), then [`Views`]'.
+struct CuViews(*mut c_void);
+
+impl crate::screens::hud_ctl::HudHost for CuViews {
+    fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
+        let ffi = &mut crate::screens::game_cpp::Ffi;
+        if let Some(r) = crate::screens::command_units_ops::op(ffi, self.0 as usize, op, a, b, f) {
+            return r;
+        }
+        crate::screens::hud_ctl::HudHost::op(&mut Views(self.0, crate::screens::hud_views::command_units), op, a, b, f)
+    }
+}
+
 /// `EEUICSelectUnits`' members: `EE_SCREENS_SU_DO_*` with the mouse location (x, y) where one is taken.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_select_units(
@@ -259,7 +272,7 @@ pub unsafe extern "C" fn ee_screens_command_units(
     x: f32,
     y: f32,
 ) -> i64 {
-    let (r, h) = (&Rec::new(rec), &mut Views(ctl, crate::screens::hud_views::command_units));
+    let (r, h) = (&Rec::new(rec), &mut CuViews(ctl));
     match which {
         EE_SCREENS_CU_DO_INIT => {
             command_units::init(r);

@@ -14,6 +14,8 @@ use std::sync::Mutex;
 #[cfg(not(any(test, feature = "no_cpp")))]
 use crate::hotkey::CreateHost;
 use crate::hotkey::{self, EventCall, EventSlotHost, FireHost, HotKeyEvent, KeysHost, KEY_SLOT};
+#[cfg(not(any(test, feature = "no_cpp")))]
+use crate::lle_cpp::Cpp as _;
 use crate::obj::{EeUiHostFn, EeUiOp as Op, Host};
 
 /// `UIHotKey`'s members (`include/lle/UIHotKey.h`), the C++ class's base.
@@ -306,18 +308,6 @@ struct Create {
 }
 
 #[cfg(not(any(test, feature = "no_cpp")))]
-mod file_sys {
-    use core::ffi::{c_long, c_ulong, c_void};
-
-    extern "C" {
-        pub fn ee_uicpp_file_open(file: *mut c_void);
-        pub fn ee_uicpp_file_read_count(file: *mut c_void, count: *mut c_ulong) -> c_long;
-        pub fn ee_uicpp_file_read(file: *mut c_void, data: *mut u8, length: c_ulong) -> c_long;
-        pub fn ee_uicpp_file_close(file: *mut c_void);
-    }
-}
-
-#[cfg(not(any(test, feature = "no_cpp")))]
 impl KeysHost for Create {
     fn get_entity(&mut self, key: hotkey::HotKey, code: c_ulong, member: usize) -> c_long {
         self.keys.get_entity(key, code, member)
@@ -342,18 +332,15 @@ impl KeysHost for Create {
 #[cfg(not(any(test, feature = "no_cpp")))]
 impl CreateHost for Create {
     fn open(&mut self) {
-        // SAFETY: the C++ caller's live file
-        unsafe { file_sys::ee_uicpp_file_open(self.file) }
+        crate::lle_cpp::Ffi.file_open(self.file as usize)
     }
     fn read_count(&mut self, count: &mut c_ulong) -> c_long {
-        // SAFETY: as open
-        unsafe { file_sys::ee_uicpp_file_read_count(self.file, count) }
+        crate::lle_cpp::Ffi.file_read_count(self.file as usize, crate::lle_cpp::EeUiShimULongOut::of(count))
     }
     fn read_record(&mut self, record: &mut hotkey::DbHotKey) -> c_long {
         let p = (record as *mut hotkey::DbHotKey).cast::<u8>();
         let n = core::mem::size_of::<hotkey::DbHotKey>() as c_ulong;
-        // SAFETY: as open; the record is n bytes
-        unsafe { file_sys::ee_uicpp_file_read(self.file, p, n) }
+        crate::lle_cpp::Ffi.file_read(self.file as usize, crate::lle_cpp::EeUiShimU8Out(p), n)
     }
     fn create(&mut self) -> hotkey::HotKey {
         self.keys.0.op(Op::HkNew, 0, 0, 0, 0) as hotkey::HotKey
@@ -362,8 +349,7 @@ impl CreateHost for Create {
         table().push(key as usize);
     }
     fn close(&mut self) {
-        // SAFETY: as open
-        unsafe { file_sys::ee_uicpp_file_close(self.file) }
+        crate::lle_cpp::Ffi.file_close(self.file as usize)
     }
 }
 

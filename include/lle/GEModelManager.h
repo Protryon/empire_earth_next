@@ -26,7 +26,8 @@ public:
                             GEModel* inParent);
     // Writes the list of loaded models and their reference counts to a file
     void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_ge_modman_dump(this->mRust, &inFile); }
-    unsigned long GetMemoryFootprint();     // exported, ICF-folded (0x10040123); the sum of the cached models' SizeOf()
+    // exported, ICF-folded (0x10040123); the sum of the cached models' SizeOf()
+    unsigned long GetMemoryFootprint() { return ee_ge_modman_footprint(this->mRust); }
     // the frames the model shares (the original's std::map<unsigned long, long>: EEGraphicObject's frame maps) as
     // ee_ge's slice, in frame order
     GEModel* LoadModel(const UString& inName, const EeGeSharedFrames& inShared = EeGeSharedFrames{NULL, 0});

@@ -29,8 +29,9 @@ public:
 protected:
     virtual long InitializeEvent() { return kErrorOK; }
     virtual long UninitializeEvent() { return kErrorOK; }
-private:
-    // the Rust record's and loaders' calls out (UIManager.cpp): the object is the record or the file
+public:
+    // the Rust record's and loaders' calls out that are not Rust's (UIManager.cpp; ee_ui lle_manager.rs:
+    // ee_ui_event_host comes first): the object is the record or the file
     static intptr_t HostOp(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 };
 

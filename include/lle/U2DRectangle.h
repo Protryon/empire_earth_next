@@ -49,9 +49,6 @@ public:
     // exe: the middle of the rectangle (0x61340, ret 4, hidden result; out of line, defined below the class)
     // (provisional name; was EEAIAStarBounds)
     void GetCenter(U2DPoint<T>& outCenter) const;
-    // exe: the corner nearest inPoint, the first one on ties (inline COMDAT 0x208164, out of line after
-    // EEGroup::MakeClusters, its only user; defined below the class) provisional name (was EEAIAStarBounds)
-    U2DPoint<T> GetClosestCorner(const U2DPoint<T>& inPoint) const;
     // exe: an inline COMDAT first expanded out of line by the AI (0xd190, U2DPolygon<long>::Contains 0xd16e calls it
     // on its bounds; RTSMap 0x1238bd): inside, edges included (bool: push 1; pop eax) provisional name. Exe view only
     // so the engine's token stream stays unchanged
@@ -66,13 +63,15 @@ public:
     U2DPoint<T> GetBottomRight() const { U2DPoint<T> thePoint(this->mRight, this->mBottom); return thePoint; }
     U2DPoint<T> GetBottomLeft() const { U2DPoint<T> thePoint(this->mLeft, this->mBottom); return thePoint; }
     U2DPoint<T> GetTopRight() const { U2DPoint<T> thePoint(this->mRight, this->mTop); return thePoint; }
-    // exe: the corner closest to inPoint and its two neighbours (inline COMDAT 0x803f4, ret 0x10, first expanded out of
-    // line by EECPIArmy) (provisional name)
-    U2DPoint<T> GetClosestCorner(const U2DPoint<T>& inPoint, U2DPoint<T>& outFirst, U2DPoint<T>& outSecond) const;
     // exe: the rectangle's point closest to inPoint: the nearer of the closest points on the two edges at the closest
-    // corner (COMDAT 0x80347, ret 8, called by EECPIArmy::IsNear 0x80296; defined below the class) (provisional name)
-    // (body)
-    U2DPoint<T> GetClosestPoint(const U2DPoint<T>& inPoint) const;
+    // corner (U2DRectangle<float> only: ee_base math u2d.rs)
+    U2DPoint<T> GetClosestPoint(const U2DPoint<T>& inPoint) const
+    {
+        U2DPoint<T> thePoint;
+        ee_u2d_rect_closest_point(reinterpret_cast<const float(*)[4]>(&this->mBottom), reinterpret_cast<const float(*)[2]>(&inPoint.mX),
+                                  reinterpret_cast<float(*)[2]>(&thePoint.mX));
+        return thePoint;
+    }
 #endif
     void Clear()
     {
@@ -149,81 +148,6 @@ void U2DRectangle<T>::GetCenter(U2DPoint<T>& outCenter) const
 {
     outCenter.mX = (this->mRight - this->mLeft) / 2 + this->mLeft;
     outCenter.mY = (this->mBottom - this->mTop) / 2 + this->mTop;
-}
-template <class T>
-inline U2DPoint<T> U2DRectangle<T>::GetClosestCorner(const U2DPoint<T>& inPoint) const
-{
-    U2DPoint<T> theCorner(this->mLeft, this->mTop);
-    U2DPoint<T> theClosest = theCorner;
-    float theBest = inPoint.DistanceToSquaredF(theCorner);
-    theCorner = U2DPoint<T>(this->mLeft, this->mBottom);
-    float theDistance = inPoint.DistanceToSquaredF(theCorner);
-    if (theDistance < theBest) {
-        theBest = theDistance;
-        theClosest = theCorner;
-    }
-    theCorner = U2DPoint<T>(this->mRight, this->mTop);
-    theDistance = inPoint.DistanceToSquaredF(theCorner);
-    if (theDistance < theBest) {
-        theBest = theDistance;
-        theClosest = theCorner;
-    }
-    theCorner = U2DPoint<T>(this->mRight, this->mBottom);
-    theDistance = inPoint.DistanceToSquaredF(theCorner);
-    if (theDistance < theBest) {
-        theBest = theDistance;
-        theClosest = theCorner;
-    }
-    return theClosest;
-}
-// exe view only: out of line (never expanded; COMDATs 0x803f4 / 0x80347, EECPIArmy's range)
-template <class T>
-U2DPoint<T> U2DRectangle<T>::GetClosestCorner(const U2DPoint<T>& inPoint, U2DPoint<T>& outFirst, U2DPoint<T>& outSecond) const
-{
-    U2DPoint<T> theCorner = this->GetTopLeft();
-    U2DPoint<T> theClosest = theCorner;
-    float theBest = inPoint.DistanceToSquaredF(theCorner);
-    outFirst = this->GetBottomLeft();
-    outSecond = this->GetTopRight();
-    theCorner = this->GetBottomLeft();
-    float theDistance = inPoint.DistanceToSquaredF(theCorner);
-    if (theDistance < theBest) {
-        theBest = theDistance;
-        theClosest = theCorner;
-        outFirst = this->GetBottomRight();
-        outSecond = this->GetTopLeft();
-    }
-    theCorner = this->GetTopRight();
-    theDistance = inPoint.DistanceToSquaredF(theCorner);
-    if (theDistance < theBest) {
-        theClosest = theCorner;
-        theBest = theDistance;
-        outFirst = this->GetTopLeft();
-        outSecond = this->GetBottomRight();
-    }
-    theCorner = this->GetBottomRight();
-    if (inPoint.DistanceToSquaredF(theCorner) < theBest) {
-        theClosest = theCorner;
-        outFirst = this->GetBottomLeft();
-        outSecond = this->GetTopRight();
-    }
-    return theClosest;
-}
-template <class T>
-U2DPoint<T> U2DRectangle<T>::GetClosestPoint(const U2DPoint<T>& inPoint) const
-{
-    U2DPoint<T> theFirst;
-    U2DPoint<T> theSecond;
-    U2DPoint<T> theResult;
-    U2DPoint<T> theCorner = this->GetClosestCorner(inPoint, theFirst, theSecond);
-    U2DPoint<T> theOther = theCorner;
-    theResult = inPoint.GetClosestPointOnSegment(theCorner, theFirst);
-    T theDistance = theResult.DistanceToSquared(inPoint);
-    theOther = inPoint.GetClosestPointOnSegment(theCorner, theSecond);
-    // the conditional assignment, then one return copy (0x80347 exact)
-    if (theDistance < theOther.DistanceToSquared(inPoint))
-        theOther = theResult;
-    return theOther;
 }
 #endif
 

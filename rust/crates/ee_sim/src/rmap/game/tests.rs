@@ -1,9 +1,7 @@
-// c_ulong is u32 on Windows, u64 on LP64: the casts are needed on one of them
 #![allow(clippy::unnecessary_cast)]
 
 use super::*;
 use crate::rmap::map::Ring;
-use std::ffi::c_ulong;
 
 /// A grid the way the C++ holds one: rows of cells, and the row pointers the state carries.
 struct Owned<T> {
@@ -30,7 +28,7 @@ impl<T: Copy> Owned<T> {
 /// The state's grids and lists for a `size` x `size` generator grid (rows of `size + 1`).
 struct Fixture {
     heights: Owned<f32>,
-    tiles: Owned<c_ulong>,
+    tiles: Owned<u32>,
     claimed: Owned<u8>,
     valid: Owned<u8>,
     players: Vec<EeRmapGamePlayer>,
@@ -320,8 +318,8 @@ fn water_points_are_the_empty_valid_cells_with_a_tile() {
     let mut f = Fixture::new(4);
     let mut h = Fake::new(4);
     h.missing.push((0, 1));
-    f.tiles.set(2, 2, (0x401) as c_ulong);
-    f.tiles.set(3, 3, (0x8000) as c_ulong); // a cliff without land bits: still water
+    f.tiles.set(2, 2, (0x401) as u32);
+    f.tiles.set(3, 3, (0x8000) as u32); // a cliff without land bits: still water
     f.valid.set(1, 1, 0);
     f.run(&mut h, |g, h| g.water_points(h));
     let mut want = Vec::new();
@@ -341,7 +339,7 @@ fn a_space_map_fills_cells_with_five_land_neighbours() {
     let mut h = Fake::new(4);
     f.state.is_space_map = 1;
     for (x, y) in [(0, 0), (0, 1), (0, 2), (1, 0), (2, 0)] {
-        f.tiles.set(x, y, (0x10 + x * 4 + y) as c_ulong);
+        f.tiles.set(x, y, (0x10 + x * 4 + y) as u32);
     }
     f.run(&mut h, |g, h| g.water_points(h));
     // (1, 1) sees five land cells around it and takes the last one counted, (2, 0)

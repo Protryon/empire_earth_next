@@ -20,15 +20,9 @@
 #include "ee/EEWorld.h"
 #include "ee/EECPTrace.h"
 #include "rust/sim/ai.h"   // ee_ai_switch*: the TEST ONLY switches (switches.rs)
-#include "ee/EEGameLog.h"
-#include <math.h>
 
 bool gCPTraceOn = false;
 bool gCPTraceHashOn = false;
-const char* gCPTraceManager = "-";
-
-static bool sInitialized = false;
-static char sCheatNames[128];
 
 // a new game (EEWorld, before its players are made): the computer players' per-game statics, now Rust's (the
 // trace's counters and next hash line, the loss incidents, the reflexes' cool-downs), cleared as at the start
@@ -37,177 +31,41 @@ void EECPNewGame()
     ee_ai_new_game();
 }
 
-// a personality's position in the rules (-1: none), and a line of the debug output: the switches' callbacks
-static long EECPTraceFindPersonality(const char* inName)
-{
-    return EEGetRules().mAIPersonalities.Find(inName);
-}
-
-static void EECPTraceDebugOut(const char* inLine)
-{
-    ESDebugOut("%s", inLine);
-}
-
 // EE_AI_TRACE, and the TEST ONLY switches (EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS, EE_AI_EXP): Rust's
-// (ee_ai switches.rs), read once
+// (ee_ai personality.rs, switches.rs), read once
 void EECPTraceInit()
 {
-    if (sInitialized)
-        return;
-    sInitialized = true;
-    const char* theTrace = getenv("EE_AI_TRACE");
-    gCPTraceOn = theTrace != NULL && theTrace[0] != '\0' && strcmp(theTrace, "0") != 0;
-    gCPTraceHashOn = gCPTraceOn;   // the sim hash only with EE_AI_TRACE (the game log turns gCPTraceOn on alone)
-    ee_ai_switches_init(EECPTraceFindPersonality, EECPTraceDebugOut);
+    ee_ai_trace_init(&gCPTraceOn, &gCPTraceHashOn);
 }
 
+// the Rust accessors' first read, and the lobby's difficulty (ee_ai personality.rs)
+extern "C" void ee_ai_host_trace_init()
+{
+    EECPTraceInit();
+}
+
+extern "C" uint32_t ee_ai_host_difficulty()
+{
+    return (uint32_t)gWorld.mLobbyOptions.mDifficulty;
+}
+
+// The personality, the experiments and the cheats are Rust's (ee_ai personality.rs: every switch of the rules)
 bool EECPExperiment(const EEComputerPlayer* inPlayer, const char* inName)
 {
-    EECPTraceInit();
-    return ee_ai_switch_experiment(inPlayer->mPlayerID, inName);
-}
-
-const char* EECPExperimentNames(const EEComputerPlayer* inPlayer)
-{
-    EECPTraceInit();
-    return ee_ai_switch_experiment_names(inPlayer->mPlayerID);
-}
-
-bool EECPMilitiaOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPPersonality(inPlayer).mMilitia && !EECPExperiment(inPlayer, "nomilitia");
-}
-
-bool EECPCoastFishingOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPPersonality(inPlayer).mCoastFishing && !EECPExperiment(inPlayer, "nofish");
-}
-
-bool EECPMilitiaTowersOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPPersonality(inPlayer).mMilitiaTowers && !EECPExperiment(inPlayer, "nomtower");
-}
-
-long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer)
-{
-    if (EECPExperiment(inPlayer, "prearmy4"))
-        return 4;   // TEST ONLY: the owner's "maybe 4 clubmen before stone"
-    return EECPExperiment(inPlayer, "noprearmy") ? 0 : EECPPersonality(inPlayer).mPrehistoricArmy;
-}
-
-static bool EECPRuleOn(const EEComputerPlayer* inPlayer, bool inRule, const char* inOn, const char* inOff)
-{
-    if (EECPExperiment(inPlayer, inOn))
-        return true;
-    return inRule && !EECPExperiment(inPlayer, inOff);
-}
-
-bool EECPForagePatchesOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mForagePatches, "foodeco", "nofoodeco");
-}
-
-bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mClaimNeeded, "goldfix", "nogoldfix");
-}
-
-bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mNavalFlee, "navalflee", "nonavalflee");
-}
-
-long EECPEarlyTownCenters(const EEComputerPlayer* inPlayer)
-{
-    if (EECPExperiment(inPlayer, "noupgrade"))
-        return 2;
-    return EECPExperiment(inPlayer, "nonoupgrade") ? 0 : EECPPersonality(inPlayer).mEarlyTownCenters;
-}
-
-long EECPEarlyTrainers(const EEComputerPlayer* inPlayer)
-{
-    if (EECPExperiment(inPlayer, "fewbarracks"))
-        return 2;
-    return EECPExperiment(inPlayer, "manybarracks") ? 0 : EECPPersonality(inPlayer).mEarlyTrainers;
-}
-
-bool EECPPatchExpandOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mPatchExpand, "patchexpand", "nopatchexpand");
-}
-
-float EECPSafeBonus(const EEComputerPlayer* inPlayer)
-{
-    if (EECPExperiment(inPlayer, "safedash"))
-        return 0.25f;
-    return EECPExperiment(inPlayer, "nosafedash") ? 0.0f : EECPPersonality(inPlayer).mSafeBonus;
-}
-
-bool EECPStonePeaceOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mStoneAttacks, "stonepeace", "nostonepeace");
-}
-
-bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");
-}
-
-long EECPClaimRange(const EEComputerPlayer* inPlayer)
-{
-    return kEECPClaimRange;   // (stage 6: the strategy's claim range is the Lua verbs', data/ai/lib/verbs.lua)
-}
-
-bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer)
-{
-    return EECPForagePatchesOn(inPlayer) && !EECPExperiment(inPlayer, "oldpatches");
-}
-
-float EECPStoneSpan(const EEComputerPlayer* inPlayer)
-{
-    if (EECPExperiment(inPlayer, "stone22"))
-        return 22.0f;
-    if (EECPExperiment(inPlayer, "stone30"))
-        return 30.0f;
-    return EECPExperiment(inPlayer, "nostone") ? 0.0f : EECPPersonality(inPlayer).mStoneSpan;
-}
-
-bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
-{
-    EECPTraceInit();
-    int32_t theDemand = ee_ai_switch_demand(inPlayer->mPlayerID);
-    return theDemand < 0 ? EECPPersonality(inPlayer).mDemandSplit : theDemand != 0;
+    return ee_ai_experiment(inPlayer->mPlayerID, inName);
 }
 
 const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer)
 {
-    EECPTraceInit();
-    const EEAIPersonalityRules& theRules = EEGetRules().mAIPersonalities;
-    long k = ee_ai_switch_personality(inPlayer->mPlayerID);
-    if (k >= 0 && (size_t)k < theRules.mPersonalities.size())
-        return theRules.mPersonalities[k];
-    return theRules.ForPlayer(inPlayer->mPlayerID);
-}
-
-// The game's difficulty's cheats (gameoptions.yaml ai_cheats), narrowed by EE_AI_CHEATS (the player's set)
-static long EECPCheats(const EEComputerPlayer* inPlayer)
-{
-    EECPTraceInit();
-    long theMask = ee_ai_switch_cheats(inPlayer != NULL ? inPlayer->mPlayerID : 1);
-    return EEDifficultyAICheats(gWorld.mLobbyOptions.mDifficulty) & theMask;
-}
-
-bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat)
-{
-    return (EECPCheats(inPlayer) & inCheat) != 0;
+    return EEGetRules().mAIPersonalities.mPersonalities[(size_t)ee_ai_personality_index(inPlayer->mPlayerID)];
 }
 
 const char* EECPCheatNames(const EEComputerPlayer* inPlayer)
 {
-    ee_ai_switch_cheat_names(EECPCheats(inPlayer), sCheatNames, sizeof(sCheatNames));
-    return sCheatNames;
+    return ee_ai_cheat_names_text(inPlayer != NULL ? inPlayer->mPlayerID : 0);
 }
 
+// the line is Rust's (ee_ai trace_line.rs: the manager, the resources, the debug output and the game log)
 void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* inFormat, ...)
 {
     char theText[640];
@@ -215,14 +73,7 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
     va_start(theArguments, inFormat);
     vsnprintf(theText, sizeof(theText), inFormat, theArguments);
     va_end(theArguments);
-    const long* theResources = inPlayer->mResourceCaps;
-    char theLine[800];
-    snprintf(theLine, sizeof(theLine), "EE-AI %lu p%lu %s %s %s | f=%ld w=%ld s=%ld g=%ld i=%ld\n", gPhysics->mGameTime,
-        inPlayer->mPlayerID, gCPTraceManager, inEvent, theText, theResources[kResourceFood], theResources[kResourceWood],
-        theResources[kResourceStone], theResources[kResourceGold], theResources[kResourceIron]);
-    ESDebugOut("%s", theLine);
-    if (EEGameLogOn())
-        EEGameLogLine(theLine);
+    ee_ai_trace_out(inPlayer, inEvent, theText);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
