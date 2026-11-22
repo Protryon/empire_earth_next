@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 
 /// `kDamageDirect`, `kDamageSplash`, `kDamageTrample` (`ee/EERules.h`).
 constexpr static const int32_t EE_COMBAT_DAMAGE_DIRECT = 0;
@@ -2888,6 +2889,12 @@ void ee_combat_attack_get(uint64_t goal, EeCombatAttackGoal *out);
 void ee_combat_attack_set(uint64_t goal,
                           const EeCombatAttackGoal *value);
 
+/// The attack goal's record by value (`EEUnitGoal::Attack()`).
+EeCombatAttackGoal ee_combat_attack_of(uint64_t goal);
+
+/// `SetAttacker(attacker)` (`which` 0) or `SetSidestepCount(count)` (1): one field of the record.
+void ee_combat_attack_set_field(uint64_t goal, int32_t which, uint64_t value);
+
 /// The record of the goal into `out` (zeroes for none).
 ///
 /// # Safety
@@ -2901,11 +2908,20 @@ void ee_combat_heal_set_location(uint64_t goal,
                                  uint32_t y,
                                  uint32_t z);
 
+/// The heal goal's healee (`GetHealTarget()`).
+uint64_t ee_combat_heal_target(uint64_t goal);
+
+/// The heal goal's location as a point (`GetHealLocation()`).
+EeGe3DPoint ee_combat_heal_location(uint64_t goal);
+
 /// The attack-ground goal's target into `out` (0, 0, 0 for a goal without a record).
 ///
 /// # Safety
 /// `out` must point to three writable floats.
 void ee_combat_ground_target(uint64_t goal, float (*out)[3]);
+
+/// The attack-ground goal's target point by value (`GetGroundTarget()`).
+EeGe3DPoint ee_combat_ground_target_point(uint64_t goal);
 
 /// The trigger test of `input.kind`; the lazy reads go to `host` and are logged into `*input`.
 ///

@@ -267,6 +267,19 @@ pub extern "C" fn ee_combat_heal_set_location(goal: u64, x: u32, y: u32, z: u32)
     put(goal, EeCombatHealGoal { location: [x, y, z], ..heal_of(goal) });
 }
 
+/// The heal goal's healee (`GetHealTarget()`).
+#[no_mangle]
+pub extern "C" fn ee_combat_heal_target(goal: u64) -> u64 {
+    heal_of(goal).target
+}
+
+/// The heal goal's location as a point (`GetHealLocation()`).
+#[no_mangle]
+pub extern "C" fn ee_combat_heal_location(goal: u64) -> ee_base::math::types::Ge3DPoint {
+    let l = heal_of(goal).location;
+    ee_base::math::types::Ge3DPoint { x: f32::from_bits(l[0]), y: f32::from_bits(l[1]), z: f32::from_bits(l[2]) }
+}
+
 #[cfg(test)]
 #[path = "goal_heal_tests.rs"]
 mod tests;

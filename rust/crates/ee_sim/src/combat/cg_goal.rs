@@ -381,6 +381,9 @@ pub fn step<H: CgHost + ?Sized>(h: &mut H, kind: i32, unit: u64, goal: u64, targ
 }
 
 #[cfg(not(test))]
+pub use game::ee_units_cg_condition;
+
+#[cfg(not(test))]
 mod game {
     use super::*;
 

@@ -377,6 +377,34 @@ impl TableHost<'_> {
             a[0] = io.i[1];
             return Some(r);
         }
+        match code {
+            // EECombatAttackPosition(firing a[1], unit, target a[0], the point of a[2..5]'s bits): the point's bits
+            // back in a[0..3] (was EECombatGoalHostOp's case)
+            #[cfg(not(test))]
+            crate::combat::goal_attack::EE_COMBAT_G_POSITION => {
+                let mut p = [f32::from_bits(a[2] as u32), f32::from_bits(a[3] as u32), f32::from_bits(a[4] as u32)];
+                // SAFETY: the goal's live unit and target; a local point
+                unsafe { crate::combat::cg_query::ee_units_cgq_attack_position(a[1] != 0, unit, a[0] as u64, &mut p) };
+                for (k, v) in p.iter().enumerate() {
+                    a[k] = i64::from(v.to_bits());
+                }
+                return Some(0);
+            }
+            // EECombatCondition(kind a[0], unit, event a[1], target a[2], goal a[3], no class)
+            #[cfg(not(test))]
+            crate::combat::goal_dispatch::EE_COMBAT_G_EVALUATE => {
+                let r = crate::combat::cg_goal::ee_units_cg_condition(
+                    a[0] as i32,
+                    unit,
+                    a[1] as u32,
+                    a[2] as u64,
+                    a[3] as u64,
+                    0,
+                );
+                return Some(i64::from(r));
+            }
+            _ => {}
+        }
         let (op, ha, hb) = match code {
             EE_COMBAT_G_REFERENCE => (g::EE_UNITS_GOAL_HOST_REFERENCE, unit, 0),
             EE_COMBAT_G_DEREFERENCE => (g::EE_UNITS_GOAL_HOST_DEREFERENCE, unit, 0),
@@ -540,6 +568,13 @@ pub unsafe extern "C" fn ee_combat_ground_target(goal: u64, out: *mut [f32; 3]) 
     let t = ground_of(goal).target;
     // SAFETY: the caller's contract
     unsafe { *out = [f32::from_bits(t[0]), f32::from_bits(t[1]), f32::from_bits(t[2])] };
+}
+
+/// The attack-ground goal's target point by value (`GetGroundTarget()`).
+#[no_mangle]
+pub extern "C" fn ee_combat_ground_target_point(goal: u64) -> ee_base::math::types::Ge3DPoint {
+    let t = ground_of(goal).target;
+    ee_base::math::types::Ge3DPoint { x: f32::from_bits(t[0]), y: f32::from_bits(t[1]), z: f32::from_bits(t[2]) }
 }
 
 /// A new attack-ground goal's record (its target point).

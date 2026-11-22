@@ -14,11 +14,11 @@ class GE3DPoint;
 struct EeUnitsGoalIo;
 
 typedef EEUnitGoal EEUGRust;
+// a Rust point (ee_base math types.rs Ge3DPoint) as a GE3DPoint (a template: GE3DPoint is complete where it is used)
+template <class P = GE3DPoint> inline P EEGoalPointOf(const EeGe3DPoint& inPoint) { return P(inPoint.x, inPoint.y, inPoint.z); }
 
 // one body of inGoal through the kind dispatch (ee_units_rust_goal over EEUGRust.cpp's host), for the accessors
 // defined outside EEUGRust.cpp (EEUGRustCombat.cpp)
-int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0,
-                     EeUnitsGoalIo* ioArgs = NULL, FSFile* inFile = NULL);
 // the combat goals' host operations (EE_COMBAT_G_*, from 1000; EEUGRustCombat.cpp), the host's other cases
 int64_t EECombatGoalHostOp(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs);
 
