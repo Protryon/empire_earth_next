@@ -37597,3 +37597,30 @@ between runs). EE-SIM covers URandom, the U2D algorithms, FSFile/UString loads a
   "main-menu: the window capture is blank" (tour and lan-game PASS); the rerun GATES PASS (tour; ai-game time-cap
   PT 13146, units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 3220/3223).
 - Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py), `gates.sh --legacy`.
+
+## The game core lane's round 9 merged with batches 14 and 15 (branch rust-core9m, 2026-11-22)
+
+- The area effects were moved twice: core 9's gamecpp `civ.rs` (EEAEManager's bodies and EEAreaEffect's host over
+  `EECore9OpD4`/`D5`) and UI round 11's screens `area_effect_*.rs`. The UI lane owns them, so the merge keeps UI's
+  EEAEManager.cpp and EEAreaEffect.cpp whole and deletes `civ.rs`, its 87 `Ae*`/`Ah*` ops and the two switches. The
+  chain they sat in skips them now: EEClient's `EECore9OpD3` falls to `D6` (EETechTree.cpp), EEServer's `DF` to `D7F`.
+  The one outside caller, the tech tree's area-effect media (tech.rs), became two one-statement cases,
+  `TkAeTemplateLoad`/`Unload` -> `gAEManager.LoadTemplateMedia`/`UnloadTemplateMedia`.
+- When a lane moves a class another lane owns, check for callers outside the moved file before deleting it. Here
+  that was tech.rs's one call, and the pre-existing `AeHas`/`AeCreate`/`AeManagerClear`/`AeClearEffects` ops
+  (EEGameOps.cpp, Empire Earth.cpp, EEWorld.cpp), which stay.
+- LLE 9 made `GERFogAttributes` ee_render's `EeGeRastFog` (start/end/scale). picker.rs's own mirror struct and its
+  layout test went, as did EEUnitPicker.cpp's static_assert: `fog_factor` reads `EeGeRastFog` itself.
+- AI 8 moved the computer players' schedule into ee_sim (`next_game::schedule`). Core 9's persist_world.rs read
+  `gArtificialIntelligence`'s members through three `PwAi*` ops; it now calls `ee_ai_schedule_get`/`set` directly,
+  and the ops and their C++ cases are gone.
+- Fixture: both sides' ops are kept. UI's `EditNumber` is a compound op in compound.rs over two new one-statement
+  ops, `FxAsEdit` and `FxEditSetNumber`, so the C++ host keeps core 9's form (no compound cases).
+- Gates on the merged tip: both builds and the test profile 0/0; the Rust gate PASS (5,753 tests); oracle seeds 2-7
+  identical; the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile
+  22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport 185 digests); the plain saveload
+  PASS (18 identical); the matrix `--expect` PASS; scenario_check 27/27; sim_editor PASS (14,448 lines) and
+  `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--input-check --view-check --play-seconds 120
+  --seed 7` RESULT PASS; `random-game --box-select --orders --seed 7` RESULT PASS (BOX SELECT PASS; ORDERS PASS:
+  gather, repair, repair-queued, move); `gates.sh` GATES PASS (ai-game time-cap PT 13194, units [4, 41, 40], alive
+  [2, 3], classic_lua x 2; lan-game PT 2869/2858).
