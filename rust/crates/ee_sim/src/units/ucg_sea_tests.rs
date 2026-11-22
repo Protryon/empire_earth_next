@@ -134,3 +134,39 @@ fn each_wheel_updates() {
     update_wheels(&mut h, 2);
     assert_eq!(h.args(EE_UNITS_UCG_WHEEL_UPDATE), [(0, 0, 0), (0, 1, 0), (0, 2, 0)]);
 }
+
+#[test]
+fn the_water_and_cruise_tiles() {
+    let mut h = Mock::default().float(EE_UNITS_UCG_CRUISE_ALTITUDE_OF, [3.0, 0.0, 0.0, 0.0]);
+    let mut out: [c_long; 2] = [-1, -1];
+    let tile = OutTile { x: &mut out[0], y: &mut out[1] };
+    // SAFETY: a local out tile
+    unsafe { location_to_tile_at(&mut h, 1, [6.5, 7.5, 3.0], tile, true) };
+    assert!(h.has(EE_UNITS_UCG_CRUISE_ALTITUDE_OF));
+    let mut h = Mock::default();
+    // SAFETY: a local out tile
+    unsafe { location_to_tile_at(&mut h, 1, [6.5, 7.5, 3.0], tile, false) };
+    assert!(!h.has(EE_UNITS_UCG_CRUISE_ALTITUDE_OF));
+    assert_eq!(out, [0, 0]);
+}
+
+#[test]
+fn water_units_are_made_on_the_water_plane() {
+    let mut h = Mock::default().answer(EE_UNITS_UCG_BASE_CREATE_AT, 40);
+    assert_eq!(naval_citizen_create_unit(&mut h, 1, 3, 4, 2, true, 9), 40);
+    assert_eq!(h.args(EE_UNITS_UCG_BASE_CREATE_AT)[0].1, 5);
+    let mut m = [[0.0f32; 4]; 4];
+    m[2][3] = 5.0;
+    assert_eq!(naval_priest_create_unit_at(&mut h, 1, &m, 2, false, 9), 40);
+}
+
+#[test]
+fn docks_sit_on_the_water_and_buildings_just_above_the_ground() {
+    let mut p = [1.0f32, 2.0, 3.0];
+    let mut h = Mock::default().answer(EE_UNITS_UC_THIS_UNIT_TYPE, UNIT_TYPE_DOCK);
+    building_ground_location(&mut h, 1, &mut p);
+    assert_eq!(p[2], 0.0);
+    let mut h = Mock::default();
+    building_ground_location(&mut h, 1, &mut p);
+    assert_eq!(p[2], BUILDING_LIFT);
+}

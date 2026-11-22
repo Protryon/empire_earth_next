@@ -12062,6 +12062,181 @@ constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED = 3026;
 
 constexpr static const int32_t EE_UNITS_UCG_DO_UPDATE_WHEELS = 3027;
 
+constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE = 3028;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE = 3029;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT = 3030;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT = 3031;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION = 3032;
+
+/// `class->BaseAddToRegion(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_ADD_TO_REGION = 3500;
+
+/// `class->SpaceTransportAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_TRANSPORT_ADD_TO_TILE = 3501;
+
+/// `class->AmbientAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_AMBIENT_ADD_TO_TILE = 3502;
+
+/// `class->ResourceAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_RESOURCE_ADD_TO_TILE = 3503;
+
+/// `class->SubmergedNavalAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_ADD_TO_TILE = 3504;
+
+/// `class->LandTransportBadlyHurt(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_LAND_TRANSPORT_BADLY_HURT = 3505;
+
+/// `class->LandCallParatroopPlane(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_LAND_CALL_PARATROOP_PLANE = 3506;
+
+/// `unit->mPlayer->mPopulationCount -= ` cargo `a`'s `mUnitClass->GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_UCK_D_POPULATION_SUB = 3507;
+
+/// `unit->mPlayer->mPopulationCount += ` cargo `a`'s `mUnitClass->GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_UCK_D_POPULATION_ADD = 3508;
+
+/// `class->TorpedoCheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_TORPEDO_GROUND_IMPACT = 3509;
+
+/// `class->MissileCheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_GROUND_IMPACT = 3510;
+
+/// `class->ProjectileCheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_GROUND_IMPACT = 3511;
+
+/// `class->MissileCheckWaterImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_WATER_IMPACT = 3512;
+
+/// `class->ProjectileCheckWaterImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_WATER_IMPACT = 3513;
+
+/// `class->MiningBuildingCreateUnit(b's x, b's y, c >> 1, c & 1, creator a)` (the next four likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_MINING_CREATE_UNIT = 3514;
+
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_CITIZEN_CREATE_UNIT = 3515;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT = 3516;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_CREATE_UNIT = 3517;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT = 3518;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_CREATE_UNIT = 3519;
+
+/// `class->MiningBuildingCreateUnitAt(the transformation at b, c >> 1, c & 1, creator a)` (the next five likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_MINING_CREATE_UNIT_AT = 3520;
+
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_PRIEST_CREATE_UNIT_AT = 3521;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT_AT = 3522;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_CREATE_UNIT_AT = 3523;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT_AT = 3524;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_CREATE_UNIT_AT = 3525;
+
+/// `class->mDomains`
+constexpr static const int32_t EE_UNITS_UCK_D_DOMAINS = 3526;
+
+/// `class->GateGateReplaced(gate a, unit b)`
+constexpr static const int32_t EE_UNITS_UCK_D_GATE_GATE_REPLACED = 3527;
+
+/// `class->AirGetSoundParameters(unit a, sound b, the three out pointers at c)`
+constexpr static const int32_t EE_UNITS_UCK_D_AIR_SOUND = 3528;
+
+/// `class->BuildingGroundLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION = 3530;
+
+/// `class->SubmergedNavalGroundLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION = 3531;
+
+/// `class->NavalBuildingHasSunk(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK = 3532;
+
+/// `class->IsSidePart(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_IS_SIDE_PART = 3533;
+
+/// `EEGetFirstPart(unit)->GetCommandType()`
+constexpr static const int32_t EE_UNITS_UCK_D_FIRST_PART_COMMAND = 3534;
+
+/// `class->mIsFlare`
+constexpr static const int32_t EE_UNITS_UCK_D_IS_FLARE = 3535;
+
+/// unit `a`'s `mUnitClass->mUnitType`
+constexpr static const int32_t EE_UNITS_UCK_D_UNIT_TYPE_OF = 3536;
+
+/// `class->BombLaunchProjectile(unit, the point at a)` (the next two likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_BOMB_LAUNCH = 3537;
+
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_LAUNCH = 3538;
+
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_LAUNCH = 3539;
+
+/// `class->NavalCitizenLocationToTile(the point at a, the long at b, the long at c)` (the next three likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_CITIZEN_TO_TILE = 3540;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_TO_TILE = 3541;
+
+constexpr static const int32_t EE_UNITS_UCK_D_AMBIENT_TO_TILE = 3542;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_TO_TILE = 3543;
+
+/// `class->BaseRemoveFromRegion(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_REMOVE_FROM_REGION = 3544;
+
+/// `class->SpaceTransportRemoveFromTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_TRANSPORT_REMOVE = 3545;
+
+/// `class->AmbientRemoveFromTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_AMBIENT_REMOVE = 3546;
+
+/// `class->ResourceSimpleUnitCreated(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED = 3547;
+
+/// `class->BaseSimpleUnitCreated(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_SIMPLE_CREATED = 3548;
+
+/// `UnitCreated`'s bodies 1..14 (`3548 + body`): `class->AirAnimalUnitCreated(unit)`, `FortressUnitCreated`,
+/// `GateUnitCreated`, (4: Rust's), `HelicopterTransportUnitCreated`, `SpaceBuildingUnitCreated`,
+/// `SpaceTransportUnitCreated`, `BuildingUnitCreated`, `LandUnitCreated`, `LandableUnitCreated`,
+/// `MissileUnitCreated`, `NavalUnitCreated`, `ProjectileUnitCreated`, `TransportUnitCreated`
+constexpr static const int32_t EE_UNITS_UCK_D_AIR_ANIMAL_CREATED = 3549;
+
+constexpr static const int32_t EE_UNITS_UCK_D_FORTRESS_CREATED = 3550;
+
+constexpr static const int32_t EE_UNITS_UCK_D_GATE_CREATED = 3551;
+
+constexpr static const int32_t EE_UNITS_UCK_D_HELICOPTER_TRANSPORT_CREATED = 3553;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_CREATED = 3554;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_TRANSPORT_CREATED = 3555;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_CREATED = 3556;
+
+constexpr static const int32_t EE_UNITS_UCK_D_LAND_CREATED = 3557;
+
+constexpr static const int32_t EE_UNITS_UCK_D_LANDABLE_CREATED = 3558;
+
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_CREATED = 3559;
+
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_CREATED = 3560;
+
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_CREATED = 3561;
+
+constexpr static const int32_t EE_UNITS_UCK_D_TRANSPORT_CREATED = 3562;
+
+/// `class->FortressUnloadAt(unit, b, c)`
+constexpr static const int32_t EE_UNITS_UCK_D_FORTRESS_UNLOAD_AT = 3563;
+
+/// `class->TransportUnloadAt(unit, b, c)`
+constexpr static const int32_t EE_UNITS_UCK_D_TRANSPORT_UNLOAD_AT = 3564;
+
 /// `EEUnitClassKinds(class)`
 constexpr static const int32_t EE_UNITS_UCK_KINDS = 2200;
 
@@ -19568,6 +19743,30 @@ int64_t ee_units_ucg_sea(int32_t what,
                          int64_t b,
                          int64_t c,
                          float *f);
+
+/// The kind dispatcher `row` (`EE_UNITS_BODY_*`) of `class` on `unit` (see [`dispatch`]).
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a`, `b`, `c` the dispatcher's
+/// objects and values, `f` its point (or NULL), on the simulation thread.
+int64_t ee_units_uck_dispatch(size_t row,
+                              void *class_,
+                              void *unit,
+                              uint64_t a,
+                              int64_t b,
+                              int64_t c,
+                              float *f);
+
+/// `GetSoundParameters(unit, sound, outs)` of `class`.
+///
+/// # Safety
+/// `class`, `unit` live; `sound` a live `EESoundObject` or NULL; the outs live floats.
+void ee_units_uck_sound(void *class_,
+                        void *unit,
+                        void *sound,
+                        float *volume,
+                        float *pan,
+                        float *pitch);
 
 extern int64_t ee_units_uck_host(int32_t op,
                                  void *class_,

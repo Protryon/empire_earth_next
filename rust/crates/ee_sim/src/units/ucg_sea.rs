@@ -48,9 +48,18 @@ pub const EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT: i32 = 3024;
 pub const EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE: i32 = 3025;
 pub const EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED: i32 = 3026;
 pub const EE_UNITS_UCG_DO_UPDATE_WHEELS: i32 = 3027;
+pub const EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE: i32 = 3028;
+pub const EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE: i32 = 3029;
+pub const EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT: i32 = 3030;
+pub const EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT: i32 = 3031;
+pub const EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION: i32 = 3032;
 
 const UNIT_TYPE_AMB_CATTAILS_1: i64 = 0x234;
 const UNIT_TYPE_RES_DOLPHIN: i64 = 0x295;
+const UNIT_TYPE_DOCK: i64 = 0x24;
+const UNIT_TYPE_NAVY_YARD: i64 = 0x41;
+/// `kBuildingLift` (a building sits just above the ground)
+const BUILDING_LIFT: f32 = 0.001;
 const GOAL_LOCATION: i64 = 1;
 /// `kSeaAnimalBottomClearance`
 const SEA_ANIMAL_BOTTOM_CLEARANCE: f32 = 0.09;
@@ -136,6 +145,71 @@ pub unsafe fn ambient_location_to_tile<H: UcHost + ?Sized>(
     solve_z(&line, 0.0, &mut point);
     // SAFETY: the caller's contract
     unsafe { write_tile(out, &point) };
+}
+
+/// `NavalCitizenLocationToTile(location, x, y)` (`z` 0, the water plane) / `SpaceBuildingLocationToTile` (`z` the
+/// class's cruise altitude): the tile where the view line through `location` meets that height.
+///
+/// # Safety
+/// `out`'s two pointers are writable `long`s
+pub unsafe fn location_to_tile_at<H: UcHost + ?Sized>(
+    h: &mut H,
+    class: u64,
+    location: [f32; 3],
+    out: OutTile,
+    cruise: bool,
+) {
+    let mut s = S { h, class, unit: 0 };
+    let mut point = Ge3DPoint::default();
+    let line = line_from(&mut s, location);
+    let z = if cruise { s.float(EE_UNITS_UCG_CRUISE_ALTITUDE_OF, class, 0) } else { 0.0 };
+    solve_z(&line, z, &mut point);
+    // SAFETY: the caller's contract
+    unsafe { write_tile(out, &point) };
+}
+
+/// `NavalCitizenCreateUnit(x, y, player, foundation, creator)`: the unit at tile (`x`, `y`) on the water plane.
+pub fn naval_citizen_create_unit<H: UcHost + ?Sized>(
+    h: &mut H,
+    class: u64,
+    x: c_long,
+    y: c_long,
+    player: i64,
+    foundation: bool,
+    creator: u64,
+) -> u64 {
+    let mut s = S { h, class, unit: 0 };
+    let mut t = GeTransformation::IDENTITY;
+    t.m[0][3] = x as f32;
+    t.m[1][3] = y as f32;
+    t.m[2][3] = 0.0;
+    create_at(&mut s, &mut t, player, foundation, creator)
+}
+
+/// `NavalPriestCreateUnitAt(t, player, foundation, creator)`: the unit at `t` on the water plane.
+pub fn naval_priest_create_unit_at<H: UcHost + ?Sized>(
+    h: &mut H,
+    class: u64,
+    t: &[[f32; 4]; 4],
+    player: i64,
+    foundation: bool,
+    creator: u64,
+) -> u64 {
+    let mut s = S { h, class, unit: 0 };
+    let mut t = GeTransformation { m: *t };
+    t.m[2][3] = 0.0;
+    create_at(&mut s, &mut t, player, foundation, creator)
+}
+
+/// `BuildingGroundLocation(location)`: docks and navy yards on the water plane, the others just above the ground.
+pub fn building_ground_location<H: UcHost + ?Sized>(h: &mut H, class: u64, location: &mut [f32; 3]) {
+    let mut s = S { h, class, unit: 0 };
+    let unit_type = s.s(EE_UNITS_UC_THIS_UNIT_TYPE);
+    if unit_type == UNIT_TYPE_DOCK || unit_type == UNIT_TYPE_NAVY_YARD {
+        location[2] = 0.0;
+    } else {
+        location[2] += BUILDING_LIFT;
+    }
 }
 
 /// `SubmergedNavalGroundLocation(location)`: a submarine never goes below the sea floor.
@@ -376,6 +450,20 @@ pub unsafe fn run<H: UcHost + UcgSeaRust + ?Sized>(
             EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE => submerged_add_to_tile(h, class, a),
             EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED => return i64::from(submerged_has_arrived(h, class, unit, *f)),
             EE_UNITS_UCG_DO_UPDATE_WHEELS => update_wheels(h, unit),
+            EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE => {
+                location_to_tile_at(h, class, *f.cast::<[f32; 3]>(), out_tile(a, b), false)
+            }
+            EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE => {
+                location_to_tile_at(h, class, *f.cast::<[f32; 3]>(), out_tile(a, b), true)
+            }
+            EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT => {
+                return naval_citizen_create_unit(h, class, b as i32 as c_long, (b >> 32) as i32 as c_long, c >> 1, c & 1 != 0, a)
+                    as i64
+            }
+            EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT => {
+                return naval_priest_create_unit_at(h, class, &*f.cast::<[[f32; 4]; 4]>(), b >> 1, b & 1 != 0, a) as i64
+            }
+            EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION => building_ground_location(h, class, &mut *f.cast::<[f32; 3]>()),
             _ => {}
         }
     }

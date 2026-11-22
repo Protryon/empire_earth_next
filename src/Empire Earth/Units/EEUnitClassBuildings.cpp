@@ -42,7 +42,6 @@
 // VirtualB8, UpdateArmed, then EECalamityManager::GetCalamityClass<EECCVolcano>.
 
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
-static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits just above the ground)
 
 // 0x446ff4 (-2.0, below it a building is gone) is ee_units cls_condition.rs BUILDING_SUNK
 
@@ -51,10 +50,7 @@ static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits jus
 // Puts docks and navy yards on the water plane and lifts other buildings just above the ground
 void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
 {
-    if (this->mUnitType == kUnitTypeDock || this->mUnitType == kUnitTypeNavyYard)
-        ioLocation.SetZ(0.0f);
-    else
-        ioLocation.SetZ(ioLocation.GetZ() + kBuildingLift);
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX);   // ucg_sea.rs
 }
 
 // Picks the first fully healed garrisoned unit that should leave (a human's unit whose rally queue has a goal, a unit
@@ -456,14 +452,7 @@ bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
 // Returns the tile under a location along the camera line, at the cruise altitude
 void EEUnitClass::SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
-    GE3DPoint thePoint;
-    GE3DLine theLine(::gWorld.mLine);
-    theLine.SetStart(inLocation);
-    float theT;
-    float theZ = this->mCruiseAltitude;
-    theLine.SolveForZ(theZ, theT, thePoint);
-    outX = UMFloor(thePoint.GetX());
-    outY = UMFloor(thePoint.GetY());
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
 }
 
 // Creates a space building at a placement, at the cruise altitude

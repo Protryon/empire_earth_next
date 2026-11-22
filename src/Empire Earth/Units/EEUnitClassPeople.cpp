@@ -165,23 +165,13 @@ void EEComplexUnit::ContinueProduction()
 // Returns the tile under a location along the camera line, at sea level
 void EEUnitClass::NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
-    GE3DPoint thePoint;
-    GE3DLine theLine(::gWorld.mLine);
-    theLine.SetStart(inLocation);
-    float theT;
-    theLine.SolveForZ(0.0f, theT, thePoint);
-    outX = UMFloor(thePoint.GetX());
-    outY = UMFloor(thePoint.GetY());
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
 }
 
 // Creates a fishing boat on a tile at sea level
 EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    GETransformation theTransformation;
-    theTransformation.SetX((float)inX);
-    theTransformation.SetY((float)inY);
-    theTransformation.SetZ(0.0f);
-    return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucg_sea.rs
 }
 
 // ---- EEUCBasicPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The priests' common
@@ -327,10 +317,7 @@ void EEUnitClass::LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* in
 EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                       EEUnit* inCreator)
 {
-    GETransformation theTransformation(inTransformation);
-    theTransformation.SetX(theTransformation.GetX());
-    theTransformation.SetZ(0.0f);
-    return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]);   // ucg_sea.rs
 }
 
 // ---- EEUCHelicopterPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
