@@ -185,17 +185,6 @@ struct UIManagerComposition {
 };
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
-intptr_t UIManager::CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const
-{
-    float f[4] = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    return this->Call(inCall, inA, 0, 0, f);
-}
-intptr_t UIManager::CallPoint(EeUiManagerCall inCall, float inX, float inY) const
-{
-    float f[4] = {inX, inY, 0.0f, 0.0f};
-    return this->Call(inCall, 0, 0, 0, f);
-}
-
 #define FORM reinterpret_cast<UIForm*>(a)
 #define INSTANCE reinterpret_cast<SESMInstanceNode*>(a)
 #define SOUNDS static_cast<UIManager*>(inObj)->GetSoundManager()

@@ -50,11 +50,4 @@ EE_UI_CASE(status_rhombus_draw) { return s->GetRasterizer()->Draw(&theRhombus, s
 #undef s
 
 // Creates a progress bar control: empty range, black fill, white text and a text area inset by the border
-UIStatusBar::UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                         unsigned long inBorderThickness)
-    : UIControl(kControlTypeStatusBar, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->mRust = ee_ui_status_bar_new(this, ee_ui_status_bar_host, inBorderThickness);
-}
-
 UIStatusBar::~UIStatusBar() { ee_ui_status_bar_free(this->mRust); }

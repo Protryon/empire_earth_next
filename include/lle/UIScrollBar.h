@@ -11,7 +11,6 @@
 #include "lle/UISlider.h"
 #include "rust/ui/scrollbarobj.h"
 
-struct EeUiScrollBar;
 
 // The width of a scroll bar (0x1009916c, one .rdata constant: the edit and list boxes, the scroll bar and the check
 // box load it). Inferred home.
@@ -43,7 +42,7 @@ public:
     virtual void TabbedTo() {}
     virtual long UpdateKeyboard() { return kErrorOK; }
     intptr_t Call(EeUiScrollBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_scroll_bar_call(this->mRust, c, a, b, f); }
-    intptr_t CallF(EeUiScrollBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_scroll_bar_call(this->mRust, c, 0, 0, f); }
+    intptr_t CallF(EeUiScrollBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_scroll_bar_call(this->mRust, c, 0, 0, UIF4(f0, f1, f2)); }
     EeUiScrollBar* mRust;                   // the state (scrollbarobj.rs)
 };
 

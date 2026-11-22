@@ -14,6 +14,7 @@
 #include "rust/ui/lle_manager.h"
 #include "rust/ui/lle_control.h"
 #include "rust/ui/obj.h"
+#include "lle/UIObjHost.h"
 
 class FSPath;
 class GEBitmap;
@@ -28,11 +29,8 @@ class UIBackgroundTable;
 class TSCriticalSection;
 class UIControl;
 class UIControlsTable;
-class UIForm;
 class UResourceFile;
 struct UIDbDataForms;
-class UIEntity;
-class UIEvent;
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
 LLE_API extern UString gDbUIHotKeyFileName;
@@ -50,7 +48,6 @@ LLE_API extern UString gDbUIBackgroundFileName;
 
 enum class EeUiOp : uint32_t;              // rust/ee_ui.h: the Rust manager's calls out
 enum class EeUiManagerCall : uint32_t;     // rust/ee_ui.h: its methods
-struct EeUiManager;                        // rust/ee_ui.h: the Rust manager (managerobj.rs)
 
 // The class is whole in Rust (rust/crates/ee_ui/src/managerobj.rs, R6 ui round 17): its state (the event factories,
 // the stack, the forms, the visible and copied forms, the queued events, the fonts, the music, the UI texture and the
@@ -202,8 +199,8 @@ public:
     // the Rust manager's calls out that are not Rust's (ee_ui lle_manager.rs: ee_ui_manager_host comes first)
     // the forwarders' one call into the Rust manager (with a rectangle, with two floats)
     intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const { return ee_ui_manager_call(this->mRust, inCall, inA, inB, inC, ioF); }
-    intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const;
-    intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const;
+    intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const { return this->Call(inCall, inA, 0, 0, UIF4(inRectangle)); }
+    intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const { return this->Call(inCall, 0, 0, 0, UIF4(inX, inY)); }
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
 #ifdef LOWLEVELENGINE_EXPORTS

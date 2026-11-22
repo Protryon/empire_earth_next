@@ -12,13 +12,12 @@
 #include "lle/GETextureCoordinate.h"
 #include "lle/GEBitmap.h"      // the units including this header rely on it
 #include "rust/ui/sliderobj.h"
+#include "rust/ui/lle_hosts.h"
 
-struct EeUiSlider;
 
 class LLE_API UISlider : public UIControl {
 public:
-    UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
-             unsigned long inIndex, unsigned long inBorderThickness);
+    UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_slider_new(this, ee_ui_slider_host, inSliderStyle); }
     virtual ~UISlider();
     virtual long CopyData() { return (long)this->Call(EeUiSliderCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiSliderCall::DrawPolygons); }
@@ -45,7 +44,7 @@ public:
     virtual void TabbedTo() {}
 
     intptr_t Call(EeUiSliderCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_slider_call(this->mRust, c, a, b, f); }
-    intptr_t CallAt(EeUiSliderCall c, const GE2DPoint& p) const { float f[4] = {p.GetX(), p.GetY(), 0.0f, 0.0f}; return ee_ui_slider_call(this->mRust, c, 0, 0, f); }
+    intptr_t CallAt(EeUiSliderCall c, const GE2DPoint& p) const { return ee_ui_slider_call(this->mRust, c, 0, 0, UIF4(p)); }
     EeUiSlider* mRust;                      // the state (sliderobj.rs)
 };
 

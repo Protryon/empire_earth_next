@@ -12,6 +12,7 @@
 #ifndef LLE_UICOMBOBOX_H
 #define LLE_UICOMBOBOX_H
 #include "rust/ui/comboobj.h"
+#include "rust/ui/lle_combo.h"
 
 class UIButton;
 class UIEditBox;
@@ -25,9 +26,7 @@ public:
     }
     UIControl* PartOf(int inPart) const { return reinterpret_cast<UIControl*>(this->Call(EeUiComboCall::Part, inPart)); }
     struct Rust;                            // the Rust object's host (UIComboBox.cpp; a member: the class's friendships)
-    UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
-               const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
-               unsigned long inMaxChars, unsigned long inBorderThickness);
+    UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont, const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness) : UIControl(kControlTypeComboBox, inId, inRectangle, inForm, inIndex, 0) { ee_ui_combo_construct(this, inTextBoxType, &inData, inFont, reinterpret_cast<const EeUiRect*>(&inRectangle), inMaxListBoxHeight, inForm, inMaxChars, inBorderThickness); }
     virtual ~UIComboBox();
     void AppendLine(UWideString& inLine);
 #ifdef __clang__
@@ -75,14 +74,9 @@ public:
     void SetListBoxSelectedBgColor(const GEColor& inColor)
     {
         this->GetList()->GetSelectedBackground()->SetColor(inColor);
-        float f[4] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), 0.0f};
-        this->Call(EeUiComboCall::SetSelectedColor, 0, 0, f);
+        this->Call(EeUiComboCall::SetSelectedColor, 0, 0, UIF4(inColor));
     }
-    virtual void SetLocation(const GE2DPoint& inLocation)
-    {
-        float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-        this->Call(EeUiComboCall::SetLocation, 0, 0, f);
-    }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiComboCall::SetLocation, 0, 0, UIF4(inLocation)); }
     void SetScrollBarBgColor(const GEColor& inColor) { this->GetList()->SetScrollBarBgColor(inColor); }
     void SetTextBoxBgColor(const GEColor& inColor) { this->PartOf(0)->SetBgColor(inColor); }
     void SetTextBoxBgOpacity(float inOpacity) { this->PartOf(0)->SetBgOpacity(inOpacity); }
@@ -97,11 +91,7 @@ public:
     virtual void HideControl() { this->Call(EeUiComboCall::HideControl); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiComboCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiComboCall::MouseLButtonUp); }
-    virtual long MouseMove(const GE2DPoint& inLocation)
-    {
-        float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-        return (long)this->Call(EeUiComboCall::MouseMove, 0, 0, f);
-    }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiComboCall::MouseMove, 0, 0, UIF4(inLocation)); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void OpenListBox() { this->Call(EeUiComboCall::OpenListBox); }   // slot 0x94

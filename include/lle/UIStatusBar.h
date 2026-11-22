@@ -12,13 +12,12 @@
 #include "lle/UIControl.h"
 #include "lle/GEText.h"
 #include "rust/ui/statusobj.h"
+#include "rust/ui/lle_hosts.h"
 
-struct EeUiStatusBar;
 
 class LLE_API UIStatusBar : public UIControl {
 public:
-    UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                unsigned long inBorderThickness);
+    UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeStatusBar, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_status_bar_new(this, ee_ui_status_bar_host, inBorderThickness); }
     virtual ~UIStatusBar();
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiStatusBarCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiStatusBarCall::CopyData); }
@@ -48,7 +47,7 @@ public:
     GERhombus mStatusRhombus;               // the bar
     GERhombus mCopiedStatusRhombus;         // the bar as of the last CopyData (inset by the border)
     intptr_t Call(EeUiStatusBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_status_bar_call(this->mRust, c, a, b, f); }
-    intptr_t CallF(EeUiStatusBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_status_bar_call(this->mRust, c, 0, 0, f); }
+    intptr_t CallF(EeUiStatusBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_status_bar_call(this->mRust, c, 0, 0, UIF4(f0, f1, f2)); }
     EeUiStatusBar* mRust;                   // the state (statusobj.rs)
 };
 

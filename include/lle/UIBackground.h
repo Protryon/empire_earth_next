@@ -11,6 +11,7 @@
 
 #include "rust/ui/bgobj.h"
 #include "lle/UILayoutUtility.h"
+#include "lle/UIObjHost.h"
 
 class UIForm;
 
@@ -41,7 +42,7 @@ public:
     void SetVisibility(bool inVisible) { this->Call(EeUiBgCall::SetVisibility, inVisible); }
     intptr_t Call(EeUiBgCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
         { return ee_ui_bg_call(this, inCall, a, b, f); }
-    intptr_t CallRect(EeUiBgCall inCall, const GERectangle& inRectangle);
+    intptr_t CallRect(EeUiBgCall inCall, const GERectangle& inRectangle) { return ee_ui_bg_call(this, inCall, 0, 0, UIF4(inRectangle)); }
 };
 
 #endif

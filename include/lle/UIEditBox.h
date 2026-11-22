@@ -19,7 +19,6 @@
 
 class GEFont;
 class GEText;
-struct EeUiEdit;
 
 class LLE_API UIEditBox : public UIControl {
 public:
@@ -78,7 +77,7 @@ public:
     virtual void TabbedTo() { this->Call(EeUiEditCall::TabbedTo); }
     intptr_t CallColor(EeUiEditCall c, const GEColor& k) const { return this->Call(c, 0, 0, 0, 0, k.GetRed(), k.GetGreen(), k.GetBlue()); }
     intptr_t CallPoint(EeUiEditCall c, const GE2DPoint& p, intptr_t a = 0) const { return this->Call(c, a, 0, 0, 0, p.GetX(), p.GetY()); }
-    intptr_t Call(EeUiEditCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_edit_call(this->mRust, c, a, b, cc, d, f); }
+    intptr_t Call(EeUiEditCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_edit_call(this->mRust, c, a, b, cc, d, UIF4(f0, f1, f2)); }
     EeUiEdit* mRust;                        // the state (editobj.rs)
 };
 

@@ -74,22 +74,4 @@ EE_UI_VOID(button_bitmap_stretch) { reinterpret_cast<GEBitmap*>(a)->ComputeStret
 EE_UI_VOID(button_label_set_text) { reinterpret_cast<UITextLabel*>(a)->SetText(*reinterpret_cast<const UWideString*>(b)); }
 #undef s
 
-// Creates a button with normal, focused and pressed bitmaps (pressed defaults to normal) and no text or sounds
-UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
-                   GEBitmap* inPressedBitmap, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                   unsigned long inBorderThickness)
-    : UIControl(kControlTypeButton, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->SetBorderType(1);
-    this->mRust = ee_ui_button_new(this, ee_ui_button_host, inNormalBitmap, inFocusedBitmap, inPressedBitmap);
-}
 
-UIButton::~UIButton() { ee_ui_button_free(this->mRust); }
-
-// The header's members (the original's inline ones, emitted by UIBlinkingButton.cpp)
-GE2DPoint UIButton::GetBitmapLocation() const
-{
-    float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    this->Call(EeUiButtonCall::BitmapLocation, 0, 0, f);
-    return GE2DPoint(f[0], f[1]);
-}

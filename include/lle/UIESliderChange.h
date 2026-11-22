@@ -12,7 +12,6 @@
 #include "lle/UITextLabel.h"
 #include "lle/UISlider.h"
 
-class UITextLabel;
 
 class LLE_API UIESliderChange : public UIEvent {
 public:

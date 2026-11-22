@@ -25,11 +25,7 @@ public:
     }
     void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset)
     {
-        int theStart = (int)inStartOffset, theEnd = (int)inEndOffset;
-        float f[4] = {inSpeed, 0.0f, 0.0f, 0.0f};
-        memcpy(&f[1], &theStart, 4);
-        memcpy(&f[2], &theEnd, 4);
-        Call(EeUiLabelCall::ScrollText, inStartDelay, inEndDelay, f);
+        Call(EeUiLabelCall::ScrollText, inStartDelay, inEndDelay, UIF4(inSpeed, UIF4::Bits((int32_t)inStartOffset), UIF4::Bits((int32_t)inEndOffset)));
     }
     void ScrollText(unsigned long inTime, unsigned long inEndDelay)
     {

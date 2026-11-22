@@ -11,22 +11,21 @@
 #define LLE_UIGRAPH_H
 
 #include "rust/ui/graphobj.h"
+#include "rust/ui/lle_hosts.h"
 
 class GEFont;
 
 class LLE_API UIGraph : public UIControl {
 public:
-    UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-            unsigned long inBorderThickness, EeUiGraphKind inKind = EeUiGraphKind::Line,
-            EeUiGraphFormatFn inFormat = NULL);
+    UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, EeUiGraphKind inKind = EeUiGraphKind::Line, EeUiGraphFormatFn inFormat = NULL) : UIControl(kControlTypeGraph, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_graph_new(this, ee_ui_graph_host, inKind, inFormat); }
     virtual ~UIGraph();
     virtual long CopyData() { return (long)this->Call(EeUiGraphCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiGraphCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiGraphCall::DrawText); }
     void SetFont(GEFont* inFont) { this->Call(EeUiGraphCall::SetFont, (intptr_t)inFont); }
-    void SetFontColor(const GEColor& inColor);
+    void SetFontColor(const GEColor& inColor) { this->Call(EeUiGraphCall::SetFontColor, 0, 0, 0, UIF4(inColor)); }
     // the summary's: a series of the inCount (time, value) pairs in a colour, added to stored graph inGraph
-    void AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor);
+    void AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor) { this->Call(EeUiGraphCall::AddGraphSeries, inGraph, (intptr_t)inPoints, inCount, UIF4(inColor)); }
     virtual long UpdateMouse(const GE2DPoint& inLocation) { return kErrorOK; }
     virtual long UpdateKeyboard() { return kErrorOK; }
     virtual long MouseLButtonDown() { return kErrorOK; }

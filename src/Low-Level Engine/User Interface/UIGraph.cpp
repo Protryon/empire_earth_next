@@ -52,21 +52,4 @@ EE_UI_VOID(graph_line_delete) { delete theLine; }
 #undef g
 
 // Creates a graph control with a 15 x 10 grid, every label on, zoom 1 and no fonts yet
-UIGraph::UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                 unsigned long inBorderThickness, EeUiGraphKind inKind, EeUiGraphFormatFn inFormat)
-    : UIControl(kControlTypeGraph, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->mRust = ee_ui_graph_new(this, ee_ui_graph_host, inKind, inFormat);
-}
-
 UIGraph::~UIGraph() { ee_ui_graph_free(this->mRust); }
-void UIGraph::SetFontColor(const GEColor& inColor)
-{
-    float f[4] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), 0.0f};
-    this->Call(EeUiGraphCall::SetFontColor, 0, 0, 0, f);
-}
-void UIGraph::AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor)
-{
-    float f[4] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), 0.0f};
-    this->Call(EeUiGraphCall::AddGraphSeries, inGraph, (intptr_t)inPoints, inCount, f);
-}

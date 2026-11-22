@@ -18,7 +18,7 @@ class UIManager;
 
 class LLE_API UIBackgroundTable : public EeUiBgTableFields {
 public:
-    UIBackgroundTable();
+    UIBackgroundTable() { ee_ui_bgtable_init(this); }
     virtual ~UIBackgroundTable() {}
     // Loads every background table entry from the file (NULL for nameless records); returns the last read result
     static long Create(FSFileSpec& inFile);

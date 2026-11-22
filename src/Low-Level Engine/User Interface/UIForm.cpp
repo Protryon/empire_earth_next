@@ -126,12 +126,6 @@ EE_UI_VOID(group_set_enabled) { static_cast<UIHotKey*>(reinterpret_cast<UIEntity
 #undef ENTITY_CONTROL
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
-intptr_t UIForm::CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const
-{
-    float f[4] = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    return this->Call(inCall, inA, inB, f);
-}
-
 // an input entity by key or button
 template <class D> static ISEntity* UIFormEntity(D* inDevice, unsigned long inKey)
 {
@@ -321,24 +315,6 @@ long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, 
 
 
 // Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over
-void UIForm::UpdateMouseLocation(const GE2DPoint& inLocation)
-{
-    float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-    this->Call(EeUiFormCall::UpdateMouseLocation, 0, 0, f);
-}
-
-float UIForm::GetFadeOpacity()
-{
-    float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    this->Call(EeUiFormCall::FadeOpacity, 0, 0, f);
-    return f[0];
-}
-void UIForm::SetLayout(UILayoutUtility& inLayout)
-{
-    float f[4] = {inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset()};
-    this->Call(EeUiFormCall::SetLayout, ee_ui_form_pack_types(inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(), inLayout.GetBottomOffsetType()), 0, f);
-}
-
 UITextLabel* UIForm::GetHelpTextLabel() const { return static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::HelpTextLabel))); }
 
 void UIForm::SetHelpTextLabel(UITextLabel* inLabel) { this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t) static_cast<UIControl*>(inLabel)); }

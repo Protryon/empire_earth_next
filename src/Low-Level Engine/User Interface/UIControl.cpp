@@ -44,8 +44,6 @@
 #include "rust/ui/lle_control.h"
 #include "rust/ui/lle_hosts.h"
 
-GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
-GEColor UIControl::sLightBorder;
 
 // the record's rectangles are read as GERectangle (bottom, left, right, top)
 static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle's layout");
@@ -105,40 +103,14 @@ extern "C" long ee_uicpp_control_mouse_right_down(uintptr_t inControl) { return 
 extern "C" long ee_uicpp_control_mouse_move(uintptr_t inControl, uintptr_t inLocation)
 { return CTL(inControl)->MouseMove(*reinterpret_cast<const GE2DPoint*>(inLocation)); }
 
-// a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
-intptr_t UIControl::CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const
-{
-    float f[4] = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    return this->Call(inCall, 0, 0, f);
-}
 
 
-// Creates a shown, dirty control with a transparent black background (the record's state, ee_ui controlobj.rs); the
-// first one looks up the shared UI keys
-UIControl::UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
-                     unsigned long inIndex, unsigned long inBorderThickness)
-    : UIEntity(1)
-{
-    this->mBgRhombus = new GERhombus;
-    this->mCopiedBgRhombus = new GERhombus;
-    ee_ui_control_init(this, this, ee_ui_control_host, inType, inId, reinterpret_cast<const float*>(&inRectangle), inForm, inIndex, inBorderThickness);
-    ee_ui_control_fetch_keys();
-}
-
-// Destroys the control: every trigger event released (ee_ui controlobj.rs), then the background rhombi
-UIControl::~UIControl()
-{
-    ee_ui_control_release(this);
-    delete this->BgRhombus();
-    delete this->CopiedBgRhombus();
-}
+// the background rhombi's new and delete (ee_ui lle_control.rs: the constructor and destructor)
+extern "C" void* ee_uicpp_rhombus_new() { return new GERhombus; }
+extern "C" void ee_uicpp_rhombus_delete(void* inRhombus) { delete static_cast<GERhombus*>(inRhombus); }
 
 
-void UIControl::SetLocation(const GE2DPoint& inLocation)
-{
-    float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-    this->Call(EeUiControlCall::SetLocation, 0, 0, f);
-}
+
 
 // Draws the copied background and the border
 long UIControl::DrawPolygons()
@@ -234,9 +206,8 @@ SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->Get
 
 long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
 {
-    return ee_ui_draw_border(this->GetRasterizer(), this->GetScreenIndex(), *reinterpret_cast<const EeUiRect*>(&inRectangle), inThickness,
-                             this->mCopiedBorderOpacity, this->mCopiedBorderType, reinterpret_cast<const float*>(&UIControl::sLightBorder),
-                             reinterpret_cast<const float*>(&UIControl::sDarkBorder));
+    return ee_ui_control_draw_border(this->GetRasterizer(), this->GetScreenIndex(), *reinterpret_cast<const EeUiRect*>(&inRectangle),
+                                     inThickness, this->mCopiedBorderOpacity, this->mCopiedBorderType);
 }
 
 const GE2DPoint& UIControl::GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }

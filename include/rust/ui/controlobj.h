@@ -47,6 +47,12 @@ enum class EeUiControlCall : uint32_t {
   CaptureKeyboard = 17,
   /// `CaptureMouse()`.
   CaptureMouse = 18,
+  /// `SetBgColor(f[0..3])`: the background rhombus's colour, then the (virtual) `SetDirty(true)`.
+  SetBgColor = 19,
+  /// `SetBgOpacity(f[0])`: whether the background draws, the rhombus's opacity.
+  SetBgOpacity = 20,
+  /// `SetBorderThickness(a)`, then the (virtual) `SetDirty(true)`.
+  SetBorderThickness = 21,
 };
 
 /// The trigger events (`std::map<unsigned long, UIEvent*>`): event id -> the event (referenced), in id order.

@@ -72,16 +72,4 @@ EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
 #undef l
 
 // Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
-UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
-                         UIForm* inForm, unsigned long inLabelType, unsigned long inIndex,
-                         unsigned long inBorderThickness)
-    : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->SetBorderType(0);
-    float f[4];
-    UIObjHost::PutRect(f, inRectangle);
-    this->mRust = ee_ui_label_new(this, ee_ui_label_host, f, inFont, inLabelType, inBorderThickness);
-    this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText);
-}
-
 UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }

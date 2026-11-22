@@ -71,10 +71,9 @@ EE_UI_VOID(bar_slider_set_range) { theSlider->SetRange((unsigned long)b, (unsign
 // 19 x (length - 1) for both styles; a horizontal bar is now (length - 1) x 19
 UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle,
                          UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
-    : UIControl(kControlTypeScrollBar, inId, UIScrollBarRust::Layout(inLocation, inLength, inStyle), inForm, inIndex, 0)
+    : UIControl(kControlTypeScrollBar, inId, UIScrollBarRust::Layout(inLocation, inLength, inStyle), inForm, inIndex, 0),
+      mRust(ee_ui_scroll_bar_new(this, ee_ui_scroll_bar_host, UIF4(inLocation.GetX(), inLocation.GetY(), inLength), inStyle, inBorderThickness))
 {
-    float f[4] = {inLocation.GetX(), inLocation.GetY(), inLength, 0.0f};
-    this->mRust = ee_ui_scroll_bar_new(this, ee_ui_scroll_bar_host, f, inStyle, inBorderThickness);
 }
 
 UIScrollBar::~UIScrollBar() { ee_ui_scroll_bar_free(this->mRust); }

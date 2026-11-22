@@ -18,8 +18,7 @@ struct UIButtonRust {
     static intptr_t Call(const UIButton* inButton, EeUiButtonCall inCall, intptr_t a = 0, intptr_t b = 0,
                          float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f)
     {
-        float f[4] = {f0, f1, f2, f3};
-        return ee_ui_button_call(inButton->mRust, inCall, a, b, f);
+        return ee_ui_button_call(inButton->mRust, inCall, a, b, UIF4(f0, f1, f2, f3));
     }
     static EeUiPoint Point(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
     static GE2DPoint Point(const EeUiPoint& inPoint) { return GE2DPoint(inPoint.x, inPoint.y); }

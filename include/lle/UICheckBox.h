@@ -13,7 +13,6 @@
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 
-class UITextLabel;
 
 class LLE_API UICheckBox : public UIButton {
 public:

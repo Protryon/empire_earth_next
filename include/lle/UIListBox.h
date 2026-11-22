@@ -63,17 +63,8 @@ public:
     {
         return ee_ui_list_call(this->mRust, inCall, a, b, f);
     }
-    intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_list_call(this->mRust, inCall, 0, 0, f);
-    }
-    GEColor Color(UIListBoxCall inCall) const
-    {
-        float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-        ee_ui_list_call(this->mRust, inCall, 0, 0, f);
-        return GEColor(f[0], f[1], f[2]);
-    }
+    intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_list_call(this->mRust, inCall, 0, 0, UIF4(f0, f1, f2)); }
+    GEColor Color(UIListBoxCall inCall) const { return UIOut(ee_ui_list_call, this->mRust, inCall, (intptr_t)0, (intptr_t)0).Color(); }
     UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
               unsigned long inBorderThickness);
@@ -212,11 +203,7 @@ public:
     virtual long MouseLButtonDown() { return (long)this->Call(UIListBoxCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(UIListBoxCall::MouseLButtonUp); }
     virtual long MouseLButtonDoublePressed() { return (long)this->Call(UIListBoxCall::MouseDoublePressed); }
-    virtual long MouseMove(const GE2DPoint& inLocation)
-    {
-        float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-        return (long)this->Call(UIListBoxCall::MouseMove, 0, 0, f);
-    }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(UIListBoxCall::MouseMove, 0, 0, UIF4(inLocation)); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void ProcessDown() { this->Call(UIListBoxCall::ProcessDown); }

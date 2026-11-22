@@ -23,6 +23,7 @@
 #include "rust/ui/lle_control.h"
 #include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
+#include "lle/UIObjHost.h"
 
 class GEFont;
 class GERasterizer;
@@ -120,31 +121,16 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     // Returns whether Right (or keypad 6 with Num Lock off) is held
     static bool RightKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Right); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
-    virtual void SetBgColor(const GEColor& inColor)
-    {
-        this->BgRhombus()->SetColor(inColor);
-        this->SetDirty(true);
-    }
-    virtual void SetBgOpacity(float inOpacity)
-    {
-        this->mHasBgOpacity = inOpacity != 0.0f;
-        this->BgRhombus()->SetOpacity(inOpacity);
-    }
-    static void SetBorderColors(const GEColor& inDark, const GEColor& inLight)
-    {
-        UIControl::sDarkBorder = inDark;
-        UIControl::sLightBorder = inLight;
-    }
+    virtual void SetBgColor(const GEColor& inColor) { this->Call(EeUiControlCall::SetBgColor, 0, 0, UIF4(inColor)); }
+    virtual void SetBgOpacity(float inOpacity) { this->Call(EeUiControlCall::SetBgOpacity, 0, 0, UIF4(inOpacity)); }
+    // every control's border colours (ee_ui lle_control.rs; black and white until set)
+    static void SetBorderColors(const GEColor& inDark, const GEColor& inLight) { ee_ui_set_border_colors(UIF4(inDark), UIF4(inLight)); }
     void SetBorderOpacity(float inOpacity) { this->mBorderOpacity = inOpacity; }
-    void SetBorderThickness(unsigned long inThickness)
-    {
-        this->mBorderThickness = inThickness;
-        this->SetDirty(true);
-    }
+    void SetBorderThickness(unsigned long inThickness) { this->Call(EeUiControlCall::SetBorderThickness, inThickness); }
     void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
     virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
-    virtual void SetLocation(const GE2DPoint& inLocation);
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiControlCall::SetLocation, 0, 0, UIF4(inLocation)); }
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetRectangle, inRectangle); }
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
     void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent) { this->Call(EeUiControlCall::SetTrigger, inEvent, (intptr_t)inTriggerEvent); }
@@ -163,9 +149,16 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     // the shared keys and mouse buttons: a Rust record of ISEntity pointers by EeUiKey (ee_ui lle_control.rs; once
     // the 24 key statics here, UIForm's Tab and Shift and UIManager's mouse buttons and wheel)
     static ISEntity*& Key(EeUiKey inKey) { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(inKey)); }
-    virtual ~UIControl();
+    virtual ~UIControl() { ee_ui_control_destruct(this); }
+    // Creates a shown, dirty control with a transparent black background and its two rhombi; the first one looks up
+    // the shared UI keys (ee_ui lle_control.rs, controlobj.rs)
     UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
-              unsigned long inIndex, unsigned long inBorderThickness);
+              unsigned long inIndex, unsigned long inBorderThickness, unsigned long inBorderType = 0)
+        : UIEntity(1)
+    {
+        ee_ui_control_construct(this, this, inType, inId, reinterpret_cast<const float*>(&inRectangle), inForm, inIndex,
+                                inBorderThickness, inBorderType);
+    }
     // The base's logic (ee_ui controlobj.rs)
     void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
@@ -183,12 +176,7 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     GERhombus* BgRhombus() const { return static_cast<GERhombus*>(this->mBgRhombus); }
     GERhombus* CopiedBgRhombus() const { return static_cast<GERhombus*>(this->mCopiedBgRhombus); }
     intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f); }
-    intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const;
-#if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
-    // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-    static GEColor sLightBorder;
-    static GEColor sDarkBorder;
-#endif
+    intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const { return this->Call(inCall, 0, 0, UIF4(inRectangle)); }
 };
 
 #include "lle/UIMultiByte.h"

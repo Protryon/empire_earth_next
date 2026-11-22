@@ -216,6 +216,91 @@ pub extern "C" fn ee_ui_control_fetch_keys() {
     fetch_keys(&mut crate::lle_cpp::Ffi);
 }
 
+/// The border colours every control's border draws with (`UIControl::SetBorderColors`; once the statics
+/// `sDarkBorder`, black, and `sLightBorder`, white): dark then light, red, green, blue.
+static BORDER_COLORS: std::sync::Mutex<[[f32; 3]; 2]> = std::sync::Mutex::new([[0.0; 3], [1.0; 3]]);
+
+/// `UIControl::SetBorderColors(dark, light)`.
+///
+/// # Safety
+/// `dark` and `light` three live floats each.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_set_border_colors(dark: *const f32, light: *const f32) {
+    // SAFETY: the contract
+    let (d, l) = unsafe { ([*dark, *dark.add(1), *dark.add(2)], [*light, *light.add(1), *light.add(2)]) };
+    *BORDER_COLORS.lock().unwrap_or_else(|e| e.into_inner()) = [d, l];
+}
+
+/// `UIControl::DrawBorder`: [`crate::draw2d::ee_ui_draw_border`] in the border colours.
+///
+/// # Safety
+/// As `ee_ui_draw_border`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_control_draw_border(
+    rasterizer: *mut c_void,
+    screen: core::ffi::c_ulong,
+    rect: crate::rect::UiRect,
+    thickness: core::ffi::c_ulong,
+    opacity: f32,
+    border_type: core::ffi::c_ulong,
+) -> core::ffi::c_long {
+    let [dark, light] = *BORDER_COLORS.lock().unwrap_or_else(|e| e.into_inner());
+    // SAFETY: the contract; the colours are three floats each
+    unsafe {
+        crate::draw2d::ee_ui_draw_border(rasterizer, screen, rect, thickness, opacity, border_type, light.as_ptr(), dark.as_ptr())
+    }
+}
+
+/// UIControl's constructor: its two background rhombi made (UIControl.cpp's shims), the record's state
+/// ([`crate::controlobj::ee_ui_control_init`] over [`ee_ui_control_host`]) with the border type, the shared keys looked up.
+///
+/// # Safety
+/// `rec` is the live base of the C++ control `cpp`; `rect` four live floats.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_ui_control_construct(
+    rec: *mut crate::controlobj::EeUiControlFields,
+    cpp: *mut c_void,
+    control_type: core::ffi::c_ulong,
+    id: core::ffi::c_ulong,
+    rect: *const f32,
+    form: *mut c_void,
+    index: core::ffi::c_ulong,
+    border_thickness: core::ffi::c_ulong,
+    border_type: core::ffi::c_ulong,
+) {
+    extern "C" {
+        fn ee_uicpp_rhombus_new() -> *mut c_void;
+    }
+    // SAFETY: the contract; the rhombi are the record's before its state (the C++ constructor's order)
+    unsafe {
+        (*rec).mBgRhombus = ee_uicpp_rhombus_new();
+        (*rec).mCopiedBgRhombus = ee_uicpp_rhombus_new();
+        crate::controlobj::ee_ui_control_init(rec, cpp, Some(ee_ui_control_host), control_type, id, rect, form, index, border_thickness);
+        (*rec).mBorderType = border_type;
+    }
+    ee_ui_control_fetch_keys();
+}
+
+/// UIControl's destructor: every trigger event released, then the two rhombi deleted.
+///
+/// # Safety
+/// `rec` a live record [`ee_ui_control_construct`] set up.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_control_destruct(rec: *mut crate::controlobj::EeUiControlFields) {
+    extern "C" {
+        fn ee_uicpp_rhombus_delete(rhombus: *mut c_void);
+    }
+    // SAFETY: the contract
+    unsafe {
+        crate::controlobj::ee_ui_control_release(rec);
+        ee_uicpp_rhombus_delete((*rec).mBgRhombus);
+        ee_uicpp_rhombus_delete((*rec).mCopiedBgRhombus);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

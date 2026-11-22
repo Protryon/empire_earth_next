@@ -17,6 +17,7 @@
 #include "rust/ui/lle_form.h"
 #include "rust/ui/ids.h"
 #include "rust/ui/obj.h"
+#include "lle/UIObjHost.h"
 
 class FSFileSpec;
 class GEBitmap;
@@ -53,7 +54,6 @@ struct UIEventData {
 
 enum class EeUiOp : uint32_t;              // rust/ee_ui.h: the Rust form's calls out
 enum class EeUiFormCall : uint32_t;        // rust/ee_ui.h: its methods
-struct EeUiForm;                           // rust/ee_ui.h: the Rust form (formobj.rs)
 
 // The class is whole in Rust (rust/crates/ee_ui/src/formobj.rs, R6 ui round 16): its state (the controls, groups,
 // backgrounds, hot keys, database records, events, the dirty-rectangle lists, the captures, the popup, the help text,
@@ -151,7 +151,7 @@ public:
     UIEntityGroup* GetEntityGroup(unsigned long inIndex) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroup, (intptr_t)inIndex)); }
     // Returns the group holding the control with the given ID; falls back to group 0 when no group holds it
     UIEntityGroup* GetEntityGroupById(unsigned long inId) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId)); }
-    float GetFadeOpacity();
+    float GetFadeOpacity() { return UIOut(ee_ui_form_call, this->mRust, EeUiFormCall::FadeOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
     unsigned long GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
     UIFormManager* GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
     UIEvent* GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
@@ -197,7 +197,7 @@ public:
     void SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
     // Enables or disables every hot key of a group
     void SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled) { this->Call(EeUiFormCall::SetHotKeyGroupEnabled, (intptr_t)inGroup, inEnabled); }
-    void SetLayout(UILayoutUtility& inLayout);
+    void SetLayout(UILayoutUtility& inLayout) { this->Call(EeUiFormCall::SetLayout, ee_ui_form_pack_types(inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(), inLayout.GetBottomOffsetType()), 0, UIF4(inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset())); }
     void SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
     void SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
     void SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
@@ -214,7 +214,7 @@ public:
     void UnlockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 0); }
     // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
     void UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
-    void UpdateMouseLocation(const GE2DPoint& inLocation);
+    void UpdateMouseLocation(const GE2DPoint& inLocation) { this->Call(EeUiFormCall::UpdateMouseLocation, 0, 0, UIF4(inLocation)); }
     bool GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
     void SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
     UIControl* GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
@@ -227,7 +227,7 @@ public:
     void SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
     // the forwarders' one call into the Rust form (with a rectangle)
     intptr_t Call(EeUiFormCall inCall, intptr_t inA = 0, intptr_t inB = 0, float* ioF = NULL) const { return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF); }
-    intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const;
+    intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const { return this->Call(inCall, inA, inB, UIF4(inRectangle)); }
 
     EeUiForm* mRust;                        // the state (formobj.rs)
 };

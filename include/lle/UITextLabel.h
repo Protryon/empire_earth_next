@@ -16,14 +16,13 @@
 #include "lle/UIControl.h"
 #include "lle/UIScrollBar.h"   // units including this header rely on it for the scroll bar
 #include "rust/ui/labelobj.h"
+#include "rust/ui/lle_hosts.h"
 
 class GEText;
-struct EeUiLabel;
 
 class LLE_API UITextLabel : public UIControl {
 public:
-    UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
-                UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness);
+    UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness), mRust(ee_ui_label_new(this, ee_ui_label_host, UIF4(inRectangle), inFont, inLabelType, inBorderThickness)) { this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText); }
     virtual ~UITextLabel();
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiLabelCall::ChangeFont, (intptr_t)inFont); }
@@ -69,8 +68,8 @@ public:
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
     void SetText(const UWideString& inText, bool inReplace) { this->Call(EeUiLabelCall::SetText, (intptr_t)(const char*)inText, inReplace); }
-    intptr_t Call(EeUiLabelCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f) const { float f[4] = {f0, f1, f2, f3}; return ee_ui_label_call(this->mRust, c, a, b, f); }
-    intptr_t CallRect(EeUiLabelCall c, const GERectangle& r) const { float f[4] = {r.GetBottom(), r.GetLeft(), r.GetRight(), r.GetTop()}; return ee_ui_label_call(this->mRust, c, 0, 0, f); }
+    intptr_t Call(EeUiLabelCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f) const { return ee_ui_label_call(this->mRust, c, a, b, UIF4(f0, f1, f2, f3)); }
+    intptr_t CallRect(EeUiLabelCall c, const GERectangle& r) const { return ee_ui_label_call(this->mRust, c, 0, 0, UIF4(r)); }
     EeUiLabel* mRust;                       // the state (labelobj.rs)
 };
 
