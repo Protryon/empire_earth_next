@@ -29,7 +29,6 @@
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFMGStatusBar.h"
 #include "rust/game/screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
-static const float kBgOpacity = 0.15f;
 
 // Creates an improvement button, faintly tinted with a thin border, without a cost label
 EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -39,43 +38,17 @@ EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsi
                inBorderThickness),
       mScenarioEditor(inScenarioEditor)
 {
-    this->mNumQueued = 0;
-    this->mLevel = 0;
-    this->mLastMessageTime = 0;
-    this->mCostLabel = NULL;
-    this->SetBgOpacity(kBgOpacity);
-    this->SetBorderOpacity(kBgOpacity * 3.0f);
-    this->SetBorderThickness(1);
-    this->mDisabled = false;
+    ee_screens_upb_construct((uintptr_t)this);
 }
 
 // Presses the button unless the improvement is unavailable, and updates the help text
-void EEUIBUpgrade::ButtonDown()
-{
-    if (!this->GetDisabled())
-        UIButton::ButtonDown();
-    this->GetForm()->UpdateHelpString();
-}
+void EEUIBUpgrade::ButtonDown() { ee_screens_upb_button_down((uintptr_t)this); }
 
 // Snapshots the button and its cost label for drawing
-long EEUIBUpgrade::CopyData()
-{
-    long theResult = UIButton::CopyData();
-    if (theResult == kErrorOK && this->mCostLabel != NULL) {
-        this->GetForm()->GetManager()->AddDirtyRectangle(this->mCostLabel->GetRectangle(), this->GetForm());
-        theResult = this->mCostLabel->CopyData();
-    }
-    return theResult;
-}
+long EEUIBUpgrade::CopyData() { return (long)ee_screens_upb_copy_data((uintptr_t)this); }
 
 // Draws the button text and its cost label
-long EEUIBUpgrade::DrawTextA()
-{
-    long theResult = UIButton::DrawTextA();
-    if (theResult == kErrorOK && this->mCostLabel != NULL)
-        theResult = this->mCostLabel->DrawTextA();
-    return theResult;
-}
+long EEUIBUpgrade::DrawTextA() { return (long)ee_screens_upb_draw_text((uintptr_t)this); }
 
 // One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
 // NULL for none), the held text, the mouse location
@@ -144,28 +117,13 @@ void EEUIBUpgrade::UpdateCost(const UWideString& inText)
 }
 
 // Shows the hover state only when the improvement can be bought
-void EEUIBUpgrade::MouseOver()
-{
-    EEUnit* theUnit = NULL;
-    if (this->GetCanUpgrade(theUnit, NULL))
-        UIButton::MouseOver();
-}
+void EEUIBUpgrade::MouseOver() { ee_screens_upb_mouse_over((uintptr_t)this); }
 
 // Presses the button on a right press, capturing the mouse
-long EEUIBUpgrade::MouseRButtonDown()
-{
-    this->CaptureMouse();
-    this->ButtonDown();
-    return kErrorOK;
-}
+long EEUIBUpgrade::MouseRButtonDown() { return (long)ee_screens_upb_right_down((uintptr_t)this); }
 
 // Marks the button and its cost label dirty
-void EEUIBUpgrade::SetDirty(bool inDirty)
-{
-    if (inDirty == true && this->mCostLabel != NULL)
-        this->mCostLabel->SetDirty(true);
-    UIControl::SetDirty(inDirty);
-}
+void EEUIBUpgrade::SetDirty(bool inDirty) { ee_screens_upb_set_dirty((uintptr_t)this, inDirty); }
 
 // The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
 // are hud_views.rs')
@@ -319,3 +277,43 @@ extern "C" float ee_screenscpp_up_icon_top(uintptr_t inCall)
 { return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetY(); }
 extern "C" void ee_screenscpp_up_icon_set_location(uintptr_t inCall, float inX, float inY)
 { static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->SetLocation(GE2DPoint(inX, inY)); }
+// the constructor's body and the draw, dirty, mouse and press overrides: hud_bodies.rs over these (UI lane round 12)
+#define UPBB(b) ((EEUIBUpgrade*)(b))
+extern "C" void ee_screenscpp_upb_set_num_queued(uintptr_t inButton, int64_t inValue)
+{ UPBB(inButton)->mNumQueued = (long)inValue; }
+extern "C" void ee_screenscpp_upb_set_level(uintptr_t inButton, int64_t inValue)
+{ UPBB(inButton)->mLevel = (long)inValue; }
+extern "C" void ee_screenscpp_upb_set_last_message(uintptr_t inButton, uint64_t inValue)
+{ UPBB(inButton)->mLastMessageTime = (unsigned long)inValue; }
+extern "C" void ee_screenscpp_upb_set_cost_label(uintptr_t inButton, uintptr_t inLabel)
+{ UPBB(inButton)->mCostLabel = (UITextLabel*)inLabel; }
+extern "C" void ee_screenscpp_upb_bg_opacity(uintptr_t inButton, float inOpacity)
+{ UPBB(inButton)->SetBgOpacity(inOpacity); }
+extern "C" void ee_screenscpp_upb_border_opacity(uintptr_t inButton, float inOpacity)
+{ UPBB(inButton)->SetBorderOpacity(inOpacity); }
+extern "C" void ee_screenscpp_upb_border_thickness(uintptr_t inButton, uint32_t inThickness)
+{ UPBB(inButton)->SetBorderThickness(inThickness); }
+extern "C" void ee_screenscpp_upb_set_disabled(uintptr_t inButton, bool inValue)
+{ UPBB(inButton)->mDisabled = inValue; }
+extern "C" bool ee_screenscpp_upb_disabled(uintptr_t inButton) { return UPBB(inButton)->GetDisabled(); }
+extern "C" void ee_screenscpp_upb_base_button_down(uintptr_t inButton) { EEUIBUpgrade::BaseButtonDown(UPBB(inButton)); }
+extern "C" void ee_screenscpp_upb_update_help(uintptr_t inButton) { UPBB(inButton)->GetForm()->UpdateHelpString(); }
+extern "C" int64_t ee_screenscpp_upb_base_copy_data(uintptr_t inButton)
+{ return (int64_t)UPBB(inButton)->UIButton::CopyData(); }
+extern "C" uintptr_t ee_screenscpp_upb_cost_label(uintptr_t inButton) { return (uintptr_t)UPBB(inButton)->mCostLabel; }
+extern "C" void ee_screenscpp_upb_label_dirty_rect(uintptr_t inButton, uintptr_t inLabel)
+{ UPBB(inButton)->GetForm()->GetManager()->AddDirtyRectangle(((UITextLabel*)inLabel)->GetRectangle(), UPBB(inButton)->GetForm()); }
+extern "C" int64_t ee_screenscpp_upb_label_copy_data(uintptr_t inLabel)
+{ return (int64_t)((UITextLabel*)inLabel)->CopyData(); }
+extern "C" int64_t ee_screenscpp_upb_base_draw_text(uintptr_t inButton)
+{ return (int64_t)UPBB(inButton)->UIButton::DrawTextA(); }
+extern "C" int64_t ee_screenscpp_upb_label_draw_text(uintptr_t inLabel)
+{ return (int64_t)((UITextLabel*)inLabel)->DrawTextA(); }
+extern "C" bool ee_screenscpp_upb_can_upgrade(uintptr_t inButton, uintptr_t* inUnit)
+{ return UPBB(inButton)->GetCanUpgrade(*reinterpret_cast<EEUnit**>(inUnit), NULL); }
+extern "C" void ee_screenscpp_upb_base_mouse_over(uintptr_t inButton) { EEUIBUpgrade::BaseMouseOver(UPBB(inButton)); }
+extern "C" void ee_screenscpp_upb_capture(uintptr_t inButton) { EEUIBUpgrade::CaptureOf(UPBB(inButton)); }
+extern "C" void ee_screenscpp_upb_button_down(uintptr_t inButton) { EEUIBUpgrade::ButtonDownOf(UPBB(inButton)); }
+extern "C" void ee_screenscpp_upb_label_set_dirty(uintptr_t inLabel) { ((UITextLabel*)inLabel)->SetDirty(true); }
+extern "C" void ee_screenscpp_upb_base_set_dirty(uintptr_t inButton, bool inDirty)
+{ UPBB(inButton)->UIControl::SetDirty(inDirty); }

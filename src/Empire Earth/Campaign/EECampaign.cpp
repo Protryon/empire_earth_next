@@ -71,8 +71,8 @@
 #include "ee/EEPersistentTemplates.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEStringIDs.h"
-#include "rust/sim/scenario.h"
 #include "rust/game/campaign.h"
+#include "rust/sim/scenario.h"
 // the campaign archive's tag keys (unguarded file-scope globals, 0x5656a0 down to 0x5655f8)
 const UWideString kEECampaignAuthorNameKey("AuthorName");
 const UWideString kEECampaignAuthorEmailKey("AuthorEmail");

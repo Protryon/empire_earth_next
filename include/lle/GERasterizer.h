@@ -197,10 +197,6 @@ protected:
     // sActiveRasterizer); every call it makes on another object goes through GERasterizerHost (GERasterizer.cpp).
     EeGeRasterizer* mRust;
 
-    friend LLE_API long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance);   // Graphics Engine.cpp
-    friend void GEShutdown(bool inForced);
-    static void ClearRasterizers() { ee_ge_rast_list(0, NULL, 0); }
-    static void AddRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_list(1, inRasterizer, 0); }
     friend class GETexture;                 // calls CreateTextureHandle/DestroyTextureHandle (GETexture.cpp)
     friend struct GERasterizerHost;
     GERasterizer(const GERasterizer&) = delete;

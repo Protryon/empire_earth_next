@@ -48,7 +48,7 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGRust.h"
+#include "rust/sim/units.h"
 
 // port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
 // makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit
@@ -64,24 +64,7 @@ static EEComplexUnit* LoadedComplexUnit(unsigned long inID)
 
 static void RestoreLoadedContacts()
 {
-    std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > theContacts;
-    theContacts.swap(sLoadedContacts);
-    for (size_t i = 0; i < theContacts.size(); i++) {
-        EEComplexUnit* theUnit = theContacts[i].first.first;
-        if (static_cast<RTSUnit*>(theUnit) == gWorld.GetUnit(theContacts[i].first.second))
-            theUnit->ClearContacts();
-    }
-    for (size_t i = 0; i < theContacts.size(); i++) {
-        EEComplexUnit* theUnit = theContacts[i].first.first;
-        if (static_cast<RTSUnit*>(theUnit) != gWorld.GetUnit(theContacts[i].first.second))
-            continue;
-        const std::vector<unsigned long>& theIDs = theContacts[i].second;
-        for (size_t k = theIDs.size(); k-- > 0;) {   // AddContact adds at the head: the last saved first
-            EEComplexUnit* theContact = LoadedComplexUnit(theIDs[k]);
-            if (theContact != NULL)
-                theUnit->AddContact(theContact);
-        }
-    }
+    ee_units_dop_body(EE_UNITS_DOP_DO_RESTORE_CONTACTS, NULL, NULL, 0, 0);   // dop_file.rs
 }
 
 // Creates an empty complex doppelganger with no model, hit points or tile
@@ -188,122 +171,20 @@ void EEComplexDoppelganger::Clear()
 // built flag, position and scale (a unit with no complex part stands built at its tile centre), then loads the media
 void EEComplexDoppelganger::Initialize(EEUnit* inUnit, EEPlayer* inPlayer, RTSTile* inTile)
 {
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    EEDoppelganger::Initialize(inUnit, inPlayer, inTile);
-    if (theClass->mCategory == kUnitCategoryResource)
-        this->mPackedHitPoints = inUnit->mResourceAmount | 0x80000000;
-    else
-        this->mPackedHitPoints = inUnit->mHitPoints;
-    if (theUnit != NULL) {
-        if (theUnit->IsFoundation() == true)
-            this->mModel = EEGetPlayerClassGraphic(theUnit->GetPlayer(), theClass);
-        else
-            this->mModel = inUnit->GetModel();
-        this->mFrame = theUnit->mPhysicalModel.GetFrame();
-        this->mAnimation = theUnit->mAnimation;
-        if (theUnit->mIsBuilt)
-            this->mPackedHitPoints |= 0x80000000;
-        this->mTransformation = theUnit->mPhysicalModel.GetLocation();
-        this->mScale = theUnit->mPhysicalModel.GetScale();
-        this->mIsFoundation = theUnit->IsFoundation();
-    } else {
-        this->mModel = inUnit->GetModel();
-        this->mFrame = 0;
-        this->mAnimation = 0;
-        this->mScale = theClass->GetScale();
-        this->mPackedHitPoints |= 0x80000000;
-        this->mIsFoundation = false;
-        this->mTransformation.MakeIdentity();
-        this->mTransformation.MakeIdentity();
-        float theHalf = inUnit->mUnitClass->mTileSize * 0.5f;
-        GE3DPoint thePosition(inUnit->mTileX + theHalf, inUnit->mTileY + theHalf, 0.0f);
-        thePosition.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(thePosition.GetX(), thePosition.GetY()));
-        this->mTransformation.SetPosition(thePosition);
-    }
-    this->mTileX = inUnit->mTileX;
-    this->mTileY = inUnit->mTileY;
-    this->mModel->LoadMedia();
+    ee_units_dop_body(EE_UNITS_DOP_DO_INITIALIZE, this, inUnit, (int64_t)(uintptr_t)inPlayer, (int64_t)(uintptr_t)inTile);   // dop_file.rs
 }
 
 // Copies another complex doppelganger's remembered view for a new viewing player
 void EEComplexDoppelganger::Initialize(EEDoppelganger* inOther, EEPlayer* inPlayer, RTSTile* inTile)
 {
-    EEComplexDoppelganger* theOther = dynamic_cast<EEComplexDoppelganger*>(inOther);
-    EEDoppelganger::Initialize(inOther, inPlayer, inTile);
-    this->mModel = theOther->mModel;
-    this->mFrame = theOther->mFrame;
-    this->mAnimation = theOther->mAnimation;
-    this->mPackedHitPoints = theOther->mPackedHitPoints;
-    this->mScale = theOther->mScale;
-    this->mTransformation = theOther->mTransformation;
-    this->mTileX = theOther->mTileX;
-    this->mTileY = theOther->mTileY;
-    this->mIsFoundation = theOther->mIsFoundation;
+    ee_units_dop_body(EE_UNITS_DOP_DO_INITIALIZE_COPY, this, inOther, (int64_t)(uintptr_t)inPlayer, (int64_t)(uintptr_t)inTile);   // dop_file.rs
 }
 
 // Reads the transformation, model index, hit points, frame, animation, scale and tile after the base data (the
 // foundation flag only from minor version 0xe6 on); returns the first read error
 long EEComplexDoppelganger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    if (inMajorVersion == 0 && inMinorVersion < 0xe6) {
-        theResult = EEDoppelganger::Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult != kErrorOK)
-            return theResult;
-        this->mTransformation.Load(inFile);
-        long theModel;
-        theResult = inFile.Read(theModel);
-        this->mModel = reinterpret_cast<EEModel*>(theModel);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = inFile.Read(this->mPackedHitPoints);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = inFile.Read(this->mFrame);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = inFile.Read(this->mAnimation);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = inFile.Read(this->mScale);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = inFile.Read(this->mTileX);
-        if (theResult != kErrorOK)
-            return theResult;
-        return inFile.Read(this->mTileY);
-    }
-    theResult = EEDoppelganger::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    this->mTransformation.Load(inFile);
-    {
-        long theModel;
-        theResult = inFile.Read(theModel);
-        this->mModel = reinterpret_cast<EEModel*>(theModel);
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mPackedHitPoints);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mFrame);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mAnimation);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mScale);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mTileX);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mTileY);
-    if (theResult != kErrorOK)
-        return theResult;
-    return inFile.Read(this->mIsFoundation);
+    return (long)ee_units_dop_body(EE_UNITS_DOP_DO_LOAD, this, &inFile, inMajorVersion, inMinorVersion);   // dop_file.rs
 }
 
 // Turns the loaded model index back into its media (clamping the frame) and puts the doppelganger on its tile; frees
@@ -329,88 +210,20 @@ long EEComplexDoppelganger::RepairPointers(unsigned long inFirst, unsigned long 
 // data; returns the first write error
 long EEComplexDoppelganger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEDoppelganger::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    this->mTransformation.Save(outFile);
-    long theModel = this->mModel->mMediaIndex;
-    theResult = outFile.Write(theModel);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mPackedHitPoints);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mFrame);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mAnimation);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mScale);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTileX);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTileY);
-    if (theResult != kErrorOK)
-        return theResult;
-    return outFile.Write(this->mIsFoundation);
+    return (long)ee_units_dop_body(EE_UNITS_DOP_DO_SAVE, this, &outFile, inMajorVersion, inMinorVersion);   // dop_file.rs
 }
 
-// The sections of EEComplexUnit::Load (ee_units unit_load.rs EE_UNITS_UNIT_LOAD_SECTION_*): the containers with the
-// original's loops (io.i carries the original's theValue, or theState, in and out; io.b = 1 when the held units' loop
-// left for LoadLateVersions) and the port's live state; the result
+// The sections of EEComplexUnit::Load left to C++ (ee_units unit_load.rs EE_UNITS_UNIT_LOAD_SECTION_*): the waypoints
+// (the path list's) and the goal queues (each queue's Load); the containers and the live state are dop_load.rs's
 static int32_t EEComplexUnitLoadSection(EEUnitSaveContext& inContext, uint32_t inIndex, EeUnitsUnitSaveIo* io)
 {
     FSFile& inFile = *inContext.mFile;
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inContext.mUnit);
     unsigned long inMajorVersion = inContext.mMajorVersion;
     unsigned long inMinorVersion = inContext.mMinorVersion;
-    unsigned long theValue = (unsigned long)io->i;
     long theCount = 0;
     long theResult = 0;
     switch (inIndex) {
-    case EE_UNITS_UNIT_LOAD_SECTION_BUILD_QUEUE: {
-        long theFirst;
-        unsigned long theSecond;
-        theUnit->mBuildQueue.clear();
-        theResult = inFile.Read(theCount);
-        for (long i = 0; i < theCount && theResult == 0; i++) {
-            theResult = inFile.Read(theFirst);
-            if (theResult == 0) {
-                if (inMinorVersion < 0xf8)
-                    theSecond = 0;
-                else
-                    theResult = inFile.Read(theSecond);
-                if (theResult == 0) {
-                    EEProductionEntry thePair = {theFirst, theSecond};
-                    theUnit->mBuildQueue.push_back(thePair);
-                }
-            }
-        }
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_SECTION_CITIZEN_QUEUE:
-        theUnit->mCitizenBuildQueue.clear();
-        theResult = inFile.Read(theCount);
-        for (long j = 0; j < theCount && theResult == 0; j++) {
-            theResult = inFile.Read(theValue);
-            if (theResult == 0)
-                theUnit->mCitizenBuildQueue.push_back(reinterpret_cast<EEUnit*>(theValue));
-        }
-        io->i = (int64_t)theValue;
-        return theResult;
-    case EE_UNITS_UNIT_LOAD_SECTION_CARGO:
-        theUnit->mCargo.clear();
-        theResult = inFile.Read(theCount);
-        for (long k = 0; k < theCount && theResult == 0; k++) {
-            theResult = inFile.Read(theValue);
-            if (theResult == 0)
-                theUnit->mCargo.push_back(reinterpret_cast<EEComplexUnit*>(theValue));
-        }
-        io->i = (int64_t)theValue;
-        return theResult;
     case EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS: {
         EEComplexUnitWaypoint theWaypoint;
         theUnit->mWaypoints.clear();
@@ -434,126 +247,14 @@ static int32_t EEComplexUnitLoadSection(EEUnitSaveContext& inContext, uint32_t i
             theResult = inFile.Read(theUnit->mHealEffect.mValue);
         return theResult;
     }
-    case EE_UNITS_UNIT_LOAD_SECTION_HELD_UNITS:
-        io->b = 0;
-        theResult = inFile.Read(theCount);
-        theUnit->mHeldUnits.resize(theCount, NULL);
-        for (long n = 0; n < theCount; n++) {
-            if (theResult != 0) {
-                io->b = 1;   // goto LoadLateVersions
-                break;
-            }
-            theResult = inFile.Read(theValue);
-            theUnit->mHeldUnits[n] = reinterpret_cast<EEComplexUnit*>(theValue);
-        }
-        io->i = (int64_t)theValue;
-        return theResult;
-    case EE_UNITS_UNIT_LOAD_SECTION_UNIT_VARIABLES: {
-        long theState = (long)io->i;
-        theResult = inFile.Read(theCount);
-        for (long r = 0; r < theCount && theResult == 0; r++) {
-            theResult = inFile.Read(theState);
-            if (theResult == 0)
-                theUnit->mUnitVariables[r] = theState;
-        }
-        io->i = (int64_t)theState;
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_SECTION_LIVE_STATE:
-        break;
     default:
         return 0;
     }
-    struct LiveState {
-        float mAnimationFraction, mCollisionRadius, mPushVelocityX, mPushVelocityY, mF24C;
-        long mNextFrame, mAIState;
-        unsigned long mNextTriggerTime;
-        std::deque<EEComplexUnitAttacker> mIgnoredTargets;
-        std::vector<U2DPoint<long> > mBoundedPathTiles;
-        // port (0.256): the model's frame (RepairPointers restarts an animation at its last frame), the counters
-        // the original saved as fractions (FinishLoad) or set at load (the rotting time, a builder's research)
-        bool mRunning = false;
-        unsigned long mFrame = 0;
-        long mFlightTime = 0, mRottingAwayTime = 0, mCurrentResearch = 0, mLastHitPoints = 0, mGarrisonCount = 0, mPower = 0;
-        // the turret angles as read above: the load's LoadMedia makes the array again, all zero, after Load (a
-        // frigate's turrets then had to turn to their target again: space game, seed 2's 1900 s save, where the
-        // continued frigate fired at its first tick)
-        std::vector<float> mTurretAngles;
-    } theLive;
-    for (long q = 0; q < theUnit->mNumTurretAngles && theUnit->mTurretAngles != NULL; q++)
-        theLive.mTurretAngles.push_back(theUnit->mTurretAngles[q]);
-    unsigned long theLiveCount = 0;
-    if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
-        && (theResult = inFile.Read(theLive.mCollisionRadius)) == 0 && (theResult = inFile.Read(theLive.mPushVelocityX)) == 0
-        && (theResult = inFile.Read(theLive.mPushVelocityY)) == 0 && (theResult = inFile.Read(theLive.mF24C)) == 0
-        && (theResult = inFile.Read(theLive.mAIState)) == 0 && (theResult = inFile.Read(theLive.mNextTriggerTime)) == 0)
-        theResult = inFile.Read(theLiveCount);
-    for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
-        EEComplexUnitAttacker theAttacker;
-        if ((theResult = inFile.Read(theAttacker.mTileX)) == 0 && (theResult = inFile.Read(theAttacker.mTileY)) == 0
-            && (theResult = inFile.Read(theAttacker.mFromX)) == 0 && (theResult = inFile.Read(theAttacker.mFromY)) == 0
-            && (theResult = inFile.Read(theAttacker.mUnitID)) == 0 && (theResult = inFile.Read(theAttacker.mTime)) == 0)
-            theLive.mIgnoredTargets.push_back(theAttacker);
-    }
-    theLiveCount = 0;
-    if (theResult == 0)
-        theResult = inFile.Read(theLiveCount);
-    for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
-        U2DPoint<long> theTile;
-        if ((theResult = inFile.Read(theTile.mX)) == 0 && (theResult = inFile.Read(theTile.mY)) == 0)
-            theLive.mBoundedPathTiles.push_back(theTile);
-    }
-    unsigned long theUnitID = theUnit->mUnitID;
-    EEComplexUnit* theSelf = theUnit;   // only while it is the world's unit of that id (not a doppelganger, not freed)
-    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256), see LiveState
-        theLive.mRunning = true;
-        if ((theResult = inFile.Read(theLive.mFrame)) == 0 && (theResult = inFile.Read(theLive.mFlightTime)) == 0
-            && (theResult = inFile.Read(theLive.mRottingAwayTime)) == 0 && (theResult = inFile.Read(theLive.mCurrentResearch)) == 0
-            && (theResult = inFile.Read(theLive.mLastHitPoints)) == 0 && (theResult = inFile.Read(theLive.mGarrisonCount)) == 0
-            && (theResult = inFile.Read(theLive.mPower)) == 0)
-            theResult = inFile.Read(theLiveCount);
-        std::vector<unsigned long> theContacts;
-        for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
-            unsigned long theID = 0;
-            if ((theResult = inFile.Read(theID)) == 0)
-                theContacts.push_back(theID);
-        }
-        if (theResult == 0) {
-            if (sLoadedContacts.empty())
-                EEAfterLoad(RestoreLoadedContacts);   // once per load (the first unit read registers it; it runs at the first tick, every unit read)
-            sLoadedContacts.push_back(std::make_pair(std::make_pair(theSelf, theUnitID), theContacts));
-        }
-    }
-    if (theResult == 0)
-        EEAfterLoad([theUnitID, theSelf, theLive]() {
-            EEComplexUnit* theUnit = theSelf;
-            if (static_cast<RTSUnit*>(theUnit) != gWorld.GetUnit(theUnitID))
-                return;
-            theUnit->mAnimationFraction = theLive.mAnimationFraction;
-            theUnit->mNextFrame = theLive.mNextFrame;
-            theUnit->mCollisionRadius = theLive.mCollisionRadius;
-            theUnit->mPushVelocityX = theLive.mPushVelocityX;
-            theUnit->mPushVelocityY = theLive.mPushVelocityY;
-            theUnit->mF24C = theLive.mF24C;
-            theUnit->mAIState = theLive.mAIState;
-            theUnit->mNextTriggerTime = theLive.mNextTriggerTime;
-            theUnit->mIgnoredTargets = theLive.mIgnoredTargets;
-            theUnit->mBoundedPathTiles = theLive.mBoundedPathTiles;
-            if (theLive.mRunning) {
-                theUnit->mPhysicalModel.SetFrame(theLive.mFrame);
-                theUnit->mFlightTime = theLive.mFlightTime;
-                theUnit->mRottingAwayTime = theLive.mRottingAwayTime;
-                theUnit->mCurrentResearch = theLive.mCurrentResearch;
-                theUnit->mLastHitPoints = theLive.mLastHitPoints;
-                theUnit->mGarrisonCount = theLive.mGarrisonCount;
-                theUnit->mPower = theLive.mPower;
-            }
-            unsigned long theParts = theUnit->GetModel() != NULL ? theUnit->GetModel()->GetNumParts() : 0;
-            for (unsigned long q = 0; q < theLive.mTurretAngles.size() && q < theParts && theUnit->mTurretAngles != NULL; q++)
-                theUnit->mTurretAngles[q] = theLive.mTurretAngles[q];
-        });
-    return theResult;
 }
+
+// the load's scratch values: the build queue entry's second, the slot of the next held unit or unit variable
+static unsigned long sLoadSecond;
+static size_t sLoadSlot;
 
 // Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
 // its pending path; fields newer than the file get defaults; returns the read status. port (R5b.4, round 26): the
@@ -588,282 +289,339 @@ long EEComplexUnit::FinishLoad(long inMajorVersion, long inMinorVersion)
     return EEUnit::FinishLoad(inMajorVersion, inMinorVersion);
 }
 
-// Turns the loaded ids back into units, groups, research and behaviour, dropping the missing ones; strands a unit whose
-// transport or owner vanished and clears goal queues that fail to repair; returns the last status
+/// Turns the loaded ids back into units, groups, research and behaviour, dropping the missing ones; strands a unit whose
+// transport or owner vanished and clears goal queues that fail to repair; returns the last status. port (the units'
+// lane, round 7): the body is Rust (ee_units dop_repair.rs) over ee_units_dop_host's statements
 long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    std::vector<long> theUnused;
-    std::vector<EEComplexUnit*> theCargo;
-    std::vector<EEProductionEntry> theResearch;
-    bool theFailed = false;
-    bool theLostContainer = false;
-    bool theAutoWaypoint = false;
-    long theResult = EEUnit::RepairPointers(inMajorVersion, inMinorVersion);
-    if (theResult != 0)
-        return theResult;
-    if (this->mCommand == NULL && this->GetUnitClass() != NULL)
-        this->StartAction(kActionIdle);
-    if (this->GetUnitClass() == NULL) {
-        this->mPatrolGroup = NULL;
-        this->mCurrentResearch = kTechNone;
-        this->mBuildQueue.clear();
-        this->mCitizenBuildQueue.clear();
-        this->mCargo.clear();
-        this->mPreviousPart = NULL;
-        this->mNextPart = NULL;
-        this->mHomeBase = NULL;
-        this->mContainer = NULL;
-        this->mGatheredResource = NULL;
-        this->mLastResource = NULL;
-        this->mLastAttacker = NULL;
-        this->mOwner = NULL;
-        this->mMine = NULL;
-        this->mHolder = NULL;
-        this->mBehavior = NULL;
-        this->mHerd = NULL;
-        for (long empty = this->mHeldUnits.size() - 1; empty >= 0; empty--)
-            this->mHeldUnits[empty] = NULL;
-        for (unsigned long item = 0; item < this->mGoalQueues.size(); item++) {
-            theFailed = false;
-            for (unsigned long goal = 0; goal < this->mGoalQueues[item].mGoals.size(); goal++) {
-                EEUnitGoal* theGoal = this->mGoalQueues[item].mGoals[goal];
-                theResult = theGoal->RepairPointers(inMajorVersion, inMinorVersion);
-                if (theResult == 0 && theGoal->mKind == kGoalAttackUnit && inMajorVersion == 0 && inMinorVersion < 0xe0) {
-                    EEUGRust* theAttack = static_cast<EEUGRust*>(theGoal);
-                    if (theAttack->GetAttacker() != this)
-                        theAttack->SetAttacker(this);
-                }
-                if (!theFailed)
-                    theFailed = theResult != 0;
-            }
-            if (theFailed)
-                this->mGoalQueues[item].Clear();
-        }
-        return theResult;
+    return (long)ee_units_dop_repair_pointers(this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+}
+
+// RepairPointers's locals (the cargo and research kept, the new turret angles)
+static std::vector<EEComplexUnit*> sRepairCargo;
+static std::vector<EEProductionEntry> sRepairResearch;
+static float* sRepairTurrets;
+
+static float EEDopFloat(int64_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, sizeof theValue);
+    return theValue;
+}
+
+static int64_t EEDopBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, sizeof theBits);
+    return theBits;
+}
+
+template <class T> static T* EEDopObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// an ignored target of dop_load.rs's six values (tile x, y, from x, y, unit id, time)
+static EEComplexUnitAttacker EEDopAttacker(const int64_t* inValues)
+{
+    EEComplexUnitAttacker theAttacker;
+    theAttacker.mTileX = (long)inValues[0];
+    theAttacker.mTileY = (long)inValues[1];
+    theAttacker.mFromX = (long)inValues[2];
+    theAttacker.mFromY = (long)inValues[3];
+    theAttacker.mUnitID = (unsigned long)inValues[4];
+    theAttacker.mTime = (unsigned long)inValues[5];
+    return theAttacker;
+}
+
+template <class T> static uint64_t EEDopHandle(T* inObject)
+{
+    return (uint64_t)(uintptr_t)inObject;
+}
+
+// dop_file.rs's scratch values: the loaded model id, the contacts being restored (the originals' locals)
+static long sDopModelID;
+static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > sDopContacts;
+
+// a complex doppelganger's member (dop_file.rs EE_UNITS_DOP_FIELD_*) read from the file
+static long EEDopReadField(EEComplexDoppelganger* inDop, FSFile& inFile, int64_t inField)
+{
+    switch (inField) {
+    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: return inFile.Read(inDop->mPackedHitPoints);
+    case EE_UNITS_DOP_FIELD_FRAME: return inFile.Read(inDop->mFrame);
+    case EE_UNITS_DOP_FIELD_ANIMATION: return inFile.Read(inDop->mAnimation);
+    case EE_UNITS_DOP_FIELD_SCALE: return inFile.Read(inDop->mScale);
+    case EE_UNITS_DOP_FIELD_TILE_X: return inFile.Read(inDop->mTileX);
+    case EE_UNITS_DOP_FIELD_TILE_Y: return inFile.Read(inDop->mTileY);
+    default: return inFile.Read(inDop->mIsFoundation);
     }
-    long theCount = this->mCitizenBuildQueue.size();
-    for (long unit = 0; unit < theCount; unit++) {
-        this->mCitizenBuildQueue[unit] = static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mCitizenBuildQueue[unit])));
-        this->mCitizenBuildQueue[unit]->Reference();
+}
+
+// a complex doppelganger's member written to the file
+static long EEDopWriteField(EEComplexDoppelganger* inDop, FSFile& outFile, int64_t inField)
+{
+    switch (inField) {
+    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: return outFile.Write(inDop->mPackedHitPoints);
+    case EE_UNITS_DOP_FIELD_FRAME: return outFile.Write(inDop->mFrame);
+    case EE_UNITS_DOP_FIELD_ANIMATION: return outFile.Write(inDop->mAnimation);
+    case EE_UNITS_DOP_FIELD_SCALE: return outFile.Write(inDop->mScale);
+    case EE_UNITS_DOP_FIELD_TILE_X: return outFile.Write(inDop->mTileX);
+    case EE_UNITS_DOP_FIELD_TILE_Y: return outFile.Write(inDop->mTileY);
+    default: return outFile.Write(inDop->mIsFoundation);
     }
-    theCount = this->mCargo.size();
-    for (long cargo = 0; cargo < theCount; cargo++) {
-        if (this->GetPlayer()->HasLoadedUnitID(USavedID(this->mCargo[cargo])))
-            continue;
-        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mCargo[cargo])));
-        theUnit->Reference();
-        theCargo.push_back(theUnit);
+}
+
+// a complex doppelganger's member copied from another's
+static void EEDopCopyField(EEComplexDoppelganger* inDop, EEComplexDoppelganger* inOther, int64_t inField)
+{
+    switch (inField) {
+    case EE_UNITS_DOP_FIELD_MODEL: inDop->mModel = inOther->mModel; break;
+    case EE_UNITS_DOP_FIELD_FRAME: inDop->mFrame = inOther->mFrame; break;
+    case EE_UNITS_DOP_FIELD_ANIMATION: inDop->mAnimation = inOther->mAnimation; break;
+    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: inDop->mPackedHitPoints = inOther->mPackedHitPoints; break;
+    case EE_UNITS_DOP_FIELD_SCALE: inDop->mScale = inOther->mScale; break;
+    case EE_UNITS_DOP_FIELD_TRANSFORMATION: inDop->mTransformation = inOther->mTransformation; break;
+    case EE_UNITS_DOP_FIELD_TILE_X: inDop->mTileX = inOther->mTileX; break;
+    case EE_UNITS_DOP_FIELD_TILE_Y: inDop->mTileY = inOther->mTileY; break;
+    default: inDop->mIsFoundation = inOther->mIsFoundation; break;
     }
-    this->mCargo.clear();
-    this->mCargo = theCargo;
-    for (unsigned long item = 0; item < this->mGoalQueues.size(); item++) {
-        theFailed = false;
-        for (unsigned long goal = 0; goal < this->mGoalQueues[item].mGoals.size(); goal++) {
-            EEUnitGoal* theGoal = this->mGoalQueues[item].mGoals[goal];
-            theResult = theGoal->RepairPointers(inMajorVersion, inMinorVersion);
-            if (theResult == 0) {
-                if (theGoal->mKind == kGoalAttackUnit && inMajorVersion == 0 && inMinorVersion < 0xe0) {
-                    EEUGRust* theAttack = static_cast<EEUGRust*>(theGoal);
-                    if (theAttack->GetAttacker() != this)
-                        theAttack->SetAttacker(this);
-                }
-            } else if (theGoal->mKind == kGoalPatrol)
-                this->GetPlayer()->AddUnitToRepatrol(this);
-            if (!theFailed)
-                theFailed = theResult != 0;
-            if (theGoal->mKind == kGoalLocation) {
-                EEUGRust* theLocation = EELocationGoalCast(theGoal);
-                theAutoWaypoint = theLocation->GetIsAutoWaypoint() == true;
-            } else
-                theAutoWaypoint = false;
-            if (theResult == 0 && item == 0 && theGoal->mKind == kGoalBuildRepair)
-                this->mCurrentResearch = static_cast<EEUGRust*>(theGoal)->GetBuildTechTreeID();
-        }
-        if (!theFailed)
-            continue;
-        this->mGoalQueues[item].Clear();
-        if (item != 0 || this->GetUnitClass() == NULL || this->GetCommandType() == kActionDying)
-            continue;
-        this->StartAction(kActionIdle);
-        if (this->mCurrentPhysicsAction != 3)
-            this->mCurrentPhysicsAction = 3;
+}
+
+// The C++ of EEComplexUnit::RepairPointers's Rust body (ee_units dop_repair.rs; EE_UNITS_DOP_*): one statement of the
+// original each, in its order; inA an object, inB and inC values
+extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC)
+{
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEUnitGoal* theGoal = EEDopObject<EEUnitGoal>(inA);
+    EEComplexUnit* theOther = EEDopObject<EEComplexUnit>(inA);
+    EETechTreeNode* theNode = EEDopObject<EETechTreeNode>(inA);
+    EEComplexDoppelganger* theDop = static_cast<EEComplexDoppelganger*>(inUnit);
+    FSFile* theFile = EEDopObject<FSFile>(inA);
+    EEUnit* theSeen = EEDopObject<EEUnit>(inA);
+    switch (inOp) {
+    case EE_UNITS_DOP_BASE_REPAIR: return theUnit->EEUnit::RepairPointers((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_DOP_COMMAND_IS_NULL: return theUnit->mCommand == NULL;
+    case EE_UNITS_DOP_HAS_CLASS: return theUnit->GetUnitClass() != NULL;
+    case EE_UNITS_DOP_START_ACTION: theUnit->StartAction((long)inB); return 0;
+    case EE_UNITS_DOP_SET_PATROL_GROUP: theUnit->mPatrolGroup = EEDopObject<EEPPatrolGroup>(inA); return 0;
+    case EE_UNITS_DOP_SET_CURRENT_RESEARCH: theUnit->mCurrentResearch = (long)inB; return 0;
+    case EE_UNITS_DOP_BUILD_QUEUE_CLEAR: theUnit->mBuildQueue.clear(); return 0;
+    case EE_UNITS_DOP_CITIZEN_QUEUE_CLEAR: theUnit->mCitizenBuildQueue.clear(); return 0;
+    case EE_UNITS_DOP_CARGO_CLEAR: theUnit->mCargo.clear(); return 0;
+    case EE_UNITS_DOP_SET_PREVIOUS_PART: theUnit->mPreviousPart = theOther; return 0;
+    case EE_UNITS_DOP_SET_NEXT_PART: theUnit->mNextPart = theOther; return 0;
+    case EE_UNITS_DOP_SET_HOME_BASE: theUnit->mHomeBase = theOther; return 0;
+    case EE_UNITS_DOP_SET_CONTAINER: theUnit->mContainer = theOther; return 0;
+    case EE_UNITS_DOP_SET_GATHERED_FIELD: theUnit->mGatheredResource = EEDopObject<EEUnit>(inA); return 0;
+    case EE_UNITS_DOP_SET_LAST_RESOURCE_FIELD: theUnit->mLastResource = EEDopObject<EEUnit>(inA); return 0;
+    case EE_UNITS_DOP_SET_LAST_ATTACKER: theUnit->mLastAttacker = theOther; return 0;
+    case EE_UNITS_DOP_SET_OWNER: theUnit->mOwner = theOther; return 0;
+    case EE_UNITS_DOP_SET_MINE: theUnit->mMine = EEDopObject<EEUnit>(inA); return 0;
+    case EE_UNITS_DOP_SET_HOLDER: theUnit->mHolder = theOther; return 0;
+    case EE_UNITS_DOP_SET_BEHAVIOR: theUnit->mBehavior = EEDopObject<EEUnitBehavior>(inA); return 0;
+    case EE_UNITS_DOP_SET_HERD: theUnit->mHerd = EEDopObject<EEHerd>(inA); return 0;
+    case EE_UNITS_DOP_HELD_COUNT: return (int64_t)theUnit->mHeldUnits.size();
+    case EE_UNITS_DOP_SET_HELD: theUnit->mHeldUnits[(size_t)inB] = theOther; return 0;
+    case EE_UNITS_DOP_GOAL_QUEUE_COUNT: return (int64_t)theUnit->mGoalQueues.size();
+    case EE_UNITS_DOP_GOAL_COUNT: return (int64_t)theUnit->mGoalQueues[(size_t)inB].mGoals.size();
+    case EE_UNITS_DOP_GOAL_AT: return EEDopHandle(theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]);
+    case EE_UNITS_DOP_GOAL_REPAIR: return theGoal->RepairPointers((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_DOP_GOAL_KIND: return theGoal->mKind;
+    case EE_UNITS_DOP_ATTACKER_IS_OTHER: return static_cast<EEUGRust*>(theGoal)->GetAttacker() != theUnit;
+    case EE_UNITS_DOP_SET_ATTACKER: static_cast<EEUGRust*>(theGoal)->SetAttacker(theUnit); return 0;
+    case EE_UNITS_DOP_GOAL_QUEUE_CLEAR: theUnit->mGoalQueues[(size_t)inB].Clear(); return 0;
+    case EE_UNITS_DOP_CITIZEN_COUNT: return (int64_t)theUnit->mCitizenBuildQueue.size();
+    case EE_UNITS_DOP_CITIZEN_RESOLVE:
+        theUnit->mCitizenBuildQueue[(size_t)inB] = static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mCitizenBuildQueue[(size_t)inB])));
+        return 0;
+    case EE_UNITS_DOP_CITIZEN_REFERENCE: theUnit->mCitizenBuildQueue[(size_t)inB]->Reference(); return 0;
+    case EE_UNITS_DOP_CARGO_COUNT: return (int64_t)theUnit->mCargo.size();
+    case EE_UNITS_DOP_CARGO_ID: return USavedID(theUnit->mCargo[(size_t)inB]);
+    case EE_UNITS_DOP_HAS_LOADED_ID: return theUnit->GetPlayer()->HasLoadedUnitID((unsigned long)inB);
+    case EE_UNITS_DOP_WORLD_COMPLEX: return EEDopHandle(EEUnitCast<EEComplexUnit>(gWorld.GetUnit((unsigned long)inB)));
+    case EE_UNITS_DOP_REFERENCE: EEDopObject<RTSUnit>(inA)->Reference(); return 0;
+    case EE_UNITS_DOP_SCRATCH_CARGO_CLEAR: sRepairCargo.clear(); return 0;
+    case EE_UNITS_DOP_SCRATCH_CARGO_PUSH: sRepairCargo.push_back(theOther); return 0;
+    case EE_UNITS_DOP_CARGO_ASSIGN: theUnit->mCargo = sRepairCargo; return 0;
+    case EE_UNITS_DOP_ADD_REPATROL: theUnit->GetPlayer()->AddUnitToRepatrol(theUnit); return 0;
+    case EE_UNITS_DOP_LOCATION_AUTO: return EELocationGoalCast(theGoal)->GetIsAutoWaypoint() == true;
+    case EE_UNITS_DOP_BUILD_TECH: return static_cast<EEUGRust*>(theGoal)->GetBuildTechTreeID();
+    case EE_UNITS_DOP_COMMAND_TYPE: return theUnit->GetCommandType();
+    case EE_UNITS_DOP_PHYSICS_ACTION: return theUnit->mCurrentPhysicsAction;
+    case EE_UNITS_DOP_SET_PHYSICS_ACTION: theUnit->mCurrentPhysicsAction = (long)inB; return 0;
+    case EE_UNITS_DOP_PATROL_IS_UNSET: return theUnit->mPatrolGroup == (EEPPatrolGroup*)-1;
+    case EE_UNITS_DOP_PLAYER_PATROL_GROUP: return EEDopHandle(theUnit->GetPlayer()->GetPatrolGroup(USavedID(theUnit->mPatrolGroup)));
+    case EE_UNITS_DOP_PATROL_GROUP: return EEDopHandle(theUnit->mPatrolGroup);
+    case EE_UNITS_DOP_PATROL_REFERENCE: ee_units_pg_reference(theUnit->mPatrolGroup); return 0;
+    case EE_UNITS_DOP_PREVIOUS_PART_ID: return USavedID(theUnit->mPreviousPart);
+    case EE_UNITS_DOP_NEXT_PART_ID: return USavedID(theUnit->mNextPart);
+    case EE_UNITS_DOP_HOME_BASE_ID: return USavedID(theUnit->mHomeBase);
+    case EE_UNITS_DOP_CONTAINER_ID: return USavedID(theUnit->mContainer);
+    case EE_UNITS_DOP_TRANSPORT_CAPACITY: return theOther->mUnitClass->mTransportCapacity;
+    case EE_UNITS_DOP_HAS_CARGO_SELF: return theOther->HasCargo(theUnit);
+    case EE_UNITS_DOP_HAS_CARGO_ID: return theOther->HasCargo(reinterpret_cast<EEComplexUnit*>(theUnit->mUnitID));
+    case EE_UNITS_DOP_CURRENT_RESEARCH: return theUnit->mCurrentResearch;
+    case EE_UNITS_DOP_SET_PRODUCTION_TIME: theUnit->mProductionTime = (long)inB; return 0;
+    case EE_UNITS_DOP_TECH_NODE: return EEDopHandle(theUnit->mPlayer->mTechnologies->Get((long)inB));
+    case EE_UNITS_DOP_IS_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
+    case EE_UNITS_DOP_NODE_CLASS_MISSING:
+        return theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL;
+    case EE_UNITS_DOP_NODE_DISALLOW: theNode->mIsAllowed = false; return 0;
+    case EE_UNITS_DOP_BUILD_QUEUE_COUNT: return (int64_t)theUnit->mBuildQueue.size();
+    case EE_UNITS_DOP_BUILD_QUEUE_TECH: return theUnit->mBuildQueue[(size_t)inB].mTechnology;
+    case EE_UNITS_DOP_SCRATCH_RESEARCH_CLEAR: sRepairResearch.clear(); return 0;
+    case EE_UNITS_DOP_SCRATCH_RESEARCH_PUSH: sRepairResearch.push_back(theUnit->mBuildQueue[(size_t)inB]); return 0;
+    case EE_UNITS_DOP_BUILD_QUEUE_ASSIGN: theUnit->mBuildQueue = sRepairResearch; return 0;
+    case EE_UNITS_DOP_GATHERED_LINK: return EEDopHandle(dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mGatheredResource))));
+    case EE_UNITS_DOP_LINK_USABLE:
+        return EEDopObject<EEUnit>(inA)->GetUnitID() != 0 || EEDopObject<EEUnit>(inA)->mResourceType != kResourceNone;
+    case EE_UNITS_DOP_SET_GATHERED_RESOURCE: theUnit->SetGatheredResource(EEDopObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_DOP_LAST_ATTACKER_ID: return USavedID(theUnit->mLastAttacker);
+    case EE_UNITS_DOP_HAS_GHOSTS: return EESaveHasGhosts((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_DOP_FIND_LOADED_GHOST: return EEDopHandle(EEFindLoadedGhost((unsigned long)inB));
+    case EE_UNITS_DOP_OWNER_IS_UNSET: return theUnit->mOwner == (EEComplexUnit*)-1 || theUnit->mOwner == NULL;
+    case EE_UNITS_DOP_OWNER_ID: return USavedID(theUnit->mOwner);
+    case EE_UNITS_DOP_MINE_IS_UNSET: return theUnit->mMine == (EEUnit*)-1;
+    case EE_UNITS_DOP_MINE_LINK: return EEDopHandle(dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mMine))));
+    case EE_UNITS_DOP_MODEL_PARTS: return (int64_t)theUnit->GetModel()->GetNumParts();
+    case EE_UNITS_DOP_NUM_TURRET_ANGLES: return (int64_t)theUnit->mNumTurretAngles;
+    case EE_UNITS_DOP_SCRATCH_TURRETS_NEW: sRepairTurrets = inB == 0 ? NULL : new float[(size_t)inB]; return 0;
+    case EE_UNITS_DOP_TURRET_ANGLE: return EEDopBits(theUnit->mTurretAngles[(size_t)inB]);
+    case EE_UNITS_DOP_SCRATCH_TURRET_SET: sRepairTurrets[(size_t)inB] = EEDopFloat(inC); return 0;
+    case EE_UNITS_DOP_TURRETS_DELETE: delete[] theUnit->mTurretAngles; return 0;
+    case EE_UNITS_DOP_TURRETS_ASSIGN: theUnit->mTurretAngles = sRepairTurrets; return 0;
+    case EE_UNITS_DOP_PAST_LAST_FRAME:
+        return theUnit->GetStats()->mModel->mLastFrames[theUnit->mAnimation] <= theUnit->mPhysicalModel.GetFrame();
+    case EE_UNITS_DOP_RESTART_ANIMATION:
+        theUnit->SetAnimationFrame(theUnit->mStats->mModel->mStartFrames[theUnit->mAnimation]);
+        return 0;
+    case EE_UNITS_DOP_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->GetPlayer()->mPlayerID, (long)inB); return 0;
+    case EE_UNITS_DOP_OWN_TECH_NODE: return EEDopHandle(theUnit->GetTechTreeNode());
+    case EE_UNITS_DOP_NODE_KIND: return theNode->mData->mKind;
+    case EE_UNITS_DOP_HIT_POINTS: return theUnit->GetHitPoints();
+    case EE_UNITS_DOP_IS_BUILT: return theUnit->mIsBuilt == true;
+    case EE_UNITS_DOP_ADD_WONDER: theUnit->GetPlayer()->AddWonder(theUnit, inB != 0); return 0;
+    case EE_UNITS_DOP_HELD_RESOLVE:
+        theUnit->mHeldUnits[(size_t)inB] = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(theUnit->mHeldUnits[(size_t)inB])));
+        return 0;
+    case EE_UNITS_DOP_HELD_AT: return EEDopHandle(theUnit->mHeldUnits[(size_t)inB]);
+    case EE_UNITS_DOP_HELD_ERASE: theUnit->mHeldUnits.erase(theUnit->mHeldUnits.begin() + (size_t)inB); return 0;
+    case EE_UNITS_DOP_HOLDER_IS_UNSET: return theUnit->mHolder == (EEComplexUnit*)-1;
+    case EE_UNITS_DOP_HOLDER_ID: return USavedID(theUnit->mHolder);
+    case EE_UNITS_DOP_ADD_STRANDED: theUnit->GetPlayer()->AddStrandedUnit(theUnit); return 0;
+    case EE_UNITS_DOP_BEHAVIOR_ID: return USavedID(theUnit->mBehavior);
+    case EE_UNITS_DOP_HAS_LIVE_STATE: return EESaveHasLiveState((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_DOP_BEHAVIOR_GET: return EEDopHandle(EEUnitBehavior::Get((unsigned long)inB));
+    case EE_UNITS_DOP_BEHAVIOR: return EEDopHandle(theUnit->mBehavior);
+    case EE_UNITS_DOP_CLASS_BEHAVIOR: return EEDopHandle(theUnit->GetUnitClass()->mBehavior);
+    case EE_UNITS_DOP_DEFAULT_BEHAVIOR: return EEDopHandle(EEUnitBehavior::sTable[5]);
+    case EE_UNITS_DOP_HAS_PLAYER: return theUnit->GetPlayer() != NULL;
+    case EE_UNITS_DOP_TAGS_EXCEEDED:
+        return theUnit->mStats->mModel->mTagPoints[theUnit->mAnimation] != NULL
+            && theUnit->mStats->mModel->mTagPoints[theUnit->mAnimation]->GetNumTagPoints() <= theUnit->mWeaponTagPoint;
+    case EE_UNITS_DOP_SET_WEAPON_TAG_POINT: theUnit->mWeaponTagPoint = (long)inB; return 0;
+    case EE_UNITS_DOP_LAST_RESOURCE_LINK: return EEDopHandle(dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mLastResource))));
+    case EE_UNITS_DOP_SET_LAST_RESOURCE: theUnit->SetLastResource(EEDopObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_DOP_AREA_EFFECTS_CLEAR: theUnit->mAreaEffects.Clear(); return 0;
+    case EE_UNITS_DOP_AREA_EFFECTS_ITEMS_CLEAR: theUnit->mAreaEffects.mItems.clear(); return 0;
+    case EE_UNITS_DOP_NUM_AREA_EFFECTS: return (int64_t)theUnit->mNumAreaEffects;
+    case EE_UNITS_DOP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects(); return 0;
+    case EE_UNITS_DOP_HAS_RUNNING_STATE: return EESaveHasRunningState((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_DOP_SET_NUM_AREA_EFFECTS: theUnit->mNumAreaEffects = (unsigned long)inB; return 0;
+    case EE_UNITS_DOP_REFRESH_GOALS: theUnit->RefreshGoals(); return 0;
+    case EE_UNITS_DOP_REFRESH_ACTIVE_GOAL: theUnit->RefreshActiveGoal(); return 0;
+    case EE_UNITS_DOP_FIRST_QUEUE_BACK: return EEDopHandle(theUnit->mGoalQueues[0].mGoals.back());
+    case EE_UNITS_DOP_IS_AUTO_WAYPOINT_GOAL:
+        return EELocationGoalCast(theGoal) != NULL && EELocationGoalCast(theGoal)->GetIsAutoWaypoint();
+    case EE_UNITS_DOP_FIRST_QUEUE_POP_BACK: theUnit->mGoalQueues[0].PopBack(); return 0;
+    case EE_UNITS_DOP_CLASS_ROTTING_TIME: return theUnit->GetUnitClass()->mRottingTime;
+    case EE_UNITS_DOP_ROTTING_AWAY_TIME: return theUnit->mRottingAwayTime;
+    case EE_UNITS_DOP_SET_ROTTING_AWAY_TIME: theUnit->mRottingAwayTime = (long)inB; return 0;
+    case EE_UNITS_DOP_DELETABLE_FROM_CLASS: theUnit->mIsDeletable = theUnit->GetUnitClass()->mIsDeletable; return 0;
+    case EE_UNITS_DOP_CATEGORY: return theUnit->GetUnitClass()->mCategory;
+    case EE_UNITS_DOP_COMMAND_KIND: return theUnit->mCommand->mType;
+    case EE_UNITS_DOP_RESOURCE_AMOUNT: return theUnit->mResourceAmount;
+    case EE_UNITS_DOP_SET_RESOURCE_AMOUNT: theUnit->mResourceAmount = (long)inB; return 0;
+    // dop_file.rs's
+    case EE_UNITS_DOP_BASE_LOAD: return theDop->EEDoppelganger::Load((unsigned long)inB, (unsigned long)inC, *theFile);
+    case EE_UNITS_DOP_LOAD_TRANSFORMATION: theDop->mTransformation.Load(*theFile); return 0;
+    case EE_UNITS_DOP_READ_MODEL_ID: return theFile->Read(sDopModelID);
+    case EE_UNITS_DOP_SET_MODEL_FROM_ID: theDop->mModel = reinterpret_cast<EEModel*>(sDopModelID); return 0;
+    case EE_UNITS_DOP_READ_FIELD: return EEDopReadField(theDop, *theFile, inB);
+    case EE_UNITS_DOP_BASE_SAVE: return theDop->EEDoppelganger::Save((unsigned long)inB, (unsigned long)inC, *theFile);
+    case EE_UNITS_DOP_SAVE_TRANSFORMATION: theDop->mTransformation.Save(*theFile); return 0;
+    case EE_UNITS_DOP_WRITE_MODEL_ID: return theFile->Write((long)theDop->mModel->mMediaIndex);
+    case EE_UNITS_DOP_WRITE_FIELD: return EEDopWriteField(theDop, *theFile, inB);
+    case EE_UNITS_DOP_BASE_INITIALIZE:
+        theDop->EEDoppelganger::Initialize(theSeen, EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
+        return 0;
+    case EE_UNITS_DOP_SEEN_IS_RESOURCE: return theSeen->mUnitClass->mCategory == kUnitCategoryResource;
+    case EE_UNITS_DOP_PACK_RESOURCE: theDop->mPackedHitPoints = theSeen->mResourceAmount | 0x80000000; return 0;
+    case EE_UNITS_DOP_PACK_HIT_POINTS: theDop->mPackedHitPoints = theSeen->mHitPoints; return 0;
+    case EE_UNITS_DOP_SEEN_COMPLEX: return EEDopHandle(theSeen->mComplexUnit);
+    case EE_UNITS_DOP_SEEN_IS_FOUNDATION: return theOther->IsFoundation() == true;
+    case EE_UNITS_DOP_MODEL_FOUNDATION:
+        theDop->mModel = EEGetPlayerClassGraphic(theOther->GetPlayer(), EEDopObject<EEUnit>((uint64_t)inB)->mUnitClass);
+        return 0;
+    case EE_UNITS_DOP_MODEL_OF: theDop->mModel = theSeen->GetModel(); return 0;
+    case EE_UNITS_DOP_FRAME_OF: theDop->mFrame = theOther->mPhysicalModel.GetFrame(); return 0;
+    case EE_UNITS_DOP_ANIMATION_OF: theDop->mAnimation = theOther->mAnimation; return 0;
+    case EE_UNITS_DOP_SEEN_IS_BUILT: return theOther->mIsBuilt;
+    case EE_UNITS_DOP_MARK_BUILT: theDop->mPackedHitPoints |= 0x80000000; return 0;
+    case EE_UNITS_DOP_TRANSFORMATION_OF: theDop->mTransformation = theOther->mPhysicalModel.GetLocation(); return 0;
+    case EE_UNITS_DOP_SCALE_OF: theDop->mScale = theOther->mPhysicalModel.GetScale(); return 0;
+    case EE_UNITS_DOP_FOUNDATION_OF: theDop->mIsFoundation = theOther->IsFoundation(); return 0;
+    case EE_UNITS_DOP_FRAME_ZERO: theDop->mFrame = 0; return 0;
+    case EE_UNITS_DOP_ANIMATION_ZERO: theDop->mAnimation = 0; return 0;
+    case EE_UNITS_DOP_SCALE_OF_CLASS: theDop->mScale = theSeen->mUnitClass->GetScale(); return 0;
+    case EE_UNITS_DOP_NOT_FOUNDATION: theDop->mIsFoundation = false; return 0;
+    case EE_UNITS_DOP_IDENTITY: theDop->mTransformation.MakeIdentity(); return 0;
+    case EE_UNITS_DOP_HALF_SIZE: return EEDopBits(theSeen->mUnitClass->mTileSize * 0.5f);
+    case EE_UNITS_DOP_SEEN_TILE: return inB == 0 ? theSeen->mTileX : theSeen->mTileY;
+    case EE_UNITS_DOP_MESH_Z: return EEDopBits(::gWorld.mMap->mTerrainMesh.GetMeshZ(EEDopFloat(inB), EEDopFloat(inC)));
+    case EE_UNITS_DOP_SET_POSITION:
+        theDop->mTransformation.SetPosition(GE3DPoint(EEDopFloat(inB), EEDopFloat(inC), EEDopFloat((int64_t)inA)));
+        return 0;
+    case EE_UNITS_DOP_SET_TILE_X: theDop->mTileX = (long)inB; return 0;
+    case EE_UNITS_DOP_SET_TILE_Y: theDop->mTileY = (long)inB; return 0;
+    case EE_UNITS_DOP_LOAD_MEDIA: theDop->mModel->LoadMedia(); return 0;
+    case EE_UNITS_DOP_BASE_INITIALIZE_COPY:
+        theDop->EEDoppelganger::Initialize(EEDopObject<EEDoppelganger>(inA), EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
+        return 0;
+    case EE_UNITS_DOP_COPY_FIELD: EEDopCopyField(theDop, dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA)), inB); return 0;
+    case EE_UNITS_DOP_CONTACTS_TAKE: sDopContacts.clear(); sDopContacts.swap(sLoadedContacts); return 0;
+    case EE_UNITS_DOP_CONTACTS_COUNT: return (int64_t)sDopContacts.size();
+    case EE_UNITS_DOP_CONTACTS_VALID:
+        return static_cast<RTSUnit*>(sDopContacts[(size_t)inB].first.first) == gWorld.GetUnit(sDopContacts[(size_t)inB].first.second);
+    case EE_UNITS_DOP_CONTACTS_CLEAR: sDopContacts[(size_t)inB].first.first->ClearContacts(); return 0;
+    case EE_UNITS_DOP_CONTACTS_ID_COUNT: return (int64_t)sDopContacts[(size_t)inB].second.size();
+    case EE_UNITS_DOP_CONTACTS_UNIT: return EEDopHandle(LoadedComplexUnit(sDopContacts[(size_t)inB].second[(size_t)inC]));
+    case EE_UNITS_DOP_CONTACTS_ADD: sDopContacts[(size_t)inB].first.first->AddContact(theOther); return 0;
+    // dop_load.rs's live state at the first tick
+    case EE_UNITS_DOP_IS_WORLD_UNIT: return static_cast<RTSUnit*>(theUnit) == gWorld.GetUnit((unsigned long)inB);
+    case EE_UNITS_DOP_SET_ANIMATION_FRACTION: theUnit->mAnimationFraction = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_NEXT_FRAME: theUnit->mNextFrame = (long)inB; return 0;
+    case EE_UNITS_DOP_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_PUSH_VELOCITY_X: theUnit->mPushVelocityX = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_PUSH_VELOCITY_Y: theUnit->mPushVelocityY = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_F24C: theUnit->mF24C = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_AI_STATE: theUnit->mAIState = (long)inB; return 0;
+    case EE_UNITS_DOP_SET_NEXT_TRIGGER_TIME: theUnit->mNextTriggerTime = (unsigned long)inB; return 0;
+    case EE_UNITS_DOP_IGNORED_TARGETS_CLEAR: theUnit->mIgnoredTargets.clear(); return 0;
+    case EE_UNITS_DOP_IGNORED_TARGETS_PUSH: theUnit->mIgnoredTargets.push_back(EEDopAttacker(EEDopObject<const int64_t>(inA))); return 0;
+    case EE_UNITS_DOP_BOUNDED_PATH_TILES_CLEAR: theUnit->mBoundedPathTiles.clear(); return 0;
+    case EE_UNITS_DOP_BOUNDED_PATH_TILES_PUSH: theUnit->mBoundedPathTiles.push_back(U2DPoint<long>((long)inB, (long)inC)); return 0;
+    case EE_UNITS_DOP_SET_FRAME: theUnit->mPhysicalModel.SetFrame((unsigned long)inB); return 0;
+    case EE_UNITS_DOP_SET_FLIGHT_TIME: theUnit->mFlightTime = (long)inB; return 0;
+    case EE_UNITS_DOP_SET_LAST_HIT_POINTS: theUnit->mLastHitPoints = (long)inB; return 0;
+    case EE_UNITS_DOP_SET_GARRISON_COUNT: theUnit->mGarrisonCount = (long)inB; return 0;
+    case EE_UNITS_DOP_SET_POWER: theUnit->mPower = (long)inB; return 0;
+    case EE_UNITS_DOP_MODEL_PARTS_OR_ZERO: return theUnit->GetModel() != NULL ? (int64_t)theUnit->GetModel()->GetNumParts() : 0;
+    case EE_UNITS_DOP_HAS_TURRET_ANGLES: return theUnit->mTurretAngles != NULL;
+    case EE_UNITS_DOP_SET_TURRET_ANGLE: theUnit->mTurretAngles[(size_t)inB] = EEDopFloat(inC); return 0;
+    default: return 0;
     }
-    if (this->mPatrolGroup == (EEPPatrolGroup*)-1)
-        this->mPatrolGroup = NULL;
-    else {
-        this->mPatrolGroup = this->GetPlayer()->GetPatrolGroup(USavedID(this->mPatrolGroup));
-        if (this->mPatrolGroup != NULL)
-            ee_units_pg_reference(this->mPatrolGroup);
-        else
-            theResult = 3;
-    }
-    this->mPreviousPart = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mPreviousPart)));
-    if (this->mPreviousPart != NULL)
-        this->mPreviousPart->Reference();
-    this->mNextPart = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mNextPart)));
-    if (this->mNextPart != NULL)
-        this->mNextPart->Reference();
-    this->mHomeBase = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHomeBase)));
-    if (this->mHomeBase != NULL)
-        this->mHomeBase->Reference();
-    this->mContainer = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mContainer)));
-    if (this->mContainer != NULL) {
-        // A not-yet-repaired cargo vector still holds IDs; a repaired one holds actual unit pointers.
-        if (this->mContainer->mUnitClass->mTransportCapacity < 1
-            || (!this->mContainer->HasCargo(this) && !this->mContainer->HasCargo(reinterpret_cast<EEComplexUnit*>(this->mUnitID)))) {
-            this->mContainer = NULL;
-            theLostContainer = true;
-        } else
-            this->mContainer->Reference();
-    }
-    if (this->mCurrentResearch == kTechNone)
-        this->mProductionTime = 0;
-    else if (this->mCurrentResearch < 200000 && this->mPlayer->mTechnologies->Get(this->mCurrentResearch) == NULL) {
-        this->mCurrentResearch = kTechNone;
-        this->mProductionTime = 0;
-    }
-    if (this->GetUnitClass()->IsLandBuilding() && this->mCurrentResearch != kTechNone && this->mCurrentResearch < 200000) {
-        EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get(this->mCurrentResearch);
-        if (theNode != NULL && (theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL))
-            theNode->mIsAllowed = false;
-    }
-    for (unsigned long research = 0; research < this->mBuildQueue.size(); research++) {
-        if (!(this->mBuildQueue[research].mTechnology < 200000))
-            continue;
-        EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get(this->mBuildQueue[research].mTechnology);
-        if (theNode == NULL)
-            continue;
-        if (theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL)
-            theNode->mIsAllowed = false;
-        theResearch.push_back(this->mBuildQueue[research]);
-    }
-    this->mBuildQueue.clear();
-    this->mBuildQueue = theResearch;
-    EEUnit* theLink = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mGatheredResource)));
-    this->mGatheredResource = NULL;
-    if (theLink != NULL && (theLink->GetUnitID() != 0 || theLink->mResourceType != kResourceNone))
-        this->SetGatheredResource(theLink);
-    {
-        unsigned long theAttackerID = USavedID(this->mLastAttacker);
-        this->mLastAttacker = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theAttackerID));
-        if (this->mLastAttacker == NULL && EESaveHasGhosts(inMajorVersion, inMinorVersion))
-            this->mLastAttacker = EEFindLoadedGhost(theAttackerID);   // port (0.262): an attacker that died, as the saved game kept it
-    }
-    if (this->mLastAttacker != NULL)
-        this->mLastAttacker->Reference();
-    if (this->mOwner == (EEComplexUnit*)-1 || this->mOwner == NULL)
-        this->mOwner = NULL;
-    else {
-        this->mOwner = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mOwner)));
-        if (this->mOwner != NULL)
-            this->mOwner->Reference();
-        else
-            theLostContainer = true;
-    }
-    if (this->mMine == (EEUnit*)-1 || this->GetUnitClass() == NULL)
-        this->mMine = NULL;
-    else {
-        this->mMine = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mMine)));
-        if (this->mMine != NULL)
-            this->mMine->Reference();
-    }
-    unsigned long theParts = this->GetModel()->GetNumParts();
-    if (theParts != this->mNumTurretAngles) {
-        float* theValues;
-        if (theParts == 0)
-            theValues = NULL;
-        else {
-            theValues = new float[theParts];
-            for (unsigned long part = 0; part < theParts; part++)
-                theValues[part] = part < (unsigned long)this->mNumTurretAngles ? this->mTurretAngles[part] : 0.0f;
-        }
-        delete[] this->mTurretAngles;
-        this->mTurretAngles = theValues;
-    }
-    if (this->GetStats()->mModel->mLastFrames[this->mAnimation] <= this->mPhysicalModel.GetFrame())
-        this->SetAnimationFrame(this->mStats->mModel->mStartFrames[this->mAnimation]);
-    if (this->mCurrentResearch != kTechNone)
-        gDataPreLoading->PostLoadTechnology(this->GetPlayer()->mPlayerID, this->mCurrentResearch);
-    EETechTreeNode* theTechnology = this->GetTechTreeNode();
-    if (theTechnology != NULL && theTechnology->mData->mKind == 4 && this->GetHitPoints() > 0 && this->mIsBuilt == true)
-        this->GetPlayer()->AddWonder(this, !(inMajorVersion == 0 && inMinorVersion < 0xe2));
-    this->mHerd = NULL;
-    for (long linked = this->mHeldUnits.size() - 1; linked >= 0; linked--) {
-        this->mHeldUnits[linked] = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHeldUnits[linked])));
-        if (this->mHeldUnits[linked] != NULL)
-            this->mHeldUnits[linked]->Reference();
-        else
-            this->mHeldUnits.erase(this->mHeldUnits.begin() + linked);
-    }
-    if (this->mHolder == (EEComplexUnit*)-1)
-        this->mHolder = NULL;
-    else {
-        this->mHolder = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHolder)));
-        if (this->mHolder != NULL)
-            this->mHolder->Reference();
-    }
-    if (theLostContainer == true)
-        this->GetPlayer()->AddStrandedUnit(this);
-    unsigned long theBehavior = USavedID(this->mBehavior);
-    if (theBehavior < 8) {
-        // port (saves from 0.254 on, no format change): the harass and cautious behaviours (3, 4) stay as saved. The
-        // original made them the class's: the computer players give their explorers harass on Hard
-        // (EECPExplorationManager), which can flee, and a loaded explorer stood and fought where the saved one ran
-        // (seed 7's 600 s save: ShouldIRun, 9 ticks after the load)
-        if ((theBehavior == 3 || theBehavior == 4) && !EESaveHasLiveState(inMajorVersion, inMinorVersion))
-            this->mBehavior = NULL;
-        else
-            this->mBehavior = EEUnitBehavior::Get(theBehavior);
-    } else {
-        unsigned long behavior;
-        for (behavior = 0; behavior < 8; behavior++)
-            if (this->mBehavior == EEUnitBehavior::Get(behavior))
-                break;
-        if (behavior == 8)
-            this->mBehavior = NULL;
-    }
-    if (this->mBehavior == NULL) {
-        if (this->GetUnitClass() != NULL)
-            this->mBehavior = this->GetUnitClass()->mBehavior;
-        if (this->mBehavior == NULL)
-            this->mBehavior = EEUnitBehavior::sTable[5];
-    }
-    EETagPointList* theTags = this->mStats->mModel->mTagPoints[this->mAnimation];
-    if (this->GetPlayer() != NULL && theTags != NULL && theTags->GetNumTagPoints() <= this->mWeaponTagPoint)
-        this->mWeaponTagPoint = 0;
-    theLink = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mLastResource)));
-    this->mLastResource = NULL;
-    if (theLink != NULL && (theLink->GetUnitID() != 0 || theLink->mResourceType != kResourceNone))
-        this->SetLastResource(theLink);
-    if (this->GetHitPoints() < 1) {
-        this->mAreaEffects.Clear();
-        this->mAreaEffects.mItems.clear();
-    } else {
-        // port (0.256): the saved count stays (MakeAreaEffects counts the templates: a unit made by EEMakeUnitCopy,
-        // whose CopyFrom zeroes it, had 0 in the game that was saved and its templates' count after a load)
-        unsigned long theCount = this->mNumAreaEffects;
-        this->MakeAreaEffects();
-        if (EESaveHasRunningState(inMajorVersion, inMinorVersion))
-            this->mNumAreaEffects = theCount;
-    }
-    this->RefreshGoals();
-    this->RefreshActiveGoal();
-    if (theAutoWaypoint) {
-        for (long autoGoal = this->mGoalQueues[0].mGoals.size() - 1; autoGoal >= 0; autoGoal--) {
-            EEUnitGoal* theGoal = this->mGoalQueues[0].mGoals.back();
-            if (theGoal == NULL || EELocationGoalCast(theGoal) == NULL
-                || !EELocationGoalCast(theGoal)->GetIsAutoWaypoint())
-                break;
-            this->mGoalQueues[0].PopBack();
-        }
-    }
-    if (this->GetUnitClass()->mRottingTime < this->mRottingAwayTime)
-        this->mRottingAwayTime = this->GetUnitClass()->mRottingTime;
-    if (inMajorVersion == 0 && inMinorVersion <= 0xca)
-        this->mIsDeletable = this->GetUnitClass()->mIsDeletable;
-    if ((this->GetUnitClass()->mCategory == kUnitCategoryLandCitizen || this->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen) && this->mCommand->mType == kActionResourcesRotting && this->mResourceAmount != 0)
-        this->mResourceAmount = 0;
-    return theResult;
 }
 
 // RepairPointers's helper, out of line in this unit.
@@ -1052,10 +810,38 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
                 theComplex->mOwner->Dereference();
             theComplex->mOwner = NULL;
             break;
+        // dop_load.rs's sections
+        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_CLEAR: theComplex->mBuildQueue.clear(); break;
+        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_SECOND: sLoadSecond = theValue; break;
+        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_PUSH: theComplex->mBuildQueue.push_back(EEProductionEntry{(long)io->i, sLoadSecond}); break;
+        case EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_CLEAR: theComplex->mCitizenBuildQueue.clear(); break;
+        case EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_PUSH: theComplex->mCitizenBuildQueue.push_back(reinterpret_cast<EEUnit*>(theValue)); break;
+        case EE_UNITS_UNIT_LOAD_SET_CARGO_CLEAR: theComplex->mCargo.clear(); break;
+        case EE_UNITS_UNIT_LOAD_SET_CARGO_PUSH: theComplex->mCargo.push_back(reinterpret_cast<EEComplexUnit*>(theValue)); break;
+        case EE_UNITS_UNIT_LOAD_SET_HELD_RESIZE: theComplex->mHeldUnits.resize((long)io->i, NULL); break;
+        case EE_UNITS_UNIT_LOAD_SET_SLOT: sLoadSlot = (size_t)io->i; break;
+        case EE_UNITS_UNIT_LOAD_SET_HELD_UNIT: theComplex->mHeldUnits[sLoadSlot] = reinterpret_cast<EEComplexUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_UNIT_VARIABLE: theComplex->mUnitVariables[sLoadSlot] = (long)io->i; break;
+        case EE_UNITS_UNIT_LOAD_SET_LIVE_REGISTER:
+            EEAfterLoad([theSelf = theComplex, theID = (uint32_t)theComplex->mUnitID,
+                         theLive = std::shared_ptr<void>((void*)(uintptr_t)io->i, &ee_units_unit_live_free)]() { ee_units_unit_live_apply(theSelf, theID, theLive.get()); });
+            break;
+        case EE_UNITS_UNIT_LOAD_SET_CONTACTS_REGISTER: EEAfterLoad(RestoreLoadedContacts); break;
+        case EE_UNITS_UNIT_LOAD_SET_CONTACTS_BEGIN:
+            sLoadedContacts.push_back(std::make_pair(std::make_pair(theComplex, (unsigned long)theComplex->mUnitID), std::vector<unsigned long>()));
+            break;
+        case EE_UNITS_UNIT_LOAD_SET_CONTACT_ID: sLoadedContacts.back().second.push_back(theValue); break;
         default: break;
         }
         return 0;
     }
+    case EE_UNITS_UNIT_LOAD_GET:
+        switch (inIndex) {
+        case EE_UNITS_UNIT_LOAD_GET_TURRET_COUNT: io->i = theComplex->mTurretAngles != NULL ? theComplex->mNumTurretAngles : 0; return 0;
+        case EE_UNITS_UNIT_LOAD_GET_TURRET_ANGLE: io->f = theComplex->mTurretAngles[(size_t)io->i]; return 0;
+        case EE_UNITS_UNIT_LOAD_GET_CONTACTS_EMPTY: io->i = sLoadedContacts.empty(); return 0;
+        default: return 0;
+        }
     case EE_UNITS_UNIT_LOAD_SECTION:
         return EEComplexUnitLoadSection(theContext, inIndex, io);
     default:

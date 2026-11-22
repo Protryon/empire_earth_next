@@ -3,6 +3,8 @@
 #define LLE_U2DRECTANGLE_H
 
 #include "lle/U2DPoint.h"
+#include <type_traits>
+#include "rust/base/math.h"
 
 // Engine template (U2DPolygon<float>'s bounds, GETerrainMesh.cpp). Members alphabetical like GERectangle (+0 bottom,
 // +4 left, +8 right, +0xc top: U2DConvexHull<float>::SetPoints 0x1002f795, Load 0x1003057d). (provisional names)
@@ -87,39 +89,14 @@ public:
         this->mTop = min(this->mTop, inPoint.GetY());
         this->mBottom = max(this->mBottom, inPoint.GetY());
     }
+    // left, top, right and bottom from (to) an open file, each through its typed call; kErrorNotOpen when it is not
+    // open, else the first error (ee_base math u2d.rs; T is long or float)
     long Load(FSFile& inFile)
-    {
-        long theResult;
-        if (inFile.GetIsOpen()) {
-            theResult = inFile.Read(this->mLeft);
-            if (theResult == 0) {
-                theResult = inFile.Read(this->mTop);
-                if (theResult == 0) {
-                    theResult = inFile.Read(this->mRight);
-                    if (theResult == 0)
-                        theResult = inFile.Read(this->mBottom);
-                }
-            }
-        } else
-            theResult = 4;
-        return theResult;
-    }
+        { return ee_u2d_rect_io(&inFile, inFile.GetIsOpen(), &this->mBottom, std::is_floating_point<T>::value, false); }
     long Save(FSFile& inFile) const
     {
-        long theResult;
-        if (inFile.GetIsOpen()) {
-            theResult = inFile.Write(this->mLeft);
-            if (theResult == 0) {
-                theResult = inFile.Write(this->mTop);
-                if (theResult == 0) {
-                    theResult = inFile.Write(this->mRight);
-                    if (theResult == 0)
-                        theResult = inFile.Write(this->mBottom);
-                }
-            }
-        } else
-            theResult = 4;
-        return theResult;
+        return ee_u2d_rect_io(&inFile, inFile.GetIsOpen(), const_cast<T*>(&this->mBottom), std::is_floating_point<T>::value,
+                              true);
     }
 
     T mBottom;                              // +0x00

@@ -9,6 +9,7 @@
 // is the forwarders and the host (the calls the model makes on other objects).
 #ifndef LLE_GEMODEL_H
 #define LLE_GEMODEL_H
+#include "rust/render/gestate.h"
 
 #include <map>
 #include <stdint.h>
@@ -131,15 +132,5 @@ private:
 };
 
 // (The LOD helper classes, lle/GELOD.h, followed GEModel here: deleted with 'GEModel LOD.cpp')
-
-// GEModel::SetClipToPlane plane index: GERasterizer::IsOrthographic/IsPerspectiveModelVisible test the viewport plane named here before each call
-enum GEClipPlane {
-    kClipPlaneFront = 0,  // GERasterizer::IsPerspectiveModelVisible tests GEViewport::GetFrontClippingDistance
-    kClipPlaneRear = 1,  // GERasterizer::IsPerspectiveModelVisible tests GEViewport::GetRearClippingDistance
-    kClipPlaneTop = 2,   // GERasterizer::IsPerspectiveModelVisible tests GEViewport::GetTopPlane
-    kClipPlaneBottom = 3,  // GERasterizer::IsPerspectiveModelVisible tests GEViewport::GetBottomPlane
-    kClipPlaneLeft = 4,  // GERasterizer::IsPerspectiveModelVisible tests GEViewport::GetLeftPlane
-    kClipPlaneRight = 5,  // GERasterizer::IsPerspectiveModelVisible tests GEViewport::GetRightPlane
-};
 
 #endif

@@ -50,6 +50,7 @@ public:
     using UIListBox<UWideString>::GetNumLines;
     using UIListBox<UWideString>::mData;
     using UIListBox<UWideString>::mCopyLineArray;
+    using UIListBox<UWideString>::SetCopiedHasSelection;
 
     GEColor mC13C;                          // the header colour (kBlack; the choice form's: (0, 0, 0.39), (0.18, 0.18, 0.28))
     GEColor mC148;                          // the header colour as of the last CopyData

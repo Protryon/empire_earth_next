@@ -15,14 +15,6 @@ pub(crate) mod sys {
         // the settings form's (settings_form_ffi.rs)
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
         pub fn ee_screenscpp_put_settings(record: *const crate::screens::settings_form::EeScreensSettingsRecord);
-        pub fn ee_screenscpp_modes(
-            rasterizer: u32,
-            screen: u32,
-            out: *mut crate::screens::settings::EeScreensVideoMode,
-            capacity: usize,
-        ) -> usize;
-        pub fn ee_screenscpp_current_mode(screen: u32, out: *mut crate::screens::settings::EeScreensVideoMode);
-        pub fn ee_screenscpp_game_size(percent: u32, windowed: bool, width: *mut u32, height: *mut u32);
     }
 }
 

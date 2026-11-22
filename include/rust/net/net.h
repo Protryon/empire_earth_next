@@ -158,11 +158,11 @@ enum class EeNetClOp : uint32_t {
   XferExportSize = 15,
   /// a message -> GetType()
   MsgType = 16,
-  /// a message, a flag (EeNetClMsgFlag) -> the virtual flag
-  MsgFlag = 17,
-  /// a message, 0 SetForSpecificSlot / 1 SetOriginatingSlot, a slot
-  MsgSetSlot = 18,
-  /// a message, an uint32_t* -> GetSendToAllAndWaitMessageID(*out)
+  /// a message -> GetCountsTowardsPlayerInputThrottle()
+  MsgCountsTowardsThrottle = 17,
+  /// a message, a slot: SetOriginatingSlot
+  MsgSetOriginatingSlot = 18,
+  /// a message, an unsigned long* (in and out) -> GetSendToAllAndWaitMessageID(*out)
   MsgS2awId = 19,
   /// an engine message, a member (NEMRecord's numbering) -> its value (a block: its address)
   MsgGet = 20,
@@ -170,11 +170,11 @@ enum class EeNetClOp : uint32_t {
   MsgNew = 21,
   /// a tick response, an input -> AddPlayerInput(input)
   MsgAddInput = 22,
-  /// a message, an uint32_t* size -> ExportMessage's data (C++ new[]), its size in *size
+  /// a message, an unsigned char** data, an unsigned long* size: ExportMessage (the data C++ new[])
   MsgExportNew = 23,
   /// an export: deleted
   BytesFree = 24,
-  /// an FSFile*, data, its size, an uint32_t* written -> Write(data, size, written)
+  /// an FSFile*, data, its size, an unsigned long* written (in and out) -> Write(data, size, *written)
   FsWrite = 25,
   /// an FSFile*: Close()
   FsClose = 26,
@@ -210,6 +210,12 @@ enum class EeNetClOp : uint32_t {
   ProcessLocalUserInput = 41,
   /// received bytes -> new NEMRecord(bytes) (the transfer message)
   MsgImport = 42,
+  /// a message -> GetCanSendWhilePaused()
+  MsgCanSendWhilePaused = 43,
+  /// a message -> GetIsAvailableToSend()
+  MsgIsAvailableToSend = 44,
+  /// a message, a slot: SetForSpecificSlot
+  MsgSetForSpecificSlot = 45,
 };
 
 /// The base class's fields
@@ -262,21 +268,21 @@ enum class EeNetSvOp : uint32_t {
   ServerClose = 14,
   /// a message -> GetType()
   MsgType = 15,
-  /// a message, originating (else for a specific slot), a slot
-  MsgSetSlot = 16,
-  /// a message, a flag (EeNetSvMsgFlag)
-  MsgFlag = 17,
+  /// a message, a slot: SetOriginatingSlot
+  MsgSetOriginatingSlot = 16,
+  /// a message -> GetCanSendWhilePaused()
+  MsgCanSendWhilePaused = 17,
   /// an engine message, a member (NEMRecord's numbering) -> its value (the players' inputs: their count)
   MsgGet = 18,
   /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
   MsgNew = 19,
-  /// a tick response, an index, an NEMessage** -> GetPlayerInput(i, out)
+  /// a tick response, an index, an NEMessage** (NULL before the call) -> GetPlayerInput(i, *out)
   MsgTickResponseInput = 20,
   /// a tick, an input -> AddPlayerInput
   MsgAddInput = 21,
   /// a message, an id: SetSendToAllAndWaitMessageID
   MsgSetS2awId = 22,
-  /// a message, a uint32_t* size -> ExportMessage's buffer (new[])
+  /// a message, an unsigned char** data, an unsigned long* size: ExportMessage (the buffer new[])
   MsgExportNew = 23,
   /// a buffer: delete[]
   BytesFree = 24,
@@ -306,6 +312,10 @@ enum class EeNetSvOp : uint32_t {
   ProcessLocalUserInput = 36,
   /// a message -> GetOriginatingSlot()
   MsgSlot = 37,
+  /// a message, a slot: SetForSpecificSlot
+  MsgSetForSpecificSlot = 38,
+  /// a message -> GetIsAvailableToSend()
+  MsgIsAvailableToSend = 39,
 };
 
 /// The fields the accessors read (`ee_net_sv_get`)
@@ -1010,6 +1020,32 @@ int32_t ee_net_pr_xfer_receive(const EeNetProtocol *p,
                                uint32_t size,
                                uint8_t *buffer,
                                uint32_t *received);
+
+/// `NESynchronousServer`'s constructor as the game calls it: its arguments as the C++ takes them (the name a
+/// zero-terminated string), the protocol the server's own (TCP); [`ee_net_sv_args`] packs them.
+///
+/// # Safety
+/// As [`ee_net_sv_new`]; `name` is a zero-terminated string.
+EeNetServer *ee_net_sv_new_game(void *ctx,
+                                EeNetSvHostFn host,
+                                EeNetMmHostFn mmhost,
+                                EeNetQHostFn qhost,
+                                const EeNetComms *comms,
+                                uint8_t max_players,
+                                unsigned long default_send_interval,
+                                uint8_t pts_per_ct,
+                                unsigned long max_pts_per_second,
+                                unsigned long min_pts_per_second,
+                                float cost_factor,
+                                unsigned long max_send_interval,
+                                unsigned long send_interval_increment,
+                                unsigned long send_interval_decrement,
+                                unsigned long current_communications_tick,
+                                unsigned long current_physics_tick,
+                                const char *name,
+                                bool allow_new_connections,
+                                bool announce,
+                                unsigned long network_adapter);
 
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
 ///

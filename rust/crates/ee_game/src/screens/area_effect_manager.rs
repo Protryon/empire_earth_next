@@ -1,7 +1,7 @@
 //! `EEAEManager.cpp`'s C++ logic in Rust over one-statement shims (UI lane round 11): `CollectEffects` (a unit's
 //! effects onto the living units around a location; a radius-0 effect onto every player's units) and
 //! `FindEffect` (the active effect of a kind covering a point for a player), in the original's order. The unit
-//! passes (the functors) and the collector stay C++.
+//! passes are `area_effect_obj.rs`' (one C++ functor); the collector stays C++.
 
 use ee_sim::tech::area_effect::EE_AREA_EFFECT_HEALING;
 
@@ -37,8 +37,14 @@ pub(crate) fn collect_effects<C: Cpp + ?Sized>(
             continue;
         }
         if c.aem_effect_radius(effect) <= 0.0 {
-            c.aem_set_affected_functor(effect, player, x, y);
-            c.aem_for_each_set_affected();
+            c.aem_for_each(
+                crate::screens::area_effect_obj::EE_SCREENS_AEM_PASS_SET_AFFECTED,
+                effect,
+                player,
+                0.0,
+                x,
+                y,
+            );
             continue;
         }
         let units = c.aem_units_count();
@@ -52,7 +58,7 @@ pub(crate) fn collect_effects<C: Cpp + ?Sized>(
             c.aem_affecting_add(target, effect);
             c.aem_applied_to(effect, target);
             if c.aem_effect_kind(effect) == EE_AREA_EFFECT_HEALING as i64 {
-                c.aem_show_on(effect, target);
+                c.ael_show_on(effect, target);
             }
         }
     }
@@ -120,9 +126,7 @@ mod tests {
         collect_effects(&mut fake, 2.0, 10.5, 20.5, 3, 7, 9);
         let calls = fake.calls();
         assert!(calls.starts_with("aem_floor(22.5)\naem_floor(12.5)\naem_floor(18.5)\naem_floor(8.5)"));
-        assert!(calls.ends_with(
-            "aem_effect_radius(50)\naem_set_affected_functor(50, 3, 10.5, 20.5)\naem_for_each_set_affected()"
-        ));
+        assert!(calls.ends_with("aem_effect_radius(50)\naem_for_each(1, 50, 3, 0.0, 10.5, 20.5)"));
     }
 
     #[test]
@@ -134,7 +138,7 @@ mod tests {
         collect_effects(&mut fake, 2.0, 10.0, 20.0, 3, 7, 9);
         assert!(fake.calls().ends_with(
             "aem_unit_complex(1)\naem_covers(50, 3, 11, 10.0, 20.0)\naem_affecting_add(11, 50)\naem_applied_to(50, 11)\n\
-             aem_effect_kind(50)\naem_show_on(50, 11)"
+             aem_effect_kind(50)\nael_show_on(50, 11)"
         ));
     }
 
