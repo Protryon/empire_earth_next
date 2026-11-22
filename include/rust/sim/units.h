@@ -13951,6 +13951,21 @@ constexpr static const int32_t EE_UNITS_US_TICK = 15;
 /// `exit(3)`
 constexpr static const int32_t EE_UNITS_US_EXIT = 16;
 
+/// `mObjectKind.mValue`
+constexpr static const int32_t EE_UNITS_US_F_OBJECT_KIND = 4000;
+
+/// `OnMap(unit)` (in the world's unit chain)
+constexpr static const int32_t EE_UNITS_US_F_ON_MAP = 4001;
+
+/// `static_cast<EEUnit*>(unit)->mStats`
+constexpr static const int32_t EE_UNITS_US_F_STATS = 4002;
+
+/// the complex unit's `mPhysicalModel.GetLocation()`'s x, y, z (`b` 0, 1, 2) as float bits
+constexpr static const int32_t EE_UNITS_US_F_LOCATION = 4003;
+
+/// the unit's `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields` base subobjects (`b` 0, 1, 2)
+constexpr static const int32_t EE_UNITS_US_F_FIELDS = 4004;
+
 /// `gWorld.mPlayers[c]`
 constexpr static const int32_t EE_UNITS_UB_PLAYER_AT = 1;
 
@@ -19834,6 +19849,21 @@ extern int64_t ee_units_us_host(int32_t op, uint64_t a, int64_t b, uint64_t c, v
 
 /// TEST ONLY: `EEUnitStoreCheck(where)`.
 uint64_t ee_units_us_check(uint64_t at);
+
+/// `Fill(unit, owner, player, *record)`: the record of a unit as its object is now.
+///
+/// # Safety
+/// `record` is writable, `unit` a live `RTSUnit`, `player` the list's player object (or 0).
+void ee_units_store_fill(EeUnitRecord *record, uint64_t unit, uint32_t owner, uint64_t player);
+
+/// `EEUnitOrderReset()`: the update order from the world's list.
+void ee_units_order_reset_world();
+
+/// `EEUnitStorePlayerTable(player)`: the player's table in the store.
+///
+/// # Safety
+/// `player` is a live `EEPlayer`.
+void ee_units_store_player_table(uint64_t player);
 
 extern int64_t ee_units_ub_host(int32_t op,
                                 uint64_t a,
