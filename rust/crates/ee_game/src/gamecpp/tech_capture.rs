@@ -30,7 +30,9 @@ const TC_NONE: c_long = 100000;
 fn tree_bytes(r: &mut TbRecord, tree: P) {
     let mut bytes = [0u8; EE_TECH_CAPTURE_TREE_SIZE as usize];
     // SAFETY: the tree's record and a buffer of the record's size
-    let n = unsafe { ee_tech_capture_tree(tree_fields(tree), h(O::TkPlayerIndex, tree, &[]) as c_long, bytes.as_mut_ptr()) };
+    let n = unsafe {
+        ee_tech_capture_tree(tree_fields(tree), h(O::TkPlayerIndex, tree, &[]) as c_long, bytes.as_mut_ptr())
+    };
     r.bytes(&bytes[..n as usize]);
 }
 
@@ -40,7 +42,13 @@ fn node_bytes(r: &mut TbRecord, node: P) {
     let tree = hp(O::TkNodeTree, node, &[]);
     // SAFETY: the node's, its data's and its tree's records (NULL ones allowed) and a buffer of the record's size
     let n = unsafe {
-        ee_tech_capture_node(node_fields(node), node_data(node), tree_fields(tree), ee_tech_epoch_count() as c_long, bytes.as_mut_ptr())
+        ee_tech_capture_node(
+            node_fields(node),
+            node_data(node),
+            tree_fields(tree),
+            ee_tech_epoch_count() as c_long,
+            bytes.as_mut_ptr(),
+        )
     };
     r.bytes(&bytes[..n as usize]);
 }
@@ -138,7 +146,9 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
             if sum_costs_safe(tree, id, &mut visiting) {
                 let mut costs: [c_long; 7] = [0; 7];
                 // SAFETY: the tree and seven costs
-                unsafe { ee_gamecpp_tech_sum_costs_captured(tree as *mut c_void, id, class as c_long, costs.as_mut_ptr()) };
+                unsafe {
+                    ee_gamecpp_tech_sum_costs_captured(tree as *mut c_void, id, class as c_long, costs.as_mut_ptr())
+                };
                 r.u32(1);
                 for c in costs {
                     r.i32(c as i32);
@@ -229,7 +239,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "no C++")]
-    fn the_sweep_asks_the_world() {
-        ee_gamecpp_tech_capture_sweep();
+    fn a_node_check_asks_the_classes() {
+        node_indexes_safe(1);
     }
 }

@@ -30,7 +30,9 @@ static TEXT_PATH: Mutex<(P, Vec<u8>)> = Mutex::new((0, Vec::new()));
 /// The one compiler content of every table (made on first use, never freed: the C++'s function static).
 static CONTENT: AtomicPtr<EeDataContent> = AtomicPtr::new(std::ptr::null_mut());
 /// The row ids of the tables loaded from text, by table (EEDbRowIds).
-static ROW_IDS: Mutex<BTreeMap<Vec<u8>, BTreeMap<c_long, Vec<u8>>>> = Mutex::new(BTreeMap::new());
+/// One table's row ids by key.
+type DxRowIds = BTreeMap<c_long, Vec<u8>>;
+static ROW_IDS: Mutex<BTreeMap<Vec<u8>, DxRowIds>> = Mutex::new(BTreeMap::new());
 
 /// Bytes the ee_data C interface returned, taken (and freed).
 fn take(bytes: &mut EeDataBytes) -> Vec<u8> {
@@ -187,7 +189,9 @@ fn split_name(name: &[u8]) -> (Vec<u8>, Vec<u8>) {
 
 unsafe extern "C" fn visit_id(ctx: *mut c_void, key: i32, id: *const u8, len: usize) {
     // SAFETY: the map this call's caller passed, and the id's bytes
-    unsafe { (*(ctx as *mut BTreeMap<c_long, Vec<u8>>)).insert(key as c_long, std::slice::from_raw_parts(id, len).to_vec()) };
+    unsafe {
+        (*(ctx as *mut BTreeMap<c_long, Vec<u8>>)).insert(key as c_long, std::slice::from_raw_parts(id, len).to_vec())
+    };
 }
 
 /// EEDbFindFile: the table's text form compiled and served as a new memory file (kErrorOK), or the game stopped.

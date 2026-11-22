@@ -15,7 +15,6 @@ use std::cell::Cell;
 use std::ffi::{c_char, c_long, c_ulong, c_void, CStr, CString};
 
 use ee_base::math::types::GeRectangle;
-use ee_render::ge::texture_ffi::{ee_ge_unpack_blue, ee_ge_unpack_green, ee_ge_unpack_red};
 use ee_data::media::{self, EeDataMediaLock, EeDataMediaStep, EeDataMediaUse};
 use ee_data::tables::{
     ee_data_animal_from_record, ee_data_animal_record_size, ee_data_button_cell, ee_data_button_cell_offset,
@@ -24,6 +23,7 @@ use ee_data::tables::{
     EeDataAnimalFields, EeDataAnimalMedia, EeDataButtonFields, EeDataButtonTexture, EeDataCliffTerrainFields,
     EeDataName, EeDataTerrainExtra, EeDataTerrainFields,
 };
+use ee_render::ge::texture_ffi::{ee_ge_unpack_blue, ee_ge_unpack_green, ee_ge_unpack_red};
 
 use super::persistent::Pf;
 use super::{cptr, h, hf, hp, pa, ptr, rec, O, P};
@@ -379,12 +379,10 @@ pub extern "C" fn ee_gamecpp_db_terrain_textures(terrain: *mut c_void) {
     let count = f.mRows.wrapping_mul(f.mColumns) as c_ulong;
     h(O::DtTerrainNewTextures, t, &[count as i64]);
     let array = textures(t);
-    let mut index: isize = 0;
-    for n in (1..=count).rev() {
+    for (index, n) in (1..=count).rev().enumerate() {
         let texture = load_texture(t, n as c_long);
         // SAFETY: an index of the new array (count entries)
-        unsafe { *array.offset(index) = texture };
-        index += 1;
+        unsafe { *array.add(index) = texture };
     }
 }
 
@@ -440,7 +438,11 @@ pub extern "C" fn ee_gamecpp_db_cliff_load(file: *mut c_void) -> c_long {
             let mut name = EeDataName { text: std::ptr::null(), length: 0 };
             // SAFETY: a whole record; the cliff's record and the name are live
             if unsafe {
-                ee_data_cliff_terrain_from_record(record, rec::<EeDataCliffTerrainFields>(O::DtCliffFields, cliff), &mut name)
+                ee_data_cliff_terrain_from_record(
+                    record,
+                    rec::<EeDataCliffTerrainFields>(O::DtCliffFields, cliff),
+                    &mut name,
+                )
             } {
                 h(O::DtCliffCopyName, cliff, &[cptr(&name)]);
                 if !found {
@@ -657,7 +659,8 @@ pub extern "C" fn ee_gamecpp_db_button_bitmap(
         return;
     }
     // SAFETY: the button's mCellU and mCellV
-    let (cell_u, cell_v) = unsafe { (*(hp(O::DbtCellU, b, &[]) as *const f32), *(hp(O::DbtCellV, b, &[]) as *const f32)) };
+    let (cell_u, cell_v) =
+        unsafe { (*(hp(O::DbtCellU, b, &[]) as *const f32), *(hp(O::DbtCellV, b, &[]) as *const f32)) };
     let size = EeDataButtonTexture {
         width: h(O::DbtTexWidth, texture, &[]) as c_ulong,
         height: h(O::DbtTexHeight, texture, &[]) as c_ulong,
@@ -897,7 +900,7 @@ mod tests {
     #[test]
     fn the_surface_description_is_the_cpps() {
         assert_eq!(size_of::<DbSurfaceDescription>(), 9 * size_of::<c_ulong>());
-        assert_eq!(offset_of!(DbSurfaceDescription, is_3d_renderable), 8 * size_of::<c_ulong>());
+        assert_eq!(offset_of!(DbSurfaceDescription, is_3d_renderable), size_of::<[c_ulong; 8]>());
         assert_eq!(DB_PALETTE.to_bytes(), b"textures\\ColorPalette.png");
         assert_eq!(DC_COLOR_SCALE, 1.0f32 / 255.0f32);
     }

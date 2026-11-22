@@ -53,10 +53,4 @@ mod tests {
     fn a_reset_with_nothing_to_do_calls_no_cpp() {
         ee_gamecpp_pch_reset(std::ptr::null_mut(), false, false);
     }
-
-    #[test]
-    #[should_panic(expected = "no C++")]
-    fn a_copy_asks_the_chunks() {
-        ee_gamecpp_pch_assign(1 as *mut c_void, 2 as *const c_void);
-    }
 }

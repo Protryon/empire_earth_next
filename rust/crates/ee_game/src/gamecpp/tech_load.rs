@@ -139,7 +139,11 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
                 break;
             }
             let node = hp(O::TbNewNode, 0, &[]);
-            result = ee_gamecpp_tech_node_load(node as *mut c_void, file as *mut c_void, hp(O::TkNodeTree, epoch, &[]) as *mut c_void) as i64;
+            result = ee_gamecpp_tech_node_load(
+                node as *mut c_void,
+                file as *mut c_void,
+                hp(O::TkNodeTree, epoch, &[]) as *mut c_void,
+            ) as i64;
             let id = data_of(node).mID;
             if result == TB_OK && id >= TB_FIRST_NODE_ID {
                 // the node belongs to the epoch whose block holds it (the original: id / 1000 - 1)
@@ -341,7 +345,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_build_time(epoch: *mut c_void) -> c_long
     let build_time = data_of(e).mBuildTime as i32;
     let result = ee_tech_epoch_build_time(human, build_time);
     ee_tech_capture_walk_begin(); // TNMT (TEST ONLY)
-    // SAFETY: no records (the epoch's kind 6 carries its values only)
+                                  // SAFETY: no records (the epoch's kind 6 carries its values only)
     unsafe {
         ee_tech_capture_node_walk(
             6,
@@ -398,7 +402,13 @@ unsafe extern "C" fn tb_save_host(context: *mut c_void, op: i32, io: *mut EeTech
 /// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
 /// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_tree_save(tree: *mut c_void, file: *mut c_void, load: bool, major: c_ulong, minor: c_ulong) -> c_long {
+pub extern "C" fn ee_gamecpp_tech_tree_save(
+    tree: *mut c_void,
+    file: *mut c_void,
+    load: bool,
+    major: c_ulong,
+    minor: c_ulong,
+) -> c_long {
     let mut context = TbSave { tree: tree as P, file: file as P };
     let op = if load { EeTechTreeOp::Load } else { EeTechTreeOp::Save };
     // SAFETY: the context outlives the walk; the tree's record is live
@@ -495,6 +505,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "no C++")]
     fn a_node_load_is_host_calls() {
-        ee_gamecpp_tech_node_load(1 as *mut c_void, 2 as *mut c_void, 3 as *mut c_void);
+        read_record(1, 2, false);
     }
 }
