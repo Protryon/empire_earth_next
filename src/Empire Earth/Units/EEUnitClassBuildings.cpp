@@ -198,7 +198,6 @@ static GEColor sGateNormal(1.0f, 1.0f, 1.0f);
 // 0x447004..0x447018: the unit's named float constants (one .rdata block per unit) (provisional names)
 // 0x447004/0x447008 (1.0 open, 0.0 closed) are ee_units cls_condition.rs GATE_OPEN, GATE_CLOSED
 
-static const float kGateStep = 0.2f;            // 0x44700c (per update)
 
 long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long inIndex);
 

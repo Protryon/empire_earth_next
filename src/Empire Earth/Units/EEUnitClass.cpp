@@ -72,33 +72,8 @@
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
 
-static const float kHeadingUnset = -10000.0f;
 static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
 static const float kMaxLineOfSight = 32.0f;      // 0x447ac8 (the ctor: the largest line of sight)
-static const float kBuildingZOffset = 0.01f;
-static const float kCloakFadeTime = 750.0f;
-static const float kCloakFadeMaxOpacity = 1.0f;
-static const float kCloakFadeMinOpacity = 0.6f;
-static const float k447ADC = 0.40824828f;        // 0x447adc (1 / sqrt(6))
-static const float kFacingTolerance = 0.043633234f;
-extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
-static const float kFleeDistanceScale = 1.5f;
-static const float k447AF0 = 0.01f;
-static const float kLargeUnitScale = 1.5f;
-static const float kMinConstructionScale = 0.1f;
-static const float kMinWaypointDistanceSquared = 36.0f;
-static const float kMinDamageRoll = 0.05f;
-static const float kMaxDamageRoll = 0.2f;
-// the wall pieces' yaws (0x446dc0, one object shared with EEGhostUnit.cpp and EEUCBuilding.cpp; ReplantFarm)
-static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
-
-[[maybe_unused]] static float sCloakFadeRate = 1.0f / kCloakFadeTime;  // 0x5636a8: the cloak fade per millisecond (provisional name; the fade is ee_units step.rs cloak_fade)
-
-[[maybe_unused]] static float sCloakFadeOpacityRange = kCloakFadeMaxOpacity - kCloakFadeMinOpacity;  // 0x5636a4: the cloak fade's opacity range (provisional name)
-
-static float sUnusedHalfInverseSqrt6 = k447ADC * 0.5f;
-
-static float sUnusedFourInverseSqrt6 = k447ADC * 4.0f;
 
 // the unit classes by type (0x5636ac in the original: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
 // (the original's fixed EEUnitClassCount() slots; now one per unit type, sized by CreateUnitClasses: EEUnitClassCount() empty slots until then)
@@ -476,14 +451,6 @@ struct EEUnitClassNameLess {
         return theName1 < theName2;
     }
 };
-
-// Each category's physics model (an index into gPhysicsModels; -1: an ambient or resource class, which is not complex
-// and has none): the EEUC* constructors' arguments (the land 0, airplane 1, helicopter 2, naval 4, submerged naval 5,
-// projectile 6, missile 7, building 8, sea animal 9, air animal 10 and space 11 models)
-static const signed char kCategoryPhysicsModels[0x23] = {
-    -1, -1, 8, 1, 4, 0, 0, 2, 0, 6, 5, 6, 7, 0, 4, 0,     // ambient .. land 15
-    0, 2, 4, 8, 7, 4, 4, 0, 0, 8, 2, 9, 10, 8, 8, 11,     // land transport .. spaceship
-    11, 11, 1};                                         // space building, space transport, planet spaceship
 
 // Builds every unit class from dbobjects by category, links the related classes and set flags, sorts sUnitTypes by
 // name (the class table has a slot per unit type, sized from the records)

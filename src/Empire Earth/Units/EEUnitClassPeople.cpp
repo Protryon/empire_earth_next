@@ -205,7 +205,6 @@ EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, b
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
 
-static const float kBasicPriestNoHeight = -10000.0f;
 
 static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversion sound's distance factor)
 

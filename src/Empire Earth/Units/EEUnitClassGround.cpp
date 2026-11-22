@@ -80,7 +80,6 @@ void EEUnitClass::ResourceAddToTile(EEUnit* inUnit)
 void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer);
 
 // 0xde4a9 (EEE2DBattlefieldAmbient.cpp's range): the unit's battlefield ambience (provisional name)
-void EEPlaceTrackDecal(EEComplexUnit* inUnit);
 
 // Sets up a new land unit: its class's resource (and amount when it has one) and, for the radio man, its power
 void EEUnitClass::LandUnitCreated(EEComplexUnit* inUnit)

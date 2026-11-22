@@ -269,7 +269,6 @@ void EEUnitClass::LandTransportBadlyHurt(EEUnit* inUnit)
 // factory); slots +0xe4, +0x24, +0xf0, +0xf8, +0x74, +0x78, +0xa0, +0xb8 in address order.
 
 // 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way) (provisional name)
-void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
 // New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
