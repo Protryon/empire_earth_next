@@ -41,25 +41,12 @@ void SeplLinePush(const UWideString& inLine);   // a line for the next combo box
 // ---- the tab's host (editor_map.rs: the ops from 500)
 
 
-
-namespace {
-
-
-}   // namespace
-
-extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i, float* f)
-{
-    switch (inOp) {
-    case EE_SCREENS_SEMP_OP_TERRAIN_COUNT: return (int32_t)EETerrainTable::GetNumTables();
-    }
-    return 0;
-}
-
 // the tab's single statements (ee_screens editor_tabsx.rs EE_SCREENS_SEMPX_*: the Rust composes the host's ops)
 extern "C" int32_t ee_screenscpp_sempx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     UIForm* theForm = static_cast<UIForm*>(p[1]);
     switch (inOp) {
+    case EE_SCREENS_SEMP_OP_TERRAIN_COUNT: return (int32_t)EETerrainTable::GetNumTables();
     case EE_SCREENS_SEMPX_TERRAIN_EXISTS: return EETerrainTable::Get((unsigned long)i[0]) != NULL;
     case EE_SCREENS_SEMPX_TERRAIN_IN_EDITOR: return EETerrainTable::Get((unsigned long)i[0])->mIsInEditor;
     case EE_SCREENS_SEMPX_TERRAIN_ID: return (int32_t)EETerrainTable::Get((unsigned long)i[0])->mID;

@@ -185,10 +185,8 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETSX_GAME_VIEW_RECT:
         EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3]));
         return 0;
-    case EE_SCREENS_SETSX_HIDE_UI_VIEWS:   // (the hide-UI event is an EESEERust since it moved)
-        ee_screens_see_hide_ui_views(
-            static_cast<EESEERust*>(static_cast<UIControl*>(p[0])->GetTriggerEvent(kControlTriggerChecked))->mEvent, f,
-            static_cast<const float*>(p[1]));
+    case EE_SCREENS_SETSX_CHECKED_EVENT:   // (the hide-UI box's event, an EESEERust: its Rust event)
+        *theOut = static_cast<EESEERust*>(t->GetTriggerEvent(kControlTriggerChecked))->mEvent;
         return 0;
     case EE_SCREENS_SETSX_SET_CHECKED:
         static_cast<UICheckBox*>(p[0])->SetChecked(true);

@@ -301,8 +301,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
         *theOut = static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[0]), f[0], (long)i[0]));
         return 0;
     case EE_SCREENS_SEETX_EV_SLIDER_FORMAT:
-        *theOut = static_cast<UIEvent*>(
-            EESEENewSliderChange(static_cast<UITextLabel*>(p[0]), i[0] != 0 ? "%#2.1f" : "%2.0f", f[0], f[1]));
+        *theOut = static_cast<UIEvent*>(EESEENewSliderChange(static_cast<UITextLabel*>(p[0]), static_cast<const char*>(p[1]), f[0], f[1]));
         return 0;
     case EE_SCREENS_SEETX_EV_USE_OBJECT_AREA:
         *theOut = static_cast<UIEvent*>(

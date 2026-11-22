@@ -876,6 +876,8 @@ pub(crate) unsafe fn semp(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f
         use core::ffi::c_void;
 
         extern "C" {
+            // (the file's statement host answers these ops too since round 6)
+            #[link_name = "ee_screenscpp_sempx"]
             pub fn ee_screenscpp_semp(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         }
     }

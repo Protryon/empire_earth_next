@@ -57,20 +57,6 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
 // ---- the host (editor_trigger.rs: the ops from 200)
 
 
-// the screen's own ops (editor_trigx.rs composes the sequences and the ops on a trigger)
-extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i, float* f)
-{
-    switch (inOp) {
-    case EE_SCREENS_SETR_OP_GET_NAMES:
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0]));
-        return 0;
-    case EE_SCREENS_SETR_OP_NEW_EVENT:
-        *static_cast<UIEvent**>(p[0]) = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
-        return 0;
-    case EE_SCREENS_SETR_OP_RELEASE_EVENT: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
-    }
-    return 0;
-}
 
 namespace {
 
@@ -91,6 +77,13 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
     void** theOut = static_cast<void**>(p[2]);
     EESMTrigger* t = static_cast<EESMTrigger*>(p[0]);
     switch (inOp) {
+    case EE_SCREENS_SETR_OP_GET_NAMES:
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0]));
+        return 0;
+    case EE_SCREENS_SETR_OP_NEW_EVENT:
+        *static_cast<UIEvent**>(p[0]) = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
+        return 0;
+    case EE_SCREENS_SETR_OP_RELEASE_EVENT: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
     case EE_SCREENS_SETRX_SET_NAME:
         t->SetName(SetrBytes(p[1], i[0]));
         return 0;
