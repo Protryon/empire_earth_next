@@ -149,6 +149,32 @@ pub const EE_UNITS_UC_R_CONTINENT_IS_LAND: i32 = 3162;
 pub const EE_UNITS_UC_R_TERRAIN_OF: i32 = 3163;
 /// `::gWorld.mMap->IsEdgeTile(b, c)`
 pub const EE_UNITS_UC_R_EDGE_TILE: i32 = 3164;
+/// `class->FacesPoint(unit, f[0..3], b)` (its own CBQR record)
+pub const EE_UNITS_UC_R_FACES_POINT: i32 = 3165;
+/// tile vector `a`'s `size()`
+pub const EE_UNITS_UC_R_VEC_TILES_SIZE: i32 = 3166;
+/// tile vector `a`'s `clear()`
+pub const EE_UNITS_UC_R_VEC_TILES_CLEAR: i32 = 3167;
+/// upgrade `a`'s `mButton = mUnitClass->mButton`
+pub const EE_UNITS_UC_R_UPGRADE_BUTTON: i32 = 3168;
+/// upgrade `a`'s `SetModel(mUnitClass->mModel)`
+pub const EE_UNITS_UC_R_UPGRADE_MODEL: i32 = 3169;
+/// upgrade `a`'s `SetAcknowledgeSound(mUnitClass->mAcknowledgeSounds[b], b)`
+pub const EE_UNITS_UC_R_UPGRADE_ACKNOWLEDGE: i32 = 3170;
+/// upgrade `a`'s `SetCreationSound(mUnitClass->mCreationSound)`
+pub const EE_UNITS_UC_R_UPGRADE_CREATION: i32 = 3171;
+/// upgrade `a`'s `SetDeathSound(mUnitClass->mDeathSound)`
+pub const EE_UNITS_UC_R_UPGRADE_DEATH: i32 = 3172;
+/// upgrade `a`'s `SetSelectionSound(mUnitClass->mSelectionSounds[b], b)`
+pub const EE_UNITS_UC_R_UPGRADE_SELECTION: i32 = 3173;
+/// upgrade `a`'s `SetRange(mUnitClass->mRange)`
+pub const EE_UNITS_UC_R_UPGRADE_RANGE: i32 = 3174;
+/// `ee_units_upgrade_init(upgrade a, its mUnitClass)` (the copies from the class's record)
+pub const EE_UNITS_UC_R_UPGRADE_INIT: i32 = 3175;
+/// upgrade `a`'s `mImprovement.Reapply(mUnitClass, upgrade)`
+pub const EE_UNITS_UC_R_UPGRADE_REAPPLY: i32 = 3176;
+/// `ee_units_upgrade_init_finish(upgrade a, its mUnitClass)`
+pub const EE_UNITS_UC_R_UPGRADE_INIT_FINISH: i32 = 3177;
 
 // (the buildings' host, EEUnitClassBuildings.cpp: 3180..3199)
 /// `USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, the class pointer at a)`
@@ -185,6 +211,9 @@ pub const EE_UNITS_UC_DO_R_FIND_TARGET_NEAR: i32 = 3220;
 pub const EE_UNITS_UC_DO_R_CONTAINER_CONTINENT: i32 = 3221;
 pub const EE_UNITS_UC_DO_R_DISTANCE_3D: i32 = 3222;
 pub const EE_UNITS_UC_DO_R_TILE_FREE: i32 = 3223;
+pub const EE_UNITS_UC_DO_R_FACES_TARGET: i32 = 3224;
+pub const EE_UNITS_UC_DO_R_BASE_SURROUNDING: i32 = 3225;
+pub const EE_UNITS_UC_DO_R_UPGRADE_INIT: i32 = 3226;
 
 // ---- the sound bodies (`ee_units_uc_rest_sound`'s `what`)
 pub const EE_UNITS_UC_SOUND_BASE: i32 = 3240;
@@ -212,6 +241,8 @@ pub trait UcRestRust {
     fn aim_point(&mut self, unit: u64, target: [f32; 3]) -> [f32; 3];
     /// `ee_units_uu_units_near(center, radius, units)`: the units
     fn units_near(&mut self, center: [f32; 3], radius: f32) -> Vec<u64>;
+    /// `ee_units_uu_block_ring(corners, x, y, w, h, tiles, append, 1)`
+    fn block_ring(&mut self, corners: i32, ring: [i32; 4], tiles: u64, append: bool);
 }
 
 fn location<H: UcHost + ?Sized>(s: &mut S<'_, H>, unit: u64) -> GeTransformation {
@@ -649,6 +680,64 @@ pub fn tile_free<H: UcHost + ?Sized>(h: &mut H, x: u32, y: u32) -> bool {
     } && s.abc(EE_UNITS_UC_R_EDGE_TILE, 0, i64::from(x), i64::from(y)) == 0
 }
 
+/// `FacesTarget(unit, target, tolerance)`'s answer (its CBQR record stays the C++ member's): `FacesPoint` toward
+/// the target's point (its tile's centre for a simple unit).
+pub fn faces_target<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64, target: u64, tolerance: bool) -> bool {
+    let mut s = S { h, class, unit };
+    let owner = s.a(EE_UNITS_UC_COMPLEX_OF, target) as u64;
+    let mut f = [0.0f32; 4];
+    if owner != 0 {
+        let p = position_of(&location(&mut s, owner));
+        f[0] = p[0];
+        f[1] = p[1];
+    } else {
+        f[0] = s.a(EE_UNITS_UC_R_TILE_X_OF, target) as i32 as f32 + 0.5;
+        f[1] = s.a(EE_UNITS_UC_R_TILE_Y_OF, target) as i32 as f32 + 0.5;
+    }
+    s.f(EE_UNITS_UC_R_FACES_POINT, 0, i64::from(tolerance), 0, &mut f) != 0
+}
+
+/// `BaseGetSurroundingTiles(unit, tiles, corners, append)`: the ring around the class's footprint at the unit's
+/// tile (the list emptied first unless appending).
+pub fn base_surrounding<H: UcHost + UcRestRust + ?Sized>(
+    h: &mut H,
+    class: u64,
+    unit: u64,
+    tiles: u64,
+    corners: i32,
+    append: bool,
+) {
+    let mut s = S { h: &mut *h, class, unit };
+    if !append && s.a(EE_UNITS_UC_R_VEC_TILES_SIZE, tiles) > 0 {
+        s.a(EE_UNITS_UC_R_VEC_TILES_CLEAR, tiles);
+    }
+    let x = s.a(EE_UNITS_UC_R_TILE_X_OF, unit) as i32;
+    let y = s.a(EE_UNITS_UC_R_TILE_Y_OF, unit) as i32;
+    let size = s.s(EE_UNITS_UC_TILE_SIZE) as i32;
+    let size2 = s.s(EE_UNITS_UC_TILE_SIZE) as i32;
+    h.block_ring(corners, [x, y, size, size2], tiles, append);
+}
+
+/// `EEUnitClassUpgrade::Init()`: the copy reset to its class (media, button, stats), then its improvements
+/// reapplied.
+pub fn upgrade_init<H: UcHost + ?Sized>(h: &mut H, upgrade: u64) {
+    let mut s = S { h, class: 0, unit: 0 };
+    s.a(EE_UNITS_UC_R_UPGRADE_BUTTON, upgrade);
+    s.a(EE_UNITS_UC_R_UPGRADE_MODEL, upgrade);
+    for i in 0..2 {
+        s.ab(EE_UNITS_UC_R_UPGRADE_ACKNOWLEDGE, upgrade, i);
+    }
+    s.a(EE_UNITS_UC_R_UPGRADE_CREATION, upgrade);
+    s.a(EE_UNITS_UC_R_UPGRADE_DEATH, upgrade);
+    for i in 0..2 {
+        s.ab(EE_UNITS_UC_R_UPGRADE_SELECTION, upgrade, i);
+    }
+    s.a(EE_UNITS_UC_R_UPGRADE_RANGE, upgrade);
+    s.a(EE_UNITS_UC_R_UPGRADE_INIT, upgrade);
+    s.a(EE_UNITS_UC_R_UPGRADE_REAPPLY, upgrade);
+    s.a(EE_UNITS_UC_R_UPGRADE_INIT_FINISH, upgrade);
+}
+
 /// Runs body `what` (`EE_UNITS_UC_DO_R_*`) of `class` on `unit`: `a`, `b`, `c` its arguments, `f` its floats (a
 /// point in, a float out); the answer, or 0.
 ///
@@ -695,6 +784,9 @@ pub unsafe fn run<H: UcHost + UcRestRust + ?Sized>(
         EE_UNITS_UC_DO_R_CONTAINER_CONTINENT => return container_continent(h, class, unit, a) as i64,
         EE_UNITS_UC_DO_R_DISTANCE_3D => f[0] = distance_3d(h, unit, [f[0], f[1], f[2]]),
         EE_UNITS_UC_DO_R_TILE_FREE => return i64::from(tile_free(h, b as u32, c as u32)),
+        EE_UNITS_UC_DO_R_FACES_TARGET => return i64::from(faces_target(h, class, unit, a, b != 0)),
+        EE_UNITS_UC_DO_R_BASE_SURROUNDING => base_surrounding(h, class, unit, a, b as i32, c != 0),
+        EE_UNITS_UC_DO_R_UPGRADE_INIT => upgrade_init(h, a),
         _ => {}
     }
     0
@@ -754,6 +846,21 @@ mod game {
         }
         fn units_near(&mut self, center: [f32; 3], radius: f32) -> Vec<u64> {
             crate::units::uu_ffi::units_near(center, radius)
+        }
+        fn block_ring(&mut self, corners: i32, ring: [i32; 4], tiles: u64, append: bool) {
+            // SAFETY: the caller's live tile vector
+            unsafe {
+                crate::units::uu_ffi::ee_units_uu_block_ring(
+                    corners,
+                    ring[0],
+                    ring[1],
+                    ring[2],
+                    ring[3],
+                    tiles as usize as *mut std::ffi::c_void,
+                    u8::from(append),
+                    1,
+                )
+            }
         }
     }
 

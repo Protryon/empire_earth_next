@@ -10985,6 +10985,45 @@ constexpr static const int32_t EE_UNITS_UC_R_TERRAIN_OF = 3163;
 /// `::gWorld.mMap->IsEdgeTile(b, c)`
 constexpr static const int32_t EE_UNITS_UC_R_EDGE_TILE = 3164;
 
+/// `class->FacesPoint(unit, f[0..3], b)` (its own CBQR record)
+constexpr static const int32_t EE_UNITS_UC_R_FACES_POINT = 3165;
+
+/// tile vector `a`'s `size()`
+constexpr static const int32_t EE_UNITS_UC_R_VEC_TILES_SIZE = 3166;
+
+/// tile vector `a`'s `clear()`
+constexpr static const int32_t EE_UNITS_UC_R_VEC_TILES_CLEAR = 3167;
+
+/// upgrade `a`'s `mButton = mUnitClass->mButton`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_BUTTON = 3168;
+
+/// upgrade `a`'s `SetModel(mUnitClass->mModel)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_MODEL = 3169;
+
+/// upgrade `a`'s `SetAcknowledgeSound(mUnitClass->mAcknowledgeSounds[b], b)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_ACKNOWLEDGE = 3170;
+
+/// upgrade `a`'s `SetCreationSound(mUnitClass->mCreationSound)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_CREATION = 3171;
+
+/// upgrade `a`'s `SetDeathSound(mUnitClass->mDeathSound)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_DEATH = 3172;
+
+/// upgrade `a`'s `SetSelectionSound(mUnitClass->mSelectionSounds[b], b)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_SELECTION = 3173;
+
+/// upgrade `a`'s `SetRange(mUnitClass->mRange)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_RANGE = 3174;
+
+/// `ee_units_upgrade_init(upgrade a, its mUnitClass)` (the copies from the class's record)
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_INIT = 3175;
+
+/// upgrade `a`'s `mImprovement.Reapply(mUnitClass, upgrade)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_REAPPLY = 3176;
+
+/// `ee_units_upgrade_init_finish(upgrade a, its mUnitClass)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_INIT_FINISH = 3177;
+
 /// `USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, the class pointer at a)`
 constexpr static const int32_t EE_UNITS_UCB_R_VOLCANO_CLASS = 3180;
 
@@ -11044,6 +11083,12 @@ constexpr static const int32_t EE_UNITS_UC_DO_R_CONTAINER_CONTINENT = 3221;
 constexpr static const int32_t EE_UNITS_UC_DO_R_DISTANCE_3D = 3222;
 
 constexpr static const int32_t EE_UNITS_UC_DO_R_TILE_FREE = 3223;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_FACES_TARGET = 3224;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_BASE_SURROUNDING = 3225;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_UPGRADE_INIT = 3226;
 
 constexpr static const int32_t EE_UNITS_UC_SOUND_BASE = 3240;
 
@@ -12071,6 +12116,9 @@ constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT = 3030;
 constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT = 3031;
 
 constexpr static const int32_t EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION = 3032;
+
+/// "UCBD"
+constexpr static const uint32_t UCBD = 1145193301;
 
 /// `class->BaseAddToRegion(unit a)`
 constexpr static const int32_t EE_UNITS_UCK_D_BASE_ADD_TO_REGION = 3500;
@@ -19743,6 +19791,15 @@ int64_t ee_units_ucg_sea(int32_t what,
                          int64_t b,
                          int64_t c,
                          float *f);
+
+/// `EEUCNote`'s constructor: whether the note records.
+uint8_t ee_units_ucbd_begin();
+
+/// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
+///
+/// # Safety
+/// `words` holds `count` words (or is NULL with 0).
+void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
 
 /// The kind dispatcher `row` (`EE_UNITS_BODY_*`) of `class` on `unit` (see [`dispatch`]).
 ///

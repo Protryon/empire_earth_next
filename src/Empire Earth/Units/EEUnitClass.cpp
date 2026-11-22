@@ -218,19 +218,8 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 // Returns whether the unit faces the target unit (or its tile's centre)
 bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
 {
-    EECombatHostReadScope theScope;   // CBQR records the outcome (the original body in a lambda)
-    bool theFaces = [&]() -> bool {
-    GE3DPoint theLocation;
-    EEComplexUnit* theOwner = inTarget->GetComplexUnit();
-    if (theOwner != NULL) {
-        theLocation.SetX(theOwner->mPhysicalModel.GetLocation().GetX());
-        theLocation.SetY(theOwner->mPhysicalModel.GetLocation().GetY());
-    } else {
-        theLocation.SetX(inTarget->GetTileX() + 0.5f);
-        theLocation.SetY(inTarget->GetTileY() + 0.5f);
-    }
-    return this->FacesPoint(inUnit, theLocation, inUseTolerance);
-    }();
+    EECombatHostReadScope theScope;   // CBQR records the outcome
+    bool theFaces = ee_units_uc_rest(EE_UNITS_UC_DO_R_FACES_TARGET, this, inUnit, EEObj(inTarget), inUseTolerance, 0, NULL) != 0;   // uc_rest.rs
     if (theScope.mOuter)
         EECombatCaptureHostRead(EE_COMBAT_HR_FACES_TARGET, inUnit, inTarget, theFaces, 0, 0, inUseTolerance);
     return theFaces;
@@ -290,9 +279,7 @@ void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
 // Lists the ring of tiles around the unit's footprint (optionally with corners, appending or replacing)
 void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
 {
-    if (!inAppend && outTiles.size() > 0)
-        outTiles.clear();
-    ee_units_uu_block_ring(inCorners, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), this->GetTileSize(), &outTiles, inAppend, 1);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, this, inUnit, EEObj(&outTiles), inCorners, inAppend, NULL);   // uc_rest.rs
 }
 
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
@@ -1040,6 +1027,19 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_R_CONTINENT_IS_LAND: return EEUcObject<EEAIContinent>(inA)->GetCategory() == kContinentCategoryLand;
     case EE_UNITS_UC_R_TERRAIN_OF: return EEUcObject<EETile>(inA)->mTerrainType;
     case EE_UNITS_UC_R_EDGE_TILE: return ::gWorld.mMap->IsEdgeTile((long)inB, (long)inC);
+    case EE_UNITS_UC_R_FACES_POINT: return theClass->FacesPoint(theUnit, GE3DPoint(f[0], f[1], f[2]), inB != 0);
+    case EE_UNITS_UC_R_VEC_TILES_SIZE: return EEUcObject<std::vector<EETileCoordinate> >(inA)->size();
+    case EE_UNITS_UC_R_VEC_TILES_CLEAR: EEUcObject<std::vector<EETileCoordinate> >(inA)->clear(); return 0;
+    case EE_UNITS_UC_R_UPGRADE_BUTTON: EEUcObject<EEUnitClassUpgrade>(inA)->mButton = EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mButton; return 0;
+    case EE_UNITS_UC_R_UPGRADE_MODEL: EEUcObject<EEUnitClassUpgrade>(inA)->SetModel(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mModel); return 0;
+    case EE_UNITS_UC_R_UPGRADE_ACKNOWLEDGE: EEUcObject<EEUnitClassUpgrade>(inA)->SetAcknowledgeSound(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mAcknowledgeSounds[inB], (long)inB); return 0;
+    case EE_UNITS_UC_R_UPGRADE_CREATION: EEUcObject<EEUnitClassUpgrade>(inA)->SetCreationSound(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mCreationSound); return 0;
+    case EE_UNITS_UC_R_UPGRADE_DEATH: EEUcObject<EEUnitClassUpgrade>(inA)->SetDeathSound(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mDeathSound); return 0;
+    case EE_UNITS_UC_R_UPGRADE_SELECTION: EEUcObject<EEUnitClassUpgrade>(inA)->SetSelectionSound(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mSelectionSounds[inB], (long)inB); return 0;
+    case EE_UNITS_UC_R_UPGRADE_RANGE: EEUcObject<EEUnitClassUpgrade>(inA)->SetRange(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass->mRange); return 0;
+    case EE_UNITS_UC_R_UPGRADE_INIT: ee_units_upgrade_init(EEUcObject<EEUnitClassUpgrade>(inA), EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass); return 0;
+    case EE_UNITS_UC_R_UPGRADE_REAPPLY: EEUcObject<EEUnitClassUpgrade>(inA)->mImprovement.Reapply(EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass, EEUcObject<EEUnitClassUpgrade>(inA)); return 0;
+    case EE_UNITS_UC_R_UPGRADE_INIT_FINISH: ee_units_upgrade_init_finish(EEUcObject<EEUnitClassUpgrade>(inA), EEUcObject<EEUnitClassUpgrade>(inA)->mUnitClass); return 0;
     case EE_UNITS_UC_GOAL_LOCATION: EEUcObject<EEUnitGoal>(inA)->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_GOAL_KIND: return EEUcObject<EEUnitGoal>(inA)->mKind;
     case EE_UNITS_UC_ATTACK_TARGET: return (uint64_t)(uintptr_t)EEAttackUnitCast(EEUcObject<EEUnitGoal>(inA))->GetAttackTarget();

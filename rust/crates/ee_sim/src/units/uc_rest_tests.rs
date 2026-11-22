@@ -13,6 +13,9 @@ impl UcRestRust for Mock {
         self.log.push((-5, 0, radius as i64, 0));
         vec![11, 12, 13]
     }
+    fn block_ring(&mut self, corners: i32, ring: [i32; 4], tiles: u64, append: bool) {
+        self.rings.push((corners, ring, tiles, append));
+    }
 }
 
 #[test]
@@ -198,4 +201,32 @@ fn a_free_tile_is_no_cliff_water_space_or_edge() {
     let mut h = Mock::default().answer(EE_UNITS_UC_GET_TILE, 4).answer(EE_UNITS_UC_R_TERRAIN_OF, TERRAIN_SPACE);
     assert!(!tile_free(&mut h, 1, 2));
     assert!(!h.has(EE_UNITS_UC_R_EDGE_TILE));
+}
+
+#[test]
+fn a_unit_faces_its_target_tile_centre_when_simple() {
+    let mut h = Mock::default().answer(EE_UNITS_UC_R_TILE_X_OF, 3).answer(EE_UNITS_UC_R_TILE_Y_OF, 4).answer(EE_UNITS_UC_R_FACES_POINT, 1);
+    assert!(faces_target(&mut h, 1, 2, 9, true));
+    assert_eq!(h.floats_of(EE_UNITS_UC_R_FACES_POINT)[0], [3.5, 4.5, 0.0, 0.0]);
+    assert_eq!(h.args(EE_UNITS_UC_R_FACES_POINT), [(0, 1, 0)]);
+}
+
+#[test]
+fn the_base_ring_empties_the_list_unless_appending() {
+    let mut h = Mock::default().answer(EE_UNITS_UC_R_VEC_TILES_SIZE, 2).answer(EE_UNITS_UC_TILE_SIZE, 3);
+    base_surrounding(&mut h, 1, 2, 77, 1, false);
+    assert!(h.has(EE_UNITS_UC_R_VEC_TILES_CLEAR));
+    assert_eq!(h.rings, [(1, [0, 0, 3, 3], 77, false)]);
+    let mut h = Mock::default().answer(EE_UNITS_UC_R_VEC_TILES_SIZE, 2);
+    base_surrounding(&mut h, 1, 2, 77, 0, true);
+    assert!(!h.has(EE_UNITS_UC_R_VEC_TILES_SIZE));
+}
+
+#[test]
+fn an_upgrade_copies_its_class_then_reapplies() {
+    let mut h = Mock::default();
+    upgrade_init(&mut h, 5);
+    assert_eq!(h.count(EE_UNITS_UC_R_UPGRADE_ACKNOWLEDGE), 2);
+    assert!(h.at(EE_UNITS_UC_R_UPGRADE_RANGE) < h.at(EE_UNITS_UC_R_UPGRADE_INIT));
+    assert!(h.at(EE_UNITS_UC_R_UPGRADE_REAPPLY) < h.at(EE_UNITS_UC_R_UPGRADE_INIT_FINISH));
 }

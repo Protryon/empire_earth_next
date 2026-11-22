@@ -167,6 +167,7 @@ pub mod ucb_gate;
 pub mod ucb_release;
 pub mod ucg_ground;
 pub mod ucg_sea;
+pub mod ucbd_note;
 pub mod uck_dispatch;
 pub mod uck_kinds;
 pub mod ucp_people;

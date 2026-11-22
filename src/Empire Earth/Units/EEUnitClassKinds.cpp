@@ -405,14 +405,7 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
 }
 
 // TEST ONLY: the UCBD record (ee/EEUnitClassKinds.h EEUCNote; the unit utilities' UUTL record's pattern)
-static thread_local int sUCDepth = 0;
-static std::mutex sUCMutex;
-static uint64_t sUCDigest = 0xcbf29ce484222325ull;
-static uint32_t sUCCalls = 0;
-static unsigned long sUCTick = 0;
-static uint32_t sUCKinds[64];
-
-EEUCNote::EEUCNote(unsigned int inKind) : mOn(++sUCDepth == 1 && EESimCaptureRecord::Active())
+EEUCNote::EEUCNote(unsigned int inKind) : mOn(ee_units_ucbd_begin() != 0)   // ucbd_note.rs (the depth, the record)
 {
     this->I((long)inKind);
 }
@@ -476,35 +469,5 @@ EEUCNote& EEUCNote::S(EEComplexUnit* inUnit)
 
 EEUCNote::~EEUCNote()
 {
-    sUCDepth--;
-    if (!this->mOn)
-        return;
-    std::lock_guard<std::mutex> theLock(sUCMutex);
-    unsigned long theTick = gPhysics != NULL ? gPhysics->mNumTicksDone : 0;
-    if (theTick != sUCTick) {
-        if (sUCCalls != 0) {
-            EESimCaptureRecord theRecord(0x44424355u);   // "UCBD"
-            theRecord.U32((unsigned int)sUCTick);
-            theRecord.U32(sUCCalls);
-            theRecord.U32((unsigned int)(sUCDigest & 0xffffffffu));
-            theRecord.U32((unsigned int)(sUCDigest >> 32));
-            theRecord.Commit();
-        }
-        if (theTick / 20000 != sUCTick / 20000) {
-            fprintf(stderr, "EE-UCBD-COUNT %lu", theTick);
-            for (int i = 1; i < 50; i++)
-                fprintf(stderr, " %d:%u", i, sUCKinds[i]);
-            fprintf(stderr, "\n");
-        }
-        sUCDigest = 0xcbf29ce484222325ull;
-        sUCCalls = 0;
-        sUCTick = theTick;
-    }
-    sUCKinds[this->mWords[0] & 63]++;
-    for (size_t i = 0; i < this->mWords.size(); i++)
-        for (int b = 0; b < 4; b++) {
-            sUCDigest ^= (this->mWords[i] >> (8 * b)) & 0xff;
-            sUCDigest *= 0x100000001b3ull;
-        }
-    sUCCalls++;
+    ee_units_ucbd_end(this->mOn, this->mWords.empty() ? NULL : this->mWords.data(), this->mWords.size());   // ucbd_note.rs
 }
