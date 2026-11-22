@@ -1060,12 +1060,39 @@ mod sys {
 /// The game's host: the C++ statements, the capture writer, the unit utilities.
 pub struct EeScenarioEvGame;
 
+// ---- the single statements the C ABI adapter composes `EE_SCENARIO_EV_FILE_LENGTH` and `_SET_NAME` of (the scenario
+// editor lane's round 6: they were C++ helpers of two statements)
+/// File a0's `GetLength(*(unsigned long*)a1)` (the value kept on failure).
+pub const EE_SCENARIO_EV_FILE_LENGTH_INTO: u32 = 3000;
+/// `gResource->GetString(UMFloatToLong(f(a0)), sEvText)`.
+pub const EE_SCENARIO_EV_NAME_TEXT: u32 = 3001;
+/// Upgrade a0's `SetName(sEvText)`.
+pub const EE_SCENARIO_EV_SET_NAME_TEXT: u32 = 3002;
+
+/// Operation `op` of the event host over the C++ statements `call`: `EE_SCENARIO_EV_FILE_LENGTH` (the length
+/// into a value that starts as a1, returned) and `EE_SCENARIO_EV_SET_NAME` (the name string of f(a1), then upgrade
+/// a0's name) as their statements, every other operation the C++'s own.
+pub(crate) fn ev_compose(op: u32, a: [i64; 4], call: &mut impl FnMut(u32, [i64; 4]) -> i64) -> i64 {
+    match op {
+        EE_SCENARIO_EV_FILE_LENGTH => {
+            let mut length = a[1] as c_ulong;
+            call(EE_SCENARIO_EV_FILE_LENGTH_INTO, [a[0], &mut length as *mut c_ulong as usize as i64, 0, 0]);
+            length as i64
+        }
+        EE_SCENARIO_EV_SET_NAME => {
+            call(EE_SCENARIO_EV_NAME_TEXT, [a[1], 0, 0, 0]);
+            call(EE_SCENARIO_EV_SET_NAME_TEXT, [a[0], 0, 0, 0])
+        }
+        _ => call(op, a),
+    }
+}
+
 impl EvHost for EeScenarioEvGame {
     fn op(&mut self, op: u32, a: [i64; 4]) -> i64 {
         #[cfg(not(test))]
         {
             // SAFETY: the C++ host's contract (EEEvent.cpp): the arguments its op names
-            unsafe { sys::ee_scenariocpp_event(op, a.as_ptr()) }
+            ev_compose(op, a, &mut |op, a| unsafe { sys::ee_scenariocpp_event(op, a.as_ptr()) })
         }
         #[cfg(test)]
         {

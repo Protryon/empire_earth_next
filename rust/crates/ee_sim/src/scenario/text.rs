@@ -71,7 +71,7 @@ pub const EE_SCENARIO_TEXT_OP_ERROR_PRINT_TEXTS: u32 = 14;
 pub const EE_SCENARIO_TEXT_OP_ERROR_PUSH: u32 = 15;
 /// The errors' format strings by `EE_SCENARIO_TEXT_ERROR_*` (`IDS_IS_INVALID_TOKEN` .. `IDS_INVALID_PLAYER_NUMBER_FOR_
 /// THIS_SCENARIO`, ee/EEStringIDs.h).
-const ERROR_FORMATS: [c_long; 8] = [10027, 10028, 10029, 10030, 10054, 10053, 10055, 10056];
+pub(crate) const ERROR_FORMATS: [c_long; 8] = [10027, 10028, 10029, 10030, 10054, 10053, 10055, 10056];
 
 /// The media strings' sections (`EESMMediaStrings`' `mHints`, `mAftermath`, `mHistory`, `mInstructions`) by the
 /// number of their tag.

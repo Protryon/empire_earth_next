@@ -23,8 +23,6 @@ public:
     // 0x1bd5eb (6.4 KB: the effect's execution, its 17 helpers' bodies with it: ee_scenario effect.rs, effect_ai.rs,
     // task.rs over EESMEffectWorld; provisional name)
     void Execute(bool inIsCinematic);
-    void ExecuteUncaptured(bool inIsCinematic);  // Execute's body (entry.rs adds the capture's SMEX record)
-    void CreateUnits();                    // 0x1bd099: effect execution helper, original this/no args
     void Reset();                           // 0x1bb65a (the ctor's tail; assigns "" to the strings, the numbers below)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bfa67
     virtual void ExpandTokens(const UWideString& inText, UWideString& outText);            // +0x04 0x1bef17
