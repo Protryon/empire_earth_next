@@ -9060,8 +9060,32 @@ constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
-/// unit `a` into `unit`
-constexpr static const int32_t EE_UNITS_SIGHT_UNIT = 1;
+/// unit `a`'s `GetLineOfSight()` into `f[0]` (the reads of [`EeUnitsSightUnit`], one statement each)
+constexpr static const int32_t EE_UNITS_SIGHT_U_LINE_OF_SIGHT = 4000;
+
+/// unit `a`'s `mPlayer`
+constexpr static const int32_t EE_UNITS_SIGHT_U_PLAYER = 4001;
+
+/// unit `a`'s `mPlayer != NULL && mPlayer->mSaveVisMap`
+constexpr static const int32_t EE_UNITS_SIGHT_U_SAVE_VIS_MAP = 4002;
+
+/// unit `a`'s `mHitPoints`
+constexpr static const int32_t EE_UNITS_SIGHT_U_HIT_POINTS = 4003;
+
+/// unit `a`'s `mIsBuilt`
+constexpr static const int32_t EE_UNITS_SIGHT_U_IS_BUILT = 4004;
+
+/// unit `a`'s `GetUnitClass()->IsLandBuilding()`
+constexpr static const int32_t EE_UNITS_SIGHT_U_LAND_BUILDING = 4005;
+
+/// unit `a`'s `GetUnitClass()->mTileSize`
+constexpr static const int32_t EE_UNITS_SIGHT_U_TILE_SIZE = 4006;
+
+/// unit `a`'s `GetUnitClass()->mWonderBonus`
+constexpr static const int32_t EE_UNITS_SIGHT_U_WONDER_BONUS = 4007;
+
+/// unit `a`'s `GetTechTreeNode() != NULL ? GetTechTreeNode()->mData->mKind : -1`
+constexpr static const int32_t EE_UNITS_SIGHT_U_NODE_KIND = 4008;
 
 /// `gSightUpdatesEnabled`
 constexpr static const int32_t EE_UNITS_SIGHT_ENABLED = 2;
@@ -9337,8 +9361,17 @@ constexpr static const int32_t EE_UNITS_TILE_SIGHT_HIDDEN = 2;
 /// player a's `mSavedGroups.Reset(0x18, 1)`
 constexpr static const int32_t EE_UNITS_TILE_SIGHT_FIRST = 3;
 
-/// `gMiniMap->CountCellOn/Off(c, d)` (a != 0: on), the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOW = 4;
+/// `gMiniMap->CountCellOn(c, d)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_CELL_ON = 4000;
+
+/// `gWorld.mMap->mTerrainMesh.ReferenceTile(c, d)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_REFERENCE = 4001;
+
+/// `gMiniMap->CountCellOff(c, d)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_CELL_OFF = 4002;
+
+/// `gWorld.mMap->mTerrainMesh.DereferenceTile(c, d)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_DEREFERENCE = 4003;
 
 /// `kErrorBeyondEnd`: an area read short.
 constexpr static const int32_t EE_UNITS_TOWN_BEYOND_END = 10;

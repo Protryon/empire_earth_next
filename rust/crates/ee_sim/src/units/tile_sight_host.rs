@@ -13,8 +13,14 @@ pub const EE_UNITS_TILE_SIGHT_SHOWN: i32 = 1;
 pub const EE_UNITS_TILE_SIGHT_HIDDEN: i32 = 2;
 /// player a's `mSavedGroups.Reset(0x18, 1)`
 pub const EE_UNITS_TILE_SIGHT_FIRST: i32 = 3;
-/// `gMiniMap->CountCellOn/Off(c, d)` (a != 0: on), the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
-pub const EE_UNITS_TILE_SIGHT_SHOW: i32 = 4;
+/// `gMiniMap->CountCellOn(c, d)`
+pub const EE_UNITS_TILE_SIGHT_CELL_ON: i32 = 4000;
+/// `gWorld.mMap->mTerrainMesh.ReferenceTile(c, d)`
+pub const EE_UNITS_TILE_SIGHT_REFERENCE: i32 = 4001;
+/// `gMiniMap->CountCellOff(c, d)`
+pub const EE_UNITS_TILE_SIGHT_CELL_OFF: i32 = 4002;
+/// `gWorld.mMap->mTerrainMesh.DereferenceTile(c, d)`
+pub const EE_UNITS_TILE_SIGHT_DEREFERENCE: i32 = 4003;
 
 extern "C" {
     fn ee_units_tile_sight_host(op: i32, a: u64, b: u64, c: i64, d: i64) -> i64;
@@ -92,7 +98,13 @@ impl SightWorld for Game<'_> {
         self.host(EE_UNITS_TILE_SIGHT_FIRST, player, 0, 0, 0);
     }
     fn show(&mut self, on: bool, x: i64, y: i64) {
-        self.host(EE_UNITS_TILE_SIGHT_SHOW, on as u64, 0, x, y);
+        let (count, mesh) = if on {
+            (EE_UNITS_TILE_SIGHT_CELL_ON, EE_UNITS_TILE_SIGHT_REFERENCE)
+        } else {
+            (EE_UNITS_TILE_SIGHT_CELL_OFF, EE_UNITS_TILE_SIGHT_DEREFERENCE)
+        };
+        self.host(count, 0, 0, x, y);
+        self.host(mesh, 0, 0, x, y);
     }
 }
 

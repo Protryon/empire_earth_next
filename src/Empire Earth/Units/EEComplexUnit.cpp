@@ -876,20 +876,15 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     float* f = *ioF;
     // (the world's and the players' plain reads are Rust's: ee_units sight_host.rs)
     switch (inOp) {
-    case EE_UNITS_SIGHT_UNIT: {
-        EEUnitClass* theClass = theUnit->GetUnitClass();
-        EETechTreeNode* theNode = theUnit->GetTechTreeNode();
-        outUnit->line_of_sight = theUnit->GetLineOfSight();
-        outUnit->player = EEObj(theUnit->mPlayer);
-        outUnit->save_vis_map = theUnit->mPlayer != NULL && theUnit->mPlayer->mSaveVisMap;
-        outUnit->hit_points = (int32_t)theUnit->mHitPoints;
-        outUnit->is_built = theUnit->mIsBuilt;
-        outUnit->land_building = theClass->IsLandBuilding();
-        outUnit->tile_size = (int32_t)theClass->mTileSize;
-        outUnit->wonder_bonus = (int32_t)theClass->mWonderBonus;
-        outUnit->node_kind = theNode != NULL ? (int32_t)theNode->mData->mKind : -1;
-        return 0;
-    }
+    case EE_UNITS_SIGHT_U_LINE_OF_SIGHT: f[0] = theUnit->GetLineOfSight(); return 0;
+    case EE_UNITS_SIGHT_U_PLAYER: return EEObj(theUnit->mPlayer);
+    case EE_UNITS_SIGHT_U_SAVE_VIS_MAP: return theUnit->mPlayer != NULL && theUnit->mPlayer->mSaveVisMap;
+    case EE_UNITS_SIGHT_U_HIT_POINTS: return (int32_t)theUnit->mHitPoints;
+    case EE_UNITS_SIGHT_U_IS_BUILT: return theUnit->mIsBuilt;
+    case EE_UNITS_SIGHT_U_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
+    case EE_UNITS_SIGHT_U_TILE_SIZE: return (int32_t)theUnit->GetUnitClass()->mTileSize;
+    case EE_UNITS_SIGHT_U_WONDER_BONUS: return (int32_t)theUnit->GetUnitClass()->mWonderBonus;
+    case EE_UNITS_SIGHT_U_NODE_KIND: return theUnit->GetTechTreeNode() != NULL ? (int32_t)theUnit->GetTechTreeNode()->mData->mKind : -1;
     case EE_UNITS_SIGHT_ENABLED:
         return gSightUpdatesEnabled;
     case EE_UNITS_SIGHT_FOUNDATION:
