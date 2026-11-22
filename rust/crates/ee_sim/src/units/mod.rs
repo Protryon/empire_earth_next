@@ -60,6 +60,7 @@ pub mod cu_dump;
 pub mod cu_life;
 pub mod cu_misc;
 pub mod cu_more;
+pub mod cu_small;
 pub mod cu_wheel;
 pub mod cu_world;
 pub mod dm_body;

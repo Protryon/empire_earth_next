@@ -1917,9 +1917,6 @@ constexpr static const int32_t EE_UNITS_CU_CURRENT_PLAYER = 169;
 /// the disband emitter on the unit (`CreateUnitEffect(this, kGraphicEffectDisbandUnitEmitter, NULL, true, 0, 0)`)
 constexpr static const int32_t EE_UNITS_CU_DISBAND_EFFECT = 170;
 
-/// player `a`'s chat line "received `c` of resource `b` in insurance"
-constexpr static const int32_t EE_UNITS_CU_INSURANCE_CHAT = 171;
-
 /// `EESoundObject::Get(kSoundInsuranceCollected)`
 constexpr static const int32_t EE_UNITS_CU_INSURANCE_SOUND = 172;
 
@@ -3507,6 +3504,153 @@ constexpr static const int32_t EE_UNITS_CUM_DO_FACE_TOWARD = 6;
 constexpr static const int32_t EE_UNITS_CUM_DO_FACE_SQUARE = 7;
 
 constexpr static const int32_t EE_UNITS_CUM_DO_FACE_TARGET = 8;
+
+/// `mSound != NULL`
+constexpr static const int32_t EE_UNITS_CU_S_HAS_SOUND = 4000;
+
+/// `mSound->Dereference()`
+constexpr static const int32_t EE_UNITS_CU_S_SOUND_DEREFERENCE = 4001;
+
+/// `mSound = (SESMInstanceNode*)a`
+constexpr static const int32_t EE_UNITS_CU_S_SET_SOUND = 4002;
+
+/// `mSound->Reference()`
+constexpr static const int32_t EE_UNITS_CU_S_SOUND_REFERENCE = 4003;
+
+/// `UIsNone32(mHealEffect.mValue)`
+constexpr static const int32_t EE_UNITS_CU_S_HEAL_EFFECT_NONE = 4004;
+
+/// `gEffectManager->DestroyEffect(mHealEffect)` (a copy of the handle)
+constexpr static const int32_t EE_UNITS_CU_S_DESTROY_HEAL_EFFECT = 4005;
+
+/// `mHealEffect.mValue = -1`
+constexpr static const int32_t EE_UNITS_CU_S_CLEAR_HEAL_EFFECT = 4006;
+
+/// complex unit `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_CU_S_REFERENCE_OTHER = 4007;
+
+/// complex unit `a`'s `SetHolder(this)`
+constexpr static const int32_t EE_UNITS_CU_S_SET_HOLDER_OF = 4008;
+
+/// `mHeldUnits.push_back(a)`
+constexpr static const int32_t EE_UNITS_CU_S_HELD_PUSH = 4009;
+
+/// `std::sort(mHeldUnits, EEComplexUnitGrowthLess())`
+constexpr static const int32_t EE_UNITS_CU_S_HELD_SORT = 4010;
+
+/// `GetNumGoalQueues()`
+constexpr static const int32_t EE_UNITS_CU_S_NUM_GOAL_QUEUES = 4011;
+
+/// `ClearGoalQueue(b)`
+constexpr static const int32_t EE_UNITS_CU_S_CLEAR_GOAL_QUEUE = 4012;
+
+/// `SightOn(GetTileX(), GetTileY())`
+constexpr static const int32_t EE_UNITS_CU_S_SIGHT_ON_HERE = 4013;
+
+/// `gWorld.GetCurrentPlayer() != mPlayer`
+constexpr static const int32_t EE_UNITS_CU_S_NOT_CURRENT_PLAYER = 4014;
+
+/// `gMiniMap->MoveUnit(this, -10000, -10000, GetTileX(), GetTileY())`
+constexpr static const int32_t EE_UNITS_CU_S_MINIMAP_SHOW = 4015;
+
+/// `EECombatWorld(EE_COMBAT_WORLD_IGNORE, this, a)`
+constexpr static const int32_t EE_UNITS_CU_S_WORLD_IGNORE = 4016;
+
+/// `EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, a, 0, 0)` (TEST ONLY: CBXR)
+constexpr static const int32_t EE_UNITS_CU_S_CAPTURE_IGNORE = 4017;
+
+/// `EECombatWorld(b ? EE_COMBAT_WORLD_IS_IGNORED : EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE, this, a) != 0`
+constexpr static const int32_t EE_UNITS_CU_S_WORLD_IS_IGNORED = 4018;
+
+/// `EECombatCaptureIgnored(EE_COMBAT_XR_IS_IGNORED, this, a, b, c)` (TEST ONLY: CBXR)
+constexpr static const int32_t EE_UNITS_CU_S_CAPTURE_IS_IGNORED = 4019;
+
+/// `EECombatWorld(EE_COMBAT_WORLD_CAN_REACH_UNIT, this, a) != 0`
+constexpr static const int32_t EE_UNITS_CU_S_WORLD_CAN_REACH = 4020;
+
+/// `EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, a, b)` (TEST ONLY: CBXR)
+constexpr static const int32_t EE_UNITS_CU_S_CAPTURE_CAN_REACH = 4021;
+
+/// `EECombatWorld(EE_COMBAT_WORLD_BORDERING, this, a) != 0`
+constexpr static const int32_t EE_UNITS_CU_S_WORLD_BORDERING = 4022;
+
+/// `EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, this, a, b)` (TEST ONLY: CBXR)
+constexpr static const int32_t EE_UNITS_CU_S_CAPTURE_BORDERING = 4023;
+
+/// `ResetEEComplexUnit(true, false)`
+constexpr static const int32_t EE_UNITS_CU_S_RESET_COMPLEX = 4024;
+
+/// `ResetEEUnit()`
+constexpr static const int32_t EE_UNITS_CU_S_RESET_UNIT = 4025;
+
+/// `Reset()`
+constexpr static const int32_t EE_UNITS_CU_S_RESET = 4026;
+
+/// `mIsValid = false`
+constexpr static const int32_t EE_UNITS_CU_S_SET_INVALID = 4027;
+
+/// `FreeNode()`
+constexpr static const int32_t EE_UNITS_CU_S_FREE_NODE = 4028;
+
+/// `mReferenceCount = 0`
+constexpr static const int32_t EE_UNITS_CU_S_ZERO_REFERENCES = 4029;
+
+/// `EEComplexUnit::sMemoryPool.Delete(this)`
+constexpr static const int32_t EE_UNITS_CU_S_POOL_DELETE = 4030;
+
+/// `sprintf(theAmount, "%ld", b)` (the chat's locals are the host's)
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_AMOUNT = 4031;
+
+/// `theText = UWideString()`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_TEXT_NEW = 4032;
+
+/// `thePart = UWideString()`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_PART_NEW = 4033;
+
+/// `gResource->GetString(IDS_YOU_HAVE_RECEIVED, theText)`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_RECEIVED = 4034;
+
+/// `theText += theAmount`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT = 4035;
+
+/// `theText += " "`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_APPEND_SPACE = 4036;
+
+/// `gResource->GetString(b + IDS_RESOURCE_NAME_BASE, thePart)`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME = 4037;
+
+/// `theText += thePart`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_APPEND_PART = 4038;
+
+/// `gResource->GetString(IDS_IN_INSURANCE, thePart)`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_IN_INSURANCE = 4039;
+
+/// `gUserInterface->AddChatLogEntry(player a's mColor, UWideString(gEmptyString), theText, 5000, 2)`
+constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_CHAT_LINE = 4040;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_CLEAR = 1;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_LAST_DEREFERENCE = 2;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_RELEASE_SOUND = 3;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_SET_SOUND = 4;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT = 5;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_HOLD_UNIT = 6;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES = 7;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_PART_FINISHED = 8;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_IGNORE_TARGET = 9;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_IS_TARGET_IGNORED = 10;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_CAN_REACH_UNIT = 11;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_IS_ON_TILE_BORDERING = 12;
 
 /// unit `a`'s `EEAttackUnitCast(GetGoal())` (0: none)
 constexpr static const int32_t EE_UNITS_CU_ATTACK_GOAL_OF = 700;
@@ -17108,6 +17252,15 @@ float ee_units_cu_more(int32_t what,
                        float z,
                        float *out_x,
                        float *out_y);
+
+/// `EEComplexUnit`'s body `what` (`EE_UNITS_CU_S_DO_*`) on `unit`.
+///
+/// # Safety
+/// `unit` is a live `EEComplexUnit` (`LastDereference` returns it to its pool), `a` live as the body needs it.
+int64_t ee_units_cu_small(int32_t what,
+                          void *unit,
+                          void *a,
+                          int64_t b);
 
 /// `EEWheel::Update`'s new angle (see [`wheel_angle`]).
 float ee_units_cu_wheel_angle(EeUnitsWheelIn input);
