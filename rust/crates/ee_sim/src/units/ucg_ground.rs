@@ -283,7 +283,7 @@ mod game {
     }
 
     /// The ground classes' host (`ee_units_ucg_host`; the class host's statements pass through it).
-    struct GameG;
+    pub(crate) struct GameG;
 
     impl UcHost for GameG {
         #[allow(clippy::too_many_arguments)]
@@ -325,6 +325,9 @@ mod game {
         run(&mut GameG, what, class as usize as u64, unit as usize as u64, a, f)
     }
 }
+
+#[cfg(not(test))]
+pub(crate) use game::GameG;
 
 #[cfg(test)]
 #[path = "ucg_ground_tests.rs"]

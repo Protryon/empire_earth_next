@@ -11708,6 +11708,52 @@ constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_ARRIVED = 8;
 
 constexpr static const int32_t EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT = 9;
 
+/// `memcpy(a, &::gWorld.mLine, sizeof(GE3DLine))` (its start, then its direction)
+constexpr static const int32_t EE_UNITS_UCG_WORLD_LINE = 3000;
+
+/// `f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_UCG_MESH_Z = 3001;
+
+/// `::gWorld.mMap->GetGroundPoint(f[0..3], f[0..3])`
+constexpr static const int32_t EE_UNITS_UCG_GROUND_POINT = 3002;
+
+/// `f[0] = ::gWorld.mMap->mTerrainMesh.GetZ(b, c)`
+constexpr static const int32_t EE_UNITS_UCG_TERRAIN_Z = 3003;
+
+/// `class->BaseCreateUnitAt(the transformation at a, b >> 1, b & 1, unit c)`
+constexpr static const int32_t EE_UNITS_UCG_BASE_CREATE_AT = 3004;
+
+/// complex unit `a`'s `SetLocation(f[0..3], true)`
+constexpr static const int32_t EE_UNITS_UCG_SET_LOCATION_OF = 3005;
+
+/// `f[0] = gPhysics->mRandom.Generate()`
+constexpr static const int32_t EE_UNITS_UCG_RANDOM_GENERATE = 3006;
+
+/// `f[0] = gPhysics->GetRandom(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_UCG_RANDOM_RANGE = 3007;
+
+/// `unit->mNumWheels`
+constexpr static const int32_t EE_UNITS_UCG_WHEEL_COUNT = 3008;
+
+/// `unit->mWheels[b]->Update(unit)`
+constexpr static const int32_t EE_UNITS_UCG_WHEEL_UPDATE = 3009;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE = 3020;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION = 3021;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE = 3022;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT = 3023;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT = 3024;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE = 3025;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED = 3026;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_UPDATE_WHEELS = 3027;
+
 /// `EEUnitClassKinds(class)`
 constexpr static const int32_t EE_UNITS_UCK_KINDS = 2200;
 
@@ -19160,6 +19206,19 @@ int64_t ee_units_ucg_call(int32_t what,
                           uint64_t a,
                           float f);
 
+/// The sea classes' body `what` (`EE_UNITS_UCG_DO_*` from 3020) of `class` on `unit` (see [`run`]).
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0) or the
+/// body's out tile, `f` the body's point or transformation, on the simulation thread.
+int64_t ee_units_ucg_sea(int32_t what,
+                         void *class_,
+                         void *unit,
+                         uint64_t a,
+                         int64_t b,
+                         int64_t c,
+                         float *f);
+
 extern int64_t ee_units_uck_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -20307,12 +20366,6 @@ void ee_units_waypoints_group_path_goals(uint64_t unit, const float *points, siz
 /// # Safety
 /// `unit` is a live complex unit; `index` writable.
 bool ee_units_waypoints_at_tile(uint64_t unit, long x, long y, size_t *index);
-
-/// `SeaAnimalAdjustPath(unit, path)`: the points' depths (EEUnitClassGround.cpp: the physics' random stream)
-extern void ee_units_wp_host_sea_animal_path(uint64_t class_,
-                                             uint64_t unit,
-                                             float (*points)[3],
-                                             uint32_t count);
 
 /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
 extern int64_t ee_units_wp_host(int32_t op, uint64_t unit, uint64_t arg, float *point);
