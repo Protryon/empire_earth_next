@@ -2798,6 +2798,171 @@ enum class EeGameCpp : uint32_t {
   EntryNotInEditor,
   EntryStartLoadingInput,
   EntryUpdateSavedGames,
+  DtTerrainFields,
+  DtTerrainUse,
+  DtTerrainLock,
+  DtTerrainNew,
+  DtTerrainDelete,
+  DtTerrainResize,
+  DtTerrainCount,
+  DtTerrainAt,
+  DtTerrainSet,
+  DtTerrainGet,
+  DtDefaultTerrain,
+  DtFirstCliffTerrain,
+  DtTerrainFirstTexture,
+  DtTerrainTextureSetId,
+  DtTerrainTextures,
+  DtTerrainPreview,
+  DtTerrainLoadTextureName,
+  DtTerrainTextureName,
+  DtTerrainCopyName,
+  DtTerrainName,
+  DtTerrainNameLength,
+  DtTerrainPushClass,
+  DtTerrainClassCount,
+  DtTerrainClass0,
+  DtTerrainColor,
+  DtTerrainNewTextures,
+  DtTerrainDeleteTextures,
+  DtTerrainLoadTexture,
+  DtTrilinearFilter,
+  DtTexSetFrame,
+  DtTexDereference,
+  DtMeshTextureSet,
+  DtSetTexture,
+  DtClassButton,
+  DtCliffNew,
+  DtCliffDelete,
+  DtCliffFields,
+  DtCliffCopyName,
+  DtCliffResize,
+  DtCliffCount,
+  DtCliffAt,
+  DtCliffSet,
+  DtCliffClear,
+  DtFileReadRecord,
+  DtFilePrint,
+  DbtFields,
+  DbtUse,
+  DbtLock,
+  DbtNew,
+  DbtDelete,
+  DbtResize,
+  DbtCount,
+  DbtAt,
+  DbtSet,
+  DbtCopyName,
+  DbtName,
+  DbtTexture,
+  DbtCellU,
+  DbtCellV,
+  DbtLoadTexture,
+  DbtReloadTexture,
+  DbtPixelDepth,
+  DbtScreenWidth,
+  DbtTexWidth,
+  DbtTexHeight,
+  DbtTexMipDrop,
+  DbtTexSurface,
+  DbtTexSurfaceHeight,
+  DbtBitmapTexture,
+  DbtBitmapCoordinates,
+  DbtBitmapScale,
+  DbtHotKeyCount,
+  DbtHotKey,
+  DanFields,
+  DanNew,
+  DanDelete,
+  DanResize,
+  DanCount,
+  DanAt,
+  DanSet,
+  DanClear,
+  DanMedia,
+  DanSoundCount,
+  DanSoundAt,
+  DanSoundPush,
+  DanSoundsClear,
+  DanListPush,
+  DanMediaGet,
+  DanMediaLoad,
+  DanMediaUnload,
+  DxFindFile,
+  DxOpen,
+  DxLength,
+  DxClose,
+  DxDelete,
+  DxMessage,
+  DxVerify,
+  DxMemoryFile,
+  DxIdsClear,
+  DxIdsInsert,
+  DxRulesHandle,
+  DxRulesRefresh,
+  TbNewData,
+  TbDeleteData,
+  TbShareData,
+  TbSetTree,
+  TbNewNode,
+  TbClassesResize,
+  TbClassRead,
+  TbClassCount,
+  TbClassAt,
+  TbCostsInsert,
+  TbCostsCount,
+  TbCostsDelete,
+  TbCostsClear,
+  TbButton,
+  TbCopyButton,
+  TbSetButton,
+  TbButtonGet,
+  TbSwapButton,
+  TbGlobalTree,
+  TbEpochInsert,
+  TbSetPlayerIndex,
+  TbCopyPlayer,
+  TbIsHuman,
+  TbClassFamily,
+  TbNodeIsObsolete,
+  TbNodeDependsOn,
+  TbNodeGetCost,
+  TbTreeChecksum,
+  TbWorldPlayers,
+  TbWorldPlayer,
+  TbPlayerTree,
+  PchClearContagion,
+  PchNewContagion,
+  PchContagion,
+  PchCopyCalamities,
+  PchCopyContagion,
+  DcCreateSurface,
+  DcVerify,
+  DcFindFile,
+  DcSurfaceLoad,
+  DcLock,
+  DcUnlock,
+  DcDereference,
+  DcMemory,
+  DcBytesPerRow,
+  DcWidth,
+  DcHeight,
+  DcNew,
+  DcDelete,
+  DcSetColor,
+  DcResize,
+  DcCount,
+  DcAt,
+  DcSet,
+  TcBytes,
+  TcUpgradeFirst,
+  TcUpgradeEnd,
+  TcUpgradeMediaCount,
+  TcUpgradeButtonCount,
+  TcPlayerId,
+  TcPlayerPopulationBonus,
+  TcPlayerTributeFee,
+  TcPlayerBB44,
 };
 
 extern "C" {
@@ -4476,6 +4641,203 @@ bool ee_gamecpp_entry_parse_command_line(const char *line);
 /// `command_line` is a terminated C string; `instance` the module's.
 int32_t ee_gamecpp_entry_run(void *instance,
                              const char *command_line);
+
+/// EETerrainTable::Load(FSFileSpec*): the terrains read (each after its texture file name), their textures numbered
+/// over the table, the first named one the default terrain.
+long ee_gamecpp_db_terrain_load(void *file);
+
+/// EETerrainTable::Unload: every terrain's textures released, the terrains destroyed, the table emptied (the texture
+/// arrays are not freed).
+void ee_gamecpp_db_terrain_unload();
+
+/// EETerrainTable::DumpAllLoadedMedia: each referenced terrain and each with a list-box preview.
+void ee_gamecpp_db_terrain_dump(void *file);
+
+/// EETerrainTable::Load(GETerrainMesh&) (`load`) and Unload(GETerrainMesh&): the first reference loads the textures
+/// and attaches them to the mesh's texture set; the last detaches and releases them.
+void ee_gamecpp_db_terrain_mesh(void *terrain,
+                                void *mesh,
+                                bool load);
+
+/// EETerrainTable::AttachTextures: the loaded textures (columns mirrored) into a texture set, once any load is done.
+void ee_gamecpp_db_terrain_attach(void *terrain,
+                                  void *texture_set);
+
+/// EETerrainTable::LoadTexture: one terrain texture with its terrain stage modes (clamped; a linear mip filter when
+/// trilinear filtering is on). No NULL test: the original references the result directly.
+void *ee_gamecpp_db_terrain_texture(void *terrain,
+                                    const char *name);
+
+/// EETerrainTable::LoadTextures: every texture of the grid (numbered _n, from the last down) into a new array.
+void ee_gamecpp_db_terrain_textures(void *terrain);
+
+/// EELoadTerrainPreviews (`load`) and EEReleaseTerrainPreviews: each terrain's list-box preview (its texture _1)
+/// loaded or released, and its first unit class's button referenced or dereferenced.
+void ee_gamecpp_db_terrain_previews(bool load);
+
+/// EECliffTerrainTable::Load: the cliff terrains (NULL for a row with a negative index); the first one noted.
+long ee_gamecpp_db_cliff_load(void *file);
+
+/// EECliffTerrainTable::Unload: every cliff terrain destroyed, the table emptied; 0.
+long ee_gamecpp_db_cliff_unload();
+
+/// The button's destructor: its texture released.
+void ee_gamecpp_db_button_free(void *button);
+
+/// EEButtonObject::Load: the button images (stopping at the first read error).
+long ee_gamecpp_db_button_load(void *file);
+
+/// EEButtonObject::Unload: every button image destroyed, the table emptied.
+void ee_gamecpp_db_button_unload();
+
+/// EEButtonObject::DumpAllLoadedMedia: each referenced button image.
+void ee_gamecpp_db_button_dump(void *file);
+
+/// EEButtonObject::Acquire: a reference; the first loads the texture (a failed load leaves the count at 0).
+long ee_gamecpp_db_button_acquire(void *button);
+
+/// EEButtonObject::Release: a reference dropped once any load is done, the texture released with the last; 0.
+long ee_gamecpp_db_button_release(void *button);
+
+/// EEButtonObject::LoadTexture: the texture (a mip level dropped at 800 pixels wide or less, alpha for ids below 50)
+/// and its cell's offset; 3 when the texture is missing.
+long ee_gamecpp_db_button_load_texture(void *button);
+
+/// EEButtonObject::SetFaceBitmap (`face`: inset by one texel; skipped without a texture or its surface) and
+/// SetPressedBitmap: the button's cell on a bitmap scaled to a rectangle.
+void ee_gamecpp_db_button_bitmap(void *button,
+                                 bool face,
+                                 void *bitmap,
+                                 const void *rectangle,
+                                 unsigned long screen);
+
+/// EEButtonObject::Reload: every referenced button image's texture reloaded (as on its first load), under the lock;
+/// the first error.
+long ee_gamecpp_db_button_reload();
+
+/// EEButtonObject::GetHotKey (and the node's): the hot key of an index, NULL out of range.
+void *ee_gamecpp_db_hot_key(long index);
+
+/// The animal type's destructor (`with_media`: its sounds and then its media released) and ClearSounds (its sounds
+/// released, last first, and the list emptied).
+void ee_gamecpp_db_animal_free(void *animal,
+                               bool with_media);
+
+/// EEAnimal::Load: the animal types (any loaded ones unloaded first), each one's media and up to three sounds loaded.
+long ee_gamecpp_db_animal_load(void *file);
+
+/// EEAnimal::Unload: every animal type destroyed (last first), the table emptied.
+void ee_gamecpp_db_animal_unload();
+
+/// EETerrainColorTable::Load: the terrain colours from the pixels of the colour palette texture (16 per row; each
+/// component / 255); the texture load status.
+long ee_gamecpp_db_colors_load();
+
+/// EETerrainColorTable::Unload: every colour destroyed, the table emptied.
+void ee_gamecpp_db_colors_unload();
+
+/// EEDbFindFile: the table's text form compiled and served as a new memory file (kErrorOK), or the game stopped.
+long ee_gamecpp_db_find_file(void *path,
+                             const char *name,
+                             void **out);
+
+/// EEDbRowIds: the row ids of dbobjects or dbtechtree by key as the last load read them; false and empty before.
+bool ee_gamecpp_db_row_ids(const char *table,
+                           void *ids);
+
+/// EELoadRules: the rules documents (next to the db tables, db\combat.yaml ...) read into the game's rules through
+/// the same content; a broken one stops the game with its message.
+void ee_gamecpp_db_load_rules(void *path);
+
+/// EEDumpRules: EE_DUMP_CONTENT's rules dump (after the db tables are loaded).
+void ee_gamecpp_db_dump_rules();
+
+/// The chunk's constructor (`fresh` only: a new contagion manager), destructor (`clear` only: the calamity list and
+/// the contagion manager deleted) and Reset (both).
+void ee_gamecpp_pch_reset(void *helper,
+                          bool clear,
+                          bool fresh);
+
+/// EEPCalamityHelper::operator=: another chunk's calamity list and contagion manager copied into fresh ones of its
+/// own (each only when the two differ).
+void *ee_gamecpp_pch_assign(void *helper,
+                            const void *other);
+
+/// TSWP (EETechCaptureSweep): per player (1 on) its tree's head record, then one record per node and epoch.
+void ee_gamecpp_tech_capture_sweep();
+
+/// EETechCaptureUpgrade: the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
+/// size first; 0 for no upgrade. mMediaCount and mButtonLoadCount count the presentation's media loads
+/// (EEPlayer::LoadUnitClassMedia, SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the
+/// record carries simulation state only.
+void ee_gamecpp_tech_capture_upgrade(void *record,
+                                     void *upgrade);
+
+/// EETechCapturePlayer: the player's fields the effects change (population bonus, tribute fee, mBB44); -1 for no
+/// player.
+void ee_gamecpp_tech_capture_player(void *record,
+                                    void *player);
+
+/// EETechTreeNode::Load: the node's record from the tech tree file, a cost table per unit class scaled by its
+/// factor, its epoch and its button.
+long ee_gamecpp_tech_node_load(void *node,
+                               void *file,
+                               void *tree);
+
+/// EETechTreeEpoch::Load: the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are
+/// dropped).
+long ee_gamecpp_tech_epoch_load(void *epoch,
+                                void *file,
+                                void *tree);
+
+/// EETechTreeNode::operator=: another node's state, its data (with its class cost tables) shared.
+void *ee_gamecpp_tech_node_assign(void *node, const void *other);
+
+/// EETechTreeEpoch::operator=: another epoch's state, its nodes deep-copied for this epoch's tree (the node data
+/// stays shared).
+void *ee_gamecpp_tech_epoch_assign(void *epoch,
+                                   const void *other);
+
+/// The EETechTree constructor's body: every epoch, the prehistoric one current, the end the last.
+void ee_gamecpp_tech_tree_init(void *tree);
+
+/// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
+void *ee_gamecpp_tech_tree_assign(void *tree,
+                                  const void *other);
+
+/// The node's destructor (`destroy`: its unit media unloaded when loaded and its unit classes given their default
+/// buttons back) and ClearClassCosts (the class cost tables freed).
+void ee_gamecpp_tech_node_free(void *node,
+                               bool destroy);
+
+/// EETechTreeNode::Unload: the node's data deleted; 0.
+long ee_gamecpp_tech_node_unload(void *node);
+
+/// EETechTreeNode::SetButton: a new button, swapped into the node's unit classes.
+void ee_gamecpp_tech_node_set_button(void *node, unsigned long button);
+
+/// EETechTreeNode::NeedsUnitMedia (`captured`: TNMT records the answer) and NeedsUnitMediaUncaptured: whether the
+/// node makes a building or mine whose media this game needs (ee_tech tree.rs needs_unit_media).
+bool ee_gamecpp_tech_needs_unit_media(void *node,
+                                      bool captured);
+
+/// EETechTreeEpoch::GetBuildTime: the epoch's research time (computer players need half of it); TNMT records it.
+long ee_gamecpp_tech_epoch_build_time(void *epoch);
+
+/// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
+/// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
+long ee_gamecpp_tech_tree_save(void *tree,
+                               void *file,
+                               bool load,
+                               unsigned long major,
+                               unsigned long minor);
+
+/// EETechTree::SumCosts: the resource costs of a tech and every unresearched prerequisite and upgrade path to it;
+/// TSUM (TEST ONLY) records the outermost call: player, id, unit class, the seven costs before and after.
+void ee_gamecpp_tech_sum_costs_captured(void *tree,
+                                        long id,
+                                        long unit_class,
+                                        long *costs);
 
 }  // extern "C"
 
