@@ -2928,8 +2928,6 @@ enum class EeGameCpp : uint32_t {
   DxMessage,
   DxVerify,
   DxMemoryFile,
-  DxIdsClear,
-  DxIdsInsert,
   DxRulesHandle,
   DxRulesRefresh,
   TbNewData,
@@ -5146,10 +5144,6 @@ void ee_gamecpp_db_colors_unload();
 long ee_gamecpp_db_find_file(void *path,
                              const char *name,
                              void **out);
-
-/// EEDbRowIds: the row ids of dbobjects or dbtechtree by key as the last load read them; false and empty before.
-bool ee_gamecpp_db_row_ids(const char *table,
-                           void *ids);
 
 /// EELoadRules: the rules documents (next to the db tables, db\combat.yaml ...) read into the game's rules through
 /// the same content; a broken one stops the game with its message.
