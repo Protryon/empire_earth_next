@@ -286,9 +286,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::NewBuffer: return (intptr_t) new WriteBuffer(0, true);
     case Op::BroadcastToGame: LobbyBroadcastToGame(aWrite->ToByteBuffer(true).get()); return 0;
     case Op::SendToCaptain: LobbySendToCaptain(aWrite->ToByteBuffer(true).get()); return 0;
-    case Op::SendToClient:
-        LobbySendToClient(reinterpret_cast<LobbyClient*>(b), aWrite->ToByteBuffer(true).get());
-        return 0;
+    case Op::SendToClient: LobbySendToClient(reinterpret_cast<LobbyClient*>(b), aWrite->ToByteBuffer(true).get()); return 0;
     case Op::FreeBuffer: delete aWrite; return 0;
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
     case Op::PlayerSlot: return aPlayer->GetSlot();
@@ -308,9 +306,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::TeamChanged: LobbyBroadcastEvent(PlayerTeamChangedEvent(aClient, b != 0), true); return 0;
     case Op::LobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case Op::KickClient: LobbyKickClient(aClient, false); return 0;
-    case Op::SameTeamBox:
-        LobbyMessageBox(EE_LOBBY_STRING(gEELobbyGame_StartGameError), EE_LOBBY_STRING(gEELobbyGame_EveryoneOnSameTeam));
-        return 0;
+    case Op::SameTeamBox: LobbyMessageBox(EE_LOBBY_STRING(gEELobbyGame_StartGameError), EE_LOBBY_STRING(gEELobbyGame_EveryoneOnSameTeam)); return 0;
     case Op::HostGame: return EELobbyHostGame() ? 1 : 0;
     case Op::CancelConnectDialog: EELobbyCancelConnectDialog(); return 0;
     case Op::SetSlotConnected: EELobbySetSlotConnected((unsigned char)a, b != 0); return 0;

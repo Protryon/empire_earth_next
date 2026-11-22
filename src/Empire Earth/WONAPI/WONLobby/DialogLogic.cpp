@@ -99,10 +99,7 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::OpKill: anOp->Kill(true); return 0;
     case Op::OpForceFinishKilled: anOp->ForceFinish(WS_Killed); return 0;
     case Op::OpGetStatus: return (intptr_t)anOp->GetStatus();
-    case Op::RunOp:
-        aLogic->RunOp(anOp, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, aLogic),
-                      (unsigned long)b);
-        return 0;
+    case Op::RunOp: aLogic->RunOp(anOp, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, aLogic), (unsigned long)b); return 0;
     case Op::EndDialog: GetLobbyWindow()->EndDialog(-1, NULL, aComp); return 0;
     case Op::LobbyRoot: return (intptr_t)static_cast<Component*>(GetLobbyRoot());
     case Op::RootWindow: return (intptr_t)LobbyGetRootWindow();
@@ -163,12 +160,7 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
         return 0;
     }
     case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
-    case Op::InvalidateRect: {
-        const int* aRect = reinterpret_cast<const int*>(b);
-        WONRectangle aBounds(aRect[0], aRect[1], aRect[2], aRect[3]);
-        static_cast<Container*>(aComp)->InvalidateRect(aBounds);
-        return 0;
-    }
+    case Op::InvalidateRect: static_cast<Container*>(aComp)->InvalidateRect(WONRectangle(reinterpret_cast<const int*>(b)[0], reinterpret_cast<const int*>(b)[1], reinterpret_cast<const int*>(b)[2], reinterpret_cast<const int*>(b)[3])); return 0;
     }
     return 0;
 }

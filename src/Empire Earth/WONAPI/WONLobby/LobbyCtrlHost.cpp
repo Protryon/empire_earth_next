@@ -191,11 +191,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::PublicAddressValid: return LobbyGetPublicAddress().IsValid() ? 1 : 0;
     case Op::LabelSetPublicAddress: aLabel->SetText(LobbyGetPublicAddress().GetHostString(true), true); return 0;
     // EELobbyGameOptionsCtrl
-    case Op::ReportInvalidType: {
-        const EeWonLobbyCtlSlot* aSlot = ee_won_lobbyctl_slot((uint32_t)a);
-        ComponentConfigMissing(std::string("Invalid type for ") + aSlot->name, aSlot->file, 89);
-        return 0;
-    }
+    case Op::ReportInvalidType: ComponentConfigMissing(std::string("Invalid type for ") + ee_won_lobbyctl_slot((uint32_t)a)->name, ee_won_lobbyctl_slot((uint32_t)a)->file, 89); return 0;
     case Op::IsButton: return dynamic_cast<Button*>(aComp) != NULL ? 1 : 0;
     case Op::IsCombo: return dynamic_cast<ComboBox*>(aComp) != NULL ? 1 : 0;
     case Op::FillMapTypes: EELobbyFillMapTypeCombo(aCombo); return 0;
