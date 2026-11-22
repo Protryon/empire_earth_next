@@ -264,6 +264,7 @@ pub unsafe extern "C" fn ee_sparse_points_into(
 /// # Safety
 /// `s` a live set, `points` `2 count` longs (NULL with 0).
 #[no_mangle]
+#[allow(clippy::unnecessary_cast)] // `long` is `i32` on Windows, `i64` on Linux and macOS: the low 32 bits
 pub unsafe extern "C" fn ee_sparse_insert_longs(
     s: *mut EeSparseArray,
     points: *const c_long,
@@ -300,6 +301,7 @@ pub unsafe extern "C" fn ee_sparse_raw_into(s: *mut EeSparseArray, out: *mut c_v
 /// # Safety
 /// `s` a live set, `data` `count` longs (NULL with 0).
 #[no_mangle]
+#[allow(clippy::unnecessary_cast)] // `long` is `i32` on Windows, `i64` on Linux and macOS: the low 32 bits
 pub unsafe extern "C" fn ee_sparse_set_raw_longs(s: *mut EeSparseArray, data: *const c_long, count: usize) -> bool {
     // SAFETY: the caller's contract
     let numbers: Vec<i32> = (0..count).map(|i| unsafe { *data.add(i) } as i32).collect();
