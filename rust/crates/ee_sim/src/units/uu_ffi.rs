@@ -1434,6 +1434,27 @@ pub unsafe extern "C" fn ee_units_uu_doppler_pitch(
     }
 }
 
+/// `EEGetDopplerPitch`'s factor without its note: the air animal's and the landable's sound parameters (their own
+/// bodies in the original, never noted; round 8 made them call the shared Doppler pitch).
+///
+/// # Safety
+/// `location` holds a matrix, `camera` three floats, `pitch` one.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_doppler_pitch_unnoted(
+    volume: f32,
+    velocity: f32,
+    location: *const [[f32; 4]; 4],
+    camera: *const [f32; 3],
+    pitch: *mut f32,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        if let Some(p) = uu_world::doppler_pitch(volume, velocity, &GeTransformation { m: *location }, *camera) {
+            *pitch = p;
+        }
+    }
+}
+
 /// `EEEditorCanPlace` (72).
 ///
 /// # Safety

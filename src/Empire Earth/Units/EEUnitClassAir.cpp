@@ -291,6 +291,16 @@ void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inS
     EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
 }
 
+// The air animal's and the landable's sound parameters: the spaceship's Doppler pitch, but (as their own inline
+// bodies were) without the unit utilities' UUTL note of EEGetDopplerPitch
+void EEUnitClass::AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+                                        float* outPitch)
+{
+    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    float theCamera[3] = {::gWorld.mTransformation.GetX(), ::gWorld.mTransformation.GetY(), ::gWorld.mTransformation.GetZ()};
+    ee_units_uu_doppler_pitch_unnoted(*outVolume, inUnit->mComplexUnit->mVelocity, (const float(*)[4][4])&inUnit->mComplexUnit->mPhysicalModel.GetLocation().mMatrix[0][0], &theCamera, outPitch);   // ee_units uu_world.rs doppler_pitch
+}
+
 template <class T> static T* EEUcaObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));

@@ -19929,6 +19929,17 @@ void ee_units_uu_doppler_pitch(uint64_t unit,
                                const float (*camera)[3],
                                float *pitch);
 
+/// `EEGetDopplerPitch`'s factor without its note: the air animal's and the landable's sound parameters (their own
+/// bodies in the original, never noted; round 8 made them call the shared Doppler pitch).
+///
+/// # Safety
+/// `location` holds a matrix, `camera` three floats, `pitch` one.
+void ee_units_uu_doppler_pitch_unnoted(float volume,
+                                       float velocity,
+                                       const float (*location)[4][4],
+                                       const float (*camera)[3],
+                                       float *pitch);
+
 /// `EEEditorCanPlace` (72).
 ///
 /// # Safety

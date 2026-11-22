@@ -202,12 +202,12 @@ long EEUnitClass::GetPopulationCost()
 void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_GET_SOUND_PARAMETERS)) {
-    case 1: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the air animal's: the same Doppler pitch
+    case 1: this->AirGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the air animal's: the same Doppler pitch, unnoted
     case 2: this->HelicopterPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
     case 3: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
     case 4: this->LandPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
     case 5: this->SpaceshipVirtual2C(inUnit, inSound, outVolume, outPan, outPitch); return;
-    case 6: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the landable's: likewise
+    case 6: this->AirGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the landable's: likewise
     }
     this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
 }

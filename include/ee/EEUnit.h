@@ -1232,6 +1232,7 @@ public:
     void SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void SpaceshipVirtual78(EEComplexUnit* inUnit);
     void SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void SubmergedNavalGroundLocation(GE3DPoint& ioLocation);
     void SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
     EEUnit* SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
