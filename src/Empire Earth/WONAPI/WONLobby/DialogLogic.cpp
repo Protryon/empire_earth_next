@@ -160,7 +160,12 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
         return 0;
     }
     case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
-    case Op::InvalidateRect: static_cast<Container*>(aComp)->InvalidateRect(WONRectangle(reinterpret_cast<const int*>(b)[0], reinterpret_cast<const int*>(b)[1], reinterpret_cast<const int*>(b)[2], reinterpret_cast<const int*>(b)[3])); return 0;
+    case Op::InvalidateRect: {
+        const int* aRect = reinterpret_cast<const int*>(b);
+        WONRectangle aBounds(aRect[0], aRect[1], aRect[2], aRect[3]);
+        static_cast<Container*>(aComp)->InvalidateRect(aBounds);
+        return 0;
+    }
     }
     return 0;
 }
