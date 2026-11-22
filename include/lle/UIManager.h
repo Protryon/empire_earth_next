@@ -195,23 +195,17 @@ public:
     virtual long UpdateUI(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x28
     // Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
     long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat); }
-protected:
     // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
     // Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateMouse, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x30
-public:
     // the Rust manager's calls out that are not Rust's (ee_ui lle_manager.rs: ee_ui_manager_host comes first)
-    static intptr_t HostOp(void* inManager, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
-                           float* ioF);
-private:
     // the forwarders' one call into the Rust manager (with a rectangle, with two floats)
     intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const { return ee_ui_manager_call(this->mRust, inCall, inA, inB, inC, ioF); }
     intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const;
     intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const;
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
-public:   // the mouse buttons' shims (UIManager.cpp)
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
     // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)

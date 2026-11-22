@@ -18,7 +18,6 @@ public:
     {
     }
     virtual ~UIDualButton() {}
-protected:
     // the right button presses and releases as the left (buttonobj.rs)
     virtual long MouseRButtonDown() { return (long)UIButtonRust::Call(this, EeUiButtonCall::DualMouseRButtonDown); }
     virtual long MouseRButtonUp() { return (long)UIButtonRust::Call(this, EeUiButtonCall::DualMouseRButtonUp); }

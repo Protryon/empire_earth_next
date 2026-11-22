@@ -146,7 +146,7 @@ pub(crate) fn new_lock<C: Cpp + ?Sized>(c: &mut C, line: u32) -> usize {
 
 lle_host!(
     /// The UI manager's host: [`manager_call`], then `UIManager::HostOp`.
-    ee_ui_manager_host => manager_call, ee_uicpp_manager_host
+    ee_ui_manager_host => manager_call, [crate::lle_hosts::manager]
 );
 
 /// The events' host's moved cases (`UIEvent::HostOp`: the events file's count, the owner, the event added).
@@ -179,7 +179,7 @@ pub(crate) fn event_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isi
 
 lle_host!(
     /// The events' host: [`event_call`], then `UIEvent::HostOp`.
-    ee_ui_event_host => event_call, ee_uicpp_event_host
+    ee_ui_event_host => event_call, [crate::lle_hosts::event]
 );
 
 /// The database's tables in load order: (their file, the find's two assert lines, the create's).

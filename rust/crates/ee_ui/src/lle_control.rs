@@ -35,7 +35,7 @@ pub(crate) fn event_call4<C: Cpp + ?Sized>(c: &mut C, event: usize, b: isize) {
 
 lle_host!(
     /// The control's host: [`control_call`], then `UIControl::HostOp`.
-    ee_ui_control_host => control_call, ee_uicpp_control_host
+    ee_ui_control_host => control_call, [crate::lle_hosts::control]
 );
 
 /// The shared UI keys (`UIControl`'s statics in the constructor's order: Space, Enter, Control, Alt, End, Home, the

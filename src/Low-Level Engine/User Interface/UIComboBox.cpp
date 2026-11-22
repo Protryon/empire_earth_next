@@ -192,9 +192,6 @@ struct UIComboBox::Rust {
     static intptr_t Op(void* inCombo, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t cc, intptr_t d, float* f)
     {
         UIComboBox* c = static_cast<UIComboBox*>(inCombo);
-        intptr_t r = 0;
-        if (UIObjHost::Base(c, inOp, a, f, &r) || UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
-            return r;
         switch (inOp) {
         case EeUiOp::ComboQuery: return Query(c, a >> 24, a & 0xffffff, f);
         case EeUiOp::ComboAct: return Act(c, a, b, cc, d, f);

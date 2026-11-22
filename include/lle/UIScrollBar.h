@@ -18,12 +18,9 @@ struct EeUiScrollBar;
 #define kScrollBarWidth 20.0f   // a #define: every user reads the one pooled literal (lle 0x1009916c, exe 0x43bff4 __real 20.0f; exe UIListBox::SetLocation 0x5ad1f2)
 
 class LLE_API UIScrollBar : public UIControl {
-    friend struct UIScrollBarRust;          // UIScrollBar.cpp: the Rust object's calls out
 public:
     UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle, UIForm* inForm,
                 unsigned long inIndex, unsigned long inBorderThickness);
-    UIScrollBar(const UIScrollBar&) = delete;
-    UIScrollBar& operator=(const UIScrollBar&) = delete;
     virtual ~UIScrollBar();
     virtual long CopyData() { return (long)this->Call(EeUiScrollBarCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiScrollBarCall::DrawPolygons); }
@@ -45,8 +42,6 @@ public:
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
     virtual long UpdateKeyboard() { return kErrorOK; }
-private:
-private:
     intptr_t Call(EeUiScrollBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_scroll_bar_call(this->mRust, c, a, b, f); }
     intptr_t CallF(EeUiScrollBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_scroll_bar_call(this->mRust, c, 0, 0, f); }
     EeUiScrollBar* mRust;                   // the state (scrollbarobj.rs)

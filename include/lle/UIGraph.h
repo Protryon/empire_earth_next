@@ -15,13 +15,10 @@
 class GEFont;
 
 class LLE_API UIGraph : public UIControl {
-    friend struct UIGraphHost;              // UIGraph.cpp: the Rust object's calls out
 public:
     UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
             unsigned long inBorderThickness, EeUiGraphKind inKind = EeUiGraphKind::Line,
             EeUiGraphFormatFn inFormat = NULL);
-    UIGraph(const UIGraph&) = delete;
-    UIGraph& operator=(const UIGraph&) = delete;
     virtual ~UIGraph();
     virtual long CopyData() { return (long)this->Call(EeUiGraphCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiGraphCall::DrawPolygons); }
@@ -32,7 +29,6 @@ public:
     void AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor);
     virtual long UpdateMouse(const GE2DPoint& inLocation) { return kErrorOK; }
     virtual long UpdateKeyboard() { return kErrorOK; }
-protected:
     virtual long MouseLButtonDown() { return kErrorOK; }
     virtual long MouseLButtonUp() { return kErrorOK; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return kErrorOK; }
@@ -41,9 +37,7 @@ protected:
     virtual void TabbedTo() { this->Call(EeUiGraphCall::TabbedTo); }
     virtual void TabbedFrom() { this->Call(EeUiGraphCall::TabbedFrom); }
 
-private:
     intptr_t Call(EeUiGraphCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, float* f = NULL) const { return ee_ui_graph_call(this->mRust, c, a, b, cc, f); }
-protected:
     EeUiGraph* mRust;                       // the state (graphobj.rs)
 };
 

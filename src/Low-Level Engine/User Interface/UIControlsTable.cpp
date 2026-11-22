@@ -71,6 +71,7 @@
 #include "lle/UIManager.h"
 #include "lle/UIShims.h"
 #include "rust/ui/lle_table.h"
+#include "rust/ui/lle_hosts.h"
 
 // the one-statement shims of the moved host cases, CreateBitmap and SetupStringArray (ee_ui lle_table.rs)
 #define FORM(x) reinterpret_cast<UIForm*>(x)

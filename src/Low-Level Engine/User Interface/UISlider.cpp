@@ -5,7 +5,7 @@
 // header-inline members were emitted by UICheckBox.cpp (0x1005ef4b..0x1005f272).
 //
 // UISlider is whole in Rust (rust/crates/ee_ui/src/sliderobj.rs, R6 ui round 10): the members below forward to the
-// Rust object, which calls out through UISliderHost::Op (UIControl's members, the virtuals ChangeRange, ButtonDown,
+// Rust object, which calls out through ee_ui_slider_host (UIControl's members, the virtuals ChangeRange, ButtonDown,
 // ButtonUp and SetDirty, the thumb bitmap, the manager's drag bar).
 #include <windows.h>
 
@@ -34,30 +34,18 @@
 #include "lle/UIManager.h"
 #include "lle/UISlider.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
-struct UISliderHost {
-    static intptr_t Op(void* inSlider, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
-    {
-        UISlider* s = static_cast<UISlider*>(inSlider);
-        UIManager* theManager = s->GetForm()->GetManager();
-        intptr_t r = 0;
-        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
-            return r;
-        switch (inOp) {
-        case EeUiOp::SliderChangeRange: s->ChangeRange((unsigned long)a); break;
-        case EeUiOp::ButtonDown: s->ButtonDown(); break;
-        case EeUiOp::ButtonUp: s->ButtonUp(); break;
-        case EeUiOp::ThumbCreate:
-            return (intptr_t)theManager->CreateBitmapForScaledControl(theManager->GetDragBarBitmap(), UIObjHost::Rect(f));
-        case EeUiOp::DragBarScale:
-            f[0] = theManager->GetDragBarBitmap()->GetXScale();
-            f[1] = theManager->GetDragBarBitmap()->GetYScale();
-            break;
-        default: break;
-        }
-        return 0;
-    }
-};
+#define s static_cast<UISlider*>(inObj)
+#define theManager (s->GetForm()->GetManager())
+EE_UI_VOID(slider_change_range) { s->ChangeRange((unsigned long)a); }
+EE_UI_VOID(slider_button_down) { s->ButtonDown(); }
+EE_UI_VOID(slider_button_up) { s->ButtonUp(); }
+EE_UI_CASE(slider_thumb_create) { return (intptr_t)theManager->CreateBitmapForScaledControl(theManager->GetDragBarBitmap(), UIObjHost::Rect(f)); }
+EE_UI_VOID(slider_drag_bar_scale) { *reinterpret_cast<GE2DPoint*>(f) = GE2DPoint(theManager->GetDragBarBitmap()->GetXScale(), theManager->GetDragBarBitmap()->GetYScale()); }
+#undef theManager
+#undef s
 
 // Creates a horizontal (style 0) or vertical slider with a square thumb, an empty range and no page size
 UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
@@ -65,7 +53,7 @@ UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned 
     : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
     this->SetBorderType(0);
-    this->mRust = ee_ui_slider_new(this, UISliderHost::Op, inSliderStyle);
+    this->mRust = ee_ui_slider_new(this, ee_ui_slider_host, inSliderStyle);
 }
 
 UISlider::~UISlider() { ee_ui_slider_free(this->mRust); }

@@ -40,35 +40,10 @@
 #include "lle/UIScrollButton.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
 struct UIScrollBarRust {
-    static intptr_t Op(void* inBar, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
-    {
-        UIScrollBar* s = static_cast<UIScrollBar*>(inBar);
-        UISlider* theSlider = reinterpret_cast<UISlider*>(a);
-        intptr_t r = 0;
-        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
-            return r;
-        switch (inOp) {
-        case EeUiOp::CreateSlider:
-            return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->GetForm(), s->GetIndex(),
-                                           (unsigned long)b);
-        case EeUiOp::CreateButton:
-            return (intptr_t) new UIScrollButton(s->GetId(), reinterpret_cast<GEBitmap*>(a), reinterpret_cast<GEBitmap*>(b),
-                                                 GE2DPoint(f[0], f[1]), s->GetForm(), reinterpret_cast<UISlider*>(c),
-                                                 (unsigned long)d, s->GetIndex());
-        case EeUiOp::PartButtonDown: reinterpret_cast<UIScrollButton*>(a)->ButtonDown(); break;
-        case EeUiOp::SliderStyle: return theSlider->GetSliderStyle();
-        case EeUiOp::SliderValue: return theSlider->GetCurrentRangeValue();
-        case EeUiOp::SliderSetValue: theSlider->SetCurrentRangeValue((long)b); break;
-        case EeUiOp::SliderDecrementPage: theSlider->DecrementByPageSize(); break;
-        case EeUiOp::SliderIncrementPage: theSlider->IncrementByPageSize(); break;
-        case EeUiOp::SliderSetPageSize: theSlider->SetPageSize((unsigned long)b); break;
-        case EeUiOp::SliderSetRange: theSlider->SetRange((unsigned long)b, (unsigned long)c); break;
-        default: break;
-        }
-        return 0;
-    }
     // the constructor's rectangle, before the Rust object exists
     static GERectangle Layout(const GE2DPoint& inLocation, float inLength, unsigned long inStyle)
     {
@@ -76,6 +51,20 @@ struct UIScrollBarRust {
         return GERectangle(r.left, r.top, r.right, r.bottom);
     }
 };
+#define s static_cast<UIScrollBar*>(inObj)
+#define theSlider reinterpret_cast<UISlider*>(a)
+EE_UI_CASE(bar_create_slider) { return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->GetForm(), s->GetIndex(), (unsigned long)b); }
+EE_UI_CASE(bar_create_button) { return (intptr_t) new UIScrollButton(s->GetId(), reinterpret_cast<GEBitmap*>(a), reinterpret_cast<GEBitmap*>(b), GE2DPoint(f[0], f[1]), s->GetForm(), reinterpret_cast<UISlider*>(c), (unsigned long)d, s->GetIndex()); }
+EE_UI_VOID(bar_part_button_down) { reinterpret_cast<UIScrollButton*>(a)->ButtonDown(); }
+EE_UI_CASE(bar_slider_style) { return theSlider->GetSliderStyle(); }
+EE_UI_CASE(bar_slider_value) { return theSlider->GetCurrentRangeValue(); }
+EE_UI_VOID(bar_slider_set_value) { theSlider->SetCurrentRangeValue((long)b); }
+EE_UI_VOID(bar_slider_decrement_page) { theSlider->DecrementByPageSize(); }
+EE_UI_VOID(bar_slider_increment_page) { theSlider->IncrementByPageSize(); }
+EE_UI_VOID(bar_slider_set_page_size) { theSlider->SetPageSize((unsigned long)b); }
+EE_UI_VOID(bar_slider_set_range) { theSlider->SetRange((unsigned long)b, (unsigned long)c); }
+#undef theSlider
+#undef s
 
 // Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
 // Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it
@@ -85,7 +74,7 @@ UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float 
     : UIControl(kControlTypeScrollBar, inId, UIScrollBarRust::Layout(inLocation, inLength, inStyle), inForm, inIndex, 0)
 {
     float f[4] = {inLocation.GetX(), inLocation.GetY(), inLength, 0.0f};
-    this->mRust = ee_ui_scroll_bar_new(this, UIScrollBarRust::Op, f, inStyle, inBorderThickness);
+    this->mRust = ee_ui_scroll_bar_new(this, ee_ui_scroll_bar_host, f, inStyle, inBorderThickness);
 }
 
 UIScrollBar::~UIScrollBar() { ee_ui_scroll_bar_free(this->mRust); }

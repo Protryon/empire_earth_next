@@ -59,10 +59,10 @@ struct UIHotKeyHost {
         case EeUiOp::HkEntityResult: return gISKeyboard->GetEntity((unsigned long)a, theEntity);
         case EeUiOp::HkEventCall:
             switch (b) {
-            case 0: theEvent->Uninitialize(); break;
-            case 1: theEvent->Dereference(); break;
-            case 2: theEvent->Reference(); break;
-            default: theEvent->Initialize(); break;
+    case 0: theEvent->Uninitialize(); break;
+    case 1: theEvent->Dereference(); break;
+    case 2: theEvent->Reference(); break;
+    default: theEvent->Initialize(); break;
             }
             break;
         case EeUiOp::HkProcess: theEvent->ProcessEvent(static_cast<UIForm*>(r->mForm), static_cast<UIHotKey*>(r)); break;

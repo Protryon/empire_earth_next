@@ -41,7 +41,6 @@ public:
     virtual void SetLocation(const GE2DPoint& inLocation) { this->SubCall(EeUiButtonCall::CheckSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY()); }
     // Sets the label text, creating the label on first use; empty text hides the label
     void SetText(const UWideString& inText, GEFont* inFont) { this->SubCall(EeUiButtonCall::CheckSetText, (intptr_t)&inText, (intptr_t)inFont); }
-protected:
     // Toggles the check, then releases the button
     virtual void ButtonUp() { this->SubCall(EeUiButtonCall::CheckButtonUp); } // 0x1005fa07: the toggle, then UIButton's
     // Presses the box unless it is disabled

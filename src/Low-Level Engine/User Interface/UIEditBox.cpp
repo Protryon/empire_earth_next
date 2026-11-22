@@ -43,6 +43,7 @@
 #include "lle/UIEditBox.h"
 #include "lle/UIObjHost.h"
 #include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
 struct UIEditBoxRust {
     // EditKey (ee_ui edit_keys.rs): UIControl's key predicates and the keyboard's A, L and Return entities
@@ -68,60 +69,54 @@ struct UIEditBoxRust {
         }
         return false;
     }
-    static intptr_t Op(void* inBox, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
-    {
-        static char* sClipboard = NULL;
-        UIEditBox* e = static_cast<UIEditBox*>(inBox);
-        UIScrollBar* theBar = reinterpret_cast<UIScrollBar*>(a);
-        TMPoll* thePoll = reinterpret_cast<TMPoll*>(a);
-        GELine* theLine = reinterpret_cast<GELine*>(a);
-        GERhombus* theRhombus = reinterpret_cast<GERhombus*>(a);
-        GEText* theText = reinterpret_cast<GEText*>(a);
-        intptr_t r = 0;
-        if (UIObjHost::Base(e, inOp, a, f, &r) || UIObjHost::Media(e, inOp, a, b, f, &r) ||
-            UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
-            return r;
-        switch (inOp) {
-        case EeUiOp::ButtonDown: e->ButtonDown(); break;
-        case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
-        case EeUiOp::PollDelete: delete thePoll; break;
-        case EeUiOp::PollRunning: return thePoll->GetIsRunning();
-        case EeUiOp::PollPoll: return thePoll->Poll();
-        case EeUiOp::PollStart: thePoll->Start(); break;
-        case EeUiOp::PollStop: thePoll->Stop(); break;
-        case EeUiOp::TextSetBytes: theText->SetText(UWideString(reinterpret_cast<const char*>(b))); break;
-        case EeUiOp::TextFontHeight: return theText->GetFont()->GetHeight();
-        case EeUiOp::DrawCountDecrement: e->UIControl::DrawTextA(); break;
-        case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
-        case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
-        case EeUiOp::BarValue: return theBar->GetSlider()->GetCurrentRangeValue();
-        case EeUiOp::BarSetValue: theBar->SetCurrentRangeValue((unsigned long)b); break;
-        case EeUiOp::BarMax: return theBar->GetSlider()->GetMaxRange();
-        case EeUiOp::VirtSetRectangle: e->SetRectangle(UIObjHost::Rect(f)); break;
-        case EeUiOp::EditKey: return Key(a);
-        case EeUiOp::VirtProcessEnterKey: e->ProcessEnterKey(); break;
-        case EeUiOp::ClipboardSet: PlatClipboardSetText(reinterpret_cast<const char*>(a)); break;
-        case EeUiOp::ClipboardGet:
-            free(sClipboard);
-            sClipboard = PlatClipboardGetText();
-            return (intptr_t)sClipboard;
-        case EeUiOp::TranslatedKey: e->GetForm()->GetManager()->UpdateTranslatedKey(reinterpret_cast<const char*>(a), 1); break;
-        case EeUiOp::TextInputCancel:
-            // ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)
-            PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation());
-            break;
-        case EeUiOp::BaseReleaseKeyboard: e->UIControl::ReleaseCapturedKeyboard(); break;
-        case EeUiOp::BaseMouseDoublePressed: return e->UIControl::MouseLButtonDoublePressed();
-        case EeUiOp::LineDelete: delete theLine; break;
-        case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus();
-        case EeUiOp::RhombusDelete: delete theRhombus; break;
-        case EeUiOp::TextSetBgColor: theText->SetBgColor(GEColor(f[0], f[1], f[2])); break;
-        case EeUiOp::TextSetTransparent: theText->SetIsTransparent(b != 0); break;
-        default: break;
-        }
-        return 0;
-    }
 };
+static char* sClipboard = NULL;
+#define e static_cast<UIEditBox*>(inObj)
+#define theBar reinterpret_cast<UIScrollBar*>(a)
+#define thePoll reinterpret_cast<TMPoll*>(a)
+#define theLine reinterpret_cast<GELine*>(a)
+#define theRhombus reinterpret_cast<GERhombus*>(a)
+#define theText reinterpret_cast<GEText*>(a)
+EE_UI_VOID(edit_button_down) { e->ButtonDown(); }
+EE_UI_CASE(edit_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
+EE_UI_VOID(edit_poll_delete) { delete thePoll; }
+EE_UI_CASE(edit_poll_running) { return thePoll->GetIsRunning(); }
+EE_UI_CASE(edit_poll_poll) { return thePoll->Poll(); }
+EE_UI_VOID(edit_poll_start) { thePoll->Start(); }
+EE_UI_VOID(edit_poll_stop) { thePoll->Stop(); }
+EE_UI_VOID(edit_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
+EE_UI_CASE(edit_text_font_height) { return theText->GetFont()->GetHeight(); }
+EE_UI_VOID(edit_draw_count_decrement) { e->UIControl::DrawTextA(); }
+EE_UI_VOID(edit_bar_set_range) { theBar->SetRange(0, (unsigned long)b); }
+EE_UI_VOID(edit_bar_set_page_size) { theBar->SetPageSize((unsigned long)b); }
+EE_UI_CASE(edit_bar_value) { return theBar->GetSlider()->GetCurrentRangeValue(); }
+EE_UI_VOID(edit_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b); }
+EE_UI_CASE(edit_bar_max) { return theBar->GetSlider()->GetMaxRange(); }
+EE_UI_VOID(edit_virt_set_rectangle) { e->SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_CASE(edit_key) { return UIEditBoxRust::Key(a); }
+EE_UI_VOID(edit_virt_process_enter_key) { e->ProcessEnterKey(); }
+EE_UI_VOID(edit_clipboard_set) { PlatClipboardSetText(reinterpret_cast<const char*>(a)); }
+EE_UI_CASE(edit_clipboard_get)
+{
+    free(sClipboard);
+                sClipboard = PlatClipboardGetText();
+                return (intptr_t)sClipboard;
+}
+EE_UI_VOID(edit_translated_key) { e->GetForm()->GetManager()->UpdateTranslatedKey(reinterpret_cast<const char*>(a), 1); }
+EE_UI_VOID(edit_text_input_cancel) { PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation()); }
+EE_UI_VOID(edit_base_release_keyboard) { e->UIControl::ReleaseCapturedKeyboard(); }
+EE_UI_CASE(edit_base_mouse_double_pressed) { return e->UIControl::MouseLButtonDoublePressed(); }
+EE_UI_VOID(edit_line_delete) { delete theLine; }
+EE_UI_CASE(edit_rhombus_create) { return (intptr_t) new GERhombus(); }
+EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
+EE_UI_VOID(edit_text_set_bg_color) { theText->SetBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(edit_text_set_transparent) { theText->SetIsTransparent(b != 0); }
+#undef theText
+#undef theRhombus
+#undef theLine
+#undef thePoll
+#undef theBar
+#undef e
 
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
 // lle_bg_edit.rs, UI lane round 12) before the host above
@@ -139,8 +134,6 @@ extern "C" uintptr_t ee_uicpp_line_new() { return (uintptr_t) new GELine(); }
 extern "C" float ee_uicpp_text_fg_red(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetRed(); }
 extern "C" float ee_uicpp_text_fg_green(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetGreen(); }
 extern "C" float ee_uicpp_text_fg_blue(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetBlue(); }
-extern "C" intptr_t ee_uicpp_edit_host(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
-{ return UIEditBoxRust::Op(inObj, inOp, a, b, c, d, f); }
 
 // Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
 UIEditBox::UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,

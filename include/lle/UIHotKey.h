@@ -23,9 +23,7 @@ class UIForm;
 #undef SetForm
 #endif
 
-class LLE_API UIHotKey : public UIEntity, private EeUiHotKeyFields {
-    friend class UIForm;                    // UIForm.cpp reads and writes the fields directly
-    friend struct UIHotKeyHost;             // UIHotKey.cpp: the Rust object's calls out
+class LLE_API UIHotKey : public UIEntity, public EeUiHotKeyFields {
 public:
     UIHotKey();
     UIHotKey(UIForm* inForm, const UIHotKey& inHotKey);
@@ -49,7 +47,6 @@ public:
 #ifdef LOWLEVELENGINE_EXPORTS
     static void UpdatePressedPollAmount() { UIHotKey::sPressedPollAmount = UIHotKey::sPressedPoll.Poll(); }
 #endif
-private:
     intptr_t Call(EeUiHotKeyCall inCall, intptr_t a = 0, intptr_t b = 0) { return ee_ui_hotkey_call(this, inCall, a, b); }
 
 #ifdef LOWLEVELENGINE_EXPORTS

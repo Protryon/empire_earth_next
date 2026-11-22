@@ -19,13 +19,9 @@ class GEText;
 struct EeUiButton;
 
 class LLE_API UIButton : public UIControl {
-    friend struct UIButtonRust;             // the Rust subclasses' logic (User Interface/UIButtonRust.h)
-    friend struct UIButtonHost;             // UIButton.cpp: the Rust object's calls out
 public:
     UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap, GEBitmap* inPressedBitmap,
              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
-    UIButton(const UIButton&) = delete;
-    UIButton& operator=(const UIButton&) = delete;
     virtual ~UIButton();
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiButtonCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiButtonCall::CopyData); }
@@ -51,7 +47,6 @@ public:
                             inRectangle.mTop);
     }
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiButtonCall::UpdateKeyboard); }   // Fixed (kept): a key press on it
-protected:
     virtual void ButtonDown() { this->Call(EeUiButtonCall::ButtonDown); } // slot 0x88
     virtual void ButtonUp() { this->Call(EeUiButtonCall::ButtonUp); }   // Fixed (kept): plays the button-up sound                // slot 0x8c
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiButtonCall::MouseLButtonDown); }
@@ -63,7 +58,6 @@ protected:
     virtual void TabbedTo() { this->Call(EeUiButtonCall::TabbedTo); }
     virtual void TabbedFrom() { this->Call(EeUiButtonCall::TabbedFrom); }
 
-protected:
     intptr_t Call(EeUiButtonCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_button_call(this->mRust, c, a, b, f); }
     intptr_t CallF(EeUiButtonCall c, float f0, float f1, float f2 = 0.0f, float f3 = 0.0f) const { float f[4] = {f0, f1, f2, f3}; return ee_ui_button_call(this->mRust, c, 0, 0, f); }
     // the subclasses' calls (UIButtonRust::Call's)

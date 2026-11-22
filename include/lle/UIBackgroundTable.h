@@ -16,8 +16,7 @@
 class FSFileSpec;
 class UIManager;
 
-class LLE_API UIBackgroundTable : private EeUiBgTableFields {
-    friend struct UIBackgroundTableHost;    // the Rust table's calls out (UIBackgroundTable.cpp)
+class LLE_API UIBackgroundTable : public EeUiBgTableFields {
 public:
     UIBackgroundTable();
     virtual ~UIBackgroundTable() {}
@@ -46,7 +45,6 @@ public:
     float GetTileWidthPercent() const { return this->mTileWidthPercent; }
     float GetTileHeightPercent() const { return this->mTileHeightPercent; }
     bool GetVisible() const { return this->mVisible; }
-private:
     UString mTextureFile;
 };
 

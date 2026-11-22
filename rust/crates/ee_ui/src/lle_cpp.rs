@@ -277,9 +277,10 @@ impl HostArgs {
 }
 
 /// A host that answers the moved ops (`$call`, `fn(&mut impl Cpp, &HostArgs) -> Option<isize>`) and passes the
-/// others to the C++ host `$cpp` (the class's `HostOp`, through one statement). Declared for C++ in `lle/UIShims.h`.
+/// others to the class's tables (`lle_hosts.rs`: the C++ cases' one-statement shims). Declared for C++ in
+/// `lle/UIShims.h`.
 macro_rules! lle_host {
-    ($(#[$m:meta])* $name:ident => $call:path, $cpp:ident) => {
+    ($(#[$m:meta])* $name:ident => $call:path, [$($t:path),*]) => {
         $(#[$m])*
         ///
         /// # Safety
@@ -295,22 +296,11 @@ macro_rules! lle_host {
             d: isize,
             f: *mut f32,
         ) -> isize {
-            extern "C" {
-                fn $cpp(
-                    obj: *mut core::ffi::c_void,
-                    op: crate::obj::EeUiOp,
-                    a: isize,
-                    b: isize,
-                    c: isize,
-                    d: isize,
-                    f: *mut f32,
-                ) -> isize;
-            }
             let args = crate::lle_cpp::HostArgs { obj: obj as usize, op, a, b, c, d, f };
             match $call(&mut crate::lle_cpp::Ffi, &args) {
                 Some(r) => r,
-                // SAFETY: the C++ host's own contract, the arguments as given
-                None => unsafe { $cpp(obj, op, a, b, c, d, f) },
+                // SAFETY: the host contract, the arguments as given
+                None => unsafe { crate::lle_hosts::chain(&[$($t),*], obj, op, a, b, c, d, f) },
             }
         }
     };

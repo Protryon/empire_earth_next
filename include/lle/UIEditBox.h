@@ -22,14 +22,10 @@ class GEText;
 struct EeUiEdit;
 
 class LLE_API UIEditBox : public UIControl {
-    friend class UIComboBox;                // calls the protected mouse/tab handlers
-    friend struct UIEditBoxRust;            // UIEditBox.cpp: the Rust object's calls out
 public:
     UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness,
               bool inMultiLine, bool inPasswordBox);
-    UIEditBox(const UIEditBox&) = delete;
-    UIEditBox& operator=(const UIEditBox&) = delete;
     virtual ~UIEditBox();
     virtual void AddIMEResultString(const UWideString& inString) { this->Call(EeUiEditCall::AddImeResult, (intptr_t)(const char*)inString); }
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
@@ -70,7 +66,6 @@ public:
     }
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiEditCall::UpdateKeyboard); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiEditCall::UpdateTranslatedKey, (intptr_t)inKey, inRepeat); }
-protected:
     virtual void ButtonDown() { this->SetDirty(true); }  // slot 0x88
     virtual long MouseLButtonDoublePressed() { return (long)this->Call(EeUiEditCall::MouseDoublePressed); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiEditCall::MouseLButtonDown); }
@@ -81,8 +76,6 @@ protected:
     virtual void ProcessEnterKey() { this->Call(EeUiEditCall::ProcessEnterKey); } // slot 0x8c
     virtual void TabbedFrom() { this->Call(EeUiEditCall::TabbedFrom); }
     virtual void TabbedTo() { this->Call(EeUiEditCall::TabbedTo); }
-private:
-private:
     intptr_t CallColor(EeUiEditCall c, const GEColor& k) const { return this->Call(c, 0, 0, 0, 0, k.GetRed(), k.GetGreen(), k.GetBlue()); }
     intptr_t CallPoint(EeUiEditCall c, const GE2DPoint& p, intptr_t a = 0) const { return this->Call(c, a, 0, 0, 0, p.GetX(), p.GetY()); }
     intptr_t Call(EeUiEditCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_edit_call(this->mRust, c, a, b, cc, d, f); }

@@ -16,12 +16,9 @@
 struct EeUiStatusBar;
 
 class LLE_API UIStatusBar : public UIControl {
-    friend struct UIStatusBarHost;          // UIStatusBar.cpp: the Rust object's calls out
 public:
     UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                 unsigned long inBorderThickness);
-    UIStatusBar(const UIStatusBar&) = delete;
-    UIStatusBar& operator=(const UIStatusBar&) = delete;
     virtual ~UIStatusBar();
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiStatusBarCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiStatusBarCall::CopyData); }
@@ -40,7 +37,6 @@ public:
     void SetStatusBarColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetStatusBarColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
     void SetText(const UWideString& inText, GEFont* inFont) { this->Call(EeUiStatusBarCall::SetText, (intptr_t)&inText, (intptr_t)inFont); }
     virtual long UpdateKeyboard() { return kErrorOK; }
-protected:
     virtual long MouseLButtonDown() { return kErrorOK; }
     virtual long MouseLButtonUp() { return kErrorOK; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return kErrorOK; }
@@ -51,10 +47,8 @@ protected:
 
     GERhombus mStatusRhombus;               // the bar
     GERhombus mCopiedStatusRhombus;         // the bar as of the last CopyData (inset by the border)
-private:
     intptr_t Call(EeUiStatusBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_status_bar_call(this->mRust, c, a, b, f); }
     intptr_t CallF(EeUiStatusBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_status_bar_call(this->mRust, c, 0, 0, f); }
-protected:
     EeUiStatusBar* mRust;                   // the state (statusobj.rs)
 };
 

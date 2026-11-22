@@ -42,6 +42,7 @@
 #include "lle/UIObjHost.h"
 #include "lle/UIShims.h"
 #include "rust/ui/lle_control.h"
+#include "rust/ui/lle_hosts.h"
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;
@@ -51,44 +52,36 @@ static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle'
 
 // The record's calls out (ee_ui controlobj.rs): the form's and manager's, the virtuals, the rhombi; the event's is
 // Rust's (lle_control.rs, the host ee_ui_control_host)
-extern "C" intptr_t ee_uicpp_control_host(EE_UI_HOST_ARGS) { return UIControl::HostOp(inObj, inOp, a, b, c, d, f); }
-#define c static_cast<UIControl*>(inControl)
-#define theForm static_cast<UIControl*>(inControl)->GetForm()
-intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
-{
-    switch (inOp) {
-    case EeUiOp::CtlFormControl: return (intptr_t)theForm->GetControl((unsigned long)a);
-    case EeUiOp::CtlSlotLeftDown: return theForm->GetControl((unsigned long)a)->mLeftButtonDown;
-    case EeUiOp::CtlSlotRightDown: return theForm->GetControl((unsigned long)a)->mRightButtonDown;
-    case EeUiOp::CtlGroupEnabled: return theForm->GetEntityGroupById((unsigned long)a)->GetIsEnabled();
-    case EeUiOp::CtlCurrentForm: return (intptr_t)theForm->GetManager()->GetCurrentForm();
-    case EeUiOp::CtlKeyboardCaptured: return (intptr_t)theForm->GetKeyboardCaptured();
-    case EeUiOp::CtlMouseCaptured: return (intptr_t)theForm->GetMouseCaptured();
-    case EeUiOp::CtlSetKeyboardCaptured: theForm->SetKeyboardCaptured(reinterpret_cast<UIControl*>(a)); return 0;
-    case EeUiOp::CtlSetMouseCaptured: theForm->SetMouseCaptured(reinterpret_cast<UIControl*>(a)); return 0;
-    case EeUiOp::CtlHide: c->HideControl(); return 0;
-    case EeUiOp::CtlAddDirty: theForm->GetManager()->AddDirtyRectangle(UIObjHost::Rect(f), theForm); return 0;
-    case EeUiOp::CtlTab: theForm->Tab(); return 0;
-    case EeUiOp::CtlAddEvent: theForm->GetManager()->AddEventToTrigger(reinterpret_cast<UIEvent*>(a), theForm, c); return 0;
-    case EeUiOp::CtlHelpString: theForm->GetManager()->GetStringTable()->GetString((unsigned long)b, *reinterpret_cast<UWideString*>(a)); return 0;
-    case EeUiOp::TabStop: return theForm->GetTabStop();
-    case EeUiOp::TabbingOn: return theForm->GetTabbingOn();
-    case EeUiOp::FormSurfaces: return theForm->GetManager()->GetNumberOfSurfaces();
-    case EeUiOp::SetDirty: c->SetDirty(a != 0); return 0;
-    case EeUiOp::FormCtlSetDirty: reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); return 0;
-    case EeUiOp::VirtSetLocation: c->SetLocation(GE2DPoint(f[0], f[1])); return 0;
-    // the direct path's virtuals (ee_ui direct.rs: the game's Rust on a control, an override running)
-    case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); return 0;
-    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); return 0;
-    case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); return 0;
-    case EeUiOp::PartSetBgColor: c->SetBgColor(GEColor(f[0], f[1], f[2])); return 0;
-    case EeUiOp::BgOpacity: f[0] = c->GetBgOpacity(); return 0;
-    case EeUiOp::CtlTabbedTo: c->TabbedTo(); return 0;
-    default: return 0;
-    }
-}
-#undef c
+#define ctl static_cast<UIControl*>(inObj)
+#define theForm ctl->GetForm()
+EE_UI_CASE(ctl_form_control) { return (intptr_t)theForm->GetControl((unsigned long)a); }
+EE_UI_CASE(ctl_slot_left_down) { return theForm->GetControl((unsigned long)a)->mLeftButtonDown; }
+EE_UI_CASE(ctl_slot_right_down) { return theForm->GetControl((unsigned long)a)->mRightButtonDown; }
+EE_UI_CASE(ctl_group_enabled) { return theForm->GetEntityGroupById((unsigned long)a)->GetIsEnabled(); }
+EE_UI_CASE(ctl_current_form) { return (intptr_t)theForm->GetManager()->GetCurrentForm(); }
+EE_UI_CASE(ctl_keyboard_captured) { return (intptr_t)theForm->GetKeyboardCaptured(); }
+EE_UI_CASE(ctl_mouse_captured) { return (intptr_t)theForm->GetMouseCaptured(); }
+EE_UI_VOID(ctl_set_keyboard_captured) { theForm->SetKeyboardCaptured(reinterpret_cast<UIControl*>(a)); }
+EE_UI_VOID(ctl_set_mouse_captured) { theForm->SetMouseCaptured(reinterpret_cast<UIControl*>(a)); }
+EE_UI_VOID(ctl_hide) { ctl->HideControl(); }
+EE_UI_VOID(ctl_add_dirty) { theForm->GetManager()->AddDirtyRectangle(UIObjHost::Rect(f), theForm); }
+EE_UI_VOID(ctl_tab) { theForm->Tab(); }
+EE_UI_VOID(ctl_add_event) { theForm->GetManager()->AddEventToTrigger(reinterpret_cast<UIEvent*>(a), theForm, ctl); }
+EE_UI_VOID(ctl_help_string) { theForm->GetManager()->GetStringTable()->GetString((unsigned long)b, *reinterpret_cast<UWideString*>(a)); }
+EE_UI_CASE(ctl_tab_stop) { return theForm->GetTabStop(); }
+EE_UI_CASE(ctl_tabbing_on) { return theForm->GetTabbingOn(); }
+EE_UI_CASE(ctl_form_surfaces) { return theForm->GetManager()->GetNumberOfSurfaces(); }
+EE_UI_VOID(ctl_set_dirty) { ctl->SetDirty(a != 0); }
+EE_UI_VOID(ctl_form_ctl_set_dirty) { reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); }
+EE_UI_VOID(ctl_virt_set_location) { ctl->SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(ctl_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
+EE_UI_VOID(ctl_release_mouse) { ctl->ReleaseCapturedMouse(); }
+EE_UI_VOID(ctl_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
+EE_UI_VOID(ctl_part_set_bg_color) { ctl->SetBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(ctl_bg_opacity) { f[0] = ctl->GetBgOpacity(); }
+EE_UI_VOID(ctl_tabbed_to) { ctl->TabbedTo(); }
 #undef theForm
+#undef ctl
 
 // The first control's key lookup (lle_control.rs): the statics in its order, the one-statement shims
 #define CTL(x) reinterpret_cast<UIControl*>(x)
@@ -156,111 +149,78 @@ long UIControl::DrawPolygons()
 }
 
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
-bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* outResult)
-{
-    intptr_t r = 0;
-    switch (inOp) {
-    case EeUiOp::BaseCopyData: r = c->UIControl::CopyData(); break;
-    case EeUiOp::BaseDrawPolygons: r = c->UIControl::DrawPolygons(); break;
-    case EeUiOp::BaseDrawText: r = c->UIControl::DrawTextA(); break;
-    case EeUiOp::BaseSetLocation: c->UIControl::SetLocation(GE2DPoint(f[0], f[1])); break;
-    case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
-    case EeUiOp::Rect: UIObjHost::PutRect(f, c->GetRectangle()); break;
-    case EeUiOp::MouseLocation: f[0] = c->GetMouseLocation().GetX(); f[1] = c->GetMouseLocation().GetY(); break;
-    case EeUiOp::CaptureMouse: c->CaptureMouse(); break;
-    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
-    case EeUiOp::FireTrigger: c->FireTriggerEvent((unsigned long)a); break;
-    case EeUiOp::BorderThickness: r = c->mBorderThickness; break;
-    case EeUiOp::Width: r = c->GetWidth(); break;
-    case EeUiOp::Index: r = c->mIndex; break;
-    case EeUiOp::BorderType: r = c->mBorderType; break;
-    case EeUiOp::SetBorderType: c->mBorderType = (unsigned long)a; break;
-    case EeUiOp::TabStop: r = c->GetForm()->GetTabStop(); break;
-    case EeUiOp::TabbingOn: r = c->GetForm()->GetTabbingOn(); break;
-    case EeUiOp::SetTabStop: c->GetForm()->SetTabStop((unsigned long)a); break;
-    case EeUiOp::Tabable: r = c->GetTabable(); break;
-    case EeUiOp::HasMouseCapture: r = c->GetHasMouseCapture(); break;
-    case EeUiOp::RightButtonDown: r = c->GetRightMouseButtonDown(); break;
-    case EeUiOp::Key: {
-        ISEntity* theKey = (a & 1) ? UIControl::Key(EeUiKey::Enter) : UIControl::Key(EeUiKey::Space);
-        r = a < 2 ? theKey->JustPressed() : theKey->JustUnpressed();
-        break;
-    }
-    case EeUiOp::CaptureKeyboard: c->CaptureKeyboard(); break;
-    case EeUiOp::ReleaseKeyboard: c->ReleaseCapturedKeyboard(); break;
-    case EeUiOp::ManagerBitmap: r = (intptr_t)c->GetForm()->GetManager()->GetBitmap(ee_ui_obj_manager_bitmap(a)); break;
-    case EeUiOp::CopiedDrawRect: UIObjHost::PutRect(f, c->GetCopiedDrawRectangle()); break;
-    case EeUiOp::BaseSetRectangle: c->UIControl::SetRectangle(UIObjHost::Rect(f)); break;
-    case EeUiOp::ControlCount: r = c->GetForm()->GetControlCount(); break;
-    case EeUiOp::AlwaysDirty: r = c->GetAlwaysDirty(); break;
-    case EeUiOp::SetAlwaysDirty: c->SetAlwaysDirty(a != 0); break;
-    case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); break;
-    case EeUiOp::BgOpacity: f[0] = c->GetBgOpacity(); break;
-    case EeUiOp::BorderOpacity: f[0] = c->GetBorderOpacity(); break;
-    case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); break;
-    case EeUiOp::SetBorderOpacity: c->SetBorderOpacity(f[0]); break;
-    default: return false;
-    }
-    *outResult = r;
-    return true;
-}
-
+#define ctl static_cast<UIControl*>(inObj)
+EE_UI_CASE(obj_base_copy_data) { return ctl->UIControl::CopyData(); }
+EE_UI_CASE(obj_base_draw_polygons) { return ctl->UIControl::DrawPolygons(); }
+EE_UI_CASE(obj_base_draw_text) { return ctl->UIControl::DrawTextA(); }
+EE_UI_VOID(obj_base_set_location) { ctl->UIControl::SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(obj_set_dirty) { ctl->SetDirty(a != 0); }
+EE_UI_VOID(obj_rect) { UIObjHost::PutRect(f, ctl->GetRectangle()); }
+EE_UI_VOID(obj_mouse_location) { *reinterpret_cast<GE2DPoint*>(f) = ctl->GetMouseLocation(); }
+EE_UI_VOID(obj_capture_mouse) { ctl->CaptureMouse(); }
+EE_UI_VOID(obj_release_mouse) { ctl->ReleaseCapturedMouse(); }
+EE_UI_VOID(obj_fire_trigger) { ctl->FireTriggerEvent((unsigned long)a); }
+EE_UI_CASE(obj_border_thickness) { return ctl->mBorderThickness; }
+EE_UI_CASE(obj_width) { return ctl->GetWidth(); }
+EE_UI_CASE(obj_index) { return ctl->mIndex; }
+EE_UI_CASE(obj_border_type) { return ctl->mBorderType; }
+EE_UI_VOID(obj_set_border_type) { ctl->mBorderType = (unsigned long)a; }
+EE_UI_CASE(obj_tab_stop) { return ctl->GetForm()->GetTabStop(); }
+EE_UI_CASE(obj_tabbing_on) { return ctl->GetForm()->GetTabbingOn(); }
+EE_UI_VOID(obj_set_tab_stop) { ctl->GetForm()->SetTabStop((unsigned long)a); }
+EE_UI_CASE(obj_tabable) { return ctl->GetTabable(); }
+EE_UI_CASE(obj_has_mouse_capture) { return ctl->GetHasMouseCapture(); }
+EE_UI_CASE(obj_right_button_down) { return ctl->GetRightMouseButtonDown(); }
+EE_UI_VOID(obj_capture_keyboard) { ctl->CaptureKeyboard(); }
+EE_UI_VOID(obj_release_keyboard) { ctl->ReleaseCapturedKeyboard(); }
+EE_UI_CASE(obj_manager_bitmap) { return (intptr_t)ctl->GetForm()->GetManager()->GetBitmap(ee_ui_obj_manager_bitmap(a)); }
+EE_UI_VOID(obj_copied_draw_rect) { UIObjHost::PutRect(f, ctl->GetCopiedDrawRectangle()); }
+EE_UI_VOID(obj_base_set_rectangle) { ctl->UIControl::SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_CASE(obj_control_count) { return ctl->GetForm()->GetControlCount(); }
+EE_UI_CASE(obj_always_dirty) { return ctl->GetAlwaysDirty(); }
+EE_UI_VOID(obj_set_always_dirty) { ctl->SetAlwaysDirty(a != 0); }
+EE_UI_VOID(obj_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
+EE_UI_VOID(obj_bg_opacity) { f[0] = ctl->GetBgOpacity(); }
+EE_UI_VOID(obj_border_opacity) { f[0] = ctl->GetBorderOpacity(); }
+EE_UI_VOID(obj_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
+EE_UI_VOID(obj_set_border_opacity) { ctl->SetBorderOpacity(f[0]); }
+#undef ctl
 // The ops on the bitmaps and texts a whole object holds by address (ee_ui obj.rs): a the object, b an argument
-bool UIObjHost::Media(UIControl* c, EeUiOp inOp, intptr_t a, intptr_t b, float* f, intptr_t* outResult)
-{
-    GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
-    GEText* theText = reinterpret_cast<GEText*>(a);
-    intptr_t r = 0;
-    switch (inOp) {
-    case EeUiOp::BitmapReference: theBitmap->Reference(); break;
-    case EeUiOp::BitmapRelease: theBitmap->Dereference(); break;
-    case EeUiOp::BitmapTextureWidth: r = theBitmap->GetTexture(c->GetScreenIndex())->GetWidth(); break;
-    case EeUiOp::StringLength: r = reinterpret_cast<const UWideString*>(a)->GetLength(); break;
-    case EeUiOp::TextCreate: r = (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); break;
-    case EeUiOp::TextDelete: delete theText; break;
-    case EeUiOp::TextSetFont: theText->SetFont(reinterpret_cast<GEFont*>(b)); break;
-    case EeUiOp::TextLength: r = theText->GetText().GetLength(); break;
-    case EeUiOp::TextExtent:
-        f[0] = theText->GetTextExtent().GetWidth();
-        f[1] = theText->GetTextExtent().GetHeight();
-        break;
-    case EeUiOp::TextCopy: *theText = *reinterpret_cast<GEText*>(b); break;
-    case EeUiOp::TextSetText: theText->SetText(*reinterpret_cast<const UWideString*>(b)); break;
-    case EeUiOp::TextSetLocation: theText->SetLocation(GE2DPoint(f[0], f[1])); break;
-    case EeUiOp::TextSetFgColor: theText->SetFgColor(GEColor(f[0], f[1], f[2])); break;
-    case EeUiOp::DrawClippedText: r = c->GetForm()->DrawClippedText(UIObjHost::Rect(f), theText, c); break;
-    default: return false;
-    }
-    *outResult = r;
-    return true;
-}
-
+#define ctl static_cast<UIControl*>(inObj)
+#define theBitmap reinterpret_cast<GEBitmap*>(a)
+#define theText reinterpret_cast<GEText*>(a)
+EE_UI_VOID(obj_bitmap_reference) { theBitmap->Reference(); }
+EE_UI_VOID(obj_bitmap_release) { theBitmap->Dereference(); }
+EE_UI_CASE(obj_bitmap_texture_width) { return theBitmap->GetTexture(ctl->GetScreenIndex())->GetWidth(); }
+EE_UI_CASE(obj_string_length) { return reinterpret_cast<const UWideString*>(a)->GetLength(); }
+EE_UI_CASE(obj_text_create) { return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); }
+EE_UI_VOID(obj_text_delete) { delete theText; }
+EE_UI_VOID(obj_text_set_font) { theText->SetFont(reinterpret_cast<GEFont*>(b)); }
+EE_UI_CASE(obj_text_length) { return theText->GetText().GetLength(); }
+EE_UI_VOID(obj_text_extent) { *reinterpret_cast<GERectangle*>(f) = theText->GetTextExtent(); }
+EE_UI_VOID(obj_text_copy) { *theText = *reinterpret_cast<GEText*>(b); }
+EE_UI_VOID(obj_text_set_text) { theText->SetText(*reinterpret_cast<const UWideString*>(b)); }
+EE_UI_VOID(obj_text_set_location) { theText->SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(obj_text_set_fg_color) { theText->SetFgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_CASE(obj_draw_clipped_text) { return ctl->GetForm()->DrawClippedText(UIObjHost::Rect(f), theText, ctl); }
+#undef theText
+#undef theBitmap
+#undef ctl
 // The ops on a part a whole object owns (ee_ui obj.rs): another control's virtuals, by address
-bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
-{
-    intptr_t r = 0;
-    switch (inOp) {
-    case EeUiOp::DeletePart: delete p; break;
-    case EeUiOp::PartCopyData: r = p->CopyData(); break;
-    case EeUiOp::PartDrawPolygons: r = p->DrawPolygons(); break;
-    case EeUiOp::PartDrawText: r = p->DrawTextA(); break;
-    case EeUiOp::PartRect: UIObjHost::PutRect(f, p->GetRectangle()); break;
-    case EeUiOp::PartMouseDown: r = p->MouseLButtonDown(); break;
-    case EeUiOp::PartMouseUp: r = p->MouseLButtonUp(); break;
-    case EeUiOp::PartMouseMove: r = p->MouseMove(GE2DPoint(f[0], f[1])); break;
-    case EeUiOp::PartSetLocation: p->SetLocation(GE2DPoint(f[0], f[1])); break;
-    case EeUiOp::PartSetRectangle: p->SetRectangle(UIObjHost::Rect(f)); break;
-    case EeUiOp::PartSetBgColor: p->SetBgColor(GEColor(f[0], f[1], f[2])); break;
-    case EeUiOp::PartSetBgOpacity: p->SetBgOpacity(f[0]); break;
-    default: return false;
-    }
-    *outResult = r;
-    return true;
-}
-
-
-
-
+#define part reinterpret_cast<UIControl*>(a)
+EE_UI_VOID(obj_delete_part) { delete part; }
+EE_UI_CASE(obj_part_copy_data) { return part->CopyData(); }
+EE_UI_CASE(obj_part_draw_polygons) { return part->DrawPolygons(); }
+EE_UI_CASE(obj_part_draw_text) { return part->DrawTextA(); }
+EE_UI_VOID(obj_part_rect) { UIObjHost::PutRect(f, part->GetRectangle()); }
+EE_UI_CASE(obj_part_mouse_down) { return part->MouseLButtonDown(); }
+EE_UI_CASE(obj_part_mouse_up) { return part->MouseLButtonUp(); }
+EE_UI_CASE(obj_part_mouse_move) { return part->MouseMove(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(obj_part_set_location) { part->SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(obj_part_set_rectangle) { part->SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_VOID(obj_part_set_bg_color) { part->SetBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(obj_part_set_bg_opacity) { part->SetBgOpacity(f[0]); }
+#undef part
 GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }
 
 unsigned long UIControl::GetScreenIndex() const { return this->GetForm()->GetManager()->GetScreen(); }

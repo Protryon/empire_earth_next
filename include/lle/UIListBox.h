@@ -15,6 +15,7 @@
 #define LLE_UILISTBOX_H
 #include "platform/PlatString.h"
 #include "rust/ui/listobj.h"
+#include "rust/ui/lle_hosts.h"
 #include "rust/ui/obj.h"
 #include <stddef.h>
 
@@ -53,12 +54,10 @@ class GERhombus;
 class UIScrollBar;
 // The Rust list box's ops that do not depend on T (UILBString.cpp: UIControl's, the scroll bar's, polls', rhombi's,
 // the focus line's, the keys')
-LLE_API intptr_t UIListBoxHostOp(UIControl* inList, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 
 template <class T> struct UIListBoxRust;
 template <class T> class UILISTBOX_API UIListBox : public UIControl {
-    friend class UIComboBox;                // OpenListBox reads the line height
-    friend struct UIListBoxRust<T>;         // the Rust object's per-T ops (below)
+public:
     typedef EeUiListCall UIListBoxCall;
     intptr_t Call(UIListBoxCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
     {
@@ -75,12 +74,9 @@ template <class T> class UILISTBOX_API UIListBox : public UIControl {
         ee_ui_list_call(this->mRust, inCall, 0, 0, f);
         return GEColor(f[0], f[1], f[2]);
     }
-public:
     UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
               unsigned long inBorderThickness);
-    UIListBox(const UIListBox&) = delete;
-    UIListBox& operator=(const UIListBox&) = delete;
     virtual ~UIListBox();
 #ifdef __clang__
     // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
@@ -187,7 +183,6 @@ public:
     void SetStartingDisplayLine(unsigned long inLine) { this->Call(UIListBoxCall::SetScrollValue, inLine); }
     void Sort() { std::sort(this->mData.begin(), this->mData.end(), UWSNoCaseAlphaSort()); }
     virtual long UpdateKeyboard() { return (long)this->Call(UIListBoxCall::UpdateKeyboard); }
-public:   // (UI round 13: the hosts' and the game's shims read these; once protected, reached by `using`)
     virtual void ButtonDown() { this->Call(UIListBoxCall::ButtonDown); }   // slot 0xa0
     virtual void ButtonUp() { this->FireTriggerEvent(kControlTriggerButtonUp); }
     long DrawScrollBarText() { return (long)this->Call(UIListBoxCall::DrawScrollBarText); }
@@ -234,7 +229,6 @@ public:   // (UI round 13: the hosts' and the game's shims read these; once prot
 
     std::vector<T> mData;                   // the lines
     std::vector<T> mCopyLineArray;          // the visible lines as of the last CopyData
-private:
     EeUiList* mRust;                        // the state (listobj.rs)
 };
 
@@ -283,7 +277,7 @@ template <class T> struct UIListBoxRust {
             memcpy(&f[0], &theSelection, 4);
             return theResult;
         }
-        default: return UIListBoxHostOp(l, inOp, a, b, c, d, f);
+        default: return ee_ui_list_host(l, inOp, a, b, c, d, f);
         }
         return 0;
     }

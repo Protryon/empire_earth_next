@@ -113,8 +113,6 @@ public:
     void SetupGEText(GEText* inText) const;
     // Fills a list with the description's string-table range (empty when the range is unset)
     void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const { ee_ui_table_setup_strings(this, inManager, &outStrings); }
-private:
-    friend struct UIControlsTableHost;      // UIControlsTable.cpp: the Rust table's calls out
     UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}
     UIControlsTable(const UIControlsTable&);             // not copied (the Rust table is owned)
     UIControlsTable& operator=(const UIControlsTable&);

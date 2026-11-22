@@ -54,6 +54,7 @@
 #include "lle/UIObjHost.h"
 #include "rust/ui/lle_form.h"
 #include "rust/ui/form_state.h"
+#include "rust/ui/lle_hosts.h"
 
 // unreferenced (its init chain 0x10070706 is the only user)
 static const UString kUIFormKey("B7B2257DB7B2257DA49985B7B5A18DF4D49327D6B51165F42EB1A52ECC918DA616B16D26B41955F43C190DDE7EB1BD9624F92DDEFC610D9EB4B9559CB4210D84FC29"
@@ -112,22 +113,16 @@ extern "C" void ee_uicpp_form_enable_group0(uintptr_t inForm) { FORM(inForm)->Ge
 // UIEntityGroup is whole in Rust (rust/crates/ee_ui/src/groupobj.rs, R6 ui round 21; the original unit
 // UIEntityGroup.cpp, 0x1006e304..0x1006e5a8): the calls out of Disable/Enable on entity a, a button or a hot key
 #define ENTITY_CONTROL static_cast<UIControl*>(reinterpret_cast<UIEntity*>(a))
-intptr_t UIEntityGroup::HostOp(void*, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float*)
-{
-    switch (inOp) {
-    case EeUiOp::GrpIsButton: return reinterpret_cast<UIEntity*>(a)->GetType() == kControlTypeButton;
-    case EeUiOp::GrpShown: return ENTITY_CONTROL->GetDisplayMode() == kDisplayModeShown;
-    case EeUiOp::GrpOnCurrentForm: return ENTITY_CONTROL->GetForm() == ENTITY_CONTROL->GetForm()->GetManager()->GetCurrentForm();
-    case EeUiOp::GrpAddDirty: ENTITY_CONTROL->GetForm()->GetManager()->AddDirtyRectangle(ENTITY_CONTROL->GetRectangle(), ENTITY_CONTROL->GetForm()); return 0;
-    case EeUiOp::GrpHide: ENTITY_CONTROL->HideControl(); return 0;
-    case EeUiOp::GrpSetDirty: ENTITY_CONTROL->SetDirty(true); return 0;
-    case EeUiOp::GrpTabbing: return ENTITY_CONTROL->GetForm()->GetTabbingOn();
-    case EeUiOp::GrpIsTabStop: return ENTITY_CONTROL->GetForm()->GetTabStop() == ENTITY_CONTROL->GetIndex();
-    case EeUiOp::GrpTab: ENTITY_CONTROL->GetForm()->Tab(); return 0;
-    case EeUiOp::GrpSetEnabled: static_cast<UIHotKey*>(reinterpret_cast<UIEntity*>(a))->SetEnabled(b != 0); return 0;
-    default: return 0;
-    }
-}
+EE_UI_CASE(group_is_button) { return reinterpret_cast<UIEntity*>(a)->GetType() == kControlTypeButton; }
+EE_UI_CASE(group_shown) { return ENTITY_CONTROL->GetDisplayMode() == kDisplayModeShown; }
+EE_UI_CASE(group_on_current_form) { return ENTITY_CONTROL->GetForm() == ENTITY_CONTROL->GetForm()->GetManager()->GetCurrentForm(); }
+EE_UI_VOID(group_add_dirty) { ENTITY_CONTROL->GetForm()->GetManager()->AddDirtyRectangle(ENTITY_CONTROL->GetRectangle(), ENTITY_CONTROL->GetForm()); }
+EE_UI_VOID(group_hide) { ENTITY_CONTROL->HideControl(); }
+EE_UI_VOID(group_set_dirty) { ENTITY_CONTROL->SetDirty(true); }
+EE_UI_CASE(group_tabbing) { return ENTITY_CONTROL->GetForm()->GetTabbingOn(); }
+EE_UI_CASE(group_is_tab_stop) { return ENTITY_CONTROL->GetForm()->GetTabStop() == ENTITY_CONTROL->GetIndex(); }
+EE_UI_VOID(group_tab) { ENTITY_CONTROL->GetForm()->Tab(); }
+EE_UI_VOID(group_set_enabled) { static_cast<UIHotKey*>(reinterpret_cast<UIEntity*>(a))->SetEnabled(b != 0); }
 #undef ENTITY_CONTROL
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
@@ -147,8 +142,7 @@ template <class D> static ISEntity* UIFormEntity(D* inDevice, unsigned long inKe
 
 // The Rust form's calls out (EeUiOp, obj.rs): a is the control, group, background, hot key, event, table or other
 // object the op names; rectangles and points travel in f
-extern "C" intptr_t ee_uicpp_form_host(EE_UI_HOST_ARGS) { return UIForm::HostOp(inObj, inOp, a, b, c, d, f); }
-#define theForm static_cast<UIForm*>(inForm)
+#define theForm static_cast<UIForm*>(inObj)
 #define theControl reinterpret_cast<UIControl*>(a)
 #define theGroup reinterpret_cast<UIEntityGroup*>(a)
 #define theBackground reinterpret_cast<UIBackground*>(a)
@@ -157,133 +151,117 @@ extern "C" intptr_t ee_uicpp_form_host(EE_UI_HOST_ARGS) { return UIForm::HostOp(
 #define theTable reinterpret_cast<UIControlsTable*>(a)
 #define thePoll reinterpret_cast<TMPoll*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
-intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+EE_UI_CASE(form_ctl_type) { return theControl->GetType(); }
+EE_UI_CASE(form_ctl_entity_type) { return theControl->UIEntity::GetType(); }
+EE_UI_CASE(form_ctl_display_mode) { return theControl->GetDisplayMode(); }
+EE_UI_CASE(form_ctl_dirty) { return theControl->GetIsDirty(); }
+EE_UI_CASE(form_ctl_draw_count) { return theControl->GetDrawCount(); }
+EE_UI_CASE(form_ctl_index) { return theControl->GetIndex(); }
+EE_UI_CASE(form_ctl_id) { return theControl->GetId(); }
+EE_UI_CASE(form_ctl_tabable) { return theControl->GetTabable(); }
+EE_UI_CASE(form_ctl_checked) { return static_cast<UIRadioButton*>(theControl)->GetIsChecked(); }
+EE_UI_CASE(form_ctl_ime_enabled) { return theControl->GetIMEEnabled(); }
+EE_UI_VOID(form_part_rect) { UIObjHost::PutRect(f, theControl->GetRectangle()); }
+EE_UI_VOID(form_part_copied_draw_rect) { UIObjHost::PutRect(f, theControl->GetCopiedDrawRectangle()); }
+EE_UI_CASE(form_part_copy_data) { return theControl->CopyData(); }
+EE_UI_CASE(form_part_draw_polygons) { return theControl->DrawPolygons(); }
+EE_UI_CASE(form_part_draw_text) { return theControl->DrawTextA(); }
+EE_UI_VOID(form_part_set_location) { theControl->SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(form_delete_part) { delete theControl; }
+EE_UI_VOID(form_ctl_set_dirty) { theControl->SetDirty(b != 0); }
+EE_UI_VOID(form_ctl_set_display_mode) { theControl->SetDisplayMode((unsigned long)b); }
+EE_UI_VOID(form_ctl_hide) { theControl->HideControl(); }
+EE_UI_VOID(form_ctl_set_string_id) { theControl->SetStringTableID((unsigned long)b); }
+EE_UI_VOID(form_ctl_tabbed_from) { theControl->TabbedFrom(); }
+EE_UI_VOID(form_ctl_tabbed_to) { theControl->TabbedTo(); }
+EE_UI_CASE(form_ctl_update_keyboard) { return theControl->UpdateKeyboard(); }
+EE_UI_CASE(form_ctl_update_mouse) { return theControl->UpdateMouse(theForm->GetMouseLocation()); }
+EE_UI_CASE(form_ctl_wheel_turned) { return theControl->MouseWheelTurned((long)b); }
+EE_UI_VOID(form_ctl_fire_trigger) { theControl->FireTriggerEvent((unsigned long)b); }
+EE_UI_VOID(form_ctl_release_mouse) { theControl->ReleaseCapturedMouse(); }
+EE_UI_VOID(form_ctl_release_keyboard) { theControl->ReleaseCapturedKeyboard(); }
+EE_UI_VOID(form_help_set_text) { static_cast<UITextLabel*>(theControl)->SetText(sUIFormHelpString, true); }
+EE_UI_CASE(form_label_fit) { return static_cast<UITextLabel*>(theControl)->GetFitRectToText(); }
+EE_UI_CASE(form_group_enabled) { return theGroup->GetIsEnabled(); }
+EE_UI_CASE(form_group_count) { return theGroup->GetEntityCount(); }
+EE_UI_CASE(form_group_entity) { return (intptr_t) static_cast<UIControl*>(theGroup->GetEntity((unsigned long)b)); }
+EE_UI_CASE(form_group_new) { return (intptr_t) new UIEntityGroup; }
+EE_UI_VOID(form_group_delete) { delete theGroup; }
+EE_UI_VOID(form_group_add) { theGroup->AddEntity(reinterpret_cast<UIControl*>(b)); }
+EE_UI_VOID(form_group_remove) { theGroup->RemoveEntity(reinterpret_cast<UIControl*>(b)); }
+EE_UI_CASE(form_bg_priority) { return theBackground->GetDrawPriority(); }
+EE_UI_CASE(form_bg_id) { return theBackground->GetBackgroundID(); }
+EE_UI_CASE(form_bg_visible) { return theBackground->GetIsVisible(); }
+EE_UI_VOID(form_bg_rect) { UIObjHost::PutRect(f, theBackground->GetRectangle()); }
+EE_UI_VOID(form_bg_open) { theBackground->Open(); }
+EE_UI_VOID(form_bg_close) { theBackground->Close(); }
+EE_UI_VOID(form_bg_delete) { delete theBackground; }
+EE_UI_CASE(form_bg_draw) { return theBackground->DrawBackground(UIFormRect(f)); }
+EE_UI_VOID(form_bg_load) { theBackground->LoadBackground(); }
+EE_UI_VOID(form_bg_unload) { theBackground->UnloadBackground(); }
+EE_UI_VOID(form_bg_relayout) { theBackground->RelayoutBackground(); }
+EE_UI_CASE(form_hot_key_always) { return theKey->GetAlwaysFire(); }
+EE_UI_CASE(form_hot_key_keys) { return theKey->GetKeyCount(); }
+EE_UI_CASE(form_hot_key_key) { return (intptr_t)theKey->mKey; }
+EE_UI_CASE(form_hot_key_mod0) { return (intptr_t)theKey->mModifiers[0]; }
+EE_UI_CASE(form_hot_key_mod1) { return (intptr_t)theKey->mModifiers[1]; }
+EE_UI_CASE(form_hot_key_mod2) { return (intptr_t)theKey->mModifiers[2]; }
+EE_UI_CASE(form_hot_key_copy) { return (intptr_t) new UIHotKey(theForm, *theKey); }
+EE_UI_VOID(form_hot_key_delete) { delete theKey; }
+EE_UI_VOID(form_hot_key_set_enabled) { theKey->mEnabled = b != 0; }
+EE_UI_CASE(form_hot_key_fire) { return theKey->FireEvents(); }
+EE_UI_CASE(form_hot_key_temp)
 {
-    switch (inOp) {
-    // the controls
-    case EeUiOp::FormCtlType: return theControl->GetType();
-    case EeUiOp::FormCtlEntityType: return theControl->UIEntity::GetType();
-    case EeUiOp::FormCtlDisplayMode: return theControl->GetDisplayMode();
-    case EeUiOp::FormCtlDirty: return theControl->GetIsDirty();
-    case EeUiOp::FormCtlDrawCount: return theControl->GetDrawCount();
-    case EeUiOp::FormCtlIndex: return theControl->GetIndex();
-    case EeUiOp::FormCtlId: return theControl->GetId();
-    case EeUiOp::FormCtlTabable: return theControl->GetTabable();
-    case EeUiOp::FormCtlChecked: return static_cast<UIRadioButton*>(theControl)->GetIsChecked();
-    case EeUiOp::FormCtlImeEnabled: return theControl->GetIMEEnabled();
-    case EeUiOp::PartRect: UIObjHost::PutRect(f, theControl->GetRectangle()); return 0;
-    case EeUiOp::PartCopiedDrawRect: UIObjHost::PutRect(f, theControl->GetCopiedDrawRectangle()); return 0;
-    case EeUiOp::PartCopyData: return theControl->CopyData();
-    case EeUiOp::PartDrawPolygons: return theControl->DrawPolygons();
-    case EeUiOp::PartDrawText: return theControl->DrawTextA();
-    case EeUiOp::PartSetLocation: theControl->SetLocation(GE2DPoint(f[0], f[1])); return 0;
-    case EeUiOp::DeletePart: delete theControl; return 0;
-    case EeUiOp::FormCtlSetDirty: theControl->SetDirty(b != 0); return 0;
-    case EeUiOp::FormCtlSetDisplayMode: theControl->SetDisplayMode((unsigned long)b); return 0;
-    case EeUiOp::FormCtlHide: theControl->HideControl(); return 0;
-    case EeUiOp::FormCtlSetStringId: theControl->SetStringTableID((unsigned long)b); return 0;
-    case EeUiOp::FormCtlTabbedFrom: theControl->TabbedFrom(); return 0;
-    case EeUiOp::FormCtlTabbedTo: theControl->TabbedTo(); return 0;
-    case EeUiOp::FormCtlUpdateKeyboard: return theControl->UpdateKeyboard();
-    case EeUiOp::FormCtlUpdateMouse: return theControl->UpdateMouse(theForm->GetMouseLocation());
-    case EeUiOp::FormCtlWheelTurned: return theControl->MouseWheelTurned((long)b);
-    case EeUiOp::FormCtlFireTrigger: theControl->FireTriggerEvent((unsigned long)b); return 0;
-    case EeUiOp::FormCtlReleaseMouse: theControl->ReleaseCapturedMouse(); return 0;
-    case EeUiOp::FormCtlReleaseKeyboard: theControl->ReleaseCapturedKeyboard(); return 0;
-    case EeUiOp::FormHelpSetText: static_cast<UITextLabel*>(theControl)->SetText(sUIFormHelpString, true); return 0;
-    case EeUiOp::FormLabelFit: return static_cast<UITextLabel*>(theControl)->GetFitRectToText();
-    // the groups
-    case EeUiOp::FormGroupEnabled: return theGroup->GetIsEnabled();
-    case EeUiOp::FormGroupCount: return theGroup->GetEntityCount();
-    case EeUiOp::FormGroupEntity: return (intptr_t) static_cast<UIControl*>(theGroup->GetEntity((unsigned long)b));
-    case EeUiOp::FormGroupNew: return (intptr_t) new UIEntityGroup;
-    case EeUiOp::FormGroupDelete: delete theGroup; return 0;
-    case EeUiOp::FormGroupAdd: theGroup->AddEntity(reinterpret_cast<UIControl*>(b)); return 0;
-    case EeUiOp::FormGroupRemove: theGroup->RemoveEntity(reinterpret_cast<UIControl*>(b)); return 0;
-    // the backgrounds
-    case EeUiOp::FormBgPriority: return theBackground->GetDrawPriority();
-    case EeUiOp::FormBgId: return theBackground->GetBackgroundID();
-    case EeUiOp::FormBgVisible: return theBackground->GetIsVisible();
-    case EeUiOp::FormBgRect: UIObjHost::PutRect(f, theBackground->GetRectangle()); return 0;
-    case EeUiOp::FormBgOpen: theBackground->Open(); return 0;
-    case EeUiOp::FormBgClose: theBackground->Close(); return 0;
-    case EeUiOp::FormBgDelete: delete theBackground; return 0;
-    case EeUiOp::FormBgDraw: return theBackground->DrawBackground(UIFormRect(f));
-    case EeUiOp::FormBgLoad: theBackground->LoadBackground(); return 0;
-    case EeUiOp::FormBgUnload: theBackground->UnloadBackground(); return 0;
-    case EeUiOp::FormBgRelayout: theBackground->RelayoutBackground(); return 0;
-    // the hot keys
-    case EeUiOp::FormHotKeyAlways: return theKey->GetAlwaysFire();
-    case EeUiOp::FormHotKeyKeys: return theKey->GetKeyCount();
-    case EeUiOp::FormHotKeyKey: return (intptr_t)theKey->mKey;
-    case EeUiOp::FormHotKeyMod0: return (intptr_t)theKey->mModifiers[0];
-    case EeUiOp::FormHotKeyMod1: return (intptr_t)theKey->mModifiers[1];
-    case EeUiOp::FormHotKeyMod2: return (intptr_t)theKey->mModifiers[2];
-    case EeUiOp::FormHotKeyCopy: return (intptr_t) new UIHotKey(theForm, *theKey);
-    case EeUiOp::FormHotKeyDelete: delete theKey; return 0;
-    case EeUiOp::FormHotKeySetEnabled: theKey->mEnabled = b != 0; return 0;
-    case EeUiOp::FormHotKeyFire: return theKey->FireEvents();
-    case EeUiOp::FormHotKeyTemp: {   // (mForm is the record's: UIForm is the hot key's friend)
-        UIHotKey* theHotKey = new UIHotKey;
-        theHotKey->mForm = theForm;
-        theHotKey->SetKey((unsigned long)a);
-        return (intptr_t)theHotKey;
-    }
-    case EeUiOp::FormHotKeySetModifier: theKey->SetModifier((unsigned long)b, (unsigned char)c); return 0;
-    case EeUiOp::FormHotKeySetAlways: theKey->mAlwaysFire = b != 0; return 0;
-    case EeUiOp::FormKeyEntity: return (intptr_t)UIFormEntity(gISKeyboard, (unsigned long)a);
-    case EeUiOp::FormKeysReady: return UIControl::Key(EeUiKey::Tab) != NULL;
-    case EeUiOp::FormTabJustPressed: return UIControl::Key(EeUiKey::Tab)->JustPressed();
-    case EeUiOp::FormShiftValue: return UIControl::Key(EeUiKey::Shift)->GetValue();
-    // the events
-    case EeUiOp::FormEventProcess: return theEvent->ProcessEvent(theForm, NULL);
-    case EeUiOp::FormWheelEventNew: return (intptr_t) new UIEMouseWheelScroll;
-    // the mouse
-    case EeUiOp::FormMouseWheel: return UIManager::GetMouseWheel() != NULL;
-    case EeUiOp::FormWheelAmount: return UIManager::GetMouseWheelScrollAmount();
-    case EeUiOp::FormMouseEntity: return (intptr_t)UIFormEntity(gISMouse, (unsigned long)a);
-    // the controls table
-    case EeUiOp::FormTable: return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a);
-    case EeUiOp::FormTableFormIndex: return theTable->GetFormIndex();
-    case EeUiOp::FormTableGroup: return theTable->GetGroup();
-    case EeUiOp::FormTableVisible: return theTable->GetIsVisible() == true;
-    case EeUiOp::FormTableType: return theTable->GetControlType();
-    case EeUiOp::FormTableStringId: return theTable->GetStringTableID();
-    case EeUiOp::FormTableCreateControl: return (intptr_t)theTable->CreateControl(theForm->GetManager());
-    case EeUiOp::FormTableCreateEvent: theTable->CreateControlEvent(theForm); return 0;
-    case EeUiOp::FormTableRelayout: theTable->RelayoutControl(reinterpret_cast<UIControl*>(b), theForm->GetManager()); return 0;
-    // the manager
-    case EeUiOp::FormSurfaces: return theForm->GetManager()->GetNumberOfSurfaces();
-    case EeUiOp::FormWindowWidth: return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth();
-    case EeUiOp::FormWindowHeight: return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight();
-    case EeUiOp::FormManagerProcessEvents: theForm->GetManager()->ProcessAllEventsForForm(theForm); return 0;
-    case EeUiOp::FormManagerAddDirty: theForm->GetManager()->AddDirtyRectangle(UIFormRect(f), theForm); return 0;
-    case EeUiOp::FormMusicStop: theForm->GetManager()->StopMusic(); return 0;
-    case EeUiOp::FormMusicStart: theForm->GetManager()->StartMusic(UWideString((const char*)a)); return 0;
-    case EeUiOp::FormCreateFormEvent: return (intptr_t)theForm->GetManager()->CreateFormEvent((unsigned long)a);
-    case EeUiOp::FormManagerDelete: delete reinterpret_cast<UIFormManager*>(a); return 0;
-    case EeUiOp::FormNow: return TMGetTime();
-    // the draw-background lock, the help-text poll
-    case EeUiOp::FormLockDelete: TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); return 0;
-    case EeUiOp::FormLockEnter: reinterpret_cast<TSCriticalSection*>(a)->Enter(); return 0;
-    case EeUiOp::FormLockLeave: reinterpret_cast<TSCriticalSection*>(a)->Leave(); return 0;
-    case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
-    case EeUiOp::PollDelete: delete thePoll; return 0;
-    case EeUiOp::PollRunning: return thePoll->GetIsRunning();
-    case EeUiOp::PollPoll: return thePoll->Poll();
-    case EeUiOp::PollStart: thePoll->Start(); return 0;
-    case EeUiOp::PollStop: thePoll->Stop(); return 0;
-    case EeUiOp::PollSetDelay: thePoll->SetTimeDelay((unsigned long)b); return 0;
-    // the form's own virtuals, so that a game form's override runs
-    case EeUiOp::FormVirtHelpLocation: theForm->SetHelpTextPopupLocation(); return 0;
-    case EeUiOp::FormVirtDrawBackground: return theForm->DrawBackground(UIFormRect(f));
-    // the draws
-    case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus;
-    case EeUiOp::RhombusDelete: delete theRhombus; return 0;
-    case EeUiOp::FormRhombusLabelColor: theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor()); return 0;
-    default: return 0;
-    }
+    UIHotKey* theHotKey = new UIHotKey;
+    theHotKey->mForm = theForm;
+    theHotKey->SetKey((unsigned long)a);
+    return (intptr_t)theHotKey;
 }
+EE_UI_VOID(form_hot_key_set_modifier) { theKey->SetModifier((unsigned long)b, (unsigned char)c); }
+EE_UI_VOID(form_hot_key_set_always) { theKey->mAlwaysFire = b != 0; }
+EE_UI_CASE(form_key_entity) { return (intptr_t)UIFormEntity(gISKeyboard, (unsigned long)a); }
+EE_UI_CASE(form_keys_ready) { return UIControl::Key(EeUiKey::Tab) != NULL; }
+EE_UI_CASE(form_tab_just_pressed) { return UIControl::Key(EeUiKey::Tab)->JustPressed(); }
+EE_UI_CASE(form_shift_value) { return UIControl::Key(EeUiKey::Shift)->GetValue(); }
+EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
+EE_UI_CASE(form_wheel_event_new) { return (intptr_t) new UIEMouseWheelScroll; }
+EE_UI_CASE(form_mouse_wheel) { return UIManager::GetMouseWheel() != NULL; }
+EE_UI_CASE(form_wheel_amount) { return UIManager::GetMouseWheelScrollAmount(); }
+EE_UI_CASE(form_mouse_entity) { return (intptr_t)UIFormEntity(gISMouse, (unsigned long)a); }
+EE_UI_CASE(form_table) { return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a); }
+EE_UI_CASE(form_table_form_index) { return theTable->GetFormIndex(); }
+EE_UI_CASE(form_table_group) { return theTable->GetGroup(); }
+EE_UI_CASE(form_table_visible) { return theTable->GetIsVisible() == true; }
+EE_UI_CASE(form_table_type) { return theTable->GetControlType(); }
+EE_UI_CASE(form_table_string_id) { return theTable->GetStringTableID(); }
+EE_UI_CASE(form_table_create_control) { return (intptr_t)theTable->CreateControl(theForm->GetManager()); }
+EE_UI_VOID(form_table_create_event) { theTable->CreateControlEvent(theForm); }
+EE_UI_VOID(form_table_relayout) { theTable->RelayoutControl(reinterpret_cast<UIControl*>(b), theForm->GetManager()); }
+EE_UI_CASE(form_surfaces) { return theForm->GetManager()->GetNumberOfSurfaces(); }
+EE_UI_CASE(form_window_width) { return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth(); }
+EE_UI_CASE(form_window_height) { return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight(); }
+EE_UI_VOID(form_manager_process_events) { theForm->GetManager()->ProcessAllEventsForForm(theForm); }
+EE_UI_VOID(form_manager_add_dirty) { theForm->GetManager()->AddDirtyRectangle(UIFormRect(f), theForm); }
+EE_UI_VOID(form_music_stop) { theForm->GetManager()->StopMusic(); }
+EE_UI_VOID(form_music_start) { theForm->GetManager()->StartMusic(UWideString((const char*)a)); }
+EE_UI_CASE(form_create_form_event) { return (intptr_t)theForm->GetManager()->CreateFormEvent((unsigned long)a); }
+EE_UI_VOID(form_manager_delete) { delete reinterpret_cast<UIFormManager*>(a); }
+EE_UI_CASE(form_now) { return TMGetTime(); }
+EE_UI_VOID(form_lock_delete) { TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); }
+EE_UI_VOID(form_lock_enter) { reinterpret_cast<TSCriticalSection*>(a)->Enter(); }
+EE_UI_VOID(form_lock_leave) { reinterpret_cast<TSCriticalSection*>(a)->Leave(); }
+EE_UI_CASE(form_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
+EE_UI_VOID(form_poll_delete) { delete thePoll; }
+EE_UI_CASE(form_poll_running) { return thePoll->GetIsRunning(); }
+EE_UI_CASE(form_poll_poll) { return thePoll->Poll(); }
+EE_UI_VOID(form_poll_start) { thePoll->Start(); }
+EE_UI_VOID(form_poll_stop) { thePoll->Stop(); }
+EE_UI_VOID(form_poll_set_delay) { thePoll->SetTimeDelay((unsigned long)b); }
+EE_UI_VOID(form_virt_help_location) { theForm->SetHelpTextPopupLocation(); }
+EE_UI_CASE(form_virt_draw_background) { return theForm->DrawBackground(UIFormRect(f)); }
+EE_UI_CASE(form_rhombus_create) { return (intptr_t) new GERhombus; }
+EE_UI_VOID(form_rhombus_delete) { delete theRhombus; }
+EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor()); }
 #undef theForm
 #undef theControl
 #undef theGroup

@@ -23,8 +23,6 @@ public:
     {
         Call(EeUiLabelCall::ScrollInit, (intptr_t)inFont);
     }
-    UITLScrolling(const UITLScrolling&) = delete;
-    UITLScrolling& operator=(const UITLScrolling&) = delete;
     void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset)
     {
         int theStart = (int)inStartOffset, theEnd = (int)inEndOffset;
@@ -38,7 +36,6 @@ public:
         Call(EeUiLabelCall::ScrollTextFor, inTime, inEndDelay);
     }
     void StopScrolling() { Call(EeUiLabelCall::StopScrolling); }
-private:
     intptr_t Call(EeUiLabelCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
     {
         return ee_ui_label_call(this->mRust, inCall, a, b, f);

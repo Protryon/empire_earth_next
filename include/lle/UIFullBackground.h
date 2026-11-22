@@ -13,7 +13,7 @@ class GERectangle;
 class UIForm;
 struct GETextureDescription;
 
-class LLE_API UIFullBackground : protected EeUiBackgroundFields {
+class LLE_API UIFullBackground : public EeUiBackgroundFields {
 public:
     UIFullBackground(const UString& inFileName, unsigned long inColumns, unsigned long inRows, UIForm* inForm,
                      unsigned long inDesignedWidth, unsigned long inDesignedHeight);

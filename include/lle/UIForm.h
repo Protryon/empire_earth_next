@@ -64,8 +64,6 @@ struct EeUiForm;                           // rust/ee_ui.h: the Rust form (formo
 // object. GetRectangle and GetMouseLocation answer the address of the Rust object's members (GERectangle's and
 // GE2DPoint's layouts); GetMusicFileName answers a copy.
 class LLE_API UIForm {
-    friend class UIControl;                 // CaptureMouse/CaptureKeyboard call SetMouseCaptured/SetKeyboardCaptured
-    friend class UIManager;                 // UIManager::HostOp: the protected Close/CopyData/DrawPolygons/Open, AddDirtyRectangle
 public:
     UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
            unsigned long inFormID, bool inUseGDIForText);
@@ -84,10 +82,8 @@ public:
     virtual long CloseIMECompositionString() { return ee_ui_form_pass_to_keyboard(this, 2, NULL, NULL, 0); }
     // Fires the deactivate event, hides the popup and help text, and releases the captured mouse and keyboard
     virtual void Deactivate() { this->Call(EeUiFormCall::Deactivate); }
-protected:
     // Redraws every visible background that overlaps the rectangle; returns the last draw result
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiFormCall::DrawBackground, 0, 0, inRectangle); } // slot 0x18
-public:
     // Opens an IME composition string in the control holding the keyboard; kErrorFailed when none does
     virtual long OpenIMECompositionString() { return ee_ui_form_pass_to_keyboard(this, 3, NULL, NULL, 0); }
     // Lays the form out again inside a new rectangle, with its backgrounds and database controls
@@ -101,7 +97,6 @@ public:
     virtual long UpdateMouse() { return (long)this->Call(EeUiFormCall::UpdateMouse); }
     // Passes a typed character to the control holding the keyboard
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return ee_ui_form_pass_to_keyboard(this, 4, inKey, NULL, (uint32_t)(int)inRepeat); }
-protected:
     // Closes the form: fires the close event, clears the draw list and popup, closes the backgrounds, flushes its events
     // and deletes the controls created from the database
     virtual void Close() { this->Call(EeUiFormCall::Close); }                   // slot 0x38
@@ -117,7 +112,6 @@ protected:
     virtual void Open() { this->Call(EeUiFormCall::Open); }
     // The header's members (inline in the original, emitted first by UIBackground.cpp 0x10059559..0x10059795)
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::SetRectangle, 0, 0, inRectangle); } // slot 0x4c
-public:
     // Inserts a background before the first one with an equal or higher draw priority
     void AddBackground(UIBackground* inBackground) { this->Call(EeUiFormCall::AddBackground, (intptr_t)inBackground); }
     // Adds a rectangle that text drawing must keep out of
@@ -221,16 +215,11 @@ public:
     // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
     void UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
     void UpdateMouseLocation(const GE2DPoint& inLocation);
-protected:
     bool GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
     void SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
-public:   // (the shims' access: UIForm.cpp)
     UIControl* GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
     UIControl* GetMouseCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseCaptured)); }
     // the Rust form's calls out that are not Rust's (ee_ui lle_form.rs: ee_ui_form_host comes first)
-    static intptr_t HostOp(void* inForm, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
-                           float* ioF);
-private:
     // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
     void AddDirtyRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddDirtyRectangle, 0, 0, inRectangle); }
     // Gives the keyboard to a control and fires the keyboard-captured event
