@@ -5,7 +5,8 @@
 
 // LLE exports use U2DPoint<long> (?$U2DPoint@J@@) and U2DPoint<float>; no member is exported (all inline).
 // Default.dll EEClumps keeps a vector<U2DPoint<long> > (8-byte elements, x then y, trivial dtor: 0x8e6d).
-#include "rust/base/math.h"   // GetLineTiles
+#include "rust/base/math.h"   // GetLineTiles, the file forms
+#include <type_traits>
 
 template <class T> class U2DPoint {
 public:
@@ -103,28 +104,11 @@ public:
     // (U2DSparseArray.cpp 0x10055899: x and y kept in eax/edx, inPoint in esi)
     T DistanceToSquared(const U2DPoint& inPoint) const
         { return (this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX()) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY()); }
-    long Load(FSFile& inFile)
-    {
-        long theResult;
-        if (inFile.GetIsOpen()) {
-            theResult = inFile.Read(this->mX);
-            if (theResult == 0)
-                theResult = inFile.Read(this->mY);
-        } else
-            theResult = 4;
-        return theResult;
-    }
+    // x and y from (to) an open file, each through its typed call; kErrorNotOpen when it is not open, else the first
+    // error (ee_base math u2d.rs; T is long or float)
+    long Load(FSFile& inFile) { return ee_u2d_point_io(&inFile, &this->mX, std::is_floating_point<T>::value, false); }
     long Save(FSFile& inFile) const
-    {
-        long theResult;
-        if (inFile.GetIsOpen()) {
-            theResult = inFile.Write(this->mX);
-            if (theResult == 0)
-                theResult = inFile.Write(this->mY);
-        } else
-            theResult = 4;
-        return theResult;
-    }
+        { return ee_u2d_point_io(&inFile, const_cast<T*>(&this->mX), std::is_floating_point<T>::value, true); }
 
     T mX;                                   // +0x00
     T mY;                                   // +0x04
