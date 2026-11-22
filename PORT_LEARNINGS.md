@@ -37160,3 +37160,103 @@ between runs). EE-SIM covers URandom, the U2D algorithms, FSFile/UString loads a
   "main-menu: the window capture is blank" (tour and lan-game PASS); the rerun GATES PASS (tour; ai-game time-cap
   PT 13146, units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 3220/3223).
 - Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py), `gates.sh --legacy`.
+
+## LLE round 10: the LLE's constant enums, GEViewport and four plain structs are Rust's; the GE start-up, the NE hosts' compound cases, U2DRectangle's file forms and the unit-list report in Rust (ee_base lle_enums.rs, fs cppfile.rs, math u2d.rs; ee_render gestate.rs, ge startup.rs, geval viewport_ffi.rs; ee_net msgid.rs, ffi_server.rs, ffi_client.rs; ee_game rts units.rs; branch rust-lle10, 2026-11-21)
+
+The brief: continue rounds 8-9 over the same scope (src/Low-Level Engine but User Interface, include/lle but UI*,
+include/ee/RTS*.h and their RTS*.cpp), whole classes where possible, target -2,000 C++ logic lines
+(`logic_lines.py`). **Logic -693** (670df2148 -> 184d52ec5: 64,944 -> 64,251); net C++ -778 (src and include but
+include/rust); in the scope 3,452 -> 2,759. docs/progress/lle-shims.md has the commits and what is left. Short of the
+target: what the scope still holds is mostly class declarations the C++ users hold (pure virtual interfaces, members
+that game-core code reads by name), forward declarations, and the hot inline math of the value types (see below).
+
+### What moved
+
+- **The constant enums** (GERenderState.h, ISKeyCode.h, NEMessageID.h whole; the enums of GEFont, GEModel,
+  GESurface, GETerrainMeshFlags, GETextAlignment, ISModifierState, ISMouse, FSFile, LowLevelEngineCore,
+  SEConductor, NESynchronousCommunications, NESynchronousServer): `#[repr(C)]` Rust enums with the C++ names as
+  variants and the evidence comments as doc comments, which cbindgen emits back as **plain** C++ enums with the
+  per-item annotation `/// cbindgen:enum-class=false` (rust/render/gestate.h, rust/base/lle_enums.h,
+  rust/net/msgid.h). A Rust enum cannot have two names for one value: ESError and FSFileAccess keep their aliases
+  (`keseOK`, `kErrorAlreadyExists`, `kErrorAlreadyOpen`, `kErrorIOFailed`; `kfsaRead`, `kfsaWrite`) in a C++
+  anonymous enum over the Rust names.
+- **Rust records as the C++ types**: GEViewport derives from ee_render geval's `EeGeViewport`, whose header names
+  its fields as the C++ did through `/// cbindgen:field-names=[mOrthographicRectangle, ...]` (the Rust keeps its
+  snake_case names); its multi-statement bodies (SetCamera, SetOrthographicRectangle, SetDepthRange, the
+  denormalization, the camera points' normalization, the frustum corners pushed into the C++ vector) are Rust calls,
+  and the getters of its record-typed members return the C++ class through `GECpp` (lle/GERust.h's mirror macro, the
+  inverse of `GERust`). GESurfaceDescription derives from `EeGeSurfaceDescription` (field-names), GEVideoMode is
+  `EeDx7VideoMode`, GETStage `EeGeTStage`, TMTime `EeTimeOfDay`; their C++ layout pins go, and the DX7 plug-in's own
+  surface description is pinned to the GE's by a Rust `const` assertion (`offset_of!`).
+- **The NE hosts' compound cases** split in the Rust FFI encoding: the server's and the client's `msg_set_slot` and
+  `msg_flag` choose one op per C++ call (SetOriginatingSlot / SetForSpecificSlot; the three flags), and the out
+  arguments are the C++ types themselves (`NEMessage**`, `unsigned long*`), so the cases are one statement each.
+- **The GE start-up** (`GEInitialize`, `GEShutdown`): ee_render ge startup.rs over a `cpp_shims!` trait (the built-in
+  fonts, the instance, the T&L rasterizer's Activate, GetScreenCount, Deactivate); the shutdown hook and the
+  rasterizer list are Rust's. `GEScreen::sInstance` is public (the shim sets it).
+- **Files**: the FSFile calls table (cppfile.rs) gains `Read`/`Write` of `int32_t` and `float`; `FSFile::Read(long&)`
+  and `Read(unsigned long&)` are Rust (the 32-bit copy kept on a failed read), and so is `U2DRectangle<T>::Load`/`Save`
+  (math u2d.rs: left, top, right, bottom through the typed calls, the first error ending it). FSMemoryFile's count
+  adapters, GETerrainMesh's out-argument members, the NE server's constructor arguments and the texture file info
+  are Rust forms that write the C++ outs.
+- **The unit chains' check** (EE_CHECK_UNIT_LIST): the switch (read once, on the first check) and the failure report
+  (from the unit's record and links) are rts units.rs's.
+- **The hosts' prologue locals** (one typed local per object kind before each GE/DX7/NE host's switch) are per-case
+  casts, as these hosts' other cases already were.
+
+### Lessons
+
+- **cbindgen can emit a plain C++ enum and C++ field names per item**: `/// cbindgen:enum-class=false` on a
+  `#[repr(C)]` enum (no `: uint32_t`, unscoped enumerators, implicit int conversion, as the C++ headers had), and
+  `/// cbindgen:field-names=[...]` on a struct (the Rust keeps its names). A C++ class can then derive from the Rust
+  record and lose its member list and its layout pins. Renaming the fields of a record other C++ already reads by
+  its Rust names (the GE points and vectors: game-core code reads `.x` on `EeGe3DPoint`) is a cross-lane change.
+- **The NE goldens replay traits, not ops**: tests_server.rs and tests_client.rs fake the host *traits*; the op
+  encoding is only ffi_server.rs's and ffi_client.rs's. Splitting a compound op therefore needs no golden change;
+  the C++ drivers (tests/net ne_server_test.cpp, ne_client_test.cpp) answer the new ops and print the old ops' lines,
+  `xbuild.py nettest` stays at 0 differing and `--print` rewrites golden_client.txt and golden_server.txt byte for
+  byte. The message manager's ops (`EeNetMmOp`) are recorded at the op level (tests_server.rs `mm`): changing their
+  arguments to pointers would change the golden's lines.
+- **A Python heredoc through the Bash tool turned `\\` + newline into a literal `\n`** in a C++ macro continuation
+  (GERust.h): the build failed with "expected unqualified-id" in 11 units. Use the Edit tool for backslashes.
+- **Debug `cargo test` under the machine's load**: plat_sys::thread's tests wait 10 s for a thread; twice a wait timed
+  out (`com_is_initialised_on_platform_threads`, `set_from_another_thread_wakes_a_waiter`) and once the ee_base test
+  binary died with an access violation; ee_base's tests then passed alone, serially and ten times in parallel.
+
+### Behaviour changes
+
+None intended. The unit-list failure report prints pointers as Rust does (`0x...`) and says "checking the unit
+chains" on the first check rather than at start-up; `GEScreen::sInstance` is public; GEInitialize's font
+verification names GERasterizer.cpp's new line.
+
+### What only a live game exercises
+
+The tours: the GE start-up (every game start), GEViewport's Rust bodies (the camera, the picking frustum),
+GESurfaceDescription/GEVideoMode/GETStage (texture creation, the video modes, the texture stages), the terrain mesh's
+out forms (the visible tiles), the GE/DX7 hosts' inlined casts, FSMemoryFile (every archive read; also EE-SIM). The
+LAN game (gates.sh) only: the NE server's and client's split cases and the server's constructor. EE-SIM covers
+U2DRectangle's and FSFile's long reads (saves, saveload), the enums, ESError, TMTime.
+
+### Gates (on the tree merged with origin/rust 8830a1187)
+
+- both builds 0/0 (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0 (414); the headers current (299); the
+  Rust gate PASS (5,607 tests, 0 failed; test, clippy, rustfmt, header). Earlier runs under load failed on
+  plat_sys::thread's 10 s waits twice and once with an access violation in the ee_base test binary; ee_base passed
+  alone, serially and ten times in parallel, and the final run passed whole;
+- the NE drivers (`xbuild.py nettest ne_client_test ne_server_test`): 1500 sequences each, 0 differing; `--print`
+  writes golden_client.txt and golden_server.txt byte for byte;
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); run dirs deleted;
+- the plain saveload PASS (seeds 2-7, every save identical); the matrix `--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` (calamity 2/1900 missing and next 915/276 as
+  expected); scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062); eedata check PASS,
+  cppgate PASS;
+- through slot.py, the test profile: the tour `--input-check --view-check --play-seconds 120 --seed 7` (F3 ok, VIEW
+  CHECK PASS, RENDER CHECK ok: view 88.8% lit, 3,881 colours, mini map ok; RESULT PASS, no GX errors);
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS);
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS at the first run (tour; ai-game time-cap
+  PT 12346, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2837/2836).
+- Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it would need the FSFile calls table's four
+  new entries if it links FSFile's long reads), `gates.sh --legacy`.
