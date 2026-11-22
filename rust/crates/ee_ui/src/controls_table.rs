@@ -14,22 +14,23 @@ use core::ffi::{c_long, c_ulong};
 
 use crate::button::UiColor;
 use crate::layout::{Layout, PROPORTIONAL};
+use crate::ids::UIDbControlType as T;
 use crate::rect::{um_floor, UiRect};
 
 /// The control types `CreateControl` dispatches on (`UIDbControlType`; private: the generated header would clash with
 /// wingdi's BITMAP).
-const BITMAP: c_ulong = 0;
-const EDITABLE_COMBO_BOX: c_ulong = 3;
-const COMBO_BOX: c_ulong = 4;
-const NUMBER_MULTI_LINE_EDIT_BOX: c_ulong = 5;
-const MULTI_LINE_EDIT_BOX: c_ulong = 7;
-const LIST_BOX: c_ulong = 9;
-const AUTO_SELECT_LIST_BOX: c_ulong = 10;
-const MULTI_LINE_TEXT_LABEL: c_ulong = 16;
-const NUMBER_MULTI_LINE_TEXT_LABEL: c_ulong = 21;
-const FILE_LIST_BOX: c_ulong = 22;
-const MULTI_LINE_HELP_TEXT_LABEL: c_ulong = 25;
-const SCROLLING_TEXT_LABEL: c_ulong = 26;
+const BITMAP: c_ulong = T::kDbControlBitmap as c_ulong;
+const EDITABLE_COMBO_BOX: c_ulong = T::kDbControlEditableComboBox as c_ulong;
+const COMBO_BOX: c_ulong = T::kDbControlComboBox as c_ulong;
+const NUMBER_MULTI_LINE_EDIT_BOX: c_ulong = T::kDbControlNumberMultiLineEditBox as c_ulong;
+const MULTI_LINE_EDIT_BOX: c_ulong = T::kDbControlMultiLineEditBox as c_ulong;
+const LIST_BOX: c_ulong = T::kDbControlListBox as c_ulong;
+const AUTO_SELECT_LIST_BOX: c_ulong = T::kDbControlAutoSelectListBox as c_ulong;
+const MULTI_LINE_TEXT_LABEL: c_ulong = T::kDbControlMultiLineTextLabel as c_ulong;
+const NUMBER_MULTI_LINE_TEXT_LABEL: c_ulong = T::kDbControlNumberMultiLineTextLabel as c_ulong;
+const FILE_LIST_BOX: c_ulong = T::kDbControlFileListBox as c_ulong;
+const MULTI_LINE_HELP_TEXT_LABEL: c_ulong = T::kDbControlMultiLineHelpTextLabel as c_ulong;
+const SCROLLING_TEXT_LABEL: c_ulong = T::kDbControlScrollingTextLabel as c_ulong;
 
 /// `kScrollBarWidth`: a combo box's closed height when its font is not scaled to it.
 const SCROLL_BAR_WIDTH: f32 = 20.0;

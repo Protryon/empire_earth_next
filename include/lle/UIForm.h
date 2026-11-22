@@ -15,6 +15,7 @@
 #include "platform/PlatWindow.h"   // PlatKeyIsToggled
 #include "rust/ui/formobj.h"
 #include "rust/ui/lle_form.h"
+#include "rust/ui/ids.h"
 #include "rust/ui/obj.h"
 
 class FSFileSpec;
@@ -274,21 +275,5 @@ public:   // (the key shims' access: UIForm.cpp)
 #endif
 };
 
-// UIForm::SetFormEvent selector (UIEventData::mEventType, db form-event type)
-enum UIFormEventType {
-    kUIEventFormOpen = 0,                      // UIForm::SetFormEvent case 0 calls SetFormOpenEvent (exported)
-    kUIEventFormClose = 1,                     // UIForm::SetFormEvent case 1 calls SetFormCloseEvent (exported)
-    kUIEventMouseLeftButtonPressed = 2,        // UIForm::SetFormEvent case 2 calls SetMouseLeftButtonPressedEvent (exported)
-    kUIEventMouseLeftButtonUnpressed = 3,      // UIForm::SetFormEvent case 3 calls SetMouseLeftButtonUnpressedEvent (exported)
-    kUIEventMouseLeftButtonDoublePressed = 4,  // UIForm::SetFormEvent case 4 calls SetMouseLeftButtonDoublePressedEvent (exported)
-    kUIEventMouseMiddleButtonPressed = 5,      // UIForm::SetFormEvent case 5 calls SetMouseMiddleButtonPressedEvent (exported)
-    kUIEventMouseMiddleButtonUnpressed = 6,    // UIForm::SetFormEvent case 6 calls SetMouseMiddleButtonUnpressedEvent (exported)
-    kUIEventMouseMiddleButtonDoublePressed = 7,  // UIForm::SetFormEvent case 7 calls SetMouseMiddleButtonDoublePressedEvent (exported)
-    kUIEventMouseRightButtonPressed = 8,       // UIForm::SetFormEvent case 8 calls SetMouseRightButtonPressedEvent (exported)
-    kUIEventMouseRightButtonUnpressed = 9,     // UIForm::SetFormEvent case 9 calls SetMouseRightButtonUnpressedEvent (exported)
-    kUIEventMouseRightButtonDoublePressed = 10,  // UIForm::SetFormEvent case 10 calls SetMouseRightButtonDoublePressedEvent (exported)
-    kUIEventMouseMove = 11,                    // UIForm::SetFormEvent case 11 calls SetMouseMoveEvent (exported)
-    kUIEventMouseWheelMove = 12,               // UIForm::SetFormEvent case 12 calls SetMouseWheelMoveEvent (exported)
-};
-
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 #endif

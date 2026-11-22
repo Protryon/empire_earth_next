@@ -13,6 +13,7 @@
 #include "rust/ui/controls_table.h"
 #include "rust/ui/lle_table.h"
 #include "lle/UIShims.h"
+#include "rust/ui/ids.h"
 #include "rust/ui/tableobj.h"
 
 class FSFileSpec;
@@ -123,57 +124,5 @@ private:
     EeUiControlsTable* mRust;
 };
 
-// UI database control type (UIControlsTable::CreateControl; >= 1000: EEUIManager::CreateUserDefinedControl)
-enum UIDbControlType {
-    kDbControlBitmap = 0,                     // CreateBitmap (provisional name)
-    kDbControlButton = 1,                     // CreateButton: new UIButton (provisional name)
-    kDbControlCheckBox = 2,                   // CreateCheckBox (provisional name)
-    kDbControlEditableComboBox = 3,           // CreateComboBox: UIComboBox text box type 0 (an edit box) (provisional name)
-    kDbControlComboBox = 4,                   // CreateComboBox: UIComboBox text box type 1 (a text label; db GS Video Card Combo Box) (provisional name)
-    kDbControlNumberMultiLineEditBox = 5,     // CreateEditBox: UIEditBox numbers only + multi-line; text set from the number (provisional name)
-    kDbControlNumberEditBox = 6,              // CreateEditBox: UIEditBox numbers only, single line (provisional name)
-    kDbControlMultiLineEditBox = 7,           // CreateEditBox: UIEditBox multi-line (db CE Campaign Descrip. Edit Box) (provisional name)
-    kDbControlEditBox = 8,                    // CreateEditBox: UIEditBox single line (db Chat Text Edit Box) (provisional name)
-    kDbControlListBox = 9,                    // CreateListBox: UILBString (provisional name)
-    kDbControlAutoSelectListBox = 10,         // CreateListBox: UILBString with inAutoSelect (select on mouse over) (provisional name)
-    kDbControlRadioButton = 11,               // CreateRadioButton (provisional name)
-    kDbControlRadioTab = 12,                  // CreateRadioButton with inIsPushButton (db: GS Video Tab, MPS Join By IP Tab) (provisional name)
-    kDbControlStatusBar = 13,                 // CreateStatusBar (provisional name)
-    kDbControlHorizontalScrollBar = 14,       // CreateScrollBar style 0 (provisional name)
-    kDbControlTextLabel = 15,                 // CreateTextLabel: label type 0 (single line) (provisional name)
-    kDbControlMultiLineTextLabel = 16,        // CreateTextLabel: label type 1 (multi-line with scroll bar) (provisional name)
-    kDbControlHorizontalSlider = 0x11,        // CreateSlider style 0 (provisional name)
-    kDbControlVerticalSlider = 0x12,          // CreateSlider style 1 (provisional name)
-    kDbControlVerticalScrollBar = 0x13,       // CreateScrollBar style 1 (provisional name)
-    kDbControlNumberTextLabel = 0x14,         // CreateTextLabel single line, text = the number in the string-table field (db CB Civ Pts Left (#)) (provisional name)
-    kDbControlNumberMultiLineTextLabel = 0x15,  // CreateTextLabel multi-line, number text (provisional name)
-    kDbControlFileListBox = 0x16,             // CreateFileListBox (provisional name)
-    kDbControlHelpTextLabel = 0x18,           // UIForm::Open takes it as mHelpTextLabel; single line (db Main Screen Tool Tips) (provisional name)
-    kDbControlMultiLineHelpTextLabel = 0x19,  // UIForm::Open help text label, multi-line (db GS Help Roll Over Text Display) (provisional name)
-    kDbControlScrollingTextLabel = 0x1a,      // CreateScrollingTextLabel: UITLScrolling (provisional name)
-    kDbControlBlinkingButton = 0x1b,          // CreateButton: new UIBlinkingButton (provisional name)
-    kDbControlScalableButton = 0x1c,          // CreateButton: new UIScalableButton (provisional name)
-    kDbControlMovie = 0x1d,                   // no control (the original's CreateMovie: UIMovie; movies left the game) (provisional name)
-    kDbControlLineGraph = 0x1e,               // CreateGraph: new UILineGraph (provisional name)
-    kDbControlDualButton = 0x1f,              // CreateButton: new UIDualButton (provisional name)
-    kDbControlFileComboBox = 0x20,            // CreateFileComboBox: UIFileComboBox (provisional name)
-    kDbControlStatusButton = 0x3e8,           // CreateUserDefinedControl: new EEUIFMGStatusButton (RTTI)
-    kDbControlMiniMap = 0x3e9,                // CreateUserDefinedControl: new EEUIMiniMap (RTTI)
-    kDbControlErrorLog = 0x3eb,               // CreateUserDefinedControl: new EEUIFMGErrorLog (RTTI)
-    kDbControlAttribute = 0x3ed,              // CreateUserDefinedControl: new EEUIFMGAttribute (RTTI)
-    kDbControlMainGameStatusBar = 0x3ee,      // CreateUserDefinedControl: new EEUIFMGStatusBar (RTTI)
-    kDbControlSelectUnits = 0x3ef,            // CreateUserDefinedControl: new EEUICSelectUnits (RTTI)
-    kDbControlCommandUnits = 0x3f0,           // CreateUserDefinedControl: new EEUICCommandUnits (RTTI)
-    kDbControlPortrait = 0x3f1,               // CreateUserDefinedControl: new EEUICPortrait (RTTI)
-    kDbControlChatLine = 0x3f2,               // CreateUserDefinedControl: new EEUICChatLine (RTTI)
-    kDbControlCBListBox = 0x3f3,              // CreateUserDefinedControl: new EECBUIListBox (RTTI)
-    kDbControlWonNetStatBox = 0x3f5,          // CreateUserDefinedControl: new EEUICWonNetStatBox (RTTI)
-    kDbControlUnitIconBar = 0x3f6,            // CreateUserDefinedControl: new EEUICUnitIconBar (RTTI)
-    kDbControlSavedGroup = 0x3f7,             // CreateUserDefinedControl: new EEUIBSavedGroup (RTTI)
-    kDbControlPGSLineGraph = 0x3f8,           // CreateUserDefinedControl: new EEUIPGSLineGraph (RTTI)
-    kDbControlPing = 0x3f9,                   // CreateUserDefinedControl: new EEUICPing (RTTI)
-    kDbControlWonNetRoomsBox = 0x3fa,         // CreateUserDefinedControl: new EEUICWonNetRoomsBox (RTTI)
-    kDbControlWonNetGamesBox = 0x3fb,         // CreateUserDefinedControl: new EEUICWonNetGamesBox (RTTI)
-};
-
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 #endif

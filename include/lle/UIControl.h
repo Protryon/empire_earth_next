@@ -20,6 +20,7 @@
 #include "rust/ui/rect.h"
 #include "lle/ISEntity.h"
 #include "rust/ui/mouse_ffi.h"
+#include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
 
 class GEFont;
@@ -232,48 +233,5 @@ private:
 };
 
 #include "lle/UIMultiByte.h"
-
-// UIControl trigger-event ids (FireTriggerEvent / SetTriggerEvent); provisional names from the lle firing sites
-enum UIControlTriggerID {
-    kControlTriggerRangeChanged = 0x3e8,     // UISlider::ChangeRange fires it (db: Game Settings Music Volume etc.) (provisional name)
-    kControlTriggerChecked = 0x3e9,          // UICheckBox::SetChecked(true), UIRadioButton::Check; UITriStateCheckBox::SetCheckState fires it for every state (db: Check Box ON) (provisional name)
-    kControlTriggerUnchecked = 0x3ea,        // UICheckBox::SetChecked(false), UIRadioButton::UnCheck (db: Check Box OFF, UnCheck Box) (provisional name)
-    kControlTriggerSelectionChanged = 0x3eb,  // UIListBox::ChangeSelectionIndex, UIComboBox::ChangeSelection (db: Change Focused File, Selected) (provisional name)
-    kControlTriggerDoubleClicked = 0x3ec,    // UIListBox::MouseLButtonDoublePressed (db: Load Game By DbClick) (provisional name)
-    kControlTriggerListOpened = 0x3ed,       // UIComboBox::OpenListBox (provisional name)
-    kControlTriggerListClosed = 0x3ee,       // UIComboBox::CloseListBox (provisional name)
-    kControlTriggerButtonDown = 0x3ef,       // UIButton::MouseLButtonDown / UpdateKeyboard key press, UIListBox::ButtonDown (next to ButtonDown()) (provisional name)
-    kControlTriggerButtonUp = 0x3f0,         // UIButton::MouseLButtonUp inside the rectangle / key release, UIListBox::ButtonUp (next to ButtonUp(); db: Load Game, Cancel Save) (provisional name)
-    kControlTriggerEnterPressed = 0x3f1,     // UIEditBox::ProcessEnterKey, UIListBox::UpdateKeyboard Enter (db: Save Game by Enter) (provisional name)
-    kControlTriggerMouseOver = 0x3f2,        // UIForm::SetMouseOverControl on the new control (db: SI Map Mouse Over) (provisional name)
-    kControlTriggerMouseOut = 0x3f3,         // UIForm::SetMouseOverControl on the old control (db: SI Map Mouse Out) (provisional name)
-    kControlTriggerScrollingFinished = 0x3f4,  // UITLScrolling::CopyData end poll / StopScrolling (db: SRM Chat Dialog Finished) (provisional name)
-    kControlTriggerRightButtonDown = 0x3f5,  // UIDualButton::MouseRButtonDown (provisional name)
-    kControlTriggerRightButtonUp = 0x3f6,    // UIDualButton::MouseRButtonUp inside the rectangle (provisional name)
-};
-
-// UIControl::GetType: the type each control class passes to the UIControl ctor (or its GetType override)
-enum UIControlType {
-    kControlTypeCustom = 0,           // the game's own controls (EEUIMiniMap, EEUICPortrait, EEUICPing, ...) pass 0 (provisional name)
-    kControlTypeButton = 1,           // UIButton ctor (provisional name)
-    kControlTypeCheckBox = 2,         // UICheckBox::GetType (provisional name)
-    kControlTypeComboBox = 3,         // UIComboBox ctor (provisional name)
-    kControlTypeEditBox = 4,          // UIEditBox ctor (provisional name)
-    kControlTypeListBox = 5,          // UIListBox ctor (provisional name)
-    kControlTypeRadioButton = 6,      // UIRadioButton::GetType (provisional name)
-    kControlTypeScrollBar = 7,        // UIScrollBar ctor (provisional name)
-    kControlTypeSlider = 8,           // UISlider ctor (provisional name)
-    kControlTypeStatusBar = 9,        // UIStatusBar ctor (provisional name)
-    kControlTypeBitmap = 10,          // UIBitmap ctor (UIMovie passes 10 too) (provisional name)
-    kControlTypeTextLabel = 11,       // UITextLabel ctor (provisional name)
-    kControlTypeTriStateCheckBox = 12,  // UITriStateCheckBox::GetType (provisional name)
-    kControlTypeGraph = 13,           // UIGraph ctor (provisional name)
-};
-
-// UIControl::mDisplayMode (+0x08, 1 at construction): SetDisplayMode(0) hides the control (HideControl, dirty rectangle, tab moves on); setrilo ui_framework.h "0 hidden, 1 shown".
-enum UIDisplayMode {
-    kDisplayModeHidden = 0,  // setrilo ui_framework.h displayMode_ "0 hidden"; UIControl::SetDisplayMode LLE 0x10065af5 hides the control on 0
-    kDisplayModeShown = 1,  // setrilo ui_framework.h displayMode_ "1 shown"; the UIControl ctor sets 1
-};
 
 #endif

@@ -10,6 +10,7 @@
 #define LLE_UIBACKGROUNDTABLE_H
 
 #include "rust/ui/bgtableobj.h"
+#include "rust/ui/ids.h"
 #include "lle/UILayoutUtility.h"
 
 class FSFileSpec;
@@ -49,15 +50,5 @@ private:
     UString mTextureFile;
 };
 
-// UI database background type (UIBackgroundTable::mBackgroundType): CreateBackgrounds creates the class named here; others go to CreateUserDefinedBackground
-enum UIBackgroundType {
-    kBackgroundBitmap = 0,        // CreateBackgrounds case: new UIBitmapBackground
-    kBackgroundTiled = 1,         // CreateBackgrounds case: new UITiledBackground
-    kBackgroundFull = 2,          // CreateBackgrounds case: new UIBFull
-    kBackgroundLRTiled = 3,       // CreateBackgrounds case: new UITiledBackground (kTilingLeftRight)
-    kBackgroundTBTiled = 4,       // CreateBackgrounds case: new UITiledBackground (kTilingTopBottom)
-    kBackgroundStretchedTiled = 5,  // CreateBackgrounds case: new UITiledBackground (kTilingStretched)
-    kBackgroundGeneric = 101,     // CreateBackgrounds case: EEUIManager::CreateUserDefinedBackground: new EEUIBGenericBackground
-};
-
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 #endif
