@@ -46,8 +46,6 @@
 static_assert(sizeof(EeGeTexCoord) == sizeof(GETextureCoordinate), "GETextureCoordinate");
 static_assert(offsetof(EeGeTexCoord, v) == offsetof(GETextureCoordinate, mV), "GETextureCoordinate");
 
-GERasterizer* GETexture::sRasterizer;
-
 // The calls the texture makes on other objects (EeGeTexOp), in the original's statements
 intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -113,34 +111,13 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     case EeGeTexOp::ManagerPromote:
         return ((GETextureManager*)inObj)->PromoteTexture((GETexture*)a);
     case EeGeTexOp::RasterCreate:
-        return GETexture::sRasterizer->CreateTextureHandle(((GETexture*)inObj));
+        return ((GERasterizer*)a)->CreateTextureHandle(((GETexture*)inObj));
     case EeGeTexOp::RasterDestroy:
-        GETexture::sRasterizer->DestroyTextureHandle(((GETexture*)inObj));
+        ((GERasterizer*)a)->DestroyTextureHandle(((GETexture*)inObj));
         return 0;
     default:
         return 0;
     }
-}
-
-// Creates an empty single-frame texture for a texture manager, with point filtering and clamped addressing
-GETexture::GETexture(GETextureManager* inManager)
-{
-    GETexture::sRasterizer = GERasterizer::GetActiveRasterizer();
-    this->mRust = ee_ge_tex_new(&GETexture::Host, this, inManager);
-}
-
-// Creates a texture around an existing surface (referenced) and registers it with the active rasterizer
-GETexture::GETexture(GESurface* inSurface, GETextureManager* inManager)
-{
-    GETexture::sRasterizer = GERasterizer::GetActiveRasterizer();
-    this->mRust = ee_ge_tex_new(&GETexture::Host, this, inManager);
-    ee_ge_tex_construct_on_surface(this->mRust, inSurface);
-}
-
-// Destroys the texture, releasing its extra animation frames, its rasterizer handle and its surface
-GETexture::~GETexture()
-{
-    ee_ge_tex_destroy(this->mRust);
 }
 
 // (the SetStage* setters: inline in lle/GETexture.h)

@@ -707,9 +707,10 @@ enum class EeGeTexOp : uint32_t {
   ManagerRemove,
   /// `((GETextureManager*)obj)->PromoteTexture((GETexture*)a)`.
   ManagerPromote,
-  /// `GETexture::sRasterizer->CreateTextureHandle((GETexture*)obj)`.
+  /// `((GERasterizer*)a)->CreateTextureHandle((GETexture*)obj)`: `a` the original's `GETexture::sRasterizer`
+  /// (`RASTERIZER`).
   RasterCreate,
-  /// `GETexture::sRasterizer->DestroyTextureHandle((GETexture*)obj)`.
+  /// `((GERasterizer*)a)->DestroyTextureHandle((GETexture*)obj)`.
   RasterDestroy,
   /// `obj->GetPixelFormat()` (a surface).
   SurfPixelFormat,
@@ -2010,6 +2011,14 @@ void ee_ge_mod_dereference(EeGeModel *p);
 void ee_ge_pm_set_model(void **slot,
                         void *model);
 
+/// `GEPhysicalModel::operator=(from)`: the model reference replaced (`SetModel`), then the location and scale, then
+/// the frame.
+///
+/// # Safety
+/// `p` and `from` are live `GEPhysicalModel`s.
+void ee_ge_pm_assign(void *p,
+                     const void *from);
+
 /// `GetPolygonCount(lod)`.
 ///
 /// # Safety
@@ -2219,6 +2228,10 @@ void ee_ge_physical_models(void (*triangle)(const void*,
                                               const EeGe3DLine*,
                                               unsigned long),
                            EeGePhysicalModels *out);
+
+/// The game's table of the walks over C++ models (`GEPhysicalModel`'s walks, the unit picker's: ee_gfx
+/// pick_walk.rs).
+const EeGePhysicalModels *ee_ge_physical_table();
 
 /// The default constructors (`GELine()`, `GEPoint()`, `GERhombus()`).
 ///
@@ -2995,11 +3008,15 @@ void ee_ge_texman_update_mip_filter(EeGeTextureManager *p, unsigned long mode);
 /// `host` serves `owner` until `ee_ge_tex_destroy`.
 EeGeTexture *ee_ge_tex_new(EeGeTexHostFn host, void *owner, void *manager);
 
-/// `GETexture::GETexture(surface, manager)`'s statements after the fields (`ee_ge_tex_new` first).
+/// `GETexture::GETexture(surface, manager)`: `ee_ge_tex_new`, then the texture around the surface (referenced) and
+/// registered with the rasterizer.
 ///
 /// # Safety
-/// `p` is live; `surface` a surface.
-void ee_ge_tex_construct_on_surface(EeGeTexture *p, void *surface);
+/// As `ee_ge_tex_new`; `surface` a surface.
+EeGeTexture *ee_ge_tex_new_on_surface(EeGeTexHostFn host,
+                                      void *owner,
+                                      void *manager,
+                                      void *surface);
 
 /// `~GETexture`: the releases, then the object freed.
 ///

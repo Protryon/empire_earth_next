@@ -138,9 +138,10 @@ pub enum EeGeTexOp {
     ManagerRemove,
     /// `((GETextureManager*)obj)->PromoteTexture((GETexture*)a)`.
     ManagerPromote,
-    /// `GETexture::sRasterizer->CreateTextureHandle((GETexture*)obj)`.
+    /// `((GERasterizer*)a)->CreateTextureHandle((GETexture*)obj)`: `a` the original's `GETexture::sRasterizer`
+    /// (`RASTERIZER`).
     RasterCreate,
-    /// `GETexture::sRasterizer->DestroyTextureHandle((GETexture*)obj)`.
+    /// `((GERasterizer*)a)->DestroyTextureHandle((GETexture*)obj)`.
     RasterDestroy,
     /// `obj->GetPixelFormat()` (a surface).
     SurfPixelFormat,
@@ -255,6 +256,15 @@ pub struct EeGeTexture {
     /// Made by the C++ (`ee_ge_tex_new`): the other textures it reaches are `GETexture`s, read in place (LLE round 8:
     /// `TexObj`, `TexRefCount` and the non-virtual `Dereference` are answered here, not by the host).
     direct: bool,
+}
+
+/// The original's `GETexture::sRasterizer`: the active rasterizer when the last C++ texture was made (each
+/// constructor set it first), the one the textures' handles are made and destroyed on.
+static RASTERIZER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// `RASTERIZER`, as a host operation's `a`.
+fn rasterizer() -> isize {
+    RASTERIZER.load(std::sync::atomic::Ordering::SeqCst) as isize
 }
 
 /// Every access to an object is one short statement: a host call may come back in and use it.
@@ -488,7 +498,7 @@ impl EeGeTexture {
             let screen = Self::surf(p, EeGeTexOp::SurfParentScreen, surface) as usize;
             tx(p).screen = screen;
             let owner = tx(p).owner;
-            Self::op(p, EeGeTexOp::RasterCreate, owner, 0, 0);
+            Self::op(p, EeGeTexOp::RasterCreate, owner, rasterizer(), 0);
         }
     }
 
@@ -513,7 +523,7 @@ impl EeGeTexture {
                 tx(p).frames = None;
             }
             let owner = tx(p).owner;
-            Self::op(p, EeGeTexOp::RasterDestroy, owner, 0, 0);
+            Self::op(p, EeGeTexOp::RasterDestroy, owner, rasterizer(), 0);
             let surface = tx(p).surface;
             if surface != 0 {
                 Self::surf(p, EeGeTexOp::SurfDereference, surface);
@@ -933,7 +943,7 @@ impl EeGeTexture {
             }
             let owner = tx(p).owner;
             if tx(p).surface != 0 {
-                Self::op(p, EeGeTexOp::RasterDestroy, owner, 0, 0);
+                Self::op(p, EeGeTexOp::RasterDestroy, owner, rasterizer(), 0);
                 let old = tx(p).surface;
                 Self::surf(p, EeGeTexOp::SurfDereference, old);
             }
@@ -942,7 +952,7 @@ impl EeGeTexture {
             let screen = Self::surf(p, EeGeTexOp::SurfParentScreen, surface) as usize;
             tx(p).screen = screen;
             tx(p).is_promoted = false;
-            Self::op(p, EeGeTexOp::RasterCreate, owner, 0, 0);
+            Self::op(p, EeGeTexOp::RasterCreate, owner, rasterizer(), 0);
             tx(p).has_changed = true;
             OK
         }
@@ -1046,20 +1056,31 @@ pub unsafe extern "C" fn ee_ge_tex_new(
     owner: *mut c_void,
     manager: *mut c_void,
 ) -> *mut EeGeTexture {
+    RASTERIZER.store(crate::ge::rastobj::ee_ge_rast_active() as usize, std::sync::atomic::Ordering::SeqCst);
     let p = EeGeTexture::create(host, owner as usize, manager as usize);
     // SAFETY: just made
     unsafe { (*p).direct = true };
     p
 }
 
-/// `GETexture::GETexture(surface, manager)`'s statements after the fields (`ee_ge_tex_new` first).
+/// `GETexture::GETexture(surface, manager)`: `ee_ge_tex_new`, then the texture around the surface (referenced) and
+/// registered with the rasterizer.
 ///
 /// # Safety
-/// `p` is live; `surface` a surface.
+/// As `ee_ge_tex_new`; `surface` a surface.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ge_tex_construct_on_surface(p: *mut EeGeTexture, surface: *mut c_void) {
+pub unsafe extern "C" fn ee_ge_tex_new_on_surface(
+    host: EeGeTexHostFn,
+    owner: *mut c_void,
+    manager: *mut c_void,
+    surface: *mut c_void,
+) -> *mut EeGeTexture {
     // SAFETY: the caller's contract
-    unsafe { EeGeTexture::construct_on_surface(p, surface as usize) }
+    unsafe {
+        let p = ee_ge_tex_new(host, owner, manager);
+        EeGeTexture::construct_on_surface(p, surface as usize);
+        p
+    }
 }
 
 /// `~GETexture`: the releases, then the object freed.
