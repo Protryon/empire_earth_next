@@ -645,6 +645,8 @@ WON_TESTS = {
     # PlatGUIWindow as a Rust object (platwin.rs) against its original statements over one stand-in world of the
     # Window base, its root and events, the platform manager and the cursors
     "won_platwin_test": [],
+    # the GUI hosts' cases R6 WON round 33 composed in Rust (guisplit.rs) against the deleted cases over a stand-in world
+    "won_guisplit33_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

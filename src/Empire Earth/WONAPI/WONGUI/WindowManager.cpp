@@ -36,6 +36,7 @@ typedef EeWonGuiOp Op;
 static SmartPtr<NativeImage> sHostImage;
 static SmartPtr<RawImage> sHostRaw;
 static ImageAttributes sHostAttr;
+static SmartPtr<Font> sHostFont; // WmDefaultWindowFont's local
 
 static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
 {
@@ -120,18 +121,7 @@ static intptr_t WmEventCall(WindowEventBase* t, intptr_t call, intptr_t c)
     case EeWonWmEvent::SetWindow: t->mWindow = (Window*)c; return 0;
     case EeWonWmEvent::Button: return static_cast<MouseEvent*>(t)->mButtonOrAmount;
     case EeWonWmEvent::Key: return static_cast<KeyEvent*>(t)->mKey;
-    case EeWonWmEvent::Size: {
-        SizeEvent* z = static_cast<SizeEvent*>(t);
-        EeWonRect4 r = { z->mx, z->my, z->mWidth, z->mHeight };
-        *(EeWonRect4*)c = r;
-        return 0;
-    }
-    case EeWonWmEvent::SetSize: {
-        SizeEvent* z = static_cast<SizeEvent*>(t);
-        const EeWonRect4& r = *(const EeWonRect4*)c;
-        z->mx = r.x; z->my = r.y; z->mWidth = r.w; z->mHeight = r.h;
-        return 0;
-    }
+    // Size and SetSize are guisplit.rs's over the size event's fields (R6 WON round 33: WmSizeEv*)
     case EeWonWmEvent::Deliver: t->Deliver(); return 0;
     case EeWonWmEvent::Hold: t->AddRef(); return 0;
     case EeWonWmEvent::Release: t->Release(); return 0;
@@ -147,17 +137,6 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmComp: return WmCompCall((Component*)b, a, c, d);
     case Op::WmWin: return WmWinCall((Window*)b, a, c, d);
     case Op::WmScreenRect: t->GetScreenRect(*(WONRectangle*)a); return 0;
-    case Op::WmNewPopupWindow: {
-        // DoPopup's `aPopupWindow = CreateNativeWindow();` and its set-up; the Rust gives the reference back
-        Window* aPopupWindow = CreateNativeWindow();
-        aPopupWindow->AddRef();
-        aPopupWindow->SetOneComponentWindow(true);
-        aPopupWindow->SetStyle(0x20);
-        aPopupWindow->SetParent((Window*)a);
-        aPopupWindow->SetIsPopup(true);
-        aPopupWindow->Create(*(const WONRectangle*)b);
-        return (intptr_t)aPopupWindow;
-    }
     case Op::WmRef:
         switch ((EeWonWmRefKind)a) {
         case EeWonWmRefKind::NativeImage: if (c) ((NativeImage*)b)->AddRef(); else ((NativeImage*)b)->Release(); return 0;
@@ -182,19 +161,31 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmImageAttributes: return t->mImageDecoder.GetImageAttributes(std::string((const char*)a, (size_t)b).c_str(), sHostAttr) ? 1 : 0;
     case Op::WmNewDelayImage: return (intptr_t)new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)a, (size_t)b, sHostAttr.mWidth, sHostAttr.mHeight));
     case Op::WmSetStandardColor: t->mColorScheme->SetStandardColor((int)a, (DWORD)(uint32_t)b); return 0;
-    case Op::WmDefaultWindowFont: {
-        SmartPtr<Font> aFont = t->GetDefaultWindow()->GetFont(FontDescriptor("Tahoma", 0, 8));
-        if (aFont.get() != NULL) aFont->AddRef();
-        return (intptr_t)aFont.get();
-    }
     case Op::WmNextEvent: t->GetNextEvent(); return 0;
     case Op::WmSelfHold: t->AddRef(); return 0;
     case Op::WmSelfRelease: t->Release(); return 0;
     case Op::WmEvent: return WmEventCall((WindowEventBase*)b, a, c);
-    case Op::WmResolution:
-        if (a == 0) { t->GetScreenResolutionHook(*(int*)b, *(int*)c); return 0; }
-        return t->SetScreenResolutionHook((int)b, (int)c) ? 1 : 0;
     case Op::WmSignal: t->Signal(); return 0;
+    // the statements of the new popup window, the default window font, the resolution and the size events
+    // (guisplit.rs composes them: R6 WON round 33)
+    case Op::WmNativeWindowNew: return (intptr_t)CreateNativeWindow();
+    case Op::WinSetOneComponent: ((Window*)a)->SetOneComponentWindow(true); return 0;
+    case Op::WinSetStyle: ((Window*)a)->SetStyle((int)b); return 0;
+    case Op::WinSetParent: ((Window*)a)->SetParent((Window*)b); return 0;
+    case Op::WinCreate: ((Window*)a)->Create(*(const WONRectangle*)b); return 0;
+    case Op::WmFontKeep: sHostFont = t->GetDefaultWindow()->GetFont(FontDescriptor("Tahoma", 0, 8)); return 0;
+    case Op::WmHostFont: return (intptr_t)sHostFont.get();
+    case Op::WmHostFontClear: sHostFont = SmartPtr<Font>(); return 0;
+    case Op::WmScreenResGet: t->GetScreenResolutionHook(*(int*)a, *(int*)b); return 0;
+    case Op::WmScreenResSet: return t->SetScreenResolutionHook((int)a, (int)b) ? 1 : 0;
+    case Op::WmSizeEvX: return static_cast<SizeEvent*>((WindowEventBase*)a)->mx;
+    case Op::WmSizeEvY: return static_cast<SizeEvent*>((WindowEventBase*)a)->my;
+    case Op::WmSizeEvW: return static_cast<SizeEvent*>((WindowEventBase*)a)->mWidth;
+    case Op::WmSizeEvH: return static_cast<SizeEvent*>((WindowEventBase*)a)->mHeight;
+    case Op::WmSizeEvSetX: static_cast<SizeEvent*>((WindowEventBase*)a)->mx = (int)b; return 0;
+    case Op::WmSizeEvSetY: static_cast<SizeEvent*>((WindowEventBase*)a)->my = (int)b; return 0;
+    case Op::WmSizeEvSetW: static_cast<SizeEvent*>((WindowEventBase*)a)->mWidth = (int)b; return 0;
+    case Op::WmSizeEvSetH: static_cast<SizeEvent*>((WindowEventBase*)a)->mHeight = (int)b; return 0;
     default: return 0;
     }
 }

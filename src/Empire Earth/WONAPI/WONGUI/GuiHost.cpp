@@ -72,6 +72,8 @@ static GUIString UnitsText(intptr_t inUnits, intptr_t inCount)
 
 // the text a run of ops shares (guisplit.rs: the original's local GUIString)
 static GUIString sHostText;
+// QueueSubMenu's local PopupParams (borrowed pointers)
+static PopupParams sHostParams(NULL, 0, NULL);
 
 // a component's services, the same for every component object
 static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
@@ -94,11 +96,8 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
         c->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), 0);
         return 0;
     case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
-    case Op::ClipboardTake: {
-        GUIString aText = Clipboard::Get();
-        ee_won_gui_sink_units((void*)a, aText.mData->mText, aText.length(), sizeof(wchar_t));
-        return 0;
-    }
+    // ClipboardTake is guisplit.rs's over these (R6 WON round 33)
+    case Op::HostTextClipboard: sHostText = Clipboard::Get(); return 0;
     case Op::HostTextSink: ee_won_gui_sink_units((void*)a, sHostText.mData->mText, sHostText.length(), sizeof(wchar_t)); return 0;
     case Op::HostTextClear: sHostText = GUIString(); return 0;
     case Op::HostTextUnits: sHostText = UnitsText(a, b); return 0;
@@ -123,10 +122,9 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::Set: t->SetField((Fd)a, (int)b); return 0;
     case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
     case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
-    case Op::LinkActivated:
-        t->mLinkParam = Seg(a)->GetLinkParam();
-        t->DeliverEvent(new TextLinkActivatedEvent(t, Seg(a)), false);
-        return 0;
+    // LinkActivated is guisplit.rs's over these two (R6 WON round 33)
+    case Op::TextSetLinkParam: t->mLinkParam = Seg(a)->GetLinkParam(); return 0;
+    case Op::TextDeliverLinkEvent: t->DeliverEvent(new TextLinkActivatedEvent(t, Seg(a)), false); return 0;
     case Op::SelTextAppend: t->mSelText.append(Seg(a)->mText, (unsigned short)b, (unsigned short)c); return 0;
     case Op::SelTextBreak: t->mSelText.append("\r\n"); return 0;
     case Op::SelTextCopy: Clipboard::Set(t->mSelText); t->mSelText.erase(); return 0;
@@ -476,26 +474,26 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::RootKeyMod: return t->GetRoot()->GetKeyMod();
     case Op::SetCursorDefault: t->SetCursor(t->GetDefaultCursor()); return 0;
     case Op::GetViewport: return (intptr_t)t->GetViewport();
-    case Op::PointerOutside: {
-        Window* window = t->GetRoot();
-        if (window == NULL) return 0;
-        int x = window->GetMouseX(), y = window->GetMouseY();
-        Container* parent = t->mParent;
-        if (parent == NULL) return 0;
-        parent->RootToChild(x, y);
-        return t->Contains(x, y) ? 0 : 1;
-    }
+    // PointerOutside, TipShow, TipHide, QueueSubMenu and QueueMouseUp are guisplit.rs's over these (R6 WON round 33)
+    case Op::ListRoot: return (intptr_t)t->GetRoot();
+    case Op::WinMouseX: return ((Window*)a)->GetMouseX();
+    case Op::WinMouseY: return ((Window*)a)->GetMouseY();
+    case Op::ListParent: return (intptr_t)(Component*)t->mParent;
+    case Op::ParentRootToChild: static_cast<Container*>((Component*)a)->RootToChild(((int*)b)[0], ((int*)b)[1]); return 0;
+    case Op::ListContains: return t->Contains((int)a, (int)b) ? 1 : 0;
+    case Op::TipNew: t->mItemToolTip = new ListAreaToolTip(t); return 0;
+    case Op::TipDo: t->mItemToolTip->DoTip(Item(a)); return 0;
+    case Op::ParamsMake: sHostParams = PopupParams((PopupMenu*)a, (int)b, t, (int)c, (int)d); return 0;
+    case Op::ParamsAvoid: sHostParams.mAvoidRect = WONRectangle(((const EeWonRect4*)a)->x, ((const EeWonRect4*)a)->y, ((const EeWonRect4*)a)->w, ((const EeWonRect4*)a)->h); return 0;
+    case Op::QueueDoPopup: t->GetRoot()->QueueEvent(new DoPopupEvent(sHostParams)); return 0;
+    case Op::ListLocalToRoot: t->LocalToRoot(((int*)a)[0], ((int*)a)[1]); return 0;
+    case Op::WinQueueMouseUp: ((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)b, (int)c, ((Window*)a)->GetKeyMod(), (int)d)); return 0;
     case Op::DeliverItemClicked: {
         const EeWonItemClick* k = (const EeWonItemClick*)b;
         t->DeliverEvent(new ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),
                                                  t->CheckDoubleClick(k->button), k->up, k->x, k->y), false);
         return 0;
     }
-    case Op::TipShow:
-        if (t->mItemToolTip.get() == NULL) t->mItemToolTip = new ListAreaToolTip(t);
-        t->mItemToolTip->DoTip(Item(a));
-        return 0;
-    case Op::TipHide: if (t->mItemToolTip.get() != NULL) t->mItemToolTip->DoTip(NULL); return 0;
     case Op::TipExists: return t->mItemToolTip.get() != NULL ? 1 : 0;
     case Op::TipEndCall: t->mItemToolTip->EndTip(); return 0;
     case Op::SortItems: std::sort((ListItem**)a, (ListItem**)a + b, ListArea::LineSortPred(t, t->GetSortFunc(), (int)c)); return 0;
@@ -558,21 +556,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::ScrollUntranslate: t->ScrollUntranslate(*(int*)a, *(int*)b); return 0;
     case Op::LocalToRoot: t->LocalToRoot(*(int*)a, *(int*)b); return 0;
     case Op::MenuReset: ((PopupMenu*)a)->Reset(); return 0;
-    case Op::QueueSubMenu: {
-        const int* at = (const int*)b;
-        const EeWonRect4* q = (const EeWonRect4*)c;
-        PopupParams params((PopupMenu*)a, (int)d, t, at[0], at[1]);
-        params.mAvoidRect = WONRectangle(q->x, q->y, q->w, q->h);
-        t->GetRoot()->QueueEvent(new DoPopupEvent(params));
-        return 0;
-    }
-    case Op::QueueMouseUp: {
-        Window* window = t->GetRoot();
-        int x = (int)a, y = (int)b;
-        t->LocalToRoot(x, y);
-        window->QueueEvent(new MouseEvent(InputEvent_MouseUp, x, y, window->GetKeyMod(), (int)c));
-        return 0;
-    }
     case Op::MenuTryKeyDown: return ((PopupMenu*)a)->TryKeyDown((int)b) ? 1 : 0;
     // the constructors' statements (guictor.rs: the list area's, the multi-column list's, the menu's)
     case Op::CtorTextColor: t->mTextColor=(int)0x8000000e; return 0;
