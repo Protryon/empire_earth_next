@@ -1632,7 +1632,7 @@ shims! {
     fn lo_lock_speed(o: usize) -> bool = ee_screenscpp_lo_lock_speed;
     fn lo_cheat_codes(o: usize) -> bool = ee_screenscpp_lo_cheat_codes;
     fn lo_victory(o: usize) -> bool = ee_screenscpp_lo_victory;
-    fn lobby_set_option(option: u32, value: i64) = ee_screenscpp_lobby_set_option;
+    fn lobby_set_option(option: u32, value: i64) = ee_screens_lobby_set_option;
     fn send_full_options() = ee_screenscpp_send_full_options;
     fn lobby_boot_delete() = ee_screenscpp_lobby_boot_delete;
     fn lobby_boot_clear() = ee_screenscpp_lobby_boot_clear;
@@ -2174,9 +2174,12 @@ shims! {
     // EEUIFError.cpp's (dialog_calls.rs)
     fn dlg_text_load(ids: u32) = ee_screenscpp_dlg_text_load;
     fn dlg_button_set_text(button: usize) = ee_screenscpp_dlg_button_set_text;
-    fn dlg_callback(index: u32) -> usize = ee_screenscpp_dlg_callback;
+    fn dlg_callback(index: u32) -> usize = ee_screens_dlg_callback;
     fn dlg_edit_text(edit: usize) -> usize = ee_screenscpp_dlg_edit_text;
-    fn dlg_data() -> usize = ee_screenscpp_dlg_data;
+    fn dlg_data() -> usize = ee_screens_dlg_data;
+    fn dlg_message_align(label: usize, alignment: u32) = ee_screenscpp_dlg_message_align;
+    fn dlg_message_text(label: usize) = ee_screenscpp_dlg_message_text;
+    fn dlg_rect_side(side: u32) -> f32 = ee_screenscpp_dlg_rect_side;
     fn dlg_set_callback(button: usize, callback: usize, data: usize) = ee_screenscpp_dlg_set_callback;
     fn dlg_show_button(button: usize) = ee_screenscpp_dlg_show_button;
     fn dlg_set_close(button: usize) = ee_screenscpp_dlg_set_close;

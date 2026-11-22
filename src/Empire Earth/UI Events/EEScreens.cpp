@@ -216,30 +216,6 @@ static EEGameOptions sLLCurrent;
 static std::vector<UWideString> sLLMissing;
 
 
-// an option (EEMGameOptions' numbers; 0 the load type) of the lobby options
-static void EEScreensLobbySetOption(uint32_t inOption, long inValue)
-{
-    EEGameOptions& theOptions = gGameOptions;
-    switch (inOption) {
-    case 0: theOptions.mLoadType = inValue; break;
-    case EE_SCREENS_OPTION_MAP_SIZE: theOptions.mMapSize = inValue; break;
-    case EE_SCREENS_OPTION_RESOURCES: theOptions.mResources = inValue; break;
-    case EE_SCREENS_OPTION_EPOCH_START: theOptions.mEpochStart = inValue; break;
-    case EE_SCREENS_OPTION_EPOCH_END: theOptions.mEpochEnd = inValue; break;
-    case EE_SCREENS_OPTION_UNIT_LIMIT: theOptions.mUnitLimit = inValue; break;
-    case EE_SCREENS_OPTION_WONDERS: theOptions.mWondersForVictory = inValue; break;
-    case EE_SCREENS_OPTION_VARIANT: theOptions.mVariant = inValue; break;
-    case EE_SCREENS_OPTION_DIFFICULTY: theOptions.mDifficulty = inValue; break;
-    case EE_SCREENS_OPTION_SPEED: theOptions.mGameSpeed = inValue; break;
-    case EE_SCREENS_OPTION_RECORD_GAMES: theOptions.mRecordGames = inValue != 0; break;
-    case EE_SCREENS_OPTION_CUSTOM_CIVS: theOptions.mAllowCustomCivs = inValue != 0; break;
-    case EE_SCREENS_OPTION_REVEAL_MAP: theOptions.mRevealMap = inValue != 0; break;
-    case EE_SCREENS_OPTION_LOCK_TEAMS: theOptions.mLockTeams = inValue != 0; break;
-    case EE_SCREENS_OPTION_LOCK_SPEED: theOptions.mLockSpeed = inValue != 0; break;
-    case EE_SCREENS_OPTION_CHEAT_CODES: theOptions.mCheatCodes = inValue != 0; break;
-    case 17: theOptions.mVictory = inValue != 0; break;
-    }
-}
 
 // a value of the rules' tables the lobby lists (EE_SCREENS_LE_RULE_*)
 static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
@@ -1061,8 +1037,8 @@ extern "C" bool ee_screenscpp_lo_lock_teams(uintptr_t inO) { return GOPT(inO)->m
 extern "C" bool ee_screenscpp_lo_lock_speed(uintptr_t inO) { return GOPT(inO)->mLockSpeed; }
 extern "C" bool ee_screenscpp_lo_cheat_codes(uintptr_t inO) { return GOPT(inO)->mCheatCodes; }
 extern "C" bool ee_screenscpp_lo_victory(uintptr_t inO) { return GOPT(inO)->mVictory; }
-extern "C" void ee_screenscpp_lobby_set_option(uint32_t inOption, int64_t inValue)
-{ EEScreensLobbySetOption(inOption, (long)inValue); }
+// the lobby options (ee_screens_lobby_set_option, lobby_form_ffi.rs, sets them)
+extern "C" EeAppOptionsFields* ee_screenscpp_lobby_options() { return &gGameOptions; }
 extern "C" void ee_screenscpp_send_full_options()
 { gCommunications->ProcessGuaranteedLocalUserInput(EENewFullGameOptions(gGameOptions), kSlotNone); }
 extern "C" void ee_screenscpp_lobby_boot_delete() { delete sLobbyBoot; }
