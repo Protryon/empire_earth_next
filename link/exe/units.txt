@@ -2,7 +2,6 @@
 0f53b 10bc7 Empire Earth/AI Thread/EEAIAStarBoundedPathGoalModifiers.cpp
 1ed2c 29f57 Empire Earth/AI Thread/EEAIContinentManager.cpp
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp
-2cc87 2ce2e Empire Earth/AI Thread/EEArtificialIntelligence.cpp
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp
 8bbbf 8e702 Empire Earth/AI Thread/EECPResourceCenter.cpp
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp

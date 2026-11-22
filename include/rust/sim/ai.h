@@ -13,9 +13,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_NOW = 1;
 /// `gCPTraceOn`
 constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_ON = 2;
 
-/// `EECPTraceOut(player, b, "%s", c)` under the manager `a` (a C string; 0: the current one)
-constexpr static const int32_t EE_AI_NEXT_HOST_TRACE = 3;
-
 /// `EEGameLogOn()`
 constexpr static const int32_t EE_AI_NEXT_HOST_GAME_LOG_ON = 4;
 
@@ -113,9 +110,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_EPOCH_COUNT = 37;
 /// `gWorld.mGameOptions.mEpochEnd`
 constexpr static const int32_t EE_AI_NEXT_HOST_EPOCH_END = 38;
 
-/// `EECPExperiment(player, a)`
-constexpr static const int32_t EE_AI_NEXT_HOST_EXPERIMENT = 39;
-
 /// the complex unit `a`'s `mLastAttacker` (0: none)
 constexpr static const int32_t EE_AI_NEXT_HOST_LAST_ATTACKER = 40;
 
@@ -130,9 +124,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_STATE_OF = 45;
 
 /// `ESDebugOut("%s", a)`
 constexpr static const int32_t EE_AI_NEXT_HOST_DEBUG_OUT = 47;
-
-/// `gCPTraceManager = a` (a static C string) -> the previous one
-constexpr static const int32_t EE_AI_NEXT_HOST_SCOPE = 48;
 
 /// the player's `mPlayerID`
 constexpr static const int32_t EE_AI_NEXT_HOST_PLAYER_ID = 49;
@@ -164,9 +155,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_CITIZEN_QUEUE = 54;
 /// the player `a`'s `IsHuman()`
 constexpr static const int32_t EE_AI_NEXT_HOST_IS_HUMAN = 55;
 
-/// a: 0 `EECPMilitiaOn(player)`, 1 `EECPMilitiaTowersOn(player)`
-constexpr static const int32_t EE_AI_NEXT_HOST_SWITCH = 56;
-
 /// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
 constexpr static const int32_t EE_AI_NEXT_HOST_FORMAT_F2 = 57;
 
@@ -187,14 +175,18 @@ constexpr static const int32_t EE_AI_NEXT_HOST_STARTED = 61;
 /// shared random seed, the inputs processed
 constexpr static const int32_t EE_AI_NEXT_HOST_SIM_HASH = 62;
 
-/// `EECPTraceOut(player, (const char*)b, "%s", (const char*)c)`
-constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_OUT = 63;
-
 /// unit `a`'s `SetGoal(NewAttackUnit(a, b, false, false), 0, 0)`; `SetGoal(NewLocation(GE2DPoint(b, c), true, true,
 /// false, 0, false, false), 0, 0)`
 constexpr static const int32_t EE_AI_NEXT_HOST_SET_ATTACK = 64;
 
 constexpr static const int32_t EE_AI_NEXT_HOST_SET_LOCATION = 65;
+
+/// `EEGameLogTick(a)`; `gCPTraceHashOn`; the computer player's `Update(a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_GAME_LOG_TICK = 66;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_HASH_ON = 67;
+
+constexpr static const int32_t EE_AI_NEXT_HOST_CP_UPDATE = 68;
 
 /// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
 constexpr static const long THREAT_RANGE = 9;
@@ -553,9 +545,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_GOAL_LOCATION = 95;
 /// the complex unit `a`'s class is no building and moves (`GetMaxVelocity() > 0`)
 constexpr static const int32_t EE_AI_UNITS_HOST_MOVES = 96;
 
-/// the complex unit `a`'s `GetTerrainFlags`: forest (bit 0) and cliff (bit 1)
-constexpr static const int32_t EE_AI_UNITS_HOST_CROSSES = 97;
-
 /// `EEUnitBehavior::sTable.size()`, `sTable[a]`
 constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIORS = 98;
 
@@ -578,76 +567,28 @@ constexpr static const int32_t EE_AI_UNITS_HOST_T_EPOCH_END = 104;
 
 constexpr static const int32_t EE_AI_UNITS_HOST_T_SPACE = 105;
 
-/// `EEPlayer::GetPopulationLimit(0)`; `EECPCheatOn(player, a)`; the personality's id into `out` (128 bytes)
+/// `EEPlayer::GetPopulationLimit(0)`
 constexpr static const int32_t EE_AI_UNITS_HOST_T_POP_LIMIT = 106;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_CHEAT = 107;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_ID = 108;
-
-/// the personality's floats into `*(float*)out`: epoch pressure start, full, surplus cut, max citizen share,
-/// standing army, army floor, floor `a`; `EECPStoneSpan`, `EECPSafeBonus`
-constexpr static const int32_t EE_AI_UNITS_HOST_T_PRESSURE_START = 109;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_PRESSURE_FULL = 110;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_SURPLUS_CUT = 111;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_MAX_CITIZEN_SHARE = 112;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_STANDING_ARMY = 113;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_ARMY_FLOOR = 114;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_FLOOR = 115;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_STONE_SPAN = 116;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_SAFE_BONUS = 117;
-
-/// the personality's integers: surplus, low stock, wood slots, moves per cycle
-constexpr static const int32_t EE_AI_UNITS_HOST_T_SURPLUS = 118;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_LOW_STOCK = 119;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_WOOD_SLOTS = 120;
-
-constexpr static const int32_t EE_AI_UNITS_HOST_T_MOVES_PER_CYCLE = 121;
-
-/// the switches: `EECPDemandSplitOn` .. `EECPNavalFleeOn` (`a` picks one, EE_AI_UNITS_SWITCH_*)
-constexpr static const int32_t EE_AI_UNITS_HOST_T_SWITCH = 122;
 
 /// `gCPBehaviors`
 constexpr static const int32_t EE_AI_UNITS_HOST_T_BEHAVIORS = 123;
 
-/// [`EE_AI_UNITS_HOST_T_SWITCH`]'s switches, in ai.tuning's order.
-constexpr static const int64_t EE_AI_UNITS_SWITCH_DEMAND_SPLIT = 0;
+/// the tech node `a`'s researched event; the event `a`'s effect count (-1: no event), its effect `b`; the effect
+/// `a`'s kind (bits 48..63), unit class (16..47) and attribute (0..15) (-1: none)
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_EVENT = 134;
 
-constexpr static const int64_t EE_AI_UNITS_SWITCH_COAST_FISHING = 1;
+constexpr static const int32_t EE_AI_UNITS_HOST_EVENT_EFFECTS = 135;
 
-constexpr static const int64_t EE_AI_UNITS_SWITCH_FORAGE_PATCHES = 2;
+constexpr static const int32_t EE_AI_UNITS_HOST_EVENT_EFFECT = 136;
 
-constexpr static const int64_t EE_AI_UNITS_SWITCH_CLAIM_RANGE = 3;
+constexpr static const int32_t EE_AI_UNITS_HOST_EFFECT_FIELDS = 137;
 
-constexpr static const int64_t EE_AI_UNITS_SWITCH_CLAIM_NEEDED = 4;
+/// the player `a`'s `TakeResource(b, c)`, `AddResource(b, c)`, `AddTribute(b >> 32, (int32_t)b, c)`
+constexpr static const int32_t EE_AI_UNITS_HOST_TAKE_RESOURCE = 138;
 
-constexpr static const int64_t EE_AI_UNITS_SWITCH_EARLY_TOWN_CENTERS = 5;
+constexpr static const int32_t EE_AI_UNITS_HOST_ADD_RESOURCE = 139;
 
-constexpr static const int64_t EE_AI_UNITS_SWITCH_EARLY_TRAINERS = 6;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_PATCH_EXPAND = 7;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_MILITIA = 8;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_MILITIA_TOWERS = 9;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_PREHISTORIC_ARMY = 10;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_PREHISTORIC_PEACE = 11;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_STONE_PEACE = 12;
-
-constexpr static const int64_t EE_AI_UNITS_SWITCH_NAVAL_FLEE = 13;
+constexpr static const int32_t EE_AI_UNITS_HOST_ADD_TRIBUTE = 140;
 
 constexpr static const long EV_ATTACKED = 1;
 
@@ -1475,6 +1416,58 @@ void ee_ai_out_of_synch_dump(void *out);
 /// line ("EE-AI <ms> p0 sim hash ...").
 void ee_ai_trace_hash(unsigned long time);
 
+/// `CollectComputerPlayers` (after a game is set up): the players' computer players in slot order.
+void ee_ai_collect_computer_players();
+
+/// `Update` (the physics tick): the game log's tick, the sim hash, the micro step, then the computer player whose
+/// turn it is.
+///
+/// # Safety
+/// The simulation thread, the game set up.
+void ee_ai_update();
+
+/// The save's part (EEPWorldHelper: `EE_UNITS_WORLD_AI_SCHEDULE`): the next player and time -> the player count.
+///
+/// # Safety
+/// `next_player` and `next_time` are writable.
+int64_t ee_ai_schedule_get(int64_t *next_player,
+                           int64_t *next_time);
+
+/// A load's schedule (`EE_UNITS_WORLD_AI_SET_SCHEDULE`) -> 0.
+int64_t ee_ai_schedule_set(int64_t next_player, int64_t next_time);
+
+/// `EECPTraceInit()` (EECPTrace.cpp: `ee_ai_trace_init` over the C++'s trace flags)
+extern void ee_ai_host_trace_init();
+
+/// `gWorld.mLobbyOptions.mDifficulty` (EECPTrace.cpp)
+extern uint32_t ee_ai_host_difficulty();
+
+/// `EECPTraceInit`: EE_AI_TRACE ("" and "0": off) into `on` and `hash` (each may be null), and the TEST ONLY
+/// switches; once (later calls do nothing).
+///
+/// # Safety
+/// `on` and `hash` are null or writable.
+void ee_ai_trace_init(bool *on,
+                      bool *hash);
+
+/// `EECPPersonality`'s position in the rules' list (the C++'s `mPersonalities`); -1: none (no list).
+long ee_ai_personality_index(uint64_t id);
+
+/// `EECPExperiment(player, name)` for the C++.
+///
+/// # Safety
+/// `name` is a NUL-terminated string.
+bool ee_ai_experiment(uint64_t id, const char *name);
+
+/// `EECPExperimentNames`: ",a,b," or "-".
+const char *ee_ai_experiment_names(uint64_t id);
+
+/// `EECPCheatOn(player, cheat)` for the C++ (`id` 0: no player).
+bool ee_ai_cheat_on(uint64_t id, long cheat);
+
+/// `EECPCheatNames` for the C++: the text, valid until the next call (the C++'s static buffer).
+const char *ee_ai_cheat_names_text(uint64_t id);
+
 /// Reads the switches from the environment (once; later calls do nothing). `find` gives a personality's position
 /// in the rules (-1: unknown), `out` writes a line to the game's debug output.
 ///
@@ -1509,6 +1502,15 @@ long ee_ai_switch_cheats(uint64_t id);
 size_t ee_ai_switch_cheat_names(long bits,
                                 char *out,
                                 size_t cap);
+
+/// `std::exchange(gCPTraceManager, name)` for the C++ (`name` a static C string).
+const char *ee_ai_trace_manager_swap(const char *name);
+
+/// `EECPTraceOut` for the C++ (its `printf` already done into `text`).
+///
+/// # Safety
+/// `player` is a live computer player's `EEPlayer*`; `event` and `text` NUL-terminated strings.
+void ee_ai_trace_out(void *player, const char *event, const char *text);
 
 /// `EE_AI_UNITS_HOST_FACTS`'s record before the C++ fills it: no goal, no gathers (-1), no stance (-1).
 ///

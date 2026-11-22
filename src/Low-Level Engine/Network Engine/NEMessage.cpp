@@ -41,31 +41,13 @@ NEMessage* NEMessage::ConvertMemoryToMessage(unsigned char* inMemory)
     return static_cast<NEMessage*>(ee_netmsg_build(inMemory));
 }
 
-void NEMessage::RegisterBuilder(unsigned char inFirst, unsigned char inLast, NEMessage* (*inBuilder)(unsigned char*)) { ee_netmsg_register_builder(inFirst, inLast, reinterpret_cast<void* (*)(uint8_t*)>(inBuilder)); }
-void NEMessage::RegisterKnownMessages() { NEMessage::RegisterBuilder(0x20, 0x3c, NEMessage::BuildNEMessage); }
-NEMessage* NEMessage::BuildNEMessage(unsigned char* inData) { return static_cast<NEMessage*>(ee_ne_record_build(inData)); }
 
 // ---- NEMRecord: the engine messages (netrecord.rs) ----
 
 NEMRecord::NEMRecord(unsigned char* inData) { ee_ne_record_construct_from(this, inData); }
 NEMRecord::NEMRecord(unsigned char inType, std::initializer_list<NEMRecordValue> inValues, std::initializer_list<const char*> inStrings) : NEMessage(inType) { ee_ne_record_fill(this, reinterpret_cast<const int64_t*>(inValues.begin()), inValues.size(), inStrings.begin(), inStrings.size()); }
 NEMRecord::NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount) : NEMessage(inType) { ee_ne_record_fill_u32(this, inValues, inCount); }
-uintptr_t NEMRecord::Value(uint32_t inIndex) const { return ee_ne_record_value(this, inIndex); }
 NEMRecord::~NEMRecord() { ee_ne_record_destruct(this); }
-unsigned char* NEMRecord::Field(uint32_t inIndex, size_t inSize) const { return ee_ne_record_field(this, inIndex, inSize); }
-const UWideString& NEMRecord::GetString(uint32_t inIndex) const { return *static_cast<const UWideString*>(ee_ne_record_string(this, inIndex)); }
-bool NEMRecord::GetCanSendWhilePaused() const { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_PAUSED) != 0; }
-bool NEMRecord::GetCountsTowardsPlayerInputThrottle() const { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_THROTTLE) != 0; }
-bool NEMRecord::GetSendToAllAndWaitMessageID(unsigned long& outID) const { return ee_ne_record_s2aw_id(this, &outID); }
-void NEMRecord::SetSendToAllAndWaitMessageID(unsigned long inID) { ee_ne_record_set_s2aw_id(this, inID); }
-char* NEMRecord::GetMessageLabel() const { return const_cast<char*>(ee_netmsg_ne_type(this->mType).label); }
-bool NEMRecord::IsResponse(NEMessage* inMessage) { return ee_ne_record_is_response(this, inMessage); }
-long NEMRecord::AddPlayerInput(NEMessage* inInput) { return ee_ne_record_add_input(this, inInput); }
-long NEMRecord::GetPlayerInput(unsigned long inIndex, NEMessage*& outInput) { return ee_ne_record_input(this, inIndex, reinterpret_cast<void**>(&outInput)); }
-unsigned long NEMRecord::XferExportSize() { return ee_netmsg_fixed_size(ee_netmsg_ne_type(kNetMessageXferMessage).class_id); }
-unsigned long NEMRecord::ExportSize() { return ee_ne_record_export_size(this); }
-void NEMRecord::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize) { ee_ne_record_export(this, outPayloadPointer, &outMessageSize); }
-void NEMRecord::ImportMessage(unsigned char* inPayloadPointer) { ee_ne_record_import(this, inPayloadPointer); }
 
 // The shims netrecord.rs calls (RecordCpp)
 extern "C" {

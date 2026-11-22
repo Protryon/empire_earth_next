@@ -23,8 +23,8 @@ class LLE_API UIComboBox : public UIControl {
     {
         return ee_ui_combo_call(this->mRust, inCall, a, b, f);
     }
+public:   // (the shims' access: UIComboBox.cpp)
     UIControl* PartOf(int inPart) const { return reinterpret_cast<UIControl*>(this->Call(EeUiComboCall::Part, inPart)); }
-public:
     struct Rust;                            // the Rust object's host (UIComboBox.cpp; a member: the class's friendships)
     UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
                const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
@@ -109,14 +109,16 @@ protected:
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void OpenListBox() { this->Call(EeUiComboCall::OpenListBox); }   // slot 0x94
+public:   // (the shims' access: UIComboBox.cpp)
     virtual void ProcessDown() { this->Call(EeUiComboCall::ProcessArrow); }   // slot 0x98 (ICF-folded with ProcessUp)
     virtual void ProcessUp() { this->Call(EeUiComboCall::ProcessArrow); }
+protected:
     virtual void TabbedTo() { this->Call(EeUiComboCall::Tabbed, 1); }
     virtual void TabbedFrom() { this->Call(EeUiComboCall::Tabbed, 0); }
     // the subclasses' reads of the members (R6 ui round 15's census)
     UILBString* GetList() const { return reinterpret_cast<UILBString*>(this->PartOf(2)); }
     unsigned long GetSelectionIndex() const { return (unsigned long)this->Call(EeUiComboCall::Selection); }
-private:
+public:   // (the constructor's shim sets it: UIComboBox.cpp)
     EeUiCombo* mRust;                       // the state (comboobj.rs)
 };
 

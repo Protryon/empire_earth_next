@@ -38,30 +38,49 @@ public:
     RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse, UIManager* inUIManager,
                 bool inIsFullScreen, long inThreadPriority);
     virtual ~RTSGraphics();                 // +0x00 (??_G 0x11a34c; dtor 0x11a368)
-    virtual long RestoreSurfaces();         // +0x04 0x11a703: the screen's RestoreAllSurfaces
+    // +0x04 0x11a703: the screen's RestoreAllSurfaces
+    virtual long RestoreSurfaces();
     // +0x08 0x11a4e1: the thread's messages 0x401..0x40f (posted by the members below)
-    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
-    virtual void FrameStarting();           // +0x0c 0x11a3af: each render object's slot 0x00
-    virtual void Render(bool inDrawMouse, bool inShowScene);  // +0x10 0x11a71c (the thread's frame; provisional name)
-    virtual void SceneStarting();           // +0x14 0x11a8fb: each render object's slot 0x04
-    virtual void RenderScene();             // +0x18 0x11a922: SetAlphaTestingRefValue(0), each object's slot 0x08
-    virtual void FrameDone();               // +0x1c 0x11a95d: each render object's slot 0x0c
+    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
+        { ee_rts_graphics_handle_message(this, inMessage, inParameter1, inParameter2); }
+    // +0x0c 0x11a3af: each render object's slot 0x00
+    virtual void FrameStarting() { ee_rts_graphics_objects_pass(this, 0); }
+    // +0x10 0x11a71c (the thread's frame; provisional name)
+    virtual void Render(bool inDrawMouse, bool inShowScene) { ee_rts_graphics_render(this, inDrawMouse, inShowScene); }
+    // +0x14 0x11a8fb: each render object's slot 0x04
+    virtual void SceneStarting() { ee_rts_graphics_objects_pass(this, 1); }
+    // +0x18 0x11a922: SetAlphaTestingRefValue(0), each object's slot 0x08
+    virtual void RenderScene() { ee_rts_graphics_objects_pass(this, 2); }
+    // +0x1c 0x11a95d: each render object's slot 0x0c
+    virtual void FrameDone() { ee_rts_graphics_objects_pass(this, 3); }
 
     static unsigned long Main(void* inGraphics);   // 0x11a3d5 (the thread function; named by the ctor's assert)
-    void PopRenderObject();                 // 0x11a4c9 (message 0x405)
-    void PushRenderObject(RTSRenderObject* inObject);   // 0x11a4d1 (message 0x404)
-    void PostClearRenderObjects();          // 0x11a984: posts 0x406
-    void Shutdown();                        // 0x11a999: posts 0x401 and waits for mThreadDone
-    long PostPause();                       // 0x11a9bd (Post's result: EEUserInterface 0x2784d9 tests eax): waits for mIsResumePending, sets mIsPausePending, posts 0x402 (pause: mIsPaused = true) (provisional name)
-    void PostPushRenderObject(RTSRenderObject* inObject);   // 0x11aa38: posts 0x404
-    void PostSetFlag5B(bool inFlag);        // 0x11aa51: posts 0x40a (provisional name)
-    void PostSetRasterizer(GERasterizer* inRasterizer, unsigned long inScreen);   // 0x11aa6c: posts 0x407
-    void PostSetFlag54(bool inFlag);        // 0x11aa87: posts 0x408 (provisional name)
-    void PostResume();                      // 0x11aaa2: waits for mIsPausePending, sets mIsResumePending, posts 0x403 (resume: mIsPaused = false) (provisional name)
-    void SetSurface(GESurface* inSurface);  // 0x11aae4: mU34, and mU38 the last attached surface before type 3
+    // 0x11a4c9 (message 0x405)
+    void PopRenderObject() { this->mRenderObjects.pop_back(); }
+    // 0x11a4d1 (message 0x404)
+    void PushRenderObject(RTSRenderObject* inObject) { this->mRenderObjects.push_back(inObject); }
+    // 0x11a984: posts 0x406
+    void PostClearRenderObjects() { this->mThread->Post(0x406, NULL, NULL, true); }
+    // 0x11a999: posts 0x401 and waits for mThreadDone
+    void Shutdown() { ee_rts_graphics_shutdown(this); }
+    // 0x11a9bd (Post's result: EEUserInterface 0x2784d9 tests eax): waits for mIsResumePending, sets mIsPausePending, posts 0x402 (pause: mIsPaused = true) (provisional name)
+    long PostPause() { return ee_rts_graphics_post_pause(this); }
+    // 0x11aa38: posts 0x404
+    void PostPushRenderObject(RTSRenderObject* inObject) { this->mThread->Post(0x404, inObject, NULL, true); }
+    // 0x11aa51: posts 0x40a (provisional name)
+    void PostSetFlag5B(bool inFlag) { this->mThread->Post(0x40a, (void*)inFlag, NULL, true); }
+    // 0x11aa6c: posts 0x407
+    void PostSetRasterizer(GERasterizer* inRasterizer, unsigned long inScreen)
+        { this->mThread->Post(0x407, inRasterizer, reinterpret_cast<void*>(inScreen), true); }
+    // 0x11aa87: posts 0x408 (provisional name)
+    void PostSetFlag54(bool inFlag) { this->mThread->Post(0x408, (void*)inFlag, NULL, true); }
+    // 0x11aaa2: waits for mIsPausePending, sets mIsResumePending, posts 0x403 (resume: mIsPaused = false) (provisional name)
+    void PostResume() { ee_rts_graphics_post_resume(this); }
+    // 0x11aae4: mU34, and mU38 the last attached surface before type 3
+    void SetSurface(GESurface* inSurface) { ee_rts_graphics_set_surface(this, inSurface); }
     // port: the frame while the WON lobby is shown (Main, instead of Render): the lobby's composited frame copied to
     // the back buffer and shown (the original showed the lobby in its own GDI window)
-    void RenderLobby();
+    void RenderLobby() { ee_rts_graphics_render_lobby(this); }
 
     TSThread* mThread;                      // +0x04 (named by the ctor's asserts)
     GERasterizer* mRasterizer;              // +0x08

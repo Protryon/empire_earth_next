@@ -18,8 +18,6 @@
 
 RTSMousePointer::RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority) : mWindow(inWindow) { ee_rts_mouse_pointer_construct(this, inMouse, inThreadPriority); }
 RTSMousePointer::~RTSMousePointer() { ee_rts_mouse_pointer_destruct(this); }
-unsigned long RTSMousePointer::Main(void* inPointer) { return ee_rts_mouse_pointer_main(inPointer); }
-void RTSMousePointer::HandleMessage(unsigned long inMessage, void* inParameter1, void*) { ee_rts_mouse_pointer_handle_message(this, inMessage, inParameter1); }
 
 // The shims mouse_pointer.rs calls (PointerCpp)
 extern "C" {

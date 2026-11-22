@@ -1,5 +1,5 @@
-//! `extern "C"` for the UI thread's message switch and the game window's events (`ui_thread.rs`). The hosts are
-//! `ee_screenscpp_ui_message` and `ee_screenscpp_ui_event` (`User Interface Thread/EEUserInterface.cpp`).
+//! `extern "C"` for the UI thread's message switch and the game window's events (`ui_thread.rs`). The message host
+//! is Rust's (`ui_message_calls.rs` last); the events' is `ee_screenscpp_ui_event` (`User Interface Thread/EEUserInterface.cpp`).
 
 use core::ffi::{c_char, c_void, CStr};
 
@@ -7,10 +7,7 @@ use crate::screens::ui_thread::{handle_event, handle_message, plat_utf8_length, 
 
 /// cbindgen:ignore
 mod sys {
-    use core::ffi::c_void;
-
     extern "C" {
-        pub fn ee_screenscpp_ui_message(ui: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
         pub fn ee_screenscpp_ui_event(op: u32, a: i64, b: i64, c: i64) -> i64;
     }
 }
@@ -31,7 +28,7 @@ impl UiHost for MessageHost {
         if let Some(r) = crate::screens::ui_calls::ui_message(&mut crate::screens::game_cpp::Ffi, op, a, b) {
             return r;
         }
-        unsafe { sys::ee_screenscpp_ui_message(self.0, op, a, b, c) }
+        crate::screens::ui_message_calls::ui_message(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c)
     }
 }
 

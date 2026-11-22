@@ -34,15 +34,6 @@ public:
     void BuildPointList(std::vector<U2DPoint<long> >& outList, long inStep) { List(false, inStep, outList); }
     // Deletes every column and empties the set
     void Clear() { ee_sparse_clear(this->mPoints); }
-    // Returns the center point of the set's points (optionally one that is in the set)
-    U2DPoint<long> ComputeCenterPoint(bool inMustBeInList)
-    {
-        std::vector<U2DPoint<long> > thePoints;
-        this->BuildPointList(thePoints, 1);
-        U2DPoint<long> theResult;
-        theResult = U2DComputeCenterPoint(thePoints, inMustBeInList);
-        return theResult;
-    }
     // Returns whether the set holds the point
     bool Contains(const U2DPoint<long>& inPoint) const
     {

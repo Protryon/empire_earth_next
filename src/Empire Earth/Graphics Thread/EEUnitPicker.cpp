@@ -333,10 +333,10 @@ void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outVa
         gRasterizer->SetFog(0, theScreen);
         float theDistance = inLocation.GetY() * gU4E8F08.GetCameraInverse().GetElement(1, 1) + inLocation.GetZ() * gU4E8F08.GetCameraInverse().GetElement(1, 2) +
                             inLocation.GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0) + gU4E8F08.GetCameraInverse().GetElement(1, 3);
-        if (theDistance <= theAttributes.mStart)
+        if (theDistance <= theAttributes.start)
             outValue = 1.0f;
-        else if (theDistance <= theAttributes.mEnd)
-            outValue = 1.0f - (theDistance - theAttributes.mStart) * theAttributes.mScale;
+        else if (theDistance <= theAttributes.end)
+            outValue = 1.0f - (theDistance - theAttributes.start) * theAttributes.scale;
         else
             outValue = 0.0f;
     } else

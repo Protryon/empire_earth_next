@@ -7,10 +7,11 @@
 #![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
 
 use std::ffi::c_void;
-use std::os::raw::{c_char, c_long};
+use std::os::raw::c_long;
 
 use super::more::{self, EeAiUnitsArea, EeAiUnitsAreaPick, EeAiUnitsTiles, EeAiUnitsTuning};
 use super::*;
+use crate::ai::personality;
 use crate::astar::cm::{EeAStarCmRecord, EeAStarCmTable};
 use crate::astar::continent::EeAStarContinentList;
 use crate::world::{UnitView, WorldRead};
@@ -20,8 +21,6 @@ use crate::world::{UnitView, WorldRead};
 pub const EE_AI_UNITS_HOST_GOAL_LOCATION: i32 = 95;
 /// the complex unit `a`'s class is no building and moves (`GetMaxVelocity() > 0`)
 pub const EE_AI_UNITS_HOST_MOVES: i32 = 96;
-/// the complex unit `a`'s `GetTerrainFlags`: forest (bit 0) and cliff (bit 1)
-pub const EE_AI_UNITS_HOST_CROSSES: i32 = 97;
 /// `EEUnitBehavior::sTable.size()`, `sTable[a]`
 pub const EE_AI_UNITS_HOST_BEHAVIORS: i32 = 98;
 pub const EE_AI_UNITS_HOST_BEHAVIOR_AT: i32 = 99;
@@ -35,46 +34,10 @@ pub const EE_AI_UNITS_HOST_T_RESOURCES: i32 = 102;
 pub const EE_AI_UNITS_HOST_T_EPOCH_START: i32 = 103;
 pub const EE_AI_UNITS_HOST_T_EPOCH_END: i32 = 104;
 pub const EE_AI_UNITS_HOST_T_SPACE: i32 = 105;
-/// `EEPlayer::GetPopulationLimit(0)`; `EECPCheatOn(player, a)`; the personality's id into `out` (128 bytes)
+/// `EEPlayer::GetPopulationLimit(0)`
 pub const EE_AI_UNITS_HOST_T_POP_LIMIT: i32 = 106;
-pub const EE_AI_UNITS_HOST_T_CHEAT: i32 = 107;
-pub const EE_AI_UNITS_HOST_T_ID: i32 = 108;
-/// the personality's floats into `*(float*)out`: epoch pressure start, full, surplus cut, max citizen share,
-/// standing army, army floor, floor `a`; `EECPStoneSpan`, `EECPSafeBonus`
-pub const EE_AI_UNITS_HOST_T_PRESSURE_START: i32 = 109;
-pub const EE_AI_UNITS_HOST_T_PRESSURE_FULL: i32 = 110;
-pub const EE_AI_UNITS_HOST_T_SURPLUS_CUT: i32 = 111;
-pub const EE_AI_UNITS_HOST_T_MAX_CITIZEN_SHARE: i32 = 112;
-pub const EE_AI_UNITS_HOST_T_STANDING_ARMY: i32 = 113;
-pub const EE_AI_UNITS_HOST_T_ARMY_FLOOR: i32 = 114;
-pub const EE_AI_UNITS_HOST_T_FLOOR: i32 = 115;
-pub const EE_AI_UNITS_HOST_T_STONE_SPAN: i32 = 116;
-pub const EE_AI_UNITS_HOST_T_SAFE_BONUS: i32 = 117;
-/// the personality's integers: surplus, low stock, wood slots, moves per cycle
-pub const EE_AI_UNITS_HOST_T_SURPLUS: i32 = 118;
-pub const EE_AI_UNITS_HOST_T_LOW_STOCK: i32 = 119;
-pub const EE_AI_UNITS_HOST_T_WOOD_SLOTS: i32 = 120;
-pub const EE_AI_UNITS_HOST_T_MOVES_PER_CYCLE: i32 = 121;
-/// the switches: `EECPDemandSplitOn` .. `EECPNavalFleeOn` (`a` picks one, EE_AI_UNITS_SWITCH_*)
-pub const EE_AI_UNITS_HOST_T_SWITCH: i32 = 122;
 /// `gCPBehaviors`
 pub const EE_AI_UNITS_HOST_T_BEHAVIORS: i32 = 123;
-
-/// [`EE_AI_UNITS_HOST_T_SWITCH`]'s switches, in ai.tuning's order.
-pub const EE_AI_UNITS_SWITCH_DEMAND_SPLIT: i64 = 0;
-pub const EE_AI_UNITS_SWITCH_COAST_FISHING: i64 = 1;
-pub const EE_AI_UNITS_SWITCH_FORAGE_PATCHES: i64 = 2;
-pub const EE_AI_UNITS_SWITCH_CLAIM_RANGE: i64 = 3;
-pub const EE_AI_UNITS_SWITCH_CLAIM_NEEDED: i64 = 4;
-pub const EE_AI_UNITS_SWITCH_EARLY_TOWN_CENTERS: i64 = 5;
-pub const EE_AI_UNITS_SWITCH_EARLY_TRAINERS: i64 = 6;
-pub const EE_AI_UNITS_SWITCH_PATCH_EXPAND: i64 = 7;
-pub const EE_AI_UNITS_SWITCH_MILITIA: i64 = 8;
-pub const EE_AI_UNITS_SWITCH_MILITIA_TOWERS: i64 = 9;
-pub const EE_AI_UNITS_SWITCH_PREHISTORIC_ARMY: i64 = 10;
-pub const EE_AI_UNITS_SWITCH_PREHISTORIC_PEACE: i64 = 11;
-pub const EE_AI_UNITS_SWITCH_STONE_PEACE: i64 = 12;
-pub const EE_AI_UNITS_SWITCH_NAVAL_FLEE: i64 = 13;
 
 /// cbindgen:ignore
 mod k {
@@ -84,11 +47,21 @@ mod k {
     pub(super) const ACTION_WAIT_FOR_SITE: u32 = 4012;
     pub(super) const CATEGORY_WATER: std::os::raw::c_long = 2;
     pub(super) const CATEGORY_GATE: u64 = 0x19;
+    /// `kAITileCliff`, `kAITileForest`
+    pub(super) const TILE_CLIFF: usize = 3;
+    pub(super) const TILE_FOREST: usize = 4;
 }
 
 fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
     // SAFETY: the C++ switch over the live game, on the simulation thread
     unsafe { ee_ai_units_host_cpp(op, me, a, b, c, out) }
+}
+
+/// The computer player's id (`me` its `EEPlayer*`; 0: none).
+fn me_id(me: *mut c_void) -> u64 {
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: the host's live computer player
+    unsafe { crate::world::PlayerView::of(&t, me as u64) }.map_or(0, |p| p.id() as u64)
 }
 
 fn record() -> Option<&'static EeAStarCmRecord> {
@@ -154,7 +127,7 @@ thread_local! {
     static LAST_TILES: std::cell::RefCell<Option<Vec<(c_long, c_long)>>> = const { std::cell::RefCell::new(None) };
 }
 
-fn tiles_out(t: &mut EeAiUnitsTiles, tiles: Vec<(c_long, c_long)>) -> i64 {
+pub(super) fn tiles_out(t: &mut EeAiUnitsTiles, tiles: Vec<(c_long, c_long)>) -> i64 {
     for (k, &(x, y)) in tiles.iter().enumerate().take(t.cap) {
         // SAFETY: the caller's room of `cap` pairs
         unsafe {
@@ -239,9 +212,11 @@ unsafe fn facts(me: *mut c_void, unit: u64, f: &mut EeAiUnitsFacts) {
     }
     if cpp(EE_AI_UNITS_HOST_MOVES, me, unit as i64, 0, 0, std::ptr::null_mut()) != 0 {
         f.moves = true;
-        let crosses = cpp(EE_AI_UNITS_HOST_CROSSES, me, unit as i64, 0, 0, std::ptr::null_mut());
-        f.crosses_forest = crosses & 1 != 0;
-        f.crosses_cliff = crosses & 2 != 0;
+        // the terrain it crosses (EEUnitClass::GetTerrainFlags, the classic's sub-group common move flags)
+        let class = u.class().map_or(0, |c| c.handle());
+        let crosses = crate::units::gather_spot::class_terrain_flags(class, unit);
+        f.crosses_forest = crosses[k::TILE_FOREST];
+        f.crosses_cliff = crosses[k::TILE_CLIFF];
     }
     f.garrisoned = crate::world_field!(u.complex(), mGarrisonCount) as c_long;
     let behavior = u.behavior_handle();
@@ -256,12 +231,6 @@ unsafe fn facts(me: *mut c_void, unit: u64, f: &mut EeAiUnitsFacts) {
 /// ai.tuning's values beyond the computer player's record.
 unsafe fn tuning(me: *mut c_void, t: &mut EeAiUnitsTuning) {
     let q = |op: i32, a: i64| cpp(op, me, a, 0, 0, std::ptr::null_mut());
-    let qf = |op: i32, a: i64| {
-        let mut v = 0.0f32;
-        cpp(op, me, a, 0, 0, (&mut v as *mut f32).cast());
-        v
-    };
-    let sw = |s: i64| q(EE_AI_UNITS_HOST_T_SWITCH, s);
     t.deathmatch = q(EE_AI_UNITS_HOST_T_DEATHMATCH, 0) != 0;
     t.all_managers = q(EE_AI_UNITS_HOST_T_RESOURCES, 0) == 5;
     t.epoch_start = q(EE_AI_UNITS_HOST_T_EPOCH_START, 0) as c_long;
@@ -277,39 +246,43 @@ unsafe fn tuning(me: *mut c_void, t: &mut EeAiUnitsTuning) {
     t.fills_garrison = q(more::EE_AI_UNITS_HOST_FILLS_GARRISON, 0) != 0;
     t.sees_all = q(EE_AI_UNITS_HOST_SEES_ALL, 0) != 0;
     t.population_limit = q(EE_AI_UNITS_HOST_T_POP_LIMIT, 0) as c_long;
+    let id = me_id(me);
     for k in 0..7 {
-        t.cheats[k] = q(EE_AI_UNITS_HOST_T_CHEAT, 1 << k) != 0;
+        t.cheats[k] = personality::cheat_on(id, 1 << k);
     }
-    cpp(EE_AI_UNITS_HOST_T_ID, me, 0, 0, 0, t.id.as_mut_ptr().cast::<c_char>().cast());
-    t.epoch_pressure_start = qf(EE_AI_UNITS_HOST_T_PRESSURE_START, 0);
-    t.epoch_pressure_full = qf(EE_AI_UNITS_HOST_T_PRESSURE_FULL, 0);
-    t.stone_span = qf(EE_AI_UNITS_HOST_T_STONE_SPAN, 0);
-    t.safe_bonus = qf(EE_AI_UNITS_HOST_T_SAFE_BONUS, 0);
-    t.surplus = q(EE_AI_UNITS_HOST_T_SURPLUS, 0) as c_long;
-    t.surplus_cut = qf(EE_AI_UNITS_HOST_T_SURPLUS_CUT, 0);
-    t.low_stock = q(EE_AI_UNITS_HOST_T_LOW_STOCK, 0) as c_long;
-    for k in 0..5 {
-        t.floor[k] = qf(EE_AI_UNITS_HOST_T_FLOOR, k as i64);
+    let p = personality::rule(id);
+    let n = p.id.len().min(127);
+    for (slot, &c) in t.id.iter_mut().zip(&p.id[..n]) {
+        *slot = c as _;
     }
-    t.max_citizen_share = qf(EE_AI_UNITS_HOST_T_MAX_CITIZEN_SHARE, 0);
-    t.wood_slots = q(EE_AI_UNITS_HOST_T_WOOD_SLOTS, 0) as c_long;
-    t.moves_per_cycle = q(EE_AI_UNITS_HOST_T_MOVES_PER_CYCLE, 0) as c_long;
-    t.demand_split = sw(EE_AI_UNITS_SWITCH_DEMAND_SPLIT) != 0;
-    t.coast_fishing = sw(EE_AI_UNITS_SWITCH_COAST_FISHING) != 0;
-    t.forage_patches = sw(EE_AI_UNITS_SWITCH_FORAGE_PATCHES) != 0;
-    t.claim_range = sw(EE_AI_UNITS_SWITCH_CLAIM_RANGE) != 0;
-    t.claim_needed = sw(EE_AI_UNITS_SWITCH_CLAIM_NEEDED) != 0;
-    t.early_town_centers = sw(EE_AI_UNITS_SWITCH_EARLY_TOWN_CENTERS) as c_long;
-    t.early_trainers = sw(EE_AI_UNITS_SWITCH_EARLY_TRAINERS) as c_long;
-    t.patch_expand = sw(EE_AI_UNITS_SWITCH_PATCH_EXPAND) != 0;
-    t.standing_army = qf(EE_AI_UNITS_HOST_T_STANDING_ARMY, 0);
-    t.army_floor = qf(EE_AI_UNITS_HOST_T_ARMY_FLOOR, 0);
-    t.militia = sw(EE_AI_UNITS_SWITCH_MILITIA) != 0;
-    t.militia_towers = sw(EE_AI_UNITS_SWITCH_MILITIA_TOWERS) != 0;
-    t.prehistoric_army = sw(EE_AI_UNITS_SWITCH_PREHISTORIC_ARMY) as c_long;
-    t.prehistoric_peace = sw(EE_AI_UNITS_SWITCH_PREHISTORIC_PEACE) != 0;
-    t.stone_peace = sw(EE_AI_UNITS_SWITCH_STONE_PEACE) != 0;
-    t.naval_flee = sw(EE_AI_UNITS_SWITCH_NAVAL_FLEE) != 0;
+    t.id[n] = 0;
+    t.epoch_pressure_start = p.epoch_pressure_start;
+    t.epoch_pressure_full = p.epoch_pressure_full;
+    t.stone_span = personality::stone_span(id);
+    t.safe_bonus = personality::safe_bonus(id);
+    t.surplus = p.surplus as c_long;
+    t.surplus_cut = p.surplus_cut;
+    t.low_stock = p.low_stock as c_long;
+    t.floor = p.floor;
+    t.max_citizen_share = p.max_citizen_share;
+    t.wood_slots = p.wood_slots as c_long;
+    t.moves_per_cycle = p.moves_per_cycle as c_long;
+    t.demand_split = personality::demand_split_on(id);
+    t.coast_fishing = personality::coast_fishing_on(id);
+    t.forage_patches = personality::forage_patches_on(id);
+    t.claim_range = personality::claim_range_on(id);
+    t.claim_needed = personality::claim_needed_on(id);
+    t.early_town_centers = personality::early_town_centers(id);
+    t.early_trainers = personality::early_trainers(id);
+    t.patch_expand = personality::patch_expand_on(id);
+    t.standing_army = p.standing_army;
+    t.army_floor = p.army_floor;
+    t.militia = personality::militia_on(id);
+    t.militia_towers = personality::militia_towers_on(id);
+    t.prehistoric_army = personality::prehistoric_army(id);
+    t.prehistoric_peace = personality::prehistoric_peace_on(id);
+    t.stone_peace = personality::stone_peace_on(id);
+    t.naval_flee = personality::naval_flee_on(id);
     let b = q(EE_AI_UNITS_HOST_T_BEHAVIORS, 0) as usize as *const crate::cp::init::EeCpBehavior;
     // SAFETY: gCPBehaviors' 129 records (ee_sim::cp::init's layout, checked by the C++)
     let row = |i: usize| unsafe { *b.add(i) };

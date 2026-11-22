@@ -391,10 +391,10 @@ unsafe extern "C" fn wf(f: *mut c_void, v: f32) -> c_long {
     // SAFETY: as above
     unsafe { (*(f as *mut BufferIo)).write_f32(v) }
 }
-unsafe extern "C" fn rb(_: *mut c_void, _: *mut u8, _: u32, _: *mut u32) -> c_long {
+unsafe extern "C" fn rb(_: *mut c_void, _: *mut u8, _: std::ffi::c_ulong, _: *mut std::ffi::c_ulong) -> c_long {
     9
 }
-unsafe extern "C" fn wb(_: *mut c_void, _: *const u8, _: u32, _: *mut u32) -> c_long {
+unsafe extern "C" fn wb(_: *mut c_void, _: *const u8, _: std::ffi::c_ulong, _: *mut std::ffi::c_ulong) -> c_long {
     9
 }
 unsafe extern "C" fn gp(_: *mut c_void, _: *mut c_long) -> c_long {
