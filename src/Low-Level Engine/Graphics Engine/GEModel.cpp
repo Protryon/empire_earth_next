@@ -68,12 +68,6 @@
 static_assert(sizeof(GEModel) == 3 * sizeof(void*), "ee_ge cppobj.rs CppCounted (the others: GEBitmap.cpp)");
 intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
-    GEVertexArray* theVertices = (GEVertexArray*)inObj;
-    GEPolygonArray* thePolygons = (GEPolygonArray*)inObj;
-    GEMaterial* theMaterial = (GEMaterial*)inObj;
-    GEModel* theModel = (GEModel*)inObj;
-    UString* theString = (UString*)inObj;
-    GETexture* theTexture = (GETexture*)inObj;
     switch (inOp) {
     case EeGeModOp::RasterActive:
         return (intptr_t)GERasterizer::GetActiveRasterizer();
@@ -87,22 +81,22 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
         return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
     // (the arrays' other calls are on their Rust arrays: ee_ge modobj.rs array_op)
     case EeGeModOp::VertexDelete:
-        delete theVertices;
+        delete ((GEVertexArray*)inObj);
         return 0;
     case EeGeModOp::PolygonDelete:
-        delete thePolygons;
+        delete ((GEPolygonArray*)inObj);
         return 0;
     case EeGeModOp::MaterialNew:
         return (intptr_t)new GEMaterial((unsigned long)a, (unsigned long)b);
     case EeGeModOp::MaterialDereference:
-        theMaterial->UReferenceCounter::Dereference();
+        ((GEMaterial*)inObj)->UReferenceCounter::Dereference();
         return 0;
     case EeGeModOp::MaterialSizeOf:
-        return (intptr_t)theMaterial->SizeOf();
+        return (intptr_t)((GEMaterial*)inObj)->SizeOf();
     case EeGeModOp::ModelNew:
         return (intptr_t)new GEModel((GEModelManager*)inObj);
     case EeGeModOp::ModelBaseDereference:
-        theModel->UReferenceCounter::Dereference();
+        ((GEModel*)inObj)->UReferenceCounter::Dereference();
         return 0;
     case EeGeModOp::ManagerRemove:
         ((GEModelManager*)inObj)->RemoveModel((GEModel*)a);
@@ -110,23 +104,23 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
     case EeGeModOp::StrNew:
         return (intptr_t)new UString;
     case EeGeModOp::StrDelete:
-        delete theString;
+        delete ((UString*)inObj);
         return 0;
     case EeGeModOp::StrArrayNew:
         return (intptr_t)new UString[(size_t)a];
     case EeGeModOp::StrArrayDelete:
-        delete[] theString;
+        delete[] ((UString*)inObj);
         return 0;
     case EeGeModOp::TexLoad:
         return (intptr_t)((GETextureManager*)inObj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b);
     case EeGeModOp::TexMinFilter:
-        theTexture->SetStageMinFilterMode((unsigned long)a, (unsigned long)b);
+        ((GETexture*)inObj)->SetStageMinFilterMode((unsigned long)a, (unsigned long)b);
         return 0;
     case EeGeModOp::TexMagFilter:
-        theTexture->SetStageMagFilterMode((unsigned long)a, (unsigned long)b);
+        ((GETexture*)inObj)->SetStageMagFilterMode((unsigned long)a, (unsigned long)b);
         return 0;
     case EeGeModOp::TexMipFilter:
-        theTexture->SetStageMipFilterMode((unsigned long)a, (unsigned long)b);
+        ((GETexture*)inObj)->SetStageMipFilterMode((unsigned long)a, (unsigned long)b);
         return 0;
     }
     (void)inOwner;
@@ -156,8 +150,6 @@ GEModel::~GEModel()
     ee_ge_mod_destroy(this->mRust);
 }
 
-
-
 // ---- GEModel Load (GEModel Load.cpp, folded here in R4.3 part 16)
 
 // (StoreLoaded: ee_ge_mod_store_loaded, from the manager's host below: the arrays allocated from the counts, the model
@@ -171,19 +163,18 @@ GEModel::~GEModel()
 // ---- the open-format lookups' host: the calls ee_openformats find.rs makes on the data path and its files
 intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    FSFileSpec* theFile = (FSFileSpec*)inObj;
     unsigned long theRead = 0;
     switch (inOp) {
     case EeOfFileOp::PathFind: {
         FSFileSpec* theFound = NULL;
         return ((FSPath*)inObj)->FindFile(UString((const char*)a), theFound) == kErrorOK ? (intptr_t)theFound : 0;
     }
-    case EeOfFileOp::FileOpen: return theFile->Open((unsigned long)a);
-    case EeOfFileOp::FileLength: return theFile->GetLength(*(unsigned long*)a);
+    case EeOfFileOp::FileOpen: return ((FSFileSpec*)inObj)->Open((unsigned long)a);
+    case EeOfFileOp::FileLength: return ((FSFileSpec*)inObj)->GetLength(*(unsigned long*)a);
     case EeOfFileOp::FileRead:
-        return theFile->Read((unsigned char*)a, (unsigned long)b, theRead) == kErrorOK ? (intptr_t)theRead : -1;
-    case EeOfFileOp::FileClose: return theFile->Close();
-    case EeOfFileOp::FileDelete: delete theFile; return 0;
+        return ((FSFileSpec*)inObj)->Read((unsigned char*)a, (unsigned long)b, theRead) == kErrorOK ? (intptr_t)theRead : -1;
+    case EeOfFileOp::FileClose: return ((FSFileSpec*)inObj)->Close();
+    case EeOfFileOp::FileDelete: delete ((FSFileSpec*)inObj); return 0;
     case EeOfFileOp::Verify: ESVerify(__FILE__, __LINE__, (const char*)a); return 0;   // a file that does not decode
     }
     return 0;
@@ -198,9 +189,6 @@ struct GEModelCreateArgs {
 // The calls the manager makes on other objects (EeGeManOp), in the original's statements
 intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
-    GEModelManager* theManager = (GEModelManager*)inOwner;
-    GEModel* theModel = (GEModel*)inObj;
-    const GEModelCreateArgs* theArgs = (const GEModelCreateArgs*)a;
     switch (inOp) {
     case EeGeManOp::LockCreate: {
         TSCriticalSection* theLock = NULL;
@@ -223,26 +211,26 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
         ((FSPath*)inObj)->Dereference();
         return 0;
     case EeGeManOp::RefCount:
-        return (intptr_t)theModel->mReferenceCount;
+        return (intptr_t)((GEModel*)inObj)->mReferenceCount;
     case EeGeManOp::BaseDereference:
-        theModel->UReferenceCounter::Dereference();
+        ((GEModel*)inObj)->UReferenceCounter::Dereference();
         return 0;
     case EeGeManOp::DumpHeader:
         fprintf(*(FSFileSpec*)inObj, "\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
         return 0;
     case EeGeManOp::DumpLine:
         fprintf(*(FSFileSpec*)b, "The %s model file is loaded in memory with a reference count of %ld.\n",
-                (const char*)a, theModel->mReferenceCount);
+                (const char*)a, ((GEModel*)inObj)->mReferenceCount);
         return 0;
     case EeGeManOp::ModelNew:
-        return (intptr_t)new GEModel(theArgs->mPolygonCount, theArgs->mVertexCount, theArgs->mMaterialCount,
-                                     theArgs->mTagPointCount, theArgs->mFrameCount, theArgs->mSubModelCount,
-                                     UString((const char*)b), theArgs->mFlags, theManager);
+        return (intptr_t)new GEModel(((const GEModelCreateArgs*)a)->mPolygonCount, ((const GEModelCreateArgs*)a)->mVertexCount, ((const GEModelCreateArgs*)a)->mMaterialCount,
+                                     ((const GEModelCreateArgs*)a)->mTagPointCount, ((const GEModelCreateArgs*)a)->mFrameCount, ((const GEModelCreateArgs*)a)->mSubModelCount,
+                                     UString((const char*)b), ((const GEModelCreateArgs*)a)->mFlags, ((GEModelManager*)inOwner));
     case EeGeManOp::ModelNewSub: {
-        GEModel* theSubModel = new GEModel(theArgs->mPolygonCount, theArgs->mVertexCount, theArgs->mMaterialCount,
-                                           theArgs->mTagPointCount, theArgs->mFrameCount, theArgs->mSubModelCount,
-                                           theModel->GetName(), theArgs->mFlags, theManager);
-        theModel->SetSubModel(theSubModel, (unsigned long)b);
+        GEModel* theSubModel = new GEModel(((const GEModelCreateArgs*)a)->mPolygonCount, ((const GEModelCreateArgs*)a)->mVertexCount, ((const GEModelCreateArgs*)a)->mMaterialCount,
+                                           ((const GEModelCreateArgs*)a)->mTagPointCount, ((const GEModelCreateArgs*)a)->mFrameCount, ((const GEModelCreateArgs*)a)->mSubModelCount,
+                                           ((GEModel*)inObj)->GetName(), ((const GEModelCreateArgs*)a)->mFlags, ((GEModelManager*)inOwner));
+        ((GEModel*)inObj)->SetSubModel(theSubModel, (unsigned long)b);
         theSubModel->UReferenceCounter::Dereference();
         return (intptr_t)theSubModel;
     }
@@ -250,14 +238,14 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
         return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, ((const EeGeSharedFrames*)b)->frames,
                                 ((const EeGeSharedFrames*)b)->count, (EeGeCemModel**)c);
     case EeGeManOp::ModelNewEmpty:
-        return (intptr_t)new GEModel(theManager);
+        return (intptr_t)new GEModel(((GEModelManager*)inOwner));
     case EeGeManOp::ModelStoreLoaded:
-        return ee_ge_mod_store_loaded(theModel->mRust, (const EeGeCemModel*)a, ((const EeGeSharedFrames*)b)->frames,
+        return ee_ge_mod_store_loaded(((GEModel*)inObj)->mRust, (const EeGeCemModel*)a, ((const EeGeSharedFrames*)b)->frames,
                                       ((const EeGeSharedFrames*)b)->count);
     case EeGeManOp::ModelSizeOf:
-        return (intptr_t)theModel->SizeOf();
+        return (intptr_t)((GEModel*)inObj)->SizeOf();
     case EeGeManOp::ModelVerify:
-        theModel->Verify();
+        ((GEModel*)inObj)->Verify();
         return 0;
     case EeGeManOp::ModelFreeFile:
         ee_ge_cem_free((EeGeCemModel*)inObj);
@@ -297,7 +285,6 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
                                  inSubModelCount, inFlags};
     return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
 }
-
 
 // Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
 // name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
@@ -403,7 +390,6 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
                                      inScale, inOtherModel, inFrame, inLOD);
 }
 
-
 // Returns whether the placed model can be visible in a viewport: bounding sphere against the four planes and the
 // clip distances, or its box against the orthographic rectangle
 // (the test is Rust: ee_ge physical.rs, model_visible)
@@ -449,7 +435,6 @@ static_assert(GETM_VISIBLE_POINTS == EE_GE_TM_SIDE, "GETM_VISIBLE_POINTS");
 // The calls the mesh makes on other objects (EeGeTmOp), in the original's statements
 static intptr_t TerrainMeshHost(void*, EeGeTmOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    GETextureSet* theSet = (GETextureSet*)inObj;
     switch (inOp) {
     case EeGeTmOp::Time:
         return (intptr_t)TMGetTime();
@@ -467,18 +452,18 @@ static intptr_t TerrainMeshHost(void*, EeGeTmOp inOp, void* inObj, intptr_t a, i
     case EeGeTmOp::Quantize:
         return (intptr_t)((const GEVector*)a)->GetQuantizedVersion();
     case EeGeTmOp::SetDelete:
-        delete theSet;
+        delete ((GETextureSet*)inObj);
         return 0;
     case EeGeTmOp::SetWidth:
-        return (intptr_t)theSet->GetNumTexturesInWidth();
+        return (intptr_t)((GETextureSet*)inObj)->GetNumTexturesInWidth();
     case EeGeTmOp::SetHeight:
-        return (intptr_t)theSet->GetNumTexturesInHeight();
+        return (intptr_t)((GETextureSet*)inObj)->GetNumTexturesInHeight();
     case EeGeTmOp::SetCoverage:
-        return (intptr_t)theSet->GetTextureTileCoverage();
+        return (intptr_t)((GETextureSet*)inObj)->GetTextureTileCoverage();
     case EeGeTmOp::SetTexture:
-        return (intptr_t)theSet->GetTexture((unsigned long)a, (unsigned long)b);
+        return (intptr_t)((GETextureSet*)inObj)->GetTexture((unsigned long)a, (unsigned long)b);
     case EeGeTmOp::SetTextureAt:
-        return (intptr_t)theSet->GetTextureAt((unsigned long)a, (unsigned long)b);
+        return (intptr_t)((GETextureSet*)inObj)->GetTextureAt((unsigned long)a, (unsigned long)b);
     case EeGeTmOp::TexReference:
         ((GETexture*)inObj)->Reference();
         return 0;
@@ -493,34 +478,6 @@ GETerrainMesh::GETerrainMesh() { this->mRust = ee_ge_tm_new(TerrainMeshHost, thi
 
 GETerrainMesh::~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
-
-
-
-
-
-
-
-long GETerrainMesh::RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
-{
-    outID = ee_ge_tm_register_color_set(this->mRust, inColorSet.data(), inColorSet.size());
-    return 0;
-}
-
-long GETerrainMesh::RegisterTextureSet(GETextureSet* inTextureSet, unsigned long& outID)
-{
-    outID = ee_ge_tm_register_texture_set(this->mRust, inTextureSet);
-    return 0;
-}
-
-
-
-
-
-
-
-
-
-
 long GETerrainMesh::Load(unsigned long, unsigned long, FSFile& inFile)
 {
     EeGeFieldIo theIO = GERustFieldIO(inFile);
@@ -533,21 +490,3 @@ long GETerrainMesh::Save(FSFile& inFile) const
     return ee_ge_tm_save(this->mRust, &theIO);
 }
 
-void GETerrainMesh::GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const
-{
-    outX = ee_ge_tm_get(this->mRust, EeGeTmVal::BottomLeftX);
-    outY = ee_ge_tm_get(this->mRust, EeGeTmVal::BottomLeftY);
-}
-void GETerrainMesh::GetTerrainVisibleTileDimensions(unsigned long& outWidth, unsigned long& outHeight) const
-{
-    outWidth = ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileWidth);
-    outHeight = ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileHeight);
-}
-void GETerrainMesh::GetVisibleTileRow(unsigned long inIndex, long& outY, long& outStartX, long& outEndX) const
-{
-    long theRow[3];
-    ee_ge_tm_visible_row(this->mRust, inIndex, theRow);
-    outY = theRow[0];
-    outStartX = theRow[1];
-    outEndX = theRow[2];
-}

@@ -17,6 +17,8 @@ pub mod input;
 /// The JPEG decoder (libjpeg 6b's, in Rust; moved from ee_won_gui).
 /// cbindgen:ignore
 pub mod jpeg;
+/// The LLE's named constants (input codes, file origins, OS types, music transitions) for its C++ headers.
+pub mod lle_enums;
 pub mod math;
 /// The crate ee_panic before the restructure.
 /// cbindgen:ignore

@@ -64,35 +64,6 @@ uint32_t EEUnitHandleID(const RTSUnit* inUnit)
 
 void EEUnitHandleResolve(uint32_t inUnitID, RTSUnit*& outUnit) { outUnit = RTSResolveUnitID(inUnitID); }
 
-// New: the unit chain check (ee/RTSDummyHeader.h)
-static bool RTSCheckUnitListFromEnvironment()
-{
-    const char* theValue = getenv("EE_CHECK_UNIT_LIST");
-    bool theOn = theValue != NULL && theValue[0] != '\0' && strcmp(theValue, "0") != 0;
-    if (theOn)
-        fprintf(stderr, "EE-UNITLIST: checking the unit chains (EE_CHECK_UNIT_LIST)\n");
-    return theOn;
-}
-bool gRTSCheckUnitList = RTSCheckUnitListFromEnvironment();
-
-static void RTSUnitListFailed(const char* inWhere, const char* inWhat, const RTSUnit* inUnit, const RTSUnit* inOther)
-{
-    fprintf(stderr, "EE-UNITLIST FAILED in %s: %s; unit %p id %08lx x %ld y %ld valid %d node %p prev %p next %p",
-            inWhere, inWhat, (const void*)inUnit, inUnit ? inUnit->mUnitID : 0UL, inUnit ? inUnit->mTileX : 0L,
-            inUnit ? inUnit->mTileY : 0L, inUnit ? (int)inUnit->mIsValid : -1, inUnit ? (void*)inUnit->mTileNode : NULL,
-            inUnit && inUnit->mTileNode ? (void*)inUnit->mTileNode->mPrev : NULL,
-            inUnit && inUnit->mTileNode ? (void*)inUnit->mTileNode->mNext : NULL);
-    if (inOther != NULL && RTSDummyHead(const_cast<RTSUnit*>(inOther)) == NULL)
-        fprintf(stderr, "; other %p id %08lx x %ld valid %d prev %p next %p", (const void*)inOther, inOther->mUnitID,
-                inOther->mTileX, (int)inOther->mIsValid, inOther->mTileNode ? (void*)inOther->mTileNode->mPrev : NULL,
-                inOther->mTileNode ? (void*)inOther->mTileNode->mNext : NULL);
-    else if (inOther != NULL)
-        fprintf(stderr, "; other: the chain's head %p", (const void*)inOther);
-    fprintf(stderr, "\n");
-    fflush(stderr);
-    abort();
-}
-
 void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere) { ee_rts_unit_check_list(inHead, inWhere); }
 
 RTSUnit::RTSUnit() { ee_rts_unit_construct(this); }
@@ -165,8 +136,6 @@ void ee_rtsucpp_store_linked(RTSUnit* inUnit) { EEUnitStoreLinked(inUnit); }
 void ee_rtsucpp_store_remove(RTSUnit* inUnit) { EEUnitStoreRemove(inUnit); }
 void ee_rtsucpp_unregister(RTSUnit* inUnit) { RTSUnregisterUnit(inUnit); }
 void ee_rtsucpp_register(RTSUnit* inUnit) { RTSRegisterUnit(inUnit); }
-bool ee_rtsucpp_check_on() { return gRTSCheckUnitList; }
-void ee_rtsucpp_list_failed(const char* inWhere, const char* inWhat, const RTSUnit* inUnit, const RTSUnit* inOther) { RTSUnitListFailed(inWhere, inWhat, inUnit, inOther); }
 RTSTile* ee_rtsucpp_map_tile(EEMap* inMap, long inX, long inY) { return inMap->GetTile(inX, inY); }
 void ee_rtsucpp_sight_on(RTSUnit* inUnit) { inUnit->SightOnHere(); }
 void ee_rtsucpp_sight_off(RTSUnit* inUnit) { inUnit->SightOffHere(); }

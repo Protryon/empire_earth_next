@@ -316,29 +316,28 @@ static ptrdiff_t RustClHost(void*, EeNetClOp inOp, size_t a, size_t b, size_t c,
     case EeNetClOp::MsgType:
         OpLine(theArgs + " " + MsgTok(a));
         return Answer(m->GetType());
-    case EeNetClOp::MsgFlag: {
-        OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b));
-        ptrdiff_t r = 0;
-        switch ((EeNetClMsgFlag)b) {
-        case EeNetClMsgFlag::CountsTowardsPlayerInputThrottle: r = m->GetCountsTowardsPlayerInputThrottle(); break;
-        case EeNetClMsgFlag::CanSendWhilePaused: r = m->GetCanSendWhilePaused(); break;
-        case EeNetClMsgFlag::IsAvailableToSend: r = m->GetIsAvailableToSend(); break;
-        }
-        return Answer(r);
-    }
-    case EeNetClOp::MsgSetSlot:
-        OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b) + " " + std::to_string(c));
-        if (b != 0)
-            m->SetOriginatingSlot((unsigned char)c);
-        else
-            m->SetForSpecificSlot((unsigned char)c);
+    // (the golden's lines are the round-9 ops': "c17 m flag", "c18 m originating slot")
+    case EeNetClOp::MsgCountsTowardsThrottle:
+        OpLine("c17 " + MsgTok(a) + " 0");
+        return Answer(m->GetCountsTowardsPlayerInputThrottle());
+    case EeNetClOp::MsgCanSendWhilePaused:
+        OpLine("c17 " + MsgTok(a) + " 1");
+        return Answer(m->GetCanSendWhilePaused());
+    case EeNetClOp::MsgIsAvailableToSend:
+        OpLine("c17 " + MsgTok(a) + " 2");
+        return Answer(m->GetIsAvailableToSend());
+    case EeNetClOp::MsgSetOriginatingSlot:
+        OpLine("c18 " + MsgTok(a) + " 1 " + std::to_string(b));
+        m->SetOriginatingSlot((unsigned char)b);
+        return Answer(0);
+    case EeNetClOp::MsgSetForSpecificSlot:
+        OpLine("c18 " + MsgTok(a) + " 0 " + std::to_string(b));
+        m->SetForSpecificSlot((unsigned char)b);
         return Answer(0);
     case EeNetClOp::MsgS2awId: {
-        OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(*(uint32_t*)b));
-        unsigned long theID = *(uint32_t*)b;
-        bool r = m->GetSendToAllAndWaitMessageID(theID);
-        *(uint32_t*)b = (uint32_t)theID;
-        return Answer(r, std::to_string((int)r) + " " + std::to_string(*(uint32_t*)b));
+        OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(*(unsigned long*)b));
+        bool r = m->GetSendToAllAndWaitMessageID(*(unsigned long*)b);
+        return Answer(r, std::to_string((int)r) + " " + std::to_string(*(unsigned long*)b));
     }
     case EeNetClOp::MsgGet: {
         // an engine message's member by NEMRecord's numbering, read from the original's class with its getter
@@ -415,22 +414,17 @@ static ptrdiff_t RustClHost(void*, EeNetClOp inOp, size_t a, size_t b, size_t c,
         return Answer(m->AddPlayerInput((NEMessage*)b));
     case EeNetClOp::MsgExportNew: {
         OpLine(theArgs + " " + MsgTok(a));
-        unsigned char* theData = NULL;
-        unsigned long theSize = 0;
-        m->ExportMessage(&theData, theSize);
-        *(uint32_t*)b = (uint32_t)theSize;
-        return Answer((ptrdiff_t)theData, std::to_string(theSize) + " " + CHex(theData, theSize));
+        m->ExportMessage((unsigned char**)b, *(unsigned long*)c);
+        return Answer(0, std::to_string(*(unsigned long*)c) + " " + CHex(*(unsigned char**)b, *(unsigned long*)c));
     }
     case EeNetClOp::BytesFree:
         OpLine(theArgs);
         delete[] (unsigned char*)a;
         return Answer(0);
     case EeNetClOp::FsWrite: {
-        OpLine(theArgs + " " + FileTok(a) + " " + CHex((const unsigned char*)b, c) + " " + std::to_string(*(uint32_t*)d));
-        unsigned long theWritten = *(uint32_t*)d;
-        long r = theFile->Write((const unsigned char*)b, (unsigned long)c, theWritten);
-        *(uint32_t*)d = (uint32_t)theWritten;
-        return Answer(r, std::to_string(r) + " " + std::to_string(theWritten));
+        OpLine(theArgs + " " + FileTok(a) + " " + CHex((const unsigned char*)b, c) + " " + std::to_string(*(unsigned long*)d));
+        long r = theFile->Write((const unsigned char*)b, (unsigned long)c, *(unsigned long*)d);
+        return Answer(r, std::to_string(r) + " " + std::to_string(*(unsigned long*)d));
     }
     case EeNetClOp::FsClose:
         OpLine(theArgs + " " + FileTok(a));

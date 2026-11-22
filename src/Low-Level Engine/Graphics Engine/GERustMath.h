@@ -43,26 +43,6 @@ struct GERustLayout {
                   offsetof(GERectangle, mTop) == offsetof(EeGeRectangle, top), "GERectangle");
 };
 
-// the private members are reached by this friend (declared in GEViewport.h)
-struct GERustViewportLayout {
-    static_assert(sizeof(GEViewport) == sizeof(EeGeViewport), "GEViewport");
-    static_assert(offsetof(GEViewport, mViewRectangle) == offsetof(EeGeViewport, view_rectangle) &&
-                  offsetof(GEViewport, mFrontPlane) == offsetof(EeGeViewport, front_plane) &&
-                  offsetof(GEViewport, mBottomPlane) == offsetof(EeGeViewport, bottom_plane) &&
-                  offsetof(GEViewport, mCamera) == offsetof(EeGeViewport, camera) &&
-                  offsetof(GEViewport, mCameraInverse) == offsetof(EeGeViewport, camera_inverse) &&
-                  offsetof(GEViewport, mOrthographicDenormalization) == offsetof(EeGeViewport, orthographic_denormalization) &&
-                  offsetof(GEViewport, mPerspectiveProjection) == offsetof(EeGeViewport, perspective_projection) &&
-                  offsetof(GEViewport, mCameraLookAtVector) == offsetof(EeGeViewport, camera_look_at_vector) &&
-                  offsetof(GEViewport, mOrthographicScale) == offsetof(EeGeViewport, orthographic_scale) &&
-                  offsetof(GEViewport, mAspectRatio) == offsetof(EeGeViewport, aspect_ratio) &&
-                  offsetof(GEViewport, mFrontClippingDistance) == offsetof(EeGeViewport, front_clipping_distance) &&
-                  offsetof(GEViewport, mRearClippingDistance) == offsetof(EeGeViewport, rear_clipping_distance) &&
-                  offsetof(GEViewport, mYClippingPlane) == offsetof(EeGeViewport, y_clipping_plane) &&
-                  offsetof(GEViewport, mFarDepth) == offsetof(EeGeViewport, far_depth),
-                  "GEViewport's members");
-};
-
 // the vertex arrays' values as floats (ee_ge_va_get/set; lle/GEVertexArray.h)
 static_assert(sizeof(GEColor) == 3 * sizeof(float) && sizeof(GE3DPoint) == 3 * sizeof(float) &&
               sizeof(GEVector) == 3 * sizeof(float) && sizeof(GETextureCoordinate) == 2 * sizeof(float), "vertarr.rs");

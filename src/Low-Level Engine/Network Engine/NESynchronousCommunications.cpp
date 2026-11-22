@@ -33,8 +33,6 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
 {
     static const char* const kUnits[] = {"NELagLossSimulator.cpp", "NERecordPlayback.cpp", "NETimestampedMessage.cpp",
                                          "NESynchronousClient.cpp", "NESynchronousServer.cpp"};
-    NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
     switch (inOp) {
     case EeNetQOp::Verify:
         ESVerify(kUnits[a < 5 ? a : 0], (unsigned long)b, "(ee_net)");
@@ -49,17 +47,17 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
             UMSetFloatingPointRoundingMode(0);
         return 0;
     case EeNetQOp::MsgReference:
-        theMessage->Reference();
+        reinterpret_cast<NEMessage*>(a)->Reference();
         return 0;
     case EeNetQOp::MsgDereference:
-        theMessage->Dereference();
+        reinterpret_cast<NEMessage*>(a)->Dereference();
         return 0;
     case EeNetQOp::MsgExportSize:
-        return (ptrdiff_t)theMessage->ExportSize();
+        return (ptrdiff_t)reinterpret_cast<NEMessage*>(a)->ExportSize();
     case EeNetQOp::MsgExport: {
         unsigned char* theData = NULL;
         unsigned long theSize = 0;
-        theMessage->ExportMessage(&theData, theSize);
+        reinterpret_cast<NEMessage*>(a)->ExportMessage(&theData, theSize);
         memcpy(reinterpret_cast<void*>(b), theData, theSize < c ? theSize : c);
         delete[] theData;
         return (ptrdiff_t)theSize;
@@ -69,25 +67,25 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     default:   // (Time, the events, the threads: ee_net native.rs; Deliver: the owner's)
         return 0;
     case EeNetQOp::FileCreate:
-        return theFile->Create();
+        return reinterpret_cast<FSFileSpec*>(a)->Create();
     case EeNetQOp::FileDelete:
-        return theFile->Delete();
+        return reinterpret_cast<FSFileSpec*>(a)->Delete();
     case EeNetQOp::FileOpen:
-        return theFile->Open((unsigned long)b);
+        return reinterpret_cast<FSFileSpec*>(a)->Open((unsigned long)b);
     case EeNetQOp::FileClose:
-        theFile->Close();
+        reinterpret_cast<FSFileSpec*>(a)->Close();
         return 0;
     case EeNetQOp::FileWrite: {
         unsigned long theWritten;
-        return theFile->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, theWritten);
+        return reinterpret_cast<FSFileSpec*>(a)->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, theWritten);
     }
     case EeNetQOp::FileWriteU32:
-        return theFile->Write((uint32_t)b);
+        return reinterpret_cast<FSFileSpec*>(a)->Write((uint32_t)b);
     case EeNetQOp::FileReadU32:
-        return theFile->Read(*reinterpret_cast<uint32_t*>(b));
+        return reinterpret_cast<FSFileSpec*>(a)->Read(*reinterpret_cast<uint32_t*>(b));
     case EeNetQOp::FileRead: {
         unsigned long theRead;
-        return theFile->Read(reinterpret_cast<unsigned char*>(b), (unsigned long)c, theRead);
+        return reinterpret_cast<FSFileSpec*>(a)->Read(reinterpret_cast<unsigned char*>(b), (unsigned long)c, theRead);
     }
     }
     return 0;

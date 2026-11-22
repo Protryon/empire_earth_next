@@ -629,3 +629,15 @@ fn the_record_reaches_the_lockstep_paths() {
     assert!(s.iter().any(|l| l.starts_with("op s20 ")), "no client input was replayed");
     assert!(s.iter().any(|l| l.starts_with("op s19 38 ")), "no tick was made");
 }
+
+#[test]
+fn the_games_constructor_arguments_pack_in_the_records_order() {
+    let a =
+        crate::net::ffi_server::ee_net_sv_args([8, 4], [200, 30, 5, 400, 25, 10, 7, 9, 2], 1.5, b"Host", [true, false]);
+    assert_eq!((a.max_players, a.pts_per_ct, a.cost_factor), (8, 4, 1.5));
+    assert_eq!((a.default_send_interval, a.max_pts_per_second, a.min_pts_per_second), (200, 30, 5));
+    assert_eq!((a.max_send_interval, a.send_interval_increment, a.send_interval_decrement), (400, 25, 10));
+    assert_eq!((a.current_communications_tick, a.current_physics_tick, a.network_adapter), (7, 9, 2));
+    assert!(a.allow_new_connections && !a.announce && a.tcp);
+    assert_eq!(unsafe { std::slice::from_raw_parts(a.name, a.name_length) }, b"Host");
+}

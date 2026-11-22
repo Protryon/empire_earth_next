@@ -58,10 +58,7 @@ public:
     // inLength bytes from the position; kErrorEndOfFile (nothing read) if fewer are left
     virtual long Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead)   // +0x64 0xa5de
     {
-        uint32_t theRead = (uint32_t)outRead;
-        long theResult = ee_fs_mem_read(this->mState, outData, inLength, &theRead);
-        outRead = theRead;
-        return theResult;
+        return ee_fs_mem_read(this->mState, outData, inLength, &outRead);
     }
     virtual long Read(char* outData, unsigned long inLength, unsigned long& outRead)            // +0x60 0xa624
         { return this->Read(reinterpret_cast<unsigned char*>(outData), inLength, outRead); }
@@ -77,10 +74,7 @@ public:
     // bytes at the position, growing the buffer by a block or by doubling; kErrorNotOpen when closed
     virtual long Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten)  // +0x9c 0xa754
     {
-        uint32_t theWritten = 0;
-        long theResult = ee_fs_mem_write(this->mState, inData, inLength, &theWritten);
-        outWritten = theWritten;
-        return theResult;
+        return ee_fs_mem_write(this->mState, inData, inLength, &outWritten);
     }
     virtual long Write(const char* inData, unsigned long inLength, unsigned long& outWritten)           // +0x98 0xa7cc
         { return this->Write(reinterpret_cast<const unsigned char*>(inData), inLength, outWritten); }
@@ -102,15 +96,13 @@ public:
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile) { return kErrorFailed; }   // +0xac (0x39110)
     virtual long GetLength(unsigned long& outLength) const                      // +0xb4 0xa45b (the written length)
     {
-        outLength = ee_fs_mem_length(this->mState);
-        return kErrorOK;
+        return ee_fs_mem_get_length(this->mState, &outLength);
     }
     virtual long GetNextFile(FSFileSpec& outFile) { return kErrorFailed; }                 // +0xb8 (folded 0x3903e)
     virtual void GetParentDirectory(FSFileSpec& outDirectory) const {}          // +0xbc (folded 0x58f8e)
     virtual long GetPosition(long& outPosition) const                           // +0xc0 0xa46c (-1 closed or empty)
     {
-        outPosition = ee_fs_mem_position(this->mState);
-        return kErrorOK;
+        return ee_fs_mem_get_position(this->mState, &outPosition);
     }
     virtual bool IsDirectory() const { return false; }                          // +0xc4 (folded 0x5efa4)
     virtual long Lock() { return kErrorFailed; }                                           // +0xc8 (0x4652)
@@ -128,12 +120,7 @@ public:
     // keeps the data and succeeds
     long Compress(unsigned long inLevel, unsigned long& outLength)
     {
-        uint32_t theLength = 0;
-        long theResult = ee_fs_mem_compress(this->mState, (uint32_t)inLevel, &theLength);
-        outLength = theLength;
-        if (theResult == 0x15)
-            ESVERIFY_AT(NULL == "PKWARE implode() error!", 140);
-        return theResult;
+        return ee_fs_mem_compress_checked(this->mState, inLevel, &outLength, __FILE__);   // (0x15: an ESVerify)
     }
     // the contents from inLength bytes of another file (on failure empty and closed), or from a length-prefixed block
     long Load(FSFile& inFile, unsigned long inLength) { return ee_fs_mem_load(this->mState, &inFile, inLength); }

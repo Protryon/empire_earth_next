@@ -72,6 +72,14 @@ struct EeFsFileCalls {
                          unsigned long *written);
   /// `Write(const char*, length, written)`.
   int32_t (*write_text)(void *file, const char *data, unsigned long length, unsigned long *written);
+  /// `Read(int32_t&)`.
+  int32_t (*read_i32)(void *file, int32_t *value);
+  /// `Read(float&)`.
+  int32_t (*read_f32)(void *file, float *value);
+  /// `Write(const int32_t&)`.
+  int32_t (*write_i32)(void *file, int32_t value);
+  /// `Write(const float&)`.
+  int32_t (*write_f32)(void *file, float value);
 };
 
 /// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
@@ -241,6 +249,20 @@ long ee_fs_arch_extract_all(EeFsArchiveObj *a,
 /// `calls` lives for the rest of the process.
 bool ee_fs_file_register(const EeFsFileCalls *calls);
 
+/// `FSFile::Read(long&)`: through a 32-bit copy that starts as the old value and is stored back even when the read
+/// fails (`Read(int32_t&)`; 4 bytes on every data model).
+///
+/// # Safety
+/// `file` is a live C++ `FSFile*`; `value` is valid.
+long ee_fs_read_long(void *file,
+                     long *value);
+
+/// `FSFile::Read(unsigned long&)`: as [`ee_fs_read_long`] through `Read(uint32_t&)`.
+///
+/// # Safety
+/// As [`ee_fs_read_long`].
+long ee_fs_read_ulong(void *file, unsigned long *value);
+
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
 
@@ -295,6 +317,28 @@ int32_t ee_fs_mem_delete(EeFsMemFile *file);
 /// `file` is live.
 uint32_t ee_fs_mem_length(const EeFsMemFile *file);
 
+/// `GetLength(outLength)`: always `kErrorOK`.
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+int32_t ee_fs_mem_get_length(const EeFsMemFile *file, unsigned long *out);
+
+/// `GetPosition(outPosition)`: always `kErrorOK` (-1 closed or empty).
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+int32_t ee_fs_mem_get_position(const EeFsMemFile *file, long *out);
+
+/// `Compress(level, outLength)` as FSMemoryFile.h has it: a PKWARE implode error (0x15) is a failed verification at
+/// `source` (the C++ header's `__FILE__`), line 140.
+///
+/// # Safety
+/// `file` is live, `out_length` valid for a write, `source` a zero-terminated name.
+int32_t ee_fs_mem_compress_checked(EeFsMemFile *file,
+                                   unsigned long level,
+                                   unsigned long *out_length,
+                                   const char *source);
+
 /// `GetPosition`.
 ///
 /// # Safety
@@ -320,7 +364,7 @@ const uint8_t *ee_fs_mem_data(const EeFsMemFile *file);
 int32_t ee_fs_mem_read(EeFsMemFile *file,
                        uint8_t *out,
                        size_t length,
-                       uint32_t *out_read);
+                       unsigned long *out_read);
 
 /// `Write`.
 ///
@@ -329,7 +373,7 @@ int32_t ee_fs_mem_read(EeFsMemFile *file,
 int32_t ee_fs_mem_write(EeFsMemFile *file,
                         const uint8_t *data,
                         size_t length,
-                        uint32_t *out_written);
+                        unsigned long *out_written);
 
 /// `SetPosition`.
 ///

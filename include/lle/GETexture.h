@@ -20,16 +20,7 @@ class GETextureManager;
 struct GESurfaceDescription;
 struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_openformats.h)
 
-struct GETStage {                           // sizeof 0x20 (copied with rep movsd in GETexture's copy ctor)
-    GETexture* mTexture;                    // +0x00 (GetStageTexture)
-    unsigned long mColorMode;               // +0x04 (SetStageColorMode)
-    unsigned long mAlphaMode;               // +0x08 (SetStageAlphaMode)
-    unsigned long mTextureAddressingMode;   // +0x0c
-    unsigned long mMinFilterMode;           // +0x10
-    unsigned long mMagFilterMode;           // +0x14
-    unsigned long mMipFilterMode;           // +0x18
-    float mMipMapBias;                      // +0x1c
-};
+typedef EeGeTStage GETStage;               // sizeof 0x20; the record is Rust's (ee_render ge texobj_tex.rs)
 
 class LLE_API GETexture : public UReferenceCounter {   // sizeof 0x6c (vector deleting dtor 0xe255)
 public:
@@ -43,7 +34,7 @@ public:
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
     unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
-    GETexture* GetStageTexture(unsigned long inStage) const { return this->GetStage()->mTexture; }
+    GETexture* GetStageTexture(unsigned long inStage) const { return (GETexture*)this->GetStage()->mTexture; }
     unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }
     bool HasChanged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::HasChanged) != 0; }
     long Promote() { return ee_ge_tex_promote(this->mRust); }

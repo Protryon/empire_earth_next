@@ -17,6 +17,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use crate::ge::texobj::EeGeSurfaceDescription;
 use crate::ge::texture;
+use crate::openformats::EeOfTextureInfo;
 
 /// `kErrorOK`, `kErrorAlreadyExists`, `kErrorOutOfMemory` (lle/LowLevelEngineCore.h).
 const OK: c_long = 0;
@@ -32,13 +33,16 @@ const MIP_FILTER_POINT: c_ulong = 1;
 /// `kSurfaceTexture` (a file has one MIP level: frame format 1's surfaces are never `kSurfaceMipMappedTexture`).
 const SURFACE_TEXTURE: c_ulong = 5;
 
-/// `GETStage` (lle/GETexture.h), field for field.
+/// `GETStage` (lle/GETexture.h's name for it, so C++ names its fields).
+/// cbindgen:field-names=[mTexture, mColorMode, mAlphaMode, mTextureAddressingMode, mMinFilterMode, mMagFilterMode, mMipFilterMode, mMipMapBias]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeGeTStage {
-    /// `mTexture` (`GETexture*`).
+    /// `mTexture` (`GETexture*`, GetStageTexture).
     pub texture: *mut c_void,
+    /// SetStageColorMode.
     pub color_mode: c_ulong,
+    /// SetStageAlphaMode.
     pub alpha_mode: c_ulong,
     pub texture_addressing_mode: c_ulong,
     pub min_filter_mode: c_ulong,
@@ -505,9 +509,9 @@ impl EeGeTexture {
             }
             tx(p).num_mip_levels_to_drop = drop_levels as c_ulong;
             tx(p).create_mipmaps = create_mipmaps;
-            let mut info = [0u32; 3];
-            Self::op(p, EeGeTexOp::FileInfo, file, info.as_mut_ptr() as isize, 0);
-            let [width, height, count] = info;
+            let mut info = EeOfTextureInfo { width: 0, height: 0, frame_count: 0 };
+            Self::op(p, EeGeTexOp::FileInfo, file, &mut info as *mut EeOfTextureInfo as isize, 0);
+            let (width, height, count) = (info.width, info.height, info.frame_count);
             result = OK;
             if frame_format == 0 {
                 let owner = tx(p).owner;
