@@ -120,13 +120,9 @@ pub extern "C" fn ee_screens_question_answer(table: u32, index: u32) -> *const c
             Some(ce_save_before_editor),
             Some(ce_delete_yes),
         ],
-        EE_SCREENS_QA_CE_NO => &[
-            Some(ce_discard_before_open),
-            Some(ce_discard_before_new),
-            Some(ce_show_main),
-            Some(ce_show_editor),
-            None,
-        ],
+        EE_SCREENS_QA_CE_NO => {
+            &[Some(ce_discard_before_open), Some(ce_discard_before_new), Some(ce_show_main), Some(ce_show_editor), None]
+        }
         EE_SCREENS_QA_BOOT => &[Some(boot_yes), Some(boot_no)],
         _ => &[],
     };

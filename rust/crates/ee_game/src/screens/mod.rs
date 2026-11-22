@@ -329,14 +329,14 @@ pub mod panel_groups;
 mod panel_groups_ffi;
 pub mod ping;
 // the screens' question answers (the C++ question shims' callbacks), absent from a test binary
-#[cfg(not(test))]
-mod question_answers_ffi;
 pub mod portrait;
 #[cfg(not(test))]
 mod portrait_ffi;
 pub mod post_game;
 #[cfg(not(test))]
 mod post_game_ffi;
+#[cfg(not(test))]
+mod question_answers_ffi;
 pub mod save_load;
 #[cfg(not(test))]
 mod save_load_ffi;
