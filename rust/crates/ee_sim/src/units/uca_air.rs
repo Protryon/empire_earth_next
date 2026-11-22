@@ -872,7 +872,7 @@ pub fn run<H: UcHost + UcaRust + ?Sized>(h: &mut H, what: i32, class: u64, unit:
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 

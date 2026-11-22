@@ -1113,6 +1113,51 @@ constexpr static const int32_t EE_UNITS_CLS_GOAL_HAS_LOCATION = 37;
 /// unit `a`'s air traffic control has it queued (`GetQueuePosition(a, 1)` or `(a, 0)` at least 0)
 constexpr static const int32_t EE_UNITS_CLS_REQUEST_QUEUED = 38;
 
+/// `p = gWorld.mMap->GetTileLocation(c, d)` (untouched when there is no tile)
+constexpr static const int32_t EE_UNITS_CLS_R_TILE_LOCATION = 3400;
+
+/// `EELoadTransportGoalCast(unit->GetGoal())`
+constexpr static const int32_t EE_UNITS_CLS_R_LOAD_GOAL = 3401;
+
+/// goal `b`'s `GetLoadUnitTile()` (x, y << 32)
+constexpr static const int32_t EE_UNITS_CLS_R_LOAD_GOAL_TILE = 3402;
+
+/// `EEAttackUnitCast(unit->GetGoal())`
+constexpr static const int32_t EE_UNITS_CLS_R_ATTACK_GOAL = 3403;
+
+/// goal `b`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_CLS_R_ATTACK_TARGET_OF = 3404;
+
+/// unit `b`'s `mHitPoints`
+constexpr static const int32_t EE_UNITS_CLS_R_HIT_POINTS_OF = 3405;
+
+/// `unit->mPlayer->mAirTraffic[unit->GetUnitClass()->mAirTrafficType - 1]`
+constexpr static const int32_t EE_UNITS_CLS_R_ATC = 3406;
+
+/// continent `b`'s `GetHullCenter()` (x, y << 32)
+constexpr static const int32_t EE_UNITS_CLS_R_HULL_CENTER = 3407;
+
+/// `p = ` goal `b`'s `GetGroundTarget()`
+constexpr static const int32_t EE_UNITS_CLS_R_GROUND_TARGET = 3408;
+
+/// unit `b`'s `mComplexUnit`
+constexpr static const int32_t EE_UNITS_CLS_R_COMPLEX_OF = 3409;
+
+/// `p = ` complex unit `b`'s location
+constexpr static const int32_t EE_UNITS_CLS_R_LOCATION_OF = 3410;
+
+/// `p = ` unit `b`'s tile centre and its tile's height
+constexpr static const int32_t EE_UNITS_CLS_R_TILE_CENTER_OF = 3411;
+
+/// goal `b`'s `GetPatrolTarget()`
+constexpr static const int32_t EE_UNITS_CLS_R_PATROL_TARGET = 3412;
+
+/// goal `b`'s `GetExploreTileCenter(p)`
+constexpr static const int32_t EE_UNITS_CLS_R_EXPLORE_CENTER = 3413;
+
+/// `unit->SetGoal(goal b, c, 0)`
+constexpr static const int32_t EE_UNITS_CLS_R_SET_GOAL_KEEP = 3414;
+
 /// the mesh `a`'s `GetZ(c, d)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_LV_MESH_Z = 85;
 

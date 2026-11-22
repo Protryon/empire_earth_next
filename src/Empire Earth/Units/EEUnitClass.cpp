@@ -560,6 +560,22 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_ST_AREA_CLOAK: inUnit->mAffectingAreaEffects.ApplyModifiers(3, sMvInput, sMvRadius, inUnit); return 0;
     case EE_UNITS_CLS_ST_MODIFIER_RADIUS: return sMvRadius;
     case EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: io->f = gWorldTable.GetFloatValue(kWorldCamouflageTiming); return 0;
+    // round 9 (cls_host.rs EE_UNITS_CLS_R_*: the class bodies' compound reads split; b the object)
+    case EE_UNITS_CLS_R_TILE_LOCATION: ::gWorld.mMap->GetTileLocation((long)inC, (long)inD, p); return 0;
+    case EE_UNITS_CLS_R_LOAD_GOAL: return EEObj(EELoadTransportGoalCast(inUnit->GetGoal()));
+    case EE_UNITS_CLS_R_LOAD_GOAL_TILE: return (int64_t)(uint32_t)static_cast<EEUGRust*>(theGoal)->GetLoadUnitTile().mX | ((int64_t)(uint32_t)static_cast<EEUGRust*>(theGoal)->GetLoadUnitTile().mY << 32);
+    case EE_UNITS_CLS_R_ATTACK_GOAL: return EEObj(EEAttackUnitCast(inUnit->GetGoal()));
+    case EE_UNITS_CLS_R_ATTACK_TARGET_OF: return EEObj(static_cast<EEUGRust*>(theGoal)->GetAttackTarget());
+    case EE_UNITS_CLS_R_HIT_POINTS_OF: return ((EEUnit*)(uintptr_t)inB)->mHitPoints;
+    case EE_UNITS_CLS_R_ATC: return EEObj(inUnit->mPlayer->mAirTraffic[inUnit->GetUnitClass()->mAirTrafficType - 1]);
+    case EE_UNITS_CLS_R_HULL_CENTER: return (int64_t)(uint32_t)((EEAIContinent*)(uintptr_t)inB)->GetHullCenter().mX | ((int64_t)(uint32_t)((EEAIContinent*)(uintptr_t)inB)->GetHullCenter().mY << 32);
+    case EE_UNITS_CLS_R_GROUND_TARGET: p = static_cast<EEUGRust*>(theGoal)->GetGroundTarget(); return 0;
+    case EE_UNITS_CLS_R_COMPLEX_OF: return EEObj(((EEUnit*)(uintptr_t)inB)->mComplexUnit);
+    case EE_UNITS_CLS_R_LOCATION_OF: p.SetXYZ(theOther->mPhysicalModel.GetLocation().GetX(), theOther->mPhysicalModel.GetLocation().GetY(), theOther->mPhysicalModel.GetLocation().GetZ()); return 0;
+    case EE_UNITS_CLS_R_TILE_CENTER_OF: p.SetXYZ((float)((EEUnit*)(uintptr_t)inB)->GetTileX() + 0.5f, (float)((EEUnit*)(uintptr_t)inB)->GetTileY() + 0.5f, ((EEUnit*)(uintptr_t)inB)->mTile->GetHeight()); return 0;
+    case EE_UNITS_CLS_R_PATROL_TARGET: return EEObj(static_cast<EEUGRust*>(theGoal)->GetPatrolTarget());
+    case EE_UNITS_CLS_R_EXPLORE_CENTER: static_cast<EEUGRust*>(theGoal)->GetExploreTileCenter(p); return 0;
+    case EE_UNITS_CLS_R_SET_GOAL_KEEP: inUnit->SetGoal(theGoal, inC != 0, 0); return 0;
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
         return 0;

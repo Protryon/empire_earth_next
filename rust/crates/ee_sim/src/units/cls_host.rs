@@ -226,6 +226,63 @@ extern "C" {
     fn ee_units_cls_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsClsIo) -> i64;
 }
 
+// ---- round 9's statements (3400..3449: EEUnitClassMoveOp's switch, EEUnitClass.cpp, takes every op from 39)
+/// `p = gWorld.mMap->GetTileLocation(c, d)` (untouched when there is no tile)
+pub const EE_UNITS_CLS_R_TILE_LOCATION: i32 = 3400;
+/// `EELoadTransportGoalCast(unit->GetGoal())`
+pub const EE_UNITS_CLS_R_LOAD_GOAL: i32 = 3401;
+/// goal `b`'s `GetLoadUnitTile()` (x, y << 32)
+pub const EE_UNITS_CLS_R_LOAD_GOAL_TILE: i32 = 3402;
+/// `EEAttackUnitCast(unit->GetGoal())`
+pub const EE_UNITS_CLS_R_ATTACK_GOAL: i32 = 3403;
+/// goal `b`'s `GetAttackTarget()`
+pub const EE_UNITS_CLS_R_ATTACK_TARGET_OF: i32 = 3404;
+/// unit `b`'s `mHitPoints`
+pub const EE_UNITS_CLS_R_HIT_POINTS_OF: i32 = 3405;
+/// `unit->mPlayer->mAirTraffic[unit->GetUnitClass()->mAirTrafficType - 1]`
+pub const EE_UNITS_CLS_R_ATC: i32 = 3406;
+/// continent `b`'s `GetHullCenter()` (x, y << 32)
+pub const EE_UNITS_CLS_R_HULL_CENTER: i32 = 3407;
+/// `p = ` goal `b`'s `GetGroundTarget()`
+pub const EE_UNITS_CLS_R_GROUND_TARGET: i32 = 3408;
+/// unit `b`'s `mComplexUnit`
+pub const EE_UNITS_CLS_R_COMPLEX_OF: i32 = 3409;
+/// `p = ` complex unit `b`'s location
+pub const EE_UNITS_CLS_R_LOCATION_OF: i32 = 3410;
+/// `p = ` unit `b`'s tile centre and its tile's height
+pub const EE_UNITS_CLS_R_TILE_CENTER_OF: i32 = 3411;
+/// goal `b`'s `GetPatrolTarget()`
+pub const EE_UNITS_CLS_R_PATROL_TARGET: i32 = 3412;
+/// goal `b`'s `GetExploreTileCenter(p)`
+pub const EE_UNITS_CLS_R_EXPLORE_CENTER: i32 = 3413;
+/// `unit->SetGoal(goal b, c, 0)`
+pub const EE_UNITS_CLS_R_SET_GOAL_KEEP: i32 = 3414;
+
+const GOAL_LOCATION: i64 = 1;
+const GOAL_ATTACK_UNIT: i64 = 2;
+const GOAL_ATTACK_GROUND: i64 = 3;
+const GOAL_PATROL: i64 = 9;
+const GOAL_EXPLORE: i64 = 10;
+
+/// One of the air classes' bodies (uca_air.rs's `ee_units_uca_call`, as the C++ member called it).
+pub(crate) fn uca_call(what: i32, class: u64, unit: u64, a: u64, p: &mut [f32; 4]) {
+    #[cfg(not(test))]
+    // SAFETY: the live class and unit the caller handed over; `p` a local point
+    unsafe {
+        crate::units::uca_air::game::ee_units_uca_call(
+            what,
+            class as usize as *mut c_void,
+            unit as usize as *mut c_void,
+            a,
+            0,
+            0,
+            p.as_mut_ptr(),
+        );
+    }
+    #[cfg(test)]
+    let _ = (what, class, unit, a, p);
+}
+
 /// Pushes a pair onto a host operation's list.
 ///
 /// # Safety
@@ -282,7 +339,7 @@ impl TrHost for ClsGame {
     }
     fn tile_location(&mut self, x: i32, y: i32) -> Ge3DPoint {
         let mut io = EeUnitsClsIo::default();
-        self.call(EE_UNITS_CLS_TILE_LOCATION, 0, 0, x as i64, y as i64, &mut io);
+        self.call(EE_UNITS_CLS_R_TILE_LOCATION, 0, 0, x as i64, y as i64, &mut io);
         Ge3DPoint { x: io.p[0], y: io.p[1], z: io.p[2] }
     }
     fn continent_id(&mut self, x: i32, y: i32) -> u16 {
@@ -320,8 +377,8 @@ impl TrHost for ClsGame {
         self.list(EE_UNITS_CLS_SHORE_NEXT_TO, continent, u64::from(id), 0, 0, [0, 0])
     }
     fn blocked(&mut self, player: u64, unit_type: u32, tile: u64) -> bool {
-        let mut io = EeUnitsClsIo::default();
-        self.call(EE_UNITS_CLS_BLOCKED, player, tile, unit_type as i64, 0, &mut io) != 0
+        // EEGetBlockingUnits' answer (ee_units_uu_tile_units_standing's, its note included)
+        crate::units::uu_ffi::tile_units_standing(player, unit_type as i32, tile, false, 2).0
     }
     fn line_blocked(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) -> bool {
         self.0.line_blocked(x1, y1, x2, y2)
@@ -336,10 +393,12 @@ impl TrHost for ClsGame {
         self.list(EE_UNITS_CLS_LINE_TILES, 0, 0, from[0] as i64, from[1] as i64, to)
     }
     fn path_length(&mut self, unit: u64, tile: &mut Tile, walls: bool) -> f32 {
-        let mut io = EeUnitsClsIo { a: tile[0] as i64, b: tile[1] as i64, ..Default::default() };
-        self.call(EE_UNITS_CLS_PATH_LENGTH, unit, u64::from(walls), 0, 0, &mut io);
-        *tile = [io.a as i32, io.b as i32];
-        io.f
+        // EEGetPathLengthTo(unit, tile, 0x10, walls): ee_units_uu_path_length_to (its note included)
+        let mut at = [tile[0], tile[1]];
+        // SAFETY: a live unit, a local tile
+        let length = unsafe { crate::units::uu_ffi::ee_units_uu_path_length_to(unit, &mut at, 0x10, u8::from(walls)) };
+        *tile = [at[0], at[1]];
+        length
     }
     fn set_location(&mut self, unit: u64, point: Ge3DPoint) {
         let mut io = EeUnitsClsIo { p: [point.x, point.y, point.z], ..Default::default() };
@@ -350,7 +409,12 @@ impl TrHost for ClsGame {
     }
     fn load_goal_tile(&mut self, unit: u64) -> Option<Tile> {
         let mut io = EeUnitsClsIo::default();
-        (self.call(EE_UNITS_CLS_LOAD_GOAL_TILE, unit, 0, 0, 0, &mut io) != 0).then_some([io.a as i32, io.b as i32])
+        let goal = self.call(EE_UNITS_CLS_R_LOAD_GOAL, unit, 0, 0, 0, &mut io) as u64;
+        if goal == 0 {
+            return None;
+        }
+        let tile = self.call(EE_UNITS_CLS_R_LOAD_GOAL_TILE, unit, goal, 0, 0, &mut io);
+        Some([tile as i32, (tile >> 32) as i32])
     }
     fn cargo(&mut self, unit: u64, index: i32) -> u64 {
         let mut io = EeUnitsClsIo::default();
@@ -436,12 +500,39 @@ impl FlightHost for ClsGame {
         TrHost::next_waypoint(self, unit)
     }
     fn flight_target(&mut self, unit: u64) -> Option<Ge3DPoint> {
+        // GetNextFlightState's goal target (0x615ccf): the goal's ground target, its attack target's point (its
+        // tile's centre and height for a simple unit), its patrol target's point or its explore tile's centre
         let mut io = EeUnitsClsIo::default();
-        (self.call(EE_UNITS_CLS_FLIGHT_TARGET, unit, 0, 0, 0, &mut io) != 0).then_some(Ge3DPoint {
-            x: io.p[0],
-            y: io.p[1],
-            z: io.p[2],
-        })
+        let goal = self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL, unit, 0, 0, 0, &mut io) as u64;
+        if goal == 0 {
+            return None;
+        }
+        match self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL_KIND, unit, goal, 0, 0, &mut io) {
+            GOAL_LOCATION | GOAL_ATTACK_GROUND => {
+                self.call(EE_UNITS_CLS_R_GROUND_TARGET, unit, goal, 0, 0, &mut io);
+            }
+            GOAL_ATTACK_UNIT => {
+                let other = self.call(EE_UNITS_CLS_R_ATTACK_TARGET_OF, unit, goal, 0, 0, &mut io) as u64;
+                if other == 0 {
+                    return None;
+                }
+                let complex = self.call(EE_UNITS_CLS_R_COMPLEX_OF, unit, other, 0, 0, &mut io) as u64;
+                if complex != 0 {
+                    self.call(EE_UNITS_CLS_R_LOCATION_OF, unit, complex, 0, 0, &mut io);
+                } else {
+                    self.call(EE_UNITS_CLS_R_TILE_CENTER_OF, unit, other, 0, 0, &mut io);
+                }
+            }
+            GOAL_PATROL => {
+                let target = self.call(EE_UNITS_CLS_R_PATROL_TARGET, unit, goal, 0, 0, &mut io) as u64;
+                self.call(EE_UNITS_CLS_R_LOCATION_OF, unit, target, 0, 0, &mut io);
+            }
+            GOAL_EXPLORE => {
+                self.call(EE_UNITS_CLS_R_EXPLORE_CENTER, unit, goal, 0, 0, &mut io);
+            }
+            _ => return None,
+        }
+        Some(Ge3DPoint { x: io.p[0], y: io.p[1], z: io.p[2] })
     }
     fn drop_path(&mut self, unit: u64) {
         let mut io = EeUnitsClsIo::default();
@@ -450,14 +541,25 @@ impl FlightHost for ClsGame {
     fn add_waypoint(&mut self, class: u64, unit: u64, point: Ge3DPoint, snap: bool) {
         self.point_op(EE_UNITS_CLS_ADD_WAYPOINT, unit, class, i64::from(snap), point, Ge3DPoint::default());
     }
-    fn path_toward(&mut self, class: u64, unit: u64, from: Ge3DPoint, to: Ge3DPoint, snap: bool) {
-        self.point_op(EE_UNITS_CLS_PATH_TOWARD, unit, class, i64::from(snap), from, to);
+    fn path_toward(&mut self, _class: u64, unit: u64, from: Ge3DPoint, to: Ge3DPoint, snap: bool) {
+        // PathToward's one call
+        crate::units::cls_move_host::ee_units_mv_path_toward(unit, from.x, from.y, from.z, to.x, to.y, to.z, u8::from(snap));
     }
     fn fly_to_goal(&mut self, class: u64, point: Ge3DPoint, unit: u64) {
-        self.point_op(EE_UNITS_CLS_FLY_TO_GOAL, unit, class, 0, point, Ge3DPoint::default());
+        // FlyToGoal's one call (uca_air.rs)
+        let mut p = [point.x, point.y, point.z, 0.0];
+        uca_call(crate::units::uca_air::EE_UNITS_UCA_DO_FLY_TO_GOAL, class, unit, 0, &mut p);
     }
     fn runway_goal(&mut self, unit: u64, point: Ge3DPoint) {
-        self.point_op(EE_UNITS_CLS_RUNWAY_GOAL, unit, 0, 0, point, Ge3DPoint::default());
+        // ApproachRunway's move goal (0x615f7d): kept behind an exploration, else the only goal
+        let goal = self.point_op(crate::units::cls_carrier_host::EE_UNITS_CLS_CR_DECK_GOAL, unit, 0, 0, point, Ge3DPoint::default());
+        let mut io = EeUnitsClsIo::default();
+        let state = self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL, unit, 0, 0, 0, &mut io) as u64;
+        let keep = state != 0 && self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL_KIND, unit, state, 0, 0, &mut io) == GOAL_EXPLORE;
+        if !keep {
+            self.call(crate::units::cls_carrier_host::EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE, unit, 0, 0, 0, &mut io);
+        }
+        self.call(EE_UNITS_CLS_R_SET_GOAL_KEEP, unit, goal as u64, i64::from(keep), 0, &mut io);
     }
 }
 
@@ -493,18 +595,15 @@ impl BuildingHost for ClsGame {
     }
     fn hull_center(&mut self, continent: u64) -> Tile {
         let mut io = EeUnitsClsIo::default();
-        self.call(EE_UNITS_CLS_HULL_CENTER, continent, 0, 0, 0, &mut io);
-        [io.a as i32, io.b as i32]
+        let center = self.call(EE_UNITS_CLS_R_HULL_CENTER, 0, continent, 0, 0, &mut io);
+        [center as i32, (center >> 32) as i32]
     }
     fn position(&mut self, unit: u64) -> [f32; 3] {
         self.0.position(unit)
     }
     fn units_near(&mut self, point: [f32; 3], radius: f32) -> Vec<u64> {
-        let mut handle = EeUnitsClsListHandle::default();
-        let mut io =
-            EeUnitsClsIo { f: radius, p: point, list: std::ptr::addr_of_mut!(handle).cast(), ..Default::default() };
-        self.call(EE_UNITS_CLS_UNITS_NEAR, 0, 0, 0, 0, &mut io);
-        handle.tiles.iter().map(|t| u64::from(t[0] as u32) | (u64::from(t[1] as u32) << 32)).collect()
+        // EEGetUnitsNear (ee_units_uu_units_near's units)
+        crate::units::uu_ffi::units_near(point, radius)
     }
     fn unit_set_contains(&mut self, unit_type: u32, set: i32) -> bool {
         self.0.unit_set_contains(unit_type, set)
@@ -541,9 +640,11 @@ impl ConditionHost for ClsGame {
         Ge3DPoint { x: p[0], y: p[1], z: p[2] }
     }
     fn ground_height(&mut self, point: Ge3DPoint) -> f32 {
-        let mut io = EeUnitsClsIo { p: [point.x, point.y, point.z], ..Default::default() };
-        self.call(EE_UNITS_CLS_GROUND_HEIGHT, 0, 0, 0, 0, &mut io);
-        io.f
+        // GetGroundHeight's one call (uca_air.rs; the C++ handed its class, which the body does not read)
+        let mut height = 0.0f32;
+        let mut p = [point.x, point.y, point.z, 0.0];
+        uca_call(crate::units::uca_air::EE_UNITS_UCA_DO_GROUND_HEIGHT, 0, 0, std::ptr::addr_of_mut!(height) as u64, &mut p);
+        height
     }
     fn bomb_on_target(&mut self, class: u64, unit: u64) -> bool {
         self.ask(EE_UNITS_CLS_BOMB_ON_TARGET, unit, class) != 0
@@ -555,13 +656,24 @@ impl ConditionHost for ClsGame {
         self.ask(EE_UNITS_CLS_PROJECTILE_CATEGORY, 0, class) as i32
     }
     fn attack_target_alive(&mut self, unit: u64) -> bool {
-        self.ask(EE_UNITS_CLS_ATTACK_TARGET_ALIVE, unit, 0) != 0
+        let goal = self.ask(EE_UNITS_CLS_R_ATTACK_GOAL, unit, 0) as u64;
+        goal != 0 && {
+            let target = self.ask(EE_UNITS_CLS_R_ATTACK_TARGET_OF, unit, goal) as u64;
+            target != 0 && self.ask(EE_UNITS_CLS_R_HIT_POINTS_OF, unit, target) > 0
+        }
     }
     fn goal_has_location(&mut self, unit: u64) -> bool {
         self.ask(EE_UNITS_CLS_GOAL_HAS_LOCATION, unit, 0) != 0
     }
     fn request_queued(&mut self, unit: u64) -> bool {
-        self.ask(EE_UNITS_CLS_REQUEST_QUEUED, unit, 0) != 0
+        // the unit in its air traffic control's landing or take-off queue
+        let control = self.ask(EE_UNITS_CLS_R_ATC, unit, 0) as usize as *mut crate::units::atc::EeUnitsAtc;
+        let plane = unit as usize as *mut c_void;
+        // SAFETY: the player's live control and unit
+        unsafe {
+            crate::units::atc::ee_units_atc_queue_position(control, plane, 1) >= 0
+                || crate::units::atc::ee_units_atc_queue_position(control, plane, 0) >= 0
+        }
     }
 }
 
