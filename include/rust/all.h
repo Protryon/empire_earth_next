@@ -55,6 +55,7 @@
 #include "rust/sim/rmap.h"
 #include "rust/sim/scenario.h"
 #include "rust/sim/tech.h"
+#include "rust/sim/unit_ids.h"
 #include "rust/sim/units.h"
 #include "rust/sim/world.h"
 #include "rust/ui/bgobj.h"
