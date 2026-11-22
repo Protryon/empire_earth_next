@@ -17,12 +17,6 @@ public:
 
     EeAStarPathAreaRecord* Record() { return this; }
     const EeAStarPathAreaRecord* Record() const { return this; }
-    EEAIListView<unsigned short> GetSectorIDs() const
-    {
-        size_t theCount;
-        const uint16_t* theIDs = ee_astar_path_area_sector_ids(this, &theCount);
-        return EEAIListView<unsigned short>(theIDs, theCount);
-    }
     unsigned short GetContinentID() const { return this->continent_id; }
     void SetContinentID(unsigned short inID) { this->continent_id = inID; }
     unsigned short GetID() const { return this->id; }
@@ -30,40 +24,6 @@ public:
     long GetKind() const { return this->kind; }
     void SetKind(long inKind) { this->kind = inKind; }
     long GetUnitID() const { return this->unit_id; }
-    void SetUnitID(long inID) { this->unit_id = inID; }
-    unsigned short GetSurfaceRegionID() const { return this->surface_region; }
-    unsigned short GetWaterBodyID() const { return this->water_body; }
-    unsigned short GetLandMassID() const { return this->land_mass; }
-    unsigned short GetSpaceRegionID() const { return this->space_region; }
-    void SetSurfaceRegionID(unsigned short inID) { this->surface_region = inID; }
-    void SetWaterBodyID(unsigned short inID) { this->water_body = inID; }
-    void SetLandMassID(unsigned short inID) { this->land_mass = inID; }
-    void SetSpaceRegionID(unsigned short inID) { this->space_region = inID; }
-    // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
-    template <class W> void WriteFields(W& ioWriter) const
-    {
-        ioWriter.Shorts(std::vector<unsigned short>(this->GetSectorIDs()));
-        ioWriter.U16(this->continent_id);
-        ioWriter.U16(this->id);
-        ioWriter.I32(this->kind);
-        ioWriter.I32(this->unit_id);
-        ioWriter.U16(this->surface_region);
-        ioWriter.U16(this->water_body);
-        ioWriter.U16(this->land_mass);
-        ioWriter.U16(this->space_region);
-    }
-    template <class R> bool ReadFields(R& ioReader)
-    {
-        std::vector<unsigned short> theIDs;
-        if (!ioReader.Shorts(theIDs))
-            return false;
-        ee_astar_path_area_set_sector_ids(this, theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
-        return ioReader.U16(this->continent_id) && ioReader.U16(this->id) && ioReader.I32(this->kind)
-            && ioReader.I32(this->unit_id) && ioReader.U16(this->surface_region) && ioReader.U16(this->water_body)
-            && ioReader.U16(this->land_mass) && ioReader.U16(this->space_region);
-    }
-    // 0x2baf4: unless present (binary_search), push_back + sort (Rust)
-    void AddSectorID(unsigned short inSectorID) { ee_astar_path_area_add_sector_id(this, inSectorID); }
 
 private:
     EEAIPathArea();
