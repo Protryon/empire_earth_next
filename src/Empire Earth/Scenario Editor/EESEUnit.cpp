@@ -47,7 +47,6 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMessage.h"
-#include "ee/EESETSConditionControls.h"
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEPlayer.h"

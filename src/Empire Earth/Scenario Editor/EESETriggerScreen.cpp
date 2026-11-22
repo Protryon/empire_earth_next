@@ -33,7 +33,6 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSConditionControls.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEStringIDs.h"

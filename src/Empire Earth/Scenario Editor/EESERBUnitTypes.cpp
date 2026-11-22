@@ -40,7 +40,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMessage.h"
-#include "ee/EESETSEffectControls.h"
 #include "ee/EEARust.h"
 #include "ee/EESERBUnitTypes.h"
 #include "lle/UIESliderChange.h"

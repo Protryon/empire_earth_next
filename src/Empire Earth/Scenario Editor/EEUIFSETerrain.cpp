@@ -37,7 +37,6 @@
 #include "ee/EESELoadThread.h"
 #include "lle/UResourceFile.h"
 #include "ee/EETerrainColorTable.h"
-#include "ee/EESETSConditionControls.h" // declares the gU531934 font
 #include "ee/EEButtonObject.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"

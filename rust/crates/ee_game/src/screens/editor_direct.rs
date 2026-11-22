@@ -33,7 +33,11 @@ use crate::screens::hud_direct::{atoi, label_set_long, label_set_text, label_tex
 /// ignored, as the C++'s `mTextEditBox`, `mEditBox48` and the condition's `mSlider`).
 type Member = (u32, usize, usize);
 
-/// `EESETSEffectControls`' members in declaration order (46 pointers).
+/// `EESETSEffectControls`' members in declaration order (46 pointers). The original's record (no RTTI; sizeof 0xb8,
+/// EESETSEffect's +0x2c; ctor 0x181792, dtor 0x1824fc) is this table alone since round 6 (its C++ header went):
+/// mLabels[13] +0x00 (UITextLabel), mEditBoxes[2] +0x34, mEditBoxes2[2] +0x3c, mTextEditBox +0x44, mEditBox48 +0x48
+/// (UIEditBox), mComboBoxes[4] +0x4c, mEffectComboBoxes[2] +0x5c, mScenarioComboBoxes[4] +0x64, mPlayers[3] +0x74
+/// (UIComboBox), mRadioButtons[6] +0x80, mSliders[4] +0x98, mCheckBoxes[2] +0xa8, mListBoxes[2] +0xb0 (UILBString).
 const EFFECT: [Member; 13] = [
     (EE_SCREENS_SEET_A_LABEL, 0, 13),
     (EE_SCREENS_SEET_A_EDIT, 13, 2),
@@ -52,7 +56,10 @@ const EFFECT: [Member; 13] = [
 /// The effect record's size in pointers.
 pub const EE_SCREENS_SEET_EFFECT_SLOTS: usize = 46;
 
-/// `EESETSConditionControls`' members in declaration order (23 pointers).
+/// `EESETSConditionControls`' members in declaration order (23 pointers). The original's record (no RTTI; sizeof
+/// 0x5c; ctor 0x17daa8, dtor 0x17e3d7) is this table alone since round 6: mLabels[5] +0x00, mEditBoxes[2] +0x14,
+/// mTextEditBox +0x1c, mComboBoxes[3] +0x20, mScenarioComboBoxes[4] +0x2c, mCheckBoxes[3] +0x3c, mPlayers[2] +0x48,
+/// mRadioButtons[2] +0x50, mSlider +0x58.
 const CONDITION: [Member; 9] = [
     (EE_SCREENS_SEET_A_LABEL, 0, 5),
     (EE_SCREENS_SEET_A_EDIT, 5, 2),

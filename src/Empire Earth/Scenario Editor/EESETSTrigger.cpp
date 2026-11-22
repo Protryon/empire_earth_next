@@ -31,7 +31,6 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EEStringIDs.h"
