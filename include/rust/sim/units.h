@@ -4082,6 +4082,79 @@ constexpr static const int32_t EE_UNITS_DM_DO_TILE_SHOWN = 11;
 
 constexpr static const int32_t EE_UNITS_DM_DO_UNREGISTER_PLAYER = 12;
 
+/// doppelganger `a`'s `mUnit = (EEUnit*)b`
+constexpr static const int32_t EE_UNITS_DM_DG_SET_UNIT = 4000;
+
+/// doppelganger `a`'s `mPlayer = (EEPlayer*)b`
+constexpr static const int32_t EE_UNITS_DM_DG_SET_PLAYER = 4001;
+
+/// doppelganger `a`'s `mTile = (RTSTile*)b`
+constexpr static const int32_t EE_UNITS_DM_DG_SET_TILE = 4002;
+
+/// doppelganger `a`'s `mUnit->mStats->mModel->LoadMedia()`
+constexpr static const int32_t EE_UNITS_DM_DG_LOAD_MEDIA = 4003;
+
+/// doppelganger `a`'s `mUnit->mStats->mModel->UnloadMedia()`
+constexpr static const int32_t EE_UNITS_DM_DG_UNLOAD_MEDIA = 4004;
+
+/// unit `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_DM_DG_REFERENCE = 4005;
+
+/// unit `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_DM_DG_DEREFERENCE = 4006;
+
+/// the unsigned long read last (`EE_UNITS_DM_READ_ULONG`)
+constexpr static const int32_t EE_UNITS_DM_DG_VALUE = 4007;
+
+/// the long read last (`EE_UNITS_DM_READ_LONG`)
+constexpr static const int32_t EE_UNITS_DM_DG_COORDINATE = 4008;
+
+/// doppelganger `a`'s `(int32_t)USavedID(mPlayer)`
+constexpr static const int32_t EE_UNITS_DM_DG_SAVED_PLAYER = 4009;
+
+/// `static_cast<EEUnit*>(gWorld.GetUnit(USavedID(doppelganger a's mUnit)))`
+constexpr static const int32_t EE_UNITS_DM_DG_SAVED_UNIT = 4010;
+
+/// doppelganger `a`'s `GetIsValid()`
+constexpr static const int32_t EE_UNITS_DM_DG_IS_VALID = 4011;
+
+/// the file's `Write(b != 0)` (a bool)
+constexpr static const int32_t EE_UNITS_DM_DG_WRITE_BOOL = 4012;
+
+/// the file's `Write((unsigned long)b)`
+constexpr static const int32_t EE_UNITS_DM_DG_WRITE_ULONG = 4013;
+
+/// doppelganger `a`'s `mUnit->mUnitID`
+constexpr static const int32_t EE_UNITS_DM_DG_UNIT_ID = 4014;
+
+/// `mPool.DumpStats(false)`
+constexpr static const int32_t EE_UNITS_DM_DG_POOL_DUMP = 4015;
+
+/// `mPool.Release()`
+constexpr static const int32_t EE_UNITS_DM_DG_POOL_RELEASE = 4016;
+
+/// `mComplexPool.DumpStats(false)`
+constexpr static const int32_t EE_UNITS_DM_DG_COMPLEX_POOL_DUMP = 4017;
+
+/// `mComplexPool.Release()`
+constexpr static const int32_t EE_UNITS_DM_DG_COMPLEX_POOL_RELEASE = 4018;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_RESET = 1;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_CLEAR = 2;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_INITIALIZE = 3;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_INITIALIZE_COPY = 4;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_LOAD = 5;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_REPAIR_POINTERS = 6;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_SAVE = 7;
+
+constexpr static const int32_t EE_UNITS_DM_DG_DO_MANAGER_RELEASE = 8;
+
 /// `EEDoppelganger::Load(b, c, *(FSFile*)a)`
 constexpr static const int32_t EE_UNITS_DOP_BASE_LOAD = 300;
 
@@ -16851,6 +16924,12 @@ extern int64_t ee_units_dm_host(int32_t op, uint64_t a, int64_t b, int64_t c);
 /// # Safety
 /// The objects named are live, on the simulation thread.
 int64_t ee_units_dm_body(int32_t what, void *a, int64_t b, int64_t c, int64_t d);
+
+/// `EEDoppelganger`'s body `what` (`EE_UNITS_DM_DG_DO_*`) of doppelganger `d`.
+///
+/// # Safety
+/// The objects named are live, on the simulation thread.
+int64_t ee_units_dm_dop(int32_t what, void *d, void *a, void *b, void *c);
 
 /// `EEComplexDoppelganger`'s body `what` (`EE_UNITS_DOP_DO_*`) on `dop` (`a` the file or the unit or other
 /// doppelganger, `b`, `c` the version or the player and tile).

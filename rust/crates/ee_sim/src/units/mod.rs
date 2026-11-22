@@ -62,6 +62,7 @@ pub mod cu_misc;
 pub mod cu_more;
 pub mod cu_world;
 pub mod dm_body;
+pub mod dm_dop;
 pub mod dop_file;
 pub mod dop_load;
 pub mod dop_more;
