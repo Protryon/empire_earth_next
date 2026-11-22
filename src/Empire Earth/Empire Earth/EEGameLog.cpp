@@ -27,6 +27,7 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEColorTable.h"
+#include "rust/game/gamecpp.h"
 #include "rust/game/game_log.h"
 
 namespace {
@@ -133,4 +134,21 @@ void EEGameLogUnitLost(EEPlayer* inPlayer, EEUnit* inUnit)
 {
     if (inUnit != NULL && inUnit->mUnitClass != NULL)
         ee_game_log_unit_lost((uint64_t)(uintptr_t)inPlayer, (uint64_t)(uintptr_t)inUnit);
+}
+
+// ------------------------------------------------------------------------- round 11, lane B: the Empire Earth directory's managers (preferences, game options, sounds, music, the game log, the camera, the app captures)
+
+int64_t EECore11OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore11OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane B's bodies in Rust (gamecpp; EeGameCpp's round 11 lane B section): one
+// statement each
+int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore11OpC(inOp, p, a, f);
+}
+
+double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore11OpCF(inOp, p, a, f);
 }

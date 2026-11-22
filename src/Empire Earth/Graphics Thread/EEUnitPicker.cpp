@@ -250,3 +250,20 @@ double EEPickOps::OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     default: return EECore9OpBF(inOp, p, a, f);
     }
 }
+
+// ------------------------------------------------------------------------- round 11, lane A: the Graphics Thread and the Map
+
+int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 11 lane A section): one
+// statement each
+int64_t EECore11OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore11OpB(inOp, p, a, f);
+}
+
+double EECore11OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore11OpBF(inOp, p, a, f);
+}

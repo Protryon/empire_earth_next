@@ -106,6 +106,22 @@ pub mod world_stats;
 //
 //
 
+// ---- round 11, lane A: the Graphics Thread and the Map
+//
+//
+
+// ---- round 11, lane B: the Empire Earth directory's managers, the camera, the app captures
+//
+//
+
+// ---- round 11, lane C: Communications, Calamities, Database, Tech Tree, Persistent
+//
+//
+
+// ---- round 11, lane E: the test drivers, the entry, the world
+//
+//
+
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
@@ -3456,6 +3472,14 @@ pub enum EeGameCpp {
     WsRecHuman,
     WsSetCurrentRecord,
     WsRecPlayTime,
+    //
+    // ---- round 11, lane A (EECore11OpA's cases)
+    //
+    // ---- round 11, lane B (EECore11OpB's cases)
+    //
+    // ---- round 11, lane C (EECore11OpC's cases)
+    //
+    // ---- round 11, lane E (EECore11OpE's cases)
     //
 }
 

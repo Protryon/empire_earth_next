@@ -135,3 +135,20 @@ EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
                           inPlayer.mIsLocal, inPlayer.mB36, (int32_t)inPlayer.mEngine});   // the engine: port
 }
 
+
+// ------------------------------------------------------------------------- round 11, lane C: Communications, Calamities, Database, Tech Tree, Persistent
+
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane C's bodies in Rust (gamecpp; EeGameCpp's round 11 lane C section): one
+// statement each
+int64_t EECore11OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore11OpE(inOp, p, a, f);
+}
+
+double EECore11OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore11OpEF(inOp, p, a, f);
+}
