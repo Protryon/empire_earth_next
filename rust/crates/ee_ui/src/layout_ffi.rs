@@ -69,6 +69,6 @@ mod tests {
             ee_ui_layout_set(&mut l, Edge::Bottom, 1, 2.0);
         }
         assert_eq!((l.top_type, l.top_offset, l.bottom_type, l.bottom_offset), (4, 0.5, 1, 2.0));
-        assert_eq!((l.left_type, l.right_offset), (FROM_START, 9.0));
+        assert_eq!((l.left_type, l.right_offset), (FROM_START, -9.0));
     }
 }

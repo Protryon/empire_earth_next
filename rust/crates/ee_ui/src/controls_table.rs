@@ -13,8 +13,8 @@
 use core::ffi::{c_long, c_ulong};
 
 use crate::button::UiColor;
-use crate::layout::{Layout, PROPORTIONAL};
 use crate::ids::UIDbControlType as T;
+use crate::layout::{Layout, PROPORTIONAL};
 use crate::rect::{um_floor, UiRect};
 
 /// The control types `CreateControl` dispatches on (`UIDbControlType`; private: the generated header would clash with

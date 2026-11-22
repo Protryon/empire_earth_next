@@ -273,7 +273,6 @@ pub enum UIFormEventType {
     kUIEventMouseWheelMove = 12,
 }
 
-
 /// UILayoutUtility edge offset types (GetHorizontalPoint/GetVerticalPoint switch); the database layouts store them
 /// (the C++ `enum UILayoutType`, UILayoutUtility.h)
 /// cbindgen:enum-class=false
