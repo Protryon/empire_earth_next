@@ -25,7 +25,7 @@ use crate::ge::managers::{self, NOT_FOUND, OK};
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeGeManOp {
-    /// `TSScheduler::CreateCriticalSection` (with its `ESVERIFY`): the lock.
+    /// `TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a)`: the lock into `a`; the result (`LockVerify`'s).
     LockCreate = 1,
     /// `TSScheduler::DestroyCriticalSection(obj)`.
     LockDestroy,
@@ -33,6 +33,8 @@ pub enum EeGeManOp {
     LockEnter,
     /// `obj->Leave()`.
     LockLeave,
+    /// `ESVERIFY_AT(a == keseOK, ...)`: the check of `LockCreate`'s result (each manager's own line).
+    LockVerify,
     /// `obj->Reference()` (an `FSPath`).
     PathReference,
     /// `obj->Dereference()` (an `FSPath`).
@@ -41,15 +43,12 @@ pub enum EeGeManOp {
     RefCount,
     /// `obj->UReferenceCounter::Dereference()` (a model or texture).
     BaseDereference,
-    /// The dump's heading into the file `obj` (`FSFileSpec&`).
-    DumpHeader,
-    /// The dump's line of the cached `obj` (its reference count) named `a` (`const char*`) into the file `b`.
-    DumpLine,
-    /// `new GEModel(counts and flags of a, UString(b), this)`: `a` the forwarder's `GEModelCreateArgs*`, `b` the
-    /// created name (`const char*`).
+    /// `fprintf(*(FSFileSpec*)obj, "%s", a)`: the dump's heading or one of its lines (`a` a `const char*`).
+    DumpText,
+    /// `new GEModel(*a, UString(b), this)`: `a` the counts and flags (`EeGeModelCreate*`), `b` the created name
+    /// (`const char*`).
     ModelNew = 20,
-    /// `CreateSubModel`'s body under the lock: `new GEModel(counts and flags of a, obj->mName, this)`,
-    /// `obj->SetSubModel(model, b)`, `model->UReferenceCounter::Dereference()`; the model.
+    /// `new GEModel(*a, *(const UString*)b, this)`: a sub-model named `b` (its parent's name, `ModelName`).
     ModelNewSub,
     /// `GEFindModelFile(obj, UString(a), *b, *c)`: `obj` the path, `a` the name (`const char*`), `b` the shared
     /// frames (`const EeGeSharedFrames*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
@@ -65,6 +64,10 @@ pub enum EeGeManOp {
     ModelVerify,
     /// `ee_ge_cem_free(obj)`.
     ModelFreeFile,
+    /// `&obj->GetName()` (a `const UString*`).
+    ModelName,
+    /// `obj->SetSubModel((GEModel*)a, b)`.
+    ModelSetSub,
     /// `GEFindTextureFile(obj, UString(a), *c)`: `obj` the path, `a` the name (`const char*`), `c` the file's out
     /// pointer (`EeOfTexture**`); the result.
     TexFindFile = 40,
@@ -108,6 +111,25 @@ pub enum EeGeManOp {
 pub type EeGeManHostFn =
     unsafe extern "C" fn(owner: *mut c_void, op: EeGeManOp, obj: *mut c_void, a: isize, b: isize, c: isize) -> isize;
 
+/// `CreateModel`'s and `CreateSubModel`'s counts (polygons, vertices, materials, tag points, frames, sub-models) and
+/// flags: `EeGeManOp::ModelNew`'s `a`, which the C++ constructor takes.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeGeModelCreate {
+    pub counts: [c_ulong; 6],
+    pub flags: c_ulong,
+}
+
+/// The dump's line of a cached model or texture (`kind`) named `name` with reference count `count`, NUL-terminated
+/// (the original's `"The %s %s file is loaded in memory with a reference count of %ld.\n"`).
+pub(crate) fn dump_line(kind: &str, name: &[u8], count: c_long) -> Vec<u8> {
+    let mut line = b"The ".to_vec();
+    line.extend(name.iter().copied().take_while(|&b| b != 0));
+    line.extend(format!(" {kind} file is loaded in memory with a reference count of {count}.\n").into_bytes());
+    line.push(0);
+    line
+}
+
 /// The original's buffer for a created model's name (`char theBuffer[1024]`): the name is cut to 1,023 bytes.
 const CREATED_NAME_CAPACITY: usize = 1024;
 
@@ -140,6 +162,9 @@ pub(crate) fn next_after(map: &BTreeMap<Vec<u8>, usize>, key: Option<&[u8]>) -> 
     }
     .map(|(k, v)| (k.clone(), *v))
 }
+
+/// The model manager's dump heading.
+const MODEL_DUMP_HEADER: &[u8] = b"\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n\0";
 
 /// The model manager.
 pub struct EeGeModelManager {
@@ -202,7 +227,9 @@ impl EeGeModelManager {
             if path != 0 {
                 Self::op(p, EeGeManOp::PathReference, path, 0, 0, 0);
             }
-            let lock = Self::op(p, EeGeManOp::LockCreate, 0, 0, 0, 0) as usize;
+            let mut lock: usize = 0;
+            let created = Self::op(p, EeGeManOp::LockCreate, 0, &mut lock as *mut usize as isize, 0, 0);
+            Self::op(p, EeGeManOp::LockVerify, 0, created, 0, 0);
             mm(p).lock = lock;
         }
         p
@@ -229,14 +256,16 @@ impl EeGeModelManager {
     ///
     /// # Safety
     /// `p` is live; `name` is NUL-terminated; `args` is the host's.
-    pub unsafe fn create_model(p: *mut Self, args: *const c_void, name: *const c_char) -> usize {
+    pub unsafe fn create_model(p: *mut Self, args: &EeGeModelCreate, name: *const c_char) -> usize {
         // SAFETY: the caller's contract
         unsafe {
             Self::enter(p);
             let mut created = managers::next_created_model_name(c_bytes(name));
             created.truncate(CREATED_NAME_CAPACITY - 1);
             let key = c_string(&created);
-            let model = Self::op(p, EeGeManOp::ModelNew, 0, args as isize, key.as_ptr() as isize, 0) as usize;
+            let model =
+                Self::op(p, EeGeManOp::ModelNew, 0, args as *const EeGeModelCreate as isize, key.as_ptr() as isize, 0)
+                    as usize;
             mm(p).models.insert(key[..key.len() - 1].to_vec(), model);
             Self::leave(p);
             model
@@ -247,11 +276,15 @@ impl EeGeModelManager {
     ///
     /// # Safety
     /// `p` is live; `args` is the host's; `parent` a model.
-    pub unsafe fn create_sub_model(p: *mut Self, args: *const c_void, index: c_ulong, parent: usize) -> usize {
+    pub unsafe fn create_sub_model(p: *mut Self, args: &EeGeModelCreate, index: c_ulong, parent: usize) -> usize {
         // SAFETY: the caller's contract
         unsafe {
             Self::enter(p);
-            let model = Self::op(p, EeGeManOp::ModelNewSub, parent, args as isize, index as isize, 0) as usize;
+            let name = Self::op(p, EeGeManOp::ModelName, parent, 0, 0, 0);
+            let model =
+                Self::op(p, EeGeManOp::ModelNewSub, 0, args as *const EeGeModelCreate as isize, name, 0) as usize;
+            Self::op(p, EeGeManOp::ModelSetSub, parent, model as isize, index as isize, 0);
+            Self::op(p, EeGeManOp::BaseDereference, model, 0, 0, 0);
             Self::leave(p);
             model
         }
@@ -265,11 +298,12 @@ impl EeGeModelManager {
         // SAFETY: the caller's contract
         unsafe {
             Self::enter(p);
-            Self::op(p, EeGeManOp::DumpHeader, file, 0, 0, 0);
+            Self::op(p, EeGeManOp::DumpText, file, MODEL_DUMP_HEADER.as_ptr() as isize, 0, 0);
             let mut at: Option<Vec<u8>> = None;
             while let Some((key, model)) = next_after(&mm(p).models, at.as_deref()) {
-                let name = c_string(&key);
-                Self::op(p, EeGeManOp::DumpLine, model, name.as_ptr() as isize, file as isize, 0);
+                let count = Self::op(p, EeGeManOp::RefCount, model, 0, 0, 0) as c_long;
+                let line = dump_line("model", &key, count);
+                Self::op(p, EeGeManOp::DumpText, file, line.as_ptr() as isize, 0, 0);
                 at = Some(key);
             }
             Self::leave(p);
@@ -443,33 +477,49 @@ pub unsafe extern "C" fn ee_ge_modman_free(p: *mut EeGeModelManager) {
     unsafe { EeGeModelManager::destroy(p) }
 }
 
-/// `CreateModel` (`args` the host's counts and flags, `name` the caller's name).
+/// `CreateModel(polygons, vertices, materials, tag points, frames, sub-models, name, flags)`.
 ///
 /// # Safety
 /// `p` is live; `name` is NUL-terminated.
 #[no_mangle]
+#[allow(clippy::too_many_arguments)] // the C++ member's arguments
 pub unsafe extern "C" fn ee_ge_modman_create(
     p: *mut EeGeModelManager,
-    args: *const c_void,
+    polygons: c_ulong,
+    vertices: c_ulong,
+    materials: c_ulong,
+    tag_points: c_ulong,
+    frames: c_ulong,
+    sub_models: c_ulong,
     name: *const c_char,
+    flags: c_ulong,
 ) -> *mut c_void {
+    let args = EeGeModelCreate { counts: [polygons, vertices, materials, tag_points, frames, sub_models], flags };
     // SAFETY: the caller's contract
-    unsafe { EeGeModelManager::create_model(p, args, name) as *mut c_void }
+    unsafe { EeGeModelManager::create_model(p, &args, name) as *mut c_void }
 }
 
-/// `CreateSubModel`.
+/// `CreateSubModel(polygons, vertices, materials, tag points, frames, sub-models, flags, index, parent)`.
 ///
 /// # Safety
-/// `p` is live.
+/// `p` is live; `parent` a model.
 #[no_mangle]
+#[allow(clippy::too_many_arguments)] // the C++ member's arguments
 pub unsafe extern "C" fn ee_ge_modman_create_sub(
     p: *mut EeGeModelManager,
-    args: *const c_void,
+    polygons: c_ulong,
+    vertices: c_ulong,
+    materials: c_ulong,
+    tag_points: c_ulong,
+    frames: c_ulong,
+    sub_models: c_ulong,
+    flags: c_ulong,
     index: c_ulong,
     parent: *mut c_void,
 ) -> *mut c_void {
+    let args = EeGeModelCreate { counts: [polygons, vertices, materials, tag_points, frames, sub_models], flags };
     // SAFETY: the caller's contract
-    unsafe { EeGeModelManager::create_sub_model(p, args, index, parent as usize) as *mut c_void }
+    unsafe { EeGeModelManager::create_sub_model(p, &args, index, parent as usize) as *mut c_void }
 }
 
 /// `DumpAllLoadedMedia(file)`.
