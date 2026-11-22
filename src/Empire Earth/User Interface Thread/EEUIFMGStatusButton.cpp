@@ -87,58 +87,12 @@ static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS
                   EE_SCREENS_SB_IDS_IMPROVEMENT_POWER == IDS_IMPROVEMENT_POWER && EE_SCREENS_SB_IDS_POP_COST == IDS_POP_COST,
               "status_button.rs's constants");
 
-// Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
-// research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
-// (ee_screens status_button.rs)
-void EEUIFMGStatusButton::ButtonUp()
-{
-    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP);
-}
-
-// Releases the button's button object
-void EEUIFMGStatusButton::ReleaseButton()
-{
-    ee_screens_sbt_release((uintptr_t)this);
-}
-
-// Snapshots the button for drawing: whether it is available, its icon and the queued count; the availability of the button: a command button by its own test (mB148), else its technology through the
-// player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
-// mAvailable; VC6 merges the stores)
-long EEUIFMGStatusButton::CopyData()
-{
-    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA);
-}
-
-// Draws the button's icon, dithered over the last drawn rectangle when unavailable (status_button_calls.rs)
-long EEUIFMGStatusButton::DrawPolygons()
-{
-    return (long)ee_screens_sbt_draw_polygons((uintptr_t)this);
-}
-
-// Draws the queued count over the button
-long EEUIFMGStatusButton::DrawTextA()
-{
-    return (long)ee_screens_sbt_draw_text((uintptr_t)this);
-}
-
 // Builds the button's help text: market trade prices, command help (with conversion cost for priests) and
 // hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)
 bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
 {
     EEUIFMGStatusButton* theButton = const_cast<EEUIFMGStatusButton*>(this);
     return static_cast<EEUIFMainGame*>(theButton->GetForm())->ButtonCall(theButton, EE_SCREENS_SB_DO_HELP, &outString) != 0;
-}
-
-// Presses the button from its hot key
-void EEUIFMGStatusButton::HotKeyDown()
-{
-    this->ButtonDown();
-}
-
-// Releases the button from its hot key
-void EEUIFMGStatusButton::HotKeyUp()
-{
-    ee_screens_sbt_hot_key_up((uintptr_t)this);
 }
 
 // Presses a tech button on a right press
@@ -171,24 +125,6 @@ void EEUIManager::Fn26FA6A()
     ee_screens_sbt_main_group_refill(true);   // (status_button_calls.rs)
 }
 
-// Makes the button a command button showing a button object
-void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
-{
-    ee_screens_sbt_set_command((uintptr_t)this, (uint32_t)inButton);
-}
-
-// Makes the button a tech button for a unit's technology, showing the tech's button
-void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID)
-{
-    ee_screens_sbt_set_tech((uintptr_t)this, inTechnology, (uint32_t)inUnitType, (uint32_t)inUnitID);
-}
-
-// Moves the button, its icon and its queue count text
-void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
-{
-    ee_screens_sbt_set_location((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
-}
-
 // Releases a pressed button when tabbing away
 void EEUIFMGStatusButton::TabbedFrom()
 {
@@ -196,12 +132,6 @@ void EEUIFMGStatusButton::TabbedFrom()
         this->HotKeyUp();
     else
         UIButton::TabbedFrom();
-}
-
-// Handles tabbing to the button
-void EEUIFMGStatusButton::TabbedTo()
-{
-    UIButton::TabbedTo();
 }
 
 // Ends the cinematic at its saved end time (sends the end-cinematic message)
@@ -393,3 +323,13 @@ extern "C" float ee_screenscpp_sbt_texture_height(uintptr_t inTexture)
 { return (float)reinterpret_cast<GETexture*>(inTexture)->GetSurface()->GetHeight(); }
 extern "C" void ee_screenscpp_sbt_dither_stretch(uintptr_t inButton, uintptr_t inRectangle, float inWidth, float inHeight, uintptr_t inManager)
 { SBB(inButton)->mDither->ComputeStretchedCoordsAndScale(*reinterpret_cast<const GERectangle*>(inRectangle), *reinterpret_cast<const GERectangle*>(inRectangle), GERectangle(0.0f, 0.0f, inWidth, inHeight), SBM(inManager)->GetScreen()); }
+
+void EEUIFMGStatusButton::ButtonUp()
+{
+    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP);
+}
+
+long EEUIFMGStatusButton::CopyData()
+{
+    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA);
+}

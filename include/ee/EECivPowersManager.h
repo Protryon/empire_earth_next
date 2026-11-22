@@ -6,6 +6,8 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 #include "ee/EECivPowerIDs.h"
+#include "rust/game/screens.h"
+#include "rust/sim/tech.h"
 class FSFile;
 class UWideString;
 
@@ -37,12 +39,21 @@ class EEPlayer;
 // EECivilizationManager.cpp.
 class EECivPowersManager {
 public:
+    // Reads a civilization power's name from the string table
     long GetName(long inID, UWideString& outName);   // 0x2831b3 (gResource->GetString(inID + 0x800c))
-    long Load(FSFile* inFile); // original-backed 0x283124; caller1414a3, FSFile IO proof
-    bool GetPower(long inID, EECivPower& outPower);   // 0x2831d0 (inID - 0x26 indexes the records)
-    bool HasPower(EEPlayer* inPlayer, long inID);   // 0x283248 (whether inPlayer's civilization has power inID; EEPlayer 0x1654be; provisional name)
-    EECivPower* GetPowerRecord(long inID);  // 0x283235 (&record[inID - 0x26]; EEUCProjectile::ActionChanged) (provisional name)
-    unsigned long GetNumPowers();           // (the original's mPowers.size())
+    // Reads the civilization power records (appended)
+    long Load(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 2); } // original-backed 0x283124; caller1414a3, FSFile IO proof
+    bool GetPower(long inID, EECivPower& outPower)
+    {
+        return ee_tech_civ_power((int32_t)inID, reinterpret_cast<EeTechCivPower*>(&outPower));
+    }   // 0x2831d0 (inID - 0x26 indexes the records)
+    // (an upgrade whose attribute applies the power: civbuilder.yaml; the original compared the level with the id)
+    bool HasPower(EEPlayer* inPlayer, long inID) { return ee_screens_civm_has_power((uintptr_t)inPlayer, inID); }   // 0x283248 (whether inPlayer's civilization has power inID; EEPlayer 0x1654be; provisional name)
+    EECivPower* GetPowerRecord(long inID)
+    {
+        return reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)inID));
+    }  // 0x283235 (&record[inID - 0x26]; EEUCProjectile::ActionChanged) (provisional name)
+    unsigned long GetNumPowers() { return ee_tech_civ_power_count(); }           // (the original's mPowers.size())
     EECivPowersManager();
     virtual ~EECivPowersManager();
 };

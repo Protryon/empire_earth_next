@@ -92,7 +92,6 @@ extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
     return (int64_t)theCall.mUnit;
 }
 
-
 // ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
 // EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
 #define SBC(x) (*reinterpret_cast<EEUIFMGStatusBoxCall*>(x))

@@ -55,9 +55,22 @@ public:
     // vtable overrides (slots from 0x44ae90): CreateUserDefinedBackground 0x14 (0x274564), CreateUserDefinedControl
     // 0x18 (0x274647; not declared yet), CreateForm 0x1c (0x274c94), UpdateKeyboard 0x2c (0x2750a9), UpdateMouse
     // 0x30 (0x2751ab)
-    virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable); //274564, actual base slot14
-    virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable); //274647, actual base slot18
-    virtual UIForm* CreateForm(const UIDbDataForms& inData);
+    // Creates the game's framed generic background for a background table entry (flags from its attributes)
+    virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable)
+    {
+        return reinterpret_cast<UIBackground*>(ee_screens_um_create_background((uintptr_t)this, (uintptr_t)&inTable));
+    } //274564, actual base slot14
+    // Creates the game's own controls from the UI database (mini map, status buttons, icon bars, WON lists ...;
+    // ee_screens ui_manager_calls.rs over the shims below)
+    virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable)
+    {
+        return reinterpret_cast<UIControl*>(ee_screens_um_create_control((uintptr_t)this, (uintptr_t)&inTable));
+    } //274647, actual base slot18
+    // Creates the main game form as the game's own class; other forms as the base manager does
+    virtual UIForm* CreateForm(const UIDbDataForms& inData)
+    {
+        return reinterpret_cast<UIForm*>(ee_screens_um_create_form((uintptr_t)this, (uintptr_t)&inData));
+    }
     virtual long UpdateKeyboard();
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation);
     // 0x274d79 / 0x274e2d: a new message box with the cancel / yes-no-cancel buttons (provisional names).
@@ -72,7 +85,8 @@ public:
     {
         EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
     }
-    void CreateScenarioEditor();            // 0x273e7d (creates the editor form at +0x130 once)
+    // Creates the scenario editor form on first use
+    void CreateScenarioEditor() { ee_screens_um_create_editor((uintptr_t)this); }            // 0x273e7d (creates the editor form at +0x130 once)
     // 0x274db5: a new EEUIFError (0x1bc bytes) showing inMessage with one button (0x261788). Parameter names are
     // provisional
     void DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inCallback,
@@ -95,7 +109,8 @@ public:
         EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
     }
     void StartScenarioEditor();             // 0x274e69 (sets +0x13c, starts a local server)
-    void DeleteScenarioEditor();            // 0x274d24 (deletes +0x130 through its vtable; the main screen's Open)
+    // Deletes the scenario editor form
+    void DeleteScenarioEditor() { ee_screens_um_delete_editor((uintptr_t)this); }            // 0x274d24 (deletes +0x130 through its vtable; the main screen's Open)
     // 0x26fa55 / 0x26fa6a: the main group's mL1C = 0 / 1 and its mB25 (EEUIFMGStatusButton::Command's buttons 1 and
     // 0; defined in EEUIFMGStatusButton.cpp's range; provisional names)
     void Fn26FA55();

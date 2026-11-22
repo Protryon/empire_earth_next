@@ -14,6 +14,7 @@
 #include "ee/UReferenceContainer.h"
 #include "rust/sim/tech.h"
 #include <stdio.h>
+#include "rust/game/screens.h"
 
 class EEAreaEffectTemplate;
 class EEComplexUnit;
@@ -28,31 +29,41 @@ class EEAreaEffect : public UReferenceCounter, public EeAreaEffectFields {
 public:
     EEAreaEffect(EEAreaEffectTemplate* inTemplate);   // 0x27bf4b (and each kind's ctor)
     virtual ~EEAreaEffect();
-    void AppliedTo(EEComplexUnit* inUnit);  // +0x04 (the cloaking 0x27aa51: SetCloakableChain(true))
+    void AppliedTo(EEComplexUnit* inUnit) { ee_screens_ae_applied_to((uintptr_t)this, (uintptr_t)inUnit); }  // +0x04 (the cloaking 0x27aa51: SetCloakableChain(true))
     // +0x08 0x27bfcd (the cloaking 0x27aa5f, the healing 0x27ad20): whether the effect covers inUnit, for player
     // inPlayer from inPoint (EEUnitClass 0x631f1e)
-    bool Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint);
-    void ShowOn(EEUnit* inUnit);            // +0x0c 0x27bff1: the template's graphic effect on inUnit
+    bool Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint)
+    {
+        return ee_screens_ae_covers((uintptr_t)this, inPlayer, (uintptr_t)inUnit, inPoint.mX, inPoint.mY);
+    }
+    void ShowOn(EEUnit* inUnit) { ee_screens_ae_show_on((uintptr_t)this, (uintptr_t)inUnit); }            // +0x0c 0x27bff1: the template's graphic effect on inUnit
     void Dump(FILE* inFile);                // +0x10 0x27c014: the out-of-synch dump (4 fprintf)
+    // Returns a sync checksum of the location's float bits, the player and the owning unit id
     long Checksum();                        // +0x14 0x27c073 (EEComplexUnit::GetChecksum sums it)
-    long GetStrength();                     // +0x18: which of two effects of a kind a unit keeps
-    float GetRadius();                      // +0x1c 0x27c0a0: GetScale() * the template's radius
-    bool IsImmunity();                      // +0x20: the two immunities
-    void SetUnit(EEComplexUnit* inUnit);    // +0x24 0x27c0cb (referenced)
+    long GetStrength() { return (long)ee_screens_ae_strength((uintptr_t)this); }                     // +0x18: which of two effects of a kind a unit keeps
+    float GetRadius() { return ee_screens_ae_radius((uintptr_t)this); }                      // +0x1c 0x27c0a0: GetScale() * the template's radius
+    bool IsImmunity() { return ee_area_effect_is_immunity(this); }                      // +0x20: the two immunities
+    void SetUnit(EEComplexUnit* inUnit) { ee_screens_ae_set_unit((uintptr_t)this, (uintptr_t)inUnit); }    // +0x24 0x27c0cb (referenced)
     void LoadMedia(bool inIsOnDemand);      // +0x28 0x27c0dc: mTemplate->Load(inArg)
     // +0x30 (the morale kinds 0x27b2e3 kind 1, the economy 0x27ac2c kind 2, the cloaking 0x27ab3a kind 3): a
     // modifier of inValue for inKind into outValue (+0x2c and +0x34 were false for every kind: no caller)
-    bool Modify(long inKind, long inValue, long& outValue);
-    void RemovedFrom(EEComplexUnit* inUnit);   // +0x38 (the cloaking 0x27ab53)
-    void MarkDirty();                       // +0x3c (the morale from buildings 0x27b956)
+    bool Modify(long inKind, long inValue, long& outValue)
+    {
+        return ee_screens_ae_modify((uintptr_t)this, inKind, (uintptr_t)&inValue, (uintptr_t)&outValue);
+    }
+    void RemovedFrom(EEComplexUnit* inUnit) { ee_screens_ae_removed_from((uintptr_t)this, (uintptr_t)inUnit); }   // +0x38 (the cloaking 0x27ab53)
+    void MarkDirty() { ee_area_effect_mark_dirty(this); }                       // +0x3c (the morale from buildings 0x27b956)
     void UnloadMedia();                     // +0x40 0x27c0eb: mTemplate->Unload()
-    void Recount(long inArg);               // +0x44 (the morale from buildings 0x27b95b; inArg unread)
-    void Tick(EEComplexUnit* inUnit, float inElapsed);   // +0x48 (the healing 0x27ad56)
-    long GetLevel();                        // +0x4c of the morale kinds (0x27b2dc, 0x27b949, 0x27bf22)
+    void Recount(long inArg) { ee_screens_ae_recount((uintptr_t)this, (float)inArg); }               // +0x44 (the morale from buildings 0x27b95b; inArg unread)
+    void Tick(EEComplexUnit* inUnit, float inElapsed)
+    {
+        ee_screens_ae_tick((uintptr_t)this, (uintptr_t)inUnit, inElapsed);
+    }   // +0x48 (the healing 0x27ad56)
+    long GetLevel() { return (long)ee_screens_ae_level((uintptr_t)this); }                        // +0x4c of the morale kinds (0x27b2dc, 0x27b949, 0x27bf22)
 
     // 0x27b480 (EEAEManager::FindEffect): the template's range test of inPoint around mLocation
     bool IsInRange(const GE2DPoint& inPoint);
-    float GetScale();                       // 0x27c0b7: the unit's area-effect scale, 1.0 without a unit
+    float GetScale() { return ee_screens_ae_scale((uintptr_t)this); }                       // 0x27c0b7: the unit's area-effect scale, 1.0 without a unit
 
     // +0x08 (= 0, 0; EEUnitAreaEffectList::MoveAndUpdate assigns it)
     GE2DPoint mLocation;
@@ -66,16 +77,31 @@ public:
 class EEUnitAreaEffectList : public UReferenceContainer<EEAreaEffect*> {
 public:
     // 0x27c6b9: each effect's Modify of inKind, showing each that applied
-    void ApplyModifiers(long inKind, const long& inDamage, long& outDamage, EEComplexUnit* inUnit);
-    void Add(EEAreaEffect* inEffect);       // 0x27c607 (keeps a reference)
+    // Lets every effect modify a value of the given kind, showing each effect that applied
+    void ApplyModifiers(long inKind, const long& inDamage, long& outDamage, EEComplexUnit* inUnit)
+    {
+        ee_screens_ael_apply_modifiers(this, inKind, &inDamage, &outDamage, inUnit);
+    }
+    // Adds an area effect to the unit's list (taking a reference)
+    void Add(EEAreaEffect* inEffect) { UReferenceContainer<EEAreaEffect*>::Add(inEffect); }       // 0x27c607 (keeps a reference)
     // 0x27c623: inEffect, replacing an effect of the same kind (the morale kinds count as one) whose strength is
     // smaller; nothing when the old one's is at least as large
-    void AddAreaEffect(EEAreaEffect* inEffect);
-    void Tick(EEComplexUnit* inUnit, float inElapsed);       // 0x27c7c9: each effect's Tick
-    bool Remove(long inKind);               // 0x27c6f3: the first effect of that kind
-    void KeepStrongest();                   // 0x27c721: the list rebuilt through AddAreaEffect
-    void MarkDirty();                       // 0x27c768: each effect's MarkDirty (EEPSuggestRecomputeAllAreaEffects)
-    void MoveAndUpdate(const GE2DPoint& inPoint, float inValue);  // 0x27c783 (EEComplexUnit::UpdateAreaEffects)
+    // Adds an area effect unless the unit already has a stronger or equal one of the same kind (all morale kinds
+    // count as one), replacing a weaker one
+    void AddAreaEffect(EEAreaEffect* inEffect) { ee_screens_ael_add(this, inEffect); }
+    // Ticks every effect in the list on the unit
+    void Tick(EEComplexUnit* inUnit, float inElapsed) { ee_screens_ael_tick(this, inUnit, inElapsed); }       // 0x27c7c9: each effect's Tick
+    // Removes the first effect of the given kind; returns whether one was found
+    bool Remove(long inKind) { return ee_screens_ael_remove(this, inKind); }               // 0x27c6f3: the first effect of that kind
+    // Rebuilds the list keeping only the strongest effect of each kind
+    void KeepStrongest() { ee_screens_ael_keep_strongest((uintptr_t)this); }                   // 0x27c721: the list rebuilt through AddAreaEffect
+    // Marks every effect in the list for a recount
+    void MarkDirty() { ee_screens_ael_mark_dirty(this); }                       // 0x27c768: each effect's MarkDirty (EEPSuggestRecomputeAllAreaEffects)
+    // Moves every effect in the list to a new location and recounts it
+    void MoveAndUpdate(const GE2DPoint& inPoint, float inValue)
+    {
+        ee_screens_ael_move_and_update(this, inPoint.mX, inPoint.mY, inValue);
+    }  // 0x27c783 (EEComplexUnit::UpdateAreaEffects)
 };
 
 #endif

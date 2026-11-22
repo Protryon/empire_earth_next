@@ -52,14 +52,6 @@ EEUICCommandUnits::~EEUICCommandUnits()
     ee_screens_cu_destroy((uintptr_t)this);
 }
 
-// ComputeAngle, CopyData, DrawPolygons, the drag, the release and StartCommand: ee_screens command_units.rs
-// (EE_SCREENS_CU_DO_*) over the arrow's, the view's, the selection's and the action's ops below
-long EEUICCommandUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)
-{
-    return (long)ee_screens_command_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f,
-                                          inLocation ? inLocation->GetY() : 0.0f);
-}
-
 // The class's own ops (the arrow's draw, the ground point, the pick, the group's centre, the click: the old RustOp)
 // are command_units_ops.rs' over the one-statement shims below (UI lane round 11)
 #define CU(c) static_cast<EEUICCommandUnits*>((EEUIRustControl*)(c))

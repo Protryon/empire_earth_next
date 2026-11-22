@@ -62,23 +62,6 @@ EEUIFMGMainGroup::~EEUIFMGMainGroup()
     delete this->mStatusBox;
 }
 
-// The group's members but ShowCommands (the original's Refresh, SetUnit, GetSelectedUnit, Open, ShowCommandButton,
-// ShowSpecialButtons, Update, WantsRefresh): ee_screens main_group.rs over the host below
-void EEUIFMGMainGroup::Refresh()
-{
-    ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0);
-}
-
-void EEUIFMGMainGroup::Open(EEUIFMainGame* inForm)
-{
-    ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_OPEN, NULL, 0);
-}
-
-bool EEUIFMGMainGroup::WantsRefresh()
-{
-    return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0;
-}
-
 // Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
 // commands, its available techs with hot keys, airport timers); hides them all for others (main_group_calls.rs)
 void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
@@ -94,15 +77,6 @@ EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
 {
     return this->mCitizenBuildQueue[inIndex];
 }
-
-void EEUIFMGMainGroup::Select()
-{
-}
-
-void EEUIFMGMainGroup::Virtual08()
-{
-}
-
 
 // Returns the epoch the tech tree shows to the player (two past the start, at most the end; at least the Bronze
 // Age's): the statistics group's "wonders available in" (inline in the original EEUIFMGGStatistics.h)
@@ -146,19 +120,6 @@ extern "C" int32_t ee_screenscpp_group(void* inGroup, bool inPrint, uint32_t inW
     if (!inIfChanged || theLabel->GetText(0) != theText)
         theLabel->SetText(theText);
     return 0;
-}
-
-// Refreshes the panel group (the statistics group: the conversions against their limit, when the text changed)
-void EEUIFMGGRust::Refresh()
-{
-    ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_REFRESH);
-}
-
-// Selects the panel group (the statistics group: the wonders to win, the epoch wonders become available in, then
-// the conversions)
-void EEUIFMGGRust::Select()
-{
-    ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_SELECT);
 }
 
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,

@@ -5,6 +5,7 @@
 // lle/UIButton.h.
 #ifndef EE_EEUIBUPGRADE_H
 #define EE_EEUIBUPGRADE_H
+#include "rust/game/screens.h"
 
 class EEUnit;
 class UITextLabel;
@@ -14,19 +15,24 @@ class EEUIBUpgrade : public UIButton {
 public:
     EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
                  UIForm* inForm, unsigned long inIndex, bool inScenarioEditor, unsigned long inBorderThickness);
-    virtual long CopyData();
-    virtual long DrawTextA();
+    // Snapshots the button and its cost label for drawing
+    virtual long CopyData() { return (long)ee_screens_upb_copy_data((uintptr_t)this); }
+    // Draws the button text and its cost label
+    virtual long DrawTextA() { return (long)ee_screens_upb_draw_text((uintptr_t)this); }
     virtual bool GetHelpString(UWideString& outString) const;
-    virtual void SetDirty(bool inDirty);
+    // Marks the button and its cost label dirty
+    virtual void SetDirty(bool inDirty) { ee_screens_upb_set_dirty((uintptr_t)this, inDirty); }
     void UpdateCost(const UWideString& inText);
 protected:
-    virtual void ButtonDown();
+    // Presses the button unless the improvement is unavailable, and updates the help text
+    virtual void ButtonDown() { ee_screens_upb_button_down((uintptr_t)this); }
     virtual void ButtonUp();
     // the in-class overrides follow the ctor with the ??_G (0x256943, 0x256949)
     virtual long MouseLButtonDown() { return UIButton::MouseLButtonDown(); }
     virtual long MouseLButtonUp() { return UIButton::MouseLButtonUp(); }
     virtual long MouseMove(const GE2DPoint& inLocation);
-    virtual void MouseOver();
+    // Shows the hover state only when the improvement can be bought
+    virtual void MouseOver() { ee_screens_upb_mouse_over((uintptr_t)this); }
     virtual long MouseRButtonDown();
     virtual long MouseRButtonUp();
 public:

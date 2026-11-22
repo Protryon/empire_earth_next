@@ -39,7 +39,6 @@ static GERectangle sFrameCornerCell(0.0f, 0.0f, 28.0f, 38.0f);     // 0x564548 (
 static GERectangle sCornerCell(49.0f, 0.0f, 56.0f, 7.0f);          // 0x564538 (the small corners)
 static GERectangle sSideCell(30.0f, 0.0f, 48.0f, 20.0f);           // 0x564528 (the side ornaments)
 
-
 // Creates a tinted form background with optional frame pieces (flags: 1 edges, 2 frame corners, 4 sides)
 EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                                                const GETextureDescription& inDescription,
@@ -57,24 +56,10 @@ EEUIBGenericBackground::~EEUIBGenericBackground()
 {
 }
 
-// Draws the tinted background inside the side insets, then the frame pieces its flags ask for, each clipped to the
-// redraw rectangle (the original's DrawCorners, DrawEdges, DrawFrameCorners, DrawSides, DrawEdge and DrawCorner:
-// ee_screens frame.rs over backgrounds_calls.rs' fill and pieces)
-long EEUIBGenericBackground::DrawBackground(const GERectangle& inRectangle)
-{
-    return ee_screens_frame_draw(this, &this->mRectangle, this->mScaleX, this->mScaleY, this->mFrameFlags, &inRectangle);
-}
-
 // Opens the background and scales its frame to the window size against the form's designed size
 void EEUIBGenericBackground::Open()
 {
     ee_screens_gb_open((uintptr_t)this);   // (backgrounds_calls.rs)
-}
-
-// Draws the campaign map background
-long EEUIBMapBackground::DrawBackground(const GERectangle& inRectangle)
-{
-    return UIBFull::DrawBackground(inRectangle);
 }
 
 // Loads the campaign map image (PNG or JPG; the original's were TGA or JPG) and cuts it into 256x256 textures, one

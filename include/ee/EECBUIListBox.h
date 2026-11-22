@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "ee/EECivUpgrade.h"
+#include "rust/game/screens.h"
 
 struct EeScreensCbOut;
 
@@ -25,16 +26,29 @@ public:
     virtual ~EECBUIListBox();
 
     // the overrides (civ_list.rs)
-    virtual void AppendStringArray(std::vector<UWideString>& inLines);
-    virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo);
-    virtual long CopyData();
-    virtual void DeleteLine(unsigned long inLine);
-    virtual long DrawTextA();
+    virtual void AppendStringArray(std::vector<UWideString>& inLines)
+    {
+        ee_screens_cbb_append((uintptr_t)static_cast<UIControl*>(this), (uintptr_t)&inLines);
+    }
+    virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
+    {
+        ee_screens_cbl_change_selection(this, (uint32_t)inIndex, inFireEvent, inScrollTo);
+    }
+    // Snapshots the list for drawing: no highlight on line 0, the header colour and the show-points flag
+    virtual long CopyData() { return (long)ee_screens_cbb_copy_data((uintptr_t)static_cast<UIControl*>(this)); }
+    virtual void DeleteLine(unsigned long inLine) { ee_screens_cbl_delete_line(this, (uint32_t)inLine); }
+    virtual long DrawTextA() { return ee_screens_cbl_draw_text(this); }
     virtual bool GetTabable() const { return this->mIsTabable; }
-    virtual void TabbedTo();
-    virtual void AddLine(const UWideString& inLine);
+    virtual void TabbedTo() { ee_screens_cbl_tabbed_to(this); }
+    virtual void AddLine(const UWideString& inLine)
+    {
+        ee_screens_cbl_add_line(this, reinterpret_cast<const uint8_t*>((const char*)inLine), inLine.GetTCHARLength());
+    }
     // the civilization's own upgrades at their refunds (the predefined civilizations' form's statistics)
-    virtual void SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades);
+    virtual void SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades)
+    {
+        ee_screens_cbl_set_civilization_upgrades(this, inUpgrades.data(), inUpgrades.size());
+    }
     // line 0 selected without an event
     virtual void ResetSelection() { UIListBox<UWideString>::ChangeSelectionIndex(0, false, false); }
 

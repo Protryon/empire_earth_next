@@ -39,9 +39,12 @@ public:
 class EEUIFMGGRust : public EEUIFMGGroup {
 public:
     EEUIFMGGRust(EEUIFMainGame* inOwner, unsigned long inKind) : EEUIFMGGroup(inOwner), mKind(inKind) {}
-    virtual void Refresh();                 // +0x04
+    // Refreshes the panel group (the statistics group: the conversions against their limit, when the text changed)
+    virtual void Refresh() { ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_REFRESH); }                 // +0x04
     virtual void Virtual08() {}             // +0x08 (empty)
-    virtual void Select();                  // +0x0c
+    // Selects the panel group (the statistics group: the wonders to win, the epoch wonders become available in, then
+    // the conversions)
+    virtual void Select() { ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_SELECT); }                  // +0x0c
 
     unsigned long mKind;                    // the group's index in the main game form's mGroups
 };
@@ -52,18 +55,23 @@ class EEUIFMGMainGroup : public EEUIFMGGroup, public EeScreensMainGroupFields {
 public:
     EEUIFMGMainGroup(EEUIFMainGame* inOwner);   // 0x267ec8 (the main game form's CreateGroup(0))
     virtual ~EEUIFMGMainGroup();            // +0x00 (??_G 0x267f1c)
-    virtual void Refresh();                 // +0x04 0x267f61
-    virtual void Virtual08();               // +0x08 (empty)
-    virtual void Select();                  // +0x0c (empty)
+    // The group's members but ShowCommands (the original's Refresh, SetUnit, GetSelectedUnit, Open, ShowCommandButton,
+    // ShowSpecialButtons, Update, WantsRefresh): ee_screens main_group.rs over the host below
+    virtual void Refresh() { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0); }                 // +0x04 0x267f61
+    virtual void Virtual08() {  }               // +0x08 (empty)
+    virtual void Select() {  }                  // +0x0c (empty)
     virtual void Reset() { this->mReset = true; }  // +0x10 0x267f17 (inline provisional name)
-    virtual bool WantsRefresh();            // +0x14 0x26915e
+    virtual bool WantsRefresh()
+    {
+        return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0;
+    }            // +0x14 0x26915e
     // 0x268162: the first selected unit with a +0x3c value, else the first selected unit, else the local player's
     // +0x9d4 (does not read `this`)
     EEUnit* GetSelectedUnit()
     {
         return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0));
     }
-    void Open(EEUIFMainGame* inForm);       // 0x2681c2 (the main game form's Open; provisional name)
+    void Open(EEUIFMainGame* inForm) { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_OPEN, NULL, 0); }       // 0x2681c2 (the main game form's Open; provisional name)
     void ShowCommands(EEUnit* inUnit);      // 0x268806 (EEMSavedGroupSelect; provisional name)
     // (SetUnit 0x268070, ShowCommandButton 0x2682ea, ShowSpecialButtons 0x268dee, Update 0x268f3f: Rust's whole,
     // ee_screens main_group.rs)

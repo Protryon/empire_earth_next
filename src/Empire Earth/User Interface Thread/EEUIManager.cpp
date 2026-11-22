@@ -54,7 +54,6 @@
 #include "ee/EEUIManagerEvents.h"
 #include "ee/EEControlEventID.h"
 
-
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
 extern bool& gLoadingSavedGame;
 extern unsigned long& gTexturePixelDepth;
@@ -136,41 +135,10 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID));
 }
 
-// Creates the scenario editor form on first use
-void EEUIManager::CreateScenarioEditor()
-{
-    ee_screens_um_create_editor((uintptr_t)this);
-}
-
-// Creates the game's framed generic background for a background table entry (flags from its attributes)
-UIBackground* EEUIManager::CreateUserDefinedBackground(const UIBackgroundTable& inTable)
-{
-    return reinterpret_cast<UIBackground*>(ee_screens_um_create_background((uintptr_t)this, (uintptr_t)&inTable));
-}
-
-// Creates the game's own controls from the UI database (mini map, status buttons, icon bars, WON lists ...;
-// ee_screens ui_manager_calls.rs over the shims below)
-UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
-{
-    return reinterpret_cast<UIControl*>(ee_screens_um_create_control((uintptr_t)this, (uintptr_t)&inTable));
-}
-
-// Creates the main game form as the game's own class; other forms as the base manager does
-UIForm* EEUIManager::CreateForm(const UIDbDataForms& inData)
-{
-    return reinterpret_cast<UIForm*>(ee_screens_um_create_form((uintptr_t)this, (uintptr_t)&inData));
-}
-
 // Creates the WON server select form's cancel event; NULL for other ids
 UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 {
     return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
-}
-
-// Deletes the scenario editor form
-void EEUIManager::DeleteScenarioEditor()
-{
-    ee_screens_um_delete_editor((uintptr_t)this);
 }
 
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading

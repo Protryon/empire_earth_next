@@ -45,11 +45,6 @@ extern unsigned long& gTexturePixelDepth;
 
 // (EEMSendFlare's inline ctor: ee/EEMessage.h)
 
-
-
-
-
-
 static GEBitmap* sMapBitmap;                // 0x565328 the terrain texture
 static GEBitmap* sWorldBitmap;              // 0x56532c the units' texture (twice the scale)
 static GEBitmap* sFlareBitmap;              // 0x565330 "textures\Flare"
@@ -86,29 +81,11 @@ long EEUIMiniMap::CopyData()
     return (long)ee_screens_mm_copy_data((uintptr_t)this);   // (mini_map_calls.rs)
 }
 
-// Creates the terrain, units and flare bitmaps and loads the flare texture
-void EEUIMiniMap::LoadMedia()
-{
-    ee_screens_mm_load_media();
-}
-
-// Releases the terrain, units and flare bitmaps
-void EEUIMiniMap::UnloadMedia()
-{
-    ee_screens_mm_unload_media();
-}
-
 // Draws the terrain, the units, the flare and the camera outline clipped to the map: ee_screens mini_map.rs' plan,
 // executed in its order (the result is the last bitmap's or line's draw)
 long EEUIMiniMap::DrawPolygons()
 {
     return (long)ee_screens_mm_draw_polygons((uintptr_t)this);   // (mini_map_calls.rs)
-}
-
-// On a right press, posts a mini map action (mode 1) at the clicked map point, clamped to the map
-long EEUIMiniMap::MouseRButtonDown()
-{
-    return (long)ee_screens_mm_mouse_r_down((uintptr_t)this);
 }
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
@@ -118,20 +95,6 @@ long EEUIMiniMap::MouseLButtonDown()
 {
     this->CaptureMouse();
     return 0;
-}
-
-// On a left release: in flare mode sends a flare at the clicked tile and leaves flare mode, otherwise centres
-// the camera there (ee_screens mini_map.rs)
-long EEUIMiniMap::MouseLButtonUp()
-{
-    return (long)ee_screens_mini_map_mouse_l_up(this);
-}
-
-// Keeps centring the camera while the left button drags over the mini map (not in flare mode) (ee_screens
-// mini_map.rs)
-long EEUIMiniMap::MouseMove(const GE2DPoint& inLocation)
-{
-    return (long)ee_screens_mini_map_mouse_move(this);
 }
 
 // The Rust's calls on the control, the mouse and the world (EE_SCREENS_MM_OP_*, EEUIRustControl's host the
@@ -145,18 +108,6 @@ int64_t EEUIMiniMap::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
     case EE_SCREENS_MM_OP_POINTER: return gMouse->mPointer;
     }
     return 0;
-}
-
-// Centres the camera on the map point under the mouse, clamped to the map
-void EEUIMiniMap::CenterCamera()
-{
-    ee_screens_mm_center_camera((uintptr_t)this);
-}
-
-// Moves the mini map control and its map origin
-void EEUIMiniMap::SetLocation(const GE2DPoint& inLocation)
-{
-    ee_screens_mm_set_location((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
 }
 
 // Points the mini map bitmaps at a new map's terrain and units textures and recomputes the map bounds (the numbers:

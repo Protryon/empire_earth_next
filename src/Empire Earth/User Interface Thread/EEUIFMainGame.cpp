@@ -164,26 +164,6 @@ EEUIFMGUnitHack::~EEUIFMGUnitHack()
     ee_screens_unit_hack_free(this->mRecord);
 }
 
-void EEUIFMGUnitHack::PlaceUnit(const GE2DPoint& inTile)
-{
-    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_PLACE_UNIT, inTile.GetX(), inTile.GetY());
-}
-
-void EEUIFMGUnitHack::FillComboBox()
-{
-    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_FILL_COMBO_BOX, 0.0f, 0.0f);
-}
-
-void EEUIFMGUnitHack::LoadUnitData()
-{
-    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_LOAD_UNIT_DATA, 0.0f, 0.0f);
-}
-
-void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
-{
-    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_UPDATE, inLocation.GetX(), inLocation.GetY());
-}
-
 // (EEUIFMGFormCall, one call of the form's work in Rust: ee/EEUIFMainGame.h)
 static_assert(offsetof(EEUIFMGFormCall, mForm) == 0, "main_form_ffi.rs reads the form as the record's first word");
 static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
@@ -192,13 +172,6 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
                   offsetof(EEUIFMGFormCall, mButton) == 15 * sizeof(void*) + 3 * sizeof(UWideString) &&
                   offsetof(EEUIFMGFormCall, mOut) == 16 * sizeof(void*) + 3 * sizeof(UWideString),
               "hud_direct.rs FormCallHead: the held text, the chat line's name and text, the button, the help");
-
-
-// Runs the keyboard mode of the current interface state (the cinematic's keys), else the form's keys
-long EEUIFMainGame::UpdateKeyboard()
-{
-    return (long)this->Rust(EE_SCREENS_MF_DO_KEYBOARD, this->mKeyboardModes[this->mUIState]);
-}
 
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
 // the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
@@ -213,13 +186,6 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
 
 // Destroys the main game form, its actions, panel groups, poll and unit hack
 EEUIFMainGame::~EEUIFMainGame() { ee_screens_mfb_destroy((uintptr_t)this); }
-
-// Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
-void EEUIFMainGame::Activate()
-{
-    this->Rust(EE_SCREENS_MF_DO_ACTIVATE);
-}
-
 
 // Shows a chat message in the next free chat line (scrolling the lines up when full), wrapping the rest of a
 // long message onto further lines (ee_screens main_form.rs)
@@ -236,20 +202,6 @@ void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& i
 
 // (BuildGate and BuildWall: the placements call the build action, ee/EEARust.h)
 
-
-// Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
-// background media
-void EEUIFMainGame::Close()
-{
-    this->Rust(EE_SCREENS_MF_DO_CLOSE);
-}
-
-// Deactivates the form: frees and resets the mouse and leaves any interface mode
-void EEUIFMainGame::Deactivate()
-{
-    this->Rust(EE_SCREENS_MF_DO_DEACTIVATE);
-}
-
 // Snapshots the form for drawing: selection state, error log, status refresh each poll, the panel group, edge
 // scrolling and the gate or wall preview of the current mode (ee_screens main_form.rs)
 long EEUIFMainGame::CopyData()
@@ -257,9 +209,6 @@ long EEUIFMainGame::CopyData()
     EEUIFMGFormCall theCall(this);
     return (long)ee_screens_main_form_copy_data(&theCall);
 }
-
-// Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
-void EEUIFMainGame::CreateGroup(unsigned long inIndex) { ee_screens_mfb_create_group((uintptr_t)this, (uint32_t)inIndex); }
 
 // Shows a chat message when the form has its chat lines
 void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
@@ -278,12 +227,6 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
     ee_screens_main_form_show_information(&theCall);
 }
 
-// Draws the form's fixed background panels (the unit panels only with a selection)
-long EEUIFMainGame::DrawPolygons()
-{
-    return (long)this->Rust(EE_SCREENS_MF_DO_DRAW);
-}
-
 // Switches the bottom panel to another entity group and selects its panel group (ee_screens main_form.rs)
 void EEUIFMainGame::SetEntityGroup(long inGroup)
 {
@@ -291,30 +234,10 @@ void EEUIFMainGame::SetEntityGroup(long inGroup)
     ee_screens_main_form_entity_group(&theCall, inGroup);
 }
 
-
-
-// Tells whether a screen point is in the game view and not under the unit information panel
-bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
-{
-    return ee_screens_mfb_in_game_view((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
-}
-
-// Stores an error log line for the next snapshot
-// Opens the form: sound latency and volume, centred mouse, empty error log, the cancel-mode event, the
-// backgrounds and the civilization builder button's blinking
-void EEUIFMainGame::Open()
-{
-    this->Rust(EE_SCREENS_MF_DO_OPEN);
-}
-
-
-
 // (BuildUnit and the start modes StartGate, StartWall, StartCalamity, StartFlare, StartPatrol: inline in
 // ee/EEUIFMainGame.h)
 
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
-
-
 
 #include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"
@@ -435,8 +358,6 @@ void EEUIFMainGame::UpdateCursorKind()
     gMouse->mPointer = ee_screens_cursor_kind(&theRead);
 }
 
-
-
 // the wall's and the gate's members from mState / mUnitClass on as mouse_modes.rs' records
 static_assert(offsetof(EEUIBuildWall, mPlayer) - offsetof(EEUIBuildWall, mState) == offsetof(EeScreensBuildWallFields, player) &&
                   offsetof(EEUIBuildWall, mEnd) - offsetof(EEUIBuildWall, mState) == offsetof(EeScreensBuildWallFields, end) &&
@@ -463,14 +384,6 @@ void EEUIBuildGate::Update(const GE2DPoint& inLocation)
     ee_screens_gate_update(&theCall, reinterpret_cast<EeScreensBuildGateFields*>(&this->mUnitClass), inLocation.GetX(),
                            inLocation.GetY());
 }
-
-// Runs the mouse: the unit hack, the form's controls, then the current interface mode's mouse (ee_screens
-// mouse_modes.rs update_mouse); returns the last UpdateMouse result (the modes answer 0)
-long EEUIFMainGame::UpdateMouse()
-{
-    return (long)this->Rust(EE_SCREENS_MF_DO_MOUSE);
-}
-
 
 // ---- the shims of the moved cases (UI lane round 7: ee_game screens main_form_calls.rs, game_cpp.rs), each one
 // C++ statement on the host's call record or the world

@@ -4,6 +4,7 @@
 // form's combo box 98 and sends EEMHackANewUnit (place a unit) / EEMLoadUnitData (reload a class).
 #ifndef EE_EEUIFMGUNITHACK_H
 #define EE_EEUIFMGUNITHACK_H
+#include "rust/game/screens.h"
 
 class EEUIFMainGame;
 class GE2DPoint;
@@ -15,10 +16,22 @@ class EEUIFMGUnitHack {
 public:
     EEUIFMGUnitHack(EEUIFMainGame* inForm);     // 0x2628e5 (the sorted class names)
     ~EEUIFMGUnitHack();
-    void PlaceUnit(const GE2DPoint& inTile);    // 0x262aa5 (EEMHackANewUnit for the selected player)
-    void FillComboBox();
-    void LoadUnitData();                        // 0x262cdc (EEMLoadUnitData for the selected class)
-    void Update(const GE2DPoint& inLocation);   // 0x262d66 (the left mouse button over the game view)
+    void PlaceUnit(const GE2DPoint& inTile)
+    {
+        ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_PLACE_UNIT, inTile.GetX(), inTile.GetY());
+    }    // 0x262aa5 (EEMHackANewUnit for the selected player)
+    void FillComboBox()
+    {
+        ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_FILL_COMBO_BOX, 0.0f, 0.0f);
+    }
+    void LoadUnitData()
+    {
+        ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_LOAD_UNIT_DATA, 0.0f, 0.0f);
+    }                        // 0x262cdc (EEMLoadUnitData for the selected class)
+    void Update(const GE2DPoint& inLocation)
+    {
+        ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_UPDATE, inLocation.GetX(), inLocation.GetY());
+    }   // 0x262d66 (the left mouse button over the game view)
     void Fn157269(const GE2DPoint& inTile) {}   // (ICF-folded into 0x157269: an empty body; provisional name)
 
     EEUIFMainGame* mForm;                       // +0x20

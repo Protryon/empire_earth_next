@@ -21,18 +21,6 @@
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType);  // 0x211957: highlights them
 
-// Asks the main game form's build action to build a gate at a location facing a direction
-void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
-{
-    gUIManager->GetMainGameForm()->mBuild->BuildGate(inLocation, inDirection);
-}
-
-// Leaves the placement mode (back to the normal interface state)
-void EEUIBuildGate::Cancel()
-{
-    gUIManager->GetMainGameForm()->SetUIState(0);
-}
-
 // Restores the player's wall colours and removes the gate ghost
 void EEUIBuildGate::ClearGhostUnits()
 {
@@ -60,4 +48,14 @@ void EEUIBuildGate::Terminate()
     this->ClearGhostUnits();
     gUIManager->GetMainGameForm()->mIsCursorLocked = false;
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
+}
+
+void EEUIBuildGate::Cancel()
+{
+    gUIManager->GetMainGameForm()->SetUIState(0);
+}
+
+void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
+{
+    gUIManager->GetMainGameForm()->mBuild->BuildGate(inLocation, inDirection);
 }

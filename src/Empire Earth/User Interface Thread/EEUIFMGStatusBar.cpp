@@ -36,33 +36,6 @@ EEUIFMGStatusBar::~EEUIFMGStatusBar()
     ee_screens_sba_destroy((uintptr_t)this);
 }
 
-// Snapshots the button and its parts for drawing; shows the number of queued improvements
-long EEUIFMGStatusBar::CopyData()
-{
-    return (long)ee_screens_sba_copy_data((uintptr_t)this);
-}
-
-// Draws the button face (when enabled), the icon, the bar and the labels
-long EEUIFMGStatusBar::DrawPolygons()
-{
-    return (long)ee_screens_sba_draw_polygons((uintptr_t)this);
-}
-
-// Draws the parts' texts, the second label when it has text, and the queued count
-long EEUIFMGStatusBar::DrawTextA()
-{
-    return (long)ee_screens_sba_draw_text((uintptr_t)this);
-}
-
-// The presses and the drag: inside an enabled button the icon nudged down-right as pressed (left and right presses),
-// back on the release, following the mouse while captured; then the button's own (ee_screens upgrade.rs bar_mouse over
-// the improvement button's host)
-long EEUIFMGStatusBar::MouseLButtonDown() { return this->BarMouse(EE_SCREENS_UP_BAR_L_DOWN, NULL); }
-long EEUIFMGStatusBar::MouseLButtonUp() { return this->BarMouse(EE_SCREENS_UP_BAR_L_UP, NULL); }
-long EEUIFMGStatusBar::MouseMove(const GE2DPoint& inLocation) { return this->BarMouse(EE_SCREENS_UP_BAR_MOVE, &inLocation); }
-long EEUIFMGStatusBar::MouseRButtonDown() { return this->BarMouse(EE_SCREENS_UP_BAR_R_DOWN, NULL); }
-long EEUIFMGStatusBar::MouseRButtonUp() { return this->BarMouse(EE_SCREENS_UP_BAR_R_UP, NULL); }
-
 // ---- the one-statement shims of ee_screens status_bar_calls.rs (UI lane round 8: the constructor's layout, the
 // destructor, CopyData, DrawPolygons, DrawTextA): each one call, no logic
 #include "ee/EEScreensShims.h"

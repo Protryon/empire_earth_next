@@ -189,12 +189,6 @@ extern "C" uintptr_t ee_screenscpp_ae_media_get(int32_t inId) { return (uintptr_
 // world calls the simulation asks are area_effect_host.rs' over the shims above
 EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }
 EEAreaEffect::~EEAreaEffect() { ee_screens_ae_destroy((uintptr_t)this); }
-void EEAreaEffect::AppliedTo(EEComplexUnit* inUnit) { ee_screens_ae_applied_to((uintptr_t)this, (uintptr_t)inUnit); }
-bool EEAreaEffect::Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint)
-{
-    return ee_screens_ae_covers((uintptr_t)this, inPlayer, (uintptr_t)inUnit, inPoint.mX, inPoint.mY);
-}
-void EEAreaEffect::ShowOn(EEUnit* inUnit) { ee_screens_ae_show_on((uintptr_t)this, (uintptr_t)inUnit); }
 
 // Writes the effect's location, owning unit and player to the out-of-synch dump
 void EEAreaEffect::Dump(FILE* inFile)
@@ -205,46 +199,20 @@ void EEAreaEffect::Dump(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Player Number %ld\n", this->mPlayer);
 }
 
-// Returns a sync checksum of the location's float bits, the player and the owning unit id
-long EEAreaEffect::Checksum()
-{
-    return ee_area_effect_checksum(this, this->mLocation.mX, this->mLocation.mY,
-                                   this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);
-}
-
-long EEAreaEffect::GetStrength() { return (long)ee_screens_ae_strength((uintptr_t)this); }
-long EEAreaEffect::GetLevel() { return (long)ee_screens_ae_level((uintptr_t)this); }
-float EEAreaEffect::GetRadius() { return ee_screens_ae_radius((uintptr_t)this); }
-bool EEAreaEffect::IsImmunity() { return ee_area_effect_is_immunity(this); }
-float EEAreaEffect::GetScale() { return ee_screens_ae_scale((uintptr_t)this); }
-void EEAreaEffect::SetUnit(EEComplexUnit* inUnit) { ee_screens_ae_set_unit((uintptr_t)this, (uintptr_t)inUnit); }
-void EEAreaEffect::LoadMedia(bool inIsOnDemand) { this->mTemplate->Load(inIsOnDemand); }
-bool EEAreaEffect::Modify(long inKind, long inValue, long& outValue)
-{
-    return ee_screens_ae_modify((uintptr_t)this, inKind, (uintptr_t)&inValue, (uintptr_t)&outValue);
-}
-void EEAreaEffect::RemovedFrom(EEComplexUnit* inUnit) { ee_screens_ae_removed_from((uintptr_t)this, (uintptr_t)inUnit); }
-void EEAreaEffect::MarkDirty() { ee_area_effect_mark_dirty(this); }
-void EEAreaEffect::UnloadMedia() { this->mTemplate->Unload(); }
-void EEAreaEffect::Recount(long inArg) { ee_screens_ae_recount((uintptr_t)this, (float)inArg); }
-void EEAreaEffect::Tick(EEComplexUnit* inUnit, float inElapsed)
-{
-    ee_screens_ae_tick((uintptr_t)this, (uintptr_t)inUnit, inElapsed);
-}
-
 EEAreaEffectTemplate::EEAreaEffectTemplate() { ee_screens_aet_construct((uintptr_t)this); }
 EEAreaEffectTemplate::~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }
-bool EEAreaEffectTemplate::AffectsPlayer(long inPlayer, long inOther)
+
+long EEAreaEffect::Checksum()
 {
-    return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, false);
+    return ee_area_effect_checksum(this, this->mLocation.mX, this->mLocation.mY, this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);
 }
-bool EEAreaEffectTemplate::AffectsPlayerReversed(long inPlayer, long inOther)
+
+void EEAreaEffect::LoadMedia(bool inIsOnDemand)
 {
-    return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, true);
+    this->mTemplate->Load(inIsOnDemand);
 }
-bool EEAreaEffectTemplate::IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale,
-                                    EEComplexUnit* inUnit)
+
+void EEAreaEffect::UnloadMedia()
 {
-    return ee_screens_aet_is_within((uintptr_t)this, inCenter.mX, inCenter.mY, inPoint.mX, inPoint.mY, inScale, (uintptr_t)inUnit);
+    this->mTemplate->Unload();
 }
-bool EEAreaEffectTemplate::Init(const EEAreaEffectData& inData) { return ee_screens_aet_init((uintptr_t)this, (uintptr_t)&inData); }

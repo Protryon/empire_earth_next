@@ -73,14 +73,28 @@ public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
     EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);
     virtual ~EEUIFMainGame();
-    virtual void Activate();                // +0x04 0x2648d4
-    virtual void Deactivate();              // +0x14 0x264d40
-    virtual long UpdateKeyboard();          // +0x2c 0x271290 (EEUIFMGStatusButton.cpp's range)
-    virtual long UpdateMouse();             // +0x30 0x2712b8 (likewise)
-    virtual void Close();                   // +0x38 0x264cf1
+    // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
+    virtual void Activate() { this->Rust(EE_SCREENS_MF_DO_ACTIVATE); }                // +0x04 0x2648d4
+    // Deactivates the form: frees and resets the mouse and leaves any interface mode
+    virtual void Deactivate() { this->Rust(EE_SCREENS_MF_DO_DEACTIVATE); }              // +0x14 0x264d40
+    // Runs the keyboard mode of the current interface state (the cinematic's keys), else the form's keys
+    virtual long UpdateKeyboard()
+    {
+        return (long)this->Rust(EE_SCREENS_MF_DO_KEYBOARD, this->mKeyboardModes[this->mUIState]);
+    }          // +0x2c 0x271290 (EEUIFMGStatusButton.cpp's range)
+    // Runs the mouse: the unit hack, the form's controls, then the current interface mode's mouse (ee_screens
+    // mouse_modes.rs update_mouse); returns the last UpdateMouse result (the modes answer 0)
+    virtual long UpdateMouse() { return (long)this->Rust(EE_SCREENS_MF_DO_MOUSE); }             // +0x30 0x2712b8 (likewise)
+    // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
+    // background media
+    virtual void Close() { this->Rust(EE_SCREENS_MF_DO_CLOSE); }                   // +0x38 0x264cf1
     virtual long CopyData();                // +0x3c 0x264dc4
-    virtual long DrawPolygons();            // +0x40 0x26550c
-    virtual void Open();                    // +0x48 0x266038
+    // Draws the form's fixed background panels (the unit panels only with a selection)
+    virtual long DrawPolygons() { return (long)this->Rust(EE_SCREENS_MF_DO_DRAW); }            // +0x40 0x26550c
+    // Stores an error log line for the next snapshot
+    // Opens the form: sound latency and volume, centred mouse, empty error log, the cancel-mode event, the
+    // backgrounds and the civilization builder button's blinking
+    virtual void Open() { this->Rust(EE_SCREENS_MF_DO_OPEN); }                    // +0x48 0x266038
 
     // the saved game's main-form state (EEPWorldHelper's Load 0x14c39b / Save 0x14c525 call them; provisional
     // names)
@@ -118,11 +132,16 @@ public:
     // the rest in address order (provisional names)
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
-    void CreateGroup(unsigned long inIndex);
+    // Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
+    void CreateGroup(unsigned long inIndex) { ee_screens_mfb_create_group((uintptr_t)this, (uint32_t)inIndex); }
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                      unsigned long inFlags, unsigned long inArg5);
     void SetEntityGroup(long inGroup);
-    bool IsInGameView(const GE2DPoint& inLocation);     // 0x265a06 (in the view, outside background 0x64)
+    // Tells whether a screen point is in the game view and not under the unit information panel
+    bool IsInGameView(const GE2DPoint& inLocation)
+    {
+        return ee_screens_mfb_in_game_view((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
+    }     // 0x265a06 (in the view, outside background 0x64)
     void SetErrorString(const UWideString& inText, unsigned long inIndex)   // 0x265ff6 (mStrings, mStringsChanged)
     {
         this->mErrorCriticalSection->Enter();

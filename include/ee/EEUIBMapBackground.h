@@ -16,7 +16,8 @@ public:
         : UIBFull(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm,
                   inDrawPriority, inColumns, inRows, inVisible) {}
     virtual ~EEUIBMapBackground() {}
-    virtual long DrawBackground(const GERectangle& inRectangle);   // 0x2556d9 (slot 0x14)
+    // Draws the campaign map background
+    virtual long DrawBackground(const GERectangle& inRectangle) { return UIBFull::DrawBackground(inRectangle); }   // 0x2556d9 (slot 0x14)
     virtual long LoadBackground();                                 // 0x2556e6 (slot 0x10)
 };
 
