@@ -300,7 +300,10 @@ pub fn play_sound(sound: P, volume: f32, pan: f32, pitch: f32) -> c_long {
 
 /// `ReadNewMusic`: "Data\Music\New Music.txt" (a score name and four reverb values) as a music record into `out`;
 /// the result of the first failing file call, else 0.
-pub fn read_new_music(out: *mut u8) -> c_long {
+///
+/// # Safety
+/// `out` has room for a music record.
+pub unsafe fn read_new_music(out: *mut u8) -> c_long {
     let directory = h(O::SpecNew, 0, &[]) as P;
     h(O::SpecSetStartupVolume, directory, &[]);
     h(O::SpecSetMusicDirectory, directory, &[]);
@@ -448,7 +451,8 @@ pub unsafe extern "C" fn ee_preload_play_sound(sound: *mut c_void, volume: f32, 
 /// `out` has room for a music record.
 #[no_mangle]
 pub unsafe extern "C" fn ee_preload_read_new_music(out: *mut u8) -> c_long {
-    read_new_music(out)
+    // SAFETY: the caller's guarantee
+    unsafe { read_new_music(out) }
 }
 
 /// # Safety
