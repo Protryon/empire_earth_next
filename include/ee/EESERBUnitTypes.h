@@ -5,25 +5,13 @@
 #ifndef EE_EESERBUNITTYPES_H
 #define EE_EESERBUNITTYPES_H
 
-class UIButton;
-
 // 0x5318cc: the world's player count the editor's player tab sets (EESEAChangeWorldPlayerCount; provisional name)
 extern unsigned long& gMaxPlayers;
 
-// RTTI EESEAChangeWorldPlayerCount > EEAction; vtable 0x44310c (??_G EEAction's 0x1e1b69, +0x08 the shared empty
-// slot); sizeof 0x10. Built inline by EESEPlayerScreen::SetPlayerCount 0x173653 and posted to the UI thread.
-class EESEAChangeWorldPlayerCount : public EEAction {
-public:
-    EESEAChangeWorldPlayerCount(unsigned long inCount) : mCount(inCount) {}
-    virtual void Virtual4();                // +0x04 0x1737a3
-    virtual void Virtual8() {}              // +0x08 (0x1720c6)
+// (EESEAChangeWorldPlayerCount, RTTI > EEAction, vtable 0x44310c, Virtual4 0x1737a3: gMaxPlayers set to its count,
+// is the EESEARust kind EE_SCREENS_SEW_PLAYER_COUNT, ee_screens editor_whole.rs)
 
-    unsigned long mCount;                   // +0x0c
-};
-
-// The diplomacy buttons' bitmaps and help text for the state inState (0 allies, 1 enemies), then the form's help text
-// when inHelp (EESERBUnitTypes.cpp; the buttons a kind over the button shell, ee_game shells_editor.rs)
-void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp);
+// (EESEDiplomacyShow, the diplomacy buttons' bitmaps and help text: EESERBUnitTypes.cpp, registered with the shells)
 
 // (EESEEChangeStartEpoch, the start epoch combo box's event, is an EESEERust: ee/EESEARust.h, editor_events.rs)
 

@@ -128,9 +128,13 @@ std::vector<unsigned long> sSeobUnits;   // EE_SCREENS_SEOB_OP_SELECT_OBJECT_UNI
 
 }   // namespace
 
-// the screen's own ops (editor_trigx.rs composes the sequences and the ops on a scenario object)
-extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i, float* f)
+
+// the screen's single statements (editor_trigx.rs EE_SCREENS_SEOBX_*, 200..: p0 and p1 the objects, p2 the out
+// word of a made or found one, i and f the numbers, a text p1's i0 bytes)
+extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
+    void** theOut = static_cast<void**>(p[2]);
+    EESMObject* o = static_cast<EESMObject*>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEOB_OP_UNIT_SET_COUNT: return (int32_t)gUnitSetManager.GetSize();
     case EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN:
@@ -148,17 +152,6 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEOB_OP_START_SELECTION:
         static_cast<EESEUICTriggerSelectUnits*>(p[0])->StartSelection(GE2DPoint(f[0], f[1]));
         return 0;
-    }
-    return 0;
-}
-
-// the screen's single statements (editor_trigx.rs EE_SCREENS_SEOBX_*, 200..: p0 and p1 the objects, p2 the out
-// word of a made or found one, i and f the numbers, a text p1's i0 bytes)
-extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i, float* f)
-{
-    void** theOut = static_cast<void**>(p[2]);
-    EESMObject* o = static_cast<EESMObject*>(p[0]);
-    switch (inOp) {
     case EE_SCREENS_SEOBX_NEW_CLICK:
         *theOut = new EESETSAMouseClick;
         return 0;

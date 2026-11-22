@@ -2,7 +2,7 @@
 // text export/import actions: 0x16ff5f..0x1705a2 (EESEIAExport::Virtual4, the export question's answer, EESEIAExport's
 // ??_G, EESEIEExport::ProcessEvent, EESEIAImport::Virtual4). After EESEEvents.cpp (0x16f892..0x16ff5f), before
 // EESEInstructions.cpp (0x1705a2). Unit flags: the exe module set. The bodies are Rust's (ee_game screens
-// editor_selt.rs; their statements are EESELoadThread.cpp's ee_screenscpp_seltx).
+// editor_selt.rs; their statements are EESELoadThread.cpp's ee_screenscpp_seltx); only the answers' callbacks stay.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -36,38 +36,15 @@
 #include "ee/EEARust.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EESEIAExport.h"
 #include "rust/game/screens.h"
-unsigned long gSETextVersion = 1;           // 0x4c2cb8 (.data = 1; ee/EESEIAExport.h)
-
-void EESEIAExport::Virtual4()
-{
-    ee_screens_seia_run(this, false);
-}
-
-// the export question's yes (and the export of a new file): the export action posted, the spec freed
+// the questions' answers (the callbacks DisplayQuestion takes): the export of the spec, the import of the info
+// (ee_screens editor_selt.rs; the actions and the buttons' events are EESEARust and EESEERust kinds since round 6)
 void EESEExportTextAnswer(UIForm* inFile)
 {
     ee_screens_seia_answer(inFile, false);
 }
 
-long EESEIEExport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return ee_screens_seia_event(inForm, false);
-}
-
-void EESEIAImport::Virtual4()
-{
-    ee_screens_seia_run(this, true);
-}
-
-// the import question's yes: the import action posted, the info freed
 void EESEImportTextAnswer(UIForm* inInfo)
 {
     ee_screens_seia_answer(inInfo, true);
-}
-
-long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return ee_screens_seia_event(inForm, true);
 }

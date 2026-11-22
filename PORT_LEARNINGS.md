@@ -38650,3 +38650,92 @@ On the tree merged with origin/rust 5143a9696:
   PT 12337, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2819/2820).
 - Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it links FSFile through the calls table,
   which gained five entries), `gates.sh --legacy`.
+
+## The scenario editor lane, round 6: the world channel's routing and the effect run's contexts in Rust, the small editor hosts folded into their statement hosts, the upgrade panel, the text export/import and the trigger screens' control records whole in Rust (ee_sim scenario world_route.rs, cpp_consts_tests.rs; ee_game editor_*; branch rust-seditor6, 2026-11-22)
+
+The brief: finish the lane (about 1,440 logic lines left in `.cpp` and headers; target -1,300), whole classes over
+one-statement shims. Three forks in sibling worktrees (sm: the Scenario Manager; act: the actions, the terrain and
+unit tabs; ed: the form, the trigger screens and the small tabs), each with its files and op numbers given up front,
+one lock for heavy jobs. All three hit the session's usage limit mid-round and were resumed. **Logic lines -560**
+(`logic_lines.py`: 60,511 at e6776575d -> 59,951 at the forks' merge b955f85b0, before origin/rust), net C++ lines
+-828 (+873 / -1,701), Rust +1,224. The lane's own C++ went from about 1,440 logic lines to about 877: **the target was
+not reached**; what is left is mostly class shells other lanes use (see "Left" in docs/progress/scenario-editor.md).
+
+### What moved (commits)
+
+| Commit | What | Logic | Net C++ |
+|---|---|---|---|
+| b83c8e0bd (sm) | the world channel's routing in Rust (`world_route.rs`: the op range picks the C++ handler), the effect run's and Create Units' contexts made by Rust | -63 | -83 |
+| a8f8b37fc (sm) | one float/pack helper, the hosts' typed contexts, the round methods and capture records called from Rust, the trigger entries as Rust records; `ee/EESMTEffectWrapper.h`, `ee/EESMTConditionWrapper.h` deleted; the C++-constant checks as `scenario/cpp_consts_tests.rs` | -145 | -276 |
+| 5e213eff9, 812050030 (sm) | rustfmt; declarations a header already makes and gInCinematic's alias gone (dead declarations) | -3 | -4 |
+| 480da074b (act) | the terrain, unit and action hosts folded into their statement hosts (seun -> seunx, setn -> setnx, sea/sew/sep/seu -> seax at bases 4200/4400/4600/4800); the terrain lists' change events and EESEAChangeWorldPlayerCount as Rust kinds; rectangles, texture coordinates, stretches and tints computed in Rust over the bitmaps' Rust objects; the terrain name order a Rust comparator under the same `std::sort` | -213 | -180 |
+| de478930d (ed) | the trigger screens' control records as Rust's tables alone: `ee/EESETSEffectControls.h`, `ee/EESETSConditionControls.h` deleted | -54 | -98 |
+| cfd730867 (ed) | EEUIFSEUpgradePanel whole in Rust (`ee/EEUIFSEUpgradePanel.h` deleted; `ee_screens_seup_new/_show/_free`) | -24 | -55 |
+| 78fec7367 (ed) | the load thread's Post40B and Post40C composed in Rust | -6 | -8 |
+| 4c819d3e2 (ed) | the trigger text export/import (EESEIAExport, EESEIAImport, EESEIEExport, EESEIEImport) as Rust action kinds; `ee/EESEIAExport.h` deleted | -20 | -91 |
+| 7e618fcf0, ee5acbf33 (ed) | the trigger screens' small hosts folded into their statement hosts; the edge scroll's edges, the hide-UI views and the slider format in Rust; the editor gate's expected names | -32 | -33 |
+
+### Lessons
+
+- **Two hosts with the same signature and disjoint numbers fold for free; overlapping ones fold at an offset base.**
+  act merged four action hosts into `ee_screenscpp_seax` with `case BASE + OP:` labels and the Rust adapter adding
+  the base; each host's frame (its prelude, `switch`, `return 0;`) went.
+- **A Rust function over a GE object's Rust handle replaces a multi-line C++ call.** Texture coordinates, stretches
+  and colours per vertex took several C++ lines of argument building; with the GEBitmap's or GEText's Rust object
+  (`GetRust()`) the Rust does the whole call.
+- **cbindgen must not declare a C++ callback whose C++ definition takes a typed context.** sm's callbacks take their
+  real context types in C++; cbindgen's `void*` declaration in the generated header clashed. They are in
+  `rust/cbindgen.toml`'s `exclude` (15 of them) and the C++ declares them.
+- **A trigger family routed by number range constrains a fork's op numbers.** `editor_trigx_ffi.rs` sends 600 and up
+  to seinx, so ed's new SETSX and SEARX ops had to stay below (480, 580..586) instead of the given 5000 range. Check
+  an adapter's routing before handing out ranges.
+- **The editor gate prints event classes by typeid.** Moving an event to an `EESEERust` kind changes its expected
+  line (`e3=EESEERust`, `e8=EESEERust`); both forks updated `tools/sim_editor/expected.txt` and the merge took the
+  union.
+- **A regex union of conflict blocks must anchor at line starts.** The origin/rust merge's PORT_LEARNINGS conflict was
+  first resolved with a pattern that also matched a quoted `<<<<<<< ours` inside another lane's text and ate two of
+  its lines; the file was rebuilt from origin/rust's copy plus this lane's round 5 section. Check the result with
+  `git diff origin/rust -- PORT_LEARNINGS.md` (only `+` lines).
+- **The counter's remaining lines are mostly declarations.** After round 6 the lane's logic lines are class
+  declarations and members (EEScenarioManager, EEUIFScenarioEditor, the terrain list boxes, the brush group, the
+  wall/gate classes on UI-lane bases), forward declarations other units need and multi-line constructions; moving
+  them is whole-class work across lanes, not more composition.
+
+### What exercises what
+
+- The oracle and every capture profile run the world channel's routing, the effect run and Create Units; the scenario
+  capture profile and scenario_check run the round methods, the capture records and the trigger entries.
+- The editor gate drives the folded hosts, the upgrade panel, the trigger screens and the text actions' creation
+  through EE-SIM; the editor tour draws the editor's first frame.
+- Only a person reaches: the terrain lists' drawing (swatches, previews, the selection frame), the preview's tint and
+  stretch, the type list's destructor at the editor's close, the unit and diplomacy buttons' cells, the merged
+  action hosts under real paints, lasso and placement, the text export/import dialogs, the load thread's posts.
+
+### Behaviour changes
+
+None observed. The terrain name order is the same comparison under the same sort.
+
+### Gates
+
+On the tree merged with origin/rust b6f7d06bd (batch 16; 29f416c60). The same set passed on the tree merged with
+5143a9696 (batch 15) before batch 16 landed (Rust gate 5,793 tests; ai-game PT 13204, units [4, 41, 40]; lan-game
+PT 2967/2968).
+
+- `build.py --sim`: 0 unresolved, 0 duplicates (EE-AOC 412 inputs, EE-SIM 413); `--test-profile windowed-software`
+  0/0.
+- `rust_build.py gate`: PASS, 6,048 tests; 309 headers current.
+- `eedata.py check` and `cppgate`: PASS.
+- `sim_oracle.py`: seeds 2-7 identical to ref (6,087 / 5,300 / 6,072 / 7,649 / 7,842 / 6,540 lines).
+- `sim_capture.py` at seeds 2-3, 12 profiles: PASS (scenario 43, oracle 212, late 214, space 210, calamity 222, units
+  175, effects 6, missile 22, app 26, transport 185, groups 2, placement 4 digests).
+- saveload plain (seeds 2-7 at 600, 1350, 2100 s) PASS; the matrix `--expect` PASS.
+- `scenario_check`: 27/27. `sim_editor`: PASS (14,448 lines), `--civbuilder` PASS (4,062 lines).
+- The editor tour (`fixture_game.py --exercise editor`): RESULT PASS. The base exe (round 5's tip, build/s6/base-test)
+  stops at the campaign step the newer tour has ("the campaign named: the fixture says 'rejected'"), so the frames
+  were compared up to there: the main menu differs only in the build-number label (162 pixels); the editors menu,
+  the closed editor and the campaign editor are pixel identical; the editor frame differs only in the game view and
+  the mini map (the blank map's grass varies by run; the tab panel is identical); the UI state files are equal but
+  for clocks and the comm turn count (31 vs 42: it follows the wall time the editor takes to load).
+- `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12722, game_s 795, units [4, 39, 40],
+  alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2871, joiner 2877).
+- Not run: the POSIX builds, `gates.sh --legacy`.

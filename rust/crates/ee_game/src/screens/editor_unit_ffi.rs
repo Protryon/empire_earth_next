@@ -12,7 +12,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_seun(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_seunx(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -56,12 +55,15 @@ impl SeplHost for Host {
                 crate::screens::editor_world::host(op, i, f, |i, f| {
                     // the statement sequences composed in Rust (editor_seunx.rs) over the C++'s single statements
                     let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+                        if let Some(r) = crate::screens::editor_seunx::ge_op(op, p, f) {
+                            return r;
+                        }
                         let p = p.map(|v| v as *mut c_void);
                         sys::ee_screenscpp_seunx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
                     };
                     let q = p.map(|v| v as usize);
                     crate::screens::editor_seunx::compose(&mut x, &mut sew, op, q, i, f)
-                        .unwrap_or_else(|| sys::ee_screenscpp_seun(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()))
+                        .unwrap_or_else(|| sys::ee_screenscpp_seunx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()))
                 })
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {

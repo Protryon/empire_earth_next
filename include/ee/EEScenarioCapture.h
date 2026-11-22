@@ -34,33 +34,12 @@
 //         after (checksum, hit points, resource, flight time, garrison, ammunition, scale, reload, power, rotting,
 //         flags, variables, command and goal queues) or the player's upgrade after, and the pending effects
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test. The records are built in Rust (ee_sim scenario
-// sm_capture.rs; the elements' records are called from Rust, ee_scenario entry.rs). The hooks the game's C++ calls are pointers that EEScenarioCapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY unit (PORT_LEARNINGS
-// "Cycle cuts").
+// sm_capture.rs; the elements' records are called from Rust, ee_scenario entry.rs; the C++ hosts call the Rust
+// records directly, sm_capture_game.rs and entry.rs's ee_scenario_en_cap_* with the save version).
 #ifndef EE_EESCENARIOCAPTURE_H
 #define EE_EESCENARIOCAPTURE_H
 
 #include "ee/EESimCapture.h"
 #include "rust/sim/scenario.h"   // the records' states before (ee_sim scenario sm_capture.rs)
-
-class EESMCondition;
-class EESMTrigger;
-class EESMObject;
-class EESMArea;
-class EESMEffect;
-class EEScenarioManager;
-class EEUnit;
-class EEPlayer;
-class EEUnitClassUpgrade;
-class UWideString;
-
-// the physics random stream's seed (0 without physics)
-inline unsigned int (*EESMCaptureSeed)() = nullptr;
-inline void (*EESMCapturePlayers)(long inType, bool inSingle, long inResult, const void* inPlayers,
-                                  unsigned int inSeed) = nullptr;
-// SMCU: kind 0 EEChangeUnit (inArgs: attribute, percent, unit id, minimum, maximum, random, mode), kind 1
-// EEModifyUnitAttribute (attribute, percent, player id, unit type, amount, mode, 0)
-inline void (*EESMCaptureUnitChange)(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
-                                     EEUnitClassUpgrade* inUpgrade, unsigned int inSeed) = nullptr;
-inline void (*EESMCaptureUpdate)(EEScenarioManager* inManager, bool inHumanPlaying) = nullptr;
 
 #endif

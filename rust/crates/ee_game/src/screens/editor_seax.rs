@@ -282,6 +282,13 @@ pub const EE_SCREENS_SEAX_TYPE_GRANARY: i32 = 0x34;
 pub const EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED: i32 = 0x2ba;
 pub const EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT: i32 = 0x167;
 
+// ---- the merged hosts (round 6): the paint actions' (sea), the whole actions' (sew), the placements' (sep) and the
+// selection's (seu) ops are `ee_screenscpp_seax`'s, at these bases (`editor_seax_ffi::host`)
+pub const EE_SCREENS_SEAX_SEA: u32 = 4200;
+pub const EE_SCREENS_SEAX_SEW: u32 = 4400;
+pub const EE_SCREENS_SEAX_SEP: u32 = 4600;
+pub const EE_SCREENS_SEAX_SEU: u32 = 4800;
+
 /// One statement's arguments: two objects, a transformation (sixteen floats, row by row), integers and floats (in
 /// and out).
 #[derive(Clone, Debug, PartialEq)]

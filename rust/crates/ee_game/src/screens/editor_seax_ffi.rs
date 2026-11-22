@@ -20,6 +20,15 @@ mod sys {
     }
 }
 
+/// An op of the C++'s merged hosts in `ee_screenscpp_seax` (`EE_SCREENS_SEAX_SEA` + an `EE_SCREENS_SEA_*` op, `_SEW` +
+/// `EE_SCREENS_SEW_OP_*`, `_SEP` + `EE_SCREENS_SEP_*`, `_SEU` + `EE_SCREENS_SEU_*`).
+///
+/// # Safety
+/// The operands are what the op reads and writes.
+pub(crate) unsafe fn host(op: u32, p: *mut c_void, q: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> isize {
+    unsafe { sys::ee_screenscpp_seax(op, p, q, t, i, f) }
+}
+
 /// The C++ statements.
 pub(crate) struct Seax;
 

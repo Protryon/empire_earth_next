@@ -281,6 +281,9 @@ pub const EE_SCREENS_SETSX_SET_DISPLAY: u32 = 428;
 pub const EE_SCREENS_SETSX_SET_GAME_VIEW: u32 = 429;
 pub const EE_SCREENS_SETSX_GAME_VIEW_RECT: u32 = 430;
 pub const EE_SCREENS_SETSX_HIDE_UI_VIEWS: u32 = 431;
+/// The hide-UI box p0's checked event's Rust event (`EESEERust::mEvent`; found): `HIDE_UI_VIEWS` (answered by the
+/// adapter since round 6) sets its views through it.
+pub const EE_SCREENS_SETSX_CHECKED_EVENT: u32 = 480;
 pub const EE_SCREENS_SETSX_SET_CHECKED: u32 = 432;
 pub const EE_SCREENS_SETSX_GROUP_ENABLE: u32 = 433;
 /// `gB529066 = false`, `gCameraFollowing = false`, `gB529068 = false`; `gMiniMap != NULL`, its `RefreshView()`;
@@ -340,11 +343,19 @@ pub const EE_SCREENS_SEARX_LBUTTON_UNPRESSED: u32 = 522;
 /// the view less one; the bounds and edges of the window; the action p0's area (into i); its `Dereference()`.
 pub const EE_SCREENS_SEARX_NEW_PAINT: u32 = 523;
 pub const EE_SCREENS_SEARX_BOUNDS_VIEW: u32 = 524;
-pub const EE_SCREENS_SEARX_EDGES_VIEW: u32 = 525;
 pub const EE_SCREENS_SEARX_BOUNDS_WINDOW: u32 = 526;
-pub const EE_SCREENS_SEARX_EDGES_WINDOW: u32 = 527;
 pub const EE_SCREENS_SEARX_PAINT_AREA: u32 = 528;
 pub const EE_SCREENS_SEARX_PAINT_RELEASE: u32 = 529;
+/// The view rectangle's sides (`gViewport.GetViewRectangle()`'s left, top, right, bottom) and the game window's
+/// width and height (as floats) into f0; the edge scroll's edges `= GERectangle(f0, f1, f2, f3)` (round 6: the
+/// edges' arithmetic, the view or the window less one, is Rust's).
+pub const EE_SCREENS_SEARX_VIEW_LEFT: u32 = 580;
+pub const EE_SCREENS_SEARX_VIEW_TOP: u32 = 581;
+pub const EE_SCREENS_SEARX_VIEW_RIGHT: u32 = 582;
+pub const EE_SCREENS_SEARX_VIEW_BOTTOM: u32 = 583;
+pub const EE_SCREENS_SEARX_WINDOW_WIDTH: u32 = 584;
+pub const EE_SCREENS_SEARX_WINDOW_HEIGHT: u32 = 585;
+pub const EE_SCREENS_SEARX_SET_EDGES: u32 = 586;
 
 // ---------------------------------------------------------------- the statements: ee_screenscpp_seinx (600..)
 /// Directory k (i0: 0 scenarios, 1 sounds, 2 movies; kept): `SetVolume(gStartupVolume)`, `SetDirectory(
@@ -482,6 +493,13 @@ const SETS_SHOW_ALPHA_SORT: i32 = 14;
 fn st(x: &mut Trgx, op: u32, p: [usize; 3], a: [i32; 4]) -> i32 {
     let mut a = a;
     x(op, p, &mut a, &mut [0.0; 4])
+}
+
+/// A statement's float answer (f0).
+fn fl(x: &mut Trgx, op: u32) -> f32 {
+    let mut f = [0.0f32; 4];
+    x(op, [0; 3], &mut [0; 4], &mut f);
+    f[0]
 }
 
 /// A statement over floats.
@@ -789,7 +807,8 @@ pub fn seet(x: &mut Trgx, condition: bool, op: u32, p: [usize; 3], i: &mut [i32;
                 }
                 EE_SCREENS_SEET_EV_SLIDER_FORMAT => {
                     let label = at(x, EE_SCREENS_SEET_A_LABEL, k);
-                    find_f(x, EE_SCREENS_SEETX_EV_SLIDER_FORMAT, label, 0, [i[2], 0, 0, 0], *f)
+                    let format: &[u8] = if i[2] != 0 { b"%#2.1f\0" } else { b"%2.0f\0" };
+                    find_f(x, EE_SCREENS_SEETX_EV_SLIDER_FORMAT, label, format.as_ptr() as usize, [i[2], 0, 0, 0], *f)
                 }
                 EE_SCREENS_SEET_EV_USE_OBJECT_AREA => {
                     let label = at(x, EE_SCREENS_SEET_A_LABEL, k);
@@ -1624,12 +1643,22 @@ pub fn sear(x: &mut Trgx, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32
             // SAFETY: p0 is the out word (the op's contract)
             unsafe { *(p[0] as *mut usize) = action };
             st(x, EE_SCREENS_SEARX_BOUNDS_VIEW, [0; 3], [0; 4]);
-            st(x, EE_SCREENS_SEARX_EDGES_VIEW, [0; 3], [0; 4]);
+            // the edge scroll's edges: the view less one
+            let view = [
+                fl(x, EE_SCREENS_SEARX_VIEW_LEFT),
+                fl(x, EE_SCREENS_SEARX_VIEW_TOP),
+                fl(x, EE_SCREENS_SEARX_VIEW_RIGHT) - 1.0,
+                fl(x, EE_SCREENS_SEARX_VIEW_BOTTOM) - 1.0,
+            ];
+            stf(x, EE_SCREENS_SEARX_SET_EDGES, [0; 3], [0; 4], view);
             0
         }
         EE_SCREENS_SEAR_OP_PAINT_END => {
             st(x, EE_SCREENS_SEARX_BOUNDS_WINDOW, [0; 3], [0; 4]);
-            st(x, EE_SCREENS_SEARX_EDGES_WINDOW, [0; 3], [0; 4]);
+            // the edges of the window less one
+            let right = fl(x, EE_SCREENS_SEARX_WINDOW_WIDTH) - 1.0;
+            let bottom = fl(x, EE_SCREENS_SEARX_WINDOW_HEIGHT) - 1.0;
+            stf(x, EE_SCREENS_SEARX_SET_EDGES, [0; 3], [0; 4], [0.0, 0.0, right, bottom]);
             let mut a = [0; 4];
             x(EE_SCREENS_SEARX_PAINT_AREA, [p[0], 0, 0], &mut a, &mut [0.0; 4]);
             *f = [a[0] as f32, a[1] as f32, a[2] as f32, a[3] as f32];

@@ -8,18 +8,17 @@
 #ifndef EE_EEUIFSETERRAIN_H
 #define EE_EEUIFSETERRAIN_H
 
-struct EeScreensSeGroup;
+#include "rust/game/screens.h"   // ee_screens_setlb_call
 
 // the terrain tab's statements (editor_setnx.rs: the list boxes' draws and copies are composed in Rust)
 extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i, float* f);
 
 // one line of the terrain type list (0x1c bytes: UIListBox<EESEUITTData>, the dtor's 0x1c stride)
 struct EESEUITTData {
-    // user ctor (vector::resize(n)'s `_Ty()` 0x1ade81 zeroes +0x18 then +0x14)
-    EESEUITTData() { this->mColorSet = 0; this->mTexture = NULL; }
+    // (the user ctor, vector::resize(n)'s `_Ty()` 0x1ade81, zeroes +0x18 then +0x14: the initializers)
     UWideString mName;                      // +0x00
-    GETexture* mTexture;                    // +0x14 (referenced; the dtor dereferences it)
-    long mColorSet;                         // +0x18 the colour list's line for this terrain
+    GETexture* mTexture = NULL;             // +0x14 (referenced; the dtor dereferences it)
+    long mColorSet = 0;                     // +0x18 the colour list's line for this terrain
 };
 
 // the terrain colour list (RTTI EESEUITerrainColorLB > UIListBox<vector<GEColor> >; vtable 0x445b24, sizeof 0x134)
@@ -52,18 +51,9 @@ public:
         this->mCopyText = new GEText(inFont);
         this->mIsSelectionFramed = false;
     }
-    // inline (COMDAT 0x1ac40d; ??_G 0x1ac3f1)
-    virtual ~EESEUITerrainTypeLB()
-    {
-        // the copied lines (the original 0x1ac40d walks +0xb0, mCopyLineArray)
-        for (unsigned long i = 0; i < this->mCopyLineArray.size(); i++) {
-            if (this->mCopyLineArray[i].mTexture != NULL)
-                this->mCopyLineArray[i].mTexture->Dereference();
-        }
-        this->mBitmap->Dereference();
-        delete this->mText;
-        delete this->mCopyText;
-    }
+    // inline (COMDAT 0x1ac40d; ??_G 0x1ac3f1): the copied lines' textures released, the bitmap, the texts
+    // (editor_setnx.rs type_free)
+    virtual ~EESEUITerrainTypeLB() { ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_FREE, this); }
     virtual long CopyData();                // +0x14 0x1aacf2
     virtual long DrawPolygons();            // +0x18 0x1aade1 (each line's texture)
     virtual long DrawTextA();               // +0x1c 0x1ab1a2 (the names)
@@ -75,26 +65,8 @@ public:
     bool mIsSelectionFramed;                // +0x140 (CopyData: the copied selection is drawn)
 };
 
-// the colour list's selection event (RTTI EEUIETerrainColorChange > UIEvent; vtable 0x445b10; ??_G 0x1ac55b)
-class EEUIETerrainColorChange : public UIEvent {
-public:
-    EEUIETerrainColorChange(EeScreensSeGroup* inTerrain) : mTerrain(inTerrain) {}
-    virtual ~EEUIETerrainColorChange() {}   // user-declared (??_G 0x1ac55b stores this vtable first)
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1ab4bc
-
-    EeScreensSeGroup* mTerrain;             // the tab's group (editor_terrain.rs reads the preview through it)
-};
-
-// the type list's selection event (RTTI EEUIETerrainTypeChange > UIEvent; vtable 0x445be4, sizeof 0x10; ??_G 0x1ac586)
-class EEUIETerrainTypeChange : public UIEvent {
-public:
-    EEUIETerrainTypeChange(EeScreensSeGroup* inTerrain) : mTerrain(inTerrain) {}
-    virtual ~EEUIETerrainTypeChange() {}    // user-declared (??_G 0x1ac586 stores this vtable first)
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1ab6d7
-
-    EeScreensSeGroup* mTerrain;             // +0x0c (the tab's group)
-};
-
+// (the colour and type lists' selection events, RTTI EEUIETerrainColorChange and EEUIETerrainTypeChange, are
+// EESEERust kinds: ee/EESEARust.h, ee_screens editor_events.rs)
 
 // whole in Rust (ee_screens editor_terrain.rs): the class holds its object (the in-editor terrains and colour types,
 // the controls ids 0xc8 .. 0xcf and 205, the selected terrain)
