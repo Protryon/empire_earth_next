@@ -890,6 +890,72 @@ pub enum EeWonGuiOp {
     SegSetLineBreak,
     /// `AddSegment(Seg(a))`.
     AddSegmentOf,
+    /// the host's text (a component op's local GUIString) into the take sink `a`.
+    HostTextSink = 800,
+    /// `sHostText = GUIString()` (the local's end).
+    HostTextClear,
+    /// `sHostText = UnitsText(a, b)`.
+    HostTextUnits,
+    /// `Seg(a)->mFont->GetStringWidth(Seg(a)->mText)`.
+    SegFontStringWidth,
+    /// `Seg(a)->mFont->GetHeight()`.
+    SegFontHeight,
+    /// `Seg(a)->mFont->GetAscent()`.
+    SegFontAscent,
+    /// the draw operation `b` on the Graphics `a` with the segment `c`'s font and text in the slots.
+    TextDrawSeg,
+    /// `mInputFilter != NULL` (0 or 1).
+    InputHasFilter = 820,
+    /// `mInputFilter(this, sHostText)` (0 or 1).
+    InputFilterHostText,
+    /// `IsDisabled()` (0 or 1).
+    InputDisabled,
+    /// `mUseDisabledColors` (0 or 1).
+    InputUseDisabledColors,
+    /// `mIcon.get() != NULL` (0 or 1).
+    InputHasIcon,
+    /// `HasFocus()` (0 or 1).
+    InputHasFocus,
+    /// `(int)mTextColor`.
+    InputTextColor,
+    /// `mDisabledTextColor`.
+    InputDisabledTextColor,
+    /// `mIcon->GetHeight()`.
+    InputIconHeight,
+    /// `*(EeWonSelColor*)a = WONDrawSelOf(mSelColor)`.
+    InputSelColor,
+    /// the draw operation `b` on the Graphics `a` with the icon, the font and the text in the slots.
+    InputDrawSlots,
+    /// `mBackground.Paint(g, 0, 0, o.c, o.d, o.e, 0)` (`a` the Graphics, `b` the draw operation).
+    InputPaintBack,
+    /// `mDisabledBackground.Paint(g, 0, 0, o.c, o.d, o.e, 0)`.
+    InputPaintDisabledBack,
+    /// the draw operation `b` on the Graphics `a` with the wrapped text in the slots (the label).
+    LabelDrawWrapped = 840,
+    /// `new Component` (unheld).
+    NewComponent = 850,
+    /// `((Container*)a)->Fn2F6140(b, 3, a, 0, 0, 0, 0, 0)` (the splitter's drag handle laid over its container).
+    ChildLayoutDrag,
+    /// `((Container*)a)->AddChildEx(b, 0)`.
+    ChildAddEx,
+    /// `Comp(a)->mParent`.
+    ParentOf,
+    /// `dynamic_cast<MultiListHeader*>((Container*)a)`.
+    AsHeader,
+    /// `((MultiListHeader*)a)->DrawSortArrow()` (0 or 1).
+    HeaderDrawsArrow,
+    /// `((MultiListHeader*)a)->GetSortType(((MultiListHeader*)a)->GetColumnIndex(Comp(b)))`.
+    HeaderSortTypeOf,
+    /// `mItemToolTip.get() != NULL` (0 or 1).
+    TipExists = 860,
+    /// `mItemToolTip->EndTip()`.
+    TipEndCall,
+    /// `new ScrollAreaViewport(this)` (unheld).
+    NewViewport,
+    /// `GetViewport()->AddChild((ScrollAreaViewport*)a)`.
+    ViewportAddChild,
+    /// `new TreeItem` (unheld).
+    NewTreeItemRaw,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).
