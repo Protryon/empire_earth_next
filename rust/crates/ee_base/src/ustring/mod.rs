@@ -31,7 +31,7 @@ mod wide;
 
 pub use fileio::*;
 pub use record::*;
-use std::ffi::{c_char, c_ulong};
+use std::ffi::{c_char, c_ulong, c_void};
 pub use wide::*;
 
 /// `strncmp(a, b, n) == 0` over strings whose bytes past their slices read as the terminator.
@@ -221,9 +221,58 @@ pub unsafe extern "C" fn ee_ustring_tokenize(
     }
 }
 
+/// Receives `ee_ustring_tokens`' calls (`UString::PushToken`): first with `s` NULL (clear the vector), then once
+/// per token with the string and the token's first and last bytes.
+pub type EeUStringPushToken = unsafe extern "C" fn(tokens: *mut c_void, s: *const EeUString, first: u32, last: u32);
+
+/// `UString::Tokenize` (`brackets` NULL) and `NestedTokenize`: `push(tokens, NULL)` to clear the C++ vector, then
+/// `push` with each token's (first, last) bytes in order; always true.
+///
+/// # Safety
+/// As [`ee_ustring_tokenize`]; `push` takes `tokens`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ustring_tokens(
+    s: *const EeUString,
+    separators: *const EeUString,
+    brackets: *const EeUString,
+    tokens: *mut c_void,
+    push: EeUStringPushToken,
+) -> bool {
+    let mut pairs = vec![0u32; 2 * ((*s).length as usize + 1)];
+    let count = ee_ustring_tokenize(s, separators, brackets, pairs.as_mut_ptr());
+    push(tokens, std::ptr::null(), 0, 0);
+    for pair in pairs.chunks(2).take(count as usize) {
+        push(tokens, s, pair[0], pair[1]);
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    unsafe extern "C" fn record_push(tokens: *mut c_void, s: *const EeUString, first: u32, last: u32) {
+        let tokens = &mut *(tokens as *mut Vec<(u32, u32)>);
+        if s.is_null() {
+            tokens.clear();
+        } else {
+            tokens.push((first, last));
+        }
+    }
+
+    #[test]
+    fn tokens_clear_then_push_each_pair() {
+        unsafe {
+            let (mut s, mut sep) = (std::mem::zeroed::<EeUString>(), std::mem::zeroed::<EeUString>());
+            ee_ustring_init_text(&mut s, c" ab  c ".as_ptr());
+            ee_ustring_init_text(&mut sep, c" ".as_ptr());
+            let mut tokens: Vec<(u32, u32)> = vec![(9, 9)];
+            assert!(ee_ustring_tokens(&s, &sep, std::ptr::null(), (&mut tokens as *mut Vec<(u32, u32)>).cast(), record_push));
+            assert_eq!(tokens, vec![(1, 2), (5, 5)]);
+            ee_ustring_free(&mut s);
+            ee_ustring_free(&mut sep);
+        }
+    }
 
     #[test]
     fn find_and_find_backwards() {

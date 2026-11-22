@@ -17,6 +17,10 @@ struct EeUString {
   unsigned long capacity;
 };
 
+/// Receives `ee_ustring_tokens`' calls (`UString::PushToken`): first with `s` NULL (clear the vector), then once
+/// per token with the string and the token's first and last bytes.
+using EeUStringPushToken = void(*)(void *tokens, const EeUString *s, uint32_t first, uint32_t last);
+
 /// A `UWideString`'s state, held by value in the C++ class (after its vtable pointer).
 struct EeUWideString {
   /// The buffer (`mString`): `capacity` bytes, at least 1.
@@ -28,6 +32,13 @@ struct EeUWideString {
   /// The bytes allocated (`mCapacity`).
   unsigned long capacity;
 };
+
+/// Receives `ee_uwstring_tokens`' calls (`UWideString::PushToken`): first with `s` NULL (clear the vector), then
+/// once per token with the string and the token's first and last characters.
+using EeUWideStringPushToken = void(*)(void *tokens,
+                                       const EeUWideString *s,
+                                       uint32_t first,
+                                       uint32_t last);
 
 extern "C" {
 
@@ -51,6 +62,17 @@ uint32_t ee_ustring_tokenize(const EeUString *s,
                              const EeUString *separators,
                              const EeUString *brackets,
                              uint32_t *out);
+
+/// `UString::Tokenize` (`brackets` NULL) and `NestedTokenize`: `push(tokens, NULL)` to clear the C++ vector, then
+/// `push` with each token's (first, last) bytes in order; always true.
+///
+/// # Safety
+/// As [`ee_ustring_tokenize`]; `push` takes `tokens`.
+bool ee_ustring_tokens(const EeUString *s,
+                       const EeUString *separators,
+                       const EeUString *brackets,
+                       void *tokens,
+                       EeUStringPushToken push);
 
 /// `UString::Load(FSFile&)` on the C++ file `file`.
 ///
@@ -493,6 +515,16 @@ char *ee_uwstring_format_buffer(EeUWideString *s,
 void ee_uwstring_format_end(EeUWideString *s,
                             char *buffer,
                             unsigned long size);
+
+/// `UWideString::Tokenize`: `push(tokens, NULL)` to clear the C++ vector, then `push` with each token's (first,
+/// last) characters in order; always true.
+///
+/// # Safety
+/// As [`ee_uwstring_tokenize`]; `push` takes `tokens`.
+bool ee_uwstring_tokens(const EeUWideString *s,
+                        const EeUWideString *separators,
+                        void *tokens,
+                        EeUWideStringPushToken push);
 
 }  // extern "C"
 
