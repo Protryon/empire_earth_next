@@ -837,10 +837,19 @@ impl PlayerHost for FnHost {
             return v;
         }
         let (player, f) = (self.player, self.f);
-        // SAFETY (both): the C++ callback's contract
-        let mut call = |op: i32, io: &mut EeUnitsPlayerIo| unsafe { f(player, op, io) };
-        // the compound operations as the C++'s one-statement ones (player_split.rs)
+        // the compound operations' statements: the views' answers first, then the C++ (SAFETY: as above, and the
+        // C++ callback's contract)
+        let mut call = |op: i32, io: &mut EeUnitsPlayerIo| match unsafe {
+            crate::units::player_views::answer(player as u64, op, io)
+        } {
+            Some(v) => v,
+            None => unsafe { f(player, op, io) },
+        };
+        // the compound operations as the C++'s one-statement ones (player_split.rs, player_split_more.rs)
         if let Some(v) = crate::units::player_split::split(op, io, &mut call) {
+            return v;
+        }
+        if let Some(v) = crate::units::player_split_more::split(op, io, &mut call) {
             return v;
         }
         call(op, io)

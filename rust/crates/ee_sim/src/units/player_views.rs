@@ -5,15 +5,29 @@
 //! answer every operation themselves, so the bodies' tests are unchanged.
 
 use crate::units::cls_dispatch::{EE_UNITS_BODY_IS_LAND_BUILDING, EE_UNIT_CLASS_BODIES};
-use crate::units::player::{EeUnitsPlayerIo, EE_UNITS_PLAYER_IS_LOCAL};
+#[cfg(not(test))]
+use crate::units::patrol_group::{
+    ee_units_pg_dereference, ee_units_pg_last, ee_units_pg_reference, ee_units_pg_remove, EeUnitsPatrolGroup,
+};
+use crate::units::player::{EeUnitsPlayerIo, EE_UNITS_PLAYER_IS_LOCAL, EE_UNITS_PLAYER_NODE_INFO};
 use crate::units::player_areas::{EE_UNITS_PLAYER_AREA_AT, EE_UNITS_PLAYER_AREA_COUNT};
 use crate::units::player_diplomacy::{EE_UNITS_PLAYER_IS_CURRENT, EE_UNITS_PLAYER_VIEW, EE_UNITS_PLAYER_VIEWED_OF};
+use crate::units::player_split_more::EE_UNITS_PLAYER_X_EXPLORATION_AMOUNT;
+#[cfg(not(test))]
+use crate::units::player_split_more::{
+    EE_UNITS_PLAYER_X_PG_DEREFERENCE, EE_UNITS_PLAYER_X_PG_LAST, EE_UNITS_PLAYER_X_PG_REFERENCE,
+    EE_UNITS_PLAYER_X_PG_REMOVE,
+};
 use crate::units::player_units::{
     EeUnitsPlayerUnit, EE_UNITS_PLAYER_AT, EE_UNITS_PLAYER_BUILD_QUEUE_TECH, EE_UNITS_PLAYER_COMPLEX_VALUES,
     EE_UNITS_PLAYER_CONTAINER_CATEGORY, EE_UNITS_PLAYER_ID, EE_UNITS_PLAYER_NEXT_UNIT, EE_UNITS_PLAYER_NUM_PLAYERS,
     EE_UNITS_PLAYER_PENDING_COUNT, EE_UNITS_PLAYER_PENDING_POPULATION, EE_UNITS_PLAYER_UNIT_INFO,
 };
+use crate::world::tech_view::NodeView;
 use crate::world::{ClassView, PlayerView, UnitView, WorldRead, WorldView};
+
+/// `kCivPowerExploration`
+const POWER_EXPLORATION: i32 = 0x2c;
 use std::os::raw::{c_long, c_ulong};
 
 /// `GetPopulationCost()`: every class kind's body is `mWeight`
@@ -131,6 +145,50 @@ pub unsafe fn answer(player: u64, op: i32, io: &mut EeUnitsPlayerIo) -> Option<i
             i64::from(viewed != 0 && owner == other)
         }
         EE_UNITS_PLAYER_AREA_COUNT => (if a0 == 0 { me.towns_len() } else { me.herds_len() }) as i64,
+        EE_UNITS_PLAYER_NODE_INFO => {
+            // the node's data (EEPlayerHost read mData without a test: none answers zeros)
+            // SAFETY: the operation's live node
+            let node = unsafe { NodeView::of(&t, a0 as u64) };
+            *a = [0; 8];
+            if let Some((n, d)) = node.and_then(|n| n.data().map(|d| (n, d))) {
+                *a = [
+                    i64::from(crate::world_field!(d, mMakesUnit)),
+                    crate::world_field!(d, mUnitClass) as i64,
+                    crate::world_field!(d, mCostResource) as i64,
+                    crate::world_field!(d, mRequiredStatistic) as i64,
+                    crate::world_field!(d, mRequiredStatisticValue) as i64,
+                    crate::world_field!(d, mKind) as i64,
+                    n.unit_classes_len() as i64,
+                    i64::from(n.researched()),
+                ];
+            }
+            0
+        }
+        EE_UNITS_PLAYER_X_EXPLORATION_AMOUNT => {
+            let mut power = crate::tech::civ::EeTechCivPower::default();
+            // SAFETY: a local record
+            unsafe { crate::tech::civ::ee_tech_civ_power(POWER_EXPLORATION, &mut power) };
+            io.f[0] = power.mAmount;
+            0
+        }
+        // the patrol groups (patrol_group.rs; SAFETY each: the player's live group and point)
+        #[cfg(not(test))]
+        EE_UNITS_PLAYER_X_PG_LAST => unsafe { ee_units_pg_last(a0 as usize as *mut EeUnitsPatrolGroup) as i64 },
+        #[cfg(not(test))]
+        EE_UNITS_PLAYER_X_PG_REMOVE => {
+            unsafe { ee_units_pg_remove(a0 as usize as *mut EeUnitsPatrolGroup, a1 as usize as *mut std::ffi::c_void) };
+            0
+        }
+        #[cfg(not(test))]
+        EE_UNITS_PLAYER_X_PG_REFERENCE => {
+            unsafe { ee_units_pg_reference(a0 as usize as *mut EeUnitsPatrolGroup) };
+            0
+        }
+        #[cfg(not(test))]
+        EE_UNITS_PLAYER_X_PG_DEREFERENCE => {
+            unsafe { ee_units_pg_dereference(a0 as usize as *mut EeUnitsPatrolGroup) };
+            0
+        }
         EE_UNITS_PLAYER_AREA_AT => {
             (if a0 == 0 { me.town_handle(a1 as usize) } else { me.herd_handle(a1 as usize) }) as i64
         }
