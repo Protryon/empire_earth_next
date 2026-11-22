@@ -11,6 +11,7 @@
 #include "lle/GERhombus.h"
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEUIBuildWall.h"
+#include "rust/ui/formobj.h"
 
 class EEABuild;
 class EEACalamity;

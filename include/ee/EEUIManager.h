@@ -9,6 +9,7 @@
 
 #include "rust/game/screens.h"   // EeScreensUiManagerFields (ee_screens ui_objects.rs)
 #include "ee/EEGameUI.h"
+#include "rust/ui/formobj.h"
 
 class EEUIFMainGame;
 class EEUIFScenarioEditor;
