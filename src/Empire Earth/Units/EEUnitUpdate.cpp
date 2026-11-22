@@ -69,22 +69,7 @@ struct EEUpdateContext {
     EEComplexUnit* mAirport;
 };
 
-// the initial contact location and heading from the unit's location (EEUnitClass::ActionChanged's two copies)
-void EEUpdateContact(EEComplexUnit* inUnit, bool inThroughSetter)
-{
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theDirection(0.0f, 0.0f, 0.0f);
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    GE3DPoint thePoint(theLocation.GetX(), theLocation.GetY(), 0.0f);
-    theLocation.Apply(theUp, theDirection);
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    if (inThroughSetter)
-        inUnit->SetInitialContactLocation(thePoint);
-    else if (inUnit->mInitialContactLocation != thePoint)
-        inUnit->mInitialContactLocation = thePoint;
-    if (inUnit->mInitialContactHeading != theYaw)
-        inUnit->mInitialContactHeading = theYaw;
-}
+// (the initial contact location and heading, EEUpdateContact: ee_sim units upd_split.rs update_contact)
 
 int64_t EEUpdateBits(float inValue)
 {
@@ -293,12 +278,12 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_HERD_UNIT_HIT:
         theUnit->mHerd->HandleUnitHit(theUnit);
         break;
-    case EE_UNITS_ACT_CONTACT_CHECK_RANGE:
-        EEUpdateContact(theUnit, false);
-        break;
-    case EE_UNITS_ACT_CONTACT_FOLLOW:
-        EEUpdateContact(theUnit, true);
-        break;
+    case EE_UNITS_UPD_X_LOCATION_MATRIX: memcpy(EEObjectOf<float>(inA), theUnit->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float)); break;
+    case EE_UNITS_UPD_X_SET_CONTACT_LOCATION: theUnit->SetInitialContactLocation(*EEObjectOf<GE3DPoint>(inA)); break;
+    case EE_UNITS_UPD_X_CONTACT_LOCATION: *EEObjectOf<GE3DPoint>(inA) = theUnit->mInitialContactLocation; break;
+    case EE_UNITS_UPD_X_STORE_CONTACT_LOCATION: theUnit->mInitialContactLocation = *EEObjectOf<GE3DPoint>(inA); break;
+    case EE_UNITS_UPD_X_CONTACT_HEADING: return EEUpdateBits(theUnit->mInitialContactHeading);
+    case EE_UNITS_UPD_X_STORE_CONTACT_HEADING: theUnit->mInitialContactHeading = EEUpdateFloat(inA); break;
     case EE_UNITS_ACT_ATTACKED:
         theClass->Attacked(theUnit);
         break;

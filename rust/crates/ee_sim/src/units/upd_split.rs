@@ -7,6 +7,8 @@
 
 use crate::units::actions::*;
 use crate::units::update::EE_UNITS_UPD_SET_OPEN_FRACTION;
+use ee_base::math::types::GeVector;
+use ee_base::math::um::um_arctan2;
 
 // ---- the statements (`a`, `b` the act's arguments; units and objects as their pointers)
 /// `theUnit->SetOpenFraction(the float of bits a)`
@@ -80,6 +82,18 @@ pub const EE_UNITS_UPD_X_AIRPLANE_HOLDING: i32 = 372;
 pub const EE_UNITS_UPD_X_SPACESHIP_HOLDING: i32 = 373;
 /// theUnit (the host's unit)
 pub const EE_UNITS_UPD_X_UNIT: i32 = 374;
+/// the 16 floats at `a` = theUnit's `mPhysicalModel.GetLocation().mMatrix`
+pub const EE_UNITS_UPD_X_LOCATION_MATRIX: i32 = 375;
+/// `theUnit->SetInitialContactLocation(the point at a)`
+pub const EE_UNITS_UPD_X_SET_CONTACT_LOCATION: i32 = 376;
+/// the point at `a` = theUnit's `mInitialContactLocation`
+pub const EE_UNITS_UPD_X_CONTACT_LOCATION: i32 = 377;
+/// theUnit's `mInitialContactLocation = the point at a`
+pub const EE_UNITS_UPD_X_STORE_CONTACT_LOCATION: i32 = 378;
+/// the bits of theUnit's `mInitialContactHeading`
+pub const EE_UNITS_UPD_X_CONTACT_HEADING: i32 = 379;
+/// theUnit's `mInitialContactHeading = the float of bits a`
+pub const EE_UNITS_UPD_X_STORE_CONTACT_HEADING: i32 = 380;
 
 /// `kActionIdle`
 const ACTION_IDLE: i64 = 5000;
@@ -100,6 +114,29 @@ fn sound<H: UpdSplitHost + ?Sized>(h: &mut H, sound: i64, play: i32) {
     h.act(play, sound, at);
 }
 
+/// The initial contact location (the unit's x, y and z 0) and heading (its forward vector's yaw), from its location
+/// (EEUnitClass::ActionChanged's two copies, `EEUpdateContact`): through the setter, or a store when it differs.
+fn update_contact<H: UpdSplitHost + ?Sized>(h: &mut H, through_setter: bool) {
+    let mut m = [0.0f32; 16];
+    h.act(EE_UNITS_UPD_X_LOCATION_MATRIX, m.as_mut_ptr() as i64, 0);
+    let t = crate::combat::geometry::matrix(&m);
+    let mut point = [t.x(), t.y(), 0.0];
+    let d = t.apply_vector(GeVector { x: 0.0, y: 1.0, z: 0.0 });
+    let yaw = um_arctan2(-d.x, d.y);
+    if through_setter {
+        h.act(EE_UNITS_UPD_X_SET_CONTACT_LOCATION, point.as_mut_ptr() as i64, 0);
+    } else {
+        let mut current = [0.0f32; 3];
+        h.act(EE_UNITS_UPD_X_CONTACT_LOCATION, current.as_mut_ptr() as i64, 0);
+        if current != point {
+            h.act(EE_UNITS_UPD_X_STORE_CONTACT_LOCATION, point.as_mut_ptr() as i64, 0);
+        }
+    }
+    if f32::from_bits(h.act(EE_UNITS_UPD_X_CONTACT_HEADING, 0, 0) as u32) != yaw {
+        h.act(EE_UNITS_UPD_X_STORE_CONTACT_HEADING, i64::from(yaw.to_bits()), 0);
+    }
+}
+
 /// `code` with `a` as `EEUpdateAct`'s compound case did it; None for any other code.
 pub fn split<H: UpdSplitHost + ?Sized>(h: &mut H, code: i32, a: i64) -> Option<i64> {
     match code {
@@ -107,6 +144,9 @@ pub fn split<H: UpdSplitHost + ?Sized>(h: &mut H, code: i32, a: i64) -> Option<i
             h.act(EE_UNITS_UPD_X_OPEN_FRACTION, a, 0);
             h.act(EE_UNITS_UPD_X_CARRIER_OPEN_FRACTION, a, 0);
             h.act(EE_UNITS_UPD_X_LINKED_OPEN_FRACTION, a, 0);
+        }
+        EE_UNITS_ACT_CONTACT_CHECK_RANGE | EE_UNITS_ACT_CONTACT_FOLLOW => {
+            update_contact(h, code == EE_UNITS_ACT_CONTACT_FOLLOW);
         }
         EE_UNITS_ACT_RETURN_TO_CONTACT => {
             h.act(EE_UNITS_UPD_X_RETURN_TO_CONTACT, a, 0);

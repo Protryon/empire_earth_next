@@ -12,6 +12,11 @@ struct Mock {
 impl UpdSplitHost for Mock {
     fn act(&mut self, code: i32, a: i64, b: i64) -> i64 {
         self.log.push((code, a, b));
+        if code == EE_UNITS_UPD_X_LOCATION_MATRIX {
+            // SAFETY: the body's 16 floats: the identity
+            let m = unsafe { &mut *(a as usize as *mut [f32; 16]) };
+            *m = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+        }
         if code == EE_UNITS_UPD_X_NEXT_PART_OF {
             return self.parts.get(&a).copied().unwrap_or(0);
         }
@@ -99,7 +104,10 @@ fn sounds_take_the_parameters_then_play() {
     let mut m = Mock::default();
     m.answers.insert(EE_UNITS_UPD_X_DEATH_SOUND, 9);
     split(&mut m, EE_UNITS_ACT_DEATH_SOUND, 0);
-    assert_eq!(m.codes(), vec![EE_UNITS_UPD_X_DEATH_SOUND, EE_UNITS_UPD_X_SOUND_PARAMETERS, EE_UNITS_UPD_X_PLAY_SAMPLE]);
+    assert_eq!(
+        m.codes(),
+        vec![EE_UNITS_UPD_X_DEATH_SOUND, EE_UNITS_UPD_X_SOUND_PARAMETERS, EE_UNITS_UPD_X_PLAY_SAMPLE]
+    );
     assert_eq!(m.log[1].1, 9);
     assert_eq!(m.log[1].2, m.log[2].2);
     let mut m = Mock::default();
@@ -158,6 +166,30 @@ fn aircraft_dispatch() {
             (EE_UNITS_UPD_X_HELICOPTER_PRIEST_PATH, 0, 0),
             (EE_UNITS_UPD_X_SPACESHIP_HOLDING, 0, 0),
             (EE_UNITS_UPD_X_LANDABLE, i64::from(EE_UNITS_ACT_TAKEOFF), 3),
+        ]
+    );
+}
+
+#[test]
+fn contact_from_the_location() {
+    // an identity location at (0, 0, 0): heading 0 (the yaw of +y), the point (0, 0, 0)
+    let mut m = Mock::default();
+    split(&mut m, EE_UNITS_ACT_CONTACT_FOLLOW, 0);
+    assert_eq!(
+        m.codes(),
+        vec![EE_UNITS_UPD_X_LOCATION_MATRIX, EE_UNITS_UPD_X_SET_CONTACT_LOCATION, EE_UNITS_UPD_X_CONTACT_HEADING]
+    );
+    // the check range form stores only what differs: the mock's heading reads 1.0
+    let mut m = Mock::default();
+    m.answers.insert(EE_UNITS_UPD_X_CONTACT_HEADING, i64::from(1.0f32.to_bits()));
+    split(&mut m, EE_UNITS_ACT_CONTACT_CHECK_RANGE, 0);
+    assert_eq!(
+        m.codes(),
+        vec![
+            EE_UNITS_UPD_X_LOCATION_MATRIX,
+            EE_UNITS_UPD_X_CONTACT_LOCATION,
+            EE_UNITS_UPD_X_CONTACT_HEADING,
+            EE_UNITS_UPD_X_STORE_CONTACT_HEADING
         ]
     );
 }
