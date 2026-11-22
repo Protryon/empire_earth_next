@@ -313,18 +313,8 @@ struct EEWonNetGameInfo {
     uint32_t mFlags;                        // +0x48 bit 0 open (Start clears it), bit 1 firewalled (EEWonNet::mIsBehindFirewall)
     unsigned short mRoomGroupId;            // +0x4c
 
-    // 0xcd9ba (inline; returns nothing: no `mov eax, this` before its ret 4)
-    void operator=(const EEWonNetGameInfo& inInfo)
-    {
-        this->mGameName = inInfo.mGameName;
-        this->mAddress = inInfo.mAddress;
-        this->mPassword = inInfo.mPassword;
-        this->mHumans = inInfo.mHumans;
-        this->mPlayers = inInfo.mPlayers;
-        this->mHostClientId = inInfo.mHostClientId;
-        this->mFlags = inInfo.mFlags;
-        this->mRoomGroupId = inInfo.mRoomGroupId;
-    }
+    // 0xcd9ba: the implicit member-wise copy (inline in the original; it returned nothing: no `mov eax, this`)
+    EEWonNetGameInfo& operator=(const EEWonNetGameInfo& inInfo) = default;
 };
 
 namespace WONAPI {
