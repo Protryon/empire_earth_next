@@ -126,9 +126,9 @@ static int32_t EECameraHost(void* inContext, int32_t inOp, EeAppCameraIo* io)
         io->z = gViewport.GetHalfHeight();
         break;
     case EE_APP_CAMERA_OP_VIEWPORT_CAMERA:
-        io->point.x = gViewport.GetCamera().GetX();
-        io->point.y = gViewport.GetCamera().GetY();
-        io->point.z = gViewport.GetCamera().GetZ();
+        io->point.mX = gViewport.GetCamera().GetX();
+        io->point.mY = gViewport.GetCamera().GetY();
+        io->point.mZ = gViewport.GetCamera().GetZ();
         break;
     case EE_APP_CAMERA_OP_FRONT_CLIPPING: io->x = gViewport.GetFrontClippingDistance(); break;
     case EE_APP_CAMERA_OP_SET_CLIPPING:

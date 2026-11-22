@@ -265,9 +265,9 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
     theVertex.second = ee_gfx_capture_ground_circle(&theGround, inLocation.GetX(), inLocation.GetY(), inRadius, thePoints);
     theBack.mPoints.resize(0x33, std::pair<GE3DPoint, float>());
     for (unsigned long i = 0; i < 0x33; i++) {
-        theVertex.first.mX = thePoints[i].x;
-        theVertex.first.mY = thePoints[i].y;
-        theVertex.first.mZ = thePoints[i].z;
+        theVertex.first.mX = thePoints[i].mX;
+        theVertex.first.mY = thePoints[i].mY;
+        theVertex.first.mZ = thePoints[i].mZ;
         theBack.mPoints[i] = theVertex;
     }
 }
@@ -365,9 +365,9 @@ void EERenderObject::Fn10C036()
         theTables.sun = {gWorld.mSunDirection.mX, gWorld.mSunDirection.mY, gWorld.mSunDirection.mZ};
         theTables.moon = {gWorld.mMoonDirection.mX, gWorld.mMoonDirection.mY, gWorld.mMoonDirection.mZ};
         EeGfxDaylight theLight = ee_gfx_scene_daylight(&theTables, theTimeOfDay);
-        gU4E9210.mX = theLight.direction.x;
-        gU4E9210.mY = theLight.direction.y;
-        gU4E9210.mZ = theLight.direction.z;
+        gU4E9210.mX = theLight.direction.mX;
+        gU4E9210.mY = theLight.direction.mY;
+        gU4E9210.mZ = theLight.direction.mZ;
         GEColor theBlend(theLight.light.red, theLight.light.green, theLight.light.blue);
         GEColor thePrelit(theLight.prelit.red, theLight.prelit.green, theLight.prelit.blue);
         gRenderEnvironment.mTerrainLightColor = theBlend;
@@ -566,8 +566,8 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
     long theID = inDoppelganger->mUnit->GetUnitID();
     long theSize = inDoppelganger->mUnit->mUnitClass->mTileSize;
     EeGe2DPoint thePlace = ee_gfx_capture_object_place((int32_t)theID, (int32_t)theSize, (int32_t)inX, (int32_t)inY);
-    outObject->mLocation.mX = thePlace.x;
-    outObject->mLocation.mY = thePlace.y;
+    outObject->mLocation.mX = thePlace.mX;
+    outObject->mLocation.mY = thePlace.mY;
     outObject->mLocation.mZ = theMap->mTerrainMesh.GetMeshZ(outObject->mLocation.GetX(), outObject->mLocation.GetY());
     theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
     theTransformation.SetPosition(outObject->mLocation.GetX(), outObject->mLocation.GetY(), outObject->mLocation.mZ);
@@ -1371,7 +1371,7 @@ const EeGfxRaster gEERustRaster = {
     [](EeGfxLighting inKind) { ApplyLighting(inKind); },
     [](const EeGe3DPoint* inLocation, uint32_t inFog) {
         float theValue;
-        GetFogFactor(GE3DPoint(inLocation->x, inLocation->y, inLocation->z), inFog, theValue);
+        GetFogFactor(GE3DPoint(inLocation->mX, inLocation->mY, inLocation->mZ), inFog, theValue);
         return theValue;
     },
     [](void* inModel, float inOpacity) -> int32_t {
@@ -1386,7 +1386,7 @@ const EeGfxRaster gEERustRaster = {
     []() -> float { return gRenderSnapshot.mCameraYaw; },
     [](const EeGe3DPoint* inPoint, float* outX, float* outY) {
         GE2DPoint theScreenPoint;
-        GetScreenPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), theScreenPoint);
+        GetScreenPoint(GE3DPoint(inPoint->mX, inPoint->mY, inPoint->mZ), theScreenPoint);
         *outX = theScreenPoint.GetX();
         *outY = theScreenPoint.GetY();
     },

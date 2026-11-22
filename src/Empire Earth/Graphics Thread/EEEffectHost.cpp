@@ -357,7 +357,7 @@ struct Ask {
             inCount == 0 ? NULL : outHeights, theColors.size(), theMesh.Vertices(), theMesh.mVertices.size(),
             theMesh.Triangles(), theMesh.mTriangles.size());
         theMesh.Store(theModel);
-        theVolcano.area.center.z = theBuilt.center_z;
+        theVolcano.area.center.mZ = theBuilt.center_z;
         float theMaximum = theBuilt.maximum;
         theModel->ComputeModelNormals();
         theModel->ComputeBoundingVolumes();
@@ -424,7 +424,7 @@ struct Ask {
     // the earthquake's (EEE3DEarthquake, 0xec6e4..0xed606): the ground under a point
     static EeGe3DPoint GroundPoint(void*, const EeGe3DPoint* inPoint)
     {
-        GE3DPoint theGround(inPoint->x, inPoint->y, inPoint->z);
+        GE3DPoint theGround(inPoint->mX, inPoint->mY, inPoint->mZ);
         gWorld.mMap->GetGroundPoint(theGround, theGround);
         return R(theGround);
     }
@@ -481,7 +481,7 @@ struct Ask {
     static void PartSound(void* inAsk, EeGe3DPoint inLocation, uint32_t inFrame, bool inChanged, bool inPart0)
     {
         EEEffect* theEffect = E(inAsk);
-        GE3DPoint theLocation(inLocation.x, inLocation.y, inLocation.z);
+        GE3DPoint theLocation(inLocation.mX, inLocation.mY, inLocation.mZ);
         EEGraphicObject* theObject =
             inPart0 ? P<EEGraphicObject>(ee_gfx_effect_part_object(H(theEffect), 0)) : theEffect->mGraphicObject;
         KeepSound(theEffect, PlayAnimationSound(theLocation, theObject, 0, theEffect->mSound, inFrame, inChanged));
@@ -517,7 +517,7 @@ struct Ask {
     {
         EeGfx2DPoint thePoint = {};
         EEMap* theMap = gWorld.mMap;
-        GE3DPoint theLocation(inAt.x, inAt.y, inAt.z);
+        GE3DPoint theLocation(inAt.mX, inAt.mY, inAt.mZ);
         GE3DPoint theGround;
         if (!theMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY())))
             return thePoint;
@@ -649,20 +649,20 @@ struct EEGoalOps {
         }
         if (theTarget->mUnitClass->IsLandBuilding()) {
             if (theTarget->mTileNode != NULL) {
-                ioTo->x = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX();
-                ioTo->y = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY();
+                ioTo->mX = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX();
+                ioTo->mY = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY();
             }
-            ioTo->x = ioTo->x + theTarget->mUnitClass->mTileSize * 0.5f - 0.25f;
-            ioTo->y = ioTo->y - theTarget->mUnitClass->mTileSize * 0.5f + 0.25f;
+            ioTo->mX = ioTo->mX + theTarget->mUnitClass->mTileSize * 0.5f - 0.25f;
+            ioTo->mY = ioTo->mY - theTarget->mUnitClass->mTileSize * 0.5f + 0.25f;
         }
         return theTarget;
     }
     static bool Ground(void*, const EeGe3DPoint* inPoint, EeGe3DPoint* outPoint)
     {
-        if (::gWorld.mMap->GetTile(UMFloor(inPoint->x), UMFloor(inPoint->y)) == NULL)
+        if (::gWorld.mMap->GetTile(UMFloor(inPoint->mX), UMFloor(inPoint->mY)) == NULL)
             return false;
         GE3DPoint theGround;
-        ::gWorld.mMap->GetGroundPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), theGround);
+        ::gWorld.mMap->GetGroundPoint(GE3DPoint(inPoint->mX, inPoint->mY, inPoint->mZ), theGround);
         *outPoint = R(theGround);
         return true;
     }
