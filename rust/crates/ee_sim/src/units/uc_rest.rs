@@ -310,7 +310,14 @@ fn find_resource_of_kind<H: UcHost + ?Sized>(
 
 /// `FindNextResource(unit, resource, kind, units)`: a resource of the kind within five lines of sight, around the
 /// gather goal's storage first when the unit can get to it.
-pub fn find_next_resource<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64, resource: u64, kind: u32, units: u64) -> u64 {
+pub fn find_next_resource<H: UcHost + ?Sized>(
+    h: &mut H,
+    class: u64,
+    unit: u64,
+    resource: u64,
+    kind: u32,
+    units: u64,
+) -> u64 {
     let mut s = S { h, class, unit };
     let goal = s.s(EE_UNITS_UC_GOAL_STATE_SELF) as u64;
     let range = lrintf(s.float(EE_UNITS_UC_R_LINE_OF_SIGHT, 0, 0) * 5.0);
@@ -347,11 +354,8 @@ pub fn elevation_factor<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64, ta
         ..Default::default()
     };
     if input.applies != 0 {
-        input.own_z = if own_height {
-            position_of(&location(&mut s, unit))[2]
-        } else {
-            s.float(EE_UNITS_UC_R_HEIGHT, 0, 0)
-        };
+        input.own_z =
+            if own_height { position_of(&location(&mut s, unit))[2] } else { s.float(EE_UNITS_UC_R_HEIGHT, 0, 0) };
         input.target_z = position_of(&location(&mut s, target))[2];
         input.high_height = s.float(EE_UNITS_UC_R_WORLD_FLOAT, 0, WORLD_ELEVATION_ROWS[0]);
         input.low_height = s.float(EE_UNITS_UC_R_WORLD_FLOAT, 0, WORLD_ELEVATION_ROWS[1]);
@@ -617,7 +621,13 @@ pub fn first_part<H: UcHost + ?Sized>(h: &mut H, mut unit: u64) -> u64 {
 ///
 /// # Safety
 /// `out` is a writable `EEUnit*`
-pub unsafe fn find_target_near<H: UcHost + UcRestRust + ?Sized>(h: &mut H, class: u64, unit: u64, range: f32, out: *mut u64) -> bool {
+pub unsafe fn find_target_near<H: UcHost + UcRestRust + ?Sized>(
+    h: &mut H,
+    class: u64,
+    unit: u64,
+    range: f32,
+    out: *mut u64,
+) -> bool {
     let mut s = S { h: &mut *h, class, unit };
     let range = if range == 0.0 { s.float(EE_UNITS_UC_R_LINE_OF_SIGHT, 0, 0) } else { range };
     let mut position = [0.0f32; 3];
@@ -674,10 +684,12 @@ pub fn distance_3d<H: UcHost + ?Sized>(h: &mut H, unit: u64, point: [f32; 3]) ->
 pub fn tile_free<H: UcHost + ?Sized>(h: &mut H, x: u32, y: u32) -> bool {
     let mut s = S { h, class: 0, unit: 0 };
     let tile = s.abc(EE_UNITS_UC_GET_TILE, 0, i64::from(x), i64::from(y)) as u64;
-    tile != 0 && {
-        let terrain = s.a(EE_UNITS_UC_R_TERRAIN_OF, tile);
-        terrain != TERRAIN_CLIFF && terrain != TERRAIN_DEEP_WATER && terrain != TERRAIN_SPACE
-    } && s.abc(EE_UNITS_UC_R_EDGE_TILE, 0, i64::from(x), i64::from(y)) == 0
+    tile != 0
+        && {
+            let terrain = s.a(EE_UNITS_UC_R_TERRAIN_OF, tile);
+            terrain != TERRAIN_CLIFF && terrain != TERRAIN_DEEP_WATER && terrain != TERRAIN_SPACE
+        }
+        && s.abc(EE_UNITS_UC_R_EDGE_TILE, 0, i64::from(x), i64::from(y)) == 0
 }
 
 /// `FacesTarget(unit, target, tolerance)`'s answer (its CBQR record stays the C++ member's): `FacesPoint` toward
@@ -779,7 +791,9 @@ pub unsafe fn run<H: UcHost + UcRestRust + ?Sized>(
         EE_UNITS_UC_DO_R_FIRST_PART => return first_part(h, a) as i64,
         // SAFETY: the caller's contract
         EE_UNITS_UC_DO_R_FIND_TARGET_NEAR => {
-            return i64::from(unsafe { find_target_near(h, class, unit, f32::from_bits(b as u32), c as usize as *mut u64) })
+            return i64::from(unsafe {
+                find_target_near(h, class, unit, f32::from_bits(b as u32), c as usize as *mut u64)
+            })
         }
         EE_UNITS_UC_DO_R_CONTAINER_CONTINENT => return container_continent(h, class, unit, a) as i64,
         EE_UNITS_UC_DO_R_DISTANCE_3D => f[0] = distance_3d(h, unit, [f[0], f[1], f[2]]),

@@ -27,7 +27,8 @@ fn a_helicopter_priest_aims_at_its_attack_and_lands() {
     assert_eq!(ops[find + 1], -4);
     assert!(h.at(EE_UNITS_UC_R_LANDING_POINT) < h.at(-3));
     assert_eq!(h.args(-3), [(2, 3, 0)]);
-    let mut h = Mock::default().answer(EE_UNITS_UC_GOAL_STATE_SELF, 9).answer(EE_UNITS_UC_GOAL_KIND, GOAL_CAST_CALAMITY);
+    let mut h =
+        Mock::default().answer(EE_UNITS_UC_GOAL_STATE_SELF, 9).answer(EE_UNITS_UC_GOAL_KIND, GOAL_CAST_CALAMITY);
     helicopter_priest_path(&mut h, 1, 2);
     assert!(h.at(EE_UNITS_UC_R_GOAL_DESTINATION) < h.at(EE_UNITS_UC_R_PRIEST_DESTINATION));
     let mut h = Mock::default()
@@ -205,7 +206,10 @@ fn a_free_tile_is_no_cliff_water_space_or_edge() {
 
 #[test]
 fn a_unit_faces_its_target_tile_centre_when_simple() {
-    let mut h = Mock::default().answer(EE_UNITS_UC_R_TILE_X_OF, 3).answer(EE_UNITS_UC_R_TILE_Y_OF, 4).answer(EE_UNITS_UC_R_FACES_POINT, 1);
+    let mut h = Mock::default()
+        .answer(EE_UNITS_UC_R_TILE_X_OF, 3)
+        .answer(EE_UNITS_UC_R_TILE_Y_OF, 4)
+        .answer(EE_UNITS_UC_R_FACES_POINT, 1);
     assert!(faces_target(&mut h, 1, 2, 9, true));
     assert_eq!(h.floats_of(EE_UNITS_UC_R_FACES_POINT)[0], [3.5, 4.5, 0.0, 0.0]);
     assert_eq!(h.args(EE_UNITS_UC_R_FACES_POINT), [(0, 1, 0)]);

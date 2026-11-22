@@ -130,12 +130,7 @@ unsafe fn write_tile(out: OutTile, point: &Ge3DPoint) {
 ///
 /// # Safety
 /// `out`'s two pointers are writable `long`s
-pub unsafe fn ambient_location_to_tile<H: UcHost + ?Sized>(
-    h: &mut H,
-    class: u64,
-    location: [f32; 3],
-    out: OutTile,
-) {
+pub unsafe fn ambient_location_to_tile<H: UcHost + ?Sized>(h: &mut H, class: u64, location: [f32; 3], out: OutTile) {
     let mut s = S { h, class, unit: 0 };
     let mut point = Ge3DPoint::default();
     if s.s(EE_UNITS_UC_THIS_UNIT_TYPE) != UNIT_TYPE_AMB_CATTAILS_1 {
@@ -227,12 +222,7 @@ pub fn submerged_ground_location<H: UcHost + ?Sized>(h: &mut H, class: u64, loca
 ///
 /// # Safety
 /// `out`'s two pointers are writable `long`s
-pub unsafe fn submerged_location_to_tile<H: UcHost + ?Sized>(
-    h: &mut H,
-    class: u64,
-    location: [f32; 3],
-    out: OutTile,
-) {
+pub unsafe fn submerged_location_to_tile<H: UcHost + ?Sized>(h: &mut H, class: u64, location: [f32; 3], out: OutTile) {
     let mut s = S { h, class, unit: 0 };
     let mut point = Ge3DPoint::default();
     let z = -s.float(EE_UNITS_UCG_CRUISE_ALTITUDE_OF, class, 0);
@@ -254,7 +244,13 @@ fn to_seabed<H: UcHost + UcgSeaRust + ?Sized>(h: &mut H, class: u64, unit: u64, 
     S { h, class, unit: 0 }.point(EE_UNITS_UCG_SET_LOCATION_OF, complex, 0, 0, &mut position);
 }
 
-fn create_at<H: UcHost + ?Sized>(s: &mut S<'_, H>, t: &mut GeTransformation, player: i64, foundation: bool, creator: u64) -> u64 {
+fn create_at<H: UcHost + ?Sized>(
+    s: &mut S<'_, H>,
+    t: &mut GeTransformation,
+    player: i64,
+    foundation: bool,
+    creator: u64,
+) -> u64 {
     s.abc(EE_UNITS_UCG_BASE_CREATE_AT, addr(&mut t.m), player.wrapping_mul(2) | i64::from(foundation), creator as i64)
         as u64
 }
@@ -436,7 +432,9 @@ pub unsafe fn run<H: UcHost + UcgSeaRust + ?Sized>(
             EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE => {
                 ambient_location_to_tile(h, class, *f.cast::<[f32; 3]>(), out_tile(a, b))
             }
-            EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION => submerged_ground_location(h, class, &mut *f.cast::<[f32; 3]>()),
+            EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION => {
+                submerged_ground_location(h, class, &mut *f.cast::<[f32; 3]>())
+            }
             EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE => {
                 submerged_location_to_tile(h, class, *f.cast::<[f32; 3]>(), out_tile(a, b))
             }
@@ -444,8 +442,15 @@ pub unsafe fn run<H: UcHost + UcgSeaRust + ?Sized>(
                 return submerged_create_unit_at(h, class, &*f.cast::<[[f32; 4]; 4]>(), b >> 1, b & 1 != 0, a) as i64
             }
             EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT => {
-                return submerged_create_unit(h, class, b as i32 as c_long, (b >> 32) as i32 as c_long, c >> 1, c & 1 != 0, a)
-                    as i64
+                return submerged_create_unit(
+                    h,
+                    class,
+                    b as i32 as c_long,
+                    (b >> 32) as i32 as c_long,
+                    c >> 1,
+                    c & 1 != 0,
+                    a,
+                ) as i64
             }
             EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE => submerged_add_to_tile(h, class, a),
             EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED => return i64::from(submerged_has_arrived(h, class, unit, *f)),
@@ -457,8 +462,15 @@ pub unsafe fn run<H: UcHost + UcgSeaRust + ?Sized>(
                 location_to_tile_at(h, class, *f.cast::<[f32; 3]>(), out_tile(a, b), true)
             }
             EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT => {
-                return naval_citizen_create_unit(h, class, b as i32 as c_long, (b >> 32) as i32 as c_long, c >> 1, c & 1 != 0, a)
-                    as i64
+                return naval_citizen_create_unit(
+                    h,
+                    class,
+                    b as i32 as c_long,
+                    (b >> 32) as i32 as c_long,
+                    c >> 1,
+                    c & 1 != 0,
+                    a,
+                ) as i64
             }
             EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT => {
                 return naval_priest_create_unit_at(h, class, &*f.cast::<[[f32; 4]; 4]>(), b >> 1, b & 1 != 0, a) as i64

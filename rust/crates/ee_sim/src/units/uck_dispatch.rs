@@ -15,7 +15,9 @@ use crate::units::cls_dispatch::*;
 use crate::units::uc_body::UcHost;
 use crate::units::uc_create::{base_unit_created, S};
 use crate::units::uc_produce::EE_UNITS_UC_THIS_UNIT_TYPE;
-use crate::units::uc_rest::{self, SoundOuts, EE_UNITS_UC_R_BASE_LOAD_MEDIA, EE_UNITS_UC_R_BASE_UNLOAD_MEDIA, EE_UNITS_UC_R_CRUISE_ALTITUDE};
+use crate::units::uc_rest::{
+    self, SoundOuts, EE_UNITS_UC_R_BASE_LOAD_MEDIA, EE_UNITS_UC_R_BASE_UNLOAD_MEDIA, EE_UNITS_UC_R_CRUISE_ALTITUDE,
+};
 use crate::units::uck_kinds::EE_UNITS_UCK_BODY;
 
 // ---- the statements (3500..3599)
@@ -349,7 +351,10 @@ pub unsafe fn dispatch<H: UcHost + UckRust + ?Sized>(
             _ => uc_rest::base_tile(h, class, a, false),
         },
         EE_UNITS_BODY_SIMPLE_UNIT_CREATED => {
-            s.a(if chosen == 1 { EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED } else { EE_UNITS_UCK_D_BASE_SIMPLE_CREATED }, a);
+            s.a(
+                if chosen == 1 { EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED } else { EE_UNITS_UCK_D_BASE_SIMPLE_CREATED },
+                a,
+            );
         }
         EE_UNITS_BODY_UNIT_CREATED => match chosen {
             UNIT_CREATED_HELICOPTER_PRIEST => uc_rest::helicopter_priest_created(h, class, unit),
@@ -452,9 +457,7 @@ mod game {
     ) {
         let outs = SoundOuts { volume, pan, pitch };
         // SAFETY: the caller's contract
-        unsafe {
-            super::sound(&mut GameD, class as usize as u64, unit as usize as u64, sound as usize as u64, outs)
-        }
+        unsafe { super::sound(&mut GameD, class as usize as u64, unit as usize as u64, sound as usize as u64, outs) }
     }
 }
 

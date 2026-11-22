@@ -543,7 +543,16 @@ impl FlightHost for ClsGame {
     }
     fn path_toward(&mut self, _class: u64, unit: u64, from: Ge3DPoint, to: Ge3DPoint, snap: bool) {
         // PathToward's one call
-        crate::units::cls_move_host::ee_units_mv_path_toward(unit, from.x, from.y, from.z, to.x, to.y, to.z, u8::from(snap));
+        crate::units::cls_move_host::ee_units_mv_path_toward(
+            unit,
+            from.x,
+            from.y,
+            from.z,
+            to.x,
+            to.y,
+            to.z,
+            u8::from(snap),
+        );
     }
     fn fly_to_goal(&mut self, class: u64, point: Ge3DPoint, unit: u64) {
         // FlyToGoal's one call (uca_air.rs)
@@ -552,10 +561,19 @@ impl FlightHost for ClsGame {
     }
     fn runway_goal(&mut self, unit: u64, point: Ge3DPoint) {
         // ApproachRunway's move goal (0x615f7d): kept behind an exploration, else the only goal
-        let goal = self.point_op(crate::units::cls_carrier_host::EE_UNITS_CLS_CR_DECK_GOAL, unit, 0, 0, point, Ge3DPoint::default());
+        let goal = self.point_op(
+            crate::units::cls_carrier_host::EE_UNITS_CLS_CR_DECK_GOAL,
+            unit,
+            0,
+            0,
+            point,
+            Ge3DPoint::default(),
+        );
         let mut io = EeUnitsClsIo::default();
         let state = self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL, unit, 0, 0, 0, &mut io) as u64;
-        let keep = state != 0 && self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL_KIND, unit, state, 0, 0, &mut io) == GOAL_EXPLORE;
+        let keep = state != 0
+            && self.call(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL_KIND, unit, state, 0, 0, &mut io)
+                == GOAL_EXPLORE;
         if !keep {
             self.call(crate::units::cls_carrier_host::EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE, unit, 0, 0, 0, &mut io);
         }
@@ -643,7 +661,13 @@ impl ConditionHost for ClsGame {
         // GetGroundHeight's one call (uca_air.rs; the C++ handed its class, which the body does not read)
         let mut height = 0.0f32;
         let mut p = [point.x, point.y, point.z, 0.0];
-        uca_call(crate::units::uca_air::EE_UNITS_UCA_DO_GROUND_HEIGHT, 0, 0, std::ptr::addr_of_mut!(height) as u64, &mut p);
+        uca_call(
+            crate::units::uca_air::EE_UNITS_UCA_DO_GROUND_HEIGHT,
+            0,
+            0,
+            std::ptr::addr_of_mut!(height) as u64,
+            &mut p,
+        );
         height
     }
     fn bomb_on_target(&mut self, class: u64, unit: u64) -> bool {

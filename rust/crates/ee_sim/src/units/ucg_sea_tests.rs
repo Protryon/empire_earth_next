@@ -66,9 +66,8 @@ fn a_new_submarine_is_grounded_then_put_on_the_seabed() {
     assert_eq!(h.floats_of(EE_UNITS_UCG_SET_LOCATION_OF)[0][..3], [1.0, 2.0, -3.0]);
     assert_eq!(h.args(EE_UNITS_UCG_SET_LOCATION_OF)[0].0, 41);
 
-    let mut h = Mock::default()
-        .answer(EE_UNITS_UCG_BASE_CREATE_AT, 40)
-        .float(EE_UNITS_UCG_TERRAIN_Z, [-4.0, 0.0, 0.0, 0.0]);
+    let mut h =
+        Mock::default().answer(EE_UNITS_UCG_BASE_CREATE_AT, 40).float(EE_UNITS_UCG_TERRAIN_Z, [-4.0, 0.0, 0.0, 0.0]);
     submerged_create_unit(&mut h, 1, 3, 4, 2, false, 0);
     assert_eq!(h.args(EE_UNITS_UCG_TERRAIN_Z), [(0, 3, 4)]);
     assert_eq!(h.args(EE_UNITS_UCG_BASE_CREATE_AT)[0].1, 4);
