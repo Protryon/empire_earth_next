@@ -33,6 +33,7 @@
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/eeglue.h"
 #include "rust/won_lobby/lobbyctl.h"
+#include "rust/won_lobby/chatlink.h"
 #include "rust/won_lobby/srvlistctl.h"
 #include "rust/won_lobby/chatctl.h"
 #include "rust/won_lobby/rows.h"
@@ -67,29 +68,7 @@ static Image* ResImage(intptr_t inRes) { return gLobbyResources[inRes].mImage.ge
 // the global namespace (vtable 0x852df8, 0x8c bytes).
 class ChatLink : public TextLink {
 public:
-    explicit ChatLink(const EeWonLobbyCtlLink& l) : mKind(l.kind)
-    {
-        // the original's five constructors, by kind
-        switch (l.kind) {
-        case 3: this->mClient = (LobbyClient*)l.obj; this->mText = this->mClient->GetName(); break;
-        case 0:
-            this->mText = Txt(l.text);
-            this->mGroupId = (unsigned short)l.id;
-            if (l.addr != 0) this->mAddress = ((LobbyServer*)l.addr)->GetAddress();
-            break;
-        case 4: this->mFriend = (LobbyFriend*)l.obj; this->mText = this->mFriend->GetName(); break;
-        case 5:
-            this->mFriend = (LobbyFriend*)l.obj;
-            this->mAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)l.addr));
-            this->mText = Txt(l.text);
-            break;
-        default: this->mClient = (LobbyClient*)l.obj; this->mText = Txt(l.text); break;
-        }
-        this->mColor = l.color;
-        this->mFont = (Font*)l.font;
-        this->mEnabled = true;
-        this->mPrevious = NULL;
-    }
+    explicit ChatLink(const EeWonLobbyCtlLink& l); // the original's five constructors, by kind (chatlink.rs)
     virtual bool IsLink() { return this->mEnabled; } // whether the link can still be clicked
     int mKind; // 0x48: kind (0 room, 1 accept, 2 reject, 3 client, 4 friend, 5 friend's location)
     IPAddr mAddress; // 0x4c..0x74: server or friend's address
@@ -100,6 +79,29 @@ public:
     SmartPtr<ChatLink> mNext; // 0x84: next link in the chain (counted reference)
     ChatLink* mPrevious; // 0x88: previous link (not counted, never released)
 };
+
+// ChatLink's constructor's statements (chatlink.rs composes them, R6 WON round 33)
+static intptr_t ChatLinkHost(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
+{
+    typedef EeWonChatLinkOp Op;
+    ChatLink* k = static_cast<ChatLink*>(inLink);
+    switch (inOp) {
+    case Op::SetClient: k->mClient = (LobbyClient*)a; return 0;
+    case Op::TextClientName: k->mText = k->mClient->GetName(); return 0;
+    case Op::SetText: k->mText = Txt(a); return 0;
+    case Op::SetGroupId: k->mGroupId = (unsigned short)a; return 0;
+    case Op::AddressOfServer: k->mAddress = ((LobbyServer*)a)->GetAddress(); return 0;
+    case Op::SetFriend: k->mFriend = (LobbyFriend*)a; return 0;
+    case Op::TextFriendName: k->mText = k->mFriend->GetName(); return 0;
+    case Op::AddressClone: k->mAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a)); return 0;
+    case Op::SetColor: k->mColor = (int)a; return 0;
+    case Op::SetFont: k->mFont = (Font*)a; return 0;
+    case Op::SetEnabled: k->mEnabled = true; return 0;
+    case Op::ClearPrevious: k->mPrevious = NULL; return 0;
+    }
+    return 0;
+}
+ChatLink::ChatLink(const EeWonLobbyCtlLink& l) : mKind(l.kind) { ee_won_chatlink_init(this, &l, ChatLinkHost); }
 
 // a held text: one reference the Rust gives back
 static intptr_t Held(const GUIString& inText)

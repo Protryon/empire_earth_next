@@ -8,6 +8,7 @@
 #[cfg(test)]
 mod chat_golden;
 pub mod chatctl;
+pub mod chatlink;
 pub mod chatobj;
 pub mod dialogs;
 pub mod dlglogic;
