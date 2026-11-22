@@ -6,22 +6,23 @@
 class FSFile;
 class GE3DPlane;
 
-class GE3DLine {                    // sizeof 0x18
+class GE3DLine : public EeGe3DLine {   // the Rust record (mStart, mDirection; rust/base/math.h)
 public:
-    GE3DLine() : mDirection(1.0f, 0.0f, 0.0f) {}   // inline (refused at every -O1 call site, 0x1000c5ba; a no-/Og caller still spends an inline-`this` slot on it: GEVector::GetQuantizedVersion)
-    GE3DLine(const GE3DPoint& inStart, const GE3DPoint& inEnd) { this->mStart = inStart; this->ComputeDirection(inEnd); }
-    GE3DLine(const GE3DPoint& inStart, const GEVector& inDirection) { this->mStart = inStart; this->mDirection = inDirection; }
-    ~GE3DLine() {}
-    void Define(const GE3DPoint& inStart, const GE3DPoint& inEnd) { this->mStart = inStart; this->ComputeDirection(inEnd); }
-    void Define(const GE3DPoint& inStart, const GEVector& inDirection) { this->mStart = inStart; this->mDirection = inDirection; }
-    const GEVector& GetDirection() const { return this->mDirection; }
+    GE3DLine() : EeGe3DLine{{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}} {}
+    // from a start to an end: the direction is the end less the start
+    GE3DLine(const GE3DPoint& inStart, const GE3DPoint& inEnd)
+        : EeGe3DLine{inStart, {inEnd.mX - inStart.mX, inEnd.mY - inStart.mY, inEnd.mZ - inStart.mZ}} {}
+    GE3DLine(const GE3DPoint& inStart, const GEVector& inDirection) : EeGe3DLine{inStart, inDirection} {}
+    void Define(const GE3DPoint& inStart, const GE3DPoint& inEnd) { *this = GE3DLine(inStart, inEnd); }
+    void Define(const GE3DPoint& inStart, const GEVector& inDirection) { *this = GE3DLine(inStart, inDirection); }
+    const GEVector& GetDirection() const { return GECpp(this->mDirection); }
+    // component by component (each reads only its own)
     void GetPointAt(float inT, GE3DPoint& outPoint) const
     {
-        outPoint.mX = this->mDirection.GetX() * inT + this->mStart.GetX();
-        outPoint.mY = this->mDirection.GetY() * inT + this->mStart.GetY();
-        outPoint.mZ = this->mDirection.GetZ() * inT + this->mStart.GetZ();
+        outPoint = GE3DPoint(this->mDirection.mX * inT + this->mStart.mX, this->mDirection.mY * inT + this->mStart.mY,
+                             this->mDirection.mZ * inT + this->mStart.mZ);
     }
-    const GE3DPoint& GetStart() const { return this->mStart; }
+    const GE3DPoint& GetStart() const { return GECpp(this->mStart); }
     // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
     // in the third axis; the parameters on each); a plane (false when parallel)
     bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const
@@ -44,17 +45,6 @@ public:
     bool SolveForZ(float inZ, float& outT) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, NULL); }
     bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const
         { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, GERust(outPoint)); }
-private:
-    friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
-    void ComputeDirection(const GE3DPoint& inEnd)
-    {
-        this->mDirection.mX = inEnd.GetX() - this->mStart.GetX();
-        this->mDirection.mY = inEnd.GetY() - this->mStart.GetY();
-        this->mDirection.mZ = inEnd.GetZ() - this->mStart.GetZ();
-    }
-
-    GE3DPoint mStart;                       // +0x00
-    GEVector mDirection;                    // +0x0c
 };
 
 #endif

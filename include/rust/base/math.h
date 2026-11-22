@@ -8,56 +8,72 @@
 #include <stddef.h>
 
 /// `GE2DPoint` (sizeof 8).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGe2DPoint {
-  float x;
-  float y;
+  float mX;
+  float mY;
 };
 
 /// `GEQuaternion` (sizeof 0x10).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGeQuaternion {
-  float x;
-  float y;
-  float z;
-  float w;
+  float mX;
+  float mY;
+  float mZ;
+  float mW;
 };
 
 /// `GE3DPoint` (sizeof 0xc).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGe3DPoint {
-  float x;
-  float y;
-  float z;
+  float mX;
+  float mY;
+  float mZ;
 };
 
 /// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGeTransformation {
-  float m[4][4];
+  float mMatrix[4][4];
 };
 
 /// `GEVector` (sizeof 0xc).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGeVector {
-  float x;
-  float y;
-  float z;
+  float mX;
+  float mY;
+  float mZ;
 };
 
 /// `GE3DLine` (sizeof 0x18): start, direction.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGe3DLine {
-  EeGe3DPoint start;
-  EeGeVector direction;
+  EeGe3DPoint mStart;
+  EeGeVector mDirection;
 };
 
 /// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGe3DPlane {
-  EeGe3DPoint point;
-  EeGeVector normal;
+  EeGe3DPoint mPoint;
+  EeGeVector mNormal;
 };
 
 /// `GERectangle` (sizeof 0x10), in the C++'s member order.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGeRectangle {
-  float bottom;
-  float left;
-  float right;
-  float top;
+  float mBottom;
+  float mLeft;
+  float mRight;
+  float mTop;
 };
 
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
@@ -67,19 +83,23 @@ using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
 using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
 
 /// `GEOrientation` (sizeof 0xc).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGeOrientation {
-  float yaw;
-  float pitch;
-  float roll;
+  float mYaw;
+  float mPitch;
+  float mRoll;
 };
 
 /// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
 struct EeGeBoundingBox {
-  EeGe3DPoint bottom_left_front;
-  EeGe3DPoint top_right_back;
-  float width;
-  float height;
-  float depth;
+  EeGe3DPoint mBottomLeftFront;
+  EeGe3DPoint mTopRightBack;
+  float mWidth;
+  float mHeight;
+  float mDepth;
 };
 
 /// Receives one rectangle of a split.
@@ -436,6 +456,14 @@ void ee_ge_quat_slerp(const EeGeQuaternion *q,
 /// # Safety
 /// `b` is valid.
 void ee_ge_bbox_compute_dimensions(EeGeBoundingBox *b);
+
+/// `GEBoundingBox::Define` and `operator=`: the two corners, then the extents (`ComputeDimensions`); returns `b`.
+///
+/// # Safety
+/// The pointers are valid (the corners may be `b`'s own).
+EeGeBoundingBox *ee_ge_bbox_define(EeGeBoundingBox *b,
+                                   const EeGe3DPoint *bottom_left_front,
+                                   const EeGe3DPoint *top_right_back);
 
 /// `GEBoundingBox::Contains`.
 ///

@@ -23,7 +23,8 @@ class GERectangle;
 class GEViewport;
 class FSFile;
 
-// The C++ object as its mirror, and a mirror as its C++ object
+// The C++ object as its record (the classes derive from their records: the records' fields are the classes' members),
+// and a record as its C++ object
 #define LLE_GERUST_MIRROR(C, R) \
     inline const R* GERust(const C& in) { return reinterpret_cast<const R*>(&in); } \
     inline R* GERust(C& in) { return reinterpret_cast<R*>(&in); } \

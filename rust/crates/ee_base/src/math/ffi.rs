@@ -758,6 +758,26 @@ pub unsafe extern "C" fn ee_ge_bbox_compute_dimensions(b: *mut GeBoundingBox) {
     unsafe { (*b).compute_dimensions() }
 }
 
+/// `GEBoundingBox::Define` and `operator=`: the two corners, then the extents (`ComputeDimensions`); returns `b`.
+///
+/// # Safety
+/// The pointers are valid (the corners may be `b`'s own).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_bbox_define(
+    b: *mut GeBoundingBox,
+    bottom_left_front: *const Ge3DPoint,
+    top_right_back: *const Ge3DPoint,
+) -> *mut GeBoundingBox {
+    // SAFETY: the function's contract (the corners are read before the stores)
+    unsafe {
+        let (first, second) = (*bottom_left_front, *top_right_back);
+        (*b).bottom_left_front = first;
+        (*b).top_right_back = second;
+        (*b).compute_dimensions();
+    }
+    b
+}
+
 /// `GEBoundingBox::Contains`.
 ///
 /// # Safety

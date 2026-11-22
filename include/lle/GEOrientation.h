@@ -7,15 +7,10 @@
 
 class FSFile;
 
-class GEOrientation {                       // sizeof 0xc
+class GEOrientation : public EeGeOrientation {   // the Rust record (mYaw, mPitch, mRoll; rust/base/math.h)
 public:
-    GEOrientation() : mYaw(0.0f), mPitch(0.0f), mRoll(0.0f) {}
-    GEOrientation(float inYaw, float inPitch, float inRoll) : mYaw(inYaw), mPitch(inPitch), mRoll(inRoll) {}
-    GEOrientation(const GEOrientation& inOrientation)
-        : mYaw(inOrientation.mYaw), mPitch(inOrientation.mPitch), mRoll(inOrientation.mRoll) {}
-    ~GEOrientation() {}
-    GEOrientation& operator=(const GEOrientation& inOrientation)
-        { this->mYaw = inOrientation.mYaw; this->mPitch = inOrientation.mPitch; this->mRoll = inOrientation.mRoll; return *this; }
+    GEOrientation() : EeGeOrientation{0.0f, 0.0f, 0.0f} {}
+    GEOrientation(float inYaw, float inPitch, float inRoll) : EeGeOrientation{inYaw, inPitch, inRoll} {}
     float GetYaw() const { return this->mYaw; }  // exported 0x10011ec0 (ICF `fld [ecx]; ret`)
     float GetPitch() const { return this->mPitch; }
     float GetRoll() const { return this->mRoll; }
@@ -26,10 +21,6 @@ public:
     void SetPitch(float inPitch) { this->mPitch = inPitch; }
     void SetRoll(float inRoll) { this->mRoll = inRoll; }
     void SetYaw(float inYaw) { this->mYaw = inYaw; }
-
-    float mYaw;                             // +0x00
-    float mPitch;                           // +0x04
-    float mRoll;                            // +0x08
 };
 
 #endif

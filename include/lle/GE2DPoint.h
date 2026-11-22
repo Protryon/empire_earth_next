@@ -7,19 +7,16 @@
 
 class FSFile;
 
-class GE2DPoint {                   // proven sizeof 8 (Default.dll vector<GE2DPoint>: index * 8)
+class GE2DPoint : public EeGe2DPoint {   // the Rust record (mX, mY; rust/base/math.h)
 public:
-    GE2DPoint() : mX(0.0f), mY(0.0f) {}
-    GE2DPoint(long inX, long inY) : mX((float)inX), mY((float)inY) {}
-    GE2DPoint(float inX, float inY) : mX(inX), mY(inY) {}
-    GE2DPoint(const GE2DPoint& inPoint) : mX(inPoint.mX), mY(inPoint.mY) {}
-    ~GE2DPoint() {}
-    GE2DPoint& operator=(const GE2DPoint& inPoint) { this->mX = inPoint.mX; this->mY = inPoint.mY; return *this; }
+    GE2DPoint() : EeGe2DPoint{0.0f, 0.0f} {}
+    GE2DPoint(long inX, long inY) : EeGe2DPoint{(float)inX, (float)inY} {}
+    GE2DPoint(float inX, float inY) : EeGe2DPoint{inX, inY} {}
     bool operator==(const GE2DPoint& inPoint) const { return this->mX == inPoint.mX && this->mY == inPoint.mY; }
     bool operator!=(const GE2DPoint& inPoint) const { return this->mX != inPoint.mX || this->mY != inPoint.mY; }
-    GE2DPoint& operator+=(const GE2DPoint& inPoint) { this->mX += inPoint.mX; this->mY += inPoint.mY; return *this; }
-    GE2DPoint& operator-=(const GE2DPoint& inPoint) { this->mX -= inPoint.mX; this->mY -= inPoint.mY; return *this; }
-    void Clear() { this->mX = 0.0f; this->mY = 0.0f; }
+    GE2DPoint& operator+=(const GE2DPoint& inPoint) { return *this = GE2DPoint(this->mX + inPoint.mX, this->mY + inPoint.mY); }
+    GE2DPoint& operator-=(const GE2DPoint& inPoint) { return *this = GE2DPoint(this->mX - inPoint.mX, this->mY - inPoint.mY); }
+    void Clear() { *this = GE2DPoint(); }
     // cross product of (inFrom - inTo) and (inTo - this): the side of the line inFrom-inTo this point lies on
     float GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const
         { return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo)); }
@@ -29,7 +26,7 @@ public:
     void SetY(float inY) { this->mY = inY; }
     void SetX(long inX) { this->mX = (float)inX; }
     void SetY(long inY) { this->mY = (float)inY; }
-    void SetXY(float inX, float inY) { this->mX = inX; this->mY = inY; }
+    void SetXY(float inX, float inY) { *this = GE2DPoint(inX, inY); }
     float DistanceTo(const GE2DPoint& inPoint) const { return ee_ge_2d_distance(GERust(*this), GERust(inPoint)); }
     float DistanceToSquared(const GE2DPoint& inPoint) const
         { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
@@ -46,9 +43,6 @@ public:
         inPoint ? static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint))
                 : static_cast<std::vector<GE2DPoint>*>(inPoints)->clear();
     }
-
-    float mX;                               // +0x00
-    float mY;                               // +0x04
 };
 
 #endif
