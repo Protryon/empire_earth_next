@@ -119,6 +119,46 @@ pub const EE_UNITS_EUM_ZERO_REFERENCES: i32 = 4016;
 /// `delete this`
 pub const EE_UNITS_EUM_DELETE: i32 = 4017;
 
+/// `mObjectKind.mValue = b`
+pub const EE_UNITS_EUM_SET_OBJECT_KIND: i32 = 4018;
+/// `static_cast<EEComplexUnit*>(this)->mDisabledReason = 0`
+pub const EE_UNITS_EUM_CX_ZERO_DISABLED_REASON: i32 = 4019;
+/// `static_cast<EEComplexUnit*>(this)->ResetEEComplexUnit(true, false)`
+pub const EE_UNITS_EUM_CX_RESET_COMPLEX: i32 = 4020;
+
+/// `ee/EEUnitKind.h`'s kinds of an `EEUnit` and an `EEComplexUnit`
+const KIND_UNIT: i64 = 1;
+const KIND_COMPLEX_UNIT: i64 = 2;
+
+/// `EEUnit::EEUnit()`: an `EEUnit`, reset, no references.
+pub fn construct<H: EumHost + ?Sized>(h: &mut H, unit: u64) {
+    h.eum(EE_UNITS_EUM_SET_OBJECT_KIND, unit, 0, KIND_UNIT, 0);
+    for op in [EE_UNITS_EUM_RTS_RESET, EE_UNITS_EUM_RESET_EE_UNIT, EE_UNITS_EUM_ZERO_REFERENCES] {
+        h.eum(op, unit, 0, 0, 0);
+    }
+}
+
+/// `EEComplexUnit::EEComplexUnit()`: an `EEComplexUnit` (a new unit's disable reason 0: saved games store it), every
+/// reset, no references.
+pub fn construct_complex<H: EumHost + ?Sized>(h: &mut H, unit: u64) {
+    h.eum(EE_UNITS_EUM_SET_OBJECT_KIND, unit, 0, KIND_COMPLEX_UNIT, 0);
+    for op in [
+        EE_UNITS_EUM_CX_ZERO_DISABLED_REASON,
+        EE_UNITS_EUM_RTS_RESET,
+        EE_UNITS_EUM_RESET_EE_UNIT,
+        EE_UNITS_EUM_CX_RESET_COMPLEX,
+        EE_UNITS_EUM_ZERO_REFERENCES,
+    ] {
+        h.eum(op, unit, 0, 0, 0);
+    }
+}
+
+/// `EEUnit::~EEUnit()`: an `EEUnit` again, its node freed.
+pub fn destroy<H: EumHost + ?Sized>(h: &mut H, unit: u64) {
+    h.eum(EE_UNITS_EUM_SET_OBJECT_KIND, unit, 0, KIND_UNIT, 0);
+    h.eum(EE_UNITS_EUM_FREE_NODE, unit, 0, 0, 0);
+}
+
 /// `EEUnit::Clear()`: the unit's and the base's resets, then invalid.
 pub fn clear<H: EumHost + ?Sized>(h: &mut H, unit: u64) {
     for op in [EE_UNITS_EUM_RESET_EE_UNIT, EE_UNITS_EUM_RTS_RESET, EE_UNITS_EUM_SET_INVALID] {
@@ -144,6 +184,9 @@ pub const EE_UNITS_EUM_DO_REGROW_FOREST: i32 = 7;
 pub const EE_UNITS_EUM_DO_SET_LAST_ATTACKER: i32 = 8;
 pub const EE_UNITS_EUM_DO_CLEAR: i32 = 9;
 pub const EE_UNITS_EUM_DO_LAST_DEREFERENCE: i32 = 10;
+pub const EE_UNITS_EUM_DO_CONSTRUCT: i32 = 11;
+pub const EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX: i32 = 12;
+pub const EE_UNITS_EUM_DO_DESTROY: i32 = 13;
 
 /// The C++ statements of the bodies.
 pub trait EumHost {
@@ -313,6 +356,9 @@ pub fn run<H: EumHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: u64, b: i64,
         EE_UNITS_EUM_DO_SET_LAST_ATTACKER => set_last_attacker(h, unit, a),
         EE_UNITS_EUM_DO_CLEAR => clear(h, unit),
         EE_UNITS_EUM_DO_LAST_DEREFERENCE => last_dereference(h, unit),
+        EE_UNITS_EUM_DO_CONSTRUCT => construct(h, unit),
+        EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX => construct_complex(h, unit),
+        EE_UNITS_EUM_DO_DESTROY => destroy(h, unit),
         _ => {}
     }
 }

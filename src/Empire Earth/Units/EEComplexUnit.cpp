@@ -137,14 +137,7 @@ UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 // Creates a complex unit with every unit, mobile-unit and reference state reset to defaults
 EEComplexUnit::EEComplexUnit()
 {
-    this->mObjectKind.mValue = 2;   // New (port): an EEComplexUnit (ee/EEUnitKind.h)
-    // none of the resets below sets the disable reason, which saved games store: start a new unit at 0
-    // (a unit reused from the pool keeps its last reason, as before)
-    this->mDisabledReason = 0;
-    this->Reset();
-    this->ResetEEUnit();
-    this->ResetEEComplexUnit(true, false);
-    this->mReferenceCount = 0;
+    ee_units_eu_more(EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX, static_cast<EEUnit*>(this), NULL, 0, 0);   // eu_more.rs
 }
 
 // Adds the unit's line of sight at its current tile
@@ -494,15 +487,7 @@ void EEReportLeakingUnits()
 // (provisional name)
 void EEDumpLeakedUnits(FSFileSpec& inFile)
 {
-    std::vector<EEComplexUnit*> theUnits;
-    EEComplexUnit::sMemoryPool.GetUsed(theUnits);
-    fprintf(inFile, "\n\n**********LEAKED UNITS*********\n\n");
-    for (long i = (long)theUnits.size() - 1; i >= 0; i--) {
-        fprintf(inFile, "Leaking Unit: %s at (%ld,%ld). UnitID: %ld with action:%s, with %6.6f growth rate\n",
-                (const char*)theUnits[i]->GetUnitClass()->GetName(), theUnits[i]->GetTileX(), theUnits[i]->GetTileY(),
-                theUnits[i]->GetUnitID(), (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType),
-                theUnits[i]->GetGrowth());
-    }
+    ee_units_cu_small(EE_UNITS_CU_S_DO_DUMP_LEAKED, NULL, &inFile, 0);   // cu_small.rs
 }
 
 // the Rust dump's text into the out-of-sync file
@@ -1187,6 +1172,8 @@ static EECivPower sInsurancePower;
 static char sCuInsuranceAmount[64];
 static UWideString sCuInsuranceText;
 static UWideString sCuInsurancePart;
+// EEDumpLeakedUnits' list (its theUnits)
+static std::vector<EEComplexUnit*> sCuLeaked;
 
 // a build queue entry of cu_cargo.rs's (technology, flag)
 static EEProductionEntry EECuEntry(int64_t inTechnology, int64_t inFlag)
@@ -1312,6 +1299,13 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     float* f = *ioF;
     switch (inOp) {
     // cu_small.rs's
+    case EE_UNITS_CU_S_ANIMATION_MODEL: theUnit->mPhysicalModel.SetModel(theUnit->GetModel()->mModels[theUnit->mAnimation]); return 0;
+    case EE_UNITS_CU_S_SET_MODEL_FRAME: theUnit->mPhysicalModel.SetFrame((unsigned long)inB); return 0;
+    case EE_UNITS_CU_S_LEAKED_CLEAR: sCuLeaked.clear(); return 0;
+    case EE_UNITS_CU_S_LEAKED_GET: EEComplexUnit::sMemoryPool.GetUsed(sCuLeaked); return 0;
+    case EE_UNITS_CU_S_LEAKED_COUNT: return (int64_t)sCuLeaked.size();
+    case EE_UNITS_CU_S_LEAKED_HEADER: fprintf(*EECuObject<FSFileSpec>(inA), "\n\n**********LEAKED UNITS*********\n\n"); return 0;
+    case EE_UNITS_CU_S_LEAKED_LINE: fprintf(*EECuObject<FSFileSpec>(inA), "Leaking Unit: %s at (%ld,%ld). UnitID: %ld with action:%s, with %6.6f growth rate\n", (const char*)sCuLeaked[inB]->GetUnitClass()->GetName(), sCuLeaked[inB]->GetTileX(), sCuLeaked[inB]->GetTileY(), sCuLeaked[inB]->GetUnitID(), (const char*)EEUnitAction::GetActionName(sCuLeaked[inB]->mCommand->mType), sCuLeaked[inB]->GetGrowth()); return 0;
     case EE_UNITS_CU_S_HAS_SOUND: return theUnit->mSound != NULL;
     case EE_UNITS_CU_S_SOUND_DEREFERENCE: theUnit->mSound->Dereference(); return 0;
     case EE_UNITS_CU_S_SET_SOUND: theUnit->mSound = EECuObject<SESMInstanceNode>(inA); return 0;

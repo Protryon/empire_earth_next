@@ -91,6 +91,21 @@ pub const EE_UNITS_CU_S_INSURANCE_IN_INSURANCE: i32 = 4039;
 /// `gUserInterface->AddChatLogEntry(player a's mColor, UWideString(gEmptyString), theText, 5000, 2)`
 pub const EE_UNITS_CU_S_INSURANCE_CHAT_LINE: i32 = 4040;
 
+/// `mPhysicalModel.SetModel(GetModel()->mModels[mAnimation])`
+pub const EE_UNITS_CU_S_ANIMATION_MODEL: i32 = 4050;
+/// `mPhysicalModel.SetFrame(b)`
+pub const EE_UNITS_CU_S_SET_MODEL_FRAME: i32 = 4051;
+/// `theUnits.clear()` (EEDumpLeakedUnits' local, the host's)
+pub const EE_UNITS_CU_S_LEAKED_CLEAR: i32 = 4052;
+/// `EEComplexUnit::sMemoryPool.GetUsed(theUnits)`
+pub const EE_UNITS_CU_S_LEAKED_GET: i32 = 4053;
+/// `theUnits.size()`
+pub const EE_UNITS_CU_S_LEAKED_COUNT: i32 = 4054;
+/// the leak dump's header line into file `a`
+pub const EE_UNITS_CU_S_LEAKED_HEADER: i32 = 4055;
+/// the leak dump's line of `theUnits[b]` into file `a`
+pub const EE_UNITS_CU_S_LEAKED_LINE: i32 = 4056;
+
 fn q<H: CuHost + ?Sized>(h: &mut H, op: i32, unit: u64) -> i64 {
     h.cu(op, unit, 0, 0, 0, &mut [0.0; 4])
 }
@@ -209,6 +224,25 @@ pub fn insurance_chat<H: CuHost + ?Sized>(h: &mut H, unit: u64, player: u64, res
     qa(h, EE_UNITS_CU_S_INSURANCE_CHAT_LINE, unit, player);
 }
 
+/// `SetAnimationFrame(frame)`: the model of the unit's animation at `frame`.
+pub fn set_animation_frame<H: CuHost + ?Sized>(h: &mut H, unit: u64, frame: i64) {
+    q(h, EE_UNITS_CU_S_ANIMATION_MODEL, unit);
+    qab(h, EE_UNITS_CU_S_SET_MODEL_FRAME, unit, 0, frame);
+}
+
+/// `EEDumpLeakedUnits(file)`: every used pool unit, last first, with its class, tile, id, action and growth (no unit:
+/// `a` is the file in every statement).
+pub fn dump_leaked<H: CuHost + ?Sized>(h: &mut H, file: u64) {
+    qa(h, EE_UNITS_CU_S_LEAKED_CLEAR, 0, file);
+    qa(h, EE_UNITS_CU_S_LEAKED_GET, 0, file);
+    qa(h, EE_UNITS_CU_S_LEAKED_HEADER, 0, file);
+    let mut i = qa(h, EE_UNITS_CU_S_LEAKED_COUNT, 0, file) - 1;
+    while i >= 0 {
+        qab(h, EE_UNITS_CU_S_LEAKED_LINE, 0, file, i);
+        i -= 1;
+    }
+}
+
 // ---- the bodies (`ee_units_cu_small`'s `what`)
 pub const EE_UNITS_CU_S_DO_CLEAR: i32 = 1;
 pub const EE_UNITS_CU_S_DO_LAST_DEREFERENCE: i32 = 2;
@@ -222,6 +256,8 @@ pub const EE_UNITS_CU_S_DO_IGNORE_TARGET: i32 = 9;
 pub const EE_UNITS_CU_S_DO_IS_TARGET_IGNORED: i32 = 10;
 pub const EE_UNITS_CU_S_DO_CAN_REACH_UNIT: i32 = 11;
 pub const EE_UNITS_CU_S_DO_IS_ON_TILE_BORDERING: i32 = 12;
+pub const EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME: i32 = 13;
+pub const EE_UNITS_CU_S_DO_DUMP_LEAKED: i32 = 14;
 
 /// Runs body `what` on `unit` (`a` another object, `b` a value).
 pub fn run<H: CuHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: u64, b: i64) -> i64 {
@@ -238,6 +274,8 @@ pub fn run<H: CuHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: u64, b: i64) 
         EE_UNITS_CU_S_DO_IS_TARGET_IGNORED => return i64::from(is_target_ignored(h, unit, a, b != 0)),
         EE_UNITS_CU_S_DO_CAN_REACH_UNIT => return i64::from(reach(h, unit, a, false)),
         EE_UNITS_CU_S_DO_IS_ON_TILE_BORDERING => return i64::from(reach(h, unit, a, true)),
+        EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME => set_animation_frame(h, unit, b),
+        EE_UNITS_CU_S_DO_DUMP_LEAKED => dump_leaked(h, a),
         _ => {}
     }
     0
@@ -272,7 +310,7 @@ mod tests {
 
     impl CuHost for Rec {
         fn cu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, _f: &mut [f32; 4]) -> i64 {
-            assert_eq!(unit, 1);
+            assert!(unit == 1 || op >= EE_UNITS_CU_S_LEAKED_CLEAR);
             self.log.push((op, a, b, c));
             if op == EE_UNITS_CU_S_NUM_GOAL_QUEUES {
                 return self.queues;
@@ -353,6 +391,26 @@ mod tests {
         let mut r = Rec::default();
         ignore_target(&mut r, 1, 9);
         assert_eq!(ops(&r), [EE_UNITS_CU_S_WORLD_IGNORE, EE_UNITS_CU_S_CAPTURE_IGNORE]);
+    }
+
+    #[test]
+    fn the_animation_frame_and_the_leak_dump() {
+        let mut r = Rec::default();
+        set_animation_frame(&mut r, 1, 7);
+        assert_eq!(r.log, [(EE_UNITS_CU_S_ANIMATION_MODEL, 0, 0, 0), (EE_UNITS_CU_S_SET_MODEL_FRAME, 0, 7, 0)]);
+        let mut r = Rec { answers: vec![(EE_UNITS_CU_S_LEAKED_COUNT, 2)], ..Default::default() };
+        dump_leaked(&mut r, 0x90);
+        assert_eq!(
+            r.log,
+            [
+                (EE_UNITS_CU_S_LEAKED_CLEAR, 0x90, 0, 0),
+                (EE_UNITS_CU_S_LEAKED_GET, 0x90, 0, 0),
+                (EE_UNITS_CU_S_LEAKED_HEADER, 0x90, 0, 0),
+                (EE_UNITS_CU_S_LEAKED_COUNT, 0x90, 0, 0),
+                (EE_UNITS_CU_S_LEAKED_LINE, 0x90, 1, 0),
+                (EE_UNITS_CU_S_LEAKED_LINE, 0x90, 0, 0)
+            ]
+        );
     }
 
     #[test]

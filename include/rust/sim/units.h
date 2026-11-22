@@ -3652,6 +3652,27 @@ constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_IN_INSURANCE = 4039;
 /// `gUserInterface->AddChatLogEntry(player a's mColor, UWideString(gEmptyString), theText, 5000, 2)`
 constexpr static const int32_t EE_UNITS_CU_S_INSURANCE_CHAT_LINE = 4040;
 
+/// `mPhysicalModel.SetModel(GetModel()->mModels[mAnimation])`
+constexpr static const int32_t EE_UNITS_CU_S_ANIMATION_MODEL = 4050;
+
+/// `mPhysicalModel.SetFrame(b)`
+constexpr static const int32_t EE_UNITS_CU_S_SET_MODEL_FRAME = 4051;
+
+/// `theUnits.clear()` (EEDumpLeakedUnits' local, the host's)
+constexpr static const int32_t EE_UNITS_CU_S_LEAKED_CLEAR = 4052;
+
+/// `EEComplexUnit::sMemoryPool.GetUsed(theUnits)`
+constexpr static const int32_t EE_UNITS_CU_S_LEAKED_GET = 4053;
+
+/// `theUnits.size()`
+constexpr static const int32_t EE_UNITS_CU_S_LEAKED_COUNT = 4054;
+
+/// the leak dump's header line into file `a`
+constexpr static const int32_t EE_UNITS_CU_S_LEAKED_HEADER = 4055;
+
+/// the leak dump's line of `theUnits[b]` into file `a`
+constexpr static const int32_t EE_UNITS_CU_S_LEAKED_LINE = 4056;
+
 constexpr static const int32_t EE_UNITS_CU_S_DO_CLEAR = 1;
 
 constexpr static const int32_t EE_UNITS_CU_S_DO_LAST_DEREFERENCE = 2;
@@ -3675,6 +3696,10 @@ constexpr static const int32_t EE_UNITS_CU_S_DO_IS_TARGET_IGNORED = 10;
 constexpr static const int32_t EE_UNITS_CU_S_DO_CAN_REACH_UNIT = 11;
 
 constexpr static const int32_t EE_UNITS_CU_S_DO_IS_ON_TILE_BORDERING = 12;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME = 13;
+
+constexpr static const int32_t EE_UNITS_CU_S_DO_DUMP_LEAKED = 14;
 
 /// unit `a`'s `EEAttackUnitCast(GetGoal())` (0: none)
 constexpr static const int32_t EE_UNITS_CU_ATTACK_GOAL_OF = 700;
@@ -5886,6 +5911,15 @@ constexpr static const int32_t EE_UNITS_EUM_ZERO_REFERENCES = 4016;
 /// `delete this`
 constexpr static const int32_t EE_UNITS_EUM_DELETE = 4017;
 
+/// `mObjectKind.mValue = b`
+constexpr static const int32_t EE_UNITS_EUM_SET_OBJECT_KIND = 4018;
+
+/// `static_cast<EEComplexUnit*>(this)->mDisabledReason = 0`
+constexpr static const int32_t EE_UNITS_EUM_CX_ZERO_DISABLED_REASON = 4019;
+
+/// `static_cast<EEComplexUnit*>(this)->ResetEEComplexUnit(true, false)`
+constexpr static const int32_t EE_UNITS_EUM_CX_RESET_COMPLEX = 4020;
+
 constexpr static const int32_t EE_UNITS_EUM_DO_REMOVE = 1;
 
 constexpr static const int32_t EE_UNITS_EUM_DO_COPY_FROM = 2;
@@ -5905,6 +5939,12 @@ constexpr static const int32_t EE_UNITS_EUM_DO_SET_LAST_ATTACKER = 8;
 constexpr static const int32_t EE_UNITS_EUM_DO_CLEAR = 9;
 
 constexpr static const int32_t EE_UNITS_EUM_DO_LAST_DEREFERENCE = 10;
+
+constexpr static const int32_t EE_UNITS_EUM_DO_CONSTRUCT = 11;
+
+constexpr static const int32_t EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX = 12;
+
+constexpr static const int32_t EE_UNITS_EUM_DO_DESTROY = 13;
 
 /// `kUnitTypeTownCenter`, `kUnitTypeCapitol`
 constexpr static const uint64_t TOWN_CENTER = 35;
