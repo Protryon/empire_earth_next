@@ -202,7 +202,7 @@ static const unsigned long kUMKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF
 static ISEntity* sUMKey;                       // the key um_key_load found
 static GERectangle sUMParent, sUMRect;         // CreateUserDefinedControl's window and control rectangles
 static std::vector<UWideString> sUMStrings;    // and its strings
-static_assert(EE_SCREENS_UMC_FORM_MAIN_GAME == kFormMainGame && EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
+static_assert(EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
                   EE_SCREENS_UMC_BACKGROUND_GENERIC == kBackgroundGeneric &&
                   EE_SCREENS_UMC_STATUS_BUTTON == kDbControlStatusButton && EE_SCREENS_UMC_MINI_MAP == kDbControlMiniMap &&
                   EE_SCREENS_UMC_ERROR_LOG == kDbControlErrorLog && EE_SCREENS_UMC_ATTRIBUTE == kDbControlAttribute &&

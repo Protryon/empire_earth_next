@@ -136,10 +136,6 @@ extern "C" int32_t ee_screenscpp_group(void* inGroup, bool inPrint, uint32_t inW
 static void* EEUIFMGStatusBox::* const kMGBoxSlots[8] = {
     &EEUIFMGStatusBox::mC8C, &EEUIFMGStatusBox::mC94, &EEUIFMGStatusBox::mC90, &EEUIFMGStatusBox::mC84,
     &EEUIFMGStatusBox::mC88, &EEUIFMGStatusBox::mC98, &EEUIFMGStatusBox::mCAC, &EEUIFMGStatusBox::mCA8};
-static_assert(EE_SCREENS_MGC_ACTION_BUTTON1 == kMainGameActionButton1 && EE_SCREENS_MGC_UNIT_ICON_BAR == kMainGameUnitIconBar &&
-                  kMainGameTimedFighterRally == 208 && kMainGameTimedBomberRally == 209 &&
-                  kMainGameTimedAtomicBomberRally == 210,
-              "main_group_calls.rs' controls");
 extern "C" uintptr_t ee_screenscpp_mg_owner(uintptr_t inGroup) { return (uintptr_t)MG(inGroup)->mOwner; }
 extern "C" uintptr_t ee_screenscpp_mg_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
 extern "C" void ee_screenscpp_mg_remove_hot_keys(uintptr_t inGroup)

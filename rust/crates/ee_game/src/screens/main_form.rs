@@ -9,6 +9,7 @@
 //! asked where and as often as the original asked it. Texts cross as UTF-8 bytes through the host's one held text
 //! (a `UWideString`): [`FormHost::set_text`] fills it, [`FormHost::text`] reads it, the label ops show it.
 
+use crate::screens::ui_ids::EEMainGameControl;
 use crate::screens::camera::*;
 use crate::screens::hot_keys::*;
 use crate::screens::main_game::*;
@@ -279,20 +280,20 @@ pub const EE_SCREENS_MF_GROUP_WANTS_REFRESH: i64 = 2;
 
 /// The first resource label (`GetControl(i + 6)`).
 pub const EE_SCREENS_MF_CTL_RESOURCE: i64 = 6;
-pub const EE_SCREENS_MF_CTL_WIN_LOSE: i64 = 13;
+pub(crate) const EE_SCREENS_MF_CTL_WIN_LOSE: i64 = EEMainGameControl::kMainGameWinLose as i64;
 /// The first wonder countdown label (to 0x12).
 pub const EE_SCREENS_MF_CTL_WONDER: i64 = 0x0e;
-pub const EE_SCREENS_MF_CTL_POPULATION: i64 = 24;
-pub const EE_SCREENS_MF_CTL_MINI_MAP: i64 = 26;
-pub const EE_SCREENS_MF_CTL_CHAT_LINE1: i64 = 101;
-pub const EE_SCREENS_MF_CTL_CHAT_LINE7: i64 = 107;
-pub const EE_SCREENS_MF_CTL_GAME_CLOCK: i64 = 108;
-pub const EE_SCREENS_MF_CTL_BRIEFING: i64 = 109;
-pub const EE_SCREENS_MF_CTL_DIALOG_PORTRAIT: i64 = 223;
-pub const EE_SCREENS_MF_CTL_BRIEFING_ALERT: i64 = 235;
+pub(crate) const EE_SCREENS_MF_CTL_POPULATION: i64 = EEMainGameControl::kMainGamePopulation as i64;
+pub(crate) const EE_SCREENS_MF_CTL_MINI_MAP: i64 = EEMainGameControl::kMainGameMiniMap as i64;
+pub(crate) const EE_SCREENS_MF_CTL_CHAT_LINE1: i64 = EEMainGameControl::kMainGameChatLine1 as i64;
+pub(crate) const EE_SCREENS_MF_CTL_CHAT_LINE7: i64 = EEMainGameControl::kMainGameChatLine7 as i64;
+pub(crate) const EE_SCREENS_MF_CTL_GAME_CLOCK: i64 = EEMainGameControl::kMainGameGameClock as i64;
+pub(crate) const EE_SCREENS_MF_CTL_BRIEFING: i64 = EEMainGameControl::kMainGameGameInfoBriefing as i64;
+pub(crate) const EE_SCREENS_MF_CTL_DIALOG_PORTRAIT: i64 = EEMainGameControl::kMainGameDialogPortrait as i64;
+pub(crate) const EE_SCREENS_MF_CTL_BRIEFING_ALERT: i64 = EEMainGameControl::kMainGameLargeScenBriefingAlert as i64;
 /// The last lag icon (player 8); player 1's is 0xfc.
 pub const EE_SCREENS_MF_CTL_LAG_LAST: i64 = 0xf5;
-pub const EE_SCREENS_MF_CTL_PREVIOUS_MESSAGES: i64 = 253;
+pub(crate) const EE_SCREENS_MF_CTL_PREVIOUS_MESSAGES: i64 = EEMainGameControl::kMainGamePreviousMessages as i64;
 /// The error log's lines (`mStrings`).
 pub const EE_SCREENS_MF_ERROR_LINES: i64 = 0x24;
 /// `mUIState`: the wall mode, the gate mode, no scrolling.
@@ -674,7 +675,7 @@ pub const EE_SCREENS_MF_GROUP_SELECT: i64 = 3;
 /// No event in a hot key's slot (EE_SCREENS_MF_OP_ADD_HOT_KEY).
 pub const EE_SCREENS_MF_NO_EVENT: u32 = 0xffff_ffff;
 /// The cancel-mode button (`kMainGameCancelUIMode`).
-pub const EE_SCREENS_MF_CTL_CANCEL_UI_MODE: i64 = 244;
+pub(crate) const EE_SCREENS_MF_CTL_CANCEL_UI_MODE: i64 = EEMainGameControl::kMainGameCancelUIMode as i64;
 /// `kSoundButton1`, `kSoundButton2`.
 pub const EE_SCREENS_MF_SOUND_BUTTON1: i64 = 0x207;
 pub const EE_SCREENS_MF_SOUND_BUTTON2: i64 = 0x208;

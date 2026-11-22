@@ -4,13 +4,14 @@
 //! `EECreateFormEvent`, `EECreateWonNetServerSelectEvent`) and the members `CreateScenarioEditor`,
 //! `DeleteScenarioEditor`, `CreateForm`, `CreateUserDefinedBackground` and `CreateUserDefinedControl`.
 
+use crate::screens::ui_ids::EEFormID;
 use crate::screens::factories::{EE_SCREENS_CPP_CANCEL_LOAD, EE_SCREENS_CPP_LOAD_UNIT, EE_SCREENS_CPP_WNS_OPEN};
 use crate::screens::game_cpp::Cpp;
 use crate::screens::save_load::EE_SCREENS_SL_ACTIVATE;
 use crate::screens::ui_manager::*;
 
 /// `kFormMainGame` (the form `CreateForm` makes as the game's class).
-pub const EE_SCREENS_UMC_FORM_MAIN_GAME: u32 = 11;
+pub(crate) const EE_SCREENS_UMC_FORM_MAIN_GAME: u32 = EEFormID::kFormMainGame as u32;
 /// `kControlEventWNSCancel` (WON's server select form's cancel).
 pub const EE_SCREENS_UMC_WNS_CANCEL: u32 = 106;
 /// `kBackgroundGeneric` (the background table's type the game makes).

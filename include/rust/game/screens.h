@@ -8948,31 +8948,11 @@ constexpr static const int64_t EE_SCREENS_MF_GROUP_WANTS_REFRESH = 2;
 /// The first resource label (`GetControl(i + 6)`).
 constexpr static const int64_t EE_SCREENS_MF_CTL_RESOURCE = 6;
 
-constexpr static const int64_t EE_SCREENS_MF_CTL_WIN_LOSE = 13;
-
 /// The first wonder countdown label (to 0x12).
 constexpr static const int64_t EE_SCREENS_MF_CTL_WONDER = 14;
 
-constexpr static const int64_t EE_SCREENS_MF_CTL_POPULATION = 24;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_MINI_MAP = 26;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_CHAT_LINE1 = 101;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_CHAT_LINE7 = 107;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_GAME_CLOCK = 108;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_BRIEFING = 109;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_DIALOG_PORTRAIT = 223;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_BRIEFING_ALERT = 235;
-
 /// The last lag icon (player 8); player 1's is 0xfc.
 constexpr static const int64_t EE_SCREENS_MF_CTL_LAG_LAST = 245;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_PREVIOUS_MESSAGES = 253;
 
 /// The error log's lines (`mStrings`).
 constexpr static const int64_t EE_SCREENS_MF_ERROR_LINES = 36;
@@ -9020,9 +9000,6 @@ constexpr static const int64_t EE_SCREENS_MF_GROUP_SELECT = 3;
 
 /// No event in a hot key's slot (EE_SCREENS_MF_OP_ADD_HOT_KEY).
 constexpr static const uint32_t EE_SCREENS_MF_NO_EVENT = 4294967295;
-
-/// The cancel-mode button (`kMainGameCancelUIMode`).
-constexpr static const int64_t EE_SCREENS_MF_CTL_CANCEL_UI_MODE = 244;
 
 /// `kSoundButton1`, `kSoundButton2`.
 constexpr static const int64_t EE_SCREENS_MF_SOUND_BUTTON1 = 519;
@@ -9679,12 +9656,6 @@ constexpr static const uint32_t EE_SCREENS_MGR_DO_COMMAND_BUTTON = 6;
 constexpr static const uint32_t EE_SCREENS_MGR_DO_SPECIAL_BUTTONS = 7;
 
 constexpr static const uint32_t EE_SCREENS_MGR_DO_UPDATE = 8;
-
-/// `kMainGameActionButton1`: the stop button's control.
-constexpr static const uint32_t EE_SCREENS_MGC_ACTION_BUTTON1 = 78;
-
-/// `kMainGameUnitIconBar`.
-constexpr static const uint32_t EE_SCREENS_MGC_UNIT_ICON_BAR = 222;
 
 /// The main menu's open event (form event 1).
 constexpr static const uint32_t EE_SCREENS_MAIN_OPEN = 3073;
@@ -13022,9 +12993,6 @@ constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
 
 constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
 
-/// `kFormMainGame` (the form `CreateForm` makes as the game's class).
-constexpr static const uint32_t EE_SCREENS_UMC_FORM_MAIN_GAME = 11;
-
 /// `kControlEventWNSCancel` (WON's server select form's cancel).
 constexpr static const uint32_t EE_SCREENS_UMC_WNS_CANCEL = 106;
 
@@ -14811,10 +14779,6 @@ constexpr static const int32_t EE_SCREENS_SETS_GROUPS[5] = { 9, 12, 13, 10, 11, 
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
-
-/// The timed rally buttons (`kMainGameTimedFighterRally`, `kMainGameTimedBomberRally`,
-/// `kMainGameTimedAtomicBomberRally`).
-constexpr static const uint32_t EE_SCREENS_MGC_TIMED_RALLIES[3] = { 208, 209, 210, };
 
 extern "C" {
 
