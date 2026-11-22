@@ -164,25 +164,7 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
                   offsetof(EEUIFMGFormCall, mOut) == 16 * sizeof(void*) + 3 * sizeof(UWideString),
               "hud_direct.rs FormCallHead: the held text, the chat line's name and text, the button, the help");
 
-// Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
-// the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
-// construct; it reads no control: they are made after it)
-EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
-    : UIForm(inManager, inData, true), EeScreensMainFormFields()
-{
-    ee_screens_main_form_fields(this, static_cast<EeScreensMainFormFields*>(this));
-    ee_screens_main_form_construct(EEUIFMGFormCall(this).Ptr());
-}
-
 // (BuildGate and BuildWall: the placements call the build action, ee/EEARust.h)
-
-// Shows a chat message when the form has its chat lines
-void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                                unsigned long inFlags, unsigned long inArg5)
-{
-    if (this->GetControl(kMainGameChatLine7) != NULL)
-        this->DisplayChatLine(inColor, inName, inText, inFlags);
-}
 
 // (BuildUnit and the start modes StartGate, StartWall, StartCalamity, StartFlare, StartPatrol: inline in
 // ee/EEUIFMainGame.h)

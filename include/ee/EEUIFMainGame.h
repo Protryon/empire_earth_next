@@ -79,7 +79,14 @@ struct EEUIFMGFormCall {
 class EEUIFMainGame : public UIForm, public EeScreensMainFormFields {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
-    EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);
+    // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity), the
+    // mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
+    // construct; it reads no control: they are made after it)
+    EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
+        : UIForm(inManager, inData, true), EeScreensMainFormFields()
+    {
+        ee_screens_main_form_new(EEUIFMGFormCall(this).Ptr(), static_cast<EeScreensMainFormFields*>(this));
+    }
     // Destroys the main game form, its actions, panel groups, poll and unit hack
     virtual ~EEUIFMainGame() { ee_screens_mfb_destroy((uintptr_t)this); }
     // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
@@ -135,8 +142,13 @@ public:
     }
     // Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
     void CreateGroup(unsigned long inIndex) { ee_screens_mfb_create_group((uintptr_t)this, (uint32_t)inIndex); }
+    // Shows a chat message when the form has its chat lines
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                     unsigned long inFlags, unsigned long inArg5);
+                     unsigned long inFlags, unsigned long inArg5)
+    {
+        if (this->GetControl(kMainGameChatLine7) != NULL)
+            this->DisplayChatLine(inColor, inName, inText, inFlags);
+    }
     // Switches the bottom panel to another entity group and selects its panel group (ee_screens main_form.rs)
     void SetEntityGroup(long inGroup) { ee_screens_main_form_entity_group(EEUIFMGFormCall(this).Ptr(), inGroup); }
     // Tells whether a screen point is in the game view and not under the unit information panel

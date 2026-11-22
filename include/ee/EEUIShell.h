@@ -186,11 +186,9 @@ public:
     virtual void UnCheck() { EE_SHELL_IS(UNCHECK) ? (void)EE_SHELL_TO(UNCHECK) : UIRadioButton::UnCheck(); }
     int64_t Extra(uint32_t inVirtual, int64_t inA, int64_t inB, bool inSelf)
     {
-        switch (inVirtual) {
-        case EE_SCREENS_SV_CHECK: inSelf ? (void)0 : UIRadioButton::Check(); return 0;
-        case EE_SCREENS_SV_UNCHECK: inSelf ? (void)0 : UIRadioButton::UnCheck(); return 0;
-        default: return EEUIShellButtonOf::Extra(inVirtual, inA, inB, inSelf);
-        }
+        return inVirtual == EE_SCREENS_SV_CHECK && !inSelf     ? (UIRadioButton::Check(), 0)
+               : inVirtual == EE_SCREENS_SV_UNCHECK && !inSelf ? (UIRadioButton::UnCheck(), 0)
+                                                                : EEUIShellButtonOf::Extra(inVirtual, inA, inB, inSelf);
     }
 };
 
