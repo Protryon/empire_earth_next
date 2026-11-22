@@ -18,12 +18,10 @@ pub enum EeCampaignCpp {
     /// `new FSPath`
     PathNew,
     PathDereference,
-    /// `AddDirectory` of "<startup>Users\<a0>\"
-    PathAddUserDirectory,
+    /// `AddDirectory(*(FSFileSpec*)a0, true)`
+    PathAddDirectory,
     /// `FindFile(UString(a0), *(FSFileSpec**)a1)`
     PathFindFile,
-    /// a new `FSFileSpec` of "<startup>Users\<a0>\" with the file a1
-    SpecNewUser,
     SpecDelete,
     /// `Delete()` of the file
     SpecRemove,
@@ -31,8 +29,6 @@ pub enum EeCampaignCpp {
     ArchiveOpen,
     ArchiveClose,
     ArchiveDelete,
-    /// `GetTag(a0, value)` with the value a1 in and out (the sink a2) -> the result
-    ArchiveGetTag,
     ArchiveSetTag,
     /// `FindFile(UString(a0), *(FSMemoryFile**)a1)`
     ArchiveFindFile,
@@ -54,6 +50,7 @@ pub enum EeCampaignCpp {
     CivBuilderEdit,
     CivBuilderSave,
     CivBuilderFree,
+    /// `EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer())`
     ApplyCivilization,
     // ---- EECampaign::Load (p: the EECampaign, or the UWideString or file named)
     MemberRequiredCiv,
@@ -70,8 +67,13 @@ pub enum EeCampaignCpp {
     DataPathExists,
     /// `GetTag(a0, *(UWideString*)a1)`
     ArchiveGetTagInto,
-    /// a line of the list file into the sink a0 -> `UString::Load`'s result
+    /// `new UString(a0)`
+    LineNew,
+    /// `((UString*)p)->Load(*(FSMemoryFile*)a0)`
     LineLoad,
+    /// the `UString`'s text into the sink a0
+    LineText,
+    LineDelete,
     MemoryDelete,
     ScenariosClear,
     /// the scenario without its extension (the last four characters) pushed
@@ -281,13 +283,34 @@ pub struct EeCampaignProgress {
 
 /// A tag's value through the C++'s `GetTag`, which writes it only when the tag is there (`value` in and out).
 fn get_tag(archive: P, name: &[u8], value: &mut Vec<u8>) -> c_long {
-    let name = C::new(name);
-    let current = C::new(value);
-    let mut sink = EeCampaignText(Vec::new());
-    let result =
-        h(O::ArchiveGetTag, archive, &[name.a(), current.a(), &mut sink as *mut EeCampaignText as usize as i64]);
-    *value = sink.0;
-    result as c_long
+    let wide = h(O::WideNew, 0, &[]) as P;
+    set_wide(wide, value);
+    let result = tag_into(archive, name, wide);
+    *value = wide_text(wide);
+    h(O::WideDelete, wide, &[]);
+    result
+}
+
+/// "<startup volume><startup directory>Users\<user>\<file>" as a new spec (the caller deletes it).
+fn user_spec(user: &[u8], file: &[u8]) -> P {
+    let directory = cat(&[&text(O::StartupDirectory, 0, &[]), b"Users\\", user, b"\\"]);
+    new_spec(&directory, file)
+}
+
+/// The player's folder added to a path.
+fn add_user_directory(path: P, user: &[u8]) {
+    let spec = user_spec(user, b"");
+    h(O::PathAddDirectory, path, &[spec as i64]);
+    h(O::SpecDelete, spec, &[]);
+}
+
+/// A `UString` of `value` for one call (`EEApplyCivilizationFile` takes a non-const one), deleted after.
+fn with_line<T>(value: &[u8], f: impl FnOnce(P) -> T) -> T {
+    let value = C::new(value);
+    let line = h(O::LineNew, 0, &[value.a()]) as P;
+    let result = f(line);
+    h(O::LineDelete, line, &[]);
+    result
 }
 
 fn user_file(user: &[u8], tail: &[&[u8]]) -> Vec<u8> {
@@ -310,8 +333,7 @@ impl EeCampaignProgress {
     pub fn load(&mut self, user: &[u8], campaign: &[u8], checksum: c_ulong, extract: bool) -> c_long {
         let checksum_text = format!("{}", checksum as c_long);
         let path = h(O::PathNew, 0, &[]) as P;
-        let user_c = C::new(user);
-        h(O::PathAddUserDirectory, path, &[user_c.a()]);
+        add_user_directory(path, user);
         let file = C::new(&cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]));
         let mut spec: usize = 0;
         let mut result = h(O::PathFindFile, path, &[file.a(), &mut spec as *mut usize as usize as i64]) as c_long;
@@ -387,8 +409,7 @@ impl EeCampaignProgress {
         let mut result = self.load(user, campaign, checksum, false);
         if result == ERROR_OK {
             let checksum_text = format!("{}", checksum as c_long);
-            let user_c = C::new(user);
-            h(O::PathAddUserDirectory, path, &[user_c.a()]);
+            add_user_directory(path, user);
             let file = C::new(&cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]));
             let mut spec: usize = 0;
             result = h(O::PathFindFile, path, &[file.a(), &mut spec as *mut usize as usize as i64]) as c_long;
@@ -427,8 +448,7 @@ impl EeCampaignProgress {
                             result = h(O::MemoryCopy, memory, &[destination.a()]) as c_long;
                             if result == ERROR_OK {
                                 extracted = true;
-                                let key_c = C::new(&key);
-                                result = h(O::ApplyCivilization, 0, &[key_c.a()]) as c_long;
+                                result = with_line(&key, |line| h(O::ApplyCivilization, line, &[]) as c_long);
                                 if result == ERROR_OK && available > 0 {
                                     h(O::AddPoints, 0, &[available as i64]);
                                 }
@@ -468,8 +488,7 @@ impl EeCampaignProgress {
         let key = make_key(campaign, scenario, checksum);
         let checksum_text = format!("{}", checksum as c_long);
         let path = h(O::PathNew, 0, &[]) as P;
-        let user_c = C::new(user);
-        h(O::PathAddUserDirectory, path, &[user_c.a()]);
+        add_user_directory(path, user);
         let available = h(O::AvailablePoints, 0, &[]) as c_long;
         let already = self.completed.iter().any(|c| c.as_slice() == scenario);
         h(O::CivBuilderEdit, 0, &[]);
@@ -482,8 +501,8 @@ impl EeCampaignProgress {
                 self.keys.push(key.clone());
                 self.points.push(available);
             }
-            let file = C::new(&cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]));
-            let spec = h(O::SpecNewUser, 0, &[user_c.a(), file.a()]) as P;
+            let file = cat(&[campaign, checksum_text.as_bytes(), &text(O::ArchiveExtension, 0, &[])]);
+            let spec = user_spec(user, &file);
             let archive = h(O::ArchiveNew, spec, &[]) as P;
             let set = |name: &[u8], value: &[u8]| {
                 let (n, v) = (C::new(name), C::new(value));
@@ -590,9 +609,12 @@ pub fn campaign_load(campaign: P, file: &[u8], error: P, check: bool) -> bool {
                     result = true;
                     loop {
                         let mut sink = EeCampaignText(Vec::new());
-                        if h(O::LineLoad, list, &[&mut sink as *mut EeCampaignText as usize as i64]) as c_long
-                            != ERROR_OK
-                        {
+                        let loaded = with_line(b"", |line| {
+                            let loaded = h(O::LineLoad, line, &[list as i64]) as c_long;
+                            h(O::LineText, line, &[&mut sink as *mut EeCampaignText as usize as i64]);
+                            loaded
+                        });
+                        if loaded != ERROR_OK {
                             break;
                         }
                         let scenario = C::new(&sink.0);

@@ -17,12 +17,10 @@ enum class EeCampaignCpp : uint32_t {
   /// `new FSPath`
   PathNew,
   PathDereference,
-  /// `AddDirectory` of "<startup>Users\<a0>\"
-  PathAddUserDirectory,
+  /// `AddDirectory(*(FSFileSpec*)a0, true)`
+  PathAddDirectory,
   /// `FindFile(UString(a0), *(FSFileSpec**)a1)`
   PathFindFile,
-  /// a new `FSFileSpec` of "<startup>Users\<a0>\" with the file a1
-  SpecNewUser,
   SpecDelete,
   /// `Delete()` of the file
   SpecRemove,
@@ -30,8 +28,6 @@ enum class EeCampaignCpp : uint32_t {
   ArchiveOpen,
   ArchiveClose,
   ArchiveDelete,
-  /// `GetTag(a0, value)` with the value a1 in and out (the sink a2) -> the result
-  ArchiveGetTag,
   ArchiveSetTag,
   /// `FindFile(UString(a0), *(FSMemoryFile**)a1)`
   ArchiveFindFile,
@@ -53,6 +49,7 @@ enum class EeCampaignCpp : uint32_t {
   CivBuilderEdit,
   CivBuilderSave,
   CivBuilderFree,
+  /// `EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer())`
   ApplyCivilization,
   MemberRequiredCiv,
   MemberBackgroundImage,
@@ -68,8 +65,13 @@ enum class EeCampaignCpp : uint32_t {
   DataPathExists,
   /// `GetTag(a0, *(UWideString*)a1)`
   ArchiveGetTagInto,
-  /// a line of the list file into the sink a0 -> `UString::Load`'s result
+  /// `new UString(a0)`
+  LineNew,
+  /// `((UString*)p)->Load(*(FSMemoryFile*)a0)`
   LineLoad,
+  /// the `UString`'s text into the sink a0
+  LineText,
+  LineDelete,
   MemoryDelete,
   ScenariosClear,
   /// the scenario without its extension (the last four characters) pushed

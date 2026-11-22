@@ -112,41 +112,6 @@ static void EECampaignText(int64_t inSink, const char* inText)
     ee_campaign_text_push((EeCampaignText*)inSink, (const uint8_t*)inText, strlen(inText));
 }
 
-// The player's folder "<startup>Users\<player>\", a file in it
-static FSFileSpec* EECampaignUserSpec(const char* inUser, const char* inFile)
-{
-    FSFileSpec* theSpec = new FSFileSpec;
-    theSpec->SetVolume(gStartupVolume);
-    theSpec->SetDirectory(gStartupDirectory + "Users\\" + inUser + "\\");
-    theSpec->SetFile(UString(inFile));
-    return theSpec;
-}
-
-// An archive tag's value (left as it was when the tag is missing) into the sink -> GetTag's result
-static long EECampaignGetTag(FSArchive* inArchive, const char* inName, const char* inValue, int64_t inSink)
-{
-    UWideString theValue(inValue);
-    long theResult = inArchive->GetTag(UWideString(inName), theValue);
-    EECampaignText(inSink, (const char*)theValue);
-    return theResult;
-}
-
-// The scenario's civilization file applied to the current player
-static long EECampaignApplyCivilization(const char* inKey)
-{
-    UString theName(inKey);   // named: the loader takes a non-const reference
-    return EEApplyCivilizationFile(theName, gWorld.GetCurrentPlayer());
-}
-
-// A line of the campaign's scenario list into the sink -> UString::Load's result
-static long EECampaignLineLoad(FSMemoryFile* inList, int64_t inSink)
-{
-    UString theLine;
-    long theResult = theLine.Load(*inList);
-    EECampaignText(inSink, (const char*)theLine);
-    return theResult;
-}
-
 // A scenario name without its extension (the last four characters) at the campaign's list's end
 static void EECampaignPushStripped(EECampaign* inCampaign, const char* inScenario)
 {
@@ -174,10 +139,9 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::PathNew: return (int64_t)(intptr_t)new FSPath;
     case O::PathDereference: ((FSPath*)p)->Dereference();
         break;
-    case O::PathAddUserDirectory: ((FSPath*)p)->AddDirectory(*std::unique_ptr<FSFileSpec>(EECampaignUserSpec((const char*)a[0], "")), true);
+    case O::PathAddDirectory: ((FSPath*)p)->AddDirectory(*(FSFileSpec*)a[0], true);
         break;
     case O::PathFindFile: return ((FSPath*)p)->FindFile(UString((const char*)a[0]), *(FSFileSpec**)a[1]);
-    case O::SpecNewUser: return (int64_t)(intptr_t)EECampaignUserSpec((const char*)a[0], (const char*)a[1]);
     case O::SpecDelete: delete (FSFileSpec*)p;
         break;
     case O::SpecRemove: ((FSFileSpec*)p)->Delete();
@@ -188,7 +152,6 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
         break;
     case O::ArchiveDelete: delete (FSArchive*)p;
         break;
-    case O::ArchiveGetTag: return EECampaignGetTag((FSArchive*)p, (const char*)a[0], (const char*)a[1], a[2]);
     case O::ArchiveSetTag: return ((FSArchive*)p)->SetTag(UWideString((const char*)a[0]), UWideString((const char*)a[1]));
     case O::ArchiveFindFile: return ((FSArchive*)p)->FindFile(UString((const char*)a[0]), *(FSMemoryFile**)a[1]);
     case O::ArchiveCreate: return ((FSArchive*)p)->Create(*(FSFileSpec*)a[0], *(std::vector<UString>*)a[1], 0x1000);
@@ -212,7 +175,7 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::CivBuilderSave: return CivBuilderSaveCivilization(UString((const char*)a[0]), true);
     case O::CivBuilderFree: CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
         break;
-    case O::ApplyCivilization: return EECampaignApplyCivilization((const char*)a[0]);
+    case O::ApplyCivilization: return EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer());
     // EECampaign::Load (p: the campaign, or the UWideString / file named)
     case O::MemberRequiredCiv: return (int64_t)(intptr_t)&((EECampaign*)p)->mRequiredCiv;
     case O::MemberBackgroundImage: return (int64_t)(intptr_t)&((EECampaign*)p)->mBackgroundImage;
@@ -226,7 +189,12 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::DataPathFindFile: return gDataPath->FindFile(UString((const char*)a[0]), *(FSFileSpec**)a[1]);
     case O::DataPathExists: return gDataPath->FindFile(UWideString((const char*)a[0])) == kErrorOK;
     case O::ArchiveGetTagInto: return ((FSArchive*)p)->GetTag(UWideString((const char*)a[0]), *(UWideString*)a[1]);
-    case O::LineLoad: return EECampaignLineLoad((FSMemoryFile*)p, a[0]);
+    case O::LineNew: return (int64_t)(intptr_t)new UString((const char*)a[0]);
+    case O::LineLoad: return ((UString*)p)->Load(*(FSMemoryFile*)a[0]);
+    case O::LineText: EECampaignText(a[0], (const char*)*(UString*)p);
+        break;
+    case O::LineDelete: delete (UString*)p;
+        break;
     case O::MemoryDelete: delete (FSMemoryFile*)p;
         break;
     case O::ScenariosClear: ((EECampaign*)p)->mScenarios.clear();
