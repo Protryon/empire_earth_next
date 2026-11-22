@@ -37239,3 +37239,25 @@ by both builds.
 - Round 30's list: the Internet logics' hosts (InitLogic, RoutingLogic, AccountLogic), the LAN hosts' multi-statement
   cases (GuiHost.cpp, LobbyNetCtrlHost.cpp, LobbyDialogHost.cpp, EELobbyGlueHost.cpp), WONLobbyGUI.h's and
   WONRouting.h's inline bodies, the UDP subclasses, ServerConnectionConnectOp, RecvChunkOp.
+
+### Gates (the merged tree: origin/rust 8830a1187 and the AI lane's merged tip 150aec61e merged in)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM), before and after the merge |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py gate` | PASS, 5,596 tests (5,312 before the merge); the known load flakes did not show |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (oracle: PASS) |
+| `won_host_coverage.py` | PASS (EeWonNetOp: 168 values, 168 host cases) |
+| `xbuild.py wontest` | all 167 programs exit 0, peak 558 MB; won_wonnet_test 200,000 sequences, 0 mismatches |
+| `lan_capture_compare.py` against round 23's start exe (empire_earth_next-won4/build/wl24/r23exe) | every lobby capture identical but the blinking carets (2 x 15 pixels: the create dialog's name box at x 575, the staging input at x 121); both runs `RESULT PASS lan-game` (PT 2765/2767 the start exe, 2858/2865 this round) |
+| the 12 capture profiles (seeds 2-3) | PASS each (oracle, late, space, calamity, missile, effects, scenario, app, units, groups, placement, transport) |
+| saveload | plain PASS with `--expect`; the matrix `--settings all --expect` PASS (oracle 18/18 .. next 3/18, as expected) |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12999` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2834 joiner=2834`, GATES PASS |
+
+The merge: origin/rust conflicted with the AI lane's round 8 (in this branch's base) in four AI files; the AI
+lane's own tip already merged with batch 14 (150aec61e) was merged first (only PORT_LEARNINGS conflicted: both
+sides' sections kept, this one last), then origin/rust merged cleanly. The AI files equal the lead's batch-15
+merge of that lane. rust_includes.py added module includes to EEWonNetHost.inl and the world (its own commit).
