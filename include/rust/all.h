@@ -199,6 +199,7 @@
 #include "rust/won_lobby/persistobj.h"
 #include "rust/won_lobby/prefsobj.h"
 #include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/rootscreen.h"
 #include "rust/won_lobby/routelogic.h"
 #include "rust/won_lobby/routing.h"
 #include "rust/won_lobby/rows.h"

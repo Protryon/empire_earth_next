@@ -42,6 +42,7 @@ pub mod persist;
 pub mod persistobj;
 pub mod prefsobj;
 pub mod resource;
+pub mod rootscreen;
 pub mod routelogic;
 pub mod routing;
 pub mod rows;

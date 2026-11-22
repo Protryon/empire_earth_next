@@ -131,6 +131,9 @@ CHECKS = [
          rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
+    # the lobby's root screen (R6 WON round 32: rootscreen.rs; RootScreen.cpp's host)
+    dict(enum="EeWonRootScreenOp", header="won_lobby/rootscreen.h",
+         hosts=[LOBBY / "RootScreen.cpp"], rust=[], allowed={}),
     # the game's WON front end (R6 WON round 31: wonnet.rs; its host's statements are ee/EEWonNetHost.inl)
     dict(enum="EeWonNetOp", header="won_lobby/wonnet.h",
          hosts=[ROOT / "include" / "ee" / "EEWonNetHost.inl"], rust=[], allowed={}),
