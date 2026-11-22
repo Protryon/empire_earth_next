@@ -70,9 +70,9 @@ struct EERules {
     const EEEpochMedia& Epoch(long inEpoch) const;
     // the Rust rules the C++ structs snapshot (ee_tech's civilization manager reads them in place)
     const EeDataRules* RustRules() const { return mRust; }
+    void Refresh();                         // the C++ structs from the Rust rules' snapshot (EELoadRules: db_text.rs)
 
 private:
-    void Refresh();                         // the C++ structs from the Rust rules' snapshot
     EeDataRules* mRust;                     // the rules' owner (rust/crates/ee_data)
 };
 

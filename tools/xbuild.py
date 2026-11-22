@@ -443,7 +443,9 @@ def cmd_tcptest(a):
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
                  f"/Fo{obj}", src], env=env)
             objs.append(obj)
-        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, *rust_libs(t), "libcmt.lib",
+        # the session drivers define Rust functions the engine's inlines call (their stand-ins): theirs come first
+        multiple = ["/FORCE:MULTIPLE"] if name.startswith("ee_session") else []
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *multiple, *objs, *rust_libs(t), "libcmt.lib",
              "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
     else:
         base = t.base_flags()
@@ -1033,7 +1035,9 @@ def build_won_test(t, name, units, folder="won", first_inc=None):
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
                  f"/Fo{obj}", src], env=env)
             objs.append(obj)
-        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, *rust_libs(t), "libcmt.lib",
+        # the session drivers define Rust functions the engine's inlines call (their stand-ins): theirs come first
+        multiple = ["/FORCE:MULTIPLE"] if name.startswith("ee_session") else []
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *multiple, *objs, *rust_libs(t), "libcmt.lib",
              "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS, *TEST_LINK_LOOSE["windows"]],
             env=env)
     else:

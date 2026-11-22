@@ -3,10 +3,13 @@
 // (db\dbterrain.dat), Unload, DumpAllLoadedMedia, the mesh functions 0xdb5c8..0xdba99, EECliffTerrainTable (ctor,
 // Load, Unload), Get, the ??_Gs and the dtor. EETerrainColorTable.cpp ends at 0xdb169, EETerrainTypeTable.cpp's
 // chain starts at 0xdbcc8. Unit flags: the exe's module set.
+// port (game core lane, round 10): the tables' bodies are Rust (ee_game gamecpp db_media.rs: the loads, the textures'
+// use count, the previews); the functions below forward, their C++ calls and members are EECore10OpB2's cases.
 
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <utility>
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
@@ -20,6 +23,7 @@
 #include "ee/EEDbRecords.h"
 #include "ee/EEMediaUse.h"
 #include "lle/GERenderState.h"
+#include "rust/game/gamecpp.h"
 
 std::vector<EETerrainTable*> EETerrainTable::sTable;
 std::vector<EECliffTerrainTable*> EETerrainTable::sCliffTable;
@@ -39,77 +43,29 @@ long gFirstCliffTerrain;
 
 
 
-// Creates an empty terrain: no textures, not water, colour type -1 (ee_data tables.rs)
+// Creates an empty terrain: no textures, not water, colour type -1 (ee_data tables.rs; the C++ members' initializers)
 EETerrainTable::EETerrainTable() : EeDataMediaUse()
 {
     ee_data_terrain_default(this);
-    this->mFirstTexture = 0;
-    this->mTextures = NULL;
-    this->mPreviewTexture = NULL;
 }
 
-// Loads the terrains from db\dbterrain.dat (each record after its texture file name; the record and its copy are
-// ee_data tables.rs': texture grid, ambient unit classes, colour, water) numbering their textures, and notes the first
-// named one as the default terrain; returns the last read status
+// Loads the terrains from db\dbterrain.dat (each record after its texture file name) numbering their textures, and
+// notes the first named one as the default terrain; returns the last read status
 long EETerrainTable::Load(FSFileSpec* inFile)
 {
-    long theTextureBase = 0;
-    EETerrainTable* theTerrain = NULL;
-    gDefaultTerrain = -1;
-    return EEDbReadLeadRecords(inFile, ee_data_terrain_record_size(),
-        [](unsigned long inCount) { EETerrainTable::sTable.resize(inCount, NULL); return true; },
-        [&](unsigned long) {
-            theTerrain = new EETerrainTable;
-            theTerrain->mFirstTexture = theTextureBase;
-            theTerrain->mTextureName.Load(*inFile);
-        },
-        [&](unsigned long inIndex, const unsigned char* inRecord) {
-            EeDataTerrainExtra theExtra;
-            ee_data_terrain_from_record(inRecord, theTerrain, &theExtra);
-            EEDbCopyName(theTerrain->mName, theExtra.name);
-            for (long k = 0; k < 3; k++)
-                if (theExtra.first[k] > 0 && theExtra.last[k] > 0)
-                    for (long theClass = theExtra.first[k]; (unsigned long)theClass <= theExtra.last[k]; theClass++)
-                        theTerrain->mUnitClasses.push_back(theClass);
-            theTerrain->mColor = GEColor(theExtra.color[0], theExtra.color[1], theExtra.color[2]);
-            if (gDefaultTerrain == -1 && theTerrain->mName.GetLength() > 0 && theTerrain->mID != -1)
-                gDefaultTerrain = theTerrain->mID;
-            EETerrainTable::sTable[inIndex] = theTerrain;
-            theTextureBase += theTerrain->mNumTextures;
-        });
+    return ee_gamecpp_db_terrain_load(inFile);
 }
 
 // Releases every terrain's textures, destroys the terrains and empties the table (the texture arrays are not freed)
 void EETerrainTable::Unload()
 {
-    unsigned long j = 0;
-    for (unsigned long i = 0; i < EETerrainTable::sTable.size(); i++) {
-        if (EETerrainTable::sTable[i] == NULL)
-            continue;
-        unsigned long theTextureCount = EETerrainTable::sTable[i]->mRows * EETerrainTable::sTable[i]->mColumns;
-        if (EETerrainTable::sTable[i]->mTextures != NULL && theTextureCount > 0)
-            for (; j < theTextureCount; j++)
-                EETerrainTable::sTable[i]->mTextures[j]->Dereference();
-        j = 0;
-        delete EETerrainTable::sTable[i];
-    }
-    EETerrainTable::sTable.resize(0);
+    ee_gamecpp_db_terrain_unload();
 }
 
 // Writes each referenced terrain and each terrain with a list-box preview to a media dump file
 void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
-    fprintf(inFile, "\n\n**********Terrain Table*********\n\n");
-    for (unsigned long i = 0; i < EETerrainTable::sTable.size(); i++) {
-        EETerrainTable* theTerrain = EETerrainTable::Get(i);
-        if (theTerrain == NULL)
-            continue;
-        if (theTerrain->mMediaCount > 0)
-            fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)theTerrain->mName,
-                    theTerrain->mMediaCount);
-        if (theTerrain->mPreviewTexture != NULL)
-            fprintf(inFile, "\t%s was loaded for list box display\n", (const char*)theTerrain->mName);
-    }
+    ee_gamecpp_db_terrain_dump(&inFile);
 }
 
 #include "lle/GETerrainMesh.h"
@@ -121,148 +77,58 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
 // mesh's texture set, later callers wait for that load
 void EETerrainTable::Load(GETerrainMesh& ioMesh)
 {
-    EEMediaAcquire(this, sDatabaseLock.mLock, [this] { this->LoadTextures(); }, [&] {
-        GETextureSet* theSet = ioMesh.GetRegisteredTextureSet(this->mTextureSetID);
-        for (long y = 0; y < this->mRows; y++) {
-            for (long x = 0; x < this->mColumns; x++)
-                theSet->SetTexture(this->mColumns - x - 1, y, this->mTextures[this->mColumns * y + x]);
-        }
-    });
+    ee_gamecpp_db_terrain_mesh(this, &ioMesh, true);
 }
 
 // Loads one terrain texture and sets its terrain stage modes (clamped; linear mip filter when trilinear is on)
 // No NULL test: the original references the result directly
 GETexture* EETerrainTable::LoadTexture(const UString& inFile)
 {
-    GETextureDescription theDescription = { 1, 0, gTexturePixelDepth, gTerrainMIPLevelsToDrop, false, false, this->mHasAlpha, true };
-    GETexture* theTexture = gTextureManager->LoadTexture(inFile, theDescription);
-    theTexture->Reference();
-    theTexture->SetFrame(0);
-    theTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    theTexture->SetStageColorMode(kStageOpModulate, -1);
-    theTexture->SetStageMinFilterMode(1, -1);
-    theTexture->SetStageMagFilterMode(1, -1);
-    theTexture->SetStageMipMapBias(-1.0f, -1);
-    theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
-    if (gTrilinearFilter) theTexture->SetStageMipFilterMode(kMipFilterLinear, -1); else theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-    return theTexture;
-}
-
-// A terrain texture's file: the texture name numbered _n before its extension (ee_data tables.rs)
-static UString EETerrainTextureFile(const UString& inName, long inNumber)
-{
-    char theName[256];
-    ee_data_terrain_texture_file(inName, inNumber, theName, sizeof(theName));
-    return UString(theName);
+    return (GETexture*)ee_gamecpp_db_terrain_texture(this, (const char*)inFile);
 }
 
 // Loads every texture of the terrain's grid (its file name numbered _n, from the last down) into its texture array
 void EETerrainTable::LoadTextures()
 {
-    unsigned long theCount = this->mRows * this->mColumns;
-    this->mTextures = new GETexture*[theCount];
-    unsigned long theIndex = 0;
-    for (unsigned long n = theCount; n > 0; n--)
-        this->mTextures[theIndex++] = this->LoadTexture(EETerrainTextureFile(this->mTextureName, n));
+    ee_gamecpp_db_terrain_textures(this);
 }
 
 // Loads each terrain's list-box preview texture (its file name with _1) and references the button of its first unit
 // class (the terrain list of EEUIFSETerrain)
 void EELoadTerrainPreviews()
 {
-    for (unsigned long i = 0; i < EETerrainTable::sTable.size(); i++) {
-        EETerrainTable* theTable = EETerrainTable::Get(i);
-        if (theTable == NULL)
-            continue;
-        theTable->mPreviewTexture = theTable->LoadTexture(EETerrainTextureFile(theTable->mTextureName, 1));
-        if (theTable->mUnitClasses.size() <= 0)
-            continue;
-        EEUnitClass* theClass = gUnitClassTable[theTable->mUnitClasses[0]];
-        if (theClass != NULL)
-            theClass->mButton->Acquire();
-    }
+    ee_gamecpp_db_terrain_previews(true);
 }
 
 // Attaches the terrain's loaded textures (columns mirrored) to a texture set, once any load has finished
 void EETerrainTable::AttachTextures(GETextureSet* inTextureSet)
 {
-    EEMediaLocked(this, sDatabaseLock.mLock, [&] {
-        if (this->mMediaCount > 0) {
-            for (long y = 0; y < this->mRows; y++) {
-                for (long x = 0; x < this->mColumns; x++)
-                    inTextureSet->SetTexture(this->mColumns - x - 1, y, this->mTextures[this->mColumns * y + x]);
-            }
-        }
-    });
+    ee_gamecpp_db_terrain_attach(this, inTextureSet);
 }
 
 // Drops a reference to the terrain's textures; the last one detaches them from the mesh and releases them
 void EETerrainTable::Unload(GETerrainMesh& ioMesh)
 {
-    EEMediaRelease(this, sDatabaseLock.mLock, [&] {
-        GETextureSet* theSet = ioMesh.GetRegisteredTextureSet(this->mTextureSetID);
-        for (long y = 0; y < this->mRows; y++) {
-            for (long x = 0; x < this->mColumns; x++)
-                theSet->SetTexture(x, y, NULL);
-        }
-        unsigned long theCount = this->mColumns * this->mRows;
-        for (unsigned long i = 0; i < theCount; i++) {
-            this->mTextures[i]->Dereference();
-            this->mTextures[i] = NULL;
-        }
-        delete[] this->mTextures;
-        this->mTextures = NULL;
-    });
+    ee_gamecpp_db_terrain_mesh(this, &ioMesh, false);
 }
 
 // Releases each terrain's preview texture and its first unit class's button reference
 void EEReleaseTerrainPreviews()
 {
-    for (unsigned long i = 0; i < EETerrainTable::sTable.size(); i++) {
-        EETerrainTable* theTerrain = EETerrainTable::Get(i);
-        if (theTerrain == NULL)
-            continue;
-        theTerrain->mPreviewTexture->Dereference();
-        theTerrain->mPreviewTexture = NULL;
-        if (theTerrain->mUnitClasses.size() <= 0)
-            continue;
-        EEUnitClass* theClass = gUnitClassTable[theTerrain->mUnitClasses[0]];
-        if (theClass != NULL)
-            theClass->mButton->Release();
-    }
+    ee_gamecpp_db_terrain_previews(false);
 }
 
-// Loads the cliff terrains from db\dbcliffterrain.dat (empty slots for negative indices; the record and its copy are
-// ee_data tables.rs') and notes the first one; returns the last read status
+// Loads the cliff terrains from db\dbcliffterrain.dat (empty slots for negative indices) and notes the first one;
+// returns the last read status
 long EECliffTerrainTable::Load(FSFileSpec* inFile)
 {
-    bool theFound = false;
-    return EEDbReadRecords(inFile, ee_data_cliff_terrain_record_size(),
-        [](unsigned long inCount) { EETerrainTable::sCliffTable.resize(inCount, NULL); return true; },
-        [&](unsigned long inIndex, const unsigned char* inRecord) {
-            EECliffTerrainTable* theCliff = new EECliffTerrainTable;
-            EeDataName theName;
-            if (ee_data_cliff_terrain_from_record(inRecord, theCliff, &theName)) {
-                EEDbCopyName(theCliff->mName, theName);
-                if (!theFound) {
-                    gFirstCliffTerrain = inIndex;
-                    theFound = true;
-                }
-            } else {
-                delete theCliff;
-                theCliff = NULL;
-            }
-            EETerrainTable::sCliffTable[inIndex] = theCliff;
-        });
+    return ee_gamecpp_db_cliff_load(inFile);
 }
 
 // Destroys every cliff terrain and empties the cliff table; returns 0
 long EECliffTerrainTable::Unload()
 {
-    for (unsigned long i = 0; i < EETerrainTable::sCliffTable.size(); i++)
-        delete EETerrainTable::sCliffTable[i];
-    EETerrainTable::sCliffTable.clear();
-    return 0;
+    return ee_gamecpp_db_cliff_unload();
 }
 
 // Returns the terrain at an index, or NULL when out of range or unused (negative id)
@@ -276,4 +142,89 @@ EETerrainTable* EETerrainTable::Get(long inIndex)
 // Destroys the terrain (members only)
 EETerrainTable::~EETerrainTable()
 {
+}
+
+// ------------------------------------------------------------------------- round 10, lane B: the terrain tables' C++
+
+int64_t EECore10OpB3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEButtonObject.cpp
+
+static_assert(kStageOpModulate == 2 && kAddressingClamp == 0 && kMipFilterNone == 0 && kMipFilterPoint == 1 &&
+              kMipFilterLinear == 2, "gamecpp db_media.rs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define TT ((EETerrainTable*)p)
+#define CLIFF ((EECliffTerrainTable*)p)
+
+// the terrain tables' C++ calls and members (gamecpp db_media.rs; p the terrain or the cliff terrain): one statement
+// each
+int64_t EECore10OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DtTerrainFields: return P64(static_cast<EeDataTerrainFields*>(TT));
+    case O::DtTerrainUse: return P64(static_cast<EeDataMediaUse*>(TT));
+    case O::DtTerrainLock: return P64(sDatabaseLock.mLock);
+    case O::DtTerrainNew: return P64(new EETerrainTable);
+    case O::DtTerrainDelete: delete TT;
+        break;
+    case O::DtTerrainResize: EETerrainTable::sTable.resize((unsigned long)a[0], NULL);
+        break;
+    case O::DtTerrainCount: return (int64_t)EETerrainTable::sTable.size();
+    case O::DtTerrainAt: return P64(EETerrainTable::sTable[a[0]]);
+    case O::DtTerrainSet: EETerrainTable::sTable[a[0]] = (EETerrainTable*)a[1];
+        break;
+    case O::DtTerrainGet: return P64(EETerrainTable::Get((long)a[0]));
+    case O::DtDefaultTerrain: return P64(&gDefaultTerrain);
+    case O::DtFirstCliffTerrain: return P64(&gFirstCliffTerrain);
+    case O::DtTerrainFirstTexture: return P64(&TT->mFirstTexture);
+    case O::DtTerrainTextureSetId: return TT->mTextureSetID;
+    case O::DtTerrainTextures: return P64(&TT->mTextures);
+    case O::DtTerrainPreview: return P64(&TT->mPreviewTexture);
+    case O::DtTerrainLoadTextureName: TT->mTextureName.Load(*(FSFile*)a[0]);
+        break;
+    case O::DtTerrainTextureName: return P64((const char*)TT->mTextureName);
+    case O::DtTerrainCopyName: EEDbCopyName(TT->mName, *(const EeDataName*)a[0]);
+        break;
+    case O::DtTerrainName: return P64((const char*)TT->mName);
+    case O::DtTerrainNameLength: return (int64_t)TT->mName.GetLength();
+    case O::DtTerrainPushClass: TT->mUnitClasses.push_back((long)a[0]);
+        break;
+    case O::DtTerrainClassCount: return (int64_t)TT->mUnitClasses.size();
+    case O::DtTerrainClass0: return TT->mUnitClasses[0];
+    case O::DtTerrainColor: TT->mColor = GEColor(f[0], f[1], f[2]);
+        break;
+    case O::DtTerrainNewTextures: TT->mTextures = new GETexture*[(unsigned long)a[0]];
+        break;
+    case O::DtTerrainDeleteTextures: delete[] std::exchange(TT->mTextures, nullptr);
+        break;
+    case O::DtTerrainLoadTexture: return P64(gTextureManager->LoadTexture(UString((const char*)a[0]), GETextureDescription{1, 0, gTexturePixelDepth, gTerrainMIPLevelsToDrop, false, false, TT->mHasAlpha, true}));
+    case O::DtTrilinearFilter: return gTrilinearFilter;
+    case O::DtTexSetFrame: ((GETexture*)p)->SetFrame((unsigned long)a[0]);
+        break;
+    case O::DtTexDereference: ((GETexture*)p)->Dereference();
+        break;
+    case O::DtMeshTextureSet: return P64(((GETerrainMesh*)p)->GetRegisteredTextureSet((unsigned long)a[0]));
+    case O::DtSetTexture: ((GETextureSet*)p)->SetTexture((unsigned long)a[0], (unsigned long)a[1], (GETexture*)a[2]);
+        break;
+    case O::DtClassButton: return P64(((EEUnitClass*)p)->mButton);
+    case O::DtCliffNew: return P64(new EECliffTerrainTable);
+    case O::DtCliffDelete: delete CLIFF;
+        break;
+    case O::DtCliffFields: return P64(static_cast<EeDataCliffTerrainFields*>(CLIFF));
+    case O::DtCliffCopyName: EEDbCopyName(CLIFF->mName, *(const EeDataName*)a[0]);
+        break;
+    case O::DtCliffResize: EETerrainTable::sCliffTable.resize((unsigned long)a[0], NULL);
+        break;
+    case O::DtCliffCount: return (int64_t)EETerrainTable::sCliffTable.size();
+    case O::DtCliffAt: return P64(EETerrainTable::sCliffTable[a[0]]);
+    case O::DtCliffSet: EETerrainTable::sCliffTable[a[0]] = (EECliffTerrainTable*)a[1];
+        break;
+    case O::DtCliffClear: EETerrainTable::sCliffTable.clear();
+        break;
+    case O::DtFileReadRecord: return ((FSFileSpec*)p)->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
+    case O::DtFilePrint: fprintf(*(FSFileSpec*)p, "%s", (const char*)a[0]);
+        break;
+    default: return EECore10OpB3(inOp, p, a, f);
+    }
+    return 0;
 }

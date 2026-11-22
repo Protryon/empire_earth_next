@@ -3,6 +3,8 @@
 // (db\dbButtons.dat), Unload, DumpAllLoadedMedia, Acquire (reference + load on demand), LoadTexture, two drawing
 // helpers, Release (dereference), Reload, the two virtual thunks. EEAnimal.cpp ends at 0xd5405, the globals-chain
 // unit (EEColorTable?) starts at 0xd5d08. Unit flags: the exe's module set.
+// port (game core lane, round 10): the bodies are Rust (ee_game gamecpp db_media.rs); the methods forward, their C++
+// calls and members are EECore10OpB3's cases.
 
 #include <windows.h>
 #include <stdio.h>
@@ -26,6 +28,7 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEDbRecords.h"
 #include "ee/EEMediaUse.h"
+#include "rust/game/gamecpp.h"
 
 std::vector<EEButtonObject*> EEButtonObject::sTable;
 
@@ -43,162 +46,66 @@ EEButtonObject::EEButtonObject()
 // Destroys the button image entry, releasing its texture
 EEButtonObject::~EEButtonObject()
 {
-    if (this->mTexture != NULL)
-        this->mTexture->Dereference();
+    ee_gamecpp_db_button_free(this);
 }
 
-// Loads the button image entries (file name, cell row and column, id, hot key, position: the record and its copy are
-// ee_data tables.rs') from db\dbButtons.dat; stops at the first read error and returns it
+// Loads the button image entries (file name, cell row and column, id, hot key, position) from db\dbButtons.dat;
+// stops at the first read error and returns it
 long EEButtonObject::Load(FSFileSpec* inFile)
 {
-    return EEDbReadRecords(inFile, ee_data_button_record_size(),
-        [](unsigned long inCount) { EEButtonObject::sTable.resize(inCount, NULL); return true; },
-        [](unsigned long inIndex, const unsigned char* inRecord) {
-            EEButtonObject* theButton = new EEButtonObject;
-            EEButtonObject::sTable[inIndex] = theButton;
-            EEDbCopyName(theButton->mName, ee_data_button_from_record(inRecord, theButton));
-        }, true);
+    return ee_gamecpp_db_button_load(inFile);
 }
 
 // Destroys every button image entry and empties the table
 void EEButtonObject::Unload()
 {
-    for (unsigned long i = 0; i < EEButtonObject::sTable.size(); i++)
-        delete EEButtonObject::sTable[i];
-    EEButtonObject::sTable.resize(0);
+    ee_gamecpp_db_button_unload();
 }
 
 // Writes each button image with a non-zero reference count to a media dump file
 void EEButtonObject::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
-    fprintf(inFile, "\n\n**********Button Database Table*********\n\n");
-    for (unsigned long i = 0; i < EEButtonObject::sTable.size(); i++)
-        if (EEButtonObject::sTable[i] != NULL && EEButtonObject::sTable[i]->mMediaCount > 0)
-            fprintf(inFile, "\t%s (filename) has a media count of %ld\n", (const char*)EEButtonObject::sTable[i]->mName,
-                    EEButtonObject::sTable[i]->mMediaCount);
+    ee_gamecpp_db_button_dump(&inFile);
 }
 
 // Adds a reference to the button image, loading its texture on the first one (later callers wait for that load);
 // returns the load error
 long EEButtonObject::Acquire()
 {
-    return EEMediaAcquire(this, sDatabaseLock.mLock, [this] { return this->LoadTexture(); }, [] {}, true);
+    return ee_gamecpp_db_button_acquire(this);
 }
 
 // Loads the button's texture (a mip level dropped at 800 pixels wide or less, alpha for ids below 50) and computes
 // its cell's texture offset; returns 3 when the texture is missing
 long EEButtonObject::LoadTexture()
 {
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = false;
-    long theResult = kErrorOK;
-    theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() > 800 ? 0 : 1;
-    theDescription.mHasAlpha = this->mID < 50;
-    this->mTexture = gTextureManager->LoadTexture(this->mName, theDescription);
-    if (this->mTexture != NULL) {
-        this->mTexture->Reference();
-        this->mTexture->SetStageMinFilterMode(0, -1);
-        this->mTexture->SetStageMagFilterMode(0, -1);
-        this->mTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-        this->mTexture->SetStageMipMapBias(0.0f, -1);
-        EeDataButtonTexture theSize = {this->mTexture->GetWidth(), this->mTexture->GetHeight(),
-                                       this->mTexture->GetNumMipLevelsToDrop(), 0};
-        float theCell[2];
-        ee_data_button_cell_offset(this->mColumn, this->mRow, &theSize, theCell);
-        this->mCellU = theCell[0];
-        this->mCellV = theCell[1];
-    } else {
-        theResult = 3;
-    }
-    return theResult;
-}
-
-// Shows the button's cell on a bitmap scaled to a rectangle: a 40-texel cell on textures 256 or more wide, else the
-// whole texture (ee_data tables.rs); inInset: one texel in
-static void EESetButtonBitmap(GETexture* inTexture, float inCellU, float inCellV, bool inInset, GEBitmap* inBitmap,
-                              const GERectangle& inRectangle, unsigned long inScreen)
-{
-    EeDataButtonTexture theSize = {inTexture->GetWidth(), inTexture->GetHeight(), inTexture->GetNumMipLevelsToDrop(),
-                                   inTexture->GetSurface()->GetHeight()};
-    inBitmap->SetTexture(inTexture, inScreen);
-    EeDataButtonCell theCell = ee_data_button_cell(&theSize, inCellU, inCellV, inInset, inRectangle.GetWidth(),
-                                                   inRectangle.GetHeight());
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomLeft;
-    GETextureCoordinate theBottomRight;
-    theTopLeft.SetU(theCell.left);
-    theTopLeft.SetV(theCell.top);
-    theTopRight.SetU(theCell.right);
-    theTopRight.SetV(theCell.top);
-    theBottomLeft.SetU(theCell.left);
-    theBottomLeft.SetV(theCell.bottom);
-    theBottomRight.SetU(theCell.right);
-    theBottomRight.SetV(theCell.bottom);
-    inBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    inBitmap->SetXYScale(theCell.scale_x, theCell.scale_y);
+    return ee_gamecpp_db_button_load_texture(this);
 }
 
 // Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle; a button without a texture (or
 // whose surface is not loaded: EE-SIM's textures, a scenario's information portrait) is skipped
 void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    if (this->mTexture == NULL || this->mTexture->GetSurface() == NULL)
-        return;
-    EESetButtonBitmap(this->mTexture, this->mCellU, this->mCellV, true, inBitmap, inRectangle, inScreen);
+    ee_gamecpp_db_button_bitmap(this, true, inBitmap, &inRectangle, inScreen);
 }
 
 // Shows the pressed button's cell (no texel inset) on a bitmap scaled to a rectangle (no texture test)
 void EEButtonObject::SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    EESetButtonBitmap(this->mTexture, this->mCellU, this->mCellV, false, inBitmap, inRectangle, inScreen);
+    ee_gamecpp_db_button_bitmap(this, false, inBitmap, &inRectangle, inScreen);
 }
 
 // Drops a reference to the button image once any load has finished, releasing its texture with the last one; returns 0
 long EEButtonObject::Release()
 {
-    EEMediaRelease(this, sDatabaseLock.mLock, [this] {
-        this->mTexture->Dereference();
-        this->mTexture = NULL;
-    });
-    return 0;
+    return ee_gamecpp_db_button_release(this);
 }
 
 // Reloads the textures of every referenced button image (a mip level dropped at 800 pixels wide or less, as on the
 // first load); returns the first error
 long EEButtonObject::Reload()
 {
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    long theResult = kErrorOK;
-    sDatabaseLock.mLock->Enter();
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mCreateMIPMaps = false;
-    // Same mip drop as the first load (one level at 800 pixels wide or less); both arms were 0.
-    theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() > 800 ? 0 : 1;
-    for (unsigned long i = 0; i < EEButtonObject::sTable.size() && theResult == kErrorOK; i++) {
-        EEButtonObject* theButton = EEButtonObject::sTable[i];
-        if (theButton != NULL && theButton->mMediaCount > 0) {
-            theDescription.mHasAlpha = theButton->mID < 50;
-            theResult = gTextureManager->ReloadTexture(theButton->mName, theDescription);
-        }
-    }
-    sDatabaseLock.mLock->Leave();
-    return theResult;
+    return ee_gamecpp_db_button_reload();
 }
 
 // Loads the button image for a user (media interface): adds a reference
@@ -216,7 +123,59 @@ long EEButtonObject::UnloadMedia()
 // Returns the button's hot key, or NULL (an inline COMDAT the original emitted in EEUIFMGMainGroup.cpp)
 UIHotKey* EEButtonObject::GetHotKey()
 {
-    if (this->mHotKeyIndex > 0 && this->mHotKeyIndex < (long)UIHotKey::GetHotKeyCount())
-        return UIHotKey::GetHotKey(this->mHotKeyIndex);
-    return NULL;
+    return (UIHotKey*)ee_gamecpp_db_hot_key(this->mHotKeyIndex);
+}
+
+// ------------------------------------------------------------------------- round 10, lane B: the buttons' C++
+
+int64_t EECore10OpB4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEAnimal.cpp
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define BTN ((EEButtonObject*)p)
+#define BTEX ((GETexture*)p)
+#define BMP ((GEBitmap*)p)
+
+// the buttons' C++ calls and members (gamecpp db_media.rs; p the button, the texture or the bitmap): one statement each
+int64_t EECore10OpB3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DbtFields: return P64(static_cast<EeDataButtonFields*>(BTN));
+    case O::DbtUse: return P64(static_cast<EeDataMediaUse*>(BTN));
+    case O::DbtLock: return P64(sDatabaseLock.mLock);
+    case O::DbtNew: return P64(new EEButtonObject);
+    case O::DbtDelete: delete BTN;
+        break;
+    case O::DbtResize: EEButtonObject::sTable.resize((unsigned long)a[0], NULL);
+        break;
+    case O::DbtCount: return (int64_t)EEButtonObject::sTable.size();
+    case O::DbtAt: return P64(EEButtonObject::sTable[a[0]]);
+    case O::DbtSet: EEButtonObject::sTable[a[0]] = (EEButtonObject*)a[1];
+        break;
+    case O::DbtCopyName: EEDbCopyName(BTN->mName, *(const EeDataName*)a[0]);
+        break;
+    case O::DbtName: return P64((const char*)BTN->mName);
+    case O::DbtTexture: return P64(&BTN->mTexture);
+    case O::DbtCellU: return P64(&BTN->mCellU);
+    case O::DbtCellV: return P64(&BTN->mCellV);
+    case O::DbtLoadTexture: return P64(gTextureManager->LoadTexture(BTN->mName, *(const GETextureDescription*)a[0]));
+    case O::DbtReloadTexture: return gTextureManager->ReloadTexture(BTN->mName, *(const GETextureDescription*)a[0]);
+    case O::DbtPixelDepth: return (int64_t)gTexturePixelDepth;
+    case O::DbtScreenWidth: return (int64_t)gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth();
+    case O::DbtTexWidth: return (int64_t)BTEX->GetWidth();
+    case O::DbtTexHeight: return (int64_t)BTEX->GetHeight();
+    case O::DbtTexMipDrop: return (int64_t)BTEX->GetNumMipLevelsToDrop();
+    case O::DbtTexSurface: return P64(BTEX->GetSurface());
+    case O::DbtTexSurfaceHeight: return (int64_t)BTEX->GetSurface()->GetHeight();
+    case O::DbtBitmapTexture: BMP->SetTexture((GETexture*)a[0], (unsigned long)a[1]);
+        break;
+    case O::DbtBitmapCoordinates: BMP->SetTextureCoordinates(GETextureCoordinate(f[0], f[1]), GETextureCoordinate(f[2], f[1]), GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[2], f[3]));
+        break;
+    case O::DbtBitmapScale: BMP->SetXYScale(f[0], f[1]);
+        break;
+    case O::DbtHotKeyCount: return (int64_t)UIHotKey::GetHotKeyCount();
+    case O::DbtHotKey: return P64(UIHotKey::GetHotKey((unsigned long)a[0]));
+    default: return EECore10OpB4(inOp, p, a, f);
+    }
+    return 0;
 }
