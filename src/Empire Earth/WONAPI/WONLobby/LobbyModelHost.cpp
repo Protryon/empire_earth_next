@@ -25,6 +25,8 @@
 #include "rust/won_lobby/model.h"
 #include "rust/won_lobby/modelobj.h"
 #include "rust/won_lobby/staging.h"
+#include "rust/won_lobby/modelbuf.h"
+#include "rust/won_lobby/lobbyhost.h"
 namespace WONAPI {
 
 static_assert(offsetof(LobbyModelObject, mModel) == 2 * sizeof(void*), "modelobj.rs reads the model at this offset");
@@ -33,6 +35,13 @@ static intptr_t Held(RefCount* inObj)
 {
     if (inObj != NULL) inObj->AddRef();
     return (intptr_t)inObj;
+}
+
+static std::wstring UnitsText(const uint16_t* inUnits, size_t inCount)
+{
+    std::wstring aText;
+    WonWideSink(&aText, inUnits, inCount);
+    return aText;
 }
 
 // the C++ the model calls (modelobj.rs EeWonModelOp documents each)
@@ -60,11 +69,7 @@ static intptr_t ModelHost(EeWonModelOp inOp, intptr_t a, intptr_t b, intptr_t c)
     case O::GameJoinStatusHook: return reinterpret_cast<LobbyGame*>(a)->GetJoinStatusHook();
     case O::GameCanStartHook: return reinterpret_cast<LobbyGame*>(a)->CanStartGameHook();
     case O::ConnectionClose: reinterpret_cast<RoutingConnection*>(a)->QueueClose(-1); return 0;
-    case O::TextOfUnits: {
-        std::wstring aText;
-        WonWideSink(&aText, reinterpret_cast<const uint16_t*>(a), (size_t)b);
-        return Held(new GUIStringData(aText));
-    }
+    case O::TextOfUnits: return Held(new GUIStringData(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
     case O::GameReadSummaryBytes: {
         ReadBuffer aBuffer(reinterpret_cast<const char*>(b), (unsigned long)c);
         return reinterpret_cast<LobbyGame*>(a)->ReadSummary(aBuffer);
@@ -76,17 +81,6 @@ static intptr_t ModelHost(EeWonModelOp inOp, intptr_t a, intptr_t b, intptr_t c)
 LobbyModelObject::LobbyModelObject(EeWonModelKind inKind)
     : mModel(ee_won_model_new(this, inKind, ModelHost, GetEmptyGUIStringData())) {}
 LobbyModelObject::~LobbyModelObject() { ee_won_model_free(this->mModel); }
-
-static void ModelAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
-{
-    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
-}
-static void ModelAppendUnits(void* inContext, const uint16_t* inUnits, size_t inCount)
-{
-    std::wstring* anOut = static_cast<std::wstring*>(inContext);
-    for (size_t i = 0; i < inCount; i++)
-        WideAppendUtf16Unit(*anOut, inUnits[i]);
-}
 
 // ---- the directory's records (the routing server's are read in Rust: modelobj.rs route_record_op)
 
@@ -129,176 +123,143 @@ void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
     }
 }
 
-// ---- the game's buffers
+// ---- the game's buffers: their bodies are modelbuf.rs's (R6 WON round 33) over these statements
 
-// Writes the game's listing summary (address or product id, name, skill, join flags, players, slots)
-void LobbyGame::WriteSummary(WriteBuffer& outBuffer)
+static intptr_t HeldConst(const RefCount* inObj) { return Held(const_cast<RefCount*>(inObj)); }
+static intptr_t HeldText(const GUIString& inText) { return Held(inText.mData.get()); }
+static std::string Utf16LE(const std::wstring& inText)
 {
-    EeWonGameSummary aSummary;
-    memset(&aSummary, 0, sizeof(aSummary));
-    aSummary.game_type = (int32_t)this->GetGameType();
-    IPAddr anAddress = this->GetAddress();
-    if (aSummary.game_type == 2)
-        memcpy(aSummary.address, anAddress.GetSixByte(), 6);
-    else
-        aSummary.product_id = GetLobbyProductId();
-    aSummary.in_progress = this->IsInProgress();
-    aSummary.has_password = this->GetPassword().length() != 0;
-    aSummary.invite_only = this->GetInviteOnly();
-    aSummary.ask_to_join = this->GetAskToJoin();
-    aSummary.skill = (int32_t)this->GetSkill();
-    aSummary.players = (int32_t)this->GetNumPlayers();
-    aSummary.open_slots = (int32_t)this->GetMaxPlayers();
-    std::string aName, aBytes;
-    if (aSummary.game_type != 2)
-        WideAppendUtf16LE(aName, (std::wstring)this->GetName());
-    ee_won_game_write_summary(&aSummary, reinterpret_cast<const uint8_t*>(aName.data()), aName.length(),
-                              ModelAppendBytes, &aBytes);
-    outBuffer.AppendBytes(aBytes.data(), aBytes.length());
-    this->WriteSummaryHook(outBuffer);
+    std::string aBytes;
+    WideAppendUtf16LE(aBytes, inText);
+    return aBytes;
 }
-
-// Reads a game's listing summary; false for another product or a short buffer
-// (a short summary keeps the fields read before the cut, as the original assigned them while reading)
-bool LobbyGame::ReadSummary(ReadBuffer& inBuffer)
-{
-    long aStart = inBuffer.pos();
-    EeWonGameSummary aSummary;
-    std::wstring aName;
-    ee_won_game_read_summary(reinterpret_cast<const uint8_t*>(inBuffer.data()) + aStart,
-                             (size_t)(inBuffer.length() - aStart), (int32_t)this->GetGameType(), GetLobbyProductId(),
-                             &aSummary, ModelAppendUnits, &aName);
-    GUIString aText;
-    if (aSummary.read & 4) aText = GUIString(new GUIStringData(aName));
-    this->M(LobbyMC::GameStoreSummary, (intptr_t)&aSummary, (intptr_t)aText.mData.get());
-    if (!aSummary.ok) return false;
-    inBuffer.SetPos((int)(aStart + aSummary.rest));
-    try {
-        return this->ReadSummaryHook(inBuffer);
-    }
-    catch (ReadBufferException&) { return false; }
-}
-
-// Reads the game code's detailed game description and marks the details as received
-bool LobbyGame::ReadDetails(ReadBuffer& inBuffer)
+static void SinkBytes(intptr_t inSink, const std::string& inBytes) { ee_won_lobby_sink(reinterpret_cast<void*>(inSink), reinterpret_cast<const uint8_t*>(inBytes.data()), inBytes.length()); }
+// a read's answer, or THREW (modelbuf.rs) for a read past the buffer's end
+template <class F> static intptr_t ReadOr(F f)
 {
     try {
-        if (this->ReadDetailsHook(inBuffer)) {
-            this->MSet(LobbyMF::GameHaveDetails, true);
-            return true;
-        }
-        return false;
-    }
-    catch (ReadBufferException&) { return false; }
-}
-
-// Builds the join request for the game: message 1, the local ping and the game code's data
-ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
-{
-    WriteBuffer buffer(0,true);
-    EeWonRoomMsg head;
-    memset(&head,0,sizeof(head));
-    head.kind=1;
-    head.ping=this->GetPing();
-    std::string bytes;
-    ee_won_room_message(&head,ModelAppendBytes,&bytes);
-    buffer.AppendBytes(bytes.data(),bytes.length());
-    this->GetJoinGameRequestHook(buffer);
-    return buffer.ToByteBuffer(true);
-}
-
-// Admits or refuses a join request; on success writes the player count and every player into the reply
-short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,WriteBuffer& outBuffer)
-{
-    SmartPtr<LobbyPlayer> player;
-    short check=ee_won_game_host_join_check(this->IsFull(),this->IsInProgress());
-    if (check!=0) return check;
-    LobbyConfig* config=GetLobbyConfig();
-    SmartPtr<LobbyClientList> clients=this->GetClients();
-    if (config!=NULL && !config->mAllowDuplicateNames) {
-        for (size_t i=0; i<clients->GetCount(); ++i) {
-            LobbyClient* aMember=clients->ClientAt(i);
-            if (aMember->GetName()==inClient->GetName() && aMember!=inClient) return 8;
-        }
-    }
-    player=LobbyPlayer::CreatePlayer();
-    inClient->SetPlayer(player.get());
-    try {
-        short anId=inBuffer.ReadShort();
-        player->SetPing(anId);
-        short result=this->HandleJoinGameRequestHook(inBuffer,inClient);
-        if (result!=0) { inClient->SetPlayer(NULL); return result; }
+        return f();
     } catch (ReadBufferException&) {
-        inClient->SetPlayer(NULL);
-        return 4;
+        return INTPTR_MIN;
     }
-    long aPlayers=this->GetNumPlayers()+1;
-    this->MSet(LobbyMF::GameNumPlayers, aPlayers);
-    outBuffer.AppendShort(aPlayers);
-    SmartPtr<LobbyClientList> aMembers=this->GetClients();
-    LobbyClientSetIterator it(aMembers.get());
-    while (it.HasMore()) {
-        LobbyClient* client;
-        LobbyPlayer* otherPlayer=it.Next(&client);
-        if (otherPlayer!=NULL) {
-            outBuffer.AppendShort(client->GetClientId());
-            otherPlayer->WriteToBuffer(outBuffer);
-        }
+}
+static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonModelBufOp Op;
+    LobbyGame* g = static_cast<LobbyGame*>(inObj);
+    LobbyPlayer* pl = static_cast<LobbyPlayer*>(inObj);
+    ReadBuffer* rb = reinterpret_cast<ReadBuffer*>(a);
+    WriteBuffer* wb = reinterpret_cast<WriteBuffer*>(a);
+    switch (inOp) {
+    case Op::BufPos: return (intptr_t)(rb->pos());
+    case Op::BufData: return (intptr_t)(rb->data());
+    case Op::BufLength: return (intptr_t)(rb->length());
+    case Op::BufSetPos: rb->SetPos((int)b); return 0;
+    case Op::ReadShort: return ReadOr([&] { return (intptr_t)rb->ReadShort(); });
+    case Op::ReadBool: return ReadOr([&] { return (intptr_t)rb->ReadBool(); });
+    case Op::WriteNew: return (intptr_t)(new WriteBuffer(0, true));
+    case Op::WriteFree: delete wb; return 0;
+    case Op::AppendBytes: wb->AppendBytes(reinterpret_cast<const void*>(b), (unsigned long)c); return 0;
+    case Op::AppendByte: wb->AppendByte((unsigned char)b); return 0;
+    case Op::AppendShort: wb->AppendShort((short)b); return 0;
+    case Op::SetShort: wb->SetShort((unsigned long)b, (short)c); return 0;
+    case Op::ToByteBuffer: return (intptr_t)(HeldConst(wb->ToByteBuffer(true).get()));
+    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
+    case Op::TextOfUnits: return (intptr_t)(Held(new GUIStringData(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b))));
+    case Op::TextOfBytes: return (intptr_t)(Held(new GUIStringData(reinterpret_cast<const char*>(a))));
+    case Op::TextEmpty: return (intptr_t)(GetEmptyGUIStringData());
+    case Op::TextLength: return (intptr_t)(reinterpret_cast<GUIStringData*>(a)->mLength);
+    case Op::GameType: return (intptr_t)(g->GetGameType());
+    case Op::GameAddressSixByte: memcpy(reinterpret_cast<void*>(a), g->GetAddress().GetSixByte(), 6); return 0;
+    case Op::ProductId: return (intptr_t)(GetLobbyProductId());
+    case Op::InProgress: return (g->IsInProgress()) ? 1 : 0;
+    case Op::HasPassword: return (g->GetPassword().length() != 0) ? 1 : 0;
+    case Op::InviteOnly: return (g->GetInviteOnly()) ? 1 : 0;
+    case Op::AskToJoin: return (g->GetAskToJoin()) ? 1 : 0;
+    case Op::Skill: return (intptr_t)(g->GetSkill());
+    case Op::NumPlayers: return (intptr_t)(g->GetNumPlayers());
+    case Op::MaxPlayers: return (intptr_t)(g->GetMaxPlayers());
+    case Op::NameUtf16: SinkBytes(a, Utf16LE((std::wstring)g->GetName())); return 0;
+    case Op::WriteSummaryHook: g->WriteSummaryHook(*wb); return 0;
+    case Op::StoreSummary: g->M(LobbyMC::GameStoreSummary, a, b); return 0;
+    case Op::ReadSummaryHook: return ReadOr([&] { return (intptr_t)g->ReadSummaryHook(*rb); });
+    case Op::ReadDetailsHook: return ReadOr([&] { return (intptr_t)g->ReadDetailsHook(*rb); });
+    case Op::SetHaveDetails: g->MSet(LobbyMF::GameHaveDetails, true); return 0;
+    case Op::Ping: return (intptr_t)(g->GetPing());
+    case Op::JoinRequestHook: g->GetJoinGameRequestHook(*wb); return 0;
+    case Op::IsFull: return (g->IsFull()) ? 1 : 0;
+    case Op::ConfigGet: return (intptr_t)(GetLobbyConfig());
+    case Op::ConfigAllowDuplicates: return (reinterpret_cast<LobbyConfig*>(a)->mAllowDuplicateNames) ? 1 : 0;
+    case Op::ClientsGet: return (intptr_t)(Held(g->GetClients().get()));
+    case Op::ListCount: return (intptr_t)(reinterpret_cast<LobbyClientList*>(a)->GetCount());
+    case Op::ListAt: return (intptr_t)(reinterpret_cast<LobbyClientList*>(a)->ClientAt((size_t)b));
+    case Op::ClientSameName: return (reinterpret_cast<LobbyClient*>(a)->GetName() == reinterpret_cast<LobbyClient*>(b)->GetName()) ? 1 : 0;
+    case Op::PlayerCreate: return (intptr_t)(Held(LobbyPlayer::CreatePlayer()));
+    case Op::ClientSetPlayer: reinterpret_cast<LobbyClient*>(a)->SetPlayer(reinterpret_cast<LobbyPlayer*>(b)); return 0;
+    case Op::PlayerSetPing: reinterpret_cast<LobbyPlayer*>(a)->SetPing((unsigned short)b); return 0;
+    case Op::JoinRequestHookRead: return ReadOr([&] { return (intptr_t)g->HandleJoinGameRequestHook(*rb, reinterpret_cast<LobbyClient*>(b)); });
+    case Op::SetNumPlayers: g->MSet(LobbyMF::GameNumPlayers, (long)a); return 0;
+    case Op::IterNew: return (intptr_t)(new LobbyClientSetIterator(reinterpret_cast<LobbyClientList*>(a)));
+    case Op::IterHasMore: return (reinterpret_cast<LobbyClientSetIterator*>(a)->HasMore()) ? 1 : 0;
+    case Op::IterNext: return (intptr_t)(reinterpret_cast<LobbyClientSetIterator*>(a)->Next(reinterpret_cast<LobbyClient**>(b)));
+    case Op::IterFree: delete reinterpret_cast<LobbyClientSetIterator*>(a); return 0;
+    case Op::ClientId: return (intptr_t)(reinterpret_cast<LobbyClient*>(a)->GetClientId());
+    case Op::PlayerWrite: reinterpret_cast<LobbyPlayer*>(a)->WriteToBuffer(*reinterpret_cast<WriteBuffer*>(b)); return 0;
+    case Op::JoinReplyHook: g->GetJoinGameReplyHook(reinterpret_cast<LobbyClient*>(a), *reinterpret_cast<WriteBuffer*>(b)); return 0;
+    case Op::HandleJoinRequest: return (intptr_t)(g->HandleJoinRequest(*rb, reinterpret_cast<LobbyClient*>(b), *reinterpret_cast<WriteBuffer*>(c)));
+    case Op::FindClient: return (intptr_t)(g->FindClient((unsigned short)a));
+    case Op::PlayerReadFrom: return (reinterpret_cast<LobbyPlayer*>(a)->ReadFromBuffer(*reinterpret_cast<ReadBuffer*>(b))) ? 1 : 0;
+    case Op::JoinReplyHookRead: return ReadOr([&] { g->HandleJoinGameReplyHook(*rb); return (intptr_t)0; });
+    case Op::StatusSuccess: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_Success_String)));
+    case Op::StatusGameFull: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_GameFull_String)));
+    case Op::StatusGameInProgress: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_GameInProgress_String)));
+    case Op::StatusUnpackFailure: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_UnpackFailure_String)));
+    case Op::StatusNotInvited: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_NotInvited_String)));
+    case Op::StatusCaptainRejectedYou: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_CaptainRejectedYou_String)));
+    case Op::StatusInvalidPassword: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_InvalidPassword_String)));
+    case Op::StatusDuplicateName: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_DuplicateName_String)));
+    case Op::StatusHook: return (intptr_t)(HeldText(g->GetStatusStringHook((short)a)));
+    case Op::PlayerReadData: return ReadOr([&] { return (intptr_t)pl->ReadData(*rb); });
+    case Op::SelfSetPing: pl->SetPing((unsigned short)a); return 0;
+    case Op::SelfSetReady: pl->SetReady(a != 0); return 0;
+    case Op::PlayerPing: return (intptr_t)(pl->GetPing());
+    case Op::PlayerReady: return (pl->GetReady()) ? 1 : 0;
+    case Op::PlayerWriteData: pl->WriteData(*wb); return 0;
     }
-    this->GetJoinGameReplyHook(inClient,outBuffer);
     return 0;
 }
+static intptr_t Buf(void* inObj, EeWonModelBufCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0) { return ee_won_modelbuf_call(inObj, BufHost, inCall, a, b, c); }
+static ConstSmartPtr<ByteBuffer> AdoptBuffer(intptr_t inHeld)
+{
+    ConstSmartPtr<ByteBuffer> aBuffer(reinterpret_cast<ByteBuffer*>(inHeld));
+    reinterpret_cast<ByteBuffer*>(inHeld)->Release();
+    return aBuffer;
+}
+static GUIString AdoptText(intptr_t inHeld)
+{
+    GUIString aText(reinterpret_cast<GUIStringData*>(inHeld));
+    reinterpret_cast<GUIStringData*>(inHeld)->Release();
+    return aText;
+}
+typedef EeWonModelBufCall BC;
 
+// Writes the game's listing summary (address or product id, name, skill, join flags, players, slots)
+void LobbyGame::WriteSummary(WriteBuffer& outBuffer) { Buf(this, BC::WriteSummary, (intptr_t)&outBuffer); }
+// Reads a game's listing summary; false for another product or a short buffer
+// (a short summary keeps the fields read before the cut, as the original assigned them while reading)
+bool LobbyGame::ReadSummary(ReadBuffer& inBuffer) { return Buf(this, BC::ReadSummary, (intptr_t)&inBuffer) != 0; }
+// Reads the game code's detailed game description and marks the details as received
+bool LobbyGame::ReadDetails(ReadBuffer& inBuffer) { return Buf(this, BC::ReadDetails, (intptr_t)&inBuffer) != 0; }
+// Builds the join request for the game: message 1, the local ping and the game code's data
+ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest() { return AdoptBuffer(Buf(this, BC::JoinRequest)); }
+// Admits or refuses a join request; on success writes the player count and every player into the reply
+short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer, LobbyClient* inClient, WriteBuffer& outBuffer) { return (short)Buf(this, BC::HandleJoinRequest, (intptr_t)&inBuffer, (intptr_t)inClient, (intptr_t)&outBuffer); }
 // Handles a join request and builds the reply: message 2, the join status and the players
-ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinReply(ReadBuffer& inBuffer,LobbyClient* inClient)
-{
-    WriteBuffer buffer(0,true);
-    buffer.AppendByte(2);
-    buffer.AppendShort(0);
-    buffer.SetShort(1,this->HandleJoinRequest(inBuffer,inClient,buffer));
-    return buffer.ToByteBuffer(true);
-}
-
+ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinReply(ReadBuffer& inBuffer, LobbyClient* inClient) { return AdoptBuffer(Buf(this, BC::JoinReply, (intptr_t)&inBuffer, (intptr_t)inClient)); }
 // Reads the host's join reply: on success creates every listed player; returns the join status
-short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer)
-{
-    short result;
-    try {
-        result=inBuffer.ReadShort();
-        if (result!=0) return result;
-        unsigned short count=inBuffer.ReadShort();
-        for (int i=0; i<count; ++i) {
-            LobbyClient* client=this->FindClient(inBuffer.ReadShort());
-            if (client!=NULL) {
-                SmartPtr<LobbyPlayer> player=LobbyPlayer::CreatePlayer();
-                if (player->ReadFromBuffer(inBuffer)) client->SetPlayer(player.get());
-            }
-        }
-        this->HandleJoinGameReplyHook(inBuffer);
-    } catch (ReadBufferException&) { result=4; }
-    return result;
-}
-
+short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer) { return (short)Buf(this, BC::HandleJoinReply, (intptr_t)&inBuffer); }
 // Returns the text for a join status: the lobby's strings, the game code's text, or the number
-GUIString LobbyGame::GetStatusString(short status)
-{
-    switch(ee_won_model_status_text(status)) {
-    case 0: return LOBBY_STRING(LobbyGameStatus_Success_String);
-    case 1: return LOBBY_STRING(LobbyGameStatus_GameFull_String);
-    case 2: return LOBBY_STRING(LobbyGameStatus_GameInProgress_String);
-    case 3: return LOBBY_STRING(LobbyGameStatus_UnpackFailure_String);
-    case 4: return LOBBY_STRING(LobbyGameStatus_NotInvited_String);
-    case 5: return LOBBY_STRING(LobbyGameStatus_CaptainRejectedYou_String);
-    case 6: return LOBBY_STRING(LobbyGameStatus_InvalidPassword_String);
-    case 7: return LOBBY_STRING(LobbyGameStatus_DuplicateName_String);
-    }
-    GUIString custom=this->GetStatusStringHook(status);
-    if(custom.length()!=0) return custom;
-    char buffer[50];
-    sprintf(buffer,"%d",static_cast<int>(status));
-    return GUIString(new GUIStringData(buffer));
-}
-
+GUIString LobbyGame::GetStatusString(short status) { return AdoptText(Buf(this, BC::StatusString, status)); }
 // Creates a game of the given type through the installed game factory
 LobbyGame* LobbyGame::CreateGame(LobbyGameType inType)
 {
@@ -306,28 +267,10 @@ LobbyGame* LobbyGame::CreateGame(LobbyGameType inType)
     game->SetGameType(inType);
     return game;
 }
-
 // Reads the player's ping, ready state and game data; false on a short buffer
-bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer)
-{
-    try {
-        this->SetPing(inBuffer.ReadShort());
-        this->SetReady(inBuffer.ReadBool());
-        return this->ReadData(inBuffer);
-    }
-    catch (ReadBufferException&) {
-        return false;
-    }
-}
-
+bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer) { return Buf(this, BC::PlayerReadFrom, (intptr_t)&inBuffer) != 0; }
 // Writes the player's ping, ready state and game data
-void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer)
-{
-    std::string aHead;
-    ee_won_room_player_head(this->GetPing(), this->GetReady(), ModelAppendBytes, &aHead);
-    outBuffer.AppendBytes(aHead.data(), aHead.length());
-    this->WriteData(outBuffer);
-}
+void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer) { Buf(this, BC::PlayerWriteTo, (intptr_t)&outBuffer); }
 
 // Factories the game code replaces to create its own game and player types: LobbyGame::mGameFactory (0x8dec84)
 // and LobbyPlayer::mPlayerFactory (0x8dec88) start as the defaults at 0x7a6730 and 0x7a5140 (no CRT initializer)

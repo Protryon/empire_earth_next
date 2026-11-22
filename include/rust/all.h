@@ -209,6 +209,7 @@
 #include "rust/won_lobby/lobbyrun.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_lobby/model.h"
+#include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/modelobj.h"
 #include "rust/won_lobby/netctl.h"
 #include "rust/won_lobby/netdisp.h"

@@ -38,6 +38,7 @@ pub mod lobbyprv;
 pub mod lobbyrun;
 pub mod logics;
 pub mod model;
+pub mod modelbuf;
 pub mod modelobj;
 pub mod netctl;
 pub mod netdisp;
