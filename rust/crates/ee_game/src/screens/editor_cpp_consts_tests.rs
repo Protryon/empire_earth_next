@@ -22,7 +22,7 @@ use crate::screens::editor_tscreen::*;
 use crate::screens::editor_unit::*;
 
 /// The headers the C++ names come from.
-const EE_SCREENS_SECC_HEADERS: [&str; 4] = [
+const EE_SCREENS_SECC_HEADERS: [&str; 5] = [
     "include/ee/EEStringIDs.h",
     "include/rust/render/gestate.h",
     "include/lle/UIControl.h",
