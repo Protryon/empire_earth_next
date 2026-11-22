@@ -154,6 +154,11 @@ CHECKS = [
          rust=[(RS / "ee_won_gui" / "src" / "guisplit.rs", fn)
                for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")],
          allowed={}),
+    # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
+    dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+    dict(enum="EeWonFrontEvent", header="won_lobby/wonfront.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
 ]
 
 
