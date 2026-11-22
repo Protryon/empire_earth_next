@@ -23,6 +23,8 @@
 pub mod boxsel;
 /// cbindgen:ignore
 pub mod cast;
+/// cbindgen:ignore
+pub mod compound;
 pub mod ffi;
 pub mod host;
 /// cbindgen:ignore

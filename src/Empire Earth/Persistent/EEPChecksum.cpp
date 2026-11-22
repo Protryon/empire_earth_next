@@ -10,6 +10,7 @@
 #include "ee/EEPChecksum.h"
 #include "ee/EEPersistentTag.h"
 #include "rust/base/error.h"
+#include "rust/game/gamecpp.h"
 
 
 // Creates an empty saved checksum chunk, verbose or not
@@ -31,49 +32,37 @@ void EEPChecksum::GetChecksum(ESChecksum& ioChecksum) const
     ioChecksum.AddChecksum("EEPChecksum", theChecksum);
 }
 
+// Load and Save are ee_game gamecpp persist_parts.rs (game core lane, round 9); their C++ calls and members are
+// EEPChecksumOp's cases below.
+
 // Reads the verbose flag and the described checksum entries from a saved game; returns the first read error
 long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theCount = 0;
-    UString theDescription;
-    unsigned long theValue;
-    bool theVerbose;
-    ee_error_checksum_clear(this->mRust);
-    long theResult = inFile.Read(theVerbose);
-    if (theResult != kErrorOK)
-        return theResult;
-    ee_error_checksum_set_verbose(this->mRust, theVerbose);
-    theResult = inFile.Read(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (long i = 0; i < theCount && theResult == kErrorOK; i++) {
-        theResult = theDescription.Load(inFile);
-        if (theResult != kErrorOK)
-            continue;
-        theResult = inFile.Read(theValue);
-        if (theResult == kErrorOK)
-            ee_error_checksum_push(this->mRust, theDescription, (uint32_t)theValue);
-    }
-    return theResult;
+    return ee_gamecpp_pc_load(static_cast<FSPersistent*>(this), &inFile);
 }
 
 // Writes the verbose flag and the described checksum entries to a save; returns the first write error
 long EEPChecksum::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    size_t theCount = ee_error_checksum_count(this->mRust);
-    long theResult = outFile.Write(ee_error_checksum_verbose(this->mRust));
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((long)theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (size_t i = 0; i < theCount && theResult == kErrorOK; i++) {
-        uint32_t theValue;
-        std::vector<char> theText(ee_error_checksum_entry(this->mRust, i, NULL, 0, &theValue) + 1);
-        ee_error_checksum_entry(this->mRust, i, theText.data(), theText.size(), &theValue);
-        theResult = UString(theText.data()).Save(outFile);
-        if (theResult == kErrorOK)
-            theResult = outFile.Write((unsigned long)theValue);
+    return ee_gamecpp_pc_save(static_cast<FSPersistent*>(this), &outFile);
+}
+
+// ------------------------------------------------------------------------- the checksum's C++ (gamecpp persist_parts.rs)
+
+int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+
+// The checksum's C++ calls and members (EEPCalamityHelper.cpp's EEPCalamityOp default; the end of lane C): one
+// statement each
+int64_t EEPChecksumOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PcRust: return P64(static_cast<EEPChecksum*>((FSPersistent*)p)->GetRust());
+    case O::PcUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
+    case O::PcUStrText: return P64((const char*)*(UString*)p);
+    case O::PcSaveText: return UString((const char*)a[0]).Save(*(FSFile*)p);
+    default: return EECore9OpD(inOp, p, a, f);
     }
-    return theResult;
 }

@@ -265,13 +265,21 @@ fn volume(sound: P) -> f32 {
 /// `SetSound(node)` and the node's own reference dropped (the calamity keeps one).
 fn keep_sound(c: P, node: P, secondary: bool) {
     if secondary {
-        h(O::CalSetSecondary, c, &[pa(node)]);
+        super::calamity_objects::ee_gamecpp_calamity_set_sound(
+            c as *mut std::ffi::c_void,
+            node as *mut std::ffi::c_void,
+            true,
+        );
         let n = hp(O::CalSecondary, c, &[]);
         if n != 0 {
             h(O::NodeDereference, n, &[]);
         }
     } else {
-        h(O::CalSetSound, c, &[pa(node)]);
+        super::calamity_objects::ee_gamecpp_calamity_set_sound(
+            c as *mut std::ffi::c_void,
+            node as *mut std::ffi::c_void,
+            false,
+        );
         let n = hp(O::CalSound, c, &[]);
         if n != 0 {
             h(O::NodeDereference, n, &[]);
@@ -289,7 +297,7 @@ fn set_disabled(cx: P, disabled: bool, reason: i64) {
 }
 
 fn set_target(c: P, u: P) {
-    h(O::CalSetTarget, c, &[pa(u)]);
+    super::calamity_objects::ee_gamecpp_calamity_set_unit(c as *mut std::ffi::c_void, u as *mut std::ffi::c_void, true);
 }
 
 fn off_map(cx: P, reason: i64) {
@@ -1268,7 +1276,7 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
         C::MeshZ => out.x = mesh_z(call.x, call.y),
         // the starts' and stops' (calamity_start.rs)
         C::StopSound => {
-            h(if call.index == 0 { O::CalStopSound } else { O::CalStopSecondary }, c, &[]);
+            super::calamity_objects::ee_gamecpp_calamity_stop_sound(c as *mut std::ffi::c_void, call.index != 0);
         }
         C::DestroyHelper => {
             h(O::ContagionDestroyVerify, 0, &[call.index as i64, call.value as i64]);

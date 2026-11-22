@@ -659,8 +659,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PreloadLoadClass: gDataPreLoading->PostLoadUnitClass((unsigned long)a[0], (unsigned long)a[1]);
         break;
     // the world, the physics, the graphics, the communications
-    case O::AttackPlayers: EEAttackPlayers((long)a[0], (unsigned char)a[1]);
-        break;
     case O::BuildGate: EEBuildGate(*(EETileCoordinate*)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
     case O::VotingPropose: gWorld.mVoting.Propose((unsigned short)a[0], 15);

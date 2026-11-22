@@ -16,6 +16,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEPMultiplayerHelper.h"
 #include "ee/EEPersistentTag.h"
+#include "rust/game/gamecpp.h"
 
 
 // Creates the saved multiplayer-state chunk
@@ -35,113 +36,51 @@ FSPersistent* EEPMultiplayerHelper::CreateDefault() const
     return new EEPMultiplayerHelper;
 }
 
+// Load and Save are ee_game gamecpp persist_parts.rs (game core lane, round 9); their C++ calls are EEPMultiplayerOp's
+// cases below.
+
 // Reads the physics state and the eight network tick counters; restores only the server's or client's physics tick
 // from them (the other counters are read and dropped); returns the first read error
 long EEPMultiplayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theNescommCt = 0;
-    unsigned long theNescommLastTickRecvd = 0;
-    unsigned long theSNessLastCt = 0;
-    unsigned long theNessCt = 0;
-    unsigned long theNessPt = 0;
-    unsigned long theNescCt = 0;
-    unsigned long theNescPt = 0;
-    unsigned long theNemmMessageNumber = 0;
-    long theResult = gPhysics->Load(inMajorVersion, inMinorVersion, inFile);
-
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theNemmMessageNumber);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theNescCt);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(theNescPt);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(theNescommCt);
-                    if (theResult == kErrorOK) {
-                        theResult = inFile.Read(theNescommLastTickRecvd);
-                        if (theResult == kErrorOK) {
-                            theResult = inFile.Read(theSNessLastCt);
-                            if (theResult == kErrorOK) {
-                                theResult = inFile.Read(theNessCt);
-                                if (theResult == kErrorOK) {
-                                    theResult = inFile.Read(theNessPt);
-                                    if (theResult == kErrorOK && gCommunications != NULL) {
-                                        NESynchronousCommunications* theCommunications =
-                                            dynamic_cast<NESynchronousCommunications*>(gCommunications);
-                                        if (gCommunications->IsServer())
-                                            dynamic_cast<NESynchronousServer*>(gCommunications)->
-                                                SetCurrentPhysicsTick(theNessPt);
-                                        else
-                                            dynamic_cast<NESynchronousClient*>(gCommunications)->
-                                                SetCurrentPhysicsTick(theNescPt);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult;
+    return ee_gamecpp_pmh_load(inMajorVersion, inMinorVersion, &inFile);
 }
 
 // Writes the physics state and the server's or client's network tick counters to a save (nothing for versions up to
 // 0.12); returns the first write error
 long EEPMultiplayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theNescommCt = 0;
-    unsigned long theNescommLastTickRecvd = 0;
-    unsigned long theSNessLastCt = 0;
-    unsigned long theNessCt = 0;
-    unsigned long theNessPt = 0;
-    unsigned long theNescCt = 0;
-    unsigned long theNescPt = 0;
-    unsigned long theNemmMessageNumber = 0;
-    long theResult;
-    NESynchronousCommunications* theCommunications;
-    NESynchronousServer* theServer;
-    NESynchronousClient* theClient;
-    if (inMajorVersion <= 0 && inMinorVersion <= 12)
-        return kErrorOK;
-    // (A branch for exactly version 0.12, unreachable after the test above, was removed.)
-    theCommunications = dynamic_cast<NESynchronousCommunications*>(gCommunications);
-    theNescommCt = theCommunications->GetNumberOfCTsProcessedInPhysics();
-    theNescommLastTickRecvd = theCommunications->GetLastTickReceived();
-    if (gCommunications->IsServer()) {
-        theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
-        theSNessLastCt = theServer->GetLastCTMessageID();
-        theNessCt = theServer->GetCurrentCommunicationsTick();
-        theNessPt = theServer->GetCurrentPhysicsTick();
-        theNemmMessageNumber = theServer->GetMessageManagerCurrentMessageNumber();
-    } else {
-        theClient = dynamic_cast<NESynchronousClient*>(gCommunications);
-        theNescCt = theClient->GetCurrentCommunicationsTick();
-        theNescPt = theClient->GetCurrentPhysicsTick();
+    return ee_gamecpp_pmh_save(inMajorVersion, inMinorVersion, &outFile);
+}
+
+// ------------------------------------------------------------------------- the multiplayer state's C++ (gamecpp persist_parts.rs)
+
+int64_t EEPCalamityOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define SERVER dynamic_cast<NESynchronousServer*>(gCommunications)
+#define CLIENT dynamic_cast<NESynchronousClient*>(gCommunications)
+#define COMMS dynamic_cast<NESynchronousCommunications*>(gCommunications)
+
+// The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
+int64_t EEPMultiplayerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
+    case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
+    case O::PmServerSetPhysicsTick: SERVER->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
+        break;
+    case O::PmClientSetPhysicsTick: CLIENT->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
+        break;
+    case O::PmCommCtsProcessed: return COMMS->GetNumberOfCTsProcessedInPhysics();
+    case O::PmCommLastTick: return COMMS->GetLastTickReceived();
+    case O::PmServerLastCt: return SERVER->GetLastCTMessageID();
+    case O::PmServerCt: return SERVER->GetCurrentCommunicationsTick();
+    case O::PmServerPt: return SERVER->GetCurrentPhysicsTick();
+    case O::PmServerMessageNumber: return SERVER->GetMessageManagerCurrentMessageNumber();
+    case O::PmClientCt: return CLIENT->GetCurrentCommunicationsTick();
+    case O::PmClientPt: return CLIENT->GetCurrentPhysicsTick();
+    default: return EEPCalamityOp(inOp, p, a, f);
     }
-    theResult = gPhysics->Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theNemmMessageNumber);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theNescCt);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theNescPt);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theNescommCt);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theNescommLastTickRecvd);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theSNessLastCt);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(theNessCt);
-    if (theResult != kErrorOK)
-        return theResult;
-    return outFile.Write(theNessPt);
+    return 0;
 }

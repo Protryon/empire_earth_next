@@ -19,6 +19,7 @@
 #include "ee/EEContagionManager.h"
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEPersistentTag.h"
+#include "rust/game/gamecpp.h"
 
 // Creates the saved-calamities chunk with no calamity list and a fresh contagion manager
 EEPCalamityHelper::EEPCalamityHelper()
@@ -81,91 +82,26 @@ FSPersistent* EEPCalamityHelper::CreateDefault() const
     return new EEPCalamityHelper;
 }
 
+// Load, RepairPointers and Save are ee_game gamecpp persist_parts.rs (game core lane, round 9); their C++ calls and
+// members are EEPCalamityOp's cases below.
+
 // Reads the active calamities and then the contagion manager from a saved game; returns the contagion manager's error
 long EEPCalamityHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EECalamity* theCalamity = NULL;
-    long theCount = 0;
-    this->ClearCalamities();
-    if (this->mCalamities == NULL)
-        this->mCalamities = new std::vector<EECalamity*>;
-    inFile.Read(theCount);
-    for (long i = 0; i < theCount; i++) {
-        theCalamity = new EECalamity;
-        theCalamity->Load(inMajorVersion, inMinorVersion, inFile);
-        this->mCalamities->push_back(theCalamity);
-    }
-    return this->mContagionManager->Load(inMajorVersion, inMinorVersion, inFile);
+    return ee_gamecpp_pch_load(this, inMajorVersion, inMinorVersion, &inFile);
 }
 
 // Reconnects the loaded calamities to their caster and target units and loads their media, deleting those whose units
 // are gone; then reconnects the contagions
 long EEPCalamityHelper::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    long theResult = 0;
-    if (this->mCalamities != NULL) {
-        for (std::vector<EECalamity*>::iterator theIterator = this->mCalamities->begin(); theIterator != this->mCalamities->end();
-             theIterator++) {
-            EECalamity* theCalamity = *theIterator;
-            long theError = 0;
-            if (theCalamity->mClass == NULL)
-                theError = 3;
-            unsigned long theCasterID = theCalamity->mOriginatingUnitID;
-            EEUnit* theCaster = gWorld.GetUnit(theCasterID);
-            theCalamity->SetCasterUnit(theCaster);
-            if (theCaster == NULL) {
-                if (UIsNone32(theCasterID))
-                    theCalamity->mClass->LoadMedia(gWorld.mPlayers[0], false);
-                else
-                    theError = 9;
-            } else
-                theCalamity->mClass->LoadMedia(theCaster->mPlayer, false);
-            if (theCalamity->mHasTargetUnit) {
-                EEUnit* theTarget = gWorld.GetUnit(theCalamity->mTargetUnitID);
-                theCalamity->SetTargetUnit(theTarget);
-                if (theTarget == NULL)
-                    theError = 3;
-            }
-            if (theError == 0)
-                theCalamity->PlaySound();
-            else {
-                delete theCalamity;
-                *theIterator = NULL;
-            }
-        }
-        theResult = this->mContagionManager->RestorePointers(*this->mCalamities);
-    }
-    return theResult;
+    return ee_gamecpp_pch_repair(this);
 }
 
 // Writes the calamity manager's active calamities (with their current target ids) and the world's contagions to a save
 long EEPCalamityHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = 0;
-    EEUnit* theTarget = NULL;
-    long theCurrentClassOffset = 0, theCount = 0;
-    std::vector<EECalamity*>* theTempActiveCalamities;
-    USingleton<EECalamityManager>::GetInstance()->GetCalamities(theTempActiveCalamities);
-    ESVERIFY_AT(theTempActiveCalamities, 334);
-    if (theTempActiveCalamities != NULL) {
-        theCount = theTempActiveCalamities->size();
-        outFile.Write(theCount);
-        std::vector<EECalamity*>::iterator theIterator = theTempActiveCalamities->begin();
-        while (true) {
-            if (theIterator == theTempActiveCalamities->end())
-                break;
-            EECalamity* theCalamity = *theIterator;
-
-            EECalamityClass* theCurrentCalamityClass = theCalamity->mClass;
-            if (!USingleton<EECalamityManager>::GetInstance()->GetCalamityClassIndex(theCurrentCalamityClass, theCurrentClassOffset))
-                ESVerify(__FILE__, 349, "EECalamityManager::Instance()->GetCalamityClassOffsetToSave(theCurrentCalamityClass, theCurrentClassOffset)"); // the original assert text (provisional names here)
-            theCalamity->mTargetUnitID = theCalamity->GetTargetUnit(theTarget) ? theTarget->GetUnitID() : -1;
-            (*theIterator)->Save(inMajorVersion, inMinorVersion, outFile);
-            theIterator++;
-        }
-        theResult = gWorld.GetContagionManager()->Save(inMajorVersion, inMinorVersion, outFile);
-    }
-    return theResult;
+    return ee_gamecpp_pch_save(inMajorVersion, inMinorVersion, &outFile);
 }
 
 void EEPCalamityHelper::GetChecksum(class ESChecksum &) const
@@ -174,4 +110,62 @@ void EEPCalamityHelper::GetChecksum(class ESChecksum &) const
 
 void EEPCalamityHelper::Virtual1C(long)
 {
+}
+
+// ------------------------------------------------------------------------- the calamities' C++ (gamecpp persist_parts.rs)
+
+int64_t EEPChecksumOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the calamity manager's active calamities (GetCalamities' out value)
+static std::vector<EECalamity*>* EEActiveCalamities()
+{
+    std::vector<EECalamity*>* theList;
+    USingleton<EECalamityManager>::GetInstance()->GetCalamities(theList);
+    return theList;
+}
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define PCH ((EEPCalamityHelper*)p)
+#define CL ((EECalamity*)p)
+#define CALAMITIES (*(std::vector<EECalamity*>*)p)
+#define AFILE (*(FSFile*)a[2])
+
+// The calamities' C++ calls and members (EEPMultiplayerHelper.cpp's EEPMultiplayerOp default): one statement each
+int64_t EEPCalamityOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PchClearCalamities: PCH->ClearCalamities();
+        break;
+    case O::PchCalamities: return P64(PCH->mCalamities);
+    case O::PchNewCalamities: PCH->mCalamities = new std::vector<EECalamity*>;
+        break;
+    case O::PchNewCalamity: return P64(new EECalamity);
+    case O::PchCalamityLoad: return CL->Load((unsigned long)a[0], (unsigned long)a[1], AFILE);
+    case O::PchCalamitySave: return CL->Save((unsigned long)a[0], (unsigned long)a[1], AFILE);
+    case O::PchPush: PCH->mCalamities->push_back((EECalamity*)a[0]);
+        break;
+    case O::PchContagionLoad: return PCH->mContagionManager->Load((unsigned long)a[0], (unsigned long)a[1], AFILE);
+    case O::PchCount: return (int64_t)PCH->mCalamities->size();
+    case O::PchAt: return P64((*PCH->mCalamities)[a[0]]);
+    case O::PchSetCaster: CL->SetCasterUnit((EEUnit*)a[0]);
+        break;
+    case O::PchPlaySound: CL->PlaySound();
+        break;
+    case O::PchDeleteAt: delete std::exchange((*PCH->mCalamities)[a[0]], nullptr);
+        break;
+    case O::PchRestoreContagions: return PCH->mContagionManager->RestorePointers(*PCH->mCalamities);
+    case O::PchActive: return P64(EEActiveCalamities());
+    case O::PchVerifyActive: ESVERIFY_AT(a[0] != 0, 334);
+        break;
+    case O::VecCalamitiesCount: return (int64_t)CALAMITIES.size();
+    case O::VecCalamitiesAt: return P64(CALAMITIES[a[0]]);
+    case O::PchClassIndex: return USingleton<EECalamityManager>::GetInstance()->GetCalamityClassIndex(CL->mClass, *(long*)a[0]);
+    case O::PchVerifyClassIndex: ESVerify(__FILE__, 349, "EECalamityManager::Instance()->GetCalamityClassOffsetToSave(theCurrentCalamityClass, theCurrentClassOffset)");   // the original assert text
+        break;
+    case O::PchGetTarget: return CL->GetTargetUnit(*(EEUnit**)a[0]);
+    case O::PchContagionSave: return gWorld.GetContagionManager()->Save((unsigned long)a[0], (unsigned long)a[1], AFILE);
+    default: return EEPChecksumOp(inOp, p, a, f);
+    }
+    return 0;
 }
