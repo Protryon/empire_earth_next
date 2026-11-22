@@ -38110,3 +38110,98 @@ rustfmt's fixes after it):
 - `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 13633, units [4, 43, 42], alive [2, 3],
   classic_lua x 2; lan-game PT 2876/2868);
 - Not run: the POSIX builds.
+
+## The game core lane, round 10: the Graphics Thread's draw units, the Database's tables and the tech tree's loads, the message captures and record class, the managers and utilities, the start screen, update_saved_games, the statistics and the fixture's lobby walk in Rust, five lanes in parallel worktrees (ee_game gamecpp render_to.rs, ro_units.rs, ro_views.rs, db_media.rs, db_text.rs, tech_load.rs, tech_capture.rs, persist_more.rs, msg_capture.rs, mrecord.rs, weather.rs, cheats.rs, civilization.rs, utilities.rs, camera_host.rs, saved_games.rs, start_screen.rs, world_stats.rs; fixture lobby.rs; branch rust-core10, 2026-11-22)
+
+The brief: the Graphics Thread's draw units, the tech tree's loads and copies, EEGraphics::RenderTo, the Database
+directory, the Persistent helpers' rest, EEMRecord, the start screen's window, EEUpdateSavedGames, the fixture's WON
+lobby walk and the rest of the lane; target -3,000 C++ logic lines. Round 9's shape again: a skeleton (7647abebd: the
+chain links EECore10OpA..E and one block per lane in gamecpp/mod.rs), four forks in their own worktrees
+(rust-core10-a..d) under one heavy-job lock, the lead as lane E. Score (`logic_lines.py`): lane A -660, B -708, C -386
+(of which the civilization captures, about 140, were dropped at the merge: the UI lane's round 12 moved the same unit),
+D -857, E -389, the skeleton +13: -2,987 before the merge of origin/rust, about -2,850 of it the round's own after it.
+Net C++ lines: A -487, B -341, C -348, D -594, E about -260.
+
+| Commit | What | C++ logic |
+|---|---|---|
+| 7647abebd | the skeleton | +13 |
+| 6e3f1e0af, c03fc7976, b17981001 | lane E: fixture lobby.rs; saved_games.rs, start_screen.rs, world_stats.rs | -389 |
+| 9701ad99b | nettest: ee_session_test's stand-ins (below) | 0 |
+| 3364852ba | merge rust-core9m (round 9 + origin/rust 5143a9696, resolved and gated by another agent) | |
+| 235edd16d (bc92fac5a, 00bb17eff) | lane B | -708 |
+| 892eaf19d (74223851b) | lane D; the storm's route on paths 2's Rust request | -857 |
+| f944b8d34 (236c86306, abc00f932) | lane A | -660 |
+| 97dcf9ed0 (1e7297d2d, a7a77c543) | lane C (its area-effect commit 5dddfb434 undone by its merge of rust-core10) | -386 |
+| 328d9915e | merge origin/rust b6f7d06bd (batch 16) | |
+
+- **Two lanes' work was done twice.** Fork C moved the area effects (EEAEManager, EEAreaEffect, EEAreaEffectTemplate)
+  and the civilization captures (EECivCapture.cpp) while the UI lane moved the same units (its rounds 11 and 12). Both
+  times the other lane's version was taken at the merge and fork C's Rust deleted (ae_effect.rs, ae_capture.rs,
+  civ_capture.rs; the five Lc cases msg_capture.rs shares moved to EEMessageCapture.cpp). The lane scopes said
+  "Civilization Builder: game core" while the brief gave the UI lane only four of its files; the area effects and the
+  captures were in neither list. Name every unit of a directory two lanes touch.
+- **The heavy-job lock starved the lead.** Five builders shared one mkdir lock polled every 20 s: the lead's builds
+  waited 20-40 minutes each, and a TaskStop of a waiting `locked.sh` did not kill it (it took the lock later and built
+  a half-edited tree). Kill the shell's children, and check `ps` before queueing again.
+- **cbindgen and generics**: world_stats.rs's imports of ee_sim's statistics FFI made cbindgen emit a
+  `template<typename H = void>` the header splitter cannot name ("cannot name the header item"). The module is
+  `/// cbindgen:ignore` and its one export declared by hand in EEWorld.cpp. Bisect such failures by running
+  `cargo run -p xtask -- cbindgen` directly (seconds) with modules ignored one at a time.
+- **The start screen in Rust** needs Win32's GDI: ee_game depends on windows-sys 0.59 (the version ee_base locks)
+  with `Win32_Graphics_Gdi` for Windows targets; LoadBitmapA is in `Graphics::Gdi`, not `WindowsAndMessaging`. The
+  window runs on a std thread (the original's TSScheduler thread and end event become a join); Start no longer waits
+  forever when the bitmap or window fails (it stops waiting when the thread ends). Only a full-screen manual launch
+  shows it: the harness runs windowed.
+- **The fixture's lobby walk** (lobby.rs) runs on the lobby's own loop through a C++ UserEvent trampoline
+  (`ee_fixture_lobby_work`); each WONAPI call is one Fx case (dynamic_casts to Label, Button, ListArea, Container; a
+  GUIString read by length and character). The LAN game of gates.sh drives it.
+- **The forks' lessons**: a Rust test must not panic through an `extern "C"` function (the process aborts with
+  0xC0000409 and the whole test run with it); cbindgen renames are global by type name, private structs included
+  (gamecpp's `Rect`, `VideoMode`, `SurfaceDescription` rewrote dx7.h and rmap.h: prefix every repr(C) mirror);
+  `sim_capture.py check` compares every seed of its golden unless given `--seeds`; clippy's
+  `not_unsafe_ptr_arg_deref` wants `pub unsafe extern "C" fn` for forwarders that write through pointers; where ee_sim
+  already has a host trait (StormHost, CheatHost) implementing it in Rust over one-statement cases deletes the C++
+  host function whole.
+- **nettest's ee_session_test** was broken at round 9's base by the LLE lane's inlines (456ed11cb: ESVerify,
+  ESRecordNativeError, ESChecksum::AddChecksum, TMGetTime, UResourceFile::GetString, URandom::Generate,
+  EECPEngineChoiceCount became inlines over Rust, and the driver's own stand-in definitions of them were
+  redefinitions). The driver now defines the Rust functions those inlines call (ee_error_verify, ee_time_get,
+  ee_util_resource_string, ee_cp_engine_choice_count, ...), and xbuild.py links the session drivers with
+  /FORCE:MULTIPLE so the stand-ins come first; its own URandom::Generate is gone (the Rust generator is the same LCG).
+  That gets the driver past its own definitions; it still does not build: the stand-in world (tests/net/ee_stand/
+  ee_world.h) redefines kServerStateOpen..Paused, which a real header now defines, and since round 9 the server's and
+  client's bodies run through the gamecpp host (EEGameOps.cpp's ee_gamecpp, the round 9 and 10 chain links), which the
+  driver does not link. It needs a stand-in `ee_gamecpp`/`ee_gamecpp_f` dispatching to the units' switches and its
+  world brought level with the headers; then the golden (made by the original units) can be compared again. Not done.
+- **Behaviour changes** (none intended): the forks' lists (ESVERIFY_AT's file in a failure report names the case's
+  file; RenderTo builds no unused locals; EE_DUMP_CONTENT appended with std::fs; the storm's RequestRoute flags built
+  in Rust, TakePath one assign; the environment's Step no longer reads the unused time of day); the start screen's
+  Start stops waiting when its thread ends; update_saved_games' log lines are written by Rust through fputs (the same
+  text); RecordStatistics' records are assigned n default records at once (clear then resize before).
+- **What only a live game exercises**: all of lane A (the units' passes, labels and bars, the UI's z-buffer clears,
+  water, ground shadows, the terrain's frame and scene, the snapshot, the mouse pointers, RenderTo); lane B's media
+  (the terrain textures and previews, the buttons, the colour palette); lane C's codec on the wire (the LAN game);
+  lane D's camera (GetUnitPoint, Update's tail), display devices, sounds, EEGetCameraPoint, EEExitGame; lane E's
+  start screen (full screen only), update_saved_games (no gate passes the command), RecordStatistics (the post-game
+  summary) and the lobby walk (the LAN game).
+- **Gates** (on the merged tip, origin/rust b6f7d06bd in): both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the
+  test profile 0/0 (412); the oracle seeds 2-7 identical; the 12 capture profiles at seeds 2-3 PASS (oracle 212
+  digests, late 214, space 210, calamity 222, missile 22, effects 6, scenario, units 175, app 26, groups 2, placement 4,
+  transport 185); the plain saveload PASS and the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) exit 0,
+  `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062);
+  `eedata.py check` PASS and `cppgate` PASS; the Rust gate PASS (6,109 tests; the first run lost ee_audio's real-time
+  null-device test under load, PASS alone on the rerun). The first `bash tools/gates.sh` failed its tour: a Rust panic
+  (0xC0000409) in ee_gfx ro_units.rs DrawRings, an index past the pool's count. Lane A had moved DrawUnits' per-call
+  pair vectors to one static in EEROUnits.cpp, and EERenderListsView's Flatten only appends: the maps grew frame after
+  frame with stale indices. Fixed by clearing the vectors in Flatten (9409d712c: `EEROUnits.cpp: the render lists' view
+  clears its reused pair vectors`); the second `gates.sh`: `RESULT PASS tour` (RENDER CHECK gameplay 84.7% lit, 4,592
+  colours; INPUT CHECK F3 ok), `RESULT PASS ai-game outcome time-cap PT 12759` units [4, 39, 40] alive [2, 3] engines
+  classic_lua x 2, `RESULT PASS lan-game PT host=2855 joiner=2854` (the lobby walk in Rust), GATES PASS; the main menu
+  and the first game frame looked at (the town center, citizens, health bar, HUD, mini map drawn). Only a tour caught
+  the panic: EE-SIM, the oracle and all 12 capture profiles passed with it. The oracle seeds 2-3 identical again after
+  the fix.
+- **Edits outside the lane**: tools/xbuild.py (the session drivers' /FORCE:MULTIPLE), tests/net/ee_session_test.cpp,
+  rust/crates/ee_game/Cargo.toml (windows-sys) and Cargo.lock; EERenderObject.cpp's scenario id rename at the merge.
+- **Left** (docs/progress/game-leaves.md): EEEffectHost's tables, EERenderListsView and MakeLayout, EEUnitPicker,
+  the cppgate-compiled Database units, the hot lookups, the Persistent text names, EEServer and EEClient, the calamity
+  I/O, EEMap's TEST ONLY scopes, the managers' rest, EESim.cpp's DumpState and the test drivers' rest.

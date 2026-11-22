@@ -1,7 +1,7 @@
 # The game core lane (was the game's leaves): src/Empire Earth/Empire Earth, Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread, Map (src/Low-Level Engine, include/lle, gx, dx7 and src/RTS Engine went to the LLE lane on 2026-11-20)
 
 The lane's state. Each round rewrites this file to the current state; each round's story goes in PORT_LEARNINGS.md
-("The game's leaves, round 1/2", "The game core lane, round 3/4/5/6/7/8/9"). The census is `python -I tools/cpp_deps.py report`
+("The game's leaves, round 1/2", "The game core lane, round 3/4/5/6/7/8/9/10"). The census is `python -I tools/cpp_deps.py report`
 (after a build: it reads the objects): `leaves.txt`, `near_leaves.txt`, `waves.txt`; `cpp_deps.py unit FILE` names
 one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the directories above and nothing else.
 
@@ -9,6 +9,12 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 | C++ (deleted or shrunk) | Rust home | What callers keep |
 |---|---|---|
+| **Round 10** (branch `rust-core10`; five lanes again, chained: EECommandLineOp -> EECore10OpA (EEGraphics.cpp -> EEROUnits.cpp -> EERenderSnapshot.cpp -> EEMouse.cpp) -> B (EEDbObject.cpp -> B2..B9 over the Database and Tech Tree units, EEPCalamityHelper.cpp) -> C (EEMessageCapture.cpp) -> D (EEGameUtilities.cpp -> EEEMStorm.cpp, EEEnvironmentManager.cpp, EECheatCodes.cpp, EECivilization.cpp, EEVCWonder.cpp, EECameraControl.cpp) -> E (Empire Earth.cpp -> EECommandLine.cpp -> EEWorld.cpp: the end)) | | |
+| EEGraphics::RenderTo whole, the graphics object's ctor and dtor; EEROUnits' media, draws and three raster entries; EEROUserInterface, EEROWater::RenderScene, EEROGroundShadows, EEROTerrain; EERenderSnapshot.cpp; EEMouse's pointers; RFIL's fill (EERenderCapture.cpp); EEEffect::Move and GetBounds; gRenderEnvironment (lane A) | gamecpp `render_to.rs`, `ro_units.rs`, `ro_views.rs`, `render_object.rs` | EERenderUnit derives from ee_gfx's EeGfxFillUnit, EERenderShadow is EeGfxFillObject (the mirror asserts gone) |
+| EETerrainTable, EECliffTerrainTable, EEButtonObject, EEAnimal (all but Find), EETerrainColorTable; EEDataTextFile.cpp (EEDbFindFile, the row ids, the rules' load and dump); the tech tree's ctor, loads, operator=s, the saved game's walk host, TSUM, TNMT, TSWP, EVAT's parts; EEPCalamityHelper's ctor, dtor, Reset, operator= (lane B) | gamecpp `db_media.rs`, `db_text.rs`, `tech_load.rs`, `tech_capture.rs`, `persist_more.rs` | EERules::Refresh public; NULL ctor stores became member initializers |
+| EEMessageCapture.cpp (NMIM, NMEX, NMSW, NMCU, NMNE); EEMessage's ExportMessage, ExportSize, ImportMessage; EEMRecord's ctors, Field, the wait id, IsResponse, GetCodecSlots, ImportMessage (lane C) | gamecpp `msg_capture.rs`, `mrecord.rs` | the hooks forward; EEMRecordValue static_asserted against `EeGamecppMrValue` |
+| EEEMStorm (all but the ctor/dtor/virtual forwarders), EEEnvironmentManager (all but the ctor), STRM and the storm sweep; EECheatCodes' host and actions, the cheat sweep's host; EECivilization; EEVCWonder; EEGameUtilities.cpp whole; EECameraControl's GetUnitPoint and Update's tail, CAMU (lane D) | gamecpp `weather.rs`, `cheats.rs`, `civilization.rs`, `utilities.rs`, `camera_host.rs` | ee_sim's StormHost and CheatHost implemented in Rust over cases (the C++ host functions gone); the storm's route is paths 2's Rust request |
+| EECommandLine.cpp's EEUpdateSavedGames and EEConvertGameFile; Empire Earth.cpp's EEStartScreen (the class, its Win32 window and thread); EEWorld::RecordStatistics; EETestFixture.cpp's WON lobby walk, commands and snapshot (lane E) | gamecpp `saved_games.rs`, `start_screen.rs` (windows-sys 0.59 Gdi in ee_game), `world_stats.rs`; fixture `lobby.rs` | the lobby's UserEvent is a C++ trampoline to `ee_fixture_lobby_work`; world_stats.rs is `cbindgen:ignore` (its statistics imports name a generic) and its export is declared by hand in EEWorld.cpp |
 | **Round 9** (branch `rust-core9`; five lanes in parallel worktrees, each a chained switch: EEGraphicsOpNext -> EECore9OpA (EERenderObject.cpp, EEUnitPicker.cpp) -> B (EEEffectHost.cpp, EEMap.cpp, EEMiniMap.cpp, EETile.cpp, EEContagionManager.cpp) -> C (EESaveLoad.cpp and the Persistent helpers) -> D (EEServer.cpp, EEClient.cpp, EEAEManager.cpp, EEAreaEffect.cpp, EETechTree.cpp, EETechTreeNode.cpp) -> E (Empire Earth.cpp, EECommandLine.cpp: the end)) | | |
 | EERenderObject.cpp: FillRenderLists, IsUnitDrawn, FillUnit, FillObject, the doppelgangers' fills, FillGhostRecords, the Unload helpers, DrawGroundCircle, QueueEffects, Fn10C036, Fn10E8D1, LoadCliffTextures, EEInitialiseScene, EEReleaseScene, the fades and letterbox, ApplyLighting, the raster table's compound entries, RFIL's world key; EEUnitPicker.cpp: Contains, the pickers, Clear, Reset, AddUnit, GetFogFactor, the walks' host | ee_game gamecpp `render_object.rs`, `picker.rs` (a Rust `GameFill` implements ee_gfx's `FillHost`: the C++ fill table is gone) | the functions forward; GetUnitOpacity a static C++ helper through one case; FindUnit and PickBox C++ over `ee_gamecpp_picker_host` |
 | EEEffectHost.cpp's compound answers (the storm, the volcano's build, the rain's sounds, the goal markers, the damaged tick, the quad batches, the decals); EEMap.cpp (the tile array, the screen line, pitch and roll, the terrain sets, the save operation's compound cases, the map host whole); EEMiniMap.cpp (the dots, the host whole, the redraws); EETile.cpp (checksum, load, dump, save, terrain type); the contagion world host's and EECalamityIoCall's compound cases | gamecpp `effect_host.rs`, `map.rs`, `minimap.rs`, `tile.rs`, `calamity_hosts.rs` | the host tables name Rust `extern "C"` functions directly |
@@ -57,9 +63,20 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Left, and why
 
-- **The test drivers' rest**: EESim.cpp's DumpState (157 logic lines: --dump-at's text, no gate reads it), ChecksumText,
-  RngTraceHook, the fault handlers and EESimMain; EETestFixture.cpp's WON lobby walk (WONAPI's C++ components), its
-  Input case (a PlatInputEvent built in place) and the lobby's mutex-guarded post and snapshot.
+- **What round 10 left** (the forks' reports, PORT_LEARNINGS "The game core lane, round 10"): EEEffectHost.cpp's
+  layout table and world tables (142: offsetof over C++ classes, C++ lambdas); EERenderListsView and MakeLayout
+  (EEROUnits.cpp, 76: C++ multimaps, offsetof); EEUnitPicker.cpp (52) and EERenderObject.cpp's globals and raster table
+  (54); EERules.cpp, EERulesGenDecode.h, EEDataText.h, EEDataTextSpecs.h (cppgate compiles them standalone; the decoder
+  is generated); the hot lookups (EETerrainTable::Get, EEAnimal::Find, the tech nodes' GetCost, EEToHitTable); the
+  Persistent text names (GetSaveTextName, GetDateText: UString lengths and asctime); EEServer.cpp (150) and EEClient.cpp
+  (30) (LAN-only); EEMessage.cpp's rest (the sort comparators, EENewSelectUnits); the calamity I/O switches and
+  EECalamityRun; EEMap's TEST ONLY scopes and context, EETile's pool; EECameraHost's compound cases; EEAmbientSoundManager,
+  EEMusicManager, EEPreferences, EEGameOptions, EEGameLog, WSTA; EESim.cpp's DumpState (157, --dump-at only),
+  ChecksumText, RngTraceHook and the fault handlers; EESimEditor.cpp's step classes (EEAction/UIEvent vtables); the
+  fixture's Input case; Empire Earth.cpp's globals' storage, EESimPreferences, the window pump, the POSIX smoke test.
+- **Taken by other lanes this round**: the area effects (EEAEManager, EEAreaEffect, EEAreaEffectTemplate) and the
+  civilization captures (EECivCapture.cpp) are the UI lane's (rounds 11 and 12); round 10's lane C versions were
+  dropped at the merge.
 - **What round 9 left in its files** (each fork's report, PORT_LEARNINGS "The game core lane, round 9"):
   the Graphics Thread's other units (EEROUnits.cpp 157, EEROTerrain 50, EEROUserInterface 47, EEROGroundShadows 39,
   EEMouse 32, EERenderSnapshot 30, EEROWater::RenderScene); EERenderObject.cpp's globals, layout asserts and raster
@@ -121,8 +138,8 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Next
 
-The rest of round 9's "Left" by size: the Graphics Thread's draw units (EEROUnits.cpp first), EECivilizationManager's
-host (with the Units lane's record field names), the Civilization Builder's files, the tech tree's loads and copies,
-EEGraphics::RenderTo, the Database directory. The sweep goes on as other lanes move callees: build/core9/sweep.py
-(in the core6 worktree) lists the lane's cases whose callee is a one-statement forwarder to Rust; check each for a
-virtual or base-qualified call before taking it. EEPlayer shrinks with the classes it calls (above).
+Round 10's "Left" by size: EEEffectHost's tables (a Rust layout of the effect classes from the Units lane's records),
+EESim.cpp's DumpState (over the world views), EEServer.cpp and EEClient.cpp (LAN-only: the LAN game and the session
+golden check them), the managers' rest (ambient sounds, music, preferences, game options, the game log), the camera
+host's compound cases. tests/net's ee_session_test needs a stand-in `ee_gamecpp` (its units' bodies call the gamecpp
+host now) before its golden can run again. The sweep (build/core9/sweep.py) goes on as other lanes move callees.
