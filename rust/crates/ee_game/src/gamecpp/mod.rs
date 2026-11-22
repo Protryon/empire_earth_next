@@ -84,6 +84,12 @@ pub mod entry;
 //
 
 // ---- round 10, lane E: the entry, the start screen, the test drivers
+/// cbindgen:ignore
+pub mod saved_games;
+/// cbindgen:ignore
+pub mod start_screen;
+/// cbindgen:ignore
+pub mod world_stats;
 //
 //
 
@@ -2835,10 +2841,6 @@ pub enum EeGameCpp {
     // the entry wiring (entry.rs; Empire Earth.cpp's EECore9OpE, EECommandLine.cpp's EECommandLineOp)
     RunRustInit,
     RunFixtureConfigure,
-    RunSplashNew,
-    RunSplashDelete,
-    RunSplashStart,
-    RunSplashStop,
     RunInstanceMutex,
     RunSetEventPump,
     RunNativeHook,
@@ -2913,7 +2915,6 @@ pub enum EeGameCpp {
     EntryServerLoadState,
     EntryNotInEditor,
     EntryStartLoadingInput,
-    EntryUpdateSavedGames,
     //
     // ---- round 10, lane A (EECore10OpA's cases)
     //
@@ -2924,6 +2925,63 @@ pub enum EeGameCpp {
     // ---- round 10, lane D (EECore10OpD's cases)
     //
     // ---- round 10, lane E (EECore10OpE's cases)
+    // the start screen (start_screen.rs; Empire Earth.cpp's EECore10OpE)
+    RunSplashFullScreen,
+    // update_saved_games (saved_games.rs; EECommandLine.cpp's EECore10OpE2)
+    UsgWorldWriteLock,
+    UsgWorldWriteUnlock,
+    UsgSetDirectory,
+    UsgSetFile,
+    UsgDelete,
+    UsgCreate,
+    UsgFOpenWrite,
+    UsgPuts,
+    UsgFlush,
+    UsgClose,
+    UsgFirstFile,
+    UsgFileName,
+    UsgLoad,
+    UsgCameraChanged,
+    UsgCameraUpdate,
+    UsgSave,
+    // EEWorld::RecordStatistics (world_stats.rs; EEWorld.cpp's EECore10OpE3)
+    WsStart,
+    WsTiles,
+    WsVictory,
+    WsTeamsLocked,
+    WsScenarioGame,
+    WsCampaignOptions,
+    WsSetScenario,
+    WsSetCampaign,
+    WsEndTime,
+    WsCampaignName,
+    WsNumPlayers,
+    WsPlayer,
+    WsCurrent,
+    WsBase,
+    WsLevel,
+    WsRandom,
+    WsStatsSet,
+    WsStatsCap,
+    WsStatsSetCap,
+    WsRecordsAssign,
+    WsRecScore,
+    WsRecEconomy,
+    WsRecEpoch,
+    WsRecMilitary,
+    WsRecTech,
+    WsRecColor,
+    WsRecName,
+    WsRecStatistics,
+    WsRecSlot,
+    WsRecResult,
+    WsRecEndTime,
+    WsRecTeam,
+    WsRecResource,
+    WsRecLocal,
+    WsRecHuman,
+    WsSetCurrentRecord,
+    WsRecPlayTime,
     //
 }
 
