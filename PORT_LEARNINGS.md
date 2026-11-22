@@ -37604,3 +37604,119 @@ U2DRectangle's and FSFile's long reads (saves, saveload), the enums, ESError, TM
   PT 12346, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2837/2836).
 - Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it would need the FSFile calls table's four
   new entries if it links FSFile's long reads), `gates.sh --legacy`.
+
+## LLE round 11: the value types derive from their Rust records; the strings' members, the value codecs, U2DPoint's file forms, RTSMap's and RTSUnit's bodies and GEPhysicalModel's model reference in Rust (ee_base ustring, fs cppfile.rs, math types.rs, u2d.rs, ffi.rs; ee_render geval values.rs, io.rs, ge map_raise.rs, modobj.rs, rastobj.rs; ee_game rts units.rs; branch rust-lle11, 2026-11-21)
+
+The brief: continue rounds 8-10 over the same scope (src/Low-Level Engine but User Interface, include/lle but UI*,
+include/ee/RTS*.h and their RTS*.cpp), target -1,500 C++ logic lines (`logic_lines.py`), and make the cross-lane change
+round 10 stopped at: derive the LLE value types from their `#[repr(C)]` records, the records' C++ field names given by
+`cbindgen:field-names`, the readers outside the LLE renamed mechanically in their own commit, last before the merge.
+**Logic -541** (2cdafaff9 -> ca6eeffbd: 60,680 -> 60,139); net C++ -627 (src and include but include/rust); in the
+scope (with include/gx and include/dx7) 3,057 -> 2,516. Short of the target: docs/progress/lle-shims.md
+lists what is left and why.
+
+### What moved
+
+- **The value types are their Rust records**: GE2DPoint, GE3DPoint, GEVector, GE3DLine, GE3DPlane, GETransformation,
+  GEOrientation, GEQuaternion, GEBoundingBox and GERectangle derive from `EeGe2DPoint` ... `EeGeRectangle` (ee_base math
+  types.rs), each record carrying `/// cbindgen:field-names=[mX, mY, ...]`, so the C++ members are the records' fields
+  under the C++ names and the Rust keeps its snake_case. The classes lose their member lists, their user copy
+  constructors and assignments (the implicit ones copy the same floats), their `friend struct GERustLayout` and
+  GERustMath.h's layout pins (the layout is the record's by construction). The compound classes' members are records
+  (`EeGe3DPoint mStart`): their accessors return the C++ class through `GECpp`. GEBoundingBox's `Define`/`operator=`
+  are Rust (`ee_ge_bbox_define`, the corners then `ComputeDimensions`).
+- **The hot inline math stays inline**: the component-wise operators (`+=`, `-=`, `Add`, `Scale`, `GetPointAt`, the
+  rectangle's `Extend`, `RoundToNearest`, `GetCenter`) are one expression each, `*this = T(each component from its
+  own)`, the same float operations in the same order (each component reads only its own, so an argument aliasing the
+  result gives the same values); GETransformation's `Apply` overloads (whose rows do read the output) and the UM
+  rounding helpers are untouched.
+- **The value codecs over the C++ file from Rust**: GERust.h's field stream (the `GERustIO<F>` template of typed reads)
+  is gone; `Load(F&)`/`Save(F&)` of every value type, the lines', planes', boxes', the transformation's and the
+  terrain mesh's hand the `FSFile*` to Rust (ee_render geval values.rs `ee_ge_*_load/save`, io.rs `cpp_file_io`: an
+  `EeGeFieldIo` over ee_base's `CppFile`). The FSFile calls table gains `Read`/`Write` of `unsigned char`,
+  `unsigned short` and `GetIsOpen` (File System.cpp; its lambdas lost their `-> int32_t`). GETextureCoordinate's
+  codec (the only one restoring the position) had no caller and is deleted. U2DPoint's `Load`/`Save` are Rust too
+  (math u2d.rs `ee_u2d_point_io`).
+- **UString/UWideString**: the results Rust fills are one expression (a private `UString(kUnset, fill, args...)`
+  constructor), the self-returning changes go through `Do(change, args...)`, the tokenizers push from Rust
+  (`ee_ustring_tokens`/`ee_uwstring_tokens`: a NULL record first clears the vector), and both `sprintf`s share one
+  formatter (`UFormat`).
+- **RTS Engine**: RTSMap's `IsAreaOnMap` (ee_render map_raise.rs `area_on_map` over the map host's tile test), the
+  raise's four in/out bounds (`ee_ge_map_raise_bounds`), the hosts built in one expression; RTSUnit's registry
+  entry points, `EEUnitHandleID`'s report and `Describe`/`DescribeLong` (ee_game rts units.rs); RTSRegionTable,
+  U2DRectangle and U2DPoint without member-by-member copies.
+- **GEPhysicalModel**: the model reference (`ee_ge_pm_set_model`: release the old, store and reference the new)
+  under the constructor, assignment, destructor and `SetModel`.
+- **Leftovers**: the interpolations clear their C++ vector from Rust (a NULL point); a float's bits through
+  `__builtin_bit_cast` (`UFloatBits`/`UBitsFloat`, lle/LowLevelEngineCore.h); the water ripple's three values;
+  GEPolygon.h, GEPolygonGroup.h, GEVertex.h deleted (no includer, no user).
+
+### The rename (game core's files)
+
+Mechanical, by clang's own error positions (a script read "no member named 'x' in 'EeGe3DPoint'" with its file, line
+and column and replaced that token with the record's C++ name): EECameraControl.cpp 3 lines, EERenderObject.cpp 10,
+EEEffectHost.cpp 10, EEEffectMesh.h 2 (`x/y/z` -> `mX/mY/mZ`), in one commit after the derive. The merge of origin/rust
+5143a9696 brought no new reader of the records' fields (the merged tree built with no rename).
+
+### Lessons
+
+- **Parallel builds garble clang's error lines**: with -j 3 the progress line's carriage returns overwrite parts of
+  the diagnostics, and a position-driven script misses them. `build.py -j 1` after the first pass recompiles only the
+  failing units and prints every error whole.
+- **cbindgen does not expand `macro_rules!`**: externs made by a macro are missing from the header (the build failed
+  with undeclared `ee_ge_3d_point_load`); write each extern out.
+- **A derived class reaching a base record needs it complete**; the `GERust`/`GECpp` mirrors stay reinterpret casts so
+  that headers can use them on classes declared only.
+- **Deleting build/xbuild deletes the static SDL3 build.py links**: the next build reconfigures and rebuilds it.
+- **`xbuild.py nettest` with no program names runs every driver**: two had stopped compiling after rounds 9 and 10
+  changed the headers they mirror (URandom's inline draws, the Rust enums) while those rounds ran only the client and
+  server drivers by name. Run the whole set after a header change.
+- **A test that calls a moved extern breaks only in the debug test build** (tmobj_tests.rs called `ee_ge_tm_load` with
+  the old field-stream argument): the release library and both exes built; the Rust gate caught it.
+
+### Speed
+
+EE-SIM, the oracle's seeds 2-7 at --jobs 2, the whole run's wall time on the shared machine, alternating: the value
+types before the derive (b3860bb57's headers) 339 s and 335 s, after it (ca6eeffbd) 337 s and 327 s. No slowdown;
+the traces identical in all four runs.
+
+### Behaviour changes
+
+None intended. `EEUnitHandleID`'s once-only report prints the record's address as Rust does (`0x...`); a
+`UWideString` sum is built through the same Rust calls; GEQuaternion's and GE3DPlane's three-point constructors
+zero the record before their Rust fill.
+
+### What only a live game exercises
+
+The tours: every value type's constructors and operators (the renderer, the camera, picking; EE-SIM also runs most of
+them), GERectangle (the UI's layout), the strings (everywhere), GEPhysicalModel's model reference, the texture
+rectangles, GEColor. EE-SIM covers the codecs (saves), U2DPoint/U2DRectangle, RTSMap's area test and raise, the
+registry, RTSRegionTable.
+
+### Gates
+
+On the tree merged with origin/rust 5143a9696:
+
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412); the headers current (308); the
+  Rust gate PASS (5,734 tests, 0 failed; test, clippy, rustfmt, header). Earlier runs: the first failed to compile tmobj_tests.rs
+  (fixed, aca16a8e2), the second on rustfmt (fixed, d65fe6f6a), the third on plat_sys::thread
+  `set_from_another_thread_wakes_a_waiter` (the known 10 s flake: it passed alone, and the next whole run passed);
+- the NE drivers (`xbuild.py nettest`): ne_msgmgr_test 20000 sequences, ne_queues_test 1500, ne_client_test
+  1500, ne_tune_test 20000, ne_server_test 1500: each 0 differing. Two drivers no longer compiled since earlier rounds and are fixed
+  here: ne_queues_test defined URandom's draws (inline over Rust since round 9), ne_tune_test the slots and server
+  states (Rust enums since round 10);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests); run dirs deleted;
+- the plain saveload PASS (seeds 2-7 at 600, 1350, 2100 s: 18 identical); the matrix `--settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` (calamity 3/4: 2/1900 missing; next 2/4:
+  seed 2 diverges 915 and 276 ticks after its loads, as expected); scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062); eedata check
+  PASS, cppgate PASS;
+- through slot.py, the test profile: the tour `--input-check --view-check --play-seconds 120 --seed 7` (F3 ok, VIEW
+  CHECK PASS, RENDER CHECK ok: view 88.8% lit, 3,899 colours, mini map ok; RESULT PASS, no GX errors);
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS);
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS at the first run (tour; ai-game time-cap
+  PT 12337, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2819/2820).
+- Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it links FSFile through the calls table,
+  which gained five entries), `gates.sh --legacy`.
