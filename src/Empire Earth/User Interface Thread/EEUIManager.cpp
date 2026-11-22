@@ -88,10 +88,12 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 // The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
 // UpdateMouse's location)
 struct EEUIManagerCall {
-    explicit EEUIManagerCall(EEUIManager* inManager) : mManager(inManager), mMouse(NULL) {}
+    explicit EEUIManagerCall(EEUIManager* inManager, const GE2DPoint* inMouse = NULL) : mManager(inManager), mMouse(inMouse) {}
     EEUIManager* mManager;
     UWideString mNames[2];
     const GE2DPoint* mMouse;
+    // the record of a call (a temporary's, for the full expression)
+    EEUIManagerCall* Ptr() { return this; }
 };
 
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
@@ -105,8 +107,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own;
     // the port's controls, the forms, the music and the save form's event: ee_screens ui_manager.rs)
     ee_screens_ui_manager_fields(this);
-    EEUIManagerCall theCall(this);
-    ee_screens_ui_manager_construct(&theCall);
+    ee_screens_ui_manager_construct(EEUIManagerCall(this).Ptr());
 }
 
 // Destroys the UI manager and its scenario editor form
@@ -143,26 +144,16 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
 // (ee_screens ui_manager.rs)
-void EEUIManager::StartScenarioEditor()
-{
-    EEUIManagerCall theCall(this);
-    ee_screens_ui_manager_start_editor(&theCall);
-}
+void EEUIManager::StartScenarioEditor() { ee_screens_ui_manager_start_editor(EEUIManagerCall(this).Ptr()); }
 
 // Handles F9 screenshots outside text entry; then the keys (ee_screens ui_manager.rs; the original first stopped a
 // playing movie on Escape, Return or Space)
-long EEUIManager::UpdateKeyboard()
-{
-    EEUIManagerCall theCall(this);
-    return (long)ee_screens_ui_manager_update_keyboard(&theCall);
-}
+long EEUIManager::UpdateKeyboard() { return (long)ee_screens_ui_manager_update_keyboard(EEUIManagerCall(this).Ptr()); }
 
 // Handles the mouse (ee_screens ui_manager.rs; the original first stopped a playing movie on a click)
 long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
-    EEUIManagerCall theCall(this);
-    theCall.mMouse = &inMouseLocation;
-    return (long)ee_screens_ui_manager_update_mouse(&theCall);
+    return (long)ee_screens_ui_manager_update_mouse(EEUIManagerCall(this, &inMouseLocation).Ptr());
 }
 
 // (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)

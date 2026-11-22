@@ -42,69 +42,51 @@ EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsi
 }
 
 // One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
-// NULL for none), the held text, the mouse location
+// NULL for none, the call's own mReason for a reason nobody reads), the held text, the mouse location
 struct EEUIBUpgradeCall {
     EEUIBUpgrade* mButton;
     UWideString* mOut;
     UWideString mText;
     const GE2DPoint* mLocation;
+    UWideString mReason;
+    EEUIBUpgradeCall(EEUIBUpgrade* inButton, UWideString* inOut = NULL, const GE2DPoint* inLocation = NULL)
+        : mButton(inButton), mOut(inOut), mLocation(inLocation) {}
+    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : mButton(inButton), mOut(&mReason), mLocation(NULL) {}
+    // the record of a call (a temporary's, for the full expression)
+    EEUIBUpgradeCall* Ptr() { return this; }
 };
 
 // The status bar's mouse handler `inWhich` (EE_SCREENS_UP_BAR_*) at the location (MouseMove's)
 long EEUIFMGStatusBar::BarMouse(uint32_t inWhich, const GE2DPoint* inLocation)
 {
-    EEUIBUpgradeCall theCall = {this, NULL};
-    theCall.mLocation = inLocation;
-    return (long)ee_screens_upgrade_bar_mouse(&theCall, inWhich);
+    return (long)ee_screens_upgrade_bar_mouse(EEUIBUpgradeCall(this, NULL, inLocation).Ptr(), inWhich);
 }
 
 // The presses, availability, tooltip, level tracking and cost update: ee_screens upgrade.rs over the host below
-void EEUIBUpgrade::ButtonUp()
-{
-    UWideString theReason;
-    EEUIBUpgradeCall theCall = {this, &theReason};
-    ee_screens_upgrade_button_up(&theCall);
-}
+void EEUIBUpgrade::ButtonUp() { ee_screens_upgrade_button_up(EEUIBUpgradeCall(this, true).Ptr()); }
 
 bool EEUIBUpgrade::GetCanUpgrade(EEUnit*& outUnit, UWideString* outReason)
 {
-    EEUIBUpgradeCall theCall = {this, outReason};
-    int64_t theUnit = -1;
-    bool theResult = ee_screens_upgrade_can_upgrade(&theCall, &theUnit);
-    if (theUnit != -1)
-        outUnit = reinterpret_cast<EEUnit*>(theUnit);
-    return theResult;
+    return ee_screens_upgrade_can_upgrade(EEUIBUpgradeCall(this, outReason).Ptr(), reinterpret_cast<int64_t*>(&outUnit));
 }
 
-bool EEUIBUpgrade::GetDisabled()
-{
-    EEUIBUpgradeCall theCall = {this, NULL};
-    return ee_screens_upgrade_disabled(&theCall);
-}
+bool EEUIBUpgrade::GetDisabled() { return ee_screens_upgrade_disabled(EEUIBUpgradeCall(this).Ptr()); }
 
 bool EEUIBUpgrade::GetHelpString(UWideString& outString) const
 {
-    EEUIBUpgradeCall theCall = {const_cast<EEUIBUpgrade*>(this), &outString};
-    return ee_screens_upgrade_help(&theCall);
+    return ee_screens_upgrade_help(EEUIBUpgradeCall(const_cast<EEUIBUpgrade*>(this), &outString).Ptr());
 }
 
 long EEUIBUpgrade::MouseMove(const GE2DPoint& inLocation)
 {
-    EEUIBUpgradeCall theCall = {this, NULL};
-    theCall.mLocation = &inLocation;
-    return (long)ee_screens_upgrade_mouse_move(&theCall);
+    return (long)ee_screens_upgrade_mouse_move(EEUIBUpgradeCall(this, NULL, &inLocation).Ptr());
 }
 
-long EEUIBUpgrade::MouseRButtonUp()
-{
-    EEUIBUpgradeCall theCall = {this, NULL};
-    return (long)ee_screens_upgrade_mouse_r_up(&theCall);
-}
+long EEUIBUpgrade::MouseRButtonUp() { return (long)ee_screens_upgrade_mouse_r_up(EEUIBUpgradeCall(this).Ptr()); }
 
 void EEUIBUpgrade::UpdateCost(const UWideString& inText)
 {
-    EEUIBUpgradeCall theCall = {this, const_cast<UWideString*>(&inText)};
-    ee_screens_upgrade_update_cost(&theCall);
+    ee_screens_upgrade_update_cost(EEUIBUpgradeCall(this, const_cast<UWideString*>(&inText)).Ptr());
 }
 
 // Presses the button on a right press, capturing the mouse
