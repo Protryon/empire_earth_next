@@ -45,30 +45,6 @@
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;
-ISEntity* UIControl::sSpaceKey;
-ISEntity* UIControl::sAltKey;
-ISEntity* UIControl::sEnterKey;
-ISEntity* UIControl::sControlKey;
-ISEntity* UIControl::sEndKey;
-ISEntity* UIControl::sHomeKey;
-ISEntity* UIControl::sLeftKey;
-ISEntity* UIControl::sRightKey;
-ISEntity* UIControl::sUpKey;
-ISEntity* UIControl::sDownKey;
-ISEntity* UIControl::sDeleteKey;
-ISEntity* UIControl::sBackSpaceKey;
-ISEntity* UIControl::sNumEndKey;
-ISEntity* UIControl::sNumEnterKey;
-ISEntity* UIControl::sNumHomeKey;
-ISEntity* UIControl::sNumLeftKey;
-ISEntity* UIControl::sNumRightKey;
-ISEntity* UIControl::sNumUpKey;
-ISEntity* UIControl::sNumDownKey;
-ISEntity* UIControl::sNumDeleteKey;
-ISEntity* UIControl::sCutKey;
-ISEntity* UIControl::sCopyKey;
-ISEntity* UIControl::sPasteKey;
-ISEntity* UIControl::sInsertKey;
 
 // the record's rectangles are read as GERectangle (bottom, left, right, top)
 static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle's layout");
@@ -116,10 +92,9 @@ intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b,
 
 // The first control's key lookup (lle_control.rs): the statics in its order, the one-statement shims
 #define CTL(x) reinterpret_cast<UIControl*>(x)
-static ISEntity** const kUIControlKeySlots[] = {&UIControl::sSpaceKey, &UIControl::sEnterKey, &UIControl::sControlKey, &UIControl::sAltKey, &UIControl::sEndKey, &UIControl::sHomeKey, &UIControl::sLeftKey, &UIControl::sRightKey, &UIControl::sUpKey, &UIControl::sDownKey, &UIControl::sDeleteKey, &UIControl::sBackSpaceKey, &UIControl::sNumEndKey, &UIControl::sNumHomeKey, &UIControl::sNumLeftKey, &UIControl::sNumRightKey, &UIControl::sNumUpKey, &UIControl::sNumDownKey, &UIControl::sNumDeleteKey, &UIControl::sNumEnterKey, &UIControl::sCutKey, &UIControl::sCopyKey, &UIControl::sPasteKey, &UIControl::sInsertKey};
-extern "C" bool ee_uicpp_control_keys_ready() { return UIControl::sSpaceKey != NULL; }
+extern "C" bool ee_uicpp_control_keys_ready() { return UIControl::Key(EeUiKey::Space) != NULL; }
 extern "C" void ee_uicpp_control_key_fetch(uint32_t inSlot, uint32_t inCode)
-{ gISKeyboard->GetEntity(inCode, *kUIControlKeySlots[inSlot]); }
+{ gISKeyboard->GetEntity(inCode, UIControl::Key((EeUiKey)inSlot)); }
 extern "C" uintptr_t ee_uicpp_mouse_l_button() { return (uintptr_t)UIManager::GetLMouseButton(); }
 extern "C" uintptr_t ee_uicpp_mouse_r_button() { return (uintptr_t)UIManager::GetRMouseButton(); }
 extern "C" bool ee_uicpp_control_left_down(uintptr_t inControl) { return CTL(inControl)->mLeftButtonDown; }
@@ -208,7 +183,7 @@ bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* 
     case EeUiOp::HasMouseCapture: r = c->GetHasMouseCapture(); break;
     case EeUiOp::RightButtonDown: r = c->GetRightMouseButtonDown(); break;
     case EeUiOp::Key: {
-        ISEntity* theKey = (a & 1) ? UIControl::sEnterKey : UIControl::sSpaceKey;
+        ISEntity* theKey = (a & 1) ? UIControl::Key(EeUiKey::Enter) : UIControl::Key(EeUiKey::Space);
         r = a < 2 ? theKey->JustPressed() : theKey->JustUnpressed();
         break;
     }
@@ -284,11 +259,8 @@ bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
     return true;
 }
 
-bool UIControl::DeleteKeyPressed() { return UIControl::sDeleteKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDeleteKey->GetValue(); }
 
-bool UIControl::DownKeyPressed() { return UIControl::sDownKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDownKey->GetValue(); }
 
-bool UIControl::EndKeyPressed() { return UIControl::sEndKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumEndKey->GetValue(); }
 
 GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }
 
@@ -296,15 +268,10 @@ unsigned long UIControl::GetScreenIndex() const { return this->GetForm()->GetMan
 
 SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->GetManager()->GetSoundManager(); }
 
-bool UIControl::HomeKeyPressed() { return UIControl::sHomeKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumHomeKey->GetValue(); }
 
-bool UIControl::LeftKeyPressed() { return UIControl::sLeftKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumLeftKey->GetValue(); }
 
-bool UIControl::RightKeyPressed() { return UIControl::sRightKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumRightKey->GetValue(); }
 
-bool UIControl::ShiftKeyPressed() { return UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue(); }
 
-bool UIControl::UpKeyPressed() { return UIControl::sUpKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumUpKey->GetValue(); }
 
 long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
 {
@@ -314,3 +281,7 @@ long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThick
 }
 
 const GE2DPoint& UIControl::GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
+
+// the key predicates' calls (lle_control.rs key_pressed)
+extern "C" long ee_uicpp_entity_long_value(uintptr_t inEntity) { return reinterpret_cast<ISEntity*>(inEntity)->GetValue(); }
+extern "C" bool ee_uicpp_num_lock_off() { return UIForm::GetNumLockOff(); }

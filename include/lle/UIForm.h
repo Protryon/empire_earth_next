@@ -264,15 +264,6 @@ private:
     intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const;
 
     EeUiForm* mRust;                        // the state (formobj.rs)
-public:   // (the key shims' access: UIForm.cpp)
-#ifdef LOWLEVELENGINE_EXPORTS
-    // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-#if defined(LLE_UIFORM_CPP)
-    // Inferred: visible to UIForm.cpp only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static ISEntity* sTabKey;
-#endif
-    static ISEntity* sShiftKey;             // 0x1012e70c (read by UIControl::ShiftKeyPressed)
-#endif
 };
 
 // the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)

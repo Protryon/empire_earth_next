@@ -9,7 +9,7 @@
 // The class is whole in Rust (rust/crates/ee_ui/src/formobj.rs, R6 ui round 16): the methods are forwarders to the
 // Rust form (UIForm::Call), the ctors and dtor make and free it, and UIForm::HostOp answers its calls out (the
 // controls', groups', backgrounds', hot keys' and events' members and virtuals, the manager, the input keys).
-#define LLE_UIFORM_CPP      // UIForm::sTabKey and UIManager::sMouseWheel are visible here (see UIForm.h) (provisional name)
+#define LLE_UIFORM_CPP      // UIControl::Key(EeUiKey::Tab) and UIManager::sMouseWheel are visible here (see UIForm.h) (provisional name)
 #include <windows.h>
 #include <mbstring.h>
 
@@ -59,8 +59,6 @@
 static const UString kUIFormKey("B7B2257DB7B2257DA49985B7B5A18DF4D49327D6B51165F42EB1A52ECC918DA616B16D26B41955F43C190DDE7EB1BD9624F92DDEFC610D9EB4B9559CB4210D84FC29"
                                 "8596249907BE14CB25F6142B25B61C1165C624F9F59696B18D269C2357BEB51955B41C1165C624F9F59696B18D269EB16D26B431B5C4F4F935F6149907CEB7B34FF5");
 
-ISEntity* UIForm::sTabKey;
-ISEntity* UIForm::sShiftKey;
 
 static GERectangle UIFormRect(const float* inF) { return GERectangle(inF[1], inF[3], inF[2], inF[0]); }
 
@@ -83,8 +81,8 @@ extern "C" void ee_uicpp_hot_key_set_just_unpressed(uintptr_t inKey, uintptr_t i
 { HOTKEY(inKey)->SetJustUnpressedEvent(EVENT(inEvent)); }
 extern "C" void ee_uicpp_hot_key_set_double_pressed(uintptr_t inKey, uintptr_t inEvent)
 { HOTKEY(inKey)->SetDoublePressedEvent(EVENT(inEvent)); }
-extern "C" void ee_uicpp_form_fetch_tab_key() { gISKeyboard->GetEntity(kKeyTab, UIForm::sTabKey); }
-extern "C" void ee_uicpp_form_fetch_shift_key() { gISKeyboard->GetEntity(kKeyShift, UIForm::sShiftKey); }
+extern "C" void ee_uicpp_form_fetch_tab_key() { gISKeyboard->GetEntity(kKeyTab, UIControl::Key(EeUiKey::Tab)); }
+extern "C" void ee_uicpp_form_fetch_shift_key() { gISKeyboard->GetEntity(kKeyShift, UIControl::Key(EeUiKey::Shift)); }
 extern "C" void ee_uicpp_event_uninitialize(uintptr_t inEvent) { EVENT(inEvent)->Uninitialize(); }
 extern "C" void ee_uicpp_event_initialize(uintptr_t inEvent) { EVENT(inEvent)->Initialize(); }
 extern "C" uint32_t ee_uicpp_entity_value(uintptr_t inEntity)
@@ -234,9 +232,9 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormHotKeySetModifier: theKey->SetModifier((unsigned long)b, (unsigned char)c); return 0;
     case EeUiOp::FormHotKeySetAlways: theKey->mAlwaysFire = b != 0; return 0;
     case EeUiOp::FormKeyEntity: return (intptr_t)UIFormEntity(gISKeyboard, (unsigned long)a);
-    case EeUiOp::FormKeysReady: return UIForm::sTabKey != NULL;
-    case EeUiOp::FormTabJustPressed: return UIForm::sTabKey->JustPressed();
-    case EeUiOp::FormShiftValue: return UIForm::sShiftKey->GetValue();
+    case EeUiOp::FormKeysReady: return UIControl::Key(EeUiKey::Tab) != NULL;
+    case EeUiOp::FormTabJustPressed: return UIControl::Key(EeUiKey::Tab)->JustPressed();
+    case EeUiOp::FormShiftValue: return UIControl::Key(EeUiKey::Shift)->GetValue();
     // the events
     case EeUiOp::FormEventProcess: return theEvent->ProcessEvent(theForm, NULL);
     case EeUiOp::FormWheelEventNew: return (intptr_t) new UIEMouseWheelScroll;

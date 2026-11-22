@@ -12,6 +12,7 @@
 #include "lle/UIEvent.h"
 #include "rust/ui/managerobj.h"
 #include "rust/ui/lle_manager.h"
+#include "rust/ui/lle_control.h"
 #include "rust/ui/obj.h"
 
 class FSPath;
@@ -126,11 +127,11 @@ public:
     // the bitmap by its index (EeUiManagerCall::Bitmap: GetAlphaSortUpBitmap 0 .. GetRadioDownOn 20)
     GEBitmap* GetBitmap(unsigned long inIndex) const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, (intptr_t)inIndex)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)
-    static ISEntity* GetLMouseButton() { return UIManager::sLMouseButton; }
+    static ISEntity* GetLMouseButton() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::LeftMouse)); }
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    static ISEntity* GetMouseWheel() { return UIManager::sMouseWheel; }
+    static ISEntity* GetMouseWheel() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::MouseWheel)); }
 #endif
 #endif
     // Returns the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
@@ -142,7 +143,7 @@ public:
     GEBitmap* GetRadioOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 19)); }
     GERasterizer* GetRasterizer() const { return reinterpret_cast<GERasterizer*>(this->Call(EeUiManagerCall::Rasterizer)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sRMouseButton inline (27 sites)
-    static ISEntity* GetRMouseButton() { return UIManager::sRMouseButton; }
+    static ISEntity* GetRMouseButton() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::RightMouse)); }
 #endif
     GEBitmap* GetSBBitmapDownNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 2)); }
     GEBitmap* GetSBBitmapDownPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 3)); }
@@ -211,16 +212,9 @@ private:
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
 public:   // the mouse buttons' shims (UIManager.cpp)
-#if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
-    // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number); the exe
-    // imports both
-    static ISEntity* sLMouseButton;
-    static ISEntity* sRMouseButton;
-#endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
     // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static ISEntity* sMouseWheel;
     static bool sMouseLeftHanded;
 #endif
 #endif

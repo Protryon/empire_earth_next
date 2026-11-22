@@ -5,7 +5,7 @@
 // and UITBTiledBackground (UIManager.cpp was their first includer; both are UITiledBackground's tilings now), the
 // ctor, the dtor and the out-of-line members in
 // the original's order, then the vector/deque COMDATs. UIMovie.cpp starts at 0x1007ba37.
-#define LLE_UIMANAGER_CPP   // UIManager::sMouseWheel/sMouseLeftHanded are visible here (see UIManager.h)
+#define LLE_UIMANAGER_CPP   // UIControl::Key(EeUiKey::MouseWheel)/sMouseLeftHanded are visible here (see UIManager.h)
 #include <windows.h>
 #include <mbstring.h>
 #include <string.h>
@@ -64,9 +64,6 @@ extern "C" void ee_uicpp_file_open(void* inFile);
 extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
 extern "C" void ee_uicpp_file_close(void* inFile);
 
-ISEntity* UIManager::sLMouseButton;
-ISEntity* UIManager::sRMouseButton;
-ISEntity* UIManager::sMouseWheel;
 bool UIManager::sMouseLeftHanded;
 
 // The Rust manager's calls out (EeUiOp, obj.rs): a is the form, event, bitmap, texture, lock, sound instance or
@@ -82,7 +79,6 @@ static UWideString sUIManagerKey;   // UpdateTranslatedKey's character (the UI t
 // the database's table files in load order, the shared mouse buttons (lle_manager.rs)
 static UString* const kUIManagerDbNames[] = {&gDbUIFontsFileName, &gDbUIFormsFileName, &gDbUIBackgroundFileName, &gDbUIControlsFileName, &gDbUIControlEventsFileName, &gDbUIFormEventsFileName, &gDbUIHotKeyFileName};
 static const unsigned long kUIManagerMouseKeys[] = {kMouseLeftButton, kMouseRightButton, kMouseZAxis};
-static ISEntity** const kUIManagerMouseSlots[] = {&UIManager::sLMouseButton, &UIManager::sRMouseButton, &UIManager::sMouseWheel};
 extern "C" uint32_t ee_uicpp_mgr_screen(uintptr_t inM) { return MGR(inM)->GetScreen(); }
 extern "C" void ee_uicpp_mgr_rasterizer_screen(uintptr_t inM)
 { MGR(inM)->GetRasterizer()->GetScreen(MGR(inM)->GetScreen()); }
@@ -173,11 +169,11 @@ extern "C" void ee_uicpp_file_delete(uintptr_t inFile) { delete FILE_SPEC(inFile
 extern "C" void ee_uicpp_db_remove_controls() { UIControlsTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_backgrounds() { UIBackgroundTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_fonts() { UIFontTable::DeleteAll(); }
-extern "C" bool ee_uicpp_mouse_buttons_ready() { return UIManager::sLMouseButton != NULL; }
+extern "C" bool ee_uicpp_mouse_buttons_ready() { return UIControl::Key(EeUiKey::LeftMouse) != NULL; }
 extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich)
-{ gISMouse->GetEntity(kUIManagerMouseKeys[inWhich], *kUIManagerMouseSlots[inWhich]); }
+{ gISMouse->GetEntity(kUIManagerMouseKeys[inWhich], UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
 extern "C" bool ee_uicpp_mouse_left_handed() { return UIManager::sMouseLeftHanded; }
-extern "C" void ee_uicpp_mouse_swap_buttons() { std::swap(UIManager::sLMouseButton, UIManager::sRMouseButton); }
+extern "C" void ee_uicpp_mouse_swap_buttons() { std::swap(UIControl::Key(EeUiKey::LeftMouse), UIControl::Key(EeUiKey::RightMouse)); }
 extern "C" void ee_uicpp_mouse_set_left_handed(bool inLeft) { UIManager::sMouseLeftHanded = inLeft; }
 
 // ChangeIMECompositionString's arguments, through the Rust IME call
@@ -334,4 +330,4 @@ long UIManager::ChangeIMECompositionString(const UWideString& inString, const US
 
 void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
 
-long UIManager::GetMouseWheelScrollAmount() { return ee_ui_manager_wheel_scroll_amount(UIManager::sMouseWheel->GetNormalizedValue()); }
+long UIManager::GetMouseWheelScrollAmount() { return ee_ui_manager_wheel_scroll_amount(UIControl::Key(EeUiKey::MouseWheel)->GetNormalizedValue()); }

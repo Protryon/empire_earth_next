@@ -50,8 +50,8 @@ struct UIEditBoxRust {
     {
         switch (inKey) {
         case 0: return UIControl::ShiftKeyPressed();
-        case 1: return UIEditBox::sControlKey->GetValue() != 0;
-        case 2: return UIEditBox::sBackSpaceKey->GetValue() != 0;
+        case 1: return UIControl::Key(EeUiKey::Control)->GetValue() != 0;
+        case 2: return UIControl::Key(EeUiKey::BackSpace)->GetValue() != 0;
         case 3: return UIControl::DeleteKeyPressed();
         case 4: return UIControl::RightKeyPressed();
         case 5: return UIControl::LeftKeyPressed();
@@ -63,8 +63,8 @@ struct UIEditBoxRust {
         case 11: return UIControl::CutKeyPressed();
         case 12: return UIControl::CopyKeyPressed();
         case 13: return UIControl::PasteKeyPressed();
-        case 17: return UIEditBox::sEnterKey->JustPressed();
-        case 18: return UIEditBox::sNumEnterKey->JustPressed();
+        case 17: return UIControl::Key(EeUiKey::Enter)->JustPressed();
+        case 18: return UIControl::Key(EeUiKey::NumEnter)->JustPressed();
         }
         return false;
     }

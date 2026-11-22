@@ -20,6 +20,7 @@
 #include "rust/ui/rect.h"
 #include "lle/ISEntity.h"
 #include "rust/ui/mouse_ffi.h"
+#include "rust/ui/lle_control.h"
 #include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
 
@@ -46,23 +47,20 @@ public:
                                             unsigned long inCursor) { return kErrorFailed; }
     virtual void ChangeFont(GEFont* inFont) {}
     virtual long CloseIMECompositionString() { return kErrorFailed; }
-    static bool ControlKeyPressed() { return UIControl::sControlKey->GetValue() > 0; }
+    static bool ControlKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Control); }
     virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
-    static bool CopyKeyPressed() { return UIControl::sControlKey->GetValue() && UIControl::sCopyKey->GetValue(); }
-    static bool CutKeyPressed()
-    {
-        return UIControl::sControlKey->GetValue() && UIControl::sCutKey->GetValue() || UIControl::ShiftKeyPressed() && UIControl::sDeleteKey->GetValue();
-    }
+    static bool CopyKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Copy); }
+    static bool CutKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Cut); }
     // Returns whether Delete (or keypad Del with Num Lock off) is held
-    static bool DeleteKeyPressed();
+    static bool DeleteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Delete); }
     // Returns whether Down (or keypad 2 with Num Lock off) is held
-    static bool DownKeyPressed();
+    static bool DownKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Down); }
     virtual long DrawPolygons();
     virtual long DrawTextA() { this->mDrawCount--; return kErrorOK; }
     // Returns whether End (or keypad 1 with Num Lock off) is held
-    static bool EndKeyPressed();
+    static bool EndKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::End); }
     // Returns whether Enter or keypad Enter was just released
-    static bool EnterKeyPressed() { return UIControl::sEnterKey->JustUnpressed() || UIControl::sNumEnterKey->JustUnpressed(); }
+    static bool EnterKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Enter); }
     void FireTriggerEvent(unsigned long inEvent) { this->Call(EeUiControlCall::FireTrigger, inEvent); }
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
     float GetBorderOpacity() const { return this->mBorderOpacity; }
@@ -104,9 +102,9 @@ public:
     unsigned long GetWidth() const { return UMFloor(this->GetRectangle().GetWidth() + 1.0f); }
     virtual void HideControl() {}
     // Returns whether Home (or keypad 7 with Num Lock off) is held
-    static bool HomeKeyPressed();
+    static bool HomeKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Home); }
     // Returns whether Left (or keypad 4 with Num Lock off) is held
-    static bool LeftKeyPressed();
+    static bool LeftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Left); }
 public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
@@ -120,14 +118,11 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseRButtonUp() = 0;
     virtual long MouseWheelTurned(long inDelta) { return kErrorFailed; }
     virtual long OpenIMECompositionString() { return kErrorFailed; }
-    static bool PasteKeyPressed()
-    {
-        return UIControl::sControlKey->GetValue() && UIControl::sPasteKey->GetValue() || UIControl::ShiftKeyPressed() && UIControl::sInsertKey->GetValue();
-    }
+    static bool PasteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Paste); }
     virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
     virtual void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
     // Returns whether Right (or keypad 6 with Num Lock off) is held
-    static bool RightKeyPressed();
+    static bool RightKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Right); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor)
     {
@@ -158,7 +153,7 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
     void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent) { this->Call(EeUiControlCall::SetTrigger, inEvent, (intptr_t)inTriggerEvent); }
     // Returns whether Shift is held or was just pressed
-    static bool ShiftKeyPressed();
+    static bool ShiftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Shift); }
     // (public: the game calls slot 0x74 on a form's control, chat 0x1d2e09; the toolkit's shims)
     virtual void TabbedTo() = 0;            // slot 0x74
     virtual void TabbedFrom() = 0;
@@ -169,7 +164,10 @@ public:
     long UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return kErrorOK; }
     // Returns whether Up (or keypad 8 with Num Lock off) is held
-    static bool UpKeyPressed();
+    static bool UpKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Up); }
+    // the shared keys and mouse buttons: a Rust record of ISEntity pointers by EeUiKey (ee_ui lle_control.rs; once
+    // the 24 key statics here, UIForm's Tab and Shift and UIManager's mouse buttons and wheel)
+    static ISEntity*& Key(EeUiKey inKey) { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(inKey)); }
     virtual ~UIControl();
 protected:
     UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
@@ -201,31 +199,6 @@ public:
     static intptr_t HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-public:   // (the key shims' access: UIControl.cpp)
-    static ISEntity* sSpaceKey;
-    static ISEntity* sAltKey;
-    static ISEntity* sEnterKey;
-    static ISEntity* sControlKey;
-    static ISEntity* sEndKey;
-    static ISEntity* sHomeKey;
-    static ISEntity* sLeftKey;
-    static ISEntity* sRightKey;
-    static ISEntity* sUpKey;
-    static ISEntity* sDownKey;
-    static ISEntity* sDeleteKey;
-    static ISEntity* sBackSpaceKey;
-    static ISEntity* sNumEndKey;
-    static ISEntity* sNumEnterKey;
-    static ISEntity* sNumHomeKey;
-    static ISEntity* sNumLeftKey;
-    static ISEntity* sNumRightKey;
-    static ISEntity* sNumUpKey;
-    static ISEntity* sNumDownKey;
-    static ISEntity* sNumDeleteKey;
-    static ISEntity* sCutKey;
-    static ISEntity* sCopyKey;
-    static ISEntity* sPasteKey;
-    static ISEntity* sInsertKey;
 private:
     static GEColor sLightBorder;
     static GEColor sDarkBorder;
