@@ -1,8 +1,7 @@
 // The game passes' view of the random map state (ee_rmap game.rs, EeRmapGameState): the four grids by their rows
 // (no copy: the Rust pass reads and writes the C++ cells), the lists the passes read as flat copies, the two random
-// streams' seeds (StoreSeeds takes them back). A template over the state's name: the exe sees the struct as
-// EERandomMapData (ee/EERandomMapClass.h), the generator and tools/rmap_gate/rmap_dump.cpp as EERandomMap.
-// Requires ee/EERandomMap.h (either name), rust/ee_rmap.h, <string.h>.
+// streams' seeds (StoreSeeds takes them back). The rmap gate's copy (the game's ee/EERandomMapView.h until the world
+// lane's round 1 moved the random map to Rust, ee_sim rmap object.rs). Requires rmap_state.h, <string.h>.
 #ifndef EE_EERANDOMMAPVIEW_H
 #define EE_EERANDOMMAPVIEW_H
 
@@ -118,7 +117,7 @@ template <class M> EERMGameView::EERMGameView(M& m, float inTileUnit, unsigned l
     EeRmapGameState& s = this->mState;
     s.grid_n = (uint32_t)m.mTiles.size();
     s.heights = this->mHeights.data();
-    s.tiles = this->mTiles.data();
+    s.tiles = reinterpret_cast<uint32_t* const*>(this->mTiles.data());   // unsigned long is 32-bit on Windows, the gate's only target
     s.claimed_tiles = this->mClaimed.data();
     s.valid_tiles = this->mValid.data();
     s.grid_size = (uint32_t)m.mGridSize;

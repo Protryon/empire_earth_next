@@ -10,35 +10,28 @@
 class GETexture;
 class GETextureCoordinate;
 
-class LLE_API GETextureSet {                // sizeof 0x1c (implicit copy ctor 0x124cb, operator= 0x124f2)
+class LLE_API GETextureSet {                // whole in Rust (ee_render ge texset.rs)
 public:
-    GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight,
-                 unsigned long inTextureTileCoverage);
-    ~GETextureSet();
-    unsigned long GetNumTexturesInHeight() { return this->mNumTexturesInHeight; }
-    unsigned long GetNumTexturesInWidth() { return this->mNumTexturesInWidth; }
-    GETexture* GetTexture(unsigned long inX, unsigned long inY)
-    {
-        unsigned long theX;
-        unsigned long theY;
-        ee_ge_texture_set_slot(inX, inY, this->mTextureTileCoverage, this->mNumTexturesInWidth,
-                               this->mNumTexturesInHeight, &theX, &theY);
-        return this->mTextures[theX][theY];
-    }
-    // the texture in a grid slot (UpdateVisibleTerrain hands the grid to its plan)
-    GETexture* GetTextureAt(unsigned long inColumn, unsigned long inRow) { return this->mTextures[inColumn][inRow]; }
+    GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight, unsigned long inTextureTileCoverage)
+        { this->mRust = ee_ge_tset_new(inNumTexturesInWidth, inNumTexturesInHeight, inTextureTileCoverage, Dereference); }
+    ~GETextureSet() { ee_ge_tset_free(this->mRust); }
+    GETextureSet(const GETextureSet&) = delete;
+    GETextureSet& operator=(const GETextureSet&) = delete;
+    unsigned long GetNumTexturesInHeight() { return ee_ge_tset_size(this->mRust, 1); }
+    unsigned long GetNumTexturesInWidth() { return ee_ge_tset_size(this->mRust, 0); }
+    GETexture* GetTexture(unsigned long inX, unsigned long inY) { return static_cast<GETexture*>(ee_ge_tset_get(this->mRust, inX, inY, true)); }
+    GETexture* GetTextureAt(unsigned long inColumn, unsigned long inRow)
+        { return static_cast<GETexture*>(ee_ge_tset_get(this->mRust, inColumn, inRow, false)); }
     void GetTextureCoordinate(unsigned long inX, unsigned long inY, GETextureCoordinate& outCoordinate)
     {
-        ee_ge_texture_set_coordinate(inX, inY, this->mTextureTileCoverage, &outCoordinate.mU, &outCoordinate.mV);
+        ee_ge_texture_set_coordinate(inX, inY, this->GetTextureTileCoverage(), &outCoordinate.mU, &outCoordinate.mV);
     }
-    unsigned long GetTextureTileCoverage() { return this->mTextureTileCoverage; }
-    void SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture);
+    unsigned long GetTextureTileCoverage() { return ee_ge_tset_size(this->mRust, 2); }
+    void SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture) { ee_ge_tset_set(this->mRust, inX, inY, inTexture); }
 
 private:
-    std::vector<std::vector<GETexture*> > mTextures;   // +0x00 [x][y]
-    unsigned long mNumTexturesInWidth;                 // +0x10
-    unsigned long mNumTexturesInHeight;                // +0x14
-    unsigned long mTextureTileCoverage;                // +0x18
+    static void Dereference(void* inTexture);   // GETexture.cpp: the texture's Dereference
+    EeGeTextureSet* mRust;
 };
 
 #endif

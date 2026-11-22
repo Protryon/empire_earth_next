@@ -34,6 +34,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicEffect.h"
 #include "rust/sim/tech.h"
+#include "rust/game/screens.h"   // the host and the premade list (civ_manager_calls.rs)
 
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
@@ -126,28 +127,10 @@ void EECivilizationManager::GetCivilizationsOfType(std::vector<EECivilizationEnt
             outCivs.push_back(this->GetCivilization(i));
 }
 
-// Fills a list box with one header per era and a line per premade civilization of that era
+// Fills a list box with one header per era and a line per premade civilization of that era (civ_manager_calls.rs)
 void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
 {
-    std::vector<EECivilizationEntry> theCivs;
-    UWideString theCategory;
-    UWideString theName;
-    inList->DeleteAllEntries();
-    for (unsigned long i = 0; i < this->GetEraCount(); i++) {
-        if (gResource->GetString(this->GetEra(i), theCategory) != 0)
-            continue;
-        // a category's header line, then one line per premade civilization of that type
-        inList->AddLine(theCategory + EECBUIListBox::sSeparator + "0" + EECBUIListBox::sSeparator +
-                        EECBUIListBox::sCategory);
-        this->GetCivilizationsOfType(theCivs, this->GetEra(i));
-        for (unsigned long j = 0; j < theCivs.size(); j++) {
-            if (gResource->GetString(theCivs[j].mNameID, theName) != 0)
-                continue;
-            inList->AddLine(theCategory + EECBUIListBox::sSeparator + theName + UWideString("/ / / / / "));
-        }
-    }
-    if (inList->GetTabable() == true)
-        inList->ChangeSelectionIndex(0, false, false);
+    ee_screens_civ_fill_list(inList);
 }
 
 bool EECivilizationManager::MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName,
@@ -264,162 +247,124 @@ std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
 
 // ------------------------------------------------------------------------------------------------ the simulation's host
 
-// The world for ee_tech civ_apply.rs: the unit sets, the player's class upgrades and fields, the units' sight, the
-// powers' research, media, sight pulse, camouflage and tech nodes
+// The world for ee_tech civ_apply.rs (the unit sets, the player's class upgrades and fields, the units' sight, the
+// powers' research, media, sight pulse, camouflage and tech nodes): Rust's (civ_manager_calls.rs) over the
+// one-statement shims below (UI lane round 11)
 static void EECivHostCall(void* inCtx, const EeTechCivCall* c, EeTechCivReply* r)
 {
-    EEPlayer* thePlayer = ::gWorld.mPlayers[c->player];
-    long theType = (long)c->a;
-    EETechTreeNode* theNode;
-    switch (c->op) {
-    case EE_TECH_CIV_OP_SET_EXISTS:
-        r->value = gUnitSetManager.GetSet((unsigned long)c->a) != NULL;
-        break;
-    case EE_TECH_CIV_OP_CLASS_COUNT:
-        r->value = EEUnitClassCount();
-        break;
-    case EE_TECH_CIV_OP_SET_CONTAINS:
-        r->value = gUnitSetManager.GetSet((unsigned long)c->a)->Contains((unsigned long)c->b);
-        break;
-    case EE_TECH_CIV_OP_CLASS: {
-        EEUnitClassUpgrade* u = gUnitClassTable[theType] != NULL ? thePlayer->mUnitClassUpgrades[theType] : NULL;
-        if (u == NULL)
-            break;
-        EEUnitClass* k = u->mUnitClass;   // the upgrade's class: the base values and the category
-        EeTechCivStats& s = r->stats;
-        s.up_attack = u->mAttack;
-        s.up_reload_time = u->mReloadTime;
-        s.up_range = u->mRange;
-        s.up_line_of_sight = u->mLineOfSight;
-        s.up_max_velocity = u->mMaxVelocity;
-        s.up_flight_time = u->mFlightTime;
-        s.up_area_effect = u->mAreaEffect;
-        s.up_build_time_scale = u->mBuildTimeScale;
-        s.up_repair_rate = u->mRepairRate;
-        s.up_area_effect_scale = u->mAreaEffectScale;
-        s.up_cost_scale = u->mCostScale;
-        s.class_attack = k->mAttack;
-        s.class_reload_time = k->mReloadTime;
-        s.class_range = k->mRange;
-        s.class_line_of_sight = k->mLineOfSight;
-        s.class_max_velocity = k->GetMaxVelocity();
-        s.class_flight_time = k->mFlightTime;
-        s.class_area_effect = k->mAreaEffect;
-        s.class_repair_rate = k->mRepairRate;
-        s.class_area_effect_scale = k->mAreaEffectScale;
-        s.class_category = (long)k->mCategory;
-        for (int i = 0; i < 6; i++) {
-            s.up_armor[i] = u->mArmor[i];
-            s.class_armor[i] = k->mArmor[i];
-        }
-        for (int i = 0; i < 7; i++) {
-            s.up_gather_times[i] = u->mGatherTimes[i];
-            s.class_gather_times[i] = k->mGatherTimes[i];
-        }
-        r->value = 1;
-        break;
-    }
-    case EE_TECH_CIV_OP_PUT: {
-        EEUnitClassUpgrade* u = thePlayer->mUnitClassUpgrades[theType];
-        const EeTechCivStats& s = c->stats;
-        switch (c->b) {
-        case EE_TECH_CIV_STAT_ATTACK: u->mAttack = s.up_attack; break;
-        case EE_TECH_CIV_STAT_RELOAD_TIME: u->mReloadTime = (long)s.up_reload_time; break;
-        case EE_TECH_CIV_STAT_ARMOR: for (int i = 0; i < 6; i++) u->mArmor[i] = s.up_armor[i]; break;
-        case EE_TECH_CIV_STAT_RANGE: u->SetRange(s.up_range); break;
-        case EE_TECH_CIV_STAT_LINE_OF_SIGHT: u->mLineOfSight = s.up_line_of_sight; break;
-        case EE_TECH_CIV_STAT_SPEED: u->SetMaxVelocity(s.up_max_velocity); break;
-        case EE_TECH_CIV_STAT_FLIGHT_TIME: u->mFlightTime = (long)s.up_flight_time; break;
-        case EE_TECH_CIV_STAT_AREA_EFFECT: u->mAreaEffect = s.up_area_effect; break;
-        case EE_TECH_CIV_STAT_GATHER_TIMES: for (int i = 0; i < 7; i++) u->mGatherTimes[i] = (long)s.up_gather_times[i]; break;
-        case EE_TECH_CIV_STAT_BUILD_TIME: u->mBuildTimeScale = s.up_build_time_scale; break;
-        case EE_TECH_CIV_STAT_REPAIR_RATE: u->mRepairRate = (long)s.up_repair_rate; break;
-        case EE_TECH_CIV_STAT_AREA_EFFECT_SCALE: u->mAreaEffectScale = s.up_area_effect_scale; break;
-        case EE_TECH_CIV_STAT_COST: u->mCostScale = s.up_cost_scale; break;
-        }
-        break;
-    }
-    case EE_TECH_CIV_OP_VARIANT_FACTOR:
-        r->real = ::gWorld.GetGameVariant()->GetFactor(theType);
-        break;
-    case EE_TECH_CIV_OP_HIT_POINTS:
-        EEUpgradeHitPoints(thePlayer->mUnitClassUpgrades[theType], theType, c->real, thePlayer);
-        break;
-    case EE_TECH_CIV_OP_SIGHT:
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            if (theUnit->mUnitClass->mUnitType == (unsigned long)theType) {
-                if (c->b != 0)
-                    theUnit->SightOnHere();
-                else
-                    theUnit->SightOffHere();
-            }
-        break;
-    case EE_TECH_CIV_OP_GET_FIELD:
-        if (c->a == EE_TECH_CIV_FIELD_CONVERSION)
-            r->real = thePlayer->mConversionFactor;
-        else if (c->a == EE_TECH_CIV_FIELD_HIGH_GROUND)
-            r->real = thePlayer->mHighGroundBonus;
-        else
-            r->value = thePlayer->mShareBonus;
-        break;
-    case EE_TECH_CIV_OP_SET_FIELD:
-        if (c->a == EE_TECH_CIV_FIELD_CONVERSION)
-            thePlayer->mConversionFactor = c->real;
-        else if (c->a == EE_TECH_CIV_FIELD_HIGH_GROUND)
-            thePlayer->mHighGroundBonus = c->real;
-        else
-            thePlayer->mShareBonus = (long)c->b;
-        break;
-    case EE_TECH_CIV_OP_POPULATION_LIMIT:
-        r->value = thePlayer->GetPopulationLimit(0);
-        break;
-    case EE_TECH_CIV_OP_AREA_EFFECTS:
-        thePlayer->SuggestRecomputeAllAreaEffects();
-        thePlayer->mSelectedGroup->ShowSelectionAreas();
-        break;
-    case EE_TECH_CIV_OP_RESEARCH:
-        thePlayer->GetTechTree()->Research(theType, NULL);
-        break;
-    case EE_TECH_CIV_OP_NODE_RESEARCHED:
-        theNode = thePlayer->GetTechTree()->Get(theType);
-        r->value = theNode == NULL ? -1 : theNode->mIsResearched ? 1 : 0;
-        break;
-    case EE_TECH_CIV_OP_RESEARCH_NODE:
-        theNode = thePlayer->GetTechTree()->Get(theType);
-        if (theNode)
-            theNode->ResearchNode(NULL);
-        break;
-    case EE_TECH_CIV_OP_LOAD_SOUND:
-        if (EESoundObject* theSound = EESoundObject::Get(theType)) {
-            theSound->LoadMedia();
-            thePlayer->AddLoadedMedia(theSound);
-        }
-        break;
-    case EE_TECH_CIV_OP_LOAD_EFFECT:
-        if (EEGraphicEffect* theEffect = EEGraphicEffect::Get(theType)) {
-            theEffect->LoadMedia();
-            thePlayer->AddLoadedMedia(theEffect);
-        }
-        break;
-    case EE_TECH_CIV_OP_PULSE_SIGHT:
-        thePlayer->PulseSight(false, c->real, theType);
-        break;
-    case EE_TECH_CIV_OP_MINING_LIMIT:
-        thePlayer->mMiningLimit = theType;
-        break;
-    case EE_TECH_CIV_OP_CAMOUFLAGE:
-        thePlayer->EnableCamouflagePower();
-        break;
-    case EE_TECH_CIV_OP_ALLOW_TECH:
-        theNode = thePlayer->GetTechTree()->Get(theType);
-        if (theNode == NULL)
-            break;
-        theNode->mIsAllowed = c->b != 0;
-        if (c->b == 0)
-            theNode->SetObsolete(true, false);
-        break;
-    }
+    ee_screens_civ_host(c, r);
 }
+
+#define CIVH_P(p) (::gWorld.mPlayers[p])
+#define CIVH_U(u) ((EEUnitClassUpgrade*)(u))
+#define CIVH_K(k) ((EEUnitClass*)(k))
+extern "C" bool ee_screenscpp_civh_set_exists(int64_t inSet)
+{ return gUnitSetManager.GetSet((unsigned long)inSet) != NULL; }
+extern "C" int64_t ee_screenscpp_civh_class_count() { return EEUnitClassCount(); }
+extern "C" bool ee_screenscpp_civh_set_contains(int64_t inSet, int64_t inKind)
+{ return gUnitSetManager.GetSet((unsigned long)inSet)->Contains((unsigned long)inKind); }
+extern "C" bool ee_screenscpp_civh_class_listed(int64_t inKind) { return gUnitClassTable[(long)inKind] != NULL; }
+extern "C" uintptr_t ee_screenscpp_civh_upgrade(int32_t inPlayer, int64_t inKind)
+{ return (uintptr_t)CIVH_P(inPlayer)->mUnitClassUpgrades[(long)inKind]; }
+extern "C" uintptr_t ee_screenscpp_civh_upgrade_class(uintptr_t inUp) { return (uintptr_t)CIVH_U(inUp)->mUnitClass; }
+extern "C" float ee_screenscpp_civh_up_attack(uintptr_t inUp) { return CIVH_U(inUp)->mAttack; }
+extern "C" int64_t ee_screenscpp_civh_up_reload_time(uintptr_t inUp) { return CIVH_U(inUp)->mReloadTime; }
+extern "C" float ee_screenscpp_civh_up_armor(uintptr_t inUp, uint32_t inI) { return CIVH_U(inUp)->mArmor[inI]; }
+extern "C" float ee_screenscpp_civh_up_range(uintptr_t inUp) { return CIVH_U(inUp)->mRange; }
+extern "C" float ee_screenscpp_civh_up_line_of_sight(uintptr_t inUp) { return CIVH_U(inUp)->mLineOfSight; }
+extern "C" float ee_screenscpp_civh_up_max_velocity(uintptr_t inUp) { return CIVH_U(inUp)->mMaxVelocity; }
+extern "C" int64_t ee_screenscpp_civh_up_flight_time(uintptr_t inUp) { return CIVH_U(inUp)->mFlightTime; }
+extern "C" float ee_screenscpp_civh_up_area_effect(uintptr_t inUp) { return CIVH_U(inUp)->mAreaEffect; }
+extern "C" int64_t ee_screenscpp_civh_up_gather_time(uintptr_t inUp, uint32_t inI)
+{ return CIVH_U(inUp)->mGatherTimes[inI]; }
+extern "C" float ee_screenscpp_civh_up_build_time_scale(uintptr_t inUp) { return CIVH_U(inUp)->mBuildTimeScale; }
+extern "C" int64_t ee_screenscpp_civh_up_repair_rate(uintptr_t inUp) { return CIVH_U(inUp)->mRepairRate; }
+extern "C" float ee_screenscpp_civh_up_area_effect_scale(uintptr_t inUp) { return CIVH_U(inUp)->mAreaEffectScale; }
+extern "C" float ee_screenscpp_civh_up_cost_scale(uintptr_t inUp) { return CIVH_U(inUp)->mCostScale; }
+extern "C" int64_t ee_screenscpp_civh_class_attack(uintptr_t inK) { return CIVH_K(inK)->mAttack; }
+extern "C" int64_t ee_screenscpp_civh_class_reload_time(uintptr_t inK) { return CIVH_K(inK)->mReloadTime; }
+extern "C" int64_t ee_screenscpp_civh_class_armor(uintptr_t inK, uint32_t inI) { return CIVH_K(inK)->mArmor[inI]; }
+extern "C" float ee_screenscpp_civh_class_range(uintptr_t inK) { return CIVH_K(inK)->mRange; }
+extern "C" float ee_screenscpp_civh_class_line_of_sight(uintptr_t inK) { return CIVH_K(inK)->mLineOfSight; }
+extern "C" float ee_screenscpp_civh_class_max_velocity(uintptr_t inK) { return CIVH_K(inK)->GetMaxVelocity(); }
+extern "C" int64_t ee_screenscpp_civh_class_flight_time(uintptr_t inK) { return CIVH_K(inK)->mFlightTime; }
+extern "C" float ee_screenscpp_civh_class_area_effect(uintptr_t inK) { return CIVH_K(inK)->mAreaEffect; }
+extern "C" int64_t ee_screenscpp_civh_class_gather_time(uintptr_t inK, uint32_t inI)
+{ return CIVH_K(inK)->mGatherTimes[inI]; }
+extern "C" int64_t ee_screenscpp_civh_class_repair_rate(uintptr_t inK) { return CIVH_K(inK)->mRepairRate; }
+extern "C" float ee_screenscpp_civh_class_area_effect_scale(uintptr_t inK) { return CIVH_K(inK)->mAreaEffectScale; }
+extern "C" int64_t ee_screenscpp_civh_class_category(uintptr_t inK) { return (long)CIVH_K(inK)->mCategory; }
+extern "C" void ee_screenscpp_civh_put_attack(uintptr_t inUp, float inV) { CIVH_U(inUp)->mAttack = inV; }
+extern "C" void ee_screenscpp_civh_put_reload_time(uintptr_t inUp, int64_t inV)
+{ CIVH_U(inUp)->mReloadTime = (long)inV; }
+extern "C" void ee_screenscpp_civh_put_armor(uintptr_t inUp, uint32_t inI, float inV)
+{ CIVH_U(inUp)->mArmor[inI] = inV; }
+extern "C" void ee_screenscpp_civh_put_range(uintptr_t inUp, float inV) { CIVH_U(inUp)->SetRange(inV); }
+extern "C" void ee_screenscpp_civh_put_line_of_sight(uintptr_t inUp, float inV) { CIVH_U(inUp)->mLineOfSight = inV; }
+extern "C" void ee_screenscpp_civh_put_max_velocity(uintptr_t inUp, float inV) { CIVH_U(inUp)->SetMaxVelocity(inV); }
+extern "C" void ee_screenscpp_civh_put_flight_time(uintptr_t inUp, int64_t inV)
+{ CIVH_U(inUp)->mFlightTime = (long)inV; }
+extern "C" void ee_screenscpp_civh_put_area_effect(uintptr_t inUp, float inV) { CIVH_U(inUp)->mAreaEffect = inV; }
+extern "C" void ee_screenscpp_civh_put_gather_time(uintptr_t inUp, uint32_t inI, int64_t inV)
+{ CIVH_U(inUp)->mGatherTimes[inI] = (long)inV; }
+extern "C" void ee_screenscpp_civh_put_build_time_scale(uintptr_t inUp, float inV)
+{ CIVH_U(inUp)->mBuildTimeScale = inV; }
+extern "C" void ee_screenscpp_civh_put_repair_rate(uintptr_t inUp, int64_t inV)
+{ CIVH_U(inUp)->mRepairRate = (long)inV; }
+extern "C" void ee_screenscpp_civh_put_area_effect_scale(uintptr_t inUp, float inV)
+{ CIVH_U(inUp)->mAreaEffectScale = inV; }
+extern "C" void ee_screenscpp_civh_put_cost_scale(uintptr_t inUp, float inV) { CIVH_U(inUp)->mCostScale = inV; }
+extern "C" float ee_screenscpp_civh_variant_factor(int64_t inKind)
+{ return ::gWorld.GetGameVariant()->GetFactor((long)inKind); }
+extern "C" void ee_screenscpp_civh_hit_points(int32_t inPlayer, int64_t inKind, float inFactor)
+{ EEUpgradeHitPoints(CIVH_P(inPlayer)->mUnitClassUpgrades[(long)inKind], (long)inKind, inFactor, CIVH_P(inPlayer)); }
+extern "C" uintptr_t ee_screenscpp_civh_first_unit(int32_t inPlayer) { return (uintptr_t)CIVH_P(inPlayer)->mFirstUnit; }
+extern "C" uintptr_t ee_screenscpp_civh_next_unit(uintptr_t inUnit)
+{ return (uintptr_t)static_cast<EEUnit*>(((EEUnit*)inUnit)->mNext); }
+extern "C" uint64_t ee_screenscpp_civh_unit_type(uintptr_t inUnit)
+{ return (uint64_t)((EEUnit*)inUnit)->mUnitClass->mUnitType; }
+extern "C" void ee_screenscpp_civh_sight_on(uintptr_t inUnit) { ((EEUnit*)inUnit)->SightOnHere(); }
+extern "C" void ee_screenscpp_civh_sight_off(uintptr_t inUnit) { ((EEUnit*)inUnit)->SightOffHere(); }
+extern "C" float ee_screenscpp_civh_conversion(int32_t inPlayer) { return CIVH_P(inPlayer)->mConversionFactor; }
+extern "C" float ee_screenscpp_civh_high_ground(int32_t inPlayer) { return CIVH_P(inPlayer)->mHighGroundBonus; }
+extern "C" int64_t ee_screenscpp_civh_share_bonus(int32_t inPlayer) { return CIVH_P(inPlayer)->mShareBonus; }
+extern "C" void ee_screenscpp_civh_set_conversion(int32_t inPlayer, float inV)
+{ CIVH_P(inPlayer)->mConversionFactor = inV; }
+extern "C" void ee_screenscpp_civh_set_high_ground(int32_t inPlayer, float inV)
+{ CIVH_P(inPlayer)->mHighGroundBonus = inV; }
+extern "C" void ee_screenscpp_civh_set_share_bonus(int32_t inPlayer, int64_t inV)
+{ CIVH_P(inPlayer)->mShareBonus = (long)inV; }
+extern "C" int64_t ee_screenscpp_civh_population_limit(int32_t inPlayer)
+{ return CIVH_P(inPlayer)->GetPopulationLimit(0); }
+extern "C" void ee_screenscpp_civh_recompute_area_effects(int32_t inPlayer)
+{ CIVH_P(inPlayer)->SuggestRecomputeAllAreaEffects(); }
+extern "C" void ee_screenscpp_civh_show_selection_areas(int32_t inPlayer)
+{ CIVH_P(inPlayer)->mSelectedGroup->ShowSelectionAreas(); }
+extern "C" void ee_screenscpp_civh_research(int32_t inPlayer, int64_t inKind)
+{ CIVH_P(inPlayer)->GetTechTree()->Research((long)inKind, NULL); }
+extern "C" uintptr_t ee_screenscpp_civh_node(int32_t inPlayer, int64_t inKind)
+{ return (uintptr_t)CIVH_P(inPlayer)->GetTechTree()->Get((long)inKind); }
+extern "C" bool ee_screenscpp_civh_node_researched(uintptr_t inNode)
+{ return ((EETechTreeNode*)inNode)->mIsResearched; }
+extern "C" void ee_screenscpp_civh_node_research(uintptr_t inNode) { ((EETechTreeNode*)inNode)->ResearchNode(NULL); }
+extern "C" void ee_screenscpp_civh_node_set_allowed(uintptr_t inNode, bool inV)
+{ ((EETechTreeNode*)inNode)->mIsAllowed = inV; }
+extern "C" void ee_screenscpp_civh_node_set_obsolete(uintptr_t inNode)
+{ ((EETechTreeNode*)inNode)->SetObsolete(true, false); }
+extern "C" uintptr_t ee_screenscpp_civh_sound(int64_t inKind) { return (uintptr_t)EESoundObject::Get((long)inKind); }
+extern "C" void ee_screenscpp_civh_sound_load(uintptr_t inSound) { ((EESoundObject*)inSound)->LoadMedia(); }
+extern "C" void ee_screenscpp_civh_add_sound(int32_t inPlayer, uintptr_t inSound)
+{ CIVH_P(inPlayer)->AddLoadedMedia((EESoundObject*)inSound); }
+extern "C" uintptr_t ee_screenscpp_civh_effect(int64_t inKind) { return (uintptr_t)EEGraphicEffect::Get((long)inKind); }
+extern "C" void ee_screenscpp_civh_effect_load(uintptr_t inEffect) { ((EEGraphicEffect*)inEffect)->LoadMedia(); }
+extern "C" void ee_screenscpp_civh_add_effect(int32_t inPlayer, uintptr_t inEffect)
+{ CIVH_P(inPlayer)->AddLoadedMedia((EEGraphicEffect*)inEffect); }
+extern "C" void ee_screenscpp_civh_pulse_sight(int32_t inPlayer, float inRadius, int64_t inKind)
+{ CIVH_P(inPlayer)->PulseSight(false, inRadius, (long)inKind); }
+extern "C" void ee_screenscpp_civh_mining_limit(int32_t inPlayer, int64_t inKind)
+{ CIVH_P(inPlayer)->mMiningLimit = (long)inKind; }
+extern "C" void ee_screenscpp_civh_camouflage(int32_t inPlayer) { CIVH_P(inPlayer)->EnableCamouflagePower(); }
+extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetTabable(); }
 
 // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
 bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)

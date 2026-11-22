@@ -52,6 +52,30 @@ uint32_t ee_ustring_tokenize(const EeUString *s,
                              const EeUString *brackets,
                              uint32_t *out);
 
+/// `UString::Load(FSFile&)` on the C++ file `file`.
+///
+/// # Safety
+/// `s` is a live record; `file` a live C++ `FSFile`.
+long ee_ustring_load_file(EeUString *s, void *file);
+
+/// `UString::Save(FSFile&)` on the C++ file `file`.
+///
+/// # Safety
+/// As [`ee_ustring_load_file`].
+long ee_ustring_save_file(const EeUString *s, void *file);
+
+/// `UWideString::Load(FSFile&)` on the C++ file `file`.
+///
+/// # Safety
+/// `s` is a live record; `file` a live C++ `FSFile`.
+long ee_uwstring_load_file(EeUWideString *s, void *file);
+
+/// `UWideString::Save(FSFile&)` on the C++ file `file`.
+///
+/// # Safety
+/// As [`ee_uwstring_load_file`].
+long ee_uwstring_save_file(const EeUWideString *s, void *file);
+
 /// `UString()`: empty, the default capacity.
 ///
 /// # Safety

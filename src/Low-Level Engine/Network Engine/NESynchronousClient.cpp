@@ -22,11 +22,6 @@ NESynchronousClient::~NESynchronousClient()
     ee_net_cl_free(this->mRust);
 }
 
-// The lag simulator's and the recorder's calls out: their callbacks are the Rust client's own (ee_net client.rs)
-ptrdiff_t NESynchronousClient::QueueHost(void*, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
-{
-    return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
-}
 
 // The client's calls out, each the statement NESynchronousClient.cpp made (the protocol ops are the Rust's own:
 // ee_net ffi_protocol.rs)

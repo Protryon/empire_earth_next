@@ -414,6 +414,14 @@ static void PMSetMatrix(GETransformation& outTransformation, const float* inMatr
     memcpy(outTransformation.mMatrix, inMatrix, 16 * sizeof(float));
 }
 
+// a matrix from Rust as a transformation
+static GETransformation PMMatrix(const float* inMatrix)
+{
+    GETransformation theTransformation(false);
+    PMSetMatrix(theTransformation, inMatrix);
+    return theTransformation;
+}
+
 extern "C" void ee_units_pm_host_tick(EeUnitsPmTick* outTick)
 {
     outTick->tick_seconds = gPhysics->mTickSeconds;
@@ -433,22 +441,17 @@ extern "C" float ee_units_pm_host_random()
 
 extern "C" void ee_units_pm_host_set_transformation(uint64_t inObject, const float* inMatrix)
 {
-    GETransformation theTransformation(false);
-    PMSetMatrix(theTransformation, inMatrix);
-    PMUnit(inObject)->SetTransformation(theTransformation, true);
+    PMUnit(inObject)->SetTransformation(PMMatrix(inMatrix), true);
 }
 
 extern "C" void ee_units_pm_host_refresh_transformation(uint64_t inObject)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    theUnit->SetTransformation(theUnit->mPhysicalModel.GetLocation(), true);
+    PMUnit(inObject)->SetTransformation(PMUnit(inObject)->mPhysicalModel.GetLocation(), true);
 }
 
 extern "C" void ee_units_pm_host_set_location(uint64_t inObject, const float* inMatrix)
 {
-    GETransformation theTransformation(false);
-    PMSetMatrix(theTransformation, inMatrix);
-    PMUnit(inObject)->mPhysicalModel.SetLocation(theTransformation);
+    PMUnit(inObject)->mPhysicalModel.SetLocation(PMMatrix(inMatrix));
 }
 
 extern "C" void ee_units_pm_host_set_location_point(uint64_t inObject, float inX, float inY, float inZ)
@@ -478,20 +481,13 @@ extern "C" void ee_units_pm_host_set_scale(uint64_t inObject, float inScale)
 // the unit's (its active group's) rates: pm_host.rs RATE_*
 extern "C" float ee_units_pm_host_rate(uint64_t inObject, int32_t inWhich)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
     switch (inWhich) {
-    case 0:
-        return theUnit->GetMaxVelocity();
-    case 1:
-        return theUnit->GetAcceleration();
-    case 2:
-        return theUnit->GetInverseAcceleration();
-    case 3:
-        return theUnit->GetAngularAcceleration();
-    case 4:
-        return theUnit->GetMaxAngularVelocity();
-    default:
-        return theUnit->GetInverseAngularAcceleration();
+    case 0: return PMUnit(inObject)->GetMaxVelocity();
+    case 1: return PMUnit(inObject)->GetAcceleration();
+    case 2: return PMUnit(inObject)->GetInverseAcceleration();
+    case 3: return PMUnit(inObject)->GetAngularAcceleration();
+    case 4: return PMUnit(inObject)->GetMaxAngularVelocity();
+    default: return PMUnit(inObject)->GetInverseAngularAcceleration();
     }
 }
 
@@ -574,8 +570,7 @@ extern "C" uint8_t ee_units_pm_host_flies_over(uint64_t inUnit)
 
 extern "C" uint8_t ee_units_pm_host_has_arrived(uint64_t inObject, float inDistance)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    return theUnit->mUnitClass->HasArrived(theUnit, inDistance) ? 1 : 0;
+    return PMUnit(inObject)->mUnitClass->HasArrived(PMUnit(inObject), inDistance) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_pm_host_is_swimming(uint64_t inObject)
@@ -585,14 +580,12 @@ extern "C" uint8_t ee_units_pm_host_is_swimming(uint64_t inObject)
 
 extern "C" void ee_units_pm_host_place_on_ground(uint64_t inObject, float inX, float inY, float inZ)
 {
-    GE3DPoint theGround(inX, inY, inZ);
-    PMUnit(inObject)->PlaceOnGround(theGround);
+    PMUnit(inObject)->PlaceOnGround(GE3DPoint(inX, inY, inZ));
 }
 
 extern "C" float ee_units_pm_host_height_at(uint64_t inObject, float inX, float inY, float inZ)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    return theUnit->GetUnitClass()->GetHeightAt(theUnit, GE3DPoint(inX, inY, inZ));
+    return PMUnit(inObject)->GetUnitClass()->GetHeightAt(PMUnit(inObject), GE3DPoint(inX, inY, inZ));
 }
 
 extern "C" void ee_units_pm_host_set_animation(uint64_t inObject, int32_t inA, int32_t inB, uint8_t inPaused)
@@ -618,21 +611,18 @@ extern "C" void ee_units_pm_host_start_action(uint64_t inObject, int32_t inActio
 
 extern "C" void ee_units_pm_host_action_changed(uint64_t inObject)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    theUnit->mUnitClass->ActionChanged(theUnit);
+    PMUnit(inObject)->mUnitClass->ActionChanged(PMUnit(inObject));
 }
 
 extern "C" uint8_t ee_units_pm_host_can_stand_on(uint64_t inObject, int32_t inX, int32_t inY)
 {
-    EETileCoordinate theTile(inX, inY);
-    return ee_units_uu_can_stand_on(theTile.mX, theTile.mY, (uint64_t)(uintptr_t)(PMUnit(inObject))) ? 1 : 0;
+    return ee_units_uu_can_stand_on(inX, inY, (uint64_t)(uintptr_t)(PMUnit(inObject))) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_pm_host_friendly(uint64_t inObject, uint64_t inOther)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    EEComplexUnit* theOther = PMUnit(inOther);
-    return theOther->mPlayer == theUnit->mPlayer || theUnit->mPlayer->mEnemies[theOther->mPlayer->mPlayerID] == 0 ? 1 : 0;
+    return PMUnit(inOther)->mPlayer == PMUnit(inObject)->mPlayer
+        || PMUnit(inObject)->mPlayer->mEnemies[PMUnit(inOther)->mPlayer->mPlayerID] == 0 ? 1 : 0;
 }
 
 // the trample: the shared damage function (ee_combat damage.rs; combat.yaml trample_damage/_threshold)
@@ -707,20 +697,18 @@ extern "C" uint8_t ee_units_pm_host_is_edge_tile(int32_t inX, int32_t inY)
 
 extern "C" uint8_t ee_units_pm_host_can_move_on_terrain(uint64_t inObject, int32_t inTerrain)
 {
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    return theUnit->mUnitClass->CanMoveOnTerrain(theUnit, inTerrain) ? 1 : 0;
+    return PMUnit(inObject)->mUnitClass->CanMoveOnTerrain(PMUnit(inObject), inTerrain) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_pm_host_passable_by(uint64_t inUnit, uint64_t inObject)
 {
-    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit));
-    return theUnit->IsPassableBy(PMUnit(inObject)) ? 1 : 0;
+    return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit))->IsPassableBy(PMUnit(inObject)) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_pm_host_unbuilt_land_building(uint64_t inUnit)
 {
-    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit));
-    return theUnit->mUnitClass->IsLandBuilding() && !theUnit->mComplexUnit->mIsBuilt ? 1 : 0;
+    return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit))->mUnitClass->IsLandBuilding()
+        && !reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit))->mComplexUnit->mIsBuilt ? 1 : 0;
 }
 
 extern "C" void ee_units_pm_host_ground_point(float inX, float inY, float inZ, float* outPoint)
@@ -734,9 +722,7 @@ extern "C" void ee_units_pm_host_ground_point(float inX, float inY, float inZ, f
 
 extern "C" float ee_units_pm_host_terrain_tilt(const float* inMatrix, uint8_t inRoll)
 {
-    GETransformation theTransformation(false);
-    PMSetMatrix(theTransformation, inMatrix);
-    return inRoll ? ::gWorld.mMap->GetTerrainRoll(theTransformation) : ::gWorld.mMap->GetTerrainPitch(theTransformation);
+    return inRoll ? ::gWorld.mMap->GetTerrainRoll(PMMatrix(inMatrix)) : ::gWorld.mMap->GetTerrainPitch(PMMatrix(inMatrix));
 }
 
 // the terrain mesh's left, right, front and back planes: each its point and normal

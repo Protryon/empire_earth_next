@@ -104,6 +104,8 @@ public:
     UIForm* GetStackedForm(unsigned long inIndex) const;   // port (test fixture)
     TSCriticalSection* GetUILock() const;                  // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const;
+    // the bitmap by its index (EeUiManagerCall::Bitmap: GetAlphaSortUpBitmap 0 .. GetRadioDownOn 20)
+    GEBitmap* GetBitmap(unsigned long inIndex) const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, (intptr_t)inIndex)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)
     static ISEntity* GetLMouseButton() { return UIManager::sLMouseButton; }
 #endif
@@ -168,13 +170,18 @@ protected:
     // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation);   // slot 0x30
-private:
-    // the forwarders' one call into the Rust manager, and the Rust manager's calls out
-    intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const;
+public:
+    // the Rust manager's calls out that are not Rust's (ee_ui lle_manager.rs: ee_ui_manager_host comes first)
     static intptr_t HostOp(void* inManager, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
                            float* ioF);
+private:
+    // the forwarders' one call into the Rust manager (with a rectangle, with two floats)
+    intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const;
+    intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const;
+    intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const;
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
+public:   // the mouse buttons' shims (UIManager.cpp)
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number); the exe
     // imports both

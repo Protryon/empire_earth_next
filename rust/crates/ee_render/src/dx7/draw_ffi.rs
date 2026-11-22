@@ -606,7 +606,8 @@ pub unsafe extern "C" fn ee_dx7r_draw_terrain_highlight(
     // SAFETY: the caller's contract
     unsafe {
         let view = mesh_view(mesh);
-        let rect = [*rect, *rect.add(1), *rect.add(2), *rect.add(3)];
+        // a U2DRectangle<long>'s members (bottom, left, right, top) as left, top, right, bottom
+        let rect = [*rect.add(1), *rect.add(3), *rect.add(2), *rect];
         let color = [*color, *color.add(1), *color.add(2)];
         let viewport = screen_viewport(rast, screen);
         let host = &mut Host::new(rast, screen);
@@ -927,4 +928,89 @@ pub unsafe extern "C" fn ee_dx7r_text_draw(
         target_height,
         target_scale,
     )
+}
+
+/// One text draw's state through `GXSurface::DrawText` (the callback's context).
+struct TextJob {
+    text: Handle,
+    clip: *const TextRect,
+    result: c_long,
+}
+
+/// `DX7DrawTextPlat`: the `GXSurface::DrawText` callback; the target covers the surface from the origin. The font is
+/// referenced around the draw, as the original did (the text holds it: the count never reaches zero here).
+extern "C" fn text_job_draw(
+    target: *const crate::gx::abi::PlatFontTarget,
+    origin_x: c_long,
+    origin_y: c_long,
+    job: *mut c_void,
+) -> bool {
+    // SAFETY: the context is the TextJob of `draw_text`; the target is GX's for the call
+    unsafe {
+        let job = &mut *(job as *mut TextJob);
+        let font = ee_ge_text_font(cppobj::plain(job.text as usize)) as usize;
+        cppobj::reference(font);
+        let t = &*target;
+        if !ee_dx7r_text_draw(
+            job.text,
+            job.clip,
+            origin_x,
+            origin_y,
+            t.mWidth,
+            t.mHeight,
+            t.mScale,
+            target as *const c_void,
+        ) {
+            job.result = 1; // kErrorNativeError
+        }
+        let counted = font as *mut cppobj::CppCounted;
+        (*counted).count = (*counted).count.wrapping_sub(1);
+        true
+    }
+}
+
+/// `DX7DrawText`: a text drawn on a surface (`surface` its `GXSurface*`), aligned and shadowed, within `clip` (null:
+/// none); kErrorNativeError when the draw or the surface fails.
+///
+/// # Safety
+/// `text` is a live `GEText*`, `clip` null or valid, `surface` a live GX surface.
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_draw_text(text: Handle, clip: *const TextRect, surface: *mut c_void) -> c_long {
+    let mut job = TextJob { text, clip, result: 0 };
+    let mut bounds = TextRect { left: 0, top: 0, right: 0, bottom: 0 };
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_dx7r_text_bounds(text, clip, &mut bounds);
+        let rect =
+            crate::gx::abi::Rect { left: bounds.left, top: bounds.top, right: bounds.right, bottom: bounds.bottom };
+        let drawn = crate::gx::ffi::gx_surface_draw_text(
+            surface,
+            &rect,
+            text_job_draw,
+            &mut job as *mut TextJob as *mut c_void,
+        );
+        if drawn != crate::gx::abi::GX_OK && job.result == 0 {
+            job.result = 1;
+        }
+    }
+    job.result
+}
+
+/// `Draw(inText, inRectangle, inTarget)` without a bitmap font: the text clipped to the rectangle (`ge_rect`: a
+/// `GERectangle`'s members, bottom, left, right, top; its edges floored).
+///
+/// # Safety
+/// As [`ee_dx7r_draw_text`]; `ge_rect` points at four floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_draw_text_clipped(
+    text: Handle,
+    ge_rect: *const [f32; 4],
+    surface: *mut c_void,
+) -> c_long {
+    use ee_base::math::um::floor;
+    // SAFETY: the caller's contract
+    let [bottom, left, right, top] = unsafe { *ge_rect };
+    let clip = TextRect { left: floor(left), top: floor(top), right: floor(right), bottom: floor(bottom) };
+    // SAFETY: as above
+    unsafe { ee_dx7r_draw_text(text, &clip, surface) }
 }

@@ -14703,6 +14703,9 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
+/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
+using EeScreensAesIo = long(*)(void *ctx, uint32_t op, void *value);
+
 /// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
 /// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
 struct EeScreensCommandMode {
@@ -15554,6 +15557,83 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
+
+/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
+/// `EeTechCivReply*`; `civ_manager_calls.rs`).
+void ee_screens_civ_host(const void *call,
+                         void *reply);
+
+/// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
+/// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
+void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
+
+/// The area effects' host (`EEAEHost::Call`: `effect` the `EEAreaEffect*`, `target` the `EEComplexUnit*`, either
+/// NULL; `call` an `EeAreaEffectCall*`, `reply` an `EeAreaEffectReply*`; `area_effect_host.rs`).
+void ee_screens_ae_host(void *effect,
+                        void *target,
+                        const void *call,
+                        void *reply);
+
+/// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
+/// the `EEComplexUnit*`; `area_effect_manager.rs`).
+void ee_screens_aem_collect(float radius,
+                            float x,
+                            float y,
+                            unsigned long player,
+                            void *list,
+                            void *unit);
+
+/// `EEAEManager::FindEffect(kind, x, y, player, mode, exclude)` on the manager -> the `EEAreaEffect*` or NULL.
+void *ee_screens_aem_find(void *manager,
+                          long kind,
+                          float x,
+                          float y,
+                          unsigned long player,
+                          bool mode,
+                          void *exclude);
+
+/// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
+long ee_screens_aes_load_templates(void *manager, void *file);
+
+/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
+void ee_screens_aes_save(void *ctx, EeScreensAesIo call);
+
+/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
+long ee_screens_aes_load(void *ctx, EeScreensAesIo call);
+
+/// The running state's fix-up after a load (`aes_after_load`'s registered call; `state` the record).
+///
+/// # Safety
+/// `state` is a live `EeAreaEffectRunning`.
+void ee_screens_aes_restore(const void *state);
+
+/// `EEAreaEffectTemplate::Load(on_demand)` and `Unload` on the template (`area_effect_lists.rs`).
+void ee_screens_ael_template_load(void *template_, bool on_demand);
+
+void ee_screens_ael_template_unload(void *template_);
+
+/// `EEUnitAreaEffectList::AddAreaEffect(effect)` on the list.
+void ee_screens_ael_add(void *list, void *effect);
+
+/// `EEUnitAreaEffectList::ApplyModifiers(kind, value, out, unit)` on the list (`value` and `out` the caller's longs).
+void ee_screens_ael_apply_modifiers(void *list,
+                                    long kind,
+                                    const long *value,
+                                    long *out,
+                                    void *unit);
+
+/// `EEUnitAreaEffectList::Remove(kind)` on the list -> whether one was removed.
+bool ee_screens_ael_remove(void *list, long kind);
+
+/// `EEUnitAreaEffectList::MarkDirty`, `MoveAndUpdate(x, y, value)` and `Tick(unit, elapsed)` on the list.
+void ee_screens_ael_mark_dirty(void *list);
+
+void ee_screens_ael_move_and_update(void *list, float x, float y, float value);
+
+void ee_screens_ael_tick(void *list, void *unit, float elapsed);
+
+/// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
+void ee_screens_civ_fill_list(void *list);
 
 /// An op's text appended (the host's answer).
 void ee_screens_cb_out_text(EeScreensCbOut *out, const uint8_t *text, size_t length);
@@ -17060,6 +17140,23 @@ int64_t ee_screens_portrait_mouse_down(void *portrait);
 
 /// `EEUICPortrait::SetUnit(unit)` (an `EEUnit*`, NULL for none).
 void ee_screens_portrait_set_unit(void *portrait, void *unit);
+
+/// The constructor's body (`EEUICPortrait::EEUICPortrait`: the rectangle, the level shown).
+void ee_screens_portrait_init(void *portrait,
+                              float left,
+                              float top,
+                              float right,
+                              float bottom,
+                              bool show);
+
+/// The destructor's body (`EEUICPortrait::~EEUICPortrait`).
+void ee_screens_portrait_free(void *portrait);
+
+/// `EEUICPortrait::DrawTextA` -> its result.
+int64_t ee_screens_portrait_draw_text(void *portrait);
+
+/// `EEUICPortrait::MouseMove` -> 0.
+int64_t ee_screens_portrait_mouse_move(void *portrait);
 
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);

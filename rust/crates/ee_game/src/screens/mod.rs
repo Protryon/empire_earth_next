@@ -378,10 +378,23 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+pub(crate) mod area_effect_host;
+pub(crate) mod area_effect_lists;
+pub(crate) mod area_effect_manager;
+pub(crate) mod area_effect_running;
+pub(crate) mod civ_file_calls;
+pub(crate) mod civ_host;
+pub(crate) mod civ_manager_calls;
+pub(crate) mod command_units_ops;
+pub(crate) mod cursor_calls;
+pub(crate) mod dialog_calls;
+pub(crate) mod icon_bar_ops;
 pub(crate) mod lobby_calls;
+pub(crate) mod portrait_calls;
 pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
+pub(crate) mod screens_more_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
@@ -393,12 +406,14 @@ mod ui_calls_ffi;
 #[cfg(not(test))]
 mod ui_direct;
 pub mod ui_game;
+pub(crate) mod ui_game_calls;
 #[cfg(not(test))]
 mod ui_game_ffi;
 pub mod ui_manager;
 pub(crate) mod ui_manager_calls;
 #[cfg(not(test))]
 mod ui_manager_ffi;
+pub(crate) mod ui_message_calls;
 pub mod ui_objects;
 #[cfg(not(test))]
 mod ui_objects_ffi;
@@ -406,6 +421,7 @@ pub mod ui_thread;
 #[cfg(not(test))]
 mod ui_thread_ffi;
 pub mod unit_hack;
+pub(crate) mod unit_hack_calls;
 #[cfg(not(test))]
 mod unit_hack_ffi;
 pub mod upgrade;

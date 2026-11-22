@@ -129,55 +129,44 @@ int64_t EEUIShellForm::SelfCall(uint32_t inVirtual)
     return 0;
 }
 
-// The kinds' class ops (EEUIRustControl's host passes them on): the icon bar's (icon_bar.rs EE_SCREENS_IB_OP_*; once
-// EEUICUnitIconBar::RustOp), its slots 0 the icon, 1 the frame, 2 and 3 the press and release samples
-int64_t EEUIShellControl::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    if (this->mKind != EE_SCREENS_SK_ICON_BAR)
-        return 0;
-    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
-    EEButtonObject* theButton = reinterpret_cast<EEButtonObject*>(inA);
-    GEBitmap* theIcon = static_cast<GEBitmap*>(this->mSlots[0]);
-    GEBitmap* theFrame = static_cast<GEBitmap*>(this->mSlots[1]);
-    NEMessage* theMessage = NULL;
-    switch (inOp - EE_SCREENS_HC_CLASS) {
-    case EE_SCREENS_IB_OP_CLASS: {
-        EEUnitClass* theClass = theUnit->GetUnitClass();
-        return (theClass->IsTransport() ? EE_SCREENS_IB_CLASS_TRANSPORT : 0) |
-               (theClass->IsAirBase() ? EE_SCREENS_IB_CLASS_AIR_BASE : 0) |
-               (theClass->mIsParatrooperBomber ? EE_SCREENS_IB_CLASS_PARATROOPER_BOMBER : 0) | (int64_t)theClass->mFamily << 8;
-    }
-    case EE_SCREENS_IB_OP_QUEUED_GOAL: return theUnit->GetQueuedGoal((unsigned long)inB) != NULL;
-    case EE_SCREENS_IB_OP_NO_GOALS: return theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL;
-    case EE_SCREENS_IB_OP_SELECT_THESE: {
-        const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
-        std::vector<long> theList(theIDs, theIDs + inB);
-        theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
-        break;
-    }
-    case EE_SCREENS_IB_OP_SOUND:
-        gSoundManager->Play((unsigned long)(uintptr_t)this->mSlots[inA == 0 ? 2 : 3], 1.0f, 0.0f, 1.0f, false, NULL);
-        break;
-    case EE_SCREENS_IB_OP_CTRL: return UIControl::ControlKeyPressed();
-    case EE_SCREENS_IB_OP_SHIFT: return UIControl::ShiftKeyPressed();
-    case EE_SCREENS_IB_OP_MOUSE: ioF[0] = this->GetMouseLocation().GetX(); break;
-    case EE_SCREENS_IB_OP_CONTAINS: return this->GetRectangle().Contains(this->GetMouseLocation());
-    case EE_SCREENS_IB_OP_ACQUIRE: theButton->Acquire(); break;
-    case EE_SCREENS_IB_OP_RELEASE: theButton->Release(); break;
-    case EE_SCREENS_IB_OP_ICON:
-        theIcon->SetTexture(theButton->GetTexture(), this->GetScreenIndex());
-        theButton->SetFaceBitmap(theIcon, GERectangle(ioF[2], ioF[3], ioF[4], ioF[5]), gScreenIndex);
-        theIcon->SetLocation(GE2DPoint(ioF[0], ioF[1]));
-        this->GetRasterizer()->Draw(theIcon, this->GetScreenIndex());
-        break;
-    case EE_SCREENS_IB_OP_FRAME:
-        theFrame->SetLocation(GE2DPoint(ioF[0], ioF[1]));
-        return this->GetRasterizer()->Draw(theFrame, this->GetScreenIndex());
-    }
-    if (theMessage != NULL)
-        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-    return 0;
-}
+// The icon bar kind's own ops (the old RustOp: a unit's class flags and goals, the selection message, the sounds,
+// the keys, the mouse, the icons and the frame) are icon_bar_ops.rs' over the one-statement shims below (UI lane
+// round 11)
+#define IB(p) static_cast<EEUIShellControl*>((EEUIRustControl*)(p))
+#define IB_CU(u) ((EEComplexUnit*)(u))
+extern "C" bool ee_screenscpp_ib_class_transport(uintptr_t inUnit)
+{ return IB_CU(inUnit)->GetUnitClass()->IsTransport(); }
+extern "C" bool ee_screenscpp_ib_class_air_base(uintptr_t inUnit) { return IB_CU(inUnit)->GetUnitClass()->IsAirBase(); }
+extern "C" bool ee_screenscpp_ib_class_paratrooper_bomber(uintptr_t inUnit)
+{ return IB_CU(inUnit)->GetUnitClass()->mIsParatrooperBomber; }
+extern "C" int64_t ee_screenscpp_ib_class_family(uintptr_t inUnit)
+{ return (int64_t)IB_CU(inUnit)->GetUnitClass()->mFamily; }
+extern "C" bool ee_screenscpp_ib_queued_goal(uintptr_t inUnit, uint64_t inGoal)
+{ return IB_CU(inUnit)->GetQueuedGoal((unsigned long)inGoal) != NULL; }
+extern "C" bool ee_screenscpp_ib_goals_empty(uintptr_t inUnit) { return IB_CU(inUnit)->GetQueueGoals(1).size() == 0; }
+extern "C" bool ee_screenscpp_ib_goal_front_none(uintptr_t inUnit)
+{ return IB_CU(inUnit)->mGoalQueues[1].GetFront() == NULL; }
+extern "C" uintptr_t ee_screenscpp_ib_select_these(uintptr_t inIds, uint64_t inCount)
+{ return (uintptr_t) new EEMRecord(kMessageSelectTheseUnits, {std::vector<long>((const int32_t*)inIds, (const int32_t*)inIds + inCount)}); }
+extern "C" void ee_screenscpp_ib_send(uintptr_t inMessage)
+{ gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotNone); }
+extern "C" void ee_screenscpp_ib_sound(uintptr_t inP, uint32_t inSlot)
+{ gSoundManager->Play((unsigned long)(uintptr_t)IB(inP)->mSlots[inSlot], 1.0f, 0.0f, 1.0f, false, NULL); }
+extern "C" bool ee_screenscpp_ib_ctrl() { return UIControl::ControlKeyPressed(); }
+extern "C" bool ee_screenscpp_ib_shift() { return UIControl::ShiftKeyPressed(); }
+extern "C" float ee_screenscpp_ib_mouse_x(uintptr_t inP) { return IB(inP)->GetMouseLocation().GetX(); }
+extern "C" bool ee_screenscpp_ib_contains(uintptr_t inP)
+{ return IB(inP)->GetRectangle().Contains(IB(inP)->GetMouseLocation()); }
+extern "C" void ee_screenscpp_ib_button_acquire(uintptr_t inButton) { ((EEButtonObject*)inButton)->Acquire(); }
+extern "C" void ee_screenscpp_ib_button_release(uintptr_t inButton) { ((EEButtonObject*)inButton)->Release(); }
+extern "C" void ee_screenscpp_ib_icon_texture(uintptr_t inP, uintptr_t inButton)
+{ static_cast<GEBitmap*>(IB(inP)->mSlots[0])->SetTexture(((EEButtonObject*)inButton)->GetTexture(), IB(inP)->GetScreenIndex()); }
+extern "C" void ee_screenscpp_ib_icon_face(uintptr_t inP, uintptr_t inButton, float inLeft, float inTop, float inRight, float inBottom)
+{ ((EEButtonObject*)inButton)->SetFaceBitmap(static_cast<GEBitmap*>(IB(inP)->mSlots[0]), GERectangle(inLeft, inTop, inRight, inBottom), gScreenIndex); }
+extern "C" void ee_screenscpp_ib_slot_location(uintptr_t inP, uint32_t inSlot, float inX, float inY)
+{ static_cast<GEBitmap*>(IB(inP)->mSlots[inSlot])->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" int64_t ee_screenscpp_ib_slot_draw(uintptr_t inP, uint32_t inSlot)
+{ return IB(inP)->GetRasterizer()->Draw(static_cast<GEBitmap*>(IB(inP)->mSlots[inSlot]), IB(inP)->GetScreenIndex()); }
 
 // A new selected-units icon bar (EEUICUnitIconBar: the user-defined control factory's): the icon bitmap, the
 // table's normal bitmap at one icon's rectangle as its frame, the two button sounds loaded
