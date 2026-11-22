@@ -17382,6 +17382,30 @@ EeScreensShell *ee_screens_shell_new(uint32_t kind,
                                      const int64_t *args,
                                      uint32_t n);
 
+/// A shell's `Make`: the kind made (`ee_screens_shell_new`), stored at `*state` with its override mask at `*over`,
+/// then its constructor body run (`ee_screens_shell_init`: the body may reach the shell through its control, so the
+/// stores come first).
+///
+/// # Safety
+/// `state` and `over` are the shell's members; `args` holds `n` words (or is NULL with `n` 0).
+void ee_screens_shell_make(EeScreensShell **state,
+                           uint64_t *over,
+                           uint32_t kind,
+                           void *ctl,
+                           const int64_t *args,
+                           uint32_t n);
+
+/// `EEUIShell::Op`: the kind's op on the shell whose control (a form shell's `UIForm*`) is at `ctl`, 0 when none is.
+/// `f` is NULL or four floats.
+///
+/// # Safety
+/// `f` is NULL or four floats.
+int64_t ee_screens_shell_op_at(const void *ctl,
+                               uint32_t op,
+                               int64_t a,
+                               int64_t b,
+                               float *f);
+
 /// The kind's override mask (`EE_SCREENS_SV_*` bits).
 ///
 /// # Safety
