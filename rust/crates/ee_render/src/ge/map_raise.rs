@@ -655,7 +655,12 @@ pub fn area_on_map(t: &impl Terrain, x: c_ulong, y: c_ulong, radius: c_ulong) ->
 /// # Safety
 /// As [`ee_ge_map_raise`].
 #[no_mangle]
-pub unsafe extern "C" fn ee_ge_map_area_on_map(host: *const EeGeMapHost, x: c_ulong, y: c_ulong, radius: c_ulong) -> bool {
+pub unsafe extern "C" fn ee_ge_map_area_on_map(
+    host: *const EeGeMapHost,
+    x: c_ulong,
+    y: c_ulong,
+    radius: c_ulong,
+) -> bool {
     // SAFETY: the caller's contract
     area_on_map(&Cpp(unsafe { &*host }), x, y, radius)
 }

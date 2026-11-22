@@ -244,7 +244,9 @@ pub unsafe extern "C" fn ee_ge_vector_save(value: *const GeVector, file: *mut c_
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_orientation_load(value: *mut GeOrientation, file: *mut c_void) -> c_long {
     // SAFETY: the function's contract
-    unsafe { file_fields_io(&[&raw mut (*value).yaw, &raw mut (*value).pitch, &raw mut (*value).roll], file, true, false) }
+    unsafe {
+        file_fields_io(&[&raw mut (*value).yaw, &raw mut (*value).pitch, &raw mut (*value).roll], file, true, false)
+    }
 }
 
 /// `GEOrientation::Save(F&)`: as the load.
@@ -255,7 +257,9 @@ pub unsafe extern "C" fn ee_ge_orientation_load(value: *mut GeOrientation, file:
 pub unsafe extern "C" fn ee_ge_orientation_save(value: *const GeOrientation, file: *mut c_void) -> c_long {
     let value = value.cast_mut();
     // SAFETY: the function's contract (a save only reads the fields)
-    unsafe { file_fields_io(&[&raw mut (*value).yaw, &raw mut (*value).pitch, &raw mut (*value).roll], file, true, true) }
+    unsafe {
+        file_fields_io(&[&raw mut (*value).yaw, &raw mut (*value).pitch, &raw mut (*value).roll], file, true, true)
+    }
 }
 
 /// `GERectangle::Load(F&)`: left, top, right, bottom; `kErrorNotOpen` when the file is not open ([`fields_io`]).
@@ -265,7 +269,14 @@ pub unsafe extern "C" fn ee_ge_orientation_save(value: *const GeOrientation, fil
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_rect_load(value: *mut GeRectangle, file: *mut c_void) -> c_long {
     // SAFETY: the function's contract
-    unsafe { file_fields_io(&[&raw mut (*value).left, &raw mut (*value).top, &raw mut (*value).right, &raw mut (*value).bottom], file, true, false) }
+    unsafe {
+        file_fields_io(
+            &[&raw mut (*value).left, &raw mut (*value).top, &raw mut (*value).right, &raw mut (*value).bottom],
+            file,
+            true,
+            false,
+        )
+    }
 }
 
 /// `GERectangle::Save(F&)`: as the load.
@@ -276,7 +287,14 @@ pub unsafe extern "C" fn ee_ge_rect_load(value: *mut GeRectangle, file: *mut c_v
 pub unsafe extern "C" fn ee_ge_rect_save(value: *const GeRectangle, file: *mut c_void) -> c_long {
     let value = value.cast_mut();
     // SAFETY: the function's contract (a save only reads the fields)
-    unsafe { file_fields_io(&[&raw mut (*value).left, &raw mut (*value).top, &raw mut (*value).right, &raw mut (*value).bottom], file, true, true) }
+    unsafe {
+        file_fields_io(
+            &[&raw mut (*value).left, &raw mut (*value).top, &raw mut (*value).right, &raw mut (*value).bottom],
+            file,
+            true,
+            true,
+        )
+    }
 }
 
 /// `GEColor::Load(F&)`: red, green, blue (it does not ask whether the file is open) ([`fields_io`]).
@@ -310,7 +328,11 @@ pub unsafe extern "C" fn ee_ge_3d_line_load(line: *mut Ge3DLine, file: *mut c_vo
     // SAFETY: the function's contract
     unsafe {
         let result = ee_ge_3d_point_load(&raw mut (*line).start, file);
-        if result == OK { ee_ge_vector_load(&raw mut (*line).direction, file) } else { result }
+        if result == OK {
+            ee_ge_vector_load(&raw mut (*line).direction, file)
+        } else {
+            result
+        }
     }
 }
 
@@ -323,7 +345,11 @@ pub unsafe extern "C" fn ee_ge_3d_line_save(line: *const Ge3DLine, file: *mut c_
     // SAFETY: the function's contract
     unsafe {
         let result = ee_ge_3d_point_save(&raw const (*line).start, file);
-        if result == OK { ee_ge_vector_save(&raw const (*line).direction, file) } else { result }
+        if result == OK {
+            ee_ge_vector_save(&raw const (*line).direction, file)
+        } else {
+            result
+        }
     }
 }
 
@@ -336,7 +362,11 @@ pub unsafe extern "C" fn ee_ge_3d_plane_load(plane: *mut Ge3DPlane, file: *mut c
     // SAFETY: the function's contract
     unsafe {
         let result = ee_ge_3d_point_load(&raw mut (*plane).point, file);
-        if result == OK { ee_ge_vector_load(&raw mut (*plane).normal, file) } else { result }
+        if result == OK {
+            ee_ge_vector_load(&raw mut (*plane).normal, file)
+        } else {
+            result
+        }
     }
 }
 
@@ -349,7 +379,11 @@ pub unsafe extern "C" fn ee_ge_3d_plane_save(plane: *const Ge3DPlane, file: *mut
     // SAFETY: the function's contract
     unsafe {
         let result = ee_ge_3d_point_save(&raw const (*plane).point, file);
-        if result == OK { ee_ge_vector_save(&raw const (*plane).normal, file) } else { result }
+        if result == OK {
+            ee_ge_vector_save(&raw const (*plane).normal, file)
+        } else {
+            result
+        }
     }
 }
 
@@ -386,7 +420,11 @@ pub unsafe extern "C" fn ee_ge_bbox_save(bbox: *const GeBoundingBox, file: *mut 
     // SAFETY: the function's contract
     unsafe {
         let result = ee_ge_3d_point_save(&raw const (*bbox).bottom_left_front, file);
-        if result == OK { ee_ge_3d_point_save(&raw const (*bbox).top_right_back, file) } else { result }
+        if result == OK {
+            ee_ge_3d_point_save(&raw const (*bbox).top_right_back, file)
+        } else {
+            result
+        }
     }
 }
 

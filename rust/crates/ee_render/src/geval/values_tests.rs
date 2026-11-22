@@ -204,8 +204,7 @@ fn the_fields_go_in_the_order_given_and_stop_at_the_first_error() {
         // an unasked open state (-1, GEColor) reads all; a short file keeps what was read
         let mut back = [0.0f32; 4];
         let b = fields(&mut back);
-        let r =
-            fields_io(&b[..4], &table(&mut BufferIo::reader(out.bytes[..9].to_vec())), -1, false, false);
+        let r = fields_io(&b[..4], &table(&mut BufferIo::reader(out.bytes[..9].to_vec())), -1, false, false);
         assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(back, [20.0, 10.0, 0.0, 0.0]);
     }

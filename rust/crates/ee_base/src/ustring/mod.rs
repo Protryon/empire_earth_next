@@ -267,7 +267,13 @@ mod tests {
             ee_ustring_init_text(&mut s, c" ab  c ".as_ptr());
             ee_ustring_init_text(&mut sep, c" ".as_ptr());
             let mut tokens: Vec<(u32, u32)> = vec![(9, 9)];
-            assert!(ee_ustring_tokens(&s, &sep, std::ptr::null(), (&mut tokens as *mut Vec<(u32, u32)>).cast(), record_push));
+            assert!(ee_ustring_tokens(
+                &s,
+                &sep,
+                std::ptr::null(),
+                (&mut tokens as *mut Vec<(u32, u32)>).cast(),
+                record_push
+            ));
             assert_eq!(tokens, vec![(1, 2), (5, 5)]);
             ee_ustring_free(&mut s);
             ee_ustring_free(&mut sep);
