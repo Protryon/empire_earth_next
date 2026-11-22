@@ -3643,9 +3643,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_LOAD = 37;
 /// media `a`'s `UnloadMedia()`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD = 38;
 
-/// `EEDeletePointers(mTowns)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWNS_DELETE = 39;
-
 /// `ee_units_off_map(mLists, b, 0, 0, 0, 0)` (2 cleared, 3 repaired)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_OFF_MAP = 40;
 
@@ -3792,9 +3789,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_COPY = 87;
 
 /// `mTechnologies = NULL`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_NULL = 88;
-
-/// `EEDeletePointers(mHerds)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERDS_DELETE = 89;
 
 /// `mPatrolGroups.clear()`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROLS_CLEAR = 90;
@@ -4071,6 +4065,43 @@ constexpr static const int32_t EE_UNITS_PLAYER_REFRESH_TERRAIN = 81;
 /// `gMiniMap->Redraw()` when there is one
 constexpr static const int32_t EE_UNITS_PLAYER_MINIMAP_REDRAW = 82;
 
+/// The decisions (the record's kind): the C++ member each stands for.
+constexpr static const uint32_t EE_UNITS_ECON_CAN_PRODUCE = 1;
+
+constexpr static const uint32_t EE_UNITS_ECON_CAN_AFFORD = 2;
+
+constexpr static const uint32_t EE_UNITS_ECON_CAN_AFFORD_SCALED = 3;
+
+constexpr static const uint32_t EE_UNITS_ECON_PAY = 6;
+
+constexpr static const uint32_t EE_UNITS_ECON_PAY_IMPROVEMENT = 7;
+
+constexpr static const uint32_t EE_UNITS_ECON_REFUND_TECHNOLOGY = 8;
+
+constexpr static const uint32_t EE_UNITS_ECON_CAN_BUY = 10;
+
+constexpr static const uint32_t EE_UNITS_ECON_CAN_IMPROVE = 11;
+
+constexpr static const uint32_t EE_UNITS_ECON_IS_IMPROVEMENT_MAXED = 12;
+
+constexpr static const uint32_t EE_UNITS_ECON_IMPROVEMENT_LEVEL = 13;
+
+constexpr static const uint32_t EE_UNITS_ECON_COUNT_QUEUED = 14;
+
+constexpr static const uint32_t EE_UNITS_ECON_ADVANCE_IMPROVEMENT = 15;
+
+constexpr static const uint32_t EE_UNITS_ECON_QUEUE_IMPROVEMENT = 16;
+
+constexpr static const uint32_t EE_UNITS_ECON_REMOVE_QUEUED = 17;
+
+constexpr static const uint32_t EE_UNITS_ECON_CAN_AFFORD_REPAIR = 18;
+
+constexpr static const uint32_t EE_UNITS_ECON_TOTAL_POPULATION = 19;
+
+constexpr static const uint32_t EE_UNITS_ECON_NUM_HEROES = 21;
+
+constexpr static const uint32_t EE_UNITS_ECON_APPLY_IMPROVEMENT = 22;
+
 /// the sight at the event's location on for the player (`AddSharedSightAt`), and the local player's mini-map cell and
 /// terrain tile when it sees the player's sight
 constexpr static const int32_t EE_UNITS_EVENTS_SHOW = 1;
@@ -4107,6 +4138,55 @@ constexpr static const uint32_t EE_UNITS_EVENTS_REPAIR = 3;
 
 constexpr static const uint32_t EE_UNITS_EVENTS_TICK = 4;
 
+/// `AddSharedSightAt(tile)`, `RemoveSharedSightAt(tile)`
+constexpr static const int32_t EE_UNITS_EVENTS_X_SIGHT_ON = 20;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_SIGHT_OFF = 21;
+
+/// `gMiniMap->CountCellOn(x, y)`, `CountCellOff`
+constexpr static const int32_t EE_UNITS_EVENTS_X_CELL_ON = 22;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_CELL_OFF = 23;
+
+/// the terrain mesh's `ReferenceTile(x, y)`, `DereferenceTile`
+constexpr static const int32_t EE_UNITS_EVENTS_X_TILE_ON = 24;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_TILE_OFF = 25;
+
+/// `mSounds[kind - 1] != NULL`; its sample played into `mPlayed` (`PlayAndReturnReferencedNode`)
+constexpr static const int32_t EE_UNITS_EVENTS_X_HAS_SOUND = 26;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_PLAY = 27;
+
+/// `mSound != NULL`, `mSound->Dereference()`, `mSound = mPlayed`, `mPlayed != NULL`, `mPlayed->Reference()`
+constexpr static const int32_t EE_UNITS_EVENTS_X_HAS_CURRENT = 28;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_CURRENT_RELEASE = 29;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_CURRENT_SET = 30;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_HAS_PLAYED = 31;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_PLAYED_REFERENCE = 32;
+
+/// the mini map's ping location (the event's source) and its flag on
+constexpr static const int32_t EE_UNITS_EVENTS_X_PING_X = 33;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_PING_Y = 34;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_PING_ON = 35;
+
+/// the list's alert sound `kind - 1` (`mSounds[kind - 1] = EESoundObject::Get(kSounds[kind - 1])`), loaded,
+/// unloaded (the constructor's and destructor's)
+constexpr static const int32_t EE_UNITS_EVENTS_X_SOUND_GET = 36;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_SOUND_LOAD = 37;
+
+constexpr static const int32_t EE_UNITS_EVENTS_X_SOUND_UNLOAD = 38;
+
+/// The list's alert sounds (under attack, garrison, flare, two more).
+constexpr static const int64_t EE_UNITS_EVENTS_SOUNDS = 5;
+
 /// The lists (`ee_units_lists_*`'s `list`).
 constexpr static const uint32_t EE_UNITS_LISTS_STRANDED = 0;
 
@@ -4132,6 +4212,291 @@ constexpr static const int32_t EE_UNITS_LISTS_HOST_UNIT_ID = 2;
 
 /// `gWorld.GetUnit(id)` (0 none)
 constexpr static const int32_t EE_UNITS_LISTS_HOST_UNIT_BY_ID = 3;
+
+/// `gContinentManager.GetContinentID(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CONTINENT_ID = 200;
+
+/// town `a`'s `mContinent`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_CONTINENT = 201;
+
+/// town `a`'s `GetClosestPoint((b, c))`, packed (x high, y low 32 bits)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_CLOSEST = 202;
+
+/// `RTSPlayer::GetChecksum(*a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_RTS_CHECKSUM = 203;
+
+/// `mTechnologies->GetChecksum(*a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_CHECKSUM = 204;
+
+/// `a->AddChecksum(UString("EEPlayer"), b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_CHECKSUM = 205;
+
+/// `EEAnimal::Find(b)` (0 none), and animal `a`'s `mAnimalID`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ANIMAL_OF_TYPE = 206;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ANIMAL_ID = 241;
+
+/// herd `a`'s `mAnimalID`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_ANIMAL = 207;
+
+/// `((std::vector<EEHerd*>*)a)->push_back(herd b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERDS_PUSH = 208;
+
+/// town `a`'s `SetSerial(gContinentManager.NewSerial())`, `gContinentManager.AddArea(town a)`; the herds' two
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SERIAL = 209;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_ADD_AREA = 210;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_SERIAL = 242;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_ADD_AREA = 243;
+
+/// complex unit `a`'s `GetNumGoalQueues()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_GOAL_QUEUES = 211;
+
+/// complex unit `a`'s `ClearGoalQueue(b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLEAR_GOAL_QUEUE = 212;
+
+/// `mAllies.erase(mAllies.begin() + b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ALLY_ERASE = 213;
+
+/// `mPatrolGroups.erase(mPatrolGroups.begin() + b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATROL_ERASE = 214;
+
+/// unit `a`'s `FinishLoad(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_FINISH_LOAD = 215;
+
+/// `gUnitClassTable[b]->UnloadClassMedia()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLASS_UNLOAD_MEDIA = 216;
+
+/// upgrade `a`'s `GetMediaCount()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_STATS_MEDIA_COUNT = 217;
+
+/// upgrade `a`'s `mUnitClass->LoadClassMedia()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_STATS_LOAD_MEDIA = 218;
+
+/// upgrade `a`'s `mUnitClass->mUnitType`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_STATS_TYPE = 219;
+
+/// complex unit `a`'s `mIsDetachedFromAI`, and its store (b)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DETACHED = 220;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_DETACHED = 221;
+
+/// complex unit `a`'s `mGoalQueues[0].mGoals.size()`, `mCitizenBuildQueue.size()`, `mActiveGroup`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_GOALS0_SIZE = 222;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_BUILD_QUEUE_SIZE = 223;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ACTIVE_GROUP = 224;
+
+/// group `a`'s `RemoveUnit(b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_GROUP_REMOVE = 225;
+
+/// `mWonders->mItems.size()`, `mWonders->mItems[b]`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDER_COUNT = 226;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WONDER_AT = 227;
+
+/// complex unit `a`'s `mCloaked = b`, `mCloaked`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_CLOAKED = 228;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLOAKED = 230;
+
+/// `gPhysics->mGameTime`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_GAME_TIME = 229;
+
+/// `ee_units_atc_update(mAirTraffic[b])`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ATC_UPDATE = 231;
+
+/// unit `a`'s class's `RemoveFromTile(a)`, `RemoveFromRegion(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_REMOVE_FROM_TILE = 232;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_REMOVE_FROM_REGION = 233;
+
+/// `gWorld.mInfluenceTable->RemoveUnit(a, b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_INFLUENCE_REMOVE = 234;
+
+/// `gPlatSimNoHumanDefeat`, and `gPlatSimNoHumanDefeatHits++` (TEST ONLY: the headless simulation)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NO_HUMAN_DEFEAT = 235;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NO_DEFEAT_HIT = 236;
+
+/// the chat log's line of the player's victory (b 1) or defeat (0) (`EEPlayerAnnounceResult`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ANNOUNCE_RESULT = 237;
+
+/// town `a`'s `GetHullPointCount()`, `GetHullPoint(b)` (packed as the closest point)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HULL_COUNT = 238;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HULL_POINT = 239;
+
+/// town `a`'s `mPatrolGroup = b`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_PATROL = 240;
+
+/// `ClearFootprint`'s: `new std::vector<EEUnit*>`, `new std::vector<EETileCoordinate>`, their `delete`, sizes, the
+/// unit `b` (an `RTSUnit` address) and the tile `b` (packed as the closest point)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_NEW = 260;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_NEW = 261;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_DELETE = 262;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_DELETE = 263;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_SIZE = 264;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_SIZE = 265;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_AT = 266;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_AT = 267;
+
+/// `gUnitSetManager.Contains(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_MANAGER_CONTAINS = 268;
+
+/// complex unit `a`'s `mWaypoints.size()`, `NextWaypoint()`, `GetPathStart(*(GE3DPoint*)b, *(float*)c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WAYPOINTS = 269;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_NEXT_WAYPOINT = 270;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATH_START = 271;
+
+/// complex unit `a` moved to the point `*(float(*)[3])b` keeping its orientation (`SetTransformation(.., true)`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MOVE_TO = 272;
+
+/// `std::sort` of the tiles `a` by `EETileDistanceLess(b, c)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SORT_TILES = 273;
+
+/// the map's tile (b, c) is there with no units on it
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILE_EMPTY = 274;
+
+/// the terrain mesh's `GetIsValidTile(b, c)`, its `GetMeshZ` of the two floats at `a` (the result's bits)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MESH_VALID = 275;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MESH_Z = 276;
+
+/// complex unit `a`'s `DropPath()`, `StartAction(kActionIdle)`, its class's `ActionChanged(a)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DROP_PATH = 277;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_START_IDLE = 278;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_ACTION_CHANGED = 279;
+
+/// `ReloadTechTree`'s: a new `FSMemoryFile(1000, true, 1)` and its `delete`, the tech tree's `Save` into file `a`,
+/// `gWorld.RemoveShareBonus()`, the file's rewind, the tree's `Load` from file `a` (the result), its
+/// `ResetEpochRange(b, c)`, its `ApplySavedState(true, b)`, `UnloadUnitClassMedia(b)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEMORY_FILE_NEW = 280;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEMORY_FILE_DELETE = 281;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_SAVE = 282;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_SHARE_REMOVE = 283;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEMORY_FILE_REWIND = 284;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_LOAD = 285;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_RESET_RANGE = 286;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TECH_APPLY_SAVED = 287;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNLOAD_CLASS_MEDIA = 288;
+
+/// `(const char*)gUnitClassTable[b]->mName`; `mMediaWarnings.push_back(UString((const char*)a))`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLASS_NAME = 289;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_WARNING = 290;
+
+/// `mHerds[b]`, `delete` herd `a`, `mHerds.clear()`, `mTowns.clear()` is 258 (the areas' delete: `EEDeletePointers`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_AT = 291;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_DELETE = 292;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERDS_CLEAR = 293;
+
+/// herd `a`'s `GetUnits(*(std::vector<EEComplexUnit*>*)b)`; `new`/`delete`/size/entry of such a vector; complex unit
+/// `a`'s `Kill(b, 0, 0)`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_UNITS = 294;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_NEW = 295;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_DELETE = 296;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE = 297;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_AT = 298;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_KILL_KILLED = 299;
+
+/// `DumpMedia(*(FSFileSpec*)a)`'s: the header line, `mUnitClassUpgrades.size()`, `mUnitClassUpgrades[b]`, upgrade
+/// `b`'s `DumpMediaCount(file a)`, the warnings' title, `mMediaWarnings.size()`, warning `b`'s line
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_HEADER = 300;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS = 301;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_UPGRADE_AT = 302;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_COUNT = 303;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_TITLE = 304;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_WARNINGS_SIZE = 305;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_WARNING = 306;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_NEAREST_AREA = 1;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_CHECKSUM = 2;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_HERDS_OF_TYPE = 3;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_REGISTER = 4;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_UNIT_REMOVED = 5;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_REMOVE_ALLY = 6;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_REMOVE_PATROL = 7;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_FINISH_UNITS_LOAD = 8;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_UNLOAD_ALL_CLASS_MEDIA = 9;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_LOAD_ALL_CLASS_MEDIA = 10;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_UNIT_GOAL_DONE = 11;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_REFRESH_TOWN_GROUPS = 12;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_RESET_WONDER_TIMERS = 13;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_DELAY_WONDER_TIMERS = 14;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_WONDER_TIME = 15;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_SET_ALL_RESOURCES = 16;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_UPDATE_AIR_TRAFFIC = 17;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_REMOVING_UNIT = 18;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_SET_GAME_RESULT = 19;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_ADOPT_TOWN_PATROL = 20;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_CLEAR_FOOTPRINT = 21;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_RELOAD_TECH_TREE = 22;
+
+/// `CheckButtonsPreloaded(class)` (b 1) and `LoadUnitClassMedia(class)` (b 0): a media warning
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_MEDIA_CHECK = 23;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_KILL_HERD_UNITS = 24;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_DUMP_MEDIA = 25;
+
+constexpr static const uint32_t EE_UNITS_PLAYER_REST_ADD_TO_REPATROL = 26;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_ULONG = 1;
 
@@ -4370,6 +4735,19 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_SAVE = 319;
 /// `mPatrolGroups[index]` (into `io.i`)
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_PATROL_AT = 320;
 
+/// `delete` the load's stand-in upgrade (the world lane, round 2)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_DUMMY_DELETE = 321;
+
+/// `delete mTechnologies`, `mTechnologies = NULL`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_DELETE = 322;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_TECH_NULL = 323;
+
+/// `mHerds[index] = new EEHerd`, `mHerds[index]->Load(...)` (its result)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_HERD_NEW = 324;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_HERD_LOAD = 325;
+
 /// `gUnitClassTable[io.i]` is there
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_X_CLASS_THERE = 330;
 
@@ -4543,6 +4921,152 @@ constexpr static const int32_t EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2 = 341;
 
 /// `(long)` of the world table's `GetLongValue(EEWorldImprovementTime(i[0]))`
 constexpr static const int32_t EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 = 342;
+
+/// `gUnitClassTable.size()`, `gUnitClassTable[i[0]]`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_COUNT = 400;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_AT = 401;
+
+/// class `i[0]`'s `mTechnology`, `mWeight`, `GetPopulationCost()`, `mUnitType`, `mAIKind`, `mImprovements`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_TECH = 402;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_WEIGHT = 403;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_POPULATION = 404;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_TYPE = 405;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_AI_KIND = 406;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_IMPROVEMENTS = 407;
+
+/// improvement table `i[0]`'s entry `i[1]`'s `mStepFactor`, `mCostFactor` (into `f[0]`), its `GetMaxLevel()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_TABLE_STEP = 408;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TABLE_COST_FACTOR = 409;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TABLE_MAX_LEVEL = 410;
+
+/// upgrade `i[0]`'s `mImprovement`: `CanUpgrade(mUnitClass, i[1]) == true`, `GetCost(i[1])`, `mTotalCost`,
+/// `GetLevel(i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_CAN_UPGRADE = 411;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_COST = 412;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_TOTAL = 413;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_LEVEL = 414;
+
+/// the world table's `kWorldUnitImprovementPointsMax`
+constexpr static const int32_t EE_UNITS_PLAYER_X_POINTS_MAX = 415;
+
+/// the exploration power's `mAmount` into `f[0]` (answered in Rust: the civ powers' table)
+constexpr static const int32_t EE_UNITS_PLAYER_X_EXPLORATION_AMOUNT = 416;
+
+/// `PulseSight(true, f[0], unit i[0]'s mUnitID)`
+constexpr static const int32_t EE_UNITS_PLAYER_X_PULSE_SIGHT = 417;
+
+/// `gWorld.GetGameVariant()->GetFactor(i[0])`, the world's `kWorldWonderHitPointBonus` (into `f[0]`)
+constexpr static const int32_t EE_UNITS_PLAYER_X_VARIANT_FACTOR = 418;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_WONDER_HIT_POINT_BONUS = 419;
+
+/// class `i[0]`'s `mFlightTime`; upgrade `i[0]`'s `mFlightTime`, `mPower`, `mMaxHitPoints`
+constexpr static const int32_t EE_UNITS_PLAYER_X_CLASS_FLIGHT_TIME = 420;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_FLIGHT_TIME = 421;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_POWER = 422;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_UP_MAX_HIT_POINTS = 423;
+
+/// a new town (`new EETown(this, ++gWorld.mTownIDCounter)`), a new herd of unit `i[0]`'s animal (`new EEHerd(this,
+/// mAnimalID, ++gWorld.mHerdIDCounter)`)
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_NEW = 424;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERD_NEW = 425;
+
+/// area `i[0]`'s `SetSerial(gContinentManager.NewSerial())`, `gContinentManager.AddArea(it)`, `RemoveArea(it)`,
+/// `delete`, pushed into `mTowns` (the town's four; the herd's four after them)
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_SERIAL = 426;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_ADD_AREA = 427;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_REMOVE_AREA = 428;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_DELETE = 429;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWNS_PUSH = 430;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERD_SERIAL = 431;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERD_ADD_AREA = 432;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERD_REMOVE_AREA = 433;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERD_DELETE = 434;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERDS_PUSH = 435;
+
+/// `mTowns.erase(begin + i[0])`, `mHerds.erase(begin + i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWNS_ERASE = 436;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERDS_ERASE = 437;
+
+/// town `i[0]`'s `RemoveUnit(unit i[1])`, herd `i[0]`'s
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_REMOVE_UNIT = 438;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_HERD_REMOVE_UNIT = 439;
+
+/// town `i[0]`'s `Merge(town i[1])`, its `mPatrolGroup`, its `RefreshPatrolGroup()`
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_MERGE = 440;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_PATROL_OF = 441;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TOWN_REFRESH_PATROL = 442;
+
+/// patrol point `i[0]` (a complex unit): `SetPatrolGroup(NULL)`, `Kill(true, false, false)`, its player's
+/// `KillUnit(it, false)`
+constexpr static const int32_t EE_UNITS_PLAYER_X_POINT_UNPATROL = 443;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_POINT_KILL = 444;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_POINT_KILL_UNIT = 445;
+
+/// unit `i[0]`'s `GetComplexUnit()`; complex unit `i[0]`'s patrol goal (`EEPatrolGoalCast(mGoalState)`, 0 none);
+/// goal `i[0]`'s `GetPatrolGroup()`, `SetPatrolGroup(group i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_COMPLEX = 446;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_PATROL_GOAL = 447;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_GOAL_PATROL_GROUP = 448;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_GOAL_SET_PATROL = 449;
+
+/// complex unit `i[0]`'s `FindAreaTile(true, 1)`, packed (x high, y low 32 bits)
+constexpr static const int32_t EE_UNITS_PLAYER_X_FIND_AREA_TILE = 450;
+
+/// unit `i[0]`'s `mTileX`, `mTileY`; complex unit `i[0]`'s `UMFloor` of its last map position's x and y
+constexpr static const int32_t EE_UNITS_PLAYER_X_TILE_X = 451;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_TILE_Y = 452;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_LAST_FLOOR_X = 453;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_LAST_FLOOR_Y = 454;
+
+/// the patrol groups' (answered in Rust, patrol_group.rs): `ee_units_pg_last(i[0])`, `ee_units_pg_remove(i[0],
+/// i[1])`, `ee_units_pg_reference(i[0])`, `ee_units_pg_dereference(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_X_PG_LAST = 455;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_PG_REMOVE = 456;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_PG_REFERENCE = 457;
+
+constexpr static const int32_t EE_UNITS_PLAYER_X_PG_DEREFERENCE = 458;
+
+/// `PayImprovement(class i[0], i[1])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_X_PAY_IMPROVEMENT = 459;
 
 /// The series of a player's statistics.
 constexpr static const size_t EE_UNITS_STATS_SERIES = 31;
@@ -5702,6 +6226,66 @@ constexpr static const int32_t EE_UNITS_TOWN_REORDER = 314;
 
 /// A debug line (`bytes`, `len`).
 constexpr static const int32_t EE_UNITS_TOWN_DEBUG = 315;
+
+/// the context's player (`mPlayer`, 0 for the save's and the load's)
+constexpr static const int32_t EE_UNITS_TOWN_X_CONTEXT_PLAYER = 320;
+
+/// `gWorld.mPlayers[player]`
+constexpr static const int32_t EE_UNITS_TOWN_X_WORLD_PLAYER = 321;
+
+/// the context's area bytes cleared, town `prim.i`'s area written into them (`EEWriteAreaBytes`), their address and
+/// size
+constexpr static const int32_t EE_UNITS_TOWN_X_AREA_CLEAR = 322;
+
+constexpr static const int32_t EE_UNITS_TOWN_X_AREA_DATA = 323;
+
+constexpr static const int32_t EE_UNITS_TOWN_X_AREA_SIZE = 324;
+
+constexpr static const int32_t EE_UNITS_TOWN_X_AREA_WRITE = 325;
+
+/// the context's file (an `FSFile*`)
+constexpr static const int32_t EE_UNITS_TOWN_X_FILE = 326;
+
+/// `mTowns.size()`, `mTowns[b]`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SLOTS = 244;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SLOT = 245;
+
+/// town `a`'s `mTownID` and its store (`b`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_ID = 246;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_ID = 247;
+
+/// town `a`'s counter `b` (mValue, mNumWalls, mL80, mNumWonders, mNumDocks, mNumAirports, mNumUnits, mReach) and its
+/// store (`c`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_COUNTER = 248;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_COUNTER = 249;
+
+/// town `a`'s `mNearWater`, `mNearMapEdge` and their stores (`b`)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_NEAR_WATER = 250;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_WATER = 251;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_NEAR_EDGE = 252;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_EDGE = 253;
+
+/// town `a`'s `mContinent = b`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_CONTINENT = 254;
+
+/// `new EETown(this, b)`, `delete` town `a`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_NEW = 255;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_DELETE = 256;
+
+/// `mTowns.push_back(a)`, `mTowns.clear()`
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWNS_PUSH = 257;
+
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWNS_CLEAR = 258;
+
+/// `EEReadAreaBytes(the b bytes at c, *town a)` (b and c: an address and a length)
+constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_READ_AREA = 259;
 
 /// `GetGoal()` as a heal goal (`EEHealGoalCast`; 0: none)
 constexpr static const int32_t EE_UNITS_UC_HEAL_GOAL = 1;
@@ -10207,6 +10791,32 @@ void ee_units_player_diplomacy(const EeUnitsPlayerRefs *refs,
                                unsigned long stance,
                                bool flag);
 
+extern uint32_t ee_units_player_wide_length(const void *text);
+
+/// The member `kind` (`EE_UNITS_ECON_*`) of the player of `refs` with its arguments (see [`decide`]).
+///
+/// # Safety
+/// As player.rs's `with`; `object` and `text` are live objects of the member (or 0).
+int64_t ee_units_player_econ(const EeUnitsPlayerRefs *refs,
+                             uint32_t kind,
+                             void *object,
+                             int64_t a,
+                             int64_t b,
+                             int64_t c,
+                             int64_t d,
+                             int64_t e,
+                             float f,
+                             void *text);
+
+/// The list's alert sounds got and loaded (`load`, the constructor's) or unloaded and the one playing released (the
+/// destructor's) over the C++ host on `list` (player_events_split.rs).
+///
+/// # Safety
+/// `list` is a live list and `f` its host.
+void ee_units_events_sounds(void *list,
+                            EeUnitsEventsFn f,
+                            bool load);
+
 /// A new, empty list.
 EeUnitsPlayerEvents *ee_units_events_new();
 
@@ -10337,6 +10947,29 @@ int32_t ee_units_off_map_file(EeUnitsPlayerLists *l,
                               void *ctx,
                               EeUnitsPlayerSaveFn f,
                               EeUnitsPlayerSaveIo *io);
+
+/// `RTSPlayer::SetColor(from)`: the color, and its shade at 0.6 of each component (GEColor: red, green, blue).
+///
+/// # Safety
+/// The three point to live colors (`from` may be `color`).
+void ee_units_player_set_color(float (*color)[3],
+                               float (*shade)[3],
+                               const float (*from)[3]);
+
+/// `EEAddDeadUnitStatistic(unit)` (an `EEComplexUnit*` as its `RTSUnit` address; see [`dead_unit_statistic`]).
+long ee_units_dead_unit_statistic(uint64_t unit);
+
+/// `EEComplexUnit::SetCloakableChain` (`which` 0) and `SetCloakedChain` (1) of complex unit `unit` (its
+/// `RTSUnit` address).
+void ee_units_cloak_chain(uint64_t unit,
+                          uint32_t which,
+                          bool value);
+
+/// The player's member `what` (`EE_UNITS_PLAYER_REST_*`) on `player`.
+///
+/// # Safety
+/// `player` a live player; `a` the member's object where it takes one.
+int64_t ee_units_player_rest(void *player, uint32_t what, uint64_t a, int64_t b, int64_t c);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
 /// and its C++ parts through `f`.
@@ -10689,6 +11322,44 @@ int64_t ee_units_rust_goal(int32_t op,
                            uint64_t b,
                            EeUnitsGoalIo *io,
                            const EeUnitsGoalHost *host);
+
+extern long ee_units_file_read_u32(void *file, uint32_t *v);
+
+extern long ee_units_file_read_i32(void *file, int32_t *v);
+
+extern long ee_units_file_read_f32(void *file, float *v);
+
+extern long ee_units_file_read_bool(void *file, uint8_t *v);
+
+extern long ee_units_file_read_u16(void *file, uint16_t *v);
+
+extern long ee_units_file_read_bytes(void *file,
+                                     uint8_t *data,
+                                     unsigned long len,
+                                     unsigned long *read);
+
+extern long ee_units_file_write_u32(void *file, uint32_t v);
+
+extern long ee_units_file_write_i32(void *file, int32_t v);
+
+extern long ee_units_file_write_f32(void *file, float v);
+
+extern long ee_units_file_write_bool(void *file, uint8_t v);
+
+extern long ee_units_file_write_u16(void *file, uint16_t v);
+
+extern long ee_units_file_write_bytes(void *file,
+                                      const uint8_t *data,
+                                      unsigned long len,
+                                      unsigned long *written);
+
+/// `EESavePrimitive(*file, op, io)` (ee/EEPlayer.h): -1 for another operation.
+///
+/// # Safety
+/// `file` a live `FSFile`; `io` a live record; for the levels' operations `io.i` the address of 0x40 bytes.
+int32_t ee_units_save_primitive(void *file,
+                                int32_t op,
+                                EeUnitsPlayerSaveIo *io);
 
 /// The reader appends a file's bytes to the sink it was handed.
 ///

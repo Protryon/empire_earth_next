@@ -90,8 +90,6 @@ pub const EE_UNITS_PLAYER_BODY_EFFECT: i32 = 36;
 pub const EE_UNITS_PLAYER_BODY_MEDIA_LOAD: i32 = 37;
 /// media `a`'s `UnloadMedia()`
 pub const EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD: i32 = 38;
-/// `EEDeletePointers(mTowns)`
-pub const EE_UNITS_PLAYER_BODY_TOWNS_DELETE: i32 = 39;
 /// `ee_units_off_map(mLists, b, 0, 0, 0, 0)` (2 cleared, 3 repaired)
 pub const EE_UNITS_PLAYER_BODY_OFF_MAP: i32 = 40;
 /// `std::for_each(mPatrolGroups, EEPDereferencer())`
@@ -190,8 +188,6 @@ pub const EE_UNITS_PLAYER_BODY_SITES_ITEMS_CLEAR: i32 = 86;
 pub const EE_UNITS_PLAYER_BODY_TECH_COPY: i32 = 87;
 /// `mTechnologies = NULL`
 pub const EE_UNITS_PLAYER_BODY_TECH_NULL: i32 = 88;
-/// `EEDeletePointers(mHerds)`
-pub const EE_UNITS_PLAYER_BODY_HERDS_DELETE: i32 = 89;
 /// `mPatrolGroups.clear()`
 pub const EE_UNITS_PLAYER_BODY_PATROLS_CLEAR: i32 = 90;
 /// `delete mConstructionSites`
@@ -595,12 +591,13 @@ pub fn reset<H: PlayerBodyHost>(h: &mut H, p: u64) {
 /// The private lists, the towns, the herds, the off-map records and the patrols dropped (the destructor's and
 /// `Clear`'s middle; `destroying`: the destructor's order, the repatrol list after the towns).
 fn drop_areas<H: PlayerBodyHost>(h: &mut H, p: u64, destroying: bool) {
-    op(h, EE_UNITS_PLAYER_BODY_TOWNS_DELETE, p, 0, 0, 0);
+    use crate::units::player_rest::delete_areas;
+    delete_areas(&mut |o, a, b| op(h, o, p, a, b, 0), true);
     if destroying {
         op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
-        op(h, EE_UNITS_PLAYER_BODY_HERDS_DELETE, p, 0, 0, 0);
+        delete_areas(&mut |o, a, b| op(h, o, p, a, b, 0), false);
     } else {
-        op(h, EE_UNITS_PLAYER_BODY_HERDS_DELETE, p, 0, 0, 0);
+        delete_areas(&mut |o, a, b| op(h, o, p, a, b, 0), false);
         op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
     }
     op(h, EE_UNITS_PLAYER_BODY_OFF_MAP, p, 0, 2, 0);
@@ -1124,6 +1121,14 @@ pub fn run<H: PlayerBodyHost>(h: &mut H, player: u64, what: u32, a: u64, b: i64,
     0
 }
 
+/// The C++ body host (EEPlayer.cpp's `ee_units_player_body_host`) for the other bodies' modules (player_rest.rs,
+/// town_split.rs): one statement of the player's C++ on player `player`.
+#[cfg(not(test))]
+pub(crate) fn body_host(op: i32, player: u64, a: u64, b: i64, c: i64) -> i64 {
+    // SAFETY: the C++ switch over a live player and the objects the bodies hand it
+    unsafe { game::ee_units_player_body_host(op, player as *mut std::ffi::c_void, a, b, c, std::ptr::null_mut()) }
+}
+
 #[cfg(not(test))]
 mod game {
     use super::*;
@@ -1134,7 +1139,14 @@ mod game {
     use std::ffi::c_void;
 
     extern "C" {
-        fn ee_units_player_body_host(op: i32, player: *mut c_void, a: u64, b: i64, c: i64, swaps: *mut c_void) -> i64;
+        pub(super) fn ee_units_player_body_host(
+            op: i32,
+            player: *mut c_void,
+            a: u64,
+            b: i64,
+            c: i64,
+            swaps: *mut c_void,
+        ) -> i64;
     }
 
     /// The player's private lists (its `mLists`, the layout's offset).

@@ -16,6 +16,16 @@ constexpr static const uint32_t FORM_PLAY_CAMPAIGN = 8;
 
 constexpr static const uint32_t FORM_CAMPAIGN_SELECT = 33;
 
+constexpr static const uint64_t AMBIENT = 0;
+
+constexpr static const uint64_t RESOURCE = 1;
+
+constexpr static const uint64_t LAND_CITIZEN = 6;
+
+constexpr static const uint64_t PROJECTILE = 9;
+
+constexpr static const uint64_t NAVAL_CITIZEN = 22;
+
 constexpr static const uint64_t GATE = 25;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
