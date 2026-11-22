@@ -1369,7 +1369,6 @@ enum class EeGameCpp : uint32_t {
   PkEntrySetModel,
   PkEntrySetScale,
   PkEntryUnit,
-  PkFindUnit,
   PkFogAttributes,
   PkGroupNonEmpty,
   PkLock,
@@ -1516,8 +1515,6 @@ enum class EeGameCpp : uint32_t {
   RoNodeUnitIsTree,
   RoObjectCount,
   RoObjectUnloadMedia,
-  RoObjectsClear,
-  RoObjectsInsert,
   RoOrbitalCount,
   RoOrthographic,
   RoPhysicsTicks,
@@ -1552,14 +1549,8 @@ enum class EeGameCpp : uint32_t {
   RoScaffoldingModel,
   RoSceneFade,
   RoScreenPoint,
-  RoSelectedClear,
-  RoSelectedObjectsClear,
-  RoSelectedObjectsPush,
-  RoSelectedUnitsClear,
-  RoSelectedUnitsPush,
   RoSelectionIsDrawn,
   RoSetLabelUnit,
-  RoSetSelectedUnit,
   RoShowAllBackgrounds,
   RoSpaceStationHeight,
   RoSpaceTurretHeight,
@@ -1605,7 +1596,6 @@ enum class EeGameCpp : uint32_t {
   RoUnitNameClear,
   RoUnitNameFromStats,
   RoUnitNextPart,
-  RoUnitOpacity,
   RoUnitOrbitalSet,
   RoUnitOrbitalsResize,
   RoUnitPartsClear,
@@ -1620,8 +1610,6 @@ enum class EeGameCpp : uint32_t {
   RoUnitTurretsResize,
   RoUnitWheelSet,
   RoUnitWheelsResize,
-  RoUnitsClear,
-  RoUnitsInsert,
   RoUpdateVisibleTerrain,
   RoViewportRearClipping,
   RoViewportSetCamera,
@@ -2774,11 +2762,9 @@ enum class EeGameCpp : uint32_t {
   RuLinesDelete,
   RuLinesDraw,
   RuLinesNew,
-  RuListsView,
   RuMainViewRectangle,
   RuMainViewport,
   RuModelDetail,
-  RuRaster,
   RuTextFont12,
   RuTextFont16,
   RuTextHeight,
@@ -3303,6 +3289,166 @@ enum class EeGameCpp : uint32_t {
   WsRecHuman,
   WsSetCurrentRecord,
   WsRecPlayTime,
+  FwLayGobjFields,
+  FwLayGobjModels,
+  FwLayGobjTextures,
+  FwLayGobjTagPoints,
+  FwLayGobjTags,
+  FwLayGobjModel,
+  FwLayGobjDefaultPoint,
+  FwLayGobjTopPoint,
+  FwLayGobjTurretParts,
+  FwLayGobjOrbitals,
+  FwLayTurretPartModel,
+  FwLayOrbitalModel,
+  FwLayOrbitalSpeed,
+  FwLayOrbitalAngle,
+  FwLayGeffectFields,
+  FwLayGeffectObject,
+  FwLayGeffectLinked,
+  FwLayComplexTurretAngles,
+  FwLayStatsModel,
+  FwLayGobjFileName,
+  FwLayGobjTextureName,
+  FwLayGobjShadowModelName,
+  FwLayGobjShadowTextureName,
+  FwLayGobjModelNames,
+  FwLayGobjTextureNames,
+  FwLayGobjTexture,
+  FwLayGobjShadowModel,
+  FwLayGobjShadowTexture,
+  FwLayGobjSounds1,
+  FwLayGobjSounds2,
+  FwLayGobjBar,
+  FwLayGobjMediaUse,
+  FwLayGeffectNumLoads,
+  FwUnitRef,
+  FwUnitDeref,
+  FwGeffRef,
+  FwGeffDeref,
+  FwGeffLoad,
+  FwGeffUnload,
+  FwGeffMedia,
+  FwGeffGet,
+  FwGeffCount,
+  FwModelDeref,
+  FwMediaLoad,
+  FwMediaUnload,
+  FwUnitDamaged,
+  FwLoadingSaved,
+  FwMapEffectRegions,
+  FwViewport,
+  FwGameTime,
+  FwGameOver,
+  FwWind,
+  FwScreen,
+  FwDoppelgangerAny,
+  FwCxSetScaledModel,
+  FwTileBlocked,
+  FwAreaEffect,
+  FwGlowRows,
+  FwManagerRust,
+  FwCurrentPlayerIndex,
+  FwNumPlayers,
+  FwMemoryNew,
+  FwMemoryRewind,
+  FwMemoryDelete,
+  FwSaveMajor,
+  FwSaveMinor,
+  FwReadU32,
+  FwReadI32,
+  FwWriteU32,
+  FwWriteI32,
+  FwTickSeconds,
+  FwTickTime,
+  FwPhysicsSpeed,
+  FwWorldSpeed,
+  FwGameClock,
+  FwMeshGetZ,
+  MxScopeEnter,
+  MxScopeLeave,
+  MxCliffCount,
+  MxCliffExists,
+  MxFirstCliff,
+  MxCaptureSight,
+  MxTileOnLine,
+  MxLocationOnLine,
+  MxRtsOf,
+  MxEEMapOf,
+  MxCreate,
+  MxLoadTile,
+  MxSetRtsTile,
+  MxMeshLoad,
+  MxMeshSave,
+  MxSpaceTile,
+  MxTerrainLoadInto,
+  MxPrimitive,
+  RlLayUnitStride,
+  RlLayUnitHealthBars,
+  RlLayUnitTurretAngles,
+  RlLayUnitTurretModels,
+  RlLayUnitOrbitalAngles,
+  RlLayUnitOrbitalModels,
+  RlLayUnitWheelAngles,
+  RlLayUnitWheelModels,
+  RlLayUnitName,
+  RlLayRecordStride,
+  RlLayRecordHeights,
+  RlLayRecordCells,
+  RlLayRecordTileX,
+  RlLayRecordTileY,
+  RlLayLineStride,
+  RlLayLinePoints,
+  RlLayLineTexture,
+  RlLayLineWidth,
+  RlUnits,
+  RlShadows,
+  RlLabelUnit,
+  RlLabelName,
+  RlPickedIds,
+  RlPickedCount,
+  RlGhosts,
+  RlLines,
+  RlLinesCount,
+  PzViewport,
+  PzOrthographic,
+  PzShowHidden,
+  PzWindowWidth,
+  PzModelTable,
+  PzEntries,
+  PzPlanesNew,
+  PzPlanesDelete,
+  PzPlanesData,
+  PzIdsClear,
+  PzFrustumPlanes,
+  PzCreateLock,
+  PzDestroyLock,
+  PzSetCapacity,
+  PzNewEntries,
+  PzDeleteEntries,
+  PzSetOrthographic,
+  PzSetShowHidden,
+  RrModelDraw,
+  RrCamera,
+  RrCreateModel,
+  RrCreateSubModel,
+  RrDrawSky,
+  RrTexture32,
+  RrScreen,
+  RrObjects,
+  RrOpacityOwn,
+  RrModelCenter,
+  RrPhysicalFrame,
+  RrCinematic,
+  RrCameraYaw,
+  RrCameraPitch,
+  RrModelRadius,
+  RrPhysicalScale,
+  RrBarDraw,
+  RrBatchDraw,
+  OvSetSpeed,
+  OvSetModel,
+  OvModelName,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -4107,12 +4253,22 @@ void ee_gamecpp_picker_add_unit(void *picker,
                                 const float *transformation,
                                 float pixel_size);
 
-/// The walks' host for a picker (EEUnitPicker.cpp's FindUnit and PickBox pass it to ee_gfx pick_walk.rs).
-///
-/// # Safety
-/// `out` is a writable `EeGfxPickHost`.
-void ee_gamecpp_picker_host(void *picker,
-                            void *out);
+/// EEUnitPicker::PickBox (PickUnits and PickUnitsInRectangle): under the lock, the ids of the units inside a screen
+/// rectangle's frustum (`all`: every pickable unit, else `player`'s of a type) into `out` (a
+/// `std::vector<unsigned long>`).
+void ee_gamecpp_pz_box(void *picker,
+                       const void *rectangle,
+                       bool all,
+                       void *player,
+                       long kind,
+                       void *out);
+
+/// EEUnitPicker's constructor: its lock, room for `capacity` entries, none yet, the perspective view.
+void ee_gamecpp_pz_construct(void *picker,
+                             unsigned long capacity);
+
+/// EEUnitPicker's destructor: its units and entries released, its lock destroyed.
+void ee_gamecpp_pz_destroy(void *picker);
 
 /// EEInitialiseScene: the light and the time-of-day colour, the fade and letterbox, the scene's flags, the effect
 /// queues, the render units' bars, once per scene, and the shared bitmap.
@@ -5525,6 +5681,169 @@ void ee_gamecpp_env_set_enabled(void *manager, bool enabled);
 
 /// `DeleteStorms`: every storm released and deleted, the list emptied.
 void ee_gamecpp_env_delete_storms(void *manager);
+
+/// Registers the effects' layout, world and manager world (EEEffectHost.cpp's `EEGfxObjectLayoutRegister`, before
+/// `main`); `complex_scale` and `complex_frame` are the complex unit's physical model's scale and frame offsets.
+void ee_gamecpp_fw_register(uint64_t complex_scale,
+                            uint64_t complex_frame);
+
+/// `EEEffectFile`: an `FSFile` as the effects' file.
+EeGfxEffectFile ee_gamecpp_fw_file(void *file_);
+
+/// EEEffectManager::Load: the manager's effects from the file.
+long ee_gamecpp_fw_load(EeGfxEffectManager *m,
+                        void *file_,
+                        unsigned long major,
+                        unsigned long minor);
+
+/// EEEffectManager::Save: the manager's effects to the file.
+long ee_gamecpp_fw_save(EeGfxEffectManager *m,
+                        void *file_,
+                        unsigned long major,
+                        unsigned long minor);
+
+/// CreateUnitEffect: on a unit (`keeps_unit`: the light glow's; `tag_point`: the emitter's; `goal_index`: the
+/// confirmation's goal queue).
+long ee_gamecpp_fw_unit_effect(EeGfxEffectManager *m,
+                               void *unit,
+                               void *effect,
+                               uint32_t *handle,
+                               bool keeps_unit,
+                               long tag_point,
+                               long goal_index);
+
+/// CreateEffectBetweenUnits: from a unit to a unit.
+long ee_gamecpp_fw_between_units(EeGfxEffectManager *m,
+                                 void *from,
+                                 void *to,
+                                 void *effect,
+                                 uint32_t *handle);
+
+/// CreateEffect: from a unit to a point.
+long ee_gamecpp_fw_unit_to_point(EeGfxEffectManager *m,
+                                 void *unit,
+                                 const EeGe3DPoint *at,
+                                 void *effect,
+                                 uint32_t *handle,
+                                 long goal_index);
+
+/// CreatePlacedEffect: at a point.
+long ee_gamecpp_fw_placed(EeGfxEffectManager *m,
+                          const EeGe3DPoint *at,
+                          void *effect,
+                          uint32_t *handle);
+
+/// CreateTransformationEffect: at a transformation.
+long ee_gamecpp_fw_transformation(EeGfxEffectManager *m,
+                                  const EeGeTransformation *t,
+                                  void *effect,
+                                  uint32_t *handle);
+
+/// CreateEffectBetween: between two points.
+long ee_gamecpp_fw_between(EeGfxEffectManager *m,
+                           const EeGe3DPoint *from,
+                           const EeGe3DPoint *to,
+                           void *effect,
+                           uint32_t *handle);
+
+/// CreateWeatherEffect: rain or snow over a set of tiles (`tiles`: `count` x, y pairs of `long`).
+long ee_gamecpp_fw_weather(EeGfxEffectManager *m,
+                           const long *tiles,
+                           size_t count,
+                           void *effect,
+                           uint32_t *handle);
+
+/// EEEffect::SetLocalTo: shown only to `player`, not saved.
+void ee_gamecpp_fw_set_local(EeGfxEffectRecord *record, long player);
+
+/// EEMap::UpdateWater: the four tiles around a vertex re-typed, the vertex's colour set.
+void ee_gamecpp_mx_update_water(void *map, long x, long y);
+
+/// EEMap::CreateMap: a new map of the size on the base terrain.
+void ee_gamecpp_mx_create_map(void *map, long width, long height, unsigned long players);
+
+/// EEMap::PaintTerrainRect: a rectangle painted, its vertices recoloured.
+void ee_gamecpp_mx_paint_rect(void *map,
+                              long left,
+                              long right,
+                              long top,
+                              long bottom,
+                              long terrain,
+                              long cliff);
+
+/// EEMap::PaintTerrain: a tile's terrain and the textures of it and its lower-left neighbours.
+void ee_gamecpp_mx_paint(void *map, long x, long y, long terrain);
+
+/// EEMap::UpdateCliffs: the steep tiles of a rectangle made cliffs.
+void ee_gamecpp_mx_update_cliffs(void *map, long left, long right, long bottom, long top);
+
+/// EEMap::RemoveFlatCliffs: the cliffs of a rectangle no longer steep back on the base terrain.
+void ee_gamecpp_mx_remove_flat_cliffs(void *map,
+                                      unsigned long left,
+                                      unsigned long right,
+                                      unsigned long bottom,
+                                      unsigned long top);
+
+/// EEMap::SetCliffTexture: another cliff terrain, the cliffs re-detected over the whole map. Fixed: the original
+/// indexed the cliff table at [-1] for a script without CliffTexture; as Load does with a bad saved index, it takes
+/// the first cliff terrain.
+void ee_gamecpp_mx_set_cliff_texture(void *map,
+                                     long cliff);
+
+/// EEMap::EEMap(): an empty map on the default terrain.
+void ee_gamecpp_mx_construct_empty(void *map);
+
+/// EEMap::EEMap(width, height, players, terrain): a new map filled with the terrain, on the first cliff terrain.
+void ee_gamecpp_mx_construct(void *map,
+                             long width,
+                             long height,
+                             unsigned long players,
+                             long terrain);
+
+/// EEMap::AddSight (`add`) / RemoveSight: a player's own or shared sight of the tiles within a radius.
+void ee_gamecpp_mx_sight(void *map,
+                         void *player,
+                         float x,
+                         float y,
+                         float radius,
+                         bool shared,
+                         bool add);
+
+/// EEMap::PickScreenTile: the tile the ray through a screen point hits (optionally at the water surface).
+void *ee_gamecpp_mx_pick_tile(void *map,
+                              const EeGe2DPoint *at,
+                              long *x,
+                              long *y,
+                              bool water);
+
+/// EEMap::GetLocationAt: the tile and the point the ray through a screen point hits.
+void *ee_gamecpp_mx_location_at(void *map, const EeGe2DPoint *at, EeGe3DPoint *out, bool water);
+
+/// EEMap::Load: the map, its base terrain, characteristics and cliff terrain.
+long ee_gamecpp_mx_load(void *map, void *file, unsigned long major, unsigned long minor);
+
+/// EEMap::Save: the map, its base terrain, characteristics and cliff terrain; the first error.
+long ee_gamecpp_mx_save(void *map, void *file, unsigned long major, unsigned long minor);
+
+/// `EEMapSaveOperation`: the C++ parts of the maps' Load and Save (the file's primitives, the tiles, the mesh and the
+/// terrain tables); a tile's y in `index`, its x in `io.i`'s low 32 bits.
+///
+/// # Safety
+/// `ctx` is a live `EEMapSaveContext`, `io` the call's.
+int32_t ee_gamecpp_mx_save_op(void *ctx,
+                              int32_t op,
+                              uint32_t index,
+                              EeUnitsPlayerSaveIo *io);
+
+/// EEOrbital::Init: attached to `model`, its speed from the model's name (degrees per second; 0 first, as the C++).
+void ee_gamecpp_ov_orbital_init(void *orbital,
+                                void *model);
+
+/// EEROEffects::SceneStarting: the main viewport's view rectangle's z buffer cleared to 1.
+void ee_gamecpp_ov_effects_scene_starting();
+
+/// The raster table (the C++ hands it to ee_gfx's plane models and ground shadows).
+const EeGfxRaster *ee_gamecpp_ro_raster();
 
 }  // extern "C"
 

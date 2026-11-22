@@ -24,17 +24,10 @@ public:
     EEEffectManager(const EEEffectManager&) = delete;
     EEEffectManager& operator=(const EEEffectManager&) = delete;
     virtual ~EEEffectManager() { ee_gfx_manager_free(this->mRust); }   // every effect released, then the markers
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-    {
-        EeGfxEffectFile theFile = EEEffectFile(inFile);
-        return ee_gfx_manager_load(this->mRust, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-    }
+    // the effects' file over inFile (gamecpp fx_world.rs; EEEffectHost.cpp)
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     virtual long RepairPointers(unsigned long, unsigned long) { return ee_gfx_manager_repair(this->mRust); }
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-    {
-        EeGfxEffectFile theFile = EEEffectFile(outFile);
-        return ee_gfx_manager_save(this->mRust, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-    }
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     // a unit swap (EEPhysics): every effect on inOld moves to inNew
     void ReplaceUnit(EEUnit* inOld, EEUnit* inNew) { ee_gfx_manager_replace_unit(this->mRust, U(inOld), U(inNew)); }
     void Update() { ee_gfx_manager_update(this->mRust); }        // EEPhysics::Tick, every tick
@@ -52,58 +45,22 @@ public:
     // the set-up's result; outHandle, when given, gets the new effect's handle): on a unit (inKeepsUnit: the light
     // glow's; inTagPoint: the particle emitter's; inGoalIndex: the command confirmation's goal queue)
     long CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, bool inKeepsUnit,
-                          long inTagPoint, long inGoalIndex)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::Unit, inEffect);
-        a.unit = U(inUnit);
-        a.keeps_unit = inKeepsUnit;
-        a.tag_point = (int32_t)inTagPoint;
-        a.goal_index = (uint32_t)inGoalIndex;
-        return this->Create(a, outHandle);
-    }
+                          long inTagPoint, long inGoalIndex);
     // from a unit to a unit (muzzle blast, winter breath, tracers, shells, projectile, tracer beam)
-    long CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::BetweenUnits, inEffect);
-        a.unit = U(inFrom);
-        a.to_unit = U(inTo);
-        return this->Create(a, outHandle);
-    }
+    long CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle);
     // from a unit to a point (muzzle blast, projectile, citizen beam, tracer beam, confirmation, pulse cannon ball)
     long CreateEffect(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle,
-                      long inGoalIndex)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::UnitToPoint, inEffect);
-        a.unit = U(inUnit);
-        a.at = P(inLocation);
-        a.goal_index = (uint32_t)inGoalIndex;
-        return this->Create(a, outHandle);
-    }
-    long CreatePlacedEffect(const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::Placed, inEffect);
-        a.at = P(inLocation);
-        return this->Create(a, outHandle);
-    }
+                      long inGoalIndex);
+    long CreatePlacedEffect(const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle);
     // the water ripple and the battlefield decal at a transformation
     long CreateTransformationEffect(const GETransformation& inTransformation, EEGraphicEffect* inEffect,
-                                    EEEffectHandle* outHandle)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::Transformation, inEffect);
-        a.transformation = *reinterpret_cast<const EeGeTransformation*>(&inTransformation);
-        return this->Create(a, outHandle);
-    }
+                                    EEEffectHandle* outHandle);
     // a particle, particle emitter or multi-effect along a line
     // an earthquake, 3D projectile or marching line between two points (other kinds: nothing, 0)
     long CreateEffectBetween(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inEffect,
-                             EEEffectHandle* outHandle)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::Between, inEffect);
-        a.at = P(inFrom);
-        a.to = P(inTo);
-        return this->Create(a, outHandle);
-    }
-    // rain or snow over a set of tiles (other kinds: nothing, 0; EEEffectHost.cpp)
+                             EEEffectHandle* outHandle);
+    // rain or snow over a set of tiles (other kinds: nothing, 0). The entry points' arguments: gamecpp fx_world.rs
+    // (EEEffectHost.cpp)
     long CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect,
                              EEEffectHandle* outHandle);
 
@@ -111,16 +68,6 @@ public:
 
 private:
     static uint64_t U(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
-    static EeGe3DPoint P(const GE3DPoint& inPoint) { return EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ}; }
-    static EeGfxEffectArgs Args(EeGfxEffectEntry inEntry, EEGraphicEffect* inEffect)
-    {
-        EeGfxEffectArgs a = {};
-        a.entry = inEntry;
-        a.graphic_effect = U(inEffect);
-        return a;
-    }
-    long Create(const EeGfxEffectArgs& inArgs, EEEffectHandle* outHandle)
-        { return ee_gfx_manager_create(this->mRust, &inArgs, outHandle != NULL ? &outHandle->mValue : NULL); }
 };
 
 extern EEEffectManager*& gEffectManager;

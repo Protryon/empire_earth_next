@@ -80,21 +80,13 @@ void EEROWater::FrameDone()
 // Creates a unit picker with room for the given number of units and its lock
 EEUnitPicker::EEUnitPicker(unsigned long inCapacity)
 {
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mLock) == keseOK, 340);
-    this->mCapacity = inCapacity;
-    this->mEntries = new EEUnitPickerEntry[inCapacity];
-    this->mCount = 0;
-    this->mOrthographic = false;
-    this->mShowHiddenUnits = 0;
+    ee_gamecpp_pz_construct(this, inCapacity);   // (its lock's ESVERIFY: EEPickOps::Op, line 340)
 }
 
 // Destroys the picker, releasing its units and entries and its lock
 EEUnitPicker::~EEUnitPicker()
 {
-    this->Clear();
-    if (this->mEntries)
-        delete[] this->mEntries;
-    TSScheduler::DestroyCriticalSection(this->mLock);
+    ee_gamecpp_pz_destroy(this);
 }
 
 // The picker's bodies: gamecpp picker.rs (EEPickOps::Op's cases below)
@@ -122,43 +114,12 @@ struct EEPickOps {
     static double OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 };
 
-// PickUnit's search, under mLock (port: split from PickUnit, R5a.3; ee_gfx pick_walk.rs)
-EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
-{
-    EeGfxPickHost theHost;
-    ee_gamecpp_picker_host(this, &theHost);
-    EeGfxPickView theView = {*reinterpret_cast<const EeGeViewport*>(&this->mViewport), this->mOrthographic,
-                             this->mShowHiddenUnits != 0, gFreeCamera, (uint32_t)gGameWindowWidth};
-    return static_cast<EEUnit*>(ee_gfx_pick_find_unit(&theHost, GEPhysicalModelTable(),
-                                                      reinterpret_cast<EeGfxPickEntry*>(this->mEntries),
-                                                      (uint32_t)this->mCount, &theView,
-                                                      reinterpret_cast<const EeGe2DPoint*>(&inPoint),
-                                                      inPreferResources != 0));
-}
-
-// The box selections' walk (ee_gfx pick_walk.rs) under mLock: the frustum of inRectangle's planes, then the entries
-void EEUnitPicker::PickBox(const GERectangle& inRectangle, bool inAll, EEPlayer* inPlayer, long inType,
-                           std::vector<unsigned long>& outUnitIDs)
-{
-    std::vector<GE3DPlane> thePlanes;
-    EeGfxPickHost theHost;
-    ee_gamecpp_picker_host(this, &theHost);
-    this->mLock->Enter();
-    outUnitIDs.clear();
-    if (this->mCount > 0)
-        this->mViewport.GetFrustrumWorldPlanes(inRectangle, thePlanes, gOrthographicView);
-    ee_gfx_pick_box(&theHost, GEPhysicalModelTable(), reinterpret_cast<EeGfxPickEntry*>(this->mEntries),
-                    (uint32_t)this->mCount, this->mCount > 0 ? reinterpret_cast<const EeGe3DPlane*>(thePlanes.data()) : NULL,
-                    inAll, inPlayer, (uint32_t)inType, &outUnitIDs);
-    this->mLock->Leave();
-}
-
 // Returns the ids of the pickable units of a type (citizens of either sex for the citizen types) inside
 // a screen rectangle, a part's carrier instead
 void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inType,
                                         std::vector<unsigned long>& outUnitIDs)
 {
-    this->PickBox(inRectangle, true, NULL, inType, outUnitIDs);
+    ee_gamecpp_pz_box(this, &inRectangle, true, NULL, inType, &outUnitIDs);
 }
 
 // Returns the ids of a player's units of a type inside a screen rectangle (male and female citizens for
@@ -166,7 +127,7 @@ void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inT
 void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
                              std::vector<unsigned long>& outUnitIDs)
 {
-    this->PickBox(inRectangle, false, inPlayer, inType, outUnitIDs);
+    ee_gamecpp_pz_box(this, &inRectangle, false, inPlayer, inType, &outUnitIDs);
 }
 
 // (ReferenceCarriers 0x519faa: gone with the references, R5a.3)
@@ -203,7 +164,6 @@ int64_t EEPickOps::Op(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::PkUnlock: PK->mLock->Leave();
         break;
-    case O::PkFindUnit: return PK_P64(PK->FindUnit(*(const GE2DPoint*)a[0], (long)a[1]));
     case O::PkEntrySetId: PK_ENTRY->mUnitID = (unsigned long)a[0];
         break;
     case O::PkEntryAssignPhysical: (GEPhysicalModel&)*PK_ENTRY = ((EEComplexUnit*)a[0])->mPhysicalModel;
@@ -236,6 +196,35 @@ int64_t EEPickOps::Op(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::PkRastFogOff: gRasterizer->SetFog(0, gScreenIndex);
         break;
     case O::PkMainCameraInverse: return PK_P64(&gU4E8F08.GetCameraInverse());
+    // round 11, lane A: FindUnit, PickBox, the constructor and destructor (gamecpp picker.rs)
+    case O::PzViewport: return PK_P64(&PK->mViewport);
+    case O::PzOrthographic: return PK->mOrthographic;
+    case O::PzShowHidden: return PK->mShowHiddenUnits != 0;
+    case O::PzWindowWidth: return (uint32_t)gGameWindowWidth;
+    case O::PzModelTable: return PK_P64(GEPhysicalModelTable());
+    case O::PzEntries: return PK_P64(PK->mEntries);
+    case O::PzPlanesNew: return PK_P64(new std::vector<GE3DPlane>);
+    case O::PzPlanesDelete: delete (std::vector<GE3DPlane>*)p;
+        break;
+    case O::PzPlanesData: return PK_P64(((std::vector<GE3DPlane>*)p)->data());
+    case O::PzIdsClear: ((std::vector<unsigned long>*)p)->clear();
+        break;
+    case O::PzFrustumPlanes: PK->mViewport.GetFrustrumWorldPlanes(*(const GERectangle*)a[0], *(std::vector<GE3DPlane>*)a[1], gOrthographicView);
+        break;
+    case O::PzCreateLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(PK->mLock) == keseOK, 340);
+        break;
+    case O::PzDestroyLock: TSScheduler::DestroyCriticalSection(PK->mLock);
+        break;
+    case O::PzSetCapacity: PK->mCapacity = (unsigned long)a[0];
+        break;
+    case O::PzNewEntries: PK->mEntries = new EEUnitPickerEntry[a[0]];
+        break;
+    case O::PzDeleteEntries: delete[] PK->mEntries;
+        break;
+    case O::PzSetOrthographic: PK->mOrthographic = a[0] != 0;
+        break;
+    case O::PzSetShowHidden: PK->mShowHiddenUnits = (long)a[0];
+        break;
     default: return EECore9OpB(inOp, p, a, f);
     }
     return 0;
@@ -256,8 +245,8 @@ double EEPickOps::OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
 int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
-// the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 11 lane A section): one
-// statement each
+// the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 11 lane A section) are cases of
+// this unit's EEPickOps::Op, EEEffectHost.cpp's EECore9OpB, EEMap.cpp's EECore9OpB2 and EEROUnits.cpp's EERoUnitsOp
 int64_t EECore11OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     return EECore11OpB(inOp, p, a, f);
