@@ -1217,29 +1217,6 @@ static EeUnitsComplexDumpIn sCuDumpIn;
 static GE3DPoint sCuDumpLocation;
 static UWideString sCuText;
 
-// the out-of-sync dump's input record from the unit (the record's lines: ee_units unit_bulk.rs dump)
-static void EECuDumpFill(EEComplexUnit* inUnit)
-{
-    EeUnitsComplexDumpIn& theIn = sCuDumpIn;
-    theIn.player_id = inUnit->mPlayer->mPlayerID;
-    theIn.tile_x = inUnit->GetTileX();
-    theIn.tile_y = inUnit->GetTileY();
-    theIn.angular_velocity[0] = inUnit->mAngularVelocity.GetYaw();
-    theIn.angular_velocity[1] = inUnit->mAngularVelocity.GetPitch();
-    theIn.angular_velocity[2] = inUnit->mAngularVelocity.GetRoll();
-    theIn.build_queue = inUnit->mBuildQueue.size();
-    theIn.citizen_build_queue = inUnit->mCitizenBuildQueue.size();
-    theIn.collision_tile[0] = inUnit->mCollisionTile.mX;
-    theIn.collision_tile[1] = inUnit->mCollisionTile.GetY();
-    theIn.frame = inUnit->mPhysicalModel.GetFrame();
-    theIn.projectile_start[0] = inUnit->mProjectileStart.GetX();
-    theIn.projectile_start[1] = inUnit->mProjectileStart.GetY();
-    theIn.projectile_start[2] = inUnit->mProjectileStart.GetZ();
-    for (unsigned long r = 0; r < 4; r++)
-        for (unsigned long c = 0; c < 4; c++)
-            theIn.location[r][c] = inUnit->mPhysicalModel.GetLocation().GetElement(r, c);
-}
-
 // cu_world.rs's scratch values: CanReachTile's destination, attach point, position and pitch, MoveToLocation's
 // waypoint point, ApplyAreaEffects' location, ReleaseConversionEffect's handle (the originals' locals)
 static GE3DPoint sCuDestination;
@@ -1804,7 +1781,15 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CIRCLES:
         return theUnit->GetUnitClass()->mCategory == kUnitCategoryAirplane || theUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
     // cu_dump.rs's
-    case EE_UNITS_CU_DUMP_FILL: EECuDumpFill(theUnit); return 0;
+    case EE_UNITS_CU_DUMP_IN: return (int64_t)(uintptr_t)&sCuDumpIn;
+    case EE_UNITS_CU_DUMP_PLAYER_ID: return (int64_t)theUnit->mPlayer->mPlayerID;
+    case EE_UNITS_CU_DUMP_TILE: return inB == 0 ? theUnit->GetTileX() : theUnit->GetTileY();
+    case EE_UNITS_CU_DUMP_ANGULAR_VELOCITY: f[0] = inB == 0 ? theUnit->mAngularVelocity.GetYaw() : inB == 1 ? theUnit->mAngularVelocity.GetPitch() : theUnit->mAngularVelocity.GetRoll(); return 0;
+    case EE_UNITS_CU_DUMP_QUEUE_SIZE: return (int64_t)(inB == 0 ? theUnit->mBuildQueue.size() : theUnit->mCitizenBuildQueue.size());
+    case EE_UNITS_CU_DUMP_COLLISION_TILE: return inB == 0 ? theUnit->mCollisionTile.mX : theUnit->mCollisionTile.GetY();
+    case EE_UNITS_CU_DUMP_FRAME: return (int64_t)theUnit->mPhysicalModel.GetFrame();
+    case EE_UNITS_CU_DUMP_PROJECTILE_START: f[0] = inB == 0 ? theUnit->mProjectileStart.GetX() : inB == 1 ? theUnit->mProjectileStart.GetY() : theUnit->mProjectileStart.GetZ(); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION_ELEMENT: f[0] = theUnit->mPhysicalModel.GetLocation().GetElement((unsigned long)inB, (unsigned long)inC); return 0;
     case EE_UNITS_CU_DUMP_PART:
         ee_units_complex_dump((uint32_t)inB, theUnit, theUnit, theUnit, theUnit->GetUnitClass(), theUnit->GetStats(), &sCuDumpIn, &EEDumpWrite, theFile);
         return 0;

@@ -2323,8 +2323,32 @@ constexpr static const int32_t EE_UNITS_CU_DO_ADD_BUILD_TARGET = 36;
 
 constexpr static const int32_t EE_UNITS_CU_DO_ADD_CONTACT = 37;
 
-/// the dump's input record filled from the unit (its tile, physics and queues; `EECuDumpIn`)
-constexpr static const int32_t EE_UNITS_CU_DUMP_FILL = 900;
+/// `&sCuDumpIn`
+constexpr static const int32_t EE_UNITS_CU_DUMP_IN = 4041;
+
+/// `mPlayer->mPlayerID`
+constexpr static const int32_t EE_UNITS_CU_DUMP_PLAYER_ID = 4042;
+
+/// `GetTileX()`, `GetTileY()` (`b` 0, 1)
+constexpr static const int32_t EE_UNITS_CU_DUMP_TILE = 4043;
+
+/// `mAngularVelocity`'s `GetYaw()`, `GetPitch()`, `GetRoll()` (`b` 0, 1, 2) into `f[0]`
+constexpr static const int32_t EE_UNITS_CU_DUMP_ANGULAR_VELOCITY = 4044;
+
+/// `mBuildQueue.size()`, `mCitizenBuildQueue.size()` (`b` 0, 1)
+constexpr static const int32_t EE_UNITS_CU_DUMP_QUEUE_SIZE = 4045;
+
+/// `mCollisionTile.mX`, `.GetY()` (`b` 0, 1)
+constexpr static const int32_t EE_UNITS_CU_DUMP_COLLISION_TILE = 4046;
+
+/// `mPhysicalModel.GetFrame()`
+constexpr static const int32_t EE_UNITS_CU_DUMP_FRAME = 4047;
+
+/// `mProjectileStart`'s `GetX()`, `GetY()`, `GetZ()` (`b` 0, 1, 2) into `f[0]`
+constexpr static const int32_t EE_UNITS_CU_DUMP_PROJECTILE_START = 4048;
+
+/// `mPhysicalModel.GetLocation().GetElement(b, c)` into `f[0]`
+constexpr static const int32_t EE_UNITS_CU_DUMP_LOCATION_ELEMENT = 4049;
 
 /// `ee_units_complex_dump(b, this, this, this, GetUnitClass(), GetStats(), the input, EEDumpWrite, (FILE*)a)`
 constexpr static const int32_t EE_UNITS_CU_DUMP_PART = 901;
