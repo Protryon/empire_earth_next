@@ -43,12 +43,7 @@ public:
                                       Text(&gStartupVolume), Text(&gStartupDirectory));
     }
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
-    {
-        std::vector<const EeFsString*> theNames;
-        for (unsigned long i = 0; i < inFiles.size(); i++)
-            theNames.push_back(Text(&inFiles[i]));
-        return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), theNames.data(), theNames.size(), inCompression);
-    }
+        { return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), Text(inFiles.data()), inFiles.size(), inCompression); }
     // every archived file below a destination directory, creating directories as needed
     long ExtractAll(const FSFileSpec& inDestination)
     {

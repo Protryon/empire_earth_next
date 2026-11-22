@@ -236,10 +236,11 @@ long ee_fs_arch_create_walk(EeFsArchiveObj *a,
 /// `Create(root, files, level)`: the archive built from the listed files under the root.
 ///
 /// # Safety
-/// `a` is a live record, `root` a live spec, `files` `count` live `UString` records.
+/// `a` is a live record, `root` a live spec, `files` an array of `count` live `UString`s (a `std::vector<UString>`'s
+/// data: a `UString` is an [`EeFsString`]).
 long ee_fs_arch_create_list(EeFsArchiveObj *a,
                             const EeFsSpec *root,
-                            const EeFsString *const *files,
+                            const EeFsString *files,
                             size_t count,
                             unsigned long level);
 
@@ -439,11 +440,11 @@ void ee_fs_chunk_init(EeFsChunk *chunk);
 /// `chunk` is valid; its `data` is null or live and not used again.
 void ee_fs_chunk_free(EeFsChunk *chunk);
 
-/// `GetChunkSize`.
+/// `GetChunkSize`: the size into `out_size` (untouched when the header is not loaded).
 ///
 /// # Safety
 /// `chunk` and `out_size` are valid.
-bool ee_fs_chunk_size(const EeFsChunk *chunk, uint32_t *out_size);
+bool ee_fs_chunk_size(const EeFsChunk *chunk, unsigned long *out_size);
 
 /// `LoadChunkHeader`.
 ///

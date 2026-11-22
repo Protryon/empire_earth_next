@@ -344,17 +344,17 @@ pub unsafe extern "C" fn ee_fs_chunk_free(chunk: *mut EeFsChunk) {
     unsafe { (*chunk).free() };
 }
 
-/// `GetChunkSize`.
+/// `GetChunkSize`: the size into `out_size` (untouched when the header is not loaded).
 ///
 /// # Safety
 /// `chunk` and `out_size` are valid.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_size(chunk: *const EeFsChunk, out_size: *mut u32) -> bool {
+pub unsafe extern "C" fn ee_fs_chunk_size(chunk: *const EeFsChunk, out_size: *mut c_ulong) -> bool {
     // SAFETY: the function's contract
     match unsafe { (*chunk).size() } {
         Some(size) => {
             // SAFETY: as above
-            unsafe { *out_size = size };
+            unsafe { *out_size = size as c_ulong };
             true
         }
         None => false,
