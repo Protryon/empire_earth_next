@@ -23,20 +23,15 @@ struct EeCpPlacement;                       // the Rust data (rust/sim/cp.h)
 // class-0x2d8 site (provisional name)
 bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer);
 
-class EECPPlacement {
-public:
-    EECPPlacement(EEComputerPlayer* inPlayer);
-    ~EECPPlacement();
-    static const UString sData;             // "EECPBuildManager-Data" (the original's key)
-    long Load(FSFile& inFile);              // the town centre tile
-    long Save(FSFile& outFile);
-
+// The placement's record (ee_sim::cp player_game.rs EeCpPlacementObj: Rust makes it at Init and frees it with the
+// player; the town tile's Load and Save are Rust's too)
+struct EECPPlacement {
     U2DPoint<long> mTownCenterTile;         // (-10000: none)
-    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;
     EeCpPlacement* mRust;                   // the dock and space site tiles (CollectSiteTiles(2), (4)), whether they
                                             // were collected, UnitAdded's classes (not saved)
 };
+static_assert(sizeof(EECPPlacement) == 2 * sizeof(long) + 2 * sizeof(void*), "ee_sim::cp EeCpPlacementObj");
 
 // (the epoch's classes, the original civilization manager's GetAntiAirClass .. GetWallClass: ee_sim::cp placement.rs)
 

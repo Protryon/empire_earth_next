@@ -372,18 +372,14 @@ fn a_leaving_herd_is_gone_once_every_unit_is_off_the_map() {
 fn the_random_point_falls_back_to_the_area_after_sixteen_tries() {
     let mut tries = 0;
     let p = random_area_point(|op, _| {
-        let mut io = EeHerdIo::default();
+        let io = EeHerdIo::default();
         let r = match op {
             EE_CP_HERD_HAS_MAP => 1,
             EE_CP_HERD_MAP_TILE_AT => {
                 tries += 1;
                 0
             }
-            EE_CP_HERD_BASE_POINT => {
-                io.v[0] = 5;
-                io.v[1] = 6;
-                0
-            }
+            EE_CP_HERD_BASE_POINT => (5 << 32) | 6,
             _ => 0,
         };
         (r, io)

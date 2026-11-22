@@ -7,7 +7,6 @@
 
 #![allow(clippy::not_unsafe_ptr_arg_deref, clippy::missing_safety_doc)]
 
-use std::collections::BTreeMap;
 use std::ffi::{c_char, c_long, c_ulong, c_void, CStr, CString};
 use std::io::Write;
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -15,7 +14,7 @@ use std::sync::Mutex;
 
 use ee_data::content::text_extension;
 use ee_data::ffi::{
-    ee_data_bytes_free, ee_data_compile, ee_data_content_new, ee_data_dump_table, ee_data_ids, ee_data_rules_dump,
+    ee_data_bytes_free, ee_data_compile, ee_data_content_new, ee_data_dump_table, ee_data_rules_dump,
     ee_data_rules_load, ee_data_sink_write, EeDataBytes, EeDataContent, EeDataRules, EeDataSink,
 };
 
@@ -29,10 +28,6 @@ const DX_FAILED: c_long = 9;
 static TEXT_PATH: Mutex<(P, Vec<u8>)> = Mutex::new((0, Vec::new()));
 /// The one compiler content of every table (made on first use, never freed: the C++'s function static).
 static CONTENT: AtomicPtr<EeDataContent> = AtomicPtr::new(std::ptr::null_mut());
-/// The row ids of the tables loaded from text, by table (EEDbRowIds).
-/// One table's row ids by key.
-type DxRowIds = BTreeMap<c_long, Vec<u8>>;
-static ROW_IDS: Mutex<BTreeMap<Vec<u8>, DxRowIds>> = Mutex::new(BTreeMap::new());
 
 /// Bytes the ee_data C interface returned, taken (and freed).
 fn take(bytes: &mut EeDataBytes) -> Vec<u8> {
@@ -187,13 +182,6 @@ fn split_name(name: &[u8]) -> (Vec<u8>, Vec<u8>) {
     (directory, stem)
 }
 
-unsafe extern "C" fn visit_id(ctx: *mut c_void, key: i32, id: *const u8, len: usize) {
-    // SAFETY: the map this call's caller passed, and the id's bytes
-    unsafe {
-        (*(ctx as *mut BTreeMap<c_long, Vec<u8>>)).insert(key as c_long, std::slice::from_raw_parts(id, len).to_vec())
-    };
-}
-
 /// EEDbFindFile: the table's text form compiled and served as a new memory file (kErrorOK), or the game stopped.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_db_find_file(path: *mut c_void, name: *const c_char, out: *mut *mut c_void) -> c_long {
@@ -229,36 +217,13 @@ pub extern "C" fn ee_gamecpp_db_find_file(path: *mut c_void, name: *const c_char
         return failed(&m, out);
     }
     let data = take(&mut data);
-    if stem == b"dbobjects" || stem == b"dbtechtree" {
-        // the ids the computer player's scripts name
-        let mut ids = BTreeMap::new();
-        let mut ignored = EeDataBytes::empty();
-        // SAFETY: as above; the map outlives the call
-        unsafe { ee_data_ids(content(), table.as_ptr(), visit_id, &mut ids as *mut _ as *mut c_void, &mut ignored) };
-        take(&mut ignored);
-        ROW_IDS.lock().unwrap().insert(stem.clone(), ids);
-    }
+    // the ids the computer players' scripts name (dbobjects, dbtechtree; the other tables: nothing)
+    // SAFETY: the content is live, the name NUL-terminated
+    unsafe { ee_sim::ai::names_db::ee_ai_names_capture(content() as *mut c_void, table.as_ptr()) };
     dump_content(&stem, &data);
     // SAFETY: the caller's out pointer
     unsafe { *out = hp(O::DxMemoryFile, 0, &[data.as_ptr() as usize as i64, data.len() as i64]) };
     DX_OK as c_long
-}
-
-/// EEDbRowIds: the row ids of dbobjects or dbtechtree by key as the last load read them; false and empty before.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_db_row_ids(table: *const c_char, ids: *mut c_void) -> bool {
-    // SAFETY: the caller's NUL-terminated table name
-    let table = unsafe { CStr::from_ptr(table) }.to_bytes();
-    let map = ids as P;
-    h(O::DxIdsClear, map, &[]);
-    let all = ROW_IDS.lock().unwrap();
-    let Some(rows) = all.get(table) else {
-        return false;
-    };
-    for (key, id) in rows {
-        h(O::DxIdsInsert, map, &[*key as i64, id.as_ptr() as usize as i64, id.len() as i64]);
-    }
-    !rows.is_empty()
 }
 
 fn rules() -> *mut EeDataRules {

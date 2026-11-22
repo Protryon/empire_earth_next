@@ -91,7 +91,7 @@
 #include "rust/sim/units.h"   // ee_units_store_checksum_flag1
 #include <functional>
 #include "ee/EEGameLog.h"
-#include "ee/EECPNext.h"
+#include "rust/sim/ai.h"   // ee_ai_name_copy
 #include "rust/game/physics.h"
 #include "rust/sim/app.h"
 // chain at 0x551c28 (wrapper)
@@ -260,10 +260,7 @@ extern "C" size_t ee_units_order_log_host(uint8_t inOp, int64_t inKey, uint8_t* 
         EEGameLogLine((const char*)ioText);
         return 0;
     }
-    std::string theName = inOp != 0 ? EECPNextTechName((long)inKey) : EECPNextClassName((long)inKey);
-    size_t theLength = theName.size() < inCapacity ? theName.size() : inCapacity;
-    memcpy(ioText, theName.data(), theLength);
-    return theLength;
+    return ee_ai_name_copy(inOp, inKey, ioText, inCapacity);   // ee_ai names_db.rs
 }
 
 // The just-in-time manufacturing chat line (Tick's resource timer)

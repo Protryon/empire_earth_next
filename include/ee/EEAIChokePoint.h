@@ -14,36 +14,12 @@ public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
     static EEAIChokePoint* New() { return (EEAIChokePoint*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::ChokePoints); }
     static void Delete(EEAIChokePoint* inObject) { ee_astar_object_delete(EeAStarCmTable::ChokePoints, (uint64_t)(uintptr_t)inObject); }
-    // 0x1c75a: appended to the area serials
-    void AddAreaSerials(const std::vector<unsigned long>& inSerials)
-        { ee_astar_choke_add_area_serials(this, inSerials.empty() ? NULL : &inSerials[0], inSerials.size(), false); }
     EeAStarChokeRecord* Record() { return this; }
     const EeAStarChokeRecord* Record() const { return this; }
-    EEAIListView<unsigned long> GetAreaSerials() const
-    {
-        size_t theCount;
-        const unsigned long* theSerials = ee_astar_choke_area_serials(this, &theCount);
-        return EEAIListView<unsigned long>(theSerials, theCount);
-    }
     long GetIndex() const { return this->index; }
     void SetIndex(long inIndex) { this->index = inIndex; }
     unsigned short GetContinentID() const { return this->continent_id; }
     void SetContinentID(unsigned short inID) { this->continent_id = inID; }
-    // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
-    template <class W> void WriteFields(W& ioWriter) const
-    {
-        ioWriter.ULongs(std::vector<unsigned long>(this->GetAreaSerials()));
-        ioWriter.I32(this->index);
-        ioWriter.U16(this->continent_id);
-    }
-    template <class R> bool ReadFields(R& ioReader)
-    {
-        std::vector<unsigned long> theSerials;
-        if (!ioReader.ULongs(theSerials))
-            return false;
-        ee_astar_choke_add_area_serials(this, theSerials.empty() ? NULL : &theSerials[0], theSerials.size(), true);
-        return ioReader.I32(this->index) && ioReader.U16(this->continent_id);
-    }
 
 private:
     EEAIChokePoint();

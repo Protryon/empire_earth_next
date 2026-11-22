@@ -67,7 +67,6 @@ template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
 
 int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
 {
-    EEMap* theMap = gWorld.mMap;
     switch (inOp) {
     case EE_ASTAR_CM_TOWN_ID:
         return ((EETown*)(uintptr_t)io->h[0])->mTownID;
@@ -81,22 +80,15 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
         return 0;
     case EE_ASTAR_CM_REGION_SIZE: return gEEAIRegionSize;
     case EE_ASTAR_CM_SET_REGION_SIZE: gEEAIRegionSize = (long)io->i[0]; return 0;
-    case EE_ASTAR_CM_SET_AI_VALUE: {
-        EETile* theTile = theMap != NULL ? theMap->GetTile((long)io->i[0], (long)io->i[1]) : NULL;
-        if (theTile != NULL)
-            theTile->mAIValue = (signed char)io->i[2];
-        return 0;
-    }
     case EE_ASTAR_CM_RANDOM: return EEGetRandomInt(0, (long)io->i[0], *(URandom*)(uintptr_t)io->h[0]);
     case EE_ASTAR_CM_RANDOM_RANGE: return gPhysics->GetRandom((long)io->i[0], (long)io->i[1]);
+    case EE_ASTAR_CM_PHYSICS_RANDOM: return (int64_t)(uintptr_t)&gPhysics->mRandom;
     case EE_ASTAR_CM_REGROW_UNIT: return (int64_t)(uintptr_t)static_cast<RTSUnit*>(gUnitClassTable[kUnitTypeResEagle]->CreateUnit((long)io->i[0], (long)io->i[1], 0, false, NULL)->mComplexUnit);
     case EE_ASTAR_CM_SET_REGROWING: ((EEComplexUnit*)(uintptr_t)io->h[0])->mIsRegrowing = true;
         return 0;
-    case EE_ASTAR_CM_AREA_CREATE: {   // a herd's (the other kinds' are Rust's: cm_host.rs)
-        const U2DPoint<long>* thePoints = (const U2DPoint<long>*)(uintptr_t)io->h[1];
-        ((EEAIArea*)(uintptr_t)io->h[0])->Create(std::vector<U2DPoint<long> >(thePoints, thePoints + io->i[0]));
+    case EE_ASTAR_CM_AREA_CREATE:   // a herd's (the other kinds' are Rust's: cm_host.rs)
+        ((EEAIArea*)(uintptr_t)io->h[0])->Create(std::vector<U2DPoint<long> >((const U2DPoint<long>*)(uintptr_t)io->h[1], (const U2DPoint<long>*)(uintptr_t)io->h[1] + io->i[0]));
         return 0;
-    }
     }
     return 0;
 }
@@ -136,13 +128,14 @@ void EEAIRegisterContinentState()
     ee_astar_world_view_set_manager(&gContinentManager.mRecord);   // the A* view's (world_view.rs)
 }
 
+static void EEAssignBytes(void* inList, const uint8_t* inData, size_t inCount)
+{
+    static_cast<std::vector<unsigned char>*>(inList)->assign(inData, inData + inCount);
+}
+
 void EEWriteAreaBytes(const EEAIArea& inArea, std::vector<unsigned char>& outBytes)
 {
-    EeAStarCmBytes* theBytes = ee_astar_cm_area_bytes((uint64_t)(uintptr_t)&inArea);
-    size_t theCount;
-    const uint8_t* theData = ee_astar_cm_bytes_data(theBytes, &theCount);
-    outBytes.assign(theData, theData + theCount);
-    ee_astar_cm_bytes_free(theBytes);
+    ee_astar_cm_area_bytes_into((uint64_t)(uintptr_t)&inArea, &outBytes, EEAssignBytes);
 }
 
 bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outArea)

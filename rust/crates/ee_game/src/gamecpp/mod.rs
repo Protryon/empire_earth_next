@@ -3063,8 +3063,6 @@ pub enum EeGameCpp {
     DxMessage,
     DxVerify,
     DxMemoryFile,
-    DxIdsClear,
-    DxIdsInsert,
     DxRulesHandle,
     DxRulesRefresh,
     TbNewData,

@@ -31,17 +31,11 @@ void EECPNewGame()
     ee_ai_new_game();
 }
 
-// EE_AI_TRACE, and the TEST ONLY switches (EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS, EE_AI_EXP): Rust's
-// (ee_ai personality.rs, switches.rs), read once
-void EECPTraceInit()
-{
-    ee_ai_trace_init(&gCPTraceOn, &gCPTraceHashOn);
-}
-
-// the Rust accessors' first read, and the lobby's difficulty (ee_ai personality.rs)
+// the Rust accessors' first read (EE_AI_TRACE, and the TEST ONLY switches EE_AI_PERSONALITY, EE_AI_DEMAND,
+// EE_AI_CHEATS, EE_AI_EXP: ee_ai personality.rs, switches.rs, read once), and the lobby's difficulty
 extern "C" void ee_ai_host_trace_init()
 {
-    EECPTraceInit();
+    ee_ai_trace_init(&gCPTraceOn, &gCPTraceHashOn);
 }
 
 extern "C" uint32_t ee_ai_host_difficulty()
@@ -79,16 +73,6 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
 // ---------------------------------------------------------------------------------------------------------------
 // The trace lines beyond the decisions, the out-of-synch checksum and its dump: Rust's (ee_ai next_trace.rs)
 
-void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
-{
-    ee_ai_trace_stats(inPlayer, inTime);
-}
-
-void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long long inMicroseconds)
-{
-    ee_ai_trace_profile(inPlayer->mPlayerID, inTime, (int64_t)inMicroseconds);
-}
-
 void EECPOutOfSynchDump(FILE* inFile)
 {
     std::string theText;
@@ -99,9 +83,4 @@ void EECPOutOfSynchDump(FILE* inFile)
 unsigned long EECPOutOfSynchChecksum()
 {
     return ee_ai_out_of_synch_checksum();
-}
-
-void EECPTraceHash(unsigned long inTime)
-{
-    ee_ai_trace_hash(inTime);
 }

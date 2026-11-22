@@ -38,26 +38,10 @@ public:
 
     EeAStarSectorRecord* Record() { return this; }
     const EeAStarSectorRecord* Record() const { return this; }
-    EEAIListView<EeAStarSectorSub> GetSubSectors() const
-    {
-        size_t theCount;
-        const EeAStarSectorSub* theSubs = ee_astar_sector_subs(this, &theCount);
-        return EEAIListView<EeAStarSectorSub>(theSubs, theCount);
-    }
-    void InsertSubSector(unsigned short inID, EEAIPathSubSector* inSubSector)
-        { ee_astar_sector_insert_sub(this, inID, (uint64_t)(uintptr_t)inSubSector); }
     EEAIHandleView<EEAIContinent> GetNeighbors() const
-    {
-        size_t theCount;
-        const uint64_t* theNeighbors = ee_astar_sector_neighbors(this, &theCount);
-        return EEAIHandleView<EEAIContinent>(theNeighbors, theCount);
-    }
+        { return EEAIHandleView<EEAIContinent>(ee_astar_sector_neighbors, static_cast<const EeAStarSectorRecord*>(this)); }
     EEAIListView<unsigned short> GetPathAreaIDs() const
-    {
-        size_t theCount;
-        const uint16_t* theIDs = ee_astar_sector_path_area_ids(this, &theCount);
-        return EEAIListView<unsigned short>(theIDs, theCount);
-    }
+        { return EEAIListView<unsigned short>(ee_astar_sector_path_area_ids, static_cast<const EeAStarSectorRecord*>(this)); }
     const U2DRectangle<long>& GetBounds() const { return reinterpret_cast<const U2DRectangle<long>&>(this->bounds); }
     void SetBounds(const U2DRectangle<long>& inBounds) { reinterpret_cast<U2DRectangle<long>&>(this->bounds) = inBounds; }
     const U2DPoint<long>& GetCenter() const { return reinterpret_cast<const U2DPoint<long>&>(this->center); }

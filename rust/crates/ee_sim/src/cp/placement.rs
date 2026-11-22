@@ -1701,3 +1701,15 @@ pub fn placement_digest(p: &EeCpPlacement) -> [u32; 8] {
     out[7] = p.types_seen.len() as u32;
     out
 }
+
+/// `EECPPlacement` (ee/EECPPlacement.h, a view of this record; the original's build manager, of which only the town
+/// centre tile, the player and the Rust placement are left): made by `Init`, freed by the destructor.
+#[repr(C)]
+pub struct EeCpPlacementObj {
+    /// `mTownCenterTile` (-10000, -10000: none)
+    pub town: [std::os::raw::c_long; 2],
+    /// `mPlayer` (the `EEComputerPlayer*`)
+    pub player: *mut std::ffi::c_void,
+    /// `mRust`: the site tiles and the classes seen (place_game.rs)
+    pub rust: *mut EeCpPlacement,
+}

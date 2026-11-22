@@ -47,15 +47,11 @@ static void* EEHerdSelf(EEHerd* inHerd)
 
 EEHerd::EEHerd()
 {
-    ee_cp_herd_init(this);
-    this->SetAreaType(kAIAreaHerd);
     ee_cp_herd_construct_default(EEHerdSelf(this), this);
 }
 
 EEHerd::EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID)
 {
-    ee_cp_herd_init(this);
-    this->SetAreaType(kAIAreaHerd);
     ee_cp_herd_construct(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inPlayer, inAnimal, inID);
 }
 
@@ -107,11 +103,15 @@ void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
     ee_cp_herd_create(EEHerdSelf(this), this, reinterpret_cast<const EeHerdPoint*>(inTiles.data()), inTiles.size());
 }
 
+// a Rust point as the U2DPoint it is
+static U2DPoint<long> EEHerdPointOf(const EeHerdPoint& inPoint)
+{
+    return U2DPoint<long>(inPoint.mX, inPoint.mY);
+}
+
 U2DPoint<long> EEHerd::GetRandomPoint()
 {
-    EeHerdPoint thePoint;
-    ee_cp_herd_random_point(EEHerdSelf(this), this, &thePoint);
-    return U2DPoint<long>(thePoint.mX, thePoint.mY);
+    return EEHerdPointOf(ee_cp_herd_random_point(EEHerdSelf(this), this));
 }
 
 // Returns whether a unit is a placed animal or fish of a known animal type
@@ -162,6 +162,12 @@ static uint64_t EEHerdHandle(const void* inObject)
     return (uint64_t)(uintptr_t)inObject;
 }
 
+// a point as one word (x high, y low; ee_sim::cp town_world.rs unpack)
+static int64_t EEHerdPack(const U2DPoint<long>& inPoint)
+{
+    return (int64_t)(((uint64_t)(uint32_t)inPoint.mX << 32) | (uint32_t)inPoint.mY);
+}
+
 static uint32_t EEHerdBits(float inValue)
 {
     uint32_t theBits;
@@ -178,12 +184,8 @@ extern "C" int64_t ee_cp_area_host(void* inArea, int32_t inOp, EeHerdIo* io)
     switch (inOp) {
     case EE_CP_HERD_RANDOM_LONG:
         return gPhysics->GetRandom((long)v[0], (long)v[1]);
-    case EE_CP_HERD_BASE_POINT: {
-        U2DPoint<long> thePoint = me->AreaRandomPoint();
-        io->v[0] = thePoint.mX;
-        io->v[1] = thePoint.mY;
-        return 0;
-    }
+    case EE_CP_HERD_BASE_POINT:
+        return EEHerdPack(me->AreaRandomPoint());
     case EE_CP_HERD_MAP_TILE_AT:
         return gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1])) != NULL ? 1 : 0;
     }
@@ -217,12 +219,8 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         return 0;
     case EE_CP_HERD_GENERATE: io->f[0] = gPhysics->mRandom.Generate();
         return 0;
-    case EE_CP_HERD_AREA_POINT: {
-        U2DPoint<long> thePoint = reinterpret_cast<EEAIArea*>((uintptr_t)inA)->GetRandomPoint();
-        io->v[0] = thePoint.mX;
-        io->v[1] = thePoint.mY;
-        return 0;
-    }
+    case EE_CP_HERD_AREA_POINT:
+        return EEHerdPack(reinterpret_cast<EEAIArea*>((uintptr_t)inA)->GetRandomPoint());
     case EE_CP_HERD_MAP_EDGE:
         return (int64_t)EEHerdHandle(gContinentManager.GetRandomContinent(kContinentCategoryMapEdge, gPhysics->mRandom));
     case EE_CP_HERD_UNIT_WAYPOINTS:

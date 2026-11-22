@@ -39,11 +39,6 @@ static_assert(sizeof(EECPBehavior) == kEEDTSize_EECPBehavior, "dbcpbehavior reco
 static_assert(sizeof(EETechTreeRecord) == kEEDTSize_EETechTreeRecord, "dbtechtree record layout");
 static_assert(sizeof(EEUnitClassRecord) == kEEDTSize_EEUnitClassRecord, "dbobjects record layout");
 
-bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds)
-{
-    return ee_gamecpp_db_row_ids(inTable, &outIds);
-}
-
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
 {
     return ee_gamecpp_db_find_file(inPath, (const char*)inName, (void**)&outFile);
@@ -65,7 +60,6 @@ int64_t EECore10OpB6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define XSPEC ((FSFileSpec*)p)
-#define XIDS (*(std::map<long, std::string>*)p)
 
 // the text tables' C++ calls (gamecpp db_text.rs; p the path, the file or the id map): one statement each
 int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
@@ -84,10 +78,6 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DxVerify: ESVerify(__FILE__, __LINE__, (const char*)a[0]);
         break;
     case O::DxMemoryFile: return P64(static_cast<FSFileSpec*>(new FSMemoryFile((unsigned char*)memcpy(new unsigned char[a[1] != 0 ? a[1] : 1], (const void*)a[0], (size_t)a[1]), (unsigned long)a[1], 1000, true)));
-    case O::DxIdsClear: XIDS.clear();
-        break;
-    case O::DxIdsInsert: XIDS[(long)a[0]] = std::string((const char*)a[1], (size_t)a[2]);
-        break;
     case O::DxRulesHandle: return P64(const_cast<EeDataRules*>(EEGetRules().RustRules()));
     case O::DxRulesRefresh: EEGetRules().Refresh();
         break;
