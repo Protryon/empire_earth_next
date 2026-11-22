@@ -26,6 +26,7 @@
 
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
+#include "rust/sim/ai.h"   // ee_ai_names_capture
 
 // The generated specs against the record structs the loaders read (the rest are checked by eedata.py check (c)
 // against their sources' static_asserts)
@@ -91,19 +92,6 @@ static void EEDumpContent(const std::string& inTable, const unsigned char* inDat
     }
 }
 
-// the row ids of the tables loaded from text, by table (EEDbRowIds)
-static std::map<long, std::string>& EERowIdsOf(const std::string& inTable)
-{
-    static std::map<std::string, std::map<long, std::string> > sIds;
-    return sIds[inTable];
-}
-
-bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds)
-{
-    outIds = EERowIdsOf(inTable);
-    return !outIds.empty();
-}
-
 // A db table that cannot be served: stops the game with the place of the problem
 static long EEDbFailed(const std::string& inError, FSFileSpec*& outFile)
 {
@@ -138,10 +126,7 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
     std::string theError;
     if (!EETextContent().Compile(theStem.c_str(), theData, theError))
         return EEDbFailed(theDirectory + theStem + theExtension + ": " + theError, outFile);   // a broken text table
-    if (theStem == "dbobjects" || theStem == "dbtechtree") {   // the ids the computer player's scripts name
-        std::string theIgnored;
-        EETextContent().Ids(theStem.c_str(), EERowIdsOf(theStem), theIgnored);
-    }
+    ee_ai_names_capture(EETextContent().Handle(), theStem.c_str());   // the ids the computer players' scripts name
     unsigned char* theBuffer = new unsigned char[theData.size() ? theData.size() : 1];
     if (!theData.empty())
         memcpy(theBuffer, &theData[0], theData.size());

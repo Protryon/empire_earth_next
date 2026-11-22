@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <utility>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -53,30 +54,17 @@ static_assert(LUA_EXTRASPACE == sizeof(void*) && LUA_IDSIZE == 60, "the extra sp
 static_assert(LUA_MASKCOUNT == 8 && LUA_NOREF == -2 && LUA_REFNIL == -1, "the count hook's mask, the references");
 static_assert(sizeof(luaL_Buffer) == 4 * sizeof(void*) + LUAL_BUFFERSIZE, "luaL_Buffer's layout");
 
-const char* EECPNextCodeName(long inCode)
-{
-    return ee_ai_code_name((int64_t)inCode);
-}
-
-const char* EECPNextReasonName(long inReason)
-{
-    return ee_ai_reason_name((int64_t)inReason);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The state (Rust's record)
 
 EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer)
 {
-    if (inPlayer->mNextState == NULL)
-        inPlayer->mNextState = (EECPNextState*)ee_ai_next_state_new();
-    return inPlayer->mNextState;
+    return inPlayer->mNextState != NULL ? inPlayer->mNextState : (inPlayer->mNextState = (EECPNextState*)ee_ai_next_state_new());
 }
 
 void EECPNextDeleteState(EEComputerPlayer* inPlayer)
 {
-    ee_ai_next_state_free(inPlayer->mNextState);
-    inPlayer->mNextState = NULL;
+    ee_ai_next_state_free(std::exchange(inPlayer->mNextState, nullptr));
 }
 
 std::string EECPNextAI(const EEComputerPlayer* inPlayer)
@@ -104,47 +92,38 @@ std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
     return EECPEngine(inPlayer) != kEECPEngineNext ? std::string() : EECPNextAI(inPlayer);
 }
 
+// the seat's manifest entry (NULL: none; an empty id is in no manifest)
 static const EECPAIEntry* EECPEngineEntry(const EEComputerPlayer* inPlayer)
 {
-    std::string theID = EECPEngineAI(inPlayer);
-    return theID.empty() ? NULL : EECPAIByID(theID);
+    return EECPAIByID(EECPEngineAI(inPlayer));
 }
 
 bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer)
 {
-    const EECPAIEntry* theAI = EECPEngineEntry(inPlayer);
-    return theAI != NULL && theAI->sees_all;
+    return EECPEngineEntry(inPlayer) != NULL && EECPEngineEntry(inPlayer)->sees_all;
 }
 
 bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer)
 {
-    const EECPAIEntry* theAI = EECPEngineEntry(inPlayer);
-    return theAI != NULL && theAI->fills_garrison;
+    return EECPEngineEntry(inPlayer) != NULL && EECPEngineEntry(inPlayer)->fills_garrison;
 }
 
 std::string EECPEngineName(const EEComputerPlayer* inPlayer)
 {
-    std::string theAI = EECPEngineAI(inPlayer);
-    return theAI.empty() ? "none" : theAI;
+    return EECPEngineAI(inPlayer).empty() ? std::string("none") : EECPEngineAI(inPlayer);
 }
 
 void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
 {
-    // no AI (a manifest without a "classic" AI): the seat stands idle (EECPNextPrepare logs it)
-    const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
+    // no AI (a manifest without a "classic" AI): the seat stands idle (ee_ai_next_prepare logs it)
     inPlayer->mEngine = kEECPEngineNext;
-    EECPNextSetAI(inPlayer, theAI != NULL ? EECPAIID(theAI) : std::string("none"));
+    EECPNextSetAI(inPlayer, EECPAIByChoice(inChoice) != NULL ? EECPAIID(EECPAIByChoice(inChoice)) : std::string("none"));
 }
 
 // the engine log's debug output (ee_game cp_engine.rs)
 extern "C" void ee_cp_engine_debug_out(const char* inText)
 {
     ESDebugOut("%s", inText);
-}
-
-bool EECPNextPrepare(EEComputerPlayer* inPlayer)
-{
-    return ee_ai_next_prepare(inPlayer);
 }
 
 bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes)
@@ -163,117 +142,13 @@ extern "C" void ee_ai_next_string_append(void* inString, const uint8_t* inData, 
     ((std::string*)inString)->append((const char*)inData, inLength);
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// The gather safety and the losses trace (ee_ai next_game.rs)
-
-static uint64_t EECPNextHandle(const RTSUnit* inUnit)
-{
-    return (uint64_t)(uintptr_t)inUnit;
-}
-
-long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource)
-{
-    return ee_ai_next_assigned(inPlayer, EECPNextHandle(inResource));
-}
-
-bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource)
-{
-    return ee_ai_next_has_room(inPlayer, EECPNextHandle(inResource));
-}
-
-bool EECPNextDropReady(EEComputerPlayer* inPlayer, long inX, long inY, bool inFood, long inSlack)
-{
-    return ee_ai_next_drop_ready(inPlayer, 0, inX, inY, inFood, inSlack);
-}
-
-bool EECPNextUnitDropReady(EEComputerPlayer* inPlayer, EEUnit* inResource)
-{
-    return inResource != NULL && ee_ai_next_drop_ready(inPlayer, EECPNextHandle(inResource), 0, 0, false, 0);
-}
-
-long EECPNextBuildUnsafe(EEComputerPlayer* inPlayer, long inX, long inY)
-{
-    return ee_ai_next_build_unsafe(inPlayer, inX, inY);
-}
-
+// the threat at a tile for the placement (ee_ai next_game.rs)
 long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
 {
     return ee_ai_next_site_threat(inPlayer, inX, inY, inNow, outKind);
 }
 
-long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCause)
-{
-    return ee_ai_next_site_blocked(inPlayer, EECPNextHandle(inUnit), outCause);
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Names: classes and techs by their data ids (dbobjects / dbtechtree "id": "citizen", "b_barracks", "inf01_clubman")
-
-// the table of a db table's row ids (EEDbRowIds; none when it has none) with the prefix of a key without an id
-// ("dbobjects_": the name of such a key, as tools/eedata ids.py): ee_ai names.rs
-static EeAiNames* EECPNextNamesTable(const char* inTable, const char* inPrefix)
-{
-    std::map<long, std::string> theIds;
-    EEDbRowIds(inTable, theIds);
-    std::vector<int64_t> theKeys;
-    std::vector<EeAiBytes> theNames;
-    for (std::map<long, std::string>::iterator it = theIds.begin(); it != theIds.end(); ++it) {
-        EeAiBytes theName = {(const uint8_t*)it->second.data(), it->second.size()};
-        theKeys.push_back((int64_t)it->first);
-        theNames.push_back(theName);
-    }
-    EeAiBytes thePrefix = {(const uint8_t*)inPrefix, strlen(inPrefix)};
-    return ee_ai_names_new(theKeys.data(), theNames.data(), theKeys.size(), thePrefix);
-}
-
-static EeAiNames* EECPNextNamesOf(const char* inTable)
-{
-    static EeAiNames* sClasses = NULL;
-    static EeAiNames* sTechs = NULL;
-    static bool sRead = false;
-    if (!sRead) {
-        sRead = true;
-        sClasses = EECPNextNamesTable("dbobjects", "dbobjects_");
-        sTechs = EECPNextNamesTable("dbtechtree", "dbtechtree_");
-    }
-    return strcmp(inTable, "dbobjects") == 0 ? sClasses : sTechs;
-}
-
-static std::string EECPNextNameOf(EeAiNames* inNames, long inKey)
-{
-    uint8_t theBuffer[48];
-    size_t theLength = 0;
-    const uint8_t* theName = ee_ai_names_name_of(inNames, (int64_t)inKey, theBuffer, sizeof(theBuffer), &theLength);
-    return std::string((const char*)theName, theLength);
-}
-
-// "<table>_<key>" names a row without an id in the data (or the binary tree's names)
-static long EECPNextKeyOf(EeAiNames* inNames, const std::string& inName)
-{
-    EeAiBytes theName = {(const uint8_t*)inName.data(), inName.size()};
-    return (long)ee_ai_names_key_of(inNames, theName);
-}
-
-long EECPNextClassByName(const std::string& inName)
-{
-    long theClass = EECPNextKeyOf(EECPNextNamesOf("dbobjects"), inName);
-    return theClass >= 0 && (unsigned long)theClass < EEUnitClassCount() && gUnitClassTable[theClass] != NULL ? theClass : -1;
-}
-
-long EECPNextTechByName(const std::string& inName)
-{
-    return EECPNextKeyOf(EECPNextNamesOf("dbtechtree"), inName);
-}
-
-std::string EECPNextClassName(long inClass)
-{
-    return EECPNextNameOf(EECPNextNamesOf("dbobjects"), inClass);
-}
-
-std::string EECPNextTechName(long inTech)
-{
-    return EECPNextNameOf(EECPNextNamesOf("dbtechtree"), inTech);
-}
+// (the classes' and techs' names by their data ids: ee_ai names_db.rs)
 
 // ---------------------------------------------------------------------------------------------------------------
 // The host of the engine (ee_ai next_game.rs EE_AI_NEXT_HOST_*): the computer player's own objects (the placement,
@@ -306,18 +181,11 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return 0;
     case EE_AI_NEXT_HOST_SIM_MODE:
         return gPlatSimMode ? 1 : 0;
-    case EE_AI_NEXT_HOST_STDERR:
-        fprintf(stderr, "%s", (const char*)(uintptr_t)a);
-        fflush(stderr);
-        return 0;
     case EE_AI_NEXT_HOST_ENGINE_LOG:
         EECPEngineLog("%s", (const char*)(uintptr_t)a);
         return 0;
     case EE_AI_NEXT_HOST_GAME_SEED:
         return (int64_t)gUserInterface->mRandomSeed;
-    case EE_AI_NEXT_HOST_CLASS_NAME:
-        EECPNextAppend(outRecord, EECPNextClassName((long)a));
-        return 0;
     case EE_AI_NEXT_HOST_CLASSIC_AI:
         if (EECPClassicAI() == NULL)
             return 0;
@@ -342,20 +210,10 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return (int64_t)gWorld.GetResourceUsers((EEUnit*)(uintptr_t)a);
     case EE_AI_NEXT_HOST_CONTINENT_OF:
         return (int64_t)gContinentManager.GetContinent((EEUnit*)(uintptr_t)a, kAIPathLandMass);
-    case EE_AI_NEXT_HOST_AREA_HULL: {
-        EETileCoordinate theTile;
-        theTile.mX = (long)b;
-        theTile.mY = (long)c;
-        EEAIArea* theArea = ((EEPlayer*)(uintptr_t)a)->GetNearestArea(theTile, true);
-        if (theArea == NULL)
-            return 0;
-        U2DPoint<long> theClosest = theArea->GetClosestHullPoint(U2DPoint<long>((long)b, (long)c));
-        out[0] = theClosest.mX;
-        out[1] = theClosest.mY;
-        return 1;
-    }
+    case EE_AI_NEXT_HOST_NEAREST_AREA:
+        return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->GetNearestArea(EETileCoordinate((long)b, (long)c), true);
     case EE_AI_NEXT_HOST_UNIT:
-        return (int64_t)EECPNextHandle(gWorld.GetUnit((unsigned long)a));
+        return (int64_t)(uintptr_t)static_cast<RTSUnit*>(gWorld.GetUnit((unsigned long)a));
     case EE_AI_NEXT_HOST_NODE_COST:
         return me->ScaleCost(((EETechTreeNode*)(uintptr_t)a)->GetCost((long)b, (long)c, 1.0f));
     case EE_AI_NEXT_HOST_NODE_TEST:
@@ -365,7 +223,7 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     case EE_AI_NEXT_HOST_EPOCH_END:
         return gWorld.mGameOptions.mEpochEnd;
     case EE_AI_NEXT_HOST_LAST_ATTACKER:
-        return (int64_t)EECPNextHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
+        return (int64_t)(uintptr_t)static_cast<RTSUnit*>(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
     case EE_AI_NEXT_HOST_STATE:
         return (int64_t)(uintptr_t)EECPNextGetState(me);
     case EE_AI_NEXT_HOST_STATE_OF:
@@ -389,20 +247,18 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return 0;
     case EE_AI_NEXT_HOST_STARTED:
         return me->mIsStarted ? 1 : 0;
-    case EE_AI_NEXT_HOST_SIM_HASH: {
-        unsigned long theUnits = 0;
-        unsigned long theCount = 0;
-        for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-            theUnits += static_cast<EEUnit*>(theUnit)->GetChecksum(3);   // hit points, tiles, positions, commands
-            theCount++;
-        }
-        out[0] = (int64_t)(unsigned long)gPhysics->mCurrentTick;
-        out[1] = (int64_t)theCount;
-        out[2] = (int64_t)theUnits;
-        out[3] = (int64_t)(unsigned long)gPhysics->mRandom.GetSeed();
-        out[4] = (int64_t)gPhysics->mInputMessagesProcessed;
-        return 0;
-    }
+    case EE_AI_NEXT_HOST_SIM_FIRST_UNIT:
+        return (int64_t)(uintptr_t)gWorld.mUnits.mFirst;
+    case EE_AI_NEXT_HOST_SIM_NEXT_UNIT:
+        return (int64_t)(uintptr_t)((RTSUnit*)(uintptr_t)a)->mTileNode->mNext;
+    case EE_AI_NEXT_HOST_SIM_CHECKSUM:   // hit points, tiles, positions, commands
+        return (int64_t)(unsigned long)static_cast<EEUnit*>((RTSUnit*)(uintptr_t)a)->GetChecksum(3);
+    case EE_AI_NEXT_HOST_SIM_TICK:
+        return (int64_t)(unsigned long)gPhysics->mCurrentTick;
+    case EE_AI_NEXT_HOST_SIM_SEED:
+        return (int64_t)(unsigned long)gPhysics->mRandom.GetSeed();
+    case EE_AI_NEXT_HOST_SIM_INPUTS:
+        return (int64_t)gPhysics->mInputMessagesProcessed;
     default:
         return 0;
     }
