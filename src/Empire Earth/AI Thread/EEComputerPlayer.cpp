@@ -40,7 +40,6 @@
 #include "ee/EECPBehavior.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
-#include "ee/EECPPlaceCapture.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECombatGoals.h"
@@ -475,10 +474,8 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return thePlayer->EEPlayer::Load((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
     case EE_CP_PLAYER_BASE_SAVE:
         return thePlayer->EEPlayer::Save((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
-    case EE_CP_PLAYER_PLACEMENT_LOAD:
-        return thePlayer->mPlacement->Load(*reinterpret_cast<FSFile*>((uintptr_t)inA));
-    case EE_CP_PLAYER_PLACEMENT_SAVE:
-        return thePlayer->mPlacement->Save(*reinterpret_cast<FSFile*>((uintptr_t)inA));
+    case EE_CP_PLAYER_FILE_OPEN:
+        return reinterpret_cast<FSFile*>((uintptr_t)inA)->GetIsOpen() ? 1 : 0;
     case EE_CP_PLAYER_SAVE_PRIMITIVE:
         return (int64_t)(uintptr_t)&EESaveFilePrimitive;
     case EE_CP_PLAYER_EPOCH_COUNT:
@@ -521,10 +518,6 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return EECPEngineSeesAll(thePlayer) ? 1 : 0;
     case EE_CP_PLAYER_ENGINE_FILLS_GARRISON:
         return EECPEngineFillsGarrison(thePlayer) ? 1 : 0;
-    case EE_CP_PLAYER_NEW_PLACEMENT: thePlayer->mPlacement = new EECPPlacement(thePlayer);
-        return 0;
-    case EE_CP_PLAYER_DELETE_PLACEMENT: delete thePlayer->mPlacement;
-        return 0;
     case EE_CP_PLAYER_SET_SELF: thePlayer->mComputerPlayer = thePlayer;
         return 0;
     case EE_CP_PLAYER_BEHAVIORS:

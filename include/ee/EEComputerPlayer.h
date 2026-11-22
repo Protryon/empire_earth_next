@@ -10,7 +10,7 @@
 #include "rust/sim/cp.h"             // EeCpFields (the plain members), the bodies over them
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
-class EECPPlacement;                        // ee/EECPPlacement.h
+struct EECPPlacement;                       // ee/EECPPlacement.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
 
 // port (lane B of the AI Thread): the plain members (the tuning values, timers and flags Init sets and Load and Save

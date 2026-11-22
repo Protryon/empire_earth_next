@@ -41,11 +41,7 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
 #include "ee/EESimCapture.h"
-#include "ee/EECPPlaceCapture.h"
 #include "rust/sim/cp.h"
-
-// the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
-const UString EECPPlacement::sData("EECPPlacement-Data");
 
 // ---------------------------------------------------------------------------------------------------------------
 // The Rust bodies' context and world
@@ -137,38 +133,5 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     return 0;
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// EECPPlacement: the members other files read, the Rust object, the forwarders
-
-// Creates the build manager for a civilization manager's player, with empty queues and no town centre tile
-EECPPlacement::EECPPlacement(EEComputerPlayer* inPlayer)
-    : mPlayer(inPlayer)
-{
-    this->mTownCenterTile = U2DPoint<long>(-10000, -10000);
-    this->mRust = ee_cp_placement_new();
-}
-
-EECPPlacement::~EECPPlacement()
-{
-    ee_cp_placement_free(this->mRust);
-}
-
-// the town centre tile (U2DPoint's own Load and Save)
-long EECPPlacement::Load(FSFile& inFile)
-{
-    EECPPlaceScope theScope(kPlceLoad, this->mPlayer);   // PLCE (TEST ONLY)
-    long theResult = this->mTownCenterTile.Load(inFile);
-    theScope.I(theResult).State(this);
-    return theResult;
-}
-
-long EECPPlacement::Save(FSFile& outFile)
-{
-    EECPPlaceScope theScope(kPlceSave, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.State(this);
-    long theResult = this->mTownCenterTile.Save(outFile);
-    theScope.I(theResult);
-    return theResult;
-}
-
+// (EECPPlacement's construction, destruction, Load and Save: Rust, ee_sim::cp player_game.rs)
 // (the epoch's classes and the Lua verbs' placement search are Rust: ee_sim::ai units_world.rs)

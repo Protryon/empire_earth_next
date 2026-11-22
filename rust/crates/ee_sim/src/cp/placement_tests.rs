@@ -527,3 +527,16 @@ fn airport_end_and_wonder_rings() {
     h.town = [CP_NO_TILE, CP_NO_TILE];
     assert!(!find_wonder_site(&mut h, 0x200, 2, &mut out));
 }
+
+/// `EECPPlacement` is a view of [`super::player_game::EeCpPlacementObj`]: the town tile first, then the player and
+/// the Rust placement (the C++ asserts its size against two longs and two pointers).
+#[test]
+fn placement_object_layout() {
+    use super::player_game::EeCpPlacementObj;
+    use std::mem::{offset_of, size_of};
+    use std::os::raw::c_long;
+    assert_eq!(offset_of!(EeCpPlacementObj, town), 0);
+    assert_eq!(offset_of!(EeCpPlacementObj, player), 2 * size_of::<c_long>());
+    assert_eq!(size_of::<EeCpPlacementObj>(), 2 * size_of::<c_long>() + 2 * size_of::<usize>());
+    assert_eq!(offset_of!(EeCpPlacementObj, rust), 2 * size_of::<c_long>() + size_of::<usize>());
+}

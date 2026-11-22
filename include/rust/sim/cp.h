@@ -596,14 +596,12 @@ constexpr static const int32_t EE_CP_PLAYER_EPOCH_SPAN = 373;
 
 constexpr static const int32_t EE_CP_PLAYER_RANDOM_RANGE = 374;
 
-/// `EEPlayer::Load(v0, v1, *(FSFile*)a)`, `Save(..)`; the placement's `Load(*(FSFile*)a)`, `Save(..)`
+/// `EEPlayer::Load(v0, v1, *(FSFile*)a)`, `Save(..)`; `((FSFile*)a)->GetIsOpen()`
 constexpr static const int32_t EE_CP_PLAYER_BASE_LOAD = 375;
 
 constexpr static const int32_t EE_CP_PLAYER_BASE_SAVE = 376;
 
-constexpr static const int32_t EE_CP_PLAYER_PLACEMENT_LOAD = 377;
-
-constexpr static const int32_t EE_CP_PLAYER_PLACEMENT_SAVE = 378;
+constexpr static const int32_t EE_CP_PLAYER_FILE_OPEN = 377;
 
 /// `&EESaveFilePrimitive`
 constexpr static const int32_t EE_CP_PLAYER_SAVE_PRIMITIVE = 379;
@@ -657,11 +655,7 @@ constexpr static const int32_t EE_CP_PLAYER_ENGINE_SEES_ALL = 399;
 
 constexpr static const int32_t EE_CP_PLAYER_ENGINE_FILLS_GARRISON = 430;
 
-/// `new EECPPlacement(player)` into `mPlacement`; `delete mPlacement`; `mComputerPlayer = player`
-constexpr static const int32_t EE_CP_PLAYER_NEW_PLACEMENT = 400;
-
-constexpr static const int32_t EE_CP_PLAYER_DELETE_PLACEMENT = 401;
-
+/// `mComputerPlayer = player`
 constexpr static const int32_t EE_CP_PLAYER_SET_SELF = 402;
 
 /// `gCPBehaviors`; `EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty)`
