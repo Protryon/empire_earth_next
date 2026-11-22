@@ -217,6 +217,21 @@ pub const EE_SCENARIO_MN_SHOW_DIALOG: u32 = 1;
 pub const EE_SCENARIO_MN_PREPARE: u32 = 2;
 /// `Reset`: the numbers and the timed effects, the lists and their built-ins, the pending effects cleared.
 pub const EE_SCENARIO_MN_RESET: u32 = 3;
+// the manager's methods over its round host (`ee_scenario_en_round`; once each built the host in C++, EESMRoundHost)
+/// The destructor's body (manager_compose.rs destroy).
+pub const EE_SCENARIO_MN_DESTROY: u32 = 3000;
+/// `EndCinematic`, `ExitCinematic`, `StartCinematic`, `ApplyPendingEffects` (cinematic.rs).
+pub const EE_SCENARIO_MN_END_CINEMATIC: u32 = 3001;
+pub const EE_SCENARIO_MN_EXIT_CINEMATIC: u32 = 3002;
+pub const EE_SCENARIO_MN_START_CINEMATIC: u32 = 3003;
+pub const EE_SCENARIO_MN_APPLY_PENDING: u32 = 3004;
+/// `MoveCameraToStart` (manager_compose.rs).
+pub const EE_SCENARIO_MN_MOVE_CAMERA: u32 = 3005;
+/// `AddV134Effect(*effect)`, `SetTimedEffectHasRun(effect, a != 0)` (manager_compose.rs).
+pub const EE_SCENARIO_MN_ADD_PENDING: u32 = 3006;
+pub const EE_SCENARIO_MN_SET_TIMED_HAS_RUN: u32 = 3007;
+/// `ReplaceUnit(a, b)` (cinematic.rs).
+pub const EE_SCENARIO_MN_REPLACE_UNIT: u32 = 3008;
 
 /// The text file host's context record (`EESMTextContext`, EEScenarioManager.cpp): the manager, the file.
 #[repr(C)]
@@ -976,6 +991,49 @@ mod game {
         })
     }
 
+    /// TEST ONLY: SMUP of manager `m` (`human` a human plays) with the save version.
+    #[no_mangle]
+    pub extern "C" fn ee_scenario_en_cap_update(m: *const c_void, human: bool) {
+        cap::ee_scenario_cap_update(m, human, save_version());
+    }
+
+    /// TEST ONLY: SMCU (`kind`, the 7 longs at `args`, the unit, player and upgrade, the seed) with the save version.
+    ///
+    /// # Safety
+    /// `args` must hold 7 longs; the objects as `ee_scenario_cap_unit_change` takes them.
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_scenario_en_cap_unit_change(
+        kind: c_long,
+        args: *const c_long,
+        unit: *const c_void,
+        player: *const c_void,
+        upgrade: *const c_void,
+        seed: u32,
+    ) {
+        // SAFETY: the caller's contract
+        unsafe { cap::ee_scenario_cap_unit_change(kind, args, unit, player, upgrade, seed, save_version()) };
+    }
+
+    /// The manager's methods over its round host (`EE_SCENARIO_MN_DESTROY` ..): `effect` the effect of the pending and
+    /// timed ones, `a`, `b` their numbers.
+    #[no_mangle]
+    pub extern "C" fn ee_scenario_en_round(m: *mut c_void, op: u32, effect: *const c_void, a: c_long, b: c_long) {
+        use crate::scenario::manager_compose as mc;
+        let h = round_host(m);
+        match op {
+            EE_SCENARIO_MN_DESTROY => mc::ee_scenario_manager_destroy(h),
+            EE_SCENARIO_MN_END_CINEMATIC => cinematic::ee_scenario_end_cinematic(h),
+            EE_SCENARIO_MN_EXIT_CINEMATIC => cinematic::ee_scenario_exit_cinematic(h),
+            EE_SCENARIO_MN_START_CINEMATIC => cinematic::ee_scenario_start_cinematic(h),
+            EE_SCENARIO_MN_APPLY_PENDING => cinematic::ee_scenario_apply_pending(h),
+            EE_SCENARIO_MN_MOVE_CAMERA => mc::ee_scenario_move_camera_to_start(h),
+            EE_SCENARIO_MN_ADD_PENDING => mc::ee_scenario_add_pending(h, effect),
+            EE_SCENARIO_MN_SET_TIMED_HAS_RUN => mc::ee_scenario_set_timed_has_run(h, effect, a != 0),
+            EE_SCENARIO_MN_REPLACE_UNIT => cinematic::ee_scenario_replace_unit(h, a, b),
+            _ => {}
+        }
+    }
+
     /// `EEScenarioManager::Update`, `ShowDialogMessage`, `Prepare` (`EE_SCENARIO_MN_*`).
     #[no_mangle]
     pub extern "C" fn ee_scenario_en_manager(m: *mut c_void, op: u32) {
@@ -1385,7 +1443,7 @@ mod tests {
 
     #[test]
     fn context_records_are_pointer_lists() {
-        assert_eq!(std::mem::size_of::<EeScenarioHostContext>(), 10 * std::mem::size_of::<usize>());
+        assert_eq!(std::mem::size_of::<EeScenarioHostContext>(), 6 * std::mem::size_of::<usize>());
         assert_eq!(std::mem::size_of::<EeScenarioListContext>(), 2 * std::mem::size_of::<usize>());
         assert_eq!(std::mem::size_of::<EeScenarioTextContext>(), 2 * std::mem::size_of::<usize>());
         assert!(EeScenarioHostContext::default().unit.is_null());

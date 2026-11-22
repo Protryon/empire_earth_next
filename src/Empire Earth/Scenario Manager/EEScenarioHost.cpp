@@ -40,27 +40,11 @@ EEPlayer* Player(int32_t inA)
     return inA >= 0 && inA < (int32_t)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0])) ? gWorld.mPlayers[inA] : NULL;
 }
 
-// two longs as one read: x in the low 32 bits, y in the high (ee_scenario area.rs unpack)
-int64_t Pack(long inX, long inY)
-{
-    return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32);
-}
-
-int64_t FloatBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
 }   // namespace
 
 // the host's callbacks (ee_scenario host.rs EeScenarioHost; entry.rs builds the table in Rust)
-extern "C" int64_t ee_scenariocpp_host_read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
+extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
 {
-    EESMHostContext* theContext = static_cast<EESMHostContext*>(inContext);
-    EESMCondition* theCondition = theContext->mCondition;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
     EEPlayer* thePlayer = Player(inA);
     switch (inOp) {
     case EE_SCENARIO_READ_CONTEXT_UNIT: return (int64_t)(uintptr_t)theContext->mUnit;
@@ -75,27 +59,26 @@ extern "C" int64_t ee_scenariocpp_host_read(void* inContext, uint32_t inOp, int3
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
     case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
     case EE_SCENARIO_READ_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
-    case EE_SCENARIO_READ_TIME: return FloatBits(theManager->mTime);
-    case EE_SCENARIO_READ_TIME_OF_DAY: return FloatBits(gWorld.GetTimeOfDay());
+    case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
+    case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;
-    case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? (int64_t)EESMCaptureSeed() : -1;
+    case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0) : -1;
     case EE_SCENARIO_READ_CONTINENT: return gContinentManager.GetContinentID(inA, inB);
     case EE_SCENARIO_READ_TOWN_COUNT: return gWorld.GetPlayer(inA)->GetNumTowns();
     case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->mTowns[inB]->HullContains(U2DPoint<long>(inC, inD));
     case EE_SCENARIO_READ_CATEGORY_IN_SET: return gUnitSetManager.Contains((long)inA, (unsigned long)inB);
     case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
-    case EE_SCENARIO_READ_OBJECT_EXISTS: return theManager->GetScenarioObject((unsigned long)inA) != NULL;
-    case EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: return theManager->GetScenarioObject((unsigned long)inA)->GetIsSelectOnMap();
-    case EE_SCENARIO_READ_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
+    case EE_SCENARIO_READ_OBJECT_EXISTS: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA) != NULL;
+    case EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->GetIsSelectOnMap();
+    case EE_SCENARIO_READ_OBJECT_PICK: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
     }
     return EESMObjectRead(theContext, inOp, inA, inB, inC, inD);   // the objects' and units' reads
 }
 
 // a plan's write (ee_scenario player.rs): each the original's statement on player inPlayer
-extern "C" void ee_scenariocpp_host_write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t inC, int64_t inD)
+extern "C" void ee_scenariocpp_host_write(EESMHostContext* theContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t inC, int64_t inD)
 {
-    EESMHostContext* theContext = static_cast<EESMHostContext*>(inContext);
     EEPlayer* thePlayer = Player((int32_t)inPlayer);
     switch (inOp) {
     case EE_SCENARIO_WRITE_SET_ATTRIBUTE:
@@ -123,14 +106,13 @@ extern "C" void ee_scenariocpp_host_players(void*, int32_t inKind, bool inSingle
              size_t inCount, uint32_t inSeed)
 {
     std::vector<long> thePlayers(inPlayers, inPlayers + inCount);
-    EESMCapturePlayers(inKind, inSingle, inResult, inListed ? &thePlayers : NULL, inSeed);
+    ee_scenario_cap_players(inKind, inSingle, inResult, inListed ? &thePlayers : NULL, inSeed);
 }
 
 // an element's save (ee_scenario stream.rs): each operation the original's FSFile call on the value the Rust hands
 // over (the 4-byte long adapters, float, bool), or the element's string or id list by slot
-extern "C" int32_t ee_scenariocpp_stream_io(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
+extern "C" int32_t ee_scenariocpp_stream_io(EESMStream* theStream, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
 {
-    EESMStream* theStream = static_cast<EESMStream*>(inContext);
     FSFile& theFile = *theStream->mFile;
     switch (inOp) {
     case EE_SCENARIO_IO_READ_ULONG: return (int32_t)theFile.Read(*static_cast<unsigned long*>(ioValue));
@@ -217,7 +199,6 @@ extern "C" const EeScenarioObjectFields* ee_scenariocpp_host_object(void*, int32
 static_assert(sizeof(EESMHostContext) == sizeof(EeScenarioHostContext) && sizeof(EESMStream) == sizeof(EeScenarioStreamContext),
               "entry.rs's context records");
 extern UWideString EESMEffect::* const kSMETexts[EE_SCENARIO_EC_TEXTS];   // EESMEffect.cpp
-extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_t inA, int64_t inB);   // EEScenarioCapture.cpp
 template<class T> T* EN(void* p) { return static_cast<T*>(p); }
 int64_t ENP(const void* p) { return (int64_t)(intptr_t)p; }
 extern "C" int64_t ee_scenariocpp_entry(uint32_t inOp, void* p, int64_t a, int64_t b)

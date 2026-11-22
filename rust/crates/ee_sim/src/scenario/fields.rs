@@ -156,6 +156,27 @@ pub struct EeScenarioTriggerFields {
     pub mIsInCinematic: bool,
 }
 
+/// One condition entry of a trigger (`EESMTConditionWrapper`, ee/EESMTrigger.h's typedef of this record; the C++ news
+/// it value-initialized: every field 0, the operator `EE_SCENARIO_SM_TRIGGER_OPERATOR_END`): the condition's index,
+/// the operator to the next entry, the negation.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeScenarioTConditionWrapper {
+    pub mValue: c_ulong,
+    pub mOperator: c_long,
+    pub mIsNot: bool,
+}
+
+/// One effect entry of a trigger (`EESMTEffectWrapper`, ee/EESMTrigger.h's typedef of this record; value-initialized
+/// as the condition's): the operator to the next entry, the delay, the effect's index.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeScenarioTEffectWrapper {
+    pub mOperator: c_long,
+    pub mDelay: c_ulong,
+    pub mEffectIndex: c_ulong,
+}
+
 /// `EESMArea`'s saved values (a copy the C++ fills from its members and stores back): the anchor tile, the
 /// rectangle, the flags, the select mode, the tiles' time and the id.
 #[repr(C)]
@@ -355,6 +376,15 @@ pub fn object_renumber(f: &mut EeScenarioObjectFields, kind: u32, old: c_ulong, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trigger_entries_start_at_zero_with_the_end_operator() {
+        use crate::scenario::ids::EE_SCENARIO_SM_TRIGGER_OPERATOR_END;
+        let c = EeScenarioTConditionWrapper::default();
+        let e = EeScenarioTEffectWrapper::default();
+        assert_eq!((c.mValue, c.mOperator as i32, c.mIsNot), (0, EE_SCENARIO_SM_TRIGGER_OPERATOR_END, false));
+        assert_eq!((e.mOperator as i32, e.mDelay, e.mEffectIndex), (EE_SCENARIO_SM_TRIGGER_OPERATOR_END, 0, 0));
+    }
 
     #[test]
     fn message_defaults_are_the_constructors() {

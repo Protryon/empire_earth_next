@@ -20,6 +20,7 @@
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
 #include "rust/sim/scenario.h"
+#include "ee/EEScenarioHost.h"
 
 // The pathfinding functor of attribute 42 (its step: ee_sim scenario event.rs)
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
@@ -83,34 +84,7 @@ namespace {
 unsigned long sEvRead = 0;   // a read's byte count (LoadEvents' theRead)
 char sEvName[100];           // an event's name (read and dropped)
 
-float EvFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, 4);
-    return theValue;
-}
-
-int64_t EvBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-unsigned long EvLength(FSFileSpec* inFile, unsigned long inPrevious)
-{
-    unsigned long theLength = inPrevious;
-    inFile->GetLength(theLength);
-    return theLength;
-}
-
-void EvSetName(EEUnitClassUpgrade* inUpgrade, float inValue)
-{
-    UWideString theName;
-    gResource->GetString(UMFloatToLong(inValue), theName);
-    inUpgrade->SetName(theName);
-}
+UWideString sEvText;         // an upgrade's new name (EE_SCENARIO_EV_NAME_TEXT)
 
 }   // namespace
 
@@ -235,7 +209,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_SET_BEHAVIOR:
         P(EEComplexUnit, 0)->SetBehavior(P(EEComplexUnit, 0)->GetClass()->mBehavior);
         return 0;
-    case EE_SCENARIO_EV_VARIANT_FACTOR: return EvBits(gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(a[0]));
+    case EE_SCENARIO_EV_VARIANT_FACTOR: return EESMBits(gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(a[0]));
     case EE_SCENARIO_EV_CLASSES_NEW: return R(new std::vector<EEUnitClass*>);
     case EE_SCENARIO_EV_CLASSES_IN_SET:
         EEUnitClass::GetClassesInSet((unsigned long)a[1], *P(std::vector<EEUnitClass*>, 0));
@@ -246,24 +220,27 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
         delete P(std::vector<EEUnitClass*>, 0);
         return 0;
     case EE_SCENARIO_EV_SET_RANGE:
-        P(EEUnitClassUpgrade, 0)->SetRange(EvFloat(a[1]));
+        P(EEUnitClassUpgrade, 0)->SetRange(EESMFloat(a[1]));
         return 0;
     case EE_SCENARIO_EV_SET_MAX_VELOCITY:
-        P(EEUnitClassUpgrade, 0)->SetMaxVelocity(EvFloat(a[1]));
+        P(EEUnitClassUpgrade, 0)->SetMaxVelocity(EESMFloat(a[1]));
         return 0;
     case EE_SCENARIO_EV_UNIT_SET: return R(gUnitSetManager.GetSet(a[0]));
     case EE_SCENARIO_EV_PATHFINDING:
         EEUnitSetFunctorModifyPathfindingBehavior(P(EEPlayer, 1), (long)a[2], a[3] != 0).ForEachIn(P(EEUnitSet, 0));
         return 0;
-    case EE_SCENARIO_EV_SET_NAME:
-        EvSetName(P(EEUnitClassUpgrade, 0), EvFloat(a[1]));
+    case EE_SCENARIO_EV_NAME_TEXT:
+        gResource->GetString(UMFloatToLong(EESMFloat(a[0])), sEvText);
+        return 0;
+    case EE_SCENARIO_EV_SET_NAME_TEXT:
+        P(EEUnitClassUpgrade, 0)->SetName(sEvText);
         return 0;
     case EE_SCENARIO_EV_EVENT_COUNT: return (int64_t)EEEvent::sEvents.size();
     case EE_SCENARIO_EV_EVENT_AT: return R(EEEvent::sEvents[(size_t)a[0]].get());
     case EE_SCENARIO_EV_EVENT_EFFECTS: return R(P(EEEvent, 0)->mEffects);
     case EE_SCENARIO_EV_EVENT_NUM: return (int64_t)P(EEEvent, 0)->mNumEffects;
     case EE_SCENARIO_EV_FILE_OPEN: return P(FSFileSpec, 0)->Open(kFileAccessRead);
-    case EE_SCENARIO_EV_FILE_LENGTH: return (int64_t)EvLength(P(FSFileSpec, 0), (unsigned long)a[1]);
+    case EE_SCENARIO_EV_FILE_LENGTH_INTO: return P(FSFileSpec, 0)->GetLength(*P(unsigned long, 1));
     case EE_SCENARIO_EV_EFFECTS_ASSIGN:
         gEventEffects.assign((size_t)a[0], EEEventEffect());
         return 0;

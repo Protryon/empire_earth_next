@@ -6,6 +6,12 @@
 #include <vector>
 #include "rust/sim/scenario.h"
 
+// a float's bits as the scenario channels carry them and back; two longs as one value, x in the low 32 bits, y in the
+// high (ee_scenario world_route.rs)
+inline int64_t EESMBits(float inValue) { return ee_scenario_f32_bits(inValue); }
+inline float EESMFloat(int64_t inBits) { return ee_scenario_bits_f32(inBits); }
+inline int64_t EESMPack(long inX, long inY) { return ee_scenario_pack_xy(inX, inY); }
+
 class FSFile;
 class UWideString;
 class EESMCondition;

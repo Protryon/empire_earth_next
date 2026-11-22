@@ -3,7 +3,9 @@
 //! or `WZ` operation, in the C++'s order of tests. entry.rs's host table calls the host [`route`] names; each C++ host
 //! is its own `extern "C"` function over its typed context. Also the effect run's lifetime operations (the run is the
 //! C++'s `EESMEffectRun`, made and freed by the Rust that runs an effect or a Create Units) and the float bits the
-//! scenario channels carry.
+//! scenario channels carry, and the packed points.
+
+use std::os::raw::c_long;
 
 use crate::scenario::ai_store::EE_SCENARIO_WK_AI_NEXT_ATTACK_NOW;
 use crate::scenario::ca_compose::EE_SCENARIO_WK_PLAYER;
@@ -80,6 +82,12 @@ pub extern "C" fn ee_scenario_bits_f32(bits: i64) -> f32 {
     f32::from_bits(bits as u32)
 }
 
+/// Two longs as one value: `x` in the low 32 bits, `y` in the high (the reads' points; area.rs unpack).
+#[no_mangle]
+pub extern "C" fn ee_scenario_pack_xy(x: c_long, y: c_long) -> i64 {
+    (x as u32 as i64) | (((y as u32) as u64) << 32) as i64
+}
+
 #[cfg(test)]
 mod tests {
     use super::EeScenarioWorldRoute as R;
@@ -119,5 +127,12 @@ mod tests {
         // the high bits are ignored, as the C++'s (uint32_t) casts did
         assert_eq!(ee_scenario_bits_f32(0x1234_5678_4000_0000), 2.0);
         assert!(ee_scenario_bits_f32(ee_scenario_f32_bits(f32::NAN)).is_nan());
+    }
+
+    #[test]
+    fn pack_puts_x_low_and_y_high() {
+        assert_eq!(ee_scenario_pack_xy(3, 4), 0x4_0000_0003);
+        assert_eq!(ee_scenario_pack_xy(-1, 0), 0xffff_ffff);
+        assert_eq!(ee_scenario_pack_xy(0, -1), 0xffff_ffff_0000_0000u64 as i64);
     }
 }
