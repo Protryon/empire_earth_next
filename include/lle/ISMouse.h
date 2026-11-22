@@ -5,6 +5,7 @@
 // mode, and Refresh passes TMGetTime (Input System.cpp). The class has no data.
 #ifndef LLE_ISMOUSE_H
 #define LLE_ISMOUSE_H
+#include "rust/base/lle_enums.h"
 
 #include "lle/ISEntity.h"
 
@@ -31,17 +32,6 @@ private:
     ISMouse() = delete;
     ~ISMouse() = delete;
     const EeInputMouse* Rust() const { return reinterpret_cast<const EeInputMouse*>(this); }
-};
-
-// ISMouse entity index (GetEntity): the names are Rust's
-enum ISMouseEntity {
-    kMouseXAxis = 0,       // "X Axis" (DIMOFS_X)
-    kMouseYAxis = 1,       // "Y Axis" (DIMOFS_Y)
-    kMouseZAxis = 2,       // "Z Axis" (DIMOFS_Z, the wheel)
-    kMouseLeftButton = 3,  // "Left button"
-    kMouseRightButton = 4,  // "Right button"
-    kMouseMiddleButton = 5,  // "Middle button"
-    kMouseOtherButton = 6,  // "Other button"
 };
 
 #endif

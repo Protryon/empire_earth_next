@@ -759,6 +759,9 @@ WON_TESTS = {
     # the EE lobby window's functions made Rust (eewindow.rs, R6 WONLobby round 29) against the deleted functions
     # over a stand-in world (tests/won/won_eewindow_world.h)
     "won_eewindow_test": [],
+    # the game's WON front end made whole Rust (ee_won_lobby wonnet.rs, R6 WON round 31) against the deleted
+    # EEWonNet.cpp over a stand-in world (tests/won/won_wonnet_world.h; the host's statements are ee/EEWonNetHost.inl)
+    "won_wonnet_test": [],
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won_lobby/src/golden_eexfer.txt)
     "won_eexfer_test": [],

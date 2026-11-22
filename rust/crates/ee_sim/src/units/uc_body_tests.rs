@@ -97,7 +97,8 @@ fn building_production_counts_down_and_produces() {
     update_building(&mut h, 100, 1);
     assert!(h.log.contains(&(EE_UNITS_UC_PRODUCE_UNIT, 40, 0, 0)));
     assert!(h.log.contains(&(EE_UNITS_UC_SET_PRODUCTION_TIME, 0, 5000, 0)), "a failed production waits 5 s");
-    assert_eq!(h.ops().last(), Some(&EE_UNITS_UC_HEAL_GARRISON));
+    // the garrison's healing (uc_anim.rs) reads the healing points first: none here
+    assert_eq!(h.ops().last(), Some(&crate::units::uc_anim::EE_UNITS_UC_HEALING_POINTS));
     // a technology is researched at once; a disabled living building does nothing
     let mut h = Mock::default()
         .answer(EE_UNITS_UC_PRODUCTION_TIME, 0, 30)
@@ -127,12 +128,16 @@ fn a_rotting_building_rots_its_parts() {
 fn an_animal_fires_on_its_attack_frames() {
     let mut h = Mock::default()
         .answer(EE_UNITS_UC_FRAME, 0, 12)
-        .answer(EE_UNITS_UC_ANIMATE, 0, 3)
         .answer(EE_UNITS_UC_COMMAND_TYPE, 0, 2021)
         .answer(EE_UNITS_UC_HAS_PHYSICS_MODEL, 0, 1)
         .answer(EE_UNITS_UC_TILE_X, 0, -10000);
     update_animal(&mut h, 100, 1);
-    assert!(h.log.contains(&(EE_UNITS_UC_FIRE_ON_ATTACK_FRAME, 0, 3, 12)));
+    // the animation (uc_anim.rs), then the attack frame's test, in place
+    assert_eq!(h.count(crate::units::uc_anim::EE_UNITS_UC_ATTACK_FRAME_SET), 1);
+    assert!(
+        h.log.iter().position(|e| e.0 == crate::units::uc_anim::EE_UNITS_UC_PAUSED)
+            < h.log.iter().position(|e| e.0 == crate::units::uc_anim::EE_UNITS_UC_ATTACK_FRAME_SET)
+    );
     assert_eq!(h.count(EE_UNITS_UC_PHYSICS_STEP), 0, "off the map");
     assert_eq!(h.ops().last(), Some(&EE_UNITS_UC_UPDATE_DONE));
 }

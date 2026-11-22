@@ -67,6 +67,19 @@ pub(crate) fn add_area_effect<C: Cpp + ?Sized>(c: &mut C, list: usize, effect: u
     }
 }
 
+/// `KeepStrongest` 0x27c721: the list rebuilt through `AddAreaEffect` (a new list, assigned back, then freed).
+pub(crate) fn keep_strongest<C: Cpp + ?Sized>(c: &mut C, list: usize) {
+    let kept = c.ael_list_new();
+    let mut i = 0;
+    while i < c.ael_count(list) {
+        let effect = c.ael_at(list, i);
+        add_area_effect(c, kept, effect);
+        i += 1;
+    }
+    c.ael_list_assign(list, kept);
+    c.ael_list_free(kept);
+}
+
 /// `ApplyModifiers(kind, value, out, unit)`: each effect's `Modify` (the value read afresh: `value` and `out` are the
 /// caller's longs, maybe the same), showing each that applied on the unit.
 pub(crate) fn apply_modifiers<C: Cpp + ?Sized>(
@@ -181,6 +194,26 @@ mod tests {
         fake.answer("ael_t_effect18", &[7]);
         template_load(&mut fake, 1, true);
         assert_eq!(fake.calls(), "ael_t_effect(1)\nael_t_effect18(1)\nael_effect_load(7, true)\nael_t_media(1)");
+    }
+
+    #[test]
+    fn keep_strongest_rebuilds_through_add_area_effect() {
+        let mut fake = Fake::default();
+        fake.answer("ael_list_new", &[60]).answer("ael_count", &[1, 0, 1]).answer("ael_at", &[40]);
+        fake.answer("aem_effect_kind", &[1]);
+        keep_strongest(&mut fake, 1);
+        assert_eq!(
+            fake.calls(),
+            "ael_list_new()
+ael_count(1)
+ael_at(1, 0)
+aem_effect_kind(40)
+ael_count(60)
+ael_add(60, 40)
+ael_count(1)
+ael_list_assign(1, 60)
+ael_list_free(60)"
+        );
     }
 
     #[test]

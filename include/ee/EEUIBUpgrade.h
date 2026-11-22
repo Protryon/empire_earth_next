@@ -38,6 +38,11 @@ public:
     virtual bool GetDisabled();
     // the button's host (ee_screenscpp_upgrade, EEUIBUpgrade.cpp): a member for the protected toolkit calls
     static int64_t HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
+    // the base and protected calls of the Rust bodies' shims (EEUIBUpgrade.cpp, hud_bodies.rs)
+    static void BaseButtonDown(EEUIBUpgrade* inButton) { inButton->UIButton::ButtonDown(); }
+    static void BaseMouseOver(EEUIBUpgrade* inButton) { inButton->UIButton::MouseOver(); }
+    static void ButtonDownOf(EEUIBUpgrade* inButton) { inButton->ButtonDown(); }
+    static void CaptureOf(EEUIBUpgrade* inButton) { inButton->CaptureMouse(); }
 
     UWideString mHelpText;                  // +0x104
     long mAttribute;                        // +0x118 the improvement (0x10: help string only, 0xc: no cost)

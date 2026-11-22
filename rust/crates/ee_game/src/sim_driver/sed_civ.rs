@@ -19,7 +19,8 @@
 //!   cb text FORM ID TEXT            an edit box's text ('_' a space, '-' none)
 //!   cb answer ID                    the message box on top: its button ID (1 OK/Yes, 2 No) released
 //!   cb form FORM                    the form's controls; cb top: the form on top's
-//!   cb state                        the stack, the editor's and the current player's civilizations, the edited one
+//!   cb state                        the stack (and a message box on top: its controls), the editor's and the
+//!                                   current player's civilizations, the edited one
 //!   cb file NAME | cb rm NAME       Users\default\Civilizations\NAME.civ: its bytes as hex | deleted
 //!   cb put NAME HEX                 such a file written from hex bytes
 //!   cb save NAME 0|1                CivBuilderSaveCivilization (the campaign's path with 1)
@@ -368,6 +369,13 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 stack += &if f == 0 { " null".to_string() } else { format!(" {}", h(O::UiFormId, f, &[]) as c_ulong) };
             }
             out.push(stack);
+            // a message box left on top (none in a passing run's states): its text names why (an error box of
+            // the builder's file writes, a question not yet closed)
+            let top = h(O::UiFormCurrent, 0, &[]) as usize;
+            if top != 0 && class_of(h(O::UiFormShellOf, top, &[]) as usize, O::UiFormTypeName, top) == "EEUIFError" {
+                out.push("  a message box on top:".into());
+                form_digest(top, out);
+            }
             let editor = x::editor();
             out.push(civ_digest(
                 "editor",

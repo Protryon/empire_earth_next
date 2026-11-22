@@ -34,286 +34,109 @@
 bool EEIsLandTerrain(long inTerrainType);
 unsigned short EECountTilesAround(long inX, long inY, bool inAny);  // 0x23d4ba (below; provisional name)
 
-// the opacity range of a cloaked unit seen by an enemy (0x449b00 / 0x449b04; 0x564498 = their difference, set by the
-// unit's dynamic initializer: the two are not compile-time constants)
-static float kCloakedFullOpacity = 1.0f;
-static float kCloakedOpacity = 0.6f;
-static float kCloakedOpacityRange = kCloakedFullOpacity - kCloakedOpacity;
-// the wall pieces' yaws (0x446dc0, one object shared with EEGhostUnit.cpp/EEUCBuilding.cpp/EEUnitClass.cpp; EEGetSpaceDockYaw)
-static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
+// (the cloaked opacity range and the wall pieces' yaws, kWallRotations: ee_units uu_cloak.rs)
+
+// ---- the C++ of the cloaking utilities' Rust bodies (ee_units uu_cloak.rs; EE_UNITS_CK_*): one statement of the
+// original bodies each; inA an object, inC, inD values, ioF floats
+
+static EEEffectHandle sCkHandle;   // EEAddCloakEffect's new effect
+
+template <class T> static T* CkObj(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
+static int64_t CkBits(float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return (int64_t)theBits; }
+static float CkFloat(int64_t inBits) { uint32_t theBits = (uint32_t)inBits; float theValue; memcpy(&theValue, &theBits, 4); return theValue; }
+
+extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int64_t inD, float (*ioF)[4])
+{
+    EEUnit* theUnit = CkObj<EEUnit>(inA);
+    EEComplexUnit* theComplex = CkObj<EEComplexUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_CK_TERRAIN:
+        return gWorld.mMap->GetTile((long)inC, (long)inD) != NULL ? gWorld.mMap->GetTile((long)inC, (long)inD)->mTerrainType : -1;
+    case EE_UNITS_CK_IS_EDGE: return gWorld.mMap->IsEdgeTile((long)inC, (long)inD);
+    case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
+    case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>(f), (long)inC, (long)inD, 0, 0);
+    case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
+    case EE_UNITS_CK_COMMAND_TYPE: return theComplex->GetCommandType();
+    case EE_UNITS_CK_ROT_FRACTION: return CkBits((float)theComplex->mComplexUnit->mRottingAwayTime / (long)theUnit->mUnitClass->mRottingTime);
+    case EE_UNITS_CK_HAS_ROTTING_TIME: return (long)theUnit->mUnitClass->mRottingTime != 0;
+    case EE_UNITS_CK_IS_CLOAKABLE: return theComplex->mIsCloakable;
+    case EE_UNITS_CK_IS_CLOAKED: return theComplex->mIsCloaked;
+    case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
+    case EE_UNITS_CK_OPACITY: return CkBits(theComplex->mOpacity);
+    case EE_UNITS_CK_CURRENT_PLAYER: return (int64_t)(uintptr_t)gWorld.GetCurrentPlayer();
+    case EE_UNITS_CK_PLAYER: return (int64_t)(uintptr_t)theUnit->mPlayer;
+    case EE_UNITS_CK_ENEMY_OF_VIEWER: return theUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID];
+    case EE_UNITS_CK_OBSERVER: return gWorld.GetCurrentPlayer()->mObserverMode;
+    case EE_UNITS_CK_SET_FLOAT: *CkObj<float>(inA) = f[0]; return 0;
+    case EE_UNITS_CK_CREATE_CLOAK:
+        return gWorld.GetEffectManager()->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
+    case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(theUnit)->mCloaked = sCkHandle.mValue; return 0;
+    case EE_UNITS_CK_CLOAKED: return (long)EEUnitCast<EEComplexUnit>(theUnit)->mCloaked;
+    case EE_UNITS_CK_DESTROY_EFFECT: gWorld.GetEffectManager()->DestroyEffect((sCkHandle.mValue = (decltype(sCkHandle.mValue))inC, sCkHandle)); return 0;
+    case EE_UNITS_CK_CLEAR_CLOAKED: EEUnitCast<EEComplexUnit>(theUnit)->mCloaked = 0; return 0;
+    case EE_UNITS_CK_SPACE_MAP: return gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
+    case EE_UNITS_CK_TILE_X: return theComplex->mTileX;
+    case EE_UNITS_CK_TILE_Y: return theComplex->mTileY;
+    case EE_UNITS_CK_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
+    case EE_UNITS_CK_FIRST_UNIT: return (int64_t)(uintptr_t)gWorld.mUnits.mFirst;
+    case EE_UNITS_CK_NEXT_UNIT: return (int64_t)(uintptr_t)CkObj<RTSUnit>(inA)->mTileNode->mNext;
+    case EE_UNITS_CK_COMPLEX_OF: return (int64_t)(uintptr_t)static_cast<EEUnit*>(CkObj<RTSUnit>(inA))->mComplexUnit;
+    case EE_UNITS_CK_DOMAINS: return theComplex->mUnitClass->mDomains;
+    case EE_UNITS_CK_UNIT_TYPE: return theComplex->mUnitClass->mUnitType;
+    case EE_UNITS_CK_SET_PLANET: theComplex->mPlanetID = (unsigned short)inC; return 0;
+    }
+    return 0;
+}
 
 // Returns whether a unit is drawn translucent and sets its opacity: the rotting fade, or its cloak opacity (dimmed and
 // clamped for an enemy viewer); a translucent unit that is not cloaked is left as it is
 bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity)
 {
-    bool theResult = inTranslucent;
-    if (inTranslucent && !(inUnit->mIsCloakable && inUnit->mIsCloaked))
-        return theResult;
-    if (inUnit->GetCommandType() == kActionUnitRotting) {
-        long theMaximum = inUnit->mUnitClass->mRottingTime;
-        if (theMaximum != 0)
-            ioOpacity = (float)inUnit->mComplexUnit->mRottingAwayTime / theMaximum;
-        else
-            ioOpacity = 0.0f;
-    } else if (!inUnit->mIsCloakable || gFreeCamera) {
-        ioOpacity = 1.0f;
-    } else {
-        float theOpacity = inUnit->mOpacity;
-        ioOpacity = theOpacity;
-        if (theOpacity < 1.0f)
-            theResult = true;
-        EEPlayer* theViewer = gWorld.GetCurrentPlayer();
-        if (theViewer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[theViewer->mPlayerID] != 0 &&
-            !gWorld.GetCurrentPlayer()->mObserverMode) {
-            ioOpacity = (theOpacity - kCloakedOpacity) / kCloakedOpacityRange * kCloakedOpacity;
-            if (ioOpacity < 0.0f)
-                ioOpacity = 0.0f;
-            else if (ioOpacity > kCloakedOpacity)
-                ioOpacity = kCloakedOpacity;
-        }
-    }
-    return theResult;
+    return ee_units_ck_body(EE_UNITS_CK_DO_TRANSLUCENT, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)&ioOpacity, inTranslucent, 0) != 0;   // uu_cloak.rs
 }
 
 // Returns a space dock's yaw from which of the 2 x 2 tiles at (inX, inY) are space (one or two space tiles), else the
 // yaw of EEGetDockFacing
 float EEGetSpaceDockYaw(long inX, long inY, long inSize)
 {
-    unsigned short theCount = 0;
-    long theLeft = (long)(inX - 1.5f) + 1;
-    long theBottom = (long)(inY - 1.5f) + 1;
-    long theRight = (long)(inX + 1.5f);
-    long theTop = (long)(inY + 1.5f);
-    float theYaw = 0.0f;
-    EEMap* theMap = gWorld.mMap;
-    long x;
-    long y;
-    for (x = theLeft; x < theRight; x++) {
-        for (y = theBottom; y < theTop; y++) {
-            EETile* theTile = theMap->GetTile(x, y);
-            if (theTile != NULL && theTile->mTerrainType != kTerrainSpace)
-                theCount++;
-        }
-    }
-    if (theCount == 3) {
-        unsigned long theWater = 0;
-        unsigned long theIndex = 0;
-        for (x = theLeft; x < theRight; x++) {
-            for (y = theBottom; y < theTop; y++) {
-                // an off-map tile counts as space, as in the count above (it used to be read through NULL)
-                EETile* theTile = theMap->GetTile(x, y);
-                if (theTile == NULL || theTile->mTerrainType == kTerrainSpace)
-                    theWater = theIndex;
-                theIndex++;
-            }
-        }
-        switch ((unsigned short)theWater) {
-        case 3:
-            theYaw = -0.78539819f;
-            break;
-        case 2:
-            theYaw = -2.3561945f;
-            break;
-        case 1:
-            theYaw = 0.78539819f;
-            break;
-        case 0:
-            theYaw = 2.3561945f;
-            break;
-        }
-    } else if (theCount == 2) {
-        long theKinds[4];
-        unsigned long theIndex = 0;
-        for (x = theLeft; x < theRight; x++) {
-            for (y = theBottom; y < theTop; y++) {
-                // an off-map tile counts as space, as in the count above (it used to be read through NULL)
-                EETile* theTile = theMap->GetTile(x, y);
-                theKinds[(unsigned short)theIndex++] = theTile != NULL ? theTile->mTerrainType : kTerrainSpace;
-            }
-        }
-        long thePiece;
-        if (theKinds[1] != 0xc && theKinds[3] != 0xc)
-            thePiece = 1;
-        else if (theKinds[0] != 0xc && theKinds[1] != 0xc)
-            thePiece = 2;
-        else if (theKinds[2] != 0xc && theKinds[3] != 0xc)
-            thePiece = 3;
-        else
-            thePiece = 0;
-        theYaw = kWallRotations[thePiece];
-    } else
-        theYaw = kWallRotations[EEGetDockFacing(inX, inY)];
-    return theYaw;
+    return CkFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, inX, inY));   // uu_cloak.rs
 }
 
 // Returns whether a space dock (unit type 0x2d8) fits at (inX, inY): its inner 2 x 2 tiles placeable, its border on the
 // map with at least two land tiles, and its inner land/space mix fitting a dock
 bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer)
 {
-    bool theOK = true;
-    long theBlocking = 0;
-    unsigned short theInner = 0;
-    long theWater = 0;
-    long theLeft = (long)(inX - 1.5f);
-    long theBottom = (long)(inY - 1.5f);
-    long theRight = (long)(inX + 1.5f);
-    long theTop = (long)(inY + 1.5f);
-    GE3DPoint thePoint((float)inX, (float)inY, 0.0f);
-    EEMap* theMap = gWorld.mMap;
-    long x;
-    long y;
-    for (x = theLeft; x <= theRight && theOK; x++) {
-        for (y = theBottom; y <= theTop && theOK; y++) {
-            EETile* theTile = theMap->GetTile(x, y);
-            if (x == theLeft || y == theBottom || x == theRight || y == theTop) {
-                if (theTile == NULL || theMap->IsEdgeTile(x, y)) {
-                    theOK = false;
-                } else {
-                    long theKind = theTile->mTerrainType;
-                    if (EEIsLandTerrain(theKind))
-                        theBlocking++;
-                    else if (theKind == kTerrainSpace)
-                        theWater++;
-                }
-            } else {
-                bool thePlaceable;
-                if (theTile != NULL) {
-                    thePlaceable = EECanPlace(inPlayer, 0x2d8, &thePoint, x, y, 0, 0);
-                    if (EEIsLandTerrain(theTile->mTerrainType))
-                        theInner++;
-                } else {
-                    thePlaceable = false;
-                }
-                if (!thePlaceable)
-                    theOK = false;
-            }
-        }
-    }
-    if (theOK) {
-        if (theInner == 3) {
-            bool theFound = false;
-            for (x = theLeft + 1; x < theRight && !theFound; x++) {
-                for (y = theBottom + 1; y < theTop && !theFound; y++) {
-                    EETile* theTile = theMap->GetTile(x, y);
-                    if (theTile != NULL && theTile->mTerrainType == kTerrainSpace)
-                        theFound = true;
-                }
-            }
-            if (EECountTilesAround(x - 1, y - 1, false) < 5)
-                theOK = false;
-        } else if (theInner == 2) {
-            // two blocking tiles inside: accepted as is
-        } else if (theInner == 1) {
-            unsigned short theMost = 0;
-            for (x = theLeft + 1; x < theRight; x++) {
-                for (y = theBottom + 1; y < theTop; y++) {
-                    EETile* theTile = theMap->GetTile(x, y);
-                    if (theTile == NULL || theTile->mTerrainType != kTerrainSpace)
-                        continue;
-                    unsigned short theCount = EECountTilesAround(x, y, true);
-                    if (theCount > theMost)
-                        theMost = theCount;
-                }
-            }
-            if (theMost < 5)
-                theOK = false;
-        } else {
-            theOK = false;
-        }
-    }
-    if (theBlocking < 2)
-        theOK = false;
-    return theOK;
+    return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)inPlayer, 0, inX, inY) != 0;   // uu_cloak.rs
 }
 
 // Counts the 3 x 3 tiles around (inX, inY) that are land (inAny) or space (otherwise); 0 when the centre is off the map
 unsigned short EECountTilesAround(long inX, long inY, bool inAny)
 {
-    if (gWorld.mMap->GetTile(inX, inY) == NULL)
-        return 0;
-    long theCount = 0;
-    for (long x = inX - 1; x <= inX + 1; x++) {
-        for (long y = inY - 1; y <= inY + 1; y++) {
-            EETile* theTile = gWorld.mMap->GetTile(x, y);
-            if (theTile == NULL)
-                continue;
-            if (inAny) {
-                if (EEIsLandTerrain(theTile->mTerrainType))
-                    theCount++;
-            } else if (theTile->mTerrainType == kTerrainSpace) {
-                theCount++;
-            }
-        }
-    }
-    return theCount;
+    return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_COUNT_TILES_AROUND, inAny, 0, inX, inY);   // uu_cloak.rs
 }
 
 // Attaches the cloaking graphic effect (0x11c) to the unit and keeps its handle in the complex unit's mCloaked
 void EEAddCloakEffect(EEUnit* inUnit)
 {
-    EEEffectHandle theHandle;
-    if (gWorld.GetEffectManager()->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &theHandle, false, 0, 0) == 0)
-        EEUnitCast<EEComplexUnit>(inUnit)->mCloaked = theHandle.mValue;
+    ee_units_ck_body(EE_UNITS_CK_DO_ADD_CLOAK_EFFECT, (uint64_t)(uintptr_t)inUnit, 0, 0, 0);   // uu_cloak.rs
 }
 
 // Destroys the unit's cloaking effect, if it has one, and clears its handle
 void EERemoveCloakEffect(EEUnit* inUnit)
 {
-    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inUnit);
-    if ((long)theUnit->mCloaked <= 0)
-        return;
-    EEEffectHandle theHandle;
-    theHandle.mValue = theUnit->mCloaked;
-    gWorld.GetEffectManager()->DestroyEffect(theHandle);
-    theUnit->mCloaked = 0;
+    ee_units_ck_body(EE_UNITS_CK_DO_REMOVE_CLOAK_EFFECT, (uint64_t)(uintptr_t)inUnit, 0, 0, 0);   // uu_cloak.rs
 }
 
 // Returns the planet (land continent) under a unit or nearest it within 6 tiles; 1 on a non-space map, 0 when none
 unsigned short EEGetLandContinentOf(EEComplexUnit* inUnit)
 {
-    if (!gWorld.mMap->mTerrainMesh.GetIsSpaceMap())
-        return 1;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    bool theFound = false;
-    EETile* theTile = gWorld.mMap->GetTile(theX, theY);
-    EEMap* theMap = gWorld.mMap;
-    if (theTile != NULL && theTile->mTerrainType != kTerrainSpace && !theMap->IsEdgeTile(theX, theY))
-        theFound = true;
-    for (long theStep = 1; theStep <= 6 && !theFound; theStep++) {
-        for (long i = -1; i <= 1 && !theFound; i++) {
-            for (long j = -1; j <= 1 && !theFound; j++) {
-                if (i == 0 && j == 0)
-                    continue;
-                theX = i * theStep + inUnit->GetTileX();
-                theY = j * theStep + inUnit->GetTileY();
-                theTile = theMap->GetTile(theX, theY);
-                if (theTile != NULL && theTile->mTerrainType != kTerrainSpace && !theMap->IsEdgeTile(theX, theY))
-                    theFound = true;
-            }
-        }
-    }
-    unsigned short theResult = 0;
-    if (theFound) {
-        EETileCoordinate theTileCoordinate;
-        theTileCoordinate.mX = theX;
-        theTileCoordinate.mY = theY;
-        theResult = gContinentManager.GetContinent(theTileCoordinate, kAIPathNonSpace);
-    }
-    return theResult;
+    return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_LAND_CONTINENT_OF, (uint64_t)(uintptr_t)inUnit, 0, 0, 0);   // uu_cloak.rs
 }
 
 // Sets the planet of every complex air unit, space dock, space turret and orbital space station on the map
 // (cdecl; called by EEWorld.cpp and EEUserInterface.cpp)
 void EEUpdateLandContinents()
 {
-    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-        EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(theUnit)->mComplexUnit;
-        if (theComplexUnit == NULL)
-            continue;
-        EEUnitClass* theClass = theComplexUnit->mUnitClass;
-        if ((theClass->mDomains & kMovementAir) || theClass->mUnitType == kUnitTypeSpaceDock || theClass->mUnitType == kUnitTypeSpaceTurret
-            || theClass->mUnitType == kUnitTypeOrbitalSpaceStation)
-            theComplexUnit->mPlanetID = EEGetLandContinentOf(theComplexUnit);
-    }
+    ee_units_ck_body(EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS, 0, 0, 0, 0);   // uu_cloak.rs
 }

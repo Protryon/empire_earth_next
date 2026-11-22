@@ -3,8 +3,9 @@
 // 0x2813f4..0x2830d0; EECivPowersManager.cpp's 0x2830d0..0x283b2e folded in (civilization builder lane, round 2).
 // Whole in Rust (ee_tech civ.rs: the tables and queries; civ_apply.rs: ApplyUpgrade, ApplyUpgradeLevel with
 // EECBProcessUpgrade and EECBUpgradeArmor, the powers' ApplyPower): the two classes keep their names and methods as
-// forwarders, this unit reads the db tables' bytes and answers the simulation's world calls (EECivHostCall). The
-// premade list's filling (a UI list) stays here. Unit flags: the exe module set.
+// forwarders. UI lane round 12: their remaining bodies (the db files' reads, the premade copies, ApplyUpgrade with
+// its world host, the out-parameter members) are ee_game screens civ_manager_obj.rs over the shims of this unit; the
+// world calls are civ_manager_calls.rs'. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -35,6 +36,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"   // the host and the premade list (civ_manager_calls.rs)
+#include "ee/EEScreensShims.h"
 
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
@@ -52,21 +54,6 @@ const UString kCivKey(".civ");
 //   object 0x9654c0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivilizationsKey("Civilizations");
 
-// A db table's whole bytes (the loads read them as their records; a memory file reads nothing past its end)
-static long EECivReadAll(FSFile* inFile, std::vector<unsigned char>& outBytes)
-{
-    long theResult = inFile->Open(kFileAccessRead);
-    unsigned char theChunk[0x1000];
-    unsigned long theRead = 0;
-    while (theResult == kErrorOK && inFile->Read(theChunk, sizeof(theChunk), theRead) == kErrorOK)
-        outBytes.insert(outBytes.end(), theChunk, theChunk + sizeof(theChunk));
-    unsigned char theByte;
-    while (theResult == kErrorOK && inFile->Read(theByte) == kErrorOK)
-        outBytes.push_back(theByte);
-    inFile->Close();
-    return theResult;
-}
-
 // Creates the civilization manager (the tables are Rust's: it binds the game's rules for them)
 EECivilizationManager::EECivilizationManager()
 {
@@ -78,22 +65,10 @@ EECivilizationManager::~EECivilizationManager()
 }
 
 // Reads the categories, then appends the civ powers' category (civbuilder.yaml's powers_category)
-long EECivilizationManager::Load(FSFile* inFile)
-{
-    std::vector<unsigned char> theBytes;
-    if (EECivReadAll(inFile, theBytes) != kErrorOK)
-        return kErrorFailed;
-    return ee_tech_civ_load(theBytes.data(), theBytes.size(), EERuleLong(EEGetRules().mCivBuilder.mPowersCost));
-}
+long EECivilizationManager::Load(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 0); }
 
 // Reads the premade civilizations, sorted by index, and their eras
-long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile)
-{
-    std::vector<unsigned char> theBytes;
-    if (EECivReadAll(inFile, theBytes) != kErrorOK)
-        return kErrorFailed;
-    return ee_tech_civ_load_premade(theBytes.data(), theBytes.size());
-}
+long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 1); }
 
 long EECivilizationManager::GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }
 
@@ -114,17 +89,12 @@ long EECivilizationManager::GetEra(unsigned long inIndex) { return ee_tech_civ_e
 
 void EECivilizationManager::GetCivilizations(std::vector<EECivilizationEntry>& outCivs)
 {
-    outCivs.clear();
-    for (unsigned long i = 0; i < this->GetNumCivilizations(); i++)
-        outCivs.push_back(this->GetCivilization(i));
+    ee_screens_civm_civilizations((uintptr_t)&outCivs, 0, true);
 }
 
 void EECivilizationManager::GetCivilizationsOfType(std::vector<EECivilizationEntry>& outCivs, long inType)
 {
-    outCivs.clear();
-    for (unsigned long i = 0; i < this->GetNumCivilizations(); i++)
-        if (this->GetCivilization(i).mEraNameID == inType)
-            outCivs.push_back(this->GetCivilization(i));
+    ee_screens_civm_civilizations((uintptr_t)&outCivs, (int32_t)inType, false);
 }
 
 // Fills a list box with one header per era and a line per premade civilization of that era (civ_manager_calls.rs)
@@ -136,20 +106,13 @@ void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
 bool EECivilizationManager::MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName,
                                                        std::vector<EECivUpgrade>& inUpgrades, long* outNameID)
 {
-    int32_t theNameID = 0;
-    bool theResult = ee_tech_civ_matches_premade((const char*)inFile, (const char*)inName, (uint32_t)inName.GetLength(),
-                                                 inUpgrades.data(), inUpgrades.size(), &theNameID);
-    *outNameID = theNameID;
-    return theResult;
+    return ee_screens_civm_matches((const char*)inFile, (const char*)inName, (uint32_t)inName.GetLength(), inUpgrades.data(),
+                                   inUpgrades.size(), outNameID);
 }
 
 bool EECivilizationManager::GetCategoryNameID(unsigned long inCategory, long* outNameID)
 {
-    EECivilizationCategoryEntry* theEntry = NULL;
-    if (!this->GetCategory(inCategory, &theEntry))
-        return false;
-    *outNameID = theEntry->mNameID;
-    return true;
+    return ee_screens_civm_category_name_id((uint32_t)inCategory, outNameID);
 }
 
 bool EECivilizationManager::LookupLevel(EECivUpgrade inUpgrade, float* outValue, float* outBonus)
@@ -165,10 +128,7 @@ bool EECivilizationManager::GetCategoryLevel(unsigned long inCategory, unsigned 
 
 bool EECivilizationManager::GetCategory(unsigned long inCategory, EECivilizationCategoryEntry** outEntry)
 {
-    EeTechCivCategory* theEntry = ee_tech_civ_category((uint32_t)inCategory);
-    if (theEntry != NULL)
-        *outEntry = reinterpret_cast<EECivilizationCategoryEntry*>(theEntry);
-    return theEntry != NULL;
+    return ee_screens_civm_category((uint32_t)inCategory, (void**)outEntry);
 }
 
 unsigned long EECivilizationManager::GetCategoryCount() { return ee_tech_civ_category_count(); }
@@ -203,10 +163,7 @@ EECivUpgrade EECivilizationManager::FromLegacy(unsigned long inLegacy) { return 
 
 bool EECivilizationManager::ToLegacy(EECivUpgrade inUpgrade, unsigned long& outLegacy)
 {
-    uint32_t theLegacy = 0;
-    bool theResult = ee_tech_civ_to_legacy(inUpgrade, &theLegacy);
-    outLegacy = theLegacy;
-    return theResult;
+    return ee_screens_civm_to_legacy(inUpgrade, &outLegacy);
 }
 
 bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const
@@ -229,10 +186,7 @@ unsigned long EECivilizationManager::MakePowerUpgrade(unsigned long inIndex) { r
 
 void EECivilizationManager::SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex)
 {
-    if (outCategory)
-        *outCategory = inUpgrade >> kCivUpgradeLevelBits;
-    if (outIndex)
-        *outIndex = inUpgrade & kCivUpgradeLevelMask;
+    ee_screens_civm_split(inUpgrade, outCategory, outIndex);
 }
 
 std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
@@ -246,14 +200,6 @@ std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
 }
 
 // ------------------------------------------------------------------------------------------------ the simulation's host
-
-// The world for ee_tech civ_apply.rs (the unit sets, the player's class upgrades and fields, the units' sight, the
-// powers' research, media, sight pulse, camouflage and tech nodes): Rust's (civ_manager_calls.rs) over the
-// one-statement shims below (UI lane round 11)
-static void EECivHostCall(void* inCtx, const EeTechCivCall* c, EeTechCivReply* r)
-{
-    ee_screens_civ_host(c, r);
-}
 
 #define CIVH_P(p) (::gWorld.mPlayers[p])
 #define CIVH_U(u) ((EEUnitClassUpgrade*)(u))
@@ -369,11 +315,7 @@ extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUILis
 // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
 bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
 {
-    EECivCaptureApply* theCapture = EECivCaptureApplyBegin(inUpgrade, inPlayer);   // TEST ONLY: CVAP
-    EeTechCivHost theHost{NULL, &EECivHostCall};
-    bool theResult = ee_tech_civ_apply_upgrade(&theHost, inUpgrade, (int32_t)inPlayer);
-    EECivCaptureApplyEnd(theCapture, theResult);
-    return theResult;
+    return ee_screens_civm_apply_upgrade(inUpgrade, inPlayer);
 }
 
 // ------------------------------------------------------------------------------------------------ the powers
@@ -387,13 +329,7 @@ EECivPowersManager::~EECivPowersManager()
 }
 
 // Reads the civilization power records (appended)
-long EECivPowersManager::Load(FSFile* inFile)
-{
-    std::vector<unsigned char> theBytes;
-    if (EECivReadAll(inFile, theBytes) != kErrorOK)
-        return kErrorFailed;
-    return ee_tech_civ_load_powers(theBytes.data(), theBytes.size());
-}
+long EECivPowersManager::Load(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 2); }
 
 // Reads a civilization power's name from the string table
 long EECivPowersManager::GetName(long inID, UWideString& outName)
@@ -414,8 +350,32 @@ EECivPower* EECivPowersManager::GetPowerRecord(long inID)
 unsigned long EECivPowersManager::GetNumPowers() { return ee_tech_civ_power_count(); }
 
 // (an upgrade whose attribute applies the power: civbuilder.yaml; the original compared the level with the id)
-bool EECivPowersManager::HasPower(EEPlayer* inPlayer, long inID)
-{
-    std::vector<EECivUpgrade>& theUpgrades = inPlayer->mCivilization.GetPurchasedUpgrades();
-    return ee_tech_civ_has_power(theUpgrades.data(), theUpgrades.size(), (int32_t)inID);
-}
+bool EECivPowersManager::HasPower(EEPlayer* inPlayer, long inID) { return ee_screens_civm_has_power((uintptr_t)inPlayer, inID); }
+
+// the db files' reads, the premade copies, ApplyUpgrade's capture halves and the powers' test: civ_manager_obj.rs over
+// these (UI lane round 12)
+static unsigned char sCivmChunk[0x1000];   // a chunk read (the original's local)
+static unsigned long sCivmRead = 0;
+static unsigned char sCivmByte = 0;
+extern "C" uintptr_t ee_screenscpp_civm_capture_begin(uint32_t inUpgrade, int64_t inPlayer)
+{ return (uintptr_t)EECivCaptureApplyBegin(inUpgrade, (long)inPlayer); }
+extern "C" void ee_screenscpp_civm_capture_end(uintptr_t inState, bool inResult)
+{ EECivCaptureApplyEnd((EECivCaptureApply*)inState, inResult); }
+extern "C" int32_t ee_screenscpp_civm_file_open(uintptr_t inFile) { return ((FSFile*)inFile)->Open(kFileAccessRead); }
+extern "C" int32_t ee_screenscpp_civm_read_chunk(uintptr_t inFile)
+{ return ((FSFile*)inFile)->Read(sCivmChunk, sizeof(sCivmChunk), sCivmRead); }
+extern "C" void ee_screenscpp_civm_chunk_bytes(void* inOut)
+{ ee_screens_shim_out(inOut, sCivmChunk, sizeof(sCivmChunk)); }
+extern "C" int32_t ee_screenscpp_civm_read_byte(uintptr_t inFile) { return ((FSFile*)inFile)->Read(sCivmByte); }
+extern "C" uint8_t ee_screenscpp_civm_byte() { return sCivmByte; }
+extern "C" void ee_screenscpp_civm_file_close(uintptr_t inFile) { ((FSFile*)inFile)->Close(); }
+extern "C" int64_t ee_screenscpp_civm_powers_cost()
+{ return (int64_t)EERuleLong(EEGetRules().mCivBuilder.mPowersCost); }
+extern "C" void ee_screenscpp_civm_civs_clear(uintptr_t inList)
+{ ((std::vector<EECivilizationEntry>*)inList)->clear(); }
+extern "C" void ee_screenscpp_civm_civs_push(uintptr_t inList, uintptr_t inEntry)
+{ ((std::vector<EECivilizationEntry>*)inList)->push_back(*(const EECivilizationEntry*)inEntry); }
+extern "C" uintptr_t ee_screenscpp_civm_purchased_count(uintptr_t inPlayer)
+{ return ((EEPlayer*)inPlayer)->mCivilization.GetPurchasedUpgrades().size(); }
+extern "C" uintptr_t ee_screenscpp_civm_purchased_data(uintptr_t inPlayer)
+{ return (uintptr_t)((EEPlayer*)inPlayer)->mCivilization.GetPurchasedUpgrades().data(); }

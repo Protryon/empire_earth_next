@@ -65,7 +65,6 @@ static GEBitmap* sSeplDiplomacy[3][2];
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
 extern FSPath* gCivilizationDataPath;
-extern GEFont* gU531930;                    // 0x531930 (a UI font; Empire Earth.cpp's globals)
 UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit global)
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)
 static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTechnologyTechs;
@@ -78,10 +77,7 @@ static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTe
 // 0x578342) and the player rows EESEPlayerRow (0x578a29 .. 0x57a53e) are the object's records.
 
 // the screen's font while a screen's object makes its controls (the player tab, the trigger screens' objects)
-extern GEFont* gSeplScreenFont;   // EEGlobals.cpp
 // the unit tab's lists (EESEUnit.cpp; declared in ee/EESEUnit.h)
-UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
-                            unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
 // Performs the action: sets gMaxPlayers to the new player count
 void EESEAChangeWorldPlayerCount::Virtual4()
@@ -102,40 +98,6 @@ static const bool sDiplomacyShowRegistered = (gEEUIShellDiplomacyShow = EESEDipl
 // ---- the player tab's host (editor_players.rs; EE_SCREENS_SEPL_OP_*): the controls it makes and drives, the
 // players and the world it loads from and stores to
 
-static_assert(EE_SCREENS_SEPL_ALIGN_LEFT == kTextAlignLeft && EE_SCREENS_SEPL_ALIGN_CENTER == kTextAlignCenter,
-              "the alignments");
-static_assert(EE_SCREENS_SEPL_SHOWN == kDisplayModeShown && EE_SCREENS_SEPL_HIDDEN == kDisplayModeHidden, "modes");
-static_assert(EE_SCREENS_SEPL_TRIGGER_RANGE == kControlTriggerRangeChanged &&
-                  EE_SCREENS_SEPL_TRIGGER_CHECKED == kControlTriggerChecked &&
-                  EE_SCREENS_SEPL_TRIGGER_SELECTION == kControlTriggerSelectionChanged,
-              "the triggers");
-static_assert(EE_SCREENS_SEPL_IDS_MAX_PLAYERS == IDS_MAX_PLAYERS && EE_SCREENS_SEPL_IDS_START_EPOCH == IDS_START_EPOCH &&
-                  EE_SCREENS_SEPL_IDS_ALL_PLAYERS == IDS_ALL_PLAYERS && EE_SCREENS_SEPL_IDS_SE_PLAYERS == IDS_SE_PLAYERS &&
-                  EE_SCREENS_SEPL_IDS_SE_PLAYER == IDS_SE_PLAYER &&
-                  EE_SCREENS_SEPL_IDS_SE_CIVILIZATION == IDS_SE_CIVILIZATION &&
-                  EE_SCREENS_SEPL_IDS_ENABLE_TECHNOLOGIES == IDS_ENABLE_TECHNOLOGIES &&
-                  EE_SCREENS_SEPL_IDS_DISABLE_TECHNOLOGIES == IDS_DISABLE_TECHNOLOGIES &&
-                  EE_SCREENS_SEPL_IDS_UNIT_TYPES == IDS_UNIT_TYPES &&
-                  EE_SCREENS_SEPL_IDS_SE_UNIT_GROUP_FIRST == IDS_SE_UNIT_GROUP_FIRST &&
-                  EE_SCREENS_SEPL_IDS_DISPLAY_EPOCHS == IDS_DISPLAY_EPOCHS &&
-                  EE_SCREENS_SEPL_IDS_END_EPOCH == IDS_END_EPOCH && EE_SCREENS_SEPL_IDS_SE_HUMAN == IDS_SE_HUMAN &&
-                  EE_SCREENS_SEPL_IDS_SE_ACTIVE == IDS_SE_ACTIVE && EE_SCREENS_SEPL_IDS_SE_ACTIVE + 4 == IDS_SE_BUILD_REPAIR &&
-                  EE_SCREENS_SEPL_IDS_SE_ACTIVE + 8 == IDS_CITIZEN_PERCENTAGE &&
-                  EE_SCREENS_SEPL_IDS_RESOURCE_NAME_FIRST == IDS_RESOURCE_NAME_FIRST &&
-                  EE_SCREENS_SEPL_IDS_GAME_OPTIONS == IDS_GAME_OPTIONS &&
-                  EE_SCREENS_SEPL_IDS_LOBBY_RESOURCES == IDS_LOBBY_RESOURCES &&
-                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT == IDS_GAME_GAME_UNIT_LIMIT &&
-                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 6 == IDS_UNIT_IMPROVEMENTS &&
-                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 7 == IDS_CPU &&
-                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 10 == IDS_GAME_LOS &&
-                  EE_SCREENS_SEPL_IDS_MUTUAL_DIPLOMACY_SETTINGS == IDS_MUTUAL_DIPLOMACY_SETTINGS &&
-                  EE_SCREENS_SEPL_IDS_USE_CARBON_RESOURCE == IDS_USE_CARBON_RESOURCE,
-              "the strings");
-static_assert(EE_SCREENS_SEPX_IDS_NONE == IDS_NONE && EE_SCREENS_SEPX_IDS_UNKNOWN_CIVILIZATION == IDS_UNKNOWN_CIVILIZATION &&
-                  EE_SCREENS_SEPX_IDS_PLAYERS_CURRENTLY_ALLIES == IDS_PLAYERS_CURRENTLY_ALLIES &&
-                  EE_SCREENS_SEPX_IDS_PLAYERS_CURRENTLY_ENEMIES == IDS_PLAYERS_CURRENTLY_ENEMIES &&
-                  EE_SCREENS_SEPX_IDS_SET == IDS_SET && EE_SCREENS_SEPX_IDS_UNIT_FAMILY_FIRST == IDS_UNIT_FAMILY_FIRST,
-              "editor_seplx.rs's strings");
 
 namespace {
 
@@ -205,13 +167,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     return 0;
 }
 
-// a making statement's object handed back in i0 (low 32 bits) and i1 (high) (editor_sepl.rs mk)
-static int32_t SepxHandle(int32_t* i, const void* inObject)
-{
-    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
-    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
-    return 0;
-}
 static EEPlayer* SepxPlayer(int32_t* i) { return gWorld.mPlayers[i[0]]; }
 static EEComputerPlayer* SepxAI(int32_t* i) { return gWorld.mPlayers[i[0]]->mComputerPlayer; }
 static std::vector<long>* SepxTechs(int32_t inList)
@@ -228,12 +183,7 @@ static UWideString SepxTextIn(void* const* p, int32_t* i) { return UWideString(s
 static const UString& SepxFile(int32_t* i) { return *std::next(sSepxFiles.begin(), i[0]); }
 
 // a text into the caller's buffer (p1, i3 bytes): its whole length
-static int32_t SepxWrite(const UWideString& inText, void* const* p, int32_t* i)
-{
-    int32_t theLength = (int32_t)inText.GetTCHARLength();
-    memcpy(p[1], (const char*)inText, (size_t)(theLength < i[3] ? theLength : i[3]));
-    return theLength;
-}
+static int32_t SepxWrite(const UWideString& inText, void* const* p, int32_t* i) { return EESEWrite(p[1], i[3], inText); }
 
 // the maker's statements' arguments (editor_sepl.rs make): the record p0, the form p1, the made control p2, the
 // rectangle f (left, top, right, bottom)
@@ -308,18 +258,18 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_AI_SET + 5: return SepxAI(i)->mCanExplore = i[3] != 0;
     case EE_SCREENS_SEPX_AI_SET + 6: return SepxAI(i)->mIgnoreOthers = i[3] != 0;
     case EE_SCREENS_SEPX_AI_SET + 7: return SepxAI(i)->mCanGather = i[3] != 0;
-    case EE_SCREENS_SEPX_EVENT_START_EPOCH: return SepxHandle(i, static_cast<UIEvent*>(new EESEERust(kSEEStartEpoch, p[1])));
+    case EE_SCREENS_SEPX_EVENT_START_EPOCH: return EESEOut(i, static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_START_EPOCH, p[1])));
     case EE_SCREENS_SEPX_EVENT_SLIDER:
-        return SepxHandle(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
+        return EESEOut(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
     case EE_SCREENS_SEPX_EVENT_UNIT_LIMIT:
-        return SepxHandle(i, static_cast<UIEvent*>(EESEENewUnitLimit(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
-    case EE_SCREENS_SEPX_EVENT_DISPLAY_EPOCH: return SepxHandle(i, EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH));
-    case EE_SCREENS_SEPX_EVENT_SCREEN: return SepxHandle(i, EECreateScreenEvent((uint32_t)i[0]));
+        return EESEOut(i, static_cast<UIEvent*>(EESEENewUnitLimit(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
+    case EE_SCREENS_SEPX_EVENT_DISPLAY_EPOCH: return EESEOut(i, EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH));
+    case EE_SCREENS_SEPX_EVENT_SCREEN: return EESEOut(i, EECreateScreenEvent((uint32_t)i[0]));
     case EE_SCREENS_SEPX_SET_TRIGGER: c->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1]));
         return 0;
     case EE_SCREENS_SEPX_EVENT_RELEASE: static_cast<UIEvent*>(p[1])->Dereference();
         return 0;
-    case EE_SCREENS_SEPX_COUNT_ACTION: return SepxHandle(i, static_cast<EEAction*>(new EESEAChangeWorldPlayerCount((unsigned long)i[0])));
+    case EE_SCREENS_SEPX_COUNT_ACTION: return EESEOut(i, static_cast<EEAction*>(new EESEAChangeWorldPlayerCount((unsigned long)i[0])));
     case EE_SCREENS_SEPX_POST_ACTION: gUserInterface->PostAction(static_cast<EEAction*>(p[0]));
         return 0;
     case EE_SCREENS_SEPX_ACTION_RELEASE: static_cast<EEAction*>(p[0])->Dereference();
@@ -364,58 +314,58 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_FT_OBSOLETED: return gWorld.mPlayers[i[1]]->GetTechTree()->Get((*SepxTechs(i[0]))[(size_t)i[2]])->mScenEditorObsoleted;
     case EE_SCREENS_SEPX_FONT_HEIGHT: return (int32_t)SeplFont((uint32_t)i[0])->GetHeight();
     case EE_SCREENS_SEPX_MAKE_LABEL:
-        return SepxHandle(i, static_cast<UIControl*>(new UITextLabel(SepxText(p), SepxFont(p), C(p).id, SepxRect(f), F(p), 0, C(p).index, (unsigned long)C(p).extra[0])));
+        return EESEOut(i, static_cast<UIControl*>(new UITextLabel(SepxText(p), SepxFont(p), C(p).id, SepxRect(f), F(p), 0, C(p).index, (unsigned long)C(p).extra[0])));
     case EE_SCREENS_SEPX_MAKE_EDIT:
-        return SepxHandle(i, static_cast<UIControl*>(new UIEditBox(C(p).id, SepxFont(p), C(p).extra[0], C(p).extra[1] != 0, SepxRect(f), F(p), C(p).index, 2, C(p).extra[2] != 0, false)));
+        return EESEOut(i, static_cast<UIControl*>(new UIEditBox(C(p).id, SepxFont(p), C(p).extra[0], C(p).extra[1] != 0, SepxRect(f), F(p), C(p).index, 2, C(p).extra[2] != 0, false)));
     case EE_SCREENS_SEPX_MAKE_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, std::vector<UWideString>(), SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
+        return EESEOut(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, std::vector<UWideString>(), SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
     case EE_SCREENS_SEPX_MAKE_COMBO_EPOCHS:
-        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
+        return EESEOut(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
     case EE_SCREENS_SEPX_MAKE_MAX_PLAYER:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo(EE_SCREENS_SK_MAX_PLAYER, {}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), SepxFont(p)->GetHeight() << 4, F(p), C(p).index, 0, 2)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellCombo(EE_SCREENS_SK_MAX_PLAYER, {}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), SepxFont(p)->GetHeight() << 4, F(p), C(p).index, 0, 2)));
     case EE_SCREENS_SEPX_MAKE_CHECK:
-        return SepxHandle(i, static_cast<UIControl*>(new UICheckBox(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false)));
-    case EE_SCREENS_SEPX_MAKE_SLIDER: return SepxHandle(i, static_cast<UIControl*>(new UISlider(C(p).id, SepxRect(f), 0, F(p), C(p).index, 2)));
+        return EESEOut(i, static_cast<UIControl*>(new UICheckBox(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false)));
+    case EE_SCREENS_SEPX_MAKE_SLIDER: return EESEOut(i, static_cast<UIControl*>(new UISlider(C(p).id, SepxRect(f), 0, F(p), C(p).index, 2)));
     case EE_SCREENS_SEPX_MAKE_UNIT_TYPE:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_UNIT_TYPES, {}, C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false, C(p).extra[0] != 0, false)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_UNIT_TYPES, {}, C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false, C(p).extra[0] != 0, false)));
     case EE_SCREENS_SEPX_MAKE_TECH_LIST:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellList(EE_SCREENS_SK_TECH_LIST, {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellList(EE_SCREENS_SK_TECH_LIST, {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_SELECT:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_SELECT, {(int64_t)SepxFont(p)}, C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, 3)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_SELECT, {(int64_t)SepxFont(p)}, C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_TAB:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_TAB, {(int64_t)SepxFont(p)}, C(p).id, UWideString(""), SepxFont(p), SepxRect(f), F(p), C(p).index, 3, true, C(p).extra[0] != 0, false)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_TAB, {(int64_t)SepxFont(p)}, C(p).id, UWideString(""), SepxFont(p), SepxRect(f), F(p), C(p).index, 3, true, C(p).extra[0] != 0, false)));
     case EE_SCREENS_SEPX_MAKE_SET_PLAYERS:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_SET_PLAYERS, {(int64_t)SepxFont(p)}, 0x144, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, 3)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_SET_PLAYERS, {(int64_t)SepxFont(p)}, 0x144, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_COLOR:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_COLOR, {C(p).extra[0]}, C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, 3)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_COLOR, {C(p).extra[0]}, C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_DIPLOMACY:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_DIPLOMACY, {}, C(p).id, sSeplDiplomacy[0][1], sSeplDiplomacy[1][1], sSeplDiplomacy[2][1], SepxRect(f), F(p), C(p).index, 0)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_DIPLOMACY, {}, C(p).id, sSeplDiplomacy[0][1], sSeplDiplomacy[1][1], sSeplDiplomacy[2][1], SepxRect(f), F(p), C(p).index, 0)));
     case EE_SCREENS_SEPX_MAKE_RADIO:
-        return SepxHandle(i, static_cast<UIControl*>(new UIRadioButton(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false, C(p).extra[0] != 0, false)));
+        return EESEOut(i, static_cast<UIControl*>(new UIRadioButton(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false, C(p).extra[0] != 0, false)));
     case EE_SCREENS_SEPX_MAKE_TRISTATE:
-        return SepxHandle(i, static_cast<UIControl*>(new UITriStateCheckBox(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0)));
+        return EESEOut(i, static_cast<UIControl*>(new UITriStateCheckBox(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0)));
     case EE_SCREENS_SEPX_MAKE_OBJ_EDIT:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellEdit(EE_SCREENS_SK_OBJECT_EDIT, {}, C(p).id, SepxFont(p), C(p).extra[0], C(p).extra[1] != 0, SepxRect(f), F(p), C(p).index, 2, false, false)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellEdit(EE_SCREENS_SK_OBJECT_EDIT, {}, C(p).id, SepxFont(p), C(p).extra[0], C(p).extra[1] != 0, SepxRect(f), F(p), C(p).index, 2, false, false)));
     case EE_SCREENS_SEPX_MAKE_SHELL_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_TRIGGER_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)(unsigned long)C(p).number}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)(unsigned long)C(p).number}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_SCENARIO_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)C(p).number, (int64_t)(unsigned long)C(p).string}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)C(p).number, (int64_t)(unsigned long)C(p).string}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_PLAIN_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return EESEOut(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_BUTTON:
-        return SepxHandle(i, static_cast<UIControl*>(new UIButton(C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, (unsigned long)C(p).extra[0])));
+        return EESEOut(i, static_cast<UIControl*>(new UIButton(C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, (unsigned long)C(p).extra[0])));
     case EE_SCREENS_SEPX_MAKE_ARROW:
-        return SepxHandle(i, static_cast<UIControl*>(new UIButton(C(p).id, C(p).extra[0] != 0 ? F(p)->GetManager()->GetSBBitmapRightNormal() : F(p)->GetManager()->GetSBBitmapLeftNormal(), NULL, C(p).extra[0] != 0 ? F(p)->GetManager()->GetSBBitmapRightPressed() : F(p)->GetManager()->GetSBBitmapLeftPressed(), SepxRect(f), F(p), C(p).index, 0)));
+        return EESEOut(i, static_cast<UIControl*>(new UIButton(C(p).id, C(p).extra[0] != 0 ? F(p)->GetManager()->GetSBBitmapRightNormal() : F(p)->GetManager()->GetSBBitmapLeftNormal(), NULL, C(p).extra[0] != 0 ? F(p)->GetManager()->GetSBBitmapRightPressed() : F(p)->GetManager()->GetSBBitmapLeftPressed(), SepxRect(f), F(p), C(p).index, 0)));
     case EE_SCREENS_SEPX_MAKE_LIST_PLAIN:
-        return SepxHandle(i, static_cast<UIControl*>(new UILBString(C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
+        return EESEOut(i, static_cast<UIControl*>(new UILBString(C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_LIST_EFFECT:
-        return SepxHandle(i, static_cast<UIControl*>(new UILBString(C(p).id, std::vector<UWideString>(), SepxFont(p), true, SepxRect(f), F(p), C(p).index, 2)));
+        return EESEOut(i, static_cast<UIControl*>(new UILBString(C(p).id, std::vector<UWideString>(), SepxFont(p), true, SepxRect(f), F(p), C(p).index, 2)));
     case EE_SCREENS_SEPX_MAKE_LIST_OBJECT:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellList(EE_SCREENS_SK_UNIT_LIST, {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellList(EE_SCREENS_SK_UNIT_LIST, {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_MAKE_LIST_UNIT:
-        return SepxHandle(i, static_cast<UIControl*>(EESEUnitNewList(C(p).extra[0], C(p).id, SepxFont(p), GE2DPoint(C(p).x, C(p).y), (unsigned long)C(p).w, (unsigned long)C(p).h, F(p), C(p).index)));
+        return EESEOut(i, static_cast<UIControl*>(new EEUIShellList((uint32_t)i[0], {}, C(p).id, std::vector<UWideString>(), SepxFont(p), false, SepxRect(f), F(p), C(p).index, 3)));
     case EE_SCREENS_SEPX_ALIGN: static_cast<UITextLabel*>(H(p))->SetAlignment((unsigned long)i[0]);
         return 0;
     case EE_SCREENS_SEPX_BG: H(p)->SetBgOpacity(f[0]);
@@ -520,7 +470,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_SETS_COUNT: return (int32_t)gUnitSetManager.GetSize();
     case EE_SCREENS_SEPX_SET_SHOWN: return gUnitSetManager.GetSet(i[0]) != NULL && gUnitSetManager.GetSet(i[0])->ShowInEditor() == true;
     case EE_SCREENS_SEPX_SET_NAME: return SepxWrite(UWideString(gUnitSetManager.GetSet(i[0])->GetName()), p, i);
-    case EE_SCREENS_SEPX_SCREEN_FONT: return SepxHandle(i, gSeplScreenFont);
+    case EE_SCREENS_SEPX_SCREEN_FONT: return EESEOut(i, gSeplScreenFont);
     case EE_SCREENS_SEPX_SET_SCREEN_FONT: gSeplScreenFont = static_cast<GEFont*>(p[0]);
         return 0;
     case EE_SCREENS_SEPX_BRUSH_SIZE: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_BRUSH_SIZE);

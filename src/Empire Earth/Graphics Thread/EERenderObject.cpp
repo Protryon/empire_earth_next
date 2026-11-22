@@ -508,7 +508,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoPickUnitUnreferenced: return RO_P64(gUnitPicker.PickUnitUnreferenced(gMouse->mPosition, 1));
     case O::RoMainSelectUnits: return RO_P64(dynamic_cast<EEUICSelectUnits*>(gUIManager->GetMainGameForm()->GetControl(kMainGameSelectUnits)));
     case O::RoEditorSelectUnits: return RO_P64(gUIManager->GetScenarioEditorForm() != NULL ? gUIManager->GetScenarioEditorForm()->GetSelectUnits() : NULL);
-    case O::RoTriggerSelectUnits: return RO_P64(dynamic_cast<EESEUICTriggerSelectUnits*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSETSObjectSelectUnits)));
+    case O::RoTriggerSelectUnits: return RO_P64(dynamic_cast<EESEUICTriggerSelectUnits*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS)));
     case O::RoSelectionIsDrawn: return ((EEUICSelectUnits*)p)->GetIsDrawn();
     case O::RoTriggerSelectionIsDrawn: return ((EESEUICTriggerSelectUnits*)p)->GetIsDrawn();
     case O::RoPickUnits: gUnitPicker.PickUnits(((EEUICSelectUnits*)p)->GetSelectionRectangle(), (EEPlayer*)a[0], 0, gU4E9230);

@@ -75,7 +75,7 @@ pub const EE_SCREENS_SH_ALWAYS_DIRTY: u32 = 0x7c;
 /// The scenario editor's button texture (`GetButtonTexture()`).
 pub const EE_SCREENS_SH_EDITOR_TEXTURE: u32 = 0x7d;
 
-/// `kUnitSortAlpha`, `kUnitSortEpoch`, `kUnitSortFamily` (ee/EEScenarioEditorIDs.h).
+/// `kUnitSortAlpha`, `kUnitSortEpoch`, `kUnitSortFamily` (editor_ids.rs).
 const SORT_ALPHA: i32 = 0;
 const SORT_EPOCH: i32 = 1;
 const SORT_FAMILY: i32 = 2;

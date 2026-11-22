@@ -37,7 +37,7 @@ static const bool sCaptureHooksSet = (EEMessageCaptureImport = EEMessageCaptureI
 
 // ------------------------------------------------------------------------- round 10, lane C: the records' C++ reads
 
-int64_t EECore10OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECivCapture.cpp
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
 double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // lane D's link
 
 #define P64(x) ((int64_t)(intptr_t)(x))
@@ -92,7 +92,13 @@ int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::LcMrListData: return P64(MCMR->mList.empty() ? NULL : &MCMR->mList[0]);
     case O::LcMrListSize: return (int64_t)MCMR->mList.size();
-    default: return EECore10OpC2(inOp, p, a, f);
+    case O::LcWideText: return (int64_t)(intptr_t)(const char*)*(const UWideString*)p;
+    case O::LcLongVecNew: return (int64_t)(intptr_t)(new std::vector<long>);
+    case O::LcLongVecDelete: delete (std::vector<long>*)p;
+        break;
+    case O::LcLongVecSize: return (int64_t)((std::vector<long>*)p)->size();
+    case O::LcLongVecAt: return (*(std::vector<long>*)p)[a[0]];
+    default: return EECore10OpD(inOp, p, a, f);
     }
     return 0;
 }

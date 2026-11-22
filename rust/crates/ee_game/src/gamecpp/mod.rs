@@ -82,7 +82,6 @@ pub mod tech_load;
 //
 
 // ---- round 10, lane C: Communications, the Civilization Builder's area effects and captures, Calamities, Map
-pub mod civ_capture;
 pub mod mrecord;
 pub mod msg_capture;
 //
@@ -3135,53 +3134,11 @@ pub enum EeGameCpp {
     // ---- round 10, lane C (EECore10OpC's cases)
     // the captures' C++ reads (civ_capture.rs, msg_capture.rs; EECivCapture.cpp, EEMessageCapture.cpp)
     // and the messages' records (mrecord.rs; EEMessageCapture.cpp)
-    LcRecNew,
-    LcRecDelete,
-    LcRecSize,
-    LcRecData,
-    LcRecTechPlayer,
-    LcRecTechUpgrade,
-    LcRecTechTree,
-    LcUStringText,
     LcWideText,
-    LcWideNew,
-    LcWideDelete,
-    LcUpgVecNew,
-    LcUpgVecDelete,
-    LcUpgVecSize,
-    LcUpgVecAt,
-    LcUpgVecPush,
     LcLongVecNew,
     LcLongVecDelete,
     LcLongVecSize,
     LcLongVecAt,
-    LcCivVecNew,
-    LcCivVecDelete,
-    LcCivVecSize,
-    LcCivGetAll,
-    LcCivLoad,
-    LcCivMatch,
-    LcCivMatchNone,
-    LcCivSplit,
-    LcCivCategory,
-    LcCivCategorySet,
-    LcCivIsPowerLevel,
-    LcCivDirIsUser,
-    LcCivPurchased,
-    LcCivDeferred,
-    LcCivName,
-    LcCivPoints,
-    LcCivMaxPoints,
-    LcCivFlags,
-    LcWorldPlayer,
-    LcPlCivilization,
-    LcPlUpgradeOf,
-    LcPlLists,
-    LcPlHasPower,
-    LcPlTechTree,
-    LcTreeNodeIDs,
-    LcTreeGet,
-    LcNodeFlags,
     LcMsgType,
     LcMsgForSlot,
     LcMsgOrigSlot,

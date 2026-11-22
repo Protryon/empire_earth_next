@@ -2,7 +2,7 @@
 //! its members; the Rust's calls out go to three host functions: the server's (`EeNetSvOp`), the message manager's
 //! that reach the C++ (`EeNetMmOp`: NESynchronousServer::MessageManagerHost) and the queues' common ones (`EeNetQOp`).
 
-use std::ffi::c_void;
+use std::ffi::{c_char, c_ulong, c_void, CStr};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::net::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
@@ -53,21 +53,21 @@ pub enum EeNetSvOp {
     ServerClose = 14,
     /// a message -> GetType()
     MsgType = 15,
-    /// a message, originating (else for a specific slot), a slot
-    MsgSetSlot = 16,
-    /// a message, a flag (EeNetSvMsgFlag)
-    MsgFlag = 17,
+    /// a message, a slot: SetOriginatingSlot
+    MsgSetOriginatingSlot = 16,
+    /// a message -> GetCanSendWhilePaused()
+    MsgCanSendWhilePaused = 17,
     /// an engine message, a member (NEMRecord's numbering) -> its value (the players' inputs: their count)
     MsgGet = 18,
     /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
     MsgNew = 19,
-    /// a tick response, an index, an NEMessage** -> GetPlayerInput(i, out)
+    /// a tick response, an index, an NEMessage** (NULL before the call) -> GetPlayerInput(i, *out)
     MsgTickResponseInput = 20,
     /// a tick, an input -> AddPlayerInput
     MsgAddInput = 21,
     /// a message, an id: SetSendToAllAndWaitMessageID
     MsgSetS2awId = 22,
-    /// a message, a uint32_t* size -> ExportMessage's buffer (new[])
+    /// a message, an unsigned char** data, an unsigned long* size: ExportMessage (the buffer new[])
     MsgExportNew = 23,
     /// a buffer: delete[]
     BytesFree = 24,
@@ -97,6 +97,10 @@ pub enum EeNetSvOp {
     ProcessLocalUserInput = 36,
     /// a message -> GetOriginatingSlot()
     MsgSlot = 37,
+    /// a message, a slot: SetForSpecificSlot
+    MsgSetForSpecificSlot = 38,
+    /// a message -> GetIsAvailableToSend()
+    MsgIsAvailableToSend = 39,
 }
 
 /// The fields the accessors read (`ee_net_sv_get`)
@@ -462,10 +466,15 @@ impl ServerHost for SvFfiHost {
         self.call(EeNetSvOp::MsgType, m, 0, 0, 0) as u8
     }
     fn msg_set_slot(&self, m: Msg, originating: bool, slot: u8) {
-        self.call(EeNetSvOp::MsgSetSlot, m, originating as usize, slot as usize, 0);
+        let op = if originating { EeNetSvOp::MsgSetOriginatingSlot } else { EeNetSvOp::MsgSetForSpecificSlot };
+        self.call(op, m, slot as usize, 0, 0);
     }
     fn msg_flag(&self, m: Msg, f: EeNetSvMsgFlag) -> bool {
-        self.call(EeNetSvOp::MsgFlag, m, f as usize, 0, 0) != 0
+        let op = match f {
+            EeNetSvMsgFlag::CanSendWhilePaused => EeNetSvOp::MsgCanSendWhilePaused,
+            EeNetSvMsgFlag::IsAvailableToSend => EeNetSvOp::MsgIsAvailableToSend,
+        };
+        self.call(op, m, 0, 0, 0) != 0
     }
     fn msg_slot(&self, m: Msg) -> u8 {
         self.call(EeNetSvOp::MsgSlot, m, 0, 0, 0) as u8
@@ -477,7 +486,10 @@ impl ServerHost for SvFfiHost {
         self.call(EeNetSvOp::MsgNew, message_type as usize, values.as_ptr() as usize, values.len(), 0) as Msg
     }
     fn msg_tick_response_input(&self, m: Msg, i: u32, out: &mut Msg) -> i32 {
-        self.call(EeNetSvOp::MsgTickResponseInput, m, i as usize, out as *mut Msg as usize, 0) as i32
+        let mut input: Msg = 0;
+        let r = self.call(EeNetSvOp::MsgTickResponseInput, m, i as usize, &mut input as *mut Msg as usize, 0) as i32;
+        *out = input;
+        r
     }
     fn msg_add_input(&self, tick: Msg, input: Msg) -> i32 {
         self.call(EeNetSvOp::MsgAddInput, tick, input, 0, 0) as i32
@@ -485,8 +497,12 @@ impl ServerHost for SvFfiHost {
     fn msg_set_s2aw_id(&self, m: Msg, id: u32) {
         self.call(EeNetSvOp::MsgSetS2awId, m, id as usize, 0, 0);
     }
+    #[allow(clippy::unnecessary_cast)] // (c_ulong: 32 bits on Windows, 64 on LP64)
     fn msg_export_new(&self, m: Msg, size: &mut u32) -> usize {
-        self.call(EeNetSvOp::MsgExportNew, m, size as *mut u32 as usize, 0, 0) as usize
+        let (mut data, mut n): (usize, c_ulong) = (0, 0);
+        self.call(EeNetSvOp::MsgExportNew, m, &mut data as *mut usize as usize, &mut n as *mut c_ulong as usize, 0);
+        *size = n as u32;
+        data
     }
     fn bytes_free(&self, data: usize) {
         self.call(EeNetSvOp::BytesFree, data, 0, 0, 0);
@@ -534,6 +550,88 @@ pub struct EeNetServer(Box<Server<SvFfiHost>>);
 
 fn sv<'a>(s: *const EeNetServer) -> &'a Server<SvFfiHost> {
     unsafe { &(*s).0 }
+}
+
+/// `NESynchronousServer`'s constructor as the game calls it: its arguments as the C++ takes them (the name a
+/// zero-terminated string), the protocol the server's own (TCP); [`ee_net_sv_args`] packs them.
+///
+/// # Safety
+/// As [`ee_net_sv_new`]; `name` is a zero-terminated string.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_net_sv_new_game(
+    ctx: *mut c_void,
+    host: EeNetSvHostFn,
+    mmhost: EeNetMmHostFn,
+    qhost: EeNetQHostFn,
+    comms: *const EeNetComms,
+    max_players: u8,
+    default_send_interval: c_ulong,
+    pts_per_ct: u8,
+    max_pts_per_second: c_ulong,
+    min_pts_per_second: c_ulong,
+    cost_factor: f32,
+    max_send_interval: c_ulong,
+    send_interval_increment: c_ulong,
+    send_interval_decrement: c_ulong,
+    current_communications_tick: c_ulong,
+    current_physics_tick: c_ulong,
+    name: *const c_char,
+    allow_new_connections: bool,
+    announce: bool,
+    network_adapter: c_ulong,
+) -> *mut EeNetServer {
+    let name = unsafe { CStr::from_ptr(name) }.to_bytes();
+    let args = ee_net_sv_args(
+        [max_players, pts_per_ct],
+        [
+            default_send_interval,
+            max_pts_per_second,
+            min_pts_per_second,
+            max_send_interval,
+            send_interval_increment,
+            send_interval_decrement,
+            current_communications_tick,
+            current_physics_tick,
+            network_adapter,
+        ],
+        cost_factor,
+        name,
+        [allow_new_connections, announce],
+    );
+    unsafe { ee_net_sv_new(ctx, host, mmhost, qhost, &args, comms) }
+}
+
+/// The game's arguments packed (`[max players, PTs per CT]`, `[default send interval, max PTs/s, min PTs/s, max
+/// send interval, its increment, its decrement, the current CT, the current PT, the network adapter]`, the cost
+/// factor, the name, `[allow new connections, announce]`), the protocol TCP; `name` outlives the server's creation.
+#[allow(clippy::unnecessary_cast)] // (c_ulong: 32 bits on Windows, 64 on LP64)
+pub fn ee_net_sv_args(
+    bytes: [u8; 2],
+    longs: [c_ulong; 9],
+    cost_factor: f32,
+    name: &[u8],
+    flags: [bool; 2],
+) -> EeNetSvArgs {
+    EeNetSvArgs {
+        max_players: bytes[0],
+        default_send_interval: longs[0] as u32,
+        pts_per_ct: bytes[1],
+        max_pts_per_second: longs[1] as u32,
+        min_pts_per_second: longs[2] as u32,
+        cost_factor,
+        max_send_interval: longs[3] as u32,
+        send_interval_increment: longs[4] as u32,
+        send_interval_decrement: longs[5] as u32,
+        current_communications_tick: longs[6] as u32,
+        current_physics_tick: longs[7] as u32,
+        allow_new_connections: flags[0],
+        tcp: true,
+        name: name.as_ptr(),
+        name_length: name.len(),
+        announce: flags[1],
+        network_adapter: longs[8] as u32,
+    }
 }
 
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).

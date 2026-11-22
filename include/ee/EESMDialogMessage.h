@@ -10,8 +10,10 @@
 #define EE_EESMDIALOGMESSAGE_H
 
 #include "lle/UWideString.h"
+#include "rust/sim/scenario.h"
 
-class EESMDialogMessage {
+// the numbers (scroll speed, unit type, duration, unit id, cinematic flag) are the Rust record's (ee_scenario fields.rs)
+class EESMDialogMessage : public EeScenarioMessageFields {
 public:
     EESMDialogMessage();
     // the copies are member-wise (the original's 0x1b9ee9 / 0x1b9f4a copied field by field)
@@ -22,11 +24,6 @@ public:
 
     UWideString mText;                      // +0x04
     UWideString mSound;                     // +0x18
-    long mScrollSpeed;                      // +0x2c
-    unsigned long mUnitType;                // +0x30 unsigned: Load/Save 0x1af92b/0x1afa14 use FSFile Read/Write(unsigned long&)
-    unsigned long mDuration;                // +0x34 unsigned: Load/Save 0x1af92b/0x1afa14 use FSFile Read/Write(unsigned long&)
-    unsigned long mUnitID;                  // +0x38 unsigned: Load/Save 0x1af92b/0x1afa14 use FSFile Read/Write(unsigned long&)
-    bool mIsCinematic;                      // +0x3c
 };
 
 #endif

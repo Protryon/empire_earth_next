@@ -37,6 +37,7 @@
 #include "ee/EECivCapture.h"
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"   // the host (civ_file_calls.rs)
+#include "ee/EEScreensShims.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fe94 (wrapper)
@@ -73,51 +74,13 @@ UString EEGetCivilizationDirectory(bool inX)
     return theDirectory;
 }
 
-// Reads a civilization file's name and upgrade ids from the data path or the given directory: the file found and
-// read here, its bytes read by Rust (ee_tech civ_file.rs: the legacy binary form or the keyed text)
-static long EELoadCivilizationUncaptured(const UString& inName, const UString& inDirectory, UWideString& outName,
-                                        std::vector<EECivUpgrade>& outUpgrades)
-{
-    FSFileSpec* theFile = NULL;
-    gU565518.Close();
-    if (gDataPath->FindFile(inDirectory + inName + kCivKey, theFile) != 0) {
-        theFile = new FSFileSpec;
-        gU565518.SetVolume(gStartupVolume);
-        gU565518.SetDirectory(inDirectory);
-        gU565518.SetFile(inName + kCivKey);
-        *theFile = gU565518;
-    }
-    long theResult = theFile->Open(kFileAccessRead);
-    if (theResult == 0) {
-        unsigned long theSize = 0, theGot = 0;
-        std::vector<unsigned char> theBytes;
-        if (theFile->GetLength(theSize) == kErrorOK) {
-            theBytes.resize(theSize);
-            if (theSize > 0 && theFile->Read(theBytes.data(), theSize, theGot) != kErrorOK)
-                theBytes.clear();
-        }
-        EeTechCivFileRead theRead;
-        ee_tech_civ_read_file(theBytes.data(), theBytes.size(), (const char*)(inName + kCivKey), &theRead);
-        theResult = theRead.result;
-        if (theRead.has_name)
-            outName = std::string((const char*)theRead.name, theRead.name_length).c_str();
-        outUpgrades.insert(outUpgrades.end(), theRead.upgrades, theRead.upgrades + theRead.count);
-        if (theRead.error_length > 0)
-            PlatMessageShow("Empire Earth: civilization", std::string((const char*)theRead.error, theRead.error_length).c_str(),
-                            PLAT_MESSAGE_ERROR);
-        ee_tech_civ_file_free(&theRead);
-    }
-    theFile->Close();
-    delete theFile;
-    return theResult;
-}
-
+// Reads a civilization file's name and upgrade ids from the data path or the given directory, then the capture's
+// record: Rust's (civ_load.rs over the shims below; ee_tech civ_file.rs reads the bytes: the legacy binary form or
+// the keyed text)
 long EELoadCivilization(const UString& inName, const UString& inDirectory, UWideString& outName,
                         std::vector<EECivUpgrade>& outUpgrades)
 {
-    long theResult = EELoadCivilizationUncaptured(inName, inDirectory, outName, outUpgrades);
-    EECivCaptureLoad(inName, inDirectory, theResult, outName, outUpgrades);   // TEST ONLY: CVLD
-    return theResult;
+    return ee_screens_civl_load((uintptr_t)&inName, (uintptr_t)&inDirectory, (uintptr_t)&outName, (uintptr_t)&outUpgrades);
 }
 
 // The C++ side of a file's application or a request (ee_tech civ_file.rs): the file's or the request's name, the
@@ -211,3 +174,36 @@ void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vecto
     EeTechCivFileHost theHost{&theContext, &EECivFileCall};
     ee_tech_civ_request_upgrades(&theHost);
 }
+
+// EELoadCivilization's file, read and results (civ_load.rs, UI lane round 12)
+static std::vector<unsigned char> sCivlBytes;   // the file's bytes (the original's local)
+static unsigned long sCivlGot = 0;
+extern "C" void ee_screenscpp_civl_string(uintptr_t inString, void* inOut)
+{ EEShimOut(inOut, *(const UString*)inString); }
+extern "C" void ee_screenscpp_civl_global_close() { gU565518.Close(); }
+extern "C" int32_t ee_screenscpp_civl_find(EeScreensShimText inPath, uintptr_t* inOut)
+{ return gDataPath->FindFile(EEShimString(inPath), *reinterpret_cast<FSFileSpec**>(inOut)); }
+extern "C" uintptr_t ee_screenscpp_civl_spec_new() { return (uintptr_t)new FSFileSpec; }
+extern "C" void ee_screenscpp_civl_global_volume() { gU565518.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_civl_global_directory(EeScreensShimText inDirectory)
+{ gU565518.SetDirectory(EEShimString(inDirectory)); }
+extern "C" void ee_screenscpp_civl_global_file(EeScreensShimText inFile) { gU565518.SetFile(EEShimString(inFile)); }
+extern "C" void ee_screenscpp_civl_spec_assign_global(uintptr_t inSpec) { *(FSFileSpec*)inSpec = gU565518; }
+extern "C" int32_t ee_screenscpp_civl_open(uintptr_t inSpec) { return ((FSFileSpec*)inSpec)->Open(kFileAccessRead); }
+extern "C" int32_t ee_screenscpp_civl_length(uintptr_t inSpec, unsigned long* inOut)
+{ return ((FSFileSpec*)inSpec)->GetLength(*inOut); }
+extern "C" void ee_screenscpp_civl_buffer_resize(uint64_t inSize) { sCivlBytes.resize((size_t)inSize); }
+extern "C" int32_t ee_screenscpp_civl_read(uintptr_t inSpec, uint64_t inSize)
+{ return ((FSFileSpec*)inSpec)->Read(sCivlBytes.data(), (unsigned long)inSize, sCivlGot); }
+extern "C" void ee_screenscpp_civl_buffer(void* inOut)
+{ ee_screens_shim_out(inOut, sCivlBytes.data(), sCivlBytes.size()); }
+extern "C" void ee_screenscpp_civl_set_name(uintptr_t inName, EeScreensShimText inText)
+{ *(UWideString*)inName = EEShimText(inText); }
+extern "C" void ee_screenscpp_civl_upgrade_push(uintptr_t inList, uint32_t inUpgrade)
+{ ((std::vector<EECivUpgrade>*)inList)->push_back(inUpgrade); }
+extern "C" void ee_screenscpp_civl_message(EeScreensShimText inText)
+{ PlatMessageShow("Empire Earth: civilization", (const char*)EEShimString(inText), PLAT_MESSAGE_ERROR); }
+extern "C" void ee_screenscpp_civl_close(uintptr_t inSpec) { ((FSFileSpec*)inSpec)->Close(); }
+extern "C" void ee_screenscpp_civl_delete(uintptr_t inSpec) { delete (FSFileSpec*)inSpec; }
+extern "C" void ee_screenscpp_civl_capture(uintptr_t inName, uintptr_t inDirectory, int64_t inResult, uintptr_t inOutName, uintptr_t inOutUpgrades)
+{ EECivCaptureLoad(*(const UString*)inName, *(const UString*)inDirectory, (long)inResult, *(const UWideString*)inOutName, *(const std::vector<EECivUpgrade>*)inOutUpgrades); }
