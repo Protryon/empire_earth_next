@@ -46,13 +46,78 @@ fn scoped<R>(slot: i32, f: impl FnOnce(bool) -> R) -> R {
     r
 }
 
-/// `EE_COMBAT_HR_STILL_REACHABLE`, `EE_COMBAT_HR_GATE_CLOSED` (ee/EECombatGoals.h)
-pub const HR_STILL_REACHABLE: u32 = 2;
-pub const HR_GATE_CLOSED: u32 = 3;
-/// `EE_COMBAT_HR_ENEMY_IN_RANGE`
-pub const HR_ENEMY_IN_RANGE: u32 = 4;
-/// `EE_COMBAT_XR_ATTACK_REACHABLE`
-pub const XR_ATTACK_REACHABLE: u32 = 4;
+// ---- the TEST ONLY capture records' function codes (ee/EECombatGoals.h's enums before; the C++ uses these)
+
+/// CBQR: one call of a read behind the hosts, its outcome: the function, the unit's and target's ids (0 without
+/// one), the result and what the call left behind. A read made inside another captured read records nothing.
+/// FindImpactUnit: extra 0 the unit hit's id, 1 the owner's mIsFiringHigh
+pub const EE_COMBAT_HR_IMPACT_UNIT: u32 = 1;
+/// IsStillReachable: extra 0 mPathAttempts, 1 the ignored targets' count
+pub const EE_COMBAT_HR_STILL_REACHABLE: u32 = 2;
+/// IsGateClosed
+pub const EE_COMBAT_HR_GATE_CLOSED: u32 = 3;
+/// EEIsEnemyWithinRange: extra 0 mTargetSearchTimer
+pub const EE_COMBAT_HR_ENEMY_IN_RANGE: u32 = 4;
+/// IsInReach: extra 0 mWeaponTagPoint before, 1 after
+pub const EE_COMBAT_HR_IN_REACH: u32 = 5;
+/// FacesPoint: extra 0, 1 the point's x, y bits, 2 inUseTolerance
+pub const EE_COMBAT_HR_FACES_POINT: u32 = 6;
+/// FacesTarget: extra 2 inUseTolerance
+pub const EE_COMBAT_HR_FACES_TARGET: u32 = 7;
+
+/// CBSO: the outcome of a shot's ActionChanged or Update or of the heal goal's Work (only the outermost call of
+/// each kind, scope slots 1 to 3)
+pub const EE_COMBAT_SO_PROJECTILE_ACTION: u32 = 1;
+pub const EE_COMBAT_SO_MISSILE_ACTION: u32 = 2;
+pub const EE_COMBAT_SO_PROJECTILE_UPDATE: u32 = 3;
+pub const EE_COMBAT_SO_MISSILE_UPDATE: u32 = 4;
+pub const EE_COMBAT_SO_TORPEDO_UPDATE: u32 = 5;
+pub const EE_COMBAT_SO_HEAL_WORK: u32 = 6;
+
+/// CBXR: one call of the eighth round's reads (every call records). IsTargetIgnored: extra 0 inCheckLocation, 1
+/// the list's size after, 2 its hash
+pub const EE_COMBAT_XR_IS_IGNORED: u32 = 1;
+/// IgnoreTarget: extra 1 the list's size after, 2 its hash
+pub const EE_COMBAT_XR_IGNORE: u32 = 2;
+/// CanReachUnit
+pub const EE_COMBAT_XR_CAN_REACH_UNIT: u32 = 3;
+/// EEIsAttackReachable: extra 0, 1 the tile's x, y after
+pub const EE_COMBAT_XR_ATTACK_REACHABLE: u32 = 4;
+/// IsOnTileBorderingTarget
+pub const EE_COMBAT_XR_BORDERING: u32 = 5;
+
+/// CBXA: the outcome of FireShot, Attacked, ApplyHit and ApplyAreaDamage at each call's end
+pub const EE_COMBAT_XA_FIRE_SHOT: u32 = 1;
+/// inBefore: the last attacker's id before
+pub const EE_COMBAT_XA_ATTACKED: u32 = 2;
+pub const EE_COMBAT_XA_APPLY_HIT: u32 = 3;
+/// inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
+pub const EE_COMBAT_XA_AREA_DAMAGE: u32 = 4;
+
+/// CBGO: the attack, attack-ground and heal goals' GetDestination (extra 0, 1: the attack goal's last target tile
+/// after) and Suits (attack ground: the target point's bits)
+pub const EE_COMBAT_GO_DESTINATION: u32 = 1;
+pub const EE_COMBAT_GO_SUITS: u32 = 2;
+
+/// `EECombatCaptureHostRead` (`which` 0, three extras) and `EECombatCaptureXRead` (1, two) with the extras as
+/// arguments.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn ee_combat_capture_read_of(
+    which: u32,
+    func: u32,
+    unit: u64,
+    target: u64,
+    result: i32,
+    e0: u32,
+    e1: u32,
+    e2: u32,
+) {
+    #[cfg(not(test))]
+    crate::combat::capture_units::ee_combat_capture_read(which, func, unit, target, result, &[e0, e1, e2]);
+    #[cfg(test)]
+    let _ = (which, func, unit, target, result, e0, e1, e2);
+}
 
 /// The world the queries ask: ee_combat's functions over the call's C++ host (the trampoline), the reads the
 /// captures take and the captures.
@@ -85,10 +150,169 @@ pub trait Queries {
     fn distance_squared_to(&mut self, candidate: u64, target: u64) -> f32;
     /// `EECombatCapture(tag, in, out)`: the record of the bytes when the capture runs
     fn capture(&mut self, tag: u32, bytes: &[u8]);
+    /// the unit's class's facts the reach tests read
+    fn class_facts(&mut self, unit: u64) -> ClassFacts;
+    /// whether the capture runs (`EESimCaptureRecord::Active()`)
+    fn capture_active(&mut self) -> bool;
+    /// the unit's `mIgnoredTargets` (each entry's tile, from tile, unit id, time)
+    fn ignored_targets(&mut self, unit: u64) -> Vec<crate::combat::world::Ignored>;
+    /// a unit's `mUnitID` (0 for none)
+    fn unit_id(&mut self, unit: u64) -> u32;
+    /// `ee_combat_capture_fold(which, bytes)`
+    fn fold(&mut self, which: u32, bytes: &[u8]);
+    /// the unit's `mGoalState` and its `mKind` (0, 0 for none)
+    fn goal_state(&mut self, unit: u64) -> (u64, u8);
+}
+
+/// `EECombatCaptureIgnored(func, unit, target, result, checkLocation)`: the X-reads fold of the call (CBXR) with
+/// the ignored targets' count and FNV-1a 32 hash, when the capture runs.
+pub fn capture_ignored<Q: Queries + ?Sized>(q: &mut Q, func: u32, unit: u64, target: u64, result: i32, check: u32) {
+    if !q.capture_active() {
+        return;
+    }
+    let entries = q.ignored_targets(unit);
+    let mut hash = 0x811c_9dc5u32;
+    for e in &entries {
+        let fields = [e.tile.0 as u32, e.tile.1 as u32, e.from.0 as u32, e.from.1 as u32, e.unit_id, e.time];
+        for b in fields.iter().flat_map(|f| f.to_le_bytes()) {
+            hash = (hash ^ u32::from(b)).wrapping_mul(0x0100_0193);
+        }
+    }
+    let unit_id = q.unit_id(unit);
+    let target_id = if target != 0 { q.unit_id(target) } else { 0 };
+    let record = [func, unit_id, target_id, result as u32, check, entries.len() as u32, hash];
+    let bytes: Vec<u8> = record.iter().flat_map(|w| w.to_le_bytes()).collect();
+    q.fold(crate::combat::capture_fold::EE_COMBAT_FOLD_X_READS, &bytes);
+}
+
+/// `kGoalAttackUnit`
+const GOAL_ATTACK_UNIT: u8 = 2;
+
+/// `ee_units_cg_host`'s `GetModel()->GetNumParts()` of the unit
+pub const EE_UNITS_CG_MODEL_PARTS: i32 = 5000;
+/// `mStats->GetScale()` of the unit (`f[0]`)
+pub const EE_UNITS_CG_STATS_SCALE: i32 = 5001;
+
+/// What `EECombatFacesPoint` reads of the class, the unit and the C++.
+pub trait Facing {
+    /// the class's `mFiringArc`, `mFacingOffset`, `mFiresBroadside`
+    fn class_arc(&mut self, class: u64) -> (f32, f32, bool);
+    /// the unit's location (`mMatrix` rows), its class's unit type, `mIsSpecialAttack`
+    fn unit_facts(&mut self, unit: u64) -> ([[f32; 4]; 4], i32, bool);
+    fn model_parts(&mut self, unit: u64) -> i32;
+    fn stats_scale(&mut self, unit: u64) -> f32;
+    fn turret(&mut self, unit: u64, index: i32) -> crate::combat::reads::EeCombatTurret;
+}
+
+/// `EECombatFacesPoint(class, unit, location, useTolerance)`: ee_combat's facing test over the class's arc, the
+/// unit's location and turrets (the scale read only with turrets).
+pub fn faces_point<F: Facing + ?Sized>(f: &mut F, class: u64, unit: u64, x: f32, y: f32, use_tolerance: bool) -> bool {
+    let (location, unit_type, special) = f.unit_facts(unit);
+    let (firing_arc, facing_offset, broadside) = f.class_arc(class);
+    let mut i = crate::combat::reads::EeCombatFacingIn {
+        location: [0.0; 16],
+        point: [x, y],
+        use_tolerance: i32::from(use_tolerance),
+        firing_arc,
+        facing_offset,
+        fires_broadside: i32::from(broadside),
+        unit_type,
+        special_attack: i32::from(special),
+        turrets: 0,
+        scale: 0.0,
+    };
+    for (r, row) in location.iter().enumerate() {
+        i.location[r * 4..r * 4 + 4].copy_from_slice(row);
+    }
+    i.turrets = f.model_parts(unit);
+    if i.turrets > 0 {
+        i.scale = f.stats_scale(unit);
+    }
+    crate::combat::reads::faces_point(&i, |index| f.turret(unit, index))
+}
+
+/// `EECombatShotTarget(unit)`: the attack goal's target (0 without an attack-unit goal).
+pub fn shot_target<Q: Queries + ?Sized>(q: &mut Q, unit: u64) -> u64 {
+    match q.goal_state(unit) {
+        (goal, GOAL_ATTACK_UNIT) if goal != 0 => q.attack_target(goal),
+        _ => 0,
+    }
+}
+
+/// A unit class's members the reach tests read.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ClassFacts {
+    pub inner_sphere: f32,
+    pub is_wall: bool,
+    pub is_tree: bool,
+    pub unit_type: u32,
+    pub category: u32,
+}
+
+/// "CBRW", "CBRT"
+const CBRW: u32 = u32::from_le_bytes(*b"CBRW");
+const CBRT: u32 = u32::from_le_bytes(*b"CBRT");
+/// `kUnitTypeRoboticFarm`, `kUnitCategoryNavalCitizen` (ee/EEUnitClassIDs.h)
+const UNIT_TYPE_ROBOTIC_FARM: u32 = 0x33a;
+const CATEGORY_NAVAL_CITIZEN: u32 = 0x16;
+
+/// The reach record's bytes and the result (`EECombatCapture`'s payload).
+fn reach_bytes(i: &crate::combat::EeCombatReachIn, out: i32) -> Vec<u8> {
+    let words = [
+        i.distance_squared.to_bits(),
+        i.radius.to_bits(),
+        i.other_radius.to_bits(),
+        i.scale.to_bits(),
+        i.flag_a as u32,
+        i.flag_b as u32,
+        out as u32,
+    ];
+    words.iter().flat_map(|w| w.to_le_bytes()).collect()
+}
+
+/// `EEIsInWorkReach(unit, target)`: ee_combat's work reach over the two classes and the units' squared distance, its
+/// CBRW record.
+pub fn in_work_reach<Q: Queries + ?Sized>(q: &mut Q, unit: u64, target: u64) -> bool {
+    let (u, t) = (q.class_facts(unit), q.class_facts(target));
+    let i = crate::combat::EeCombatReachIn {
+        distance_squared: q.distance_squared_to(unit, target),
+        radius: u.inner_sphere,
+        other_radius: t.inner_sphere,
+        scale: 0.0,
+        flag_a: i32::from(t.is_wall),
+        flag_b: i32::from(t.unit_type == UNIT_TYPE_ROBOTIC_FARM),
+    };
+    let out = crate::combat::work_reach(&i);
+    q.capture(CBRW, &reach_bytes(&i, out));
+    out != 0
+}
+
+/// `EEIsInGatherReach(distance, unit, target)`: ee_combat's gather reach, its CBRT record.
+pub fn in_gather_reach<Q: Queries + ?Sized>(q: &mut Q, distance_squared: f32, unit: u64, target: u64) -> bool {
+    let (u, t) = (q.class_facts(unit), q.class_facts(target));
+    let i = crate::combat::EeCombatReachIn {
+        distance_squared,
+        radius: u.inner_sphere,
+        other_radius: t.inner_sphere,
+        scale: 0.0,
+        flag_a: i32::from(t.is_tree),
+        flag_b: i32::from(u.category == CATEGORY_NAVAL_CITIZEN),
+    };
+    let out = crate::combat::gather_reach(&i);
+    q.capture(CBRT, &reach_bytes(&i, out));
+    out != 0
+}
+
+/// `EEIsInContactRange(unit, target, distance)`: the world's contact range, the distance's bits handed as both of
+/// the tile's coordinates (ee_combat leaves.rs in_contact_range).
+pub fn in_contact_range<Q: Queries + ?Sized>(q: &mut Q, unit: u64, target: u64, distance_squared: f32) -> bool {
+    let bits = distance_squared.to_bits() as i32;
+    let mut tile = [bits, bits];
+    q.world(crate::combat::world::EE_COMBAT_WORLD_CONTACT_RANGE, unit, target, 0, &mut tile) != 0
 }
 
 /// "CBFS", as `EE_COMBAT_TAG` builds it (the first letter in the low byte)
-pub const CBFS: u32 = u32::from_le_bytes(*b"CBFS");
+const CBFS: u32 = u32::from_le_bytes(*b"CBFS");
 
 /// `EEFOFindNewTargetNearOldTarget::Virtual04/08` (EENearOldScreen): ee_combat's screen of a living candidate
 /// within `range` (squared) of the old target, its CBFS record (the screen record, the result).
@@ -162,7 +386,7 @@ pub fn still_reachable<Q: Queries + ?Sized>(q: &mut Q, unit: u64, goal: u64) -> 
         let (reachable, ignored) = q.still_reachable(unit, goal);
         if outer {
             let attempts = q.path_attempts(goal);
-            q.capture_read(0, HR_STILL_REACHABLE, unit, target, reachable, [attempts, ignored]);
+            q.capture_read(0, EE_COMBAT_HR_STILL_REACHABLE, unit, target, reachable, [attempts, ignored]);
         }
         reachable
     })
@@ -174,7 +398,7 @@ pub fn gate_closed<Q: Queries + ?Sized>(q: &mut Q, unit: u64, goal: u64) -> bool
         let closed = q.gate_closed(unit, goal);
         if outer {
             let target = q.attack_target(goal);
-            q.capture_read(0, HR_GATE_CLOSED, unit, target, closed, [0, 0]);
+            q.capture_read(0, EE_COMBAT_HR_GATE_CLOSED, unit, target, closed, [0, 0]);
         }
         closed
     })
@@ -187,7 +411,7 @@ pub fn is_enemy_within_range<Q: Queries + ?Sized>(q: &mut Q, unit: u64) -> bool 
         let in_range = q.enemy_in_range(unit);
         if outer {
             let timer = q.search_timer(unit);
-            q.capture_read(0, HR_ENEMY_IN_RANGE, unit, 0, in_range, [timer, 0]);
+            q.capture_read(0, EE_COMBAT_HR_ENEMY_IN_RANGE, unit, 0, in_range, [timer, 0]);
         }
         in_range
     })
@@ -205,8 +429,69 @@ pub fn is_attack_reachable<Q: Queries + ?Sized>(
     let reachable =
         world(q, crate::combat::world::EE_COMBAT_WORLD_ATTACK_REACHABLE, unit, target, 0, Some(&mut *x), Some(&mut *y))
             != 0;
-    q.capture_read(1, XR_ATTACK_REACHABLE, unit, target, reachable, [*x as u32, *y as u32]);
+    q.capture_read(1, EE_COMBAT_XR_ATTACK_REACHABLE, unit, target, reachable, [*x as u32, *y as u32]);
     reachable
+}
+
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod facing {
+    use super::*;
+
+    extern "C" {
+        fn ee_units_cg_host(op: i32, unit: u64, a: u64, b: i64, c: i64, f: *mut [f32; 4]) -> i64;
+        /// EECombatGoals.cpp: turret part `index` of the unit's model
+        fn ee_units_cg_facing_turret(unit: u64, index: i32, out: *mut crate::combat::reads::EeCombatTurret);
+    }
+
+    pub struct Game;
+
+    impl Facing for Game {
+        fn class_arc(&mut self, class: u64) -> (f32, f32, bool) {
+            // SAFETY: the C++ caller holds the world; its class is live
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            let c = unsafe { crate::world::view::ClassView::of(&t, class) }.expect("a live class");
+            let cf = c.fields();
+            (
+                crate::world_field!(cf, mFiringArc),
+                crate::world_field!(cf, mFacingOffset),
+                crate::world_field!(cf, mFiresBroadside),
+            )
+        }
+        fn unit_facts(&mut self, unit: u64) -> ([[f32; 4]; 4], i32, bool) {
+            crate::units::unit_geom::with_unit(unit, |u| {
+                let class = u.class().expect("a unit's class");
+                (u.transform(), class.unit_type() as i32, crate::world_field!(u.complex(), mIsSpecialAttack))
+            })
+            .expect("a live unit")
+        }
+        fn model_parts(&mut self, unit: u64) -> i32 {
+            // SAFETY: the caller's live unit
+            unsafe { ee_units_cg_host(EE_UNITS_CG_MODEL_PARTS, unit, 0, 0, 0, &mut [0.0; 4]) as i32 }
+        }
+        fn stats_scale(&mut self, unit: u64) -> f32 {
+            let mut f = [0.0; 4];
+            // SAFETY: as above
+            unsafe { ee_units_cg_host(EE_UNITS_CG_STATS_SCALE, unit, 0, 0, 0, &mut f) };
+            f[0]
+        }
+        fn turret(&mut self, unit: u64, index: i32) -> crate::combat::reads::EeCombatTurret {
+            let mut out = crate::combat::reads::EeCombatTurret::default();
+            // SAFETY: an index below the model's part count; a local record
+            unsafe { ee_units_cg_facing_turret(unit, index, &mut out) };
+            out
+        }
+    }
+}
+
+/// `EECombatFacesPoint(class, unit, location, useTolerance)` (the point's x, y)
+/// # Safety
+/// Inside the game's call; the class and unit live.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_faces_point(class: u64, unit: u64, x: f32, y: f32, use_tolerance: bool) -> bool {
+    faces_point(&mut facing::Game, class, unit, x, y, use_tolerance)
 }
 
 /// cbindgen:ignore
@@ -334,6 +619,45 @@ mod game {
             })
             .flatten()
             .expect("live units")
+        }
+        fn class_facts(&mut self, unit: u64) -> ClassFacts {
+            crate::units::unit_geom::with_unit(unit, |u| {
+                let class = u.class().expect("a unit's class");
+                let cf = class.fields();
+                ClassFacts {
+                    inner_sphere: crate::world_field!(cf, mInnerCollisionSphere),
+                    is_wall: crate::world_field!(cf, mIsWall),
+                    is_tree: crate::world_field!(cf, mIsTree),
+                    unit_type: crate::world_field!(cf, mUnitType) as u32,
+                    category: crate::world_field!(cf, mCategory) as u32,
+                }
+            })
+            .expect("a live unit")
+        }
+        fn capture_active(&mut self) -> bool {
+            crate::app::capture_record::active()
+        }
+        fn ignored_targets(&mut self, unit: u64) -> Vec<crate::combat::world::Ignored> {
+            with(unit, 0, 0, |h| {
+                let mut w = *h;
+                let count = crate::combat::reads::QueryHost::read(
+                    &mut w,
+                    crate::combat::world::EE_COMBAT_Q_IGNORED_COUNT,
+                    unit,
+                    0,
+                );
+                (0..count).map(|i| crate::combat::world::ignored_entry(&mut w, unit, i)).collect()
+            })
+        }
+        fn unit_id(&mut self, unit: u64) -> u32 {
+            crate::units::unit_geom::with_unit(unit, |u| u.id()).unwrap_or(0)
+        }
+        fn fold(&mut self, which: u32, bytes: &[u8]) {
+            crate::combat::capture_fold::fold(which, bytes)
+        }
+        fn goal_state(&mut self, unit: u64) -> (u64, u8) {
+            crate::units::unit_geom::with_unit(unit, |u| (u.goal_handle(), u.goal().map_or(0, |(k, _)| k)))
+                .unwrap_or((0, 0))
         }
         fn capture(&mut self, tag: u32, bytes: &[u8]) {
             if crate::app::capture_record::active() {
@@ -515,6 +839,70 @@ pub unsafe extern "C" fn ee_units_cgq_near_old_screen(candidate: u64, target: u6
     near_old_screen(q, candidate, target, range)
 }
 
+/// `EEIsInWorkReach(unit, target)` with its CBRW record
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_in_work_reach(unit: u64, target: u64) -> bool {
+    in_work_reach(&mut game::Game, unit, target)
+}
+
+/// `EEIsInGatherReach(distance, unit, target)` with its CBRT record
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_in_gather_reach(distance_squared: f32, unit: u64, target: u64) -> bool {
+    in_gather_reach(&mut game::Game, distance_squared, unit, target)
+}
+
+/// `EEIsInContactRange(unit, target, distance)`
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_in_contact_range(unit: u64, target: u64, distance_squared: f32) -> bool {
+    in_contact_range(&mut game::Game, unit, target, distance_squared)
+}
+
+/// `EECombatCaptureIgnored(func, unit, target, result, checkLocation)` (CBXR's fold)
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_capture_ignored(func: u32, unit: u64, target: u64, result: i32, check: u32) {
+    capture_ignored(&mut game::Game, func, unit, target, result, check)
+}
+
+/// `EECombatShotTarget(unit)`
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_shot_target(unit: u64) -> u64 {
+    shot_target(&mut game::Game, unit)
+}
+
+/// The query host's `ATTACK_REACHABLE` (`EEIsAttackReachable` from a zero tile, its CBXR record)
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_attack_reachable_from_zero(unit: u64, target: u64) -> bool {
+    let (mut x, mut y): (c_long, c_long) = (0, 0);
+    is_attack_reachable(&mut game::Game, unit, target, &mut x, &mut y)
+}
+
+/// The query host's `CONTACT_RANGE` (`EEIsInContactRange` of the distance's bits)
+/// # Safety
+/// As above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_in_contact_range_bits(unit: u64, target: u64, bits: i32) -> bool {
+    in_contact_range(&mut game::Game, unit, target, f32::from_bits(bits as u32))
+}
+
 /// `EECombatHealInRange(healer, target)`
 /// # Safety
 /// As above.
@@ -625,6 +1013,30 @@ mod tests {
         fn capture(&mut self, tag: u32, bytes: &[u8]) {
             self.captured.push((tag, bytes.to_vec()));
         }
+        fn capture_active(&mut self) -> bool {
+            true
+        }
+        fn ignored_targets(&mut self, unit: u64) -> Vec<crate::combat::world::Ignored> {
+            self.log.push(format!("ignored {unit}"));
+            vec![crate::combat::world::Ignored { tile: (1, 2), from: (3, 4), unit_id: 5, time: 6 }]
+        }
+        fn unit_id(&mut self, unit: u64) -> u32 {
+            unit as u32 + 1000
+        }
+        fn fold(&mut self, which: u32, bytes: &[u8]) {
+            self.captured.push((which, bytes.to_vec()));
+        }
+        fn goal_state(&mut self, unit: u64) -> (u64, u8) {
+            (unit + 50, if unit == 1 { 2 } else { 4 })
+        }
+        fn class_facts(&mut self, unit: u64) -> ClassFacts {
+            self.log.push(format!("class {unit}"));
+            if unit == 1 {
+                ClassFacts { inner_sphere: 0.5, category: 0x16, ..Default::default() }
+            } else {
+                ClassFacts { inner_sphere: 1.0, is_wall: true, is_tree: true, unit_type: 0x33a, ..Default::default() }
+            }
+        }
         fn capture_read(&mut self, which: u32, func: u32, unit: u64, target: u64, result: bool, extra: [u32; 2]) {
             let w = if which == 0 { "capture" } else { "xcapture" };
             self.log.push(format!("{w} {func} {unit} {target} {result} {extra:?}"));
@@ -705,6 +1117,94 @@ mod tests {
         assert_eq!(m.log, ["hp 1"]);
         let w: Vec<u32> = m.captured[0].1.chunks(4).map(|c| u32::from_le_bytes(c.try_into().unwrap())).collect();
         assert_eq!(w, [1, 0, 25.0f32.to_bits(), 0, 0, 0]);
+    }
+
+    fn words(b: &[u8]) -> Vec<u32> {
+        b.chunks(4).map(|c| u32::from_le_bytes(c.try_into().unwrap())).collect()
+    }
+
+    #[test]
+    fn the_reach_tests_record_their_inputs_and_result() {
+        let mut m = Mock::default();
+        let r = in_work_reach(&mut m, 1, 2);
+        assert_eq!(m.log, ["class 1", "class 2", "distance 1 2"]);
+        let (tag, b) = &m.captured[0];
+        assert_eq!(*tag, CBRW);
+        assert_eq!(words(b), [9.0f32.to_bits(), 0.5f32.to_bits(), 1.0f32.to_bits(), 0, 1, 1, u32::from(r)]);
+        let mut m = Mock::default();
+        let r = in_gather_reach(&mut m, 100.0, 1, 2);
+        let (tag, b) = &m.captured[0];
+        assert_eq!(*tag, CBRT);
+        assert_eq!(words(b)[..6], [100.0f32.to_bits(), 0.5f32.to_bits(), 1.0f32.to_bits(), 0, 1, 1]);
+        assert_eq!(words(b)[6], u32::from(r));
+    }
+
+    #[test]
+    fn the_contact_range_hands_the_distance_bits_as_the_tile() {
+        let mut m = Mock::default();
+        assert!(in_contact_range(&mut m, 3, 4, 2.0));
+        let b = 2.0f32.to_bits() as i32;
+        assert_eq!(m.log, [format!("world 10 3 4 0 [{b}, {b}]")]);
+    }
+
+    #[test]
+    fn the_ignored_capture_hashes_the_entries() {
+        let mut m = Mock::default();
+        capture_ignored(&mut m, 2, 7, 0, 1, 0);
+        let (which, b) = &m.captured[0];
+        assert_eq!(*which, crate::combat::capture_fold::EE_COMBAT_FOLD_X_READS);
+        let mut hash = 0x811c_9dc5u32;
+        for f in [1u32, 2, 3, 4, 5, 6] {
+            for byte in f.to_le_bytes() {
+                hash = (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193);
+            }
+        }
+        assert_eq!(words(b), [2, 1007, 0, 1, 0, 1, hash]);
+    }
+
+    #[test]
+    fn the_shot_target_is_an_attack_unit_goals_target() {
+        let mut m = Mock::default();
+        assert_eq!(shot_target(&mut m, 1), 151);
+        assert_eq!(shot_target(&mut m, 2), 0);
+    }
+
+    struct FacingMock {
+        log: Vec<String>,
+        parts: i32,
+    }
+
+    impl Facing for FacingMock {
+        fn class_arc(&mut self, class: u64) -> (f32, f32, bool) {
+            self.log.push(format!("class {class}"));
+            (1.0, 0.5, true)
+        }
+        fn unit_facts(&mut self, unit: u64) -> ([[f32; 4]; 4], i32, bool) {
+            self.log.push(format!("unit {unit}"));
+            ([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], 7, false)
+        }
+        fn model_parts(&mut self, unit: u64) -> i32 {
+            self.log.push(format!("parts {unit}"));
+            self.parts
+        }
+        fn stats_scale(&mut self, unit: u64) -> f32 {
+            self.log.push(format!("scale {unit}"));
+            1.0
+        }
+        fn turret(&mut self, unit: u64, index: i32) -> crate::combat::reads::EeCombatTurret {
+            self.log.push(format!("turret {unit} {index}"));
+            crate::combat::reads::EeCombatTurret::default()
+        }
+    }
+
+    #[test]
+    fn facing_reads_the_scale_only_with_turrets() {
+        let mut m = FacingMock { log: Vec::new(), parts: 0 };
+        let _ = faces_point(&mut m, 1, 2, 3.0, 4.0, true);
+        assert_eq!(m.log, ["unit 2", "class 1", "parts 2"]);
+        let mut m = FacingMock { log: Vec::new(), parts: 1 };
+        let _ = faces_point(&mut m, 1, 2, 3.0, 4.0, true);
+        assert_eq!(&m.log[..4], ["unit 2", "class 1", "parts 2", "scale 2"]);
     }
 
     #[test]

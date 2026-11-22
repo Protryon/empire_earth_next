@@ -74,20 +74,7 @@ uint32_t EECombatCommandOf(const EEComplexUnit* inUnit)
 void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
                             uint32_t inCheckLocation)
 {
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theHash = 0x811c9dc5u;
-    for (size_t i = 0; i < inUnit->mIgnoredTargets.size(); i++) {
-        const EEComplexUnitAttacker& theEntry = inUnit->mIgnoredTargets[i];
-        uint32_t theFields[6] = {(uint32_t)theEntry.mTileX, (uint32_t)theEntry.mTileY, (uint32_t)theEntry.mFromX,
-                                 (uint32_t)theEntry.mFromY, (uint32_t)theEntry.mUnitID, (uint32_t)theEntry.mTime};
-        const unsigned char* theBytes = (const unsigned char*)theFields;
-        for (size_t k = 0; k < sizeof(theFields); k++)
-            theHash = (theHash ^ theBytes[k]) * 0x01000193u;
-    }
-    uint32_t theRecord[7] = {inFunc, (uint32_t)inUnit->mUnitID, inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
-                             (uint32_t)inResult, inCheckLocation, (uint32_t)inUnit->mIgnoredTargets.size(), theHash};
-    ee_combat_capture_fold(EE_COMBAT_FOLD_X_READS, (const uint8_t*)theRecord, sizeof(theRecord));
+    ee_units_cgq_capture_ignored(inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, inCheckLocation);   // cg_query.rs
 }
 
 void EECombatCaptureFlush()
@@ -110,8 +97,7 @@ uint32_t EEConditionBits(float inValue)
 
 EEUnit* EECombatShotTarget(EEComplexUnit* inUnit)
 {
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    return theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGRust*>(theGoal)->GetAttackTarget() : NULL;
+    return (EEUnit*)(uintptr_t)ee_units_cgq_shot_target(EEObj(inUnit));   // cg_query.rs
 }
 
 // The trigger tests and the steps of the combat goals: their records, lazy reads, heal facing fallback and CBGS
@@ -141,6 +127,8 @@ extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     float* f = *ioF;
     switch (inOp) {
     case EE_UNITS_CG_TARGET_COMPLEX: return EEObj(theObject->mComplexUnit);
+    case EE_UNITS_CG_MODEL_PARTS: return (int32_t)theUnit->GetModel()->GetNumParts();
+    case EE_UNITS_CG_STATS_SCALE: f[0] = theUnit->mStats->GetScale(); return 0;
     case EE_UNITS_CG_HUMAN: return theUnit->mPlayer != NULL && theUnit->mPlayer->IsHuman();
     case EE_UNITS_CG_ATTACK_TILE_X: return theGoal->GetAttackTileX();
     case EE_UNITS_CG_ATTACK_TILE_Y: return theGoal->GetAttackTileY();
@@ -252,10 +240,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return (uint32_t)theContext->mGoal->mPathAttempts;
     case EE_COMBAT_Q_CAN_REACH_UNIT:
         return theUnit->CanReachUnit(theObject);
-    case EE_COMBAT_Q_ATTACK_REACHABLE: {
-        U2DPoint<long> theTile;
-        return EEIsAttackReachable(theUnit, EEQueryComplex(inObject), &theTile);
-    }
+    case EE_COMBAT_Q_ATTACK_REACHABLE: return ee_units_cgq_attack_reachable_from_zero(EEQueryHandleOf(theUnit), inObject);
     case EE_COMBAT_Q_IGNORED:
         return theUnit->IsTargetIgnored(EEQueryComplex(inObject), true);
     case EE_COMBAT_Q_LINE_OF_SIGHT:
@@ -279,11 +264,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, theUnit, theObject) != 0;
     case EE_COMBAT_Q_BALLISTIC_HIT:
         return EECanBallisticHit(theUnit, theObject);
-    case EE_COMBAT_Q_CONTACT_RANGE: {
-        float theDistance;
-        memcpy(&theDistance, &inArg, 4);
-        return EEIsInContactRange(theUnit, theObject, theDistance);
-    }
+    case EE_COMBAT_Q_CONTACT_RANGE: return ee_units_cgq_in_contact_range_bits(EEQueryHandleOf(theUnit), inObject, inArg);
     case EE_COMBAT_Q_REGION_COUNT: {
         EeCombatUnitRegions* theTable = ::gWorld.mMap->mUnitRegions;
         long theSize = ee_combat_regions_size(theTable);
@@ -332,10 +313,7 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
         return EEQueryHandleOf(EEQueryComplex(inObject)->mPreviousPart);
     case EE_COMBAT_H_OWNER:
         return EEQueryHandleOf(EEQueryComplex(inObject)->mOwner);
-    case EE_COMBAT_H_GOAL_TARGET: {
-        EEUGRust* theGoal = EEAttackUnitCast(EEQueryComplex(inObject)->mGoalState);
-        return theGoal != NULL ? EEQueryHandleOf(theGoal->GetAttackTarget()) : 0;
-    }
+    case EE_COMBAT_H_GOAL_TARGET: return ee_units_cgq_shot_target(inObject);   // its attack-unit goal's target (cg_query.rs)
     case EE_COMBAT_H_REGION_UNIT:
         return theContext->mRegion[inArg];
     case EE_COMBAT_H_TILE_PREV:
@@ -506,24 +484,20 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     return 0;
 }
 
-struct EEFacingContext {
-    EEComplexUnit* mUnit;
-    EEGraphicObject* mModel;
-};
+}   // namespace
 
-void EEFacingTurret(void* inContext, int32_t inIndex, EeCombatTurret* outTurret)
+// FacesPoint's turret part inIndex of the unit's model (ee_sim combat cg_query.rs faces_point)
+extern "C" void ee_units_cg_facing_turret(uint64_t inUnit, int32_t inIndex, EeCombatTurret* outTurret)
 {
-    EEFacingContext* theContext = (EEFacingContext*)inContext;
-    EETurretPart* thePart = *(theContext->mModel->mTurretParts.begin() + inIndex);
+    EEComplexUnit* theUnit = EEQueryComplex(inUnit);
+    EEGraphicObject* theModel = theUnit->GetModel();
+    EETurretPart* thePart = *(theModel->mTurretParts.begin() + inIndex);
     outTurret->position[0] = thePart->mPosition.GetX();
     outTurret->position[1] = thePart->mPosition.GetY();
     outTurret->position[2] = thePart->mPosition.GetZ();
-    memcpy(outTurret->transformation, theContext->mModel->GetTurretPartTransformation(inIndex).mMatrix,
-           sizeof(outTurret->transformation));
-    outTurret->angle = theContext->mUnit->mTurretAngles[inIndex];
+    memcpy(outTurret->transformation, theModel->GetTurretPartTransformation(inIndex).mMatrix, sizeof(outTurret->transformation));
+    outTurret->angle = theUnit->mTurretAngles[inIndex];
 }
-
-}   // namespace
 
 // The query entry points: ee_sim combat cg_query.rs (the marshalling and the CBQR records) over one C++ context and
 // host per call, made here
@@ -603,21 +577,5 @@ bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit)
 
 bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
 {
-    EeCombatFacingIn in;
-    memset(&in, 0, sizeof(in));
-    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
-    in.point[0] = inLocation.GetX();
-    in.point[1] = inLocation.GetY();
-    in.use_tolerance = inUseTolerance;
-    in.firing_arc = inClass->mFiringArc;
-    in.facing_offset = inClass->mFacingOffset;
-    in.fires_broadside = inClass->mFiresBroadside;
-    in.unit_type = (int32_t)inUnit->mUnitClass->GetUnitType();
-    in.special_attack = inUnit->mIsSpecialAttack;
-    EEGraphicObject* theModel = inUnit->GetModel();
-    in.turrets = (int32_t)theModel->GetNumParts();
-    if (in.turrets > 0)
-        in.scale = inUnit->mStats->GetScale();
-    EEFacingContext theContext = {inUnit, theModel};
-    return ee_combat_faces_point(&in, &theContext, EEFacingTurret) != 0;
+    return ee_units_cgq_faces_point(EEObj(inClass), EEQueryHandleOf(inUnit), inLocation.GetX(), inLocation.GetY(), inUseTolerance);
 }
