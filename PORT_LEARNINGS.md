@@ -39,7 +39,6 @@ Process rules learned the hard way:
   window layer that `build.py` builds from source. Python's TLS store rejected
   archive.org on one box while curl worked. Download those archives with curl into `toolchain/dl/` and let
   the fetch script verify the pinned hash (now only `tools/fetch_dx7sdk.py`).
-
 - **The SDL3 CMake build needs the Windows SDK's x64 tools on PATH.** From a plain shell CMake's compiler check
   failed with `MT-NOTFOUND` (`vs_link_exe` could not embed the manifest) while the game itself built fine, because
   `tools/build.py` gets the SDK paths from `tools/ee.py` while CMake only searches PATH. `windows_env()` now puts
@@ -2257,8 +2256,9 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   rest.
 - **A seat without a loadable AI stands idle** (it used to fall back to the C++ classic); a scenario's computer player
   plays the manifest's "classic" AI.
-- **Saved games** from before the deletion do not load (the combat and exploration managers' save blocks are gone;
-  save compatibility is not a goal).
+- **Saved games** from before the deletion load again: the combat and exploration managers' blocks are read and
+  discarded for files older than the port's own 0.254 (see the stage 6 entry below); the port's AI rebuilds its
+  state from the map.
 - **Benches beside other agents' benches**: with sim_bench's default `--port-base 2000`, EE-SIM runs crashed before
   the game (rc 0xC0000005, no report) while other agents' games ran on the same TCP ports. Give each concurrent bench
   its own `--port-base` (e.g. 13000, 21000, 31000).
@@ -2285,6 +2285,32 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Units the deleted units emitted:** `EEComplexUnit::IsResearchQueued` (EECPUnitManager.cpp's range),
   `EEUnit::IsPathMarker` (EECPCivilizationManager.cpp's) and `RTSMapTileRun`'s two members (EECPWallManager.cpp's)
   moved to EECPEngineHelpers.cpp. The link names them as unresolved when they are missing.
+
+- **The saved AI blocks needed version gates, not a format bump alone.** Stage 5 emptied `EECPCombatManager`'s saved
+  block and stage 6 replaced `mCivilizationManager->Load` with the town-centre tile (8 bytes), both without a
+  read-side gate, so the `>= 0.232` check still admitted the retail game's 0.250 files. A campaign scenario
+  desynchronised at the first computer player: the next player's type read as 655360, `CreatePlayer` returned NULL,
+  the load failed, and `EEGameState::Clear` then dereferenced an effect's saved unit id (`mUnit` = 0x14c) in
+  `EEEffect::~EEEffect`. Three readers now consume the old blocks for files older than 0.254 and discard them (the
+  Lua AI re-plans from the map): `EELoadLegacyCombatBlock` (the personnel and its requests, the attack and defense
+  commanders with their groups, orders and tasks, the aid packages, the wonder race and the threat tiles),
+  `LoadLegacyAIManagerBlock` (the resource, build, research, unit and wall managers, then the epoch, garrison,
+  fortress and morale state, keeping only the town-centre tile) and `LoadLegacyExplorationManagerBlock` (the
+  explorer ids, two flags and the open request ids). Watch the 16-bit field: `EECPUMRequest::mContinent` is an
+  `unsigned short`, and reading it as 32 bits over-read 2 bytes per request, which walked the stream past the end of
+  the players chunk (error 18).
+- **The reference is the code before the format bump, and its field widths come from the header.** The retail file
+  says 0.250, so the reader to match is `git show <the commit that bumped 0.250 to 0.251>^:<file>`, not the current
+  head of the file: the port's own bumps (0.251-0.254) added fields the retail file does not have. `Load` is a chain
+  of one branch per save format and only the last branch (`>= 0.232`) matters for these files. A wrong width is
+  invisible in a field that happens to be zero, and `bool` members are single bytes: the resource manager's block is
+  109 bytes, the build manager's 72, research 73, unit 69, civilization flags 28, wall 57 and fortress 9.
+- **Verify the walk offline before rebuilding the game (a build is ten minutes).**
+  `python -I tools/harness/savefile.py dump FILE --out DIR` writes the decompressed chunks (a campaign `.scn` first
+  comes out of its `.ssa`: `tools/datafmt/ssa.py`, `--out` then the same `dump`). Walking the players chunk in
+  Python with the same field order prints each section's end and lands on the next player's saved type; the last
+  player's record must end exactly at the chunk length. This found both the exploration block and a bogus count
+  (`mFavoriteTypeHistory` is legitimately 8,000 entries long in a retail scenario) without a single game run.
 
 ## Checkout-independent builds (2026-11-16)
 

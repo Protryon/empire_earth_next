@@ -1065,6 +1065,186 @@ void EEComputerPlayer::Init()
     this->mCombatManager = new EECPCombatManager(this);
 }
 
+// Reads and discards the pre-stage-6 saved AI block, keeping only the town centre tile: the field order is the
+// deleted C++ economy managers' Load functions (docs/AI_RESEARCH.md §8.92, git f506a295f^). Files older than the
+// port's own format (0.254) carry it -- the retail game's saves and campaign scenarios -- and without this the
+// stream desynchronised at the first computer player, so the load failed.
+static long LoadLegacyAIManagerBlock(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
+                                     U2DPoint<long>& outTownCenterTile)
+{
+    long theResult = kErrorOK;
+    unsigned long theCount = 0;
+    unsigned long theValue = 0;
+    long theLong = 0;
+    bool theFlag = false;
+    float theFloat = 0.0f;
+    U2DPoint<long> theTile;
+    unsigned long i, j;
+
+    // EECPResourceManager::Load: the drop site classes, needs, wanted gatherers, flags and timers
+    for (i = 0; i < 7 && theResult == kErrorOK; i++) {
+        theResult = inFile.Read(theCount);
+        for (j = 0; j < theCount && theResult == kErrorOK; j++)
+            theResult = inFile.Read(theValue);
+    }
+    for (i = 0; i < 7 && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theLong);
+    for (i = 0; i < 7 && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theValue);
+    for (i = 0; i < 7 && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theFlag);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);
+    for (i = 0; i < 4 && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theValue);
+
+    // EECPBuildManager::Load: the build queues, the town centre tile and the update time
+    for (i = 0; i < (unsigned long)EEEpochCount() && theResult == kErrorOK; i++) {
+        if (inMajorVersion == 0 && inMinorVersion < 0xea && i == 14)
+            continue;
+        theResult = inFile.Read(theCount);
+        for (j = 0; j < theCount && theResult == kErrorOK; j++) {
+            if ((theResult = inFile.Read(theValue)) != kErrorOK)
+                break;
+            if ((theResult = theTile.Load(inFile)) != kErrorOK)
+                break;
+        }
+    }
+    if (theResult == kErrorOK)
+        theResult = outTownCenterTile.Load(inFile);
+    if (theResult == kErrorOK && (inMajorVersion != 0 || inMinorVersion >= 0xdc))
+        theResult = inFile.Read(theValue);
+
+    // EECPResearchManager::Load: the candidates, the per-epoch queues, the next time, epoch and flag
+    if (theResult == kErrorOK) {
+        theResult = inFile.Read(theCount);
+        for (j = 0; j < theCount && theResult == kErrorOK; j++)
+            theResult = inFile.Read(theLong);
+    }
+    for (i = 0; i < (unsigned long)EEEpochCount() && theResult == kErrorOK; i++) {
+        if (inMajorVersion == 0 && inMinorVersion < 0xea && i == 14)
+            continue;
+        theResult = inFile.Read(theCount);
+        for (j = 0; j < theCount && theResult == kErrorOK; j++)
+            theResult = inFile.Read(theLong);
+    }
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theLong);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);
+
+    // EECPUnitManager::Load: the requests per epoch, the waiting counts and the flags
+    for (i = 0; i < (unsigned long)EEEpochCount() && theResult == kErrorOK; i++) {
+        if (inMajorVersion == 0 && inMinorVersion < 0xea && i == 14)
+            continue;
+        theResult = inFile.Read(theCount);
+        for (j = 0; j < theCount && theResult == kErrorOK; j++) {
+            unsigned short theContinent = 0;
+            // EECPUMRequest: mUnitClass, mCount, mContinent (16-bit), mTownID
+            if ((theResult = inFile.Read(theValue)) == kErrorOK
+                && (theResult = inFile.Read(theValue)) == kErrorOK
+                && (theResult = inFile.Read(theContinent)) == kErrorOK)
+                theResult = inFile.Read(theLong);
+        }
+    }
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theCount);
+    for (i = 0; i < theCount && theResult == kErrorOK; i++) {
+        theResult = inFile.Read(theValue);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theValue);
+    }
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theLong);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);
+
+    // EECPCivilizationManager::Load: the flags and timers around the managers
+    for (i = 0; i < 4 && theResult == kErrorOK; i++)   // mFirstUpdateDone .. mAdvancingEpoch
+        theResult = inFile.Read(theFlag);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // mNextEpochAdvanceTime
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);    // mScheduleEpochAdvance
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // mLastCountCheck
+    for (i = 0; i < 3 && theResult == kErrorOK; i++)   // mBuildingCountsChecked, mEpochAdvanceEnabled, mBuildingCountsEnabled
+        theResult = inFile.Read(theFlag);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // the garrison's unit id
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // mNextGarrisonTime
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // mNextMoraleBuildingTime
+
+    // EECPWallManager::Load: the planned walls, the gates, the tiles and the timers
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theCount);
+    for (i = 0; i < theCount && theResult == kErrorOK; i++) {
+        theResult = inFile.Read(theValue);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theValue);
+    }
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theCount);
+    for (i = 0; i < theCount && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theValue);
+    for (i = 0; i < 3 && theResult == kErrorOK; i++)   // mGateTile, mWallStart, mWallEnd
+        theResult = theTile.Load(inFile);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFloat);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFloat);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // mL7C
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);    // mBuildingPlannedWall
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);   // mNextTime
+
+    // the fortress and the morale flag
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theValue);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);
+    return theResult;
+}
+
+// Reads and discards the pre-stage-5 exploration manager's saved block (EECPExplorationManager::Load, git
+// c41244c7d^): the explorer ids, the two flags and the open personnel-request ids (resolved later by Restore), plus
+// an extra value in saves from 0.32 and earlier. The manager itself is gone (the Lua AI explores), but files older
+// than the port's own format still carry its block between the civilization managers and the player's tuning values.
+static long LoadLegacyExplorationManagerBlock(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    long theResult;
+    unsigned long theOld;
+    unsigned long theCount;
+    unsigned long theValue;
+    bool theFlag;
+    unsigned long i;
+
+    theResult = inFile.Read(theCount);
+    for (i = 0; i < theCount && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theValue);
+    if (theResult == kErrorOK && inMajorVersion <= 0 && inMinorVersion <= 0x20)
+        theResult = inFile.Read(theOld);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);   // mB2C
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theFlag);   // mEnabled
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theCount);
+    for (i = 0; i < theCount && theResult == kErrorOK; i++)
+        theResult = inFile.Read(theValue);   // the request's saved id
+    return theResult;
+}
+
 // FUNCTION: EXE 0x42fd50
 // Loads the computer player from a saved game (the current format only since stage 5): the base player, the combat
 // and civilization managers, the resource centers and the tuning values; returns the first read error
@@ -1085,14 +1265,25 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
     unsigned long theCount;
     unsigned long theIdx;
     theResult = EEPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-    // stage 5 (docs/AI_RESEARCH.md §8.90): only the current format (from 0.232, the original's last block) loads;
-    // the seven older blocks went (save compatibility is not a goal)
+    // stage 5 (docs/AI_RESEARCH.md §8.90): only the current format era (0.232 on, the original's last block) loads;
+    // the seven older eras went. Inside it, a file older than the port's own format (0.254) still carries the blocks
+    // stages 5 and 6 emptied, so the combat manager reads and discards its own for those files.
     if (theResult == kErrorOK && inMajorVersion == 0 && inMinorVersion < 0xe8)
         return kErrorFailed;
     if (theResult == kErrorOK)
         theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mPlacement->Load(inFile);   // (stage 6: the managers' block is the town centre tile)
+    if (theResult == kErrorOK) {
+        // stage 6 (docs/AI_RESEARCH.md §8.92): the C++ economy managers are gone and the saved block is the town
+        // centre tile. Older files -- the retail game's saves and its campaign scenarios (0.250) -- still carry the
+        // managers' block.
+        if (inMajorVersion == 0 && inMinorVersion < 0xfe)
+            theResult = LoadLegacyAIManagerBlock(inMajorVersion, inMinorVersion, inFile,
+                                                 this->mPlacement->mTownCenterTile);
+        else
+            theResult = this->mPlacement->Load(inFile);
+    }
+    if (theResult == kErrorOK && inMajorVersion == 0 && inMinorVersion < 0xfe)
+        theResult = LoadLegacyExplorationManagerBlock(inMajorVersion, inMinorVersion, inFile);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mLBD4);
     if (theResult == kErrorOK)
