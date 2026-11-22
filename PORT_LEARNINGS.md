@@ -37990,3 +37990,101 @@ rustfmt's fixes after it):
 - `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 13633, units [4, 43, 42], alive [2, 3],
   classic_lua x 2; lan-game PT 2876/2868);
 - Not run: the POSIX builds.
+## AI Thread cluster, round 9: EECPPlacement whole in Rust, the path manager's and the continent manager's members one call each, the next engine's names tables and hosts' rest, the dead declarations (ee_sim::cp placement.rs, player_game.rs; astar cm_inline.rs, pm.rs; ai units_cases.rs, names_db.rs; branch rust-aicluster9 with forks rust-aicluster9p and rust-aicluster9n, 2026-11-22)
+
+The ninth round of the cluster lane (docs/progress/ai-thread-cluster.md), from 150aec61e (round 8 with batch 14). The
+branch first merged rust-seditor5 (39271a2c1: the scenario area accessor `scenario::entry::region_inputs`) and
+rust-batch15 (dea7e6911: LLE round 9's `ee_base::fs::CppFile`). Two forks then worked from dea7e6911 in sibling
+worktrees: P on the path manager, the continent manager and the EEAI* headers, N on the next engine. Each fork owned
+its files and its host enums' op numbers, and the three shared one heavy-job lock. The forks were merged into the
+branch, then origin/rust 5143a9696 (batch 15) and b6f7d06bd (batch 16).
+
+| Commit | What | Logic lines | Net lines (src, include/ee, include/lle) |
+|---|---|---|---|
+| c684befe5 | the kCPBehavior* names into tools/eedata ids.py (CPBEHAVIOR_NAMES); the C++ keeps the one it reads | -113 | -112 |
+| 4e4170f4e | EECPPlacement whole in Rust (EeCpPlacementObj, Load and Save with their PLCE scopes); ee/EECPPlaceCapture.h deleted | -122 | -206 |
+| 83afe77cc | EECPUnitRequirement.h, EECPASGWeights, EECPASGFlags::And, EEComputerPlayer.h's difficulty and manager enums deleted | -40 | -78 |
+| b45bf76a5 | the herd's, town's, centres' and computer player's multi-statement host cases | -37 | -17 |
+| 0fc88e137 | EeCpPlacementObj in placement.rs (the test build has no player_game), clippy, rustfmt | 0 | 0 |
+| 51ae3e445 (P) | the continent manager's, areas' and path manager's unused members and enumerators | -186 | -428 |
+| d5bae9192 (P) | the path manager's and continent manager's members one call each into Rust (pm.rs, pm_entry.rs, pm_apply.rs, cm_inline.rs, cm_world.rs, cm_host.rs) | -277 | -352 |
+| c90d7dc23 (N) | the next engine's hosts' multi-statement cases, the names tables, the improvement cost, the seats' helpers (units_cases.rs, names_db.rs, next_host.rs) | -196 | -285 |
+| 988374628 (N) | the next engine's unused declarations (EECPNext.h's enums and limits, unused entry points) | -58 | -119 |
+| | **round** (logic_lines.py: 55,209 at dea7e6911 -> 54,180 at e00c8736b, the forks merged; 47,013 after batch 16) | **-1,029** | **-1,597** (+246 / -1,843) |
+
+The cluster (AI Thread and its include/ee headers) went from about 1,680 logic lines to about 650; Rust +1,375 /
+-151 lines. The brief's -2,500 could not be reached inside the lane: the whole cluster held fewer lines than that.
+What is left is mostly the declarations of the classes other lanes call (EEComputerPlayer's vtable over EEPlayer,
+EEHerd, EETown, the area views, the managers' inline forwarders) and the hosts' one-statement cases.
+
+- **What moved.**
+  - (1) EECPPlacement is a Rust record. `EeCpPlacementObj` (the town tile, the player, the Rust placement) is made
+    by ee_cp_pl_init and freed by ee_cp_pl_destroy, and its layout is asserted against EEWorldLayout's offsets. The
+    town tile's Load and Save are U2DPoint's own, over EESaveFilePrimitive's READ_LONG and WRITE_LONG and one host
+    case (`EE_CP_PLAYER_FILE_OPEN`), in their PLCE scopes in the C++'s order.
+  - (2) EEPathManager's save file goes over CppFile, with its after-load fixups in pm.rs. Call's io, GetPathGoal,
+    FindPath's lists, the dumps and the destructor are one call each (P).
+  - (3) The continent manager's inline lookups and list fillers are in cm_inline.rs. BuildRegions reads
+    `scenario::entry::region_inputs()`. Reset, Shutdown and the destructor are Rust, and so are the areas' random
+    points, AreaCreate, the AI value and the area bytes (P).
+  - (4) The units host's multi-statement cases are in units_cases.rs: the command's borrowed-slot sequence, the
+    improvement cost and the gather safety among them. The names tables are in names_db.rs: the db loader hands
+    each load's row ids to `ee_ai_names_capture`, and EEDbRowIds is gone. The next host's SIM_HASH, area hull and
+    stderr line are in next_host.rs (N).
+  - (5) The herd's constructors' start, the area and random points by value, the patrol points as U2DPoints, the
+    centres' morale effect search and the path area id are Rust.
+  - (6) Declarations with no C++ user left are deleted.
+- **Shims.**
+  - Added: about 30 one-statement host cases and helpers, among them FILE_OPEN, the centres' EFFECT_COUNT, EFFECT_AT
+    and EFFECT_KIND, the herd's point packing, the units host's ops 141-160, the next host's ops 69-75 and the path
+    manager's `ee_path_after_load`.
+  - Deleted: the placement's NEW, DELETE, LOAD and SAVE cases, EECPRCMoraleEffect and the multi-statement cases
+    named above.
+- **Lesson: a staged `git rm` rides along with the next commit.** `git add X && git commit` commits the whole
+  index. A deletion staged earlier went into an unrelated commit that then did not build. Unstage it, or commit the
+  deletion with its own concern.
+- **Lesson: a Rust module the game build gates with `#[cfg(not(test))]` cannot hold what tests use.**
+  `EeCpPlacementObj` first lived in player_game.rs (`cfg(not(test))`), and the test that checks its layout did not
+  compile. Shared records go in a module the test build has (placement.rs).
+- **Lesson: `sim_capture.py check` compares every seed of the golden unless it is given `--seeds`.** A run at
+  seeds 2-3 checked without `--seeds 2-3` reports FAIL for the seeds it did not run (`got ''`). Pass the run's seeds
+  to check.
+- **Lessons from fork N.** A host-op constant from outside the module's scope, used in a Rust `match`, becomes a
+  catch-all binding: watch for unused_variables and non_snake_case warnings. An `extern "C"` declaration in one
+  crate of a function another crate exports breaks the header check. Take the shared heavy lock once per chain of
+  jobs, not once per job, or the other holders starve the chain.
+- **What runs it.**
+  - Every game runs the placement's construction, the hosts' cases, the names tables, the continent manager's
+    lookups and the path manager's calls.
+  - Every save and load runs the placement's and the path manager's file parts.
+  - Nothing of it draws.
+- **Behaviour.** None intended. The unused static `EECPPlacement::sData` UString is gone.
+- **Call-site edits outside the lane**:
+  - tools/eedata/ids.py (the behaviour names);
+  - tools/sim_capture.py (doc comments);
+  - EEPhysics.cpp (N: the order log's names through `ee_ai_name_copy`);
+  - EEDataTextFile.cpp and EEDataText.h (N: EEDbRowIds deleted, `ee_ai_names_capture` called);
+  - EECampaign.cpp and rust/cbindgen.toml: the merges' resolutions only.
+- **Gates**, all on the final tree (the round merged with origin/rust b6f7d06bd; strip_markers --check clean, no
+  conflict marker; headers current; rust_includes 0 changes):
+  - the `--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0;
+  - the Rust gate: every step passed but one test outside the lane: ee_won_lobby's
+    `eecolor::tests::the_palette_is_the_originals_until_the_game_sets_it` failed in the gate's `cargo test --workspace`
+    three runs out of three (5,375 tests passed). It passes alone and in `cargo test -p ee_won_lobby --lib`, both
+    serial and parallel (221/221). This branch changes no WON crate, ee_base or Cargo manifest against origin/rust
+    b6f7d06bd, so the failure comes with batch 16 (the WON lane's palette test);
+  - the oracle at seeds 2-7 identical;
+  - the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6,
+    missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal to their goldens);
+  - the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical;
+  - the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) exit 0, `saveload expect: PASS`;
+  - scenario_check 27/27;
+  - sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062 lines);
+  - eedata check PASS and cppgate PASS;
+  - the tour (fixture_game.py) `RESULT PASS tour`;
+  - `gates.sh`: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12482` with units [4, 38, 39],
+    alive_computers [2, 3] and engines classic_lua x 2, `RESULT PASS lan-game PT host=2830 joiner=2831`,
+    GATES PASS;
+  - the POSIX builds were not run.
+- **Lesson: the ee_won_lobby palette test fails only in the workspace run.** Give the WON lane the test name and
+  the conditions above.
