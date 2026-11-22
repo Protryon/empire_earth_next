@@ -530,4 +530,15 @@ shims! {
     fn list_set_scroll_bg_opacity(list: usize, opacity: f32) = ee_uicpp_list_set_scroll_bg_opacity;
     fn list_set_scroll_bg_color(list: usize, red: f32, green: f32, blue: f32) = ee_uicpp_list_set_scroll_bg_color;
     fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) = ee_uicpp_combo_base_set_rect;
+    // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
+    fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
+    fn edit_key_fetch(which: u32, out: EeUiShimPtrOut) = ee_uicpp_edit_key_fetch;
+    fn edit_scroll_bar_new(edit: usize, x: f32, y: f32, length: f32) -> usize = ee_uicpp_edit_scroll_bar_new;
+    fn edit_form_mouse_x(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_x;
+    fn edit_form_mouse_y(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_y;
+    fn line_new_black() -> usize = ee_uicpp_line_new_black;
+    fn line_new() -> usize = ee_uicpp_line_new;
+    fn text_fg_red(text: usize) -> f32 = ee_uicpp_text_fg_red;
+    fn text_fg_green(text: usize) -> f32 = ee_uicpp_text_fg_green;
+    fn text_fg_blue(text: usize) -> f32 = ee_uicpp_text_fg_blue;
 }

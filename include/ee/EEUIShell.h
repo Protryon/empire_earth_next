@@ -228,7 +228,9 @@ public:
             return (int64_t)this->GetDisplayLine() | (int64_t)(this->GetNumberLinesDisplayed() + this->GetDisplayLine()) << 32;
         return (int64_t)this->GetNumLines() << 32;
     }
-    long DrawBars(const uint32_t* inLines, size_t inCount);   // EESEUITechListBox::DrawPolygons' blue bars
+    // EESEUITechListBox::DrawPolygons' blue bars (shell_factories.rs draw_bars)
+    using UILBString::GetCopyTextRectangle;
+    using UILBString::GetLineHeight;
     EE_SHELL_COMMON(UILBString)
     EE_SHELL_VOID(UILBString, ButtonUp, EE_SCREENS_SV_BUTTON_UP)
     virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
@@ -348,8 +350,6 @@ protected:
 };
 
 class UIControlsTable;
-UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
-UIControl* EEUIShellNewChatLine(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
 
 // the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
 // extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)

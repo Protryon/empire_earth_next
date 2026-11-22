@@ -22,6 +22,7 @@
 #include "rust/ui/obj.h"
 #include "rust/ui/rect.h"
 #include "lle/LowLevelEngine.h"
+#include "lle/UIShims.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -64,7 +65,6 @@ struct UIBackgroundHost {
         UIManager* m = theForm->GetManager();
         unsigned long s = m->GetScreen();
         GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
-        GETexture* theTexture = reinterpret_cast<GETexture*>(a);
         switch (inOp) {
         case EeUiOp::BgAdd: theForm->AddBackground(Background(r)); break;
         case EeUiOp::BgWindow:
@@ -86,20 +86,6 @@ struct UIBackgroundHost {
         case EeUiOp::BgBitmapRelease: theBitmap->Dereference(); break;
         case EeUiOp::BgBitmapTexture: return (intptr_t)theBitmap->GetTexture(s);
         case EeUiOp::BgBitmapSetTexture: theBitmap->SetTexture(reinterpret_cast<GETexture*>(b), s); break;
-        case EeUiOp::BgTextureSize:
-            f[0] = (float)theTexture->GetHeight();
-            return theTexture->GetWidth();
-        case EeUiOp::BgTextureLoad:
-            theTexture = m->GetRasterizer()->GetTextureManager(s)->LoadTexture(
-                UString(reinterpret_cast<const char*>(a)), *reinterpret_cast<const GETextureDescription*>(b));
-            theTexture->SetStageAlphaMode(kStageOpModulate, -1);
-            theTexture->SetStageColorMode(kStageOpModulate, -1);
-            theTexture->SetStageMinFilterMode(1, -1);
-            theTexture->SetStageMagFilterMode(1, -1);
-            theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-            theTexture->SetStageMipMapBias(-0.75f, -1);
-            theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
-            return (intptr_t)theTexture;
         case EeUiOp::BgFormRect: UIObjHost::PutRect(f, theForm->GetRectangle()); break;
         case EeUiOp::BgFormFade: f[0] = theForm->GetFadeOpacity(); break;
         default: break;
@@ -115,11 +101,18 @@ struct UIBackgroundHost {
 };
 typedef EeUiBgCall C;
 
+// the texture's size and load: Rust's (ee_ui lle_bg_edit.rs, UI lane round 12) before the host above
+#define UIBGM(r) static_cast<UIForm*>(static_cast<EeUiBackgroundFields*>((void*)(r))->mForm)->GetManager()
+extern "C" uintptr_t ee_uicpp_bg_texture_load(uintptr_t inRecord, EeUiShimText inName, uintptr_t inDescription)
+{ return (uintptr_t)UIBGM(inRecord)->GetRasterizer()->GetTextureManager(UIBGM(inRecord)->GetScreen())->LoadTexture(UIShimString(inName), *reinterpret_cast<const GETextureDescription*>(inDescription)); }
+extern "C" intptr_t ee_uicpp_background_host(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+{ return UIBackgroundHost::Op(inObj, inOp, a, b, c, d, f); }
+
 // Creates a background with its layout and draw priority and adds it to the form
 UIBackground::UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
                            unsigned long inDrawPriority, bool inVisible)
 {
-    ee_ui_bg_init(this, static_cast<EeUiBackgroundFields*>(this), UIBackgroundHost::Op, inBackgroundID,
+    ee_ui_bg_init(this, static_cast<EeUiBackgroundFields*>(this), ee_ui_background_host, inBackgroundID,
                   reinterpret_cast<const EeUiLayout*>(&inLayout), inForm, inDrawPriority, inVisible);
     ee_ui_direct_background(this, this);   // the direct path's registry (ee_ui direct.rs): this background's record
 }
