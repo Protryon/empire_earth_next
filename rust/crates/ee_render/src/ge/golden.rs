@@ -371,11 +371,19 @@ fn run_all() -> Vec<Section> {
 
     unsafe extern "C" fn push2(context: *mut c_void, point: *const Ge2DPoint) {
         // SAFETY: the context is the test's Vec, the point valid for the call
-        unsafe { (*(context as *mut Vec<Ge2DPoint>)).push(*point) };
+        unsafe {
+            if !point.is_null() {
+                (*(context as *mut Vec<Ge2DPoint>)).push(*point)
+            }
+        };
     }
     unsafe extern "C" fn push3(context: *mut c_void, point: *const Ge3DPoint) {
         // SAFETY: as push2
-        unsafe { (*(context as *mut Vec<Ge3DPoint>)).push(*point) };
+        unsafe {
+            if !point.is_null() {
+                (*(context as *mut Vec<Ge3DPoint>)).push(*point)
+            }
+        };
     }
     unsafe extern "C" fn push_rect(context: *mut c_void, rectangle: *const GeRectangle) {
         // SAFETY: as push2

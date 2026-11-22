@@ -137,7 +137,8 @@ pub unsafe extern "C" fn ee_ge_2d_rotate(
     }
 }
 
-/// `GE2DPoint::InterpolateTo`: each point goes to `push` (the caller clears its vector first).
+/// `GE2DPoint::InterpolateTo`: `push(context, NULL)` first (the C++ clears its vector: the two points were copied
+/// before, as either may be one of its elements), then each point.
 ///
 /// # Safety
 /// The pointers are valid; `push` may be called with `context`.
@@ -152,6 +153,7 @@ pub unsafe extern "C" fn ee_ge_2d_interpolate(
     // SAFETY: the function's contract; Rust holds no reference into C++ memory across `push`
     unsafe {
         let (from, to) = (*from, *to);
+        push(context, std::ptr::null());
         from.interpolate_to(to, step, |point| push(context, &point));
     }
 }
@@ -176,7 +178,7 @@ pub unsafe extern "C" fn ee_ge_3d_distance_squared(p: *const Ge3DPoint, q: *cons
     unsafe { (*p).distance_to_squared(*q) }
 }
 
-/// `GE3DPoint::InterpolateTo`.
+/// `GE3DPoint::InterpolateTo`: as [`ee_ge_2d_interpolate`].
 ///
 /// # Safety
 /// The pointers are valid; `push` may be called with `context`.
@@ -191,6 +193,7 @@ pub unsafe extern "C" fn ee_ge_3d_interpolate(
     // SAFETY: the function's contract; Rust holds no reference into C++ memory across `push`
     unsafe {
         let (from, to) = (*from, *to);
+        push(context, std::ptr::null());
         from.interpolate_to(to, step, |point| push(context, &point));
     }
 }

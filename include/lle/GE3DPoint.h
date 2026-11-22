@@ -47,15 +47,15 @@ public:
     float GetZ() const { return this->mZ; }
     // points every inStep along the segment to inPoint, always ending with inPoint itself (points within 0.0001 of
     // each other but not equal: the C++ read an uninitialized end, Rust takes 0)
+    // (Rust copies the two points before the vector is cleared: either may be one of its elements)
     void InterpolateTo(const GE3DPoint& inPoint, float inStep, std::vector<GE3DPoint>& outPoints) const
-    {
-        GE3DPoint theFrom(*this);
-        GE3DPoint theTo(inPoint);   // copies: either may be an element of outPoints
-        outPoints.clear();
-        ee_ge_3d_interpolate(GERust(theFrom), GERust(theTo), inStep, Push, &outPoints);
-    }
+        { ee_ge_3d_interpolate(GERust(*this), GERust(inPoint), inStep, Push, &outPoints); }
+    // the interpolation's calls: the vector cleared (no point), then each point
     static void Push(void* inPoints, const EeGe3DPoint* inPoint)
-        { static_cast<std::vector<GE3DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint)); }
+    {
+        inPoint ? static_cast<std::vector<GE3DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint))
+                : static_cast<std::vector<GE3DPoint>*>(inPoints)->clear();
+    }
     // x, y and z from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
     template <class F> long Load(F& inFile) { return ee_ge_3d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Load(unsigned long, unsigned long, F& inFile) { return this->Load(inFile); }

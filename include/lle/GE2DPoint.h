@@ -34,18 +34,18 @@ public:
     float DistanceToSquared(const GE2DPoint& inPoint) const
         { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
     // points every inStep along the segment to inPoint, always ending with inPoint itself
+    // (Rust copies the two points before the vector is cleared: either may be one of its elements)
     void InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const
-    {
-        GE2DPoint theFrom(*this);
-        GE2DPoint theTo(inPoint);   // copies: either may be an element of outPoints
-        outPoints.clear();
-        ee_ge_2d_interpolate(GERust(theFrom), GERust(theTo), inStep, Push, &outPoints);
-    }
+        { ee_ge_2d_interpolate(GERust(*this), GERust(inPoint), inStep, Push, &outPoints); }
     // x and y from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
     template <class F> long Load(F& inFile) { return ee_ge_2d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_2d_point_save(GERust(*this), GERustFile(inFile)); }
+    // the interpolation's calls: the vector cleared (no point), then each point
     static void Push(void* inPoints, const EeGe2DPoint* inPoint)
-        { static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint)); }
+    {
+        inPoint ? static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint))
+                : static_cast<std::vector<GE2DPoint>*>(inPoints)->clear();
+    }
 
     float mX;                               // +0x00
     float mY;                               // +0x04
