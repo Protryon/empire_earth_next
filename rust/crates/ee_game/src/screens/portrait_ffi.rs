@@ -29,6 +29,12 @@ impl PortraitHost for Portrait {
                 return 0;
             }
         }
+        if op >= class {
+            let ffi = &mut crate::screens::game_cpp::Ffi;
+            if let Some(r) = crate::screens::portrait_calls::op(ffi, self.0 as usize, op - class, a, b, f) {
+                return r;
+            }
+        }
         crate::screens::hud_ctl::HudHost::op(&mut crate::screens::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }
@@ -61,4 +67,40 @@ pub extern "C" fn ee_screens_portrait_mouse_down(portrait: *mut c_void) -> i64 {
 #[no_mangle]
 pub extern "C" fn ee_screens_portrait_set_unit(portrait: *mut c_void, unit: *mut c_void) {
     portrait::set_unit(&mut Portrait(portrait), unit as i64);
+}
+
+/// The constructor's body (`EEUICPortrait::EEUICPortrait`: the rectangle, the level shown).
+#[no_mangle]
+pub extern "C" fn ee_screens_portrait_init(
+    portrait: *mut c_void,
+    left: f32,
+    top: f32,
+    right: f32,
+    bottom: f32,
+    show: bool,
+) {
+    crate::screens::portrait_calls::init(
+        &mut crate::screens::game_cpp::Ffi,
+        portrait as usize,
+        [left, top, right, bottom],
+        show,
+    )
+}
+
+/// The destructor's body (`EEUICPortrait::~EEUICPortrait`).
+#[no_mangle]
+pub extern "C" fn ee_screens_portrait_free(portrait: *mut c_void) {
+    crate::screens::portrait_calls::free(&mut crate::screens::game_cpp::Ffi, portrait as usize)
+}
+
+/// `EEUICPortrait::DrawTextA` -> its result.
+#[no_mangle]
+pub extern "C" fn ee_screens_portrait_draw_text(portrait: *mut c_void) -> i64 {
+    crate::screens::portrait_calls::draw_text(&mut crate::screens::game_cpp::Ffi, portrait as usize)
+}
+
+/// `EEUICPortrait::MouseMove` -> 0.
+#[no_mangle]
+pub extern "C" fn ee_screens_portrait_mouse_move(portrait: *mut c_void) -> i64 {
+    crate::screens::portrait_calls::mouse_move(&mut crate::screens::game_cpp::Ffi, portrait as usize)
 }

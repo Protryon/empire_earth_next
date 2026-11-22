@@ -78,9 +78,9 @@ protected:
     void SetTextRectangle(const GERectangle& inRectangle);
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
-private:
+public:   // (the combo box's shims: UIComboBox.cpp)
     void SetText(const UWideString& inText, bool inReplace);
-
+private:
     EeUiLabel* mRust;                       // the state (labelobj.rs)
 };
 

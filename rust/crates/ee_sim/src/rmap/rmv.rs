@@ -1371,7 +1371,7 @@ pub struct EeRmapScriptName {
 }
 
 /// The bytes of one script file, filled by the host's `read` through `ee_rmap_script_bytes_push`.
-pub struct EeRmapScriptBytes(Vec<u8>);
+pub struct EeRmapScriptBytes(pub(crate) Vec<u8>);
 
 /// The game's side of a read.
 #[repr(C)]

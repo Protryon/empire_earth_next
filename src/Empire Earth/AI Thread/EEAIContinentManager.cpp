@@ -34,6 +34,8 @@
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
 // scenario manager, and the forests' two members that make units.
 
+// (CNTQ, the queries' capture records: ee_sim::astar cm_capture.rs; the last queries here moved: cm_unit.rs)
+
 // Resets the global continent manager and frees its tile grids (Rust: cm_passes.rs)
 void EEAIContinentManager::Shutdown()
 {
@@ -121,36 +123,10 @@ extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
     return theUnit->mPlanetID;
 }
 
-// 0x563bc8 (.bss) = gUnitClassTable[0x147] (0x563bc8 - 0x5636ac = 0x51c): the unit class RegrowTrees creates
-// (its vtable +0x30 is EEUnitClass::CreateUnit(x, y, player, bool, creator)); no store to it is known in the exe
-
 // When inTile is in the forest, creates inCount units of type 0x147 at random forest tiles within inRadius of
-// inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest
-// (EEUnit 0x22a3fd calls it)
+// inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest (EEUnit 0x22a3fd
+// calls it; Rust: cm_world.rs)
 bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount)
 {
-    U2DRectangle<long> theArea;
-    U2DPoint<long> thePoint;
-    bool theResult = this->Contains(inTile);
-    if (theResult) {
-        theArea.Set(inTile);
-        theArea.Grow(inRadius, true);
-        for (long i = inCount - 1; i >= 0; i--) {
-            bool theFound = false;
-            for (long theTries = 10; theTries >= 0 && !theFound; theTries--) {
-                long theY = gPhysics->GetRandom(theArea.mTop, theArea.mBottom);
-                thePoint.mX = gPhysics->GetRandom(theArea.mLeft, theArea.mRight);
-                thePoint.mY = theY;
-                theFound = this->Contains(thePoint);
-            }
-            if (!theFound)
-                thePoint = inTile;
-            EEComplexUnit* theUnit = gUnitClassTable[kUnitTypeResEagle]->CreateUnit(thePoint.mX, thePoint.mY, 0, false, NULL)->mComplexUnit;
-            if (theUnit->mIsRegrowing != true)
-                theUnit->mIsRegrowing = true;
-        }
-    }
-    return theResult;
+    return ee_astar_forest_regrow((uint64_t)(uintptr_t)this, inTile.mX, inTile.mY, inRadius, inCount);
 }
-
-
