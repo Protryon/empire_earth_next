@@ -104,26 +104,6 @@ public:
     void* mUnitsState = NULL;     // new: the per-unit Lua interface's state (ee_ai units_state.rs; NULL until used)
 };
 
-// Computer player difficulty (EEComputerPlayer::mDifficulty, from the game options).
-enum EECPDifficulty {
-    kDifficultyEasy = 0,  // Language.rc 28504 "The values are Easy, Medium, and Hard Difficulty, respectively" (record 4 value1/value2/float -> mAssistAlliesDelayEasy/Medium/Hard, used for mDifficulty 0/1/2); 29665..29667 "Easy"/"Medium"/"Hard"; GetX getters 0x42eafc.. test 0/1/2
-    kDifficultyMedium = 1,  // Language.rc 28504 "The values are Easy, Medium, and Hard Difficulty, respectively" (record 4 value1/value2/float -> mAssistAlliesDelayEasy/Medium/Hard, used for mDifficulty 0/1/2); 29665..29667 "Easy"/"Medium"/"Hard"; GetX getters 0x42eafc.. test 0/1/2
-    kDifficultyHard = 2,  // Language.rc 28504 "The values are Easy, Medium, and Hard Difficulty, respectively" (record 4 value1/value2/float -> mAssistAlliesDelayEasy/Medium/Hard, used for mDifficulty 0/1/2); 29665..29667 "Easy"/"Medium"/"Hard"; GetX getters 0x42eafc.. test 0/1/2
-};
-
-// Computer player manager kinds of EnableManagers 0x42d334 / CanEnableManager 0x43eeca.
-enum EECPManagerKind {
-    kCPManagerCivilization = 0,   // setrilo ComputerCanAfford 0x43f66f case 0 enableStockCivilization_; EnableManagers case 0 sets EECPCivilizationManager::mEpochAdvanceEnabled
-    kCPManagerResource = 1,       // setrilo case 1 enableStockResource_; EnableManagers case 1 sets EECPResourceManager::mSettlementsEnabled
-    kCPManagerResearch = 2,       // setrilo case 2 enableStockResearch_; EnableManagers case 2 sets EECPResearchManager::mEnabled
-    kCPManagerProduction = 3,     // setrilo case 3 enableStockProduction_; EnableManagers case 3 sets EECPUnitManager::mProductionEnabled
-    kCPManagerBuild = 4,          // setrilo case 4 enableStockBuild_; EnableManagers case 4 sets EECPCivilizationManager::mBuildingCountsEnabled
-    kCPManagerDefense = 6,        // setrilo case 6 enableStockDefense_; EnableManagers case 6 sets EECPDefenseCommander::mEnabled
-    kCPManagerExploration = 7,    // setrilo case 7 enableStockExploration_; EnableManagers case 7 sets EECPExplorationManager::mEnabled
-    kCPManagerCombat = 8,         // setrilo case 8 enableStockCombat_; EnableManagers case 8 sets EECPCombatManager::mImprovementsEnabled
-    kCPManagerMoraleBuildings = 9,  // CanEnableManager case 9 uses mEnableStockBuild; EnableManagers case 9 sets EECPCivilizationManager::mMoraleBuildingsEnabled (QueueMoraleBuilding timer) (provisional name)
-};
-
 // the epoch advance one of the player's buildings researches or has queued (kTechNone: none)
 long EECPPendingEpoch(EEComputerPlayer* inPlayer);
 
