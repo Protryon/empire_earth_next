@@ -7,6 +7,45 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// A DirEntity's member that `ee_won_dir_entity_fill` sets (R6 WON round 33: DirEntityReplyParser.cpp's
+/// DirMakeEntity's decisions are Rust's, each assignment one case of the C++ setter).
+enum class EeWonDirSet {
+  /// `mType = (char)num`
+  Kind,
+  /// `mPath` of the `n` UTF-16 units at `p`
+  Path,
+  /// `mName`, the same
+  Name,
+  /// `mNetAddr = new ByteBuffer(p, n)`
+  NetAddr,
+  /// `mReqUnique = num != 0`
+  ReqUnique,
+  /// `mDisplayName` of the units at `p`
+  DisplayName,
+  /// `mLifespan = num`
+  Lifespan,
+  /// `mCreated = num`
+  Created,
+  /// `mTouched = num`
+  Touched,
+  /// `mCRC = num`
+  Crc,
+  /// `mCreateIP = num`
+  CreateIp,
+  /// `mTouchIP = num`
+  TouchIp,
+  /// `mCreateId = num`
+  CreateId,
+  /// `mTouchId = num`
+  TouchId,
+  /// a data object of the `n` type bytes at `p` appended to `mDataObjects`
+  ObjectAdd,
+  /// the last data object's `mData = new ByteBuffer(p, n)`
+  ObjectData,
+  /// the ACL `p` (an `EeWonDirAcl`) appended to `mACLs`
+  Acl,
+};
+
 /// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
 /// negative `status`, 3 cut short; `sequence` when `has_sequence`.
 struct EeWonDirReply {
@@ -63,6 +102,9 @@ struct EeWonDirEntity {
 /// Receives an entity; valid only during the call.
 using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
 
+/// The C++ setter: `(entity, member, number, pointer, count)`.
+using EeWonDirSetFn = void(*)(void *entity, EeWonDirSet member, int64_t num, const void *p, size_t n);
+
 extern "C" {
 
 /// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
@@ -82,6 +124,15 @@ EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
                                       size_t length,
                                       EeWonDirEntitySink sink,
                                       void *context);
+
+/// DirMakeEntity's statements: the members `e` read set on the C++ `entity` through `set`, in the original's order
+/// (the flags' members, then the data objects, then the ACLs).
+///
+/// # Safety
+/// `e` is a live entity record (its pointers hold their counts); `set` is valid with `entity`.
+void ee_won_dir_entity_fill(const EeWonDirEntity *e,
+                            EeWonDirSetFn set,
+                            void *entity);
 
 }  // extern "C"
 

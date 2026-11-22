@@ -22,6 +22,7 @@ class UITextLabel;
 
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
+struct EeWonDirEntity; // rust/won_net/dir.h (an entity the directory replies read)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
@@ -261,6 +262,7 @@ protected:
     virtual ~DirEntity();
 public:
     DirEntity(); // DirEntityReplyParser.cpp (its members need ByteBuffer)
+    explicit DirEntity(const EeWonDirEntity* inEntity); // the members ee_won read (DirEntityReplyParser.cpp)
     IPAddr GetNetAddrAsIP() const; //native2f0400
     char mType; //08, naturalalignment09..0b
     std::wstring mPath; //0c
