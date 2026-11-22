@@ -15392,6 +15392,26 @@ struct EeUnitsCondIo {
   float p[3];
 };
 
+/// The unit's travel this tick that rolls the wheel.
+struct EeUnitsWheelIn {
+  /// the wheel's `mAngle`
+  float angle;
+  /// the unit's `mPhysicalModel.GetScale()` and the wheel's `mRadius`
+  float scale;
+  float radius;
+  /// the unit's `mCurrentPhysicsAction`
+  uint32_t mode;
+  /// the unit's `mVelocity` and `mAngularVelocity.mYaw`
+  float speed;
+  float yaw;
+  /// the unit's stats' `GetInverseMaxVelocity()`, `GetInverseMaxAngularVelocity()`, `GetMaxVelocity()`
+  float inverse_max_velocity;
+  float inverse_max_angular_velocity;
+  float max_velocity;
+  /// `gPhysics->GetTickSeconds()`
+  float tick_seconds;
+};
+
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
 struct EeUnitRecord {
@@ -16987,6 +17007,15 @@ float ee_units_cu_more(int32_t what,
                        float z,
                        float *out_x,
                        float *out_y);
+
+/// `EEWheel::Update`'s new angle (see [`wheel_angle`]).
+float ee_units_cu_wheel_angle(EeUnitsWheelIn input);
+
+/// `EEGetAttackFrameSet`'s choice (see [`attack_frame_set`]).
+int32_t ee_units_cu_attack_frame_set(bool special_attack,
+                                     uint32_t unit_type,
+                                     bool fires_over_walls,
+                                     bool firing_high);
 
 /// `EEComplexUnit::SightMoved(old x, old y, new x, new y)` on `unit` (the tiles as `long`s).
 ///
