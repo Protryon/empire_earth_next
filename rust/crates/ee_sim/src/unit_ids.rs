@@ -1,7 +1,7 @@
 //! The units' named integer constants (ee/EEUnitClassIDs.h: the AI kinds, categories, families, unit types and the
-//! class flags; ee/EEUnitAction.h: the action and trigger ids), as plain (unscoped) C enums for the C++ headers; each
-//! comment gives the evidence for its name, "(provisional name)" marks an inferred one. A composed value's parts
-//! are in its comment (`[= a | b]`).
+//! class flags; ee/EEUnitAction.h: the action and trigger ids; ee/EEUnitGoal.h: the goal kinds), as plain (unscoped)
+//! C enums for the C++ headers; each comment gives the evidence for its name, "(provisional name)" marks an inferred
+//! one. A composed value's parts are in its comment (`[= a | b]`).
 #![allow(non_camel_case_types, clippy::enum_variant_names, clippy::upper_case_acronyms)]
 
 /// The AI's unit kinds (dbobjects record +0x224, EEUnitClass::mL1D0 / mAIKind; counter kinds mL1D4..mL1DC). Provisional
@@ -1531,4 +1531,35 @@ pub enum EEUnitTriggerID {
     kTriggerShouldIRetaliate = 20001,
     /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanISeeEnemy", 20002)
     kTriggerCanISeeEnemy = 20002,
+}
+
+/// EEUnitGoal::mKind: EEUnitGoal::CreateGoal 0x23c3e6 creates the goal class of each kind.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitGoalKind {
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 1: new EEUGLocation (RTTI)
+    kGoalLocation = 1,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 2: new EEUGAttackUnit (RTTI)
+    kGoalAttackUnit = 2,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 3: new EEUGAttackGround (RTTI)
+    kGoalAttackGround = 3,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 4: new EEUGBuildRepair (RTTI)
+    kGoalBuildRepair = 4,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 6: new EEUGGather (RTTI)
+    kGoalGather = 6,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 7: new EEUGLoadTransport (RTTI)
+    kGoalLoadTransport = 7,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 8: new EEUGUnloadTransport (RTTI)
+    kGoalUnloadTransport = 8,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 9: new EEUGPatrol (RTTI)
+    kGoalPatrol = 9,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 10: new EEUGExplore (RTTI)
+    kGoalExplore = 10,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 11: new EEUGCastCalamity (RTTI)
+    kGoalCastCalamity = 11,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 12: new EEUGLoadGarrison (RTTI)
+    kGoalLoadGarrison = 12,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 15: new EEUGHealUnit (RTTI)
+    kGoalHealUnit = 15,
 }

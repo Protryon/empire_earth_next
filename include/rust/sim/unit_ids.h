@@ -1506,4 +1506,32 @@ enum EEUnitTriggerID {
   kTriggerCanISeeEnemy = 20002,
 };
 
+/// EEUnitGoal::mKind: EEUnitGoal::CreateGoal 0x23c3e6 creates the goal class of each kind.
+enum EEUnitGoalKind {
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 1: new EEUGLocation (RTTI)
+  kGoalLocation = 1,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 2: new EEUGAttackUnit (RTTI)
+  kGoalAttackUnit = 2,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 3: new EEUGAttackGround (RTTI)
+  kGoalAttackGround = 3,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 4: new EEUGBuildRepair (RTTI)
+  kGoalBuildRepair = 4,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 6: new EEUGGather (RTTI)
+  kGoalGather = 6,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 7: new EEUGLoadTransport (RTTI)
+  kGoalLoadTransport = 7,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 8: new EEUGUnloadTransport (RTTI)
+  kGoalUnloadTransport = 8,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 9: new EEUGPatrol (RTTI)
+  kGoalPatrol = 9,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 10: new EEUGExplore (RTTI)
+  kGoalExplore = 10,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 11: new EEUGCastCalamity (RTTI)
+  kGoalCastCalamity = 11,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 12: new EEUGLoadGarrison (RTTI)
+  kGoalLoadGarrison = 12,
+  /// EEUnitGoal::CreateGoal 0x23c3e6 case 15: new EEUGHealUnit (RTTI)
+  kGoalHealUnit = 15,
+};
+
 #endif  // EE_RUST_SIM_UNIT_IDS_H

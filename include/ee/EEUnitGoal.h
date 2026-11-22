@@ -378,20 +378,7 @@ public:
     bool mB1D;                              // +0x1d (saved from 0x87)
 };
 
-// EEUnitGoal::mKind: EEUnitGoal::CreateGoal 0x23c3e6 creates the goal class of each kind.
-enum EEUnitGoalKind {
-    kGoalLocation = 1,       // EEUnitGoal::CreateGoal 0x23c3e6 case 1: new EEUGLocation (RTTI)
-    kGoalAttackUnit = 2,     // EEUnitGoal::CreateGoal 0x23c3e6 case 2: new EEUGAttackUnit (RTTI)
-    kGoalAttackGround = 3,   // EEUnitGoal::CreateGoal 0x23c3e6 case 3: new EEUGAttackGround (RTTI)
-    kGoalBuildRepair = 4,    // EEUnitGoal::CreateGoal 0x23c3e6 case 4: new EEUGBuildRepair (RTTI)
-    kGoalGather = 6,         // EEUnitGoal::CreateGoal 0x23c3e6 case 6: new EEUGGather (RTTI)
-    kGoalLoadTransport = 7,  // EEUnitGoal::CreateGoal 0x23c3e6 case 7: new EEUGLoadTransport (RTTI)
-    kGoalUnloadTransport = 8,  // EEUnitGoal::CreateGoal 0x23c3e6 case 8: new EEUGUnloadTransport (RTTI)
-    kGoalPatrol = 9,         // EEUnitGoal::CreateGoal 0x23c3e6 case 9: new EEUGPatrol (RTTI)
-    kGoalExplore = 10,       // EEUnitGoal::CreateGoal 0x23c3e6 case 10: new EEUGExplore (RTTI)
-    kGoalCastCalamity = 11,  // EEUnitGoal::CreateGoal 0x23c3e6 case 11: new EEUGCastCalamity (RTTI)
-    kGoalLoadGarrison = 12,  // EEUnitGoal::CreateGoal 0x23c3e6 case 12: new EEUGLoadGarrison (RTTI)
-    kGoalHealUnit = 15,      // EEUnitGoal::CreateGoal 0x23c3e6 case 15: new EEUGHealUnit (RTTI)
-};
+// EEUnitGoal::mKind's kinds: Rust's enum (ee_sim unit_ids.rs, rust/sim/unit_ids.h).
+#include "rust/sim/unit_ids.h"
 
 #endif
