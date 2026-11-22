@@ -22,6 +22,7 @@
 #include "rust/won_net/userstatus.h"
 #include "rust/won_lobby/routelogic.h"
 #include <map>
+#include "rust/won_net/httpcache.h"
 
 namespace LoWorld {
 struct GUIStringData : RefCount {

@@ -3,6 +3,18 @@
 // out. InitHost's config is the world's, as in won_netlogic_orig.h.
 #ifndef WON_NETLOGIC_NEW_H
 #define WON_NETLOGIC_NEW_H
+#include "rust/won_lobby/lobbydlg.h"
+#include "rust/won_lobby/logics.h"
+#include "rust/won_lobby/routelogic.h"
+#include "rust/won_net/adminop.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/httpcache.h"
+#include "rust/won_net/httpdoc.h"
+#include "rust/won_net/httpget.h"
+#include "rust/won_net/reqdir.h"
+#include "rust/won_net/reqops.h"
+#include "rust/won_net/routecpp.h"
+#include "rust/won_net/routeop.h"
 namespace NlNew {
 using namespace LoWorld;
 using namespace NlWorld;
