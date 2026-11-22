@@ -1445,7 +1445,7 @@ const EeGfxRaster gEERustRaster = {
     // the screen the models' textures are set for (raster_direct.rs: the model, material and texture calls are Rust's)
     []() -> uint32_t { return (uint32_t)gScreenIndex; },
     // gRasterizer's Rust objects (raster_direct.rs: the state calls the lambdas made on it)
-    [](void** outBase) -> void* { return DX7Rasterizer::RustObjects(gRasterizer, outBase); },
+    [](void** outBase) -> void* { return GERasterizer::RustObjects(gRasterizer, outBase); },
 };
 
 // Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance

@@ -1,5 +1,5 @@
-// DX7Rasterizer (RECONSTRUCTION): the GERasterizer of the DX7 renderer plug-ins, plus the headers every DX7 unit
-// includes. Slot order from the vtable 0x10010324 and the exports. The original's sizeof 0x7c (copy ctor 0x10001271):
+// DX7Rasterizer (RECONSTRUCTION): the GERasterizer of the DX7 renderer plug-ins (folded into GERasterizer in LLE round
+// 12), plus the headers every DX7 unit includes. Slot order from the vtable 0x10010324 and the exports. The original's sizeof 0x7c (copy ctor 0x10001271):
 // GERasterizer 0x68, the per-screen DX7 state vector +0x68, the debug color +0x78.
 //
 // Whole in Rust (rust/crates/ee_render/src/dx7 rastobj.rs, R4.3 part 13): the per-screen DX7 records, the debug colour, the light
@@ -38,17 +38,7 @@
 #include "dx7/DX7Common.h"
 #include "lle/GEVertexArray.h"
 
-struct EeDx7Rasterizer;                     // rust/ee_dx7.h
-
-class DX7_API DX7Rasterizer : public GERasterizer {
-public:
-    // port (LLE round 12): the methods are GERasterizer's (one rasterizer: each calls this object's mDX7)
-    DX7Rasterizer(const UString& inName, bool inTnL = false);
-    virtual ~DX7Rasterizer();
-
-private:
-    DX7Rasterizer(const DX7Rasterizer&) = delete;
-    DX7Rasterizer& operator=(const DX7Rasterizer&) = delete;
-};
+// port (LLE round 12): DX7Rasterizer is GERasterizer (lle/GERasterizer.h): one rasterizer, whose members call the
+// DX7 Rust object; its constructor makes both Rust objects (GERasterizer.cpp)
 
 #endif
