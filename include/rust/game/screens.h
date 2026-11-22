@@ -11096,6 +11096,18 @@ constexpr static const uint32_t EE_SCREENS_PING_BAR = 32;
 /// (bar) -> the rasterizer's draw of the bar.
 constexpr static const uint32_t EE_SCREENS_PING_DRAW = 33;
 
+/// The tables (`EE_SCREENS_QA_*`): the save question's yes (send, post), the in-game options' yeses, the campaign
+/// editor's yeses and noes (by its question index), the boot question's yes and no.
+constexpr static const uint32_t EE_SCREENS_QA_SAVE_YES = 0;
+
+constexpr static const uint32_t EE_SCREENS_QA_GO_YES = 1;
+
+constexpr static const uint32_t EE_SCREENS_QA_CE_YES = 2;
+
+constexpr static const uint32_t EE_SCREENS_QA_CE_NO = 3;
+
+constexpr static const uint32_t EE_SCREENS_QA_BOOT = 4;
+
 /// -> the portrait's level | its first bar shown << 32 | its second << 33.
 constexpr static const uint32_t EE_SCREENS_PT_OP_STATE = 0;
 
@@ -17266,6 +17278,17 @@ int64_t ee_screens_mini_map_mouse_move(void *map);
 
 /// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
 void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+
+/// A saved game's save message to every player, waiting up to 15 s; the save handed on.
+void ee_screens_save_send(void *message);
+
+/// A scenario's save action posted, our reference dropped; the save handed on.
+void ee_screens_save_post(void *action);
+
+/// The answer `index` of the table `table` (`EE_SCREENS_QA_*`; the boot table's 0 yes, 1 no), NULL for none (the
+/// campaign editor's delete has no "no").
+const void *ee_screens_question_answer(uint32_t table,
+                                       uint32_t index);
 
 /// `EEUICPortrait::Update`.
 void ee_screens_portrait_update(void *portrait);
