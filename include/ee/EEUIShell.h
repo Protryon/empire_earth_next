@@ -280,7 +280,7 @@ public:
 
 // a plain control (UIControl, its pure virtuals EEUIRustControl's: nothing, 0): the paint areas, the icon bar. Its
 // slots hold the C++ objects a kind's host cases need (the icon bar's bitmaps and sounds); EEUIRustControl's class
-// ops (RustOp) are the kind's host cases (EEUIShell.cpp)
+// ops are Rust's (the icon bar's: icon_bar_ops.rs over EEUIShell.cpp's shims)
 class EEUIShellControl : public EEUIRustControl, public EEUIShell {
 public:
     EEUIShellControl(uint32_t inKind, const std::vector<int64_t>& inArgs, unsigned long inId,
@@ -298,7 +298,6 @@ public:
     const GE2DPoint& MouseLocation() const { return this->GetMouseLocation(); }
     void Capture() { this->CaptureMouse(); }
 protected:
-    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 };
 
 // a form (UIForm): its virtuals the kind's when it overrides them; a kind reaches the form's base calls and its own

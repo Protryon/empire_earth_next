@@ -2,7 +2,7 @@
 // names). The civilization builder's list box (RTTI EECBUIListBox > UILBString > UIListBox<UWideString> > UIControl >
 // UIEntity). EECBUIListBox.cpp 0x27cfdb..0x27efca. Its logic is Rust's (ee_screens civ_list.rs: the lines'
 // tokens, order, categories, selection, formatting and drawing); the class keeps the toolkit's base and its members,
-// its overrides forward, and HostOp is the list's half of the builder's host (EE_SCREENS_CBW_L_*). Requires
+// its overrides forward (the list's host ops are Rust's: civ_host.rs). Requires
 // lle/UILBString.h.
 #ifndef EE_EECBUILISTBOX_H
 #define EE_EECBUILISTBOX_H
@@ -40,9 +40,16 @@ public:
 
     void SetSortLines(bool inSortLines) { this->mSortLines = inSortLines; }
 
-    // the list's host ops (EE_SCREENS_CBW_L_*) on the list p
-    static int64_t HostOp(uint32_t inOp, EECBUIListBox* p, int64_t inA, int64_t inB, int64_t inC,
-                          const UWideString& inText, EeScreensCbOut* outText);
+    // the base's members the builder host's shims call (EECivilizationBuilder.cpp)
+    using UIListBox<UWideString>::GetCopyTextRectangle;
+    using UIListBox<UWideString>::GetLineHeight;
+    using UIListBox<UWideString>::DrawScrollBarText;
+    using UIListBox<UWideString>::GetSelectionIndex;
+    using UIListBox<UWideString>::GetAutoSelect;
+    using UIListBox<UWideString>::GetDrawCount;
+    using UIListBox<UWideString>::GetNumLines;
+    using UIListBox<UWideString>::mData;
+    using UIListBox<UWideString>::mCopyLineArray;
 
     GEColor mC13C;                          // the header colour (kBlack; the choice form's: (0, 0, 0.39), (0.18, 0.18, 0.28))
     GEColor mC148;                          // the header colour as of the last CopyData

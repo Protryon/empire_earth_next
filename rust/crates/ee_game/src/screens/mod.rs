@@ -87,6 +87,9 @@
 //!   game options page): the controls it makes as tables, its pages, rows, diplomacy grid, load and store.
 //! - [`editor_trigger`]: the scenario editor's trigger tab trigger screen whole in Rust (`EESETSTrigger`): its
 //!   controls, condition and effect rows, operators, store and load.
+//! - [`editor_trigx`]: the trigger tab family's host ops that were C++ statement sequences (the generic effect and
+//!   condition host, the object, trigger, area and instructions screens, the trigger tab, the place fills, the tech
+//!   names), composed of single C++ statements (`ee_screenscpp_seetx` .. `_seinx`).
 //! - [`editor_tscreen`]: the scenario editor's trigger tab whole in Rust (`EESETriggerScreen`): its controls, entry
 //!   list and buttons, sub-tabs, the open entry's store and load.
 //! - [`editor_groups`]: the scenario editor's seven tab groups as Rust objects (once `EEUIFSEMainGroup` and its
@@ -181,6 +184,7 @@ pub mod editor_area;
 #[cfg(not(test))]
 mod editor_area_ffi;
 pub mod editor_brush;
+mod editor_calls;
 pub mod editor_conditions;
 pub mod editor_controls;
 mod editor_direct;
@@ -216,16 +220,27 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_sefmx;
+pub mod editor_selt;
+#[cfg(not(test))]
+mod editor_selt_ffi;
 pub mod editor_sepl;
+pub mod editor_seplx;
+pub mod editor_setnx;
+pub mod editor_seunx;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
+pub mod editor_tabsx;
 pub mod editor_terrain;
 #[cfg(not(test))]
 mod editor_terrain_ffi;
 pub mod editor_trigger;
 #[cfg(not(test))]
 mod editor_trigger_ffi;
+pub mod editor_trigx;
+#[cfg(not(test))]
+mod editor_trigx_ffi;
 pub mod editor_tscreen;
 #[cfg(not(test))]
 mod editor_tscreen_ffi;
@@ -357,10 +372,23 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+pub(crate) mod area_effect_host;
+pub(crate) mod area_effect_lists;
+pub(crate) mod area_effect_manager;
+pub(crate) mod area_effect_running;
+pub(crate) mod civ_file_calls;
+pub(crate) mod civ_host;
+pub(crate) mod civ_manager_calls;
+pub(crate) mod command_units_ops;
+pub(crate) mod cursor_calls;
+pub(crate) mod dialog_calls;
+pub(crate) mod icon_bar_ops;
 pub(crate) mod lobby_calls;
+pub(crate) mod portrait_calls;
 pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
+pub(crate) mod screens_more_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
@@ -372,12 +400,14 @@ mod ui_calls_ffi;
 #[cfg(not(test))]
 mod ui_direct;
 pub mod ui_game;
+pub(crate) mod ui_game_calls;
 #[cfg(not(test))]
 mod ui_game_ffi;
 pub mod ui_manager;
 pub(crate) mod ui_manager_calls;
 #[cfg(not(test))]
 mod ui_manager_ffi;
+pub(crate) mod ui_message_calls;
 pub mod ui_objects;
 #[cfg(not(test))]
 mod ui_objects_ffi;
@@ -385,6 +415,7 @@ pub mod ui_thread;
 #[cfg(not(test))]
 mod ui_thread_ffi;
 pub mod unit_hack;
+pub(crate) mod unit_hack_calls;
 #[cfg(not(test))]
 mod unit_hack_ffi;
 pub mod upgrade;

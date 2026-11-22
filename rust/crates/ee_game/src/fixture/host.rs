@@ -134,6 +134,8 @@ pub enum EeFixtureOp {
     LobbyPost,
     /// the WON lobby's last snapshot into the sink (a new one asked for) -> 1, 0 the lobby is not open
     LobbySnapshot,
+    /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
+    EditNumber,
     // ---- the compound operations' finer ones (compound.rs; one C++ statement each: EETestFixture.cpp names each
     // one's call)
     FxInstallDebug,
@@ -328,6 +330,8 @@ pub enum EeFixtureOp {
     FxGameNameLen,
     /// game h's name's character i0
     FxGameNameAt,
+    FxAsEdit,
+    FxEditSetNumber,
 }
 
 /// One call's arguments and answers (see [`EeFixtureOp`]).

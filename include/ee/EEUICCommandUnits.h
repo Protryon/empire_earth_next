@@ -30,7 +30,6 @@ protected:
     virtual long MouseLButtonDoublePressed() { return 0; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_CU_DO_MOUSE_MOVE, &inLocation); }
     virtual long MouseRButtonUp() { return this->Rust(EE_SCREENS_CU_DO_MOUSE_R_UP); }
-    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL);
 
 public:   // (for the shims of ee_screens command_units_calls.rs)

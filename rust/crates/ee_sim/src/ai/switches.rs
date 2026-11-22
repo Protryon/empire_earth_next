@@ -140,6 +140,11 @@ pub unsafe extern "C" fn ee_ai_switches_init(
     });
 }
 
+/// Whether the player `id`'s experiments (the environment's, once read) name `name`.
+pub fn experiment_of(id: u64, name: &str) -> bool {
+    experiment(switches(), id, name)
+}
+
 /// `EECPExperiment`: the player `id`'s experiments name `name`.
 ///
 /// # Safety

@@ -38,12 +38,6 @@ public:
                                             // were collected, UnitAdded's classes (not saved)
 };
 
-// the epoch's classes (the original civilization manager's GetAntiAirClass, GetFishingBoatClass, GetGateClass,
-// GetTowerClass, GetWallClass; 0: none in the epoch)
-long EECPAntiAirClass(EEComputerPlayer* inPlayer);
-long EECPFishingBoatClass(EEComputerPlayer* inPlayer);
-long EECPGateClass(EEComputerPlayer* inPlayer);
-long EECPTowerClass(EEComputerPlayer* inPlayer);
-long EECPWallClass(EEComputerPlayer* inPlayer);
+// (the epoch's classes, the original civilization manager's GetAntiAirClass .. GetWallClass: ee_sim::cp placement.rs)
 
 #endif

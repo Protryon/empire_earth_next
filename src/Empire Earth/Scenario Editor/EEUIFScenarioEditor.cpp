@@ -5,8 +5,9 @@
 //
 // The form whole in Rust (ee_screens editor_form.rs): EEUIFScenarioEditor holds its object (the controls, events,
 // tabs, state and selection as slots) and forwards; the trigger-only save (Ctrl+S, once EEUIESaveScenarioTriggersOnly)
-// is an EESEERust whose report Rust writes over the scenario's records. This unit is the form's host
-// (ee_screenscpp_sefm): the controls only the form makes and the world it reads and posts to.
+// is an EESEERust whose report Rust writes over the scenario's records. The form's host is Rust too (editor_sefmx.rs:
+// the controls only the form makes and the world it reads and posts to, composed of this unit's single statements,
+// ee_screenscpp_sefmx).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -120,20 +121,6 @@ EEUIFScenarioEditor::~EEUIFScenarioEditor()
     ee_screens_sefm_free(this->mRust);
 }
 
-// Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
-void EEUIFScenarioEditor::Close()
-{
-    gFreeCamera = false;
-    ::gWorld.mCameraControl.SetMode(gGamePreferences.mSettings.mZoomStyle);
-    ::gWorld.mCameraControl.SetChanged();
-    ((UIFullBackground*)this->GetSlot(EE_SCREENS_SEFM_FULL_BACKGROUND))->UnloadBackground();
-    gGraphics->PostClearRenderObjects();
-    gGraphics->PostPushRenderObject(gU56534C);
-    gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
-    gB529065 = false;
-    UIForm::Close();
-}
-
 // Prepares the frame: dirties the game view (unless full view) and mini map, moves the placement ghost, updates the
 // current tab group and the edge scroll (unless full view or a control holds the mouse) (editor_form.rs)
 long EEUIFScenarioEditor::CopyData()
@@ -225,484 +212,387 @@ GETextureDescription SefmDescription(unsigned long inPixelDepth, bool inHasAlpha
     return theDescription;
 }
 
-void SefmColor(GEText* inText, const GEColor& inColor)
-{
-    inText->SetFgColor(inColor);
-    inText->SetIsTransparent(true);
-}
+}   // namespace
 
-const GEColor kSefmYellow(0.99607843f, 0.96862745f, 0.1254902f);
 
-// a scenario record's name or description into the caller's buffer: its length
-int32_t SefmText(const UWideString& inText, void* outBuffer, int32_t inCapacity)
+// ---- the form's host whole in Rust (ee_screens editor_sefmx.rs composes every EE_SCREENS_SEFM_OP_* op and Close of
+// these single statements, EE_SCREENS_SEFMX_*): p0 the statement's object, p1 the form, p2 a second object; a made
+// object's handle answers in i0 (low 32 bits) and i1 (high)
+
+UWideString gSefxText;   // EE_SCREENS_SEFMX_STRING's (the other editor statement hosts' texts too)
+
+namespace {
+
+int32_t SefxOut(int32_t* i, const void* inObject)
 {
-    int32_t theLength = (int32_t)inText.GetTCHARLength();
-    memcpy(outBuffer, (const char*)inText, theLength < inCapacity ? theLength : inCapacity);
-    return theLength;
+    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
+    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
+    return 0;
 }
+GERectangle SefxRect(const void* inFloats, int inFirst) { return GERectangle(static_cast<const float*>(inFloats)[inFirst], static_cast<const float*>(inFloats)[inFirst + 1], static_cast<const float*>(inFloats)[inFirst + 2], static_cast<const float*>(inFloats)[inFirst + 3]); }
+const EeScreensSefmButton& SefxButton(void* const* p) { return *static_cast<const EeScreensSefmButton*>(p[2]); }
+const uint32_t* SefxBits(void* const* p) { return static_cast<const uint32_t*>(p[0]); }
+UIEvent* const* SefxEvents(void* const* p) { return static_cast<UIEvent* const*>(p[0]); }
+EEScenarioManager* SefxManager() { return gWorld.mScenarioManager; }
+FSFileSpec* SefxFile(void* const* p) { return static_cast<FSFileSpec*>(p[0]); }
+GETexture* SefxTexture(void* const* p) { return static_cast<GETexture*>(p[0]); }
+unsigned long sSefxIndex;          // EE_SCREENS_SEFMX_NEW_BRUSH_GROUP's index (advanced by the group)
+EEUnit* sSefxUnit;                 // EE_SCREENS_SEFMX_RESOLVE's
+ISEntity* sSefxKey;                // EE_SCREENS_SEFMX_KEY_FETCH's
+GETransformation sSefxTurn;        // the camera turns' (a fresh one each sequence: EE_SCREENS_SEFMX_TURN_RESET)
 
 }   // namespace
 
-extern "C" int32_t ee_screenscpp_sefm(uint32_t inOp, void* const* p, int32_t* i, float* f)
+extern "C" int32_t ee_screenscpp_sefmx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    return EEUIFScenarioEditor::Host(inOp, p, i, f);
+    return EEUIFScenarioEditor::Statement(inOp, p, i, f);
 }
 
-int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
+int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
+    UIControl* c = static_cast<UIControl*>(p[0]);
     EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(p[1]);
-    void** theOut = static_cast<void**>(p[0]);
-    UWideString theText;
     switch (inOp) {
-    case EE_SCREENS_SEFM_OP_BASICS: {   // the ctor's texture, scroll and poll, then CreateBackground
-        GETextureDescription theDescription = SefmDescription(gTexturePixelDepth, true);
-        GETexture* theTexture = gRasterizer->GetTextureManager(theForm->GetManager()->GetScreen())
-                                    ->LoadTexture("textures\\SE Buttons", theDescription);
-        theTexture->Reference();
-        theOut[0] = theTexture;
-        theOut[1] = new EEAScroll;
-        TMPoll* thePoll = new TMPoll(500, 0, false);
-        thePoll->Start();
-        theOut[2] = thePoll;
-        theDescription = SefmDescription(16, false);
-        GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-        GEScreen* theScreen = NULL;
-        for (unsigned long k = 0; k < theRasterizer->GetScreenCount(); k++) {
-            if (theRasterizer->GetIsScreenActivated(k)) {
-                theScreen = theRasterizer->GetScreen(k);
-                break;
-            }
-        }
-        GETextureManager* theManager = theScreen->GetTextureManager();
-        theTexture = theManager->LoadTexture("textures\\scenpart", theDescription);
-        theTexture->SetFrame(0);
-        theTexture->SetStageAlphaMode(kStageOpTexture, -1);
-        theTexture->SetStageColorMode(kStageOpTexture, -1);
-        theTexture->SetStageMinFilterMode(0, -1);
-        theTexture->SetStageMagFilterMode(0, -1);
-        theTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-        theTexture->SetStageMipMapBias(-1.0f, -1);
-        theTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-        GEBitmap* thePanel = new GEBitmap;
-        thePanel->SetTexture(theTexture, gScreenIndex);
-        theOut[3] = thePanel;
-        theOut[4] = new UIFullBackground("textures\\Scenfull", 4, 3, theForm, 1024, 768);
+    case EE_SCREENS_SEFMX_BUTTON_TEXTURE: return SefxOut(i, gRasterizer->GetTextureManager(theForm->GetManager()->GetScreen())->LoadTexture("textures\\SE Buttons", SefmDescription(gTexturePixelDepth, true)));
+    case EE_SCREENS_SEFMX_TEXTURE_REFERENCE: SefxTexture(p)->Reference();
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_MINI_MAP: {
-        EEUIMiniMap* t = new EEUIMiniMap(GERectangle(GE2DPoint(f[0], f[1]), f[2], f[2]), theForm, (unsigned long)i[0], 8, 3);
-        theForm->AddControl(t, 0);
-        t->SetDisplayMode(kDisplayModeHidden);
-        *theOut = t;
+    case EE_SCREENS_SEFMX_NEW_SCROLL: return SefxOut(i, new EEAScroll);
+    case EE_SCREENS_SEFMX_NEW_POLL: return SefxOut(i, new TMPoll(500, 0, false));
+    case EE_SCREENS_SEFMX_POLL_START: static_cast<TMPoll*>(p[0])->Start();
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_PLAYER_COMBO: {
-        UIComboBox* t = new UIComboBox(0x149, 1, std::vector<UWideString>(), gU531938,
-                                       GERectangle(GE2DPoint(0.0f, 0.0f), 140.0f, 20.0f), 400, theForm,
-                                       (unsigned long)i[0], 0, 2);
-        t->SetTextBoxBgOpacity(0.4f);
-        SefmColor(t->GetGEText(), kSefmYellow);
-        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-        t->SetBgOpacity(1.0f);
-        theForm->AddControl(t, 0);
-        t->SetDisplayMode(kDisplayModeHidden);
-        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_NEW_PLAYER);
-        t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-        *static_cast<void**>(p[2]) = theEvent;
-        *theOut = t;
+    case EE_SCREENS_SEFMX_SCREEN_COUNT: return (int32_t)GERasterizer::GetActiveRasterizer()->GetScreenCount();
+    case EE_SCREENS_SEFMX_SCREEN_ACTIVATED: return GERasterizer::GetActiveRasterizer()->GetIsScreenActivated((unsigned long)i[0]);
+    case EE_SCREENS_SEFMX_SCREEN: return SefxOut(i, GERasterizer::GetActiveRasterizer()->GetScreen((unsigned long)i[0]));
+    case EE_SCREENS_SEFMX_PART_TEXTURE: return SefxOut(i, static_cast<GEScreen*>(p[0])->GetTextureManager()->LoadTexture("textures\\scenpart", SefmDescription(16, false)));
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 0: SefxTexture(p)->SetFrame(0);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_LABEL: {
-        UITextLabel* t;
-        if (i[0] == 0) {   // the top text label
-            t = new UITextLabel(UWideString(gEmptyString), gU531930, 9,
-                                GERectangle(GE2DPoint(500.0f, 0.0f), 300.0f, (float)gU531930->GetHeight()), theForm,
-                                0, (unsigned long)i[1], 0);
-            t->SetAlignment(kTextAlignRight);
-            t->SetBgOpacity(0.4f);
-            SefmColor(t->GetGEText(), kSefmYellow);
-        } else {   // the help label, the form's tool tips
-            t = new UITextLabel(UWideString(gEmptyString), gU531934, 0x10,
-                                GERectangle(GE2DPoint(0.0f, 0.0f), 400.0f, 400.0f), theForm, 1, (unsigned long)i[1], 0);
-            t->SetAlignment(kTextAlignLeft);
-            t->SetBgOpacity(1.0f);
-            t->SetBgColor(GEColor());
-            theForm->SetUseToolTips(true);
-            theForm->SetHelpTextTimeDelay(600);
-            SefmColor(t->GetGEText(), GEColor(0.0f, 0.0f, 0.0f));
-        }
-        theForm->AddControl(t, 0);
-        t->SetDisplayMode(kDisplayModeHidden);
-        t->SetAlwaysDirty(true);
-        t->SetFitRectToText(true);
-        *theOut = t;
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 1: SefxTexture(p)->SetStageAlphaMode(kStageOpTexture, -1);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_BRUSH_GROUP: {
-        unsigned long theIndex = *static_cast<uint32_t*>(p[2]);
-        *theOut = new EEUIFSEBrushGroup(theIndex, GE2DPoint(f[0], f[1]), theForm, gU531930);
-        *static_cast<uint32_t*>(p[2]) = (uint32_t)theIndex;
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 2: SefxTexture(p)->SetStageColorMode(kStageOpTexture, -1);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_UNDO_REDO: {
-        // the Undo and Redo buttons (the original EEUIFSEUndo 0x1a4dbe and EEUIFSERedo 0x1a4cbb, 65x25: kinds over the
-        // button shell, ee_game shells_editor.rs): a press posts the button's action (EEAUndo, EEARedo)
-        EEAction* theAction = new EEARust(i[0] == 0 ? kEEAEditorUndo : kEEAEditorRedo);
-        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_ACTION_BUTTON, {(int64_t)theAction}, i[0] == 0 ? 0 : 1, NULL, NULL,
-                                          NULL, GERectangle(GE2DPoint(f[0], f[1]), 65.0f, 25.0f), theForm,
-                                          (unsigned long)i[1], 0);
-        gResource->GetString(i[0] == 0 ? IDS_UNDO : IDS_REDO, theText);
-        t->SetText(theText, gU531930);
-        SefmColor(t->GetGEText(), GEColor(1.0f, 1.0f, 1.0f));
-        *theOut = t;
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 3: SefxTexture(p)->SetStageMinFilterMode(0, -1);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_TAB_GROUP:   // CreateTabGroup (editor_groups_ffi.rs; the unit tab's C++ parts its shell)
-        gSeplScreenFont = i[0] < kEditorTabUnits ? gU531930 : gU531938;
-        *theOut = ee_screens_segr_new((uint32_t)i[0], theForm, theForm->GetEdgeScroll(), theForm->GetBrushGroup(),
-                                      theForm->GetPlayerComboBox(), i[0] == kEditorTabUnits ? new EESEUnit(theForm) : NULL,
-                                      static_cast<uint32_t*>(p[2]));
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 4: SefxTexture(p)->SetStageMagFilterMode(0, -1);
         return 0;
-    case EE_SCREENS_SEFM_OP_BUTTON: {
-        const EeScreensSefmButton& b = *static_cast<const EeScreensSefmButton*>(p[2]);
-        UIButton* t;
-        if (b.kind == 0) {
-            float theCells[4] = {b.normal[0], b.normal[1], b.pressed[0], b.pressed[1]};
-            uint32_t theBits[4];
-            memcpy(theBits, theCells, sizeof(theBits));
-            t = new EEUIShellRadio(EE_SCREENS_SK_MAIN_BUTTON,
-                                   {(int64_t)(unsigned char)b.flag, (int64_t)theForm->GetButtonTexture(), (int64_t)b.tab,
-                                    theBits[0], theBits[1], theBits[2], theBits[3]},
-                                   b.id, UWideString(""), gU531930, GERectangle(GE2DPoint(b.rect[0], b.rect[1]), 32.0f, 32.0f),
-                                   theForm, b.index, 0, false, b.checked != 0, false);
-            t->SetStringTableID(b.help);
-            theForm->AddControl(t, 0);
-            *theOut = t;
-            return 0;
-        }
-        unsigned long theScreen = theForm->GetManager()->GetScreen();
-        GERectangle theDestination(b.dest[0], b.dest[1], b.dest[2], b.dest[3]);
-        GEBitmap* theNormal = new GEBitmap;
-        GEBitmap* thePressed = new GEBitmap;
-        theNormal->SetTexture(theForm->GetButtonTexture(), theScreen);
-        thePressed->SetTexture(theForm->GetButtonTexture(), theScreen);
-        theNormal->ComputeStretchedCoordsAndScale(theDestination, theDestination,
-            GERectangle(b.normal[0], b.normal[1], b.normal[0] + 32.0f, b.normal[1] + 32.0f), theScreen);
-        thePressed->ComputeStretchedCoordsAndScale(theDestination, theDestination,
-            GERectangle(b.pressed[0], b.pressed[1], b.pressed[0] + 32.0f, b.pressed[1] + 32.0f), theScreen);
-        t = new UIButton(b.id, theNormal, NULL, thePressed, GERectangle(b.rect[0], b.rect[1], b.rect[2], b.rect[3]),
-                         theForm, b.index, 0);
-        t->SetStringTableID(b.help);
-        theForm->AddControl(t, 0);
-        UIEvent* theEvent = b.object != 0 ? new EESEERust(b.event, (void*)b.object) : EECreateScreenEvent(b.event);
-        t->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-        theEvent->Dereference();
-        theNormal->Dereference();
-        thePressed->Dereference();
-        *theOut = t;
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 5: SefxTexture(p)->SetStageMipFilterMode(kMipFilterNone, -1);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_QUICK_ACTION:
-        *theOut = static_cast<EEAction*>(new EESEAQuickSaveLoad(gScenarioExtension));
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 6: SefxTexture(p)->SetStageMipMapBias(-1.0f, -1);
         return 0;
-    case EE_SCREENS_SEFM_OP_HIDE_UI: {
-        UICheckBox* t = new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gEmptyString), gU531934,
-                                       GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), theForm,
-                                       (unsigned long)i[0], 0, false);
-        t->SetStringTableID(IDS_HIDE_UI);
-        t->SetChecked(true);
-        EESEERust* theHideUI = new EESEERust(kSEEHideUI);
-        t->SetTriggerEvent(kControlTriggerChecked, theHideUI);
-        t->SetTriggerEvent(kControlTriggerUnchecked, theHideUI);
-        theHideUI->Dereference();
-        theForm->AddControl(t, 0);
-        t->SetDisplayMode(kDisplayModeHidden);
-        *theOut = t;
+    case EE_SCREENS_SEFMX_TEXTURE_SETUP + 7: SefxTexture(p)->SetStageTextureAddressingMode(kAddressingWrap, -1);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_SCREEN_EVENT: *theOut = EECreateScreenEvent((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEFM_OP_SEE_EVENT: *theOut = new EESEERust((uint32_t)i[0], p[2]); return 0;
-    case EE_SCREENS_SEFM_OP_MOUSE_EVENT: {
-        UIEvent* theEvent = static_cast<UIEvent*>(p[0]);
-        if (i[0] == 0)
-            theForm->SetMouseWheelMoveEvent(theEvent);
-        else {
-            theForm->SetMouseMiddleButtonPressedEvent(theEvent);
-            theForm->SetMouseMiddleButtonUnpressedEvent(theEvent);
-        }
+    case EE_SCREENS_SEFMX_NEW_BITMAP: return SefxOut(i, new GEBitmap);
+    case EE_SCREENS_SEFMX_BITMAP_TEXTURE: static_cast<GEBitmap*>(p[0])->SetTexture(static_cast<GETexture*>(p[2]), (unsigned long)i[0]);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_HOT_KEY: {
-        UIEvent* const* theEvents = static_cast<UIEvent* const*>(p[0]);
-        UIHotKey theHotKey;
-        theHotKey.SetKey(sSefmKeys[i[0]]);
-        theHotKey.SetJustPressedEvent(theEvents[0]);
-        theHotKey.SetPressedEvent(theEvents[1]);
-        theHotKey.SetJustUnpressedEvent(theEvents[2]);
-        theForm->AddHotKey(theHotKey, 0);
+    case EE_SCREENS_SEFMX_SCREEN_INDEX: return (int32_t)gScreenIndex;
+    case EE_SCREENS_SEFMX_NEW_FULL_BACKGROUND: return SefxOut(i, new UIFullBackground("textures\\Scenfull", 4, 3, theForm, 1024, 768));
+    case EE_SCREENS_SEFMX_NEW_MINI_MAP: return SefxOut(i, static_cast<UIControl*>(new EEUIMiniMap(GERectangle(GE2DPoint(f[0], f[1]), f[2], f[2]), theForm, (unsigned long)i[0], 8, 3)));
+    case EE_SCREENS_SEFMX_ADD_CONTROL: theForm->AddControl(c, (unsigned long)i[0]);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_ADD_HOT_KEY: {
-        UIEvent* theEvents[4] = {NULL, NULL, NULL, NULL};
-        theEvents[i[3] & 3] = static_cast<UIEvent*>(p[0]);
-        theForm->AddHotKey(sSefmKeys[i[0]], sSefmKeys[i[1]], sSefmKeys[i[2]], kKeyNone, theEvents[0], theEvents[1],
-                           theEvents[2], theEvents[3], (unsigned long)(i[3] >> 4), false);
+    case EE_SCREENS_SEFMX_HIDE: c->SetDisplayMode(kDisplayModeHidden);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_GRAB_SCROLL: *theOut = EECreateGrabScroll(1); return 0;
-    case EE_SCREENS_SEFM_OP_RELEASE_GRAB_SCROLL: EEReleaseGrabScroll(1); return 0;
-    case EE_SCREENS_SEFM_OP_TAB_CHECK:
-        if (i[0])
-            EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_CHECK_DIRECT);
-        else
-            static_cast<UIRadioButton*>(p[0])->Check();
+    case EE_SCREENS_SEFMX_NEW_PLAYER_COMBO: return SefxOut(i, static_cast<UIControl*>(new UIComboBox(0x149, 1, std::vector<UWideString>(), gU531938, GERectangle(GE2DPoint(0.0f, 0.0f), 140.0f, 20.0f), 400, theForm, (unsigned long)i[0], 0, 2)));
+    case EE_SCREENS_SEFMX_COMBO_TEXTBOX_OPACITY: static_cast<UIComboBox*>(c)->SetTextBoxBgOpacity(f[0]);
         return 0;
-    case EE_SCREENS_SEFM_OP_DEREFERENCE:
-        switch (i[0]) {
-        case 0: static_cast<UIEvent*>(p[0])->Dereference(); break;
-        case 1: static_cast<GETexture*>(p[0])->Dereference(); break;
-        case 2: static_cast<GEBitmap*>(p[0])->Dereference(); break;
-        case 3: static_cast<EEAction*>(p[0])->Dereference(); break;
-        case 4: static_cast<EEAScroll*>(p[0])->Dereference(); break;
-        }
+    case EE_SCREENS_SEFMX_COMBO_SELECTED_BG: static_cast<UIComboBox*>(c)->SetListBoxSelectedBgColor(GEColor(f[0], f[1], f[2]));
         return 0;
-    case EE_SCREENS_SEFM_OP_DELETE:
-        switch (i[0]) {
-        case 0: delete static_cast<UIControl*>(p[0]); break;
-        case 1: delete static_cast<EESEUnit*>(ee_screens_segr_free(static_cast<EeScreensSeGroup*>(p[0]))); break;
-        case 2: delete static_cast<TMPoll*>(p[0]); break;
-        case 3: delete static_cast<EEUIFSEBrushGroup*>(p[0]); break;
-        case 4: delete static_cast<UIFullBackground*>(p[0]); break;
-        }
+    case EE_SCREENS_SEFMX_COMBO_GETEXT: return SefxOut(i, static_cast<UIComboBox*>(c)->GetGEText());
+    case EE_SCREENS_SEFMX_LABEL_GETEXT: return SefxOut(i, static_cast<UITextLabel*>(c)->GetGEText());
+    case EE_SCREENS_SEFMX_BUTTON_GETEXT: return SefxOut(i, static_cast<UIButton*>(c)->GetGEText());
+    case EE_SCREENS_SEFMX_TEXT_FG: static_cast<GEText*>(p[0])->SetFgColor(GEColor(f[0], f[1], f[2]));
         return 0;
-    case EE_SCREENS_SEFM_OP_GROUP_CALL: {   // (Draw's rectangle a GERectangle)
-        GERectangle theRectangle(f[0], f[1], f[2], f[3]);
-        ee_screens_segr_call(static_cast<EeScreensSeGroup*>(p[0]), i[0], f[0], f[1], &theRectangle);
+    case EE_SCREENS_SEFMX_TEXT_TRANSPARENT: static_cast<GEText*>(p[0])->SetIsTransparent(true);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_RENDER_LIST:
-        if (i[0]) {
-            gGraphics->PostClearRenderObjects();
-            gGraphics->PostPushRenderObject(gU56534C);
-        } else
-            EEPostGraphicsAll();
+    case EE_SCREENS_SEFMX_BG_OPACITY: c->SetBgOpacity(f[0]);
         return 0;
-    case EE_SCREENS_SEFM_OP_REDRAW_ALL:
-        gUIManager->RedrawAll();
-        gUIManager->GetCurrentForm()->SetAllControlsDirty();
+    case EE_SCREENS_SEFMX_BG_COLOR: c->SetBgColor(GEColor(f[0], f[1], f[2]));
         return 0;
-    case EE_SCREENS_SEFM_OP_HIGHLIGHT: static_cast<EEUIFSEBrushGroup*>(p[0])->mIsHighlightShown = i[0] != 0; return 0;
-    case EE_SCREENS_SEFM_OP_RESOLVE: {
-        EEUnit* theUnit;
-        EEUnitHandleResolve((uint32_t)i[0], theUnit);
-        *theOut = theUnit;
+    case EE_SCREENS_SEFMX_ALWAYS_DIRTY: c->SetAlwaysDirty(true);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_UNIT_ID: return (int32_t)EEUnitHandle<EEUnit>(static_cast<EEUnit*>(p[0])).GetSavedID();
-    case EE_SCREENS_SEFM_OP_UNIT_SELECT: {
-        EEUnit* theUnit = static_cast<EEUnit*>(p[0]);
-        if (theUnit == NULL)
-            return 0;
-        theUnit->mIsEditorSelected = i[0] != 0;
-        if (i[1] > 0)
-            theUnit->Reference();
-        else if (i[1] < 0)
-            theUnit->Dereference();
+    case EE_SCREENS_SEFMX_STRING_ID: c->SetStringTableID((unsigned long)i[0]);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_UNIT_CARGO: {
-        EEUnit* theUnit = static_cast<EEUnit*>(p[0]);
-        return theUnit->GetTileNode() != NULL && (theUnit->GetComplexUnit()->mCargoRoom > 0 ||
-                                                  theUnit->GetComplexUnit()->GetNumCargoUnits() > 0);
-    }
-    case EE_SCREENS_SEFM_OP_SHOW_CARGO:
-    case EE_SCREENS_SEFM_OP_SHOW_STATUS:
-        ee_screens_seun_call((EeScreensSeUnit*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
-                             inOp == EE_SCREENS_SEFM_OP_SHOW_CARGO ? EE_SCREENS_SEUN_SHOW_CARGO : EE_SCREENS_SEUN_SHOW_UNIT,
-                             i[0] != 0, 0.0f, 0.0f, p[1]);
+    case EE_SCREENS_SEFMX_SET_TRIGGER: c->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[2]));
         return 0;
-    case EE_SCREENS_SEFM_OP_GAME_VIEW: EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3])); return 0;
-    case EE_SCREENS_SEFM_OP_LOAD_THREAD: {
-        EESELoadThread* theThread = static_cast<EESELoadThread*>(p[1]);
-        switch (i[0]) {
-        case 0: *theOut = new EESELoadThread(static_cast<EEUIFScenarioEditor*>(p[2]), 0); break;
-        case EE_SCREENS_SEFM_POST_401: theThread->Post401(); break;
-        case EE_SCREENS_SEFM_POST_404: theThread->Post404(); break;
-        case EE_SCREENS_SEFM_POST_405: theThread->Post405(); break;
-        case EE_SCREENS_SEFM_POST_40B: theThread->Post40B(static_cast<UReferenceCounter*>(p[2])); break;
-        case EE_SCREENS_SEFM_POST_40C: theThread->Post40C(static_cast<UReferenceCounter*>(p[2])); break;
-        }
+    case EE_SCREENS_SEFMX_SET_DIRTY: c->SetDirty(true);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_TEST_PREPARE:
-        gWorld.RebuildActiveUnits();
-        return gUIManager->mInScenarioEditor == true;
-    case EE_SCREENS_SEFM_OP_OPEN_CAMERA: {
-        GETransformation theTransformation;
-        gWorld.mCameraControl.SetMode(2);
-        gWorld.RefreshUnits();
-        gSightUpdatesEnabled = false;
-        theTransformation.SetOrientationYPR(0.7853981852531433f, -0.6108652353286743f, 0.0f);
-        gWorld.mCameraControl.SetOffsetTurn(theTransformation, false);
-        gWorld.mCameraControl.SetChanged();
+    case EE_SCREENS_SEFMX_SCREEN_EVENT: return SefxOut(i, EECreateScreenEvent((unsigned long)i[0]));
+    case EE_SCREENS_SEFMX_SEE_EVENT: return SefxOut(i, static_cast<UIEvent*>(new EESEERust((uint32_t)i[0], p[2])));
+    case EE_SCREENS_SEFMX_EVENT_RELEASE: static_cast<UIEvent*>(p[0])->Dereference();
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_LOAD_BACKGROUND:
-        static_cast<UIFullBackground*>(p[0])->LoadBackground(SefmDescription(gTexturePixelDepth, true));
+    case EE_SCREENS_SEFMX_NEW_LOAD_LABEL: return SefxOut(i, static_cast<UIControl*>(new UITextLabel(UWideString(gEmptyString), gU531930, 9, GERectangle(GE2DPoint(500.0f, 0.0f), 300.0f, (float)gU531930->GetHeight()), theForm, 0, (unsigned long)i[0], 0)));
+    case EE_SCREENS_SEFMX_NEW_HELP_LABEL: return SefxOut(i, static_cast<UIControl*>(new UITextLabel(UWideString(gEmptyString), gU531934, 0x10, GERectangle(GE2DPoint(0.0f, 0.0f), 400.0f, 400.0f), theForm, 1, (unsigned long)i[0], 0)));
+    case EE_SCREENS_SEFMX_LABEL_ALIGN: static_cast<UITextLabel*>(c)->SetAlignment((unsigned long)i[0]);
         return 0;
-    case EE_SCREENS_SEFM_OP_OPEN_WORLD: {
-        gGraphics->PostFadeIn(0);
-        ee_screens_sepl_call((EeScreensSePlayers*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
-                             EE_SCREENS_SEPL_REFRESH, 0, 0);
-        gMusicManager->Pause();
-        gAmbientSoundManager.StopSounds();
-        gAmbientSoundManager.Pause();
-        static_cast<EEAScroll*>(p[1])->mEdges =
-            GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f, (float)gGameWindow->GetHeight() - 1.0f);
-        gFreeCamera = true;
-        gB529065 = true;
-        const GERectangle& theView = gViewport.GetViewRectangle();
-        f[0] = theView.GetLeft();
-        f[1] = theView.GetTop();
-        f[2] = theView.GetRight();
-        f[3] = theView.GetBottom();
-        EESetGameViewRectangle(GERectangle(0.0f, 0.0f, 1024.0f, 606.0f));
-        gB529066 = false;
-        gCameraFollowing = false;
-        gB529068 = false;
-        if (gMiniMap != NULL) gMiniMap->RefreshView();
-        EEUIMiniMap::Update(gMiniMap);
+    case EE_SCREENS_SEFMX_LABEL_FIT: static_cast<UITextLabel*>(c)->SetFitRectToText(true);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_OPEN_FORM:
-        gWorld.mScenarioManager->mIsMovingCamera = false;
-        gMiniMap->Redraw();
-        theForm->UIForm::Open();
+    case EE_SCREENS_SEFMX_FORM_TOOL_TIPS: theForm->SetUseToolTips(true);
         return 0;
-    case EE_SCREENS_SEFM_OP_POST_EXIT: {
-        EESEARust* theAction = new EESEARust(kSEAExit);
-        gUserInterface->PostAction(theAction);
-        theAction->Dereference();
+    case EE_SCREENS_SEFMX_FORM_HELP_DELAY: theForm->SetHelpTextTimeDelay((unsigned long)i[0]);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_COPY_WORLD:
-        if (i[0] == 2) {
-            EEPreviewPlacement(gMouse->mPosition);
-            return 0;
-        }
-        if (i[0] == 1) {
-            GERectangle theRectangle = gViewport.GetViewRectangle();
-            theRectangle.SetRight(theRectangle.GetRight() - 1.0f);
-            theRectangle.SetBottom(theRectangle.GetBottom() - 1.0f);
-            theForm->GetManager()->AddDirtyRectangle(theRectangle, theForm);
-        }
-        static_cast<UIControl*>(p[0])->SetDirty(true);
+    case EE_SCREENS_SEFMX_INDEX_SET: sSefxIndex = (unsigned long)(uint32_t)i[0];
         return 0;
-    case EE_SCREENS_SEFM_OP_EDGE_SCROLL: static_cast<EEAScroll*>(p[0])->Update(gMouse->mPosition); return 0;
-    case EE_SCREENS_SEFM_OP_DRAW_FULL:
-        return (int32_t) static_cast<UIFullBackground*>(p[0])->DrawBackground(GERectangle(f[0], f[1], f[2], f[3]));
-    case EE_SCREENS_SEFM_OP_DRAW_PANEL: {
-        const float* r = static_cast<const float*>(p[2]);
-        theForm->UIForm::DrawBackground(static_cast<GEBitmap*>(p[0]), GERectangle(f[0], f[1], f[2], f[3]),
-                                        GERectangle(0.0f, 0.0f, 256.0f, 256.0f), GERectangle(r[0], r[1], r[2], r[3]));
+    case EE_SCREENS_SEFMX_INDEX_GET: return (int32_t)(uint32_t)sSefxIndex;
+    case EE_SCREENS_SEFMX_NEW_BRUSH_GROUP: return SefxOut(i, new EEUIFSEBrushGroup(sSefxIndex, GE2DPoint(f[0], f[1]), theForm, gU531930));
+    case EE_SCREENS_SEFMX_NEW_UNDO_ACTION: return SefxOut(i, static_cast<EEAction*>(new EEARust(kEEAEditorUndo)));
+    case EE_SCREENS_SEFMX_NEW_REDO_ACTION: return SefxOut(i, static_cast<EEAction*>(new EEARust(kEEAEditorRedo)));
+    case EE_SCREENS_SEFMX_NEW_ACTION_BUTTON: return SefxOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_ACTION_BUTTON, {(int64_t)p[0]}, i[0], NULL, NULL, NULL, GERectangle(GE2DPoint(f[0], f[1]), 65.0f, 25.0f), theForm, (unsigned long)i[1], 0)));
+    case EE_SCREENS_SEFMX_STRING: gResource->GetString((unsigned long)i[0], gSefxText);
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_KEY: {
-        ISEntity* theKey;
-        gISKeyboard->GetEntity(sSefmKeys[i[0]], theKey);
-        return (theKey->JustPressed() ? 1 : 0) | (theKey->GetValue() != 0 ? 2 : 0);
-    }
-    case EE_SCREENS_SEFM_OP_GRID: static_cast<EEROTerrain*>(gU56535C)->StepGridMode(i[0] != 0); return 0;
-    case EE_SCREENS_SEFM_OP_PLAYER_COUNT:
-        return (int32_t)ee_screens_sepl_call((EeScreensSePlayers*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
-                                             EE_SCREENS_SEPL_PLAYER_COUNT, 0, 0);
-    case EE_SCREENS_SEFM_OP_MOUSE: {
-        const GE2DPoint& theMouse = theForm->GetMouseLocation();
-        f[0] = theMouse.GetX();
-        f[1] = theMouse.GetY();
+    case EE_SCREENS_SEFMX_BUTTON_TEXT: static_cast<UIButton*>(c)->SetText(gSefxText, gU531930);
         return 0;
-    }
-    }
-    // the trigger-only save's records (the scenario manager's lists)
-    EEScenarioManager* m = gWorld.mScenarioManager;
-    unsigned long k = (unsigned long)i[1];
-    switch (inOp) {
-    case EE_SCREENS_SEFM_OP_SM_COUNT:
-        switch (i[0]) {
-        case EE_SCREENS_SEFM_LIST_TRIGGERS: return (int32_t)m->mTriggers.size();
-        case EE_SCREENS_SEFM_LIST_CONDITIONS: return (int32_t)m->mConditions.size();
-        case EE_SCREENS_SEFM_LIST_EFFECTS: return (int32_t)m->mEffects.size();
-        case EE_SCREENS_SEFM_LIST_OBJECTS: return (int32_t)m->mObjects.size();
-        }
-        return (int32_t)m->mAreas.size();
-    case EE_SCREENS_SEFM_OP_SM_RECORD:
-        switch (i[0]) {
-        case EE_SCREENS_SEFM_LIST_TRIGGERS:
-            *theOut = k < m->mTriggers.size() ? static_cast<EeScenarioTriggerFields*>(m->GetTrigger(k)) : NULL;
-            return 0;
-        case EE_SCREENS_SEFM_LIST_CONDITIONS: *theOut = static_cast<EeScenarioConditionFields*>(m->GetCondition(k)); return 0;
-        case EE_SCREENS_SEFM_LIST_EFFECTS: *theOut = static_cast<EeScenarioEffectFields*>(m->GetEffect(k)); return 0;
-        case EE_SCREENS_SEFM_LIST_OBJECTS: *theOut = static_cast<EeScenarioObjectFields*>(m->GetScenarioObject(k)); return 0;
-        }
-        *theOut = NULL;
+    case EE_SCREENS_SEFMX_FONT_SMALL: gSeplScreenFont = gU531930;
         return 0;
-    case EE_SCREENS_SEFM_OP_SM_TEXT:
-        switch (i[0]) {
-        case EE_SCREENS_SEFM_LIST_TRIGGERS:
-            if (k >= m->mTriggers.size()) return -1;
-            return SefmText(i[2] ? m->GetTrigger(k)->mText : m->GetTrigger(k)->mName, p[0], i[3]);
-        case EE_SCREENS_SEFM_LIST_CONDITIONS:
-            return m->GetCondition(k) == NULL ? -1 : SefmText(m->GetCondition(k)->mName, p[0], i[3]);
-        case EE_SCREENS_SEFM_LIST_EFFECTS: return m->GetEffect(k) == NULL ? -1 : SefmText(m->GetEffect(k)->mName, p[0], i[3]);
-        case EE_SCREENS_SEFM_LIST_OBJECTS:
-            return m->GetScenarioObject(k) == NULL ? -1 : SefmText(m->GetScenarioObject(k)->mName, p[0], i[3]);
-        }
-        return m->GetArea(k) == NULL ? -1 : SefmText(m->GetArea(k)->mName, p[0], i[3]);
-    case EE_SCREENS_SEFM_OP_SM_VEC_LEN:
-        if (i[0] == EE_SCREENS_SEFM_VEC_OBJECTS)
-            return m->GetEffect(k) == NULL ? 0 : (int32_t)m->GetEffect(k)->mObjects.size();
-        if (k >= m->mTriggers.size()) return 0;
-        return (int32_t)(i[0] == EE_SCREENS_SEFM_VEC_CONDITIONS ? m->GetTrigger(k)->mConditions.size()
-                                                                 : m->GetTrigger(k)->mEffects.size());
-    case EE_SCREENS_SEFM_OP_SM_VEC_AT: {
-        unsigned long n = (unsigned long)i[2];
-        if (i[0] == EE_SCREENS_SEFM_VEC_OBJECTS) {
-            i[0] = (int32_t)m->GetEffect(k)->mObjects[n];
-        } else if (i[0] == EE_SCREENS_SEFM_VEC_CONDITIONS) {
-            EESMTConditionWrapper* w = m->GetTrigger(k)->GetCondition(n);
-            i[0] = w->mIsNot ? 1 : 0;
-            i[1] = (int32_t)w->mValue;
-            i[2] = (int32_t)w->mOperator;
-        } else {
-            EESMTEffectWrapper* w = m->GetTrigger(k)->GetEffect(n);
-            i[0] = (int32_t)w->mDelay;
-            i[1] = (int32_t)w->mEffectIndex;
-            i[2] = (int32_t)w->mOperator;
-        }
+    case EE_SCREENS_SEFMX_FONT_LARGE: gSeplScreenFont = gU531938;
         return 0;
-    }
-    case EE_SCREENS_SEFM_OP_REPORT_SAVE: {
-        FSFileSpec theFile;
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory);
-        theFile.SetFile("ScenarioTriggers.scn");
-        theFile.Create();
-        long theResult = theFile.Open(kFileAccessWrite);
-        if (theResult == kErrorOK)
-            m->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
-        theFile.Close();
-        return (int32_t)theResult;
-    }
-    case EE_SCREENS_SEFM_OP_REPORT_WRITE: {
-        UString thePath(260);
-        thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
-        FILE* theText = PlatFOpen(thePath, "w");
-        if (theText) {
-            fwrite(p[0], 1, (size_t)i[0], theText);
-            fclose(theText);
-        }
+    case EE_SCREENS_SEFMX_NEW_UNIT_PARTS: return SefxOut(i, new EESEUnit(theForm));
+    case EE_SCREENS_SEFMX_NEW_TAB_GROUP: return SefxOut(i, ee_screens_segr_new((uint32_t)i[0], theForm, theForm->GetEdgeScroll(), theForm->GetBrushGroup(), theForm->GetPlayerComboBox(), p[0], static_cast<uint32_t*>(p[2])));
+    case EE_SCREENS_SEFMX_NEW_MAIN_RADIO: return SefxOut(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_MAIN_BUTTON, {(int64_t)(unsigned char)SefxButton(p).flag, (int64_t)theForm->GetButtonTexture(), (int64_t)SefxButton(p).tab, SefxBits(p)[0], SefxBits(p)[1], SefxBits(p)[2], SefxBits(p)[3]}, SefxButton(p).id, UWideString(""), gU531930, GERectangle(GE2DPoint(SefxButton(p).rect[0], SefxButton(p).rect[1]), 32.0f, 32.0f), theForm, SefxButton(p).index, 0, false, SefxButton(p).checked != 0, false)));
+    case EE_SCREENS_SEFMX_FORM_BUTTON_TEXTURE: return SefxOut(i, theForm->GetButtonTexture());
+    case EE_SCREENS_SEFMX_FORM_SCREEN: return (int32_t)theForm->GetManager()->GetScreen();
+    case EE_SCREENS_SEFMX_BITMAP_STRETCH: static_cast<GEBitmap*>(p[0])->ComputeStretchedCoordsAndScale(SefxRect(p[2], 0), SefxRect(p[2], 0), SefxRect(p[2], 4), (unsigned long)i[0]);
         return 0;
-    }
+    case EE_SCREENS_SEFMX_NEW_BUTTON: return SefxOut(i, static_cast<UIControl*>(new UIButton((unsigned long)i[0], static_cast<GEBitmap*>(p[0]), NULL, static_cast<GEBitmap*>(p[2]), GERectangle(f[0], f[1], f[2], f[3]), theForm, (unsigned long)i[1], 0)));
+    case EE_SCREENS_SEFMX_BITMAP_RELEASE: static_cast<GEBitmap*>(p[0])->Dereference();
+        return 0;
+    case EE_SCREENS_SEFMX_NEW_QUICK_ACTION: return SefxOut(i, static_cast<EEAction*>(new EESEAQuickSaveLoad(gScenarioExtension)));
+    case EE_SCREENS_SEFMX_NEW_HIDE_UI: return SefxOut(i, static_cast<UIControl*>(new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gEmptyString), gU531934, GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), theForm, (unsigned long)i[0], 0, false)));
+    case EE_SCREENS_SEFMX_HIDE_UI_HELP: c->SetStringTableID(IDS_HIDE_UI);
+        return 0;
+    case EE_SCREENS_SEFMX_CHECK_SET: static_cast<UICheckBox*>(c)->SetChecked(true);
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_WHEEL_EVENT: theForm->SetMouseWheelMoveEvent(static_cast<UIEvent*>(p[0]));
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_MIDDLE_PRESSED: theForm->SetMouseMiddleButtonPressedEvent(static_cast<UIEvent*>(p[0]));
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_MIDDLE_UNPRESSED: theForm->SetMouseMiddleButtonUnpressedEvent(static_cast<UIEvent*>(p[0]));
+        return 0;
+    case EE_SCREENS_SEFMX_NEW_HOT_KEY: return SefxOut(i, new UIHotKey);
+    case EE_SCREENS_SEFMX_HOT_KEY_KEY: static_cast<UIHotKey*>(p[0])->SetKey(sSefmKeys[i[0]]);
+        return 0;
+    case EE_SCREENS_SEFMX_HOT_KEY_JUST_PRESSED: static_cast<UIHotKey*>(p[0])->SetJustPressedEvent(static_cast<UIEvent*>(p[1]));
+        return 0;
+    case EE_SCREENS_SEFMX_HOT_KEY_PRESSED: static_cast<UIHotKey*>(p[0])->SetPressedEvent(static_cast<UIEvent*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEFMX_HOT_KEY_JUST_UNPRESSED: static_cast<UIHotKey*>(p[0])->SetJustUnpressedEvent(static_cast<UIEvent*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_ADD_HOT_KEY: theForm->AddHotKey(*static_cast<UIHotKey*>(p[0]), 0);
+        return 0;
+    case EE_SCREENS_SEFMX_HOT_KEY_DELETE: delete static_cast<UIHotKey*>(p[0]);
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_ADD_HOT_KEY_KEYS: theForm->AddHotKey(sSefmKeys[i[0]], sSefmKeys[i[1]], sSefmKeys[i[2]], kKeyNone, SefxEvents(p)[0], SefxEvents(p)[1], SefxEvents(p)[2], SefxEvents(p)[3], (unsigned long)i[3], false);
+        return 0;
+    case EE_SCREENS_SEFMX_GRAB_SCROLL: return SefxOut(i, EECreateGrabScroll(1));
+    case EE_SCREENS_SEFMX_RELEASE_GRAB_SCROLL: EEReleaseGrabScroll(1);
+        return 0;
+    case EE_SCREENS_SEFMX_CHECK_DIRECT: EEUIShell::Op(c, EE_SCREENS_SKOP_CHECK_DIRECT);
+        return 0;
+    case EE_SCREENS_SEFMX_RADIO_CHECK: static_cast<UIRadioButton*>(c)->Check();
+        return 0;
+    case EE_SCREENS_SEFMX_DEREF_TEXTURE: SefxTexture(p)->Dereference();
+        return 0;
+    case EE_SCREENS_SEFMX_DEREF_ACTION: static_cast<EEAction*>(p[0])->Dereference();
+        return 0;
+    case EE_SCREENS_SEFMX_DEREF_SCROLL: static_cast<EEAScroll*>(p[0])->Dereference();
+        return 0;
+    case EE_SCREENS_SEFMX_DELETE_CONTROL: delete c;
+        return 0;
+    case EE_SCREENS_SEFMX_DELETE_TAB_GROUP: delete static_cast<EESEUnit*>(ee_screens_segr_free(static_cast<EeScreensSeGroup*>(p[0])));
+        return 0;
+    case EE_SCREENS_SEFMX_DELETE_POLL: delete static_cast<TMPoll*>(p[0]);
+        return 0;
+    case EE_SCREENS_SEFMX_DELETE_BRUSH_GROUP: delete static_cast<EEUIFSEBrushGroup*>(p[0]);
+        return 0;
+    case EE_SCREENS_SEFMX_DELETE_FULL_BACKGROUND: delete static_cast<UIFullBackground*>(p[0]);
+        return 0;
+    case EE_SCREENS_SEFMX_CLEAR_RENDER: gGraphics->PostClearRenderObjects();
+        return 0;
+    case EE_SCREENS_SEFMX_PUSH_BASE_RENDER: gGraphics->PostPushRenderObject(gU56534C);
+        return 0;
+    case EE_SCREENS_SEFMX_POST_GRAPHICS_ALL: EEPostGraphicsAll();
+        return 0;
+    case EE_SCREENS_SEFMX_REDRAW_ALL: gUIManager->RedrawAll();
+        return 0;
+    case EE_SCREENS_SEFMX_CURRENT_FORM_DIRTY: gUIManager->GetCurrentForm()->SetAllControlsDirty();
+        return 0;
+    case EE_SCREENS_SEFMX_BRUSH_HIGHLIGHT: static_cast<EEUIFSEBrushGroup*>(p[0])->mIsHighlightShown = i[0] != 0;
+        return 0;
+    case EE_SCREENS_SEFMX_RESOLVE: EEUnitHandleResolve((uint32_t)i[0], sSefxUnit);
+        return 0;
+    case EE_SCREENS_SEFMX_RESOLVED: return SefxOut(i, sSefxUnit);
+    case EE_SCREENS_SEFMX_UNIT_ID: return (int32_t)EEUnitHandle<EEUnit>(static_cast<EEUnit*>(p[0])).GetSavedID();
+    case EE_SCREENS_SEFMX_UNIT_EDITOR_SELECTED: static_cast<EEUnit*>(p[0])->mIsEditorSelected = i[0] != 0;
+        return 0;
+    case EE_SCREENS_SEFMX_UNIT_REFERENCE: static_cast<EEUnit*>(p[0])->Reference();
+        return 0;
+    case EE_SCREENS_SEFMX_UNIT_DEREFERENCE: static_cast<EEUnit*>(p[0])->Dereference();
+        return 0;
+    case EE_SCREENS_SEFMX_UNIT_PLACED: return static_cast<EEUnit*>(p[0])->GetTileNode() != NULL;
+    case EE_SCREENS_SEFMX_UNIT_CARGO_ROOM: return static_cast<EEUnit*>(p[0])->GetComplexUnit()->mCargoRoom > 0;
+    case EE_SCREENS_SEFMX_UNIT_CARGO_COUNT: return static_cast<EEUnit*>(p[0])->GetComplexUnit()->GetNumCargoUnits() > 0;
+    case EE_SCREENS_SEFMX_GAME_VIEW: EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3]));
+        return 0;
+    case EE_SCREENS_SEFMX_NEW_LOAD_THREAD: return SefxOut(i, new EESELoadThread(static_cast<EEUIFScenarioEditor*>(p[2]), 0));
+    case EE_SCREENS_SEFMX_POST_401: static_cast<EESELoadThread*>(p[0])->Post401();
+        return 0;
+    case EE_SCREENS_SEFMX_POST_404: static_cast<EESELoadThread*>(p[0])->Post404();
+        return 0;
+    case EE_SCREENS_SEFMX_POST_405: static_cast<EESELoadThread*>(p[0])->Post405();
+        return 0;
+    case EE_SCREENS_SEFMX_POST_40B: static_cast<EESELoadThread*>(p[0])->Post40B(static_cast<UReferenceCounter*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEFMX_POST_40C: static_cast<EESELoadThread*>(p[0])->Post40C(static_cast<UReferenceCounter*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS: gWorld.RebuildActiveUnits();
+        return 0;
+    case EE_SCREENS_SEFMX_IN_EDITOR: return gUIManager->mInScenarioEditor == true;
+    case EE_SCREENS_SEFMX_CAMERA_MODE: gWorld.mCameraControl.SetMode(i[0]);
+        return 0;
+    case EE_SCREENS_SEFMX_CAMERA_MODE_PREFERRED: gWorld.mCameraControl.SetMode(gGamePreferences.mSettings.mZoomStyle);
+        return 0;
+    case EE_SCREENS_SEFMX_CAMERA_OFFSET_TURN: gWorld.mCameraControl.SetOffsetTurn(sSefxTurn, i[0] != 0);
+        return 0;
+    case EE_SCREENS_SEFMX_CAMERA_CHANGED: gWorld.mCameraControl.SetChanged();
+        return 0;
+    case EE_SCREENS_SEFMX_REFRESH_UNITS: gWorld.RefreshUnits();
+        return 0;
+    case EE_SCREENS_SEFMX_SIGHT_UPDATES_OFF: gSightUpdatesEnabled = false;
+        return 0;
+    case EE_SCREENS_SEFMX_TURN_RESET: sSefxTurn = GETransformation();
+        return 0;
+    case EE_SCREENS_SEFMX_TURN_YPR: sSefxTurn.SetOrientationYPR(f[0], f[1], f[2]);
+        return 0;
+    case EE_SCREENS_SEFMX_TURN_VIEW: gWorld.mCameraControl.SetViewTurn(sSefxTurn, false);
+        return 0;
+    case EE_SCREENS_SEFMX_LOAD_BACKGROUND: static_cast<UIFullBackground*>(p[0])->LoadBackground(SefmDescription(gTexturePixelDepth, true));
+        return 0;
+    case EE_SCREENS_SEFMX_DRAW_FULL: return (int32_t)static_cast<UIFullBackground*>(p[0])->DrawBackground(GERectangle(f[0], f[1], f[2], f[3]));
+    case EE_SCREENS_SEFMX_UNLOAD_BACKGROUND: ((UIFullBackground*)theForm->GetSlot(EE_SCREENS_SEFM_FULL_BACKGROUND))->UnloadBackground();
+        return 0;
+    case EE_SCREENS_SEFMX_FADE_IN: gGraphics->PostFadeIn(0);
+        return 0;
+    case EE_SCREENS_SEFMX_MUSIC_PAUSE: gMusicManager->Pause();
+        return 0;
+    case EE_SCREENS_SEFMX_AMBIENT_STOP: gAmbientSoundManager.StopSounds();
+        return 0;
+    case EE_SCREENS_SEFMX_AMBIENT_PAUSE: gAmbientSoundManager.Pause();
+        return 0;
+    case EE_SCREENS_SEFMX_SCROLL_EDGES: static_cast<EEAScroll*>(p[0])->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f, (float)gGameWindow->GetHeight() - 1.0f);
+        return 0;
+    case EE_SCREENS_SEFMX_FREE_CAMERA: gFreeCamera = i[0] != 0;
+        return 0;
+    case EE_SCREENS_SEFMX_B529065: gB529065 = i[0] != 0;
+        return 0;
+    case EE_SCREENS_SEFMX_B529066_OFF: gB529066 = false;
+        return 0;
+    case EE_SCREENS_SEFMX_FOLLOWING_OFF: gCameraFollowing = false;
+        return 0;
+    case EE_SCREENS_SEFMX_B529068_OFF: gB529068 = false;
+        return 0;
+    case EE_SCREENS_SEFMX_VIEW_LEFT: f[0] = gViewport.GetViewRectangle().GetLeft();
+        return 0;
+    case EE_SCREENS_SEFMX_VIEW_TOP: f[0] = gViewport.GetViewRectangle().GetTop();
+        return 0;
+    case EE_SCREENS_SEFMX_VIEW_RIGHT: f[0] = gViewport.GetViewRectangle().GetRight();
+        return 0;
+    case EE_SCREENS_SEFMX_VIEW_BOTTOM: f[0] = gViewport.GetViewRectangle().GetBottom();
+        return 0;
+    case EE_SCREENS_SEFMX_MINIMAP: return gMiniMap != NULL;
+    case EE_SCREENS_SEFMX_MINIMAP_REFRESH_VIEW: gMiniMap->RefreshView();
+        return 0;
+    case EE_SCREENS_SEFMX_MINIMAP_UPDATE: EEUIMiniMap::Update(gMiniMap);
+        return 0;
+    case EE_SCREENS_SEFMX_MINIMAP_REDRAW: gMiniMap->Redraw();
+        return 0;
+    case EE_SCREENS_SEFMX_CAMERA_MOVE_OFF: gWorld.mScenarioManager->mIsMovingCamera = false;
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_OPEN: theForm->UIForm::Open();
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_CLOSE: theForm->UIForm::Close();
+        return 0;
+    case EE_SCREENS_SEFMX_NEW_EXIT_ACTION: return SefxOut(i, static_cast<EEAction*>(new EESEARust(kSEAExit)));
+    case EE_SCREENS_SEFMX_POST_ACTION: gUserInterface->PostAction(static_cast<EEAction*>(p[0]));
+        return 0;
+    case EE_SCREENS_SEFMX_PREVIEW_PLACEMENT: EEPreviewPlacement(gMouse->mPosition);
+        return 0;
+    case EE_SCREENS_SEFMX_ADD_DIRTY: theForm->GetManager()->AddDirtyRectangle(GERectangle(f[0], f[1], f[2], f[3]), theForm);
+        return 0;
+    case EE_SCREENS_SEFMX_SCROLL_UPDATE: static_cast<EEAScroll*>(p[0])->Update(gMouse->mPosition);
+        return 0;
+    case EE_SCREENS_SEFMX_DRAW_PANEL: theForm->UIForm::DrawBackground(static_cast<GEBitmap*>(p[0]), GERectangle(f[0], f[1], f[2], f[3]), GERectangle(0.0f, 0.0f, 256.0f, 256.0f), SefxRect(p[2], 0));
+        return 0;
+    case EE_SCREENS_SEFMX_KEY_FETCH: gISKeyboard->GetEntity(sSefmKeys[i[0]], sSefxKey);
+        return 0;
+    case EE_SCREENS_SEFMX_KEY_JUST_PRESSED: return sSefxKey->JustPressed() ? 1 : 0;
+    case EE_SCREENS_SEFMX_KEY_DOWN: return sSefxKey->GetValue() != 0;
+    case EE_SCREENS_SEFMX_GRID: static_cast<EEROTerrain*>(gU56535C)->StepGridMode(i[0] != 0);
+        return 0;
+    case EE_SCREENS_SEFMX_MOUSE_X: f[0] = theForm->GetMouseLocation().GetX();
+        return 0;
+    case EE_SCREENS_SEFMX_MOUSE_Y: f[0] = theForm->GetMouseLocation().GetY();
+        return 0;
+    case EE_SCREENS_SEFMX_MOUSE_BOUNDS_WINDOW: gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
+        return 0;
+    case EE_SCREENS_SEFMX_SM_COUNT + EE_SCREENS_SEFM_LIST_TRIGGERS: return (int32_t)SefxManager()->mTriggers.size();
+    case EE_SCREENS_SEFMX_SM_COUNT + EE_SCREENS_SEFM_LIST_CONDITIONS: return (int32_t)SefxManager()->mConditions.size();
+    case EE_SCREENS_SEFMX_SM_COUNT + EE_SCREENS_SEFM_LIST_EFFECTS: return (int32_t)SefxManager()->mEffects.size();
+    case EE_SCREENS_SEFMX_SM_COUNT + EE_SCREENS_SEFM_LIST_OBJECTS: return (int32_t)SefxManager()->mObjects.size();
+    case EE_SCREENS_SEFMX_SM_COUNT + EE_SCREENS_SEFM_LIST_AREAS: return (int32_t)SefxManager()->mAreas.size();
+    case EE_SCREENS_SEFMX_SM_RECORD + EE_SCREENS_SEFM_LIST_TRIGGERS: return SefxOut(i, static_cast<EeScenarioTriggerFields*>(SefxManager()->GetTrigger((unsigned long)i[1])));
+    case EE_SCREENS_SEFMX_SM_RECORD + EE_SCREENS_SEFM_LIST_CONDITIONS: return SefxOut(i, static_cast<EeScenarioConditionFields*>(SefxManager()->GetCondition((unsigned long)i[1])));
+    case EE_SCREENS_SEFMX_SM_RECORD + EE_SCREENS_SEFM_LIST_EFFECTS: return SefxOut(i, static_cast<EeScenarioEffectFields*>(SefxManager()->GetEffect((unsigned long)i[1])));
+    case EE_SCREENS_SEFMX_SM_RECORD + EE_SCREENS_SEFM_LIST_OBJECTS: return SefxOut(i, static_cast<EeScenarioObjectFields*>(SefxManager()->GetScenarioObject((unsigned long)i[1])));
+    case EE_SCREENS_SEFMX_SM_EXISTS + EE_SCREENS_SEFM_LIST_CONDITIONS: return SefxManager()->GetCondition((unsigned long)i[1]) != NULL;
+    case EE_SCREENS_SEFMX_SM_EXISTS + EE_SCREENS_SEFM_LIST_EFFECTS: return SefxManager()->GetEffect((unsigned long)i[1]) != NULL;
+    case EE_SCREENS_SEFMX_SM_EXISTS + EE_SCREENS_SEFM_LIST_OBJECTS: return SefxManager()->GetScenarioObject((unsigned long)i[1]) != NULL;
+    case EE_SCREENS_SEFMX_SM_EXISTS + EE_SCREENS_SEFM_LIST_AREAS: return SefxManager()->GetArea((unsigned long)i[1]) != NULL;
+    case EE_SCREENS_SEFMX_SM_NAME + EE_SCREENS_SEFM_LIST_TRIGGERS: return SefxOut(i, &SefxManager()->GetTrigger((unsigned long)i[1])->mName);
+    case EE_SCREENS_SEFMX_SM_NAME + EE_SCREENS_SEFM_LIST_CONDITIONS: return SefxOut(i, &SefxManager()->GetCondition((unsigned long)i[1])->mName);
+    case EE_SCREENS_SEFMX_SM_NAME + EE_SCREENS_SEFM_LIST_EFFECTS: return SefxOut(i, &SefxManager()->GetEffect((unsigned long)i[1])->mName);
+    case EE_SCREENS_SEFMX_SM_NAME + EE_SCREENS_SEFM_LIST_OBJECTS: return SefxOut(i, &SefxManager()->GetScenarioObject((unsigned long)i[1])->mName);
+    case EE_SCREENS_SEFMX_SM_NAME + EE_SCREENS_SEFM_LIST_AREAS: return SefxOut(i, &SefxManager()->GetArea((unsigned long)i[1])->mName);
+    case EE_SCREENS_SEFMX_SM_TRIGGER_TEXT: return SefxOut(i, &SefxManager()->GetTrigger((unsigned long)i[1])->mText);
+    case EE_SCREENS_SEFMX_SM_EFFECT_OBJECTS: return (int32_t)SefxManager()->GetEffect((unsigned long)i[1])->mObjects.size();
+    case EE_SCREENS_SEFMX_SM_EFFECT_OBJECT: return (int32_t)SefxManager()->GetEffect((unsigned long)i[1])->mObjects[(unsigned long)i[2]];
+    case EE_SCREENS_SEFMX_SM_TRIGGER_CONDITIONS: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->mConditions.size();
+    case EE_SCREENS_SEFMX_SM_TRIGGER_EFFECTS: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->mEffects.size();
+    case EE_SCREENS_SEFMX_SM_CONDITION_NOT: return SefxManager()->GetTrigger((unsigned long)i[1])->GetCondition((unsigned long)i[2])->mIsNot ? 1 : 0;
+    case EE_SCREENS_SEFMX_SM_CONDITION_VALUE: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->GetCondition((unsigned long)i[2])->mValue;
+    case EE_SCREENS_SEFMX_SM_CONDITION_OPERATOR: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->GetCondition((unsigned long)i[2])->mOperator;
+    case EE_SCREENS_SEFMX_SM_EFFECT_DELAY: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->GetEffect((unsigned long)i[2])->mDelay;
+    case EE_SCREENS_SEFMX_SM_EFFECT_INDEX: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->GetEffect((unsigned long)i[2])->mEffectIndex;
+    case EE_SCREENS_SEFMX_SM_EFFECT_OPERATOR: return (int32_t)SefxManager()->GetTrigger((unsigned long)i[1])->GetEffect((unsigned long)i[2])->mOperator;
+    case EE_SCREENS_SEFMX_FILE_NEW: return SefxOut(i, new FSFileSpec);
+    case EE_SCREENS_SEFMX_FILE_VOLUME: SefxFile(p)->SetVolume(gStartupVolume);
+        return 0;
+    case EE_SCREENS_SEFMX_FILE_DIRECTORY: SefxFile(p)->SetDirectory(gStartupDirectory);
+        return 0;
+    case EE_SCREENS_SEFMX_FILE_TRIGGERS: SefxFile(p)->SetFile("ScenarioTriggers.scn");
+        return 0;
+    case EE_SCREENS_SEFMX_FILE_CREATE: SefxFile(p)->Create();
+        return 0;
+    case EE_SCREENS_SEFMX_FILE_OPEN_WRITE: return (int32_t)SefxFile(p)->Open(kFileAccessWrite);
+    case EE_SCREENS_SEFMX_FILE_OPEN_READ: return (int32_t)SefxFile(p)->Open(kFileAccessRead);
+    case EE_SCREENS_SEFMX_FILE_CLOSE: SefxFile(p)->Close();
+        return 0;
+    case EE_SCREENS_SEFMX_FILE_DELETE: delete SefxFile(p);
+        return 0;
+    case EE_SCREENS_SEFMX_SM_SAVE: SefxManager()->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, *SefxFile(p));
+        return 0;
+    case EE_SCREENS_SEFMX_SM_LOAD: SefxManager()->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, *SefxFile(p));
+        return 0;
+    case EE_SCREENS_SEFMX_TEXT_OPEN: return SefxOut(i, PlatFOpen(UString(gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt"), "w"));
+    case EE_SCREENS_SEFMX_TEXT_WRITE: fwrite(p[0], 1, (size_t)i[0], static_cast<FILE*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEFMX_TEXT_CLOSE: fclose(static_cast<FILE*>(p[0]));
+        return 0;
+    case EE_SCREENS_SEFMX_FORM_RUST: return SefxOut(i, theForm->mRust);
+    case EE_SCREENS_SEFMX_MANAGER_EDITOR: return SefxOut(i, static_cast<UIForm*>(gUIManager->GetScenarioEditorForm()));
     }
     return 0;
+}
+
+// Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
+// (editor_sefmx.rs)
+void EEUIFScenarioEditor::Close()
+{
+    ee_screens_sefm_close(this);
 }

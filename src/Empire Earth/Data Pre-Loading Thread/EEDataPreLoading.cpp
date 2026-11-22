@@ -1,6 +1,7 @@
 // C:\EEX\Empire Earth\Data Pre-Loading Thread\EEDataPreLoading.cpp (__FILE__ 0x4bc5cc). The data pre-loading thread:
 // 0xd3ff4..0xd47a1 (ctor, ??_G, dtor, the members in definition order, then vector::push_back's COMDAT; the table
 // loader 0xd47a1 that follows is the Database unit EEAIUnitTargetingTable.cpp). Unit flags: the exe's module set.
+// The bodies are Rust (ee_game preload.rs, world lane round 1).
 #include <windows.h>
 #include <vector>
 
@@ -49,222 +50,46 @@
 #include "ee/EEClient.h"
 #include "ee/EEMessage.h"
 #include "ee/EEDataPreLoading.h"
+#include "rust/game/preload.h"
+// The thread's bodies are Rust (ee_game preload.rs, world lane round 1: the loop, the messages, the queue and its two
+// flags, the media loads, the game's load); each C++ call they make is a case of ee_preloadcpp below.
+
 // Creates the data pre-loading thread at the given priority and waits until it is running
 EEDataPreLoading::EEDataPreLoading(long inThreadPriority)
 {
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadCreated) == keseOK, 55);
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadDone) == keseOK, 56);
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 57);
-    this->mQuit = false;
-    this->mQueueing = false;
-    this->mQueue.clear();
-
+    ee_preload_reset();
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, EEDataPreLoading::Main, (void*)this) == keseOK, 65);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 66);
     this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(gDataPreLoadingThreadName);
 }
 
-// Destroys the pre-loader: frees its events, deletes every queued message and destroys the thread
+// Destroys the pre-loader: frees its events, drops every queued message and destroys the thread
 EEDataPreLoading::~EEDataPreLoading()
 {
     TSScheduler::DestroyEvent(this->mThreadCreated);
     TSScheduler::DestroyEvent(this->mThreadDone);
     TSScheduler::DestroyEvent(this->mMessageQueueDone);
-    for (std::vector<EEDataPreLoadingMessage*>::iterator it = this->mQueue.begin(); it != this->mQueue.end(); ++it)
-        delete *it;
-    this->mQueue.clear();
+    ee_preload_reset();
     TSScheduler::DestroyThread(this->mThread);
 }
 
-// Runs the pre-loading thread: drains its messages (queueing or handling each, 1 ms apart) until told to quit
-unsigned long EEDataPreLoading::Main(void* inThis)
-{
-    EEDataPreLoading* theThis = static_cast<EEDataPreLoading*>(inThis);
-    unsigned long theMessage;
-    void* theParameter1;
-    void* theParameter2;
-    theThis->mThread->Receive(theMessage, theParameter1, theParameter2);
-    theThis->mThreadCreated->Set();
-    UMSetFloatingPointPrecision(kFPPrecision53);
-    while (!theThis->mQuit) {
-        long theResult;
-        do {
-            theResult = theThis->mThread->Receive(theMessage, theParameter1, theParameter2);
-            if (UMGetFloatingPointPrecision() != kFPPrecision53)
-                UMSetFloatingPointPrecision(kFPPrecision53);
-            if (UMGetFloatingPointRoundingMode() != 0)
-                UMSetFloatingPointRoundingMode(0);
-            if (theResult == kErrorOK) {
-                if (theThis->mQueueing)
-                    theThis->QueueMessage(theMessage, theParameter1, theParameter2);
-                else
-                    theThis->HandleMessage(theMessage, theParameter1, theParameter2);
-            }
-            PlatSleep(1);
-        } while (theResult == kErrorOK);
-    }
-    theThis->mThreadDone->Set();
-    return 0;
-}
-
-// Handles one pre-loader message: quit, start/flush queueing, (un)load unit class or tech media, load a game
+unsigned long EEDataPreLoading::Main(void* inThis) { return ee_preload_main(inThis); }
 void EEDataPreLoading::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-{
-    switch (inMessage) {
-    case kThreadMessageQuit:
-        this->mQuit = true;
-        break;
-    case 0x407:
-        this->StartQueueing();
-        break;
-    case 0x408:
-        this->FlushQueue();
-        break;
-    case 0x404:
-    case 0x409: {
-        EEPlayer* thePlayer = gWorld.mPlayers[(long)reinterpret_cast<intptr_t>(inParameter1)];
-        if (thePlayer != NULL) {
-            EEUnitClass* theClass = gUnitClassTable[(long)reinterpret_cast<intptr_t>(inParameter2)];
-            if (theClass != NULL)
-                this->LoadUnitClassMedia(thePlayer, theClass, inMessage == 0x404);
-        }
-        break;
-    }
-    case 0x40a:
-    case 0x40b: {
-        EEPlayer* thePlayer = gWorld.mPlayers[(long)reinterpret_cast<intptr_t>(inParameter1)];
-        if (thePlayer != NULL) {
-            EETechTreeNode* theNode = thePlayer->mTechnologies->Get((long)reinterpret_cast<intptr_t>(inParameter2));
-            if (theNode != NULL)
-                this->LoadTechnologyMedia(thePlayer, theNode, inMessage == 0x40a);
-        }
-        break;
-    }
-    case 0x402:
-        this->LoadGame(inParameter1 != NULL, inParameter2 != NULL);
-        break;
-    case 0x40c:
-        this->mMessageQueueDone->Set();
-        break;
-    }
-}
-
-// Loads (or unloads) a unit class's media and command buttons for a player
-void EEDataPreLoading::LoadUnitClassMedia(EEPlayer* inPlayer, EEUnitClass* inClass, bool inLoad)
-{
-    if (inLoad == true) {
-        inPlayer->SetUnitClassMedia(inClass->mUnitType, 0x7f);
-        inPlayer->LoadUnitClassButtons(inClass->mUnitType);
-    } else {
-        inPlayer->UnloadUnitClassMedia(inClass->mUnitType);
-        inPlayer->UnloadUnitClassButtons(inClass->mUnitType);
-    }
-}
-
-// Loads (or unloads) a technology's media for a player
-void EEDataPreLoading::LoadTechnologyMedia(EEPlayer* inPlayer, EETechTreeNode* inNode, bool inLoad)
-{
-    TMGetTime();
-    if (inLoad == true)
-        inNode->LoadMedia(inPlayer);
-    else
-        inNode->UnloadMedia(inPlayer);
-    TMGetTime();
-}
-
-// Builds the game world from the current game options with load progress, then reports loaded to the host;
-// on failure exits the game and shows the error
-void EEDataPreLoading::LoadGame(bool inSkipGameMedia, bool inClearWorld)
-{
-    EEGameOptions theOptions(gGameOptions);
-    UWideString theError;
-    long thePriority = this->mThread->GetPriority();
-    this->mThread->SetPriority(PLAT_PRIORITY_ABOVE_NORMAL);
-    gUserInterface->SetLoadProgress(0.0f);
-    gUserInterface->SetLoadingText(IDS_LOADING_GLOBAL_MEDIA);
-    if (!inSkipGameMedia)
-        EELoadGameMedia();
-    bool theFlag;
-    if (gGameOptions.mLoadType == 4 || gGameOptions.mLoadType == 1 || gGameOptions.mLoadType == 2) {
-        theFlag = true;
-        gLoadingSavedGame = true;
-    } else
-        theFlag = false;
-    bool theCreated = gGameState.Create(theOptions, theError);
-    if (theCreated) {
-        if (inClearWorld == true) {
-            gGraphics->PostReleaseScene();
-            gGraphics->PostMessage50AAndWait();
-            gWorld.mLock->WriteLock();
-            gWorld.Clear();
-            gPhysics->ClearServerMessages();
-            gWorld.mLock->WriteUnlock();
-        }
-        gUserInterface->SetLoadProgress(0.6f);
-        gUserInterface->SetLoadingText(IDS_POPULATING_WORLD);
-        gWorld.StartGame(&gGameState, false);
-        gUserInterface->ResumeGraphics();
-    }
-    gGameState.Reset();
-    if (theFlag)
-        gLoadingSavedGame = false;
-    if (theCreated) {
-        if (!gCommunications->GetIsMultiplayerSession())
-            gUserInterface->SetLoadingText(IDS_LOADING_COMPLETE);
-        else
-            gUserInterface->SetLoadingText(IDS_WAITING_FOR_PLAYERS);
-        gUserInterface->SetLoadProgress(1.0f);
-        EEMRecord* theResponse;
-        if (gCommunications->IsClient())
-            theResponse = new EEMRecord(kMessageStartLoadingResponse, {static_cast<EEClient*>(gCommunications)->GetMySendToSlot(), gWorld.GetCurrentPlayer()->GetPlayerID(), 0});
-        else
-            theResponse = new EEMRecord(kMessageStartLoadingResponse, {0xfe, gWorld.GetCurrentPlayer()->GetPlayerID(), 0});
-        gCommunications->ProcessLocalUserInput(theResponse, kSlotNone);
-        if (gCommunications->IsClient())
-            (static_cast<EEClient*>(gCommunications))->mHasLoaded = true;
-    } else {
-        EEExitGame();
-        gUIManager->DisplayMessage(theError, true, NULL, EEDataPreLoading::LoadGameErrorDone, true);
-    }
-    this->mThread->SetPriority(thePriority);
-}
+    { ee_preload_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
+void EEDataPreLoading::StartQueueing() { ee_preload_start_queueing(); }
+void EEDataPreLoading::FlushQueue() { ee_preload_flush_queue(this); }
+void EEDataPreLoading::QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
+    { ee_preload_queue_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
+long EEDataPreLoading::WaitForMessageQueue() { return (long)ee_preload_wait_for_queue(this); }
 
 // Tells the user interface that loading the game failed once the error box is closed
 void EEDataPreLoading::LoadGameErrorDone(UIForm* inForm)
 {
     gUserInterface->PostLoadGameFailed(false);
-}
-
-// Starts holding incoming messages in the queue instead of handling them
-void EEDataPreLoading::StartQueueing()
-{
-    this->mQueueing = true;
-}
-
-// Stops queueing and handles then deletes every queued message in order
-void EEDataPreLoading::FlushQueue()
-{
-    this->mQueueing = false;
-    for (std::vector<EEDataPreLoadingMessage*>::iterator it = this->mQueue.begin(); it != this->mQueue.end(); ++it) {
-        this->HandleMessage((*it)->mMessage, (*it)->mParameter1, (*it)->mParameter2);
-        delete *it;
-    }
-    this->mQueue.clear();
-}
-
-// Queues a message for later; a flush message instead handles the queue now
-void EEDataPreLoading::QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-{
-    if (inMessage == 0x408)
-        this->FlushQueue();
-    else {
-        EEDataPreLoadingMessage* theMessage = new EEDataPreLoadingMessage;
-        theMessage->mMessage = inMessage;
-        theMessage->mParameter1 = inParameter1;
-        theMessage->mParameter2 = inParameter2;
-        this->mQueue.push_back(theMessage);
-    }
 }
 
 // Asks the pre-loading thread to load the game
@@ -297,13 +122,108 @@ void EEDataPreLoading::PostUnloadUnitClass(long inPlayer, long inUnitClass)
     this->mThread->Post(0x409, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true);
 }
 
-// Waits until the pre-loading thread has handled every message posted so far; returns the post result
-long EEDataPreLoading::WaitForMessageQueue()
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define DP ((EEDataPreLoading*)p)
+#define PL ((EEPlayer*)p)
+
+// The pre-loader's calls (ee_game preload.rs EePreloadCpp): p the pre-loader or the object named, a the integers, f the
+// floats
+extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    long theResult = this->mThread->Post(0x40c, NULL, NULL, true);
-    if (theResult == kErrorOK) {
-        this->mMessageQueueDone->Wait(kTSWaitInfinite);
-        this->mMessageQueueDone->Clear();
+    typedef EePreloadCpp O;
+    switch (inOp) {
+    case O::Receive: return DP->mThread->Receive(*(unsigned long*)a[0], *(void**)a[1], *(void**)a[2]);
+    case O::ThreadCreatedSet: DP->mThreadCreated->Set();
+        break;
+    case O::ThreadDoneSet: DP->mThreadDone->Set();
+        break;
+    case O::QueueDoneSet: DP->mMessageQueueDone->Set();
+        break;
+    case O::QueueDoneWait: DP->mMessageQueueDone->Wait(kTSWaitInfinite);
+        break;
+    case O::QueueDoneClear: DP->mMessageQueueDone->Clear();
+        break;
+    case O::ThreadPost: return DP->mThread->Post((unsigned long)a[0], NULL, NULL, true);
+    case O::ThreadPriority: return DP->mThread->GetPriority();
+    case O::SetThreadPriority: DP->mThread->SetPriority((long)a[0]);
+        break;
+    case O::FpPrecisionIs53: return UMGetFloatingPointPrecision() == kFPPrecision53;
+    case O::SetFpPrecision53: UMSetFloatingPointPrecision(kFPPrecision53);
+        break;
+    case O::FpRoundingMode: return UMGetFloatingPointRoundingMode();
+    case O::SetFpRoundingNearest: UMSetFloatingPointRoundingMode(0);
+        break;
+    case O::Sleep1: PlatSleep(1);
+        break;
+    case O::Player: return P64(gWorld.mPlayers[a[0]]);
+    case O::Class: return P64(gUnitClassTable[a[0]]);
+    case O::Technology: return P64(PL->mTechnologies->Get((long)a[0]));
+    case O::ClassUnitType: return ((EEUnitClass*)p)->mUnitType;
+    case O::SetUnitClassMedia: PL->SetUnitClassMedia((long)a[0], 0x7f);
+        break;
+    case O::LoadUnitClassButtons: PL->LoadUnitClassButtons((long)a[0]);
+        break;
+    case O::UnloadUnitClassMedia: PL->UnloadUnitClassMedia((long)a[0]);
+        break;
+    case O::UnloadUnitClassButtons: PL->UnloadUnitClassButtons((long)a[0]);
+        break;
+    case O::TechLoadMedia: ((EETechTreeNode*)p)->LoadMedia((EEPlayer*)a[0]);
+        break;
+    case O::TechUnloadMedia: ((EETechTreeNode*)p)->UnloadMedia((EEPlayer*)a[0]);
+        break;
+    // the game's load
+    case O::NewOptions: return P64(new EEGameOptions(gGameOptions));
+    case O::DeleteOptions: delete (EEGameOptions*)p;
+        break;
+    case O::NewError: return P64(new UWideString());
+    case O::DeleteError: delete (UWideString*)p;
+        break;
+    case O::LoadProgress: gUserInterface->SetLoadProgress(f[0]);
+        break;
+    case O::TextLoadingGlobalMedia: gUserInterface->SetLoadingText(IDS_LOADING_GLOBAL_MEDIA);
+        break;
+    case O::TextPopulatingWorld: gUserInterface->SetLoadingText(IDS_POPULATING_WORLD);
+        break;
+    case O::TextLoadingComplete: gUserInterface->SetLoadingText(IDS_LOADING_COMPLETE);
+        break;
+    case O::TextWaitingForPlayers: gUserInterface->SetLoadingText(IDS_WAITING_FOR_PLAYERS);
+        break;
+    case O::LoadGameMedia: EELoadGameMedia();
+        break;
+    case O::LoadType: return gGameOptions.mLoadType;
+    case O::SetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
+        break;
+    case O::GameStateCreate: return gGameState.Create(*(EEGameOptions*)a[0], *(UWideString*)a[1]);
+    case O::GameStateReset: gGameState.Reset();
+        break;
+    case O::ReleaseScene: gGraphics->PostReleaseScene();
+        break;
+    case O::GraphicsWait50A: gGraphics->PostMessage50AAndWait();
+        break;
+    case O::WorldWriteLock: gWorld.mLock->WriteLock();
+        break;
+    case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
+        break;
+    case O::WorldClear: gWorld.Clear();
+        break;
+    case O::PhysicsClearServerMessages: gPhysics->ClearServerMessages();
+        break;
+    case O::StartGame: gWorld.StartGame(&gGameState, false);
+        break;
+    case O::ResumeGraphics: gUserInterface->ResumeGraphics();
+        break;
+    case O::IsMultiplayer: return gCommunications->GetIsMultiplayerSession();
+    case O::IsClient: return gCommunications->IsClient();
+    case O::NewLoadedResponseClient: return P64(new EEMRecord(kMessageStartLoadingResponse, {static_cast<EEClient*>(gCommunications)->GetMySendToSlot(), gWorld.GetCurrentPlayer()->GetPlayerID(), 0}));
+    case O::NewLoadedResponseServer: return P64(new EEMRecord(kMessageStartLoadingResponse, {0xfe, gWorld.GetCurrentPlayer()->GetPlayerID(), 0}));
+    case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput((NEMessage*)p, kSlotNone);
+        break;
+    case O::SetHasLoaded: (static_cast<EEClient*>(gCommunications))->mHasLoaded = true;
+        break;
+    case O::ExitGame: EEExitGame();
+        break;
+    case O::DisplayError: gUIManager->DisplayMessage(*(UWideString*)p, true, NULL, EEDataPreLoading::LoadGameErrorDone, true);
+        break;
     }
-    return theResult;
+    return 0;
 }

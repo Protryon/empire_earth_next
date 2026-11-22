@@ -10,7 +10,7 @@
 //!     selection's and the order's lines ([`boxsel`], [`orders`]) and the WON lobby's snapshot;
 //!   - when <dir>/frame.request exists, removes it and writes the next presented frame to <dir>/frame.bmp;
 //!   - executes the newest line of <dir>/test.command, "<seq> <op> <form> <a> [<b> [<c>]]", once per sequence
-//!     number, only while <form> is on top: click, select, check, lselect (a control's own methods), zoom, pointer
+//!     number, only while <form> is on top: click, select, check, lselect, editnum (a control's own methods), zoom, pointer
 //!     (held ms milliseconds), lclick, key, wheel (the platform's events), clickevent, screenevent, chat, boxselect,
 //!     cast ([`cast`]), order, and the lobby's won* commands (run on the lobby's own loop); the verdict goes to
 //!     stderr ("TEST UI ...").

@@ -60,9 +60,11 @@ fn media(player: P, what: i32, id: i32, load: bool) {
         }
         EE_TECH_MEDIA_AREA_EFFECT => {
             // (the original's unload called LoadTemplateMedia again)
-            let manager = hp(O::AeManager, 0, &[]);
-            super::civ::ee_gamecpp_ae_template_media(manager as *mut c_void, id as _, load);
-            return;
+            if load {
+                O::TkAeTemplateLoad
+            } else {
+                O::TkAeTemplateUnload
+            }
         }
         EE_TECH_MEDIA_ITEM => {
             if load {

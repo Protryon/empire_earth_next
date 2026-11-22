@@ -69,89 +69,64 @@ static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_S
                   EE_SCREENS_SEE_PER_PLAYER_LABEL_ID == kSERBUnitTypesPerPlayerCountLabel,
               "ee/EESEARust.h's event kinds");
 
-// p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*)
+// p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*): the ops left of the host (the toolkit's
+// in editor_direct.rs, the sequences and the Rust objects' calls in editor_tabsx.rs, over ee_screenscpp_seex)
 extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int32_t* i, float* f)
 {
-    void* p = inPointers[0];
-    void* q = inPointers[1];
     switch (inOp) {
-    case EE_SCREENS_SEE_OP_REFERENCE:
-        static_cast<EEAction*>(p)->Reference();
-        break;
-    case EE_SCREENS_SEE_OP_DEREFERENCE:
-        static_cast<EEAction*>(p)->Dereference();
-        break;
-    case EE_SCREENS_SEE_OP_POST_VIEWPORT: {
-        EESEERust* theEvent = new EESEERust(kSEEChangeViewport);
-        ee_screens_see_viewport(theEvent->mEvent, f, i[0] != 0 ? 1 : 0);
-        long theResult = gUserInterface->PostEvent(theEvent, NULL);
-        theEvent->Dereference();
-        return (int32_t)theResult;
-    }
     case EE_SCREENS_SEE_OP_HAS_EDITOR:
         return gUIManager->GetScenarioEditorForm() != NULL;
-    case EE_SCREENS_SEE_OP_SET_GAME_VIEW:
-        gUIManager->GetScenarioEditorForm()->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), i[0] != 0);
-        break;
-    case EE_SCREENS_SEE_OP_REDRAW_ALL:
-        gUIManager->RedrawAll();
-        break;
-    case EE_SCREENS_SEE_OP_SHOW_LOADED:
-        gUIManager->GetScenarioEditorForm()->PostShowLoadedObject(static_cast<EEAction*>(p));
-        break;
-    case EE_SCREENS_SEE_OP_QUICK_SAVE: {
-        EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(p));
-        gUserInterface->PostAction(theAction);
-        theAction->Dereference();
-        break;
-    }
-    case EE_SCREENS_SEE_OP_SLIDER_TEXT: {
-        // the original's sprintf of its UWideString format: the float value passed as a double through `...`
-        UWideString theText;
-        sprintf(theText, static_cast<const char*>(q), (double)f[0]);
-        static_cast<UITextLabel*>(p)->SetText(theText);
-        break;
-    }
-    case EE_SCREENS_SEE_OP_FILL_SCENARIO:
-        FillScenarioComboBox(static_cast<UIComboBox*>(p), static_cast<UITextLabel*>(q), i[0] != 0);
-        break;
-    case EE_SCREENS_SEE_OP_CAMG_ADD:   // the effect types (editor_effects.rs), the effect screen's controls
-    case EE_SCREENS_SEE_OP_CAMG_REMOVE:
-        ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 0, inOp == EE_SCREENS_SEE_OP_CAMG_ADD ? 1 : 0,
-                              (uint32_t)i[0]);
-        break;
-    case EE_SCREENS_SEE_OP_MSD_SHOW: ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 1, 0, 0); break;
-    case EE_SCREENS_SEE_OP_SAA_SHOW:
-        ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 2, 0, (uint32_t)i[0]);
-        break;
-    case EE_SCREENS_SEE_OP_FILL_AREA_OBJECT: {
-        UIForm* theForm = static_cast<UIForm*>(p);
-        FillAreaObjectComboBox(static_cast<UITextLabel*>(theForm->GetControlById(i[0])),
-                               static_cast<UIComboBox*>(theForm->GetControlById(i[1])), i[2] != 0);
-        break;
-    }
-    case EE_SCREENS_SEE_OP_MAP_ELEVATION:
-        ee_screens_semp_call((EeScreensSeMap*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p)),   // the map tab's group
-                             EE_SCREENS_SEMP_SHOW_ELEVATION, i[0] != 0);
-        break;
-    case EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST:
-        static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p))->UnitCall(EE_SCREENS_SEUN_REFRESH);
-        break;
     case EE_SCREENS_SEE_OP_EPOCH_COUNT:
         return (int32_t)EEEpochCount();
-    case EE_SCREENS_SEE_OP_FILL_EPOCHS: {
-        UWideString theText;
-        std::vector<UWideString> theNames;
-        for (unsigned long k = (unsigned long)i[0]; k < (unsigned long)EEEpochCount(); k++) {
-            gResource->GetString(EEEpochTitleID(k), theText);
-            theNames.push_back(theText);
-        }
-        static_cast<UIComboBox*>(p)->DeleteAllEntries();
-        static_cast<UIComboBox*>(p)->AppendStringArray(theNames);
-        break;
-    }
     case EE_SCREENS_SEE_OP_MAX_PLAYERS:
         return (int32_t)gWorld.mMaxPlayers;
+    }
+    return 0;
+}
+
+extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
+
+namespace {
+
+int32_t SeexOut(int32_t* i, const void* inObject)
+{
+    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
+    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
+    return 0;
+}
+std::vector<UWideString> sSeexNames;   // EE_SCREENS_SEEX_NAMES_*'s epoch titles
+
+}   // namespace
+
+// the events' single statements (ee_screens editor_tabsx.rs EE_SCREENS_SEEX_*: p0 the object, p1 a second)
+extern "C" int32_t ee_screenscpp_seex(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    switch (inOp) {
+    case EE_SCREENS_SEEX_REFERENCE: static_cast<EEAction*>(p[0])->Reference();
+        return 0;
+    case EE_SCREENS_SEEX_NEW_VIEWPORT: return SeexOut(i, static_cast<UIEvent*>(new EESEERust(kSEEChangeViewport)));
+    case EE_SCREENS_SEEX_EVENT_RUST: return SeexOut(i, static_cast<EESEERust*>(static_cast<UIEvent*>(p[0]))->mEvent);
+    case EE_SCREENS_SEEX_POST_EVENT: return (int32_t)gUserInterface->PostEvent(static_cast<UIEvent*>(p[0]), NULL);
+    case EE_SCREENS_SEEX_NEW_QUICK_SAVE: return SeexOut(i, static_cast<EEAction*>(new EESEARust(kSEAQuickSave, static_cast<EEAction*>(p[0]))));
+    case EE_SCREENS_SEEX_PRINT: sprintf(gSefxText, static_cast<const char*>(p[1]), (double)f[0]);
+        return 0;
+    case EE_SCREENS_SEEX_LABEL_TEXT: static_cast<UITextLabel*>(p[0])->SetText(gSefxText);
+        return 0;
+    case EE_SCREENS_SEEX_FILL_SCENARIO: FillScenarioComboBox(static_cast<UIComboBox*>(p[0]), static_cast<UITextLabel*>(p[1]), i[0] != 0);
+        return 0;
+    case EE_SCREENS_SEEX_FILL_AREA_OBJECT: FillAreaObjectComboBox(static_cast<UITextLabel*>(static_cast<UIForm*>(p[0])->GetControlById(i[0])), static_cast<UIComboBox*>(static_cast<UIForm*>(p[0])->GetControlById(i[1])), i[2] != 0);
+        return 0;
+    case EE_SCREENS_SEEX_NAMES_CLEAR: sSeexNames.clear();
+        return 0;
+    case EE_SCREENS_SEEX_EPOCH_TITLE: gResource->GetString(EEEpochTitleID((unsigned long)i[0]), gSefxText);
+        return 0;
+    case EE_SCREENS_SEEX_NAMES_PUSH: sSeexNames.push_back(gSefxText);
+        return 0;
+    case EE_SCREENS_SEEX_COMBO_CLEAR: static_cast<UIComboBox*>(p[0])->DeleteAllEntries();
+        return 0;
+    case EE_SCREENS_SEEX_COMBO_APPEND: static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeexNames);
+        return 0;
+    case EE_SCREENS_SEEX_EPOCH_COUNT: return (int32_t)EEEpochCount();
     }
     return 0;
 }

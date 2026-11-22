@@ -47,11 +47,8 @@ pub const EE_CP_PLAYER_BASE_UNIT_PLACED: i32 = 346;
 pub const EE_CP_PLAYER_BASE_UNIT_TAKEN: i32 = 347;
 /// `EEPlayer::DamageTaken(v0, v1, a)`
 pub const EE_CP_PLAYER_BASE_DAMAGE_TAKEN: i32 = 348;
-/// `EECPNavalFleeOn`, `EECPMilitiaOn`, `gCPTraceOn`, `EECPExperiment(player, (const char*)a)`
-pub const EE_CP_PLAYER_NAVAL_FLEE_ON: i32 = 349;
-pub const EE_CP_PLAYER_MILITIA_ON: i32 = 350;
+/// `gCPTraceOn`
 pub const EE_CP_PLAYER_TRACE_ON: i32 = 351;
-pub const EE_CP_PLAYER_EXPERIMENT: i32 = 352;
 /// `IsAlly((EEPlayer*)a)`
 pub const EE_CP_PLAYER_IS_ALLY: i32 = 353;
 /// the epoch `v0`'s kind-7 media loaded (`v1` 1) or unloaded; `EEPlayer::EpochMediaLoaded(v0)`, `..Unloaded(v0)`
@@ -115,11 +112,13 @@ pub const EE_CP_PLAYER_BASE_CAN_AFFORD: i32 = 393;
 pub const EE_CP_PLAYER_GAME_RESOURCES: i32 = 394;
 pub const EE_CP_PLAYER_SCENARIO_GAME: i32 = 395;
 pub const EE_CP_PLAYER_LOAD_TYPE: i32 = 396;
-/// `gWorld.mMap->ExploreUnseen(player)`; the start's trace line
+/// `gWorld.mMap->ExploreUnseen(player)`
 pub const EE_CP_PLAYER_EXPLORE_UNSEEN: i32 = 397;
-pub const EE_CP_PLAYER_TRACE_START: i32 = 398;
-/// `gCPTraceManager` set to `(const char*)a` -> the one before
-pub const EE_CP_PLAYER_TRACE_MANAGER: i32 = 399;
+/// `EECPEngineName(player)` appended to the `Vec<u8>` `a`; `EECPEngineSeesAll(player)`,
+/// `EECPEngineFillsGarrison(player)`
+pub const EE_CP_PLAYER_ENGINE_NAME: i32 = 398;
+pub const EE_CP_PLAYER_ENGINE_SEES_ALL: i32 = 399;
+pub const EE_CP_PLAYER_ENGINE_FILLS_GARRISON: i32 = 430;
 /// `new EECPPlacement(player)` into `mPlacement`; `delete mPlacement`; `mComputerPlayer = player`
 pub const EE_CP_PLAYER_NEW_PLACEMENT: i32 = 400;
 pub const EE_CP_PLAYER_DELETE_PLACEMENT: i32 = 401;
@@ -261,7 +260,13 @@ impl Cp {
         self.q(pg::EE_CP_PLAYER_IS_EPOCH, 0, 0, &[id]) != 0
     }
     fn cheat_on(&self, cheat: i64) -> bool {
-        self.q(pg::EE_CP_PLAYER_CHEAT_ON, 0, 0, &[cheat]) != 0
+        crate::ai::personality::cheat_on(self.id(), cheat as c_long)
+    }
+    fn id(&self) -> u64 {
+        self.ctx.player_id as u64
+    }
+    fn experiment(&self, name: &str) -> bool {
+        crate::ai::personality::experiment(self.id(), name)
     }
     fn next_state(&self) -> *mut c_void {
         self.q(EE_CP_PLAYER_NEXT_STATE, 0, 0, &[]) as usize as *mut c_void
@@ -940,7 +945,7 @@ pub unsafe extern "C" fn ee_cp_pl_damage_taken(player: u64, attacker: c_long, am
     };
     let complex = unit_view(unit, |u| u.complex_unit_handle()).unwrap_or(0);
     if attacker > 0
-        && cp.on(EE_CP_PLAYER_NAVAL_FLEE_ON)
+        && crate::ai::personality::naval_flee_on(cp.id())
         && !building
         && cp.reflex_on(c"naval_flee")
         && complex != 0
@@ -960,8 +965,8 @@ pub unsafe extern "C" fn ee_cp_pl_damage_taken(player: u64, attacker: c_long, am
             && category == ops::CATEGORY_LAND_CITIZEN
             && enemy().is_some()
             && (cp.q(pg::EE_CP_PLAYER_HUMAN, 0, 0, &[attacker as i64]) == 1
-                || cp.q(EE_CP_PLAYER_EXPERIMENT, c"flee".as_ptr() as u64, 0, &[]) != 0
-                || cp.on(EE_CP_PLAYER_MILITIA_ON))
+                || cp.experiment("flee")
+                || crate::ai::personality::militia_on(cp.id()))
             && cp.reflex_on(c"danger")
             && (!cp.holds(complex) || cp.reflex_on(c"held"))
         {
@@ -1046,7 +1051,7 @@ pub unsafe extern "C" fn ee_cp_pl_pay(player: u64, tech: u64, unit_type: c_long,
     });
     let kind = ops::pay_kind(epoch, facts);
     let id = cp.ctx.player_id as c_ulong;
-    if id < 64 && (0..=7).contains(&kind) && cp.q(EE_CP_PLAYER_EXPERIMENT, c"spending".as_ptr() as u64, 0, &[]) != 0 {
+    if id < 64 && (0..=7).contains(&kind) && cp.experiment("spending") {
         // SAFETY: five costs
         unsafe { crate::ai::next_game::trace::ee_ai_trace_spend(id, kind, cost.as_ptr()) };
     }
@@ -1305,8 +1310,38 @@ fn choose_civilization(cp: &Cp) {
 // ---------------------------------------------------------------------------------------------------------------
 // The tick
 
-fn trace_manager(cp: &Cp, name: *const c_char) -> u64 {
-    cp.q(EE_CP_PLAYER_TRACE_MANAGER, name as u64, 0, &[]) as u64
+fn trace_manager(name: *const c_char) -> *const c_char {
+    crate::ai::trace_line::scope(name)
+}
+
+/// The start's trace line (the trace on): the difficulty, the personality, the cheats, the engine.
+fn trace_start(cp: &Cp) {
+    if !cp.trace_on() {
+        return;
+    }
+    let id = cp.id();
+    let f = cp.fields();
+    let (difficulty, cheating, cost100, aggression) =
+        (f.mDifficulty, i32::from(f.mIsCheating), f.scale_cost(100), f.mComputerAggression as c_long);
+    let extra = if crate::ai::personality::cheat_on(id, ops::CHEAT_EXTRA as c_long) { f.mExtraResources } else { 0 };
+    let mut engine: Vec<u8> = Vec::new();
+    cp.q(EE_CP_PLAYER_ENGINE_NAME, &mut engine as *mut Vec<u8> as u64, 0, &[]);
+    let sees_all = if cp.on(EE_CP_PLAYER_ENGINE_SEES_ALL) { " sees_all=1" } else { "" };
+    let fills = if cp.on(EE_CP_PLAYER_ENGINE_FILLS_GARRISON) { " fills_garrison=1" } else { "" };
+    // SAFETY: Rust's static experiment text
+    let exp = unsafe { std::ffi::CStr::from_ptr(crate::ai::personality::ee_ai_experiment_names(id)) };
+    let mut text = format!(
+        "difficulty={difficulty} personality={} cheats={} cheating={cheating} cost100={cost100} extra={extra} aggression={aggression} demand={} exp={} engine=",
+        String::from_utf8_lossy(&crate::ai::personality::rule(id).id),
+        crate::ai::personality::cheat_names(id),
+        i32::from(crate::ai::personality::demand_split_on(id)),
+        exp.to_string_lossy(),
+    )
+    .into_bytes();
+    text.extend_from_slice(&engine);
+    text.extend_from_slice(sees_all.as_bytes());
+    text.extend_from_slice(fills.as_bytes());
+    crate::ai::trace_line::trace_out(cp.me() as usize as *mut c_void, b"start", &text);
 }
 
 /// `EECPNextUpdate`: the bookkeeping the classic tick did first (a pending regroup, the combat state's decay, the
@@ -1350,7 +1385,7 @@ fn next_update(cp: &Cp, time: c_ulong) {
 #[no_mangle]
 pub unsafe extern "C" fn ee_cp_pl_update(player: u64, time: c_ulong) {
     let cp = Cp::of(player);
-    let saved = trace_manager(&cp, c"cp".as_ptr());
+    let saved = trace_manager(c"cp".as_ptr());
     pc::ee_cp_capture_thread();
     if !cp.fields().mIsStarted {
         if !cp.observer() {
@@ -1360,7 +1395,7 @@ pub unsafe extern "C" fn ee_cp_pl_update(player: u64, time: c_ulong) {
         if cp.cheat_on(ops::CHEAT_REVEAL) {
             cp.q(EE_CP_PLAYER_EXPLORE_UNSEEN, 0, 0, &[]);
         }
-        cp.q(EE_CP_PLAYER_TRACE_START, 0, 0, &[]);
+        trace_start(&cp);
         set_next_island_expansion_time(&cp);
         if center_count(&cp) == 0 {
             regroup(&cp);
@@ -1378,9 +1413,9 @@ pub unsafe extern "C" fn ee_cp_pl_update(player: u64, time: c_ulong) {
         cp.fields().mIsStarted = true;
     }
     if !cp.observer() && cp.first_unit() != 0 {
-        let outer = trace_manager(&cp, c"next".as_ptr());
+        let outer = trace_manager(c"next".as_ptr());
         next_update(&cp, time);
-        trace_manager(&cp, outer as usize as *const c_char);
+        trace_manager(outer);
     }
     // SAFETY: the player's record
     let kills = unsafe { lists::ee_cp_kill_count(cp.ctx.fields) };
@@ -1394,7 +1429,7 @@ pub unsafe extern "C" fn ee_cp_pl_update(player: u64, time: c_ulong) {
     }
     // SAFETY: as above
     unsafe { lists::ee_cp_kill_clear(cp.ctx.fields) };
-    trace_manager(&cp, saved as usize as *const c_char);
+    trace_manager(saved);
 }
 
 /// `RTSResolveUnitID`: 0 for none (0xffffffff) or a freed unit.

@@ -6,21 +6,14 @@
 #ifndef EE_EEARTIFICIALINTELLIGENCE_H
 #define EE_EEARTIFICIALINTELLIGENCE_H
 
-class EEComputerPlayer;
-class EEPlayer;
-class EEUnit;
+#include "rust/sim/ai.h"   // ee_ai_collect_computer_players, ee_ai_update (ee_sim::ai next_schedule.rs)
 
+// The computer players' schedule (0x2cc87..0x2ce2e; its members and bodies are Rust: ee_sim::ai next_schedule.rs)
 class EEArtificialIntelligence {
 public:
-    EEArtificialIntelligence() : mNextUpdateTime(0), mNextPlayer(0) { this->mUpdateInterval = 1000; }
     virtual ~EEArtificialIntelligence() {}
-    void CollectComputerPlayers();          // 0x2cd0e (after a game is set up: 0x139a26, 0x276e53)
-    void Update();                          // 0x2cd99 (the physics thread: one computer player per interval)
-
-    std::vector<EEComputerPlayer*> mComputerPlayers;   // +0x04
-    unsigned long mUpdateInterval;          // +0x14 (1000 / the number of computer players)
-    unsigned long mNextUpdateTime;          // +0x18
-    unsigned long mNextPlayer;              // +0x1c
+    void CollectComputerPlayers() { ee_ai_collect_computer_players(); }   // 0x2cd0e (after a game is set up)
+    void Update() { ee_ai_update(); }   // 0x2cd99 (the physics thread: one computer player per interval)
 };
 
 extern EEArtificialIntelligence* gArtificialIntelligence;

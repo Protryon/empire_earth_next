@@ -24,6 +24,7 @@
 #include "lle/NEMessage.h"
 #include "ee/EEMessage.h"
 #include "ee/EESimCapture.h"
+#include "rust/game/gamecpp.h"   // round 10 (ee_game gamecpp)
 #include "ee/EEMessageCapture.h"
 #include "rust/sim/netmsg.h"
 
@@ -244,3 +245,20 @@ static void EEMessageCaptureSweepImpl()
 static const bool sCaptureHooksSet = (EEMessageCaptureImport = EEMessageCaptureImportImpl,
                                       EEMessageCaptureExecuted = EEMessageCaptureExecutedImpl,
                                       EEMessageCaptureSweep = EEMessageCaptureSweepImpl, true);
+
+// ------------------------------------------------------------------------- round 10, lane C: Communications, the Civilization Builder's captures, Calamities, Map
+
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of lane C's bodies in Rust (gamecpp; EeGameCpp's round 10 lane C section): one
+// statement each
+int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpD(inOp, p, a, f);
+}
+
+double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpDF(inOp, p, a, f);
+}

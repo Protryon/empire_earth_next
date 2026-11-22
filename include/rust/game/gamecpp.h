@@ -2069,9 +2069,6 @@ enum class EeGameCpp : uint32_t {
   PwPointsCount,
   PwPointX,
   PwPointY,
-  PwAiNextPlayer,
-  PwAiNextUpdateTime,
-  PwAiPlayerCount,
   PwMap,
   PwMapSize,
   PwMapTileAt,
@@ -2541,93 +2538,6 @@ enum class EeGameCpp : uint32_t {
   ClIdsSeconds,
   ClTimeoutFormat,
   ClSprintfSeconds,
-  AeFields,
-  AeTemplateFields,
-  AeTplFields,
-  AeOwner,
-  AeLocation,
-  AeIsImmunity,
-  AeAffectsPlayer,
-  AeAffectsPlayerReversed,
-  AeIsInRange,
-  AeCovers,
-  AeAppliedTo,
-  AeShowOn,
-  AeSetUnit,
-  AeSetAffectedAll,
-  AeNew,
-  AeListCount,
-  AeListAt,
-  AeListAdd,
-  AeListDereference,
-  AeListEmpty,
-  AeUnitProtected,
-  AeUnitBuilt,
-  AeUnitOwnList,
-  AeUnitAffectingList,
-  AeUnitAffectingAdd,
-  AeUnitPlayerId,
-  AeUnitId,
-  AeUnitComplex,
-  AeUnitNext,
-  AeWorldUnit,
-  AeWorldNumPlayers,
-  AeWorldPlayer,
-  AePlFirstUnit,
-  AeNewUnitVec,
-  AeDeleteUnitVec,
-  AeUnitsInRect,
-  AeVecCount,
-  AeVecComplexAt,
-  AeManager,
-  AeManagerEffects,
-  AeTemplateCount,
-  AeTemplateAt,
-  AeTemplatesClear,
-  AeTemplatePush,
-  AeTemplateDereference,
-  AeTemplateLoad,
-  AeTemplateUnload,
-  AeNewTemplate,
-  AeTemplateInit,
-  AeTemplateError,
-  AeFileOpenRead,
-  AeFileReadULong,
-  AeFileReadData,
-  AeFileClose,
-  AeIoCall,
-  AeAfterLoad,
-  AeLostRefs,
-  AhTargetInSet,
-  AhTargetTechNode,
-  AhNodeKind,
-  AhPlayer,
-  AhAllied,
-  AhAtWar,
-  AhTargetBuilt,
-  AhTargetRepairable,
-  AhTargetPosition,
-  AhContinent,
-  AhTargetCarrier,
-  AhTargetType,
-  AhPlanet,
-  AhTargetHitPoints,
-  AhTargetMaxHitPoints,
-  AhInCinematic,
-  AhTargetSetHitPoints,
-  AhTargetCloak,
-  AhCamouflaged,
-  AhStaysHidden,
-  AhCloakedEnemy,
-  AhTargetCloakOwn,
-  AhMiniMapHide,
-  AhOwner,
-  AhOwnerHitPoints,
-  AhCountInRect,
-  AhCountInRange,
-  AhOwnerScale,
-  AhOwnerLeadership,
-  AhOwnerGarrisonBonus,
   TkTreeFields,
   TkCurrentPlayer,
   TkPlayerIndex,
@@ -2675,6 +2585,8 @@ enum class EeGameCpp : uint32_t {
   TkButtonRelease,
   TkItemLoad,
   TkItemUnload,
+  TkAeTemplateLoad,
+  TkAeTemplateUnload,
   TkSoundLoad,
   TkSoundUnload,
   TkClassCount,
@@ -4333,83 +4245,6 @@ int64_t ee_gamecpp_pworld_host(void *ctx,
 /// `EEFindLoadedGhostUnit` (save 0.262 on): the unit made for the ghost of id `id` (made at the first ask, held by
 /// world_save.rs until the first tick), or null.
 void *ee_gamecpp_find_loaded_ghost_unit(unsigned long id);
-
-/// EEAEManager::CollectEffects: the list's effects added to every living unit they cover around a location (a
-/// radius-0 effect: to every unit of every player); a healing effect skips its own unit and shows on the units it
-/// covers.
-void ee_gamecpp_ae_collect_effects(void *_manager,
-                                   float radius,
-                                   const void *location,
-                                   unsigned long player,
-                                   void *list,
-                                   void *unit);
-
-/// SetAffectedByAreaEffectFunctor::Apply: the effect added to a covered unit's affecting effects and applied.
-void ee_gamecpp_ae_set_affected(void *effect,
-                                unsigned long player,
-                                void *unit,
-                                const void *location);
-
-/// A container emptied (its references let go, then its items).
-void ee_gamecpp_ae_container_empty(void *list);
-
-/// EEAEManager::ClearEffects: the active list emptied.
-void ee_gamecpp_ae_clear_effects(void *manager);
-
-/// EEAEManager::Clear: every template released, then the active list emptied.
-void ee_gamecpp_ae_clear(void *manager);
-
-/// EEAEManager::Load: the templates of the area-effect file (an empty slot for records with id 0); 3 when a template
-/// fails to initialize.
-long ee_gamecpp_ae_load(void *manager,
-                        void *file);
-
-/// EEAEManager::CreateAreaEffect: the effect of the template at an index (a known kind) for a unit, owned by the
-/// unit's player; NULL otherwise.
-void *ee_gamecpp_ae_create(void *manager,
-                           unsigned long index,
-                           void *unit);
-
-/// EEAEManager::FindEffect: an active effect of a kind covering a point that affects the player (immunities only, by
-/// the reversed player test, in immunity mode), skipping protected units' effects and those in the exclusion list.
-void *ee_gamecpp_ae_find(void *manager,
-                         long kind,
-                         float x,
-                         float y,
-                         unsigned long player,
-                         bool mode,
-                         void *exclude);
-
-/// EEAEManager::LoadTemplateMedia / UnloadTemplateMedia: the template at an index, if any.
-void ee_gamecpp_ae_template_media(void *manager, unsigned long index, bool load);
-
-/// RebuildAreaEffectRegionListFunctor::Apply: a built unit's own effects added to the active list.
-void ee_gamecpp_ae_rebuild_add(void *effects, void *unit);
-
-/// EEAESaveRunningState: per unit (of every player but the world's) with effects, its own effects' location (and
-/// the morale from buildings' count), then the effects acting on it, each as its owner and index; then the active
-/// list the same way.
-void ee_gamecpp_ae_save_running(void *file);
-
-/// EEAELoadRunningState: the saved running state read, and put back at the loaded game's first tick.
-long ee_gamecpp_ae_load_running(void *file);
-
-/// The running state put back (EEAfterLoad): each unit's own effects' location and morale count (when the unit
-/// has the saved number of own effects), each unit's affecting effects in their saved order, the active list;
-/// the references no longer found are counted and reported.
-///
-/// # Safety
-/// `state` is the record ee_area_effect_running_load made (the caller keeps it).
-void ee_gamecpp_ae_restore_running(const EeAreaEffectRunning *state);
-
-/// The world of an area effect's Rust slots (ee_sim tech area_effect.rs's host; was EEAreaEffect.cpp's
-/// EEAEHost::Call): `ctx` the EEAEHost (the effect and the unit the slot was given).
-///
-/// # Safety
-/// `call` and `reply` are the slot's live records.
-void ee_gamecpp_ae_host(void *ctx,
-                        const void *call,
-                        void *reply);
 
 /// EEClient::HandleSlotUpdate: this client booted from the canceled game when the host's slot (0) has become open
 /// (closed), else the slot's line refreshed.

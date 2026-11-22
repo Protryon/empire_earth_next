@@ -72,6 +72,7 @@
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "rust/game/campaign.h"
 // the campaign archive's tag keys (unguarded file-scope globals, 0x5656a0 down to 0x5655f8)
 const UWideString kEECampaignAuthorNameKey("AuthorName");
 const UWideString kEECampaignAuthorEmailKey("AuthorEmail");
@@ -241,77 +242,11 @@ const UWideString& EECampaign::GetRequiredCiv()
     return this->mRequiredCiv;
 }
 
-// NEAR: FSArchive::FindFile(const UWideString&) is inline in our header, the original calls the import, and
-// its two push_backs are expanded (insert(end(), x)); slots follow from that
 // Reads a campaign archive: its tags, decrypted password and scenario list (optionally checking every scenario
-// exists); returns whether it worked, with an error text otherwise
+// exists); returns whether it worked, with an error text otherwise (ee_game campaign.rs campaign_load)
 bool EECampaign::Load(const UWideString& inFile, UWideString& outError, bool inCheckFiles)
 {
-    UWideString theFormat;
-    UWideString thePassword;
-    UWideString theScenario;
-    UWideString theListFile;
-    UWideString theRequiredCiv;
-    UString theLine;
-    FSFileSpec* theSpec = NULL;
-    FSMemoryFile* theList = NULL;
-    bool theResult = false;
-    long theFindResult = gDataPath->FindFile(UString((const char*)inFile), theSpec);
-    if (theFindResult == kErrorOK) {
-        FSArchive* theArchive = new FSArchive(*theSpec);
-        if (theArchive->Open() == kErrorOK) {
-            theArchive->GetTag(kEECampaignRequiredCivNameKey, theRequiredCiv);
-            if (theRequiredCiv == " ")
-                this->mRequiredCiv = "";
-            else
-                this->mRequiredCiv = theRequiredCiv;
-            theArchive->GetTag(kEECampaignBackgroundImageKey, this->mBackgroundImage);
-            if (theArchive->GetTag(kEECampaignCampaignNameKey, this->mCampaignName) == kErrorOK
-                && theArchive->GetTag(kEECampaignCampaignDescriptionKey, this->mDescription) == kErrorOK
-                && theArchive->GetTag(kEECampaignAuthorNameKey, this->mAuthorName) == kErrorOK
-                && theArchive->GetTag(kEECampaignAuthorEmailKey, this->mAuthorEmail) == kErrorOK) {
-                theArchive->GetTag(kEECampaignCampaignPasswordKey, thePassword);
-                if (thePassword != "")
-                    this->mPassword = this->DecryptPassword(thePassword);
-                else
-                    this->mPassword = "";
-                theListFile = this->GetScenarioListFile();
-                if (theArchive->FindFile(theListFile, theList) == kErrorOK) {
-                    this->mScenarios.clear();
-                    theResult = true;
-                    while (theLine.Load(*theList) == kErrorOK) {
-                        theScenario = (const char*)theLine;
-                        if (inCheckFiles) {
-                            bool theFound = gDataPath->FindFile(UWideString("Scenarios\\") + theScenario) == kErrorOK;
-                            if (theFound) {
-                                if (theScenario.GetLength() > 4)
-                                    theScenario.InsertString("", theScenario.GetLength() - 4, true);
-                                this->mScenarios.insert(this->mScenarios.end(), theScenario);
-                            } else {
-                                gResource->GetString(IDS_SCENARIO_DIDNT_EXIST_ON_DISK, theFormat);
-                                sprintf(outError, (const char*)theFormat, (const char*)theScenario);
-                                this->mScenarios.clear();
-                                theResult = false;
-                                break;
-                            }
-                        } else {
-                            if (theScenario.GetLength() > 4)
-                                theScenario.InsertString("", theScenario.GetLength() - 4, true);
-                            this->mScenarios.insert(this->mScenarios.end(), theScenario);
-                        }
-                    }
-                    delete theList;
-                } else
-                    gResource->GetString(IDS_THERE_WAS_ERROR_READING_TAG, outError);
-            } else
-                gResource->GetString(IDS_THERE_WAS_ERROR_READING_TAG, outError);
-        } else
-            gResource->GetString(IDS_FILE_COULDNT_BE_OPENED, outError);
-        delete theArchive;
-        delete theSpec;
-    } else
-        gResource->GetString(IDS_FILE_COULDNT_BE_OPENED, outError);
-    return theResult;
+    return ee_campaign_load(this, (const char*)inFile, &outError, inCheckFiles);
 }
 
 // NEAR: register allocation only (this in edi, the += import in ebx in the original)

@@ -298,6 +298,9 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxCheckIsChecked: return As<UICheckBox>(c->h)->GetIsChecked() ? 1 : 0;
     case EeFixtureOp::FxCheckSet: As<UICheckBox>(c->h)->SetChecked(i[0] != 0);
         return 0;
+    case EeFixtureOp::FxAsEdit: return Handle(dynamic_cast<UIEditBox*>(CONTROL));
+    case EeFixtureOp::FxEditSetNumber: As<UIEditBox>(c->h)->SetText((unsigned long)i[0]);
+        return 0;
     case EeFixtureOp::FxRadioCheck: As<UIRadioButton>(c->h)->Check();
         return 0;
     case EeFixtureOp::FxFireTrigger: CONTROL->FireTriggerEvent(kTriggerEvent);

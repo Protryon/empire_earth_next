@@ -1,21 +1,12 @@
 //! `extern "C"` for the scenario editor's elevation tab whole in Rust (`editor_elevation.rs`): the object
 //! `EEUIFSEElevation` holds, made, called and freed by it. The shared control ops (below 100) are
-//! `ee_screenscpp_sepl` (`Scenario Editor/EESERBUnitTypes.cpp`), the tab's own `ee_screenscpp_seel`
-//! (`Scenario Editor/EEUIFSEElevation.cpp`).
+//! `ee_screenscpp_sepl` (`Scenario Editor/EESERBUnitTypes.cpp`), the tab's own `editor_tabsx::seel` (over
+//! `ee_screenscpp_seelx`, `Scenario Editor/EEUIFSEElevation.cpp`).
 
 use core::ffi::c_void;
 
 use crate::screens::editor_elevation::{ElevationTab, EE_SCREENS_SEEL_MOUSE_MOVE, EE_SCREENS_SEEL_UPDATE};
 use crate::screens::editor_players::SeplHost;
-
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_seel(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
-    }
-}
 
 struct Host;
 
@@ -24,7 +15,7 @@ impl SeplHost for Host {
         let p = p.map(|x| x as *mut c_void);
         unsafe {
             if op >= 900 {
-                sys::ee_screenscpp_seel(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+                crate::screens::editor_tabsx::seel_host(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {
                     crate::screens::editor_direct::sepl(op, p.as_ptr(), i, f)

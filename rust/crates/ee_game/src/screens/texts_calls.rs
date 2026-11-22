@@ -181,7 +181,7 @@ pub(crate) fn text<C: Cpp + ?Sized>(c: &mut C, _form: usize, which: u32, arg: u3
         EE_SCREENS_TEXT_LE_GENERATOR_NAME => out_text(|o| c.tt_generator_name(arg, o)),
         EE_SCREENS_TEXT_LE_ENGINE => {
             // an engine choice: the strings Classic and Random, an AI's manifest name
-            let ai = if arg == TT_ENGINE_CLASSIC { 0 } else { c.tt_engine_ai(arg) };
+            let ai = if arg == TT_ENGINE_CLASSIC { 0 } else { c.tt_engine_ai(arg as u64) };
             if ai != 0 {
                 out_text(|o| c.tt_engine_ai_name(ai, o))
             } else {

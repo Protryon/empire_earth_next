@@ -176,7 +176,7 @@ bool EEClient::IsServer()
 
 // ------------------------------------------------------------------------- round 9, lane D: the client's bodies' C++
 
-int64_t EECore9OpD4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEAEManager.cpp
+int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTree.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define FILESPEC ((FSFileSpec*)a[0])
@@ -219,7 +219,7 @@ int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);
         break;
-    default: return EECore9OpD4(inOp, p, a, f);
+    default: return EECore9OpD6(inOp, p, a, f);
     }
     return 0;
 }

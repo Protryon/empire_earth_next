@@ -101,6 +101,14 @@ constexpr static const uint64_t CATEGORY_PLANET_SPACESHIP = 34;
 /// the space terrain (`CanMoveOnTerrain(unit, 0xc)`)
 constexpr static const int32_t TERRAIN_SPACE = 12;
 
+/// `gPhysics->GetRandom(i0, i1)` (the longs')
+constexpr static const int32_t EE_ASTAR_CM_RANDOM_RANGE = 46;
+
+/// `gUnitClassTable[kUnitTypeResEagle]->CreateUnit(i0, i1, 0, false, NULL)->mComplexUnit`; its `mIsRegrowing = true`
+constexpr static const int32_t EE_ASTAR_CM_REGROW_UNIT = 47;
+
+constexpr static const int32_t EE_ASTAR_CM_SET_REGROWING = 48;
+
 /// The id lists, by `EeAStarContinentList`'s numbers.
 constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
 
@@ -309,7 +317,7 @@ constexpr static const int32_t EE_PATH_FREE_POOLS = 50;
 /// a new request (`i0` id, `i1` player, from (`i2`, `i3`), to (`i4`, `i5`), the flags `h1`) -> it
 constexpr static const int32_t EE_PATH_REQUEST_NEW = 51;
 
-/// request `h0` into the request record `h1` (`ee_path_request_record_set`)
+/// request `h0` into the request record `h1` (a `RequestRecord`)
 constexpr static const int32_t EE_PATH_REQUEST_SAVE = 52;
 
 /// tile machine `h0` (in `mPaths`) as the saved game holds it into the record `h1` -> whether it can be saved
@@ -373,9 +381,6 @@ constexpr static const int32_t EE_PATH_MODIFIER_NONE = 0;
 constexpr static const int32_t EE_PATH_MODIFIER_STORM_RAIN = 9;
 
 constexpr static const int32_t EE_PATH_MODIFIER_STORM_SNOW = 10;
-
-/// request `h1`'s path: the tiles `h2[..i0]` (x, y pairs), its length `i1`, done
-constexpr static const int32_t EE_PATH_REQUEST_SET_PATH = 170;
 
 /// map `h1`'s `GetClosestTile` of the point of float bits (`i0`, `i1`) -> (`i0`, `i1`)
 constexpr static const int32_t EE_PATH_CLOSEST_TILE = 171;
@@ -1282,18 +1287,6 @@ using EePathFileFn = int32_t(*)(void *ctx,
                                 uint8_t *data,
                                 uint32_t len);
 
-/// A path request as the saved game holds it (save 0.277, `EESaveAutoPathRequest`).
-struct EePathRequestRecord {
-  int32_t from[2];
-  int32_t to[2];
-  int32_t player;
-  int32_t id;
-  int32_t length;
-  bool done;
-  int32_t flags_player;
-  bool flags[17];
-};
-
 /// A bounded tile search's window (`EEAIAStarBounds`: top, left, bottom, right).
 struct EePathWindow {
   int32_t top;
@@ -1951,6 +1944,21 @@ void ee_astar_cntq_i(int32_t v);
 /// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
 void ee_astar_cntq_leave(bool on);
 
+/// `EESaveContinentRegions`: the manager's regions into the save.
+///
+/// # Safety
+/// `r` is the manager's live record; `file` is the save's C++ `FSFile*`, open for writing.
+int32_t ee_astar_cm_save_regions(const EeAStarCmRecord *r, void *file);
+
+/// `EELoadContinentRegions`: the save's block, kept for the start of the game.
+///
+/// # Safety
+/// `file` is the save's C++ `FSFile*`, open for reading.
+int32_t ee_astar_cm_load_regions(void *file);
+
+/// `EEContinentRegionsPending`: a loaded block waits.
+bool ee_astar_cm_regions_pending();
+
 /// `EEAIArea::UpdateHull()` for the C++.
 ///
 /// # Safety
@@ -2382,6 +2390,13 @@ uint16_t ee_astar_cm_adjacent_area_id(const EeAStarCmRecord *r,
                                       long y,
                                       int32_t area_kind);
 
+/// `EERestoreContinentRegions`: the regions of the save being loaded put back (its block taken: `cm_file.rs`); false
+/// without one.
+///
+/// # Safety
+/// `r` is the manager's live record.
+bool ee_astar_cm_restore_loaded(EeAStarCmRecord *r);
+
 /// `EERestoreContinentRegions` after its block was taken: false when the block could not be read (the regions are
 /// built again).
 ///
@@ -2413,6 +2428,17 @@ uint16_t ee_astar_cm_footprint_continent(uint64_t unit, long kind);
 /// (`EEGetLandContinentOf`, with the original's trace) when 0 (EEAIContinentManager.cpp)
 extern uint32_t ee_astar_cm_unit_host(int32_t what,
                                       uint64_t unit);
+
+/// `EEAIForest::RegrowTrees`: when the tile is in the forest, `count` trees (unit type 0x147) at random forest
+/// tiles within `radius` of it (11 tries each, else the tile), flagged as regrowing -> whether it is in the forest.
+///
+/// # Safety
+/// `forest` is a live forest.
+bool ee_astar_forest_regrow(uint64_t forest,
+                            long x,
+                            long y,
+                            long radius,
+                            long count);
 
 /// The adjacent continents and their count; valid until they next change.
 ///
@@ -3108,45 +3134,6 @@ int32_t ee_path_manager_file(EePathManager *p,
                              EePathFileFn f,
                              void *ctx);
 
-/// A request's record written (`EESaveAutoPathRequest`); `path` its `len` tiles.
-///
-/// # Safety
-/// `r` live, `path` readable for `len` tiles; `f` called with `ctx`.
-void ee_path_request_write(const EePathRequestRecord *r,
-                           const int32_t *path,
-                           uint32_t len,
-                           EePathFileFn f,
-                           void *ctx);
-
-/// A request's record read (`EELoadAutoPathRequest`): the file's error, or 0 with the record in `out` and its path
-/// in the list `path` (an [`ee_path_tiles_push`] list).
-///
-/// # Safety
-/// `out` writable, `path` a live list; `f` called with `ctx`.
-int32_t ee_path_request_read(EePathRequestRecord *out,
-                             void *path,
-                             EePathFileFn f,
-                             void *ctx);
-
-/// A request record's (`RequestRecord`, as the host gets it) fields into `out` and its path's length; `path`
-/// receives up to `cap` tiles.
-///
-/// # Safety
-/// `r` a live `RequestRecord` (from a host operation), `out` writable, `path` writable for `cap` tiles.
-uint32_t ee_path_request_record_get(const void *r,
-                                    EePathRequestRecord *out,
-                                    int32_t *path,
-                                    uint32_t cap);
-
-/// A request record's fields and path set from the C++ request (`SaveGraphSearches`).
-///
-/// # Safety
-/// `r` a live `RequestRecord`, `rec` readable, `path` readable for `len` tiles.
-void ee_path_request_record_set(void *r,
-                                const EePathRequestRecord *rec,
-                                const int32_t *path,
-                                uint32_t len);
-
 /// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
 /// the end; `push` appends (x, y).
 ///
@@ -3178,7 +3165,7 @@ const uint8_t *ee_path_saved_bytes(void *bytes,
 /// `lists` a live `EePathSavedLists`.
 void *ee_path_saved_storage(EePathSavedLists *lists);
 
-/// A tile list for [`ee_path_request_read`]: new, its tiles, freed.
+/// A tile list (`EEPathManager::FindPath`'s): new, its tiles, freed.
 void *ee_path_tiles_new();
 
 /// Tile `k` of the list into `out`; false past the end.
@@ -3239,6 +3226,42 @@ void ee_path_find_path(EePathManager *p,
                        uint64_t modifier,
                        void *path,
                        void *visited);
+
+/// The resolve at the loaded game's first tick (`EEAfterLoadLast`'s fix-up): the game's manager's call 19.
+void ee_path_resolve_graph_searches();
+
+/// `EEAfterLoadLast(f)` (EEPathManager.cpp's one statement)
+extern void ee_path_after_load_last(void (*f)());
+
+/// `Reference()`.
+///
+/// # Safety
+/// `h` a live request.
+void ee_path_request_reference(void *h);
+
+/// `Dereference()`.
+///
+/// # Safety
+/// `h` a live request.
+void ee_path_request_dereference(void *h);
+
+/// `mIsDone`.
+///
+/// # Safety
+/// `h` a live request.
+bool ee_path_request_done(const void *h);
+
+/// `mPath.size()`; with `out` non-NULL its tiles (x, y pairs of `long`) up to `cap` into it.
+///
+/// # Safety
+/// `h` a live request; `out` NULL or writable for `cap` pairs.
+uint32_t ee_path_request_tiles(const void *h, long *out, uint32_t cap);
+
+/// `CancelAutoPathRequest` for the C++ (`EEPathManager::CancelAutoPathRequest`).
+///
+/// # Safety
+/// `h` a live request.
+void ee_path_request_cancel(void *h);
 
 /// The C++ view's notes (`EEAIAStarView::Note`): a no-op unless a run is captured on this thread.
 void ee_astar_capture_note(uint8_t kind,

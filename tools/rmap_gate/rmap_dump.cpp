@@ -23,10 +23,10 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/U2DGeometry.h"
 #include "lle/FSFileSpec.h"
-#include "ee/EERandomMap.h"
+#include "rmap_state.h"
 #include "ee/EERandomMapIDs.h"
 #include "rust/sim/rmap.h"
-#include "ee/EERandomMapView.h"
+#include "rmap_view.h"
 
 extern "C" {
 long EERMPIMCreateFlatMap(EERandomMap* ioMap);

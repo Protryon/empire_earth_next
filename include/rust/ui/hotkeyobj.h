@@ -86,14 +86,6 @@ unsigned long ee_ui_hotkey_count();
 /// `UIHotKey::GetHotKey(i)`: its record (NULL for an unused record).
 EeUiHotKeyFields *ee_ui_hotkey_at(unsigned long i);
 
-extern void ee_uicpp_file_open(void *file);
-
-extern long ee_uicpp_file_read_count(void *file, unsigned long *count);
-
-extern long ee_uicpp_file_read(void *file, uint8_t *data, unsigned long length);
-
-extern void ee_uicpp_file_close(void *file);
-
 }  // extern "C"
 
 #endif  // EE_RUST_UI_HOTKEYOBJ_H

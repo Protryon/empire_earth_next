@@ -192,8 +192,6 @@ double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 int64_t EEPickerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f) { return EEPickOps::Op(inOp, p, a, f); }
 double EEPickerOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f) { return EEPickOps::OpF(inOp, p, a, f); }
 
-static_assert(offsetof(GERFogAttributes, mScale) == offsetof(GERFogAttributes, mType) + sizeof(long) + 12, "picker.rs FogAttributes");
-
 #define PK_P64(x) ((int64_t)(intptr_t)(x))
 #define PK ((EEUnitPicker*)p)
 #define PK_UN ((EEUnit*)p)

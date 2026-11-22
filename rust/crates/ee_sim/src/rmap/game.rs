@@ -13,7 +13,7 @@ use crate::rmap::map::{Feature, Object, Rect};
 use crate::rmap::math::{floor, floor_unsigned, lrintf, um_cos, um_sin, Point};
 use ee_base::random::URandom;
 use ee_base::util::EeUtilFractal;
-use std::ffi::{c_ulong, c_void};
+use std::ffi::c_void;
 
 /// `kRMMinimumPlayerDistance`: the least distance between two players' starts.
 const MINIMUM_PLAYER_DISTANCE: f32 = 6.0;
@@ -149,8 +149,8 @@ pub struct EeRmapGameForest {
 pub struct EeRmapGameState {
     pub grid_n: u32,
     pub heights: *const *mut f32,
-    /// `mTiles`: `unsigned long` cells (the values fit 32 bits).
-    pub tiles: *const *mut c_ulong,
+    /// `mTiles`: 32-bit cells (the generator writes `uint32_t`s).
+    pub tiles: *const *mut u32,
     pub claimed_tiles: *const *mut u8,
     pub valid_tiles: *const *mut u8,
     /// `mGridSize` (the grids hold one more row and column).
@@ -416,7 +416,7 @@ impl GameHost for EeRmapGameHost {
 /// The state for one pass: the grids, the lists and the two random streams.
 pub struct Game<'a> {
     pub heights: Rows<'a, f32>,
-    pub tiles: Rows<'a, c_ulong>,
+    pub tiles: Rows<'a, u32>,
     pub claimed_tiles: Rows<'a, u8>,
     pub valid_tiles: Rows<'a, u8>,
     pub s: &'a EeRmapGameState,
@@ -478,15 +478,13 @@ impl<'a> Game<'a> {
         self.s.is_space_map != 0
     }
 
-    /// A `mTiles` cell (32 bits on every target: the generator writes `uint32_t`s).
-    #[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
+    /// A `mTiles` cell.
     fn tile_value(&self, x: u32, y: u32) -> u32 {
-        self.tiles.get(x, y) as u32
+        self.tiles.get(x, y)
     }
 
-    #[allow(clippy::unnecessary_cast)]
     fn set_tile_value(&self, x: u32, y: u32, value: u32) {
-        self.tiles.set(x, y, value as c_ulong);
+        self.tiles.set(x, y, value);
     }
 
     /// `EERMIsTileFree`: no land value.

@@ -29,6 +29,10 @@ macro_rules! host {
                 if let Some(r) = unsafe { crate::screens::editor_direct::seet($cond, op, p, i, f) } {
                     return r;
                 }
+                // the statement sequences composed in Rust (editor_trigx.rs)
+                if let Some(r) = crate::screens::editor_trigx_ffi::seet($cond, op, p, i, f) {
+                    return r;
+                }
                 let p = p.map(|x| x as *mut c_void);
                 unsafe { sys::$f(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
             }

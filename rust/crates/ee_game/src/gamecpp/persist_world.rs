@@ -15,6 +15,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 use std::ptr::addr_of_mut;
 
 use ee_base::math::types::GeTransformation;
+use ee_sim::ai::next_game::schedule;
 use ee_sim::app::active_ffi::{ee_app_active_list, ee_app_active_set, ee_app_active_set_list};
 use ee_sim::combat::regions::{ee_combat_regions_order, ee_combat_regions_restore, EeCombatUnitRegions};
 use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
@@ -456,22 +457,12 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
             0
         }
         EE_UNITS_WORLD_FOREST_SIZE => h(O::PwForestSize, u, &[]),
+        // the computer players' schedule is ee_sim's (AI round 8: ee_sim::ai next_schedule.rs)
         EE_UNITS_WORLD_AI_SCHEDULE => {
-            // SAFETY: the computer players' schedule's members
-            unsafe {
-                io.a = *(hp(O::PwAiNextPlayer, 0, &[]) as *const c_ulong) as i64;
-                io.b = *(hp(O::PwAiNextUpdateTime, 0, &[]) as *const c_ulong) as i64;
-            }
-            h(O::PwAiPlayerCount, 0, &[])
+            // SAFETY: io's two members are writable
+            unsafe { schedule::ee_ai_schedule_get(&mut io.a, &mut io.b) }
         }
-        EE_UNITS_WORLD_AI_SET_SCHEDULE => {
-            // SAFETY: as above
-            unsafe {
-                *(hp(O::PwAiNextPlayer, 0, &[]) as *mut c_ulong) = io.a as c_ulong;
-                *(hp(O::PwAiNextUpdateTime, 0, &[]) as *mut c_ulong) = io.b as c_ulong;
-            }
-            0
-        }
+        EE_UNITS_WORLD_AI_SET_SCHEDULE => schedule::ee_ai_schedule_set(io.a, io.b),
         EE_UNITS_WORLD_TILE_COUNT => {
             let map = hp(O::PwMap, 0, &[]);
             if map != 0 {
