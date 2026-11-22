@@ -546,6 +546,63 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
+/// `mCommand ? mCommand->mType : 0`
+constexpr static const int32_t EE_UNITS_AI_H_COMMAND_TYPE = 4000;
+
+/// `mNextTriggerTime`
+constexpr static const int32_t EE_UNITS_AI_H_NEXT_TRIGGER_TIME = 4001;
+
+/// `mGoalState ? mGoalState->mKind : -1`
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_KIND = 4002;
+
+/// `mCommand` as a handle (0: none)
+constexpr static const int32_t EE_UNITS_AI_H_COMMAND = 4003;
+
+/// `mGoalState != NULL`
+constexpr static const int32_t EE_UNITS_AI_H_HAS_GOAL = 4004;
+
+/// `theAction = 0` (the gather test's local)
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION_RESET = 4005;
+
+/// `mGoalState->IsActive(&theAction)`
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTIVE = 4006;
+
+/// `theAction`
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION = 4007;
+
+/// `mUnitClass->EvaluateCondition(unit, b)`
+constexpr static const int32_t EE_UNITS_AI_H_CONDITION = 4008;
+
+/// action `a`'s `mType`
+constexpr static const int32_t EE_UNITS_AI_H_ACTION_TYPE = 4009;
+
+/// `StartAction(b)`
+constexpr static const int32_t EE_UNITS_AI_H_START_ACTION = 4010;
+
+/// `GetUnitClass()->ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_AI_H_ACTION_CHANGED = 4011;
+
+/// `DropFinishedGoals(false)`
+constexpr static const int32_t EE_UNITS_AI_H_DROP_FINISHED_GOALS = 4012;
+
+/// `UpdateCamouflage(b)`
+constexpr static const int32_t EE_UNITS_AI_H_UPDATE_CAMOUFLAGE = 4013;
+
+/// `mCommand = (EEUnitAction*)a`
+constexpr static const int32_t EE_UNITS_AI_H_SET_COMMAND = 4014;
+
+/// `mNextTriggerTime = b`
+constexpr static const int32_t EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME = 4015;
+
+/// `mUnitID`
+constexpr static const int32_t EE_UNITS_AI_H_UNIT_ID = 4016;
+
+/// `mIsCitizen`
+constexpr static const int32_t EE_UNITS_AI_H_IS_CITIZEN = 4017;
+
+/// `gPhysics->mGameTime`
+constexpr static const int32_t EE_UNITS_AI_H_GAME_TIME = 4018;
+
 /// the unit's class's `mWeight`
 constexpr static const int32_t EE_UNITS_ATC_WEIGHT = 1;
 
@@ -15244,49 +15301,6 @@ struct EeUnitsAgIo {
   void *list;
 };
 
-/// What `AIStep` did (the USST words): the path (1 the gather goal restarted its action, 2 no command, 3 an idle
-/// unit waiting, 4 evaluated), the gather's action, the two evaluations' results (`u32::MAX`: not evaluated).
-struct EeUnitsAIStepOut {
-  uint32_t path;
-  uint32_t action;
-  uint32_t first;
-  uint32_t second;
-};
-
-/// What `AIStep` reads of the unit: from its record, or from the members when it has none (a killed unit still
-/// stepped).
-struct EeUnitsAIState {
-  /// `mCommand ? mCommand->mType : 0`
-  int64_t command;
-  /// `mNextTriggerTime`
-  int64_t next_trigger_time;
-  /// `mGoalState ? mGoalState->mKind : -1`
-  int32_t goal_kind;
-};
-
-/// The C++ calls of `AIStep` and the script's decision. `ctx` is the host's (the unit).
-struct EeUnitsAIHost {
-  void *ctx;
-  /// the members `EeUnitsAIState` mirrors
-  void (*members)(void *ctx, EeUnitsAIState *out);
-  /// `mCommand` as a handle (0: none)
-  uint64_t (*command)(void *ctx);
-  /// `!mGoalState->IsActive(&action)`: true and the action when the gather goal is not active
-  bool (*gather_inactive)(void *ctx, uint32_t *out_action);
-  /// the unit class's `EvaluateCondition(unit, trigger)` (the host notes it: USST)
-  int64_t (*condition)(void *ctx, int64_t trigger);
-  /// an action's `mType`
-  uint32_t (*action_type)(void *ctx, uint64_t action);
-  /// `StartAction(action)`, then `GetUnitClass()->ActionChanged(unit)`
-  void (*start_action)(void *ctx, uint32_t action);
-  /// `DropFinishedGoals(false)`
-  void (*drop_finished_goals)(void *ctx);
-  /// `UpdateCamouflage(action_type)`, `mCommand = action`, `GetUnitClass()->ActionChanged(unit)`
-  void (*set_command)(void *ctx, uint64_t action, uint32_t action_type);
-  /// `mNextTriggerTime = value` (the holder's write)
-  void (*set_next_trigger_time)(void *ctx, uint32_t value);
-};
-
 /// The unit's and its model's numbers for its current animation state (`state`).
 struct EeUnitsAnimateIn {
   /// `mIsAnimationPaused`
@@ -16510,15 +16524,13 @@ uint8_t ee_units_ag_reserved(uint64_t group, const float (*point)[3], uint8_t wh
 /// records while it runs, and alone.
 void ee_units_ag_sweep();
 
-/// `EEComplexUnit::AIStep` over the store and the host's calls.
+extern int64_t ee_units_ai_host(int32_t op, void *unit, uint64_t a, int64_t b);
+
+/// `EEComplexUnit::AIStep()` on `unit` (see [`ai_step_noted`]).
 ///
 /// # Safety
-/// `host` points to a valid table whose calls are valid for its `ctx`.
-EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
-                                  uint32_t id,
-                                  uint64_t object,
-                                  uint8_t is_citizen,
-                                  int64_t game_time);
+/// `unit` is a live `EEComplexUnit`, on the simulation thread.
+void ee_units_cu_ai_step(void *unit);
 
 /// `EEUnitClass::Animate`'s decisions (`out` filled).
 ///
