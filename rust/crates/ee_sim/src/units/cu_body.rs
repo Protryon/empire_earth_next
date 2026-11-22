@@ -528,7 +528,7 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
     }
     s(h, EE_UNITS_CU_CLEAR_OWNER, unit);
     s(h, EE_UNITS_CU_UPDATE_JIT, unit);
-    s(h, EE_UNITS_CU_CLEAR_CONTACTS, unit);
+    crate::units::cu_world::clear_contacts(h, unit);
     s(h, EE_UNITS_CU_KILL_CARGO, unit);
     s(h, EE_UNITS_CU_CLEAR_GARRISON, unit);
     if s(h, EE_UNITS_CU_HOLDER, unit) != 0 {
@@ -539,7 +539,7 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
         }
         s(h, EE_UNITS_CU_CLEAR_HOLDER_FIELD, unit);
     } else {
-        s(h, EE_UNITS_CU_RELEASE_HELD_UNITS, unit);
+        crate::units::cu_world::release_held_units(h, unit);
     }
     s(h, EE_UNITS_CU_CANCEL_PATHS, unit);
     s(h, EE_UNITS_CU_DROP_PATH, unit);
@@ -577,8 +577,8 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
         s(h, EE_UNITS_CU_CONTAINER_RELEASE, unit);
     }
     s(h, EE_UNITS_CU_CLEAR_GATHERED, unit);
-    s(h, EE_UNITS_CU_CLEAR_BLOCKING, unit);
-    s(h, EE_UNITS_CU_CLEAR_LAST_RESOURCE, unit);
+    crate::units::cu_world::set_blocking_unit(h, unit, 0);
+    crate::units::cu_world::set_last_resource(h, unit, 0);
     if !keep_research {
         s(h, EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION, unit);
     }
@@ -664,14 +664,14 @@ pub fn invalidate<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
     release_set(h, unit, EE_UNITS_CU_MINE, EE_UNITS_CU_CLEAR_MINE);
     release(h, unit, EE_UNITS_CU_OWNER, EE_UNITS_CU_CLEAR_OWNER);
     release(h, unit, EE_UNITS_CU_LAST_ATTACKER, EE_UNITS_CU_CLEAR_LAST_ATTACKER);
-    s(h, EE_UNITS_CU_CLEAR_CONTACTS, unit);
+    crate::units::cu_world::clear_contacts(h, unit);
     s(h, EE_UNITS_CU_CLEAR_ACTIVE_GOAL, unit);
     s(h, EE_UNITS_CU_CLEAR_GOAL_STATE, unit);
     if s(h, EE_UNITS_CU_HOLDER, unit) != 0 {
         s(h, EE_UNITS_CU_HOLDER_RELEASE, unit);
         s(h, EE_UNITS_CU_CLEAR_HOLDER, unit);
     } else {
-        s(h, EE_UNITS_CU_RELEASE_HELD_UNITS, unit);
+        crate::units::cu_world::release_held_units(h, unit);
     }
     s(h, EE_UNITS_CU_IGNORED_CLEAR, unit);
     if s(h, EE_UNITS_CU_SOUND, unit) != 0 {
@@ -1016,13 +1016,17 @@ pub fn run<H: crate::units::cu_cargo::CuCargoHost + ?Sized>(
         EE_UNITS_CU_DO_SET_ANIMATION => set_animation(h, unit, a, b, c != 0),
         EE_UNITS_CU_DO_PAY_INSURANCE => pay_insurance(h, unit, float(a)),
         EE_UNITS_CU_DO_FIND_CONTACTS => find_contacts(h, unit),
-        _ => return crate::units::cu_cargo::run(h, what, unit, a, b, c).unwrap_or(0),
+        _ => {
+            return crate::units::cu_cargo::run(h, what, unit, a, b, c)
+                .or_else(|| crate::units::cu_life::run(h, what, unit, a, b, c))
+                .unwrap_or(0)
+        }
     }
     0
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
@@ -1030,7 +1034,8 @@ mod game {
         fn ee_units_cu_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64, f: *mut [f32; 4]) -> i64;
     }
 
-    struct Game;
+    /// the game's host (the other cu_* modules' extern functions use it too)
+    pub(crate) struct Game;
 
     impl crate::units::cu_cargo::CuCargoHost for Game {
         fn find_placement(&mut self, p: &crate::units::cu_cargo::Placement, m: &mut [[f32; 4]; 4]) -> bool {

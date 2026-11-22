@@ -37595,3 +37595,50 @@ origin/rust is round 5 alone):
   alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 3080, joiner 3086). Before the batch 14
   merge it passed as well (PT 12731, units [4, 39, 40]).
 - Not run: the POSIX builds, `gates.sh --legacy`.
+## The units' lane, round 7: the EEUnitClass family, EEComplexUnit's and EEUnit's remaining bodies, the doppelgangers, the ghosts and the unit utilities in Rust over one-statement hosts (ee_sim units uc_create.rs, uc_anim.rs, uc_media.rs, ucb_release.rs, ucs_shots.rs, ucp_people.rs, ucg_ground.rs, ucx_transports.rs, cu_life.rs, cu_world.rs, cu_dump.rs, dop_*.rs, eu_hit.rs, eu_body.rs, ghost_*.rs, dm_body.rs, uu_body.rs, uu_cloak.rs, uu_gather_tree.rs; branch rust-units7, 2026-11-21)
+
+Numbers: docs/progress/units.md ("Round 7"). C++ logic lines (logic_lines.py, rust-world1 -> the tip, i.e. the
+units' work alone on top of the world lane's round 1) 65,109 -> 60,486 (-4,623); lines -2,737; the target was
+-3,000.
+
+- **Three forks in three worktrees, one heavy-job lock.** The lane split by host file (A: EEUnitClass*.cpp; B:
+  EEComplexUnit, the doppelgangers, the ghosts, EEUnit; C: the unit utilities, cloaking, EEPhysics); each fork
+  built, tested and ran the oracle in its own worktree, and a mkdir lock (`build/u7/heavy.py`) let only one heavy job
+  run at a time. The three branches merged without a conflict (each new Rust module and host was one fork's; the
+  shared mod.rs and header_consts.rs edits did not overlap). A lock left by a fork that stopped mid-run (the usage
+  limit) has to be removed by hand: check that no process of it is left first.
+- **Two lanes moved EEPhysics.** Fork C moved its bodies over a units host while the world lane's round 1 moved the
+  class wholly (`ee_physcpp`, ee_game physics.rs). World's won: fork C's phys_body.rs and `ee_units_ph_host` were
+  dropped in the merge (nothing else called them), and the round's score is measured from rust-world1 so the dropped
+  part is not counted. The Physics Thread directory is not the units lane's any more.
+- **A 4-character capture tag is `EE_COMBAT_TAG`'s order: the first letter in the low byte.** Fork A wrote LaunchShot's
+  CBLS/CBLT as `u32::from_be_bytes(*b"CBLS")`; the oracle and every fork gate passed (captures do not run per fork),
+  and six capture profiles failed with `CBLS` missing and an unknown `SLBC` of the same count. `from_le_bytes` fixes
+  it; a test pins both values. Run at least the oracle capture profile per fork when a body records a capture.
+- **A host list kept as a static is not a fresh local.** The uu searches (`units_on`, `player_units_of_type`) append to
+  the list they are handed; two of fork C's oracle runs crashed until each body cleared the host's list where the
+  original declared a new one, and copied it into Rust before its next call.
+- **State that outlives a statement**: the doppelganger load's live state is now a Rust allocation handed to
+  EEAfterLoad through a shared_ptr with a Rust deleter and applied at the first tick (saveloads identical);
+  UpdateFanaticismColor's function statics and ReportStatistics' clock state are Rust statics; host file statics
+  stand for locals the statements share (SwapGraphic's arrays, StepAside's tiles, the launch chain), each reset where
+  the original declared it.
+- **Call-site edits outside the lane**: none (the world merge only took world's EEPhysics.cpp).
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Only a drawn game reaches the class
+  media and buttons, Animate's sounds, UnitDied's effect and sound, the launch effects, ripples and trails, the
+  temple's effects, the conversion indicator, EEPlayUnitEffect, the placement ghosts (ghost_body.rs, ghost_make.rs),
+  TakeHit's and Kill's minimap, ping, effect and sound statements, the adaptation chat line, the JIT notice and
+  OutOfSynchDump/Describe: the tours exercise most of them.
+- **Gates**: Gates on the final tree (72451b917: the forks, rust-world1 7f68eb2bc and the CBLS/CBLT fix; origin/rust 439543b4b is
+  contained): both builds 0/0 (EE-AOC 413 inputs, EE-SIM 414) and the test profile 0/0; the Rust gate PASS (5,619
+  tests, no flake this time); the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines; before and after
+  the fix); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175,
+  transport 185 on the fixed build; effects 6, missile 22, app 26, scenario 43, groups 2, placement 4 on the merged
+  build, which the tag fix does not reach); the plain saveload 18/18 identical (exit 0); the matrix `--settings all
+  --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check
+  27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; through
+  slot.py on the main checkout's tree, the tour `--exercise random-game --box-select --orders --seed 7` RESULT PASS
+  (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour;
+  ai-game time-cap PT 12471, units [4, 38, 39], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`;
+  lan-game PT 2718/2718). The saveloads, scenario_check, the editor gates and eedata ran on the merged build before
+  the tag fix (it changes only a TEST ONLY capture record's tag).

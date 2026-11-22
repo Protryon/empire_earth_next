@@ -148,7 +148,8 @@ fn invalidate_releases_every_reference() {
     assert_eq!(h.count(EE_UNITS_CU_CLEAR_NEXT_PART), 1);
     assert_eq!(h.count(EE_UNITS_CU_CLEAR_MINE), 0);
     assert_eq!(h.count(EE_UNITS_CU_CLEAR_OWNER), 2);
-    assert_eq!(h.count(EE_UNITS_CU_RELEASE_HELD_UNITS), 1);
+    // the held units released by cu_world.rs (no held unit here: the list cleared)
+    assert_eq!(h.count(crate::units::cu_world::EE_UNITS_CU_HELD_CLEAR), 1);
     assert_eq!(h.count(EE_UNITS_CU_UNLOAD_BUTTONS), 0, "an unbuilt building keeps its buttons");
     assert_eq!(h.ops().last(), Some(&EE_UNITS_CU_CLEAR_FOUNDATION));
 }

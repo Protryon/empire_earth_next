@@ -160,6 +160,10 @@ static const float kUUFacingStep = 0.2617994f;   // 0x449bb4 (pi/12)
 static uint64_t UUHandle(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
 static EEUnit* UUUnit(uint64_t inUnit) { return (EEUnit*)(uintptr_t)inUnit; }
 static EETile* UUTile(uint64_t inTile) { return (EETile*)(uintptr_t)inTile; }
+// a float's bits and back (uu_body.rs passes floats as their bits)
+static int64_t UbBits(float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return (int64_t)theBits; }
+static float UbFloat(int64_t inBits) { uint32_t theBits = (uint32_t)inBits; float theValue; memcpy(&theValue, &theBits, 4); return theValue; }
+template <class T> static T* UbObj(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 // the first inCapacity tiles of a list into outTiles; their number
 static uint32_t UUPairs(const std::vector<U2DPoint<long> >& inTiles, int32_t (*outTiles)[2], uint32_t inCapacity)
 {
@@ -170,25 +174,7 @@ static uint32_t UUPairs(const std::vector<U2DPoint<long> >& inTiles, int32_t (*o
     return (uint32_t)inTiles.size();
 }
 
-// TEST ONLY: the unit utilities' record (UUTL) is Rust's (ee_units uu_note.rs): every noted entry point notes its
-// call there; the bodies still here note theirs through this wrapper (the same thread depth and record)
-class EEUUNote {
-public:
-    explicit EEUUNote(uint32_t inKind) : mOn(ee_units_uu_note_begin(inKind) != 0) {}
-    ~EEUUNote() { ee_units_uu_note_end(); }
-    EEUUNote& I(long inValue) { if (this->mOn) ee_units_uu_note_word((uint32_t)inValue); return *this; }
-    EEUUNote& F(float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return this->I((long)theBits); }
-    EEUUNote& U(const EEUnit* inUnit) { return this->I(inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2); }
-    EEUUNote& P(const GE3DPoint& inPoint) { return this->F(inPoint.mX).F(inPoint.mY).F(inPoint.mZ); }
-    EEUUNote& C(EEUnitClass* inClass) { return this->I(inClass != NULL ? (long)inClass->mUnitType : -2); }
-    EEUUNote& M(const GETransformation& inTransformation)
-    {
-        for (int i = 0; i < 16; i++)
-            this->F((&inTransformation.mMatrix[0][0])[i]);
-        return *this;
-    }
-    bool mOn;
-};
+// TEST ONLY: the unit utilities' record (UUTL) is Rust's (ee_units uu_note.rs); the host's writes note their events
 static long UUId(const EEUnit* inUnit) { return inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2; }
 static void UUEvent(long inA, long inB = 0, long inC = 0) { ee_units_uu_note_event((int32_t)inA, (int32_t)inB, (int32_t)inC); }
 // the record's world: whether the capture runs (0), the physics' ticks (1), a UUTL record written (2)
@@ -266,26 +252,14 @@ bool EEFOLocationScreenEnsureContinentAndPathOverlay::Screen(const U2DPoint<long
 
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
 {
-    if (inTarget->mIsBuilt && inTarget->GetHitPoints() == inTarget->mStats->mMaxHitPoints) {
-        inUnit->SetGoal(EEUGRust::NewGather(inTarget, NULL, false), 0, 0);
-        inUnit->StartAction(kActionMoveToResource);
-    } else {
-        inUnit->SetGoal(EEUGRust::NewBuildRepair(inTarget->GetPlayer(), inTarget, false), 0, 0);
-        inUnit->StartAction(kActionMoveToRepairSite);
-    }
-    inUnit->GetUnitClass()->ActionChanged(inUnit);
+    ee_units_ub_body(EE_UNITS_UB_DO_WORK_FARM, UUHandle(inTarget), UUHandle(inUnit), 0, 0, 0);   // uu_body.rs
 }
 
 
 // Shows the wall ghosts for a wall line of a technology and player
 void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer)
 {
-    EEPlayer* thePlayer = ::gWorld.mPlayers[inPlayer];
-    std::vector<long> theCorners;
-    ee_units_uu_drop_tiles(1, &inTiles);
-    ee_units_uu_drop_tiles(0, &inTiles);
-    EEPickWallPieces(inTiles, theCorners, ::gWorld.mMap);
-    EEBuildWallGhosts(inTiles, theCorners, inTechnology, thePlayer, 0.0f);
+    ee_units_ub_body(EE_UNITS_UB_DO_PREVIEW_WALL, UUHandle(&inTiles), 0, inTechnology, inPlayer, 0);   // uu_body.rs
 }
 
 
@@ -294,22 +268,7 @@ void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, lo
 // Returns the foundation model a player uses for a building class of its size
 EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass)
 {
-    if (inClass->mUnitType == kUnitTypeRoboticFarm)
-        return gUnitClassTable[kUnitTypeSpaceFallowFarm]->mModel;
-    if (inClass->mUnitType != kUnitTypeAirport) {
-        switch (inClass->mTileSize) {
-        case 1:
-            return inPlayer->mUnitClassUpgrades[0x136]->mModel;
-        case 2:
-            return inPlayer->mUnitClassUpgrades[0x132]->mModel;
-        case 3:
-        case 4:
-            return inPlayer->mUnitClassUpgrades[0x133]->mModel;
-        default:
-            return inPlayer->mUnitClassUpgrades[kUnitTypeFoundation6x6]->mModel;
-        }
-    }
-    return inPlayer->mUnitClassUpgrades[kUnitTypeFoundationAirport]->mModel;
+    return (EEModel*)(uintptr_t)ee_units_ub_body(EE_UNITS_UB_DO_PLAYER_CLASS_GRAPHIC, UUHandle(inPlayer), UUHandle(inClass), 0, 0, 0);
 }
 
 // Computes the launch pitch for a shot at its speed under gravity (low or high arc); false (45 degrees) when
@@ -340,59 +299,14 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 // its attack action (0x7dd) over
 void EERetargetAttack(EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEComplexUnit* inTarget)
 {
-    EEComplexUnit* theOld = static_cast<EEUGRust*>(inGoal)->GetAttackTarget()->mComplexUnit;
-    if (inTarget != theOld)
-        inGoal->ReplaceUnit(theOld, inTarget, NULL);
-    inUnit->mCollisionResolutionCount = 0.0f;
-    inUnit->SetBlockingUnit(NULL);
-    if (inUnit->mCollisionState != 0)
-        inUnit->mCollisionState = 0;
-    inUnit->DropPath();
-    inUnit->StartAction(kActionCheckRange);
-    inUnit->mUnitClass->ActionChanged(inUnit);
+    ee_units_ub_body(EE_UNITS_UB_DO_RETARGET_ATTACK, UUHandle(inUnit), UUHandle(inGoal), (int64_t)UUHandle(inTarget), 0, 0);   // uu_body.rs
 }
 
 // Finds a unit a new target near its old one: another piece of a linked (wall/gate) target, else the
 // nearest living enemy within 5 tiles
 void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
-    EETileCoordinate theTile;
-    EEComplexUnit* theLink;
-
-    inUnit->IgnoreTarget(inTarget);
-    if (inTarget->mPreviousPart == NULL && inTarget->mNextPart == NULL) {
-        theTile.mX = inTarget->GetTileX();
-        theTile.mY = inTarget->GetTileY();
-        EEFOFindNewTargetNearOldTarget theScreen(inTarget, 25.0f);
-        if (!EEFindNewTarget(&theScreen, inUnit->GetLoadGoal(), inUnit, &theTile, 2, true, 0))
-            EEDebugTrace(">>> SHAWN %d could not find a target.\n", inTarget->GetUnitClass()->GetName());
-    } else {
-        theLink = inTarget->GetOutermostCarrier()->mNextPart;
-        while (true) {
-            if (!(theLink->mNextPart != NULL))
-                break;
-            if (!theLink->mUnitClass->IsPartLeftOut(theLink) && !inUnit->IsTargetIgnored(theLink, false)) {
-                EERetargetAttack(inUnit, EEAttackUnitCast(inUnit->GetLoadGoal()), theLink);
-                return;
-            }
-            theLink = theLink->mNextPart;
-        }
-        if (inTarget->mUnitClass->GetCategory() == kUnitCategoryGate) {
-            EEComplexUnit* theFirst = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inTarget->mUnitClass)->GetLastLinkedCarrier(
-                theLink->GetOutermostCarrier());
-            EEComplexUnit* theSecond = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inTarget->GetUnitClass())->GetLastLinked(
-                theFirst->GetOutermostCarrier());
-            float theDistance = inUnit->DistanceSquaredTo(theFirst);
-            theLink = theFirst;
-            if (inUnit->DistanceSquaredTo(theSecond) < theDistance)
-                theLink = theSecond;
-        }
-        theTile.mX = theLink->GetTileX();
-        theTile.mY = theLink->GetTileY();
-        EEFOFindNewTargetNearOldTarget theScreen(theLink, 25.0f);
-        if (!EEFindNewTarget(&theScreen, inUnit->GetLoadGoal(), inUnit, &theTile, 1, true, 0))
-            EEDebugTrace(">>> SHAWN %d could not find a target.\n", theLink->GetUnitClass()->GetName());
-    }
+    ee_units_ub_body(EE_UNITS_UB_DO_FIND_NEW_TARGET_NEAR_OLD, UUHandle(inUnit), UUHandle(inTarget), 0, 0, 0);   // uu_body.rs
 }
 
 // Accepts a living unit within the screen's distance of the old target (new: ee_combat's screen)
@@ -442,12 +356,7 @@ void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume,
 // Tells whether a priest can convert the target
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
-    bool theFlag;
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    bool theResult = false;
-    if (inTarget != NULL && theClass->IsPriest())
-        theResult = EECanConvert(inUnit, inTarget, theFlag);
-    return theResult;
+    return ee_units_ub_body(EE_UNITS_UB_DO_CAN_PRIEST_CONVERT, UUHandle(inUnit), UUHandle(inTarget), 0, 0, 0) != 0;
 }
 
 // Tells whether a unit can attack a target from where it is; else finds the first tile of a path to a place
@@ -756,9 +665,7 @@ EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea, long i
 // Returns a target near a unit (along the unit list for anti-air ammunition 0x3c)
 EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
 {
-    if (inUnit->mUnitClass->mAmmoType != 0x3c)
-        return EEFindTargetNear(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), 1.0f);
-    return EESearchTargetAlongList(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), 1.0f);
+    return UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_FIND_NEARBY_TARGET, UUHandle(inUnit), 0, 0, 0, 0));   // uu_body.rs
 }
 
 // Returns the best target for a unit around a tile along the x-sorted unit list, scored by its targeting table
@@ -794,26 +701,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
 // Returns the best target for a unit around a tile when the influence table shows enemies within its reach
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale)
 {
-    U2DRectangle<long> theArea;
-    EEUnit* theResult = NULL;
-    EEInfluenceTable* theTable = ::gWorld.mInfluenceTable;
-    float theRange = inUnit->mStats->GetRange() * inScale;
-    float theReach = inUnit->GetLineOfSight();
-    unsigned long thePlayer = inUnit->mPlayer->GetPlayerID();
-    long theRadius;
-
-    if (theRange > theReach)
-        theRadius = UMCeil(theRange);
-    else
-        theRadius = UMCeil(theReach);
-    theArea.mTop = inY - theRadius;
-    theArea.mBottom = theRadius + inY;
-    theArea.mLeft = inX - theRadius;
-    theArea.mRight = theRadius + inX;
-    if ((inUnit->mStats->GetAttack() != 0.0f || inUnit->mUnitClass->mCategory == kUnitCategoryBuildingPriest)
-        && (inUnit->mUnitClass->mAmmoType == 0x3c || theTable->SumOthersValueOnTiles(thePlayer, theArea) > 0))
-        theResult = EESearchTarget(inUnit, &theArea, inX, inY, inScale);
-    return theResult;
+    return UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_FIND_TARGET_NEAR, UUHandle(inUnit), 0, inX, inY, UbBits(inScale)));   // uu_body.rs
 }
 
 // Sums the other players' influence values on a rectangle of tiles
@@ -852,49 +740,13 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
 // Creates a paid building site (one hit point) of a unit type for a player at a tile
 EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY)
 {
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    EEUnit* theUnit = theClass->CreateUnit(inX, inY, inPlayer->GetPlayerID(), true, NULL);
-    theUnit->SetHitPoints(1);
-    if (theUnit->mTile->GetVisibility(inPlayer->GetPlayerID()) > 0 && theUnit->mTile->GetVisibility(inPlayer->GetPlayerID()) <= 1)
-        gDoppelgangerManager.AddForUnseenUnit(static_cast<EEComplexUnit*>(theUnit));
-    if (inUnitType == 0x42) {
-        EEComplexUnit* theLink = dynamic_cast<EEComplexUnit*>(theUnit);
-        while ((theLink = theLink->mNextPart) != NULL)
-            theLink->SetHitPoints(1);
-    }
-    EETechnology* theTechnology = inPlayer->GetTechTree()->Get(theClass->GetTechnology());
-    unsigned long theType = theUnit->mUnitClass->mUnitType;
-    if (theType != kUnitTypeFarm && theType != kUnitTypeRoboticFarm) {
-        inPlayer->Pay(theTechnology, 0x20, 1.0f);
-        if (theUnit->mTileNode != NULL && theUnit->mComplexUnit->mIsPaidFor != true)
-            theUnit->mComplexUnit->mIsPaidFor = true;
-    }
-    inPlayer->AddPendingUnits(false, true);
-    ::gWorld.FlushQueuedPlacements();
-    theType = theUnit->mUnitClass->mUnitType;
-    if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary)
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReplantFarms, {theUnit->mUnitID}), kSlotNone);
-    return theUnit;
+    return UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_MAKE_BUILDING, UUHandle(inPlayer), 0, inUnitType, inX, inY));   // uu_body.rs
 }
 
 // Replaces a queued technology on every living unit of a player whose class makes it
 void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology)
 {
-    std::vector<EEUnit*> theUnits;
-    long theID = inClass->mTechnology;
-    EETechnology* theTechnology = inPlayer->mTechnologies->Get(theID);
-    unsigned long i;
-    if (theTechnology == NULL)
-        return;
-    for (i = 0; i < theTechnology->GetNumUnitClasses(); i++) {
-        long theClass = theTechnology->GetUnitClass(i);
-        if (!(ee_units_uu_player_units_of_type(theClass, inPlayer->GetPlayerID(), &theUnits) > 0))
-            continue;
-        for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
-            if ((*it)->mComplexUnit->mHitPoints > 0)
-                (*it)->mComplexUnit->ReplaceResearch(theID, inNewTechnology);
-        }
-    }
+    ee_units_ub_body(EE_UNITS_UB_DO_REPLACE_QUEUED_TECHNOLOGY, UUHandle(inPlayer), UUHandle(inClass), inNewTechnology, 0, 0);
 }
 
 // Replaces a unit with a new one of another class (pack/unpack): hit points in proportion, goals, groups
@@ -903,60 +755,13 @@ void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long in
 // and effects moved over
 EEComplexUnit* EEReplaceUnit(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass)
 {
-    EEUUNote theNote(85); theNote.U(inUnit).I((long)inPlayer).C(inClass);   // TEST ONLY (UUTL)
-    EEComplexUnit* theNew = EEMakeUnitCopy(inUnit, inPlayer, inClass)->mComplexUnit;
-    float theFraction = (float)inUnit->mHitPoints / (float)inUnit->mStats->mMaxHitPoints;
-    long theHitPoints;
-    if (UMFloatToLong((float)theNew->mStats->mMaxHitPoints * theFraction) > 1)
-        theHitPoints = UMFloatToLong((float)theNew->mStats->mMaxHitPoints * theFraction);
-    else
-        theHitPoints = 1;
-    theNew->SetHitPoints(theHitPoints);
-    EEComplexUnit* theOld = inUnit->mComplexUnit;
-    gPhysics->QueueUnitSwap(theOld, theNew);
-    if (theOld->mPreviousPart == NULL)
-        inUnit->mUnitClass->GateReplaced(inUnit, theNew);
-    if (theOld->GetPlayer() == theNew->GetPlayer()) {
-        for (long i = 0; i < 20; i++) {
-            EEGroup* theGroup = theNew->GetPlayer()->mGroups[i];
-            if (theGroup == NULL)
-                continue;
-            for (unsigned long j = 0; j < theGroup->GetNumUnits(); j++) {
-                if (theGroup->GetUnit(j) == theOld) {
-                    theGroup->Add(theNew);
-                    break;
-                }
-            }
-        }
-    }
-    inUnit->Kill(false, true, false);
-    theNew->DropUnsuitedGoals(0);
-    if (inUnit->mUnitClass->mDamageEffect != NULL && theNew->mUnitClass->mDamageEffect != NULL && theOld != NULL
-        && theOld->mIsBuilt && inUnit->mUnitClass->mDamageEffect->mParam2 > theFraction)
-        ::gWorld.mEffectManager->CreateUnitEffect(theNew, theNew->mUnitClass->mDamageEffect, NULL, 0, 0, 0);
-    if (theNew->mUnitClass->mUnitType == kUnitTypeWallSpace && !theNew->IsFoundation() && theNew->GetPlayer()->mTechnologies->Get(kTechWallSpace)->GetIsAvailable())
-        EECreateSpaceWallEnergyWall(theNew);
-    else if (theNew->mUnitClass->mCategory == kUnitCategoryGate && theNew->mPreviousPart == NULL && theNew->mNextPart != NULL
-        && theNew->GetPlayer()->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && theNew->mUnitClass->mUnitType != kUnitTypeGatePalisades)
-        EECreateSpaceGateEnergyWall(theNew);
-    theNote.U(theNew).I(theNew->mHitPoints);   // TEST ONLY (UUTL)
-    return theNew;
+    return static_cast<EEComplexUnit*>(UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_REPLACE_UNIT, UUHandle(inUnit), UUHandle(inClass), (int64_t)inPlayer, 0, 0)));
 }
 
 // Creates a copy of a unit (or a new class) for a player on its tile, in its state
 EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass)
 {
-    if (inClass == NULL)
-        inClass = inUnit->mUnitClass;
-    long theY = inUnit->GetTileY();
-    long theX = inUnit->GetTileX();
-    EEUnit* theUnit = inClass->CreateUnit(theX, theY, inPlayer, inUnit->IsFoundation(), NULL);
-    theUnit->CopyFrom(inUnit);
-    if (theUnit->mTileNode != NULL && theUnit->mUnitClass->IsLandBuilding() && theUnit->mComplexUnit->mIsBuilt) {
-        theUnit->mComplexUnit->SetBuilt(0, 0, 1);
-        theUnit->mComplexUnit->SetBuilt(1, 0, 1);
-    }
-    return theUnit;
+    return UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_MAKE_UNIT_COPY, UUHandle(inUnit), UUHandle(inClass), (int64_t)inPlayer, 0, 0));   // uu_body.rs
 }
 
 
@@ -1118,28 +923,13 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
 // Runs a functor over the units of every player but nature
 void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor)
 {
-    for (unsigned long i = 1; i < ::gWorld.mNumPlayers; i++)
-        EEForEachUnitOf(::gWorld.mPlayers[i], inFunctor, false);
+    ee_units_ub_body(EE_UNITS_UB_DO_FOR_EACH_PLAYERS_UNIT, UUHandle(inFunctor), 0, 0, 0, 0);   // uu_body.rs
 }
 
 // Runs a functor over a player's units (and its pending units when asked)
 void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCalamities)
 {
-    if (inPlayer == NULL)
-        return;
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        inFunctor->ApplyToUnit(theUnit);
-        if (theUnit->mComplexUnit != NULL)
-            inFunctor->Apply(theUnit->mComplexUnit);
-    }
-    if (inCalamities != true)
-        return;
-    for (unsigned long i = 0; i < inPlayer->GetNumPendingUnits(); i++) {
-        inFunctor->ApplyToUnit(inPlayer->GetPendingUnit(i));
-        EEComplexUnit* theUnit = static_cast<EEUnit*>(inPlayer->GetPendingUnit(i))->mComplexUnit;
-        if (theUnit != NULL)
-            inFunctor->Apply(theUnit);
-    }
+    ee_units_ub_body(EE_UNITS_UB_DO_FOR_EACH_UNIT_OF, UUHandle(inPlayer), UUHandle(inFunctor), inCalamities, 0, 0);   // uu_body.rs
 }
 
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
@@ -1193,28 +983,7 @@ bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
 // Returns a unit around the given one whose gather goal works on it (searched in a random rotation)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnit*> theUnits;
-    EEComplexUnit* theResult = NULL;
-    if (!UShutdownInProgress()) {
-        ee_units_uu_unit_tiles(1, UUHandle(inUnit), &theTiles);
-        ee_units_uu_units_on(0, &theTiles, &theUnits);
-        float theRandom = gPhysics->mRandom.Generate();
-        PermuteValues(theUnits, UMFloatToLong(theRandom));
-        for (unsigned long i = 0; i < theUnits.size() && theResult == NULL; i++) {
-            EEComplexUnit* theUnit = theUnits[i]->mComplexUnit;
-            if (theUnit == NULL)
-                continue;
-            long theCommand;
-            theCommand = theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0;
-            if (theCommand != kActionWaitForOpenPosition || theUnit->mGoalState == NULL || theUnit->mGoalState->mKind != kGoalGather)
-                continue;
-            EEUGRust* theGoal = EEGatherGoalCast(theUnit->mGoalState);
-            if (theGoal != NULL && theGoal->GetGatherResource() == inUnit)
-                theResult = theUnit;
-        }
-    }
-    return theResult;
+    return static_cast<EEComplexUnit*>(UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_WAITING_GATHERER, UUHandle(inUnit), 0, 0, 0, 0)));
 }
 
 // Returns the tile of a unit's footprint nearest to a tile's centre and that squared distance
@@ -1255,23 +1024,7 @@ bool EEIsInGatherReach(float inDistanceSquared, EEComplexUnit* inUnit, EEUnit* i
 // Tells whether a unit can hit a target from its attach point (a clear line to the drop location)
 bool EECanBallisticHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
-    GE3DPoint theDrop;
-    GE3DPoint theTag;
-    EEUnit* theTarget;
-    long theB;
-    long theC;
-    float theAngle;
-    bool theResult;
-
-    EEApproachAttachPoint(inUnit, theTag);
-    theResult = !inUnit->IsOnOtherContinentThan(static_cast<EEComplexUnit*>(inTarget));
-    if (theResult) {
-        theTarget = EECombatFindDropLocation(inUnit, inTarget, theDrop);
-        theResult = EEGetBallisticPitch(inUnit, inUnit->GetStats(), &theTag, &theDrop, &theAngle);
-        if (theResult && !inUnit->mUnitClass->mShootsHigh && !inUnit->GetStats()->mCanFireOverWalls)
-            theResult = !EEIsLineToUnitBlocked(inUnit, inTarget, &theTarget, &theB, &theC);
-    }
-    return theResult;
+    return ee_units_ub_body(EE_UNITS_UB_DO_CAN_BALLISTIC_HIT, UUHandle(inUnit), UUHandle(inTarget), 0, 0, 0) != 0;   // uu_body.rs
 }
 
 // Tells whether a unit touches a target (collision spheres; walls count as radius 1)
@@ -1307,32 +1060,7 @@ long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
 // Returns where a unit casts its calamity from: 90% of the calamity's range from the target
 void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 {
-    EEUUNote theNote(64); theNote.U(inUnit).P(outPoint);   // TEST ONLY (UUTL)
-    GEVector theDirection;
-    GEVector theOffset;
-    GE3DPoint thePosition;
-    GE3DPoint theTarget;
-    EEUGRust* theGoal = EECastCalamityGoalCast(inUnit->GetGoal());
-    theGoal->GetGoalLocation(theTarget);
-    long theType = theGoal->GetCalamityType();
-    EETechTree* theTree = inUnit->mPlayer->mTechnologies;
-    EETechnology* theTechnology = theTree->Get(theType);
-    if (theTechnology == NULL) {
-        theNote.P(outPoint);   // TEST ONLY (UUTL)
-        return;
-    }
-    EECalamityEnum theEnum = (EECalamityEnum)theTechnology->mData->mCalamity;
-    EECalamityClass* theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theEnum);
-    inUnit->GetPosition(thePosition);
-    theDirection.SetX(thePosition.GetX() - theTarget.GetX());
-    theDirection.SetY(thePosition.GetY() - theTarget.GetY());
-    theDirection.SetZ(thePosition.GetZ() - theTarget.GetZ());
-    theDirection.Normalize();
-    theDirection.Scale((float)(unsigned long)theClass->mRange * 0.9f, theOffset);
-    outPoint.SetX(theTarget.GetX() + theOffset.GetX());
-    outPoint.SetY(theTarget.GetY() + theOffset.GetY());
-    outPoint.SetZ(theTarget.GetZ() + theOffset.GetZ());
-    theNote.P(outPoint);   // TEST ONLY (UUTL)
+    ee_units_ub_body(EE_UNITS_UB_DO_HELICOPTER_PRIEST_DESTINATION, UUHandle(inUnit), UUHandle(&outPoint), 0, 0, 0);
 }
 
 // Collects the tiles of a line, walking in from both ends (optionally the end tiles and 4-connected)
@@ -1608,29 +1336,7 @@ long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long i
 // Moves a unit to a transformation, snapping to the closest tile when off the map
 void EEUpdateUnitTile(GETransformation* inTransformation, EEComplexUnit* inUnit, long* outX, long* outY)
 {
-    EEUUNote theNote(81); theNote.M(*inTransformation).U(inUnit);   // TEST ONLY (UUTL)
-    GE3DPoint thePoint;
-    *outX = UMFloor(inTransformation->GetX());
-    *outY = UMFloor(inTransformation->GetY());
-    EETile* theTile = ::gWorld.mMap->GetTile(*outX, *outY);
-    if (theTile != NULL) {
-        inUnit->SetTransformation(*inTransformation, true);
-    } else {
-        thePoint.SetX(inTransformation->GetX());
-        thePoint.SetY(inTransformation->GetY());
-        thePoint.SetZ(inTransformation->GetZ());
-        ::gWorld.mMap->GetClosestTile(&thePoint, outX, outY);
-        inUnit->mPhysicalModel.SetLocation(*inTransformation);
-        inUnit->MoveTo(*outX, *outY, true);
-        if ((long)inUnit->mWaypoints.size() > 0 && (inUnit->mUnitClass->mDomains & kMovementAir) != 0) {
-            GE3DPoint theGoal;
-            inUnit->GetNextWaypointPoint(theGoal);
-            float theHeight = inUnit->mUnitClass->GetHeightAt(inUnit, theGoal);
-            if (theHeight != inUnit->mHeight)
-                inUnit->mHeight = theHeight;
-        }
-    }
-    theNote.I(*outX).I(*outY).M(inUnit->mPhysicalModel.GetLocation());   // TEST ONLY (UUTL)
+    ee_units_ub_body(EE_UNITS_UB_DO_UPDATE_UNIT_TILE, UUHandle(inTransformation), UUHandle(inUnit), (int64_t)UUHandle(outX), (int64_t)UUHandle(outY), 0);
 }
 
 // Builds the text of a civilization upgrade ("category: attribute percent%"); false when a string is missing
@@ -1638,30 +1344,7 @@ void EEUpdateUnitTile(GETransformation* inTransformation, EEComplexUnit* inUnit,
 // Its two function-local static strings' atexit dtors follow it (0x24e7c4 / 0x24e7cf).
 bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText)
 {
-    unsigned long theCategory;
-    unsigned long theIndex;
-    float theValue;
-    float theBonus;
-    long theStringID;
-    bool theResult = false;
-    gCivilizationManager.SplitAttribute(inUpgrade, &theCategory, &theIndex);
-    gCivilizationManager.LookupLevel(inUpgrade, &theValue, &theBonus);
-    if (gCivilizationManager.GetCategoryNameID(theCategory, &theStringID)) {
-        static UWideString sCategory;
-        if (gResource->GetString(theStringID, sCategory) == 0) {
-            static UWideString sAttribute;
-            theStringID = EECivilizationManager::LevelNameID(theIndex);   // civbuilder.yaml attribute names
-            if (gResource->GetString(theStringID, sAttribute) == 0) {
-                if (!EECivilizationManager::IsPowerLevel(theIndex))
-                    sprintf(outText, "%s: %s %ld%%", (const char*)sCategory, (const char*)sAttribute,
-                            (long)(theValue * 100.0f + 0.5f));
-                else
-                    sprintf(outText, "%s", (const char*)sAttribute);
-                theResult = true;
-            }
-        }
-    }
-    return theResult;
+    return ee_units_ub_body(EE_UNITS_UB_DO_UPGRADE_TEXT, 0, UUHandle(&outText), (int64_t)inUpgrade, 0, 0) != 0;   // uu_body.rs
 }
 
 // Converts a unit to another player: a converted priest may hand over a civ power or upgrade, the class
@@ -1671,182 +1354,26 @@ bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText)
 // unit takes over its hit point share, actions and groups; inArg3 counts it in the statistics
 EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConversion)
 {
-    EEUUNote theNote(86); theNote.U(inUnit).I(inPlayer).I(inIsConversion);   // TEST ONLY (UUTL)
-    EEPlayer* thePlayer = ::gWorld.mPlayers[inPlayer];
-    EEComplexUnit* theOld = NULL;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    if ((theClass->mUnitType == kUnitTypeSettlement || theClass->mUnitType == kUnitTypeTownCenter) && gCivPowersManager.HasPower(thePlayer, kCivPowerAdaptation)
-        && inUnit->GetComplexUnit()->mIsBuilt) {
-        bool theGranted = false;
-        UWideString theFormat;
-        UWideString theMessage;
-        UWideString theName;
-        unsigned long theUpgrade = 0;
-        for (unsigned long i = 0x26; i < gCivPowersManager.GetNumPowers() + 0x26; i++) {
-            if (gCivPowersManager.HasPower(inUnit->GetPlayer(), i) && !gCivPowersManager.HasPower(thePlayer, i)) {
-                theUpgrade = gCivilizationManager.MakePowerUpgrade(EECivilizationManager::PowerLevel(i));
-                gCivPowersManager.GetName(i, theName);
-                goto grant;
-            }
-        }
-        {
-            std::vector<EECivUpgrade>& theAll = inUnit->GetPlayer()->mCivilization.GetPurchasedUpgrades();
-            std::vector<EECivUpgrade> theList;
-            std::vector<EECivUpgrade>::iterator it; for (it = theAll.begin(); it != theAll.end(); it++)
-                theList.push_back(*it);
-            EEAIRandomShuffle(theList.begin(), theList.end());
-            it = theList.begin();
-            while (true) {
-                if (it == theList.end())
-                    break;
-                if (!EEHasCivilizationUpgrade(&thePlayer->mCivilization, *it)) {
-                    theUpgrade = *it;
-                    EEFn24E68F(theUpgrade, theName);
-                    theGranted = true;
-                    break;
-                }
-                it++;
-            }
-        }
-        if (theGranted) {
-        grant:
-            EECivilization& theCivilization = thePlayer->mCivilization;
-            long thePoints = theCivilization.GetAvailablePoints();
-            unsigned long theCost;
-            theCivilization.CanAfford(theUpgrade, &theCost, NULL);
-            theCivilization.SetPointsAndMax(theCivilization.GetMaxPoints() + theCost);
-            theCivilization.Buy(theUpgrade, thePlayer->GetPlayerID(), true);
-            theCivilization.SetPoints(thePoints);
-            if (::gWorld.GetCurrentPlayer() == thePlayer) {
-                gResource->GetString(IDS_ACQUIRED_THROUGH_ADAPTATION, theFormat);
-                sprintf(theMessage, theFormat, (const char*)theName);
-                gUserInterface->AddChatLogEntry(inUnit->GetPlayer()->mColor, inUnit->GetPlayer()->mName, theMessage,
-                                                gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-            }
-        }
-        if (theClass->mUnitType == kUnitTypeTownCenter)
-            theClass = gUnitClassTable[kUnitTypeSettlement];
-    }
-    if (!gCivPowersManager.HasPower(thePlayer, kCivPowerFlamingArrows)) {
-        long theType = theClass->mUnitType;
-        if (theType == kUnitTypeArch03SimpleBowmanFlaming || theType == kUnitTypeArch05CompositeBowFlaming || theType == kUnitTypeArch06LongBowFlaming) {
-            switch (theType) {
-            case kUnitTypeArch03SimpleBowmanFlaming: theClass = gUnitClassTable[kUnitTypeArch03SimpleBowman]; break;
-            case kUnitTypeArch05CompositeBowFlaming: theClass = gUnitClassTable[kUnitTypeArch05CompositeBow]; break;
-            case kUnitTypeArch06LongBowFlaming: theClass = gUnitClassTable[kUnitTypeArch06LongBow]; break;
-            }
-        }
-    }
-    if (!gCivPowersManager.HasPower(thePlayer, kCivPowerCrusaders) && theClass->IsCrusader()) {
-        switch (theClass->mUnitType) {
-        case kUnitTypeInf04ShortSwordCrusader: theClass = gUnitClassTable[kUnitTypeInf04ShortSword]; break;
-        case kUnitTypeInf06LongSwordCrusader: theClass = gUnitClassTable[kUnitTypeInf06LongSword]; break;
-        case kUnitTypeCav04BronzeSpearCavalryCrusader: theClass = gUnitClassTable[kUnitTypeCav04BronzeSpearCavalry]; break;
-        case kUnitTypeCav06KnightCrusader: theClass = gUnitClassTable[kUnitTypeCav06Knight]; break;
-        }
-    }
-    if (!gCivPowersManager.HasPower(thePlayer, kCivPowerEmissaries) && theClass->mUnitType == kUnitTypeEmissary)
-        theClass = gUnitClassTable[kUnitTypePriest];
-    float theFraction = (float)inUnit->GetHitPoints() / (float)inUnit->mStats->mMaxHitPoints;
-    inUnit->GetPlayer()->DeselectUnit(inUnit->GetComplexUnit());
-    for (long i = 0; i < 20; i++) {
-        if (inUnit->GetPlayer()->mGroups[i]->Contains(inUnit->GetComplexUnit()))
-            inUnit->GetPlayer()->mGroups[i]->RemoveUnit(inUnit->GetComplexUnit());
-    }
-    thePlayer->SetUnitClassMedia(inUnit->GetUnitClass()->mUnitType, 0x7f);
-    EEUnit* theNewUnit = EEMakeUnitCopy(inUnit, inPlayer, theClass);
-    thePlayer->UnloadUnitClassMedia(inUnit->GetUnitClass()->mUnitType);
-    if (inUnit->GetUnitClass() != theClass && theClass->mUnitType == kUnitTypeSettlement)
-        theNewUnit->GetComplexUnit()->ClearGarrison();
-    EEComplexUnit* theNew = theNewUnit->GetComplexUnit();
-    if (theNew != NULL) {
-        if (theNew->GetUnitClass()->IsLandBuilding() && theNew->mIsBuilt) {
-            if (!theNew->GetUnitClass()->mIsWall || theNew->GetUnitClass()->mIsTower)
-                theNew->StartAction(kActionIdle);
-            if (theNew->GetBuildQueueSize() > 0)
-                theNew->mBuildQueue.clear();
-            if (theClass->mIsWall && theClass->mCategory != kUnitCategoryGate)
-                theNew->SetAnimation(inUnit->GetComplexUnit()->mAnimation, -1, 0);
-            else if (theClass->mCategory == kUnitCategoryGate)
-                theNew->StartAction(inUnit->GetComplexUnit()->mCommand != NULL ? inUnit->GetComplexUnit()->mCommand->mType : 0);
-        } else {
-            if (theClass->mCategory == kUnitCategoryAirplane || theClass->mCategory == kUnitCategoryPlanetSpaceship)
-                theNew->StartAction(kActionCircle);
-            else
-                theNew->StartAction(kActionIdle);
-        }
-        theOld = inUnit->GetComplexUnit();
-        gPhysics->QueueUnitSwap(theOld, theNew);
-        if (theOld->mPreviousPart == NULL)
-            inUnit->GetUnitClass()->GateReplaced(inUnit, theNew);
-        theNew->ClearAllGoalQueues();
-        theNew->mBuildQueue.clear();
-        theNew->ClearBuildTargets();
-        theNew->PlayEffect(100000);
-        if (theNew->mProductionTime != 0)
-            theNew->mProductionTime = 0;
-        if (!theNew->GetUnitClass()->mIsWall)
-            theClass->ActionChanged(theNew);
-    }
-    inUnit->Kill(false, false, true);
-    if (inIsConversion) {
-        EEPlayerStatistics& theStatistics = thePlayer->mSavedGroups;
-        theStatistics.Reset(5, 1);
-        long theSeries = EEAddDeadUnitStatistic(inUnit);
-        if (theSeries != 0) {
-            inUnit->GetPlayer()->mSavedGroups.Lower(theSeries, 1);
-            theStatistics.Reset(theSeries, 1);
-        }
-        if (inUnit->GetUnitClass()->mUnitType != kUnitTypePathPoint) {
-            long theCategory = inUnit->GetUnitClass()->mCategory;
-            if (theCategory == kUnitCategoryBuilding || theCategory == kUnitCategoryBuilding19 || theCategory == kUnitCategoryGate || theCategory == kUnitCategoryMiningBuilding
-                || theCategory == kUnitCategoryFortress)
-                inUnit->GetPlayer()->mSavedGroups.Reset(1, 1);
-            else
-                inUnit->GetPlayer()->mSavedGroups.Reset(4, 1);
-        }
-    }
-    if (inUnit->GetUnitClass()->mDamageEffect != NULL && theNew->GetUnitClass()->mDamageEffect != NULL && theOld != NULL
-        && theOld->mIsBuilt && theFraction < inUnit->GetUnitClass()->mDamageEffect->mParam2)
-        gWorld.GetEffectManager()->CreateUnitEffect(theNew, theNew->GetUnitClass()->mDamageEffect, NULL, 0, 0, 0);
-    theNote.U(theNew).C(theNew != NULL ? theNew->mUnitClass : NULL);   // TEST ONLY (UUTL)
-    return theNew;
+    return static_cast<EEComplexUnit*>(UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_CONVERT_UNIT, UUHandle(inUnit), 0, inPlayer, inIsConversion, 0)));
 }
 
 // Tells whether a civilization bought an upgrade
 // Whether inValue is in inCivilization's mPurchasedUpgrades (read through the out-of-line GetPurchasedUpgrades 0x12c738, ICF with EECampaign::GetScenarios)
 bool EEHasCivilizationUpgrade(EECivilization* inCivilization, EECivUpgrade inValue)
 {
-    std::vector<EECivUpgrade>& theList = inCivilization->GetPurchasedUpgrades();
-    for (std::vector<EECivUpgrade>::iterator it = theList.begin(); it != theList.end(); it++) {
-        if (*it == inValue)
-            return true;
-    }
-    return false;
+    return ee_units_ub_body(EE_UNITS_UB_DO_HAS_CIVILIZATION_UPGRADE, UUHandle(inCivilization), 0, (int64_t)inValue, 0, 0) != 0;
 }
 
 // Moves a container's cargo into the unit's care (also placing it on the map for a conversion)
 void EEMovePassengers(EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool inIsConversion)
 {
-    EEPlayer* thePlayer = inUnit->mPlayer;
-    GETransformation theTransformation;
-    theTransformation.SetPosition(-10000.0f, -10000.0f, 0.0f);
-    if (inContainer == NULL || !(inContainer->GetNumCargoUnits() > 0))
-        return;
-    while (inContainer->GetNumCargoUnits() != 0) {
-        // (EEConvertUnit returns the unit it placed: the original passes its result on)
-        EEComplexUnit* theCargo = inContainer->UnloadCargoAt(inContainer->GetNumCargoUnits() - 1, theTransformation);
-        if (inIsConversion)
-            theCargo = EEConvertUnit(theCargo, thePlayer->GetPlayerID(), 1);
-        inUnit->LoadCargo(theCargo, false, inIsConversion);
-    }
+    ee_units_ub_body(EE_UNITS_UB_DO_MOVE_PASSENGERS, UUHandle(inUnit), UUHandle(inContainer), inIsConversion, 0, 0);   // uu_body.rs
 }
 
 // Gives a unit another unit's load (as much as its class allows), emptying the other
 void EETakeOverLoad(EEComplexUnit* inUnit, EEComplexUnit* inOther)
 {
-    inUnit->AddGarrison(inOther->mGarrisonCount - inUnit->mUnitClass->mInitialGarrisonCount, inOther->mGarrisonPopulation);
-    inOther->ClearGarrison();
+    ee_units_ub_body(EE_UNITS_UB_DO_TAKE_OVER_LOAD, UUHandle(inUnit), UUHandle(inOther), 0, 0, 0);   // uu_body.rs
 }
 
 // ---- 0x24f0e9..0x24f932: the rest of this TU's own functions (the unit map's "EEHitPointUpgrader.cpp" slice; the
@@ -1866,25 +1393,13 @@ public:
 // inUpgrade's hit points raised by inFactor of its class's base; inPlayer's units of type inType follow (inferred)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer)
 {
-    long theBase = inUpgrade->mUnitClass->mHitPoints;
-    EEHitPointUpgrader theUpgrader(inType, (theBase * inFactor + inUpgrade->GetMaxHitPoints()) / inUpgrade->GetMaxHitPoints());
-    long theBonus = inUpgrade->mUnitClass->mHitPoints;
-    if (theBonus <= 0)
-        return;
-    inFactor *= theBonus;
-    long theHitPoints = max(UMFloatToLong(inUpgrade->GetMaxHitPoints() + inFactor), 1);
-    inUpgrade->mMaxHitPoints = max(theHitPoints, 1);
-    if (!gLoadingSavedGame)
-        EEForEachUnitOf(inPlayer, &theUpgrader, true);
+    ee_units_ub_body(EE_UNITS_UB_DO_UPGRADE_HIT_POINTS, UUHandle(inUpgrade), UUHandle(inPlayer), inType, UbBits(inFactor), 0);
 }
 
 // Scales the hit points of a living unit of the upgraded type by the ratio (at least 1)
 void EEHitPointUpgrader::Apply(EEComplexUnit* inUnit)
 {
-    if (inUnit->mUnitClass->mUnitType == this->mUnitType && inUnit->mHitPoints > 0 && !inUnit->IsFoundation()) {
-        if (inUnit->mHitPoints > 0)
-            inUnit->SetHitPoints(max(UMFloatToLong(inUnit->mHitPoints * this->mRatio), 1));
-    }
+    ee_units_ub_body(EE_UNITS_UB_DO_HIT_POINT_APPLY, UUHandle(static_cast<EEUUUnitFunctor*>(this)), UUHandle(inUnit), 0, 0, 0);
 }
 
 // Tells whether a unit type can be placed at a location (the editor's own test in free camera mode)
@@ -1913,17 +1428,13 @@ bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnit
 // Gives a space wall its energy wall effect
 void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit)
 {
-    EEEffectHandle theHandle;
-    gWorld.GetEffectManager()->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectSpaceWallEnergyWall), &theHandle, 0, 0, 0);
-    inUnit->mFireEffect = theHandle;
+    ee_units_ub_body(EE_UNITS_UB_DO_SPACE_ENERGY_WALL, UUHandle(inUnit), 0, 0, 0, 0);   // uu_body.rs
 }
 
 // Gives a space gate its energy wall effect
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit)
 {
-    EEEffectHandle theHandle;
-    gWorld.GetEffectManager()->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectSpaceGateEnergyWall), &theHandle, 0, 0, 0);
-    inUnit->mFireEffect = theHandle;
+    ee_units_ub_body(EE_UNITS_UB_DO_SPACE_ENERGY_WALL, UUHandle(inUnit), 0, 1, 0, 0);   // uu_body.rs
 }
 
 // ---- the unit utilities' world (ee_units uu.rs over uu_host.rs): units, classes, players, tiles, maps and continents
@@ -2265,4 +1776,309 @@ void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer
 {
     EETileCoordinate theTile(inTile);
     ee_units_uu_step_aside((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inPlayer, theTile.mX, theTile.mY, inArg);
+}
+
+// ---- the C++ of the unit utilities' Rust bodies (ee_units uu_body.rs; EE_UNITS_UB_*): one statement of the
+// original bodies each, in their order; inA, inB objects (a unit as its EEUnit*), inC, inD, inE values, ioF floats
+
+static_assert(sizeof(GE3DPoint) == 3 * sizeof(float), "a GE3DPoint is three floats");
+static_assert(sizeof(GEVector) == 3 * sizeof(float), "a GEVector is three floats");
+
+// the bodies' scratch: EEConvertUnit's strings, upgrade list and cost; EEFn24E68F's attribute, strings and string id;
+// the unit and tile lists; EEPreviewWall's corners; the helicopter priest's direction; EEUpdateUnitTile's waypoint
+// point; EEFindTargetNear's area; EEUpgradeHitPoints' functor
+struct EEUbStrings {
+    UWideString mFormat;
+    UWideString mMessage;
+    UWideString mName;
+};
+static EEUbStrings sUbStrings;
+static std::vector<EECivUpgrade> sUbUpgrades;
+static unsigned long sUbCost;
+static unsigned long sUbAttribute[2];
+static long sUbStringID;
+static UWideString sUbCategoryString;
+static UWideString sUbAttributeString;
+static std::vector<EEUnit*> sUbUnits;
+static std::vector<U2DPoint<long> > sUbTiles;
+static std::vector<long> sUbCorners;
+static GEVector sUbDirection;
+static GE3DPoint sUbPoint;
+static U2DRectangle<long> sUbArea;
+static EEHitPointUpgrader sUbUpgrader(0, 0.0f);
+
+// EEMovePassengers' place for the unloaded cargo (off the map)
+static GETransformation UbOffMap()
+{
+    GETransformation theTransformation;
+    theTransformation.SetPosition(-10000.0f, -10000.0f, 0.0f);
+    return theTransformation;
+}
+static const GETransformation sUbOffMap = UbOffMap();
+
+// EEFindNewTargetNearOld's search near the old target (its screen and tile are the original's locals)
+static bool UbFindNewTarget(EEComplexUnit* inTarget, EEComplexUnit* inUnit, long inX, long inY, long inRadius)
+{
+    EETileCoordinate theTile(inX, inY);
+    EEFOFindNewTargetNearOldTarget theScreen(inTarget, 25.0f);
+    return EEFindNewTarget(&theScreen, inUnit->GetLoadGoal(), inUnit, &theTile, inRadius, true, 0);
+}
+
+extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, int64_t inE, float (*ioF)[4])
+{
+    EEUnit* theUnit = UUUnit(inA);
+    EEComplexUnit* theComplex = UbObj<EEComplexUnit>(inA);
+    EEComplexUnit* theOther = UbObj<EEComplexUnit>(inB);
+    EEUnitClass* theClass = UbObj<EEUnitClass>(inA);
+    EEPlayer* thePlayer = UbObj<EEPlayer>(inA);
+    EEGroup* theGroup = UbObj<EEGroup>(inA);
+    EEUnitGoal* theGoal = UbObj<EEUnitGoal>(inA);
+    EETechnology* theTechnology = UbObj<EETechnology>(inA);
+    EEUnitClassUpgrade* theUpgrade = UbObj<EEUnitClassUpgrade>(inA);
+    EEUUUnitFunctor* theFunctor = UbObj<EEUUUnitFunctor>(inA);
+    GE3DPoint* thePoint = UbObj<GE3DPoint>(inA);
+    GETransformation* theTransformation = UbObj<GETransformation>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    // EEConvertUnit's
+    case EE_UNITS_UB_PLAYER_AT: return UUHandle(::gWorld.mPlayers[inC]);
+    case EE_UNITS_UB_UNIT_CLASS: return UUHandle(theUnit->GetUnitClass());
+    case EE_UNITS_UB_CLASS_TYPE: return theClass->mUnitType;
+    case EE_UNITS_UB_HAS_POWER: return gCivPowersManager.HasPower(thePlayer, (unsigned long)inC);
+    case EE_UNITS_UB_IS_BUILT: return theUnit->GetComplexUnit()->mIsBuilt;
+    case EE_UNITS_UB_STRINGS_RESET: sUbStrings = EEUbStrings(); return 0;
+    case EE_UNITS_UB_NUM_POWERS: return gCivPowersManager.GetNumPowers();
+    case EE_UNITS_UB_UNIT_HAS_POWER: return gCivPowersManager.HasPower(theUnit->GetPlayer(), (unsigned long)inC);
+    case EE_UNITS_UB_MAKE_POWER_UPGRADE: return gCivilizationManager.MakePowerUpgrade(EECivilizationManager::PowerLevel((unsigned long)inC));
+    case EE_UNITS_UB_POWER_NAME: gCivPowersManager.GetName((unsigned long)inC, sUbStrings.mName); return 0;
+    case EE_UNITS_UB_UPGRADES_COPY: sUbUpgrades = theUnit->GetPlayer()->mCivilization.GetPurchasedUpgrades(); return 0;
+    case EE_UNITS_UB_UPGRADES_SHUFFLE: EEAIRandomShuffle(sUbUpgrades.begin(), sUbUpgrades.end()); return 0;
+    case EE_UNITS_UB_UPGRADES_COUNT: return (int64_t)sUbUpgrades.size();
+    case EE_UNITS_UB_HAS_UPGRADE: return EEHasCivilizationUpgrade(&thePlayer->mCivilization, (EECivUpgrade)inC);
+    case EE_UNITS_UB_UPGRADE_AT: return (int64_t)sUbUpgrades[(size_t)inC];
+    case EE_UNITS_UB_UPGRADE_NAME: return EEFn24E68F((EECivUpgrade)inC, sUbStrings.mName);
+    case EE_UNITS_UB_AVAILABLE_POINTS: return thePlayer->mCivilization.GetAvailablePoints();
+    case EE_UNITS_UB_CAN_AFFORD: return thePlayer->mCivilization.CanAfford((EECivUpgrade)inC, &sUbCost, NULL);
+    case EE_UNITS_UB_SET_POINTS_AND_MAX: thePlayer->mCivilization.SetPointsAndMax(thePlayer->mCivilization.GetMaxPoints() + sUbCost); return 0;
+    case EE_UNITS_UB_BUY: thePlayer->mCivilization.Buy((EECivUpgrade)inC, thePlayer->GetPlayerID(), true); return 0;
+    case EE_UNITS_UB_SET_POINTS: thePlayer->mCivilization.SetPoints((long)inC); return 0;
+    case EE_UNITS_UB_CURRENT_PLAYER: return UUHandle(::gWorld.GetCurrentPlayer());
+    case EE_UNITS_UB_ADAPTATION_FORMAT: gResource->GetString(IDS_ACQUIRED_THROUGH_ADAPTATION, sUbStrings.mFormat); return 0;
+    case EE_UNITS_UB_ADAPTATION_MESSAGE: sprintf(sUbStrings.mMessage, sUbStrings.mFormat, (const char*)sUbStrings.mName); return 0;
+    case EE_UNITS_UB_ADAPTATION_CHAT:
+        gUserInterface->AddChatLogEntry(theUnit->GetPlayer()->mColor, theUnit->GetPlayer()->mName, sUbStrings.mMessage,
+                                        gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
+        return 0;
+    case EE_UNITS_UB_CLASS_OF_TYPE: return UUHandle(gUnitClassTable[inC]);
+    case EE_UNITS_UB_IS_CRUSADER: return theClass->IsCrusader();
+    case EE_UNITS_UB_HIT_FRACTION: return UbBits((float)theUnit->GetHitPoints() / (float)theUnit->mStats->mMaxHitPoints);
+    case EE_UNITS_UB_DESELECT: theUnit->GetPlayer()->DeselectUnit(theUnit->GetComplexUnit()); return 0;
+    case EE_UNITS_UB_GROUP_CONTAINS: return theUnit->GetPlayer()->mGroups[inC]->Contains(theUnit->GetComplexUnit());
+    case EE_UNITS_UB_GROUP_REMOVE: theUnit->GetPlayer()->mGroups[inC]->RemoveUnit(theUnit->GetComplexUnit()); return 0;
+    case EE_UNITS_UB_SET_CLASS_MEDIA: thePlayer->SetUnitClassMedia(UUUnit(inB)->GetUnitClass()->mUnitType, 0x7f); return 0;
+    case EE_UNITS_UB_UNLOAD_CLASS_MEDIA: thePlayer->UnloadUnitClassMedia(UUUnit(inB)->GetUnitClass()->mUnitType); return 0;
+    case EE_UNITS_UB_COMPLEX_OF: return UUHandle(theUnit->GetComplexUnit());
+    case EE_UNITS_UB_CLEAR_GARRISON: theComplex->ClearGarrison(); return 0;
+    case EE_UNITS_UB_IS_LAND_BUILDING: return theClass->IsLandBuilding();
+    case EE_UNITS_UB_IS_WALL: return theClass->mIsWall;
+    case EE_UNITS_UB_IS_TOWER: return theClass->mIsTower;
+    case EE_UNITS_UB_START_ACTION: theComplex->StartAction((long)inC); return 0;
+    case EE_UNITS_UB_BUILD_QUEUE_SIZE: return theComplex->GetBuildQueueSize();
+    case EE_UNITS_UB_BUILD_QUEUE_CLEAR: theComplex->mBuildQueue.clear(); return 0;
+    case EE_UNITS_UB_CATEGORY: return theClass->mCategory;
+    case EE_UNITS_UB_SET_ANIMATION_OF: theComplex->SetAnimation(UUUnit(inB)->GetComplexUnit()->mAnimation, -1, 0); return 0;
+    case EE_UNITS_UB_START_COMMAND_OF:
+        theComplex->StartAction(UUUnit(inB)->GetComplexUnit()->mCommand != NULL ? UUUnit(inB)->GetComplexUnit()->mCommand->mType : 0);
+        return 0;
+    case EE_UNITS_UB_QUEUE_SWAP: gPhysics->QueueUnitSwap(theComplex, theOther); return 0;
+    case EE_UNITS_UB_PREVIOUS_PART: return UUHandle(theComplex->mPreviousPart);
+    case EE_UNITS_UB_GATE_REPLACED: theUnit->GetUnitClass()->GateReplaced(theUnit, theOther); return 0;
+    case EE_UNITS_UB_CLEAR_ALL_GOAL_QUEUES: theComplex->ClearAllGoalQueues(); return 0;
+    case EE_UNITS_UB_CLEAR_BUILD_TARGETS: theComplex->ClearBuildTargets(); return 0;
+    case EE_UNITS_UB_PLAY_EFFECT: theComplex->PlayEffect((long)inC); return 0;
+    case EE_UNITS_UB_PRODUCTION_TIME: return theComplex->mProductionTime;
+    case EE_UNITS_UB_CLEAR_PRODUCTION_TIME: theComplex->mProductionTime = 0; return 0;
+    case EE_UNITS_UB_ACTION_CHANGED: theClass->ActionChanged(theOther); return 0;
+    case EE_UNITS_UB_KILL: theComplex->Kill((inC & 1) != 0, (inC & 2) != 0, (inC & 4) != 0); return 0;
+    case EE_UNITS_UB_STATS_RESET: thePlayer->mSavedGroups.Reset((long)inC, 1); return 0;
+    case EE_UNITS_UB_ADD_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theComplex);
+    case EE_UNITS_UB_UNIT_STATS_LOWER: theUnit->GetPlayer()->mSavedGroups.Lower((long)inC, 1); return 0;
+    case EE_UNITS_UB_UNIT_STATS_RESET: theUnit->GetPlayer()->mSavedGroups.Reset((long)inC, 1); return 0;
+    case EE_UNITS_UB_HAS_DAMAGE_EFFECT: return theClass->mDamageEffect != NULL;
+    case EE_UNITS_UB_DAMAGE_PARAM2: return UbBits(theClass->mDamageEffect->mParam2);
+    case EE_UNITS_UB_CREATE_DAMAGE_EFFECT:
+        gWorld.GetEffectManager()->CreateUnitEffect(theComplex, theComplex->GetUnitClass()->mDamageEffect, NULL, 0, 0, 0);
+        return 0;
+    // EEMakeUnitCopy's, EEReplaceUnit's, EEMakeBuilding's
+    case EE_UNITS_UB_TILE_X: return theUnit->GetTileX();
+    case EE_UNITS_UB_TILE_Y: return theUnit->GetTileY();
+    case EE_UNITS_UB_IS_FOUNDATION: return theUnit->IsFoundation();
+    case EE_UNITS_UB_CREATE_UNIT: return UUHandle(theClass->CreateUnit((long)inC, (long)inD, (unsigned long)inE, inB != 0, NULL));
+    case EE_UNITS_UB_COPY_FROM: theUnit->CopyFrom(UUUnit(inB)); return 0;
+    case EE_UNITS_UB_TILE_NODE: return UUHandle(theUnit->mTileNode);
+    case EE_UNITS_UB_SET_BUILT: theComplex->SetBuilt((long)inC, (long)inD, (long)inE); return 0;
+    case EE_UNITS_UB_SET_HIT_POINTS: theUnit->SetHitPoints((long)inC); return 0;
+    case EE_UNITS_UB_MAX_HIT_POINTS: return theUnit->mStats->mMaxHitPoints;
+    case EE_UNITS_UB_PLAYER_OF: return UUHandle(theUnit->GetPlayer());
+    case EE_UNITS_UB_GROUP_AT: return UUHandle(thePlayer->mGroups[inC]);
+    case EE_UNITS_UB_GROUP_NUM_UNITS: return theGroup->GetNumUnits();
+    case EE_UNITS_UB_GROUP_UNIT: return UUHandle(theGroup->GetUnit((unsigned long)inC));
+    case EE_UNITS_UB_GROUP_ADD: theGroup->Add(theOther); return 0;
+    case EE_UNITS_UB_DROP_UNSUITED_GOALS: theComplex->DropUnsuitedGoals(0); return 0;
+    case EE_UNITS_UB_TECH_AVAILABLE: return thePlayer->mTechnologies->Get((long)inC)->GetIsAvailable();
+    case EE_UNITS_UB_NEXT_PART: return UUHandle(theComplex->mNextPart);
+    case EE_UNITS_UB_ENERGY_WALL:
+        gWorld.GetEffectManager()->CreateUnitEffect(theComplex, EEGraphicEffect::Get(inC != 0 ? kGraphicEffectSpaceGateEnergyWall : kGraphicEffectSpaceWallEnergyWall),
+                                                    &theComplex->mFireEffect, 0, 0, 0);
+        return 0;
+    case EE_UNITS_UB_HIT_POINTS: return theUnit->mHitPoints;
+    case EE_UNITS_UB_TILE_VISIBILITY: return theUnit->mTile->GetVisibility(UbObj<EEPlayer>(inB)->GetPlayerID());
+    case EE_UNITS_UB_ADD_FOR_UNSEEN: gDoppelgangerManager.AddForUnseenUnit(theComplex); return 0;
+    case EE_UNITS_UB_PAY_CLASS: thePlayer->Pay(thePlayer->GetTechTree()->Get(UbObj<EEUnitClass>(inB)->GetTechnology()), 0x20, 1.0f); return 0;
+    case EE_UNITS_UB_IS_PAID_FOR: return theComplex->mIsPaidFor;
+    case EE_UNITS_UB_SET_PAID_FOR: theComplex->mIsPaidFor = true; return 0;
+    case EE_UNITS_UB_ADD_PENDING_UNITS: thePlayer->AddPendingUnits(false, true); return 0;
+    case EE_UNITS_UB_FLUSH_PLACEMENTS: ::gWorld.FlushQueuedPlacements(); return 0;
+    case EE_UNITS_UB_REPLANT_FARMS: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReplantFarms, {theUnit->mUnitID}), kSlotNone); return 0;
+    case EE_UNITS_UB_PLAYER_ID: return thePlayer->GetPlayerID();
+    // EEReplaceQueuedTechnology's
+    case EE_UNITS_UB_CLASS_TECHNOLOGY: return theClass->mTechnology;
+    case EE_UNITS_UB_TECHNOLOGY: return UUHandle(thePlayer->mTechnologies->Get((long)inC));
+    case EE_UNITS_UB_TECH_NUM_CLASSES: return theTechnology->GetNumUnitClasses();
+    case EE_UNITS_UB_TECH_CLASS: return theTechnology->GetUnitClass((unsigned long)inC);
+    case EE_UNITS_UB_UNITS_OF_TYPE: return ee_units_uu_player_units_of_type((long)inC, thePlayer->GetPlayerID(), &sUbUnits);
+    case EE_UNITS_UB_LIST_UNIT: return UUHandle(sUbUnits[(size_t)inC]);
+    case EE_UNITS_UB_REPLACE_RESEARCH: theComplex->ReplaceResearch((long)inC, (long)inD); return 0;
+    // EEWorkFarm's, EERetargetAttack's, EEFindNewTargetNearOld's
+    case EE_UNITS_UB_SET_GATHER_GOAL: theComplex->SetGoal(EEUGRust::NewGather(theOther, NULL, false), 0, 0); return 0;
+    case EE_UNITS_UB_SET_REPAIR_GOAL: theComplex->SetGoal(EEUGRust::NewBuildRepair(theOther->GetPlayer(), theOther, false), 0, 0); return 0;
+    case EE_UNITS_UB_ATTACK_TARGET: return UUHandle(static_cast<EEUGRust*>(theGoal)->GetAttackTarget()->mComplexUnit);
+    case EE_UNITS_UB_GOAL_REPLACE_UNIT: theGoal->ReplaceUnit(theOther, UbObj<EEComplexUnit>((uint64_t)inC), NULL); return 0;
+    case EE_UNITS_UB_CLEAR_COLLISION_COUNT: theComplex->mCollisionResolutionCount = 0.0f; return 0;
+    case EE_UNITS_UB_CLEAR_BLOCKING: theComplex->SetBlockingUnit(NULL); return 0;
+    case EE_UNITS_UB_COLLISION_STATE: return theComplex->mCollisionState;
+    case EE_UNITS_UB_CLEAR_COLLISION_STATE: theComplex->mCollisionState = 0; return 0;
+    case EE_UNITS_UB_DROP_PATH: theComplex->DropPath(); return 0;
+    case EE_UNITS_UB_IGNORE_TARGET: theComplex->IgnoreTarget(theOther); return 0;
+    case EE_UNITS_UB_FIND_NEW_TARGET: return UbFindNewTarget(theComplex, theOther, (long)inC, (long)inD, (long)inE);
+    case EE_UNITS_UB_NO_TARGET_TRACE: EEDebugTrace(">>> SHAWN %d could not find a target.\n", theComplex->GetUnitClass()->GetName()); return 0;
+    case EE_UNITS_UB_OUTERMOST_CARRIER: return UUHandle(theComplex->GetOutermostCarrier());
+    case EE_UNITS_UB_PART_LEFT_OUT: return theClass->IsPartLeftOut(theOther);
+    case EE_UNITS_UB_TARGET_IGNORED: return theComplex->IsTargetIgnored(theOther, inC != 0);
+    case EE_UNITS_UB_LOAD_ATTACK_GOAL: return UUHandle(static_cast<EEUnitGoal*>(EEAttackUnitCast(theComplex->GetLoadGoal())));
+    case EE_UNITS_UB_LAST_LINKED_CARRIER: return UUHandle(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass)->GetLastLinkedCarrier(theOther));
+    case EE_UNITS_UB_LAST_LINKED: return UUHandle(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass)->GetLastLinked(theOther));
+    case EE_UNITS_UB_DISTANCE_SQUARED_TO: return UbBits(theComplex->DistanceSquaredTo(theOther));
+    // EEGetHelicopterPriestDestination's
+    case EE_UNITS_UB_CALAMITY_GOAL: return UUHandle(static_cast<EEUnitGoal*>(EECastCalamityGoalCast(theComplex->GetGoal())));
+    case EE_UNITS_UB_GOAL_LOCATION: static_cast<EEUGRust*>(theGoal)->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UB_CALAMITY_TYPE: return static_cast<EEUGRust*>(theGoal)->GetCalamityType();
+    case EE_UNITS_UB_UNIT_TECHNOLOGY: return UUHandle(theUnit->mPlayer->mTechnologies->Get((long)inC));
+    case EE_UNITS_UB_CALAMITY_RANGE:
+        return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)theTechnology->mData->mCalamity)->mRange;
+    case EE_UNITS_UB_POSITION: theComplex->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UB_DIRECTION_SET: sUbDirection = *reinterpret_cast<GEVector*>(f); return 0;
+    case EE_UNITS_UB_DIRECTION_NORMALIZE: sUbDirection.Normalize(); return 0;
+    case EE_UNITS_UB_DIRECTION_SCALE: sUbDirection.Scale(f[0], *reinterpret_cast<GEVector*>(f)); return 0;
+    case EE_UNITS_UB_SET_POINT: *thePoint = *reinterpret_cast<GE3DPoint*>(f); return 0;
+    case EE_UNITS_UB_POINT: *reinterpret_cast<GE3DPoint*>(f) = *thePoint; return 0;
+    // EEUpdateUnitTile's
+    case EE_UNITS_UB_TRANSFORMATION_POSITION: theTransformation->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UB_TRANSFORMATION_MATRIX: memcpy((void*)(uintptr_t)inC, theTransformation->mMatrix, sizeof(theTransformation->mMatrix)); return 0;
+    case EE_UNITS_UB_LOCATION_MATRIX: memcpy((void*)(uintptr_t)inC, theComplex->mPhysicalModel.GetLocation().mMatrix, 64); return 0;
+    case EE_UNITS_UB_SET_LONG: *UbObj<long>(inA) = (long)inC; return 0;
+    case EE_UNITS_UB_READ_LONG: return *UbObj<long>(inA);
+    case EE_UNITS_UB_TILE_EXISTS: return ::gWorld.mMap->GetTile((long)inC, (long)inD) != NULL;
+    case EE_UNITS_UB_SET_TRANSFORMATION: theComplex->SetTransformation(*UbObj<GETransformation>(inB), true); return 0;
+    case EE_UNITS_UB_CLOSEST_TILE: ::gWorld.mMap->GetClosestTile(reinterpret_cast<GE3DPoint*>(f), UbObj<long>((uint64_t)inC), UbObj<long>((uint64_t)inD)); return 0;
+    case EE_UNITS_UB_SET_LOCATION: theComplex->mPhysicalModel.SetLocation(*UbObj<GETransformation>(inB)); return 0;
+    case EE_UNITS_UB_MOVE_TO: theComplex->MoveTo((long)inC, (long)inD, true); return 0;
+    case EE_UNITS_UB_WAYPOINT_COUNT: return (long)theComplex->mWaypoints.size();
+    case EE_UNITS_UB_DOMAINS: return theClass->mDomains;
+    case EE_UNITS_UB_NEXT_WAYPOINT_POINT: theComplex->GetNextWaypointPoint(sUbPoint); return 0;
+    case EE_UNITS_UB_HEIGHT_AT: return UbBits(theComplex->mUnitClass->GetHeightAt(theComplex, sUbPoint));
+    case EE_UNITS_UB_HEIGHT: return UbBits(theComplex->mHeight);
+    case EE_UNITS_UB_SET_HEIGHT: theComplex->mHeight = UbFloat(inC); return 0;
+    // EEGetWaitingGatherer's
+    case EE_UNITS_UB_SHUTDOWN: return UShutdownInProgress();
+    case EE_UNITS_UB_UNIT_TILES: ee_units_uu_unit_tiles(1, inA, &sUbTiles); return 0;
+    case EE_UNITS_UB_UNITS_ON_TILES: ee_units_uu_units_on(0, &sUbTiles, &sUbUnits); return 0;
+    case EE_UNITS_UB_RANDOM_GENERATE: return UbBits(gPhysics->mRandom.Generate());
+    case EE_UNITS_UB_PERMUTE_UNITS: PermuteValues(sUbUnits, (long)inC); return 0;
+    case EE_UNITS_UB_LIST_SIZE: return (int64_t)sUbUnits.size();
+    case EE_UNITS_UB_LISTS_CLEAR: return (sUbUnits.clear(), sUbTiles.clear(), 0);
+    case EE_UNITS_UB_COMMAND: return theComplex->mCommand != NULL ? theComplex->mCommand->mType : 0;
+    case EE_UNITS_UB_GOAL_STATE: return UUHandle(theComplex->mGoalState);
+    case EE_UNITS_UB_GOAL_KIND: return theGoal->mKind;
+    case EE_UNITS_UB_GATHER_GOAL: return UUHandle(static_cast<EEUnitGoal*>(EEGatherGoalCast(theGoal)));
+    case EE_UNITS_UB_GATHER_RESOURCE: return UUHandle(static_cast<EEUGRust*>(theGoal)->GetGatherResource());
+    // EEUpgradeHitPoints', the functor's and EEForEachUnitOf's
+    case EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS: return theUpgrade->mUnitClass->mHitPoints;
+    case EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS: return theUpgrade->GetMaxHitPoints();
+    case EE_UNITS_UB_MAKE_UPGRADER: return UUHandle(static_cast<EEUUUnitFunctor*>(&(sUbUpgrader = EEHitPointUpgrader((unsigned long)inC, UbFloat(inD)))));
+    case EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS: theUpgrade->mMaxHitPoints = (long)inC; return 0;
+    case EE_UNITS_UB_LOADING_SAVED_GAME: return gLoadingSavedGame;
+    case EE_UNITS_UB_FIRST_UNIT: return UUHandle(thePlayer->mFirstUnit);
+    case EE_UNITS_UB_NEXT_UNIT: return UUHandle(static_cast<EEUnit*>(theUnit->mNext));
+    case EE_UNITS_UB_APPLY_TO_UNIT: theFunctor->ApplyToUnit(UUUnit(inB)); return 0;
+    case EE_UNITS_UB_APPLY: theFunctor->Apply(theOther); return 0;
+    case EE_UNITS_UB_NUM_PENDING: return thePlayer->GetNumPendingUnits();
+    case EE_UNITS_UB_PENDING_UNIT: return UUHandle(static_cast<EEUnit*>(thePlayer->GetPendingUnit((unsigned long)inC)));
+    case EE_UNITS_UB_NUM_PLAYERS: return ::gWorld.mNumPlayers;
+    case EE_UNITS_UB_UPGRADER_TYPE: return static_cast<EEHitPointUpgrader*>(theFunctor)->mUnitType;
+    case EE_UNITS_UB_UPGRADER_RATIO: return UbBits(static_cast<EEHitPointUpgrader*>(theFunctor)->mRatio);
+    // EEMovePassengers', EETakeOverLoad's, EEGetPlayerClassGraphic's
+    case EE_UNITS_UB_NUM_CARGO: return theComplex->GetNumCargoUnits();
+    case EE_UNITS_UB_UNLOAD_CARGO_AT: return UUHandle(theComplex->UnloadCargoAt((unsigned long)inC, sUbOffMap));
+    case EE_UNITS_UB_LOAD_CARGO: theComplex->LoadCargo(theOther, false, inC != 0); return 0;
+    case EE_UNITS_UB_TAKE_GARRISON:
+        theComplex->AddGarrison(theOther->mGarrisonCount - theComplex->mUnitClass->mInitialGarrisonCount, theOther->mGarrisonPopulation);
+        return 0;
+    case EE_UNITS_UB_TILE_SIZE: return theClass->mTileSize;
+    case EE_UNITS_UB_TABLE_MODEL: return UUHandle(gUnitClassTable[inC]->mModel);
+    case EE_UNITS_UB_UPGRADE_MODEL: return UUHandle(thePlayer->mUnitClassUpgrades[inC]->mModel);
+    // EEFindTargetNear's, EEFindNearbyTarget's, EECanBallisticHit's, EECanPriestConvert's
+    case EE_UNITS_UB_RANGE: return UbBits(theUnit->mStats->GetRange());
+    case EE_UNITS_UB_LINE_OF_SIGHT: return UbBits(theComplex->GetLineOfSight());
+    case EE_UNITS_UB_ATTACK: return UbBits(theUnit->mStats->GetAttack());
+    case EE_UNITS_UB_AMMO_TYPE: return theClass->mAmmoType;
+    case EE_UNITS_UB_AREA_TOP: sUbArea.mTop = (long)inC; return 0;
+    case EE_UNITS_UB_AREA_BOTTOM: sUbArea.mBottom = (long)inC; return 0;
+    case EE_UNITS_UB_AREA_LEFT: sUbArea.mLeft = (long)inC; return 0;
+    case EE_UNITS_UB_AREA_RIGHT: sUbArea.mRight = (long)inC; return 0;
+    case EE_UNITS_UB_SUM_OTHERS_INFLUENCE: return ::gWorld.mInfluenceTable->SumOthersValueOnTiles((unsigned long)inC, sUbArea);
+    case EE_UNITS_UB_SEARCH_TARGET: return UUHandle(EESearchTarget(theComplex, &sUbArea, (long)inC, (long)inD, UbFloat(inE)));
+    case EE_UNITS_UB_SEARCH_ALONG_LIST: return UUHandle(EESearchTargetAlongList(theComplex, (long)inC, (long)inD, UbFloat(inE)));
+    case EE_UNITS_UB_APPROACH_ATTACH_POINT: return EEApproachAttachPoint(theComplex, *UbObj<GE3DPoint>(inB));
+    case EE_UNITS_UB_OTHER_CONTINENT: return theComplex->IsOnOtherContinentThan(theOther);
+    case EE_UNITS_UB_FIND_DROP_LOCATION: return UUHandle(EECombatFindDropLocation(theComplex, UUUnit(inB), *UbObj<GE3DPoint>((uint64_t)inC)));
+    case EE_UNITS_UB_BALLISTIC_PITCH:
+        return EEGetBallisticPitch(theComplex, theComplex->GetStats(), UbObj<GE3DPoint>(inB), UbObj<GE3DPoint>((uint64_t)inC), UbObj<float>((uint64_t)inD));
+    case EE_UNITS_UB_SHOOTS_HIGH: return theClass->mShootsHigh;
+    case EE_UNITS_UB_FIRES_OVER_WALLS: return theComplex->GetStats()->mCanFireOverWalls;
+    case EE_UNITS_UB_LINE_TO_UNIT_BLOCKED:
+        return EEIsLineToUnitBlocked(theComplex, UUUnit(inB), UbObj<EEUnit*>((uint64_t)inC), UbObj<long>((uint64_t)inD), UbObj<long>((uint64_t)inE));
+    case EE_UNITS_UB_IS_PRIEST: return theClass->IsPriest();
+    case EE_UNITS_UB_CAN_CONVERT: return EECanConvert(theComplex, theOther, *UbObj<bool>((uint64_t)inC));
+    // EEPreviewWall's
+    case EE_UNITS_UB_DROP_TILES: ee_units_uu_drop_tiles((int32_t)inC, UbObj<std::vector<EETileCoordinate> >(inA)); return 0;
+    case EE_UNITS_UB_PICK_WALL_PIECES: EEPickWallPieces(*UbObj<std::vector<EETileCoordinate> >(inA), sUbCorners, ::gWorld.mMap); return 0;
+    case EE_UNITS_UB_BUILD_WALL_GHOSTS: EEBuildWallGhosts(*UbObj<std::vector<EETileCoordinate> >(inA), sUbCorners, (long)inC, UbObj<EEPlayer>(inB), 0.0f); return 0;
+    case EE_UNITS_UB_CORNERS_CLEAR: sUbCorners.clear(); return 0;
+    // EEHasCivilizationUpgrade's, EEFn24E68F's
+    case EE_UNITS_UB_PURCHASED_COUNT: return (int64_t)UbObj<EECivilization>(inA)->GetPurchasedUpgrades().size();
+    case EE_UNITS_UB_PURCHASED_AT: return (int64_t)UbObj<EECivilization>(inA)->GetPurchasedUpgrades()[(size_t)inC];
+    case EE_UNITS_UB_SPLIT_ATTRIBUTE: gCivilizationManager.SplitAttribute((EECivUpgrade)inC, &sUbAttribute[0], &sUbAttribute[1]); return 0;
+    case EE_UNITS_UB_LOOKUP_LEVEL: gCivilizationManager.LookupLevel((EECivUpgrade)inC, &f[0], &f[1]); return 0;
+    case EE_UNITS_UB_CATEGORY_NAME_ID: return gCivilizationManager.GetCategoryNameID(sUbAttribute[0], &sUbStringID);
+    case EE_UNITS_UB_CATEGORY_STRING: return gResource->GetString(sUbStringID, sUbCategoryString);
+    case EE_UNITS_UB_LEVEL_NAME_ID: sUbStringID = EECivilizationManager::LevelNameID(sUbAttribute[1]); return 0;
+    case EE_UNITS_UB_ATTRIBUTE_STRING: return gResource->GetString(sUbStringID, sUbAttributeString);
+    case EE_UNITS_UB_IS_POWER_LEVEL: return EECivilizationManager::IsPowerLevel(sUbAttribute[1]);
+    case EE_UNITS_UB_LEVEL_TEXT:
+        sprintf(*UbObj<UWideString>(inA), "%s: %s %ld%%", (const char*)sUbCategoryString, (const char*)sUbAttributeString, (long)inC);
+        return 0;
+    case EE_UNITS_UB_POWER_TEXT: sprintf(*UbObj<UWideString>(inA), "%s", (const char*)sUbAttributeString); return 0;
+    }
+    return 0;
 }
