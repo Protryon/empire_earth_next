@@ -6,22 +6,11 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_render::ge::rastobj::{EeGeRastColor, EeGeRastFog};
 use ee_render::gfx::pick::{admits, EeGfxPickAdd, EeGfxPickUnit};
 use ee_render::gfx::pick_walk::{EeGfxPickBoxUnit, EeGfxPickFindUnit, EeGfxPickHost};
 
 use super::{h, hd, hf, hp, pa, ptr, O, P};
-
-/// `GERFogAttributes` (lle/GERasterizer.h), member for member.
-#[repr(C)]
-#[derive(Default)]
-struct FogAttributes {
-    color: [f32; 3],
-    kind: c_ulong,
-    density: f32,
-    start: f32,
-    end: f32,
-    scale: f32,
-}
 
 /// The picker's entry count (`mCount`).
 fn count(picker: P) -> *mut c_ulong {
@@ -139,7 +128,15 @@ pub fn fog_factor(location: Ge3DPoint, fog: c_ulong) -> f32 {
     if fog != 1 {
         return 1.0;
     }
-    let mut attributes = FogAttributes::default();
+    // GERFogAttributes is ee_render's record (LLE round 9)
+    let mut attributes = EeGeRastFog {
+        color: EeGeRastColor { red: 0.0, green: 0.0, blue: 0.0 },
+        kind: 0,
+        density: 0.0,
+        start: 0.0,
+        end: 0.0,
+        scale: 0.0,
+    };
     h(O::PkFogAttributes, 0, &[ptr(&mut attributes)]);
     h(O::PkRastFogOff, 0, &[]);
     // SAFETY: the main viewport's camera inverse
@@ -254,16 +251,6 @@ pub unsafe extern "C" fn ee_gamecpp_picker_host(picker: *mut c_void, out: *mut c
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::mem::{offset_of, size_of};
-
-    #[test]
-    fn the_fog_attributes_mirror_the_rasterizer_s() {
-        // +0x00 the colour, +0x0c the type, then the four floats (the 32-bit long of the Windows build)
-        let kind = offset_of!(FogAttributes, kind);
-        assert_eq!(kind, 0x0c_usize.next_multiple_of(std::mem::align_of::<c_ulong>()));
-        assert_eq!(offset_of!(FogAttributes, start), kind + size_of::<c_ulong>() + 4);
-        assert_eq!(offset_of!(FogAttributes, scale), kind + size_of::<c_ulong>() + 12);
-    }
 
     #[test]
     fn no_fog_is_full_visibility() {

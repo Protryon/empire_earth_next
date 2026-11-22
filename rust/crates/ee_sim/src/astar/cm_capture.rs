@@ -56,6 +56,10 @@ impl Query {
     pub fn new(kind: u32) -> Query {
         Query { on: enter(kind) }
     }
+    /// Whether it records (the outermost query, the capture on).
+    pub fn on(&self) -> bool {
+        self.on
+    }
     pub fn i(&self, v: i64) {
         if self.on {
             push(v as i32);

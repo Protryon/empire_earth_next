@@ -1107,9 +1107,6 @@ constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT = 39;
 /// `EEGetPursuerOf(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
 
-/// `EEGetDirectionTo(a, b)`
-constexpr static const int32_t EE_UNITS_CLS_MV_DIRECTION_TO = 41;
-
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
 
@@ -1182,8 +1179,8 @@ constexpr static const int32_t EE_UNITS_CLS_MV_UPDATE_WATER_STATE = 68;
 /// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
 constexpr static const int32_t EE_UNITS_CLS_MV_INITIAL_CONTACT = 70;
 
-/// `PathToGoal`'s request for unit `a`, goal `b` to `(io.a, io.b)`: revisions `c`, graph `d & 1`, arg8 `d & 2`
-constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
+/// unit `a`'s player's `AvoidsEnemies(a)` (a virtual: the computer player's CPEV record)
+constexpr static const int32_t EE_UNITS_CLS_MV_AVOIDS_ENEMIES = 71;
 
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
@@ -2882,9 +2879,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_CENTER = 9;
 /// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
 constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_PLACE = 10;
 
-/// unit `a`'s class's `GetTerrainFlags(a, flags)` into `io.flags`
-constexpr static const int32_t EE_UNITS_GROUP_OP_TERRAIN_FLAGS = 13;
-
 /// `gContinentManager.GetContinentID(a)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_OF = 14;
 
@@ -2893,27 +2887,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_AT = 15;
 
 /// `gContinentManager.GetPathAreaIDAt(c, d)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_AREA_AT = 17;
-
-/// `gPathManager.RequestPath(c, (io.a, io.b), (io.c, io.d), flags io.flags, 1, -1, NULL, 0)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REQUEST = 19;
-
-/// `gPathManager.CancelAutoPathRequest(a)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_CANCEL = 20;
-
-/// path `a`'s `Reference()`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REFERENCE = 21;
-
-/// path `a`'s `Dereference()`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DEREFERENCE = 22;
-
-/// path `a`'s `mIsDone`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DONE = 23;
-
-/// path `a`'s `mRequestID`
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_ID = 24;
-
-/// path `a`'s `mPath` tiles pushed
-constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_TILES = 25;
 
 /// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
 constexpr static const int32_t EE_UNITS_GROUP_OP_SET_GROUP_PATH = 26;
@@ -2938,15 +2911,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_OUTLINES = 35;
 
 /// `gAEManager.mTemplates[c]->mRadius` into `io.f`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS = 36;
-
-/// `EESaveAutoPathRequest(file a, path b)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_SAVE_PATH = 37;
-
-/// `EELoadAutoPathRequest(file a, io.a)`: the error
-constexpr static const int32_t EE_UNITS_GROUP_OP_LOAD_PATH = 38;
-
-/// `EEAwaitAutoPathRequest(c, ...)` calling `ee_units_group_path_resolved(b, d, request)`
-constexpr static const int32_t EE_UNITS_GROUP_OP_AWAIT_PATH = 39;
 
 /// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AFTER_LOAD = 40;
@@ -4750,9 +4714,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_CIV_POWER = 45;
 /// the exploration power's pulse: `PulseSight(true, its amount, unit i[0]'s id)`
 constexpr static const int32_t EE_UNITS_PLAYER_PULSE_EXPLORATION = 46;
 
-/// `gContinentManager.UpdateWallUnit(i[0], i[1])`
-constexpr static const int32_t EE_UNITS_PLAYER_UPDATE_WALL = 47;
-
 /// `EEGameLogUnitLost(this, i[0])` (the game log)
 constexpr static const int32_t EE_UNITS_PLAYER_LOG_LOST = 48;
 
@@ -5022,8 +4983,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_SCREEN = 77;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CELL_TAKEN = 78;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_STAND = 79;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_REACHABLE = 80;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_MAP_DIMENSIONS = 82;
 
@@ -6780,12 +6739,10 @@ constexpr static const int32_t EE_UNITS_WP_QUEUE_LENGTH = 6;
 
 constexpr static const int32_t EE_UNITS_WP_QUEUE_BACK = 7;
 
-/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `RefreshPath()`; `gEEAIRegionSize`
+/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `gEEAIRegionSize`
 constexpr static const int32_t EE_UNITS_WP_IS_HUMAN = 8;
 
 constexpr static const int32_t EE_UNITS_WP_CLEAR_BOUNDED = 9;
-
-constexpr static const int32_t EE_UNITS_WP_REFRESH_PATH = 10;
 
 constexpr static const int32_t EE_UNITS_WP_REGION_SIZE = 11;
 
@@ -9474,14 +9431,6 @@ EeUnitsGroup *ee_units_group_active_of(void *player, void *unit);
 /// `player` a live player whose groups are live.
 void ee_units_groups_player(void *player,
                             int32_t op);
-
-/// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).
-///
-/// # Safety
-/// `g` the waiting group (referenced); `request` 0 or a request with the caller's reference.
-void ee_units_group_path_resolved(EeUnitsGroup *g,
-                                  int64_t key,
-                                  void *request);
 
 /// `EESaveActiveGroups(file)` over the player save's primitive `f`.
 ///

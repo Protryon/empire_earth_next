@@ -1,5 +1,8 @@
 // C:\EEX\RTS Engine\Units\RTSUnit.cpp (__FILE__ 0x4ccf20). The engine-side unit (RTTI RTSUnit > UReferenceCounter,
-// vtable 0x449b10): 0x23d7c0..0x23dd54 (its four key chains to Virtual20). Unit flags: the exe's module set.
+// vtable 0x449b10). LLE round 8: the lists' bodies are Rust (rust/crates/ee_game/src/rts/units.rs: Reset, Initialize,
+// Invalidate, FreeNode, the owner's list, the tile chain and its checks, UpdateTile, Clear); the members forward, and
+// the shims below are the C++ calls those bodies make (one statement each). The bodies' history: git history before
+// LLE round 8.
 
 #include <windows.h>
 
@@ -17,6 +20,7 @@
 #include <string.h>
 
 #include "rust/sim/units.h"   // the unit registry (rust/crates/ee_sim/src/units)
+#include "rust/game/rts.h"
 
 // New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h) is Rust (ee_units): a lock-free radix
 // tree over the id's bits, so any thread may resolve a handle while another thread inserts a unit or runs its
@@ -89,61 +93,9 @@ static void RTSUnitListFailed(const char* inWhere, const char* inWhat, const RTS
     abort();
 }
 
-// Whether a unit (or a chain head) is in a chain: a head always is; a unit has a previous link (a unit or the head)
-static bool RTSIsInChain(const RTSUnit* inUnit)
-{
-    return RTSDummyHead(const_cast<RTSUnit*>(inUnit)) != NULL
-        || (inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL);
-}
+void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere) { ee_rts_unit_check_list(inHead, inWhere); }
 
-// The unit's neighbours point back at it (a unit in no chain passes)
-static void RTSCheckNeighbours(const RTSUnit* inUnit, const char* inWhere)
-{
-    RTSUnit* thePrev = inUnit->mTileNode->mPrev;
-    RTSUnit* theNext = inUnit->mTileNode->mNext;
-    if (thePrev == NULL) {
-        if (theNext != NULL)
-            RTSUnitListFailed(inWhere, "a next link without a previous one", inUnit, theNext);
-        return;
-    }
-    if (RTSDummyHead(thePrev) != NULL) {
-        if (RTSDummyHead(thePrev)->mFirst != inUnit)
-            RTSUnitListFailed(inWhere, "the head's first unit is another", inUnit, thePrev);
-    } else if (thePrev->mTileNode == NULL || thePrev->mTileNode->mNext != inUnit)
-        RTSUnitListFailed(inWhere, "the previous unit's next is another", inUnit, thePrev);
-    else if (!RTSIsInChain(thePrev))
-        RTSUnitListFailed(inWhere, "the previous unit is in no chain", inUnit, thePrev);
-    if (theNext != NULL && (theNext->mTileNode == NULL || theNext->mTileNode->mPrev != inUnit))
-        RTSUnitListFailed(inWhere, "the next unit's previous is another", inUnit, theNext);
-}
-
-void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere)
-{
-    if (!gRTSCheckUnitList || inHead == NULL)
-        return;
-    const RTSUnit* thePrev = reinterpret_cast<const RTSUnit*>(inHead);
-    unsigned long theCount = 0;
-    for (const RTSUnit* theUnit = inHead->mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-        if (theUnit->mTileNode == NULL)
-            RTSUnitListFailed(inWhere, "a unit in the chain has no node", theUnit, thePrev);
-        if (theUnit->mTileNode->mPrev != thePrev)
-            RTSUnitListFailed(inWhere, "a unit's previous is not the unit before it", theUnit, thePrev);
-        if (!theUnit->mIsValid)
-            RTSUnitListFailed(inWhere, "an invalid (removed) unit is in the chain", theUnit, thePrev);
-        if (++theCount > (1UL << 22))
-            RTSUnitListFailed(inWhere, "the chain loops (over 4M units)", theUnit, thePrev);
-        thePrev = theUnit;
-    }
-}
-
-
-// Creates an invalid unit with no id, tile or tile node
-RTSUnit::RTSUnit()
-{
-    this->Reset();
-    this->mIsValid = false;
-    this->mIsNodeFreed = true;
-}
+RTSUnit::RTSUnit() { ee_rts_unit_construct(this); }
 
 // Destroys the unit and its tile node (asserts it was invalidated)
 RTSUnit::~RTSUnit()
@@ -154,27 +106,6 @@ RTSUnit::~RTSUnit()
     delete this->mTileNode;
 }
 
-// Takes the unit out of its player's unit list and its tile's chain and marks it invalid
-void RTSUnit::Invalidate()
-{
-    ESVERIFY_AT(this->mIsValid == true, 80);
-    this->RemoveFromList();
-    if (this->mTileNode != NULL) {
-        this->Unlink();
-    }
-    this->mIsValid = false;
-}
-
-// Frees the invalid unit's tile node
-void RTSUnit::FreeNode()
-{
-    ESVERIFY_AT(this->mIsValid == false, 119);
-    RTSUnregisterUnit(this);   // New (R5a.4): its handles resolve to nothing from here (ee/EEUnitHandle.h)
-    EEUnitStoreRemove(this);   // New (R5b.4): a no-op unless a teardown dropped the list's reference (ee/EEUnitStore.h)
-    delete this->mTileNode;
-    this->mTileNode = NULL;
-    this->mIsNodeFreed = true;
-}
 
 // Appends the unit's id and tile to a debug description
 void RTSUnit::Describe(UWideString& ioString)
@@ -192,81 +123,7 @@ void RTSUnit::DescribeLong(UWideString& ioString)
     ioString += theString;
 }
 
-// Resets the unit as valid, creating a tile node when it is to be linked into tiles
-void RTSUnit::Initialize(long inLinked)
-{
-    this->Reset();
-    this->mIsValid = true;
-    this->mIsNodeFreed = false;
-    if (inLinked == 0) {
-        this->mTileNode = NULL;
-    } else {
-        this->mTileNode = new RTSUnitLink;
-    }
-}
 
-// Clears the unit's id, tile, list links, player and flags (off the map)
-void RTSUnit::Reset()
-{
-    this->mUnitID = 0xffffffff;
-    this->mTileNode = NULL;
-    this->mTile = NULL;
-    this->mTileX = -10000;
-    this->mTileY = -10000;
-    this->mNext = NULL;
-    this->mPrevious = NULL;
-    this->mPlayer = NULL;
-    this->mIsQueuedForDelete = false;
-    this->mIsEditorSelected = false;
-    this->mIsValid = false;
-    this->mIsNodeFreed = false;
-}
-
-// Moves the unit in its player's unit list to after another unit (to the head with NULL)
-void RTSUnit::InsertAfter(RTSUnit* inUnit)
-{
-    this->RemoveFromList();
-    if (inUnit != NULL) {
-        this->mNext = inUnit->mNext;
-        inUnit->mNext = this;
-        if (this->mNext != NULL) {
-            this->mNext->mPrevious = this;
-        }
-    }
-    this->mPrevious = inUnit;
-}
-
-// Moves the unit in a tile's unit chain to after another unit or to the front after the chain's dummy head
-void RTSUnit::Link(RTSUnit* inUnit)
-{
-    this->Unlink();
-    if (gRTSCheckUnitList && !this->mIsValid)
-        RTSUnitListFailed("RTSUnit::Link", "linking a removed (invalid) unit", this, inUnit);
-    if (gRTSCheckUnitList && !RTSIsInChain(inUnit))
-        RTSUnitListFailed("RTSUnit::Link", "linking after a unit that is in no chain", this, inUnit);
-    RTSDummyUnit* theHead = RTSDummyHead(inUnit);
-    if (theHead != NULL) {
-        this->mTileNode->mNext = theHead->mFirst;
-        this->mTileNode->mPrev = inUnit;
-        theHead->mFirst = this;
-    } else {
-        this->mTileNode->mNext = inUnit->mTileNode->mNext;
-        this->mTileNode->mPrev = inUnit;
-        inUnit->mTileNode->mNext = this;
-    }
-    if (this->mTileNode->mNext != NULL) {
-        this->mTileNode->mNext->mTileNode->mPrev = this;
-    }
-    if (gRTSCheckUnitList)
-        RTSCheckNeighbours(this, "RTSUnit::Link (after)");
-    EEUnitStoreLinked(this);   // New (R5b.4): the store's on-the-map flag (ee/EEUnitStore.h)
-}
-
-// Drops the last reference to the unit
-void RTSUnit::LastDereference()
-{
-    UReferenceCounter::Dereference();
-}
 
 // Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error. port (R5b.4,
 // round 26): the body is Rust (ee_units unit_load.rs rts_load)
@@ -277,39 +134,6 @@ long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
 }
 
-// Unlinks the unit from its player's unit list
-void RTSUnit::RemoveFromList()
-{
-    if (this->mNext != NULL) {
-        this->mNext->mPrevious = this->mPrevious;
-    }
-    if (this->mPrevious != NULL) {
-        this->mPrevious->mNext = this->mNext;
-    }
-    this->mNext = NULL;
-    this->mPrevious = NULL;
-}
-
-// Unlinks the unit from its tile's unit chain
-void RTSUnit::Unlink()
-{
-    if (gRTSCheckUnitList)
-        RTSCheckNeighbours(this, "RTSUnit::Unlink (before)");
-    if (this->mTileNode->mNext != NULL) {
-        this->mTileNode->mNext->mTileNode->mPrev = this->mTileNode->mPrev;
-    }
-    if (this->mTileNode->mPrev != NULL) {
-        RTSDummyUnit* theHead = RTSDummyHead(this->mTileNode->mPrev);
-        if (theHead != NULL) {
-            theHead->mFirst = this->mTileNode->mNext;
-        } else {
-            this->mTileNode->mPrev->mTileNode->mNext = this->mTileNode->mNext;
-        }
-    }
-    this->mTileNode->mNext = NULL;
-    this->mTileNode->mPrev = NULL;
-    EEUnitStoreLinked(this);   // New (R5b.4): the store's on-the-map flag (ee/EEUnitStore.h)
-}
 
 // Writes the unit's tile, id and flags (editor selection as false; versions up to 0.6 write id and tile
 // only); returns the first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs rts_save)
@@ -320,33 +144,32 @@ long RTSUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
 }
 
-// Looks up the unit's tile on the map, marking the unit off the map when there is no tile
-void RTSUnit::UpdateTile(EEMap* inMap)
-{
-    if (this->mTileX == -10000 || this->mTileY == -10000) {
-        this->mTile = NULL;
-    } else {
-        RTSTile* theTile = inMap->GetTile(this->mTileX, this->mTileY);
-        if (theTile == NULL) {
-            this->mTileX = -10000;
-            this->mTileY = -10000;
-        }
-        this->mTile = theTile;
-    }
-}
-
-// Resets the unit as invalid
-void RTSUnit::Clear()
-{
-    this->Reset();
-    this->mIsValid = false;
-}
-
 void RTSUnit::CopyFrom(class RTSUnit *)
 {
 }
 
-long RTSUnit::RepairPointers(unsigned long,unsigned long)
-{
-    return 0;
+
+// The shims units.rs calls (UnitsCpp: the unit's side)
+extern "C" {
+EeUnitsRtsUnitFields* ee_rtsucpp_unit_fields(RTSUnit* inUnit) { return inUnit; }
+RTSUnitLink** ee_rtsucpp_node_slot(RTSUnit* inUnit) { return &inUnit->mTileNode; }
+RTSUnit** ee_rtsucpp_next_slot(RTSUnit* inUnit) { return &inUnit->mNext; }
+RTSUnit** ee_rtsucpp_previous_slot(RTSUnit* inUnit) { return &inUnit->mPrevious; }
+RTSTile** ee_rtsucpp_tile_slot(RTSUnit* inUnit) { return &inUnit->mTile; }
+EEPlayer** ee_rtsucpp_player_slot(RTSUnit* inUnit) { return &inUnit->mPlayer; }
+RTSDummyUnit* ee_rtsucpp_dummy_head(RTSUnit* inLink) { return RTSDummyHead(inLink); }
+RTSUnit** ee_rtsucpp_head_first_slot(RTSDummyUnit* inHead) { return &inHead->mFirst; }
+RTSUnitLink* ee_rtsucpp_link_new() { return new RTSUnitLink; }
+void ee_rtsucpp_link_delete(RTSUnitLink* inLink) { delete inLink; }
+void ee_rtsucpp_store_linked(RTSUnit* inUnit) { EEUnitStoreLinked(inUnit); }
+void ee_rtsucpp_store_remove(RTSUnit* inUnit) { EEUnitStoreRemove(inUnit); }
+void ee_rtsucpp_unregister(RTSUnit* inUnit) { RTSUnregisterUnit(inUnit); }
+void ee_rtsucpp_register(RTSUnit* inUnit) { RTSRegisterUnit(inUnit); }
+bool ee_rtsucpp_check_on() { return gRTSCheckUnitList; }
+void ee_rtsucpp_list_failed(const char* inWhere, const char* inWhat, const RTSUnit* inUnit, const RTSUnit* inOther) { RTSUnitListFailed(inWhere, inWhat, inUnit, inOther); }
+RTSTile* ee_rtsucpp_map_tile(EEMap* inMap, long inX, long inY) { return inMap->GetTile(inX, inY); }
+void ee_rtsucpp_sight_on(RTSUnit* inUnit) { inUnit->SightOnHere(); }
+void ee_rtsucpp_sight_off(RTSUnit* inUnit) { inUnit->SightOffHere(); }
+void ee_rtsucpp_unit_invalidate(RTSUnit* inUnit) { inUnit->Invalidate(); }
+void ee_rtsucpp_unit_repair_pointers(RTSUnit* inUnit, unsigned long inFirst, unsigned long inSecond) { inUnit->RepairPointers(inFirst, inSecond); }
 }

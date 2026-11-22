@@ -1,5 +1,7 @@
 # LLE, the rest (all of the Low-Level Engine in Rust)
 
+Round 8 (2026-11-20, the bodies over one-statement shims, with src/RTS Engine in the scope): [lle-shims.md](lle-shims.md).
+
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
 ("LLE rest, round 1"). Earlier lanes over the same code: [lle-whole-classes-ne-fs-utilities-sound-ts-tm-es-input.md](lle-whole-classes-ne-fs-utilities-sound-ts-tm-es-input.md),
 [lle-network-engine-whole-classes.md](lle-network-engine-whole-classes.md), [r6-lle-user-interface-toolkit-14-4k.md](r6-lle-user-interface-toolkit-14-4k.md),

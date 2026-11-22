@@ -375,8 +375,6 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_BASE_POP_LIMIT:
         return thePlayer->EEPlayer::GetPopulationLimit(0);
-    case EE_CP_PLAYER_CHEAT_ON:
-        return EECPCheatOn(thePlayer, (long)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_NUM_TEAMS:
         return (int64_t)gWorld.GetNumTeams();
     case EE_CP_PLAYER_TEAM_WONDERS:
@@ -427,14 +425,8 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_BASE_DAMAGE_TAKEN: thePlayer->EEPlayer::DamageTaken((long)v[0], (long)v[1], theUnit);
         return 0;
-    case EE_CP_PLAYER_NAVAL_FLEE_ON:
-        return EECPNavalFleeOn(thePlayer) ? 1 : 0;
-    case EE_CP_PLAYER_MILITIA_ON:
-        return EECPMilitiaOn(thePlayer) ? 1 : 0;
     case EE_CP_PLAYER_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
-    case EE_CP_PLAYER_EXPERIMENT:
-        return EECPExperiment(thePlayer, (const char*)(uintptr_t)inA) ? 1 : 0;
     case EE_CP_PLAYER_IS_ALLY:
         return thePlayer->IsAlly(reinterpret_cast<EEPlayer*>((uintptr_t)inA)) ? 1 : 0;
     case EE_CP_PLAYER_EPOCH_MEDIA: v[1] != 0 ? static_cast<EETechTreeEpoch*>(thePlayer->mTechnologies->Get((long)v[0]))->LoadMediaOfKind(7) : static_cast<EETechTreeEpoch*>(thePlayer->mTechnologies->Get((long)v[0]))->UnloadMediaOfKind(7);
@@ -523,14 +515,12 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return gGameOptions.mLoadType;
     case EE_CP_PLAYER_EXPLORE_UNSEEN: gWorld.mMap->ExploreUnseen(thePlayer);
         return 0;
-    case EE_CP_PLAYER_TRACE_START: EE_CP_TRACE(thePlayer, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld demand=%d exp=%s engine=%s%s%s",
-            thePlayer->mDifficulty, EECPPersonality(thePlayer).mID.c_str(), EECPCheatNames(thePlayer), thePlayer->mIsCheating ? 1 : 0, thePlayer->ScaleCost(100),
-            EECPCheatOn(thePlayer, kAICheatExtra) ? thePlayer->mExtraResources : 0L, (long)thePlayer->mComputerAggression, EECPDemandSplitOn(thePlayer) ? 1 : 0,
-            EECPExperimentNames(thePlayer), EECPEngineName(thePlayer).c_str(), EECPEngineSeesAll(thePlayer) ? " sees_all=1" : "",
-            EECPEngineFillsGarrison(thePlayer) ? " fills_garrison=1" : "");
+    case EE_CP_PLAYER_ENGINE_NAME: EECPNextAppend((void*)(uintptr_t)inA, EECPEngineName(thePlayer));
         return 0;
-    case EE_CP_PLAYER_TRACE_MANAGER:
-        return (int64_t)(uintptr_t)std::exchange(gCPTraceManager, (const char*)(uintptr_t)inA);
+    case EE_CP_PLAYER_ENGINE_SEES_ALL:
+        return EECPEngineSeesAll(thePlayer) ? 1 : 0;
+    case EE_CP_PLAYER_ENGINE_FILLS_GARRISON:
+        return EECPEngineFillsGarrison(thePlayer) ? 1 : 0;
     case EE_CP_PLAYER_NEW_PLACEMENT: thePlayer->mPlacement = new EECPPlacement(thePlayer);
         return 0;
     case EE_CP_PLAYER_DELETE_PLACEMENT: delete thePlayer->mPlacement;

@@ -321,29 +321,23 @@ static UWideString Text(const uint8_t* inText, size_t inLength)
 // the last snapshot's complex units (EE_SCREENS_GAME_HK_CENTER's record index), kept by ee_screenscpp_hot_key_keep
 static std::vector<EEComplexUnit*> sHotKeyUnits;
 
-// the aircraft's target (hot_keys_ffi.rs): the map point under the game view's centre, or its tile's centre
-extern "C" void ee_screenscpp_hot_key_target(float* outXY)
-{
-    GE3DPoint theTarget;
-    GE2DPoint theCursor(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter());
-    if (gWorld.mMap->GetLocationAt(theCursor, theTarget, true) == NULL) {
-        long theX;
-        long theY;
-        gWorld.mMap->GetTileAt(theCursor, theX, theY);
-        theTarget.SetX(theX + 0.5f);
-        theTarget.SetY(theY + 0.5f);
-    }
-    outXY[0] = theTarget.GetX();
-    outXY[1] = theTarget.GetY();
-}
-
-// the snapshot's complex units (hud_views.rs hot_key_units), EE_SCREENS_GAME_HK_CENTER's by the snapshot's index
-extern "C" void ee_screenscpp_hot_key_keep(const uint64_t* inUnits, size_t inCount)
-{
-    sHotKeyUnits.clear();
-    for (size_t i = 0; i < inCount; i++)
-        sHotKeyUnits.push_back(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnits[i]));
-}
+static GE3DPoint sHotKeyTarget;   // the aircraft's target (a local of the original)
+extern "C" void ee_screenscpp_hk_target_reset() { sHotKeyTarget = GE3DPoint(); }
+extern "C" bool ee_screenscpp_hk_location_at()
+{ return gWorld.mMap->GetLocationAt(GE2DPoint(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter()), sHotKeyTarget, true) != NULL; }
+extern "C" void ee_screenscpp_hk_tile_at(long* inX, long* inY)
+{ gWorld.mMap->GetTileAt(GE2DPoint(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter()), *inX, *inY); }
+extern "C" float ee_screenscpp_hk_target_x() { return sHotKeyTarget.GetX(); }
+extern "C" float ee_screenscpp_hk_target_y() { return sHotKeyTarget.GetY(); }
+extern "C" void ee_screenscpp_hk_units_clear() { sHotKeyUnits.clear(); }
+extern "C" void ee_screenscpp_hk_units_push(uint64_t inUnit)
+{ sHotKeyUnits.push_back(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit)); }
+extern "C" uintptr_t ee_screenscpp_sel_control(uintptr_t inForm, uint32_t inControl)
+{ return (uintptr_t)static_cast<UIForm*>(reinterpret_cast<void*>(inForm))->GetControl(inControl); }
+extern "C" int32_t ee_screenscpp_sel_list(uintptr_t inControl, unsigned long* inSelection)
+{ return (int32_t)static_cast<UILBString*>(reinterpret_cast<UIControl*>(inControl))->GetCurrentSelection(*inSelection); }
+extern "C" int32_t ee_screenscpp_sel_combo(uintptr_t inControl, unsigned long* inSelection)
+{ return (int32_t)static_cast<UIComboBox*>(reinterpret_cast<UIControl*>(inControl))->GetCurrentSelection(*inSelection); }
 
 // ---- the chat log (chat_log.rs): its C++ entry points are inline (ee/EEUIEChatLogEvents.h); a saved game's reads
 // and writes
@@ -351,48 +345,27 @@ extern "C" void ee_screenscpp_hot_key_keep(const uint64_t* inUnits, size_t inCou
 static UWideString sChatLogString;   // the last read's string and colour (ee_screenscpp_cl_last)
 static GEColor sChatLogColour;
 
-extern "C" long ee_screenscpp_cl_read(void* inFile, uint32_t inKind, uint32_t* outValue)
-{
-    FSFile& theFile = *static_cast<FSFile*>(inFile);
-    if (inKind == 0) {
-        unsigned long theValue = 0;
-        long theResult = theFile.Read(theValue);
-        *outValue = (uint32_t)theValue;
-        return theResult;
-    }
-    if (inKind == 1)
-        return sChatLogString.Load(theFile);
-    return sChatLogColour.Load(theFile);
-}
-
-extern "C" size_t ee_screenscpp_cl_last(uint32_t inKind, uint8_t* outText, size_t inCapacity)
-{
-    if (inKind == 2) {
-        const float theColour[3] = {sChatLogColour.mRed, sChatLogColour.mGreen, sChatLogColour.mBlue};
-        memcpy(outText, theColour, inCapacity < 12 ? inCapacity : 12);
-        return 12;
-    }
-    size_t theLength = sChatLogString.GetTCHARLength();
-    memcpy(outText, (const char*)sChatLogString, theLength < inCapacity ? theLength : inCapacity);
-    return theLength;
-}
-
-extern "C" long ee_screenscpp_cl_write(void* inFile, uint32_t inKind, uint32_t inValue, const uint8_t* inBytes,
-                                       size_t inLength)
-{
-    FSFile& theFile = *static_cast<FSFile*>(inFile);
-    if (inKind == 0) {
-        unsigned long theValue = inValue;
-        return theFile.Write(theValue);
-    }
-    if (inKind == 1)
-        return Text(inBytes, inLength).Save(theFile);
-    GEColor theColour;
-    memcpy(&theColour.mRed, inBytes, 4);
-    memcpy(&theColour.mGreen, inBytes + 4, 4);
-    memcpy(&theColour.mBlue, inBytes + 8, 4);
-    return theColour.Save(theFile);
-}
+static unsigned long sChatLogValue;   // a write's value
+#define CL_FILE(x) (*reinterpret_cast<FSFile*>(x))
+extern "C" int32_t ee_screenscpp_cl_read_ulong(uintptr_t inFile, unsigned long* inValue)
+{ return (int32_t)CL_FILE(inFile).Read(*inValue); }
+extern "C" int32_t ee_screenscpp_cl_read_string(uintptr_t inFile)
+{ return (int32_t)sChatLogString.Load(CL_FILE(inFile)); }
+extern "C" int32_t ee_screenscpp_cl_read_colour(uintptr_t inFile)
+{ return (int32_t)sChatLogColour.Load(CL_FILE(inFile)); }
+extern "C" void ee_screenscpp_cl_string(void* inText) { EEShimOut(inText, sChatLogString); }
+extern "C" float ee_screenscpp_cl_red() { return sChatLogColour.mRed; }
+extern "C" float ee_screenscpp_cl_green() { return sChatLogColour.mGreen; }
+extern "C" float ee_screenscpp_cl_blue() { return sChatLogColour.mBlue; }
+extern "C" void ee_screenscpp_cl_set_red(float inV) { sChatLogColour.mRed = inV; }
+extern "C" void ee_screenscpp_cl_set_green(float inV) { sChatLogColour.mGreen = inV; }
+extern "C" void ee_screenscpp_cl_set_blue(float inV) { sChatLogColour.mBlue = inV; }
+extern "C" int32_t ee_screenscpp_cl_write_ulong(uintptr_t inFile, uint32_t inValue)
+{ return (int32_t)CL_FILE(inFile).Write(sChatLogValue = inValue); }
+extern "C" int32_t ee_screenscpp_cl_write_string(uintptr_t inFile, EeScreensShimText inText)
+{ return (int32_t)EEShimText(inText).Save(CL_FILE(inFile)); }
+extern "C" int32_t ee_screenscpp_cl_write_colour(uintptr_t inFile)
+{ return (int32_t)sChatLogColour.Save(CL_FILE(inFile)); }
 
 // ---- the civilization builder's (civ_builder.rs): inForm is the builder's form or one of its dialogs
 
@@ -1166,20 +1139,6 @@ extern "C" void ee_screenscpp_le_map_display(uintptr_t inOptions, void* inOut)
 
 // ---- the settings form's records (settings_form.rs)
 
-// a control's GetCurrentSelection (a combo box's, else a list box's): its result, the selection into outSelection
-extern "C" int32_t ee_screenscpp_selection(void* inForm, uint32_t inControl, bool inList, uint32_t* outSelection)
-{
-    UIControl* theControl = static_cast<UIForm*>(inForm)->GetControl(inControl);
-    unsigned long theSelection = 0;
-    long theResult = kErrorFailed;
-    if (theControl && inList)
-        theResult = static_cast<UILBString*>(theControl)->GetCurrentSelection(theSelection);
-    else if (theControl)
-        theResult = static_cast<UIComboBox*>(theControl)->GetCurrentSelection(theSelection);
-    *outSelection = theSelection;
-    return theResult;
-}
-
 // the fields of EEGameSettings the form reads and writes: (record field, settings member)
 #define EE_SCREENS_SETTINGS_FIELDS(X)                                                                                  \
     X(mouse_sensitivity, mMouseSensitivity) X(side_scroll_speed, mSideScrollSpeed)                                     \
@@ -1491,11 +1450,9 @@ extern "C" void ee_screenscpp_sc_pgs_new_manager(uintptr_t inForm) { F(inForm)->
 extern "C" bool ee_screenscpp_sc_pgs_is_bitmap(uintptr_t inForm, uint32_t inControl)
 { return dynamic_cast<UIBitmap*>(F(inForm)->GetControl(inControl)) != NULL; }
 extern "C" void ee_screenscpp_sc_pgs_protocol() { NEProtocol::GetProtocol(0, sPgsProtocol); }
-extern "C" void ee_screenscpp_sc_pgs_sci_delete() { EEUISCIFormManager::Get()->DeleteObjects(); }
 extern "C" int32_t ee_screenscpp_sc_preferences_save() { return (int32_t)gGamePreferences.Save(); }
 extern "C" void ee_screenscpp_sc_pdcs_fill(uintptr_t inForm, uint32_t inControl)
 { gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(F(inForm)->GetControl(inControl))); }
-extern "C" void ee_screenscpp_sc_pause_game() { gWorld.PauseGame(); }
 extern "C" uintptr_t ee_screenscpp_sc_pdcs_control(uint32_t inIndex)
 { return (uintptr_t)EEScreensPdcsControl(inIndex); }
 extern "C" void ee_screenscpp_sc_pdcs_clear_stats() { EEScreensPdcsControl(4)->DeleteAllEntries(); }
@@ -1685,7 +1642,6 @@ extern "C" void ee_screenscpp_tt_generator_display(uint32_t inIndex, void* inOut
 { EEShimOut(inOut, UWideString((const char*)EERMGetGeneratorDisplayName((unsigned long)inIndex))); }
 extern "C" void ee_screenscpp_tt_generator_name(uint32_t inIndex, void* inOut)
 { EEShimOut(inOut, UWideString(EERMGetGeneratorName(inIndex))); }
-extern "C" uintptr_t ee_screenscpp_tt_engine_ai(uint32_t inChoice) { return (uintptr_t)EECPAIByChoice(inChoice); }
 extern "C" void ee_screenscpp_tt_engine_ai_name(uintptr_t inAi, void* inOut)
 { EEShimOut(inOut, UWideString(EECPAIText(reinterpret_cast<const EECPAIEntry*>(inAi)->name, reinterpret_cast<const EECPAIEntry*>(inAi)->name_len).c_str())); }
 
@@ -1698,7 +1654,6 @@ extern "C" void ee_screenscpp_rc_ui_music_volume(float inVolume) { gUIManager->S
 extern "C" void ee_screenscpp_rc_music_start() { gMusicManager->Start(); }
 extern "C" void ee_screenscpp_rc_music_stop() { gMusicManager->Stop(); }
 extern "C" void ee_screenscpp_rc_mouse_sensitivity(float inValue) { gMouse->SetSensitivity(inValue); }
-extern "C" void ee_screenscpp_rc_left_handed(bool inLeft) { UIManager::SetMouseLeftHanded(inLeft); }
 extern "C" void ee_screenscpp_rc_apply_port() { EEApplyPortSettings(gGamePreferences.GetSettings()); }
 extern "C" void ee_screenscpp_rc_mip_filter(uint32_t inMode) { gTextureManager->UpdateMIPFilterMode(inMode); }
 extern "C" void ee_screenscpp_rc_texture_resolution(int32_t inValue) { EESetTextureResolution(inValue); }
@@ -1707,10 +1662,6 @@ extern "C" uint32_t ee_screenscpp_rc_display_rasterizers() { return (uint32_t)gD
 extern "C" uint32_t ee_screenscpp_rc_display_screens(uint32_t inRasterizer)
 { return (uint32_t)gDisplayRasterizers[inRasterizer].mScreens.size(); }
 extern "C" void ee_screenscpp_rc_external_lobby() { EEStartExternalLobby(); }
-extern "C" void ee_screenscpp_rc_delete_editor(uintptr_t inManager)
-{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->DeleteScenarioEditor(); }
-extern "C" void ee_screenscpp_rc_create_editor(uintptr_t inManager)
-{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->CreateScenarioEditor(); }
 extern "C" void ee_screenscpp_rc_start_editor(uintptr_t inManager)
 { static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->StartScenarioEditor(); }
 extern "C" void ee_screenscpp_rc_forget_main_form() { gSavedMainGameForm = NULL; }
@@ -1720,9 +1671,6 @@ extern "C" void ee_screenscpp_rc_campaign_all_open(bool inOpen)
 extern "C" void ee_screenscpp_rc_save_send() { EEScreensSendSave(sSaveObject); }
 extern "C" void ee_screenscpp_rc_save_post() { EEScreensPostSave(sSaveObject); }
 extern "C" void ee_screenscpp_rc_open_saved_main_form() { gUserInterface->OpenForm(gSavedMainGameForm); }
-extern "C" void ee_screenscpp_rc_si_blink_off() { EEUISCIFormManager::Get()->SetBlinking(false); }
-extern "C" uint32_t ee_screenscpp_rc_si_open_map() { return (uint32_t)EEUISCIFormManager::Get()->OpenMap(); }
-extern "C" uint32_t ee_screenscpp_rc_si_open_sound() { return (uint32_t)EEUISCIFormManager::Get()->OpenSound(); }
 extern "C" uint32_t ee_screenscpp_rc_si_get_scenario()
 { return (uint32_t)EEUISCIFormManager::Get()->GetScenario(EEScreensScenario()); }
 extern "C" void ee_screenscpp_rc_si_post_load() { gUserInterface->PostLoadSavedGame(EEScreensScenario()); }

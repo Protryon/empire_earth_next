@@ -409,7 +409,8 @@ pub(crate) fn call<C: Cpp + ?Sized>(
             if a == 0 {
                 c.civ_builder_button_blinking(b != 0);
             } else {
-                c.intro_set_blinking(b != 0);
+                crate::screens::sci_calls::get(c);
+                crate::screens::sci_calls::set_blinking(c, b != 0);
             }
             0
         }

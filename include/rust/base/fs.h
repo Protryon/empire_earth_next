@@ -12,6 +12,9 @@ struct EeFsArchive;
 
 struct EeFsMemFile;
 
+/// The search path.
+struct EeFsPath;
+
 /// A `UString` member as the C++ object lays it out: its vtable pointer, then the Rust record (`EeUString`).
 struct EeFsString {
   const void *vtable;
@@ -51,14 +54,24 @@ struct EeFsArchiveObj {
   unsigned long view_length;
 };
 
-/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
-/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
-struct EeFsFileOps {
-  void *context;
-  int32_t (*read_u32)(void *context, uint32_t *value);
-  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
-  int32_t (*write_u32)(void *context, uint32_t value);
-  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
+/// The C++ `FSFile`'s calls (File System.cpp): each the one virtual call it names; the counts are the C++
+/// `unsigned long` out arguments.
+struct EeFsFileCalls {
+  /// `Read(uint32_t&)`.
+  int32_t (*read_u32)(void *file, uint32_t *value);
+  /// `Read(unsigned char*, length, read)`.
+  int32_t (*read_bytes)(void *file, uint8_t *out, unsigned long length, unsigned long *read);
+  /// `Read(char*, length, read)`.
+  int32_t (*read_text)(void *file, char *out, unsigned long length, unsigned long *read);
+  /// `Write(const uint32_t&)`.
+  int32_t (*write_u32)(void *file, uint32_t value);
+  /// `Write(const unsigned char*, length, written)`.
+  int32_t (*write_bytes)(void *file,
+                         const uint8_t *data,
+                         unsigned long length,
+                         unsigned long *written);
+  /// `Write(const char*, length, written)`.
+  int32_t (*write_text)(void *file, const char *data, unsigned long length, unsigned long *written);
 };
 
 /// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
@@ -74,6 +87,16 @@ struct EeFsChunk {
   bool decompressed;
 };
 
+/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
+/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
+struct EeFsFileOps {
+  void *context;
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
+};
+
 /// Receives a NUL-terminated byte string, valid during the call. `context` is the caller's.
 using EeFsTextSink = void(*)(void *context, const char *text);
 
@@ -86,6 +109,28 @@ using EeFsFatVisitor = void(*)(void *context,
 
 /// A name handed to `ListFiles`' sink (the C++ inserts it into its `std::set<UString>`).
 using EeFsPathNameSink = void(*)(void *context, const char *name);
+
+/// The C++ objects an `FSPath` holds, made and deleted on the C++ side (FSPath.cpp), and the startup volume and
+/// directory its searches start from.
+struct EeFsPathCalls {
+  /// `&(*new FSArchive = *archive)`: a copy (the original's `push_back(FSArchive())` and `back() = inArchive`).
+  EeFsArchiveObj *(*archive_new)(const EeFsArchiveObj *archive);
+  /// `delete archive`.
+  void (*archive_delete)(EeFsArchiveObj *archive);
+  /// `new FSFileSpec(*spec)`.
+  EeFsSpec *(*spec_new)(const EeFsSpec *spec);
+  /// `delete spec` (any `FSFileSpec`, a memory file too).
+  void (*spec_delete)(EeFsSpec *spec);
+  /// `new FSMemoryFile(member, true)` as its `FSFileSpec`.
+  EeFsSpec *(*memory_file_new)(EeFsMemFile *member);
+  /// `static_cast<std::set<UString>*>(set)->clear()`.
+  void (*set_clear)(void *set);
+  /// `static_cast<std::set<UString>*>(set)->insert(UString(name))`.
+  EeFsPathNameSink set_insert;
+  /// `&gStartupVolume`, `&gStartupDirectory`.
+  const EeFsString *startup_volume;
+  const EeFsString *startup_directory;
+};
 
 extern "C" {
 
@@ -189,6 +234,12 @@ long ee_fs_arch_extract_all(EeFsArchiveObj *a,
                             const EeFsSpec *destination,
                             const EeFsString *startup_volume,
                             const EeFsString *startup_directory);
+
+/// Registers the C++ `FSFile` calls (File System.cpp's static initializer); returns true.
+///
+/// # Safety
+/// `calls` lives for the rest of the process.
+bool ee_fs_file_register(const EeFsFileCalls *calls);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
@@ -301,26 +352,26 @@ void ee_fs_mem_set_open(EeFsMemFile *file, bool open);
 /// `Load(inFile, inLength)`.
 ///
 /// # Safety
-/// `file` is live, `ops` valid and its callbacks live for the call.
-int32_t ee_fs_mem_load(EeFsMemFile *file, const EeFsFileOps *ops, size_t length);
+/// `file` is live, `ops` the live C++ `FSFile` (any subclass).
+int32_t ee_fs_mem_load(EeFsMemFile *file, void *file_obj, size_t length);
 
 /// `Load(inFile)`.
 ///
 /// # Safety
 /// As `ee_fs_mem_load`.
-int32_t ee_fs_mem_load_prefixed(EeFsMemFile *file, const EeFsFileOps *ops);
+int32_t ee_fs_mem_load_prefixed(EeFsMemFile *file, void *file_obj);
 
 /// `Save(outFile, inLength)`.
 ///
 /// # Safety
 /// As `ee_fs_mem_load`.
-int32_t ee_fs_mem_save(const EeFsMemFile *file, const EeFsFileOps *ops, size_t length);
+int32_t ee_fs_mem_save(const EeFsMemFile *file, void *file_obj, size_t length);
 
 /// `Save(outFile)`.
 ///
 /// # Safety
 /// As `ee_fs_mem_load`.
-int32_t ee_fs_mem_save_prefixed(EeFsMemFile *file, const EeFsFileOps *ops);
+int32_t ee_fs_mem_save_prefixed(EeFsMemFile *file, void *file_obj);
 
 /// `FSChunk()`: fills the embedded state.
 ///
@@ -343,26 +394,26 @@ bool ee_fs_chunk_size(const EeFsChunk *chunk, uint32_t *out_size);
 /// `LoadChunkHeader`.
 ///
 /// # Safety
-/// `chunk` is valid; `ops` valid and its callbacks live for the call.
-int32_t ee_fs_chunk_load_header(EeFsChunk *chunk, const EeFsFileOps *ops);
+/// `chunk` is valid; `ops` the live C++ `FSFile` (any subclass).
+int32_t ee_fs_chunk_load_header(EeFsChunk *chunk, void *file_obj);
 
 /// `LoadChunkFromFile`.
 ///
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
-int32_t ee_fs_chunk_load_from_file(EeFsChunk *chunk, const EeFsFileOps *ops);
+int32_t ee_fs_chunk_load_from_file(EeFsChunk *chunk, void *file_obj);
 
 /// `SaveChunkToFile`.
 ///
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
-int32_t ee_fs_chunk_save_to_file(EeFsChunk *chunk, const EeFsFileOps *ops);
+int32_t ee_fs_chunk_save_to_file(EeFsChunk *chunk, void *file_obj);
 
 /// `SkipChunk`.
 ///
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
-int32_t ee_fs_chunk_skip(EeFsChunk *chunk, const EeFsFileOps *ops);
+int32_t ee_fs_chunk_skip(EeFsChunk *chunk, void *file_obj);
 
 /// `SavePersistentToChunk`'s first half: a new payload, or null when the chunk has one already.
 ///
@@ -515,41 +566,127 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t length,
                                   EeFsMemFile **out_file);
 
-/// `FindFile(name, outFile, outDirectory)`'s search: the directories in order (each searched by a copy of its spec,
-/// so no search handle is shared between threads), then the archives (the name lower-cased). A file found in a
-/// directory is left in `found` (the C++ copies it into a new `FSFileSpec`) and in `out_directory`; a member found in
-/// archive `*out_archive` is handed back in `*out_member` (the C++ wraps and names it) and `out_directory` becomes
-/// that archive's file. kErrorNotFound when neither has it.
+/// `FSMemoryFile::Close`: the memory file closed; an `FOpen` stream closed and its temporary file deleted.
 ///
 /// # Safety
-/// `directories` holds `directory_count` live spec records, `archives` `archive_count` live archive records; `name`
-/// is a live `UString` record; `found` and `out_directory` are live spec records; the outputs are writable.
-long ee_fs_path_find(const EeFsSpec *directories,
-                     size_t directory_count,
-                     const EeFsArchiveObj *archives,
-                     size_t archive_count,
-                     const EeFsString *name,
-                     EeFsSpec *found,
-                     EeFsSpec *out_directory,
-                     EeFsMemFile **out_member,
-                     size_t *out_archive,
-                     const EeFsString *startup_volume,
-                     const EeFsString *startup_directory);
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`.
+int32_t ee_fs_mem_close_disk(EeFsMemFile *file,
+                             void **stream,
+                             const EeFsString *temporary);
 
-/// `ListFiles`' walk of the directories: every match of `pattern` in each directory, named relative to it (as a
-/// `PLAT_MAX_PATH` string's `Copy` keeps it), handed to `sink`. Returns the last search's result (the end-of-search
-/// code when there is a directory), or `previous` (the archives' result) when there is none.
+/// `FSMemoryFile::Copy(inDestination, inFailIfExists, ...)`: the contents written to a disk file; kErrorAlreadyExists
+/// when asked to fail on an existing file, kErrorNativeError when it cannot be created. The position is reset.
 ///
 /// # Safety
-/// `directories` holds `directory_count` live spec records, `pattern` is a C string, `sink` takes `context`.
-long ee_fs_path_list_directories(const EeFsSpec *directories,
-                                 size_t directory_count,
-                                 const char *pattern,
-                                 long previous,
-                                 EeFsPathNameSink sink,
-                                 void *context,
-                                 const EeFsString *startup_volume,
-                                 const EeFsString *startup_directory);
+/// `file` is live, `destination` a C string.
+int32_t ee_fs_mem_copy_disk(EeFsMemFile *file,
+                            const char *destination,
+                            bool fail_if_exists);
+
+/// `FSMemoryFile::FOpen(inMode)`: the contents copied to a new temporary file (`EE_` in the temporary directory),
+/// reopened with `mode` into `*stream` (its name in `temporary`); kErrorNativeError (the platform's error recorded)
+/// when that fails. The memory file is open while the stream is.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`; `mode` a C string.
+int32_t ee_fs_mem_fopen_disk(EeFsMemFile *file,
+                             const char *mode,
+                             void **stream,
+                             EeFsString *temporary);
+
+/// `FSPath()`.
+///
+/// # Safety
+/// `calls` is static.
+EeFsPath *ee_fs_path_new(const EeFsPathCalls *calls);
+
+/// `FSPath(inPath)`: a new path with copies of the other's archives (each reopened) and directories.
+///
+/// # Safety
+/// `other` is live.
+EeFsPath *ee_fs_path_new_copy(const EeFsPath *other);
+
+/// `~FSPath`: the archives and directories deleted.
+///
+/// # Safety
+/// `p` is live and not used again.
+void ee_fs_path_free(EeFsPath *p);
+
+/// `operator=(inPath)`: the archives and directories replaced by copies of the other's.
+///
+/// # Safety
+/// Both are live.
+void ee_fs_path_assign(EeFsPath *p, const EeFsPath *other);
+
+/// `AddArchive(inArchive, inAppend)`.
+///
+/// # Safety
+/// `p` is live, `archive` a live `FSArchive`.
+void ee_fs_path_add_archive(EeFsPath *p, const EeFsArchiveObj *archive, bool append);
+
+/// `AddDirectory(inDirectory, inAppend)`.
+///
+/// # Safety
+/// `p` is live, `directory` a live `FSFileSpec`.
+void ee_fs_path_add_directory(EeFsPath *p, const EeFsSpec *directory, bool append);
+
+/// `FindFile(inName, outFile, outDirectory)` (`out_directory` null: a local one, `FindFile(inName, outFile)`).
+///
+/// # Safety
+/// `p` is live, `name` a live `UString`, `out_file` writable, `out_directory` null or a live `FSFileSpec`.
+long ee_fs_path_find_file(const EeFsPath *p,
+                          const EeFsString *name,
+                          EeFsSpec **out_file,
+                          EeFsSpec *out_directory);
+
+/// `FindFile(inName)` (`wide`: `inName` is a `UWideString`, searched as a `UString` of its bytes).
+///
+/// # Safety
+/// `p` is live, `name` a live `UString` (or `UWideString`: its text).
+long ee_fs_path_has_file(const EeFsPath *p, const char *name);
+
+/// `GetFileArchiveStatus(inName, outArchived)` (the name's text: `UString` or `UWideString`).
+///
+/// # Safety
+/// `p` is live, `name` a C string, `archived` writable.
+bool ee_fs_path_archive_status(const EeFsPath *p, const char *name, bool *archived);
+
+/// `ListFiles(inPattern, outFiles)`.
+///
+/// # Safety
+/// `p` is live, `pattern` a C string, `set` the C++ `std::set<UString>`.
+long ee_fs_path_list_files(const EeFsPath *p, const char *pattern, void *set);
+
+/// `GetArchive(inIndex)`: the archive (null past the end).
+///
+/// # Safety
+/// `p` is live.
+EeFsArchiveObj *ee_fs_path_archive(const EeFsPath *p, unsigned long index);
+
+/// `GetArchive(inIndex, outArchive)` / `GetDirectory(inIndex, outDirectory)` (`directory`): the item assigned to
+/// `out`; kErrorBeyondEnd past the end.
+///
+/// # Safety
+/// `p` is live; `out` a live `FSArchive` (or `FSFileSpec` for a directory).
+long ee_fs_path_get(const EeFsPath *p,
+                    bool directory,
+                    unsigned long index,
+                    void *out);
+
+/// `GetArchiveCount()` / `GetDirectoryCount()` (`directory`).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_fs_path_count(const EeFsPath *p, bool directory);
+
+/// `RemoveArchive(inIndex)` (the archive closed, then deleted) / `RemoveDirectory(inIndex)` (`directory`);
+/// kErrorBeyondEnd past the end.
+///
+/// # Safety
+/// `p` is live.
+long ee_fs_path_remove(EeFsPath *p,
+                       bool directory,
+                       unsigned long index);
 
 /// Registers a prototype under its tag -> whether it was taken (false: the tag was already registered, the caller
 /// deletes the prototype).

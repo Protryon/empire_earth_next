@@ -9,6 +9,10 @@
 
 #include <vector>
 
+struct EeCampaignProgress;
+
+// The progress is Rust's whole (ee_game campaign.rs, world lane round 1: the three lists and the count, Load,
+// RestoreCivilization, SaveCompletedScenario; MakeKey is campaign.rs make_key); the class is its handle
 class EECampaignProgress {
 public:
     EECampaignProgress();                   // 0x28f462 (three vector() ctors, clear()s, mL30 = 0)
@@ -17,9 +21,6 @@ public:
     void GetCompletedScenarios(std::vector<UWideString>& outScenarios);
     // 0x28f56d (EEWorld::StartGame: (UWideString("default"), campaign, scenario, checksum); provisional name)
     long RestoreCivilization(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario, unsigned long inChecksum);
-    // 0x28f4d5: outKey = "<campaign>.<scenario>.<checksum>" (the archive tag names; provisional name)
-    void MakeKey(UWideString& outKey, const UWideString& inCampaign, const UWideString& inScenario,
-                 unsigned long inChecksum);
     // 0x28fb05: loads inUser's progress in inCampaign (keseOK when found); the CSSE passes "default", the campaign
     // name and EECampaignFormManager::mChecksum (argument names are provisional)
     long Load(const UWideString& inUser, const UWideString& inCampaign, unsigned long inChecksum, bool inFlag);
@@ -28,10 +29,11 @@ public:
     long SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario,
                   unsigned long inChecksum);
 
-    std::vector<UWideString> mCompletedScenarios;   // +0x00 (GetCompletedScenarios copies it)
-    std::vector<UWideString> mCivilizationKeys;     // +0x10
-    std::vector<long> mCivPointsAvailable;          // +0x20
-    long mNumScenariosCompleted;                    // +0x30
+    EeCampaignProgress* mRust;              // (was +0x00 mCompletedScenarios, +0x10 mCivilizationKeys,
+                                            // +0x20 mCivPointsAvailable, +0x30 mNumScenariosCompleted)
+private:
+    EECampaignProgress(const EECampaignProgress&);
+    EECampaignProgress& operator=(const EECampaignProgress&);
 };
 
 #endif

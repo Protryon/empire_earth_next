@@ -229,9 +229,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwPointsCount: return (int64_t)POINTS.size();
     case O::PwPointX: return POINTS[a[0]].mX;
     case O::PwPointY: return POINTS[a[0]].mY;
-    case O::PwAiNextPlayer: return P64(&gArtificialIntelligence->mNextPlayer);
-    case O::PwAiNextUpdateTime: return P64(&gArtificialIntelligence->mNextUpdateTime);
-    case O::PwAiPlayerCount: return (int64_t)gArtificialIntelligence->mComputerPlayers.size();
     case O::PwMap: return P64(gWorld.mMap);
     case O::PwMapSize: return ((EEMap*)p)->mSize;
     case O::PwMapTileAt: return P64(((EEMap*)p)->mTiles[a[0]]);

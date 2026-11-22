@@ -764,8 +764,8 @@ int64_t EECore9OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     return 0;
 }
 
-double EECore9OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEAreaEffect.cpp
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
 double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore9OpD5F(inOp, p, a, f);
+    return EECore9OpD7F(inOp, p, a, f);
 }

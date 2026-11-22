@@ -6,6 +6,9 @@
 #define EE_RTSMOUSE_H
 
 #include "lle/GERectangle.h"           // RTSMouse::mBounds
+#include "rust/game/rts.h"              // EeRtsMouseFields (RTSMouse' plain members)
+#include "rust/base/math.h"
+#include "rust/render/gfx.h"
 
 class GEScreen;
 class GESurface;
@@ -13,22 +16,28 @@ class TSCriticalSection;
 
 struct EeGfxMouseFrame;                      // ee_gfx mouse_frame.rs
 
-class RTSMouse {
+// LLE round 8: the bodies are Rust (ee_game rts mouse.rs); the plain members are its record EeRtsMouseFields, a base
+// (mSensitivity, mDesktopHeight, mDesktopWidth, mWheel, mPointer, mOverlay, mShiftMode, mBA2, mIsFrozen).
+class RTSMouse : public EeRtsMouseFields {
 public:
     RTSMouse();
     virtual ~RTSMouse();                    // +0x00 (??_G 0x11acbe)
-    virtual long Load(GEScreen* inScreen);        // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
+    // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
+    virtual long Load(GEScreen* inScreen) { return ee_rts_mouse_load(this, inScreen); }
     virtual long Release();                 // +0x08 0x11b373 (returns 0)
     // 0x11af66: finds inFile on the texture path and loads it into *ioSurface on inScreen (EEMouse::Load passes
     // its 14 pointer files; provisional name)
-    long LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface);
-    void Update();                          // 0x11b3cc (under mInputLock after ISMouse::RefreshXY; provisional name)
+    long LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface)
+        { return ee_rts_mouse_load_pointer(inFile, inScreen, reinterpret_cast<void**>(ioSurface)); }
+    // 0x11b3cc (under mInputLock after ISMouse::RefreshXY; provisional name)
+    void Update() { ee_rts_mouse_update(this); }
     // drawn by RTSGraphics::Render 0x11a71c in this order (provisional names)
-    void BeginFrame();
+    void BeginFrame() { ee_rts_mouse_begin_frame(this); }
     void SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin);
     void Draw(GESurface* inSurface, const GE2DPoint& inOrigin);
     long RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, bool inIsWindowed);  // 0x11ae5d (the original returns the CopyTo result, 0 on the first call: re-mangle names.txt 11ae5d with any retype)
-    void EndFrame();                        // 0x10a94c: releases +0x74, clears +0xa1, leaves mRenderLock
+    // 0x10a94c: releases +0x74, clears +0xa1, leaves mRenderLock
+    void EndFrame() { ee_rts_mouse_end_frame(this); }
     // inline: the game settings store the mouse sensitivity value first, then load gMouse (0x1d6c80, 0x1d88eb;
     // provisional name)
     void SetSensitivity(float inSensitivity) { this->mSensitivity = inSensitivity; }
@@ -36,7 +45,9 @@ public:
     void SetBounds(const GERectangle& inBounds) { this->mBounds = inBounds; this->ClampPosition(); }
     // inline: Open 0x266038 loads gMouse once as `this` for the store and ClampPosition
     void SetPosition(const GE2DPoint& inPosition) { this->mPosition = inPosition; this->ClampPosition(); }
-    void ClampPosition();                   // 0x11b31c: mPosition into mBounds (provisional name)
+    // 0x11b31c: mPosition into mBounds (provisional name)
+    void ClampPosition()
+        { ee_gfx_mouse_clamp(reinterpret_cast<EeGe2DPoint*>(&this->mPosition), reinterpret_cast<const EeGeRectangle*>(&this->mBounds)); }
 
     GE2DPoint mPosition;                    // +0x04 (provisional name; the unit calamities pick the unit under it)
     // +0x14: the bounds the position is clamped to (SetBounds; GERectangle's operator= order top/left/bottom/right:
@@ -49,15 +60,6 @@ public:
     EeGfxMouseFrame* mFrame;
     TSCriticalSection* mRenderLock;         // +0x78
     TSCriticalSection* mInputLock;          // +0x7c
-    float mSensitivity;                     // +0x88
-    unsigned long mDesktopHeight;           // +0x8c (the desktop height; unsigned: Update divides by it through a zero-extended qword temp)
-    unsigned long mDesktopWidth;            // +0x90 (the desktop width; unsigned, likewise)
-    long mWheel;                            // +0x94
-    volatile long mPointer;                 // +0x98 (volatile: EEMSavedGroupSelect stores `mov dword ptr [x], 0`)
-    volatile long mOverlay;                 // +0x9c (= 8; volatile like mPointer: BeginFrame keeps the push next to the call, 0x11b240)
-    volatile bool mShiftMode;               // +0xa0 (volatile: `mov byte ptr [x], 0`, 0xbe1b7) set with the local player's shift mode (0xbe076; provisional name)
-    bool mBA2;                              // +0xa2
-    bool mIsFrozen;                         // +0xa4
 };
 
 // New (R5a.6): the mouse the input side updates, the game's gMouse (defined in Empire Earth.cpp), so that the RTS

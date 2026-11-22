@@ -363,6 +363,10 @@ int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::TkItemUnload: EEMedia::Get(a[0])->UnloadMedia();
         break;
+    case O::TkAeTemplateLoad: gAEManager.LoadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkAeTemplateUnload: gAEManager.UnloadTemplateMedia((unsigned long)a[0]);
+        break;
     case O::TkSoundLoad: EESoundObject::Get(a[0])->LoadMedia();
         break;
     case O::TkSoundUnload: EESoundObject::Get(a[0])->UnloadMedia();

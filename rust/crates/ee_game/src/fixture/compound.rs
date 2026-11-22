@@ -175,6 +175,14 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             }
             (check != 0) as i64
         }
+        Op::EditNumber => {
+            // the editor exercise's campaign name
+            let edit = go(Op::FxAsEdit, control_of(c.h, i[0]), &[]) as u64;
+            if edit != 0 {
+                go(Op::FxEditSetNumber, edit, &[i[1]]);
+            }
+            (edit != 0) as i64
+        }
         Op::ListSelect => {
             let list = go(Op::FxAsListString, control_of(c.h, i[0]), &[]) as u64;
             if list == 0 || (i[1] as u32 as i64) >= go(Op::FxListLineCount, list, &[]) {
