@@ -124,6 +124,7 @@
 #include "rust/won_gui/guimenu.h"
 #include "rust/won_gui/guimulti.h"
 #include "rust/won_gui/guiscroll.h"
+#include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/guistring.h"
 #include "rust/won_gui/guistrobj.h"
 #include "rust/won_gui/guitext.h"

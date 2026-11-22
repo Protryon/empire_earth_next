@@ -17,6 +17,7 @@ struct WONDrawSlots {
     const GUIString* mString;
     WrappedText* mText;
     WONDrawSlots() : mFont(NULL), mString(NULL), mText(NULL) { mImages[0] = mImages[1] = mImages[2] = mImages[3] = NULL; }
+    WONDrawSlots(Font* f, const GUIString* s, Image* i0 = NULL, WrappedText* w = NULL) : mFont(f), mString(s), mText(w) { mImages[0] = i0; mImages[1] = mImages[2] = mImages[3] = NULL; }
 };
 
 // a plan's operations: a buffer for the usual few, asked again at the plan's length when it did not fit (the
@@ -44,7 +45,7 @@ private:
 };
 
 // executes one operation; EE_WON_DRAW_CALL goes to the caller's handler
-template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, const WONDrawSlots& s, Call& call)
+template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, const WONDrawSlots& s, Call&& call)
 {
     switch (o.kind) {
         case EE_WON_DRAW_SET_COLOR: g.SetColor((DWORD)(unsigned int)o.a); break;

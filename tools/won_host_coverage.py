@@ -143,6 +143,14 @@ CHECKS = [
     # the game's WON front end (R6 WON round 31: wonnet.rs; its host's statements are ee/EEWonNetHost.inl)
     dict(enum="EeWonNetOp", header="won_lobby/wonnet.h",
          hosts=[ROOT / "include" / "ee" / "EEWonNetHost.inl"], rust=[], allowed={}),
+    # the WONGUI component hosts' one-statement cases (R6 WON round 32: guisplit.rs composes them; checked from the
+    # round's first value on: the older ops are answered by the components' Rust objects and hosts this tool does
+    # not follow)
+    dict(enum="EeWonGuiOp", header="won_gui/guihost.h", since="HostTextSink",
+         hosts=sorted(GUI.glob("*.cpp")),
+         rust=[(RS / "ee_won_gui" / "src" / "guisplit.rs", fn)
+               for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")],
+         allowed={}),
 ]
 
 
@@ -203,6 +211,8 @@ def main():
             print(f"{c['enum']}: not in include/rust/{c['header']}")
             bad += 1
             continue
+        if "since" in c:
+            values = values[values.index(c["since"]):]
         cases = host_cases(c["hosts"], c.get("mentions", False))
         rust = set()
         for path, fn, *flag in c["rust"]:

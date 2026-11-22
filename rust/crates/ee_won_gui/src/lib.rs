@@ -34,6 +34,7 @@ pub mod guilist;
 pub mod guimenu;
 pub mod guimulti;
 pub mod guiscroll;
+pub mod guisplit;
 pub mod guistring;
 pub mod guistrobj;
 pub mod guitext;
