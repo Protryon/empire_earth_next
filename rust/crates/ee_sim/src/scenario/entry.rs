@@ -33,14 +33,7 @@ pub struct EeScenarioHostContext {
 impl Default for EeScenarioHostContext {
     fn default() -> Self {
         let n = std::ptr::null_mut();
-        EeScenarioHostContext {
-            condition: n,
-            unit: n,
-            effect: n,
-            object: n,
-            cursor: n,
-            tiles: n,
-        }
+        EeScenarioHostContext { condition: n, unit: n, effect: n, object: n, cursor: n, tiles: n }
     }
 }
 
@@ -856,7 +849,8 @@ mod game {
                 return;
             }
             // SAFETY: the effect's and the object's numbers are live for the call
-            let index = unsafe { (*(en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, e, 0) as *const EeScenarioEffectFields)).mObject };
+            let index =
+                unsafe { (*(en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, e, 0) as *const EeScenarioEffectFields)).mObject };
             let fields = en_ptr(EE_SCENARIO_EN_OBJECT_FIELDS, object, 0) as *const EeScenarioObjectFields;
             // SAFETY: as above; the run's table lives for the call
             if unsafe { ffi::ee_scenario_create_units(h, index as i32, fields) }

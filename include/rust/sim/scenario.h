@@ -5704,8 +5704,6 @@ int64_t ee_scenario_trigger_member(void *trigger,
 /// `host` must be valid for the call, `trigger` a live trigger.
 void ee_scenario_trigger_evaluate_member(const EeScenarioHost *host, void *trigger, float time);
 
-extern int64_t ee_scenariocpp_trigger(uint32_t op, void *trigger, int64_t i, int64_t v);
-
 /// A float's bits as the scenario channels carry them (the low 32 bits).
 int64_t ee_scenario_f32_bits(float value);
 

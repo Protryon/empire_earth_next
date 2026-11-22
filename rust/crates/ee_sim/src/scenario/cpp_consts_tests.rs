@@ -46,7 +46,15 @@ fn c(name: &str) -> i64 {
 
 #[test]
 fn list_built_in_names_are_the_string_ids() {
-    let ids = ["IDS_COPY", "IDS_EXISTS", "IDS_ALWAYS_TRUE", "IDS_DO_NOTHING", "IDS_NONE", "IDS_OFF_MAP", "IDS_PREVIOUS_LOCATION"];
+    let ids = [
+        "IDS_COPY",
+        "IDS_EXISTS",
+        "IDS_ALWAYS_TRUE",
+        "IDS_DO_NOTHING",
+        "IDS_NONE",
+        "IDS_OFF_MAP",
+        "IDS_PREVIOUS_LOCATION",
+    ];
     for (k, name) in ids.iter().enumerate() {
         assert_eq!(EE_SCENARIO_STRING_IDS[k] as i64, c(name), "{name}");
     }
