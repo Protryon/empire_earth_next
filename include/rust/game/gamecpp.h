@@ -10,6 +10,7 @@
 #include "rust/game/app.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/app.h"
+#include "rust/sim/netmsg.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 
@@ -2994,6 +2995,41 @@ enum class EeGameCpp : uint32_t {
   TcPlayerPopulationBonus,
   TcPlayerTributeFee,
   TcPlayerBB44,
+  LcWideText,
+  LcLongVecNew,
+  LcLongVecDelete,
+  LcLongVecSize,
+  LcLongVecAt,
+  LcMsgType,
+  LcMsgForSlot,
+  LcMsgOrigSlot,
+  LcMsgIsGame,
+  LcMsgExportSize,
+  LcMsgExport,
+  LcBytesDelete,
+  LcMsgCodecSlots,
+  LcMsgSelectIDs,
+  LcMsgBuildGame,
+  LcMsgBuildEngine,
+  LcMsgDereference,
+  LcNeInputs,
+  LcNeInputAt,
+  LcNeString,
+  LcNeRecord,
+  LcWideLength,
+  LcEmCodecSlots,
+  LcBytesNew,
+  LcMrRecord,
+  LcMrFastId,
+  LcMrHeaderSlots,
+  LcMrSetString,
+  LcMrStringText,
+  LcMrStringImport,
+  LcMrListAppend,
+  LcMrListAssign,
+  LcMrListClear,
+  LcMrListData,
+  LcMrListSize,
   DuLocalPlayer,
   DuPlaySound,
   DuWorldReadLock,
@@ -3275,6 +3311,17 @@ struct EeGameCppTileBounds {
   long left;
   long right;
   long top;
+};
+
+/// A sender's value for one member (EEMRecordValue, ee/EEMessage.h: its layout).
+struct EeGamecppMrValue {
+  int64_t integer;
+  float floats[3];
+  bool is_float;
+  const void *string;
+  const uint8_t *list;
+  size_t list_count;
+  size_t list_element;
 };
 
 extern "C" {
@@ -5197,6 +5244,75 @@ void ee_gamecpp_tech_sum_costs_captured(void *tree,
                                         long id,
                                         long unit_class,
                                         long *costs);
+
+/// EEMessage::ExportMessage: the codec's bytes in a new[] block (the caller deletes it), and their size.
+///
+/// # Safety
+/// `out` and `out_size` are writable.
+void ee_gamecpp_msg_export(void *message,
+                           uint8_t **out,
+                           unsigned long *out_size);
+
+/// EEMessage::ExportSize: the class's fixed size, else the codec's size of the members.
+unsigned long ee_gamecpp_msg_export_size(void *message);
+
+/// EEMessage::ImportMessage: the codec's import into the members.
+///
+/// # Safety
+/// `data` holds the received message (NULL fails the check).
+void ee_gamecpp_msg_import(void *message, uint8_t *data);
+
+/// EEMRecord::Field.
+uint8_t *ee_gamecpp_mrecord_field(const void *message, uint32_t index, size_t size);
+
+/// EEMRecord(type, values): the record zeroed, then each value into its member in wire order (the string and the
+/// list beside the record; a blob or a raw member left to its sender).
+///
+/// # Safety
+/// `values` points at `count` values (their strings and lists alive for the call).
+void ee_gamecpp_mrecord_init(void *message,
+                             const EeGamecppMrValue *values,
+                             size_t count);
+
+/// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
+/// text, the list's records, the blob's bytes, the record's members).
+///
+/// # Safety
+/// `slots` has room for 32 (`MR_MAX_SLOTS`); `class` is writable.
+size_t ee_gamecpp_mrecord_slots(void *message,
+                                EeNetMsgSlot *slots,
+                                uint32_t *class_);
+
+/// EEMRecord::ImportMessage (and the factory's constructor, `fresh`: the record zeroed first): the codec, then the
+/// string's text and the list's or blob's bytes from where the codec found them.
+///
+/// # Safety
+/// `data` holds the received message (NULL fails the check).
+void ee_gamecpp_mrecord_import(void *message,
+                               uint8_t *data,
+                               bool fresh);
+
+/// GetSendToAllAndWaitMessageID: the type's wait member (false when it has none).
+///
+/// # Safety
+/// `out` is writable.
+bool ee_gamecpp_mrecord_wait_id(const void *message, unsigned long *out);
+
+/// SetSendToAllAndWaitMessageID: the type's wait member, if it has one.
+void ee_gamecpp_mrecord_set_wait_id(void *message, unsigned long id);
+
+/// IsResponse: the type's rule (the response's type, this message's and the response's members equal as int32).
+bool ee_gamecpp_mrecord_is_response(void *message,
+                                    void *other);
+
+/// NMIM (NMSW in the sweep): a game message the factory built from `data`.
+void ee_gamecpp_msgcap_import(void *message, const uint8_t *data);
+
+/// NMEX: a game message the physics executes (types 0x41..0xfd), then built again from its export (its NMIM).
+void ee_gamecpp_msgcap_executed(void *message);
+
+/// The sweep (EEMessageCaptureSweep): ee_sim's edge payloads, each item built.
+void ee_gamecpp_msgcap_sweep();
 
 /// `GetUnitPoint`: a unit's model centre at its camera-focus height (scaled, at its location), else its tile's
 /// centre just above the terrain.
