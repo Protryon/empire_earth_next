@@ -13,8 +13,8 @@ use ee_base::math::types::{GeRectangle, GeTransformation};
 use ee_base::math::um::floor;
 use ee_render::gfx::effect_obj::{ee_gfx_effect_queues_draw, ee_gfx_effect_storm_move, EeGfxEffectHead};
 use ee_render::gfx::effect_state::EeGfxEffectRecord;
-use ee_render::gfx::ffi_effect::ee_gfx_storm_bounds;
 use ee_render::gfx::effects::EeGfxColor;
+use ee_render::gfx::ffi_effect::ee_gfx_storm_bounds;
 use ee_render::gfx::fill::{EeGfxFillObject, EeGfxFillUnit};
 use ee_render::gfx::lighting::EeGfxLighting;
 use ee_render::gfx::rfil::{ee_gfx_rfil_active, ee_gfx_rfil_write, EeGfxRfilPairs};
@@ -150,6 +150,8 @@ extern "C" fn gs_effects(_: *mut c_void) {
 /// EEROGroundShadows::RenderScene: the static shadows and the unit shadows (when ground shadows are on; not the
 /// submerged units nor those without a shadow scale), then the effects' ground pass, by ee_gfx shadows.rs over the
 /// frame's lists (`mShadows2`, `mUnits2` in their order).
+// `!(x > 0.0)`: a NaN shadow scale casts no shadow, as the C++'s test
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_gs_render_scene() {
     let mut shadows = Vec::new();
@@ -453,7 +455,12 @@ fn fx_put_bounds(out: &mut EeGameCppTileBounds, b: &[i32; 4]) {
 /// # Safety
 /// `effect` is a live effect, `bounds` its caller's rectangle.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_fx_storm_move(effect: *mut c_void, x: c_long, y: c_long, bounds: *mut EeGameCppTileBounds) {
+pub unsafe extern "C" fn ee_gamecpp_fx_storm_move(
+    effect: *mut c_void,
+    x: c_long,
+    y: c_long,
+    bounds: *mut EeGameCppTileBounds,
+) {
     // SAFETY: the function's contract
     let out = unsafe { &mut *bounds };
     let mut b = [out.left as i32, out.top as i32, out.right as i32, out.bottom as i32];

@@ -228,8 +228,8 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "no C++")]
-    fn an_empty_line_batch_still_draws() {
-        // SAFETY: no line is read
-        unsafe { ee_gamecpp_ru_screen_lines(std::ptr::null(), 0, 0.0, 3.0) };
+    fn the_lists_view_asks_the_cpp() {
+        // (the extern "C" entries abort on a panic: the view is tested through its plain caller)
+        lists_view();
     }
 }

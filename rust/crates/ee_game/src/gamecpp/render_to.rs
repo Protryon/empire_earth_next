@@ -320,8 +320,9 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
             line.start = corner.start;
             solve_for_z(&line, 0.0, &mut location);
             camera_to(&location);
-            row_step.z = (hd(O::RtViewportYClipping, 0, &[], &[]) as f64 * (row as f64 + RT_HALF) * view_height
-                * RT_MINUS_ONE) as f32;
+            row_step.z =
+                (hd(O::RtViewportYClipping, 0, &[], &[]) as f64 * (row as f64 + RT_HALF) * view_height * RT_MINUS_ONE)
+                    as f32;
             transformation = world_transformation();
             location = transformation.apply_point(row_step);
             line = world_line();
