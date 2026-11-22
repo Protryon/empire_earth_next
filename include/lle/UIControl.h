@@ -19,6 +19,7 @@
 #include "rust/ui/obj.h"
 #include "rust/ui/rect.h"
 #include "lle/ISEntity.h"
+#include "rust/ui/mouse_ffi.h"
 #include "lle/UIEntity.h"
 
 class GEFont;
@@ -51,13 +52,17 @@ public:
     {
         return UIControl::sControlKey->GetValue() && UIControl::sCutKey->GetValue() || UIControl::ShiftKeyPressed() && UIControl::sDeleteKey->GetValue();
     }
+    // Returns whether Delete (or keypad Del with Num Lock off) is held
     static bool DeleteKeyPressed();
+    // Returns whether Down (or keypad 2 with Num Lock off) is held
     static bool DownKeyPressed();
     virtual long DrawPolygons();
     virtual long DrawTextA() { this->mDrawCount--; return kErrorOK; }
+    // Returns whether End (or keypad 1 with Num Lock off) is held
     static bool EndKeyPressed();
-    static bool EnterKeyPressed();
-    void FireTriggerEvent(unsigned long inEvent);
+    // Returns whether Enter or keypad Enter was just released
+    static bool EnterKeyPressed() { return UIControl::sEnterKey->JustUnpressed() || UIControl::sNumEnterKey->JustUnpressed(); }
+    void FireTriggerEvent(unsigned long inEvent) { this->Call(EeUiControlCall::FireTrigger, inEvent); }
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
     float GetBorderOpacity() const { return this->mBorderOpacity; }
     unsigned long GetBorderThickness() { return this->mBorderThickness; }
@@ -75,25 +80,31 @@ public:
     UIForm* GetForm() const { return static_cast<UIForm*>(this->mForm); }
     bool GetHasMouseCapture() const { return this->Call(EeUiControlCall::HasMouseCapture) != 0; }
     unsigned long GetHeight() const { return UMFloor(this->GetRectangle().GetBottom() - this->GetRectangle().GetTop() + 1.0f); }
-    virtual bool GetHelpString(UWideString& outString) const;
+    virtual bool GetHelpString(UWideString& outString) const { return this->Call(EeUiControlCall::HelpString, (intptr_t)&outString) != 0; }
     UIHotKey* GetHotKey() const { return static_cast<UIHotKey*>(this->mHotKey); }
     unsigned long GetId() const { return this->mId; }
     virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
     bool GetIsDirty() const { return this->mIsDirty; }
     bool GetLeftMouseButtonDown() const { return this->Call(EeUiControlCall::LeftButtonDown) != 0; }
+    // Returns the UI manager's rasterizer
     GERasterizer* GetRasterizer() const;
     const GERectangle& GetRectangle() const { return UIControl::AsRect(this->mRectangle); }
     bool GetRightMouseButtonDown() const { return this->Call(EeUiControlCall::RightButtonDown) != 0; }
+    // (their bodies need the form's, the manager's or the background table's class)
+    // Returns the UI manager's screen index
     unsigned long GetScreenIndex() const;
+    // Returns the UI manager's sound manager
     SESoundManager* GetSoundManager() const;
     unsigned long GetStringTableID() const { return this->mStringTableID; }
     virtual bool GetTabable() const { return true; }
-    UIEvent* GetTriggerEvent(unsigned long inEvent);
+    UIEvent* GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(EeUiControlCall::TriggerEvent, inEvent); }
     virtual unsigned long GetType() const { return this->mControlType; }
     unsigned long GetWidth() const { return UMFloor(this->GetRectangle().GetWidth() + 1.0f); }
     virtual void HideControl() {}
+    // Returns whether Home (or keypad 7 with Num Lock off) is held
     static bool HomeKeyPressed();
+    // Returns whether Left (or keypad 4 with Num Lock off) is held
     static bool LeftKeyPressed();
 public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseLButtonDown() = 0;    // slot 0x34
@@ -114,6 +125,7 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     }
     virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
     virtual void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
+    // Returns whether Right (or keypad 6 with Num Lock off) is held
     static bool RightKeyPressed();
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor)
@@ -141,17 +153,21 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
     virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
     virtual void SetLocation(const GE2DPoint& inLocation);
-    virtual void SetRectangle(const GERectangle& inRectangle);
+    virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetRectangle, inRectangle); }
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
-    void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent);
+    void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent) { this->Call(EeUiControlCall::SetTrigger, inEvent, (intptr_t)inTriggerEvent); }
+    // Returns whether Shift is held or was just pressed
     static bool ShiftKeyPressed();
     // (public: the game calls slot 0x74 on a form's control, chat 0x1d2e09; the toolkit's shims)
     virtual void TabbedTo() = 0;            // slot 0x74
     virtual void TabbedFrom() = 0;
 public:
     virtual long UpdateKeyboard() = 0;      // slot 0x7c
-    long UpdateMouse(const GE2DPoint& inLocation);
+    // Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
+    // (ee_ui mouse.rs)
+    long UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return kErrorOK; }
+    // Returns whether Up (or keypad 8 with Num Lock off) is held
     static bool UpKeyPressed();
     virtual ~UIControl();
 protected:
@@ -160,11 +176,14 @@ protected:
     // The base's logic (ee_ui controlobj.rs)
     void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
-    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness);   // slot 0x84
+    // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
+    // Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
+    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness); // slot 0x84
 public:   // (the shims' access)
+    // Returns the form's mouse location
     const GE2DPoint& GetMouseLocation() const;
 protected:
-    void SetBgRectangle(const GERectangle& inRectangle);
+    void SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetBgRectangle, inRectangle); }
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
 private:
@@ -173,7 +192,7 @@ private:
     static const GERectangle& AsRect(const EeUiRect& inRect) { return *reinterpret_cast<const GERectangle*>(&inRect); }
     GERhombus* BgRhombus() const { return static_cast<GERhombus*>(this->mBgRhombus); }
     GERhombus* CopiedBgRhombus() const { return static_cast<GERhombus*>(this->mCopiedBgRhombus); }
-    intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const;
+    intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f); }
     intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const;
 public:
     // the record's calls out that are not Rust's (EeUiOp 5, 16, 17, 71..74, 169, 218, 245, 520..533; ee_ui

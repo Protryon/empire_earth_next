@@ -99,26 +99,3 @@ UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float 
 }
 
 UIScrollBar::~UIScrollBar() { ee_ui_scroll_bar_free(this->mRust); }
-long UIScrollBar::CopyData() { return (long)UIScrollBarRust::Call(this, C::CopyData); }
-long UIScrollBar::DrawPolygons() { return (long)UIScrollBarRust::Call(this, C::DrawPolygons); }
-long UIScrollBar::DrawTextA() { return (long)UIScrollBarRust::Call(this, C::DrawText); }
-const UISlider* UIScrollBar::GetSlider() const { return reinterpret_cast<const UISlider*>(UIScrollBarRust::Call(this, C::Slider)); }
-void UIScrollBar::IncrementBy(long inAmount) { UIScrollBarRust::Call(this, C::IncrementBy, inAmount); }
-long UIScrollBar::MouseLButtonDown() { return (long)UIScrollBarRust::Call(this, C::MouseLButtonDown); }
-long UIScrollBar::MouseLButtonUp() { return (long)UIScrollBarRust::Call(this, C::MouseLButtonUp); }
-long UIScrollBar::MouseMove(const GE2DPoint& inLocation)
-{
-    return (long)UIScrollBarRust::CallF(this, C::MouseMove, inLocation.GetX(), inLocation.GetY());
-}
-void UIScrollBar::SetCurrentRangeValue(unsigned long inValue) { UIScrollBarRust::Call(this, C::SetCurrentRangeValue, inValue); }
-void UIScrollBar::SetBgColor(const GEColor& inColor)
-{
-    UIScrollBarRust::CallF(this, C::SetBgColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-}
-void UIScrollBar::SetBgOpacity(float inOpacity) { UIScrollBarRust::CallF(this, C::SetBgOpacity, inOpacity); }
-void UIScrollBar::SetLocation(const GE2DPoint& inLocation)
-{
-    UIScrollBarRust::CallF(this, C::SetLocation, inLocation.GetX(), inLocation.GetY());
-}
-void UIScrollBar::SetPageSize(unsigned long inPageSize) { UIScrollBarRust::Call(this, C::SetPageSize, inPageSize); }
-void UIScrollBar::SetRange(unsigned long inMin, unsigned long inMax) { UIScrollBarRust::Call(this, C::SetRange, inMin, inMax); }

@@ -131,7 +131,6 @@ UIBitmapBackground::UIBitmapBackground(unsigned long inBackgroundID, const UStri
 }
 
 UIBitmapBackground::~UIBitmapBackground() { this->Call(C::BitmapRelease); }
-long UIBitmapBackground::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(C::BitmapDraw, inRectangle); }
 long UIBitmapBackground::DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination)
 {
     float f[12] = {0};
@@ -139,9 +138,6 @@ long UIBitmapBackground::DrawStrectchedBackground(const GERectangle& inSource, c
     UIObjHost::PutRect(f + 4, inDestination);
     return (long)this->Call(C::BitmapStretched, 0, 0, f);
 }
-long UIBitmapBackground::LoadBackground() { return (long)this->Call(C::BitmapLoad); }
-void UIBitmapBackground::SetBitmapTexture(GETexture* inTexture) { this->Call(C::BitmapSetTexture, (intptr_t)inTexture); }
-long UIBitmapBackground::UnloadBackground() { return (long)this->Call(C::BitmapUnload); }
 
 UITiledBackground::UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                                      const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
@@ -155,7 +151,6 @@ UITiledBackground::UITiledBackground(unsigned long inBackgroundID, const UString
     this->mVerticalCount = inDown;
 }
 
-long UITiledBackground::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(C::TiledDraw, inRectangle); }
 long UITiledBackground::DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
                                             unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
                                             float inHeight)
@@ -180,8 +175,6 @@ UIBFull::UIBFull(unsigned long inBackgroundID, const UString& inTextureFileName,
 }
 
 UIBFull::~UIBFull() { this->Call(C::BFullRelease); }
-long UIBFull::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(C::BFullDraw, inRectangle); }
-long UIBFull::LoadBackground() { return (long)this->Call(C::BFullLoad); }
 void UIBFull::SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, unsigned long inRow)
 {
     uint32_t theRow = (uint32_t)inRow;
@@ -189,8 +182,6 @@ void UIBFull::SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, uns
     memcpy(f, &theRow, 4);
     this->Call(C::BFullSetBitmapTexture, (intptr_t)inTexture, inColumn, f);
 }
-void UIBFull::SetNumberColumnsAndRows(unsigned long inColumns, unsigned long inRows) { this->Call(C::BFullSetGrid, inColumns, inRows); }
-long UIBFull::UnloadBackground() { return (long)this->Call(C::BFullUnload); }
 
 UIFullBackground::UIFullBackground(const UString& inFileName, unsigned long inColumns, unsigned long inRows,
                                    UIForm* inForm, unsigned long inDesignedWidth, unsigned long inDesignedHeight)
@@ -204,9 +195,5 @@ UIFullBackground::~UIFullBackground()
     ee_ui_bg_call(this, C::FullRelease, 0, 0, NULL);
     ee_ui_bg_free(this);
 }
-long UIFullBackground::DrawBackground(const GERectangle& inRectangle) { return (long)UIBackgroundHost::CallRect(this, C::FullDraw, inRectangle); }
-long UIFullBackground::LoadBackground(const GETextureDescription& inDescription)
-{
-    return (long)ee_ui_bg_call(this, C::FullLoad, (intptr_t)&inDescription, 0, NULL);
-}
-long UIFullBackground::UnloadBackground() { return (long)ee_ui_bg_call(this, C::FullUnload, 0, 0, NULL); }
+
+long UIFullBackground::DrawBackground(const GERectangle& inRectangle) { return (long)UIBackgroundHost::CallRect(this, EeUiBgCall::FullDraw, inRectangle); }

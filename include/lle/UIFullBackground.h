@@ -20,9 +20,9 @@ public:
     UIFullBackground(const UIFullBackground&) = delete;
     UIFullBackground& operator=(const UIFullBackground&) = delete;
     virtual ~UIFullBackground();
-    virtual long LoadBackground(const GETextureDescription& inDescription);
+    virtual long LoadBackground(const GETextureDescription& inDescription) { return (long)ee_ui_bg_call(this, EeUiBgCall::FullLoad, (intptr_t)&inDescription, 0, NULL); }
     virtual long DrawBackground(const GERectangle& inRectangle);
-    virtual long UnloadBackground();
+    virtual long UnloadBackground() { return (long)ee_ui_bg_call(this, EeUiBgCall::FullUnload, 0, 0, NULL); }
 };
 
 #endif

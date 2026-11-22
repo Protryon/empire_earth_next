@@ -20,8 +20,11 @@ class LLE_API UIBackgroundTable : private EeUiBgTableFields {
 public:
     UIBackgroundTable();
     virtual ~UIBackgroundTable() {}
+    // Loads every background table entry from the file (NULL for nameless records); returns the last read result
     static long Create(FSFileSpec& inFile);
+    // Creates every background in the UI background database on its form, by type (UIManager::CreateBackgrounds)
     static void CreateBackgrounds(UIManager* inManager);
+    // Deletes every background table entry and empties the table
     static void DeleteAll();
     bool GetAttribute1() const { return this->mAttribute1; }
     bool GetAttribute2() const { return this->mAttribute2; }

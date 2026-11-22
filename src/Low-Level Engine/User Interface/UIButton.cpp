@@ -118,32 +118,6 @@ UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFoc
 }
 
 UIButton::~UIButton() { ee_ui_button_free(this->mRust); }
-void UIButton::ButtonDown() { EE_UI_BUTTON(ButtonDown); }
-void UIButton::ButtonUp() { EE_UI_BUTTON(ButtonUp); }   // Fixed (kept): plays the button-up sound
-void UIButton::ChangeFont(GEFont* inFont) { EE_UI_BUTTON(ChangeFont, (intptr_t)inFont); }
-long UIButton::CopyData() { return (long)EE_UI_BUTTON(CopyData); }
-long UIButton::DrawPolygons() { return (long)EE_UI_BUTTON(DrawPolygons); }
-long UIButton::DrawTextA() { return (long)EE_UI_BUTTON(DrawText); }
-long UIButton::MouseLButtonDown() { return (long)EE_UI_BUTTON(MouseLButtonDown); }
-long UIButton::MouseLButtonUp() { return (long)EE_UI_BUTTON(MouseLButtonUp); }
-long UIButton::MouseMove(const GE2DPoint& inLocation)
-{
-    return (long)UIButtonHost::CallF(this, C::MouseMove, inLocation.GetX(), inLocation.GetY());
-}
-void UIButton::MouseOver() { EE_UI_BUTTON(MouseOver); }
-void UIButton::SetButtonDownSound(const UString& inName) { EE_UI_BUTTON(SetButtonDownSound, (intptr_t)&inName); }
-void UIButton::SetButtonUpSound(const UString& inName) { EE_UI_BUTTON(SetButtonUpSound, (intptr_t)&inName); }
-void UIButton::SetLocation(const GE2DPoint& inLocation)
-{
-    UIButtonHost::CallF(this, C::SetLocation, inLocation.GetX(), inLocation.GetY());
-}
-void UIButton::SetText(const UWideString& inText, GEFont* inFont)
-{
-    EE_UI_BUTTON(SetText, (intptr_t)&inText, (intptr_t)inFont);
-}
-void UIButton::TabbedTo() { EE_UI_BUTTON(TabbedTo); }
-void UIButton::TabbedFrom() { EE_UI_BUTTON(TabbedFrom); }
-long UIButton::UpdateKeyboard() { return (long)EE_UI_BUTTON(UpdateKeyboard); }   // Fixed (kept): a key press on it
 
 // The header's members (the original's inline ones, emitted by UIBlinkingButton.cpp)
 GE2DPoint UIButton::GetBitmapLocation() const
@@ -151,24 +125,4 @@ GE2DPoint UIButton::GetBitmapLocation() const
     float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     EE_UI_BUTTON(BitmapLocation, 0, 0, f);
     return GE2DPoint(f[0], f[1]);
-}
-unsigned long UIButton::GetState() const { return (unsigned long)EE_UI_BUTTON(State); }
-GEText* UIButton::GetGEText() { return (GEText*)EE_UI_BUTTON(Text); }
-GEBitmap* UIButton::GetNormalBitmap() const { return (GEBitmap*)EE_UI_BUTTON(NormalBitmap); }
-GEBitmap* UIButton::GetPressedBitmap() const { return (GEBitmap*)EE_UI_BUTTON(PressedBitmap); }
-void UIButton::SetBitmapDrawOffset(const GE2DPoint& inOffset)
-{
-    UIButtonHost::CallF(this, C::SetBitmapDrawOffset, inOffset.GetX(), inOffset.GetY());
-}
-void UIButton::SetFocusedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(SetFocusedBitmap, (intptr_t)inBitmap); }
-void UIButton::SetFocusedTextColor(const GEColor& inColor)
-{
-    UIButtonHost::CallF(this, C::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-}
-void UIButton::SetNormalBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(SetNormalBitmap, (intptr_t)inBitmap); }
-void UIButton::SetPressedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(SetPressedBitmap, (intptr_t)inBitmap); }
-void UIButton::SetTextRectangle(const GERectangle& inRectangle)
-{
-    UIButtonHost::CallF(this, C::SetTextRectangle, inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight,
-                        inRectangle.mTop);
 }

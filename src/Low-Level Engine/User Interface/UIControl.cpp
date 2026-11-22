@@ -137,10 +137,6 @@ extern "C" long ee_uicpp_control_mouse_right_down(uintptr_t inControl) { return 
 extern "C" long ee_uicpp_control_mouse_move(uintptr_t inControl, uintptr_t inLocation)
 { return CTL(inControl)->MouseMove(*reinterpret_cast<const GE2DPoint*>(inLocation)); }
 
-intptr_t UIControl::Call(EeUiControlCall inCall, intptr_t a, intptr_t b, float* f) const
-{
-    return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f);
-}
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
 intptr_t UIControl::CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const
 {
@@ -170,43 +166,11 @@ UIControl::~UIControl()
     delete this->CopiedBgRhombus();
 }
 
-void UIControl::FireTriggerEvent(unsigned long inEvent) { this->Call(C::FireTrigger, inEvent); }
-bool UIControl::GetHelpString(UWideString& outString) const { return this->Call(C::HelpString, (intptr_t)&outString) != 0; }
-UIEvent* UIControl::GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(C::TriggerEvent, inEvent); }
-void UIControl::SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent)
-{
-    this->Call(C::SetTrigger, inEvent, (intptr_t)inTriggerEvent);
-}
-
-void UIControl::SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(C::SetBgRectangle, inRectangle); }
 
 void UIControl::SetLocation(const GE2DPoint& inLocation)
 {
     float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
     this->Call(C::SetLocation, 0, 0, f);
-}
-
-void UIControl::SetRectangle(const GERectangle& inRectangle) { this->CallRect(C::SetRectangle, inRectangle); }
-
-// Returns whether Delete (or keypad Del with Num Lock off) is held
-bool UIControl::DeleteKeyPressed()
-{
-    return UIControl::sDeleteKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDeleteKey->GetValue();
-}
-
-// Returns whether Down (or keypad 2 with Num Lock off) is held
-bool UIControl::DownKeyPressed()
-{
-    return UIControl::sDownKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDownKey->GetValue();
-}
-
-// Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
-// Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
-long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
-{
-    return ee_ui_draw_border(this->GetRasterizer(), this->GetScreenIndex(), *reinterpret_cast<const EeUiRect*>(&inRectangle), inThickness,
-                             this->mCopiedBorderOpacity, this->mCopiedBorderType, reinterpret_cast<const float*>(&UIControl::sLightBorder),
-                             reinterpret_cast<const float*>(&UIControl::sDarkBorder));
 }
 
 // Draws the copied background and the border
@@ -215,42 +179,6 @@ long UIControl::DrawPolygons()
     if (this->mCopiedHasBgOpacity)
         this->GetRasterizer()->Draw(this->CopiedBgRhombus(), this->GetScreenIndex());
     return this->DrawBorder(this->GetCopiedDrawRectangle(), this->mBorderThickness);
-}
-
-// Returns whether Enter or keypad Enter was just released
-bool UIControl::EnterKeyPressed()
-{
-    return UIControl::sEnterKey->JustUnpressed() || UIControl::sNumEnterKey->JustUnpressed();
-}
-
-// Returns whether End (or keypad 1 with Num Lock off) is held
-bool UIControl::EndKeyPressed()
-{
-    return UIControl::sEndKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumEndKey->GetValue();
-}
-
-// Returns whether Home (or keypad 7 with Num Lock off) is held
-bool UIControl::HomeKeyPressed()
-{
-    return UIControl::sHomeKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumHomeKey->GetValue();
-}
-
-// Returns whether Left (or keypad 4 with Num Lock off) is held
-bool UIControl::LeftKeyPressed()
-{
-    return UIControl::sLeftKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumLeftKey->GetValue();
-}
-
-// Returns whether Right (or keypad 6 with Num Lock off) is held
-bool UIControl::RightKeyPressed()
-{
-    return UIControl::sRightKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumRightKey->GetValue();
-}
-
-// Returns whether Shift is held or was just pressed
-bool UIControl::ShiftKeyPressed()
-{
-    return UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue();
 }
 
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
@@ -356,21 +284,33 @@ bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
     return true;
 }
 
-// Returns whether Up (or keypad 8 with Num Lock off) is held
-bool UIControl::UpKeyPressed()
+bool UIControl::DeleteKeyPressed() { return UIControl::sDeleteKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDeleteKey->GetValue(); }
+
+bool UIControl::DownKeyPressed() { return UIControl::sDownKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDownKey->GetValue(); }
+
+bool UIControl::EndKeyPressed() { return UIControl::sEndKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumEndKey->GetValue(); }
+
+GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }
+
+unsigned long UIControl::GetScreenIndex() const { return this->GetForm()->GetManager()->GetScreen(); }
+
+SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->GetManager()->GetSoundManager(); }
+
+bool UIControl::HomeKeyPressed() { return UIControl::sHomeKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumHomeKey->GetValue(); }
+
+bool UIControl::LeftKeyPressed() { return UIControl::sLeftKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumLeftKey->GetValue(); }
+
+bool UIControl::RightKeyPressed() { return UIControl::sRightKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumRightKey->GetValue(); }
+
+bool UIControl::ShiftKeyPressed() { return UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue(); }
+
+bool UIControl::UpKeyPressed() { return UIControl::sUpKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumUpKey->GetValue(); }
+
+long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
 {
-    return UIControl::sUpKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumUpKey->GetValue();
+    return ee_ui_draw_border(this->GetRasterizer(), this->GetScreenIndex(), *reinterpret_cast<const EeUiRect*>(&inRectangle), inThickness,
+                             this->mCopiedBorderOpacity, this->mCopiedBorderType, reinterpret_cast<const float*>(&UIControl::sLightBorder),
+                             reinterpret_cast<const float*>(&UIControl::sDarkBorder));
 }
 
-// (their bodies need the form's, the manager's or the background table's class)
-// Returns the UI manager's screen index
-unsigned long UIControl::GetScreenIndex() const { return this->GetForm()->GetManager()->GetScreen(); }
-// Returns the UI manager's sound manager
-SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->GetManager()->GetSoundManager(); }
-// Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
-// (ee_ui mouse.rs)
-long UIControl::UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
-// Returns the form's mouse location
 const GE2DPoint& UIControl::GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
-// Returns the UI manager's rasterizer
-GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }

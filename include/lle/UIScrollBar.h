@@ -9,6 +9,7 @@
 #define LLE_UISCROLLBAR_H
 
 #include "lle/UISlider.h"
+#include "rust/ui/scrollbarobj.h"
 
 struct EeUiScrollBar;
 
@@ -24,27 +25,30 @@ public:
     UIScrollBar(const UIScrollBar&) = delete;
     UIScrollBar& operator=(const UIScrollBar&) = delete;
     virtual ~UIScrollBar();
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
-    const UISlider* GetSlider() const;
+    virtual long CopyData() { return (long)this->Call(EeUiScrollBarCall::CopyData); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiScrollBarCall::DrawPolygons); }
+    virtual long DrawTextA() { return (long)this->Call(EeUiScrollBarCall::DrawText); }
+    const UISlider* GetSlider() const { return reinterpret_cast<const UISlider*>(this->Call(EeUiScrollBarCall::Slider)); }
     virtual bool GetTabable() const { return false; }
-    void IncrementBy(long inAmount);
-    virtual long MouseLButtonDown();
-    virtual long MouseLButtonUp();
-    virtual long MouseMove(const GE2DPoint& inLocation);
+    void IncrementBy(long inAmount) { this->Call(EeUiScrollBarCall::IncrementBy, inAmount); }
+    virtual long MouseLButtonDown() { return (long)this->Call(EeUiScrollBarCall::MouseLButtonDown); }
+    virtual long MouseLButtonUp() { return (long)this->Call(EeUiScrollBarCall::MouseLButtonUp); }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallF(EeUiScrollBarCall::MouseMove, inLocation.GetX(), inLocation.GetY()); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    void SetCurrentRangeValue(unsigned long inValue);
-    virtual void SetBgColor(const GEColor& inColor);
-    virtual void SetBgOpacity(float inOpacity);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetPageSize(unsigned long inPageSize);
-    void SetRange(unsigned long inMin, unsigned long inMax);
+    void SetCurrentRangeValue(unsigned long inValue) { this->Call(EeUiScrollBarCall::SetCurrentRangeValue, inValue); }
+    virtual void SetBgColor(const GEColor& inColor) { this->CallF(EeUiScrollBarCall::SetBgColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
+    virtual void SetBgOpacity(float inOpacity) { this->CallF(EeUiScrollBarCall::SetBgOpacity, inOpacity); }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->CallF(EeUiScrollBarCall::SetLocation, inLocation.GetX(), inLocation.GetY()); }
+    void SetPageSize(unsigned long inPageSize) { this->Call(EeUiScrollBarCall::SetPageSize, inPageSize); }
+    void SetRange(unsigned long inMin, unsigned long inMax) { this->Call(EeUiScrollBarCall::SetRange, inMin, inMax); }
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
     virtual long UpdateKeyboard() { return kErrorOK; }
 private:
+private:
+    intptr_t Call(EeUiScrollBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_scroll_bar_call(this->mRust, c, a, b, f); }
+    intptr_t CallF(EeUiScrollBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_scroll_bar_call(this->mRust, c, 0, 0, f); }
     EeUiScrollBar* mRust;                   // the state (scrollbarobj.rs)
 };
 

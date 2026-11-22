@@ -187,10 +187,6 @@ struct UIManagerComposition {
     unsigned long mCursor;
 };
 
-intptr_t UIManager::Call(EeUiManagerCall inCall, intptr_t inA, intptr_t inB, intptr_t inC, float* ioF) const
-{
-    return ee_ui_manager_call(this->mRust, inCall, inA, inB, inC, ioF);
-}
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
 intptr_t UIManager::CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const
 {
@@ -297,169 +293,6 @@ UIManager::~UIManager()
     ee_ui_manager_remove_database();
 }
 
-// Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
-void UIManager::AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm)
-{
-    this->CallRect(EeUiManagerCall::AddDirtyRectangle, (intptr_t)inForm, inRectangle);
-}
-
-// Queues an event (referenced) to run on the next update for a form and entity
-void UIManager::AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity)
-{
-    this->Call(EeUiManagerCall::AddEventToTrigger, (intptr_t)inEvent, (intptr_t)inForm, (intptr_t)inEntity);
-}
-
-void UIManager::AddForm(UIForm* inForm) { this->Call(EeUiManagerCall::AppendForm, (intptr_t)inForm); }
-
-// Passes an IME result string to the top form, under the UI lock
-void UIManager::AddIMEResultString(const UWideString& inString)
-{
-    this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString);
-}
-
-// Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
-long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                           unsigned long inCursor)
-{
-    return (long)this->Call(EeUiManagerCall::ChangeComposition, (intptr_t)&(const UIManagerComposition&)UIManagerComposition{&inString, &inAttributes, inCursor});
-}
-
-void UIManager::ChangeRasterizer(GERasterizer* inRasterizer)
-{
-    this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer);
-}
-
-// Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
-GEBitmap* UIManager::CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle)
-{
-    return reinterpret_cast<GEBitmap*>(this->CallRect(EeUiManagerCall::ScaledBitmap, (intptr_t)inBitmap, inRectangle));
-}
-
-// Asks each registered control-event factory in turn for a form's event; returns the first one made, or NULL
-UIEvent* UIManager::CreateControlEvent(UIForm* inForm, unsigned long inEventID)
-{
-    return reinterpret_cast<UIEvent*>(
-        this->Call(EeUiManagerCall::CreateControlEvent, (intptr_t)inForm, (intptr_t)inEventID));
-}
-
-// Asks each registered form-event factory in turn for an event; returns the first one made, or NULL
-UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
-{
-    return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID));
-}
-
-GEBitmap* UIManager::GetAlphaSortUpBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 0)); }
-GEBitmap* UIManager::GetAlphaSortDownBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 1)); }
-GEBitmap* UIManager::GetSBBitmapDownNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 2)); }
-GEBitmap* UIManager::GetSBBitmapDownPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 3)); }
-GEBitmap* UIManager::GetSBBitmapLeftNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 4)); }
-GEBitmap* UIManager::GetSBBitmapLeftPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 5)); }
-GEBitmap* UIManager::GetSBBitmapRightNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 6)); }
-GEBitmap* UIManager::GetSBBitmapRightPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 7)); }
-GEBitmap* UIManager::GetSBBitmapUpNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 8)); }
-GEBitmap* UIManager::GetSBBitmapUpPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 9)); }
-GEBitmap* UIManager::GetDragBarBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 10)); }
-GEBitmap* UIManager::GetCheckOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 11)); }
-GEBitmap* UIManager::GetCheckDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 12)); }
-GEBitmap* UIManager::GetCheckOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 13)); }
-GEBitmap* UIManager::GetCheckDownOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 14)); }
-GEBitmap* UIManager::GetCheckNot() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 15)); }
-GEBitmap* UIManager::GetCheckDownNot() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 16)); }
-GEBitmap* UIManager::GetRadioOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 17)); }
-GEBitmap* UIManager::GetRadioDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 18)); }
-GEBitmap* UIManager::GetRadioOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 19)); }
-GEBitmap* UIManager::GetRadioDownOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 20)); }
-GEFont* UIManager::GetFont(unsigned long inIndex) const
-{
-    return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex));
-}
-UIForm* UIManager::GetStackedForm(unsigned long inIndex) const
-{
-    return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex));
-}
-TSCriticalSection* UIManager::GetUILock() const { return reinterpret_cast<TSCriticalSection*>(this->Call(EeUiManagerCall::UiLock)); }
-GERasterizer* UIManager::GetRasterizer() const
-{
-    return reinterpret_cast<GERasterizer*>(this->Call(EeUiManagerCall::Rasterizer));
-}
-SESoundManager* UIManager::GetSoundManager() const
-{
-    return reinterpret_cast<SESoundManager*>(this->Call(EeUiManagerCall::SoundManager));
-}
-UResourceFile* UIManager::GetStringTable() const
-{
-    return reinterpret_cast<UResourceFile*>(this->Call(EeUiManagerCall::StringTable));
-}
-void UIManager::RegisterControlEventCallback(UIEvent* (*inCallback)(UIForm*, unsigned long))
-{
-    this->Call(EeUiManagerCall::RegisterControlCallback, (intptr_t)inCallback);
-}
-void UIManager::RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long))
-{
-    this->Call(EeUiManagerCall::RegisterFormCallback, (intptr_t)inCallback);
-}
-void UIManager::SetFont(unsigned long inIndex, GEFont* inFont)
-{
-    this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont);
-}
-
-// Returns the form with the given ID (NULL: none)
-UIForm* UIManager::GetFormByID(unsigned long inID) const
-{
-    // an unknown ID gives NULL (the original returned the word one past the end of the form list)
-    return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::FormById, (intptr_t)inID));
-}
-
-// Returns the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
-long UIManager::GetMouseWheelScrollAmount()
-{
-    return ee_ui_manager_wheel_scroll_amount(UIManager::sMouseWheel->GetNormalizedValue());
-}
-
-// Loads the UI database (fonts, forms, backgrounds, controls, control and form events, hot keys) from a directory
-void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory) { ee_ui_manager_load_database(this, inPath, &inDirectory); }
-
-// Runs and releases the queued events of one form; the other forms' events stay queued in order
-void UIManager::ProcessAllEventsForForm(UIForm* inForm)
-{
-    this->Call(EeUiManagerCall::ProcessAllEventsForForm, (intptr_t)inForm);
-}
-
-// Deletes the UI database tables (controls, backgrounds, fonts)
-void UIManager::RemoveDatabase() { ee_ui_manager_remove_database(); }
-
-// Swaps the left and right mouse buttons when the left-handed setting changes
-void UIManager::SetMouseLeftHanded(bool inLeftHanded) { ee_ui_manager_set_mouse_left_handed(inLeftHanded); }
-
-// Sets the music volume; stops the music at 0 and restarts the last track (or the intro) when raised from 0
-void UIManager::SetMusicVolume(float inVolume)
-{
-    this->CallPoint(EeUiManagerCall::SetMusicVolume, inVolume, 0.0f);
-}
-
-// Loads and starts a music track unless it is the current one (names compared lower-cased)
-void UIManager::StartMusic(const UWideString& inFileName)
-{
-    this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName);
-}
-
-// Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
-long UIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
-{
-    return (long)this->CallPoint(EeUiManagerCall::UpdateMouse, inMouseLocation.GetX(), inMouseLocation.GetY());
-}
-
-// Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
-long UIManager::UpdateTranslatedKey(const char* inKey, short inRepeat)
-{
-    return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat);
-}
-
-// Runs one UI update: keyboard, mouse, queued events, then any pending music stop or start; returns the mouse result
-long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
-{
-    return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY());
-}
 
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
 // 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls
@@ -477,13 +310,6 @@ intptr_t UIEvent::HostOp(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     }
 }
 
-long UIEvent::CreateControlEvents(FSFileSpec& inFile) { return ee_ui_event_create(&inFile, ee_ui_event_host, 0, NULL); }
-long UIEvent::CreateFormEvents(FSFileSpec& inFile, UIManager* inManager)
-{
-    return ee_ui_event_create(&inFile, ee_ui_event_host, 1, inManager);
-}
-long UIEvent::Initialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Initialize); }
-long UIEvent::Uninitialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Uninitialize); }
 
 // TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the map
 // (the manager's and forms' state is Rust's: ee_ui managerobj.rs, formobj.rs): the UI lock it try-enters, the form
@@ -503,6 +329,9 @@ extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { re
 #pragma comment(linker, "/include:EETestUIFormControl")
 #endif
 
-// (their bodies need the form's, the manager's or the background table's class)
-// Creates every background in the UI background database on its form, by type (bgtableobj.rs)
+long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
+    unsigned long inCursor) { return (long)this->Call(EeUiManagerCall::ChangeComposition, (intptr_t)&(const UIManagerComposition&)UIManagerComposition{&inString, &inAttributes, inCursor}); }
+
 void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
+
+long UIManager::GetMouseWheelScrollAmount() { return ee_ui_manager_wheel_scroll_amount(UIManager::sMouseWheel->GetNormalizedValue()); }
