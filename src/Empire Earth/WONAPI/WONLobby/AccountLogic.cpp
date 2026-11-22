@@ -24,7 +24,28 @@
 #include "rust/won_net/reqdir.h"
 using namespace WONAPI;
 namespace WONAPI {
-static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t)
+// the user's terms-of-use times set to the lobby's
+static void UserSetTOUNow(LobbyUserInfo* inUser)
+{
+    long aSys, aGame;
+    LobbyGetTOUTimes(aSys, aGame);
+    LobbyUserSetTOU(inUser, aSys, aGame);
+}
+
+static ComponentEvent* E(intptr_t a) { return reinterpret_cast<ComponentEvent*>(a); }
+static RustServerOp* R(intptr_t a) { return static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a)); }
+static AuthContext* A(intptr_t a) { return reinterpret_cast<AuthContext*>(a); }
+static ServerContext* SC(intptr_t a) { return reinterpret_cast<ServerContext*>(a); }
+// a new op with one reference the Rust gives back (the original's SmartPtr local)
+static intptr_t Held(AsyncOp* inOp)
+{
+    inOp->AddRef();
+    return (intptr_t)inOp;
+}
+
+// The host: each case one statement; the decisions and the order are the Rust's (logics.rs, and netlogicops.rs
+// for the cases R6 WON round 32 split).
+static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonLogicOp O;
     typedef LobbyEvtField EF;
@@ -36,152 +57,45 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::Exit: LobbyExit((int)a); return 0;
     case O::AuthContext: return (intptr_t)GetLobbyAuthContext();
     case O::VersionStatus: return (int)LobbyGetVersionStatus();
-    case O::OutOfDateDialog:
-        return LobbyDoYesNoDialog(LOBBY_STRING(LobbyContainer_VersionOutOfDataTitle_String),
-                                  LOBBY_STRING(LobbyContainer_VersionOutOfDataDetails_String), true);
-    case O::ShowCredits:
-        aLogic->mCreditsDialog->LCall(EeWonLobbyDlgCall::ResetScrolling);
-        aLogic->mCreditsDialog->LCall(EeWonLobbyDlgCall::StartScrolling);
-        LobbyDoDialog(aLogic->mCreditsDialog.get());
-        aLogic->mCreditsDialog->LCall(EeWonLobbyDlgCall::StopScrolling);
-        return 0;
-    case O::ShowTOU:
-        aLogic->mTOUDialog->LCall(EeWonLobbyDlgCall::Reset);
-        return LobbyDoDialog(aLogic->mTOUDialog.get());
-    case O::ShowScreen:
-        if (a == 1) LobbyShowCreateAccount();
-        else if (a == 2) LobbyShowLostPassword();
-        else LobbyShowLostUsername();
-        return 0;
+    case O::YesNoRes: return LobbyDoYesNoDialog(gLobbyResources[a].mString, gLobbyResources[b].mString, true);
+    case O::MessageBoxRes: LobbyMessageBox(gLobbyResources[a].mString, gLobbyResources[b].mString); return 0;
+    case O::CreditsLCall: aLogic->mCreditsDialog->LCall((EeWonLobbyDlgCall)a); return 0;
+    case O::CreditsDo: return LobbyDoDialog(aLogic->mCreditsDialog.get());
+    case O::TouLCall: aLogic->mTOUDialog->LCall((EeWonLobbyDlgCall)a); return 0;
+    case O::TouDo: return LobbyDoDialog(aLogic->mTOUDialog.get());
+    case O::ShowCreateAccount: LobbyShowCreateAccount(); return 0;
+    case O::ShowLostPassword: LobbyShowLostPassword(); return 0;
+    case O::ShowLostUsername: LobbyShowLostUsername(); return 0;
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
-    case O::RequestPasswordEmail: {
-        // RequestPasswordEmailOp: a Rust op (ee_won adminop.rs)
-        std::string aName;
-        WideAppendUtf16LE(aName, LobbyEvtStr<std::wstring>(reinterpret_cast<ComponentEvent*>(a), EF::UserName));
-        SmartPtr<RustServerOp> op = RustServerOp::NewRequest(
-            ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(aName.data()), aName.size()),
-            reinterpret_cast<ServerContext*>(b));
-        LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_RetrievePasswordTitle_String),
-                             LOBBY_STRING(LobbyContainer_RetrievePasswordDetails_String), 0, 0);
+    case O::RunWithStatusRes: LobbyRunOpWithStatus(reinterpret_cast<AsyncOp*>(a), gLobbyResources[b].mString, gLobbyResources[c].mString, (int)(d & 0xff), (unsigned long)(d >> 8)); return 0;
+    case O::OpSetNum: R(a)->SetNum((int)b, (long long)c); return 0;
+    case O::GetCertNew: return Held(new GetCertOp(A(a)));
+    case O::GetAccountNew: return Held(RustServerOp::NewGetAccount(SC(a), A(b)));
+    case O::PasswordEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));
+    case O::InfoEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));
+    case O::UpdateAccountNew: return Held(RustServerOp::NewUpdateAccount(SC(a), A(b), LobbyEvtText(E(c), EF::NewPassword), LobbyEvtText(E(c), EF::Email)));
+    case O::CreateAccountNew: return Held(RustServerOp::NewCreateAccount(SC(a), LobbyEvtStr<std::wstring>(E(b), EF::UserName), LobbyEvtStr<std::wstring>(E(b), EF::Password), LobbyEvtStr<std::string>(E(b), EF::Email), LobbyEvtGet(E(b), EF::Newsletter) != 0, (unsigned char)LobbyEvtGet(E(b), EF::Month), (unsigned char)LobbyEvtGet(E(b), EF::Day), (unsigned short)LobbyEvtGet(E(b), EF::Year)));
+    case O::BroadcastAccount:
+        LobbyBroadcastEvent(QueryAccountResultEvent(R(a)->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL), R(a)->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1) != 0), true);
         return 0;
-    }
-    case O::RequestInfoEmail: {
-        // RequestAccountInfoEmailOp: a Rust op (ee_won adminop.rs)
-        const std::string aEmail = LobbyEvtStr<std::string>(reinterpret_cast<ComponentEvent*>(a), EF::Email);
-        SmartPtr<RustServerOp> op = RustServerOp::NewRequest(
-            ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(aEmail.data()), aEmail.size()),
-            reinterpret_cast<ServerContext*>(b));
-        LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_RetrieveUsernameTitle_String),
-                             LOBBY_STRING(LobbyContainer_RetrieveUsernameDetails_String), 0, 0);
-        return 0;
-    }
-    case O::QueryAccount: {
-        SmartPtr<RustServerOp> op = RustServerOp::NewGetAccount(reinterpret_cast<ServerContext*>(a),
-                                                                reinterpret_cast<AuthContext*>(b));
-        op->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1);
-        LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_QueryAccountTitle_String),
-                             LOBBY_STRING(LobbyContainer_QueryAccountDetails_String), 1, 0);
-        op->AddRef();
-        return (intptr_t)static_cast<AsyncOp*>(op.get());
-    }
-    case O::BroadcastAccount: {
-        RustServerOp* op = static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a));
-        LobbyBroadcastEvent(QueryAccountResultEvent(op->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL),
-                                                        op->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1) != 0), true);
-        return 0;
-    }
-    case O::UpdateAccount: {
-        ComponentEvent* event = reinterpret_cast<ComponentEvent*>(c);
-        SmartPtr<RustServerOp> op = RustServerOp::NewUpdateAccount(reinterpret_cast<ServerContext*>(a),
-            reinterpret_cast<AuthContext*>(b), LobbyEvtText(event, EF::NewPassword), LobbyEvtText(event, EF::Email));
-        op->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1 | (LobbyEvtGet(event, EF::Newsletter) ? 0x10000 : 0));
-        LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_UpdateAccountTitle_String),
-                             LOBBY_STRING(LobbyContainer_UpdateAccountDetails_String), 0, 0);
-        return 0;
-    }
-    case O::CreateAccount: {
-        ComponentEvent* event = reinterpret_cast<ComponentEvent*>(b);
-        SmartPtr<RustServerOp> op = RustServerOp::NewCreateAccount(reinterpret_cast<ServerContext*>(a),
-            LobbyEvtStr<std::wstring>(event, EF::UserName), LobbyEvtStr<std::wstring>(event, EF::Password),
-            LobbyEvtStr<std::string>(event, EF::Email), LobbyEvtGet(event, EF::Newsletter) != 0,
-            (unsigned char)LobbyEvtGet(event, EF::Month), (unsigned char)LobbyEvtGet(event, EF::Day),
-            (unsigned short)LobbyEvtGet(event, EF::Year));
-        LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_CreateAccountTitle_String),
-                             LOBBY_STRING(LobbyContainer_CreateAccountDetails_String), 0, 0);
-        op->AddRef();
-        return (intptr_t)static_cast<AsyncOp*>(op.get());
-    }
-    case O::AccountCreated: {
-        ComponentEvent* event = reinterpret_cast<ComponentEvent*>(a);
-        LobbyUserInfo* user = LobbyAddUser(LobbyEvtStr<std::wstring>(event, EF::UserName), "", false);
-        if (user) {
-            long aSys, aGame;
-            LobbyGetTOUTimes(aSys, aGame);
-            LobbyUserSetTOU(user, aSys, aGame);
-        }
-        LobbySaveGlobalPrefs(true);
-        LobbyBroadcastLobbyEvent(100052, true);
-        LobbyBroadcastEvent(SetLoginFieldsEvent(GUIString(LobbyEvtStr<std::wstring>(event, EF::UserName)),
-                                                GUIString(LobbyEvtStr<std::wstring>(event, EF::Password)), false), true);
-        return 0;
-    }
+    case O::AddUserNamed: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), "", false);
+    case O::AddUserNoPassword: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), GUIString(GetEmptyGUIStringData()), false);
+    case O::AddUserWithPassword: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false);
+    case O::UserSetTOUNow: UserSetTOUNow(reinterpret_cast<LobbyUserInfo*>(a)); return 0;
+    case O::SaveGlobalPrefsNow: LobbySaveGlobalPrefs(true); return 0;
+    case O::SetCurrentUser: LobbySetCurrentUser(reinterpret_cast<LobbyUserInfo*>(a)); return 0;
+    case O::BroadcastLoginFields: LobbyBroadcastEvent(SetLoginFieldsEvent(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false), true); return 0;
     case O::RootWindow: return (intptr_t)LobbyGetRootWindow();
     case O::KeyMod: return reinterpret_cast<Window*>(a)->GetKeyMod();
-    case O::LoginName: {
-        // the event's own copy (lobbyevt.rs), live while the event is
-        ComponentEvent* event = reinterpret_cast<ComponentEvent*>(a);
-        *reinterpret_cast<size_t*>(b) = LobbyEvtStr<std::wstring>(event, EF::UserName).length();
-        return LobbyEvtGet(event, EF::UserName);
-    }
-    case O::LoginStripAt: {
-        ComponentEvent* event = reinterpret_cast<ComponentEvent*>(a);
-        LobbyEvtSetStr(event, EF::UserName, LobbyEvtStr<std::wstring>(event, EF::UserName).substr(1));
-        return 0;
-    }
-    case O::UserNeedsTOU: {
-        LobbyUserInfo* user;
-        {
-            GUIString name(new GUIStringData(LobbyEvtStr<std::wstring>(reinterpret_cast<ComponentEvent*>(a), EF::UserName)));
-            user = LobbyFindUser(name);
-        }
-        return !user || LobbyIsTOUNewer(LobbyUserTOU(user, 0), LobbyUserTOU(user, 1));
-    }
-    case O::SetCredentials: {
-        AuthContext* auth = reinterpret_cast<AuthContext*>(a);
-        auth->SetUserName(LobbyEvtStr<std::wstring>(reinterpret_cast<ComponentEvent*>(b), EF::UserName));
-        auth->SetPassword(LobbyEvtStr<std::wstring>(reinterpret_cast<ComponentEvent*>(b), EF::Password));
-        return 0;
-    }
+    case O::FindUserOfEvent: return (intptr_t)LobbyFindUser(GUIString(new GUIStringData(LobbyEvtStr<std::wstring>(E(a), EF::UserName))));
+    case O::UserTOUNewer: return LobbyIsTOUNewer(LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 0), LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 1));
+    case O::AuthSetUserNameOf: A(a)->SetUserName(LobbyEvtStr<std::wstring>(E(b), EF::UserName)); return 0;
+    case O::AuthSetPasswordOf: A(a)->SetPassword(LobbyEvtStr<std::wstring>(E(b), EF::Password)); return 0;
     case O::DoCDKeyCheck: return LobbyDoCDKeyCheck();
     case O::CDKeyValid: return LobbyIsCDKeyValid();
-    case O::InvalidCDKeyBox:
-        LobbyMessageBox(LOBBY_STRING(AccountLogic_InvalidCDKeyTitle_String), LOBBY_STRING(AccountLogic_InvalidCDKeyDetails_String));
-        return 0;
-    case O::SetAdmin:
-        if (b) reinterpret_cast<AuthContext*>(a)->AddCommunity(std::wstring(L"Admin"));
-        else reinterpret_cast<AuthContext*>(a)->RemoveCommunity(std::wstring(L"Admin"));
-        return 0;
-    case O::GetCert: {
-        SmartPtr<GetCertOp> op = new GetCertOp(reinterpret_cast<AuthContext*>(a));
-        LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_LoginTitle_String), LOBBY_STRING(LobbyContainer_LoginDetails_String), 1, 0);
-        op->AddRef();
-        return (intptr_t)static_cast<AsyncOp*>(op.get());
-    }
-    case O::AutoRefresh: reinterpret_cast<AuthContext*>(a)->SetDoAutoRefresh(true); return 0;
-    case O::LoginSaveUser: {
-        ComponentEvent* event = reinterpret_cast<ComponentEvent*>(a);
-        GUIString password(GetEmptyGUIStringData());
-        if (LobbyEvtGet(event, EF::Remember)) password = LobbyEvtStr<std::wstring>(event, EF::Password);
-        LobbyUserInfo* user = LobbyAddUser(LobbyEvtStr<std::wstring>(event, EF::UserName), password, false);
-        if (user) {
-            long aSys, aGame;
-            LobbyGetTOUTimes(aSys, aGame);
-            LobbyUserSetTOU(user, aSys, aGame);
-            LobbySaveGlobalPrefs(true);
-            LobbySetCurrentUser(user);
-        }
-        return 0;
-    }
+    case O::AuthAddAdmin: A(a)->AddCommunity(std::wstring(L"Admin")); return 0;
+    case O::AuthRemoveAdmin: A(a)->RemoveCommunity(std::wstring(L"Admin")); return 0;
+    case O::AutoRefresh: A(a)->SetDoAutoRefresh(true); return 0;
     case O::EnterInternet: LobbyEnterInternetScreen(a != 0); return 0;
     default: return 0;
     }
@@ -196,12 +110,7 @@ void AccountLogic::InitComponent(ComponentConfig* inConfig)
     SafeGetDialog(inConfig, this->mTOUDialog, EeWonLobbyDlgKind::Tou, "TOUDialog", __FILE__, 44);
 }
 // Opens the create-account (terms of use to follow), lost-password or lost-user-name screen if the version is usable
-void AccountLogic::HandleControlEvent(int inControlId)
-{
-    int aWhich = inControlId == ID_ShowCreateAccount ? 1 : inControlId == ID_ShowLostPassword ? 2
-               : inControlId == ID_ShowLostUserName ? 3 : 0;
-    if (aWhich != 0) ee_won_logic_call(this->mRust, EeWonLogicCall::AcctControl, aWhich, 0, 0);
-}
+void AccountLogic::HandleControlEvent(int inControlId) { ee_won_logic_call(this->mRust, EeWonLogicCall::AcctControlId, inControlId, 0, 0); }
 // Routes create-account, lost password/user name, login, account query and update events to the handlers
 void AccountLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {

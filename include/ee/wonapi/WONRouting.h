@@ -729,7 +729,7 @@ typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
 // The friend status map (the original's +0x88), the request datagram and the reply's read are a Rust object since
-// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set through copies
+// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set in Rust
 class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
 public:
     typedef std::map<unsigned long,unsigned char> FriendStatusMap;
@@ -761,21 +761,10 @@ public:
         return aStatus;
     }
     void AddWONUserId(unsigned long inId) { ee_won_userstatus_add(this->mStatus, inId); } //2c68c0, status 0 until the reply
-    FriendStatusMap GetFriendStatusMap() const // a copy
-    {
-        FriendStatusMap aMap;
-        ee_won_userstatus_each(this->mStatus, StatusSink, &aMap);
-        return aMap;
-    }
-    void SetFriendStatusMap(const FriendStatusMap& inMap)
-    {
-        ee_won_userstatus_clear(this->mStatus);
-        for (FriendStatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i)
-            ee_won_userstatus_put(this->mStatus, i->first, i->second);
-    }
+    // the friend status map, read and set by the routing logic in Rust (R6 WON round 32: netlogicops.rs; the
+    // original's GetFriendStatusMap / SetFriendStatusMap copies)
+    EeWonUserStatus* GetRust() const { return this->mStatus; }
 private:
-    static void StatusSink(void* inContext, uint64_t inId, uint8_t inStatus)
-    { (*static_cast<FriendStatusMap*>(inContext))[(unsigned long)inId] = inStatus; }
     EeWonUserStatus* mStatus; // owned
 };
 #define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)

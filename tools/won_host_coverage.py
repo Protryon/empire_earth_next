@@ -93,7 +93,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_record_op_in"),
                (RS / "ee_won_lobby" / "src" / "routelogic.rs", "conn_request"),
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "route_op"),
-               (RS / "ee_won_lobby" / "src" / "netops.rs", "route_op")],
+               (RS / "ee_won_lobby" / "src" / "netops.rs", "route_op"),
+               # the cases whose statements are Rust (R6 WON round 32)
+               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "route_op")],
          allowed={}),
     dict(enum="EeWonLobbyDlgOp", header="won_lobby/lobbydlg.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "EELobbyGameHost.cpp", LOBBY / "EELobbyGlueHost.cpp"],
@@ -117,7 +119,8 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lobbyops.rs", "lobby_op")], allowed={}),
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
          hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
-         rust=[], allowed={}),
+         # the cases whose statements are Rust (R6 WON round 32)
+         rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op")], allowed={}),
     dict(enum="EeWonEeGameOp", header="won_lobby/eegame.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op")], allowed={}),
