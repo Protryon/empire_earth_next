@@ -379,11 +379,7 @@ fn the_random_point_falls_back_to_the_area_after_sixteen_tries() {
                 tries += 1;
                 0
             }
-            EE_CP_HERD_BASE_POINT => {
-                io.v[0] = 5;
-                io.v[1] = 6;
-                0
-            }
+            EE_CP_HERD_BASE_POINT => (5 << 32) | 6,
             _ => 0,
         };
         (r, io)

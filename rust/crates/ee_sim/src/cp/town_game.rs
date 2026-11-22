@@ -298,17 +298,12 @@ pub unsafe extern "C" fn ee_cp_town_refresh_patrol_group(town: *mut c_void, area
     unsafe { with(town, area, f, |t| t.refresh_patrol_group()) }
 }
 
-/// `EETown::GetRandomPoint` into `out`.
+/// `EETown::GetRandomPoint`.
 ///
 /// # Safety
-/// As `with`; `out` a live point.
+/// As `with`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_town_random_point(
-    town: *mut c_void,
-    area: *mut c_void,
-    f: *mut EeTownFields,
-    out: *mut EeHerdPoint,
-) {
+pub unsafe extern "C" fn ee_cp_town_random_point(town: *mut c_void, area: *mut c_void, f: *mut EeTownFields) -> EeHerdPoint {
     // SAFETY: the caller's contract
-    unsafe { *out = with(town, area, f, |t| t.random_point()) }
+    unsafe { with(town, area, f, |t| t.random_point()) }
 }

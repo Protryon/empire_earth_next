@@ -72,7 +72,7 @@ constexpr static const int32_t EE_CP_HERD_CONTINENT_AT = 15;
 /// is one, its category into `v0` and its hull's bounds into `v1..v4` (bottom, left, right, top)
 constexpr static const int32_t EE_CP_HERD_CONTINENT = 16;
 
-/// area `a`'s `GetRandomPoint()` into `v0`, `v1`
+/// area `a`'s `GetRandomPoint()` (x high, y low: [`super::town_world::unpack`])
 constexpr static const int32_t EE_CP_HERD_AREA_POINT = 17;
 
 /// `gContinentManager.GetArea(v0)`
@@ -99,7 +99,7 @@ constexpr static const int32_t EE_CP_HERD_HULL_BOUNDS = 24;
 /// `((EEHerd*)a)->GetHullDistanceSquared((EEHerd*)b)` into `f0`
 constexpr static const int32_t EE_CP_HERD_HULL_DISTANCE = 25;
 
-/// `EEAIArea::GetRandomPoint()` into `v0`, `v1`
+/// `EEAIArea::GetRandomPoint()` (x high, y low)
 constexpr static const int32_t EE_CP_HERD_BASE_POINT = 26;
 
 /// `GetTileSet().BuildPointList(tiles, 1)` (pushed)
@@ -506,6 +506,13 @@ constexpr static const int32_t EE_CP_CENTER_EFFECT_MAX_LEVEL = 121;
 
 /// the player's `mUnitClassUpgrades[v0]`
 constexpr static const int32_t EE_CP_CENTER_UPGRADE = 122;
+
+/// unit `a`'s area effects: their count (`mAreaEffects.mItems.size()`), the one at `v0`, an effect `b`'s `mKind`
+constexpr static const int32_t EE_CP_CENTER_EFFECT_COUNT = 123;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_AT = 124;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_KIND = 125;
 
 constexpr static const unsigned long EASY = 0;
 
@@ -1696,10 +1703,10 @@ void ee_cp_herd_init(EeHerdFields *f);
 /// `f` is a live record whose lists are not used again.
 void ee_cp_herd_free(EeHerdFields *f);
 
-/// `EEHerd()`: no units, leader, target or path request, then `Clear`.
+/// `EEHerd()`: the lists, the area kind; no units, leader, target or path request, then `Clear`.
 ///
 /// # Safety
-/// `herd` is the live `EEHerd*` whose record is `f` (its lists made).
+/// `herd` is the `EEHerd*` being constructed whose record is `f`.
 void ee_cp_herd_construct_default(void *herd, EeHerdFields *f);
 
 /// `EEHerd(player, animal, id)`.
@@ -1762,11 +1769,11 @@ void ee_cp_herd_update(void *herd, EeHerdFields *f, unsigned long time);
 /// As [`ee_cp_herd_construct_default`]; `tiles` holds `count` points.
 void ee_cp_herd_create(void *herd, EeHerdFields *f, const EeHerdPoint *tiles, size_t count);
 
-/// `GetRandomPoint` (the area's override) into `out`.
+/// `GetRandomPoint` (the area's override).
 ///
 /// # Safety
-/// As [`ee_cp_herd_construct_default`]; `out` a live point.
-void ee_cp_herd_random_point(void *herd, EeHerdFields *f, EeHerdPoint *out);
+/// As [`ee_cp_herd_construct_default`].
+EeHerdPoint ee_cp_herd_random_point(void *herd, EeHerdFields *f);
 
 /// `Load` over the saved game's file (`host` its primitives).
 ///
@@ -2685,11 +2692,11 @@ bool ee_cp_town_update_near_water(void *town, void *area, EeTownFields *f);
 /// As `with`.
 void ee_cp_town_refresh_patrol_group(void *town, void *area, EeTownFields *f);
 
-/// `EETown::GetRandomPoint` into `out`.
+/// `EETown::GetRandomPoint`.
 ///
 /// # Safety
-/// As `with`; `out` a live point.
-void ee_cp_town_random_point(void *town, void *area, EeTownFields *f, EeHerdPoint *out);
+/// As `with`.
+EeHerdPoint ee_cp_town_random_point(void *town, void *area, EeTownFields *f);
 
 /// `EETown(player, id)`'s body after its members (`mPlayer`, `mPatrolGroup` NULL): the id, the area's kind, `Reset`.
 ///

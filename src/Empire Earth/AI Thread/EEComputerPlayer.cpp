@@ -388,10 +388,6 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return gWorld.mPlayers[(size_t)v[0]]->GetTotalPopulation(true, true);
     case EE_CP_PLAYER_HANDLE:
         return (int64_t)(uintptr_t)gWorld.GetPlayer((unsigned long)v[0]);
-    case EE_CP_PLAYER_PATH_AREA_ID: {
-        EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(EETileLocation((long)v[0], (long)v[1]));
-        return theArea != NULL ? theArea->GetID() : 0;
-    }
     case EE_CP_PLAYER_UNIT_CONTINENT_AT:
         return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
     case EE_CP_PLAYER_IS_EPOCH:

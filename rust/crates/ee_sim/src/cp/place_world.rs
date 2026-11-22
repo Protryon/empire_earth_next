@@ -23,6 +23,12 @@ pub const EE_CP_CENTER_EFFECT_LEVEL: i32 = 120;
 pub const EE_CP_CENTER_EFFECT_MAX_LEVEL: i32 = 121;
 /// the player's `mUnitClassUpgrades[v0]`
 pub const EE_CP_CENTER_UPGRADE: i32 = 122;
+/// unit `a`'s area effects: their count (`mAreaEffects.mItems.size()`), the one at `v0`, an effect `b`'s `mKind`
+pub const EE_CP_CENTER_EFFECT_COUNT: i32 = 123;
+pub const EE_CP_CENTER_EFFECT_AT: i32 = 124;
+pub const EE_CP_CENTER_EFFECT_KIND: i32 = 125;
+/// `kAreaEffectMoraleFromBuildings` (ee/EEAreaEffectKindIDs.h)
+const AREA_EFFECT_MORALE_FROM_BUILDINGS: i64 = 5;
 
 /// `EEComplexUnit::DistanceSquaredToUnit` (0x...: EECPResourceCenter.cpp's): from this unit's location to the other's
 /// (its complex unit's location, else its tile), `dx * dx + dy * dy` in f32 as the original.
@@ -279,6 +285,31 @@ mod game {
                 0
             }
             pg::EE_CP_PLACE_UNITS_IN_RECT => units_in_rect(player, io),
+            // the first of unit `a`'s area effects that is a morale from buildings one (EECPResourceCenter.cpp's
+            // EECPRCMoraleEffect), 0 for none
+            EE_CP_CENTER_MORALE_EFFECT => {
+                let n = cpp(ctx, EE_CP_CENTER_EFFECT_COUNT, a, 0, &mut pg::place_io());
+                (0..n)
+                    .map(|i| {
+                        let mut q = pg::place_io();
+                        q.v[0] = i;
+                        cpp(ctx, EE_CP_CENTER_EFFECT_AT, a, 0, &mut q)
+                    })
+                    .find(|&e| cpp(ctx, EE_CP_CENTER_EFFECT_KIND, 0, e as u64, &mut pg::place_io()) == AREA_EFFECT_MORALE_FROM_BUILDINGS)
+                    .unwrap_or(0)
+            }
+            // the id of the path area at tile (v0, v1), 0 for none (GetPathAreaAt's CNTQ record as the C++ asked it)
+            pg::EE_CP_PLAYER_PATH_AREA_ID => {
+                let Some(r) = crate::astar::world_view::cm() else { return Some(0) };
+                // SAFETY: the manager's live record
+                let area = unsafe { crate::astar::cm_queries::ee_astar_cmq_area_at(r, 3, v0 as c_long, v1 as c_long) };
+                if area == 0 {
+                    0
+                } else {
+                    // SAFETY: a live path area object of the manager
+                    i64::from(unsafe { (*(area as *const crate::astar::objects::EeAStarPathAreaObj)).rec.id })
+                }
+            }
             pg::EE_CP_CENTER_DISTANCE_TO_UNIT => {
                 io.f[0] = distance_squared_to_unit(a, b);
                 0
