@@ -160,6 +160,7 @@ pub mod ucb_gate;
 pub mod ucb_release;
 pub mod ucg_ground;
 pub mod ucp_people;
+pub mod ucs_impact;
 pub mod ucs_shots;
 pub mod ucx_transports;
 pub mod unit_bulk;
