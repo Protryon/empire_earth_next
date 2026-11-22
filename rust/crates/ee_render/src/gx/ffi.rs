@@ -325,9 +325,9 @@ unsafe fn rect(pointer: *const Rect) -> Option<Rect> {
 #[no_mangle]
 pub unsafe extern "C" fn gx_surface_blt(
     surface: *mut c_void,
-    destination: *const Rect,
+    destination: *const RECT,
     source: *mut c_void,
-    source_rect: *const Rect,
+    source_rect: *const RECT,
     flags: c_ulong,
     fx: *const GxBltFx,
 ) -> GxResult {
@@ -349,7 +349,7 @@ pub unsafe extern "C" fn gx_surface_flip(surface: *mut c_void, flags: c_ulong) -
 #[no_mangle]
 pub unsafe extern "C" fn gx_surface_lock(
     surface: *mut c_void,
-    rect_pointer: *const Rect,
+    rect_pointer: *const RECT,
     out: *mut GxSurfaceDesc,
     flags: c_ulong,
 ) -> GxResult {
@@ -396,7 +396,7 @@ pub unsafe extern "C" fn gx_surface_is_gpu_resident(surface: *mut c_void) -> boo
 #[no_mangle]
 pub unsafe extern "C" fn gx_surface_draw_text(
     surface: *mut c_void,
-    bounds: *const Rect,
+    bounds: *const RECT,
     draw: TextCallback,
     context: *mut c_void,
 ) -> GxResult {
@@ -716,7 +716,7 @@ pub extern "C" fn gx_auto_ui_scale() -> c_ulong {
 
 /// TEST ONLY (tools/harness/presentation_bridge.c finds this by map address): a callback before every presented frame.
 #[no_mangle]
-pub extern "C" fn GXTestSetPresentHook(hook: Option<PresentHook>) {
+pub extern "C" fn GXTestSetPresentHook(hook: Option<extern "C" fn(*mut c_void, *mut c_void)>) {
     with(|gx| gx.set_test_present_hook(hook));
 }
 

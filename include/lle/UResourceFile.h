@@ -25,24 +25,9 @@ public:
     unsigned short GetLanguage() { return this->mLanguage; }
     HINSTANCE GetModule() const { return this->mModule; }
     // a string by id (up to 4499 bytes, as LoadStringA's buffer); a native error when it is missing
-    long GetString(long inID, UWideString& outString)
-    {
-        const char* theText = (const char*)ee_util_resource_string((uint16_t)inID);
-        if (theText == NULL) {
-            ESRecordNativeError(1814);
-            return kErrorNativeError;
-        }
-        if (strlen(theText) < 4499) {
-            outString = theText;
-        } else {
-            char theString[4500];
-            memcpy(theString, theText, 4499);
-            theString[4499] = 0;
-            outString = theString;
-        }
-        return kErrorOK;
-    }
+    long GetString(long inID, UWideString& outString) { return ee_util_resource_string_get((uint16_t)inID, Assign, &outString); }
 private:
+    static void Assign(void* inString, const char* inText) { *static_cast<UWideString*>(inString) = inText; }
     HINSTANCE mModule;                      // +0x04
     unsigned short mLanguage;               // +0x08
     bool mOwnsModule;                       // +0x0a (provisional name; always false: the module is the game's)
