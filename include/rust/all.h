@@ -205,6 +205,7 @@
 #include "rust/won_lobby/lobbymap.h"
 #include "rust/won_lobby/lobbyops.h"
 #include "rust/won_lobby/lobbypopup.h"
+#include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/lobbyrun.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_lobby/model.h"
