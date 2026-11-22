@@ -19,26 +19,26 @@ use crate::units::uu_tiles::Tile;
 use crate::units::uu_world;
 
 // ---- the host operations (`ee_units_cls_host`'s `op`, after cls_host.rs's)
-/// `gWorld.mMap->GetClosestTile(io.p, ...)`'s `mHeight` into `io.f` (0: no tile)
-pub const EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT: i32 = 39;
+/// `gWorld.mMap->GetClosestTile(io.p, ...)`
+pub const EE_UNITS_CLS_MV_CLOSEST_TILE: i32 = 39;
 /// `EEGetPursuerOf(unit a)`
 pub const EE_UNITS_CLS_MV_PURSUER: i32 = 40;
 // (41 was the direction between two units' tiles: `direction_to`)
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 pub const EE_UNITS_CLS_MV_MAX_VELOCITY: i32 = 43;
-/// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
+/// unit `a`'s `mGoalState`
 pub const EE_UNITS_CLS_MV_GOAL: i32 = 45;
-/// unit `a`'s `mLastAttacker` dereferenced and cleared
+/// unit `a`'s `mLastAttacker = NULL`
 pub const EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER: i32 = 46;
 /// goal `b`'s `mKind`
 pub const EE_UNITS_CLS_MV_GOAL_KIND: i32 = 47;
-/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) of `io.p` (both read it as an input) into `io.p`
+/// goal `b`'s `GetGoalLocation(io.p)`
 pub const EE_UNITS_CLS_MV_GOAL_LOCATION: i32 = 48;
-/// goal `b`'s `mB1C` (c 0), `mB1D` (1), `GetIsAutoWaypoint()` (2), `GetGroupPathState()` (3), a gather goal on wood (4)
+/// goal `b`'s `mB1C`
 pub const EE_UNITS_CLS_MV_GOAL_FLAG: i32 = 49;
 /// goal `b`'s `mPathAttempts += c`
 pub const EE_UNITS_CLS_MV_PATH_ATTEMPTS: i32 = 50;
-/// goal `b`'s `GetSidestepCount()` (c -1), else `SetSidestepCount(c)`
+/// goal `b`'s `GetSidestepCount()`
 pub const EE_UNITS_CLS_MV_SIDESTEP: i32 = 51;
 /// goal `b`'s `SetGroupPathState(c)`
 pub const EE_UNITS_CLS_MV_SET_GROUP_PATH_STATE: i32 = 52;
@@ -60,7 +60,7 @@ pub const EE_UNITS_CLS_MV_SECOND_WAYPOINT: i32 = 59;
 pub const EE_UNITS_CLS_MV_NEXT_WAYPOINT: i32 = 60;
 /// unit `a`'s `DistanceSquared3D(io.p)` into `io.f`
 pub const EE_UNITS_CLS_MV_DISTANCE_3D: i32 = 61;
-/// unit `a`'s `mBoundedPathTiles.clear()` (c 0) or `push_back((io.a, io.b))` (1)
+/// unit `a`'s `mBoundedPathTiles.clear()`
 pub const EE_UNITS_CLS_MV_BOUNDED: i32 = 62;
 /// unit `a`'s `SetVelocity(io.f)`
 pub const EE_UNITS_CLS_MV_SET_VELOCITY: i32 = 65;
@@ -70,12 +70,40 @@ pub const EE_UNITS_CLS_MV_START_ACTION: i32 = 66;
 pub const EE_UNITS_CLS_MV_ACTION_CHANGED: i32 = 67;
 /// unit `a`'s `UpdateWaterState(true)`
 pub const EE_UNITS_CLS_MV_UPDATE_WATER_STATE: i32 = 68;
-/// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
+/// unit `a`'s `mInitialContactLocation = io.p`
 pub const EE_UNITS_CLS_MV_INITIAL_CONTACT: i32 = 70;
 /// unit `a`'s player's `AvoidsEnemies(a)` (a virtual: the computer player's CPEV record)
 pub const EE_UNITS_CLS_MV_AVOIDS_ENEMIES: i32 = 71;
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 pub const EE_UNITS_CLS_MV_FLEE_GOAL: i32 = 72;
+/// `unit->mActiveGoal`
+pub const EE_UNITS_CLS_MV_ACTIVE_GOAL: i32 = 200;
+/// `unit->mBlockingUnit`
+pub const EE_UNITS_CLS_MV_BLOCKING_UNIT: i32 = 201;
+/// `unit->mLastAttacker`
+pub const EE_UNITS_CLS_MV_LAST_ATTACKER: i32 = 202;
+/// `unit->mLastAttacker->Dereference()`
+pub const EE_UNITS_CLS_MV_DEREFERENCE_LAST_ATTACKER: i32 = 203;
+/// goal `b`'s `GetDestination(unit, io.p)`
+pub const EE_UNITS_CLS_MV_GOAL_DESTINATION: i32 = 205;
+/// goal `b`'s `mB1D`
+pub const EE_UNITS_CLS_MV_GOAL_B1D: i32 = 206;
+/// goal `b`'s `GetIsAutoWaypoint()`
+pub const EE_UNITS_CLS_MV_AUTO_WAYPOINT: i32 = 207;
+/// goal `b`'s `GetGroupPathState()`
+pub const EE_UNITS_CLS_MV_GROUP_PATH_STATE: i32 = 208;
+/// `EEGatherGoalCast(goal b)`
+pub const EE_UNITS_CLS_MV_GATHER_GOAL: i32 = 209;
+/// gather goal `b`'s `GetGatherResource()`
+pub const EE_UNITS_CLS_MV_GATHER_RESOURCE: i32 = 210;
+/// unit `b`'s `mResourceType == kResourceWood`
+pub const EE_UNITS_CLS_MV_RESOURCE_IS_WOOD: i32 = 211;
+/// goal `b`'s `SetSidestepCount(c)`
+pub const EE_UNITS_CLS_MV_SET_SIDESTEP: i32 = 212;
+/// `unit->mBoundedPathTiles.push_back((io.a, io.b))`
+pub const EE_UNITS_CLS_MV_PUSH_BOUNDED: i32 = 213;
+/// `unit->mInitialContactLocation != io.p`
+pub const EE_UNITS_CLS_MV_CONTACT_DIFFERS: i32 = 214;
 
 impl ClsGame {
     fn mv(&mut self, op: i32, a: u64, b: u64, c: i64) -> (i64, EeUnitsClsIo) {
@@ -139,8 +167,8 @@ impl MoveHost for ClsGame {
         out
     }
     fn closest_tile_height(&mut self, p: Ge3DPoint) -> Option<f32> {
-        let (r, io) = self.mv_p(EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT, 0, 0, 0, p);
-        (r != 0).then_some(io.f)
+        let tile = self.mv_p(EE_UNITS_CLS_MV_CLOSEST_TILE, 0, 0, 0, p).0 as u64;
+        (tile != 0).then(|| self.0.tile_height(tile))
     }
     fn passable_by(&mut self, obj: u64, by: u64) -> bool {
         self.0.passable_by(obj, by)
@@ -199,15 +227,18 @@ impl MoveHost for ClsGame {
         self.mv(EE_UNITS_CLS_MV_GOAL, unit, 0, 0).0 as u64
     }
     fn active_goal(&mut self, unit: u64) -> u64 {
-        self.mv(EE_UNITS_CLS_MV_GOAL, unit, 0, 1).0 as u64
+        self.mv(EE_UNITS_CLS_MV_ACTIVE_GOAL, unit, 0, 0).0 as u64
     }
     fn blocking_unit(&mut self, unit: u64) -> u64 {
-        self.mv(EE_UNITS_CLS_MV_GOAL, unit, 0, 2).0 as u64
+        self.mv(EE_UNITS_CLS_MV_BLOCKING_UNIT, unit, 0, 0).0 as u64
     }
     fn last_attacker(&mut self, unit: u64) -> u64 {
-        self.mv(EE_UNITS_CLS_MV_GOAL, unit, 0, 3).0 as u64
+        self.mv(EE_UNITS_CLS_MV_LAST_ATTACKER, unit, 0, 0).0 as u64
     }
     fn clear_last_attacker(&mut self, unit: u64) {
+        if self.mv(EE_UNITS_CLS_MV_LAST_ATTACKER, unit, 0, 0).0 != 0 {
+            self.mv(EE_UNITS_CLS_MV_DEREFERENCE_LAST_ATTACKER, unit, 0, 0);
+        }
         self.mv(EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER, unit, 0, 0);
     }
     fn goal_kind(&mut self, goal: u64) -> i32 {
@@ -217,34 +248,40 @@ impl MoveHost for ClsGame {
         point(self.mv(EE_UNITS_CLS_MV_GOAL_LOCATION, 0, goal, 0).1.p)
     }
     fn goal_destination(&mut self, goal: u64, unit: u64, from: Ge3DPoint) -> Ge3DPoint {
-        point(self.mv_p(EE_UNITS_CLS_MV_GOAL_LOCATION, unit, goal, 1, from).1.p)
+        point(self.mv_p(EE_UNITS_CLS_MV_GOAL_DESTINATION, unit, goal, 0, from).1.p)
     }
     fn goal_flag(&mut self, goal: u64, b1d: bool) -> bool {
-        self.mv(EE_UNITS_CLS_MV_GOAL_FLAG, 0, goal, i64::from(b1d)).0 != 0
+        self.mv(if b1d { EE_UNITS_CLS_MV_GOAL_B1D } else { EE_UNITS_CLS_MV_GOAL_FLAG }, 0, goal, 0).0 != 0
     }
     fn add_path_attempts(&mut self, goal: u64, n: i32) {
         self.mv(EE_UNITS_CLS_MV_PATH_ATTEMPTS, 0, goal, i64::from(n));
     }
     fn sidestep_count(&mut self, goal: u64) -> u32 {
-        self.mv(EE_UNITS_CLS_MV_SIDESTEP, 0, goal, -1).0 as u32
+        self.mv(EE_UNITS_CLS_MV_SIDESTEP, 0, goal, 0).0 as u32
     }
     fn set_sidestep_count(&mut self, goal: u64, n: u32) {
-        self.mv(EE_UNITS_CLS_MV_SIDESTEP, 0, goal, i64::from(n));
+        self.mv(EE_UNITS_CLS_MV_SET_SIDESTEP, 0, goal, i64::from(n));
     }
     fn attack_target(&mut self, goal: u64) -> u64 {
         self.mv(EE_UNITS_CLS_MV_ATTACK_TARGET, 0, goal, 0).0 as u64
     }
     fn auto_waypoint(&mut self, goal: u64) -> bool {
-        self.mv(EE_UNITS_CLS_MV_GOAL_FLAG, 0, goal, 2).0 != 0
+        self.mv(EE_UNITS_CLS_MV_AUTO_WAYPOINT, 0, goal, 0).0 != 0
     }
     fn group_path_state(&mut self, goal: u64) -> u8 {
-        self.mv(EE_UNITS_CLS_MV_GOAL_FLAG, 0, goal, 3).0 as u8
+        self.mv(EE_UNITS_CLS_MV_GROUP_PATH_STATE, 0, goal, 0).0 as u8
     }
     fn set_group_path_state(&mut self, goal: u64, state: u8) {
         self.mv(EE_UNITS_CLS_MV_SET_GROUP_PATH_STATE, 0, goal, i64::from(state));
     }
     fn gathers_wood(&mut self, goal: u64) -> bool {
-        self.mv(EE_UNITS_CLS_MV_GOAL_FLAG, 0, goal, 4).0 != 0
+        // the gather goal's resource is wood
+        let gather = self.mv(EE_UNITS_CLS_MV_GATHER_GOAL, 0, goal, 0).0 as u64;
+        if gather == 0 {
+            return false;
+        }
+        let resource = self.mv(EE_UNITS_CLS_MV_GATHER_RESOURCE, 0, gather, 0).0 as u64;
+        resource != 0 && self.mv(EE_UNITS_CLS_MV_RESOURCE_IS_WOOD, 0, resource, 0).0 != 0
     }
     fn ignore_target(&mut self, unit: u64, target: u64) {
         self.mv(EE_UNITS_CLS_MV_IGNORE_TARGET, unit, target, 0);
@@ -288,7 +325,7 @@ impl MoveHost for ClsGame {
     }
     fn push_bounded_tile(&mut self, unit: u64, tile: Tile) {
         let mut io = EeUnitsClsIo { a: tile[0] as i64, b: tile[1] as i64, ..Default::default() };
-        self.call(EE_UNITS_CLS_MV_BOUNDED, unit, 0, 1, 0, &mut io);
+        self.call(EE_UNITS_CLS_MV_PUSH_BOUNDED, unit, 0, 0, 0, &mut io);
     }
     fn find_bounded_path(&mut self, unit: u64, kind: i32, to: Tile) -> Vec<Ge3DPoint> {
         // FindBoundedPath(unit, the map, kind, its tile, to, path, 50) (pm_entry.rs, its PMRQ record)
@@ -335,7 +372,9 @@ impl MoveHost for ClsGame {
         crate::units::waypoints::cancel_paths(unit);
     }
     fn set_initial_contact_location(&mut self, unit: u64, p: Ge3DPoint) {
-        self.mv_p(EE_UNITS_CLS_MV_INITIAL_CONTACT, unit, 0, 0, p);
+        if self.mv_p(EE_UNITS_CLS_MV_CONTACT_DIFFERS, unit, 0, 0, p).0 != 0 {
+            self.mv_p(EE_UNITS_CLS_MV_INITIAL_CONTACT, unit, 0, 0, p);
+        }
     }
     fn request_path(&mut self, unit: u64, goal: u64, to: Tile, revs: i32, graph: bool, arg8: bool) {
         // `PathToGoal`'s request: an enemy avoidance modifier for a unit its player keeps from enemies, the goal's

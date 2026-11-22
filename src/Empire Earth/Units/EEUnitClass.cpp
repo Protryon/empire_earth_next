@@ -727,52 +727,44 @@ void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
         theTile->RemoveUnit(inUnit);
 }
 
+// the closest tile's x and y (not read), the carrier's tag transformation, the area cloak's modifier
+static long sMvX;
+static long sMvY;
+static GETransformation sMvTransformation;
+static long sMvInput;
+static long sMvRadius;
+
 // The movement bodies' world (ee_units cls_move_host.rs EE_UNITS_CLS_MV_*: the class bodies' host switch passes them
-// here, where the path manager's and the screens' headers are)
+// here, where the path manager's and the screens' headers are); one statement a case (round 8: the compound cases
+// split, their choices Rust's)
 int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int64_t inC, int64_t inD, EeUnitsClsIo* io)
 {
     EEUnitGoal* theGoal = (EEUnitGoal*)(uintptr_t)inB;
     EEComplexUnit* theOther = (EEComplexUnit*)(uintptr_t)inB;
-    GE3DPoint thePoint(io->p[0], io->p[1], io->p[2]);
+    GE3DPoint& p = *reinterpret_cast<GE3DPoint*>(io->p);
     switch (inOp) {
-    case EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT: {
-        long theX, theY;
-        EEMapTile* theTile = ::gWorld.mMap->GetClosestTile(&thePoint, &theX, &theY);
-        if (theTile != NULL)
-            io->f = theTile->mHeight;
-        return theTile != NULL;
-    }
+    case EE_UNITS_CLS_MV_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&p, &sMvX, &sMvY));
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
-    case EE_UNITS_CLS_MV_GOAL: {
-        const void* theMembers[4] = {inUnit->mGoalState, inUnit->mActiveGoal, inUnit->mBlockingUnit, inUnit->mLastAttacker};
-        return EEObj(theMembers[inC]);
-    }
-    case EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER:
-        if (inUnit->mLastAttacker != NULL)
-            inUnit->mLastAttacker->Dereference();
-        inUnit->mLastAttacker = NULL;
-        return 0;
+    case EE_UNITS_CLS_MV_GOAL: return EEObj(inUnit->mGoalState);
+    case EE_UNITS_CLS_MV_ACTIVE_GOAL: return EEObj(inUnit->mActiveGoal);
+    case EE_UNITS_CLS_MV_BLOCKING_UNIT: return EEObj(inUnit->mBlockingUnit);
+    case EE_UNITS_CLS_MV_LAST_ATTACKER: return EEObj(inUnit->mLastAttacker);
+    case EE_UNITS_CLS_MV_DEREFERENCE_LAST_ATTACKER: inUnit->mLastAttacker->Dereference(); return 0;
+    case EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER: inUnit->mLastAttacker = NULL; return 0;
     case EE_UNITS_CLS_MV_GOAL_KIND: return theGoal->mKind;
-    case EE_UNITS_CLS_MV_GOAL_LOCATION:
-        if (inC != 0)
-            theGoal->GetDestination(inUnit, thePoint);
-        else
-            theGoal->GetGoalLocation(thePoint);
-        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-        return 0;
-    case EE_UNITS_CLS_MV_GOAL_FLAG: {
-        if (inC < 4)
-            return inC == 0 ? theGoal->mB1C : inC == 1 ? theGoal->mB1D : inC == 2 ? theGoal->GetIsAutoWaypoint() : theGoal->GetGroupPathState();
-        EEUGRust* theGather = EEGatherGoalCast(theGoal);
-        return theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mResourceType == kResourceWood;
-    }
+    case EE_UNITS_CLS_MV_GOAL_LOCATION: theGoal->GetGoalLocation(p); return 0;
+    case EE_UNITS_CLS_MV_GOAL_DESTINATION: theGoal->GetDestination(inUnit, p); return 0;
+    case EE_UNITS_CLS_MV_GOAL_FLAG: return theGoal->mB1C;
+    case EE_UNITS_CLS_MV_GOAL_B1D: return theGoal->mB1D;
+    case EE_UNITS_CLS_MV_AUTO_WAYPOINT: return theGoal->GetIsAutoWaypoint();
+    case EE_UNITS_CLS_MV_GROUP_PATH_STATE: return theGoal->GetGroupPathState();
+    case EE_UNITS_CLS_MV_GATHER_GOAL: return EEObj(EEGatherGoalCast(theGoal));
+    case EE_UNITS_CLS_MV_GATHER_RESOURCE: return EEObj(static_cast<EEUGRust*>(theGoal)->GetGatherResource());
+    case EE_UNITS_CLS_MV_RESOURCE_IS_WOOD: return ((EEUnit*)(uintptr_t)inB)->mResourceType == kResourceWood;
     case EE_UNITS_CLS_MV_PATH_ATTEMPTS: theGoal->mPathAttempts += (long)inC; return 0;
-    case EE_UNITS_CLS_MV_SIDESTEP:
-        if (inC < 0)
-            return theGoal->GetSidestepCount();
-        theGoal->SetSidestepCount((unsigned long)inC);
-        return 0;
+    case EE_UNITS_CLS_MV_SIDESTEP: return theGoal->GetSidestepCount();
+    case EE_UNITS_CLS_MV_SET_SIDESTEP: theGoal->SetSidestepCount((unsigned long)inC); return 0;
     case EE_UNITS_CLS_MV_SET_GROUP_PATH_STATE: theGoal->SetGroupPathState((unsigned char)inC); return 0;
     case EE_UNITS_CLS_MV_ATTACK_TARGET: return EEObj(theGoal->GetAttackTarget()->GetComplexUnit());
     case EE_UNITS_CLS_MV_IGNORE_TARGET: inUnit->IgnoreTarget(theOther); return 0;
@@ -784,76 +776,49 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     }
     case EE_UNITS_CLS_MV_SET_BLOCKING: inUnit->SetBlockingUnit((RTSUnit*)(uintptr_t)inB); return 0;
     // the waypoints' operations: Rust (cls_host.rs waypoint_op)
-    case EE_UNITS_CLS_MV_DISTANCE_3D: io->f = inUnit->DistanceSquared3D(thePoint); return 0;
-    case EE_UNITS_CLS_MV_BOUNDED:
-        if (inC == 0)
-            inUnit->mBoundedPathTiles.clear();
-        else
-            inUnit->mBoundedPathTiles.push_back(U2DPoint<long>((long)io->a, (long)io->b));
-        return 0;
+    case EE_UNITS_CLS_MV_DISTANCE_3D: io->f = inUnit->DistanceSquared3D(p); return 0;
+    case EE_UNITS_CLS_MV_BOUNDED: inUnit->mBoundedPathTiles.clear(); return 0;
+    case EE_UNITS_CLS_MV_PUSH_BOUNDED: inUnit->mBoundedPathTiles.push_back(U2DPoint<long>((long)io->a, (long)io->b)); return 0;
     case EE_UNITS_CLS_MV_SET_VELOCITY: inUnit->SetVelocity(io->f); return 0;
     case EE_UNITS_CLS_MV_START_ACTION: inUnit->StartAction((long)inC); return 0;
     case EE_UNITS_CLS_MV_ACTION_CHANGED: ((EEUnitClass*)(uintptr_t)inB)->ActionChanged(inUnit); return 0;
     case EE_UNITS_CLS_MV_UPDATE_WATER_STATE: inUnit->UpdateWaterState(true); return 0;
-    case EE_UNITS_CLS_MV_INITIAL_CONTACT:
-        if (inUnit->mInitialContactLocation != thePoint)
-            inUnit->mInitialContactLocation = thePoint;
-        return 0;
+    case EE_UNITS_CLS_MV_CONTACT_DIFFERS: return inUnit->mInitialContactLocation != p;
+    case EE_UNITS_CLS_MV_INITIAL_CONTACT: inUnit->mInitialContactLocation = p; return 0;
     // PathToGoal's request: Rust (cls_move_host.rs) but the player's virtual
     case EE_UNITS_CLS_MV_AVOIDS_ENEMIES: return inUnit->mPlayer->AvoidsEnemies(inUnit);
-    case EE_UNITS_CLS_CR_TAG: {   // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)
-        EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-        if (theTags == NULL || theTags->mPoints.size() == 0)
-            return 0;
-        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-        EETagPointList::Scale(theTransformation, inUnit->GetStats()->GetScale());
-        theTags->mPoints[(size_t)inC]->GetPoint(theOther->mPhysicalModel.GetFrame(), theTransformation, thePoint);
-        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-        return 1;
-    }
-    case EE_UNITS_CLS_CR_SET_ORIENTATION: inUnit->mOrientation = GEOrientation(io->p[0], io->p[1], io->p[2]); return 0;
-    case EE_UNITS_CLS_CR_SET_POSITION: {
-        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-        theTransformation.SetPosition(thePoint);
-        inUnit->SetTransformation(theTransformation, true);
+    // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)
+    case EE_UNITS_CLS_CR_TAG_LIST: return EEObj(inUnit->GetModel()->mTagPoints[inUnit->mAnimation]);
+    case EE_UNITS_CLS_CR_TAG_COUNT: return ((EETagPointList*)(uintptr_t)inB)->mPoints.size();
+    case EE_UNITS_CLS_CR_SCRATCH_LOCATION: sMvTransformation = inUnit->mPhysicalModel.GetLocation(); return 0;
+    case EE_UNITS_CLS_CR_SCRATCH_SCALE: EETagPointList::Scale(sMvTransformation, inUnit->GetStats()->GetScale()); return 0;
+    case EE_UNITS_CLS_CR_TAG:
+        ((EETagPointList*)(uintptr_t)inD)->mPoints[(size_t)inC]->GetPoint(theOther->mPhysicalModel.GetFrame(), sMvTransformation, p);
         return 0;
-    }
+    case EE_UNITS_CLS_CR_SET_ORIENTATION: inUnit->mOrientation = GEOrientation(io->p[0], io->p[1], io->p[2]); return 0;
+    case EE_UNITS_CLS_CR_SET_POSITION: sMvTransformation.SetPosition(p); return 0;
+    case EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION: inUnit->SetTransformation(sMvTransformation, true); return 0;
     case EE_UNITS_CLS_CR_SET_SCALE: inUnit->mPhysicalModel.SetScale(io->f); return 0;
     case EE_UNITS_CLS_CR_ROUTE_DOCK: ((EEUnitClass*)(uintptr_t)inB)->RouteDockWaypoint(inUnit); return 0;
     case EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC: return inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] != 0;
-    case EE_UNITS_CLS_CR_DECK_GOAL: {
-        EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
-        if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
-            theLocation = inUnit->GetGoal();
-        if (theLocation == NULL) {
-            EEUGRust* theMove = EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false);
-            inUnit->ClearGoalQueue(0);
-            inUnit->SetGoal(theMove, 0, 0);
-        } else
-            EESetLocationGoalPoint(theLocation, thePoint);
+    case EE_UNITS_CLS_CR_GOAL: return EEObj(inUnit->GetGoal());
+    case EE_UNITS_CLS_CR_HAS_LOCATION: return EEGoalHasLocation(theGoal);
+    case EE_UNITS_CLS_CR_DECK_GOAL: return EEObj(EEUGRust::NewLocation(&p, false, true, false, 0.0f, false, false));
+    case EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE: inUnit->ClearGoalQueue(0); return 0;
+    case EE_UNITS_CLS_CR_SET_GOAL: inUnit->SetGoal(theGoal, 0, 0); return 0;
+    case EE_UNITS_CLS_CR_SET_LOCATION_POINT: EESetLocationGoalPoint(theGoal, p); return 0;
+    case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT: p = EELocationGoalPoint(inUnit->GetGoal()); return 0;
+    case EE_UNITS_CLS_CR_ATC_SLOTS: return ee_units_atc_slot_count(inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1]);
+    case EE_UNITS_CLS_CR_HOME_FIRST_SLOT:
+        inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1], 0)));
         return 0;
-    }
-    case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT:
-        thePoint = EELocationGoalPoint(inUnit->GetGoal());
-        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-        return 0;
-    case EE_UNITS_CLS_CR_HOME_FIRST_SLOT: {
-        EeUnitsAtc* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
-        if (ee_units_atc_slot_count(theControl) > 0)
-            inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(theControl, 0)));
-        else
-            inUnit->Kill(true, false, false);
-        return EEObj(inUnit->mHomeBase);
-    }
+    case EE_UNITS_CLS_CR_KILL: inUnit->Kill(true, false, false); return 0;
     case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
-    case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, thePoint); return 0;
+    case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, p); return 0;
     // the ground levelling's (cls_level.rs): the mesh and the tile are the handle a
     case EE_UNITS_CLS_LV_MESH_Z: io->f = ((GETerrainMesh*)(uintptr_t)inUnit)->GetZ((unsigned long)inC, (unsigned long)inD); return 0;
     case EE_UNITS_CLS_LV_SET_MESH_Z: ((GETerrainMesh*)(uintptr_t)inUnit)->SetZ((unsigned long)inC, (unsigned long)inD, io->f); return 0;
-    case EE_UNITS_CLS_LV_SET_TILE_HEIGHT:
-        if (inUnit != NULL)
-            ((EEMapTile*)(uintptr_t)inUnit)->mHeight = io->f;
-        return 0;
+    case EE_UNITS_CLS_LV_SET_TILE_HEIGHT: ((EEMapTile*)(uintptr_t)inUnit)->mHeight = io->f; return 0;
     case EE_UNITS_CLS_LV_MAP_MESH: return EEObj(&::gWorld.mMap->mTerrainMesh);
     case EE_UNITS_CLS_LV_CREATE_UNIT:
         return EEObj(((EEUnitClass*)(uintptr_t)inB)->CreateUnit((long)inC, (long)inD, (long)io->a, io->b != 0, inUnit)->mComplexUnit);
@@ -861,35 +826,19 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_LV_SET_FACING: inUnit->SetFacing((unsigned long)inC); return 0;
     case EE_UNITS_CLS_LV_CAMERA_OFF: gCameraFollowing = false; return 0;
     // the status ticks' (cls_status.rs)
-    case EE_UNITS_CLS_ST_CINEMATIC_INTERVAL:
-        io->a = ::gWorld.mInCinematic ? 1 : 0;
-        io->b = EEGetRules().mCombat.mPowerRegenerationInterval;
-        return 0;
+    case EE_UNITS_CLS_ST_CINEMATIC_INTERVAL: return ::gWorld.mInCinematic ? 1 : 0;
+    case EE_UNITS_CLS_ST_POWER_INTERVAL: return EEGetRules().mCombat.mPowerRegenerationInterval;
     case EE_UNITS_CLS_ST_CLOAKED_ENEMY: return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer()));
-    case EE_UNITS_CLS_ST_MINI_MAP:
-        if (inC != 0)
-            gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-        else
-            gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
-        return 0;
-    case EE_UNITS_CLS_ST_CHAIN:
-        if (inC == 0)
-            inUnit->SetCloakableChain(inD != 0);
-        else if (inC == 1)
-            inUnit->SetCloakedChain(inD != 0);
-        else
-            inUnit->SetOpacityChain(io->f);
-        return 0;
+    case EE_UNITS_CLS_ST_MINI_MAP: gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000); return 0;
+    case EE_UNITS_CLS_ST_MINI_MAP_SHOW: gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY()); return 0;
+    case EE_UNITS_CLS_ST_CHAIN: inUnit->SetCloakableChain(inD != 0); return 0;
+    case EE_UNITS_CLS_ST_CLOAKED_CHAIN: inUnit->SetCloakedChain(inD != 0); return 0;
+    case EE_UNITS_CLS_ST_OPACITY_CHAIN: inUnit->SetOpacityChain(io->f); return 0;
     case EE_UNITS_CLS_ST_CLOAK_DETECTION: ((EEUnitClass*)(uintptr_t)inB)->UpdateCloakDetection(inUnit); return 0;
-    case EE_UNITS_CLS_ST_AREA_CLOAK: {
-        if (!inUnit->HasEffect(8))
-            return 0;
-        long theInput = 0;
-        long theRadius = 0;
-        inUnit->mAffectingAreaEffects.ApplyModifiers(3, theInput, theRadius, inUnit);
-        io->a = theRadius;
-        return 1;
-    }
+    case EE_UNITS_CLS_ST_HAS_AREA_CLOAK: return inUnit->HasEffect(8);
+    case EE_UNITS_CLS_ST_RESET_MODIFIERS: sMvInput = sMvRadius = 0; return 0;
+    case EE_UNITS_CLS_ST_AREA_CLOAK: inUnit->mAffectingAreaEffects.ApplyModifiers(3, sMvInput, sMvRadius, inUnit); return 0;
+    case EE_UNITS_CLS_ST_MODIFIER_RADIUS: return sMvRadius;
     case EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: io->f = gWorldTable.GetFloatValue(kWorldCamouflageTiming); return 0;
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
