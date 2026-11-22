@@ -68,13 +68,13 @@ mod win {
 
     use windows_sys_059::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM};
     use windows_sys_059::Win32::Graphics::Gdi::{
-        BitBlt, CreateCompatibleDC, DeleteObject, GetDC, GetObjectA, GetStockObject, LoadBitmapA, ReleaseDC, SelectObject,
-        BITMAP, HBRUSH, NULL_BRUSH, SRCCOPY,
+        BitBlt, CreateCompatibleDC, DeleteObject, GetDC, GetObjectA, GetStockObject, LoadBitmapA, ReleaseDC,
+        SelectObject, BITMAP, HBRUSH, NULL_BRUSH, SRCCOPY,
     };
     use windows_sys_059::Win32::UI::WindowsAndMessaging::{
-        CreateWindowExA, DefWindowProcA, DispatchMessageA, GetDesktopWindow, GetWindowRect, LoadCursorA,
-        PeekMessageA, PostQuitMessage, RegisterClassExA, ShowCursor, TranslateMessage, CS_HREDRAW, CS_VREDRAW, MSG,
-        PM_REMOVE, WM_ERASEBKGND, WM_PAINT, WM_SETCURSOR, WNDCLASSEXA, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
+        CreateWindowExA, DefWindowProcA, DispatchMessageA, GetDesktopWindow, GetWindowRect, LoadCursorA, PeekMessageA,
+        PostQuitMessage, RegisterClassExA, ShowCursor, TranslateMessage, CS_HREDRAW, CS_VREDRAW, MSG, PM_REMOVE,
+        WM_ERASEBKGND, WM_PAINT, WM_SETCURSOR, WNDCLASSEXA, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
     };
 
     const CLASS_NAME: &std::ffi::CStr = c"Loading Game Window";

@@ -40,8 +40,10 @@ fn handle(op: Op, h: u64) -> u64 {
 /// The fixture's view of a GUI text: at most 60 characters, a space, a control character, a non-ASCII one or '|'
 /// as '_', "-" when empty.
 pub fn lobby_gui_text(chars: impl Iterator<Item = u16>) -> String {
-    let text: String =
-        chars.take(60).map(|c| if !(0x21..0x7f).contains(&c) || c == b'|' as u16 { '_' } else { c as u8 as char }).collect();
+    let text: String = chars
+        .take(60)
+        .map(|c| if !(0x21..0x7f).contains(&c) || c == b'|' as u16 { '_' } else { c as u8 as char })
+        .collect();
     if text.is_empty() {
         "-".into()
     } else {
