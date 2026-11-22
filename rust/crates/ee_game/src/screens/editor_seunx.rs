@@ -22,9 +22,8 @@ pub const EE_SCREENS_SEUNX_NEW_BITMAP: u32 = 0;
 pub const EE_SCREENS_SEUNX_BUTTON_TEXTURE: u32 = 1;
 pub const EE_SCREENS_SEUNX_TEXTURE_WIDTH: u32 = 2;
 pub const EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM: u32 = 3;
-pub const EE_SCREENS_SEUNX_BITMAP_COORDS: u32 = 4;
 pub const EE_SCREENS_SEUNX_BITMAP_SCALE: u32 = 5;
-/// A unit type button (`EEUIShellRadio`, id i1 + 0x406, at x i3, index i0, checked when i1 is 0) on form p1; its
+/// A unit type button (`EEUIShellRadio`, index i0, id i1, checked i2, the rectangle f) on form p1; its
 /// up checked, down checked, down unchecked, up unchecked bitmaps (p2), no focused bitmap, the draw offset 0, the
 /// button-up event p2, the string id i0; added to form p1 (p2 the radio, layer i0).
 pub const EE_SCREENS_SEUNX_TYPE_RADIO: u32 = 6;
@@ -37,17 +36,14 @@ pub const EE_SCREENS_SEUNX_RADIO_DRAW_OFFSET: u32 = 12;
 pub const EE_SCREENS_SEUNX_RADIO_TRIGGER: u32 = 13;
 pub const EE_SCREENS_SEUNX_RADIO_STRING_ID: u32 = 14;
 pub const EE_SCREENS_SEUNX_ADD_RADIO: u32 = 15;
-/// `IDS_SE_REMOVE` into the host's text; the Remove Cargo button (form p1, x f0, index i0); button p1's `SetText(the
-/// text, the screen font)`, `SetBgOpacity(1)`, its text white and transparent; added to form p1 (p2, layer i0); the
-/// Rotation button (form p1, index i0), its `SetStringTableID(IDS_ROTATE)`.
+/// `IDS_SE_REMOVE` into the host's text; button p1's `SetText(the text, the screen font)`, `SetBgOpacity(1)`, its
+/// text white and transparent; added to form p1 (p2, layer i0); button p1's `SetStringTableID(IDS_ROTATE)`.
 pub const EE_SCREENS_SEUNX_STRING_REMOVE: u32 = 16;
-pub const EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON: u32 = 17;
 pub const EE_SCREENS_SEUNX_BUTTON_SET_TEXT: u32 = 18;
 pub const EE_SCREENS_SEUNX_BUTTON_OPAQUE: u32 = 19;
 pub const EE_SCREENS_SEUNX_BUTTON_TEXT_WHITE: u32 = 20;
 pub const EE_SCREENS_SEUNX_BUTTON_TEXT_TRANSPARENT: u32 = 21;
 pub const EE_SCREENS_SEUNX_ADD_BUTTON: u32 = 22;
-pub const EE_SCREENS_SEUNX_ROTATION_BUTTON: u32 = 23;
 pub const EE_SCREENS_SEUNX_ROTATION_STRING: u32 = 24;
 /// The actions: `new EESEAMouseClick`, `new EESEALasso`, `new EESEARust(kSEAPlaceUnit)`, `(kSEAPlaceGate)`,
 /// `(kSEAPlaceWall)`, `(kSEAMoveUnit)`.
@@ -122,8 +118,8 @@ pub const EE_SCREENS_SEUNX_MINIMAP: u32 = 76;
 pub const EE_SCREENS_SEUNX_MINIMAP_REFRESH: u32 = 77;
 pub const EE_SCREENS_SEUNX_REDRAW_ALL: u32 = 78;
 pub const EE_SCREENS_SEUNX_ALL_DIRTY: u32 = 79;
-/// The tab p1's panel rectangle `And` the rectangle p2 into the host's rectangle; the form's `DrawBackground(bitmap
-/// p2, that rectangle, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
+/// The tab p1's panel rectangle `And` the rectangle p2 into the rectangle *p0; the form's `DrawBackground(bitmap
+/// p2, the rectangle *p0, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
 /// top, right, bottom set to f0; the panel added dirty to control p2's form.
 pub const EE_SCREENS_SEUNX_PANEL_AND: u32 = 80;
 pub const EE_SCREENS_SEUNX_DRAW_PANEL: u32 = 81;
@@ -195,8 +191,90 @@ pub const EE_SCREENS_SEUNX_KEY_DELETE: u32 = 130;
 pub const EE_SCREENS_SEUNX_KEY_SHIFT: u32 = 131;
 pub const EE_SCREENS_SEUNX_KEY_PRESSED: u32 = 132;
 pub const EE_SCREENS_SEUNX_KEY_DOWN: u32 = 133;
-/// `new EESEARust(kSEADeleteUnit, NULL, -1, the current player's id, i0 != 0)`.
+/// `new EESEARust(kSEADeleteUnit, NULL, -1, player i1, i0 != 0)`.
 pub const EE_SCREENS_SEUNX_DELETE_ACTION: u32 = 134;
+
+// round 6 (4000..)
+/// Bitmap p1's Rust object (`EeGeBitmap`); Rust's own statement (`ge_op`): the bitmap p0's
+/// `SetTextureCoordinates((f0, f1), (f2, f1), (f0, f3), (f2, f3))` (the original's corner order).
+pub const EE_SCREENS_SEUNX_BITMAP_RUST: u32 = 4000;
+pub const EE_SCREENS_SEUNX_GE_UVS: u32 = 4001;
+/// `new EEUIShellButton(kind i1, id i2, no bitmaps, the rectangle f, form p1, index i0, border i3)`.
+pub const EE_SCREENS_SEUNX_NEW_BUTTON: u32 = 4002;
+/// The current player's id.
+pub const EE_SCREENS_SEUNX_CURRENT_PLAYER: u32 = 4003;
+
+/// The buttons' kinds and ids (the Remove Cargo button 0x3f4, the Rotation button 0x3f5).
+const SEUNX_KIND_REMOVE_CARGO: i32 = crate::screens::shells_unit::EE_SCREENS_SK_REMOVE_CARGO as i32;
+const SEUNX_KIND_ROTATION: i32 = crate::screens::shells_unit::EE_SCREENS_SK_ROTATION as i32;
+
+/// Rust's own statements (`EE_SCREENS_SEUNX_GE_*` on the bitmaps' Rust objects), `None` for the C++'s.
+///
+/// # Safety
+/// The operands are the live objects the statement names.
+pub unsafe fn ge_op(op: u32, p: [usize; 3], f: &[f32; 4]) -> Option<i32> {
+    if op != EE_SCREENS_SEUNX_GE_UVS {
+        return None;
+    }
+    // GETextureCoordinate is u, v
+    let mut uv = [[f[0], f[1]], [f[2], f[1]], [f[0], f[3]], [f[2], f[3]]];
+    let quad = uv.each_mut().map(|c| c.as_mut_ptr().cast::<core::ffi::c_void>());
+    unsafe { ee_render::ge::bmpobj::ee_ge_bmp_set_uvs(p[0] as *mut ee_render::ge::bmpobj::EeGeBitmap, &quad) };
+    Some(0)
+}
+
+/// The bitmap `bitmap`'s texture coordinates over a cell: `(u0, v0), (u1, v0), (u0, v1), (u1, v1)` (the original's
+/// corner order; the diplomacy buttons' cells).
+///
+/// # Safety
+/// `bitmap` is a live bitmap.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_bitmap_uvs(
+    bitmap: *mut ee_render::ge::bmpobj::EeGeBitmap,
+    u0: f32,
+    v0: f32,
+    u1: f32,
+    v1: f32,
+) {
+    unsafe { ge_op(EE_SCREENS_SEUNX_GE_UVS, [bitmap as usize, 0, 0], &[u0, v0, u1, v1]) };
+}
+
+/// `SeplColor`'s colour for a made control's flags (`EE_SCREENS_SEPL_FG*`): white, red or yellow, none without one.
+pub fn sepl_color(flags: u32) -> Option<[f32; 3]> {
+    use crate::screens::editor_area::EE_SCREENS_SEPL_FG_RED as RED;
+    use crate::screens::editor_map::EE_SCREENS_SEPL_FG_WHITE as WHITE;
+    use crate::screens::editor_players::EE_SCREENS_SEPL_FG as FG;
+    if flags & (FG | WHITE | RED) == 0 {
+        return None;
+    }
+    Some(if flags & WHITE != 0 {
+        [1.0, 1.0, 1.0]
+    } else if flags & RED != 0 {
+        [1.0, 0.0, 0.0]
+    } else {
+        [0.996_078_43, 0.968_627_45, 0.125_490_2]
+    })
+}
+
+/// `SeplColor(text, flags)`: the text coloured by the flags and made transparent (nothing without a colour).
+///
+/// # Safety
+/// `text` is a live text.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sepl_color(text: *mut ee_render::ge::smallobj::EeGeText, flags: u32) {
+    use ee_render::ge::smallobj::{ee_ge_text_color, ee_ge_text_set_transparent};
+    if let Some(c) = sepl_color(flags) {
+        unsafe {
+            core::ptr::copy_nonoverlapping(c.as_ptr(), ee_ge_text_color(text, true), 3);
+            ee_ge_text_set_transparent(text, true);
+        }
+    }
+}
+
+/// `GERectangle(GE2DPoint(x, y), width, height)` as left, top, right, bottom (its constructor's sums).
+fn sized(x: f32, y: f32, width: f32, height: f32) -> [f32; 4] {
+    [x, y, x + (width - 1.0), y + (height - 1.0)]
+}
 
 /// The tech tree id of no technology (`kTechNone`).
 const TECH_NONE: i32 = 100000;
@@ -287,12 +365,14 @@ fn type_button(x: &mut Seunx, p: [usize; 3], i: &[i32; 4], f: &[f32; 4]) -> [usi
     for (k, b) in [normal, pressed].into_iter().enumerate() {
         let (cx, cy) = (f[k * 2], f[k * 2 + 1]);
         let corners = [cx / size, cy / size, (cx + W) / size, (cy + 25.0) / size];
-        st(x, EE_SCREENS_SEUNX_BITMAP_COORDS, b, 0, [0; 4], corners);
+        let rust = mk(x, EE_SCREENS_SEUNX_BITMAP_RUST, b, 0, [0; 4], [0.0; 4]);
+        x(EE_SCREENS_SEUNX_GE_UVS, [rust, 0, 0], &mut [0; 4], &mut { corners });
     }
     for b in [normal, pressed] {
         st(x, EE_SCREENS_SEUNX_BITMAP_SCALE, b, 0, [0; 4], [x_scale, y_scale, 0.0, 0.0]);
     }
-    let button = mk(x, EE_SCREENS_SEUNX_TYPE_RADIO, form, 0, [i[0], i[1], 0, i[3]], [0.0; 4]);
+    let rect = sized(i[3] as u32 as f32, 0.0, W, 25.0);
+    let button = mk(x, EE_SCREENS_SEUNX_TYPE_RADIO, form, 0, [i[0], i[1] + 0x406, i32::from(i[1] == 0), 0], rect);
     for (op, b) in [
         (EE_SCREENS_SEUNX_RADIO_UP_CHECKED, pressed),
         (EE_SCREENS_SEUNX_RADIO_DOWN_CHECKED, pressed),
@@ -394,7 +474,8 @@ pub unsafe fn compose(
         }
         EE_SCREENS_SEUN_OP_REMOVE_CARGO => {
             on(x, EE_SCREENS_SEUNX_STRING_REMOVE, 0);
-            let t = mk(x, EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON, p[1], 0, [i[0], 0, 0, 0], [f[0], 0.0, 0.0, 0.0]);
+            let ints = [i[0], SEUNX_KIND_REMOVE_CARGO, 0x3f4, 2];
+            let t = mk(x, EE_SCREENS_SEUNX_NEW_BUTTON, p[1], 0, ints, sized(f[0], 707.0, 100.0, 25.0));
             on(x, EE_SCREENS_SEUNX_BUTTON_SET_TEXT, t);
             on(x, EE_SCREENS_SEUNX_BUTTON_OPAQUE, t);
             on(x, EE_SCREENS_SEUNX_BUTTON_TEXT_WHITE, t);
@@ -405,7 +486,8 @@ pub unsafe fn compose(
             0
         }
         EE_SCREENS_SEUN_OP_ROTATION => {
-            let t = mk(x, EE_SCREENS_SEUNX_ROTATION_BUTTON, p[1], 0, [i[0], 0, 0, 0], z);
+            let ints = [i[0], SEUNX_KIND_ROTATION, 0x3f5, 0];
+            let t = mk(x, EE_SCREENS_SEUNX_NEW_BUTTON, p[1], 0, ints, sized(500.0, 633.0, 50.0, 50.0));
             on(x, EE_SCREENS_SEUNX_ROTATION_STRING, t);
             st(x, EE_SCREENS_SEUNX_ADD_BUTTON, p[1], t, [6, 0, 0, 0], z);
             // SAFETY: p0 the op's out slot
@@ -554,8 +636,11 @@ pub unsafe fn compose(
             0
         }
         EE_SCREENS_SEUN_OP_DRAW => {
-            if st(x, EE_SCREENS_SEUNX_PANEL_AND, p[0], p[2], [0; 4], z) != 0 {
-                st(x, EE_SCREENS_SEUNX_DRAW_PANEL, p[0], p[1], [0; 4], z);
+            // the clipped panel (the original's local), written by the And, drawn
+            let mut clip = ee_base::math::types::GeRectangle::default();
+            let c = &mut clip as *mut ee_base::math::types::GeRectangle as usize;
+            if x(EE_SCREENS_SEUNX_PANEL_AND, [c, p[0], p[2]], &mut [0; 4], &mut [0.0; 4]) != 0 {
+                x(EE_SCREENS_SEUNX_DRAW_PANEL, [c, p[0], p[1]], &mut [0; 4], &mut [0.0; 4]);
             }
             0
         }
@@ -688,7 +773,8 @@ pub unsafe fn compose(
             keys
         }
         EE_SCREENS_SEUN_OP_DELETE_SELECTION => {
-            let a = mk(x, EE_SCREENS_SEUNX_DELETE_ACTION, 0, 0, [i[0], 0, 0, 0], z);
+            let player = on(x, EE_SCREENS_SEUNX_CURRENT_PLAYER, 0);
+            let a = mk(x, EE_SCREENS_SEUNX_DELETE_ACTION, 0, 0, [i[0], player, 0, 0], z);
             on(x, EE_SCREENS_SEUNX_RELEASE_ACTION, a);
             0
         }

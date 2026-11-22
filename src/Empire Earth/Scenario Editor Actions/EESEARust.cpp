@@ -60,6 +60,7 @@
 #include "ee/EEMessage.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EESEARust.h"
+#include "ee/EESERBUnitTypes.h"   // gMaxPlayers
 #include "lle/UICheckBox.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
@@ -92,12 +93,11 @@ EESEUICCommandUnits::~EESEUICCommandUnits()
 
 int64_t EESEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
-    EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
     switch (inOp) {
     case EE_SCREENS_CU_ROTATE: ee_screens_sew_rotate(this->mRotateAction->mAction, ioF[0]); return 0;
     case EE_SCREENS_CU_PICK: return (int64_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
-    case EE_SCREENS_CU_DELETE: (new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, theUnit->mUnitID))->Dereference(); return 0;
-    case EE_SCREENS_CU_UNIT_RELEASE: theUnit->Dereference(); return 0;
+    case EE_SCREENS_CU_DELETE: (new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, reinterpret_cast<EEUnit*>(inA)->mUnitID))->Dereference(); return 0;
+    case EE_SCREENS_CU_UNIT_RELEASE: reinterpret_cast<EEUnit*>(inA)->Dereference(); return 0;
     }
     return EEUICCommandUnits::RustOp(inOp, inA, inB, ioF);
 }
@@ -108,47 +108,6 @@ int64_t EESEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, flo
 // Its sequences (the follow stop, the point, the terrain, the plant, the elevation mode, the raise, the tile's units,
 // the bulldozer's removal) are composed in ee_screens editor_seax.rs over ee_screenscpp_seax's statements.
 
-// 0x445618: the height of one elevation level (once EEUIFSEPaintElevation.cpp's; ee_game shells_paint.rs)
-static const float kSEPELevelHeight = 0.20412414f;
-
-extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
-{
-    EEMap* theMap = gWorld.mMap;
-    switch (inOp) {
-    case EE_SCREENS_SEA_TILE:
-        return theMap->GetTile(i[0], i[1]) != NULL;
-    case EE_SCREENS_SEA_PAINT_RECT:
-        theMap->PaintTerrainRect(i[0], i[1], i[2], i[3], i[4], i[5]);
-        return 0;
-    case EE_SCREENS_SEA_UPDATE_CLIFFS:
-        theMap->UpdateCliffs(i[0], i[1], i[2], i[3]);
-        return 0;
-    case EE_SCREENS_SEA_MINIMAP_RECT:
-        gMiniMap->RedrawRect(i[0], i[1], i[2], i[3]);
-        return 0;
-    case EE_SCREENS_SEA_MINIMAP_REFRESH:
-        gMiniMap->Refresh();
-        return 0;
-    case EE_SCREENS_SEA_TERRAIN_CLASS:
-        return (int32_t)EETerrainTable::Get(i[0])->GetUnitClass((unsigned long)(long)i[1]);
-    case EE_SCREENS_SEA_TIME:
-        return (int32_t)TMGetTime();
-    case EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS:
-        theMap->RemoveFlatCliffs((long)i[0], (long)i[1], (long)i[2], (long)i[3]);
-        return 0;
-    case EE_SCREENS_SEA_STORE_MOUSE_TILE:
-        EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_PAINT), EE_SCREENS_SKOP_PAINT_STORE_TILE);
-        return 0;
-    case EE_SCREENS_SEA_ELEVATION_CHANGED:
-        gEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
-        return 0;
-    case EE_SCREENS_SEA_LEVEL_HEIGHT:
-        f[0] = kSEPELevelHeight;
-        return 0;
-    }
-    return 0;
-}
-
 // ------------------------------------------------------------------------------------------------ the whole actions
 // The host of the editor's actions whole in Rust (ee_screens editor_whole.rs: EE_SCREENS_SEW_OP_*; ee/EESEARust.h):
 // the original EESEASaveScenario, EESEATestScenario, EESEAExitScenario, EESEAQuickSaveScenario, EESEATechTree,
@@ -157,98 +116,6 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 
-extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* f)
-{
-    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-    EEMap* theMap = gWorld.mMap;
-    // a mesh coordinate as the original's unsigned long (x - 1 at 0 wraps)
-    unsigned long x = (unsigned long)(long)i[0], y = (unsigned long)(long)i[1];
-    switch (inOp) {
-    case EE_SCREENS_SEW_OP_POST:
-        gUserInterface->PostAction(static_cast<EEAction*>(p));
-        break;
-    case EE_SCREENS_SEW_OP_REFERENCE:
-        static_cast<EEAction*>(p)->Reference();
-        break;
-    case EE_SCREENS_SEW_OP_DEREFERENCE:
-        static_cast<EEAction*>(p)->Dereference();
-        break;
-    case EE_SCREENS_SEW_OP_EXIT_EDITOR:
-        theEditor->ExitEditor(i[0] != 0);
-        break;
-    case EE_SCREENS_SEW_OP_REFRESH_GROUP:
-        theEditor->RefreshCurrentGroup();
-        break;
-    case EE_SCREENS_SEW_OP_IN_EDITOR:
-        return gUIManager->mInScenarioEditor == true;
-    case EE_SCREENS_SEW_OP_PREPARE_SAVE:
-        theMap->PrepareSave();
-        break;
-    case EE_SCREENS_SEW_OP_ROTATE:
-        ee_screens_seu_rotate(f[0]);
-        break;
-    case EE_SCREENS_SEW_OP_PLAYER_COUNT:
-        return (int32_t)gWorld.GetNumPlayers();
-    case EE_SCREENS_SEW_OP_MAP_SIZE:
-        return (int32_t)theMap->mSize;
-    case EE_SCREENS_SEW_OP_POINT:
-        return theMap->mTerrainMesh.GetIsValidPoint(x, y);
-    case EE_SCREENS_SEW_OP_TILE:
-        return theMap->mTerrainMesh.GetIsValidTile(x, y);
-    case EE_SCREENS_SEW_OP_GET_Z:
-        f[0] = theMap->mTerrainMesh.GetZ(x, y);
-        break;
-    case EE_SCREENS_SEW_OP_SET_Z:
-        theMap->mTerrainMesh.SetZ(x, y, f[0]);
-        break;
-    case EE_SCREENS_SEW_OP_NORMAL:
-        theMap->mTerrainMesh.ComputeVertexNormal(x, y);
-        break;
-    case EE_SCREENS_SEW_OP_SHORELINES:
-        theMap->mTerrainMesh.ComputeShorelines(x, y);
-        break;
-    case EE_SCREENS_SEW_OP_PAINT_TERRAIN:
-        theMap->PaintTerrain(i[0], i[1], i[2]);
-        break;
-    case EE_SCREENS_SEW_OP_WATER_COLOR:
-        theMap->mTerrainMesh.SetWaterColorSet(x, y);
-        break;
-    case EE_SCREENS_SEW_OP_UPDATE_CLIFFS:
-        theMap->UpdateCliffs(i[0], i[1], i[2], i[3]);
-        break;
-    case EE_SCREENS_SEW_OP_CONTINENTS_CLEAR:
-        gContinentManager.Clear(theMap);
-        break;
-    case EE_SCREENS_SEW_OP_CONTINENTS_BUILD:
-        gContinentManager.BuildRegions(theMap);
-        break;
-    case EE_SCREENS_SEW_OP_TERRAIN_AMBIENT:
-        return EETerrainTable::Get(i[0])->mAmbientUnitChance > 0;
-    case EE_SCREENS_SEW_OP_INFLUENCE:
-        gWorld.CreateInfluenceTable(theMap);
-        break;
-    case EE_SCREENS_SEW_OP_CAMERA:
-        gWorld.mCameraControl.SetLocation(GE3DPoint(f[0], f[1], f[2]), true, true);
-        break;
-    case EE_SCREENS_SEW_OP_LOCAL_PLAYER:
-        return (int32_t)gWorld.GetCurrentPlayer()->mPlayerID;
-    case EE_SCREENS_SEW_OP_DEFAULT_TERRAIN:
-        return (int32_t)gDefaultTerrain;
-    case EE_SCREENS_SEW_OP_MAX_PLAYERS:
-        return (int32_t)gWorld.mMaxPlayers;
-    case EE_SCREENS_SEW_OP_LOAD_MEDIA:
-        gWorld.mPlayers[i[0]]->SetUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass, 0x7f);
-        break;
-    case EE_SCREENS_SEW_OP_UNLOAD_MEDIA:
-        gWorld.mPlayers[i[0]]->UnloadUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass);
-        break;
-    case EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
-        theEditor->UnitCall(EE_SCREENS_SEUN_SELECT);
-        break;
-    }
-    return 0;
-}
-
 // ------------------------------------------------------------------------------------------------ placement and move
 // The host of the unit placement and move (ee_screens editor_place.rs: EE_SCREENS_SEP_*; the original EESEAPlaceUnit
 // and EESEAMoveUnit, EESEARust kinds): units by id (the original's handles), referenced while the actions hold them;
@@ -256,57 +123,12 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
 
 static EEUnit* EESEPUnit(int32_t inID)
 {
-    EEUnit* theUnit;
-    EEUnitHandleResolve((uint32_t)inID, theUnit);
-    return theUnit;
+    return EEUnitHandle<EEUnit>::FromSavedID((uint32_t)inID).Get();
 }
 
 static EEComplexUnit* EESEPComplexUnit(int32_t inID)
 {
-    EEComplexUnit* theUnit;
-    EEUnitHandleResolve((uint32_t)inID, theUnit);
-    return theUnit;
-}
-
-extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* i, float* f)
-{
-    GETransformation& theT = *reinterpret_cast<GETransformation*>(t);
-    switch (inOp) {
-    case EE_SCREENS_SEP_GHOST_COUNT:
-        return (int32_t)gWorld.GetNumGhostUnits();
-    case EE_SCREENS_SEP_UNDER_MOUSE:
-        return (int32_t)gUIManager->GetScenarioEditorForm()->GetUnitUnderMouse();
-    case EE_SCREENS_SEP_LOAD_MEDIA:
-        gWorld.mPlayers[i[0]]->SetUnitClassMedia(i[1], 0x7f);
-        break;
-    case EE_SCREENS_SEP_POST:
-        gUserInterface->PostAction(static_cast<EEAction*>(p));
-        break;
-    case EE_SCREENS_SEP_PITCHES:
-        return gUnitClassTable[i[0]]->mPitchesWithTerrain != 0;
-    case EE_SCREENS_SEP_TERRAIN_PITCH:
-        f[0] = gWorld.mMap->GetTerrainPitch(theT);
-        break;
-    case EE_SCREENS_SEP_LIFT:
-        EESEPUnit(i[0])->MoveTo(-10000, -10000, true);
-        break;
-    case EE_SCREENS_SEP_CLEAR_GHOSTS:
-        gWorld.ClearGhostUnits();
-        break;
-    case EE_SCREENS_SEP_GHOST_FOR:
-        EEGhostUnit::Create(gMouse->mPosition, EESEPUnit(i[0])->GetUnitClass()->mUnitType, EESEPUnit(i[0])->mPlayer, f[0], true);
-        break;
-    case EE_SCREENS_SEP_SET_LOCATION:
-        EESEPUnit(i[0])->mComplexUnit->mPhysicalModel.SetLocation(theT);
-        break;
-    case EE_SCREENS_SEP_LEVEL:
-        EESEPUnit(i[0])->mComplexUnit->GetUnitClass()->LevelGround(&gWorld.mMap->mTerrainMesh, i[1], i[2], &f[0]);
-        break;
-    case EE_SCREENS_SEP_DELETE:
-        new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, i[0]);
-        break;
-    }
-    return 0;
+    return EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)inID).Get();
 }
 
 // ------------------------------------------------------------------------------------------------ the host
@@ -315,99 +137,8 @@ extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* 
 // Its sequences (the rotation, the removal, the air traffic, the part's kill, the unload, the lasso's pick) are
 // composed in editor_seax.rs.
 
-static_assert(kMessageSelectUnit == 0x48 && kMessageAddUnitToSelectedGroup == 0x49 &&
-                  kMessageAlwaysAddUnitToSelectedGroup == 0x76 && kMessageUnselectAllUnits == 0x4b &&
-                  kMessageSelectUnits == 0x4e && kMessageAddUnitsToSelectedGroup == 0x4f &&
-                  kMessageAddAndRemoveUnitsFromSelectedGroup == 0x50,
-              "editor_actions.rs's EE_SCREENS_SEU_MSG_*");
 
 static GERectangle sSeuRectangle;   // the box selection's rectangle (this thread's copy)
-
-extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA, float inF)
-{
-    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
-    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(inUnit);   // the ops on a complex unit's part
-    switch (inOp) {
-    case EE_SCREENS_SEU_SELECTED_COUNT:
-        return theEditor->GetSelectedUnitCount();
-    case EE_SCREENS_SEU_SELECTED:
-        return (uintptr_t)(EEUnit*)theEditor->GetSelectedUnit((unsigned long)inA);
-    case EE_SCREENS_SEU_FIRST_SELECTED:
-        return (uintptr_t)theEditor->GetFirstSelectedUnit();
-    case EE_SCREENS_SEU_CLEAR:
-        theEditor->ClearSelection();
-        return 0;
-    case EE_SCREENS_SEU_DESELECT_FIRST:
-        theEditor->DeselectFirstUnit();
-        return 0;
-    case EE_SCREENS_SEU_SELECT:
-        theEditor->SelectUnit(theUnit);
-        return 0;
-    case EE_SCREENS_SEU_DESELECT:
-        theEditor->DeselectUnit(theUnit);
-        return 0;
-    case EE_SCREENS_SEU_UPDATE_SELECTION:
-        theEditor->UnitCall(EE_SCREENS_SEUN_UPDATE_SELECTION);
-        return 0;
-    case EE_SCREENS_SEU_UNIT:
-        return (uintptr_t)gWorld.GetUnit((unsigned long)inA);
-    case EE_SCREENS_SEU_PLAYER_UNIT:
-        return (uintptr_t)static_cast<EEUnit*>(gWorld.GetPlayer((long)(intptr_t)inUnit)->GetUnit((unsigned long)inA));
-    case EE_SCREENS_SEU_IS_SELECTED:
-        return theUnit->mIsEditorSelected ? 1 : 0;
-    case EE_SCREENS_SEU_HAS_COMPLEX:
-        return theUnit->mComplexUnit != NULL ? 1 : 0;
-    case EE_SCREENS_SEU_TURNS:
-        return theUnit->mUnitClass->mAngularAcceleration > 0.0f ? 1 : 0;
-    case EE_SCREENS_SEU_PATH_POINT:
-        return theUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint ? 1 : 0;
-    case EE_SCREENS_SEU_OFF_MAP:
-        return theUnit->GetTileX() == -10000 && theUnit->GetTileY() == -10000 ? 1 : 0;
-    case EE_SCREENS_SEU_ON_TILE:
-        return theUnit->mTileNode != NULL ? 1 : 0;
-    case EE_SCREENS_SEU_PLAYER:
-        return (uintptr_t)theComplex->mPlayer;
-    case EE_SCREENS_SEU_CARGO_COUNT:
-        return theComplex->GetNumCargoUnits();
-    case EE_SCREENS_SEU_KILL_CARGO:
-        theComplex->KillCargo();
-        return 0;
-    case EE_SCREENS_SEU_NEXT_PART:
-        return (uintptr_t)theComplex->mNextPart;
-    case EE_SCREENS_SEU_CONTAINER:
-        return (uintptr_t)(EEComplexUnit*)theComplex->mContainer;
-    case EE_SCREENS_SEU_CARGO:
-        return (uintptr_t)(EEUnit*)theComplex->GetCargo((unsigned long)inA);
-    case EE_SCREENS_SEU_MESSAGE_TYPE:
-        return static_cast<EEMessage*>(inUnit)->GetType();
-    case EE_SCREENS_SEU_MESSAGE_UNIT:   // Select Unit, the toggle, Always Add: records whose first member is the unit
-        return static_cast<EEMRecord*>(inUnit)->Get<uint32_t>(1);
-    case EE_SCREENS_SEU_MESSAGE_RELEASE:
-        static_cast<EEMessage*>(inUnit)->Dereference();
-        return 0;
-    case EE_SCREENS_SEU_MESSAGE_UNIT_TYPE:
-        return (uintptr_t)(intptr_t)static_cast<EEMRecord*>(inUnit)->Get<int32_t>(4);   // the unit type (off the wire)
-    case EE_SCREENS_SEU_PICK_AT_MOUSE:
-        return (uintptr_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
-    case EE_SCREENS_SEU_UNIT_RELEASE:
-        theUnit->Dereference();
-        return 0;
-    case EE_SCREENS_SEU_NEW_TOGGLE:
-        return (uintptr_t)static_cast<EEMessage*>(new EEMRecord(kMessageAddUnitToSelectedGroup, {theUnit->mUnitID}));
-    case EE_SCREENS_SEU_NEW_UNSELECT_ALL:
-        return (uintptr_t)static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
-    case EE_SCREENS_SEU_SET_MESSAGE:
-        static_cast<EEAMouseClick*>(static_cast<EEAction*>(inUnit))->SetMessage(reinterpret_cast<EEMessage*>(inA));
-        return 0;
-    case EE_SCREENS_SEU_POST:
-        gUserInterface->PostAction(static_cast<EEAction*>(inUnit));
-        return 0;
-    case EE_SCREENS_SEU_MESSAGE_RECTANGLE:   // the box selection's rectangle (member 3, off the wire)
-        return (uintptr_t)&(sSeuRectangle = static_cast<EEMRecord*>(inUnit)->Get<GERectangle>(3));
-    }
-    return 0;
-}
 
 // ------------------------------------------------------------------------------------------------ the statements
 // The single statements editor_seax.rs composes the hosts' sequences of (EE_SCREENS_SEAX_*, 3000..): p and q objects,
@@ -424,14 +155,234 @@ static unsigned long sSeaxRead;                 // a file read's count
 static GETransformation sSeaxT;                 // the rotation's transformation
 static std::vector<unsigned long> sSeaxIDs;     // the lasso's picked ids
 
-static_assert(kUnitTypeAirport == EE_SCREENS_SEAX_TYPE_AIRPORT && kUnitTypeGranary == EE_SCREENS_SEAX_TYPE_GRANARY &&
-                  kUnitTypeGranaryImproved == EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED &&
-                  kUnitTypeCameraObject == EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT,
-              "editor_seax.rs's unit types");
 
 extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t, int32_t* i, float* f)
 {
     switch (inOp) {
+    // the merged hosts' ops (EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_*, ...: editor_seax_ffi.rs host): the paint actions'
+    // world edits (sea: i, f), the whole actions' (sew: p, i, f; a mesh coordinate i0, i1 as the original's unsigned
+    // long, x - 1 at 0 wraps), the placements' (sep: p, t a GETransformation, i, f), the selection's (seu: p a unit,
+    // a message or an action, q its integer or message)
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_TILE:
+        return gWorld.mMap->GetTile(i[0], i[1]) != NULL;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_PAINT_RECT:
+        gWorld.mMap->PaintTerrainRect(i[0], i[1], i[2], i[3], i[4], i[5]);
+        return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_UPDATE_CLIFFS:
+        gWorld.mMap->UpdateCliffs(i[0], i[1], i[2], i[3]);
+        return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_MINIMAP_RECT:
+        gMiniMap->RedrawRect(i[0], i[1], i[2], i[3]);
+        return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_MINIMAP_REFRESH:
+        gMiniMap->Refresh();
+        return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_TERRAIN_CLASS:
+        return (int32_t)EETerrainTable::Get(i[0])->GetUnitClass((unsigned long)(long)i[1]);
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_TIME:
+        return (int32_t)TMGetTime();
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS:
+        gWorld.mMap->RemoveFlatCliffs((long)i[0], (long)i[1], (long)i[2], (long)i[3]);
+        return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_STORE_MOUSE_TILE:
+        EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_PAINT), EE_SCREENS_SKOP_PAINT_STORE_TILE);
+        return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_ELEVATION_CHANGED:
+        gEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
+        return 0;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_POST:
+        gUserInterface->PostAction(static_cast<EEAction*>(p));
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_REFERENCE:
+        static_cast<EEAction*>(p)->Reference();
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_DEREFERENCE:
+        static_cast<EEAction*>(p)->Dereference();
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_EXIT_EDITOR:
+        gUIManager->GetScenarioEditorForm()->ExitEditor(i[0] != 0);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_REFRESH_GROUP:
+        gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup();
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_IN_EDITOR:
+        return gUIManager->mInScenarioEditor == true;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_PREPARE_SAVE:
+        gWorld.mMap->PrepareSave();
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_ROTATE:
+        ee_screens_seu_rotate(f[0]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_PLAYER_COUNT:
+        return (int32_t)gWorld.GetNumPlayers();
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_MAP_SIZE:
+        return (int32_t)gWorld.mMap->mSize;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_POINT:
+        return gWorld.mMap->mTerrainMesh.GetIsValidPoint((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_TILE:
+        return gWorld.mMap->mTerrainMesh.GetIsValidTile((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_GET_Z:
+        f[0] = gWorld.mMap->mTerrainMesh.GetZ((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SET_Z:
+        gWorld.mMap->mTerrainMesh.SetZ((unsigned long)(long)i[0], (unsigned long)(long)i[1], f[0]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_NORMAL:
+        gWorld.mMap->mTerrainMesh.ComputeVertexNormal((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SHORELINES:
+        gWorld.mMap->mTerrainMesh.ComputeShorelines((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_PAINT_TERRAIN:
+        gWorld.mMap->PaintTerrain(i[0], i[1], i[2]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_WATER_COLOR:
+        gWorld.mMap->mTerrainMesh.SetWaterColorSet((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_UPDATE_CLIFFS:
+        gWorld.mMap->UpdateCliffs(i[0], i[1], i[2], i[3]);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_CONTINENTS_CLEAR:
+        gContinentManager.Clear(gWorld.mMap);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_CONTINENTS_BUILD:
+        gContinentManager.BuildRegions(gWorld.mMap);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_TERRAIN_AMBIENT:
+        return EETerrainTable::Get(i[0])->mAmbientUnitChance > 0;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_INFLUENCE:
+        gWorld.CreateInfluenceTable(gWorld.mMap);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_CAMERA:
+        gWorld.mCameraControl.SetLocation(GE3DPoint(f[0], f[1], f[2]), true, true);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_LOCAL_PLAYER:
+        return (int32_t)gWorld.GetCurrentPlayer()->mPlayerID;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_DEFAULT_TERRAIN:
+        return (int32_t)gDefaultTerrain;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_MAX_PLAYERS:
+        return (int32_t)gWorld.mMaxPlayers;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_LOAD_MEDIA:
+        gWorld.mPlayers[i[0]]->SetUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass, 0x7f);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_UNLOAD_MEDIA:
+        gWorld.mPlayers[i[0]]->UnloadUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass);
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SET_MAX_PLAYERS:
+        gMaxPlayers = (unsigned long)i[0];
+        break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
+        gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_SELECT);
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_GHOST_COUNT:
+        return (int32_t)gWorld.GetNumGhostUnits();
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_UNDER_MOUSE:
+        return (int32_t)gUIManager->GetScenarioEditorForm()->GetUnitUnderMouse();
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_LOAD_MEDIA:
+        gWorld.mPlayers[i[0]]->SetUnitClassMedia(i[1], 0x7f);
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_POST:
+        gUserInterface->PostAction(static_cast<EEAction*>(p));
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_PITCHES:
+        return gUnitClassTable[i[0]]->mPitchesWithTerrain != 0;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_TERRAIN_PITCH:
+        f[0] = gWorld.mMap->GetTerrainPitch(*reinterpret_cast<GETransformation*>(t));
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_LIFT:
+        EESEPUnit(i[0])->MoveTo(-10000, -10000, true);
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_CLEAR_GHOSTS:
+        gWorld.ClearGhostUnits();
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_GHOST_FOR:
+        EEGhostUnit::Create(gMouse->mPosition, EESEPUnit(i[0])->GetUnitClass()->mUnitType, EESEPUnit(i[0])->mPlayer, f[0], true);
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_SET_LOCATION:
+        EESEPUnit(i[0])->mComplexUnit->mPhysicalModel.SetLocation(*reinterpret_cast<GETransformation*>(t));
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_LEVEL:
+        EESEPUnit(i[0])->mComplexUnit->GetUnitClass()->LevelGround(&gWorld.mMap->mTerrainMesh, i[1], i[2], &f[0]);
+        break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_DELETE:
+        new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, i[0]);
+        break;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_SELECTED_COUNT:
+        return gUIManager->GetScenarioEditorForm()->GetSelectedUnitCount();
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_SELECTED:
+        return (intptr_t)(EEUnit*)gUIManager->GetScenarioEditorForm()->GetSelectedUnit((unsigned long)(intptr_t)q);
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_FIRST_SELECTED:
+        return (intptr_t)gUIManager->GetScenarioEditorForm()->GetFirstSelectedUnit();
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CLEAR:
+        gUIManager->GetScenarioEditorForm()->ClearSelection();
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_DESELECT_FIRST:
+        gUIManager->GetScenarioEditorForm()->DeselectFirstUnit();
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_SELECT:
+        gUIManager->GetScenarioEditorForm()->SelectUnit(static_cast<EEUnit*>(p));
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_DESELECT:
+        gUIManager->GetScenarioEditorForm()->DeselectUnit(static_cast<EEUnit*>(p));
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_UPDATE_SELECTION:
+        gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_UPDATE_SELECTION);
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_UNIT:
+        return (intptr_t)gWorld.GetUnit((unsigned long)(intptr_t)q);
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_PLAYER_UNIT:
+        return (intptr_t)static_cast<EEUnit*>(gWorld.GetPlayer((long)(intptr_t)p)->GetUnit((unsigned long)(intptr_t)q));
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_IS_SELECTED:
+        return static_cast<EEUnit*>(p)->mIsEditorSelected ? 1 : 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_HAS_COMPLEX:
+        return static_cast<EEUnit*>(p)->mComplexUnit != NULL ? 1 : 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_TURNS:
+        return static_cast<EEUnit*>(p)->mUnitClass->mAngularAcceleration > 0.0f ? 1 : 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_PATH_POINT:
+        return static_cast<EEUnit*>(p)->GetUnitClass()->GetUnitType() == kUnitTypePathPoint ? 1 : 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_OFF_MAP:
+        return static_cast<EEUnit*>(p)->GetTileX() == -10000 && static_cast<EEUnit*>(p)->GetTileY() == -10000 ? 1 : 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_ON_TILE:
+        return static_cast<EEUnit*>(p)->mTileNode != NULL ? 1 : 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_PLAYER:
+        return (intptr_t)static_cast<EEComplexUnit*>(p)->mPlayer;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CARGO_COUNT:
+        return static_cast<EEComplexUnit*>(p)->GetNumCargoUnits();
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_KILL_CARGO:
+        static_cast<EEComplexUnit*>(p)->KillCargo();
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_NEXT_PART:
+        return (intptr_t)static_cast<EEComplexUnit*>(p)->mNextPart;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CONTAINER:
+        return (intptr_t)(EEComplexUnit*)static_cast<EEComplexUnit*>(p)->mContainer;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CARGO:
+        return (intptr_t)(EEUnit*)static_cast<EEComplexUnit*>(p)->GetCargo((unsigned long)(intptr_t)q);
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_MESSAGE_TYPE:
+        return static_cast<EEMessage*>(p)->GetType();
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_MESSAGE_UNIT:   // Select Unit, the toggle, Always Add: records whose first member is the unit
+        return static_cast<EEMRecord*>(p)->Get<uint32_t>(1);
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_MESSAGE_RELEASE:
+        static_cast<EEMessage*>(p)->Dereference();
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_MESSAGE_UNIT_TYPE:
+        return (intptr_t)(intptr_t)static_cast<EEMRecord*>(p)->Get<int32_t>(4);   // the unit type (off the wire)
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_PICK_AT_MOUSE:
+        return (intptr_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_UNIT_RELEASE:
+        static_cast<EEUnit*>(p)->Dereference();
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_NEW_TOGGLE:
+        return (intptr_t)static_cast<EEMessage*>(new EEMRecord(kMessageAddUnitToSelectedGroup, {static_cast<EEUnit*>(p)->mUnitID}));
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_NEW_UNSELECT_ALL:
+        return (intptr_t)static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_SET_MESSAGE:
+        static_cast<EEAMouseClick*>(static_cast<EEAction*>(p))->SetMessage(static_cast<EEMessage*>(q));
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_POST:
+        gUserInterface->PostAction(static_cast<EEAction*>(p));
+        return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_MESSAGE_RECTANGLE:   // the box selection's rectangle (member 3, off the wire)
+        return (intptr_t)&(sSeuRectangle = static_cast<EEMRecord*>(p)->Get<GERectangle>(3));
     case EE_SCREENS_SEAX_POST_ACTION:
         gUserInterface->PostAction(static_cast<EEAction*>(p));
         return 0;
