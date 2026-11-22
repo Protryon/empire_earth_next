@@ -5868,6 +5868,24 @@ constexpr static const int32_t EE_UNITS_EUM_SET_LAST_ATTACKER = 246;
 /// complex unit `a`'s `Reference()`
 constexpr static const int32_t EE_UNITS_EUM_REFERENCE_OF = 247;
 
+/// `ResetEEUnit()`
+constexpr static const int32_t EE_UNITS_EUM_RESET_EE_UNIT = 4012;
+
+/// `Reset()`
+constexpr static const int32_t EE_UNITS_EUM_RTS_RESET = 4013;
+
+/// `mIsValid = false`
+constexpr static const int32_t EE_UNITS_EUM_SET_INVALID = 4014;
+
+/// `FreeNode()`
+constexpr static const int32_t EE_UNITS_EUM_FREE_NODE = 4015;
+
+/// `mReferenceCount = 0`
+constexpr static const int32_t EE_UNITS_EUM_ZERO_REFERENCES = 4016;
+
+/// `delete this`
+constexpr static const int32_t EE_UNITS_EUM_DELETE = 4017;
+
 constexpr static const int32_t EE_UNITS_EUM_DO_REMOVE = 1;
 
 constexpr static const int32_t EE_UNITS_EUM_DO_COPY_FROM = 2;
@@ -5883,6 +5901,10 @@ constexpr static const int32_t EE_UNITS_EUM_DO_LOAD_MEDIA = 6;
 constexpr static const int32_t EE_UNITS_EUM_DO_REGROW_FOREST = 7;
 
 constexpr static const int32_t EE_UNITS_EUM_DO_SET_LAST_ATTACKER = 8;
+
+constexpr static const int32_t EE_UNITS_EUM_DO_CLEAR = 9;
+
+constexpr static const int32_t EE_UNITS_EUM_DO_LAST_DEREFERENCE = 10;
 
 /// `kUnitTypeTownCenter`, `kUnitTypeCapitol`
 constexpr static const uint64_t TOWN_CENTER = 35;

@@ -105,6 +105,34 @@ pub const EE_UNITS_EUM_SET_LAST_ATTACKER: i32 = 246;
 /// complex unit `a`'s `Reference()`
 pub const EE_UNITS_EUM_REFERENCE_OF: i32 = 247;
 
+// the round 9 bodies' (`Clear`, `LastDereference`)
+/// `ResetEEUnit()`
+pub const EE_UNITS_EUM_RESET_EE_UNIT: i32 = 4012;
+/// `Reset()`
+pub const EE_UNITS_EUM_RTS_RESET: i32 = 4013;
+/// `mIsValid = false`
+pub const EE_UNITS_EUM_SET_INVALID: i32 = 4014;
+/// `FreeNode()`
+pub const EE_UNITS_EUM_FREE_NODE: i32 = 4015;
+/// `mReferenceCount = 0`
+pub const EE_UNITS_EUM_ZERO_REFERENCES: i32 = 4016;
+/// `delete this`
+pub const EE_UNITS_EUM_DELETE: i32 = 4017;
+
+/// `EEUnit::Clear()`: the unit's and the base's resets, then invalid.
+pub fn clear<H: EumHost + ?Sized>(h: &mut H, unit: u64) {
+    for op in [EE_UNITS_EUM_RESET_EE_UNIT, EE_UNITS_EUM_RTS_RESET, EE_UNITS_EUM_SET_INVALID] {
+        h.eum(op, unit, 0, 0, 0);
+    }
+}
+
+/// `EEUnit::LastDereference()`: the node freed and the unit deleted.
+pub fn last_dereference<H: EumHost + ?Sized>(h: &mut H, unit: u64) {
+    for op in [EE_UNITS_EUM_FREE_NODE, EE_UNITS_EUM_ZERO_REFERENCES, EE_UNITS_EUM_DELETE] {
+        h.eum(op, unit, 0, 0, 0);
+    }
+}
+
 // ---- the bodies (`ee_units_eu_more`'s `what`)
 pub const EE_UNITS_EUM_DO_REMOVE: i32 = 1;
 pub const EE_UNITS_EUM_DO_COPY_FROM: i32 = 2;
@@ -114,6 +142,8 @@ pub const EE_UNITS_EUM_DO_RESET: i32 = 5;
 pub const EE_UNITS_EUM_DO_LOAD_MEDIA: i32 = 6;
 pub const EE_UNITS_EUM_DO_REGROW_FOREST: i32 = 7;
 pub const EE_UNITS_EUM_DO_SET_LAST_ATTACKER: i32 = 8;
+pub const EE_UNITS_EUM_DO_CLEAR: i32 = 9;
+pub const EE_UNITS_EUM_DO_LAST_DEREFERENCE: i32 = 10;
 
 /// The C++ statements of the bodies.
 pub trait EumHost {
@@ -281,6 +311,8 @@ pub fn run<H: EumHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: u64, b: i64,
         EE_UNITS_EUM_DO_LOAD_MEDIA => load_media(h, unit, b != 0),
         EE_UNITS_EUM_DO_REGROW_FOREST => regrow_forest(h, unit, a),
         EE_UNITS_EUM_DO_SET_LAST_ATTACKER => set_last_attacker(h, unit, a),
+        EE_UNITS_EUM_DO_CLEAR => clear(h, unit),
+        EE_UNITS_EUM_DO_LAST_DEREFERENCE => last_dereference(h, unit),
         _ => {}
     }
 }

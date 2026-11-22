@@ -96,9 +96,7 @@ EEModel* EEUnit::GetModel()
 // Resets the unit to an empty, invalid unit
 void EEUnit::Clear()
 {
-    this->ResetEEUnit();
-    this->Reset();
-    this->mIsValid = false;
+    ee_units_eu_more(EE_UNITS_EUM_DO_CLEAR, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Destroys the unit, freeing its tile node
@@ -250,9 +248,7 @@ void EEUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
 // Frees the unit's tile node and deletes the unit once its last reference goes
 void EEUnit::LastDereference()
 {
-    this->FreeNode();
-    this->mReferenceCount = 0;
-    delete this;
+    ee_units_eu_more(EE_UNITS_EUM_DO_LAST_DEREFERENCE, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Reads the unit from a saved game (resource type, health fraction held in mHitPoints until FinishLoad, amount);
@@ -555,6 +551,12 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_DEREFERENCE_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker->Dereference(); return 0;
     case EE_UNITS_EUM_SET_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker = EEEuObject<EEComplexUnit>(inA); return 0;
     case EE_UNITS_EUM_REFERENCE_OF: EEEuObject<EEComplexUnit>(inA)->Reference(); return 0;
+    case EE_UNITS_EUM_RESET_EE_UNIT: theUnit->ResetEEUnit(); return 0;
+    case EE_UNITS_EUM_RTS_RESET: theUnit->Reset(); return 0;
+    case EE_UNITS_EUM_SET_INVALID: theUnit->mIsValid = false; return 0;
+    case EE_UNITS_EUM_FREE_NODE: theUnit->FreeNode(); return 0;
+    case EE_UNITS_EUM_ZERO_REFERENCES: theUnit->mReferenceCount = 0; return 0;
+    case EE_UNITS_EUM_DELETE: delete theUnit; return 0;
     // eu_describe.rs's (sEuText: the originals' theString)
     case EE_UNITS_EUM_TEXT_NEW: sEuText = UWideString(); return 0;
     case EE_UNITS_EUM_TEXT_RTS_DESCRIBE: theUnit->RTSUnit::Describe(sEuText); return 0;
