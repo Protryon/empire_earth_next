@@ -520,7 +520,7 @@ constexpr static const int32_t EE_UNITS_AG_TILE_HEIGHT = 102;
 /// that tile's `mTerrainType`
 constexpr static const int32_t EE_UNITS_AG_TILE_TERRAIN = 103;
 
-/// The goals the sweep makes (`EeUnitsSweepop::EE_UNITS_SWEEP_OP_GOAL`'s kind).
+/// The goals the sweep makes (`EE_UNITS_SWEEP_OP_GOAL_MOVE` + the kind).
 constexpr static const uint64_t EE_UNITS_SWEEP_GOAL_MOVE = 0;
 
 constexpr static const uint64_t EE_UNITS_SWEEP_GOAL_ATTACK_UNIT = 1;
@@ -617,6 +617,22 @@ constexpr static const int32_t EE_UNITS_ATC_RESOLVE = 23;
 
 /// the dump's line: the NUL-terminated text at `unit`
 constexpr static const int32_t EE_UNITS_ATC_DUMP_LINE = 24;
+
+/// the game's steps of the two composite calls (the FFI host makes them; the C++ answers each with one call):
+/// `FindPassenger(io.a)` of the airport `unit`
+constexpr static const int32_t EE_UNITS_ATC_FIND_PASSENGER = 25;
+
+/// `SetExitingUnitID(-1)`
+constexpr static const int32_t EE_UNITS_ATC_CLEAR_EXITING = 26;
+
+/// `SetHomeBase(other)`
+constexpr static const int32_t EE_UNITS_ATC_SET_HOME_BASE = 27;
+
+/// `StartAction(kActionRequestLanding)`
+constexpr static const int32_t EE_UNITS_ATC_REQUEST_LANDING = 28;
+
+/// the class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_ATC_ACTION_CHANGED = 29;
 
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
@@ -3320,14 +3336,10 @@ constexpr static const int32_t EE_UNITS_PG_SELECT = 7;
 
 constexpr static const int32_t EE_UNITS_PG_SELECT_FLAG = 8;
 
-/// The selectors of `ee_units_pg_host_file`
+/// The selectors of `ee_units_pg_host_write`
 constexpr static const int32_t EE_UNITS_PG_WRITE_U32 = 0;
 
 constexpr static const int32_t EE_UNITS_PG_WRITE_BOOL = 1;
-
-constexpr static const int32_t EE_UNITS_PG_READ_U32 = 2;
-
-constexpr static const int32_t EE_UNITS_PG_READ_BOOL = 3;
 
 /// The members' operations of [`run`].
 constexpr static const int32_t EE_UNITS_PG_OP_NEW_ID = 0;
@@ -4858,6 +4870,27 @@ constexpr static const int32_t EE_UNITS_PM_AIR_ANIMAL = 10;
 
 constexpr static const int32_t EE_UNITS_PM_SPACESHIP = 11;
 
+/// `GetMaxVelocity()`
+constexpr static const int32_t EE_UNITS_PM_RATE_MAX_VELOCITY = 0;
+
+/// `GetAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_ACCELERATION = 1;
+
+/// `GetInverseAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_INVERSE_ACCELERATION = 2;
+
+/// `GetAngularAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_ANGULAR_ACCELERATION = 3;
+
+/// `GetMaxAngularVelocity()`
+constexpr static const int32_t EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY = 4;
+
+/// `GetInverseAngularAcceleration()`
+constexpr static const int32_t EE_UNITS_PM_RATE_INVERSE_ANGULAR_ACCELERATION = 5;
+
+/// "PMST"
+constexpr static const uint32_t PM_STEP_TAG = 1414745424;
+
 /// `mColor.Load(inFile)`, the result
 constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_COLOR_LOAD = 201;
 
@@ -6377,38 +6410,107 @@ constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_LAST_MAP_POSITION = 8;
 /// `if (mHerd != NULL) mHerd->HasUnit(this)` after the herd's id (no write; 0)
 constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_HERD_HAS_UNIT = 9;
 
-/// class `a`: bit 0 `IsBuilding()`, bit 1 `IsLandBuilding()`, bit 2 `IsAircraft()`, bits 8.. the index of its
-/// `mPhysicsModel` in `gPhysicsModels` (0xff: none of them, or no model)
-constexpr static const int32_t EE_UNITS_SWEEP_OP_CLASS_INFO = 1;
+/// class `a`'s `IsBuilding()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_IS_BUILDING = 10;
 
-/// class `a`'s `CreateUnit(c, d, player b's id, false, NULL)`, the player's pending units added and the queued
-/// placements flushed, the unit built (when it has a tile node) and put on the ground -> its id (0 none)
-constexpr static const int32_t EE_UNITS_SWEEP_OP_CREATE = 2;
+/// class `a`'s `IsLandBuilding()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_IS_LAND_BUILDING = 11;
 
-/// producer `a`'s class `ProduceUnit(a, class b, false)`, then its player's pending units added and the queued
-/// placements flushed -> 1 done
-constexpr static const int32_t EE_UNITS_SWEEP_OP_PRODUCE = 3;
+/// class `a`'s `IsAircraft()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_IS_AIRCRAFT = 12;
 
-/// unit `a`'s goal at `b`: `NewAttackUnit(a, b, true, false)` when `c`, else `NewLocation` at b's position;
-/// `SetGoal(goal, 0, 0)`
-constexpr static const int32_t EE_UNITS_SWEEP_OP_ORDER = 4;
+/// class `a`'s `mPhysicsModel->mKind` (its `gPhysicsModels` index; 0xff: no model)
+constexpr static const int32_t EE_UNITS_SWEEP_OP_MODEL_KIND = 13;
 
-/// the active groups' sweep (ag_sweep.rs): a new `EEActiveGroup` of player `a`, units `b` (`c` handles) that
-/// live and are valid added (`AddMember(u, true)`), formation kind `d` set -> the group
-constexpr static const int32_t EE_UNITS_SWEEP_OP_NEW_GROUP = 5;
+/// class `a`'s `CreateUnit(c, d, player b's id, false, NULL)` -> the `EEUnit*` (0: none)
+constexpr static const int32_t EE_UNITS_SWEEP_OP_CREATE_UNIT = 14;
 
-/// group `a`'s `SetGoal(goal b, c != 0)`; `d` >= 0: then `mAction = d`, into its player's pending groups, `Plan()`
-constexpr static const int32_t EE_UNITS_SWEEP_OP_RUN = 6;
+/// player `a`'s `AddPendingUnits(false, true)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_ADD_PENDING = 15;
 
-/// a goal by its kind `a` (ag_sweep.rs `EE_UNITS_SWEEP_GOAL_*`): unit `b`, target `c` (a unit or a patrol group),
-/// the point in the call's floats, `d` the flag word -> the goal
-constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL = 7;
+/// `gWorld.FlushQueuedPlacements()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_FLUSH_PLACEMENTS = 16;
 
-/// the AGPL record of case `a`, player `b`, group `c`, the units (`d` handles), the answers word
-constexpr static const int32_t EE_UNITS_SWEEP_OP_RECORD = 8;
+/// unit `a`'s `GetComplexUnit()->SetBuilt(1, 0, 1)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_SET_BUILT = 17;
 
-/// group `a`'s `TellGroup(unit b, its position)`
+/// `gWorld.mMap->PlaceUnitOnGround(a)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_PLACE_ON_GROUND = 18;
+
+/// producer `a`'s class `ProduceUnit(a, class b, false)` -> 1 done
+constexpr static const int32_t EE_UNITS_SWEEP_OP_PRODUCE_UNIT = 19;
+
+/// `EEUnitGoal::NewAttackUnit(a, b, true, false)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_NEW_ATTACK_ORDER = 20;
+
+/// unit `a`'s `GetPosition(point)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_POSITION = 21;
+
+/// `EEUnitGoal::NewLocation(&point, false, true, false, 0.0f, false, 0)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_NEW_LOCATION_ORDER = 22;
+
+/// unit `a`'s `SetGoal(goal b, 0, 0)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_SET_GOAL = 23;
+
+/// `EEActiveGroup::New(player a)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GROUP_NEW = 24;
+
+/// group `a`'s `AddMember(b, true)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_ADD_MEMBER = 25;
+
+/// `EEFormation::Create(a)` (0: none)
+constexpr static const int32_t EE_UNITS_SWEEP_OP_FORMATION_CREATE = 26;
+
+/// group `a`'s `SetFormation(b)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_SET_FORMATION = 27;
+
+/// formation `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_FORMATION_DEREFERENCE = 28;
+
+/// group `a`'s `SetGoal(goal b, c != 0)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GROUP_SET_GOAL = 29;
+
+/// group `a` into its player's pending groups
+constexpr static const int32_t EE_UNITS_SWEEP_OP_ADD_PENDING_GROUP = 30;
+
+/// group `a`'s `Plan()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_PLAN = 31;
+
+/// town `a`'s `mPatrolGroup`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_TOWN_PATROL = 32;
+
+/// `gPhysics->GetRandom(0, 0x3fffffff)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_RANDOM = 33;
+
+/// goal `a`'s `GetGoalLocation(point)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_LOCATION = 34;
+
+/// goal `a`'s `SetUseGroupMovement(b != 0)`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GROUP_MOVEMENT = 35;
+
+/// player `a`'s `GetNumPendingGroups()`
+constexpr static const int32_t EE_UNITS_SWEEP_OP_PENDING_GROUPS = 36;
+
+/// group `a`'s `TellGroup(unit b, point)`
 constexpr static const int32_t EE_UNITS_SWEEP_OP_TELL = 9;
+
+/// the goals (ag_sweep.rs `EE_UNITS_SWEEP_GOAL_*` added): unit `a`, target `b` (a unit or a patrol group), the point
+/// (a move's yaw its fourth float)
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_MOVE = 40;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_ATTACK_UNIT = 41;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_ATTACK_GROUND = 42;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_GATHER = 43;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_HEAL = 44;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_EXPLORE = 45;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_UNLOAD = 46;
+
+constexpr static const int32_t EE_UNITS_SWEEP_OP_GOAL_PATROL = 47;
 
 /// the transport's classes (`EEUnitClassCast<EEUCTransport>`, `<EEUCAirplane>`)
 constexpr static const int64_t TRANSPORT_CLASS = 1;
@@ -7710,38 +7812,6 @@ struct EeUnitsStatPoint {
 /// The host: `(ctx, op, index, io) -> the operation's result`.
 using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
-/// A complex unit: the object and its three records (the C++ object's bases; `static_cast`s of one pointer).
-struct EeUnitsPmUnit {
-  /// the `EEComplexUnit*` (its `EEUnit` and `RTSUnit` bases at the same address)
-  uint64_t obj;
-  EeUnitsRtsUnitFields *rts;
-  EeUnitsUnitFields *unit;
-  EeUnitsComplexUnitFields *cx;
-};
-
-/// The tick's values (`gPhysics`'s, `gWorld`'s and the unit's globals), read once per call from the C++.
-struct EeUnitsPmTick {
-  /// `mTickSeconds`, `mTicksPerGameSecond`, `GetTickTime()` (the tick in game ms, a float)
-  float tick_seconds;
-  float ticks_per_second;
-  float tick_time;
-  /// `mGameTime`
-  int32_t game_time;
-  /// `gCollisionPeriod`, `gWorld.mCollisionDetectionFlags`
-  uint32_t collision_period;
-  uint32_t detection_flags;
-  /// `gPhysicsModelsF` (world table entry 79: the trample's minimum squared distance), `kHeightEpsilon`
-  float trample_min;
-  float height_epsilon;
-};
-
-/// A tile's values (`RTSTile`'s; zeros for no tile).
-struct EeUnitsPmTile {
-  int32_t terrain_type;
-  int8_t ai_value;
-  float height;
-};
-
 /// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
 struct EeUnitsGoalHost {
   void *context;
@@ -8156,6 +8226,29 @@ struct EeUnitsPmStats {
   float scale;
 };
 
+/// The tick's values (`gPhysics`'s, `gWorld`'s and the unit's globals), read once per call from the C++.
+struct EeUnitsPmTick {
+  /// `mTickSeconds`, `mTicksPerGameSecond`, `GetTickTime()` (the tick in game ms, a float)
+  float tick_seconds;
+  float ticks_per_second;
+  float tick_time;
+  /// `mGameTime`
+  int32_t game_time;
+  /// `gCollisionPeriod`, `gWorld.mCollisionDetectionFlags`
+  uint32_t collision_period;
+  uint32_t detection_flags;
+  /// `gPhysicsModelsF` (world table entry 79: the trample's minimum squared distance), `kHeightEpsilon`
+  float trample_min;
+  float height_epsilon;
+};
+
+/// A tile's values (`RTSTile`'s; zeros for no tile).
+struct EeUnitsPmTile {
+  int32_t terrain_type;
+  int8_t ai_value;
+  float height;
+};
+
 /// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
 /// virtuals' answers the host reads once (`ee_units_uu_host_unit`). The records are null for a missing part (no
 /// complex unit, no class); `obj` 0 is no unit.
@@ -8422,14 +8515,19 @@ void ee_units_atc_update(EeUnitsAtc *p);
 /// See above; `file` is the host's `FILE*`.
 void ee_units_atc_dump(EeUnitsAtc *p, void *file);
 
-/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`
+/// `ReplaceUnits`: `count` (old, new) pairs at `swaps` (the physics' `EEPUnitSwap`s: two unit pointers each)
 ///
 /// # Safety
-/// See above; `olds` and `news` hold `count` units each.
+/// See above; `swaps` holds `2 * count` units (null with `count` 0).
 void ee_units_atc_replace(EeUnitsAtc *p,
-                          const EeAStarUnit *olds,
-                          const EeAStarUnit *news,
+                          const EeAStarUnit *swaps,
                           size_t count);
+
+/// `EEUnit::GetTileDistanceSquared(other)`.
+///
+/// # Safety
+/// `unit` and `other` are live units; the world layout is registered.
+float ee_units_atc_tile_distance_squared(EeAStarUnit unit, EeAStarUnit other);
 
 /// The maximum (0) or the used (1) air cargo.
 ///
@@ -9840,26 +9938,28 @@ void ee_units_order_log(uint64_t player,
                         uint32_t time,
                         uint8_t select);
 
-extern void ee_units_pg_host_unit_tile(uint64_t unit, int32_t *out_x, int32_t *out_y);
-
 extern float ee_units_pg_host_distance(uint64_t unit, int32_t x, int32_t y);
 
-extern uint8_t ee_units_pg_host_tile_at(float x, float y, uint64_t probe, float *out_height);
+extern uint8_t ee_units_pg_host_tile_has(float x, float y, uint64_t probe);
 
-extern uint64_t ee_units_pg_host_create_point(uint64_t group, float x, float y, uint32_t player);
+extern uint64_t ee_units_pg_host_create_point(float x, float y, uint32_t player);
 
 extern uint64_t ee_units_pg_host_unit(int32_t which, uint64_t unit, uint64_t other);
 
 extern uint8_t ee_units_pg_host_live_state(uint32_t major, uint32_t minor);
 
-extern int32_t ee_units_pg_host_file(uint64_t file, int32_t which, uint32_t *io);
+extern int32_t ee_units_pg_host_write(uint64_t file, int32_t which, uint32_t value);
+
+extern int32_t ee_units_pg_host_read_u32(uint64_t file, unsigned long *value);
+
+extern int32_t ee_units_pg_host_read_bool(uint64_t file, bool *value);
 
 /// `SetPatrolPoints`'s tiles (`inPoints`, U2DPoint<long> pairs) for the group of player `player`.
 ///
 /// # Safety
-/// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
+/// `tiles` holds `count` (x, y) pairs of `long`s (or is null with `count` 0), valid for the call.
 void ee_units_pg_set_points(EeUnitsPatrolGroup *group,
-                            const int32_t *tiles,
+                            const long *tiles,
                             uint32_t count,
                             uint32_t player);
 
@@ -10536,26 +10636,36 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *enemies,
                                size_t count);
 
-/// `EEPhysicsModel::Step(unit)` of the kind's model.
+/// `EEPhysicsModel::Step(unit)` of the kind's model, then (TEST ONLY) its PMST note while the capture runs.
 ///
 /// # Safety
-/// `unit`'s records point into a live complex unit; the call runs on the physics thread under the world lock.
+/// `obj` is a live complex unit; the call runs on the physics thread under the world lock.
 void ee_units_pm_step(int32_t kind,
-                      EeUnitsPmUnit unit);
+                      void *obj);
 
 /// The kind's `Step0(unit)` alone (EE-SIM's missile sweep).
 ///
 /// # Safety
 /// As [`ee_units_pm_step`].
-void ee_units_pm_step0(int32_t kind, EeUnitsPmUnit unit);
+void ee_units_pm_step0(int32_t kind, void *obj);
 
 /// The kind's `ComputeRoll(unit, value)` (the airplane classes' death roll).
 ///
 /// # Safety
 /// As [`ee_units_pm_step`].
-float ee_units_pm_compute_roll(int32_t kind, EeUnitsPmUnit unit, float value);
+float ee_units_pm_compute_roll(int32_t kind, void *obj, float value);
 
-extern void ee_units_pm_host_tick(EeUnitsPmTick *out);
+/// `EEInitPhysicsModels`: the world table's trample minimum.
+void ee_units_pm_set_trample_min(float value);
+
+/// `EEComplexUnit::GetMaxAngularVelocity()` .. `GetInverseAngularAcceleration()` (the `EE_UNITS_PM_RATE_*`).
+///
+/// # Safety
+/// As [`unit_rate`].
+float ee_units_pm_unit_rate(const void *unit,
+                            int32_t which);
+
+extern uint32_t ee_units_pm_host_collision(uint8_t flags);
 
 extern void ee_units_pm_host_set_transformation(uint64_t obj, const float *m);
 
@@ -10567,23 +10677,15 @@ extern void ee_units_pm_host_set_location_point(uint64_t obj, float x, float y, 
 
 extern void ee_units_pm_host_set_location_xy(uint64_t obj, float x, float y);
 
-extern void ee_units_pm_host_update_tile(uint64_t obj, const float *m);
+extern void ee_units_pm_host_update_tile(uint64_t obj, float *m, long *tile);
 
 extern void ee_units_pm_host_set_scale(uint64_t obj, float s);
-
-extern float ee_units_pm_host_rate(uint64_t obj, int32_t which);
 
 extern int32_t ee_units_pm_host_model_parts(uint64_t obj);
 
 extern uint32_t ee_units_pm_host_frame_time(uint64_t obj, uint32_t animation);
 
 extern uint64_t ee_units_pm_host_tile_of(uint64_t obj);
-
-extern uint64_t ee_units_pm_host_goal_unit(uint64_t obj, int32_t which);
-
-extern void ee_units_pm_host_goal_point(uint64_t obj, int32_t which, float *out);
-
-extern uint8_t ee_units_pm_host_goal_facing(uint64_t obj, float *yaw);
 
 extern uint8_t ee_units_pm_host_flies_over(uint64_t unit);
 
@@ -10609,17 +10711,11 @@ extern uint8_t ee_units_pm_host_can_stand_on(uint64_t obj, int32_t x, int32_t y)
 
 extern uint8_t ee_units_pm_host_friendly(uint64_t obj, uint64_t other);
 
-extern void ee_units_pm_host_trample(uint64_t obj, uint64_t other);
+extern uint8_t ee_units_pm_host_trample_damage(uint64_t obj, uint64_t other, long *amount);
 
-extern uint64_t ee_units_pm_host_list(int32_t which, uint64_t of);
-
-extern int32_t ee_units_pm_host_contact_count(uint64_t obj);
-
-extern int32_t ee_units_pm_host_contact_gate(uint64_t obj);
+extern void ee_units_pm_host_take_hit(uint64_t obj, uint64_t attacker, long amount);
 
 extern uint64_t ee_units_pm_host_tile(int32_t x, int32_t y);
-
-extern void ee_units_pm_host_tile_info(uint64_t tile, EeUnitsPmTile *out);
 
 extern uint8_t ee_units_pm_host_is_edge_tile(int32_t x, int32_t y);
 
@@ -10633,21 +10729,37 @@ extern void ee_units_pm_host_ground_point(float x, float y, float z, float *out)
 
 extern float ee_units_pm_host_terrain_tilt(const float *m, uint8_t roll);
 
-extern void ee_units_pm_host_edge_planes(float *out);
-
-extern float ee_units_pm_host_mesh_ground(float x, float y);
-
-extern void ee_units_pm_host_adjust_dive_depth(uint64_t obj, float *io);
-
-extern void ee_units_pm_host_effect(uint64_t obj, int32_t which, float x, float y, float z);
-
-extern int32_t ee_units_pm_host_carrier_tag(uint64_t carrier, int32_t index, float *out);
+extern uint64_t ee_units_pm_host_carrier(int32_t which,
+                                         uint64_t carrier,
+                                         int32_t index,
+                                         float *m,
+                                         float *out);
 
 extern void ee_units_pm_host_route_dock_waypoint(uint64_t obj);
 
-extern uint8_t ee_units_pm_host_gate_links(uint64_t obj, uint64_t *carrier, uint64_t *last);
+extern uint64_t ee_units_pm_host_goal(int32_t which, uint64_t goal, float *out);
 
-extern void ee_units_pm_host_kind_step(uint64_t obj, int32_t which);
+extern void ee_units_pm_host_path_start(uint64_t obj, float *out, float *length);
+
+extern uint8_t ee_units_pm_host_is_gate_class(uint64_t obj);
+
+extern const float *ee_units_pm_host_edge_plane(int32_t which);
+
+extern float ee_units_pm_host_mesh(int32_t which, float x, float y);
+
+extern void ee_units_pm_host_effect(int32_t which, uint64_t obj, float *point);
+
+extern uint64_t ee_units_pm_host_gate_link(int32_t which, uint64_t obj);
+
+extern float ee_units_pm_host_launch_speed(uint64_t obj, uint8_t launcher);
+
+extern const float *ee_units_pm_host_projectile_start(uint64_t obj);
+
+extern void ee_units_pm_host_set_velocity(uint64_t obj, float v);
+
+extern void ee_units_pm_host_drop_target(uint64_t obj, float *out);
+
+extern uint32_t ee_units_pm_host_blocking_id(uint64_t obj);
 
 /// `RTSPlayer::Load`: the record `rec` (the player's `EeUnitsRtsPlayerFields` base) and its C++ parts through `f`.
 ///
@@ -11019,7 +11131,7 @@ extern int64_t ee_units_sweep_host(int32_t op,
                                    uint64_t b,
                                    int64_t c,
                                    int64_t d,
-                                   const float *f);
+                                   float *f);
 
 /// `EEPhysicsUnitSweep(call)` (EESim.cpp's every five game minutes).
 void ee_units_unit_sweep(int64_t call);

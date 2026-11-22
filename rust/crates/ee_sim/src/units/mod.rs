@@ -114,8 +114,10 @@ pub mod player_views;
 pub mod players;
 pub mod pm;
 pub mod pm_air;
+pub mod pm_flight;
 pub mod pm_ground;
 pub mod pm_host;
+pub mod pm_note;
 #[cfg(test)]
 mod pm_tests;
 pub mod rally;
