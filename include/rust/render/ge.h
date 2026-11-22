@@ -180,17 +180,24 @@ enum class EeGeFbOp : uint32_t {
   SurfLock,
   /// `obj->Unlock()`.
   SurfUnlock,
-  /// `obj->GetMemoryAddress()`, with `GetWidth()`, `GetHeight()` and `GetBytesPerRow()` into
-  /// `*(unsigned long(*)[3])a`.
-  SurfPixels,
-  /// `obj->Clear(GEColor(0, 0, 0), 1.0f)`.
+  /// `obj->GetWidth()`.
+  SurfWidth,
+  /// `obj->GetHeight()`.
+  SurfHeight,
+  /// `obj->GetBytesPerRow()`.
+  SurfBytesPerRow,
+  /// `obj->GetMemoryAddress()`.
+  SurfMemory,
+  /// `obj->Clear(*(GEColor*)a, 1.0f)` (`a` black).
   SurfClear,
   /// `obj->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)` (a screen) -> its result.
   ScreenCreateSurface,
   /// `obj->GetTextureManager()->MakeTexture((GESurface*)a)` (a screen) -> the texture.
   ScreenMakeTexture,
-  /// `ESVerify` of the constructor's check `a`: 0 the surface's creation (line 228), 1 the texture (235).
-  Verify,
+  /// `ESVerify` of the font texture's surface creation (`theResult == keseOK`, line 228).
+  VerifySurface,
+  /// `ESVerify` of its texture (`((GETexture*)inObj) != NULL`, line 235).
+  VerifyTexture,
 };
 
 /// The calls the four classes make on other objects.
