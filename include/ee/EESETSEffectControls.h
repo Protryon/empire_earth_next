@@ -13,7 +13,6 @@ class GEFont;
 class UICheckBox;
 class UIComboBox;
 class UIEditBox;
-class UIForm;
 class UILBString;
 class UIRadioButton;
 class UISlider;

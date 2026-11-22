@@ -387,7 +387,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT);
         break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
-    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(kSEADeleteUnit, NULL, (int32_t)a))->Dereference(); break;
+    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, (int32_t)a))->Dereference(); break;
     case EE_SCREENS_SH_BITMAP_ROTATION: reinterpret_cast<GEBitmap*>(a)->SetRotation(f[0]); break;
     case EE_SCREENS_SH_SELF: return EEUIShell::Of(c)->SelfCall((uint32_t)a);
     case EE_SCREENS_SH_KEYBOARD: EEUIShell::Of(c)->Keyboard(a != 0); break;
@@ -426,9 +426,9 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
     case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
     case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION:
-        EEShellTriggers()->TriggerSubOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
+        EEShellTriggers()->TriggerSubOp(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SEOB_UPDATE_SELECTION);
         break;
-    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(kSETriggerScreenObject, EE_SCREENS_SETS_SCREEN_STORE); break;
+    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SETS_SCREEN_STORE); break;
     case EE_SCREENS_SH_COPY_FIRST_TO_ALL:
         static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL);
         break;
@@ -568,7 +568,7 @@ extern "C" int64_t ee_screenscpp_sh_form_list_selection(uintptr_t inControl, int
 extern "C" void ee_screenscpp_sh_editor_player(unsigned long* inSelection)
 { gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(*inSelection); }
 extern "C" void ee_screenscpp_sh_tech_tree_move(int32_t inA, int32_t inB, int32_t inC, bool inFlag)
-{ (new EESEARust(kSEATechTree, NULL, inA, inB, inC, inFlag))->Dereference(); }
+{ (new EESEARust(EE_SCREENS_SEW_TECH_TREE, NULL, inA, inB, inC, inFlag))->Dereference(); }
 extern "C" void ee_screenscpp_sh_combo_list_selection(uintptr_t inControl, unsigned long* inSelection)
 { const_cast<UILBString*>(static_cast<UIComboBox*>(C(inControl))->GetListBox())->GetCurrentSelection(*inSelection); }
 extern "C" uintptr_t ee_screenscpp_sh_bitmap_new() { return (uintptr_t)new GEBitmap; }

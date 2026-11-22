@@ -119,7 +119,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEFormation.h"
 #include "ee/EECivilizationBuilder.h"
-#include "ee/EEScenarioEditorIDs.h"
+#include "rust/game/screens.h"
 #include "rust/sim/units.h"
 #include "ee/EEScreensShims.h"
 #include "lle/UITextureBackground.h"

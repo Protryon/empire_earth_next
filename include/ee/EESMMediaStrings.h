@@ -21,12 +21,12 @@ public:
         UWideString* theSections[] = {&this->mHints, &this->mAftermath, &this->mHistory, &this->mInstructions};
         return *theSections[inSlot];
     }
+    // string inSlot in the save's order (aftermath, hints, history, movie, sound, instructions, map; ee_scenario
+    // entry.rs)
+    UWideString* GetString(unsigned long inSlot) { return &(this->*sStrings[inSlot]); }
 
 private:
-    // 0x1c5828 (`ret 0x14`; ListMediaFiles' per-kind worker: 0 movie, 1 sound, 2 picture; provisional name)
-    bool GetMediaFile(const UWideString& inScenarioName, unsigned long inKind, UWideString& outFile,
-                      UWideString& outError, bool inCampaignPrefix);
-
+    static UWideString EESMMediaStrings::* const sStrings[7];
     friend class EEUIFMainGame; // actual briefing-string read at266f03; nominal access placement provisional
     friend struct EEScreensMedia;           // the campaign scenario select's Start (UI Events/EEScreens.cpp) prefixes
                                             // mSoundFile/mMapFile with the campaign's scenario prefix (0x1d2910)

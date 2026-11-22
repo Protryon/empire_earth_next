@@ -14,63 +14,44 @@
 #include "lle/UWideString.h"
 #include "lle/U2DPoint.h"
 #include "ee/EEAreaUtilities.h"
+#include "rust/sim/scenario.h"
 
 class EEUnit;
 
-class EESMArea {
+// the numbers (the anchor, the rectangle, the cached centre tile, the select mode, the tile time, the id, the two
+// flags) are the Rust record's (ee_scenario area_fields.rs), with GERectangle's and U2DPoint<long>'s layouts
+class EESMArea : public EeScenarioAreaFields {
 public:
     EESMArea();
     ~EESMArea();
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1ba670
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x04 0x1ba78e
-    long SaveIO(FSFile& inFile, bool inSave);   // Load's or Save's values (ee_scenario save.rs)
     // 0x1ba0d1: whether inUnit is in this area (EESMObject's 0x1c6458 asks; provisional name)
     bool ContainsUnit(EEUnit* inUnit);
-    bool ContainsUnitUncaptured(EEUnit* inUnit);   // (+ SMAR)
     bool ContainsTile(const U2DPoint<long>& inTile);
-    bool ContainsTileUncaptured(const U2DPoint<long>& inTile);   // (+ SMAR)
     void Copy(const EESMArea& inArea);      // 0x1ba2b2 (EEScenarioManager 0x1b12ff; provisional name)
     U2DPoint<long> GetCenterTile();         // 0x1ba315: hidden-result ABI; by-value spelling inferred
-    U2DPoint<long> GetCenterTileUncaptured();   // (+ SMAR)
     void GetTiles(std::vector<U2DPoint<long> >& outTiles);   // 0x1ba495: real typed cache/output family
-    void GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles);   // (+ SMAR)
     const UWideString& GetName() const { return this->mName; }  // inline (DuplicateArea 0x5b120d)
-    bool IsUnset() const;
-    bool IsOffMap() const;                  // 0x1ba473: the anchor has a negative coordinate (provisional name)
+    bool IsUnset() const { return ee_scenario_area_is_unset(this); }
+    bool IsOffMap() const { return ee_scenario_area_is_off_map(this); }
     // inline (COMDAT 0x17d381, first emitted by the editor's area screen; Reset 0x1afbb1 calls it) (provisional name)
-    void SetAnchor(const U2DPoint<long>& inAnchor)
-    {
-        this->mHasAnchor = true;
-        this->mAnchor = inAnchor;
-        this->mTiles.clear();
-        this->mCenterTile.mX = -10000;
-    }
+    void SetAnchor(const U2DPoint<long>& inAnchor) { ee_scenario_en_area_set_anchor(this, inAnchor.mX, inAnchor.mY); }
     // inline (COMDAT 0x17d34c, before SetAnchor's: the editor's area screen 0x17d272 calls both) (provisional name)
     void SetRectangle(const GERectangle& inRectangle)
     {
-        this->mHasRectangle = true;
-        this->mRect = inRectangle;
-        this->mTiles.clear();
-        this->mCenterTile.mX = -10000;
+        ee_scenario_en_area_set_rectangle(this, reinterpret_cast<const EeScenarioAreaRect*>(&inRectangle));
     }
 
     const UWideString& GetText() const { return this->mText; }
-    const GERectangle& GetRect() const { return this->mRect; }
-    const U2DPoint<long>& GetAnchor() const { return this->mAnchor; }
+    const GERectangle& GetRect() const { return *reinterpret_cast<const GERectangle*>(&this->mRect); }
+    const U2DPoint<long>& GetAnchor() const { return *reinterpret_cast<const U2DPoint<long>*>(&this->mAnchor); }
     unsigned long GetSelectMode() const { return this->mSelectMode; }
     bool GetHasRectangle() const { return this->mHasRectangle; }
     bool GetHasAnchor() const { return this->mHasAnchor; }
-    UWideString mName;                     // +0x04 (ctor: assigned "")
-    UWideString mText;                      // +0x18
-    U2DPoint<long> mAnchor;                 // +0x2c
-    GERectangle mRect;                      // +0x34
-    std::vector<U2DPoint<long> > mTiles;   // +0x44 (`_Buy` 0x14823b; `_Tidy` 0xa9c2c in the dtor)
-    U2DPoint<long> mCenterTile;             // +0x54 (ctor: zeroed by its ctor, then (-10000, -10000); 0x1ba315 returns it)
-    unsigned long mSelectMode;              // +0x5c (Load/Save: unsigned long; 0x1ba154 switches on it: 0, 1, 2)
-    unsigned long mTilesTime;               // +0x60
-    unsigned long mID;                      // +0x64
-    bool mHasRectangle;                     // +0x68
-    bool mHasAnchor;                        // +0x69
+    UWideString mName;                     // (ctor: empty)
+    UWideString mText;
+    std::vector<U2DPoint<long> > mTiles;   // the tile cache (`_Buy` 0x14823b; `_Tidy` 0xa9c2c in the dtor)
 };
 
 #endif

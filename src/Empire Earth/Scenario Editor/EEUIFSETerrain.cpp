@@ -43,7 +43,6 @@
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
 
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 // The terrain name order (0x1aee71): compares the localized terrain names without case. It has no state and
 // returns via ret 8 (provisional name).
 struct EESETerrainNameLess {
@@ -106,13 +105,6 @@ long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // ---- the tab's host (editor_terrain.rs: the ops from 1000)
 
-static_assert(IDS_SE_TERRAIN == 20508 && IDS_BULLDOZER == 20510 && IDS_TERRAIN_TYPE == 20511 &&
-                  IDS_TERRAIN_COLOR == 20542 && kSETerrainTerrainButton == 0xc8 && kSETerrainBitmap == 0xc9 &&
-                  kSETerrainMountainsButton == 0xca && kSETerrainTerrainTypeLabel == 0xcb &&
-                  kSETerrainTerrainType == 0xcc && kSETerrainTerrainColorTypeLabel == 0xce &&
-                  kSETerrainTerrainColorType == 0xcf && IDS_BRUSH_SIZE == 20500 && IDS_SE_TINY == 20501 &&
-                  IDS_SE_HUGE == 20505,
-              "editor_terrain.rs's ids");
 
 extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
@@ -242,7 +234,7 @@ extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i
         sSetnxLines[(size_t)i[0]].mColorSet = i[1];
         return 0;
     case EE_SCREENS_SETNX_TYPE_LIST_NEW:
-        *theOut = new EESEUITerrainTypeLB(kSETerrainTerrainType, gU531934, sSetnxLines,
+        *theOut = new EESEUITerrainTypeLB(EE_SCREENS_SE_TERRAIN_TERRAIN_TYPE, gU531934, sSetnxLines,
                                           GERectangle(GE2DPoint(f[0], f[1]), f[2], 85.0f), theForm, (unsigned long)i[0], 2);
         return 0;
     case EE_SCREENS_SETNX_LINES_CLEAR:
@@ -284,7 +276,7 @@ extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i
         sSetnxColors[(size_t)i[0]].push_back(EETerrainColorTable::Get(i[1])->mColor);
         return 0;
     case EE_SCREENS_SETNX_COLOR_LIST_NEW:
-        *theOut = new EESEUITerrainColorLB(kSETerrainTerrainColorType, sSetnxColors, 16, false,
+        *theOut = new EESEUITerrainColorLB(EE_SCREENS_SE_TERRAIN_TERRAIN_COLOR_TYPE, sSetnxColors, 16, false,
                                            GERectangle(GE2DPoint(f[0], f[1]), f[2], 85.0f), theForm, (unsigned long)i[0], 2);
         return 0;
     case EE_SCREENS_SETNX_COLORS_CLEAR:
@@ -324,7 +316,7 @@ extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i
         *theOut = new GEBitmap;
         return 0;
     case EE_SCREENS_SETNX_UIBITMAP_NEW:
-        *theOut = new UIBitmap(kSETerrainBitmap, static_cast<GEBitmap*>(p[2]), GERectangle(GE2DPoint(f[0], f[1]), 64.0f, 64.0f),
+        *theOut = new UIBitmap(EE_SCREENS_SE_TERRAIN_BITMAP, static_cast<GEBitmap*>(p[2]), GERectangle(GE2DPoint(f[0], f[1]), 64.0f, 64.0f),
                                theForm, (unsigned long)i[0]);
         return 0;
     case EE_SCREENS_SETNX_BITMAP_RELEASE:

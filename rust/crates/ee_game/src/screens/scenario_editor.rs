@@ -166,7 +166,7 @@ pub const EE_SCREENS_SE_TAB_DEC_PRIORITY: u32 = 6;
 pub const EE_SCREENS_SE_TAB_ALPHA_SORT: u32 = 7;
 pub const EE_SCREENS_SE_TAB_SELECT_NAME: u32 = 8;
 
-// the editor's control ids (ee/EEScenarioEditorIDs.h)
+// the editor's control ids (editor_ids.rs)
 const SE_OBJECT_UNITS_RADIO: u32 = 0x834;
 const SE_CONDITION_AMOUNT: u32 = 0x910;
 const SE_CONDITION_USE_AMOUNT: u32 = 0x91a;

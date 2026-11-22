@@ -1,7 +1,7 @@
 //! `extern "C"` for the scenario editor's actions (`editor_actions.rs`): the paint actions' records
 //! (`EESEAPaintTerrain`, `EESEAPaintElevation`, `EESEAPaintMoutains` hold one each) and the trigger area's rectangle.
-//! The world-edit host is `ee_screenscpp_sea`, `ee_screenscpp_sea_units` and `ee_screenscpp_sea_remove`
-//! (`Scenario Editor Actions/EESEAPaint.cpp`).
+//! The world-edit host is `ee_screenscpp_sea` (`Scenario Editor Actions/EESEARust.cpp`), its sequences, the
+//! tile's units and the removal composed in `editor_seax.rs`.
 
 use core::ffi::c_void;
 
@@ -9,6 +9,8 @@ use crate::screens::editor_actions::{
     apply_click, apply_lasso, click_execute, lasso_in_rectangle, lasso_select, rotate_selection, EeScreensSeaPaint,
     SePaint, SePaintKind, SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
 };
+use crate::screens::editor_seax;
+use crate::screens::editor_seax_ffi::Seax;
 
 /// cbindgen:ignore
 mod sys {
@@ -16,21 +18,7 @@ mod sys {
 
     extern "C" {
         pub fn ee_screenscpp_sea(op: u32, i: *mut i32, f: *mut f32) -> i32;
-        pub fn ee_screenscpp_sea_units(
-            x: i32,
-            y: i32,
-            units: *mut *mut c_void,
-            paths: *mut u8,
-            capacity: usize,
-        ) -> usize;
-        pub fn ee_screenscpp_sea_remove(unit: *mut c_void);
         pub fn ee_screenscpp_seu(op: u32, unit: *mut c_void, a: isize, f: f32) -> usize;
-        pub fn ee_screenscpp_seu_pick(
-            rectangle: *const c_void,
-            unit_type: i32,
-            ids: *mut u32,
-            capacity: usize,
-        ) -> usize;
     }
 }
 
@@ -38,24 +26,16 @@ struct Host;
 
 impl SeaHost for Host {
     fn op(&mut self, op: u32, i: &mut [i32; 6], f: &mut [f32; 5]) -> i32 {
+        if let Some(r) = editor_seax::sea(&mut Seax, op, i, f) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_sea(op, i.as_mut_ptr(), f.as_mut_ptr()) }
     }
     fn tile_units(&mut self, x: i32, y: i32) -> Vec<(usize, bool)> {
-        // the host references the units it writes; a second call with room for all when the first had too little
-        // (the host writes nothing then)
-        let mut capacity = 16;
-        loop {
-            let mut units = vec![core::ptr::null_mut::<c_void>(); capacity];
-            let mut paths = vec![0u8; capacity];
-            let n = unsafe { sys::ee_screenscpp_sea_units(x, y, units.as_mut_ptr(), paths.as_mut_ptr(), capacity) };
-            if n <= capacity {
-                return (0..n).map(|k| (units[k] as usize, paths[k] != 0)).collect();
-            }
-            capacity = n;
-        }
+        editor_seax::tile_units(&mut Seax, x, y)
     }
     fn remove_unit(&mut self, unit: usize) {
-        unsafe { sys::ee_screenscpp_sea_remove(unit as *mut c_void) }
+        editor_seax::remove_unit(&mut Seax, unit)
     }
 }
 
@@ -113,28 +93,20 @@ pub unsafe extern "C" fn ee_screens_sea_paint_run(paint: *mut EeScreensSeaPaint)
 }
 
 // ---- group 2: the selection's actions (`EESEAMouseClick`, `EESEALasso`, `EESEARotateUnits`, `EESEADeleteUnit`;
-// the host `ee_screenscpp_seu`, `ee_screenscpp_seu_pick` in `Scenario Editor Actions/EESEARust.cpp`)
+// the host `ee_screenscpp_seu` in `Scenario Editor Actions/EESEARust.cpp`, the lasso's pick in `editor_seax.rs`)
 
 /// The selection's host (the deletion, an `EESEARust` kind, runs through it too: `editor_whole_ffi.rs`).
 pub(crate) struct Selection;
 
 impl SeuHost for Selection {
     fn op(&mut self, op: u32, unit: usize, a: isize, f: f32) -> usize {
+        if let Some(r) = editor_seax::seu(&mut Seax, op, unit, a, f) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_seu(op, unit as *mut c_void, a, f) }
     }
     fn pick(&mut self, rectangle: usize, unit_type: i32) -> Vec<u32> {
-        let mut capacity = 64;
-        loop {
-            let mut ids = vec![0u32; capacity];
-            let n = unsafe {
-                sys::ee_screenscpp_seu_pick(rectangle as *const c_void, unit_type, ids.as_mut_ptr(), capacity)
-            };
-            if n <= capacity {
-                ids.truncate(n);
-                return ids;
-            }
-            capacity = n;
-        }
+        editor_seax::pick(&mut Seax, rectangle, unit_type)
     }
 }
 

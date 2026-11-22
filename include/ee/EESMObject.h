@@ -18,7 +18,6 @@ class EEUnit;
 class EESMObject : public EeScenarioObjectFields {
 public:
     bool FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // 0x1c6d4f, actual ret12/AL/float output
-    bool FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // (+ SMFP)
     EESMObject();
     virtual ~EESMObject();                  // +0x00 (??_G 0x1c6019; the body 0x1c6035)
     // slot signatures from `ret N` and EEScenarioManager's broadcast hooks
@@ -29,7 +28,6 @@ public:
     long GetUnitAttribute(unsigned long inMetric, bool inFlag, EEUnit* inUnit, long inArg4, long inArg5);  // 0x1c7749; last two slots unused/provisional
     long PickUnitType();                   // 0x1c6b14: chooses a matching unit class (provisional name)
     bool Evaluate(bool inIncludeDead);      // 0x1c6458 (the object condition: its units exist/are in the area; provisional name)
-    bool EvaluateUncaptured(bool inIncludeDead);  // Evaluate's body (Evaluate adds the capture's SMOB record)
     void GetUnits(std::vector<unsigned long>& outUnits) const;
     // inline const accessor (Save 0x1c85de reads mUnits[i] through the const operator[]: lea; mov [eax]) (provisional
     // name)
