@@ -16,90 +16,67 @@
 #include "ee/EEPhysics.h"
 #include "ee/EETeam.h"
 #include "ee/EEDatabaseTables.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp civilization.rs)
 
 extern EEWorld gWorld;
 extern EEPhysics* gPhysics;
 extern bool& gInCinematic;                   // 0x5318e0 (no wonder victory while set; provisional name)
 
-// one standing wonder: its player and when it was built; ordered by the time, then the player (provisional names)
-struct EEVCWonderEntry {
-    unsigned long mPlayer;
-    unsigned long mTime;
-    bool operator<(const EEVCWonderEntry& inOther) const
-    {
-        return mTime < inOther.mTime || (mTime == inOther.mTime && mPlayer < inOther.mPlayer);
-    }
-};
+// (the wonder entries, their sort and the countdown: ee_game gamecpp civilization.rs)
 
 // Returns whether the team's players together own as many wonders as the game needs to win (never when none)
 bool EEVictoryCondition::HasEnoughWonders()
 {
-    unsigned long theNeeded = gWorld.mNumberOfWondersToWin;
-    bool theResult = false;
-    if (theNeeded > 0) {
-        unsigned long theCount = 0;
-        for (unsigned long i = 0; i < this->mTeam->GetNumPlayers(); i++)
-            theCount += gWorld.mPlayers[this->mTeam->mPlayers[i]]->GetNumWonderUnits();
-        theResult = theCount >= theNeeded;
-    }
-    return theResult;
+    return ee_gamecpp_wonder_enough(this);
 }
 
 // Returns the player whose wonder completes the team's winning count and the seconds left of the wonder
 // countdown (NULL and 0 when the team lacks the wonders)
 EEPlayer* EEVictoryCondition::GetWonderCountdown(unsigned long& outValue)
 {
-    std::vector<EEVCWonderEntry> theEntries;
-    unsigned long theNeeded = gWorld.mNumberOfWondersToWin;
-    EEPlayer* theWinner;
-    if (this->HasEnoughWonders() == true) {
-        for (unsigned long i = 0; i < this->mTeam->GetNumPlayers(); i++) {
-            EEPlayer* thePlayer = gWorld.mPlayers[this->mTeam->mPlayers[i]];
-            for (unsigned long j = 0; j < thePlayer->GetNumWonderUnits() && j < theNeeded; j++) {
-                EEVCWonderEntry theEntry;
-                theEntry.mPlayer = thePlayer->mPlayerID;
-                theEntry.mTime = thePlayer->GetWonderTime(j);
-                theEntries.push_back(theEntry);
-            }
-        }
-        std::sort(theEntries.begin(), theEntries.end());
-        EEVCWonderEntry& theLast = theEntries[theNeeded - 1];
-        theWinner = gWorld.mPlayers[theLast.mPlayer];
-        long theLeft = gWorldTable.GetLongValue(kWorldWonderVictoryTime) - (gPhysics->mGameTime - theLast.mTime) / 1000;
-        if (theLeft <= 0)
-            theLeft = 0;
-        outValue = theLeft;
-    } else {
-        theWinner = NULL;
-        outValue = 0;
-    }
-    return theWinner;
+    return static_cast<EEPlayer*>(ee_gamecpp_wonder_countdown(this, &outValue));
 }
 
 // Reads and discards the wonder list of old saved games (before version 0.225); returns the first read error
 long EEVCWonder::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    std::vector<unsigned long> theOld;
-    unsigned long theCount;
-    long theResult = kErrorOK;
-    if (inMajorVersion == 0 && inMinorVersion < 0xe1) {
-        theResult = inFile.Read(theCount);
-        theOld.resize(theCount, 0);
-        for (unsigned long i = 0; i < theCount; i++)
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theOld[i]);
-    }
-    return theResult;
+    return ee_gamecpp_wonder_load(inMajorVersion, inMinorVersion, &inFile);
 }
 
 // Returns 1 (won) when the team's wonder countdown has run out, outside cinematics; else 0
 long EEVCWonder::GetVictoryState()
 {
-    long theState = 0;
-    if (!gInCinematic) {
-        unsigned long theValue;
-        if (this->GetWonderCountdown(theValue) != NULL && theValue == 0)
-            theState = 1;
+    return ee_gamecpp_wonder_state(this);
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the wonder victory
+
+int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
+double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define VC ((EEVictoryCondition*)p)
+
+// the C++ calls and members of the wonder victory's bodies in Rust (gamecpp civilization.rs): p the victory
+// condition unless noted, one statement each
+int64_t EECore10OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DwTeamCount: return VC->mTeam->GetNumPlayers();
+    case O::DwTeamPlayer: return VC->mTeam->mPlayers[a[0]];
+    case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
+    case O::DwWonderCount: return ((EEPlayer*)p)->GetNumWonderUnits();
+    case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
+    case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
+    case O::DwGameTime: return gPhysics->mGameTime;
+    case O::DwInCinematic: return gInCinematic;
+    default: return EECore10OpD7(inOp, p, a, f);
     }
-    return theState;
+    return 0;
+}
+
+double EECore10OpD6F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpD7F(inOp, p, a, f);
 }

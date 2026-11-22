@@ -1,6 +1,6 @@
-// New (port), TEST ONLY: the app and world lane's records of the map, the mini map, the cheat codes and the storms
-// (ee/EEAppCapture.h; tools/sim_capture.py). Reads the objects; the sweeps (EE-SIM --app-sweep) play cheat lines and
-// start storms as a player would.
+// New (port), TEST ONLY: the app and world lane's records of the map, the mini map and the statistics (ee/EEAppCapture.h;
+// tools/sim_capture.py). Reads the objects; the sweeps (EE-SIM --app-sweep: ee_game gamecpp cheats.rs, weather.rs)
+// play cheat lines and start storms as a player would.
 #include <windows.h>
 #include <string.h>
 #include <string>
@@ -28,6 +28,7 @@
 #include "rust/render/ge.h"
 #include "rust/game/app.h"   // the map records
 #include "rust/sim/units.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D: the storm and cheat sweeps
 #include "ee/EETechCapture.h"
 #include "ee/EEAppCapture.h"
 
@@ -52,96 +53,7 @@ static void AppMapScopeLeave(EEMap* inMap, bool inOuter, unsigned int inKind, co
                              inKind, inArgs, inRect);
 }
 
-static void EEAppCaptureStormImpl(const EEEMStorm& inStorm, unsigned int inPhase, unsigned long inTime)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    EESimCaptureRecord r(EECaptureTag("STRM"));
-    r.U32(inPhase);
-    r.U32((unsigned int)inTime);
-    r.I32((int)inStorm.mType);
-    r.I32((int)inStorm.mState);
-    r.F32(inStorm.mTargetIntensity);
-    r.F32(inStorm.mIntensity);
-    r.F32(inStorm.mStep);
-    r.U32((unsigned int)inStorm.mNextMoveTime);
-    r.U32((unsigned int)inStorm.mEndTime);
-    r.U32(inStorm.mIsSevere ? 1 : 0);
-    r.I32((int)inStorm.mStart.mX);
-    r.I32((int)inStorm.mStart.mY);
-    r.I32((int)inStorm.mGoal.mX);
-    r.I32((int)inStorm.mGoal.mY);
-    r.I32((int)inStorm.mArea.mTop);
-    r.I32((int)inStorm.mArea.mLeft);
-    r.I32((int)inStorm.mArea.mBottom);
-    r.I32((int)inStorm.mArea.mRight);
-    r.U32((unsigned int)inStorm.mPath.size());
-    for (const U2DPoint<long>& thePoint : inStorm.mPath) {
-        r.I32((int)thePoint.mX);
-        r.I32((int)thePoint.mY);
-    }
-    r.U32(inStorm.mRequest != NULL ? 1 : 0);
-    if (inStorm.mStorm != NULL) {
-        U2DPoint<long> theCenter = inStorm.mStorm->GetCenterPoint();
-        r.I32((int)theCenter.mX);
-        r.I32((int)theCenter.mY);
-        r.U32((unsigned int)inStorm.mStorm->GetTileCount());
-    } else
-        r.U32(0xffffffffu);
-    r.Commit();
-}
-
-// the cheat sweep's C++ calls (CHET, CHEF: ee_game app cheat_capture.rs)
-static void EEAppCaptureCheatSweepImpl()
-{
-    if (!EESimCaptureRecord::Active() || gCheatCodes == NULL)
-        return;
-    EeAppCheatSweepHost theHost = {
-        NULL,
-        [](void*, const char* inLine, long* outCode, long* outParameter) {
-            gCheatCodes->ParseCheatCode(UWideString(inLine), *outCode, *outParameter);
-        },
-        [](void*, long inCode, long inPlayer, long inParameter) { gCheatCodes->ApplyCheatCode(inCode, inPlayer, inParameter); },
-        [](void*, bool inOn) {
-            bool theOld = gWorld.mCheatsEnabled;
-            gWorld.mCheatsEnabled = inOn;
-            return theOld;
-        },
-        [](void*, uint64_t inPlayer, uint32_t inIndex, int32_t* outLevels) -> int32_t {
-            EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer);
-            if (inIndex >= thePlayer->mUnitClassUpgrades.size())
-                return -1;
-            EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[inIndex];
-            if (theUpgrade == NULL)
-                return 0;
-            for (unsigned long j = 0; j < 0x10; j++)
-                outLevels[j] = (int32_t)theUpgrade->mImprovement.GetLevel(j);
-            return 1;
-        },
-        [](void*, float* outPoint) {
-            GE3DPoint theCamera;
-            gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theCamera);
-            outPoint[0] = theCamera.mX;
-            outPoint[1] = theCamera.mY;
-            outPoint[2] = theCamera.mZ;
-        },
-    };
-    ee_app_capture_cheat_sweep(&theHost);
-}
-
-static void EEAppCaptureStormSweepImpl()
-{
-    EEEnvironmentManager* theManager = gWorld.mEnvironmentManager;
-    if (!EESimCaptureRecord::Active() || theManager == NULL)
-        return;
-    theManager->SetEnabled(true);
-    const long kTypes[] = {kStormRain, kStormSnow, kStormHurricane, kStormBlizzard};
-    for (long theType : kTypes) {
-        EEEMStorm* theStorm = new EEEMStorm(theType, theManager);
-        EEAppCaptureStorm(*theStorm, 0, 0);
-        theManager->mStorms.push_back(theStorm);
-    }
-}
+// STRM, the storm sweep and the cheat sweep's C++ calls (CHET, CHEF): ee_game gamecpp weather.rs, cheats.rs
 
 namespace {
 
@@ -223,8 +135,7 @@ static void EEAppCaptureStatisticsSweepImpl()
 // The game calls these through the header's hook pointers, set here before main: the game's units name no
 // symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
 static const bool sCaptureHooksSet = (EEAppMapScopeEnter = AppMapScopeEnter, EEAppMapScopeLeave = AppMapScopeLeave,
-                                      EEAppCaptureCheatSweep = EEAppCaptureCheatSweepImpl,
+                                      EEAppCaptureCheatSweep = ee_gamecpp_capture_cheat_sweep,
                                       EEAppCaptureSight = EEAppCaptureSightImpl,
                                       EEAppCaptureStatisticsSweep = EEAppCaptureStatisticsSweepImpl,
-                                      EEAppCaptureStorm = EEAppCaptureStormImpl,
-                                      EEAppCaptureStormSweep = EEAppCaptureStormSweepImpl, true);
+                                      EEAppCaptureStormSweep = ee_gamecpp_capture_storm_sweep, true);

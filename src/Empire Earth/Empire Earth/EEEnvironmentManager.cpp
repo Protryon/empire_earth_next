@@ -20,19 +20,16 @@
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEPersistentTag.h"
 #include "ee/EEStormType.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp weather.rs)
 
-// the wind's limits (unit-local .rdata; the first two sit before the vtable, the step limit after it)
-static const float kWindStepMaximum = 1.3333333e-06f;
-static const float kWindMinimum = 1.25e-06f;
-static const float kWindMaximum = 1.4285714e-06f;
-
-// Creates the weather manager, disabled, with no storms, calm wind and at most three storms at a time
+// Creates the weather manager, disabled, with no storms, calm wind and at most three storms at a time (the wind's
+// limits: ee_game gamecpp weather.rs)
 EEEnvironmentManager::EEEnvironmentManager()
     : FSPersistent(kPersistentEnvironment), mState(0)
 {
-    this->mWind = kWindMinimum;
-    this->mWindTarget = kWindMinimum;
-    this->mWindRate = kWindStepMaximum;
+    this->mWind = 1.25e-06f;
+    this->mWindTarget = 1.25e-06f;
+    this->mWindRate = 1.3333333e-06f;
     this->mNextStep = 0;
     this->mIsEnabled = false;
     this->mInterval = 5000;
@@ -44,24 +41,13 @@ EEEnvironmentManager::EEEnvironmentManager()
 // Destroys the weather manager, releasing and deleting every storm
 EEEnvironmentManager::~EEEnvironmentManager()
 {
-    this->DeleteStorms();
+    ee_gamecpp_env_delete_storms(this);
 }
 
 // Returns whether a tile lies inside a storm: rain or hurricane storms and/or snow or blizzard storms, as asked
 bool EEEnvironmentManager::IsInStorm(const U2DPoint<long>& inPoint, bool inTypes13, bool inTypes24)
 {
-    bool theResult = false;
-    for (long i = this->mStorms.size() - 1; i >= 0 && !theResult; i--) {
-        if (inTypes13) {
-            if (this->mStorms[i]->GetType() == kStormRain || this->mStorms[i]->GetType() == kStormHurricane)
-                theResult = this->mStorms[i]->Contains(inPoint);
-        }
-        if (inTypes24) {
-            if (this->mStorms[i]->GetType() == kStormSnow || this->mStorms[i]->GetType() == kStormBlizzard)
-                theResult = this->mStorms[i]->Contains(inPoint);
-        }
-    }
-    return theResult;
+    return ee_gamecpp_env_is_in_storm(this, &inPoint, inTypes13, inTypes24);
 }
 
 // Creates a new default weather manager (the persistent-object factory)
@@ -73,149 +59,86 @@ FSPersistent* EEEnvironmentManager::CreateDefault() const
 // Advances the storms and the wind, clears a finished state and schedules the next weather step by game speed
 void EEEnvironmentManager::Step(unsigned long inTime)
 {
-    float theTimeOfDay = gWorld.GetTimeOfDay();
-    this->UpdateStorms(theTimeOfDay, inTime);
-    this->UpdateWind(theTimeOfDay, inTime);
-    if (this->mState == 2)
-        this->mState = 0;
-    this->mNextStep = UMFloatToLong(gWorld.GetGameSpeed() * this->mInterval) + inTime;
+    ee_gamecpp_env_step(this, inTime);
 }
 
-// Reads the storms, state, wind and timing from a saved game; returns the first read error (it used to return 0
-// whatever the reads returned)
+// Reads the storms, state, wind and timing from a saved game; returns the first read error
 long EEEnvironmentManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    this->mStorms.resize(theCount, 0);
-    for (unsigned long i = 0; i < theCount; i++) {
-        this->mStorms[i] = new EEEMStorm(kStormUnknown, this);
-        if (theResult == kErrorOK)
-            theResult = this->mStorms[i]->Load(inMajorVersion, inMinorVersion, inFile);
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    if ((theResult = inFile.Read(this->mState)) == 0 && (theResult = inFile.Read(this->mWind)) == 0
-        && (theResult = inFile.Read(this->mWindTarget)) == 0 && (theResult = inFile.Read(this->mWindRate)) == 0
-        && (theResult = inFile.Read(this->mNextStep)) == 0 && (theResult = inFile.Read(this->mInterval)) == 0
-        && (theResult = this->mC24.Load(inFile)) == 0 && (theResult = this->mC18.Load(inFile)) == 0)
-        theResult = inFile.Read(this->mL50);
-    return theResult;
+    return ee_gamecpp_env_load(this, &inFile);
 }
 
 // Reconnects the loaded storms after a load, deleting the ones that fail to restore; returns 0
 long EEEnvironmentManager::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    for (long i = this->mStorms.size() - 1; i >= 0; i--) {
-        if (this->mStorms[i]->Restore() != 0) {
-            delete this->mStorms[i];
-            this->mStorms.erase(this->mStorms.begin() + i);
-        }
-    }
-    return 0;
+    return ee_gamecpp_env_repair(this);
 }
 
-// Writes the storms, state, wind and timing to a saved game; returns the first write error (it used to return
-// success whatever the writes returned)
+// Writes the storms, state, wind and timing to a saved game; returns the first write error
 long EEEnvironmentManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theCount = this->mStorms.size();
-    long theResult = outFile.Write(theCount);
-    if (theResult != 0)
-        return theResult;
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (theResult == 0) {
-            EEEMStorm*& theStorm = this->mStorms[i];
-            theResult = theStorm->Save(inMajorVersion, inMinorVersion, outFile);
-        }
-    }
-    if (theResult != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mState)) == 0 && (theResult = outFile.Write(this->mWind)) == 0
-        && (theResult = outFile.Write(this->mWindTarget)) == 0 && (theResult = outFile.Write(this->mWindRate)) == 0
-        && (theResult = outFile.Write(this->mNextStep)) == 0 && (theResult = outFile.Write(this->mInterval)) == 0
-        && (theResult = this->mC24.Save(outFile)) == 0 && (theResult = this->mC18.Save(outFile)) == 0)
-        theResult = outFile.Write(this->mL50);
-    return theResult;
+    return ee_gamecpp_env_save(this, &outFile);
 }
 
 // Turns the weather on or off: off deletes every storm and unloads the rain and snow effects, on loads them
 void EEEnvironmentManager::SetEnabled(bool inEnabled)
 {
-    if (this->mIsEnabled == inEnabled)
-        return;
-    this->mIsEnabled = inEnabled;
-    if (!inEnabled) {
-        this->DeleteStorms();
-        EEGraphicEffect::Get(kGraphicEffectRain)->Unload();
-        EEGraphicEffect::Get(kGraphicEffectSnow)->Unload();
-    } else {
-        EEGraphicEffect::Get(kGraphicEffectRain)->Load(false);
-        EEGraphicEffect::Get(kGraphicEffectSnow)->Load(false);
-    }
-}
-
-// Releases and deletes every storm and empties the storm list
-void EEEnvironmentManager::DeleteStorms()
-{
-    for (long i = this->mStorms.size() - 1; i >= 0; i--) {
-        this->mStorms[i]->Release();
-        delete this->mStorms[i];
-    }
-    this->mStorms.clear();
-}
-
-// Steps every storm and deletes the ones that are over; then rolls for a new storm below the limit but never creates
-// one (the roll and the rain effect lookup have no further effect)
-void EEEnvironmentManager::UpdateStorms(float inTimeOfDay, unsigned long inTime)
-{
-    for (long i = this->mStorms.size() - 1; i >= 0; i--) {
-        this->mStorms[i]->Step(inTime);
-        if (!(*(this->mStorms.begin() + i))->IsOver())
-            continue;
-        EEEMStorm* theStorm = *(this->mStorms.begin() + i);
-        theStorm->Release();
-        this->mStorms.erase(this->mStorms.begin() + i);
-        delete theStorm;
-    }
-    if (this->mStorms.size() < (unsigned long)this->mMaxStorms && gPhysics->GetRandom(0.0001f, 1.0f) <= 0.2f) {
-        gPhysics->mRandom.Generate();
-        EEGraphicEffect* theEffect = EEGraphicEffect::Get(kGraphicEffectRain);
-    }
-}
-
-static const float kWindStepMinimum = 1e-08f;
-
-// Moves the wind one step toward its target; once there, picks a new random target and a step rate that reaches
-// it in about fifteen steps
-void EEEnvironmentManager::UpdateWind(float inTimeOfDay, unsigned long inTime)
-{
-    if (this->mWind != this->mWindTarget) {
-        if (this->mWind < this->mWindTarget) {
-            this->mWind += this->mWindRate;
-            if (this->mWind > this->mWindTarget)
-                this->mWind = this->mWindTarget;
-        } else {
-            this->mWind -= this->mWindRate;
-            if (this->mWind < this->mWindTarget)
-                this->mWind = this->mWindTarget;
-        }
-
-    } else {
-        // reached: pick a new random target and a rate that gets there in about fifteen steps
-        this->mWindTarget = gPhysics->GetRandom(kWindMinimum, kWindMaximum);
-        if (this->mWind != this->mWindTarget) {
-            float theDelta = this->mWindTarget - this->mWind;
-            float theStep = (theDelta < 0.0f ? -theDelta : theDelta) / 15.0;
-
-
-            this->mWindRate = min(max(theStep, kWindStepMinimum), kWindStepMaximum);
-        }
-    }
+    ee_gamecpp_env_set_enabled(this, inEnabled);
 }
 
 void EEEnvironmentManager::FnE123D()
 {
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the environment manager
+
+int64_t EECore10OpD4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECheatCodes.cpp
+double EECore10OpD4F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define EM ((EEEnvironmentManager*)p)
+
+// the C++ calls and members of the environment manager's bodies in Rust (gamecpp weather.rs): p the manager unless
+// noted, one statement each
+int64_t EECore10OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DeManager: return P64(gWorld.mEnvironmentManager);
+    case O::DeNewStorm: return P64(new EEEMStorm((long)a[0], EM));
+    case O::DeStormPush: EM->mStorms.push_back((EEEMStorm*)a[0]);
+        break;
+    case O::DeStormCount: return (int64_t)EM->mStorms.size();
+    case O::DeStormAt: return P64(EM->mStorms[a[0]]);
+    case O::DeStormSet: EM->mStorms[a[0]] = (EEEMStorm*)a[1];
+        break;
+    case O::DeStormErase: EM->mStorms.erase(EM->mStorms.begin() + a[0]);
+        break;
+    case O::DeStormResize: EM->mStorms.resize((size_t)a[0], 0);
+        break;
+    case O::DeStormClear: EM->mStorms.clear();
+        break;
+    case O::DeStormDelete: delete (EEEMStorm*)p;
+        break;
+    case O::DeState: return P64(&EM->mState);
+    case O::DeWind: return P64(&EM->mWind);
+    case O::DeWindTarget: return P64(&EM->mWindTarget);
+    case O::DeWindRate: return P64(&EM->mWindRate);
+    case O::DeNextStep: return P64(&EM->mNextStep);
+    case O::DeInterval: return P64(&EM->mInterval);
+    case O::DeMaxStorms: return P64(&EM->mMaxStorms);
+    case O::DeL50: return P64(&EM->mL50);
+    case O::DeEnabled: return P64(&EM->mIsEnabled);
+    case O::DeC18: return P64(&EM->mC18);
+    case O::DeC24: return P64(&EM->mC24);
+    case O::DeColorLoad: return ((GEColor*)p)->Load(*(FSFile*)a[0]);
+    case O::DeColorSave: return ((GEColor*)p)->Save(*(FSFile*)a[0]);
+    default: return EECore10OpD4(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore10OpD3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpD4F(inOp, p, a, f);
 }
