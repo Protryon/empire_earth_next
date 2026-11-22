@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/render/ge.h"
 
 /// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
 /// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
@@ -1389,9 +1390,6 @@ constexpr static const uint32_t EE_SCREENS_SEA_STORE_MOUSE_TILE = 15;
 /// `gEffectManager->ElevationChanged(left i0, top i1, right i2, bottom i3)`.
 constexpr static const uint32_t EE_SCREENS_SEA_ELEVATION_CHANGED = 16;
 
-/// -> the height of one elevation level (`kSEPELevelHeight`) in f0.
-constexpr static const uint32_t EE_SCREENS_SEA_LEVEL_HEIGHT = 17;
-
 /// The paint kinds of `ee_screens_sea_paint_new` (`kSEAPaint*` in `ee/EESEAPaint.h`).
 constexpr static const uint32_t EE_SCREENS_SEA_PAINT_TERRAIN = 0;
 
@@ -2093,6 +2091,12 @@ constexpr static const uint32_t EE_SCREENS_SEE_START_EPOCH = 15;
 /// `EESEEGameUnitLimit` (its label, modifier and offset: `ee_screens_see_slider` with the format "%g").
 constexpr static const uint32_t EE_SCREENS_SEE_UNIT_LIMIT = 16;
 
+/// `EEUIETerrainTypeChange` (object: the terrain tab's group, `EeScreensSeGroup`): the tab's type change.
+constexpr static const uint32_t EE_SCREENS_SEE_TERRAIN_TYPE = 4000;
+
+/// `EEUIETerrainColorChange` (object: the terrain tab's group): the tab's colour change.
+constexpr static const uint32_t EE_SCREENS_SEE_TERRAIN_COLOR = 4001;
+
 /// The game page's per-player count label (`kSERBUnitTypesPerPlayerCountLabel`).
 constexpr static const int32_t EE_SCREENS_SEE_PER_PLAYER_LABEL_ID = 354;
 
@@ -2188,6 +2192,16 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
+
+/// `ee_screenscpp_seex`'s statements for the host's last ops (round 6): whether the editor's form exists,
+/// `gWorld.mMaxPlayers` (with `EE_SCREENS_SEEX_EPOCH_COUNT`, editor_tabsx.rs).
+constexpr static const uint32_t EE_SCREENS_SEEX_HAS_EDITOR = 4000;
+
+constexpr static const uint32_t EE_SCREENS_SEEX_MAX_PLAYERS = 4001;
+
+/// The terrain tab of the group p told of its list q's change i0 (`EE_SCREENS_SETN_TYPE_CHANGE` or
+/// `EE_SCREENS_SETN_COLOR_CHANGE`; `ee_screens_setn_call`, Rust).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_TERRAIN_CHANGE = 4000;
 
 constexpr static const uint32_t EE_SCREENS_SEFM_BUTTON_TEXTURE = 0;
 
@@ -4464,6 +4478,14 @@ constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED = 698;
 
 constexpr static const int32_t EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT = 359;
 
+constexpr static const uint32_t EE_SCREENS_SEAX_SEA = 4200;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEW = 4400;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEP = 4600;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEU = 4800;
+
 /// `gRasterizer->GetTextureManager(form->GetManager()->GetScreen())->LoadTexture("textures\\SE Buttons", the
 /// screen's description)` -> the texture; p0's `Reference()`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_BUTTON_TEXTURE = 0;
@@ -5605,11 +5627,9 @@ constexpr static const uint32_t EE_SCREENS_SETNX_T_PREVIEW = 14;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_T_CLASS = 15;
 
-/// String i0 into the host's text; the paint type radio (id i0, the text, index i2, checked i3, at f0, f1, on form
-/// p1); radio p1's label's background 0.4, its text transparent, yellow; radio p1 as a control.
+/// String i0 into the host's text; radio p1's label's background 0.4, its text transparent, coloured f0, f1, f2
+/// (`SetnYellow`); radio p1 as a control.
 constexpr static const uint32_t EE_SCREENS_SETNX_STRING = 16;
-
-constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_RADIO = 17;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_LABEL_BG = 18;
 
@@ -5715,18 +5735,12 @@ constexpr static const uint32_t EE_SCREENS_SETNX_CLASS_EXISTS = 61;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_CLASS_BUTTON_TEXTURE = 62;
 
-/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height; the preview p1's
-/// `ComputeStretchedCoordsAndScale(its rectangle, its rectangle, f, list p0's screen)`.
+/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height.
 constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_TEXTURE = 63;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_TEXTURE_WIDTH = 64;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_TEXTURE_HEIGHT = 65;
-
-constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_STRETCH = 66;
-
-/// The preview p2's bitmap's `SetColorPerVertex` of the colour list p1's line i0's colours 0, i1, i2, i3.
-constexpr static const uint32_t EE_SCREENS_SETNX_TINT = 67;
 
 /// Form p1's load thread's `Post408(i0)`, `Post409(i0)`.
 constexpr static const uint32_t EE_SCREENS_SETNX_POST_408 = 68;
@@ -5741,8 +5755,43 @@ constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_TERRAIN = 71;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_BULLDOZER = 72;
 
-/// A brush radio (group p2's brush i0, id i1, the text, index i3, at f0, f1, form p1; checked for brush 0).
-constexpr static const uint32_t EE_SCREENS_SETNX_BRUSH_RADIO = 73;
+/// The screen font's height; the form p1's radio-on bitmap's height into f0; `new EEUIShellRadio(kind i0, the
+/// arguments at p2 (`[count, ...]`), id i1, the host's text, the screen font, the rectangle f (left, top, right,
+/// bottom), form p1, index i2, border 0, checked i3)`.
+constexpr static const uint32_t EE_SCREENS_SETNX_FONT_HEIGHT = 4000;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RADIO_ON_HEIGHT = 4001;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_NEW_RADIO = 4002;
+
+/// The preview p1's bitmap's Rust object (`EeGeBitmap`); its rectangle into *p2; control p1's screen; the colour
+/// list p1's line i0's colours (a `GEColor` array); the type list p1's bitmap's Rust object.
+constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_BITMAP = 4003;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_RECT = 4004;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_SCREEN = 4005;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_COLORS = 4006;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP = 4007;
+
+/// The host's text's bytes (NUL-terminated) into the out slot (after `EE_SCREENS_SETNX_STRING`).
+constexpr static const uint32_t EE_SCREENS_SETNX_TEXT = 4008;
+
+/// Rust's own statements (`ge_op`, never the C++): the bitmap p0's `ComputeStretchedCoordsAndScale` of the three
+/// rectangles at p1 (texture, source, destination) on screen i0; the bitmap p0's `SetColorPerVertex` of the
+/// colours i0..i3 of the `GEColor` array p1.
+constexpr static const uint32_t EE_SCREENS_SETNX_GE_STRETCH = 4010;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_GE_COLORS = 4011;
+
+/// The type list p1's destructor's parts: its bitmap released, its text deleted, its copy text deleted.
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP_RELEASE = 4012;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_TEXT_DELETE = 4013;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_TEXT_DELETE = 4014;
 
 /// The colour list p1 (from 100): its base `CopyData()`, `SetCopiedHasFocus(true)`, its copied lines' count, line
 /// i0's colour count, its copy text rectangle into *p2 (a `GERectangle`), its line height; `new GERhombus`, rhombus
@@ -5817,8 +5866,6 @@ constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_RECT = 137;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_T_LINE_HEIGHT = 138;
 
-constexpr static const uint32_t EE_SCREENS_SETNX_T_STRETCH = 139;
-
 constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP_AT = 140;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_T_DRAW_BITMAP = 141;
@@ -5865,6 +5912,9 @@ constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_DRAW = 4;
 
 constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_TEXT = 5;
 
+/// The type list's destructor (`~EESEUITerrainTypeLB`, 0x1ac40d).
+constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_FREE = 4000;
+
 /// `new GEBitmap`; the form p1's `GetButtonTexture()`; texture p1's `GetWidth()`; bitmap p0's `SetTexture(texture
 /// p1, form p2's screen)`; bitmap p1's `SetTextureCoordinates` of the corners (f0, f1)-(f2, f3), `SetXYScale(f0,
 /// f1)`.
@@ -5876,11 +5926,9 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_TEXTURE_WIDTH = 2;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM = 3;
 
-constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_COORDS = 4;
-
 constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_SCALE = 5;
 
-/// A unit type button (`EEUIShellRadio`, id i1 + 0x406, at x i3, index i0, checked when i1 is 0) on form p1; its
+/// A unit type button (`EEUIShellRadio`, index i0, id i1, checked i2, the rectangle f) on form p1; its
 /// up checked, down checked, down unchecked, up unchecked bitmaps (p2), no focused bitmap, the draw offset 0, the
 /// button-up event p2, the string id i0; added to form p1 (p2 the radio, layer i0).
 constexpr static const uint32_t EE_SCREENS_SEUNX_TYPE_RADIO = 6;
@@ -5903,12 +5951,9 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_STRING_ID = 14;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_RADIO = 15;
 
-/// `IDS_SE_REMOVE` into the host's text; the Remove Cargo button (form p1, x f0, index i0); button p1's `SetText(the
-/// text, the screen font)`, `SetBgOpacity(1)`, its text white and transparent; added to form p1 (p2, layer i0); the
-/// Rotation button (form p1, index i0), its `SetStringTableID(IDS_ROTATE)`.
+/// `IDS_SE_REMOVE` into the host's text; button p1's `SetText(the text, the screen font)`, `SetBgOpacity(1)`, its
+/// text white and transparent; added to form p1 (p2, layer i0); button p1's `SetStringTableID(IDS_ROTATE)`.
 constexpr static const uint32_t EE_SCREENS_SEUNX_STRING_REMOVE = 16;
-
-constexpr static const uint32_t EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON = 17;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_SET_TEXT = 18;
 
@@ -5919,8 +5964,6 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXT_WHITE = 20;
 constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXT_TRANSPARENT = 21;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_BUTTON = 22;
-
-constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_BUTTON = 23;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_STRING = 24;
 
@@ -6052,8 +6095,8 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_REDRAW_ALL = 78;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ALL_DIRTY = 79;
 
-/// The tab p1's panel rectangle `And` the rectangle p2 into the host's rectangle; the form's `DrawBackground(bitmap
-/// p2, that rectangle, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
+/// The tab p1's panel rectangle `And` the rectangle p2 into the rectangle *p0; the form's `DrawBackground(bitmap
+/// p2, the rectangle *p0, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
 /// top, right, bottom set to f0; the panel added dirty to control p2's form.
 constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_AND = 80;
 
@@ -6179,8 +6222,20 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_PRESSED = 132;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_DOWN = 133;
 
-/// `new EESEARust(kSEADeleteUnit, NULL, -1, the current player's id, i0 != 0)`.
+/// `new EESEARust(kSEADeleteUnit, NULL, -1, player i1, i0 != 0)`.
 constexpr static const uint32_t EE_SCREENS_SEUNX_DELETE_ACTION = 134;
+
+/// Bitmap p1's Rust object (`EeGeBitmap`); Rust's own statement (`ge_op`): the bitmap p0's
+/// `SetTextureCoordinates((f0, f1), (f2, f1), (f0, f3), (f2, f3))` (the original's corner order).
+constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_RUST = 4000;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GE_UVS = 4001;
+
+/// `new EEUIShellButton(kind i1, id i2, no bitmaps, the rectangle f, form p1, index i0, border i3)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_NEW_BUTTON = 4002;
+
+/// The current player's id.
+constexpr static const uint32_t EE_SCREENS_SEUNX_CURRENT_PLAYER = 4003;
 
 constexpr static const uint32_t EE_SCREENS_SESC_SORT = 1;
 
@@ -7942,6 +7997,9 @@ constexpr static const uint32_t EE_SCREENS_SEW_MOVE_UNIT = 13;
 /// (the one unit only when it exists).
 constexpr static const uint32_t EE_SCREENS_SEW_DELETE_UNIT = 14;
 
+/// `EESEAChangeWorldPlayerCount` (a: the count): `gMaxPlayers` set when it runs (round 6: the player tab's count).
+constexpr static const uint32_t EE_SCREENS_SEW_PLAYER_COUNT = 4000;
+
 /// `gUserInterface->PostAction(p)` (p: the action's `EESEARust`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_POST = 1;
 
@@ -8094,6 +8152,9 @@ constexpr static const uint32_t EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE = 50;
 
 /// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
 constexpr static const uint32_t EE_SCREENS_SEW_OP_UNIT_PLAYER = 51;
+
+/// `gMaxPlayers = i0` (`EESEAChangeWorldPlayerCount::Virtual4`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_SET_MAX_PLAYERS = 4000;
 
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
@@ -15971,6 +16032,24 @@ void ee_screens_sebr_group_new(EeScreensSeBrushGroup *group,
 /// `group` is a live C++ group.
 void ee_screens_sebr_group_highlight(EeScreensSeBrushGroup *group, float x, float y, bool centered);
 
+/// The bitmap `bitmap`'s texture coordinates over a cell: `(u0, v0), (u1, v0), (u0, v1), (u1, v1)` (the original's
+/// corner order; the diplomacy buttons' cells).
+///
+/// # Safety
+/// `bitmap` is a live bitmap.
+void ee_screens_bitmap_uvs(EeGeBitmap *bitmap,
+                           float u0,
+                           float v0,
+                           float u1,
+                           float v1);
+
+/// `SeplColor(text, flags)`: the text coloured by the flags and made transparent (nothing without a colour).
+///
+/// # Safety
+/// `text` is a live text.
+void ee_screens_sepl_color(EeGeText *text,
+                           uint32_t flags);
+
 /// `EESETSCondition`'s constructor on the form: its controls from the control index `*index` (advanced; the screen
 /// font is `gSeplScreenFont`). Freed by `ee_screens_secd_free`.
 ///
@@ -16059,6 +16138,10 @@ void ee_screens_seup_free(void *panel);
 /// `list` is the live list box of the member's class (its `this`).
 int32_t ee_screens_setlb_call(uint32_t which,
                               void *list);
+
+/// `EESETerrainNameLess` (std::sort's order of the editor's terrains): string `first` before string `second`.
+bool ee_screens_setnx_terrain_less(int32_t first,
+                                   int32_t second);
 
 /// `EEUIFSETerrain`'s constructor: every control made on `form` from the control index `*index` (advanced), the
 /// lists' events over the C++ `tab`, the paint area over the form's edge `scroll` and `brushes`. Freed by
@@ -16480,6 +16563,25 @@ void ee_screens_see_objects(EeScreensSeeEvent *event,
                             void *a,
                             void *b,
                             void *c);
+
+/// A slider event of `kind` (`EE_SCREENS_SEE_SLIDER_CHANGE` or `EE_SCREENS_SEE_UNIT_LIMIT`) made with its label,
+/// format, scale and offset (`EESEENewSliderChange`, `EESEENewUnitLimit`).
+///
+/// # Safety
+/// `format` is NUL-terminated (or NULL).
+EeScreensSeeEvent *ee_screens_see_new_slider(uint32_t kind,
+                                             void *label,
+                                             const char *format,
+                                             float scale,
+                                             float offset);
+
+/// An `EESEEUseObjectArea` made with its label, combo box and area control (`EESEENewUseObjectArea`).
+EeScreensSeeEvent *ee_screens_see_new_object_area(void *label,
+                                                  void *combo,
+                                                  void *area);
+
+/// An effect editor's event of `kind` made with its objects (`EESEENewObjects`).
+EeScreensSeeEvent *ee_screens_see_new_objects(uint32_t kind, void *a, void *b, void *c);
 
 /// The `EESEERust`'s destructor.
 ///

@@ -2,7 +2,7 @@
 //! holds, made, called and freed by it, the paint radios' `Check` and the paint area's `CreatePaintAction`. The
 //! shared control ops (below 100) are `ee_screenscpp_sepl` (`Scenario Editor/EESERBUnitTypes.cpp`), a control by id
 //! the map tab's `ee_screenscpp_semp` (500..), the mouse and the highlight the elevation tab's `ee_screenscpp_seel`
-//! (900..), the tab's own `ee_screenscpp_setn` (1000.., `Scenario Editor/EEUIFSETerrain.cpp`).
+//! (900..), the tab's own ops (1000..) and its statements `ee_screenscpp_setnx` (`Scenario Editor/EEUIFSETerrain.cpp`).
 
 use core::ffi::c_void;
 
@@ -17,7 +17,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_setn(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_setnx(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -32,10 +31,7 @@ impl SeplHost for Host {
             match op {
                 1000.. => {
                     // the statement sequences composed in Rust (editor_setnx.rs) over the C++'s single statements
-                    let mut x = |op: u32, q: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
-                        let q = q.map(|v| v as *mut c_void);
-                        sys::ee_screenscpp_setnx(op, q.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
-                    };
+                    let mut x = statement;
                     let q = [*p as usize, *p.add(1) as usize, *p.add(2) as usize];
                     crate::screens::editor_setnx::compose(
                         &mut x,
@@ -44,7 +40,7 @@ impl SeplHost for Host {
                         &mut *(i as *mut [i32; 4]),
                         &mut *(f as *mut [f32; 4]),
                     )
-                    .unwrap_or_else(|| sys::ee_screenscpp_setn(op, p, i, f))
+                    .unwrap_or_else(|| sys::ee_screenscpp_setnx(op, p, i, f))
                 }
                 900.. => crate::screens::editor_tabsx::seel_host(op, p, i, f),
                 500.. => crate::screens::editor_direct::semp(op, p, i, f),
@@ -66,12 +62,25 @@ impl SeplHost for Host {
 /// `list` is the live list box of the member's class (its `this`).
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_setlb_call(which: u32, list: *mut c_void) -> i32 {
-    let mut x = |op: u32, q: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+    crate::screens::editor_setnx::compose_list(&mut statement, which, list as usize)
+}
+
+/// One statement of `editor_setnx.rs`: Rust's own (the bitmaps') or the C++'s (`ee_screenscpp_setnx`).
+fn statement(op: u32, q: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
+    // SAFETY: the statements take the objects and the handles the composition passes
+    unsafe {
+        if let Some(r) = crate::screens::editor_setnx::ge_op(op, q, i) {
+            return r;
+        }
         let q = q.map(|v| v as *mut c_void);
-        // SAFETY: the statements take the list and the handles the composition passes
-        unsafe { sys::ee_screenscpp_setnx(op, q.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
-    };
-    crate::screens::editor_setnx::compose_list(&mut x, which, list as usize)
+        sys::ee_screenscpp_setnx(op, q.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+    }
+}
+
+/// `EESETerrainNameLess` (std::sort's order of the editor's terrains): string `first` before string `second`.
+#[no_mangle]
+pub extern "C" fn ee_screens_setnx_terrain_less(first: i32, second: i32) -> bool {
+    crate::screens::editor_setnx::terrain_less(&mut statement, first, second)
 }
 
 /// The terrain tab (opaque to C++).

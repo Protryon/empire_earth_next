@@ -7,7 +7,7 @@ type Line = (u32, [usize; 3], [i32; 4], [f32; 4]);
 const MAKERS: &[u32] = &[
     EE_SCREENS_SETNX_TT_GET,
     EE_SCREENS_SETNX_T_AT,
-    EE_SCREENS_SETNX_PAINT_RADIO,
+    EE_SCREENS_SETNX_NEW_RADIO,
     EE_SCREENS_SETNX_RADIO_CONTROL,
     EE_SCREENS_SETNX_TYPE_LIST_NEW,
     EE_SCREENS_SETNX_TYPE_EVENT,
@@ -23,7 +23,8 @@ const MAKERS: &[u32] = &[
     EE_SCREENS_SETNX_CLASS_BUTTON_TEXTURE,
     EE_SCREENS_SETNX_PAINT_TERRAIN,
     EE_SCREENS_SETNX_PAINT_BULLDOZER,
-    EE_SCREENS_SETNX_BRUSH_RADIO,
+    EE_SCREENS_SETNX_PREVIEW_BITMAP,
+    EE_SCREENS_SETNX_LINE_COLORS,
 ];
 
 /// The fake C++: records every statement, makes handles 0x100, 0x101, ..., answers `answer(op, i)`.
@@ -172,7 +173,8 @@ fn the_type_list_is_made_from_its_lines() {
     let l = &fake.lines;
     assert_eq!((l[1].1[1], l[1].2[0]), (terrains.as_ptr() as usize, 0));
     assert_eq!(l[4].2[..2], [1, 5]);
-    assert_eq!((l[5].1[1], l[5].2[0], l[5].3), (0x40, 11, [5.0, 6.0, 120.0, 0.0]));
+    assert_eq!((l[5].1[1], l[5].2[0], l[5].3), (0x40, 11, [5.0, 6.0, 124.0, 90.0]));
+    assert_eq!(l[10].3, SETNX_YELLOW);
     assert_eq!(l[6].1[1], 0x77);
     // the list 0x100, its event 0x101, the control 0x102
     assert_eq!((l[7].1[1], l[7].1[2]), (0x100, 0x101));
@@ -208,7 +210,8 @@ fn the_colour_list_pushes_each_types_colours() {
 #[test]
 fn the_radios_selection_preview_and_paint_action() {
     let mut out = 0usize;
-    let mut fake = Fake::new(|_, _| 0);
+    // the font 14 high, the radio-on bitmap 13 (the font's height wins): the paint type radio
+    let mut fake = Fake::new(|op, _| (op == EE_SCREENS_SETNX_FONT_HEIGHT) as i32 * 14);
     fake.run(
         EE_SCREENS_SETN_OP_RADIO,
         [&mut out as *mut usize as usize, 0x40, 0],
@@ -219,7 +222,9 @@ fn the_radios_selection_preview_and_paint_action() {
         fake.ops(),
         vec![
             EE_SCREENS_SETNX_STRING,
-            EE_SCREENS_SETNX_PAINT_RADIO,
+            EE_SCREENS_SETNX_FONT_HEIGHT,
+            EE_SCREENS_SETNX_RADIO_ON_HEIGHT,
+            EE_SCREENS_SETNX_NEW_RADIO,
             EE_SCREENS_SETNX_LABEL_BG,
             EE_SCREENS_SETNX_LABEL_TRANSPARENT,
             EE_SCREENS_SETNX_LABEL_YELLOW,
@@ -227,16 +232,38 @@ fn the_radios_selection_preview_and_paint_action() {
         ]
     );
     assert_eq!(fake.lines[0].2[0], 20508);
+    assert_eq!(fake.lines[2].1[1], 0x40);
+    let r = &fake.lines[3];
+    assert_eq!((r.1[1], r.2, r.3), (0x40, [SETNX_KIND_PAINT_TYPE, 200, 9, 1], [1.0, 2.0, 125.0, 15.0]));
+    assert_eq!(fake.lines[6].3, SETNX_YELLOW);
     assert_eq!(out, 0x101);
+    // the brush radio: kind, group and brush as its arguments, checked for brush 0, 100 x 20
+    let args = std::cell::RefCell::new(Vec::new());
     let mut fake = Fake::new(|_, _| 0);
-    fake.run(
-        EE_SCREENS_SETN_OP_BRUSH,
-        [&mut out as *mut usize as usize, 0x40, 0x41],
-        &mut [0, 2, 20501, 9],
-        &mut [0.0; 4],
-    );
+    let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+        if op == EE_SCREENS_SETNX_NEW_RADIO {
+            // SAFETY: p2 the arguments block, its count first
+            let n = unsafe { *(p[2] as *const i64) } as usize;
+            *args.borrow_mut() = unsafe { core::slice::from_raw_parts(p[2] as *const i64, n + 1) }.to_vec();
+        }
+        fake.lines.push((op, p, *i, *f));
+        0
+    };
+    let mut slot = 0usize;
+    // SAFETY: the out slot is the test's
+    unsafe {
+        compose(
+            &mut x,
+            EE_SCREENS_SETN_OP_BRUSH,
+            [&mut slot as *mut usize as usize, 0x40, 0x41],
+            &mut [0, 2, 20501, 9],
+            &mut [3.0, 4.0, 0.0, 0.0],
+        )
+    };
     assert!(!fake.ops().contains(&EE_SCREENS_SETNX_LABEL_BG));
-    assert_eq!((fake.lines[0].2[0], fake.lines[1].1[2]), (20501, 0x41));
+    assert_eq!(fake.lines[0].2[0], 20501);
+    assert_eq!((fake.lines[1].2, fake.lines[1].3), ([SETNX_KIND_BRUSH, 2, 9, 1], [3.0, 4.0, 102.0, 23.0]));
+    assert_eq!(*args.borrow(), vec![2, 0x41, 0]);
     // the selection: its value, or -1 on an error
     let mut fake = Fake::new(|_, _| 0);
     assert_eq!(fake.run(EE_SCREENS_SETN_OP_SELECTION, [0x50, 0, 0], &mut [1, 0, 0, 0], &mut [0.0; 4]), Some(4));
@@ -251,7 +278,25 @@ fn the_radios_selection_preview_and_paint_action() {
     });
     fake.run(EE_SCREENS_SETN_OP_SHOW_PREVIEW, [0x50, 0x51, 0], &mut [2, 0, 0, 0], &mut [0.0; 4]);
     assert_eq!(fake.lines[1].1, [0x50, 0x51, 0x100]);
-    assert_eq!(fake.lines[4].3, [0.0, 0.0, 64.0, 32.0]);
+    assert_eq!(
+        fake.ops()[4..],
+        [
+            EE_SCREENS_SETNX_PREVIEW_BITMAP,
+            EE_SCREENS_SETNX_PREVIEW_RECT,
+            EE_SCREENS_SETNX_SCREEN,
+            EE_SCREENS_SETNX_GE_STRETCH,
+        ]
+    );
+    assert_eq!((fake.lines[4].1[1], fake.lines[6].1[1], fake.lines[7].1[0]), (0x51, 0x50, 0x101));
+    // the tint: the colour list p0's line, the preview p1's bitmap, colours 0, i1, i2, i3
+    let mut fake = Fake::new(|_, _| 0);
+    fake.run(EE_SCREENS_SETN_OP_TINT, [0x52, 0x53, 0], &mut [4, 1, 2, 3], &mut [0.0; 4]);
+    assert_eq!(
+        fake.ops(),
+        vec![EE_SCREENS_SETNX_LINE_COLORS, EE_SCREENS_SETNX_PREVIEW_BITMAP, EE_SCREENS_SETNX_GE_COLORS]
+    );
+    assert_eq!((fake.lines[0].1[1], fake.lines[0].2[0], fake.lines[1].1[1]), (0x52, 4, 0x53));
+    assert_eq!((fake.lines[2].1, fake.lines[2].2), ([0x101, 0x100, 0], [0, 1, 2, 3]));
     // the paint action: centred unless i3 < 0; terrain, bulldozer, none
     let mut action = 1usize;
     let mut fake = Fake::new(|_, _| 0);
@@ -392,8 +437,8 @@ fn type_draw_places_the_previews_and_frames_the_selection() {
         _ => 0,
     });
     assert_eq!(r, 6);
-    let stretches: Vec<[f32; 4]> = lines.iter().filter(|l| l.0 == EE_SCREENS_SETNX_T_STRETCH).map(|l| l.3).collect();
-    assert_eq!(stretches, vec![[0.0, 0.0, 32.0, 32.0]; 2]);
+    let stretches = lines.iter().filter(|l| l.0 == EE_SCREENS_SETNX_GE_STRETCH).count();
+    assert_eq!(stretches, 2);
     let points: Vec<(u32, [f32; 2])> = lines
         .iter()
         .filter(|l| l.0 == EE_SCREENS_SETNX_LINE_START || l.0 == EE_SCREENS_SETNX_LINE_END)
@@ -453,4 +498,46 @@ fn set_texture_moves_the_reference() {
     let mut fake = Fake::new(|_, _| 0);
     fake.run(EE_SCREENS_SETN_OP_SET_TEXTURE, [0x50, 0, 0], &mut [2, 0, 0, 0], &mut [0.0; 4]);
     assert_eq!(fake.ops(), vec![EE_SCREENS_SETNX_T_DATA_HAS_TEXTURE, EE_SCREENS_SETNX_T_DATA_SET]);
+}
+
+#[test]
+fn type_free_releases_the_copied_textures_then_its_parts() {
+    let (r, lines) = list_run(EE_SCREENS_SETLB_TYPE_FREE, |op, i| match op {
+        EE_SCREENS_SETNX_T_COPY_COUNT => 3,
+        EE_SCREENS_SETNX_T_COPY_HAS_TEXTURE => (i[0] != 1) as i32,
+        _ => 0,
+    });
+    assert_eq!(r, 0);
+    let ops: Vec<(u32, i32)> = lines.iter().map(|l| (l.0, l.2[0])).collect();
+    assert_eq!(
+        ops,
+        vec![
+            (EE_SCREENS_SETNX_T_COPY_COUNT, 0),
+            (EE_SCREENS_SETNX_T_COPY_HAS_TEXTURE, 0),
+            (EE_SCREENS_SETNX_T_COPY_RELEASE, 0),
+            (EE_SCREENS_SETNX_T_COPY_HAS_TEXTURE, 1),
+            (EE_SCREENS_SETNX_T_COPY_HAS_TEXTURE, 2),
+            (EE_SCREENS_SETNX_T_COPY_RELEASE, 2),
+            (EE_SCREENS_SETNX_T_BITMAP_RELEASE, 0),
+            (EE_SCREENS_SETNX_T_TEXT_DELETE, 0),
+            (EE_SCREENS_SETNX_T_COPY_TEXT_DELETE, 0),
+        ]
+    );
+}
+
+#[test]
+fn terrain_names_compare_without_case() {
+    let names = std::collections::HashMap::from([(1, &b"grass\0"[..]), (2, &b"Desert\0"[..]), (3, &b"GRASS\0"[..])]);
+    let mut current = 0;
+    let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], _: &mut [f32; 4]| -> i32 {
+        match op {
+            EE_SCREENS_SETNX_STRING => current = i[0],
+            EE_SCREENS_SETNX_TEXT => unsafe { *(p[0] as *mut usize) = names[&current].as_ptr() as usize },
+            _ => panic!("op {op}"),
+        }
+        0
+    };
+    assert!(terrain_less(&mut x, 2, 1));
+    assert!(!terrain_less(&mut x, 1, 2));
+    assert!(!terrain_less(&mut x, 1, 3));
 }

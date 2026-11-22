@@ -2735,8 +2735,8 @@ step 298 form 0 99999
   c48 EEUIFSETRBPaintType id=0xca ix=48 g=3d r=115,645,239,664 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Bulldozer' btn fg=none
   c49 UITextLabel id=0xcb ix=49 g=3d r=250,621,449,631 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Terrain Type'
   c50 UITextLabel id=0xce ix=50 g=3d r=455,621,574,631 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Terrain Color'
-  c51 EESEUITerrainTypeLB id=0xcc ix=51 g=3d r=250,636,449,720 m=1 bg=0.4,0,0,0 b=2 h=0 e3=EEUIETerrainTypeChange
-  c52 EESEUITerrainColorLB id=0xcf ix=52 g=3d r=455,636,574,720 m=1 bg=0.4,0,0,0 b=2 h=0 e3=EEUIETerrainColorChange
+  c51 EESEUITerrainTypeLB id=0xcc ix=51 g=3d r=250,636,449,720 m=1 bg=0.4,0,0,0 b=2 h=0 e3=EESEERust
+  c52 EESEUITerrainColorLB id=0xcf ix=52 g=3d r=455,636,574,720 m=1 bg=0.4,0,0,0 b=2 h=0 e3=EESEERust
   c53 EEUIFSETerrainPaint id=0xcd ix=53 g=3d r=0,0,1023,605 m=1 bg=0,0,0,0 b=0 h=0
   c54 UIBitmap id=0xc9 ix=54 g=3d r=584,646,647,709 m=1 bg=0,0,0,0 b=0 h=0
   c55 UITextLabel id=0x3f3 ix=55 g=6d r=260,613,484,628 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Cargo'

@@ -58,6 +58,8 @@ pub const EE_SCREENS_SEW_MOVE_UNIT: u32 = 13;
 /// `EESEADeleteUnit` (a the unit's id, or -1: the player b's selection, all of it when c != 0); posted when made
 /// (the one unit only when it exists).
 pub const EE_SCREENS_SEW_DELETE_UNIT: u32 = 14;
+/// `EESEAChangeWorldPlayerCount` (a: the count): `gMaxPlayers` set when it runs (round 6: the player tab's count).
+pub const EE_SCREENS_SEW_PLAYER_COUNT: u32 = 4000;
 
 // ---- the host's ops (`ee_screenscpp_sew`: `p` a pointer, `i` up to 8 integers, `f` up to 4 floats, in and out)
 
@@ -163,6 +165,8 @@ pub const EE_SCREENS_SEW_OP_BUILD_GATE: u32 = 49;
 pub const EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE: u32 = 50;
 /// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
 pub const EE_SCREENS_SEW_OP_UNIT_PLAYER: u32 = 51;
+/// `gMaxPlayers = i0` (`EESEAChangeWorldPlayerCount::Virtual4`).
+pub const EE_SCREENS_SEW_OP_SET_MAX_PLAYERS: u32 = 4000;
 
 /// The elevation file picked on the map tab, read whole.
 #[derive(Clone, Debug, PartialEq)]
@@ -265,6 +269,9 @@ pub enum SewKind {
         player: i32,
         group: bool,
     },
+    PlayerCount {
+        count: u32,
+    },
 }
 
 /// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
@@ -310,6 +317,7 @@ impl SewAction {
             EE_SCREENS_SEW_PLACE_UNIT => SewKind::PlaceUnit(SepPlace::default()),
             EE_SCREENS_SEW_MOVE_UNIT => SewKind::MoveUnit(SepMove::default()),
             EE_SCREENS_SEW_DELETE_UNIT => SewKind::DeleteUnit { id: a as u32, player: b, group: c != 0 },
+            EE_SCREENS_SEW_PLAYER_COUNT => SewKind::PlayerCount { count: a as u32 },
             _ => return None,
         };
         Some(SewAction { owner, kind })
@@ -467,6 +475,9 @@ impl SewAction {
                     SeuDelete::Selection { group: *group }
                 };
                 h.delete(what);
+            }
+            SewKind::PlayerCount { count } => {
+                op(h, EE_SCREENS_SEW_OP_SET_MAX_PLAYERS, &[*count as i32]);
             }
         }
     }
@@ -817,6 +828,15 @@ mod tests {
         let mut action = SewAction::new(h, 0x100, kind, object, a, b, c, d).unwrap();
         action.begin(h);
         action
+    }
+
+    #[test]
+    fn player_count_sets_the_world_count_when_it_runs() {
+        let mut h = Rec::new();
+        let mut a = make(&mut h, EE_SCREENS_SEW_PLAYER_COUNT, 0, 5, 0, 0, 0);
+        assert!(h.log.is_empty());
+        a.run(&mut h);
+        assert_eq!(h.log, [format!("{EE_SCREENS_SEW_OP_SET_MAX_PLAYERS} p0 [5, 0, 0, 0, 0] [0.0, 0.0, 0.0]")]);
     }
 
     #[test]
