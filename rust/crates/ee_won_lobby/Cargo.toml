@@ -9,6 +9,7 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
+ee_base = { path = "../ee_base" }
 ee_won_gui = { path = "../ee_won_gui" }
 ee_won_net = { path = "../ee_won_net" }
 

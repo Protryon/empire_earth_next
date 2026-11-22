@@ -235,48 +235,19 @@ float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
 bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
                               GE3DPoint& inLocation, GE3DPoint& outLocation)
 {
-    std::vector<EETileCoordinate> theTiles;
-    GETransformation theTransformation;
-    GE3DPoint thePosition;
-    bool theAllowWater = (inCargo->mUnitClass->mDomains & kMovementLand) == 0;
-    bool theResult;
-    if (inCargo->mStats->mMaxVelocity <= 0.0f) {
-        ee_units_uu_tiles_around((uint64_t)(uintptr_t)inTransport, (uint64_t)(uintptr_t)inCargo, 1, 0, 0, &theTiles);
-        theResult = ee_units_uu_pick_tile_near(&theTiles, (uint64_t)(uintptr_t)inTransport, (uint64_t)(uintptr_t)inCargo, 0, (float(*)[3])&outLocation.mX);
-    } else {
-        inTransport->GetPosition(thePosition);
-        long theSize = inCargo->mUnitClass->mTileSize;
-        unsigned long theY = UMFloorUnsigned(inLocation.GetY());
-        unsigned long theX = UMFloorUnsigned(inLocation.GetX());
-        if (ee_units_uu_find_placement((const float(*)[3])&thePosition.mX, (uint64_t)(uintptr_t)inTransport, 0, theX, theY, theSize, 1, false, theAllowWater, false, true, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
-            theResult = true;
-            outLocation = theTransformation.GetPosition();
-        } else {
-            theResult = false;
-            outLocation = inLocation;
-        }
-    }
-    return theResult;
+    return ee_units_ucx_boarding(this, inTransport, inCargo, (const float(*)[3])&inLocation.mX, (float(*)[3])&outLocation.mX);   // ucx_transports.rs
 }
 
 // Sets up a new transport as any unit, then gives it its class's resource type and amount
 void EEUnitClass::TransportUnitCreated(EEComplexUnit* inUnit)
 {
-    this->BaseUnitCreated(inUnit);
-    inUnit->SetResourceType(this->mResourceType);
-    if (inUnit->mResourceType != kResourceNone)
-        inUnit->SetResourceAmount(this->mResourceAmount);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // Unloads the transport's cargo at a tile (siege towers with the tower flag set)
 void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
-    bool theFlag;
-    if (this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower)
-        theFlag = true;
-    else
-        theFlag = false;
-    inTransport->UnloadCargoAtTile(inX, inY, theFlag);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, this, inTransport, 0, inX, inY);   // ucx_transports.rs
 }
 
 // ---- EEUCLandTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -288,18 +259,7 @@ void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long i
 // Unloads all cargo at once when the transport is badly hurt
 void EEUnitClass::LandTransportBadlyHurt(EEUnit* inUnit)
 {
-    std::vector<EEComplexUnit*> theCargo;
-    EEComplexUnit* theTransport = inUnit->mComplexUnit;
-    EEComplexUnit* theUnit;
-    unsigned long theCount = theTransport->GetNumCargoUnits();
-    for (unsigned long i = 0; i < theCount; i++) {
-        theUnit = theTransport->GetCargo(i);
-        if (theUnit != NULL)
-            theCargo.push_back(theUnit);
-    }
-    unsigned long theSize = theCargo.size();
-    for (unsigned long j = 0; j < theSize; j++)
-        theTransport->UnloadCargoNow(theCargo[j]);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_BADLY_HURT, this, NULL, EEObj(inUnit), 0, 0);   // ucx_transports.rs
 }
 
 // ---- EEUCHelicopterTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -315,31 +275,13 @@ void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
 void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEUnitClass* theClass = inClass;
-    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
-                          inUnit->mPhysicalModel.GetLocation().GetZ());
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    GE3DPoint theTarget;
-    theGoal->GetDestination(inUnit, theTarget);
-    if (theGoal->mKind == kGoalExplore)
-        theTarget.SetZ(theClass->mCruiseAltitude);
-    EEFindLandingPoint(inUnit, &theTarget);
-    theClass->PathToward(inUnit, thePosition, theTarget, false);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // Sets up a new transport helicopter as a transport, then lifts it to its flying height
 void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    this->TransportUnitCreated(inUnit);
-    thePosition.SetX(theTransformation.GetX());
-    thePosition.SetY(theTransformation.GetY());
-    thePosition.SetZ(theTransformation.GetZ());
-    float theZ = this->GetHeightAt(inUnit, thePosition);
-    theTransformation.SetZ(theZ);
-    inUnit->SetTransformation(theTransformation, true);
-    inUnit->SetHeight(theZ);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // ---- EEUCNavalTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval
@@ -358,30 +300,19 @@ void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
 // Sets up a new space transport at its flying height, with the class's resource type and amount
 void EEUnitClass::SpaceTransportUnitCreated(EEComplexUnit* inUnit)
 {
-    this->SpaceshipVirtual78(inUnit);
-    inUnit->SetResourceType(this->mResourceType);
-    if (inUnit->mResourceType != kResourceNone)
-        inUnit->SetResourceAmount(this->mResourceAmount);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // Adds the transport to its own tile only
 void EEUnitClass::SpaceTransportAddToTile(EEUnit* inUnit)
 {
-    EEMap* theMap = ::gWorld.mMap;
-    EEUnit* theUnit = inUnit->mComplexUnit;
-    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
-    if (theTile != NULL)
-        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_ADD, this, NULL, EEObj(inUnit), 0, 0);   // ucx_transports.rs
 }
 
 // Removes the transport from its own tile only
 void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
 {
-    EEMap* theMap = ::gWorld.mMap;
-    EEUnit* theUnit = inUnit->mComplexUnit;
-    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
-    if (theTile != NULL)
-        theTile->RemoveUnit(theUnit);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_REMOVE, this, NULL, EEObj(inUnit), 0, 0);   // ucx_transports.rs
 }
 
 void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
@@ -393,16 +324,7 @@ void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, flo
 
 void EEUnitClass::SpaceshipVirtual78(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    this->BaseUnitCreated(inUnit);
-    thePosition.SetX(theTransformation.GetX());
-    thePosition.SetY(theTransformation.GetY());
-    thePosition.SetZ(theTransformation.GetZ());
-    float theZ = this->GetHeightAt(inUnit, thePosition);
-    theTransformation.SetZ(theZ);
-    inUnit->SetTransformation(theTransformation, true);
-    inUnit->SetHeight(theZ);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACESHIP_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // ---- EEUCFortress.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The fortress (a land
@@ -416,40 +338,72 @@ unsigned short gFortressUnloadCost = 100;
 // Returns whether the player's population has room for the unit's cost
 bool EEUnitClass::FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
-    EEPlayer* thePlayer = inUnit->mPlayer;
-    EEUnitClass* theClass = inCargo->mUnitClass;
-    bool theResult = thePlayer->GetTotalPopulation(false, false) + theClass->GetPopulationCost() <= thePlayer->GetPopulationLimit(0);
-    return theResult;
+    return ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_HAS_ROOM, this, inUnit, EEObj(inCargo), 0, 0) != 0;   // ucx_transports.rs
 }
 
 // Sets up a new fortress as built, with a 1 s regeneration timer
 void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
 {
-    inUnit->SetBuilt(0, 1, 1);
-    this->BaseUnitCreated(inUnit);
-    inUnit->SetRegenerationTimer(1000);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // Unloads at a tile; a teleporter needs 100 faith and spends it in proportion to the cargo unloaded, else warns
 // its owner (event 0x274e)
 void EEUnitClass::FortressUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
-    if (inTransport->mUnitClass->mUnitType == kUnitTypeTeleporter) {
-        if (inTransport->GetPower() >= gFortressUnloadCost) {
-            unsigned long theBefore = inTransport->mUnitClass->mTransportCapacity - inTransport->mCargoRoom;
-            this->TransportUnloadAt(inTransport, inX, inY);
-            long theCapacity = inTransport->mUnitClass->mTransportCapacity;
-            unsigned long theAfter = theCapacity - inTransport->mCargoRoom;
-            if (theBefore != theAfter)
-            {
-                float theFraction = (float)(theBefore - theAfter) / theCapacity;
-                inTransport->SetPower(inTransport->GetPower() - UMFloatToLong(theFraction * gFortressUnloadCost));
-            }
-        } else {
-            U2DPoint<long> theTile(inX, inY);
-            inTransport->mPlayer->mEvents.AddEvent(theTile, 2, inTransport->GetPlayer(), 0x274e, false);
-        }
-    } else
-        this->TransportUnloadAt(inTransport, inX, inY);
+    ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_UNLOAD_AT, this, inTransport, 0, inX, inY);   // ucx_transports.rs
 }
 
+// the boarding location's tiles (ucx_transports.rs)
+static std::vector<EETileCoordinate> sUcxTiles;
+
+template <class T> static T* EEUcxObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// The C++ of the transports' Rust bodies (ee_units ucx_transports.rs; EE_UNITS_UCX_*): one statement of the original
+// bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
+extern "C" int64_t ee_units_ucx_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
+                                     float (*ioF)[4])
+{
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EEUcxObject<EEComplexUnit>(inA);
+    EEUnit* theSimple = EEUcxObject<EEUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_UCX_DOMAINS_OF: return theOther->mUnitClass->mDomains;
+    case EE_UNITS_UCX_MAX_VELOCITY_OF: f[0] = theOther->mStats->mMaxVelocity; return 0;
+    case EE_UNITS_UCX_TILES_CLEAR: sUcxTiles.clear(); return 0;
+    case EE_UNITS_UCX_TILES_AROUND: ee_units_uu_tiles_around((uint64_t)(uintptr_t)theUnit, inA, 1, 0, 0, &sUcxTiles); return 0;
+    case EE_UNITS_UCX_PICK_TILE_NEAR: return ee_units_uu_pick_tile_near(&sUcxTiles, (uint64_t)(uintptr_t)theUnit, inA, 0, EEUcxObject<float[3]>((uint64_t)inB));
+    case EE_UNITS_UCX_TILE_SIZE_OF: return theOther->mUnitClass->mTileSize;
+    case EE_UNITS_UCX_SET_POINT: *EEUcxObject<GE3DPoint>((uint64_t)inB) = GE3DPoint(f[0], f[1], f[2]); return 0;
+    case EE_UNITS_UCX_SET_RESOURCE_TYPE: theSimple->SetResourceType(theClass->mResourceType); return 0;
+    case EE_UNITS_UCX_RESOURCE_TYPE: return theSimple->mResourceType;
+    case EE_UNITS_UCX_SET_RESOURCE_AMOUNT: theSimple->SetResourceAmount(theClass->mResourceAmount); return 0;
+    case EE_UNITS_UCX_UNLOAD_AT_TILE: theUnit->UnloadCargoAtTile((long)inB, (long)inC, inA != 0); return 0;
+    case EE_UNITS_UCX_COMPLEX_FIELD_OF: return (uint64_t)(uintptr_t)theSimple->mComplexUnit;
+    case EE_UNITS_UCX_CARGO_COUNT_OF: return theOther->GetNumCargoUnits();
+    case EE_UNITS_UCX_CARGO_OF: return (uint64_t)(uintptr_t)theOther->GetCargo((unsigned long)inB);
+    case EE_UNITS_UCX_UNLOAD_NOW_OF: theOther->UnloadCargoNow(EEUcxObject<EEComplexUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCX_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UCX_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcxObject<GETransformation>(inA), true); return 0;
+    case EE_UNITS_UCX_TILE_X_OF: return theSimple->mTileX;
+    case EE_UNITS_UCX_TILE_Y_OF: return theSimple->mTileY;
+    case EE_UNITS_UCX_TILE_ADD: EEUcxObject<EEMapTile>(inA)->mUnits = EEUcxObject<EEMapTile>(inA)->AddUnit(EEUcxObject<EEUnit>((uint64_t)inB), EEUcxObject<EEMapTile>(inA)->mUnits); return 0;
+    case EE_UNITS_UCX_TILE_REMOVE: EEUcxObject<EEMapTile>(inA)->RemoveUnit(EEUcxObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCX_TOTAL_POPULATION: return theUnit->mPlayer->GetTotalPopulation(false, false);
+    case EE_UNITS_UCX_SET_BUILT: theUnit->SetBuilt(0, 1, 1); return 0;
+    case EE_UNITS_UCX_TYPE_OF: return theOther->mUnitClass->mUnitType;
+    case EE_UNITS_UCX_POWER: return theUnit->GetPower();
+    case EE_UNITS_UCX_UNLOAD_COST: return gFortressUnloadCost;
+    case EE_UNITS_UCX_SET_POWER: theUnit->SetPower((long)inB); return 0;
+    case EE_UNITS_UCX_UNLOAD_EVENT: theUnit->mPlayer->mEvents.AddEvent(U2DPoint<long>((long)inB, (long)inC), 2, theUnit->GetPlayer(), 0x274e, false); return 0;
+    case EE_UNITS_UCX_DESTINATION: EEUcxObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCX_CRUISE_ALTITUDE: f[0] = theClass->mCruiseAltitude; return 0;
+    case EE_UNITS_UCX_TRANSPORT_CAPACITY: return theUnit->mUnitClass->mTransportCapacity;
+    default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
+    }
+}

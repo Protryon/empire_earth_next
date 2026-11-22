@@ -1178,49 +1178,33 @@ extern "C" void ee_screenscpp_put_settings(const EeScreensSettingsRecord* inReco
 #undef EE_SCREENS_PUT
 }
 
-// FillModes' modes, unsorted (the first screen of index inScreen in the first rasterizer of index inRasterizer that
-// has it): up to inCapacity into outModes; their count
-extern "C" size_t ee_screenscpp_modes(uint32_t inRasterizer, uint32_t inScreen, EeScreensVideoMode* outModes,
-                                      size_t inCapacity)
-{
-    for (size_t r = 0; r < gDisplayRasterizers.size(); r++) {
-        if (gDisplayRasterizers[r].mIndex != inRasterizer)
-            continue;
-        const std::vector<EEDisplayScreen>& theScreens = gDisplayRasterizers[r].mScreens;
-        for (size_t s = 0; s < theScreens.size(); s++) {
-            if (theScreens[s].mIndex != inScreen)
-                continue;
-            const std::vector<EEDisplayMode>& theModes = theScreens[s].mModes;
-            for (size_t m = 0; m < theModes.size() && m < inCapacity; m++) {
-                outModes[m].width = theModes[m].mMode.mWidth;
-                outModes[m].height = theModes[m].mMode.mHeight;
-                outModes[m].refresh_rate = theModes[m].mMode.mRefreshRate;
-                outModes[m].bit_count = theModes[m].mMode.mBitCount;
-            }
-            return theModes.size();
-        }
-    }
-    return 0;
-}
-
-// the current mode of gRasterizer's screen inScreen
-extern "C" void ee_screenscpp_current_mode(uint32_t inScreen, EeScreensVideoMode* outMode)
-{
-    const GEVideoMode& theMode = gRasterizer->GetScreen(inScreen)->GetCurrentMode();
-    outMode->width = theMode.mWidth;
-    outMode->height = theMode.mHeight;
-    outMode->refresh_rate = theMode.mRefreshRate;
-    outMode->bit_count = theMode.mBitCount;
-}
-
-// GXGameSize
-extern "C" void ee_screenscpp_game_size(uint32_t inPercent, bool inWindowed, uint32_t* outWidth, uint32_t* outHeight)
-{
-    unsigned long theWidth = 0, theHeight = 0;
-    GXGameSize(inPercent, inWindowed, &theWidth, &theHeight);
-    *outWidth = theWidth;
-    *outHeight = theHeight;
-}
+// the settings form's display questions: display_modes.rs over these (UI lane round 12)
+extern "C" uintptr_t ee_screenscpp_disp_rasterizer_count() { return gDisplayRasterizers.size(); }
+extern "C" uint64_t ee_screenscpp_disp_rasterizer_index(uintptr_t inR)
+{ return (uint64_t)gDisplayRasterizers[inR].mIndex; }
+extern "C" uintptr_t ee_screenscpp_disp_screen_count(uintptr_t inR) { return gDisplayRasterizers[inR].mScreens.size(); }
+extern "C" uint64_t ee_screenscpp_disp_screen_index(uintptr_t inR, uintptr_t inS)
+{ return (uint64_t)gDisplayRasterizers[inR].mScreens[inS].mIndex; }
+extern "C" uintptr_t ee_screenscpp_disp_mode_count(uintptr_t inR, uintptr_t inS)
+{ return gDisplayRasterizers[inR].mScreens[inS].mModes.size(); }
+extern "C" uint64_t ee_screenscpp_disp_mode_width(uintptr_t inR, uintptr_t inS, uintptr_t inM)
+{ return (uint64_t)gDisplayRasterizers[inR].mScreens[inS].mModes[inM].mMode.mWidth; }
+extern "C" uint64_t ee_screenscpp_disp_mode_height(uintptr_t inR, uintptr_t inS, uintptr_t inM)
+{ return (uint64_t)gDisplayRasterizers[inR].mScreens[inS].mModes[inM].mMode.mHeight; }
+extern "C" uint64_t ee_screenscpp_disp_mode_refresh(uintptr_t inR, uintptr_t inS, uintptr_t inM)
+{ return (uint64_t)gDisplayRasterizers[inR].mScreens[inS].mModes[inM].mMode.mRefreshRate; }
+extern "C" uint64_t ee_screenscpp_disp_mode_bits(uintptr_t inR, uintptr_t inS, uintptr_t inM)
+{ return (uint64_t)gDisplayRasterizers[inR].mScreens[inS].mModes[inM].mMode.mBitCount; }
+extern "C" uint64_t ee_screenscpp_disp_current_width(uint32_t inScreen)
+{ return (uint64_t)gRasterizer->GetScreen(inScreen)->GetCurrentMode().mWidth; }
+extern "C" uint64_t ee_screenscpp_disp_current_height(uint32_t inScreen)
+{ return (uint64_t)gRasterizer->GetScreen(inScreen)->GetCurrentMode().mHeight; }
+extern "C" uint64_t ee_screenscpp_disp_current_refresh(uint32_t inScreen)
+{ return (uint64_t)gRasterizer->GetScreen(inScreen)->GetCurrentMode().mRefreshRate; }
+extern "C" uint64_t ee_screenscpp_disp_current_bits(uint32_t inScreen)
+{ return (uint64_t)gRasterizer->GetScreen(inScreen)->GetCurrentMode().mBitCount; }
+extern "C" void ee_screenscpp_disp_game_size(uint32_t inPercent, bool inWindowed, unsigned long* inWidth, unsigned long* inHeight)
+{ GXGameSize(inPercent, inWindowed, inWidth, inHeight); }
 
 // ---- the lobby's records (lobby_form.rs)
 

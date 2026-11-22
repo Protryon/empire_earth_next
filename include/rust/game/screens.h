@@ -13598,6 +13598,27 @@ constexpr static const uint32_t EE_SCREENS_SB_DO_HELP = 3;
 /// `kResourceGold` (`mResourceCaps`' index).
 constexpr static const int64_t EE_SCREENS_SB_RESOURCE_GOLD = 5;
 
+/// The manager's unit passes (`EEAEPassFunctor`'s pass): the original's functors, by their RTTI names.
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_APPLY_GENERATED = 0;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_SET_AFFECTED = 1;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_CLEAR = 2;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_REBUILD = 3;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_REMOVE_REDUNDANT = 4;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_GENERATED = 5;
+
+constexpr static const uint32_t EE_SCREENS_AEM_PASS_UPDATE_AFFECTED = 6;
+
+/// The tables a load fills: the civilization builder's categories (with the powers' extra cost), the premade
+/// civilizations; any other `which` the powers.
+constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_TABLES = 0;
+
+constexpr static const uint32_t EE_SCREENS_CIVM_LOAD_PREMADE = 1;
+
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
 
@@ -15558,21 +15579,9 @@ long ee_screens_chat_log_load(void *file);
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
 
-/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
-/// `EeTechCivReply*`; `civ_manager_calls.rs`).
-void ee_screens_civ_host(const void *call,
-                         void *reply);
-
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
-
-/// The area effects' host (`EEAEHost::Call`: `effect` the `EEAreaEffect*`, `target` the `EEComplexUnit*`, either
-/// NULL; `call` an `EeAreaEffectCall*`, `reply` an `EeAreaEffectReply*`; `area_effect_host.rs`).
-void ee_screens_ae_host(void *effect,
-                        void *target,
-                        const void *call,
-                        void *reply);
 
 /// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
 /// the `EEComplexUnit*`; `area_effect_manager.rs`).
@@ -17186,6 +17195,32 @@ uint32_t ee_screens_scenario_intro_event_for(unsigned long id);
 /// The settings form's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_settings_event_for(unsigned long id);
 
+void ee_screens_mfb_create_group(size_t form, uint32_t index);
+
+bool ee_screens_mfb_in_game_view(size_t form, float x, float y);
+
+void ee_screens_mfb_destroy(size_t form);
+
+void ee_screens_upb_construct(size_t button);
+
+void ee_screens_upb_button_down(size_t button);
+
+int64_t ee_screens_upb_copy_data(size_t button);
+
+int64_t ee_screens_upb_draw_text(size_t button);
+
+void ee_screens_upb_mouse_over(size_t button);
+
+int64_t ee_screens_upb_right_down(size_t button);
+
+void ee_screens_upb_set_dirty(size_t button, bool dirty);
+
+void ee_screens_cbb_construct(size_t table, size_t list, bool tabable);
+
+void ee_screens_cbb_append(size_t list, size_t lines);
+
+int64_t ee_screens_cbb_copy_data(size_t list);
+
 /// A shell's constructor: the kind `kind` of the control `ctl`, made from `args[0..n]`; NULL for an unknown kind.
 ///
 /// # Safety
@@ -17267,6 +17302,162 @@ int64_t ee_screens_status_button_op(void *call,
 /// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
+
+void ee_screens_ae_construct(size_t effect, size_t template_);
+
+void ee_screens_ae_destroy(size_t effect);
+
+/// `AppliedTo(unit)` (the shim list's `aem_applied_to`).
+void ee_screens_ae_applied_to(size_t effect, size_t unit);
+
+void ee_screens_ae_removed_from(size_t effect, size_t unit);
+
+/// `Covers(player, unit, point)` (`aem_covers`).
+bool ee_screens_ae_covers(size_t effect, uint64_t player, size_t unit, float x, float y);
+
+/// `GetStrength` (`ael_strength`).
+int64_t ee_screens_ae_strength(size_t effect);
+
+int64_t ee_screens_ae_level(size_t effect);
+
+float ee_screens_ae_radius(size_t effect);
+
+float ee_screens_ae_scale(size_t effect);
+
+/// `IsImmunity` (`aem_is_immunity`).
+bool ee_screens_ae_is_immunity(size_t effect);
+
+/// `Modify(kind, *value, *out)` (`ael_modify`: `value` and `out` the caller's longs, maybe the same).
+bool ee_screens_ae_modify(size_t effect,
+                          int64_t kind,
+                          size_t value,
+                          size_t out);
+
+/// `MarkDirty` (`ael_mark_dirty`).
+void ee_screens_ae_mark_dirty(size_t effect);
+
+/// `Recount(arg)` (`ael_recount`; the argument unread).
+void ee_screens_ae_recount(size_t effect, float _value);
+
+/// `Tick(unit, elapsed)` (`ael_tick`).
+void ee_screens_ae_tick(size_t effect, size_t unit, float elapsed);
+
+/// `ShowOn(unit)` (`ael_show_on`).
+void ee_screens_ae_show_on(size_t effect, size_t unit);
+
+void ee_screens_ae_set_unit(size_t effect, size_t unit);
+
+/// `IsInRange(point)` (`aem_in_range`).
+bool ee_screens_ae_in_range(size_t effect, float x, float y);
+
+/// The effect's template's `AffectsPlayer(player, (long)(unsigned long)other)` (`aem_affects_player`).
+bool ee_screens_ae_affects_player(size_t effect,
+                                  int64_t player,
+                                  uint64_t other);
+
+/// The same reversed (`aem_affects_player_reversed`).
+bool ee_screens_ae_affects_player_reversed(size_t effect, int64_t player, uint64_t other);
+
+void ee_screens_aet_construct(size_t template_);
+
+void ee_screens_aet_destroy(size_t template_);
+
+/// `AffectsPlayer(player, other)` / `AffectsPlayerReversed` (`reversed`) of a template.
+bool ee_screens_aet_affects(size_t template_, int32_t player, int32_t other, bool reversed);
+
+/// `IsWithin(center, point, scale, unit)` of a template.
+bool ee_screens_aet_is_within(size_t template_,
+                              float center_x,
+                              float center_y,
+                              float point_x,
+                              float point_y,
+                              float scale,
+                              size_t unit);
+
+/// `Init(data)` of a template (`data` an `EEAreaEffectData*`, the record's layout).
+bool ee_screens_aet_init(size_t template_, size_t data);
+
+/// `EEAEPassFunctor::Apply(unit)`: one unit of a manager pass.
+void ee_screens_aem_pass(uint32_t which,
+                         size_t arg,
+                         uint64_t player,
+                         float elapsed,
+                         float x,
+                         float y,
+                         size_t unit);
+
+void ee_screens_aem_tick(size_t manager, float elapsed);
+
+void ee_screens_aem_clear(size_t manager);
+
+void ee_screens_aem_clear_effects(size_t manager);
+
+size_t ee_screens_aem_create(size_t manager, uint64_t index, size_t unit);
+
+/// `LoadTemplateMedia(index)` / `UnloadTemplateMedia(index)` (`load` false).
+void ee_screens_aem_template_media(size_t manager, uint64_t index, bool load);
+
+/// `EEUnitAreaEffectList::KeepStrongest`.
+void ee_screens_ael_keep_strongest(size_t list);
+
+/// TEST ONLY: the capture's record after a tick (`EEAECaptureTick`'s target).
+void ee_screens_ae_capture_tick(float elapsed);
+
+/// CVAP's first half: its state (null when the capture is off).
+void *ee_screens_civc_apply_begin(uint32_t upgrade, long player);
+
+/// CVAP's second half (nothing for a null state).
+void ee_screens_civc_apply_end(void *state, bool result);
+
+/// CVLD (the C strings and the upgrades live for the call).
+void ee_screens_civc_load(const char *name,
+                          const char *directory,
+                          long result,
+                          const char *civ_name,
+                          const uint32_t *upgrades,
+                          size_t count);
+
+/// CVAF (`player` the `EEPlayer*`).
+void ee_screens_civc_apply_file(const char *name, size_t player, long result);
+
+/// `Load` (0), `LoadPremadeCivilizations` (1), `EECivPowersManager::Load` (2) of `file` (an `FSFile*`).
+long ee_screens_civm_load(size_t file,
+                          uint32_t which);
+
+/// `GetCivilizations(out)` (`all`) / `GetCivilizationsOfType(out, era)`.
+void ee_screens_civm_civilizations(size_t out, int32_t era, bool all);
+
+bool ee_screens_civm_apply_upgrade(uint32_t upgrade, long player);
+
+/// `EECivPowersManager::HasPower(player, id)` (`player` an `EEPlayer*`).
+bool ee_screens_civm_has_power(size_t player, long id);
+
+/// `SplitAttribute(upgrade, category, index)`: each out written when given.
+void ee_screens_civm_split(uint32_t upgrade, unsigned long *category, unsigned long *index);
+
+/// `MatchesPremadeCivilization(file, name, upgrades, name_id)` (`characters` the name's `GetLength()`).
+bool ee_screens_civm_matches(const char *file,
+                             const char *name,
+                             uint32_t characters,
+                             const uint32_t *upgrades,
+                             size_t count,
+                             long *name_id);
+
+/// `GetCategory(category, out)`: the record in place, `out` left alone without one.
+bool ee_screens_civm_category(uint32_t category, void **out);
+
+/// `GetCategoryNameID(category, out)`.
+bool ee_screens_civm_category_name_id(uint32_t category, long *out);
+
+/// `ToLegacy(upgrade, out)`.
+bool ee_screens_civm_to_legacy(uint32_t upgrade, unsigned long *out);
+
+/// `EELoadCivilization(name, directory, out name, out upgrades)` (`civ_load.rs`; the `UString*`s, the
+/// `UWideString*` and the `std::vector<EECivUpgrade>*`) -> its result.
+long ee_screens_civl_load(size_t name,
+                          size_t directory,
+                          size_t out_name,
+                          size_t out_upgrades);
 
 /// `EEUISCIFormManager::Clear`.
 void ee_screens_sci_clear(size_t m);

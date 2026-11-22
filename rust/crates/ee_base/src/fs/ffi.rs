@@ -1,7 +1,7 @@
 //! The C ABI of `FSMemoryFile`, `FSChunk` and `FSArchive` (`include/rust/ee_rust.h`, called by the facades in
 //! `src/Low-Level Engine/File System`). Plain forwards: no logic beyond turning pointers into references.
 
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use std::slice;
 
 use crate::fs::archive::{Archive, FatEntry};
@@ -126,6 +126,53 @@ pub unsafe extern "C" fn ee_fs_mem_length(file: *const EeFsMemFile) -> u32 {
     unsafe { (*file).length() as u32 }
 }
 
+/// `GetLength(outLength)`: always `kErrorOK`.
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_get_length(file: *const EeFsMemFile, out: *mut c_ulong) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { *out = (*file).length() as c_ulong };
+    status::OK
+}
+
+/// `GetPosition(outPosition)`: always `kErrorOK` (-1 closed or empty).
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_get_position(file: *const EeFsMemFile, out: *mut c_long) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { *out = (*file).position() as i32 as c_long };
+    status::OK
+}
+
+/// `Compress(level, outLength)` as FSMemoryFile.h has it: a PKWARE implode error (0x15) is a failed verification at
+/// `source` (the C++ header's `__FILE__`), line 140.
+///
+/// # Safety
+/// `file` is live, `out_length` valid for a write, `source` a zero-terminated name.
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
+pub unsafe extern "C" fn ee_fs_mem_compress_checked(
+    file: *mut EeFsMemFile,
+    level: c_ulong,
+    out_length: *mut c_ulong,
+    source: *const c_char,
+) -> i32 {
+    let mut length = 0u32;
+    // SAFETY: the function's contract
+    let result = unsafe { ee_fs_mem_compress(file, level as u32, &mut length) };
+    // SAFETY: the function's contract
+    unsafe { *out_length = length as c_ulong };
+    if result == 0x15 {
+        // SAFETY: the C++'s own arguments
+        unsafe { crate::error::ee_error_verify(source, 140, c"NULL == \"PKWARE implode() error!\"".as_ptr()) };
+    }
+    result
+}
+
 /// `GetPosition`.
 ///
 /// # Safety
@@ -165,7 +212,7 @@ pub unsafe extern "C" fn ee_fs_mem_read(
     file: *mut EeFsMemFile,
     out: *mut u8,
     length: usize,
-    out_read: *mut u32,
+    out_read: *mut c_ulong,
 ) -> i32 {
     let mut empty = [];
     let slice = if length == 0 {
@@ -178,7 +225,7 @@ pub unsafe extern "C" fn ee_fs_mem_read(
     let (result, read) = unsafe { (*file).read(slice) };
     if let Some(read) = read {
         // SAFETY: the function's contract
-        unsafe { *out_read = read };
+        unsafe { *out_read = read as c_ulong };
     }
     result
 }
@@ -192,12 +239,12 @@ pub unsafe extern "C" fn ee_fs_mem_write(
     file: *mut EeFsMemFile,
     data: *const u8,
     length: usize,
-    out_written: *mut u32,
+    out_written: *mut c_ulong,
 ) -> i32 {
     // SAFETY: the function's contract
     let (result, written) = unsafe { (*file).write(bytes(data, length)) };
     // SAFETY: the function's contract
-    unsafe { *out_written = written };
+    unsafe { *out_written = written as c_ulong };
     result
 }
 
@@ -668,6 +715,7 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
+    #[allow(clippy::unnecessary_cast)]
     fn mem_round_trip_through_the_c_abi() {
         let file = ee_fs_mem_new(8, true, 1);
         unsafe {
@@ -684,6 +732,10 @@ mod tests {
             let mut untouched = 77;
             assert_eq!(ee_fs_mem_read(file, out.as_mut_ptr(), 2, &mut untouched), status::NOT_OPEN);
             assert_eq!(untouched, 77);
+            let (mut length, mut position): (c_ulong, c_long) = (9, 9);
+            assert_eq!(ee_fs_mem_get_length(file, &mut length), status::OK);
+            assert_eq!(ee_fs_mem_get_position(file, &mut position), status::OK);
+            assert_eq!((length as u32, position as i32), (ee_fs_mem_length(file), ee_fs_mem_position(file)));
             ee_fs_mem_free(file);
         }
     }

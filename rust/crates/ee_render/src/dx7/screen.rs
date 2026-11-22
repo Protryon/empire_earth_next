@@ -75,7 +75,7 @@ const GXPF_RGB: u32 = 0x40;
 const GXPF_ZBUFFER: u32 = 0x400;
 const FOURCC_DXT1: u32 = u32::from_le_bytes(*b"DXT1");
 
-/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
+/// `GEVideoMode` (lle/GEScreen.h's name for it).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[allow(non_snake_case)]
