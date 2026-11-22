@@ -319,6 +319,23 @@ unsigned long ee_ge_pa_size(const EeGePolygonArray *p, bool size_of);
 /// `p` is live; `polygon` one of its triangles.
 unsigned long ee_ge_pa_index(const EeGePolygonArray *p, uint32_t polygon, uint32_t corner);
 
+/// `GEVertexArray::GetOpacity(index)`: the vertex's opacity (`ee_ge_va_get`'s).
+///
+/// # Safety
+/// As `ee_ge_va_get`.
+float ee_ge_va_opacity(const EeGeVertexArray *a, uint32_t index);
+
+/// `GEPolygonArray::SetVertexIndices(polygon, first, second, third)`: the three corners in turn
+/// (`ee_ge_pa_set_index`'s).
+///
+/// # Safety
+/// As `ee_ge_pa_set_index`.
+void ee_ge_pa_set_indices(EeGePolygonArray *p,
+                          uint32_t polygon,
+                          unsigned long first,
+                          unsigned long second,
+                          unsigned long third);
+
 /// `SetVertexIndex{corner + 1}(polygon, index)` (16 bits kept).
 ///
 /// # Safety
