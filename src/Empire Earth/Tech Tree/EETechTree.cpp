@@ -37,25 +37,6 @@ int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io)
     return (int32_t)ee_gamecpp_tech_host(inTree, inOp, io);
 }
 
-// The saved game's walks: the file's long and bool (EESavePrimitive), the rest EETechHost's
-struct EETechSaveContext {
-    EETechTree* mTree;
-    FSFile* mFile;
-};
-
-static int32_t EETechSaveHost(void* inContext, int32_t inOp, EeTechHostIo* io)
-{
-    EETechSaveContext& theContext = *static_cast<EETechSaveContext*>(inContext);
-    static const int32_t kOps[4] = {EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_READ_BOOL,
-                                    EE_UNITS_PLAYER_SAVE_WRITE_LONG, EE_UNITS_PLAYER_SAVE_WRITE_BOOL};
-    if (inOp < EE_TECH_HOST_READ_LONG || inOp > EE_TECH_HOST_WRITE_BOOL)
-        return EETechHost(theContext.mTree, inOp, io);
-    EeUnitsPlayerSaveIo theIo = {io->v[0], 0.0f, (uint8_t)(io->v[0] != 0 ? 1 : 0)};
-    int32_t theResult = EESavePrimitive(*theContext.mFile, kOps[inOp - EE_TECH_HOST_READ_LONG], &theIo);
-    io->v[0] = inOp == EE_TECH_HOST_READ_BOOL ? theIo.b : (int32_t)theIo.i;
-    return theResult;
-}
-
 // Returns the owner's tech tree node of the technology that makes the unit's class (was EECPEngineHelpers.cpp's:
 // it reaches EETechTreeEpochOf and EETechTreeEpoch::Get through the inline EETechTree::Get)
 EETechTreeNode* EEUnit::GetTechTreeNode()
@@ -67,15 +48,7 @@ EETechTreeNode* EEUnit::GetTechTreeNode()
 EETechTree::EETechTree()
     : mPlayer(NULL)
 {
-    this->mCurrentEpoch = kTechEpochPrehistoric;
-    this->mStartEpoch = kTechEpochPrehistoric;
-    this->mEndEpoch = EEEpochCount() - 1;
-    this->mMediaID = 0;
-    this->mEpochNameID = IDS_PREHISTORIC_AGE;
-    this->mIsLoaded = false;
-    this->mSaved = NULL;
-    this->mEpochsBeforeWonders = 1;
-    this->mEpochs.Resize(EEEpochCount());
+    ee_gamecpp_tech_tree_init(this);   // (gamecpp tech_load.rs)
 }
 
 // Destroys the tech tree and its epochs (and the saved game's lists, Rust's)
@@ -126,24 +99,7 @@ void EETechTree::GetChecksum(ESChecksum& ioChecksum)
 // Adds up the resource costs (kinds 2..6) of a tech and every unresearched prerequisite and upgrade path to it
 void EETechTree::SumCosts(long inID, long inUnitClass, long* ioCosts)
 {
-    // TEST ONLY (ee/EETechCapture.h): the outermost call (the walk's own recursion is not a call of the game's)
-    static thread_local long sDepth = 0;
-    if (EESimCaptureRecord::Active() && sDepth == 0) {
-        sDepth++;
-        EESimCaptureRecord theRecord(EECaptureTag("TSUM"));
-        theRecord.I32(this->mPlayerIndex);
-        theRecord.I32(inID);
-        theRecord.I32(inUnitClass);
-        for (long i = 0; i < 7; i++)
-            theRecord.I32(ioCosts[i]);
-        this->SumCostsUncaptured(inID, inUnitClass, ioCosts);
-        for (long i = 0; i < 7; i++)
-            theRecord.I32(ioCosts[i]);
-        theRecord.Commit();
-        sDepth--;
-        return;
-    }
-    this->SumCostsUncaptured(inID, inUnitClass, ioCosts);
+    ee_gamecpp_tech_sum_costs_captured(this, inID, inUnitClass, ioCosts);   // (TSUM, TEST ONLY: gamecpp tech_load.rs)
 }
 
 void EETechTree::SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts)
@@ -183,9 +139,7 @@ void EETechTree::ApplySavedState(bool inApplyObsoleted, bool inApplyResearch)
 // state (14 epochs before version 0.0xea); marks every epoch up to the current one researched (ee_tech tree_load)
 long EETechTree::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EETechSaveContext theContext = {this, &inFile};
-    return ee_tech_walk_tree(&theContext, &EETechSaveHost, EeTechTreeOp::Load, this, (int32_t)inMajorVersion,
-                             (int32_t)inMinorVersion, NULL);
+    return ee_gamecpp_tech_tree_save(this, &inFile, true, inMajorVersion, inMinorVersion);   // (gamecpp tech_load.rs)
 }
 
 // Makes a tech or epoch obsolete in its epoch
@@ -211,8 +165,7 @@ void EETechTree::Research(long inID, EEComplexUnit* inUnit)
 // the epochs, then each epoch's state; returns the last epoch's write result (ee_tech tree_save)
 long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EETechSaveContext theContext = {this, &outFile};
-    return ee_tech_walk_tree(&theContext, &EETechSaveHost, EeTechTreeOp::Save, this, 0, 0, NULL);
+    return ee_gamecpp_tech_tree_save(this, &outFile, false, 0, 0);   // (gamecpp tech_load.rs)
 }
 
 // Moves the tree forward to an epoch (never back), recording it in statistics series 0xc and researching up to it
@@ -256,18 +209,7 @@ void EETechTree::UpdateInterface(bool inEpochChanged)
 // Copies another tree's epochs, epoch range and player; the copy is not marked loaded
 EETechTree& EETechTree::operator=(const EETechTree& inOther)
 {
-    this->mCurrentEpoch = inOther.mCurrentEpoch;
-    this->mStartEpoch = inOther.mStartEpoch;
-    this->mEndEpoch = inOther.mEndEpoch;
-    this->mPlayerIndex = inOther.mPlayerIndex;
-    this->mPlayer = inOther.mPlayer;
-    this->mEpochs.Resize(inOther.mEpochs.size());
-    for (long i = 0; i < inOther.mEpochs.size(); i++) {
-        this->mEpochs[i].mTree = this;
-        this->mEpochs[i] = inOther.mEpochs[i];
-    }
-    this->mIsLoaded = false;
-    return *this;
+    return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther);
 }
 
 // ------------------------------------------------------------------------- round 9, lane D: the tech tree's host

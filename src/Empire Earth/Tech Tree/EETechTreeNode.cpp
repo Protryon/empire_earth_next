@@ -44,41 +44,19 @@ long EETechTreeNode::GetBuildTime()
 // Destroys the node, unloading its unit media and giving its unit classes their default buttons back
 EETechTreeNode::~EETechTreeNode()
 {
-    if (this->mIsUnitMediaLoaded == true) {
-        if (this->mTree->GetPlayer() != NULL)
-            this->mTree->GetPlayer()->UnloadUnitClassMedia(this->mData->mUnitClass);
-    }
-    if (this->mData != NULL) {
-        for (unsigned long i = 0; i < this->mData->mUnitClasses.size(); i++) {
-            if (this->mTree->GetPlayer() != NULL)
-                this->mTree->GetPlayer()->SwapClassButtonMedia(this->mData->mUnitClasses[i], this->mButton, NULL);
-        }
-    }
-    this->ClearClassCosts();
+    ee_gamecpp_tech_node_free(this, true);   // (gamecpp tech_load.rs)
 }
 
 // Frees the node's per-unit-class cost tables
 void EETechTreeNode::ClearClassCosts()
 {
-    std::map<long, long*>::iterator theCosts;
-    if (this->mData == NULL)
-        return;
-    theCosts = this->mData->mClassCosts.begin();
-    while (theCosts != this->mData->mClassCosts.end()) {
-        delete [] (*theCosts).second;
-        ++theCosts;
-    }
-    this->mData->mClassCosts.clear();
+    ee_gamecpp_tech_node_free(this, false);
 }
 
 // Deletes the node's data
 long EETechTreeNode::Unload()
 {
-    if (this->mData != NULL) {
-        delete this->mData;
-        this->mData = NULL;
-    }
-    return 0;
+    return ee_gamecpp_tech_node_unload(this);
 }
 
 // Returns a node's cost in a resource for a unit class: per-class cost, scaled for unit-making nodes by wonder
@@ -110,35 +88,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
 // Reads the node's record from the tech tree file, with a cost table per unit class scaled by its factor
 long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
 {
-    unsigned long theRead = 0;
-    unsigned long theCount = 0;
-    EeTechTreeRecord theRecord;
-    this->mData = new RTSTechTreeNodeData;
-    this->mTree = inTree;
-    inFile.Read(reinterpret_cast<char*>(&theRecord), sizeof(theRecord), theRead);
-    long theResult = inFile.Read(theCount);
-    this->mData->mUnitClasses.resize(theCount, 0);
-    for (unsigned long j = 0; j < theCount; j++)
-        inFile.Read(this->mData->mUnitClasses[j]);
-    // the record fields, the obsolete epoch, the editor flag of a node obsoleted by default, the empty
-    // prerequisites flags, no research delay (ee_tech nodes.rs fill_data, fill_node)
-    ee_tech_fill_from_record(this, this->mData, &theRecord, false);
-    for (unsigned long k = 0; k < this->mData->mUnitClasses.size(); k++) {
-        // the k-th class's table: every cost times the record's factor of that class (ee_tech class_costs)
-        long* theCosts = new long[7];
-        int32_t theBase[7];
-        int32_t theTable[7];
-        for (long r = 0; r < 7; r++)
-            theBase[r] = (int32_t)this->mData->mCosts[r];
-        float theFactors[4] = {theRecord.mFactor1, theRecord.mFactor2, theRecord.mFactor3, theRecord.mFactor4};
-        ee_tech_class_costs(theBase, (uint32_t)k, theFactors, theTable);
-        for (long r = 0; r < 7; r++)
-            theCosts[r] = theTable[r];
-        this->mData->mClassCosts.insert(std::map<long, long*>::value_type(this->mData->mUnitClasses[k], theCosts));
-    }
-    this->mEpoch = EETechTreeEpochOf(this->mData->mID);   // a node's: set by its epoch's Load (the block holding it)
-    this->mButton = EEButtonObject::Get(theRecord.mButton);
-    return theResult;
+    return ee_gamecpp_tech_node_load(this, &inFile, inTree);   // (gamecpp tech_load.rs)
 }
 
 // Tells whether the node can be researched now (wonders only after enough epochs or in the last epoch)
@@ -164,23 +114,12 @@ bool EETechTreeNode::GetIsObsolete()
 // Tells whether the node makes a building or mine whose media this game needs
 bool EETechTreeNode::NeedsUnitMedia()
 {
-    bool theResult = this->NeedsUnitMediaUncaptured();
-    ee_tech_capture_walk_begin();   // TNMT (TEST ONLY: ee_sim tech nodes_capture.rs)
-    long theUnitClass = this->mData->mUnitClass;
-    EEUnitClass* theClass = theUnitClass > 0 ? gUnitClassTable[theUnitClass] : NULL;
-    ee_tech_capture_node_walk(10, NULL, -1, this, this->mData, this->mTree, theUnitClass,
-                              theClass != NULL ? theClass->mFamily : -1, theResult ? 1 : 0);
-    return theResult;
+    return ee_gamecpp_tech_needs_unit_media(this, true);   // (TNMT, TEST ONLY: gamecpp tech_load.rs)
 }
 
 bool EETechTreeNode::NeedsUnitMediaUncaptured()
 {
-    // the rule is Rust (ee_tech tree.rs needs_unit_media): the node's class (none for an id 0 or less or an empty
-    // table entry) and its family
-    long theUnitClass = this->mData->mUnitClass;
-    EEUnitClass* theClass = theUnitClass > 0 ? gUnitClassTable[theUnitClass] : NULL;
-    return ee_tech_needs_unit_media(theClass != NULL, theClass != NULL ? (int32_t)theClass->mFamily : -1, this->mScenEditorObsoleted,
-                                    (int32_t)this->mObsoleteEpoch, (int32_t)this->mTree->mStartEpoch);
+    return ee_gamecpp_tech_needs_unit_media(this, false);
 }
 
 // Tells whether the node depends on a tech, directly or through its prerequisites (ee_tech depends_on)
@@ -232,10 +171,7 @@ void EETechTreeNode::SetObsolete(bool inValue, bool inKeepMedia)
 // Gives the node a new button and swaps it into its unit classes
 void EETechTreeNode::SetButton(unsigned long inButton)
 {
-    for (unsigned long i = 0; i < this->mData->mUnitClasses.size(); i++) {
-        this->mTree->GetPlayer()->SwapClassButtonMedia(this->mData->mUnitClasses[i], this->mButton, EEButtonObject::Get(inButton));
-    }
-    this->mButton = EEButtonObject::Get(inButton);
+    ee_gamecpp_tech_node_set_button(this, inButton);
 }
 
 // Unloads the node's media: the unit class and its buttons, and the media its research event uses
@@ -247,24 +183,13 @@ void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
 // Copies another node's state and shares its data (with its class cost tables)
 EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
 {
-    if (&inOther != this) {
-        // the record's fields: ee_tech nodes.rs assign (the original's copy of mData->mMakesUnit onto the same
-        // shared data was a self-assignment, dropped)
-        this->mData = inOther.mData;
-        ee_tech_node_assign(this, &inOther, false);
-        // mData is now inOther's (shared) block, which already holds the class cost tables: clearing and
-        // re-copying them into the same map would empty them for every node sharing the block
-        this->mButton = inOther.mButton;
-    }
-    return *this;
+    return *(EETechTreeNode*)ee_gamecpp_tech_node_assign(this, &inOther);   // (gamecpp tech_load.rs)
 }
 
 // Returns the tech node's hot key, or NULL (an inline COMDAT the original emitted in EEUIFMGMainGroup.cpp)
 UIHotKey* EETechTreeNode::GetHotKey()
 {
-    if (this->mData->mHotKey > 0 && this->mData->mHotKey < (long)UIHotKey::GetHotKeyCount())
-        return UIHotKey::GetHotKey(this->mData->mHotKey);
-    return NULL;
+    return (UIHotKey*)ee_gamecpp_db_hot_key(this->mData->mHotKey);
 }
 
 // ------------------------------------------------------------------------- round 9, lane D: the nodes' and epochs' C++

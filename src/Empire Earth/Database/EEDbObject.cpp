@@ -43,14 +43,16 @@ const UString kDbCivPowersFile("db\\dbcivpowers.dat");
 
 // ------------------------------------------------------------------------- round 10, lane B: the Database, the Tech Tree, Persistent
 
-int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETerrainTable.cpp
 
-// the C++ calls and members of lane B's bodies in Rust (gamecpp; EeGameCpp's round 10 lane B section): one
-// statement each
+// the C++ calls and members of lane B's bodies in Rust (gamecpp db_media.rs, db_text.rs, tech_load.rs, tech_capture.rs, persist_more.rs;
+// EeGameCpp's round 10 lane B section) are the cases of a chain of switches beside the statics they read:
+// EETerrainTable.cpp (B2) -> EEButtonObject.cpp (B3) -> EEAnimal.cpp (B4) -> EEDataTextFile.cpp (B5) ->
+// EETechCapture.cpp (B6) -> EETechTreeEpoch.cpp (B7) -> EEPCalamityHelper.cpp (B8) -> EETerrainColorTable.cpp (B9) -> lane C
 int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore10OpC(inOp, p, a, f);
+    return EECore10OpB2(inOp, p, a, f);
 }
 
 double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
