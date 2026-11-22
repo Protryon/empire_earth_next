@@ -37990,3 +37990,99 @@ rustfmt's fixes after it):
 - `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 13633, units [4, 43, 42], alive [2, 3],
   classic_lua x 2; lan-game PT 2876/2868);
 - Not run: the POSIX builds.
+
+## The UI lane, round 13: the toolkit's and the game UI's class declarations (one-statement members inline in their classes, the enums, key statics and records as Rust's, UIListBox's accessors public, the main form's Load and Save in Rust) (ee_ui ids.rs, layout.rs; ee_game screens ui_ids.rs, hud_more.rs; branches rust-ui13a, rust-ui13b, merged on rust-ui13, 2026-11-22)
+
+The brief: break round 12's structural floor (the toolkit's base classes and the game's headers, which every control
+derives from or includes), bottom-up, planned first (build/ui13/plan.md); target -2,500 logic lines. Two forks in own
+worktrees: ui13a the LLE toolkit (EeUiOp 700-899 reserved, none needed), ui13b the game UI and the civilization
+builder; a lane-wide heavy-job lock (build/ui13/heavy.sh) kept one build or test at a time. **Logic -1,087** (whole
+tree, base bae8f3bd6 -> 2ee82fd9f, both forks merged before origin/rust, one run: 59,718 -> 58,631; ui13a -597, ui13b
+-490); the lane's files 3,682 -> 2,718, their headers 2,098 -> 1,274. Net C++ lines -1,901 (+1,323 -3,224) in src,
+include/ee and include/lle. The target was not reached.
+
+### What moved
+
+- **One-statement members inline** (both forks; ui13a about 450, ui13b 208): an out-of-line member whose body was
+  already one forward is now the inline body in its class declaration and its .cpp definition is gone. The owner's
+  metric excludes shims "and their declarations"; the counter could not see a declaration's body in another file, so
+  this is where most of the counted lines went. The hosts' call helpers the inlined bodies replaced are deleted.
+- **Enums as Rust's** (ee_ui `ids.rs`, ee_game screens `ui_ids.rs`): the toolkit's (UIControl's trigger ids, control
+  types and display modes, UIControlsTable's db control types, UIForm's event types, UILayoutType, UITiling,
+  UICheckState) and EEUIManager.h's form ids and control indices. `#[repr(u32)]` with `/// cbindgen:enum-class=false`:
+  cbindgen emits an unscoped `enum X : uint32_t { ... }`, so every C++ user (the WON lane's too) compiles unchanged;
+  the Rust constants that duplicated the values now name the enums, and their static_asserts are gone.
+- **The key statics** (ui13a): UIControl's 24 key `ISEntity*`, UIForm's and UIManager's key and mouse statics are one
+  Rust record read through `UIControl::Key(EeUiKey::...)`; the key predicates (`ShiftKeyPressed`, `CopyKeyPressed`...)
+  are Rust.
+- **Records** (ui13a): `UILayoutUtility` derives from the Rust `EeUiLayout` (layout.rs), its setters one call;
+  `UIDbDataForms` is the Rust `DbForm` (formobj.rs) generated under the C++ name (cbindgen rename), its fields the
+  members' names; tools/eedata reads it there. ui13b: `EEAreaEffectData` is a typedef of the Rust `EeAreaEffectData`.
+- **UIListBox** (ui13a): the subclass accessors and the lines are public, plus `UILBString::GetCopiedGEText`, so a host
+  in another file needs no `using` or friend (`EECBUIListBox`'s `using` lines can go next round).
+- **Bodies** (ui13b, `hud_more.rs`): the attribute and status buttons' bodies, EEUserInterface's posts, the main game
+  form's `Load`, `Save` and `SetErrorString`.
+- **Dead code** (ui13b): unused members and forward declarations of the game UI's headers.
+
+### Lessons
+
+- **cbindgen can emit a plain C++ enum.** `/// cbindgen:enum-class=false` on a `#[repr(u32)]` enum gives
+  `enum X : uint32_t`, so a C++ enum moves to Rust with no call site changed; the variant names stay the C++ ones
+  (`#[allow(non_camel_case_types)]`). The enums' underlying type is now `uint32_t` (the C++ default was `int`); no
+  user depended on a negative value.
+- **Header-reading tools follow a moved declaration.** Two of them read C++ headers as text: the editor's
+  constant tests (`editor_cpp_consts_tests.rs`, scenario editor lane: `kDisplayModeShown` and the trigger ids were
+  "not in the headers" after the enums moved to include/rust/ui/ids.h) and eedata's specgen (`struct
+  EEAreaEffectData not found` once it became a typedef: overlay.py now reads the Rust struct, as 1e368df56 did for
+  dbeffects; `eedata.py specs` then `rustgen`). Grep tools/ and the tests for a name before moving its declaration.
+- **The cbindgen include list is one line.** Every branch that adds a record conflicts on it; the merge takes the
+  union of the names (two such merges this round).
+- **Two forks need two Rust target directories** (about 9 GB a worktree: release 3.7 GB, debug 4.7 GB); with a shared
+  disk of about 30 GB the round ran two forks, not three, and deleted another lane's stale xbuild output first.
+
+### The civilization builder gate
+
+`sim_editor --civbuilder` PASS (4,062 lines) on the final tree, also in ui13b's own run; no message box was left on
+top, so the flake was not seen this round.
+
+### The view check's chat close (one failure, not reproduced)
+
+The first tour `--input-check --view-check` failed at its chat close: the chat event (0x0b09) left form 7 (the
+civilization builder's main form) on the stack under the chat form 18 (`stack 12 6 11 7 18`); the driver read form 7
+as the form that opened and sent the close to it, which the fixture rejected because 18 was on top. The rerun on the
+same exe passed (`stack 12 6 11` afterwards), and the gates.sh tour passed. Not explained: what pushed form 7 (no game
+log line names it). If it comes back, the evidence's ui-state stack is the thing to read.
+
+### What only the tours (or a person) exercise
+
+Cumulative with rounds 7-12 ("The UI lane, round 12"): every inlined toolkit member and the key record (every menu
+and the game form), the enums (every form, the lobby, the WON lane's forms in the LAN game), `UILayoutUtility` (every
+form's layout), `DbForm` (every form's load); the HUD bodies (the orders game); the main form's `Load`/`Save` (the
+saveload runs too).
+
+### Gates
+
+On the final tree (the forks merged at 2ee82fd9f, then origin/rust b6f7d06bd, batch 16, at 2b35ed910: one conflict,
+cbindgen.toml's include list, the union taken; strip_markers --check 0 files, no conflict marker; `rust_build.py
+header` current (310 headers) and `rust_includes.py`'s two additions; the editor's constant tests' header list and
+eedata's area-effect record fixed after it):
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412);
+- the Rust gate: the first run on the merge failed four `editor_cpp_consts_tests` (the enums' new header), the next
+  failed to compile (the list's length), the third PASS (6,040 tests; test, clippy, rustfmt, header);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests);
+- the plain saveload exit 0; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062 lines);
+- `eedata.py check` PASS (after the area-effect record's source), `cppgate` PASS;
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` failed once at the chat close (above) and PASS on the rerun (F3 ok, VIEW CHECK PASS);
+  `--exercise editor` (CAMPAIGN EDITOR PASS, RESULT PASS); `random-game --box-select --orders --seed 7` (BOX SELECT
+  PASS; ORDERS PASS: gather, repair, repair-queued, move). The tour's captures against the base build's (the main
+  checkout's test profile, the same tour): the settings tabs, single player and random map set-up equal pixel for
+  pixel, the main menu and the closed settings differ only in the build label (216 pixels); the game frames differ as
+  two live games do;
+- `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 12224, units [4, 36, 38], alive [2, 3], classic_lua x 2;
+  lan-game PT 3409/3401);
+- Not run: the POSIX builds, the lobby captures (lan_capture_compare; the LAN game passed).
