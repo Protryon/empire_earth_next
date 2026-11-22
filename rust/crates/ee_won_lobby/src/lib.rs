@@ -40,6 +40,7 @@ pub mod model;
 pub mod modelobj;
 pub mod netctl;
 pub mod netdisp;
+pub mod netlogicops;
 pub mod netops;
 pub mod persist;
 pub mod persistobj;

@@ -211,6 +211,7 @@
 #include "rust/won_lobby/modelobj.h"
 #include "rust/won_lobby/netctl.h"
 #include "rust/won_lobby/netdisp.h"
+#include "rust/won_lobby/netlogicops.h"
 #include "rust/won_lobby/netops.h"
 #include "rust/won_lobby/persist.h"
 #include "rust/won_lobby/persistobj.h"
