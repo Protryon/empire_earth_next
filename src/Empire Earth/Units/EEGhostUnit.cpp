@@ -137,11 +137,7 @@ void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>
 // Adds the ghost's player number and unit class name to the sync checksum
 void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
 {
-    UString theText;
-    sprintf(theText, "The Ghost Unit Player Number was: %ld", this->mPlayer->mPlayerID);
-    ioChecksum.AddChecksum(theText, 0);
-    sprintf(theText, "The Object Type was %s", (const char*)this->mUnitClass->mName);
-    ioChecksum.AddChecksum(theText, 1);
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_ADD_CHECKSUM, this, &ioChecksum, 0, 0);   // ghost_more.rs
 }
 
 // Returns the half-width of the footprint square around the ghost's tile (1 for a one-tile unit)
@@ -199,6 +195,7 @@ static GETransformation sGhostTransform(false);
 static bool sGhostPieceFlag;
 static FSFile* sGhostFile;
 static unsigned long sGhostValue;
+static UString sGhostText;
 
 // a GE3DPoint's x, y or z (0, 1, 2)
 static float& EEGhostPart(GE3DPoint& inPoint, int64_t inIndex)
@@ -337,6 +334,9 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_M_WRITE_ULONG: return sGhostFile->Write((unsigned long)inB);
     case EE_UNITS_GHOST_M_WRITE_PLAYER_ID: return sGhostFile->Write(theGhost->mPlayer->GetPlayerID());
     case EE_UNITS_GHOST_M_START_FRAME: return theGhost->GetModel()->mStartFrames[inB];
+    case EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT: sprintf(sGhostText, "The Ghost Unit Player Number was: %ld", theGhost->mPlayer->mPlayerID); return 0;
+    case EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT: sprintf(sGhostText, "The Object Type was %s", (const char*)theGhost->mUnitClass->mName); return 0;
+    case EE_UNITS_GHOST_M_CHECKSUM_ADD: EEGhostObject<ESChecksum>(inA)->AddChecksum(sGhostText, (long)inB); return 0;
     default: return 0;
     }
 }

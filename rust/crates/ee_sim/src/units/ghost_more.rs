@@ -53,6 +53,13 @@ pub const EE_UNITS_GHOST_M_WRITE_PLAYER_ID: i32 = 4019;
 /// the ghost's `GetModel()->mStartFrames[b]`
 pub const EE_UNITS_GHOST_M_START_FRAME: i32 = 4020;
 
+/// `sprintf(theText, "The Ghost Unit Player Number was: %ld", mPlayer->mPlayerID)` (`theText` is the host's)
+pub const EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT: i32 = 4021;
+/// `sprintf(theText, "The Object Type was %s", mUnitClass->mName)`
+pub const EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT: i32 = 4023;
+/// checksum `a`'s `AddChecksum(theText, b)`
+pub const EE_UNITS_GHOST_M_CHECKSUM_ADD: i32 = 4022;
+
 /// `Reset`'s animation
 const RESET_ANIMATION: i64 = 7;
 
@@ -168,6 +175,14 @@ pub fn set_animation<H: GhostHost + ?Sized>(h: &mut H, g: u64, index: i64) {
     qb(h, EE_UNITS_GHOST_M_SET_ANIMATION_INDEX, g, index);
 }
 
+/// `AddChecksum(checksum)`: the ghost's player number and class name.
+pub fn add_checksum<H: GhostHost + ?Sized>(h: &mut H, g: u64, checksum: u64) {
+    q(h, EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT, g);
+    qab(h, EE_UNITS_GHOST_M_CHECKSUM_ADD, g, checksum, 0);
+    q(h, EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT, g);
+    qab(h, EE_UNITS_GHOST_M_CHECKSUM_ADD, g, checksum, 1);
+}
+
 // ---- the bodies (`ee_units_ghost_more`'s `what`)
 pub const EE_UNITS_GHOST_M_DO_RESET: i32 = 1;
 pub const EE_UNITS_GHOST_M_DO_CONSTRUCT: i32 = 2;
@@ -176,6 +191,7 @@ pub const EE_UNITS_GHOST_M_DO_LOAD: i32 = 4;
 pub const EE_UNITS_GHOST_M_DO_SAVE: i32 = 5;
 pub const EE_UNITS_GHOST_M_DO_SET_FARM_SLOT_TILE: i32 = 6;
 pub const EE_UNITS_GHOST_M_DO_SET_ANIMATION: i32 = 7;
+pub const EE_UNITS_GHOST_M_DO_ADD_CHECKSUM: i32 = 8;
 
 /// Runs body `what` on ghost `g` (`a` an object: the player or the file; `b`, `c` values).
 pub fn run<H: GhostHost + ?Sized>(h: &mut H, what: i32, g: u64, a: u64, b: i64, c: i64) -> i64 {
@@ -187,6 +203,7 @@ pub fn run<H: GhostHost + ?Sized>(h: &mut H, what: i32, g: u64, a: u64, b: i64, 
         EE_UNITS_GHOST_M_DO_SAVE => return save(h, g, a),
         EE_UNITS_GHOST_M_DO_SET_FARM_SLOT_TILE => set_farm_slot_tile(h, g, b),
         EE_UNITS_GHOST_M_DO_SET_ANIMATION => set_animation(h, g, b),
+        EE_UNITS_GHOST_M_DO_ADD_CHECKSUM => add_checksum(h, g, a),
         _ => {}
     }
     0

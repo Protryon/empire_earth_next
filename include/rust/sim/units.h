@@ -6283,6 +6283,15 @@ constexpr static const int32_t EE_UNITS_GHOST_M_WRITE_PLAYER_ID = 4019;
 /// the ghost's `GetModel()->mStartFrames[b]`
 constexpr static const int32_t EE_UNITS_GHOST_M_START_FRAME = 4020;
 
+/// `sprintf(theText, "The Ghost Unit Player Number was: %ld", mPlayer->mPlayerID)` (`theText` is the host's)
+constexpr static const int32_t EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT = 4021;
+
+/// `sprintf(theText, "The Object Type was %s", mUnitClass->mName)`
+constexpr static const int32_t EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT = 4023;
+
+/// checksum `a`'s `AddChecksum(theText, b)`
+constexpr static const int32_t EE_UNITS_GHOST_M_CHECKSUM_ADD = 4022;
+
 constexpr static const int32_t EE_UNITS_GHOST_M_DO_RESET = 1;
 
 constexpr static const int32_t EE_UNITS_GHOST_M_DO_CONSTRUCT = 2;
@@ -6296,6 +6305,8 @@ constexpr static const int32_t EE_UNITS_GHOST_M_DO_SAVE = 5;
 constexpr static const int32_t EE_UNITS_GHOST_M_DO_SET_FARM_SLOT_TILE = 6;
 
 constexpr static const int32_t EE_UNITS_GHOST_M_DO_SET_ANIMATION = 7;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_ADD_CHECKSUM = 8;
 
 /// the shared point `= GE3DPoint(f[0], f[1], f[2])`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT = 800;

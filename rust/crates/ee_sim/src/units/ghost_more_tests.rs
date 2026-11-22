@@ -125,3 +125,18 @@ fn farm_slot_and_animation() {
     set_animation(&mut r, G, 3);
     assert_eq!(r.log, [(EE_UNITS_GHOST_M_START_FRAME, G, 0, 3), (EE_UNITS_GHOST_M_SET_FRAME, G, 0, 40), (EE_UNITS_GHOST_M_SET_ANIMATION_INDEX, G, 0, 3)]);
 }
+
+#[test]
+fn the_checksum_takes_the_player_then_the_class() {
+    let mut r = rec(&[]);
+    add_checksum(&mut r, G, 0x700);
+    assert_eq!(
+        r.log,
+        [
+            (EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT, G, 0, 0),
+            (EE_UNITS_GHOST_M_CHECKSUM_ADD, G, 0x700, 0),
+            (EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT, G, 0, 0),
+            (EE_UNITS_GHOST_M_CHECKSUM_ADD, G, 0x700, 1)
+        ]
+    );
+}
