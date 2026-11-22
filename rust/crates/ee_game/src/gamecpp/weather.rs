@@ -229,8 +229,8 @@ fn take_path(s: P) {
     let mut tiles = vec![0 as c_long; 2 * unsafe { ee_path_request_tiles(r, std::ptr::null_mut(), 0) } as usize];
     unsafe { ee_path_request_tiles(r, tiles.as_mut_ptr(), (tiles.len() / 2) as u32) };
     h(O::DsPathClear, s, &[]);
-    for t in tiles.chunks_exact(2).rev() {
-        h(O::DsPathPush, s, &[t[0] as i64, t[1] as i64]);
+    for k in (0..tiles.len() / 2).rev() {
+        h(O::DsPathPush, s, &[tiles[2 * k] as i64, tiles[2 * k + 1] as i64]);
     }
     // SAFETY: as cancel_request
     unsafe { ee_path_request_dereference(r as *mut c_void) };
