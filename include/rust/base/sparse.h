@@ -16,6 +16,10 @@ struct EePoint {
   int32_t y;
 };
 
+/// A C++ `std::vector<U2DPoint<long>>` or `std::vector<long>` resized to `count` points or numbers: its data, as
+/// `long`s (a point is two).
+using EeSparseResize = long*(*)(void*, size_t);
+
 extern "C" {
 
 /// A new, empty set.
@@ -119,6 +123,41 @@ EePoint ee_sparse_closest_point(const EeSparseArray *s, int32_t x, int32_t y);
 EePoint ee_sparse_random_point(const EeSparseArray *s,
                                float (*generate)(void*),
                                void *random);
+
+/// `BuildPointList(list, step)` (`extremes` false) and `GetOnlyExtremeEdgePoints(list)` (true): the points into the
+/// C++ vector `out`, which `resize` makes their count long.
+///
+/// # Safety
+/// `s` a live set; `resize(out, n)` returns room for `n` points (`2 n` longs).
+void ee_sparse_points_into(EeSparseArray *s,
+                           bool extremes,
+                           int32_t step,
+                           void *out,
+                           EeSparseResize resize);
+
+/// `Create(points)` (`create`) and `Insert(points)`: `count` points of a `std::vector<U2DPoint<long>>` (two `long`s
+/// each, taken as their low 32 bits as the C++ did).
+///
+/// # Safety
+/// `s` a live set, `points` `2 count` longs (NULL with 0).
+void ee_sparse_insert_longs(EeSparseArray *s,
+                            const long *points,
+                            size_t count,
+                            bool create);
+
+/// `GetRaw(raw)`: [`ee_sparse_raw`]'s numbers into the C++ vector `out`, which `resize` makes their count long.
+///
+/// # Safety
+/// `s` a live set; `resize(out, n)` returns room for `n` longs.
+void ee_sparse_raw_into(EeSparseArray *s,
+                        void *out,
+                        EeSparseResize resize);
+
+/// `SetRaw(raw)`: [`ee_sparse_set_raw`] over `count` longs (their low 32 bits).
+///
+/// # Safety
+/// `s` a live set, `data` `count` longs (NULL with 0).
+bool ee_sparse_set_raw_longs(EeSparseArray *s, const long *data, size_t count);
 
 }  // extern "C"
 
