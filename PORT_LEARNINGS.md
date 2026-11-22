@@ -2384,3 +2384,19 @@ commit now has the same cache key in every worktree.
   Data/db, which the harness rewrites (`open_data.py sync`, e.g. for the gates) whenever main's data/ai or data/db
   moved on, although the stage replaces both with the requester's own data/ai and data/db (already in the key).
   The key now leaves them out (CACHE_FORMAT 2: every older entry misses once).
+
+## Playing the retail campaigns (2026-11-22)
+
+- **A look-alike layout class is a trap.** `EEUIFMainGame::ShowInformation` received the scenario's
+  `EESMDialogMessage` through a hand-written class in the same file with the same fields *almost*: it had one extra
+  4-byte member, so on x64 the UI read the message's **duration** as the portrait's **unit class** and the unit id
+  as the scroll time. `gUnitClassTable[duration]` then returned garbage, the portrait's button was garbage, and the
+  game crashed in `EEButtonObject::SetFaceBitmap`/`GETexture::Load` about twenty seconds into an AoC campaign mission
+  (the first dialog message). Take the real type; a bounds check on the unit class and on the upgrade entry keeps a
+  scenario that names none from crashing the same way.
+- **A campaign's map type can lose its directory.** The campaign archive stores its scenarios under
+  `scenarios\<prefix><name>.scn`, and `EEGameState::Create` finds the scenario with the map type the intro form put
+  in the options. `FindFile` returns a *disk* spec with only the file name when the scenario is also extracted into
+  `Data\Scenarios`, so the later lookup misses both the directory and the archive's key and the game stops after the
+  briefing with "The file couldn't be opened." The archive retry now also tries `Scenarios\` + the map type. (Both
+  the archive and the folder work; the file only has to be reachable one way.)

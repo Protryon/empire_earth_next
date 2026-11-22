@@ -112,6 +112,7 @@
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EESMDialogMessage.h"
 // the status buttons' availability tests (EEUIFMGStatusButton.cpp's range) (provisional names)
 long EEModeAtomicBomberRally(void* inLocation, void* inForm);
 long EEModeParatrooperRally(void* inLocation, void* inForm);
@@ -150,17 +151,6 @@ bool gUnitSelected;                         // 0x56488c (a unit is selected: the
 extern RTSRenderObject* gU56534C;           // 0x56534c (the render object pushed when the form closes)
 extern float& gMasterVolume;                 // 0x530830 (the master volume Open restores)
 
-// the information panel's message (ShowInformation 0x26533e; layout from its reads) (provisional name)
-class EEUIFMGInformation {
-public:
-    long mL00;                              // +0x00
-    UWideString mText;                      // +0x04
-    UString mSound;                         // +0x18 (under "Sounds\\")
-    long mL28;                              // +0x28
-    long mL2C;                              // +0x2c
-    long mUnitType;                         // +0x30 (the portrait's unit class)
-    unsigned long mTime;                    // +0x34 the scroll time
-};
 
 // chain at 0x66272b (wrapper)
 //   object 0x8372c0  ctor None  dtor __imp_??1UWideString@@UAE@XZ
@@ -941,7 +931,7 @@ void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inNam
 // FUNCTION: EXE 0x66533e
 // Shows an information message: scrolling text, the speaker's portrait and its sound; hides the messages
 // without a text control
-void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
+void EEUIFMainGame::ShowInformation(EESMDialogMessage* inInformation)
 {
     UITLScrolling* theText = static_cast<UITLScrolling*>(this->GetControl(kMainGameDialogMessage));
     UIBitmap* thePortrait = static_cast<UIBitmap*>(this->GetControl(kMainGameDialogPortrait));
@@ -953,8 +943,13 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
         theText->SetDisplayMode(kDisplayModeShown);
         if (thePortrait != NULL) {
             EEButtonObject* theButton;
-            if (gUnitClassTable[inInformation->mUnitType] != NULL &&
-                (theButton = gWorld.GetCurrentPlayer()->mUnitClassUpgrades[inInformation->mUnitType]->mButton) != NULL) {
+            EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+            // A scenario's message may name no unit class (or one the player has no upgrade for): the portrait is
+            // hidden rather than indexed out of range (a duration read as a unit type used to crash here).
+            EEUnitStats* theStats = thePlayer != NULL && inInformation->mUnitType < EEUnitClassCount()
+                                        ? thePlayer->mUnitClassUpgrades[inInformation->mUnitType]
+                                        : NULL;
+            if (theStats != NULL && (theButton = theStats->mButton) != NULL) {
                 GEBitmap* theBitmap = new GEBitmap;
                 theButton->SetFaceBitmap(theBitmap, thePortrait->GetRectangle(), thePortrait->GetScreenIndex());
                 thePortrait->SetBitmap(theBitmap);
@@ -967,9 +962,9 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
         }
         EELoadSound("Sounds\\" + UString((const char*)inInformation->mSound), 0x31, theSampleID, theLength, 1);
         if (!UIsNone32(theLength))
-            theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, inInformation->mTime);
+            theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, inInformation->mDuration);
         else
-            theText->ScrollText(inInformation->mTime, 0);
+            theText->ScrollText(inInformation->mDuration, 0);
         this->SetChatTop(UMFloatToLong(theText->GetRectangle().GetBottom() - theText->GetRectangle().mTop + 5.0f));
     } else
         this->HideMessages();

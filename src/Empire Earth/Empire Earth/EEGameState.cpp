@@ -207,6 +207,11 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
                         delete theFile;
                         theFile = NULL;
                         gDataPath->FindFile(UString(inOptions.mMapType), theFile);
+                        // port: a campaign keeps its scenarios under "Scenarios\" in its archive, and the map type is
+                        // the file name the scenario intro form found -- a file found on disk (an extracted
+                        // scenario) loses that directory, so the lookup above misses the archive's entry.
+                        if (theFile == NULL)
+                            gDataPath->FindFile(UString("Scenarios\\") + UString(inOptions.mMapType), theFile);
                     } else {
                         gResource->GetString(keeCouldntOpenFile, outErrorMessage);
                         sprintf(outErrorMessage, "%s\n\"%s\"", (const char*)outErrorMessage,

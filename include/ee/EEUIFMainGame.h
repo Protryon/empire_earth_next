@@ -14,10 +14,10 @@ class EEACalamity;
 class EEALasso;
 class EEAMouseClick;
 class EEAScroll;
+class EESMDialogMessage;
 class EEUIEGrabScroll;
 class EEUIEWheelZoom;
 class EEUIFMGGroup;
-class EEUIFMGInformation;
 class EEUIFMGMainGroup;
 class EEUIFMGUnitHack;
 class EEUnit;
@@ -74,7 +74,7 @@ public:
     long GetRepairCommand(EEUnit* inUnit, long inCommand, long inAllowDead);  // 0x265e35 (4: the selection's 0x40-flag unit
                                             // can work on inUnit; provisional name)
     void SetErrorString(const UWideString& inText, unsigned long inIndex);   // 0x265ff6 (mStrings, mStringsChanged)
-    void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
+    void ShowInformation(EESMDialogMessage* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
     void PauseInformation();                // 0x2662d7
     void ResumeInformation();               // 0x266367
     void BuildUnit(unsigned long inUnitID, long inTechnology);  // 0x266384 (the build mode for a unit's technology)
