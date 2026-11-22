@@ -172,14 +172,15 @@ pub const EE_SCREENS_SEFMX_UNIT_CARGO_ROOM: u32 = 108;
 pub const EE_SCREENS_SEFMX_UNIT_CARGO_COUNT: u32 = 109;
 /// `EESetGameViewRectangle(GERectangle(f0, f1, f2, f3))`.
 pub const EE_SCREENS_SEFMX_GAME_VIEW: u32 = 110;
-/// `new EESELoadThread(p2, 0)`; the load thread p0's `Post401()`, `Post404()`, `Post405()`, `Post40B(p2)`,
-/// `Post40C(p2)`.
+/// `new EESELoadThread(p2, 0)`; the load thread p0's `Post401()`, `Post404()`, `Post405()`.
 pub const EE_SCREENS_SEFMX_NEW_LOAD_THREAD: u32 = 111;
 pub const EE_SCREENS_SEFMX_POST_401: u32 = 112;
 pub const EE_SCREENS_SEFMX_POST_404: u32 = 113;
 pub const EE_SCREENS_SEFMX_POST_405: u32 = 114;
-pub const EE_SCREENS_SEFMX_POST_40B: u32 = 115;
-pub const EE_SCREENS_SEFMX_POST_40C: u32 = 116;
+/// The load thread's `Post40B(p2)` and `Post40C(p2)` (once two-statement inline members): p2's `Reference()`, then
+/// the thread p0's `mThread->Post(i0, p2, NULL, true)`.
+pub const EE_SCREENS_SEFMX_REFERENCE: u32 = 5000;
+pub const EE_SCREENS_SEFMX_THREAD_POST: u32 = 5001;
 /// `gWorld.RebuildActiveUnits()`; `gUIManager->mInScenarioEditor == true`.
 pub const EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS: u32 = 117;
 pub const EE_SCREENS_SEFMX_IN_EDITOR: u32 = 118;
@@ -719,11 +720,11 @@ pub unsafe fn compose(x: &mut Sefmx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
                 EE_SCREENS_SEFM_POST_405 => {
                     on(x, EE_SCREENS_SEFMX_POST_405, thread, 0);
                 }
-                EE_SCREENS_SEFM_POST_40B => {
-                    st(x, EE_SCREENS_SEFMX_POST_40B, [thread, 0, p2], [0; 4], none);
-                }
-                EE_SCREENS_SEFM_POST_40C => {
-                    st(x, EE_SCREENS_SEFMX_POST_40C, [thread, 0, p2], [0; 4], none);
+                EE_SCREENS_SEFM_POST_40B | EE_SCREENS_SEFM_POST_40C => {
+                    // a UI event to post (0x40b) or a loaded object to show (0x40c), kept referenced
+                    let message = if ii[0] == EE_SCREENS_SEFM_POST_40B { 0x40b } else { 0x40c };
+                    st(x, EE_SCREENS_SEFMX_REFERENCE, [0, 0, p2], [0; 4], none);
+                    st(x, EE_SCREENS_SEFMX_THREAD_POST, [thread, 0, p2], [message, 0, 0, 0], none);
                 }
                 _ => {}
             }

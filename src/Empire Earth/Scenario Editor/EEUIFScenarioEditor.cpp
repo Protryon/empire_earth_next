@@ -382,9 +382,9 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEFMX_POST_405: static_cast<EESELoadThread*>(p[0])->Post405();
         return 0;
-    case EE_SCREENS_SEFMX_POST_40B: static_cast<EESELoadThread*>(p[0])->Post40B(static_cast<UReferenceCounter*>(p[2]));
+    case EE_SCREENS_SEFMX_REFERENCE: static_cast<UReferenceCounter*>(p[2])->Reference();
         return 0;
-    case EE_SCREENS_SEFMX_POST_40C: static_cast<EESELoadThread*>(p[0])->Post40C(static_cast<UReferenceCounter*>(p[2]));
+    case EE_SCREENS_SEFMX_THREAD_POST: static_cast<EESELoadThread*>(p[0])->mThread->Post((unsigned long)i[0], p[2], NULL, true);
         return 0;
     case EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS: gWorld.RebuildActiveUnits();
         return 0;
