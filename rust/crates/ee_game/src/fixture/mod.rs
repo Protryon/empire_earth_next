@@ -28,6 +28,8 @@ pub mod compound;
 pub mod ffi;
 pub mod host;
 /// cbindgen:ignore
+pub mod lobby;
+/// cbindgen:ignore
 pub mod orders;
 /// cbindgen:ignore
 pub mod poll;

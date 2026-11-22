@@ -423,6 +423,12 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             }
             0
         }
+        Op::LobbyPost => {
+            // SAFETY: the call's text, NUL ended, alive through the call
+            let command = if c.s.is_null() { String::new() } else { unsafe { std::ffi::CStr::from_ptr(c.s) }.to_string_lossy().into_owned() };
+            super::lobby::post(&command, i[0] as u64)
+        }
+        Op::LobbySnapshot => super::lobby::snapshot(sink),
         _ => return None,
     };
     Some(result)
