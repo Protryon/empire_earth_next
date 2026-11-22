@@ -81,21 +81,12 @@ public:
     // Out-of-line members (EEAIContinentManager.cpp; ret N / argument reads / the value left at ret)
     static void Shutdown();                 // 0x1ef12: Reset() of gContinentManager, delete[] the four grids (absolute)
     void Reset();                           // 0x1f503: clears every container and counter (not the grids)
-    // 0x1f813: mTileValues = new long[mHeight * mWidth], zeroed
-    void AllocateTileValues() { ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::TileValues, true, this->mRecord.height * this->mRecord.width); }
-    void ClearChecksum() { this->mRecord.checksum = 0; }
     EEAIContinent* GetContinentAt(EEUnit* inUnit)          // 0x22658 (its tile, bounds-checked, then 0x60c7)
         { EeHullPoint t = ee_astar_unit_tile((uint64_t)(uintptr_t)inUnit); return this->OnGrid(t) ? this->GetContinentAt(t.x, t.y) : NULL; }
     unsigned short FindContinentID(long inX, long inY) const     // 0x22680: FindContinent(inX, inY)->+0x11c, 0 if none
         { return ee_astar_cm_found_continent_id(&this->mRecord, inX, inY); }
     // 0x21fff: inUnit can reach tile (inX, inY) (EEComplexUnit::IsOnOtherContinent for class flag 1) (provisional name)
     bool CanGetTo(EEUnit* inUnit, long inX, long inY) { return ee_astar_cm_can_get_to((uint64_t)(uintptr_t)inUnit, inX, inY); }   // cm_unit.rs
-    EEAIContinent* FindContinent(long inX, long inY) const       // 0x2269f: via the tile's path sector's sub-sectors
-        { return (EEAIContinent*)(uintptr_t)ee_astar_cm_find_continent(&this->mRecord, inX, inY); }
-    // 0x22a2f: the last free id of mFreeSubSectorIDs, else ++mLastSubSectorID
-    unsigned short NewSubSectorID() { return ee_astar_cm_new_sub_sector_id(&this->mRecord); }
-    // 0x22a70: the last free id of mFreePathAreaIDs, else mNextPathAreaID++
-    unsigned short NewPathAreaID() { return ee_astar_cm_new_path_area_id(&this->mRecord); }
     // 0x22ad9: the path area of inTile's sub-sector (its +0x4e; open sub-sectors only), 0 off the map (provisional
     // name)
     // name (EEAIContinent::GetShoreInRegions)
@@ -118,8 +109,6 @@ public:
     void BuildRegions(EEMap* inMap);        // 0x24a24 (after Clear; resets mClearing; provisional name)
     // 0x24f70: erases inArea's serial from mAreas; true if it was there
     bool RemoveArea(EEAIArea* inArea) { return ee_astar_cm_remove_object_area(&this->mRecord, (uint64_t)(uintptr_t)inArea); }
-    // 0x24fb5: erases its id (+0x48) from mSectorTiles
-    void RemoveSectorTiles(EEAIPathSector* inSector) { ee_astar_cm_remove_sector_tiles_of(&this->mRecord, (uint64_t)(uintptr_t)inSector); }
     // 0x26f8d: mAreas.insert((its serial, inArea))
     void AddArea(EEAIArea* inArea) { ee_astar_cm_add_object_area(&this->mRecord, (uint64_t)(uintptr_t)inArea); }
     // 0x26fb3: 0 if not found
@@ -130,23 +119,10 @@ public:
     // inline twin of GetContinentByID: its undone COMDAT folds with 0x26fdd; at a low share its const operator[] goes out of line
     EEAIContinent* GetContinentFromID(unsigned short inID) const { return this->GetContinents()[inID]; }
     EEAIContinent* GetContinentByID(unsigned short inID) const { return this->GetContinents()[inID]; }
-    // inline (EEAIPathSector::GetPathAreaAt 0x2bd4d: the value load, then the const operator[]'s dead lea) (provisional
-    // name)
-    // name
-    EEAIPathArea* GetPathArea(unsigned short inID) const { return this->GetPathAreas()[inID]; }
     // 0x22872 (ret 0xc): whether inFirst and inSecond are connected under inFlags (1/2/8: the +0x112/+0x116/+0x10e ids)
     // (provisional name)
     bool AreConnected(EEAIContinent* inFirst, EEAIContinent* inSecond, long inFlags)
         { return ee_astar_cmq_are_connected((uint64_t)(uintptr_t)inFirst, (uint64_t)(uintptr_t)inSecond, inFlags); }
-    // inline (COMDAT 0x934d6 after its first user EECPResourceManager::FindForestTarget; also 0x24f3a1) (provisional
-    // name)
-    bool AreConnectedByID(unsigned short inFirst, unsigned short inSecond, long inFlags)
-    {
-        EEAIHandleView<EEAIContinent> theContinents = this->GetContinents();
-        EEAIContinent* theSecond = theContinents[inSecond];
-        EEAIContinent* theFirst = theContinents[inFirst];
-        return this->AreConnected(theFirst, theSecond, inFlags);
-    }
     // area lookups by a tile (bodies read; names and the exact return classes inferred): the continent at the tile
     // (GetContinentAt), then the first of its id list (+0x7c chokes, +0x8c forests, +0xac hills) whose area holds
     // the tile
@@ -166,20 +142,12 @@ public:
         { EeHullPoint t = ee_astar_unit_tile((uint64_t)(uintptr_t)inUnit); return (EEAIPathArea*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 3, t.x, t.y); }
     EEAIPathSubSector* GetPathSubSectorAt(EEUnit* inUnit)
         { return (EEAIPathSubSector*)(uintptr_t)ee_astar_cmq_sub_sector_at(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
-    // inline (COMDAT 0xabb3f after its first user EEPathManager::RequestUnitPaths): the path sub sector of id inID
-    // Provisional name
-    EEAIPathSubSector* GetPathSubSector(unsigned short inID) { return this->GetPathSubSectors()[inID]; }
     unsigned short GetPathSubSectorID(EEUnit* inUnit)                 // 0x22cd7 (0 off the grid)
         { EeHullPoint t = ee_astar_unit_tile((uint64_t)(uintptr_t)inUnit); return this->OnGrid(t) ? this->GetPathSubSectorID(t.x, t.y) : 0; }
-    EEAIPathSubSector* FindPathSubSector(long inX, long inY)
-        { return (EEAIPathSubSector*)(uintptr_t)ee_astar_cm_find_sub_sector(&this->mRecord, inX, inY); }
     unsigned short FindPathSubSectorID(long inX, long inY)            // 0x22cff: FindPathSubSector's id (+0x50), 0 if none
         { return ee_astar_cm_sub_sector_id_found(&this->mRecord, inX, inY); }
-    bool InSameContinent(EEUnit* inFirst, EEUnit* inSecond)
-        { return ee_astar_cmq_in_same_continent(&this->mRecord, (uint64_t)(uintptr_t)inFirst, (uint64_t)(uintptr_t)inSecond); }
     bool CanGetToUnit(EEUnit* inUnit, EEUnit* inTarget)               // 0x21fe7: CanGetTo(inUnit, inTarget's tile)
         { EeHullPoint t = ee_astar_unit_tile((uint64_t)(uintptr_t)inTarget); return this->CanGetTo(inUnit, t.x, t.y); }
-    long GetTileFlag(long inX, long inY) { return ee_astar_tile_flag(inX, inY); }   // 0x21f5a: the map tile's +0x14 (0 off the map)
     // 0x22635 (const-shaped: lea; mov): the tiles of continent inID (provisional name)
     void GetContinentTiles(unsigned short inID, std::vector<U2DPoint<long> >& outTiles) const
     {
@@ -195,8 +163,6 @@ public:
     // 0x4e6d4 (ret 4; EECPASGSea.cpp's range): GetPathSubSectorAt(inTile's x, y) (provisional name)
     EEAIPathSubSector* GetPathSubSectorAt(const EETileLocation& inTile);
     unsigned short GetPathSubSectorID(long inX, long inY);
-    // 0x21e22: outIDs cleared, then the ids listed for inID (EETown::UpdateNearWater 0xabfda; provisional name)
-    void GetConnectedIDs(std::vector<unsigned short>& outIDs, unsigned short inID) { this->AdjacentIDs(outIDs, inID, true); }
     // 0x22255 (ret 0xc): the choke points of continent inID into outChokePoints (cleared first when inClear)
     // Provisional name (EECPAttackGroup 0x54cea)
     void GetChokePoints(std::vector<EEAIChokePoint*>& outChokePoints, unsigned short inID, bool inClear)
@@ -214,11 +180,6 @@ public:
         outIDs.resize(this->mRecord.flags_width > 0 ? this->mRecord.flags_width : 0);
         outIDs.resize(ee_astar_cmq_adjacent_ids(&this->mRecord, inID, inSelf, outIDs.empty() ? NULL : &outIDs[0]));
     }
-    // inline (COMDAT 0x88ce9 after its first user EECPPersonnel::DraftUnit) (provisional name)
-    unsigned long GetNumContinents() const { return this->GetContinents().size(); }
-    void FreePathAreaID(unsigned short inID) { ee_astar_cm_add_free_ids(&this->mRecord, EeAStarCmFree::PathAreas, &inID, 1, false); }
-    unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind)
-        { return ee_astar_cm_adjacent_area_id(&this->mRecord, (int32_t)inKind, inTile.mX, inTile.mY, (int32_t)inAreaKind); }
     bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const
         { return ee_astar_cmq_has_shore_tile(&this->mRecord, EEAIHullPoints(inTiles), inTiles.size()); }
     bool InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind)
@@ -228,8 +189,6 @@ public:
     }
     void GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint)
         { EeHullPoint t = ee_astar_cmq_continent_center(&this->mRecord, inID); outPoint.mX = t.x; outPoint.mY = t.y; }
-    bool AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond)   // cm_unit.rs
-        { return ee_astar_cm_connected_for_unit((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inFirst, (uint64_t)(uintptr_t)inSecond); }
     EEAIArea* GetRandomArea(long inKind, URandom& inRandom, unsigned short inContinent)
         { return (EEAIArea*)(uintptr_t)ee_astar_cmq_random_area(&this->mRecord, false, inKind, (uint64_t)(uintptr_t)&inRandom, inContinent); }
     bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID)
@@ -242,15 +201,9 @@ public:
             outTiles.push_back(U2DPoint<long>(theTiles[k].x, theTiles[k].y));
         return theResult;
     }
-    void UpdateTileValues(bool inWater) { ee_astar_cm_update_tile_values(&this->mRecord, inWater); }   // 0x231d7 (Rust: tile_values.rs)
     // 0x2372b (ret 4): the path areas after inTile changed kind (provisional name)
     void RepairPathArea(const U2DPoint<long>& inTile) { ee_astar_cmq_repair_path_area(&this->mRecord, inTile.mX, inTile.mY); }
-    void RemoveSubSectors(EEAIPathSector* inSector) { ee_astar_cm_remove_sub_sectors(&this->mRecord, (uint64_t)(uintptr_t)inSector); }
     void RemoveForestTile(EEUnit* inUnit) { ee_astar_cmq_remove_forest_tile(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
-    // UpdateWallUnit: Rust (ee_sim::astar cm_unit.rs update_wall_unit; its caller is Rust)
-    // inline (COMDATs in this unit's range; defined inline in EEAIContinentManager.cpp)
-    bool IsShoreTile(long inX, long inY) const { return ee_astar_cm_is_shore(&this->mRecord, inX, inY); }
-    EEAIPathSector* GetPathSectorByID(unsigned short inID) const { return this->GetPathSectors()[inID]; }
 
     // New (port): the members are Rust's (ee_sim::astar cm.rs, EeAStarCmRecord): the counters, the sector grid (was
     // EEAIPathSectorRegionInformation, +0xdc) and the grids' pointers are the record, its scalars at fixed addresses
@@ -265,31 +218,12 @@ public:
         const uint64_t* theData = ee_astar_cm_table(&this->mRecord, inTable, &theCount);
         return EEAIHandleView<T>(theData, theCount);
     }
-    void SetTable(EeAStarCmTable inTable, size_t inID, const void* inObject)
-        { ee_astar_cm_table_set(&this->mRecord, inTable, inID, (uint64_t)(uintptr_t)inObject); }
-    void ResizeTable(EeAStarCmTable inTable, size_t inCount) { ee_astar_cm_table_resize(&this->mRecord, inTable, inCount); }
     EEAIHandleView<EEAIContinent> GetContinents() const { return this->Table<EEAIContinent>(EeAStarCmTable::Continents); }
     EEAIHandleView<EEAIPathSector> GetPathSectors() const { return this->Table<EEAIPathSector>(EeAStarCmTable::PathSectors); }
     EEAIHandleView<EEAIPathSubSector> GetPathSubSectors() const
         { return this->Table<EEAIPathSubSector>(EeAStarCmTable::PathSubSectors); }
     EEAIHandleView<EEAIForest> GetForests() const { return this->Table<EEAIForest>(EeAStarCmTable::Forests); }
-    EEAIHandleView<EEAIPathArea> GetPathAreas() const { return this->Table<EEAIPathArea>(EeAStarCmTable::PathAreas); }
-    EEAIHandleView<EEAIHill> GetHills() const { return this->Table<EEAIHill>(EeAStarCmTable::Hills); }
     EEAIHandleView<EEAIChokePoint> GetChokePoints() const { return this->Table<EEAIChokePoint>(EeAStarCmTable::ChokePoints); }
-    EEAIHandleView<EEAIRectangleArea> GetRectangleAreas() const
-        { return this->Table<EEAIRectangleArea>(EeAStarCmTable::RectangleAreas); }
-    EEAIContinent* GetContinentsAt(unsigned long inIndex) const { return this->GetContinents()[inIndex]; }
-    EEAIPathSector* GetPathSectorsAt(unsigned long inIndex) const { return this->GetPathSectors()[inIndex]; }
-    EEAIPathSubSector* GetPathSubSectorsAt(unsigned long inIndex) const { return this->GetPathSubSectors()[inIndex]; }
-    EEAIChokePoint* GetChokePointsAt(unsigned long inIndex) const { return this->GetChokePoints()[inIndex]; }
-    EEAIHill* GetHill(unsigned short inID) const { return this->GetHills()[inID]; }
-    // the serial table, sorted by serial
-    EEAIListView<EeAStarCmArea> GetAreas() const
-    {
-        size_t theCount;
-        const EeAStarCmArea* theAreas = ee_astar_cm_areas(&this->mRecord, &theCount);
-        return EEAIListView<EeAStarCmArea>(theAreas, theCount);
-    }
     // copies of the shore lists, the free ids and the pending sector tiles (in id order)
     std::vector<U2DPoint<long> > GetShoreTiles(EeAStarCmShore inList) const
     {
@@ -298,39 +232,10 @@ public:
         const U2DPoint<long>* thePoints = reinterpret_cast<const U2DPoint<long>*>(theTiles);
         return std::vector<U2DPoint<long> >(thePoints, thePoints + theCount);
     }
-    std::vector<unsigned short> GetFreeIDs(EeAStarCmFree inList) const
-    {
-        size_t theCount;
-        const uint16_t* theIDs = ee_astar_cm_free_ids(&this->mRecord, inList, &theCount);
-        return std::vector<unsigned short>(theIDs, theIDs + theCount);
-    }
-    std::vector<std::pair<unsigned short, std::vector<EETileCoordinate> > > GetSectorTiles() const
-    {
-        std::vector<std::pair<unsigned short, std::vector<EETileCoordinate> > > theResult(
-            ee_astar_cm_sector_tiles_count(&this->mRecord));
-        for (size_t i = 0; i < theResult.size(); i++) {
-            size_t theCount;
-            const EeHullPoint* theTiles = ee_astar_cm_sector_tiles(&this->mRecord, i, &theResult[i].first, &theCount);
-            for (size_t k = 0; k < theCount; k++) {
-                EETileCoordinate theTile;
-                theTile.mX = theTiles[k].x;
-                theTile.mY = theTiles[k].y;
-                theResult[i].second.push_back(theTile);
-            }
-        }
-        return theResult;
-    }
     unsigned long NewSerial() { return ++this->mRecord.last_serial; }   // `++mLastSerial`
-    unsigned long GetLastSerial() const { return this->mRecord.last_serial; }
-    void SetLastSerial(unsigned long inSerial) { this->mRecord.last_serial = inSerial; }
     // the continents' adjacency matrix (mTileFlags, mFlagsWidth x mFlagsWidth)
     bool AreAdjacent(long inFrom, long inTo) const { return this->mRecord.tile_flags[inFrom * this->mRecord.flags_width + inTo]; }
-    long GetFlagsWidth() const { return this->mRecord.flags_width; }
-    const long* GetTileValues() const { return this->mRecord.tile_values; }
-    unsigned short* GetPathSubSectorIDs() const { return this->mRecord.sub_sector_ids; }
-    unsigned short NextChainID(long inKind) { return ++this->mRecord.next_ids[inKind]; }   // `++mNextIDs[kind]`
     long GetState() const { return this->mRecord.state; }
-    bool IsClearing() const { return this->mRecord.clearing; }
     long GetNumWaterTiles() const { return this->mRecord.num_water_tiles; }
     long GetNumLandTiles() const { return this->mRecord.num_land_tiles; }
     long GetNumSpaceTiles() const { return this->mRecord.num_space_tiles; }
@@ -372,6 +277,5 @@ inline unsigned short EEAIContinentManager::GetPathSubSectorID(long inX, long in
 // 0x29ced: the resource kind (1..3, by the tree type) of the first wood unit on inTile, not in deep water; 0 if none
 // (Rust: ee_sim::astar world_view.rs)
 class EETile;
-inline long EEAIHasResourceUnit(EETile* inTile) { return ee_astar_tile_resource_kind((uint64_t)(uintptr_t)inTile); }
 
 #endif

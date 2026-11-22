@@ -56,8 +56,6 @@ public:
     // (EEAwaitAutoPathRequest: ee_sim::astar request.rs)
     void SaveGraphSearches(FSFile& outFile);
     long LoadGraphSearches(FSFile& inFile);
-    void RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)   // RequestPendingPaths' one unit
-        { this->Call(16, H(inUnit), 0, {inTile.mX, inTile.mY}); }
     void AddPending(unsigned long inUnitID, const EETileCoordinate& inTile)   // a loaded unit asks its path at StartGame
         { this->Call(17, 0, 0, {(int64_t)inUnitID, inTile.mX, inTile.mY}); }
     void Update() { this->Call(1); }    // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
@@ -75,8 +73,6 @@ public:
     void FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo,
                   const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType, long inRevs,
                   EeAStarModifier* inModifier, std::vector<U2DPoint<long> >* outVisited);   // 0x12e2c9 passes &local (the storm's tile list)
-    bool HasAutoPath(EEComplexUnit* inUnit) { return this->Call(11, H(inUnit)) != 0; }
-    bool IsPathDone(EEComplexUnit* inUnit) { return this->Call(12, H(inUnit)) != 0; }
     bool GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
     {
         int64_t theTile[2] = {0, 0};
@@ -85,11 +81,7 @@ public:
         outTile.mY = (long)theTile[1];
         return theResult;
     }
-    void RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EeAStarModifier* inModifier, bool inArg8)
-        { this->Call(15, H(inUnit), H(inModifier), {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inUnlimitedRevs, inRevs, inUseGraph, inArg8}); }
     void CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths) { this->Call(7, H(inUnit), 0, {inAutoPaths}); }
-    void SetRegionUpdates(bool inOn, bool inNow) { this->Call(6, 0, 0, {inOn, inNow}); }
     void Clear() { this->Call(3); }
     void FreePaths() { this->Call(4); }   // 0xa5f39 (both queues in progress)
     // 0xa71c9 FindBoundedPath: Rust (ee_sim::astar pm_entry.rs find_bounded_path; its callers are Rust)

@@ -38,14 +38,6 @@ public:
 
     EeAStarSectorRecord* Record() { return this; }
     const EeAStarSectorRecord* Record() const { return this; }
-    EEAIListView<EeAStarSectorSub> GetSubSectors() const
-    {
-        size_t theCount;
-        const EeAStarSectorSub* theSubs = ee_astar_sector_subs(this, &theCount);
-        return EEAIListView<EeAStarSectorSub>(theSubs, theCount);
-    }
-    void InsertSubSector(unsigned short inID, EEAIPathSubSector* inSubSector)
-        { ee_astar_sector_insert_sub(this, inID, (uint64_t)(uintptr_t)inSubSector); }
     EEAIHandleView<EEAIContinent> GetNeighbors() const
     {
         size_t theCount;

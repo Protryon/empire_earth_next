@@ -27,24 +27,6 @@ public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
     static EEAIPathSubSector* New() { return (EEAIPathSubSector*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::PathSubSectors); }
     static void Delete(EEAIPathSubSector* inObject) { ee_astar_object_delete(EeAStarCmTable::PathSubSectors, (uint64_t)(uintptr_t)inObject); }
-    // (0x2c0b9 GetLinks, the links listed under an id: the Rust record's, ee_astar_sub_sector_links_of)
-    // (0x2c10f IsPassable, whether the sub-sector's gate lets a player through: ee_sim::astar modifier_obj.rs
-    // gate_passable)
-    // 0x2c219 (ret 8): inOther is a neighbour and none of its links to this sub-sector is open for inIndex (body
-    // not written: the links' +0x54 is a pointer there)
-    bool AreLinksBlocked(EEAIPathSubSector* inOther, long inIndex);
-    // (EECPAttackSubGroupUnit::ChooseTarget 0x63d50 passes the address of an EECPASGFlags its unit class filled)
-    // (Rust: ee_sim::astar modifier_obj.rs)
-    bool AreLinksBlocked(EEAIPathSubSector* inOther, const EECPASGFlags& inFlags)
-    {
-        return ee_astar_sub_sector_links_blocked((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther, inFlags.mFlags);
-    }
-    // 0x2c2c5 (ret 4): drops every link with inOther and inOther from the neighbours; true if it was a neighbour
-    bool RemoveNeighbor(EEAIPathSubSector* inOther)
-        { return ee_astar_sub_sector_remove_neighbor(this, (uint64_t)(uintptr_t)inOther, inOther->id); }
-    // 0x2c379 (ret 4): erases the links listed under inID
-    void RemoveLinks(unsigned short inID) { ee_astar_sub_sector_remove_links(this, inID); }
-    void CreateTiles(const std::vector<U2DPoint<long> >& inTiles) { this->mTiles.Create(inTiles); }
 
     // the graph machine's view (EEAIAStarGraphMachine<.., EEAIPathSubSector>; 0xab6c1 takes the node tile from
     // mSector +0x40/+0x44) (provisional names)
@@ -55,52 +37,20 @@ public:
         return EEAIHandleView<EEAIPathSubSector>(theNeighbors, theCount);
     }
     unsigned long GetNumNeighbors() const { return (unsigned long)this->GetNeighbors().size(); }
-    // 0x1a99b (ret 4): whether inOther is a neighbour (inline; its COMDAT follows EEAIAStarPathGraphGoal::IsGoalNode)
-    bool IsNeighbor(EEAIPathSubSector* inOther) const
-    {
-        EEAIHandleView<EEAIPathSubSector> theNeighbors = this->GetNeighbors();
-        for (size_t i = 0; i < theNeighbors.size(); i++)
-            if (theNeighbors[i] == inOther)
-                return true;
-        return false;
-    }
     void AddNeighbor(EEAIPathSubSector* inOther) { ee_astar_sub_sector_add_neighbor(this, (uint64_t)(uintptr_t)inOther); }
-    // inline (COMDAT 0x26430 in EEAIContinentManager.cpp's range): links listed under inID
-    bool HasLinks(unsigned short inID) const
-    {
-        size_t theCount;
-        ee_astar_sub_sector_links_of(this, inID, &theCount);
-        return theCount != 0;
-    }
-    void AddLink(unsigned short inID, const std::pair<EEAIPathSubSector*, EEAIPathSubSector*>& inLink)
-        { ee_astar_sub_sector_insert_link(this, inID, (uint64_t)(uintptr_t)inLink.first, (uint64_t)(uintptr_t)inLink.second); }
-    EEAIListView<EeAStarSubSectorLink> GetAllLinks() const
-    {
-        size_t theCount;
-        const EeAStarSubSectorLink* theLinks = ee_astar_sub_sector_links_all(this, &theCount);
-        return EEAIListView<EeAStarSubSectorLink>(theLinks, theCount);
-    }
 
     EeAStarSubSectorRecord* Record() { return this; }
     const EeAStarSubSectorRecord* Record() const { return this; }
     const U2DPoint<long>& GetLocation() const { return reinterpret_cast<const U2DPoint<long>&>(this->location); }
     void SetLocation(const U2DPoint<long>& inLocation) { reinterpret_cast<U2DPoint<long>&>(this->location) = inLocation; }
-    EEAIPathSector* GetSector() const { return (EEAIPathSector*)(uintptr_t)this->sector; }
-    void SetSector(EEAIPathSector* inSector) { this->sector = (uint64_t)(uintptr_t)inSector; }
     long GetNumTiles() const { return this->num_tiles; }
-    void SetNumTiles(long inCount) { this->num_tiles = inCount; }
     unsigned short GetContinentID() const { return this->continent_id; }
     void SetContinentID(unsigned short inID) { this->continent_id = inID; }
-    unsigned short GetPathAreaID() const { return this->path_area_id; }
-    void SetPathAreaID(unsigned short inID) { this->path_area_id = inID; }
     unsigned short GetID() const { return this->id; }
     void SetID(unsigned short inID) { this->id = inID; }
     long GetKind() const { return this->kind; }
     void SetKind(long inKind) { this->kind = inKind; }
     long GetPlayerID() const { return this->player_id; }
-    void SetPlayerID(long inID) { this->player_id = inID; }
-    bool IsStale() const { return this->is_stale; }
-    void SetStale(bool inStale) { this->is_stale = inStale; }
 
     U2DSparseArrayPointContainer mTiles;    // +0x10 (0x1c)
 
