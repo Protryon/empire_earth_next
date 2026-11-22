@@ -875,6 +875,9 @@ struct EeGeTexture;
 /// The texture manager.
 struct EeGeTextureManager;
 
+/// The grid (`mTextures[x][y]`) and its sizes.
+struct EeGeTextureSet;
+
 /// The window.
 struct EeGeWin;
 
@@ -917,6 +920,27 @@ struct EeGeTextOps {
   uint8_t *(*next_chars)(const uint8_t *text, size_t characters);
   int (*cp1252_byte_of)(uint32_t character);
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
+};
+
+/// `GELight`'s members in the C++'s order (sizeof 0x74).
+struct EeGeLight {
+  float color[3];
+  float computed_color[3];
+  float location[3];
+  float model_space_location[3];
+  float direction[3];
+  float model_space_direction[3];
+  float attenuation0;
+  float attenuation1;
+  float attenuation2;
+  float intensity;
+  float range;
+  float range_inverse;
+  float range_squared;
+  float model_space_range;
+  float model_space_range_inverse;
+  float model_space_range_squared;
+  unsigned long style;
 };
 
 /// One command as the executor reads it.
@@ -1167,6 +1191,9 @@ struct EeGeTexCoord {
   float u;
   float v;
 };
+
+/// `static_cast<GETexture*>(texture)->Dereference()`.
+using EeGeTextureDereferenceFn = void(*)(void *texture);
 
 /// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
 struct EeGeStoreTarget {
@@ -1541,6 +1568,36 @@ EeGeFont *ee_ge_game_font_new(void *owner,
                               unsigned long size,
                               unsigned long style,
                               unsigned long quality);
+
+/// `GELight()`.
+///
+/// # Safety
+/// `l` is valid for a write.
+void ee_ge_light_init(EeGeLight *l);
+
+/// `operator=(inLight)`.
+///
+/// # Safety
+/// Both are live.
+void ee_ge_light_assign(EeGeLight *l, const EeGeLight *other);
+
+/// `SetColor(inColor)`.
+///
+/// # Safety
+/// `l` is live; `color` points at three floats.
+void ee_ge_light_set_color(EeGeLight *l, const float (*color)[3]);
+
+/// `SetDirection(inDirection)`.
+///
+/// # Safety
+/// `l` is live; `direction` points at three floats.
+void ee_ge_light_set_direction(EeGeLight *l, const float (*direction)[3]);
+
+/// `SetIntensity(inIntensity)`.
+///
+/// # Safety
+/// `l` is live.
+void ee_ge_light_set_intensity(EeGeLight *l, float intensity);
 
 /// The game's executor and the primitives' vertex host (`GEVertexHost`), set once by the C++ (`GERasterizer`'s
 /// constructor).
@@ -2245,6 +2302,12 @@ const EeGeRastColor *ee_ge_rast_color(EeGeRasterizer *p,
 /// `p` is live; `color` is valid.
 void ee_ge_rast_set_ambient_color(EeGeRasterizer *p, const EeGeRastColor *color);
 
+/// `GetAmbientIntensity()`.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_rast_ambient_intensity(EeGeRasterizer *p);
+
 /// `SetAmbientIntensity(inIntensity, ...)` (the screen is ignored).
 ///
 /// # Safety
@@ -2927,6 +2990,39 @@ void *const *ee_ge_tex_frames(EeGeTexture *p);
 /// `p` is live.
 void *ee_ge_tex_frame_texture(EeGeTexture *p,
                               unsigned long frame);
+
+/// `GETextureSet(inNumTexturesInWidth, inNumTexturesInHeight, inTextureTileCoverage)`: every slot empty.
+EeGeTextureSet *ee_ge_tset_new(unsigned long width,
+                               unsigned long height,
+                               unsigned long coverage,
+                               EeGeTextureDereferenceFn dereference);
+
+/// `~GETextureSet`: every texture in the grid released, column by column.
+///
+/// # Safety
+/// `p` is live and not used again.
+void ee_ge_tset_free(EeGeTextureSet *p);
+
+/// `SetTexture(inX, inY, inTexture)`: the old texture released, the new one referenced.
+///
+/// # Safety
+/// `p` is live, the slot inside the grid, `texture` null or a live `GETexture`.
+void ee_ge_tset_set(EeGeTextureSet *p, unsigned long x, unsigned long y, void *texture);
+
+/// `GetTextureAt(inColumn, inRow)` (`slot` false) or `GetTexture(inX, inY)` (`slot`: the tile's slot in the grid).
+///
+/// # Safety
+/// `p` is live, the slot inside the grid.
+void *ee_ge_tset_get(const EeGeTextureSet *p,
+                     unsigned long x,
+                     unsigned long y,
+                     bool slot);
+
+/// `GetNumTexturesInWidth()` (0), `GetNumTexturesInHeight()` (1), `GetTextureTileCoverage()` (2).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_tset_size(const EeGeTextureSet *p, uint32_t which);
 
 /// `GEPackColor(format, red, green, blue, alpha)`.
 unsigned long ee_ge_pack_color(unsigned long format,

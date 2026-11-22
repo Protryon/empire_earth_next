@@ -63,6 +63,15 @@ pub const EE_SCENARIO_TEXT_OP_ERROR: u32 = 9;
 pub const EE_SCENARIO_TEXT_OP_MEDIA: u32 = 10;
 /// The media strings' section `slot` set to `text`.
 pub const EE_SCENARIO_TEXT_OP_SET_MEDIA: u32 = 11;
+/// [`EE_SCENARIO_TEXT_OP_ERROR`]'s statements: `gResource->GetString(value, the host's format)`; `sprintf(the
+/// host's message, the format, value, text)`, `sprintf(.., text, text2)`; `mImportErrors.push_back(the message)`.
+pub const EE_SCENARIO_TEXT_OP_ERROR_FORMAT: u32 = 12;
+pub const EE_SCENARIO_TEXT_OP_ERROR_PRINT_ID: u32 = 13;
+pub const EE_SCENARIO_TEXT_OP_ERROR_PRINT_TEXTS: u32 = 14;
+pub const EE_SCENARIO_TEXT_OP_ERROR_PUSH: u32 = 15;
+/// The errors' format strings by `EE_SCENARIO_TEXT_ERROR_*` (`IDS_IS_INVALID_TOKEN` .. `IDS_INVALID_PLAYER_NUMBER_FOR_
+/// THIS_SCENARIO`, ee/EEStringIDs.h).
+const ERROR_FORMATS: [c_long; 8] = [10027, 10028, 10029, 10030, 10054, 10053, 10055, 10056];
 
 /// The media strings' sections (`EESMMediaStrings`' `mHints`, `mAftermath`, `mHistory`, `mInstructions`) by the
 /// number of their tag.
@@ -531,7 +540,18 @@ impl Text for HostText<'_> {
         self.call(EE_SCENARIO_TEXT_OP_CLEAR_ERRORS, 0, 0, std::ptr::null_mut(), b"", b"");
     }
     fn error(&mut self, kind: u32, id: c_long, line: &[u8], name: &[u8]) {
-        self.call(EE_SCENARIO_TEXT_OP_ERROR, kind, id, std::ptr::null_mut(), line, name);
+        // the format, then the id and the line or the line and the name, the message kept
+        let none = std::ptr::null_mut();
+        self.call(EE_SCENARIO_TEXT_OP_ERROR_FORMAT, 0, ERROR_FORMATS[kind as usize], none, b"", b"");
+        if matches!(
+            kind,
+            EE_SCENARIO_TEXT_ERROR_EFFECT_ID | EE_SCENARIO_TEXT_ERROR_CONDITION_ID | EE_SCENARIO_TEXT_ERROR_PLAYER
+        ) {
+            self.call(EE_SCENARIO_TEXT_OP_ERROR_PRINT_ID, 0, id, none, line, b"");
+        } else {
+            self.call(EE_SCENARIO_TEXT_OP_ERROR_PRINT_TEXTS, 0, 0, none, line, name);
+        }
+        self.call(EE_SCENARIO_TEXT_OP_ERROR_PUSH, 0, 0, none, b"", b"");
     }
     fn media(&mut self, slot: u32) -> Vec<u8> {
         Self::c_text(self.call(EE_SCENARIO_TEXT_OP_MEDIA, slot, 0, std::ptr::null_mut(), b"", b""))
@@ -572,6 +592,47 @@ pub unsafe extern "C" fn ee_scenario_text_import(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The C ABI host's statements of an import error, recorded (op, value, text, text2).
+    #[test]
+    fn a_host_error_is_formatted_printed_and_kept() {
+        use std::cell::RefCell;
+        type Op = (u32, c_long, Vec<u8>, Vec<u8>);
+        thread_local! {
+            static OPS: RefCell<Vec<Op>> = const { RefCell::new(Vec::new()) };
+        }
+        unsafe extern "C" fn op(
+            _: *mut c_void,
+            op: u32,
+            _: u32,
+            value: c_long,
+            _: *mut c_void,
+            text: *const c_char,
+            text2: *const c_char,
+        ) -> *mut c_void {
+            // SAFETY: the host passes NUL-terminated strings
+            let (a, b) =
+                unsafe { (CStr::from_ptr(text).to_bytes().to_vec(), CStr::from_ptr(text2).to_bytes().to_vec()) };
+            OPS.with(|o| o.borrow_mut().push((op, value, a, b)));
+            std::ptr::null_mut()
+        }
+        let host = EeScenarioTextHost { lists: std::ptr::null(), ctx: std::ptr::null_mut(), op };
+        let mut t = HostText(&host);
+        t.error(EE_SCENARIO_TEXT_ERROR_PLAYER, 9, b"line", b"");
+        t.error(EE_SCENARIO_TEXT_ERROR_EFFECT_NAME, 0, b"line", b"name");
+        let got = OPS.with(|o| o.borrow().clone());
+        assert_eq!(
+            got,
+            vec![
+                (EE_SCENARIO_TEXT_OP_ERROR_FORMAT, 10056, vec![], vec![]),
+                (EE_SCENARIO_TEXT_OP_ERROR_PRINT_ID, 9, b"line".to_vec(), vec![]),
+                (EE_SCENARIO_TEXT_OP_ERROR_PUSH, 0, vec![], vec![]),
+                (EE_SCENARIO_TEXT_OP_ERROR_FORMAT, 10030, vec![], vec![]),
+                (EE_SCENARIO_TEXT_OP_ERROR_PRINT_TEXTS, 0, b"line".to_vec(), b"name".to_vec()),
+                (EE_SCENARIO_TEXT_OP_ERROR_PUSH, 0, vec![], vec![]),
+            ]
+        );
+    }
     use crate::scenario::fields::{EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields};
     use crate::scenario::manager::{EeScenarioManagerFields, EeScenarioTimedQueue};
 

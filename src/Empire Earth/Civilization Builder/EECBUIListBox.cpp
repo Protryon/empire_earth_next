@@ -2,7 +2,7 @@
 // box: 0x27cfdb..0x27efca. Its logic is Rust's (ee_screens civ_list.rs: AddLine, AddCategory, SortLines and the
 // line order, ChangeSelectionIndex, SetUpgrades and FormatUpgrade, ReformatUpgrades, DeleteLine and its category's
 // header, GetSelectedUpgrade, TabbedTo, DrawTextA's lines); this unit keeps the ctor, the snapshot and the
-// forwarders, and HostOp, the base's calls Rust makes on a list. Unit flags: the exe's module set.
+// forwarders (the base's calls Rust makes on a list are the builder host's shims: EECivilizationBuilder.cpp). Unit flags: the exe's module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -26,12 +26,6 @@ const UWideString EECBUIListBox::sSeparator("/");
 const UWideString EECBUIListBox::sCategory("Category");
 static const GEColor kBlack(0.0f, 0.0f, 0.0f);
 static const GEColor kWhite(1.0f, 1.0f, 1.0f);
-static const GEColor kDarkBlue(0.0f, 0.0f, 0.39f);
-
-static void EECBPut(EeScreensCbOut* outText, const UWideString& inText)
-{
-    ee_screens_cb_out_text(outText, reinterpret_cast<const uint8_t*>((const char*)inText), inText.GetTCHARLength());
-}
 
 // Creates a civilization builder list box (upgrade lines only selectable, points shown, sorted lines)
 EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData,
@@ -99,98 +93,4 @@ void EECBUIListBox::SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrade
 void EECBUIListBox::TabbedTo()
 {
     ee_screens_cbl_tabbed_to(this);
-}
-
-// The list's host ops (EE_SCREENS_CBW_L_*: the base's members; ee_screens civ_whole.rs)
-int64_t EECBUIListBox::HostOp(uint32_t inOp, EECBUIListBox* p, int64_t inA, int64_t inB, int64_t inC,
-                              const UWideString& inText, EeScreensCbOut* outText)
-{
-    switch (inOp) {
-    case EE_SCREENS_CBW_L_COUNT:
-        return p->GetNumLines();
-    case EE_SCREENS_CBW_L_LINE:
-        EECBPut(outText, p->mData[(unsigned long)inA]);
-        return 0;
-    case EE_SCREENS_CBW_L_SET_LINE:
-        p->mData[(unsigned long)inA] = inText;
-        return 0;
-    case EE_SCREENS_CBW_L_APPEND:
-        p->UIListBox<UWideString>::AppendLine(inText);
-        return 0;
-    case EE_SCREENS_CBW_L_DELETE:
-        p->UIListBox<UWideString>::DeleteLine((unsigned long)inA);
-        return 0;
-    case EE_SCREENS_CBW_L_DELETE_ALL:
-        p->DeleteAllEntries();
-        return 0;
-    case EE_SCREENS_CBW_L_SELECT:
-        p->UIListBox<UWideString>::ChangeSelectionIndex((unsigned long)inA, inB != 0, inC != 0);
-        return 0;
-    case EE_SCREENS_CBW_L_CURRENT: {
-        unsigned long theIndex = 0;
-        long theResult = p->GetCurrentSelection(theIndex);
-        ee_screens_cb_out_value(outText, (int64_t)theIndex);
-        return theResult;
-    }
-    case EE_SCREENS_CBW_L_AUTO:
-        return p->GetAutoSelect();
-    case EE_SCREENS_CBW_L_HAS:
-        return p->GetHasSelection();
-    case EE_SCREENS_CBW_L_INDEX:
-        return p->GetSelectionIndex();
-    case EE_SCREENS_CBW_L_DIRTY:
-        p->SetDirty(true);
-        return 0;
-    case EE_SCREENS_CBW_L_FLAG:
-        return inA == EE_SCREENS_CBW_FLAG_UPGRADES_ONLY ? p->mSelectUpgradesOnly
-               : inA == EE_SCREENS_CBW_FLAG_SHOW_POINTS ? p->mShowPoints
-               : inA == EE_SCREENS_CBW_FLAG_SORT        ? p->mSortLines
-                                                        : p->mCopiedShowPoints;
-    case EE_SCREENS_CBW_L_SET_FLAG:
-        (inA == EE_SCREENS_CBW_FLAG_UPGRADES_ONLY ? p->mSelectUpgradesOnly
-         : inA == EE_SCREENS_CBW_FLAG_SHOW_POINTS ? p->mShowPoints
-         : inA == EE_SCREENS_CBW_FLAG_SORT        ? p->mSortLines
-                                                  : p->mCopiedShowPoints) = inB != 0;
-        return 0;
-    case EE_SCREENS_CBW_L_DRAW_BEGIN:
-        p->UIControl::DrawTextA();
-        return p->GetDrawCount();
-    case EE_SCREENS_CBW_L_COPY_LINE:
-        EECBPut(outText, p->mCopyLineArray[(unsigned long)inA]);
-        return 0;
-    case EE_SCREENS_CBW_L_DRAW: {
-        // the line's rectangle (the copied text rectangle, 2 in on the left, 1 out on the right), then the text
-        GERectangle theRectangle = p->GetCopyTextRectangle();
-        theRectangle.SetLeft(theRectangle.GetLeft() + 2.0f);
-        theRectangle.SetRight(theRectangle.GetRight() + 1.0f);
-        unsigned long theLineHeight = p->GetLineHeight();
-        float theTop = p->GetCopyTextRectangle().GetTop() + (unsigned long)inA * theLineHeight;
-        theRectangle.SetTop(theTop);
-        theRectangle.SetBottom(theTop + theLineHeight);
-        GEText* theText = p->GetGEText();
-        bool theBold = (inB & EE_SCREENS_CBW_DRAW_BOLD) != 0;
-        if (theBold)
-            theText->SetFont(UIFontTable::FindOrCreateFont(theText->GetFont()->GetFontName(),
-                                                           theText->GetFont()->GetFontStyle() | kFontStyleBold,
-                                                           theText->GetFont()->GetFontQuality(),
-                                                           theText->GetFont()->GetFontSize()));
-        bool theRight = (inB & EE_SCREENS_CBW_DRAW_RIGHT) != 0;
-        theText->SetAlignment(theRight ? kTextAlignRight : kTextAlignLeft);
-        theText->SetText(inText);
-        theText->SetFgColor(inC == EE_SCREENS_CBW_COLOUR_HEADER ? p->mC148
-                            : inC == EE_SCREENS_CBW_COLOUR_BLACK ? kBlack
-                                                                 : kDarkBlue);
-        theText->SetLocation(theRight ? theRectangle.GetTopRight() : theRectangle.GetTopLeft());
-        long theResult = p->GetForm()->DrawClippedText(theRectangle, theText, p);
-        if (theBold)
-            theText->SetFont(UIFontTable::FindOrCreateFont(theText->GetFont()->GetFontName(),
-                                                           theText->GetFont()->GetFontStyle() & ~kFontStyleBold,
-                                                           theText->GetFont()->GetFontQuality(),
-                                                           theText->GetFont()->GetFontSize()));
-        return theResult;
-    }
-    case EE_SCREENS_CBW_L_DRAW_END:
-        return p->DrawScrollBarText();
-    }
-    return 0;
 }

@@ -203,7 +203,8 @@ pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: 
             0
         }
         EE_SCREENS_GAME_PGS_SCI_DELETE => {
-            c.sc_pgs_sci_delete();
+            let m = crate::screens::sci_calls::get(c);
+            crate::screens::sci_calls::delete_objects(c, m);
             0
         }
         EE_SCREENS_GAME_PGS_SAVE => {
@@ -216,7 +217,7 @@ pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: 
             0
         }
         EE_SCREENS_GAME_PDCS_PAUSE => {
-            c.sc_pause_game();
+            c.world_pause(true);
             0
         }
         EE_SCREENS_OP_PDCS_CLEAR_STATS => {
@@ -350,7 +351,7 @@ fn root<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: u32) -> Opt
             0
         }
         EE_SCREENS_GAME_PAUSE => {
-            c.sc_pause_game();
+            c.world_pause(true);
             0
         }
         EE_SCREENS_GAME_APPLY_PORT => {
@@ -422,11 +423,18 @@ fn root<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: u32) -> Opt
         }
         // the campaign scenario select and scenario intro forms' (scenario_screens.rs)
         EE_SCREENS_GAME_SI_BLINK_OFF => {
-            c.rc_si_blink_off();
+            crate::screens::sci_calls::get(c);
+            crate::screens::sci_calls::set_blinking(c, false);
             0
         }
-        EE_SCREENS_GAME_SI_OPEN_MAP => c.rc_si_open_map(),
-        EE_SCREENS_GAME_SI_OPEN_SOUND => c.rc_si_open_sound(),
+        EE_SCREENS_GAME_SI_OPEN_MAP => {
+            let m = crate::screens::sci_calls::get(c);
+            crate::screens::sci_calls::open_map(c, m) as u32
+        }
+        EE_SCREENS_GAME_SI_OPEN_SOUND => {
+            let m = crate::screens::sci_calls::get(c);
+            crate::screens::sci_calls::open_sound(c, m) as u32
+        }
         EE_SCREENS_GAME_SI_GET_SCENARIO => c.rc_si_get_scenario(),
         EE_SCREENS_GAME_SI_POST_LOAD => {
             c.rc_si_post_load();

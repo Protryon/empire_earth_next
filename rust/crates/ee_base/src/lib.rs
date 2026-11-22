@@ -35,8 +35,9 @@ pub mod plat_sys;
 pub mod plat_ui;
 pub mod png;
 /// The crate ee_random before the restructure.
-/// cbindgen:ignore
 pub mod random;
+// the one-statement C++ shims' trait maker (cpp_shims!) and their recording fake
+pub mod shim;
 /// The sparse point set (`U2DSparseArrayPointContainer`; was ee_sim::astar's sparse.rs).
 pub mod sparse;
 /// The crate ee_time before the restructure.

@@ -155,8 +155,8 @@ public:
     bool GetWasUIHidden() const { return this->GetSlot(kSlotWasUIHidden) != 0; }
     void SetExitAfterSave(bool inExit) { ee_screens_sefm_set(this->mRust, kSlotExitAfterSave, inExit ? 1 : 0); }
 
-    // the host of the Rust object's calls (ee_screenscpp_sefm; a member for UIForm's protected calls)
-    static int32_t Host(uint32_t inOp, void* const* p, int32_t* i, float* f);
+    // the single statements of the form's host (ee_screenscpp_sefmx; a member for UIForm's protected calls)
+    static int32_t Statement(uint32_t inOp, void* const* p, int32_t* i, float* f);   // editor_sefmx.rs's statements
 
     EECivilization mC1A0;                   // +0x1a0 (the civilization builder's; EESEEvents.cpp)
     EeScreensSeForm* mRust;                 // the form (editor_form.rs)

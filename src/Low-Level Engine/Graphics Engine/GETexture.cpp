@@ -201,21 +201,7 @@ GETexture::~GETexture()
     ee_ge_tex_destroy(this->mRust);
 }
 
-// Loads the texture (and its animation frames) from its decoded PNG frames (port, D9: the original read a texture or
-// .tga file), building or dropping MIP levels as asked; frames become separate textures (format 0) or cells of one
-// grid surface (format 1)
-long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
-                     bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat)
-{
-    return ee_ge_tex_load(this->mRust, inTexture, (EeGeSurfaceDescription*)&inDescription, inScreen, inCreateMIPMaps,
-                          inNumMipLevelsToDrop, inFrameFormat);
-}
 
-// Locks the texture's surface and returns its memory and row pitch
-long GETexture::Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
-{
-    return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow);
-}
 
 // (the SetStage* setters: inline in lle/GETexture.h)
 
@@ -230,12 +216,6 @@ static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "G
 static_assert(offsetof(EeGeTextureDescription, num_mip_levels_to_drop) == offsetof(GETextureDescription, mNumMipLevelsToDrop), "");
 static_assert(offsetof(EeGeTextureDescription, use_texture_pack) == offsetof(GETextureDescription, mUseTexturePack), "");
 
-// port: the texture pack (SetTexturePack): its settings live in Rust (ee_ge managers.rs, TexturePack). The directory
-// stays set when the pack is turned off, so a texture loaded from it is reloaded from it (RefreshAllTextures).
-void GETextureManager::SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
-{
-    ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop);
-}
 
 // The pack's name of a texture: "textures\x" -> "textures-4x\x"; false for a name outside "textures\" (or no pack
 // directory), for the pictures the game reads as data, and while the pack is off
@@ -248,15 +228,7 @@ bool GETextureManager::GetTexturePackName(const UString& inName, UString& outNam
     return true;
 }
 
-long GETextureManager::GetTexturePackLogicalShift()
-{
-    return ee_ge_texpack_logical_shift();
-}
 
-long GETextureManager::GetTexturePackMipLevelsToDrop()
-{
-    return ee_ge_texpack_mip_levels_to_drop();
-}
 
 // The calls the manager makes on other objects (EeGeManOp), in the original's statements
 intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
@@ -324,11 +296,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     }
 }
 
-// port: the cache's texture at an index, in the cache's (name) order: the store gate digests every cached texture
-GETexture* GETextureManager::GetTextureAt(unsigned long inIndex)
-{
-    return (GETexture*)ee_ge_texman_at(this->mRust, inIndex);
-}
 
 // Creates a texture manager on a search path (referenced), with no textures and its own lock
 GETextureManager::GETextureManager(FSPath* inTexturePath)
@@ -342,54 +309,11 @@ GETextureManager::~GETextureManager()
     ee_ge_texman_free(this->mRust);
 }
 
-unsigned long GETextureManager::GetMemoryFootprint()
-{
-    return ee_ge_texman_footprint(this->mRust);
-}
 
-// Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
-// name's stem; the original tried <name>.tga, then <name>.sst); NULL if it cannot be found or loaded
-// Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
-// looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
-long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
-{
-    return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
-}
 
 // ---- GETextureSet (GETextureSet.cpp, folded here in R4.3 part 16)
 
-// Creates a width x height grid of empty texture slots
-GETextureSet::GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight,
-                           unsigned long inTextureTileCoverage)
-{
-    this->mNumTexturesInWidth = inNumTexturesInWidth;
-    this->mNumTexturesInHeight = inNumTexturesInHeight;
-    this->mTextureTileCoverage = inTextureTileCoverage;
-    this->mTextures.resize(inNumTexturesInWidth);
-    for (unsigned long i = 0; i < inNumTexturesInWidth; i++)
-        this->mTextures[i].resize(inNumTexturesInHeight, NULL);
-}
-
-// Destroys the texture grid, releasing every texture in it
-GETextureSet::~GETextureSet()
-{
-    for (unsigned long i = 0; i < this->mNumTexturesInWidth; i++) {
-        for (unsigned long j = 0; j < this->mNumTexturesInHeight; j++) {
-            if (this->mTextures[i][j] != NULL)
-                this->mTextures[i][j]->Dereference();
-        }
-    }
-}
-
-// Puts a texture into a grid slot, releasing the old one and referencing the new one
-void GETextureSet::SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture)
-{
-    if (this->mTextures[inX][inY] != NULL)
-        this->mTextures[inX][inY]->Dereference();
-    this->mTextures[inX][inY] = inTexture;
-    if (this->mTextures[inX][inY] != NULL)
-        this->mTextures[inX][inY]->Reference();
-}
+void GETextureSet::Dereference(void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); }
 
 // ---- GESurface (GESurface.cpp, folded here in R4.3 part 16)
 
@@ -430,12 +354,7 @@ static intptr_t GESurfaceHost(EeOfSurfOp inOp, void* inObj, intptr_t a, intptr_t
 long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
                                        unsigned long& outHeight, unsigned long& outDepth)
 {
-    unsigned long theOut[3] = {outWidth, outHeight, outDepth};
-    long theResult = ee_of_surf_attributes(&GESurfaceHost, &inFile, inType, &theOut);
-    outWidth = theOut[0];
-    outHeight = theOut[1];
-    outDepth = theOut[2];
-    return theResult;
+    return ee_of_surf_attributes(&GESurfaceHost, &inFile, inType, &outWidth, &outHeight, &outDepth);
 }
 
 // Loads an image file into the surface by file type (BMP: unsupported, JPG, JPG2, PNG; TGA: no longer read, D9)

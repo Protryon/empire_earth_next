@@ -5,6 +5,8 @@
 
 // LLE exports use U2DPoint<long> (?$U2DPoint@J@@) and U2DPoint<float>; no member is exported (all inline).
 // Default.dll EEClumps keeps a vector<U2DPoint<long> > (8-byte elements, x then y, trivial dtor: 0x8e6d).
+#include "rust/base/math.h"   // GetLineTiles
+
 template <class T> class U2DPoint {
 public:
     U2DPoint() : mX(0), mY(0) {}           // zero-filled: GETerrainMesh.cpp static arrays 0x1002c1ba (and dword, 0),
@@ -71,57 +73,13 @@ public:
     float DistanceToSquaredF(const U2DPoint& inPoint) const;
 #endif
 #ifdef LLE_EXE_HEADERS
-    // exe (out-of-line COMDAT 0xe92e, an AI unit's): the distance as a float (sqrt of the squared distance; EECPIArmy's
-    // ProjectOnSegment 0x80730) (provisional name)
-    float DistanceToF(const U2DPoint& inPoint) const;
-    // exe view only (COMDAT 0x80730, EECPIArmy's range; defined below the class): the point inDistance of the way
-    // (inDot times this point's distance from inStart) along inStart..inEnd; the offset vector is normalized but
-    // unused. GEVector must be complete where it is instantiated. (provisional name)
-    U2DPoint ProjectOnSegment(float inDot, const U2DPoint& inStart, const U2DPoint& inEnd) const;
-    // exe view only (COMDAT 0x805ff, EECPIArmy's range; defined below the class): the point of inStart..inEnd
-    // closest to this one (the projection when the angle at inStart is not obtuse, else the nearer end) (provisional
-    // name)
-    // name
-    U2DPoint GetClosestPointOnSegment(const U2DPoint& inStart, const U2DPoint& inEnd) const;
-    // exe view only (owner decision 2): the tiles a line from this tile to inTo crosses, one step of
-    // inStep tiles at a time, inTo last (thiscall COMDAT 0xf40d8, EEE3DMarchingLine.cpp; also EEUGGather 0x222ff0).
-    // GE3DPoint/GE3DLine/GEVector must be complete where it is instantiated. (provisional name)
+    // exe view only: the tiles a line from this tile to inTo crosses, one step of inStep tiles at a time, inTo last
+    // (U2DPoint<long> only: ee_base math u2d.rs)
     void GetLineTiles(const U2DPoint& inTo, float inStep, std::vector<U2DPoint>& outTiles) const
-    {
-        GE3DPoint theStart((float)this->mX, (float)this->mY, 0.0f);
-        GE3DPoint theEnd((float)inTo.mX, (float)inTo.mY, 0.0f);
-        GE3DPoint thePoint;
-        long theLastX = 0;
-        long theLastY = 0;
-        U2DPoint theTile;
-        GE3DLine theLine;
-        GEVector theDirection;
-        float theDistance = 0.0f;
-        float theLength;
-        outTiles.clear();
-        if (!(this->mX == inTo.mX && this->mY == inTo.mY)) {
-            theDirection.SetX((float)inTo.mX - (float)this->mX);
-            theDirection.SetY((float)inTo.mY - (float)this->mY);
-            theDirection.Normalize();
-            theDirection.SetX(theDirection.GetX() * inStep);
-            theDirection.SetY(theDirection.GetY() * inStep);
-            theLine.SetStart(theStart);
-            theLine.SetDirection(theDirection);
-            if (!theLine.SolveForX(theEnd.GetX(), theLength))
-                theLine.SolveForY(theEnd.GetY(), theLength);
-            while (theDistance < theLength) {
-                theLine.GetPointAt(theDistance, thePoint);
-                theTile.mX = (long)thePoint.GetX();
-                theTile.mY = (long)thePoint.GetY();
-                if (theLastX != theTile.mX || theLastY != theTile.mY || outTiles.size() == 0)
-                    outTiles.push_back(theTile);
-                theDistance += inStep;
-                theLastX = theTile.mX;
-                theLastY = theTile.mY;
-            }
-        }
-        outTiles.push_back(inTo);
-    }
+        { ee_u2d_line_tiles(reinterpret_cast<const long(*)[2]>(&this->mX), reinterpret_cast<const long(*)[2]>(&inTo.mX), inStep, &outTiles, AssignTiles); }
+    // GetLineTiles' vector: the Rust tiles replace its contents
+    static void AssignTiles(void* outTiles, const long (*inTiles)[2], size_t inCount)
+        { static_cast<std::vector<U2DPoint>*>(outTiles)->assign(reinterpret_cast<const U2DPoint*>(inTiles), reinterpret_cast<const U2DPoint*>(inTiles) + inCount); }
 #endif
 #ifdef LLE_EXE_HEADERS
     // exe: the squares are summed in the FPU (fild dx2; fiadd dy2; EECPResourceCenter COMDAT 0x48d421), not as T
@@ -171,94 +129,5 @@ public:
     T mX;                                   // +0x00
     T mY;                                   // +0x04
 };
-
-#ifdef LLE_EXE_HEADERS
-// exe: out of line (COMDAT 0xe92e; never expanded by its 4 callers). Spelled out: through DistanceToSquaredF its
-// callers expand it
-template <class T>
-float U2DPoint<T>::DistanceToF(const U2DPoint& inPoint) const
-{
-    return (float)sqrt((float)((this->mX - inPoint.mX) * (this->mX - inPoint.mX)) + (this->mY - inPoint.mY) * (this->mY - inPoint.mY));
-}
-// exe view only: out of line (never expanded; COMDATs 0x80730 / 0x805ff, EECPIArmy's range)
-template <class T>
-U2DPoint<T> U2DPoint<T>::ProjectOnSegment(float inDot, const U2DPoint& inStart, const U2DPoint& inEnd) const
-{
-    GEVector theEdge;
-    GEVector theOffset;
-    U2DPoint<T> theResult = *this;
-    if (inStart != inEnd) {
-        theOffset.SetX((float)this->mX - (float)inStart.mX);
-        theOffset.SetY((float)this->mY - (float)inStart.mY);
-        theOffset.Normalize();
-        theEdge.SetX((float)inEnd.mX - (float)inStart.mX);
-        theEdge.SetY((float)inEnd.mY - (float)inStart.mY);
-        theEdge.Normalize();
-        float theLength = inStart.DistanceToF(theResult) * inDot;
-        theResult.mX = (T)(theEdge.GetX() * theLength + inStart.mX);
-        theResult.mY = (T)(theEdge.GetY() * theLength + inStart.mY);
-    }
-    return theResult;
-}
-template <class T>
-U2DPoint<T> U2DPoint<T>::GetClosestPointOnSegment(const U2DPoint& inStart, const U2DPoint& inEnd) const
-{
-    GEVector theEdge;
-    GEVector theOffset;
-    T theX = this->mX;
-    T theY = this->mY;
-    U2DPoint<T> theResult(theX, theY);
-    if (!(*this == inStart || *this == inEnd)) {
-        if (inStart == inEnd)
-            theResult = inStart;
-        else {
-            theOffset.SetX((float)theX - (float)inStart.mX);
-            theOffset.SetY((float)theY - (float)inStart.mY);
-            theOffset.Normalize();
-            theEdge.SetX((float)inEnd.mX - (float)inStart.mX);
-            theEdge.SetY((float)inEnd.mY - (float)inStart.mY);
-            theEdge.Normalize();
-            float theDot = theOffset.DotProduct(theEdge);
-            if (theDot >= 0.0f)
-                theResult = this->ProjectOnSegment(theDot, inStart, inEnd);
-            else
-                theResult = this->DistanceToSquaredF(inStart) < this->DistanceToSquaredF(inEnd) ? inStart : inEnd;
-        }
-    }
-    return theResult;
-}
-#endif
-
-// LLE 0x10055900 (template COMDAT of U2DSparseArray.cpp; provisional name): the mean of the points, optionally moved
-// to the closest point of the list when the mean itself is not one of them.
-template <class T> U2DPoint<T> U2DComputeCenterPoint(const std::vector<U2DPoint<T> >& inPoints, bool inMustBeInList)
-{
-    float theX = 0.0f;
-    float theY = 0.0f;
-    U2DPoint<T> theCenter;
-    U2DPoint<T> theClosest;
-    long theCount = inPoints.size();
-    if (inPoints.size() > 0) {   // size() > 0: the original expands this size() and calls back() out of line
-        long i;
-        for (i = theCount - 1; i >= 0; i--) {
-            theX += inPoints[i].GetX() / (float)theCount;
-            theY += inPoints[i].GetY() / (float)theCount;
-        }
-        theCenter = U2DPoint<T>((T)theX, (T)theY);
-        if (inMustBeInList && std::find(inPoints.begin(), inPoints.end(), theCenter) == inPoints.end()) {
-            theClosest = inPoints.back();
-            T theBest = theCenter.DistanceToSquared(theClosest);
-            for (i = inPoints.size() - 2; i >= 0; i--) {
-                T theDistance = theCenter.DistanceToSquared(inPoints[i]);
-                if (theDistance <= theBest) {
-                    theClosest = inPoints[i];
-                    theBest = theDistance;
-                }
-            }
-            theCenter = theClosest;
-        }
-    }
-    return theCenter;
-}
 
 #endif

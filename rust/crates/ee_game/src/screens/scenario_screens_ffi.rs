@@ -7,7 +7,7 @@ use core::ffi::{c_ulong, c_void};
 use std::sync::Mutex;
 
 use crate::screens::menus::EE_SCREENS_TEXT_STRING;
-use crate::screens::menus_ffi::{sys, Form};
+use crate::screens::menus_ffi::Form;
 use crate::screens::scenario_screens::*;
 
 /// The manager's form of an id (`gUIManager->GetFormByID`, on the manager's Rust object: `ee_ui direct.rs`).
@@ -44,9 +44,13 @@ impl ScenarioHost for Form {
         self.get(EE_SCREENS_TEXT_STRING, id)
     }
     fn combo_selection(&mut self, form: u32, control: u32) -> u32 {
-        let mut out = 0u32;
-        unsafe { sys::ee_screenscpp_selection(self.on(form).0, control, false, &mut out) };
-        out
+        crate::screens::screens_more_calls::selection(
+            &mut crate::screens::game_cpp::Ffi,
+            self.on(form).0 as usize,
+            control,
+            false,
+        )
+        .1
     }
 }
 

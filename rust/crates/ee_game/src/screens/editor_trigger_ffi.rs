@@ -28,6 +28,9 @@ impl SeplHost for Host {
                 if let Some(r) = crate::screens::editor_direct::sets(op, p.map(|x| x as usize), i) {
                     return r;
                 }
+                if let Some(r) = crate::screens::editor_trigx_ffi::setr(op, p.map(|x| x as usize), i) {
+                    return r;
+                }
                 sys::ee_screenscpp_setr(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {

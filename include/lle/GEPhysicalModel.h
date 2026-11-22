@@ -5,6 +5,8 @@
 #define LLE_GEPHYSICALMODEL_H
 
 #include <stddef.h>
+#include "lle/GERust.h"
+#include "rust/render/ge.h"
 
 class GEModel;
 

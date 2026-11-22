@@ -123,65 +123,57 @@ void EEUserInterface::ShowMessageOfTheDay(const UWideString& inGame, const UWide
 
 // LeaveMap, CancelGame, CloseScenarioEditor, EnterScenarioEditor, StartLoadingFromEditor, ShowCivilizationBuilder and
 // RestartGame are Rust's whole (ee_screens ui_game.rs; the thread's messages run them by ee_screens_ui_member).
-// The game starts' and the loop's calls (EE_SCREENS_UG_OP_*) on the UI object inUI (ee_screens ui_game.rs)
-extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    EEUserInterface* theUI = static_cast<EEUserInterface*>(inUI);
-    FSFile* theFile = reinterpret_cast<FSFile*>(inA);
-    EEServer* theServer = static_cast<EEServer*>(gCommunications);
-    switch (inOp) {
-    case EE_SCREENS_UG_OP_SCREEN_ACTIVE: gGameScreenActive = true; break;
-    case EE_SCREENS_UG_OP_PATH_RESET: gPathManager.Reset(); break;
-    case EE_SCREENS_UG_OP_SIGHT_ON: gSightUpdatesEnabled = true; break;
-    case EE_SCREENS_UG_OP_RESTART_UNITS: gWorld.RestartUnits(); break;
-    case EE_SCREENS_UG_OP_LAND_CONTINENTS: EEUpdateLandContinents(); break;
-    case EE_SCREENS_UG_OP_RESIZE_GAME: theUI->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA != 0, inB != 0); break;
-    case EE_SCREENS_UG_OP_PHYSICS_POST: gPhysics->mThread->Post((unsigned long)inA, NULL, NULL, true); break;
-    case EE_SCREENS_UG_OP_MUSIC: gMusicManager->Start(); break;
-    case EE_SCREENS_UG_OP_PREPARE_SAVE: gWorld.mMap->PrepareSave(); break;
-    case EE_SCREENS_UG_OP_SAVE_SCENARIO:
-        return SaveGame(UString("ScenDefault") + gScenarioExtension, TMGetTime(), true,
-                        UString("data\\") + UString("Scenarios\\"));
-    case EE_SCREENS_UG_OP_SAVE_ERROR: gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true); break;
-    case EE_SCREENS_UG_OP_MAX_PLAYERS: gWorld.SetNumPlayers(gWorld.mMaxPlayers); break;
-    case EE_SCREENS_UG_OP_COLLECT_COMPUTERS: gArtificialIntelligence->CollectComputerPlayers(); break;
-    case EE_SCREENS_UG_OP_TIMER_RUNNING: return gPhysics->mTimerRunning;
-    case EE_SCREENS_UG_OP_STATE_CLEAR: gGameState.Clear(); break;
-    case EE_SCREENS_UG_OP_STOP_SOUNDS: EEStopAllSounds(); break;
-    case EE_SCREENS_UG_OP_OPTIONS_DEFAULTS: gGameOptions.SetDefaults(); break;
-    case EE_SCREENS_UG_OP_FILE_IS_SCENARIO: {
-        unsigned long theLength = theFile->GetFile().GetLength();
-        return theFile->GetFile().Find(gScenarioExtension, 0) < theLength;
-    }
-    case EE_SCREENS_UG_OP_POST_LOAD: gDataPreLoading->PostLoadGame(inA != 0, inB != 0); break;
-    case EE_SCREENS_UG_OP_DELETE_FILE: delete theFile; break;
-    case EE_SCREENS_UG_OP_UPDATE_INTERFACE: theUI->UpdateInterface(); break;
-    case EE_SCREENS_UG_OP_FREE_CAMERA: return gFreeCamera;
-    case EE_SCREENS_UG_OP_SIM_RUN: return gPlatSimRun;
-    case EE_SCREENS_UG_OP_WAIT_PRELOAD: gDataPreLoading->WaitForMessageQueue(); break;
-    case EE_SCREENS_UG_OP_WORLD_CLEAR: gWorld.Clear(); break;
-    case EE_SCREENS_UG_OP_SCREEN_INACTIVE: gGameScreenActive = false; break;
-    case EE_SCREENS_UG_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), inA != 0, inB != 0); break;
-    case EE_SCREENS_UG_OP_ONE_RECORD: return gWorld.mStatistics.GetRecords().size() == 1;
-    case EE_SCREENS_UG_OP_SERVER_LOST:
-        return gCommunications != NULL && gCommunications->IsClient() &&
-               static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading;
-    case EE_SCREENS_UG_OP_UNLOAD_MEDIA: EEUnloadGameMedia(); break;
-    case EE_SCREENS_UG_OP_LOBBY_OPEN: return EEIsLobbyOpen();
-    case EE_SCREENS_UG_OP_QUIT_FLAG: EESetQuitFlag(); break;
-    case EE_SCREENS_UG_OP_CREATE_EDITOR: gUIManager->CreateScenarioEditor(); break;
-    case EE_SCREENS_UG_OP_LOAD_SCENDEFAULT:
-        return EELoadSavedGameFile(UString("ScenDefault") + gScenarioExtension, true, true,
-                                   UString("data\\") + UString("Scenarios\\"), 0);
-    case EE_SCREENS_UG_OP_STOP_ONE_SHOTS: gSoundManager->StopAllOneShotSounds(); break;
-    case EE_SCREENS_UG_OP_GRAPHICS_PAUSED: return gGraphics->mIsPaused;
-    case EE_SCREENS_UG_OP_CAN_BUY_CIV: return gWorld.mGameOptions.CanBuyCivilization();
-    case EE_SCREENS_UG_OP_CUSTOM_CIVS: return gWorld.mGameOptions.mAllowCustomCivs;
-    case EE_SCREENS_UG_OP_CIV_EDIT: CivBuilderEditCivilization(); break;
-    case EE_SCREENS_UG_OP_CIV_CREATE: CivBuilderCreateCivilization(reinterpret_cast<EECivilization*>(inA), inB != 0); break;
-    }
-    return 0;
-}
+// The UI thread's game starts' host (EE_SCREENS_UG_OP_*): Rust's (ui_game_calls.rs and the modules before it)
+// over the one-statement shims below (UI lane round 11)
+#define UG_UI(u) static_cast<EEUserInterface*>((void*)(u))
+extern "C" void ee_screenscpp_ug_screen_active(bool inActive) { gGameScreenActive = inActive; }
+extern "C" void ee_screenscpp_ug_path_reset() { gPathManager.Reset(); }
+extern "C" void ee_screenscpp_ug_sight_on() { gSightUpdatesEnabled = true; }
+extern "C" void ee_screenscpp_ug_restart_units() { gWorld.RestartUnits(); }
+extern "C" void ee_screenscpp_ug_land_continents() { EEUpdateLandContinents(); }
+extern "C" void ee_screenscpp_ug_resize_game(uintptr_t inUi, bool inA, bool inB)
+{ UG_UI(inUi)->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA, inB); }
+extern "C" void ee_screenscpp_ug_resize_menu(uintptr_t inUi, bool inA, bool inB)
+{ UG_UI(inUi)->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), inA, inB); }
+extern "C" void ee_screenscpp_ug_physics_post(uint64_t inMessage)
+{ gPhysics->mThread->Post((unsigned long)inMessage, NULL, NULL, true); }
+extern "C" void ee_screenscpp_ug_music() { gMusicManager->Start(); }
+extern "C" void ee_screenscpp_ug_prepare_save() { gWorld.mMap->PrepareSave(); }
+extern "C" int64_t ee_screenscpp_ug_save_scenario()
+{ return SaveGame(UString("ScenDefault") + gScenarioExtension, TMGetTime(), true, UString("data\\") + UString("Scenarios\\")); }
+extern "C" void ee_screenscpp_ug_save_error()
+{ gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true); }
+extern "C" void ee_screenscpp_ug_max_players() { gWorld.SetNumPlayers(gWorld.mMaxPlayers); }
+extern "C" void ee_screenscpp_ug_collect_computers() { gArtificialIntelligence->CollectComputerPlayers(); }
+extern "C" bool ee_screenscpp_ug_timer_running() { return gPhysics->mTimerRunning; }
+extern "C" void ee_screenscpp_ug_state_clear() { gGameState.Clear(); }
+extern "C" void ee_screenscpp_ug_stop_sounds() { EEStopAllSounds(); }
+extern "C" void ee_screenscpp_ug_options_defaults() { gGameOptions.SetDefaults(); }
+extern "C" uint64_t ee_screenscpp_ug_file_name_length(uintptr_t inFile)
+{ return (uint64_t)reinterpret_cast<FSFile*>(inFile)->GetFile().GetLength(); }
+extern "C" uint64_t ee_screenscpp_ug_file_scenario_at(uintptr_t inFile)
+{ return (uint64_t)reinterpret_cast<FSFile*>(inFile)->GetFile().Find(gScenarioExtension, 0); }
+extern "C" void ee_screenscpp_ug_post_load(bool inA, bool inB) { gDataPreLoading->PostLoadGame(inA, inB); }
+extern "C" void ee_screenscpp_ug_delete_file(uintptr_t inFile) { delete reinterpret_cast<FSFile*>(inFile); }
+extern "C" void ee_screenscpp_ug_update_interface(uintptr_t inUi) { UG_UI(inUi)->UpdateInterface(); }
+extern "C" bool ee_screenscpp_ug_free_camera() { return gFreeCamera; }
+extern "C" bool ee_screenscpp_ug_sim_run() { return gPlatSimRun; }
+extern "C" void ee_screenscpp_ug_wait_preload() { gDataPreLoading->WaitForMessageQueue(); }
+extern "C" void ee_screenscpp_ug_world_clear() { gWorld.Clear(); }
+extern "C" bool ee_screenscpp_ug_one_record() { return gWorld.mStatistics.GetRecords().size() == 1; }
+extern "C" bool ee_screenscpp_ug_has_communications() { return gCommunications != NULL; }
+extern "C" bool ee_screenscpp_ug_is_client() { return gCommunications->IsClient(); }
+extern "C" bool ee_screenscpp_ug_server_lost_after_loading()
+{ return static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading; }
+extern "C" void ee_screenscpp_ug_unload_media() { EEUnloadGameMedia(); }
+extern "C" bool ee_screenscpp_ug_lobby_open() { return EEIsLobbyOpen(); }
+extern "C" void ee_screenscpp_ug_create_editor() { gUIManager->CreateScenarioEditor(); }
+extern "C" int64_t ee_screenscpp_ug_load_scendefault()
+{ return EELoadSavedGameFile(UString("ScenDefault") + gScenarioExtension, true, true, UString("data\\") + UString("Scenarios\\"), 0); }
+extern "C" void ee_screenscpp_ug_stop_one_shots() { gSoundManager->StopAllOneShotSounds(); }
+extern "C" bool ee_screenscpp_ug_graphics_paused() { return gGraphics->mIsPaused; }
+extern "C" bool ee_screenscpp_ug_can_buy_civ() { return gWorld.mGameOptions.CanBuyCivilization(); }
+extern "C" bool ee_screenscpp_ug_custom_civs() { return gWorld.mGameOptions.mAllowCustomCivs; }
 
 // Opens the WON server selection, remembering the password when asked
 void EEUserInterface::OpenSelectServer()
@@ -216,78 +208,72 @@ extern "C" uint32_t ee_screenscpp_action(uint32_t inOp, void* inAction)
     return 0;
 }
 
-// The thread messages' calls (EE_SCREENS_UI_OP_*) on the UI object inUI: the UI manager and its forms, the locks,
-// the graphics thread, the thread object's handlers; the pointers are the messages' parameters
-extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    EEUserInterface* theUI = static_cast<EEUserInterface*>(inUI);
-    EEUIFMainGame* theMain = gUIManager != NULL ? gUIManager->GetMainGameForm() : NULL;
-    UIForm* theForm = reinterpret_cast<UIForm*>(inA);
-    switch (inOp) {
-    case EE_SCREENS_UI_OP_PAUSE: theUI->PauseGraphics(); break;
-    case EE_SCREENS_UI_OP_RESUME: theUI->ResumeGraphics(); break;
-    case EE_SCREENS_UI_OP_STATUS_VALUE:
-        static_cast<UIStatusBar*>(theForm->GetControl(inB))->SetCurrentRangeValue(inC);
-        break;
-    case EE_SCREENS_UI_OP_RESIZE_GAME: theUI->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true); break;
-    case EE_SCREENS_UI_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false); break;
-    case EE_SCREENS_UI_OP_SCREEN_ACTIVE: gGameScreenActive = true; break;
-    case EE_SCREENS_UI_OP_POST_LOAD_GAME: gDataPreLoading->PostLoadGame(false, false); break;
-    case EE_SCREENS_UI_OP_BACKGROUND_MEDIA: theMain->Rust(EE_SCREENS_MF_DO_UPDATE_MEDIA, 1); break;
-    case EE_SCREENS_UI_OP_GFX_POST_PAUSE: return gGraphics->PostPause() == kErrorOK;
-    case EE_SCREENS_UI_OP_GFX_PAUSED: return gGraphics->mIsPaused;
-    case EE_SCREENS_UI_OP_GFX_POST_RESUME: gGraphics->PostResume(); break;
-    case EE_SCREENS_UI_OP_RESET_GFX_VALUES: EEResetGraphicsValues(); break;
-    case EE_SCREENS_UI_OP_SCREEN_CAPTURE: {
-        EEScreenCapture* theCapture = reinterpret_cast<EEScreenCapture*>(inA);
-        ESVERIFY_AT(TSScheduler::CreateEvent(theCapture->mCaptureComplete) == keseOK, 1956);
-        gGraphics->PostScreenShot(theCapture);
-        theCapture->mCaptureComplete->Wait(kTSWaitInfinite);
-        TSScheduler::DestroyEvent(theCapture->mCaptureComplete);
-        if (theCapture->mWidth != -1)
-            theCapture->mSurface->Dereference();
-        delete theCapture;
-        break;
-    }
-    case EE_SCREENS_UI_OP_POST_GFX_ALL: EEPostGraphicsAll(); break;
-    case EE_SCREENS_UI_OP_ERROR_HAS_CALLBACK: return reinterpret_cast<EEUIFErrorCallbackData*>(inA)->mCallback != NULL;
-    case EE_SCREENS_UI_OP_ERROR_CALLBACK: {
-        EEUIFErrorCallbackData* theData = reinterpret_cast<EEUIFErrorCallbackData*>(inA);
-        theData->mCallback(static_cast<UIForm*>(theData->mData));
-        break;
-    }
-    case EE_SCREENS_UI_OP_DELETE_FORM: delete theForm; break;
-    case EE_SCREENS_UI_OP_DELETE_ERROR_DATA: delete reinterpret_cast<EEUIFErrorCallbackData*>(inA); break;
-    case EE_SCREENS_UI_OP_CHAT_SHOW: {
-        EEChatLogEntry* theEntry = reinterpret_cast<EEChatLogEntry*>(inA);
-        theMain->DisplayChat(theEntry->mColor, theEntry->mName, theEntry->mText, theEntry->mTime, theEntry->mType);
-        break;
-    }
-    case EE_SCREENS_UI_OP_CHAT_TYPE: return reinterpret_cast<EEChatLogEntry*>(inA)->mType;
-    case EE_SCREENS_UI_OP_CHAT_LOG: EEUIECLEFormManager::AddEntry(*reinterpret_cast<EEChatLogEntry*>(inA)); break;
-    case EE_SCREENS_UI_OP_DELETE_CHAT: delete reinterpret_cast<EEChatLogEntry*>(inA); break;
-    case EE_SCREENS_UI_OP_SHOW_INFORMATION: theMain->ShowInformation(reinterpret_cast<EEUIFMGInformation*>(inA)); break;
-    case EE_SCREENS_UI_OP_DELETE_DIALOG: delete reinterpret_cast<EESMDialogMessage*>(inA); break;
-    case EE_SCREENS_UI_OP_UPDATE_ICON_BAR:
-        theMain->Rust(EE_SCREENS_MF_DO_ICON_BAR);
-        theUI->mIconBarUpdatePosted = false;
-        break;
-    case EE_SCREENS_UI_OP_CHANGE_RASTERIZER: theUI->ChangeRasterizer(inA, inB); break;
-    case EE_SCREENS_UI_OP_INFORMATION:
-        theMain->Rust(EE_SCREENS_MF_DO_INFO_PAUSE, inA != 0);
-        break;
-    case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
-    case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); break;
-    case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->GetScenarioEditorForm()->SelectTab((unsigned char)inA, inB); break;
-    case EE_SCREENS_UI_OP_SAVED_GROUP: EEUIShell::Op(theMain->GetControl(inA), EE_SCREENS_SKOP_SG_REFRESH); break;
-    case EE_SCREENS_UI_OP_SELECT_SERVER: theUI->OpenSelectServer(); break;
-    case EE_SCREENS_UI_OP_MOTD:
-        theUI->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inA), *reinterpret_cast<UWideString*>(inB));
-        break;
-    case EE_SCREENS_UI_OP_DELETE_WSTRING: delete reinterpret_cast<UWideString*>(inA); break;
-    }
-    return 0;
-}
+// The UI thread's message host (EE_SCREENS_UI_OP_*): Rust's (ui_message_calls.rs and the modules before it) over
+// the one-statement shims below (UI lane round 11)
+#define UIM(u) static_cast<EEUserInterface*>((void*)(u))
+#define UIM_CAP(c) reinterpret_cast<EEScreenCapture*>(c)
+#define UIM_CHAT(e) reinterpret_cast<EEChatLogEntry*>(e)
+extern "C" void ee_screenscpp_uim_pause(uintptr_t inUi) { UIM(inUi)->PauseGraphics(); }
+extern "C" void ee_screenscpp_uim_resume(uintptr_t inUi) { UIM(inUi)->ResumeGraphics(); }
+extern "C" void ee_screenscpp_uim_status_value(uintptr_t inForm, uint64_t inControl, int64_t inValue)
+{ static_cast<UIStatusBar*>(((UIForm*)inForm)->GetControl((unsigned long)inControl))->SetCurrentRangeValue(inValue); }
+extern "C" void ee_screenscpp_uim_resize_game(uintptr_t inUi)
+{ UIM(inUi)->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true); }
+extern "C" void ee_screenscpp_uim_resize_menu(uintptr_t inUi)
+{ UIM(inUi)->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false); }
+extern "C" void ee_screenscpp_uim_screen_active() { gGameScreenActive = true; }
+extern "C" void ee_screenscpp_uim_post_load_game() { gDataPreLoading->PostLoadGame(false, false); }
+extern "C" bool ee_screenscpp_uim_has_manager() { return gUIManager != NULL; }
+extern "C" uintptr_t ee_screenscpp_uim_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
+extern "C" void ee_screenscpp_uim_main_rust(uintptr_t inMain, uint32_t inWhich, int64_t inA)
+{ ((EEUIFMainGame*)inMain)->Rust(inWhich, inA); }
+extern "C" bool ee_screenscpp_uim_gfx_post_pause() { return gGraphics->PostPause() == kErrorOK; }
+extern "C" bool ee_screenscpp_uim_gfx_paused() { return gGraphics->mIsPaused; }
+extern "C" void ee_screenscpp_uim_gfx_post_resume() { gGraphics->PostResume(); }
+extern "C" void ee_screenscpp_uim_reset_gfx_values() { EEResetGraphicsValues(); }
+extern "C" bool ee_screenscpp_uim_capture_event(uintptr_t inCapture)
+{ return TSScheduler::CreateEvent(UIM_CAP(inCapture)->mCaptureComplete) == keseOK; }
+extern "C" void ee_screenscpp_uim_capture_post(uintptr_t inCapture) { gGraphics->PostScreenShot(UIM_CAP(inCapture)); }
+extern "C" void ee_screenscpp_uim_capture_wait(uintptr_t inCapture)
+{ UIM_CAP(inCapture)->mCaptureComplete->Wait(kTSWaitInfinite); }
+extern "C" void ee_screenscpp_uim_capture_event_free(uintptr_t inCapture)
+{ TSScheduler::DestroyEvent(UIM_CAP(inCapture)->mCaptureComplete); }
+extern "C" int64_t ee_screenscpp_uim_capture_width(uintptr_t inCapture) { return (int64_t)UIM_CAP(inCapture)->mWidth; }
+extern "C" void ee_screenscpp_uim_capture_surface_release(uintptr_t inCapture)
+{ UIM_CAP(inCapture)->mSurface->Dereference(); }
+extern "C" void ee_screenscpp_uim_capture_delete(uintptr_t inCapture) { delete UIM_CAP(inCapture); }
+extern "C" void ee_screenscpp_uim_verify(uint32_t inLine)
+{ ESVerify(__FILE__, inLine, "TSScheduler::CreateEvent(theCapture->mCaptureComplete) == keseOK"); }
+extern "C" void ee_screenscpp_uim_post_gfx_all() { EEPostGraphicsAll(); }
+extern "C" bool ee_screenscpp_uim_error_has_callback(uintptr_t inData)
+{ return reinterpret_cast<EEUIFErrorCallbackData*>(inData)->mCallback != NULL; }
+extern "C" void ee_screenscpp_uim_error_callback(uintptr_t inData)
+{ reinterpret_cast<EEUIFErrorCallbackData*>(inData)->mCallback(static_cast<UIForm*>(reinterpret_cast<EEUIFErrorCallbackData*>(inData)->mData)); }
+extern "C" void ee_screenscpp_uim_delete_form(uintptr_t inForm) { delete (UIForm*)inForm; }
+extern "C" void ee_screenscpp_uim_delete_error_data(uintptr_t inData)
+{ delete reinterpret_cast<EEUIFErrorCallbackData*>(inData); }
+extern "C" void ee_screenscpp_uim_chat_show(uintptr_t inMain, uintptr_t inEntry)
+{ ((EEUIFMainGame*)inMain)->DisplayChat(UIM_CHAT(inEntry)->mColor, UIM_CHAT(inEntry)->mName, UIM_CHAT(inEntry)->mText, UIM_CHAT(inEntry)->mTime, UIM_CHAT(inEntry)->mType); }
+extern "C" int64_t ee_screenscpp_uim_chat_type(uintptr_t inEntry) { return (int64_t)UIM_CHAT(inEntry)->mType; }
+extern "C" void ee_screenscpp_uim_chat_log(uintptr_t inEntry) { EEUIECLEFormManager::AddEntry(*UIM_CHAT(inEntry)); }
+extern "C" void ee_screenscpp_uim_delete_chat(uintptr_t inEntry) { delete UIM_CHAT(inEntry); }
+extern "C" void ee_screenscpp_uim_show_information(uintptr_t inMain, uintptr_t inInfo)
+{ ((EEUIFMainGame*)inMain)->ShowInformation(reinterpret_cast<EEUIFMGInformation*>(inInfo)); }
+extern "C" void ee_screenscpp_uim_delete_dialog(uintptr_t inDialog)
+{ delete reinterpret_cast<EESMDialogMessage*>(inDialog); }
+extern "C" void ee_screenscpp_uim_icon_bar_posted_clear(uintptr_t inUi) { UIM(inUi)->mIconBarUpdatePosted = false; }
+extern "C" void ee_screenscpp_uim_change_rasterizer(uintptr_t inUi, int64_t inA, int64_t inB)
+{ UIM(inUi)->ChangeRasterizer(inA, inB); }
+extern "C" void ee_screenscpp_uim_post_event(uintptr_t inEvent)
+{ gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inEvent), NULL); }
+extern "C" void ee_screenscpp_uim_select_tab(uint8_t inTab, int64_t inB)
+{ gUIManager->GetScenarioEditorForm()->SelectTab(inTab, inB); }
+extern "C" void ee_screenscpp_uim_saved_group(uintptr_t inMain, uint64_t inControl)
+{ EEUIShell::Op(((EEUIFMainGame*)inMain)->GetControl((unsigned long)inControl), EE_SCREENS_SKOP_SG_REFRESH); }
+extern "C" void ee_screenscpp_uim_select_server(uintptr_t inUi) { UIM(inUi)->OpenSelectServer(); }
+extern "C" void ee_screenscpp_uim_motd(uintptr_t inUi, uintptr_t inA, uintptr_t inB)
+{ UIM(inUi)->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inA), *reinterpret_cast<UWideString*>(inB)); }
+extern "C" void ee_screenscpp_uim_delete_wstring(uintptr_t inText) { delete reinterpret_cast<UWideString*>(inText); }
 
 // Updates the interface: keyboard and mouse input, the UI under the world read lock, then the queued actions
 void EEUserInterface::UpdateInterface()

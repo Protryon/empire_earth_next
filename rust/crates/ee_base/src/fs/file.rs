@@ -10,6 +10,10 @@ pub trait FsFile {
     fn read_u32(&mut self, value: &mut u32) -> i32;
     /// Reads up to `out.len()` bytes; returns the status and how many were read.
     fn read_bytes(&mut self, out: &mut [u8]) -> (i32, u32);
+    /// Reads up to `out.len()` bytes as text (`Read(char*, ...)`; the byte read unless the file tells them apart).
+    fn read_text(&mut self, out: &mut [u8]) -> (i32, u32) {
+        self.read_bytes(out)
+    }
 }
 
 /// The writing half of `FsFile`.
@@ -17,6 +21,10 @@ pub trait FsWrite {
     fn write_u32(&mut self, value: u32) -> i32;
     /// Returns the status and how many were written.
     fn write_bytes(&mut self, data: &[u8]) -> (i32, u32);
+    /// Writes the bytes as text (`Write(const char*, ...)`; the byte write unless the file tells them apart).
+    fn write_text(&mut self, data: &[u8]) -> (i32, u32) {
+        self.write_bytes(data)
+    }
 }
 
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and

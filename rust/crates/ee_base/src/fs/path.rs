@@ -25,14 +25,12 @@ pub type EeFsPathNameSink = unsafe extern "C" fn(context: *mut c_void, name: *co
 /// that archive's file. kErrorNotFound when neither has it.
 ///
 /// # Safety
-/// `directories` holds `directory_count` live spec records, `archives` `archive_count` live archive records; `name`
+/// `directories` and `archives` hold live records; `name`
 /// is a live `UString` record; `found` and `out_directory` are live spec records; the outputs are writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fs_path_find(
-    directories: *const EeFsSpec,
-    directory_count: usize,
-    archives: *const EeFsArchiveObj,
-    archive_count: usize,
+#[allow(clippy::too_many_arguments)]
+pub unsafe fn path_find(
+    directories: &[*mut EeFsSpec],
+    archives: &[*mut EeFsArchiveObj],
     name: *const EeFsString,
     found: *mut EeFsSpec,
     out_directory: *mut EeFsSpec,
@@ -41,8 +39,8 @@ pub unsafe extern "C" fn ee_fs_path_find(
     startup_volume: *const EeFsString,
     startup_directory: *const EeFsString,
 ) -> c_long {
-    for i in 0..directory_count {
-        let mut directory = TempSpec::copy_of(directories.add(i));
+    for &d in directories {
+        let mut directory = TempSpec::copy_of(d);
         if ee_fs_spec_first_file(&mut directory.0, (*name).string, found, startup_volume, startup_directory)
             == status::OK as c_long
         {
@@ -51,16 +49,16 @@ pub unsafe extern "C" fn ee_fs_path_find(
             return status::OK as c_long;
         }
     }
-    for i in 0..archive_count {
+    for (i, &archive) in archives.iter().enumerate() {
         // FSArchive::FindFile: the name lower-cased, the member found
         let mut lowered = EeFsString::blank();
         crate::ustring::ee_ustring_init_copy(lowered.us(), (*name).usc());
         ee_ustring_change_case(lowered.us(), false);
         let mut member: *mut EeFsMemFile = std::ptr::null_mut();
-        let result = ee_fs_arch_find(archives.add(i), lowered.string, &mut member);
+        let result = ee_fs_arch_find(archive, lowered.string, &mut member);
         crate::ustring::ee_ustring_free(lowered.us());
         if result == status::OK as c_long {
-            ee_fs_spec_assign(out_directory, &(*archives.add(i)).archive_file);
+            ee_fs_spec_assign(out_directory, &(*archive).archive_file);
             *out_member = member;
             *out_archive = i;
             return status::OK as c_long;
@@ -78,11 +76,10 @@ pub unsafe extern "C" fn ee_fs_path_find(
 /// code when there is a directory), or `previous` (the archives' result) when there is none.
 ///
 /// # Safety
-/// `directories` holds `directory_count` live spec records, `pattern` is a C string, `sink` takes `context`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fs_path_list_directories(
-    directories: *const EeFsSpec,
-    directory_count: usize,
+/// `directories` hold live records, `pattern` is a C string, `sink` takes `context`.
+#[allow(clippy::too_many_arguments)]
+pub unsafe fn path_list_directories(
+    directories: &[*mut EeFsSpec],
     pattern: *const c_char,
     previous: c_long,
     sink: EeFsPathNameSink,
@@ -95,8 +92,7 @@ pub unsafe extern "C" fn ee_fs_path_list_directories(
     ee_fs_basic_init(&mut file.0);
     ee_fs_spec_init(&mut file.0, startup_volume, startup_directory);
     let mut name = EeFsString::with_capacity(260);
-    for i in 0..directory_count {
-        let root = directories.add(i);
+    for &root in directories {
         let root_length = (*root).volume.length.wrapping_add((*root).directory.length);
         let mut directory = TempSpec::copy_of(root);
         result = ee_fs_spec_first_file(&mut directory.0, pattern, &mut file.0, startup_volume, startup_directory);

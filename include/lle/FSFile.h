@@ -97,60 +97,10 @@ public:
 };
 
 // UString's and UWideString's file forms (lle/UString.h, lle/UWideString.h)
-inline long UString::Load(FSFile& inFile)
-{
-    unsigned long theLength = 0;   // (passed on below even when its read fails)
-    unsigned long theRead;
-    long theResult = inFile.Read(theLength);
-    if (theResult == kErrorOK && theLength != 0) {
-        theResult = inFile.Read(ee_ustring_load_buffer(&this->mState, theLength), theLength, theRead);
-        if (theResult == kErrorOK && theRead != theLength)
-            theResult = kErrorFailed;
-    }
-    ee_ustring_load_end(&this->mState, theResult == kErrorOK && theLength != 0, theLength);
-    return theResult;
-}
-inline long UString::Save(FSFile& inFile) const
-{
-    unsigned long theLength = this->GetLength() + 1;
-    long theResult = inFile.Write(theLength);
-    if (theResult != kErrorOK)
-        return theResult;
-    unsigned long theWritten;
-    theResult = inFile.Write(*this, theLength, theWritten);
-    if (theResult == kErrorOK && theWritten < theLength)
-        theResult = kErrorFailed;
-    return theResult;
-}
-inline long UWideString::Load(FSFile& inFile)
-{
-    unsigned long theSize = 0;
-    unsigned long theRead;
-    long theResult = inFile.Read(theSize);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(ee_uwstring_load_buffer(&this->mState, theSize), theSize, theRead);
-        if (theResult == kErrorOK) {
-            ee_uwstring_load_end(&this->mState, theSize);
-            if (theRead != theSize)
-                theResult = kErrorFailed;
-        }
-    }
-    if (theResult != kErrorOK)
-        this->Clear();
-    return theResult;
-}
-inline long UWideString::Save(FSFile& inFile) const
-{
-    unsigned long theSize = this->GetBytesUsedToSave() - 4;
-    unsigned long theWritten;
-    long theResult = inFile.Write(theSize);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(*this, theSize, theWritten);
-    if (theResult == kErrorOK && theWritten < theSize)
-        theResult = kErrorFailed;
-    return theResult;
-}
+inline long UString::Load(FSFile& inFile) { return ee_ustring_load_file(&this->mState, &inFile); }
+inline long UString::Save(FSFile& inFile) const { return ee_ustring_save_file(&this->mState, &inFile); }
+inline long UWideString::Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
+inline long UWideString::Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
 
 // FSFile::SetPosition inOrigin: FSFileSpec::SetPosition maps it to the SetFilePointer move method
 enum FSFileOrigin {
