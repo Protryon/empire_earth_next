@@ -102,14 +102,8 @@ public:
     { return ee_won_auth_verifier_load(WonBytes(inFile), inFile.size()); }
     void SetServerContext(ServerContext* inContext) //2df330
     { ee_won_authctx_set_server_context(this->mCore, inContext != NULL ? static_cast<RefCount*>(inContext) : NULL); }
-    SmartPtr<ServerContext> GetServerContext() //2df3e0: the context's own reference handed to the result
-    {
-        void* aServers = ee_won_authctx_server_context(this->mCore);
-        if (aServers == NULL) return NULL;
-        SmartPtr<ServerContext> servers(static_cast<ServerContext*>(static_cast<RefCount*>(aServers)));
-        static_cast<RefCount*>(aServers)->Release();
-        return servers;
-    }
+    SmartPtr<ServerContext> GetServerContext() //2df3e0: a reference of the result's own
+    { return static_cast<ServerContext*>(static_cast<RefCount*>(ee_won_authctx_server_context_borrowed(this->mCore))); }
     void ClearCDKeyCommunityJoins() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_JOINS, std::wstring()); } //2e0510
     void ClearUserData() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_USER_DATA, std::wstring()); } //2e05e0
     void ClearOneTimeData() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME, std::wstring()); } //2e06b0
@@ -179,25 +173,16 @@ private:
     const EeWonAuthCtx* mCore; // one reference
     static std::string Utf16(const std::wstring& inText) { std::string b; WideAppendUtf16LE(b, inText); return b; }
     std::wstring LoginText(int inWhich) const
-    {
-        std::string aBytes;
-        ee_won_auth_login_text(ee_won_authctx_login(this->mCore), inWhich, WonStringSink, &aBytes);
-        std::wstring aText;
-        WideAssignUtf16LE(aText, aBytes.data(), (unsigned long)(aBytes.size() / 2));
-        return aText;
-    }
+    { std::wstring s; ee_won_auth_login_text_wide(ee_won_authctx_login(this->mCore), inWhich, sizeof(wchar_t), WonWideTextSink, &s); return s; }
     void LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue = std::string(), long long inNum = 0)
     {
-        std::string aKey = Utf16(inKey);
-        ee_won_auth_login_set(ee_won_authctx_login(this->mCore), inWhich, WonBytes(aKey), aKey.size(), WonBytes(inValue),
-                              inValue.size(), inNum);
+        ee_won_auth_login_set_wide(ee_won_authctx_login(this->mCore), inWhich, inKey.data(), sizeof(wchar_t), inKey.size(),
+                                   WonBytes(inValue), inValue.size(), inNum);
     }
     void AppendBlock(int inWhich, WriteBuffer& outBuffer, const std::basic_string<unsigned char>* inChallenge)
     {
-        std::string aBytes;
-        ee_won_auth_login_block(ee_won_authctx_login(this->mCore), inWhich, inChallenge != NULL ? inChallenge->data() : NULL,
-                                inChallenge != NULL ? inChallenge->size() : 0, WonStringSink, &aBytes);
-        outBuffer.AppendBytes(aBytes.data(), aBytes.length());
+        ee_won_auth_login_block_to(ee_won_authctx_login(this->mCore), inWhich, inChallenge != NULL ? inChallenge->data() : NULL,
+                                   inChallenge != NULL ? inChallenge->size() : 0, outBuffer.mBuffer);
     }
     bool Secrets(int inWhich, const void* inKey = NULL, time_t inT0 = 0, time_t inT1 = 0)
     {

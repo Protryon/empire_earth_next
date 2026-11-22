@@ -221,7 +221,9 @@ impl EeWonCdKeyObj {
     fn save_registry(&self, root: i32, path: *const c_char) -> bool {
         let Some(e) = self.encrypted() else { return false };
         // SAFETY: the caller's path, our bytes
-        unsafe { ee_won_cdkey_registry_write(root, path, self.product.as_ptr(), self.product.len(), e.as_ptr(), e.len()) }
+        unsafe {
+            ee_won_cdkey_registry_write(root, path, self.product.as_ptr(), self.product.len(), e.as_ptr(), e.len())
+        }
     }
 
     /// `ClearFromRegistry`.
@@ -327,7 +329,7 @@ pub unsafe extern "C" fn ee_won_cdkey_obj_clone(k: *const EeWonCdKeyObj) -> *mut
 /// Both are live CDKeys.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_cdkey_obj_assign(to: *mut EeWonCdKeyObj, from: *const EeWonCdKeyObj) {
-    if to as *const EeWonCdKeyObj != from {
+    if !std::ptr::eq(to, from) {
         // SAFETY: the caller's keys, two distinct objects
         unsafe { (*to).clone_from(&*from) };
     }

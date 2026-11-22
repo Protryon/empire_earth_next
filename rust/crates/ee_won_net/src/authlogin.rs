@@ -427,6 +427,75 @@ pub unsafe extern "C" fn ee_won_auth_login_text(
     unsafe { give(sink, context, &b) };
 }
 
+/// `LoginText(which)` as `wchar_t` text (R6 WON round 33): `ee_won_auth_login_text`'s bytes read as their UTF-16
+/// little-endian units (an odd last byte dropped), given to `sink` once.
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_auth_login_text_wide(
+    l: *const EeWonAuthLogin,
+    which: i32,
+    wchar_size: u32,
+    sink: crate::ffi::EeWonWideSink,
+    context: *mut c_void,
+) {
+    unsafe extern "C" fn keep(context: *mut c_void, data: *const u8, length: usize) {
+        // SAFETY: the Vec below, the sink's bytes
+        unsafe { *(context as *mut Vec<u8>) = crate::ffi::bytes(data, length).to_vec() };
+    }
+    let mut b: Vec<u8> = Vec::new();
+    // SAFETY: the caller's login and sink
+    unsafe {
+        ee_won_auth_login_text(l, which, keep, &mut b as *mut Vec<u8> as *mut c_void);
+        crate::ffi::ee_won_wide_from_utf16le_sink(b.as_ptr(), b.len() / 2, wchar_size, sink, context);
+    }
+}
+
+/// `LoginSet` with the key as `wchar_t` text (R6 WON round 33: its UTF-16 conversion is here).
+///
+/// # Safety
+/// `l` is a login; `key` holds `key_count` characters of `wchar_size` bytes; `value` holds `value_len` bytes.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_auth_login_set_wide(
+    l: *const EeWonAuthLogin,
+    which: i32,
+    key: *const c_void,
+    wchar_size: u32,
+    key_count: usize,
+    value: *const u8,
+    value_len: usize,
+    num: i64,
+) {
+    let k = unsafe { crate::ffi::wide_units(key, wchar_size, key_count) };
+    let v = unsafe { crate::ffi::bytes(value, value_len) };
+    unsafe { login(l) }.set(which, &k, v, num);
+}
+
+/// `AppendBlock(which, buffer, challenge)` (R6 WON round 33): `ee_won_auth_login_block`'s bytes appended to the
+/// write buffer.
+///
+/// # Safety
+/// `l` is a login; `data` holds `len` bytes; `w` a live write buffer.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_auth_login_block_to(
+    l: *const EeWonAuthLogin,
+    which: i32,
+    data: *const u8,
+    len: usize,
+    w: *mut crate::buffer::EeWonWriteBuffer,
+) {
+    unsafe extern "C" fn append(context: *mut c_void, data: *const u8, length: usize) {
+        // SAFETY: the write buffer below, the sink's bytes
+        unsafe {
+            crate::buffer::ee_won_writer_append(context as *mut crate::buffer::EeWonWriteBuffer, data, length as _)
+        };
+    }
+    // SAFETY: the caller's login and buffer
+    unsafe { ee_won_auth_login_block(l, which, data, len, append, w as *mut c_void) };
+}
+
 /// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
 ///
 /// # Safety
