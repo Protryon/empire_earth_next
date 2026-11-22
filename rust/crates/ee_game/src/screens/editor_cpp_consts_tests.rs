@@ -26,6 +26,7 @@ const EE_SCREENS_SECC_HEADERS: [&str; 4] = [
     "include/ee/EEStringIDs.h",
     "include/rust/render/gestate.h",
     "include/lle/UIControl.h",
+    "include/rust/ui/ids.h",
     "include/ee/EEUnitClassIDs.h",
 ];
 
