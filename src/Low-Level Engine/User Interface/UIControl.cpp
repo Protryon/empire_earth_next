@@ -119,7 +119,6 @@ intptr_t UIControl::CallRect(EeUiControlCall inCall, const GERectangle& inRectan
     return this->Call(inCall, 0, 0, f);
 }
 
-typedef EeUiControlCall C;
 
 // Creates a shown, dirty control with a transparent black background (the record's state, ee_ui controlobj.rs); the
 // first one looks up the shared UI keys
@@ -145,7 +144,7 @@ UIControl::~UIControl()
 void UIControl::SetLocation(const GE2DPoint& inLocation)
 {
     float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-    this->Call(C::SetLocation, 0, 0, f);
+    this->Call(EeUiControlCall::SetLocation, 0, 0, f);
 }
 
 // Draws the copied background and the border

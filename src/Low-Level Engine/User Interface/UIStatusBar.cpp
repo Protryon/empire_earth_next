@@ -55,17 +55,7 @@ struct UIStatusBarHost {
         }
         return 0;
     }
-    static intptr_t Call(const UIStatusBar* s, EeUiStatusBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_status_bar_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallF(const UIStatusBar* s, EeUiStatusBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_status_bar_call(s->mRust, c, 0, 0, f);
-    }
 };
-typedef EeUiStatusBarCall C;
 
 // Creates a progress bar control: empty range, black fill, white text and a text area inset by the border
 UIStatusBar::UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,

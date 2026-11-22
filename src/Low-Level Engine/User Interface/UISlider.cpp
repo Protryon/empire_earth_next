@@ -57,17 +57,7 @@ struct UISliderHost {
         }
         return 0;
     }
-    static intptr_t Call(const UISlider* s, EeUiSliderCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_slider_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallAt(const UISlider* s, EeUiSliderCall c, const GE2DPoint& p)
-    {
-        float f[4] = {p.GetX(), p.GetY(), 0.0f, 0.0f};
-        return ee_ui_slider_call(s->mRust, c, 0, 0, f);
-    }
 };
-typedef EeUiSliderCall C;
 
 // Creates a horizontal (style 0) or vertical slider with a square thumb, an empty range and no page size
 UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,

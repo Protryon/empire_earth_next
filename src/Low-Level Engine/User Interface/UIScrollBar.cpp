@@ -69,15 +69,6 @@ struct UIScrollBarRust {
         }
         return 0;
     }
-    static intptr_t Call(const UIScrollBar* s, EeUiScrollBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_scroll_bar_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallF(const UIScrollBar* s, EeUiScrollBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_scroll_bar_call(s->mRust, c, 0, 0, f);
-    }
     // the constructor's rectangle, before the Rust object exists
     static GERectangle Layout(const GE2DPoint& inLocation, float inLength, unsigned long inStyle)
     {
@@ -85,7 +76,6 @@ struct UIScrollBarRust {
         return GERectangle(r.left, r.top, r.right, r.bottom);
     }
 };
-typedef EeUiScrollBarCall C;
 
 // Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
 // Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it

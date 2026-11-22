@@ -76,21 +76,8 @@ struct UITextLabelRust {
         }
         return 0;
     }
-    static intptr_t Call(const UITextLabel* l, EeUiLabelCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f,
-                         float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, f3};
-        return ee_ui_label_call(l->mRust, c, a, b, f);
-    }
-    static intptr_t CallRect(const UITextLabel* l, EeUiLabelCall c, const GERectangle& r)
-    {
-        float f[4];
-        UIObjHost::PutRect(f, r);
-        return ee_ui_label_call(l->mRust, c, 0, 0, f);
-    }
     static const GERectangle& RectAt(intptr_t inAddress) { return *reinterpret_cast<const GERectangle*>(inAddress); }
 };
-typedef EeUiLabelCall C;
 
 // Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
 UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
@@ -102,7 +89,7 @@ UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned lon
     float f[4];
     UIObjHost::PutRect(f, inRectangle);
     this->mRust = ee_ui_label_new(this, UITextLabelRust::Op, f, inFont, inLabelType, inBorderThickness);
-    UITextLabelRust::Call(this, C::Init, (intptr_t)(const char*)inText);
+    this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText);
 }
 
 UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }

@@ -121,23 +121,7 @@ struct UIEditBoxRust {
         }
         return 0;
     }
-    static intptr_t Call(const UIEditBox* e, EeUiEditCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0,
-                         intptr_t d = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_edit_call(e->mRust, c, a, b, cc, d, f);
-    }
-    static intptr_t Color(const UIEditBox* e, EeUiEditCall c, const GEColor& inColor)
-    {
-        return Call(e, c, 0, 0, 0, 0, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-    }
-    static intptr_t Point(const UIEditBox* e, EeUiEditCall c, const GE2DPoint& inPoint, intptr_t a = 0)
-    {
-        return Call(e, c, a, 0, 0, 0, inPoint.GetX(), inPoint.GetY());
-    }
 };
-typedef EeUiEditCall C;
-typedef UIEditBoxRust R;
 
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
 // lle_bg_edit.rs, UI lane round 12) before the host above

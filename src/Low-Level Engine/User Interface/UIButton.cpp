@@ -94,18 +94,7 @@ struct UIButtonHost {
         }
         return 0;
     }
-    static intptr_t Call(const UIButton* s, EeUiButtonCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_button_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallF(const UIButton* s, EeUiButtonCall c, float f0, float f1, float f2 = 0.0f, float f3 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, f3};
-        return ee_ui_button_call(s->mRust, c, 0, 0, f);
-    }
 };
-typedef EeUiButtonCall C;
-#define EE_UI_BUTTON(c, ...) UIButtonHost::Call(this, C::c, ##__VA_ARGS__)
 
 // Creates a button with normal, focused and pressed bitmaps (pressed defaults to normal) and no text or sounds
 UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
@@ -123,6 +112,6 @@ UIButton::~UIButton() { ee_ui_button_free(this->mRust); }
 GE2DPoint UIButton::GetBitmapLocation() const
 {
     float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    EE_UI_BUTTON(BitmapLocation, 0, 0, f);
+    this->Call(EeUiButtonCall::BitmapLocation, 0, 0, f);
     return GE2DPoint(f[0], f[1]);
 }
