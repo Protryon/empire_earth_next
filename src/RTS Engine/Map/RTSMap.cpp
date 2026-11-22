@@ -60,19 +60,16 @@ struct EEMapRaiseOps {
     }
     static void UpdateWater(void* inMap, long inX, long inY) { static_cast<RTSMap*>(inMap)->UpdateWater(inX, inY); }
     static void* Tile(void* inMap, unsigned long inX, unsigned long inY) { return static_cast<RTSMap*>(inMap)->GetTile(inX, inY); }
-    static EeGeMapHost Of(RTSMap* inMap)
-    {
-        EeGeMapHost theHost = {inMap, inMap->mTerrainMesh.GetRust(), HasTile, SettleTile, UpdateWater, Tile};
-        return theHost;
-    }
+    static EeGeMapHost Of(RTSMap* inMap) { return {inMap, inMap->mTerrainMesh.GetRust(), HasTile, SettleTile, UpdateWater, Tile}; }
+    // the host of a call's arguments (the temporary lives to the end of the call)
+    static const EeGeMapHost* Ptr(const EeGeMapHost& inHost) { return &inHost; }
 };
 }
 
 // Counts the tile's corners at least 0.4 above its lowest corner (0 off the map)
 long RTSMap::GetNumRaisedCorners(unsigned long inX, unsigned long inY)
 {
-    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
-    return ee_ge_map_raised_corners(&theHost, inX, inY);
+    return ee_ge_map_raised_corners(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), inX, inY);
 }
 
 // Turns every explored but unseen tile back to unexplored for each player but player 0, then unregisters
@@ -110,28 +107,20 @@ EEMapTile* EEMap::GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY)
 // Returns whether a tile's corner heights differ by at most 0.7 times the map's scale value (false off the map)
 bool RTSMap::IsTileFlat(unsigned long inX, unsigned long inY)
 {
-    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
-    return ee_ge_map_tile_flat(&theHost, this->mF1955F4, inX, inY);
+    return ee_ge_map_tile_flat(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), this->mF1955F4, inX, inY);
 }
 
 // Returns whether the tiles a radius's diagonal away left, right, below and above a tile are all on the map
 bool EEMap::IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius)
 {
-    float theDiagonal = sqrt((inRadius * inRadius) * 2.0);
-    unsigned long theRadius = UMFloorUnsigned(theDiagonal + 0.5f);
-    bool theResult = false;
-    if (this->GetTile(inX - theRadius, inY) != NULL && this->GetTile(inX + theRadius, inY) != NULL &&
-        this->GetTile(inX, inY - theRadius) != NULL && this->GetTile(inX, inY + theRadius) != NULL)
-        theResult = true;
-    return theResult;
+    return ee_ge_map_area_on_map(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), inX, inY, inRadius);
 }
 
 // Returns the tile where a line meets the terrain, or the water surface if asked and it comes first, and stores its
 // coordinates; NULL if nothing is hit (ee_ge map_raise.rs)
 EEMapTile* RTSMap::GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface)
 {
-    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
-    return static_cast<EEMapTile*>(ee_ge_map_tile_on_line(&theHost, reinterpret_cast<const EeGe3DLine*>(&inLine), &outX,
+    return static_cast<EEMapTile*>(ee_ge_map_tile_on_line(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), reinterpret_cast<const EeGe3DLine*>(&inLine), &outX,
                                                           &outY, inHitWaterSurface));
 }
 
@@ -139,8 +128,7 @@ EEMapTile* RTSMap::GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY,
 // hit point; NULL if nothing is hit (ee_ge map_raise.rs)
 EEMapTile* RTSMap::GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface)
 {
-    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
-    return static_cast<EEMapTile*>(ee_ge_map_location_on_line(&theHost, reinterpret_cast<const EeGe3DLine*>(&inLine),
+    return static_cast<EEMapTile*>(ee_ge_map_location_on_line(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), reinterpret_cast<const EeGe3DLine*>(&inLine),
                                                               reinterpret_cast<EeGe3DPoint*>(&outLocation),
                                                               inHitWaterSurface));
 }
@@ -148,19 +136,8 @@ EEMapTile* RTSMap::GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocat
 // Returns the color of one of a tile's four corner vertices
 const GEColor& RTSMap::GetVertexColor(long inX, long inY, long inCorner)
 {
-    switch (inCorner) {
-    case 0:
-        inY++;
-        break;
-    case 1:
-        inY++;
-        inX++;
-        break;
-    case 3:
-        inX++;
-        break;
-    }
-    return this->mTerrainMesh.GetVertexColor(inX, inY);
+    // corner 0 (x, y + 1), 1 (x + 1, y + 1), 2 (x, y), 3 (x + 1, y)
+    return this->mTerrainMesh.GetVertexColor(inX + (inCorner == 1 || inCorner == 3), inY + (inCorner == 0 || inCorner == 1));
 }
 
 // Reads the map's size and player count, recreates the map and loads its tiles and terrain mesh; returns the
@@ -176,13 +153,8 @@ long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
 void RTSMap::Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, float inHeight, float inSlope,
                    float inEdgeHeight, float inEdgeSlope, bool inRaise)
 {
-    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
-    long theBounds[4] = {*ioLeft, *ioRight, *ioTop, *ioBottom};
-    ee_ge_map_raise(&theHost, this, &theBounds, inHeight, inSlope, inEdgeHeight, inEdgeSlope, inRaise);
-    *ioLeft = theBounds[0];
-    *ioRight = theBounds[1];
-    *ioTop = theBounds[2];
-    *ioBottom = theBounds[3];
+    ee_ge_map_raise_bounds(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), this, ioLeft, ioRight, ioTop, ioBottom, inHeight,
+                           inSlope, inEdgeHeight, inEdgeSlope, inRaise);
 }
 
 // Frees the map's tile pointer table (not the tiles)

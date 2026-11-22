@@ -612,6 +612,54 @@ pub unsafe extern "C" fn ee_ge_map_raise(
     unsafe { raise(&mut Cpp(&*host), &mut *fields, &mut *bounds, height, slope, edge_height, edge_slope, raise_first) }
 }
 
+/// `RTSMap::Raise` with its four in/out bounds (left, right, top, bottom) as the C++ hands them ([`ee_ge_map_raise`]).
+///
+/// # Safety
+/// As [`ee_ge_map_raise`]; the four bounds are valid.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_ge_map_raise_bounds(
+    host: *const EeGeMapHost,
+    fields: *mut EeUnitsRtsMapFields,
+    left: *mut c_long,
+    right: *mut c_long,
+    top: *mut c_long,
+    bottom: *mut c_long,
+    height: f32,
+    slope: f32,
+    edge_height: f32,
+    edge_slope: f32,
+    raise_first: bool,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut bounds = [*left, *right, *top, *bottom];
+        ee_ge_map_raise(host, fields, &mut bounds, height, slope, edge_height, edge_slope, raise_first);
+        (*left, *right, *top, *bottom) = (bounds[0], bounds[1], bounds[2], bounds[3]);
+    }
+}
+
+/// `EEMap::IsAreaOnMap`: the radius's diagonal (`sqrt(r * r * 2.0)` as a float, floored after + 0.5) reaches a tile
+/// on each of the four sides (asked left, right, up, down; the coordinates wrap as the C++'s unsigned ones).
+pub fn area_on_map(t: &impl Terrain, x: c_ulong, y: c_ulong, radius: c_ulong) -> bool {
+    let diagonal = ((radius.wrapping_mul(radius)) as f64 * 2.0).sqrt() as f32;
+    let r = um::floor_unsigned(diagonal + 0.5) as c_ulong;
+    t.has_tile(x.wrapping_sub(r), y)
+        && t.has_tile(x.wrapping_add(r), y)
+        && t.has_tile(x, y.wrapping_sub(r))
+        && t.has_tile(x, y.wrapping_add(r))
+}
+
+/// `EEMap::IsAreaOnMap` ([`area_on_map`]).
+///
+/// # Safety
+/// As [`ee_ge_map_raise`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_map_area_on_map(host: *const EeGeMapHost, x: c_ulong, y: c_ulong, radius: c_ulong) -> bool {
+    // SAFETY: the caller's contract
+    area_on_map(&Cpp(unsafe { &*host }), x, y, radius)
+}
+
 /// `RTSMap::GetNumRaisedCorners`.
 ///
 /// # Safety
