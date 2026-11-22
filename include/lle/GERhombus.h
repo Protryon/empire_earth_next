@@ -17,40 +17,21 @@ public:
     GERhombus& operator=(const GERhombus& inRhombus) { ee_ge_prim_assign(this->mRust, inRhombus.mRust); return *this; }
     void GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                            GEColor& outBottomLeft) const
-    {
-        GEColor* const theOut[4] = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-        for (unsigned long i = 0; i < 4; i++)
-            ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexGetColor, i, theOut[i]);
-    }
+        { ee_ge_prim_vertices4(this->mRust, EeGeBmpOp::VertexGetColor, &outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft); }
     void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight, float& outBottomLeft) const
-    {
-        float* const theOut[4] = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-        for (unsigned long i = 0; i < 4; i++)
-            *theOut[i] = ee_ge_prim_opacity(this->mRust, i);
-    }
+        { ee_ge_prim_opacities(this->mRust, &outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft); }
     void SetColor(const GEColor& inColor) { this->SetColorPerVertex(inColor, inColor, inColor, inColor); }
     void SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                            const GEColor& inBottomLeft)
-    {
-        const GEColor* const theColors[4] = {&inTopLeft, &inTopRight, &inBottomRight, &inBottomLeft};
-        for (unsigned long i = 0; i < 4; i++)
-            ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexSetColor, i, (void*)theColors[i]);
-    }
+        { ee_ge_prim_vertices4(this->mRust, EeGeBmpOp::VertexSetColor, &inTopLeft, &inTopRight, &inBottomRight, &inBottomLeft); }
     void SetOpacity(float inOpacity) { this->SetOpacityPerVertex(inOpacity, inOpacity, inOpacity, inOpacity); }
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
-    {
-        const float theOpacities[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
-        for (unsigned long i = 0; i < 4; i++)
-            ee_ge_prim_set_opacity(this->mRust, i, theOpacities[i]);
-    }
+        { ee_ge_prim_set_opacities(this->mRust, 4, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     void SetRectangle(const GERectangle& inRectangle) { ee_ge_prim_place(this->mRust, (const EeGeRectangle*)&inRectangle, 0.0f); }
     void SetRotation(float inRotation) { ee_ge_prim_place(this->mRust, NULL, inRotation); }
     void SetZ(float inZ) { this->SetZPerVertex(inZ, inZ, inZ, inZ); }
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
-    {
-        const float theDepths[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
-        ee_ge_prim_set_depths(this->mRust, &theDepths);
-    }
+        { ee_ge_prim_set_z(this->mRust, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
 private:
     EeGePrim* mRust;                        // the rhombus (ee_ge prim.rs)
 };

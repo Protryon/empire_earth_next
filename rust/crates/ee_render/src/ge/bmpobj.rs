@@ -483,6 +483,65 @@ pub unsafe extern "C" fn ee_ge_bmp_set_colors(p: *mut EeGeBitmap, colors: *const
     }
 }
 
+/// A per-vertex member of `GEBitmap` over its four corners (`ee_ge_bmp_quad`'s `call`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeGeBmpQuadCall {
+    /// `GetColorPerVertex` (`GEColor*`).
+    Colors = 1,
+    /// `SetColorPerVertex` (`const GEColor*`).
+    SetColors,
+    /// `GetOpacityPerVertex` (`float*`).
+    Opacities,
+    /// `GetTextureCoordinatesPerVertex` (`GETextureCoordinate*`).
+    Uvs,
+    /// `SetTextureCoordinates` (`GETextureCoordinate*`).
+    SetUvs,
+}
+
+/// `GEBitmap`'s per-vertex member `call` on the corners `a` (top left), `b` (top right), `c` (bottom right) and `d`
+/// (bottom left): the quad functions' calls.
+///
+/// # Safety
+/// `p` is live; the corners are valid for what `call` reads or writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_bmp_quad(
+    p: *mut EeGeBitmap,
+    call: EeGeBmpQuadCall,
+    a: *const c_void,
+    b: *const c_void,
+    c: *const c_void,
+    d: *const c_void,
+) {
+    let q: EeGeBmpQuad = [a as *mut c_void, b as *mut c_void, c as *mut c_void, d as *mut c_void];
+    // SAFETY: the caller's contract
+    unsafe {
+        match call {
+            EeGeBmpQuadCall::Colors => ee_ge_bmp_colors(p, &q),
+            EeGeBmpQuadCall::SetColors => ee_ge_bmp_set_colors(p, &q),
+            EeGeBmpQuadCall::Opacities => ee_ge_bmp_opacities(p, &q),
+            EeGeBmpQuadCall::Uvs => ee_ge_bmp_uvs(p, &q),
+            EeGeBmpQuadCall::SetUvs => ee_ge_bmp_set_uvs(p, &q),
+        }
+    }
+}
+
+/// `SetOpacityPerVertex(a, b, c, d)`, or with `z` `SetZPerVertex(a, b, c, d)`.
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_bmp_set_values(p: *mut EeGeBitmap, z: bool, a: f32, b: f32, c: f32, d: f32) {
+    // SAFETY: the caller's contract
+    unsafe {
+        if z {
+            ee_ge_bmp_set_depths(p, &[a, b, c, d]);
+        } else {
+            ee_ge_bmp_set_opacities(p, &[a, b, c, d]);
+        }
+    }
+}
+
 /// `GetLocationPerVertex` (`out` four `GE2DPoint*`): the four points read, then their x and y written.
 ///
 /// # Safety

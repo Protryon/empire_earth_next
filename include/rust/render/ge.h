@@ -84,6 +84,20 @@ enum class EeGeBmpOp : uint32_t {
   VertexCopyFrom,
 };
 
+/// A per-vertex member of `GEBitmap` over its four corners (`ee_ge_bmp_quad`'s `call`).
+enum class EeGeBmpQuadCall : uint32_t {
+  /// `GetColorPerVertex` (`GEColor*`).
+  Colors = 1,
+  /// `SetColorPerVertex` (`const GEColor*`).
+  SetColors,
+  /// `GetOpacityPerVertex` (`float*`).
+  Opacities,
+  /// `GetTextureCoordinatesPerVertex` (`GETextureCoordinate*`).
+  Uvs,
+  /// `SetTextureCoordinates` (`GETextureCoordinate*`).
+  SetUvs,
+};
+
 /// A float of the header's accessors (`ee_ge_bmp_getf`).
 enum class EeGeBmpFloat : uint32_t {
   /// `mRotation`.
@@ -1326,6 +1340,24 @@ void ee_ge_bmp_colors(EeGeBitmap *p, const EeGeBmpQuad *out);
 /// `p` is live; the inputs are valid.
 void ee_ge_bmp_set_colors(EeGeBitmap *p, const EeGeBmpQuad *colors);
 
+/// `GEBitmap`'s per-vertex member `call` on the corners `a` (top left), `b` (top right), `c` (bottom right) and `d`
+/// (bottom left): the quad functions' calls.
+///
+/// # Safety
+/// `p` is live; the corners are valid for what `call` reads or writes.
+void ee_ge_bmp_quad(EeGeBitmap *p,
+                    EeGeBmpQuadCall call,
+                    const void *a,
+                    const void *b,
+                    const void *c,
+                    const void *d);
+
+/// `SetOpacityPerVertex(a, b, c, d)`, or with `z` `SetZPerVertex(a, b, c, d)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_set_values(EeGeBitmap *p, bool z, float a, float b, float c, float d);
+
 /// `GetLocationPerVertex` (`out` four `GE2DPoint*`): the four points read, then their x and y written.
 ///
 /// # Safety
@@ -2269,6 +2301,40 @@ void ee_ge_prim_place(EeGePrim *p,
 /// `p` is live.
 void ee_ge_prim_set_depths(EeGePrim *p,
                            const float (*z)[4]);
+
+/// A rhombus's or a line's per-vertex member: `op` (`VertexGetColor`, `VertexSetColor`, `VertexGetUv`, `VertexSetUv`)
+/// on the vertices 0, 1, 2 and 3 with `a`, `b`, `c` and `d`, up to the first NULL (a line's two).
+///
+/// # Safety
+/// `p` is live; the pointers before the first NULL are valid for `op`.
+void ee_ge_prim_vertices4(EeGePrim *p,
+                          EeGeBmpOp op,
+                          const void *a,
+                          const void *b,
+                          const void *c,
+                          const void *d);
+
+/// `GetOpacityPerVertex`: vertex 0's, 1's, 2's and 3's opacity into `a`, `b`, `c` and `d`, up to the first NULL.
+///
+/// # Safety
+/// `p` is live; the pointers before the first NULL are valid for writes.
+void ee_ge_prim_opacities(EeGePrim *p,
+                          float *a,
+                          float *b,
+                          float *c,
+                          float *d);
+
+/// `SetOpacityPerVertex`: the first `count` of `a`, `b`, `c`, `d` to the vertices 0.. in turn.
+///
+/// # Safety
+/// `p` is live with at least `count` vertices.
+void ee_ge_prim_set_opacities(EeGePrim *p, unsigned long count, float a, float b, float c, float d);
+
+/// A rhombus's `SetZPerVertex(a, b, c, d)`.
+///
+/// # Safety
+/// `p` is a live rhombus.
+void ee_ge_prim_set_z(EeGePrim *p, float a, float b, float c, float d);
 
 /// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
 ///
