@@ -842,6 +842,74 @@ enum class EeWonGuiOp : uint32_t {
   ViewportAddChild,
   /// `new TreeItem` (unheld).
   NewTreeItemRaw,
+  /// `((InputEvent*)a)->mEventType`.
+  WinEvType = 900,
+  /// `static_cast<KeyEvent*>((InputEvent*)a)->mKeyMod`.
+  WinKeyEvKeyMod,
+  /// `static_cast<KeyEvent*>((InputEvent*)a)->mKey`.
+  WinKeyEvKey,
+  /// `static_cast<MouseEvent*>((InputEvent*)a)->mx`.
+  WinMouseEvX,
+  /// `static_cast<MouseEvent*>((InputEvent*)a)->my`.
+  WinMouseEvY,
+  /// `static_cast<MouseEvent*>((InputEvent*)a)->mKeyMod`.
+  WinMouseEvKeyMod,
+  /// `static_cast<MouseEvent*>((InputEvent*)a)->mButtonOrAmount`.
+  WinMouseEvButton,
+  /// `static_cast<SizeEvent*>((InputEvent*)a)->mWidth`.
+  WinSizeEvWidth,
+  /// `static_cast<SizeEvent*>((InputEvent*)a)->mHeight`.
+  WinSizeEvHeight,
+  /// `sHostFont = PlatformGetFont(*(const FontDescriptor*)a)` (the original's local SmartPtr).
+  WinPlatformFont,
+  /// `sHostFont.get()`.
+  WinHostFont,
+  /// `((Font*)a)->AddRef()`.
+  WinFontHold,
+  /// `sHostFont = SmartPtr<Font>()` (the local's end).
+  WinHostFontClear,
+  /// `mIcon.get() != NULL` (0 or 1).
+  WinHasIcon,
+  /// `mIcon = mManager->mDefaultWindowIcon.get()`.
+  WinIconDefault,
+  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx`.
+  WmMouseEvX = 930,
+  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my`.
+  WmMouseEvY,
+  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx = b`.
+  WmMouseEvSetX,
+  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my = b`.
+  WmMouseEvSetY,
+  /// `((Font*)a)->AddRef()`.
+  WmFontHold,
+  /// `((Font*)a)->Release()`.
+  WmFontRelease,
+  /// `((RawImage*)a)->AddRef()`.
+  WmRawHold,
+  /// `((RawImage*)a)->Release()`.
+  WmRawRelease,
+  /// `((Image*)a)->AddRef()`.
+  WmImageHold,
+  /// `((Image*)a)->Release()`.
+  WmImageRelease,
+  /// `sHostImage = mImageDecoder.Decode((DisplayContext*)a, the path b of c bytes)` (the original's local SmartPtr).
+  WmDecodeKeep,
+  /// `sHostImage.get()`.
+  WmHostImage,
+  /// `sHostImage = SmartPtr<NativeImage>()`.
+  WmHostImageClear,
+  /// `sHostRaw = mImageDecoder.DecodeRaw(the path a of b bytes)`.
+  WmDecodeRawKeep,
+  /// `sHostRaw.get()`.
+  WmHostRaw,
+  /// `sHostRaw = SmartPtr<RawImage>()`.
+  WmHostRawClear,
+  /// `mImageDecoder.GetImageAttributes(the path a of b bytes, sHostAttr)` (0 or 1).
+  WmImageAttributes,
+  /// `new Image(ee_won_image_new_delay(WONImageHost, a, b, sHostAttr.mWidth, sHostAttr.mHeight))` (unheld).
+  WmNewDelayImage,
+  /// `mColorScheme->SetStandardColor(a, b)`.
+  WmSetStandardColor,
 };
 
 /// The events a component object fires (`FireEvent`).

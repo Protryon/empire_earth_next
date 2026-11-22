@@ -325,3 +325,79 @@ fn golden_replay_fails_on_a_changed_answer() {
     REPLAY.with(|r| *r.borrow_mut() = None);
     assert!(r.is_err());
 }
+
+// ---- the event records, the font cache and the create's icon (R6 WON round 32)
+
+#[test]
+fn the_event_records_are_read_by_shape() {
+    take();
+    let w = new_win(1);
+    answer(Op::WinEvType, 0, EV_SIZE_CHANGE as isize);
+    answer(Op::WinSizeEvWidth, 0, 640);
+    answer(Op::WinSizeEvHeight, 0, 480);
+    answer(Op::WinMouseEvX, 0, 5);
+    answer(Op::WinKeyEvKey, 0, 65);
+    assert_eq!(w.event_of(EeWonWinEventShape::Input, 9), EeWonWinEvent { kind: EV_SIZE_CHANGE, width: 640, height: 480, ..Default::default() });
+    let ops: Vec<Op> = take().iter().map(|e| e.1).collect();
+    assert_eq!(ops, [Op::WinEvType, Op::WinSizeEvWidth, Op::WinSizeEvHeight]);
+    let m = w.event_of(EeWonWinEventShape::Mouse, 9);
+    assert_eq!((m.x, m.key, m.width), (5, 0, 0));
+    let ops: Vec<Op> = take().iter().map(|e| e.1).collect();
+    assert_eq!(ops, [Op::WinEvType, Op::WinMouseEvX, Op::WinMouseEvY, Op::WinMouseEvKeyMod, Op::WinMouseEvButton]);
+    let k = w.event_of(EeWonWinEventShape::Key, 9);
+    assert_eq!((k.key, k.x), (65, 0));
+    // an input event of another type reads no size
+    answer(Op::WinEvType, 0, EV_SIZE_CHANGE as isize + 1);
+    take();
+    assert_eq!(w.event_of(EeWonWinEventShape::Input, 9).width, 0);
+    assert_eq!(take().len(), 1);
+    answer(Op::WinEvType, 0, 0);
+    answer(Op::WinSizeEvWidth, 0, 0);
+    answer(Op::WinSizeEvHeight, 0, 0);
+    answer(Op::WinMouseEvX, 0, 0);
+    answer(Op::WinKeyEvKey, 0, 0);
+}
+
+#[test]
+fn the_font_cache_asks_the_platform_once() {
+    take();
+    let w = new_win(1);
+    let map = crate::fontmap::ee_won_fontmap_new();
+    let face = b"Tahoma";
+    answer(Op::WinHostFont, 0, 0x50);
+    // SAFETY: a live map and face
+    let f = unsafe { w.get_font(map, 7, face.as_ptr(), face.len(), 0, 8) };
+    assert_eq!(f, 0x50);
+    let ops: Vec<(Op, isize)> = take().iter().map(|e| (e.1, e.2)).collect();
+    assert_eq!(ops, [(Op::WinPlatformFont, 7), (Op::WinHostFont, 0), (Op::WinFontHold, 0x50), (Op::WinHostFontClear, 0)]);
+    // SAFETY: as above
+    assert_eq!(unsafe { w.get_font(map, 7, face.as_ptr(), face.len(), 0, 8) }, 0x50);
+    assert!(take().is_empty());
+    // a NULL platform font is not held
+    answer(Op::WinHostFont, 0, 0);
+    // SAFETY: as above
+    assert_eq!(unsafe { w.get_font(map, 7, face.as_ptr(), face.len(), 0, 9) }, 0);
+    assert!(!take().iter().any(|e| e.1 == Op::WinFontHold));
+    // SAFETY: a live map
+    while unsafe { crate::fontmap::ee_won_fontmap_pop(map) } >= 0 {}
+    // SAFETY: from ee_won_fontmap_new
+    unsafe { crate::fontmap::ee_won_fontmap_free(map) };
+}
+
+#[test]
+fn create_sets_the_default_icon_only_without_one() {
+    take();
+    let w = new_win(1);
+    // SAFETY: a live window
+    unsafe { ee_won_win_create(&w, 100, 80) };
+    let ops: Vec<Op> = take().iter().map(|e| e.1).collect();
+    assert_eq!(&ops[..2], [Op::WinHasIcon, Op::WinIconDefault]);
+    let w = new_win(1);
+    answer(Op::WinHasIcon, 0, 1);
+    // SAFETY: as above
+    unsafe { ee_won_win_create(&w, 100, 80) };
+    let ops: Vec<Op> = take().iter().map(|e| e.1).collect();
+    assert_eq!(ops[0], Op::WinHasIcon);
+    assert!(!ops.contains(&Op::WinIconDefault));
+    answer(Op::WinHasIcon, 0, 0);
+}

@@ -10,6 +10,8 @@
 
 use crate::guidraw::{EeWonDrawOp, EeWonInputPaint, EeWonSelColor, EE_WON_DRAW_CALL};
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp, EeWonGuiOp as Op};
+use crate::wmcache::EeWonWmRefKind;
+use crate::wmobj::{EeWonWmEvent, EeWonWmMouse};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -27,9 +29,11 @@ pub enum EeWonGuiSplitHost {
     Split,
     /// `ee_won_guicpp_list_call` (the list area, the multi-column list, the tree, the popup menu).
     List,
+    /// `ee_won_guicpp_wm_call` (the window manager).
+    Wm,
 }
 
-const HOST_COUNT: usize = 5;
+const HOST_COUNT: usize = 6;
 static HOSTS: [AtomicUsize; HOST_COUNT] = [const { AtomicUsize::new(0) }; HOST_COUNT];
 
 /// The calls out: `(op, a, b, c, d) -> result` on the component the op came for.
@@ -61,6 +65,7 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
         EeWonGuiSplitHost::Label => label_op(op, a, b, &out),
         EeWonGuiSplitHost::Split => split_op(op, a, &out),
         EeWonGuiSplitHost::List => list_op(op, &out),
+        EeWonGuiSplitHost::Wm => wm_op(op, a, b, c, &out),
     };
     match answer {
         Some(r) => r,
@@ -116,6 +121,16 @@ pub unsafe extern "C" fn ee_won_gui_split_game(comp: *mut c_void, op: EeWonGuiOp
 pub unsafe extern "C" fn ee_won_gui_list_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
     // SAFETY: the caller's
     unsafe { game(EeWonGuiSplitHost::List, comp, op, a, b, c, d) }
+}
+
+/// The window manager's host in the game.
+///
+/// # Safety
+/// As the C++ host's: `comp` a `WindowManager*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gui_wm_game(comp: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+    // SAFETY: the caller's
+    unsafe { game(EeWonGuiSplitHost::Wm, comp, op, a, b, c, d) }
 }
 
 fn text_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
@@ -236,6 +251,88 @@ fn list_op(op: Op, out: Out) -> Option<isize> {
             Some(n)
         }
         _ => None,
+    }
+}
+
+fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
+    const MOUSE: isize = EeWonWmEvent::Mouse as isize;
+    const SET_MOUSE: isize = EeWonWmEvent::SetMouse as isize;
+    match op {
+        // a mouse event's window, point and button read, or its window and point set (`b` the event, `c` the record)
+        Op::WmEvent if a == MOUSE => {
+            let ev = |sub: EeWonWmEvent| out(Op::WmEvent, sub as isize, b, 0, 0);
+            let window = ev(EeWonWmEvent::Window);
+            let x = out(Op::WmMouseEvX, b, 0, 0, 0) as i32;
+            let y = out(Op::WmMouseEvY, b, 0, 0, 0) as i32;
+            let button = ev(EeWonWmEvent::Button) as i32;
+            // SAFETY: `c` is the record (the op's contract)
+            unsafe { *(c as *mut EeWonWmMouse) = EeWonWmMouse { window, x, y, button } };
+            Some(0)
+        }
+        Op::WmEvent if a == SET_MOUSE => {
+            // SAFETY: `c` is the record (the op's contract)
+            let m = unsafe { *(c as *const EeWonWmMouse) };
+            out(Op::WmEvent, EeWonWmEvent::SetWindow as isize, b, m.window, 0);
+            out(Op::WmMouseEvSetX, b, m.x as isize, 0, 0);
+            out(Op::WmMouseEvSetY, b, m.y as isize, 0, 0);
+            Some(0)
+        }
+        // a font's, raw image's or image's reference taken or given back (a native image's is the C++ host's)
+        Op::WmRef => {
+            let (hold, release) = match a {
+                x if x == EeWonWmRefKind::Font as isize => (Op::WmFontHold, Op::WmFontRelease),
+                x if x == EeWonWmRefKind::RawImage as isize => (Op::WmRawHold, Op::WmRawRelease),
+                x if x == EeWonWmRefKind::Image as isize => (Op::WmImageHold, Op::WmImageRelease),
+                _ => return None,
+            };
+            out(if c != 0 { hold } else { release }, b, 0, 0, 0);
+            Some(0)
+        }
+        // the decoder's picture with one reference for the caller (the original's SmartPtr: the host's)
+        Op::WmDecode => {
+            out(Op::WmDecodeKeep, a, b, c, 0);
+            let image = out(Op::WmHostImage, 0, 0, 0, 0);
+            if image != 0 {
+                out(Op::WmRef, EeWonWmRefKind::NativeImage as isize, image, 1, 0);
+            }
+            out(Op::WmHostImageClear, 0, 0, 0, 0);
+            Some(image)
+        }
+        Op::WmDecodeRaw => {
+            out(Op::WmDecodeRawKeep, a, b, 0, 0);
+            let image = out(Op::WmHostRaw, 0, 0, 0, 0);
+            if image != 0 {
+                out(Op::WmRawHold, image, 0, 0, 0);
+            }
+            out(Op::WmHostRawClear, 0, 0, 0, 0);
+            Some(image)
+        }
+        // a delay-load image of the picture's size (0 when the decoder cannot read its attributes)
+        Op::WmDelayImage => {
+            if out(Op::WmImageAttributes, a, b, 0, 0) == 0 {
+                return Some(0);
+            }
+            let image = out(Op::WmNewDelayImage, a, b, 0, 0);
+            out(Op::WmImageHold, image, 0, 0, 0);
+            Some(image)
+        }
+        _ => None,
+    }
+}
+
+/// `WindowManager::InitColorScheme`: the 17 standard colours set in the manager's scheme.
+///
+/// # Safety
+/// `host` is the manager's host, `wm` the `WindowManager*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gui_wm_init_colors(host: EeWonGuiHostFn, wm: *mut c_void) {
+    let Some(host) = host else { return };
+    let mut colors = [0u32; 17];
+    // SAFETY: room for the 17 colours
+    unsafe { crate::wmobj::ee_won_wm_standard_colors(colors.as_mut_ptr()) };
+    for (i, c) in colors.iter().enumerate() {
+        // SAFETY: the caller's host
+        unsafe { host(wm, Op::WmSetStandardColor, i as isize, *c as isize, 0, 0) };
     }
 }
 
@@ -380,6 +477,54 @@ mod tests {
         let ob = &o as *const EeWonDrawOp as isize;
         assert_eq!(run(|f| input_op(Op::Draw, 3, ob, 0, f), |_, _| 0).1, [format!("InputDrawSlots 3 {ob} 0 0")]);
         assert_eq!(run(|f| label_op(Op::Draw, 3, ob, f), |_, _| 0).1, [format!("LabelDrawWrapped 3 {ob} 0 0")]);
+    }
+
+    #[test]
+    fn the_manager_ops() {
+        // the mouse record read and set
+        let mut m = EeWonWmMouse { window: 0, x: 0, y: 0, button: 0 };
+        let mp = &mut m as *mut EeWonWmMouse as isize;
+        let (_, log) = run(
+            |o| wm_op(Op::WmEvent, EeWonWmEvent::Mouse as isize, 6, mp, o),
+            |op, a| match op {
+                Op::WmEvent if a == EeWonWmEvent::Window as isize => 70,
+                Op::WmEvent => 2,
+                Op::WmMouseEvX => 11,
+                _ => 12,
+            },
+        );
+        assert_eq!((m.window, m.x, m.y, m.button), (70, 11, 12, 2));
+        assert_eq!(log.len(), 4);
+        let (_, log) = run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetMouse as isize, 6, mp, o), |_, _| 0);
+        assert_eq!(
+            log,
+            [format!("WmEvent {} 6 70 0", EeWonWmEvent::SetWindow as isize), "WmMouseEvSetX 6 11 0 0".into(), "WmMouseEvSetY 6 12 0 0".into()]
+        );
+        // other events are the C++ host's
+        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Size as isize, 6, mp, o), |_, _| 0).0, None);
+        // references
+        assert_eq!(run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Font as isize, 5, 1, o), |_, _| 0).1, ["WmFontHold 5 0 0 0"]);
+        assert_eq!(run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Image as isize, 5, 0, o), |_, _| 0).1, ["WmImageRelease 5 0 0 0"]);
+        assert_eq!(run(|o| wm_op(Op::WmRef, EeWonWmRefKind::NativeImage as isize, 5, 0, o), |_, _| 0).0, None);
+        // the decodes: held only when found
+        let (r, log) = run(|o| wm_op(Op::WmDecode, 1, 2, 3, o), |op, _| (op == Op::WmHostImage) as isize * 40);
+        assert_eq!(r, Some(40));
+        assert_eq!(
+            log,
+            [
+                "WmDecodeKeep 1 2 3 0".to_string(),
+                "WmHostImage 0 0 0 0".into(),
+                format!("WmRef {} 40 1 0", EeWonWmRefKind::NativeImage as isize),
+                "WmHostImageClear 0 0 0 0".into()
+            ]
+        );
+        let (r, log) = run(|o| wm_op(Op::WmDecodeRaw, 2, 3, 0, o), |_, _| 0);
+        assert_eq!((r, log.len()), (Some(0), 3));
+        let (r, log) = run(|o| wm_op(Op::WmDelayImage, 2, 3, 0, o), |_, _| 0);
+        assert_eq!((r, log.len()), (Some(0), 1));
+        let (r, log) = run(|o| wm_op(Op::WmDelayImage, 2, 3, 0, o), |_, _| 8);
+        assert_eq!(r, Some(8));
+        assert_eq!(log, ["WmImageAttributes 2 3 0 0", "WmNewDelayImage 2 3 0 0", "WmImageHold 8 0 0 0"]);
     }
 
     #[test]

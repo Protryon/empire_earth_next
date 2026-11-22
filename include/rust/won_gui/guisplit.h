@@ -20,6 +20,8 @@ enum class EeWonGuiSplitHost : uint32_t {
   Split,
   /// `ee_won_guicpp_list_call` (the list area, the multi-column list, the tree, the popup menu).
   List,
+  /// `ee_won_guicpp_wm_call` (the window manager).
+  Wm,
 };
 
 extern "C" {
@@ -81,6 +83,23 @@ ptrdiff_t ee_won_gui_list_game(void *comp,
                                ptrdiff_t b,
                                ptrdiff_t c,
                                ptrdiff_t d);
+
+/// The window manager's host in the game.
+///
+/// # Safety
+/// As the C++ host's: `comp` a `WindowManager*`.
+ptrdiff_t ee_won_gui_wm_game(void *comp,
+                             EeWonGuiOp op,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d);
+
+/// `WindowManager::InitColorScheme`: the 17 standard colours set in the manager's scheme.
+///
+/// # Safety
+/// `host` is the manager's host, `wm` the `WindowManager*`.
+void ee_won_gui_wm_init_colors(EeWonGuiHostFn host, void *wm);
 
 /// `MultiListHeader::GetSortTypeForButton`: the sort arrow of the header the button is in (`ListSortType_None`, 2,
 /// without one or without arrows). `host` is the header's host; its ops here read only their arguments.
