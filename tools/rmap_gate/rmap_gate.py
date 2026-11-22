@@ -8,7 +8,8 @@ map sizes x player counts, compared with the digests recorded from the C++ gener
   ... check|record --reader                     the .rmv reader alone: the digest after SetRandomMapValues
                                                 (golden_reader.txt, recorded from the C++ reader Unit10.cpp)
 
-The tool compiles the C++ adapter (Default.cpp: the PIM entry points, the reader's host) and the engine units it needs, and links
+The tool compiles the C++ adapter (rmap_adapter.cpp, the game's Default.cpp until the world lane's round 1 moved the
+random map whole to Rust: the PIM entry points over ee_rmap_run, the reader's host) and the engine units it needs, and links
 the generator as ee_rmap_gatelib. The golden digests were recorded from the C++ generator (commit 7e470841) before
 it was deleted; there is no way to re-record them from C++ now. `record` overwrites them from the Rust generator: only
 do that at a declared rebaseline.
@@ -43,7 +44,7 @@ DEFAULT_GENERATOR = "rust"
 
 
 def compile_units(generator, jobs=4):
-    work = [(DEFAULT / n, MODULE_FLAGS["default"]) for n in READER + ["Default.cpp"]]
+    work = [(HERE / n, MODULE_FLAGS["default"]) for n in READER + ["rmap_adapter.cpp"]]
     work += [(UTIL / rel, MODULE_FLAGS["lle"]) for rel in LLE_UNITS]
     work += [(HERE / "rmap_dump.cpp", MODULE_FLAGS["default"])]
     work += [(HERE / "rmap_stubs.cpp", MODULE_FLAGS["default"])]

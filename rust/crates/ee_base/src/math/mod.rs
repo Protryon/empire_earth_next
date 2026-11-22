@@ -21,6 +21,7 @@ pub mod point;
 /// cbindgen:ignore
 pub mod transform;
 pub mod types;
+pub mod u2d;
 /// cbindgen:ignore
 pub mod um;
 /// cbindgen:ignore

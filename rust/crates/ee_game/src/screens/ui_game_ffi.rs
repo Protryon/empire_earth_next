@@ -1,19 +1,10 @@
-//! `extern "C"` for the UI thread's game starts and its loop (`ui_game.rs`). The host is `ee_screenscpp_ui_game`
-//! (`User Interface Thread/EEUserInterface.cpp`) on the UI object.
+//! `extern "C"` for the UI thread's game starts and its loop (`ui_game.rs`). The host is Rust's (`ui_game_calls.rs`
+//! last) over the shims of `User Interface Thread/EEUserInterface.cpp`, on the UI object.
 
 use core::ffi::c_void;
 
 use crate::screens::ui_game;
 use crate::screens::ui_thread::UiHost;
-
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_ui_game(ui: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
-    }
-}
 
 struct GameHost(*mut c_void);
 
@@ -30,7 +21,7 @@ impl UiHost for GameHost {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_ui_game(self.0, op, a, b, c) }
+        crate::screens::ui_game_calls::ui_game(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b)
     }
 }
 

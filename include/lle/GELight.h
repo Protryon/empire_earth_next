@@ -1,96 +1,34 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\GELight.h (RECONSTRUCTION). Everything is inline except the members in
-// GELight.cpp (Attenuation0 accessors); GEBoundingBox.cpp emits the block first (0x10010858..0x10010af2).
+// C:\EEX\Low-Level Engine\Graphics Engine\GELight.h (RECONSTRUCTION). A light whole in Rust (LLE round 9): the class
+// holds the Rust record (rust/crates/ee_render/src/ge light.rs, EeGeLight: the original's members in their order) and
+// forwards; the DX7 rasterizer reads the record directly.
 #ifndef LLE_GELIGHT_H
 #define LLE_GELIGHT_H
 
-class LLE_API GELight {                     // sizeof 0x74 (implicit copy ctor 0x10a5d)
+#include "rust/render/ge.h"
+
+class LLE_API GELight {                     // sizeof 0x74
 public:
-    GELight()
-    {
-        this->mStyle = 0;
-        this->mIntensity = 1.0f;
-        this->mRange = 0.0f;
-        this->mAttenuation0 = 1.0f;
-        this->mAttenuation1 = 0.0f;
-        this->mAttenuation2 = 0.0f;
-    }
-    ~GELight() {}
-    // 0x108d1: copies the defining state only (the computed and model-space members are derived); the intensity is
-    // copied twice
-    GELight& operator=(const GELight& inLight)
-    {
-        this->mColor = inLight.mColor;
-        this->mLocation = inLight.mLocation;
-        this->mDirection = inLight.mDirection;
-        this->mIntensity = inLight.mIntensity;
-        this->mAttenuation0 = inLight.mAttenuation0;
-        this->mAttenuation1 = inLight.mAttenuation1;
-        this->mAttenuation2 = inLight.mAttenuation2;
-        this->mIntensity = inLight.mIntensity;
-        this->mRange = inLight.mRange;
-        this->mStyle = inLight.mStyle;
-        return *this;
-    }
-    float GetAttenuation0() const { return this->mAttenuation0; }
-    float GetAttenuation1() const { return this->mAttenuation1; }
-    float GetAttenuation2() const { return this->mAttenuation2; }
-    const GEColor& GetColor() const { return this->mColor; }
-    const GEColor& GetComputedColor() const { return this->mComputedColor; }
-    const GEVector& GetDirection() const { return this->mDirection; }
-    const GE3DPoint& GetLocation() const { return this->mLocation; }
-    float GetRange() const { return this->mRange; }
-    unsigned long GetStyle() const { return this->mStyle; }
-    void SetAttenuation0(float inAttenuation) { this->mAttenuation0 = inAttenuation; }
-    void SetAttenuation1(float inAttenuation) { this->mAttenuation1 = inAttenuation; }
-    void SetAttenuation2(float inAttenuation) { this->mAttenuation2 = inAttenuation; }
-    void SetColor(const GEColor& inColor)
-    {
-        this->mColor = inColor;
-        this->mColor.Normalize();
-        this->mComputedColor.SetRed(inColor.GetRed() * this->mIntensity);
-        this->mComputedColor.SetGreen(inColor.GetGreen() * this->mIntensity);
-        this->mComputedColor.SetBlue(inColor.GetBlue() * this->mIntensity);
-    }
+    GELight() { ee_ge_light_init(&this->mRust); }
+    GELight& operator=(const GELight& inLight) { ee_ge_light_assign(&this->mRust, &inLight.mRust); return *this; }
+    float GetAttenuation0() const { return this->mRust.attenuation0; }
+    float GetAttenuation1() const { return this->mRust.attenuation1; }
+    float GetAttenuation2() const { return this->mRust.attenuation2; }
+    const GEColor& GetColor() const { return *reinterpret_cast<const GEColor*>(this->mRust.color); }
+    const GEColor& GetComputedColor() const { return *reinterpret_cast<const GEColor*>(this->mRust.computed_color); }
+    const GEVector& GetDirection() const { return *reinterpret_cast<const GEVector*>(this->mRust.direction); }
+    const GE3DPoint& GetLocation() const { return *reinterpret_cast<const GE3DPoint*>(this->mRust.location); }
+    float GetRange() const { return this->mRust.range; }
+    unsigned long GetStyle() const { return this->mRust.style; }
+    void SetAttenuation0(float inAttenuation) { this->mRust.attenuation0 = inAttenuation; }
+    void SetAttenuation1(float inAttenuation) { this->mRust.attenuation1 = inAttenuation; }
+    void SetAttenuation2(float inAttenuation) { this->mRust.attenuation2 = inAttenuation; }
+    void SetColor(const GEColor& inColor) { ee_ge_light_set_color(&this->mRust, reinterpret_cast<const float(*)[3]>(&inColor)); }
     void SetDirection(const GEVector& inDirection)
-    {
-        this->mDirection.SetX(-inDirection.GetX());
-        this->mDirection.SetY(-inDirection.GetY());
-        this->mDirection.SetZ(-inDirection.GetZ());
-        this->mDirection.Normalize();
-    }
-    void SetIntensity(float inIntensity)
-    {
-        this->mIntensity = inIntensity;
-        this->mComputedColor.SetRed(this->mColor.GetRed() * inIntensity);
-        this->mComputedColor.SetGreen(this->mColor.GetGreen() * inIntensity);
-        this->mComputedColor.SetBlue(this->mColor.GetBlue() * inIntensity);
-    }
-    void SetLocation(const GE3DPoint& inLocation) { this->mLocation = inLocation; }
-    void SetRange(float inRange)
-    {
-        this->mRange = inRange;
-        this->mRangeSquared = inRange * inRange;
-        this->mRangeInverse = inRange == 0.0f ? 0.0f : 1.0f / inRange;
-    }
-    void SetStyle(unsigned long inStyle) { this->mStyle = inStyle; }
+        { ee_ge_light_set_direction(&this->mRust, reinterpret_cast<const float(*)[3]>(&inDirection)); }
+    void SetIntensity(float inIntensity) { ee_ge_light_set_intensity(&this->mRust, inIntensity); }
+    void SetStyle(unsigned long inStyle) { this->mRust.style = inStyle; }
 private:
-    GEColor mColor;                         // +0x00
-    GEColor mComputedColor;                 // +0x0c color * intensity
-    GE3DPoint mLocation;                    // +0x18
-    GE3DPoint mModelSpaceLocation;          // +0x24
-    GEVector mDirection;                    // +0x30 stored negated, normalized
-    GEVector mModelSpaceDirection;          // +0x3c
-    float mAttenuation0;                    // +0x48
-    float mAttenuation1;                    // +0x4c
-    float mAttenuation2;                    // +0x50
-    float mIntensity;                       // +0x54
-    float mRange;                           // +0x58
-    float mRangeInverse;                    // +0x5c
-    float mRangeSquared;                    // +0x60
-    float mModelSpaceRange;                 // +0x64
-    float mModelSpaceRangeInverse;          // +0x68
-    float mModelSpaceRangeSquared;          // +0x6c
-    unsigned long mStyle;                   // +0x70
+    EeGeLight mRust;
 };
 
 #endif

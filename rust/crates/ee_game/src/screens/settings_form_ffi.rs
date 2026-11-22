@@ -25,8 +25,12 @@ pub(crate) fn dispatch(host: &mut Form, event: u32) -> Option<c_long> {
 
 impl Form {
     fn selection(&mut self, control: u32, list: bool) -> (c_long, c_ulong) {
-        let mut out = 0u32;
-        let result = unsafe { sys::ee_screenscpp_selection(self.0, control, list, &mut out) };
+        let (result, out) = crate::screens::screens_more_calls::selection(
+            &mut crate::screens::game_cpp::Ffi,
+            self.0 as usize,
+            control,
+            list,
+        );
         (result as c_long, out as c_ulong)
     }
 }

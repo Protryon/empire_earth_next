@@ -64,8 +64,10 @@ pub enum EeDx7RastOp {
     SurfaceGx,
     /// `(GXSurface*)*dynamic_cast<DX7Surface*>(obj)`.
     SurfaceGxChecked,
-    /// `((uint32_t*)a)[0] = obj->GetWidth(); ((uint32_t*)a)[1] = obj->GetHeight()`.
-    SurfaceSize,
+    /// `obj->GetWidth()` (a surface).
+    SurfaceWidth,
+    /// `obj->GetHeight()` (a surface).
+    SurfaceHeight,
     /// `obj->Flip(a != 0)`.
     SurfaceFlip,
     /// `obj->HasChanged()` (a texture).
@@ -76,14 +78,14 @@ pub enum EeDx7RastOp {
     TextureDereference,
     /// `obj->Promote()`.
     TexturePromote,
-    /// `*(StageView*)a`: `obj->GetStage()`'s fields and `obj->GetStageTexture(0)->GetFrameSurface()`'s `GXSurface*`.
+    /// `obj->GetStage()` (the texture's `GETStage`, an `EeGeTStage`).
     TextureStage,
+    /// `(GXSurface*)*static_cast<DX7Surface*>(obj->GetStageTexture(0)->GetFrameSurface())`.
+    TextureStageSurface,
     /// `obj->ValidateChanges()`.
     TextureValidate,
-    /// `((float*)a)[0..2] = obj->GetClientOrigin()` (a window).
+    /// `*(GE2DPoint*)a = obj->GetClientOrigin()` (a window).
     WindowOrigin,
-    /// `*(LightParams*)a`: the `GELight` fields `UpdateLight` reads.
-    LightParams,
     /// `obj->Enter()` (the drawing lock).
     LockEnter,
     /// `obj->Leave()`.
@@ -292,10 +294,11 @@ impl EeDx7Rasterizer {
     /// # Safety
     /// `p` is live; `surface` is a C++ surface.
     unsafe fn surface_size(p: *mut Self, surface: H) -> (u32, u32) {
-        let mut size = [0u32; 2];
         // SAFETY: the host's contract
-        unsafe { Self::op(p, EeDx7RastOp::SurfaceSize, surface, size.as_mut_ptr() as isize, 0) };
-        (size[0], size[1])
+        unsafe {
+            let width = Self::op(p, EeDx7RastOp::SurfaceWidth, surface, 0, 0) as u32;
+            (width, Self::op(p, EeDx7RastOp::SurfaceHeight, surface, 0, 0) as u32)
+        }
     }
 
     /// The activation's commit: the texture manager and the screen joined, the base record's surfaces and window, the
@@ -498,13 +501,13 @@ impl EeDx7Rasterizer {
 
     // ---- lights ---------------------------------------------------------------------------------------------------------
 
+    /// The fields `AddLight`/`UpdateLight` read from a `GELight` (its record is Rust's: ee_render ge light.rs).
+    ///
     /// # Safety
-    /// `p` is live; `light` is a C++ `GELight`.
-    unsafe fn light_params(p: *mut Self, light: H) -> LightParams {
-        let mut params = LightParams::default();
-        // SAFETY: the host's contract
-        unsafe { Self::op(p, EeDx7RastOp::LightParams, light, &mut params as *mut LightParams as isize, 0) };
-        params
+    /// `light` is a live C++ `GELight`.
+    unsafe fn light_params(_p: *mut Self, light: H) -> LightParams {
+        // SAFETY: the caller's contract: a GELight is its EeGeLight
+        unsafe { (*(light as *const crate::ge::light::EeGeLight)).params() }
     }
 
     /// `AddLight`: (result, the slot).
@@ -941,8 +944,18 @@ impl EeDx7Rasterizer {
                 state::clear_texture(state, &mut device);
                 return;
             }
-            let mut view: StageView = core::mem::zeroed();
-            Self::op(p, EeDx7RastOp::TextureStage, texture, &mut view as *mut StageView as isize, 0);
+            let stage =
+                &*(Self::op(p, EeDx7RastOp::TextureStage, texture, 0, 0) as *const crate::ge::texobj_tex::EeGeTStage);
+            let view = StageView {
+                surface: Self::op(p, EeDx7RastOp::TextureStageSurface, texture, 0, 0) as H,
+                mColorMode: stage.color_mode,
+                mAlphaMode: stage.alpha_mode,
+                mTextureAddressingMode: stage.texture_addressing_mode,
+                mMinFilterMode: stage.min_filter_mode,
+                mMagFilterMode: stage.mag_filter_mode,
+                mMipFilterMode: stage.mip_filter_mode,
+                mMipMapBias: stage.mip_map_bias,
+            };
             let state = dx(p, screen);
             let mut device = RawDevice(state.mDevice);
             state::apply_texture_stage(state, &mut device, &view);
@@ -1250,9 +1263,10 @@ pub unsafe extern "C" fn ee_dx7r_activate_the_screen(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_deactivate(p: *mut EeDx7Rasterizer) {
+pub unsafe extern "C" fn ee_dx7r_deactivate(p: *mut EeDx7Rasterizer) -> i32 {
     // SAFETY: the caller's contract
-    unsafe { EeDx7Rasterizer::deactivate(p) }
+    unsafe { EeDx7Rasterizer::deactivate(p) };
+    K_OK
 }
 
 #[no_mangle]
@@ -1281,14 +1295,16 @@ pub unsafe extern "C" fn ee_dx7r_can_do_current_state(
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_clear(
     p: *mut EeDx7Rasterizer,
-    rect: *const f32,
+    ge_rect: *const [f32; 4],
     color: *const EeGeRastColor,
     z: f32,
     screen: c_ulong,
 ) -> i32 {
     // SAFETY: the caller's contract
     unsafe {
-        let rect = [*rect, *rect.add(1), *rect.add(2), *rect.add(3)];
+        // a GERectangle's members (bottom, left, right, top) as left, top, right, bottom
+        let [bottom, left, right, top] = *ge_rect;
+        let rect = [left, top, right, bottom];
         match color.as_ref() {
             Some(c) => EeDx7Rasterizer::clear(p, rect, [c.red, c.green, c.blue], screen),
             None => EeDx7Rasterizer::clear_z(p, rect, z, screen),
@@ -1302,13 +1318,13 @@ pub unsafe extern "C" fn ee_dx7r_video_memory(
     p: *mut EeDx7Rasterizer,
     screen: c_ulong,
     total: bool,
-    out: *mut u32,
+    out: *mut c_ulong,
 ) -> i32 {
     // SAFETY: the caller's contract
     unsafe {
         let (result, t, f) = EeDx7Rasterizer::video_memory(p, screen);
         if result == K_OK {
-            *out = if total { t } else { f };
+            *out = if total { t } else { f } as c_ulong;
         }
         result
     }
@@ -1332,12 +1348,12 @@ pub unsafe extern "C" fn ee_dx7r_add_light(
     p: *mut EeDx7Rasterizer,
     light: *mut c_void,
     screen: c_ulong,
-    out_index: *mut u32,
+    out_index: *mut c_ulong,
 ) -> i32 {
     // SAFETY: the caller's contract
     unsafe {
         let (result, index) = EeDx7Rasterizer::add_light(p, light, screen);
-        *out_index = index;
+        *out_index = index as c_ulong;
         result
     }
 }

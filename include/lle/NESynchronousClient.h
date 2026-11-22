@@ -103,7 +103,8 @@ private:
     // the client's calls out (ee_net's EeNetClOp): the protocol, the messages, the base class's fields, the virtuals
     static ptrdiff_t Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d);
     // the lag simulator's and the recorder's common calls out (ee_net's EeNetQOp)
-    static ptrdiff_t QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
+    static ptrdiff_t QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
+        { return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d); }
 
     EeNetClient* mRust;                     // NESynchronousClient's state and members (ee_net client.rs)
 };

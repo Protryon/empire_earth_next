@@ -80,8 +80,6 @@ public:
         const EeAStarSubSectorLink* theLinks = ee_astar_sub_sector_links_all(this, &theCount);
         return EEAIListView<EeAStarSubSectorLink>(theLinks, theCount);
     }
-    // inline (COMDAT 0x2640c, same range): the location = the tiles' center (provisional name)
-    void UpdateLocation() { this->SetLocation(this->mTiles.ComputeCenterPoint(true)); }
 
     EeAStarSubSectorRecord* Record() { return this; }
     const EeAStarSubSectorRecord* Record() const { return this; }

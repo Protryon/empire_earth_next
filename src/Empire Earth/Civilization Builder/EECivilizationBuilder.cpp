@@ -3,8 +3,8 @@
 // the save/load dialogs, 0x23 the in-game civilization selection) and EEProcessTimerExpired. The builder is Rust's
 // whole (ee_screens civ_whole.rs with civ_edit.rs, the edited civilization, and civ_list.rs, the list box): its
 // helpers, its state, the edited civilization, its files' writing, its open, close, buys, returns, loads, deletes and
-// accept. This unit keeps the entry points the game calls and the builder's host, ee_screenscpp_cb: one toolkit,
-// file or game call per op. Unit flags: the exe module set.
+// accept. This unit keeps the entry points the game calls and the builder's host's one-statement shims (its ops,
+// the list's too, are Rust's: civ_host.rs). Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -46,7 +46,10 @@
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
 #include "EEDataText.h"   // QuoteText: the keyed .civ text's name
-#include "rust/game/screens.h"   // the builder (civ_whole.rs) and its host's ops (EE_SCREENS_CBW_*)
+#include "rust/game/screens.h"   // the builder (civ_whole.rs)
+#include "ee/EEScreensShims.h"   // the host's shims' text arguments
+#include "lle/UIFontTable.h"
+#include "lle/GERectangle.h"
 
 // the civilization file being saved or loaded (EECBCivilizationFiles.cpp's file spec 0x565518: EELoadCivilization
 // shares it)
@@ -107,359 +110,235 @@ static void EECBAnswerAccept(UIForm* inForm)
     ee_screens_cb_answer(EE_SCREENS_CBW_ANSWER_ACCEPT, inForm);
 }
 
-// ---- the host
+// ---- the host's shims (civ_host.rs: every op of the builder's host and of the list's in Rust; UI lane round 11)
 
-static void EECBPut(EeScreensCbOut* outText, const char* inText)
-{
-    ee_screens_cb_out_text(outText, reinterpret_cast<const uint8_t*>(inText), strlen(inText));
-}
+static const EEUIFErrorCallback kCBAnswers[3] = {EECBAnswerWrite, EECBAnswerDelete, EECBAnswerAccept};
+static FSPath* sCBPath = NULL;          // the file list's search path being made
+static FSFileSpec sCBSpec;              // its directory
+static UWideString sCBString;           // a string read, printed or loaded
+static UWideString sCBFormat;           // a format read
+static unsigned long sCBWritten = 0;    // the civilization file's bytes written
+static std::vector<EECivUpgrade> sCBUpgrades;   // a request's or a loaded civilization's upgrades
+static std::vector<unsigned long> sCBPlayers;   // the players whose civilization is reloaded
+static GERectangle sCBRect;             // the list line's rectangle
 
-static UIControl* EECBControl(int64_t inForm, int64_t inControl)
-{
-    UIForm* theForm = gUIManager->GetFormByID((unsigned long)inForm);
-    return theForm == NULL ? NULL : theForm->GetControlById((unsigned long)inControl);
-}
-
-static UIFileListBox* EECBFileList(void* inForm, int64_t inFormID, int64_t inControl)
-{
-    UIForm* theForm = inForm != NULL ? static_cast<UIForm*>(inForm) : gUIManager->GetFormByID((unsigned long)inFormID);
-    return theForm == NULL ? NULL : dynamic_cast<UIFileListBox*>(theForm->GetControlById((unsigned long)inControl));
-}
-
-static UIControl* EECBMainButton(int64_t inWhich)
-{
-    if (inWhich == 0) {
-        UIForm* theForm = gUIManager->GetFormByID(kFormMainGame);
-        return theForm == NULL ? NULL : dynamic_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameCivSelectorBuilder));
-    }
-    return gUIManager->GetMainGameForm()->GetControl(kMainGameLargeCivBuilderAlert);
-}
-
-extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, int64_t inB, int64_t inC,
-                                    const uint8_t* inText, size_t inLength, EeScreensCbOut* outText)
-{
-    std::string theBytes(reinterpret_cast<const char*>(inText), inText == NULL ? 0 : inLength);
-    UWideString theText(theBytes.c_str());
-    void* p = reinterpret_cast<void*>(inP);
-    if (inOp >= EE_SCREENS_CBW_L_COUNT && inOp <= EE_SCREENS_CBW_L_DRAW_END)
-        return EECBUIListBox::HostOp(inOp, static_cast<EECBUIListBox*>(p), inA, inB, inC, theText, outText);
-    EECivilization* theCiv = static_cast<EECivilization*>(p);
-    switch (inOp) {
-    case EE_SCREENS_CBW_FORM_EXISTS:
-        return gUIManager->GetFormByID((unsigned long)inA) != NULL;
-    case EE_SCREENS_CBW_EDIT_TEXT:
-    case EE_SCREENS_CBW_SET_EDIT_TEXT:
-    case EE_SCREENS_CBW_EDIT_SELECT: {
-        UIEditBox* theEdit = dynamic_cast<UIEditBox*>(EECBControl(inA, inB));
-        if (theEdit == NULL)
-            return 3;
-        if (inOp == EE_SCREENS_CBW_EDIT_TEXT)
-            EECBPut(outText, theEdit->GetText(0));
-        else if (inOp == EE_SCREENS_CBW_SET_EDIT_TEXT)
-            theEdit->SetText(theText);
-        else {
-            theEdit->SelectText();
-            gUIManager->GetFormByID((unsigned long)inA)->SetTabStop(theEdit->GetIndex());
-        }
-        return 0;
-    }
-    case EE_SCREENS_CBW_LABEL_TEXT:
-    case EE_SCREENS_CBW_SET_LABEL_TEXT:
-    case EE_SCREENS_CBW_SET_LABEL_NUMBER: {
-        UITextLabel* theLabel = dynamic_cast<UITextLabel*>(EECBControl(inA, inB));
-        if (theLabel == NULL)
-            return 3;
-        if (inOp == EE_SCREENS_CBW_LABEL_TEXT)
-            EECBPut(outText, theLabel->GetText(0));
-        else if (inOp == EE_SCREENS_CBW_SET_LABEL_TEXT)
-            theLabel->SetText(theText);
-        else
-            theLabel->SetText((long)inC);
-        return 0;
-    }
-    case EE_SCREENS_CBW_DISPLAY:
-    case EE_SCREENS_CBW_DISPLAY_INDEX: {
-        UIForm* theForm = gUIManager->GetFormByID((unsigned long)inA);
-        UIControl* theControl = theForm == NULL ? NULL
-                                : inOp == EE_SCREENS_CBW_DISPLAY ? theForm->GetControlById((unsigned long)inB)
-                                                                 : theForm->GetControl((unsigned long)inB);
-        if (theControl != NULL)
-            theControl->SetDisplayMode(inC ? kDisplayModeShown : kDisplayModeHidden);
-        return 0;
-    }
-    case EE_SCREENS_CBW_PUSH: {
-        UIForm* theForm = gUIManager->GetFormByID((unsigned long)inA);
-        return theForm == NULL ? 3 : gUIManager->Push(theForm);
-    }
-    case EE_SCREENS_CBW_CLOSE_FORM:
-        return gUserInterface->CloseForm(NULL);
-    case EE_SCREENS_CBW_CURRENT_IS:
-        return gUIManager->GetCurrentForm() == gUIManager->GetFormByID((unsigned long)inA);
-    case EE_SCREENS_CBW_FILE_LIST_FILL: {
-        // Users\default\Civilizations\*.civ
-        UIFileListBox* theList = EECBFileList(NULL, inA, inB);
-        FSPath* thePath = new FSPath;
-        FSFileSpec theSpec;
-        theSpec.SetVolume(gStartupVolume);
-        theSpec.SetDirectory(gStartupDirectory + "Users\\default\\Civilizations\\");
-        thePath->AddDirectory(theSpec, true);
-        theList->SetSearchPaths(thePath);
-        theList->AddValidExtension(UString(".civ"));
-        theList->CreateEntries(1);
-        thePath->Dereference();
-        return 0;
-    }
-    case EE_SCREENS_CBW_FILE_SELECTION: {
-        UIFileListBox* theList = EECBFileList(p, inA, inB);
-        if (theList == NULL)
-            return -1;
-        unsigned long theIndex = 0;
-        long theResult = theList->GetCurrentSelection(theIndex);
-        ee_screens_cb_out_value(outText, (int64_t)theIndex);
-        return theResult;
-    }
-    case EE_SCREENS_CBW_FILE_LINE:
-        EECBPut(outText, EECBFileList(p, inA, inB)->GetData((unsigned long)inC));
-        return 0;
-    case EE_SCREENS_CBW_FILE_DELETE:
-        return EECBFileList(NULL, inA, inB)->DeleteSelectedFile();
-    case EE_SCREENS_CBW_IS_FORM:
-        return static_cast<UIForm*>(p) == gUIManager->GetFormByID((unsigned long)inA);
-    case EE_SCREENS_CBW_LIST: {
-        EECBUIListBox* theList = dynamic_cast<EECBUIListBox*>(EECBControl(inA, inB));
-        return (int64_t)reinterpret_cast<uintptr_t>(theList);
-    }
-    case EE_SCREENS_CBW_FORM_EVENTS: {
-        UIForm* theForm = gUIManager->GetFormByID((unsigned long)inA);
-        UIEvent* theEvent = EECreateScreenEvent((unsigned long)inB);
-        theForm->SetFormOpenEvent(theEvent);
-        theEvent->Dereference();
-        theEvent = EECreateScreenEvent((unsigned long)inC);
-        theForm->SetFormCloseEvent(theEvent);
-        theEvent->Dereference();
-        return 0;
-    }
-    case EE_SCREENS_CBW_FORM_ID:
-        return static_cast<UIForm*>(p)->GetFormID();
-    case EE_SCREENS_CBW_STRING: {
-        UWideString theString;
-        long theResult = gResource->GetString(inA, theString);
-        EECBPut(outText, theString);
-        return theResult;
-    }
-    case EE_SCREENS_CBW_PERCENT: {
-        static UWideString sFormat;
-        UWideString theValue;
-        uint32_t theBits = (uint32_t)inA;
-        float theFloat;
-        memcpy(&theFloat, &theBits, sizeof(theFloat));
-        gResource->GetString(IDS_FORMAT_PERCENT_6_2G, sFormat);
-        sprintf(theValue, sFormat, theFloat);
-        EECBPut(outText, theValue);
-        return 0;
-    }
-    case EE_SCREENS_CBW_RESERVED: {
-        UString theName(theBytes.c_str());
-        for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-            if (PlatStrICmp(theName, gCivilizationManager.GetCivilization(i).mFileName) != 0)
-                continue;
-            UWideString theFormat;
-            UWideString theMessage;
-            gResource->GetString(IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED, theFormat);
-            sprintf(theMessage, theFormat, (const char*)theName);
-            EECBPut(outText, theMessage);
-            return 1;
-        }
-        return 0;
-    }
-    case EE_SCREENS_CBW_LOOKUP_LEVEL: {
-        float theValue = 0.0f;
-        float theBonus = 0.0f;
-        bool theFound = gCivilizationManager.LookupLevel((EECivUpgrade)inA, &theValue, &theBonus);
-        uint32_t theBits[2];
-        memcpy(&theBits[0], &theValue, 4);
-        memcpy(&theBits[1], &theBonus, 4);
-        ee_screens_cb_out_value(outText, theBits[0]);
-        ee_screens_cb_out_value(outText, theBits[1]);
-        return theFound;
-    }
-    case EE_SCREENS_CBW_EXTRA_COST:
-        return gCivilizationManager.GetExtraCost((EECivUpgrade)inA);
-    case EE_SCREENS_CBW_CATEGORY_NAME_ID: {
-        long theID = 0;
-        bool theFound = gCivilizationManager.GetCategoryNameID((unsigned long)inA, &theID);
-        ee_screens_cb_out_value(outText, theID);
-        return theFound;
-    }
-    case EE_SCREENS_CBW_LEVEL_NAME_ID:
-        return EECivilizationManager::LevelNameID((unsigned long)inA);
-    case EE_SCREENS_CBW_IS_POWER_LEVEL:
-        return EECivilizationManager::IsPowerLevel((unsigned long)inA);
-    case EE_SCREENS_CBW_ALL_UPGRADES:
-        for (EECivUpgrade theUpgrade : gCivilizationManager.GetUpgrades())
-            ee_screens_cb_out_value(outText, theUpgrade);
-        return 0;
-    case EE_SCREENS_CBW_UPGRADE_KEY: {
-        std::string theKey;
-        bool theFound = gCivilizationManager.UpgradeKey((EECivUpgrade)inA, theKey);
-        EECBPut(outText, theKey.c_str());
-        return theFound;
-    }
-    case EE_SCREENS_CBW_QUOTE:
-        EECBPut(outText, EEDataText::QuoteText(theBytes).c_str());
-        return 0;
-    case EE_SCREENS_CBW_C_BASE_COST:
-        return theCiv->GetBaseCost((EECivUpgrade)inA);
-    case EE_SCREENS_CBW_C_EXTRA_COST:
-        return theCiv->GetExtraCost((EECivUpgrade)inA);
-    case EE_SCREENS_CBW_C_COMPUTE:
-        return theCiv->ComputeCost((long)inA, (long)inB, (long)inC);
-    case EE_SCREENS_CBW_C_COUNT:
-        return theCiv->CountInCategory((EECivUpgrade)inA, NULL);
-    case EE_SCREENS_CBW_C_AVAILABLE:
-        return theCiv->GetAvailablePoints();
-    case EE_SCREENS_CBW_C_UNCHANGED:
-        return theCiv->GetUnchanged();
-    case EE_SCREENS_CBW_C_MAX:
-        return theCiv->GetMaxPoints();
-    case EE_SCREENS_CBW_C_PURCHASED:
-        for (EECivUpgrade theUpgrade : theCiv->GetPurchasedUpgrades())
-            ee_screens_cb_out_value(outText, theUpgrade);
-        return 0;
-    case EE_SCREENS_CBW_C_NAME:
-        EECBPut(outText, theCiv->mName);
-        return 0;
-    case EE_SCREENS_CBW_REQUEST: {
-        // the name's bytes, then the upgrades (little-endian u32s)
-        UWideString theName(theBytes.substr(0, (size_t)inB).c_str());
-        std::vector<EECivUpgrade> theUpgrades;
-        for (size_t i = (size_t)inB; i + 4 <= theBytes.size(); i += 4) {
-            const unsigned char* q = reinterpret_cast<const unsigned char*>(theBytes.data()) + i;
-            theUpgrades.push_back((EECivUpgrade)(q[0] | q[1] << 8 | q[2] << 16 | (uint32_t)q[3] << 24));
-        }
-        unsigned char thePlayer = (unsigned char)inA;
-        NEMessage* theMessage = new EEMRecord(kMessageCivUpgradesRequested, {thePlayer, 0, theUpgrades, theName});
-        if (gCommunications->GetIsMultiplayerSession())
-            gCommunications->ProcessLocalUserInput(theMessage, kSlotServer);
-        else {
-            theMessage->Execute();
-            theMessage->Dereference();
-        }
-        return 0;
-    }
-    case EE_SCREENS_CBW_MULTIPLAYER:
-        return gCommunications->GetIsMultiplayerSession();
-    case EE_SCREENS_CBW_GAME_RESULT:
-        return gWorld.GetCurrentPlayer()->GetGameResult();
-    case EE_SCREENS_CBW_PAUSE:
-        return gWorld.PauseGame();
-    case EE_SCREENS_CBW_UNPAUSE:
-        return gWorld.UnpauseGame();
-    case EE_SCREENS_CBW_PLAYER_CIV: {
-        EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-        return thePlayer == NULL ? 0 : (int64_t)reinterpret_cast<uintptr_t>(&thePlayer->mCivilization);
-    }
-    case EE_SCREENS_CBW_PLAYER_ID:
-        return (unsigned char)gWorld.mCurrentPlayer;
-    case EE_SCREENS_CBW_PLAYER_FLAG:
-        return inA == 0 ? gWorld.GetCurrentPlayer()->mCivilizationChosen : gWorld.GetCurrentPlayer()->mCivilizationLocked;
-    case EE_SCREENS_CBW_SET_PLAYER_FLAG:
-        (inA == 0 ? gWorld.GetCurrentPlayer()->mCivilizationChosen : gWorld.GetCurrentPlayer()->mCivilizationLocked) =
-            inB != 0;
-        return 0;
-    case EE_SCREENS_CBW_FREE_CAMERA:
-        return gFreeCamera;
-    case EE_SCREENS_CBW_CAN_BUY:
-        return gWorld.mGameOptions.CanBuyCivilization();
-    case EE_SCREENS_CBW_CAMPAIGN_NAME: {
-        UWideString theName;
-        bool theFound = gWorld.mGameOptions.GetCampaignMapName(theName);
-        if (theFound)
-            EECBPut(outText, theName);
-        return theFound;
-    }
-    case EE_SCREENS_CBW_CUSTOM_CIVS:
-        return gAllowCustomCivs;
-    case EE_SCREENS_CBW_SOUND_LOAD:
-        return (int64_t)gSoundManager->Load(UString(inA ? "sounds\\button2.wav" : "sounds\\button1.wav"), 0, 1);
-    case EE_SCREENS_CBW_SOUND_UNLOAD:
-        gSoundManager->Unload((unsigned long)inA);
-        return 0;
-    case EE_SCREENS_CBW_SOUND_PLAY:
-        gSoundManager->Play((unsigned long)inA, 1.0f, 0.0f, 1.0f, false, NULL);
-        return 0;
-    case EE_SCREENS_CBW_MESSAGE:
-        gUIManager->DisplayMessage(theText, 1, NULL, NULL, true);
-        return 0;
-    case EE_SCREENS_CBW_QUESTION:
-        gUIManager->DisplayQuestion(theText, 1, static_cast<UIForm*>(p),
-                                    inA == EE_SCREENS_CBW_ANSWER_WRITE    ? EECBAnswerWrite
-                                    : inA == EE_SCREENS_CBW_ANSWER_DELETE ? EECBAnswerDelete
-                                                                          : EECBAnswerAccept,
-                                    NULL);
-        return 0;
-    case EE_SCREENS_CBW_BLINK_FLAG:
-        gUIManager->GetMainGameForm()->mIsButtonBlinking = inA != 0;
-        return 0;
-    case EE_SCREENS_CBW_MAIN_BUTTON:
-        return EECBMainButton(inA) != NULL;
-    case EE_SCREENS_CBW_MAIN_BLINK:
-        static_cast<UIBlinkingButton*>(EECBMainButton(inA))->SetIsBlinking(inB != 0);
-        return 0;
-    case EE_SCREENS_CBW_MAIN_DISPLAY:
-        EECBMainButton(inA)->SetDisplayMode(inB ? kDisplayModeShown : kDisplayModeHidden);
-        return 0;
-    case EE_SCREENS_CBW_F_DIRECTORY:
-        gU565518.SetVolume(gStartupVolume);
-        gU565518.SetDirectory(UString(theBytes.c_str()));
-        return 0;
-    case EE_SCREENS_CBW_F_NAME:
-        gU565518.SetFile(UString(theBytes.c_str()));
-        return 0;
-    case EE_SCREENS_CBW_F_OPEN:
-        return gU565518.Open(inA ? kFileAccessWrite : kFileAccessRead);
-    case EE_SCREENS_CBW_F_CLOSE:
-        return gU565518.Close();
-    case EE_SCREENS_CBW_F_DELETE:
-        return gU565518.Delete();
-    case EE_SCREENS_CBW_F_CREATE:
-        return gU565518.Create();
-    case EE_SCREENS_CBW_F_WRITE: {
-        unsigned long theWritten = 0;
-        return gU565518.Write(theBytes.data(), (unsigned long)theBytes.size(), theWritten);
-    }
-    case EE_SCREENS_CBW_F_FILE:
-        EECBPut(outText, gU565518.GetFile());
-        return 0;
-    case EE_SCREENS_CBW_STARTUP_DIRECTORY:
-        EECBPut(outText, gStartupDirectory);
-        return 0;
-    case EE_SCREENS_CBW_RELOAD_PLAYERS: {
-        UString theFile(theBytes.c_str());
-        std::vector<unsigned long> thePlayers;
-        for (unsigned long i = 1; i < gWorld.mNumPlayers; i++)
-            if (gWorld.mPlayers[i]->mCivilizationFile + ".civ" == theFile)
-                thePlayers.push_back(i);
-        if (thePlayers.size() > 0) {
-            EEAResetAllPlayerInfo* theAction = new EEAResetAllPlayerInfo(thePlayers);
-            gUserInterface->PostAction(theAction);
-            theAction->Dereference();
-        }
-        return (int64_t)thePlayers.size();
-    }
-    case EE_SCREENS_CBW_LOAD_CIVILIZATION: {
-        // the game's file, else (into the same name and upgrades) the user's
-        UString theName(theBytes.c_str());
-        UWideString theCivName;
-        std::vector<EECivUpgrade> theUpgrades;
-        long theResult = EELoadCivilization(theName, EEGetCivilizationDirectory(false), theCivName, theUpgrades);
-        if (theResult != 0)
-            theResult = EELoadCivilization(theName, EEGetCivilizationDirectory(true), theCivName, theUpgrades);
-        EECBPut(outText, theCivName);
-        for (EECivUpgrade theUpgrade : theUpgrades)
-            ee_screens_cb_out_value(outText, theUpgrade);
-        return theResult;
-    }
-    }
-    return 0;
-}
+extern "C" uintptr_t ee_screenscpp_cbh_form(uint32_t inId) { return (uintptr_t)gUIManager->GetFormByID(inId); }
+extern "C" uintptr_t ee_screenscpp_cbh_control_by_id(uintptr_t inForm, uint32_t inId)
+{ return (uintptr_t)((UIForm*)inForm)->GetControlById(inId); }
+extern "C" uintptr_t ee_screenscpp_cbh_control(uintptr_t inForm, uint32_t inIndex)
+{ return (uintptr_t)((UIForm*)inForm)->GetControl(inIndex); }
+extern "C" uintptr_t ee_screenscpp_cbh_as_edit(uintptr_t inControl)
+{ return (uintptr_t)dynamic_cast<UIEditBox*>((UIControl*)inControl); }
+extern "C" uintptr_t ee_screenscpp_cbh_as_label(uintptr_t inControl)
+{ return (uintptr_t)dynamic_cast<UITextLabel*>((UIControl*)inControl); }
+extern "C" uintptr_t ee_screenscpp_cbh_as_file_list(uintptr_t inControl)
+{ return (uintptr_t)dynamic_cast<UIFileListBox*>((UIControl*)inControl); }
+extern "C" uintptr_t ee_screenscpp_cbh_as_list(uintptr_t inControl)
+{ return (uintptr_t)dynamic_cast<EECBUIListBox*>((UIControl*)inControl); }
+extern "C" void ee_screenscpp_cbh_edit_text(uintptr_t inEdit, void* inOut)
+{ EEShimOutC(inOut, ((UIEditBox*)inEdit)->GetText(0)); }
+extern "C" void ee_screenscpp_cbh_edit_set_text(uintptr_t inEdit, EeScreensShimText inText)
+{ ((UIEditBox*)inEdit)->SetText(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cbh_edit_select(uintptr_t inEdit) { ((UIEditBox*)inEdit)->SelectText(); }
+extern "C" uint32_t ee_screenscpp_cbh_edit_index(uintptr_t inEdit) { return ((UIEditBox*)inEdit)->GetIndex(); }
+extern "C" void ee_screenscpp_cbh_form_set_tab_stop(uintptr_t inForm, uint32_t inIndex)
+{ ((UIForm*)inForm)->SetTabStop(inIndex); }
+extern "C" void ee_screenscpp_cbh_label_text(uintptr_t inLabel, void* inOut)
+{ EEShimOut(inOut, ((UITextLabel*)inLabel)->GetText(0)); }
+extern "C" void ee_screenscpp_cbh_label_set_text(uintptr_t inLabel, EeScreensShimText inText)
+{ ((UITextLabel*)inLabel)->SetText(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cbh_label_set_number(uintptr_t inLabel, int32_t inNumber)
+{ ((UITextLabel*)inLabel)->SetText((long)inNumber); }
+extern "C" int32_t ee_screenscpp_cbh_push(uintptr_t inForm) { return gUIManager->Push((UIForm*)inForm); }
+extern "C" int32_t ee_screenscpp_cbh_close_form() { return gUserInterface->CloseForm(NULL); }
+extern "C" uintptr_t ee_screenscpp_cbh_current_form() { return (uintptr_t)gUIManager->GetCurrentForm(); }
+extern "C" void ee_screenscpp_cbh_path_new() { sCBPath = new FSPath; }
+extern "C" void ee_screenscpp_cbh_spec_volume() { sCBSpec.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_cbh_spec_directory()
+{ sCBSpec.SetDirectory(gStartupDirectory + "Users\\default\\Civilizations\\"); }
+extern "C" void ee_screenscpp_cbh_path_add() { sCBPath->AddDirectory(sCBSpec, true); }
+extern "C" void ee_screenscpp_cbh_fl_set_paths(uintptr_t inList) { ((UIFileListBox*)inList)->SetSearchPaths(sCBPath); }
+extern "C" void ee_screenscpp_cbh_fl_add_extension(uintptr_t inList)
+{ ((UIFileListBox*)inList)->AddValidExtension(UString(".civ")); }
+extern "C" void ee_screenscpp_cbh_fl_create_entries(uintptr_t inList) { ((UIFileListBox*)inList)->CreateEntries(1); }
+extern "C" void ee_screenscpp_cbh_path_release() { sCBPath->Dereference(); }
+extern "C" int32_t ee_screenscpp_cbh_fl_selection(uintptr_t inList, unsigned long* inIndex)
+{ return ((UIFileListBox*)inList)->GetCurrentSelection(*inIndex); }
+extern "C" void ee_screenscpp_cbh_fl_line(uintptr_t inList, uint32_t inLine, void* inOut)
+{ EEShimOut(inOut, ((UIFileListBox*)inList)->GetData(inLine)); }
+extern "C" int32_t ee_screenscpp_cbh_fl_delete(uintptr_t inList)
+{ return ((UIFileListBox*)inList)->DeleteSelectedFile(); }
+extern "C" uintptr_t ee_screenscpp_cbh_screen_event(uint32_t inCode) { return (uintptr_t)EECreateScreenEvent(inCode); }
+extern "C" void ee_screenscpp_cbh_form_set_open_event(uintptr_t inForm, uintptr_t inEvent)
+{ ((UIForm*)inForm)->SetFormOpenEvent((UIEvent*)inEvent); }
+extern "C" void ee_screenscpp_cbh_form_set_close_event(uintptr_t inForm, uintptr_t inEvent)
+{ ((UIForm*)inForm)->SetFormCloseEvent((UIEvent*)inEvent); }
+extern "C" void ee_screenscpp_cbh_event_release(uintptr_t inEvent) { ((UIEvent*)inEvent)->Dereference(); }
+extern "C" uint32_t ee_screenscpp_cbh_form_id(uintptr_t inForm) { return ((UIForm*)inForm)->GetFormID(); }
+extern "C" int32_t ee_screenscpp_cbh_string_load(uint32_t inId) { return gResource->GetString(inId, sCBString); }
+extern "C" void ee_screenscpp_cbh_string_out(void* inOut) { EEShimOut(inOut, sCBString); }
+extern "C" void ee_screenscpp_cbh_format_percent() { gResource->GetString(IDS_FORMAT_PERCENT_6_2G, sCBFormat); }
+extern "C" void ee_screenscpp_cbh_format_reserved()
+{ gResource->GetString(IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED, sCBFormat); }
+extern "C" void ee_screenscpp_cbh_print_float(float inValue) { sprintf(sCBString, sCBFormat, inValue); }
+extern "C" void ee_screenscpp_cbh_print_text(EeScreensShimText inText)
+{ sprintf(sCBString, sCBFormat, (const char*)EEShimString(inText)); }
+extern "C" void ee_screenscpp_cbh_quote(EeScreensShimText inText, void* inOut)
+{ EEShimOutC(inOut, EEDataText::QuoteText(std::string((const char*)inText.ptr, inText.len)).c_str()); }
+extern "C" int32_t ee_screenscpp_cbh_civ_base_cost(uintptr_t inCiv, uint32_t inUpgrade)
+{ return ((EECivilization*)inCiv)->GetBaseCost((EECivUpgrade)inUpgrade); }
+extern "C" int32_t ee_screenscpp_cbh_civ_extra_cost(uintptr_t inCiv, uint32_t inUpgrade)
+{ return ((EECivilization*)inCiv)->GetExtraCost((EECivUpgrade)inUpgrade); }
+extern "C" int32_t ee_screenscpp_cbh_civ_compute(uintptr_t inCiv, int32_t inA, int32_t inB, int32_t inC)
+{ return ((EECivilization*)inCiv)->ComputeCost((long)inA, (long)inB, (long)inC); }
+extern "C" int32_t ee_screenscpp_cbh_civ_count(uintptr_t inCiv, uint32_t inUpgrade)
+{ return ((EECivilization*)inCiv)->CountInCategory((EECivUpgrade)inUpgrade, NULL); }
+extern "C" int32_t ee_screenscpp_cbh_civ_available(uintptr_t inCiv)
+{ return ((EECivilization*)inCiv)->GetAvailablePoints(); }
+extern "C" int32_t ee_screenscpp_cbh_civ_unchanged(uintptr_t inCiv) { return ((EECivilization*)inCiv)->GetUnchanged(); }
+extern "C" int32_t ee_screenscpp_cbh_civ_max(uintptr_t inCiv) { return ((EECivilization*)inCiv)->GetMaxPoints(); }
+extern "C" uint32_t ee_screenscpp_cbh_civ_purchased_count(uintptr_t inCiv)
+{ return (uint32_t)((EECivilization*)inCiv)->GetPurchasedUpgrades().size(); }
+extern "C" uint32_t ee_screenscpp_cbh_civ_purchased(uintptr_t inCiv, uint32_t inIndex)
+{ return ((EECivilization*)inCiv)->GetPurchasedUpgrades()[inIndex]; }
+extern "C" void ee_screenscpp_cbh_civ_name(uintptr_t inCiv, void* inOut)
+{ EEShimOut(inOut, ((EECivilization*)inCiv)->mName); }
+extern "C" void ee_screenscpp_cbh_upgrades_clear() { sCBUpgrades.clear(); }
+extern "C" void ee_screenscpp_cbh_upgrades_push(uint32_t inUpgrade) { sCBUpgrades.push_back((EECivUpgrade)inUpgrade); }
+extern "C" uint32_t ee_screenscpp_cbh_upgrades_count() { return (uint32_t)sCBUpgrades.size(); }
+extern "C" uint32_t ee_screenscpp_cbh_upgrades_at(uint32_t inIndex) { return sCBUpgrades[inIndex]; }
+extern "C" uintptr_t ee_screenscpp_cbh_request_new(uint8_t inPlayer, EeScreensShimText inName)
+{ return (uintptr_t) new EEMRecord(kMessageCivUpgradesRequested, {inPlayer, 0, sCBUpgrades, EEShimText(inName)}); }
+extern "C" bool ee_screenscpp_cbh_multiplayer() { return gCommunications->GetIsMultiplayerSession(); }
+extern "C" void ee_screenscpp_cbh_send_server(uintptr_t inMessage)
+{ gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotServer); }
+extern "C" void ee_screenscpp_cbh_message_execute(uintptr_t inMessage) { ((NEMessage*)inMessage)->Execute(); }
+extern "C" void ee_screenscpp_cbh_message_release(uintptr_t inMessage) { ((NEMessage*)inMessage)->Dereference(); }
+extern "C" int32_t ee_screenscpp_cbh_game_result() { return gWorld.GetCurrentPlayer()->GetGameResult(); }
+extern "C" int32_t ee_screenscpp_cbh_pause() { return gWorld.PauseGame(); }
+extern "C" int32_t ee_screenscpp_cbh_unpause() { return gWorld.UnpauseGame(); }
+extern "C" uintptr_t ee_screenscpp_cbh_current_player() { return (uintptr_t)gWorld.GetCurrentPlayer(); }
+extern "C" uintptr_t ee_screenscpp_cbh_player_civ(uintptr_t inPlayer)
+{ return (uintptr_t)&((EEPlayer*)inPlayer)->mCivilization; }
+extern "C" uint8_t ee_screenscpp_cbh_player_id() { return (unsigned char)gWorld.mCurrentPlayer; }
+extern "C" bool ee_screenscpp_cbh_civ_chosen() { return gWorld.GetCurrentPlayer()->mCivilizationChosen; }
+extern "C" bool ee_screenscpp_cbh_civ_locked() { return gWorld.GetCurrentPlayer()->mCivilizationLocked; }
+extern "C" void ee_screenscpp_cbh_set_civ_chosen(bool inValue)
+{ gWorld.GetCurrentPlayer()->mCivilizationChosen = inValue; }
+extern "C" void ee_screenscpp_cbh_set_civ_locked(bool inValue)
+{ gWorld.GetCurrentPlayer()->mCivilizationLocked = inValue; }
+extern "C" bool ee_screenscpp_cbh_free_camera() { return gFreeCamera; }
+extern "C" bool ee_screenscpp_cbh_can_buy() { return gWorld.mGameOptions.CanBuyCivilization(); }
+extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(sCBString); }
+extern "C" bool ee_screenscpp_cbh_custom_civs() { return gAllowCustomCivs; }
+extern "C" uint32_t ee_screenscpp_cbh_sound_load(EeScreensShimText inName)
+{ return (uint32_t)gSoundManager->Load(EEShimString(inName), 0, 1); }
+extern "C" void ee_screenscpp_cbh_sound_unload(uint32_t inSound) { gSoundManager->Unload((unsigned long)inSound); }
+extern "C" void ee_screenscpp_cbh_sound_play(uint32_t inSound)
+{ gSoundManager->Play((unsigned long)inSound, 1.0f, 0.0f, 1.0f, false, NULL); }
+extern "C" void ee_screenscpp_cbh_message(EeScreensShimText inText)
+{ gUIManager->DisplayMessage(EEShimText(inText), 1, NULL, NULL, true); }
+extern "C" void ee_screenscpp_cbh_question(EeScreensShimText inText, uintptr_t inForm, uint32_t inAnswer)
+{ gUIManager->DisplayQuestion(EEShimText(inText), 1, (UIForm*)inForm, kCBAnswers[inAnswer], NULL); }
+extern "C" void ee_screenscpp_cbh_set_blink_flag(bool inValue)
+{ gUIManager->GetMainGameForm()->mIsButtonBlinking = inValue; }
+extern "C" uintptr_t ee_screenscpp_cbh_main_builder_button(uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(dynamic_cast<UIBlinkingButton*>(((UIForm*)inForm)->GetControl(kMainGameCivSelectorBuilder))); }
+extern "C" uintptr_t ee_screenscpp_cbh_main_alert_button()
+{ return (uintptr_t)gUIManager->GetMainGameForm()->GetControl(kMainGameLargeCivBuilderAlert); }
+extern "C" uint32_t ee_screenscpp_cbh_main_game_form_id() { return kFormMainGame; }
+extern "C" void ee_screenscpp_cbh_button_blink(uintptr_t inButton, bool inValue)
+{ static_cast<UIBlinkingButton*>((UIControl*)inButton)->SetIsBlinking(inValue); }
+extern "C" void ee_screenscpp_cbh_f_volume() { gU565518.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_cbh_f_directory(EeScreensShimText inText) { gU565518.SetDirectory(EEShimString(inText)); }
+extern "C" void ee_screenscpp_cbh_f_name(EeScreensShimText inText) { gU565518.SetFile(EEShimString(inText)); }
+extern "C" int32_t ee_screenscpp_cbh_f_open_read() { return gU565518.Open(kFileAccessRead); }
+extern "C" int32_t ee_screenscpp_cbh_f_open_write() { return gU565518.Open(kFileAccessWrite); }
+extern "C" int32_t ee_screenscpp_cbh_f_close() { return gU565518.Close(); }
+extern "C" int32_t ee_screenscpp_cbh_f_delete() { return gU565518.Delete(); }
+extern "C" int32_t ee_screenscpp_cbh_f_create() { return gU565518.Create(); }
+extern "C" int32_t ee_screenscpp_cbh_f_write(EeScreensShimText inBytes)
+{ return gU565518.Write((const char*)inBytes.ptr, (unsigned long)inBytes.len, sCBWritten); }
+extern "C" void ee_screenscpp_cbh_f_file(void* inOut) { EEShimOut(inOut, gU565518.GetFile()); }
+extern "C" void ee_screenscpp_cbh_startup_directory(void* inOut) { EEShimOut(inOut, gStartupDirectory); }
+extern "C" uint32_t ee_screenscpp_cbh_num_players() { return gWorld.mNumPlayers; }
+extern "C" bool ee_screenscpp_cbh_player_civ_file_is(uint32_t inPlayer, EeScreensShimText inFile)
+{ return gWorld.mPlayers[inPlayer]->mCivilizationFile + ".civ" == EEShimString(inFile); }
+extern "C" void ee_screenscpp_cbh_players_clear() { sCBPlayers.clear(); }
+extern "C" void ee_screenscpp_cbh_players_push(uint32_t inPlayer) { sCBPlayers.push_back(inPlayer); }
+extern "C" uintptr_t ee_screenscpp_cbh_reset_players_new() { return (uintptr_t) new EEAResetAllPlayerInfo(sCBPlayers); }
+extern "C" void ee_screenscpp_cbh_post_action(uintptr_t inAction) { gUserInterface->PostAction((EEAction*)inAction); }
+extern "C" void ee_screenscpp_cbh_action_release(uintptr_t inAction) { ((EEAction*)inAction)->Dereference(); }
+extern "C" void ee_screenscpp_cbh_string_clear() { sCBString = UWideString(); }
+extern "C" int32_t ee_screenscpp_cbh_load_civilization(EeScreensShimText inName, bool inUser)
+{ return EELoadCivilization(EEShimString(inName), EEGetCivilizationDirectory(inUser), sCBString, sCBUpgrades); }
+extern "C" uint32_t ee_screenscpp_cbl_count(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetNumLines(); }
+extern "C" void ee_screenscpp_cbl_line(uintptr_t inList, uint32_t inLine, void* inOut)
+{ EEShimOut(inOut, ((EECBUIListBox*)inList)->mData[inLine]); }
+extern "C" void ee_screenscpp_cbl_set_line(uintptr_t inList, uint32_t inLine, EeScreensShimText inText)
+{ ((EECBUIListBox*)inList)->mData[inLine] = EEShimText(inText); }
+extern "C" void ee_screenscpp_cbl_append(uintptr_t inList, EeScreensShimText inText)
+{ ((EECBUIListBox*)inList)->UIListBox<UWideString>::AppendLine(EEShimText(inText)); }
+extern "C" void ee_screenscpp_cbl_delete(uintptr_t inList, uint32_t inLine)
+{ ((EECBUIListBox*)inList)->UIListBox<UWideString>::DeleteLine(inLine); }
+extern "C" void ee_screenscpp_cbl_delete_all(uintptr_t inList) { ((EECBUIListBox*)inList)->DeleteAllEntries(); }
+extern "C" void ee_screenscpp_cbl_select(uintptr_t inList, uint32_t inLine, bool inFire, bool inScroll)
+{ ((EECBUIListBox*)inList)->UIListBox<UWideString>::ChangeSelectionIndex(inLine, inFire, inScroll); }
+extern "C" int32_t ee_screenscpp_cbl_current(uintptr_t inList, unsigned long* inIndex)
+{ return ((EECBUIListBox*)inList)->GetCurrentSelection(*inIndex); }
+extern "C" bool ee_screenscpp_cbl_auto(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetAutoSelect(); }
+extern "C" bool ee_screenscpp_cbl_has(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetHasSelection(); }
+extern "C" uint32_t ee_screenscpp_cbl_index(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetSelectionIndex(); }
+extern "C" void ee_screenscpp_cbl_dirty(uintptr_t inList) { ((EECBUIListBox*)inList)->SetDirty(true); }
+extern "C" bool ee_screenscpp_cbl_upgrades_only(uintptr_t inList)
+{ return ((EECBUIListBox*)inList)->mSelectUpgradesOnly; }
+extern "C" bool ee_screenscpp_cbl_show_points(uintptr_t inList) { return ((EECBUIListBox*)inList)->mShowPoints; }
+extern "C" bool ee_screenscpp_cbl_sort(uintptr_t inList) { return ((EECBUIListBox*)inList)->mSortLines; }
+extern "C" bool ee_screenscpp_cbl_copied_points(uintptr_t inList)
+{ return ((EECBUIListBox*)inList)->mCopiedShowPoints; }
+extern "C" void ee_screenscpp_cbl_set_upgrades_only(uintptr_t inList, bool inValue)
+{ ((EECBUIListBox*)inList)->mSelectUpgradesOnly = inValue; }
+extern "C" void ee_screenscpp_cbl_set_show_points(uintptr_t inList, bool inValue)
+{ ((EECBUIListBox*)inList)->mShowPoints = inValue; }
+extern "C" void ee_screenscpp_cbl_set_sort(uintptr_t inList, bool inValue)
+{ ((EECBUIListBox*)inList)->mSortLines = inValue; }
+extern "C" void ee_screenscpp_cbl_set_copied_points(uintptr_t inList, bool inValue)
+{ ((EECBUIListBox*)inList)->mCopiedShowPoints = inValue; }
+extern "C" void ee_screenscpp_cbl_draw_base(uintptr_t inList) { ((EECBUIListBox*)inList)->UIControl::DrawTextA(); }
+extern "C" uint32_t ee_screenscpp_cbl_draw_count(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetDrawCount(); }
+extern "C" void ee_screenscpp_cbl_copy_line(uintptr_t inList, uint32_t inLine, void* inOut)
+{ EEShimOut(inOut, ((EECBUIListBox*)inList)->mCopyLineArray[inLine]); }
+extern "C" void ee_screenscpp_cbl_rect_copy(uintptr_t inList)
+{ sCBRect = ((EECBUIListBox*)inList)->GetCopyTextRectangle(); }
+extern "C" float ee_screenscpp_cbl_rect_left() { return sCBRect.GetLeft(); }
+extern "C" float ee_screenscpp_cbl_rect_right() { return sCBRect.GetRight(); }
+extern "C" void ee_screenscpp_cbl_rect_set_left(float inValue) { sCBRect.SetLeft(inValue); }
+extern "C" void ee_screenscpp_cbl_rect_set_right(float inValue) { sCBRect.SetRight(inValue); }
+extern "C" void ee_screenscpp_cbl_rect_set_top(float inValue) { sCBRect.SetTop(inValue); }
+extern "C" void ee_screenscpp_cbl_rect_set_bottom(float inValue) { sCBRect.SetBottom(inValue); }
+extern "C" uint32_t ee_screenscpp_cbl_line_height(uintptr_t inList)
+{ return ((EECBUIListBox*)inList)->GetLineHeight(); }
+extern "C" float ee_screenscpp_cbl_copy_top(uintptr_t inList)
+{ return ((EECBUIListBox*)inList)->GetCopyTextRectangle().GetTop(); }
+extern "C" uintptr_t ee_screenscpp_cbl_text(uintptr_t inList)
+{ return (uintptr_t)((EECBUIListBox*)inList)->GetGEText(); }
+extern "C" void ee_screenscpp_cbl_font_bold(uintptr_t inText)
+{ ((GEText*)inText)->SetFont(UIFontTable::FindOrCreateFont(((GEText*)inText)->GetFont()->GetFontName(), ((GEText*)inText)->GetFont()->GetFontStyle() | kFontStyleBold, ((GEText*)inText)->GetFont()->GetFontQuality(), ((GEText*)inText)->GetFont()->GetFontSize())); }
+extern "C" void ee_screenscpp_cbl_font_plain(uintptr_t inText)
+{ ((GEText*)inText)->SetFont(UIFontTable::FindOrCreateFont(((GEText*)inText)->GetFont()->GetFontName(), ((GEText*)inText)->GetFont()->GetFontStyle() & ~kFontStyleBold, ((GEText*)inText)->GetFont()->GetFontQuality(), ((GEText*)inText)->GetFont()->GetFontSize())); }
+extern "C" void ee_screenscpp_cbl_align_right(uintptr_t inText) { ((GEText*)inText)->SetAlignment(kTextAlignRight); }
+extern "C" void ee_screenscpp_cbl_align_left(uintptr_t inText) { ((GEText*)inText)->SetAlignment(kTextAlignLeft); }
+extern "C" void ee_screenscpp_cbl_text_set(uintptr_t inText, EeScreensShimText inValue)
+{ ((GEText*)inText)->SetText(EEShimText(inValue)); }
+extern "C" void ee_screenscpp_cbl_colour_header(uintptr_t inText, uintptr_t inList)
+{ ((GEText*)inText)->SetFgColor(((EECBUIListBox*)inList)->mC148); }
+extern "C" void ee_screenscpp_cbl_colour(uintptr_t inText, float inRed, float inGreen, float inBlue)
+{ ((GEText*)inText)->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
+extern "C" void ee_screenscpp_cbl_location_top_right(uintptr_t inText)
+{ ((GEText*)inText)->SetLocation(sCBRect.GetTopRight()); }
+extern "C" void ee_screenscpp_cbl_location_top_left(uintptr_t inText)
+{ ((GEText*)inText)->SetLocation(sCBRect.GetTopLeft()); }
+extern "C" int32_t ee_screenscpp_cbl_draw_clipped(uintptr_t inList, uintptr_t inText)
+{ return ((EECBUIListBox*)inList)->GetForm()->DrawClippedText(sCBRect, (GEText*)inText, (EECBUIListBox*)inList); }
+extern "C" int32_t ee_screenscpp_cbl_draw_end(uintptr_t inList)
+{ return ((EECBUIListBox*)inList)->DrawScrollBarText(); }

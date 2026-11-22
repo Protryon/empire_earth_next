@@ -85,6 +85,9 @@ struct EeGeBoundingBox {
 /// Receives one rectangle of a split.
 using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
 
+/// `GetLineTiles`' C side: `assign(out, tiles, count)` replaces the C++ vector's contents.
+using EeU2DAssignTiles = void(*)(void *out, const long (*tiles)[2], size_t count);
+
 extern "C" {
 
 /// `UMCos`.
@@ -172,6 +175,12 @@ void ee_ge_3d_interpolate(const EeGe3DPoint *from,
 /// # Safety
 /// `v` is valid.
 float ee_ge_vector_magnitude(const EeGeVector *v);
+
+/// `GEVector::Normalize` (a magnitude within 0.0001 of zero gives the zero vector).
+///
+/// # Safety
+/// `v` is valid.
+void ee_ge_vector_normalize(EeGeVector *v);
 
 /// `GEVector::GetMagnitudeSquared`.
 ///
@@ -475,6 +484,25 @@ void ee_ge_rect_remove_intersecting(const EeGeRectangle *r,
                                     size_t existing,
                                     EeGePushRectangle push,
                                     void *context);
+
+/// `U2DPoint<long>::GetLineTiles(inTo, inStep, outTiles)`.
+///
+/// # Safety
+/// `from` and `to` point at two `long`s; `assign` takes `out`.
+void ee_u2d_line_tiles(const long (*from)[2],
+                       const long (*to)[2],
+                       float step,
+                       void *out,
+                       EeU2DAssignTiles assign);
+
+/// `U2DRectangle<float>::GetClosestPoint(inPoint)` (the rectangle's members in their order: bottom, left, right,
+/// top).
+///
+/// # Safety
+/// `rect` points at four floats, `point` and `out` at two.
+void ee_u2d_rect_closest_point(const float (*rect)[4],
+                               const float (*point)[2],
+                               float (*out)[2]);
 
 }  // extern "C"
 

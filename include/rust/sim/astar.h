@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/fs.h"
 #include "rust/base/sparse.h"
 
 /// A tile of an area of its own (`0x36`).
@@ -1948,14 +1947,14 @@ void ee_astar_cntq_leave(bool on);
 /// `EESaveContinentRegions`: the manager's regions into the save.
 ///
 /// # Safety
-/// `r` is the manager's live record; `ops` serves the save's file.
-int32_t ee_astar_cm_save_regions(const EeAStarCmRecord *r, EeFsFileOps ops);
+/// `r` is the manager's live record; `file` is the save's C++ `FSFile*`, open for writing.
+int32_t ee_astar_cm_save_regions(const EeAStarCmRecord *r, void *file);
 
 /// `EELoadContinentRegions`: the save's block, kept for the start of the game.
 ///
 /// # Safety
-/// `ops` serves the save's file.
-int32_t ee_astar_cm_load_regions(EeFsFileOps ops);
+/// `file` is the save's C++ `FSFile*`, open for reading.
+int32_t ee_astar_cm_load_regions(void *file);
 
 /// `EEContinentRegionsPending`: a loaded block waits.
 bool ee_astar_cm_regions_pending();

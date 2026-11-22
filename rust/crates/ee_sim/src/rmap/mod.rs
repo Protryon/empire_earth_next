@@ -18,6 +18,7 @@ mod golden;
 pub mod grid;
 pub mod map;
 pub mod math;
+pub mod object;
 pub mod points;
 pub mod resources;
 pub mod rmv;

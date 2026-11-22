@@ -86,7 +86,8 @@ public:
     void PrepareTransforms() { ee_ge_mod_prepare_transforms(this->mRust); }
     // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
     void SetGraphicsCurrentFrame(unsigned long inFrame) { ee_ge_mod_set_current_frame(this->mRust, inFrame); }
-    void SetTexture(GETexture* inTexture, unsigned long inIndex);
+    void SetTexture(GETexture* inTexture, unsigned long inIndex)
+        { ee_ge_mod_set_texture(this->mRust, inTexture, inIndex); }
     unsigned long SizeOf() { return ee_ge_mod_size_of(this->mRust); }
     bool Verify() const { return ee_ge_mod_verify(this->mRust); }
     GEModel(const GEModel&) = delete;
@@ -99,7 +100,8 @@ protected:
 private:
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
-    void SetSubModel(GEModel* inModel, unsigned long inIndex);
+    void SetSubModel(GEModel* inModel, unsigned long inIndex)
+        { ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex); }
     // what the friends read (the store gate's digest), as accessors
     unsigned long GetVertexCount() const { return this->Val(EeGeModVal::VertexCount); }
     unsigned long GetSharedFrameCount() const { return this->Val(EeGeModVal::SharedFrameCount); }

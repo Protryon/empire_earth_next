@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include "rust/render/ge.h"   // the font bitmap (ee_ge fbobj.rs), its host's EeGeFbOp
+#include "lle/GERust.h"
 
 class GEFont;
 class GERasterizer;
@@ -17,9 +18,11 @@ class GEText;
 class LLE_API GEFontBitmap : public UReferenceCounter {   // sizeof 0x24 (vector deleting dtor 0x106be)
 public:
     GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen);
-    bool operator==(GEFont* inFont);
-    long Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen);
-    long Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer, unsigned long inScreen);
+    bool operator==(GEFont* inFont) { return true; }
+    long Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
+        { return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen); }
+    long Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer, unsigned long inScreen)
+        { return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen); }
     GEFontBitmap(const GEFontBitmap&) = delete;
     GEFontBitmap& operator=(const GEFontBitmap&) = delete;
 protected:
