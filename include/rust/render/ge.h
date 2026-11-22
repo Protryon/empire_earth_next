@@ -255,7 +255,7 @@ enum class EeGeDraw2DKind : uint32_t {
 /// A call the managers make on another object (the C++ hosts `GEModelManagerHost` and `GETextureManagerHost`).
 /// `obj`, `a`, `b` and `c` are the operation's arguments as each describes; the result is the call's.
 enum class EeGeManOp : uint32_t {
-  /// `TSScheduler::CreateCriticalSection` (with its `ESVERIFY`): the lock.
+  /// `TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a)`: the lock into `a`; the result (`LockVerify`'s).
   LockCreate = 1,
   /// `TSScheduler::DestroyCriticalSection(obj)`.
   LockDestroy,
@@ -263,6 +263,8 @@ enum class EeGeManOp : uint32_t {
   LockEnter,
   /// `obj->Leave()`.
   LockLeave,
+  /// `ESVERIFY_AT(a == keseOK, ...)`: the check of `LockCreate`'s result (each manager's own line).
+  LockVerify,
   /// `obj->Reference()` (an `FSPath`).
   PathReference,
   /// `obj->Dereference()` (an `FSPath`).
@@ -271,15 +273,12 @@ enum class EeGeManOp : uint32_t {
   RefCount,
   /// `obj->UReferenceCounter::Dereference()` (a model or texture).
   BaseDereference,
-  /// The dump's heading into the file `obj` (`FSFileSpec&`).
-  DumpHeader,
-  /// The dump's line of the cached `obj` (its reference count) named `a` (`const char*`) into the file `b`.
-  DumpLine,
-  /// `new GEModel(counts and flags of a, UString(b), this)`: `a` the forwarder's `GEModelCreateArgs*`, `b` the
-  /// created name (`const char*`).
+  /// `fprintf(*(FSFileSpec*)obj, "%s", a)`: the dump's heading or one of its lines (`a` a `const char*`).
+  DumpText,
+  /// `new GEModel(*a, UString(b), this)`: `a` the counts and flags (`EeGeModelCreate*`), `b` the created name
+  /// (`const char*`).
   ModelNew = 20,
-  /// `CreateSubModel`'s body under the lock: `new GEModel(counts and flags of a, obj->mName, this)`,
-  /// `obj->SetSubModel(model, b)`, `model->UReferenceCounter::Dereference()`; the model.
+  /// `new GEModel(*a, *(const UString*)b, this)`: a sub-model named `b` (its parent's name, `ModelName`).
   ModelNewSub,
   /// `GEFindModelFile(obj, UString(a), *b, *c)`: `obj` the path, `a` the name (`const char*`), `b` the shared
   /// frames (`const EeGeSharedFrames*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
@@ -295,6 +294,10 @@ enum class EeGeManOp : uint32_t {
   ModelVerify,
   /// `ee_ge_cem_free(obj)`.
   ModelFreeFile,
+  /// `&obj->GetName()` (a `const UString*`).
+  ModelName,
+  /// `obj->SetSubModel((GEModel*)a, b)`.
+  ModelSetSub,
   /// `GEFindTextureFile(obj, UString(a), *c)`: `obj` the path, `a` the name (`const char*`), `c` the file's out
   /// pointer (`EeOfTexture**`); the result.
   TexFindFile = 40,
@@ -675,14 +678,14 @@ enum class EeGeTexOp : uint32_t {
   SurfHeight,
   /// `obj->CopyWithFilter(a, b's source, b's destination)` (`b` an `EeGeTexCopy`).
   SurfCopyWithFilter,
-  /// `obj->CopyTo(a, b's source, b's destination, b's transparent)`.
+  /// `obj->CopyTo(a, b's source, b's destination, c != 0)` (always false here).
   SurfCopyTo,
   /// `((GEScreen*)obj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)`.
   ScreenCreateSurface,
   /// `ee_of_texture_info(obj, (EeOfTextureInfo*)a)`: the decoded file's width, height and frame count.
   FileInfo,
-  /// `ee_of_texture_frame(a, b, &frame)`, then `GEStoreFrame(obj, frame)`: frame `b` of file `a` into surface `obj`.
-  StoreFrame,
+  /// `ee_of_texture_frame(obj, a, (EeOfTextureFrame*)b)`: frame `a` of the decoded file `obj`.
+  FileFrame,
   /// `new GETexture((GETextureManager*)obj)`: a frame's texture.
   TexNew,
   /// The Rust object of texture `obj`.
@@ -701,6 +704,16 @@ enum class EeGeTexOp : uint32_t {
   RasterCreate,
   /// `GETexture::sRasterizer->DestroyTextureHandle((GETexture*)obj)`.
   RasterDestroy,
+  /// `obj->GetPixelFormat()` (a surface).
+  SurfPixelFormat,
+  /// `obj->GetPixelDepth()`.
+  SurfPixelDepth,
+  /// `obj->GetSurfaceVolatility()`.
+  SurfVolatility,
+  /// `obj->GetIs3DRenderable()`.
+  SurfIs3DRenderable,
+  /// `obj->GetIsTransparencyEnabled()`.
+  SurfIsTransparencyEnabled,
 };
 
 /// A stage field (`ee_ge_tex_set_stage`): each `SetStage...` setter.
@@ -1220,16 +1233,6 @@ struct EeGeTexCoord {
 /// `static_cast<GETexture*>(texture)->Dereference()`.
 using EeGeTextureDereferenceFn = void(*)(void *texture);
 
-/// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
-struct EeGeStoreTarget {
-  unsigned long pixel_depth;
-  unsigned long pixel_format;
-  bool no_alpha;
-  unsigned long pixel_width;
-  unsigned long pixel_height;
-  unsigned long bytes_per_row;
-};
-
 /// The host: `owner` is the C++ terrain mesh of the object calling.
 using EeGeTmHostFn = ptrdiff_t(*)(void *owner, EeGeTmOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
@@ -1287,15 +1290,18 @@ struct EeGeTexLoad {
   unsigned long frame_format;
 };
 
-/// A rectangle as GERectangle's setters fill it: left, top, right, bottom.
-using EeGeTexRect = float[4];
-
-/// A copy between two surfaces (`EeGeTexOp::SurfCopyTo` / `SurfCopyWithFilter`'s `b`).
+/// A copy between two surfaces (`EeGeTexOp::SurfCopyTo` / `SurfCopyWithFilter`'s `b`): the C++ reads it as two
+/// `GERectangle`s (the records its class derives from); `CopyTo`'s `inTransparent` is the operation's `c`.
 struct EeGeTexCopy {
-  EeGeTexRect source;
-  EeGeTexRect destination;
-  /// `CopyTo`'s `inTransparent` (always false here).
-  bool transparent;
+  EeGeRectangle source;
+  EeGeRectangle destination;
+};
+
+/// `CreateModel`'s and `CreateSubModel`'s counts (polygons, vertices, materials, tag points, frames, sub-models) and
+/// flags: `EeGeManOp::ModelNew`'s `a`, which the C++ constructor takes.
+struct EeGeModelCreate {
+  unsigned long counts[6];
+  unsigned long flags;
 };
 
 extern "C" {
@@ -1672,15 +1678,14 @@ size_t ee_ge_texture_stem(const char *name);
 /// `directory` is NULL or NUL-terminated.
 void ee_ge_texpack_set(const char *directory, long scale_shift, long mip_levels_to_drop);
 
-/// The pack's name of a texture (`GETexturePackName`; with `require_enabled`, `GetTexturePackName`): false and nothing
-/// written when there is none.
+/// `GETextureManager::GetTexturePackName(name, out)`: the pack's name of a texture while the pack is on, into the
+/// `UString` `out` through the original's 1,024-byte buffer (cut to 1,023 bytes); false and `out` unchanged when
+/// there is none.
 ///
 /// # Safety
-/// `name` is NUL-terminated; `out` holds `capacity` bytes.
+/// `name` is NUL-terminated; `out` is a C++ `UString`.
 bool ee_ge_texpack_name(const char *name,
-                        bool require_enabled,
-                        char *out,
-                        size_t capacity);
+                        void *out);
 
 /// Whether the pack is on (`sTexturePackEnabled`).
 bool ee_ge_texpack_enabled();
@@ -1751,18 +1756,32 @@ EeGeModelManager *ee_ge_modman_new(EeGeManHostFn host, void *owner, void *path);
 /// `p` is from `ee_ge_modman_new` (freed).
 void ee_ge_modman_free(EeGeModelManager *p);
 
-/// `CreateModel` (`args` the host's counts and flags, `name` the caller's name).
+/// `CreateModel(polygons, vertices, materials, tag points, frames, sub-models, name, flags)`.
 ///
 /// # Safety
 /// `p` is live; `name` is NUL-terminated.
-void *ee_ge_modman_create(EeGeModelManager *p, const void *args, const char *name);
+void *ee_ge_modman_create(EeGeModelManager *p,
+                          unsigned long polygons,
+                          unsigned long vertices,
+                          unsigned long materials,
+                          unsigned long tag_points,
+                          unsigned long frames,
+                          unsigned long sub_models,
+                          const char *name,
+                          unsigned long flags);
 
-/// `CreateSubModel`.
+/// `CreateSubModel(polygons, vertices, materials, tag points, frames, sub-models, flags, index, parent)`.
 ///
 /// # Safety
-/// `p` is live.
+/// `p` is live; `parent` a model.
 void *ee_ge_modman_create_sub(EeGeModelManager *p,
-                              const void *args,
+                              unsigned long polygons,
+                              unsigned long vertices,
+                              unsigned long materials,
+                              unsigned long tag_points,
+                              unsigned long frames,
+                              unsigned long sub_models,
+                              unsigned long flags,
                               unsigned long index,
                               void *parent);
 
@@ -1947,11 +1966,10 @@ void ee_ge_mod_destroy(EeGeModel *p);
 /// `StoreLoaded(model, shared frames)`.
 ///
 /// # Safety
-/// `p` is live; `model` a decoded model; `shared` holds `count` entries (or is NULL).
+/// `p` is live; `model` a decoded model; `shared` is NULL or its frames hold its count of entries.
 long ee_ge_mod_store_loaded(EeGeModel *p,
                             const EeGeCemModel *model,
-                            const EeGeSharedFrame *shared,
-                            size_t count);
+                            const EeGeSharedFrames *shared);
 
 /// `LoadTexturesForScreen(description, screen)`.
 ///
@@ -3168,24 +3186,6 @@ uint8_t ee_ge_unpack_blue(unsigned long format, unsigned long color);
 
 /// `GEUnpackAlpha`.
 uint8_t ee_ge_unpack_alpha(unsigned long format, unsigned long color);
-
-/// Whether a `width` x `height` frame fits the surface (else `GEStoreFrame` fails before locking).
-///
-/// # Safety
-/// `target` is valid.
-bool ee_ge_texture_frame_fits(const EeGeStoreTarget *target, uint32_t width, uint32_t height);
-
-/// Stores a decoded frame (`channels` 3 or 4, top row first) into the locked surface's `memory`.
-///
-/// # Safety
-/// `target` is valid, `memory` holds the surface's rows, `pixels` the frame's, and the frame fits
-/// (`ee_ge_texture_frame_fits`).
-void ee_ge_texture_store_frame(const EeGeStoreTarget *target,
-                               uint32_t width,
-                               uint32_t height,
-                               uint32_t channels,
-                               const uint8_t *pixels,
-                               uint8_t *memory);
 
 /// `GETextureSet`'s slot of tile (x, y): the texture column and row.
 ///

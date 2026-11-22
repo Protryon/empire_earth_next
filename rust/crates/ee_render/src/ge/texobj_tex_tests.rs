@@ -230,27 +230,21 @@ fn remove_texture(manager: usize, t: usize) -> isize {
     }
 }
 
-/// The fakes' `GEStoreFrame`: a frame that fits is locked in, stored and unlocked.
-fn store_frame(s: usize, frame: isize) -> isize {
+/// The fakes' decoded frame (`FileFrame`): an empty one when the golden locks the surface next (the frame fits and
+/// stores nothing), else one larger than any surface (refused before the lock).
+fn file_frame(frame: isize, out: *mut EeOfTextureFrame) -> isize {
     emit(format!("FileFrame {frame}"));
-    if !peek().trim_start_matches('~').starts_with("Lock ") {
-        return 9;
-    }
-    let r = answer();
-    emit(format!("Lock {} = {r}", name(s)));
-    if r != 0 {
-        return r;
-    }
-    let r = answer();
-    emit(format!("Unlock {} = {r}", name(s)));
-    r
+    let size = if peek().trim_start_matches('~').starts_with("Lock ") { 0 } else { u32::MAX };
+    // SAFETY: the object's out frame
+    unsafe { *out = EeOfTextureFrame { width: size, height: size, channels: 4, pixels: std::ptr::null() } };
+    0
 }
 
-fn rect(r: &EeGeTexRect) -> String {
-    format!("({} {} {} {})", bits(r[0]), bits(r[1]), bits(r[2]), bits(r[3]))
+fn rect(r: &GeRectangle) -> String {
+    format!("({} {} {} {})", bits(r.left), bits(r.top), bits(r.right), bits(r.bottom))
 }
 
-unsafe extern "C" fn host(owner: *mut c_void, op: EeGeTexOp, obj: *mut c_void, a: isize, b: isize, _c: isize) -> isize {
+unsafe extern "C" fn host(owner: *mut c_void, op: EeGeTexOp, obj: *mut c_void, a: isize, b: isize, c: isize) -> isize {
     let o = obj as usize;
     let _ = owner;
     match op {
@@ -305,7 +299,7 @@ unsafe extern "C" fn host(owner: *mut c_void, op: EeGeTexOp, obj: *mut c_void, a
                     "CopyTo {from} {to} {} {} {} = {r}",
                     rect(&copy.source),
                     rect(&copy.destination),
-                    copy.transparent as u8
+                    c as u8
                 ));
                 r
             } else {
@@ -333,7 +327,12 @@ unsafe extern "C" fn host(owner: *mut c_void, op: EeGeTexOp, obj: *mut c_void, a
             unsafe { std::ptr::copy_nonoverlapping(f.as_ptr(), a as *mut u32, 3) };
             0
         }
-        EeGeTexOp::StoreFrame => store_frame(o, b),
+        EeGeTexOp::FileFrame => file_frame(a, b as *mut EeOfTextureFrame),
+        EeGeTexOp::SurfPixelFormat => surf(o).desc.pixel_format as isize,
+        EeGeTexOp::SurfPixelDepth => surf(o).desc.pixel_depth as isize,
+        EeGeTexOp::SurfVolatility => surf(o).desc.surface_volatility as isize,
+        EeGeTexOp::SurfIs3DRenderable => surf(o).desc.is_3d_renderable as isize,
+        EeGeTexOp::SurfIsTransparencyEnabled => surf(o).desc.is_transparency_enabled as isize,
         EeGeTexOp::TexNew => new_texture(o) as isize,
         EeGeTexOp::TexObj => tex(o) as isize,
         EeGeTexOp::TexDereference => {

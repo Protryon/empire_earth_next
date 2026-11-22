@@ -25,7 +25,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 use std::ptr;
 
 use crate::ge::cppobj;
-use crate::ge::model_ffi::EeGeSharedFrame;
+use crate::ge::model_ffi::EeGeSharedFrames;
 use crate::ge::model_geom;
 use crate::ge::model_store::CemModel;
 use crate::ge::smallobj::{ee_ge_mat_get, ee_ge_mat_name, ee_ge_mat_set, ee_ge_mat_set_texture, EeGeMat, EeGeMatField};
@@ -1475,21 +1475,17 @@ pub unsafe extern "C" fn ee_ge_mod_destroy(p: *mut EeGeModel) {
 /// `StoreLoaded(model, shared frames)`.
 ///
 /// # Safety
-/// `p` is live; `model` a decoded model; `shared` holds `count` entries (or is NULL).
+/// `p` is live; `model` a decoded model; `shared` is NULL or its frames hold its count of entries.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_mod_store_loaded(
     p: *mut EeGeModel,
     model: *const CemModel,
-    shared: *const EeGeSharedFrame,
-    count: usize,
+    shared: *const EeGeSharedFrames,
 ) -> c_long {
     // SAFETY: the caller's contract
     unsafe {
-        let entries: Vec<(c_ulong, c_long)> = if shared.is_null() || count == 0 {
-            Vec::new()
-        } else {
-            std::slice::from_raw_parts(shared, count).iter().map(|e| (e.frame as c_ulong, e.offset as c_long)).collect()
-        };
+        let entries: Vec<(c_ulong, c_long)> =
+            EeGeSharedFrames::entries(shared).iter().map(|e| (e.frame as c_ulong, e.offset as c_long)).collect();
         EeGeModel::store_loaded(p, &*model, &entries)
     }
 }

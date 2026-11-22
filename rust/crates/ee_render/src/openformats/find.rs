@@ -9,7 +9,7 @@
 
 use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 
-use crate::ge::model_ffi::EeGeSharedFrame;
+use crate::ge::model_ffi::EeGeSharedFrames;
 use crate::ge::model_store::{CemModel, SharedFrames};
 
 use crate::openformats::gltf_to_model;
@@ -112,26 +112,21 @@ fn directory_of(name: &[u8]) -> &[u8] {
 /// file is there, kErrorFailed (after `ESVerify`) when the file does not convert.
 ///
 /// # Safety
-/// `host` serves `path`; `name` is a C string; `shared` holds `shared_count` entries (or is NULL when 0); `out` is
+/// `host` serves `path`; `name` is a C string; `shared` is NULL or its frames hold its count of entries; `out` is
 /// valid for writing.
 #[no_mangle]
 pub unsafe extern "C" fn ee_of_find_model(
     host: EeOfFileHostFn,
     path: *mut c_void,
     name: *const c_char,
-    shared: *const EeGeSharedFrame,
-    shared_count: usize,
+    shared: *const EeGeSharedFrames,
     out: *mut *mut CemModel,
 ) -> c_long {
     let p = Path { host, path };
     // SAFETY: the caller's contract
     let name = unsafe { CStr::from_ptr(name) }.to_bytes();
-    let entries: Vec<(u32, i32)> = if shared_count == 0 || shared.is_null() {
-        Vec::new()
-    } else {
-        // SAFETY: the caller's contract
-        unsafe { std::slice::from_raw_parts(shared, shared_count) }.iter().map(|e| (e.frame, e.offset)).collect()
-    };
+    // SAFETY: the caller's contract
+    let entries: Vec<(u32, i32)> = unsafe { EeGeSharedFrames::entries(shared) }.iter().map(|e| (e.frame, e.offset)).collect();
     // SAFETY: the caller's contract
     unsafe { *out = std::ptr::null_mut() };
     for extension in [&b".glb"[..], b".gltf"] {

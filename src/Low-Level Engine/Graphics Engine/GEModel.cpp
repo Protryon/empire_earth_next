@@ -127,29 +127,6 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
     return 0;
 }
 
-// Creates an empty model owned by a model manager, with one LOD and no data allocated
-GEModel::GEModel(GEModelManager* inManager)
-{
-    this->mRust = ee_ge_mod_new(&GEModel::Host, this, inManager);
-}
-
-// Creates a named model with the given counts and allocates its data (no shared frames)
-GEModel::GEModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount,
-                 unsigned long inTagPointCount, unsigned long inFrameCount, unsigned long inSubModelCount,
-                 const UString& inName, unsigned long inFlags, GEModelManager* inManager)
-{
-    const unsigned long theCounts[6] = {inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount,
-                                        inSubModelCount};
-    this->mRust = ee_ge_mod_new_with_counts(&GEModel::Host, this, theCounts, &inName, inFlags, inManager);
-}
-
-// Destroys the model: frees its vertex, polygon and tag point arrays (shared frames once),
-// releases its materials and sub-models
-GEModel::~GEModel()
-{
-    ee_ge_mod_destroy(this->mRust);
-}
-
 // ---- GEModel Load (GEModel Load.cpp, folded here in R4.3 part 16)
 
 // (StoreLoaded: ee_ge_mod_store_loaded, from the manager's host below: the arrays allocated from the counts, the model
@@ -181,20 +158,12 @@ intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 }
 // ---- end of the open-format lookups' host
 
-// CreateModel's and CreateSubModel's counts and flags, through the Rust object to the host
-struct GEModelCreateArgs {
-    unsigned long mPolygonCount, mVertexCount, mMaterialCount, mTagPointCount, mFrameCount, mSubModelCount, mFlags;
-};
-
 // The calls the manager makes on other objects (EeGeManOp), in the original's statements
 intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeManOp::LockCreate: {
-        TSCriticalSection* theLock = NULL;
-        ESVERIFY_AT(TSScheduler::CreateCriticalSection(theLock) == keseOK, 39);
-        return (intptr_t)theLock;
-    }
+    case EeGeManOp::LockCreate: return TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a);
+    case EeGeManOp::LockVerify: ESVERIFY_AT(a == keseOK, 39); return 0;
     case EeGeManOp::LockDestroy:
         TSScheduler::DestroyCriticalSection((TSCriticalSection*)inObj);
         return 0;
@@ -215,33 +184,17 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     case EeGeManOp::BaseDereference:
         ((GEModel*)inObj)->UReferenceCounter::Dereference();
         return 0;
-    case EeGeManOp::DumpHeader:
-        fprintf(*(FSFileSpec*)inObj, "\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
-        return 0;
-    case EeGeManOp::DumpLine:
-        fprintf(*(FSFileSpec*)b, "The %s model file is loaded in memory with a reference count of %ld.\n",
-                (const char*)a, ((GEModel*)inObj)->mReferenceCount);
-        return 0;
-    case EeGeManOp::ModelNew:
-        return (intptr_t)new GEModel(((const GEModelCreateArgs*)a)->mPolygonCount, ((const GEModelCreateArgs*)a)->mVertexCount, ((const GEModelCreateArgs*)a)->mMaterialCount,
-                                     ((const GEModelCreateArgs*)a)->mTagPointCount, ((const GEModelCreateArgs*)a)->mFrameCount, ((const GEModelCreateArgs*)a)->mSubModelCount,
-                                     UString((const char*)b), ((const GEModelCreateArgs*)a)->mFlags, ((GEModelManager*)inOwner));
-    case EeGeManOp::ModelNewSub: {
-        GEModel* theSubModel = new GEModel(((const GEModelCreateArgs*)a)->mPolygonCount, ((const GEModelCreateArgs*)a)->mVertexCount, ((const GEModelCreateArgs*)a)->mMaterialCount,
-                                           ((const GEModelCreateArgs*)a)->mTagPointCount, ((const GEModelCreateArgs*)a)->mFrameCount, ((const GEModelCreateArgs*)a)->mSubModelCount,
-                                           ((GEModel*)inObj)->GetName(), ((const GEModelCreateArgs*)a)->mFlags, ((GEModelManager*)inOwner));
-        ((GEModel*)inObj)->SetSubModel(theSubModel, (unsigned long)b);
-        theSubModel->UReferenceCounter::Dereference();
-        return (intptr_t)theSubModel;
-    }
+    case EeGeManOp::DumpText: fprintf(*(FSFileSpec*)inObj, "%s", (const char*)a); return 0;
+    case EeGeManOp::ModelNew: return (intptr_t)new GEModel(*(const EeGeModelCreate*)a, UString((const char*)b), (GEModelManager*)inOwner);
+    case EeGeManOp::ModelNewSub: return (intptr_t)new GEModel(*(const EeGeModelCreate*)a, *(const UString*)b, (GEModelManager*)inOwner);
+    case EeGeManOp::ModelName: return (intptr_t)&((GEModel*)inObj)->GetName();
+    case EeGeManOp::ModelSetSub: ((GEModel*)inObj)->SetSubModel((GEModel*)a, (unsigned long)b); return 0;
     case EeGeManOp::ModelFindFile:
-        return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, ((const EeGeSharedFrames*)b)->frames,
-                                ((const EeGeSharedFrames*)b)->count, (EeGeCemModel**)c);
+        return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, (const EeGeSharedFrames*)b, (EeGeCemModel**)c);
     case EeGeManOp::ModelNewEmpty:
         return (intptr_t)new GEModel(((GEModelManager*)inOwner));
     case EeGeManOp::ModelStoreLoaded:
-        return ee_ge_mod_store_loaded(((GEModel*)inObj)->mRust, (const EeGeCemModel*)a, ((const EeGeSharedFrames*)b)->frames,
-                                      ((const EeGeSharedFrames*)b)->count);
+        return ee_ge_mod_store_loaded(((GEModel*)inObj)->mRust, (const EeGeCemModel*)a, (const EeGeSharedFrames*)b);
     case EeGeManOp::ModelSizeOf:
         return (intptr_t)((GEModel*)inObj)->SizeOf();
     case EeGeManOp::ModelVerify:
@@ -253,45 +206,6 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     default:
         return 0;
     }
-}
-
-// Creates the model manager with a model search path and its lock
-GEModelManager::GEModelManager(FSPath* inPath)
-{
-    this->mRust = ee_ge_modman_new(&GEModelManager::Host, this, inPath);
-}
-
-// Destroys the model manager: removes every unreferenced model, releases the path and the lock
-GEModelManager::~GEModelManager()
-{
-    ee_ge_modman_free(this->mRust);
-}
-
-// Creates a new model registered under a numbered name ("GEModelManager::CreateModel(name_N)")
-GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
-                                     unsigned long inFrameCount, unsigned long inSubModelCount, const UString& inName, unsigned long inFlags)
-{
-    GEModelCreateArgs theArgs = {inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount,
-                                 inSubModelCount, inFlags};
-    return (GEModel*)ee_ge_modman_create(this->mRust, &theArgs, inName);
-}
-
-// Creates a model and attaches it to a parent model as the sub-model at an index (the parent holds it)
-GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
-                                        unsigned long inFrameCount, unsigned long inSubModelCount, unsigned long inFlags,
-                                        unsigned long inIndex, GEModel* inParent)
-{
-    GEModelCreateArgs theArgs = {inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount,
-                                 inSubModelCount, inFlags};
-    return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
-}
-
-// Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
-// name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
-// original's was "<name>.cem")
-GEModel* GEModelManager::LoadModel(const UString& inName, const EeGeSharedFrames& inShared)
-{
-    return (GEModel*)ee_ge_modman_load(this->mRust, inName, &inShared);
 }
 
 // ---- GEPhysicalModel (GEPhysicalModel.cpp, folded here in R4.3 part 16)

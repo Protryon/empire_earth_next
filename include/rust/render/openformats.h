@@ -150,13 +150,12 @@ bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeO
 /// file is there, kErrorFailed (after `ESVerify`) when the file does not convert.
 ///
 /// # Safety
-/// `host` serves `path`; `name` is a C string; `shared` holds `shared_count` entries (or is NULL when 0); `out` is
+/// `host` serves `path`; `name` is a C string; `shared` is NULL or its frames hold its count of entries; `out` is
 /// valid for writing.
 long ee_of_find_model(EeOfFileHostFn host,
                       void *path,
                       const char *name,
-                      const EeGeSharedFrame *shared,
-                      size_t shared_count,
+                      const EeGeSharedFrames *shared,
                       EeGeCemModel **out);
 
 /// A texture on the path: `<name>.png` and its further frames `<name>@1.png`, ... (up to the first missing one),
