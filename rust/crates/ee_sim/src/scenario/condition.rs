@@ -4,7 +4,7 @@
 use crate::scenario::ftol;
 use crate::scenario::host::*;
 
-/// `kSMCondition*` (ee/EEScenarioIDs.h).
+/// `kSMCondition*` (ee_sim scenario::ids).
 pub const EE_SCENARIO_CONDITION_ALWAYS_TRUE: u32 = 0;
 pub const EE_SCENARIO_CONDITION_OBJECT: u32 = 1;
 pub const EE_SCENARIO_CONDITION_PLAYER_ATTRIBUTE: u32 = 2;

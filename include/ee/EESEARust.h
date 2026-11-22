@@ -11,24 +11,6 @@
 
 #include "ee/EEARust.h"
 
-// the kinds (EE_SCREENS_SEW_*)
-enum {
-    kSEASave = 1,
-    kSEATest = 2,
-    kSEAExit = 3,
-    kSEAQuickSave = 4,      // object: the editor's EEAQuickSaveLoad
-    kSEATechTree = 5,       // first, last, player, the left list
-    kSEARotate = 6,
-    kSEAPaintArea = 7,      // the first corner
-    kSEABlankMap = 8,       // width, height, terrain
-    kSEARandomMap = 9,      // size, style
-    kSEAPlaceWall = 10,
-    kSEAPlaceGate = 11,
-    kSEAPlaceUnit = 12,
-    kSEAMoveUnit = 13,
-    kSEADeleteUnit = 14,    // a the unit's id (posted only when it exists), or -1: the player b's selection (c: all)
-};
-
 // The editor's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the
 // toolbar's quick load and quick save, the trigger screens' slider label, check box display and area/object refill
 // and the effect editors' own events (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad,
@@ -36,24 +18,6 @@ enum {
 // EESETSETMSDCameraScrollChange, EESETSETSAAAttributeChange, EESEEUseAreaObject, EESEEMoveAreaObject,
 // EESEEFaceAreaObject), and the editor tabs' (EEUIFSEEMapType, EEUIFSEESortUnitList, EESEEChangeStartEpoch,
 // EESEEGameUnitLimit). Requires lle/UIEvent.h for EESEERust.
-enum {
-    kSEEHideUI = 1,
-    kSEEChangeViewport = 2,
-    kSEEQuickLoad = 3,          // object: the quick save/load action
-    kSEEQuickSave = 4,          // object: the quick save/load action
-    kSEESliderChange = 5,       // EESEENewSliderChange
-    kSEECheckDisplay = 6,       // its controls: EESEEPushControl
-    kSEEUseObjectArea = 7,      // EESEENewUseObjectArea
-    kSEECAMGModifyObject = 8,   // EESEENewObjects(kind, the military group type, its two lists)
-    kSEEMSDCameraScroll = 9,    // EESEENewObjects(kind, the send-dialogue type, the effect's controls)
-    kSEESAAAttribute = 10,      // EESEENewObjects(kind, the set-AI-attribute type, the effect's controls)
-    kSEEUseAreaObject = 11,     // EESEEUseAreaObject and EESEEMoveAreaObject (one body)
-    kSEEFaceAreaObject = 12,
-    kSEEMapType = 13,           // object: the map tab (EEUIFSEMap)
-    kSEESortUnitList = 14,
-    kSEEStartEpoch = 15,        // object: the row's end epoch combo box
-    kSEEUnitLimit = 16,         // EESEENewUnitLimit
-};
 
 class EESEERust : public UIEvent {
 public:
@@ -75,7 +39,7 @@ class UIComboBox;
 // label (the format is copied)
 inline EESEERust* EESEENewSliderChange(UITextLabel* inLabel, const char* inFormat, float inScale, float inOffset)
 {
-    EESEERust* theEvent = new EESEERust(kSEESliderChange);
+    EESEERust* theEvent = new EESEERust(EE_SCREENS_SEE_SLIDER_CHANGE);
     ee_screens_see_slider(theEvent->mEvent, inLabel, inFormat, inScale, inOffset);
     return theEvent;
 }
@@ -90,7 +54,7 @@ inline void EESEEPushControl(EESEERust* inEvent, UIControl* inControl)
 // is the one checked, else with the objects (FillScenarioComboBox), its first line picked
 inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, UIComboBox* inComboBox, UIEntity* inAreaControl)
 {
-    EESEERust* theEvent = new EESEERust(kSEEUseObjectArea);
+    EESEERust* theEvent = new EESEERust(EE_SCREENS_SEE_USE_OBJECT_AREA);
     ee_screens_see_object_area(theEvent->mEvent, inLabel, inComboBox, inAreaControl);
     return theEvent;
 }
@@ -99,12 +63,12 @@ inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, UIComboBox* inComb
 // UIESliderChange's "%g" of the slider's value * modifier + offset into the label (no value maps to a string)
 inline EESEERust* EESEENewUnitLimit(UITextLabel* inLabel, float inModifier, long inOffset)
 {
-    EESEERust* theEvent = new EESEERust(kSEEUnitLimit);
+    EESEERust* theEvent = new EESEERust(EE_SCREENS_SEE_UNIT_LIMIT);
     ee_screens_see_slider(theEvent->mEvent, inLabel, "%g", inModifier, (float)inOffset);
     return theEvent;
 }
 
-// the effect editors' events: kSEECAMGModifyObject, kSEEMSDCameraScroll, kSEESAAAttribute (the effect types,
+// the effect editors' events: EE_SCREENS_SEE_CAMG_MODIFY_OBJECT, EE_SCREENS_SEE_MSD_CAMERA_SCROLL, EE_SCREENS_SEE_SAA_ATTRIBUTE (the effect types,
 // EeScreensSeEffects of ee_screens editor_effects.rs, and the effect screen's EESETSEffectControls)
 inline EESEERust* EESEENewObjects(uint32_t inKind, void* inA, void* inB, void* inC = 0)
 {

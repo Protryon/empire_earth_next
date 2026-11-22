@@ -34,7 +34,7 @@
 //         after (checksum, hit points, resource, flight time, garrison, ammunition, scale, reload, power, rotting,
 //         flags, variables, command and goal queues) or the player's upgrade after, and the pending effects
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test. The records are built in Rust (ee_sim scenario
-// sm_capture.rs). The hooks the game calls are pointers that EEScenarioCapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY unit (PORT_LEARNINGS
+// sm_capture.rs; the elements' records are called from Rust, ee_scenario entry.rs). The hooks the game's C++ calls are pointers that EEScenarioCapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY unit (PORT_LEARNINGS
 // "Cycle cuts").
 #ifndef EE_EESCENARIOCAPTURE_H
 #define EE_EESCENARIOCAPTURE_H
@@ -55,36 +55,12 @@ class UWideString;
 
 // the physics random stream's seed (0 without physics)
 inline unsigned int (*EESMCaptureSeed)() = nullptr;
-inline void (*EESMCaptureCondition)(EESMCondition* inCondition, bool inResult, unsigned int inSeed) = nullptr;
-// the trigger's state before: on, fired, start time
-typedef EeScenarioCapTriggerBefore EESMCaptureTriggerState;
-inline EESMCaptureTriggerState (*EESMCaptureTriggerBefore)(EESMTrigger* inTrigger) = nullptr;
-inline void (*EESMCaptureTrigger)(EESMTrigger* inTrigger, const EESMCaptureTriggerState& inBefore, float inTime,
-                                  unsigned int inSeed) = nullptr;
-// SMOB: Begin before the object's Evaluate (the units before; the depth that keeps SMCP/SMAR out), End after it
-typedef EeScenarioCapObjectBefore EESMCaptureObjectState;
-inline EESMCaptureObjectState (*EESMCaptureObjectBegin)(EESMObject* inObject) = nullptr;
-inline void (*EESMCaptureObjectEnd)(EESMObject* inObject, bool inIncludeDead, bool inResult,
-                                    const EESMCaptureObjectState& inBefore) = nullptr;
 inline void (*EESMCapturePlayers)(long inType, bool inSingle, long inResult, const void* inPlayers,
                                   unsigned int inSeed) = nullptr;
-// kind 0 ContainsUnit (unit id), 1 ContainsTile (x, y), 2 GetCenterTile, 3 GetTiles; the result's x, y (or bool in x;
-// GetTiles: count and hash)
-inline void (*EESMCaptureArea)(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY,
-                               unsigned long long inHash) = nullptr;
-inline void (*EESMCaptureEffect)(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed) = nullptr;
-inline void (*EESMCapturePlayerAttribute)(long inPlayer, unsigned long inAttribute, long inMode, long inAmount,
-                                          unsigned int inSeed) = nullptr;
-inline void (*EESMCaptureTokens)(const UWideString& inText, const UWideString& outText, unsigned int inSeed) = nullptr;
-inline void (*EESMCapturePlacement)(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult,
-                                    float inX,
-                                    float inY, unsigned int inSeed) = nullptr;
 // SMCU: kind 0 EEChangeUnit (inArgs: attribute, percent, unit id, minimum, maximum, random, mode), kind 1
 // EEModifyUnitAttribute (attribute, percent, player id, unit type, amount, mode, 0)
 inline void (*EESMCaptureUnitChange)(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
                                      EEUnitClassUpgrade* inUpgrade, unsigned int inSeed) = nullptr;
 inline void (*EESMCaptureUpdate)(EEScenarioManager* inManager, bool inHumanPlaying) = nullptr;
-inline void (*EESMCaptureSaved)(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
-                                unsigned long inMinorVersion) = nullptr;
 
 #endif

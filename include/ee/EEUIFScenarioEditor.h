@@ -11,12 +11,10 @@
 // keeps its civilization (the builder's) and forwards. Requires lle/UIForm.h, ee/EECivilization.h.
 #ifndef EE_EEUIFSCENARIOEDITOR_H
 #define EE_EEUIFSCENARIOEDITOR_H
-#include "ee/EEScenarioEditorIDs.h"
+#include <string.h>
 #include "ee/EEUnitHandle.h"
 #include "rust/game/screens.h"
 
-class EEUIMiniMap;
-class UIFullBackground;
 class UIButton;
 class EEAScroll;
 class EESELoadThread;
@@ -27,28 +25,44 @@ class EEUnit;
 class EEUICSelectUnits;
 class UIEditBox;
 class GETexture;
-class TMPoll;
-class TSThread;
-class UIEvent;
 struct EeScreensSeForm;
-class UICheckBox;
 class UIComboBox;
-class UITextLabel;
 
 // the form's trigger tab: the jump to a combo box's right-clicked entry (EESETSTrigger.cpp; inKind the combo's screen)
 // and the writing-back flag (0x4c3220, = true; set while an entry is written back; provisional name)
+// the globals the editor's C++ shares (Empire Earth.cpp's fonts and render objects, EEGlobals.cpp's screen font)
+class RTSRenderObject;
+class GEViewport;
+class GE2DPoint;
+class GEFont;
+extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls
+extern char gEmptyString[];       // 0x4e5b98 (pooled "")
+extern UWideString gSefxText;     // EE_SCREENS_SEFMX_STRING's (the other editor statement hosts' texts too)
+extern GEFont* gU531930;          // 0x531930 .. 0x531938 (Empire Earth.cpp's fonts)
+extern GEFont* gU531934;
+extern GEFont* gU531938;
+extern unsigned long& gTexturePixelDepth;
+extern RTSRenderObject* gU56534C;   // the game's base render object (EERenderObject.cpp)
+extern RTSRenderObject* gU56535C;   // the terrain render object
+extern GEViewport gViewport;
+void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
+void EEPostGraphicsAll();          // EERenderObject.cpp: every render object
+
+// The editor statement hosts' helpers: a made object's handle into i0 (low 32 bits) and i1 (high) (the
+// statements' out integers); a text into the caller's buffer of inCapacity bytes, answering its whole length
+inline int32_t EESEOut(int32_t* i, const void* inObject) { memcpy(i, &inObject, sizeof(inObject)); return 0; }
+inline int32_t EESEWrite(void* outBuffer, int32_t inCapacity, const char* inText)
+{
+    size_t theLength = strlen(inText);
+    memcpy(outBuffer, inText, theLength < (size_t)(inCapacity > 0 ? inCapacity : 0) ? theLength : (size_t)inCapacity);
+    return (int32_t)theLength;
+}
+inline int32_t EESEWrite(void* outBuffer, int32_t inCapacity, const UWideString& inText) { return EESEWrite(outBuffer, inCapacity, (const char*)inText); }
 void EESETriggerJump(unsigned long inKind, unsigned long inSelection);
 extern bool gB4C3220;
 
 class EEUIFScenarioEditor : public UIForm {
 public:
-    // the slots the accessors read (editor_form.rs EE_SCREENS_SEFM_*)
-    enum {
-        kSlotButtonTexture = 0, kSlotEdgeScroll = 1, kSlotPanelBackground = 3, kSlotFullBackground = 4,
-        kSlotPlayerComboBox = 6, kSlotBrushGroup = 9, kSlotGroup = 12, kSlotTabButton = 19,
-        kSlotQuickSaveButton = 31, kSlotLoadThread = 43, kSlotUIHidden = 52, kSlotWasUIHidden = 53,
-        kSlotExitAfterSave = 54
-    };
     EEUIFScenarioEditor(UIManager* inManager);   // 0x19d615 (EEUIManager::CreateScenarioEditor news 0x2b8 bytes)
     virtual ~EEUIFScenarioEditor();
     virtual long UpdateKeyboard();          // slot 0x2c 0x19fdc8
@@ -99,11 +113,11 @@ public:
     size_t GetSlot(uint32_t inSlot) const { return ee_screens_sefm_get(this->mRust, inSlot); }
     // the tab groups (ee_screens editor_groups_ffi.rs; once EEUIFSEMainGroup and its seven subclasses) and their tabs'
     // Rust objects (kEditorTab*: an EeScreensSeMap* .. EeScreensSeInstructions*)
-    EeScreensSeGroup* GetTabGroup(long inGroup) const { return (EeScreensSeGroup*)this->GetSlot(kSlotGroup + inGroup); }
+    EeScreensSeGroup* GetTabGroup(long inGroup) const { return (EeScreensSeGroup*)this->GetSlot(EE_SCREENS_SEFM_GROUP + inGroup); }
     void* GetTab(long inGroup) const { return ee_screens_segr_tab(this->GetTabGroup(inGroup)); }
-    EeScreensSeTriggerTab* GetTriggerTab() const { return (EeScreensSeTriggerTab*)this->GetTab(kEditorTabTriggers); }
-    EeScreensSeUnit* GetUnitTab() const { return (EeScreensSeUnit*)this->GetTab(kEditorTabUnits); }
-    EeScreensSePlayers* GetPlayerTab() const { return (EeScreensSePlayers*)this->GetTab(kEditorTabPlayers); }
+    EeScreensSeTriggerTab* GetTriggerTab() const { return (EeScreensSeTriggerTab*)this->GetTab(EE_SCREENS_SE_EDITOR_TAB_TRIGGERS); }
+    EeScreensSeUnit* GetUnitTab() const { return (EeScreensSeUnit*)this->GetTab(EE_SCREENS_SE_EDITOR_TAB_UNITS); }
+    EeScreensSePlayers* GetPlayerTab() const { return (EeScreensSePlayers*)this->GetTab(EE_SCREENS_SE_EDITOR_TAB_PLAYERS); }
     // the trigger tab's members (EE_SCREENS_SETS_*), its name or description box, its sub-screens' own calls with
     // their selections where their classes passed them (EE_SCREENS_SETR_*, _SESC_*, _SEOB_*, _SEAR_*) and slots
     void TriggerCall(uint32_t inWhat, uint32_t inA = 0) const
@@ -143,17 +157,17 @@ public:
     {
         return ee_screens_sepl_call(this->GetPlayerTab(), inWhat, inA, inB);
     }
-    EEUIFSEBrushGroup* GetBrushGroup() const { return (EEUIFSEBrushGroup*)this->GetSlot(kSlotBrushGroup); }
-    EESELoadThread* GetLoadThread() const { return (EESELoadThread*)this->GetSlot(kSlotLoadThread); }
-    GETexture* GetButtonTexture() const { return (GETexture*)this->GetSlot(kSlotButtonTexture); }
-    EEAScroll* GetEdgeScroll() const { return (EEAScroll*)this->GetSlot(kSlotEdgeScroll); }
-    GEBitmap* GetPanelBackground() const { return (GEBitmap*)this->GetSlot(kSlotPanelBackground); }
-    UIComboBox* GetPlayerComboBox() const { return (UIComboBox*)this->GetSlot(kSlotPlayerComboBox); }
-    UIButton* GetQuickSaveButton() const { return (UIButton*)this->GetSlot(kSlotQuickSaveButton); }
-    UIRadioButton* GetTabButton(long inTab) const { return (UIRadioButton*)this->GetSlot(kSlotTabButton + inTab); }   // shells (EEUIFSEMainButton)
-    bool GetIsUIHidden() const { return this->GetSlot(kSlotUIHidden) != 0; }
-    bool GetWasUIHidden() const { return this->GetSlot(kSlotWasUIHidden) != 0; }
-    void SetExitAfterSave(bool inExit) { ee_screens_sefm_set(this->mRust, kSlotExitAfterSave, inExit ? 1 : 0); }
+    EEUIFSEBrushGroup* GetBrushGroup() const { return (EEUIFSEBrushGroup*)this->GetSlot(EE_SCREENS_SEFM_BRUSH_GROUP); }
+    EESELoadThread* GetLoadThread() const { return (EESELoadThread*)this->GetSlot(EE_SCREENS_SEFM_LOAD_THREAD); }
+    GETexture* GetButtonTexture() const { return (GETexture*)this->GetSlot(EE_SCREENS_SEFM_BUTTON_TEXTURE); }
+    EEAScroll* GetEdgeScroll() const { return (EEAScroll*)this->GetSlot(EE_SCREENS_SEFM_EDGE_SCROLL); }
+    GEBitmap* GetPanelBackground() const { return (GEBitmap*)this->GetSlot(EE_SCREENS_SEFM_PANEL_BACKGROUND); }
+    UIComboBox* GetPlayerComboBox() const { return (UIComboBox*)this->GetSlot(EE_SCREENS_SEFM_PLAYER_COMBO); }
+    UIButton* GetQuickSaveButton() const { return (UIButton*)this->GetSlot(EE_SCREENS_SEFM_QUICK_SAVE_BUTTON); }
+    UIRadioButton* GetTabButton(long inTab) const { return (UIRadioButton*)this->GetSlot(EE_SCREENS_SEFM_TAB_BUTTON + inTab); }   // shells (EEUIFSEMainButton)
+    bool GetIsUIHidden() const { return this->GetSlot(EE_SCREENS_SEFM_UI_HIDDEN) != 0; }
+    bool GetWasUIHidden() const { return this->GetSlot(EE_SCREENS_SEFM_WAS_UI_HIDDEN) != 0; }
+    void SetExitAfterSave(bool inExit) { ee_screens_sefm_set(this->mRust, EE_SCREENS_SEFM_EXIT_AFTER_SAVE, inExit ? 1 : 0); }
 
     // the single statements of the form's host (ee_screenscpp_sefmx; a member for UIForm's protected calls)
     static int32_t Statement(uint32_t inOp, void* const* p, int32_t* i, float* f);   // editor_sefmx.rs's statements

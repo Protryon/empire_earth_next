@@ -22,8 +22,6 @@
 #include "ee/EEGraphics.h"
 
 // The render-list API and object (defined in EERenderObject.cpp)
-void EEPostGraphicsAll();
-extern RTSRenderObject* gU56534C;
 
 // The seven editor tabs, original VA 0x8c46d0, stride 0x20 (provisional names).
 // 0x19eba9 reads order/help/normal+pressed cells/flag while constructing the buttons;
@@ -41,17 +39,7 @@ extern RTSRenderObject* gU56534C;
 
 // The tool bar buttons (0x4c47b0, right after sEditorTabs; CreateToolbarButtons walks the six of them): the control id, the
 // 32x32 destination, the normal and pressed source corners in mButtonTexture, the help string (provisional names)
-struct EESEToolbarButton {
-    unsigned long mID;
-    unsigned long mX;
-    unsigned long mY;
-    unsigned long mNormalX;
-    unsigned long mNormalY;
-    unsigned long mPressedX;
-    unsigned long mPressedY;
-    unsigned long mHelp;
-};
-// EESEToolbarButton sToolbarButtons[6] = {   // (one array at 0x4c47b0, defined in EEUIFScenarioEditor.cpp)
+// (id, x, y, normal x, y, pressed x, y, help) sToolbarButtons[6] = {   // (one array at 0x4c47b0, defined in EEUIFScenarioEditor.cpp)
 //     {0xc, 0x287, 0x2e0, 0x80, 0x72, 0xa0, 0x72, 0x2140},
 //     {0xd, 0x2aa, 0x2e0, 0x00, 0xc4, 0x20, 0xc4, 0x2141},
 //     {0xb, 0x2cd, 0x2e0, 0x40, 0x72, 0x60, 0x72, 0x1b59},
@@ -66,12 +54,8 @@ struct EESEToolbarButton {
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIEditBox.h"
-extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
-extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
-extern GEFont* gU531938;
 #include "rust/game/screens.h"
 
-extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 static_assert(sizeof(EEUIFSEBrushGroup) == sizeof(EeScreensSeBrushGroup) &&
                   offsetof(EEUIFSEBrushGroup, mButtons) == offsetof(EeScreensSeBrushGroup, buttons) &&
@@ -92,9 +76,7 @@ EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& in
 // Destroys the brush group, deleting its five buttons and title
 EEUIFSEBrushGroup::~EEUIFSEBrushGroup()
 {
-    for (unsigned long i = 0; i < 5; i++)
-        delete this->mButtons[i];
-    delete this->mTitle;
+    ee_screens_sebr_group_free(reinterpret_cast<EeScreensSeBrushGroup*>(this));   // (editor_seplx.rs)
 }
 
 // Sets the highlighted brush square around a map position, one tile larger to the top left when centered

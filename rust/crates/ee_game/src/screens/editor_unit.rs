@@ -49,6 +49,13 @@ pub const EE_SCREENS_SEUN_OP_PLACE_GATE: u32 = 312;
 pub const EE_SCREENS_SEUN_OP_CLEAR_GHOSTS: u32 = 313;
 /// The colour of the gate tool's player's walls restored (p0 the shell; `EEClearGateHighlights`).
 pub const EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS: u32 = 314;
+/// The build tools' `Cancel` (once EESEUIBuildGate::Cancel, EESEUIBuildWall::Cancel): the tool p1's player into
+/// p0 (`gWorld.mPlayers[tool->mPlayer]`), the gate's / the wall's; player p1's `UnloadUnitClassMedia` of the gate
+/// p2's class type / of the wall p2's technology's class.
+pub const EE_SCREENS_SEUN_OP_GATE_PLAYER: u32 = 2000;
+pub const EE_SCREENS_SEUN_OP_WALL_PLAYER: u32 = 2001;
+pub const EE_SCREENS_SEUN_OP_UNLOAD_GATE: u32 = 2002;
+pub const EE_SCREENS_SEUN_OP_UNLOAD_WALL: u32 = 2003;
 /// A frame's preview (p0 the shell): i0 0 the unit ghost at the mouse, 1 the wall ghosts, 2 the gate on a wall.
 pub const EE_SCREENS_SEUN_OP_PREVIEW: u32 = 315;
 /// The game view (i0: 1 right of the panel, 0 the full view), the camera flags cleared, the mini map's view, the
@@ -491,6 +498,22 @@ impl UnitTab {
         self.placing.set(false);
         self.gate_held.set(false);
         op(h, EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS, [self.shell, 0, 0], [0; 4], [0.0; 4]);
+    }
+
+    /// The gate tool's `Cancel` (`gate` the C++ `EESEUIBuildGate`): its player read, `EndGate`, the gate class's
+    /// media unloaded for that player.
+    pub fn cancel_gate<H: SeplHost + ?Sized>(&self, h: &mut H, gate: usize) {
+        let player = made(h, EE_SCREENS_SEUN_OP_GATE_PLAYER, gate, 0, [0; 4], [0.0; 4]);
+        self.end_gate(h);
+        op(h, EE_SCREENS_SEUN_OP_UNLOAD_GATE, [0, player, gate], [0; 4], [0.0; 4]);
+    }
+
+    /// The wall tool's `Cancel` (`wall` the C++ `EESEUIBuildWall`): its player read, `EndWall`, the wall
+    /// technology's class media unloaded for that player.
+    pub fn cancel_wall<H: SeplHost + ?Sized>(&self, h: &mut H, wall: usize) {
+        let player = made(h, EE_SCREENS_SEUN_OP_WALL_PLAYER, wall, 0, [0; 4], [0.0; 4]);
+        self.end_wall(h);
+        op(h, EE_SCREENS_SEUN_OP_UNLOAD_WALL, [0, player, wall], [0; 4], [0.0; 4]);
     }
 
     /// `ReselectUnitType`: the list's class picked again while placing.
@@ -1004,6 +1027,24 @@ mod tests {
         // shown once, hidden once
         u.show_cargo(&mut r, true);
         assert_eq!(r.mode[&u.remove_cargo], EE_SCREENS_SEPL_SHOWN);
+    }
+
+    #[test]
+    fn the_tools_cancel_reads_the_player_ends_then_unloads() {
+        let mut r = Rec::default();
+        let u = tab(&mut r);
+        r.log.clear();
+        u.cancel_gate(&mut r, 77);
+        let ops: Vec<u32> = r.log.iter().map(|(o, _)| *o).collect();
+        let at = |o: u32| ops.iter().position(|&x| x == o).unwrap();
+        assert!(at(EE_SCREENS_SEUN_OP_GATE_PLAYER) < at(EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS));
+        assert!(at(EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS) < at(EE_SCREENS_SEUN_OP_UNLOAD_GATE));
+        assert_eq!(*ops.last().unwrap(), EE_SCREENS_SEUN_OP_UNLOAD_GATE);
+        r.log.clear();
+        u.cancel_wall(&mut r, 78);
+        let ops: Vec<u32> = r.log.iter().map(|(o, _)| *o).collect();
+        assert_eq!(ops.first(), Some(&EE_SCREENS_SEUN_OP_WALL_PLAYER));
+        assert_eq!(ops.last(), Some(&EE_SCREENS_SEUN_OP_UNLOAD_WALL));
     }
 
     #[test]

@@ -57,17 +57,6 @@
 void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESETSEffect.cpp
 void FillAreaObjectComboBox(UITextLabel* inLabel, UIComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
 
-static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_SCREENS_SEE_CHANGE_VIEWPORT &&
-                  kSEEQuickLoad == EE_SCREENS_SEE_QUICK_LOAD && kSEEQuickSave == EE_SCREENS_SEE_QUICK_SAVE &&
-                  kSEESliderChange == EE_SCREENS_SEE_SLIDER_CHANGE && kSEECheckDisplay == EE_SCREENS_SEE_CHECK_DISPLAY &&
-                  kSEEUseObjectArea == EE_SCREENS_SEE_USE_OBJECT_AREA &&
-                  kSEECAMGModifyObject == EE_SCREENS_SEE_CAMG_MODIFY_OBJECT &&
-                  kSEEMSDCameraScroll == EE_SCREENS_SEE_MSD_CAMERA_SCROLL && kSEESAAAttribute == EE_SCREENS_SEE_SAA_ATTRIBUTE &&
-                  kSEEUseAreaObject == EE_SCREENS_SEE_USE_AREA_OBJECT && kSEEFaceAreaObject == EE_SCREENS_SEE_FACE_AREA_OBJECT &&
-                  kSEEMapType == EE_SCREENS_SEE_MAP_TYPE && kSEESortUnitList == EE_SCREENS_SEE_SORT_UNIT_LIST &&
-                  kSEEStartEpoch == EE_SCREENS_SEE_START_EPOCH && kSEEUnitLimit == EE_SCREENS_SEE_UNIT_LIMIT &&
-                  EE_SCREENS_SEE_PER_PLAYER_LABEL_ID == kSERBUnitTypesPerPlayerCountLabel,
-              "ee/EESEARust.h's event kinds");
 
 // p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*): the ops left of the host (the toolkit's
 // in editor_direct.rs, the sequences and the Rust objects' calls in editor_tabsx.rs, over ee_screenscpp_seex)
@@ -84,16 +73,9 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
     return 0;
 }
 
-extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
 
 namespace {
 
-int32_t SeexOut(int32_t* i, const void* inObject)
-{
-    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
-    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
-    return 0;
-}
 std::vector<UWideString> sSeexNames;   // EE_SCREENS_SEEX_NAMES_*'s epoch titles
 
 }   // namespace
@@ -104,10 +86,10 @@ extern "C" int32_t ee_screenscpp_seex(uint32_t inOp, void* const* p, int32_t* i,
     switch (inOp) {
     case EE_SCREENS_SEEX_REFERENCE: static_cast<EEAction*>(p[0])->Reference();
         return 0;
-    case EE_SCREENS_SEEX_NEW_VIEWPORT: return SeexOut(i, static_cast<UIEvent*>(new EESEERust(kSEEChangeViewport)));
-    case EE_SCREENS_SEEX_EVENT_RUST: return SeexOut(i, static_cast<EESEERust*>(static_cast<UIEvent*>(p[0]))->mEvent);
+    case EE_SCREENS_SEEX_NEW_VIEWPORT: return EESEOut(i, static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_CHANGE_VIEWPORT)));
+    case EE_SCREENS_SEEX_EVENT_RUST: return EESEOut(i, static_cast<EESEERust*>(static_cast<UIEvent*>(p[0]))->mEvent);
     case EE_SCREENS_SEEX_POST_EVENT: return (int32_t)gUserInterface->PostEvent(static_cast<UIEvent*>(p[0]), NULL);
-    case EE_SCREENS_SEEX_NEW_QUICK_SAVE: return SeexOut(i, static_cast<EEAction*>(new EESEARust(kSEAQuickSave, static_cast<EEAction*>(p[0]))));
+    case EE_SCREENS_SEEX_NEW_QUICK_SAVE: return EESEOut(i, static_cast<EEAction*>(new EESEARust(EE_SCREENS_SEW_QUICK_SAVE, static_cast<EEAction*>(p[0]))));
     case EE_SCREENS_SEEX_PRINT: sprintf(gSefxText, static_cast<const char*>(p[1]), (double)f[0]);
         return 0;
     case EE_SCREENS_SEEX_LABEL_TEXT: static_cast<UITextLabel*>(p[0])->SetText(gSefxText);

@@ -8,7 +8,7 @@
 // them (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts, round 3").
 #ifndef EE_EESELOADTHREAD_H
 #define EE_EESELOADTHREAD_H
-#include "ee/EEScenarioEditorIDs.h"
+#include "rust/game/screens.h"
 
 class EESEAChangeLoadText;
 
