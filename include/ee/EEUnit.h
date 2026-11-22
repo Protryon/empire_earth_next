@@ -1070,7 +1070,6 @@ public:
     void UpdateTrail(EEComplexUnit* inUnit);  // 0x2393a9 (the unit's +0x284 timer; the EEUC* VirtualB8s) (provisional name)
     void TurnTurretsBack(EEComplexUnit* inUnit);  // 0x2364f3 (the unit's mTabButtons values back towards 0; TurnTurrets) (provisional name)
     void MoveToTileCentre(EEComplexUnit* inUnit);  // 0x23658b (to its tile centre, or a step forward; 0x22db0f) (provisional name)
-    bool AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal);  // 0x22d95f (ret 8; this unread): an attack goal on a target (EEUnitAI.cpp) (provisional name)
     void CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation);  // 0x232e4a (CreateUnitAt for unit type 0x42; bool: CreateUnitAt passes its bool through) (provisional name)
     void ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer);  // 0x232c9f (EEMReplantFarms, farm classes)
     // EEUCProjectile.cpp's callees (provisional names)
