@@ -214,6 +214,11 @@ pub enum SeeKind {
     /// the trigger-only save (Ctrl+S, once `EEUIESaveScenarioTriggersOnly`): run by the editor form's host
     /// (`editor_form.rs`), not by `process_in`
     SaveTriggersOnly,
+    /// the instructions screen's trigger text export or import button (`editor_selt.rs`): run by the adapter
+    /// (`ee_screens_see_process`), not by `process_in`
+    Text {
+        import: bool,
+    },
 }
 
 impl SeeKind {
@@ -237,6 +242,8 @@ impl SeeKind {
             EE_SCREENS_SEE_START_EPOCH => SeeKind::StartEpoch { end_combo: object },
             EE_SCREENS_SEE_UNIT_LIMIT => SeeKind::UnitLimit { label: 0, format: vec![0], scale: 0.0, offset: 0.0 },
             crate::screens::editor_form::EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY => SeeKind::SaveTriggersOnly,
+            crate::screens::editor_selt::EE_SCREENS_SEE_TEXT_EXPORT => SeeKind::Text { import: false },
+            crate::screens::editor_selt::EE_SCREENS_SEE_TEXT_IMPORT => SeeKind::Text { import: true },
             EE_SCREENS_SEE_QUICK_LOAD | EE_SCREENS_SEE_QUICK_SAVE => {
                 call(h, EE_SCREENS_SEE_OP_REFERENCE, object, [0; 2], [0.0; 4]);
                 if kind == EE_SCREENS_SEE_QUICK_LOAD {
@@ -440,7 +447,7 @@ impl SeeKind {
                 0
             }
             // the editor form's host runs it (`ee_screens_see_process`)
-            SeeKind::SaveTriggersOnly => 0,
+            SeeKind::SaveTriggersOnly | SeeKind::Text { .. } => 0,
         }
     }
 
