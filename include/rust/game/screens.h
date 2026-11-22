@@ -4742,8 +4742,7 @@ constexpr static const uint32_t EE_SCREENS_SEFMX_UNIT_CARGO_COUNT = 109;
 /// `EESetGameViewRectangle(GERectangle(f0, f1, f2, f3))`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_GAME_VIEW = 110;
 
-/// `new EESELoadThread(p2, 0)`; the load thread p0's `Post401()`, `Post404()`, `Post405()`, `Post40B(p2)`,
-/// `Post40C(p2)`.
+/// `new EESELoadThread(p2, 0)`; the load thread p0's `Post401()`, `Post404()`, `Post405()`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_NEW_LOAD_THREAD = 111;
 
 constexpr static const uint32_t EE_SCREENS_SEFMX_POST_401 = 112;
@@ -4752,9 +4751,11 @@ constexpr static const uint32_t EE_SCREENS_SEFMX_POST_404 = 113;
 
 constexpr static const uint32_t EE_SCREENS_SEFMX_POST_405 = 114;
 
-constexpr static const uint32_t EE_SCREENS_SEFMX_POST_40B = 115;
+/// The load thread's `Post40B(p2)` and `Post40C(p2)` (once two-statement inline members): p2's `Reference()`, then
+/// the thread p0's `mThread->Post(i0, p2, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_SEFMX_REFERENCE = 5000;
 
-constexpr static const uint32_t EE_SCREENS_SEFMX_POST_40C = 116;
+constexpr static const uint32_t EE_SCREENS_SEFMX_THREAD_POST = 5001;
 
 /// `gWorld.RebuildActiveUnits()`; `gUIManager->mInScenarioEditor == true`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS = 117;
@@ -5098,10 +5099,11 @@ constexpr static const uint32_t EE_SCREENS_SELTX_REMOVE_KILLED = 63;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_RELEASE_PENDING = 64;
 
-/// The text actions' (p1 a file spec `FSFileSpec*`): the export action p0's `&mFile`, the import action p0's `&mFile`
-/// and `mValidate`; p1's `FOpen("w")` / `FOpen("r")`, `Close()`, `feof`, `fgets` into the buffer (0x200 bytes; the
-/// answer: not NULL); `gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup()` / `ResumeCurrentGroup()`; the
-/// `"{Version_%ld}\n\n"` header's `fprintf` (as an `unsigned long`); `gSETextVersion`.
+/// The text actions' (p1 a file spec `FSFileSpec*`): the action p0's file and its validate flag (answered in Rust by
+/// the adapter from the action's [`EeScreensSeltInfo`]); p1's `FOpen("w")` / `FOpen("r")`, `Close()`, `feof`, `fgets`
+/// into the buffer (0x200 bytes; the answer: not NULL); `gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup()`
+/// / `ResumeCurrentGroup()`; the `"{Version_%ld}\n\n"` header's `fprintf` (as an `unsigned long`) of a0 (the adapter
+/// passes [`EE_SCREENS_SELT_TEXT_VERSION`]); the version (answered by the adapter).
 constexpr static const uint32_t EE_SCREENS_SELTX_EXPORT_FILE = 70;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_IMPORT_FILE = 71;
@@ -5152,9 +5154,10 @@ constexpr static const uint32_t EE_SCREENS_SELTX_QUESTION = 92;
 constexpr static const uint32_t EE_SCREENS_SELTX_FORM_QUESTION = 93;
 
 /// The specs and answers: `new FSFileSpec`, `new FSFileSpec(*p1)`, `delete p1`, p1's `SetVolume(gStartupVolume)`,
-/// `SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\")`, `SetFile(the text)`; `new EESEImportInfo{*p1, a0 !=
-/// 0}`, `delete` it; `gUserInterface->PostAction(new EESEIAExport(*p1))`, `PostAction(new EESEIAImport(p1->mFile,
-/// p1->mValidate))`.
+/// `SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\")`, `SetFile(the text)`; the import info (once `new
+/// EESEImportInfo{*p1, a0 != 0}`) and its `delete`, the posts of the export action (p1 a spec, copied) and of the
+/// import action (p1 an info, copied): answered by the adapter over `SPEC_COPY`, `SPEC_DELETE` and
+/// [`EE_SCREENS_SELTX_POST_TEXT_ACTION`].
 constexpr static const uint32_t EE_SCREENS_SELTX_SPEC_NEW = 100;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_SPEC_COPY = 101;
@@ -5174,6 +5177,24 @@ constexpr static const uint32_t EE_SCREENS_SELTX_INFO_DELETE = 107;
 constexpr static const uint32_t EE_SCREENS_SELTX_POST_EXPORT = 108;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_POST_IMPORT = 109;
+
+/// `gUserInterface->PostAction(new EESEARust(a0, p1))`: a text action (`EE_SCREENS_SEW_TEXT_*`) on its info.
+constexpr static const uint32_t EE_SCREENS_SELTX_POST_TEXT_ACTION = 5000;
+
+/// The trigger text files' version (`{Version_1}`; the original's `gSETextVersion` 0x4c2cb8, .data = 1).
+constexpr static const int64_t EE_SCREENS_SELT_TEXT_VERSION = 1;
+
+/// The instructions screen's export and import buttons' events (`EESEERust` kinds; once `EESEIEExport` and
+/// `EESEIEImport`, vtables 0x442bd4 and 0x442be8): their `ProcessEvent` is `export_event` / `import_event`.
+constexpr static const uint32_t EE_SCREENS_SEE_TEXT_EXPORT = 5000;
+
+constexpr static const uint32_t EE_SCREENS_SEE_TEXT_IMPORT = 5001;
+
+/// The text actions (`EESEARust` kinds over an [`EeScreensSeltInfo`]; once `EESEIAExport`, vtable 0x442bb0, and
+/// `EESEIAImport`, vtable 0x442bc0): their `Virtual4` is `export` / `import`.
+constexpr static const uint32_t EE_SCREENS_SEW_TEXT_EXPORT = 5000;
+
+constexpr static const uint32_t EE_SCREENS_SEW_TEXT_IMPORT = 5001;
 
 /// The statements answered in Rust by the adapter: `UMGetFloatingPointPrecision() == kFPPrecision53`,
 /// `UMSetFloatingPointPrecision(kFPPrecision53)`, `UMGetFloatingPointRoundingMode()`,
@@ -6400,8 +6421,8 @@ constexpr static const uint32_t EE_SCREENS_SEELX_TILE_Y = 20;
 /// The screen font's height.
 constexpr static const uint32_t EE_SCREENS_SEELX_FONT_HEIGHT = 21;
 
-/// `mStatusBox = new EEUIFMGStatusBox(form)`; `mPortrait = new EEUICPortrait(form, GERectangle(f0, f1, f2, f3), i0,
-/// i1, false)` (a handle); the portrait's right and top into f0.
+/// `new EEUIFMGStatusBox(form)`; `new EEUICPortrait(form, GERectangle(f0, f1, f2, f3), i0, i1, false)`; the
+/// portrait p0's right and top into f0.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_BOX = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_PORTRAIT = 1;
@@ -6410,8 +6431,8 @@ constexpr static const uint32_t EE_SCREENS_SEUPX_PORTRAIT_RIGHT = 2;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_PORTRAIT_TOP = 3;
 
-/// `mUnitNameLabel = new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1,
-/// 0)`; `new UILayoutUtility`, p2's `SetLeft(0, f0)`, `SetRight(0, f0)`, `SetTop(3, f0)`, `SetBottom(3, f0)`, its
+/// `new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1, 0)`; `new
+/// UILayoutUtility`, p2's `SetLeft(0, f0)`, `SetRight(0, f0)`, `SetTop(3, f0)`, `SetBottom(3, f0)`, its
 /// `CalculateRectangle(the form's rectangle, f as a `GERectangle`, false)`, `delete`.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_NAME_LABEL = 4;
 
@@ -6429,27 +6450,24 @@ constexpr static const uint32_t EE_SCREENS_SEUPX_LAYOUT_CALCULATE = 10;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_LAYOUT_DELETE = 11;
 
-/// `mLeftStatusBar`, `mMiddleStatusBar = new EEUIFMGStatusBar(i0, i1, p2, 0x400, 0x300, GERectangle(f0, f1, f2, f3),
-/// form, true, true, false)`.
-constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_LEFT_BAR = 12;
+/// A status bar (the left and the middle one): `new EEUIFMGStatusBar(i0, i1, p2, 0x400, 0x300, GERectangle(f0, f1,
+/// f2, f3), form, true, true, false)`.
+constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_BAR = 12;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_MIDDLE_BAR = 13;
-
-/// `mAttributes[i2] = new EEUIFMGAttribute(gFontTahoma10, form, GERectangle(f0, f1, f2, f3), i1, i0, black, true,
-/// 0)`; `mLabels[i2] = new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1,
-/// 0)`; `mStatusBox->SetControls(i2, mAttributes[i2], mLabels[i2])`.
+/// `new EEUIFMGAttribute(gFontTahoma10, form, GERectangle(f0, f1, f2, f3), i1, i0, black, true, 0)`; `new
+/// UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1, 0)`; the box p0's
+/// `SetControls(i2, p1, p2)`.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_ATTRIBUTE = 14;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_ROW_LABEL = 15;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_ROW = 16;
 
-/// `mArmorTitleLabel = new UITextLabel(gSefxText, gFontTahoma12, i0, GERectangle(156, 634, 240, 650), form, 0, i1,
-/// 0)`.
+/// `new UITextLabel(gSefxText, gFontTahoma12, i0, GERectangle(156, 634, 240, 650), form, 0, i1, 0)`.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_ARMOR_LABEL = 17;
 
-/// The status box's portrait (`mC8C`), name label (`mC90`), left bar (`mC84`), middle bar (`mC88`), armor title
-/// (`mC98`) set from the panel's.
+/// The box p0's portrait (`mC8C`), name label (`mC90`), left bar (`mC84`), middle bar (`mC88`), armor title (`mC98`)
+/// set to p1.
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_PORTRAIT = 18;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_NAME = 19;
@@ -6460,23 +6478,19 @@ constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_MIDDLE_BAR = 21;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_ARMOR = 22;
 
-/// The destructor's `delete`s: the status box, the portrait, the armor title, the left and middle bars, the name
-/// label, attribute i2, label i2.
+/// `delete` p0: the status box, the portrait, a text label, a status bar, an attribute icon.
 constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_BOX = 23;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_PORTRAIT = 24;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_ARMOR = 25;
+constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_LABEL = 25;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_LEFT_BAR = 26;
-
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_MIDDLE_BAR = 27;
-
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_NAME = 28;
+constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_BAR = 26;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_ATTRIBUTE = 29;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_LABEL = 30;
+/// The box p0's `Fill(p1)` (`EEUIFSEUpgradePanel::ShowUnit`: the status box shows the unit).
+constexpr static const uint32_t EE_SCREENS_SEUPX_FILL = 5000;
 
 /// `gWorld.mScenarioManager->mShowDebugIDs`, set to i0 != 0.
 constexpr static const uint32_t EE_SCREENS_SEX_DEBUG_IDS = 0;
@@ -7187,6 +7201,10 @@ constexpr static const uint32_t EE_SCREENS_SETSX_GAME_VIEW_RECT = 430;
 
 constexpr static const uint32_t EE_SCREENS_SETSX_HIDE_UI_VIEWS = 431;
 
+/// The hide-UI box p0's checked event's Rust event (`EESEERust::mEvent`; found): `HIDE_UI_VIEWS` (answered by the
+/// adapter since round 6) sets its views through it.
+constexpr static const uint32_t EE_SCREENS_SETSX_CHECKED_EVENT = 480;
+
 constexpr static const uint32_t EE_SCREENS_SETSX_SET_CHECKED = 432;
 
 constexpr static const uint32_t EE_SCREENS_SETSX_GROUP_ENABLE = 433;
@@ -7285,15 +7303,28 @@ constexpr static const uint32_t EE_SCREENS_SEARX_NEW_PAINT = 523;
 
 constexpr static const uint32_t EE_SCREENS_SEARX_BOUNDS_VIEW = 524;
 
-constexpr static const uint32_t EE_SCREENS_SEARX_EDGES_VIEW = 525;
-
 constexpr static const uint32_t EE_SCREENS_SEARX_BOUNDS_WINDOW = 526;
-
-constexpr static const uint32_t EE_SCREENS_SEARX_EDGES_WINDOW = 527;
 
 constexpr static const uint32_t EE_SCREENS_SEARX_PAINT_AREA = 528;
 
 constexpr static const uint32_t EE_SCREENS_SEARX_PAINT_RELEASE = 529;
+
+/// The view rectangle's sides (`gViewport.GetViewRectangle()`'s left, top, right, bottom) and the game window's
+/// width and height (as floats) into f0; the edge scroll's edges `= GERectangle(f0, f1, f2, f3)` (round 6: the
+/// edges' arithmetic, the view or the window less one, is Rust's).
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_LEFT = 580;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_TOP = 581;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_RIGHT = 582;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_BOTTOM = 583;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_WINDOW_WIDTH = 584;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_WINDOW_HEIGHT = 585;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_SET_EDGES = 586;
 
 /// Directory k (i0: 0 scenarios, 1 sounds, 2 movies; kept): `SetVolume(gStartupVolume)`, `SetDirectory(
 /// gStartupDirectory + "data\\" + its name)`; `new FSPath` (made); a path p0's `AddDirectory(directory i0, true)`;
@@ -8155,6 +8186,12 @@ constexpr static const uint32_t EE_SCREENS_SEW_OP_UNIT_PLAYER = 51;
 
 /// `gMaxPlayers = i0` (`EESEAChangeWorldPlayerCount::Virtual4`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_SET_MAX_PLAYERS = 4000;
+
+/// A text action's run (p its info, i0 1 for the import) and its info freed (`editor_selt.rs`; the adapter answers
+/// them).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TEXT_RUN = 5000;
+
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TEXT_FREE = 5001;
 
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
@@ -15992,14 +16029,16 @@ unsigned long ee_screens_selt_main(void *thread);
 /// `EESELoadThread::HandleMessage(message, p1, p2)`.
 void ee_screens_selt_message(void *thread, unsigned long message, void *p1, void *p2);
 
-/// The text actions: `EESEIAExport::Virtual4` (`import` false) or `EESEIAImport::Virtual4`.
-void ee_screens_seia_run(void *action, bool import_text);
+/// The text actions' `Virtual4` (`action` its [`EeScreensSeltInfo`]): the export (`import` false) or the import.
+void ee_screens_seia_run(void *action,
+                         bool import_text);
 
 /// The questions' answers: `EESEExportTextAnswer(spec)` (`import` false) or `EESEImportTextAnswer(info)`.
 void ee_screens_seia_answer(void *p,
                             bool import_text);
 
-/// The buttons' events: `EESEIEExport::ProcessEvent(form)` (`import` false) or `EESEIEImport::ProcessEvent`.
+/// The buttons' events' `ProcessEvent(form)` (the `EESEERust` kinds `EE_SCREENS_SEE_TEXT_*`): the export (`import`
+/// false) or the import.
 long ee_screens_seia_event(void *form,
                            bool import_text);
 
@@ -16116,19 +16155,25 @@ void ee_screens_sefx_names(const EeScreensSeEffectScreen *screen, void *names);
 /// `screen` comes from `ee_screens_sefx_new` (or is NULL).
 void *ee_screens_sefx_handle(const EeScreensSeEffectScreen *screen, uint32_t which);
 
-/// `EEUIFSEUpgradePanel::EEUIFSEUpgradePanel` (the C++ constructor forwards here).
+/// The unit tab's upgrade panel made (once `new EEUIFSEUpgradePanel(id, index, form)`): its handle, freed by
+/// `ee_screens_seup_free`.
 ///
 /// # Safety
-/// `panel` is the panel being made, `id` and `index` the caller's counters, `form` the live editor form.
-void ee_screens_seup_new(void *panel,
-                         unsigned long *id,
-                         unsigned long *index,
-                         void *form);
+/// `id` and `index` are the caller's counters, `form` the live editor form.
+void *ee_screens_seup_new(unsigned long *id,
+                          unsigned long *index,
+                          void *form);
 
-/// `EEUIFSEUpgradePanel::~EEUIFSEUpgradePanel`.
+/// The panel's `ShowUnit(unit)`.
 ///
 /// # Safety
-/// `panel` is the panel being destroyed.
+/// `panel` comes from `ee_screens_seup_new`.
+void ee_screens_seup_show(void *panel, void *unit);
+
+/// The panel destroyed (once `delete` of the `EEUIFSEUpgradePanel`): its box and controls deleted.
+///
+/// # Safety
+/// `panel` comes from `ee_screens_seup_new` and is not used after.
 void ee_screens_seup_free(void *panel);
 
 /// The terrain list boxes' members (`EE_SCREENS_SETLB_*`: the colour list's `CopyData`, `DrawPolygons`; the type

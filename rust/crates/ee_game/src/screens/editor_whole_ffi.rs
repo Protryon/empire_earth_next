@@ -13,6 +13,7 @@ use crate::screens::editor_seax;
 use crate::screens::editor_seax_ffi::Seax;
 use crate::screens::editor_whole::{
     EeScreensSewAction, SewAction, SewElevation, SewGate, SewHost, SewWall, EE_SCREENS_SEW_OP_RANDOM_MAP,
+    EE_SCREENS_SEW_OP_TEXT_FREE, EE_SCREENS_SEW_OP_TEXT_RUN,
 };
 
 /// cbindgen:ignore
@@ -52,6 +53,14 @@ impl SewHost for Host {
             let players = unsafe { core::slice::from_raw_parts(p as *const i32, i[0].max(0) as usize) };
             let at = editor_seax::random_map(&mut Seax, players, i[1], i[2], i[3], i[4]);
             f[..3].copy_from_slice(&at);
+            return 0;
+        }
+        if op == EE_SCREENS_SEW_OP_TEXT_RUN {
+            crate::screens::editor_selt_ffi::ee_screens_seia_run(p as *mut c_void, i[0] != 0);
+            return 0;
+        }
+        if op == EE_SCREENS_SEW_OP_TEXT_FREE {
+            crate::screens::editor_selt_ffi::seia_info_free(p as *mut c_void);
             return 0;
         }
         if let Some(r) = editor_seax::sew(&mut Seax, op, p, i, f) {
@@ -360,6 +369,9 @@ pub unsafe extern "C" fn ee_screens_see_process(
     let e = unsafe { (*event).0.clone() };
     if e == SeeKind::SaveTriggersOnly {
         return crate::screens::editor_form_ffi::save_triggers();
+    }
+    if let SeeKind::Text { import } = e {
+        return crate::screens::editor_selt_ffi::ee_screens_seia_event(form, import) as i32;
     }
     e.process_in(&mut Host, form as usize, entity as usize)
 }
