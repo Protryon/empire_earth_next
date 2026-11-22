@@ -6,6 +6,7 @@
 #define LLE_URANDOM_H
 
 #include <stdint.h>
+#include "rust/base/random.h"   // the draws (ee_base random)
 
 class LLE_API URandom {                     // proven sizeof 0x10 (TCP: operator new(0x10))
 public:
@@ -29,7 +30,7 @@ public:
         this->mIncrement = inRandom.mIncrement;
         return *this;
     }
-    float Generate();
+    float Generate() { return ee_urandom_generate(reinterpret_cast<EeURandom*>(this)); }
     // proven inline (LLE 0x1000de1a, exported in the inline region): Default.dll 0xc0db expands it around a
     // call to the Generate() import
     float Generate(float inMinimum, float inMaximum) { return this->Generate() * (inMaximum - inMinimum) + inMinimum; }
@@ -37,7 +38,7 @@ public:
     unsigned long GetSeed() { return this->mSeed; }
     void SetSeed(unsigned long inSeed) { this->mSeed = inSeed; }
 private:
-    unsigned long NextInSeries();           // exported private ?NextInSeries@URandom@@AAEKXZ
+    unsigned long NextInSeries() { return ee_urandom_next(reinterpret_cast<EeURandom*>(this)); }           // exported private ?NextInSeries@URandom@@AAEKXZ
 public:
 
     // 32-bit state on every data model: the series is the same on Windows, Linux and macOS (lockstep games and
@@ -51,7 +52,7 @@ public:
 static_assert(sizeof(URandom) == 16, "URandom: four 32-bit words");
 // port, TEST ONLY: a hook called after every out-of-line Generate() (NULL in the game; EE-SIM's --rng-trace sets it to
 // write the physics stream's draws with their callers, the save/load fidelity hunt). It reads only.
-extern void (*gURandomTraceHook)(URandom* inRandom);
+extern "C" void (*gURandomTraceHook)(URandom* inRandom);
 
 class LLE_API URandomIntegers : public URandom {   // proven base: LLE Generate(long,long) 0xde5f calls
 public:                                             // URandom::Generate on the same this
@@ -65,11 +66,7 @@ public:                                             // URandom::Generate on the 
 
 inline long URandomIntegers::Generate(long inMinimum, long inMaximum)
 {
-    long theLimit = inMaximum + 1;
-    long theResult = UMFloatToLong(URandom::Generate() * (theLimit - inMinimum) + inMinimum);
-    if (theResult == theLimit)
-        theResult = inMaximum;
-    return theResult;
+    return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(this), inMinimum, inMaximum);
 }
 
 inline URandomIntegers::URandomIntegers()

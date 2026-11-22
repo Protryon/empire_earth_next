@@ -106,13 +106,6 @@ struct EETileDistanceLess {
     // 0x9cad8 (EECPWallManager.cpp; built without /Og): two runs by the distance of their middle tiles (provisional
     // name)
     bool operator()(const RTSMapTileRun& inFirst, const RTSMapTileRun& inSecond) const;
-    // 0x66b6d (EECPBuildManager.cpp; built without /Og): (continent, town) pairs by the distance of the continent's
-    // centre (EEAIArea +0x44: its hull's centre) (provisional name)
-    bool operator()(const std::pair<EEAIContinent*, EETown*>& inFirst,
-        const std::pair<EEAIContinent*, EETown*>& inSecond) const;
-    // 0x66be7 (EECPBuildManager.cpp; built without /Og): choke points by the distance of their centres (EEAIArea +0x44)
-    // (provisional name)
-    bool operator()(EEAIChokePoint* inFirst, EEAIChokePoint* inSecond) const;
 
     EETileCoordinate mCenter;
 };

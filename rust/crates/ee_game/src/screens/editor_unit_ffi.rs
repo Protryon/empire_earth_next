@@ -89,6 +89,9 @@ pub const EE_SCREENS_SEUN_RESELECT: u32 = 9;
 pub const EE_SCREENS_SEUN_SELECT: u32 = 10;
 pub const EE_SCREENS_SEUN_UPDATE_SELECTION: u32 = 11;
 pub const EE_SCREENS_SEUN_REFRESH: u32 = 12;
+/// The build tools' `Cancel` (p the C++ tool): `cancel_gate`, `cancel_wall`.
+pub const EE_SCREENS_SEUN_CANCEL_GATE: u32 = 2000;
+pub const EE_SCREENS_SEUN_CANCEL_WALL: u32 = 2001;
 /// With an argument `a`: `ShowCargo(a != 0)`, `MouseMove(x, y)`; `ShowUnitStatus(p)`, `Draw(p: the rectangle)`.
 pub const EE_SCREENS_SEUN_SHOW_CARGO: u32 = 13;
 pub const EE_SCREENS_SEUN_MOUSE_MOVE: u32 = 14;
@@ -174,6 +177,8 @@ pub unsafe extern "C" fn ee_screens_seun_call(
         EE_SCREENS_SEUN_MOUSE_MOVE => u.mouse_move(h, x, y),
         EE_SCREENS_SEUN_SHOW_UNIT => u.show_unit_status(h, p as usize),
         EE_SCREENS_SEUN_DRAW => u.draw(h, p as usize),
+        EE_SCREENS_SEUN_CANCEL_GATE => u.cancel_gate(h, p as usize),
+        EE_SCREENS_SEUN_CANCEL_WALL => u.cancel_wall(h, p as usize),
         _ => {}
     }
 }

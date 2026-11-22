@@ -3704,7 +3704,7 @@
   "EEEventEffect": {
    "name": "EEEventEffect",
    "size": 88,
-   "source": "include/ee/EEEvent.h",
+   "source": "rust/crates/ee_sim/src/scenario/event.rs",
    "size_check": [
     88,
     "static_assert"

@@ -68,8 +68,6 @@ pub const EE_UNITS_UC_NEXT_PART: i32 = 29;
 pub const EE_UNITS_UC_SET_ROTTING: i32 = 30;
 /// `unit->ContinueProduction()`
 pub const EE_UNITS_UC_CONTINUE_PRODUCTION: i32 = 31;
-/// `class->HealGarrison(unit)`
-pub const EE_UNITS_UC_HEAL_GARRISON: i32 = 32;
 /// `unit->mPhysicalModel.GetFrame()`
 pub const EE_UNITS_UC_FRAME: i32 = 33;
 /// `unit->SetLastHitPoints(unit->mHitPoints)`
@@ -84,14 +82,8 @@ pub const EE_UNITS_UC_PHYSICS_STEP: i32 = 37;
 pub const EE_UNITS_UC_UPDATE_RELOAD_TIMER: i32 = 38;
 /// `unit->UpdateTargetSearchTimer()`
 pub const EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER: i32 = 39;
-/// `class->Animate(unit)`
-pub const EE_UNITS_UC_ANIMATE: i32 = 40;
-/// `class->RefreshSound(unit)`
-pub const EE_UNITS_UC_REFRESH_SOUND: i32 = 41;
 /// `unit->GetCommandType()`
 pub const EE_UNITS_UC_COMMAND_TYPE: i32 = 42;
-/// `class->FireOnAttackFrame(unit, b, c)`
-pub const EE_UNITS_UC_FIRE_ON_ATTACK_FRAME: i32 = 43;
 /// `unit->UpdateResourcesRotting()`
 pub const EE_UNITS_UC_UPDATE_RESOURCES_ROTTING: i32 = 44;
 /// `class->UpdateDone(unit)`
@@ -286,7 +278,7 @@ pub fn update_building<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
         }
     }
     b.s(EE_UNITS_UC_CONTINUE_PRODUCTION);
-    b.s(EE_UNITS_UC_HEAL_GARRISON);
+    crate::units::uc_anim::heal_garrison(b.h, class, unit);
 }
 
 /// `UpdateAnimal(unit)`: physics, effects, timers and animation; fires on attack frames and lets its carcass rot.
@@ -300,11 +292,11 @@ pub fn update_animal<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     b.s(EE_UNITS_UC_UPDATE_EFFECTS);
     b.s(EE_UNITS_UC_UPDATE_RELOAD_TIMER);
     b.s(EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER);
-    let result = b.s(EE_UNITS_UC_ANIMATE);
-    b.s(EE_UNITS_UC_REFRESH_SOUND);
+    let result = crate::units::uc_anim::animate(b.h, class, unit);
+    refresh_sound(b.h, class, unit);
     match b.s(EE_UNITS_UC_COMMAND_TYPE) {
         ACTION_ATTACK_ENEMY_UNIT | ACTION_ATTACK_LOCATION | ACTION_WAIT_FOR_RELOAD => {
-            b.h.uc(EE_UNITS_UC_FIRE_ON_ATTACK_FRAME, class, unit, 0, result, frame, &mut [0.0; 4]);
+            crate::units::uc_anim::fire_on_attack_frame(b.h, class, unit, result, frame);
         }
         ACTION_RESOURCES_ROTTING => {
             b.s(EE_UNITS_UC_UPDATE_RESOURCES_ROTTING);

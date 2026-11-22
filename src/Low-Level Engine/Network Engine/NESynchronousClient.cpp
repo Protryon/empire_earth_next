@@ -22,112 +22,87 @@ NESynchronousClient::~NESynchronousClient()
     ee_net_cl_free(this->mRust);
 }
 
-// The lag simulator's and the recorder's calls out: their callbacks are the Rust client's own (ee_net client.rs)
-ptrdiff_t NESynchronousClient::QueueHost(void*, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
-{
-    return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
-}
 
 // The client's calls out, each the statement NESynchronousClient.cpp made (the protocol ops are the Rust's own:
 // ee_net ffi_protocol.rs)
 ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
-    NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inClient);
-    NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    NEMRecord* theRecord = static_cast<NEMRecord*>(theMessage);   // an engine message (the ops that read members)
-    FSFile* theFile = reinterpret_cast<FSFile*>(a);
     switch (inOp) {
     case EeNetClOp::XferExportSize:
         return (ptrdiff_t)NEMRecord::XferExportSize();
     case EeNetClOp::MsgType:
-        return theMessage->GetType();
-    case EeNetClOp::MsgFlag:
-        switch ((EeNetClMsgFlag)b) {
-        case EeNetClMsgFlag::CountsTowardsPlayerInputThrottle:
-            return theMessage->GetCountsTowardsPlayerInputThrottle();
-        case EeNetClMsgFlag::CanSendWhilePaused:
-            return theMessage->GetCanSendWhilePaused();
-        case EeNetClMsgFlag::IsAvailableToSend:
-            return theMessage->GetIsAvailableToSend();
-        }
+        return reinterpret_cast<NEMessage*>(a)->GetType();
+    case EeNetClOp::MsgCountsTowardsThrottle:
+        return reinterpret_cast<NEMessage*>(a)->GetCountsTowardsPlayerInputThrottle();
+    case EeNetClOp::MsgCanSendWhilePaused:
+        return reinterpret_cast<NEMessage*>(a)->GetCanSendWhilePaused();
+    case EeNetClOp::MsgIsAvailableToSend:
+        return reinterpret_cast<NEMessage*>(a)->GetIsAvailableToSend();
+    case EeNetClOp::MsgSetOriginatingSlot:
+        reinterpret_cast<NEMessage*>(a)->SetOriginatingSlot((unsigned char)b);
         return 0;
-    case EeNetClOp::MsgSetSlot:
-        if (b != 0)
-            theMessage->SetOriginatingSlot((unsigned char)c);
-        else
-            theMessage->SetForSpecificSlot((unsigned char)c);
+    case EeNetClOp::MsgSetForSpecificSlot:
+        reinterpret_cast<NEMessage*>(a)->SetForSpecificSlot((unsigned char)b);
         return 0;
-    case EeNetClOp::MsgS2awId: {
-        unsigned long theID = *reinterpret_cast<uint32_t*>(b);
-        bool theResult = theMessage->GetSendToAllAndWaitMessageID(theID);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)theID;
-        return theResult;
-    }
+    case EeNetClOp::MsgS2awId:
+        return reinterpret_cast<NEMessage*>(a)->GetSendToAllAndWaitMessageID(*reinterpret_cast<unsigned long*>(b));
     case EeNetClOp::MsgGet:
-        return (ptrdiff_t)theRecord->Value((uint32_t)b);
+        return (ptrdiff_t)static_cast<NEMRecord*>(reinterpret_cast<NEMessage*>(a))->Value((uint32_t)b);
     case EeNetClOp::MsgNew:
         return (ptrdiff_t) new NEMRecord((unsigned char)a, reinterpret_cast<const uint32_t*>(b), c);
     case EeNetClOp::MsgImport:
         return (ptrdiff_t) new NEMRecord(reinterpret_cast<unsigned char*>(a));
     case EeNetClOp::MsgAddInput:
-        return theRecord->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
-    case EeNetClOp::MsgExportNew: {
-        unsigned char* thePayload = NULL;
-        unsigned long thePayloadSize = 0;
-        theMessage->ExportMessage(&thePayload, thePayloadSize);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)thePayloadSize;
-        return (ptrdiff_t)thePayload;
-    }
+        return static_cast<NEMRecord*>(reinterpret_cast<NEMessage*>(a))->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
+    case EeNetClOp::MsgExportNew:
+        reinterpret_cast<NEMessage*>(a)->ExportMessage(reinterpret_cast<unsigned char**>(b), *reinterpret_cast<unsigned long*>(c));
+        return 0;
     case EeNetClOp::BytesFree:
         delete[] reinterpret_cast<unsigned char*>(a);
         return 0;
-    case EeNetClOp::FsWrite: {
-        unsigned long theWritten = *reinterpret_cast<uint32_t*>(d);
-        long theResult = theFile->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, theWritten);
-        *reinterpret_cast<uint32_t*>(d) = (uint32_t)theWritten;
-        return theResult;
-    }
+    case EeNetClOp::FsWrite:
+        return reinterpret_cast<FSFile*>(a)->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, *reinterpret_cast<unsigned long*>(d));
     case EeNetClOp::FsClose:
-        theFile->Close();
+        reinterpret_cast<FSFile*>(a)->Close();
         return 0;
     case EeNetClOp::FsDelete:
-        theFile->Delete();
+        reinterpret_cast<FSFile*>(a)->Delete();
         return 0;
     case EeNetClOp::FsFree:
-        delete theFile;
+        delete reinterpret_cast<FSFile*>(a);
         return 0;
     case EeNetClOp::CreateXferFile:
-        return (ptrdiff_t)theClient->CreateXferFile(UWideString(reinterpret_cast<char*>(a)), (unsigned long)b);
+        return (ptrdiff_t)static_cast<NESynchronousClient*>(inClient)->CreateXferFile(UWideString(reinterpret_cast<char*>(a)), (unsigned long)b);
     case EeNetClOp::IsPlaybackRecordingSession:
-        return theClient->IsPlaybackRecordingSession();
+        return static_cast<NESynchronousClient*>(inClient)->IsPlaybackRecordingSession();
     case EeNetClOp::ConnectTimeout:
-        return (ptrdiff_t)theClient->GetConnectTimeout();
+        return (ptrdiff_t)static_cast<NESynchronousClient*>(inClient)->GetConnectTimeout();
     case EeNetClOp::ClientSlot:
-        return theClient->GetClientSlot();
+        return static_cast<NESynchronousClient*>(inClient)->GetClientSlot();
     case EeNetClOp::IgnoreConnectionTimeout:
-        return theClient->IgnoreConnectionTimeout();
+        return static_cast<NESynchronousClient*>(inClient)->IgnoreConnectionTimeout();
     case EeNetClOp::SetConnectionState:
-        theClient->SetConnectionState((long)(int32_t)a);
+        static_cast<NESynchronousClient*>(inClient)->SetConnectionState((long)(int32_t)a);
         return 0;
     case EeNetClOp::HandleMessage:
-        theClient->HandleMessage(theMessage);
+        static_cast<NESynchronousClient*>(inClient)->HandleMessage(reinterpret_cast<NEMessage*>(a));
         return 0;
     case EeNetClOp::HandleUserInput:
-        theClient->HandleUserInput(theMessage);
+        static_cast<NESynchronousClient*>(inClient)->HandleUserInput(reinterpret_cast<NEMessage*>(a));
         return 0;
     case EeNetClOp::HandleConnectionLost:
-        theClient->HandleConnectionLost();
+        static_cast<NESynchronousClient*>(inClient)->HandleConnectionLost();
         return 0;
     case EeNetClOp::HandleStartGame:
-        return (ptrdiff_t)(uint32_t)theClient->HandleStartGame((unsigned long)a);
+        return (ptrdiff_t)(uint32_t)static_cast<NESynchronousClient*>(inClient)->HandleStartGame((unsigned long)a);
     case EeNetClOp::HandleStopGame:
-        theClient->HandleStopGame();
+        static_cast<NESynchronousClient*>(inClient)->HandleStopGame();
         return 0;
     case EeNetClOp::HandleConnectionTimeoutWarning:
-        theClient->HandleConnectionTimeoutWarning((unsigned long)a);
+        static_cast<NESynchronousClient*>(inClient)->HandleConnectionTimeoutWarning((unsigned long)a);
         return 0;
     case EeNetClOp::ProcessLocalUserInput:
-        return theClient->ProcessLocalUserInput(theMessage, (unsigned char)b);
+        return static_cast<NESynchronousClient*>(inClient)->ProcessLocalUserInput(reinterpret_cast<NEMessage*>(a), (unsigned char)b);
     }
     return 0;
 }

@@ -34,6 +34,20 @@ impl SaveHost for File {
                 self.data.push_back((0, 0, 0));
                 0
             }
+            // the containers' save sections (the views' in the game) of an empty container: the count alone
+            EE_UNITS_UNIT_SAVE_SECTION
+                if [
+                    EE_UNITS_UNIT_SAVE_SECTION_BUILD_QUEUE,
+                    EE_UNITS_UNIT_SAVE_SECTION_CITIZEN_QUEUE,
+                    EE_UNITS_UNIT_SAVE_SECTION_CARGO,
+                    EE_UNITS_UNIT_SAVE_SECTION_HELD_UNITS,
+                    EE_UNITS_UNIT_SAVE_SECTION_UNIT_VARIABLES,
+                ]
+                .contains(&index) =>
+            {
+                self.data.push_back((0, 0, 0));
+                0
+            }
             EE_UNITS_UNIT_LOAD_SECTION if index == EE_UNITS_UNIT_LOAD_SECTION_GOAL_QUEUES => {
                 self.data.pop_front();
                 self.data.pop_front();
@@ -173,16 +187,17 @@ fn a_load_reads_back_what_the_save_wrote() {
     // everything written was read
     assert!(f.data.is_empty());
     let sections: Vec<u32> = f.log.iter().filter(|e| e.0 == EE_UNITS_UNIT_LOAD_SECTION).map(|e| e.1).collect();
-    assert_eq!(sections, [0, 1, 2, 3, 4, 5, 6]);
+    // the waypoints and the goal queues (the containers' sections are dop_load.rs's reads)
+    assert_eq!(sections, [3, 4]);
 }
 
 #[test]
 fn a_failed_read_goes_on_at_the_original_labels() {
     // the height fails: on at LoadFlags (the conversion start time is the next read), whose reads then run dry
     let full = saved(&NOW);
-    // the reads before the height: the base unit's 6 and the unit's 4, the firing flag, the scale, the frame, the
+    // the reads before the height: the base unit's 6 and the unit's 4, the three queues' counts, the firing flag, the scale, the frame, the
     // collision tile's 2, the launcher class, the 5 part ids, the action and the turret count
-    let height_at = 6 + 4 + 3 + 2 + 1 + 5 + 2 + 1;
+    let height_at = 6 + 4 + 3 + 3 + 2 + 1 + 5 + 2 + 1;
     let mut f = File { data: full.data.clone(), fail_at: Some(height_at), ..Default::default() };
     let mut r2 = EeUnitsRtsUnitFields::default();
     let mut u2 = EeUnitsUnitFields::default();

@@ -273,7 +273,7 @@ unsafe extern "C" fn w32(p: *mut c_void, v: u32) -> c_long {
 unsafe extern "C" fn wf(p: *mut c_void, v: f32) -> c_long {
     file(p).put(&v.to_le_bytes())
 }
-unsafe extern "C" fn rb(p: *mut c_void, o: *mut u8, n: u32, read: *mut u32) -> c_long {
+unsafe extern "C" fn rb(p: *mut c_void, o: *mut u8, n: std::ffi::c_ulong, read: *mut std::ffi::c_ulong) -> c_long {
     let mut b = vec![0u8; n as usize];
     let r = file(p).get(&mut b);
     // SAFETY: the table's contract
@@ -285,7 +285,7 @@ unsafe extern "C" fn rb(p: *mut c_void, o: *mut u8, n: u32, read: *mut u32) -> c
     }
     r
 }
-unsafe extern "C" fn wb(p: *mut c_void, d: *const u8, n: u32, written: *mut u32) -> c_long {
+unsafe extern "C" fn wb(p: *mut c_void, d: *const u8, n: std::ffi::c_ulong, written: *mut std::ffi::c_ulong) -> c_long {
     // SAFETY: the table's contract
     let r = file(p).put(unsafe { std::slice::from_raw_parts(d, n as usize) });
     // SAFETY: as above

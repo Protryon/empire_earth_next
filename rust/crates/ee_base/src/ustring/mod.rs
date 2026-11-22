@@ -2,7 +2,7 @@
 //! (`Tokenize`, `NestedTokenize`); round 4 its storage (`record.rs`): the C++ class holds an [`EeUString`] by value
 //! (the original's buffer, length and capacity, so every record embedding a `UString` keeps its layout and
 //! `operator const char*` stays an inline read) and every member forwards here. C++ keeps what touches C++: the
-//! `FSFile` virtuals of `Load`/`Save`, the token vectors and `sprintf`'s varargs formatting.
+//! token vectors and `sprintf`'s varargs formatting (`Load`/`Save` are `fileio.rs`, over the C++ `FSFile`'s calls).
 //!
 //! A string is searched as its bytes up to its length (`mLength`); the comparisons are the original's `strncmp`, so
 //! a NUL inside the length ends a comparison as it did. Arithmetic is the build's `unsigned long` (32 bits on
@@ -21,6 +21,7 @@ mod golden;
 /// Serialises the golden replays (they set the process-wide legacy flag and default capacities).
 #[cfg(test)]
 static GOLDEN_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+mod fileio;
 #[cfg(test)]
 mod golden_store;
 #[cfg(test)]
@@ -28,6 +29,7 @@ mod golden_wide;
 mod record;
 mod wide;
 
+pub use fileio::*;
 pub use record::*;
 use std::ffi::{c_char, c_ulong};
 pub use wide::*;

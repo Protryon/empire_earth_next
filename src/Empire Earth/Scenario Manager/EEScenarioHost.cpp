@@ -26,6 +26,11 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
+#include "ee/EESMMediaStrings.h"
+#include "ee/EESMDialogMessage.h"
+#include "ee/EESaveGameFiles.h"
+#include "lle/FSArchive.h"
+#include "lle/FSPath.h"
 
 namespace {
 
@@ -48,7 +53,10 @@ int64_t FloatBits(float inValue)
     return theBits;
 }
 
-int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
+}   // namespace
+
+// the host's callbacks (ee_scenario host.rs EeScenarioHost; entry.rs builds the table in Rust)
+extern "C" int64_t ee_scenariocpp_host_read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
 {
     EESMHostContext* theContext = static_cast<EESMHostContext*>(inContext);
     EESMCondition* theCondition = theContext->mCondition;
@@ -85,7 +93,7 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
 }
 
 // a plan's write (ee_scenario player.rs): each the original's statement on player inPlayer
-void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t inC, int64_t inD)
+extern "C" void ee_scenariocpp_host_write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t inC, int64_t inD)
 {
     EESMHostContext* theContext = static_cast<EESMHostContext*>(inContext);
     EEPlayer* thePlayer = Player((int32_t)inPlayer);
@@ -108,10 +116,10 @@ void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t i
 }
 
 // the tile lists: every list is the Rust's (object_reads.rs tiles: ee_sim units' and the EE_SCENARIO_WZ_TILES_* statements)
-void Tiles(void*, uint32_t, int32_t, int32_t, int32_t, EeScenarioTiles*) {}
+extern "C" void ee_scenariocpp_host_tiles(void*, uint32_t, int32_t, int32_t, int32_t, EeScenarioTiles*) {}
 
 // TEST ONLY: a player choice's SMCP record (ee/EEScenarioCapture.h)
-void Players(void*, int32_t inKind, bool inSingle, int32_t inResult, bool inListed, const int32_t* inPlayers,
+extern "C" void ee_scenariocpp_host_players(void*, int32_t inKind, bool inSingle, int32_t inResult, bool inListed, const int32_t* inPlayers,
              size_t inCount, uint32_t inSeed)
 {
     std::vector<long> thePlayers(inPlayers, inPlayers + inCount);
@@ -120,7 +128,7 @@ void Players(void*, int32_t inKind, bool inSingle, int32_t inResult, bool inList
 
 // an element's save (ee_scenario stream.rs): each operation the original's FSFile call on the value the Rust hands
 // over (the 4-byte long adapters, float, bool), or the element's string or id list by slot
-int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
+extern "C" int32_t ee_scenariocpp_stream_io(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
 {
     EESMStream* theStream = static_cast<EESMStream*>(inContext);
     FSFile& theFile = *theStream->mFile;
@@ -146,8 +154,6 @@ int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long 
     // the manager's lists, media strings and dialog messages (EEScenarioManager.cpp)
     return inOp >= EE_SCENARIO_IO_ELEMENT_SAVE ? EESMManagerIO(theStream, inOp, inSlot, inIndex, ioValue) : 0;
 }
-
-}   // namespace
 
 // the reads' and the pending population write's single statements (ee_scenario read_compose.rs EE_SCENARIO_RX_*:
 // the Rust composes the sequences), on handles; reached through the world channel (EESMEffectWorld)
@@ -219,29 +225,89 @@ int64_t SMEHostWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a
     return 0;
 }
 
-EeScenarioStream EESMStreamTable(EESMStream* inStream)
-{
-    EeScenarioStream theTable = {inStream, StreamIO};
-    return theTable;
-}
-
 // an object's numbers (NULL for none)
-static const EeScenarioObjectFields* Object(void*, int32_t inIndex)
+extern "C" const EeScenarioObjectFields* ee_scenariocpp_host_object(void*, int32_t inIndex)
 {
     return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inIndex);
 }
 
 EeScenarioHost EESMHost(EESMHostContext* inContext)
 {
-    EeScenarioHost theHost = {inContext, Read, Players, Write, Tiles, EESMEffectWorld, Object};
-    return theHost;
+    return EeScenarioHost{inContext, ee_scenariocpp_host_read, ee_scenariocpp_host_players, ee_scenariocpp_host_write,
+                          ee_scenariocpp_host_tiles, ee_scenariocpp_host_world, ee_scenariocpp_host_object};
 }
 
-// EESMArea's members as the Rust record
-EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea)
+// The members and single statements of the scenario elements' methods whole in Rust (ee_scenario entry.rs
+// EE_SCENARIO_EN_*): p the object, a a string's slot or a number, b a number
+static_assert(sizeof(EESMHostContext) == sizeof(EeScenarioHostContext) && sizeof(EESMStream) == sizeof(EeScenarioStreamContext),
+              "entry.rs's context records");
+extern UWideString EESMEffect::* const kSMETexts[EE_SCENARIO_EC_TEXTS];   // EESMEffect.cpp
+extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_t inA, int64_t inB);   // EEScenarioCapture.cpp
+template<class T> T* EN(void* p) { return static_cast<T*>(p); }
+int64_t ENP(const void* p) { return (int64_t)(intptr_t)p; }
+extern "C" int64_t ee_scenariocpp_entry(uint32_t inOp, void* p, int64_t a, int64_t b)
 {
-    EeScenarioAreaRecord theRecord = {(uint32_t)inArea.mSelectMode, (int32_t)inArea.mAnchor.mX, (int32_t)inArea.mAnchor.mY,
-                                inArea.mRect.GetLeft(), inArea.mRect.GetTop(), inArea.mRect.GetRight(),
-                                inArea.mRect.GetBottom(), (int32_t)inArea.mCenterTile.mX, (int32_t)inArea.mCenterTile.mY};
-    return theRecord;
+    switch (inOp) {
+    case EE_SCENARIO_EN_EFFECT_FIELDS: return ENP(static_cast<EeScenarioEffectFields*>(EN<EESMEffect>(p)));
+    case EE_SCENARIO_EN_EFFECT_STRING: return ENP(&(EN<EESMEffect>(p)->*kSMETexts[a]));
+    case EE_SCENARIO_EN_EFFECT_OBJECTS: return ENP(&EN<EESMEffect>(p)->mObjects);
+    case EE_SCENARIO_EN_CONDITION_FIELDS: return ENP(static_cast<EeScenarioConditionFields*>(EN<EESMCondition>(p)));
+    case EE_SCENARIO_EN_CONDITION_STRING: return ENP(a == 0 ? &EN<EESMCondition>(p)->mName : a == 1 ? &EN<EESMCondition>(p)->mText : &EN<EESMCondition>(p)->mChatText);
+    case EE_SCENARIO_EN_OBJECT_FIELDS: return ENP(static_cast<EeScenarioObjectFields*>(EN<EESMObject>(p)));
+    case EE_SCENARIO_EN_OBJECT_NAME: return ENP(&EN<EESMObject>(p)->mName);
+    case EE_SCENARIO_EN_OBJECT_UNITS: return ENP(&EN<EESMObject>(p)->mUnits);
+    case EE_SCENARIO_EN_TRIGGER_FIELDS: return ENP(static_cast<EeScenarioTriggerFields*>(EN<EESMTrigger>(p)));
+    case EE_SCENARIO_EN_TRIGGER_STRING: return ENP(a == 0 ? &EN<EESMTrigger>(p)->mName : &EN<EESMTrigger>(p)->mText);
+    case EE_SCENARIO_EN_MEDIA_STRING: return ENP(EN<EESMMediaStrings>(p)->GetString((unsigned long)a));
+    case EE_SCENARIO_EN_MANAGER_FIELDS: return ENP(static_cast<EeScenarioManagerFields*>(EN<EEScenarioManager>(p)));
+    case EE_SCENARIO_EN_MANAGER_TIMED: return ENP(EN<EEScenarioManager>(p)->mTimedEffects);
+    case EE_SCENARIO_EN_MANAGER_STRING: return ENP(a == 0 ? &EN<EEScenarioManager>(p)->mExportFileName : &EN<EEScenarioManager>(p)->mLastChatText);
+    case EE_SCENARIO_EN_MANAGER_MEDIA: return ENP(&EN<EEScenarioManager>(p)->mMediaStrings);
+    case EE_SCENARIO_EN_MESSAGE_FIELDS: return ENP(static_cast<EeScenarioMessageFields*>(EN<EESMDialogMessage>(p)));
+    case EE_SCENARIO_EN_MESSAGE_STRING: return ENP(a == 0 ? &EN<EESMDialogMessage>(p)->mText : &EN<EESMDialogMessage>(p)->mSound);
+    case EE_SCENARIO_EN_AREA_FIELDS: return ENP(static_cast<EeScenarioAreaFields*>(EN<EESMArea>(p)));
+    case EE_SCENARIO_EN_AREA_STRING: return ENP(a == 0 ? &EN<EESMArea>(p)->mName : &EN<EESMArea>(p)->mText);
+    case EE_SCENARIO_EN_AREA_TILES: return ENP(&EN<EESMArea>(p)->mTiles);
+    case EE_SCENARIO_EN_MANAGER: return ENP(gWorld.mScenarioManager);
+    case EE_SCENARIO_EN_MANAGER_RESET: EN<EEScenarioManager>(p)->Reset();
+        return 0;
+    case EE_SCENARIO_EN_EFFECT_RUN: EN<EESMEffect>(p)->ExecuteUncaptured(a != 0);
+        return 0;
+    case EE_SCENARIO_EN_SAVE_VERSION: return ((int64_t)kSaveGameMajorVersion << 32) | kSaveGameMinorVersion;
+    case EE_SCENARIO_EN_UNIT_ID: return (int64_t)EN<EEUnit>(p)->mUnitID;
+    case EE_SCENARIO_EN_UNIT_BY_ID: return ENP(gWorld.GetUnit((unsigned long)a));
+    case EE_SCENARIO_EN_AREA_AT: return ENP(gWorld.mScenarioManager->GetArea((unsigned long)a));
+    case EE_SCENARIO_EN_AREA_COUNT: return (int64_t)EN<EEScenarioManager>(p)->mAreas.size();
+    case EE_SCENARIO_EN_AREA_INDEX: return ENP(EN<EEScenarioManager>(p)->mAreas[(size_t)a]);
+    case EE_SCENARIO_EN_STRING_TEXT: return ENP((const char*)*EN<UWideString>(p));
+    case EE_SCENARIO_EN_STRING_SET_TEXT: *EN<UWideString>(p) = (const char*)(intptr_t)a;
+        return 0;
+    case EE_SCENARIO_EN_STRING_ASSIGN: *EN<UWideString>(p) = *(const UWideString*)(intptr_t)a;
+        return 0;
+    case EE_SCENARIO_EN_UNITS_COUNT: return (int64_t)EN<std::vector<unsigned long> >(p)->size();
+    case EE_SCENARIO_EN_UNITS_AT: return (int64_t)(*EN<std::vector<unsigned long> >(p))[(size_t)a];
+    case EE_SCENARIO_EN_UNITS_SET: (*EN<std::vector<unsigned long> >(p))[(size_t)a] = (unsigned long)b;
+        return 0;
+    case EE_SCENARIO_EN_UNITS_ASSIGN: *EN<std::vector<unsigned long> >(p) = *(const std::vector<unsigned long>*)(intptr_t)a;
+        return 0;
+    case EE_SCENARIO_EN_PHYSICS_TICK: return (int64_t)gPhysics->mCurrentTick;
+    case EE_SCENARIO_EN_TILES_COUNT: return (int64_t)EN<std::vector<U2DPoint<long> > >(p)->size();
+    case EE_SCENARIO_EN_TILES_CLEAR: EN<std::vector<U2DPoint<long> > >(p)->clear();
+        return 0;
+    case EE_SCENARIO_EN_TILES_COPY_TO: *(std::vector<U2DPoint<long> >*)(intptr_t)a = *EN<std::vector<U2DPoint<long> > >(p);
+        return 0;
+    case EE_SCENARIO_EN_TILES_DATA: return ENP(EN<std::vector<U2DPoint<long> > >(p)->data());
+    case EE_SCENARIO_EN_PENDING_CLEAR: EN<EEScenarioManager>(p)->mPendingEffects.clear();
+        return 0;
+    case EE_SCENARIO_EN_CAPTURE_SEED: return ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0);
+    case EE_SCENARIO_EN_DATA_FIND: return gDataPath->FindFile(UWideString((const char*)(intptr_t)a));
+    case EE_SCENARIO_EN_CAMPAIGN_PREFIX: return ENP((const char*)gU52A280);
+    case EE_SCENARIO_EN_STRINGS_PUSH_TEXT: EN<std::vector<UWideString> >(p)->push_back(UWideString((const char*)(intptr_t)a));
+        return 0;
+    case EE_SCENARIO_EN_STRING_APPEND_TEXT: *EN<UWideString>(p) += (const char*)(intptr_t)a;
+        return 0;
+    case EE_SCENARIO_EN_VERIFY: ESVerify((const char*)p, (unsigned long)a, (const char*)(intptr_t)b);
+        return 0;
+    }
+    return 0;
 }

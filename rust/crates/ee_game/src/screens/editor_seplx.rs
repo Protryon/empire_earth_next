@@ -497,6 +497,29 @@ pub fn brush_group_highlight(g: &mut EeScreensSeBrushGroup, px: f32, py: f32, ce
     g.centered = centered;
 }
 
+/// `EEUIFSEBrushGroup`'s destructor: its five buttons, then its title deleted (`delete` of each, the C++'s order).
+pub fn brush_group_free(x: &mut Sepx, g: &EeScreensSeBrushGroup) {
+    for b in g.buttons.into_iter().chain([g.title]) {
+        x(EE_SCREENS_SEPL_OP_DELETE, [b, 0, 0], &mut [0; 4], &mut [0.0; 4]);
+    }
+}
+
+/// The brush group's destructor body.
+///
+/// # Safety
+/// `group` is the C++ group being destroyed.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sebr_group_free(group: *const EeScreensSeBrushGroup) {
+    let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+        let p = p.map(|v| v as *mut core::ffi::c_void);
+        // SAFETY: the group's live controls
+        unsafe { crate::screens::editor_direct::sepl(op, p.as_ptr(), i, f) }
+    };
+    // SAFETY: the contract
+    brush_group_free(&mut x, unsafe { &*group });
+}
+
 /// The brush group's constructor body (`index` the form's next control index, advanced).
 ///
 /// # Safety

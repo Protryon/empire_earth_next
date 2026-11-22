@@ -14,6 +14,7 @@
 //! - [`objeval`]: `EESMObject::Evaluate`, the object's units rebuilt and filtered (the list the C++'s).
 //! - [`trigger`]: `EESMTrigger::Evaluate` with its condition chain (`EESMTConditionWrapper::Evaluate`), duration
 //!   and the timed effects it schedules.
+//! - [`ids`]: the named kinds the triggers store (once `ee/EEScenarioIDs.h`).
 //! - [`fields`]: the effect's, condition's and object's numbers as records the C++ classes derive from (their
 //!   defaults and index upkeep); [`save`]: their `Load` and `Save` over [`stream`], the `FSFile` calls by operation.
 //! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
@@ -36,11 +37,15 @@
 //! - [`event`]: the data-driven events' effects (`EEEvent::Trigger`, `RunEffect` and its handlers, `LoadEvents`).
 //! - [`world_compose`]: the effect run's world calls that were C++ statement sequences, of single statements.
 //! - [`ffi`]: the C ABI the C++ classes call.
+//! - [`entry`]: the C++ methods that were glue around a Rust call (capture wrappers, host and stream tables, the
+//!   elements' saves and copies, the area's methods, the manager's list entries), whole in Rust.
+//! - [`area_fields`]: `EESMArea`'s numbers as a record the C++ class derives from; `BuildRegions`' area inputs.
 //! - [`sm_capture`]: TEST ONLY, the simulation capture's scenario records (SMCE .. SMCU) over the C++ reads.
 
 pub mod ai_store;
 pub mod aivar;
 pub mod area;
+pub mod area_fields;
 pub mod attribute;
 pub mod ca_compose;
 pub mod cinematic;
@@ -51,10 +56,12 @@ pub mod effect;
 pub mod effect_ai;
 pub mod effect_copy;
 pub mod effect_text;
+pub mod entry;
 pub mod event;
 pub mod ffi;
 pub mod fields;
 pub mod host;
+pub mod ids;
 pub mod lists;
 pub mod manager;
 pub mod manager_compose;

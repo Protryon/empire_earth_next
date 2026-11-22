@@ -21,27 +21,14 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
                                          bool inAnnounce, unsigned long inNetworkAdapter)
     : NESynchronousCommunications(inCurrentCommunicationsTick)
 {
-    EeNetSvArgs theArgs;
-    theArgs.max_players = inMaxPlayers;
-    theArgs.default_send_interval = (uint32_t)inDefaultSendInterval;
-    theArgs.pts_per_ct = inPTsPerCT;
-    theArgs.max_pts_per_second = (uint32_t)inMaxPhysicsTicksPerSecond;
-    theArgs.min_pts_per_second = (uint32_t)inMinPhysicsTicksPerSecond;
-    theArgs.cost_factor = inPhysicsTickCostFactor;
-    theArgs.max_send_interval = (uint32_t)inMaxSendInterval;
-    theArgs.send_interval_increment = (uint32_t)inSendIntervalIncrement;
-    theArgs.send_interval_decrement = (uint32_t)inSendIntervalDecrement;
-    theArgs.current_communications_tick = (uint32_t)inCurrentCommunicationsTick;
-    theArgs.current_physics_tick = (uint32_t)inCurrentPhysicsTick;
-    theArgs.allow_new_connections = inAllowNewConnections;
     // the server calls the protocol itself (ee_net ffi_protocol.rs): Publish's name, announcement and adapter
-    theArgs.tcp = true;
-    theArgs.name = reinterpret_cast<const uint8_t*>(static_cast<const char*>(inName));
-    theArgs.name_length = strlen(static_cast<const char*>(inName));
-    theArgs.announce = inAnnounce;
-    theArgs.network_adapter = (uint32_t)inNetworkAdapter;
-    this->mRust = ee_net_sv_new(this, NESynchronousServer::Host, NESynchronousServer::MessageManagerHost,
-                                NESynchronousServer::QueueHost, &theArgs, this->mComms);
+    this->mRust = ee_net_sv_new_game(this, NESynchronousServer::Host, NESynchronousServer::MessageManagerHost,
+                                     NESynchronousServer::QueueHost, this->mComms, inMaxPlayers, inDefaultSendInterval,
+                                     inPTsPerCT, inMaxPhysicsTicksPerSecond, inMinPhysicsTicksPerSecond,
+                                     inPhysicsTickCostFactor, inMaxSendInterval, inSendIntervalIncrement,
+                                     inSendIntervalDecrement, inCurrentCommunicationsTick, inCurrentPhysicsTick,
+                                     static_cast<const char*>(inName), inAllowNewConnections, inAnnounce,
+                                     inNetworkAdapter);
 }
 
 // Destroys the server: frees events, threads, locks and the recorder, then closes the published server
@@ -69,30 +56,27 @@ long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inU
 // fields, the game, a transfer's file spec (the manager's own copy, FileClone/FileFree)
 ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
-    NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServer);
-    NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
     switch (inOp) {
     case EeNetMmOp::MsgReference:
-        theMessage->Reference();
+        reinterpret_cast<NEMessage*>(a)->Reference();
         return 0;
     case EeNetMmOp::MsgDereference:
-        theMessage->Dereference();
+        reinterpret_cast<NEMessage*>(a)->Dereference();
         return 0;
     case EeNetMmOp::MsgType:
-        return theMessage->GetType();
+        return reinterpret_cast<NEMessage*>(a)->GetType();
     case EeNetMmOp::MsgIsResponse:
-        return theMessage->IsResponse(reinterpret_cast<NEMessage*>(b));
+        return reinterpret_cast<NEMessage*>(a)->IsResponse(reinterpret_cast<NEMessage*>(b));
     case EeNetMmOp::MsgSlot:
-        return theMessage->GetOriginatingSlot();
+        return reinterpret_cast<NEMessage*>(a)->GetOriginatingSlot();
     case EeNetMmOp::NewResponse: {
         // the sent message's first member: the tick's tick, the pause's or unpause's unique ID
         uint32_t theSent = reinterpret_cast<NEMRecord*>(b)->Get<uint32_t>(0);
         NEMessage* theResponse;
         if (a == kNetMessageCommunicationsTick)
             theResponse = new NEMRecord(kNetMessageCommunicationsTickResponse,
-                                        {theServer->GetNumberOfCTsProcessedInPhysics(), theSent,
-                                         (unsigned short)theServer->GetAveragePhysicsUpdateTime()});
+                                        {static_cast<NESynchronousServer*>(inServer)->GetNumberOfCTsProcessedInPhysics(), theSent,
+                                         (unsigned short)static_cast<NESynchronousServer*>(inServer)->GetAveragePhysicsUpdateTime()});
         else
             theResponse = new NEMRecord(
                 a == kNetMessageUnPauseGame ? kNetMessageUnPauseGameResponse : kNetMessagePauseGameResponse, {theSent});
@@ -100,42 +84,42 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
         return reinterpret_cast<ptrdiff_t>(theResponse);
     }
     case EeNetMmOp::ProcessSystemMessage:
-        theServer->ProcessSystemMessage(theMessage);
+        static_cast<NESynchronousServer*>(inServer)->ProcessSystemMessage(reinterpret_cast<NEMessage*>(a));
         return 0;
     case EeNetMmOp::XferStatus: {
         unsigned char theSlot = (unsigned char)a, thePercent = (unsigned char)b, theStatus = (unsigned char)d;
         uint32_t theID = (uint32_t)c;
-        theServer->HandleXferStatus(theSlot, thePercent, theID, theStatus);
+        static_cast<NESynchronousServer*>(inServer)->HandleXferStatus(theSlot, thePercent, theID, theStatus);
         return 0;
     }
     case EeNetMmOp::FileClone: {
         FSFileSpec* theCopy = new FSFileSpec;
-        *theCopy = *theFile;
+        *theCopy = *reinterpret_cast<FSFileSpec*>(a);
         return reinterpret_cast<ptrdiff_t>(theCopy);
     }
     case EeNetMmOp::FileFree:
-        delete theFile;
+        delete reinterpret_cast<FSFileSpec*>(a);
         return 0;
     case EeNetMmOp::FileIsOpen:
-        return theFile->GetIsOpen();
+        return reinterpret_cast<FSFileSpec*>(a)->GetIsOpen();
     case EeNetMmOp::FileOpen:
-        return theFile->Open(kFileAccessRead) == kErrorOK;
+        return reinterpret_cast<FSFileSpec*>(a)->Open(kFileAccessRead) == kErrorOK;
     case EeNetMmOp::FileClose:
-        theFile->Close();
+        reinterpret_cast<FSFileSpec*>(a)->Close();
         return 0;
     case EeNetMmOp::FileLength: {
         unsigned long theLength = 0;
-        theFile->GetLength(theLength);
+        reinterpret_cast<FSFileSpec*>(a)->GetLength(theLength);
         return (uint32_t)theLength;
     }
     case EeNetMmOp::FileRead: {
         unsigned long theRead = 0;
-        if (theFile->Read(reinterpret_cast<unsigned char*>(b), 0x400, theRead) != kErrorOK)
+        if (reinterpret_cast<FSFileSpec*>(a)->Read(reinterpret_cast<unsigned char*>(b), 0x400, theRead) != kErrorOK)
             return -1;
         return (uint32_t)theRead;
     }
     case EeNetMmOp::FileName:
-        return reinterpret_cast<ptrdiff_t>(static_cast<const char*>(theFile->GetFile()));
+        return reinterpret_cast<ptrdiff_t>(static_cast<const char*>(reinterpret_cast<FSFileSpec*>(a)->GetFile()));
     default:
         // (ForceCt, LastCtMessageId, StartSendToAllAndWait and Time are the Rust server's; MsgSendTo, MsgTick,
         // ResetClientConnection and XferSend its host's, ee_net ffi_server.rs)
@@ -143,94 +127,78 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
     }
 }
 
-// The recorder's and the server's queue calls out: the common ones (its callback is the Rust server's own)
-ptrdiff_t NESynchronousServer::QueueHost(void*, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
-{
-    return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
-}
 
 // The server's calls out, each the statement NESynchronousServer.cpp made (the protocol ops are the Rust's own:
 // ee_net ffi_protocol.rs)
 ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
-    NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServer);
-    NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    NEMRecord* theRecord = static_cast<NEMRecord*>(theMessage);   // an engine message (the ops that read members)
     switch (inOp) {
     case EeNetSvOp::SimMode:
         return gPlatSimMode;
     case EeNetSvOp::MsgType:
-        return theMessage->GetType();
-    case EeNetSvOp::MsgSetSlot:
-        if (b != 0)
-            theMessage->SetOriginatingSlot((unsigned char)c);
-        else
-            theMessage->SetForSpecificSlot((unsigned char)c);
+        return reinterpret_cast<NEMessage*>(a)->GetType();
+    case EeNetSvOp::MsgSetOriginatingSlot:
+        reinterpret_cast<NEMessage*>(a)->SetOriginatingSlot((unsigned char)b);
         return 0;
-    case EeNetSvOp::MsgFlag:
-        if ((EeNetSvMsgFlag)b == EeNetSvMsgFlag::CanSendWhilePaused)
-            return theMessage->GetCanSendWhilePaused();
-        return theMessage->GetIsAvailableToSend();
+    case EeNetSvOp::MsgSetForSpecificSlot:
+        reinterpret_cast<NEMessage*>(a)->SetForSpecificSlot((unsigned char)b);
+        return 0;
+    case EeNetSvOp::MsgCanSendWhilePaused:
+        return reinterpret_cast<NEMessage*>(a)->GetCanSendWhilePaused();
+    case EeNetSvOp::MsgIsAvailableToSend:
+        return reinterpret_cast<NEMessage*>(a)->GetIsAvailableToSend();
     case EeNetSvOp::MsgSlot:
-        return theMessage->GetOriginatingSlot();
+        return reinterpret_cast<NEMessage*>(a)->GetOriginatingSlot();
     case EeNetSvOp::MsgGet:
-        return (ptrdiff_t)theRecord->Value((uint32_t)b);
+        return (ptrdiff_t)static_cast<NEMRecord*>(reinterpret_cast<NEMessage*>(a))->Value((uint32_t)b);
     case EeNetSvOp::MsgNew:
         return (ptrdiff_t) new NEMRecord((unsigned char)a, reinterpret_cast<const uint32_t*>(b), c);
-    case EeNetSvOp::MsgTickResponseInput: {
-        NEMessage* theInput = NULL;
-        long theResult = theRecord->GetPlayerInput((unsigned long)b, theInput);
-        *reinterpret_cast<NEMessage**>(c) = theInput;
-        return theResult;
-    }
+    case EeNetSvOp::MsgTickResponseInput:
+        return static_cast<NEMRecord*>(reinterpret_cast<NEMessage*>(a))->GetPlayerInput((unsigned long)b, *reinterpret_cast<NEMessage**>(c));
     case EeNetSvOp::MsgAddInput:
-        return theRecord->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
+        return static_cast<NEMRecord*>(reinterpret_cast<NEMessage*>(a))->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
     case EeNetSvOp::MsgSetS2awId:
-        theMessage->SetSendToAllAndWaitMessageID((unsigned long)b);
+        reinterpret_cast<NEMessage*>(a)->SetSendToAllAndWaitMessageID((unsigned long)b);
         return 0;
-    case EeNetSvOp::MsgExportNew: {
-        unsigned char* theData = NULL;
-        unsigned long theSize = 0;
-        theMessage->ExportMessage(&theData, theSize);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)theSize;
-        return (ptrdiff_t)theData;
-    }
+    case EeNetSvOp::MsgExportNew:
+        reinterpret_cast<NEMessage*>(a)->ExportMessage(reinterpret_cast<unsigned char**>(b), *reinterpret_cast<unsigned long*>(c));
+        return 0;
     case EeNetSvOp::BytesFree:
         delete[] reinterpret_cast<unsigned char*>(a);
         return 0;
     case EeNetSvOp::BootPlayer:
-        theServer->BootPlayer((unsigned char)a, b != 0, c != 0);
+        static_cast<NESynchronousServer*>(inServer)->BootPlayer((unsigned char)a, b != 0, c != 0);
         return 0;
     case EeNetSvOp::ServerSlot28:
-        return theServer->ServerSlot28();
+        return static_cast<NESynchronousServer*>(inServer)->ServerSlot28();
     case EeNetSvOp::IsMigrating:
-        return theServer->IsMigrating();
+        return static_cast<NESynchronousServer*>(inServer)->IsMigrating();
     case EeNetSvOp::BeforeRemovingPlayers:
-        theServer->BeforeRemovingPlayers();
+        static_cast<NESynchronousServer*>(inServer)->BeforeRemovingPlayers();
         return 0;
     case EeNetSvOp::HandleReconnectWaitTimedOut:
-        theServer->HandleReconnectWaitTimedOut();
+        static_cast<NESynchronousServer*>(inServer)->HandleReconnectWaitTimedOut();
         return 0;
     case EeNetSvOp::PlayerSendToSlot:
-        return theServer->GetPlayerSendToSlot((unsigned char)a);
+        return static_cast<NESynchronousServer*>(inServer)->GetPlayerSendToSlot((unsigned char)a);
     case EeNetSvOp::FilterPlayerInput:
-        return theServer->FilterPlayerInput(theMessage);
+        return static_cast<NESynchronousServer*>(inServer)->FilterPlayerInput(reinterpret_cast<NEMessage*>(a));
     case EeNetSvOp::PrepareLocalInput:
-        theServer->PrepareLocalInput(theMessage);
+        static_cast<NESynchronousServer*>(inServer)->PrepareLocalInput(reinterpret_cast<NEMessage*>(a));
         return 0;
     case EeNetSvOp::IsPlayerPresent:
-        return theServer->IsPlayerPresent((unsigned char)a);
+        return static_cast<NESynchronousServer*>(inServer)->IsPlayerPresent((unsigned char)a);
     case EeNetSvOp::ReportLaggers: {
         const unsigned char* theFirst = reinterpret_cast<const unsigned char*>(a);
         std::vector<unsigned char> theSlots(theFirst, theFirst + b);
-        theServer->ReportLaggers(theSlots, c != 0);
+        static_cast<NESynchronousServer*>(inServer)->ReportLaggers(theSlots, c != 0);
         return 0;
     }
     case EeNetSvOp::ProcessSystemMessage:
-        theServer->ProcessSystemMessage(theMessage);
+        static_cast<NESynchronousServer*>(inServer)->ProcessSystemMessage(reinterpret_cast<NEMessage*>(a));
         return 0;
     case EeNetSvOp::ProcessLocalUserInput:
-        return theServer->ProcessLocalUserInput(theMessage, (unsigned char)b);
+        return static_cast<NESynchronousServer*>(inServer)->ProcessLocalUserInput(reinterpret_cast<NEMessage*>(a), (unsigned char)b);
     }
     return 0;
 }

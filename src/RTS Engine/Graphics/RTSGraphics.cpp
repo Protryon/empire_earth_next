@@ -29,7 +29,6 @@ RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTS
 }
 
 RTSGraphics::~RTSGraphics() { ee_rts_graphics_destruct(this); }
-void RTSGraphics::FrameStarting() { ee_rts_graphics_objects_pass(this, 0); }
 
 // The thread: its passes are Rust; the Sleep(1) between them stays here. Win32 Sleep, not PlatSleep: the test
 // harness's time shim caps the frame rate at the Sleep import by the caller's return address (inside
@@ -46,24 +45,6 @@ unsigned long RTSGraphics::Main(void* inGraphics)
     return 0;
 }
 
-void RTSGraphics::PopRenderObject() { this->mRenderObjects.pop_back(); }
-void RTSGraphics::PushRenderObject(RTSRenderObject* inObject) { this->mRenderObjects.push_back(inObject); }
-void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_rts_graphics_handle_message(this, inMessage, inParameter1, inParameter2); }
-long RTSGraphics::RestoreSurfaces() { return this->mRasterizer->GetScreen(this->mScreen)->RestoreAllSurfaces(); }
-void RTSGraphics::Render(bool inDrawMouse, bool inShowScene) { ee_rts_graphics_render(this, inDrawMouse, inShowScene); }
-void RTSGraphics::RenderLobby() { ee_rts_graphics_render_lobby(this); }
-void RTSGraphics::SceneStarting() { ee_rts_graphics_objects_pass(this, 1); }
-void RTSGraphics::RenderScene() { ee_rts_graphics_objects_pass(this, 2); }
-void RTSGraphics::FrameDone() { ee_rts_graphics_objects_pass(this, 3); }
-void RTSGraphics::PostClearRenderObjects() { this->mThread->Post(0x406, NULL, NULL, true); }
-void RTSGraphics::Shutdown() { ee_rts_graphics_shutdown(this); }
-long RTSGraphics::PostPause() { return ee_rts_graphics_post_pause(this); }
-void RTSGraphics::PostPushRenderObject(RTSRenderObject* inObject) { this->mThread->Post(0x404, inObject, NULL, true); }
-void RTSGraphics::PostSetFlag5B(bool inFlag) { this->mThread->Post(0x40a, (void*)inFlag, NULL, true); }
-void RTSGraphics::PostSetRasterizer(GERasterizer* inRasterizer, unsigned long inScreen) { this->mThread->Post(0x407, inRasterizer, reinterpret_cast<void*>(inScreen), true); }
-void RTSGraphics::PostSetFlag54(bool inFlag) { this->mThread->Post(0x408, (void*)inFlag, NULL, true); }
-void RTSGraphics::PostResume() { ee_rts_graphics_post_resume(this); }
-void RTSGraphics::SetSurface(GESurface* inSurface) { ee_rts_graphics_set_surface(this, inSurface); }
 
 // The shims graphics.rs calls (GraphicsCpp)
 extern "C" {
@@ -88,6 +69,7 @@ void** ee_rtsgcpp_lobby_frame_slot(RTSGraphics* inGraphics) { return reinterpret
 const char* ee_rtsgcpp_thread_name() { return gGraphicsThreadName; }
 void ee_rtsgcpp_handle_message(RTSGraphics* inGraphics, unsigned long inMessage, void* inFirst, void* inSecond) { inGraphics->HandleMessage(inMessage, inFirst, inSecond); }
 void ee_rtsgcpp_render(RTSGraphics* inGraphics, bool inDrawMouse, bool inShowScene) { inGraphics->Render(inDrawMouse, inShowScene); }
+long RTSGraphics::RestoreSurfaces() { return this->mRasterizer->GetScreen(this->mScreen)->RestoreAllSurfaces(); }
 long ee_rtsgcpp_restore_surfaces(RTSGraphics* inGraphics) { return inGraphics->RestoreSurfaces(); }
 void ee_rtsgcpp_frame_starting(RTSGraphics* inGraphics) { inGraphics->FrameStarting(); }
 void ee_rtsgcpp_scene_starting(RTSGraphics* inGraphics) { inGraphics->SceneStarting(); }

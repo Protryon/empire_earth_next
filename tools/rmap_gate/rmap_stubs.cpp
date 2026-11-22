@@ -19,7 +19,6 @@ float URandom::Generate()
     return (float)((double)this->NextInSeries() / (double)this->mModulus);
 }
 
-unsigned long TMGetTime() { return 0; }
-void ESDebugOut(const char*, ...) {}
+// (TMGetTime and ESDebugOut are header inlines over Rust now)
 UString gStartupVolume;
 UString gStartupDirectory;

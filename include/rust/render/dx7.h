@@ -89,8 +89,10 @@ enum class EeDx7RastOp : uint32_t {
   SurfaceGx,
   /// `(GXSurface*)*dynamic_cast<DX7Surface*>(obj)`.
   SurfaceGxChecked,
-  /// `((uint32_t*)a)[0] = obj->GetWidth(); ((uint32_t*)a)[1] = obj->GetHeight()`.
-  SurfaceSize,
+  /// `obj->GetWidth()` (a surface).
+  SurfaceWidth,
+  /// `obj->GetHeight()` (a surface).
+  SurfaceHeight,
   /// `obj->Flip(a != 0)`.
   SurfaceFlip,
   /// `obj->HasChanged()` (a texture).
@@ -101,14 +103,14 @@ enum class EeDx7RastOp : uint32_t {
   TextureDereference,
   /// `obj->Promote()`.
   TexturePromote,
-  /// `*(StageView*)a`: `obj->GetStage()`'s fields and `obj->GetStageTexture(0)->GetFrameSurface()`'s `GXSurface*`.
+  /// `obj->GetStage()` (the texture's `GETStage`, an `EeGeTStage`).
   TextureStage,
+  /// `(GXSurface*)*static_cast<DX7Surface*>(obj->GetStageTexture(0)->GetFrameSurface())`.
+  TextureStageSurface,
   /// `obj->ValidateChanges()`.
   TextureValidate,
-  /// `((float*)a)[0..2] = obj->GetClientOrigin()` (a window).
+  /// `*(GE2DPoint*)a = obj->GetClientOrigin()` (a window).
   WindowOrigin,
-  /// `*(LightParams*)a`: the `GELight` fields `UpdateLight` reads.
-  LightParams,
   /// `obj->Enter()` (the drawing lock).
   LockEnter,
   /// `obj->Leave()`.
@@ -155,7 +157,7 @@ struct EeDx7Surface;
 /// The host of the screen and surface objects.
 using EeDx7ObjHostFn = ptrdiff_t(*)(EeDx7ObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
-/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+/// `GESurfaceDescription` (`lle/GESurface.h`: the GE's `EeGeSurfaceDescription`, pinned below).
 struct EeDx7SurfaceDescription {
   unsigned long mType;
   unsigned long mPixelFormat;
@@ -170,7 +172,7 @@ struct EeDx7SurfaceDescription {
   bool mNoAlpha;
 };
 
-/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
+/// `GEVideoMode` (lle/GEScreen.h's name for it).
 struct EeDx7VideoMode {
   unsigned long mWidth;
   unsigned long mHeight;
@@ -178,6 +180,14 @@ struct EeDx7VideoMode {
   unsigned long mBitCount;
   unsigned long mPixelFormat;
 };
+
+/// The C++ side of `CreateAWindow`: the window's constructor and the failure's debug line (one statement each).
+using EeDx7NewWindowFn = void*(*)(void *window,
+                                  unsigned long width,
+                                  unsigned long height,
+                                  unsigned long style);
+
+using EeDx7WindowErrorFn = void(*)(const char *error);
 
 /// What `CreateAWindow` makes of its style, display and origin: which platform call, its size and flags.
 struct EeDx7WindowParams {
@@ -317,6 +327,19 @@ void *ee_dx7sc_direct_draw(EeDx7Screen *p);
 /// 5 32-bit device, 6 32-bit textures.
 bool ee_dx7sc_flag(EeDx7Screen *p,
                    uint32_t which);
+
+/// `DX7Screen::CreateAWindow(inOrigin, inWidth, inHeight, inClassName, inTitle, outWindow, inStyle, inParent)` (the
+/// class name and the parent are unused, as they were).
+int32_t ee_dx7sc_create_window(bool sim,
+                               float x,
+                               float y,
+                               unsigned long width,
+                               unsigned long height,
+                               const char *title,
+                               unsigned long style,
+                               void **out_window,
+                               EeDx7NewWindowFn new_window,
+                               EeDx7WindowErrorFn error);
 
 /// `CreateAWindow`'s choice of platform call, size and flags (`sim`: the headless simulation).
 void ee_dx7sc_window_params(bool sim,
@@ -511,6 +534,24 @@ bool ee_dx7r_text_draw(EeDx7Handle text,
                        float target_scale,
                        const void *target);
 
+/// `DX7DrawText`: a text drawn on a surface (`surface` its `GXSurface*`), aligned and shadowed, within `clip` (null:
+/// none); kErrorNativeError when the draw or the surface fails.
+///
+/// # Safety
+/// `text` is a live `GEText*`, `clip` null or valid, `surface` a live GX surface.
+long ee_dx7r_draw_text(EeDx7Handle text,
+                       const EeDx7TextRect *clip,
+                       void *surface);
+
+/// `Draw(inText, inRectangle, inTarget)` without a bitmap font: the text clipped to the rectangle (`ge_rect`: a
+/// `GERectangle`'s members, bottom, left, right, top; its edges floored).
+///
+/// # Safety
+/// As [`ee_dx7r_draw_text`]; `ge_rect` points at four floats.
+long ee_dx7r_draw_text_clipped(EeDx7Handle text,
+                               const float (*ge_rect)[4],
+                               void *surface);
+
 /// `DX7Rasterizer(inName)`: `base` is the `GERasterizer`'s object.
 EeDx7Rasterizer *ee_dx7r_new(EeDx7RastHostFn host, void *owner, EeGeRasterizer *base, bool tnl);
 
@@ -540,7 +581,7 @@ int32_t ee_dx7r_activate_rendering_surface(EeDx7Rasterizer *p,
 
 int32_t ee_dx7r_activate_the_screen(EeDx7Rasterizer *p, unsigned long screen, void *secondary);
 
-void ee_dx7r_deactivate(EeDx7Rasterizer *p);
+int32_t ee_dx7r_deactivate(EeDx7Rasterizer *p);
 
 int32_t ee_dx7r_begin_scene(EeDx7Rasterizer *p, void *target, unsigned long screen);
 
@@ -550,13 +591,16 @@ bool ee_dx7r_can_do_current_state(EeDx7Rasterizer *p, void *texture, unsigned lo
 
 /// `Clear` (`color` a `GEColor`) or, `color` NULL, `ClearZBuffer` to `z`; `rect` is left, top, right, bottom.
 int32_t ee_dx7r_clear(EeDx7Rasterizer *p,
-                      const float *rect,
+                      const float (*ge_rect)[4],
                       const EeGeRastColor *color,
                       float z,
                       unsigned long screen);
 
 /// `GetTotalVideoMemory` (`total`) or `GetAvailableVideoMemory`: `out` is written on success only.
-int32_t ee_dx7r_video_memory(EeDx7Rasterizer *p, unsigned long screen, bool total, uint32_t *out);
+int32_t ee_dx7r_video_memory(EeDx7Rasterizer *p,
+                             unsigned long screen,
+                             bool total,
+                             unsigned long *out);
 
 /// `GetDirtyRectangleSupport` (`dirty`) or `GetCanModulateTextureAlpha`.
 bool ee_dx7r_card_flag(EeDx7Rasterizer *p, unsigned long screen, bool dirty);
@@ -565,7 +609,7 @@ bool ee_dx7r_card_flag(EeDx7Rasterizer *p, unsigned long screen, bool dirty);
 int32_t ee_dx7r_add_light(EeDx7Rasterizer *p,
                           void *light,
                           unsigned long screen,
-                          uint32_t *out_index);
+                          unsigned long *out_index);
 
 int32_t ee_dx7r_update_light(EeDx7Rasterizer *p, uint32_t index, void *light, unsigned long screen);
 

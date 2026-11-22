@@ -328,6 +328,48 @@ impl EeDx7Screen {
     }
 }
 
+/// The calls `DX7Screen::CreateAWindow` makes (the platform's, the error record's, the thread system's and the C++
+/// window's constructor).
+pub trait WindowCalls {
+    /// `PlatWindowGetDisplayLogicalSize(NULL, ...)` (the sizes stay 0 when it fails).
+    fn display_size(&mut self) -> (i32, i32);
+    /// `PlatWindowCreateAt` (`at`) or `PlatWindowCreate`.
+    fn create(&mut self, params: &screen::WindowParams) -> H;
+    /// The failure's debug line (`CreateAWindow: ` and the platform's error), `ESRecordNativeError(PlatGetLastError())`,
+    /// `ESGetNativeError()`.
+    fn failed(&mut self);
+    /// `PlatCursorShow(0); TSThread::DispatchWindowEvents()`.
+    fn shown(&mut self);
+    /// `new GEWindow(window, width, height, style, true)`.
+    fn new_window(&mut self, window: H, width: c_ulong, height: c_ulong, style: c_ulong) -> H;
+}
+
+/// `DX7Screen::CreateAWindow`: the platform window at the origin (or centred, or full screen: [`screen::window_params`])
+/// and its C++ `GEWindow`; kErrorNativeError (1) when the platform refuses.
+#[allow(clippy::too_many_arguments)]
+pub fn create_window<C: WindowCalls>(
+    c: &mut C,
+    sim: bool,
+    x: f32,
+    y: f32,
+    width: c_ulong,
+    height: c_ulong,
+    style: c_ulong,
+    out_window: &mut H,
+) -> i32 {
+    let (display_width, display_height) = c.display_size();
+    let params =
+        screen::window_params(sim, style as u32, width as i32, height as i32, display_width, display_height, x, y);
+    let window = c.create(&params);
+    if window.is_null() {
+        c.failed();
+        return 1;
+    }
+    c.shown();
+    *out_window = c.new_window(window, width, height, style);
+    0
+}
+
 #[cfg(not(test))]
 pub use ffi::*;
 
@@ -454,6 +496,88 @@ mod ffi {
             s.device32,
             s.texture32,
         ][which as usize]
+    }
+
+    /// The C++ side of `CreateAWindow`: the window's constructor and the failure's debug line (one statement each).
+    pub type EeDx7NewWindowFn =
+        unsafe extern "C" fn(window: *mut c_void, width: c_ulong, height: c_ulong, style: c_ulong) -> *mut c_void;
+    pub type EeDx7WindowErrorFn = unsafe extern "C" fn(error: *const core::ffi::c_char);
+
+    /// cbindgen:ignore
+    mod plat {
+        use core::ffi::{c_char, c_int, c_void};
+        extern "C" {
+            pub fn PlatWindowGetDisplayLogicalSize(window: *mut c_void, width: *mut i32, height: *mut i32) -> c_int;
+            pub fn PlatWindowCreate(title: *const c_char, width: i32, height: i32, flags: u32) -> *mut c_void;
+            pub fn PlatWindowCreateAt(
+                title: *const c_char,
+                x: i32,
+                y: i32,
+                width: i32,
+                height: i32,
+                flags: u32,
+            ) -> *mut c_void;
+            pub fn PlatWindowLastError() -> *const c_char;
+            pub fn PlatGetLastError() -> u32;
+            pub fn PlatCursorShow(show: c_int);
+        }
+    }
+
+    struct PlatWindowCalls {
+        title: *const core::ffi::c_char,
+        new_window: EeDx7NewWindowFn,
+        error: EeDx7WindowErrorFn,
+    }
+
+    impl WindowCalls for PlatWindowCalls {
+        fn display_size(&mut self) -> (i32, i32) {
+            let (mut w, mut h) = (0, 0);
+            unsafe { plat::PlatWindowGetDisplayLogicalSize(core::ptr::null_mut(), &mut w, &mut h) };
+            (w, h)
+        }
+        fn create(&mut self, p: &WindowParams) -> H {
+            unsafe {
+                if p.create_at {
+                    plat::PlatWindowCreateAt(self.title, p.x, p.y, p.width, p.height, p.flags)
+                } else {
+                    plat::PlatWindowCreate(self.title, p.width, p.height, p.flags)
+                }
+            }
+        }
+        fn failed(&mut self) {
+            unsafe {
+                (self.error)(plat::PlatWindowLastError());
+                ee_base::error::ee_error_record_native(plat::PlatGetLastError() as c_ulong);
+            }
+            ee_base::error::ee_error_native();
+        }
+        fn shown(&mut self) {
+            unsafe { plat::PlatCursorShow(0) };
+            ee_base::ts::ee_ts_dispatch_window_events();
+        }
+        fn new_window(&mut self, window: H, width: c_ulong, height: c_ulong, style: c_ulong) -> H {
+            unsafe { (self.new_window)(window, width, height, style) }
+        }
+    }
+
+    /// `DX7Screen::CreateAWindow(inOrigin, inWidth, inHeight, inClassName, inTitle, outWindow, inStyle, inParent)` (the
+    /// class name and the parent are unused, as they were).
+    #[no_mangle]
+    #[allow(clippy::too_many_arguments)]
+    pub unsafe extern "C" fn ee_dx7sc_create_window(
+        sim: bool,
+        x: f32,
+        y: f32,
+        width: c_ulong,
+        height: c_ulong,
+        title: *const core::ffi::c_char,
+        style: c_ulong,
+        out_window: *mut *mut c_void,
+        new_window: EeDx7NewWindowFn,
+        error: EeDx7WindowErrorFn,
+    ) -> i32 {
+        let mut calls = PlatWindowCalls { title, new_window, error };
+        unsafe { create_window(&mut calls, sim, x, y, width, height, style, &mut *out_window) }
     }
 
     /// `CreateAWindow`'s choice of platform call, size and flags (`sim`: the headless simulation).

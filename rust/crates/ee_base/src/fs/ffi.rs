@@ -1,13 +1,15 @@
 //! The C ABI of `FSMemoryFile`, `FSChunk` and `FSArchive` (`include/rust/ee_rust.h`, called by the facades in
 //! `src/Low-Level Engine/File System`). Plain forwards: no logic beyond turning pointers into references.
 
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use std::slice;
 
 use crate::fs::archive::{Archive, FatEntry};
 use crate::fs::chunk::EeFsChunk;
+use crate::fs::cppfile::CppFile;
 use crate::fs::file::EeFsFileOps;
 use crate::fs::memfile::EeFsMemFile;
+use crate::fs::spec::EeFsString;
 use crate::fs::status;
 
 unsafe fn bytes<'a>(data: *const u8, length: usize) -> &'a [u8] {
@@ -124,6 +126,53 @@ pub unsafe extern "C" fn ee_fs_mem_length(file: *const EeFsMemFile) -> u32 {
     unsafe { (*file).length() as u32 }
 }
 
+/// `GetLength(outLength)`: always `kErrorOK`.
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_get_length(file: *const EeFsMemFile, out: *mut c_ulong) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { *out = (*file).length() as c_ulong };
+    status::OK
+}
+
+/// `GetPosition(outPosition)`: always `kErrorOK` (-1 closed or empty).
+///
+/// # Safety
+/// `file` is live, `out` valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_get_position(file: *const EeFsMemFile, out: *mut c_long) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { *out = (*file).position() as i32 as c_long };
+    status::OK
+}
+
+/// `Compress(level, outLength)` as FSMemoryFile.h has it: a PKWARE implode error (0x15) is a failed verification at
+/// `source` (the C++ header's `__FILE__`), line 140.
+///
+/// # Safety
+/// `file` is live, `out_length` valid for a write, `source` a zero-terminated name.
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
+pub unsafe extern "C" fn ee_fs_mem_compress_checked(
+    file: *mut EeFsMemFile,
+    level: c_ulong,
+    out_length: *mut c_ulong,
+    source: *const c_char,
+) -> i32 {
+    let mut length = 0u32;
+    // SAFETY: the function's contract
+    let result = unsafe { ee_fs_mem_compress(file, level as u32, &mut length) };
+    // SAFETY: the function's contract
+    unsafe { *out_length = length as c_ulong };
+    if result == 0x15 {
+        // SAFETY: the C++'s own arguments
+        unsafe { crate::error::ee_error_verify(source, 140, c"NULL == \"PKWARE implode() error!\"".as_ptr()) };
+    }
+    result
+}
+
 /// `GetPosition`.
 ///
 /// # Safety
@@ -163,7 +212,7 @@ pub unsafe extern "C" fn ee_fs_mem_read(
     file: *mut EeFsMemFile,
     out: *mut u8,
     length: usize,
-    out_read: *mut u32,
+    out_read: *mut c_ulong,
 ) -> i32 {
     let mut empty = [];
     let slice = if length == 0 {
@@ -176,7 +225,7 @@ pub unsafe extern "C" fn ee_fs_mem_read(
     let (result, read) = unsafe { (*file).read(slice) };
     if let Some(read) = read {
         // SAFETY: the function's contract
-        unsafe { *out_read = read };
+        unsafe { *out_read = read as c_ulong };
     }
     result
 }
@@ -190,12 +239,12 @@ pub unsafe extern "C" fn ee_fs_mem_write(
     file: *mut EeFsMemFile,
     data: *const u8,
     length: usize,
-    out_written: *mut u32,
+    out_written: *mut c_ulong,
 ) -> i32 {
     // SAFETY: the function's contract
     let (result, written) = unsafe { (*file).write(bytes(data, length)) };
     // SAFETY: the function's contract
-    unsafe { *out_written = written };
+    unsafe { *out_written = written as c_ulong };
     result
 }
 
@@ -232,11 +281,11 @@ pub unsafe extern "C" fn ee_fs_mem_set_open(file: *mut EeFsMemFile, open: bool) 
 /// `Load(inFile, inLength)`.
 ///
 /// # Safety
-/// `file` is live, `ops` valid and its callbacks live for the call.
+/// `file` is live, `ops` the live C++ `FSFile` (any subclass).
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_load(file: *mut EeFsMemFile, ops: *const EeFsFileOps, length: usize) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_load(file: *mut EeFsMemFile, file_obj: *mut c_void, length: usize) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&mut *file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &mut *file }, &mut CppFile(file_obj));
     file.load(ops, length)
 }
 
@@ -245,9 +294,9 @@ pub unsafe extern "C" fn ee_fs_mem_load(file: *mut EeFsMemFile, ops: *const EeFs
 /// # Safety
 /// As `ee_fs_mem_load`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_load_prefixed(file: *mut EeFsMemFile, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_load_prefixed(file: *mut EeFsMemFile, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&mut *file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &mut *file }, &mut CppFile(file_obj));
     file.load_prefixed(ops)
 }
 
@@ -256,9 +305,9 @@ pub unsafe extern "C" fn ee_fs_mem_load_prefixed(file: *mut EeFsMemFile, ops: *c
 /// # Safety
 /// As `ee_fs_mem_load`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_save(file: *const EeFsMemFile, ops: *const EeFsFileOps, length: usize) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_save(file: *const EeFsMemFile, file_obj: *mut c_void, length: usize) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&*file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &*file }, &mut CppFile(file_obj));
     file.save(ops, length)
 }
 
@@ -267,9 +316,9 @@ pub unsafe extern "C" fn ee_fs_mem_save(file: *const EeFsMemFile, ops: *const Ee
 /// # Safety
 /// As `ee_fs_mem_load`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_save_prefixed(file: *mut EeFsMemFile, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_mem_save_prefixed(file: *mut EeFsMemFile, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (file, ops) = unsafe { (&mut *file, &mut *(ops as *mut EeFsFileOps)) };
+    let (file, ops) = (unsafe { &mut *file }, &mut CppFile(file_obj));
     file.save_prefixed(ops)
 }
 
@@ -315,11 +364,11 @@ pub unsafe extern "C" fn ee_fs_chunk_size(chunk: *const EeFsChunk, out_size: *mu
 /// `LoadChunkHeader`.
 ///
 /// # Safety
-/// `chunk` is valid; `ops` valid and its callbacks live for the call.
+/// `chunk` is valid; `ops` the live C++ `FSFile` (any subclass).
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_load_header(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_load_header(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.load_header(ops)
 }
 
@@ -328,9 +377,9 @@ pub unsafe extern "C" fn ee_fs_chunk_load_header(chunk: *mut EeFsChunk, ops: *co
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_load_from_file(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_load_from_file(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.load_from_file(ops)
 }
 
@@ -339,9 +388,9 @@ pub unsafe extern "C" fn ee_fs_chunk_load_from_file(chunk: *mut EeFsChunk, ops: 
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_save_to_file(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_save_to_file(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.save_to_file(ops)
 }
 
@@ -350,9 +399,9 @@ pub unsafe extern "C" fn ee_fs_chunk_save_to_file(chunk: *mut EeFsChunk, ops: *c
 /// # Safety
 /// As `ee_fs_chunk_load_header`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_chunk_skip(chunk: *mut EeFsChunk, ops: *const EeFsFileOps) -> i32 {
+pub unsafe extern "C" fn ee_fs_chunk_skip(chunk: *mut EeFsChunk, file_obj: *mut c_void) -> i32 {
     // SAFETY: the function's contract
-    let (chunk, ops) = unsafe { (&mut *chunk, &mut *(ops as *mut EeFsFileOps)) };
+    let (chunk, ops) = (unsafe { &mut *chunk }, &mut CppFile(file_obj));
     chunk.skip(ops)
 }
 
@@ -666,6 +715,7 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
+    #[allow(clippy::unnecessary_cast)]
     fn mem_round_trip_through_the_c_abi() {
         let file = ee_fs_mem_new(8, true, 1);
         unsafe {
@@ -682,6 +732,10 @@ mod tests {
             let mut untouched = 77;
             assert_eq!(ee_fs_mem_read(file, out.as_mut_ptr(), 2, &mut untouched), status::NOT_OPEN);
             assert_eq!(untouched, 77);
+            let (mut length, mut position): (c_ulong, c_long) = (9, 9);
+            assert_eq!(ee_fs_mem_get_length(file, &mut length), status::OK);
+            assert_eq!(ee_fs_mem_get_position(file, &mut position), status::OK);
+            assert_eq!((length as u32, position as i32), (ee_fs_mem_length(file), ee_fs_mem_position(file)));
             ee_fs_mem_free(file);
         }
     }
@@ -718,5 +772,177 @@ mod tests {
             ee_fs_chunk_free(&mut chunk);
             assert!(chunk.data.is_null());
         }
+    }
+}
+
+// ---- FSMemoryFile's disk copies (File System.cpp before LLE round 9)
+
+/// cbindgen:ignore
+mod disk {
+    use std::ffi::{c_char, c_int, c_void};
+    extern "C" {
+        pub fn PlatFOpen(path: *const c_char, mode: *const c_char) -> *mut c_void;
+        pub fn PlatDeleteFile(path: *const c_char) -> c_int;
+        pub fn PlatGetTempDirectory(path: *mut c_char, size: u32) -> u32;
+        pub fn PlatCreateTempFile(directory: *const c_char, prefix: *const c_char, path: *mut c_char) -> i32;
+        pub fn PlatGetLastError() -> u32;
+    }
+}
+
+/// The memory file's contents, compacted, written to a stdio stream (none when empty); the compaction's result.
+unsafe fn write_contents(file: *mut EeFsMemFile, stream: *mut c_void) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let result = ee_fs_mem_compact(file);
+        if result == status::OK {
+            let length = ee_fs_mem_length(file);
+            if length > 0 {
+                libc::fwrite(ee_fs_mem_data(file).cast(), 1, length as usize, stream.cast());
+            }
+        }
+        result
+    }
+}
+
+/// `FSMemoryFile::Close`: the memory file closed; an `FOpen` stream closed and its temporary file deleted.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_close_disk(
+    file: *mut EeFsMemFile,
+    stream: *mut *mut c_void,
+    temporary: *const EeFsString,
+) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let result = ee_fs_mem_close(file);
+        if (*stream).is_null() {
+            return result;
+        }
+        libc::fclose((*stream).cast());
+        // Fixed: the stream pointer was kept, so a second Close (the destructor's) closed the same FILE again
+        *stream = std::ptr::null_mut();
+        if (*temporary).length > 0 {
+            disk::PlatDeleteFile((*temporary).string);
+        }
+        result
+    }
+}
+
+/// `FSMemoryFile::Copy(inDestination, inFailIfExists, ...)`: the contents written to a disk file; kErrorAlreadyExists
+/// when asked to fail on an existing file, kErrorNativeError when it cannot be created. The position is reset.
+///
+/// # Safety
+/// `file` is live, `destination` a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_copy_disk(
+    file: *mut EeFsMemFile,
+    destination: *const c_char,
+    fail_if_exists: bool,
+) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let existing = if fail_if_exists { disk::PlatFOpen(destination, c"r".as_ptr()) } else { std::ptr::null_mut() };
+        let (result, stream) = if !existing.is_null() {
+            (2, existing) // kErrorAlreadyExists
+        } else {
+            let stream = disk::PlatFOpen(destination, c"wb".as_ptr());
+            if stream.is_null() {
+                (1, stream) // kErrorNativeError
+            } else {
+                (write_contents(file, stream), stream)
+            }
+        };
+        ee_fs_mem_set_position(file, 0, 0);
+        if !stream.is_null() {
+            libc::fclose(stream.cast());
+        }
+        result
+    }
+}
+
+/// `FSMemoryFile::FOpen(inMode)`: the contents copied to a new temporary file (`EE_` in the temporary directory),
+/// reopened with `mode` into `*stream` (its name in `temporary`); kErrorNativeError (the platform's error recorded)
+/// when that fails. The memory file is open while the stream is.
+///
+/// # Safety
+/// `file` is live; `stream` is the object's `mStream`, `temporary` its `mTemporaryFileName`; `mode` a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_fopen_disk(
+    file: *mut EeFsMemFile,
+    mode: *const c_char,
+    stream: *mut *mut c_void,
+    temporary: *mut EeFsString,
+) -> i32 {
+    const PLAT_MAX_PATH: usize = 260;
+    let mut directory = [0 as c_char; PLAT_MAX_PATH];
+    let mut name = [0 as c_char; PLAT_MAX_PATH];
+    let mut opened = false;
+    let mut result = status::OK;
+    // SAFETY: the caller's contract; the buffers hold PLAT_MAX_PATH bytes
+    unsafe {
+        ee_fs_mem_set_open(file, true);
+        if disk::PlatGetTempDirectory(directory.as_mut_ptr(), 256) != 0
+            && disk::PlatCreateTempFile(directory.as_ptr(), c"EE_".as_ptr(), name.as_mut_ptr()) != 0
+        {
+            crate::ustring::ee_ustring_assign_text((*temporary).us(), name.as_ptr());
+            *stream = disk::PlatFOpen((*temporary).string, c"w+b".as_ptr());
+            if !(*stream).is_null() {
+                result = write_contents(file, *stream);
+                if result == status::OK {
+                    // the C++ left the position at the end after writing the contents out
+                    ee_fs_mem_set_position(file, ee_fs_mem_length(file) as i64, 0);
+                }
+                libc::fclose((*stream).cast());
+                *stream = disk::PlatFOpen((*temporary).string, mode);
+                if (*stream).is_null() {
+                    ee_fs_mem_set_open(file, false);
+                } else {
+                    opened = true;
+                }
+            } else {
+                crate::ustring::ee_ustring_assign_text((*temporary).us(), c"".as_ptr());
+                ee_fs_mem_set_open(file, false);
+            }
+        }
+        if !opened {
+            result = 1; // kErrorNativeError
+            crate::error::ee_error_record_native(disk::PlatGetLastError() as std::ffi::c_ulong);
+        }
+    }
+    result
+}
+
+#[cfg(test)]
+mod disk_tests {
+    use super::*;
+
+    #[test]
+    fn a_memory_file_is_copied_to_disk_and_opened_as_a_stream() {
+        let file = ee_fs_mem_new(8, true, 1);
+        let dir = std::env::temp_dir().join(format!("ee_fs_mem_disk_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = std::ffi::CString::new(dir.join("copy.bin").to_str().unwrap()).unwrap();
+        unsafe {
+            let mut count = 0;
+            ee_fs_mem_write(file, b"hello".as_ptr(), 5, &mut count);
+            assert_eq!(ee_fs_mem_copy_disk(file, path.as_ptr(), false), status::OK);
+            assert_eq!(std::fs::read(dir.join("copy.bin")).unwrap(), b"hello");
+            assert_eq!(ee_fs_mem_copy_disk(file, path.as_ptr(), true), 2);
+            // a temporary copy reopened for reading, then closed and deleted
+            let mut temporary = EeFsString::with_capacity(16);
+            let mut stream: *mut c_void = std::ptr::null_mut();
+            assert_eq!(ee_fs_mem_fopen_disk(file, c"rb".as_ptr(), &mut stream, &mut temporary), status::OK);
+            assert!(!stream.is_null());
+            let name = std::path::PathBuf::from(String::from_utf8_lossy(temporary.bytes()).into_owned());
+            assert_eq!(std::fs::read(&name).unwrap(), b"hello");
+            assert_eq!(ee_fs_mem_close_disk(file, &mut stream, &temporary), status::OK);
+            assert!(stream.is_null());
+            assert!(!name.exists());
+            crate::ustring::ee_ustring_free(temporary.us());
+            ee_fs_mem_free(file);
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

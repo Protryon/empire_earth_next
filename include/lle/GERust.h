@@ -24,10 +24,11 @@ class GERectangle;
 class GEViewport;
 class FSFileSpec;
 
-// The C++ object as its mirror
+// The C++ object as its mirror, and a mirror as its C++ object
 #define LLE_GERUST_MIRROR(C, R) \
     inline const R* GERust(const C& in) { return reinterpret_cast<const R*>(&in); } \
-    inline R* GERust(C& in) { return reinterpret_cast<R*>(&in); }
+    inline R* GERust(C& in) { return reinterpret_cast<R*>(&in); } \
+    inline const C& GECpp(const R& in) { return reinterpret_cast<const C&>(in); }
 LLE_GERUST_MIRROR(GE2DPoint, EeGe2DPoint)
 LLE_GERUST_MIRROR(GE3DPoint, EeGe3DPoint)
 LLE_GERUST_MIRROR(GEVector, EeGeVector)
@@ -56,48 +57,28 @@ template <class F> struct GERustIO {
     static long WriteU16(void* inFile, uint16_t inValue) { return File(inFile)->Write(inValue); }
     static long WriteU32(void* inFile, uint32_t inValue) { return File(inFile)->Write(inValue); }
     static long WriteF32(void* inFile, float inValue) { return File(inFile)->Write(inValue); }
-    static long ReadBytes(void* inFile, uint8_t* outData, uint32_t inLength, uint32_t* outRead)
+    static long ReadBytes(void* inFile, uint8_t* outData, unsigned long inLength, unsigned long* outRead)
+        { return File(inFile)->Read(reinterpret_cast<char*>(outData), inLength, *outRead); }
+    static long WriteBytes(void* inFile, const uint8_t* inData, unsigned long inLength, unsigned long* outWritten)
+        { return File(inFile)->Write(reinterpret_cast<const char*>(inData), inLength, *outWritten); }
+    // a plain FSFile has no position: kErrorFailed
+    static long GetPosition(void* inFile, long* outPosition)
     {
-        unsigned long theRead = *outRead;
-        long theResult = File(inFile)->Read(reinterpret_cast<char*>(outData), inLength, theRead);
-        *outRead = (uint32_t)theRead;
-        return theResult;
+        if constexpr (std::is_base_of<FSFileSpec, F>::value) return File(inFile)->GetPosition(*outPosition);
+        else return 9;
     }
-    static long WriteBytes(void* inFile, const uint8_t* inData, uint32_t inLength, uint32_t* outWritten)
+    static long SetPosition(void* inFile, long inPosition)
     {
-        unsigned long theWritten = *outWritten;
-        long theResult = File(inFile)->Write(reinterpret_cast<const char*>(inData), inLength, theWritten);
-        *outWritten = (uint32_t)theWritten;
-        return theResult;
+        if constexpr (std::is_base_of<FSFileSpec, F>::value) return File(inFile)->SetPosition(inPosition, 0, false);
+        else return 9;
     }
-    static long NoPosition(void*, long*) { return 9; }       // kErrorFailed: a plain FSFile has no position
-    static long NoSetPosition(void*, long) { return 9; }
-    static long GetPosition(void* inFile, long* outPosition) { return File(inFile)->GetPosition(*outPosition); }
-    static long SetPosition(void* inFile, long inPosition) { return File(inFile)->SetPosition(inPosition, 0, false); }
 };
 
 template <class F> inline EeGeFieldIo GERustFieldIO(F& inFile)
 {
-    typedef GERustIO<F> IO;
-    EeGeFieldIo theIO;
-    theIO.file = &inFile;
-    theIO.read_u8 = IO::ReadU8;
-    theIO.read_u16 = IO::ReadU16;
-    theIO.read_u32 = IO::ReadU32;
-    theIO.read_f32 = IO::ReadF32;
-    theIO.write_u8 = IO::WriteU8;
-    theIO.write_u16 = IO::WriteU16;
-    theIO.write_u32 = IO::WriteU32;
-    theIO.write_f32 = IO::WriteF32;
-    theIO.read_bytes = IO::ReadBytes;
-    theIO.write_bytes = IO::WriteBytes;
-    theIO.get_position = IO::NoPosition;
-    theIO.set_position = IO::NoSetPosition;
-    if constexpr (std::is_base_of<FSFileSpec, F>::value) {
-        theIO.get_position = IO::GetPosition;
-        theIO.set_position = IO::SetPosition;
-    }
-    return theIO;
+    return {&inFile, GERustIO<F>::ReadU8, GERustIO<F>::ReadU16, GERustIO<F>::ReadU32, GERustIO<F>::ReadF32,
+            GERustIO<F>::WriteU8, GERustIO<F>::WriteU16, GERustIO<F>::WriteU32, GERustIO<F>::WriteF32,
+            GERustIO<F>::ReadBytes, GERustIO<F>::WriteBytes, GERustIO<F>::GetPosition, GERustIO<F>::SetPosition};
 }
 
 // The value types' codecs (ee_ge_fields_io): the fields in order through the file's float reads or writes. inAskOpen:

@@ -31,6 +31,22 @@
 UString gStartupVolume(256);
 UString gStartupDirectory(256);
 
+// The C++ FSFile's calls that Rust makes on any file it is handed (ee_base fs cppfile.rs: the memory file's and the
+// chunk's loads and saves, the strings' Load and Save, ...), registered once
+static const EeFsFileCalls kFSFileCalls = {
+    [](void* f, uint32_t* v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, uint8_t* d, unsigned long n, unsigned long* r) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(d, n, *r); },
+    [](void* f, char* d, unsigned long n, unsigned long* r) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(d, n, *r); },
+    [](void* f, uint32_t v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, const uint8_t* d, unsigned long n, unsigned long* w) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(d, n, *w); },
+    [](void* f, const char* d, unsigned long n, unsigned long* w) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(d, n, *w); },
+    [](void* f, int32_t* v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, float* v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, int32_t v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, float v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+};
+static const bool sFSFileCallsRegistered = ee_fs_file_register(&kFSFileCalls);
+
 // FSBasicFile and FSFileSpec are their Rust records from the vtable pointer on (lle/FSFileSpec.h; fs spec.rs)
 static_assert(sizeof(UString) == sizeof(EeFsString), "a UString member is an EeFsString");
 static_assert(sizeof(FSFileSpec) == sizeof(EeFsSpec), "FSFileSpec is an EeFsSpec");
@@ -62,77 +78,11 @@ void FSInitialize(const UString& inPath)
 
 static_assert(sizeof(FSArchive) == sizeof(EeFsArchiveObj), "FSArchive is an EeFsArchiveObj");
 
-// Marks the memory file closed and closes (deletes) its temporary disk copy
+// The memory file's disk copies (rust/crates/ee_base/src/fs ffi.rs): Close closes and deletes FOpen's temporary file,
+// Copy writes the contents to a file, FOpen to a temporary file reopened as a stdio stream
 long FSMemoryFile::Close()
 {
-    long theResult = ee_fs_mem_close(this->mState);
-    if (!this->mStream)
-        return theResult;
-    fclose(this->mStream);
-    // Fixed: the stream pointer was kept, so a second Close (the destructor's) closed the same FILE again
-    this->mStream = NULL;
-    if (this->mTemporaryFileName.GetLength() > 0)
-        PlatDeleteFile(this->mTemporaryFileName);
-    return theResult;
+    return ee_fs_mem_close_disk(this->mState, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<const EeFsString*>(&this->mTemporaryFileName));
 }
 
-// Writes the contents to a disk file; kErrorAlreadyExists if inFailIfExists and it exists
-long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool inKeepAttributes)
-{
-    long theResult;
-    FILE* theFile;
-    if (inFailIfExists && (theFile = PlatFOpen(inDestination, "r")) != NULL)
-        theResult = kErrorAlreadyExists;
-    else if ((theFile = PlatFOpen(inDestination, "wb")) != NULL) {
-        theResult = this->Compact();
-        if (theResult == kErrorOK) {
-            uint32_t theLength = ee_fs_mem_length(this->mState);
-            if (theLength > 0)
-                fwrite(this->GetData(), 1, theLength, theFile);
-        }
-    } else
-        theResult = kErrorNativeError;
-    ee_fs_mem_set_position(this->mState, 0, kFileOriginBegin);
-    if (theFile)
-        fclose(theFile);
-    return theResult;
-}
 
-// Copies the contents to a new temporary disk file and reopens it as a stdio stream with the given mode
-long FSMemoryFile::FOpen(char* inMode)
-{
-    char theDirectory[PLAT_MAX_PATH];
-    char theName[PLAT_MAX_PATH];
-    char thePrefix[] = "EE_";
-    bool theOpened = false;
-    long theResult = kErrorOK;
-    ee_fs_mem_set_open(this->mState, true);
-    if (PlatGetTempDirectory(theDirectory, 256) && PlatCreateTempFile(theDirectory, thePrefix, theName)) {   // 256: _MAX_FNAME
-        this->mTemporaryFileName = UWideString(theName);
-        this->mStream = PlatFOpen(this->mTemporaryFileName, "w+b");
-        if (this->mStream) {
-            theResult = this->Compact();
-            if (theResult == kErrorOK) {
-                uint32_t theLength = ee_fs_mem_length(this->mState);
-                if (theLength > 0)
-                    fwrite(this->GetData(), 1, theLength, this->mStream);
-                // the C++ left the position at the end after writing the contents out
-                ee_fs_mem_set_position(this->mState, theLength, kFileOriginBegin);
-            }
-            fclose(this->mStream);
-            this->mStream = PlatFOpen(this->mTemporaryFileName, inMode);
-            if (this->mStream)
-                theOpened = true;
-            else
-                ee_fs_mem_set_open(this->mState, false);
-        } else {
-            this->mTemporaryFileName = "";
-            ee_fs_mem_set_open(this->mState, false);
-        }
-    }
-    if (!theOpened) {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(PlatGetLastError());
-    }
-    return theResult;
-}

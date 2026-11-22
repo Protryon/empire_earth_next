@@ -17,7 +17,7 @@ STRUCT_SOURCES = {
     'EETerrainTypeRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEButtonRecord': 'rust/crates/ee_data/src/tables.rs',
     'EETechTreeRecord': 'include/ee/EETechTreeRecord.h',
-    'EEEventEffect': 'include/ee/EEEvent.h',
+    'EEEventEffect': 'rust/crates/ee_sim/src/scenario/event.rs',
     'EEAnimalRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEColorTableRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEAIUnitTargetingRecord': 'rust/crates/ee_data/src/tables.rs',
@@ -55,6 +55,7 @@ UNREAD_TABLES = {'dbrandommap', 'dbterraingraytextures'}
 # reads the Rust struct (field names to mCamelCase, `id` as ID; a scalar u8 is a one-byte bool, a u8/c_char array
 # char[N], a `[DbFlag; N]` array bool[N]) and its `assert!(size_of::<T>() == N)`.
 RUST_STRUCTS = {
+    'EEEventEffect': 'EeScenarioEvEffect',
     'EEAnimalRecord': 'DbAnimal',
     'EEToHitRecord': 'DbToHit',
     'EEUnitBehaviorRecord': 'DbUnitBehavior',

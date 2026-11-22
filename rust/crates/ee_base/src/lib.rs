@@ -17,6 +17,8 @@ pub mod input;
 /// The JPEG decoder (libjpeg 6b's, in Rust; moved from ee_won_gui).
 /// cbindgen:ignore
 pub mod jpeg;
+/// The LLE's named constants (input codes, file origins, OS types, music transitions) for its C++ headers.
+pub mod lle_enums;
 pub mod math;
 /// The crate ee_panic before the restructure.
 /// cbindgen:ignore
@@ -35,7 +37,6 @@ pub mod plat_sys;
 pub mod plat_ui;
 pub mod png;
 /// The crate ee_random before the restructure.
-/// cbindgen:ignore
 pub mod random;
 // the one-statement C++ shims' trait maker (cpp_shims!) and their recording fake
 pub mod shim;
