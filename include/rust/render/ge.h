@@ -1945,6 +1945,14 @@ void ee_ge_mod_compute_normals(EeGeModel *p);
 /// `p` is live; it may be freed.
 void ee_ge_mod_dereference(EeGeModel *p);
 
+/// `GEPhysicalModel::SetModel` (and its constructor's, assignment's and destructor's model): the old model in
+/// `slot` released (`Dereference`), the new one stored and referenced; NULL for none.
+///
+/// # Safety
+/// `slot` is a placed model's model member; the models are NULL or live C++ `GEModel`s.
+void ee_ge_pm_set_model(void **slot,
+                        void *model);
+
 /// `GetPolygonCount(lod)`.
 ///
 /// # Safety

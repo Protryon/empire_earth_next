@@ -12,12 +12,7 @@ class GEModel;
 
 class LLE_API GEPhysicalModel {             // sizeof 0x4c
 public:
-    GEPhysicalModel()
-    {
-        this->mModel = NULL;
-        this->mScale = 1.0f;
-        this->mFrame = 0;
-    }
+    GEPhysicalModel() : mModel(NULL), mScale(1.0f), mFrame(0) {}
     GEPhysicalModel(GEModel* inModel, const GETransformation& inLocation, float inScale);
     ~GEPhysicalModel();
     GEPhysicalModel& operator=(const GEPhysicalModel& inModel);
