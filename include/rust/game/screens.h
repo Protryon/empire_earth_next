@@ -16435,6 +16435,16 @@ int64_t ee_screens_sbm_right_down(size_t button);
 
 void ee_screens_sbm_tabbed_from(size_t button);
 
+int64_t ee_screens_mff_load(size_t info,
+                            size_t button,
+                            uint32_t major,
+                            uint32_t minor,
+                            size_t file);
+
+int64_t ee_screens_mff_save(bool info, bool button, size_t file);
+
+void ee_screens_mff_set_error(size_t form, uint32_t index, size_t text);
+
 /// A shell's constructor: the kind `kind` of the control `ctl`, made from `args[0..n]`; NULL for an unknown kind.
 ///
 /// # Safety

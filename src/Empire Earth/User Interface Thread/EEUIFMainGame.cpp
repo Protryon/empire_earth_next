@@ -159,11 +159,6 @@ EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm)
     this->mRecord = ee_screens_unit_hack_new(inForm);
 }
 
-EEUIFMGUnitHack::~EEUIFMGUnitHack()
-{
-    ee_screens_unit_hack_free(this->mRecord);
-}
-
 // (EEUIFMGFormCall, one call of the form's work in Rust: ee/EEUIFMainGame.h)
 static_assert(offsetof(EEUIFMGFormCall, mForm) == 0, "main_form_ffi.rs reads the form as the record's first word");
 static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
@@ -183,9 +178,6 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
     EEUIFMGFormCall theCall(this);
     ee_screens_main_form_construct(&theCall);
 }
-
-// Destroys the main game form, its actions, panel groups, poll and unit hack
-EEUIFMainGame::~EEUIFMainGame() { ee_screens_mfb_destroy((uintptr_t)this); }
 
 // Shows a chat message in the next free chat line (scrolling the lines up when full), wrapping the rest of a
 // long message onto further lines (ee_screens main_form.rs)
@@ -597,6 +589,14 @@ extern "C" void ee_screenscpp_background_draw(uintptr_t inBackground)
 extern "C" float ee_screenscpp_mf_fps(uintptr_t inRec)
 { return gRasterizer->GetFramesPerSecond(R(inRec)->mForm->GetManager()->GetScreen()); }
 // end shims5
+
+// the saved flags' and the error strings' shims (ee_screens hud_more.rs)
+extern "C" int64_t ee_screenscpp_mff_read_bool(uintptr_t inFile, uintptr_t inField) { return reinterpret_cast<FSFile*>(inFile)->Read(*reinterpret_cast<bool*>(inField)); }
+extern "C" int64_t ee_screenscpp_mff_write_bool(uintptr_t inFile, bool inValue) { return reinterpret_cast<FSFile*>(inFile)->Write(inValue); }
+extern "C" void ee_screenscpp_mff_error_enter(uintptr_t inForm) { reinterpret_cast<EEUIFMainGame*>(inForm)->mErrorCriticalSection->Enter(); }
+extern "C" void ee_screenscpp_mff_error_set(uintptr_t inForm, uint32_t inIndex, uintptr_t inText) { reinterpret_cast<EEUIFMainGame*>(inForm)->mStrings[inIndex] = *reinterpret_cast<const UWideString*>(inText); }
+extern "C" void ee_screenscpp_mff_strings_changed(uintptr_t inForm) { reinterpret_cast<EEUIFMainGame*>(inForm)->mStringsChanged = true; }
+extern "C" void ee_screenscpp_mff_error_leave(uintptr_t inForm) { reinterpret_cast<EEUIFMainGame*>(inForm)->mErrorCriticalSection->Leave(); }
 
 // ---- the rest of the original host (EEUIFMainGame::HostOp, the mouse modes' EEMouseModeOp; UI lane round 9:
 // main_form_calls.rs), each one statement on the call record, the form or the world, and the cases' locals

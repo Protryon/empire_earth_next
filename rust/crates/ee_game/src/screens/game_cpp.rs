@@ -3092,4 +3092,10 @@ shims! {
     fn sbm_state(button: usize) -> u32 = ee_screenscpp_sbm_state;
     fn sbm_hot_key_up(button: usize) = ee_screenscpp_sbm_hot_key_up;
     fn sbm_base_tabbed_from(button: usize) = ee_screenscpp_sbm_base_tabbed_from;
+    fn mff_read_bool(file: usize, field: usize) -> i64 = ee_screenscpp_mff_read_bool;
+    fn mff_write_bool(file: usize, value: bool) -> i64 = ee_screenscpp_mff_write_bool;
+    fn mff_error_enter(form: usize) = ee_screenscpp_mff_error_enter;
+    fn mff_error_set(form: usize, index: u32, text: usize) = ee_screenscpp_mff_error_set;
+    fn mff_strings_changed(form: usize) = ee_screenscpp_mff_strings_changed;
+    fn mff_error_leave(form: usize) = ee_screenscpp_mff_error_leave;
 }

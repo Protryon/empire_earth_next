@@ -71,7 +71,8 @@ class EEUIFMainGame : public UIForm, public EeScreensMainFormFields {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
     EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);
-    virtual ~EEUIFMainGame();
+    // Destroys the main game form, its actions, panel groups, poll and unit hack
+    virtual ~EEUIFMainGame() { ee_screens_mfb_destroy((uintptr_t)this); }
     // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
     virtual void Activate() { this->Rust(EE_SCREENS_MF_DO_ACTIVATE); }                // +0x04 0x2648d4
     // Deactivates the form: frees and resets the mouse and leaves any interface mode
@@ -100,23 +101,13 @@ public:
     // Reads the information and civilization builder blinking flags from a saved game (version 0.0xd2 on)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
     {
-        long theResult = kErrorOK;
-
-        if (inMajorVersion > 1 || (inMajorVersion == kErrorOK && inMinorVersion >= 0xd2)) {
-            theResult = inFile.Read(this->mInfoBlinking);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mIsButtonBlinking);
-        }
-        return theResult;
+        return (long)ee_screens_mff_load((uintptr_t)&this->mInfoBlinking, (uintptr_t)&this->mIsButtonBlinking,
+                                         (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, (uintptr_t)&inFile);
     }
     // Writes the information and civilization builder blinking flags to the saved game
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
     {
-        long theResult = outFile.Write(this->mInfoBlinking);
-
-        if (theResult == kErrorOK)
-            theResult = outFile.Write(this->mIsButtonBlinking);
-        return theResult;
+        return (long)ee_screens_mff_save(this->mInfoBlinking, this->mIsButtonBlinking, (uintptr_t)&outFile);
     }
 
     // 0x2668ee (EEMLoadMainScreen passes 0x11, EEMSavedGroupSelect 0)
@@ -143,10 +134,7 @@ public:
     }     // 0x265a06 (in the view, outside background 0x64)
     void SetErrorString(const UWideString& inText, unsigned long inIndex)   // 0x265ff6 (mStrings, mStringsChanged)
     {
-        this->mErrorCriticalSection->Enter();
-        this->mStrings[inIndex] = inText;
-        this->mStringsChanged = true;
-        this->mErrorCriticalSection->Leave();
+        ee_screens_mff_set_error((uintptr_t)this, (uint32_t)inIndex, (uintptr_t)&inText);   // (hud_more.rs)
     }
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
     // 0x266384: starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in

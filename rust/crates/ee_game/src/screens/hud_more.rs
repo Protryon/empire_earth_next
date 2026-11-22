@@ -1,6 +1,7 @@
 //! More HUD bodies in Rust over one-statement shims (UI lane round 13): `EEUIFMGAttribute`'s constructor body,
 //! `CopyData` and `DrawTextA` (the attribute button's level text: the number of queued upgrades in its corner) and
-//! `EEUIFMGStatusButton`'s `MouseRButtonDown` and `TabbedFrom`. Each C++ member is one forward; the calls are the
+//! `EEUIFMGStatusButton`'s `MouseRButtonDown` and `TabbedFrom`; `EEUIFMainGame`'s `Load`, `Save` (the two blinking
+//! flags of a saved game) and `SetErrorString`. Each C++ member is one forward; the calls are the
 //! original's, in its order.
 
 // the forwards are the FFI module's (absent from a test binary)
@@ -69,6 +70,37 @@ pub(crate) fn status_tabbed_from<C: Cpp + ?Sized>(c: &mut C, button: usize) {
     }
 }
 
+/// `EEUIFMainGame::Load(major, minor, file)`: the information and civilization builder blinking flags, from saved
+/// games of version 1.210 on (`major > 1 || (major == 0 && minor >= 0xd2)`, the original's test), each read only
+/// after the last succeeded.
+pub(crate) fn main_load<C: Cpp + ?Sized>(c: &mut C, info: usize, button: usize, major: u32, minor: u32, file: usize) -> i64 {
+    let mut result = 0;
+    if major > 1 || (major == 0 && minor >= 0xd2) {
+        result = c.mff_read_bool(file, info);
+        if result == 0 {
+            result = c.mff_read_bool(file, button);
+        }
+    }
+    result
+}
+
+/// `EEUIFMainGame::Save(file)`: the two flags, the second only after the first was written.
+pub(crate) fn main_save<C: Cpp + ?Sized>(c: &mut C, info: bool, button: bool, file: usize) -> i64 {
+    let mut result = c.mff_write_bool(file, info);
+    if result == 0 {
+        result = c.mff_write_bool(file, button);
+    }
+    result
+}
+
+/// `EEUIFMainGame::SetErrorString(text, index)`: the error line stored under the strings' lock, marked changed.
+pub(crate) fn main_set_error<C: Cpp + ?Sized>(c: &mut C, form: usize, index: u32, text: usize) {
+    c.mff_error_enter(form);
+    c.mff_error_set(form, index, text);
+    c.mff_strings_changed(form);
+    c.mff_error_leave(form);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,5 +158,34 @@ mod tests {
         status_tabbed_from(&mut fake, 3);
         status_tabbed_from(&mut fake, 3);
         assert_eq!(fake.calls(), "sbm_state(3)\nsbm_hot_key_up(3)\nsbm_state(3)\nsbm_base_tabbed_from(3)");
+    }
+
+    #[test]
+    fn the_main_form_flags_load_and_save() {
+        let mut fake = Fake::default();
+        assert_eq!(main_load(&mut fake, 1, 2, 0, 0xd1, 9), 0);
+        assert_eq!(fake.calls(), "");
+        fake.answer("mff_read_bool", &[0, 0, 5]);
+        assert_eq!(main_load(&mut fake, 1, 2, 0, 0xd2, 9), 0);
+        assert_eq!(main_load(&mut fake, 1, 2, 2, 0, 9), 5);
+        assert_eq!(fake.calls(), "mff_read_bool(9, 1)\nmff_read_bool(9, 2)\nmff_read_bool(9, 1)");
+        let mut fake = Fake::default();
+        fake.answer("mff_write_bool", &[3]);
+        assert_eq!(main_save(&mut fake, true, false, 9), 3);
+        assert_eq!(main_save(&mut fake, true, false, 9), 0);
+        assert_eq!(
+            fake.calls(),
+            "mff_write_bool(9, true)\nmff_write_bool(9, true)\nmff_write_bool(9, false)"
+        );
+    }
+
+    #[test]
+    fn the_error_string_is_set_under_the_lock() {
+        let mut fake = Fake::default();
+        main_set_error(&mut fake, 4, 7, 8);
+        assert_eq!(
+            fake.calls(),
+            "mff_error_enter(4)\nmff_error_set(4, 7, 8)\nmff_strings_changed(4)\nmff_error_leave(4)"
+        );
     }
 }
