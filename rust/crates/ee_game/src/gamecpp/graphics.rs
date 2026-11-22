@@ -39,7 +39,7 @@ pub extern "C" fn ee_gamecpp_gfx_frame_starting(g: *mut c_void) {
         h(O::WorldWriteLock, 0, &[]);
     }
     h(O::SceneFlags6668Clear, 0, &[]);
-    h(O::TakeRenderSnapshot, 0, &[]);
+    super::ro_views::ee_gamecpp_sn_take();
     h(O::RtsGfxFrameStarting, g, &[]);
     let mode = lock_mode(g);
     if mode == 0 {

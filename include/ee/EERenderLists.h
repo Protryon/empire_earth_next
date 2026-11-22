@@ -10,6 +10,8 @@
 #include <map>
 #include <vector>
 
+#include "rust/render/gfx.h"   // EeGfxFillUnit, EeGfxFillObject (ee_gfx fill.rs)
+
 class GEModel;
 class EEGraphicObject;
 
@@ -19,47 +21,12 @@ class EEUnitClass;
 class RTSRenderObject;
 
 
-// one drawn unit (the original's 0x148 bytes; ctor 0x1118e9, dtor 0x111997): 0x200 of them in EERenderLists
-// (implicit ctor: GETransformation's, then GEColor's three fld1 twice, the vectors, the name). Port (Lane R): the
-// members ee_gfx fill.rs writes first, the vectors and the name after them
-struct EERenderUnit {
-    // the head: ee_gfx fill.rs's EeGfxFillUnit, member for member (EERenderObject.cpp static_asserts the offsets)
-    GETransformation mTransformation;       // (the shadows read its position)
-    GEColor mPlayerColor;                   // (EEGraphicObject::SetGroupColor takes its address with the part)
-    GEColor mTintColor;                     // (class 0x104: the model's material 0 colour)
-    EEUnitClass* mInfo;                     // (its ring size, Virtual54)
-    EEGraphicObject* mSource;               // (its models, shadow model, bar offset)
-    EEGraphicObject* mSource2;              // (UnloadRenderUnits unloads it when set)
-    float mScale;                           // (the shadow's size)
-    float mSelectionSize;                   // (> 0: the selection ring is drawn)
-    float mShadowScale;                     // (the shadow's opacity; > 0: drawn)
-    float mFF4;                             // (the class's +0x170: fld/fstp, FillDoppelgangerUnit)
-    float mGroundZ;
-    float mOpacity;
-    float mHealth;                          // (>= 0: the health bar's fraction)
-    float mFraction;                        // (the frame fraction, when gInterpolateFrames)
-    float mSubModelOffsetScale;             // (scales sub model 0's internal offset)
-    float mFogScale;                        // (the fog band's start: kFogDepth times it before the centre)
-    long mCategory;                         // (10: no shadow; 0/1: no ring)
-    unsigned long mUnitClassIndex;          // (into gUnitClassTable)
-    long mL118;
-    long mCommandType;
-    long mCurrentResearch;
-    long mAnimation;                        // (4, 5: no ring)
-    long mGridSize;                         // (the footprint grid's cells per side: EEROUnits::DrawPlacement)
-    unsigned long mCurrentFrame;
-    unsigned long mNextFrame;
-    long mL134;
-    unsigned long mUnitId;                  // (class 0x33a: the unit whose +0x3c decides the opacity)
-    long mPlayerID;
-    unsigned long mAreaEffectStrength;      // (the ring's highlighted segments)
-    bool mCanPlace;                         // (EEROUnits::DrawPlacement: drawn by DrawUnitModel without the fog pass)
-    bool mIsFogged;
-    bool mIsTinted;
-    bool mHasSubModelOffset;                // (sub model 0 is offset against its internal transform)
-    // port (R5a.3; past the original record): a robotic farm's second model is drawn opaque (its unit gone or at
-    // 1 hp). FillRenderLists takes it under the world's lock; EEROUnits::DrawUnitModel read the live unit for it
-    bool mSecondFullOpacity;
+// one drawn unit (the original's 0x148 bytes; ctor 0x1118e9, dtor 0x111997): 0x200 of them in EERenderLists. Port
+// (Lane R): the head is ee_gfx fill.rs's EeGfxFillUnit itself (the members fill.rs writes: the transformation, the
+// player and tint colours, the class, the sources, the scales, the frames, the flags), its implicit ctor's values
+// (GETransformation's identity, GEColor's white twice) kept; the vectors and the name after it
+struct EERenderUnit : EeGfxFillUnit {
+    EERenderUnit() : EeGfxFillUnit{{{{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}} {}
 
     // the C++ members (the original record's +0x58..+0xdc; port: after the head)
     std::vector<float> mHealthBars;         // (the extra bars' fractions: EEROUnits::DrawUnitBars)
@@ -85,25 +52,10 @@ struct EERenderUnitRecord {
 
 };
 
-// one placed object (0x3c bytes; also its ground shadow): 0x600 of them in EERenderLists
-struct EERenderShadow {
-    GE3DPoint mLocation;                    // +0x00
-    EEGraphicObject* mObject;               // +0x0c
-    float mModelScale;                      // +0x10
-    float mSelectionSize;                   // +0x14 (> 0: EEROUnits draws its ring)
-    float mScale;                           // +0x18
-    float mF1C;                             // +0x1c (EERenderObject::FillObject: the class's +0x170, or 0)
-    float mHealth;                          // +0x20 (the bar's fraction: EEROUnits::DrawObjectBars)
-
-    float mOpacity;                         // +0x24
-    float mFraction;                        // +0x28
-    unsigned long mModelIndex;              // +0x2c
-    unsigned long mCurrentFrame;            // +0x30
-    unsigned long mNextFrame;               // +0x34
-    bool mIsFogged;                         // +0x38 (EEROUnits::DrawObjectModels picks the lighting by it)
-    unsigned char _gap39[0x3];              // +0x39
-
-};
+// one placed object (0x3c bytes; also its ground shadow): 0x600 of them in EERenderLists. Port: ee_gfx fill.rs's
+// EeGfxFillObject itself (location, object, model scale, selection size, scale, the class's +0x170, health, opacity,
+// fraction, model index, frames, fogged)
+typedef EeGfxFillObject EERenderShadow;
 
 typedef std::multimap<GETexture*, EERenderUnit*> EERenderUnitMap;
 typedef std::multimap<GETexture*, EERenderShadow*> EERenderShadowMap;
@@ -155,48 +107,7 @@ struct EERenderLine {
 // 0x10aa88) (provisional name and owner)
 extern std::vector<EERenderLine> gU529050;
 
-// the lighting/sky environment (0x528ce0: ctor 0x111722, empty dtor; a class static by its guard 0x928d70 bit 2,
-// shared with gUnitPicker's bit 1) (provisional names)
-struct EERenderEnvironment {
-    // inline: its COMDAT 0x111722 closes EERenderObject.cpp with the template COMDATs (first user: the init chain)
-    EERenderEnvironment()
-    {
-        this->mB8C = false;
-        this->mSeaLevel = 0.0f;
-        this->mWindSpeed = 1.25e-6f;
-        this->mTimeOfDayChanged = true;
-        this->mShowHiddenUnits = 1;
-        this->mTimeOfDay = 0.0f;
-        this->mWaterPhase = 0.0f;
-        this->mCloudOffset = 0.0f;
-        this->mCameraYaw = 0.0f;
-    }
-    ~EERenderEnvironment() {}
-    GEVector mDirection;                    // +0x00 (Fn10C036 copies gWorld.mWindDirection with movs: GEVector's operator=)
-    // Fn10C036's colours (each GEColor's default 1, 1, 1): +0x0c/+0x24 gU4E9338, +0x18/+0x30 the time-of-day blend of
-    // gU4E9348, +0x3c/+0x54 the lit colour and +0x48 half of it
-    GEColor mTerrainAmbientColor;           // +0x0c (SetTerrainLighting: the ambient colour)
-    GEColor mTerrainLightColor;             // +0x18 (SetTerrainLighting: the light's colour)
-    GEColor mUnitAmbientColor;              // +0x24
-    GEColor mUnitLightColor;                // +0x30
-    GEColor mPrelitColor;                   // +0x3c (SetPrelitLighting: the ambient colour)
-    GEColor mDimPrelitColor;                // +0x48
-    GEColor mColor54;                       // +0x54 (SetCloudLighting: the ambient colour)
-    float mUnitAmbientIntensity;            // +0x60 (the time-of-day blend of gU4E9264)
-    float mUnitLightIntensity;              // +0x64 (of gU4E92EC)
-    float mTerrainAmbientIntensity;         // +0x68 (of gU4E92A8; SetTerrainLighting: the ambient intensity scale)
-    float mTerrainLightIntensity;           // +0x6c (of gU4E92EC; SetTerrainLighting: the light's intensity scale)
-    float mSeaLevel;                        // +0x70 (0)
-    float mTimeOfDay;                       // +0x74 (0; [0, 1): EEROTerrain's sky colours)
-    float mWaterPhase;                      // +0x78 (0)
-    float mCloudOffset;                     // +0x7c (0; EEROTerrain's cloud texture scroll)
-    float mWindSpeed;                       // +0x80 (1.25e-6)
-    float mCameraYaw;                       // +0x84 (0)
-    long mShowHiddenUnits;                  // +0x88 (1)
-    bool mB8C;                              // +0x8c (false)
-    bool mTimeOfDayChanged;                 // +0x8d (true)
-};
-extern EERenderEnvironment gRenderEnvironment;
+// the lighting/sky environment (0x528ce0; gRenderEnvironment): gamecpp render_object.rs' RENDER_ENV
 
 
 // the fog/sky colour (0x4e9220, EERenderObject.cpp's chain 0x10ad9a; EEROTerrain sets it) (provisional name)
