@@ -11017,6 +11017,24 @@ constexpr static const int32_t EE_UNITS_UPD_X_SPACESHIP_HOLDING = 373;
 /// theUnit (the host's unit)
 constexpr static const int32_t EE_UNITS_UPD_X_UNIT = 374;
 
+/// the 16 floats at `a` = theUnit's `mPhysicalModel.GetLocation().mMatrix`
+constexpr static const int32_t EE_UNITS_UPD_X_LOCATION_MATRIX = 375;
+
+/// `theUnit->SetInitialContactLocation(the point at a)`
+constexpr static const int32_t EE_UNITS_UPD_X_SET_CONTACT_LOCATION = 376;
+
+/// the point at `a` = theUnit's `mInitialContactLocation`
+constexpr static const int32_t EE_UNITS_UPD_X_CONTACT_LOCATION = 377;
+
+/// theUnit's `mInitialContactLocation = the point at a`
+constexpr static const int32_t EE_UNITS_UPD_X_STORE_CONTACT_LOCATION = 378;
+
+/// the bits of theUnit's `mInitialContactHeading`
+constexpr static const int32_t EE_UNITS_UPD_X_CONTACT_HEADING = 379;
+
+/// theUnit's `mInitialContactHeading = the float of bits a`
+constexpr static const int32_t EE_UNITS_UPD_X_STORE_CONTACT_HEADING = 380;
+
 constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
 
 constexpr static const int32_t EE_UNITS_UPDATE_NAVAL = 2;
@@ -12117,6 +12135,78 @@ constexpr static const int32_t EE_UNITS_CK_DO_LAND_CONTINENT_OF = 7;
 
 constexpr static const int32_t EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS = 8;
 
+/// the shot's launch speed: `f[0] =` stats `a`'s `mLaunchSpeed`
+constexpr static const int32_t EE_UNITS_LF_LAUNCH_SPEED = 29;
+
+/// `f[0] =` stats `a`'s `mUnitClass->mProjectileClass->GetAcceleration()`
+constexpr static const int32_t EE_UNITS_LF_PROJECTILE_ACCELERATION = 30;
+
+/// complex unit `a`'s `mUnitClass->mShootsHigh`
+constexpr static const int32_t EE_UNITS_LF_SHOOTS_HIGH = 31;
+
+/// stats `a`'s `mCanFireOverWalls`
+constexpr static const int32_t EE_UNITS_LF_STATS_OVER_WALLS = 32;
+
+/// complex unit `a`'s `mIsFiringHigh`
+constexpr static const int32_t EE_UNITS_LF_FIRING_HIGH = 33;
+
+/// complex unit `a`'s `mAnimation`
+constexpr static const int32_t EE_UNITS_LF_ANIMATION = 34;
+
+/// unit `a`'s `mStats->mWonderUnitSet`
+constexpr static const int32_t EE_UNITS_LF_WONDER_SET = 35;
+
+/// complex unit `a`'s `IsRepairable()`
+constexpr static const int32_t EE_UNITS_LF_REPAIRABLE = 36;
+
+/// `f[0] =` unit `a`'s `mUnitClass->GetHealThreshold()`
+constexpr static const int32_t EE_UNITS_LF_HEAL_THRESHOLD = 37;
+
+/// unit `a`'s `mPlayer`
+constexpr static const int32_t EE_UNITS_LF_PLAYER = 38;
+
+/// unit `a`'s `mPlayer->mEnemies[unit b's mPlayer->GetPlayerID()] == 0`
+constexpr static const int32_t EE_UNITS_LF_ALLIED = 39;
+
+/// `gUnitSetManager.GetSize()`
+constexpr static const int32_t EE_UNITS_LF_SET_COUNT = 40;
+
+/// `gUnitSetManager.Contains(complex unit a's mUnitClass->mUnitType, c)`
+constexpr static const int32_t EE_UNITS_LF_SET_CONTAINS = 41;
+
+/// unit `a`'s `GetModel()->mSound1Frames[0]`
+constexpr static const int32_t EE_UNITS_LF_SOUND_FRAME0 = 42;
+
+/// tag point list `a`'s `GetNumTagPoints()`
+constexpr static const int32_t EE_UNITS_LF_TAG_POINT_COUNT = 43;
+
+/// screen `a`'s `mB08`
+constexpr static const int32_t EE_UNITS_LF_SCREEN_ON_MAP = 44;
+
+/// `::gWorld.mMap->GetTileAtLocation(U2DPoint<long>(c, d)) != NULL`
+constexpr static const int32_t EE_UNITS_LF_TILE_AT_LOCATION = 45;
+
+/// screen `a`'s `mContinentID`
+constexpr static const int32_t EE_UNITS_LF_SCREEN_CONTINENT = 46;
+
+/// `gMapWidth`
+constexpr static const int32_t EE_UNITS_LF_MAP_WIDTH = 47;
+
+/// `gMapHeight`
+constexpr static const int32_t EE_UNITS_LF_MAP_HEIGHT = 48;
+
+/// `gContinentManager.GetContinentID(c, d)`
+constexpr static const int32_t EE_UNITS_LF_CONTINENT_ID = 49;
+
+/// screen `a`'s `mAreaID`
+constexpr static const int32_t EE_UNITS_LF_SCREEN_AREA = 50;
+
+/// screen `a`'s `mUseWaterAreas`
+constexpr static const int32_t EE_UNITS_LF_SCREEN_WATER = 51;
+
+/// `gContinentManager.GetContinent(U2DPoint<long>(c, d), b)`
+constexpr static const int32_t EE_UNITS_LF_CONTINENT_OF = 52;
+
 /// unit `a`'s `mResourceAmount`
 constexpr static const int32_t EE_UNITS_GT_RESOURCE_AMOUNT = 1;
 
@@ -12197,6 +12287,252 @@ constexpr static const int32_t EE_UNITS_GT_FAMILY = 26;
 
 /// the tile line emptied (the original's was a new local)
 constexpr static const int32_t EE_UNITS_GT_LINE_CLEAR = 27;
+
+/// unit `a`'s `GetTileX()`
+constexpr static const int32_t EE_UNITS_LF_TILE_X = 1;
+
+/// unit `a`'s `GetTileY()`
+constexpr static const int32_t EE_UNITS_LF_TILE_Y = 2;
+
+/// unit `a`'s `GetUnitClass()->mSkipsLineOfFireCheck`
+constexpr static const int32_t EE_UNITS_LF_SKIPS_CHECK = 3;
+
+/// unit `a`'s `GetHitPoints()`
+constexpr static const int32_t EE_UNITS_LF_HIT_POINTS = 4;
+
+/// unit `a`'s `GetUnitClass()->mIsMelee`
+constexpr static const int32_t EE_UNITS_LF_MELEE = 5;
+
+/// unit `a`'s `GetUnitID()`
+constexpr static const int32_t EE_UNITS_LF_UNIT_ID = 6;
+
+/// unit `a`'s `GetComplexUnit()`
+constexpr static const int32_t EE_UNITS_LF_COMPLEX = 7;
+
+/// the 16 floats at `c` = complex unit `a`'s `mPhysicalModel.GetLocation().mMatrix`
+constexpr static const int32_t EE_UNITS_LF_LOCATION = 8;
+
+/// unit `a`'s `GetModel()`
+constexpr static const int32_t EE_UNITS_LF_MODEL = 9;
+
+/// model `a`'s `mTagPoints[complex unit b's mAnimation]`
+constexpr static const int32_t EE_UNITS_LF_TAG_LIST = 10;
+
+/// complex unit `a`'s `mPhysicalModel.GetFrame()`
+constexpr static const int32_t EE_UNITS_LF_FRAME = 11;
+
+/// complex unit `a`'s `mWeaponTagPoint`
+constexpr static const int32_t EE_UNITS_LF_WEAPON_INDEX = 12;
+
+/// `f[0] =` complex unit `a`'s `mPhysicalModel.GetScale()`
+constexpr static const int32_t EE_UNITS_LF_SCALE = 13;
+
+/// model `a`'s `GetNumParts()`
+constexpr static const int32_t EE_UNITS_LF_NUM_PARTS = 14;
+
+/// model `a`'s `FindTurretPart(list b's GetTagPoint(c)->mModel, the unsigned long at d)`
+constexpr static const int32_t EE_UNITS_LF_FIND_TURRET = 15;
+
+/// `f[0] =` complex unit `a`'s `mTurretAngles[c]`
+constexpr static const int32_t EE_UNITS_LF_TURRET_ANGLE = 16;
+
+/// `*(list a's mPoints.begin() + c)`
+constexpr static const int32_t EE_UNITS_LF_LIST_POINT_AT = 17;
+
+/// list `a`'s `mPoints.size()`
+constexpr static const int32_t EE_UNITS_LF_LIST_SIZE = 18;
+
+/// list `a`'s `GetTagPoint(c)`
+constexpr static const int32_t EE_UNITS_LF_LIST_TAG_POINT = 19;
+
+/// the point at `d` = model `a`'s `mModels[complex unit b's mAnimation]->GetBoundingBox(c).GetTopRightBack()`
+constexpr static const int32_t EE_UNITS_LF_BOX_TOP = 20;
+
+/// the point at `d` = tag point `a`'s `mModel->GetTagPoint(its mIndex, c)`
+constexpr static const int32_t EE_UNITS_LF_POINT_LOCAL = 21;
+
+/// tag point `a`'s `mModel`
+constexpr static const int32_t EE_UNITS_LF_POINT_MODEL = 22;
+
+/// the 16 floats at `d` = model `a`'s `GetInternalTransform(c).mMatrix`
+constexpr static const int32_t EE_UNITS_LF_INTERNAL_TRANSFORM = 23;
+
+/// model `a`'s `GetParentModel()`
+constexpr static const int32_t EE_UNITS_LF_PARENT = 24;
+
+/// `f[0] =` unit `a`'s `mStats->GetScale()`
+constexpr static const int32_t EE_UNITS_LF_STATS_SCALE = 25;
+
+/// complex unit `a`'s `mIsBuilt`
+constexpr static const int32_t EE_UNITS_LF_BUILT = 26;
+
+/// complex unit `a`'s `mStats->mMaxHitPoints`
+constexpr static const int32_t EE_UNITS_LF_MAX_HIT_POINTS = 27;
+
+/// `f[0] =` complex unit `a`'s `mPhysicalModel.GetLocation().GetZ()`
+constexpr static const int32_t EE_UNITS_LF_Z = 28;
+
+/// unit `a`'s `mPlayer == unit->mPlayer`
+constexpr static const int32_t EE_UNITS_SR_SAME_PLAYER = 1;
+
+/// `unit->mPlayer->mEnemies[unit a's mPlayer->GetPlayerID()] != 0`
+constexpr static const int32_t EE_UNITS_SR_ENEMY = 2;
+
+/// complex unit `a`'s `mHitPoints`
+constexpr static const int32_t EE_UNITS_SR_HIT_POINTS = 3;
+
+/// complex unit `a`'s `mIsDisabled`
+constexpr static const int32_t EE_UNITS_SR_DISABLED = 4;
+
+/// complex unit `a`'s `IsProtected()`
+constexpr static const int32_t EE_UNITS_SR_PROTECTED = 5;
+
+/// `EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, unit, unit a) != 0`
+constexpr static const int32_t EE_UNITS_SR_ATTACKED_BY = 6;
+
+/// unit `a`'s `GetUnitClass()`
+constexpr static const int32_t EE_UNITS_SR_CLASS = 7;
+
+/// complex unit `a`'s `IsFoundation()`
+constexpr static const int32_t EE_UNITS_SR_IS_FOUNDATION = 8;
+
+/// `EECombatIsSeenBy(complex unit a, unit->GetPlayer(), true)`
+constexpr static const int32_t EE_UNITS_SR_SEEN = 9;
+
+/// `unit->IsOnOtherContinentThan(complex unit a)`
+constexpr static const int32_t EE_UNITS_SR_OTHER_CONTINENT = 10;
+
+/// unit `a`'s `GetUnitClass()->IsPartLeftOut(complex unit c)`
+constexpr static const int32_t EE_UNITS_SR_PART_LEFT_OUT = 11;
+
+/// class `a`'s `IsPriest()`
+constexpr static const int32_t EE_UNITS_SR_CLASS_PRIEST = 12;
+
+/// `EECanPriestConvert(unit, complex unit a)`
+constexpr static const int32_t EE_UNITS_SR_CAN_PRIEST_CONVERT = 13;
+
+/// `unit->CanAttackClass(class a)`
+constexpr static const int32_t EE_UNITS_SR_CAN_ATTACK_CLASS = 14;
+
+/// `unit->mIgnoredTargets.size()`
+constexpr static const int32_t EE_UNITS_SR_IGNORED_COUNT = 15;
+
+/// `unit->IsTargetIgnored(complex unit a, c != 0)`
+constexpr static const int32_t EE_UNITS_SR_IS_IGNORED = 16;
+
+/// complex unit `a`'s `GetGoal()`
+constexpr static const int32_t EE_UNITS_SR_GOAL = 17;
+
+/// `EEAttackUnitCast(goal a)`
+constexpr static const int32_t EE_UNITS_SR_ATTACK_CAST = 18;
+
+/// goal `a`'s `GetAttackTarget()->mComplexUnit`
+constexpr static const int32_t EE_UNITS_SR_ATTACK_TARGET_COMPLEX = 19;
+
+/// unit `a`'s `mPlayer->mTechnologies->Get(its GetUnitClass()->mTechnology)`
+constexpr static const int32_t EE_UNITS_SR_TECH_NODE = 20;
+
+/// tech node `a`'s `mData->mKind`
+constexpr static const int32_t EE_UNITS_SR_NODE_KIND = 21;
+
+/// complex unit `a`'s `mLauncherClass != NULL`
+constexpr static const int32_t EE_UNITS_SR_LAUNCHER = 22;
+
+/// complex unit `a`'s `mGoalState`
+constexpr static const int32_t EE_UNITS_SR_GOAL_STATE = 23;
+
+/// `EEGatherGoalCast(goal a)`
+constexpr static const int32_t EE_UNITS_SR_GATHER_CAST = 24;
+
+/// goal `a`'s `GetGatherResource()`
+constexpr static const int32_t EE_UNITS_SR_GATHER_RESOURCE = 25;
+
+/// unit `a`'s `mComplexUnit`
+constexpr static const int32_t EE_UNITS_SR_COMPLEX = 26;
+
+/// unit `a`'s `mTileNode->mNext` (as an `EEUnit*`)
+constexpr static const int32_t EE_UNITS_SR_LIST_NEXT = 27;
+
+/// unit `a`'s `mTileNode->mPrev` (as an `EEUnit*`)
+constexpr static const int32_t EE_UNITS_SR_LIST_PREV = 28;
+
+/// `RTSDummyHead(unit a) != NULL`
+constexpr static const int32_t EE_UNITS_SR_DUMMY_HEAD = 29;
+
+/// `f[0] = EECombatHitDistanceSquared(unit, unit a, f[0], f[1])`
+constexpr static const int32_t EE_UNITS_SR_HIT_DISTANCE = 30;
+
+/// `f[0] = gToHitTable.GetAttackFactor(unit's class's mAmmoType, unit a's class, the players' ids)`
+constexpr static const int32_t EE_UNITS_SR_ATTACK_FACTOR = 31;
+
+/// `EEIsLineToUnitBlocked(unit, unit a, &c->mBlocker, &c->mX, &c->mY)` (`c` an `EeUnitsSrLine`)
+constexpr static const int32_t EE_UNITS_SR_LINE_BLOCKED = 32;
+
+/// `EEIsAttackReachable(unit, complex unit a, the tile at c)`
+constexpr static const int32_t EE_UNITS_SR_REACHABLE = 33;
+
+/// `unit->IgnoreTarget(complex unit a)`
+constexpr static const int32_t EE_UNITS_SR_IGNORE = 34;
+
+/// `unit->GetNearestFootprintTile(unit a, the two longs at c)`
+constexpr static const int32_t EE_UNITS_SR_FOOTPRINT_TILE = 35;
+
+/// unit `a`'s `GetUnitID()`
+constexpr static const int32_t EE_UNITS_SR_UNIT_ID = 36;
+
+/// `f[0] = unit->mStats->GetAttack()`
+constexpr static const int32_t EE_UNITS_SR_ATTACK = 37;
+
+/// `f[0] = unit->GetLineOfSight()`
+constexpr static const int32_t EE_UNITS_SR_LINE_OF_SIGHT = 38;
+
+/// `f[0] = unit->mStats->GetMaxVelocity()`
+constexpr static const int32_t EE_UNITS_SR_MAX_VELOCITY = 39;
+
+/// `f[0] = unit->mStats->GetRange()`
+constexpr static const int32_t EE_UNITS_SR_RANGE = 40;
+
+/// `f[0] = unit->mUnitClass->mMinRange`
+constexpr static const int32_t EE_UNITS_SR_MIN_RANGE = 41;
+
+/// `unit->mUnitClass->mIsMelee`
+constexpr static const int32_t EE_UNITS_SR_MELEE = 42;
+
+/// `unit->mUnitClass->mShootsHigh`
+constexpr static const int32_t EE_UNITS_SR_SHOOTS_HIGH = 43;
+
+/// `unit->mStats->mCanFireOverWalls`
+constexpr static const int32_t EE_UNITS_SR_OVER_WALLS = 44;
+
+/// `unit->mTileX`
+constexpr static const int32_t EE_UNITS_SR_TILE_X = 45;
+
+/// `unit->mTileY`
+constexpr static const int32_t EE_UNITS_SR_TILE_Y = 46;
+
+/// `gPhysics->mTickRandom`
+constexpr static const int32_t EE_UNITS_SR_TICK_RANDOM = 47;
+
+/// `f[0] = unit->mPhysicalModel.GetLocation().GetX()`
+constexpr static const int32_t EE_UNITS_SR_POSITION_X = 48;
+
+/// `f[0] = unit->mPhysicalModel.GetLocation().GetY()`
+constexpr static const int32_t EE_UNITS_SR_POSITION_Y = 49;
+
+/// `gWorld.mMap->mUnitRegions`
+constexpr static const int32_t EE_UNITS_SR_UNIT_REGIONS = 50;
+
+/// screen `a`'s `Virtual08(complex unit c)`
+constexpr static const int32_t EE_UNITS_SR_SCREEN = 51;
+
+/// `EERetargetAttack(unit, goal a, complex unit c)`
+constexpr static const int32_t EE_UNITS_SR_RETARGET = 52;
+
+/// `unit->GetPlayer()->GetTechTree()->Get(unit a's GetUnitClass()->GetTechnology())`
+constexpr static const int32_t EE_UNITS_SR_OWN_TECHNOLOGY = 53;
+
+/// technology `a`'s `mData->mKind`
+constexpr static const int32_t EE_UNITS_SR_TECHNOLOGY_KIND = 54;
 
 /// `GetPathStart`'s and the others' "no path" answer.
 constexpr static const int32_t EE_UNITS_WAYPOINTS_NONE = 7;
@@ -17456,6 +17792,28 @@ uint8_t ee_units_uu_targetable(uint64_t attacker,
                                uint64_t class_,
                                uint8_t can_target);
 
+/// `EEGetBallisticPitch` (`from`, `to` three floats; `angle` written)
+///
+/// # Safety
+/// The pointers are the caller's live points and float.
+uint8_t ee_units_lf_ballistic_pitch(uint64_t unit,
+                                    uint64_t stats,
+                                    const float (*from)[3],
+                                    const float (*to)[3],
+                                    float *angle);
+
+/// `EECanHeal`
+uint8_t ee_units_lf_can_heal(uint64_t unit, uint64_t target);
+
+/// `EEApproachAttachPoint` (`point` three floats written)
+///
+/// # Safety
+/// `point` holds three floats.
+uint8_t ee_units_lf_attach_point(uint64_t unit, float (*point)[3]);
+
+/// `EEFOLocationScreenEnsureContinentAndPathOverlay::Screen`
+uint8_t ee_units_lf_location_screen(uint64_t screen, long x, long y);
+
 extern int64_t ee_units_gt_host(int32_t op,
                                 uint64_t a,
                                 uint64_t b,
@@ -17564,6 +17922,35 @@ extern uint64_t ee_units_uu_host_world(int32_t which,
 
 extern float ee_units_uu_host_world_f(int32_t which, uint64_t a, uint64_t b, float f);
 
+extern int64_t ee_units_lf_host(int32_t op,
+                                uint64_t a,
+                                uint64_t b,
+                                int64_t c,
+                                int64_t d,
+                                float (*f)[4]);
+
+/// `EEIsLineToUnitBlocked`: `blocker` written only when a tile was asked; `x`, `y` the last tile reached.
+///
+/// # Safety
+/// `blocker` points to a pointer, `x` and `y` to longs.
+uint8_t ee_units_lf_line_blocked(uint64_t unit,
+                                 uint64_t target,
+                                 uint64_t *blocker,
+                                 long *x,
+                                 long *y);
+
+/// `EEGetTileLine` into a C++ tile vector (replaced).
+///
+/// # Safety
+/// `out` a live `std::vector<U2DPoint<long> >`.
+void ee_units_lf_tile_line(int32_t x1,
+                           int32_t y1,
+                           int32_t x2,
+                           int32_t y2,
+                           uint8_t ends,
+                           uint8_t thin,
+                           void *out);
+
 /// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
 /// the digest's halves) written (2).
 extern uint32_t ee_units_uu_host_note(int32_t which,
@@ -17583,6 +17970,34 @@ void ee_units_uu_note_end();
 
 /// An event of the thread's recording note (the C++ host's writes: `UUEvent`).
 void ee_units_uu_note_event(int32_t a, int32_t b, int32_t c);
+
+extern int64_t ee_units_sr_host(int32_t op, uint64_t unit, uint64_t a, int64_t c, float (*f)[4]);
+
+/// `EESearchTarget` (the area left, top, right, bottom; the scale's bits).
+uint64_t ee_units_sr_search_target(uint64_t unit,
+                                   int32_t left,
+                                   int32_t top,
+                                   int32_t right,
+                                   int32_t bottom,
+                                   int32_t x,
+                                   int32_t y,
+                                   float scale);
+
+/// `EESearchTargetAlongList` (`unit` the searching unit, as an `EEUnit*` in the list).
+uint64_t ee_units_sr_search_along_list(uint64_t unit, int32_t x, int32_t y, float scale);
+
+/// `EEGetPursuerOf`
+uint64_t ee_units_sr_pursuer_of(uint64_t unit);
+
+/// `EEFindNewTarget`
+uint8_t ee_units_sr_find_new_target(uint64_t screen,
+                                    uint64_t goal,
+                                    uint64_t unit,
+                                    int32_t x,
+                                    int32_t y,
+                                    int32_t radius,
+                                    uint8_t skip_kind,
+                                    int32_t ignore_argument);
 
 /// A new empty list.
 EeUnitsWaypoints *ee_units_waypoints_new();

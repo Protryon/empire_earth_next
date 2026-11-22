@@ -99,27 +99,27 @@ pub unsafe extern "C" fn ee_combat_line_blocked(
 
 // ---- the new target search
 
-/// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeCombatTargetHost {
-    pub ctx: *mut c_void,
-    /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
-    pub unit_regions: *const crate::combat::regions::EeCombatUnitRegions,
-    pub screen: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub test: unsafe extern "C" fn(ctx: *mut c_void, test: u32, unit: u64) -> i32,
-    /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
-    pub push: unsafe extern "C" fn(ctx: *mut c_void, unit: u64),
+/// `EEFindNewTarget`'s calls that are not reads of the views (see `TargetHost`): the screen and the tests.
+pub trait TargetCallbacks {
+    fn screen(&mut self, unit: EeCombatHandle) -> bool;
+    fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool;
 }
 
-impl EeCombatTargetHost {
+/// `EEFindNewTarget`'s world: the map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs, live for the walk)
+/// and the callbacks (units/uu_search.rs).
+pub struct TargetWorld<'c, C: TargetCallbacks + ?Sized> {
+    pub unit_regions: *const crate::combat::regions::EeCombatUnitRegions,
+    pub calls: &'c mut C,
+}
+
+impl<C: TargetCallbacks + ?Sized> TargetWorld<'_, C> {
     fn table(&self) -> &crate::combat::regions::EeCombatUnitRegions {
-        // SAFETY: the table's contract: the regions are live for the call that handed them over
+        // SAFETY: the regions are live for the walk
         unsafe { &*self.unit_regions }
     }
 }
 
-impl TargetHost for EeCombatTargetHost {
+impl<C: TargetCallbacks + ?Sized> TargetHost for TargetWorld<'_, C> {
     fn regions(&mut self, left: i32, top: i32, right: i32, bottom: i32) -> (i32, i32, i32, i32) {
         self.table().rect(left, top, right, bottom)
     }
@@ -134,8 +134,7 @@ impl TargetHost for EeCombatTargetHost {
         store::unit_of(unit).map_or((0, 0), |r| (r.tile_x as i32, r.tile_y as i32))
     }
     fn screen(&mut self, unit: EeCombatHandle) -> bool {
-        // SAFETY: as above
-        unsafe { (self.screen)(self.ctx, unit) != 0 }
+        self.calls.screen(unit)
     }
     fn multiple(&mut self, unit: EeCombatHandle) -> bool {
         // its class's `mTileSize > 1` (a region's complex unit, read in place)
@@ -159,43 +158,6 @@ impl TargetHost for EeCombatTargetHost {
             let owner = unsafe { crate::world::UnitView::of(&t, unit) }.and_then(|u| u.player()).expect("an owner");
             return owner.id() == 0;
         }
-        // SAFETY: as above
-        unsafe { (self.test)(self.ctx, test, unit) != 0 }
+        self.calls.test(test, unit)
     }
-}
-
-/// `EEUUGetUnitsInArea`: pushes the candidates in order (`host.push`); returns their number.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_units_in_area(
-    input: *const EeCombatFindTargetIn,
-    host: *const EeCombatTargetHost,
-) -> u32 {
-    let mut host = unsafe { *host };
-    let units = units_in_area(unsafe { read(input) }, &mut host);
-    for &unit in &units {
-        // SAFETY: as in the trait's calls
-        unsafe { (host.push)(host.ctx, unit) };
-    }
-    units.len() as u32
-}
-
-/// `EEFindNewTarget`'s choice among `count` candidates: the index of the first that passes, -1 for none.
-///
-/// # Safety
-/// `units` must point to `count` handles, `host` to a valid record whose callbacks are callable with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_choose_target(
-    units: *const u64,
-    count: u32,
-    skip_kind: i32,
-    host: *const EeCombatTargetHost,
-) -> i32 {
-    let mut host = unsafe { *host };
-    // copied: the C++ list must not be borrowed across the host's calls
-    let candidates: Vec<EeCombatHandle> =
-        if count == 0 { Vec::new() } else { unsafe { std::slice::from_raw_parts(units, count as usize) }.to_vec() };
-    choose_target(&candidates, skip_kind != 0, &mut host).map_or(-1, |n| n as i32)
 }
