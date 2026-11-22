@@ -16,6 +16,7 @@
 #include "won_lobby33_world.h"
 #include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/modelbuf.h"
+#include "rust/won_lobby/chatlink.h"
 #include "won_lobby33_orig.h"
 #include "won_lobby33_new.h"
 
@@ -69,6 +70,15 @@ static intptr_t MutBuf(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t b
     if (sMutate == 12 && inOp == Op::Release && reinterpret_cast<RefCount*>(a)->mId >= 0) return 0;
     if (sMutate == 13 && inOp == Op::SelfSetReady) return 0;
     return L33New::BufHost(inObj, inOp, a, b, c);
+}
+static std::map<int, int> sLinkHits;
+static intptr_t MutLink(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
+{
+    sLinkHits[(int)inOp]++;
+    if (sMutate == 14 && inOp == EeWonChatLinkOp::SetText) return 0;
+    if (sMutate == 15 && inOp == EeWonChatLinkOp::ClearPrevious) return 0;
+    if (sMutate == 16 && inOp == EeWonChatLinkOp::AddressOfServer) return 0;
+    return L33New::ChatLinkHost(inLink, inOp, a);
 }
 static intptr_t NewBuf(void* inObj, EeWonModelBufCall inCall, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -378,15 +388,64 @@ static void BufCase(int inCall, unsigned seed)
     Compare(kCalls[inCall], aTraces);
 }
 
+// ---- ChatCtrl's links: every kind with each of its arguments there or not
+
+static void LinkCases()
+{
+    for (int aKind = -1; aKind <= 6; aKind++)
+        for (int k = 0; k < 8; k++) {
+            std::vector<std::string> aTraces[2];
+            for (int aSide = 0; aSide < 2; aSide++) {
+                sObjects.clear();
+                sTrace.clear();
+                LobbyClient* aClient = new LobbyClient;
+                aClient->AddRef();
+                aClient->mName = GUIString("cy");
+                LobbyFriend* aFriend = new LobbyFriend;
+                aFriend->AddRef();
+                aFriend->mName = GUIString("fr");
+                LobbyServer* aServer = new LobbyServer;
+                aServer->AddRef();
+                Font* aFont = new Font;
+                aFont->AddRef();
+                EeWonIpAddr* anIp = ee_won_ipaddr_new();
+                ee_won_ipaddr_set_host_order(anIp, 0xc0a80105, 2300);
+                GUIString aText("[Accept]");
+                EeWonLobbyCtlLink l = {};
+                l.kind = aKind;
+                l.obj = aKind == 4 || aKind == 5 ? (intptr_t)aFriend : (intptr_t)aClient;
+                l.text = (k & 1) ? (intptr_t)aText.mData.get() : 0;
+                l.id = 40 + k;
+                l.addr = aKind == 5 ? (intptr_t)anIp : (k & 2) ? (intptr_t)aServer : 0;
+                l.font = (k & 4) ? (intptr_t)aFont : 0;
+                l.color = 0x123456 + k;
+                ChatLink* aLink = new ChatLink;
+                aLink->mKind = 55;
+                sTrace.clear();
+                if (aSide == 0) L33Orig::ChatLinkInit(aLink, l);
+                else {
+                    aLink->mKind = l.kind; // the C++ constructor's initialiser
+                    ee_won_chatlink_init(aLink, &l, MutLink);
+                }
+                aLink->Dump();
+                Refs();
+                ee_won_ipaddr_free(anIp);
+                aTraces[aSide].swap(sTrace);
+            }
+            Compare("ChatLink", aTraces);
+        }
+}
+
 int main()
 {
     const char* m = getenv("EE_L33_MUTATE");
     sMutate = m != NULL ? atoi(m) : 0;
     PrvCases();
+    LinkCases();
     int aPrvChecks = sChecks;
     for (int aCall = 0; aCall < 10; aCall++)
         for (unsigned seed = 1; seed <= 3000; seed++) BufCase(aCall, seed * 7919u + (unsigned)aCall);
-    printf("won_lobby33_test: WONLobbyPrv %d cases, the model's buffers %d cases, %d mismatches\n", aPrvChecks,
+    printf("won_lobby33_test: WONLobbyPrv and ChatLink %d cases, the model's buffers %d cases, %d mismatches\n", aPrvChecks,
            sChecks - aPrvChecks, sFailures);
     for (const auto& f : sFailed) printf("  %s: %d\n", f.first.c_str(), f.second);
     // every op of the two hosts reached (their enums' last values: AllocPlayerOptionsCtrl, PlayerWriteData)
@@ -401,8 +460,14 @@ int main()
             printf("  buf op %d not reached\n", i);
             aMissed++;
         }
-    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size()),
-           (int)EeWonLobbyPrvOp::AllocPlayerOptionsCtrl + (int)EeWonModelBufOp::PlayerWriteData);
+    for (int i = 1; i <= (int)EeWonChatLinkOp::ClearPrevious; i++)
+        if (sLinkHits.count(i) == 0) {
+            printf("  link op %d not reached\n", i);
+            aMissed++;
+        }
+    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size()),
+           (int)EeWonLobbyPrvOp::AllocPlayerOptionsCtrl + (int)EeWonModelBufOp::PlayerWriteData +
+               (int)EeWonChatLinkOp::ClearPrevious);
     if (sMutate == 0) sFailures += aMissed;
     if (sMutate != 0) {
         printf("mutation %d: %s\n", sMutate, sFailures > 0 ? "caught" : "MISSED");

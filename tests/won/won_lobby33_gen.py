@@ -3,7 +3,8 @@ tests/won/won_lobby33_new.h (the new hosts' cases and helpers as they are in the
 import re
 import subprocess
 
-ROOT = "C:/Users/max/Desktop/empire_earth_next-w33lobby"
+import pathlib
+ROOT = str(pathlib.Path(__file__).resolve().parents[2]).replace("\\", "/")
 BASE = "fb32b70d8"
 L = "src/Empire Earth/WONAPI/WONLobby/"
 
@@ -65,8 +66,15 @@ for sig, new in [
     ("void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer)", "static void WriteToBuffer(LobbyPlayer* self, WriteBuffer& outBuffer)"),
 ]:
     out.append(func(mh, sig, new))
+nc = show(L + "LobbyNetCtrlHost.cpp")
+i = nc.index("    explicit ChatLink(const EeWonLobbyCtlLink& l) : mKind(l.kind)")
+b = body_at(nc, i)
+b = b[b.index("{"):].replace("this->", "self->")
+out.append("static void ChatLinkInit(ChatLink* self, const EeWonLobbyCtlLink& l)\n{\n    self->mKind = l.kind;\n    "
+           + b.strip() + "\n}")
 out += ["}", "#endif", ""]
-open(ROOT + "/tests/won/won_lobby33_orig.h", "w", encoding="utf-8", newline="\n").write("\n\n".join(out))
+open(ROOT + "/tests/won/won_lobby33_orig.h", "w", encoding="utf-8", newline="\n").write(
+    "\n".join(out[:6]) + "\n\n" + "\n\n".join(out[6:]))
 
 # the new side: the hosts' cases and helpers as they are
 new = ["// the hosts' statements R6 WON round 33 added (by tests/won/won_lobby33_gen.py from the working tree), over",
@@ -82,6 +90,10 @@ new.append(body_at(cur, i))
 i = cur.index("static intptr_t HeldConst")
 j = cur.index("static intptr_t Buf(void* inObj", i)
 new.append(cur[i:j].strip())
+cur = open(ROOT + "/" + L + "LobbyNetCtrlHost.cpp", encoding="utf-8").read()
+i = cur.index("// ChatLink's constructor's statements")
+new.append(body_at(cur, cur.index("static intptr_t ChatLinkHost", i)))
 new += ["}", "#endif", ""]
-open(ROOT + "/tests/won/won_lobby33_new.h", "w", encoding="utf-8", newline="\n").write("\n\n".join(new))
+open(ROOT + "/tests/won/won_lobby33_new.h", "w", encoding="utf-8", newline="\n").write(
+    "\n".join(new[:6]) + "\n\n" + "\n\n".join(new[6:]))
 print("ok")

@@ -1,13 +1,8 @@
 // the bodies R6 WON round 33 moved to Rust, as they were at fb32b70d8 (by tests/won/won_lobby33_gen.py),
-
 // over won_lobby33_world.h's stand-ins: a member function as a free function of `self`
-
 #ifndef WON_LOBBY33_ORIG_H
-
 #define WON_LOBBY33_ORIG_H
-
 namespace L33Orig {
-
 using namespace L33World;
 
 static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *theTable)
@@ -383,6 +378,33 @@ static void WriteToBuffer(LobbyPlayer* self, WriteBuffer& outBuffer)
     ee_won_room_player_head(self->GetPing(), self->GetReady(), ModelAppendBytes, &aHead);
     outBuffer.AppendBytes(aHead.data(), aHead.length());
     self->WriteData(outBuffer);
+}
+
+static void ChatLinkInit(ChatLink* self, const EeWonLobbyCtlLink& l)
+{
+    self->mKind = l.kind;
+    {
+        // the original's five constructors, by kind
+        switch (l.kind) {
+        case 3: self->mClient = (LobbyClient*)l.obj; self->mText = self->mClient->GetName(); break;
+        case 0:
+            self->mText = Txt(l.text);
+            self->mGroupId = (unsigned short)l.id;
+            if (l.addr != 0) self->mAddress = ((LobbyServer*)l.addr)->GetAddress();
+            break;
+        case 4: self->mFriend = (LobbyFriend*)l.obj; self->mText = self->mFriend->GetName(); break;
+        case 5:
+            self->mFriend = (LobbyFriend*)l.obj;
+            self->mAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)l.addr));
+            self->mText = Txt(l.text);
+            break;
+        default: self->mClient = (LobbyClient*)l.obj; self->mText = Txt(l.text); break;
+        }
+        self->mColor = l.color;
+        self->mFont = (Font*)l.font;
+        self->mEnabled = true;
+        self->mPrevious = NULL;
+    }
 }
 
 }

@@ -22,6 +22,8 @@
 #include "rust/won_lobby/model.h"
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/srvlistctl.h"
+#include "rust/won_lobby/chatctl.h"
+#include "rust/won_net/ipobj.h"
 
 namespace L33World {
 using WONAPI::WonGuard;
@@ -415,7 +417,16 @@ struct WriteBuffer {
 };
 struct IPAddr {
     char mSix[6];
+    long mHost;   // a chat link's address (FromValue's)
+    unsigned short mPort;
     const char* GetSixByte() const { return this->mSix; }
+    static IPAddr FromValue(EeWonIpAddr* v)
+    {
+        IPAddr a = {{0}, ee_won_ipaddr_host(v), ee_won_ipaddr_port(v)};
+        ee_won_ipaddr_free(v);
+        Log("IPAddr FromValue " + N(a.mHost) + ":" + N(a.mPort));
+        return a;
+    }
 };
 enum class LobbyMC { GameStoreSummary };
 enum class LobbyMF { GameHaveDetails, GameNumPlayers };
@@ -614,5 +625,37 @@ struct WONLobbyPrv {
     }
 };
 
+// ---- ChatCtrl's links
+
+struct Font : Tracked {};
+struct LobbyFriend : Tracked {
+    GUIString mName;
+    const GUIString& GetName() const { return this->mName; }
+};
+struct LobbyServer : Tracked {
+    IPAddr mAddress = {{0}, 0x0a000001, 15101};
+    IPAddr GetAddress() const { Log("server GetAddress " + Id(this)); return this->mAddress; }
+};
+// LobbyNetCtrlHost.cpp's
+static GUIString Txt(intptr_t inData) { return inData != 0 ? GUIString((GUIStringData*)inData) : GUIString(); }
+struct ChatLink : Tracked {
+    GUIString mText = GUIString("unset");
+    int mColor = 55;
+    SmartPtr<Font> mFont;
+    int mKind = 55;
+    IPAddr mAddress = {{0}, 55, 55};
+    unsigned short mGroupId = 55;
+    SmartPtr<LobbyClient> mClient;
+    SmartPtr<LobbyFriend> mFriend;
+    bool mEnabled = false;
+    ChatLink* mPrevious = this;
+    void Dump()
+    {
+        Log("link kind " + N(this->mKind) + " text " + Text(this->mText) + " color " + N(this->mColor) + " font " +
+            Id(this->mFont.get()) + " address " + N(this->mAddress.mHost) + ":" + N(this->mAddress.mPort) + " group " +
+            N(this->mGroupId) + " client " + Id(this->mClient.get()) + " friend " + Id(this->mFriend.get()) +
+            " enabled " + N(this->mEnabled) + " previous " + (this->mPrevious == NULL ? "null" : "set"));
+    }
+};
 }
 #endif

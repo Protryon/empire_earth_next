@@ -1,13 +1,8 @@
 // the hosts' statements R6 WON round 33 added (by tests/won/won_lobby33_gen.py from the working tree), over
-
 // won_lobby33_world.h's stand-ins
-
 #ifndef WON_LOBBY33_NEW_H
-
 #define WON_LOBBY33_NEW_H
-
 namespace L33New {
-
 using namespace L33World;
 
 // the methods' statements (lobbyprv.rs composes them, R6 WON round 33); Init's locals are these statics
@@ -277,6 +272,27 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::PlayerPing: return (intptr_t)(pl->GetPing());
     case Op::PlayerReady: return (pl->GetReady()) ? 1 : 0;
     case Op::PlayerWriteData: pl->WriteData(*wb); return 0;
+    }
+    return 0;
+}
+
+static intptr_t ChatLinkHost(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
+{
+    typedef EeWonChatLinkOp Op;
+    ChatLink* k = static_cast<ChatLink*>(inLink);
+    switch (inOp) {
+    case Op::SetClient: k->mClient = (LobbyClient*)a; return 0;
+    case Op::TextClientName: k->mText = k->mClient->GetName(); return 0;
+    case Op::SetText: k->mText = Txt(a); return 0;
+    case Op::SetGroupId: k->mGroupId = (unsigned short)a; return 0;
+    case Op::AddressOfServer: k->mAddress = ((LobbyServer*)a)->GetAddress(); return 0;
+    case Op::SetFriend: k->mFriend = (LobbyFriend*)a; return 0;
+    case Op::TextFriendName: k->mText = k->mFriend->GetName(); return 0;
+    case Op::AddressClone: k->mAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a)); return 0;
+    case Op::SetColor: k->mColor = (int)a; return 0;
+    case Op::SetFont: k->mFont = (Font*)a; return 0;
+    case Op::SetEnabled: k->mEnabled = true; return 0;
+    case Op::ClearPrevious: k->mPrevious = NULL; return 0;
     }
     return 0;
 }
