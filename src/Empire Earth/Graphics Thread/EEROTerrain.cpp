@@ -28,12 +28,8 @@
 #include "ee/EEROTerrain.h"
 #include "ee/EERenderSnapshot.h"
 #include "rust/render/gfx.h"
+#include "rust/game/gamecpp.h"
 
-extern unsigned long& gTextureMipLevelsToDrop;
-extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
-extern bool& gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
-// the rasterizer as the Rust draws call it (EERenderObject.cpp)
-extern const EeGfxRaster gEERustRaster;
 
 // the brush highlight colour (0x5293e8; its init chain 0x51251f: GEColor's default white) (provisional name)
 GEColor gBrushHighlightColor;
@@ -54,84 +50,21 @@ EEROTerrain::~EEROTerrain()
 {
 }
 
-static EeGfxTerrainMedia EETerrainMedia()
-{
-    EeGfxTerrainMedia theMedia = {(uint32_t)gTextureMipLevelsToDrop, gTrilinearFilter, gDrawClouds};
-    return theMedia;
-}
-
-// Prepares the frame: updates the sky colours and models, the clouds (black fog colour on space maps instead),
-// the fog of war (all seen for see-all or the free camera) and copies the map's grid runs
+// The frame (the sky colours, the clouds, the fog of war, the grid runs, the terrain's snapshot), the sky media and
+// the scene's draws: gamecpp ro_views.rs (ee_gfx ro_terrain.rs)
 void EEROTerrain::FrameStarting()
 {
-    this->Fn10C036();
-    EEMap* theMap = gWorld.mMap;
-    EeGfxTerrainFrame theFrame = {gRenderEnvironment.mTimeOfDay, (int32_t)theMap->mSize, (int32_t)theMap->mL195614,
-                                  theMap->mTerrainMesh.GetIsSpaceMap(), gRenderEnvironment.mCloudOffset, EETerrainMedia()};
-    EeGfxTerrainFrameOut theOut = ee_gfx_ro_terrain_frame(&gEERustRaster, &theFrame);
-    gU4E9220 = GEColor(theOut.fog.red, theOut.fog.green, theOut.fog.blue);
-    gRenderEnvironment.mCloudOffset = theOut.cloud_offset;
-    this->Fn10E8D1();
-    theMap->mTerrainMesh.UpdateFogOfWar(gWorld.GetCurrentPlayer()->mSeesAll || gFreeCamera);
-
-    gGridRuns = gWorld.mMap->mU1955DC;
-    EETakeTerrainSnapshot();   // port: what RenderScene draws from the map and the editor (ee/EERenderSnapshot.h)
+    ee_gamecpp_te_frame_starting(this);
 }
 
-// Creates the sky dome model and its colour table, the star models, the clouds (when clouds are on) and
-// loads the area-effect textures (square and circle) (ee_gfx ro_terrain.rs, with CreateStarModels 0x5126ce and
-// CreateCloudModel 0x512bc4)
 void EEROTerrain::CreateSkyModel()
 {
-    EeGfxTerrainMedia theMedia = EETerrainMedia();
-    EeGfxTerrainTextures theTextures = ee_gfx_ro_terrain_create(&gEERustRaster, &theMedia);
-    gAreaEffectTexture = static_cast<GETexture*>(theTextures.area_effect);
-    gCircleAreaEffectTexture = static_cast<GETexture*>(theTextures.circle_area_effect);
+    ee_gamecpp_te_create_sky_model();
 }
 
-namespace {
-// the terrain mesh's draws from the frame's snapshot (port: EETakeTerrainSnapshot took the editor's brush and the
-// map's coloured rectangles, and erased the erase markers, where this drew them from the live map and its lock)
-void TerrainDraw(void*) { gRasterizer->Draw(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView); }
-void TerrainHighlights(void*, float inOpacity)
-{
-    GETerrainMesh& theMesh = *gRenderSnapshot.mTerrainMesh;
-    if (gRenderSnapshot.mBrushHighlightShown)
-        gRasterizer->DrawTerrainHighlight(theMesh, gRenderSnapshot.mBrushTiles, gScreenIndex, gOrthographicView,
-                                          gBrushHighlightColor, inOpacity);
-    for (unsigned long theRect = 0; theRect < gRenderSnapshot.mColoredRectangles.size(); theRect++) {
-        const RTSColoredRectangle& theColored = gRenderSnapshot.mColoredRectangles[theRect];
-        gRasterizer->DrawTerrainHighlight(theMesh, theColored.mRect, gScreenIndex, gOrthographicView, theColored.mColor,
-                                          theColored.mOpacity);
-    }
-}
-void TerrainGrid(void*) { gRasterizer->DrawTerrainGrid(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView); }
-void TerrainGridLines(void*)
-{
-    gRasterizer->DrawGridLines(*gRenderSnapshot.mTerrainMesh, gGridRuns, gAreaEffectTexture, gU4E9330, gScreenIndex,
-                               gOrthographicView);
-}
-void TerrainLines(void*)
-{
-    for (unsigned long i = 0; i < gU529050.size(); i++)
-        gRasterizer->Draw3DLine(gU529050[i].mPoints, gU529050[i].mTexture, gU529050[i].mWidth, gScreenIndex, false);
-}
-// the effects' terrain pass: queue 2, batched per texture
-void TerrainEffects(void*)
-{
-    ee_gfx_effect_queues_draw(4);
-}
-}
-
-// Draws the sky (stars on space maps, the inner layer only with clouds on; else sky and clouds), the terrain,
-// the editor brush highlight, the map's coloured rectangles (erasing faded ones), grid, lines and ground effects
-// (ee_gfx ro_terrain.rs)
 void EEROTerrain::RenderScene()
 {
-    EeGfxTerrainScene theScene = {NULL, gRenderSnapshot.mIsSpaceMap, gDrawClouds, gOrthographicView,
-                                  this->mGridMode != 0, gGridRuns.size(), TerrainDraw, TerrainHighlights, TerrainGrid,
-                                  TerrainGridLines, TerrainLines, TerrainEffects};
-    ee_gfx_ro_terrain_render(&gEERustRaster, &theScene);
+    ee_gamecpp_te_render_scene(this);
 }
 
 // Steps the terrain grid mode forwards or backwards through 0..17, wrapping around
@@ -143,9 +76,7 @@ void EEROTerrain::StepGridMode(bool inBackwards)
 // Releases the sky, cloud and star models and textures and the two area-effect textures (ee_gfx ro_terrain.rs)
 void EEROTerrain::ReleaseSkyModels()
 {
-    ee_gfx_ro_terrain_release(&gEERustRaster);
-    gAreaEffectTexture = NULL;
-    gCircleAreaEffectTexture = NULL;
+    ee_gamecpp_te_release_sky_models();
 }
 
 void EEROTerrain::FrameDone()

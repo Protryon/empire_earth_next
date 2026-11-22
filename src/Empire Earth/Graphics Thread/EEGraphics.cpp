@@ -26,24 +26,8 @@
 #include "ee/EEGraphics.h"
 #include "ee/EERenderSnapshot.h"
 #include "rust/render/gfx.h"
-// chain at 0x50972b (wrapper, no dtor): an object whose inline ctor clears one bool (provisional type and name)
-struct EEGraphicsU8E8EB4 {
-    EEGraphicsU8E8EB4() : mB00(false) {}
-    bool mB00;
-};
-EEGraphicsU8E8EB4 gU8E8EB4;
-
-// chain at 0x509738: three deques (ICF-shared ~deque 0x2003a4) and a bool; implicit dtor 0x509762; nothing else
-// reads it (provisional type and names; the deque element types are unknown: any POD gives the same code)
-struct EEGraphicsQueues {
-    EEGraphicsQueues() : mB40(false) {}
-    std::deque<long> mQ00;
-    std::deque<long> mQ14;
-    std::deque<long> mQ28;
-    long mL3C;
-    bool mB40;
-};
-EEGraphicsQueues gGraphicsQueues;
+// the two file-scope objects of the chains at 0x50972b and 0x509738 (a bool; three deques and a bool): nothing read
+// them, so the port has neither
 
 // Creates the game's graphics thread object for a screen (full screen as the screen is), with the frame lock
 // mode 0 and the message-queue-done event
@@ -52,17 +36,13 @@ EEGraphics::EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMo
     : RTSGraphics(inRasterizer, inScreen, inMouse, inUIManager,
                   inRasterizer->GetScreen(inScreen)->GetIsFullScreen(), inThreadPriority)
 {
-    this->mLockMode = 0;
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 78);
-    ee_gfx_main_viewport_set(reinterpret_cast<EeGeViewport*>(&gViewport));   // port: the Rust readers' (input_views.rs)
+    ee_gamecpp_gfx_construct(this);
 }
 
 // Destroys the graphics object, releasing the scene and the message-queue-done event
 EEGraphics::~EEGraphics()
 {
-    ee_gfx_main_viewport_set(NULL);
-    EEReleaseScene();
-    TSScheduler::DestroyEvent(this->mMessageQueueDone);
+    ee_gamecpp_gfx_destruct(this);
 }
 
 // Starts a frame: redraws the whole UI when needed, then copies the frame data under the world lock (read
@@ -113,226 +93,9 @@ void EEGraphics::SaveScreenShot(EEScreenCapture* inCapture)
 
 // Renders a capture: the current view, or the whole map top-down tile by tile into a new surface of the asked
 // width (zooming out until a tile fits the window), restoring the camera afterwards
-// RenderTo's constants: unit-local .rdata (0x4412ac.. before the vtable, 0x4412e8.. after it), not __real pool
-// literals (provisional names)
-static const float kCaptureLeft = 0.0f;     // 0x4412ac (the free camera's capture rectangle, scaled by 0.64)
-static const float kCaptureRight = 1600.0f;
-static const float kCaptureTop = 35.0f;
-static const float kCaptureBottom = 1085.0f;
-static const double kMinusOne = -1.0;
-static const double kEpsilon = 0.001f;      // 0x4412f0 (a float value widened)
-static const double kMinusHalf = -0.5;
-static const double kHalf = 0.5;
-static const double kTileFactor = 0.70710677f;   // 0x441308 (a float value widened)
-static const double kOne = 1.0;
-static const float kCaptureScale = 0.64f;
 void EEGraphics::RenderTo(EEScreenCapture* inCapture)
 {
-    EEMap* theMap = gWorld.mMap;
-    GESurfaceDescription theDescription;
-    GEViewport theViewport;
-    GE3DPlane thePlane1;
-    GE3DPlane theFrontPlane;
-    GE3DPlane theLeftPlane;
-    GE3DPlane thePlane4;
-    GETransformation theTransformation;
-    GEOrientation theOrientation;
-    GERectangle theDestination;
-    GERectangle theSource;
-    GE3DPoint theSavedTarget;
-    GE3DLine theCorner;
-    GE3DLine theLine2;
-    GE3DLine theLine;
-    GE3DPoint theLocation;
-    GE3DPoint theColumnStep;
-    GE3DPoint theRowStep;
-    GE3DPoint theSavedLocation;
-    GERectangle theSavedView;
-    float theZoom = gWorld.mCameraControl.mZoom;
-    unsigned long theScreen = gScreenIndex;
-    bool theSavedB5308E2 = gOrthographicView;
-    long theRow = 0;
-    long theColumn = 0;
-    bool theSavedB529065 = gB529065;
-    GERectangle theSavedOrthographic;
-    unsigned long theWidth;
-    unsigned long theHeight;
-    float theT;
-
-    gWorld.mLock->ReadLock();
-    gB529065 = true;
-    if (inCapture->mWidth == -1) {
-        this->Render(false, false);
-        inCapture->mSurface = gRasterizer->GetRenderTarget(theScreen);
-    } else {
-        gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theSavedLocation);
-        gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theSavedTarget);
-        theSavedView = gViewport.GetViewRectangle();
-        theSavedOrthographic = gViewport.GetOrthographicRectangle();
-        if (!gFreeCamera) {
-            theWidth = gGameWindowWidth;
-            theHeight = gGameWindowHeight;
-        } else {
-            theWidth = 1024;
-            theHeight = 768;
-            theSource.SetLeft((float)(kCaptureScale * kCaptureLeft));
-            theSource.SetRight(kCaptureScale * kCaptureRight);
-            theSource.SetTop(kCaptureScale * kCaptureTop);
-            theSource.SetBottom(kCaptureScale * kCaptureBottom);
-            gViewport.SetViewRectangle(theSource);
-        }
-        gOrthographicView = true;
-        gRasterizer->SetProjectionMode(0, theScreen);
-        gWorld.mCameraControl.SetZoom(1.0f);
-        gWorld.mCameraControl.SetChanged();
-        gWorld.mCameraControl.Update(0.0f);
-        theTransformation = gWorld.mTransformation;
-        theTransformation.ConvertToOrientation(theOrientation);
-        double theCos = UMCos(1.5707964f - theOrientation.GetPitch() * -1.0f);
-        double theAspect = (double)theMap->mL195610 / theMap->mL195614;
-        if (theAspect > kOne)
-            inCapture->mWidth = (long)(inCapture->mWidth / (theAspect * theCos));
-        double theViewWidth = gViewport.GetOrthographicRectangle().GetWidth();
-        double theViewHeight = gViewport.GetOrthographicRectangle().GetHeight();
-        double theMapHeight = theMap->mL195614;
-        double theRatio = inCapture->mWidth / theMapHeight;
-        double theTileWidth = theRatio * theViewWidth * kTileFactor;
-        double theTileHeight = theTileWidth * theCos;
-        while (theTileWidth > theWidth || theHeight < theTileHeight) {
-            if (gWorld.mCameraControl.mZoom <= 0.0f) {
-                inCapture->mWidth /= 2;
-                theRatio = inCapture->mWidth / theMapHeight;
-                gWorld.mCameraControl.SetZoom(1.0f);
-            } else
-                gWorld.mCameraControl.SetZoom(gWorld.mCameraControl.mZoom - 0.1f);
-            gWorld.mCameraControl.SetChanged();
-            gWorld.mCameraControl.Update(0.0f);
-            theViewWidth = gViewport.GetOrthographicRectangle().GetWidth();
-            theViewHeight = gViewport.GetOrthographicRectangle().GetHeight();
-            theTileWidth = theRatio * theViewWidth * kTileFactor;
-            theTileHeight = theTileWidth * theCos;
-        }
-
-        theDescription.mWidth = inCapture->mWidth;
-        theDescription.mHeight = (unsigned long)(inCapture->mWidth * theAspect * theCos);
-        theDescription.mType = kSurfaceSystemMemory;
-        theDescription.mPixelFormat = gRasterizer->GetRenderTarget(theScreen)->GetPixelFormat();
-        theDescription.mPixelDepth = gRasterizer->GetRenderTarget(theScreen)->GetPixelDepth();
-        theDescription.mSurfaceVolatility = 0;
-        theDescription.m14 = 0;
-        theDescription.mMipLevelCount = 0;
-        theDescription.mIs3DRenderable = false;
-        theDescription.mIsTransparencyEnabled = false;
-        long theResult = gRasterizer->GetScreen(theScreen)->CreateSurface(theDescription, &inCapture->mSurface);
-        ESVERIFY_AT(theResult == keseOK, 810);
-
-        double theFractionX = theDescription.mWidth / theTileWidth - (long)(theDescription.mWidth / theTileWidth);
-        double theFractionY = theDescription.mHeight / theTileHeight - (long)(theDescription.mHeight / theTileHeight);
-        float theTileHeightF = theTileHeight;
-        theSource.SetBottom(theTileHeightF);
-        theSource.SetTop(0.0f);
-        float theTileWidthF = theTileWidth;
-        theSource.SetRight(theTileWidthF);
-        theSource.SetLeft(0.0f);
-        gViewport.SetViewRectangle(theSource);
-        theDestination.SetTop(0.0f);
-        theDestination.SetBottom(theTileHeightF);
-        theDestination.SetLeft(0.0f);
-        theDestination.SetRight(theTileWidthF);
-
-        const GE3DPlane& theMapFront = theMap->mTerrainMesh.GetFrontPlane();
-        theFrontPlane.Define(theMapFront.GetPoint(), theMapFront.GetNormal());
-        const GE3DPlane& theMapLeft = theMap->mTerrainMesh.GetLeftPlane();
-        theLeftPlane.Define(theMapLeft.GetPoint(), theMapLeft.GetNormal());
-        theLeftPlane.Intersects(theFrontPlane, theCorner);
-        theLocation.SetX(theCorner.GetStart().GetX());
-        theLocation.SetY(theCorner.GetStart().GetY());
-        theLocation.SetZ(0.0f);
-        gWorld.mCameraControl.SetLocation(theLocation, false, true);
-        gWorld.mCameraControl.SetChanged();
-        gWorld.mCameraControl.Update(0.0f);
-
-        theTransformation = gWorld.mTransformation;
-        theRowStep.mX = theViewWidth * kHalf;
-        theRowStep.mZ = gViewport.GetYClippingPlane() * theViewHeight * kMinusHalf;
-        theTransformation.Apply(theRowStep, theLocation);
-        theLine.SetStart(gWorld.mLine.GetStart());
-        theLine.SetDirection(gWorld.mLine.GetDirection());
-        theLine.SetStart(theLocation);
-        theLine.SolveForZ(0.0f, theT, theLocation);
-        gWorld.mCameraControl.SetLocation(theLocation, false, true);
-        gWorld.mCameraControl.SetChanged();
-        gWorld.mCameraControl.Update(0.0f);
-
-        long theColumns = (float)UMCeil(theDescription.mWidth / theTileWidthF);
-        long theRows = (float)UMCeil(theDescription.mHeight / theTileHeightF);
-        theColumnStep.SetX(theViewWidth);
-        do {
-            do {
-                gB529066 = false;
-                gCameraFollowing = false;
-                gB529068 = false;
-                this->Render(false, false);
-                if (theDestination.GetBottom() > (float)theDescription.mHeight)
-                    theDestination.SetBottom((float)theDescription.mHeight);
-                if (theDestination.GetRight() > (float)theDescription.mWidth)
-                    theDestination.SetRight((float)theDescription.mWidth);
-                gRasterizer->GetRenderTarget(theScreen)->CopyTo(inCapture->mSurface, theSource, theDestination, false);
-                theColumn++;
-                theDestination.SetLeft((float)(theColumn * theTileWidth));
-                theDestination.SetRight((float)((theColumn + 1) * theTileWidth));
-                theTransformation = gWorld.mTransformation;
-                theTransformation.Apply(theColumnStep, theLocation);
-                theLine = gWorld.mLine;
-                theLine.SetStart(theLocation);
-                theLine.SolveForZ(0.0f, theT, theLocation);
-                gWorld.mCameraControl.SetLocation(theLocation, false, true);
-                gWorld.mCameraControl.SetChanged();
-                gWorld.mCameraControl.Update(0.0f);
-                if (theColumn + 1 == theColumns && theFractionX > kEpsilon)
-                    theSource.SetRight((float)(theFractionX * theTileWidth));
-            } while (theColumn < theColumns);
-            theRow++;
-            theDestination.SetTop((float)(theRow * theTileHeight));
-            theDestination.SetBottom((float)((theRow + 1) * theTileHeight));
-            theColumn = 0;
-            theDestination.SetRight(theTileWidthF);
-            theDestination.SetLeft(0.0f);
-            theSource.SetRight(theTileWidthF);
-            theSource.SetLeft(0.0f);
-            if (theRow + 1 == theRows && theFractionY > kEpsilon)
-                theSource.SetBottom((float)(theFractionY * theTileHeight));
-            theLine = gWorld.mLine;
-            theLine.SetStart(theCorner.GetStart());
-            theLine.SolveForZ(0.0f, theT, theLocation);
-            gWorld.mCameraControl.SetLocation(theLocation, false, true);
-            gWorld.mCameraControl.SetChanged();
-            gWorld.mCameraControl.Update(0.0f);
-            theRowStep.mZ = gViewport.GetYClippingPlane() * (theRow + kHalf) * theViewHeight * kMinusOne;
-            theTransformation = gWorld.mTransformation;
-            theTransformation.Apply(theRowStep, theLocation);
-            theLine = gWorld.mLine;
-            theLine.SetStart(theLocation);
-            theLine.SolveForZ(0.0f, theT, theLocation);
-            gWorld.mCameraControl.SetLocation(theLocation, false, true);
-            gWorld.mCameraControl.SetChanged();
-            gWorld.mCameraControl.Update(0.0f);
-        } while (theRow < theRows);
-
-        gViewport.SetViewRectangle(theSavedView);
-        gViewport.SetOrthographicRectangle(theSavedOrthographic);
-        gOrthographicView = theSavedB5308E2;
-        gRasterizer->SetProjectionMode(1, theScreen);
-        gWorld.mCameraControl.SetZoom(theZoom);
-        gWorld.mCameraControl.SetLocation(theSavedLocation, false, true);
-        gWorld.mCameraControl.SetChanged();
-        gWorld.mCameraControl.Update(0.0f);
-    }
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
-    gB529065 = theSavedB529065;
-    gWorld.mLock->ReadUnlock();
+    ee_gamecpp_gfx_render_to(this, inCapture);
 }
 
 // Posts the initialise-scene message (0x503) to the graphics thread
@@ -387,10 +150,7 @@ void EEGraphics::PostLetterboxOut(unsigned long inValue)
 // message; returns the post result
 long EEGraphics::PostMessage50AAndWait()
 {
-    long theResult = this->mThread->Post(0x50a, NULL, NULL, true);
-    if (theResult == 0)
-        this->mMessageQueueDone->Wait(kTSWaitInfinite);
-    return theResult;
+    return ee_gamecpp_gfx_post_50a_and_wait(this);
 }
 
 // ------------------------------------------------------------------------- the graphics bodies' C++ (gamecpp graphics.rs)
@@ -441,8 +201,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SceneFlags6668Clear: gB529066 = false, gB529068 = false;
         break;
-    case O::TakeRenderSnapshot: EETakeRenderSnapshot();
-        break;
     case O::LightFadeIn: EEStartLightFadeIn((unsigned long)a[0]);
         break;
     case O::LightFadeOut: EEStartLightFadeOut((unsigned long)a[0]);
@@ -484,17 +242,66 @@ int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const fl
 
 // ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EERenderSnapshot, EEUnitPicker)
 
-int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+// the next switches of the lane (EEROUnits.cpp's, then EERenderSnapshot.cpp's and EEMouse.cpp's, whose default is
+// EECore10OpB)
+int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EERoUnitsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 10 lane A section): one
 // statement each
 int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore10OpB(inOp, p, a, f);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the graphics object (gamecpp render_to.rs)
+    case O::GtQueueDoneCreate: return TSScheduler::CreateEvent(GFX->mMessageQueueDone) == keseOK;
+    case O::GtQueueDoneDestroy: TSScheduler::DestroyEvent(GFX->mMessageQueueDone);
+        break;
+    case O::GtQueueDoneWait: GFX->mMessageQueueDone->Wait(kTSWaitInfinite);
+        break;
+    case O::GtPost: return GFX->mThread->Post((unsigned long)a[0], NULL, NULL, true);
+    case O::GtMainViewport: return P64(&gViewport);
+    case O::RtCaptureWidth: return P64(&CAPTURE->mWidth);
+    case O::RtCaptureSurface: return P64(&CAPTURE->mSurface);
+    case O::RtScreenIndex: return gScreenIndex;
+    case O::RtRender: GFX->Render(false, false);
+        break;
+    case O::RtCaptureSetRenderTarget: CAPTURE->mSurface = gRasterizer->GetRenderTarget((unsigned long)a[0]);
+        break;
+    case O::RtViewportViewRectangle: *(GERectangle*)a[0] = gViewport.GetViewRectangle();
+        break;
+    case O::RtViewportOrthoRectangle: *(GERectangle*)a[0] = gViewport.GetOrthographicRectangle();
+        break;
+    case O::RtSetViewportOrthoRectangle: gViewport.SetOrthographicRectangle(*(const GERectangle*)a[0]);
+        break;
+    case O::RtSetOrthographic: gOrthographicView = a[0] != 0;
+        break;
+    case O::RtProjectionMode: gRasterizer->SetProjectionMode((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::RtMapL195610: return gWorld.mMap->mL195610;
+    case O::RtMapL195614: return gWorld.mMap->mL195614;
+    case O::RtTargetPixelFormat: return gRasterizer->GetRenderTarget((unsigned long)a[0])->GetPixelFormat();
+    case O::RtTargetPixelDepth: return gRasterizer->GetRenderTarget((unsigned long)a[0])->GetPixelDepth();
+    case O::RtCreateSurface: return gRasterizer->GetScreen((unsigned long)a[2])->CreateSurface(*(GESurfaceDescription*)a[0], (GESurface**)a[1]);
+    case O::RtMeshFrontPlane: *(GE3DPlane*)a[0] = gWorld.mMap->mTerrainMesh.GetFrontPlane();
+        break;
+    case O::RtMeshLeftPlane: *(GE3DPlane*)a[0] = gWorld.mMap->mTerrainMesh.GetLeftPlane();
+        break;
+    case O::RtWorldLine: *(GE3DLine*)a[0] = gWorld.mLine;
+        break;
+    case O::RtCopyTo: gRasterizer->GetRenderTarget((unsigned long)a[0])->CopyTo(CAPTURE->mSurface, *(GERectangle*)a[1], *(GERectangle*)a[2], false);
+        break;
+    default: return EERoUnitsOp(inOp, p, a, f);
+    }
+    return 0;
 }
 
 double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore10OpBF(inOp, p, a, f);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::RtCameraZoom: return gWorld.mCameraControl.mZoom;
+    case O::RtViewportYClipping: return gViewport.GetYClippingPlane();
+    default: return EERoUnitsOpF(inOp, p, a, f);
+    }
 }

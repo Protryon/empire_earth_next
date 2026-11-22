@@ -65,22 +65,10 @@ void EEROWater::SceneStarting()
 {
 }
 
-// Draws the water unlit with fog, alpha-blended with z test only, then the effects' pass 6
+// Draws the water unlit with fog, alpha-blended with z test only, then the effects' pass 6 (gamecpp ro_views.rs)
 void EEROWater::RenderScene()
 {
-    float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAlphaTestingRefValue(0.0f, gScreenIndex);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    gRasterizer->SetShadingColorSource(1, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetLightingOff();
-    SetSceneFog();
-    gRasterizer->DrawWater(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView);   // port: the snapshot's
-    ee_gfx_effect_queues_draw(6);
-    gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
+    ee_gamecpp_wa_render_scene();
 }
 
 void EEROWater::FrameDone()
