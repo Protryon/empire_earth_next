@@ -7,6 +7,44 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The Error System's codes (proven: the "theResult == keseOK" assert text; the others are the codes the Thread, Time
+/// and File System units return, names provisional). One name per value: lle/LowLevelEngineCore.h adds the aliases
+/// (`keseOK`, and `kErrorAlreadyExists`, `kErrorAlreadyOpen`, `kErrorIOFailed`, whose values another name has).
+enum ESError {
+  kErrorOK = 0,
+  /// after ESRecordNativeError(GetLastError()) (TSEvent::Set 0x53d09)
+  kErrorNativeError = 1,
+  /// TSThread::Resume: ResumeThread returned 0
+  kErrorNotSuspended = 2,
+  /// TSScheduler::DestroyThread, TSThread::Receive (no message), TMTimer
+  kErrorNotFound = 3,
+  /// FSMemoryFile::Read with no buffer; FSFileSpec I/O on a closed file
+  kErrorNotOpen = 4,
+  /// TMTimer::Set* while running
+  kErrorBusy = 5,
+  /// FSFileSpec::GetNextFile: ERROR_NO_MORE_FILES
+  kErrorNoMoreFiles = 7,
+  /// operator new failed (TSScheduler::Create*)
+  kErrorOutOfMemory = 8,
+  /// TSInitialize: URegisterShutdown failed; FSMemoryFile's unsupported operations (DeleteDirectory, Lock,
+  /// GetFirstFile, ...)
+  kErrorFailed = 9,
+  /// FSFileSpec::SetPosition past the end of the file
+  kErrorBeyondEnd = 10,
+  /// FSDebugFile::Copy
+  kErrorNotSupported = 13,
+  /// FSBasicFile::Delete / FSFileSpec::Open: path longer than MAX_PATH
+  kErrorBadPath = 14,
+  /// FSFileSpec::Write/SetLength without write access
+  kErrorNotWritable = 15,
+  /// FSFileSpec::Read without read access
+  kErrorNotReadable = 16,
+  /// TSEvent::Wait: WAIT_TIMEOUT
+  kErrorTimeout = 17,
+  /// FSMemoryFile::Read past the end
+  kErrorEndOfFile = 18,
+};
+
 /// ISKeyboard entity index: the DirectInput DIK_* scan code; 0xe0..0xe2 the either-side ISExtendedKeys; 0x7fff no key
 enum ISKeyCode {
   /// DirectInput 7 dinput.h DIK_ESCAPE = 0x01
@@ -238,44 +276,6 @@ enum SETransitionFlags {
   kTransitionFlagMeasure = 0,
   kTransitionFlagModulate = 1,
   kTransitionFlagLong = 2,
-};
-
-/// The Error System's codes (proven: the "theResult == keseOK" assert text; the others are the codes the Thread, Time
-/// and File System units return, names provisional). One name per value: lle/LowLevelEngineCore.h adds the aliases
-/// (`keseOK`, and `kErrorAlreadyExists`, `kErrorAlreadyOpen`, `kErrorIOFailed`, whose values another name has).
-enum ESError {
-  kErrorOK = 0,
-  /// after ESRecordNativeError(GetLastError()) (TSEvent::Set 0x53d09)
-  kErrorNativeError = 1,
-  /// TSThread::Resume: ResumeThread returned 0
-  kErrorNotSuspended = 2,
-  /// TSScheduler::DestroyThread, TSThread::Receive (no message), TMTimer
-  kErrorNotFound = 3,
-  /// FSMemoryFile::Read with no buffer; FSFileSpec I/O on a closed file
-  kErrorNotOpen = 4,
-  /// TMTimer::Set* while running
-  kErrorBusy = 5,
-  /// FSFileSpec::GetNextFile: ERROR_NO_MORE_FILES
-  kErrorNoMoreFiles = 7,
-  /// operator new failed (TSScheduler::Create*)
-  kErrorOutOfMemory = 8,
-  /// TSInitialize: URegisterShutdown failed; FSMemoryFile's unsupported operations (DeleteDirectory, Lock,
-  /// GetFirstFile, ...)
-  kErrorFailed = 9,
-  /// FSFileSpec::SetPosition past the end of the file
-  kErrorBeyondEnd = 10,
-  /// FSDebugFile::Copy
-  kErrorNotSupported = 13,
-  /// FSBasicFile::Delete / FSFileSpec::Open: path longer than MAX_PATH
-  kErrorBadPath = 14,
-  /// FSFileSpec::Write/SetLength without write access
-  kErrorNotWritable = 15,
-  /// FSFileSpec::Read without read access
-  kErrorNotReadable = 16,
-  /// TSEvent::Wait: WAIT_TIMEOUT
-  kErrorTimeout = 17,
-  /// FSMemoryFile::Read past the end
-  kErrorEndOfFile = 18,
 };
 
 /// FSFileSpec::Open's access (lle/FSFile.h adds the original's assert-text spellings `kfsaRead`, `kfsaWrite`).
