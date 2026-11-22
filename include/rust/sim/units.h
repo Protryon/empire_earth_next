@@ -923,8 +923,28 @@ constexpr static const int32_t EE_UNITS_COND_ATTACK_GOAL = 40;
 /// unit `a`'s class's `IsCrusader()`
 constexpr static const int32_t EE_UNITS_COND_CRUSADER = 41;
 
-/// the sunk test of the ships (`DyingAnimationFinished`): unit `a`'s transformed bounding box below the water
-constexpr static const int32_t EE_UNITS_COND_SUNK = 42;
+/// `unit a->GetPosition(thePosition = GE3DPoint(0, 0, 0))`
+constexpr static const int32_t EE_UNITS_COND_SUNK_POSITION = 4000;
+
+/// `theTransformation = GETransformation(false)`, then unit `a`'s location `Apply`'d to its model's internal
+/// transform at its frame
+constexpr static const int32_t EE_UNITS_COND_SUNK_LOCATE = 4001;
+
+/// `theTransformation.Scale(s, s, s)` with unit `a`'s model scale
+constexpr static const int32_t EE_UNITS_COND_SUNK_SCALE = 4002;
+
+/// `theTransformation.SetX(thePosition.GetX())` (and Y, Z below)
+constexpr static const int32_t EE_UNITS_COND_SUNK_SET_X = 4003;
+
+constexpr static const int32_t EE_UNITS_COND_SUNK_SET_Y = 4004;
+
+constexpr static const int32_t EE_UNITS_COND_SUNK_SET_Z = 4005;
+
+/// unit `a`'s model's bounding box at its frame `Transform`ed by `theTransformation` into `theTransformedBox`
+constexpr static const int32_t EE_UNITS_COND_SUNK_BOX = 4006;
+
+/// `theTransformedBox.GetTopRightBack().GetZ()` into `f`
+constexpr static const int32_t EE_UNITS_COND_SUNK_TOP_Z = 4007;
 
 /// class `b`'s `SelectUnitToRelease(a)` (`c` 0), `EruptVolcano(a)` (1), `HasSunk(a)` (2), `AreEnemiesNear(a)` (3),
 /// `IsPasserNear(a)` (4)
