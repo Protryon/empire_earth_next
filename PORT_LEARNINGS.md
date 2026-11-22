@@ -37272,3 +37272,139 @@ conflict, strip_markers --check 0 files, no conflict marker; `rust_build.py head
 - `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT 13249, units
   [4, 41, 41], alive [2, 3], classic_lua x 2; lan-game PT 2797/2793);
 - Not run: the POSIX builds.
+
+## The UI lane, round 12: the area effects whole (EEAreaEffect, its template, EEAEManager's passes as one functor), the area-effect and civilization capture records, the civilization manager's and file load's bodies, the HUD and shell factories' bodies, the backgrounds' and edit boxes' host cases in Rust over one-statement shims; the civilization builder gate's flake (ee_game screens area_effect_obj.rs, area_effect_capture.rs, civ_capture.rs, civ_manager_obj.rs, civ_load.rs, shell_factories.rs, hud_bodies.rs; ee_ui lle_bg_edit.rs; branch rust-ui12, 2026-11-21)
+
+The brief: round 11's leftovers as whole classes where the lane can (the area effects, the civilization manager, the
+captures if cheap, the HUD classes, the toolkit's hosts), score the C++ logic lines removed (`logic_lines.py`, base
+f705e3c07), target -2,500; settle round 11's `--civbuilder` flake. **Logic -797** (whole tree, base f705e3c07 -> 1d52fcced before the merge of origin/rust, one run: 65,838 ->
+65,041), net C++ lines -639 (+563 -1,202) in src, include/ee and include/lle (the generated include/rust headers not
+counted); 257 one-statement shims added (244 `extern "C"` lines and 13 shim list entries naming Rust symbols: the 12
+area-effect ones and `aec_active`); 20 C++ functions deleted that were shims or hosts (17 shims, the display
+questions' three); the C++ `EEAEHost` and `EECivHostCall` deleted. The target was not reached: what is left is mostly
+declarations (the toolkit's base classes, which every control derives from, the game's headers' enums and members) and
+the C++ call records that hold a `UWideString`; docs/progress/ui-cluster.md lists it file by file. Per commit (logic,
+one run): 802d3fdde -318 (the area effects), af86ad714 -142 (the civilization capture), 761f2fe50 -69 (the
+civilization manager), a80bcc145 -176 (the HUD and shells, the dead player names), 26c810f9f -30 (the backgrounds'
+and edit boxes' cases), 384deb77d 0 (the gate's diagnostic), 73e657d06 -34 (`EELoadCivilization`), 1d52fcced -28
+(the display questions).
+
+### What moved
+
+- **The area effects whole** (`area_effect_obj.rs`): `EEAreaEffect`'s constructor (template referenced, the kind's
+  numbers with the variant's morale bonus, media loaded), destructor, `AppliedTo`, `RemovedFrom`, `Covers`,
+  `GetStrength`, `GetLevel`, `GetRadius`, `GetScale`, `Modify`, `MarkDirty`, `Recount`, `Tick`, `ShowOn`,
+  `SetUnit`, `IsInRange`; `EEAreaEffectTemplate`'s constructor, destructor, `AffectsPlayer(Reversed)`, `IsWithin`,
+  `Init`; `EEAEManager`'s `Tick`, `Clear`, `ClearEffects`, `CreateAreaEffect`, the template media by index, and its
+  seven unit functors (ApplyGeneratedEffectsToOthers, SetAffectedByAreaEffect, ClearAreaEffects,
+  RebuildAreaEffectRegionList, RemoveRedundantAreaEffects, UpdateGeneratedAreaEffects, UpdateAffectedByAreaEffects)
+  as one C++ functor `EEAEPassFunctor` whose `Apply` is Rust's `pass`; `EEUnitAreaEffectList::KeepStrongest`. The
+  simulation (`ee_sim::tech::area_effect`) asks its world calls of `area_effect_obj::Host`, which answers them
+  through `area_effect_host.rs`: the C++ `EEAEHost` (a struct, its `Call`, the `ee_screens_ae_host` export) is
+  gone. The effect's and template's numbers are their Rust records, read through the shims' base pointers and copied
+  per call as the old forwarders copied them. The six pass methods left `EEAEManager.h`.
+- **The capture records** (`area_effect_capture.rs`, `civ_capture.rs`; TEST ONLY): AETP/AEFX and CVMG/CVAP/CVLD/CVAF
+  are Rust over the test-only units' own shims; the units keep only their shims and the hooks' assignments (the hooks
+  stay pointers, so no game unit names a test-only symbol). The tech capture's records a civilization record embeds
+  (`EETechCapturePlayer`, `...Upgrade`, `...Tree`) run on a scratch C++ record whose bytes are appended.
+- **The civilization manager and file load** (`civ_manager_obj.rs`, `civ_load.rs`): the db files' reads
+  (`EECivReadAll`), the three tables' loads, the premade copies, `ApplyUpgrade` (the capture's halves around the
+  simulation's apply over a Rust `CivHost`: the C++ `EECivHostCall` and the `ee_screens_civ_host` export are gone),
+  `HasPower`, the out-parameter members (`MatchesPremadeCivilization`, `GetCategory`, `GetCategoryNameID`,
+  `ToLegacy`, `SplitAttribute`) and `EELoadCivilization` (the file found, read whole, parsed, its results handed
+  back, the CVLD hook).
+- **The HUD and shells** (`shell_factories.rs`, `hud_bodies.rs`): the icon bar's and chat line's factories
+  (`EEUIShellNewIconBar`, `EEUIShellNewChatLine`, called from the UI manager's Rust), the tech list's bars
+  (`EEUIShellList::DrawBars`, now a Rust case of the shells' host); `EEUIFMainGame`'s destructor, `CreateGroup`,
+  `IsInGameView`; `EEUIBUpgrade`'s constructor body, `ButtonDown`, `CopyData`, `DrawTextA`, `MouseOver`,
+  `MouseRButtonDown`, `SetDirty`; `EECBUIListBox`'s constructor body, `AppendStringArray`, `CopyData`.
+- **The display questions** (`display_modes.rs`): `EEScreens.cpp`'s video modes, current mode and game size for the
+  settings form.
+- **The toolkit** (`ee_ui` `lle_bg_edit.rs`): the backgrounds' texture size and load (the UI textures' stages, shared
+  with the manager's) and the edit boxes' keyboard keys A/L/Return, scroll bar, form mouse, lines and text colour,
+  as Rust hosts before `UIBackgroundHost::Op` and `UIEditBoxRust::Op` (`lle_host!`, as round 10's).
+- **Dead code**: `gDefaultPlayerNames` (32 "Player N" strings, a reconstructed static initializer nothing reads),
+  two unused declarations in `EEUIManager.cpp`.
+- **The sweep**: 12 shims whose callee became Rust name it in the shim list (`aem_covers`, `aem_applied_to`,
+  `aem_is_immunity`, `aem_affects_player(_reversed)`, `aem_in_range`, `ael_strength`, `ael_modify`, `ael_show_on`,
+  `ael_mark_dirty`, `ael_recount`, `ael_tick`); their C++ shims, `aem_show_on`, `aem_set_affected_functor`,
+  `aem_for_each_set_affected`, `ct_new_chat_line` and `ct_new_icon_bar` are deleted.
+
+### The civilization builder gate's flake (round 11: step 59's stack still held a message box)
+
+**Not reproduced; not a race in the ported code, not the script's timing; most likely a file error box of the
+overwrite.** What the round established:
+- The posted close cannot be read late. The answer's `ButtonUp` posts the box's close (`CloseForm`: message 0x419,
+  a pop handled synchronously) from inside the step; the step's end is its marker's `PostEvent` (0x40e) to the same
+  thread queue afterwards (`ee_base::ts` `post`/`receive`: one FIFO deque). The pop runs before the step ends, under
+  any load.
+- The failing output fits a box the "Yes" callback opened instead: `write_civilization` deletes the file, then
+  `Create` is a create-new (`PlatFileCreateNew`); a delete that fails (another handle without delete sharing: the
+  game opens with `FILE_SHARE_READ` only) or is left pending makes the create fail, and the builder shows "error
+  creating file" on top of the save form. The file stays as it was (step 60's bytes equal, as in the failure: the
+  overwrite writes the same bytes), and step 70's close of the save form pops the box with it (every later step
+  equal, as in the failure). Windows Defender's real-time scan is on and the worktrees are not excluded.
+- Probes did not reproduce it: 3 + 3 + 3 `--civbuilder` runs this round passed; a script without the state step
+  between the "No" and the second save passed the overwrite; 2,300 write/read/delete/create-new cycles of a `.civ`
+  on the same disk (`build/ui12/civrace*.py`) never failed.
+- So the gate's `cb state` now digests a message box left on top (commit "sim_editor --civbuilder's state step
+  digests a message box left on top"; a passing run's states never have one, so its expected output is unchanged):
+  the next failure names the box and its text. No game change: a retry of the create would change the original's
+  behaviour.
+
+### Lessons
+
+- **A host struct the simulation hands back can go when the caller is Rust.** `EEAEHost` existed to give the
+  simulation's Rust a C function pointer into the game's Rust; once the forwarders are Rust, a Rust `Host` that
+  implements the simulation's trait calls the game's host directly, and the C++ struct and its `Call` disappear.
+- **Seven functors, one class.** C++ walkers that take a functor object (`EEForEachPlayersUnit`) keep one functor
+  class whose `Apply` forwards (pass id, argument, numbers); the passes' bodies are Rust. The temporary's address for
+  the walker is a one-statement helper (`EEAETemp(T&&)`).
+- **Heredocs, fourth round running**: a `c"textures\\x"` written through a bash heredoc reached the file as
+  `c"textures\x"` (rustc: "numeric character escape is too short"). Test strings now avoid backslashes, or go through
+  the Write tool.
+- **An `lle_host!` export is not in a generated header**: cbindgen does not expand the macro, so the C++ declares the
+  host itself (`lle/UIShims.h`), as round 10's six.
+- **The logic count's heuristic counts any brace in a body**: a one-statement shim with an initializer list (`{}` for
+  an empty vector, `{a, b}` for a message record) counts as logic. Where an equivalent expression exists
+  (`std::vector<int64_t>()`, `std::vector<int64_t>(1, v)`) the shim uses it; the message records' initializer lists
+  stay (the lead may want the heuristic to accept them).
+
+### What only the tours (or a person) exercise
+
+Cumulative with rounds 7-11 ("The UI lane, round 11"):
+- EE-SIM and the oracle: the area effects (every game; the captures' AETP/AEFX digests), the civilization manager's
+  loads and `ApplyUpgrade` (every game), the civilization file load (sim_editor `--civbuilder`, the capture
+  profiles' CVLD).
+- The tours: the icon bar's and chat line's factories (every game form), the improvement buttons' bodies (the orders
+  game's selections), the main game form's destructor (a game's end), `IsInGameView` (the orders game's clicks), the
+  backgrounds' textures (every form), the edit boxes' cases (the editor tour's names, the lobby).
+- sim_editor: the tech list's bars (the editor script's tech tab), the civilization list's constructor and copies.
+- Only a person: the edit boxes' select-all and clipboard keys.
+
+### Gates
+
+On the final tree (the round's commits merged with origin/rust 8830a1187, batch 14, at f2b46fa63: one conflict, the
+two sides' sections at the end of this file, kept both; strip_markers --check 0 files, no conflict marker;
+`rust_build.py header` current and `rust_includes.py`'s one addition to tests/sound/se_golden.cpp; clippy's and
+rustfmt's fixes after it):
+- both builds 0/0 (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0 (414); 301 headers current;
+- the Rust gate: its first run on the merge failed clippy on this round's code (LP64 casts, a boxed local); the second
+  PASS (5,713 tests; test, clippy, rustfmt, header);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines); seeds 2-3 identical after each piece;
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests);
+- the plain saveload PASS; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`
+  exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines); `--civbuilder` PASS three times in the chain (4,062 lines), and six times more
+  during the round;
+- `eedata.py check` PASS, `cppgate` PASS;
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RESULT PASS), `--exercise editor` (CAMPAIGN EDITOR PASS,
+  RESULT PASS), `random-game --box-select --orders --seed 7` (BOX SELECT PASS; ORDERS PASS: gather, repair,
+  repair-queued, move; RESULT PASS). The tour's menu captures against the base build's (the main checkout's test
+  profile): the settings tabs, single player and random map set-up equal pixel for pixel, the main menu and the
+  closed settings differ only in the build label (151 pixels); the game frames differ as two live games do;
+- `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 13633, units [4, 43, 42], alive [2, 3],
+  classic_lua x 2; lan-game PT 2876/2868);
+- Not run: the POSIX builds.
