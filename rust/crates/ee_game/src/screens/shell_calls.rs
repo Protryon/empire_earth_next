@@ -35,8 +35,9 @@ use crate::screens::shells_saved::{
     EE_SCREENS_SH_SG_SOUND, EE_SCREENS_SH_SG_TEXTURE_REF,
 };
 use crate::screens::shells_tech::{
-    EE_SCREENS_SH_FORM_CHECKED, EE_SCREENS_SH_LIST_CURRENT, EE_SCREENS_SH_TECH_DEPENDS, EE_SCREENS_SH_TECH_MARK_PLAYER,
-    EE_SCREENS_SH_TECH_NAME_ID, EE_SCREENS_SH_TECH_OBSOLETE, EE_SCREENS_SH_TECH_OBSOLETED,
+    EE_SCREENS_SH_FORM_CHECKED, EE_SCREENS_SH_LIST_CURRENT, EE_SCREENS_SH_TECH_BARS, EE_SCREENS_SH_TECH_DEPENDS,
+    EE_SCREENS_SH_TECH_MARK_PLAYER, EE_SCREENS_SH_TECH_NAME_ID, EE_SCREENS_SH_TECH_OBSOLETE,
+    EE_SCREENS_SH_TECH_OBSOLETED,
 };
 use crate::screens::shells_unit::{
     EE_SCREENS_SH_KEY, EE_SCREENS_SH_LIST_INSERT_BYTES, EE_SCREENS_SH_LIST_LINE, EE_SCREENS_SH_ROTATE,
@@ -91,6 +92,16 @@ fn rotate<C: Cpp + ?Sized>(c: &mut C, ctl: usize, ghosts: bool, angle: f32) {
 /// not here.
 pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, ctl: usize, op: u32, a: i64, b: i64, f: &mut [f32; 4]) -> Option<i64> {
     Some(match op {
+        // the tech list's blue bars (`a` the lines, `b` their count; shell_factories.rs)
+        EE_SCREENS_SH_TECH_BARS => {
+            let lines = if b <= 0 {
+                &[][..]
+            } else {
+                // SAFETY: the caller's lines, live for the call
+                unsafe { core::slice::from_raw_parts(a as *const u32, b as usize) }
+            };
+            crate::screens::shell_factories::draw_bars(c, ctl, lines)
+        }
         EE_SCREENS_SH_TEXT_FG => {
             c.shell_text_fg(ctl, a as u32, f[0], f[1], f[2]);
             c.shell_text_transparent(ctl, a as u32);

@@ -50,6 +50,7 @@ pub mod labelobj;
 pub mod layout;
 pub mod list;
 pub mod listobj;
+pub mod lle_bg_edit;
 pub mod lle_combo;
 pub mod lle_control;
 pub mod lle_cpp;

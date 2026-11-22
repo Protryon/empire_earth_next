@@ -31,6 +31,8 @@ extern "C" intptr_t ee_ui_form_host(EE_UI_HOST_ARGS);
 extern "C" intptr_t ee_ui_control_host(EE_UI_HOST_ARGS);
 extern "C" intptr_t ee_ui_table_host(EE_UI_HOST_ARGS);
 extern "C" intptr_t ee_ui_combo_host(EE_UI_HOST_ARGS);
+extern "C" intptr_t ee_ui_background_host(EE_UI_HOST_ARGS);
+extern "C" intptr_t ee_ui_edit_host(EE_UI_HOST_ARGS);
 
 // the text as a string (the bytes up to the first 0)
 inline UWideString UIShimText(EeUiShimText inText) { return UWideString(std::string((const char*)inText.ptr, inText.len).c_str()); }

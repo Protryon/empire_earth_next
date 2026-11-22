@@ -1,6 +1,8 @@
 // New (port), TEST ONLY: the civilization builder lane's capture records (ee/EECivCapture.h; tools/sim_capture.py).
 // Reads the manager, the powers, the players and their class upgrades; changes nothing but the capture file (CVMG
-// loads the premade civilizations' files through EELoadCivilization, as the game's choice form does).
+// loads the premade civilizations' files through EELoadCivilization, as the game's choice form does). UI lane round
+// 12: the records are Rust's (ee_game screens civ_capture.rs) over the one-statement shims below; the hooks are set to
+// its entries here.
 #include <windows.h>
 #include <algorithm>
 #include <string.h>
@@ -16,207 +18,111 @@
 #include "ee/EECivPowersManager.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECivCapture.h"
-#include "rust/sim/tech.h"   // ee_tech_capture_civ_manager
+#include "ee/EEScreensShims.h"
+#include "rust/sim/units.h"   // ee_units_lists_len
+#include "rust/game/screens.h"   // ee_screens_civc_* (civ_capture.rs)
 
-namespace {
-
-void Text(EESimCaptureRecord& ioRecord, const char* inText)
-{
-    unsigned int theSize = inText != NULL ? (unsigned int)strlen(inText) : 0;
-    ioRecord.U32(theSize);
-    ioRecord.Bytes(inText, theSize);
-}
-
-void Upgrades(EESimCaptureRecord& ioRecord, const std::vector<EECivUpgrade>& inUpgrades)
-{
-    ioRecord.U32((unsigned int)inUpgrades.size());
-    for (EECivUpgrade theUpgrade : inUpgrades)
-        ioRecord.U32(theUpgrade);
-}
-
-// the player's fields the upgrade levels and powers change
-void PlayerFields(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)
-{
-    EETechCapturePlayer(ioRecord, inPlayer);
-    if (inPlayer == NULL)
-        return;
-    ioRecord.F32(inPlayer->mConversionFactor);
-    ioRecord.F32(inPlayer->mHighGroundBonus);
-    ioRecord.I32(inPlayer->mShareBonus);
-    ioRecord.I32(inPlayer->mMiningLimit);
-}
-
-// the player's civilization
-void Civilization(EESimCaptureRecord& ioRecord, EECivilization& inCivilization)
-{
-    Upgrades(ioRecord, inCivilization.mPurchasedUpgrades);
-    Upgrades(ioRecord, inCivilization.mDeferredUpgrades);
-    Text(ioRecord, (const char*)inCivilization.mName);
-    ioRecord.U32(inCivilization.mAvailablePoints);
-    ioRecord.U32(inCivilization.mMaxPoints);
-    ioRecord.U32((inCivilization.mNoPointsAdded ? 1u : 0u) | (inCivilization.mUnchanged ? 2u : 0u));
-}
-
+#define CR(r) ((EESimCaptureRecord*)(r))
+#define CP(p) ((EEPlayer*)(p))
+#define CN(n) ((EETechTreeNode*)(n))
+#define CV(c) ((EECivilization*)(c))
+static std::vector<long> sCivcTypes;            // a unit set's types (the original's collector's)
+static std::vector<long> sCivcIDs;              // a tech tree's node ids
+static UWideString sCivcName;                   // a premade file's name and upgrades as loaded
+static std::vector<EECivUpgrade> sCivcLoaded;
 // the unit types of a set, in its order
-class Collect : public EEUnitSetFunctor {
+class EECivcCollect : public EEUnitSetFunctor {
 public:
-    virtual bool Execute(long inUnitType)
-    {
-        this->mTypes.push_back(inUnitType);
-        return true;
-    }
-    std::vector<long> mTypes;
+    virtual bool Execute(long inUnitType) { return sCivcTypes.push_back(inUnitType), true; }
 };
+// a temporary's address for the full expression (the set walker's functor argument)
+template <class T> static T* EECivcTemp(T&& inValue) { return &inValue; }
+extern "C" uintptr_t ee_screenscpp_civc_rec_new() { return (uintptr_t)new EESimCaptureRecord(0); }
+extern "C" void ee_screenscpp_civc_rec_bytes(uintptr_t inRec, void* inOut)
+{ ee_screens_shim_out(inOut, CR(inRec)->Data().data(), CR(inRec)->Data().size()); }
+extern "C" void ee_screenscpp_civc_rec_free(uintptr_t inRec) { delete CR(inRec); }
+extern "C" void ee_screenscpp_civc_rec_player(uintptr_t inRec, uintptr_t inPlayer)
+{ EETechCapturePlayer(*CR(inRec), CP(inPlayer)); }
+extern "C" void ee_screenscpp_civc_rec_upgrade(uintptr_t inRec, uintptr_t inUpgrade)
+{ EETechCaptureUpgrade(*CR(inRec), (EEUnitClassUpgrade*)inUpgrade); }
+extern "C" void ee_screenscpp_civc_rec_tree(uintptr_t inRec, uintptr_t inTree)
+{ EETechCaptureTree(*CR(inRec), (EETechTree*)inTree); }
+extern "C" uintptr_t ee_screenscpp_civc_player(int64_t inIndex) { return (uintptr_t)::gWorld.mPlayers[inIndex]; }
+extern "C" float ee_screenscpp_civc_conversion(uintptr_t inPlayer) { return CP(inPlayer)->mConversionFactor; }
+extern "C" float ee_screenscpp_civc_high_ground(uintptr_t inPlayer) { return CP(inPlayer)->mHighGroundBonus; }
+extern "C" int64_t ee_screenscpp_civc_share(uintptr_t inPlayer) { return (int64_t)CP(inPlayer)->mShareBonus; }
+extern "C" int64_t ee_screenscpp_civc_mining(uintptr_t inPlayer) { return (int64_t)CP(inPlayer)->mMiningLimit; }
+extern "C" bool ee_screenscpp_civc_set_exists(int64_t inSet) { return gUnitSetManager.GetSet((long)inSet) != NULL; }
+extern "C" void ee_screenscpp_civc_types_clear() { sCivcTypes.clear(); }
+extern "C" void ee_screenscpp_civc_collect(int64_t inSet)
+{ gUnitSetManager.ForEach((long)inSet, EECivcTemp(EECivcCollect())); }
+extern "C" uintptr_t ee_screenscpp_civc_types_count() { return sCivcTypes.size(); }
+extern "C" int64_t ee_screenscpp_civc_type_at(uintptr_t inIndex) { return (int64_t)sCivcTypes[inIndex]; }
+extern "C" bool ee_screenscpp_civc_class_exists(int64_t inKind) { return gUnitClassTable[(long)inKind] != NULL; }
+extern "C" uintptr_t ee_screenscpp_civc_class_upgrade(uintptr_t inPlayer, int64_t inKind)
+{ return (uintptr_t)CP(inPlayer)->mUnitClassUpgrades[(long)inKind]; }
+extern "C" uint64_t ee_screenscpp_civc_media_count(uintptr_t inPlayer)
+{ return (uint64_t)ee_units_lists_len(CP(inPlayer)->mLists, EE_UNITS_LISTS_MEDIA); }
+extern "C" uintptr_t ee_screenscpp_civc_purchased_count(uintptr_t inPlayer)
+{ return CP(inPlayer)->mCivilization.GetPurchasedUpgrades().size(); }
+extern "C" uintptr_t ee_screenscpp_civc_purchased_data(uintptr_t inPlayer)
+{ return (uintptr_t)CP(inPlayer)->mCivilization.GetPurchasedUpgrades().data(); }
+extern "C" uintptr_t ee_screenscpp_civc_tree(uintptr_t inPlayer) { return (uintptr_t)CP(inPlayer)->GetTechTree(); }
+extern "C" void ee_screenscpp_civc_ids_clear() { sCivcIDs.clear(); }
+extern "C" void ee_screenscpp_civc_ids_fill(uintptr_t inTree) { ((EETechTree*)inTree)->GetNodeIDs(sCivcIDs); }
+extern "C" uintptr_t ee_screenscpp_civc_ids_count() { return sCivcIDs.size(); }
+extern "C" int64_t ee_screenscpp_civc_id_at(uintptr_t inIndex) { return (int64_t)sCivcIDs[inIndex]; }
+extern "C" uintptr_t ee_screenscpp_civc_node(uintptr_t inTree, int64_t inId)
+{ return (uintptr_t)((EETechTree*)inTree)->Get((long)inId); }
+extern "C" bool ee_screenscpp_civc_node_researched(uintptr_t inNode) { return CN(inNode)->mIsResearched; }
+extern "C" bool ee_screenscpp_civc_node_obsolete(uintptr_t inNode) { return CN(inNode)->mIsObsolete; }
+extern "C" bool ee_screenscpp_civc_node_available(uintptr_t inNode) { return CN(inNode)->mIsAvailable; }
+extern "C" bool ee_screenscpp_civc_node_allowed(uintptr_t inNode) { return CN(inNode)->mIsAllowed; }
+extern "C" int64_t ee_screenscpp_civc_civ_load(EeScreensShimText inFile)
+{ return EELoadCivilization(EEShimString(inFile), EEGetCivilizationDirectory(false), sCivcName, sCivcLoaded); }
+extern "C" void ee_screenscpp_civc_loaded_clear() { sCivcLoaded.clear(); }
+extern "C" void ee_screenscpp_civc_name_clear() { sCivcName = UWideString(); }
+extern "C" void ee_screenscpp_civc_name(void* inOut) { EEShimOut(inOut, sCivcName); }
+extern "C" uint32_t ee_screenscpp_civc_name_length() { return (uint32_t)sCivcName.GetLength(); }
+extern "C" uintptr_t ee_screenscpp_civc_loaded_count() { return sCivcLoaded.size(); }
+extern "C" uint32_t ee_screenscpp_civc_loaded_at(uintptr_t inIndex) { return sCivcLoaded[inIndex]; }
+extern "C" bool ee_screenscpp_civc_is_user_directory(EeScreensShimText inDirectory)
+{ return EEShimString(inDirectory).Equals(EEGetCivilizationDirectory(true)); }
+extern "C" uintptr_t ee_screenscpp_civc_civ(uintptr_t inPlayer) { return (uintptr_t)&CP(inPlayer)->mCivilization; }
+extern "C" uintptr_t ee_screenscpp_civc_civ_purchased_count(uintptr_t inCiv)
+{ return CV(inCiv)->mPurchasedUpgrades.size(); }
+extern "C" uint32_t ee_screenscpp_civc_civ_purchased_at(uintptr_t inCiv, uintptr_t inIndex)
+{ return CV(inCiv)->mPurchasedUpgrades[inIndex]; }
+extern "C" uintptr_t ee_screenscpp_civc_civ_deferred_count(uintptr_t inCiv)
+{ return CV(inCiv)->mDeferredUpgrades.size(); }
+extern "C" uint32_t ee_screenscpp_civc_civ_deferred_at(uintptr_t inCiv, uintptr_t inIndex)
+{ return CV(inCiv)->mDeferredUpgrades[inIndex]; }
+extern "C" void ee_screenscpp_civc_civ_name(uintptr_t inCiv, void* inOut)
+{ EEShimOutC(inOut, (const char*)CV(inCiv)->mName); }
+extern "C" uint32_t ee_screenscpp_civc_civ_available(uintptr_t inCiv) { return (uint32_t)CV(inCiv)->mAvailablePoints; }
+extern "C" uint32_t ee_screenscpp_civc_civ_max(uintptr_t inCiv) { return (uint32_t)CV(inCiv)->mMaxPoints; }
+extern "C" bool ee_screenscpp_civc_civ_no_points(uintptr_t inCiv) { return CV(inCiv)->mNoPointsAdded; }
+extern "C" bool ee_screenscpp_civc_civ_unchanged(uintptr_t inCiv) { return CV(inCiv)->mUnchanged; }
+extern "C" bool ee_screenscpp_civc_civ_purchased_flag(uintptr_t inPlayer)
+{ return CP(inPlayer)->mCivUpgradesPurchased; }
 
-// CVMG: the manager's and the powers' data and every query over it (ee_sim tech capture_rec.rs), then the premade
-// civilizations' files, loaded and matched
-void CaptureManager()
+static EECivCaptureApply* EECivcBegin(EECivUpgrade inUpgrade, long inPlayer)
 {
-    EECivilizationManager& m = gCivilizationManager;
-    EESimCaptureRecord r(EECaptureTag("CVMG"));
-    uint32_t theSize = 0;
-    unsigned char* theHead = ee_tech_capture_civ_manager(&theSize);
-    r.Bytes(theHead, theSize);
-    ee_tech_capture_free(theHead, theSize);
-    std::vector<EECivilizationEntry> theCivs;
-    m.GetCivilizations(theCivs);
-    // the premade civilizations' files: loaded and matched
-    for (const EECivilizationEntry& theCiv : theCivs) {
-        UWideString theName;
-        std::vector<EECivUpgrade> theLoaded;
-        UString theFile(theCiv.mFileName);
-        long theResult = EELoadCivilization(theFile, EEGetCivilizationDirectory(false), theName, theLoaded);
-        r.I32(theResult);
-        long theNameID = -7;
-        r.U32(m.MatchesPremadeCivilization(UWideString(theCiv.mFileName), theName, theLoaded, &theNameID) ? 1 : 0);
-        r.I32(theNameID);
-        theLoaded.push_back(1);
-        r.U32(m.MatchesPremadeCivilization(UWideString(theCiv.mFileName), theName, theLoaded, &theNameID) ? 1 : 0);
-        r.I32(theNameID);
-    }
-    long theNameID = -7;
-    std::vector<EECivUpgrade> theNone;
-    r.U32(m.MatchesPremadeCivilization(UWideString("no such file"), UWideString("x"), theNone, &theNameID) ? 1 : 0);
-    r.I32(theNameID);
-    r.Commit();
+    return (EECivCaptureApply*)ee_screens_civc_apply_begin(inUpgrade, inPlayer);
 }
-
-}  // namespace
-
-struct EECivCaptureApply {
-    EECivUpgrade mUpgrade;
-    long mPlayer;
-    std::vector<long> mTypes;
-    EESimCaptureRecord mRecord{EECaptureTag("CVAP")};
-};
-
-static EECivCaptureApply* EECivCaptureApplyBeginImpl(EECivUpgrade inUpgrade, long inPlayer)
+static void EECivcEnd(EECivCaptureApply* inCapture, bool inResult) { ee_screens_civc_apply_end((void*)inCapture, inResult); }
+static void EECivcLoad(const UString& inName, const UString& inDirectory, long inResult, const UWideString& inCivName,
+                       const std::vector<EECivUpgrade>& inUpgrades)
 {
-    if (!EESimCaptureRecord::Active())
-        return NULL;
-    static bool sManagerDone = false;
-    if (!sManagerDone) {
-        sManagerDone = true;
-        CaptureManager();
-    }
-    EECivCaptureApply* c = new EECivCaptureApply;
-    c->mUpgrade = inUpgrade;
-    c->mPlayer = inPlayer;
-    c->mRecord.U32(inUpgrade);
-    c->mRecord.I32(inPlayer);
-    EEPlayer* thePlayer = inPlayer >= 0 && inPlayer < 17 ? ::gWorld.mPlayers[inPlayer] : NULL;
-    PlayerFields(c->mRecord, thePlayer);
-    unsigned long theCategory = 0;
-    gCivilizationManager.SplitAttribute(inUpgrade, &theCategory, NULL);
-    EECivilizationCategoryEntry* theEntry = NULL;
-    if (thePlayer != NULL && gCivilizationManager.GetCategory(theCategory, &theEntry) &&
-        gUnitSetManager.GetSet(theEntry->mUnitSet) != NULL) {
-        Collect theCollect;
-        gUnitSetManager.ForEach(theEntry->mUnitSet, &theCollect);
-        c->mTypes = theCollect.mTypes;
-    }
-    c->mRecord.U32((unsigned int)c->mTypes.size());
-    for (long theType : c->mTypes) {
-        c->mRecord.I32(theType);
-        EETechCaptureUpgrade(c->mRecord, gUnitClassTable[theType] != NULL ? thePlayer->mUnitClassUpgrades[theType] : NULL);
-    }
-    return c;
+    ee_screens_civc_load((const char*)inName, (const char*)inDirectory, inResult, (const char*)inCivName, inUpgrades.data(),
+                         inUpgrades.size());
 }
-
-static void EECivCaptureApplyEndImpl(EECivCaptureApply* inCapture, bool inResult)
+static void EECivcApplyFile(const UString& inName, EEPlayer* inPlayer, long inResult)
 {
-    if (inCapture == NULL)
-        return;
-    EESimCaptureRecord& r = inCapture->mRecord;
-    r.U32(inResult ? 1 : 0);
-    EEPlayer* thePlayer = inCapture->mPlayer >= 0 && inCapture->mPlayer < 17
-                              ? ::gWorld.mPlayers[inCapture->mPlayer] : NULL;
-    PlayerFields(r, thePlayer);
-    for (long theType : inCapture->mTypes)
-        EETechCaptureUpgrade(r, gUnitClassTable[theType] != NULL ? thePlayer->mUnitClassUpgrades[theType] : NULL);
-    unsigned long theLevel = 0;
-    gCivilizationManager.SplitAttribute(inCapture->mUpgrade, NULL, &theLevel);
-    if (thePlayer != NULL && EECivilizationManager::IsPowerLevel(theLevel)) {
-        r.U32((unsigned int)ee_units_lists_len(thePlayer->mLists, EE_UNITS_LISTS_MEDIA));
-        for (long theID = kCivPowerFlamingArrows; theID <= kCivPowerJustInTimeManufacturing + 2; theID++)
-            r.U32(gCivPowersManager.HasPower(thePlayer, theID) ? 1 : 0);
-        EETechTree* theTree = thePlayer->GetTechTree();
-        if (theTree != NULL) {
-            EETechCaptureTree(r, theTree);
-            std::vector<long> theIDs;
-            theTree->GetNodeIDs(theIDs);
-            r.U32((unsigned int)theIDs.size());
-            for (long theID : theIDs) {
-                EETechTreeNode* theNode = theTree->Get(theID);
-                r.I32(theID);
-                if (theNode != NULL)
-                    r.U32((theNode->mIsResearched ? 1u : 0u) | (theNode->mIsObsolete ? 2u : 0u) |
-                          (theNode->mIsAvailable ? 4u : 0u) | (theNode->mIsAllowed ? 8u : 0u) | 16u);
-                else
-                    r.U32(0);
-            }
-        }
-    }
-    r.Commit();
-    delete inCapture;
-}
-
-static void EECivCaptureLoadImpl(const UString& inName, const UString& inDirectory, long inResult,
-                                 const UWideString& inCivName, const std::vector<EECivUpgrade>& inUpgrades)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    EESimCaptureRecord r(EECaptureTag("CVLD"));
-    Text(r, (const char*)inName);
-    // the directory without the startup folder (the user's directory is under the run's own folder)
-    UString theUser = EEGetCivilizationDirectory(true);
-    r.U32(inDirectory.Equals(theUser) ? 1 : 0);
-    if (!inDirectory.Equals(theUser))
-        Text(r, (const char*)inDirectory);
-    r.I32(inResult);
-    Text(r, (const char*)inCivName);
-    Upgrades(r, inUpgrades);
-    r.Commit();
-}
-
-static void EECivCaptureApplyFileImpl(const UString& inName, EEPlayer* inPlayer, long inResult)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    EESimCaptureRecord r(EECaptureTag("CVAF"));
-    Text(r, (const char*)inName);
-    PlayerFields(r, inPlayer);
-    r.I32(inResult);
-    if (inPlayer != NULL) {
-        Civilization(r, inPlayer->mCivilization);
-        r.U32(inPlayer->mCivUpgradesPurchased ? 1 : 0);
-    }
-    r.Commit();
+    ee_screens_civc_apply_file((const char*)inName, (uintptr_t)inPlayer, inResult);
 }
 
 // The game calls these through the header's hook pointers, set here before main: the game's units name no
 // symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EECivCaptureApplyBegin = EECivCaptureApplyBeginImpl,
-                                      EECivCaptureApplyEnd = EECivCaptureApplyEndImpl,
-                                      EECivCaptureLoad = EECivCaptureLoadImpl,
-                                      EECivCaptureApplyFile = EECivCaptureApplyFileImpl, true);
+static const bool sCaptureHooksSet = (EECivCaptureApplyBegin = EECivcBegin, EECivCaptureApplyEnd = EECivcEnd,
+                                      EECivCaptureLoad = EECivcLoad, EECivCaptureApplyFile = EECivcApplyFile, true);

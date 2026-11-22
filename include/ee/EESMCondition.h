@@ -21,7 +21,6 @@ public:
     // 0x1ba998: inValue against inTarget by the operator index (mOperator: <, <=, ==, >=, >) (provisional name)
     bool Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget);
     bool Evaluate();
-    bool EvaluateUncaptured();              // Evaluate's body (Evaluate adds the capture's SMCE record)
     void Copy(const EESMCondition& inCondition);    // 0x1ba9e7 (EEScenarioManager 0x1b14c1; provisional name)
     // inline accessors (the condition screen's Virtual24/Virtual2C: their inline cost decides which
     // GetTriggerScreen sites VC6 refuses)

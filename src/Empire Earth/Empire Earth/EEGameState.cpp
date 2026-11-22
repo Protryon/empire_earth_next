@@ -254,7 +254,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::VecPlayersSize: return (int64_t)((std::vector<EEPlayer*>*)p)->size();
     case O::CreateRandomMap: return EERandomMap::CreateRandomMap(OPT, *(std::vector<EEPlayer*>*)a[0], (unsigned long)a[1], OPT->mMapType, (unsigned long)a[2], (EEMap*)a[3], *(GE3DPoint*)a[4]);
-    case O::EpochCount: return EEEpochCount();
     case O::RandomNew: return P64(new URandomIntegers);
     case O::RandomDelete: delete (URandomIntegers*)p;
         break;

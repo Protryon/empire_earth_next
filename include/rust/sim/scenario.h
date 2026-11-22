@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/sim/astar.h"
 
 /// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
 /// `SetNextAttackTime(gPhysics->mGameTime)`.
@@ -40,6 +41,12 @@ constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER =
 
 /// The host's `mTiles->push_back(U2DPoint<long>(b, c))`: an area's rebuilt tiles (`EESMArea::GetTiles`).
 constexpr static const uint32_t EE_SCENARIO_WRITE_TILE = 17;
+
+/// The "no area" coordinate of the anchor and the centre tile.
+constexpr static const long EE_SCENARIO_AREA_NONE = -10000;
+
+/// The ticks a cached tile list lives unread (`GetTiles` rebuilds it after them).
+constexpr static const unsigned long EE_SCENARIO_AREA_TILES_TICKS = 3000;
 
 /// The context unit's member `b` (`EE_SCENARIO_UNIT_*`): an integer, or a `float`'s bits for the float fields.
 constexpr static const uint32_t EE_SCENARIO_READ_UNIT_FIELD = 69;
@@ -423,7 +430,7 @@ constexpr static const uint32_t EE_SCENARIO_CA_FLAG = 6;
 /// The camera focus: in hundredths, no percent.
 constexpr static const uint32_t EE_SCENARIO_CA_CAMERA = 7;
 
-/// `kSMCondition*` (ee/EEScenarioIDs.h).
+/// `kSMCondition*` (ee_sim scenario::ids).
 constexpr static const uint32_t EE_SCENARIO_CONDITION_ALWAYS_TRUE = 0;
 
 constexpr static const uint32_t EE_SCENARIO_CONDITION_OBJECT = 1;
@@ -932,6 +939,183 @@ constexpr static const uint32_t EE_SCENARIO_WY_CU_TAKEN = 852;
 
 constexpr static const uint32_t EE_SCENARIO_WY_CU_KILL_UNIT = 853;
 
+/// `static_cast<EeScenarioEffectFields*>(effect)`.
+constexpr static const uint32_t EE_SCENARIO_EN_EFFECT_FIELDS = 0;
+
+/// The effect's string `a` (Load's order: name, text, message, s64, s78, new name, file name, description).
+constexpr static const uint32_t EE_SCENARIO_EN_EFFECT_STRING = 1;
+
+/// `&effect->mObjects`.
+constexpr static const uint32_t EE_SCENARIO_EN_EFFECT_OBJECTS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_EN_CONDITION_FIELDS = 3;
+
+/// The condition's string `a` (name, text, chat text).
+constexpr static const uint32_t EE_SCENARIO_EN_CONDITION_STRING = 4;
+
+constexpr static const uint32_t EE_SCENARIO_EN_OBJECT_FIELDS = 5;
+
+constexpr static const uint32_t EE_SCENARIO_EN_OBJECT_NAME = 6;
+
+/// `&object->mUnits`.
+constexpr static const uint32_t EE_SCENARIO_EN_OBJECT_UNITS = 7;
+
+constexpr static const uint32_t EE_SCENARIO_EN_TRIGGER_FIELDS = 8;
+
+/// The trigger's string `a` (name, text).
+constexpr static const uint32_t EE_SCENARIO_EN_TRIGGER_STRING = 9;
+
+/// The media strings' string `a` (aftermath, hints, history, movie file, sound file, instructions, map file).
+constexpr static const uint32_t EE_SCENARIO_EN_MEDIA_STRING = 10;
+
+constexpr static const uint32_t EE_SCENARIO_EN_MANAGER_FIELDS = 11;
+
+/// `manager->mTimedEffects`.
+constexpr static const uint32_t EE_SCENARIO_EN_MANAGER_TIMED = 12;
+
+/// The manager's string `a` (export file name, last chat text).
+constexpr static const uint32_t EE_SCENARIO_EN_MANAGER_STRING = 13;
+
+/// `&manager->mMediaStrings`.
+constexpr static const uint32_t EE_SCENARIO_EN_MANAGER_MEDIA = 14;
+
+constexpr static const uint32_t EE_SCENARIO_EN_MESSAGE_FIELDS = 15;
+
+/// The dialog message's string `a` (text, sound).
+constexpr static const uint32_t EE_SCENARIO_EN_MESSAGE_STRING = 16;
+
+constexpr static const uint32_t EE_SCENARIO_EN_AREA_FIELDS = 17;
+
+/// The area's string `a` (name, text).
+constexpr static const uint32_t EE_SCENARIO_EN_AREA_STRING = 18;
+
+/// `&area->mTiles`.
+constexpr static const uint32_t EE_SCENARIO_EN_AREA_TILES = 19;
+
+/// `gWorld.mScenarioManager`.
+constexpr static const uint32_t EE_SCENARIO_EN_MANAGER = 20;
+
+/// `manager->Reset()`.
+constexpr static const uint32_t EE_SCENARIO_EN_MANAGER_RESET = 21;
+
+/// `effect->ExecuteUncaptured(a)` (the run's context is C++: EESMEffectRun).
+constexpr static const uint32_t EE_SCENARIO_EN_EFFECT_RUN = 22;
+
+/// The save's version (major << 32 | minor), the capture's.
+constexpr static const uint32_t EE_SCENARIO_EN_SAVE_VERSION = 23;
+
+/// `unit->mUnitID`.
+constexpr static const uint32_t EE_SCENARIO_EN_UNIT_ID = 24;
+
+/// `gWorld.GetUnit(a)`.
+constexpr static const uint32_t EE_SCENARIO_EN_UNIT_BY_ID = 25;
+
+/// `gWorld.mScenarioManager->GetArea(a)`.
+constexpr static const uint32_t EE_SCENARIO_EN_AREA_AT = 26;
+
+/// `manager->mAreas.size()`.
+constexpr static const uint32_t EE_SCENARIO_EN_AREA_COUNT = 27;
+
+/// `manager->mAreas[a]`.
+constexpr static const uint32_t EE_SCENARIO_EN_AREA_INDEX = 28;
+
+/// A string's text (`(const char*)*string`).
+constexpr static const uint32_t EE_SCENARIO_EN_STRING_TEXT = 29;
+
+/// `*string = (const char*)a`.
+constexpr static const uint32_t EE_SCENARIO_EN_STRING_SET_TEXT = 30;
+
+/// `*string = *(const UWideString*)a`.
+constexpr static const uint32_t EE_SCENARIO_EN_STRING_ASSIGN = 31;
+
+/// An id list's (`std::vector<unsigned long>`) size.
+constexpr static const uint32_t EE_SCENARIO_EN_UNITS_COUNT = 32;
+
+/// An id list's element `a`.
+constexpr static const uint32_t EE_SCENARIO_EN_UNITS_AT = 33;
+
+/// An id list's element `a` set to `b`.
+constexpr static const uint32_t EE_SCENARIO_EN_UNITS_SET = 34;
+
+/// An id list assigned list `a`.
+constexpr static const uint32_t EE_SCENARIO_EN_UNITS_ASSIGN = 35;
+
+/// `gPhysics->mCurrentTick`.
+constexpr static const uint32_t EE_SCENARIO_EN_PHYSICS_TICK = 36;
+
+/// A tile list's (`std::vector<U2DPoint<long>>`) size.
+constexpr static const uint32_t EE_SCENARIO_EN_TILES_COUNT = 37;
+
+/// A tile list cleared.
+constexpr static const uint32_t EE_SCENARIO_EN_TILES_CLEAR = 38;
+
+/// Tile list `a` assigned the list.
+constexpr static const uint32_t EE_SCENARIO_EN_TILES_COPY_TO = 39;
+
+/// A tile list's data (`(const long*)data()`, x and y of each tile).
+constexpr static const uint32_t EE_SCENARIO_EN_TILES_DATA = 40;
+
+/// `manager->mPendingEffects.clear()`.
+constexpr static const uint32_t EE_SCENARIO_EN_PENDING_CLEAR = 41;
+
+/// The physics random stream's seed (the capture's `EE_SCENARIO_CAP_SEED` read).
+constexpr static const uint32_t EE_SCENARIO_EN_CAPTURE_SEED = 42;
+
+/// `gDataPath->FindFile(UWideString((const char*)a))` (0 when found).
+constexpr static const uint32_t EE_SCENARIO_EN_DATA_FIND = 43;
+
+/// The campaign's file prefix (`gU52A280`), its text.
+constexpr static const uint32_t EE_SCENARIO_EN_CAMPAIGN_PREFIX = 44;
+
+/// A string list (`std::vector<UWideString>`) appended `(const char*)a`.
+constexpr static const uint32_t EE_SCENARIO_EN_STRINGS_PUSH_TEXT = 45;
+
+/// `*string += (const char*)a`.
+constexpr static const uint32_t EE_SCENARIO_EN_STRING_APPEND_TEXT = 46;
+
+/// `ESVerify((const char*)p, a, (const char*)b)`: a failed check's report.
+constexpr static const uint32_t EE_SCENARIO_EN_VERIFY = 47;
+
+/// `IDS_SE_MAP_NONE` ("<NONE>"): a media name meaning no file.
+constexpr static const uint16_t EE_SCENARIO_IDS_SE_MAP_NONE = 20009;
+
+/// The manager's list entries (`ee_scenario_en_list`).
+constexpr static const uint32_t EE_SCENARIO_LS_RESET = 0;
+
+constexpr static const uint32_t EE_SCENARIO_LS_SORT = 1;
+
+constexpr static const uint32_t EE_SCENARIO_LS_NEW = 2;
+
+/// `a` the index, `b` up.
+constexpr static const uint32_t EE_SCENARIO_LS_MOVE = 3;
+
+constexpr static const uint32_t EE_SCENARIO_LS_DELETE = 4;
+
+constexpr static const uint32_t EE_SCENARIO_LS_DUPLICATE = 5;
+
+/// `list` which, `p` the names out.
+constexpr static const uint32_t EE_SCENARIO_LS_NAMES = 6;
+
+/// `a` the id.
+constexpr static const uint32_t EE_SCENARIO_LS_FIND = 7;
+
+/// `p` the element.
+constexpr static const uint32_t EE_SCENARIO_LS_INDEX_OF = 8;
+
+/// `p` the object, `a` parent, `b` the value.
+constexpr static const uint32_t EE_SCENARIO_LS_OBJECT_CHANGED = 9;
+
+/// The manager's round entries (`ee_scenario_en_manager`).
+constexpr static const uint32_t EE_SCENARIO_MN_UPDATE = 0;
+
+constexpr static const uint32_t EE_SCENARIO_MN_SHOW_DIALOG = 1;
+
+/// `Prepare`: the media unloaded, then the players' media prepared.
+constexpr static const uint32_t EE_SCENARIO_MN_PREPARE = 2;
+
+/// `Reset`: the numbers and the timed effects, the lists and their built-ins, the pending effects cleared.
+constexpr static const uint32_t EE_SCENARIO_MN_RESET = 3;
+
 /// `gEventEffects.data()` (`EeScenarioEvEffect*`), `.size()`; `gLoadingSavedGame`; `gEventsEnabled`.
 constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_DATA = 0;
 
@@ -1160,7 +1344,7 @@ constexpr static const uint32_t EE_SCENARIO_EV_EVENT_NO_EFFECTS = 131;
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
 
-/// `kSMEffectObject`, `kSMEffectNone` (ee/EEScenarioIDs.h).
+/// `kSMEffectObject`, `kSMEffectNone` (ee_sim scenario::ids).
 constexpr static const unsigned long EE_SCENARIO_EFFECT_NONE = 0;
 
 constexpr static const unsigned long EE_SCENARIO_EFFECT_OBJECT = 1;
@@ -1344,6 +1528,750 @@ constexpr static const uint32_t EE_SCENARIO_READ_CONTEXT_UNIT = 87;
 
 /// `&gWorld` for the world views' reads (unit_views.rs).
 constexpr static const uint32_t EE_SCENARIO_READ_WORLD = 88;
+
+/// `kSMAIActionModifyAIMilitaryTarget`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29690 (0x73fa) "Modify AI Military Target"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_MODIFY_AI_MILITARY_TARGET = 0;
+
+/// `kSMAIActionCreateAIMilitaryGroup`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29691 (0x73fb) "Create AI Military Group"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_CREATE_AI_MILITARY_GROUP = 1;
+
+/// `kSMAIActionBuildObject`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29692 (0x73fc) "Build Object"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_BUILD_OBJECT = 2;
+
+/// `kSMAIActionMaintainObject`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29693 (0x73fd) "Maintain Object"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_MAINTAIN_OBJECT = 3;
+
+/// `kSMAIActionSetAIToggle`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29694 (0x73fe) "Set AI Toggle"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_SET_AI_TOGGLE = 4;
+
+/// `kSMAIActionSetAIVariable`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29695 (0x73ff) "Set AI Variable"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_SET_AI_VARIABLE = 5;
+
+/// `kSMAIActionSetFavoriteUnits`: EESETSETAI "Action" list 0x73fa+i (GetString(mCurrentType + 0x73fa)): Language.rc 29696 (0x7400) "Set Favorite Units"
+constexpr static const int32_t EE_SCENARIO_SM_AI_ACTION_SET_FAVORITE_UNITS = 6;
+
+/// `kSMAIToggleActive`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29625 (0x73b9) "Active"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_ACTIVE = 0;
+
+/// `kSMAIToggleCheat`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29626 (0x73ba) "Cheat"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_CHEAT = 1;
+
+/// `kSMAIToggleAttack`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29627 (0x73bb) "Attack"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_ATTACK = 2;
+
+/// `kSMAIToggleDefend`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29628 (0x73bc) "Defend"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_DEFEND = 3;
+
+/// `kSMAIToggleBuildPerRepair`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29629 (0x73bd) "Build/Repair"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_BUILD_PER_REPAIR = 4;
+
+/// `kSMAIToggleExplore`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29630 (0x73be) "Explore"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_EXPLORE = 5;
+
+/// `kSMAIToggleIgnore`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29631 (0x73bf) "Ignore"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_IGNORE = 6;
+
+/// `kSMAIToggleGather`: Set AI Toggle "AI Toggle" list 0x73b9+i (EESETSETAI): Language.rc 29632 (0x73c0) "Gather"
+constexpr static const int32_t EE_SCENARIO_SM_AI_TOGGLE_GATHER = 7;
+
+/// `kSMCompareLessThan`: condition operator list 0x727e+i: Language.rc 29310 "<"; EESMCondition::Compare case 0
+constexpr static const int32_t EE_SCENARIO_SM_COMPARE_LESS_THAN = 0;
+
+/// `kSMCompareLessOrEqual`: condition operator list 0x727e+i: Language.rc 29311 "<="; EESMCondition::Compare case 1
+constexpr static const int32_t EE_SCENARIO_SM_COMPARE_LESS_OR_EQUAL = 1;
+
+/// `kSMCompareEqual`: condition operator list 0x727e+i: Language.rc 29312 "="; EESMCondition::Compare case 2
+constexpr static const int32_t EE_SCENARIO_SM_COMPARE_EQUAL = 2;
+
+/// `kSMCompareGreaterOrEqual`: condition operator list 0x727e+i: Language.rc 29313 ">="; EESMCondition::Compare case 3
+constexpr static const int32_t EE_SCENARIO_SM_COMPARE_GREATER_OR_EQUAL = 3;
+
+/// `kSMCompareGreater`: condition operator list 0x727e+i: Language.rc 29314 ">"; EESMCondition::Compare case 4
+constexpr static const int32_t EE_SCENARIO_SM_COMPARE_GREATER = 4;
+
+/// `kSMConditionAlwaysTrue`: EESETSCondition mTypes[0] = EESETSCTAlwaysTrue; EESMCondition::Evaluate case 0 returns true (provisional name)
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_ALWAYS_TRUE = 0;
+
+/// `kSMConditionObject`: the scenario-object condition (EEScenarioManager::NewObject stores 1 with mObjectIndex; Evaluate case 1 = EESMObject::Evaluate) (provisional name)
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_OBJECT = 1;
+
+/// `kSMConditionPlayerAttribute`: EESETSCondition::RefreshControls GetString(mType + 0x7272): Language.rc 29300 "Player-Attribute"
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_PLAYER_ATTRIBUTE = 2;
+
+/// `kSMConditionPlayerTechnology`: EESETSCondition::RefreshControls GetString(mType + 0x7272): Language.rc 29301 "Player-Technology"
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_PLAYER_TECHNOLOGY = 3;
+
+/// `kSMConditionTriggerAttribute`: EESETSCondition::RefreshControls GetString(mType + 0x7272): Language.rc 29302 "Trigger- Attribute"
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_TRIGGER_ATTRIBUTE = 4;
+
+/// `kSMConditionPlayerDiplomacy`: EESETSCondition::RefreshControls GetString(mType + 0x7272): Language.rc 29303 "Player-Diplomacy"
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_PLAYER_DIPLOMACY = 5;
+
+/// `kSMConditionGameAttribute`: EESETSCondition::RefreshControls GetString(mType + 0x7272): Language.rc 29304 "Game-Attribute"
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_GAME_ATTRIBUTE = 6;
+
+/// `kSMConditionChatMessageContains`: EESETSCondition::RefreshControls GetString(mType + 0x7272): Language.rc 29305 "Chat Message Contains"
+constexpr static const int32_t EE_SCENARIO_SM_CONDITION_CHAT_MESSAGE_CONTAINS = 7;
+
+/// `kSMEffectNone`: EESETSEffect mTypes[0] = EESETSETNoEffect; EEScenarioManager::Reset stores 0 in the null effect (provisional name)
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_NONE = 0;
+
+/// `kSMEffectObject`: EESETSEffect ctor type names 0x7289+i for mTypes[1..6]: Language.rc 29321 (0x7289) "Object"
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_OBJECT = 1;
+
+/// `kSMEffectPlayer`: EESETSEffect ctor type names 0x7289+i for mTypes[1..6]: Language.rc 29322 (0x728a) "Player"
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_PLAYER = 2;
+
+/// `kSMEffectTrigger`: EESETSEffect ctor type names 0x7289+i for mTypes[1..6]: Language.rc 29323 (0x728b) "Trigger"
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_TRIGGER = 3;
+
+/// `kSMEffectMedia`: EESETSEffect ctor type names 0x7289+i for mTypes[1..6]: Language.rc 29324 (0x728c) "Media"
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_MEDIA = 4;
+
+/// `kSMEffectGame`: EESETSEffect ctor type names 0x7289+i for mTypes[1..6]: Language.rc 29325 (0x728d) "Game"
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_GAME = 5;
+
+/// `kSMEffectAI`: EESETSEffect ctor type names 0x7289+i for mTypes[1..6]: Language.rc 29326 (0x728e) "AI"
+constexpr static const int32_t EE_SCENARIO_SM_EFFECT_AI = 6;
+
+/// `kSMGameActionDaylightHour`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29575 (0x7387) "Daylight Hour"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_DAYLIGHT_HOUR = 0;
+
+/// `kSMGameActionDayPerNightCycleTime`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29576 (0x7388) "Day/Night Cycle Time"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_DAY_PER_NIGHT_CYCLE_TIME = 1;
+
+/// `kSMGameActionCalamity`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29577 (0x7389) "Calamity"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_CALAMITY = 2;
+
+/// `kSMGameActionGraphicEffect`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29578 (0x738a) "Graphic Effect"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_GRAPHIC_EFFECT = 3;
+
+/// `kSMGameActionStartCinematicMode`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29579 (0x738b) "Start-Cinematic Mode"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_START_CINEMATIC_MODE = 4;
+
+/// `kSMGameActionEndCinematicMode`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29580 (0x738c) "End-Cinematic Mode"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_END_CINEMATIC_MODE = 5;
+
+/// `kSMGameActionAmbientWeather`: EESETSETGame "Action" list 0x7387+i (GetString(mCurrentType + 0x7387)): Language.rc 29581 (0x738d) "Ambient-Weather"
+constexpr static const int32_t EE_SCENARIO_SM_GAME_ACTION_AMBIENT_WEATHER = 6;
+
+/// `kSMMediaActionPlaySound`: EESETSETMedia "Action" list 0x7355+i (GetString(mCurrentType + 0x7355)): Language.rc 29525 (0x7355) "Play Sound"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_ACTION_PLAY_SOUND = 0;
+
+/// `kSMMediaActionChangeText`: EESETSETMedia "Action" list 0x7355+i (GetString(mCurrentType + 0x7355)): Language.rc 29526 (0x7356) "Change Text"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_ACTION_CHANGE_TEXT = 1;
+
+/// `kSMMediaActionSendDialogue`: EESETSETMedia "Action" list 0x7355+i (GetString(mCurrentType + 0x7355)): Language.rc 29527 (0x7357) "Send Dialogue"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_ACTION_SEND_DIALOGUE = 2;
+
+/// `kSMMediaActionSendChatMessage`: EESETSETMedia "Action" list 0x7355+i (GetString(mCurrentType + 0x7355)): Language.rc 29528 (0x7358) "Send Chat Message"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_ACTION_SEND_CHAT_MESSAGE = 3;
+
+/// `kSMMediaTextHints`: Change Text "Text Object" list 0x736e+i (EESETSETMedia): Language.rc 29550 (0x736e) "Hints"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_TEXT_HINTS = 0;
+
+/// `kSMMediaTextInstructions`: Change Text "Text Object" list 0x736e+i (EESETSETMedia): Language.rc 29551 (0x736f) "Instructions"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_TEXT_INSTRUCTIONS = 1;
+
+/// `kSMMediaTextHistory`: Change Text "Text Object" list 0x736e+i (EESETSETMedia): Language.rc 29552 (0x7370) "History"
+constexpr static const int32_t EE_SCENARIO_SM_MEDIA_TEXT_HISTORY = 2;
+
+/// `kSMObjectActionCreate`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29350 (0x72a6) "Create"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_CREATE = 0;
+
+/// `kSMObjectActionFreeze`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29351 (0x72a7) "Freeze"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_FREEZE = 1;
+
+/// `kSMObjectActionUnfreeze`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29352 (0x72a8) "Unfreeze"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_UNFREEZE = 2;
+
+/// `kSMObjectActionKill`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29353 (0x72a9) "Kill"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_KILL = 3;
+
+/// `kSMObjectActionRemove`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29354 (0x72aa) "Remove"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_REMOVE = 4;
+
+/// `kSMObjectActionTaskObject`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29355 (0x72ab) "Task-Object"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_TASK_OBJECT = 5;
+
+/// `kSMObjectActionTaskArea`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29356 (0x72ac) "Task-Area"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_TASK_AREA = 6;
+
+/// `kSMObjectActionStance`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29357 (0x72ad) "Stance"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_STANCE = 7;
+
+/// `kSMObjectActionUnitAttribute`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29358 (0x72ae) "Unit-Attribute"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_UNIT_ATTRIBUTE = 8;
+
+/// `kSMObjectActionOwner`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29359 (0x72af) "Owner"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_OWNER = 9;
+
+/// `kSMObjectActionClassName`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29360 (0x72b0) "Class-Name"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_CLASS_NAME = 10;
+
+/// `kSMObjectActionFaceObject`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29361 (0x72b1) "Face Object"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_FACE_OBJECT = 11;
+
+/// `kSMObjectActionClassAttribute`: EESETSETObject "Action" list 0x72a6+i (GetString(mCurrentType + 0x72a6)): Language.rc 29362 (0x72b2) "Class-Attribute"
+constexpr static const int32_t EE_SCENARIO_SM_OBJECT_ACTION_CLASS_ATTRIBUTE = 12;
+
+/// `kSMPlayerActionVictory`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29452 (0x730c) "Victory"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_VICTORY = 0;
+
+/// `kSMPlayerActionScriptCamera`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29453 (0x730d) "Script-Camera"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_SCRIPT_CAMERA = 1;
+
+/// `kSMPlayerActionDefeat`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29454 (0x730e) "Defeat"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_DEFEAT = 2;
+
+/// `kSMPlayerActionDiplomacy`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29455 (0x730f) "Diplomacy"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_DIPLOMACY = 3;
+
+/// `kSMPlayerActionSetAttributeLevel`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29456 (0x7310) "Set-Attribute Level"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_SET_ATTRIBUTE_LEVEL = 4;
+
+/// `kSMPlayerActionModifyTechTree`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29457 (0x7311) "Modify-Tech-Tree"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_MODIFY_TECH_TREE = 5;
+
+/// `kSMPlayerActionAwardCivPoints`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29458 (0x7312) "Award-Civ-Points"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_AWARD_CIV_POINTS = 6;
+
+/// `kSMPlayerActionFadeIn`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29459 (0x7313) "Fade-In"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_FADE_IN = 7;
+
+/// `kSMPlayerActionFadeOut`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29460 (0x7314) "Fade-Out"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_FADE_OUT = 8;
+
+/// `kSMPlayerActionVisibilityOn`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29461 (0x7315) "Visibility-On"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_VISIBILITY_ON = 9;
+
+/// `kSMPlayerActionVisibilityOff`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29462 (0x7316) "Visibility-Off"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_VISIBILITY_OFF = 10;
+
+/// `kSMPlayerActionMiniMapFlare`: EESETSETPlayer "Action" list 0x730c+i (GetString(mCurrentType + 0x730c)): Language.rc 29463 (0x7317) "MiniMap-Flare"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_MINI_MAP_FLARE = 11;
+
+/// `kSMPlayerActionTotal`: count of player actions; EESMEffect::Load resets mPlayerAction >= 12 to 0 (provisional name)
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_ACTION_TOTAL = 12;
+
+/// `kSMPlayerValueAnyResource`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 0: Language.rc 29670 "Any Resource"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_ANY_RESOURCE = 0;
+
+/// `kSMPlayerValueAllResources`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 1: Language.rc 29671 "All Resources"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_ALL_RESOURCES = 1;
+
+/// `kSMPlayerValueStone`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 2: Language.rc 29672 "Stone"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STONE = 2;
+
+/// `kSMPlayerValueGold`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 3: Language.rc 29673 "Gold"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_GOLD = 3;
+
+/// `kSMPlayerValueWood`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 4: Language.rc 29674 "Wood"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_WOOD = 4;
+
+/// `kSMPlayerValueFood`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 5: Language.rc 29675 "Food"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_FOOD = 5;
+
+/// `kSMPlayerValueIron`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 6: Language.rc 29676 "Iron"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_IRON = 6;
+
+/// `kSMPlayerValueCurrentPop`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 7: Language.rc 29677 "Current Pop"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_CURRENT_POP = 7;
+
+/// `kSMPlayerValuePopCap`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 8: Language.rc 29678 "Pop Cap"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_POP_CAP = 8;
+
+/// `kSMPlayerValueUnitCount`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 9: Language.rc 29679 "Unit Count"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_UNIT_COUNT = 9;
+
+/// `kSMPlayerValueDifficultyLevel`: player attribute list (EESETSConditionType/EESETSETPlayer) entry 10: Language.rc 29680 "Difficulty Level"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_DIFFICULTY_LEVEL = 10;
+
+/// `kSMPlayerValueVariable0`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 0); GetPlayerValue mScenarioVariables[0]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE0 = 11;
+
+/// `kSMPlayerValueVariable1`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 1); GetPlayerValue mScenarioVariables[1]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE1 = 12;
+
+/// `kSMPlayerValueVariable2`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 2); GetPlayerValue mScenarioVariables[2]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE2 = 13;
+
+/// `kSMPlayerValueVariable3`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 3); GetPlayerValue mScenarioVariables[3]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE3 = 14;
+
+/// `kSMPlayerValueVariable4`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 4); GetPlayerValue mScenarioVariables[4]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE4 = 15;
+
+/// `kSMPlayerValueVariable5`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 5); GetPlayerValue mScenarioVariables[5]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE5 = 16;
+
+/// `kSMPlayerValueVariable6`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 6); GetPlayerValue mScenarioVariables[6]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE6 = 17;
+
+/// `kSMPlayerValueVariable7`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 7); GetPlayerValue mScenarioVariables[7]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE7 = 18;
+
+/// `kSMPlayerValueVariable8`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 8); GetPlayerValue mScenarioVariables[8]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE8 = 19;
+
+/// `kSMPlayerValueVariable9`: list entries 11..20: sprintf("%s%d", Language.rc 0x79e0 "Variable", 9); GetPlayerValue mScenarioVariables[9]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_VARIABLE9 = 20;
+
+/// `kSMPlayerValueFoodSent`: list entry: Language.rc 30116 "Food" + 0x7bd6 "Sent"; GetPlayerValue mTributes[0]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_FOOD_SENT = 21;
+
+/// `kSMPlayerValueFoodReceived`: list entry: Language.rc 30116 "Food" + 0x7bd8 "Received"; GetPlayerValue mTributes[5]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_FOOD_RECEIVED = 22;
+
+/// `kSMPlayerValueWoodSent`: list entry: Language.rc 30117 "Wood" + 0x7bd6 "Sent"; GetPlayerValue mTributes[1]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_WOOD_SENT = 23;
+
+/// `kSMPlayerValueWoodReceived`: list entry: Language.rc 30117 "Wood" + 0x7bd8 "Received"; GetPlayerValue mTributes[6]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_WOOD_RECEIVED = 24;
+
+/// `kSMPlayerValueStoneSent`: list entry: Language.rc 30118 "Stone" + 0x7bd6 "Sent"; GetPlayerValue mTributes[2]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STONE_SENT = 25;
+
+/// `kSMPlayerValueStoneReceived`: list entry: Language.rc 30118 "Stone" + 0x7bd8 "Received"; GetPlayerValue mTributes[7]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STONE_RECEIVED = 26;
+
+/// `kSMPlayerValueGoldSent`: list entry: Language.rc 30119 "Gold" + 0x7bd6 "Sent"; GetPlayerValue mTributes[3]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_GOLD_SENT = 27;
+
+/// `kSMPlayerValueGoldReceived`: list entry: Language.rc 30119 "Gold" + 0x7bd8 "Received"; GetPlayerValue mTributes[8]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_GOLD_RECEIVED = 28;
+
+/// `kSMPlayerValueIronSent`: list entry: Language.rc 30120 "Iron" + 0x7bd6 "Sent"; GetPlayerValue mTributes[4]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_IRON_SENT = 29;
+
+/// `kSMPlayerValueIronReceived`: list entry: Language.rc 30120 "Iron" + 0x7bd8 "Received"; GetPlayerValue mTributes[9]
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_IRON_RECEIVED = 30;
+
+/// `kSMPlayerValueStatBuildingsLost`: list entry 31: Language.rc 31201 "Buildings Lost" (statistic; GetPlayerValue mSavedGroups.GetLastValue(1))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_BUILDINGS_LOST = 31;
+
+/// `kSMPlayerValueStatBuildingsRazed`: list entry 32: Language.rc 31202 "Buildings Razed" (statistic; GetPlayerValue mSavedGroups.GetLastValue(2))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_BUILDINGS_RAZED = 32;
+
+/// `kSMPlayerValueStatUnitsKilled`: list entry 33: Language.rc 31203 "Units Killed" (statistic; GetPlayerValue mSavedGroups.GetLastValue(3))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_UNITS_KILLED = 33;
+
+/// `kSMPlayerValueStatUnitsLost`: list entry 34: Language.rc 31204 "Units Lost" (statistic; GetPlayerValue mSavedGroups.GetLastValue(4))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_UNITS_LOST = 34;
+
+/// `kSMPlayerValueStatConversions`: list entry 35: Language.rc 31205 "Conversions" (statistic; GetPlayerValue mSavedGroups.GetLastValue(5))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_CONVERSIONS = 35;
+
+/// `kSMPlayerValueStatCalamities`: list entry 36: Language.rc 31206 "Calamities" (statistic; GetPlayerValue mSavedGroups.GetLastValue(6))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_CALAMITIES = 36;
+
+/// `kSMPlayerValueStatFood`: list entry 37: Language.rc 31207 "Food" (statistic; GetPlayerValue mSavedGroups.GetLastValue(7))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FOOD = 37;
+
+/// `kSMPlayerValueStatWood`: list entry 38: Language.rc 31208 "Wood" (statistic; GetPlayerValue mSavedGroups.GetLastValue(8))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_WOOD = 38;
+
+/// `kSMPlayerValueStatGold`: list entry 39: Language.rc 31209 "Gold" (statistic; GetPlayerValue mSavedGroups.GetLastValue(9))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_GOLD = 39;
+
+/// `kSMPlayerValueStatStone`: list entry 40: Language.rc 31210 "Stone" (statistic; GetPlayerValue mSavedGroups.GetLastValue(10))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_STONE = 40;
+
+/// `kSMPlayerValueStatIron`: list entry 41: Language.rc 31211 "Iron" (statistic; GetPlayerValue mSavedGroups.GetLastValue(11))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_IRON = 41;
+
+/// `kSMPlayerValueStatEpochReached`: list entry 42: Language.rc 31212 "Epoch Reached" (statistic; GetPlayerValue mSavedGroups.GetLastValue(12))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_EPOCH_REACHED = 42;
+
+/// `kSMPlayerValueStatArmySize`: list entry 43: Language.rc 31213 "Army Size" (statistic; GetPlayerValue mSavedGroups.GetLastValue(13))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_ARMY_SIZE = 43;
+
+/// `kSMPlayerValueStatCitizenCount`: list entry 44: Language.rc 31214 "Citizen Count" (statistic; GetPlayerValue mSavedGroups.GetLastValue(14))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_CITIZEN_COUNT = 44;
+
+/// `kSMPlayerValueStatHeroCount`: list entry 45: Language.rc 31215 "Hero Count" (statistic; GetPlayerValue mSavedGroups.GetLastValue(15))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_HERO_COUNT = 45;
+
+/// `kSMPlayerValueStatWonderCount`: list entry 46: Language.rc 31216 "Wonder Count" (statistic; GetPlayerValue mSavedGroups.GetLastValue(16))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_WONDER_COUNT = 46;
+
+/// `kSMPlayerValueStatTributeSent`: list entry 47: Language.rc 31217 "Tribute Sent" (statistic; GetPlayerValue mSavedGroups.GetLastValue(17))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_TRIBUTE_SENT = 47;
+
+/// `kSMPlayerValueStatTributeReceived`: list entry 48: Language.rc 31218 "Tribute Received" (statistic; GetPlayerValue mSavedGroups.GetLastValue(18))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_TRIBUTE_RECEIVED = 48;
+
+/// `kSMPlayerValueStatResearchCount`: list entry 49: Language.rc 31219 "Research Count" (statistic; GetPlayerValue mSavedGroups.GetLastValue(19))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_RESEARCH_COUNT = 49;
+
+/// `kSMPlayerValueStatHotKeysPressed`: list entry 50: Language.rc 31220 "Hot Keys Pressed" (statistic; GetPlayerValue mSavedGroups.GetLastValue(20))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_HOT_KEYS_PRESSED = 50;
+
+/// `kSMPlayerValueStatMouseClicks`: list entry 51: Language.rc 31221 "Mouse Clicks" (statistic; GetPlayerValue mSavedGroups.GetLastValue(21))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_MOUSE_CLICKS = 51;
+
+/// `kSMPlayerValueStatResearchAvailable`: list entry 52: Language.rc 31222 "Research Available" (statistic; GetPlayerValue mSavedGroups.GetLastValue(22))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_RESEARCH_AVAILABLE = 52;
+
+/// `kSMPlayerValueStatTotalPopulation`: list entry 53: Language.rc 31223 "Total Population" (statistic; GetPlayerValue mSavedGroups.GetLastValue(23))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_TOTAL_POPULATION = 53;
+
+/// `kSMPlayerValueStatTilesExplored`: list entry 54: Language.rc 31224 "Tiles Explored" (statistic; GetPlayerValue mSavedGroups.GetLastValue(24))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_TILES_EXPLORED = 54;
+
+/// `kSMPlayerValueStatFutureUse1`: list entry 55: Language.rc 31225 "Stat - for future use1" (statistic; GetPlayerValue mSavedGroups.GetLastValue(25))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FUTURE_USE1 = 55;
+
+/// `kSMPlayerValueStatFutureUse2`: list entry 56: Language.rc 31226 "Stat - for future use2" (statistic; GetPlayerValue mSavedGroups.GetLastValue(26))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FUTURE_USE2 = 56;
+
+/// `kSMPlayerValueStatFutureUse3`: list entry 57: Language.rc 31227 "Stat - for future use3" (statistic; GetPlayerValue mSavedGroups.GetLastValue(27))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FUTURE_USE3 = 57;
+
+/// `kSMPlayerValueStatFutureUse4`: list entry 58: Language.rc 31228 "Stat - for future use4" (statistic; GetPlayerValue mSavedGroups.GetLastValue(28))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FUTURE_USE4 = 58;
+
+/// `kSMPlayerValueStatFutureUse5`: list entry 59: Language.rc 31229 "Stat - for future use5" (statistic; GetPlayerValue mSavedGroups.GetLastValue(29))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FUTURE_USE5 = 59;
+
+/// `kSMPlayerValueStatFutureUse6`: list entry 60: Language.rc 31230 "Stat - for future use6" (statistic; GetPlayerValue mSavedGroups.GetLastValue(30))
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_STAT_FUTURE_USE6 = 60;
+
+/// `kSMPlayerValueMiningLimit`: list entry 61: Language.rc 29681 "Mining Limit"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_MINING_LIMIT = 61;
+
+/// `kSMPlayerValuePlaceholder1`: list entry 62: Language.rc 29682 "Placeholder1"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_PLACEHOLDER1 = 62;
+
+/// `kSMPlayerValuePlaceholder2`: list entry 63: Language.rc 29683 "Placeholder2"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_PLACEHOLDER2 = 63;
+
+/// `kSMPlayerValuePlaceholder3`: list entry 64: Language.rc 29684 "Placeholder3"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_PLACEHOLDER3 = 64;
+
+/// `kSMPlayerValuePlaceholder4`: list entry 65: Language.rc 29685 "Placholder4"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_PLACEHOLDER4 = 65;
+
+/// `kSMPlayerValuePlaceholder5`: list entry 66: Language.rc 29686 "Placeholder5"
+constexpr static const int32_t EE_SCENARIO_SM_PLAYER_VALUE_PLACEHOLDER5 = 66;
+
+/// `kSMValueModeToExactly`: Set-Attribute Level mode list 0x733c+i (EESETSETPlayer): Language.rc 29500 (0x733c) "To Exactly"
+constexpr static const int32_t EE_SCENARIO_SM_VALUE_MODE_TO_EXACTLY = 0;
+
+/// `kSMValueModeToIncreaseBy`: Set-Attribute Level mode list 0x733c+i (EESETSETPlayer): Language.rc 29501 (0x733d) "To Increase By"
+constexpr static const int32_t EE_SCENARIO_SM_VALUE_MODE_TO_INCREASE_BY = 1;
+
+/// `kSMValueModeToDecreaseBy`: Set-Attribute Level mode list 0x733c+i (EESETSETPlayer): Language.rc 29502 (0x733e) "To Decrease By"
+constexpr static const int32_t EE_SCENARIO_SM_VALUE_MODE_TO_DECREASE_BY = 2;
+
+/// `kSMStanceExplore`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29475 (0x7323) "Explore"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_EXPLORE = 0;
+
+/// `kSMStanceIdle`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29476 (0x7324) "Idle"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_IDLE = 1;
+
+/// `kSMStanceLocked`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29477 (0x7325) "Locked"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_LOCKED = 2;
+
+/// `kSMStanceUnlocked`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29478 (0x7326) "Unlocked"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_UNLOCKED = 3;
+
+/// `kSMStanceTownPatrol`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29479 (0x7327) "Town Patrol"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_TOWN_PATROL = 4;
+
+/// `kSMStanceScout`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29480 (0x7328) "Scout"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_SCOUT = 5;
+
+/// `kSMStanceStandGround`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29481 (0x7329) "Stand Ground"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_STAND_GROUND = 6;
+
+/// `kSMStanceGuard`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29482 (0x732a) "Guard"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_GUARD = 7;
+
+/// `kSMStanceHarass`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29483 (0x732b) "Harass"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_HARASS = 8;
+
+/// `kSMStanceCautious`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29484 (0x732c) "Cautious"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_CAUTIOUS = 9;
+
+/// `kSMStanceAggressive`: Stance effect "Stance" list 0x7323+i (EESETSETSetObjectStance): Language.rc 29485 (0x732d) "Aggressive"
+constexpr static const int32_t EE_SCENARIO_SM_STANCE_AGGRESSIVE = 10;
+
+/// `kSMTaskActionNormal`: Task-Object/Task-Area "Action" list 0x72bf+i (EESETSETObject mActions.push_back(theIndex - 0x72bf)): Language.rc 29375 (0x72bf) "Normal"
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_NORMAL = 0;
+
+/// `kSMTaskActionPatrol`: Task-Object/Task-Area "Action" list 0x72bf+i (EESETSETObject mActions.push_back(theIndex - 0x72bf)): Language.rc 29376 (0x72c0) "Patrol"
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_PATROL = 1;
+
+/// `kSMTaskActionAttackMove`: Task-Object/Task-Area "Action" list 0x72bf+i (EESETSETObject mActions.push_back(theIndex - 0x72bf)): Language.rc 29377 (0x72c1) "Attack-Move"
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_ATTACK_MOVE = 2;
+
+/// `kSMTaskActionLoad`: Task-Object/Task-Area "Action" list 0x72bf+i (EESETSETObject mActions.push_back(theIndex - 0x72bf)): Language.rc 29378 (0x72c2) "Load"
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_LOAD = 3;
+
+/// `kSMTaskActionUnload`: Task-Object/Task-Area "Action" list 0x72bf+i (EESETSETObject mActions.push_back(theIndex - 0x72bf)): Language.rc 29379 (0x72c3) "Unload"
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_UNLOAD = 4;
+
+/// `kSMTaskActionGarrison`: Task-Object/Task-Area "Action" list 0x72bf+i (EESETSETObject mActions.push_back(theIndex - 0x72bf)): Language.rc 29380 (0x72c4) "Garrison"
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_GARRISON = 5;
+
+/// `kSMTaskActionCalamityBase`: calamity task actions are the calamity class mL18 + 6 (EESETSETObject); TaskUnitsTo* test mTaskAction > 6 (provisional name)
+constexpr static const int32_t EE_SCENARIO_SM_TASK_ACTION_CALAMITY_BASE = 6;
+
+/// `kSMTriggerOperatorEnd`: EESETSTrigger::ShowOperator case 0 label Language.rc 0x76bd "End"; wrapper ctors store 0; EESMTConditionWrapper::Evaluate case 0 stops
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_OPERATOR_END = 0;
+
+/// `kSMTriggerOperatorAnd`: Language.rc 0x76b6 "And" (EESETSTrigger combo line 0); EEUIESaveScenarioTriggersOnly writes " AND" for 1
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_OPERATOR_AND = 1;
+
+/// `kSMTriggerOperatorOr`: Language.rc 0x76b7 "Or" (combo line 1); EEUIESaveScenarioTriggersOnly writes " OR" for 2
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_OPERATOR_OR = 2;
+
+/// `kSMTriggerStateOn`: Trigger effect "State" list 0x73d2+i (EESETSETTrigger GetString(theSelection + 0x73d2)): Language.rc 29650 (0x73d2) "On"
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_STATE_ON = 0;
+
+/// `kSMTriggerStateOff`: Trigger effect "State" list 0x73d2+i (EESETSETTrigger GetString(theSelection + 0x73d2)): Language.rc 29651 (0x73d3) "Off"
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_STATE_OFF = 1;
+
+/// `kSMTriggerStateFired`: Trigger effect "State" list 0x73d2+i (EESETSETTrigger GetString(theSelection + 0x73d2)): Language.rc 29652 (0x73d4) "Fired"
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_STATE_FIRED = 2;
+
+/// `kSMTriggerStateNotFired`: Trigger effect "State" list 0x73d2+i (EESETSETTrigger GetString(theSelection + 0x73d2)): Language.rc 29653 (0x73d5) "Not Fired"
+constexpr static const int32_t EE_SCENARIO_SM_TRIGGER_STATE_NOT_FIRED = 3;
+
+/// `kSMUnitAttributeHitPoints`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29100 (0x71ac) "HitPoints"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_HIT_POINTS = 0;
+
+/// `kSMUnitAttributeAnyResource`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29101 (0x71ad) "Any Resource"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_ANY_RESOURCE = 1;
+
+/// `kSMUnitAttributeStone`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29102 (0x71ae) "Stone"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_STONE = 2;
+
+/// `kSMUnitAttributeGold`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29103 (0x71af) "Gold"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_GOLD = 3;
+
+/// `kSMUnitAttributeWood`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29104 (0x71b0) "Wood"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_WOOD = 4;
+
+/// `kSMUnitAttributeFood`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29105 (0x71b1) "Food"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_FOOD = 5;
+
+/// `kSMUnitAttributeIron`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29106 (0x71b2) "Iron"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_IRON = 6;
+
+/// `kSMUnitAttributeFlightTime`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29107 (0x71b3) "Flight Time"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_FLIGHT_TIME = 7;
+
+/// `kSMUnitAttributeCargoCount`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29108 (0x71b4) "Cargo Count"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_CARGO_COUNT = 8;
+
+/// `kSMUnitAttributeGarrisonLevel`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29109 (0x71b5) "Garrison Level"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_GARRISON_LEVEL = 9;
+
+/// `kSMUnitAttributeAmmunition`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29110 (0x71b6) "Ammunition"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_AMMUNITION = 10;
+
+/// `kSMUnitAttributeAnimationIsPaused`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29111 (0x71b7) "Animation Is Paused"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_ANIMATION_IS_PAUSED = 11;
+
+/// `kSMUnitAttributeReloadTime`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29112 (0x71b8) "Reload Time"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_RELOAD_TIME = 12;
+
+/// `kSMUnitAttributeGraphicScale`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29113 (0x71b9) "Graphic Scale"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_GRAPHIC_SCALE = 13;
+
+/// `kSMUnitAttributePower`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29114 (0x71ba) "Power"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_POWER = 14;
+
+/// `kSMUnitAttributeRottingTime`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29115 (0x71bb) "Rotting Time"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_ROTTING_TIME = 15;
+
+/// `kSMUnitAttributeConstructionComplete`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29116 (0x71bc) "Construction Complete"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_CONSTRUCTION_COMPLETE = 16;
+
+/// `kSMUnitAttributeUnitVariable1`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29117 (0x71bd) "Unit Variable1"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_UNIT_VARIABLE1 = 17;
+
+/// `kSMUnitAttributeUnitVariable2`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29118 (0x71be) "Unit Variable2"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_UNIT_VARIABLE2 = 18;
+
+/// `kSMUnitAttributeUnitVariable3`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29119 (0x71bf) "Unit Variable3"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_UNIT_VARIABLE3 = 19;
+
+/// `kSMUnitAttributeShockArmorPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29120 (0x71c0) "ShockArmor+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_SHOCK_ARMOR_PLUS = 20;
+
+/// `kSMUnitAttributeArrowArmorPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29121 (0x71c1) "ArrowArmor+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_ARROW_ARMOR_PLUS = 21;
+
+/// `kSMUnitAttributePierceArmorPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29122 (0x71c2) "PierceArmor+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_PIERCE_ARMOR_PLUS = 22;
+
+/// `kSMUnitAttributeGunArmorPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29123 (0x71c3) "GunArmor+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_GUN_ARMOR_PLUS = 23;
+
+/// `kSMUnitAttributeLaserArmorPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29124 (0x71c4) "LaserArmor+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_LASER_ARMOR_PLUS = 24;
+
+/// `kSMUnitAttributeMissileArmorPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29125 (0x71c5) "MissileArmor+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_MISSILE_ARMOR_PLUS = 25;
+
+/// `kSMUnitAttributeReloadTimePlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29126 (0x71c6) "ReloadTime+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_RELOAD_TIME_PLUS = 26;
+
+/// `kSMUnitAttributeAttackPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29127 (0x71c7) "Attack+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_ATTACK_PLUS = 27;
+
+/// `kSMUnitAttributeWorkRatePlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29128 (0x71c8) "WorkRate+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_WORK_RATE_PLUS = 28;
+
+/// `kSMUnitAttributeFlightTimePlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29129 (0x71c9) "FlightTime+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_FLIGHT_TIME_PLUS = 29;
+
+/// `kSMUnitAttributeLeadershipPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29130 (0x71ca) "Leadership+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_LEADERSHIP_PLUS = 30;
+
+/// `kSMUnitAttributeMaxObjectsCarriedPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29131 (0x71cb) "MaxObjectsCarried+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_MAX_OBJECTS_CARRIED_PLUS = 31;
+
+/// `kSMUnitAttributeRepairPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29132 (0x71cc) "Repair+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_REPAIR_PLUS = 32;
+
+/// `kSMUnitAttributeHitPointsPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29133 (0x71cd) "HitPoints+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_HIT_POINTS_PLUS = 33;
+
+/// `kSMUnitAttributeCarryAmountPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29134 (0x71ce) "CarryAmount+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_CARRY_AMOUNT_PLUS = 34;
+
+/// `kSMUnitAttributeContainerHealingHPPerSecPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29135 (0x71cf) "ContainerHealingHP/Sec+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_CONTAINER_HEALING_HP_PER_SEC_PLUS = 35;
+
+/// `kSMUnitAttributeRangePlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29136 (0x71d0) "Range+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_RANGE_PLUS = 36;
+
+/// `kSMUnitAttributeLineOfSightPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29137 (0x71d1) "LineOfSight+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_LINE_OF_SIGHT_PLUS = 37;
+
+/// `kSMUnitAttributeMaxVelocityPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29138 (0x71d2) "MaxVelocity+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_MAX_VELOCITY_PLUS = 38;
+
+/// `kSMUnitAttributePowerPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29139 (0x71d3) "Power+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_POWER_PLUS = 39;
+
+/// `kSMUnitAttributeAnimalAIActivePlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29140 (0x71d4) "Animal AI Active+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_ANIMAL_AI_ACTIVE_PLUS = 40;
+
+/// `kSMUnitAttributeCameraFocusPlus`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29141 (0x71d5) "CameraFocus+"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_CAMERA_FOCUS_PLUS = 41;
+
+/// `kSMUnitAttributeTotalShockArmor`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29142 (0x71d6) "Total ShockArmor"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_SHOCK_ARMOR = 42;
+
+/// `kSMUnitAttributeTotalArrowArmor`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29143 (0x71d7) "Total ArrowArmor"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_ARROW_ARMOR = 43;
+
+/// `kSMUnitAttributeTotalPierceArmor`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29144 (0x71d8) "Total PierceArmor"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_PIERCE_ARMOR = 44;
+
+/// `kSMUnitAttributeTotalGunArmor`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29145 (0x71d9) "Total GunArmor"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_GUN_ARMOR = 45;
+
+/// `kSMUnitAttributeTotalLaserArmor`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29146 (0x71da) "Total LaserArmor"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_LASER_ARMOR = 46;
+
+/// `kSMUnitAttributeTotalMissileArmor`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29147 (0x71db) "Total MissileArmor"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_MISSILE_ARMOR = 47;
+
+/// `kSMUnitAttributeTotalReloadTime`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29148 (0x71dc) "Total ReloadTime"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_RELOAD_TIME = 48;
+
+/// `kSMUnitAttributeTotalAttack`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29149 (0x71dd) "Total Attack"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_ATTACK = 49;
+
+/// `kSMUnitAttributeTotalWorkRate`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29150 (0x71de) "Total WorkRate"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_WORK_RATE = 50;
+
+/// `kSMUnitAttributeTotalFlightTime`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29151 (0x71df) "Total FlightTime"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_FLIGHT_TIME = 51;
+
+/// `kSMUnitAttributeTotalLeadership`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29152 (0x71e0) "Total Leadership"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_LEADERSHIP = 52;
+
+/// `kSMUnitAttributeTotalMaxObjectsCarried`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29153 (0x71e1) "Total MaxObjectsCarried"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_MAX_OBJECTS_CARRIED = 53;
+
+/// `kSMUnitAttributeTotalRepair`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29154 (0x71e2) "Total Repair"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_REPAIR = 54;
+
+/// `kSMUnitAttributeTotalHitPoints`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29155 (0x71e3) "Total HitPoints"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_HIT_POINTS = 55;
+
+/// `kSMUnitAttributeTotalCarryAmount`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29156 (0x71e4) "Total CarryAmount"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CARRY_AMOUNT = 56;
+
+/// `kSMUnitAttributeTotalHealingHPPerSec`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29157 (0x71e5) "Total HealingHP/Sec"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_HEALING_HP_PER_SEC = 57;
+
+/// `kSMUnitAttributeTotalRange`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29158 (0x71e6) "Total Range"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_RANGE = 58;
+
+/// `kSMUnitAttributeTotalLineOfSight`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29159 (0x71e7) "Total LineOfSight"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_LINE_OF_SIGHT = 59;
+
+/// `kSMUnitAttributeTotalMaxVelocity`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29160 (0x71e8) "Total MaxVelocity"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_MAX_VELOCITY = 60;
+
+/// `kSMUnitAttributeTotalPower`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29161 (0x71e9) "Total Power"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_POWER = 61;
+
+/// `kSMUnitAttributeTotalPlaceHolder2`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29162 (0x71ea) "Total PlaceHolder2"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_PLACE_HOLDER2 = 62;
+
+/// `kSMUnitAttributeTotalPlaceHolder3`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29163 (0x71eb) "Total PlaceHolder3"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_PLACE_HOLDER3 = 63;
+
+/// `kSMUnitAttributeTotalTransportWeight`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29164 (0x71ec) "Total TransportWeight"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_TRANSPORT_WEIGHT = 64;
+
+/// `kSMUnitAttributeTotalWeight`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29165 (0x71ed) "Total Weight"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_WEIGHT = 65;
+
+/// `kSMUnitAttributeTotalTileSize`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29166 (0x71ee) "Total Tile Size"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_TILE_SIZE = 66;
+
+/// `kSMUnitAttributeTotalCruiseAltitude`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29167 (0x71ef) "Total Cruise Altitude"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CRUISE_ALTITUDE = 67;
+
+/// `kSMUnitAttributeTotalMinimumRange`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29168 (0x71f0) "Total Minimum Range"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_MINIMUM_RANGE = 68;
+
+/// `kSMUnitAttributeTotalCanEnterAirTransports`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29169 (0x71f1) "Total Can Enter Air Transports"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CAN_ENTER_AIR_TRANSPORTS = 69;
+
+/// `kSMUnitAttributeTotalCanEnterLandTransports`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29170 (0x71f2) "Total Can Enter Land Transports"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CAN_ENTER_LAND_TRANSPORTS = 70;
+
+/// `kSMUnitAttributeTotalCanEnterSeaTransports`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29171 (0x71f3) "Total Can Enter Sea Transports"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_CAN_ENTER_SEA_TRANSPORTS = 71;
+
+/// `kSMUnitAttributeTotalPlaceHolder1`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29172 (0x71f4) "Total Place Holder1"
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_PLACE_HOLDER1 = 72;
+
+/// `kSMUnitAttributeTotalPlaceHolder2B`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29173 (0x71f5) "Total Place Holder2"; B: the text equals entry 62 but for the space in Place Holder
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_PLACE_HOLDER2_B = 73;
+
+/// `kSMUnitAttributeTotalPlaceHolder3B`: unit attribute list 0x71ac+i (EESETSObject/EESETSETObject GetString(i + 0x71ac)): Language.rc 29174 (0x71f6) "Total Place Holder3"; B: the text equals entry 63 but for the space in Place Holder
+constexpr static const int32_t EE_SCENARIO_SM_UNIT_ATTRIBUTE_TOTAL_PLACE_HOLDER3_B = 74;
+
+/// `kSMAttributeModeIncrease`: unit attribute operator list 0x7396+i (EESETSETSAAAttributeChange): Language.rc 29590 (0x7396) "Increase"
+constexpr static const int32_t EE_SCENARIO_SM_ATTRIBUTE_MODE_INCREASE = 0;
+
+/// `kSMAttributeModeDecrease`: unit attribute operator list 0x7396+i (EESETSETSAAAttributeChange): Language.rc 29591 (0x7397) "Decrease"
+constexpr static const int32_t EE_SCENARIO_SM_ATTRIBUTE_MODE_DECREASE = 1;
+
+/// `kSMAttributeModeExactly`: unit attribute operator list 0x7396+i (EESETSETSAAAttributeChange): Language.rc 29592 (0x7398) "Exactly"
+constexpr static const int32_t EE_SCENARIO_SM_ATTRIBUTE_MODE_EXACTLY = 2;
 
 /// The lists, by the manager's member: `mTriggers`, `mConditions`, `mEffects`, `mObjects`, `mAreas`,
 /// `mPendingEffects` (the last only for the index upkeep).
@@ -3414,6 +4342,42 @@ struct EeScenarioRoundHost {
   int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
 };
 
+/// `EESMDialogMessage`'s numbers, in the class's order (the text and the sound stay members of the C++ class).
+struct EeScenarioMessageFields {
+  long mScrollSpeed;
+  unsigned long mUnitType;
+  unsigned long mDuration;
+  unsigned long mUnitID;
+  bool mIsCinematic;
+};
+
+/// `U2DPoint<long>`.
+struct EeScenarioAreaPoint {
+  long mX;
+  long mY;
+};
+
+/// `GERectangle` (its members' order).
+struct EeScenarioAreaRect {
+  float mBottom;
+  float mLeft;
+  float mRight;
+  float mTop;
+};
+
+/// `EESMArea`'s numbers.
+struct EeScenarioAreaFields {
+  EeScenarioAreaPoint mAnchor;
+  EeScenarioAreaRect mRect;
+  /// The cached centre tile (-10000 while unset).
+  EeScenarioAreaPoint mCenterTile;
+  unsigned long mSelectMode;
+  unsigned long mTilesTime;
+  unsigned long mID;
+  bool mHasRectangle;
+  bool mHasAnchor;
+};
+
 /// `EESMObject`'s numbers, in the class's order.
 struct EeScenarioObjectFields {
   unsigned long mOwner;
@@ -3709,6 +4673,86 @@ struct EeScenarioEntry {
   unsigned long value;
 };
 
+/// The host context's record (`EESMHostContext`, ee/EEScenarioHost.h: the same pointers, C++-typed there).
+struct EeScenarioHostContext {
+  void *condition;
+  void *unit;
+  void *effect;
+  void *object;
+  void *cursor;
+  void *tiles;
+  void *created;
+  void *location;
+  void *wall_pieces;
+  void *transform;
+};
+
+/// The stream's context record (`EESMStream`, ee/EEScenarioHost.h).
+struct EeScenarioStreamContext {
+  void *file;
+  void *const *strings;
+  void *list;
+  void *trigger;
+  void *manager;
+  unsigned long major;
+  unsigned long minor;
+};
+
+/// The list host's context record (`EESMListContext`, EEScenarioManager.cpp): the manager, the name list out.
+struct EeScenarioListContext {
+  void *manager;
+  void *names;
+};
+
+/// The text file host's context record (`EESMTextContext`, EEScenarioManager.cpp): the manager, the file.
+struct EeScenarioTextContext {
+  void *manager;
+  void *file;
+};
+
+/// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
+/// every target; provisional names from the tech tree's readers).
+struct EeScenarioEvEffect {
+  int32_t mUnused1;
+  int32_t mUnusedID;
+  /// +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
+  float mValue;
+  /// +0x0c the offset added to the base
+  float mOffset;
+  /// +0x10 the factor of the value
+  float mFactor;
+  /// +0x14 a gUnitClassTable index (< EEUnitClassCount())
+  int32_t mUnitClass;
+  /// +0x18 a unit class (kind 0x13: its media)
+  int32_t mNewUnitClass;
+  int32_t mUnitSet;
+  /// +0x20
+  int32_t mKind;
+  /// +0x24 an EEMedia index (kind 6)
+  int32_t mMediaIndex;
+  /// +0x28 a tech tree id (kind 9)
+  int32_t mTechnology;
+  /// +0x2c (kind 2: 0x28 = an area effect)
+  int32_t mAttribute;
+  /// +0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)
+  int32_t mSoundID;
+  /// +0x34 an EEButtonObject index (kind 1)
+  int32_t mButton;
+  /// +0x38 an EEAEManager index (kind 2)
+  int32_t mAreaEffect;
+  int32_t mTerrainType;
+  int32_t mUnused2;
+  /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
+  unsigned char mRunOnLoad;
+  unsigned char mUnused3;
+  uint16_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnused6;
+  int32_t mUnused7;
+  /// (sizeof 0x58)
+  int32_t mUnused8;
+};
+
 extern "C" {
 
 /// `EEScenarioManager::EndCinematic`.
@@ -3738,6 +4782,249 @@ void ee_scenario_effect_reset(void *e);
 
 /// `EESMEffect::Copy`: `src` into `e` (the C++ objects).
 void ee_scenario_effect_copy(void *e, const void *src);
+
+/// `EESMDialogMessage::EESMDialogMessage`'s numbers.
+EeScenarioMessageFields ee_scenario_message_defaults();
+
+/// `EESMArea::EESMArea`'s numbers.
+EeScenarioAreaFields ee_scenario_area_defaults();
+
+/// `EESMArea::IsUnset`.
+///
+/// # Safety
+/// `f` a live area's record.
+bool ee_scenario_area_is_unset(const EeScenarioAreaFields *f);
+
+/// `EESMArea::IsOffMap`.
+///
+/// # Safety
+/// `f` a live area's record.
+bool ee_scenario_area_is_off_map(const EeScenarioAreaFields *f);
+
+/// `EESMCondition::Evaluate` (with the SMCE record).
+bool ee_scenario_en_condition_evaluate(void *c);
+
+/// `EESMCondition::Load` / `Save`.
+int32_t ee_scenario_en_condition_io(void *c, void *file, bool save);
+
+/// `EESMCondition::Copy`: the name, text and chat text, then every number.
+void ee_scenario_en_condition_copy(void *c, void *from);
+
+/// `EESMObject::Evaluate` (with the SMOB record).
+bool ee_scenario_en_object_evaluate(void *o, bool include_dead);
+
+/// `EESMObject::PickUnitType`.
+long ee_scenario_en_object_pick_unit_type(void *o);
+
+/// `EESMObject::GetUnitAttribute` (0 for no unit).
+long ee_scenario_en_unit_attribute(unsigned long attribute, bool percent, void *unit);
+
+/// `EESMObject::FindPlacement` (with the SMFP record; a retry is the whole call again without the random try).
+bool ee_scenario_en_find_placement(void *o,
+                                   unsigned long unit_type,
+                                   float *x,
+                                   float *y,
+                                   bool try_random);
+
+/// `EESMObject::Load` / `Save` (the name, the unit ids).
+int32_t ee_scenario_en_object_io(void *o,
+                                 void *file,
+                                 unsigned long major,
+                                 unsigned long minor,
+                                 bool save);
+
+/// `EESMObject::ReplaceUnit`.
+void ee_scenario_en_object_replace_unit(void *o, long old, long new_);
+
+/// `EESMObject::Copy`: the name, every number, the units when selected on the map.
+void ee_scenario_en_object_copy(void *o, void *from);
+
+/// `EESMObject::SetName` (the manager renames the conditions that use the object).
+void ee_scenario_en_object_set_name(void *o, const void *name);
+
+/// `EESMObject::SetParent` (the manager breaks a cycle).
+void ee_scenario_en_object_set_parent(void *o, long parent);
+
+/// `EEChangeUnit` (with the SMCU record: the unit read again by id after, as a kill may free it).
+void ee_scenario_en_change_unit(unsigned long attribute,
+                                bool percent,
+                                void *unit,
+                                long minimum,
+                                unsigned long maximum,
+                                bool random,
+                                long mode);
+
+/// `EESMTrigger::Evaluate` (with the SMTE record).
+void ee_scenario_en_trigger_evaluate(void *t, float time);
+
+/// `EESMTrigger::Load` / `Save` (the name, the text, the entries through the trigger).
+int32_t ee_scenario_en_trigger_io(void *t, void *file, bool save);
+
+/// `EESMEffect::SetPlayerAttribute` (with the SMPA record).
+void ee_scenario_en_effect_set_player_attribute(void *e,
+                                                long player,
+                                                unsigned long attribute,
+                                                long mode,
+                                                long amount);
+
+/// `EESMEffect::Execute` (with the SMEX record; the run is the C++'s `ExecuteUncaptured`).
+void ee_scenario_en_effect_execute(void *e, bool cinematic);
+
+/// `EESMEffect::ExpandTokens` (with the SMTK record): `text` and `out` the C++ strings (they may be one).
+void ee_scenario_en_effect_expand_tokens(void *e,
+                                         void *text,
+                                         void *out);
+
+/// `EESMEffect::Load` / `Save` (the eight strings, the object list).
+int32_t ee_scenario_en_effect_io(void *e,
+                                 void *file,
+                                 unsigned long major,
+                                 unsigned long minor,
+                                 bool save);
+
+/// `EESMMediaStrings::Load` / `Save` (the seven strings).
+int32_t ee_scenario_en_media_io(void *m, void *file, bool save);
+
+/// `EESMDialogMessage::Load` / `Save`.
+int32_t ee_scenario_en_message_io(void *m,
+                                  void *file,
+                                  unsigned long major,
+                                  unsigned long minor,
+                                  bool save);
+
+/// `EEScenarioManager::Load` (with the SMSV record): `Reset`, then the manager's save.
+long ee_scenario_en_manager_load(void *m, void *file, unsigned long major, unsigned long minor);
+
+/// `EEScenarioManager::Save`.
+long ee_scenario_en_manager_save(void *m, void *file, unsigned long major, unsigned long minor);
+
+/// `EEScenarioManager::Update`, `ShowDialogMessage`, `Prepare` (`EE_SCENARIO_MN_*`).
+void ee_scenario_en_manager(void *m, uint32_t op);
+
+/// `EESMMediaStrings::ListMediaFiles`: the sound and the map picture (not the movie) of the media strings `m`
+/// appended to `files` in lower case (`PlatMbsLwr`), each missing one's first name and a line feed appended to
+/// `error`; false when one is missing. `scenario` the scenario file's name (checked for its three parts).
+bool ee_scenario_en_media_files(void *m,
+                                void *scenario,
+                                void *files,
+                                void *error,
+                                bool prefix);
+
+/// `EEScenarioManager::ExportText` (`export`) or `ImportTriggerText` (`kind`, `validate`) of the open `file`.
+long ee_scenario_en_text(void *m,
+                         void *file,
+                         bool export_,
+                         unsigned long kind,
+                         bool validate);
+
+/// The manager's list entries (`EE_SCENARIO_LS_*`; `Reset`'s lists, `SortList`, `NewEntry`, `MoveEntry`,
+/// `DeleteEntry`, `DuplicateEntry`, `GetNames`, the `Find*ByID`s, `GetObjectIndex`, `ObjectChanged`): an
+/// element's address, a bool or an index.
+int64_t ee_scenario_en_list(void *m,
+                            uint32_t op,
+                            uint32_t list,
+                            int64_t a,
+                            int64_t b,
+                            void *p);
+
+/// `EESMArea::SetAnchor`.
+void ee_scenario_en_area_set_anchor(void *a, long x, long y);
+
+/// `EESMArea::SetRectangle` (`r` a `GERectangle`: bottom, left, right, top).
+///
+/// # Safety
+/// `r` points to four floats.
+void ee_scenario_en_area_set_rectangle(void *a, const EeScenarioAreaRect *r);
+
+/// `EESMArea::Copy`: the name, the text, the numbers but the tile cache.
+void ee_scenario_en_area_copy(void *a, void *from);
+
+/// `EESMArea::ContainsUnit` (with the SMAR record kind 0).
+bool ee_scenario_en_area_contains_unit(void *a, void *unit);
+
+/// `EESMArea::ContainsTile` (with the SMAR record kind 1).
+bool ee_scenario_en_area_contains_tile(void *a, long x, long y);
+
+/// `EESMArea::GetCenterTile` (with the SMAR record kind 2): the centre computed once and cached.
+///
+/// # Safety
+/// `out` points to two longs.
+void ee_scenario_en_area_center_tile(void *a, long *out);
+
+/// `EESMArea::GetTiles` (with the SMAR record kind 3): the cache rebuilt when empty or unread for 3000 ticks,
+/// every read restarting the timer, copied out to `out` (a `std::vector<U2DPoint<long>>`).
+void ee_scenario_en_area_tiles(void *a,
+                               void *out);
+
+/// `EESMArea::Load` / `Save` (the name, the text, the numbers through the save's copy).
+int32_t ee_scenario_en_area_io(void *a, void *file, bool save);
+
+/// [`region_inputs`] for the C++: the count of areas, and (when `capacity` holds them) each area's input and id.
+///
+/// # Safety
+/// `inputs` and `ids` point to `capacity` entries (or `capacity` is 0).
+size_t ee_scenario_area_region_inputs(EeScenarioArea *inputs,
+                                      long *ids,
+                                      size_t capacity);
+
+extern int64_t ee_scenariocpp_entry(uint32_t op, void *p, int64_t a, int64_t b);
+
+extern int64_t ee_scenariocpp_host_read(void *ctx,
+                                        uint32_t op,
+                                        int32_t a,
+                                        int32_t b,
+                                        int32_t c,
+                                        int32_t d);
+
+extern void ee_scenariocpp_host_players(void *ctx,
+                                        int32_t kind,
+                                        bool single,
+                                        int32_t result,
+                                        bool listed,
+                                        const int32_t *players,
+                                        size_t count,
+                                        uint32_t seed);
+
+extern void ee_scenariocpp_host_write(void *ctx,
+                                      uint32_t op,
+                                      long player,
+                                      int64_t b,
+                                      int64_t c,
+                                      int64_t d);
+
+extern void ee_scenariocpp_host_tiles(void *ctx,
+                                      uint32_t op,
+                                      int32_t a,
+                                      int32_t b,
+                                      int32_t c,
+                                      EeScenarioTiles *list);
+
+extern int64_t ee_scenariocpp_host_world(void *ctx, uint32_t op, const int64_t *args);
+
+extern const EeScenarioObjectFields *ee_scenariocpp_host_object(void *ctx, int32_t index);
+
+extern int32_t ee_scenariocpp_stream_io(void *ctx,
+                                        uint32_t op,
+                                        uint32_t slot,
+                                        unsigned long index,
+                                        void *value);
+
+extern void *ee_scenariocpp_list_op(void *ctx,
+                                    uint32_t op,
+                                    uint32_t list,
+                                    size_t index,
+                                    void *element,
+                                    const char *text);
+
+extern int64_t ee_scenariocpp_round_op(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
+
+extern void *ee_scenariocpp_text_op(void *ctx,
+                                    uint32_t op,
+                                    uint32_t slot,
+                                    long value,
+                                    void *element,
+                                    const char *text,
+                                    const char *text2);
 
 /// `EEEvent::Trigger`: runs every effect of event `event` for a player (a given player's own index wins); the last
 /// effect's result.

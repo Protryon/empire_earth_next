@@ -145,7 +145,7 @@ The candidate seams, from lowest to highest level:
 
    The scenario AI effects already drive this layer, so it is proven to work from outside the AI:
    - `EESMEffect` `BuildObject`, `CreateAIMilitaryGroup`, `ModifyAIMilitaryTarget`, `MaintainObject`,
-     `SetAIVariable`, `SetFavoriteUnits`, `SetAIToggle` (enum `include/ee/EEScenarioIDs.h:7-26`).
+     `SetAIVariable`, `SetFavoriteUnits`, `SetAIToggle` (`EE_SCENARIO_SM_AI_ACTION_*` in `rust/crates/ee_sim/src/scenario/ids.rs`).
 3. **Behaviour values.** `SetAIVariable` can already rewrite any `dbcpbehavior` field per player at runtime.
 
 ### 2.4 Inputs and cheats

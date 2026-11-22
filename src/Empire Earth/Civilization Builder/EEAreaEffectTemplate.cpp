@@ -56,13 +56,7 @@ bool EEUnitAreaEffectList::Remove(long inKind)
 }
 
 // Rebuilds the list keeping only the strongest effect of each kind
-void EEUnitAreaEffectList::KeepStrongest()
-{
-    EEUnitAreaEffectList theList;
-    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator)
-        theList.AddAreaEffect(*theIterator);
-    *this = theList;
-}
+void EEUnitAreaEffectList::KeepStrongest() { ee_screens_ael_keep_strongest((uintptr_t)this); }
 
 // Marks every effect in the list for a recount
 void EEUnitAreaEffectList::MarkDirty()
@@ -90,22 +84,12 @@ void EEUnitAreaEffectList::Tick(EEComplexUnit* inUnit, float inElapsed)
 extern "C" uintptr_t ee_screenscpp_ael_count(uintptr_t inList) { return AEL_L(inList)->mItems.size(); }
 extern "C" uintptr_t ee_screenscpp_ael_at(uintptr_t inList, uintptr_t inIndex)
 { return (uintptr_t)AEL_L(inList)->mItems[inIndex]; }
-extern "C" int64_t ee_screenscpp_ael_strength(uintptr_t inEffect) { return (int64_t)AEL_E(inEffect)->GetStrength(); }
 extern "C" void ee_screenscpp_ael_remove(uintptr_t inList, uintptr_t inEffect)
 { AEL_L(inList)->UReferenceContainer<EEAreaEffect*>::Remove(AEL_E(inEffect)); }
 extern "C" void ee_screenscpp_ael_add(uintptr_t inList, uintptr_t inEffect)
 { AEL_L(inList)->UReferenceContainer<EEAreaEffect*>::Add(AEL_E(inEffect)); }
-extern "C" bool ee_screenscpp_ael_modify(uintptr_t inEffect, int64_t inKind, uintptr_t inValue, uintptr_t inOut)
-{ return AEL_E(inEffect)->Modify((long)inKind, *(const long*)inValue, *(long*)inOut); }
-extern "C" void ee_screenscpp_ael_show_on(uintptr_t inEffect, uintptr_t inUnit)
-{ AEL_E(inEffect)->ShowOn((EEComplexUnit*)inUnit); }
-extern "C" void ee_screenscpp_ael_mark_dirty(uintptr_t inEffect) { AEL_E(inEffect)->MarkDirty(); }
 extern "C" void ee_screenscpp_ael_set_location(uintptr_t inEffect, float inX, float inY)
 { AEL_E(inEffect)->mLocation = GE2DPoint(inX, inY); }
-extern "C" void ee_screenscpp_ael_recount(uintptr_t inEffect, float inValue)
-{ AEL_E(inEffect)->Recount((long)inValue); }
-extern "C" void ee_screenscpp_ael_tick(uintptr_t inEffect, uintptr_t inUnit, float inElapsed)
-{ AEL_E(inEffect)->Tick((EEComplexUnit*)inUnit, inElapsed); }
 extern "C" uintptr_t ee_screenscpp_ael_t_effect(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mGraphicEffect; }
 extern "C" uintptr_t ee_screenscpp_ael_t_effect18(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mGraphicEffect18; }
 extern "C" uintptr_t ee_screenscpp_ael_t_media(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mMedia; }
@@ -114,3 +98,6 @@ extern "C" void ee_screenscpp_ael_effect_load(uintptr_t inEffect, bool inOnDeman
 extern "C" void ee_screenscpp_ael_effect_unload(uintptr_t inEffect) { ((EEGraphicEffect*)inEffect)->Unload(); }
 extern "C" void ee_screenscpp_ael_media_load(uintptr_t inMedia) { ((EEMedia*)inMedia)->LoadMedia(); }
 extern "C" void ee_screenscpp_ael_media_unload(uintptr_t inMedia) { ((EEMedia*)inMedia)->UnloadMedia(); }
+extern "C" uintptr_t ee_screenscpp_ael_list_new() { return (uintptr_t)new EEUnitAreaEffectList; }
+extern "C" void ee_screenscpp_ael_list_assign(uintptr_t inList, uintptr_t inOther) { *AEL_L(inList) = *AEL_L(inOther); }
+extern "C" void ee_screenscpp_ael_list_free(uintptr_t inList) { delete AEL_L(inList); }

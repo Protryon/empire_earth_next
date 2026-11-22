@@ -325,31 +325,22 @@ struct EEWonNetGameInfo {
     }
 };
 
-// a room of the room list (the value of EEWonNet::mRooms; provisional names)
-struct EEWonNetRoomInfo {
-    UWideString mName;                      // +0x00
-    UWideString mDescription;               // +0x14 (the room's data object name)
-    unsigned long mMaxPlayers;              // +0x28
-    unsigned long mId;                      // +0x2c
-};
-
 namespace WONAPI {
-class AsyncOp;
 class RustServerOp;
-class RustServerOp;
-class RoutingConnection;
 class SmartRoutingConnection;
-class RoutingOp;
 class WONAPICore; //actual core owner, not a synthetic lobby-host alias
 class WONLobbyWindow;
 class ServerContext;
 }
 
+struct EeWonNet; // rust/won_lobby/wonnet.h
+
+// The game's WON front end (R6 WON round 31: whole in Rust, ee_won_lobby wonnet.rs). The data (the strings, the
+// game, room and client maps, the joined game's info, the ids and flags; the original's +0x054..+0x18e) are the
+// Rust object's; this class keeps the C++ objects and forwards every method (EEWonNet.cpp). Dead in AoC: gWonNet
+// is never created (the base game's 0x4c55df).
 class EEWonNet {
 public:
-    // the completion callbacks: WONAPI completions that call a member of gWonNet
-    typedef void (EEWonNet::*Callback)(WONAPI::AsyncOp* inOp);
-
     void ConnectToLobby();                 // 0xcd7d2 (the room screen's open; provisional name)
     void FnCFFDD(long inArg);               // 0xcffdd (window message 0x433; provisional name)
     void FnCFFF2();                         // 0xcfff2 (window message 0x434; provisional name)
@@ -374,116 +365,37 @@ public:
     void SendChat(const UWideString& inText);
     // 0xd1104: refills the room list form's rooms box and its two labels (controls 6, 16, 14)
     void UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel16, UITextLabel* inLabel14);
-
-    // (EEWonNet.cpp; provisional names, by behaviour)
-    wchar_t* A2W(wchar_t* outString, const char* inString, int inLength);
-    void ListGamesCallback(WONAPI::AsyncOp* inOp);
-    void ListRoomCallback(WONAPI::AsyncOp* inOp);
-    void CloseCallback(WONAPI::AsyncOp* inOp);
-    void TempCallback(WONAPI::AsyncOp* inOp);
-    void ConnectCallback(WONAPI::AsyncOp* inOp);
-    void ChatRoomListCallback(WONAPI::AsyncOp* inOp);
-    void JoinGameDataCallback(WONAPI::AsyncOp* inOp);
-    void CreateGameCallback(WONAPI::AsyncOp* inOp);
-    void CreateGame();
-    void UpdateGameObject();
-    void ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData, unsigned long& outSize);
-    void ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& outInfo);
-    void Disconnect();
-    void LeaveGroups();
-    void ClearGames();
-    void JoinGroupCallback(WONAPI::AsyncOp* inOp);
-    void JoinGameObjectsCallback(WONAPI::AsyncOp* inOp);
-    void JoinRoomCallback(WONAPI::AsyncOp* inOp);
-    void ClientListCallback(WONAPI::AsyncOp* inOp);
-    void MembersCallback(WONAPI::AsyncOp* inOp);
-    void UpdateAccountCallback(WONAPI::AsyncOp* inOp);
-    void GetAccountCallback(WONAPI::AsyncOp* inOp);
-    void OnChat(WONAPI::AsyncOp* inOp);
-    void OnDataObjectChanged(WONAPI::AsyncOp* inOp);
-    void OnDataObjectCreated(WONAPI::AsyncOp* inOp);
-    void OnDataObjectDeleted(WONAPI::AsyncOp* inOp);
-    void OnDataObjectModified(WONAPI::AsyncOp* inOp);
-    void OnGroupMaxPlayersChanged(WONAPI::AsyncOp* inOp);
-    void RegisterCallback(WONAPI::AsyncOp* inOp);
-    void SendChatCallback(WONAPI::AsyncOp* inOp);
-    std::wstring ToWString(const char* inString);
-    // 0xd146d: out of line in EEWonNet.cpp (ToString calls it)
-    char* W2A(char* outString, int inSize, const wchar_t* inString, int inLength);
-    std::string ToString(const std::wstring& inString)
-    {
-        int theSize = inString.length() * 4 + 1;   // UTF-8 (decision D6): up to four bytes a character
-        if (theSize == 0)
-            return std::string();
-        char* theBuffer = new char[theSize];
-        this->W2A(theBuffer, theSize, inString.c_str(), inString.length());
-        std::string theResult(theBuffer);
-        delete[] theBuffer;
-        return theResult;
-    }
+    // the data the screens read (the original's members)
+    unsigned short GetGameListPort();       // +0x180 (0xffff: no game list to refresh)
+    bool GetRoomListChanged();              // +0x18c (the room list form refreshes at once when set)
+    bool GetIsBehindFirewall();             // +0x186 (EEAJoinOrHostAGame: the connection request's firewall flag)
+    std::wstring GetRoomName();             // +0x074 (the game room screen shows it)
 
     // dead in AoC (gWonNet is never created; /OPT:REF dropped it), live in the base game 0x4c55df
     EEWonNet();
     // the main screen deletes gWonNet through vtable slot 0 (0x1e212d): a virtual dtor, no RTTI
     virtual ~EEWonNet();
-    //: dead in AoC (DEAD-IN-AOC bodies in EEWonNet.cpp; names PROVISIONAL, from the base game)
-    bool Initialize();                      // base 0x4c9e16 (reads SierraCom.cfg into mDirectoryServers)
+    //: dead in AoC (names PROVISIONAL, from the base game)
+    bool Initialize();                      // base 0x4c9e16 (reads SierraCom.cfg into the directory servers)
     void GetTitanServerList();              // base 0x4c9883
-    void GetTitanServerListCompletion(WONAPI::AsyncOp* inOp);   // base 0x4c9ad9
     void Login(const char* inName, const char* inPassword);       // base 0x4c91a3
-    void LoginCallback(WONAPI::AsyncOp* inOp);                  // base 0x4c9414
 
+    EeWonNet* mRust;                        // the front end (owned)
     TSCriticalSection* mLock;               // +0x004
     TSCriticalSection* mLock8;              // +0x008 (OnDataObjectChanged enters and leaves it)
     WONAPI::SmartPtr<WONAPI::SmartRoutingConnection> mRouting;    // +0x00c
-    // +0x010: the directory servers
-    WONAPI::SmartPtr<WONAPI::ServerContext> mDirServers;
-    char _gap014[4];
+    WONAPI::SmartPtr<WONAPI::ServerContext> mDirServers;          // +0x010: the directory servers
     WONAPI::ServerContext* mAuthServers;    // +0x018 (the account ops get it)
-    char _gap01c[4];
-    WONAPI::WONAPICore* mLobby; //+0x020 actual core; FnCFFDD pumps milliseconds, FnCFFF2 tests existence
+    WONAPI::WONAPICore* mLobby; //+0x020 actual core; FnCFFDD pumps milliseconds
     WONAPI::WONLobbyWindow* mLobbyWindow;   // +0x024
     WONAPI::AuthContext* mUser;                    // +0x028
     WONAPI::DirEntityList mServers;         // +0x02c (the server-select form lists them)
-    // +0x038: the message-of-the-day request (base game: RequestMOTD)
-    WONAPI::SmartPtr<WONAPI::RustServerOp> mMOTDOp;
+    WONAPI::SmartPtr<WONAPI::RustServerOp> mMOTDOp;      // +0x038: the message-of-the-day request (base game)
     WONAPI::SmartPtr<WONAPI::GetCertOp> mLoginOp;  // +0x03c (base game: Login)
-    // +0x040: the directory query (base game: GetTitanServerList; a Rust GetDirOp, ee_won reqdir.rs)
-    WONAPI::SmartPtr<WONAPI::RustServerOp> mDirOp;
-    char _gap044[0xc];
+    WONAPI::SmartPtr<WONAPI::RustServerOp> mDirOp;       // +0x040: the directory query (a Rust GetDirOp)
     WONAPI::SmartPtr<WONAPI::RustServerOp> mAccountOp;   // +0x050 (OpenUpdateAccount; a Rust GetAccountOp)
-    std::wstring mPassword;                 // +0x054 (the hosted game's password)
-    std::wstring mGameName;                 // +0x064 (the hosted or joined game)
-    std::wstring mRoomName;                 // +0x074 (the game room screen shows it)
-    std::wstring mCurrentRoom;              // +0x084
-    std::wstring mServerName;               // +0x094
-    char _gap0a4[0x40];
-    EEWonNetGameInfo mGameInfo;             // +0x0e4
-    std::map<unsigned short, EEWonNetGameInfo> mGames;      // +0x134 (by game group id)
-    std::map<unsigned short, EEWonNetRoomInfo> mRooms;      // +0x140 (by room group id)
-    std::map<unsigned short, std::wstring> mClients;     // +0x14c (RefreshGameList: the client list's names by id)
-    // +0x158: the directory server addresses (base game 0x4c9e16 fills it from SierraCom.cfg; the ctor and dtor
-    // clear it). AoC: only EEWonNet.cpp's dead code uses it
-    std::vector<std::string> mDirectoryServers;
-    long mL168;
-    long mL16C;
-    char _gap170[8];
-    unsigned short mJoinGroupId;            // +0x178 (0xffff: none)
-    unsigned short mGameGroupId;            // +0x17a (0xffff: none)
-    unsigned short mReplyClientId;
-    unsigned short mJoinRoomId;             // +0x17e (0xffff: none)
-    unsigned short mGameListPort;           // +0x180 (0xffff: no game list to refresh; provisional name)
-    unsigned short mRoomGroupId;            // +0x182
-    char _gap184[2];
-    bool mIsBehindFirewall;                 // +0x186 (EEAJoinOrHostAGame: the connection request's firewall flag when 1)
-    bool mB187;
-    bool mCancelled;                        // +0x188 (the connect message's Cancel sets it)
-    bool mJoinRoomCancelled;
-    bool mIgnoreClose;
-    bool mIsListingPlayers;
-    bool mRoomListChanged;                  // +0x18c (the room list form refreshes at once when set; provisional name)
-    bool mGamesChanged;                     // +0x18d
-    bool mB18E;
+    bool mCancelled;                        // +0x188 (the connect message's Cancel sets it through a pointer)
+    bool mJoinRoomCancelled;                // +0x189 (the room join's Cancel, the same)
 };
 
 extern EEWonNet* gWonNet;

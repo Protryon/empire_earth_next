@@ -11,6 +11,7 @@
 // EEEffect.cpp, EEEffectManager.cpp and EEGraphicalGoalManager.cpp.
 #include <windows.h>
 #include <math.h>
+#include <utility>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -58,6 +59,7 @@
 #include "rust/base/math.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
+#include "rust/game/gamecpp.h"
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
@@ -132,99 +134,8 @@ EeGe3DPoint R(const GE3DPoint& inPoint) { return EeGe3DPoint{inPoint.mX, inPoint
 // the map a weather storm reads and calls into (ee_gfx effect_storm.rs; the storms' and EEEMStorm's moves)
 struct EEStormHostOps {
     static bool OnMap(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->GetTile(inX, inY) != NULL; }
-    static bool IsWater(void*, int32_t inX, int32_t inY)
-    {
-        EEMapTile* theTile = gWorld.GetMap()->GetTile(inX, inY);
-        return theTile && (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater);
-    }
     static float GroundZ(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->mTerrainMesh.GetZ(inX, inY); }
-    static void StepToward(void*, int32_t inFromX, int32_t inFromY, int32_t inToX, int32_t inToY, int32_t* outTile)
-    {
-        EETileCoordinate theFrom;
-        EETileCoordinate theTile;
-        theFrom.mX = inFromX;
-        theFrom.mY = inFromY;
-        EEGetNextTile(theFrom, theTile, ee_units_uu_tile_direction(inFromX, inFromY, inToX, inToY), 1);
-        outTile[0] = (int32_t)theTile.mX;
-        outTile[1] = (int32_t)theTile.mY;
-    }
-    static void Ripple(void*, float inX, float inY)
-    {
-        GE3DPoint theSplash(inX, inY, 0.0f);
-        gWorld.GetEffectManager()->CreatePlacedEffect(theSplash, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL);
-    }
 };
-
-// a sound replaced by a referenced node (EEE3DRain::SetSound 0xf8337, SetRumble 0xf835e, EEE3DParticleEmitter::SetSound
-// 0xf69bc), the node's own reference then dropped
-void EESetEffectSound(SESMInstanceNode*& ioSound, SESMInstanceNode* inSound)
-{
-    if (inSound != ioSound) {
-        if (ioSound)
-            ioSound->Dereference();
-        ioSound = inSound;
-        if (inSound)
-            inSound->Reference();
-    }
-    if (ioSound)
-        ioSound->Dereference();
-}
-
-// a rain sound's volume, pan and pitch from the camera's distance to the storm (range 5 times its radius), scaled by
-// inVolume and by 0.4 in the first 6.5 s (EEE3DRain::SetSoundLevel, 0xf80e8)
-void EESetRainSoundLevel(EEEffect* inRain, SESMInstanceNode* inSound, float inVolume)
-{
-    GE3DPoint thePosition;
-    if (!inSound)
-        return;
-    float theVolume;
-    float thePan;
-    float thePitch;
-    inRain->Transformation().GetPosition(thePosition);
-    EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, inRain->mRecord->bounding_radius * 5.0f);
-    theVolume *= inVolume;
-    if (inRain->mRecord->storm.elapsed < EE_GFX_RAIN_FADE_TIME)
-        theVolume = EE_GFX_RAIN_FADE_SHARE * theVolume;
-    gSoundManager->SetSoundParameters(inSound, theVolume, thePan, thePitch);
-}
-
-// the map's questions for ee_gfx volcano.rs (the volcano's build)
-float EEVolcanoZ(void* inMap, uint32_t inX, uint32_t inY)
-{
-    return static_cast<EEMap*>(inMap)->mTerrainMesh.GetZ(inX, inY);
-}
-EeGfxColor EEVolcanoColor(void* inMap, uint32_t inX, uint32_t inY)
-{
-    const GEColor& theColor = EETerrainTable::Get(static_cast<EEMap*>(inMap)->mTerrainMesh.GetTextureSetID(inX, inY))->mColor;
-    EeGfxColor theResult = {theColor.mRed, theColor.mGreen, theColor.mBlue};
-    return theResult;
-}
-bool EEVolcanoValidTile(void* inMap, uint32_t inX, uint32_t inY)
-{
-    return static_cast<EEMap*>(inMap)->mTerrainMesh.GetIsValidTile(inX, inY);
-}
-EeGfxColor EEVolcanoLight(void* inMap, int32_t inX, int32_t inY, int32_t inCorner)
-{
-    const GEColor& theColor = static_cast<EEMap*>(inMap)->GetVertexColor(inX, inY, inCorner);
-    EeGfxColor theResult = {theColor.mRed, theColor.mGreen, theColor.mBlue};
-    return theResult;
-}
-
-// the terrain's questions for ee_gfx farm.rs (the farm's meshes)
-float EEFarmZ(void* inMesh, uint32_t inX, uint32_t inY)
-{
-    return static_cast<GETerrainMesh*>(inMesh)->GetZ(inX, inY);
-}
-EeGeVector EEFarmNormal(void* inMesh, uint32_t inX, uint32_t inY)
-{
-    const GEVector* theNormal = static_cast<GETerrainMesh*>(inMesh)->GetVertexNormal(inX, inY);
-    EeGeVector theResult = {theNormal->GetX(), theNormal->GetY(), theNormal->GetZ()};
-    return theResult;
-}
-float EEFarmMeshZ(void* inMesh, float inX, float inY)
-{
-    return static_cast<GETerrainMesh*>(inMesh)->GetMeshZ(inX, inY);
-}
 
 // The C++ answers of one call (the call's EeGfxEffectAsk: its effect, its operation, a constructor's argument; the
 // reads of the graphic objects, tag points and physical models and the effects' own answers are ee_gfx's)
@@ -232,259 +143,15 @@ struct Ask {
     static EEEffect* E(void* inAsk) { return Fx(static_cast<EeGfxEffectAsk*>(inAsk)->effect); }
     // a unit's graphic (a virtual: a foundation shows its player's class graphic)
     static uint64_t UnitGraphic(void*, uint64_t inUnit) { return U(P<EEUnit>(inUnit)->GetModel()); }
-    // the frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd)
-    static void AnimationSound(void* inAsk, uint32_t inFrame, bool inChanged)
-    {
-        EEEffect* theEffect = E(inAsk);
-        GE3DPoint theLocation;
-        theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
-        KeepSound(theEffect, PlayAnimationSound(theLocation, theEffect->mGraphicObject, 0, theEffect->mSound, inFrame,
-                                                inChanged));
-    }
-    // the effect's sound replaced by inSound (referenced), then its reference dropped (as the original)
-    static void KeepSound(EEEffect* inEffect, SESMInstanceNode* inSound)
-    {
-        if (inSound != inEffect->mSound) {
-            if (inEffect->mSound)
-                inEffect->mSound->Dereference();
-            inEffect->mSound = inSound;
-            if (inSound)
-                inSound->Reference();
-        }
-        if (inEffect->mSound)
-            inEffect->mSound->Dereference();
-    }
-    // the energy wall's posts on a gate: its two end parts (EEE3DEnergyWall::Place, 0xed784)
-    static bool WallGatePosts(void* inAsk, EeGe3DPoint* outFirst, EeGe3DPoint* outSecond)
-    {
-        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
-        if (theUnit->GetClass()->mCategory != kUnitCategoryGate)
-            return false;
-        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetClass());
-        EEComplexUnit* theFirst = theGate->GetPart(theUnit, 0);
-        EEComplexUnit* theSecond = theGate->GetPart(theUnit, 4);
-        GE3DPoint theFrom;
-        GE3DPoint theTo;
-        theFirst->GetPosition(theFrom);
-        theSecond->GetPosition(theTo);
-        *outFirst = R(theFrom);
-        *outSecond = R(theTo);
-        return true;
-    }
-    // the height of the last living, finished wall piece or gate side part of the wall's owner on a tile (0xee00c)
-    static bool WallPiece(void* inAsk, int32_t inX, int32_t inY, float* outZ)
-    {
-        unsigned long theOwner = E(inAsk)->mUnit->mComplexUnit->mPlayer->mPlayerID;
-        bool theFound = false;
-        std::vector<EEUnit*> theUnits;
-        ee_units_uu_units_on_tile(inX, inY, &theUnits);
-        for (unsigned long j = 0; j < theUnits.size(); j++) {
-            EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(theUnits[j]);
-            if (!theOther || theOther->mPlayer->mPlayerID != theOwner || !(theOther->mHitPoints > 0) ||
-                theOther->IsFoundation())
-                continue;
-            long theType = theOther->GetClass()->mUnitType;
-            if (theType == kUnitTypeWallSpace
-                || (theType == kUnitTypeGateSpace && theOther->GetClass()->IsSidePart(theOther))) {
-                GE3DPoint thePosition;
-                theOther->GetPosition(thePosition);
-                *outZ = thePosition.GetZ();
-                theFound = true;
-            }
-        }
-        return theFound;
-    }
-    // the volcano's model over the record's mesh lists (EEE3DVolcano::BuildModel, 0xfe79d): each tile of its area
-    // split 3x3, following the terrain, coloured by terrain and lighting and blended into textures\Volcano.png near
-    // the centre, and the cone heights from the image's alpha (ee_gfx volcano.rs); the model made and referenced,
-    // placed at its centre, the bounding radius to the cone's top, the texture
-    static int32_t VolcanoBuild(void* inAsk, EeGe3DPoint* outPoints, float* outHeights, uint32_t inCount)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EeGfxEffectVolcano& theVolcano = theEffect->mRecord->volcano;
-        GETransformation theTransformation;
-        GE3DPoint theTop;
-        FSFileSpec* theFile = NULL;
-        GESurface* theSurface = NULL;
-        GESurfaceDescription theDescription;
-        float theHeightScale = theEffect->mGraphicEffect->mSize;
-        EeGfxVolcanoSizes theSizes = ee_gfx_volcano_sizes(theVolcano.area.right - theVolcano.area.left);
-        std::vector<EeGfxColor> theColors(theSizes.vertices);
-        theDescription.mWidth = 19;
-        theDescription.mHeight = 19;
-        theDescription.mIs3DRenderable = false;
-        theDescription.mIsTransparencyEnabled = false;
-        theDescription.mPixelFormat = kPixelFormatA8R8G8B8;
-        theDescription.mSurfaceVolatility = 0;
-        theDescription.m14 = 0;
-        theDescription.mMipLevelCount = 0;
-        theDescription.mType = kSurfaceSystemMemory;
-        theDescription.mPixelDepth = 32;
-        long theResult = gRasterizer->GetScreen(gScreenIndex)->CreateSurface(theDescription, &theSurface);
-        ESVERIFY_AT(theResult == keseOK, 233);
-
-        UString theFileName = UString("textures\\Volcano.png");   // the original's .tga as PNG (RUST_PLAN D9)
-        theResult = gTextureManager->GetTexturePath()->FindFile(theFileName, theFile);
-        ESVERIFY_AT(theResult == keseOK, 238);
-        ESVERIFY_AT(theFile != NULL, 239);
-        theSurface->Load(*theFile, kImageFilePNG);
-        ESVERIFY_AT(theResult == keseOK, 241);
-        if (theFile != NULL)
-            delete theFile;
-        theSurface->Lock();
-        const uint32_t* thePixels = reinterpret_cast<const uint32_t*>(theSurface->GetMemoryAddress());
-        ee_gfx_volcano_image(theHeightScale, theSizes.side, thePixels, theSurface->GetBytesPerRow() / 4,
-                             theColors.empty() ? NULL : &theColors[0], inCount == 0 ? NULL : outHeights, theColors.size());
-        theSurface->Unlock();
-        theSurface->Dereference();
-        GEModel* theModel = gModelManager->CreateModel(theSizes.polygons, theSizes.vertices, 1, 0, 1, 0, "volcano model", 1);
-        theEffect->mVolcanoModel = theModel;
-        theModel->Reference();
-        theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-        theModel->GetMaterial(0)->SetPolygonRangeLength(theSizes.polygons, 0);
-        theModel->GetMaterial(0)->SetVertexStartingIndex(0);
-        theModel->GetMaterial(0)->SetVertexRangeLength(theSizes.vertices);
-        EeGfxVolcanoTerrain theTerrain;
-        theTerrain.context = ::gWorld.mMap;
-        theTerrain.z = EEVolcanoZ;
-        theTerrain.color = EEVolcanoColor;
-        theTerrain.valid_tile = EEVolcanoValidTile;
-        theTerrain.light = EEVolcanoLight;
-        EEEffectMesh theMesh(theSizes.vertices, theSizes.polygons);
-        EeGfxVolcanoArea theArea = theVolcano.area;
-        EeGfxVolcanoBuilt theBuilt = ee_gfx_volcano_build(
-            &theArea, theColors.empty() ? NULL : &theColors[0], theTerrain, inCount == 0 ? NULL : outPoints,
-            inCount == 0 ? NULL : outHeights, theColors.size(), theMesh.Vertices(), theMesh.mVertices.size(),
-            theMesh.Triangles(), theMesh.mTriangles.size());
-        theMesh.Store(theModel);
-        theVolcano.area.center.mZ = theBuilt.center_z;
-        float theMaximum = theBuilt.maximum;
-        theModel->ComputeModelNormals();
-        theModel->ComputeBoundingVolumes();
-        theModel->SetGraphicsPostModelTransform(theTransformation);
-        theModel->PrepareTransforms();
-        theTransformation.SetPosition(theModel->GetCenterPoint().GetX(), theModel->GetCenterPoint().GetY(),
-                                      theModel->GetCenterPoint().GetZ());
-        theEffect->SetTransformation(theTransformation);
-        theTop.SetX(theModel->GetCenterPoint().GetX());
-        theTop.SetY(theModel->GetCenterPoint().GetY());
-        theTop.SetZ(theHeightScale + theMaximum);
-        float theRadius = theModel->GetCenterPoint().DistanceTo(theTop);
-        if (theRadius <= theModel->GetBoundingRadius(0))
-            theRadius = theModel->GetBoundingRadius(0);
-        theEffect->mRecord->bounding_radius = theRadius;
-        if (theResult == kErrorOK)
-            theModel->GetMaterial(0)->SetTexture(theEffect->mGraphicObject->mTextures[0], gScreenIndex);
-        return (int32_t)theResult;
-    }
-    static EeGfxFarmTerrain FarmTerrain(void*)
-    {
-        EeGfxFarmTerrain theTerrain;
-        theTerrain.context = &gWorld.mMap->mTerrainMesh;
-        theTerrain.z = EEFarmZ;
-        theTerrain.normal = EEFarmNormal;
-        theTerrain.mesh_z = EEFarmMeshZ;
-        return theTerrain;
-    }
-    static bool FarmDropSite(void* inAsk, int32_t* outX, int32_t* outY)
-    {
-        std::vector<EEUnit*> theUnits;
-        if (!ee_units_uu_farm_drop_sites((uint64_t)(uintptr_t)(E(inAsk)->mUnit->mComplexUnit), &theUnits))
-            return false;
-        *outX = (int32_t)theUnits[0]->mComplexUnit->GetTileX();
-        *outY = (int32_t)theUnits[0]->mComplexUnit->GetTileY();
-        return true;
-    }
     static void FarmSetVariant(void* inAsk, int32_t inVariant) { E(inAsk)->mUnit->mComplexUnit->mCloaked = inVariant; }
     static bool FarmDoppelgangerAny(void* inAsk)
     {
         EEUnit* theUnit = E(inAsk)->mUnit;
         return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit) == true;
     }
-    static int32_t FarmDoppelganger(void* inAsk)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
-        EEDoppelganger* theDoppelganger = NULL;
-        if (theUnit->mTile)
-            theDoppelganger = gDoppelgangerManager.GetDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit, theCurrent->mPlayerID);
-        if (theDoppelganger && !gFreeCamera && !theCurrent->mSeesAll)
-            return theDoppelganger->IsBuilt() ? 1 : 0;
-        return -1;
-    }
-    static float FarmOpacity(void* inAsk, float inOpacity)
-    {
-        Fn23CEE2(E(inAsk)->mUnit->mComplexUnit, false, inOpacity);
-        return inOpacity;
-    }
     static void SetScaledModel(void* inAsk, void* inModel)
     {
         E(inAsk)->mUnit->mComplexUnit->SetScaledModel(static_cast<GEModel*>(inModel));
-    }
-    // the earthquake's (EEE3DEarthquake, 0xec6e4..0xed606): the ground under a point
-    static EeGe3DPoint GroundPoint(void*, const EeGe3DPoint* inPoint)
-    {
-        GE3DPoint theGround(inPoint->mX, inPoint->mY, inPoint->mZ);
-        gWorld.mMap->GetGroundPoint(theGround, theGround);
-        return R(theGround);
-    }
-    // the rain's sounds (EEE3DRain::StartSounds, 0xf8195, after its thunder timer): the loop at the start or after a
-    // load, the thunder inRumble (1 or 2), both levels
-    static void RainSounds(void* inAsk, bool inStart, int32_t inRumble)
-    {
-        EEEffect* theRain = E(inAsk);
-        const uint32_t* theIDs = theRain->mRecord->storm.sounds;
-        EESoundObject* theSound;
-        if (inStart && (theSound = EESoundObject::Get(theIDs[0])) != NULL)
-            EESetEffectSound(theRain->mSound, gSoundManager->PlayAndReturnReferencedNode(
-                theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3DRain"));
-        if (inRumble != 0 && (theSound = EESoundObject::Get(theIDs[inRumble])) != NULL)
-            EESetEffectSound(theRain->mRumble, gSoundManager->PlayAndReturnReferencedNode(
-                theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3D Rain Rumble"));
-        EESetRainSoundLevel(theRain, theRain->mSound, 0.5f);
-        EESetRainSoundLevel(theRain, theRain->mRumble, 1.0f);
-    }
-    // the emitter's animation sound at its place (its graphic effect's object, if any)
-    static void EmitterSound(void* inAsk, const EeGe3DPoint* inLocation, bool inFirst)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEGraphicObject* theObject = theEffect->mGraphicEffect->mGraphicObject;
-        if (theObject)
-            EESetEffectSound(theEffect->mSound, PlayAnimationSound(*reinterpret_cast<const GE3DPoint*>(inLocation), theObject, 0,
-                                                                   theEffect->mSound, 0, inFirst));
-    }
-    // the 2D kinds' answers
-    // the goal a state-0 confirmation shows: the last goal of the unit's goal queue as a location goal (on the tile
-    // at the effect: blocked when the unit cannot stand there and its player sees it; forced; a move), else whether
-    // its active goal unloads a transport (EEE3DCommandConfirmation::SetUp)
-    static EeGfxConfirmGoal ConfirmGoal(void* inAsk, uint32_t inGoalIndex, int32_t inTileX, int32_t inTileY)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        if (!theUnit || !theUnit->mComplexUnit)
-            return EeGfxConfirmGoal::NoUnit;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        EEUGRust* theGoal = theComplex->mGoalQueues[inGoalIndex].mGoals.size() == 0
-                                ? NULL : EELocationGoalCast(theComplex->mGoalQueues[inGoalIndex].mGoals.back());
-        if (theGoal) {
-            EETileCoordinate theTile(inTileX, inTileY);
-            EEMapTile* theMapTile = gWorld.mMap->GetTile(theTile.mX, theTile.mY);
-            if (ee_units_uu_can_stand_on(theTile.mX, theTile.mY, (uint64_t)(uintptr_t)theComplex) == false && theMapTile && theMapTile->IsVisibleTo(theUnit->mPlayer))
-                return EeGfxConfirmGoal::Blocked;
-            return theGoal->GetIsForcedMove() ? EeGfxConfirmGoal::Forced : EeGfxConfirmGoal::Move;
-        }
-        EEUnitGoal* theLoadGoal = theComplex->mActiveGoal;
-        return theLoadGoal && theLoadGoal->mKind == kGoalUnloadTransport ? EeGfxConfirmGoal::Unloading
-                                                                          : EeGfxConfirmGoal::Other;
-    }
-    // the kept object's (inPart0: the first part's) animation sound for the frame at the location, kept as the
-    // effect's (EEE2DImpact::Step and SetSound, 0xe166b / 0xe17ed)
-    static void PartSound(void* inAsk, EeGe3DPoint inLocation, uint32_t inFrame, bool inChanged, bool inPart0)
-    {
-        EEEffect* theEffect = E(inAsk);
-        GE3DPoint theLocation(inLocation.mX, inLocation.mY, inLocation.mZ);
-        EEGraphicObject* theObject =
-            inPart0 ? P<EEGraphicObject>(ee_gfx_effect_part_object(H(theEffect), 0)) : theEffect->mGraphicObject;
-        KeepSound(theEffect, PlayAnimationSound(theLocation, theObject, 0, theEffect->mSound, inFrame, inChanged));
     }
     static bool DrawBlood(void*) { return gDrawBlood; }
     static bool TileBlocked(void*, int32_t inX, int32_t inY) { return gWorld.IsTileBlocked(inX, inY); }
@@ -493,181 +160,15 @@ struct Ask {
         return gAEManager.HasEffect(inKind, inX, inY, inPlayer, false, &E(inAsk)->mUnit->mComplexUnit->mAreaEffects);
     }
     static int32_t AreaEffects(void* inAsk) { return (int32_t)E(inAsk)->mUnit->mComplexUnit->mNumAreaEffects; }
-    static void SetAreaEffects(void* inAsk, int32_t inCount)
-    {
-        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
-        theUnit->mNumAreaEffects = inCount;
-        if (inCount == 0)
-            theUnit->FnE123D();
-    }
-    // the unit's type is in its player's active group; a town centre or capitol also with 0x23 or 0x29 there
-    static bool IconsSelected(void* inAsk)
-    {
-        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
-        unsigned long theType = theUnit->mUnitClass->mUnitType;
-        EESelectedGroup* theGroup = theUnit->mPlayer->mActiveGroup;
-        bool theSelected = theGroup ? theGroup->HasUnitType(theType) : false;
-        if (theGroup != NULL && (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol)) {
-            if (theGroup->HasUnitType(0x23) || theGroup->HasUnitType(0x29))
-                theSelected = true;
-        }
-        return theSelected;
-    }
-    static EeGfx2DPoint GroundAt(void*, EeGe3DPoint inAt)
-    {
-        EeGfx2DPoint thePoint = {};
-        EEMap* theMap = gWorld.mMap;
-        GE3DPoint theLocation(inAt.mX, inAt.mY, inAt.mZ);
-        GE3DPoint theGround;
-        if (!theMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY())))
-            return thePoint;
-        theMap->GetGroundPoint(theLocation, theGround);
-        thePoint.has = true;
-        thePoint.point = R(theGround);
-        return thePoint;
-    }
-    static EeGfxGlowArea GlowArea(void* inAsk)
-    {
-        GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
-        unsigned long theX, theY, theWidth, theHeight;
-        theMesh.GetTerrainVisibleBottomLeftIndices(theX, theY);
-        theMesh.GetTerrainVisibleTileDimensions(theWidth, theHeight);
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        return EeGfxGlowArea{(uint32_t)theX, (uint32_t)theY, (uint32_t)theWidth, (uint32_t)theHeight,
-                             (int32_t)theUnit->mTileX, (int32_t)theUnit->mTileY};
-    }
     static uint32_t GlowRows(void*) { return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows(); }
 };
-
-// the damage controller's tick facts (EEEDamagedEffect::Step, 0x10225c): its graphic effect's, then its unit's (the
-// outer part on the map), the damage tag points of linked effect 1's kind, its health, hidden when cloaked to the
-// current player's enemy
-EeGfxDamagedTick EEDamagedTick(EeGfxEffectHead* inEffect)
-{
-    EEEffect* theSelf = Fx(inEffect);
-    EeGfxDamagedTick theTick = {};
-    EEGraphicEffect* theEffect = theSelf->GetGraphicEffect();
-    theTick.has_linked2 = theEffect->GetLinkedEffect2() != NULL;
-    theTick.param2 = theEffect->GetParam2();
-    EEUnit* theUnit = theSelf->mUnit;
-    if (theUnit && !theSelf->mRecord->damaged.finished) {
-        theTick.has_unit = true;
-        if (theUnit->mTileNode) {
-            while (theUnit->mComplexUnit->mPreviousPart)
-                theUnit = theUnit->mComplexUnit->mPreviousPart;
-        }
-        EETagPointList* theList;
-        if (theUnit->mTileNode)
-            theList = theUnit->GetModel()->GetTagPoints(theUnit->mComplexUnit->GetAnimation(),
-                                                        theEffect->GetLinkedEffect1()->mTagPointKind);
-        else
-            theList = theUnit->GetModel()->GetTagPoints(0, theEffect->GetLinkedEffect1()->mTagPointKind);
-        theTick.tag_count = theList ? (uint32_t)theList->GetNumTagPoints() : 1;
-        theTick.hit_points = (int32_t)theUnit->GetHitPoints();
-        theTick.max_hit_points = (int32_t)theUnit->GetStats()->GetMaxHitPoints();
-        if (theUnit->GetTileNode()) {
-            EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-            if (theComplexUnit->GetIsCloaked() && !gWorld.GetCurrentPlayer()->IsAlly(theComplexUnit->GetPlayer()))
-                theTick.hidden = true;
-        }
-    }
-    return theTick;
-}
 
 // The goal markers' questions (goal_markers.rs EeGfxGoalHost; the selection is the last player asked; the markers'
 // effects are ee_gfx's)
 struct EEGoalOps {
-    static EESelectedGroup* sGroup;
-    static EEComplexUnit* Unit(uint32_t inUnit) { return sGroup->GetUnit(inUnit); }
     static uint32_t CurrentPlayer(void*) { return (uint32_t)::gWorld.mCurrentPlayer; }
     static uint32_t PlayerCount(void*) { return (uint32_t)::gWorld.mNumPlayers; }
-    static EeGfxGoalPlayer Player(void*, uint32_t inPlayer)
-    {
-        EEPlayer* thePlayer = ::gWorld.mPlayers[inPlayer];
-        sGroup = thePlayer->mSelectedGroup;
-        return EeGfxGoalPlayer{thePlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicWW2, thePlayer->mShiftMode,
-                               (uint32_t)sGroup->GetNumUnits()};
-    }
-    static EeGfxGoalUnit Facts(void*, uint32_t inUnit)
-    {
-        EEComplexUnit* theUnit = Unit(inUnit);
-        EEUnitClass* theClass = theUnit->mUnitClass;
-        return EeGfxGoalUnit{(uint32_t)theClass->mCategory, (uint32_t)theClass->mUnitType, (int32_t)theClass->mAirTrafficType,
-                             theUnit->mTile != NULL, theUnit->mContainer != NULL, (uint32_t)theUnit->GetNumGoalQueues()};
-    }
-    static uint32_t GoalCount(void*, uint32_t inUnit, uint32_t inQueue)
-    {
-        return (uint32_t)Unit(inUnit)->mGoalQueues[inQueue].mGoals.size();
-    }
-    // a goal's kind, automatic waypoint, garrison container or attack target, and location
-    static EeGfxGoalStep Goal(void*, uint32_t inUnit, uint32_t inQueue, uint32_t inGoal)
-    {
-        EEUnitGoal* theGoal = Unit(inUnit)->mGoalQueues[inQueue].mGoals[inGoal];
-        EeGfxGoalStep theStep = {};
-        theStep.kind = theGoal->mKind;
-        if (theGoal->mKind == kGoalLocation) {
-            theStep.auto_waypoint = EELocationGoalCast(theGoal)->GetIsAutoWaypoint();
-            if (theStep.auto_waypoint)
-                return theStep;
-        }
-        GE3DPoint theTo;
-        theGoal->GetGoalLocation(theTo);
-        theStep.to = R(theTo);
-        EEUGRust* theCast = theGoal->mKind == kGoalLoadGarrison ? EELoadGarrisonGoalCast(theGoal)
-                            : theGoal->mKind == kGoalAttackUnit  ? EEAttackUnitCast(theGoal) : NULL;
-        if (theCast != NULL) {
-            theStep.has_target = true;
-            theStep.target = theGoal->mKind == kGoalLoadGarrison ? (void*)theCast->GetLoadContainer()
-                                                                 : (void*)theCast->GetAttackTarget();
-        }
-        return theStep;
-    }
-    static bool GoalLocation(void*, uint32_t inUnit, uint32_t inQueue, uint32_t inGoal, EeGe3DPoint* outPoint)
-    {
-        EEUnitGoal* thePrevious = Unit(inUnit)->mGoalQueues[inQueue].GetGoalAt(inGoal);
-        if (thePrevious == NULL)
-            return false;
-        GE3DPoint theFrom;
-        thePrevious->GetGoalLocation(theFrom);
-        *outPoint = R(theFrom);
-        return true;
-    }
-    static EeGe3DPoint UnitLocation(void*, uint32_t inUnit, bool inOnTile)
-    {
-        EEComplexUnit* theUnit = Unit(inUnit);
-        return R(GE3DPoint((inOnTile ? theUnit : theUnit->mContainer)->mPhysicalModel.GetLocation()));
-    }
-    // a placed target's outer part; a land building's: the goal's point on its centre's tile corner
-    static void* Target(void*, void* inTarget, EeGe3DPoint* ioTo)
-    {
-        EEUnit* theTarget = static_cast<EEUnit*>(inTarget);
-        if (theTarget->mTileNode != NULL) {
-            EEComplexUnit* theOuter = theTarget->mComplexUnit;
-            while (theOuter->mPreviousPart != NULL)
-                theOuter = theOuter->mPreviousPart;
-            theTarget = theOuter;
-        }
-        if (theTarget->mUnitClass->IsLandBuilding()) {
-            if (theTarget->mTileNode != NULL) {
-                ioTo->mX = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX();
-                ioTo->mY = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY();
-            }
-            ioTo->mX = ioTo->mX + theTarget->mUnitClass->mTileSize * 0.5f - 0.25f;
-            ioTo->mY = ioTo->mY - theTarget->mUnitClass->mTileSize * 0.5f + 0.25f;
-        }
-        return theTarget;
-    }
-    static bool Ground(void*, const EeGe3DPoint* inPoint, EeGe3DPoint* outPoint)
-    {
-        if (::gWorld.mMap->GetTile(UMFloor(inPoint->mX), UMFloor(inPoint->mY)) == NULL)
-            return false;
-        GE3DPoint theGround;
-        ::gWorld.mMap->GetGroundPoint(GE3DPoint(inPoint->mX, inPoint->mY, inPoint->mZ), theGround);
-        *outPoint = R(theGround);
-        return true;
-    }
 };
-EESelectedGroup* EEGoalOps::sGroup;
 
 // The effects' file over an FSFile (each the FSFile call of that type) and the TEST ONLY captures' memory files
 struct EEFileOps {
@@ -682,43 +183,9 @@ struct EEFileOps {
     static int32_t WriteF32(void* inContext, float inValue) { return (int32_t)File(inContext).Write(inValue); }
     static int32_t WriteBool(void* inContext, bool inValue) { return (int32_t)File(inContext).Write(inValue); }
     static EeGfxEffectFile Memory() { return EEEffectFile(*new FSMemoryFile); }
-    static const uint8_t* MemoryData(void* inContext, uint32_t* outLength)
-    {
-        unsigned long theLength = 0;
-        static_cast<FSMemoryFile*>(inContext)->GetLength(theLength);
-        *outLength = (uint32_t)theLength;
-        return static_cast<FSMemoryFile*>(inContext)->GetData();
-    }
     static void MemoryRewind(void* inContext) { static_cast<FSMemoryFile*>(inContext)->SetPosition(0, kFileOriginBegin, false); }
     static void MemoryFree(void* inContext) { delete static_cast<FSMemoryFile*>(inContext); }
 };
-
-// The capture's records (EESimCaptureRecord) as the manager's captures write them
-uint32_t EECapture(EeGfxCaptureOp inOp, uint32_t inTag, const uint8_t* inData, uint32_t inLength)
-{
-    switch (inOp) {
-    case EeGfxCaptureOp::Active:
-        return EESimCaptureRecord::Active() ? 1 : 0;
-    case EeGfxCaptureOp::Keeps:
-        return EESimCaptureRecord::Keeps(inTag) ? 1 : 0;
-    case EeGfxCaptureOp::Commit: {
-        EESimCaptureRecord theRecord(inTag);
-        theRecord.Bytes(inData, inLength);
-        theRecord.Commit();
-        return 0;
-    }
-    case EeGfxCaptureOp::Only:
-        if (inData != NULL)
-            EESimCaptureRecord::Only(reinterpret_cast<const unsigned int*>(inData), inLength);
-        else
-            EESimCaptureRecord::Only(0);
-        return 0;
-    case EeGfxCaptureOp::Exclusive:
-        EESimCaptureRecord::Exclusive(inTag != 0);
-        return 0;
-    }
-    return 0;
-}
 
 // The world the effects and their manager call into (ee_gfx effect_obj.rs EeGfxEffectWorld, ffi_manager.rs
 // EeGfxManagerWorld), registered before main
@@ -744,33 +211,14 @@ EeGfxEffectWorld EEMakeWorld()
     w.model_release = Deref<GEModel>;
     w.media_load = [](uint64_t inObject) { return (int32_t)P<EEGraphicObject>(inObject)->LoadMedia(); };
     w.media_unload = [](uint64_t inObject) { P<EEGraphicObject>(inObject)->UnloadMedia(); };
-    w.sound_release = [](uint64_t inNode) {
-        gSoundManager->Stop(P<SESMInstanceNode>(inNode), false);
-        P<SESMInstanceNode>(inNode)->Dereference();
-    };
-    w.sound_object_unload = [](uint32_t inID) {
-        EESoundObject* theSound = EESoundObject::Get(inID);
-        if (theSound)
-            theSound->UnloadMedia();
-    };
-    w.sound_object_load = [](uint32_t inID) {
-        EESoundObject* theSound = EESoundObject::Get(inID);
-        if (theSound)
-            theSound->LoadMedia();
-    };
+    w.sound_release = ee_gamecpp_fx_sound_release;
+    w.sound_object_unload = ee_gamecpp_fx_sound_object_unload;
+    w.sound_object_load = ee_gamecpp_fx_sound_object_load;
     w.unit_damaged = [](uint64_t inUnit) { P<EEUnit>(inUnit)->mUnitClass->UnitDamaged(P<EEUnit>(inUnit)->mComplexUnit, NULL, 0); };
     w.loading_saved_game = []() { return (bool)gLoadingSavedGame; };
     w.regions = []() { return gWorld.mMap != NULL ? gWorld.mMap->mEffectRegions : (EeGfxEffectRegions*)NULL; };
-    w.tile_seen = [](int64_t inX, int64_t inY) {
-        EEMapTile* theTile = gWorld.mMap->GetTile((long)inX, (long)inY);
-        return theTile == NULL ? -1 : theTile->IsSeenBy(gWorld.GetCurrentPlayer()) ? 1 : 0;
-    };
-    w.doppelganger = [](int64_t inX, int64_t inY, uint64_t inUnit, bool inComplex) {
-        EEMapTile* theTile = gWorld.mMap->GetTile((long)inX, (long)inY);
-        EEUnit* theUnit = P<EEUnit>(inUnit);
-        return gDoppelgangerManager.HasDoppelganger(theTile, inComplex ? theUnit->mComplexUnit : theUnit,
-                                                    gWorld.mCurrentPlayer);
-    };
+    w.tile_seen = ee_gamecpp_fx_tile_seen;
+    w.doppelganger = ee_gamecpp_fx_doppelganger;
     w.in_view = [](const EeGe3DPoint* inPoint, float inRadius) {
         return ee_gfx_effect_in_view(reinterpret_cast<const EeGeViewport*>(&gViewport), gOrthographicView, inPoint, inRadius);
     };
@@ -785,48 +233,38 @@ EeGfxEffectWorld EEMakeWorld()
     };
     // a shooter's weapon point (ee_combat's weapon_point with its CBEW capture): with the tag points at its
     // animation when inTestList finds them, else assumed
-    w.weapon_point = [](uint64_t inUnit, int32_t inSite, bool inTestList, bool* outTagged) {
-        EEUnit* theUnit = P<EEUnit>(inUnit);
-        EEModel* theModel = theUnit->GetModel();
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
-        *outTagged = theList != NULL && theList->GetNumTagPoints() != 0;
-        GE3DPoint theStart;
-        EECombatEffectWeaponPoint(inSite, theComplex, theModel, theList, inTestList ? *outTagged : true, theStart);
-        return R(theStart);
-    };
+    w.weapon_point = ee_gamecpp_fx_weapon_point;
     w.height = [](const EeGe3DPoint* inPoint) { return gWorld.mMap->GetHeight(*reinterpret_cast<const GE3DPoint*>(inPoint)); };
     w.mesh = []() { return (const EeGeTerrainMesh*)gWorld.mMap->mTerrainMesh.GetRust(); };
     w.raster = &gEERustRaster;
     w.unit_graphic = Ask::UnitGraphic;
-    w.storm = EeGfxStormHost{NULL, EEStormHostOps::OnMap, EEStormHostOps::IsWater, EEStormHostOps::GroundZ,
-                             EEStormHostOps::StepToward, EEStormHostOps::Ripple};
-    w.answers3d = EeGfxEffectAnswers3D{Ask::AnimationSound, Ask::WallGatePosts, Ask::WallPiece, Ask::VolcanoBuild,
-                                       Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant,
-                                       Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity,
-                                       Ask::SetScaledModel, Ask::GroundPoint, Ask::RainSounds, Ask::EmitterSound};
-    w.answers2d = EeGfxEffectAnswers2D{Ask::ConfirmGoal, Ask::PartSound, Ask::DrawBlood, Ask::TileBlocked,
-                                       Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects, Ask::IconsSelected,
-                                       Ask::GroundAt, Ask::GlowArea, Ask::GlowRows};
+    w.storm = EeGfxStormHost{NULL, EEStormHostOps::OnMap, ee_gamecpp_fx_storm_is_water, EEStormHostOps::GroundZ,
+                             ee_gamecpp_fx_storm_step_toward, ee_gamecpp_fx_storm_ripple};
+    w.answers3d = EeGfxEffectAnswers3D{ee_gamecpp_fx_animation_sound, ee_gamecpp_fx_wall_gate_posts, ee_gamecpp_fx_wall_piece,
+                                       ee_gamecpp_fx_volcano_build, ee_gamecpp_fx_farm_terrain, ee_gamecpp_fx_farm_drop_site,
+                                       Ask::FarmSetVariant, Ask::FarmDoppelgangerAny, ee_gamecpp_fx_farm_doppelganger,
+                                       ee_gamecpp_fx_farm_opacity, Ask::SetScaledModel, ee_gamecpp_fx_ground_point,
+                                       ee_gamecpp_fx_rain_sounds, ee_gamecpp_fx_emitter_sound};
+    w.answers2d = EeGfxEffectAnswers2D{ee_gamecpp_fx_confirm_goal, ee_gamecpp_fx_part_sound, Ask::DrawBlood, Ask::TileBlocked,
+                                       Ask::AreaEffect, Ask::AreaEffects, ee_gamecpp_fx_set_area_effects,
+                                       ee_gamecpp_fx_icons_selected, ee_gamecpp_fx_ground_at, ee_gamecpp_fx_glow_area,
+                                       Ask::GlowRows};
     return w;
 }
 
 EeGfxManagerWorld EEMakeManagerWorld()
 {
     EeGfxManagerWorld w = {};
-    w.damaged_tick = EEDamagedTick;
-    w.effect_detail = [](int64_t inSet) {
-        if (inSet >= 0)
-            gEffectDetail = (unsigned long)inSet;
-        return (uint32_t)gEffectDetail;
-    };
+    w.damaged_tick = ee_gamecpp_fx_damaged_tick;
+    w.effect_detail = ee_gamecpp_fx_effect_detail;
     w.current = []() { return gEffectManager != NULL ? gEffectManager->mRust : (EeGfxEffectManager*)NULL; };
-    w.goals = EeGfxGoalHost{NULL, EEGoalOps::CurrentPlayer, EEGoalOps::PlayerCount, EEGoalOps::Player, EEGoalOps::Facts,
-                            EEGoalOps::GoalCount, EEGoalOps::Goal, EEGoalOps::GoalLocation, EEGoalOps::UnitLocation,
-                            EEGoalOps::Target, EEGoalOps::Ground, NULL, NULL, NULL, NULL};
-    w.capture = EECapture;
+    w.goals = EeGfxGoalHost{NULL, EEGoalOps::CurrentPlayer, EEGoalOps::PlayerCount, ee_gamecpp_fx_goal_player,
+                            ee_gamecpp_fx_goal_facts, ee_gamecpp_fx_goal_count, ee_gamecpp_fx_goal_step,
+                            ee_gamecpp_fx_goal_location, ee_gamecpp_fx_goal_unit_location, ee_gamecpp_fx_goal_target,
+                            ee_gamecpp_fx_goal_ground, NULL, NULL, NULL, NULL};
+    w.capture = ee_gamecpp_fx_capture;
     w.memory_file = EEFileOps::Memory;
-    w.memory_file_data = EEFileOps::MemoryData;
+    w.memory_file_data = ee_gamecpp_fx_memory_file_data;
     w.memory_file_rewind = EEFileOps::MemoryRewind;
     w.memory_file_free = EEFileOps::MemoryFree;
     w.save_major = kSaveGameMajorVersion;
@@ -906,12 +344,7 @@ static GEPolygonArray* sEffectPolygons;
 // A batch's quad: its four vertices from inIndex on (the raster table's batch_quad; AddEffectQuad)
 void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex)
 {
-    const GEColor& theColor = *reinterpret_cast<const GEColor*>(&inQuad->color);
-    const GEVector& theNormal = *reinterpret_cast<const GEVector*>(&inQuad->normal);
-    for (unsigned long i = 0; i < 4; i++)
-        sEffectVertices[inWhich]->SetVertex(theColor, *reinterpret_cast<const GE3DPoint*>(&inQuad->points[i]), theNormal,
-                                            *reinterpret_cast<const GETextureCoordinate*>(&inQuad->coords[i]),
-                                            inQuad->opacities[i], inIndex + i);
+    ee_gamecpp_fx_batch_quad(inWhich, inQuad, inIndex);
 }
 
 // A batch's draw: inCount vertices, half as many polygons (the raster table's batch_draw)
@@ -925,28 +358,13 @@ int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture)
 // (provisional name)
 void CreateEffectBatchBuffers()
 {
-    sEffectPolygons = gRasterizer->CreatePolygonArray(0x400);
-    unsigned long j = 0;
-    for (unsigned long i = 0; i < 0x200; i++) {
-        sEffectPolygons->SetVertexIndices(j, i * 4, i * 4 + 1, i * 4 + 2);
-        sEffectPolygons->SetVertexIndices(j + 1, i * 4, i * 4 + 2, i * 4 + 3);
-        j += 2;
-    }
-    sEffectVertices[EE_GFX_BATCH_CAMERA] = gRasterizer->CreateVertexArray(1, 0x800);
-    sEffectVertices[EE_GFX_BATCH_GROUND] = gRasterizer->CreateVertexArray(1, 0x800);
+    ee_gamecpp_fx_batch_create();
 }
 
 // Deletes the quad batches' polygon array and vertex arrays (provisional name)
 void DeleteEffectBatchBuffers()
 {
-    if (sEffectPolygons)
-        delete sEffectPolygons;
-    for (int i = 0; i < 2; i++) {
-        if (sEffectVertices[i])
-            delete sEffectVertices[i];
-    }
-    sEffectPolygons = NULL;
-    sEffectVertices[0] = sEffectVertices[1] = NULL;
+    ee_gamecpp_fx_batch_delete();
 }
 
 // Creates and releases the two shared quad models (provisional names)
@@ -958,23 +376,200 @@ void ReleasePlaneModels() { ee_gfx_effect_planes_release(&gEERustRaster); }
 // its scatter roll moves it
 void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
 {
-    EEGraphicEffect* theEffect;
-    if (gAmbientEffectsEnabled && (theEffect = inUnit->mUnitClass->mShellHoleEffect) != 0)
-        ee_gfx_effects_decal_impact(U(theEffect), R(inLocation));
+    ee_gamecpp_fx_place_impact_decal(inUnit, reinterpret_cast<const EeGe3DPoint*>(&inLocation));
 }
 
 // Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
 // (moved forward along the heading for giraffes and horses)
 void EEPlaceTrackDecal(EEComplexUnit* inUnit)
 {
-    EEGraphicEffect* theEffect;
-    if (!gAmbientEffectsEnabled || !gDrawBlood || (theEffect = inUnit->mUnitClass->mBloodStainEffect) == 0)
-        return;
-    GE3DPoint theLocation;
-    inUnit->GetPosition(theLocation);
-    unsigned long theType = inUnit->mUnitClass->mUnitType;
-    const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-    ee_gfx_effects_decal_track(U(theEffect), R(theLocation),
-                               theType == kUnitTypeResGiraffe ? EE_GFX_TRACK_GIRAFFE : theType == kUnitTypeResHorse ? EE_GFX_TRACK_HORSE : 0,
-                               theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
+    ee_gamecpp_fx_place_track_decal(inUnit);
+}
+
+// ------------------------------------------------------------------------- round 9, lane B: this file's bodies' C++
+
+// the map's cases (EEMap.cpp), then lane C's
+int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpB2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane B section): one statement each
+// the constants the Rust names (gamecpp effect_host.rs)
+static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10 && kUnitCategoryGate == 0x19 && kUnitTypeWallSpace == 0x2fe &&
+                  kUnitTypeGateSpace == 0x2ff && kUnitTypeTownCenter == 0x23 && kUnitTypeCapitol == 0x29 &&
+                  kUnitTypeResGiraffe == 0x124 && kUnitTypeResHorse == 0x175 && kGoalLocation == 1 && kGoalAttackUnit == 2 &&
+                  kGoalUnloadTransport == 8 && kGoalLoadGarrison == 12 && kTechEpochAtomicWW2 == 10 &&
+                  kPixelFormatA8R8G8B8 == 0 && kSurfaceSystemMemory == 4,
+              "gamecpp effect_host.rs");
+static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GEVector) == sizeof(EeGeVector) &&
+                  sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(GESurfaceDescription) == 9 * sizeof(unsigned long),
+              "gamecpp effect_host.rs: the values the Rust passes by address");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define FXPT(i) (*(GE3DPoint*)a[i])
+#define FXUN ((EEUnit*)p)
+#define FXCX ((EEComplexUnit*)p)
+#define FXQUAD ((const EeGfxEffectQuad*)a[1])
+
+int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the storms' map, the terrain under a volcano and a farm
+    case O::FxTileTerrainType: return ((EEMapTile*)p)->mTerrainType;
+    case O::FxNextTile: EEGetNextTile(*(const EETileCoordinate*)a[0], *(EETileCoordinate*)a[1], (long)a[2], 1);
+        break;
+    case O::FxLandRipple: return P64(EEGraphicEffect::Get(kGraphicEffectLandRipple));
+    case O::FxWorldPlacedEffect: return gWorld.GetEffectManager()->CreatePlacedEffect(FXPT(0), (EEGraphicEffect*)a[1], NULL);
+    case O::FxTerrainColor: *(GEColor*)a[2] = EETerrainTable::Get(gWorld.mMap->mTerrainMesh.GetTextureSetID((unsigned long)a[0], (unsigned long)a[1]))->mColor;
+        break;
+    case O::FxVertexColor: *(GEColor*)a[3] = gWorld.mMap->GetVertexColor((long)a[0], (long)a[1], (long)a[2]);
+        break;
+    case O::FxVertexNormal: *(GEVector*)a[2] = *gWorld.mMap->mTerrainMesh.GetVertexNormal((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    // the sounds
+    case O::FxComputeSound: EEComputeSoundParameters(f[0], FXPT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], f[1]);
+        break;
+    case O::FxSetSoundParameters: gSoundManager->SetSoundParameters((SESMInstanceNode*)p, f[0], f[1], f[2]);
+        break;
+    case O::FxPlayAnimationSound: return P64(PlayAnimationSound(FXPT(0), (EEGraphicObject*)a[1], 0, (SESMInstanceNode*)a[2], (unsigned long)a[3], a[4] != 0));
+    case O::FxPlayNodeNamed: return P64(gSoundManager->PlayAndReturnReferencedNode(((EESoundObject*)p)->GetSampleID(), ((EESoundObject*)p)->GetVolume(), 0.0f, 1.0f, ((EESoundObject*)p)->GetLooping(), (char*)a[0]));
+    case O::FxSoundStop: gSoundManager->Stop((SESMInstanceNode*)p, false);
+        break;
+    case O::FxSoundObjectUnload: ((EESoundObject*)p)->UnloadMedia();
+        break;
+    case O::FxSoundObjectLoad: ((EESoundObject*)p)->LoadMedia();
+        break;
+    // the units, their classes, players and goals
+    case O::FxCxGetClass: return P64(FXCX->GetClass());
+    case O::FxGatePart: return P64(EEUnitClassOfKind<EE_CLASS_KIND_GATE>((EEUnitClass*)p)->GetPart((EEComplexUnit*)a[0], (long)a[1]));
+    case O::FxDynComplex: return P64(dynamic_cast<EEComplexUnit*>(FXUN));
+    case O::FxIsFoundation: return FXCX->IsFoundation();
+    case O::FxCxIsSidePart: return FXCX->GetClass()->IsSidePart(FXCX);
+    case O::FxCxTileX: return FXCX->GetTileX();
+    case O::FxCxTileY: return FXCX->GetTileY();
+    case O::FxUnitTile: return P64(FXUN->mTile);
+    case O::FxDoppelgangerGet: return P64(gDoppelgangerManager.GetDoppelganger(static_cast<EETile*>(((EEUnit*)a[0])->mTile), (EEUnit*)a[0], (unsigned long)a[1]));
+    case O::FxDoppelgangerIsBuilt: return ((EEDoppelganger*)p)->IsBuilt();
+    case O::FxHasDoppelganger: return gDoppelgangerManager.HasDoppelganger((EEMapTile*)p, (EEUnit*)a[0], gWorld.mCurrentPlayer);
+    case O::FxFreeCamera: return gFreeCamera;
+    case O::FxUnitOpacity: Fn23CEE2(FXCX, false, *(float*)a[0]);
+        break;
+    case O::FxGeffObject: return P64(((EEGraphicEffect*)p)->mGraphicObject);
+    case O::FxGeffLinked2: return P64(((EEGraphicEffect*)p)->GetLinkedEffect2());
+    case O::FxGeffLinked1TagKind: return ((EEGraphicEffect*)p)->GetLinkedEffect1()->mTagPointKind;
+    case O::FxQueueGoalCount: return (int64_t)FXCX->mGoalQueues[a[0]].mGoals.size();
+    case O::FxQueueGoalAt: return P64(FXCX->mGoalQueues[a[0]].mGoals[a[1]]);
+    case O::FxQueueGoalGetAt: return P64(FXCX->mGoalQueues[a[0]].GetGoalAt((unsigned long)a[1]));
+    case O::FxLocationGoalCast: return P64(EELocationGoalCast((EEUnitGoal*)p));
+    case O::FxLoadGarrisonCast: return P64(EELoadGarrisonGoalCast((EEUnitGoal*)p));
+    case O::FxAttackUnitCast: return P64(EEAttackUnitCast((EEUnitGoal*)p));
+    case O::FxGoalForcedMove: return ((EEUGRust*)p)->GetIsForcedMove();
+    case O::FxGoalAutoWaypoint: return EELocationGoalCast((EEUnitGoal*)p)->GetIsAutoWaypoint();
+    case O::FxGoalLocation: ((EEUnitGoal*)p)->GetGoalLocation(FXPT(0));
+        break;
+    case O::FxGoalLoadContainer: return P64(((EEUGRust*)p)->GetLoadContainer());
+    case O::FxGoalAttackTarget: return P64(((EEUGRust*)p)->GetAttackTarget());
+    case O::FxCxActiveGoal: return P64(FXCX->mActiveGoal);
+    case O::FxCxFnE123D: FXCX->FnE123D();
+        break;
+    case O::FxCxGetAnimation: return FXCX->GetAnimation();
+    case O::FxCxIsCloaked: return FXCX->GetIsCloaked();
+    case O::FxCxGetPlayer: return P64(FXCX->GetPlayer());
+    case O::FxUnGetHitPoints: return FXUN->GetHitPoints();
+    case O::FxUnMaxHitPoints: return FXUN->GetStats()->GetMaxHitPoints();
+    case O::FxTileVisibleTo: return ((EEMapTile*)p)->IsVisibleTo((EEPlayer*)a[0]);
+    case O::FxTileSeenBy: return ((EEMapTile*)p)->IsSeenBy((EEPlayer*)a[0]);
+    case O::FxPlIsAlly: return ((EEPlayer*)p)->IsAlly((EEPlayer*)a[0]);
+    case O::FxPlSelectedGroup: return P64(((EEPlayer*)p)->mSelectedGroup);
+    case O::FxPlCurrentEpoch: return ((EEPlayer*)p)->mTechnologies->mCurrentEpoch;
+    case O::FxGroupHasType: return ((EESelectedGroup*)p)->HasUnitType((unsigned long)a[0]);
+    case O::FxGroupUnit: return P64(((EESelectedGroup*)p)->GetUnit((unsigned long)a[0]));
+    case O::FxGroupNumUnits: return ((EESelectedGroup*)p)->GetNumUnits();
+    case O::FxVisibleBottomLeft: gWorld.GetMap()->mTerrainMesh.GetTerrainVisibleBottomLeftIndices(*(unsigned long*)a[0], *(unsigned long*)a[1]);
+        break;
+    case O::FxVisibleDimensions: gWorld.GetMap()->mTerrainMesh.GetTerrainVisibleTileDimensions(*(unsigned long*)a[0], *(unsigned long*)a[1]);
+        break;
+    // the models, their tag points, the weapon point
+    case O::FxTagPoints: return P64(((EEModel*)p)->GetTagPoints((unsigned long)a[0], (long)a[1]));
+    case O::FxModelTagList: return P64(((EEModel*)p)->mTagPoints[a[0]]);
+    case O::FxTagCount: return ((EETagPointList*)p)->GetNumTagPoints();
+    case O::FxWeaponPoint: EECombatEffectWeaponPoint((long)a[0], FXCX, (EEModel*)a[1], (EETagPointList*)a[2], a[3] != 0, FXPT(4));
+        break;
+    // the volcano's image and model
+    case O::FxCreateSurface: return gRasterizer->GetScreen(gScreenIndex)->CreateSurface(*(GESurfaceDescription*)a[0], (GESurface**)a[1]);
+    case O::FxFindTexture: return gTextureManager->GetTexturePath()->FindFile(UString((const char*)a[0]), *(FSFileSpec**)a[1]);
+    case O::FxSurfaceLoadPng: ((GESurface*)p)->Load(*(FSFileSpec*)a[0], kImageFilePNG);
+        break;
+    case O::FxFileSpecDelete: delete (FSFileSpec*)p;
+        break;
+    case O::FxSurfaceLock: ((GESurface*)p)->Lock();
+        break;
+    case O::FxSurfaceMemory: return P64(((GESurface*)p)->GetMemoryAddress());
+    case O::FxSurfaceBytesPerRow: return ((GESurface*)p)->GetBytesPerRow();
+    case O::FxSurfaceUnlock: ((GESurface*)p)->Unlock();
+        break;
+    case O::FxSurfaceDereference: ((GESurface*)p)->Dereference();
+        break;
+    case O::FxCreateVolcanoModel: return P64(gModelManager->CreateModel((unsigned long)a[0], (unsigned long)a[1], 1, 0, 1, 0, "volcano model", 1));
+    case O::FxModelReference: ((GEModel*)p)->Reference();
+        break;
+    case O::FxMaterialPolygonStart: ((GEModel*)p)->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
+        break;
+    case O::FxMaterialPolygonLength: ((GEModel*)p)->GetMaterial(0)->SetPolygonRangeLength((unsigned long)a[0], 0);
+        break;
+    case O::FxMaterialVertexStart: ((GEModel*)p)->GetMaterial(0)->SetVertexStartingIndex(0);
+        break;
+    case O::FxMaterialVertexLength: ((GEModel*)p)->GetMaterial(0)->SetVertexRangeLength((unsigned long)a[0]);
+        break;
+    case O::FxStoreMesh: EEStoreMesh((GEModel*)p, (const EeGfxMeshVertex*)a[0], (size_t)a[1], (const EeGfxMeshTriangle*)a[2], (size_t)a[3]);
+        break;
+    case O::FxModelComputeNormals: ((GEModel*)p)->ComputeModelNormals();
+        break;
+    case O::FxModelComputeBounds: ((GEModel*)p)->ComputeBoundingVolumes();
+        break;
+    case O::FxModelSetPostTransform: ((GEModel*)p)->SetGraphicsPostModelTransform(*(GETransformation*)a[0]);
+        break;
+    case O::FxModelPrepare: ((GEModel*)p)->PrepareTransforms();
+        break;
+    case O::FxModelCenter: FXPT(0) = ((GEModel*)p)->GetCenterPoint();
+        break;
+    case O::FxModelSetTexture: ((GEModel*)p)->GetMaterial(0)->SetTexture(((EEGraphicObject*)a[0])->mTextures[0], gScreenIndex);
+        break;
+    // the manager's world, the memory files
+    case O::FxSetEffectDetail: gEffectDetail = (unsigned long)a[0];
+        break;
+    case O::FxEffectDetail: return gEffectDetail;
+    case O::FxMemoryLength: ((FSMemoryFile*)p)->GetLength(*(unsigned long*)a[0]);
+        break;
+    case O::FxMemoryData: return P64(((FSMemoryFile*)p)->GetData());
+    // the quad batches' arrays
+    case O::FxBatchSetVertex: sEffectVertices[a[0]]->SetVertex(*reinterpret_cast<const GEColor*>(&FXQUAD->color), *reinterpret_cast<const GE3DPoint*>(&FXQUAD->points[a[2]]), *reinterpret_cast<const GEVector*>(&FXQUAD->normal), *reinterpret_cast<const GETextureCoordinate*>(&FXQUAD->coords[a[2]]), FXQUAD->opacities[a[2]], (unsigned long)a[3]);
+        break;
+    case O::FxBatchPolygonsNew: return P64(sEffectPolygons = gRasterizer->CreatePolygonArray((unsigned long)a[0]));
+    case O::FxPolygonSetIndices: ((GEPolygonArray*)p)->SetVertexIndices((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
+        break;
+    case O::FxBatchVerticesNew: sEffectVertices[a[0]] = gRasterizer->CreateVertexArray(1, 0x800);
+        break;
+    case O::FxBatchPolygonsDelete: delete std::exchange(sEffectPolygons, nullptr);
+        break;
+    case O::FxBatchVerticesDelete: delete std::exchange(sEffectVertices[a[0]], nullptr);
+        break;
+    // the decals
+    case O::FxAmbientEffects: return gAmbientEffectsEnabled;
+    case O::FxDrawBlood: return gDrawBlood;
+    case O::FxShellHoleEffect: return P64(FXCX->mUnitClass->mShellHoleEffect);
+    case O::FxBloodStainEffect: return P64(FXCX->mUnitClass->mBloodStainEffect);
+    default: return EECore9OpB2(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::FxGeffSize: return ((EEGraphicEffect*)p)->mSize;
+    case O::FxGeffParam2: return ((EEGraphicEffect*)p)->GetParam2();
+    default: return EECore9OpB2F(inOp, p, a, f);
+    }
 }

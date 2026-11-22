@@ -292,6 +292,15 @@ pub const EE_SCREENS_SEFMX_SM_LOAD: u32 = 210;
 pub const EE_SCREENS_SEFMX_TEXT_OPEN: u32 = 211;
 pub const EE_SCREENS_SEFMX_TEXT_WRITE: u32 = 212;
 pub const EE_SCREENS_SEFMX_TEXT_CLOSE: u32 = 213;
+/// The form p1's `UIForm::CopyData()`, `UIForm::UpdateKeyboard()`, `UIForm::UpdateMouse()` (their answers); its
+/// `SetRectangle((f0, f1, f2, f3))`; its civilization's `SetPointsAndMax(the world table's builder points)`; its
+/// `SetMusicFileName(the host's text)` (the constructor's, `ee_screens_sefm_construct`).
+pub const EE_SCREENS_SEFMX_BASE_COPY_DATA: u32 = 2000;
+pub const EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD: u32 = 2001;
+pub const EE_SCREENS_SEFMX_BASE_UPDATE_MOUSE: u32 = 2002;
+pub const EE_SCREENS_SEFMX_SET_RECTANGLE: u32 = 2003;
+pub const EE_SCREENS_SEFMX_CIVILIZATION_POINTS: u32 = 2004;
+pub const EE_SCREENS_SEFMX_MUSIC_TEXT: u32 = 2005;
 
 /// `kTextAlignLeft`, `kTextAlignRight`; `kControlTriggerSelectionChanged`, `kControlTriggerButtonUp`,
 /// `kControlTriggerChecked`, `kControlTriggerUnchecked`; `EE_SCREENS_SE_NEW_PLAYER`; `kErrorOK`.

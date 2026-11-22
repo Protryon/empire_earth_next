@@ -34,8 +34,11 @@ mod tests {
         ("UNIT_TYPE_RADIO_MAN", "kUnitTypeInf10RadioMan"),
         ("MOVEMENT_SEA_OR_SPACE", "kMovementSeaOrSpace"),
         ("UNIT_TYPE_MARKET_CP", "kUnitTypeMarketCP"),
+        ("UNIT_TYPE_CP_ICBM", "kUnitTypeCpICBM"),
         ("TRIGGER_ENEMY_UNIT_IN_LOS", "kTriggerEnemyUnitInLOS"),
         ("TRIGGER_CAN_I_PURSUE_PAST_INITIAL_CONTACT_LOS", "kTriggerCanIPursuePastInitialContactLOS"),
+        ("UNIT_TYPE_CP_ICBM", "kUnitTypeCpICBM"),
+        ("UNIT_TYPE_BOMB_FOR_SAS_EXPLOSIVE_EXPERT", "kUnitTypeBombForSASExplosiveExpert"),
         ("TRIGGER_ENEMY_INSIDE_INITIAL_CONTACT_LOS", "kTriggerEnemyInsideInitialContactLOS"),
     ];
 

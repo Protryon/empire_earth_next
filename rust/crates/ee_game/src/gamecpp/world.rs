@@ -225,7 +225,7 @@ pub extern "C" fn ee_gamecpp_world_init(w: *mut c_void) {
     *wm::<c_long>(O::WUB80, w) = 0;
     h(O::WSetEnvironmentRaw, w, &[0]);
     h(O::WSetCalamityHelperRaw, w, &[0]);
-    hf(O::WSetTimeOfDay, w, &[], &[0.35]);
+    ee_gamecpp_world_set_time_of_day(w as *mut std::ffi::c_void, 0.35);
     h(O::WCreateGhostLock, w, &[]);
     for i in 0..10 {
         wm::<[c_long; 10]>(O::WUB30, w)[i] = 1;
@@ -278,7 +278,7 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
         && options(w).mCampaignChecksum > 0
         && !*wm::<bool>(O::WLoadingSavedGame, w)
     {
-        h(O::ShowSinglePlayerScreen, 0, &[]);
+        super::startup::ee_gamecpp_startup_data_paths();
     }
     ee_gamecpp_world_unload_media(w as *mut c_void);
     h(O::WGhostLock, w, &[]);
@@ -323,7 +323,7 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     if h(O::UserInterfacePresent, 0, &[]) != 0 {
         h(O::UiPostUpdateBackground, 0, &[]);
     }
-    h(O::StopAllSounds, 0, &[]);
+    super::startup::ee_gamecpp_startup_stop_sounds();
     h(O::MiniMapDelete, 0, &[]);
     h(O::MiniMapSetNull, 0, &[]);
     h(O::PathReset, 0, &[]);
@@ -628,9 +628,9 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     h(O::GraphicsReleaseScene, 0, &[]);
     h(O::WSetEffectManager, w, &[pa(hp(O::StEffectManager, st, &[]))]);
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
-        h(O::WSetNumPlayers, w, &[17]);
+        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, 17);
     } else {
-        h(O::WSetNumPlayers, w, &[h(O::StNumPlayers, st, &[])]);
+        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, h(O::StNumPlayers, st, &[]) as c_ulong);
     }
     progress(16);
     *wm::<bool>(O::WInCinematic, w) = false;
@@ -660,7 +660,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     }
     *wm::<c_long>(O::WCurrentPlayer, w) = local as c_long;
     h(O::CommSetPlayerNumber, 0, &[local as i64]);
-    h(O::WSetPopulationLimit, w, &[state_options(st).mUnitLimit as i64]);
+    ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, true, state_options(st).mUnitLimit as c_ulong);
     progress(18);
     h(O::WClearContinents, w, &[]);
     // port (save version 0.263): a loaded game's continent manager is the saved one (made in place of BuildRegions,
@@ -674,9 +674,9 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     ee_gamecpp_world_create_players(w as *mut c_void, st as *mut c_void);
     progress(21);
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
-        h(O::WSetNumPlayers, w, &[17]);
+        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, 17);
     } else {
-        h(O::WSetNumPlayers, w, &[h(O::StNumPlayers, st, &[])]);
+        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, h(O::StNumPlayers, st, &[]) as c_ulong);
     }
     for i in 0..num_players(w) {
         h(O::PlCivApplyDeferred, player(w, i), &[pa(st)]);
@@ -686,7 +686,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     start_teams(w, st);
     *wm::<c_ulong>(O::WWondersToWin, w) = state_options(st).mWondersForVictory;
     *wm::<bool>(O::WVictoryEnabled, w) = state_options(st).mVictory;
-    hf(O::WSetTimeOfDay, w, &[], &[*sm::<f32>(O::StTimeOfDay, st)]);
+    ee_gamecpp_world_set_time_of_day(w as *mut std::ffi::c_void, *sm::<f32>(O::StTimeOfDay, st));
     hf(O::WSetGameSpeed, w, &[], &[*sm::<f32>(O::StGameSpeed, st)]);
     let observer = prts(hp(O::WCurrentPlayerPtr, w, &[])).mObserverMode;
     h(O::SetLocalPlayerOut, 0, &[observer as i64]);
@@ -708,7 +708,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
         h(O::CameraSetLocation, 0, &[hp(O::StMapCenter, st, &[]) as i64, 0, 1]);
     }
     h(O::CameraSetChanged, 0, &[]);
-    h(O::StRepairRestorables, st, &[]);
+    super::state::ee_gamecpp_state_repair_restorables(st as *mut std::ffi::c_void);
     progress(23);
     h(O::SetSightUpdates, 0, &[1]);
     if loaded {
@@ -717,7 +717,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
         h(O::ReportGameInitialized, 0, &[]);
     }
     if num_players(w) as i64 != h(O::MapPlayerCount, map(w), &[]) {
-        h(O::MapSetPlayerCount, map(w), &[num_players(w) as i64]);
+        super::map::ee_gamecpp_map_set_player_count(map(w) as *mut std::ffi::c_void, num_players(w) as c_ulong);
     }
     h(O::MiniMapSetViewer, 0, &[pa(player(w, current(w) as c_ulong))]);
     if *sm::<bool>(O::StRevealMap, st) == true {
@@ -823,7 +823,11 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     progress(29);
     ee_gamecpp_world_rebuild_active(w as *mut c_void);
     if h(O::UiInScenarioEditor, 0, &[]) == 1 && *wm::<bool>(O::WGameScreenActive, w) == true {
-        h(O::WSetNumPlayers, w, &[*sm::<c_long>(O::StNumPlayersMade, st) as i64]);
+        ee_gamecpp_world_set_count(
+            w as *mut std::ffi::c_void,
+            false,
+            *sm::<c_long>(O::StNumPlayersMade, st) as c_ulong,
+        );
     }
     if *sm::<bool>(O::StIsLoadedGame, st) == true {
         ee_gamecpp_world_notify_loaded(
@@ -945,7 +949,8 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
             i += 1;
         }
         h(O::SetDeferComputerRestore, 0, &[0]);
-        h(O::CpRestoreDeferredManagers, 0, &[major, minor]);
+        // SAFETY: the C++'s restore of the computer players' deferred managers, on the loading thread
+        unsafe { ee_sim::cp::player_game::ee_cp_pl_restore_deferred(major as c_ulong, minor as c_ulong) };
     }
     h(O::WFlushQueued, w, &[]);
     if *sm::<bool>(O::StInScenarioEditor, st) == true {

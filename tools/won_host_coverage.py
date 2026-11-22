@@ -129,6 +129,9 @@ CHECKS = [
          hosts=[LOBBY / "EELobbyGlueHost.cpp"], rust=[], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
+    # the game's WON front end (R6 WON round 31: wonnet.rs; its host's statements are ee/EEWonNetHost.inl)
+    dict(enum="EeWonNetOp", header="won_lobby/wonnet.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonNetHost.inl"], rust=[], allowed={}),
 ]
 
 

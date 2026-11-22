@@ -178,10 +178,10 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
 extern "C" double ee_scenariocpp_capture_f(uint32_t inOp, const void* inP)
 {
     switch (inOp) {
-    case EE_SCENARIO_CAP_AREA_LEFT: return SA(inP)->mRect.GetLeft();
-    case EE_SCENARIO_CAP_AREA_TOP: return SA(inP)->mRect.GetTop();
-    case EE_SCENARIO_CAP_AREA_RIGHT: return SA(inP)->mRect.GetRight();
-    case EE_SCENARIO_CAP_AREA_BOTTOM: return SA(inP)->mRect.GetBottom();
+    case EE_SCENARIO_CAP_AREA_LEFT: return SA(inP)->mRect.mLeft;
+    case EE_SCENARIO_CAP_AREA_TOP: return SA(inP)->mRect.mTop;
+    case EE_SCENARIO_CAP_AREA_RIGHT: return SA(inP)->mRect.mRight;
+    case EE_SCENARIO_CAP_AREA_BOTTOM: return SA(inP)->mRect.mBottom;
     case EE_SCENARIO_CAP_TIME_OF_DAY: return gWorld.GetTimeOfDay();
     case EE_SCENARIO_CAP_GAME_SPEED: return gWorld.mGameSpeed;
     case EE_SCENARIO_CAP_SCALE: return SX(inP)->mPhysicalModel.GetScale();
@@ -191,64 +191,14 @@ extern "C" double ee_scenariocpp_capture_f(uint32_t inOp, const void* inP)
 
 // the hooks (ee/EEScenarioCapture.h): each the Rust record's
 static unsigned int EESMCaptureSeedImpl() { return (unsigned int)ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0); }
-static void EESMCaptureConditionImpl(EESMCondition* inCondition, bool inResult, unsigned int inSeed)
-{
-    ee_scenario_cap_condition(inCondition, inResult, inSeed);
-}
-static EESMCaptureTriggerState EESMCaptureTriggerBeforeImpl(EESMTrigger* inTrigger)
-{
-    return ee_scenario_cap_trigger_before(inTrigger);
-}
-static void EESMCaptureTriggerImpl(EESMTrigger* inTrigger, const EESMCaptureTriggerState& inBefore, float inTime,
-                                   unsigned int inSeed)
-{
-    ee_scenario_cap_trigger(inTrigger, &inBefore, inTime, inSeed);
-}
-static EESMCaptureObjectState EESMCaptureObjectBeginImpl(EESMObject* inObject)
-{
-    return ee_scenario_cap_object_begin(inObject);
-}
-static void EESMCaptureObjectEndImpl(EESMObject* inObject, bool inIncludeDead, bool inResult,
-                                     const EESMCaptureObjectState& inBefore)
-{
-    ee_scenario_cap_object_end(inObject, inIncludeDead, inResult, &inBefore);
-}
 static void EESMCapturePlayersImpl(long inType, bool inSingle, long inResult, const void* inPlayers,
                                    unsigned int inSeed)
 {
     ee_scenario_cap_players(inType, inSingle, inResult, inPlayers, inSeed);
 }
-static void EESMCaptureAreaImpl(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY,
-                                unsigned long long inHash)
-{
-    ee_scenario_cap_area(inArea, inKind, inA, inB, inX, inY, inHash);
-}
-static void EESMCaptureEffectImpl(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed)
-{
-    ee_scenario_cap_effect(inEffect, inIsCinematic, inSeed, SaveVersion());
-}
-static void EESMCaptureSavedImpl(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
-                                 unsigned long inMinorVersion)
-{
-    ee_scenario_cap_saved(inManager, inKind, inResult, Version(inMajorVersion, inMinorVersion));
-}
 static void EESMCaptureUpdateImpl(EEScenarioManager* inManager, bool inHumanPlaying)
 {
     ee_scenario_cap_update(inManager, inHumanPlaying, SaveVersion());
-}
-static void EESMCapturePlayerAttributeImpl(long inPlayer, unsigned long inAttribute, long inMode, long inAmount,
-                                           unsigned int inSeed)
-{
-    ee_scenario_cap_player_attribute(inPlayer, inAttribute, inMode, inAmount, inSeed, SaveVersion());
-}
-static void EESMCaptureTokensImpl(const UWideString& inText, const UWideString& outText, unsigned int inSeed)
-{
-    ee_scenario_cap_tokens((const char*)inText, (const char*)outText, inSeed);
-}
-static void EESMCapturePlacementImpl(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult,
-                                     float inX, float inY, unsigned int inSeed)
-{
-    ee_scenario_cap_placement(inObject, inUnitType, inTryRandom, inResult, inX, inY, inSeed);
 }
 static void EESMCaptureUnitChangeImpl(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
                                       EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
@@ -258,18 +208,7 @@ static void EESMCaptureUnitChangeImpl(long inKind, const long* inArgs, EEUnit* i
 
 // The game calls these through the header's hook pointers, set here before main: the game's units name no
 // symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EESMCaptureArea = EESMCaptureAreaImpl,
-                                      EESMCaptureCondition = EESMCaptureConditionImpl,
-                                      EESMCaptureEffect = EESMCaptureEffectImpl,
-                                      EESMCaptureObjectBegin = EESMCaptureObjectBeginImpl,
-                                      EESMCaptureObjectEnd = EESMCaptureObjectEndImpl,
-                                      EESMCapturePlacement = EESMCapturePlacementImpl,
-                                      EESMCapturePlayerAttribute = EESMCapturePlayerAttributeImpl,
-                                      EESMCapturePlayers = EESMCapturePlayersImpl,
-                                      EESMCaptureSaved = EESMCaptureSavedImpl,
+static const bool sCaptureHooksSet = (EESMCapturePlayers = EESMCapturePlayersImpl,
                                       EESMCaptureSeed = EESMCaptureSeedImpl,
-                                      EESMCaptureTokens = EESMCaptureTokensImpl,
-                                      EESMCaptureTrigger = EESMCaptureTriggerImpl,
-                                      EESMCaptureTriggerBefore = EESMCaptureTriggerBeforeImpl,
                                       EESMCaptureUnitChange = EESMCaptureUnitChangeImpl,
                                       EESMCaptureUpdate = EESMCaptureUpdateImpl, true);

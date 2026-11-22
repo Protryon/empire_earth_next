@@ -885,8 +885,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WDeleteInfluence: delete W->mInfluenceTable;
         break;
-    case O::WSetTimeOfDay: W->SetTimeOfDay(f[0]);
-        break;
     case O::WCreateGhostLock: TSScheduler::CreateCriticalSection(W->mGhostUnitsLock);
         break;
     case O::WStatisticsReset: W->mStatistics.Reset();
@@ -936,10 +934,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WSetMap: W->SetMap((EEMap*)a[0]);
         break;
     case O::WSetEffectManager: W->SetEffectManager((EEEffectManager*)a[0]);
-        break;
-    case O::WSetNumPlayers: W->SetNumPlayers((unsigned long)a[0]);
-        break;
-    case O::WSetPopulationLimit: W->SetPopulationLimit((unsigned long)a[0]);
         break;
     case O::WCreateInfluenceTable: W->CreateInfluenceTable((EEMap*)a[0]);
         break;
@@ -1011,8 +1005,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StReadLock: ST->ReadLock();
         break;
     case O::StReadUnlock: ST->ReadUnlock();
-        break;
-    case O::StRepairRestorables: ST->RepairRestorables();
         break;
     case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
     case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
@@ -1106,8 +1098,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CpRefreshResourceCenters: ((EEComputerPlayer*)p)->RefreshResourceCenters();
         break;
     case O::CpReplaceOnLoad: return ((EEComputerPlayer*)p)->mReplaceOnLoad;
-    case O::CpRestoreDeferredManagers: EECPRestoreDeferredManagers((unsigned long)a[0], (unsigned long)a[1]);
-        break;
     case O::CpNewGame: EECPNewGame();   // port: the computer players' per-game file statics cleared (ee/EECPTrace.h)
         break;
     case O::SetDeferComputerRestore: gDeferComputerPlayerRestore = a[0] != 0;
@@ -1186,8 +1176,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     // the map, the managers and the globals
     case O::MapSize: return ((EEMap*)p)->mSize;
     case O::MapPlayerCount: return ((EEMap*)p)->mU19561C;
-    case O::MapSetPlayerCount: ((EEMap*)p)->SetPlayerCount((unsigned long)a[0]);
-        break;
     case O::MapFogSeen: ((EEMap*)p)->FogSeen((EEPlayer*)a[0]);
         break;
     case O::MeshReferenceTile: gWorld.mMap->mTerrainMesh.ReferenceTile((long)a[0], (long)a[1]);
@@ -1235,8 +1223,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::UiLoadProgress: gUserInterface->SetLoadProgress(f[0]);
         break;
     case O::DisplayWeatherEffects: return gDisplayWeatherEffects;
-    case O::ShowSinglePlayerScreen: EEShowSinglePlayerScreen();
-        break;
     case O::EnvSetEnabled: ((EEEnvironmentManager*)p)->SetEnabled(a[0] != 0);
         break;
     case O::EnvFnE123D: ((EEEnvironmentManager*)p)->FnE123D();
@@ -1256,8 +1242,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CalamitiesRestore: USingleton<EECalamityManager>::GetInstance()->Restore(((EEGameState*)a[0])->mMajorVersion, ((EEGameState*)a[0])->mMinorVersion, *(std::vector<EECalamity*>*)p);
         break;
     case O::NewCalamityHelper: return P64(static_cast<FSPersistent*>(new EEPCalamityHelper));
-    case O::StopAllSounds: EEStopAllSounds();
-        break;
     case O::SetLocalPlayerOut: gLocalPlayerOut = a[0] != 0;
         break;
     case O::SetCollisionDetectionUnit: gCollisionDetectionUnit = (unsigned long)a[0];

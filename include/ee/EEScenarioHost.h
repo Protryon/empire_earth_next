@@ -42,10 +42,9 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB);
 
 // an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*; EESMEffect.cpp): inContext an effect
 // run's context (EESMEffect::Execute's), a[0..5] the arguments
-int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a);
+extern "C" int64_t ee_scenariocpp_host_world(void* inContext, uint32_t inOp, const int64_t* a);
 // the host table over inContext (it must outlive the Rust call)
 EeScenarioHost EESMHost(EESMHostContext* inContext);
-EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea);
 
 class EEScenarioManager;
 // an element's save (ee_scenario save.rs): its file, its strings by slot, its id list (NULL for none), the trigger
@@ -62,7 +61,5 @@ struct EESMStream {
 };
 // the manager's operations of a stream (EE_SCENARIO_IO_ELEMENT_*, _MEDIA, _MESSAGES; EEScenarioManager.cpp)
 int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue);
-// the stream table over inStream (it must outlive the Rust call)
-EeScenarioStream EESMStreamTable(EESMStream* inStream);
 
 #endif
