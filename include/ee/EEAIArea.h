@@ -32,11 +32,6 @@ public:
     ~EEAIArea() { ee_astar_area_free(this); }   // +0x00 dtor 0x11123 (inline COMDAT)
     // +0x08 0xd705 (ret 4): the area made of the tiles; its hull and influence-region bounds built (a herd: its own)
     void Create(const std::vector<U2DPoint<long> >& inTiles);
-    void AreaCreate(const std::vector<U2DPoint<long> >& inTiles)
-    {
-        this->mTiles.Create(inTiles);
-        this->UpdateHull();
-    }
     // +0x14 0xd8e6 (ret 8, hidden result): the area tile closest to inPoint
     U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint) { return this->mTiles.GetClosestPoint(inPoint); }
     // +0x18 0xd8a5 (ret 8, hidden result): inPoint if the hull contains it, else the hull outline's closest point
@@ -62,17 +57,13 @@ public:
 
     // inline COMDAT 0xc6fd (emitted at its first user in EECPASGU*'s range): the hull (bounds first), then the tiles
     // Provisional name
-    bool Contains(const U2DPoint<long>& inPoint) { bool theResult = this->HullContains(inPoint); if (theResult) theResult = this->mTiles.Contains(inPoint); return theResult; }
+    bool Contains(const U2DPoint<long>& inPoint) { return this->HullContains(inPoint) && this->mTiles.Contains(inPoint); }
     // 0xd81e: the squared distance of the hulls' closest points (provisional name)
     float GetHullDistanceSquared(EEAIArea* inOther) { return ee_astar_area_hull_distance_squared(this, inOther); }
     void UpdateBounds(EEInfluenceTable* inTable);   // 0xd763: the hull's bounds in the table's regions (EEAIRectangleArea.cpp)
     // 0xdaae: appends every tile of the hull's scan lines (provisional name)
     void GetTiles(std::vector<U2DPoint<long> >& outTiles)
-    {
-        ee_astar_area_get_tiles(this, outTiles.size(), &outTiles, [](void* inTiles, long inX, long inY) {
-            static_cast<std::vector<U2DPoint<long> >*>(inTiles)->push_back(U2DPoint<long>(inX, inY));
-        });
-    }
+        { ee_astar_area_get_tiles(this, outTiles.size(), &outTiles, EEAIPushPoint); }
 
     // New (port): the members behind accessors (R5b.1 blocker (b): the AI and the units read an area only
     // through these, so the record can live elsewhere)
@@ -86,9 +77,9 @@ public:
         { return reinterpret_cast<const U2DRectangle<long>&>(this->hull_bounds); }
     // BoundedContains: the bounds, then the outline (HULL 6)
     bool HullContains(const U2DPoint<long>& inPoint) { return ee_astar_area_hull_contains(this, EEAIArea::HullPoint(inPoint)); }
-    unsigned long GetHullPointCount() const { size_t theCount; ee_astar_area_hull_points(this, &theCount); return (unsigned long)theCount; }
+    unsigned long GetHullPointCount() const { return (unsigned long)EEAIListView<U2DPoint<long> >(ee_astar_area_hull_points, static_cast<const EeAStarAreaRecord*>(this)).size(); }
     const U2DPoint<long>* GetHullPointData() const
-        { size_t theCount; return reinterpret_cast<const U2DPoint<long>*>(ee_astar_area_hull_points(this, &theCount)); }
+        { return EEAIListView<U2DPoint<long> >(ee_astar_area_hull_points, static_cast<const EeAStarAreaRecord*>(this)).begin(); }
     const U2DPoint<long>& GetHullPoint(long inIndex) const { return this->GetHullPointData()[inIndex]; }
     U2DPoint<long> GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint)   // (HULL 2)
         { return EEAIArea::PointOf(ee_astar_area_hull_closest_outline_point(this, EEAIArea::HullPoint(inPoint))); }
@@ -99,9 +90,11 @@ public:
     EeAStarAreaRecord* AreaRecord() { return this; }   // New (port): the record (ee_sim::astar cm_io.rs's layout)
     void SetAreaType(long inType) { this->area_type = inType; }
 
-private:
+protected:
     static EeHullPoint HullPoint(const U2DPoint<long>& inPoint) { EeHullPoint thePoint = {inPoint.mX, inPoint.mY}; return thePoint; }
     static U2DPoint<long> PointOf(const EeHullPoint& inPoint) { return U2DPoint<long>(inPoint.x, inPoint.y); }
+
+private:
     EEAIArea(const EEAIArea&);              // the record owns its hull: no copies
     EEAIArea& operator=(const EEAIArea&);
 

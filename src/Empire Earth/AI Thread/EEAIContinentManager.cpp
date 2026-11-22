@@ -36,12 +36,6 @@
 
 // (CNTQ, the queries' capture records: ee_sim::astar cm_capture.rs; the last queries here moved: cm_unit.rs)
 
-// Resets the global continent manager and frees its tile grids (Rust: cm_passes.rs)
-void EEAIContinentManager::Shutdown()
-{
-    ee_astar_cm_shutdown(&gContinentManager.mRecord);
-}
-
 // Creates an empty continent manager: no grids, every id and counter at 0 (the record: ee_sim::astar cm.rs)
 void EEAIRegisterContinentState();   // EEAIContinentSave.cpp: the objects' layout and the host (cm_io.rs)
 
@@ -54,14 +48,7 @@ EEAIContinentManager::EEAIContinentManager()
 // Destroys the continent manager by shutting down the global one (Shutdown), then frees its tables
 EEAIContinentManager::~EEAIContinentManager()
 {
-    EEAIContinentManager::Shutdown();
-    ee_astar_cm_free(&this->mRecord);
-}
-
-// Deletes every area, path sector and sub sector, empties the tables and zeroes the counters (not the grids)
-void EEAIContinentManager::Reset()
-{
-    ee_astar_cm_reset_all(&this->mRecord);
+    ee_astar_cm_destroy(&gContinentManager.mRecord, &this->mRecord);
 }
 
 
@@ -79,33 +66,11 @@ void EEAIContinentManager::Clear(EEMap* inMap)
 }
 
 // Builds the AI regions of inMap after Clear: tile values, path areas and sectors, choke points, the region ids, the
-// scenario manager's areas and the six chain kinds; frees the work grids (continent ids kept in large games) (Rust:
-// cm_passes.rs)
+// scenario manager's areas (scenario::entry::region_inputs) and the six chain kinds; frees the work grids (continent
+// ids kept in large games) (Rust: cm_passes.rs, cm_inline.rs)
 void EEAIContinentManager::BuildRegions(EEMap* inMap)
 {
-    std::vector<EeScenarioArea> theInputs;
-    std::vector<long> theIDs;
-    EEScenarioManager* theManager = gWorld.GetScenarioManager();
-    if (theManager) {
-        theInputs.resize(theManager->mAreas.size());
-        theIDs.resize(theManager->mAreas.size());
-        for (long i = theManager->mAreas.size() - 1; i >= 0; i--) {
-            EESMArea* theSource = theManager->mAreas[i];
-            theInputs[i].set = theSource && !theSource->IsUnset();
-            theIDs[i] = theSource ? theSource->mID : 0;
-            if (!theInputs[i].set)
-                continue;
-            theInputs[i].top = theSource->GetRect().GetTop();
-            theInputs[i].bottom = theSource->GetRect().GetBottom();
-            theInputs[i].left = theSource->GetRect().GetLeft();
-            theInputs[i].right = theSource->GetRect().GetRight();
-            theInputs[i].height = theSource->GetRect().GetHeight();
-            theInputs[i].width = theSource->GetRect().GetWidth();
-        }
-    }
-    bool theKeep = !(inMap->mL195610 < 0x4b && gWorld.mNumPlayers < 5 && gWorld.mPopulationLimit < 1000);
-    ee_astar_cm_build_regions(&this->mRecord, (uint64_t)(uintptr_t)inMap, EEAIRegionSize(), theInputs.empty() ? NULL : &theInputs[0],
-                              theIDs.empty() ? NULL : &theIDs[0], theInputs.size(), theKeep);
+    ee_astar_cm_build_regions_scenario(&this->mRecord, (uint64_t)(uintptr_t)inMap, EEAIRegionSize(), !(inMap->mL195610 < 0x4b && gWorld.mNumPlayers < 5 && gWorld.mPopulationLimit < 1000));
 }
 
 // CanGetTo's C++ (ee_sim::astar cm_unit.rs): 0 the map is a space map; 1 the aircraft's planet id, its land

@@ -28,10 +28,7 @@ public:
                                                  reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther)); }
     // +0x2c 0x1dc54 (ret 8): reserves outTiles to mShoreTiles's size, then walks mShoreTiles (inID 0: every tile)
     void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles)
-    {
-        outTiles.reserve(this->GetShoreTiles().size());
-        ee_astar_continent_shore_next_to((uint64_t)(uintptr_t)this, inID, &outTiles, EEAIContinent::PushTile);
-    }
+        { ee_astar_continent_shore_next_to((uint64_t)(uintptr_t)this, inID, &outTiles, EEAIPushPoint); }
     // +0x30 0x1e45e (ret 0xc): Virtual34 with the one-element id list { inID }
     void GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<long> >& outTiles, long inKind)
         { this->GetShoreInRegions(std::vector<unsigned short>(1, inID), outTiles, inKind); }
@@ -39,13 +36,7 @@ public:
     // with inIDs empty or holding a 0, every tile; else the tiles whose path area's id (+0x8a for inArg3 3,
     // else +0x86) is listed, or, without one, a kind-1 continent's tiles next to a listed continent
     void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles, long inKind)
-    {
-        outTiles.clear();
-        ee_astar_continent_shore_in_regions((uint64_t)(uintptr_t)this, inIDs.empty() ? NULL : &inIDs[0], inIDs.size(), inKind,
-                                            &outTiles, EEAIContinent::PushTile);
-    }
-    static void PushTile(void* inTiles, long inX, long inY)
-        { static_cast<std::vector<U2DPoint<long> >*>(inTiles)->push_back(U2DPoint<long>(inX, inY)); }
+        { ee_astar_continent_shore_in_regions_into((uint64_t)(uintptr_t)this, inIDs.data(), inIDs.size(), inKind, &outTiles, EEAIClearList<std::vector<U2DPoint<long> > >, EEAIPushPoint); }
 
     // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac) (Rust: ee_astar continent.rs, as the rest)
     void AddPathAreaID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::PathAreas, inID); }
@@ -61,30 +52,14 @@ public:
     // New (port): the members behind accessors (R5b.1 blocker (b)); the lists, counts, category and id are the
     // record's (EeAStarContinentRecord, ee_astar continent.rs), the neighbours stay here
     EEAIListView<U2DPoint<long> > GetShoreTiles() const
-    {
-        size_t theCount;
-        const EeHullPoint* theTiles = ee_astar_continent_shore(this, &theCount);
-        return EEAIListView<U2DPoint<long> >(reinterpret_cast<const U2DPoint<long>*>(theTiles), theCount);
-    }
+        { return EEAIListView<U2DPoint<long> >(ee_astar_continent_shore, static_cast<const EeAStarContinentRecord*>(this)); }
     EEAIListView<long> GetChokePoints() const
-    {
-        size_t theCount;
-        const long* theIndices = ee_astar_continent_choke_points(this, &theCount);
-        return EEAIListView<long>(theIndices, theCount);
-    }
+        { return EEAIListView<long>(ee_astar_continent_choke_points, static_cast<const EeAStarContinentRecord*>(this)); }
     EEAIListView<unsigned short> GetIDs(EeAStarContinentList inList) const
-    {
-        size_t theCount;
-        const uint16_t* theIDs = ee_astar_continent_ids(this, inList, &theCount);
-        return EEAIListView<unsigned short>(theIDs, theCount);
-    }
+        { return EEAIListView<unsigned short>(ee_astar_continent_ids, static_cast<const EeAStarContinentRecord*>(this), inList); }
     EEAIListView<unsigned short> GetPathAreaIDs() const { return this->GetIDs(EeAStarContinentList::PathAreas); }
     EEAIHandleView<EEAIContinent> GetNeighbors() const
-    {
-        size_t theCount;
-        const uint64_t* theNeighbors = ee_astar_continent_neighbors(this, &theCount);
-        return EEAIHandleView<EEAIContinent>(theNeighbors, theCount);
-    }
+        { return EEAIHandleView<EEAIContinent>(ee_astar_continent_neighbors, static_cast<const EeAStarContinentRecord*>(this)); }
     void AddNeighbor(EEAIContinent* inContinent) { ee_astar_continent_add_neighbor(this, (uint64_t)(uintptr_t)inContinent); }
     unsigned short GetCount(long inKind) const { return this->counts[inKind]; }
     unsigned char GetCategory() const { return this->category; }  // inline (GetRandomContinent 0x422dc8) (provisional name)

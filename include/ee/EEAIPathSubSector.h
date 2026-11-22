@@ -31,11 +31,7 @@ public:
     // the graph machine's view (EEAIAStarGraphMachine<.., EEAIPathSubSector>; 0xab6c1 takes the node tile from
     // mSector +0x40/+0x44) (provisional names)
     EEAIHandleView<EEAIPathSubSector> GetNeighbors() const
-    {
-        size_t theCount;
-        const uint64_t* theNeighbors = ee_astar_sub_sector_neighbors(this, &theCount);
-        return EEAIHandleView<EEAIPathSubSector>(theNeighbors, theCount);
-    }
+        { return EEAIHandleView<EEAIPathSubSector>(ee_astar_sub_sector_neighbors, static_cast<const EeAStarSubSectorRecord*>(this)); }
     unsigned long GetNumNeighbors() const { return (unsigned long)this->GetNeighbors().size(); }
     void AddNeighbor(EEAIPathSubSector* inOther) { ee_astar_sub_sector_add_neighbor(this, (uint64_t)(uintptr_t)inOther); }
 

@@ -219,6 +219,7 @@ mod game {
 
     /// `ClampTile(map, tile)`: a tile off the map moved to the map's tile closest to its center (`map` 0: the
     /// world's).
+    #[allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
     pub fn clamp(raw: Raw<'_>, map: u64, x: i64, y: i64) -> (i64, i64) {
         let (map, on) = {
             let t = token();
@@ -231,12 +232,16 @@ mod game {
             return (x, y);
         }
         let (fx, fy) = ((x as c_long) as f32 + 0.5, (y as c_long) as f32 + 0.5);
+        // the point (x, y, 0) as a GE3DPoint in i2.. (three floats); the C++ writes the tile's `long`s at i0, i1
         let mut io = EePathIo::default();
         io.h[1] = map;
-        io.i[0] = i64::from(fx.to_bits());
-        io.i[1] = i64::from(fy.to_bits());
+        io.i[2] = i64::from(fx.to_bits()) | (i64::from(fy.to_bits()) << 32);
         raw(EE_PATH_CLOSEST_TILE, &mut io);
-        (io.i[0], io.i[1])
+        // SAFETY: the C++ wrote a `long` at the start of each of i0 and i1
+        unsafe {
+            let at = io.i.as_ptr();
+            (*(at as *const std::ffi::c_long) as i64, *(at.add(1) as *const std::ffi::c_long) as i64)
+        }
     }
 }
 
