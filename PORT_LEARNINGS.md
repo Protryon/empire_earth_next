@@ -38057,11 +38057,13 @@ None observed. The terrain name order is the same comparison under the same sort
 
 ### Gates
 
-On the tree merged with origin/rust 5143a9696 (batch 15; 14eac8909):
+On the tree merged with origin/rust b6f7d06bd (batch 16; 29f416c60). The same set passed on the tree merged with
+5143a9696 (batch 15) before batch 16 landed (Rust gate 5,793 tests; ai-game PT 13204, units [4, 41, 40]; lan-game
+PT 2967/2968).
 
 - `build.py --sim`: 0 unresolved, 0 duplicates (EE-AOC 412 inputs, EE-SIM 413); `--test-profile windowed-software`
   0/0.
-- `rust_build.py gate`: PASS, 5,793 tests; 305 headers current.
+- `rust_build.py gate`: PASS, 6,048 tests; 309 headers current.
 - `eedata.py check` and `cppgate`: PASS.
 - `sim_oracle.py`: seeds 2-7 identical to ref (6,087 / 5,300 / 6,072 / 7,649 / 7,842 / 6,540 lines).
 - `sim_capture.py` at seeds 2-3, 12 profiles: PASS (scenario 43, oracle 212, late 214, space 210, calamity 222, units
@@ -38069,11 +38071,11 @@ On the tree merged with origin/rust 5143a9696 (batch 15; 14eac8909):
 - saveload plain (seeds 2-7 at 600, 1350, 2100 s) PASS; the matrix `--expect` PASS.
 - `scenario_check`: 27/27. `sim_editor`: PASS (14,448 lines), `--civbuilder` PASS (4,062 lines).
 - The editor tour (`fixture_game.py --exercise editor`): RESULT PASS. The base exe (round 5's tip, build/s6/base-test)
-  now stops at the tour's campaign step that batch 15 added ("the campaign named: the fixture says 'rejected'"), so
-  the frames were compared up to there: the main menu differs only in the build-number label (206 pixels); the
-  editors menu, the closed editor and the campaign editor are pixel identical; the editor frame differs only in the
-  game view and the mini map (the blank map's grass varies by run), the tab panel identical; the UI state files equal
-  but for clocks and the comm turn count (32 vs 33).
-- `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 13204, game_s 825, units [4, 41, 40],
-  alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2967, joiner 2968).
+  stops at the campaign step the newer tour has ("the campaign named: the fixture says 'rejected'"), so the frames
+  were compared up to there: the main menu differs only in the build-number label (162 pixels); the editors menu,
+  the closed editor and the campaign editor are pixel identical; the editor frame differs only in the game view and
+  the mini map (the blank map's grass varies by run; the tab panel is identical); the UI state files are equal but
+  for clocks and the comm turn count (31 vs 42: it follows the wall time the editor takes to load).
+- `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12722, game_s 795, units [4, 39, 40],
+  alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2871, joiner 2877).
 - Not run: the POSIX builds, `gates.sh --legacy`.
