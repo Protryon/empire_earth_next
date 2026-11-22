@@ -38,71 +38,11 @@
 #include "rust/game/screens.h"   // EE_SCREENS_MAIN_MULTI_PLAYER (ee_screens menus.rs)
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/game/gamecpp.h"
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 void CreatePlaneModels();                   // 0x1030ab (EEEffect.cpp)
-
-// The four file statics (0x529ad0, 0x529ac0, 0x529ab0, 0x529aa0)
-// chain at 0x52cac8 (wrapper)
-//   object 0x929ad0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-static UString sDash("-");
-
-// chain at 0x52cafa (wrapper)
-//   object 0x929ac0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-static UString sTab("/t");
-
-// chain at 0x52cb2c (wrapper)
-//   object 0x929ab0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-static UString sQuote("\"");
-
-// chain at 0x52cb5e (wrapper)
-//   object 0x929aa0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-static UString sText("Text-");
-
-
-// The balancer command's target: compiled away in the shipping build (an empty cdecl body ICF-folded into 0xe123d,
-// no marker) (provisional name).
-void EERunBalancer(const UString& inFile)
-{
-}
-
-// "loadgame": starts a saved game on a local server, or falls back to a client, then opens the main menu
-long EELoadGameFromCommandLine(const UString& inName)
-{
-    FSFileSpec* theFile = NULL;
-    if (gCommunications != NULL) {
-        delete gCommunications;
-        // Cleared so the second delete below does not free it again.
-        gCommunications = NULL;
-    }
-    long theResult = EEOpenSaveGameFile(inName, "Saved Games\\", theFile);
-    if (theResult == kErrorOK) {
-        gGameOptions.mLock->WriteLock();
-        gGameOptions.SetDefaults();
-        gGameOptions.mLoadType = 2;
-        { UWideString theTemp((const char*)theFile->GetFile()); gGameOptions.mMapType = theTemp; }
-        gGameOptions.mLock->WriteUnlock();
-        if (theFile != NULL)
-            delete theFile;
-        gGameStateIsMultiplayer = false;
-        if (gCommunications != NULL)
-            delete gCommunications;
-        gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
-        static_cast<EEServer*>(gCommunications)->StartThreads();
-        static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0;
-        gGameStateLoadType = 2;
-        static_cast<EEServer*>(gCommunications)->StopPing();
-        static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-        gUIManager->mInScenarioEditor = false;
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
-    } else {
-        gCommunications = new EEClient;
-        static_cast<EEClient*>(gCommunications)->StartThreads();
-    }
-    gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
-    return 0;
-}
 
 // Loads one saved game or scenario from a directory and saves it again under a new name; returns the first error
 long EEConvertGameFile(const UString& inDirectory, const UString& inFile, const UString& inNewFile)
@@ -206,114 +146,83 @@ void EEUpdateSavedGames()
     gWorld.mLock->WriteUnlock();
 }
 
-// Returns whether an argument starts with a command (case-insensitively: the argument is lowered first)
-bool EEIsCommand(UString inArgument, UString inCommand)
-{
-    bool theResult = false;
-    unsigned long theLength = inCommand.GetLength();
-    UString theStart;
-    inArgument.ToLower();
-    theStart = inArgument.GetSubstring(0, theLength);
-    if (theStart.Equals(inCommand, theLength))
-        theResult = true;
-    return theResult;
-}
-
-// "hostgame": hosts a multiplayer game with the given game name as the given player
-bool EEHostGameFromCommandLine(const UString& inPlayerName, const UString& inGameName)
-{
-    if (gCommunications != NULL) {
-        delete gCommunications;
-        gCommunications = NULL;
-    }
-    gCommunications = new EEClient;
-    static_cast<EEClient*>(gCommunications)->StartThreads();
-    gPlayerName = UWideString((const char*)inPlayerName);
-    gGamePreferences.mSettings.mHostGameName = UWideString((const char*)inGameName);
-    gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
-    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_MULTI_PLAYER);
-    theEvent->ProcessEvent(gUIManager->GetFormByID(kFormMainMenu), NULL);
-    theEvent->Dereference();
-    EEAction* theAction = new EEAJoinOrHostAGame(0, UWideString((const char*)inPlayerName),
-                                                 UWideString((const char*)inGameName));
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    return true;
-}
-
-// "joinbyip": joins the game at an address as the given player, trying a given number of times
-bool EEJoinByIPFromCommandLine(const UString& inPlayerName, const UString& inAddress, long inTrys)
-{
-    if (gCommunications != NULL) {
-        delete gCommunications;
-        gCommunications = NULL;
-    }
-    gCommunications = new EEClient;
-    static_cast<EEClient*>(gCommunications)->SetMaxNumConnectionTrys(inTrys);
-    static_cast<EEClient*>(gCommunications)->StartThreads();
-    gPlayerName = UWideString((const char*)inPlayerName);
-    gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
-    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_MULTI_PLAYER);
-    theEvent->ProcessEvent(gUIManager->GetFormByID(kFormMainMenu), NULL);
-    theEvent->Dereference();
-    EEAction* theAction = new EEAJoinOrHostAGame(2, UWideString((const char*)inPlayerName),
-                                                 UWideString((const char*)inAddress));
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    return true;
-}
-
 // Runs the command-line commands after startup; without one, starts a client and opens the main menu. Returns
-// false when the game should quit (update_saved_games)
+// false when the game should quit (update_saved_games) (ee_game gamecpp entry.rs; the original's four file statics
+// "-", "/t", "\"", "Text-" were its tokenizer's)
 bool EEParseCommandLine(const char* inCommandLine)
 {
-    std::vector<UString> theArguments;
-    std::vector<UString> theTokens;
-    UString theLine(inCommandLine);
-    UString theArgument;
-    bool theResult = true;
-    bool theNoCommand = true;
-    if (theLine.NestedTokenize(sDash, UString("\"\""), theArguments)) {
-        for (std::vector<UString>::iterator theIt = theArguments.begin(); theIt != theArguments.end(); theIt++) {
-            theArgument = *theIt;
-            if (EEIsCommand(theArgument, UString("hostgame"))) {
-                theArgument.Tokenize(sQuote, theTokens);
-                if (theTokens.size() == 4) {
-                    theNoCommand = false;
-                    EEHostGameFromCommandLine(theTokens[1], theTokens[3]);
-                }
-            } else if (EEIsCommand(theArgument, UString("joinbyip"))) {
-                theArgument.Tokenize(sQuote, theTokens);
-                if (theTokens.size() == 6) {
-                    theNoCommand = false;
-                    EEJoinByIPFromCommandLine(theTokens[1], theTokens[3], atoi(theTokens[5]));
-                }
-            } else if (EEIsCommand(theArgument, UString("update_saved_games"))) {
-                EEUpdateSavedGames();
-                theResult = false;
-                theNoCommand = false;
-            } else if (EEIsCommand(theArgument, UString("loadgame"))) {
-                theArgument.Tokenize(sQuote, theTokens);
-                if (theTokens.size() == 2) {
-                    EELoadGameFromCommandLine(theTokens[1]);
-                    theNoCommand = false;
-                }
-            } else if (EEIsCommand(theArgument, UString("balancer"))) {
-                theArgument.Tokenize(sQuote, theTokens);
-                if (theTokens.size() == 2) {
-                    EERunBalancer(theTokens[1]);
-                    theNoCommand = false;
-                }
-            }
-        }
-    }
-    if (theNoCommand == true) {
-        if (gCommunications != NULL)
-            delete gCommunications;
-        gCommunications = new EEClient;
-        static_cast<EEClient*>(gCommunications)->StartThreads();
-        gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
-    }
-    return theResult;
+    return ee_gamecpp_entry_parse_command_line(inCommandLine);
 }
 
+// ------------------------------------------------------------------------- the command line's C++ (gamecpp entry.rs)
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define SPEC ((FSFileSpec*)p)
+#define SERVER static_cast<EEServer*>(gCommunications)
+
+// The command line's C++ calls and members (EeGameCpp's lane E section; Empire Earth.cpp's EECore9OpE default): one
+// statement each; the end of the chain
+int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::EntryNewClient: gCommunications = new EEClient;
+        break;
+    case O::EntryClientSetTries: static_cast<EEClient*>(gCommunications)->SetMaxNumConnectionTrys((long)a[0]);
+        break;
+    case O::EntryClientStartThreads: static_cast<EEClient*>(gCommunications)->StartThreads();
+        break;
+    case O::EntryDeleteCommunicationsKeep: delete gCommunications;
+        break;
+    case O::EntryNullCommunications: gCommunications = NULL;
+        break;
+    case O::EntrySetPlayerName: gPlayerName = UWideString((const char*)a[0]);
+        break;
+    case O::EntrySetHostGameName: gGamePreferences.mSettings.mHostGameName = UWideString((const char*)a[0]);
+        break;
+    case O::EntryPushMainMenu: gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
+        break;
+    case O::EntryNewMultiPlayerEvent: return P64(EECreateScreenEvent(EE_SCREENS_MAIN_MULTI_PLAYER));
+    case O::EntryProcessOnMainMenu: ((UIEvent*)p)->ProcessEvent(gUIManager->GetFormByID(kFormMainMenu), NULL);
+        break;
+    case O::EntryDereferenceEvent: ((UIEvent*)p)->Dereference();
+        break;
+    case O::EntryNewJoinOrHost: return P64(static_cast<EEAction*>(new EEAJoinOrHostAGame((long)a[0], UWideString((const char*)a[1]), UWideString((const char*)a[2]))));
+    case O::EntryPostAction: gUserInterface->PostAction((EEAction*)p);
+        break;
+    case O::EntryDereferenceAction: ((EEAction*)p)->Dereference();
+        break;
+    case O::EntryOpenSavedGame: return EEOpenSaveGameFile(UString((const char*)a[0]), "Saved Games\\", *(FSFileSpec**)a[1]);
+    case O::EntryOptionsWriteLock: gGameOptions.mLock->WriteLock();
+        break;
+    case O::EntryOptionsWriteUnlock: gGameOptions.mLock->WriteUnlock();
+        break;
+    case O::EntryOptionsLoadType: gGameOptions.mLoadType = (long)a[0];
+        break;
+    case O::EntryOptionsMapTypeOf: gGameOptions.mMapType = UWideString((const char*)SPEC->GetFile());
+        break;
+    case O::EntryNotMultiplayer: gGameStateIsMultiplayer = false;
+        break;
+    case O::EntryNewServer: gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
+        break;
+    case O::EntryServerStartThreads: SERVER->StartThreads();
+        break;
+    case O::EntryServerNoLoadResponses: SERVER->mNumLoadResponses = 0;
+        break;
+    case O::EntrySetGameStateLoadType: gGameStateLoadType = (long)a[0];
+        break;
+    case O::EntryServerStopPing: SERVER->StopPing();
+        break;
+    case O::EntryServerLoadState: SERVER->mLoadState = (long)a[0];
+        break;
+    case O::EntryNotInEditor: gUIManager->mInScenarioEditor = false;
+        break;
+    case O::EntryStartLoadingInput: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
+        break;
+    case O::EntryUpdateSavedGames: EEUpdateSavedGames();
+        break;
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+        break;
+    }
+    return 0;
+}

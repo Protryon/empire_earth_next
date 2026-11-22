@@ -17,6 +17,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
+#include "rust/game/gamecpp.h"
 
 // chain at 0x521191 (wrapper)
 //   object 0x9297e0  ctor UMemoryPool<EETUnitList>::UMemoryPool 0x121734  dtor (unguarded: a plain global) 0x1211b1
@@ -64,100 +65,99 @@ void EETile::FreeUnitNode(RTSTileUnitNode* inNode)
 // Returns the tile's base checksum plus the unit ids of its building images
 long EETile::GetChecksum(unsigned long inPlayerCount) const
 {
-    long theSum = 0;
-    for (unsigned long i = 0; i < this->GetNumDoppelgangers(); i++)
-        theSum += this->mDoppelgangers[i]->mUnit->mUnitID;
-    return RTSTile::GetChecksum(inPlayerCount) + theSum;
+    return ee_gamecpp_tile_checksum(this, inPlayerCount);
 }
 
 // Reads the tile and its building images from the saved game; returns the image count's read result
 long EETile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                   unsigned long inPlayerCount)
 {
-    RTSTile::Load(inMajorVersion, inMinorVersion, inFile, inPlayerCount);
-    unsigned long theCount;
-    long theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEDoppelganger* theDoppelganger = gDoppelgangerManager.Load(inMajorVersion, inMinorVersion, inFile);
-            if (theDoppelganger)
-                theDoppelganger->mTile = this;
-        }
-    }
-    return theResult;
+    return ee_gamecpp_tile_load(this, inMajorVersion, inMinorVersion, &inFile, inPlayerCount);
 }
 
 // Writes the tile's building image unit ids, then its base state, to the out-of-sync dump
 void EETile::Dump(FILE* inFile, unsigned long inPlayerCount) const
 {
-    for (unsigned long i = 0; i < this->GetNumDoppelgangers(); i++)
-        fprintf(inFile, "Doppelganger %ld has unit id of %ld\n", i,this->mDoppelgangers[i]->mUnit->mUnitID);
-    RTSTile::Dump(inFile, inPlayerCount);
+    ee_gamecpp_tile_dump(this, inFile, inPlayerCount);
 }
 
 // Removes a building image from the tile, if it is there
 void EETile::RemoveDoppelganger(EEDoppelganger* inDoppelganger)
 {
-    std::vector<EEDoppelganger*>::iterator theIterator = std::find(this->mDoppelgangers.begin(), this->mDoppelgangers.end(), inDoppelganger);
-    if (theIterator != this->mDoppelgangers.end())
-        this->mDoppelgangers.erase(theIterator);
+    ee_gamecpp_tile_remove_image(this, inDoppelganger);
 }
 
 // Writes the tile and its valid building images that belong to this tile (or to none) to the saved game;
 // returns the first error
-// NEAR: inline budget: the original calls begin() + i out of line for the first three mU18[i], inlines the last
 long EETile::Save(FSFile& outFile, unsigned long inPlayerCount)
 {
-    std::vector<EEDoppelganger*> theDoppelgangers;
-    long theResult = RTSTile::Save(outFile, inPlayerCount);
-    if (theResult == 0) {
-        for (unsigned long i = 0; i < this->mDoppelgangers.size(); i++) {
-            if (this->mDoppelgangers[i]->GetIsValid()) {
-                if (this->mDoppelgangers[i]->GetTile() == NULL || this->mDoppelgangers[i]->GetTile() == this)
-                    theDoppelgangers.push_back(this->mDoppelgangers[i]);
-            }
-        }
-        unsigned long theCount = theDoppelgangers.size();
-        theResult = outFile.Write(theCount);
-        if (theResult == 0) {
-            for (unsigned long j = 0; j < theDoppelgangers.size() && theResult == 0; j++)
-                theResult = theDoppelgangers[j]->Save(0, 0, outFile);
-        }
-    }
-    return theResult;
+    return ee_gamecpp_tile_save(this, &outFile, inPlayerCount);
 }
 
 // Sets the tile's terrain type and its space flag; a tile below sea level becomes deep water when deep,
 // else shallow water unless three of its corners are dry
-// NEAR: register/slot allocation: the original reloads inLocation after the first UMFloor (asm) corner
 void EETile::SetTerrainType(long inTerrainType, const EETileLocation& inLocation, RTSMap* inMap)
 {
-    GETerrainMesh& theMesh = dynamic_cast<EEMap*>(inMap)->mTerrainMesh;
-    long theX = inLocation.mX;
-    long theY = inLocation.mY;
-    theMesh.SetIsSpace(theX, theY, inTerrainType == kTerrainSpace);
-    if (this->GetHeight() < 0.0f) {
-        if (this->GetHeight() < -(gMapTileSize * 0.75f))
-            inTerrainType = kTerrainDeepWater;
-        else {
-            long theCount = 0;
-            if (theMesh.GetIsValidPoint(theX, theY))
-                theCount += UMFloor(theMesh.GetZ(theX, theY) >= 0.0f ? 1 : 0);
-            if (theMesh.GetIsValidPoint(theX + 1, theY))
-                theCount += UMFloor(theMesh.GetZ(theX + 1, theY) >= 0.0f ? 1 : 0);
-            if (theMesh.GetIsValidPoint(theX, theY + 1))
-                theCount += UMFloor(theMesh.GetZ(theX, theY + 1) >= 0.0f ? 1 : 0);
-            if (theMesh.GetIsValidPoint(theX + 1, theY + 1))
-                theCount += UMFloor(theMesh.GetZ(theX + 1, theY + 1) >= 0.0f ? 1 : 0);
-            if (theCount < 3)
-                inTerrainType = kTerrainShallowWater;
-        }
-    }
-    this->mTerrainType = inTerrainType;
+    ee_gamecpp_tile_set_terrain_type(this, inTerrainType, inLocation.mX, inLocation.mY, inMap);
 }
 
 // Sizes the tile unit list pool (chunk size and chunk limit)
 void EETile::SetUnitListPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
 {
     gTileUnitListPool.SetSize(inChunkSize, inMaxChunks, 1);
+}
+
+// ------------------------------------------------------------------------- round 9, lane B: the tile's bodies' C++
+
+// the calamity hosts' cases (EEContagionManager.cpp), then lane C's
+int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10 && kTerrainSpace == 12, "gamecpp tile.rs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+
+// The C++ calls and members of the tile's bodies in Rust (gamecpp tile.rs; EeGameCpp's lane B section, after
+// EEMiniMap.cpp's EECore9OpB3): one statement each
+int64_t EECore9OpB4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TlRtsChecksum: return ((const EETile*)p)->RTSTile::GetChecksum((unsigned long)a[0]);
+    case O::TlRtsLoad: ((EETile*)p)->RTSTile::Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2], (unsigned long)a[3]);
+        break;
+    case O::TlRtsSave: return ((EETile*)p)->RTSTile::Save(*(FSFile*)a[0], (unsigned long)a[1]);
+    case O::TlRtsDump: ((const EETile*)p)->RTSTile::Dump((FILE*)a[0], (unsigned long)a[1]);
+        break;
+    case O::TlLoadImage: return P64(gDoppelgangerManager.Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]));
+    case O::TlImageSetTile: ((EEDoppelganger*)p)->mTile = (EETile*)a[0];
+        break;
+    case O::TlImageValid: return ((EEDoppelganger*)p)->GetIsValid();
+    case O::TlImageTileNull: return ((EEDoppelganger*)p)->GetTile() == NULL;
+    case O::TlImageSave: return ((EEDoppelganger*)p)->Save(0, 0, *(FSFile*)a[0]);
+    case O::TlEraseImage: ((EETile*)p)->mDoppelgangers.erase(((EETile*)p)->mDoppelgangers.begin() + a[0]);
+        break;
+    case O::TlDumpImage: fprintf((FILE*)p, "Doppelganger %ld has unit id of %ld\n", (unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::TlWriteUlong: return ((FSFile*)p)->Write((unsigned long)a[0]);
+    case O::TlDynMap: return P64(dynamic_cast<EEMap*>((RTSMap*)p));
+    case O::TlSetIsSpace: ((EEMap*)p)->mTerrainMesh.SetIsSpace((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
+        break;
+    case O::TlValidPoint: return ((EEMap*)p)->mTerrainMesh.GetIsValidPoint((unsigned long)a[0], (unsigned long)a[1]);
+    case O::TlSetTerrainTypeField: ((EETile*)p)->mTerrainType = (long)a[0];
+        break;
+    default: return EECore9OpB5(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpB4F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TlHeight: return ((EETile*)p)->GetHeight();
+    case O::TlMapTileSize: return gMapTileSize;
+    case O::TlMeshZ: return ((EEMap*)p)->mTerrainMesh.GetZ((long)a[0], (long)a[1]);
+    default: return EECore9OpB5F(inOp, p, a, f);
+    }
 }

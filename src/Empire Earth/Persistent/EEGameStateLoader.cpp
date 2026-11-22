@@ -9,6 +9,7 @@
 #include <deque>
 #include <map>
 #include <vector>
+#include <utility>
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/GEColor.h"
@@ -40,6 +41,7 @@
 #include "ee/EESaveLoad.h"
 #include "ee/EEGameStateLoader.h"
 #include "ee/EEPersistentTag.h"
+#include "rust/game/gamecpp.h"
 
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
 
@@ -74,308 +76,73 @@ bool GetIsLoadingScenario()
     return sLoadingScenario;
 }
 
-// Reads every saved chunk in tag order into the game state (checksum, seed, effects, camera, map, players, world, ...)
-// while advancing the load progress bar; returns 3 for an unknown tag or a chunk of the wrong type
-long EEGameStateLoader::RestorePersistents(std::vector<long>& inTags, FSFile& inFile)
-{
-    FSPersistent* thePersistent = NULL;
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < inTags.size() && theResult == kErrorOK; i++) {
-        gUserInterface->SetLoadProgress((float)i / inTags.size() * 0.4f + 0.1f);
-        theResult = this->ReadPersistent(inFile, thePersistent);
-        if (theResult != kErrorOK)
-            continue;
-        switch (thePersistent->GetTagID()) {
-        case kPersistentChecksum: {
-            EEPChecksum* theChecksum = dynamic_cast<EEPChecksum*>(thePersistent);
-            if (theChecksum == NULL) {
-                theResult = 3;
-                break;
-            }
-            this->mState->mChecksum = *theChecksum;
-            break;
-        }
-        case kPersistentSeed: {
-            EEPTGeneric<unsigned long>* theValue = dynamic_cast<EEPTGeneric<unsigned long>*>(thePersistent);
-            if (theValue == NULL) {
-                theResult = 3;
-                break;
-            }
-            this->mState->mRandomSeed = theValue->mValue;
-            break;
-        }
-        case kPersistentEffects: {
-            EEPTPRestorable<EEEffectManager>* theEffects =
-                dynamic_cast<EEPTPRestorable<EEEffectManager>*>(thePersistent);
-            if (theEffects == NULL) {
-                theResult = 3;
-                break;
-            }
-            EEEffectManager* theManager = theEffects->mObject;
-            this->mState->SetEffectManager(theManager);
-            this->mState->mRestorables.push_back(theManager);
-            theEffects->mOwned = false;
-            break;
-        }
-        case kPersistentCamera: {
-            EEPTRestorable<GE3DPoint>* thePoint = dynamic_cast<EEPTRestorable<GE3DPoint>*>(thePersistent);
-            if (thePoint == NULL) {
-                theResult = 3;
-                break;
-            }
-            GE3DPoint theCenter = thePoint->mValue;
-            if (this->mState->mMinorVersion > 0x42)
-                this->mState->mMapCenter = theCenter;
-            else
-                this->mState->SetDefaultMapCenter();
-            break;
-        }
-        case kPersistentMap: {
-            EEPTPRestorable<EEMap>* theMap = dynamic_cast<EEPTPRestorable<EEMap>*>(thePersistent);
-            if (theMap == NULL) {
-                theResult = 3;
-                break;
-            }
-            this->mState->SetMap(theMap->mObject);
-            theMap->mOwned = false;
-            break;
-        }
-        case kPersistentPlayers: {
-            EEPPlayerHelper* thePlayers = dynamic_cast<EEPPlayerHelper*>(thePersistent);
-            if (thePlayers == NULL) {
-                theResult = 3;
-                break;
-            }
-            this->RestorePlayers(thePlayers);
-            break;
-        }
-        case kPersistentWorld: {
-            EEPWorldHelper* theWorld = dynamic_cast<EEPWorldHelper*>(thePersistent);
-            if (theWorld == NULL) {
-                theResult = 3;
-                break;
-            }
-            theWorld->Restore(*this->mState);
-            break;
-        }
-        case kPersistentScenario: {
-            EEPTPRestorable<EEScenarioManager>* theScenario =
-                dynamic_cast<EEPTPRestorable<EEScenarioManager>*>(thePersistent);
-            if (theScenario == NULL) {
-                theResult = 3;
-                break;
-            }
-            this->mState->SetScenarioManager(theScenario->mObject);
-            theScenario->mOwned = false;
-            break;
-        }
-        case kPersistentCalamities: {
-            EEPCalamityHelper* theCalamities = dynamic_cast<EEPCalamityHelper*>(thePersistent);
-            if (theCalamities == NULL) {
-                theResult = 3;
-                break;
-            }
-            this->mState->SetCalamityHelper(theCalamities);
-            this->mState->mRestorables.push_back(theCalamities);
-            thePersistent = NULL;
-            break;
-        }
-        case kPersistentEnvironment: {
-            EEPTPRestorable<EEEnvironmentManager>* theEnvironment =
-                dynamic_cast<EEPTPRestorable<EEEnvironmentManager>*>(thePersistent);
-            if (theEnvironment == NULL) {
-                theResult = 3;
-                break;
-            }
-            EEEnvironmentManager* theManager = theEnvironment->mObject;
-            this->mState->SetEnvironmentManager(theManager);
-            this->mState->mRestorables.push_back(theManager);
-            theEnvironment->mOwned = false;
-            break;
-        }
-        case kPersistentMultiplayer:
-            break;
-        default:
-            theResult = 3;
-            break;
-        }
-        delete thePersistent;
-        thePersistent = NULL;
-    }
-    return theResult;
-}
+// The loader's bodies are ee_game gamecpp persist_save.rs (game core lane, round 9): Load, LoadGame, the chunks'
+// restore in tag order, the players' move into the game state, one chunk read out of a file and the map's default
+// centre; the methods forward, and their C++ calls and members are EECore9OpC's cases (the scenario flag's here).
 
 // Loads a saved game or scenario file into memory and restores the game state from it; returns whether it worked
 bool EEGameStateLoader::Load(FSFile& inFile)
 {
-    FSMemoryFile theMemory(1000, true, 1);
-    UString theName;
-    bool theResult = false;
-    theName = GetSaveTextName(inFile.GetFile(), false);
-    sLoadingScenario = EEIsScenarioFile(inFile.GetFile());
-    if ((inFile.GetIsOpen() || inFile.Open(kFileAccessRead) == kErrorOK) && theMemory.Load(inFile) == kErrorOK) {
-        inFile.Close();
-        theResult = this->LoadGame(theMemory, theMemory);
-        theMemory.Close();
-    }
-    sLoadingScenario = false;
-    return theResult;
+    return ee_gamecpp_loader_load(this->mState, &inFile);
 }
 
 // Restores the game state from a saved header and its chunks; on failure reports "Load game file is corrupt."
 // and clears the state; returns whether it worked
 bool EEGameStateLoader::LoadGame(FSFile& inHeaderFile, FSFile& inFile)
 {
-    std::vector<long> theTags;
-    EEPSaveGameHeader theHeader;
-    bool theResult = false;
-    this->mState->WriteLock();
-    this->mState->Init();
-    if (gUIManager->mInScenarioEditor)
-        this->mState->mInScenarioEditor = true;
-    if (theHeader.Load(kSaveGameMajorVersion, kSaveGameMinorVersion, inHeaderFile) == kErrorOK) {
-        this->mState->mMajorVersion = theHeader.mMajorVersion;
-        this->mState->mMinorVersion = theHeader.mMinorVersion;
-        this->mState->mGameOptions = theHeader.mGameOptions;
-        theTags = theHeader.mChunkTypes;
-        // port (decision D6): the chunks of a save older than 0.255 hold Windows-1252 text, converted as it loads
-        USetLegacyTextLoad(!EESaveTextIsUtf8(theHeader.mMajorVersion, theHeader.mMinorVersion));
-        if (this->RestorePersistents(theTags, inFile) == kErrorOK)
-            theResult = true;
-        this->mState->FinishLoad(theHeader.mMajorVersion, theHeader.mMinorVersion);
-        USetLegacyTextLoad(false);
-    }
-    if (!theResult) {
-        EEReportLoadFailure("Load game file is corrupt.", false, NULL);
-        this->mState->Clear();
-        // port: the failed load's teardown done (EE-SIM ends its wait for the game with it: a clean failure)
-        ESDebugOut("EE load failure: Load game file is corrupt.\n");
-    }
-    this->mState->mIsLoadedGame = theResult;
-    this->mState->WriteUnlock();
-    return theResult;
+    return ee_gamecpp_loader_load_game(this->mState, &inHeaderFile, &inFile);
 }
 
 // Reads one chunk (by tag) out of a saved game file without loading the rest; returns the read error
 long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPersistent)
 {
-    EEPSaveGameHeader theHeader;
-    FSMemoryFile theMemory(1000, true, 1);
-    std::vector<long> theTags;
-    FSFileSpec* theFile = NULL;
-    long theResult = gDataPath->FindFile(inFile, theFile);
-    if (theResult == kErrorOK) {
-        theResult = theFile->Open(kFileAccessRead);
-        if (theResult == kErrorOK) {
-            theMemory.Load(*theFile);
-            theResult = theHeader.Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theMemory);
-            theTags = theHeader.mChunkTypes;
-            // port (decision D6): a chunk of a save older than 0.255 holds Windows-1252 text
-            USetLegacyTextLoad(theResult == kErrorOK && !EESaveTextIsUtf8(theHeader.mMajorVersion, theHeader.mMinorVersion));
-            for (unsigned long i = 0; i < theTags.size(); i++) {
-                FSChunk theChunk;
-                if (theTags[i] == inTagID) {
-                    theResult = theChunk.LoadChunkFromFile(theMemory);
-                    if (theResult == kErrorOK)
-                        theResult = theChunk.LoadPersistentFromChunk(outPersistent);
-                    break;
-                }
-                theChunk.SkipChunk(theMemory);
-            }
-            USetLegacyTextLoad(false);
-        }
-        delete theFile;
-    }
-    return theResult;
-}
-
-// Reads the next chunk of a saved game and creates its persistent object; returns the read error
-long EEGameStateLoader::ReadPersistent(FSFile& inFile, FSPersistent*& outPersistent)
-{
-    FSChunk theChunk;
-    outPersistent = NULL;
-    long theResult = theChunk.LoadChunkFromFile(inFile);
-    if (theResult == kErrorOK)
-        theResult = theChunk.LoadPersistentFromChunk(outPersistent);
-    return theResult;
-}
-
-// Moves the loaded players into the game state (extra players beyond the slot count become closed loaded players)
-// and, when hosting, gives the server slot to the local player; returns the player helper's error
-long EEGameStateLoader::RestorePlayers(EEPPlayerHelper* inHelper)
-{
-    std::vector<EEPlayer*> thePlayers;
-    EEGameOptionsPlayer theOptions;
-    long theLocal;
-    long theResult = inHelper->GetLocalPlayerIndex(theLocal);
-    if (theResult == kErrorOK) {
-        this->mState->mLocalPlayer = theLocal;
-        theResult = inHelper->GetPlayers(thePlayers);
-        if (this->mState->mInScenarioEditor == true) {
-            unsigned long theCount = thePlayers.size();
-            this->mState->mPlayers.resize(theCount);
-            this->mState->mNumPlayersMade = inHelper->mMaxPlayers;
-        } else {
-            unsigned long theCount = inHelper->mMaxPlayers;
-            this->mState->mPlayers.resize(theCount);
-            this->mState->mNumPlayersMade = theCount;
-        }
-        if (theResult == kErrorOK) {
-            for (unsigned long i = 0; i < thePlayers.size(); i++) {
-                EEPlayer* thePlayer = thePlayers[i];
-                if (this->mState->mInScenarioEditor == false && i >= inHelper->mMaxPlayers) {
-                    this->mState->mLoadedPlayers.push_back(thePlayer);
-                    for (unsigned long j = 0; j < this->mState->GetNumPlayers(); j++)
-                        this->mState->GetPlayer(j)->RemoveAlly(thePlayer);
-                    theOptions = this->mState->mGameOptions.mPlayers[i - 1];
-                    theOptions.mType = 4;
-                    this->mState->mGameOptions.mPlayers[i - 1] = theOptions;
-                } else {
-                    *(this->mState->mPlayers.begin() + i) = thePlayer;
-                }
-            }
-        }
-    }
-    // Only with the players read: a failed read left the vector empty and theLocal unset.
-    if (theResult == kErrorOK && gCommunications != NULL && gCommunications->IsServer()) {
-        if (thePlayers.size() > 1)
-            thePlayers[1]->mSlot = kSlotNone;
-        if ((unsigned long)theLocal < thePlayers.size())
-            thePlayers[theLocal]->mSlot = kSlotServer;
-    }
-    inHelper->Fn157269(this->mState);
-    return theResult;
+    return ee_gamecpp_ps_load_persistent(&inFile, inTagID, reinterpret_cast<void**>(&outPersistent));
 }
 
 // Centres the camera on the middle of the map, if there is one
 void EEGameState::SetDefaultMapCenter()
 {
-    if (this->mMap == NULL)
-        return;
-    float theCenter = (float)(this->mMap->mL195610 + this->mMap->mL195614) * 0.5f;
-    theCenter += 0.5f;
-    this->mMapCenter = GE3DPoint(theCenter, theCenter, 0.0f);
+    ee_gamecpp_st_default_map_center(this);
 }
 
 // Replaces the game state's effect manager, deleting the old one
 void EEGameState::SetEffectManager(EEEffectManager* inManager)
 {
-    delete this->mEffectManager;
-    this->mEffectManager = inManager;
+    delete std::exchange(this->mEffectManager, inManager);
 }
 
 // Replaces the game state's map, deleting the old one
 void EEGameState::SetMap(EEMap* inMap)
 {
-    delete this->mMap;
-    this->mMap = inMap;
+    delete std::exchange(this->mMap, inMap);
 }
 
 // Replaces the game state's scenario manager, deleting the old one
 void EEGameState::SetScenarioManager(EEScenarioManager* inManager)
 {
-    delete this->mScenarioManager;
-    this->mScenarioManager = inManager;
+    delete std::exchange(this->mScenarioManager, inManager);
 }
 
-// TODO 0x54aa42 (360 bytes, vector<EETeam>::operator=: no user found in this unit yet)
+// ------------------------------------------------------------------------- the loader's C++ (gamecpp persist_save.rs)
+
+int64_t EEPHelpersOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEPHelpersOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
+int64_t EEPLoaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
+        break;
+    case O::PsClearLoadingScenario: sLoadingScenario = false;
+        break;
+    default: return EEPHelpersOp(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EEPHelpersOpF(inOp, p, a, f);
+}

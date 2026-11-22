@@ -42,6 +42,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
+#include "rust/game/gamecpp.h"
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
@@ -354,7 +355,7 @@ bool EEServer::IsServer()
     return true;
 }
 
-// ---- the host of ee_netmsg session.rs: the server's and the client's world calls, one operation each ----
+// ---- the host of ee_netmsg session.rs: ee_game gamecpp server.rs (ee_gamecpp_session_host) over the cases below ----
 
 // the forwarder's frame: the communications object, the bodies' two lobby slot registers and a join request's
 // player and version, protocol 0 for the slot info
@@ -380,472 +381,6 @@ static EEGameOptionsPlayer& EESessionRegister(EESessionFrame* f, long long inReg
     return inRegister == EE_NETMSG_SESS_R_IN ? const_cast<EEGameOptionsPlayer&>(*f->mIn) : f->mRegisters[inRegister];
 }
 
-static long long EESessionPlayerField(EEGameOptionsPlayer& p, long long inField, bool inSet, long long inValue)
-{
-    float thePing;
-    switch (inField) {
-    case EE_NETMSG_SESS_FIELD_TYPE: if (inSet) p.mType = (unsigned long)inValue; return (long long)p.mType;
-    case EE_NETMSG_SESS_FIELD_LOADED_TYPE: if (inSet) p.mLoadedType = (long)inValue; return p.mLoadedType;
-    case EE_NETMSG_SESS_FIELD_PING:   // the float's bits
-        if (inSet) { uint32_t theBits = (uint32_t)inValue; memcpy(&p.mPing, &theBits, 4); }
-        thePing = p.mPing;
-        { uint32_t theBits; memcpy(&theBits, &thePing, 4); return theBits; }
-    case EE_NETMSG_SESS_FIELD_SLOT: if (inSet) p.mSlot = (unsigned long)inValue; return (long long)p.mSlot;
-    case EE_NETMSG_SESS_FIELD_COLOR: if (inSet) p.mColor = (unsigned long)inValue; return (long long)p.mColor;
-    case EE_NETMSG_SESS_FIELD_TEAM: if (inSet) p.mTeam = (unsigned long)inValue; return (long long)p.mTeam;
-    case EE_NETMSG_SESS_FIELD_CITIZENS: if (inSet) p.mStartingCitizens = (unsigned long)inValue; return (long long)p.mStartingCitizens;
-    case EE_NETMSG_SESS_FIELD_TRANSFER_ID: if (inSet) p.mTransferID = (unsigned long)inValue; return (long long)p.mTransferID;
-    case EE_NETMSG_SESS_FIELD_LOCAL: if (inSet) p.mIsLocal = inValue != 0; return p.mIsLocal;
-    case EE_NETMSG_SESS_FIELD_READY: if (inSet) p.mIsReady = inValue != 0; return p.mIsReady;
-    case EE_NETMSG_SESS_FIELD_B36: if (inSet) p.mB36 = inValue != 0; return p.mB36;
-    default: if (inSet) p.mEngine = (unsigned long)inValue; return (long long)p.mEngine;   // port: the engine
-    }
-}
-
-// the server's and client's members (bool and byte members as their values)
-static long long EESessionMember(EESessionFrame* f, long long inMember, long long inIndex, bool inSet, long long v)
-{
-    EEServer* s = static_cast<EEServer*>(f->mComms);
-    EEClient* c = static_cast<EEClient*>(f->mComms);
-#define EE_SESSION_MEMBER(x, T) do { if (inSet) x = (T)v; return (long long)x; } while (0)
-    switch (inMember) {
-    case EE_NETMSG_SESS_SELF_HAS_LEFT:
-        if (f->mServer) EE_SESSION_MEMBER(s->mHasLeftGame, bool); else EE_SESSION_MEMBER(c->mHasLeftGame, bool);
-    case EE_NETMSG_SESS_SELF_MIGRATING:
-        if (f->mServer) EE_SESSION_MEMBER(s->mIsMigrating, bool); else EE_SESSION_MEMBER(c->mIsMigrating, bool);
-    case EE_NETMSG_SESS_SELF_FAST_ID:
-        if (f->mServer) EE_SESSION_MEMBER(s->mFastSelectionID, unsigned char); else EE_SESSION_MEMBER(c->mFastSelectionID, unsigned char);
-    case EE_NETMSG_SESS_SELF_EXECUTING:
-        if (f->mServer) EE_SESSION_MEMBER(s->mIsExecutingSelection, bool); else EE_SESSION_MEMBER(c->mIsExecutingSelection, bool);
-    case EE_NETMSG_SESS_SELF_LOAD_STATE: EE_SESSION_MEMBER(s->mLoadState, unsigned char);
-    case EE_NETMSG_SESS_SELF_DROPPED_LOADERS: EE_SESSION_MEMBER(s->mNumDroppedLoaders, unsigned char);
-    case EE_NETMSG_SESS_SELF_VOTE_EDICT: EE_SESSION_MEMBER(s->mVoteEdict, unsigned short);
-    case EE_NETMSG_SESS_SELF_YES_VOTES: EE_SESSION_MEMBER(s->mYesVotes, unsigned short);
-    case EE_NETMSG_SESS_SELF_NO_VOTES: EE_SESSION_MEMBER(s->mNoVotes, unsigned short);
-    case EE_NETMSG_SESS_SELF_NUM_VOTES: EE_SESSION_MEMBER(s->mNumVotes, unsigned char);
-    case EE_NETMSG_SESS_SELF_VOTED:
-        if (inSet && inIndex < 0) {
-            for (long k = 0; k < 256; k++)
-                s->mVoted[k] = false;
-            return 0;
-        }
-        EE_SESSION_MEMBER(s->mVoted[inIndex & 0xff], bool);
-    case EE_NETMSG_SESS_SELF_LAG_MASK: EE_SESSION_MEMBER(s->mLagMask, unsigned short);
-    case EE_NETMSG_SESS_SELF_UI_SLOT: EE_SESSION_MEMBER(c->mUISlotNumber, unsigned char);
-    case EE_NETMSG_SESS_SELF_ALLOW_MIGRATION: EE_SESSION_MEMBER(c->mAllowServerMigration, bool);
-    case EE_NETMSG_SESS_SELF_IGNORE_TIMEOUT: EE_SESSION_MEMBER(c->mIgnoreConnectionTimeout, bool);
-    case EE_NETMSG_SESS_SELF_SERVER_LOST: EE_SESSION_MEMBER(c->mIsServerLost, bool);
-    case EE_NETMSG_SESS_SELF_HAS_LOADED: EE_SESSION_MEMBER(c->mHasLoaded, bool);
-    case EE_NETMSG_SESS_SELF_LOST_AFTER_LOADING: EE_SESSION_MEMBER(c->mServerLostAfterLoading, bool);
-    default: EE_SESSION_MEMBER(c->mWasBooted, bool);
-    }
-#undef EE_SESSION_MEMBER
-}
-
-static void EESessionDisplay(long inText, EEUIFErrorCallback inCallback, bool inFlag)
-{
-    UWideString theText;
-    gResource->GetString(inText, theText);
-    gUIManager->DisplayMessage(theText, true, NULL, inCallback, inFlag);
-}
-
-static void EESessionPost(EEAction* inAction)
-{
-    gUserInterface->PostAction(inAction);
-    inAction->Dereference();
-}
-
-static void EESessionWon(long long inKind, long long a, long long b)
-{
-    EEWonNetGameInfo theInfo;
-    switch (inKind) {
-    case EE_NETMSG_SESS_WON_COUNT:
-        gWonNet->GetGameInfo(theInfo);
-        theInfo.mPlayers = (unsigned long)a;
-        theInfo.mHumans = (unsigned long)b;
-        gWonNet->SetGameInfo(theInfo);
-        break;
-    case EE_NETMSG_SESS_WON_HUMANS_DEC:
-        gWonNet->GetGameInfo(theInfo);
-        theInfo.mHumans--;
-        gWonNet->SetGameInfo(theInfo);
-        break;
-    case EE_NETMSG_SESS_WON_JOINED: gWonNet->PlayerJoined(); break;
-    default:   // back to the game list
-        gWonNet->ClearGameList();
-        gWonNet->RejoinRoom(false);
-        break;
-    }
-}
-
-static long long EESessionUI(EESessionFrame* f, const long long* v)
-{
-    EEClient* c = static_cast<EEClient*>(f->mComms);
-    UWideString theText;
-    UWideString theFormat;
-    UWideString theName;
-    switch (v[0]) {
-    case EE_NETMSG_SESS_UI_LOBBY_PLAYER: gUserInterface->PostLobbyUpdatePlayer((long)v[1], 8); break;
-    case EE_NETMSG_SESS_UI_ACTION_REMOVE: EESessionPost(new EEARemovePlayer((unsigned char)v[1], v[2] != 0)); break;
-    case EE_NETMSG_SESS_UI_ACTION_BOOT: EESessionPost(new EEABootClientFromCanceledGame((long)v[1])); break;
-    case EE_NETMSG_SESS_UI_ACTION_MIGRATION: EESessionPost(new EEAServerMigration); break;
-    case EE_NETMSG_SESS_UI_PAUSE_EVENT: {
-        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
-        gUserInterface->PostEvent(theEvent, NULL);
-        theEvent->Dereference();
-        break;
-    }
-    case EE_NETMSG_SESS_UI_DISPLAY: EESessionDisplay((long)v[1], v[2] != 0 ? (EEUIFErrorCallback)CancelGameCallback : NULL, v[3] != 0); break;
-    case EE_NETMSG_SESS_UI_CHAT_PLAYER:   // the game's line about player v2 (string v1 formats its name)
-        gResource->GetString((long)v[1], theFormat);
-        sprintf(theText, theFormat, (const char*)((EEPlayer*)(uintptr_t)v[2])->mName);
-        gResource->GetString(IDS_MSG_GAME, theName);
-        gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-        break;
-    case EE_NETMSG_SESS_UI_CHAT_TEXT:
-        gResource->GetString((long)v[1], theText);
-        gUserInterface->AddChatLogEntry(theText, (long)v[2]);
-        break;
-    case EE_NETMSG_SESS_UI_CLOSE_FORM: gUserInterface->CloseForm(NULL); break;
-    case EE_NETMSG_SESS_UI_OPEN_FORM: gUserInterface->OpenForm(gUIManager->GetFormByID(v[1])); break;
-    case EE_NETMSG_SESS_UI_PUSH_FORM: gUIManager->Push(gUIManager->GetFormByID(v[1])); break;
-    case EE_NETMSG_SESS_UI_CANCEL_GAME: gUserInterface->PostCancelGame(); break;
-    case EE_NETMSG_SESS_UI_CANCEL_CALLBACK: {
-        unsigned long theUnused = 0;
-        CancelGameCallback(&theUnused);
-        break;
-    }
-    case EE_NETMSG_SESS_UI_LOBBY_FORM: gUserInterface->PostLobbyUpdateForm(); break;
-    case EE_NETMSG_SESS_UI_HOST_MIGRATED: gUserInterface->PostHostMigrated(); break;
-    case EE_NETMSG_SESS_UI_TRANSFER: gUserInterface->PostLobbyShowTransferProgress((long)v[1], (long)v[2]); break;
-    case EE_NETMSG_SESS_UI_CONNECT_STATUS: EELobbyPostConnectStatus(v[1] != 0); break;
-    case EE_NETMSG_SESS_UI_RETRY:   // the connecting box with the retries
-        gResource->GetString((long)v[1], theFormat);
-        sprintf(theText, "%s Retry: %ld times", (const char*)theFormat, c->GetNumConnectionTrys());
-        gUIManager->DisplayMessage(theText, true, NULL, NULL, false);
-        break;
-    case EE_NETMSG_SESS_UI_LEAVE:   // back to the game list, the reason shown (with the host's version and ours) or
-                                    // the boot posted, then disconnected
-        if (gWonNet != NULL)
-            EESessionWon(EE_NETMSG_SESS_WON_LEAVE, 0, 0);
-        if (v[2] == EE_NETMSG_SESS_LEAVE_BOOT)
-            EESessionPost(new EEABootClientFromCanceledGame((long)v[1]));
-        else if (v[2] != EE_NETMSG_SESS_LEAVE_QUIET) {
-            gUserInterface->CloseForm(NULL);
-            gResource->GetString((long)v[1], theFormat);
-            if (v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS)
-                sprintf(theText, theFormat, (const char*)((NEMRecord*)(uintptr_t)v[3])->GetString(4), (const char*)gGameVersion);
-            gUIManager->DisplayMessage(v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS ? theText : theFormat, true, NULL, NULL, true);
-        }
-        c->Disconnect();
-        break;
-    default: c->HandleSlotUpdate((unsigned char)v[1], EESessionRegister(f, v[2])); break;
-    }
-    return 0;
-}
-
-static long long EESessionRecord(const long long* v)
-{
-    unsigned char theType = (unsigned char)v[1];
-    switch (v[2]) {   // the values' count
-    case 0: return (long long)(uintptr_t)new EEMRecord(theType);
-    case 2: return (long long)(uintptr_t)new EEMRecord(theType, {v[3], v[4]});
-    case 3: return (long long)(uintptr_t)new EEMRecord(theType, {v[3], v[4], v[5]});
-    default: return (long long)(uintptr_t)new EEMRecord(theType, {v[3], v[4], v[5], v[6]});
-    }
-}
-
-static long long EESessionSend(EESessionFrame* f, const long long* v)
-{
-    EEServer* s = static_cast<EEServer*>(f->mComms);
-    switch (v[0]) {
-    case EE_NETMSG_SESS_SEND_RESPONSE:
-        s->SendConnectionResponse((unsigned char)v[1], (long)v[2], (unsigned char)v[3], (unsigned char)v[4], v[5] != 0);
-        return 0;
-    case EE_NETMSG_SESS_SEND_LOCAL_RESPONSE:
-        s->ProcessLocalUserInput(s->NewConnectionResponse((long)v[1], (unsigned char)v[2], (unsigned char)v[3]), (unsigned char)v[4]);
-        return 0;
-    case EE_NETMSG_SESS_SEND_FULL_OPTIONS:
-        gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), (unsigned char)v[1]);
-        return 0;
-    case EE_NETMSG_SESS_SEND_PLAYER_INFO: {
-        EEMRecord* theInformation = EENewFullPlayerInformation(EESessionRegister(f, v[1]));
-        if (v[3] != 0)
-            theInformation->SetOriginatingSlot(kSlotServer);
-        f->mComms->ProcessLocalUserInput(theInformation, (unsigned char)v[2]);
-        return 0;
-    }
-    case EE_NETMSG_SESS_SEND_NEW_RECORD: return EESessionRecord(v);
-    case EE_NETMSG_SESS_SEND_PING_STAT: {
-        uint32_t theBits = (uint32_t)v[2];
-        float theQuality;
-        memcpy(&theQuality, &theBits, 4);
-        s->SendPingStat((unsigned char)v[1], theQuality);
-        return 0;
-    }
-    case EE_NETMSG_SESS_SEND_SLOT_INFO: {   // player v1 at send-to slot v2: the host's address, none, a client's
-        unsigned char theIndex = (unsigned char)v[1];
-        unsigned char theSlot = (unsigned char)v[2];
-        UWideString theAddress;
-        EEMRecord* theMessage;
-        if (theSlot == kSlotServer)
-            theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotServer, s->mBehindFirewall[theSlot], EEGetLocalAddress(f->mProtocol, gGamePreferences.mSettings.GetNetworkAdapter())});
-        else if (theSlot == kSlotNone) {
-            theAddress = "";
-            theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotNone, s->mBehindFirewall[theSlot], theAddress});
-        } else {
-            s->GetClientAddress(theSlot, theAddress);
-            theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, theSlot, s->mBehindFirewall[theSlot], theAddress});
-        }
-        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-        return 0;
-    }
-    case EE_NETMSG_SESS_SEND_PHYSICS_TICK:   // the inputs, the ticks, checksum and dump, PTs per second
-        return (long long)(uintptr_t)new NEMRecord(kNetMessagePhysicsTick, {v[1], v[2], v[3], v[4], v[5]});
-    default:   // the connection check's answer
-        f->mComms->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)v[1]}), kSlotNone);
-        return 0;
-    }
-}
-
-static long long EESessionMessage(EESessionFrame* f, const long long* v)
-{
-    EEServer* s = static_cast<EEServer*>(f->mComms);
-    NEMessage* m = (NEMessage*)(uintptr_t)v[1];
-    NEMessage* theInput;
-    switch (v[0]) {
-    case EE_NETMSG_SESS_MSG_TYPE: return m->GetType();
-    case EE_NETMSG_SESS_MSG_ORIGIN: return m->GetOriginatingSlot();
-    case EE_NETMSG_SESS_MSG_FOR_SLOT: return m->GetForSpecificSlot();
-    case EE_NETMSG_SESS_MSG_NE_VALUE: return (long long)static_cast<NEMRecord*>(m)->Value((uint32_t)v[2]);
-    case EE_NETMSG_SESS_MSG_RECORD: memcpy((void*)(uintptr_t)v[2], static_cast<EEMRecord*>(m)->mRecord, sizeof(static_cast<EEMRecord*>(m)->mRecord)); return 0;
-    case EE_NETMSG_SESS_MSG_INPUT_COUNT: return static_cast<NEMRecord*>(m)->GetNumberOfPlayerInputs();
-    case EE_NETMSG_SESS_MSG_INPUT: static_cast<NEMRecord*>(m)->GetPlayerInput((unsigned long)v[2], theInput); return (long long)(uintptr_t)theInput;
-    case EE_NETMSG_SESS_MSG_REFERENCE: m->Reference(); return 0;
-    case EE_NETMSG_SESS_MSG_DEREFERENCE: m->Dereference(); return 0;
-    case EE_NETMSG_SESS_MSG_EXECUTE: m->Execute(); return 0;
-    case EE_NETMSG_SESS_MSG_SET_FAST_ID: static_cast<EEMessage*>(m)->mFastSelectionID = (unsigned char)v[2]; return 0;
-    case EE_NETMSG_SESS_MSG_IS_GAME: return EEGameMessageCast(m) != NULL;
-    case EE_NETMSG_SESS_MSG_QUEUE: gPhysics->QueueServerMessage(m); return 0;
-    case EE_NETMSG_SESS_MSG_LOG_RESPONSE: s->LogResponse(m); return 0;
-    case EE_NETMSG_SESS_MSG_LOCAL: f->mComms->ProcessLocalUserInput(m, (unsigned char)v[2]); return 0;
-    case EE_NETMSG_SESS_MSG_BROADCAST: m->SetOriginatingSlot(kSlotServer); EESessionAccess::Broadcast(s, m); return 0;
-    case EE_NETMSG_SESS_MSG_SEND_ALL:
-        m->SetOriginatingSlot(kSlotServer);
-        EESessionAccess::SendToAll(s, m);
-        m->Dereference();
-        return 0;
-    default: s->TakeConnectionRequest(static_cast<NEMRecord*>(m)); return 0;
-    }
-}
-
-static long long EESessionComms(EESessionFrame* f, const long long* v)
-{
-    EEServer* s = static_cast<EEServer*>(f->mComms);
-    EEClient* c = static_cast<EEClient*>(f->mComms);
-    switch (v[0]) {
-    case EE_NETMSG_SESS_COMMS_SET_CT: gCommunications->SetCurrentCommunicationsTick((unsigned long)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS: gCommunications->SetNumberOfCTsProcessedInPhysics((unsigned long)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_INCREMENT_CTS: gCommunications->IncrementNumberOfCTsProcessedInPhysics(); break;
-    case EE_NETMSG_SESS_COMMS_SET_MP_SESSION: gCommunications->SetIsMultiplayerSession(v[1] != 0); break;
-    case EE_NETMSG_SESS_COMMS_SET_HUMANS: f->mComms->SetNumHumanPlayers((unsigned char)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_SET_PT: {
-        unsigned long theTick = (unsigned long)v[1];
-        c->SetCurrentPhysicsTick(theTick);
-        break;
-    }
-    case EE_NETMSG_SESS_COMMS_REGISTER: s->RegisterSlot((unsigned char)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_UNREGISTER: EESessionAccess::Unregister(s, (unsigned char)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR: s->mSendToSlots.clear(); break;
-    case EE_NETMSG_SESS_COMMS_SEND_TO_INSERT:
-        s->mSendToSlots.insert(std::map<unsigned char, unsigned char>::value_type((unsigned char)v[1], (unsigned char)v[2]));
-        break;
-    case EE_NETMSG_SESS_COMMS_SEND_TO_ERASE: s->mSendToSlots.erase((unsigned char)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_ABORT_XFER: s->AbortXfer((unsigned long)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS: s->RemovePlayerFromGameInProgress((unsigned char)v[1], v[2] != 0, false, v[3] != 0); break;
-    case EE_NETMSG_SESS_COMMS_XFER_GAME_FILE: {   // load type v1's file (the map type) to lobby slot v2's client
-        FSFileSpec* theFile;
-        EEPSaveGameHeader theHeader;
-        unsigned long theXferID;
-        if (EEOpenSaveGameFile((const char*)gGameOptions.mMapType, v[1] == 2 ? "Saved Games\\" : "Scenarios\\", theFile) == kErrorOK) {
-            theHeader.mMajorVersion = kSaveGameMajorVersion;
-            theHeader.mMinorVersion = kSaveGameMinorVersion;
-            if (theHeader.LoadFromFile(*theFile) == kErrorOK && !EEIsMultiplayerGame(true))
-                s->XferFileToClient(*theFile, theHeader.mChecksum, s->GetSendToSlot((unsigned char)v[2]), theXferID, false);
-        }
-        break;
-    }
-    case EE_NETMSG_SESS_COMMS_START_GAME: s->StartGame(); break;
-    case EE_NETMSG_SESS_COMMS_PAUSE_GAME: s->PauseGame(); break;
-    case EE_NETMSG_SESS_COMMS_BECOME_CLIENT:   // the host removed: the server deleted, a client in its place
-        static_cast<NESynchronousServer*>(gCommunications)->StopPing();
-        static_cast<NESynchronousServer*>(gCommunications)->ResetXfer();
-        EESessionAccess::Unregister(s, kSlotServer);
-        s->RegisterSlot(kSlotServer);
-        if (gCommunications != NULL) {
-            delete gCommunications;
-            gCommunications = new EEClient;
-            static_cast<NESynchronousClient*>(gCommunications)->StartThreads();
-        }
-        break;
-    case EE_NETMSG_SESS_COMMS_LOWEST_CTS: static_cast<NESynchronousServer*>(gCommunications)->SetMessageManagerLowestCTs((unsigned long)v[1]); break;
-    case EE_NETMSG_SESS_COMMS_DISCONNECT: c->Disconnect(); break;
-    case EE_NETMSG_SESS_COMMS_LOCAL_OUT: gLocalPlayerOut = v[1] != 0; break;
-    case EE_NETMSG_SESS_COMMS_SLEEP: PlatSleep((unsigned long)v[1]); break;
-    default: NEProtocol::GetProtocol(0, f->mProtocol); break;
-    }
-    return 0;
-}
-
-static long long EESessionFact(EESessionFrame* f, const long long* v)
-{
-    EEServer* s = static_cast<EEServer*>(f->mComms);
-    EEClient* c = static_cast<EEClient*>(f->mComms);
-    UIForm* theForm;
-    switch (v[0]) {
-    case EE_NETMSG_SESS_FACT_MULTIPLAYER_GAME: return EEIsMultiplayerGame(true);
-    case EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER: return gGameOptions.mIsMultiplayer;
-    case EE_NETMSG_SESS_FACT_LOAD_TYPE: return gGameOptions.mLoadType;
-    case EE_NETMSG_SESS_FACT_GAME_STATE: return s->GetGameState();
-    case EE_NETMSG_SESS_FACT_DEFAULT_COLOR: return gDefaultPlayerColors[v[1]];
-    case EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    case EE_NETMSG_SESS_FACT_VERSION_MATCH: return !(*f->mVersion != gGameVersion);
-    case EE_NETMSG_SESS_FACT_BINARY_CHECKSUM: return gBinaryChecksum;
-    case EE_NETMSG_SESS_FACT_CURRENT_CT: return (long long)f->mComms->GetCurrentCommunicationsTick();
-    case EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS: return (long long)gCommunications->GetNumberOfCTsProcessedInPhysics();
-    case EE_NETMSG_SESS_FACT_HUMANS: return gCommunications->GetNumHumanPlayers();
-    case EE_NETMSG_SESS_FACT_MP_SESSION: return f->mComms->GetIsMultiplayerSession();
-    case EE_NETMSG_SESS_FACT_PLAYER_NUMBER: return (long long)f->mComms->GetPlayerNumber();
-    case EE_NETMSG_SESS_FACT_CURRENT_PT: return (long long)c->GetCurrentPhysicsTick();
-    case EE_NETMSG_SESS_FACT_MY_SEND_TO_SLOT: return c->GetMySendToSlot();
-    case EE_NETMSG_SESS_FACT_NUM_PLAYERS: return s->GetNumberOfPlayers();
-    case EE_NETMSG_SESS_FACT_WORLD_PLAYERS: return (long long)gWorld.mNumPlayers;
-    case EE_NETMSG_SESS_FACT_TIME: return (long long)TMGetTime();
-    case EE_NETMSG_SESS_FACT_WON: return gWonNet != NULL;
-    case EE_NETMSG_SESS_FACT_SCREEN_ACTIVE: return gGameScreenActive;
-    case EE_NETMSG_SESS_FACT_ENGINE_CHOICES: return (long long)EECPEngineChoiceCount();
-    case EE_NETMSG_SESS_FACT_FORM_IS_CURRENT:   // the form looked up first (v2 0) or the current form first
-        if (v[2] == 0) {
-            theForm = gUIManager->GetFormByID(v[1]);
-            return gUIManager->GetCurrentForm() == theForm;
-        }
-        theForm = gUIManager->GetCurrentForm();
-        return theForm == gUIManager->GetFormByID(v[1]);
-    case EE_NETMSG_SESS_FACT_FORM_VISIBLE: return gUIManager->IsFormVisible(gUIManager->GetFormByID(v[1]));
-    case EE_NETMSG_SESS_FACT_SEND_TO_SLOT: return s->GetSendToSlot((unsigned char)v[1]);
-    default: return s->GetPlayerSendToSlot((unsigned char)v[1]);
-    }
-}
-
-static long long EESessionWorld(EESessionFrame* f, const long long* v)
-{
-    EEPlayer* p = (EEPlayer*)(uintptr_t)v[1];
-    switch (v[0]) {
-    case EE_NETMSG_SESS_WORLD_PLAYER: return (long long)(uintptr_t)gWorld.mPlayers[v[1]];
-    case EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT: return (long long)(uintptr_t)gWorld.GetPlayerBySlot((unsigned char)v[1]);
-    case EE_NETMSG_SESS_WORLD_IS_HUMAN: return p->IsHuman();
-    case EE_NETMSG_SESS_WORLD_SLOT: return p->mSlot;
-    case EE_NETMSG_SESS_WORLD_HAS_HUMAN: return p->mHumanPlayer != NULL;
-    case EE_NETMSG_SESS_WORLD_ID: return (long long)p->mPlayerID;
-    case EE_NETMSG_SESS_WORLD_SET_SLOT: p->mSlot = (unsigned char)v[2]; return 0;
-    case EE_NETMSG_SESS_WORLD_SET_FIREWALL: p->mBehindFirewall = v[2] != 0; return 0;
-    case EE_NETMSG_SESS_WORLD_NAME_FROM_MSG: static_cast<EEHumanPlayer*>(p)->SetName(((EEMRecord*)(uintptr_t)v[2])->mString); return 0;
-    case EE_NETMSG_SESS_WORLD_RECONNECT: gWorld.GetPlayer((unsigned long)v[1])->mSlot = (unsigned char)v[2]; return 0;
-    case EE_NETMSG_SESS_WORLD_REMOVE: gWorld.RemoveDisconnectedPlayer((unsigned long)v[1]); return 0;
-    default: gWorld.GetCurrentPlayer()->ExecuteSelectionMessage((NEMessage*)(uintptr_t)v[1]); return 0;
-    }
-}
-
-static long long EESessionRegisterOp(EESessionFrame* f, const long long* v)
-{
-    EEGameOptionsPlayer& r = EESessionRegister(f, v[0]);
-    switch (v[1]) {
-    case EE_NETMSG_SESS_REG_LOAD_OPTIONS: r = gGameOptions.mPlayers[v[2]]; return 0;
-    case EE_NETMSG_SESS_REG_LOAD_LOBBY: r = gWorld.GetLobbyOptions().mPlayers[v[2]]; return 0;
-    case EE_NETMSG_SESS_REG_LOAD_REG: r = EESessionRegister(f, v[2]); return 0;
-    case EE_NETMSG_SESS_REG_STORE_OPTIONS: gGameOptions.mPlayers[v[2]] = r; return 0;
-    case EE_NETMSG_SESS_REG_STORE_LOBBY: gWorld.GetLobbyOptions().mPlayers[v[2]] = r; return 0;
-    case EE_NETMSG_SESS_REG_GET: return EESessionPlayerField(r, v[2], false, 0);
-    case EE_NETMSG_SESS_REG_SET: return EESessionPlayerField(r, v[2], true, v[3]);
-    case EE_NETMSG_SESS_REG_NAME_CLEAR: r.mName = ""; return 0;
-    case EE_NETMSG_SESS_REG_NAME_COPY: r.mName = EESessionRegister(f, v[2]).mName; return 0;
-    case EE_NETMSG_SESS_REG_NAME_ICMP:
-        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)r.mName),
-                           reinterpret_cast<const unsigned char*>((const char*)EESessionRegister(f, v[2]).mName)) == 0;
-    case EE_NETMSG_SESS_REG_NAME_EQ: return r.mName == EESessionRegister(f, v[2]).mName;
-    case EE_NETMSG_SESS_REG_NAME_FROM_MSG: r.mName = ((EEMRecord*)(uintptr_t)v[2])->mString; return 0;
-    default:   // the name against world player v2's
-        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)r.mName),
-                           reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)(uintptr_t)v[2])->mName)) == 0;
-    }
-}
-
-static int64_t EESessionHost(uint32_t inOp, EeNetSessCall* inCall)
-{
-    EESessionFrame* f = (EESessionFrame*)inCall->frame;
-    const long long* v = (const long long*)inCall->v;
-    EEServer* s = static_cast<EEServer*>(f->mComms);
-    TSCriticalSection* theSection;
-    switch (inOp) {
-    case EE_NETMSG_SESS_OP_LOCK:
-        switch (v[0]) {
-        case EE_NETMSG_SESS_LOCK_CT: if (v[1]) s->LockSendCommunicationsTick(); else s->UnlockSendCommunicationsTick(); return 0;
-        case EE_NETMSG_SESS_LOCK_OPTIONS_WRITE: if (v[1]) gGameOptions.mLock->WriteLock(); else gGameOptions.mLock->WriteUnlock(); return 0;
-        case EE_NETMSG_SESS_LOCK_WORLD_WRITE: if (v[1]) gWorld.mLock->WriteLock(); else gWorld.mLock->WriteUnlock(); return 0;
-        case EE_NETMSG_SESS_LOCK_PING: if (v[1]) s->StopPing(); else s->StartPing(); return 0;
-        case EE_NETMSG_SESS_LOCK_SEARCH: theSection = s->mSearchForSlotLock; break;
-        case EE_NETMSG_SESS_LOCK_ATTEMPT: theSection = s->mAttemptToRemovePlayerLock; break;
-        case EE_NETMSG_SESS_LOCK_FAST: theSection = f->mServer ? s->mFastSelectionLock : static_cast<EEClient*>(f->mComms)->mFastSelectionLock; break;
-        default: if (v[1]) gPhysics->mServerMessageQueueLock->Enter(); else gPhysics->mServerMessageQueueLock->Leave(); return 0;
-        }
-        if (v[1])
-            theSection->Enter();
-        else
-            theSection->Leave();
-        return 0;
-    case EE_NETMSG_SESS_OP_FACT: return EESessionFact(f, v);
-    case EE_NETMSG_SESS_OP_SELF_GET: return EESessionMember(f, v[0], v[1], false, 0);
-    case EE_NETMSG_SESS_OP_SELF_SET: return EESessionMember(f, v[0], v[1], true, v[2]);
-    case EE_NETMSG_SESS_OP_REG: return EESessionRegisterOp(f, v);
-    case EE_NETMSG_SESS_OP_SEND: return EESessionSend(f, v);
-    case EE_NETMSG_SESS_OP_MSG: return EESessionMessage(f, v);
-    case EE_NETMSG_SESS_OP_UI: return EESessionUI(f, v);
-    case EE_NETMSG_SESS_OP_WON: EESessionWon(v[0], v[1], v[2]); return 0;
-    case EE_NETMSG_SESS_OP_SOUND:
-        if (v[0] == 0) {   // the server's: loaded and played
-            sSample = gSoundManager->Load(UString(v[1] ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, 1);
-            if (!UIsNone32(sSample))
-                gSoundManager->Play(sSample, 1.0f, 0.0f, 1.0f, false, NULL);
-        } else {
-            unsigned long theSample;
-            unsigned long theInstance;
-            EELoadSound(UString(v[0] == 1 ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, theSample, theInstance, 1);
-        }
-        return 0;
-    case EE_NETMSG_SESS_OP_WORLD: return EESessionWorld(f, v);
-    case EE_NETMSG_SESS_OP_COMMS: return EESessionComms(f, v);
-    default:   // the game start
-        if (v[0] == EE_NETMSG_SESS_START_PREP) {   // the offset start time, the physics' draw, the protocol's status
-            NEProtocol* theProtocol = NULL;
-            gStartTime = ((NEMRecord*)(uintptr_t)v[1])->Get<uint32_t>(0);
-            gPhysics->GetRandom(0L, 0x7fffffffL);
-            gWorld.GetNumTeams();
-            NEProtocol::GetProtocol(0, theProtocol);
-            theProtocol->GetStatus(UWideString(""), 0xffff0000);
-        } else if (v[0] == EE_NETMSG_SESS_START_RESUME) {
-            gGraphics->PostResume();
-            while (gGraphics->mIsPaused)
-                PlatSleep(1);
-        } else {
-            gPhysics->mThread->Post(0x404, NULL, NULL, true);
-            while (!gPhysics->mTimerRunning)
-                PlatSleep(1);
-            gUIManager->GetMainGameForm()->SetUIState(0);
-        }
-        return 0;
-    }
-}
-
 // the server's or client's member inWhat (EE_NETMSG_SESS_DO_*) over the host
 long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_t inWhat, long long a, long long b,
                     long long c, long long d, const EEGameOptionsPlayer* inPlayer, const UWideString* inVersion)
@@ -856,5 +391,381 @@ long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_
     theFrame.mIn = inPlayer;
     theFrame.mVersion = inVersion;
     theFrame.mProtocol = NULL;
-    return ee_netmsg_session(EESessionHost, &theFrame, inServer, inWhat, a, b, c, d);
+    return ee_netmsg_session((EeNetSessHostFn)ee_gamecpp_session_host, &theFrame, inServer, inWhat, a, b, c, d);
+}
+
+// ------------------------------------------------------------------------- round 9, lane D: this file's bodies' C++
+
+int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore9OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEClient.cpp
+
+static_assert(kSlotServer == 0xfe && kSlotNone == 0xff, "gamecpp server.rs SLOT_SERVER, SLOT_NONE");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define SF ((EESessionFrame*)p)
+#define SS static_cast<EEServer*>(SF->mComms)
+#define SC static_cast<EEClient*>(SF->mComms)
+#define REG(k) EESessionRegister(SF, a[k])
+#define MSG ((NEMessage*)a[0])
+#define WSTR(k) (*(UWideString*)a[k])
+
+// the C++ calls and members of the session host's body in Rust (gamecpp server.rs; EeGameCpp's lane D section):
+// p the session's frame (EESessionFrame) unless noted, one statement each
+int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the locks
+    case O::SsLockCt: SS->LockSendCommunicationsTick();
+        break;
+    case O::SsUnlockCt: SS->UnlockSendCommunicationsTick();
+        break;
+    case O::SsOptionsWriteLock: gGameOptions.mLock->WriteLock();
+        break;
+    case O::SsOptionsWriteUnlock: gGameOptions.mLock->WriteUnlock();
+        break;
+    case O::SsWorldWriteLock: gWorld.mLock->WriteLock();
+        break;
+    case O::SsWorldWriteUnlock: gWorld.mLock->WriteUnlock();
+        break;
+    case O::SsStopPing: SS->StopPing();
+        break;
+    case O::SsStartPing: SS->StartPing();
+        break;
+    case O::SsSearchLock: return P64(SS->mSearchForSlotLock);
+    case O::SsAttemptLock: return P64(SS->mAttemptToRemovePlayerLock);
+    case O::SsServerFastLock: return P64(SS->mFastSelectionLock);
+    case O::SsClientFastLock: return P64(SC->mFastSelectionLock);
+    case O::SsSectionEnter: ((TSCriticalSection*)a[0])->Enter();
+        break;
+    case O::SsSectionLeave: ((TSCriticalSection*)a[0])->Leave();
+        break;
+    case O::SsPhysicsQueueEnter: gPhysics->mServerMessageQueueLock->Enter();
+        break;
+    case O::SsPhysicsQueueLeave: gPhysics->mServerMessageQueueLock->Leave();
+        break;
+    case O::SsFrameServer: return SF->mServer;
+    // the facts
+    case O::SsMultiplayerGame: return EEIsMultiplayerGame(true);
+    case O::SsOptionsMultiplayer: return gGameOptions.mIsMultiplayer;
+    case O::SsLoadType: return gGameOptions.mLoadType;
+    case O::SsGameState: return SS->GetGameState();
+    case O::SsDefaultColor: return gDefaultPlayerColors[a[0]];
+    case O::SsCitizensDefault: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+    case O::SsVersionMatch: return !(*SF->mVersion != gGameVersion);
+    case O::SsBinaryChecksum: return gBinaryChecksum;
+    case O::SsCurrentCt: return (long long)SF->mComms->GetCurrentCommunicationsTick();
+    case O::SsCtsInPhysics: return (long long)gCommunications->GetNumberOfCTsProcessedInPhysics();
+    case O::SsHumans: return gCommunications->GetNumHumanPlayers();
+    case O::SsMpSession: return SF->mComms->GetIsMultiplayerSession();
+    case O::SsPlayerNumber: return (long long)SF->mComms->GetPlayerNumber();
+    case O::SsCurrentPt: return (long long)SC->GetCurrentPhysicsTick();
+    case O::SsMySendToSlot: return SC->GetMySendToSlot();
+    case O::SsNumPlayers: return SS->GetNumberOfPlayers();
+    case O::SsWorldPlayers: return (long long)gWorld.mNumPlayers;
+    case O::SsTime: return (long long)TMGetTime();
+    case O::SsWon: return gWonNet != NULL;
+    case O::SsScreenActive: return gGameScreenActive;
+    case O::SsEngineChoices: return (long long)EECPEngineChoiceCount();
+    case O::SsFormById: return P64(gUIManager->GetFormByID(a[0]));
+    case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
+    case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
+    case O::SsSendToSlot: return SS->GetSendToSlot((unsigned char)a[0]);
+    case O::SsPlayerSendToSlot: return SS->GetPlayerSendToSlot((unsigned char)a[0]);
+    // the server's and client's members (their addresses)
+    case O::SsSHasLeft: return P64(&SS->mHasLeftGame);
+    case O::SsCHasLeft: return P64(&SC->mHasLeftGame);
+    case O::SsSMigrating: return P64(&SS->mIsMigrating);
+    case O::SsCMigrating: return P64(&SC->mIsMigrating);
+    case O::SsSFastId: return P64(&SS->mFastSelectionID);
+    case O::SsCFastId: return P64(&SC->mFastSelectionID);
+    case O::SsSExecuting: return P64(&SS->mIsExecutingSelection);
+    case O::SsCExecuting: return P64(&SC->mIsExecutingSelection);
+    case O::SsLoadState: return P64(&SS->mLoadState);
+    case O::SsDroppedLoaders: return P64(&SS->mNumDroppedLoaders);
+    case O::SsVoteEdict: return P64(&SS->mVoteEdict);
+    case O::SsYesVotes: return P64(&SS->mYesVotes);
+    case O::SsNoVotes: return P64(&SS->mNoVotes);
+    case O::SsNumVotes: return P64(&SS->mNumVotes);
+    case O::SsVoted: return P64(&SS->mVoted[0]);
+    case O::SsLagMask: return P64(&SS->mLagMask);
+    case O::SsUiSlot: return P64(&SC->mUISlotNumber);
+    case O::SsAllowMigration: return P64(&SC->mAllowServerMigration);
+    case O::SsIgnoreTimeout: return P64(&SC->mIgnoreConnectionTimeout);
+    case O::SsServerLost: return P64(&SC->mIsServerLost);
+    case O::SsHasLoaded: return P64(&SC->mHasLoaded);
+    case O::SsLostAfterLoading: return P64(&SC->mServerLostAfterLoading);
+    case O::SsWasBooted: return P64(&SC->mWasBooted);
+    // the lobby slot registers (a0 the register)
+    case O::SsReg: return P64(static_cast<EeAppOptionsPlayerFields*>(&REG(0)));
+    case O::SsRegLoadOptions: REG(0) = gGameOptions.mPlayers[a[1]];
+        break;
+    case O::SsRegLoadLobby: REG(0) = gWorld.GetLobbyOptions().mPlayers[a[1]];
+        break;
+    case O::SsRegLoadReg: REG(0) = REG(1);
+        break;
+    case O::SsRegStoreOptions: gGameOptions.mPlayers[a[1]] = REG(0);
+        break;
+    case O::SsRegStoreLobby: gWorld.GetLobbyOptions().mPlayers[a[1]] = REG(0);
+        break;
+    case O::SsRegNameClear: REG(0).mName = "";
+        break;
+    case O::SsRegNameCopy: REG(0).mName = REG(1).mName;
+        break;
+    case O::SsRegNameIcmp: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG(0).mName),
+                                              reinterpret_cast<const unsigned char*>((const char*)REG(1).mName)) == 0;
+    case O::SsRegNameEq: return REG(0).mName == REG(1).mName;
+    case O::SsRegNameFromMsg: REG(0).mName = ((EEMRecord*)a[1])->mString;
+        break;
+    case O::SsRegNameIcmpPlayer: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG(0).mName),
+                                                    reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)a[1])->mName)) == 0;
+    // the sends
+    case O::SsSendResponse: SS->SendConnectionResponse((unsigned char)a[0], (long)a[1], (unsigned char)a[2], (unsigned char)a[3], a[4] != 0);
+        break;
+    case O::SsSendLocalResponse: SS->ProcessLocalUserInput(SS->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]), (unsigned char)a[3]);
+        break;
+    case O::SsSendFullOptions: gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), (unsigned char)a[0]);
+        break;
+    case O::SsNewPlayerInfo: return P64(static_cast<NEMessage*>(EENewFullPlayerInformation(REG(0))));
+    case O::SsMsgSetOriginServer: MSG->SetOriginatingSlot(kSlotServer);
+        break;
+    case O::SsLocalInput: SF->mComms->ProcessLocalUserInput(MSG, (unsigned char)a[1]);
+        break;
+    case O::SsCommsLocalInput: gCommunications->ProcessLocalUserInput(MSG, (unsigned char)a[1]);
+        break;
+    case O::SsNewRecord0: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0])));
+    case O::SsNewRecord2: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2]})));
+    case O::SsNewRecord3: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2], (long long)a[3]})));
+    case O::SsNewRecord4: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2], (long long)a[3], (long long)a[4]})));
+    case O::SsSendPingStat: SS->SendPingStat((unsigned char)a[0], f[0]);
+        break;
+    case O::SsNewString: return P64(new UWideString);
+    case O::SsDeleteString: delete (UWideString*)p;
+        break;
+    case O::SsClientAddress: SS->GetClientAddress((unsigned char)a[0], WSTR(1));
+        break;
+    case O::SsSlotInfoServer: return P64(static_cast<NEMessage*>(new EEMRecord(kMessagePlayerSlotInfo, {(unsigned char)a[0], kSlotServer, SS->mBehindFirewall[kSlotServer], EEGetLocalAddress(SF->mProtocol, gGamePreferences.mSettings.GetNetworkAdapter())})));
+    case O::SsSlotInfoRecord: return P64(static_cast<NEMessage*>(new EEMRecord(kMessagePlayerSlotInfo, {(unsigned char)a[0], (unsigned char)a[1], SS->mBehindFirewall[(unsigned char)a[1]], WSTR(2)})));
+    case O::SsNewPhysicsTick: return P64(static_cast<NEMessage*>(new NEMRecord(kNetMessagePhysicsTick, {(long long)a[0], (long long)a[1], (long long)a[2], (long long)a[3], (long long)a[4]})));
+    case O::SsConnectionCheckResponse: SF->mComms->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)a[0]}), kSlotNone);
+        break;
+    // the messages (a0)
+    case O::SsMsgType: return MSG->GetType();
+    case O::SsMsgOrigin: return MSG->GetOriginatingSlot();
+    case O::SsMsgForSlot: return MSG->GetForSpecificSlot();
+    case O::SsMsgNeValue: return (long long)static_cast<NEMRecord*>(MSG)->Value((uint32_t)a[1]);
+    case O::SsMsgRecord: memcpy((void*)a[1], static_cast<EEMRecord*>(MSG)->mRecord, sizeof(static_cast<EEMRecord*>(MSG)->mRecord));
+        break;
+    case O::SsMsgInputCount: return static_cast<NEMRecord*>(MSG)->GetNumberOfPlayerInputs();
+    case O::SsMsgInput: static_cast<NEMRecord*>(MSG)->GetPlayerInput((unsigned long)a[1], *(NEMessage**)a[2]);
+        break;
+    case O::SsMsgReference: MSG->Reference();
+        break;
+    case O::SsMsgDereference: MSG->Dereference();
+        break;
+    case O::SsMsgExecute: MSG->Execute();
+        break;
+    case O::SsMsgSetFastId: static_cast<EEMessage*>(MSG)->mFastSelectionID = (unsigned char)a[1];
+        break;
+    case O::SsMsgIsGame: return EEGameMessageCast(MSG) != NULL;
+    case O::SsMsgQueue: gPhysics->QueueServerMessage(MSG);
+        break;
+    case O::SsMsgLogResponse: SS->LogResponse(MSG);
+        break;
+    case O::SsBroadcast: EESessionAccess::Broadcast(SS, MSG);
+        break;
+    case O::SsSendToAll: EESessionAccess::SendToAll(SS, MSG);
+        break;
+    case O::SsTakeConnectionRequest: SS->TakeConnectionRequest(static_cast<NEMRecord*>(MSG));
+        break;
+    // the user interface
+    case O::SsLobbyUpdatePlayer: gUserInterface->PostLobbyUpdatePlayer((long)a[0], 8);
+        break;
+    case O::SsNewRemovePlayer: return P64(static_cast<EEAction*>(new EEARemovePlayer((unsigned char)a[0], a[1] != 0)));
+    case O::SsNewBootClient: return P64(static_cast<EEAction*>(new EEABootClientFromCanceledGame((long)a[0])));
+    case O::SsNewServerMigration: return P64(static_cast<EEAction*>(new EEAServerMigration));
+    case O::SsPostAction: gUserInterface->PostAction((EEAction*)a[0]);
+        break;
+    case O::SsActionDereference: ((EEAction*)a[0])->Dereference();
+        break;
+    case O::SsNewPauseEvent: return P64(EECreateScreenEvent(EE_SCREENS_MG_PAUSE));
+    case O::SsPostEvent: gUserInterface->PostEvent((UIEvent*)a[0], NULL);
+        break;
+    case O::SsEventDereference: ((UIEvent*)a[0])->Dereference();
+        break;
+    case O::SsGetString: gResource->GetString((long)a[0], WSTR(1));
+        break;
+    case O::SsDisplayMessage: gUIManager->DisplayMessage(WSTR(0), true, NULL, a[1] != 0 ? (EEUIFErrorCallback)CancelGameCallback : NULL, a[2] != 0);
+        break;
+    case O::SsSprintfName: sprintf(WSTR(0), WSTR(1), (const char*)((EEPlayer*)a[2])->mName);
+        break;
+    case O::SsIdsMsgGame: return IDS_MSG_GAME;
+    case O::SsChatGameLine: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), WSTR(0), WSTR(1), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
+        break;
+    case O::SsChatText: gUserInterface->AddChatLogEntry(WSTR(0), (long)a[1]);
+        break;
+    case O::SsCloseForm: gUserInterface->CloseForm(NULL);
+        break;
+    case O::SsOpenForm: gUserInterface->OpenForm(gUIManager->GetFormByID(a[0]));
+        break;
+    case O::SsPushForm: gUIManager->Push(gUIManager->GetFormByID(a[0]));
+        break;
+    case O::SsCancelGame: gUserInterface->PostCancelGame();
+        break;
+    case O::SsCancelCallback: CancelGameCallback((void*)a[0]);
+        break;
+    case O::SsLobbyForm: gUserInterface->PostLobbyUpdateForm();
+        break;
+    case O::SsHostMigrated: gUserInterface->PostHostMigrated();
+        break;
+    case O::SsTransfer: gUserInterface->PostLobbyShowTransferProgress((long)a[0], (long)a[1]);
+        break;
+    case O::SsConnectStatus: EELobbyPostConnectStatus(a[0] != 0);
+        break;
+    case O::SsSprintfRetry: sprintf(WSTR(0), "%s Retry: %ld times", (const char*)WSTR(1), SC->GetNumConnectionTrys());
+        break;
+    case O::SsSprintfVersions: sprintf(WSTR(0), WSTR(1), (const char*)((NEMRecord*)a[2])->GetString(4), (const char*)gGameVersion);
+        break;
+    default: return EECore9OpD2(inOp, p, a, f);
+    }
+    return 0;
+}
+
+// the session host's second half (the lobby service, the sounds, the world, the communications, the game start)
+int64_t EECore9OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the lobby service
+    case O::SsNewWonInfo: return P64(new EEWonNetGameInfo);
+    case O::SsDeleteWonInfo: delete (EEWonNetGameInfo*)p;
+        break;
+    case O::SsWonGetInfo: gWonNet->GetGameInfo(*(EEWonNetGameInfo*)a[0]);
+        break;
+    case O::SsWonSetInfo: gWonNet->SetGameInfo(*(EEWonNetGameInfo*)a[0]);
+        break;
+    case O::SsWonInfoHumans: return P64(&((EEWonNetGameInfo*)a[0])->mHumans);
+    case O::SsWonInfoPlayers: return P64(&((EEWonNetGameInfo*)a[0])->mPlayers);
+    case O::SsWonJoined: gWonNet->PlayerJoined();
+        break;
+    case O::SsWonClearGameList: gWonNet->ClearGameList();
+        break;
+    case O::SsWonRejoinRoom: gWonNet->RejoinRoom(false);
+        break;
+    // the sounds (sSample: the server's last)
+    case O::SsSoundLoadServer: return sSample = gSoundManager->Load(UString(a[0] != 0 ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, 1);
+    case O::SsSoundPlayServer: gSoundManager->Play(sSample, 1.0f, 0.0f, 1.0f, false, NULL);
+        break;
+    case O::SsLoadSound: EELoadSound(UString(a[0] != 0 ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, *(unsigned long*)a[1], *(unsigned long*)a[2], 1);
+        break;
+    // the world (p: an EEPlayer* for the Pl ops)
+    case O::SsWorldPlayer: return P64(gWorld.mPlayers[a[0]]);
+    case O::SsWorldPlayerBySlot: return P64(gWorld.GetPlayerBySlot((unsigned char)a[0]));
+    case O::SsPlIsHuman: return ((EEPlayer*)p)->IsHuman();
+    case O::SsPlSlot: return ((EEPlayer*)p)->mSlot;
+    case O::SsPlHasHuman: return ((EEPlayer*)p)->mHumanPlayer != NULL;
+    case O::SsPlId: return (long long)((EEPlayer*)p)->mPlayerID;
+    case O::SsPlSetSlot: ((EEPlayer*)p)->mSlot = (unsigned char)a[0];
+        break;
+    case O::SsPlSetFirewall: ((EEPlayer*)p)->mBehindFirewall = a[0] != 0;
+        break;
+    case O::SsPlNameFromMsg: static_cast<EEHumanPlayer*>((EEPlayer*)p)->SetName(((EEMRecord*)a[0])->mString);
+        break;
+    case O::SsWorldReconnect: gWorld.GetPlayer((unsigned long)a[0])->mSlot = (unsigned char)a[1];
+        break;
+    case O::SsWorldRemove: gWorld.RemoveDisconnectedPlayer((unsigned long)a[0]);
+        break;
+    case O::SsExecuteSelection: gWorld.GetCurrentPlayer()->ExecuteSelectionMessage((NEMessage*)a[0]);
+        break;
+    // the communications
+    case O::SsSetCt: gCommunications->SetCurrentCommunicationsTick((unsigned long)a[0]);
+        break;
+    case O::SsSetCtsInPhysics: gCommunications->SetNumberOfCTsProcessedInPhysics((unsigned long)a[0]);
+        break;
+    case O::SsIncrementCts: gCommunications->IncrementNumberOfCTsProcessedInPhysics();
+        break;
+    case O::SsSetMpSession: gCommunications->SetIsMultiplayerSession(a[0] != 0);
+        break;
+    case O::SsSetHumans: SF->mComms->SetNumHumanPlayers((unsigned char)a[0]);
+        break;
+    case O::SsSetPt: SC->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
+        break;
+    case O::SsRegisterSlot: SS->RegisterSlot((unsigned char)a[0]);
+        break;
+    case O::SsUnregisterSlot: EESessionAccess::Unregister(SS, (unsigned char)a[0]);
+        break;
+    case O::SsSendToClear: SS->mSendToSlots.clear();
+        break;
+    case O::SsSendToInsert: SS->mSendToSlots.insert(std::map<unsigned char, unsigned char>::value_type((unsigned char)a[0], (unsigned char)a[1]));
+        break;
+    case O::SsSendToErase: SS->mSendToSlots.erase((unsigned char)a[0]);
+        break;
+    case O::SsAbortXfer: SS->AbortXfer((unsigned long)a[0]);
+        break;
+    case O::SsRemoveInProgress: SS->RemovePlayerFromGameInProgress((unsigned char)a[0], a[1] != 0, false, a[2] != 0);
+        break;
+    case O::SsOpenSaveGame: return EEOpenSaveGameFile((const char*)gGameOptions.mMapType, a[0] != 0 ? "Saved Games\\" : "Scenarios\\", *(FSFileSpec**)a[1]) == kErrorOK;
+    case O::SsNewHeader: return P64(new EEPSaveGameHeader);
+    case O::SsDeleteHeader: delete (EEPSaveGameHeader*)p;
+        break;
+    case O::SsHeaderSetVersions: ((EEPSaveGameHeader*)a[0])->mMajorVersion = kSaveGameMajorVersion, ((EEPSaveGameHeader*)a[0])->mMinorVersion = kSaveGameMinorVersion;
+        break;
+    case O::SsHeaderLoad: return ((EEPSaveGameHeader*)a[0])->LoadFromFile(*(FSFileSpec*)a[1]) == kErrorOK;
+    case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, SS->GetSendToSlot((unsigned char)a[2]), *(unsigned long*)a[3], false);
+        break;
+    case O::SsStartGame: SS->StartGame();
+        break;
+    case O::SsPauseGame: SS->PauseGame();
+        break;
+    case O::SsCommsStopPing: static_cast<NESynchronousServer*>(gCommunications)->StopPing();
+        break;
+    case O::SsCommsResetXfer: static_cast<NESynchronousServer*>(gCommunications)->ResetXfer();
+        break;
+    case O::SsCommsPresent: return gCommunications != NULL;
+    case O::SsCommsDelete: delete gCommunications;
+        break;
+    case O::SsCommsNewClient: gCommunications = new EEClient;
+        break;
+    case O::SsClientStartThreads: static_cast<NESynchronousClient*>(gCommunications)->StartThreads();
+        break;
+    case O::SsLowestCts: static_cast<NESynchronousServer*>(gCommunications)->SetMessageManagerLowestCTs((unsigned long)a[0]);
+        break;
+    case O::SsDisconnect: SC->Disconnect();
+        break;
+    case O::SsLocalOut: gLocalPlayerOut = a[0] != 0;
+        break;
+    case O::SsSleep: PlatSleep((unsigned long)a[0]);
+        break;
+    case O::SsFrameProtocol: NEProtocol::GetProtocol(0, SF->mProtocol);
+        break;
+    // the game start
+    case O::SsStartTimeFromMsg: gStartTime = ((NEMRecord*)a[0])->Get<uint32_t>(0);
+        break;
+    case O::SsPhysicsRandom: gPhysics->GetRandom(0L, 0x7fffffffL);
+        break;
+    case O::SsNumTeams: gWorld.GetNumTeams();
+        break;
+    case O::SsGetProtocol: NEProtocol::GetProtocol(0, *(NEProtocol**)a[0]);
+        break;
+    case O::SsProtocolStatus: ((NEProtocol*)a[0])->GetStatus(UWideString(""), 0xffff0000);
+        break;
+    case O::SsPostResume: gGraphics->PostResume();
+        break;
+    case O::SsGfxPaused: return gGraphics->mIsPaused;
+    case O::SsPhysicsPostStart: gPhysics->mThread->Post(0x404, NULL, NULL, true);
+        break;
+    case O::SsTimerRunning: return gPhysics->mTimerRunning;
+    case O::SsMainGameUiState0: gUIManager->GetMainGameForm()->SetUIState(0);
+        break;
+    default: return EECore9OpD3(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
+double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpD7F(inOp, p, a, f);
 }

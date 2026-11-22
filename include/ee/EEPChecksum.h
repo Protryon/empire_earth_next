@@ -6,6 +6,7 @@
 // Requires lle/LowLevelEngine.h (ESChecksum), lle/FSRestorable.h, lle/FSPersistent.h.
 #ifndef EE_EEPCHECKSUM_H
 #define EE_EEPCHECKSUM_H
+#include "rust/base/error.h"
 
 class EEPChecksum : public ESChecksum, public FSPersistent {
 public:
@@ -16,6 +17,8 @@ public:
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x149d9b
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x149e5c
     virtual FSPersistent* CreateDefault() const;                                // +0x14 0x149d3c
+    // the Rust set (ee_game gamecpp persist_parts.rs reads and fills it)
+    EeErrorChecksum* GetRust() const { return this->mRust; }
 
 };
 

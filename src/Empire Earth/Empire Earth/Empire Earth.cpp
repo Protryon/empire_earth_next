@@ -399,59 +399,7 @@ struct EEFileNameSorter {
 
 unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPattern, long inUseFileTimes)
 {
-    FSFileSpec theFile;
-    std::vector<FSFileSpec> theFiles;
-    UString theExcluded;
-    UWideString thePath;
-    unsigned long theChecksum = 0;
-    if (inDirectory.GetFirstFile(inPattern, theFile) != kErrorOK)
-        return theChecksum;
-    UEDecryptUString(gU530BE0, theExcluded);
-    do {
-        thePath = theFile.GetFile();
-        if (PlatStrICmp(theFile.GetFile(), theExcluded) != 0)
-            theFiles.push_back(theFile);
-    } while (inDirectory.GetNextFile(theFile) == kErrorOK);
-    std::sort(theFiles.begin(), theFiles.end(), EEFileNameSorter());
-    unsigned char* theBuffer = new unsigned char[0x800];
-    for (std::vector<FSFileSpec>::iterator i = theFiles.begin(); i != theFiles.end(); i++) {
-        theFile = *i;
-        if ((unsigned char)inUseFileTimes != 0) {
-            thePath = theFile.GetVolume();
-            thePath += theFile.GetDirectory();
-            thePath += theFile.GetFile();
-            // the write time's high word plus the size (GetFileAttributesEx's ftLastWriteTime.dwHighDateTime,
-            // nFileSizeHigh and nFileSizeLow; files stay below 4 GB)
-            PlatFile* theNative = PlatFileOpen(thePath, PLAT_FILE_READ);
-            if (theNative != NULL) {
-                uint64_t theTime = 0;
-                PlatFileGetWriteTime(theNative, &theTime);
-                theChecksum += (unsigned long)(theTime >> 32) + PlatFileGetSize(theNative);
-                PlatFileClose(theNative);
-            }
-        } else {
-            // Fix: a file that cannot be opened is skipped, and a read that returns no data (an error, or the file
-            // shrank) ends the loop; both used to loop forever.
-            if (theFile.Open(kFileAccessRead) != kErrorOK)
-                continue;
-            unsigned long theLength = 0;
-            theFile.GetLength(theLength);
-            unsigned long theRead;
-            while (theLength > 0) {
-                unsigned long theAmount = min(theLength, 0x800UL);
-                theRead = 0;
-                theFile.Read(theBuffer, theAmount, theRead);
-                if (theRead == 0 || theRead > theAmount)
-                    break;
-                for (long j = 0; j < (long)theRead; j++)
-                    theChecksum += theBuffer[j];
-                theLength -= theRead;
-            }
-            theFile.Close();
-        }
-    }
-    delete[] theBuffer;
-    return theChecksum;
+    return ee_gamecpp_entry_file_checksum(&inDirectory, &inPattern, inUseFileTimes);
 }
 
 // Reads the five campaign checksums from string resources 0x32..0x34, 0x37, 0x36; a missing string keeps the value
@@ -560,56 +508,7 @@ void EEInitializeGraphics()
 // models and archive timestamps; appends the checksum's low 13 bits to the game version
 void EEInitializeNetwork()
 {
-    FSFileSpec theFile;
-    FSFileSpec theDirectory;
-    UString theUnused;
-    UWideString theVersion(gGameVersion);
-    UWideString theTag;
-    UWideString theSuffix;
-    long theTimestamp = 0;
-    theDirectory.SetDirectory(gStartupDirectory);
-    long theResult = NEInitialize(theDirectory);
-
-    ESVERIFY_AT(theResult == keseOK, 1578);
-    NEMessage::RegisterKnownMessages();
-    EEMessage::RegisterKnownMessages();
-    theResult = URegisterShutdown(EEEmptyShutdown);
-
-    ESVERIFY_AT(theResult == keseOK, 1586);
-    theFile.SetVolume(gStartupVolume);
-    TMGetTime();
-    theFile.SetDirectory(gStartupDirectory);
-    // the game's code is all in its exe (the original summed the engine, Dinkum and TCP Protocol DLLs)
-    char theExeName[PLAT_MAX_PATH];
-    if (!PlatPathGetExecutableName(theExeName, sizeof(theExeName)))
-        theExeName[0] = 0;
-    uint32_t theChecksum = EEGetFileChecksum(theFile, theExeName, 0);   // a 32-bit sum on every data model (LP64: the server compares it with the request's)
-    theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
-    // the db tables, which the game reads only as text (EEDbFindFile; the original summed the .dat files here)
-    theChecksum += EEGetFileChecksum(theFile, "*.csv", 0);
-    theChecksum += EEGetFileChecksum(theFile, "*.yaml", 0);
-    theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");
-    theChecksum += EEGetFileChecksum(theFile, "*.tai", 0);
-    theFile.SetDirectory(gStartupDirectory + "Data\\Models\\");
-    // the models (glTF only since D9: GEFindModelFile)
-    theChecksum += EEGetFileChecksum(theFile, "*.glb", 0);
-    theChecksum += EEGetFileChecksum(theFile, "*.gltf", 0);
-    theChecksum += EEGetFileChecksum(theFile, "*.bin", 0);
-    // port: the computer players' AIs (Data\ai: the manifest ais.json and every Lua script; ee/EECPEngine.h), so a
-    // joiner whose AI folder differs from the host's is refused like any other data mismatch (kConnectionBadChecksum)
-    theChecksum += EECPAIFolderHash();
-    for (unsigned long i = 0; i < gDataPath->GetArchiveCount(); i++) {
-        bool theHaveTimestamp = gDataPath->GetArchive(i).GetTag(UWideString("Timestamp"), theTag) == kErrorOK;
-        if (theHaveTimestamp) {
-            sscanf(theTag, "%ld", &theTimestamp);
-            theChecksum += theTimestamp;
-        }
-    }
-    TMGetTime();
-    gBinaryChecksum = theChecksum;
-    gGameVersion = theVersion.GetIndexedSubstring(theVersion.Find("v", 0), theVersion.GetLength() - 1);
-    sprintf(theSuffix, ".%04ld", (long)(gBinaryChecksum & 0x1fff));
-    gGameVersion += theSuffix;
+    ee_gamecpp_entry_initialize_network();
 }
 
 // Registers the saved game's persistent sections (checksum, map, scenario, players, world, effects, ...)
@@ -941,86 +840,11 @@ static int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWP
 
 void EERustInit();   // EERust.cpp
 
+// The game's run (ee_game gamecpp entry.rs): the Rust library's start first, the window system, the engine, the
+// start-up under the splash screen, the menus, the command line and the user interface's run, then the shutdown
 static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
-    EERustInit();   // first: a panic anywhere after this reaches a log
-    if (gEETestFixtureConfigure != NULL)
-        gEETestFixtureConfigure();   // TEST ONLY: nothing unless EE_TEST_UI is set (before any clock or thread starts)
-    long theResult;
-    bool theInitialized;
-    EEStartScreen theSplashScreen(inInstance);
-    if (gPlatSimMode || EECreateInstanceMutex()) {   // the simulation: any number of copies at once
-        // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
-        // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
-        PlatWindowSetAppName("Empire Earth Expansion", 0x66);
-        if (!PlatWindowSystemStart()) {
-            PlatMessageShow("Empire Earth", PlatWindowLastError(), PLAT_MESSAGE_ERROR);
-            return 1;
-        }
-        TSThread::SetEventPump(EEPumpWindowEvent, PlatCurrentThreadId());
-#ifdef _WIN32
-        PlatWindowSetNativeMessageHook(EENativeMessageHook);
-#endif
-#ifdef _WIN32
-        HRESULT theHResult = CoInitialize(NULL);
-
-        ESVERIFY_AT(theHResult == S_OK || theHResult == S_FALSE, 3600);
-#endif
-        UMSetFloatingPointPrecision(kFPPrecision53);
-        UMFastMath::BuildSqrtTable();
-        {   // (the original's first command-line pass here only chose whether to play the intro movies)
-            gInstance = inInstance;
-            ESInitialize(inInstance);
-            // the game's directory is the data root (the executable's directory, or EE_DATA_ROOT), wherever it was
-            // started from: its Data, Users and config.yaml are found relative to it (the original used the current
-            // directory)
-            PlatPathEnterDataRoot();
-            FSInitialize("");
-            gResource = new UResourceFile(inInstance);   // the language resources are linked into the exe
-
-            ESVERIFY_AT(gResource, 3632);
-            EEInitializeDefaultSettings();
-            theResult = gGamePreferences.Load();
-
-            ESVERIFY_AT(theResult == keseOK, 3637);
-            if (gPlatSimMode)
-                EESimPreferences();
-            EELoadNetworkSettings();
-            EEShowSinglePlayerScreen();
-            // the original tests the constant 1 here (push 1; pop eax; test eax,eax; je, no-/Og)
-            if (1) {
-                if (!gPlatSimMode)   // the simulation shows no splash window
-                    theSplashScreen.Start();
-                theInitialized = EEInitializePart1();
-                if (!gPlatSimMode)
-                    theSplashScreen.Stop();
-                if (theInitialized) {
-                    EEStartMenuScreen();
-                    EEInitializePart2();
-                    ee_fixture_start();   // TEST ONLY: the UI fixture's thread, only when EE_TEST_UI is set
-                    if (gPlatSimMode)
-                        ee_sim_driver_start();   // TEST ONLY: the simulation driver's thread (was EESimStart)
-                    if (EEParseCommandLine(inCommandLine)) {
-                        theResult = gUserInterface->Run((void*)&(const UString&)inCommandLine);
-                        theInitialized = theResult == kErrorOK;
-                        EEClearGame();
-                        UShutdown(theInitialized, false);
-                        gDataPath->Dereference();
-                        gCivilizationDataPath->Dereference();
-                    }
-                } else {
-                    UShutdown(theInitialized, false);
-                    gDataPath->Dereference();
-                    gCivilizationDataPath->Dereference();
-                }
-            }
-        }
-#ifdef _WIN32
-        CoUninitialize();
-#endif
-        PlatWindowSystemStop();
-    }
-    return 0;
+    return ee_gamecpp_entry_run((void*)inInstance, inCommandLine);
 }
 
 #ifdef _WIN32
@@ -1931,7 +1755,127 @@ int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     return EEGraphicsOp(inOp, p, a, f);
 }
 
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpAF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 9, lane E: this file's bodies' C++
+
+// EEInitializeNetwork's checksum folders under the start-up directory (gamecpp entry.rs NET_EXE..NET_MODELS)
+static const char* const kNetworkFolders[4] = {"", "Data\\Db\\", "Data\\Unit AI Scripts\\", "Data\\Models\\"};
+
+#define SPECS ((std::vector<FSFileSpec>*)p)
+
+int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp entry.rs; EeGameCpp's lane E section): one
+// statement each
+int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::EntrySpecFirstFile: return SPEC->GetFirstFile(*(const UString*)a[0], *(FSFileSpec*)a[1]);
+    case O::EntrySpecNextFile: return SPEC->GetNextFile(*(FSFileSpec*)a[0]);
+    case O::EntryDecryptExcluded: UEDecryptUString(gU530BE0, USTR);
+        break;
+    case O::EntrySpecFileIsNot: return PlatStrICmp(SPEC->GetFile(), *(const UString*)a[0]) != 0;
+    case O::EntrySpecVecNew: return P64(new std::vector<FSFileSpec>);
+    case O::EntrySpecVecDelete: delete SPECS;
+        break;
+    case O::EntrySpecVecPush: SPECS->push_back(*(FSFileSpec*)a[0]);
+        break;
+    case O::EntrySpecVecSort: std::sort(SPECS->begin(), SPECS->end(), EEFileNameSorter());
+        break;
+    case O::EntrySpecVecSize: return (int64_t)SPECS->size();
+    case O::EntrySpecVecGet: *(FSFileSpec*)a[1] = (*SPECS)[(size_t)a[0]];
+        break;
+    case O::EntrySpecOpenRead: return SPEC->Open(kFileAccessRead);
+    case O::EntrySpecLength: return SPEC->GetLength(*(unsigned long*)a[0]);
+    case O::EntrySpecRead: return SPEC->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
+    case O::EntrySpecClose: SPEC->Close();
+        break;
+    case O::EntrySpecFullPath: *(UString*)a[0] = SPEC->GetVolume() + SPEC->GetDirectory() + SPEC->GetFile();
+        break;
+    case O::EntryUStrData: return P64((const char*)USTR);
+    case O::EntryUStrSet: USTR = (const char*)a[0];
+        break;
+    case O::EntrySetNetworkFolder: SPEC->SetDirectory(gStartupDirectory + kNetworkFolders[a[0]]);
+        break;
+    case O::EntryNeInitialize: return NEInitialize(*SPEC);
+    case O::EntryRegisterNeMessages: NEMessage::RegisterKnownMessages();
+        break;
+    case O::EntryRegisterEeMessages: EEMessage::RegisterKnownMessages();
+        break;
+    case O::EntryRegisterEmptyShutdown: return URegisterShutdown(EEEmptyShutdown);
+    case O::EntryArchiveCount: return gDataPath->GetArchiveCount();
+    case O::EntryArchiveTimestamp: return gDataPath->GetArchive((unsigned long)a[0]).GetTag(UWideString("Timestamp"), WSTR) == kErrorOK;
+    case O::EntryStrData: return P64((const char*)WSTR);
+    case O::EntrySetBinaryChecksum: gBinaryChecksum = (uint32_t)a[0];
+        break;
+    case O::EntryVersionTrim: gGameVersion = gGameVersion.GetIndexedSubstring(gGameVersion.Find("v", 0), gGameVersion.GetLength() - 1);
+        break;
+    case O::EntryVersionAppend: gGameVersion += (const char*)a[0];
+        break;
+    case O::RunRustInit: EERustInit();
+        break;
+    case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
+        break;
+    case O::RunSplashNew: return P64(new EEStartScreen((HINSTANCE)a[0]));
+    case O::RunSplashDelete: delete (EEStartScreen*)p;
+        break;
+    case O::RunSplashStart: ((EEStartScreen*)p)->Start();
+        break;
+    case O::RunSplashStop: ((EEStartScreen*)p)->Stop();
+        break;
+    case O::RunInstanceMutex: return EECreateInstanceMutex();
+    case O::RunSetEventPump: TSThread::SetEventPump(EEPumpWindowEvent, PlatCurrentThreadId());
+        break;
+    case O::RunNativeHook:
+#ifdef _WIN32
+        PlatWindowSetNativeMessageHook(EENativeMessageHook);
+#endif
+        break;
+    case O::RunComInit:
+#ifdef _WIN32
+        return CoInitialize(NULL);
+#endif
+        break;
+    case O::RunComUninit:
+#ifdef _WIN32
+        CoUninitialize();
+#endif
+        break;
+    case O::RunFloatingPoint: UMSetFloatingPointPrecision(kFPPrecision53);
+        break;
+    case O::RunSqrtTable: UMFastMath::BuildSqrtTable();
+        break;
+    case O::RunSetInstance: gInstance = (HINSTANCE)a[0];
+        break;
+    case O::RunEsInitialize: ESInitialize((HINSTANCE)a[0]);
+        break;
+    case O::RunFsInitialize: FSInitialize("");
+        break;
+    case O::RunNewResource: return (gResource = new UResourceFile((HINSTANCE)a[0])) != NULL;   // the language resources are linked into the exe
+    case O::RunDefaultSettings: EEInitializeDefaultSettings();
+        break;
+    case O::RunPreferencesLoad: return gGamePreferences.Load();
+    case O::RunSimPreferences: EESimPreferences();
+        break;
+    case O::RunUserInterface: return gUserInterface->Run((void*)&(const UString&)UString((const char*)a[0]));
+    case O::RunUShutdown: UShutdown(a[0] != 0, false);
+        break;
+    case O::RunReleaseDataPath: gDataPath->Dereference();
+        break;
+    case O::RunReleaseCivilizationPath: gCivilizationDataPath->Dereference();
+        break;
+    default: return EECommandLineOp(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
     return 0.0;
