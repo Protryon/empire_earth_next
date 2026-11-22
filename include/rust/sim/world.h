@@ -17,6 +17,23 @@ struct EeUnitsPlayerWonders;
 /// The queued improvements: per unit type the running timer (`first`) and the improvements in order.
 struct EeUnitsQueued;
 
+/// `RTSUnit`'s plain members (ee/RTSUnit.h; RTSUnit.cpp's `Reset` sets them).
+struct EeUnitsRtsUnitFields {
+  /// the unit's tile (-10000: off the map)
+  long mTileX;
+  long mTileY;
+  /// the unit's id (0xffffffff: none; the owner in its top byte)
+  unsigned long mUnitID;
+  /// saved
+  bool mIsQueuedForDelete;
+  /// saved as false; Load clears it
+  bool mIsEditorSelected;
+  /// true after the constructor
+  bool mIsNodeFreed;
+  /// named by the asserts "this->mIsValid == true"
+  bool mIsValid;
+};
+
 /// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
 struct EeUnitsRtsMapFields {
   /// the constructor's tile size (copied to `gMapTileSize`)
@@ -277,23 +294,6 @@ struct EeUnitsUnitClassUpgradeFields {
   bool mConvertsBuildings;
   bool mConvertsPriests;
   bool mIsInitialized;
-};
-
-/// `RTSUnit`'s plain members (ee/RTSUnit.h; RTSUnit.cpp's `Reset` sets them).
-struct EeUnitsRtsUnitFields {
-  /// the unit's tile (-10000: off the map)
-  long mTileX;
-  long mTileY;
-  /// the unit's id (0xffffffff: none; the owner in its top byte)
-  unsigned long mUnitID;
-  /// saved
-  bool mIsQueuedForDelete;
-  /// saved as false; Load clears it
-  bool mIsEditorSelected;
-  /// true after the constructor
-  bool mIsNodeFreed;
-  /// named by the asserts "this->mIsValid == true"
-  bool mIsValid;
 };
 
 /// `EEUnit`'s plain members (ee/EEUnit.h).

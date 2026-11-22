@@ -891,7 +891,7 @@ fn run_sequence(seq: i32) {
                     file.limit = r(200) as usize;
                 }
                 // SAFETY: the file is live
-                let result = unsafe { ee_ge_tm_save(m, &io_of(&mut file)) };
+                let result = unsafe { (*m).save(&io_of(&mut file)) };
                 trace(format!("save {result} size {}", file.data.len()));
                 let mut h = FNV;
                 fnv(&mut h, &file.data);
@@ -903,7 +903,7 @@ fn run_sequence(seq: i32) {
                     }
                     file.pos = 0;
                     // SAFETY: as above
-                    let lr = unsafe { ee_ge_tm_load(m, &io_of(&mut file)) };
+                    let lr = unsafe { EeGeTerrainMesh::load(m, &io_of(&mut file)) };
                     trace(format!("load {lr} at {}", file.pos));
                     dump_state(&s);
                 }

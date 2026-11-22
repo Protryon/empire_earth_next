@@ -227,12 +227,12 @@ static bool EEGetUnitOpacity(EEUnit* inUnit, long inShowHiddenUnits, float& outO
 
 const EeGfxRaster gEERustRaster = {
     [](EeGfxLighting inKind) { ee_gamecpp_ro_lighting((uint32_t)inKind); },
-    [](const EeGe3DPoint* inLocation, uint32_t inFog) { return ee_gamecpp_ro_fog_factor(&inLocation->x, inFog); },
+    [](const EeGe3DPoint* inLocation, uint32_t inFog) { return ee_gamecpp_ro_fog_factor(&inLocation->mX, inFog); },
     [](void* inModel, float inOpacity) { return (int32_t)gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, gOrthographicView); },
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
     ee_gamecpp_ro_depth_range,
     []() { return gRenderSnapshot.mCameraYaw; },
-    [](const EeGe3DPoint* inPoint, float* outX, float* outY) { ee_gamecpp_ro_screen_point(&inPoint->x, outX, outY); },
+    [](const EeGe3DPoint* inPoint, float* outX, float* outY) { ee_gamecpp_ro_screen_point(&inPoint->mX, outX, outY); },
     // EEE3DGoal::DrawPass3's text (0xf13db)
     [](float inX, float inY, const uint8_t* inText, EeGfxColor inColor) { ee_gamecpp_ro_draw_text(inX, inY, inText, inColor.red, inColor.green, inColor.blue); },
     EERasterCreateModel,

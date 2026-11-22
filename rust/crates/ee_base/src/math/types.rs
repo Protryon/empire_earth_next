@@ -1,8 +1,12 @@
 //! The Graphics Engine's value types as `#[repr(C)]` mirrors of the C++ classes, which stay the types callers use
-//! (`include/lle/GE*.h`; the forwarding units `static_assert` each size and public offset). Rust owns the algorithms
-//! over them; the trivial members (constructors, accessors, component-wise `+=`, file I/O) stay C++.
+//! (`include/lle/GE*.h`, which derive from these records: `cbindgen:field-names` gives the fields the C++ member
+//! names). Rust owns the algorithms over them; the trivial members (constructors, accessors, component-wise `+=`)
+//! stay C++ inline.
 
 /// `GE2DPoint` (sizeof 8).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mX, mY]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Ge2DPoint {
@@ -11,6 +15,9 @@ pub struct Ge2DPoint {
 }
 
 /// `GE3DPoint` (sizeof 0xc).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mX, mY, mZ]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Ge3DPoint {
@@ -20,6 +27,9 @@ pub struct Ge3DPoint {
 }
 
 /// `GEVector` (sizeof 0xc).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mX, mY, mZ]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeVector {
@@ -29,6 +39,9 @@ pub struct GeVector {
 }
 
 /// `GE3DLine` (sizeof 0x18): start, direction.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mStart, mDirection]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Ge3DLine {
@@ -37,6 +50,9 @@ pub struct Ge3DLine {
 }
 
 /// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mPoint, mNormal]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Ge3DPlane {
@@ -45,6 +61,9 @@ pub struct Ge3DPlane {
 }
 
 /// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mMatrix]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeTransformation {
@@ -52,6 +71,9 @@ pub struct GeTransformation {
 }
 
 /// `GEOrientation` (sizeof 0xc).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mYaw, mPitch, mRoll]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeOrientation {
@@ -61,6 +83,9 @@ pub struct GeOrientation {
 }
 
 /// `GEQuaternion` (sizeof 0x10).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mX, mY, mZ, mW]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeQuaternion {
@@ -71,6 +96,9 @@ pub struct GeQuaternion {
 }
 
 /// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mBottomLeftFront, mTopRightBack, mWidth, mHeight, mDepth]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeBoundingBox {
@@ -82,6 +110,9 @@ pub struct GeBoundingBox {
 }
 
 /// `GERectangle` (sizeof 0x10), in the C++'s member order.
+///
+/// The C++ class derives from it (its members are these fields, by the C++ names).
+/// cbindgen:field-names=[mBottom, mLeft, mRight, mTop]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeRectangle {

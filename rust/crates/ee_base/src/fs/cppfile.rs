@@ -38,6 +38,16 @@ pub struct EeFsFileCalls {
     pub write_i32: unsafe extern "C" fn(file: *mut c_void, value: i32) -> i32,
     /// `Write(const float&)`.
     pub write_f32: unsafe extern "C" fn(file: *mut c_void, value: f32) -> i32,
+    /// `Read(unsigned char&)`.
+    pub read_u8: unsafe extern "C" fn(file: *mut c_void, value: *mut u8) -> i32,
+    /// `Read(unsigned short&)`.
+    pub read_u16: unsafe extern "C" fn(file: *mut c_void, value: *mut u16) -> i32,
+    /// `Write(const unsigned char&)`.
+    pub write_u8: unsafe extern "C" fn(file: *mut c_void, value: u8) -> i32,
+    /// `Write(const unsigned short&)`.
+    pub write_u16: unsafe extern "C" fn(file: *mut c_void, value: u16) -> i32,
+    /// `GetIsOpen()`.
+    pub is_open: unsafe extern "C" fn(file: *mut c_void) -> bool,
 }
 
 static CALLS: AtomicPtr<EeFsFileCalls> = AtomicPtr::new(std::ptr::null_mut());
@@ -90,6 +100,31 @@ impl CppFile {
     pub fn write_f32(&mut self, value: f32) -> i32 {
         // SAFETY: as `read_text`
         unsafe { (self.calls().write_f32)(self.0, value) }
+    }
+    /// `Read(unsigned char&)`.
+    pub fn read_u8(&mut self, value: &mut u8) -> i32 {
+        // SAFETY: as `read_text`
+        unsafe { (self.calls().read_u8)(self.0, value) }
+    }
+    /// `Read(unsigned short&)`.
+    pub fn read_u16(&mut self, value: &mut u16) -> i32 {
+        // SAFETY: as `read_text`
+        unsafe { (self.calls().read_u16)(self.0, value) }
+    }
+    /// `Write(const unsigned char&)`.
+    pub fn write_u8(&mut self, value: u8) -> i32 {
+        // SAFETY: as `read_text`
+        unsafe { (self.calls().write_u8)(self.0, value) }
+    }
+    /// `Write(const unsigned short&)`.
+    pub fn write_u16(&mut self, value: u16) -> i32 {
+        // SAFETY: as `read_text`
+        unsafe { (self.calls().write_u16)(self.0, value) }
+    }
+    /// `GetIsOpen()`.
+    pub fn is_open(&self) -> bool {
+        // SAFETY: as `read_text`
+        unsafe { (self.calls().is_open)(self.0) }
     }
     /// `Write(const char*, length, written)`: the status and the count.
     pub fn write_text(&mut self, data: &[u8]) -> (i32, c_ulong) {
@@ -260,6 +295,42 @@ pub(crate) mod tests {
         r
     }
 
+    unsafe extern "C" fn read_u8(f: *mut c_void, v: *mut u8) -> i32 {
+        let m = unsafe { mem(f) };
+        m.log.push("read_u8".into());
+        let Some(&b) = m.data.get(m.pos) else { return 0x12 };
+        unsafe { *v = b };
+        m.pos += 1;
+        0
+    }
+    unsafe extern "C" fn read_u16(f: *mut c_void, v: *mut u16) -> i32 {
+        let m = unsafe { mem(f) };
+        m.log.push("read_u16".into());
+        if m.pos + 2 > m.data.len() {
+            return 0x12;
+        }
+        unsafe { *v = u16::from_le_bytes([m.data[m.pos], m.data[m.pos + 1]]) };
+        m.pos += 2;
+        0
+    }
+    unsafe extern "C" fn write_u8(f: *mut c_void, v: u8) -> i32 {
+        let m = unsafe { mem(f) };
+        m.log.push(format!("write_u8 {v}"));
+        m.data.push(v);
+        0
+    }
+    unsafe extern "C" fn write_u16(f: *mut c_void, v: u16) -> i32 {
+        let m = unsafe { mem(f) };
+        m.log.push(format!("write_u16 {v}"));
+        m.data.extend_from_slice(&v.to_le_bytes());
+        0
+    }
+    unsafe extern "C" fn is_open(f: *mut c_void) -> bool {
+        let m = unsafe { mem(f) };
+        m.log.push("is_open".into());
+        true
+    }
+
     static TABLE: EeFsFileCalls = EeFsFileCalls {
         read_u32,
         read_bytes,
@@ -271,6 +342,11 @@ pub(crate) mod tests {
         read_f32,
         write_i32,
         write_f32,
+        read_u8,
+        read_u16,
+        write_u8,
+        write_u16,
+        is_open,
     };
     static LOCK: Mutex<()> = Mutex::new(());
 
@@ -316,5 +392,21 @@ pub(crate) mod tests {
         });
         assert_eq!(m.log, ["read_u32", "read_bytes 2", "read_text 4", "write_u32 9", "write_bytes 2", "write_text 1"]);
         assert_eq!(&m.data[7..], &[9, 0, 0, 0, b'x', b'y', b'z']);
+    }
+
+    #[test]
+    fn the_small_values_and_the_open_state_reach_the_table() {
+        let ((), m) = with_file(&[7, 1, 2], |mut f| {
+            assert!(f.is_open());
+            let (mut b, mut s) = (0u8, 0u16);
+            assert_eq!(f.read_u8(&mut b), 0);
+            assert_eq!(f.read_u16(&mut s), 0);
+            assert_eq!((b, s), (7, 0x201));
+            assert_eq!(f.read_u8(&mut b), 0x12);
+            assert_eq!(f.write_u8(5), 0);
+            assert_eq!(f.write_u16(0x302), 0);
+        });
+        assert_eq!(m.log, ["is_open", "read_u8", "read_u16", "read_u8", "write_u8 5", "write_u16 770"]);
+        assert_eq!(&m.data[3..], &[5, 2, 3]);
     }
 }

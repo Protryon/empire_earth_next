@@ -5,6 +5,8 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use ee_base::fs::{CppFile, FsFile, FsWrite};
+
 /// `kErrorOK`.
 pub(crate) const OK: c_long = 0;
 /// `kErrorFailed` (`LowLevelEngineCore.h`).
@@ -124,6 +126,76 @@ impl FieldIo for CppIo {
     fn set_position(&mut self, offset: c_long) -> c_long {
         // SAFETY: as above
         unsafe { (self.0.set_position)(self.0.file, offset) }
+    }
+}
+
+/// A C++ `FSFile*` as a field stream: each field through the file's virtual `Read`/`Write` (ee_base `CppFile`, the
+/// table File System.cpp registers). A plain `FSFile` has no position: both position calls fail (`kErrorFailed`).
+pub fn cpp_file_io(file: *mut c_void) -> EeGeFieldIo {
+    unsafe extern "C" fn read_u8(f: *mut c_void, o: *mut u8) -> c_long {
+        // SAFETY: a live C++ file and a valid out pointer (the table's contract)
+        c_long::from(CppFile(f).read_u8(unsafe { &mut *o }))
+    }
+    unsafe extern "C" fn read_u16(f: *mut c_void, o: *mut u16) -> c_long {
+        // SAFETY: as above
+        c_long::from(CppFile(f).read_u16(unsafe { &mut *o }))
+    }
+    unsafe extern "C" fn read_u32(f: *mut c_void, o: *mut u32) -> c_long {
+        // SAFETY: as above
+        c_long::from(FsFile::read_u32(&mut CppFile(f), unsafe { &mut *o }))
+    }
+    unsafe extern "C" fn read_f32(f: *mut c_void, o: *mut f32) -> c_long {
+        // SAFETY: as above
+        c_long::from(CppFile(f).read_f32(unsafe { &mut *o }))
+    }
+    unsafe extern "C" fn write_u8(f: *mut c_void, v: u8) -> c_long {
+        c_long::from(CppFile(f).write_u8(v))
+    }
+    unsafe extern "C" fn write_u16(f: *mut c_void, v: u16) -> c_long {
+        c_long::from(CppFile(f).write_u16(v))
+    }
+    unsafe extern "C" fn write_u32(f: *mut c_void, v: u32) -> c_long {
+        c_long::from(FsWrite::write_u32(&mut CppFile(f), v))
+    }
+    unsafe extern "C" fn write_f32(f: *mut c_void, v: f32) -> c_long {
+        c_long::from(CppFile(f).write_f32(v))
+    }
+    unsafe extern "C" fn read_bytes(f: *mut c_void, o: *mut u8, n: c_ulong, r: *mut c_ulong) -> c_long {
+        // SAFETY: `o` holds `n` bytes, `r` is valid (the table's contract)
+        unsafe {
+            let (status, read) = CppFile(f).read_text(std::slice::from_raw_parts_mut(o, n as usize));
+            *r = read;
+            c_long::from(status)
+        }
+    }
+    unsafe extern "C" fn write_bytes(f: *mut c_void, d: *const u8, n: c_ulong, w: *mut c_ulong) -> c_long {
+        // SAFETY: `d` holds `n` bytes, `w` is valid (the table's contract)
+        unsafe {
+            let (status, written) = CppFile(f).write_text(std::slice::from_raw_parts(d, n as usize));
+            *w = written;
+            c_long::from(status)
+        }
+    }
+    unsafe extern "C" fn no_position(_: *mut c_void, _: *mut c_long) -> c_long {
+        9
+    }
+    unsafe extern "C" fn no_set_position(_: *mut c_void, _: c_long) -> c_long {
+        9
+    }
+    EeGeFieldIo {
+        file,
+        read_u8,
+        read_u16,
+        read_u32,
+        read_f32,
+        write_u8,
+        write_u16,
+        write_u32,
+        write_f32,
+        read_bytes,
+        write_bytes,
+        get_position: no_position,
+        set_position: no_set_position,
     }
 }
 

@@ -33,18 +33,8 @@ static bool sVerbose = false;   // --verbose: each trace line to stderr as it is
 #include "rust/net/net.h"
 #include "ne_tcp_host.h"
 
-// URandom's out-of-line members, as GEBitmap.cpp defines them
-void (*gURandomTraceHook)(URandom* inRandom) = NULL;
-float URandom::Generate()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return (float)((double)this->mSeed / (double)this->mModulus);
-}
-unsigned long URandom::NextInSeries()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return this->mSeed;
-}
+// URandom's trace hook, as GEBitmap.cpp defines it (its draws are Rust's: lle/URandom.h, ee_base random)
+extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;
 
 int QWorld::IdOf(NEMessage* inMessage)
 {
