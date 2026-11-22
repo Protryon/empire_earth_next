@@ -103,24 +103,6 @@ void EEStopAllSounds();                     // 0x140ceb (Empire Earth.cpp)
 static const float kGameViewLeft = 0.0f, kGameViewRight = 1600.0f;  // the game view below the top bar (.rdata
 static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c..0x44ba38: separate words)
 
-// (the members below are Rust's: ee_game screens ui_calls.rs)
-// Switches to another rasterizer: hides the cursor, releases the screens, deactivates the old rasterizer and
-// resizes the game screen to 1024x768
-void EEUserInterface::ChangeRasterizer(long inRasterizer, long inScreen)
-
-{ ee_screens_ui_change_rasterizer(inRasterizer, inScreen); }
-
-// Resizes the game screen (unless the size is unchanged and not forced), relays out the forms and redraws the
-// mini map
-void EEUserInterface::ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag)
-
-{ ee_screens_ui_resize_game_screen((uint32_t)inWidth, (uint32_t)inHeight, inForce, inFlag); }
-
-// Shows the WON game and system messages of the day on the multiplayer form when it is visible
-void EEUserInterface::ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem)
-
-{ ee_screens_ui_show_motd(&inGame, &inSystem); }
-
 // LeaveMap, CancelGame, CloseScenarioEditor, EnterScenarioEditor, StartLoadingFromEditor, ShowCivilizationBuilder and
 // RestartGame are Rust's whole (ee_screens ui_game.rs; the thread's messages run them by ee_screens_ui_member).
 // The UI thread's game starts' host (EE_SCREENS_UG_OP_*): Rust's (ui_game_calls.rs and the modules before it)
@@ -174,16 +156,6 @@ extern "C" void ee_screenscpp_ug_stop_one_shots() { gSoundManager->StopAllOneSho
 extern "C" bool ee_screenscpp_ug_graphics_paused() { return gGraphics->mIsPaused; }
 extern "C" bool ee_screenscpp_ug_can_buy_civ() { return gWorld.mGameOptions.CanBuyCivilization(); }
 extern "C" bool ee_screenscpp_ug_custom_civs() { return gWorld.mGameOptions.mAllowCustomCivs; }
-
-// Opens the WON server selection, remembering the password when asked
-void EEUserInterface::OpenSelectServer()
-
-{ ee_screens_ui_open_select_server(); }
-
-// Pauses the graphics thread and waits until it is paused
-void EEUserInterface::PauseGraphics()
-
-{ ee_screens_ui_pause_graphics(); }
 
 // The action queues' host (actions.rs): an action's reference, release, run, undo and undoable flag; the locks
 extern "C" uint32_t ee_screenscpp_action(uint32_t inOp, void* inAction)
@@ -274,17 +246,6 @@ extern "C" void ee_screenscpp_uim_select_server(uintptr_t inUi) { UIM(inUi)->Ope
 extern "C" void ee_screenscpp_uim_motd(uintptr_t inUi, uintptr_t inA, uintptr_t inB)
 { UIM(inUi)->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inA), *reinterpret_cast<UWideString*>(inB)); }
 extern "C" void ee_screenscpp_uim_delete_wstring(uintptr_t inText) { delete reinterpret_cast<UWideString*>(inText); }
-
-// Updates the interface: keyboard and mouse input, the UI under the world read lock, then the queued actions
-void EEUserInterface::UpdateInterface()
-
-{ ee_screens_ui_update_interface(); }
-
-// Posts loading a saved game file (message 0x408)
-void EEUserInterface::PostLoadSavedGame(const FSFileSpec& inSpec)
-{
-    this->Post(0x408, new FSFileSpec(inSpec), NULL);
-}
 
 // (the posts the game makes, ResumeGraphics and HandleEvent are inline: ee/EEUserInterface.h)
 
@@ -487,9 +448,14 @@ extern "C" void ee_screenscpp_ime_composition(EeScreensShimText inText, EeScreen
 
 // (the window's event pump and native message hook: Empire Earth.cpp, which installs them)
 
-
 // the number of humans in the session (SetLoadProgress's test: ee_screens ui_objects_ffi.rs)
 extern "C" int64_t ee_screenscpp_ui_humans()
 {
     return gCommunications != NULL ? gCommunications->GetNumHumanPlayers() : 0;
 }
+
+// the posts' references and the graphics thread's resume (ee_screens ui_objects_ffi.rs)
+extern "C" void ee_screenscpp_ui_event_reference(void* inEvent) { static_cast<UIEvent*>(inEvent)->Reference(); }
+extern "C" void ee_screenscpp_ui_object_reference(void* inObject) { static_cast<UReferenceCounter*>(inObject)->Reference(); }
+extern "C" void ee_screenscpp_ui_graphics_post_resume() { gGraphics->PostResume(); }
+extern "C" bool ee_screenscpp_ui_graphics_paused() { return gGraphics->mIsPaused; }

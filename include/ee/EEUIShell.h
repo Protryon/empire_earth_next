@@ -349,7 +349,6 @@ protected:
     EE_SHELL_RECT(UIForm, SetRectangle, EE_SCREENS_SV_SET_RECTANGLE, void, return)
 };
 
-class UIControlsTable;
 
 // the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
 // extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)

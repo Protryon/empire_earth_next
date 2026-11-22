@@ -14,10 +14,12 @@ public:
     // inline: EEUIFMainGame's ctor 0x262e73 stores +0x10 then the vptr (0x262ed5)
     EEUIBuildGate() : mTechnology(kTechNone) {}
     virtual ~EEUIBuildGate() {}             // +0x00 (??_G 0x19cc1c in the scenario editor form's unit: the vptr store)
+    // Leaves the placement mode (back to the normal interface state)
     virtual void Cancel();                  // +0x04 0x2561b6 (ICF: EEUIBuildWall's too) the main form leaves the mode
     virtual void Initialize(long inPlayer); // +0x08 0x2561ff
     virtual void Terminate();               // +0x0c 0x256245
     virtual void Update(const GE2DPoint& inLocation);   // +0x10 0x25627d (the mouse location)
+    // Asks the main game form's build action to build a gate at a location facing a direction
     virtual void Build(const GE2DPoint& inLocation, long inDirection);   // +0x14 0x25619b
     void ClearGhostUnits();                 // 0x2561c9 (un-highlights the walls, clears the ghosts)
 
