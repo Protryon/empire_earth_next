@@ -76,21 +76,8 @@ struct UITextLabelRust {
         }
         return 0;
     }
-    static intptr_t Call(const UITextLabel* l, EeUiLabelCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f,
-                         float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, f3};
-        return ee_ui_label_call(l->mRust, c, a, b, f);
-    }
-    static intptr_t CallRect(const UITextLabel* l, EeUiLabelCall c, const GERectangle& r)
-    {
-        float f[4];
-        UIObjHost::PutRect(f, r);
-        return ee_ui_label_call(l->mRust, c, 0, 0, f);
-    }
     static const GERectangle& RectAt(intptr_t inAddress) { return *reinterpret_cast<const GERectangle*>(inAddress); }
 };
-typedef EeUiLabelCall C;
 
 // Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
 UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
@@ -102,56 +89,7 @@ UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned lon
     float f[4];
     UIObjHost::PutRect(f, inRectangle);
     this->mRust = ee_ui_label_new(this, UITextLabelRust::Op, f, inFont, inLabelType, inBorderThickness);
-    UITextLabelRust::Call(this, C::Init, (intptr_t)(const char*)inText);
+    this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText);
 }
 
 UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }
-void UITextLabel::ChangeFont(GEFont* inFont) { UITextLabelRust::Call(this, C::ChangeFont, (intptr_t)inFont); }
-void UITextLabel::CheckScrollBar() { UITextLabelRust::Call(this, C::CheckScrollBar); }
-long UITextLabel::CopyData() { return (long)UITextLabelRust::Call(this, C::CopyData); }
-void UITextLabel::DeleteArray() { UITextLabelRust::Call(this, C::DeleteArray); }
-void UITextLabel::DeleteLine(unsigned long inLine) { UITextLabelRust::Call(this, C::DeleteLine, inLine); }
-long UITextLabel::DrawPolygons() { return (long)UITextLabelRust::Call(this, C::DrawPolygons); }
-long UITextLabel::DrawTextA() { return (long)UITextLabelRust::Call(this, C::DrawText); }
-bool UITextLabel::GetFitRectToText() const { return UITextLabelRust::Call(this, C::FitRectToText) != 0; }
-GEText* UITextLabel::GetGEText() const { return reinterpret_cast<GEText*>(UITextLabelRust::Call(this, C::Text)); }
-unsigned long UITextLabel::GetLineCount() const { return (unsigned long)UITextLabelRust::Call(this, C::LineCount); }
-unsigned long UITextLabel::GetNumberLinesDisplayed() const
-{
-    return (unsigned long)UITextLabelRust::Call(this, C::LinesDisplayed);
-}
-const UIScrollBar* UITextLabel::GetScrollBar() const
-{
-    return reinterpret_cast<const UIScrollBar*>(UITextLabelRust::Call(this, C::ScrollBar));
-}
-const UWideString& UITextLabel::GetText(unsigned long inLine) const
-{
-    return *reinterpret_cast<const UWideString*>(UITextLabelRust::Call(this, C::Line, inLine));
-}
-long UITextLabel::MouseLButtonDown() { return (long)UITextLabelRust::Call(this, C::MouseLButtonDown); }
-long UITextLabel::MouseLButtonUp() { return (long)UITextLabelRust::Call(this, C::MouseLButtonUp); }
-long UITextLabel::MouseMove(const GE2DPoint& inLocation)
-{
-    return (long)UITextLabelRust::Call(this, C::MouseMove, 0, 0, inLocation.GetX(), inLocation.GetY());
-}
-long UITextLabel::MouseWheelTurned(long inDelta) { return (long)UITextLabelRust::Call(this, C::MouseWheelTurned, inDelta); }
-void UITextLabel::RecomputeDisplayRange() { UITextLabelRust::Call(this, C::RecomputeDisplayRange); }
-bool UITextLabel::ScrollBarExists() const { return UITextLabelRust::Call(this, C::ScrollBarExists) != 0; }
-void UITextLabel::SetAlignment(unsigned long inAlignment) { UITextLabelRust::Call(this, C::SetAlignment, inAlignment); }
-void UITextLabel::SetFitRectToText(bool inFit) { UITextLabelRust::Call(this, C::SetFitRectToText, inFit); }
-void UITextLabel::SetLocation(const GE2DPoint& inLocation)
-{
-    UITextLabelRust::Call(this, C::SetLocation, 0, 0, inLocation.GetX(), inLocation.GetY());
-}
-void UITextLabel::SetRectangle(const GERectangle& inRectangle) { UITextLabelRust::CallRect(this, C::SetRectangle, inRectangle); }
-void UITextLabel::SetStartingDisplayLine(unsigned long inLine) { UITextLabelRust::Call(this, C::SetStartingDisplayLine, inLine); }
-void UITextLabel::SetScrollBarBgOpacity(float inOpacity) { UITextLabelRust::Call(this, C::SetScrollBarBgOpacity, 0, 0, inOpacity); }
-void UITextLabel::SetScrollBarBgColor(const GEColor& inColor)
-{
-    UITextLabelRust::Call(this, C::SetScrollBarBgColor, 0, 0, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-}
-void UITextLabel::SetText(const UWideString& inText, bool inReplace)
-{
-    UITextLabelRust::Call(this, C::SetText, (intptr_t)(const char*)inText, inReplace);
-}
-void UITextLabel::SetTextRectangle(const GERectangle& inRectangle) { UITextLabelRust::CallRect(this, C::SetTextRectangle, inRectangle); }

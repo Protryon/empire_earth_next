@@ -298,26 +298,6 @@ UIControlsTable::UIControlsTable() : mRust(ee_ui_controls_table_new(this, ee_ui_
 // Destroys the control description, releasing its font
 UIControlsTable::~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
 
-void UIControlsTable::AddEvent(const UIEventData& inEvent)
-{
-    ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEvent.mEventID, inEvent.mEventType, NULL);
-}
-
-// Loads every control record from the file and registers each valid one with its form; returns the last read result
-long UIControlsTable::Create(FSFileSpec& inFile, UIManager* inManager)
-{
-    return (long)ee_ui_controls_tables(EeUiTablesCall::Create, (intptr_t)&inFile, (intptr_t)inManager,
-                                       ee_ui_table_host, NULL);
-}
-
-// port: see the header
-long UIControlsTable::AddControlLike(UIManager* inManager, long inTemplateID, long inID, long inFormIndex,
-                                     unsigned long inGroup, float inLeft, float inRight, float inTop, float inBottom,
-                                     long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID)
-{
-    return (long)ee_ui_controls_tables(EeUiTablesCall::AddControlLike, (intptr_t)inManager, (intptr_t)&(const EeUiTableLike&)EeUiTableLike{inTemplateID, inID, inFormIndex, inGroup, inLeft, inRight, inTop, inBottom, inStringTableBegin, inStringTableEnd, inHelpStringID}, NULL, NULL);
-}
-
 // port: see the header
 long UIControlsTable::MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
                                                float inRightDelta)
@@ -328,57 +308,9 @@ long UIControlsTable::MoveControlsHorizontally(long inFormID, long inFirstIndex,
                                        NULL, f);
 }
 
-// Loads a UI texture (clamped, point mip, given alpha) and returns a bitmap stretched over the rectangle, or NULL
-GEBitmap* UIControlsTable::CreateBitmap(UIManager* inManager, const GERectangle& inRectangle,
-                                        const UString& inFileName, bool inHasAlpha,
-                                        const GERectangle& inTextureRectangle) const
-{
-    return (GEBitmap*)ee_ui_table_create_bitmap(inManager, &inRectangle, &inFileName, inHasAlpha, &inTextureRectangle);
-}
-
-// Lays out the control on the window and creates it by type (user types via the manager), then sets its background
-UIControl* UIControlsTable::CreateControl(UIManager* inManager)
-{
-    return reinterpret_cast<UIControl*>(
-        ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControl, (intptr_t)inManager, 0, NULL));
-}
-
-// Attaches the description's trigger events to the form's control, creating each event through the manager
-void UIControlsTable::CreateControlEvent(UIForm* inForm)
-{
-    ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControlEvent, (intptr_t)inForm, 0, NULL);
-}
-
-// Deletes every control description and empties the table
-void UIControlsTable::DeleteAll() { ee_ui_controls_tables(EeUiTablesCall::DeleteAll, 0, 0, NULL, NULL); }
-
-UIControlsTable* UIControlsTable::GetUIControlsTable(unsigned long inIndex)
-{
-    return reinterpret_cast<UIControlsTable*>(ee_ui_controls_tables(EeUiTablesCall::At, inIndex, 0, NULL, NULL));
-}
-
-// Recomputes a created control's rectangle and font for the current window size
-void UIControlsTable::RelayoutControl(UIControl* inControl, UIManager* inManager)
-{
-    ee_ui_controls_table_call(this->mRust, EeUiTableCall::RelayoutControl, (intptr_t)inControl, (intptr_t)inManager,
-                              NULL);
-}
-
-// Picks the description's font: scaled to the control or window height when the record asks, else the table font
-void UIControlsTable::SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow)
-{
-    ee_ui_controls_table_call(this->mRust, EeUiTableCall::SetupFont, (intptr_t)inManager, inScaleToWindow, const_cast<float*>(&inRectangle.mBottom));
-}
-
 // Sets text to transparent in the description's text colour
 void UIControlsTable::SetupGEText(GEText* inText) const
 {
     inText->SetIsTransparent(true);
     inText->SetFgColor(this->GetTextForeground());
-}
-
-// Fills a list with the description's string-table range (empty when the range is unset)
-void UIControlsTable::SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const
-{
-    ee_ui_table_setup_strings(this, inManager, &outStrings);
 }

@@ -541,4 +541,7 @@ shims! {
     fn text_fg_red(text: usize) -> f32 = ee_uicpp_text_fg_red;
     fn text_fg_green(text: usize) -> f32 = ee_uicpp_text_fg_green;
     fn text_fg_blue(text: usize) -> f32 = ee_uicpp_text_fg_blue;
+    // ui13a: the key predicates (lle_control.rs key_pressed)
+    fn entity_long_value(entity: usize) -> c_long = ee_uicpp_entity_long_value;
+    fn num_lock_off() -> bool = ee_uicpp_num_lock_off;
 }

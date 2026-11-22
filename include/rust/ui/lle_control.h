@@ -7,7 +7,66 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
+/// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The
+/// first 24 are [`CONTROL_KEYS`]' order (`ee_uicpp_control_key_fetch`'s slot); the mouse three are
+/// `ee_uicpp_mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
+enum class EeUiKey : uint32_t {
+  Space = 0,
+  Enter,
+  Control,
+  Alt,
+  End,
+  Home,
+  Left,
+  Right,
+  Up,
+  Down,
+  Delete,
+  BackSpace,
+  NumEnd,
+  NumHome,
+  NumLeft,
+  NumRight,
+  NumUp,
+  NumDown,
+  NumDelete,
+  NumEnter,
+  Cut,
+  Copy,
+  Paste,
+  Insert,
+  Tab,
+  Shift,
+  LeftMouse,
+  RightMouse,
+  MouseWheel,
+};
+
+/// The key predicates (`UIControl::ControlKeyPressed` .. `UpKeyPressed`).
+enum class EeUiKeyPress : uint32_t {
+  Control = 0,
+  Copy,
+  Cut,
+  Delete,
+  Down,
+  End,
+  Enter,
+  Home,
+  Left,
+  Paste,
+  Right,
+  Shift,
+  Up,
+};
+
 extern "C" {
+
+/// `key`'s slot: the C++ `ISEntity*&` (`UIControl::Key`; `GetEntity`'s out reference).
+void **ee_ui_key_slot(EeUiKey key);
+
+/// `UIControl::<which>KeyPressed()`.
+bool ee_ui_key_pressed(EeUiKeyPress which);
 
 /// `EeUiOp::ManagerBitmap`'s `a` as the manager's bitmap index.
 uint32_t ee_ui_obj_manager_bitmap(ptrdiff_t a);

@@ -20,17 +20,24 @@ public:
     // 0x25861c (the user-defined control factory 0x274965; the scenario editor 0x1a4f39)
     EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId, unsigned long inIndex,
                   bool inShowLevel);
-    virtual ~EEUICPortrait();
-    virtual long DrawPolygons();            // +0x18 0x258987
-    virtual long DrawTextA();               // +0x1c 0x258ad0
+    // Destroys the portrait, releasing its unit and button
+    virtual ~EEUICPortrait() { ee_screens_portrait_free(this); }
+    // The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's
+    // GetBarRectangles, DrawPolygons, GetHelpString, MouseLButtonDown and Update): ee_screens portrait.rs over the host
+    // below
+    virtual long DrawPolygons() { return ee_screens_portrait_draw(this); }            // +0x18 0x258987
+    // Draws the improvement level when it is above 0
+    virtual long DrawTextA() { return ee_screens_portrait_draw_text(this); }               // +0x1c 0x258ad0
     virtual bool GetHelpString(UWideString& outString) const;   // +0x20 0x258af7
     // 0x258f82: shows inUnit (EEUIFMainGame 0x26bfe2, 0x26c38b)
-    void SetUnit(EEUnit* inUnit);
+    // Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
+    void SetUnit(EEUnit* inUnit) { ee_screens_portrait_set_unit(this, inUnit); }
     // 0x259028: updates the bars and the level text from the unit (EEUIFMainGame 0x26d0a0)
-    void Update();
+    void Update() { ee_screens_portrait_update(this); }
     // (the portrait's own ops are portrait_calls.rs': EEUIRustControl's RustOp; its shims read the members below)
-    virtual long MouseLButtonDown();        // +0x34 0x258d02
-    virtual long MouseMove(const GE2DPoint& inLocation);    // +0x40 0x258f5d
+    virtual long MouseLButtonDown() { return ee_screens_portrait_mouse_down(this); }        // +0x34 0x258d02
+    // Updates the help text while the mouse moves over a portrait showing both bars
+    virtual long MouseMove(const GE2DPoint& inLocation) { return ee_screens_portrait_mouse_move(this); }    // +0x40 0x258f5d
     virtual long MouseRButtonDown() { return this->MouseLButtonDown(); }  // +0x44 0x258f7d
 
     GEText* mText;                          // +0x0a0 the level number

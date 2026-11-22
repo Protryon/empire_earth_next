@@ -16,11 +16,11 @@ public:
             const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm,
             unsigned long inDrawPriority, unsigned long inColumns, unsigned long inRows, bool inVisible);
     virtual ~UIBFull();
-    virtual long DrawBackground(const GERectangle& inRectangle);
-    virtual long LoadBackground();
+    virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::BFullDraw, inRectangle); }
+    virtual long LoadBackground() { return (long)this->Call(EeUiBgCall::BFullLoad); }
     virtual void SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, unsigned long inRow);   // slot 0x1c
-    void SetNumberColumnsAndRows(unsigned long inColumns, unsigned long inRows);
-    virtual long UnloadBackground();
+    void SetNumberColumnsAndRows(unsigned long inColumns, unsigned long inRows) { this->Call(EeUiBgCall::BFullSetGrid, inColumns, inRows); }
+    virtual long UnloadBackground() { return (long)this->Call(EeUiBgCall::BFullUnload); }
 };
 
 #endif
