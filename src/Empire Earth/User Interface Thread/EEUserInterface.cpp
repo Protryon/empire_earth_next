@@ -453,3 +453,9 @@ extern "C" int64_t ee_screenscpp_ui_humans()
 {
     return gCommunications != NULL ? gCommunications->GetNumHumanPlayers() : 0;
 }
+
+// the posts' references and the graphics thread's resume (ee_screens ui_objects_ffi.rs)
+extern "C" void ee_screenscpp_ui_event_reference(void* inEvent) { static_cast<UIEvent*>(inEvent)->Reference(); }
+extern "C" void ee_screenscpp_ui_object_reference(void* inObject) { static_cast<UReferenceCounter*>(inObject)->Reference(); }
+extern "C" void ee_screenscpp_ui_graphics_post_resume() { gGraphics->PostResume(); }
+extern "C" bool ee_screenscpp_ui_graphics_paused() { return gGraphics->mIsPaused; }

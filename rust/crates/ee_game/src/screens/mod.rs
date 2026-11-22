@@ -349,6 +349,9 @@ pub(crate) mod display_modes;
 pub(crate) mod hud_bodies;
 #[cfg(not(test))]
 mod hud_bodies_ffi;
+pub(crate) mod hud_more;
+#[cfg(not(test))]
+mod hud_more_ffi;
 pub(crate) mod shell_calls;
 pub(crate) mod shell_factories;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)

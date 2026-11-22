@@ -84,24 +84,13 @@ public:
     void PostMessage424Once() { ee_screens_ui_post_icon_bar_once(this); }
 
     // the posts that build C++ objects
-    long PostEvent(UIEvent* inEvent, UIForm* inForm)   // 0x40e (a reference)
+    // 0x40e and 0x40c post a reference (ee_screens ui_objects_ffi.rs)
+    long PostEvent(UIEvent* inEvent, UIForm* inForm) { return (long)ee_screens_ui_post_event(this, inEvent, inForm); }
+    void ShowLoadedObject(UReferenceCounter* inObject) { ee_screens_ui_show_loaded(this, inObject); }
+    // 0x41b: a new EEScreenCapture of a width (no surface or completion event yet)
+    void PostScreenShot(long inX, bool inFlag1, bool inFlag2)
     {
-        inEvent->Reference();
-        return this->Post(0x40e, inEvent, inForm);
-    }
-    void ShowLoadedObject(UReferenceCounter* inObject)   // 0x40c (a reference)
-    {
-        inObject->Reference();
-        this->Post(0x40c, inObject, NULL);
-    }
-    void PostScreenShot(long inX, bool inFlag1, bool inFlag2)   // 0x41b (a new EEScreenCapture)
-    {
-        EEScreenCapture* theCapture = new EEScreenCapture;
-        theCapture->mCaptureComplete = NULL;
-        theCapture->mSurface = NULL;
-        theCapture->mIsPostGame = inFlag2;
-        theCapture->mWidth = inX;
-        this->Post(0x41b, theCapture, (void*)inFlag1);
+        this->Post(0x41b, new EEScreenCapture{inX, NULL, NULL, inFlag2}, (void*)inFlag1);
     }
     // 0x422 (a copy)
     void PostDialogMessage(const EESMDialogMessage& inMessage) { this->Post(0x422, new EESMDialogMessage(inMessage), NULL); }
@@ -111,20 +100,13 @@ public:
     long AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inTime, unsigned long inType)
     {
-        EEChatLogEntry* theEntry = new EEChatLogEntry;
-        theEntry->mName = inName;
-        theEntry->mColor = inColor;
-        theEntry->mText = inText;
-        theEntry->mTime = inTime;
-        theEntry->mType = inType;
-        return this->Post(0x418, theEntry, NULL);
+        return this->Post(0x418, new EEChatLogEntry{inColor, inName, inText, inType, inTime}, NULL);
     }
     // a white system line to the chat log, shown three times the usual time (gWorldTable's
     // kWorldChatLogDisplayTime: ee/EEDatabaseTables.h's GetLongValue)
     long AddChatLogEntry(const UWideString& inText, long inY)
     {
-        GEColor theColor(1.0f, 1.0f, 1.0f);
-        return this->AddChatLogEntry(theColor, " > ", inText,
+        return this->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), " > ", inText,
                                      ee_data_world_entry((uint32_t)kWorldChatLogDisplayTime).mLongValue * 3, 2);
     }
 
@@ -160,12 +142,7 @@ public:
     // Pauses the graphics thread and waits until it is paused
     void PauseGraphics() { ee_screens_ui_pause_graphics(); }
     // Resumes the graphics thread and waits until it runs
-    void ResumeGraphics()
-    {
-        gGraphics->PostResume();
-        for (bool theStarted = gGraphics->mIsPaused; theStarted != false; theStarted = gGraphics->mIsPaused)
-            PlatSleep(1);
-    }
+    void ResumeGraphics() { ee_screens_ui_resume_graphics(); }
     // Updates the interface: keyboard and mouse input, the UI under the world read lock, then the queued actions
     void UpdateInterface() { ee_screens_ui_update_interface(); }                 // 0x278ed3 (input, UpdateUI, the actions)
 };

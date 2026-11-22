@@ -5,6 +5,7 @@
 // elsewhere (the tab slots 0x1720c6, UpdateKeyboard 0x1ad67e). Names are provisional. Requires ee/EEUIBUpgrade.h.
 #ifndef EE_EEUIFMGATTRIBUTE_H
 #define EE_EEUIFMGATTRIBUTE_H
+#include "rust/game/screens.h"
 
 class GEText;
 
@@ -15,15 +16,17 @@ public:
                      unsigned long inId, const GEColor& inTextColor, bool inScenarioEditor,
                      unsigned long inBorderThickness);
     virtual ~EEUIFMGAttribute();
-    virtual long CopyData();
-    virtual long DrawTextA();
+    // Snapshots the button; shows the number of queued upgrades as its level text (ee_screens hud_more.rs)
+    virtual long CopyData() { return (long)ee_screens_att_copy_data((uintptr_t)this); }
+    // Draws the button and, when shown, the level text in its corner (ee_screens hud_more.rs)
+    virtual long DrawTextA() { return (long)ee_screens_att_draw_text((uintptr_t)this); }
     // 0x267a6b: the rectangle the status box stretches the button's bitmaps to (EEUIFMGStatusBox 0x26ae16)
     GERectangle GetIconRectangle() const;
 protected:
     virtual void TabbedTo() {}
     virtual void TabbedFrom() {}
     virtual long UpdateKeyboard() { return 0; }
-
+public:   // (the Rust bodies' shims: EEUIFMGAttribute.cpp)
     GEText* mLevelText;                     // +0x130
     bool mShowLevel;                        // +0x134 mL128 > 0 as of the last CopyData
 };

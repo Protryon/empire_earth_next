@@ -95,16 +95,6 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
     return static_cast<EEUIFMainGame*>(theButton->GetForm())->ButtonCall(theButton, EE_SCREENS_SB_DO_HELP, &outString) != 0;
 }
 
-// Presses a tech button on a right press
-long EEUIFMGStatusButton::MouseRButtonDown()
-{
-    if (!this->mIsCommand) {
-        this->CaptureMouse();
-        UIButton::ButtonDown();
-    }
-    return 0;
-}
-
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
 long EEUIFMGStatusButton::MouseRButtonUp()
@@ -125,14 +115,14 @@ void EEUIManager::Fn26FA6A()
     ee_screens_sbt_main_group_refill(true);   // (status_button_calls.rs)
 }
 
-// Releases a pressed button when tabbing away
-void EEUIFMGStatusButton::TabbedFrom()
-{
-    if (this->GetState() == kButtonStatePressed)
-        this->HotKeyUp();
-    else
-        UIButton::TabbedFrom();
-}
+// the right press's and tab's shims (ee_screens hud_more.rs)
+#define SBM(b) reinterpret_cast<EEUIFMGStatusButton*>(b)
+extern "C" bool ee_screenscpp_sbm_is_command(uintptr_t inButton) { return SBM(inButton)->mIsCommand; }
+extern "C" void ee_screenscpp_sbm_capture_mouse(uintptr_t inButton) { SBM(inButton)->BaseCaptureMouse(); }
+extern "C" void ee_screenscpp_sbm_base_button_down(uintptr_t inButton) { SBM(inButton)->BaseButtonDown(); }
+extern "C" uint32_t ee_screenscpp_sbm_state(uintptr_t inButton) { return (uint32_t)SBM(inButton)->GetState(); }
+extern "C" void ee_screenscpp_sbm_hot_key_up(uintptr_t inButton) { SBM(inButton)->HotKeyUp(); }
+extern "C" void ee_screenscpp_sbm_base_tabbed_from(uintptr_t inButton) { SBM(inButton)->BaseTabbedFrom(); }
 
 // Ends the cinematic at its saved end time (sends the end-cinematic message)
 // (EEMEndCinematic takes the end time as a float)

@@ -37,7 +37,8 @@ public:
     void HotKeyDown() { this->ButtonDown(); }                      // 0x26f16c (the hot-key event, pressed)
     // Releases the button from its hot key
     void HotKeyUp() { ee_screens_sbt_hot_key_up((uintptr_t)this); }                        // 0x26f174 (the hot-key event, released)
-    virtual long MouseRButtonDown();        // +0x44 0x26f186
+    // Presses a tech button on a right press (ee_screens hud_more.rs)
+    virtual long MouseRButtonDown() { return (long)ee_screens_sbm_right_down((uintptr_t)this); }   // +0x44 0x26f186
     virtual long MouseRButtonUp();          // +0x48 0x26f1a4
     // for the presses' host (ee_screens status_button.rs): UIButton::ButtonUp, and the mouse in the rectangle
     bool IsMouseInside() const { return this->GetRectangle().Contains(this->GetMouseLocation()); }
@@ -54,13 +55,17 @@ public:
     {
         ee_screens_sbt_set_location((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
     }   // +0x6c 0x26fb19
-    virtual void TabbedFrom();              // +0x78 0x26fb79
+    // Releases a pressed button when tabbing away (ee_screens hud_more.rs)
+    virtual void TabbedFrom() { ee_screens_sbm_tabbed_from((uintptr_t)this); }   // +0x78 0x26fb79
+    // the base's press and tab for the Rust bodies' shims
+    void BaseButtonDown() { UIButton::ButtonDown(); }
+    void BaseTabbedFrom() { UIButton::TabbedFrom(); }
+    void BaseCaptureMouse() { this->CaptureMouse(); }
     // Handles tabbing to the button
     virtual void TabbedTo() { UIButton::TabbedTo(); }                // +0x74 0x26fb8d
 
     // the plain members (+0x118 mLastErrorTime, +0x12c mTechnology .. +0x14b mDrawIcon) are the Rust record
     // EeScreensStatusButtonFields' (ee_screens main_form_fields.rs), under their names
-    UWideString mU104;                      // +0x104 (constructed and destroyed only)
     EEButtonObject* mButtonObject;          // +0x11c
     GEBitmap* mDither;                      // +0x120 textures\Dither over a disabled button
     GEBitmap* mIcon;                        // +0x124

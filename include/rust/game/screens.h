@@ -16425,6 +16425,16 @@ void ee_screens_cbb_append(size_t list, size_t lines);
 
 int64_t ee_screens_cbb_copy_data(size_t list);
 
+void ee_screens_att_construct(size_t attr, size_t font, size_t color);
+
+int64_t ee_screens_att_copy_data(size_t attr);
+
+int64_t ee_screens_att_draw_text(size_t attr);
+
+int64_t ee_screens_sbm_right_down(size_t button);
+
+void ee_screens_sbm_tabbed_from(size_t button);
+
 /// A shell's constructor: the kind `kind` of the control `ctl`, made from `args[0..n]`; NULL for an unknown kind.
 ///
 /// # Safety
@@ -16850,6 +16860,18 @@ void ee_screens_ui_construct(EeScreensUserInterfaceFields *rec);
 /// `EEUserInterface::~EEUserInterface` (0x276740): every queued, undoable and redoable action released, the event
 /// destroyed.
 void ee_screens_ui_destroy(EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::PostEvent(event, form)` (0x40e): the event referenced, then posted with its form.
+long ee_screens_ui_post_event(const EeScreensUserInterfaceFields *rec,
+                              void *event,
+                              void *form);
+
+/// `EEUserInterface::ShowLoadedObject(object)` (0x40c): the object referenced, then posted.
+void ee_screens_ui_show_loaded(const EeScreensUserInterfaceFields *rec, void *object);
+
+/// `EEUserInterface::ResumeGraphics`: the graphics thread told to resume, then waited for (1 ms sleeps) until it
+/// is not paused.
+void ee_screens_ui_resume_graphics();
 
 /// One of `EEUserInterface`'s posts: `mThread->Post(message, p1, p2, true)` -> Post's result.
 long ee_screens_ui_post(const EeScreensUserInterfaceFields *rec,
