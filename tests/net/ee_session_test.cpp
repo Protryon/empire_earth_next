@@ -81,15 +81,18 @@ std::string TPlayer(const EEGameOptionsPlayer& p)
 }
 
 // ---- the engine functions the units call ----
-void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression)
+// (the engine's ESVerify, ESRecordNativeError, ESChecksum::AddChecksum, TMGetTime, UResourceFile::GetString and
+// EECPEngineChoiceCount are inlines over the Rust library now: the stand-ins define the Rust functions they call,
+// which the link takes before the library's (/FORCE:MULTIPLE, xbuild.py NET_TESTS))
+extern "C" void ee_error_verify(const char* inFile, unsigned long inLine, const char* inExpression)
 {
     T("ESVERIFY %lu %s", inLine, inExpression);
 }
-unsigned long ESRecordNativeError(unsigned long inError)
+extern "C" unsigned long ee_error_record_native(unsigned long inError)
 {
     return inError;
 }
-void ESChecksum::AddChecksum(const UString&, unsigned long)
+extern "C" void ee_error_checksum_add(EeErrorChecksum*, const char*, unsigned long)
 {
 }
 float URandom::Generate()
@@ -97,7 +100,7 @@ float URandom::Generate()
     this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
     return (float)((double)this->mSeed / (double)this->mModulus);
 }
-unsigned long TMGetTime()
+extern "C" uint32_t ee_time_get()
 {
     T("time");
     return gFake.mTime;
@@ -183,26 +186,25 @@ std::string EEABootClientFromCanceledGame::Describe()
 }
 static long sResourceStorage[8];
 UResourceFile* gResource = reinterpret_cast<UResourceFile*>(sResourceStorage);
-long UResourceFile::GetString(long inID, UWideString& outString)
+extern "C" const uint8_t* ee_util_resource_string(uint16_t inID)
 {
-    char theText[64];
+    static char theText[64];
     switch (inID) {
     case IDS_PLAYER_IS_OUT_OF_SYNCH:
     case IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME:
     case IDS_HOST_IS_OUT_OF_SYNCH:
-        snprintf(theText, sizeof(theText), "<%ld %%s>", inID);
+        snprintf(theText, sizeof(theText), "<%ld %%s>", (long)inID);
         break;
     case IDS_TO_JOIN_THIS_GAME_YOU:
     case IDS_GAME_IS_IN_PROGRESS:
-        snprintf(theText, sizeof(theText), "<%ld %%s %%s>", inID);
+        snprintf(theText, sizeof(theText), "<%ld %%s %%s>", (long)inID);
         break;
     default:
-        snprintf(theText, sizeof(theText), "<%ld>", inID);
+        snprintf(theText, sizeof(theText), "<%ld>", (long)inID);
         break;
     }
-    T("resource %ld", inID);
-    outString = theText;
-    return 0;
+    T("resource %ld", (long)inID);
+    return (const uint8_t*)theText;
 }
 static SESoundManager sSoundManager;
 SESoundManager* gSoundManager = &sSoundManager;
@@ -286,7 +288,7 @@ UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
     T("local address %lu", inAdapter);
     return sAddress;
 }
-unsigned long EECPEngineChoiceCount()
+extern "C" uint64_t ee_cp_engine_choice_count()
 {
     return gFake.mEngineChoices;
 }
