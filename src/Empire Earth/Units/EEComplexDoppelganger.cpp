@@ -148,23 +148,13 @@ EEComplexDoppelganger::~EEComplexDoppelganger()
 // Forgets the model, hit points, frame, animation, scale and tile (-10000, off the map) without releasing anything
 void EEComplexDoppelganger::Reset()
 {
-    this->mScale = 0.0f;
-    this->mModel = NULL;
-    this->mPackedHitPoints = 0;
-    this->mFrame = 0;
-    this->mAnimation = 0;
-    this->mTileX = -10000;
-    this->mTileY = -10000;
-    this->mIsFoundation = false;
+    ee_units_dop_more(EE_UNITS_DOPX_DO_RESET, this, 0, 0);   // dop_more.rs
 }
 
 // Releases the remembered unit and the model's media, then resets
 void EEComplexDoppelganger::Clear()
 {
-    EEDoppelganger::Clear();
-    if (this->mModel != NULL)
-        this->mModel->UnloadMedia();
-    this->Reset();
+    ee_units_dop_more(EE_UNITS_DOPX_DO_CLEAR, this, 0, 0);   // dop_more.rs
 }
 
 // Remembers what a viewing player sees of a unit: model, frame, animation, hit points (a resource's amount),
@@ -191,19 +181,7 @@ long EEComplexDoppelganger::Load(unsigned long inMajorVersion, unsigned long inM
 // it if the unit or model is gone; returns 0
 long EEComplexDoppelganger::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    unsigned long theModel = USavedID(this->mModel);
-    this->mModel = NULL;
-    if (EEDoppelganger::RepairPointers(inFirst, inSecond) == kErrorOK) {
-        EEModel* theMedia = (EEModel*)EEMedia::Get(theModel);
-        if (theMedia != NULL && theMedia->LoadMedia() == kErrorOK) {
-            this->mModel = theMedia;
-            this->mFrame = min(this->mFrame, theMedia->mModel->GetFrameCount() - 1);
-            gDoppelgangerManager.AddToTiles(this, this->mTileX, this->mTileY, this->mUnit->mUnitClass->GetUnitType() == kUnitTypeAirport);
-            return kErrorOK;
-        }
-    }
-    gDoppelgangerManager.Free(this);
-    return kErrorOK;
+    return (long)ee_units_dop_more(EE_UNITS_DOPX_DO_REPAIR_POINTERS, this, (int64_t)inFirst, (int64_t)inSecond);   // dop_more.rs
 }
 
 // Writes the transformation, model index, hit points, frame, animation, scale, tile and foundation flag after the base
@@ -213,45 +191,6 @@ long EEComplexDoppelganger::Save(unsigned long inMajorVersion, unsigned long inM
     return (long)ee_units_dop_body(EE_UNITS_DOP_DO_SAVE, this, &outFile, inMajorVersion, inMinorVersion);   // dop_file.rs
 }
 
-// The sections of EEComplexUnit::Load left to C++ (ee_units unit_load.rs EE_UNITS_UNIT_LOAD_SECTION_*): the waypoints
-// (the path list's) and the goal queues (each queue's Load); the containers and the live state are dop_load.rs's
-static int32_t EEComplexUnitLoadSection(EEUnitSaveContext& inContext, uint32_t inIndex, EeUnitsUnitSaveIo* io)
-{
-    FSFile& inFile = *inContext.mFile;
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inContext.mUnit);
-    unsigned long inMajorVersion = inContext.mMajorVersion;
-    unsigned long inMinorVersion = inContext.mMinorVersion;
-    long theCount = 0;
-    long theResult = 0;
-    switch (inIndex) {
-    case EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS: {
-        EEComplexUnitWaypoint theWaypoint;
-        theUnit->mWaypoints.clear();
-        theResult = inFile.Read(theCount);
-        for (long p = 0; p < theCount && theResult == 0; p++) {
-            theResult = theWaypoint.mLocation.Load(inFile);
-            if (theResult == 0 && (theResult = inFile.Read(theWaypoint.mDistance)) == 0
-                && (theResult = inFile.Read(theWaypoint.mStartDistance)) == 0)
-                theUnit->mWaypoints.push_back(theWaypoint);
-        }
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_SECTION_GOAL_QUEUES: {
-        unsigned long theGoalCount;
-        theResult = inFile.Read(theGoalCount);
-        for (unsigned long goal = 0; goal < theGoalCount; goal++)
-            if (theResult == 0)
-                theResult = (goal < theUnit->mGoalQueues.size() ? theUnit->mGoalQueues[goal] : *inContext.mGoals)
-                                .Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == 0 && (theResult = inFile.Read(theUnit->mConversionEffect.mValue)) == 0)
-            theResult = inFile.Read(theUnit->mHealEffect.mValue);
-        return theResult;
-    }
-    default:
-        return 0;
-    }
-}
-
 // the load's scratch values: the build queue entry's second, the slot of the next held unit or unit variable
 static unsigned long sLoadSecond;
 static size_t sLoadSlot;
@@ -259,7 +198,7 @@ static size_t sLoadSlot;
 // Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
 // its pending path; fields newer than the file get defaults; returns the read status. port (R5b.4, round 26): the
 // body is Rust (ee_units unit_load.rs, with RTSUnit's and EEUnit's parts) over the records this class derives from,
-// EEUnitSaveOperation's parts and EEComplexUnitLoadSection's sections
+// EEUnitSaveOperation's parts and dop_save.rs's sections
 long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEUnitVectorItem theGoals(this);
@@ -276,17 +215,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
 // building at 1 hit point as a foundation, reloading its media
 long EEComplexUnit::FinishLoad(long inMajorVersion, long inMinorVersion)
 {
-    EeUnitsFinishLoadIn theMaxima = {this->mStats->mMaxHitPoints, this->mStats->mFlightTime,
-                                     this->GetUnitClass()->mGarrisonCapacity, this->mStats->mPower};
-    ee_units_unit_finish_fractions(this, &theMaxima);
-    if (inMajorVersion == 0 && (unsigned long)inMinorVersion <= 200) {
-        this->mIsFoundation = this->GetUnitClass()->IsLandBuilding() && this->GetUnitClass()->GetUnitType() != kUnitTypeFarm && !this->mIsBuilt && this->GetHitPoints() == 1;
-        if (this->mIsFoundation == true) {
-            this->GetPlayer()->UnloadUnitClassMedia(this->GetUnitClass()->GetUnitType());
-            gDataPreLoading->PostLoadUnitClass(this->GetPlayer()->mPlayerID, this->GetUnitClass()->GetUnitType());
-        }
-    }
-    return EEUnit::FinishLoad(inMajorVersion, inMinorVersion);
+    return (long)ee_units_dop_more(EE_UNITS_DOPX_DO_FINISH_LOAD, this, inMajorVersion, inMinorVersion);   // dop_more.rs
 }
 
 /// Turns the loaded ids back into units, groups, research and behaviour, dropping the missing ones; strands a unit whose
@@ -342,6 +271,7 @@ template <class T> static uint64_t EEDopHandle(T* inObject)
 
 // dop_file.rs's scratch values: the loaded model id, the contacts being restored (the originals' locals)
 static long sDopModelID;
+static EeUnitsFinishLoadIn sDopMaxima;   // FinishLoad's maxima (dop_more.rs)
 static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > sDopContacts;
 
 // a complex doppelganger's member (dop_file.rs EE_UNITS_DOP_FIELD_*) read from the file
@@ -517,9 +447,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_CLASS_BEHAVIOR: return EEDopHandle(theUnit->GetUnitClass()->mBehavior);
     case EE_UNITS_DOP_DEFAULT_BEHAVIOR: return EEDopHandle(EEUnitBehavior::sTable[5]);
     case EE_UNITS_DOP_HAS_PLAYER: return theUnit->GetPlayer() != NULL;
-    case EE_UNITS_DOP_TAGS_EXCEEDED:
-        return theUnit->mStats->mModel->mTagPoints[theUnit->mAnimation] != NULL
-            && theUnit->mStats->mModel->mTagPoints[theUnit->mAnimation]->GetNumTagPoints() <= theUnit->mWeaponTagPoint;
+    case EE_UNITS_DOP_TAGS_EXCEEDED: return theUnit->mStats->mModel->mTagPoints[theUnit->mAnimation] != NULL && theUnit->mStats->mModel->mTagPoints[theUnit->mAnimation]->GetNumTagPoints() <= theUnit->mWeaponTagPoint;
     case EE_UNITS_DOP_SET_WEAPON_TAG_POINT: theUnit->mWeaponTagPoint = (long)inB; return 0;
     case EE_UNITS_DOP_LAST_RESOURCE_LINK: return EEDopHandle(dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mLastResource))));
     case EE_UNITS_DOP_SET_LAST_RESOURCE: theUnit->SetLastResource(EEDopObject<EEUnit>(inA)); return 0;
@@ -620,6 +548,31 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_MODEL_PARTS_OR_ZERO: return theUnit->GetModel() != NULL ? (int64_t)theUnit->GetModel()->GetNumParts() : 0;
     case EE_UNITS_DOP_HAS_TURRET_ANGLES: return theUnit->mTurretAngles != NULL;
     case EE_UNITS_DOP_SET_TURRET_ANGLE: theUnit->mTurretAngles[(size_t)inB] = EEDopFloat(inC); return 0;
+    // dop_more.rs's (the doppelganger's Reset, Clear, RepairPointers; the unit's FinishLoad)
+    case EE_UNITS_DOPX_ZERO_SCALE: theDop->mScale = 0.0f; return 0;
+    case EE_UNITS_DOPX_CLEAR_MODEL: theDop->mModel = NULL; return 0;
+    case EE_UNITS_DOPX_ZERO_HIT_POINTS: theDop->mPackedHitPoints = 0; return 0;
+    case EE_UNITS_DOPX_ZERO_FRAME: theDop->mFrame = 0; return 0;
+    case EE_UNITS_DOPX_ZERO_ANIMATION: theDop->mAnimation = 0; return 0;
+    case EE_UNITS_DOPX_TILE_X_OFF: theDop->mTileX = -10000; return 0;
+    case EE_UNITS_DOPX_TILE_Y_OFF: theDop->mTileY = -10000; return 0;
+    case EE_UNITS_DOPX_NOT_FOUNDATION: theDop->mIsFoundation = false; return 0;
+    case EE_UNITS_DOPX_BASE_CLEAR: theDop->EEDoppelganger::Clear(); return 0;
+    case EE_UNITS_DOPX_HAS_MODEL: return theDop->mModel != NULL;
+    case EE_UNITS_DOPX_UNLOAD_MODEL: theDop->mModel->UnloadMedia(); return 0;
+    case EE_UNITS_DOPX_MODEL_SAVED_ID: return USavedID(theDop->mModel);
+    case EE_UNITS_DOPX_BASE_REPAIR: return theDop->EEDoppelganger::RepairPointers((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_DOPX_MEDIA: return (int64_t)(uintptr_t)EEMedia::Get((unsigned long)inB);
+    case EE_UNITS_DOPX_LOAD_MEDIA: return EEDopObject<EEModel>(inA)->LoadMedia();
+    case EE_UNITS_DOPX_SET_MODEL: theDop->mModel = EEDopObject<EEModel>(inA); return 0;
+    case EE_UNITS_DOPX_CLAMP_FRAME: theDop->mFrame = min(theDop->mFrame, EEDopObject<EEModel>(inA)->mModel->GetFrameCount() - 1); return 0;
+    case EE_UNITS_DOPX_ADD_TO_TILES: gDoppelgangerManager.AddToTiles(theDop, theDop->mTileX, theDop->mTileY, theDop->mUnit->mUnitClass->GetUnitType() == kUnitTypeAirport); return 0;
+    case EE_UNITS_DOPX_FREE: gDoppelgangerManager.Free(theDop); return 0;
+    case EE_UNITS_DOPX_FINISH_FRACTIONS: ee_units_unit_finish_fractions(theUnit, &(sDopMaxima = EeUnitsFinishLoadIn{theUnit->mStats->mMaxHitPoints, theUnit->mStats->mFlightTime, theUnit->GetUnitClass()->mGarrisonCapacity, theUnit->mStats->mPower})); return 0;
+    case EE_UNITS_DOPX_OLD_FOUNDATION: return theUnit->mIsFoundation = theUnit->GetUnitClass()->IsLandBuilding() && theUnit->GetUnitClass()->GetUnitType() != kUnitTypeFarm && !theUnit->mIsBuilt && theUnit->GetHitPoints() == 1;
+    case EE_UNITS_DOPX_UNLOAD_CLASS_MEDIA: theUnit->GetPlayer()->UnloadUnitClassMedia(theUnit->GetUnitClass()->GetUnitType()); return 0;
+    case EE_UNITS_DOPX_POST_LOAD_CLASS: gDataPreLoading->PostLoadUnitClass(theUnit->GetPlayer()->mPlayerID, theUnit->GetUnitClass()->GetUnitType()); return 0;
+    case EE_UNITS_DOPX_BASE_FINISH_LOAD: return theUnit->EEUnit::FinishLoad((long)inB, (long)inC);
     default: return 0;
     }
 }
@@ -647,9 +600,15 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
 }
 
 // The C++ parts of the units' saves (ee_units unit_save.rs): the file's primitives with the overload the original
-// called, the deques' and goal queues' sections with the original's loops, the composite members' Save and Load, and
-// the loads' sets that call a method. The ids, maxima, floats, the vectors' and the contacts' sections and the loads'
-// plain stores are read and written in place (ee_units unit_save_views.rs)
+// called, the composite members' Save and Load, and the loads' sets that call a method. The ids, maxima, floats, the
+// vectors' and the contacts' sections and the loads' plain stores are read and written in place (ee_units
+// unit_save_views.rs); the deques' and goal queues' sections, the path goal, the herd, the location and path loads and
+// the compound sets are Rust (the units' lane, round 8: ee_units dop_save.rs), each statement an EE_UNITS_DOPS_* case
+// (the shared locals below stand for the original's)
+static U2DPoint<long> sSaveGoalTile;
+static GETransformation sLoadLocation(false);
+static EEComplexUnitWaypoint sLoadWaypoint;
+
 int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io)
 {
     EEUnitSaveContext& theContext = *static_cast<EEUnitSaveContext*>(inContext);
@@ -657,7 +616,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     FSFile& inFile = outFile;
     EEUnit* theUnit = static_cast<EEUnit*>(theContext.mUnit);   // (the unit operations only)
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);   // (the complex operations only)
-    long theResult = 0;
     if (EESaveIsPrimitive(inOp))
         return EESavePrimitive(outFile, inOp, io);
     switch (inOp) {
@@ -670,171 +628,99 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
         case EE_UNITS_UNIT_SAVE_PART_U0DC: return theComplex->mU0DC.Save(outFile);
         case EE_UNITS_UNIT_SAVE_PART_COLOR: return theComplex->mColor.Save(outFile);
         case EE_UNITS_UNIT_SAVE_PART_FIRE_EFFECT: return outFile.Write(theComplex->mFireEffect.mValue);
-        case EE_UNITS_UNIT_SAVE_PART_PATH: {
-            U2DPoint<long> theGoalTile;
-            bool theHasPath = gPathManager.GetPathGoal(theComplex, theGoalTile);
-            if ((theResult = outFile.Write(theHasPath)) == 0)
-                theResult = theGoalTile.Save(outFile);
-            return theResult;
-        }
         case EE_UNITS_UNIT_SAVE_PART_LAST_MAP_POSITION: return theComplex->mLastMapPosition.Save(outFile);
-        case EE_UNITS_UNIT_SAVE_PART_HERD_HAS_UNIT:
-            if (theComplex->mHerd != NULL)
-                theComplex->mHerd->HasUnit(theComplex);
-            return 0;
         default: return 0;
         }
-    case EE_UNITS_UNIT_SAVE_SECTION:
-        switch (inIndex) {
-        case EE_UNITS_UNIT_SAVE_SECTION_CITIZEN_QUEUE: {
-            long theLength = 0;
-            long theQueued = theComplex->mCitizenBuildQueue.size();
-            for (long j = 0; j < theQueued; j++)
-                if (theComplex->mCitizenBuildQueue[j]->mIsValid)
-                    theLength++;
-            theResult = outFile.Write(theLength);
-            for (long j = 0; j < theQueued && theResult == 0; j++) {
-                if (theComplex->mCitizenBuildQueue[j]->mIsValid) {
-                    unsigned long theID = theComplex->mCitizenBuildQueue[j]->mUnitID;
-                    theResult = outFile.Write(theID);
-                }
-            }
-            return theResult;
-        }
-        case EE_UNITS_UNIT_SAVE_SECTION_WAYPOINTS: {
-            long theLength = theComplex->mWaypoints.size();
-            theResult = outFile.Write(theLength);
-            for (long p = 0; p < theLength && theResult == 0; p++) {
-                EEComplexUnitWaypoint theWaypoint = theComplex->mWaypoints[p];
-                theResult = theWaypoint.mLocation.Save(outFile);
-                if (theResult == 0) {
-                    theResult = outFile.Write(theWaypoint.mDistance);
-                    if (theResult == 0)
-                        theResult = outFile.Write(theWaypoint.mStartDistance);
-                }
-            }
-            return theResult;
-        }
-        case EE_UNITS_UNIT_SAVE_SECTION_TURRET_ANGLES: {
-            long theLength = theComplex->GetModel()->GetNumParts();
-            theResult = outFile.Write(theLength);
-            for (long q = 0; q < theLength && theResult == 0; q++)
-                theResult = outFile.Write(theComplex->mTurretAngles[q]);
-            return theResult;
-        }
-        case EE_UNITS_UNIT_SAVE_SECTION_GOAL_QUEUES: {
-            unsigned long theCount = theComplex->mGoalQueues.size();
-            theResult = outFile.Write(theCount);
-            for (unsigned long item = 0; item < theCount; item++)
-                if (theResult == 0)
-                    theResult = theComplex->mGoalQueues[item].Save(theContext.mMajorVersion, theContext.mMinorVersion, outFile);
-            return theResult;
-        }
-        case EE_UNITS_UNIT_SAVE_SECTION_IGNORED_TARGETS:
-            theResult = outFile.Write((unsigned long)theComplex->mIgnoredTargets.size());
-            for (size_t k = 0; k < theComplex->mIgnoredTargets.size() && theResult == 0; k++) {
-                const EEComplexUnitAttacker& theAttacker = theComplex->mIgnoredTargets[k];
-                if ((theResult = outFile.Write(theAttacker.mTileX)) == 0 && (theResult = outFile.Write(theAttacker.mTileY)) == 0
-                    && (theResult = outFile.Write(theAttacker.mFromX)) == 0 && (theResult = outFile.Write(theAttacker.mFromY)) == 0
-                    && (theResult = outFile.Write(theAttacker.mUnitID)) == 0)
-                    theResult = outFile.Write(theAttacker.mTime);
-            }
-            return theResult;
-        default: return 0;
-        }
+    // ---- dop_save.rs's statements
+    case EE_UNITS_DOPS_CITIZEN_QUEUE_SIZE: io->i = (int64_t)theComplex->mCitizenBuildQueue.size(); return 0;
+    case EE_UNITS_DOPS_CITIZEN_VALID: io->i = theComplex->mCitizenBuildQueue[inIndex]->mIsValid; return 0;
+    case EE_UNITS_DOPS_CITIZEN_ID: io->i = (int64_t)theComplex->mCitizenBuildQueue[inIndex]->mUnitID; return 0;
+    case EE_UNITS_DOPS_WAYPOINT_COUNT: io->i = (int64_t)theComplex->mWaypoints.size(); return 0;
+    case EE_UNITS_DOPS_WAYPOINT_SAVE_LOCATION: return theComplex->mWaypoints[inIndex].mLocation.Save(outFile);
+    case EE_UNITS_DOPS_WAYPOINT_DISTANCE: io->f = theComplex->mWaypoints[inIndex].mDistance; return 0;
+    case EE_UNITS_DOPS_WAYPOINT_START_DISTANCE: io->f = theComplex->mWaypoints[inIndex].mStartDistance; return 0;
+    case EE_UNITS_DOPS_MODEL_PARTS: io->i = (int64_t)theComplex->GetModel()->GetNumParts(); return 0;
+    case EE_UNITS_DOPS_TURRET_ANGLE: io->f = theComplex->mTurretAngles[inIndex]; return 0;
+    case EE_UNITS_DOPS_GOAL_QUEUE_COUNT: io->i = (int64_t)theComplex->mGoalQueues.size(); return 0;
+    case EE_UNITS_DOPS_GOAL_QUEUE_SAVE: return theComplex->mGoalQueues[inIndex].Save(theContext.mMajorVersion, theContext.mMinorVersion, outFile);
+    case EE_UNITS_DOPS_IGNORED_COUNT: io->i = (int64_t)theComplex->mIgnoredTargets.size(); return 0;
+    case EE_UNITS_DOPS_IGNORED_TILE_X: io->i = theComplex->mIgnoredTargets[inIndex].mTileX; return 0;
+    case EE_UNITS_DOPS_IGNORED_TILE_Y: io->i = theComplex->mIgnoredTargets[inIndex].mTileY; return 0;
+    case EE_UNITS_DOPS_IGNORED_FROM_X: io->i = theComplex->mIgnoredTargets[inIndex].mFromX; return 0;
+    case EE_UNITS_DOPS_IGNORED_FROM_Y: io->i = theComplex->mIgnoredTargets[inIndex].mFromY; return 0;
+    case EE_UNITS_DOPS_IGNORED_UNIT_ID: io->i = (int64_t)theComplex->mIgnoredTargets[inIndex].mUnitID; return 0;
+    case EE_UNITS_DOPS_IGNORED_TIME: io->i = (int64_t)theComplex->mIgnoredTargets[inIndex].mTime; return 0;
+    case EE_UNITS_DOPS_PATH_GOAL: io->b = gPathManager.GetPathGoal(theComplex, sSaveGoalTile) ? 1 : 0; return 0;
+    case EE_UNITS_DOPS_TILE_SAVE: return sSaveGoalTile.Save(outFile);
+    case EE_UNITS_DOPS_TILE_RESET: sSaveGoalTile = U2DPoint<long>(); return 0;
+    case EE_UNITS_DOPS_HAS_HERD: io->i = theComplex->mHerd != NULL; return 0;
+    case EE_UNITS_DOPS_HERD_HAS_UNIT: theComplex->mHerd->HasUnit(theComplex); return 0;
+    case EE_UNITS_DOPS_LOCATION_LOAD: return sLoadLocation.Load(inFile);
+    case EE_UNITS_DOPS_SET_LOCATION: theComplex->mPhysicalModel.SetLocation(sLoadLocation); return 0;
+    case EE_UNITS_DOPS_TILE_LOAD: return sSaveGoalTile.Load(inFile);
+    case EE_UNITS_DOPS_ADD_PENDING: gPathManager.AddPending(theComplex->mUnitID, sSaveGoalTile); return 0;
+    case EE_UNITS_DOPS_LOADING_SCENARIO: io->i = GetIsLoadingScenario() ? 1 : 0; return 0;
+    case EE_UNITS_DOPS_HAS_CLASS: io->i = theComplex->GetUnitClass() != NULL; return 0;
+    case EE_UNITS_DOPS_CLASS_SCALE: io->f = theComplex->GetUnitClass()->GetScale(); return 0;
+    case EE_UNITS_DOPS_SET_SCALE: theComplex->mPhysicalModel.SetScale(io->f); return 0;
+    case EE_UNITS_DOPS_FINDS_ACTION: return theComplex->GetUnitClass()->FindAction((unsigned long)io->i) != NULL;
+    case EE_UNITS_DOPS_START_ACTION: theComplex->StartAction((unsigned long)io->i); return 0;
+    case EE_UNITS_DOPS_HAS_LAST_ATTACKER: io->i = theComplex->mLastAttacker != NULL; return 0;
+    case EE_UNITS_DOPS_DEREFERENCE_LAST_ATTACKER: theComplex->mLastAttacker->Dereference(); return 0;
+    case EE_UNITS_DOPS_CLEAR_LAST_ATTACKER: theComplex->mLastAttacker = NULL; return 0;
+    case EE_UNITS_DOPS_HAS_OWNER: io->i = theComplex->mOwner != NULL; return 0;
+    case EE_UNITS_DOPS_DEREFERENCE_OWNER: theComplex->mOwner->Dereference(); return 0;
+    case EE_UNITS_DOPS_CLEAR_OWNER: theComplex->mOwner = NULL; return 0;
+    case EE_UNITS_DOPS_WAYPOINTS_CLEAR: theComplex->mWaypoints.clear(); return 0;
+    case EE_UNITS_DOPS_WAYPOINT_LOAD_LOCATION: return sLoadWaypoint.mLocation.Load(inFile);
+    case EE_UNITS_DOPS_SET_WAYPOINT_DISTANCE: sLoadWaypoint.mDistance = io->f; return 0;
+    case EE_UNITS_DOPS_SET_WAYPOINT_START_DISTANCE: sLoadWaypoint.mStartDistance = io->f; return 0;
+    case EE_UNITS_DOPS_WAYPOINT_PUSH: theComplex->mWaypoints.push_back(sLoadWaypoint); return 0;
+    case EE_UNITS_DOPS_GOAL_QUEUE_LOAD: return theComplex->mGoalQueues[inIndex].Load(theContext.mMajorVersion, theContext.mMinorVersion, inFile);
+    case EE_UNITS_DOPS_SPARE_QUEUE_LOAD: return theContext.mGoals->Load(theContext.mMajorVersion, theContext.mMinorVersion, inFile);
+    case EE_UNITS_DOPS_READ_CONVERSION_EFFECT: return inFile.Read(theComplex->mConversionEffect.mValue);
+    case EE_UNITS_DOPS_READ_HEAL_EFFECT: return inFile.Read(theComplex->mHealEffect.mValue);
     // ---- the loads (ee_units unit_load.rs)
     case EE_UNITS_UNIT_LOAD_TURRET_ANGLE:
         return inFile.Read(theComplex->mTurretAngles[inIndex]);
     case EE_UNITS_UNIT_LOAD_PART:
         switch (inIndex) {
         case EE_UNITS_UNIT_LOAD_PART_PROJECTILE_START: return theComplex->mProjectileStart.Load(inFile);
-        case EE_UNITS_UNIT_LOAD_PART_LOCATION: {
-            GETransformation theLocation(false);
-            theResult = theLocation.Load(inFile);
-            if (theResult == 0)
-                theComplex->mPhysicalModel.SetLocation(theLocation);
-            return theResult;
-        }
         case EE_UNITS_UNIT_LOAD_PART_ANGULAR_VELOCITY: return theComplex->mAngularVelocity.Load(inFile);
         case EE_UNITS_UNIT_LOAD_PART_ORIENTATION: return theComplex->mOrientation.Load(inFile);
         case EE_UNITS_UNIT_LOAD_PART_U0DC: return theComplex->mU0DC.Load(inFile);
         case EE_UNITS_UNIT_LOAD_PART_COLOR: return theComplex->mColor.Load(inFile);
         case EE_UNITS_UNIT_LOAD_PART_FIRE_EFFECT: return inFile.Read(theComplex->mFireEffect.mValue);
-        case EE_UNITS_UNIT_LOAD_PART_PATH: {
-            bool theHasPath = false;
-            U2DPoint<long> theGoalTile;
-            theResult = inFile.Read(theHasPath);
-            if (theResult == 0)
-                theResult = theGoalTile.Load(inFile);
-            if (!theHasPath) {
-                gPathManager.AddPending(theComplex->mUnitID, theGoalTile);
-            }
-            return theResult;
-        }
         case EE_UNITS_UNIT_LOAD_PART_LAST_MAP_POSITION: return theComplex->mLastMapPosition.Load(inFile);
         case EE_UNITS_UNIT_LOAD_PART_CONTACT_X: return inFile.Read(theComplex->mInitialContactLocation.mX);
         case EE_UNITS_UNIT_LOAD_PART_CONTACT_Y: return inFile.Read(theComplex->mInitialContactLocation.mY);
         case EE_UNITS_UNIT_LOAD_PART_CONTACT_Z: return inFile.Read(theComplex->mInitialContactLocation.mZ);
         default: return 0;
         }
-    case EE_UNITS_UNIT_LOAD_SET: {
-        unsigned long theValue = (unsigned long)io->i;
+    case EE_UNITS_UNIT_LOAD_SET:
         switch (inIndex) {
-        case EE_UNITS_UNIT_LOAD_SET_SCALE: {
-            float theScale = io->f;
-            if (GetIsLoadingScenario() || theScale == 0.0f) {
-                if (theComplex->GetUnitClass() == NULL) {
-                    if (theScale == 0.0f)
-                        theScale = 1.0f;
-                } else
-                    theScale = theComplex->GetUnitClass()->GetScale();
-            }
-            theComplex->mPhysicalModel.SetScale(theScale);
-            break;
-        }
-        case EE_UNITS_UNIT_LOAD_SET_ACTION:
-            if (theComplex->GetUnitClass() != NULL && theComplex->GetUnitClass()->FindAction(theValue) != NULL) {
-                if (theValue == 0)
-                    theValue = 5000;
-                theComplex->StartAction(theValue);
-            }
-            break;
-        case EE_UNITS_UNIT_LOAD_SET_TURRETS: theComplex->ResizeTurretAngles((long)io->i); break;
-        case EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER_CLEAR:
-            if (theComplex->mLastAttacker != NULL)
-                theComplex->mLastAttacker->Dereference();
-            theComplex->mLastAttacker = NULL;
-            break;
-        case EE_UNITS_UNIT_LOAD_SET_OWNER_CLEAR:
-            if (theComplex->mOwner != NULL)
-                theComplex->mOwner->Dereference();
-            theComplex->mOwner = NULL;
-            break;
+        case EE_UNITS_UNIT_LOAD_SET_TURRETS: theComplex->ResizeTurretAngles((long)io->i); return 0;
         // dop_load.rs's sections
-        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_CLEAR: theComplex->mBuildQueue.clear(); break;
-        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_SECOND: sLoadSecond = theValue; break;
-        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_PUSH: theComplex->mBuildQueue.push_back(EEProductionEntry{(long)io->i, sLoadSecond}); break;
-        case EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_CLEAR: theComplex->mCitizenBuildQueue.clear(); break;
-        case EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_PUSH: theComplex->mCitizenBuildQueue.push_back(reinterpret_cast<EEUnit*>(theValue)); break;
-        case EE_UNITS_UNIT_LOAD_SET_CARGO_CLEAR: theComplex->mCargo.clear(); break;
-        case EE_UNITS_UNIT_LOAD_SET_CARGO_PUSH: theComplex->mCargo.push_back(reinterpret_cast<EEComplexUnit*>(theValue)); break;
-        case EE_UNITS_UNIT_LOAD_SET_HELD_RESIZE: theComplex->mHeldUnits.resize((long)io->i, NULL); break;
-        case EE_UNITS_UNIT_LOAD_SET_SLOT: sLoadSlot = (size_t)io->i; break;
-        case EE_UNITS_UNIT_LOAD_SET_HELD_UNIT: theComplex->mHeldUnits[sLoadSlot] = reinterpret_cast<EEComplexUnit*>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_UNIT_VARIABLE: theComplex->mUnitVariables[sLoadSlot] = (long)io->i; break;
+        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_CLEAR: theComplex->mBuildQueue.clear(); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_SECOND: sLoadSecond = (unsigned long)io->i; return 0;
+        case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_PUSH: theComplex->mBuildQueue.push_back(EEProductionEntry{(long)io->i, sLoadSecond}); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_CLEAR: theComplex->mCitizenBuildQueue.clear(); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CITIZEN_QUEUE_PUSH: theComplex->mCitizenBuildQueue.push_back(reinterpret_cast<EEUnit*>((unsigned long)io->i)); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CARGO_CLEAR: theComplex->mCargo.clear(); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CARGO_PUSH: theComplex->mCargo.push_back(reinterpret_cast<EEComplexUnit*>((unsigned long)io->i)); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_HELD_RESIZE: theComplex->mHeldUnits.resize((long)io->i, NULL); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_SLOT: sLoadSlot = (size_t)io->i; return 0;
+        case EE_UNITS_UNIT_LOAD_SET_HELD_UNIT: theComplex->mHeldUnits[sLoadSlot] = reinterpret_cast<EEComplexUnit*>((unsigned long)io->i); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_UNIT_VARIABLE: theComplex->mUnitVariables[sLoadSlot] = (long)io->i; return 0;
         case EE_UNITS_UNIT_LOAD_SET_LIVE_REGISTER:
             EEAfterLoad([theSelf = theComplex, theID = (uint32_t)theComplex->mUnitID,
                          theLive = std::shared_ptr<void>((void*)(uintptr_t)io->i, &ee_units_unit_live_free)]() { ee_units_unit_live_apply(theSelf, theID, theLive.get()); });
-            break;
-        case EE_UNITS_UNIT_LOAD_SET_CONTACTS_REGISTER: EEAfterLoad(RestoreLoadedContacts); break;
-        case EE_UNITS_UNIT_LOAD_SET_CONTACTS_BEGIN:
-            sLoadedContacts.push_back(std::make_pair(std::make_pair(theComplex, (unsigned long)theComplex->mUnitID), std::vector<unsigned long>()));
-            break;
-        case EE_UNITS_UNIT_LOAD_SET_CONTACT_ID: sLoadedContacts.back().second.push_back(theValue); break;
-        default: break;
+            return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CONTACTS_REGISTER: EEAfterLoad(RestoreLoadedContacts); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CONTACTS_BEGIN: sLoadedContacts.push_back(std::make_pair(std::make_pair(theComplex, (unsigned long)theComplex->mUnitID), std::vector<unsigned long>())); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_CONTACT_ID: sLoadedContacts.back().second.push_back((unsigned long)io->i); return 0;
+        default: return 0;
         }
-        return 0;
-    }
     case EE_UNITS_UNIT_LOAD_GET:
         switch (inIndex) {
         case EE_UNITS_UNIT_LOAD_GET_TURRET_COUNT: io->i = theComplex->mTurretAngles != NULL ? theComplex->mNumTurretAngles : 0; return 0;
@@ -842,8 +728,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
         case EE_UNITS_UNIT_LOAD_GET_CONTACTS_EMPTY: io->i = sLoadedContacts.empty(); return 0;
         default: return 0;
         }
-    case EE_UNITS_UNIT_LOAD_SECTION:
-        return EEComplexUnitLoadSection(theContext, inIndex, io);
     default:
         return 0;
     }
