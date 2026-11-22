@@ -2438,7 +2438,7 @@
   "EEAreaEffectData": {
    "name": "EEAreaEffectData",
    "size": 188,
-   "source": "include/ee/EEAreaEffectTemplate.h",
+   "source": "rust/crates/ee_sim/src/tech/area_effect.rs",
    "size_check": [
     188,
     "static_assert"
@@ -2451,7 +2451,7 @@
      "type": "str",
      "count": 104,
      "cls": "named",
-     "comment": "+0x00"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -2460,7 +2460,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68"
+     "comment": ""
     },
     {
      "name": "mKind",
@@ -2469,7 +2469,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c (> 0 for a template: EEAEManager::Load skips the others)"
+     "comment": ""
     },
     {
      "name": "mShape",
@@ -2478,7 +2478,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mGraphicEffect",
@@ -2487,7 +2487,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 (EEGraphicEffect::Get index, none if <= 0)"
+     "comment": ""
     },
     {
      "name": "mUnitSet",
@@ -2496,7 +2496,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     },
     {
      "name": "mMode",
@@ -2505,7 +2505,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c"
+     "comment": ""
     },
     {
      "name": "mGraphicEffect18",
@@ -2514,7 +2514,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80 (EEGraphicEffect::Get index)"
+     "comment": ""
     },
     {
      "name": "mMedia",
@@ -2523,7 +2523,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84 (EEMedia::Get index)"
+     "comment": ""
     },
     {
      "name": "mMaxLevel",
@@ -2532,7 +2532,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88"
+     "comment": ""
     },
     {
      "name": "mLevel",
@@ -2541,7 +2541,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x8c"
+     "comment": ""
     },
     {
      "name": "mUnusedValue1",
@@ -2550,7 +2550,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x90"
+     "comment": ""
     },
     {
      "name": "mUnusedValue2",
@@ -2559,7 +2559,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x94"
+     "comment": ""
     },
     {
      "name": "mUnusedValue3",
@@ -2568,7 +2568,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x98"
+     "comment": ""
     },
     {
      "name": "mRadius",
@@ -2577,7 +2577,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x9c"
+     "comment": ""
     },
     {
      "name": "mRed",
@@ -2586,7 +2586,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0"
+     "comment": ""
     },
     {
      "name": "mGreen",
@@ -2595,7 +2595,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4"
+     "comment": ""
     },
     {
      "name": "mBlue",
@@ -2604,7 +2604,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8"
+     "comment": ""
     },
     {
      "name": "mAlpha",
@@ -2613,7 +2613,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac"
+     "comment": ""
     },
     {
      "name": "mUnusedFloat",
@@ -2622,7 +2622,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xb0"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag1",
@@ -2631,7 +2631,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xb4"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag2",
@@ -2640,7 +2640,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xb5"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag3",
@@ -2649,7 +2649,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xb6"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag4",
@@ -2658,7 +2658,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xb7"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag5",
@@ -2667,16 +2667,16 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xb8"
+     "comment": ""
     },
     {
-     "name": "pad_0x0b9",
-     "member": "pad_0x0b9",
+     "name": "mPad",
+     "member": "mPad",
      "off": 185,
      "type": "pad",
      "count": 3,
      "cls": "pad",
-     "comment": "tail padding"
+     "comment": ""
     }
    ],
    "defaults": {}
