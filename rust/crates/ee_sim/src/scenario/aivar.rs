@@ -32,7 +32,7 @@ pub const EE_SCENARIO_AI_KIND_UNITS_PER: u32 = 3;
 pub const EE_SCENARIO_AI_KIND_CALL: u32 = 4;
 
 /// One store on a computer player: `field` the position of the field in its kind's list (`EE_SM_AI_LONGS`,
-/// `EE_SM_AI_FLOATS`, `EE_SM_AI_BUILDINGS`, `EE_SM_AI_CALLS` in ee/EESMAIFields.h: the modules below in order).
+/// `EE_SM_AI_FLOATS`, `EE_SM_AI_BUILDINGS`, `EE_SM_AI_CALLS` of the C++, now ai_store.rs: the modules below in order).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeScenarioAiWrite {
@@ -409,7 +409,7 @@ mod tests {
         assert_eq!((lrintf(2_147_483_648.0), lrintf(-2_147_483_648.0), lrintf(4.3e9)), (i32::MIN, i32::MIN, 0));
     }
 
-    /// The C++ names of the field numbers (ee/EESMAIFields.h's lists), for the golden's lines.
+    /// The C++ names of the field numbers (the C++ lists, now ai_store.rs' matches), for the golden's lines.
     const LONG_NAMES: [&str; 96] = [
         "mInitialAttackDelayMax",
         "mInitialAttackDelayMin",

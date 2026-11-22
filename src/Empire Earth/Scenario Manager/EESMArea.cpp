@@ -131,15 +131,9 @@ bool EESMArea::IsOffMap() const
 void EESMArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
 {
     this->GetTilesUncaptured(outTiles);
-    if (EESimCaptureRecord::Active()) {
-        unsigned long long theHash = 0xcbf29ce484222325ULL;
-        for (const U2DPoint<long>& t : outTiles) {
-            int theXY[2] = {(int)t.mX, (int)t.mY};
-            for (int b = 0; b < 8; b++)
-                theHash = (theHash ^ ((const unsigned char*)theXY)[b]) * 0x100000001b3ULL;
-        }
-        EESMCaptureArea(this, 3, (long)this->mTilesTime, 0, (long)outTiles.size(), 0, theHash);
-    }
+    static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "ee_scenario_tiles_hash's tiles");
+    if (EESimCaptureRecord::Active())   // (the hash: object_reads.rs tiles_hash)
+        EESMCaptureArea(this, 3, (long)this->mTilesTime, 0, (long)outTiles.size(), 0, ee_scenario_tiles_hash((const long*)outTiles.data(), outTiles.size()));
 }
 
 // GetTiles' body (GetTiles adds the simulation capture's SMAR record: ee/EEScenarioCapture.h); the rebuild is

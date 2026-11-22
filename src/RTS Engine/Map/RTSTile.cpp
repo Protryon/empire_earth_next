@@ -1,6 +1,7 @@
 // C:\EEX\RTS Engine\Map\RTSTile.cpp (no __FILE__: no asserts). A map tile's engine side (RTTI RTSTile, vtable
-// 0x441dd0): 0x1245bb..0x1248f6 (the three "RTSTile-..." key chains, the class in definition order; RTSVisibleMap's
-// key chains open the next unit). Unit flags: the exe's module set.
+// 0x441dd0). LLE round 8: the bodies are Rust (rust/crates/ee_game/src/rts/tile.rs: the checksum, Load, Save, Dump,
+// the unit list's removals and search); the members forward, and the shims below are the C++ calls those bodies make
+// (one statement each). The original's addresses and the bodies' history: git history before LLE round 8.
 #include <windows.h>
 #include <stdio.h>
 #include <vector>
@@ -11,15 +12,7 @@
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEMap.h"
-
-// chain at 0x5245bb (wrapper)
-//   object 0x929878  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-
-// chain at 0x5245fe (wrapper)
-//   object 0x929860  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-
-// chain at 0x524641 (wrapper)
-//   object 0x929850  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
+#include "rust/game/rts.h"
 
 // Creates a tile at the given height with no units and terrain type 0
 RTSTile::RTSTile(float inHeight)
@@ -30,106 +23,27 @@ RTSTile::RTSTile(float inHeight)
     this->mAIValue = false;
 }
 
-// Destroys the tile
-RTSTile::~RTSTile()
-{
-}
+RTSTile::~RTSTile() {}
+void RTSTile::FreeUnitNode(RTSTileUnitNode* inNode) { delete inNode; }
+long RTSTile::GetChecksum(unsigned long inPlayerCount) const { return ee_rts_tile_checksum(this, inPlayerCount); }
+long RTSTile::Load(unsigned long, unsigned long, FSFile& inFile, unsigned long inPlayerCount) { return ee_rts_tile_load(this, &inFile, inPlayerCount); }
+void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const { ee_rts_tile_dump(this, inFile, inPlayerCount); }
+void RTSTile::RemoveAllUnits() { ee_rts_tile_remove_all_units(this); }
+void RTSTile::RemoveUnit(EEUnit* inUnit) { ee_rts_tile_remove_unit(this, inUnit); }
+long RTSTile::Save(FSFile& outFile, unsigned long inPlayerCount) { return ee_rts_tile_save(this, &outFile, inPlayerCount); }
+bool RTSTile::HasUnit(EEUnit* inUnit) { return ee_rts_tile_has_unit(this, inUnit); }
+void RTSTile::SetTerrainType(long inValue, const EETileLocation&, RTSMap*) { this->mTerrainType = inValue; }
 
-// Frees a node of the tile's unit list
-void RTSTile::FreeUnitNode(RTSTileUnitNode* inNode)
-{
-    delete inNode;
-}
-
-// Returns the tile's checksum: its terrain type plus every player's visibility value
-long RTSTile::GetChecksum(unsigned long inPlayerCount) const
-{
-    long theCount = 0;
-    for (unsigned long i = 0; i < inPlayerCount; i++)
-        theCount += this->GetVisibility(i);
-    return this->mTerrainType + theCount;
-}
-
-// Reads the tile's height and per-player visibility words; returns the first read error
-long RTSTile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                   unsigned long inPlayerCount)
-{
-    long theResult = inFile.Read(this->mHeight);
-    if (theResult == kErrorOK) {
-        unsigned long theRead;
-        theResult = inFile.Read(reinterpret_cast<char*>(this->mVisibility), ((inPlayerCount >> 1) + (inPlayerCount & 1)) * 4, theRead);
-    }
-    return theResult;
-}
-
-// Prints each player's visibility value and the terrain type of the tile to an out-of-sync dump
-void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const
-{
-    for (unsigned long i = 0; i < inPlayerCount; i++)
-        fprintf(inFile, "Tile Vis Count For Player %ld has a value of %ld\n", i, this->GetVisibility(i));
-    fprintf(inFile, "Tile Terrain Type has value %ld\n", this->mTerrainType);
-}
-
-// Frees the tile's whole unit list
-void RTSTile::RemoveAllUnits()
-{
-    RTSTileUnitNode* theNode = this->mUnits;
-    while (theNode != NULL) {
-        RTSTileUnitNode* theNext = theNode->mNext;
-        this->FreeUnitNode(theNode);
-        theNode = theNext;
-    }
-    this->mUnits = NULL;
-}
-
-// Removes a unit from the tile's unit list
-void RTSTile::RemoveUnit(EEUnit* inUnit)
-{
-    RTSTileUnitNode* thePrevious = NULL;
-    RTSTileUnitNode* theNode = this->mUnits;
-    while (theNode != NULL) {
-        if (theNode->mUnit == inUnit) {
-            if (thePrevious != NULL)
-                thePrevious->mNext = theNode->mNext;
-            else
-                this->mUnits = theNode->mNext;
-            this->FreeUnitNode(theNode);
-            return;
-        }
-        thePrevious = theNode;
-        theNode = theNode->mNext;
-    }
-}
-
-// Writes the tile's height and per-player visibility words; returns the first write error
-long RTSTile::Save(FSFile& outFile, unsigned long inPlayerCount)
-{
-    long theResult = outFile.Write(this->mHeight);
-    if (theResult != kErrorOK)
-        return theResult;
-    unsigned long theWritten;
-    theResult = outFile.Write(reinterpret_cast<const char*>(this->mVisibility), ((inPlayerCount >> 1) + (inPlayerCount & 1)) * 4,
-                              theWritten);
-    return theResult;
-}
-
-// Returns whether a unit is in the tile's unit list
-bool RTSTile::HasUnit(EEUnit* inUnit)
-{
-    bool theResult = false;
-    RTSTileUnitNode* theNode = this->mUnits;
-    while (theNode != NULL) {
-        if (theNode->mUnit == inUnit) {
-            theResult = true;
-            break;
-        }
-        theNode = theNode->mNext;
-    }
-    return theResult;
-}
-
-// Sets the tile's terrain type (the location and map are unused)
-void RTSTile::SetTerrainType(long inValue, const EETileLocation&, RTSMap*)
-{
-    this->mTerrainType = inValue;
+// The shims tile.rs calls (TileCpp)
+extern "C" {
+long ee_rtstcpp_terrain_type(const RTSTile* inTile) { return inTile->mTerrainType; }
+const uint32_t* ee_rtstcpp_visibility(const RTSTile* inTile) { return inTile->mVisibility; }
+float* ee_rtstcpp_height_slot(RTSTile* inTile) { return &inTile->mHeight; }
+RTSTileUnitNode** ee_rtstcpp_units_slot(RTSTile* inTile) { return &inTile->mUnits; }
+EEUnit* ee_rtstcpp_node_unit(RTSTileUnitNode* inNode) { return inNode->mUnit; }
+RTSTileUnitNode** ee_rtstcpp_node_next_slot(RTSTileUnitNode* inNode) { return &inNode->mNext; }
+void ee_rtstcpp_free_node(RTSTile* inTile, RTSTileUnitNode* inNode) { inTile->FreeUnitNode(inNode); }
+long ee_rtstcpp_read_bytes(FSFile* inFile, unsigned char* outData, unsigned long inLength, unsigned long* outRead) { return inFile->Read(reinterpret_cast<char*>(outData), inLength, *outRead); }
+long ee_rtstcpp_write_bytes(FSFile* inFile, const unsigned char* inData, unsigned long inLength, unsigned long* outWritten) { return inFile->Write(reinterpret_cast<const char*>(inData), inLength, *outWritten); }
+void ee_rtstcpp_puts(FILE* inFile, const char* inText) { fputs(inText, inFile); }
 }

@@ -448,6 +448,44 @@ pub unsafe extern "C" fn ee_scenario_strings_io(stream: *const EeScenarioStream,
     save::strings(&mut s, count, save)
 }
 
+/// `EESMDialogMessage::Load` (`save` false) or `::Save`: the first error (save.rs `message_io`).
+///
+/// # Safety
+/// `stream` must be valid for the call, `numbers`' pointers for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_message_io(
+    stream: *const EeScenarioStream,
+    numbers: *const save::EeScenarioMessageNumbers,
+    major: c_ulong,
+    minor: c_ulong,
+    save: bool,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, p) = unsafe { (stream_of(stream), &*numbers) };
+    // SAFETY: as above: the members' addresses, copied in and written back once
+    let mut n = unsafe {
+        save::MessageNumbers {
+            scroll_speed: *p.scroll_speed,
+            unit_type: *p.unit_type,
+            duration: *p.duration,
+            unit_id: *p.unit_id,
+            cinematic: *p.cinematic,
+        }
+    };
+    let r = save::message_io(&mut s, &mut n, major, minor, save);
+    if !save {
+        // SAFETY: as above
+        unsafe {
+            *p.scroll_speed = n.scroll_speed;
+            *p.unit_type = n.unit_type;
+            *p.duration = n.duration;
+            *p.unit_id = n.unit_id;
+            *p.cinematic = n.cinematic;
+        }
+    }
+    r
+}
+
 // The manager (manager.rs): its numbers are the record the C++ class derives from; the timed effects' queue is
 // owned here, the C++ holding the pointer from `ee_scenario_timed_new` to `ee_scenario_timed_free`.
 

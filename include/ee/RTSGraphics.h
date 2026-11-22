@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include "rust/game/rts.h"            // EeRtsGraphicsFields (RTSGraphics' plain members)
 
 class FSFileSpec;
 class GERasterizer;
@@ -28,7 +29,10 @@ public:
     virtual ~RTSRenderObject();             // +0x10 (??_G 0x1106e5)
 };
 
-class RTSGraphics {
+// LLE round 8: the bodies are Rust (ee_game rts graphics.rs); the plain members are its record EeRtsGraphicsFields,
+// a base (mScreen, mShowOverdraw, mL50, mB54, mIsPaused, mIsPausePending, mIsResumePending, mIsQuitting, mIsWindowed,
+// mIsSlowPlayback and RenderLobby's mLobbySerial, mLobbySecondaryWidth/Height, mLobbyShownTime).
+class RTSGraphics : public EeRtsGraphicsFields {
 public:
     // 0x11a1cc: creates the events, starts the thread (Main) at inThreadPriority, waits for it
     RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse, UIManager* inUIManager,
@@ -61,8 +65,6 @@ public:
 
     TSThread* mThread;                      // +0x04 (named by the ctor's asserts)
     GERasterizer* mRasterizer;              // +0x08
-    unsigned long mScreen;                  // +0x0c
-    bool mShowOverdraw;                     // +0x10 (message 0x40e: the overdraw display mode)
     std::vector<RTSRenderObject*> mRenderObjects;   // +0x14
     TSEvent* mRenderNow;                    // +0x24 (named by the ctor's asserts)
     TSEvent* mThreadCreated;                // +0x28
@@ -72,20 +74,8 @@ public:
     GESurface* mU38;                        // +0x38
     UIManager* mUIManager;                  // +0x3c
     // (+0x40..+0x4c: the original's movie, its done event and the volumes saved while it played; no movie plays)
-    long mL50;                              // +0x50
-    bool mB54;                              // +0x54
-    volatile bool mIsPaused;                // +0x56 (= true; volatile: `mov byte ptr [x], 0`, 0x11a530)
-    volatile bool mIsPausePending;          // +0x57 (PostResume waits for it to clear)
-    volatile bool mIsResumePending;         // +0x58 (PostPause waits for it to clear)
-    bool mIsQuitting;                       // +0x59 (message 0x401: the thread ends)
-    bool mIsWindowed;                       // +0x5a (= !inArg5)
-    bool mIsSlowPlayback;                   // +0x5b
     // port: RenderLobby's state (graphics thread only)
     GESurface* mLobbyFrame = NULL;          // system memory, the lobby frame's size in the back buffer's format
-    uint32_t mLobbySerial = 0;              // the lobby frame packed into mLobbyFrame
-    unsigned long mLobbySecondaryWidth = 0;   // the back buffer size last given to the lobby
-    unsigned long mLobbySecondaryHeight = 0;
-    unsigned long mLobbyShownTime = 0;      // TMGetTime of the last ShowScene
 };
 
 class SEMixer;

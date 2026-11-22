@@ -99,6 +99,11 @@ const NAMES: [&[u8]; 32] = [
     b"SPIMSetMusicSource\0",
 ];
 
+/// The entry names the mixer asks for, without their NULs.
+pub fn entry_names() -> impl Iterator<Item = &'static [u8]> {
+    NAMES.iter().map(|n| &n[..n.len() - 1])
+}
+
 /// A mixer: its conductor, its plug-in module and the module's entry points.
 pub struct EeSoundMixer {
     pub(crate) conductor: EeSoundConductor,

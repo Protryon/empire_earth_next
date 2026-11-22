@@ -269,7 +269,7 @@ pub fn compose(x: &mut Sepx, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [
             st(x, EE_SCREENS_SEPX_TECH_REBUILD, [p[1], 0, 0], [0; 4]);
             0
         }
-        _ => return None,
+        _ => return crate::screens::editor_seplx::compose(x, op, p, i, f),
     })
 }
 

@@ -9,6 +9,7 @@
 #include <vector>
 #include <deque>
 #include "rust/sim/units.h"             // EeUnitsPhysicsSaved (EEPhysics' saved block)
+#include "rust/game/rts.h"              // EeRtsPhysicsFields (RTSPhysics' plain members)
 
 class FSFile;
 class RTSGraphics;
@@ -29,7 +30,10 @@ struct EEPUnitSwap {
     EEComplexUnit* mNew;                    // +0x04
 };
 
-class RTSPhysics {                          // sizeof 0x6c; RTSPhysics.cpp, ctor 0x161041 (asserts lines 0x31..0x52)
+// LLE round 8: the bodies are Rust (ee_game rts physics.rs); the plain members are its record EeRtsPhysicsFields, a
+// base (mL28, mTimerRunning, mSpeed, mTimerInterval, mTicksPerSecond, mTicksRun, mTicksOwed, mDefaultTicksPerSecond,
+// mStopThread, mSlowPlayback; the Rust loop reads the volatile ones with volatile accesses).
+class RTSPhysics : public EeRtsPhysicsFields {   // RTSPhysics.cpp, ctor 0x161041 (asserts lines 0x31..0x52)
 public:
     void Shutdown();                        // COMDAT 0x144488: mThread->Post(0x401), mThreadDone->Wait (inline: defined in Empire Earth.cpp, its only user)
     // 0x161041 (EEPhysics passes its graphics and timer, then 1, 0xf; argument names are provisional)
@@ -74,8 +78,6 @@ public:
     // +0x14 the loop tests
     std::deque<NEMessage*> mServerMessages;
     URandom mRandom;                        // +0x18 (seed 1; provisional name)
-    unsigned long mL28;                     // +0x28 (= 0; unsigned: Load/Save use the unsigned long overloads)
-    volatile bool mTimerRunning;            // +0x2c (= false; volatile: `mov byte` stores, Save copies it to a local)
     RTSGraphics* mGraphics;                 // +0x30 (the ctor's first argument; Main sets its +0x24 event)
     TSThread* mThread;                      // +0x34 (CreateThread(this->mThread, RTSPhysics::Main, this); the game
                                             // posts 0x502/0x503 through it: EEMToggleDayNight/EEMSnapToDaylight)
@@ -85,14 +87,6 @@ public:
     TSEvent* mTimerTick;                    // +0x44
     TMTimer* mTimer;                        // +0x48 (a ctor argument; provisional name)
     TSCriticalSection* mServerMessageQueueLock;   // +0x4c
-    float mSpeed;                           // +0x50 (= 1)
-    unsigned long mTimerInterval;           // +0x54 (= 1000: the timer interval)
-    unsigned long mTicksPerSecond;          // +0x58 (= 1; Virtual0C converts it unsigned: fild qword)
-    unsigned long mTicksRun;                // +0x5c (unsigned: Load/Save)
-    volatile unsigned long mTicksOwed;      // +0x60 (volatile: Load's `mov dword [x], 0`, Main's load/inc/store; unsigned: jae/jbe)
-    unsigned long mDefaultTicksPerSecond;   // +0x64 (a ctor argument; unsigned: Virtual18's `fild qword`)
-    volatile bool mStopThread;              // +0x68 (volatile: Save/Load copy it through a local)
-    bool mSlowPlayback;                     // +0x69 (= true before CreateThread)
 };
 
 // New (R5b.4, round 28): the plain block +0x080 .. +0x0e8 (the clocks, tick counters, timing averages and the civ
