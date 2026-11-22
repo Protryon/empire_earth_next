@@ -14,7 +14,6 @@ class FSFile;
 #include "ee/EECivUpgrade.h"   // EECivUpgrade: (category << 16) | level
 
 class EECBUIListBox;
-class EEPlayer;
 class UString;
 class UWideString;
 
@@ -107,7 +106,6 @@ public:
         return ee_screens_civm_category((uint32_t)inCategory, (void**)outEntry);
     }   // 0x281d79 (the record in place)
     unsigned long GetCategoryCount() { return ee_tech_civ_category_count(); }       // mCategoryCount (+0x522c)
-    std::string GetCategoryID(unsigned long inCategory);   // dbcivilization.yaml's id (empty from the binary table)
     unsigned long MakeUpgrade(unsigned long inCategory, unsigned long inIndex)
     {
         return (inCategory << kCivUpgradeLevelBits) + (inIndex & kCivUpgradeLevelMask);

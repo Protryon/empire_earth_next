@@ -13,7 +13,6 @@
 
 class EEAMiniMap;
 class EEMiniMap;
-class GEBitmap;
 
 class EEUIMiniMap : public EEUIRustControl {
 public:

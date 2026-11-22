@@ -64,19 +64,6 @@ EECivilizationManager::~EECivilizationManager()
 {
 }
 
-std::string EECivilizationManager::GetCategoryID(unsigned long inCategory)
-{
-    struct Sink {
-        static void Put(void* inCtx, const uint8_t* inBytes, size_t inLength)
-        {
-            static_cast<std::string*>(inCtx)->assign(reinterpret_cast<const char*>(inBytes), inLength);
-        }
-    };
-    std::string theID;
-    ee_tech_civ_category_id((uint32_t)inCategory, &theID, &Sink::Put);
-    return theID;
-}
-
 bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const
 {
     struct Sink {

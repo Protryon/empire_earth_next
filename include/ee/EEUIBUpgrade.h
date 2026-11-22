@@ -50,7 +50,6 @@ public:
     static void ButtonDownOf(EEUIBUpgrade* inButton) { inButton->ButtonDown(); }
     static void CaptureOf(EEUIBUpgrade* inButton) { inButton->CaptureMouse(); }
 
-    UWideString mHelpText;                  // +0x104
     long mAttribute;                        // +0x118 the improvement (0x10: help string only, 0xc: no cost)
     UITextLabel* mCostLabel;                // +0x11c
     unsigned long mLastMessageTime;         // +0x120 TMGetTime of the last "cannot" chat line

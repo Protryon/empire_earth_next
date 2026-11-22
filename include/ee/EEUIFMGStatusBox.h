@@ -9,11 +9,9 @@
 #include "ee/EEImprovementIDs.h"
 
 class EEComplexUnit;
-class EEUIFMainGame;
 class EEUnit;
 class UIControl;
 class UIForm;
-class UWideString;
 
 struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes)
 

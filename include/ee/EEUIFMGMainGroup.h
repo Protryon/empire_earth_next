@@ -6,8 +6,6 @@
 
 #include "rust/game/screens.h"   // EeScreensMainGroupFields
 
-class EEComplexUnit;
-class EEPlayer;
 class EEUnit;
 class EEUIFMainGame;
 class EEUIFMGStatusBox;

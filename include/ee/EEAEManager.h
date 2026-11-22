@@ -10,7 +10,6 @@ class FSFile;
 #include "ee/EEAreaEffect.h"               // mEffects by value (UReferenceContainer<EEAreaEffect*>)
 
 class EEAreaEffectTemplate;
-class EEUnit;
 class EEComplexUnit;
 class GE2DPoint;
 

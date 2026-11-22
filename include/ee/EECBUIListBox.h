@@ -11,7 +11,6 @@
 #include "ee/EECivUpgrade.h"
 #include "rust/game/screens.h"
 
-struct EeScreensCbOut;
 
 class EECBUIListBox : public UILBString {
 public:

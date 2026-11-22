@@ -20,7 +20,6 @@ class EEAScroll;
 class EEUIFMGGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
-class EEUIFMGMainGroup;
 class EEUIFMGUnitHack;
 class EEUnit;
 class UIBackground;
@@ -197,14 +196,11 @@ public:
     using UIForm::SetDrawToolTipShadow;
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
-    GE3DPoint mPoint470;                    // +0x470 (the inline ctor's zeros)
-    GERhombus mRhombus47C;                  // +0x47c
     EEUIBuildWall mBuildWall;               // +0x494
     EEUIBuildGate mBuildGate;               // +0x4b4
     UIBackground* mUnitInfoBackground;      // +0x4d4 the background 0x64 (Open)
     UIEvent* mWheelZoom;                    // +0x4d8 (EE_SCREENS_CAM_WHEEL_ZOOM)
     UIEvent* mGrabScroll;                   // +0x4dc (the middle button's pressed and unpressed event: EECreateGrabScroll)
-    long mL4E0;                             // +0x4e0
     TSCriticalSection* mErrorCriticalSection;        // +0x4e4 (guards mStrings)
     EEUIFMGUnitHack* mUnitHack;             // +0x4e8
     EEUIFMGGroup* mGroups[6];               // +0x4ec (0: EEUIFMGMainGroup, 1: statistics, 2: chat, 3: diplomacy,
@@ -215,7 +211,6 @@ public:
     EEALasso* mLasso;                       // +0x510
     EEABuild* mBuild;                       // +0x514
     EEACalamity* mCalamity;                 // +0x518
-    long mL51C;                             // +0x51c
 };
 
 #endif
