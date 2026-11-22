@@ -331,6 +331,9 @@ pub mod panel_groups;
 #[cfg(not(test))]
 mod panel_groups_ffi;
 pub mod ping;
+// the message box's Display inputs, absent from a test binary
+#[cfg(not(test))]
+mod dialog_inputs_ffi;
 // the wall and gate placements' start and end, absent from a test binary
 #[cfg(not(test))]
 mod placement_ffi;

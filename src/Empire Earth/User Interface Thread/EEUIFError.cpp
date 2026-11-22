@@ -28,11 +28,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIShell.h"
-// the box's Display inputs while Rust shows it, and the layout's registers (the UI thread's)
-static const UWideString* sDialogMessage;
-static void* sDialogData;
-static EEUIFErrorCallback sDialogCallbacks[2];
-static UIForm* sDialogCloseForm;
+// the layout's registers (the UI thread's; the box's Display inputs are dialog_inputs_ffi.rs')
 static GERectangle sDialogRectangle;
 static GEFont* sDialogFont;
 static float sDialogFloats[9];   // the constructor's sizes, colours and layout (EE_SCREENS_DLG_FLOAT)
@@ -43,13 +39,9 @@ static void EEUIFErrorShow(UIManager* inManager, unsigned long inKind, const UWi
                            unsigned long inAlignment, void* inData, EEUIFErrorCallback inFirst,
                            EEUIFErrorCallback inSecond, UIForm* inCloseForm, bool inFlag)
 {
-    UIForm* theBox = new EEUIShellForm(EE_SCREENS_SK_DIALOG, {}, 7, 1, inManager, (unsigned long)-1, true);
-    sDialogMessage = &inMessage;
-    sDialogData = inData;
-    sDialogCallbacks[0] = inFirst;
-    sDialogCallbacks[1] = inSecond;
-    sDialogCloseForm = inCloseForm;
-    EEUIShell::Op(theBox, EE_SCREENS_SKOP_DIALOG_SHOW, (int64_t)inKind, (int64_t)(uint32_t)inAlignment | (int64_t)inFlag << 32);
+    ee_screens_dialog_show(static_cast<UIForm*>(new EEUIShellForm(EE_SCREENS_SK_DIALOG, {}, 7, 1, inManager, (unsigned long)-1, true)),
+                           (uint32_t)inKind, &inMessage, (uint32_t)inAlignment, inData, reinterpret_cast<const void*>(inFirst),
+                           reinterpret_cast<const void*>(inSecond), inCloseForm, inFlag);
 }
 static const bool sErrorDisplayRegistered = (gEEGameUI.mErrorDisplay = EEUIFErrorShow, true);
 
@@ -65,16 +57,19 @@ static UILayoutUtility sDialogLayout;    // the layout's and the background's la
 extern "C" void ee_screenscpp_dlg_text_load(uint32_t inIds) { gResource->GetString(inIds, sDialogText); }
 extern "C" void ee_screenscpp_dlg_button_set_text(uintptr_t inButton)
 { DLG_BUTTON(inButton)->SetText(sDialogText, gFontTahoma12); }
-extern "C" uintptr_t ee_screenscpp_dlg_callback(uint32_t inIndex) { return (uintptr_t)sDialogCallbacks[inIndex]; }
 extern "C" uintptr_t ee_screenscpp_dlg_edit_text(uintptr_t inEdit)
 { return (uintptr_t)static_cast<UIEditBox*>(DLG_CTL(inEdit))->GetText(0); }
-extern "C" uintptr_t ee_screenscpp_dlg_data() { return (uintptr_t)sDialogData; }
+extern "C" void ee_screenscpp_dlg_message_align(uintptr_t inLabel, uint32_t inAlignment)
+{ static_cast<UITextLabel*>(DLG_CTL(inLabel))->SetAlignment(inAlignment); }
+extern "C" void ee_screenscpp_dlg_message_text(uintptr_t inLabel)
+{ static_cast<UITextLabel*>(DLG_CTL(inLabel))->SetText(*static_cast<const UWideString*>(ee_screens_dlg_message())); }
+extern "C" float ee_screenscpp_dlg_rect_side(uint32_t inSide) { return *kDialogSides[inSide]; }
 extern "C" void ee_screenscpp_dlg_set_callback(uintptr_t inButton, uintptr_t inCallback, uintptr_t inData)
 { EEUIShell::Op(DLG_CTL(inButton), EE_SCREENS_SKOP_DIALOG_SET_CALLBACK, (int64_t)inCallback, (int64_t)inData); }
 extern "C" void ee_screenscpp_dlg_show_button(uintptr_t inButton)
 { DLG_CTL(inButton)->SetDisplayMode(kDisplayModeShown); }
 extern "C" void ee_screenscpp_dlg_set_close(uintptr_t inButton)
-{ EEUIShell::Op(DLG_CTL(inButton), EE_SCREENS_SKOP_DIALOG_SET_CLOSE, (int64_t)sDialogCloseForm); }
+{ EEUIShell::Op(DLG_CTL(inButton), EE_SCREENS_SKOP_DIALOG_SET_CLOSE, (int64_t)ee_screens_dlg_close_form()); }
 extern "C" void ee_screenscpp_dlg_button_text_color(uintptr_t inButton)
 { DLG_BUTTON(inButton)->GetGEText()->SetFgColor(kMessageTextColor); }
 extern "C" void ee_screenscpp_dlg_button_text_transparent(uintptr_t inButton)
@@ -132,10 +127,6 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
 #define theControls reinterpret_cast<UIControl**>(ioSlots)
 #define theError static_cast<UITextLabel*>(theControls[0])
     switch (inOp) {
-    case EE_SCREENS_DLG_MESSAGE:
-        theError->SetAlignment(inA);
-        theError->SetText(*sDialogMessage);
-        break;
     case EE_SCREENS_DLG_MESSAGE_SIZE:
         theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
         break;
@@ -145,12 +136,6 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
     case EE_SCREENS_DLG_PLACE:
         theControls[inA]->SetRectangle(sDialogRectangle);
         break;
-    case EE_SCREENS_DLG_RECT: {
-        float theSide = *kDialogSides[inA];
-        uint32_t theBits;
-        memcpy(&theBits, &theSide, 4);
-        return theBits;
-    }
     case EE_SCREENS_DLG_SET_RECT:
         memcpy(kDialogSides[inA], &inB, 4);
         break;
