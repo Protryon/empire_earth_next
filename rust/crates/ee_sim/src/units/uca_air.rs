@@ -252,7 +252,6 @@ pub const EE_UNITS_UCA_DO_SPACESHIP_HOLDING: i32 = 12;
 pub const EE_UNITS_UCA_DO_HELICOPTER_PATH: i32 = 13;
 pub const EE_UNITS_UCA_DO_OPACITY_CHAIN: i32 = 14;
 
-const GOAL_LOCATION: i64 = 1;
 const GOAL_ATTACK_UNIT: i64 = 2;
 const GOAL_ATTACK_GROUND: i64 = 3;
 const GOAL_UNLOAD_TRANSPORT: i64 = 8;
@@ -648,6 +647,8 @@ pub fn bomb_on_target<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64) -> b
     let b = -(heading.z * speed);
     let half = gravity * 0.5;
     let discriminant = b * b - (target.z - start.z) * half * 4.0;
+    // the original's `if (theDiscriminant >= 0.0f)` (a NaN fails)
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     if !(discriminant >= 0.0) {
         return false;
     }

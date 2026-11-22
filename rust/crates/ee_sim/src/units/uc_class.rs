@@ -158,7 +158,7 @@ const OK: i64 = 0;
 /// Each category's physics model (an index into gPhysicsModels; -1: an ambient or resource class, which is not
 /// complex and has none): the EEUC* constructors' arguments (the land 0, airplane 1, helicopter 2, naval 4,
 /// submerged naval 5, projectile 6, missile 7, building 8, sea animal 9, air animal 10 and space 11 models).
-const CATEGORY_PHYSICS_MODELS: [i8; 0x23] = [
+const MODEL_BY_CATEGORY: [i8; 0x23] = [
     -1, -1, 8, 1, 4, 0, 0, 2, 0, 6, 5, 6, 7, 0, 4, 0, // ambient .. land 15
     0, 2, 4, 8, 7, 4, 4, 0, 0, 8, 2, 9, 10, 8, 8, 11, // land transport .. spaceship
     11, 11, 1, // space building, space transport, planet spaceship
@@ -258,7 +258,7 @@ pub fn create_unit_classes<H: UcHost + ?Sized>(h: &mut H) {
         let category = s.a(EE_UNITS_UC_RECORD_CATEGORY, record) as u32 as u64;
         let mut new_class = 0u64;
         if category < CATEGORIES && EE_UNIT_CLASS_KINDS[category as usize] != 0 {
-            let model = CATEGORY_PHYSICS_MODELS[category as usize];
+            let model = MODEL_BY_CATEGORY[category as usize];
             new_class = s.ab(EE_UNITS_UC_NEW_CLASS, record, i64::from(model)) as u64;
         }
         s.a(EE_UNITS_UC_REGISTER_CLASS, new_class);

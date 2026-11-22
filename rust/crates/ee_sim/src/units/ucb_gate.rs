@@ -406,7 +406,7 @@ pub fn highlight_gate_walls<H: UcHost + ?Sized>(h: &mut H, player: u64, kind: i6
             if let Some(d) = fits.iter().position(|&f| f) {
                 let side = list(&mut s, sides[d]);
                 let n = side.len();
-                let middle = if n % 2 == 0 { n / 2 - 1 } else { n / 2 };
+                let middle = if n.is_multiple_of(2) { n / 2 - 1 } else { n / 2 };
                 let wall = s.a(EE_UNITS_UCB_COMPLEX_FIELD, side[middle]) as u64;
                 if s.a(EE_UNITS_UCB_IS_TINTED, wall) == 0 {
                     s.ab(EE_UNITS_UCB_SET_COLOR, wall, 1);
