@@ -125,6 +125,17 @@ void ee_won_udprecvop_cleanup(const EeWonUdpRecvOp *r);
 /// `r` is live.
 void ee_won_udprecvop_run(const EeWonUdpRecvOp *r);
 
+/// RoutingGetUserStatusOp's constructor's settings (2c6630; R6 WON round 33): the server address, the manager, the
+/// retransmits and the message time-out, in the original's order.
+///
+/// # Safety
+/// `r` is live; `addr` a live address.
+void ee_won_udpsendrecvop_setup(const EeWonUdpSendRecvOp *r,
+                                const EeWonIpAddr *addr,
+                                void *manager,
+                                int32_t retransmits,
+                                uint32_t timeout);
+
 /// A request op's object.
 ///
 /// # Safety

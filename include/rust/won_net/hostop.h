@@ -798,6 +798,16 @@ void ee_won_hostop_set(const EeWonHostOp *op,
                        const uint8_t *addr,
                        void *obj);
 
+/// Two object setters in order (R6 WON round 33: GetCertOp's constructor's server and auth contexts).
+///
+/// # Safety
+/// As `ee_won_hostop_set`.
+void ee_won_hostop_set_two(const EeWonHostOp *op,
+                           int32_t which1,
+                           void *obj1,
+                           int32_t which2,
+                           void *obj2);
+
 /// The members, one line (the drivers' form).
 ///
 /// # Safety
@@ -1065,6 +1075,14 @@ bool ee_won_thread_in_this_thread(const EeWonThread *t);
 /// # Safety
 /// `t` is valid.
 void ee_won_thread_wait_for_stop(const EeWonThread *t);
+
+/// `ThreadBase::Stop` (R6 WON round 33): marks the thread stopped, signals it and, when asked, waits for it; nothing
+/// when it was stopped (ThreadBase's `Signal` has no override).
+///
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_stop(const EeWonThread *t,
+                        bool wait_for_stop);
 
 /// # Safety
 /// `t` is valid.

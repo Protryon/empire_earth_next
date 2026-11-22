@@ -693,25 +693,18 @@ public:
     void SetNum(int inField, long long inValue) { ee_won_routeop_set_num(this->mRust, inField, inValue); }
     std::wstring Text(int inWhich) const { std::wstring s; ee_won_routeop_text(this->mRust, inWhich, WonWideSink, &s); return s; }
     void SetText(int inWhich, const std::wstring& inText)
-    {
-        std::string b;
-        WideAppendUtf16LE(b, inText);
-        ee_won_routeop_set_text(this->mRust, inWhich, reinterpret_cast<const uint16_t*>(b.data()), b.size() / 2);
-    }
+    { ee_won_routeop_set_text_wide(this->mRust, inWhich, inText.data(), sizeof(wchar_t), inText.length()); }
     std::string DataType() const { std::string s; ee_won_routeop_data_type(this->mRust, WonStringSink, &s); return s; }
     // NULL when the op has no buffer
     ByteBufferPtr GetData() const { ByteBufferPtr b; ee_won_routeop_data(this->mRust, WonByteBufferSink, &b); return b; }
-    void SetData(const ByteBuffer* inData)
+    void SetData(const ByteBuffer* inData) // (NULL: no buffer)
     {
-        if (inData == NULL) ee_won_routeop_set_data(this->mRust, false, NULL, 0);
-        else ee_won_routeop_set_data(this->mRust, true, reinterpret_cast<const uint8_t*>(inData->data()), inData->length());
+        ee_won_routeop_set_data(this->mRust, inData != NULL, inData != NULL ? reinterpret_cast<const uint8_t*>(inData->data()) : NULL,
+                                inData != NULL ? inData->length() : 0);
     }
     std::list<unsigned short> Recipients() const
-    {
-        std::vector<uint16_t> anIds(ee_won_routeop_ids(this->mRust, NULL, 0) + 1);
-        size_t n = ee_won_routeop_ids(this->mRust, &anIds[0], anIds.size() - 1);
-        return std::list<unsigned short>(anIds.begin(), anIds.begin() + n);
-    }
+    { std::list<unsigned short> l; ee_won_routeop_ids_each(this->mRust, IdSink, &l); return l; }
+    static void IdSink(void* inList, uint16_t inId) { static_cast<std::list<unsigned short>*>(inList)->push_back(inId); }
     unsigned short GetGroupId() const { return (unsigned short)this->Num(EE_WON_RTF_GROUP_ID); }
     unsigned short GetClientId() const { return (unsigned short)this->Num(EE_WON_RTF_CLIENT_ID); }
     unsigned short GetLinkId() const { return (unsigned short)this->Num(EE_WON_RTF_LINK_ID); }
@@ -735,12 +728,7 @@ public:
     typedef std::map<unsigned long,unsigned char> FriendStatusMap;
     // 2c6630: a query to the server address, 3 retransmits, a 1 s message timeout
     RoutingGetUserStatusOp(const IPAddr& inAddress, UDPManager* inManager) : mStatus(ee_won_userstatus_new())
-    {
-        this->SetDestAddr(inAddress);
-        this->SetUDPManager(inManager);
-        this->SetNumRetransmits(3);
-        this->SetMsgTimeout(1000);
-    }
+    { ee_won_udpsendrecvop_setup(this->GetUdpObject(), inAddress.GetValue(), static_cast<RefCount*>(inManager), 3, 1000); }
     virtual ~RoutingGetUserStatusOp() { ee_won_userstatus_free(this->mStatus); } // (the original's implicit 2c6750)
     // 2c6970: the datagram listing every queried id, then the send and receive
     virtual void RunHook()
@@ -1035,14 +1023,7 @@ public:
     virtual void Signal() { ee_won_thread_signal(this->mThread); }
     void Start() { ee_won_thread_start(this->mThread); }
     // marks the thread stopped, signals it and waits for it when asked (nothing when it was stopped)
-    void Stop(bool waitForStop=true)
-    {
-        if(!ee_won_thread_mark_stopped(this->mThread))
-            return;
-        this->Signal();
-        if(waitForStop)
-            this->WaitForStop();
-    }
+    void Stop(bool waitForStop=true) { ee_won_thread_stop(this->mThread,waitForStop); } // (thread.rs; Signal has no override)
     bool InThisThread() { return ee_won_thread_in_this_thread(this->mThread); }
     void WaitForStop() { ee_won_thread_wait_for_stop(this->mThread); }
     void SetPriority(ThreadPriority thePriority)
@@ -1213,10 +1194,7 @@ public:
     virtual void RemoveSocketOp(SocketOp* inOp) { ee_won_socket_thread_remove(this->mOps,static_cast<AsyncOp*>(inOp)); }
     // every op continued once, the finished dropped, then a wait of up to 20 ms for a signal (2b6760)
     virtual void Pump(unsigned long inWaitTime)
-    {
-        uint32_t aWait=ee_won_socket_thread_pump(this->mOps,static_cast<uint32_t>(inWaitTime));
-        if(aWait>0) this->WaitForSignal(aWait);
-    }
+    { ee_won_socket_thread_pump_wait(this->mOps,this->mThread,static_cast<uint32_t>(inWaitTime)); }
     virtual void PurgeOps() { ee_won_socket_thread_purge(this->mOps); } //2b6380: killed and forgotten
 private:
     EeWonSocketThread* mOps; //owned
