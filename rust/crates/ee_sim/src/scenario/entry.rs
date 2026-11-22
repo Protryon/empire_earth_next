@@ -28,10 +28,6 @@ pub struct EeScenarioHostContext {
     pub object: *mut c_void,
     pub cursor: *mut c_void,
     pub tiles: *mut c_void,
-    pub created: *mut c_void,
-    pub location: *mut c_void,
-    pub wall_pieces: *mut c_void,
-    pub transform: *mut c_void,
 }
 
 impl Default for EeScenarioHostContext {
@@ -44,10 +40,6 @@ impl Default for EeScenarioHostContext {
             object: n,
             cursor: n,
             tiles: n,
-            created: n,
-            location: n,
-            wall_pieces: n,
-            transform: n,
         }
     }
 }
@@ -113,8 +105,7 @@ pub const EE_SCENARIO_EN_AREA_TILES: u32 = 19;
 pub const EE_SCENARIO_EN_MANAGER: u32 = 20;
 /// `manager->Reset()`.
 pub const EE_SCENARIO_EN_MANAGER_RESET: u32 = 21;
-/// `effect->ExecuteUncaptured(a)` (the run's context is C++: EESMEffectRun).
-pub const EE_SCENARIO_EN_EFFECT_RUN: u32 = 22;
+// (22, `effect->ExecuteUncaptured(a)`, went: the Rust makes the run, world_route.rs EE_SCENARIO_WORLD_RUN_*)
 /// The save's version (major << 32 | minor), the capture's.
 pub const EE_SCENARIO_EN_SAVE_VERSION: u32 = 23;
 /// `unit->mUnitID`.
@@ -353,6 +344,13 @@ mod game {
                 list: *mut EeScenarioTiles,
             );
             pub fn ee_scenariocpp_host_world(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_cu(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_class(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_read(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_y(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_object(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_create(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
+            pub fn ee_scenariocpp_world_atom(ctx: *mut c_void, op: u32, args: *const i64) -> i64;
             pub fn ee_scenariocpp_host_object(
                 ctx: *mut c_void,
                 index: i32,
@@ -406,17 +404,56 @@ mod game {
         ((major as u64 as i64) << 32) | (minor as u32 as i64)
     }
 
-    /// The host table over `ctx` (it must outlive the calls).
-    fn host(ctx: &mut EeScenarioHostContext) -> EeScenarioHost {
+    /// A world call: the C++ host world_route.rs names for `op` (the C++ dispatcher's range tests, in its order).
+    unsafe extern "C" fn world(ctx: *mut c_void, op: u32, args: *const i64) -> i64 {
+        use crate::scenario::world_route::{route, EeScenarioWorldRoute as R};
+        let f = match route(op) {
+            R::ChangeUnit => sys::ee_scenariocpp_world_cu,
+            R::Class => sys::ee_scenariocpp_world_class,
+            R::Read => sys::ee_scenariocpp_world_read,
+            R::Text => sys::ee_scenariocpp_world_y,
+            R::Object => sys::ee_scenariocpp_world_object,
+            R::Create => sys::ee_scenariocpp_world_create,
+            R::Atom => sys::ee_scenariocpp_world_atom,
+            R::Run => sys::ee_scenariocpp_host_world,
+        };
+        // SAFETY: the host table's contract, passed through to the host that answers `op`
+        unsafe { f(ctx, op, args) }
+    }
+
+    /// The host table over the context `ctx` (it must outlive the calls).
+    fn table(ctx: *mut c_void) -> EeScenarioHost {
         EeScenarioHost {
-            ctx: ctx as *mut EeScenarioHostContext as *mut c_void,
+            ctx,
             read: sys::ee_scenariocpp_host_read,
             players: sys::ee_scenariocpp_host_players,
             write: sys::ee_scenariocpp_host_write,
             tiles: sys::ee_scenariocpp_host_tiles,
-            world: sys::ee_scenariocpp_host_world,
+            world,
             object: sys::ee_scenariocpp_host_object,
         }
+    }
+
+    /// The host table over `ctx` (it must outlive the calls).
+    fn host(ctx: &mut EeScenarioHostContext) -> EeScenarioHost {
+        table(ctx as *mut EeScenarioHostContext as *mut c_void)
+    }
+
+    /// One effect run's call `op` (world_route.rs EE_SCENARIO_WORLD_RUN_*) on the run `run`, argument `a`.
+    fn run_op(run: *mut c_void, op: u32, a: i64) -> i64 {
+        let args = [a, 0, 0, 0, 0, 0];
+        // SAFETY: the run host's contract: `run` a live EESMEffectRun (null for RUN_NEW), six arguments
+        unsafe { sys::ee_scenariocpp_host_world(run, op, args.as_ptr()) }
+    }
+
+    /// `f` over a new effect run of effect `e` (the C++'s EESMEffectRun, the original's locals) and its host table;
+    /// the run is freed after.
+    fn with_run(e: *mut c_void, f: impl FnOnce(&EeScenarioHost, *mut c_void)) {
+        use crate::scenario::world_route::{EE_SCENARIO_WORLD_RUN_FREE, EE_SCENARIO_WORLD_RUN_NEW};
+        let run = run_op(null(), EE_SCENARIO_WORLD_RUN_NEW, e as usize as i64) as usize as *mut c_void;
+        let h = table(run);
+        f(&h, run);
+        run_op(run, EE_SCENARIO_WORLD_RUN_FREE, 0);
     }
 
     /// `f` over a stream table of `file`, the strings `strings` (the member op's slots 0..count of `object`), the
@@ -778,14 +815,40 @@ mod game {
         });
     }
 
-    /// `EESMEffect::Execute` (with the SMEX record; the run is the C++'s `ExecuteUncaptured`).
+    /// `EESMEffect::Execute` (with the SMEX record; the run's context the C++'s EESMEffectRun).
     #[no_mangle]
     pub extern "C" fn ee_scenario_en_effect_execute(e: *mut c_void, cinematic: bool) {
         let mut run = || {
-            en(EE_SCENARIO_EN_EFFECT_RUN, e, cinematic as i64, 0);
+            let fields = en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, e, 0) as *const EeScenarioEffectFields;
+            // SAFETY: the run's table lives for the call, the effect's numbers are live
+            with_run(e, |h, _| unsafe { ffi::ee_scenario_effect_execute(h, fields, cinematic) });
         };
         captured(active(), &mut seed, &mut run, &mut |(), s| {
             cap::ee_scenario_cap_effect(e, cinematic, s, save_version())
+        });
+    }
+
+    /// `EESMEffect::CreateUnits`: on its own effect run, the effect's object (none: nothing); create.rs's units, which
+    /// become the object's units when it made any.
+    #[no_mangle]
+    pub extern "C" fn ee_scenario_en_effect_create_units(e: *mut c_void) {
+        use crate::scenario::world_route::{
+            EE_SCENARIO_WORLD_RUN_CREATED, EE_SCENARIO_WORLD_RUN_OBJECT, EE_SCENARIO_WORLD_RUN_SET_UNITS,
+        };
+        with_run(e, |h, run| {
+            let object = run_op(run, EE_SCENARIO_WORLD_RUN_OBJECT, 0) as usize as *mut c_void;
+            if object.is_null() {
+                return;
+            }
+            // SAFETY: the effect's and the object's numbers are live for the call
+            let index = unsafe { (*(en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, e, 0) as *const EeScenarioEffectFields)).mObject };
+            let fields = en_ptr(EE_SCENARIO_EN_OBJECT_FIELDS, object, 0) as *const EeScenarioObjectFields;
+            // SAFETY: as above; the run's table lives for the call
+            if unsafe { ffi::ee_scenario_create_units(h, index as i32, fields) }
+                && run_op(run, EE_SCENARIO_WORLD_RUN_CREATED, 0) > 0
+            {
+                run_op(run, EE_SCENARIO_WORLD_RUN_SET_UNITS, 0);
+            }
         });
     }
 

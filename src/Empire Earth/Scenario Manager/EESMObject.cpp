@@ -27,6 +27,10 @@
 #include "ee/EECombatGoals.h"
 #include "rust/sim/units.h"
 #include "ee/EESMCondition.h"
+#include "lle/U2DSparseArray.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEAIContinentManager.h"
+#include "ee/EETown.h"
 // 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
 // (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
@@ -130,13 +134,12 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
 // sequences of Evaluate's, FindPlacement's and the conditions' reads), on handles; through the world channel
 static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10, "object_reads.rs's numbers");
 UWideString sWZText[2];        // the chat test's two texts (the original's locals)
-extern U2DPoint<long> sWZPoint;   // the centres' point (EEScenarioHost.cpp)
-extern std::vector<U2DPoint<long> > sWZTiles;   // the host's tile list (EEScenarioHost.cpp)
+U2DPoint<long> sWZPoint;   // the centres' point (the original's local)
+std::vector<U2DPoint<long> > sWZTiles;   // the host's tile list (the original's local)
 float SMEFloatBits(int64_t inBits) { float theValue; uint32_t theBits = (uint32_t)inBits; memcpy(&theValue, &theBits, 4); return theValue; }
 template<class T> T* SMWzOf(int64_t inHandle) { return (T*)(intptr_t)inHandle; }
 int64_t SMWzPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
-int64_t SMEHostWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);
-int64_t SMEObjectWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+extern "C" int64_t ee_scenariocpp_world_object(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
     case EE_SCENARIO_WZ_UNIT: return SMWzPtr(SMUnit((int32_t)a[0]));
@@ -183,8 +186,16 @@ int64_t SMEObjectWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t*
     case EE_SCENARIO_WZ_TILES_COUNT: return (int64_t)sWZTiles.size();
     case EE_SCENARIO_WZ_TILE_X: return sWZTiles[(size_t)a[0]].mX;
     case EE_SCENARIO_WZ_TILE_Y: return sWZTiles[(size_t)a[0]].mY;
+    case EE_SCENARIO_WZ_CONTINENT_CENTER: gContinentManager.GetContinentCenter((unsigned short)a[0], sWZPoint);
+        return 0;
+    case EE_SCENARIO_WZ_TOWN_CENTER: sWZPoint = gWorld.GetPlayer((unsigned long)a[0])->mTowns[(size_t)a[1]]->GetHullCenter();
+        return 0;
+    case EE_SCENARIO_WZ_TILES_CONTINENT: gContinentManager.GetContinentTiles((unsigned short)a[0], sWZTiles);
+        return 0;
+    case EE_SCENARIO_WZ_TILES_TOWN: gWorld.GetPlayer((unsigned long)a[0])->mTowns[(size_t)a[1]]->GetTiles(sWZTiles);
+        return 0;
     }
-    return SMEHostWorld(inContext, inOp, a);   // the continents' and towns' (EEScenarioHost.cpp)
+    return 0;
 }
 
 // Evaluate's changes of the object's list (objeval.rs EE_SCENARIO_WRITE_OBJ_*)
