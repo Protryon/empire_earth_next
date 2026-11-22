@@ -6,7 +6,7 @@
 #ifndef EE_EERENDEROBJECT_H
 #define EE_EERENDEROBJECT_H
 
-#include <set>                          // IsUnitDrawn's std::set
+#include <set>                          // (its includers' std::set)
 #include "ee/RTSGraphics.h"
 
 class RTSRenderObject;
@@ -16,12 +16,11 @@ class EEUnit;
 class EETile;
 class EEDoppelganger;
 
-void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue);
 void SetTerrainLighting();                  // 0x10f833: the effects' lighting set-up (EEE3DEarthquake::DrawPass2)
 void SetLightingOff();                      // 0x10f6de: lighting set-up (EEROWater::RenderScene)
 void SetSceneFog();                         // 0x10f60f: lighting set-up (EEROWater::RenderScene)
 
-// the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by GetFogFactor)
+// the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by the fog factor, gamecpp picker.rs)
 // (provisional name)
 class GEQuaternion;
 extern long& gHiddenUnitsMode;
@@ -36,21 +35,10 @@ public:
     // implicit dtor: ??_G 0x10ae51 and EEROEffects's dtor call ~RTSRenderObject 0x10ae6d (it stores RTSRenderObject's vptr 0x441390)
     void QueueEffects();                    // 0x10bdd2 (EEROEffects::FrameStarting tail-calls it; provisional name)
     void Fn10C036();                        // 0x10c036 (EEROGroundShadows::FrameStarting; provisional name)
-    void FillGhostRecords();                // 0x10c952 (FillRenderLists: the ghost units)
     void FillRenderLists();                 // 0x10eabe (EEROGroundShadows::FrameStarting; provisional name)
     void Fn10E8D1();                        // 0x10e8d1 (EEROTerrain::FrameStarting; provisional name)
-    // FillRenderLists's per-unit helpers (thiscall, `this` unused; provisional names; types inferred)
-    bool IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn);  // 0x10b3b3: the unit is drawn this frame
-    void DrawGroundCircle(const GETransformation& inLocation, float inRadius, long inMode);  // 0x10bba4: a ground circle
-#ifdef EE_EERENDERLISTS_H
-    void FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERenderShadowMap& ioMap, EERenderFrameInfo& ioInfo);
-    void FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERenderShadow* outObject, unsigned long& ioCount,
-                  EERenderShadowMap& ioMap, unsigned long inMaximum, long inX, long inY, EERenderFrameInfo& ioInfo);
-    void FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUnitMap& ioMap, EERenderFrameInfo& ioInfo);
-    void FillDoppelgangerUnit(EEDoppelganger* inDoppelganger, EERenderUnit* outUnit, unsigned long& ioCount,
-                  EERenderUnitMap& ioMap, unsigned long inMaximum, long inX, long inY, EERenderFrameInfo& ioInfo);
-    bool GetUnitOpacity(EEUnit* inUnit, float& outOpacity);  // 0x10f412: the unit's opacity this frame
-#endif
+    // FillRenderLists' per-unit helpers (IsUnitDrawn 0x10b3b3, DrawGroundCircle 0x10bba4, FillGhostRecords 0x10c952,
+    // FillObject, FillUnit, the doppelgangers' fills, GetUnitOpacity 0x10f412): gamecpp render_object.rs
 };
 
 #endif

@@ -14966,6 +14966,18 @@ struct EeUnitsPlayerSaveIo {
   uint8_t b;
 };
 
+/// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
+/// count) or reads (`cap` entries).
+struct EeUnitsWorldIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  int64_t v[8];
+  float m[16];
+  uint64_t *list;
+  size_t cap;
+};
+
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
 using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
@@ -16010,18 +16022,6 @@ struct EeUnitsWaypoint {
   float distance;
   /// `mStartDistance`: the path's length up to the waypoint before
   float start_distance;
-};
-
-/// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
-/// count) or reads (`cap` entries).
-struct EeUnitsWorldIo {
-  int64_t a;
-  int64_t b;
-  float f;
-  int64_t v[8];
-  float m[16];
-  uint64_t *list;
-  size_t cap;
 };
 
 /// The host: `(ctx, op, io) -> the answer`.

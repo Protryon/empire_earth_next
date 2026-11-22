@@ -10,6 +10,7 @@
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/game/gamecpp.h"
 
 
 // Creates a save header with placeholder name and description, version 0.1 and three players
@@ -24,152 +25,56 @@ EEPSaveGameHeader::EEPSaveGameHeader()
     this->mNumPlayers = 3;
 }
 
+// The header's Load and Save are ee_game gamecpp persist_parts.rs (game core lane, round 9); the methods forward and
+// their C++ calls and members are EEPHeaderOp's cases below.
+
 // Reads the header's name/version part, then its body; returns the first read error
 long EEPSaveGameHeader::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = this->LoadHeader(inFile);
-    if (theResult == kErrorOK) {
-        // port (decision D6): the body of a save older than 0.255 holds Windows-1252 text, converted as it loads
-        // (the name and description, read before the version, were converted by UString::Load's own test)
-        USetLegacyTextLoad(!EESaveTextIsUtf8(this->mMajorVersion, this->mMinorVersion));
-        theResult = this->LoadBody(inFile);
-        USetLegacyTextLoad(false);
-    }
-    return theResult;
-}
-
-// Reads the save's name, description and version; fails for saves older than version 0.197
-long EEPSaveGameHeader::LoadHeader(FSFile& inFile)
-{
-    long theResult = this->mName.Load(inFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mDescription.Load(inFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mMajorVersion);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mMinorVersion);
-    if (theResult == kErrorOK && this->mMajorVersion <= 0 && this->mMinorVersion < 0xc5)
-        theResult = kErrorFailed;
-    return theResult;
-}
-
-// Reads the player names, date, game options, player count, chunk tag list, media strings and checksum; returns the
-// first read error
-long EEPSaveGameHeader::LoadBody(FSFile& inFile)
-{
-    long theCount = 0;
-    long theID = 0;
-    unsigned long theValue = 0;
-    long theResult = this->mPlayerNames.Load(inFile);
-    if (theResult == kErrorOK) {
-        theResult = this->mDate.Load(inFile);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mL4E4);
-            if (theResult == kErrorOK) {
-                theResult = this->mGameOptions.Load(this->mMajorVersion, this->mMinorVersion, inFile);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mNumPlayers);
-                    if (theResult == kErrorOK) {
-                        this->mChunkTypes.clear();
-                        theResult = inFile.Read(theCount);
-                        if (theResult == kErrorOK) {
-                            for (long i = 0; i < theCount && theResult == kErrorOK; i++) {
-                                theResult = inFile.Read(theValue);
-                                if (theResult == kErrorOK) {
-                                    theID = theValue;
-                                    this->mChunkTypes.push_back(theID);
-                                }
-                            }
-                            if (theResult == kErrorOK) {
-                                theResult = this->mMediaStrings.Load(this->mMajorVersion, this->mMinorVersion, inFile);
-                                if (theResult == kErrorOK)
-                                    theResult = inFile.Read(this->mChecksum);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult;
+    return ee_gamecpp_hdr_load(this, &inFile);
 }
 
 // Opens a save file, copies it into memory and reads its header from there; returns the first error
 long EEPSaveGameHeader::LoadFromFile(FSFile& inFile)
 {
-    FSMemoryFile theMemoryFile(1000, true, 1);
-    long theResult = inFile.Open(kFileAccessRead);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = theMemoryFile.Load(inFile);
-    if (theResult == kErrorOK) {
-        inFile.Close();
-        theResult = this->Load(this->mMajorVersion, this->mMinorVersion, theMemoryFile);
-        theMemoryFile.Close();
-    }
-    return theResult;
+    return ee_gamecpp_hdr_load_from_file(this, &inFile);
 }
 
 // Writes the header's name/version part, then its body; returns the first write error
 long EEPSaveGameHeader::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->SaveHeader(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->SaveBody(outFile);
-    return theResult;
-}
-
-// Writes the save's name, description and version; returns the first write error
-long EEPSaveGameHeader::SaveHeader(FSFile& outFile)
-{
-    long theResult = this->mName.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mDescription.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mMajorVersion);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinorVersion);
-    return theResult;
-}
-
-// Writes the player names, date, game options, player count, chunk tag list, media strings and checksum; returns the
-// first write error
-long EEPSaveGameHeader::SaveBody(FSFile& outFile)
-{
-    long theResult = this->mPlayerNames.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mDate.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mL4E4);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mGameOptions.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mNumPlayers);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((long)this->mChunkTypes.size());
-    if (theResult != kErrorOK)
-        return theResult;
-    for (std::vector<long>::iterator it = this->mChunkTypes.begin(); it != this->mChunkTypes.end() && theResult == kErrorOK; ++it)
-        theResult = outFile.Write((unsigned long)*it);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mMediaStrings.Save(this->mMajorVersion, this->mMinorVersion, outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mChecksum);
-    return theResult;
+    return ee_gamecpp_hdr_save(this, &outFile);
 }
 
 // Adds nothing to the checksum (empty: folded into a shared empty function)
 void EEPSaveGameHeader::GetChecksum(ESChecksum& ioChecksum) const
 {
+}
+
+// ------------------------------------------------------------------------- the header's C++ (gamecpp persist_parts.rs)
+
+int64_t EEPMultiplayerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define HDR ((EEPSaveGameHeader*)p)
+#define AFILE (*(FSFile*)a[0])
+
+// The header's C++ calls and members (EEPPlayerHelper.cpp's EEPHelpersOp default): one statement each
+int64_t EEPHeaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::HdrNameLoad: return HDR->mName.Load(AFILE);
+    case O::HdrNameSave: return HDR->mName.Save(AFILE);
+    case O::HdrDescriptionLoad: return HDR->mDescription.Load(AFILE);
+    case O::HdrDescriptionSave: return HDR->mDescription.Save(AFILE);
+    case O::HdrPlayerNamesLoad: return HDR->mPlayerNames.Load(AFILE);
+    case O::HdrPlayerNamesSave: return HDR->mPlayerNames.Save(AFILE);
+    case O::HdrDateLoad: return HDR->mDate.Load(AFILE);
+    case O::HdrDateSave: return HDR->mDate.Save(AFILE);
+    case O::HdrOptionsLoad: return HDR->mGameOptions.Load(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
+    case O::HdrOptionsSave: return HDR->mGameOptions.Save(AFILE);
+    case O::HdrMediaLoad: return HDR->mMediaStrings.Load(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
+    case O::HdrMediaSave: return HDR->mMediaStrings.Save(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
+    default: return EEPMultiplayerOp(inOp, p, a, f);
+    }
 }
