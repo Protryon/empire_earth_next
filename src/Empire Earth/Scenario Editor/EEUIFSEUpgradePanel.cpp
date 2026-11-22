@@ -37,8 +37,6 @@
 #include "ee/EEUIFSEUpgradePanel.h"
 #include "ee/EEStringIDs.h"
 // the shared empty byte string (the original references it at 0x1a4eb4; no other string has its contents)
-extern char gEmptyString[];
-extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
 #include "rust/game/screens.h"
 
 // Builds the unit tab's status panel (portrait, unit name, two status bars, nine attribute rows and the armor
@@ -63,12 +61,6 @@ void EEUIFSEUpgradePanel::ShowUnit(EEUnit* inUnit)
 
 namespace {
 
-int32_t SeupxOut(int32_t* i, const void* inObject)
-{
-    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
-    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
-    return 0;
-}
 GERectangle SeupxRect(const float* f) { return GERectangle(f[0], f[1], f[2], f[3]); }
 UILayoutUtility* SeupxLayout(void* const* p) { return static_cast<UILayoutUtility*>(p[2]); }
 
@@ -82,13 +74,13 @@ extern "C" int32_t ee_screenscpp_seupx(uint32_t inOp, void* const* p, int32_t* i
     switch (inOp) {
     case EE_SCREENS_SEUPX_NEW_BOX: P->mStatusBox = new EEUIFMGStatusBox(theForm);
         return 0;
-    case EE_SCREENS_SEUPX_NEW_PORTRAIT: return SeupxOut(i, static_cast<UIControl*>(P->mPortrait = new EEUICPortrait(theForm, SeupxRect(f), (unsigned long)i[0], (unsigned long)i[1], false)));
+    case EE_SCREENS_SEUPX_NEW_PORTRAIT: return EESEOut(i, static_cast<UIControl*>(P->mPortrait = new EEUICPortrait(theForm, SeupxRect(f), (unsigned long)i[0], (unsigned long)i[1], false)));
     case EE_SCREENS_SEUPX_PORTRAIT_RIGHT: f[0] = P->mPortrait->GetRectangle().GetRight();
         return 0;
     case EE_SCREENS_SEUPX_PORTRAIT_TOP: f[0] = P->mPortrait->GetRectangle().GetTop();
         return 0;
-    case EE_SCREENS_SEUPX_NEW_NAME_LABEL: return SeupxOut(i, static_cast<UIControl*>(P->mUnitNameLabel = new UITextLabel(UWideString(gEmptyString), gFontTahoma12, (unsigned long)i[0], GERectangle(GE2DPoint(f[0], f[1]), f[2], f[3]), theForm, 0, (unsigned long)i[1], 0)));
-    case EE_SCREENS_SEUPX_NEW_LAYOUT: return SeupxOut(i, new UILayoutUtility);
+    case EE_SCREENS_SEUPX_NEW_NAME_LABEL: return EESEOut(i, static_cast<UIControl*>(P->mUnitNameLabel = new UITextLabel(UWideString(gEmptyString), gFontTahoma12, (unsigned long)i[0], GERectangle(GE2DPoint(f[0], f[1]), f[2], f[3]), theForm, 0, (unsigned long)i[1], 0)));
+    case EE_SCREENS_SEUPX_NEW_LAYOUT: return EESEOut(i, new UILayoutUtility);
     case EE_SCREENS_SEUPX_LAYOUT_LEFT: SeupxLayout(p)->SetLeft(0, f[0]);
         return 0;
     case EE_SCREENS_SEUPX_LAYOUT_RIGHT: SeupxLayout(p)->SetRight(0, f[0]);
@@ -101,13 +93,13 @@ extern "C" int32_t ee_screenscpp_seupx(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEUPX_LAYOUT_DELETE: delete SeupxLayout(p);
         return 0;
-    case EE_SCREENS_SEUPX_NEW_LEFT_BAR: return SeupxOut(i, static_cast<UIControl*>(P->mLeftStatusBar = new EEUIFMGStatusBar((unsigned long)i[0], (unsigned long)i[1], SeupxLayout(p), 0x400, 0x300, SeupxRect(f), theForm, true, true, false)));
-    case EE_SCREENS_SEUPX_NEW_MIDDLE_BAR: return SeupxOut(i, static_cast<UIControl*>(P->mMiddleStatusBar = new EEUIFMGStatusBar((unsigned long)i[0], (unsigned long)i[1], SeupxLayout(p), 0x400, 0x300, SeupxRect(f), theForm, true, true, false)));
-    case EE_SCREENS_SEUPX_NEW_ATTRIBUTE: return SeupxOut(i, static_cast<UIControl*>(P->mAttributes[i[2]] = new EEUIFMGAttribute(gFontTahoma10, theForm, SeupxRect(f), (unsigned long)i[1], (unsigned long)i[0], GEColor(0.0f, 0.0f, 0.0f), true, 0)));
-    case EE_SCREENS_SEUPX_NEW_ROW_LABEL: return SeupxOut(i, static_cast<UIControl*>(P->mLabels[i[2]] = new UITextLabel(UWideString(gEmptyString), gFontTahoma12, (unsigned long)i[0], GERectangle(GE2DPoint(f[0], f[1]), f[2], f[3]), theForm, 0, (unsigned long)i[1], 0)));
+    case EE_SCREENS_SEUPX_NEW_LEFT_BAR: return EESEOut(i, static_cast<UIControl*>(P->mLeftStatusBar = new EEUIFMGStatusBar((unsigned long)i[0], (unsigned long)i[1], SeupxLayout(p), 0x400, 0x300, SeupxRect(f), theForm, true, true, false)));
+    case EE_SCREENS_SEUPX_NEW_MIDDLE_BAR: return EESEOut(i, static_cast<UIControl*>(P->mMiddleStatusBar = new EEUIFMGStatusBar((unsigned long)i[0], (unsigned long)i[1], SeupxLayout(p), 0x400, 0x300, SeupxRect(f), theForm, true, true, false)));
+    case EE_SCREENS_SEUPX_NEW_ATTRIBUTE: return EESEOut(i, static_cast<UIControl*>(P->mAttributes[i[2]] = new EEUIFMGAttribute(gFontTahoma10, theForm, SeupxRect(f), (unsigned long)i[1], (unsigned long)i[0], GEColor(0.0f, 0.0f, 0.0f), true, 0)));
+    case EE_SCREENS_SEUPX_NEW_ROW_LABEL: return EESEOut(i, static_cast<UIControl*>(P->mLabels[i[2]] = new UITextLabel(UWideString(gEmptyString), gFontTahoma12, (unsigned long)i[0], GERectangle(GE2DPoint(f[0], f[1]), f[2], f[3]), theForm, 0, (unsigned long)i[1], 0)));
     case EE_SCREENS_SEUPX_BOX_ROW: P->mStatusBox->SetControls(i[2], P->mAttributes[i[2]], P->mLabels[i[2]]);
         return 0;
-    case EE_SCREENS_SEUPX_NEW_ARMOR_LABEL: return SeupxOut(i, static_cast<UIControl*>(P->mArmorTitleLabel = new UITextLabel(gSefxText, gFontTahoma12, (unsigned long)i[0], GERectangle(156.0f, 634.0f, 240.0f, 650.0f), theForm, 0, (unsigned long)i[1], 0)));
+    case EE_SCREENS_SEUPX_NEW_ARMOR_LABEL: return EESEOut(i, static_cast<UIControl*>(P->mArmorTitleLabel = new UITextLabel(gSefxText, gFontTahoma12, (unsigned long)i[0], GERectangle(156.0f, 634.0f, 240.0f, 650.0f), theForm, 0, (unsigned long)i[1], 0)));
     case EE_SCREENS_SEUPX_BOX_PORTRAIT: P->mStatusBox->mC8C = P->mPortrait;
         return 0;
     case EE_SCREENS_SEUPX_BOX_NAME: P->mStatusBox->mC90 = P->mUnitNameLabel;

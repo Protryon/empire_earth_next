@@ -34,22 +34,32 @@ const MADE_NAME_CAPACITY: usize = 64;
 /// The original's buffer for a texture pack name (`char theBuffer[1024]`).
 const PACK_NAME_CAPACITY: usize = 1024;
 
-/// `GESurfaceDescription` (lle/GESurface.h), field for field.
+/// `GESurfaceDescription`: the C++ struct derives from it (lle/GESurface.h), so C++ names its fields.
+/// cbindgen:field-names=[mType, mPixelFormat, mSurfaceVolatility, mWidth, mHeight, m14, mMipLevelCount, mPixelDepth, mIs3DRenderable, mIsTransparencyEnabled, mNoAlpha]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EeGeSurfaceDescription {
-    /// `mType`.
+    /// `mType` +0x00: GETexture::Load: 5 texture, 6 texture with a mip chain.
     pub kind: c_ulong,
+    /// +0x04 GetPixelFormat.
     pub pixel_format: c_ulong,
+    /// +0x08 GetSurfaceVolatility.
     pub surface_volatility: c_ulong,
+    /// +0x0c GETexture::Load (the file header's width).
     pub width: c_ulong,
+    /// +0x10.
     pub height: c_ulong,
+    /// +0x14 GETexture::Load stores 0.
     pub m14: c_ulong,
+    /// +0x18 signed (GETexture::Load's mip loop: jl).
     pub mip_level_count: c_long,
+    /// +0x1c GetPixelDepth.
     pub pixel_depth: c_ulong,
+    /// +0x20 GetIs3DRenderable.
     pub is_3d_renderable: bool,
+    /// +0x21 GetIsTransparencyEnabled.
     pub is_transparency_enabled: bool,
-    /// The constructor's one store (false).
+    /// +0x22 32-bit surfaces only: !GETextureDescription::mHasAlpha; the constructor's one store (false).
     pub no_alpha: bool,
 }
 

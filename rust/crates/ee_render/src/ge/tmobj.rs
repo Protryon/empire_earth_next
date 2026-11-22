@@ -1377,6 +1377,56 @@ pub unsafe extern "C" fn ee_ge_tm_register_texture_set(p: *mut EeGeTerrainMesh, 
     (m.texture_sets.len() - 1) as c_ulong
 }
 
+/// `RegisterColorSet(set, outID)` as the C++ returns it: the id into `out`, 0.
+///
+/// # Safety
+/// `p` is live; `colors` holds `count` values; `out` is valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_tm_register_color_set_out(
+    p: *mut EeGeTerrainMesh,
+    colors: *const c_ulong,
+    count: usize,
+    out: *mut c_ulong,
+) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { *out = ee_ge_tm_register_color_set(p, colors, count) };
+    0
+}
+
+/// `RegisterTextureSet(set, outID)` as the C++ returns it: the id into `out`, 0.
+///
+/// # Safety
+/// `p` is live; `out` is valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_tm_register_texture_set_out(
+    p: *mut EeGeTerrainMesh,
+    set: *mut c_void,
+    out: *mut c_ulong,
+) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { *out = ee_ge_tm_register_texture_set(p, set) };
+    0
+}
+
+/// Two of the mesh's values (`GetTerrainVisibleBottomLeftIndices`, `GetTerrainVisibleTileDimensions`).
+///
+/// # Safety
+/// `p` is live; the outs are valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_tm_get_pair(
+    p: *const EeGeTerrainMesh,
+    a: EeGeTmVal,
+    b: EeGeTmVal,
+    out_a: *mut c_ulong,
+    out_b: *mut c_ulong,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        *out_a = ee_ge_tm_get(p, a);
+        *out_b = ee_ge_tm_get(p, b);
+    }
+}
+
 /// `GetRegisteredTextureSet(id)` (NULL past the registered ones).
 ///
 /// # Safety
@@ -1503,6 +1553,25 @@ pub unsafe extern "C" fn ee_ge_tm_visible_row(p: *const EeGeTerrainMesh, index: 
         let rows = &(*p).visible_rows;
         let r = rows[index as usize];
         std::ptr::copy_nonoverlapping(r.as_ptr(), out, 3);
+    }
+}
+
+/// `GetVisibleTileRow(index, outY, outStartX, outEndX)`: the row's three values.
+///
+/// # Safety
+/// `p` is live, `index` one of its rows; the outs are valid for a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_tm_visible_row_parts(
+    p: *const EeGeTerrainMesh,
+    index: c_ulong,
+    out_y: *mut c_long,
+    out_start_x: *mut c_long,
+    out_end_x: *mut c_long,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        let r = (&(*p).visible_rows)[index as usize];
+        (*out_y, *out_start_x, *out_end_x) = (r[0], r[1], r[2]);
     }
 }
 

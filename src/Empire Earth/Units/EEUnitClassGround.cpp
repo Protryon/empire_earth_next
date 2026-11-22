@@ -19,6 +19,8 @@
 #include "ee/EEWheel.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
+#include "ee/EEUnitClassKinds.h"   // EEObj (the host)
+#include "rust/sim/units.h"
 
 // ---- EEUCAmbient.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The ambient object's
 // unit class: 0x20b9fc..0x20bcf7 (after EEUCAirplane.cpp; EEUCBasicCitizen.cpp follows). Unit flags: the exe's module
@@ -42,47 +44,13 @@ void EEUnitClass::AmbientLocationToTile(const GE3DPoint& inLocation, long& outX,
 // Adds the unit to every map tile of its footprint, its own tile first
 void EEUnitClass::AmbientAddToTile(EEUnit* inUnit)
 {
-    long theSize = this->GetTileSize();
-    EEMap* theMap = ::gWorld.mMap;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    long theEndX = theX + theSize;
-    long theEndY = theY + theSize;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile != NULL)
-        theTile->mUnits = theTile->AddUnit(inUnit, theTile->mUnits);
-    for (long i = theX; i < theEndX; i++) {
-        for (long j = theY; j < theEndY; j++) {
-            if (i == theX && j == theY)
-                continue;
-            theTile = theMap->GetTile(i, j);
-            if (theTile != NULL)
-                theTile->mUnits = theTile->AddUnit(inUnit, theTile->mUnits);
-        }
-    }
+    ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_ADD, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
 }
 
 // Removes the unit from every map tile of its footprint, its own tile first
 void EEUnitClass::AmbientRemoveFromTile(EEUnit* inUnit)
 {
-    long theSize = this->GetTileSize();
-    EEMap* theMap = ::gWorld.mMap;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    long theEndX = theX + theSize;
-    long theEndY = theY + theSize;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile != NULL)
-        theTile->RemoveUnit(inUnit);
-    for (long i = theX; i < theEndX; i++) {
-        for (long j = theY; j < theEndY; j++) {
-            if (i == theX && j == theY)
-                continue;
-            EEMapTile* theOther = theMap->GetTile(i, j);
-            if (theOther != NULL)
-                theOther->RemoveUnit(inUnit);
-        }
-    }
+    ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_REMOVE, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
 }
 
 // ---- EEUCResource.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The resource's unit
@@ -92,35 +60,13 @@ void EEUnitClass::AmbientRemoveFromTile(EEUnit* inUnit)
 // Sets up a new resource unit with the class's resource type and amount
 void EEUnitClass::ResourceSimpleUnitCreated(EEUnit* inUnit)
 {
-    this->BaseSimpleUnitCreated(inUnit);
-    inUnit->SetResourceType(this->mResourceType);
-    if (inUnit->mResourceType != kResourceNone)
-        inUnit->SetResourceAmount(this->mResourceAmount);
+    ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_CREATED, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
 }
 
 // Adds the resource to every tile of its footprint (its own tile first), unless it is queued for deletion
 void EEUnitClass::ResourceAddToTile(EEUnit* inUnit)
 {
-    long theSize = this->GetTileSize();
-    EEMap* theMap = ::gWorld.mMap;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    long theEndX = theX + theSize;
-    long theEndY = theY + theSize;
-    if (inUnit->mIsQueuedForDelete)
-        return;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile != NULL)
-        theTile->mUnits = theTile->AddUnit(inUnit, theTile->mUnits);
-    for (long i = theX; i < theEndX; i++) {
-        for (long j = theY; j < theEndY; j++) {
-            if (i == theX && j == theY)
-                continue;
-            EEMapTile* theOther = theMap->GetTile(i, j);
-            if (theOther != NULL)
-                theOther->mUnits = theOther->AddUnit(inUnit, theOther->mUnits);
-        }
-    }
+    ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_ADD, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
 }
 
 // ---- EEUCLand.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -139,39 +85,14 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit);
 // Sets up a new land unit: its class's resource (and amount when it has one) and, for the radio man, its power
 void EEUnitClass::LandUnitCreated(EEComplexUnit* inUnit)
 {
-    this->BaseUnitCreated(inUnit);
-    inUnit->SetResourceType(this->mResourceType);
-    if (inUnit->mResourceType != kResourceNone)
-        inUnit->SetResourceAmount(this->mResourceAmount);
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeInf10RadioMan)
-        inUnit->SetPower(inUnit->mUnitClass->mPower);
+    ee_units_ucg_call(EE_UNITS_UCG_DO_LAND_CREATED, this, inUnit, 0, 0.0f);   // ucg_ground.rs
 }
 
 // Calls a paratroop plane (class 0x2e1): it appears over the last map tile beyond the unit in +y and flies to the
 // unit's goal location to unload its cargo
 void EEUnitClass::LandCallParatroopPlane(EEComplexUnit* inUnit)
 {
-    EEUnitClass* thePlaneClass = gUnitClassTable[kUnitTypeParatrooperPlane];
-    GETransformation theTransformation;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    while (::gWorld.GetMap()->GetTile(theX, theY) != NULL)
-        theY++;
-    theTransformation.SetX((float)theX);
-    theTransformation.SetY((float)(theY - 1));
-    theTransformation.SetZ(thePlaneClass->mCruiseAltitude);
-    theTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f);
-    EEComplexUnit* thePlane = thePlaneClass->CreateUnitAt(theTransformation, 0, 0, inUnit)->mComplexUnit;
-    EECreateCarrierAircraft(thePlane, inUnit->mPlayer->mPlayerID);
-    thePlane->mOrientation = GEOrientation(3.1415927f, 0.0f, 0.0f);
-    GE3DPoint theTarget;
-    inUnit->mGoalState->GetGoalLocation(theTarget);
-    thePlane->QueueGoal(EEUGRust::NewUnloadTransport(thePlane, (long)theTarget.GetX(), (long)theTarget.GetY(), false), 0);
-    thePlane->SetFlightTime(1000000);
-    GE3DPoint theStart(theTransformation);
-    thePlane->mUnitClass->PathToward(thePlane, theStart, theTarget, true);
-    thePlane->StartAction(kActionFly);
-    thePlane->mUnitClass->ActionChanged(thePlane);
+    ee_units_ucg_call(EE_UNITS_UCG_DO_CALL_PARATROOP_PLANE, this, inUnit, 0, 0.0f);   // ucg_ground.rs
 }
 
 // Updates each of the unit's wheels
@@ -198,52 +119,19 @@ void EEComplexUnit::UpdateWheels()
 // Sets up a new ship at sea level (z 0), with the class's resource type and amount
 void EEUnitClass::NavalUnitCreated(EEComplexUnit* inUnit)
 {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    this->BaseUnitCreated(inUnit);
-    theTransformation.SetX(theTransformation.GetX());
-    theTransformation.SetZ(0.0f);
-    inUnit->SetTransformation(theTransformation, true);
-    inUnit->SetResourceType(this->mResourceType);
-    if (inUnit->mResourceType != kResourceNone)
-        inUnit->SetResourceAmount(this->mResourceAmount);
+    ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_CREATED, this, inUnit, 0, 0.0f);   // ucg_ground.rs
 }
 
 // Returns whether the ship may stop: already sinking, a slow request, or at the path's end tile with its speed reached
 bool EEUnitClass::NavalHasArrived(EEComplexUnit* inUnit, float inValue)
 {
-    GE3DPoint thePosition;
-    bool theResult = false;
-    if (inUnit->mCollisionState == 8 || inValue <= 0.05f)
-        theResult = true;
-    else {
-        unsigned long theCount = inUnit->mWaypoints.size();
-        inUnit->GetNextWaypointPoint(thePosition);
-        thePosition.SetZ(0.0f);
-        if (inUnit->GetTileX() == UMFloor(thePosition.GetX()) && inUnit->GetTileY() == UMFloor(thePosition.GetY())
-            && (theCount > 1 || inUnit->mCollisionRadius >= 2.0f
-                || (inUnit->GetQueueGoals(0).size() > 1 && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalLocation))) {
-            if (inUnit->mCollisionRadius < inValue)
-                theResult = false;
-            else
-                theResult = true;
-        }
-    }
-    return theResult;
+    return ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_ARRIVED, this, inUnit, 0, inValue) != 0;   // ucg_ground.rs
 }
 
 // Updates a fish resource: while its resources rot it loses one every 4 s; a rotting unit counts its rotting time down
 void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 {
-    inUnit->UpdateOrbitals();
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionResourcesRotting:
-        inUnit->UpdateResourcesRotting();
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
+    ee_units_ucg_call(EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT, this, inUnit, 0, 0.0f);   // ucg_ground.rs
 }
 
 // ---- EEUCSubmergedNaval.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The submarine's
@@ -429,3 +317,45 @@ extern "C" void ee_units_wp_host_sea_animal_path(uint64_t inClass, uint64_t inUn
         ioPoints[i][2] = thePath[i].mZ;
 }
 
+template <class T> static T* EEUcgObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// The C++ of the ground classes' Rust bodies (ee_units ucg_ground.rs; EE_UNITS_UCG_*): one statement of the original
+// bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
+extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
+                                     float (*ioF)[4])
+{
+    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EEUcgObject<EEComplexUnit>(inA);
+    EEUnit* theSimple = EEUcgObject<EEUnit>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_UCG_TILE_X_OF: return theSimple->mTileX;
+    case EE_UNITS_UCG_TILE_Y_OF: return theSimple->mTileY;
+    case EE_UNITS_UCG_TILE_ADD: EEUcgObject<EEMapTile>(inA)->mUnits = EEUcgObject<EEMapTile>(inA)->AddUnit(EEUcgObject<EEUnit>((uint64_t)inB), EEUcgObject<EEMapTile>(inA)->mUnits); return 0;
+    case EE_UNITS_UCG_TILE_REMOVE: EEUcgObject<EEMapTile>(inA)->RemoveUnit(EEUcgObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCG_QUEUED_FOR_DELETE: return theSimple->mIsQueuedForDelete;
+    case EE_UNITS_UCG_BASE_SIMPLE_CREATED: theClass->BaseSimpleUnitCreated(theSimple); return 0;
+    case EE_UNITS_UCG_SET_RESOURCE_TYPE: theSimple->SetResourceType(theClass->mResourceType); return 0;
+    case EE_UNITS_UCG_RESOURCE_TYPE: return theSimple->mResourceType;
+    case EE_UNITS_UCG_SET_RESOURCE_AMOUNT: theSimple->SetResourceAmount(theClass->mResourceAmount); return 0;
+    case EE_UNITS_UCG_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
+    case EE_UNITS_UCG_SET_CLASS_POWER: theUnit->SetPower(theUnit->mUnitClass->mPower); return 0;
+    case EE_UNITS_UCG_MAP_TILE: return EEObj(::gWorld.GetMap()->GetTile((long)inB, (long)inC));
+    case EE_UNITS_UCG_CRUISE_ALTITUDE_OF: f[0] = EEUcgObject<EEUnitClass>(inA)->mCruiseAltitude; return 0;
+    case EE_UNITS_UCG_CREATE_PLANE: return EEObj(EEUcgObject<EEUnitClass>(inA)->CreateUnitAt(*EEUcgObject<GETransformation>((uint64_t)inB), 0, 0, theUnit)->mComplexUnit);
+    case EE_UNITS_UCG_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, theUnit->mPlayer->mPlayerID); return 0;
+    case EE_UNITS_UCG_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
+    case EE_UNITS_UCG_SET_FLIGHT_TIME_OF: theOther->SetFlightTime((unsigned long)inB); return 0;
+    case EE_UNITS_UCG_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcgObject<GETransformation>(inA), true); return 0;
+    case EE_UNITS_UCG_COLLISION_STATE: return theUnit->mCollisionState;
+    case EE_UNITS_UCG_WAYPOINT_COUNT: return theUnit->mWaypoints.size();
+    case EE_UNITS_UCG_NEXT_WAYPOINT: theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCG_COLLISION_RADIUS: f[0] = theUnit->mCollisionRadius; return 0;
+    case EE_UNITS_UCG_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
+    default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
+    }
+}

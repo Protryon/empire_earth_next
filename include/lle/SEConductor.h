@@ -7,6 +7,7 @@
 // Requires lle/LowLevelEngine.h.
 #ifndef LLE_SECONDUCTOR_H
 #define LLE_SECONDUCTOR_H
+#include "rust/base/lle_enums.h"
 
 #include "rust/audio/sound.h"
 
@@ -64,23 +65,6 @@ private:
     SEConductor() = delete;
     ~SEConductor() = delete;
     const EeSoundConductor* Rust() const { return reinterpret_cast<const EeSoundConductor*>(this); }
-};
-
-// SEConductor::TransitionTo inCommand: the transition pattern (DirectMusic embellishment) the conductor plays
-enum SETransitionCommand {
-    kMusicTransitionGroove = 0,     // DmEmbellishment_GROOVE (default)
-    kMusicTransitionFill = 1,       // DmEmbellishment_FILL
-    kMusicTransitionBreak = 2,      // DmEmbellishment_BREAK
-    kMusicTransitionIntro = 3,      // DmEmbellishment_INTRO
-    kMusicTransitionEnd = 4,        // DmEmbellishment_END
-    kMusicTransitionEndAndIntro = 5,  // end only (the engine has no end-and-intro)
-};
-
-// SEConductor::TransitionTo inFlags: the boundary (DirectMusic's composer flags; the engine transitions on a measure)
-enum SETransitionFlags {
-    kTransitionFlagMeasure = 0,
-    kTransitionFlagModulate = 1,
-    kTransitionFlagLong = 2,
 };
 
 #endif

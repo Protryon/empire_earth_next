@@ -95,7 +95,6 @@ public:
     EeScreensSeGroup* mTerrain;             // +0x0c (the tab's group)
 };
 
-struct EeScreensSeTerrain;
 
 // whole in Rust (ee_screens editor_terrain.rs): the class holds its object (the in-editor terrains and colour types,
 // the controls ids 0xc8 .. 0xcf and 205, the selected terrain)

@@ -34,6 +34,7 @@
 #include <dmusic.h>
 #include "rust/audio/sound.h"
 #include "rust/base/ts.h"
+#include "rust/audio/mixer.h"
 
 long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow);
 #ifdef SE_NEW

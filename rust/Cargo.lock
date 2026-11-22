@@ -396,6 +396,7 @@ dependencies = [
 name = "ee_won_lobby"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_won_gui",
  "ee_won_net",
 ]

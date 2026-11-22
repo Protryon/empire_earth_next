@@ -18,6 +18,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | 4 | `rust-units4` | -712 | the unit utilities' one-call forwarders gone (40: callers call the Rust); the unit host's goal constructions, clones, queue calls and plain reads in Rust (units/goal_spec.rs); 34 one-call members of `EEUnitClass` and `EEActiveGroup` inline in their headers |
 | 5 | `rust-units5` | -887 | the game log's human orders, the units sweep and the active groups' sweep whole in Rust (EEActiveGroupSweep.cpp deleted); the gather goal's spot search and accessibility; the combat records of a unit's state (CBSO, CBXA, CBQR, CBXR, CBAD); EEFindLandingPoint, EEGetRandomPointAhead; host cases answered over the views and the Rust continent manager |
 | 6 | `rust-units6` | -603 (logic -1,358) | GoalOp's compound cases split into one-statement cases; 51 `EEComplexUnit` and `EEUnitClass` bodies (Kill, Invalidate, StartProduction, ProduceUnit, the cargo, garrison and production queue, Heal, UpdateBuilding, ...) in Rust over one-statement hosts |
+| 7 | `rust-units7` | -2,737 (logic -4,623) | three forks: the EEUnitClass family (creation, LaunchShot, Animate, the media, the buildings', shots', people's, ground and transport bodies), EEComplexUnit's remaining bodies with the doppelganger load/save and RepairPointers, EEUnit's TakeHit and Kill, the placement ghosts, the doppelganger manager, the unit utilities (EEConvertUnit, EEReplaceUnit, the searches), the cloaking utilities whole, EEGatherNextTree; each C++ statement one host case |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -243,7 +244,71 @@ tests), the twelve capture profiles PASS, saveload 18/18 and the matrix PASS (ex
 and `--civbuilder` PASS, eedata check and cppgate PASS, the tour PASS, gates.sh GATES PASS: see PORT_LEARNINGS.md
 "The units' lane, round 6".
 
+## Round 7 (branch `rust-units7`, from round 6's tip 5e4f3833f, 2026-11-20/21)
+
+The brief: C++ logic lines removed (target -3,000) by round 6's method (the body in Rust, each C++ statement one case
+of its file's host, the capture-note calls C++ statements in place and order, a recording-mock test per module). The
+round ran as three forks in their own worktrees (A: the EEUnitClass family; B: EEComplexUnit, the doppelgangers, the
+ghosts, EEUnit; C: the unit utilities, the cloaking utilities, EEGatherNextTree, EEPhysics), merged with `--no-ff`
+(no conflict), then merged with the world lane's round 1 (`rust-world1`, 76b3a54af), which had moved EEPhysics
+wholly (`ee_physcpp`, ee_game physics.rs): world's EEPhysics.cpp/.h won, and fork C's EEPhysics part (phys_body.rs
+and `ee_units_ph_host`) was dropped (nothing else called it).
+
+| Commit | What | Logic (per file, rust-world1 -> tip) |
+|---|---|---|
+| d06d1b54c, e153dcb20, af601dd28 (A) | EEUnitClass: the creation family (CreateUnitAtTile/AtPoint, BaseCreateUnitAt, BaseCreateUnit), ReplantFarm, CreateRemainsUnit, LaunchShot, LaunchFromTurret, UnitDied, FindSafeLocation, MoveToTileCentre (uc_create.rs); Animate, FireOnAttackFrame, the turrets, trails and ripples, HealGarrison, Regenerate, the regions (uc_anim.rs); the class media and buttons, the destructor (uc_media.rs). EEUnitClassBuildings: the release choice, ReleaseUnit, the creations, UpdateArmed (ucb_release.rs). EEUnitClassShots: the projectile, bomb and missile creations and launches (ucs_shots.rs). EEUnitClassPeople: UpdateCitizen, the priests' conversion, the temple's effects, the step timers (ucp_people.rs). EEUnitClassGround (ucg_ground.rs), EEUnitClassTransports (ucx_transports.rs). uc_body's UpdateBuilding/UpdateAnimal call the moved bodies directly | EEUnitClass 1,263 -> 535, Buildings 728 -> 347, People 422 -> 145, Shots 395 -> 270, Ground 257 -> 149, Transports 239 -> 128 |
+| c6c911e2a, b36576033, f856391b5, 2c2c3b2c8, 458f2bc0b, 11a80cd77, 8ec9a55ee (B) | RepairPointers (dop_repair.rs), the load's container sections and live state (dop_load.rs: a Rust allocation applied at the first tick), the doppelganger's Load/Save/Initialize (dop_file.rs); CopyFrom, ResetEEComplexUnit, Init, FreeNode, SwapGraphic, StepAside, UpdateFanaticismColor, GetChecksum (cu_life.rs) and ~36 more EEComplexUnit bodies (cu_world.rs); OutOfSynchDump, Describe (cu_dump.rs); EEUnit's TakeHit (eu_hit.rs: CBTH, CBDE and the morale records stay C++ statements), MoveTo, Kill, CanGather, FindAreaTile, SetHitPoints, DepleteResource (eu_body.rs); the placement ghosts (ghost_body.rs, ghost_make.rs); EEDoppelgangerManager (dm_body.rs) | EEComplexUnit 1,280 -> 448, EEComplexDoppelganger 720 -> 248, EEGhostUnit 535 -> 98, EEDoppelgangerManager 271 -> 21, EEUnit 450 -> 182 |
+| 42931276f, 61f816360, b5614d4d0 (C) | EEConvertUnit with its adaptation grant (the shuffle one C++ statement), EEReplaceUnit, EEMakeUnitCopy, EEMakeBuilding, EEReplaceQueuedTechnology, EEWorkFarm, EERetargetAttack, EEFindNewTargetNearOld, EEUpgradeHitPoints, EEMovePassengers, EETakeOverLoad, EEFindTargetNear, EEFindNearbyTarget, EECanBallisticHit, EECanPriestConvert, EEPreviewWall, the space energy walls and more (uu_body.rs, host `ee_units_ub_host`); the cloaking utilities whole (uu_cloak.rs); EEGatherNextTree (uu_gather_tree.rs) | EEFOFindNewTargetNearOldTarget 1,287 -> 884, EECloakingUtilities 203 -> 11, EEUGRust 285 -> 246 |
+
+Round total, the units' contribution measured on the merged tree (logic_lines.py over src, include/ee, include/lle;
+rust-world1 -> the tip, so EEPhysics, which world moved, is not counted): logic 65,109 -> 60,486 (**-4,623**); lines
+156,163 -> 153,426 (-2,737). With fork C's dropped EEPhysics part the forks alone measured -5,180 (5e4f3833f -> the
+fork merge); -557 of that was EEPhysics.cpp and is world's now. Shims added: about 2,000 one-statement host cases
+(A ~590 and 88 one-call members, B ~908, C ~335 without the dropped `ee_units_ph_host`'s ~225); shims deleted: 9
+(A 4: UpdateBuilding/UpdateAnimal's HealGarrison, Animate, RefreshSound, FireOnAttackFrame; B 5: CLEAR_CONTACTS,
+RELEASE_HELD_UNITS, CLEAR_BLOCKING, CLEAR_LAST_RESOURCE, CLEAR_BUILD_TARGETS).
+
+New hosts: `ee_units_uc_call`/`ee_units_uc_create_at` and the per-file ucb/ucs/ucp/ucg/ucx hosts (each passing unknown
+ops on to `ee_units_uc_host`), `ee_units_dop_host`, `ee_units_eu_host`, `ee_units_ghost_host`, `ee_units_dm_host`,
+`ee_units_ub_host`, `ee_units_ck_host`, `ee_units_gt_host`. New Rust (ee_sim::units): uc_create, uc_anim, uc_media,
+ucb_release, ucs_shots, ucp_people, ucg_ground, ucx_transports, uc_mock (a shared recording mock), dop_repair,
+dop_load, dop_file, cu_life, cu_world, cu_dump, eu_hit, eu_body, ghost_body, ghost_make, dm_body, uu_body, uu_cloak,
+uu_gather_tree; each with op-sequence tests.
+
+Gates on the final tree (72451b917: the forks, rust-world1 7f68eb2bc and the CBLS/CBLT fix; origin/rust 439543b4b is
+contained): both builds 0/0 (EE-AOC 413 inputs, EE-SIM 414) and the test profile 0/0; the Rust gate PASS (5,619
+tests, no flake this time); the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines; before and after
+the fix); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175,
+transport 185 on the fixed build; effects 6, missile 22, app 26, scenario 43, groups 2, placement 4 on the merged
+build, which the tag fix does not reach); the plain saveload 18/18 identical (exit 0); the matrix `--settings all
+--seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check
+27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; through
+slot.py on the main checkout's tree, the tour `--exercise random-game --box-select --orders --seed 7` RESULT PASS
+(gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour;
+ai-game time-cap PT 12471, units [4, 38, 39], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`;
+lan-game PT 2718/2718). The saveloads, scenario_check, the editor gates and eedata ran on the merged build before
+the tag fix (it changes only a TEST ONLY capture record's tag).
+
 ## What is left (behaviour)
+
+- **Round 7's measure** (logic_lines.py's per-file count at the tip): EEFOFindNewTargetNearOldTarget.cpp 884 (the
+  search and line-of-fire host callbacks with their CB* records, EESearchTarget and its siblings, EEFindNewTarget,
+  the uu host's compound world cases), EEUnitClass.cpp 535 (the constructor's fill, CreateUnitClasses,
+  EEUnitClassMoveOp's compound cases, the FacesTarget/FacesPoint/FindImpactUnit capture wrappers,
+  GetElevationFactor, BaseGetSoundParameters, FindTargetNear, GetContainerContinent), EEUnitClassAir 503 (untouched:
+  EELandableActionOperation, FlyToGoal, the sound and air-animal bodies), EEComplexUnit.cpp 448 (the AIStep notes,
+  QueueResearch with its TQRS record, PlaceOnGround, the facing transforms, GetEffectHeight, AddCenterOffset,
+  EEReportLeakingUnits, EEInsuranceChat, the hosts' preambles; the Paths lane's `ee_units_wp_host`),
+  EEPhysicsModel 403 (not started), EEUnitClassBuildings 347 (the gates, FindNearestTargetBuilding,
+  NavalBuildingHasSunk, EruptVolcano), EEUnitClassShots 270 (the impact tests, EEShotOp), EEUnitClassKinds 266
+  (untouched), EEComplexDoppelganger 248 (EEUnitSaveOperation's compound save sections and load sets, the waypoint
+  and goal-queue load sections, FinishLoad), EEUGRust 246 (GoalOp's BOARDING, LINE_TO_UNIT_BLOCKED, MINING_BEAM,
+  CAN_CAST_AT, SURROUNDING_TILES, NEXT_RESOURCE, RESOURCE_OF_KIND; PATH_REACHABLE is the Paths lane's), EEUnit 182
+  (RegrowForest, Init, Describe, Remove), EEUnitStore 170 (TEST ONLY check), EECombatGoals' EEWorldOp compound cases
+  and EECombatGoalHostOp's TELL_GROUP, POSITION, VERIFY_TARGET, EEUnitUpdate's EEUpdateAct. EEPhysics is the world
+  lane's (moved wholly in its round 1). The TEST ONLY EEPhysicsSweep host can now call uc_create.rs's creation.
+- **A host list kept as a static must be cleared where the original made a fresh local** (round 7 fork C's two
+  oracle crashes): the uu searches append to the list they are handed.
 
 - **Round 6's measure** (the logic left in the lane's files, logic_lines.py's per-file count): EEComplexUnit.cpp ~1,500
   (CopyFrom, ResetEEComplexUnit, SwapGraphic, StepAside, ReplaceUnits, GetChecksum, OutOfSynchDump, the area effects,

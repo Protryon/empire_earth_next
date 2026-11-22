@@ -187,6 +187,8 @@ pub mod editor_brush;
 mod editor_calls;
 pub mod editor_conditions;
 pub mod editor_controls;
+#[cfg(test)]
+mod editor_cpp_consts_tests;
 mod editor_direct;
 pub mod editor_effects;
 #[cfg(not(test))]
@@ -207,6 +209,7 @@ mod editor_form_ffi;
 pub mod editor_groups;
 #[cfg(not(test))]
 mod editor_groups_ffi;
+pub mod editor_ids;
 pub mod editor_instructions;
 #[cfg(not(test))]
 mod editor_instructions_ffi;
@@ -220,6 +223,9 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_seax;
+#[cfg(not(test))]
+mod editor_seax_ffi;
 pub mod editor_sefmx;
 pub mod editor_selt;
 #[cfg(not(test))]
@@ -345,7 +351,12 @@ mod settings_form_ffi;
 // TEST ONLY: the SGVW trace of the screens' and the editor's game reads (EE_SGVW)
 pub(crate) mod sgvw;
 // the shells' moved host cases (UI lane round 7)
+pub(crate) mod display_modes;
+pub(crate) mod hud_bodies;
+#[cfg(not(test))]
+mod hud_bodies_ffi;
 pub(crate) mod shell_calls;
+pub(crate) mod shell_factories;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
 pub mod shells;
 pub mod shells_chat;
@@ -372,13 +383,24 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+pub(crate) mod area_effect_capture;
+#[cfg(not(test))]
+mod area_effect_ffi;
 pub(crate) mod area_effect_host;
 pub(crate) mod area_effect_lists;
 pub(crate) mod area_effect_manager;
+pub(crate) mod area_effect_obj;
 pub(crate) mod area_effect_running;
+pub(crate) mod civ_capture;
+#[cfg(not(test))]
+mod civ_capture_ffi;
 pub(crate) mod civ_file_calls;
 pub(crate) mod civ_host;
+pub(crate) mod civ_load;
 pub(crate) mod civ_manager_calls;
+#[cfg(not(test))]
+mod civ_manager_ffi;
+pub(crate) mod civ_manager_obj;
 pub(crate) mod command_units_ops;
 pub(crate) mod cursor_calls;
 pub(crate) mod dialog_calls;

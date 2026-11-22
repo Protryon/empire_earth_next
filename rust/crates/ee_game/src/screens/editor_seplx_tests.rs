@@ -283,3 +283,28 @@ fn the_brush_group_is_built_in_the_screen_font() {
     assert_eq!([g.left, g.top, g.right, g.bottom], r);
     assert!(g.centered);
 }
+
+#[test]
+fn the_brush_group_deletes_its_buttons_then_its_title() {
+    let g = EeScreensSeBrushGroup {
+        bottom: 0.0,
+        left: 0.0,
+        right: 0.0,
+        top: 0.0,
+        buttons: [11, 12, 13, 14, 15],
+        title: 10,
+        brush_size: 0,
+        highlight_shown: false,
+        centered: false,
+    };
+    let mut deleted = Vec::new();
+    brush_group_free(
+        &mut |op: u32, p: [usize; 3], _: &mut [i32; 4], _: &mut [f32; 4]| {
+            assert_eq!(op, EE_SCREENS_SEPL_OP_DELETE);
+            deleted.push(p[0]);
+            0
+        },
+        &g,
+    );
+    assert_eq!(deleted, [11, 12, 13, 14, 15, 10]);
+}

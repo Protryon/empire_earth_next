@@ -44,6 +44,27 @@ extern GEViewport gViewport;
 // .rdata 0x446dc0: the four facing yaws (docks, robotic farm pieces) (provisional name)
 static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
 
+template <class T> static T* EEGhostObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+static int64_t EEGhostBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, sizeof theBits);
+    return theBits;
+}
+
+static float EEGhostFloat(int64_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, sizeof theValue);
+    return theValue;
+}
+
+
 // Creates a placement ghost of a unit class for a player, loading the class media unless told not to
 EEGhostUnit::EEGhostUnit(long inUnitClass, EEPlayer* inPlayer, bool inNoMedia)
 {
@@ -74,237 +95,31 @@ EEGhostUnit::~EEGhostUnit()
 // inner cell is, with 2+ land rim tiles; then turns it to the space dock yaw or the dock facing
 void EEGhostUnit::FillDockSquare()
 {
-    GE3DPoint thePosition(this->mTransformation);
-    EEMap* theMap = gWorld.GetMap();
-    long theType = this->mUnitClass->GetUnitType();
-    float theOffset = this->GetFootprintOffset();
-    float theYaw = 0.0f;
-    long theBorder = 0;
-    long theInterior = 0;
-    long theWater = 0;
-    bool theValid = true;
-    long theLeft = (long)((float)this->mTileX - theOffset);
-    long theBottom = (long)((float)this->mTileY - theOffset);
-    long theRight = (long)((float)this->mTileX + theOffset);
-    long theTop = (long)((float)this->mTileY + theOffset);
-    if (this->mUnitClass->GetUnitType() == kUnitTypeSpaceDock) {
-        theValid = EEIsSpaceDockSiteOpen(this->mTileX, this->mTileY, this->mPlayer);
-        if (!theValid)
-            theBorder = 0;
-        else {
-            theBorder = 2;
-            for (long i = theLeft + 1; i < theRight; i++)
-                for (long j = theBottom + 1; j < theTop; j++)
-                    this->mFootprint[i - theLeft - 1][j - theBottom - 1] = true;
-        }
-    } else {
-        for (long x = theLeft; x <= theRight; x++) {
-            for (long y = theBottom; y <= theTop; y++) {
-                EETile* theTile = theMap->GetTile(x, y);
-                if (theTile == NULL || theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater || theTile->mTerrainType == kTerrainSpace)
-                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-                else
-                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = theMap->mTerrainMesh.GetZ(x, y);
-                if (x == theLeft || y == theBottom || x == theRight || y == theTop) {
-                    if (theTile != NULL) {
-                        if (EEIsLandTerrain(theTile->mTerrainType))
-                            theBorder++;
-                        else if (theTile->mTerrainType == kTerrainSpace)
-                            theWater++;
-                    }
-                } else {
-                    bool theCell = false;
-                    if (theTile != NULL) {
-                        theCell = EECanPlace(this->mPlayer, theType, &thePosition, x, y, 0, 0);
-                        if (EEIsLandTerrain(theTile->mTerrainType))
-                            theInterior++;
-                    }
-                    this->mFootprint[x - theLeft - 1][y - theBottom - 1] = theCell;
-                    if (!theCell)
-                        theValid = false;
-                }
-            }
-        }
-    }
-    if (theValid) {
-        if (this->mUnitClass->GetUnitType() != kUnitTypeSpaceDock)
-            theYaw = kWallRotations[EEGetDockFacing(this->mTileX, this->mTileY)];
-        else
-            theYaw = EEGetSpaceDockYaw(this->mTileX, this->mTileY, this->mUnitClass->GetTileSize());
-    }
-    if (theBorder < 2) {
-        for (long a = theLeft + 1; a < theRight; a++)
-            for (long b = theBottom + 1; b < theTop; b++)
-                this->mFootprint[a - theLeft - 1][b - theBottom - 1] = false;
-    }
-    this->mCanPlace = theValid && theBorder >= 2;
-    if (this->mCanPlace)
-        this->mTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_DOCK_SQUARE, this, NULL, NULL);   // ghost_body.rs
 }
 
 // Fills a dock's footprint and heights: placeable when every inner cell is and at least 3 rim tiles are land
 void EEGhostUnit::FillRimSquare()
 {
-    GE3DPoint thePosition(this->mTransformation);
-    EEMap* theMap = gWorld.GetMap();
-    long theType = this->mUnitClass->GetUnitType();
-    float theOffset = this->GetFootprintOffset();
-    long theBorder = 0;
-    bool theValid = true;
-    long theLeft = (long)((float)this->mTileX - theOffset);
-    long theBottom = (long)((float)this->mTileY - theOffset);
-    long theRight = (long)((float)this->mTileX + theOffset);
-    long theTop = (long)((float)this->mTileY + theOffset);
-    for (long x = theLeft; x <= theRight; x++) {
-        for (long y = theBottom; y <= theTop; y++) {
-            EETile* theTile = theMap->GetTile(x, y);
-            if (theTile == NULL || theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-            else
-                this->mHeights[(x - theLeft) * 12 + y - theBottom] = theMap->mTerrainMesh.GetZ(x, y);
-            if (x != theLeft && y != theBottom && x != theRight && y != theTop) {
-                bool theCell = theTile != NULL ? EECanPlace(this->mPlayer, theType, &thePosition, x, y, 0, 0) : false;
-                this->mFootprint[x - theLeft - 1][y - theBottom - 1] = theCell;
-                if (!theCell)
-                    theValid = false;
-            } else {
-                if (theTile != NULL && EEIsLandTerrain(theTile->mTerrainType))
-                    theBorder++;
-            }
-        }
-    }
-    if (theBorder < 3) {
-        for (long i = theLeft + 1; i < theRight; i++)
-            for (long j = theBottom + 1; j < theTop; j++)
-                this->mFootprint[i - theLeft - 1][j - theBottom - 1] = false;
-    }
-    this->mCanPlace = theValid && theBorder >= 3;
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_RIM_SQUARE, this, NULL, NULL);   // ghost_body.rs
 }
 
 // Marks a mining building's whole footprint placeable when a unit of its overlap set stands on tile (x-1, y-1)
 void EEGhostUnit::UpdateFootprint()
 {
-    EEMap* theMap = ::gWorld.GetMap();
-    float theOffset = this->GetFootprintOffset();
-    float theX = (float)this->mTileX;
-    long theLeft = (long)(theX - theOffset);
-    float theY = (float)this->mTileY;
-    long theBottom = (long)(theY - theOffset);
-    long theRight = (long)(theX + theOffset);
-    long theTop = (long)(theY + theOffset);
-    this->mCanPlace = false;
-    EEMapTile* theTile = theMap->GetTile(this->mTileX - 1, this->mTileY - 1);
-    if (theTile != NULL) {
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && !this->mCanPlace; theNode = theNode->mNext) {
-            if (theNode->mUnit != NULL && gUnitSetManager.Contains(theNode->mUnit->mUnitClass->GetUnitType(), this->mUnitSet))
-                this->mCanPlace = true;
-        }
-    }
-    for (long i = theLeft + 1; i < theRight; i++)
-        for (long j = theBottom + 1; j < theTop; j++)
-            this->mFootprint[i - theLeft - 1][j - theBottom - 1] = this->mCanPlace;
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_UPDATE_FOOTPRINT, this, NULL, NULL);   // ghost_body.rs
 }
 
 // Fills the ghost's footprint and heights and whether it can be placed; mining, dock, space, volcano have variants
 void EEGhostUnit::FillSquare()
 {
-    GE3DPoint thePosition(this->mTransformation);
-    EEMap* theMap = gWorld.GetMap();
-    long theType = this->mUnitClass->GetUnitType();
-    bool theValid = true;
-    if (this->mUnitClass->mCategory == kUnitCategoryMiningBuilding)
-        this->UpdateFootprint();
-    else if (theType == kUnitTypeDock || theType == kUnitTypeNavyYard)
-        this->FillRimSquare();
-    else if (theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret || theType == kUnitTypeOrbitalSpaceStation)
-        this->FillDockSquare();
-    else if (theType == kUnitTypeVolcano)
-        this->FillVolcanoSquare();
-    else {
-        long theSize = this->mUnitClass->GetTileSize();
-        long theLeft;
-        long theBottom;
-        if (theSize <= 1) {
-            theLeft = this->mTileX;
-            theBottom = this->mTileY;
-            theSize = 1;
-        } else {
-            long theHalf = (long)(theSize * 0.5f);
-            theLeft = this->mTileX - theHalf;
-            theBottom = this->mTileY - theHalf;
-        }
-        long theTop = theBottom + theSize;
-        long theRight = theLeft + theSize;
-        for (long x = theLeft; x <= theRight; x++) {
-            for (long y = theBottom; y <= theTop; y++) {
-                EETile* theTile = theMap->GetTile(x, y);
-                bool theCell;
-                if (theTile != NULL) {
-                    theCell = EECanPlace(this->mPlayer, theType, &thePosition, x, y, 0, 0);
-                    if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                        this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-                    else
-                        this->mHeights[(x - theLeft) * 12 + y - theBottom] = theMap->mTerrainMesh.GetZ(x, y);
-                } else {
-                    theCell = false;
-                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-                }
-                this->mFootprint[x - theLeft][y - theBottom] = theCell;
-                if (x < theRight && y < theTop && !theCell)
-                    theValid = false;
-            }
-        }
-        this->mCanPlace = theValid;
-    }
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_SQUARE, this, NULL, NULL);   // ghost_body.rs
 }
 
 // Fills a volcano's footprint and heights: each cell unblocked, off the map edge and free of area effect 3
 void EEGhostUnit::FillVolcanoSquare()
 {
-    GE3DPoint thePosition(this->mTransformation);
-    EEMap* theMap = gWorld.GetMap();
-    long theType = this->mUnitClass->GetUnitType();
-    long theClassSize = this->mUnitClass->GetTileSize();
-    long theSize = 1;
-    bool theValid = true;
-    long theLeft;
-    long theBottom;
-    if (theClassSize <= 1) {
-        theLeft = this->mTileX;
-        theBottom = this->mTileY;
-    } else {
-        theSize = theClassSize;
-        long theHalf = (long)(theSize * 0.5f);
-        theLeft = this->mTileX - theHalf;
-        theBottom = this->mTileY - theHalf;
-    }
-    long theRight = theLeft + theSize;
-    long theTop = theBottom + theSize;
-    for (long x = theLeft; x <= theRight; x++) {
-        for (long y = theBottom; y <= theTop; y++) {
-            EETile* theTile = theMap->GetTile(x, y);
-            bool theCell;
-            if (theTile != NULL) {
-                theCell = ee_units_uu_is_tile_unblocked((uint64_t)(uintptr_t)this->mPlayer, theType, (uint64_t)(uintptr_t)theTile);
-                if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-                else
-                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = theMap->mTerrainMesh.GetZ(x, y);
-                if (theCell) {
-                    theCell = !theMap->IsEdgeTile(x, y);
-                    if (theCell)
-                        theCell = !gAEManager.HasAreaEffect2(3, x, y, this->mPlayer->mPlayerID);
-                }
-            } else {
-                theCell = false;
-                this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-            }
-            this->mFootprint[x - theLeft][y - theBottom] = theCell;
-            if (x < theRight && y < theTop && !theCell)
-                theValid = false;
-        }
-    }
-    this->mCanPlace = theValid;
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_VOLCANO_SQUARE, this, NULL, NULL);   // ghost_body.rs
 }
 
 // Resets the ghost to an empty, unplaceable one at the origin with animation 7
@@ -330,71 +145,13 @@ void EEGhostUnit::Reset()
 void EEGhostUnit::Create(const GE2DPoint& inLocation, long inUnitType, EEPlayer* inPlayer, float inRotation,
                          bool inIsMove)
 {
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    EEUnitClass* theWallClass = gUnitClassTable[kUnitTypeAirportRunway];
-    ::gWorld.mGhostUnitsLock->Enter();
-    ::gWorld.ClearGhostUnits();
-    EEGhostUnit* theGhost = new EEGhostUnit(theClass->GetUnitType(), inPlayer, false);
-    theGhost->mTransformation.SetOrientationYPR(theClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-    ::gWorld.AddGhostUnit(theGhost);
-    if (inUnitType == 0x42) {
-        for (long i = 0; i < 3; i++) {
-            theGhost = new EEGhostUnit(theWallClass->GetUnitType(), inPlayer, false);
-            theGhost->mTransformation.SetOrientationYPR(theWallClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-            ::gWorld.AddGhostUnit(theGhost);
-        }
-    }
-    if ((theClass->GetUnitType() == kUnitTypeGranaryImproved || theClass->GetUnitType() == kUnitTypeGranary) && !inIsMove) {
-        EEUnitClass* thePieceClass = gUnitClassTable[EEGetFarmType(inPlayer)];
-        long theSize = theClass->GetTileSize();
-        long theCount = max(theSize, 3) * max(theSize, 3) - 1;
-        for (long i = 0; i < theCount; i++) {
-            theGhost = new EEGhostUnit(thePieceClass->GetUnitType(), inPlayer, false);
-            theGhost->mTransformation.SetOrientationYPR(thePieceClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-            if (thePieceClass->GetUnitType() == kUnitTypeRoboticFarm) {
-                bool theFlag = false;
-                long thePiece = EEGetWallPiecePart(i >= 4 ? i + 1 : i, &theFlag);
-                if (theFlag)
-                    theGhost->SetAnimation(0xb);
-                float theYaw = kWallRotations[thePiece];
-                theGhost->mTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-            }
-            ::gWorld.AddGhostUnit(theGhost);
-        }
-    }
-    if (theClass->mCategory == kUnitCategoryMiningBuilding)
-        theGhost->mUnitSet = theClass->mOverlapUnitSet;
-    gGhostUnitsChanged = false;
-    ::gWorld.mGhostUnitsLock->Leave();
+    ee_units_ghost_create(inUnitType, inPlayer, inRotation, inIsMove);   // ghost_make.rs
 }
 
 // Replaces the placement ghosts with a gate's three parts (left, middle, right), each turned as its part
 void EEGhostUnit::CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* inPlayer)
 {
-    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inClass);
-    GETransformation theTransformation(false);
-    gWorld.mGhostUnitsLock->Enter();
-    gWorld.ClearGhostUnits();
-    EEGhostUnit* theGhost = new EEGhostUnit(theClass->GetUnitType(), inPlayer, true);
-    theGhost->mTransformation.SetOrientationYPR(theClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-    theTransformation = theGhost->mTransformation;
-    theGhost->SetAnimation(EETurnGatePart(theTransformation, 2, 0));
-    theGhost->mTransformation = theTransformation;
-    gWorld.AddGhostUnit(theGhost);
-    theGhost = new EEGhostUnit(theClass->GetUnitType(), inPlayer, true);
-    theGhost->mTransformation.SetOrientationYPR(theClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-    theTransformation = theGhost->mTransformation;
-    theGhost->SetAnimation(EETurnGatePart(theTransformation, 2, 2));
-    theGhost->mTransformation = theTransformation;
-    gWorld.AddGhostUnit(theGhost);
-    theGhost = new EEGhostUnit(theClass->GetUnitType(), inPlayer, true);
-    theGhost->mTransformation.SetOrientationYPR(theClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-    theTransformation = theGhost->mTransformation;
-    theGhost->SetAnimation(EETurnGatePart(theTransformation, 2, 4));
-    theGhost->mTransformation = theTransformation;
-    gWorld.AddGhostUnit(theGhost);
-    gGhostUnitsChanged = false;
-    gWorld.mGhostUnitsLock->Leave();
+    ee_units_ghost_create_gate(inRotation, inClass, inPlayer);   // ghost_make.rs
 }
 
 // Replaces the placement ghosts with one wall ghost per planned tile, shaped by its corner and set on the ground
@@ -402,38 +159,8 @@ void EEGhostUnit::CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* i
 void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>& inCorners,
                 long inTechnology, EEPlayer* inPlayer, float inRotation)
 {
-    EEUnitClass* theClass = gUnitClassTable[inPlayer->mTechnologies->Get(inTechnology)->mData->mUnitClass];
-    gWorld.mGhostUnitsLock->Enter();
-    gWorld.ClearGhostUnits();
-    for (unsigned long i = 0; i < inTiles.size(); i++) {
-        long theX = inTiles[i].GetX();
-        long theY = inTiles[i].mY;
-        EEGhostUnit* theGhost = new EEGhostUnit(theClass->GetUnitType(), inPlayer, true);
-        theGhost->mTransformation.SetOrientationYPR(theClass->mMaxAngularVelocity == 0.0f ? 0.0f : inRotation, 0.0f, 0.0f);
-        EEMapTile* theTile = gWorld.GetMap()->GetTile(theX, theY);
-        long theRaised = gWorld.GetMap()->GetNumRaisedCorners(theX, theY);
-        EEOrientWallGhost(theGhost, inCorners[i], theRaised);
-        theGhost->mTileX = theX;
-        theGhost->mTileY = theY;
-        gWorld.AddGhostUnit(theGhost);
-        if (theTile == NULL)
-            theGhost->mCanPlace = false;
-        else
-            theGhost->FillSquare();
-        float theCenterX = theX + 0.5f;
-        float theCenterY = theY + 0.5f;
-        float theHeight = 0.0f;
-        if (theTile != NULL) {
-            theHeight = gWorld.GetMap()->mTerrainMesh.GetMeshZ(theCenterX, theCenterY);
-            if (theHeight < 0.0f)
-                theHeight = 0.0f;
-        }
-        theGhost->mTransformation.SetX(theCenterX);
-        theGhost->mTransformation.SetY(theCenterY);
-        theGhost->mTransformation.SetZ(theHeight);
-    }
-    gGhostUnitsChanged = true;
-    gWorld.mGhostUnitsLock->Leave();
+    EeUnitsGhostWalls theArgs = {&inTiles, &inCorners, inTechnology, inPlayer, inRotation};
+    ee_units_ghost_build_walls(&theArgs);   // ghost_make.rs
 }
 
 // Adds the ghost's player number and unit class name to the sync checksum
@@ -449,17 +176,7 @@ void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
 // Returns the half-width of the footprint square around the ghost's tile (1 for a one-tile unit)
 float EEGhostUnit::GetFootprintOffset()
 {
-    long theSize = this->mUnitClass->GetTileSize();
-    float theOffset;
-    if (theSize <= 1)
-        theOffset = 1.0f;
-    else if (theSize & 1)
-        theOffset = UMCeil(theSize * 0.5f);
-    else {
-        float theHalf = theSize * 0.5f;
-        theOffset = theHalf + 0.5f;
-    }
-    return theOffset;
+    return EEGhostFloat(ee_units_ghost_body(EE_UNITS_GHOST_DO_FOOTPRINT_OFFSET, this, NULL, NULL));   // ghost_body.rs
 }
 
 // Reads the unit class and player ids from the saved game; returns the first read error
@@ -508,215 +225,141 @@ void EEGhostUnit::SetAnimation(long inIndex)
 // to its facing quarter with its runways behind it, farm ghosts take their slots
 void EEPreviewPlacement(const GE2DPoint& inLocation)
 {
-    GE3DPoint thePosition;
-    std::vector<EETileCoordinate> theUnused;
-    long theDirection = 0;
-    gWorld.mGhostUnitsLock->Enter();
-    if (!gViewport.GetViewRectangle().Contains(inLocation) || gWorld.GetNumGhostUnits() == 0)
-        gGhostUnitsChanged = false;
-    else {
-        gGhostUnitsChanged = true;
-        EEGhostUnit* theFirstGhost = gWorld.mGhostUnits[0];
-        EETile* theTile;
-        bool theOnMap = EEPointUnitOrTile(inLocation, theTile, thePosition, true);
-        long theX = (long)thePosition.GetX();
-        long theY = (long)thePosition.mY;
-        for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
-            EEGhostUnit* theGhost = gWorld.mGhostUnits[i];
-            theGhost->GetModel();
-            theGhost->mTileX = theX;
-            theGhost->mTileY = theY;
-            long theType = theGhost->mUnitClass->GetUnitType();
-            if (theType == kUnitTypeAirport) {
-                EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(gUnitClassTable[kUnitTypeAirport]);
-                theDirection = EEGetFacingQuarter(theX - theClass->GetTileSize() / 2, theY - theClass->GetTileSize() / 2);
-                switch (theDirection) {
-                case 0: theGhost->mTransformation.SetOrientationYPR(0.0f, 0.0f, 0.0f); break;
-                case 1: theGhost->mTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f); break;
-                case 2: theGhost->mTransformation.SetOrientationYPR(-1.5707964f, 0.0f, 0.0f); break;
-                case 3: theGhost->mTransformation.SetOrientationYPR(1.5707964f, 0.0f, 0.0f); break;
-                }
-            } else if (theType == kUnitTypeAirportRunway) {
-                float theOffset = (float)(theGhost->mUnitClass->GetTileSize() * i);
-                switch (theDirection) {
-                case 0: theGhost->mTileY = theY + (long)theOffset; break;
-                case 1: theGhost->mTileY = theY - (long)theOffset; break;
-                case 2: theGhost->mTileX = theX + (long)theOffset; break;
-                case 3: theGhost->mTileX = theX - (long)theOffset; break;
-                }
-            } else if ((theType == kUnitTypeFarm || theType == kUnitTypeRoboticFarm) && gWorld.GetNumGhostUnits() != 1)
-                EEGhostUnit::SetFarmSlotTile(theGhost, i);
-            if ((theGhost->mUnitClass->GetTileSize() > 1 || theGhost->mUnitClass->IsLandBuilding()
-                 || (theGhost->mUnitClass->GetUnitType() != kUnitTypePathPoint && theGhost->mUnitClass->mIsComplex != 1)) && theOnMap) {
-                if ((theGhost->mUnitClass->GetTileSize() & 1) == 0) {
-                    thePosition.mX = (float)theGhost->mTileX;
-                    thePosition.mY = (float)theGhost->mTileY;
-                } else {
-                    thePosition.mX = (float)theGhost->mTileX + 0.5f;
-                    thePosition.mY = (float)theGhost->mTileY + 0.5f;
-                }
-                if (gWorld.GetMap()->GetTile(theGhost->mTileX, theGhost->mTileY) != NULL) {
-                    thePosition.mZ = gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePosition.GetX(), thePosition.mY);
-                    if (thePosition.mZ < 0.0f)
-                        thePosition.mZ = 0.0f;
-                }
-            }
-            theGhost->mTransformation.SetPosition(thePosition);
-            if (!theOnMap)
-                theGhost->mCanPlace = false;
-            else {
-                if (theGhost->mUnitClass->GetUnitType() == kUnitTypeAirportRunway) {
-                    for (unsigned long j = 0; j < i; j++) {
-                        theGhost->mCanPlace = true;
-                        if (!gWorld.mGhostUnits[j]->mCanPlace)
-                            theGhost->mCanPlace = false;
-                        if (theGhost->mCanPlace)
-                            theGhost->FillSquare();
-                    }
-                } else
-                    theGhost->FillSquare();
-                if (!theGhost->mCanPlace && theGhost->mUnitClass->GetUnitType() == kUnitTypeAirportRunway) {
-                    for (unsigned long k = 0; k < i; k++)
-                        gWorld.mGhostUnits[k]->mCanPlace = false;
-                }
-            }
-            theGhost->mUnitClass->LocationToTile(thePosition, theGhost->mTileX, theGhost->mTileY);
-            if (gWorld.GetMap()->GetTile(theGhost->mTileX, theGhost->mTileY) == NULL)
-                theGhost->mCanPlace = false;
-        }
-    }
-    gWorld.mGhostUnitsLock->Leave();
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_PREVIEW_PLACEMENT, NULL, &inLocation, NULL);   // ghost_body.rs
 }
 
 // Moves the gate ghost's three parts onto the wall tiles under the cursor; placeable only over a marked
 // wall piece, whose gate direction it takes
 void EEGhostUnit::PreviewGate(const GE2DPoint& inLocation, long& ioDirection)
 {
-    std::vector<U2DPoint<long> > theTiles;
+    ee_units_ghost_body(EE_UNITS_GHOST_DO_PREVIEW_GATE, NULL, &inLocation, &ioDirection);   // ghost_body.rs
+}
+
+// ghost_body.rs's scratch values: the fills' position (their thePosition), the preview's position and tile, the gate
+// preview's cursor tile, tiles and turned transformation (the originals' locals)
+static GE3DPoint sGhostFillPosition;
+static GE3DPoint sGhostPosition;
+static EETile* sGhostTile;
+static long sGhostXY[2];
+static std::vector<U2DPoint<long> > sGhostPoints;
+static GETransformation sGhostTransform(false);
+static bool sGhostPieceFlag;
+
+// a GE3DPoint's x, y or z (0, 1, 2)
+static float& EEGhostPart(GE3DPoint& inPoint, int64_t inIndex)
+{
+    return inIndex == 0 ? inPoint.mX : inIndex == 1 ? inPoint.mY : inPoint.mZ;
+}
+
+// The C++ of EEGhostUnit's Rust bodies (ee_units ghost_body.rs; EE_UNITS_GHOST_*): one statement of the originals
+// each, in their order; inGhost the ghost acted on, inA an object or a value, inB and inC values (floats as bits)
+extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA, int64_t inB, int64_t inC)
+{
+    EEGhostUnit* theGhost = static_cast<EEGhostUnit*>(inGhost);
     EEMap* theMap = gWorld.GetMap();
-    bool theNewGate = true;
-    gWorld.mGhostUnitsLock->Enter();
-    if (!gViewport.GetViewRectangle().Contains(inLocation))
-        gGhostUnitsChanged = false;
-    else {
-        gGhostUnitsChanged = true;
-        EEUnit* theUnit = gUnitPicker.PickUnit(inLocation, 0);
-        long theX;
-        long theY;
-        EETile* theTile;
-        if (theUnit == NULL || !theUnit->mUnitClass->mIsWall)
-            EEPointUnitOrTileXY(inLocation, theTile, theX, theY, true);
-        else {
-            theX = theUnit->mTileX;
-            theY = theUnit->mTileY;
-        }
-        if (theUnit != NULL)
-            theUnit->Dereference();
-        EEGhostUnit* theLeft = gWorld.mGhostUnits[0];
-        EEGhostUnit* theMiddle = gWorld.mGhostUnits[1];
-        EEGhostUnit* theRight = gWorld.mGhostUnits[2];
-        theTile = gWorld.GetMap()->GetTile(theX, theY);
-        if (theTile != NULL) {
-            RTSTileUnitNode* theNode = theTile->mUnits;
-            EEUnit* theExisting = theNode ? theNode->mUnit : NULL;
-            while (theExisting != NULL && !theExisting->mUnitClass->mIsWall && theNode != NULL) {
-                theNode = theNode->mNext;
-                if (theNode != NULL)
-                    theExisting = theNode->mUnit;
-            }
-            if (theExisting != NULL && theExisting->mUnitClass->mIsWall
-                && theExisting->mComplexUnit != NULL && theExisting->mComplexUnit->mIsTinted) {
-                theNewGate = false;
-                ioDirection = theExisting->mComplexUnit->mGateDirection;
-            }
-            U2DPoint<long> theCenter(theX, theY);
-            EEGetWallGateTiles(theCenter, ioDirection, theTiles);
-            GETransformation theTransformation(false);
-            float theZ;
-            theTransformation = theMiddle->mTransformation;
-            theMiddle->SetAnimation(EETurnGatePart(theTransformation, ioDirection, 2));
-            theMiddle->mTransformation = theTransformation;
-            theMiddle->mTileX = theTiles[2].GetX();
-            theMiddle->mTileY = theTiles[2].mY;
-            float theMiddleX = (float)theMiddle->mTileX + 0.5f;
-            float theMiddleY = (float)theMiddle->mTileY + 0.5f;
-            if (theTile == NULL || theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                theZ = 0.0f;
-            else
-                theZ = gWorld.GetMap()->mTerrainMesh.GetMeshZ(theMiddleX, theMiddleY);
-            theMiddle->mTransformation.SetPosition(theMiddleX, theMiddleY, theZ);
-            long theMiddleStartX = theMiddle->mTileX;
-            long theMiddleStartY = theMiddle->mTileY;
-            for (long theMiddleXIndex = theMiddleStartX; theMiddleXIndex <= theMiddleStartX + 1; theMiddleXIndex++) {
-                for (long theMiddleYIndex = theMiddleStartY; theMiddleYIndex <= theMiddleStartY + 1; theMiddleYIndex++) {
-                    theTile = theMap->GetTile(theMiddleXIndex, theMiddleYIndex);
-                    if (theTile == NULL)
-                        continue;
-                    if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                        theMiddle->mHeights[(theMiddleXIndex - theMiddleStartX) * 12 + theMiddleYIndex - theMiddleStartY] = 0.0f;
-                    else
-                        theMiddle->mHeights[(theMiddleXIndex - theMiddleStartX) * 12 + theMiddleYIndex - theMiddleStartY] = theMap->mTerrainMesh.GetZ(theMiddleXIndex, theMiddleYIndex);
-                }
-            }
-            theMiddle->mCanPlace = !theNewGate;
-            theMiddle->mFootprint[0][0] = theMiddle->mCanPlace;
-            theTransformation = theLeft->mTransformation;
-            theLeft->SetAnimation(EETurnGatePart(theTransformation, ioDirection, 0));
-            theLeft->mTransformation = theTransformation;
-            theLeft->mTileX = theTiles[0].GetX();
-            theLeft->mTileY = theTiles[0].mY;
-            theTile = gWorld.GetMap()->GetTile(theLeft->mTileX, theLeft->mTileY);
-            float theLeftX = (float)theLeft->mTileX + 0.5f;
-            float theLeftY = (float)theLeft->mTileY + 0.5f;
-            if (theTile == NULL || theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                theZ = 0.0f;
-            else
-                theZ = gWorld.GetMap()->mTerrainMesh.GetMeshZ(theLeftX, theLeftY);
-            theLeft->mTransformation.SetPosition(theLeftX, theLeftY, theZ);
-            long theLeftStartX = theLeft->mTileX;
-            long theLeftStartY = theLeft->mTileY;
-            for (long theLeftXIndex = theLeftStartX; theLeftXIndex <= theLeftStartX + 1; theLeftXIndex++) {
-                for (long theLeftYIndex = theLeftStartY; theLeftYIndex <= theLeftStartY + 1; theLeftYIndex++) {
-                    theTile = theMap->GetTile(theLeftXIndex, theLeftYIndex);
-                    if (theTile == NULL)
-                        continue;
-                    if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                        theLeft->mHeights[(theLeftXIndex - theLeftStartX) * 12 + theLeftYIndex - theLeftStartY] = 0.0f;
-                    else
-                        theLeft->mHeights[(theLeftXIndex - theLeftStartX) * 12 + theLeftYIndex - theLeftStartY] = theMap->mTerrainMesh.GetZ(theLeftXIndex, theLeftYIndex);
-                }
-            }
-            theLeft->mCanPlace = !theNewGate;
-            theLeft->mFootprint[0][0] = theLeft->mCanPlace;
-            theTransformation = theRight->mTransformation;
-            theRight->SetAnimation(EETurnGatePart(theTransformation, ioDirection, 4));
-            theRight->mTransformation = theTransformation;
-            theRight->mTileX = theTiles[4].GetX();
-            theRight->mTileY = theTiles[4].mY;
-            theTile = gWorld.GetMap()->GetTile(theRight->mTileX, theRight->mTileY);
-            float theRightX = (float)theRight->mTileX + 0.5f;
-            float theRightY = (float)theRight->mTileY + 0.5f;
-            if (theTile == NULL || theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                theZ = 0.0f;
-            else
-                theZ = gWorld.GetMap()->mTerrainMesh.GetMeshZ(theRightX, theRightY);
-            theRight->mTransformation.SetPosition(theRightX, theRightY, theZ);
-            long theRightStartX = theRight->mTileX;
-            long theRightStartY = theRight->mTileY;
-            for (long theRightXIndex = theRightStartX; theRightXIndex <= theRightStartX + 1; theRightXIndex++) {
-                for (long theRightYIndex = theRightStartY; theRightYIndex <= theRightStartY + 1; theRightYIndex++) {
-                    theTile = theMap->GetTile(theRightXIndex, theRightYIndex);
-                    if (theTile == NULL)
-                        continue;
-                    if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
-                        theRight->mHeights[(theRightXIndex - theRightStartX) * 12 + theRightYIndex - theRightStartY] = 0.0f;
-                    else
-                        theRight->mHeights[(theRightXIndex - theRightStartX) * 12 + theRightYIndex - theRightStartY] = theMap->mTerrainMesh.GetZ(theRightXIndex, theRightYIndex);
-                }
-            }
-            theRight->mCanPlace = !theNewGate;
-            theRight->mFootprint[0][0] = theRight->mCanPlace;
-        }
+    EEUnit* theUnit = EEGhostObject<EEUnit>(inA);
+    RTSTileUnitNode* theNode = EEGhostObject<RTSTileUnitNode>(inA);
+    const GE2DPoint* theLocation = EEGhostObject<const GE2DPoint>(inA);
+    switch (inOp) {
+    case EE_UNITS_GHOST_UNIT_TYPE: return theGhost->mUnitClass->GetUnitType();
+    case EE_UNITS_GHOST_CATEGORY: return theGhost->mUnitClass->mCategory;
+    case EE_UNITS_GHOST_TILE_SIZE: return theGhost->mUnitClass->GetTileSize();
+    case EE_UNITS_GHOST_TILE_X: return theGhost->mTileX;
+    case EE_UNITS_GHOST_TILE_Y: return theGhost->mTileY;
+    case EE_UNITS_GHOST_SET_TILE_X: theGhost->mTileX = (long)inB; return 0;
+    case EE_UNITS_GHOST_SET_TILE_Y: theGhost->mTileY = (long)inB; return 0;
+    case EE_UNITS_GHOST_UM_CEIL: return EEGhostBits(UMCeil(EEGhostFloat(inB)));
+    case EE_UNITS_GHOST_POSITION_FROM_TRANSFORM: sGhostFillPosition = GE3DPoint(theGhost->mTransformation); return 0;
+    case EE_UNITS_GHOST_CAN_PLACE_AT:
+        return EECanPlace(theGhost->mPlayer, theGhost->mUnitClass->GetUnitType(), &sGhostFillPosition, (long)inB, (long)inC, 0, 0);
+    case EE_UNITS_GHOST_TILE_EXISTS: return theMap->GetTile((long)inB, (long)inC) != NULL;
+    case EE_UNITS_GHOST_TILE_TERRAIN: return theMap->GetTile((long)inB, (long)inC)->mTerrainType;
+    case EE_UNITS_GHOST_TERRAIN_Z: return EEGhostBits(theMap->mTerrainMesh.GetZ((long)inB, (long)inC));
+    case EE_UNITS_GHOST_SET_HEIGHT: theGhost->mHeights[inB] = EEGhostFloat(inC); return 0;
+    case EE_UNITS_GHOST_SET_FOOTPRINT: theGhost->mFootprint[inB][inC] = inA != 0; return 0;
+    case EE_UNITS_GHOST_IS_LAND_TERRAIN: return EEIsLandTerrain((long)inB);
+    case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return EEIsSpaceDockSiteOpen(theGhost->mTileX, theGhost->mTileY, theGhost->mPlayer);
+    case EE_UNITS_GHOST_DOCK_FACING: return EEGetDockFacing(theGhost->mTileX, theGhost->mTileY);
+    case EE_UNITS_GHOST_SPACE_DOCK_YAW:
+        return EEGhostBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
+    case EE_UNITS_GHOST_SET_CAN_PLACE: theGhost->mCanPlace = inB != 0; return 0;
+    case EE_UNITS_GHOST_CAN_PLACE: return theGhost->mCanPlace;
+    case EE_UNITS_GHOST_SET_YAW: theGhost->mTransformation.SetOrientationYPR(EEGhostFloat(inB), 0.0f, 0.0f); return 0;
+    case EE_UNITS_GHOST_TILE_FIRST_NODE:
+        return theMap->GetTile((long)inB, (long)inC) != NULL ? (uint64_t)(uintptr_t)theMap->GetTile((long)inB, (long)inC)->mUnits : 0;
+    case EE_UNITS_GHOST_NODE_NEXT: return (uint64_t)(uintptr_t)theNode->mNext;
+    case EE_UNITS_GHOST_NODE_IN_SET:
+        return theNode->mUnit != NULL && gUnitSetManager.Contains(theNode->mUnit->mUnitClass->GetUnitType(), theGhost->mUnitSet);
+    case EE_UNITS_GHOST_TILE_UNBLOCKED:
+        return ee_units_uu_is_tile_unblocked((uint64_t)(uintptr_t)theGhost->mPlayer, theGhost->mUnitClass->GetUnitType(),
+                                             (uint64_t)(uintptr_t)theMap->GetTile((long)inB, (long)inC));
+    case EE_UNITS_GHOST_IS_EDGE_TILE: return theMap->IsEdgeTile((long)inB, (long)inC);
+    case EE_UNITS_GHOST_HAS_AREA_EFFECT_3: return gAEManager.HasAreaEffect2(3, (long)inB, (long)inC, theGhost->mPlayer->mPlayerID);
+    case EE_UNITS_GHOST_LOCK_ENTER: gWorld.mGhostUnitsLock->Enter(); return 0;
+    case EE_UNITS_GHOST_LOCK_LEAVE: gWorld.mGhostUnitsLock->Leave(); return 0;
+    case EE_UNITS_GHOST_VIEW_CONTAINS: return gViewport.GetViewRectangle().Contains(*theLocation);
+    case EE_UNITS_GHOST_NUM_GHOSTS: return (int64_t)gWorld.GetNumGhostUnits();
+    case EE_UNITS_GHOST_SET_CHANGED: gGhostUnitsChanged = inB != 0; return 0;
+    case EE_UNITS_GHOST_GHOST_AT: return (uint64_t)(uintptr_t)gWorld.mGhostUnits[(size_t)inB];
+    case EE_UNITS_GHOST_POINT_UNIT_OR_TILE: return EEPointUnitOrTile(*theLocation, sGhostTile, sGhostPosition, true);
+    case EE_UNITS_GHOST_POSITION: return EEGhostBits(EEGhostPart(sGhostPosition, inB));
+    case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = EEGhostFloat(inC); return 0;
+    case EE_UNITS_GHOST_GET_MODEL: theGhost->GetModel(); return 0;
+    case EE_UNITS_GHOST_AIRPORT_TILE_SIZE: return EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(gUnitClassTable[kUnitTypeAirport])->GetTileSize();
+    case EE_UNITS_GHOST_FACING_QUARTER: return EEGetFacingQuarter((long)inB, (long)inC);
+    case EE_UNITS_GHOST_SET_FARM_SLOT: EEGhostUnit::SetFarmSlotTile(theGhost, (long)inB); return 0;
+    case EE_UNITS_GHOST_IS_LAND_BUILDING: return theGhost->mUnitClass->IsLandBuilding();
+    case EE_UNITS_GHOST_IS_COMPLEX: return theGhost->mUnitClass->mIsComplex;
+    case EE_UNITS_GHOST_SET_POSITION: theGhost->mTransformation.SetPosition(sGhostPosition); return 0;
+    case EE_UNITS_GHOST_LOCATION_TO_TILE: theGhost->mUnitClass->LocationToTile(sGhostPosition, theGhost->mTileX, theGhost->mTileY); return 0;
+    case EE_UNITS_GHOST_PICK_UNIT: return (uint64_t)(uintptr_t)gUnitPicker.PickUnit(*theLocation, 0);
+    case EE_UNITS_GHOST_UNIT_IS_WALL: return theUnit->mUnitClass->mIsWall;
+    case EE_UNITS_GHOST_POINT_TILE_XY: EEPointUnitOrTileXY(*theLocation, sGhostTile, sGhostXY[0], sGhostXY[1], true); return 0;
+    case EE_UNITS_GHOST_SCRATCH_XY: return sGhostXY[inB];
+    case EE_UNITS_GHOST_UNIT_TILE: return inB == 0 ? theUnit->mTileX : theUnit->mTileY;
+    case EE_UNITS_GHOST_UNIT_DEREFERENCE: theUnit->Dereference(); return 0;
+    case EE_UNITS_GHOST_NODE_UNIT: return (uint64_t)(uintptr_t)theNode->mUnit;
+    case EE_UNITS_GHOST_UNIT_TINTED: return theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mIsTinted;
+    case EE_UNITS_GHOST_UNIT_GATE_DIRECTION: return theUnit->mComplexUnit->mGateDirection;
+    case EE_UNITS_GHOST_SCRATCH_POINTS_CLEAR: sGhostPoints.clear(); return 0;
+    case EE_UNITS_GHOST_GATE_TILES: EEGetWallGateTiles(U2DPoint<long>((long)inB, (long)inC), (long)inA, sGhostPoints); return 0;
+    case EE_UNITS_GHOST_SCRATCH_POINT: return inC == 0 ? sGhostPoints[(size_t)inB].GetX() : sGhostPoints[(size_t)inB].mY;
+    case EE_UNITS_GHOST_SCRATCH_TRANSFORM_GET: sGhostTransform = theGhost->mTransformation; return 0;
+    case EE_UNITS_GHOST_TURN_GATE_PART: theGhost->SetAnimation(EETurnGatePart(sGhostTransform, (long)inB, (long)inC)); return 0;
+    case EE_UNITS_GHOST_SCRATCH_TRANSFORM_SET: theGhost->mTransformation = sGhostTransform; return 0;
+    case EE_UNITS_GHOST_MESH_Z: return EEGhostBits(theMap->mTerrainMesh.GetMeshZ(EEGhostFloat(inB), EEGhostFloat(inC)));
+    case EE_UNITS_GHOST_SET_POSITION_XYZ:
+        theGhost->mTransformation.SetPosition(EEGhostFloat(inB), EEGhostFloat(inC), EEGhostFloat((int64_t)inA));
+        return 0;
+    case EE_UNITS_GHOST_FOOTPRINT_FROM_CAN_PLACE: theGhost->mFootprint[0][0] = theGhost->mCanPlace; return 0;
+    case EE_UNITS_GHOST_POSITION_RESET: sGhostPosition = GE3DPoint(); return 0;
+    // ghost_make.rs's
+    case EE_UNITS_GHOST_CLASS_AT: return (uint64_t)(uintptr_t)gUnitClassTable[inB];
+    case EE_UNITS_GHOST_CLEAR_GHOSTS: gWorld.ClearGhostUnits(); return 0;
+    case EE_UNITS_GHOST_NEW:
+        return (uint64_t)(uintptr_t)new EEGhostUnit(EEGhostObject<EEUnitClass>(inA)->GetUnitType(), EEGhostObject<EEPlayer>((uint64_t)inB), inC != 0);
+    case EE_UNITS_GHOST_CLASS_FIXED: return EEGhostObject<EEUnitClass>(inA)->mMaxAngularVelocity == 0.0f;
+    case EE_UNITS_GHOST_ADD: gWorld.AddGhostUnit(theGhost); return 0;
+    case EE_UNITS_GHOST_CLASS_TYPE: return EEGhostObject<EEUnitClass>(inA)->GetUnitType();
+    case EE_UNITS_GHOST_FARM_TYPE: return EEGetFarmType(EEGhostObject<EEPlayer>(inA));
+    case EE_UNITS_GHOST_CLASS_TILE_SIZE: return EEGhostObject<EEUnitClass>(inA)->GetTileSize();
+    case EE_UNITS_GHOST_WALL_PIECE_PART: return EEGetWallPiecePart((long)inB, &sGhostPieceFlag);
+    case EE_UNITS_GHOST_PIECE_FLAG: return sGhostPieceFlag;
+    case EE_UNITS_GHOST_SET_ANIMATION: theGhost->SetAnimation((long)inB); return 0;
+    case EE_UNITS_GHOST_CLASS_CATEGORY: return EEGhostObject<EEUnitClass>(inA)->mCategory;
+    case EE_UNITS_GHOST_SET_OVERLAP_SET: theGhost->mUnitSet = EEGhostObject<EEUnitClass>(inA)->mOverlapUnitSet; return 0;
+    case EE_UNITS_GHOST_GATE_CLASS: return (uint64_t)(uintptr_t)EEUnitClassOfKind<EE_CLASS_KIND_GATE>(EEGhostObject<EEUnitClass>(inA));
+    case EE_UNITS_GHOST_TECH_CLASS:
+        return (uint64_t)(uintptr_t)gUnitClassTable[EEGhostObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass];
+    case EE_UNITS_GHOST_TILES_SIZE: return (int64_t)EEGhostObject<std::vector<EETileCoordinate> >(inA)->size();
+    case EE_UNITS_GHOST_TILES_AT:
+        return inC == 0 ? (*EEGhostObject<std::vector<EETileCoordinate> >(inA))[(size_t)inB].GetX() : (*EEGhostObject<std::vector<EETileCoordinate> >(inA))[(size_t)inB].mY;
+    case EE_UNITS_GHOST_RAISED_CORNERS: return gWorld.GetMap()->GetNumRaisedCorners((long)inB, (long)inC);
+    case EE_UNITS_GHOST_CORNER_AT: return (*EEGhostObject<std::vector<long> >(inA))[(size_t)inB];
+    case EE_UNITS_GHOST_ORIENT_WALL: EEOrientWallGhost(theGhost, (long)inB, (long)inC); return 0;
+    case EE_UNITS_GHOST_SET_X: theGhost->mTransformation.SetX(EEGhostFloat(inB)); return 0;
+    case EE_UNITS_GHOST_SET_Y: theGhost->mTransformation.SetY(EEGhostFloat(inB)); return 0;
+    case EE_UNITS_GHOST_SET_Z: theGhost->mTransformation.SetZ(EEGhostFloat(inB)); return 0;
+    default: return 0;
     }
-    gWorld.mGhostUnitsLock->Leave();
 }

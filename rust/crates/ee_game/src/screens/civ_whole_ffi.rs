@@ -18,16 +18,6 @@ impl CbHost for Host {
     }
 }
 
-/// The civilization simulation's host (`EeTechCivHost`'s call: `call` an `EeTechCivCall*`, `reply` an
-/// `EeTechCivReply*`; `civ_manager_calls.rs`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_civ_host(call: *const c_void, reply: *mut c_void) {
-    use ee_sim::tech::civ_apply::{EeTechCivCall, EeTechCivReply};
-    // SAFETY: the simulation's call and reply, live for the call
-    let (call, reply) = unsafe { (&*(call as *const EeTechCivCall), &mut *(reply as *mut EeTechCivReply)) };
-    crate::screens::civ_manager_calls::host(&mut crate::screens::game_cpp::Ffi, call, reply)
-}
-
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 #[no_mangle]
@@ -36,22 +26,6 @@ pub unsafe extern "C" fn ee_screens_civ_file_host(ctx: *mut c_void, call: *const
     // SAFETY: the simulation's call and reply, live for the call
     let (call, reply) = unsafe { (&*(call as *const EeTechCivFileCall), &mut *(reply as *mut EeTechCivFileReply)) };
     crate::screens::civ_file_calls::host(&mut crate::screens::game_cpp::Ffi, ctx as usize, call, reply)
-}
-
-/// The area effects' host (`EEAEHost::Call`: `effect` the `EEAreaEffect*`, `target` the `EEComplexUnit*`, either
-/// NULL; `call` an `EeAreaEffectCall*`, `reply` an `EeAreaEffectReply*`; `area_effect_host.rs`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_ae_host(
-    effect: *mut c_void,
-    target: *mut c_void,
-    call: *const c_void,
-    reply: *mut c_void,
-) {
-    use ee_sim::tech::area_effect::{EeAreaEffectCall, EeAreaEffectReply};
-    // SAFETY: the simulation's call and reply, live for the call
-    let (call, reply) = unsafe { (&*(call as *const EeAreaEffectCall), &mut *(reply as *mut EeAreaEffectReply)) };
-    let ffi = &mut crate::screens::game_cpp::Ffi;
-    crate::screens::area_effect_host::host(ffi, effect as usize, target as usize, call, reply)
 }
 
 /// `EEAEManager::CollectEffects(radius, location, player, list, unit)` (`list` the `EEUnitAreaEffectList*`, `unit`
