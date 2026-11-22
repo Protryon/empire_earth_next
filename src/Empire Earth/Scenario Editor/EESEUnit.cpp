@@ -69,7 +69,6 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x21
 // The upgrade panel is a real 0x60-byte class (new at 0x59b976 in the tab's ctor); both its ctor counters
 // are mutable
 #include "ee/EEUIFMGStatusBox.h"
-#include "ee/EEUIFSEUpgradePanel.h"
 #include "ee/EEStringIDs.h"
 
 
@@ -132,7 +131,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEUN_OP_REDRAW: static_cast<UIControl*>(p[0])->GetForm()->GetManager()->RedrawAll(); return 0;
     case EE_SCREENS_SEUN_OP_CLEAR_SELECTION: SeunEditor(p[0])->ClearSelection(); return 0;
     case EE_SCREENS_SEUN_OP_SHOW_UNIT:
-        static_cast<EEUIFSEUpgradePanel*>(p[0])->ShowUnit(static_cast<EEUnit*>(p[1]));
+        ee_screens_seup_show(p[0], p[1]);
         return 0;
     case EE_SCREENS_SEUN_OP_TYPE_MODE: return ee_screens_shell_unit_type_mode();
     case EE_SCREENS_SEUN_OP_LIST_TOP: theList->SetScrollBarCurrentRange(0); return 0;
@@ -332,8 +331,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         static_cast<GEBitmap*>(p[1])->SetTexture(static_cast<GETexture*>(p[2]), gScreenIndex);
         return 0;
     case EE_SCREENS_SEUNX_UPGRADE_PANEL:
-        *theOut = new EEUIFSEUpgradePanel(static_cast<unsigned long*>(p[2])[0], static_cast<unsigned long*>(p[2])[1],
-                                          static_cast<EEUIFScenarioEditor*>(theForm));
+        *theOut = ee_screens_seup_new(static_cast<unsigned long*>(p[2]), static_cast<unsigned long*>(p[2]) + 1, theForm);
         return 0;
     case EE_SCREENS_SEUNX_RELEASE_ACTION:
         static_cast<EEAction*>(p[1])->Dereference();
@@ -345,7 +343,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         static_cast<UIEvent*>(p[1])->Dereference();
         return 0;
     case EE_SCREENS_SEUNX_DELETE_PANEL:
-        delete static_cast<EEUIFSEUpgradePanel*>(p[1]);
+        ee_screens_seup_free(p[1]);
         return 0;
     case EE_SCREENS_SEUNX_SEW_ACTION:
         *theOut = SeunAction(p[1])->mAction;
