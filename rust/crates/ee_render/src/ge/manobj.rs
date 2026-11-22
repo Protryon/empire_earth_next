@@ -263,8 +263,9 @@ impl EeGeModelManager {
             let mut created = managers::next_created_model_name(c_bytes(name));
             created.truncate(CREATED_NAME_CAPACITY - 1);
             let key = c_string(&created);
-            let model = Self::op(p, EeGeManOp::ModelNew, 0, args as *const EeGeModelCreate as isize, key.as_ptr() as isize, 0)
-                as usize;
+            let model =
+                Self::op(p, EeGeManOp::ModelNew, 0, args as *const EeGeModelCreate as isize, key.as_ptr() as isize, 0)
+                    as usize;
             mm(p).models.insert(key[..key.len() - 1].to_vec(), model);
             Self::leave(p);
             model

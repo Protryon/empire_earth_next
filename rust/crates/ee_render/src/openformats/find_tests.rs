@@ -113,7 +113,15 @@ fn model(name: &str, shared: &[EeGeSharedFrame]) -> (c_long, *mut CemModel) {
     let mut out = std::ptr::null_mut();
     let c = std::ffi::CString::new(name).unwrap();
     // SAFETY: as above
-    let r = unsafe { ee_of_find_model(host, PATH as *mut c_void, c.as_ptr(), &EeGeSharedFrames { frames: shared.as_ptr(), count: shared.len() }, &mut out) };
+    let r = unsafe {
+        ee_of_find_model(
+            host,
+            PATH as *mut c_void,
+            c.as_ptr(),
+            &EeGeSharedFrames { frames: shared.as_ptr(), count: shared.len() },
+            &mut out,
+        )
+    };
     (r, out)
 }
 

@@ -15,11 +15,11 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use crate::ge::pixel;
 use crate::ge::texobj::EeGeSurfaceDescription;
 use crate::ge::texture;
-use crate::ge::pixel;
-use ee_base::math::types::GeRectangle;
 use crate::openformats::{EeOfTextureFrame, EeOfTextureInfo};
+use ee_base::math::types::GeRectangle;
 
 /// `kErrorOK`, `kErrorAlreadyExists`, `kErrorOutOfMemory` (lle/LowLevelEngineCore.h).
 const OK: c_long = 0;
@@ -434,7 +434,8 @@ impl EeGeTexture {
         // SAFETY: the caller's contract
         unsafe {
             let s = tx(p).surface;
-            let (w, h) = (Self::surf(p, EeGeTexOp::SurfWidth, s) as c_ulong, Self::surf(p, EeGeTexOp::SurfHeight, s) as c_ulong);
+            let (w, h) =
+                (Self::surf(p, EeGeTexOp::SurfWidth, s) as c_ulong, Self::surf(p, EeGeTexOp::SurfHeight, s) as c_ulong);
             let mut desc = EeGeSurfaceDescription::default();
             Self::op(p, EeGeTexOp::SurfDescription, s, &mut desc as *mut EeGeSurfaceDescription as isize, 0);
             eprintln!(
@@ -652,7 +653,7 @@ impl EeGeTexture {
                 for frame in 0..count {
                     let mut surface = 0usize;
                     if Self::create_surface(p, screen, &mut desc, &mut surface) == OK {
-                        if Self::store_frame(p, surface, file, frame as u32) == OK {
+                        if Self::store_frame(p, surface, file, frame) == OK {
                             let mut mip = surface;
                             let mut j: c_long = 1;
                             while j < desc.mip_level_count {

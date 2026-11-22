@@ -129,7 +129,8 @@ pub unsafe extern "C" fn ee_of_find_model(
     // SAFETY: the caller's contract
     let name = unsafe { CStr::from_ptr(name) }.to_bytes();
     // SAFETY: the caller's contract
-    let entries: Vec<(u32, i32)> = unsafe { EeGeSharedFrames::entries(shared) }.iter().map(|e| (e.frame, e.offset)).collect();
+    let entries: Vec<(u32, i32)> =
+        unsafe { EeGeSharedFrames::entries(shared) }.iter().map(|e| (e.frame, e.offset)).collect();
     // SAFETY: the caller's contract
     unsafe { *out = std::ptr::null_mut() };
     for extension in [&b".glb"[..], b".gltf"] {
