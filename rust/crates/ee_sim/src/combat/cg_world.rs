@@ -364,14 +364,7 @@ pub fn split<H: CgWorldHost + ?Sized>(
         EE_COMBAT_W_PATH_START => {
             let mut p = [0.0f32; 3];
             let mut index = 0.0f32;
-            op(
-                h,
-                EE_COMBAT_W_PATH_START_AT,
-                object,
-                0,
-                p.as_mut_ptr() as i64,
-                &mut index as *mut f32 as i64,
-            );
+            op(h, EE_COMBAT_W_PATH_START_AT, object, 0, p.as_mut_ptr() as i64, &mut index as *mut f32 as i64);
             point_args(a, p);
             0
         }

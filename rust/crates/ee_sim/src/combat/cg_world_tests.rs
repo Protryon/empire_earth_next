@@ -230,8 +230,8 @@ fn points_go_back_as_bits() {
 
 #[test]
 fn firing_ring_joins_the_rings_and_sorts_by_distance() {
-    let mut m = Mock::default();
-    m.rings = vec![(2, vec![[20, 20], [11, 10]]), (3, vec![[30, 30], [10, 12]])];
+    let mut m =
+        Mock { rings: vec![(2, vec![[20, 20], [11, 10]]), (3, vec![[30, 30], [10, 12]])], ..Default::default() };
     let mut a = [0; 12];
     a[0] = 2;
     a[1] = bits(0.5);

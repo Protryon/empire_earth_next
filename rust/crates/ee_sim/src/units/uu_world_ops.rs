@@ -254,6 +254,8 @@ pub fn make_wall_piece<H: UuOps + ?Sized>(
 }
 
 /// `EEIsTileTopAbove`'s wall rise: its box top's z (a gate's 1.2) by its scale, in part while it is built
+// (the C++'s operand order)
+#[allow(clippy::assign_op_pattern)]
 pub fn wall_rise<H: UuOps + ?Sized>(h: &mut H, wall: u64) -> f32 {
     let z = if w(h, UW_CATEGORY, wall) as c_long as i64 != CATEGORY_GATE {
         h.world_f(UWF_BOX_TOP_Z, wall, 0, 0.0)
