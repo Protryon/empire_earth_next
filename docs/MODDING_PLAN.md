@@ -183,11 +183,11 @@ table plus call-site edits, H = new mechanism, save/network format changes or ma
 - **Size of the constant pool**: ~1,230 float literals, 276 ms literals and 206 `GetRandom(a,b)` ranges. An
   estimated 300-500 of them are real tuning.
 
-**H. Scenario triggers** (`include/ee/EEScenarioIDs.h`).
+**H. Scenario triggers** (the `EE_SCENARIO_SM_*` constants, `rust/crates/ee_sim/src/scenario/ids.rs`).
 - **Vocabulary**:
-  - 8 condition types (:39); 7 effect types (:51), with 13 object actions (:88), 12 player actions (:105),
-    media (:73), game (:62) and AI (:7) actions.
-  - 67 player values (:122); 75 unit attributes (:241).
+  - 8 condition types (`_CONDITION_`); 7 effect types (`_EFFECT_`), with 13 object actions (`_OBJECT_ACTION_`), 12
+    player actions (`_PLAYER_ACTION_`), media (`_MEDIA_ACTION_`), game (`_GAME_ACTION_`) and AI (`_AI_ACTION_`) actions.
+  - 67 player values (`_PLAYER_VALUE_`); 75 unit attributes (`_UNIT_ATTRIBUTE_`).
 - **Evaluation**:
   - Conditions are dispatched in `src/EE/Scenario Manager/EESMCondition.cpp:118-252`; effects in
     `EESMEffect.cpp:930-1425`.
@@ -425,7 +425,7 @@ optional and late.
 ### 3.4 Conditions, effects and triggers as data
 
 Today there are three separate mini-languages: tech **events/effects** (`EEEvent.cpp`, 22 kinds × ~45 attributes),
-**scenario triggers** (`EEScenarioIDs.h`: conditions, effects, selectors) and **civ-power / calamity switches** in
+**scenario triggers** (`scenario/ids.rs`: conditions, effects, selectors) and **civ-power / calamity switches** in
 C++. They become one declarative, **deterministic** language, interpreted by the engine:
 
 ```yaml
@@ -529,7 +529,7 @@ The Rust rewrite reuses steps 1, 3 and the schemas unchanged. Only the engine si
 2. `tools/content/convert.py bin2yaml|yaml2bin`. The key generator uses record names. Enum maps:
    - unit categories, AI kinds, resource types;
    - event-effect kinds and attributes, from the `EEEvent.cpp` switches;
-   - scenario enums, from `EEScenarioIDs.h`.
+   - scenario enums, from `ee_sim::scenario::ids`.
 3. **Name the 95 `dbworld` entries and the 129 `dbcpbehavior` records** in the YAML, using their reader sites. This
    is also the cheapest modder-visible win.
 4. `Language.rc` → `localisation/english/*.yaml` with legacy ids. `.civ` → YAML.

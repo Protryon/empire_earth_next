@@ -9,7 +9,7 @@
 //! links and the buckets through one-statement shims ([`UnitsCpp`]), the virtuals and the unit store by call, in the
 //! original's order.
 
-use core::ffi::{c_char, c_long, c_ulong};
+use core::ffi::{c_char, c_long, c_ulong, CStr};
 
 use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
@@ -30,8 +30,6 @@ ee_base::cpp_shims! {
     fn store_linked(unit: usize) = ee_rtsucpp_store_linked;
     fn store_remove(unit: usize) = ee_rtsucpp_store_remove;
     fn unregister(unit: usize) = ee_rtsucpp_unregister;
-    fn check_on() -> bool = ee_rtsucpp_check_on;
-    fn list_failed(where_: *const c_char, what: *const c_char, unit: usize, other: usize) = ee_rtsucpp_list_failed;
     fn map_tile(map: usize, x: c_long, y: c_long) -> usize = ee_rtsucpp_map_tile;
     fn sight_on(unit: usize) = ee_rtsucpp_sight_on;
     fn sight_off(unit: usize) = ee_rtsucpp_sight_off;
@@ -84,8 +82,64 @@ const OFF_MAP: c_long = -10000;
 
 macro_rules! failed {
     ($c:expr, $where:expr, $what:expr, $unit:expr, $other:expr) => {
-        $c.list_failed($where.as_ptr(), $what.as_ptr(), $unit, $other)
+        list_failed($c, $where.as_ptr(), $what.as_ptr(), $unit, $other)
     };
+}
+
+/// Whether the unit chains are checked (`EE_CHECK_UNIT_LIST` set, not "0"; read once, said once on stderr).
+fn check_on() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    cfg!(test)
+        || *ON.get_or_init(|| {
+            let on = std::env::var_os("EE_CHECK_UNIT_LIST").is_some_and(|v| !v.is_empty() && v != "0");
+            if on {
+                eprintln!("EE-UNITLIST: checking the unit chains (EE_CHECK_UNIT_LIST)");
+            }
+            on
+        })
+}
+
+/// `RTSUnitListFailed`: the broken chain reported on stderr (where, what, the unit and its links, the other unit's or
+/// the chain head's), then the process stops (a test panics with `what`).
+fn list_failed<C: UnitsCpp>(c: &mut C, where_: *const c_char, what: *const c_char, unit: usize, other: usize) {
+    // SAFETY: the callers' literals
+    let text = |p: *const c_char| unsafe { CStr::from_ptr(p) }.to_string_lossy().into_owned();
+    let mut line = format!("EE-UNITLIST FAILED in {}: {}; ", text(where_), text(what));
+    let links = |c: &mut C, u: usize| {
+        let l = link(c, u);
+        // SAFETY: a live link or none
+        if l.is_null() {
+            (0, 0)
+        } else {
+            unsafe { ((*l)[PREV], (*l)[NEXT]) }
+        }
+    };
+    if unit != 0 {
+        // SAFETY: a live unit's members
+        let f = unsafe { &*c.unit_fields(unit) };
+        let (id, x, y, valid) = (f.mUnitID, f.mTileX, f.mTileY, f.mIsValid as i32);
+        let node = link(c, unit) as usize;
+        let (prev, next) = links(c, unit);
+        line += &format!(
+            "unit {unit:#x} id {id:08x} x {x} y {y} valid {valid} node {node:#x} prev {prev:#x} next {next:#x}"
+        );
+    } else {
+        line += "unit 0x0 id 00000000 x 0 y 0 valid -1 node 0x0 prev 0x0 next 0x0";
+    }
+    if other != 0 && c.dummy_head(other) == 0 {
+        // SAFETY: as above
+        let f = unsafe { &*c.unit_fields(other) };
+        let (id, x, valid) = (f.mUnitID, f.mTileX, f.mIsValid as i32);
+        let (prev, next) = links(c, other);
+        line += &format!("; other {other:#x} id {id:08x} x {x} valid {valid} prev {prev:#x} next {next:#x}");
+    } else if other != 0 {
+        line += &format!("; other: the chain's head {other:#x}");
+    }
+    eprintln!("{line}");
+    #[cfg(test)]
+    panic!("{}", text(what));
+    #[cfg(not(test))]
+    std::process::abort();
 }
 
 /// A unit (or a chain head) is in a chain: a head always is; a unit has a previous link.
@@ -138,7 +192,7 @@ fn check_neighbours<C: UnitsCpp>(c: &mut C, unit: usize, where_: &core::ffi::CSt
 /// # Safety
 /// `head` is null or a live chain head.
 pub unsafe fn check_unit_list<C: UnitsCpp>(c: &mut C, head: usize, where_: *const c_char) {
-    if !c.check_on() || head == 0 {
+    if !check_on() || head == 0 {
         return;
     }
     let mut prev = head;
@@ -147,17 +201,17 @@ pub unsafe fn check_unit_list<C: UnitsCpp>(c: &mut C, head: usize, where_: *cons
     while unit != 0 {
         let l = link(c, unit);
         if l.is_null() {
-            c.list_failed(where_, c"a unit in the chain has no node".as_ptr(), unit, prev);
+            list_failed(c, where_, c"a unit in the chain has no node".as_ptr(), unit, prev);
         }
         if unsafe { (*l)[PREV] } != prev {
-            c.list_failed(where_, c"a unit's previous is not the unit before it".as_ptr(), unit, prev);
+            list_failed(c, where_, c"a unit's previous is not the unit before it".as_ptr(), unit, prev);
         }
         if !unsafe { (*c.unit_fields(unit)).mIsValid } {
-            c.list_failed(where_, c"an invalid (removed) unit is in the chain".as_ptr(), unit, prev);
+            list_failed(c, where_, c"an invalid (removed) unit is in the chain".as_ptr(), unit, prev);
         }
         count += 1;
         if count > (1 << 22) {
-            c.list_failed(where_, c"the chain loops (over 4M units)".as_ptr(), unit, prev);
+            list_failed(c, where_, c"the chain loops (over 4M units)".as_ptr(), unit, prev);
         }
         prev = unit;
         unit = unsafe { (*l)[NEXT] };
@@ -251,7 +305,7 @@ pub fn insert_after<C: UnitsCpp>(c: &mut C, unit: usize, after: usize) {
 /// `RTSUnit::Link`: into the tile chain after `after` (a unit, or the chain's head: then first).
 pub fn link_after<C: UnitsCpp>(c: &mut C, unit: usize, after: usize) {
     unlink(c, unit);
-    let check = c.check_on();
+    let check = check_on();
     if check && !unsafe { (*c.unit_fields(unit)).mIsValid } {
         failed!(c, c"RTSUnit::Link", c"linking a removed (invalid) unit", unit, after);
     }
@@ -286,7 +340,7 @@ pub fn link_after<C: UnitsCpp>(c: &mut C, unit: usize, after: usize) {
 
 /// `RTSUnit::Unlink`: out of the tile chain.
 pub fn unlink<C: UnitsCpp>(c: &mut C, unit: usize) {
-    if c.check_on() {
+    if check_on() {
         check_neighbours(c, unit, c"RTSUnit::Unlink (before)");
     }
     let l = link(c, unit);
@@ -855,12 +909,6 @@ mod tests {
         }
         fn unregister(&mut self, unit: usize) {
             self.note(format!("unregister({unit})"));
-        }
-        fn check_on(&mut self) -> bool {
-            true
-        }
-        fn list_failed(&mut self, _w: *const c_char, what: *const c_char, _u: usize, _o: usize) {
-            panic!("{}", unsafe { core::ffi::CStr::from_ptr(what) }.to_string_lossy());
         }
         fn map_tile(&mut self, _map: usize, x: c_long, _y: c_long) -> usize {
             if x < 0 {

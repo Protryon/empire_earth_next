@@ -71,6 +71,8 @@ pub mod pixel;
 pub mod prim;
 pub mod rastobj;
 pub mod smallobj;
+/// `GEInitialize` and `GEShutdown`: the engine's start-up over one-statement C++ shims.
+pub mod startup;
 /// TEST ONLY: the store gate's reads of the arrays' capture.
 pub mod store_capture;
 pub mod surface_px;

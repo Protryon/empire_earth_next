@@ -311,6 +311,7 @@ pub const EE_SCREENS_SEPX_MAKE_ARROW: u32 = 143;
 pub const EE_SCREENS_SEPX_MAKE_LIST_PLAIN: u32 = 144;
 pub const EE_SCREENS_SEPX_MAKE_LIST_EFFECT: u32 = 145;
 pub const EE_SCREENS_SEPX_MAKE_LIST_OBJECT: u32 = 146;
+/// (the unit tab's lists: an `EEUIShellList` of shell kind i0)
 pub const EE_SCREENS_SEPX_MAKE_LIST_UNIT: u32 = 147;
 /// The made control p2: `SetAlignment(i0)`, `SetBgOpacity(f0)`, its text label's `SetBgOpacity(f0)` (a radio),
 /// `SeplColor(its GEText, i0)` by class (a label, an edit box, a combo box, a list, a button, a check box's, a
@@ -363,7 +364,7 @@ unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
         EE_SCREENS_SEPL_COMBO_TRIGGER,
     };
     use crate::screens::editor_tscreen::{EE_SCREENS_SEPL_HIDE, EE_SCREENS_SEPL_LIST_PLAIN};
-    use crate::screens::editor_unit::EE_SCREENS_SEPL_LIST_OBJECT;
+    use crate::screens::editor_unit::{EE_SCREENS_SEPL_LIST_OBJECT, EE_SCREENS_SEPL_LIST_UNIT_TYPES};
     use crate::screens::shells::*;
     // SAFETY: the contract
     let c = unsafe { *(p[1] as *const EeScreensSeplCtl) };
@@ -600,7 +601,16 @@ unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
                 EE_SCREENS_SEPL_LIST_OBJECT => {
                     made(x, EE_SCREENS_SEPX_MAKE_LIST_OBJECT, sized(c.w, whole(c.h)), [0; 4])
                 }
-                _ => made(x, EE_SCREENS_SEPX_MAKE_LIST_UNIT, rect, [0; 4]),
+                _ => {
+                    // the unit tab's lists (once EESEUnitNewList): the class list or the cargo list by kind
+                    use crate::screens::shells_unit::{EE_SCREENS_SK_CARGO_LIST, EE_SCREENS_SK_UNIT_CLASS_LIST};
+                    let kind = if c.extra[0] == EE_SCREENS_SEPL_LIST_UNIT_TYPES {
+                        EE_SCREENS_SK_UNIT_CLASS_LIST
+                    } else {
+                        EE_SCREENS_SK_CARGO_LIST
+                    };
+                    made(x, EE_SCREENS_SEPX_MAKE_LIST_UNIT, sized(whole(c.w), whole(c.h)), [kind as i32, 0, 0, 0])
+                }
             };
             if c.bg >= 0.0 {
                 set(x, h, EE_SCREENS_SEPX_BG, [0; 4], c.bg);

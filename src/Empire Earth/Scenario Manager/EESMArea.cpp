@@ -1,30 +1,14 @@
 // C:\EEX\Empire Earth\Scenario Manager\EESMArea.cpp (file name inferred: no __FILE__): 0x1ba02f..0x1ba89f,
-// one scenario area. Unit flags: the exe module set.
+// one scenario area. Unit flags: the exe module set. The numbers are the Rust record EeScenarioAreaFields and every
+// body is Rust's (ee_scenario area_fields.rs, entry.rs over area.rs; the simulation capture's SMAR records with them).
 #include <windows.h>
 #include <vector>
-#include <set>
-#include <map>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "ee/EESMArea.h"
-#include "ee/EEUnit.h"
-#include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
-static const long kNoArea = -10000;
-
 // Creates an unnamed rectangle-mode area with no rectangle or anchor and no cached centre tile
-EESMArea::EESMArea()
-{
-    this->mName = "";
-    this->mHasRectangle = false;
-    this->mHasAnchor = false;
-    this->mSelectMode = 0;
-    this->mID = 0;
-    this->mCenterTile.SetX(kNoArea);
-    this->mCenterTile.SetY(kNoArea);
-    this->mTilesTime = 0;
-}
+EESMArea::EESMArea() : EeScenarioAreaFields(ee_scenario_area_defaults()) {}
 
 // Destroys the area (members only)
 EESMArea::~EESMArea()
@@ -35,156 +19,47 @@ EESMArea::~EESMArea()
 // unit or that stands on the unit's tile; else by tile); false for no unit
 bool EESMArea::ContainsUnit(EEUnit* inUnit)
 {
-    bool theResult = this->ContainsUnitUncaptured(inUnit);
-    if (EESimCaptureRecord::Active())
-        EESMCaptureArea(this, 0, inUnit ? (long)inUnit->GetUnitID() : -1, 0, theResult, 0, 0);
-    return theResult;
-}
-
-// ContainsUnit's body (ContainsUnit adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
-bool EESMArea::ContainsUnitUncaptured(EEUnit* inUnit)
-{
-    if (inUnit == NULL)
-        return false;
-    EESMHostContext theContext = {NULL, inUnit};   // ee_scenario area.rs contains_unit
-    EeScenarioHost theHost = EESMHost(&theContext);
-    EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
-    return ee_scenario_area_contains_unit(&theHost, &theRecord);
+    return ee_scenario_en_area_contains_unit(this, inUnit);
 }
 
 // Returns whether a tile is in the area: inside the rectangle, on the anchor's continent, or inside the hull of a
 // non-Gaia town that contains the anchor
 bool EESMArea::ContainsTile(const U2DPoint<long>& inTile)
 {
-    bool theResult = this->ContainsTileUncaptured(inTile);
-    if (EESimCaptureRecord::Active())
-        EESMCaptureArea(this, 1, inTile.mX, inTile.mY, theResult, 0, 0);
-    return theResult;
-}
-
-// ContainsTile's body (ContainsTile adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
-bool EESMArea::ContainsTileUncaptured(const U2DPoint<long>& inTile)
-{
-    EESMHostContext theContext = {NULL, NULL};   // ee_scenario area.rs contains_tile
-    EeScenarioHost theHost = EESMHost(&theContext);
-    EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
-    return ee_scenario_area_contains_tile(&theHost, &theRecord, (int32_t)inTile.GetX(), (int32_t)inTile.GetY());
+    return ee_scenario_en_area_contains_tile(this, inTile.mX, inTile.mY);
 }
 
 // Copies another area's name, text, rectangle, anchor, select mode and ID (not its tile cache)
 void EESMArea::Copy(const EESMArea& inArea)
 {
-    this->mName = inArea.mName;
-    this->mText = inArea.mText;
-    this->mRect = inArea.mRect;
-    this->mHasRectangle = inArea.mHasRectangle;
-    this->mAnchor = inArea.mAnchor;
-    this->mHasAnchor = inArea.mHasAnchor;
-    this->mSelectMode = inArea.mSelectMode;
-    this->mID = inArea.mID;
+    ee_scenario_en_area_copy(this, (void*)&inArea);
 }
-
-#include "ee/EEPhysics.h"
 
 // Returns the area's centre tile, computing and caching it once: rectangle centre, continent centre, or the hull
 // centre of the town holding the anchor (else the anchor)
 U2DPoint<long> EESMArea::GetCenterTile()
 {
-    U2DPoint<long> theResult = this->GetCenterTileUncaptured();
-    if (EESimCaptureRecord::Active())
-        EESMCaptureArea(this, 2, 0, 0, theResult.mX, theResult.mY, 0);
+    U2DPoint<long> theResult;
+    ee_scenario_en_area_center_tile(this, &theResult.mX);
     return theResult;
-}
-
-// GetCenterTile's body (GetCenterTile adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
-U2DPoint<long> EESMArea::GetCenterTileUncaptured()
-{
-    EESMHostContext theContext = {NULL, NULL};   // ee_scenario area.rs center_tile (the cache kept here)
-    EeScenarioHost theHost = EESMHost(&theContext);
-    EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
-    int32_t theTile[2];
-    ee_scenario_area_center_tile(&theHost, &theRecord, &theTile);
-    this->mCenterTile.mX = theRecord.center_x;
-    this->mCenterTile.mY = theRecord.center_y;
-    return U2DPoint<long>(theTile[0], theTile[1]);
-}
-
-// Returns true when the area has no anchor (an anchor coordinate is the -10000 no-area value)
-bool EESMArea::IsUnset() const
-{
-    if (this->mAnchor.mX != kNoArea && this->mAnchor.mY != kNoArea) {
-        return false;
-    }
-    return true;
-}
-
-// Returns whether the anchor has a negative coordinate (an off-map area)
-bool EESMArea::IsOffMap() const
-{
-    if (this->mAnchor.mX < 0.0f || this->mAnchor.mY < 0.0f)
-        return true;
-    return false;
 }
 
 // Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks; every cached read
 // restarts the timer
 void EESMArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
 {
-    this->GetTilesUncaptured(outTiles);
-    static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "ee_scenario_tiles_hash's tiles");
-    if (EESimCaptureRecord::Active())   // (the hash: object_reads.rs tiles_hash)
-        EESMCaptureArea(this, 3, (long)this->mTilesTime, 0, (long)outTiles.size(), 0, ee_scenario_tiles_hash((const long*)outTiles.data(), outTiles.size()));
-}
-
-// GetTiles' body (GetTiles adds the simulation capture's SMAR record: ee/EEScenarioCapture.h); the rebuild is
-// ee_scenario area.rs tiles, into mTiles through EE_SCENARIO_WRITE_TILE
-void EESMArea::GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles)
-{
-    if (this->mTiles.size() <= 0 || (unsigned long)(gPhysics->mCurrentTick - this->mTilesTime) >= 3000) {
-        this->mTiles.clear();
-        EESMHostContext theContext = {};
-        theContext.mTiles = &this->mTiles;
-        EeScenarioHost theHost = EESMHost(&theContext);
-        EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
-        ee_scenario_area_tiles(&theHost, &theRecord);
-    }
-    this->mTilesTime = gPhysics->mCurrentTick;
-    outTiles = this->mTiles;
+    ee_scenario_en_area_tiles(this, &outTiles);
 }
 
 // Reads the area's name, text, anchor (as floats), rectangle, flags, select mode, tile time and ID; returns the first
 // error (ee_scenario save.rs area_load)
 long EESMArea::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    return this->SaveIO(inFile, false);
+    return ee_scenario_en_area_io(this, &inFile, false);
 }
 
 // Writes the area's name, text, anchor, rectangle, flags, select mode, tile time and ID; returns the first error
 long EESMArea::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    return this->SaveIO(outFile, true);
-}
-
-// Load's or Save's values through a copy (ee_scenario save.rs area_load, area_save)
-long EESMArea::SaveIO(FSFile& inFile, bool inSave)
-{
-    UWideString* theStrings[] = {&this->mName, &this->mText};
-    EESMStream theStream = {&inFile, theStrings, NULL, NULL};
-    EeScenarioStream theTable = EESMStreamTable(&theStream);
-    EeScenarioAreaSave theArea = {this->mAnchor.mX, this->mAnchor.mY, this->mRect.GetLeft(), this->mRect.GetTop(),
-                                  this->mRect.GetRight(), this->mRect.GetBottom(), this->mHasRectangle,
-                                  this->mHasAnchor, this->mSelectMode, this->mTilesTime, this->mID};
-    long theResult = ee_scenario_area_io(&theTable, &theArea, inSave);
-    this->mAnchor.mX = theArea.anchor_x;
-    this->mAnchor.mY = theArea.anchor_y;
-    this->mRect.SetLeft(theArea.left);
-    this->mRect.SetTop(theArea.top);
-    this->mRect.SetRight(theArea.right);
-    this->mRect.SetBottom(theArea.bottom);
-    this->mHasRectangle = theArea.has_rectangle;
-    this->mHasAnchor = theArea.has_anchor;
-    this->mSelectMode = theArea.select_mode;
-    this->mTilesTime = theArea.tiles_time;
-    this->mID = theArea.id;
-    return theResult;
+    return ee_scenario_en_area_io(this, &outFile, true);
 }

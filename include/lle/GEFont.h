@@ -5,6 +5,7 @@
 // the name, the bitmap and the platform font.
 #ifndef LLE_GEFONT_H
 #define LLE_GEFONT_H
+#include "rust/render/gestate.h"
 
 #include "lle/GEFontBitmap.h"   // rust/ee_ge.h
 
@@ -32,21 +33,6 @@ public:
     EeGeFont* GetRust() const { return this->mRust; }
 private:
     EeGeFont* mRust;                        // the font (ee_ge smallobj.rs)
-};
-
-// GEFont ctor inQuality: the CreateFont quality each case picks
-enum GEFontQuality {
-    kFontQualityDefault = 0,    // GEFont::GEFont case -> DEFAULT_QUALITY
-    kFontQualityDraft = 1,      // GEFont::GEFont case -> DRAFT_QUALITY
-    kFontQualityAntialiased = 2,  // GEFont::GEFont case -> ANTIALIASED_QUALITY (the only antialiased one)
-};
-
-// GEFont's style bits: the GEFont ctor passes them to CreateFont; UIFontTable::Create builds them from the dbfonts flags
-enum GEFontStyle {
-    kFontStyleBold = 1,     // GEFont ctor: CreateFont weight FW_BOLD
-    kFontStyleItalic = 2,   // GEFont ctor: CreateFont fdwItalic = (inStyle >> 1) & 1
-    kFontStyleUnderline = 4,  // GEFont ctor: CreateFont fdwUnderline = (inStyle >> 2) & 1
-    kFontStyleShadow = 0x10,  // DX7Rasterizer::Draw (Draw2D.cpp:252) draws the text once more at +1,+1 in black or white (provisional name)
 };
 
 #endif

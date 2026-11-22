@@ -24,10 +24,11 @@ class GERectangle;
 class GEViewport;
 class FSFileSpec;
 
-// The C++ object as its mirror
+// The C++ object as its mirror, and a mirror as its C++ object
 #define LLE_GERUST_MIRROR(C, R) \
     inline const R* GERust(const C& in) { return reinterpret_cast<const R*>(&in); } \
-    inline R* GERust(C& in) { return reinterpret_cast<R*>(&in); }
+    inline R* GERust(C& in) { return reinterpret_cast<R*>(&in); } \
+    inline const C& GECpp(const R& in) { return reinterpret_cast<const C&>(in); }
 LLE_GERUST_MIRROR(GE2DPoint, EeGe2DPoint)
 LLE_GERUST_MIRROR(GE3DPoint, EeGe3DPoint)
 LLE_GERUST_MIRROR(GEVector, EeGeVector)

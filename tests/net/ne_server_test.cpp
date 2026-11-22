@@ -347,17 +347,21 @@ static ptrdiff_t RustSvHost(void*, EeNetSvOp inOp, size_t a, size_t b, size_t c,
     case EeNetSvOp::MsgType:
         OpLine(theArgs + " " + MsgTok(a));
         return Answer(m->GetType());
-    case EeNetSvOp::MsgSetSlot:
-        OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b) + " " + std::to_string(c));
-        if (b != 0)
-            m->SetOriginatingSlot((unsigned char)c);
-        else
-            m->SetForSpecificSlot((unsigned char)c);
+    // (the golden's lines are the round-9 ops': "s16 m originating slot", "s17 m flag")
+    case EeNetSvOp::MsgSetOriginatingSlot:
+        OpLine("s16 " + MsgTok(a) + " 1 " + std::to_string(b));
+        m->SetOriginatingSlot((unsigned char)b);
         return Answer(0);
-    case EeNetSvOp::MsgFlag:
-        OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b));
-        return Answer((EeNetSvMsgFlag)b == EeNetSvMsgFlag::CanSendWhilePaused ? m->GetCanSendWhilePaused()
-                                                                                : m->GetIsAvailableToSend());
+    case EeNetSvOp::MsgSetForSpecificSlot:
+        OpLine("s16 " + MsgTok(a) + " 0 " + std::to_string(b));
+        m->SetForSpecificSlot((unsigned char)b);
+        return Answer(0);
+    case EeNetSvOp::MsgCanSendWhilePaused:
+        OpLine("s17 " + MsgTok(a) + " 0");
+        return Answer(m->GetCanSendWhilePaused());
+    case EeNetSvOp::MsgIsAvailableToSend:
+        OpLine("s17 " + MsgTok(a) + " 1");
+        return Answer(m->GetIsAvailableToSend());
     case EeNetSvOp::MsgSlot:
         OpLine(theArgs + " " + MsgTok(a));
         return Answer(m->GetOriginatingSlot());
@@ -427,11 +431,8 @@ static ptrdiff_t RustSvHost(void*, EeNetSvOp inOp, size_t a, size_t b, size_t c,
         return Answer(0);
     case EeNetSvOp::MsgExportNew: {
         OpLine(theArgs + " " + MsgTok(a));
-        unsigned char* theData = NULL;
-        unsigned long theSize = 0;
-        m->ExportMessage(&theData, theSize);
-        *(uint32_t*)b = (uint32_t)theSize;
-        return Answer((ptrdiff_t)theData, std::to_string(theSize) + " " + SHex(theData, theSize));
+        m->ExportMessage((unsigned char**)b, *(unsigned long*)c);
+        return Answer(0, std::to_string(*(unsigned long*)c) + " " + SHex(*(unsigned char**)b, *(unsigned long*)c));
     }
     case EeNetSvOp::BytesFree:
         OpLine(theArgs);

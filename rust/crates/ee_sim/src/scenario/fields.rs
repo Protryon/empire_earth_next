@@ -174,6 +174,24 @@ pub struct EeScenarioAreaSave {
     pub id: c_ulong,
 }
 
+/// `EESMDialogMessage`'s numbers, in the class's order (the text and the sound stay members of the C++ class).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EeScenarioMessageFields {
+    pub mScrollSpeed: c_long,
+    pub mUnitType: c_ulong,
+    pub mDuration: c_ulong,
+    pub mUnitID: c_ulong,
+    pub mIsCinematic: bool,
+}
+
+impl Default for EeScenarioMessageFields {
+    /// The constructor's: no scroll speed (-1), the rest 0.
+    fn default() -> Self {
+        EeScenarioMessageFields { mScrollSpeed: -1, mUnitType: 0, mDuration: 0, mUnitID: 0, mIsCinematic: false }
+    }
+}
+
 /// `EESMObject`'s numbers, in the class's order.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -205,7 +223,7 @@ pub struct EeScenarioObjectFields {
     pub mIsAttributePercent: bool,
 }
 
-/// `kSMEffectObject`, `kSMEffectNone` (ee/EEScenarioIDs.h).
+/// `kSMEffectObject`, `kSMEffectNone` (ee_sim scenario::ids).
 pub const EE_SCENARIO_EFFECT_NONE: c_ulong = 0;
 pub const EE_SCENARIO_EFFECT_OBJECT: c_ulong = 1;
 /// `kSMPlayerActionTotal`: Load moves a later player action down by 2, then to Victory (0).
@@ -337,6 +355,12 @@ pub fn object_renumber(f: &mut EeScenarioObjectFields, kind: u32, old: c_ulong, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_defaults_are_the_constructors() {
+        let m = EeScenarioMessageFields::default();
+        assert_eq!((m.mScrollSpeed, m.mUnitType, m.mDuration, m.mUnitID, m.mIsCinematic), (-1, 0, 0, 0, false));
+    }
 
     #[test]
     fn renumber_follows_a_swap_and_a_delete() {

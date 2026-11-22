@@ -5,6 +5,7 @@
 // FSBasicFile and FSFileSpec (0x10001000..0x1000144b).
 #ifndef LLE_LOWLEVELENGINECORE_H
 #define LLE_LOWLEVELENGINECORE_H
+#include "rust/base/lle_enums.h"
 
 // The engine's own units are built with LOWLEVELENGINE_EXPORTS (VC6 DLL-wizard convention). EE_STATIC: everything is
 // linked into one exe, so the other units neither import nor export. The engine units still declare their classes
@@ -37,33 +38,13 @@
 #include "rust/base/math.h"
 
 // ---- Error system (ES)
-// proven: "theResult == keseOK" assert text. Other values: codes returned by the Thread/Time System units;
-// names are provisional.
-enum ESError {
-    kErrorOK = 0,
-    keseOK = kErrorOK,  // spelled this way in the original's assert strings
-    kErrorNativeError = 1,                    // after ESRecordNativeError(GetLastError()) (TSEvent::Set 0x53d09)
-    kErrorNotSuspended = 2,                   // TSThread::Resume: ResumeThread returned 0
-    kErrorNotFound = 3,                       // TSScheduler::DestroyThread, TSThread::Receive (no message), TMTimer
-    kErrorBusy = 5,                           // TMTimer::Set* while running
-    kErrorAlreadyExists = 2,                  // FSFileSpec::Create (ERROR_FILE_EXISTS), CreateDirectory (ERROR_ALREADY_
-                                            // EXISTS), Lock/Unlock (already in that state); same value as
-                                            // kErrorNotSuspended: the real name of 2 is unknown
-    kErrorNotOpen = 4,                        // FSMemoryFile::Read with no buffer; FSFileSpec I/O on a closed file
-    kErrorNoMoreFiles = 7,                    // FSFileSpec::GetNextFile: ERROR_NO_MORE_FILES
-    kErrorBeyondEnd = 0xa,                    // FSFileSpec::SetPosition past the end of the file
-    kErrorNotWritable = 0xf,                  // FSFileSpec::Write/SetLength without write access
-    kErrorNotReadable = 0x10,                 // FSFileSpec::Read without read access
-    kErrorAlreadyOpen = 5,                    // FSBasicFile::Delete on an open file
-    kErrorOutOfMemory = 8,                    // operator new failed (TSScheduler::Create*)
-    kErrorFailed = 9,                         // TSInitialize: URegisterShutdown failed; FSMemoryFile's unsupported
-                                            // operations (DeleteDirectory, Lock, GetFirstFile, ...)
-    kErrorBadPath = 0xe,                      // FSBasicFile::Delete / FSFileSpec::Open: path longer than MAX_PATH
-    kErrorIOFailed = 0xe,                     // FSDebugFile::ReadText/WriteText: short fread/fwrite (same value as
-                                            // kErrorBadPath; real name unknown)
-    kErrorNotSupported = 0xd,                 // FSDebugFile::Copy
-    kErrorTimeout = 0x11,                     // TSEvent::Wait: WAIT_TIMEOUT
-    kErrorEndOfFile = 0x12                    // FSMemoryFile::Read past the end
+// ESError is Rust's (rust/base/lle_enums.h), one name per value; the names that share a value:
+enum {
+    keseOK = kErrorOK,                          // spelled this way in the original's assert strings
+    kErrorAlreadyExists = kErrorNotSuspended,   // FSFileSpec::Create (ERROR_FILE_EXISTS), CreateDirectory
+                                                // (ERROR_ALREADY_EXISTS), Lock/Unlock: the real name of 2 is unknown
+    kErrorAlreadyOpen = kErrorBusy,             // FSBasicFile::Delete on an open file
+    kErrorIOFailed = kErrorBadPath              // FSDebugFile::ReadText/WriteText: short fread/fwrite (real name unknown)
 };
 
 class UString;
@@ -100,31 +81,14 @@ inline void ESDebugOut(const char* inFormat, ...)
 #define ESVERIFY_AT(expr, line) if (!(expr)) ESVerify(__FILE__, line, #expr)
 
 // ---- Timing (TM): Time Manager unit 0x53701..0x53819 (folder/file name inferred)
-struct TMTime {                             // filled from the local time by TMGetTimeOfDay 0x5376c
-    unsigned long mMonth;                   // +0x00 0-based (wMonth - 1)
-    unsigned long mDay;                     // +0x04
-    unsigned long mYear;                    // +0x08
-    unsigned long mHour;                    // +0x0c
-    unsigned long mMinute;                  // +0x10
-    unsigned long mSecond;                  // +0x14
-};
+typedef EeTimeOfDay TMTime;                 // filled from the local time by TMGetTimeOfDay 0x5376c (rust/base/time.h)
 // The Time Manager is Rust's (rust/crates/ee_base/src/time): TMInitialize sets 1 ms timer resolution and registers
 // the shutdown; TMGetTime is milliseconds (a time pinned on this thread instead: EE-SIM's scripted editor,
 // ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local clock (month counted from 0)
 inline long TMInitialize() { return ee_time_system_initialize(); }
 inline unsigned long TMGetTime() { return ee_time_get(); }
 inline int64_t TMGetMicroTime() { return ee_time_get_micro(); }
-inline void TMGetTimeOfDay(TMTime& outTime)
-{
-    EeTimeOfDay theTime;
-    ee_time_of_day(&theTime);
-    outTime.mMonth = theTime.mMonth;
-    outTime.mDay = theTime.mDay;
-    outTime.mYear = theTime.mYear;
-    outTime.mHour = theTime.mHour;
-    outTime.mMinute = theTime.mMinute;
-    outTime.mSecond = theTime.mSecond;
-}
+inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
 // TMPoll.h / TMTimer.h are NOT included here: every static data member of a class a unit sees consumes a VC6
 // `$E` number (probe: one per member; extern objects consume none), and the plug-ins' $E numbering proves they
 // saw no engine-class static data members (TMPoll::sCounterFrequency was one; it is ee_time's state now). Engine units include them directly.
@@ -248,20 +212,5 @@ inline unsigned long UMCeilUnsigned(float inValue)
 #endif
 
 // ---- Startup paths gStartupVolume, gStartupDirectory (above; File System.cpp defines them)
-
-// UMSetFloatingPointPrecision / UMGetFloatingPointPrecision: the float.h _PC_* precision-control value (_controlfp(x, _MCW_PC), UMath.cpp)
-enum UMFloatingPointPrecision {
-    kFPPrecision64 = 0,      // float.h _PC_64
-    kFPPrecision53 = 0x10000,  // float.h _PC_53
-    kFPPrecision24 = 0x20000,  // float.h _PC_24
-};
-
-// UGetOSType (Utilities.cpp 0x100837eb) results from GetVersion. Names are provisional.
-enum UOSType {
-    kOSWindows95 = 1,  // UGetOSType 0x100837eb returns 1 for Win32 platform, version 4.0..4.9 (95) (provisional name)
-    kOSWindows98 = 2,  // UGetOSType 0x100837eb returns 2 for Win32 platform, 4.10+ (98/ME) (provisional name)
-    kOSWindowsNT5 = 3,  // UGetOSType 0x100837eb returns 3 for NT platform, major >= 5 (2000/XP) (provisional name)
-    kOSWindowsNT4 = 4,  // UGetOSType 0x100837eb returns 4 for NT major < 5, or Win32s/major < 4 (provisional name)
-};
 
 #endif

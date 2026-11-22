@@ -77,7 +77,7 @@ pub const EE_SCREENS_SH_BITMAP_OFFSET: u32 = 0x34;
 /// (`SelectTab`); `b` the flag << 32 | the tab.
 pub const EE_SCREENS_SH_SELECT_TAB: u32 = 0x35;
 
-/// The ids (ee/EEScenarioEditorIDs.h): the tech lists, the select buttons, the page tabs.
+/// The ids (editor_ids.rs): the tech lists, the select buttons, the page tabs.
 const TECH_LIST: i64 = 0x154;
 const OTHER_TECH_LIST: i64 = 0x155;
 const ADD: u32 = 0x156;

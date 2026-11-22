@@ -84,45 +84,6 @@ extern float& gMasterVolume;                 // 0x530830 (the master volume Open
 // EESMDialogMessage; ShowInformation 0x26533e read it through the 32-bit offsets of a stand-in class, whose fields
 // lined up there and not on x64: the portrait's class was read from the duration, the scroll time from the unit id)
 
-// chain at 0x66272b (wrapper)
-//   object 0x8372c0  ctor None  dtor __imp_??1UWideString@@UAE@XZ
-//   inline ctor: mov esi, dword ptr [0x8372c0]
-//   object bound as __imp_??0UWideString@@QAE@PBD@Z
-UWideString gDefaultPlayerNames[32] = {
-    "Player 0",
-    "Player 1",
-    "Player 2",
-    "Player 3",
-    "Player 4",
-    "Player 5",
-    "Player 6",
-    "Player 7",
-    "Player 8",
-    "Player 9",
-    "Player 10",
-    "Player 11",
-    "Player 12",
-    "Player 13",
-    "Player 14",
-    "Player 15",
-    "Player 16",
-    "Player 17",
-    "Player 18",
-    "Player 19",
-    "Player 20",
-    "Player 21",
-    "Player 22",
-    "Player 23",
-    "Player 24",
-    "Player 25",
-    "Player 26",
-    "Player 27",
-    "Player 28",
-    "Player 29",
-    "Player 30",
-    "Player 31"
-};
-
 // The unit hack whole in Rust (ee_screens unit_hack.rs): the original's members 0x2628e5 (ctor: the sorted
 // class names), 0x262a91 (dtor), 0x262aa5 PlaceUnit, 0x262c6f FillComboBox, 0x262cdc LoadUnitData, 0x262d66
 // Update, 0x262e29 GetSelection, and the two message ctors' COMDATs 0x262c24 (EEMHackANewUnit) and 0x262d32
@@ -251,24 +212,7 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
 }
 
 // Destroys the main game form, its actions, panel groups, poll and unit hack
-EEUIFMainGame::~EEUIFMainGame()
-{
-    unsigned long i;
-
-    this->mGrabScroll->Dereference();
-    EEReleaseGrabScroll(0);
-    this->mWheelZoom->Dereference();
-    this->mScroll->Dereference();
-    this->mMouseClick->Dereference();
-    this->mLasso->Dereference();
-    TSScheduler::DestroyCriticalSection(this->mErrorCriticalSection);
-    for (i = 0; i < 6; i++)
-        delete this->mGroups[i];
-    delete this->mPoll;
-    this->mBuild->Dereference();
-    this->mCalamity->Dereference();
-    delete this->mUnitHack;
-}
+EEUIFMainGame::~EEUIFMainGame() { ee_screens_mfb_destroy((uintptr_t)this); }
 
 // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
 void EEUIFMainGame::Activate()
@@ -315,21 +259,7 @@ long EEUIFMainGame::CopyData()
 }
 
 // Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
-void EEUIFMainGame::CreateGroup(unsigned long inIndex)
-{
-    switch (inIndex) {
-    case 0:
-        this->mGroups[0] = new EEUIFMGMainGroup(this);
-        break;
-    case EE_SCREENS_GROUP_STATISTICS:
-    case EE_SCREENS_GROUP_CHAT:
-    case EE_SCREENS_GROUP_DIPLOMACY:
-    case EE_SCREENS_GROUP_OPTIONS:
-    case EE_SCREENS_GROUP_CIV_BUILDER:
-        this->mGroups[inIndex] = new EEUIFMGGRust(this, inIndex);
-        break;
-    }
-}
+void EEUIFMainGame::CreateGroup(unsigned long inIndex) { ee_screens_mfb_create_group((uintptr_t)this, (uint32_t)inIndex); }
 
 // Shows a chat message when the form has its chat lines
 void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
@@ -366,13 +296,7 @@ void EEUIFMainGame::SetEntityGroup(long inGroup)
 // Tells whether a screen point is in the game view and not under the unit information panel
 bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
 {
-    bool theOutside = true;
-
-    if (this->mUnitInfoBackground != NULL && this->mUnitInfoBackground->GetIsVisible())
-        theOutside = !this->mUnitInfoBackground->GetRectangle().Contains(inLocation);
-    if (gViewport.GetViewRectangle().Contains(inLocation) && theOutside)
-        return true;
-    return false;
+    return ee_screens_mfb_in_game_view((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
 }
 
 // Stores an error log line for the next snapshot
@@ -932,3 +856,32 @@ extern "C" bool ee_screenscpp_md_entity_enabled(uintptr_t inRec, int64_t inGroup
 extern "C" void ee_screenscpp_md_set_entity_group(uintptr_t inRec, int64_t inGroup)
 { MF(inRec)->SetEntityGroup((long)inGroup); }
 extern "C" void ee_screenscpp_md_gate_clear(uintptr_t inRec) { R(inRec)->mGate->ClearGhostUnits(); }
+
+// the destructor's, CreateGroup's and IsInGameView's bodies: hud_bodies.rs over these (UI lane round 12)
+#define MFB(f) ((EEUIFMainGame*)(f))
+extern "C" void ee_screenscpp_mfb_group_main(uintptr_t inForm)
+{ MFB(inForm)->mGroups[0] = new EEUIFMGMainGroup(MFB(inForm)); }
+extern "C" void ee_screenscpp_mfb_group_rust(uintptr_t inForm, uint32_t inIndex)
+{ MFB(inForm)->mGroups[inIndex] = new EEUIFMGGRust(MFB(inForm), inIndex); }
+extern "C" uintptr_t ee_screenscpp_mfb_unit_info(uintptr_t inForm)
+{ return (uintptr_t)MFB(inForm)->mUnitInfoBackground; }
+extern "C" bool ee_screenscpp_mfb_background_visible(uintptr_t inBackground)
+{ return ((UIBackground*)inBackground)->GetIsVisible(); }
+extern "C" bool ee_screenscpp_mfb_background_contains(uintptr_t inBackground, float inX, float inY)
+{ return ((UIBackground*)inBackground)->GetRectangle().Contains(GE2DPoint(inX, inY)); }
+extern "C" bool ee_screenscpp_mfb_view_contains(float inX, float inY)
+{ return gViewport.GetViewRectangle().Contains(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_mfb_grab_scroll_dereference(uintptr_t inForm) { MFB(inForm)->mGrabScroll->Dereference(); }
+extern "C" void ee_screenscpp_mfb_release_grab_scroll() { EEReleaseGrabScroll(0); }
+extern "C" void ee_screenscpp_mfb_wheel_zoom_dereference(uintptr_t inForm) { MFB(inForm)->mWheelZoom->Dereference(); }
+extern "C" void ee_screenscpp_mfb_scroll_dereference(uintptr_t inForm) { MFB(inForm)->mScroll->Dereference(); }
+extern "C" void ee_screenscpp_mfb_mouse_click_dereference(uintptr_t inForm) { MFB(inForm)->mMouseClick->Dereference(); }
+extern "C" void ee_screenscpp_mfb_lasso_dereference(uintptr_t inForm) { MFB(inForm)->mLasso->Dereference(); }
+extern "C" void ee_screenscpp_mfb_destroy_error_section(uintptr_t inForm)
+{ TSScheduler::DestroyCriticalSection(MFB(inForm)->mErrorCriticalSection); }
+extern "C" void ee_screenscpp_mfb_group_delete(uintptr_t inForm, uint32_t inIndex)
+{ delete MFB(inForm)->mGroups[inIndex]; }
+extern "C" void ee_screenscpp_mfb_poll_delete(uintptr_t inForm) { delete MFB(inForm)->mPoll; }
+extern "C" void ee_screenscpp_mfb_build_dereference(uintptr_t inForm) { MFB(inForm)->mBuild->Dereference(); }
+extern "C" void ee_screenscpp_mfb_calamity_dereference(uintptr_t inForm) { MFB(inForm)->mCalamity->Dereference(); }
+extern "C" void ee_screenscpp_mfb_unit_hack_delete(uintptr_t inForm) { delete MFB(inForm)->mUnitHack; }

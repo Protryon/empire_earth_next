@@ -71,7 +71,7 @@ long EEUIEWNAGUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     if (!EEWonNetAvailableGameFormManager::Get()->GetPoll()->Poll())
         return kErrorOK;
-    if (gWonNet->mGameListPort != 0xffff) {
+    if (gWonNet->GetGameListPort() != 0xffff) {
         gWonNet->RefreshGameList(NULL);
         gWonNet->UpdateGameList();
     }
@@ -331,7 +331,7 @@ long EEUIEWNAGOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     std::string theUser = WONAPI::WStringToString(gWonNet->mUser->GetName());
     theUserLabel->SetText(UWideString(theUser.c_str()));
     UITextLabel* theRoomLabel = static_cast<UITextLabel*>(inForm->GetControl(kAvailableGamesRoomsNameLabel));
-    std::string theRoom = WONAPI::WStringToString(gWonNet->mRoomName);
+    std::string theRoom = WONAPI::WStringToString(gWonNet->GetRoomName());
     theRoomLabel->SetText(UWideString(theRoom.c_str()));
     static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesHostGameNameEditBox))->SetText(gHostedGameName);
     static_cast<UICheckBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox))->SetChecked(false);

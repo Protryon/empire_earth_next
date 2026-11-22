@@ -156,24 +156,13 @@ impl SettingsHost for Form {
         self.put(which, arg, text);
     }
     fn modes(&mut self, rasterizer: c_ulong, screen: c_ulong) -> Vec<EeScreensVideoMode> {
-        let mut out = vec![EeScreensVideoMode::default(); 64];
-        let n = unsafe { sys::ee_screenscpp_modes(rasterizer as u32, screen as u32, out.as_mut_ptr(), out.len()) };
-        if n > out.len() {
-            out.resize(n, EeScreensVideoMode::default());
-            unsafe { sys::ee_screenscpp_modes(rasterizer as u32, screen as u32, out.as_mut_ptr(), out.len()) };
-        }
-        out.truncate(n);
-        out
+        crate::screens::display_modes::modes(&mut crate::screens::game_cpp::Ffi, rasterizer, screen)
     }
     fn current_mode(&mut self, screen: c_ulong) -> EeScreensVideoMode {
-        let mut out = EeScreensVideoMode::default();
-        unsafe { sys::ee_screenscpp_current_mode(screen as u32, &mut out) };
-        out
+        crate::screens::display_modes::current_mode(&mut crate::screens::game_cpp::Ffi, screen)
     }
     fn game_size(&mut self, percent: c_ulong, windowed: bool) -> (c_ulong, c_ulong) {
-        let (mut w, mut h) = (0u32, 0u32);
-        unsafe { sys::ee_screenscpp_game_size(percent as u32, windowed, &mut w, &mut h) };
-        (w as c_ulong, h as c_ulong)
+        crate::screens::display_modes::game_size(&mut crate::screens::game_cpp::Ffi, percent, windowed)
     }
 }
 

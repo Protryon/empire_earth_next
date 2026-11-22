@@ -23,42 +23,42 @@ struct EeGePolygonArray;
 /// A `GEVertexArray`'s Rust array: type 0 standard (`GXVERTEX`), 1 coloured (`GXVERTEX_STD_COLOR`).
 struct EeGeVertexArray;
 
-/// `GEViewport` (sizeof 0x288), in the C++'s member order.
+/// `GEViewport` (sizeof 0x288): the C++ class derives from it (lle/GEViewport.h), so C++ names its fields.
 struct EeGeViewport {
-  EeGeRectangle orthographic_rectangle;
-  EeGeRectangle view_rectangle;
-  EeGe3DPlane front_plane;
-  EeGe3DPlane rear_plane;
-  EeGe3DPlane left_plane;
-  EeGe3DPlane right_plane;
-  EeGe3DPlane top_plane;
-  EeGe3DPlane bottom_plane;
-  EeGeTransformation camera;
-  EeGeTransformation camera_inverse;
-  EeGeTransformation orthographic_denormalization;
-  EeGeTransformation perspective_denormalization;
-  EeGeTransformation orthographic_projection;
-  EeGeTransformation perspective_projection;
-  EeGeVector camera_look_at_vector;
-  float orthographic_scale;
-  float orthographic_depth_scale;
-  float orthographic_depth_offset;
-  float perspective_scale;
-  float perspective_depth_scale;
-  float perspective_depth_offset;
-  float aspect_ratio;
-  float aspect_ratio_multiplier;
-  float field_of_view;
-  float field_of_view_multiplier;
-  float front_clipping_distance;
-  float half_height;
-  float half_width;
-  float rear_clipping_distance;
-  float x_center;
-  float y_center;
-  float y_clipping_plane;
-  float near_depth;
-  float far_depth;
+  EeGeRectangle mOrthographicRectangle;
+  EeGeRectangle mViewRectangle;
+  EeGe3DPlane mFrontPlane;
+  EeGe3DPlane mRearPlane;
+  EeGe3DPlane mLeftPlane;
+  EeGe3DPlane mRightPlane;
+  EeGe3DPlane mTopPlane;
+  EeGe3DPlane mBottomPlane;
+  EeGeTransformation mCamera;
+  EeGeTransformation mCameraInverse;
+  EeGeTransformation mOrthographicDenormalization;
+  EeGeTransformation mPerspectiveDenormalization;
+  EeGeTransformation mOrthographicProjection;
+  EeGeTransformation mPerspectiveProjection;
+  EeGeVector mCameraLookAtVector;
+  float mOrthographicScale;
+  float mOrthographicDepthScale;
+  float mOrthographicDepthOffset;
+  float mPerspectiveScale;
+  float mPerspectiveDepthScale;
+  float mPerspectiveDepthOffset;
+  float mAspectRatio;
+  float mAspectRatioMultiplier;
+  float mFieldOfView;
+  float mFieldOfViewMultiplier;
+  float mFrontClippingDistance;
+  float mHalfHeight;
+  float mHalfWidth;
+  float mRearClippingDistance;
+  float mXCenter;
+  float mYCenter;
+  float mYClippingPlane;
+  float mNearDepth;
+  float mFarDepth;
 };
 
 /// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
@@ -324,6 +324,54 @@ void ee_ge_viewport_set_rear(EeGeViewport *v, float distance);
 /// # Safety
 /// `v` is a live viewport; `rectangle` is valid.
 void ee_ge_viewport_set_view_rectangle(EeGeViewport *v, const EeGeRectangle *rectangle);
+
+/// `GEViewport::GetFrustrumWorldPoints(rectangle, points, orthographic)`: the eight corners appended through `push`.
+///
+/// # Safety
+/// `v` and `rectangle` are valid; `push` may be called with `context`.
+void ee_ge_viewport_frustum_points_push(const EeGeViewport *v,
+                                        const EeGeRectangle *rectangle,
+                                        bool orthographic,
+                                        EeGePush3D push,
+                                        void *context);
+
+/// `GEViewport::DenormalizePerspectivePoint`.
+///
+/// # Safety
+/// The pointers are valid (`out` may be `p`).
+void ee_ge_viewport_denormalize_perspective(const EeGeViewport *v,
+                                            const EeGe3DPoint *p,
+                                            float w,
+                                            EeGe3DPoint *out);
+
+/// `GEViewport::NormalizeOrthographicCameraPoint` (`perspective` false) and `NormalizePerspectiveCameraPoint`: the
+/// camera-space point scaled to the screen (x, z) and the depth range (y); `out_w` 1 or the point's y.
+///
+/// # Safety
+/// The pointers are valid (`out` may be `p`).
+void ee_ge_viewport_normalize_camera_point(const EeGeViewport *v,
+                                           const EeGe3DPoint *p,
+                                           bool perspective,
+                                           EeGe3DPoint *out,
+                                           float *out_w);
+
+/// `GEViewport::SetCamera`.
+///
+/// # Safety
+/// `v` is a live viewport; `camera` is valid.
+void ee_ge_viewport_set_camera(EeGeViewport *v, const EeGeTransformation *camera);
+
+/// `GEViewport::SetOrthographicRectangle`.
+///
+/// # Safety
+/// `v` is a live viewport; `rectangle` is valid.
+void ee_ge_viewport_set_orthographic_rectangle(EeGeViewport *v, const EeGeRectangle *rectangle);
+
+/// `GEViewport::SetDepthRange`.
+///
+/// # Safety
+/// `v` is a live viewport.
+void ee_ge_viewport_set_depth_range(EeGeViewport *v, float near, float far);
 
 }  // extern "C"
 

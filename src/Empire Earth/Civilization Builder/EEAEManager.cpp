@@ -33,57 +33,26 @@
 #include <memory>
 #include <stdint.h>
 
-// The unit functors of the manager's passes (RTTI names; each > EEUUUnitFunctor, slot +0x04 only; their ??_G is
-// ICF-shared with EEPSuggestRecomputeAllAreaEffects's 0x16b555)
-class ApplyGeneratedEffectsToOthersFunctor : public EEUUUnitFunctor {   // vtable 0x44bb50
+// The unit functors of the manager's passes (the original's ApplyGeneratedEffectsToOthersFunctor,
+// SetAffectedByAreaEffectFunctor, ClearAreaEffectsFunctor, RebuildAreaEffectRegionListFunctor,
+// RemoveRedundantAreaEffectsFunctor, UpdateGeneratedAreaEffectsFunctor, UpdateAffectedByAreaEffectsFunctor, each
+// > EEUUUnitFunctor, slot +0x04 only): one functor whose Apply is the pass's, Rust's (area_effect_obj.rs pass; UI lane
+// round 12)
+class EEAEPassFunctor : public EEUUUnitFunctor {
 public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->ApplyAreaEffects(); }
+    EEAEPassFunctor(uint32_t inPass, uintptr_t inArg, uint64_t inPlayer, float inElapsed, float inX, float inY)
+        : mPass(inPass), mArg(inArg), mPlayer(inPlayer), mElapsed(inElapsed), mX(inX), mY(inY) {}
+    virtual void Apply(EEComplexUnit* inUnit)
+    {
+        ee_screens_aem_pass(this->mPass, this->mArg, this->mPlayer, this->mElapsed, this->mX, this->mY, (uintptr_t)inUnit);
+    }
+    uint32_t mPass;
+    uintptr_t mArg;
+    uint64_t mPlayer;
+    float mElapsed, mX, mY;
 };
-
-class SetAffectedByAreaEffectFunctor : public EEUUUnitFunctor {         // vtable 0x44bb60
-public:
-    SetAffectedByAreaEffectFunctor(EEAreaEffect* inEffect, unsigned long inPlayer, const GE2DPoint& inLocation)
-        : mEffect(inEffect), mPlayer(inPlayer), mLocation(inLocation) {}
-    virtual void Apply(EEComplexUnit* inUnit);
-
-    EEAreaEffect* mEffect;                  // +0x04
-    unsigned long mPlayer;                  // +0x08
-    GE2DPoint mLocation;                    // +0x0c
-};
-
-class ClearAreaEffectsFunctor : public EEUUUnitFunctor {                // vtable 0x44bb70
-public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->RemoveAffectingAreaEffects(); }
-};
-
-class RebuildAreaEffectRegionListFunctor : public EEUUUnitFunctor {     // vtable 0x44bd28
-public:
-    RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects);
-    virtual void Apply(EEComplexUnit* inUnit);
-
-    UReferenceContainer<EEAreaEffect*>* mEffects;   // +0x04
-};
-
-class RemoveRedundantAreaEffectsFunctor : public EEUUUnitFunctor {      // vtable 0x44bd38
-public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.KeepStrongest(); }
-};
-
-class UpdateGeneratedAreaEffectsFunctor : public EEUUUnitFunctor {      // vtable 0x44bd48
-public:
-    UpdateGeneratedAreaEffectsFunctor(float inElapsed) : mElapsed(inElapsed) {}
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->UpdateAreaEffects((unsigned long)this->mElapsed); }
-
-    float mElapsed;                         // +0x04
-};
-
-class UpdateAffectedByAreaEffectsFunctor : public EEUUUnitFunctor {     // vtable 0x44bd58
-public:
-    UpdateAffectedByAreaEffectsFunctor(float inElapsed) : mElapsed(inElapsed) {}
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.Tick(inUnit, this->mElapsed); }
-
-    float mElapsed;                         // +0x04
-};
+// a temporary's address for the full expression (the walker's functor argument)
+template <class T> static T* EEAETemp(T&& inValue) { return &inValue; }
 
 // The living units (expanded into the collector 0x27b77d) (provisional name)
 struct EEAEAliveUnit {
@@ -101,13 +70,6 @@ EEAEManager::~EEAEManager()
     this->Clear();
 }
 
-// Lets every unit apply the area effects it generates to the units around it
-void EEAEManager::ApplyGeneratedAreaEffects()
-{
-    ApplyGeneratedEffectsToOthersFunctor theFunctor;
-    EEForEachPlayersUnit(&theFunctor);
-}
-
 // Adds the list's effects to every living unit they cover around a location (a radius-0 effect: to every
 // unit of every player); a healing effect skips its own unit and shows on the units it covers
 void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned long inPlayerID,
@@ -116,20 +78,10 @@ void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned
     ee_screens_aem_collect(inRadius, inLocation.mX, inLocation.mY, inPlayerID, inList, inUnit);
 }
 
-// Adds the effect to a covered unit's affecting effects and applies it
-void SetAffectedByAreaEffectFunctor::Apply(EEComplexUnit* inUnit)
-{
-    if (this->mEffect->Covers(this->mPlayer, inUnit, this->mLocation)) {
-        inUnit->mAffectingAreaEffects.Add(this->mEffect);
-        this->mEffect->AppliedTo(inUnit);
-    }
-}
-
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
 static std::vector<EEComplexUnit*> sAEMUnits;   // the living units around the location
 static U2DRectangle<long> sAEMRect;
-static SetAffectedByAreaEffectFunctor sAEMSetAffected(NULL, 0, GE2DPoint(0.0f, 0.0f));   // a radius-0 effect's pass
 extern "C" int32_t ee_screenscpp_aem_floor(float inV) { return UMFloor(inV); }
 extern "C" void ee_screenscpp_aem_units_clear() { sAEMUnits.clear(); }
 extern "C" void ee_screenscpp_aem_rect_top(int32_t inV) { sAEMRect.mTop = inV; }
@@ -149,45 +101,17 @@ extern "C" float ee_screenscpp_aem_effect_radius(uintptr_t inEffect)
 { return ((EEAreaEffect*)inEffect)->mTemplate->mRadius; }
 extern "C" int64_t ee_screenscpp_aem_effect_kind(uintptr_t inEffect)
 { return (int64_t)((EEAreaEffect*)inEffect)->mTemplate->mKind; }
-extern "C" void ee_screenscpp_aem_set_affected_functor(uintptr_t inEffect, uint64_t inPlayer, float inX, float inY)
-{ sAEMSetAffected = SetAffectedByAreaEffectFunctor((EEAreaEffect*)inEffect, (unsigned long)inPlayer, GE2DPoint(inX, inY)); }
-extern "C" void ee_screenscpp_aem_for_each_set_affected() { EEForEachPlayersUnit(&sAEMSetAffected); }
-extern "C" bool ee_screenscpp_aem_covers(uintptr_t inEffect, uint64_t inPlayer, uintptr_t inUnit, float inX, float inY)
-{ return ((EEAreaEffect*)inEffect)->Covers((unsigned long)inPlayer, (EEComplexUnit*)inUnit, GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_aem_affecting_add(uintptr_t inUnit, uintptr_t inEffect)
 { ((EEComplexUnit*)inUnit)->mAffectingAreaEffects.Add((EEAreaEffect*)inEffect); }
-extern "C" void ee_screenscpp_aem_applied_to(uintptr_t inEffect, uintptr_t inUnit)
-{ ((EEAreaEffect*)inEffect)->AppliedTo((EEComplexUnit*)inUnit); }
-extern "C" void ee_screenscpp_aem_show_on(uintptr_t inEffect, uintptr_t inUnit)
-{ ((EEAreaEffect*)inEffect)->ShowOn((EEComplexUnit*)inUnit); }
 extern "C" uintptr_t ee_screenscpp_aem_effects_count(uintptr_t inManager)
 { return ((EEAEManager*)inManager)->mEffects.mItems.size(); }
 extern "C" uintptr_t ee_screenscpp_aem_effects_at(uintptr_t inManager, uintptr_t inIndex)
 { return (uintptr_t)((EEAEManager*)inManager)->mEffects.mItems[inIndex]; }
-extern "C" bool ee_screenscpp_aem_is_immunity(uintptr_t inEffect) { return ((EEAreaEffect*)inEffect)->IsImmunity(); }
 extern "C" int64_t ee_screenscpp_aem_effect_player(uintptr_t inEffect)
 { return (int64_t)((EEAreaEffect*)inEffect)->mPlayer; }
-extern "C" bool ee_screenscpp_aem_affects_player(uintptr_t inEffect, int64_t inPlayer, uint64_t inOther)
-{ return ((EEAreaEffect*)inEffect)->mTemplate->AffectsPlayer((long)inPlayer, (long)(unsigned long)inOther); }
-extern "C" bool ee_screenscpp_aem_affects_player_reversed(uintptr_t inEffect, int64_t inPlayer, uint64_t inOther)
-{ return ((EEAreaEffect*)inEffect)->mTemplate->AffectsPlayerReversed((long)inPlayer, (long)(unsigned long)inOther); }
-extern "C" bool ee_screenscpp_aem_in_range(uintptr_t inEffect, float inX, float inY)
-{ return ((EEAreaEffect*)inEffect)->IsInRange(GE2DPoint(inX, inY)); }
-
-// Clears the affecting area effects of every unit
-void EEAEManager::ClearAreaEffects()
-{
-    ClearAreaEffectsFunctor theFunctor;
-    EEForEachPlayersUnit(&theFunctor);
-}
 
 // Empties the list of active area effects
-void EEAEManager::ClearEffects()
-{
-    UReferenceContainer<EEAreaEffect*>& theEffects = this->mEffects;
-    theEffects.Clear();
-    theEffects.mItems.clear();
-}
+void EEAEManager::ClearEffects() { ee_screens_aem_clear_effects((uintptr_t)this); }
 
 // Reads the area-effect templates from the area-effect file (an empty slot for records with id 0); returns 3
 // when a template fails to initialize
@@ -200,17 +124,7 @@ long EEAEManager::Load(FSFile* inFile)
 // morale from buildings, from military heroes, economy from units, cloaking) for a unit; NULL for an unknown kind
 EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit* inUnit)
 {
-    EEAreaEffect* theEffect = NULL;
-    if (inIndex < this->mTemplates.size()) {
-        EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-        if (ee_area_effect_known_kind(theTemplate->mKind))
-            theEffect = new EEAreaEffect(theTemplate);
-        if (theEffect != NULL) {
-            theEffect->SetUnit(inUnit);
-            theEffect->mPlayer = inUnit->mPlayer->mPlayerID;
-        }
-    }
-    return theEffect;
+    return (EEAreaEffect*)ee_screens_aem_create((uintptr_t)this, inIndex, (uintptr_t)inUnit);
 }
 
 // Finds an active effect of a kind covering a point that affects the player (immunities only, by the
@@ -259,96 +173,16 @@ EEAreaEffect* EEAEManager::FindEffectAtTile(long inKind, long inX, long inY, uns
 }
 
 // Loads the media of the template at an index, if any
-void EEAEManager::LoadTemplateMedia(unsigned long inIndex)
-{
-    if (inIndex >= this->mTemplates.size())
-        return;
-    EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-    if (theTemplate != NULL)
-        theTemplate->Load(false);
-}
-
-// Rebuilds the list of active area effects from every built unit's own effects
-void EEAEManager::RebuildAreaEffectRegionList()
-{
-    RebuildAreaEffectRegionListFunctor theFunctor(&this->mEffects);
-    EEForEachPlayersUnit(&theFunctor);
-}
-
-// Starts a rebuild of the active effect list by emptying it
-RebuildAreaEffectRegionListFunctor::RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects)
-{
-    this->mEffects = inEffects;
-    inEffects->Clear();
-    inEffects->mItems.clear();
-}
-
-// Keeps only each unit's strongest affecting effect of each kind
-void EEAEManager::RemoveRedundantAreaEffects()
-{
-    RemoveRedundantAreaEffectsFunctor theFunctor;
-    EEForEachPlayersUnit(&theFunctor);
-}
+void EEAEManager::LoadTemplateMedia(unsigned long inIndex) { ee_screens_aem_template_media((uintptr_t)this, inIndex, true); }
 
 // Releases every template and empties the active effect list
-void EEAEManager::Clear()
-{
-    for (std::vector<EEAreaEffectTemplate*>::iterator theIterator = this->mTemplates.begin();
-         theIterator != this->mTemplates.end(); ++theIterator) {
-        if (*theIterator != NULL)
-            (*theIterator)->Dereference();
-    }
-    this->mTemplates.clear();
-    UReferenceContainer<EEAreaEffect*>& theEffects = this->mEffects;
-    theEffects.Clear();
-    theEffects.mItems.clear();
-}
+void EEAEManager::Clear() { ee_screens_aem_clear((uintptr_t)this); }
 
 // Unloads the media of the template at an index, if any
-void EEAEManager::UnloadTemplateMedia(unsigned long inIndex)
-{
-    if (inIndex >= this->mTemplates.size())
-        return;
-    EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-    if (theTemplate != NULL)
-        theTemplate->Unload();
-}
+void EEAEManager::UnloadTemplateMedia(unsigned long inIndex) { ee_screens_aem_template_media((uintptr_t)this, inIndex, false); }
 
 // Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
-void EEAEManager::Tick(float inElapsed)
-{
-    this->ClearAreaEffects();
-    this->ApplyGeneratedAreaEffects();
-    this->RemoveRedundantAreaEffects();
-    this->UpdateGeneratedAreaEffects(inElapsed);
-    this->RebuildAreaEffectRegionList();
-    this->UpdateAffectedByAreaEffects(inElapsed);
-    EEAECaptureTick(inElapsed);   // TEST ONLY: AEFX (ee/EEAECapture.h)
-}
-
-// Updates the area effects every unit generates for the elapsed time
-void EEAEManager::UpdateGeneratedAreaEffects(float inElapsed)
-{
-    UpdateGeneratedAreaEffectsFunctor theFunctor(inElapsed);
-    EEForEachPlayersUnit(&theFunctor);
-}
-
-// Ticks every unit's affecting area effects for the elapsed time
-void EEAEManager::UpdateAffectedByAreaEffects(float inElapsed)
-{
-    UpdateAffectedByAreaEffectsFunctor theFunctor(inElapsed);
-    EEForEachPlayersUnit(&theFunctor);
-}
-
-// Adds a built unit's own area effects to the active effect list
-void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
-{
-    if (!inUnit->mIsBuilt)
-        return;
-    for (std::vector<EEAreaEffect*>::iterator theIterator = inUnit->mAreaEffects.mItems.begin();
-         theIterator != inUnit->mAreaEffects.mItems.end(); ++theIterator)
-        this->mEffects->Add(*theIterator);
-}
+void EEAEManager::Tick(float inElapsed) { ee_screens_aem_tick((uintptr_t)this, inElapsed); }
 
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
 // loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)
@@ -436,3 +270,29 @@ extern "C" void ee_screenscpp_aes_templates_push(uintptr_t inManager, uintptr_t 
 { ((EEAEManager*)inManager)->mTemplates.push_back((EEAreaEffectTemplate*)inT); }
 extern "C" void ee_screenscpp_aes_file_close(uintptr_t inFile) { ((FSFile*)inFile)->Close(); }
 extern "C" uintptr_t ee_screenscpp_aem_manager() { return (uintptr_t)&gAEManager; }
+
+// the manager's passes, Tick, Clear and CreateAreaEffect: area_effect_obj.rs over these (UI lane round 12)
+#define AEM_U(u) ((EEComplexUnit*)(u))
+#define AEM_M(m) ((EEAEManager*)(m))
+extern "C" void ee_screenscpp_aem_for_each(uint32_t inPass, uintptr_t inArg, uint64_t inPlayer, float inElapsed, float inX, float inY)
+{ EEForEachPlayersUnit(EEAETemp(EEAEPassFunctor(inPass, inArg, inPlayer, inElapsed, inX, inY))); }
+extern "C" void ee_screenscpp_aem_apply_area_effects(uintptr_t inUnit) { AEM_U(inUnit)->ApplyAreaEffects(); }
+extern "C" void ee_screenscpp_aem_remove_affecting(uintptr_t inUnit) { AEM_U(inUnit)->RemoveAffectingAreaEffects(); }
+extern "C" uintptr_t ee_screenscpp_aem_affecting_list(uintptr_t inUnit)
+{ return (uintptr_t)&AEM_U(inUnit)->mAffectingAreaEffects; }
+extern "C" void ee_screenscpp_aem_update_area_effects(uintptr_t inUnit, float inElapsed)
+{ AEM_U(inUnit)->UpdateAreaEffects((unsigned long)inElapsed); }
+extern "C" void ee_screenscpp_aem_effects_release(uintptr_t inManager) { AEM_M(inManager)->mEffects.Clear(); }
+extern "C" void ee_screenscpp_aem_effects_erase(uintptr_t inManager) { AEM_M(inManager)->mEffects.mItems.clear(); }
+extern "C" void ee_screenscpp_aem_effects_add(uintptr_t inManager, uintptr_t inEffect)
+{ AEM_M(inManager)->mEffects.Add((EEAreaEffect*)inEffect); }
+extern "C" uintptr_t ee_screenscpp_aem_templates_count(uintptr_t inManager)
+{ return AEM_M(inManager)->mTemplates.size(); }
+extern "C" uintptr_t ee_screenscpp_aem_template_at(uintptr_t inManager, uintptr_t inIndex)
+{ return (uintptr_t)AEM_M(inManager)->mTemplates[inIndex]; }
+extern "C" void ee_screenscpp_aem_templates_clear(uintptr_t inManager) { AEM_M(inManager)->mTemplates.clear(); }
+extern "C" void ee_screenscpp_aem_capture_tick(float inElapsed) { EEAECaptureTick(inElapsed); }
+extern "C" uintptr_t ee_screenscpp_aem_effect_new(uintptr_t inT)
+{ return (uintptr_t)new EEAreaEffect((EEAreaEffectTemplate*)inT); }
+extern "C" void ee_screenscpp_aem_set_effect_player(uintptr_t inEffect, uintptr_t inUnit)
+{ ((EEAreaEffect*)inEffect)->mPlayer = AEM_U(inUnit)->mPlayer->mPlayerID; }

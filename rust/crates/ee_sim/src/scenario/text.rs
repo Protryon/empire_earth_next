@@ -78,7 +78,7 @@ const ERROR_FORMATS: [c_long; 8] = [10027, 10028, 10029, 10030, 10054, 10053, 10
 pub const MEDIA_TAGS: [&[u8]; 4] = [b"0_Hints", b"1_After Math", b"2_History", b"3_Instructions"];
 
 /// `kSMEffectObject`, `kSMEffectMedia`, `kSMMediaActionChangeText` .. `kSMMediaActionSendChatMessage`,
-/// `kSMObjectActionClassName`, `kSMConditionChatMessageContains` (ee/EEScenarioIDs.h).
+/// `kSMObjectActionClassName`, `kSMConditionChatMessageContains` (ee_sim scenario::ids).
 const EFFECT_OBJECT: c_ulong = 1;
 const EFFECT_MEDIA: c_ulong = 4;
 const MEDIA_CHANGE_TEXT: c_ulong = 1;

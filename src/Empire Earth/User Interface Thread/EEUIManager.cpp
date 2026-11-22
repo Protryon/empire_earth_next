@@ -55,10 +55,8 @@
 #include "ee/EEControlEventID.h"
 
 
-class UIFileListBox;
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
 extern bool& gLoadingSavedGame;
-extern UString gSavedGameExtension;
 extern unsigned long& gTexturePixelDepth;
 extern FSPath* gDataPath;
 void EEPostF9Key();
@@ -381,8 +379,6 @@ extern "C" uintptr_t ee_screenscpp_ct_new_command_units(uintptr_t inManager, uin
 { return (uintptr_t)static_cast<UIControl*>(new EEUICCommandUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), UMG(inManager)->GetMainGameForm()->mMouseClick)); }
 extern "C" uintptr_t ee_screenscpp_ct_new_portrait(uintptr_t inTable, uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(new EEUICPortrait(UMF(inForm), sUMRect, UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), false)); }
-extern "C" uintptr_t ee_screenscpp_ct_new_chat_line(uintptr_t inTable, uintptr_t inForm)
-{ return (uintptr_t)static_cast<UIControl*>(EEUIShellNewChatLine(UMCT(inTable), sUMRect, UMF(inForm))); }
 extern "C" void ee_screenscpp_ct_setup_font(uintptr_t inManager, uintptr_t inTable)
 { UMCT(inTable).SetupFont(UMG(inManager), sUMRect, true); }
 extern "C" uintptr_t ee_screenscpp_ct_new_cb_list_box(uintptr_t inTable, uintptr_t inForm)
@@ -405,8 +401,6 @@ extern "C" void ee_screenscpp_um_button_set_pressed(uintptr_t inButton, uintptr_
 { reinterpret_cast<UIButton*>(inButton)->SetPressedBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
 extern "C" void ee_screenscpp_um_bitmap_dereference(uintptr_t inBitmap)
 { reinterpret_cast<GEBitmap*>(inBitmap)->Dereference(); }
-extern "C" uintptr_t ee_screenscpp_ct_new_icon_bar(uintptr_t inTable, uintptr_t inForm)
-{ return (uintptr_t)static_cast<UIControl*>(EEUIShellNewIconBar(UMCT(inTable), sUMRect, UMF(inForm))); }
 extern "C" uintptr_t ee_screenscpp_ct_new_pgs_graph(uintptr_t inTable, uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(new UIGraph(UMCT(inTable).GetID(), sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness(), EeUiGraphKind::PostGame, ee_screens_pgs_format)); }
 extern "C" void ee_screenscpp_ct_graph_font(uintptr_t inGraph, uintptr_t inTable)
@@ -424,3 +418,8 @@ static const bool sManagerRegistered =
                                 const UString& inUnused) { return new EEUIManager(inRasterizer, inNumberOfSurfaces,
                                                                                   inScreen, inUnused); },
      true);
+// the icon bar's and chat line's shells over the factory's rectangle (shell_factories.rs, UI lane round 12)
+extern "C" uintptr_t ee_screenscpp_sf_icon_bar_new(uintptr_t inTable, uintptr_t inForm)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIShellControl(EE_SCREENS_SK_ICON_BAR, std::vector<int64_t>(), UMCT(inTable).GetID(), sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), 0)); }
+extern "C" uintptr_t ee_screenscpp_sf_chat_line_new(uintptr_t inTable, uintptr_t inForm, int64_t inOpacityBits)
+{ return (uintptr_t)static_cast<UIControl*>(new EEUIShellControl(EE_SCREENS_SK_CHAT_LINE, std::vector<int64_t>(1, inOpacityBits), UMCT(inTable).GetID(), sUMRect, UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetBorderThickness())); }

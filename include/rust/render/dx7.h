@@ -157,7 +157,7 @@ struct EeDx7Surface;
 /// The host of the screen and surface objects.
 using EeDx7ObjHostFn = ptrdiff_t(*)(EeDx7ObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
-/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+/// `GESurfaceDescription` (`lle/GESurface.h`: the GE's `EeGeSurfaceDescription`, pinned below).
 struct EeDx7SurfaceDescription {
   unsigned long mType;
   unsigned long mPixelFormat;
@@ -172,7 +172,7 @@ struct EeDx7SurfaceDescription {
   bool mNoAlpha;
 };
 
-/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
+/// `GEVideoMode` (lle/GEScreen.h's name for it).
 struct EeDx7VideoMode {
   unsigned long mWidth;
   unsigned long mHeight;
