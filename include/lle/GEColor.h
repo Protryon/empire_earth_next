@@ -10,9 +10,6 @@ class GEColor {                     // sizeof 0xc: red, green, blue (GetRed +0, 
 public:
     GEColor() : mRed(1.0f), mGreen(1.0f), mBlue(1.0f) {}   // 0xdeb3: three fld1
     GEColor(float inRed, float inGreen, float inBlue) : mRed(inRed), mGreen(inGreen), mBlue(inBlue) {}
-    ~GEColor() {}
-    GEColor& operator=(const GEColor& inColor)
-        { this->mRed = inColor.mRed; this->mGreen = inColor.mGreen; this->mBlue = inColor.mBlue; return *this; }
     bool operator==(const GEColor& inColor) const
         { return this->mRed == inColor.mRed && this->mGreen == inColor.mGreen && this->mBlue == inColor.mBlue; }
     bool operator!=(const GEColor& inColor) const
@@ -24,12 +21,8 @@ public:
     void SetGreen(float inGreen) { this->mGreen = inGreen; }
     void SetBlue(float inBlue) { this->mBlue = inBlue; }
     // 0xdec4: clamps each channel to [0, 1]
-    void Normalize()
-    {
-        this->mRed = this->mRed > 1.0f ? 1.0f : (this->mRed < 0.0f ? 0.0f : this->mRed);
-        this->mGreen = this->mGreen > 1.0f ? 1.0f : (this->mGreen < 0.0f ? 0.0f : this->mGreen);
-        this->mBlue = this->mBlue > 1.0f ? 1.0f : (this->mBlue < 0.0f ? 0.0f : this->mBlue);
-    }
+    void Normalize() { *this = GEColor(Clamp(this->mRed), Clamp(this->mGreen), Clamp(this->mBlue)); }
+    static float Clamp(float inValue) { return inValue > 1.0f ? 1.0f : (inValue < 0.0f ? 0.0f : inValue); }
     // red, green and blue from (to) the file (open or not); the first error
     template <class F> long Load(F& inFile) { return ee_ge_color_load(reinterpret_cast<float(*)[3]>(&mRed), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_color_save(reinterpret_cast<const float(*)[3]>(&mRed), GERustFile(inFile)); }

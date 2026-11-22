@@ -35,8 +35,6 @@ public:
     // The exe calls an out-of-line copy ctor 0x4d28b (479 callers); with the pair in the exe view allscores gained
     // 3 exact, 0 lost (EEAIArea 0xda77, EEUGLoadGarrison 0x226ba4, EEUGUnloadTransport 0x228883).
     // (The engine's empty dtor is in the exe view too: EEAIArea 0xe98e is one of its known regressions.)
-    U2DPoint(const U2DPoint& inPoint) : mX(inPoint.mX), mY(inPoint.mY) {}
-    U2DPoint& operator=(const U2DPoint& inPoint) { this->mX = inPoint.mX; this->mY = inPoint.mY; return *this; }
 #endif
     // Engine template members (instantiated by GETerrainMesh.cpp's U2DPolygon<float> code). (provisional names)
     bool operator<(const U2DPoint& inPoint) const   // 0x10031459: lower y first, then larger x (through the accessors:
@@ -48,7 +46,7 @@ public:
     T GetY() const { return this->mY; }
     void SetX(T inX) { this->mX = inX; }
     void SetY(T inY) { this->mY = inY; }
-    void SetXY(T inX, T inY) { this->mX = inX; this->mY = inY; }  // exe: EEUGUnloadTransport's (bool) ctor 0x23c685 (as GE2DPoint's)
+    void SetXY(T inX, T inY) { *this = U2DPoint(inX, inY); }  // exe: EEUGUnloadTransport's (bool) ctor 0x23c685 (as GE2DPoint's)
     // exe (out-of-line COMDAT 0xe964, an AI unit's): the squared distance as a float (EEUGUnloadTransport 0x228683)
     // (provisional name)
     // Inline with the doubled differences: 0xe964 exact, and the float copy is ICF-identical to

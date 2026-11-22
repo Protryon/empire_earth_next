@@ -10,9 +10,6 @@ class GETextureCoordinate {         // sizeof 8: u, v
 public:
     GETextureCoordinate() : mU(0.0f), mV(0.0f) {}
     GETextureCoordinate(float inU, float inV) : mU(inU), mV(inV) {}
-    ~GETextureCoordinate() {}
-    GETextureCoordinate& operator=(const GETextureCoordinate& inCoordinate)
-        { this->mU = inCoordinate.mU; this->mV = inCoordinate.mV; return *this; }
     bool operator==(const GETextureCoordinate& inCoordinate) const
         { return this->mU == inCoordinate.mU && this->mV == inCoordinate.mV; }
     bool operator!=(const GETextureCoordinate& inCoordinate) const
