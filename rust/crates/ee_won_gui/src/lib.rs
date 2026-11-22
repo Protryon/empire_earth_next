@@ -29,6 +29,7 @@ pub mod guiedit;
 pub mod guievent;
 pub mod guifocus;
 pub mod guihost;
+pub mod guireg;
 pub mod guilayout;
 pub mod guilist;
 pub mod guimenu;
