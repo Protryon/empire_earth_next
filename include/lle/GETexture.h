@@ -11,11 +11,8 @@
 #include "rust/base/png.h"   // the texture (ee_ge texobj_tex.rs), its host's EeGeTexOp
 #include "rust/render/ge.h"
 
-class FSFileSpec;
-class GERasterizer;
 class GEScreen;
 class GESurface;
-class GETexture;
 class GETextureManager;
 struct GESurfaceDescription;
 struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_openformats.h)

@@ -66,7 +66,7 @@
 // The calls the model makes on other objects (EeGeModOp), in the original's statements; the materials, the
 // strings' records, the references taken and the sub-models' objects are read in place (ee_ge cppobj.rs)
 static_assert(sizeof(GEModel) == 3 * sizeof(void*), "ee_ge cppobj.rs CppCounted (the others: GEBitmap.cpp)");
-intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
+intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
     case EeGeModOp::RasterActive:
@@ -123,7 +123,6 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
         ((GETexture*)inObj)->SetStageMipFilterMode((unsigned long)a, (unsigned long)b);
         return 0;
     }
-    (void)inOwner;
     return 0;
 }
 
@@ -142,10 +141,7 @@ intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     unsigned long theRead = 0;
     switch (inOp) {
-    case EeOfFileOp::PathFind: {
-        FSFileSpec* theFound = NULL;
-        return ((FSPath*)inObj)->FindFile(UString((const char*)a), theFound) == kErrorOK ? (intptr_t)theFound : 0;
-    }
+    case EeOfFileOp::PathFind: return ((FSPath*)inObj)->FindFile(UString((const char*)a), *(FSFileSpec**)b);
     case EeOfFileOp::FileOpen: return ((FSFileSpec*)inObj)->Open((unsigned long)a);
     case EeOfFileOp::FileLength: return ((FSFileSpec*)inObj)->GetLength(*(unsigned long*)a);
     case EeOfFileOp::FileRead:

@@ -10,7 +10,6 @@
 
 class GE2DPoint;
 class GEColor;
-class GERectangle;
 class GETexture;
 class GETextureCoordinate;
 class GEVertexArray;

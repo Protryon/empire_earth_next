@@ -11,7 +11,8 @@
 
 /// The calls the lookups make on the path and its files. `obj` the path or a file (`FSFileSpec*`).
 enum class EeOfFileOp : uint32_t {
-  /// `path->FindFile(UString((const char*)a), file)` -> the file (`new`) when found, else NULL.
+  /// `path->FindFile(UString((const char*)a), *(FSFileSpec**)b)` -> its result; the file (`new`) in `*b` when it
+  /// is kErrorOK.
   PathFind = 1,
   /// `file->Open(kFileAccessRead)` -> the result.
   FileOpen,

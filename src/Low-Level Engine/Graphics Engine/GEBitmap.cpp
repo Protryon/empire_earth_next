@@ -65,7 +65,7 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST 
 static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
 
 // (C linkage: ee_ge game_hosts.rs names it)
-extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
     case EeGeBmpOp::RasterActive:
@@ -95,7 +95,6 @@ extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, int
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)((GETexture*)inObj)->GetNumMipLevelsToDrop();
     }
-    (void)inOwner;
     return 0;
 }
 // ---- end of the vertex host
@@ -112,7 +111,7 @@ static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWi
 
 // ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
 // and GEWindow's forwarders (its header does not include the Rust header)
-extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+extern "C" intptr_t GEObjectHost(void*, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
     case EeGeObjOp::StrNew:
@@ -146,7 +145,6 @@ extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, int
         PlatWindowGetPosition((PlatWindow*)inObj, (int32_t*)a, (int32_t*)b);
         return 0;
     }
-    (void)inOwner;
     return 0;
 }
 
@@ -221,19 +219,3 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         return 0;
     }
 }
-
-
-// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
-GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
-{
-    this->mRust = NULL;
-    this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen);
-}
-
-// Destroys the glyph bitmap, releasing its drawing bitmap
-GEFontBitmap::~GEFontBitmap()
-{
-    ee_ge_fb_destroy(this->mRust);
-}
-
-

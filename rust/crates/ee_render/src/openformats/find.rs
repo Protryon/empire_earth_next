@@ -20,7 +20,8 @@ use ee_base::png::PngTexture;
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeOfFileOp {
-    /// `path->FindFile(UString((const char*)a), file)` -> the file (`new`) when found, else NULL.
+    /// `path->FindFile(UString((const char*)a), *(FSFileSpec**)b)` -> its result; the file (`new`) in `*b` when it
+    /// is kErrorOK.
     PathFind = 1,
     /// `file->Open(kFileAccessRead)` -> the result.
     FileOpen,
@@ -78,7 +79,9 @@ impl Path {
     fn read(&self, name: &[u8]) -> Option<Vec<u8>> {
         let mut c = name.to_vec();
         c.push(0);
-        let file = self.call(EeOfFileOp::PathFind, self.path, c.as_ptr() as isize, 0) as *mut c_void;
+        let mut found: *mut c_void = std::ptr::null_mut();
+        let result = self.call(EeOfFileOp::PathFind, self.path, c.as_ptr() as isize, &mut found as *mut _ as isize);
+        let file = if result as c_long == K_ERROR_OK { found } else { std::ptr::null_mut() };
         if file.is_null() {
             return None;
         }

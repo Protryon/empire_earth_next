@@ -36,9 +36,10 @@ unsafe extern "C" fn host(op: EeOfFileOp, obj: *mut c_void, a: isize, b: isize) 
                 let found = with(|w| w.files.contains_key(&wanted));
                 with(|w| w.log.push(format!("find {wanted} {found}")));
                 if found {
-                    Box::into_raw(Box::new(wanted)) as isize
-                } else {
+                    *(b as *mut *mut String) = Box::into_raw(Box::new(wanted));
                     0
+                } else {
+                    3
                 }
             }
             EeOfFileOp::FileOpen => {

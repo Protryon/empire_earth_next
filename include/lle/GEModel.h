@@ -17,13 +17,11 @@
 #include "rust/base/math.h"   // the model (ee_ge modobj.rs), its host's EeGeModOp
 #include "rust/render/ge.h"
 
-class FSFileSpec;
 class GEMaterial;
 class GEModelManager;
 class GEPolygonArray;
 class GETexture;
 class GEVertexArray;
-struct GETextureDescription;
 
 class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 in the original (GEModelManager: operator new(0x188))
     friend class GEModelManager;
