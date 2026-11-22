@@ -9,6 +9,7 @@
 #include "rust/base/math.h"
 #include "rust/game/app.h"
 #include "rust/render/gfx.h"
+#include "rust/sim/netmsg.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 
@@ -2835,6 +2836,93 @@ enum class EeGameCpp : uint32_t {
   LcMemFileDelete,
   LcMemFilePosition,
   LcMemFileData,
+  LcRecNew,
+  LcRecDelete,
+  LcRecSize,
+  LcRecData,
+  LcRecTechPlayer,
+  LcRecTechUpgrade,
+  LcRecTechTree,
+  LcUStringText,
+  LcWideText,
+  LcWideNew,
+  LcWideDelete,
+  LcUpgVecNew,
+  LcUpgVecDelete,
+  LcUpgVecSize,
+  LcUpgVecAt,
+  LcUpgVecPush,
+  LcLongVecNew,
+  LcLongVecDelete,
+  LcLongVecSize,
+  LcLongVecAt,
+  LcCivVecNew,
+  LcCivVecDelete,
+  LcCivVecSize,
+  LcCivGetAll,
+  LcCivLoad,
+  LcCivMatch,
+  LcCivMatchNone,
+  LcCivSplit,
+  LcCivCategory,
+  LcCivCategorySet,
+  LcCivIsPowerLevel,
+  LcCivDirIsUser,
+  LcCivPurchased,
+  LcCivDeferred,
+  LcCivName,
+  LcCivPoints,
+  LcCivMaxPoints,
+  LcCivFlags,
+  LcPlCivilization,
+  LcPlUpgradeOf,
+  LcPlLists,
+  LcPlHasPower,
+  LcPlTechTree,
+  LcTreeNodeIDs,
+  LcTreeGet,
+  LcNodeFlags,
+  LcMsgType,
+  LcMsgForSlot,
+  LcMsgOrigSlot,
+  LcMsgIsGame,
+  LcMsgExportSize,
+  LcMsgExport,
+  LcBytesDelete,
+  LcMsgCodecSlots,
+  LcMsgSelectIDs,
+  LcMsgBuildGame,
+  LcMsgBuildEngine,
+  LcMsgDereference,
+  LcNeInputs,
+  LcNeInputAt,
+  LcNeString,
+  LcNeRecord,
+  LcWideLength,
+  LcEmCodecSlots,
+  LcBytesNew,
+  LcMrRecord,
+  LcMrFastId,
+  LcMrHeaderSlots,
+  LcMrSetString,
+  LcMrStringText,
+  LcMrStringImport,
+  LcMrListAppend,
+  LcMrListAssign,
+  LcMrListClear,
+  LcMrListData,
+  LcMrListSize,
+};
+
+/// A sender's value for one member (EEMRecordValue, ee/EEMessage.h: its layout).
+struct EeGamecppMrValue {
+  int64_t integer;
+  float floats[3];
+  bool is_float;
+  const void *string;
+  const uint8_t *list;
+  size_t list_count;
+  size_t list_element;
 };
 
 extern "C" {
@@ -4556,6 +4644,9 @@ float ee_gamecpp_aefx_scale(void *effect);
 void ee_gamecpp_aefx_set_unit(void *effect, void *unit);
 
 /// Modify: a value of a kind by the effect's kind into `out`; false when it leaves it.
+///
+/// # Safety
+/// `out` is writable.
 bool ee_gamecpp_aefx_modify(void *effect, long kind, long value, long *out);
 
 /// Recount: the morale from buildings' buildings recounted when marked.
@@ -4595,6 +4686,9 @@ void ee_gamecpp_aelist_add(void *list,
 
 /// ApplyModifiers: each effect's Modify of the kind (the damage read anew each time: it may be the out value),
 /// showing each that applied on the unit.
+///
+/// # Safety
+/// `damage` is readable and `out` writable (they may be the same value).
 void ee_gamecpp_aelist_modifiers(void *list,
                                  long kind,
                                  const long *damage,
@@ -4621,6 +4715,102 @@ void ee_gamecpp_aelist_tick(void *list, void *unit, float elapsed);
 /// effects, the affecting effects ticked; then the capture's AEFX (TEST ONLY).
 void ee_gamecpp_aem_tick(void *manager,
                          float elapsed);
+
+/// CVAP's first half (EECivCaptureApplyBegin): the upgrade, the player and its fields, the category's unit types
+/// and their class upgrades; NULL when the capture is off.
+void *ee_gamecpp_civcap_apply_begin(uint32_t upgrade,
+                                    long player);
+
+/// CVAP's second half (EECivCaptureApplyEnd): the result, the player and its class upgrades again, and for a power
+/// level the media list's length, the powers, the tech tree and its nodes' flags; the record written.
+///
+/// # Safety
+/// `capture` is NULL or what [`ee_gamecpp_civcap_apply_begin`] answered, not yet ended.
+void ee_gamecpp_civcap_apply_end(void *capture,
+                                 bool result);
+
+/// CVLD: a civilization file loaded (its name, its directory unless the user's, the result, the civilization's
+/// name and upgrades).
+void ee_gamecpp_civcap_load(const void *name,
+                            const void *directory,
+                            long result,
+                            const void *civ_name,
+                            const void *list);
+
+/// CVAF: a civilization file applied to a player (the name, the player's fields, the result, and with a player its
+/// civilization and whether its upgrades were bought).
+void ee_gamecpp_civcap_apply_file(const void *name,
+                                  void *player,
+                                  long result);
+
+/// EEMessage::ExportMessage: the codec's bytes in a new[] block (the caller deletes it), and their size.
+///
+/// # Safety
+/// `out` and `out_size` are writable.
+void ee_gamecpp_msg_export(void *message,
+                           uint8_t **out,
+                           unsigned long *out_size);
+
+/// EEMessage::ExportSize: the class's fixed size, else the codec's size of the members.
+unsigned long ee_gamecpp_msg_export_size(void *message);
+
+/// EEMessage::ImportMessage: the codec's import into the members.
+///
+/// # Safety
+/// `data` holds the received message (NULL fails the check).
+void ee_gamecpp_msg_import(void *message, uint8_t *data);
+
+/// EEMRecord::Field.
+uint8_t *ee_gamecpp_mrecord_field(const void *message, uint32_t index, size_t size);
+
+/// EEMRecord(type, values): the record zeroed, then each value into its member in wire order (the string and the
+/// list beside the record; a blob or a raw member left to its sender).
+///
+/// # Safety
+/// `values` points at `count` values (their strings and lists alive for the call).
+void ee_gamecpp_mrecord_init(void *message,
+                             const EeGamecppMrValue *values,
+                             size_t count);
+
+/// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
+/// text, the list's records, the blob's bytes, the record's members).
+///
+/// # Safety
+/// `slots` has room for 32 (`MR_MAX_SLOTS`); `class` is writable.
+size_t ee_gamecpp_mrecord_slots(void *message,
+                                EeNetMsgSlot *slots,
+                                uint32_t *class_);
+
+/// EEMRecord::ImportMessage (and the factory's constructor, `fresh`: the record zeroed first): the codec, then the
+/// string's text and the list's or blob's bytes from where the codec found them.
+///
+/// # Safety
+/// `data` holds the received message (NULL fails the check).
+void ee_gamecpp_mrecord_import(void *message,
+                               uint8_t *data,
+                               bool fresh);
+
+/// GetSendToAllAndWaitMessageID: the type's wait member (false when it has none).
+///
+/// # Safety
+/// `out` is writable.
+bool ee_gamecpp_mrecord_wait_id(const void *message, unsigned long *out);
+
+/// SetSendToAllAndWaitMessageID: the type's wait member, if it has one.
+void ee_gamecpp_mrecord_set_wait_id(void *message, unsigned long id);
+
+/// IsResponse: the type's rule (the response's type, this message's and the response's members equal as int32).
+bool ee_gamecpp_mrecord_is_response(void *message,
+                                    void *other);
+
+/// NMIM (NMSW in the sweep): a game message the factory built from `data`.
+void ee_gamecpp_msgcap_import(void *message, const uint8_t *data);
+
+/// NMEX: a game message the physics executes (types 0x41..0xfd), then built again from its export (its NMIM).
+void ee_gamecpp_msgcap_executed(void *message);
+
+/// The sweep (EEMessageCaptureSweep): ee_sim's edge payloads, each item built.
+void ee_gamecpp_msgcap_sweep();
 
 }  // extern "C"
 

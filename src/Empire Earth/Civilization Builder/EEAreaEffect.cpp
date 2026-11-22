@@ -337,6 +337,7 @@ double EECore9OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 // ------------------------------------------------------------------------- round 10, lane C: Communications, the Civilization Builder's area effects and captures, Calamities, Map
 
 int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECivCapture.cpp
 double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define LCAE ((EEAreaEffect*)p)
@@ -416,7 +417,7 @@ int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::LcMemFilePosition: return LCMEM->GetPosition(*(long*)a[0]);
     case O::LcMemFileData: return P64(LCMEM->GetData());
-    default: return EECore10OpD(inOp, p, a, f);
+    default: return EECore10OpC2(inOp, p, a, f);
     }
     return 0;
 }
