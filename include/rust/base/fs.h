@@ -569,11 +569,11 @@ int32_t ee_fs_archive_write_tags(const EeFsArchive *archive, const EeFsFileOps *
 /// As `ee_fs_archive_write_header`.
 int32_t ee_fs_archive_read_tags(EeFsArchive *archive, const EeFsFileOps *ops);
 
-/// `SetTag` (always `kErrorOK` in C++).
+/// `SetTag`: always `kErrorOK`.
 ///
 /// # Safety
 /// `archive` is valid; `name` and `value` NUL-terminated.
-void ee_fs_archive_set_tag(EeFsArchive *archive, const char *name, const char *value);
+int32_t ee_fs_archive_set_tag(EeFsArchive *archive, const char *name, const char *value);
 
 /// `GetTag`: gives the value to `sink` and returns `kErrorOK`, or `kErrorNotFound`.
 ///
@@ -592,6 +592,17 @@ void ee_fs_archive_list(const EeFsArchive *archive,
                         const char *pattern,
                         EeFsTextSink sink,
                         void *context);
+
+/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
+/// [`ee_fs_archive_list`]; always `kErrorOK`.
+///
+/// # Safety
+/// As [`ee_fs_archive_list`]; `sink` takes a null text.
+int32_t ee_fs_archive_list_files(const EeFsArchive *archive,
+                                 const char *pattern,
+                                 bool clear,
+                                 EeFsTextSink sink,
+                                 void *context);
 
 /// Visits the FAT in order (the `Create` check loop, `ExtractAll`).
 ///

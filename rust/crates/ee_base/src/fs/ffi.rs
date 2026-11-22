@@ -581,14 +581,19 @@ pub unsafe extern "C" fn ee_fs_archive_read_tags(archive: *mut Archive, ops: *co
     archive.read_tags(ops)
 }
 
-/// `SetTag` (always `kErrorOK` in C++).
+/// `SetTag`: always `kErrorOK`.
 ///
 /// # Safety
 /// `archive` is valid; `name` and `value` NUL-terminated.
 #[no_mangle]
-pub unsafe extern "C" fn ee_fs_archive_set_tag(archive: *mut Archive, name: *const c_char, value: *const c_char) {
+pub unsafe extern "C" fn ee_fs_archive_set_tag(
+    archive: *mut Archive,
+    name: *const c_char,
+    value: *const c_char,
+) -> i32 {
     // SAFETY: the function's contract
     unsafe { (*archive).set_tag(c_bytes(name), c_bytes(value)) };
+    status::OK
 }
 
 /// Receives a NUL-terminated byte string, valid during the call. `context` is the caller's.
@@ -638,6 +643,28 @@ pub unsafe extern "C" fn ee_fs_archive_list(
     for name in unsafe { (*archive).list_matching(c_bytes(pattern)) } {
         give_text(sink, context, &name);
     }
+}
+
+/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
+/// [`ee_fs_archive_list`]; always `kErrorOK`.
+///
+/// # Safety
+/// As [`ee_fs_archive_list`]; `sink` takes a null text.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_archive_list_files(
+    archive: *const Archive,
+    pattern: *const c_char,
+    clear: bool,
+    sink: EeFsTextSink,
+    context: *mut c_void,
+) -> i32 {
+    if clear {
+        // SAFETY: the function's contract
+        unsafe { sink(context, std::ptr::null()) };
+    }
+    // SAFETY: the function's contract
+    unsafe { ee_fs_archive_list(archive, pattern, sink, context) };
+    status::OK
 }
 
 /// Visits a FAT entry; `name` is valid during the call.
