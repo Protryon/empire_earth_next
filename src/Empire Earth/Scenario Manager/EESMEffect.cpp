@@ -107,7 +107,6 @@ void EEChangeUnit(unsigned long, bool, EEUnit*, long, unsigned long, bool, long)
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EECalamityClass.h"
 
-extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 
@@ -943,7 +942,7 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_UPDATE_ACTIVE: gWorld.UpdateActiveUnits(); return 0;
     case EE_SCENARIO_WORLD_UNIT: return SMEUnitValue(a[0], a[1]);
     case EE_SCENARIO_WORLD_CURRENT_PLAYER: return gWorld.mCurrentPlayer;
-    case EE_SCENARIO_WORLD_IN_CINEMATIC: return gInCinematic;
+    case EE_SCENARIO_WORLD_IN_CINEMATIC: return gWorld.mInCinematic;   // (gInCinematic)
     case EE_SCENARIO_WORLD_PLAYER_OBSERVER: return SMEPlayer(a[0])->mObserverMode;
     case EE_SCENARIO_WORLD_PLAYER_IS_HUMAN: return SMEPlayer(a[0])->IsHuman();
     case EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER: return SMEComputer(a[0]) != NULL;

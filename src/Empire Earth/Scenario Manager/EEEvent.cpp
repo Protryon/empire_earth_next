@@ -21,6 +21,7 @@
 #include "ee/EETechRust.h"
 #include "rust/sim/scenario.h"
 #include "ee/EEScenarioHost.h"
+#include "ee/EEUnitUtilities.h"   // EEReplaceQueuedTechnology
 
 // The pathfinding functor of attribute 42 (its step: ee_sim scenario event.rs)
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
@@ -77,7 +78,6 @@ long EEEvent::Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inP
     return ee_scenario_ev_trigger(inEvent, inPlayerIndex, inID, inPlayer, inUnit);
 }
 
-void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology);  // 0x244deb (ee/EEUnitUtilities.h)
 
 namespace {
 

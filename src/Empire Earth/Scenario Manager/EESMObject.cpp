@@ -32,9 +32,6 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
-// 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
-// (inX, inY), the unit's nearest tile out (provisional name)
-float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
