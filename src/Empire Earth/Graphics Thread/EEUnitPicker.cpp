@@ -30,6 +30,7 @@
 #include "rust/base/math.h"   // ee_gfx pick.rs (RUST_PLAN R4.4)
 #include "rust/render/ge.h"
 #include "rust/render/gfx.h"
+#include "rust/game/gamecpp.h"
 #include "rust/base/math.h"
 #include "rust/render/ge.h"
 #include "rust/render/gfx.h"
@@ -86,30 +87,7 @@ void EEROWater::FrameDone()
 {
 }
 
-// Returns a unit's click priority: 1 land building or wall, 4 own or allied unit, 6 enemy unit or AA
-// building, 2 wood, 3 stone/gold/other resource, 5 any resource when preferring resources (provisional name)
-// GetUnitPickPriority's questions (pick.rs EeGfxPickQuestion), asked where the original asked them
-static bool EEPickAsk(void* inUnit, uint32_t inQuestion)
-{
-    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
-    if (inQuestion == 0)
-        return theUnit->mUnitClass->IsLandBuilding();
-    return gWorld.GetCurrentPlayer()->IsAlly(theUnit->GetPlayer());
-}
-
-long GetUnitPickPriority(EEUnit* inUnit, bool inPreferResources)
-{
-    EeGfxPickUnit theFacts;
-    theFacts.complex = inUnit->GetComplexUnit() != NULL;
-    theFacts.gaia = inUnit->mPlayer == gWorld.mPlayers[0];
-    theFacts.wall = inUnit->mUnitClass->mIsWall;
-    theFacts.hit_points = (int32_t)inUnit->mHitPoints;
-    theFacts.family = (uint32_t)inUnit->mUnitClass->mFamily;
-    theFacts.category = (uint32_t)inUnit->mUnitClass->mCategory;
-    theFacts.resource_type = (uint32_t)inUnit->mResourceType;
-    theFacts.resource_amount = (int32_t)inUnit->mResourceAmount;
-    return ee_gfx_pick_priority(&theFacts, inPreferResources, inUnit, EEPickAsk);
-}
+// (GetUnitPickPriority 0x118xxx: its only caller was the picker's walk; ee_gfx pick.rs priority answers it there)
 
 // Creates a unit picker with room for the given number of units and its lock
 EEUnitPicker::EEUnitPicker(unsigned long inCapacity)
@@ -131,42 +109,19 @@ EEUnitPicker::~EEUnitPicker()
     TSScheduler::DestroyCriticalSection(this->mLock);
 }
 
-// Returns whether the picker holds a unit
-bool EEUnitPicker::Contains(EEUnit* inUnit)
-{
-    bool theFound = false;
-    if (this->mCount > 0) {
-        for (long i = this->mCount - 1; i >= 0 && !theFound; i--)
-            theFound = this->mEntries[i].mUnitID == inUnit->GetUnitID();   // port: ids (R5a.3)
-    }
-    return theFound;
-}
+// The picker's bodies: gamecpp picker.rs (EEPickOps::Op's cases below)
+bool EEUnitPicker::Contains(EEUnit* inUnit) { return ee_gamecpp_picker_contains(this, inUnit); }
+EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, true); }
+// port (R5a.3): PickUnit with no reference taken (FillRenderLists, under the world's lock)
+EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, false); }
+void EEUnitPicker::Clear() { ee_gamecpp_picker_clear(this); }
+void EEUnitPicker::Reset() { ee_gamecpp_picker_reset(this); }
+void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize) { ee_gamecpp_picker_add_unit(this, inUnit, reinterpret_cast<const float*>(&inTransformation), inPixelSize); }
 
 // port (R5a.3): an entry's unit by its id; NULL once the unit has left the world (the original's reference kept it)
 EEUnit* EEUnitPicker::GetEntryUnit(unsigned long inIndex)
 {
     return static_cast<EEUnit*>(gWorld.GetUnit(this->mEntries[inIndex].mUnitID));
-}
-
-// Returns the unit under a screen point (its carrier for a part), referenced: polygon hits beat
-// bounding hits, then the nearest, with click priority deciding near ties; or null
-EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
-{
-    this->mLock->Enter();
-    EEUnit* theResult = this->FindUnit(inPoint, inPreferResources);
-    if (theResult != NULL)
-        theResult->Reference();
-    this->mLock->Leave();
-    return theResult;
-}
-
-// port (R5a.3): PickUnit with no reference taken (FillRenderLists, under the world's lock)
-EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources)
-{
-    this->mLock->Enter();
-    EEUnit* theResult = this->FindUnit(inPoint, inPreferResources);
-    this->mLock->Leave();
-    return theResult;
 }
 
 // The picker's walks (ee_gfx pick_walk.rs: FindUnit, the box selection and its frustum test over the entries in
@@ -175,60 +130,15 @@ const EeGePhysicalModels* GEPhysicalModelTable();
 static_assert(sizeof(EEUnitPickerEntry) == sizeof(EeGfxPickEntry) && offsetof(EEUnitPickerEntry, mUnitID) == offsetof(EeGfxPickEntry, unit_id),
               "EEUnitPickerEntry");
 struct EEPickOps {
-    static EEUnitPicker* P(void* inPicker) { return static_cast<EEUnitPicker*>(inPicker); }
-    static void* Unit(void* inPicker, uint32_t inIndex) { return P(inPicker)->GetEntryUnit(inIndex); }
-    static EeGfxPickFindUnit FindFacts(void*, void* inUnit)
-    {
-        EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
-        EeGfxPickFindUnit theFacts;
-        theFacts.facts.complex = theUnit->GetComplexUnit() != NULL;
-        theFacts.facts.gaia = theUnit->mPlayer == gWorld.mPlayers[0];
-        theFacts.facts.wall = theUnit->mUnitClass->mIsWall;
-        theFacts.facts.hit_points = (int32_t)theUnit->mHitPoints;
-        theFacts.facts.family = (uint32_t)theUnit->mUnitClass->mFamily;
-        theFacts.facts.category = (uint32_t)theUnit->mUnitClass->mCategory;
-        theFacts.facts.resource_type = (uint32_t)theUnit->mResourceType;
-        theFacts.facts.resource_amount = (int32_t)theUnit->mResourceAmount;
-        theFacts.tile_x = (int32_t)theUnit->GetTileX();
-        return theFacts;
-    }
-    static bool Ask(void*, void* inUnit, uint32_t inQuestion) { return EEPickAsk(inUnit, inQuestion); }
-    static bool GroupNonEmpty(void*) { return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() != 0; }
-    static float PixelSize(void* inPicker, uint32_t inIndex)
-    {
-        return gRasterizer->GetPixelSize(P(inPicker)->mEntries[inIndex], P(inPicker)->mViewport, P(inPicker)->mOrthographic);
-    }
-    // a part's outermost carrier
-    static EEUnit* Outer(EEUnit* inUnit)
-    {
-        EEComplexUnit* theCarrier = inUnit->GetComplexUnit();
-        if (theCarrier == NULL)
-            return inUnit;
-        while (theCarrier->mPreviousPart != NULL)
-            theCarrier = theCarrier->mPreviousPart;
-        return theCarrier;
-    }
-    static void* Carrier(void*, void* inUnit) { return Outer(static_cast<EEUnit*>(inUnit)); }
-    static EeGfxPickBoxUnit BoxFacts(void*, void* inUnit)
-    {
-        EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
-        EEUnitClass* theClass = theUnit->mUnitClass;
-        EEUnit* theOuter = Outer(theUnit);
-        return EeGfxPickBoxUnit{theUnit->GetComplexUnit() != NULL, theClass->IsPickable(), theUnit->mHitPoints > 0,
-                                (uint32_t)theClass->mCategory, (uint32_t)theClass->mUnitType, theUnit->mPlayer,
-                                (uint32_t)theOuter->mUnitID, theOuter->mUnitClass->IsLandBuilding()};
-    }
-    static void Push(void*, void* outIDs, uint32_t inID) { static_cast<std::vector<unsigned long>*>(outIDs)->push_back(inID); }
+    static int64_t Op(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+    static double OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 };
-static const EeGfxPickHost kPickHost = {NULL, EEPickOps::Unit, EEPickOps::FindFacts, EEPickOps::Ask,
-                                        EEPickOps::GroupNonEmpty, EEPickOps::PixelSize, EEPickOps::Carrier,
-                                        EEPickOps::BoxFacts, EEPickOps::Push};
 
 // PickUnit's search, under mLock (port: split from PickUnit, R5a.3; ee_gfx pick_walk.rs)
 EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
 {
-    EeGfxPickHost theHost = kPickHost;
-    theHost.context = this;
+    EeGfxPickHost theHost;
+    ee_gamecpp_picker_host(this, &theHost);
     EeGfxPickView theView = {*reinterpret_cast<const EeGeViewport*>(&this->mViewport), this->mOrthographic,
                              this->mShowHiddenUnits != 0, gFreeCamera, (uint32_t)gGameWindowWidth};
     return static_cast<EEUnit*>(ee_gfx_pick_find_unit(&theHost, GEPhysicalModelTable(),
@@ -243,8 +153,8 @@ void EEUnitPicker::PickBox(const GERectangle& inRectangle, bool inAll, EEPlayer*
                            std::vector<unsigned long>& outUnitIDs)
 {
     std::vector<GE3DPlane> thePlanes;
-    EeGfxPickHost theHost = kPickHost;
-    theHost.context = this;
+    EeGfxPickHost theHost;
+    ee_gamecpp_picker_host(this, &theHost);
     this->mLock->Enter();
     outUnitIDs.clear();
     if (this->mCount > 0)
@@ -271,74 +181,84 @@ void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer,
     this->PickBox(inRectangle, false, inPlayer, inType, outUnitIDs);
 }
 
-// Empties the picker (port, R5a.3: ids, nothing to release; the original dereferenced every
-// unit and carrier here)
-void EEUnitPicker::Clear()
-{
-    for (unsigned long i = 0; i < this->mCount; i++)
-        this->mEntries[i].SetModel(NULL);
-    this->mCount = 0;
-}
-
-// Empties the picker and takes the frame's viewport, projection and see-through mode
-void EEUnitPicker::Reset()
-{
-    this->Clear();
-    this->mViewport = gU4E8F08;
-    this->mOrthographic = gOrthographicView;
-    this->mShowHiddenUnits = gHiddenUnitsMode;
-}
-
 // (ReferenceCarriers 0x519faa: gone with the references, R5a.3)
 
-// Adds a unit at a transformation when there is room and it is big enough on screen (no path points;
-// no ambient units or projectiles but ICBMs unless the camera is free)
-void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize)
+// (GetFogFactor: gamecpp picker.rs fog_factor, the raster table's fog_factor)
+
+// ------------------------------------------------------------------------- round 9, lane A: the picker's C++
+
+int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EEPickerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f) { return EEPickOps::Op(inOp, p, a, f); }
+double EEPickerOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f) { return EEPickOps::OpF(inOp, p, a, f); }
+
+#define PK_P64(x) ((int64_t)(intptr_t)(x))
+#define PK ((EEUnitPicker*)p)
+#define PK_UN ((EEUnit*)p)
+#define PK_ENTRY ((EEUnitPickerEntry*)p)
+
+// the C++ calls and members of the picker's bodies in Rust (gamecpp picker.rs): one statement each
+int64_t EEPickOps::Op(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    EEComplexUnit* theComplexUnit = inUnit->GetComplexUnit();
-    EEUnitPickerEntry& theEntry = this->mEntries[this->mCount];
-    EeGfxPickAdd theAdd;
-    theAdd.count = (uint32_t)this->mCount;
-    theAdd.capacity = (uint32_t)this->mCapacity;
-    theAdd.pixel_size = inPixelSize;
-    theAdd.unit_type = (uint32_t)theClass->mUnitType;
-    theAdd.category = (uint32_t)theClass->mCategory;
-    theAdd.projectile = theClass->mIsProjectile;
-    theAdd.free_camera = gFreeCamera;
-    if (!ee_gfx_pick_admits(&theAdd))
-        return;
-    theEntry.mUnitID = inUnit->GetUnitID();   // port: the id, no reference (R5a.3)
-    if (theComplexUnit != NULL) {
-        (GEPhysicalModel&)theEntry = theComplexUnit->mPhysicalModel;
-        theEntry.SetLocation(inTransformation);
-    } else {
-        EEUnitClassUpgrade* theStats = inUnit->mStats;
-        theEntry.SetFrame(0);
-        theEntry.SetModel(inUnit->GetModel()->mModels[0]);
-        float theScale = theStats->mScale;
-        theEntry.SetLocation(inTransformation);
-        theEntry.SetScale(theScale);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PkCount: return PK_P64(&PK->mCount);
+    case O::PkCapacity: return PK->mCapacity;
+    case O::PkEntry: return PK_P64(&PK->mEntries[a[0]]);
+    case O::PkEntryId: return PK->mEntries[a[0]].mUnitID;
+    case O::PkEntryUnit: return PK_P64(PK->GetEntryUnit((unsigned long)a[0]));
+    case O::PkEntryReleaseModel: PK->mEntries[a[0]].SetModel(NULL);
+        break;
+    case O::PkTakeView: PK->mViewport = gU4E8F08, PK->mOrthographic = gOrthographicView, PK->mShowHiddenUnits = gHiddenUnitsMode;
+        break;
+    case O::PkLock: PK->mLock->Enter();
+        break;
+    case O::PkUnlock: PK->mLock->Leave();
+        break;
+    case O::PkFindUnit: return PK_P64(PK->FindUnit(*(const GE2DPoint*)a[0], (long)a[1]));
+    case O::PkEntrySetId: PK_ENTRY->mUnitID = (unsigned long)a[0];
+        break;
+    case O::PkEntryAssignPhysical: (GEPhysicalModel&)*PK_ENTRY = ((EEComplexUnit*)a[0])->mPhysicalModel;
+        break;
+    case O::PkEntrySetLocation: PK_ENTRY->SetLocation(*(const GETransformation*)a[0]);
+        break;
+    case O::PkEntrySetFrame0: PK_ENTRY->SetFrame(0);
+        break;
+    case O::PkEntrySetModel: PK_ENTRY->SetModel((GEModel*)a[0]);
+        break;
+    case O::PkEntrySetScale: PK_ENTRY->SetScale(f[0]);
+        break;
+    case O::PkUnitReference: PK_UN->Reference();
+        break;
+    case O::PkClassIsWall: return PK_UN->mUnitClass->mIsWall;
+    case O::PkClassFamily: return PK_UN->mUnitClass->mFamily;
+    case O::PkClassCategory: return PK_UN->mUnitClass->mCategory;
+    case O::PkClassUnitType: return PK_UN->mUnitClass->mUnitType;
+    case O::PkClassPickable: return PK_UN->mUnitClass->IsPickable();
+    case O::PkClassProjectile: return PK_UN->mUnitClass->mIsProjectile;
+    case O::PkUnitResourceType: return PK_UN->mResourceType;
+    case O::PkUnitTileX: return PK_UN->GetTileX();
+    case O::PkUnitIdField: return PK_UN->mUnitID;
+    case O::PkCurrentPlayerAllied: return gWorld.GetCurrentPlayer()->IsAlly(PK_UN->GetPlayer());
+    case O::PkGroupNonEmpty: return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() != 0;
+    case O::PkPushId: ((std::vector<unsigned long>*)p)->push_back((unsigned long)a[0]);
+        break;
+    case O::PkFogAttributes: gRasterizer->GetFogAttributes(*(GERFogAttributes*)a[0], gScreenIndex);
+        break;
+    case O::PkRastFogOff: gRasterizer->SetFog(0, gScreenIndex);
+        break;
+    case O::PkMainCameraInverse: return PK_P64(&gU4E8F08.GetCameraInverse());
+    default: return EECore9OpB(inOp, p, a, f);
     }
-    this->mCount++;
+    return 0;
 }
 
-// Computes the fog visibility of a point into outValue (linear fog only, which it also turns off; else 1)
-void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue)
+double EEPickOps::OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    GERFogAttributes theAttributes;
-    unsigned long theScreen = gScreenIndex;
-    if (inFog == 1) {
-        gRasterizer->GetFogAttributes(theAttributes, theScreen);
-        gRasterizer->SetFog(0, theScreen);
-        float theDistance = inLocation.GetY() * gU4E8F08.GetCameraInverse().GetElement(1, 1) + inLocation.GetZ() * gU4E8F08.GetCameraInverse().GetElement(1, 2) +
-                            inLocation.GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0) + gU4E8F08.GetCameraInverse().GetElement(1, 3);
-        if (theDistance <= theAttributes.start)
-            outValue = 1.0f;
-        else if (theDistance <= theAttributes.end)
-            outValue = 1.0f - (theDistance - theAttributes.start) * theAttributes.scale;
-        else
-            outValue = 0.0f;
-    } else
-        outValue = 1.0f;
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PkPixelSize: return gRasterizer->GetPixelSize(PK->mEntries[a[0]], PK->mViewport, PK->mOrthographic);
+    case O::PkStatsScale: return PK_UN->mStats->mScale;
+    default: return EECore9OpBF(inOp, p, a, f);
+    }
 }
