@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/lle_enums.h"
 
 /// A message manager's calls out (`msgmgr::Host`); a, b, c, d as each op says, the answer as isize.
 enum class EeNetMmOp : uint32_t {
@@ -1177,15 +1176,16 @@ int32_t ee_net_sv_send_to_all_and_wait(const EeNetServer *s,
 bool ee_net_sv_tune_server(const EeNetServer *s);
 
 /// XferFileToClient: `spec` an FSFileSpec*, copied by the message manager; kErrorOK with the transfer's id in `id`, or
-/// kErrorNotFound (no free transfer: `id` untouched)
+/// kErrorNotFound (no free transfer: `id` untouched); a long, so that rust/net/net.h needs no rust/base/lle_enums.h
+/// (the NE drivers' original-side headers define the codes themselves)
 ///
 /// # Safety
 /// `id` points at an unsigned long.
-ESError ee_net_sv_xfer_file_to_client(const EeNetServer *s,
-                                      void *spec,
-                                      uint32_t user_data,
-                                      uint8_t slot,
-                                      unsigned long *id);
+long ee_net_sv_xfer_file_to_client(const EeNetServer *s,
+                                   void *spec,
+                                   uint32_t user_data,
+                                   uint8_t slot,
+                                   unsigned long *id);
 
 /// The checksums' state (the tests): writes at most `size` bytes of `Server::checks_state` (NUL-terminated) and
 /// answers its length.
