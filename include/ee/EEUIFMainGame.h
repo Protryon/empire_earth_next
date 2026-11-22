@@ -39,29 +39,37 @@ class EETile;
 // picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
 struct EEUIFMGFormCall {
     EEUIFMainGame* mForm;                   // first: main_form_ffi.rs reads it (the toolkit's direct path)
-    EEUnit* mPicked;
+    EEUnit* mPicked = NULL;
     UWideString mText;
-    const GEColor* mColor;
+    const GEColor* mColor = NULL;
     UWideString mName;
     UWideString mChat;
-    unsigned long mFlags;
-    const EESMDialogMessage* mMessage;
-    EETechTreeNode* mNode;                  // the start modes' tech tree node, unit, caster, calamity
-    EEUnit* mUnit;
-    EEUnit* mCaster;
-    EECalamityClass* mCalamity;
-    EEMedia* mOldMedia;                     // UpdateBackgroundMedia's old and new media
-    EEMedia* mMedia;
-    EEComplexUnit* mFirst;                  // the mouse modes' first selected unit and pointed tile
-    EETile* mTile;
-    EEUIBuildWall* mWall;                   // the placement whose Update runs (the game form's or the editor's)
-    EEUIBuildGate* mGate;
-    EEUIFMGStatusButton* mButton;           // a command button's press, CopyData or help string (its result)
-    UWideString* mOut;
-    explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
-        : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL), mNode(NULL), mUnit(NULL),
-          mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL), mFirst(NULL), mTile(NULL),
-          mWall(NULL), mGate(NULL), mButton(NULL), mOut(NULL) {}
+    unsigned long mFlags = 0;
+    const EESMDialogMessage* mMessage = NULL;
+    EETechTreeNode* mNode = NULL;           // the start modes' tech tree node, unit, caster, calamity
+    EEUnit* mUnit = NULL;
+    EEUnit* mCaster = NULL;
+    EECalamityClass* mCalamity = NULL;
+    EEMedia* mOldMedia = NULL;              // UpdateBackgroundMedia's old and new media
+    EEMedia* mMedia = NULL;
+    EEComplexUnit* mFirst = NULL;           // the mouse modes' first selected unit and pointed tile
+    EETile* mTile = NULL;
+    EEUIBuildWall* mWall = NULL;            // the placement whose Update runs (the game form's or the editor's)
+    EEUIBuildGate* mGate = NULL;
+    EEUIFMGStatusButton* mButton = NULL;    // a command button's press, CopyData or help string (its result)
+    UWideString* mOut = NULL;
+    explicit EEUIFMGFormCall(EEUIFMainGame* inForm) : mForm(inForm) {}
+    // a chat line's (DisplayChatLine), an information message's, a placement's Update, a command button's member
+    EEUIFMGFormCall(EEUIFMainGame* inForm, const GEColor& inColor, const UWideString& inName, const UWideString& inChat,
+                    unsigned long inFlags)
+        : mForm(inForm), mColor(&inColor), mName(inName), mChat(inChat), mFlags(inFlags) {}
+    EEUIFMGFormCall(EEUIFMainGame* inForm, const EESMDialogMessage* inMessage) : mForm(inForm), mMessage(inMessage) {}
+    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIBuildWall* inWall) : mForm(inForm), mWall(inWall) {}
+    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIBuildGate* inGate) : mForm(inForm), mGate(inGate) {}
+    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIFMGStatusButton* inButton, UWideString* inOut)
+        : mForm(inForm), mButton(inButton), mOut(inOut) {}
+    // the record of a call (a temporary's, for the full expression)
+    EEUIFMGFormCall* Ptr() { return this; }
 };
 
 
@@ -89,7 +97,9 @@ public:
     // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
     // background media
     virtual void Close() { this->Rust(EE_SCREENS_MF_DO_CLOSE); }                   // +0x38 0x264cf1
-    virtual long CopyData();                // +0x3c 0x264dc4
+    // Snapshots the form for drawing: selection state, error log, status refresh each poll, the panel group, edge
+    // scrolling and the gate or wall preview of the current mode (ee_screens main_form.rs; +0x3c 0x264dc4)
+    virtual long CopyData() { return (long)ee_screens_main_form_copy_data(EEUIFMGFormCall(this).Ptr()); }
     // Draws the form's fixed background panels (the unit panels only with a selection)
     virtual long DrawPolygons() { return (long)this->Rust(EE_SCREENS_MF_DO_DRAW); }            // +0x40 0x26550c
     // Stores an error log line for the next snapshot
@@ -112,22 +122,23 @@ public:
     }
 
     // 0x2668ee (EEMLoadMainScreen passes 0x11, EEMSavedGroupSelect 0)
-    void SetUIState(long inUIState)
-    {
-        EEUIFMGFormCall theCall(this);
-        ee_screens_main_form_ui_state(&theCall, inUIState);
-    }
+    void SetUIState(long inUIState) { ee_screens_main_form_ui_state(EEUIFMGFormCall(this).Ptr(), inUIState); }
     // (0x264b1f / 0x264b35, BuildGate / BuildWall over the build action +0x514: EEUIBuildGate/EEUIBuildWall::Build
     // call mBuild's own, ee/EEARust.h)
 
     // the rest in address order (provisional names)
-    void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                         unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
+    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine): shows a chat message in the next free chat line (scrolling the
+    // lines up when full), wrapping the rest of a long message onto further lines (ee_screens main_form.rs)
+    void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText, unsigned long inFlags)
+    {
+        ee_screens_main_form_chat_line(EEUIFMGFormCall(this, inColor, inName, inText, inFlags).Ptr());
+    }
     // Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
     void CreateGroup(unsigned long inIndex) { ee_screens_mfb_create_group((uintptr_t)this, (uint32_t)inIndex); }
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                      unsigned long inFlags, unsigned long inArg5);
-    void SetEntityGroup(long inGroup);
+    // Switches the bottom panel to another entity group and selects its panel group (ee_screens main_form.rs)
+    void SetEntityGroup(long inGroup) { ee_screens_main_form_entity_group(EEUIFMGFormCall(this).Ptr(), inGroup); }
     // Tells whether a screen point is in the game view and not under the unit information panel
     bool IsInGameView(const GE2DPoint& inLocation)
     {
@@ -137,13 +148,18 @@ public:
     {
         ee_screens_mff_set_error((uintptr_t)this, (uint32_t)inIndex, (uintptr_t)&inText);   // (hud_more.rs)
     }
-    void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
+    // 0x26533e (the scrolling text 0xd3, portrait 0xdf): shows an information message: scrolling text, the speaker's
+    // portrait and its sound; hides the messages without a text control (ee_screens main_form.rs)
+    void ShowInformation(EEUIFMGInformation* inInformation)
+    {
+        ee_screens_main_form_show_information(
+            EEUIFMGFormCall(this, reinterpret_cast<const EESMDialogMessage*>(inInformation)).Ptr());
+    }
     // 0x266384: starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
     // the chat log (ee_screens main_form.rs, as the other start modes)
     void BuildUnit(unsigned long inUnitID, long inTechnology)
     {
-        EEUIFMGFormCall theCall(this);
-        ee_screens_main_form_build_unit(&theCall, (int64_t)inUnitID, inTechnology);
+        ee_screens_main_form_build_unit(EEUIFMGFormCall(this).Ptr(), (int64_t)inUnitID, inTechnology);
     }
     // the start modes (ee_screens main_form.rs): 0x2664b4 a gate for a tech (state 0xb), 0x266594 a wall (state 6),
     // 0x26662d a calamity cast with the first selected unit (state 5; at once for a self-targeted one), 0x26679a the
@@ -155,10 +171,9 @@ public:
     void StartPatrol() { this->StartMode(4, 0); }
     void StartMode(uint32_t inMode, long inTechnology)
     {
-        EEUIFMGFormCall theCall(this);
-        ee_screens_main_form_start(&theCall, inMode, inTechnology);
+        ee_screens_main_form_start(EEUIFMGFormCall(this).Ptr(), inMode, inTechnology);
     }
-    void UpdateCursorKind();                // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
+    void UpdateCursorKind() { ee_screens_update_cursor_kind(this); }   // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
     // the members that are Rust's whole (EE_SCREENS_MF_DO_*, with their argument: the original's
@@ -167,16 +182,12 @@ public:
     // RefreshSavedGroups 0x26716e, UpdateIconBar 0x2671b0, and the overrides above)
     int64_t Rust(uint32_t inWhich, int64_t inA = 0)
     {
-        EEUIFMGFormCall theCall(this);
-        return ee_screens_main_form_member(&theCall, inWhich, inA);
+        return ee_screens_main_form_member(EEUIFMGFormCall(this).Ptr(), inWhich, inA);
     }
     // a command button's member in Rust (EE_SCREENS_SB_DO_*; ee_screens status_button.rs over the form's host)
     int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL)
     {
-        EEUIFMGFormCall theCall(this);
-        theCall.mButton = inButton;
-        theCall.mOut = outString;
-        return ee_screens_status_button_member(&theCall, inWhich);
+        return ee_screens_status_button_member(EEUIFMGFormCall(this, inButton, outString).Ptr(), inWhich);
     }
     void ShowAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS); }   // 0x26568e (EERenderObject's)
     void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }

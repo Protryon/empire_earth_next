@@ -15931,6 +15931,13 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
 /// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
 int32_t ee_screens_cursor_kind(void *ctx);
 
+/// `EEUIFMainGame::UpdateCursorKind` (0x266f8b): picks the mouse cursor for the unit under it from what the local
+/// player's selection can do to it (`cursor_kind` over one read state of `form`).
+///
+/// # Safety
+/// `form` is the live main game form; the world has its local player.
+void ee_screens_update_cursor_kind(void *form);
+
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);
 
