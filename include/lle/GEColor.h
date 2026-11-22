@@ -31,8 +31,8 @@ public:
         this->mBlue = this->mBlue > 1.0f ? 1.0f : (this->mBlue < 0.0f ? 0.0f : this->mBlue);
     }
     // red, green and blue from (to) the file (open or not); the first error
-    template <class F> long Load(F& inFile) { const float* f[] = {&mRed, &mGreen, &mBlue}; return GERustFields(inFile, f, 3, false, false); }
-    template <class F> long Save(F& inFile) { const float* f[] = {&mRed, &mGreen, &mBlue}; return GERustFields(inFile, f, 3, false, true); }
+    template <class F> long Load(F& inFile) { return ee_ge_color_load(reinterpret_cast<float(*)[3]>(&mRed), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) { return ee_ge_color_save(reinterpret_cast<const float(*)[3]>(&mRed), GERustFile(inFile)); }
 
     float mRed;                             // +0x00
     float mGreen;                           // +0x04

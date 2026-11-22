@@ -181,10 +181,8 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
     bool And(const GERectangle& inRectangle, GERectangle& outRectangle) const
         { return ee_ge_rect_and(GERust(*this), GERust(inRectangle), GERust(outRectangle)); }
     // left, top, right and bottom from (to) an open file; kErrorNotOpen when it is not open, else the first error
-    template <class F> long Load(F& inFile)
-        { const float* f[] = {&mLeft, &mTop, &mRight, &mBottom}; return GERustFields(inFile, f, 4, true, false); }
-    template <class F> long Save(F& inFile) const
-        { const float* f[] = {&mLeft, &mTop, &mRight, &mBottom}; return GERustFields(inFile, f, 4, true, true); }
+    template <class F> long Load(F& inFile) { return ee_ge_rect_load(GERust(*this), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) const { return ee_ge_rect_save(GERust(*this), GERustFile(inFile)); }
 
     float mBottom;                          // +0x00
     float mLeft;                            // +0x04

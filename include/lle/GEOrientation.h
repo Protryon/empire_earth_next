@@ -20,11 +20,9 @@ public:
     float GetPitch() const { return this->mPitch; }
     float GetRoll() const { return this->mRoll; }
     // yaw, pitch and roll from (to) an open file; kErrorNotOpen when it is not open
-    template <class F> long Load(F& inFile)
-        { const float* f[] = {&mYaw, &mPitch, &mRoll}; return GERustFields(inFile, f, 3, true, false); }
+    template <class F> long Load(F& inFile) { return ee_ge_orientation_load(GERust(*this), GERustFile(inFile)); }
     void Normalize() { ee_ge_orientation_normalize(GERust(*this)); }   // each angle into -pi..pi
-    template <class F> long Save(F& inFile)
-        { const float* f[] = {&mYaw, &mPitch, &mRoll}; return GERustFields(inFile, f, 3, true, true); }
+    template <class F> long Save(F& inFile) { return ee_ge_orientation_save(GERust(*this), GERustFile(inFile)); }
     void SetPitch(float inPitch) { this->mPitch = inPitch; }
     void SetRoll(float inRoll) { this->mRoll = inRoll; }
     void SetYaw(float inYaw) { this->mYaw = inYaw; }

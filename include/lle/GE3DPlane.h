@@ -25,16 +25,8 @@ public:
     // uninitialized parameter, Rust takes 0)
     bool Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
         { return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine)); }
-    template <class F> long Load(F& inFile)
-    {
-        long theResult = this->mPoint.Load(inFile);
-        return theResult == 0 ? this->mNormal.Load(inFile) : theResult;
-    }
-    template <class F> long Save(F& inFile)
-    {
-        long theResult = this->mPoint.Save(inFile);
-        return theResult == 0 ? this->mNormal.Save(inFile) : theResult;
-    }
+    template <class F> long Load(F& inFile) { return ee_ge_3d_plane_load(GERust(*this), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) { return ee_ge_3d_plane_save(GERust(*this), GERustFile(inFile)); }
 private:
     friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     GE3DPoint mPoint;                       // +0x00

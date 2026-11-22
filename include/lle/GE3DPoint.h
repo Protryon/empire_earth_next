@@ -57,10 +57,9 @@ public:
     static void Push(void* inPoints, const EeGe3DPoint* inPoint)
         { static_cast<std::vector<GE3DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint)); }
     // x, y and z from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
-    template <class F> long Load(F& inFile) { const float* f[] = {&mX, &mY, &mZ}; return GERustFields(inFile, f, 3, true, false); }
+    template <class F> long Load(F& inFile) { return ee_ge_3d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Load(unsigned long, unsigned long, F& inFile) { return this->Load(inFile); }
-    template <class F> long Save(F& inFile) const
-        { const float* f[] = {&mX, &mY, &mZ}; return GERustFields(inFile, f, 3, true, true); }
+    template <class F> long Save(F& inFile) const { return ee_ge_3d_point_save(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(unsigned long, unsigned long, F& inFile) const { return this->Save(inFile); }
     void SetX(float inX) { this->mX = inX; }
     void SetY(float inY) { this->mY = inY; }

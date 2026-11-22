@@ -60,9 +60,8 @@ public:
     void SetX(float inX) { this->mX = inX; }  // inline (exported 0x54ae4 / 0xc56c / 0xc576)
     void SetY(float inY) { this->mY = inY; }
     void SetZ(float inZ) { this->mZ = inZ; }
-    template <class F> long Load(F& inFile) { const float* f[] = {&mX, &mY, &mZ}; return GERustFields(inFile, f, 3, true, false); }
-    template <class F> long Save(F& inFile) const
-        { const float* f[] = {&mX, &mY, &mZ}; return GERustFields(inFile, f, 3, true, true); }
+    template <class F> long Load(F& inFile) { return ee_ge_vector_load(GERust(*this), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) const { return ee_ge_vector_save(GERust(*this), GERustFile(inFile)); }
 
     float mX;                               // +0x00
     float mY;                               // +0x04

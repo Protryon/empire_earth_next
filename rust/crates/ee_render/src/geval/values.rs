@@ -5,11 +5,14 @@
 //! The simulation copies transformations everywhere: the copies are the sixteen floats as they are (bit for bit,
 //! a NaN's payload and -0 kept), the comparisons IEEE's (a NaN never equals).
 
-use std::ffi::c_long;
+use std::ffi::{c_long, c_void};
 
-use crate::geval::io::{CppIo, EeGeFieldIo, FieldIo, OK};
+use crate::geval::io::{cpp_file_io, CppIo, EeGeFieldIo, FieldIo, OK};
 use crate::geval::viewport::GeViewport;
-use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_base::fs::CppFile;
+use ee_base::math::types::{
+    Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeOrientation, GeRectangle, GeTransformation, GeVector,
+};
 
 /// `GETransformation()` and `MakeIdentity()`: the identity.
 ///
@@ -83,8 +86,7 @@ pub unsafe extern "C" fn ee_ge_t_zero_orientation(t: *const GeTransformation, ou
 ///
 /// # Safety
 /// `t` is valid; `io` is a live field stream.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_t_io(t: *mut GeTransformation, io: *const EeGeFieldIo, write: bool) -> c_long {
+pub(crate) unsafe fn t_io(t: *mut GeTransformation, io: &EeGeFieldIo, write: bool) -> c_long {
     // SAFETY: the function's contract
     let (t, mut io) = unsafe { (&mut *t, CppIo(*io)) };
     let mut result = OK;
@@ -99,6 +101,26 @@ pub unsafe extern "C" fn ee_ge_t_io(t: *mut GeTransformation, io: *const EeGeFie
     result
 }
 
+/// `GETransformation::Load(FSFile&)` over a C++ file ([`t_io`]).
+///
+/// # Safety
+/// `t` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_t_load(t: *mut GeTransformation, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { t_io(t, &cpp_file_io(file), false) }
+}
+
+/// `GETransformation::Save(FSFile&)` over a C++ file ([`t_io`]).
+///
+/// # Safety
+/// As [`ee_ge_t_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_t_save(t: *const GeTransformation, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract (a save only reads the elements)
+    unsafe { t_io(t.cast_mut(), &cpp_file_io(file), true) }
+}
+
 /// `kErrorNotOpen`.
 const NOT_OPEN: c_long = 4;
 
@@ -109,21 +131,12 @@ const NOT_OPEN: c_long = 4;
 /// returned as is) and set back after a failed field.
 ///
 /// # Safety
-/// `fields` holds `count` valid float pointers; `io` is a live field stream.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_fields_io(
-    fields: *const *mut f32,
-    count: u32,
-    io: *const EeGeFieldIo,
-    open: i32,
-    write: bool,
-    restore: bool,
-) -> c_long {
+/// `fields` are valid float pointers; `io` is a live field stream.
+pub(crate) unsafe fn fields_io(fields: &[*mut f32], io: &EeGeFieldIo, open: i32, write: bool, restore: bool) -> c_long {
     if open == 0 {
         return NOT_OPEN;
     }
-    // SAFETY: the function's contract
-    let (fields, mut io) = unsafe { (std::slice::from_raw_parts(fields, count as usize), CppIo(*io)) };
+    let mut io = CppIo(*io);
     let mut position: c_long = 0;
     if restore {
         let result = io.get_position(&mut position);
@@ -149,6 +162,232 @@ pub unsafe extern "C" fn ee_ge_fields_io(
         io.set_position(position);
     }
     result
+}
+
+/// [`fields_io`] over a C++ `FSFile*`, asking `GetIsOpen()` first when `ask_open`, with no position to restore.
+///
+/// # Safety
+/// `fields` are valid float pointers; `file` is a live C++ `FSFile*`.
+unsafe fn file_fields_io(fields: &[*mut f32], file: *mut c_void, ask_open: bool, write: bool) -> c_long {
+    let open = if ask_open { i32::from(CppFile(file).is_open()) } else { -1 };
+    // SAFETY: the function's contract
+    unsafe { fields_io(fields, &cpp_file_io(file), open, write, false) }
+}
+
+/// `GE2DPoint::Load(F&)`: x, y; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_2d_point_load(value: *mut Ge2DPoint, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { file_fields_io(&[&raw mut (*value).x, &raw mut (*value).y], file, true, false) }
+}
+
+/// `GE2DPoint::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_2d_point_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_2d_point_save(value: *const Ge2DPoint, file: *mut c_void) -> c_long {
+    let value = value.cast_mut();
+    // SAFETY: the function's contract (a save only reads the fields)
+    unsafe { file_fields_io(&[&raw mut (*value).x, &raw mut (*value).y], file, true, true) }
+}
+
+/// `GE3DPoint::Load(F&)`: x, y, z; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_3d_point_load(value: *mut Ge3DPoint, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { file_fields_io(&[&raw mut (*value).x, &raw mut (*value).y, &raw mut (*value).z], file, true, false) }
+}
+
+/// `GE3DPoint::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_3d_point_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_3d_point_save(value: *const Ge3DPoint, file: *mut c_void) -> c_long {
+    let value = value.cast_mut();
+    // SAFETY: the function's contract (a save only reads the fields)
+    unsafe { file_fields_io(&[&raw mut (*value).x, &raw mut (*value).y, &raw mut (*value).z], file, true, true) }
+}
+
+/// `GEVector::Load(F&)`: x, y, z; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_vector_load(value: *mut GeVector, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { file_fields_io(&[&raw mut (*value).x, &raw mut (*value).y, &raw mut (*value).z], file, true, false) }
+}
+
+/// `GEVector::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_vector_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_vector_save(value: *const GeVector, file: *mut c_void) -> c_long {
+    let value = value.cast_mut();
+    // SAFETY: the function's contract (a save only reads the fields)
+    unsafe { file_fields_io(&[&raw mut (*value).x, &raw mut (*value).y, &raw mut (*value).z], file, true, true) }
+}
+
+/// `GEOrientation::Load(F&)`: yaw, pitch, roll; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_orientation_load(value: *mut GeOrientation, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { file_fields_io(&[&raw mut (*value).yaw, &raw mut (*value).pitch, &raw mut (*value).roll], file, true, false) }
+}
+
+/// `GEOrientation::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_orientation_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_orientation_save(value: *const GeOrientation, file: *mut c_void) -> c_long {
+    let value = value.cast_mut();
+    // SAFETY: the function's contract (a save only reads the fields)
+    unsafe { file_fields_io(&[&raw mut (*value).yaw, &raw mut (*value).pitch, &raw mut (*value).roll], file, true, true) }
+}
+
+/// `GERectangle::Load(F&)`: left, top, right, bottom; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_rect_load(value: *mut GeRectangle, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { file_fields_io(&[&raw mut (*value).left, &raw mut (*value).top, &raw mut (*value).right, &raw mut (*value).bottom], file, true, false) }
+}
+
+/// `GERectangle::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_rect_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_rect_save(value: *const GeRectangle, file: *mut c_void) -> c_long {
+    let value = value.cast_mut();
+    // SAFETY: the function's contract (a save only reads the fields)
+    unsafe { file_fields_io(&[&raw mut (*value).left, &raw mut (*value).top, &raw mut (*value).right, &raw mut (*value).bottom], file, true, true) }
+}
+
+/// `GEColor::Load(F&)`: red, green, blue (it does not ask whether the file is open) ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_color_load(value: *mut [f32; 3], file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe { file_fields_io(&[&raw mut (*value)[0], &raw mut (*value)[1], &raw mut (*value)[2]], file, false, false) }
+}
+
+/// `GEColor::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_color_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_color_save(value: *const [f32; 3], file: *mut c_void) -> c_long {
+    let value = value.cast_mut();
+    // SAFETY: the function's contract (a save only reads the fields)
+    unsafe { file_fields_io(&[&raw mut (*value)[0], &raw mut (*value)[1], &raw mut (*value)[2]], file, false, true) }
+}
+
+/// `GE3DLine::Load(F&)`: the start, then (when it loaded) the direction ([`ee_ge_3d_point_load`],
+/// [`ee_ge_vector_load`]).
+///
+/// # Safety
+/// `line` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_3d_line_load(line: *mut Ge3DLine, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        let result = ee_ge_3d_point_load(&raw mut (*line).start, file);
+        if result == OK { ee_ge_vector_load(&raw mut (*line).direction, file) } else { result }
+    }
+}
+
+/// `GE3DLine::Save(F&)`: the start, then the direction.
+///
+/// # Safety
+/// As [`ee_ge_3d_line_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_3d_line_save(line: *const Ge3DLine, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        let result = ee_ge_3d_point_save(&raw const (*line).start, file);
+        if result == OK { ee_ge_vector_save(&raw const (*line).direction, file) } else { result }
+    }
+}
+
+/// `GE3DPlane::Load(F&)`: the point, then (when it loaded) the normal.
+///
+/// # Safety
+/// `plane` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_3d_plane_load(plane: *mut Ge3DPlane, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        let result = ee_ge_3d_point_load(&raw mut (*plane).point, file);
+        if result == OK { ee_ge_vector_load(&raw mut (*plane).normal, file) } else { result }
+    }
+}
+
+/// `GE3DPlane::Save(F&)`: the point, then the normal.
+///
+/// # Safety
+/// As [`ee_ge_3d_plane_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_3d_plane_save(plane: *const Ge3DPlane, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        let result = ee_ge_3d_point_save(&raw const (*plane).point, file);
+        if result == OK { ee_ge_vector_save(&raw const (*plane).normal, file) } else { result }
+    }
+}
+
+/// `GEBoundingBox::Load(F&)`: the two corners (the first error returned as is), then the extents from them (width
+/// x, height z, depth y).
+///
+/// # Safety
+/// `bbox` is valid; `file` is a live C++ `FSFile*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_bbox_load(bbox: *mut GeBoundingBox, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut result = ee_ge_3d_point_load(&raw mut (*bbox).bottom_left_front, file);
+        if result == OK {
+            result = ee_ge_3d_point_load(&raw mut (*bbox).top_right_back, file);
+        }
+        if result != OK {
+            return result;
+        }
+        let b = &mut *bbox;
+        b.width = b.top_right_back.x - b.bottom_left_front.x;
+        b.height = b.top_right_back.z - b.bottom_left_front.z;
+        b.depth = b.top_right_back.y - b.bottom_left_front.y;
+        result
+    }
+}
+
+/// `GEBoundingBox::Save(F&)`: the two corners.
+///
+/// # Safety
+/// As [`ee_ge_bbox_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_bbox_save(bbox: *const GeBoundingBox, file: *mut c_void) -> c_long {
+    // SAFETY: the function's contract
+    unsafe {
+        let result = ee_ge_3d_point_save(&raw const (*bbox).bottom_left_front, file);
+        if result == OK { ee_ge_3d_point_save(&raw const (*bbox).top_right_back, file) } else { result }
+    }
 }
 
 /// `GEViewport::operator=`: every field.

@@ -153,15 +153,15 @@ fn a_transformation_saves_row_by_row_and_a_short_file_keeps_what_was_read() {
     // SAFETY: valid matrices and tables
     unsafe {
         let mut src = s;
-        assert_eq!(ee_ge_t_io(&mut src, &table(&mut out), true), OK);
+        assert_eq!(t_io(&mut src, &table(&mut out), true), OK);
         assert_eq!(out.bytes.len(), 64);
         assert_eq!(&out.bytes[4..8], &s.m[0][1].to_le_bytes());
         let mut back = GeTransformation::IDENTITY;
-        assert_eq!(ee_ge_t_io(&mut back, &table(&mut BufferIo::reader(out.bytes.clone())), false), OK);
+        assert_eq!(t_io(&mut back, &table(&mut BufferIo::reader(out.bytes.clone())), false), OK);
         assert_eq!(bits(&back), bits(&s));
         // 5 floats and a half: rows 0 and [1][0] read, the rest as they were
         let mut part = GeTransformation::IDENTITY;
-        let r = ee_ge_t_io(&mut part, &table(&mut BufferIo::reader(out.bytes[..22].to_vec())), false);
+        let r = t_io(&mut part, &table(&mut BufferIo::reader(out.bytes[..22].to_vec())), false);
         assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(part.m[0], s.m[0]);
         assert_eq!(part.m[1][0], s.m[1][0]);
@@ -169,7 +169,7 @@ fn a_transformation_saves_row_by_row_and_a_short_file_keeps_what_was_read() {
         assert_eq!(part.m[3], GeTransformation::IDENTITY.m[3]);
         // a write refused at the third float stops there
         let mut limited = BufferIo { write_limit: 10, ..BufferIo::writer() };
-        assert_eq!(ee_ge_t_io(&mut src, &table(&mut limited), true), crate::geval::io::FAILED);
+        assert_eq!(t_io(&mut src, &table(&mut limited), true), crate::geval::io::FAILED);
         assert_eq!(limited.bytes.len(), 8);
     }
 }
@@ -184,7 +184,7 @@ fn a_closed_file_is_not_open_and_reads_nothing() {
     let mut io = BufferIo::reader(vec![0; 12]);
     let f = fields(&mut v);
     // SAFETY: valid pointers and table
-    let r = unsafe { ee_ge_fields_io(f.as_ptr(), 3, &table(&mut io), 0, false, false) };
+    let r = unsafe { fields_io(&f[..3], &table(&mut io), 0, false, false) };
     assert_eq!(r, 4);
     assert_eq!(io.position, 0);
     assert_eq!(v, [1.0, 2.0, 3.0]);
@@ -199,13 +199,13 @@ fn the_fields_go_in_the_order_given_and_stop_at_the_first_error() {
     let f: Vec<*mut f32> = order.iter().map(|&i| &mut rect[i] as *mut f32).collect();
     // SAFETY: valid pointers and tables
     unsafe {
-        assert_eq!(ee_ge_fields_io(f.as_ptr(), 4, &table(&mut out), 1, true, false), OK);
+        assert_eq!(fields_io(&f[..4], &table(&mut out), 1, true, false), OK);
         assert_eq!(&out.bytes[0..4], &20.0f32.to_le_bytes());
         // an unasked open state (-1, GEColor) reads all; a short file keeps what was read
         let mut back = [0.0f32; 4];
         let b = fields(&mut back);
         let r =
-            ee_ge_fields_io(b.as_ptr(), 4, &table(&mut BufferIo::reader(out.bytes[..9].to_vec())), -1, false, false);
+            fields_io(&b[..4], &table(&mut BufferIo::reader(out.bytes[..9].to_vec())), -1, false, false);
         assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(back, [20.0, 10.0, 0.0, 0.0]);
     }
@@ -219,13 +219,13 @@ fn a_failed_texture_coordinate_sets_the_position_back() {
     io.position = 2;
     // SAFETY: valid pointers and table
     unsafe {
-        let r = ee_ge_fields_io(f.as_ptr(), 2, &table(&mut io), 1, false, true);
+        let r = fields_io(&f[..2], &table(&mut io), 1, false, true);
         assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(io.position, 2);
         assert_eq!(uv, [0.0, 0.25]);
         // without the restore the position stays after the read field
         io.position = 2;
-        ee_ge_fields_io(f.as_ptr(), 2, &table(&mut io), 1, false, false);
+        fields_io(&f[..2], &table(&mut io), 1, false, false);
         assert_eq!(io.position, 6);
     }
 }

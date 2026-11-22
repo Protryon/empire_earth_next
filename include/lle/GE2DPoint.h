@@ -42,8 +42,8 @@ public:
         ee_ge_2d_interpolate(GERust(theFrom), GERust(theTo), inStep, Push, &outPoints);
     }
     // x and y from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
-    template <class F> long Load(F& inFile) { const float* f[] = {&mX, &mY}; return GERustFields(inFile, f, 2, true, false); }
-    template <class F> long Save(F& inFile) { const float* f[] = {&mX, &mY}; return GERustFields(inFile, f, 2, true, true); }
+    template <class F> long Load(F& inFile) { return ee_ge_2d_point_load(GERust(*this), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) { return ee_ge_2d_point_save(GERust(*this), GERustFile(inFile)); }
     static void Push(void* inPoints, const EeGe2DPoint* inPoint)
         { static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint)); }
 

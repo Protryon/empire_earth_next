@@ -480,13 +480,11 @@ GETerrainMesh::~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
 long GETerrainMesh::Load(unsigned long, unsigned long, FSFile& inFile)
 {
-    EeGeFieldIo theIO = GERustFieldIO(inFile);
-    return ee_ge_tm_load(this->mRust, &theIO);
+    return ee_ge_tm_load(this->mRust, &inFile);
 }
 
 long GETerrainMesh::Save(FSFile& inFile) const
 {
-    EeGeFieldIo theIO = GERustFieldIO(inFile);
-    return ee_ge_tm_save(this->mRust, &theIO);
+    return ee_ge_tm_save(this->mRust, &inFile);
 }
 

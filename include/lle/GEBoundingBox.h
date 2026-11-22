@@ -38,21 +38,8 @@ public:
     bool Intersects(const GE3DLine& inLine, float& outDistance) const
         { return ee_ge_bbox_intersects_line(GERust(*this), GERust(inLine), &outDistance); }
     // the two corners from the file (an FSFileSpec), then the size; the first read error
-    template <class F> long Load(F& inFile)
-    {
-        long theResult = this->mBottomLeftFront.Load(inFile);
-        if (theResult != kErrorOK || (theResult = this->mTopRightBack.Load(inFile)) != kErrorOK)
-            return theResult;
-        this->mWidth = this->mTopRightBack.GetX() - this->mBottomLeftFront.GetX();
-        this->mHeight = this->mTopRightBack.GetZ() - this->mBottomLeftFront.GetZ();
-        this->mDepth = this->mTopRightBack.GetY() - this->mBottomLeftFront.GetY();
-        return theResult;
-    }
-    template <class F> long Save(F& inFile)
-    {
-        long theResult = this->mBottomLeftFront.Save(inFile);
-        return theResult == kErrorOK ? this->mTopRightBack.Save(inFile) : theResult;
-    }
+    template <class F> long Load(F& inFile) { return ee_ge_bbox_load(GERust(*this), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) { return ee_ge_bbox_save(GERust(*this), GERustFile(inFile)); }
     // the axis-aligned box around the eight transformed corners
     void Transform(const GETransformation& inTransformation, GEBoundingBox& outBox) const
         { ee_ge_bbox_transform(GERust(*this), GERust(inTransformation), GERust(outBox)); }

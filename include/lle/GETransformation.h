@@ -77,7 +77,7 @@ public:
     float GetYaw() const { return ee_ge_t_yaw(GERust(*this)); }
     float GetZ() const { return this->mMatrix[2][3]; }
     // the sixteen elements from (to) a file, stopping at the first error
-    template <class F> long Load(F& inFile) { EeGeFieldIo theIO = GERustFieldIO(inFile); return ee_ge_t_io(GERust(*this), &theIO, false); }
+    template <class F> long Load(F& inFile) { return ee_ge_t_load(GERust(*this), GERustFile(inFile)); }
     void MakeIdentity() { ee_ge_t_identity(GERust(*this)); }
     // the inverse of a rigid transformation (transposed rotation, negated rotated position), element by element as
     // the C++ stored them (an output equal to this transposes through its own stores)
@@ -90,11 +90,7 @@ public:
     void Rotate(const GEOrientation& inOrientation)
         { this->Rotate(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
     void Rotate(float inYaw, float inPitch, float inRoll) { ee_ge_t_rotate(GERust(*this), inYaw, inPitch, inRoll); }
-    template <class F> long Save(F& inFile) const
-    {
-        EeGeFieldIo theIO = GERustFieldIO(inFile);
-        return ee_ge_t_io(const_cast<EeGeTransformation*>(GERust(*this)), &theIO, true);
-    }
+    template <class F> long Save(F& inFile) const { return ee_ge_t_save(GERust(*this), GERustFile(inFile)); }
     // inline: EE-AOC.exe imports only Scale(x, y, z); GEPhysicalModel::Intersects expands it (GE3DPoint.cpp emits the
     // exported copy 0x1000d848)
     void Scale(float inScale) { this->Scale(inScale, inScale, inScale); }

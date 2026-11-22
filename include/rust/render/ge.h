@@ -3363,14 +3363,14 @@ void ee_ge_tm_update_visible_terrain(EeGeTerrainMesh *p,
 /// `Load(major, minor, file)`.
 ///
 /// # Safety
-/// `p` is live; `io` is a live field stream.
-long ee_ge_tm_load(EeGeTerrainMesh *p, const EeGeFieldIo *io);
+/// `p` is live; `file` is a live C++ `FSFile*`.
+long ee_ge_tm_load(EeGeTerrainMesh *p, void *file);
 
 /// `Save(file)`.
 ///
 /// # Safety
-/// `p` is live; `io` is a live field stream.
-long ee_ge_tm_save(const EeGeTerrainMesh *p, const EeGeFieldIo *io);
+/// `p` is live; `file` is a live C++ `FSFile*`.
+long ee_ge_tm_save(const EeGeTerrainMesh *p, void *file);
 
 /// The visible tile row `index`: (y, first x, last x) into `out`.
 ///
