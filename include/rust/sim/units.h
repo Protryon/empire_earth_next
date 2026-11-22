@@ -5917,6 +5917,83 @@ constexpr static const int32_t EE_UNITS_GHOST_SET_Y = 121;
 /// `mTransformation.SetZ(the float of the bits b)`
 constexpr static const int32_t EE_UNITS_GHOST_SET_Z = 122;
 
+/// the ghost's `mPlayer = (EEPlayer*)b`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_PLAYER = 4000;
+
+/// the ghost's `mUnitClass = (EEUnitClass*)b`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_CLASS = 4001;
+
+/// `gFreeCamera`
+constexpr static const int32_t EE_UNITS_GHOST_M_FREE_CAMERA = 4002;
+
+/// player `a`'s `LoadUnitClassMedia(b)`
+constexpr static const int32_t EE_UNITS_GHOST_M_LOAD_CLASS_MEDIA = 4003;
+
+/// the ghost's `mPlayer->SetUnitClassMedia(b, 0x7f)`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_CLASS_MEDIA = 4004;
+
+/// `gDataPreLoading->PostLoadUnitClass(player a's mPlayerID, b)`
+constexpr static const int32_t EE_UNITS_GHOST_M_POST_LOAD = 4005;
+
+/// the ghost's `mNoMedia = b != 0`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_NO_MEDIA = 4006;
+
+/// the ghost's `mNoMedia`
+constexpr static const int32_t EE_UNITS_GHOST_M_NO_MEDIA = 4007;
+
+/// `UShutdownInProgress()`
+constexpr static const int32_t EE_UNITS_GHOST_M_SHUTTING_DOWN = 4008;
+
+/// `gDataPreLoading->PostUnloadUnitClass(the ghost's mPlayer->mPlayerID, its mUnitClass->GetUnitType())`
+constexpr static const int32_t EE_UNITS_GHOST_M_POST_UNLOAD = 4009;
+
+/// the ghost's `mPlayer->UnloadUnitClassMedia(mUnitClass->GetUnitType())`
+constexpr static const int32_t EE_UNITS_GHOST_M_UNLOAD_CLASS_MEDIA = 4010;
+
+/// the ghost's `mFrame = b`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_FRAME = 4011;
+
+/// the ghost's `mAnimation = b`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_ANIMATION_INDEX = 4012;
+
+/// `memset(the ghost's mFootprint, 0, ...)`
+constexpr static const int32_t EE_UNITS_GHOST_M_CLEAR_FOOTPRINT = 4013;
+
+/// `memset(the ghost's mHeights, 0, ...)`
+constexpr static const int32_t EE_UNITS_GHOST_M_CLEAR_HEIGHTS = 4014;
+
+/// the saved game's file `= (FSFile*)a`
+constexpr static const int32_t EE_UNITS_GHOST_M_SET_FILE = 4015;
+
+/// the file's `Read(an unsigned long)` (kept: `EE_UNITS_GHOST_M_VALUE`)
+constexpr static const int32_t EE_UNITS_GHOST_M_READ_ULONG = 4016;
+
+/// the unsigned long read last
+constexpr static const int32_t EE_UNITS_GHOST_M_VALUE = 4017;
+
+/// the file's `Write((unsigned long)b)`
+constexpr static const int32_t EE_UNITS_GHOST_M_WRITE_ULONG = 4018;
+
+/// the file's `Write(the ghost's mPlayer->GetPlayerID())`
+constexpr static const int32_t EE_UNITS_GHOST_M_WRITE_PLAYER_ID = 4019;
+
+/// the ghost's `GetModel()->mStartFrames[b]`
+constexpr static const int32_t EE_UNITS_GHOST_M_START_FRAME = 4020;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_RESET = 1;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_CONSTRUCT = 2;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_DESTROY = 3;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_LOAD = 4;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_SAVE = 5;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_SET_FARM_SLOT_TILE = 6;
+
+constexpr static const int32_t EE_UNITS_GHOST_M_DO_SET_ANIMATION = 7;
+
 /// the shared point `= GE3DPoint(f[0], f[1], f[2])`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT = 800;
 
@@ -17388,6 +17465,17 @@ void ee_units_ghost_create_gate(float rotation, void *class_, void *player);
 /// # Safety
 /// The arguments' vectors and player are live, on the thread that owns the ghosts.
 void ee_units_ghost_build_walls(const EeUnitsGhostWalls *args);
+
+/// `EEGhostUnit`'s body `what` (`EE_UNITS_GHOST_M_DO_*`) on `ghost`.
+///
+/// # Safety
+/// `ghost` is a live `EEGhostUnit` (being made or destroyed for the constructor's and destructor's), `a` live as
+/// the body needs it.
+int64_t ee_units_ghost_more(int32_t what,
+                            void *ghost,
+                            void *a,
+                            int64_t b,
+                            int64_t c);
 
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
