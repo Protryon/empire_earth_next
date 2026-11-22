@@ -248,6 +248,8 @@ def main():
                             "windows-x86_64", "-j", str(a.j)])
         if r.returncode or not (ee.sdl3_dir() / "lib" / "SDL3-static.lib").exists():
             sys.exit("SDL3 did not build: python -I tools/fetch_posix.py sdl3, then python -I tools/xbuild.py sdl3")
+    if not (ee.TOOLCHAIN / "fonts" / "LiberationSans-Regular.ttf").exists():   # the fonts #embed'd into PlatFontData
+        sys.exit("the built-in fonts are missing: python -I tools/fetch_posix.py fonts")
     kind = "clang-test" if a.test_profile else "clang"
     out = pathlib.Path(a.out or ROOT / "build" / (kind + ("-nullsan" if a.sanitize_null else ""))).resolve()
     out.mkdir(parents=True, exist_ok=True)

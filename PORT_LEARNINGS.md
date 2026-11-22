@@ -35,9 +35,15 @@ Process rules learned the hard way:
 - **Git Bash rewrites `/O1` and similar into paths.** Pass clang options to the scripts as `--opt=-O1`.
 - **Write Python edits with the Edit tool or a quoted heredoc.** Regex replacement strings in an unquoted heredoc lose
   their backslashes, and a raw newline inside an f-string broke a script once.
-- A fresh machine needs: Python 3.12, 7-Zip, LLVM (`winget install LLVM.LLVM`). Python's TLS store rejected
+- A fresh machine needs: Python 3.12, 7-Zip, LLVM (`winget install LLVM.LLVM`), and CMake and Ninja for the SDL3
+  window layer that `build.py` builds from source. Python's TLS store rejected
   archive.org on one box while curl worked. Download those archives with curl into `toolchain/dl/` and let
   the fetch script verify the pinned hash (now only `tools/fetch_dx7sdk.py`).
+
+- **The SDL3 CMake build needs the Windows SDK's x64 tools on PATH.** From a plain shell CMake's compiler check
+  failed with `MT-NOTFOUND` (`vs_link_exe` could not embed the manifest) while the game itself built fine, because
+  `tools/build.py` gets the SDK paths from `tools/ee.py` while CMake only searches PATH. `windows_env()` now puts
+  `<Windows Kits>\10\bin\<version>\x64` on PATH for the CMake and the resource steps.
 
 ## Compiler flags (clang-cl, phase 1)
 
