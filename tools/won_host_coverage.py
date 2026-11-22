@@ -126,7 +126,9 @@ CHECKS = [
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "netops.rs", "xfer_op")], allowed={}),
     dict(enum="EeWonEeGlueOp", header="won_lobby/eeglue.h",
-         hosts=[LOBBY / "EELobbyGlueHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "EELobbyGlueHost.cpp"],
+         # the multi-statement cases composed in Rust over one-statement cases (R6 WON round 32)
+         rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
     # the game's WON front end (R6 WON round 31: wonnet.rs; its host's statements are ee/EEWonNetHost.inl)

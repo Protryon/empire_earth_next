@@ -20,6 +20,7 @@ pub mod eexfer;
 pub mod evmap;
 pub mod ffi_lan;
 pub mod flow;
+pub mod gluesplit;
 pub mod hostops;
 pub mod lan;
 pub mod lanlogic;
