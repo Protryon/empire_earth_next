@@ -1,5 +1,5 @@
 //! The toolkit's enumerations (UI lane round 13): once C++ enums in the toolkit's headers (`UIBackgroundType`,
-//! `UIButtonState`, `UIControlTriggerID`, `UIControlType`, `UIDisplayMode`, `UIDbControlType`, `UIFormEventType`),
+//! `UIButtonState`, `UILayoutType`, `UITiling`, `UICheckState`, `UIControlTriggerID`, `UIControlType`, `UIDisplayMode`, `UIDbControlType`, `UIFormEventType`),
 //! now Rust's. cbindgen emits each as an unscoped C++ `enum X : uint32_t` with the same names and values
 //! (`cbindgen:enum-class=false`), so the C++ that names them is unchanged; the Rust tables that listed the values
 //! (`tableobj.rs`, `controls_table.rs`, `formobj.rs`) read them from here.
@@ -274,6 +274,59 @@ pub enum UIFormEventType {
 }
 
 
+/// UILayoutUtility edge offset types (GetHorizontalPoint/GetVerticalPoint switch); the database layouts store them
+/// (the C++ `enum UILayoutType`, UILayoutUtility.h)
+/// cbindgen:enum-class=false
+#[repr(u32)]
+#[allow(non_camel_case_types, clippy::enum_variant_names)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UILayoutType {
+    /// UILayoutUtility::GetHorizontalPoint: left/top + offset (provisional name)
+    kLayoutFromStart = 0,
+    /// UILayoutUtility::GetHorizontalPoint: centre + offset (provisional name)
+    kLayoutAfterCenter = 1,
+    /// UILayoutUtility::GetHorizontalPoint: centre - offset (provisional name)
+    kLayoutBeforeCenter = 2,
+    /// UILayoutUtility::GetHorizontalPoint: right/bottom - offset (provisional name)
+    kLayoutFromEnd = 3,
+    /// UILayoutUtility::GetHorizontalPoint: left/top + size x offset (fraction) (provisional name)
+    kLayoutProportional = 4,
+    /// UILayoutUtility::GetHorizontalPoint: the left/top edge point + offset (a width/height) (provisional name)
+    kLayoutFromStartEdge = 5,
+}
+
+/// UITiledBackground's tiling (bgobj.rs mTiling)
+/// (the C++ `enum UITiling`, UITiledBackground.h)
+/// cbindgen:enum-class=false
+#[repr(u32)]
+#[allow(non_camel_case_types, clippy::enum_variant_names)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UITiling {
+    /// UITiledBackground
+    kTilingBoth = 0,
+    /// was UILRTiledBackground
+    kTilingLeftRight = 1,
+    /// was UITBTiledBackground
+    kTilingTopBottom = 2,
+    /// was UIStretchedTiledBackground (inAcross x inDown tiles)
+    kTilingStretched = 3,
+}
+
+/// UITriStateCheckBox::SetCheckState: the UIManager check bitmaps each state shows
+/// (the C++ `enum UICheckState`, UITriStateCheckBox.h)
+/// cbindgen:enum-class=false
+#[repr(u32)]
+#[allow(non_camel_case_types, clippy::enum_variant_names)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UICheckState {
+    /// SetCheckState case -> UIManager::GetCheckOff/GetCheckDownOff
+    kCheckStateOff = 0,
+    /// SetCheckState case -> UIManager::GetCheckOn/GetCheckDownOn
+    kCheckStateOn = 1,
+    /// SetCheckState case -> UIManager::GetCheckNot/GetCheckDownNot
+    kCheckStateNot = 2,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -287,5 +340,15 @@ mod tests {
         assert_eq!(UIDisplayMode::kDisplayModeShown as u32, 1);
         assert_eq!(UIDbControlType::kDbControlFileListBox as u32, 22);
         assert_eq!(UIFormEventType::kUIEventMouseWheelMove as u32, 12);
+        assert_eq!(UITiling::kTilingStretched as u32, 3);
+        assert_eq!(UICheckState::kCheckStateNot as u32, 2);
+        // layout.rs' exported constants are the enum's values
+        use crate::layout as l;
+        assert_eq!(UILayoutType::kLayoutFromStart as core::ffi::c_ulong, l::FROM_START);
+        assert_eq!(UILayoutType::kLayoutAfterCenter as core::ffi::c_ulong, l::AFTER_CENTER);
+        assert_eq!(UILayoutType::kLayoutBeforeCenter as core::ffi::c_ulong, l::BEFORE_CENTER);
+        assert_eq!(UILayoutType::kLayoutFromEnd as core::ffi::c_ulong, l::FROM_END);
+        assert_eq!(UILayoutType::kLayoutProportional as core::ffi::c_ulong, l::PROPORTIONAL);
+        assert_eq!(UILayoutType::kLayoutFromStartEdge as core::ffi::c_ulong, l::FROM_START_EDGE);
     }
 }

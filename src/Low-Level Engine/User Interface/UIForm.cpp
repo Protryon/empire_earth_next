@@ -307,7 +307,7 @@ UIForm::UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, 
 UIForm::UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText)
     : mRust(NULL)
 {
-    UWideString theMusic(inData.mMusicFile);
+    UWideString theMusic(reinterpret_cast<const char*>(inData.mMusicFile));
     PlatMbsLwr((unsigned char*)(const char*)theMusic);
     this->mRust = ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, (const char*)theMusic, inUseGDIForText);
 }

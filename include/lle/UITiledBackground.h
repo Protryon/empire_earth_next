@@ -10,14 +10,9 @@
 #define LLE_UITILEDBACKGROUND_H
 
 #include "lle/UIBitmapBackground.h"
+#include "rust/ui/ids.h"
 
-// UITiledBackground's tiling (bgobj.rs mTiling)
-enum UITiling {
-    kTilingBoth = 0,        // UITiledBackground
-    kTilingLeftRight = 1,   // was UILRTiledBackground
-    kTilingTopBottom = 2,   // was UITBTiledBackground
-    kTilingStretched = 3,   // was UIStretchedTiledBackground (inAcross x inDown tiles)
-};
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 
 class LLE_API UITiledBackground : public UIBitmapBackground {
 public:

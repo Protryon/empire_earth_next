@@ -248,4 +248,45 @@ enum UIFormEventType : uint32_t {
   kUIEventMouseWheelMove = 12,
 };
 
+/// UILayoutUtility edge offset types (GetHorizontalPoint/GetVerticalPoint switch); the database layouts store them
+/// (the C++ `enum UILayoutType`, UILayoutUtility.h)
+enum UILayoutType : uint32_t {
+  /// UILayoutUtility::GetHorizontalPoint: left/top + offset (provisional name)
+  kLayoutFromStart = 0,
+  /// UILayoutUtility::GetHorizontalPoint: centre + offset (provisional name)
+  kLayoutAfterCenter = 1,
+  /// UILayoutUtility::GetHorizontalPoint: centre - offset (provisional name)
+  kLayoutBeforeCenter = 2,
+  /// UILayoutUtility::GetHorizontalPoint: right/bottom - offset (provisional name)
+  kLayoutFromEnd = 3,
+  /// UILayoutUtility::GetHorizontalPoint: left/top + size x offset (fraction) (provisional name)
+  kLayoutProportional = 4,
+  /// UILayoutUtility::GetHorizontalPoint: the left/top edge point + offset (a width/height) (provisional name)
+  kLayoutFromStartEdge = 5,
+};
+
+/// UITiledBackground's tiling (bgobj.rs mTiling)
+/// (the C++ `enum UITiling`, UITiledBackground.h)
+enum UITiling : uint32_t {
+  /// UITiledBackground
+  kTilingBoth = 0,
+  /// was UILRTiledBackground
+  kTilingLeftRight = 1,
+  /// was UITBTiledBackground
+  kTilingTopBottom = 2,
+  /// was UIStretchedTiledBackground (inAcross x inDown tiles)
+  kTilingStretched = 3,
+};
+
+/// UITriStateCheckBox::SetCheckState: the UIManager check bitmaps each state shows
+/// (the C++ `enum UICheckState`, UITriStateCheckBox.h)
+enum UICheckState : uint32_t {
+  /// SetCheckState case -> UIManager::GetCheckOff/GetCheckDownOff
+  kCheckStateOff = 0,
+  /// SetCheckState case -> UIManager::GetCheckOn/GetCheckDownOn
+  kCheckStateOn = 1,
+  /// SetCheckState case -> UIManager::GetCheckNot/GetCheckDownNot
+  kCheckStateNot = 2,
+};
+
 #endif  // EE_RUST_UI_IDS_H

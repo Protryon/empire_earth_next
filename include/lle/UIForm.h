@@ -36,30 +36,7 @@ class UITextLabel;
 
 // The form record of the UI database (0x10c bytes; UIForm::Create 0x100716c0 reads it). Exported parameter type
 // (??0UIForm@@QAE@PAVUIManager@@ABUUIDbDataForms@@_N@Z); field names are provisional, offsets proven by that ctor.
-struct UIDbDataForms {
-    char mLabel[0x64];                      // +0x000
-    char mMusicFile[0x64];                  // +0x064 "none" stops the music
-    int32_t mUnusedID;                      // +0x0c8 (provisional name)
-    int32_t mFormID;                        // +0x0cc 0 or less: no form
-    uint32_t mControlCount;                 // +0x0d0
-    uint32_t mControlGroupCount;            // +0x0d4
-    float mLeftOffset;                      // +0x0d8
-    float mRightOffset;                     // +0x0dc
-    float mBottomOffset;                    // +0x0e0
-    float mTopOffset;                       // +0x0e4
-    uint32_t mDesignedWidth;                // +0x0e8
-    uint32_t mDesignedHeight;               // +0x0ec
-    uint32_t mHelpTextTimeDelay;            // +0x0f0
-    uint32_t mUnused;                       // +0x0f4 (provisional name)
-    uint32_t mLeftOffsetType;               // +0x0f8
-    uint32_t mRightOffsetType;              // +0x0fc
-    uint32_t mTopOffsetType;                // +0x100
-    uint32_t mBottomOffsetType;             // +0x104
-    bool mTabbingOn;                        // +0x108
-    bool mUseToolTips;                      // +0x109
-    bool mUseExclusiveCoords;               // +0x10a
-};
-static_assert(sizeof(UIDbDataForms) == 268, "on-disk record: 268 bytes on every target");
+// struct UIDbDataForms: rust/ui/formobj.h (ee_ui formobj.rs DbForm, under the members' names; UI round 13)
 
 // A control the form creates from the controls table when it opens (exported AddDatabaseControl parameter type;
 // 8-byte vector element at UIForm +0x48)
