@@ -53,6 +53,7 @@ public:
     }
     virtual long DrawTextA();
     GEText* GetGEText() const { return this->mText; }  // ICF-folded (0x1005966a)
+    GEText* GetCopiedGEText() const { return this->mCopiedText; }   // the draw pass's text (UI round 13: for the hosts)
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat);
 private:
     GEText* mText;                          // +0x134
