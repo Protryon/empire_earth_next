@@ -70,6 +70,14 @@
 
 #include <memory>
 #include "ee/EEStringIDs.h"
+#include "lle/FSRestorable.h"
+#include "lle/FSPersistent.h"
+#include "ee/EESMMediaStrings.h"
+#include "ee/EEPSaveGameHeader.h"
+#include "ee/EEScenarioIDs.h"
+#include "ee/EEScenarioManager.h"
+#include "ee/EESMEffect.h"
+#include "ee/EEPersistentTemplates.h"
 #include "rust/game/campaign.h"
 
 // UString globals used before their definitions (gU5656B8/gU5656C8 are defined at the end of this file, gU530B88 in
@@ -148,13 +156,9 @@ static void EECampaignPushStripped(EECampaign* inCampaign, const char* inScenari
     inCampaign->mScenarios.insert(inCampaign->mScenarios.end(), theScenario);
 }
 
-// "The scenario %s didn't exist on disk"
-static void EECampaignScenarioMissing(UWideString& outError, const char* inScenario)
-{
-    UWideString theFormat;
-    gResource->GetString(IDS_SCENARIO_DIDNT_EXIST_ON_DISK, theFormat);
-    sprintf(outError, (const char*)theFormat, inScenario);
-}
+// The built-in campaigns (EECampaignFormManager::GetBuiltInCampaign, ee_game campaign.rs built_in_campaign)
+static const UWideString* const kEECampaignBuiltIns[] = {&gCampaignAOCRoman, &gCampaignAOCPacific, &gCampaignAOCAsian, &gCampaignEEDemo, &gCampaignEELearning};
+static const long* const kEECampaignBuiltInChecksums[] = {&gAOCRomanChecksum, &gAOCPacificChecksum, &gAOCAsianChecksum, &gEEDemoChecksum, &gEELearningChecksum};
 
 // The progress' calls (ee_game campaign.rs EeCampaignCpp): p the object named, a the integers
 extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t* a)
@@ -225,10 +229,6 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::LineLoad: return EECampaignLineLoad((FSMemoryFile*)p, a[0]);
     case O::MemoryDelete: delete (FSMemoryFile*)p;
         break;
-    case O::Decrypt: *(UWideString*)a[1] = ((EECampaign*)p)->DecryptPassword(UWideString((const char*)a[0]));
-        break;
-    case O::ScenarioListFile: EECampaignText(a[0], (const char*)((EECampaign*)p)->GetScenarioListFile());
-        break;
     case O::ScenariosClear: ((EECampaign*)p)->mScenarios.clear();
         break;
     case O::ScenariosPushStripped: EECampaignPushStripped((EECampaign*)p, (const char*)a[0]);
@@ -237,8 +237,73 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
         break;
     case O::ErrorCouldntOpen: gResource->GetString(IDS_FILE_COULDNT_BE_OPENED, *(UWideString*)p);
         break;
-    case O::ErrorScenarioMissing: EECampaignScenarioMissing(*(UWideString*)p, (const char*)a[0]);
+    // the editor side (ee_game campaign.rs campaign_save, list_scenario_files; p the object named)
+    case O::WideText: EECampaignText(a[0], (const char*)*(UWideString*)p);
         break;
+    case O::WideAppend: *(UWideString*)p += (const char*)a[0];
+        break;
+    case O::WideNew: return (int64_t)(intptr_t)new UWideString;
+    case O::WideDelete: delete (UWideString*)p;
+        break;
+    case O::MemberDirectory: return (int64_t)(intptr_t)&((EECampaign*)p)->mDirectory;
+    case O::MemberScenarios: return (int64_t)(intptr_t)&((EECampaign*)p)->mScenarios;
+    case O::WideListNew: return (int64_t)(intptr_t)new std::vector<UWideString>;
+    case O::WideListDelete: delete (std::vector<UWideString>*)p;
+        break;
+    case O::WideListLen: return (int64_t)((std::vector<UWideString>*)p)->size();
+    case O::WideListAt: EECampaignText(a[0], (const char*)(*(std::vector<UWideString>*)p)[(size_t)a[1]]);
+        break;
+    case O::WideListContains: return std::find(((std::vector<UWideString>*)p)->begin(), ((std::vector<UWideString>*)p)->end(), UWideString((const char*)a[0])) != ((std::vector<UWideString>*)p)->end();
+    case O::ScenarioExtension: EECampaignText(a[0], (const char*)gScenarioExtension);
+        break;
+    case O::CampaignExtension: EECampaignText(a[0], (const char*)gCampaignExtension);
+        break;
+    case O::ScenarioPrefix: EECampaignText(a[0], (const char*)gU52A280);
+        break;
+    case O::ResourceString: gResource->GetString((long)a[0], *(UWideString*)p);
+        break;
+    case O::Sprintf: sprintf(*(UWideString*)p, (const char*)*(UWideString*)a[0], (const char*)a[1], (const char*)a[2]);
+        break;
+    case O::SpecNew: return (int64_t)(intptr_t)new FSFileSpec;
+    case O::SpecSetStartupVolume: ((FSFileSpec*)p)->SetVolume(gStartupVolume);
+        break;
+    case O::SpecSetDirectory: ((FSFileSpec*)p)->SetDirectory(UString((const char*)a[0]));
+        break;
+    case O::SpecSetFile: ((FSFileSpec*)p)->SetFile(UString((const char*)a[0]));
+        break;
+    case O::SpecCreate: return ((FSFileSpec*)p)->Create();
+    case O::SpecOpenWrite: return ((FSFileSpec*)p)->Open(kFileAccessWrite);
+    case O::SpecClose: return ((FSFileSpec*)p)->Close();
+    case O::SpecCopy: return ((FSFileSpec*)p)->Copy(UString((const char*)a[0]), false, false);
+    case O::SpecPathText: EECampaignText(a[0], (const char*)(((FSFileSpec*)p)->GetVolume() + ((FSFileSpec*)p)->GetDirectory() + ((FSFileSpec*)p)->GetFile()));
+        break;
+    case O::LineSave: return UString((const char*)a[0]).Save(*(FSFileSpec*)p);
+    case O::ArchiveStatus: gDataPath->GetFileArchiveStatus(UWideString((const char*)a[0]), *(bool*)a[1]);
+        break;
+    case O::HeaderNew: return (int64_t)(intptr_t)new EEPSaveGameHeader;
+    case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->LoadFromFile(*(FSFileSpec*)a[0]);
+    case O::HeaderListMedia: return EESMMediaStrings(((EEPSaveGameHeader*)p)->mMediaStrings).ListMediaFiles(UWideString((const char*)a[0]), *(std::vector<UWideString>*)a[1], *(UWideString*)a[2], a[3] != 0);
+    case O::HeaderDelete: delete (EEPSaveGameHeader*)p;
+        break;
+    case O::PersistentLoad: return EELoadPersistent(UString((const char*)a[0]), 6, *(FSPersistent**)a[1]);
+    case O::PersistentManager: return (int64_t)(intptr_t)(dynamic_cast<EEPTPRestorable<EEScenarioManager>*>((FSPersistent*)p) ? dynamic_cast<EEPTPRestorable<EEScenarioManager>*>((FSPersistent*)p)->mObject : NULL);
+    case O::ManagerEffects: return (int64_t)((EEScenarioManager*)p)->mEffects.size();
+    case O::ManagerEffect: return (int64_t)(intptr_t)((EEScenarioManager*)p)->mEffects[(size_t)a[0]];
+    case O::EffectIsSound: return ((EESMEffect*)p)->mType == kSMEffectMedia && (((EESMEffect*)p)->mMediaAction == kSMMediaActionPlaySound || ((EESMEffect*)p)->mMediaAction == kSMMediaActionSendDialogue);
+    case O::EffectFileName: EECampaignText(a[0], (const char*)((EESMEffect*)p)->mFileName);
+        break;
+    case O::PersistentFreeManager: delete std::exchange(dynamic_cast<EEPTPRestorable<EEScenarioManager>*>((FSPersistent*)p)->mObject, nullptr);
+        break;
+    case O::PersistentDelete: delete (FSPersistent*)p;
+        break;
+    // EECampaignFormManager (p: the manager)
+    case O::FormCampaignName: return (int64_t)(intptr_t)&((EECampaignFormManager*)p)->mCampaignName;
+    case O::FormSetChecksum: ((EECampaignFormManager*)p)->mChecksum = (unsigned long)a[0];
+        break;
+    case O::FileChecksum: return EEGetFileChecksum(*(FSFileSpec*)p, UString((const char*)a[0]), 0);
+    case O::BuiltInName: EECampaignText(a[0], (const char*)*kEECampaignBuiltIns[a[1]]);
+        break;
+    case O::BuiltInChecksum: return *kEECampaignBuiltInChecksums[a[0]];
     }
     return 0;
 }
