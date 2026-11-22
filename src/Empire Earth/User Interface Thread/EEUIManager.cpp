@@ -193,21 +193,7 @@ static const unsigned long kUMKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF
 static ISEntity* sUMKey;                       // the key um_key_load found
 static GERectangle sUMParent, sUMRect;         // CreateUserDefinedControl's window and control rectangles
 static std::vector<UWideString> sUMStrings;    // and its strings
-static_assert(EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
-                  EE_SCREENS_UMC_BACKGROUND_GENERIC == kBackgroundGeneric &&
-                  EE_SCREENS_UMC_STATUS_BUTTON == kDbControlStatusButton && EE_SCREENS_UMC_MINI_MAP == kDbControlMiniMap &&
-                  EE_SCREENS_UMC_ERROR_LOG == kDbControlErrorLog && EE_SCREENS_UMC_ATTRIBUTE == kDbControlAttribute &&
-                  EE_SCREENS_UMC_MAIN_GAME_STATUS_BAR == kDbControlMainGameStatusBar &&
-                  EE_SCREENS_UMC_SELECT_UNITS == kDbControlSelectUnits &&
-                  EE_SCREENS_UMC_COMMAND_UNITS == kDbControlCommandUnits && EE_SCREENS_UMC_PORTRAIT == kDbControlPortrait &&
-                  EE_SCREENS_UMC_CHAT_LINE == kDbControlChatLine && EE_SCREENS_UMC_CB_LIST_BOX == kDbControlCBListBox &&
-                  EE_SCREENS_UMC_WON_STAT_BOX == kDbControlWonNetStatBox &&
-                  EE_SCREENS_UMC_UNIT_ICON_BAR == kDbControlUnitIconBar &&
-                  EE_SCREENS_UMC_SAVED_GROUP == kDbControlSavedGroup &&
-                  EE_SCREENS_UMC_PGS_LINE_GRAPH == kDbControlPGSLineGraph && EE_SCREENS_UMC_PING == kDbControlPing &&
-                  EE_SCREENS_UMC_WON_ROOMS_BOX == kDbControlWonNetRoomsBox &&
-                  EE_SCREENS_UMC_WON_GAMES_BOX == kDbControlWonNetGamesBox,
-              "ui_manager_calls.rs' ids");
+// (ui_manager_calls.rs' ids equal the headers': hud_cpp_consts_tests.rs)
 extern "C" uintptr_t ee_screenscpp_um_call_manager(uintptr_t inCall) { return (uintptr_t)UMCALL(inCall).mManager; }
 extern "C" void ee_screenscpp_um_register_game_event(uintptr_t inManager)
 { UMG(inManager)->RegisterControlEventCallback(EECreateGameEvent); }

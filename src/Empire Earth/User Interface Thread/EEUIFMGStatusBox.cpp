@@ -72,12 +72,7 @@ struct EEUIFMGStatusBoxCall {
     EEUIFMGStatusBoxCall* Ptr() { return this; }
 };
 static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == 3 * sizeof(void*), "hud_direct.rs BoxCallHead");
-static_assert(EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER == kImprovementFlightTimeOrPower &&
-                  EE_SCREENS_BOX_IMPROVEMENT_HIT_POINTS == kImprovementHitPoints &&
-                  EE_SCREENS_BOX_IMPROVEMENT_TRANSPORT == kImprovementTransport &&
-                  EE_SCREENS_BOX_IDS_GARRISON == IDS_IMPROVEMENT_GARRISON && kDisplayModeHidden == 0 &&
-                  kDisplayModeShown == 1,
-              "status_box.rs's constants");
+// (status_box.rs' constants equal the headers': hud_cpp_consts_tests.rs)
 
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
 // EEStatusBoxView), and whether the box has its third and fourth bars

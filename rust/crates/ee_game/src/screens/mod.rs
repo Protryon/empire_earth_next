@@ -189,6 +189,9 @@ pub mod editor_conditions;
 pub mod editor_controls;
 #[cfg(test)]
 mod editor_cpp_consts_tests;
+// the game UI's numbers against the C++ headers' (once its static_asserts)
+#[cfg(test)]
+mod hud_cpp_consts_tests;
 mod editor_direct;
 pub mod editor_effects;
 #[cfg(not(test))]

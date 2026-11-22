@@ -68,18 +68,7 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
 
 // (the command buttons' part of the main game form's host, the original's EEStatusButtonOp, is Rust's over the
 // shims below: ee_screens status_button_calls.rs)
-static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS_SB_CATEGORY_FORTRESS == kUnitCategoryFortress &&
-                  EE_SCREENS_SB_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_SB_SOUND_BUTTON2 == kSoundButton2 &&
-                  EE_SCREENS_SB_WORLD_JIT_DELAY == kWorldDeathmatchJitManufacturingDelay &&
-                  EE_SCREENS_SB_WORLD_REFUSAL_INTERVAL == kWorldRefusalMessageInterval &&
-                  EE_SCREENS_SB_IDS_JIT_NOT_YET == IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT &&
-                  EE_SCREENS_SB_IDS_INSUFFICIENT_POWER == IDS_INSUFFICIENT_POWER &&
-                  EE_SCREENS_SB_IDS_TRADE_BUY == IDS_TRADE_BUY && EE_SCREENS_SB_IDS_TRADE_SELL == IDS_TRADE_SELL &&
-                  EE_SCREENS_SB_IDS_TRADE_FOR == IDS_TRADE_FOR &&
-                  EE_SCREENS_SB_IDS_RESOURCE_NAME_BASE == IDS_RESOURCE_NAME_BASE &&
-                  EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD == IDS_RESOURCE_NAME_GOLD &&
-                  EE_SCREENS_SB_IDS_IMPROVEMENT_POWER == IDS_IMPROVEMENT_POWER && EE_SCREENS_SB_IDS_POP_COST == IDS_POP_COST,
-              "status_button.rs's constants");
+// (status_button.rs' constants equal the headers': hud_cpp_consts_tests.rs)
 
 // Builds the button's help text: market trade prices, command help (with conversion cost for priests) and
 // hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)

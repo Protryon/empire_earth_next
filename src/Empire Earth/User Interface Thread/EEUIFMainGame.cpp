@@ -195,16 +195,10 @@ void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inNam
 #include "ee/EECombatGoals.h"
 #include "rust/sim/units.h"
 
-static_assert(EE_SCREENS_MF_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_MF_SOUND_BUTTON2 == kSoundButton2 &&
-                  EE_SCREENS_MF_IDS_FPS == IDS_FPS && EE_SCREENS_MF_IDS_GAME_PAUSED == IDS_GAME_PAUSED,
-              "main_form.rs' sounds and strings");
+// (main_form.rs' sounds and strings and mouse_modes.rs' farms and keys equal the headers': hud_cpp_consts_tests.rs)
 
 // ---- the mouse modes' ops (ee_screens mouse_modes.rs, EE_SCREENS_MF_OP_MD_*): the picked unit, the first selected
 // unit and the pointed tile held in the call; io.f[0..2] the mouse location where an op takes one
-static_assert(EE_SCREENS_MF_TYPE_FARM == kUnitTypeFarm && EE_SCREENS_MF_TYPE_ROBOTIC_FARM == kUnitTypeRoboticFarm &&
-                  EE_SCREENS_MF_KEY_ESCAPE == kKeyEscape && EE_SCREENS_MF_KEY_F1 == kKeyF1 && EE_SCREENS_MF_KEY_F3 == kKeyF3 &&
-                  EE_SCREENS_MF_KEY_F9 == kKeyF9,
-              "mouse_modes.rs' farms and keys");
 // ---- (the mouse modes' ops end)
 
 // The cursor's reads for one UpdateCursorKind (ee_screens cursor.rs asks them through ee_screenscpp_cursor)
