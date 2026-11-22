@@ -157,28 +157,12 @@ extern "C" bool ee_screenscpp_ug_graphics_paused() { return gGraphics->mIsPaused
 extern "C" bool ee_screenscpp_ug_can_buy_civ() { return gWorld.mGameOptions.CanBuyCivilization(); }
 extern "C" bool ee_screenscpp_ug_custom_civs() { return gWorld.mGameOptions.mAllowCustomCivs; }
 
-// The action queues' host (actions.rs): an action's reference, release, run, undo and undoable flag; the locks
-extern "C" uint32_t ee_screenscpp_action(uint32_t inOp, void* inAction)
-{
-    EEAction* theAction = static_cast<EEAction*>(inAction);
-    switch (inOp) {
-    case EE_SCREENS_ACTION_REFERENCE:
-        theAction->Reference();
-        break;
-    case EE_SCREENS_ACTION_DEREFERENCE:
-        theAction->Dereference();
-        break;
-    case EE_SCREENS_ACTION_RUN:
-        theAction->Virtual4();
-        break;
-    case EE_SCREENS_ACTION_UNDO:
-        theAction->Virtual8();
-        break;
-    case EE_SCREENS_ACTION_UNDOABLE:
-        return theAction->mIsUndoable;
-    }
-    return 0;
-}
+// The action queues' host (actions_ffi.rs picks): an action's reference, release, run, undo and undoable flag
+extern "C" void ee_screenscpp_action_reference(EEAction* inAction) { inAction->Reference(); }
+extern "C" void ee_screenscpp_action_release(EEAction* inAction) { inAction->Dereference(); }
+extern "C" void ee_screenscpp_action_run(EEAction* inAction) { inAction->Virtual4(); }
+extern "C" void ee_screenscpp_action_undo(EEAction* inAction) { inAction->Virtual8(); }
+extern "C" bool ee_screenscpp_action_undoable(EEAction* inAction) { return inAction->mIsUndoable; }
 
 // The UI thread's message host (EE_SCREENS_UI_OP_*): Rust's (ui_message_calls.rs and the modules before it) over
 // the one-statement shims below (UI lane round 11)
@@ -253,10 +237,6 @@ extern "C" void ee_screenscpp_uim_delete_wstring(uintptr_t inText) { delete rein
 // devices, the mouse pointer's thread, the input method; inA is the event's text for the IME ops
 extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
-    float theVolume;
-    uint32_t theBits = (uint32_t)inA;
-    memcpy(&theVolume, &theBits, 4);
-    const char* theText = reinterpret_cast<const char*>(inA);
     switch (inOp) {
     case EE_SCREENS_UI_EV_HAS:
         switch (inA) {
@@ -271,8 +251,8 @@ extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t in
     case EE_SCREENS_UI_EV_LOBBY_SHOWN: return EELobbyIsShown();
     case EE_SCREENS_UI_EV_LOBBY_OPEN: return EEIsLobbyOpen();
     case EE_SCREENS_UI_EV_LOBBY_SHUTDOWN: EELobbyShutdown(); break;
-    case EE_SCREENS_UI_EV_SET_MUSIC_VOLUME: gConductor->GetConductor().SetVolume(theVolume); break;
-    case EE_SCREENS_UI_EV_SET_MASTER_VOLUME: gSoundManager->SetMasterVolume(theVolume); break;
+    case EE_SCREENS_UI_EV_SET_MUSIC_VOLUME: gConductor->GetConductor().SetVolume(EEShimBitsFloat(inA)); break;
+    case EE_SCREENS_UI_EV_SET_MASTER_VOLUME: gSoundManager->SetMasterVolume(EEShimBitsFloat(inA)); break;
     case EE_SCREENS_UI_EV_MUTE: SPIMSetMuted(inA != 0); break;   // port: "Mute in Background"
     case EE_SCREENS_UI_EV_CENTER_MOUSE:
         gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1), (float)(gGameWindow->GetHeight() >> 1)));
@@ -282,8 +262,8 @@ extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t in
     case EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND: return gGamePreferences.mSettings.mMuteInBackground;   // port
     case EE_SCREENS_UI_EV_FULL_SCREEN: return gGamePreferences.mSettings.GetFullScreen();
     case EE_SCREENS_UI_EV_MINIMIZE: PlatWindowMinimize(gGameWindow->GetOSRepresentation()); break;   // CloseWindow
-    case EE_SCREENS_UI_EV_IME_RESULT: gUIManager->AddIMEResultString(theText); break;   // the committed composition
-    case EE_SCREENS_UI_EV_TRANSLATED_KEY: gUIManager->UpdateTranslatedKey(theText, 1); break;
+    case EE_SCREENS_UI_EV_IME_RESULT: gUIManager->AddIMEResultString(reinterpret_cast<const char*>(inA)); break;   // the committed composition
+    case EE_SCREENS_UI_EV_TRANSLATED_KEY: gUIManager->UpdateTranslatedKey(reinterpret_cast<const char*>(inA), 1); break;
     }
     return 0;
 }
