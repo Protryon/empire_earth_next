@@ -70,7 +70,10 @@ public:
         return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0));
     }
     void Open(EEUIFMainGame* inForm) { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_OPEN, NULL, 0); }       // 0x2681c2 (the main game form's Open; provisional name)
-    void ShowCommands(EEUnit* inUnit);      // 0x268806 (EEMSavedGroupSelect; provisional name)
+    // Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
+    // commands, its available techs with hot keys, airport timers); hides them all for others (main_group_calls.rs)
+    // (main_group_calls.rs)
+    void ShowCommands(EEUnit* inUnit) { ee_screens_mg_show_commands((uintptr_t)this, (uintptr_t)inUnit); }      // 0x268806 (EEMSavedGroupSelect; provisional name)
     // (SetUnit 0x268070, ShowCommandButton 0x2682ea, ShowSpecialButtons 0x268dee, Update 0x268f3f: Rust's whole,
     // ee_screens main_group.rs)
 

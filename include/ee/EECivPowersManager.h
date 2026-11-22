@@ -55,7 +55,7 @@ public:
     }  // 0x283235 (&record[inID - 0x26]; EEUCProjectile::ActionChanged) (provisional name)
     unsigned long GetNumPowers() { return ee_tech_civ_power_count(); }           // (the original's mPowers.size())
     EECivPowersManager();
-    virtual ~EECivPowersManager();
+    virtual ~EECivPowersManager() {}
 };
 
 extern EECivPowersManager gCivPowersManager;

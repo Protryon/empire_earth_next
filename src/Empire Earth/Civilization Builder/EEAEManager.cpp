@@ -64,12 +64,6 @@ EEAEManager::EEAEManager()
 {
 }
 
-// Destroys the manager, releasing every template and effect
-EEAEManager::~EEAEManager()
-{
-    this->Clear();
-}
-
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
 static std::vector<EEComplexUnit*> sAEMUnits;   // the living units around the location

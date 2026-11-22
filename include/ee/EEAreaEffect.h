@@ -28,7 +28,7 @@ class EEUnit;
 class EEAreaEffect : public UReferenceCounter, public EeAreaEffectFields {
 public:
     EEAreaEffect(EEAreaEffectTemplate* inTemplate);   // 0x27bf4b (and each kind's ctor)
-    virtual ~EEAreaEffect();
+    virtual ~EEAreaEffect() { ee_screens_ae_destroy((uintptr_t)this); }
     void AppliedTo(EEComplexUnit* inUnit) { ee_screens_ae_applied_to((uintptr_t)this, (uintptr_t)inUnit); }  // +0x04 (the cloaking 0x27aa51: SetCloakableChain(true))
     // +0x08 0x27bfcd (the cloaking 0x27aa5f, the healing 0x27ad20): whether the effect covers inUnit, for player
     // inPlayer from inPoint (EEUnitClass 0x631f1e)

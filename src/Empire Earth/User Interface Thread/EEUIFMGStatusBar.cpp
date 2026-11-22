@@ -30,12 +30,6 @@ EEUIFMGStatusBar::EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UI
                              inArg10);   // (status_bar_calls.rs)
 }
 
-// Destroys the status bar button and its parts
-EEUIFMGStatusBar::~EEUIFMGStatusBar()
-{
-    ee_screens_sba_destroy((uintptr_t)this);
-}
-
 // ---- the one-statement shims of ee_screens status_bar_calls.rs (UI lane round 8: the constructor's layout, the
 // destructor, CopyData, DrawPolygons, DrawTextA): each one call, no logic
 #include "ee/EEScreensShims.h"

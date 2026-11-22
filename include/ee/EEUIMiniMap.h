@@ -18,9 +18,13 @@ class EEUIMiniMap : public EEUIRustControl {
 public:
     EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                 unsigned long inBorderThickness);
-    virtual ~EEUIMiniMap();
+    // Destroys the mini map control and its click action
+    virtual ~EEUIMiniMap() { ee_screens_mm_destroy((uintptr_t)this); }
     virtual long CopyData();                // +0x14 0x275585
-    virtual long DrawPolygons();            // +0x18 0x275ba1
+    // Draws the terrain, the units, the flare and the camera outline clipped to the map: ee_screens mini_map.rs' plan,
+    // executed in its order (the result is the last bitmap's or line's draw)
+    // (mini_map_calls.rs)
+    virtual long DrawPolygons() { return (long)ee_screens_mm_draw_polygons((uintptr_t)this); }            // +0x18 0x275ba1
     // Moves the mini map control and its map origin
     virtual void SetLocation(const GE2DPoint& inLocation)
     {
@@ -34,7 +38,10 @@ public:
     static void UnloadMedia() { ee_screens_mm_unload_media(); }
     // 0x276236 (5 callers: EEMiniMap 0x11f0a1, EEWorld 0x13a308, the scenario editor): the bitmaps' textures, texture
     // coordinates and sBounds from inMiniMap's transformations, gMiniMapTransformation = its +0x64 (provisional name)
-    static void Update(EEMiniMap* inMiniMap);
+    // Points the mini map bitmaps at a new map's terrain and units textures and recomputes the map bounds (the numbers:
+    // ee_screens mini_map.rs)
+    // (mini_map_calls.rs)
+    static void Update(EEMiniMap* inMiniMap) { ee_screens_mm_update((uintptr_t)inMiniMap); }
     static GERectangle sBounds;
     // (public for the shims of ee_screens mini_map_calls.rs: the members, CenterCamera and the base's mouse)
     using UIControl::CaptureMouse;

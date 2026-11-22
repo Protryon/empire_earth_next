@@ -20,7 +20,8 @@ public:
     EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout, unsigned long inScreenWidth,
                      unsigned long inScreenHeight, const GERectangle& inRectangle, UIForm* inForm, bool inScenarioEditor,
                      bool inEnabled, bool inArg10);
-    virtual ~EEUIFMGStatusBar();
+    // Destroys the status bar button and its parts
+    virtual ~EEUIFMGStatusBar() { ee_screens_sba_destroy((uintptr_t)this); }
     // Snapshots the button and its parts for drawing; shows the number of queued improvements
     virtual long CopyData() { return (long)ee_screens_sba_copy_data((uintptr_t)this); }                // +0x14 0x269896
     // Draws the button face (when enabled), the icon, the bar and the labels

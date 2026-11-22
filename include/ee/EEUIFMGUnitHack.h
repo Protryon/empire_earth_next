@@ -15,7 +15,7 @@ struct EeScreensUnitHack;
 class EEUIFMGUnitHack {
 public:
     EEUIFMGUnitHack(EEUIFMainGame* inForm);     // 0x2628e5 (the sorted class names)
-    ~EEUIFMGUnitHack();
+    ~EEUIFMGUnitHack() { ee_screens_unit_hack_free(this->mRecord); }
     void PlaceUnit(const GE2DPoint& inTile)
     {
         ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_PLACE_UNIT, inTile.GetX(), inTile.GetY());

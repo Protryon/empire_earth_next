@@ -26,7 +26,8 @@ public:
     // when a template fails to initialize
     long Load(FSFile* inFile) { return ee_screens_aes_load_templates(this, inFile); } // original-backed 0x27b079; caller1414a3, FSFile IO proof
     EEAEManager();                          // 0x27adb0 (Empire Earth.cpp's chain)
-    virtual ~EEAEManager();
+    // Destroys the manager, releasing every template and effect
+    virtual ~EEAEManager() { this->Clear(); }
     // Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
     void Tick(float inElapsed) { ee_screens_aem_tick((uintptr_t)this, inElapsed); }             // 0x27b634 (EEPhysics::Fn153C59 every 2000; provisional name)
     // 0x27b4f3: whether an area effect of inKind covers tile (inX, inY) for inPlayer

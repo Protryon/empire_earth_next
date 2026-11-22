@@ -20,7 +20,7 @@ struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes
 class EEUIFMGStatusBox : public EeScreensStatusBoxFields {
 public:
     EEUIFMGStatusBox(UIForm* inForm);
-    ~EEUIFMGStatusBox();                    // (ICF-folded into the empty 0xe123d)
+    ~EEUIFMGStatusBox() {}                    // (ICF-folded into the empty 0xe123d)
     void Fill(EEUnit* inUnit);              // 0x26b593 (the main group's new selection)
     void HideBackgrounds();                 // 0x26c470 (before the main group fills the controls in)
     void Refresh(EEUnit* inUnit);           // 0x26cbe1 (each update of the same selection)
@@ -28,13 +28,22 @@ public:
     // the rest of EEUIFMGStatusBox.cpp (provisional names; FillArmorAttributes, UpdateArmorTexts and GetAttributeText
     // are Rust's: ee_screens status_box.rs)
     static void LoadIcons();                // 0x26c4fe (the 50 icon bitmaps of the three unit improvement textures)
-    static void UnloadIcons();
-    static long ReloadIcons();              // 0x26dcd9 (ReloadTexture of the three textures)
+    // Releases the 50 attribute icon bitmaps
+    // (status_box_calls.rs)
+    static void UnloadIcons() { ee_screens_sb_unload_icons(); }
+    // Reloads the three unit improvement textures (after a device loss); returns the first error
+    // (status_box_calls.rs)
+    static long ReloadIcons() { return (long)ee_screens_sb_reload_icons(); }              // 0x26dcd9 (ReloadTexture of the three textures)
     // 0x564ed8: the 50 loaded icons, a class static (its atexit dtor is guarded: bit of 0x564ed0)
     // (provisional name)
     static EEUIFMGIconBitmap sIconBitmaps[50];
     // (the host of ee_screens status_box.rs is Rust over EEUIFMGStatusBox.cpp's shims: status_box_calls.rs)
-    UIControl* GetBoxControl(int64_t inControl) const;  // an EE_SCREENS_BOX_CTL_*
+    // The control an EE_SCREENS_BOX_CTL_* names
+    // (the record's slots)
+    UIControl* GetBoxControl(int64_t inControl) const
+    {
+        return static_cast<UIControl*>(ee_screens_status_box_control(this, inControl));
+    }  // an EE_SCREENS_BOX_CTL_*
     // inline (EEUIFMGMainGroup::Open loads the label first: the arguments are evaluated right to left)
     void SetControls(long inIndex, UIControl* inIcon, UIControl* inLabel)
     {

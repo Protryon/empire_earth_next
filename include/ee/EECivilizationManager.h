@@ -58,7 +58,7 @@ public:
     // Reads the premade civilizations, sorted by index, and their eras
     long LoadPremadeCivilizations(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 1); } // original-backed 0x281672; caller1414a3, FSFile IO proof
     EECivilizationManager();
-    virtual ~EECivilizationManager();
+    virtual ~EECivilizationManager() {}
     // (EEUIEPDCS*; provisional names): 0x2818f9 every premade civilization (sorted by index); 0x28199b DeleteAllEntries,
     // then a header per era and a line per premade civilization of that era
     void GetCivilizations(std::vector<EECivilizationEntry>& outCivs)

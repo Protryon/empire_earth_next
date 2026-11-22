@@ -188,7 +188,6 @@ extern "C" uintptr_t ee_screenscpp_ae_media_get(int32_t inId) { return (uintptr_
 // The effect's and the template's members: Rust's (area_effect_obj.rs; UI lane round 12), each one forward; the
 // world calls the simulation asks are area_effect_host.rs' over the shims above
 EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }
-EEAreaEffect::~EEAreaEffect() { ee_screens_ae_destroy((uintptr_t)this); }
 
 // Writes the effect's location, owning unit and player to the out-of-synch dump
 void EEAreaEffect::Dump(FILE* inFile)
@@ -200,7 +199,6 @@ void EEAreaEffect::Dump(FILE* inFile)
 }
 
 EEAreaEffectTemplate::EEAreaEffectTemplate() { ee_screens_aet_construct((uintptr_t)this); }
-EEAreaEffectTemplate::~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }
 
 long EEAreaEffect::Checksum()
 {

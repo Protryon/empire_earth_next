@@ -15,7 +15,8 @@ public:
                            const GETextureDescription& inDescription, const UILayoutUtility& inLayout,
                            UIForm* inForm, unsigned long inDrawPriority, const GEColor& inColor, bool inVisible,
                            float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags);
-    virtual ~EEUIBGenericBackground();
+    // Destroys the form background
+    virtual ~EEUIBGenericBackground() {}
     // +0x14 0x255131: the tinted rhombus, then the frame pieces mFrameFlags asks for (1 edges + small corners, 2 large
     // corners, 4 side ornaments; ee_screens frame.rs, with the original's DrawCorner 0x255463, DrawCorners 0x254acc,
     // DrawEdge 0x25528a, DrawEdges 0x254c5d, DrawFrameCorners 0x254e05 and DrawSides 0x254f98)
@@ -27,7 +28,9 @@ public:
         return ee_screens_frame_draw(this, &this->mRectangle, this->mScaleX, this->mScaleY, this->mFrameFlags, &inRectangle);
     }
     // +0x08 0x255675: scales the frame to the game window (mScaleX/mScaleY = window / designed size)
-    virtual void Open();
+    // Opens the background and scales its frame to the window size against the form's designed size
+    // (backgrounds_calls.rs)
+    virtual void Open() { ee_screens_gb_open((uintptr_t)this); }
     void SetScale(float inScaleX, float inScaleY)
     {
         this->mScaleX = inScaleX;

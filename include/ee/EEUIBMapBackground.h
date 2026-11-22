@@ -6,6 +6,7 @@
 // the unit at 0x254911.. (EEUIBGenericBackground's). Requires lle/UIBFull.h.
 #ifndef EE_EEUIBMAPBACKGROUND_H
 #define EE_EEUIBMAPBACKGROUND_H
+#include "rust/game/screens.h"
 
 class EEUIBMapBackground : public UIBFull {
 public:
@@ -18,7 +19,11 @@ public:
     virtual ~EEUIBMapBackground() {}
     // Draws the campaign map background
     virtual long DrawBackground(const GERectangle& inRectangle) { return UIBFull::DrawBackground(inRectangle); }   // 0x2556d9 (slot 0x14)
-    virtual long LoadBackground();                                 // 0x2556e6 (slot 0x10)
+    // Loads the campaign map image (PNG or JPG; the original's were TGA or JPG) and cuts it into 256x256 textures, one
+    // per background cell
+    // The image comes from the saved game/scenario resources, else from the startup path (backgrounds_calls.rs)
+    // (backgrounds_calls.rs)
+    virtual long LoadBackground() { return (long)ee_screens_mb_load((uintptr_t)this); }                                 // 0x2556e6 (slot 0x10)
 };
 
 #endif

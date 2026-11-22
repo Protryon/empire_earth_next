@@ -21,7 +21,8 @@ public:
     // 0x257881 (the user-defined control factory 0x274931; EESEUICCommandUnits 0x197274): a 2x2 rectangle at
     // gViewport's view rectangle top-left; references inListener
     EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inListener);
-    virtual ~EEUICCommandUnits();
+    // Destroys the command control, its arrow model and texture
+    virtual ~EEUICCommandUnits() { ee_screens_cu_destroy((uintptr_t)this); }
     virtual long CopyData() { return this->Rust(EE_SCREENS_CU_DO_COPY_DATA); }
     virtual long DrawPolygons() { return this->Rust(EE_SCREENS_CU_DO_DRAW); }
     // +0x88 0x25829c: a right button press at inLocation (EEUIFMainGame; EESEUICCommandUnits 0x197383)

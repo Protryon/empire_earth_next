@@ -17,7 +17,8 @@ class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields 
 public:
     // 0x26de97 (ret 0xc; the user-defined control factory)
     EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable);
-    virtual ~EEUIFMGStatusButton();
+    // Destroys the command button and its parts
+    virtual ~EEUIFMGStatusButton() { ee_screens_sbt_destroy((uintptr_t)this); }
     // Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
     // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
     // (ee_screens status_button.rs)

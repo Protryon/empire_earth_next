@@ -46,12 +46,6 @@ EEUICCommandUnits::EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigne
     ee_screens_cu_construct((uintptr_t)this, (uintptr_t)inListener);   // (command_units_calls.rs)
 }
 
-// Destroys the command control, its arrow model and texture
-EEUICCommandUnits::~EEUICCommandUnits()
-{
-    ee_screens_cu_destroy((uintptr_t)this);
-}
-
 // The class's own ops (the arrow's draw, the ground point, the pick, the group's centre, the click: the old RustOp)
 // are command_units_ops.rs' over the one-statement shims below (UI lane round 11)
 #define CU(c) static_cast<EEUICCommandUnits*>((EEUIRustControl*)(c))

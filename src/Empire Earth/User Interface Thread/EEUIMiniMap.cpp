@@ -67,25 +67,12 @@ long EEUIMiniMap::MouseRButtonUp()
     return 0;
 }
 
-// Destroys the mini map control and its click action
-EEUIMiniMap::~EEUIMiniMap()
-{
-    ee_screens_mm_destroy((uintptr_t)this);
-}
-
 // Snapshots the mini map for drawing: refreshes the units texture, scales the map to the window, places the
 // camera outline and the blinking flare (redrawing the screen when the flare leaves the map's inner area); the
 // numbers are ee_screens mini_map.rs', the C++ reads and applies them in the original's order
 long EEUIMiniMap::CopyData()
 {
     return (long)ee_screens_mm_copy_data((uintptr_t)this);   // (mini_map_calls.rs)
-}
-
-// Draws the terrain, the units, the flare and the camera outline clipped to the map: ee_screens mini_map.rs' plan,
-// executed in its order (the result is the last bitmap's or line's draw)
-long EEUIMiniMap::DrawPolygons()
-{
-    return (long)ee_screens_mm_draw_polygons((uintptr_t)this);   // (mini_map_calls.rs)
 }
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
@@ -108,13 +95,6 @@ int64_t EEUIMiniMap::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
     case EE_SCREENS_MM_OP_POINTER: return gMouse->mPointer;
     }
     return 0;
-}
-
-// Points the mini map bitmaps at a new map's terrain and units textures and recomputes the map bounds (the numbers:
-// ee_screens mini_map.rs)
-void EEUIMiniMap::Update(EEMiniMap* inMiniMap)
-{
-    ee_screens_mm_update((uintptr_t)inMiniMap);   // (mini_map_calls.rs)
 }
 
 // ---- the one-statement shims of ee_screens mini_map_calls.rs (UI lane round 8): each one call, no logic

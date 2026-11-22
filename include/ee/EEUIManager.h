@@ -113,8 +113,12 @@ public:
     void DeleteScenarioEditor() { ee_screens_um_delete_editor((uintptr_t)this); }            // 0x274d24 (deletes +0x130 through its vtable; the main screen's Open)
     // 0x26fa55 / 0x26fa6a: the main group's mL1C = 0 / 1 and its mB25 (EEUIFMGStatusButton::Command's buttons 1 and
     // 0; defined in EEUIFMGStatusButton.cpp's range; provisional names)
-    void Fn26FA55();
-    void Fn26FA6A();
+    // Asks the main panel to refill its unit (clearing its flag)
+    // (status_button_calls.rs)
+    void Fn26FA55() { ee_screens_sbt_main_group_refill(false); }
+    // Asks the main panel to refill its unit (setting its flag)
+    // (status_button_calls.rs)
+    void Fn26FA6A() { ee_screens_sbt_main_group_refill(true); }
 
     // the record's forms as their classes (+0x12c GetFormByID(0xb) in the ctor; +0x130 CreateScenarioEditor's)
     EEUIFScenarioEditor* GetScenarioEditorForm() const { return (EEUIFScenarioEditor*)this->mScenarioEditorForm; }

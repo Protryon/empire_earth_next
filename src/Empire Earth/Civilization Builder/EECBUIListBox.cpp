@@ -34,10 +34,6 @@ EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::
     ee_screens_cbb_construct((uintptr_t)&inTable, (uintptr_t)static_cast<UIControl*>(this), inIsTabable);
 }
 
-EECBUIListBox::~EECBUIListBox()
-{
-}
-
 // the constructor's body, AppendStringArray and CopyData: hud_bodies.rs over these (UI lane round 12)
 #define CBB(l) static_cast<EECBUIListBox*>(reinterpret_cast<UIControl*>(l))
 extern "C" void ee_screenscpp_cbb_setup_text(uintptr_t inTable, uintptr_t inList)

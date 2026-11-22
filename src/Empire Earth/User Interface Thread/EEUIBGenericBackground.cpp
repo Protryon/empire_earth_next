@@ -51,25 +51,6 @@ EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, con
     ee_screens_gb_construct((uintptr_t)this, inOpacity, (uint32_t)inFlags, (uintptr_t)&inColor, inScaleX, inScaleY);
 }
 
-// Destroys the form background
-EEUIBGenericBackground::~EEUIBGenericBackground()
-{
-}
-
-// Opens the background and scales its frame to the window size against the form's designed size
-void EEUIBGenericBackground::Open()
-{
-    ee_screens_gb_open((uintptr_t)this);   // (backgrounds_calls.rs)
-}
-
-// Loads the campaign map image (PNG or JPG; the original's were TGA or JPG) and cuts it into 256x256 textures, one
-// per background cell
-// The image comes from the saved game/scenario resources, else from the startup path (backgrounds_calls.rs)
-long EEUIBMapBackground::LoadBackground()
-{
-    return (long)ee_screens_mb_load((uintptr_t)this);   // (backgrounds_calls.rs)
-}
-
 // ---- the one-statement shims of ee_screens backgrounds_calls.rs (UI lane round 8: the frame's fill and pieces,
 // Open, the map's LoadBackground): each one call, no logic
 #include "ee/EEScreensShims.h"

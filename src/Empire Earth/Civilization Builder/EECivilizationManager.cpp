@@ -60,10 +60,6 @@ EECivilizationManager::EECivilizationManager()
     ee_tech_civ_bind_rules(EEGetRules().RustRules());
 }
 
-EECivilizationManager::~EECivilizationManager()
-{
-}
-
 bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const
 {
     struct Sink {
@@ -201,10 +197,6 @@ extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUILis
 // ------------------------------------------------------------------------------------------------ the powers
 
 EECivPowersManager::EECivPowersManager()
-{
-}
-
-EECivPowersManager::~EECivPowersManager()
 {
 }
 

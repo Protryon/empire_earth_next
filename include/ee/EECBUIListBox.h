@@ -22,7 +22,7 @@ public:
     EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData, GEFont* inFont,
                   const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                   unsigned long inBorderThickness, bool inIsTabable);
-    virtual ~EECBUIListBox();
+    virtual ~EECBUIListBox() {}
 
     // the overrides (civ_list.rs)
     virtual void AppendStringArray(std::vector<UWideString>& inLines)

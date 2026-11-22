@@ -41,12 +41,6 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
                              inRectangle.GetBottom(), inShowLevel);
 }
 
-// Destroys the portrait, releasing its unit and button
-EEUICPortrait::~EEUICPortrait()
-{
-    ee_screens_portrait_free(this);
-}
-
 // the tooltip being built (the UI thread's)
 static UWideString* sPortraitHelp;
 

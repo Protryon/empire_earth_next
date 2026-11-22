@@ -66,12 +66,6 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
     ee_screens_sbt_construct((uintptr_t)this, (uintptr_t)inManager, (uintptr_t)&inRectangle, (uintptr_t)&inTable);   // (status_button_calls.rs)
 }
 
-// Destroys the command button and its parts
-EEUIFMGStatusButton::~EEUIFMGStatusButton()
-{
-    ee_screens_sbt_destroy((uintptr_t)this);
-}
-
 // (the command buttons' part of the main game form's host, the original's EEStatusButtonOp, is Rust's over the
 // shims below: ee_screens status_button_calls.rs)
 static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS_SB_CATEGORY_FORTRESS == kUnitCategoryFortress &&
@@ -101,18 +95,6 @@ long EEUIFMGStatusButton::MouseRButtonUp()
 {
     static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP);
     return 0;
-}
-
-// Asks the main panel to refill its unit (clearing its flag)
-void EEUIManager::Fn26FA55()
-{
-    ee_screens_sbt_main_group_refill(false);   // (status_button_calls.rs)
-}
-
-// Asks the main panel to refill its unit (setting its flag)
-void EEUIManager::Fn26FA6A()
-{
-    ee_screens_sbt_main_group_refill(true);   // (status_button_calls.rs)
 }
 
 // the right press's and tab's shims (ee_screens hud_more.rs)

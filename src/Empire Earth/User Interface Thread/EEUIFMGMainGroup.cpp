@@ -62,13 +62,6 @@ EEUIFMGMainGroup::~EEUIFMGMainGroup()
     delete this->mStatusBox;
 }
 
-// Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
-// commands, its available techs with hot keys, airport timers); hides them all for others (main_group_calls.rs)
-void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
-{
-    ee_screens_mg_show_commands((uintptr_t)this, (uintptr_t)inUnit);   // (main_group_calls.rs)
-}
-
 // (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
 // classes' units, Tech Tree/EETechTreeNode.cpp and Database/EEButtonObject.cpp)
 

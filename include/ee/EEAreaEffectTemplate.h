@@ -32,7 +32,7 @@ typedef EeAreaEffectData EEAreaEffectData;
 class EEAreaEffectTemplate : public UReferenceCounter, public EeAreaEffectTemplateFields {
 public:
     EEAreaEffectTemplate();
-    virtual ~EEAreaEffectTemplate();        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
+    virtual ~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
     // 0x27c5ab: EEGraphicEffect::Load(inArg) on both graphic effects, then mMedia's LoadMedia
     void Load(bool inIsOnDemand);
     // Unloads the template's graphic effects and sound media
