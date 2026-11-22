@@ -91,6 +91,7 @@ namespace {
 // a texture map in its order, as rfil.rs reads it
 template <class Map> EeGfxRfilPairs Flatten(const Map& inMap, std::vector<EeGfxRfilPair>& outPairs)
 {
+    outPairs.clear();   // (the pairs' storage is reused from view to view: sDrawPairs)
     for (typename Map::const_iterator it = inMap.begin(); it != inMap.end(); ++it)
         outPairs.push_back({it->first, it->second});
     return {outPairs.data(), outPairs.size()};
