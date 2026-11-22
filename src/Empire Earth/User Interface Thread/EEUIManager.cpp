@@ -197,17 +197,7 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
     return (long)ee_screens_ui_manager_update_mouse(&theCall);
 }
 
-static_assert(EE_SCREENS_UM_TEXTURE_RESOLUTION_ID == kTextureResolutionControlID &&
-              EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX == kGameSettingsTextureResolutionComboBox &&
-              EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING == kTextureResolutionOriginalString &&
-              EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP == kTextureResolutionHelpString &&
-              EE_SCREENS_UM_FORM_LOBBY == kFormLobby && EE_SCREENS_UM_ENGINE_ID == kLobbyEngineControlID &&
-              EE_SCREENS_UM_ENGINE_HEADER == kLobbyEngineHeader && EE_SCREENS_UM_ENGINE_COMBO == kLobbyEngineCombo &&
-              EE_SCREENS_UM_ENGINE_LABEL == kLobbyEngineLabel && EE_SCREENS_UM_ENGINE_CLASSIC == kLobbyEngineClassicString &&
-              EE_SCREENS_UM_ENGINE_RANDOM == kLobbyEngineRandomString &&
-              EE_SCREENS_UM_ENGINE_HEADER_STRING == kLobbyEngineHeaderString &&
-              EE_SCREENS_UM_ENGINE_HELP == kLobbyEngineHelpString && kGameSettingsQualityComboBox == 123,
-              "ee_screens ui_manager.rs' ids");
+// (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)
 
 // The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*), each the original's
 extern "C" int64_t ee_screenscpp_ui_manager(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)

@@ -419,6 +419,7 @@ pub mod ui_game;
 pub(crate) mod ui_game_calls;
 #[cfg(not(test))]
 mod ui_game_ffi;
+pub mod ui_ids;
 pub mod ui_manager;
 pub(crate) mod ui_manager_calls;
 #[cfg(not(test))]
