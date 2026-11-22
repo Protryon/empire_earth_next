@@ -1139,44 +1139,9 @@ extern "C" void ee_screenscpp_le_map_display(uintptr_t inOptions, void* inOut)
 
 // ---- the settings form's records (settings_form.rs)
 
-// the fields of EEGameSettings the form reads and writes: (record field, settings member)
-#define EE_SCREENS_SETTINGS_FIELDS(X)                                                                                  \
-    X(mouse_sensitivity, mMouseSensitivity) X(side_scroll_speed, mSideScrollSpeed)                                     \
-    X(grab_scroll_speed, mGrabScrollSpeed) X(sound_volume, mSoundVolume) X(music_volume, mMusicVolume)                 \
-    X(max_number_of_sounds, mMaxNumberOfSounds) X(game_bit_depth, mGameBitDepth)                                       \
-    X(game_window_height, mGameWindowHeight) X(game_window_width, mGameWindowWidth)                                    \
-    X(mip_levels_to_drop, mMIPLevelsToDrop) X(model_detail, mModelDetail) X(effect_detail, mEffectDetail)              \
-    X(network_adapter, mNetworkAdapter) X(screen_id, mScreenID) X(terrain_mip_levels_to_drop, mTerrainMIPLevelsToDrop) \
-    X(texture_bit_depth, mTextureBitDepth) X(number_of_auto_saves, mNumberOfAutoSaves)                                 \
-    X(auto_save_in_milliseconds, mAutoSaveInMilliseconds) X(texture_resolution, mTextureResolution)                    \
-    X(ui_scale, mUIScale) X(render_resolution, mRenderResolution) X(window_mode, mWindowMode)                          \
-    X(frame_rate_limit, mFrameRateLimit) X(texture_filtering, mTextureFiltering) X(brightness, mBrightness)            \
-    X(master_volume, mMasterVolume) X(maximum_zoom_out, mMaximumZoomOut) X(zoom_enabled, mZoomEnabled)                 \
-    X(display_clouds, mDisplayClouds) X(display_shadows, mDisplayShadows)                                              \
-    X(display_battlefield_ambients, mDisplayBattlefieldAmbients) X(trilinear_filter, mTrilinearFilter)                 \
-    X(full_screen, mFullScreen) X(reverb_enabled, mReverbEnabled) X(wait_for_vsync, mWaitForVSync)                     \
-    X(ambient_sounds, mAmbientSounds) X(show_blood, mShowBlood) X(music_enabled, mMusicEnabled)                        \
-    X(right_hand_mouse_orientation, mRightHandMouseOrientation) X(unit_lighting, mUnitLighting)                        \
-    X(display_weather_effects, mDisplayWeatherEffects) X(anti_aliasing, mAntiAliasing)                                 \
-    X(mute_in_background, mMuteInBackground)
-
-// the settings (the defaults when inDefaults) into outRecord
-extern "C" void ee_screenscpp_settings(bool inDefaults, EeScreensSettingsRecord* outRecord)
-{
-    const EEGameSettings& theSettings = inDefaults ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings();
-#define EE_SCREENS_GET(field, member) outRecord->field = theSettings.member;
-    EE_SCREENS_SETTINGS_FIELDS(EE_SCREENS_GET)
-#undef EE_SCREENS_GET
-}
-
-// a record into the settings
-extern "C" void ee_screenscpp_put_settings(const EeScreensSettingsRecord* inRecord)
-{
-    EEGameSettings& theSettings = gGamePreferences.GetSettings();
-#define EE_SCREENS_PUT(field, member) theSettings.member = inRecord->field;
-    EE_SCREENS_SETTINGS_FIELDS(EE_SCREENS_PUT)
-#undef EE_SCREENS_PUT
-}
+// the settings the form reads and writes (settings_form_ffi.rs copies their members), the defaults read only
+extern "C" EeAppSettingsFields* ee_screenscpp_settings_fields(bool inDefaults)
+{ return inDefaults ? &EEGamePreferences::sDefaultSettings : &gGamePreferences.GetSettings(); }
 
 // the settings form's display questions: display_modes.rs over these (UI lane round 12)
 extern "C" uintptr_t ee_screenscpp_disp_rasterizer_count() { return gDisplayRasterizers.size(); }

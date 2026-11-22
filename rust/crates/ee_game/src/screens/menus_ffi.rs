@@ -13,8 +13,8 @@ use crate::screens::single_player::EeScreensSinglePlayerSlot;
 pub(crate) mod sys {
     extern "C" {
         // the settings form's (settings_form_ffi.rs)
-        pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
-        pub fn ee_screenscpp_put_settings(record: *const crate::screens::settings_form::EeScreensSettingsRecord);
+        /// the game's settings (`gGamePreferences.GetSettings()`), or the defaults (`sDefaultSettings`, read only)
+        pub fn ee_screenscpp_settings_fields(defaults: bool) -> *mut crate::app::settings::EeAppSettingsFields;
     }
 }
 
