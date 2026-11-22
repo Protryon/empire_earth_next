@@ -29,6 +29,12 @@ impl IconBarHost for Bar {
                 return 0;
             }
         }
+        if op >= class {
+            let ffi = &mut crate::screens::game_cpp::Ffi;
+            if let Some(r) = crate::screens::icon_bar_ops::op(ffi, self.0 as usize, op - class, a, b, f) {
+                return r;
+            }
+        }
         crate::screens::hud_ctl::HudHost::op(&mut crate::screens::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }

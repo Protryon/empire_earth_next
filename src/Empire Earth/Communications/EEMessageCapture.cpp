@@ -37,15 +37,17 @@ static const bool sCaptureHooksSet = (EEMessageCaptureImport = EEMessageCaptureI
 
 // ------------------------------------------------------------------------- round 10, lane C: the records' C++ reads
 
-int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp (lane D)
+int64_t EECore10OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECivCapture.cpp
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // lane D's link
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define MCMSG ((NEMessage*)p)
 #define MCNE (static_cast<NEMRecord*>(MCMSG))
 #define MCMR (static_cast<EEMRecord*>(MCMSG))
 
-// the C++ calls and members of gamecpp msg_capture.rs and mrecord.rs (p a message): one statement each
-int64_t EECore10OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+// lane C's chain link (round 10): the C++ calls and members of gamecpp msg_capture.rs and mrecord.rs (p a message),
+// then EECivCapture.cpp's, then lane D's link: one statement each
+int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
@@ -90,7 +92,12 @@ int64_t EECore10OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::LcMrListData: return P64(MCMR->mList.empty() ? NULL : &MCMR->mList[0]);
     case O::LcMrListSize: return (int64_t)MCMR->mList.size();
-    default: return EECore10OpD(inOp, p, a, f);
+    default: return EECore10OpC2(inOp, p, a, f);
     }
     return 0;
+}
+
+double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpDF(inOp, p, a, f);
 }

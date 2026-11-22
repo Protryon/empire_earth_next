@@ -24,6 +24,9 @@ impl SeplHost for Host {
         let p = p.map(|x| x as *mut c_void);
         unsafe {
             if op >= 700 {
+                if let Some(r) = crate::screens::editor_trigx_ffi::sein(op, p.map(|x| x as usize), i, f) {
+                    return r;
+                }
                 sys::ee_screenscpp_sein(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {

@@ -79,7 +79,7 @@ fn player_fields(r: &mut Record, player: P) {
 /// The player of an index (none out of 0..17).
 fn player_of(index: c_long) -> P {
     if (0..17).contains(&index) {
-        hp(O::AeWorldPlayer, 0, &[index as i64])
+        hp(O::LcWorldPlayer, 0, &[index as i64])
     } else {
         0
     }

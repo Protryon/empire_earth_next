@@ -42,10 +42,12 @@ public:
     GETextureManager& operator=(const GETextureManager&) = delete;
     // Prints every loaded texture file and its reference count to a dump file
     void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_ge_texman_dump(this->mRust, &inFile); }
-    unsigned long GetMemoryFootprint();     // the sum of the cached textures' GetAllocatedSize()
+    // the sum of the cached textures' GetAllocatedSize()
+    unsigned long GetMemoryFootprint() { return ee_ge_texman_footprint(this->mRust); }
     GEScreen* GetScreen() const { return (GEScreen*)ee_ge_texman_screen(this->mRust); }
     unsigned long GetTextureCount() { return ee_ge_texman_count(this->mRust); }
-    GETexture* GetTextureAt(unsigned long inIndex);   // port: the cache's textures in name order (the store gate)
+    // port: the cache's textures in name order (the store gate)
+    GETexture* GetTextureAt(unsigned long inIndex) { return (GETexture*)ee_ge_texman_at(this->mRust, inIndex); }
     FSPath* GetTexturePath() { return (FSPath*)ee_ge_texman_path(this->mRust); }
     GETexture* LoadTexture(const UString& inName, const GETextureDescription& inDescription)
     {
@@ -56,7 +58,8 @@ public:
     // Reloads every cached texture from its files (or recreates its surface when they are gone),
     // then reapplies the frames' saved stage settings to the whole texture; returns the last result
     long RefreshAllTextures() { return ee_ge_texman_refresh_all(this->mRust); }
-    long ReloadTexture(const UString& inName, const GETextureDescription& inDescription);
+    long ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
+        { return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription); }
     // Removes and releases every texture nobody else references; returns 5 if any are still in use
     long RemoveAllTextures() { return ee_ge_texman_remove_all(this->mRust); }
     // Removes and releases one texture if nobody else references it; 5 if still in use, 3 if not managed here
@@ -73,12 +76,13 @@ public:
     // keep the original's size as their logical size (GESurface::GetLogicalShift: inScaleShift - inMipLevelsToDrop)
     // and get MIP levels. NULL or "" turns the pack off. Every texture manager; textures already cached keep the file
     // they were loaded from until they are released.
-    static void SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop);
+    static void SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
+        { ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop); }
     // the pack's name of a "textures\..." file (false with no pack, or for a picture read as data), and the logical
     // shift and extra MIP drop of its files: for pictures loaded around the texture manager (RTSMouse's pointers)
     static bool GetTexturePackName(const UString& inName, UString& outName);
-    static long GetTexturePackLogicalShift();
-    static long GetTexturePackMipLevelsToDrop();
+    static long GetTexturePackLogicalShift() { return ee_ge_texpack_logical_shift(); }
+    static long GetTexturePackMipLevelsToDrop() { return ee_ge_texpack_mip_levels_to_drop(); }
 private:
     friend class GETexture;
     // Marks the texture as promoted; always succeeds

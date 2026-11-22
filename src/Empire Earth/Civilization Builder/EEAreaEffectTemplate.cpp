@@ -14,23 +14,20 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"   // the template media and list members (area_effect_lists.rs)
 
 // UReferenceContainer<T>::Contains (its COMDAT 0x27c820 closes this unit) is defined in ee/UReferenceContainer.h
-
-// port (round 10, lane C): the bodies are gamecpp ae_effect.rs's; each list passes itself as its container
-#define EELIST static_cast<UReferenceContainer<EEAreaEffect*>*>(this)
 
 // Loads the template's graphic effects and sound media
 void EEAreaEffectTemplate::Load(bool inIsOnDemand)
 {
-    ee_gamecpp_aetpl_media(this, false, inIsOnDemand);
+    ee_screens_ael_template_load(this, inIsOnDemand);
 }
 
 // Unloads the template's graphic effects and sound media
 void EEAreaEffectTemplate::Unload()
 {
-    ee_gamecpp_aetpl_media(this, true, false);
+    ee_screens_ael_template_unload(this);
 }
 
 // Adds an area effect to the unit's list (taking a reference)
@@ -43,41 +40,77 @@ void EEUnitAreaEffectList::Add(EEAreaEffect* inEffect)
 // count as one), replacing a weaker one
 void EEUnitAreaEffectList::AddAreaEffect(EEAreaEffect* inEffect)
 {
-    ee_gamecpp_aelist_add(EELIST, inEffect);
+    ee_screens_ael_add(this, inEffect);
 }
 
 // Lets every effect modify a value of the given kind, showing each effect that applied
 void EEUnitAreaEffectList::ApplyModifiers(long inKind, const long& inDamage, long& outDamage, EEComplexUnit* inUnit)
 {
-    ee_gamecpp_aelist_modifiers(EELIST, inKind, &inDamage, &outDamage, inUnit);
+    ee_screens_ael_apply_modifiers(this, inKind, &inDamage, &outDamage, inUnit);
 }
 
 // Removes the first effect of the given kind; returns whether one was found
 bool EEUnitAreaEffectList::Remove(long inKind)
 {
-    return ee_gamecpp_aelist_remove(EELIST, inKind);
+    return ee_screens_ael_remove(this, inKind);
 }
 
 // Rebuilds the list keeping only the strongest effect of each kind
 void EEUnitAreaEffectList::KeepStrongest()
 {
-    ee_gamecpp_aelist_keep_strongest(EELIST);
+    EEUnitAreaEffectList theList;
+    for (std::vector<EEAreaEffect*>::iterator theIterator = this->mItems.begin(); theIterator != this->mItems.end(); ++theIterator)
+        theList.AddAreaEffect(*theIterator);
+    *this = theList;
 }
 
 // Marks every effect in the list for a recount
 void EEUnitAreaEffectList::MarkDirty()
 {
-    ee_gamecpp_aelist_mark_dirty(EELIST);
+    ee_screens_ael_mark_dirty(this);
 }
 
-// Moves every effect in the list to a new location and recounts it (inValue unread)
+// Moves every effect in the list to a new location and recounts it
 void EEUnitAreaEffectList::MoveAndUpdate(const GE2DPoint& inPoint, float inValue)
 {
-    ee_gamecpp_aelist_move(EELIST, &inPoint);
+    ee_screens_ael_move_and_update(this, inPoint.mX, inPoint.mY, inValue);
 }
 
 // Ticks every effect in the list on the unit
 void EEUnitAreaEffectList::Tick(EEComplexUnit* inUnit, float inElapsed)
 {
-    ee_gamecpp_aelist_tick(EELIST, inUnit, inElapsed);
+    ee_screens_ael_tick(this, inUnit, inElapsed);
 }
+
+// The template's media and the list members' logic: area_effect_lists.rs over the one-statement shims below (UI lane
+// round 11)
+#define AEL_L(l) ((EEUnitAreaEffectList*)(l))
+#define AEL_E(e) ((EEAreaEffect*)(e))
+#define AEL_T(t) ((EEAreaEffectTemplate*)(t))
+extern "C" uintptr_t ee_screenscpp_ael_count(uintptr_t inList) { return AEL_L(inList)->mItems.size(); }
+extern "C" uintptr_t ee_screenscpp_ael_at(uintptr_t inList, uintptr_t inIndex)
+{ return (uintptr_t)AEL_L(inList)->mItems[inIndex]; }
+extern "C" int64_t ee_screenscpp_ael_strength(uintptr_t inEffect) { return (int64_t)AEL_E(inEffect)->GetStrength(); }
+extern "C" void ee_screenscpp_ael_remove(uintptr_t inList, uintptr_t inEffect)
+{ AEL_L(inList)->UReferenceContainer<EEAreaEffect*>::Remove(AEL_E(inEffect)); }
+extern "C" void ee_screenscpp_ael_add(uintptr_t inList, uintptr_t inEffect)
+{ AEL_L(inList)->UReferenceContainer<EEAreaEffect*>::Add(AEL_E(inEffect)); }
+extern "C" bool ee_screenscpp_ael_modify(uintptr_t inEffect, int64_t inKind, uintptr_t inValue, uintptr_t inOut)
+{ return AEL_E(inEffect)->Modify((long)inKind, *(const long*)inValue, *(long*)inOut); }
+extern "C" void ee_screenscpp_ael_show_on(uintptr_t inEffect, uintptr_t inUnit)
+{ AEL_E(inEffect)->ShowOn((EEComplexUnit*)inUnit); }
+extern "C" void ee_screenscpp_ael_mark_dirty(uintptr_t inEffect) { AEL_E(inEffect)->MarkDirty(); }
+extern "C" void ee_screenscpp_ael_set_location(uintptr_t inEffect, float inX, float inY)
+{ AEL_E(inEffect)->mLocation = GE2DPoint(inX, inY); }
+extern "C" void ee_screenscpp_ael_recount(uintptr_t inEffect, float inValue)
+{ AEL_E(inEffect)->Recount((long)inValue); }
+extern "C" void ee_screenscpp_ael_tick(uintptr_t inEffect, uintptr_t inUnit, float inElapsed)
+{ AEL_E(inEffect)->Tick((EEComplexUnit*)inUnit, inElapsed); }
+extern "C" uintptr_t ee_screenscpp_ael_t_effect(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mGraphicEffect; }
+extern "C" uintptr_t ee_screenscpp_ael_t_effect18(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mGraphicEffect18; }
+extern "C" uintptr_t ee_screenscpp_ael_t_media(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mMedia; }
+extern "C" void ee_screenscpp_ael_effect_load(uintptr_t inEffect, bool inOnDemand)
+{ ((EEGraphicEffect*)inEffect)->Load(inOnDemand); }
+extern "C" void ee_screenscpp_ael_effect_unload(uintptr_t inEffect) { ((EEGraphicEffect*)inEffect)->Unload(); }
+extern "C" void ee_screenscpp_ael_media_load(uintptr_t inMedia) { ((EEMedia*)inMedia)->LoadMedia(); }
+extern "C" void ee_screenscpp_ael_media_unload(uintptr_t inMedia) { ((EEMedia*)inMedia)->UnloadMedia(); }

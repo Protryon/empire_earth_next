@@ -175,6 +175,14 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             }
             (check != 0) as i64
         }
+        Op::EditNumber => {
+            // the editor exercise's campaign name
+            let edit = go(Op::FxAsEdit, control_of(c.h, i[0]), &[]) as u64;
+            if edit != 0 {
+                go(Op::FxEditSetNumber, edit, &[i[1]]);
+            }
+            (edit != 0) as i64
+        }
         Op::ListSelect => {
             let list = go(Op::FxAsListString, control_of(c.h, i[0]), &[]) as u64;
             if list == 0 || (i[1] as u32 as i64) >= go(Op::FxListLineCount, list, &[]) {
@@ -423,6 +431,16 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             }
             0
         }
+        Op::LobbyPost => {
+            // SAFETY: the call's text, NUL ended, alive through the call
+            let command = if c.s.is_null() {
+                String::new()
+            } else {
+                unsafe { std::ffi::CStr::from_ptr(c.s) }.to_string_lossy().into_owned()
+            };
+            super::lobby::post(&command, i[0] as u64)
+        }
+        Op::LobbySnapshot => super::lobby::snapshot(sink),
         _ => return None,
     };
     Some(result)

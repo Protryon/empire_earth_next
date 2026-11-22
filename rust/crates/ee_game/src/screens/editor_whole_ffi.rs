@@ -296,6 +296,10 @@ impl SeeHost for Host {
         if let Some(r) = crate::screens::editor_direct::see(op, p, i) {
             return r;
         }
+        use crate::screens::editor_tabsx as tabsx;
+        if let Some(r) = unsafe { tabsx::see(&mut crate::screens::editor_sefmx::cpp, &mut tabsx::seex, op, p, i, f) } {
+            return r;
+        }
         let p = p.map(|x| x as *mut c_void);
         unsafe { sys::ee_screenscpp_see(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
     }

@@ -33,28 +33,37 @@
 //! - [`text`]: the trigger text file (the editor's export and import of the scenario's translatable texts).
 //! - [`effect`]: a trigger effect's run (`EESMEffect::Execute` and its helpers) over the world's calls by
 //!   operation; [`effect_ai`] the AI's military effects, [`task`] the two task effects.
+//! - [`event`]: the data-driven events' effects (`EEEvent::Trigger`, `RunEffect` and its handlers, `LoadEvents`).
 //! - [`world_compose`]: the effect run's world calls that were C++ statement sequences, of single statements.
 //! - [`ffi`]: the C ABI the C++ classes call.
 //! - [`sm_capture`]: TEST ONLY, the simulation capture's scenario records (SMCE .. SMCU) over the C++ reads.
 
+pub mod ai_store;
 pub mod aivar;
 pub mod area;
 pub mod attribute;
+pub mod ca_compose;
 pub mod cinematic;
 pub mod class_attribute;
 pub mod condition;
 pub mod create;
 pub mod effect;
 pub mod effect_ai;
+pub mod effect_copy;
+pub mod effect_text;
+pub mod event;
 pub mod ffi;
 pub mod fields;
 pub mod host;
 pub mod lists;
 pub mod manager;
+pub mod manager_compose;
 pub mod object;
+pub mod object_reads;
 pub mod objeval;
 pub mod placement;
 pub mod player;
+pub mod read_compose;
 pub mod round;
 pub mod save;
 pub mod sm_capture;
@@ -64,6 +73,7 @@ pub mod task;
 pub mod text;
 pub mod tokens;
 pub mod trigger;
+pub mod trigger_members;
 pub mod unit_change;
 pub mod unit_views;
 pub mod world_compose;

@@ -21,6 +21,10 @@ ee_won_gui = { path = "../ee_won_gui" }
 ee_won_lobby = { path = "../ee_won_lobby" }
 ee_won_net = { path = "../ee_won_net" }
 
+# the start screen's splash window (gamecpp start_screen.rs)
+[target.'cfg(windows)'.dependencies]
+windows-sys-059 = { version = "0.59.0", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"], package = "windows-sys" }
+
 [dev-dependencies]
 ee_ui = { path = "../ee_ui", features = ["no_cpp"] }
 ee_sim = { path = "../ee_sim", features = ["test_layout"] }

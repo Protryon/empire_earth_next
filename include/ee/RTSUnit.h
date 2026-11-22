@@ -8,6 +8,7 @@
 
 #include "ee/EEUnitStore.h"   // the members the unit store mirrors (EEUnitStoreField)
 #include "rust/sim/units.h"    // EeUnitsRtsUnitFields (RTSUnit's plain members)
+#include "rust/game/rts.h"
 
 class EEPlayer;
 class EEMap;
@@ -47,7 +48,8 @@ public:
     void Dereference() { if (this->GetReferenceCount() > 1) UReferenceCounter::Dereference(); else this->LastDereference(); }
 
     virtual ~RTSUnit();                     // +0x00 (??_G 0x23d8ed; dtor 0x23d909: asserts !mIsValid)
-    virtual void Invalidate();              // +0x04 0x23d93f (asserts mIsValid; unlinks; mIsValid = false)
+    // +0x04 0x23d93f (asserts mIsValid; unlinks; mIsValid = false)
+    virtual void Invalidate() { ee_rts_unit_invalidate(this); }
     // +0x08 (the shared empty `ret 4` 0x157269): copies from inUnit (EEUnit::CopyFrom 0x228ef5 calls it last with
     // its argument; provisional name)
     virtual void CopyFrom(RTSUnit* inUnit);
@@ -55,23 +57,34 @@ public:
     virtual void Describe(UWideString& ioString);   // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
     virtual void DescribeLong(UWideString& ioString);  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x23db4f
-    virtual void Clear();                   // +0x20 0x23dd46 (Reset, mIsValid = false)
+    // +0x20 0x23dd46 (Reset, mIsValid = false)
+    virtual void Clear() { ee_rts_unit_clear(this); }
     virtual void SightOffHere() = 0;        // +0x24
-    virtual long RepairPointers(unsigned long, unsigned long);  // +0x28
+    // +0x28
+    virtual long RepairPointers(unsigned long, unsigned long) { return 0; }
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x23dc3a
-    virtual void FreeNode();                // +0x30 0x23d977 (asserts !mIsValid; deletes the link)
-    virtual void LastDereference();         // +0x34 0x23db49 (RTSUnit::Dereference calls it at the last reference)
+    // +0x30 0x23d977 (asserts !mIsValid; deletes the link)
+    virtual void FreeNode() { ee_rts_unit_free_node(this); }
+    // +0x34 0x23db49 (RTSUnit::Dereference calls it at the last reference)
+    virtual void LastDereference() { UReferenceCounter::Dereference(); }
 
     // 0x23d8cc (out of line): the count = 1 (UReferenceCounter's inline ctor), the vptr, Reset(), then +0x2b = 0,
     // +0x2a = 1
     RTSUnit();
-    void Initialize(long inLinked);         // 0x23da54: Reset, mIsValid, a new RTSUnitLink unless inLinked == 0
-    void Reset();                           // 0x23da8e: +0x24 = -1, +0x1c/+0x20 = -10000, the rest 0 (provisional name)
-    void InsertAfter(RTSUnit* inUnit);      // 0x23dabb (the mNext/mL10 list)
-    void Link(RTSUnit* inUnit);             // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
-    void RemoveFromList();                  // 0x23dbb7 (the mNext/mL10 list)
-    void Unlink();                          // 0x23dbda (the mL08 list)
-    void UpdateTile(EEMap* inMap);          // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)
+    // 0x23da54: Reset, mIsValid, a new RTSUnitLink unless inLinked == 0
+    void Initialize(long inLinked) { ee_rts_unit_initialize(this, inLinked); }
+    // 0x23da8e: +0x24 = -1, +0x1c/+0x20 = -10000, the rest 0 (provisional name)
+    void Reset() { ee_rts_unit_reset(this); }
+    // 0x23dabb (the mNext/mL10 list)
+    void InsertAfter(RTSUnit* inUnit) { ee_rts_unit_insert_after(this, inUnit); }
+    // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
+    void Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }
+    // 0x23dbb7 (the mNext/mL10 list)
+    void RemoveFromList() { ee_rts_unit_remove_from_list(this); }
+    // 0x23dbda (the mL08 list)
+    void Unlink() { ee_rts_unit_unlink(this); }
+    // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)
+    void UpdateTile(EEMap* inMap) { ee_rts_unit_update_tile(this, inMap); }
     unsigned long GetUnitID() const { return this->mUnitID; }  // (EEWUnitsOffMapInfo::Save 0x161d22 reads an RTSUnit's id through it)
 
 

@@ -40,6 +40,8 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_control.h"
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;
@@ -71,11 +73,13 @@ ISEntity* UIControl::sInsertKey;
 // the record's rectangles are read as GERectangle (bottom, left, right, top)
 static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle's layout");
 
-// The record's calls out (ee_ui controlobj.rs): the form's and manager's, the virtuals, the rhombi, the events
+// The record's calls out (ee_ui controlobj.rs): the form's and manager's, the virtuals, the rhombi; the event's is
+// Rust's (lle_control.rs, the host ee_ui_control_host)
+extern "C" intptr_t ee_uicpp_control_host(EE_UI_HOST_ARGS) { return UIControl::HostOp(inObj, inOp, a, b, c, d, f); }
+#define c static_cast<UIControl*>(inControl)
+#define theForm static_cast<UIControl*>(inControl)->GetForm()
 intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
 {
-    UIControl* c = static_cast<UIControl*>(inControl);
-    UIForm* theForm = c->GetForm();
     switch (inOp) {
     case EeUiOp::CtlFormControl: return (intptr_t)theForm->GetControl((unsigned long)a);
     case EeUiOp::CtlSlotLeftDown: return theForm->GetControl((unsigned long)a)->mLeftButtonDown;
@@ -84,48 +88,64 @@ intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b,
     case EeUiOp::CtlCurrentForm: return (intptr_t)theForm->GetManager()->GetCurrentForm();
     case EeUiOp::CtlKeyboardCaptured: return (intptr_t)theForm->GetKeyboardCaptured();
     case EeUiOp::CtlMouseCaptured: return (intptr_t)theForm->GetMouseCaptured();
-    case EeUiOp::CtlSetKeyboardCaptured: theForm->SetKeyboardCaptured(reinterpret_cast<UIControl*>(a)); break;
-    case EeUiOp::CtlSetMouseCaptured: theForm->SetMouseCaptured(reinterpret_cast<UIControl*>(a)); break;
-    case EeUiOp::CtlHide: c->HideControl(); break;
-    case EeUiOp::CtlAddDirty: theForm->GetManager()->AddDirtyRectangle(UIObjHost::Rect(f), theForm); break;
-    case EeUiOp::CtlTab: theForm->Tab(); break;
-    case EeUiOp::CtlAddEvent: theForm->GetManager()->AddEventToTrigger(reinterpret_cast<UIEvent*>(a), theForm, c); break;
-    case EeUiOp::CtlHelpString:
-        theForm->GetManager()->GetStringTable()->GetString((unsigned long)b, *reinterpret_cast<UWideString*>(a));
-        break;
+    case EeUiOp::CtlSetKeyboardCaptured: theForm->SetKeyboardCaptured(reinterpret_cast<UIControl*>(a)); return 0;
+    case EeUiOp::CtlSetMouseCaptured: theForm->SetMouseCaptured(reinterpret_cast<UIControl*>(a)); return 0;
+    case EeUiOp::CtlHide: c->HideControl(); return 0;
+    case EeUiOp::CtlAddDirty: theForm->GetManager()->AddDirtyRectangle(UIObjHost::Rect(f), theForm); return 0;
+    case EeUiOp::CtlTab: theForm->Tab(); return 0;
+    case EeUiOp::CtlAddEvent: theForm->GetManager()->AddEventToTrigger(reinterpret_cast<UIEvent*>(a), theForm, c); return 0;
+    case EeUiOp::CtlHelpString: theForm->GetManager()->GetStringTable()->GetString((unsigned long)b, *reinterpret_cast<UWideString*>(a)); return 0;
     case EeUiOp::TabStop: return theForm->GetTabStop();
     case EeUiOp::TabbingOn: return theForm->GetTabbingOn();
     case EeUiOp::FormSurfaces: return theForm->GetManager()->GetNumberOfSurfaces();
-    case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
-    case EeUiOp::FormCtlSetDirty: reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); break;
-    case EeUiOp::VirtSetLocation: c->SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::SetDirty: c->SetDirty(a != 0); return 0;
+    case EeUiOp::FormCtlSetDirty: reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); return 0;
+    case EeUiOp::VirtSetLocation: c->SetLocation(GE2DPoint(f[0], f[1])); return 0;
     // the direct path's virtuals (ee_ui direct.rs: the game's Rust on a control, an override running)
-    case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); break;
-    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
-    case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); break;
-    case EeUiOp::PartSetBgColor: c->SetBgColor(GEColor(f[0], f[1], f[2])); break;
-    case EeUiOp::BgOpacity: f[0] = c->GetBgOpacity(); break;
-    case EeUiOp::CtlTabbedTo: c->TabbedTo(); break;
-    case EeUiOp::FormEventCall: {
-        UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
-        if (b == 0)
-            theEvent->Uninitialize();
-        else if (b == 1)
-            theEvent->Dereference();
-        else if (b == 2)
-            theEvent->Reference();
-        else
-            theEvent->Initialize();
-        break;
+    case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); return 0;
+    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); return 0;
+    case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); return 0;
+    case EeUiOp::PartSetBgColor: c->SetBgColor(GEColor(f[0], f[1], f[2])); return 0;
+    case EeUiOp::BgOpacity: f[0] = c->GetBgOpacity(); return 0;
+    case EeUiOp::CtlTabbedTo: c->TabbedTo(); return 0;
+    default: return 0;
     }
-    default: break;
-    }
-    return 0;
 }
+#undef c
+#undef theForm
+
+// The first control's key lookup (lle_control.rs): the statics in its order, the one-statement shims
+#define CTL(x) reinterpret_cast<UIControl*>(x)
+static ISEntity** const kUIControlKeySlots[] = {&UIControl::sSpaceKey, &UIControl::sEnterKey, &UIControl::sControlKey, &UIControl::sAltKey, &UIControl::sEndKey, &UIControl::sHomeKey, &UIControl::sLeftKey, &UIControl::sRightKey, &UIControl::sUpKey, &UIControl::sDownKey, &UIControl::sDeleteKey, &UIControl::sBackSpaceKey, &UIControl::sNumEndKey, &UIControl::sNumHomeKey, &UIControl::sNumLeftKey, &UIControl::sNumRightKey, &UIControl::sNumUpKey, &UIControl::sNumDownKey, &UIControl::sNumDeleteKey, &UIControl::sNumEnterKey, &UIControl::sCutKey, &UIControl::sCopyKey, &UIControl::sPasteKey, &UIControl::sInsertKey};
+extern "C" bool ee_uicpp_control_keys_ready() { return UIControl::sSpaceKey != NULL; }
+extern "C" void ee_uicpp_control_key_fetch(uint32_t inSlot, uint32_t inCode)
+{ gISKeyboard->GetEntity(inCode, *kUIControlKeySlots[inSlot]); }
+extern "C" uintptr_t ee_uicpp_mouse_l_button() { return (uintptr_t)UIManager::GetLMouseButton(); }
+extern "C" uintptr_t ee_uicpp_mouse_r_button() { return (uintptr_t)UIManager::GetRMouseButton(); }
+extern "C" bool ee_uicpp_control_left_down(uintptr_t inControl) { return CTL(inControl)->mLeftButtonDown; }
+extern "C" bool ee_uicpp_control_right_down(uintptr_t inControl) { return CTL(inControl)->mRightButtonDown; }
+extern "C" void ee_uicpp_control_set_left_down(uintptr_t inControl, bool inDown)
+{ CTL(inControl)->mLeftButtonDown = inDown; }
+extern "C" void ee_uicpp_control_set_right_down(uintptr_t inControl, bool inDown)
+{ CTL(inControl)->mRightButtonDown = inDown; }
+extern "C" long ee_uicpp_control_mouse_left_double(uintptr_t inControl)
+{ return CTL(inControl)->MouseLButtonDoublePressed(); }
+extern "C" long ee_uicpp_control_mouse_left_up(uintptr_t inControl) { return CTL(inControl)->MouseLButtonUp(); }
+extern "C" long ee_uicpp_control_mouse_left_down(uintptr_t inControl) { return CTL(inControl)->MouseLButtonDown(); }
+extern "C" long ee_uicpp_control_mouse_right_up(uintptr_t inControl) { return CTL(inControl)->MouseRButtonUp(); }
+extern "C" long ee_uicpp_control_mouse_right_down(uintptr_t inControl) { return CTL(inControl)->MouseRButtonDown(); }
+extern "C" long ee_uicpp_control_mouse_move(uintptr_t inControl, uintptr_t inLocation)
+{ return CTL(inControl)->MouseMove(*reinterpret_cast<const GE2DPoint*>(inLocation)); }
 
 intptr_t UIControl::Call(EeUiControlCall inCall, intptr_t a, intptr_t b, float* f) const
 {
     return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f);
+}
+// a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
+intptr_t UIControl::CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const
+{
+    float f[4] = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    return this->Call(inCall, 0, 0, f);
 }
 
 typedef EeUiControlCall C;
@@ -138,35 +158,8 @@ UIControl::UIControl(unsigned long inType, unsigned long inId, const GERectangle
 {
     this->mBgRhombus = new GERhombus;
     this->mCopiedBgRhombus = new GERhombus;
-    float theRectangle[4];
-    UIObjHost::PutRect(theRectangle, inRectangle);
-    ee_ui_control_init(this, this, UIControl::HostOp, inType, inId, theRectangle, inForm, inIndex, inBorderThickness);
-    if (UIControl::sSpaceKey != NULL)
-        return;
-    gISKeyboard->GetEntity(kKeySpace, UIControl::sSpaceKey);
-    gISKeyboard->GetEntity(kKeyReturn, UIControl::sEnterKey);
-    gISKeyboard->GetEntity(kKeyControl, UIControl::sControlKey);
-    gISKeyboard->GetEntity(kKeyAlt, UIControl::sAltKey);
-    gISKeyboard->GetEntity(kKeyEnd, UIControl::sEndKey);
-    gISKeyboard->GetEntity(kKeyHome, UIControl::sHomeKey);
-    gISKeyboard->GetEntity(kKeyLeft, UIControl::sLeftKey);
-    gISKeyboard->GetEntity(kKeyRight, UIControl::sRightKey);
-    gISKeyboard->GetEntity(kKeyUp, UIControl::sUpKey);
-    gISKeyboard->GetEntity(kKeyDown, UIControl::sDownKey);
-    gISKeyboard->GetEntity(kKeyDelete, UIControl::sDeleteKey);
-    gISKeyboard->GetEntity(kKeyBack, UIControl::sBackSpaceKey);
-    gISKeyboard->GetEntity(kKeyNumpad1, UIControl::sNumEndKey);
-    gISKeyboard->GetEntity(kKeyNumpad7, UIControl::sNumHomeKey);
-    gISKeyboard->GetEntity(kKeyNumpad4, UIControl::sNumLeftKey);
-    gISKeyboard->GetEntity(kKeyNumpad6, UIControl::sNumRightKey);
-    gISKeyboard->GetEntity(kKeyNumpad8, UIControl::sNumUpKey);
-    gISKeyboard->GetEntity(kKeyNumpad2, UIControl::sNumDownKey);
-    gISKeyboard->GetEntity(kKeyDecimal, UIControl::sNumDeleteKey);
-    gISKeyboard->GetEntity(kKeyNumpadEnter, UIControl::sNumEnterKey);
-    gISKeyboard->GetEntity(kKeyX, UIControl::sCutKey);
-    gISKeyboard->GetEntity(kKeyC, UIControl::sCopyKey);
-    gISKeyboard->GetEntity(kKeyV, UIControl::sPasteKey);
-    gISKeyboard->GetEntity(kKeyInsert, UIControl::sInsertKey);
+    ee_ui_control_init(this, this, ee_ui_control_host, inType, inId, reinterpret_cast<const float*>(&inRectangle), inForm, inIndex, inBorderThickness);
+    ee_ui_control_fetch_keys();
 }
 
 // Destroys the control: every trigger event released (ee_ui controlobj.rs), then the background rhombi
@@ -185,12 +178,7 @@ void UIControl::SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent)
     this->Call(C::SetTrigger, inEvent, (intptr_t)inTriggerEvent);
 }
 
-void UIControl::SetBgRectangle(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIObjHost::PutRect(f, inRectangle);
-    this->Call(C::SetBgRectangle, 0, 0, f);
-}
+void UIControl::SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(C::SetBgRectangle, inRectangle); }
 
 void UIControl::SetLocation(const GE2DPoint& inLocation)
 {
@@ -198,12 +186,7 @@ void UIControl::SetLocation(const GE2DPoint& inLocation)
     this->Call(C::SetLocation, 0, 0, f);
 }
 
-void UIControl::SetRectangle(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIObjHost::PutRect(f, inRectangle);
-    this->Call(C::SetRectangle, 0, 0, f);
-}
+void UIControl::SetRectangle(const GERectangle& inRectangle) { this->CallRect(C::SetRectangle, inRectangle); }
 
 // Returns whether Delete (or keypad Del with Num Lock off) is held
 bool UIControl::DeleteKeyPressed()
@@ -221,8 +204,7 @@ bool UIControl::DownKeyPressed()
 // Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
 long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
 {
-    EeUiRect theRectangle = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    return ee_ui_draw_border(this->GetRasterizer(), this->GetScreenIndex(), theRectangle, inThickness,
+    return ee_ui_draw_border(this->GetRasterizer(), this->GetScreenIndex(), *reinterpret_cast<const EeUiRect*>(&inRectangle), inThickness,
                              this->mCopiedBorderOpacity, this->mCopiedBorderType, reinterpret_cast<const float*>(&UIControl::sLightBorder),
                              reinterpret_cast<const float*>(&UIControl::sDarkBorder));
 }
@@ -268,9 +250,7 @@ bool UIControl::RightKeyPressed()
 // Returns whether Shift is held or was just pressed
 bool UIControl::ShiftKeyPressed()
 {
-    if (UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue())
-        return true;
-    return false;
+    return UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue();
 }
 
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
@@ -306,18 +286,7 @@ bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* 
     }
     case EeUiOp::CaptureKeyboard: c->CaptureKeyboard(); break;
     case EeUiOp::ReleaseKeyboard: c->ReleaseCapturedKeyboard(); break;
-    case EeUiOp::ManagerBitmap: {
-        UIManager* m = c->GetForm()->GetManager();
-        GEBitmap* theBitmaps[18] = {m->GetSBBitmapDownNormal(),  m->GetSBBitmapUpNormal(),
-                                    m->GetSBBitmapDownPressed(), m->GetSBBitmapUpPressed(),
-                                    m->GetSBBitmapRightNormal(), m->GetSBBitmapLeftNormal(),
-                                    m->GetSBBitmapRightPressed(), m->GetSBBitmapLeftPressed(),
-                                    m->GetCheckOff(), m->GetCheckOn(), m->GetCheckDownOff(), m->GetCheckDownOn(),
-                                    m->GetCheckNot(), m->GetCheckDownNot(),
-                                    m->GetRadioOff(), m->GetRadioOn(), m->GetRadioDownOff(), m->GetRadioDownOn()};
-        r = (intptr_t)theBitmaps[a];
-        break;
-    }
+    case EeUiOp::ManagerBitmap: r = (intptr_t)c->GetForm()->GetManager()->GetBitmap(ee_ui_obj_manager_bitmap(a)); break;
     case EeUiOp::CopiedDrawRect: UIObjHost::PutRect(f, c->GetCopiedDrawRectangle()); break;
     case EeUiOp::BaseSetRectangle: c->UIControl::SetRectangle(UIObjHost::Rect(f)); break;
     case EeUiOp::ControlCount: r = c->GetForm()->GetControlCount(); break;
@@ -385,56 +354,6 @@ bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
     }
     *outResult = r;
     return true;
-}
-
-// The Rust mouse dispatch's view of a control (ee_ui mouse.rs): the buttons' entities, the button-down members and
-// the protected handlers
-struct UIControlRust {
-    static long Mouse(UIControl* inControl, const GE2DPoint* inLocation, int inCall, int inArg)
-    {
-        ISEntity* theButton = inCall >= 4 && inCall < 8 ? UIManager::GetRMouseButton() : UIManager::GetLMouseButton();
-        switch (inCall) {
-        case 0:
-        case 4:
-            return theButton->JustDoublePressed();
-        case 1:
-        case 5:
-            return theButton->JustUnpressed();
-        case 2:
-        case 6:
-            return theButton->GetValue() != 0;
-        case 3:
-        case 7:
-            return theButton->JustPressed();
-        case 8:
-            return inControl->mLeftButtonDown;
-        case 9:
-            return inControl->mRightButtonDown;
-        case 10:
-            inControl->mLeftButtonDown = inArg != 0;
-            return 0;
-        case 11:
-            inControl->mRightButtonDown = inArg != 0;
-            return 0;
-        case 12:
-            return inControl->MouseLButtonDoublePressed();
-        case 13:
-            return inControl->MouseLButtonUp();
-        case 14:
-            return inControl->MouseLButtonDown();
-        case 15:
-            return inControl->MouseRButtonUp();
-        case 16:
-            return inControl->MouseRButtonDown();
-        default:
-            return inControl->MouseMove(*inLocation);
-        }
-    }
-};
-extern "C" long ee_uicpp_control_mouse(void* inControl, const void* inLocation, int inCall, int inArg)
-{
-    return UIControlRust::Mouse(static_cast<UIControl*>(inControl), static_cast<const GE2DPoint*>(inLocation), inCall,
-                                inArg);
 }
 
 // Returns whether Up (or keypad 8 with Num Lock off) is held

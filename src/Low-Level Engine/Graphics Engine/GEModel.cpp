@@ -156,15 +156,7 @@ GEModel::~GEModel()
     ee_ge_mod_destroy(this->mRust);
 }
 
-void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
-{
-    ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex);
-}
 
-void GEModel::SetTexture(GETexture* inTexture, unsigned long inScreen)
-{
-    ee_ge_mod_set_texture(this->mRust, inTexture, inScreen);
-}
 
 // ---- GEModel Load (GEModel Load.cpp, folded here in R4.3 part 16)
 
@@ -306,10 +298,6 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
     return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
 }
 
-unsigned long GEModelManager::GetMemoryFootprint()
-{
-    return ee_ge_modman_footprint(this->mRust);
-}
 
 // Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
 // name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
@@ -415,6 +403,7 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
                                      inScale, inOtherModel, inFrame, inLOD);
 }
 
+
 // Returns whether the placed model can be visible in a viewport: bounding sphere against the four planes and the
 // clip distances, or its box against the orthographic rectangle
 // (the test is Rust: ee_ge physical.rs, model_visible)
@@ -504,19 +493,12 @@ GETerrainMesh::GETerrainMesh() { this->mRust = ee_ge_tm_new(TerrainMeshHost, thi
 
 GETerrainMesh::~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
-void GETerrainMesh::ComputeShorelines(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 7, 0); }
 
-void GETerrainMesh::ComputeVertexNormal(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 4, 0, 0.0f); }
 
-void GETerrainMesh::CreateFlatMesh(long inWidth, long inHeight) { ee_ge_tm_create_flat_mesh(this->mRust, inWidth, inHeight); }
 
-float GETerrainMesh::GetMeshZ(float inX, float inY) const { return ee_ge_tm_mesh_z(this->mRust, inX, inY); }
 
-void GETerrainMesh::GetClosestTile(const GE3DLine& inLine, long& outX, long& outY) const { ee_ge_tm_closest_tile_line(this->mRust, GERust(inLine), &outX, &outY); }
 
-void GETerrainMesh::GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const { ee_ge_tm_closest_tile_point(this->mRust, GERust(inPoint), &outX, &outY); }
 
-bool GETerrainMesh::Intersects(const GE3DLine& inLine, float& outDistance) const { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
 
 long GETerrainMesh::RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
 {
@@ -530,25 +512,14 @@ long GETerrainMesh::RegisterTextureSet(GETextureSet* inTextureSet, unsigned long
     return 0;
 }
 
-void GETerrainMesh::SetColorFromColorTableIndex(unsigned long inX, unsigned long inY, unsigned char inIndex) { ee_ge_tm_point_edit(this->mRust, inX, inY, 1, inIndex, 0.0f); }
 
-void GETerrainMesh::SetWaterColorSet(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }
 
-void GETerrainMesh::SetColorTable(std::vector<GEColor>& inColorTable) { ee_ge_tm_set_color_table(this->mRust, reinterpret_cast<const float(*)[3]>(inColorTable.data()), inColorTable.size()); }
 
-void GETerrainMesh::SetGlobalWaterState(unsigned long inWaterSetID, unsigned long inColorSetID, unsigned long inAnimationPeriod, float inTextureScale)
-    { ee_ge_tm_set_global_water_state(this->mRust, inWaterSetID, inColorSetID, inAnimationPeriod, inTextureScale); }
 
-void GETerrainMesh::UpdateFogOfWar(bool inAllVisible) { ee_ge_tm_update_fog_of_war(this->mRust, inAllVisible); }
 
-void GETerrainMesh::UpdateWaterAnimation() { ee_ge_tm_update_water_animation(this->mRust); }
 
-bool GETerrainMesh::GetIsSpaceTile(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_space_tile(this->mRust, inX, inY); }
 
-void GETerrainMesh::UpdateVisibleTerrain(const GETransformation&, GEViewport& inViewport, unsigned long, unsigned long, unsigned long, bool inOrthographic)
-    { ee_ge_tm_update_visible_terrain(this->mRust, GERust(inViewport), inOrthographic); }
 
-void GETerrainMesh::SetIsSpace(unsigned long inX, unsigned long inY, bool inIsSpace) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 6, inIsSpace); }
 
 long GETerrainMesh::Load(unsigned long, unsigned long, FSFile& inFile)
 {
@@ -562,35 +533,6 @@ long GETerrainMesh::Save(FSFile& inFile) const
     return ee_ge_tm_save(this->mRust, &theIO);
 }
 
-// The header's accessors (inline in the original: GEBoundingBox.cpp emitted them)
-void GETerrainMesh::DereferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 1, 0); }
-void GETerrainMesh::ReferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 0, 0); }
-void GETerrainMesh::SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }
-void GETerrainMesh::SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 3, inTextureSetID); }
-void GETerrainMesh::SetIsWater(unsigned long inX, unsigned long inY, bool inIsWater) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 5, inIsWater); }
-void GETerrainMesh::SetZ(unsigned long inX, unsigned long inY, float inZ) { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
-float GETerrainMesh::GetZ(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->z; }
-unsigned char GETerrainMesh::GetColorTableIndex(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->color_table_index; }
-GEVector* GETerrainMesh::GetVertexNormal(unsigned long inX, unsigned long inY) const { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
-const GEColor& GETerrainMesh::GetVertexColor(unsigned long inX, unsigned long inY) const { return *reinterpret_cast<const GEColor*>(ee_ge_tm_vertex_color(this->mRust, inX, inY)); }
-unsigned long GETerrainMesh::GetTextureSetID(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->texture_set_id; }
-unsigned char GETerrainMesh::GetWaterInfo(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->water_info; }
-bool GETerrainMesh::GetIsWaterTile(unsigned long inX, unsigned long inY) const { return (ee_ge_tm_tile(this->mRust, inX, inY)->water_info & kWaterInfoWaterMask) != 0; }
-bool GETerrainMesh::GetIsValidPoint(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_valid(this->mRust, inX, inY, false); }
-bool GETerrainMesh::GetIsValidTile(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_valid(this->mRust, inX, inY, true); }
-bool GETerrainMesh::GetIsSpaceMap() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceTileCount) > 0; }
-const GE3DPlane& GETerrainMesh::GetFrontPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 0)); }
-const GE3DPlane& GETerrainMesh::GetBackPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 1)); }
-const GE3DPlane& GETerrainMesh::GetLeftPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 2)); }
-const GE3DPlane& GETerrainMesh::GetRightPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 3)); }
-float GETerrainMesh::GetVisibleSpaceTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
-float GETerrainMesh::GetVisibleWaterTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
-unsigned long GETerrainMesh::GetGlobalWaterSetID() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::GlobalWaterSetId); }
-unsigned long GETerrainMesh::GetNumVisibleTiles() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::NumVisibleTiles); }
-unsigned long GETerrainMesh::GetNumVisibleTileRows() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileRows); }
-unsigned int GETerrainMesh::NumSpaceCliffTextures() { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceCliffTextureCount); }
-void GETerrainMesh::SetSpaceCliffTextures(std::vector<GETexture*>& inTextures) { ee_ge_tm_set_space_cliff_textures(this->mRust, (void* const*)inTextures.data(), inTextures.size()); }
-GETextureSet* GETerrainMesh::GetRegisteredTextureSet(unsigned long inID) const { return (GETextureSet*)ee_ge_tm_texture_set(this->mRust, inID); }
 void GETerrainMesh::GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const
 {
     outX = ee_ge_tm_get(this->mRust, EeGeTmVal::BottomLeftX);

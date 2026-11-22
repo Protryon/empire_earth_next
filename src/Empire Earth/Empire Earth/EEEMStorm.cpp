@@ -38,7 +38,11 @@
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEStormType.h"
-#include "ee/EEAppCapture.h"
+#include "ee/EEAutoPathRequest.h"
+#include "ee/EECPASGFlags.h"
+#include "ee/EEEffect.h"
+#include "ee/EEEffectManager.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp weather.rs)
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)
@@ -61,268 +65,139 @@ UWideString EEEMStorm::GetTypeName(long inType)
     return UWideString(ee_app_storm_type_name(inType));
 }
 
-// Creates a storm of a type for the environment manager at full intensity; any known type starts at once
+// Creates a storm of a type for the environment manager at full intensity; any known type starts at once (its
+// members and Begin: ee_game gamecpp weather.rs)
 EEEMStorm::EEEMStorm(long inType, EEEnvironmentManager* inManager)
     : mManager(inManager)
 {
-    ee_app_storm_init(this, inType);
-    this->mStorm = NULL;
-    this->mRequest = NULL;
-    this->mName = EEEMStorm::GetTypeName(inType);
-    if (inType != kStormUnknown)
-        this->Begin();
+    ee_gamecpp_storm_init(this, inType);
 }
 
 // Destroys the storm, cancelling its route request and ending its weather effect
 EEEMStorm::~EEEMStorm()
 {
-    this->Release();
-}
-
-// Starts the storm: picks a goal in a random player's town, a start over water (rain) or cliffs and hills (snow),
-// creates the weather effect around the start and requests its route
-void EEEMStorm::Begin()
-{
-    std::vector<U2DPoint<long> > thePath;
-    std::vector<U2DPoint<long> > theVisited;
-    EEAIAStarBounds theBounds;
-    EEGraphicEffect* theEffect = NULL;
-    U2DRectangle<long> theInner, theOuter;   // the shaper's (modifier_obj.rs StormShaper)
-    EEEffectHandle theHandle;
-    theHandle.mValue = 0;
-    EEAIArea* theArea;
-    EEPlayer* thePlayer = gWorld.mPlayers[gPhysics->GetRandom(1L, gWorld.mNumPlayers - 1)];
-    if (thePlayer == NULL || thePlayer->mTowns.size() == 0
-        || (theArea = thePlayer->mTowns[gPhysics->GetRandom(0L, (long)thePlayer->mTowns.size() - 1)]) == NULL) {
-        theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)];
-        if (theArea == NULL)
-            theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
-    }
-    this->mGoal = theArea->GetRandomPoint();
-    theArea = NULL;
-    if (this->mType == kStormRain || this->mType == kStormHurricane) {
-        theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)];
-    } else if (this->mType == kStormSnow || this->mType == kStormBlizzard) {
-        if (gPhysics->GetRandom() <= 0.5f)
-            theArea = static_cast<EEAIContinent*>(gContinentManager.GetRandomContinent(kContinentCategoryCliff, gPhysics->mRandom));
-        else
-            theArea = static_cast<EEAIHill*>(gContinentManager.GetRandomArea(kAIAreaHill, gPhysics->mRandom, 0));
-    }
-    if (theArea == NULL)
-        theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
-    this->mStart = theArea->GetRandomPoint();
-    theInner.Set(this->mStart);
-    theInner.mTop = max(theInner.mTop - 4, 0);
-    theInner.mLeft = max(theInner.mLeft - 4, 0);
-    theInner.mRight = min(theInner.mRight + 4, gWorld.GetMap()->mSize);
-    theInner.mBottom = min(theInner.mBottom + 4, gWorld.GetMap()->mSize);
-    theOuter = theInner;
-    theOuter.mTop = max(theOuter.mTop - 4, 0);
-    theOuter.mLeft = max(theOuter.mLeft - 4, 0);
-    theOuter.mRight = min(theOuter.mRight + 4, gWorld.GetMap()->mSize);
-    theOuter.mBottom = min(theOuter.mBottom + 4, gWorld.GetMap()->mSize);
-    long theMaxSteps = gPhysics->GetRandom(0x2dL, 0x87L);
-    EeAStarModifier* theShaper = ee_astar_modifier_new_storm_shaper(
-        EEAIAStarRectOf(theInner), EEAIAStarRectOf(theOuter), (int32_t)theMaxSteps,
-        this->mType == kStormRain || this->mType == kStormHurricane, this->mType == kStormSnow || this->mType == kStormBlizzard);
-    theBounds.Set(this->mStart);
-    theBounds.mTop = max(theBounds.mTop - 30, 0);
-    theBounds.mLeft = max(theBounds.mLeft - 30, 0);
-    theBounds.mRight = min(theBounds.mRight + 30, gWorld.GetMap()->mSize);
-    theBounds.mBottom = min(theBounds.mBottom + 30, gWorld.GetMap()->mSize);
-    gPathManager.FindPath(NULL, gWorld.GetMap(), this->mStart, this->mGoal, theBounds, thePath, 4, 0x6e, theShaper, &theVisited);
-    if (this->mType == kStormRain || this->mType == kStormHurricane)
-        theEffect = EEGraphicEffect::Get(kGraphicEffectRain);
-    else if (this->mType == kStormSnow || this->mType == kStormBlizzard)
-        theEffect = EEGraphicEffect::Get(kGraphicEffectSnow);
-    gEffectManager->CreateWeatherEffect(theVisited, theEffect, &theHandle);
-    this->mStorm = gEffectManager->GetEffect(theHandle);
-    this->mStorm->Reference();
-    this->mStorm->GetBounds(this->mArea);
-    this->mStorm->mRecord->storm.sustained = true;
-    ee_astar_modifier_release(theShaper);
-    this->RequestRoute();
-    this->mState = 2;
-}
-
-// Returns whether the storm is over (no weather effect, or finished)
-bool EEEMStorm::IsOver()
-{
-    return this->mStorm == NULL || this->mState == 6;
+    ee_gamecpp_storm_release(this);
 }
 
 // Loads the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
 long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EEEffectHandle theHandle = kNoEffectHandle;
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    if (theResult != kErrorOK)
-        return 0;
-    this->mPath.resize(theCount);
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (theResult == kErrorOK)
-            theResult = this->mPath[i].Load(inFile);
-    }
-    if (theResult != kErrorOK)
-        return 0;
-    this->mArea.Load(inFile);
-    this->mStart.Load(inFile);
-    this->mGoal.Load(inFile);
-    this->mArea.Load(inFile);
-    theResult = inFile.Read(theHandle.mValue);
-    this->mStorm = reinterpret_cast<EEE3DRust*>(theHandle.mValue);
-    if (theResult == kErrorOK && (theResult = inFile.Read(this->mTargetIntensity)) == 0
-        && (theResult = inFile.Read(this->mIntensity)) == 0 && (theResult = inFile.Read(this->mStep)) == 0
-        && (theResult = inFile.Read(this->mType)) == 0 && (theResult = inFile.Read(this->mState)) == 0
-        && (theResult = inFile.Read(this->mNextMoveTime)) == 0 && (theResult = inFile.Read(this->mIsSevere)) == 0)
-        inFile.Read(this->mEndTime);
-    return 0;
+    return ee_gamecpp_storm_load(this, &inFile);
 }
 
 // Reconnects the loaded storm to its weather effect and renames it; returns 9 when the effect is missing
 long EEEMStorm::Restore()
 {
-    long theResult = 0;
-    EEEffectHandle theHandle;
-    theHandle.mValue = USavedID(this->mStorm);
-    this->mStorm = gEffectManager->GetEffect(theHandle);
-    if (this->mStorm != NULL)
-        this->mStorm->Reference();
-    else {
-        this->mStorm = NULL;
-        theResult = 9;
-    }
-    if (this->mPath.size() == 0 && this->mStorm != NULL)
-        this->mStorm->mRecord->storm.sustained = false;
-    this->mName = EEEMStorm::GetTypeName(this->mType);
-    if (this->mState == 2)
-        this->mState = 8;
-    return theResult;
-}
-
-// Requests the storm's route from its start to its goal with the planner for its type
-void EEEMStorm::RequestRoute()
-{
-    EECPASGFlags theFlags;
-    memset(theFlags.mFlags, 1, sizeof(theFlags.mFlags));
-    if (this->mRequest != NULL) {
-        gPathManager.CancelAutoPathRequest(this->mRequest);
-        this->mRequest->Dereference();
-        this->mRequest = NULL;
-    }
-    EeAStarModifier* thePlanner = ee_astar_modifier_new_storm_planner(this->mType == kStormRain || this->mType == kStormHurricane);
-    this->mRequest = gPathManager.RequestPath(0, this->mStart, this->mGoal, &theFlags, 1, 500, thePlanner, 0);
-    ee_astar_modifier_release(thePlanner);
-}
-
-// Takes the finished route (reversed, to pop from the back); the step then moves (state 3)
-void EEEMStorm::TakePath()
-{
-    this->mPath = this->mRequest->mPath;
-    std::reverse(this->mPath.begin(), this->mPath.end());
-    this->mRequest->Dereference();
-    this->mRequest = NULL;
+    return ee_gamecpp_storm_restore(this);
 }
 
 // Writes the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
 long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theCount = this->mPath.size();
-    long theResult = outFile.Write(theCount);
-    if (theResult != 0)
-        return 0;
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (theResult == 0)
-            theResult = this->mPath[i].Save(outFile);
+    return ee_gamecpp_storm_save(this, &outFile);
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the storm
+
+int64_t EECore10OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEEnvironmentManager.cpp
+double EECore10OpD3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(sizeof(EEEffectHandle) == 4 && kStormRain == 1 && kStormSnow == 2 && kStormHurricane == 3 && kStormBlizzard == 4
+                  && kGraphicEffectRain == 0x54 && kGraphicEffectSnow == 0xac
+                  && sizeof(EECPASGFlags) == (sizeof(long) + 17 + sizeof(long) - 1) / sizeof(long) * sizeof(long)
+                  && sizeof(U2DRectangle<long>) == 4 * sizeof(long) && sizeof(EEAIAStarBounds) == 4 * sizeof(long),
+              "gamecpp weather.rs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define S ((EEEMStorm*)p)
+#define PL ((EEPlayer*)p)
+#define POINTS(i) (*(std::vector<U2DPoint<long> >*)a[i])
+
+// the C++ calls and members of the storm's bodies in Rust (gamecpp weather.rs): p the storm unless noted, one
+// statement each
+int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DsFields: return P64(static_cast<EeAppStormFields*>(S));
+    case O::DsStorm: return P64(&S->mStorm);
+    case O::DsRequest: return P64(&S->mRequest);
+    case O::DsArea: return P64(&S->mArea);
+    case O::DsStart: return P64(&S->mStart);
+    case O::DsGoal: return P64(&S->mGoal);
+    case O::DsSetName: S->mName = EEEMStorm::GetTypeName((long)a[0]);
+        break;
+    case O::DsRandomPlayer: return P64(gWorld.mPlayers[gPhysics->GetRandom(1L, gWorld.mNumPlayers - 1)]);
+    case O::DsTownCount: return (int64_t)PL->mTowns.size();
+    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->mTowns[gPhysics->GetRandom(0L, (long)PL->mTowns.size() - 1)]));
+    case O::DsLargestLand: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)]));
+    case O::DsLargestAny: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)]));
+    case O::DsLargestWater: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)]));
+    case O::DsRandomCliff: return P64(static_cast<EEAIArea*>(static_cast<EEAIContinent*>(gContinentManager.GetRandomContinent(kContinentCategoryCliff, gPhysics->mRandom))));
+    case O::DsRandomHill: return P64(static_cast<EEAIArea*>(static_cast<EEAIHill*>(gContinentManager.GetRandomArea(kAIAreaHill, gPhysics->mRandom, 0))));
+    case O::DsRandomPoint: *(U2DPoint<long>*)a[0] = ((EEAIArea*)p)->GetRandomPoint();
+        break;
+    case O::DsMapSize: return gWorld.GetMap()->mSize;
+    case O::DsRandomLong: return gPhysics->GetRandom((long)a[0], (long)a[1]);
+    case O::DsPointsNew: return P64(new std::vector<U2DPoint<long> >);
+    case O::DsPointsDelete: delete (std::vector<U2DPoint<long> >*)p;
+        break;
+    case O::DsFindPath: gPathManager.FindPath(NULL, gWorld.GetMap(), S->mStart, S->mGoal, *(EEAIAStarBounds*)a[0], POINTS(1), 4, 0x6e, (EeAStarModifier*)a[2], &POINTS(3));
+        break;
+    case O::DsCreateWeather: gEffectManager->CreateWeatherEffect(*(std::vector<U2DPoint<long> >*)p, (EEGraphicEffect*)a[0], (EEEffectHandle*)a[1]);
+        break;
+    case O::DsEffectReference: ((EEE3DRust*)p)->Reference();
+        break;
+    case O::DsEffectRelease: ((EEE3DRust*)p)->Release();
+        break;
+    case O::DsEffectBounds: S->mStorm->GetBounds(S->mArea);
+        break;
+    case O::DsEffectHandle: return ((EEE3DRust*)p)->GetHandle().mValue;
+    case O::DsSustain: S->mStorm->mRecord->storm.sustained = a[0] != 0;
+        break;
+    case O::DsEndEffect: S->mStorm->mRecord->storm.elapsed = S->mStorm->mRecord->storm.duration;
+        break;
+    case O::DsSetIntensity: S->mStorm->mRecord->storm.intensity = f[0];
+        break;
+    case O::DsTileCount: return (int64_t)((EEE3DRust*)p)->GetTileCount();
+    case O::DsCenter: *(U2DPoint<long>*)a[0] = ((EEE3DRust*)p)->GetCenterPoint();
+        break;
+    case O::DsCancelRequest: gPathManager.CancelAutoPathRequest((EEAutoPathRequest*)p);
+        break;
+    case O::DsRequestPath: return P64(gPathManager.RequestPath(0, S->mStart, S->mGoal, (EECPASGFlags*)a[1], 1, 500, (EeAStarModifier*)a[0], 0));
+    case O::DsPathClear: S->mPath.clear();
+        break;
+    case O::DsPathPush: S->mPath.push_back(U2DPoint<long>((long)a[0], (long)a[1]));
+        break;
+    case O::DsPathLen: return (int64_t)S->mPath.size();
+    case O::DsPathAt: *(U2DPoint<long>*)a[1] = S->mPath[a[0]];
+        break;
+    case O::DsPathResize: S->mPath.resize((size_t)a[0]);
+        break;
+    case O::DsPopPath: S->mPath.pop_back();
+        break;
+    case O::DsDistance: return S->mStorm->GetCenterPoint().DistanceToSquared(a[0] != 0 ? S->mGoal : S->mPath.back());
+    case O::DsMove: S->mStorm->Move(a[0] != 0 ? S->mGoal : S->mPath.back(), S->mArea);
+        break;
+    case O::DsResetColor: S->mManager->mC18 = gStormColor;
+        break;
+    case O::DsPathPointLoad: return S->mPath[a[0]].Load(*(FSFile*)a[1]);
+    case O::DsPathPointSave: return S->mPath[a[0]].Save(*(FSFile*)a[1]);
+    case O::DsRectLoad: return ((U2DRectangle<long>*)p)->Load(*(FSFile*)a[0]);
+    case O::DsRectSave: return ((U2DRectangle<long>*)p)->Save(*(FSFile*)a[0]);
+    case O::DsPointLoad: return ((U2DPoint<long>*)p)->Load(*(FSFile*)a[0]);
+    case O::DsPointSave: return ((U2DPoint<long>*)p)->Save(*(FSFile*)a[0]);
+    case O::DsReadHandle: return ((FSFile*)p)->Read(*(uint32_t*)a[0]);
+    default: return EECore10OpD3(inOp, p, a, f);
     }
-    if (theResult != 0)
-        return 0;
-    this->mArea.Save(outFile);
-    this->mStart.Save(outFile);
-    this->mGoal.Save(outFile);
-    this->mArea.Save(outFile);
-    unsigned long theHandle = this->mStorm->GetHandle().mValue;
-    if ((theResult = outFile.Write(theHandle)) == 0 && (theResult = outFile.Write(this->mTargetIntensity)) == 0
-        && (theResult = outFile.Write(this->mIntensity)) == 0 && (theResult = outFile.Write(this->mStep)) == 0
-        && (theResult = outFile.Write(this->mType)) == 0 && (theResult = outFile.Write(this->mState)) == 0
-        && (theResult = outFile.Write(this->mNextMoveTime)) == 0 && (theResult = outFile.Write(this->mIsSevere)) == 0)
-        outFile.Write(this->mEndTime);
     return 0;
 }
 
-// Cancels the storm's route request and ends its weather effect
-void EEEMStorm::Release()
+double EECore10OpD2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    if (this->mRequest != NULL) {
-        gPathManager.CancelAutoPathRequest(this->mRequest);
-        this->mRequest->Dereference();
-        this->mRequest = NULL;
-    }
-    if (this->mStorm == NULL)
-        return;
-    this->mStorm->mRecord->storm.sustained = false;
-    this->mStorm->mRecord->storm.elapsed = this->mStorm->mRecord->storm.duration;
-    this->mStorm->Release();
-    this->mStorm = NULL;
-}
-
-// New (port): the step's host (ee_app storm.rs; no operation touches the storm's EeAppStormFields)
-static void EEEMStormHostOp(void* inContext, int32_t inOp, EeAppStormIo* io)
-{
-    EEEMStorm* theStorm = static_cast<EEEMStorm*>(inContext);
+    typedef EeGameCpp O;
     switch (inOp) {
-    case EE_APP_STORM_OP_REQUEST:
-        io->flag = theStorm->mRequest != NULL;
-        io->done = io->flag && theStorm->mRequest->mIsDone;
-        break;
-    case EE_APP_STORM_OP_TAKE_PATH:
-        theStorm->TakePath();
-        break;
-    case EE_APP_STORM_OP_REQUEST_ROUTE:
-        theStorm->RequestRoute();
-        break;
-    case EE_APP_STORM_OP_PATH_LEN:
-        io->n = (long)theStorm->mPath.size();
-        break;
-    case EE_APP_STORM_OP_DISTANCE:
-        io->n = theStorm->mStorm->GetCenterPoint().DistanceToSquared(io->flag ? theStorm->mGoal : theStorm->mPath.back());
-        break;
-    case EE_APP_STORM_OP_POP_PATH:
-        theStorm->mPath.pop_back();
-        break;
-    case EE_APP_STORM_OP_MOVE:
-        theStorm->mStorm->Move(io->flag ? theStorm->mGoal : theStorm->mPath.back(), theStorm->mArea);
-        break;
-    case EE_APP_STORM_OP_TILE_COUNT:
-        io->n = (long)theStorm->mStorm->GetTileCount();
-        break;
-    case EE_APP_STORM_OP_END_EFFECT:
-        theStorm->mStorm->mRecord->storm.elapsed = theStorm->mStorm->mRecord->storm.duration;
-        break;
-    case EE_APP_STORM_OP_SET_INTENSITY:
-        if (theStorm->mStorm != NULL)
-            theStorm->mStorm->mRecord->storm.intensity = io->f;
-        break;
-    case EE_APP_STORM_OP_GAME_SPEED:
-        io->f = gWorld.GetGameSpeed();
-        break;
-    case EE_APP_STORM_OP_RANDOM_RANGE:
-        io->f = gPhysics->GetRandom(io->f, io->g);
-        break;
-    case EE_APP_STORM_OP_RANDOM:
-        io->f = gPhysics->mRandom.Generate();
-        break;
-    case EE_APP_STORM_OP_RESET_COLOR:
-        theStorm->mManager->mC18 = gStormColor;
-        break;
+    case O::DsGameSpeed: return gWorld.GetGameSpeed();
+    default: return EECore10OpD3F(inOp, p, a, f);
     }
-}
-
-// Advances the storm: follows its route to the goal, lingers, then dies away (also at its end time) and fades its
-// intensity; the target is always 0.4 (the hour is fixed at 10) (ee_app storm.rs, over the host above)
-void EEEMStorm::Step(unsigned long inTime)
-{
-    ee_app_storm_step(this, &EEEMStormHostOp, this, inTime);
-    EEAppCaptureStorm(*this, 1, inTime);   // STRM (TEST ONLY)
 }

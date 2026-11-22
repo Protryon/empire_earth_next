@@ -34,10 +34,9 @@ class UIHotKey;
 #undef GetForm
 #endif
 
-class LLE_API UIControl : public UIEntity, private EeUiControlFields {
+class LLE_API UIControl : public UIEntity, public EeUiControlFields {   // (public: the toolkit's shims, UIControl.cpp)
     friend class UIForm;                    // the form's tabbing calls TabbedTo/TabbedFrom (protected)
     friend class UIComboBox;                // drives its parts' protected mouse/tab handlers (ui-edit)
-    friend struct UIControlRust;            // UIControl.cpp: the Rust mouse dispatch's calls (ee_ui mouse.rs)
     friend struct UIObjHost;                // UIControl.cpp: the whole objects' base ops (ee_ui obj.rs)
 public:
     virtual void AddIMEResultString(const UWideString& inString) {}   // slot 0x04
@@ -96,20 +95,17 @@ public:
     virtual void HideControl() {}
     static bool HomeKeyPressed();
     static bool LeftKeyPressed();
-protected:
+public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
-public:
     virtual long MouseLButtonDoublePressed()
     {
         this->mLeftButtonDown = true;
         return this->MouseLButtonDown();
     }
-protected:
     virtual long MouseMove(const GE2DPoint& inLocation) = 0;  // slot 0x40
     virtual long MouseRButtonDown() = 0;
     virtual long MouseRButtonUp() = 0;
-public:
     virtual long MouseWheelTurned(long inDelta) { return kErrorFailed; }
     virtual long OpenIMECompositionString() { return kErrorFailed; }
     static bool PasteKeyPressed()
@@ -149,9 +145,7 @@ public:
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
     void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent);
     static bool ShiftKeyPressed();
-#ifndef LLE_EXE_HEADERS   // the game calls slot 0x74 on a form's control (chat 0x1d2e09): public in its view
-protected:
-#endif
+    // (public: the game calls slot 0x74 on a form's control, chat 0x1d2e09; the toolkit's shims)
     virtual void TabbedTo() = 0;            // slot 0x74
     virtual void TabbedFrom() = 0;
 public:
@@ -167,7 +161,9 @@ protected:
     void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
     virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness);   // slot 0x84
+public:   // (the shims' access)
     const GE2DPoint& GetMouseLocation() const;
+protected:
     void SetBgRectangle(const GERectangle& inRectangle);
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
@@ -178,11 +174,14 @@ private:
     GERhombus* BgRhombus() const { return static_cast<GERhombus*>(this->mBgRhombus); }
     GERhombus* CopiedBgRhombus() const { return static_cast<GERhombus*>(this->mCopiedBgRhombus); }
     intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const;
-    // the record's calls out (EeUiOp 5, 16, 17, 71..74, 169, 218, 245, 274, 520..533)
+    intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const;
+public:
+    // the record's calls out that are not Rust's (EeUiOp 5, 16, 17, 71..74, 169, 218, 245, 520..533; ee_ui
+    // lle_control.rs: ee_ui_control_host comes first)
     static intptr_t HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-protected:
+public:   // (the key shims' access: UIControl.cpp)
     static ISEntity* sSpaceKey;
     static ISEntity* sAltKey;
     static ISEntity* sEnterKey;

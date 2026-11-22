@@ -124,6 +124,9 @@ unsafe fn ee_ai_units_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64,
     if let Some(r) = host_ops::op(op, player, a, b, c, out) {
         return r;
     }
+    if let Some(r) = world_ops::op(op, player, a, b, c, out) {
+        return r;
+    }
     match world_op(op, a, b, c, out) {
         Some(r) => r,
         None => ee_ai_units_host_cpp(op, player, a, b, c, out),
@@ -227,7 +230,10 @@ fn trace(me: *mut c_void, event: &CStr, text: &str) {
         return;
     }
     let text = CString::new(text).unwrap_or_default();
-    host(EE_AI_UNITS_HOST_TRACE, me, event.as_ptr() as i64, text.as_ptr() as i64, 0);
+    // under the "next" scope (EECPTraceOut's manager)
+    let saved = super::trace_line::scope(c"next".as_ptr());
+    super::trace_line::trace_out(me, event.to_bytes(), text.as_bytes());
+    super::trace_line::scope_end(saved);
 }
 
 /// The player's state (`EECPUnitsGet`).
@@ -677,6 +683,7 @@ pub extern "C" fn ee_ai_units_state_new() -> *mut c_void {
 #[no_mangle]
 pub unsafe extern "C" fn ee_ai_units_state_free(s: *mut c_void) {
     if !s.is_null() {
+        more::routes_clear(s as *mut UnitsState);
         drop(Box::from_raw(s as *mut UnitsState));
     }
 }
@@ -3572,3 +3579,7 @@ mod more;
 // the host's operations whose bodies are Rust (AI Thread cluster round 7; were EECPNextUnits.cpp's)
 #[path = "units_host.rs"]
 mod host_ops;
+
+// the host's operations whose bodies are Rust (AI Thread cluster round 8; were EECPNextUnits.cpp's)
+#[path = "units_world.rs"]
+mod world_ops;

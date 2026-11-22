@@ -80,6 +80,18 @@ pub(crate) fn owner(h: u64, io: &mut EeAStarCmIo) {
     }
 }
 
+/// `EERestoreContinentRegions`: the regions of the save being loaded put back (its block taken: `cm_file.rs`); false
+/// without one.
+///
+/// # Safety
+/// `r` is the manager's live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_cm_restore_loaded(r: *mut EeAStarCmRecord) -> bool {
+    let bytes = crate::astar::cm_file::take_loaded();
+    // SAFETY: the caller's contract; the block's bytes
+    !bytes.is_empty() && unsafe { ee_astar_cm_restore_regions(r, bytes.as_ptr(), bytes.len()) }
+}
+
 /// `EERestoreContinentRegions` after its block was taken: false when the block could not be read (the regions are
 /// built again).
 ///

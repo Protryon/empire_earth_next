@@ -669,18 +669,6 @@ void EEComplexUnit::ReleasePool()
     EEComplexUnit::sMemoryPool.Release();
 }
 
-// Completes the unit's pending group path and, with at most two waypoints left, its own path
-void EEComplexUnit::RefreshPath()
-{
-    if (this->mActiveGroup) {
-        EEAutoPathRequest* thePath = this->mActiveGroup->GetUnitPath(this->mUnitID);
-        if (thePath && !thePath->mIsDone)
-            ::gPathManager.CompleteAutoPath(thePath);
-    }
-    if (this->mWaypoints.size() <= 2)
-        ::gPathManager.CompletePath(this);
-}
-
 // Builds a "!Leaking Unit" line per used pool unit and clears its reference count (the report is gone)
 // The reference-counter buckets are walked too, their report compiled away (provisional name, from Empire Earth.cpp)
 void EEReportLeakingUnits()
@@ -2794,7 +2782,6 @@ extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inAr
     case EE_UNITS_WP_QUEUE_BACK: return (int64_t)(uintptr_t)theUnit->mGoalQueues[0].mGoals.back();
     case EE_UNITS_WP_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
     case EE_UNITS_WP_CLEAR_BOUNDED: theUnit->mBoundedPathTiles.clear(); return 0;
-    case EE_UNITS_WP_REFRESH_PATH: theUnit->RefreshPath(); return 0;
     case EE_UNITS_WP_REGION_SIZE: return gEEAIRegionSize;
     case EE_UNITS_WP_GOAL_POINT: { GE3DPoint thePoint = EELocationGoalPoint(theGoal); memcpy(ioPoint, &thePoint.mX, 12); return 0; }
     case EE_UNITS_WP_CLOSEST_TILE: {

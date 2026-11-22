@@ -49,23 +49,9 @@
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-// Advances the random generator one step and returns the new seed as a fraction in [0, 1)
-void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
+// The RNG trace hook (the draws are Rust: ee_base random)
+extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
 
-float URandom::Generate()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    if (gURandomTraceHook != NULL)
-        gURandomTraceHook(this);
-    return (float)((double)this->mSeed / (double)this->mModulus);
-}
-
-// Advances the random generator one step and returns the new seed
-unsigned long URandom::NextInSeries()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return this->mSeed;
-}
 
 // ---- GEBitmap (0x1000f3a4..). Vertex order: 0 top left, 1 top right, 2 bottom left, 3 bottom right.
 //
@@ -284,11 +270,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     }
 }
 
-// Always returns true (any font matches)
-bool GEFontBitmap::operator==(GEFont* inFont)
-{
-    return true;
-}
 
 // Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
 GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
@@ -303,15 +284,4 @@ GEFontBitmap::~GEFontBitmap()
     ee_ge_fb_destroy(this->mRust);
 }
 
-// Draws the text glyph by glyph at its location in its colour; returns the last draw's result (Rust: ee_ge fbobj.rs)
-long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
-{
-    return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen);
-}
 
-// Draws the text glyph by glyph clipped to a rectangle (Rust: ee_ge fbobj.rs)
-long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
-                        unsigned long inScreen)
-{
-    return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen);
-}

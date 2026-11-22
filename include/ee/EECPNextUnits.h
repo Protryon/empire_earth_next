@@ -22,17 +22,6 @@ struct EEPUnitSwap;
 void* EECPUnitsRust(const EEComputerPlayer* inPlayer);
 
 // whether the script holds the unit (ai.take, or any command on it): the classic runners leave it alone
-bool EECPUnitsHolds(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUnit);
-bool EECPUnitsHoldsID(const EEComputerPlayer* inPlayer, long inID);
-// the ids held (for EECPNextHeld: the next engine's groups never take them)
-void EECPUnitsHeld(const EEComputerPlayer* inPlayer, std::vector<long>& outIDs);
-// the reflexes the script left on (ai.reflex): "naval_flee", "danger" (the citizens' danger zones and militia)
-bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName);
-// whether the script has called the per-unit interface (then a save's shadow step cannot replay it: its commands
-// would run on the live player)
-bool EECPUnitsUsed(const EEComputerPlayer* inPlayer);
-
-// a hit one of the player's units dealt to inVictim (EEUnit::TakeHit): the lost layer's "dealt" side
 void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim);
 void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend);
 

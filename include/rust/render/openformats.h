@@ -194,7 +194,9 @@ long ee_of_surf_save(EeOfSurfHostFn host, void *surface, void *file, uint8_t kin
 long ee_of_surf_attributes(EeOfSurfHostFn host,
                            void *file,
                            uint8_t kind,
-                           unsigned long (*out)[3]);
+                           unsigned long *out_width,
+                           unsigned long *out_height,
+                           unsigned long *out_depth);
 
 }  // extern "C"
 

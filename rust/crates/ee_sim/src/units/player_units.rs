@@ -120,8 +120,9 @@ pub const EE_UNITS_PLAYER_ADD_TO_HERD: i32 = 44;
 pub const EE_UNITS_PLAYER_CIV_POWER: i32 = 45;
 /// the exploration power's pulse: `PulseSight(true, its amount, unit i[0]'s id)`
 pub const EE_UNITS_PLAYER_PULSE_EXPLORATION: i32 = 46;
-/// `gContinentManager.UpdateWallUnit(i[0], i[1])`
-pub const EE_UNITS_PLAYER_UPDATE_WALL: i32 = 47;
+// (47 was UpdateWallUnit: ee_sim::astar cm_unit.rs; the tests' host still notes it under 47)
+#[cfg(test)]
+const UPDATE_WALL_NOTE: i32 = 47;
 /// `EEGameLogUnitLost(this, i[0])` (the game log)
 pub const EE_UNITS_PLAYER_LOG_LOST: i32 = 48;
 /// unit `i[0]`'s `GetTechTreeNode()`
@@ -262,7 +263,15 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
         self.h.ask(EE_UNITS_PLAYER_CITIZEN_CONTAINS, &[unit_type as i64]) != 0
     }
     fn update_wall(&mut self, unit: i64, flag: bool) {
-        self.h.ask(EE_UNITS_PLAYER_UPDATE_WALL, &[unit, i64::from(flag)]);
+        // `gContinentManager.UpdateWallUnit(unit, flag)` (cm_unit.rs)
+        #[cfg(not(test))]
+        // SAFETY: the player's live unit
+        unsafe {
+            crate::astar::cm_unit::update_wall_unit(unit as u64, flag)
+        };
+        // the tests' host notes it under the code the C++ case had
+        #[cfg(test)]
+        self.h.ask(UPDATE_WALL_NOTE, &[unit, i64::from(flag)]);
     }
     /// the exploration power's pulse at a new town center or capitol
     fn exploration_pulse(&mut self, unit: i64, unit_type: c_ulong) {

@@ -9,6 +9,7 @@
 #include "rust/base/math.h"
 #include "rust/game/app.h"
 #include "rust/render/gfx.h"
+#include "rust/sim/app.h"
 #include "rust/sim/netmsg.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
@@ -2070,9 +2071,6 @@ enum class EeGameCpp : uint32_t {
   PwPointsCount,
   PwPointX,
   PwPointY,
-  PwAiNextPlayer,
-  PwAiNextUpdateTime,
-  PwAiPlayerCount,
   PwMap,
   PwMapSize,
   PwMapTileAt,
@@ -2542,93 +2540,6 @@ enum class EeGameCpp : uint32_t {
   ClIdsSeconds,
   ClTimeoutFormat,
   ClSprintfSeconds,
-  AeFields,
-  AeTemplateFields,
-  AeTplFields,
-  AeOwner,
-  AeLocation,
-  AeIsImmunity,
-  AeAffectsPlayer,
-  AeAffectsPlayerReversed,
-  AeIsInRange,
-  AeCovers,
-  AeAppliedTo,
-  AeShowOn,
-  AeSetUnit,
-  AeSetAffectedAll,
-  AeNew,
-  AeListCount,
-  AeListAt,
-  AeListAdd,
-  AeListDereference,
-  AeListEmpty,
-  AeUnitProtected,
-  AeUnitBuilt,
-  AeUnitOwnList,
-  AeUnitAffectingList,
-  AeUnitAffectingAdd,
-  AeUnitPlayerId,
-  AeUnitId,
-  AeUnitComplex,
-  AeUnitNext,
-  AeWorldUnit,
-  AeWorldNumPlayers,
-  AeWorldPlayer,
-  AePlFirstUnit,
-  AeNewUnitVec,
-  AeDeleteUnitVec,
-  AeUnitsInRect,
-  AeVecCount,
-  AeVecComplexAt,
-  AeManager,
-  AeManagerEffects,
-  AeTemplateCount,
-  AeTemplateAt,
-  AeTemplatesClear,
-  AeTemplatePush,
-  AeTemplateDereference,
-  AeTemplateLoad,
-  AeTemplateUnload,
-  AeNewTemplate,
-  AeTemplateInit,
-  AeTemplateError,
-  AeFileOpenRead,
-  AeFileReadULong,
-  AeFileReadData,
-  AeFileClose,
-  AeIoCall,
-  AeAfterLoad,
-  AeLostRefs,
-  AhTargetInSet,
-  AhTargetTechNode,
-  AhNodeKind,
-  AhPlayer,
-  AhAllied,
-  AhAtWar,
-  AhTargetBuilt,
-  AhTargetRepairable,
-  AhTargetPosition,
-  AhContinent,
-  AhTargetCarrier,
-  AhTargetType,
-  AhPlanet,
-  AhTargetHitPoints,
-  AhTargetMaxHitPoints,
-  AhInCinematic,
-  AhTargetSetHitPoints,
-  AhTargetCloak,
-  AhCamouflaged,
-  AhStaysHidden,
-  AhCloakedEnemy,
-  AhTargetCloakOwn,
-  AhMiniMapHide,
-  AhOwner,
-  AhOwnerHitPoints,
-  AhCountInRect,
-  AhCountInRange,
-  AhOwnerScale,
-  AhOwnerLeadership,
-  AhOwnerGarrisonBonus,
   TkTreeFields,
   TkCurrentPlayer,
   TkPlayerIndex,
@@ -2676,6 +2587,8 @@ enum class EeGameCpp : uint32_t {
   TkButtonRelease,
   TkItemLoad,
   TkItemUnload,
+  TkAeTemplateLoad,
+  TkAeTemplateUnload,
   TkSoundLoad,
   TkSoundUnload,
   TkClassCount,
@@ -2720,10 +2633,6 @@ enum class EeGameCpp : uint32_t {
   TkJitFactor,
   RunRustInit,
   RunFixtureConfigure,
-  RunSplashNew,
-  RunSplashDelete,
-  RunSplashStart,
-  RunSplashStop,
   RunInstanceMutex,
   RunSetEventPump,
   RunNativeHook,
@@ -2798,44 +2707,171 @@ enum class EeGameCpp : uint32_t {
   EntryServerLoadState,
   EntryNotInEditor,
   EntryStartLoadingInput,
-  EntryUpdateSavedGames,
-  LcAeTemplate,
-  LcAeSetTemplate,
-  LcAeSetOwner,
-  LcMoraleBonus,
-  LcTplReference,
-  LcTplDereference,
-  LcTplGfx,
-  LcTplGfx18,
-  LcTplMedia,
-  LcTplSetGfx,
-  LcTplSetGfx18,
-  LcTplSetMedia,
-  LcGfxGet,
-  LcGfxReference,
-  LcGfxDereference,
-  LcGfxLoad,
-  LcGfxUnload,
-  LcGfxCreateUnitEffect,
-  LcMediaGet,
-  LcMediaCount,
-  LcMediaLoad,
-  LcMediaUnload,
-  LcCxReference,
-  LcCxDereference,
-  LcCxHitPoints,
-  LcCxApplyAreaEffects,
-  LcCxRemoveAffecting,
-  LcCxUpdateAreaEffects,
-  LcListRemove,
-  LcListNew,
-  LcListDelete,
-  LcListAssign,
-  LcAeCaptureTick,
-  LcMemFileNew,
-  LcMemFileDelete,
-  LcMemFilePosition,
-  LcMemFileData,
+  DtTerrainFields,
+  DtTerrainUse,
+  DtTerrainLock,
+  DtTerrainNew,
+  DtTerrainDelete,
+  DtTerrainResize,
+  DtTerrainCount,
+  DtTerrainAt,
+  DtTerrainSet,
+  DtTerrainGet,
+  DtDefaultTerrain,
+  DtFirstCliffTerrain,
+  DtTerrainFirstTexture,
+  DtTerrainTextureSetId,
+  DtTerrainTextures,
+  DtTerrainPreview,
+  DtTerrainLoadTextureName,
+  DtTerrainTextureName,
+  DtTerrainCopyName,
+  DtTerrainName,
+  DtTerrainNameLength,
+  DtTerrainPushClass,
+  DtTerrainClassCount,
+  DtTerrainClass0,
+  DtTerrainColor,
+  DtTerrainNewTextures,
+  DtTerrainDeleteTextures,
+  DtTerrainLoadTexture,
+  DtTrilinearFilter,
+  DtTexSetFrame,
+  DtTexDereference,
+  DtMeshTextureSet,
+  DtSetTexture,
+  DtClassButton,
+  DtCliffNew,
+  DtCliffDelete,
+  DtCliffFields,
+  DtCliffCopyName,
+  DtCliffResize,
+  DtCliffCount,
+  DtCliffAt,
+  DtCliffSet,
+  DtCliffClear,
+  DtFileReadRecord,
+  DtFilePrint,
+  DbtFields,
+  DbtUse,
+  DbtLock,
+  DbtNew,
+  DbtDelete,
+  DbtResize,
+  DbtCount,
+  DbtAt,
+  DbtSet,
+  DbtCopyName,
+  DbtName,
+  DbtTexture,
+  DbtCellU,
+  DbtCellV,
+  DbtLoadTexture,
+  DbtReloadTexture,
+  DbtPixelDepth,
+  DbtScreenWidth,
+  DbtTexWidth,
+  DbtTexHeight,
+  DbtTexMipDrop,
+  DbtTexSurface,
+  DbtTexSurfaceHeight,
+  DbtBitmapTexture,
+  DbtBitmapCoordinates,
+  DbtBitmapScale,
+  DbtHotKeyCount,
+  DbtHotKey,
+  DanFields,
+  DanNew,
+  DanDelete,
+  DanResize,
+  DanCount,
+  DanAt,
+  DanSet,
+  DanClear,
+  DanMedia,
+  DanSoundCount,
+  DanSoundAt,
+  DanSoundPush,
+  DanSoundsClear,
+  DanListPush,
+  DanMediaGet,
+  DanMediaLoad,
+  DanMediaUnload,
+  DxFindFile,
+  DxOpen,
+  DxLength,
+  DxClose,
+  DxDelete,
+  DxMessage,
+  DxVerify,
+  DxMemoryFile,
+  DxIdsClear,
+  DxIdsInsert,
+  DxRulesHandle,
+  DxRulesRefresh,
+  TbNewData,
+  TbDeleteData,
+  TbShareData,
+  TbSetTree,
+  TbNewNode,
+  TbClassesResize,
+  TbClassRead,
+  TbClassCount,
+  TbClassAt,
+  TbCostsInsert,
+  TbCostsCount,
+  TbCostsDelete,
+  TbCostsClear,
+  TbButton,
+  TbCopyButton,
+  TbSetButton,
+  TbButtonGet,
+  TbSwapButton,
+  TbGlobalTree,
+  TbEpochInsert,
+  TbSetPlayerIndex,
+  TbCopyPlayer,
+  TbIsHuman,
+  TbClassFamily,
+  TbNodeIsObsolete,
+  TbNodeDependsOn,
+  TbNodeGetCost,
+  TbTreeChecksum,
+  TbWorldPlayers,
+  TbWorldPlayer,
+  TbPlayerTree,
+  PchClearContagion,
+  PchNewContagion,
+  PchContagion,
+  PchCopyCalamities,
+  PchCopyContagion,
+  DcCreateSurface,
+  DcVerify,
+  DcFindFile,
+  DcSurfaceLoad,
+  DcLock,
+  DcUnlock,
+  DcDereference,
+  DcMemory,
+  DcBytesPerRow,
+  DcWidth,
+  DcHeight,
+  DcNew,
+  DcDelete,
+  DcSetColor,
+  DcResize,
+  DcCount,
+  DcAt,
+  DcSet,
+  TcBytes,
+  TcUpgradeFirst,
+  TcUpgradeEnd,
+  TcUpgradeMediaCount,
+  TcUpgradeButtonCount,
+  TcPlayerId,
+  TcPlayerPopulationBonus,
+  TcPlayerTributeFee,
+  TcPlayerBB44,
   LcRecNew,
   LcRecDelete,
   LcRecSize,
@@ -2874,6 +2910,7 @@ enum class EeGameCpp : uint32_t {
   LcCivPoints,
   LcCivMaxPoints,
   LcCivFlags,
+  LcWorldPlayer,
   LcPlCivilization,
   LcPlUpgradeOf,
   LcPlLists,
@@ -2912,6 +2949,279 @@ enum class EeGameCpp : uint32_t {
   LcMrListClear,
   LcMrListData,
   LcMrListSize,
+  DuLocalPlayer,
+  DuPlaySound,
+  DuWorldReadLock,
+  DuNewChecksum,
+  DuWorldChecksum,
+  DuWorldReadUnlock,
+  DuChecksumTotal,
+  DuErrorsNew,
+  DuErrorsDelete,
+  DuChecksumCompare,
+  DuChecksumVerbose,
+  DuErrorCount,
+  DuErrorAt,
+  DuChecksumDelete,
+  DuHaveUi,
+  DuSetErrorString,
+  DuDebugOut,
+  DuPixelFormatA8R8G8B8,
+  DuActiveRasterizer,
+  DuDevicesClear,
+  DuRasterizerCount,
+  DuRasterizerAt,
+  DuActivate,
+  DuPushRasterizer,
+  DuScreenCount,
+  DuScreenAt,
+  DuPushScreen,
+  DuVideoMemory,
+  DuModeCount,
+  DuModeAt,
+  Du32Bit,
+  DuPushMode,
+  DuDeactivate,
+  DuSoundParameters,
+  DuNodeReference,
+  DuSound1Frame,
+  DuSound1,
+  DuSound2Frame,
+  DuSound2,
+  DuSoundSample,
+  DuNodeSample,
+  DuNodeLooping,
+  DuNodeSetParameters,
+  DuNodeStop,
+  DuCameraInverseApply,
+  DuCameraNormalize,
+  DuCxPosition,
+  DuSetLocal,
+  DuSelectedGroup,
+  DuGroupCount,
+  DuGroupUnit,
+  DuPickScreenTile,
+  DuTileAt,
+  DuLocationAt,
+  DuMapHeight,
+  DuIsClient,
+  DuClientConnected,
+  DuServerLost,
+  DuRemoveSelf,
+  DuNotifyDisconnect,
+  DuServerState,
+  DuNewRemoveAll,
+  DuPostAction,
+  DuActionDereference,
+  DsFields,
+  DsStorm,
+  DsRequest,
+  DsArea,
+  DsSetName,
+  DsRandomPlayer,
+  DsTownCount,
+  DsRandomTown,
+  DsLargestLand,
+  DsLargestAny,
+  DsRandomPoint,
+  DsGoal,
+  DsLargestWater,
+  DsRandomCliff,
+  DsRandomHill,
+  DsStart,
+  DsMapSize,
+  DsRandomLong,
+  DsPointsNew,
+  DsPointsDelete,
+  DsFindPath,
+  DsCreateWeather,
+  DsEffectReference,
+  DsEffectBounds,
+  DsSustain,
+  DsCancelRequest,
+  DsRequestPath,
+  DsPathClear,
+  DsPathPush,
+  DsEndEffect,
+  DsEffectRelease,
+  DsPathResize,
+  DsPathPointLoad,
+  DsRectLoad,
+  DsPointLoad,
+  DsReadHandle,
+  DsPathLen,
+  DsPathPointSave,
+  DsRectSave,
+  DsPointSave,
+  DsEffectHandle,
+  DsDistance,
+  DsPopPath,
+  DsMove,
+  DsTileCount,
+  DsSetIntensity,
+  DsGameSpeed,
+  DsResetColor,
+  DsPathAt,
+  DsCenter,
+  DeManager,
+  DeNewStorm,
+  DeStormPush,
+  DeStormCount,
+  DeStormAt,
+  DeState,
+  DeInterval,
+  DeNextStep,
+  DeStormErase,
+  DeStormDelete,
+  DeMaxStorms,
+  DeWind,
+  DeWindTarget,
+  DeWindRate,
+  DeStormResize,
+  DeStormSet,
+  DeColorLoad,
+  DeC24,
+  DeC18,
+  DeL50,
+  DeColorSave,
+  DeEnabled,
+  DeStormClear,
+  DcStats,
+  DcStrBytes,
+  DcIsViewed,
+  DcActiveContains,
+  DcCxKill,
+  DcPlayerKillUnit,
+  DcClassCount,
+  DcPlayerUpgrade,
+  DcCanImprove,
+  DcClassMaxLevel,
+  DcUpgradeLevel,
+  DcApplyImprovement,
+  DcEraseQueued,
+  DcExplore,
+  DcNewMakeVisible,
+  DcSetOriginatingSlot,
+  DcProcessInput,
+  DcEpochCount,
+  DcCurrentEpoch,
+  DcSetEpoch,
+  DcSetHitPoints,
+  DcEndGame,
+  DcAddResource,
+  DcMultiplayer,
+  DcCheatsEnabled,
+  DcNumPlayers,
+  DcChatLog,
+  DcClosestTile,
+  DcWorldUnit,
+  DcParse,
+  DcApply,
+  DcSwapCheatsEnabled,
+  DcPlayerUpgradeCount,
+  DcHaveCheats,
+  DvAvailable,
+  DvMaximum,
+  DvNoPointsAdded,
+  DvUnchanged,
+  DvListCount,
+  DvListAt,
+  DvPurchased,
+  DvApplyUpgrade,
+  DvNameEmpty,
+  DvDeferredClear,
+  DvPurchasedPush,
+  DvUStrLoad,
+  DvNameNarrow,
+  DvNameLoad,
+  DvNameSave,
+  DvCanAfford,
+  DvDeferredPush,
+  DvDeferred,
+  DwTeamCount,
+  DwTeamPlayer,
+  DwNeeded,
+  DwWonderCount,
+  DwWonderTime,
+  DwVictoryTime,
+  DwGameTime,
+  DwInCinematic,
+  DkFields,
+  DkModelScale,
+  DkModelCenter,
+  DkModelHeight,
+  DkCameraFocus,
+  DkLocationApply,
+  DkTileX,
+  DkTileY,
+  DkSetOrtho,
+  DkSetWorldCamera,
+  DkSetFieldOfView,
+  DkHaveMiniMap,
+  DkMiniMapRefresh,
+  DkClearB529066,
+  DkClearFollowing,
+  DkClearB529068,
+  DkUnitASaved,
+  DkUnitBSaved,
+  DkKeyCount,
+  DkKeyAt,
+  DkFrontClipping,
+  DkRearClipping,
+  RunSplashFullScreen,
+  UsgWorldWriteLock,
+  UsgWorldWriteUnlock,
+  UsgSetDirectory,
+  UsgSetFile,
+  UsgDelete,
+  UsgCreate,
+  UsgFOpenWrite,
+  UsgPuts,
+  UsgFlush,
+  UsgClose,
+  UsgFirstFile,
+  UsgFileName,
+  UsgLoad,
+  UsgCameraChanged,
+  UsgCameraUpdate,
+  UsgSave,
+  WsStart,
+  WsTiles,
+  WsVictory,
+  WsTeamsLocked,
+  WsScenarioGame,
+  WsCampaignOptions,
+  WsSetScenario,
+  WsSetCampaign,
+  WsEndTime,
+  WsCampaignName,
+  WsNumPlayers,
+  WsPlayer,
+  WsCurrent,
+  WsBase,
+  WsLevel,
+  WsRandom,
+  WsStatsSet,
+  WsStatsCap,
+  WsStatsSetCap,
+  WsRecordsAssign,
+  WsRecScore,
+  WsRecEconomy,
+  WsRecEpoch,
+  WsRecMilitary,
+  WsRecTech,
+  WsRecColor,
+  WsRecName,
+  WsRecStatistics,
+  WsRecSlot,
+  WsRecResult,
+  WsRecEndTime,
+  WsRecTeam,
+  WsRecResource,
+  WsRecLocal,
+  WsRecHuman,
+  WsSetCurrentRecord,
+  WsRecPlayTime,
 };
 
 /// A sender's value for one member (EEMRecordValue, ee/EEMessage.h: its layout).
@@ -4410,83 +4720,6 @@ int64_t ee_gamecpp_pworld_host(void *ctx,
 /// world_save.rs until the first tick), or null.
 void *ee_gamecpp_find_loaded_ghost_unit(unsigned long id);
 
-/// EEAEManager::CollectEffects: the list's effects added to every living unit they cover around a location (a
-/// radius-0 effect: to every unit of every player); a healing effect skips its own unit and shows on the units it
-/// covers.
-void ee_gamecpp_ae_collect_effects(void *_manager,
-                                   float radius,
-                                   const void *location,
-                                   unsigned long player,
-                                   void *list,
-                                   void *unit);
-
-/// SetAffectedByAreaEffectFunctor::Apply: the effect added to a covered unit's affecting effects and applied.
-void ee_gamecpp_ae_set_affected(void *effect,
-                                unsigned long player,
-                                void *unit,
-                                const void *location);
-
-/// A container emptied (its references let go, then its items).
-void ee_gamecpp_ae_container_empty(void *list);
-
-/// EEAEManager::ClearEffects: the active list emptied.
-void ee_gamecpp_ae_clear_effects(void *manager);
-
-/// EEAEManager::Clear: every template released, then the active list emptied.
-void ee_gamecpp_ae_clear(void *manager);
-
-/// EEAEManager::Load: the templates of the area-effect file (an empty slot for records with id 0); 3 when a template
-/// fails to initialize.
-long ee_gamecpp_ae_load(void *manager,
-                        void *file);
-
-/// EEAEManager::CreateAreaEffect: the effect of the template at an index (a known kind) for a unit, owned by the
-/// unit's player; NULL otherwise.
-void *ee_gamecpp_ae_create(void *manager,
-                           unsigned long index,
-                           void *unit);
-
-/// EEAEManager::FindEffect: an active effect of a kind covering a point that affects the player (immunities only, by
-/// the reversed player test, in immunity mode), skipping protected units' effects and those in the exclusion list.
-void *ee_gamecpp_ae_find(void *manager,
-                         long kind,
-                         float x,
-                         float y,
-                         unsigned long player,
-                         bool mode,
-                         void *exclude);
-
-/// EEAEManager::LoadTemplateMedia / UnloadTemplateMedia: the template at an index, if any.
-void ee_gamecpp_ae_template_media(void *manager, unsigned long index, bool load);
-
-/// RebuildAreaEffectRegionListFunctor::Apply: a built unit's own effects added to the active list.
-void ee_gamecpp_ae_rebuild_add(void *effects, void *unit);
-
-/// EEAESaveRunningState: per unit (of every player but the world's) with effects, its own effects' location (and
-/// the morale from buildings' count), then the effects acting on it, each as its owner and index; then the active
-/// list the same way.
-void ee_gamecpp_ae_save_running(void *file);
-
-/// EEAELoadRunningState: the saved running state read, and put back at the loaded game's first tick.
-long ee_gamecpp_ae_load_running(void *file);
-
-/// The running state put back (EEAfterLoad): each unit's own effects' location and morale count (when the unit
-/// has the saved number of own effects), each unit's affecting effects in their saved order, the active list;
-/// the references no longer found are counted and reported.
-///
-/// # Safety
-/// `state` is the record ee_area_effect_running_load made (the caller keeps it).
-void ee_gamecpp_ae_restore_running(const EeAreaEffectRunning *state);
-
-/// The world of an area effect's Rust slots (ee_sim tech area_effect.rs's host; was EEAreaEffect.cpp's
-/// EEAEHost::Call): `ctx` the EEAEHost (the effect and the unit the slot was given).
-///
-/// # Safety
-/// `call` and `reply` are the slot's live records.
-void ee_gamecpp_ae_host(void *ctx,
-                        const void *call,
-                        void *reply);
-
 /// EEClient::HandleSlotUpdate: this client booted from the canceled game when the host's slot (0) has become open
 /// (closed), else the slot's line refreshed.
 void ee_gamecpp_client_slot_update(uint8_t slot,
@@ -4602,119 +4835,202 @@ bool ee_gamecpp_entry_parse_command_line(const char *line);
 int32_t ee_gamecpp_entry_run(void *instance,
                              const char *command_line);
 
-/// The AEFX record of an area-effect tick (AETP first, once).
-void ee_gamecpp_ae_capture_tick(float elapsed);
+/// EETerrainTable::Load(FSFileSpec*): the terrains read (each after its texture file name), their textures numbered
+/// over the table, the first named one the default terrain.
+long ee_gamecpp_db_terrain_load(void *file);
 
-/// EEAreaEffect(template): the template referenced, no unit or player yet (the morale from buildings' cap: the
-/// template's maximum level plus the game variant's morale bonus), then the template's media.
-void ee_gamecpp_aefx_construct(void *effect,
-                               void *template_);
+/// EETerrainTable::Unload: every terrain's textures released, the terrains destroyed, the table emptied (the texture
+/// arrays are not freed).
+void ee_gamecpp_db_terrain_unload();
 
-/// ~EEAreaEffect: the template and the unit let go, then the template's media unloaded.
-void ee_gamecpp_aefx_destruct(void *effect);
+/// EETerrainTable::DumpAllLoadedMedia: each referenced terrain and each with a list-box preview.
+void ee_gamecpp_db_terrain_dump(void *file);
 
-/// AppliedTo / RemovedFrom: the kind's slot on a unit (the cloaking's).
-void ee_gamecpp_aefx_applied(void *effect, void *unit, bool removed);
+/// EETerrainTable::Load(GETerrainMesh&) (`load`) and Unload(GETerrainMesh&): the first reference loads the textures
+/// and attaches them to the mesh's texture set; the last detaches and releases them.
+void ee_gamecpp_db_terrain_mesh(void *terrain,
+                                void *mesh,
+                                bool load);
 
-/// Covers: whether the effect, by its kind, covers the unit from a point for a player.
-bool ee_gamecpp_aefx_covers(void *effect, unsigned long player, void *unit, const void *point);
+/// EETerrainTable::AttachTextures: the loaded textures (columns mirrored) into a texture set, once any load is done.
+void ee_gamecpp_db_terrain_attach(void *terrain,
+                                  void *texture_set);
 
-/// ShowOn: the template's graphic effect played on the unit, if it has one.
-void ee_gamecpp_aefx_show_on(void *effect, void *unit);
+/// EETerrainTable::LoadTexture: one terrain texture with its terrain stage modes (clamped; a linear mip filter when
+/// trilinear filtering is on). No NULL test: the original references the result directly.
+void *ee_gamecpp_db_terrain_texture(void *terrain,
+                                    const char *name);
 
-/// Dump: the effect's location, owning unit id (-1 without one) and player in the out-of-sync dump.
-void ee_gamecpp_aefx_dump(void *effect, void *file);
+/// EETerrainTable::LoadTextures: every texture of the grid (numbered _n, from the last down) into a new array.
+void ee_gamecpp_db_terrain_textures(void *terrain);
 
-/// Checksum: the location's float bits, the player and the owning unit's id (0 without one).
-long ee_gamecpp_aefx_checksum(void *effect);
+/// EELoadTerrainPreviews (`load`) and EEReleaseTerrainPreviews: each terrain's list-box preview (its texture _1)
+/// loaded or released, and its first unit class's button referenced or dereferenced.
+void ee_gamecpp_db_terrain_previews(bool load);
 
-/// GetStrength: by the kind.
-long ee_gamecpp_aefx_strength(void *effect);
+/// EECliffTerrainTable::Load: the cliff terrains (NULL for a row with a negative index); the first one noted.
+long ee_gamecpp_db_cliff_load(void *file);
 
-/// GetLevel: a morale kind's level.
-long ee_gamecpp_aefx_level(void *effect);
+/// EECliffTerrainTable::Unload: every cliff terrain destroyed, the table emptied; 0.
+long ee_gamecpp_db_cliff_unload();
 
-/// GetRadius: the template's radius times the effect's scale.
-float ee_gamecpp_aefx_radius(void *effect);
+/// The button's destructor: its texture released.
+void ee_gamecpp_db_button_free(void *button);
 
-/// GetScale: the owning unit's area-effect scale, 1 without a unit.
-float ee_gamecpp_aefx_scale(void *effect);
+/// EEButtonObject::Load: the button images (stopping at the first read error).
+long ee_gamecpp_db_button_load(void *file);
 
-/// SetUnit: the owning unit, referenced.
-void ee_gamecpp_aefx_set_unit(void *effect, void *unit);
+/// EEButtonObject::Unload: every button image destroyed, the table emptied.
+void ee_gamecpp_db_button_unload();
 
-/// Modify: a value of a kind by the effect's kind into `out`; false when it leaves it.
-///
-/// # Safety
-/// `out` is writable.
-bool ee_gamecpp_aefx_modify(void *effect, long kind, long value, long *out);
+/// EEButtonObject::DumpAllLoadedMedia: each referenced button image.
+void ee_gamecpp_db_button_dump(void *file);
 
-/// Recount: the morale from buildings' buildings recounted when marked.
-void ee_gamecpp_aefx_recount(void *effect);
+/// EEButtonObject::Acquire: a reference; the first loads the texture (a failed load leaves the count at 0).
+long ee_gamecpp_db_button_acquire(void *button);
 
-/// Tick: the effect on a unit it affects (the healing heals it).
-void ee_gamecpp_aefx_tick(void *effect, void *unit, float elapsed);
+/// EEButtonObject::Release: a reference dropped once any load is done, the texture released with the last; 0.
+long ee_gamecpp_db_button_release(void *button);
 
-/// EEAreaEffectTemplate(): square, radius 1, allied players, no unit set, white tint; no graphics or media.
-void ee_gamecpp_aetpl_construct(void *template_);
+/// EEButtonObject::LoadTexture: the texture (a mip level dropped at 800 pixels wide or less, alpha for ids below 50)
+/// and its cell's offset; 3 when the texture is missing.
+long ee_gamecpp_db_button_load_texture(void *button);
 
-/// ~EEAreaEffectTemplate: its two graphic effects let go.
-void ee_gamecpp_aetpl_destruct(void *template_);
+/// EEButtonObject::SetFaceBitmap (`face`: inset by one texel; skipped without a texture or its surface) and
+/// SetPressedBitmap: the button's cell on a bitmap scaled to a rectangle.
+void ee_gamecpp_db_button_bitmap(void *button,
+                                 bool face,
+                                 void *bitmap,
+                                 const void *rectangle,
+                                 unsigned long screen);
 
-/// Load (`unload` false) or Unload: both graphic effects, then the media.
-void ee_gamecpp_aetpl_media(void *template_, bool unload, bool on_demand);
+/// EEButtonObject::Reload: every referenced button image's texture reloaded (as on its first load), under the lock;
+/// the first error.
+long ee_gamecpp_db_button_reload();
 
-/// AffectsPlayer (`reversed` false) / AffectsPlayerReversed: the template's player mode.
-bool ee_gamecpp_aetpl_affects(void *template_, long player, long other, bool reversed);
+/// EEButtonObject::GetHotKey (and the node's): the hot key of an index, NULL out of range.
+void *ee_gamecpp_db_hot_key(long index);
 
-/// IsWithin: a point in the square or circular area around a center (and on its continent; a carried space dock or
-/// turret also on its carrier's planet).
-bool ee_gamecpp_aetpl_is_within(void *template_,
-                                const void *center,
-                                const void *point,
-                                float scale,
-                                void *unit);
+/// The animal type's destructor (`with_media`: its sounds and then its media released) and ClearSounds (its sounds
+/// released, last first, and the list emptied).
+void ee_gamecpp_db_animal_free(void *animal,
+                               bool with_media);
 
-/// Init: the members from an area-effect file record, its graphic effects (referenced) and media resolved.
-bool ee_gamecpp_aetpl_init(void *template_,
-                           const void *data);
+/// EEAnimal::Load: the animal types (any loaded ones unloaded first), each one's media and up to three sounds loaded.
+long ee_gamecpp_db_animal_load(void *file);
 
-/// AddAreaEffect: the effect, replacing one of the same kind (the morale kinds count as one) whose strength is
-/// smaller; nothing when the old one's is at least as large.
-void ee_gamecpp_aelist_add(void *list,
-                           void *effect);
+/// EEAnimal::Unload: every animal type destroyed (last first), the table emptied.
+void ee_gamecpp_db_animal_unload();
 
-/// ApplyModifiers: each effect's Modify of the kind (the damage read anew each time: it may be the out value),
-/// showing each that applied on the unit.
-///
-/// # Safety
-/// `damage` is readable and `out` writable (they may be the same value).
-void ee_gamecpp_aelist_modifiers(void *list,
-                                 long kind,
-                                 const long *damage,
-                                 long *out,
-                                 void *unit);
+/// EETerrainColorTable::Load: the terrain colours from the pixels of the colour palette texture (16 per row; each
+/// component / 255); the texture load status.
+long ee_gamecpp_db_colors_load();
 
-/// Remove: the first effect of the kind; whether one was found.
-bool ee_gamecpp_aelist_remove(void *list, long kind);
+/// EETerrainColorTable::Unload: every colour destroyed, the table emptied.
+void ee_gamecpp_db_colors_unload();
 
-/// KeepStrongest: the list rebuilt through AddAreaEffect.
-void ee_gamecpp_aelist_keep_strongest(void *list);
+/// EEDbFindFile: the table's text form compiled and served as a new memory file (kErrorOK), or the game stopped.
+long ee_gamecpp_db_find_file(void *path,
+                             const char *name,
+                             void **out);
 
-/// MarkDirty: each effect's.
-void ee_gamecpp_aelist_mark_dirty(void *list);
+/// EEDbRowIds: the row ids of dbobjects or dbtechtree by key as the last load read them; false and empty before.
+bool ee_gamecpp_db_row_ids(const char *table,
+                           void *ids);
 
-/// MoveAndUpdate: each effect moved to the point and recounted.
-void ee_gamecpp_aelist_move(void *list, const void *point);
+/// EELoadRules: the rules documents (next to the db tables, db\combat.yaml ...) read into the game's rules through
+/// the same content; a broken one stops the game with its message.
+void ee_gamecpp_db_load_rules(void *path);
 
-/// Tick: each effect's on the unit.
-void ee_gamecpp_aelist_tick(void *list, void *unit, float elapsed);
+/// EEDumpRules: EE_DUMP_CONTENT's rules dump (after the db tables are loaded).
+void ee_gamecpp_db_dump_rules();
 
-/// EEAEManager::Tick: every unit's affecting effects cleared, each unit's own effects applied to the units around
-/// it, the strongest of each kind kept, the generators updated, the active list rebuilt from the built units' own
-/// effects, the affecting effects ticked; then the capture's AEFX (TEST ONLY).
-void ee_gamecpp_aem_tick(void *manager,
-                         float elapsed);
+/// The chunk's constructor (`fresh` only: a new contagion manager), destructor (`clear` only: the calamity list and
+/// the contagion manager deleted) and Reset (both).
+void ee_gamecpp_pch_reset(void *helper,
+                          bool clear,
+                          bool fresh);
+
+/// EEPCalamityHelper::operator=: another chunk's calamity list and contagion manager copied into fresh ones of its
+/// own (each only when the two differ).
+void *ee_gamecpp_pch_assign(void *helper,
+                            const void *other);
+
+/// TSWP (EETechCaptureSweep): per player (1 on) its tree's head record, then one record per node and epoch.
+void ee_gamecpp_tech_capture_sweep();
+
+/// EETechCaptureUpgrade: the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
+/// size first; 0 for no upgrade. mMediaCount and mButtonLoadCount count the presentation's media loads
+/// (EEPlayer::LoadUnitClassMedia, SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the
+/// record carries simulation state only.
+void ee_gamecpp_tech_capture_upgrade(void *record,
+                                     void *upgrade);
+
+/// EETechCapturePlayer: the player's fields the effects change (population bonus, tribute fee, mBB44); -1 for no
+/// player.
+void ee_gamecpp_tech_capture_player(void *record,
+                                    void *player);
+
+/// EETechTreeNode::Load: the node's record from the tech tree file, a cost table per unit class scaled by its
+/// factor, its epoch and its button.
+long ee_gamecpp_tech_node_load(void *node,
+                               void *file,
+                               void *tree);
+
+/// EETechTreeEpoch::Load: the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are
+/// dropped).
+long ee_gamecpp_tech_epoch_load(void *epoch,
+                                void *file,
+                                void *tree);
+
+/// EETechTreeNode::operator=: another node's state, its data (with its class cost tables) shared.
+void *ee_gamecpp_tech_node_assign(void *node, const void *other);
+
+/// EETechTreeEpoch::operator=: another epoch's state, its nodes deep-copied for this epoch's tree (the node data
+/// stays shared).
+void *ee_gamecpp_tech_epoch_assign(void *epoch,
+                                   const void *other);
+
+/// The EETechTree constructor's body: every epoch, the prehistoric one current, the end the last.
+void ee_gamecpp_tech_tree_init(void *tree);
+
+/// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
+void *ee_gamecpp_tech_tree_assign(void *tree,
+                                  const void *other);
+
+/// The node's destructor (`destroy`: its unit media unloaded when loaded and its unit classes given their default
+/// buttons back) and ClearClassCosts (the class cost tables freed).
+void ee_gamecpp_tech_node_free(void *node,
+                               bool destroy);
+
+/// EETechTreeNode::Unload: the node's data deleted; 0.
+long ee_gamecpp_tech_node_unload(void *node);
+
+/// EETechTreeNode::SetButton: a new button, swapped into the node's unit classes.
+void ee_gamecpp_tech_node_set_button(void *node, unsigned long button);
+
+/// EETechTreeNode::NeedsUnitMedia (`captured`: TNMT records the answer) and NeedsUnitMediaUncaptured: whether the
+/// node makes a building or mine whose media this game needs (ee_tech tree.rs needs_unit_media).
+bool ee_gamecpp_tech_needs_unit_media(void *node,
+                                      bool captured);
+
+/// EETechTreeEpoch::GetBuildTime: the epoch's research time (computer players need half of it); TNMT records it.
+long ee_gamecpp_tech_epoch_build_time(void *epoch);
+
+/// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
+/// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
+long ee_gamecpp_tech_tree_save(void *tree,
+                               void *file,
+                               bool load,
+                               unsigned long major,
+                               unsigned long minor);
+
+/// EETechTree::SumCosts: the resource costs of a tech and every unresearched prerequisite and upgrade path to it;
+/// TSUM (TEST ONLY) records the outermost call: player, id, unit class, the seven costs before and after.
+void ee_gamecpp_tech_sum_costs_captured(void *tree,
+                                        long id,
+                                        long unit_class,
+                                        long *costs);
 
 /// CVAP's first half (EECivCaptureApplyBegin): the upgrade, the player and its fields, the category's unit types
 /// and their class upgrades; NULL when the capture is off.
@@ -4811,6 +5127,218 @@ void ee_gamecpp_msgcap_executed(void *message);
 
 /// The sweep (EEMessageCaptureSweep): ee_sim's edge payloads, each item built.
 void ee_gamecpp_msgcap_sweep();
+
+/// `GetUnitPoint`: a unit's model centre at its camera-focus height (scaled, at its location), else its tile's
+/// centre just above the terrain.
+void ee_gamecpp_camera_unit_point(void *unit,
+                                  void *out);
+
+/// `Update`: the camera's frame (ee_game app camera.rs over the C++ host `call`); when it moved, the view to the
+/// world and the viewport (the orthographic size, the field of view, the clipping distances) and the mini map's
+/// view; CAMU before and after (TEST ONLY).
+///
+/// # Safety
+/// `camera` is a live EECameraControl and `call` its host.
+void ee_gamecpp_camera_update(void *camera,
+                              EeAppCameraFn call,
+                              float elapsed);
+
+/// CAMU (TEST ONLY): the camera's whole state (the poses, the view, the target, the followed units' ids, the move's
+/// numbers, the mode and flags, every key of the path) and the viewport's clipping distances, at each update's start
+/// (phase 0, with its elapsed time) and end (1).
+void ee_gamecpp_capture_camera(void *camera,
+                               uint32_t phase,
+                               float elapsed);
+
+/// `EECheatCodes()`: the table from the string resources.
+EeAppCheats *ee_gamecpp_cheats_new();
+
+/// `ApplyCheatCode(code, player, parameter)`.
+///
+/// # Safety
+/// `cheats` came from [`ee_gamecpp_cheats_new`] and is live.
+void ee_gamecpp_cheats_apply(const EeAppCheats *cheats, long code, long player, long parameter);
+
+/// `ParseCheatCode(text)`: `code` and (when the line ends in a number) `parameter`.
+///
+/// # Safety
+/// `cheats` is live, `text` a C string, the outputs live.
+void ee_gamecpp_cheats_parse(const EeAppCheats *cheats,
+                             const char *text,
+                             long *code,
+                             long *parameter);
+
+/// EE-SIM --app-sweep's cheats (TEST ONLY: CHET, CHEF), when there are cheat codes.
+void ee_gamecpp_capture_cheat_sweep();
+
+/// `EECivilization()`: unnamed, no points or upgrades, unchanged.
+void ee_gamecpp_civ_init(void *civilization);
+
+/// `AddPoints`: to both the available and the maximum points.
+void ee_gamecpp_civ_add_points(void *civilization, long amount);
+
+/// `Load`: the purchased upgrades, the points, the flags and the name (before 0.216 a narrow one); the first read
+/// error.
+long ee_gamecpp_civ_load(void *civilization,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `Save`: as `Load`, stopping at the first failed upgrade write; the first write error.
+long ee_gamecpp_civ_save(void *civilization, void *file);
+
+/// `Buy`: an upgrade applied to a player, first paid for and recorded when buying; whether it applied.
+bool ee_gamecpp_civ_buy(void *civilization,
+                        uint32_t upgrade,
+                        long player,
+                        bool purchase);
+
+/// `AddUpgrades`: a list's upgrades bought in turn for a player, stopping at the first that fails.
+void ee_gamecpp_civ_add_upgrades(void *civilization, void *list, long player, bool purchase);
+
+/// `ApplyLevel21ToWorld`: the purchased upgrades of the deferred kind applied to player 0.
+void ee_gamecpp_civ_apply_level21(void *civilization);
+
+/// `Reapply`: after a load the purchased upgrades applied to the player but those of the deferred kind, which wait;
+/// 13 when one fails.
+long ee_gamecpp_civ_reapply(void *civilization,
+                            long player);
+
+/// `ApplyDeferred`: the deferred upgrades applied to the player and forgotten; 13 when one fails.
+long ee_gamecpp_civ_apply_deferred(void *civilization, long player);
+
+/// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
+bool ee_gamecpp_wonder_enough(void *condition);
+
+/// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
+/// the team lacks the wonders).
+void *ee_gamecpp_wonder_countdown(void *condition,
+                                  unsigned long *out);
+
+/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
+long ee_gamecpp_wonder_state(void *condition);
+
+/// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
+long ee_gamecpp_wonder_load(unsigned long major,
+                            unsigned long minor,
+                            void *file);
+
+/// `EEPlayForLocalPlayer`: the sound played when the player is the local one; the instance, or -1.
+unsigned long ee_gamecpp_play_for_local(void *player, void *sound);
+
+/// `EEReportLoadFailure`: the message in the main game form; with a checksum, the game state's checksum (under the
+/// world's read lock when asked) and whether it matches, its differences logged in verbose mode.
+void ee_gamecpp_report_load_failure(const char *message,
+                                    bool lock,
+                                    void *checksum);
+
+/// `EEEnumerateDisplayDevices`: every rasterizer that activates, its screens, and their 16-bit (and supported
+/// 32-bit) modes of at least 640 x 480 whose three buffers fit the video memory; nothing while one is active.
+void ee_gamecpp_enumerate_display_devices();
+
+/// `PlayAnimationSound`: an animation frame's sound at a location started, restarted or updated; the referenced
+/// instance now playing (the given one when nothing changes).
+void *ee_gamecpp_play_animation_sound(const void *location,
+                                      void *graphic,
+                                      long animation,
+                                      void *node,
+                                      unsigned long frame,
+                                      bool start);
+
+/// `EEGetCameraPoint`: a world point in camera space, divided by its depth, and the depth.
+void ee_gamecpp_camera_point(const void *point, void *out, float *depth);
+
+/// `EEOrderAtCursor`: the click confirmation at the ground point under the cursor.
+void ee_gamecpp_order_at_cursor(const void *screen, void *unit);
+
+/// `EEMakeCalamityEffect`: the local-only click confirmation on a unit or on the ground.
+void ee_gamecpp_make_click_effect(const void *location, void *unit);
+
+/// `EEGetFirstSelectedUnit`: the local player's first selected unit; false when nothing is selected.
+bool ee_gamecpp_first_selected_unit(void **out);
+
+/// `EEPointUnitOrTileXY`: the tile under a screen point (the visible tile picked first); false when only the plain
+/// map lookup hit.
+bool ee_gamecpp_point_tile_xy(const void *screen,
+                              void **tile,
+                              long *x,
+                              long *y,
+                              bool flag);
+
+/// `EEPointUnitOrTile`: the ground point under a screen point; without a pick the tile centre at terrain height,
+/// and false.
+bool ee_gamecpp_point_unit_or_tile(const void *screen,
+                                   void **tile,
+                                   void *out,
+                                   bool flag);
+
+/// `EEExitGame`: a client removes itself (the server lost) or tells the server; the server posts the removal of
+/// every player when the game is open, running or paused.
+void ee_gamecpp_exit_game();
+
+/// EEEMStorm's constructor: the step's members for the kind, no effect or request, the kind's name; a known kind
+/// begins.
+void ee_gamecpp_storm_init(void *storm,
+                           long kind);
+
+/// `Begin`: the goal in a random player's town (else the largest land, else any continent), the start over the
+/// largest water (rain), a random cliff or hill (snow) or any continent, the path shaped around the start, the weather
+/// effect over the tiles it visited, the route request; state 2.
+void ee_gamecpp_storm_begin(void *storm);
+
+/// `IsOver`: no effect, or finished.
+bool ee_gamecpp_storm_is_over(void *storm);
+
+/// `RequestRoute`: the old request cancelled, a route requested with the kind's planner.
+void ee_gamecpp_storm_request_route(void *storm);
+
+/// `Release`: the route request cancelled, the effect ended and released.
+void ee_gamecpp_storm_release(void *storm);
+
+/// `Load`: the route, the areas, the effect's handle (as the pointer, until `Restore`), the step's members; always 0.
+long ee_gamecpp_storm_load(void *storm,
+                           void *file);
+
+/// `Restore` (RepairPointers): the effect from its saved handle (9 when it is gone), an empty route's effect not
+/// sustained, the name again; a routing storm routes again (state 8).
+long ee_gamecpp_storm_restore(void *storm);
+
+/// `Save`: as `Load`; always 0.
+long ee_gamecpp_storm_save(void *storm, void *file);
+
+/// `Step`: ee_sim app storm.rs's step over the host, then its STRM record (TEST ONLY).
+void ee_gamecpp_storm_step(void *storm, unsigned long time);
+
+/// EE-SIM --app-sweep's storms (TEST ONLY): the weather on, one storm of each kind, each recorded (STRM phase 0).
+void ee_gamecpp_capture_storm_sweep();
+
+/// `IsInStorm`: whether a tile is inside a rain or hurricane storm (`rain`) and/or a snow or blizzard storm (`snow`).
+bool ee_gamecpp_env_is_in_storm(void *manager,
+                                const void *tile,
+                                bool rain,
+                                bool snow);
+
+/// `Step`: the storms and the wind, a finished state cleared, the next step by the game speed (the time of day the
+/// C++ read for them is unused).
+void ee_gamecpp_env_step(void *manager,
+                         unsigned long time);
+
+/// `Load`: the storms (each a new unknown storm loaded), the state, the wind, the timing and the colours; the first
+/// read error.
+long ee_gamecpp_env_load(void *manager,
+                         void *file);
+
+/// `RepairPointers`: the loaded storms reconnected, the ones that fail deleted; 0.
+long ee_gamecpp_env_repair(void *manager);
+
+/// `Save`: as `Load`; the first write error.
+long ee_gamecpp_env_save(void *manager, void *file);
+
+/// `SetEnabled`: off deletes every storm and unloads the rain and snow effects, on loads them.
+void ee_gamecpp_env_set_enabled(void *manager, bool enabled);
+
+/// `DeleteStorms`: every storm released and deleted, the list emptied.
+void ee_gamecpp_env_delete_storms(void *manager);
 
 }  // extern "C"
 

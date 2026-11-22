@@ -51,7 +51,7 @@ static const bool sCaptureHooksSet = (EECivCaptureApplyBegin = EECivCaptureApply
 
 // ------------------------------------------------------------------------- round 10, lane C: the records' C++ reads
 
-int64_t EECore10OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEMessageCapture.cpp
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // lane D's link
 
 static_assert(kCivPowerFlamingArrows == 0x26 && kCivPowerJustInTimeManufacturing == 0x3c && EE_UNITS_LISTS_MEDIA == 6,
               "gamecpp civ_capture.rs CC_POWER_FIRST, CC_POWER_LAST, CC_LISTS_MEDIA");
@@ -126,6 +126,7 @@ int64_t EECore10OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::LcCivMaxPoints: return (int64_t)CCCIV->mMaxPoints;
     case O::LcCivFlags: return (CCCIV->mNoPointsAdded ? 1 : 0) | (CCCIV->mUnchanged ? 2 : 0);
     // the players (p an EEPlayer*), their tech trees and nodes
+    case O::LcWorldPlayer: return P64(::gWorld.mPlayers[a[0]]);
     case O::LcPlCivilization: return P64(&CCPL->mCivilization);
     case O::LcPlUpgradeOf: return P64(gUnitClassTable[a[0]] != NULL ? CCPL->mUnitClassUpgrades[a[0]] : NULL);
     case O::LcPlLists: return P64(CCPL->mLists);
@@ -135,7 +136,7 @@ int64_t EECore10OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::LcTreeGet: return P64(((EETechTree*)p)->Get((long)a[0]));
     case O::LcNodeFlags: return (CCNODE->mIsResearched ? 1u : 0u) | (CCNODE->mIsObsolete ? 2u : 0u) | (CCNODE->mIsAvailable ? 4u : 0u) | (CCNODE->mIsAllowed ? 8u : 0u) | 16u;
-    default: return EECore10OpC3(inOp, p, a, f);
+    default: return EECore10OpD(inOp, p, a, f);
     }
     return 0;
 }

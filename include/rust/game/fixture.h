@@ -161,6 +161,8 @@ enum class EeFixtureOp : uint32_t {
   LobbyPost,
   /// the WON lobby's last snapshot into the sink (a new one asked for) -> 1, 0 the lobby is not open
   LobbySnapshot,
+  /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
+  EditNumber,
   FxInstallDebug,
   FxInstallFault,
   FxInstallLasso,
@@ -266,6 +268,94 @@ enum class EeFixtureOp : uint32_t {
   FxCalamityCount,
   FxCalamityEnumAt,
   FxCalamityTimeAlive,
+  /// the WON lobby is open (EEIsLobbyOpen)
+  FxLobbyOpen,
+  /// the lobby's window manager -> its handle (0 none)
+  FxLobbyManager,
+  /// the lobby's root window -> its handle (0 none)
+  FxLobbyRootWindow,
+  /// window manager h: the fixture's lobby work queued on its loop (a UserEvent)
+  FxLobbyPostWork,
+  /// window h's root component -> its handle
+  FxWindowRoot,
+  /// window manager h's modal component -> its handle (0 none)
+  FxManagerModal,
+  /// window h: a mouse event queued, i0 0 move, 1 press, 2 release, at (i1, i2)
+  FxWindowMouse,
+  /// window h: the typed character i0 queued
+  FxWindowKeyChar,
+  /// component h is visible
+  FxCompVisible,
+  /// component h's control id
+  FxCompControlId,
+  /// component h is disabled
+  FxCompDisabled,
+  /// component h's width
+  FxCompWidth,
+  /// component h's height
+  FxCompHeight,
+  /// component h's point (i0, i1) to root coordinates (i0, i1, 32-bit)
+  FxCompLocalToRoot,
+  /// component h's root window -> its handle (0 none)
+  FxCompRootWindow,
+  /// component h's next visible sibling -> its handle (0 none)
+  FxCompNextSibling,
+  /// component h as a Label -> its handle (0 not one)
+  FxAsLabel,
+  /// component h as a Button -> its handle (0 not one)
+  FxAsButton,
+  /// component h as a ListArea -> its handle (0 not one)
+  FxAsListArea,
+  /// component h as a Container -> its handle (0 not one)
+  FxAsContainer,
+  /// container h's front child -> its handle (0 none)
+  FxContainerFront,
+  /// label h has a wrapped text
+  FxLabelHasText,
+  /// label h's wrapped text's length
+  FxLabelTextLen,
+  /// label h's wrapped text's character i0
+  FxLabelTextAt,
+  /// button h's text's length
+  FxButtonTextLen,
+  /// button h's text's character i0
+  FxButtonTextAt,
+  /// button h's Activate (the keyboard path)
+  FxButtonActivate,
+  /// list area h's selected item -> its handle (0 none)
+  FxListSelItem,
+  /// list area h's item count
+  FxListItemCount,
+  /// list area h's position of item h2
+  FxListItemPos,
+  /// list area h's item i0 selected (with its event)
+  FxListSetSel,
+  /// the lobby is shown
+  FxLobbyShown,
+  /// the lobby's game screen type (1 LAN)
+  FxLobbyScreenType,
+  /// the lobby is on its LAN screen
+  FxLobbyOnLan,
+  /// the lobby is on its login screen
+  FxLobbyOnLogin,
+  /// the lobby's own game -> its handle (0 none)
+  FxMyGame,
+  /// the lobby's own client -> its handle (0 none)
+  FxMyClient,
+  /// game h is hosted here
+  FxGameIsHost,
+  /// game h's client count (0: no client list)
+  FxGameClientCount,
+  /// game h has a client list and all are ready
+  FxGameAllReady,
+  /// client h is ready
+  FxClientReady,
+  /// game h's name's length
+  FxGameNameLen,
+  /// game h's name's character i0
+  FxGameNameAt,
+  FxAsEdit,
+  FxEditSetNumber,
 };
 
 /// The texts and ids a call answers with (`ee_fixture_sink_text`, `ee_fixture_sink_id`).
@@ -323,6 +413,9 @@ void ee_fixture_message(uint64_t message,
                         uint64_t kind,
                         bool local,
                         int32_t phase);
+
+/// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
+void ee_fixture_lobby_work();
 
 }  // extern "C"
 

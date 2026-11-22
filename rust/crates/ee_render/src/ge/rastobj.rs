@@ -809,6 +809,16 @@ pub unsafe extern "C" fn ee_ge_rast_set_ambient_color(p: *mut EeGeRasterizer, co
     }
 }
 
+/// `GetAmbientIntensity()`.
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_rast_ambient_intensity(p: *mut EeGeRasterizer) -> f32 {
+    // SAFETY: the caller's contract
+    unsafe { rs(p) }.ambient_intensity
+}
+
 /// `SetAmbientIntensity(inIntensity, ...)` (the screen is ignored).
 ///
 /// # Safety

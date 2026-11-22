@@ -29,6 +29,7 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUICPortrait.h"
+#include "ee/EEScreensShims.h"
 #include "ee/EEStringIDs.h"
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text
@@ -36,32 +37,14 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
                              unsigned long inIndex, bool inShowLevel)
     : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0)
 {
-    this->mPortrait = new GEBitmap;
-    this->mPortrait->SetLocation(inRectangle.GetTopLeft());
-    const float theRect[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
-    ee_screens_portrait_draw_init(this, this->mPortrait, theRect);   // the bars (ee_screens hud_draw.rs)
-    this->mShowFirstBar = false;
-    this->mShowSecondBar = false;
-    this->mUnit = NULL;
-    this->mLevel = 0;
-    this->mShowLevel = inShowLevel;
-    this->mText = new GEText(UIFontTable::CreateClosestFont(0x36,
-                                                      inRectangle.GetHeight() * 0.5f));
-    this->mText->SetAlignment(kTextAlignRight);
-    this->mText->SetIsTransparent(true);
-    this->mText->SetFgColor(GEColor());
-    this->mText->SetLocation(inRectangle.GetTopRight());
+    ee_screens_portrait_init(this, inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(),
+                             inRectangle.GetBottom(), inShowLevel);
 }
 
 // Destroys the portrait, releasing its unit and button
 EEUICPortrait::~EEUICPortrait()
 {
-    delete this->mText;
-    if (this->mUnit) {
-        this->mButton->Release();
-        this->mUnit->Dereference();
-    }
-    this->mPortrait->Dereference();
+    ee_screens_portrait_free(this);
 }
 
 // The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's
@@ -86,19 +69,13 @@ bool EEUICPortrait::GetHelpString(UWideString& outString) const
 // Draws the improvement level when it is above 0
 long EEUICPortrait::DrawTextA()
 {
-    this->UIControl::DrawTextA();   // the base's draw count
-    long theResult = 0;
-    if (this->mLevel > 0)
-        theResult = this->GetForm()->DrawClippedText(this->GetCopiedDrawRectangle(), this->mText, this);
-    return theResult;
+    return ee_screens_portrait_draw_text(this);
 }
 
 // Updates the help text while the mouse moves over a portrait showing both bars
 long EEUICPortrait::MouseMove(const GE2DPoint& inLocation)
 {
-    if (this->mShowFirstBar && this->mShowSecondBar)
-        this->GetForm()->UpdateHelpString();
-    return 0;
+    return ee_screens_portrait_mouse_move(this);
 }
 
 // Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
@@ -107,98 +84,96 @@ void EEUICPortrait::SetUnit(EEUnit* inUnit)
     ee_screens_portrait_set_unit(this, inUnit);
 }
 
-// The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*, EEUIRustControl's host the toolkit's): units and nodes as
-// handles, ioF the op's floats (the unit's owner, production time and research are hud_views.rs'; the bars' and
-// the draws' hud_draw.rs')
-int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    EEUICPortrait* inPortrait = this;
-    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
-    EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(inA);
-    UWideString theFormat;
-    UWideString theName;
-    float theFloat;
-    uint32_t theBits;
-    switch (inOp - EE_SCREENS_HC_CLASS) {
-    case EE_SCREENS_PT_OP_HAS_UNIT: return inPortrait->mUnit != NULL;
-    case EE_SCREENS_PT_OP_RELEASE:
-        inPortrait->mButton->Release();
-        inPortrait->mUnit->Dereference();
-        return 0;
-    case EE_SCREENS_PT_OP_SET_UNIT: inPortrait->mUnit = reinterpret_cast<EEUnit*>(inA); return 0;
-    case EE_SCREENS_PT_OP_ACQUIRE:
-        inPortrait->mUnit->Reference();
-        inPortrait->mButton = inPortrait->mUnit->mStats->mButton;
-        inPortrait->mButton->Acquire();
-        return 0;
-    case EE_SCREENS_PT_OP_FACE:
-        inPortrait->mPortrait->SetTexture(inPortrait->mButton->GetTexture(), gScreenIndex);
-        inPortrait->mButton->SetFaceBitmap(inPortrait->mPortrait, inPortrait->GetRectangle(), gScreenIndex);
-        return 0;
-    case EE_SCREENS_PT_OP_STATE:
-        return (int64_t)inPortrait->mLevel | (int64_t)inPortrait->mShowFirstBar << 32 | (int64_t)inPortrait->mShowSecondBar << 33;
-    case EE_SCREENS_PT_OP_SET_STATE:
-        inPortrait->mLevel = (unsigned long)(inA & 0xffffffff);
-        inPortrait->mShowFirstBar = (inA >> 32 & 1) != 0;
-        inPortrait->mShowSecondBar = (inA >> 33 & 1) != 0;
-        return 0;
-    case EE_SCREENS_PT_OP_COMPLEX:
-        return (int64_t)inPortrait->mUnit->GetComplexUnit();
-    case EE_SCREENS_PT_OP_RESEARCHED:
-        return theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
-    case EE_SCREENS_PT_OP_NODE:
-        return (int64_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inA);
-    case EE_SCREENS_PT_OP_SCALE:
-        if (!theNode->mData->mMakesUnit || !inPortrait->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass])
-            return -1;
-        memcpy(&theBits, &inPortrait->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass]->mBuildTimeScale, 4);
-        return theBits;
-    case EE_SCREENS_PT_OP_BUILD_TIME:
-        return theNode->GetBuildTime();
-    case EE_SCREENS_PT_OP_IMPROVEMENT_LEVEL:
-        return theUnit->GetStats()->mImprovement.GetLevel((long)inB);
-    case EE_SCREENS_PT_OP_IMPROVEMENT_TIME:
-        return inA == 1 ? gWorldTable.GetLongValue(EEWorldImprovementTime((long)inB))
-                        : gWorldTable.GetLongValue2(EEWorldImprovementTime((long)inB));
-    case EE_SCREENS_PT_OP_PROGRESS:
-        theFloat = theUnit->GetPlayer()->GetImprovementProgress(theUnit->GetUnitClass()->GetUnitType());
-        memcpy(&theBits, &theFloat, 4);
-        return theBits;
-    case EE_SCREENS_PT_OP_TOTAL_COST:
-        return theUnit->GetStats()->mImprovement.mTotalCost;
-    case EE_SCREENS_PT_OP_POINTS_MAX:
-        return gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax);
-    case EE_SCREENS_PT_OP_TEXT:
-        inPortrait->mText->SetText(UWideString(std::string(reinterpret_cast<const char*>(inA), (size_t)inB).c_str()));
-        return 0;
-    case EE_SCREENS_PT_OP_UPDATE_HELP:
-        inPortrait->GetForm()->UpdateHelpString();
-        return 0;
-    case EE_SCREENS_PT_OP_CONTAINS:
-        return GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]).Contains(inPortrait->GetMouseLocation());
-    case EE_SCREENS_PT_OP_BUILDING:
-        return inPortrait->mUnit->GetUnitClass()->IsBuilding();
-    case EE_SCREENS_PT_OP_HELP_RESEARCH:
-        gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, theFormat);
-        if (theNode->mData->mMakesUnit == true)
-            gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, theName);
-        else
-            gResource->GetString(theNode->mData->mNameID, theName);
-        sprintf(*sPortraitHelp, theFormat, (const char*)theName);
-        return 0;
-    case EE_SCREENS_PT_OP_HELP_IMPROVEMENT:
-        gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, theFormat);
-        inPortrait->mUnit->mStats->GetImprovementName(
-            theName, inPortrait->mUnit->GetPlayer()->GetResearchedImprovement(inPortrait->mUnit->GetUnitClass()->GetUnitType()));
-        sprintf(*sPortraitHelp, theFormat, (const char*)theName);
-        return 0;
-    case EE_SCREENS_PT_OP_ALIVE:
-        return inPortrait->mUnit && inPortrait->mUnit->mHitPoints > 0 && inPortrait->mUnit->mTileNode;
-    case EE_SCREENS_PT_OP_COMPLEX_FIELD:
-        return (int64_t)(EEComplexUnit*)inPortrait->mUnit->mComplexUnit;
-    case EE_SCREENS_PT_OP_SOUND:
-        gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-        return 0;
-    }
-    return 0;
-}
+// The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*: units and nodes as handles), its constructor's,
+// destructor's, DrawTextA's and MouseMove's bodies: portrait_calls.rs over the one-statement shims below (UI lane
+// round 11)
+#define PT(p) ((EEUICPortrait*)(p))
+#define PT_CU(u) ((EEComplexUnit*)(u))
+#define PT_N(n) ((EETechTreeNode*)(n))
+static UWideString sPTFormat;           // the tooltip's format
+static UWideString sPTName;             // the tooltip's name
+
+extern "C" bool ee_screenscpp_pt_has_unit(uintptr_t inP) { return PT(inP)->mUnit != NULL; }
+extern "C" void ee_screenscpp_pt_button_release(uintptr_t inP) { PT(inP)->mButton->Release(); }
+extern "C" void ee_screenscpp_pt_unit_release(uintptr_t inP) { PT(inP)->mUnit->Dereference(); }
+extern "C" void ee_screenscpp_pt_set_unit(uintptr_t inP, uintptr_t inUnit)
+{ PT(inP)->mUnit = reinterpret_cast<EEUnit*>(inUnit); }
+extern "C" void ee_screenscpp_pt_unit_acquire(uintptr_t inP) { PT(inP)->mUnit->Reference(); }
+extern "C" void ee_screenscpp_pt_button_take(uintptr_t inP) { PT(inP)->mButton = PT(inP)->mUnit->mStats->mButton; }
+extern "C" void ee_screenscpp_pt_button_acquire(uintptr_t inP) { PT(inP)->mButton->Acquire(); }
+extern "C" void ee_screenscpp_pt_face_texture(uintptr_t inP)
+{ PT(inP)->mPortrait->SetTexture(PT(inP)->mButton->GetTexture(), gScreenIndex); }
+extern "C" void ee_screenscpp_pt_face_bitmap(uintptr_t inP)
+{ PT(inP)->mButton->SetFaceBitmap(PT(inP)->mPortrait, PT(inP)->GetRectangle(), gScreenIndex); }
+extern "C" uint64_t ee_screenscpp_pt_level(uintptr_t inP) { return (uint64_t)PT(inP)->mLevel; }
+extern "C" bool ee_screenscpp_pt_first_bar(uintptr_t inP) { return PT(inP)->mShowFirstBar; }
+extern "C" bool ee_screenscpp_pt_second_bar(uintptr_t inP) { return PT(inP)->mShowSecondBar; }
+extern "C" void ee_screenscpp_pt_set_level(uintptr_t inP, uint64_t inV) { PT(inP)->mLevel = (unsigned long)inV; }
+extern "C" void ee_screenscpp_pt_set_first_bar(uintptr_t inP, bool inV) { PT(inP)->mShowFirstBar = inV; }
+extern "C" void ee_screenscpp_pt_set_second_bar(uintptr_t inP, bool inV) { PT(inP)->mShowSecondBar = inV; }
+extern "C" void ee_screenscpp_pt_set_show_level(uintptr_t inP, bool inV) { PT(inP)->mShowLevel = inV; }
+extern "C" uintptr_t ee_screenscpp_pt_unit_complex(uintptr_t inP)
+{ return (uintptr_t)PT(inP)->mUnit->GetComplexUnit(); }
+extern "C" int64_t ee_screenscpp_pt_researched(uintptr_t inUnit)
+{ return PT_CU(inUnit)->GetPlayer()->GetResearchedImprovement(PT_CU(inUnit)->GetUnitClass()->GetUnitType()); }
+extern "C" uintptr_t ee_screenscpp_pt_node(int64_t inId)
+{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inId); }
+extern "C" bool ee_screenscpp_pt_node_makes_unit(uintptr_t inNode) { return PT_N(inNode)->mData->mMakesUnit; }
+extern "C" uintptr_t ee_screenscpp_pt_node_upgrade(uintptr_t inP, uintptr_t inNode)
+{ return (uintptr_t)PT(inP)->mUnit->GetPlayer()->mUnitClassUpgrades[PT_N(inNode)->mData->mUnitClass]; }
+extern "C" float ee_screenscpp_pt_upgrade_build_scale(uintptr_t inUp)
+{ return ((EEUnitClassUpgrade*)inUp)->mBuildTimeScale; }
+extern "C" int64_t ee_screenscpp_pt_node_build_time(uintptr_t inNode) { return PT_N(inNode)->GetBuildTime(); }
+extern "C" int64_t ee_screenscpp_pt_improvement_level(uintptr_t inUnit, int64_t inKind)
+{ return PT_CU(inUnit)->GetStats()->mImprovement.GetLevel((long)inKind); }
+extern "C" int64_t ee_screenscpp_pt_improvement_time(int64_t inKind)
+{ return gWorldTable.GetLongValue(EEWorldImprovementTime((long)inKind)); }
+extern "C" int64_t ee_screenscpp_pt_improvement_time2(int64_t inKind)
+{ return gWorldTable.GetLongValue2(EEWorldImprovementTime((long)inKind)); }
+extern "C" float ee_screenscpp_pt_progress(uintptr_t inUnit)
+{ return PT_CU(inUnit)->GetPlayer()->GetImprovementProgress(PT_CU(inUnit)->GetUnitClass()->GetUnitType()); }
+extern "C" int64_t ee_screenscpp_pt_total_cost(uintptr_t inUnit)
+{ return PT_CU(inUnit)->GetStats()->mImprovement.mTotalCost; }
+extern "C" int64_t ee_screenscpp_pt_points_max() { return gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax); }
+extern "C" void ee_screenscpp_pt_text(uintptr_t inP, EeScreensShimText inText)
+{ PT(inP)->mText->SetText(EEShimText(inText)); }
+extern "C" void ee_screenscpp_pt_update_help(uintptr_t inP) { PT(inP)->GetForm()->UpdateHelpString(); }
+extern "C" bool ee_screenscpp_pt_contains(uintptr_t inP, float inLeft, float inTop, float inRight, float inBottom)
+{ return GERectangle(inLeft, inTop, inRight, inBottom).Contains(PT(inP)->GetMouseLocation()); }
+extern "C" bool ee_screenscpp_pt_unit_building(uintptr_t inP) { return PT(inP)->mUnit->GetUnitClass()->IsBuilding(); }
+extern "C" void ee_screenscpp_pt_strings_clear() { sPTFormat = UWideString(); }
+extern "C" void ee_screenscpp_pt_name_clear() { sPTName = UWideString(); }
+extern "C" void ee_screenscpp_pt_format_research()
+{ gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, sPTFormat); }
+extern "C" void ee_screenscpp_pt_format_improvement()
+{ gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, sPTFormat); }
+extern "C" void ee_screenscpp_pt_name_unit_class(uintptr_t inNode)
+{ gResource->GetString(gUnitClassTable[PT_N(inNode)->mData->mUnitClass]->mNameStringID, sPTName); }
+extern "C" void ee_screenscpp_pt_name_node(uintptr_t inNode)
+{ gResource->GetString(PT_N(inNode)->mData->mNameID, sPTName); }
+extern "C" void ee_screenscpp_pt_name_improvement(uintptr_t inP)
+{ PT(inP)->mUnit->mStats->GetImprovementName(sPTName, PT(inP)->mUnit->GetPlayer()->GetResearchedImprovement(PT(inP)->mUnit->GetUnitClass()->GetUnitType())); }
+extern "C" void ee_screenscpp_pt_help_print() { sprintf(*sPortraitHelp, sPTFormat, (const char*)sPTName); }
+extern "C" bool ee_screenscpp_pt_unit_hp_positive(uintptr_t inP) { return PT(inP)->mUnit->mHitPoints > 0; }
+extern "C" bool ee_screenscpp_pt_unit_on_tile(uintptr_t inP) { return PT(inP)->mUnit->mTileNode != NULL; }
+extern "C" uintptr_t ee_screenscpp_pt_unit_complex_field(uintptr_t inP)
+{ return (uintptr_t)(EEComplexUnit*)PT(inP)->mUnit->mComplexUnit; }
+extern "C" void ee_screenscpp_pt_sound()
+{ gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL); }
+extern "C" void ee_screenscpp_pt_new_bitmap(uintptr_t inP) { PT(inP)->mPortrait = new GEBitmap; }
+extern "C" void ee_screenscpp_pt_bitmap_location(uintptr_t inP, float inX, float inY)
+{ PT(inP)->mPortrait->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_pt_draw_init(uintptr_t inP, float* inRect)
+{ ee_screens_portrait_draw_init(PT(inP), PT(inP)->mPortrait, inRect); }
+extern "C" void ee_screenscpp_pt_new_text(uintptr_t inP, float inHeight)
+{ PT(inP)->mText = new GEText(UIFontTable::CreateClosestFont(0x36, inHeight)); }
+extern "C" void ee_screenscpp_pt_text_align_right(uintptr_t inP) { PT(inP)->mText->SetAlignment(kTextAlignRight); }
+extern "C" void ee_screenscpp_pt_text_transparent(uintptr_t inP) { PT(inP)->mText->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_pt_text_color(uintptr_t inP) { PT(inP)->mText->SetFgColor(GEColor()); }
+extern "C" void ee_screenscpp_pt_text_location(uintptr_t inP, float inX, float inY)
+{ PT(inP)->mText->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_pt_delete_text(uintptr_t inP) { delete PT(inP)->mText; }
+extern "C" void ee_screenscpp_pt_bitmap_release(uintptr_t inP) { PT(inP)->mPortrait->Dereference(); }
+extern "C" void ee_screenscpp_pt_draw_text_base(uintptr_t inP) { PT(inP)->UIControl::DrawTextA(); }
+extern "C" int32_t ee_screenscpp_pt_draw_level(uintptr_t inP)
+{ return PT(inP)->GetForm()->DrawClippedText(PT(inP)->GetCopiedDrawRectangle(), PT(inP)->mText, PT(inP)); }

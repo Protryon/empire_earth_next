@@ -15,11 +15,13 @@ pub mod fractal;
 mod golden;
 pub mod graph;
 mod language_strings;
+pub mod pool;
 pub mod strings;
 pub mod system;
 
 pub use fp::*;
 pub use fractal::*;
 pub use graph::*;
+pub use pool::*;
 pub use strings::*;
 pub use system::*;

@@ -79,205 +79,13 @@ bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the extern
 extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
 extern void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase);   // EEPhysics.cpp (DrainInput)
 
-// ---- the WON lobby (TEST ONLY). The lobby owns the UI thread while it is open and runs its own message loop
-// (WONAPI::WindowManager), so its state is read and its controls are driven on that loop, by a UserEvent the fixture
-// posts (WindowManager::PostEvent is thread-safe); nothing of the lobby's is touched from the fixture's thread. The
-// snapshot goes into ui-state.txt as
-//   "lobby shown <0|1> screen <t> lan <0|1> login <0|1> modal <0|1> game <0|1> host <0|1> clients <n> ready <0|1>
-//    allready <0|1> name <text>" (screen: LobbyGetGameScreenType, 1 LAN; game: GetMyLobbyGame != NULL),
-//   "wonctl <controlId> <x> <y> <w> <h> <enabled> <text>" per visible component with a control id (root coordinates
-//   of the lobby window, 1024x768; the text of a button), and
-//   "wonlist <k> items <n> sel <i>" per visible list area, in tree order, and "wontext <text>" per label of the
-//   modal dialog (a message box's message).
-// The commands: "<seq> wonclick <controlId> 0" (a mouse move, press and release at the component's centre, through
-// the window's event queue: the real button path; the modal dialog's component is searched first),
-// "<seq> wonactivate <controlId> 0" (Button::Activate, the keyboard path), "<seq> wonselect <k> <item>" (the k-th
-// list area's selection, ListArea::SetSelItem with its event), "<seq> wonkey <code> 0" (one typed character to the
-// focused control), "<seq> wonclickat <x> <y>" (a click at root coordinates). The verdict ("TEST UI lobby-...") is
-// printed by the lobby thread when the command ran.
+// ---- the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the
+// lobby's own message loop by a UserEvent (this trampoline)
 namespace {
 
-std::mutex sLobbyMutex;
-std::string sLobbySnapshot;                  // the last snapshot the lobby thread wrote
-std::string sLobbyCommand;                   // a pending "<op> <a> <b>" for the lobby thread (empty: none)
-unsigned long sLobbyCommandSeq = 0;
-std::atomic<int> sLobbyWorkPosted(0);        // a UserEvent is queued and not yet delivered
-WONAPI::Component* sLobbyModal = NULL;       // the walk's modal component (lobby thread only)
-bool sLobbyInModal = false;
-
-std::string GUIText(const WONAPI::GUIString& inText)
-{
-    std::string theOut;
-    for (int k = 0; k < (int)inText.length() && k < 60; k++) {
-        unsigned short c = inText.at(k);
-        theOut += (c < 0x21 || c >= 0x7f || c == '|') ? '_' : (char)c;
-    }
-    return theOut.empty() ? std::string("-") : theOut;
-}
-
-// The visible components with a control id and the list areas below inComponent, in tree order
-void LobbyWalk(WONAPI::Component* inComponent, std::string& outText, std::vector<WONAPI::ListArea*>& outLists)
-{
-    using namespace WONAPI;
-    if (inComponent == NULL || !inComponent->IsVisible())
-        return;
-    bool theModalEntered = inComponent == sLobbyModal;
-    if (theModalEntered)
-        sLobbyInModal = true;
-    if (sLobbyInModal && inComponent->mControlId == 0) {   // the modal dialog's texts (a message box's message)
-        if (Label* theLabel = dynamic_cast<Label*>(inComponent)) {
-            if (theLabel->mWrappedText.get() != NULL && theLabel->mWrappedText->GetText().length() > 0)
-                outText += "wontext " + GUIText(theLabel->mWrappedText->GetText()) + "\n";
-        }
-    }
-    if (inComponent->mControlId != 0) {
-        int x = 0, y = 0;
-        inComponent->LocalToRoot(x, y);
-        std::string theText("-");
-        if (Button* theButton = dynamic_cast<Button*>(inComponent))
-            theText = GUIText(theButton->GetText());
-        else if (Label* theLabel = dynamic_cast<Label*>(inComponent))
-            theText = theLabel->mWrappedText.get() ? GUIText(theLabel->mWrappedText->GetText()) : std::string("-");
-        char theLine[200];
-        snprintf(theLine, sizeof(theLine), "wonctl %d %d %d %d %d %d %s\n", inComponent->mControlId, x, y,
-                 inComponent->Width(), inComponent->Height(), inComponent->IsDisabled() ? 0 : 1, theText.c_str());
-        outText += theLine;
-    }
-    if (ListArea* theList = dynamic_cast<ListArea*>(inComponent)) {
-        ListItem* theSelected = theList->GetSelItem();
-        char theLine[100];
-        snprintf(theLine, sizeof(theLine), "wonlist %d items %d sel %d\n", (int)outLists.size(), theList->GetNumItems(),
-                 theSelected ? theList->GetItemPos(theSelected) : -1);
-        outText += theLine;
-        outLists.push_back(theList);
-    }
-    if (Container* theContainer = dynamic_cast<Container*>(inComponent)) {
-        for (Component* theChild = theContainer->GetFrontChild(); theChild != NULL;
-             theChild = theChild->GetNextSibling(true))
-            LobbyWalk(theChild, outText, outLists);
-    }
-    if (theModalEntered)
-        sLobbyInModal = false;
-}
-
-// The first visible, enabled component with control id inId below inComponent
-WONAPI::Component* LobbyFindById(WONAPI::Component* inComponent, long inId)
-{
-    using namespace WONAPI;
-    if (inComponent == NULL || !inComponent->IsVisible())
-        return NULL;
-    if (inComponent->mControlId == inId && !inComponent->IsDisabled())
-        return inComponent;
-    if (Container* theContainer = dynamic_cast<Container*>(inComponent)) {
-        for (Component* theChild = theContainer->GetFrontChild(); theChild != NULL;
-             theChild = theChild->GetNextSibling(true))
-            if (Component* theFound = LobbyFindById(theChild, inId))
-                return theFound;
-    }
-    return NULL;
-}
-
-// A click (a mouse move, press and release) at root coordinates of a lobby window
-void LobbyClick(WONAPI::Window* inWindow, int x, int y)
-{
-    using namespace WONAPI;
-    inWindow->QueueEvent(new MouseEvent(InputEvent_MouseMove, x, y, 0, 0));
-    inWindow->QueueEvent(new MouseEvent(InputEvent_MouseDown, x, y, 0, 0));
-    inWindow->QueueEvent(new MouseEvent(InputEvent_MouseUp, x, y, 0, 0));
-}
-
-// On the lobby thread (a delivered UserEvent): runs the pending command, then takes the snapshot
 void LobbyWork(int)
 {
-    using namespace WONAPI;
-    std::string theCommand;
-    unsigned long theSeq = 0;
-    {
-        std::lock_guard<std::mutex> theLock(sLobbyMutex);
-        theCommand.swap(sLobbyCommand);
-        theSeq = sLobbyCommandSeq;
-    }
-    Window* theWindow = LobbyGetRootWindow();
-    WindowManager* theManager = GetLobbyWindow();
-    Component* theRoot = theWindow != NULL ? theWindow->mRoot.get() : NULL;
-    if (!theCommand.empty()) {
-        char theOp[32] = {0};
-        long a = 0, b = 0;
-        sscanf(theCommand.c_str(), "%31s %ld %ld", theOp, &a, &b);
-        const char* theVerdict = "lobby-rejected";
-        Component* theScope = (theManager != NULL && theManager->GetModalComponent() != NULL) ? theManager->GetModalComponent() : theRoot;
-        if (!strcmp(theOp, "wonclick") || !strcmp(theOp, "wonactivate")) {
-            Component* theTarget = LobbyFindById(theScope, a);
-            if (theTarget == NULL)
-                theTarget = LobbyFindById(theRoot, a);
-            if (theTarget != NULL && !strcmp(theOp, "wonclick")) {
-                int x = theTarget->Width() / 2, y = theTarget->Height() / 2;
-                theTarget->LocalToRoot(x, y);
-                if (Window* theTargetWindow = theTarget->GetRootWindow()) {
-                    LobbyClick(theTargetWindow, x, y);
-                    theVerdict = "lobby-clicked";
-                }
-            } else if (theTarget != NULL) {
-                if (Button* theButton = dynamic_cast<Button*>(theTarget)) {
-                    theButton->Fn2F3440();   // Button::Activate
-                    theVerdict = "lobby-activated";
-                }
-            }
-        } else if (!strcmp(theOp, "wonclickat")) {
-            // "<seq> wonclickat <x> <y>": a left click at root coordinates of the lobby window (a tab, a list row)
-            if (theWindow != NULL) {
-                LobbyClick(theWindow, (int)a, (int)b);
-                theVerdict = "lobby-clicked";
-            }
-        } else if (!strcmp(theOp, "wonkey")) {
-            // "<seq> wonkey <code> 0": one typed character to the lobby window's focus (WM_CHAR's path)
-            if (theWindow != NULL && a > 0) {
-                theWindow->QueueEvent(new KeyEvent(InputEvent_KeyChar, (int)a, 0));
-                theVerdict = "lobby-typed";
-            }
-        } else if (!strcmp(theOp, "wonselect")) {
-            std::string theUnused;
-            std::vector<ListArea*> theLists;
-            LobbyWalk(theRoot, theUnused, theLists);
-            if (a >= 0 && a < (long)theLists.size() && b >= 0 && b < theLists[a]->GetNumItems()) {
-                theLists[a]->SetSelItem((int)b, true);
-                theVerdict = "lobby-selected";
-            }
-        }
-        fprintf(stderr, "TEST UI %s %s control %ld value %ld on form 0 (seq %lu, top form 0)\n", theVerdict, theOp, a, b, theSeq);
-        fflush(stderr);
-    }
-    std::string theText;
-    LobbyGame* theGame = GetMyLobbyGame();
-    LobbyClient* theClient = GetMyLobbyClient();
-    char theLine[300];
-    snprintf(theLine, sizeof(theLine), "lobby shown %d screen %d lan %d login %d modal %d game %d host %d clients %d ready %d allready %d name %s\n",
-             EELobbyIsShown() ? 1 : 0, LobbyGetGameScreenType(), LobbyOnLanScreen() ? 1 : 0, LobbyOnLoginScreen() ? 1 : 0,
-             (theManager != NULL && theManager->GetModalComponent() != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
-             (theGame != NULL && theGame->GetIsHost()) ? 1 : 0,
-             (theGame != NULL && theGame->GetClients().get() != NULL) ? (int)theGame->GetClients()->GetCount() : 0,
-             // AreAllReady reads the client list: a just-joined game has none yet (a fixture-only crash at Join Game)
-             (theClient != NULL && theClient->IsReady()) ? 1 : 0,
-             (theGame != NULL && theGame->GetClients().get() != NULL && theGame->AreAllReady()) ? 1 : 0,
-             theGame != NULL ? GUIText(theGame->GetName()).c_str() : "-");
-    theText += theLine;
-    std::vector<ListArea*> theLists;
-    sLobbyModal = theManager != NULL ? theManager->GetModalComponent() : NULL;
-    sLobbyInModal = false;
-    LobbyWalk(theRoot, theText, theLists);
-    {
-        std::lock_guard<std::mutex> theLock(sLobbyMutex);
-        sLobbySnapshot = theText;
-    }
-    sLobbyWorkPosted = 0;
-}
-
-// Queues the lobby work on the lobby's message loop when none is queued (any thread)
-void LobbyPostWork()
-{
-    WONAPI::WindowManager* theManager = EEIsLobbyOpen() ? WONAPI::GetLobbyWindow() : NULL;
-    if (theManager != NULL && !sLobbyWorkPosted.exchange(1))
-        theManager->PostEvent(new WONAPI::UserEvent(LobbyWork, 0));
+    ee_fixture_lobby_work();
 }
 
 // ---- the actions and hooks
@@ -442,28 +250,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::SetHitPoints: u->mHitPoints = (long)i[0];
         return 0;
     case EeFixtureOp::CalamityCount: return CALAMITIES != NULL ? (int64_t)CALAMITIES->GetCalamityClassCount() : 0;
-    case EeFixtureOp::LobbyPost:
-        if (!EEIsLobbyOpen())
-            return 0;
-        {
-            std::lock_guard<std::mutex> theLock(sLobbyMutex);
-            sLobbyCommand = c->s;
-            sLobbyCommandSeq = (unsigned long)i[0];
-        }
-        LobbyPostWork();
-        return 1;
-    case EeFixtureOp::LobbySnapshot: {   // the last snapshot the lobby's own thread took, and a new one asked for
-        if (!EEIsLobbyOpen())
-            return 0;
-        std::string theSnapshot;
-        {
-            std::lock_guard<std::mutex> theLock(sLobbyMutex);
-            theSnapshot = sLobbySnapshot;
-        }
-        ee_fixture_sink_text(c->sink, theSnapshot.c_str());
-        LobbyPostWork();
-        return 1;
-    }
     // ---- the compound operations' finer ones (compound.rs)
     case EeFixtureOp::FxInstallDebug: PlatDebugSetHandler(DebugToStderr);
         return 0;
@@ -511,6 +297,9 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::FxCheckIsChecked: return As<UICheckBox>(c->h)->GetIsChecked() ? 1 : 0;
     case EeFixtureOp::FxCheckSet: As<UICheckBox>(c->h)->SetChecked(i[0] != 0);
+        return 0;
+    case EeFixtureOp::FxAsEdit: return Handle(dynamic_cast<UIEditBox*>(CONTROL));
+    case EeFixtureOp::FxEditSetNumber: As<UIEditBox>(c->h)->SetText((unsigned long)i[0]);
         return 0;
     case EeFixtureOp::FxRadioCheck: As<UIRadioButton>(c->h)->Check();
         return 0;
@@ -607,6 +396,57 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxCalamityCount: return (int64_t)CALAMITIES->mCalamities.size();
     case EeFixtureOp::FxCalamityEnumAt: return (unsigned long)CALAMITIES->mCalamities[(size_t)i[0]]->mClass->mClassEnum;
     case EeFixtureOp::FxCalamityTimeAlive: return (long)CALAMITIES->mCalamities[(size_t)i[0]]->GetTimeAlive();
+    // ---- the WON lobby's walk (lobby.rs)
+    case EeFixtureOp::FxLobbyOpen: return EEIsLobbyOpen() ? 1 : 0;
+    case EeFixtureOp::FxLobbyManager: return Handle(WONAPI::GetLobbyWindow());
+    case EeFixtureOp::FxLobbyRootWindow: return Handle(WONAPI::LobbyGetRootWindow());
+    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(LobbyWork, 0));
+        return 0;
+    case EeFixtureOp::FxWindowRoot: return Handle(As<WONAPI::Window>(c->h)->mRoot.get());
+    case EeFixtureOp::FxManagerModal: return Handle(As<WONAPI::WindowManager>(c->h)->GetModalComponent());
+    case EeFixtureOp::FxWindowMouse: As<WONAPI::Window>(c->h)->QueueEvent(new WONAPI::MouseEvent(i[0] == 0 ? WONAPI::InputEvent_MouseMove : i[0] == 1 ? WONAPI::InputEvent_MouseDown : WONAPI::InputEvent_MouseUp, (int)i[1], (int)i[2], 0, 0));
+        return 0;
+    case EeFixtureOp::FxWindowKeyChar: As<WONAPI::Window>(c->h)->QueueEvent(new WONAPI::KeyEvent(WONAPI::InputEvent_KeyChar, (int)i[0], 0));
+        return 0;
+    case EeFixtureOp::FxCompVisible: return As<WONAPI::Component>(c->h)->IsVisible() ? 1 : 0;
+    case EeFixtureOp::FxCompControlId: return As<WONAPI::Component>(c->h)->mControlId;
+    case EeFixtureOp::FxCompDisabled: return As<WONAPI::Component>(c->h)->IsDisabled() ? 1 : 0;
+    case EeFixtureOp::FxCompWidth: return As<WONAPI::Component>(c->h)->Width();
+    case EeFixtureOp::FxCompHeight: return As<WONAPI::Component>(c->h)->Height();
+    case EeFixtureOp::FxCompLocalToRoot: As<WONAPI::Component>(c->h)->LocalToRoot(*(int*)&c->i[0], *(int*)&c->i[1]);
+        return 0;
+    case EeFixtureOp::FxCompRootWindow: return Handle(As<WONAPI::Component>(c->h)->GetRootWindow());
+    case EeFixtureOp::FxCompNextSibling: return Handle(As<WONAPI::Component>(c->h)->GetNextSibling(true));
+    case EeFixtureOp::FxAsLabel: return Handle(dynamic_cast<WONAPI::Label*>(As<WONAPI::Component>(c->h)));
+    case EeFixtureOp::FxAsButton: return Handle(dynamic_cast<WONAPI::Button*>(As<WONAPI::Component>(c->h)));
+    case EeFixtureOp::FxAsListArea: return Handle(dynamic_cast<WONAPI::ListArea*>(As<WONAPI::Component>(c->h)));
+    case EeFixtureOp::FxAsContainer: return Handle(dynamic_cast<WONAPI::Container*>(As<WONAPI::Component>(c->h)));
+    case EeFixtureOp::FxContainerFront: return Handle(As<WONAPI::Container>(c->h)->GetFrontChild());
+    case EeFixtureOp::FxLabelHasText: return As<WONAPI::Label>(c->h)->mWrappedText.get() != NULL;
+    case EeFixtureOp::FxLabelTextLen: return (int64_t)As<WONAPI::Label>(c->h)->mWrappedText->GetText().length();
+    case EeFixtureOp::FxLabelTextAt: return (unsigned short)As<WONAPI::Label>(c->h)->mWrappedText->GetText().at((int)i[0]);
+    case EeFixtureOp::FxButtonTextLen: return (int64_t)As<WONAPI::Button>(c->h)->GetText().length();
+    case EeFixtureOp::FxButtonTextAt: return (unsigned short)As<WONAPI::Button>(c->h)->GetText().at((int)i[0]);
+    case EeFixtureOp::FxButtonActivate: As<WONAPI::Button>(c->h)->Fn2F3440();   // Button::Activate
+        return 0;
+    case EeFixtureOp::FxListSelItem: return Handle(As<WONAPI::ListArea>(c->h)->GetSelItem());
+    case EeFixtureOp::FxListItemCount: return As<WONAPI::ListArea>(c->h)->GetNumItems();
+    case EeFixtureOp::FxListItemPos: return As<WONAPI::ListArea>(c->h)->GetItemPos(As<WONAPI::ListItem>(c->h2));
+    case EeFixtureOp::FxListSetSel: As<WONAPI::ListArea>(c->h)->SetSelItem((int)i[0], true);
+        return 0;
+    case EeFixtureOp::FxLobbyShown: return EELobbyIsShown() ? 1 : 0;
+    case EeFixtureOp::FxLobbyScreenType: return WONAPI::LobbyGetGameScreenType();
+    case EeFixtureOp::FxLobbyOnLan: return WONAPI::LobbyOnLanScreen() ? 1 : 0;
+    case EeFixtureOp::FxLobbyOnLogin: return WONAPI::LobbyOnLoginScreen() ? 1 : 0;
+    case EeFixtureOp::FxMyGame: return Handle(WONAPI::GetMyLobbyGame());
+    case EeFixtureOp::FxMyClient: return Handle(WONAPI::GetMyLobbyClient());
+    case EeFixtureOp::FxGameIsHost: return As<WONAPI::LobbyGame>(c->h)->GetIsHost() ? 1 : 0;
+    case EeFixtureOp::FxGameClientCount: return As<WONAPI::LobbyGame>(c->h)->GetClients().get() != NULL ? (int64_t)As<WONAPI::LobbyGame>(c->h)->GetClients()->GetCount() : 0;
+    // AreAllReady reads the client list: a just-joined game has none yet (a fixture-only crash at Join Game)
+    case EeFixtureOp::FxGameAllReady: return As<WONAPI::LobbyGame>(c->h)->GetClients().get() != NULL && As<WONAPI::LobbyGame>(c->h)->AreAllReady();
+    case EeFixtureOp::FxClientReady: return As<WONAPI::LobbyClient>(c->h)->IsReady() ? 1 : 0;
+    case EeFixtureOp::FxGameNameLen: return (int64_t)As<WONAPI::LobbyGame>(c->h)->GetName().length();
+    case EeFixtureOp::FxGameNameAt: return (unsigned short)As<WONAPI::LobbyGame>(c->h)->GetName().at((int)i[0]);
     default:
         break;
     }
