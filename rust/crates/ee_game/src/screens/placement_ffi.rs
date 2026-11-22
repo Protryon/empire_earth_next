@@ -4,8 +4,6 @@
 //! world's one-statement shims (EEUIBuildWall.cpp, EEUIBuildGate.cpp).
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::c_void;
-
 use crate::screens::hud_ctl::EeScreensPoint;
 use crate::screens::mouse_modes::{EeScreensBuildGateFields, EeScreensBuildWallFields};
 
