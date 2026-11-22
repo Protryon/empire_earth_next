@@ -180,6 +180,7 @@ pub mod unit_save;
 pub mod unit_save_views;
 pub mod unit_sweep;
 pub mod unload;
+pub mod upd_split;
 pub mod update;
 pub mod update_views;
 pub mod upgrade_media;
@@ -189,16 +190,20 @@ pub mod uu_body;
 pub mod uu_cloak;
 pub mod uu_direct;
 pub mod uu_ffi;
+pub mod uu_fill;
 pub mod uu_gather_tree;
 pub mod uu_host;
+pub mod uu_line;
 pub mod uu_note;
 pub mod uu_place;
 pub mod uu_reads;
+pub mod uu_search;
 pub mod uu_spots;
 #[cfg(test)]
 mod uu_tests;
 pub mod uu_tiles;
 pub mod uu_world;
+pub mod uu_world_ops;
 #[cfg(test)]
 mod uu_world_tests;
 pub mod waypoints;
