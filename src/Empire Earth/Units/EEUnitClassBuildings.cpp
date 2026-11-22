@@ -133,29 +133,7 @@ long EEGetWallPiecePart(long inIndex, bool* outFlag)
 EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
 {
     EEUCNote theNote(35); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    EEUnit* theResult = ([&]() -> EEUnit* {
-        std::vector<EETileCoordinate> theTiles;
-        EEUnit* theResult = NULL;
-        EEMap* theMap = ::gWorld.mMap;
-        for (unsigned long theRing = 1; theResult == NULL && theRing < 0x14; theRing++) {
-            ee_units_uu_square_ring_tiles(inUnit->GetTileX(), inUnit->GetTileY(), theRing, &theTiles);
-            for (std::vector<EETileCoordinate>::iterator theTile = theTiles.begin();
-                 theResult == NULL && theTile != theTiles.end(); theTile++) {
-                EEMapTile* theMapTile = theMap->GetTile(theTile->mX, theTile->mY);
-                if (theMapTile == NULL)
-                    continue;
-                for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                    EEUnit* theUnit = theNode->mUnit;
-                    if (theUnit != NULL && theUnit->mUnitClass->IsLandBuilding() && theUnit->mHitPoints > 0 &&
-                        ee_units_uu_targetable(0, (uint64_t)(uintptr_t)theUnit->GetUnitClass(), 0)) {
-                        theResult = theUnit;
-                        break;
-                    }
-                }
-            }
-        }
-        return theResult;
-    }());
+    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_ucb_gate(EE_UNITS_UCB_DO_NEAREST_TARGET_BUILDING, this, NULL, EEObj(inUnit), 0, 0, 0.0f);   // ucb_gate.rs
     theNote.U(theResult);
     return theResult;
 }
@@ -240,103 +218,15 @@ void EECreateSpaceGateEnergyWall(EEComplexUnit* inGate);
 // relinking them; the posts go idle and the doors take the new gate piece's action
 void EEUnitClass::GateGateReplaced(EEUnit* inGate, EEUnit* inUnit)
 {
-    std::vector<EEUnit*> thePieces;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    unsigned long theDirection = inUnit->GetComplexUnit()->mGateDirection;
-    thePieces.resize(5);
-    thePieces[2] = inUnit;
-    for (long i = 0; i <= 4; i++) {
-        if (i == 2)
-            continue;
-        EEComplexUnit* theOld = this->GetPart(inGate->GetComplexUnit(), i);
-        EEComplexUnit* thePiece = EEReplaceUnit(theOld, inUnit->GetPlayer()->GetPlayerID(), theClass);
-        GETransformation theTransformation(false);
-        theTransformation = thePiece->mPhysicalModel.GetLocation();
-        long theAction = EETurnGatePart(theTransformation, theDirection, i);
-        thePiece->SetTransformation(theTransformation, true);
-        thePiece->SetAnimation(theAction, -1, 0);
-        thePiece->SetGateDirection(theDirection);
-        thePieces[i] = thePiece;
-    }
-    thePieces[4]->GetComplexUnit()->LinkPart(thePieces[0]->GetComplexUnit());
-    thePieces[0]->GetComplexUnit()->LinkPart(thePieces[3]->GetComplexUnit());
-    thePieces[3]->GetComplexUnit()->LinkPart(thePieces[1]->GetComplexUnit());
-    thePieces[1]->GetComplexUnit()->LinkPart(thePieces[2]->GetComplexUnit());
-    thePieces[4]->GetComplexUnit()->StartAction(kActionIdle);
-    thePieces[0]->GetComplexUnit()->StartAction(kActionIdle);
-    thePieces[3]->GetComplexUnit()->StartAction(thePieces[2]->GetComplexUnit()->GetCommandType());
-    thePieces[1]->GetComplexUnit()->StartAction(thePieces[2]->GetComplexUnit()->GetCommandType());
-
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_REPLACED, this, inUnit, EEObj(inGate), 0, 0, 0.0f);   // ucb_gate.rs
 }
 
 // Turns the five wall pieces across a tile into a closed gate of the technology's class for a player (EEMBuildGate's
 // work): weakest wall's health, posts on the lower ground; adds the energy wall once space gates are available
 void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, long inDirection)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEUnit*> theWalls;
-    std::vector<EEUnit*> theGate;
-    GE3DPoint thePost4;
-    U2DPoint<long> theTile;
-    EEPlayer* thePlayer = ::gWorld.mPlayers[inPlayer];
-    GE3DPoint thePost0;
-    float theHealth = 1.0f;
-    EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->Get(inTechnology)->mData->mUnitClass];
-    theTile.mX = inTile.mX;
-    theTile.mY = inTile.mY;
-    EEGetWallGateTiles(theTile, inDirection, theTiles);
-    ee_units_uu_units_on(0, &theTiles, &theUnits);
-    for (unsigned long i = 0; i < theUnits.size(); i++) {
-        if (theUnits[i]->GetUnitClass()->mIsWall)
-            theWalls.push_back(theUnits[i]);
-    }
-    std::vector<EEUnit*> theSide;
-    if (theWalls.size() == 0 || !EEDoesWallGateFit(inTile, inDirection, theWalls[0]->GetUnitClass()->GetUnitType(), theSide))
-        return;
-    long j;
-    std::vector<EEUnit*>::iterator it;
-    for (j = 0, it = theWalls.begin(); j <= 4; j++, it++) {
-        if (it == theWalls.end())
-            break;
-        float theRatio = (float)(*it)->mHitPoints / (*it)->mStats->mMaxHitPoints;
-        if (theHealth >= theRatio)
-            theHealth = theRatio;
-        long thePlayerID = thePlayer->GetPlayerID();
-        EEComplexUnit* thePiece = EEReplaceUnit((EEComplexUnit*)*it, thePlayerID, theClass);
-        GETransformation theTransformation(false);
-        theTransformation = thePiece->mPhysicalModel.GetLocation();
-        long theAction = EETurnGatePart(theTransformation, inDirection, j);
-        thePiece->SetTransformation(theTransformation, true);
-        thePiece->SetAnimation(theAction, -1, 0);
-        thePiece->SetGateDirection(inDirection);
-        theGate.push_back(thePiece);
-    }
-    theGate[4]->mComplexUnit->GetPosition(thePost4);
-    theGate[0]->GetComplexUnit()->GetPosition(thePost0);
-    float theZ = min(::gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePost4.GetX(), thePost4.GetY()),
-                     ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePost0.GetX(), thePost0.GetY()));
-    thePost4.SetZ(theZ);
-    thePost0.SetZ(theZ);
-    theGate[4]->GetComplexUnit()->SetLocation(thePost4, true);
-    theGate[0]->GetComplexUnit()->SetLocation(thePost0, true);
-    theGate[4]->GetComplexUnit()->LinkPart(theGate[0]->GetComplexUnit());
-    theGate[0]->GetComplexUnit()->LinkPart(theGate[3]->GetComplexUnit());
-    theGate[3]->GetComplexUnit()->LinkPart(theGate[1]->GetComplexUnit());
-    theGate[1]->GetComplexUnit()->LinkPart(theGate[2]->GetComplexUnit());
-    theGate[4]->GetComplexUnit()->StartAction(kActionIdle);
-    theGate[0]->GetComplexUnit()->StartAction(kActionIdle);
-    theGate[3]->GetComplexUnit()->StartAction(kActionClosed);
-    theGate[1]->GetComplexUnit()->StartAction(kActionClosed);
-    theGate[2]->mComplexUnit->StartAction(kActionClosed);
-    theGate[2]->SetHitPoints(UMFloatToLong(theGate[2]->GetStats()->mMaxHitPoints * theHealth));
-    if (gUIManager->mInScenarioEditor && !gGameScreenActive) {
-        ::gWorld.FlushQueuedPlacements();
-        thePlayer->AddPendingUnits(0, true);
-        thePlayer->RemoveKilledUnits();
-    }
-    if (thePlayer->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && theClass->GetUnitType() != kUnitTypeGatePalisades)
-        EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(theGate[2]));
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_BUILD_GATE, NULL, NULL, (uint64_t)inPlayer, (int64_t)(uint32_t)inTile.mX | (int64_t)((uint64_t)(uint32_t)inTile.mY << 32),
+                      (int64_t)(uint32_t)inTechnology | (int64_t)((uint64_t)(uint32_t)inDirection << 32), 0.0f);   // ucb_gate.rs
 }
 
 // The sort-and-unique of a vector (cdecl template 0x211ebc and its range half 0x211f07) (provisional names)
@@ -357,28 +247,14 @@ template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E 
 // Collects the footprint tiles of every gate piece not left out (doors and gate piece while open), sorted and unique
 void EEUnitClass::GateGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
 {
-    if (!inAppend)
-        outTiles.clear();
-    EEComplexUnit* thePiece = inUnit->GetComplexUnit();
-    while (thePiece->mPreviousPart != NULL)
-        thePiece = thePiece->mPreviousPart;
-    for (; thePiece != NULL; thePiece = thePiece->mNextPart) {
-        if (!this->IsPartLeftOut(thePiece))
-            this->BaseGetSurroundingTiles(thePiece, outTiles, inCorners, true);
-    }
-    // the COMDATs sort U2DPoint<long>s (operator< 0x13710, vector<U2DPoint<long> >::erase 0x288efb); EETileCoordinate
-    // is U2DPoint<long>, so the tiles need no vector cast
-    EESortUnique(outTiles, std::less<U2DPoint<long> >(), std::equal_to<U2DPoint<long> >());
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_SURROUNDING, this, inUnit, EEObj(&outTiles), inCorners, inAppend, 0.0f);   // ucb_gate.rs
 }
 
 // Returns whether a gate fits across a wall unit's tile in a direction (1..4), giving the five walls of the type
 // (EECPWallManager.cpp declares it the same way)
 bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits)
 {
-    EETileCoordinate theTile;
-    theTile.mX = inUnit->mTileX;
-    theTile.mY = inUnit->mTileY;
-    return EEDoesWallGateFit(theTile, inSide, inUnitType, outUnits);
+    return EEDoesWallGateFit(EETileCoordinate(inUnit->mTileX, inUnit->mTileY), inSide, inUnitType, outUnits);
 }
 
 // Returns whether a gate fits across a tile in a direction: five built, living walls of the type on level tiles
@@ -387,33 +263,9 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
                 std::vector<EEUnit*>& outUnits)
 {
     EEUCNote theNote(25); theNote.T(inTile).I(inDirection).I(inUnitType);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R([&]() -> bool {
-        std::vector<U2DPoint<long> > theTiles;
-        std::vector<EEUnit*> theUnused;
-        bool theResult = true;
-        U2DPoint<long> theTile(inTile.mX, inTile.mY);
-        EEGetWallGateTiles(theTile, inDirection, theTiles);
-        ee_units_uu_units_of_type_on_tiles(&theTiles, inUnitType, &outUnits);
-        std::vector<EEUnit*>::iterator it = outUnits.begin();
-        while (true) {
-            if (it == outUnits.end())
-                break;
-            if ((*it)->mComplexUnit->mIsBuilt && (*it)->mHitPoints > 0)
-                theResult = true;
-            else
-                theResult = false;
-            it++;
-            if (!theResult)
-                break;
-        }
-        if (theResult && outUnits.size() == 5)
-            theResult = EEAreTilesLevel(theTiles);
-        else {
-            outUnits.clear();
-            theResult = false;
-        }
-        return theResult;
-    }());
+    bool theResult = theNote.R(ee_units_ucb_gate(EE_UNITS_UCB_DO_WALL_GATE_FIT, NULL, NULL, EEObj(&outUnits),
+                                                 (int64_t)(uint32_t)inTile.mX | (int64_t)((uint64_t)(uint32_t)inTile.mY << 32),
+                                                 (int64_t)(uint32_t)inDirection | (int64_t)((uint64_t)(uint32_t)inUnitType << 32), 0.0f) != 0);   // ucb_gate.rs
     theNote.Us(outUnits);
     return theResult;
 }
@@ -427,13 +279,6 @@ EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit)
 }
 
 // Returns the middle unit of a list (the lower of the two middles for an even count)
-static EEUnit* EEGetMiddleOf(std::vector<EEUnit*>& inUnits)
-{
-    unsigned long theIndex = inUnits.size() / 2;
-    if (inUnits.size() % 2 == 0)
-        theIndex--;
-    return inUnits[theIndex];
-}
 
 // Turns gate piece inIndex for a gate in direction 1..4; returns its animation: 9 a post, 10 a diagonal post, 11 else
 // (the yaws: cls_building.rs)
@@ -507,19 +352,7 @@ bool EEUnitClass::IsPasserNear(EEComplexUnit* inUnit)
 // Returns whether a tile holds a highlighted living wall that can take a gate, giving its gate direction
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 {
-    bool theFound = false;
-    EEMapTile* theTile = ::gWorld.GetMap()->GetTile(inTile.mX, inTile.mY);
-    if (theTile != NULL) {
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && !theFound; theNode = theNode->mNext) {
-            EEUnit* theUnit = theNode->mUnit;
-            if (theUnit != NULL && theUnit->mUnitClass->mIsWall && theUnit->mHitPoints > 0 && theUnit->mTileNode != NULL &&
-                theUnit->GetComplexUnit()->mIsTinted) {
-                theFound = true;
-                ioDirection = theUnit->GetComplexUnit()->mGateDirection;
-            }
-        }
-    }
-    return theFound;
+    return ee_units_ucb_gate(EE_UNITS_UCB_DO_FIND_GATE_WALL, NULL, NULL, EEObj(&ioDirection), (int64_t)(uint32_t)inTile.mX | (int64_t)((uint64_t)(uint32_t)inTile.mY << 32), 0, 0.0f) != 0;   // ucb_gate.rs (sets the direction when found)
 }
 
 // Returns the piece before the last one of a unit's linked chain
@@ -555,65 +388,20 @@ EEComplexUnit* EEUnitClass::GetFourthPart(EEComplexUnit* inGate)
 // Restores the normal colour of a player's walls of a type and clears their gate direction (after gate placement)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 {
-    std::vector<EEUnit*> theUnits;
-    ee_units_uu_player_units_of_type(inUnitType, inPlayer->mPlayerID, &theUnits);
-    for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
-        EEComplexUnit* theUnit = (*it)->mComplexUnit;
-        if (theUnit == NULL)
-            continue;
-        theUnit->SetColor(sGateNormal);
-        theUnit->SetIsTinted(false);
-        theUnit->SetGateDirection(0);
-    }
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_CLEAR_GATE_HIGHLIGHTS, NULL, NULL, EEObj(inPlayer), inUnitType, 0, 0.0f);   // ucb_gate.rs
 }
 
 // Sets up a new gate piece the building's way; the chain's first piece starts closed
 void EEUnitClass::GateUnitCreated(EEComplexUnit* inUnit)
 {
-    this->BuildingUnitCreated(inUnit);
-    EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inUnit->GetUnitClass());
-    if (inUnit->mPreviousPart == NULL && inUnit->mNextPart != NULL) {
-        inUnit->StartAction(kActionClosed);
-        this->ActionChanged(inUnit);
-    }
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f);   // ucb_gate.rs
 }
 
 // Highlights the middle wall of a gate line through each of a player's walls of a type when one or three of the
 // four directions fit (an XOR of the four tests); the first fitting direction is used
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
 {
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEUnit*> theSide1;
-    std::vector<EEUnit*> theSide2;
-    std::vector<EEUnit*> theSide3;
-    std::vector<EEUnit*> theSide4;
-    EEClearGateHighlights(inPlayer, inUnitType);
-    ee_units_uu_player_units_of_type(inUnitType, inPlayer->mPlayerID, &theUnits);
-    for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
-        bool the1 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 1, inUnitType, theSide1);
-        bool the2 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 2, inUnitType, theSide2);
-        bool the3 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 3, inUnitType, theSide3);
-        bool the4 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 4, inUnitType, theSide4);
-        if (the1 ^ the2 ^ the3 ^ the4) {   // the first fitting direction's middle wall
-            std::vector<EEUnit*>* theSides[4] = {&theSide1, &theSide2, &theSide3, &theSide4};
-            bool theFits[4] = {the1, the2, the3, the4};
-            for (long d = 0; d < 4; d++) {
-                if (!theFits[d])
-                    continue;
-                EEComplexUnit* theWall = EEGetMiddleOf(*theSides[d])->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(d + 1);
-                }
-                break;
-            }
-        }
-        theSide1.clear();
-        theSide2.clear();
-        theSide3.clear();
-        theSide4.clear();
-    }
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_HIGHLIGHT_GATE_WALLS, NULL, NULL, EEObj(inPlayer), inUnitType, 0, 0.0f);   // ucb_gate.rs
 }
 
 // Returns whether all tiles are on the map, flat or ramps (0 or 2 raised corners), and differ in height by at most
@@ -709,29 +497,23 @@ EEUnit* EEUnitClass::SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, 
 // Sets up a new space building as a building, already built
 void EEUnitClass::SpaceBuildingUnitCreated(EEComplexUnit* inUnit)
 {
-    this->BuildingUnitCreated(inUnit);
-    inUnit->SetBuilt(1, 0, 1);
+    ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f);   // ucb_gate.rs
 }
 
 // Returns whether the space building may stop: already sinking, a slow request, or at its next waypoint's tile
 bool EEUnitClass::SpaceBuildingHasArrived(EEComplexUnit* inUnit, float inValue)
 {
-    GE3DPoint theLocation;
-    bool theResult = false;
-    if (inUnit->mCollisionState == 8 || inValue <= 0.05f)
-        theResult = true;
-    else {
-        inUnit->GetNextWaypointPoint(theLocation);
-        if (inUnit->GetTileX() == UMFloor(theLocation.GetX()) && inUnit->GetTileY() == UMFloor(theLocation.GetY()))
-            theResult = true;
-    }
-    return theResult;
+    return ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_ARRIVED, this, inUnit, 0, 0, 0, inValue) != 0;   // ucb_gate.rs
 }
 
 template <class T> static T* EEUcbObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
+
+// the gate bodies' vectors (ucb_gate.rs: one per local of the originals) and EEFindGateWall's direction
+static std::vector<EEUnit*> sUcbUnits[8];
+static std::vector<U2DPoint<long> > sUcbTiles[3];
 
 // ReleaseUnit's yaw is the orientation's first float
 static_assert(offsetof(GEOrientation, mYaw) == 0, "a GEOrientation starts with its yaw");
@@ -746,6 +528,86 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     EEComplexUnit* theOther = EEUcbObject<EEComplexUnit>(inA);
     float* f = *ioF;
     switch (inOp) {
+    // the gates' (ucb_gate.rs)
+    case EE_UNITS_UCB_UNITS_VEC: return EEObj(&sUcbUnits[inB]);
+    case EE_UNITS_UCB_TILES_VEC: return EEObj(&sUcbTiles[inB]);
+    case EE_UNITS_UCB_UNITS_SIZE: return EEUcbObject<std::vector<EEUnit*> >(inA)->size();
+    case EE_UNITS_UCB_UNITS_AT: return EEObj((*EEUcbObject<std::vector<EEUnit*> >(inA))[(size_t)inB]);
+    case EE_UNITS_UCB_UNITS_CLEAR: EEUcbObject<std::vector<EEUnit*> >(inA)->clear(); return 0;
+    case EE_UNITS_UCB_GATE_TILES_CLEAR: EEUcbObject<std::vector<U2DPoint<long> > >(inA)->clear(); return 0;
+    case EE_UNITS_UCB_TILES_SIZE: return EEUcbObject<std::vector<U2DPoint<long> > >(inA)->size();
+    case EE_UNITS_UCB_TILE_X: return (*EEUcbObject<std::vector<U2DPoint<long> > >(inA))[(size_t)inB].mX;
+    case EE_UNITS_UCB_TILE_Y: return (*EEUcbObject<std::vector<U2DPoint<long> > >(inA))[(size_t)inB].mY;
+    case EE_UNITS_UCB_WALL_GATE_TILES: EEGetWallGateTiles(U2DPoint<long>((long)(int32_t)inB, (long)(int32_t)(inB >> 32)), (long)inC, *EEUcbObject<std::vector<U2DPoint<long> > >(inA)); return 0;
+    case EE_UNITS_UCB_UNITS_ON: ee_units_uu_units_on(0, EEUcbObject<void>(inA), EEUcbObject<void>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCB_UNIT_CLASS_OF: return EEObj(EEUcbObject<EEUnit>(inA)->GetUnitClass());
+    case EE_UNITS_UCB_CLASS_IS_WALL: return EEUcbObject<EEUnitClass>(inA)->mIsWall;
+    case EE_UNITS_UCB_CLASS_TYPE: return EEUcbObject<EEUnitClass>(inA)->GetUnitType();
+    case EE_UNITS_UCB_WALL_GATE_FIT:
+        return EEDoesWallGateFit(EETileCoordinate((long)(int32_t)inB, (long)(int32_t)(inB >> 32)), (long)(int32_t)inC, (unsigned long)(uint32_t)(inC >> 32), *EEUcbObject<std::vector<EEUnit*> >(inA));
+    case EE_UNITS_UCB_PLAYER_AT: return EEObj(::gWorld.mPlayers[inB]);
+    case EE_UNITS_UCB_TECH_CLASS: return EEObj(gUnitClassTable[EEUcbObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass]);
+    case EE_UNITS_UCB_HIT_RATIO: f[0] = (float)EEUcbObject<EEUnit>(inA)->mHitPoints / EEUcbObject<EEUnit>(inA)->mStats->mMaxHitPoints; return 0;
+    case EE_UNITS_UCB_PLAYER_ID: return EEUcbObject<EEPlayer>(inA)->GetPlayerID();
+    case EE_UNITS_UCB_REPLACE_UNIT: return EEObj(EEReplaceUnit(theOther, (long)inB, EEUcbObject<EEUnitClass>((uint64_t)inC)));
+    case EE_UNITS_UCB_TURN_GATE_PART: return EETurnGatePart(*EEUcbObject<GETransformation>(inA), (long)inB, (long)inC);
+    case EE_UNITS_UCB_SET_TRANSFORMATION_OF: theOther->SetTransformation(*EEUcbObject<GETransformation>((uint64_t)inB), true); return 0;
+    case EE_UNITS_UCB_SET_GATE_DIRECTION_OF: theOther->SetGateDirection((unsigned long)inB); return 0;
+    case EE_UNITS_UCB_POSITION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCB_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
+    case EE_UNITS_UCB_SET_LOCATION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->SetLocation(*reinterpret_cast<GE3DPoint*>(f), true); return 0;
+    case EE_UNITS_UCB_LINK_PART: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->LinkPart(EEUcbObject<EEUnit>((uint64_t)inB)->GetComplexUnit()); return 0;
+    case EE_UNITS_UCB_START_ACTION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->StartAction((long)inB); return 0;
+    case EE_UNITS_UCB_SET_HEALTH: EEUcbObject<EEUnit>(inA)->SetHitPoints(UMFloatToLong(EEUcbObject<EEUnit>(inA)->GetStats()->mMaxHitPoints * f[0])); return 0;
+    case EE_UNITS_UCB_IN_EDITOR: return gUIManager->mInScenarioEditor && !gGameScreenActive;
+    case EE_UNITS_UCB_FLUSH_PLACEMENTS: ::gWorld.FlushQueuedPlacements(); return 0;
+    case EE_UNITS_UCB_ADD_PENDING: EEUcbObject<EEPlayer>(inA)->AddPendingUnits(0, true); return 0;
+    case EE_UNITS_UCB_REMOVE_KILLED: EEUcbObject<EEPlayer>(inA)->RemoveKilledUnits(); return 0;
+    case EE_UNITS_UCB_SPACE_GATES:
+        return EEUcbObject<EEPlayer>(inA)->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && EEUcbObject<EEUnitClass>((uint64_t)inB)->GetUnitType() != kUnitTypeGatePalisades;
+    case EE_UNITS_UCB_ENERGY_WALL: EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(EEUcbObject<EEUnit>(inA))); return 0;
+    case EE_UNITS_UCB_COMMAND_TYPE_OF: return EEUcbObject<EEUnit>(inA)->GetComplexUnit()->GetCommandType();
+    case EE_UNITS_UCB_GATE_DIRECTION_OF: return EEUcbObject<EEUnit>(inA)->GetComplexUnit()->mGateDirection;
+    case EE_UNITS_UCB_GET_PART: return EEObj(theClass->GetPart(theOther, (long)inB));
+    case EE_UNITS_UCB_UNIT_PLAYER_ID: return EEUcbObject<EEUnit>(inA)->GetPlayer()->GetPlayerID();
+    case EE_UNITS_UCB_COMPLEX_OF: return EEObj(EEUcbObject<EEUnit>(inA)->GetComplexUnit());
+    case EE_UNITS_UCB_LOCATION_MATRIX_OF: *EEUcbObject<GETransformation>((uint64_t)inB) = theOther->mPhysicalModel.GetLocation(); return 0;
+    case EE_UNITS_UCB_SET_ANIMATION_OF: theOther->SetAnimation((long)inB, -1, 0); return 0;
+    case EE_UNITS_UCB_BUILT_ALIVE: return EEUcbObject<EEUnit>(inA)->mComplexUnit->mIsBuilt && EEUcbObject<EEUnit>(inA)->mHitPoints > 0;
+    case EE_UNITS_UCB_TILES_LEVEL: return EEAreTilesLevel(*EEUcbObject<std::vector<U2DPoint<long> > >(inA));
+    case EE_UNITS_UCB_UNITS_OF_TYPE_ON_TILES: ee_units_uu_units_of_type_on_tiles(EEUcbObject<void>(inA), (int32_t)inB, EEUcbObject<void>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCB_PLAYER_UNITS_OF_TYPE: ee_units_uu_player_units_of_type((int32_t)inB, (int32_t)inC, EEUcbObject<void>(inA)); return 0;
+    case EE_UNITS_UCB_COMPLEX_FIELD: return EEObj(EEUcbObject<EEUnit>(inA)->mComplexUnit);
+    case EE_UNITS_UCB_SET_COLOR: theOther->SetColor(inB != 0 ? sGateHighlight : sGateNormal); return 0;
+    case EE_UNITS_UCB_SET_TINTED: theOther->SetIsTinted(inB != 0); return 0;
+    case EE_UNITS_UCB_IS_TINTED: return theOther->mIsTinted;
+    case EE_UNITS_UCB_FIT_ON_UNIT: return EEDoesWallGateFitOnUnit(theOther, (long)(int32_t)inB, (long)(int32_t)(inB >> 32), *EEUcbObject<std::vector<EEUnit*> >((uint64_t)inC));
+    case EE_UNITS_UCB_PLAYER_ID_FIELD: return EEUcbObject<EEPlayer>(inA)->mPlayerID;
+    case EE_UNITS_UCB_MAP_TILE: return EEObj(::gWorld.GetMap()->GetTile((long)inB, (long)inC));
+    case EE_UNITS_UCB_TILE_NODES: return EEObj(EEUcbObject<EEMapTile>(inA)->mUnits);
+    case EE_UNITS_UCB_GATE_NODE_UNIT: return EEObj(EEUcbObject<RTSTileUnitNode>(inA)->mUnit);
+    case EE_UNITS_UCB_GATE_NODE_NEXT: return EEObj(EEUcbObject<RTSTileUnitNode>(inA)->mNext);
+    case EE_UNITS_UCB_TINTED_WALL:
+        return EEUcbObject<EEUnit>(inA)->mUnitClass->mIsWall && EEUcbObject<EEUnit>(inA)->mHitPoints > 0 && EEUcbObject<EEUnit>(inA)->mTileNode != NULL && EEUcbObject<EEUnit>(inA)->GetComplexUnit()->mIsTinted;
+    case EE_UNITS_UCB_RING: ee_units_uu_square_ring_tiles((int32_t)inB, (int32_t)(inB >> 32), (int32_t)inC, EEUcbObject<void>(inA)); return 0;
+    case EE_UNITS_UCB_UNIT_TILE_X: return EEUcbObject<EEUnit>(inA)->GetTileX();
+    case EE_UNITS_UCB_UNIT_TILE_Y: return EEUcbObject<EEUnit>(inA)->GetTileY();
+    case EE_UNITS_UCB_TARGET_BUILDING:
+        return EEUcbObject<EEUnit>(inA)->mUnitClass->IsLandBuilding() && EEUcbObject<EEUnit>(inA)->mHitPoints > 0 && ee_units_uu_targetable(0, EEObj(EEUcbObject<EEUnit>(inA)->GetUnitClass()), 0);
+    case EE_UNITS_UCB_PREVIOUS_PART: return EEObj(theOther->mPreviousPart);
+    case EE_UNITS_UCB_NEXT_PART_OF: return EEObj(theOther->mNextPart);
+    case EE_UNITS_UCB_PART_LEFT_OUT: return theClass->IsPartLeftOut(theOther);
+    case EE_UNITS_UCB_GATE_BASE_SURROUNDING: theClass->BaseGetSurroundingTiles(theOther, *EEUcbObject<std::vector<EETileCoordinate> >((uint64_t)inB), (long)inC, true); return 0;
+    case EE_UNITS_UCB_SORT_UNIQUE: EESortUnique(*EEUcbObject<std::vector<U2DPoint<long> > >(inA), std::less<U2DPoint<long> >(), std::equal_to<U2DPoint<long> >()); return 0;
+    case EE_UNITS_UCB_COLLISION_STATE: return theUnit->mCollisionState;
+    case EE_UNITS_UCB_NEXT_WAYPOINT: return theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f));
+    case EE_UNITS_UCB_SELF_TILE_X: return theUnit->GetTileX();
+    case EE_UNITS_UCB_SELF_TILE_Y: return theUnit->GetTileY();
+    case EE_UNITS_UCB_BUILDING_UNIT_CREATED: theClass->BuildingUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCB_CHAIN_HEAD: return theUnit->mPreviousPart == NULL && theUnit->mNextPart != NULL;
+    case EE_UNITS_UCB_START_ACTION: theUnit->StartAction((long)inB); return 0;
+    case EE_UNITS_UCB_ACTION_CHANGED: theClass->ActionChanged(theUnit); return 0;
+    case EE_UNITS_UCB_SPACE_SET_BUILT: theUnit->SetBuilt(1, 0, 1); return 0;
     case EE_UNITS_UCB_LOCATION_YAW: theUnit->mPhysicalModel.GetLocation().ConvertToOrientation(*reinterpret_cast<GEOrientation*>(f)); return 0;
     case EE_UNITS_UCB_CARGO_SIZE: return theUnit->mCargo.size();
     case EE_UNITS_UCB_CARGO_INDEX: return EEObj(theUnit->mCargo[(size_t)inB]);
