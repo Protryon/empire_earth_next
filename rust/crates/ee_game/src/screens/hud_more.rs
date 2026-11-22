@@ -73,7 +73,14 @@ pub(crate) fn status_tabbed_from<C: Cpp + ?Sized>(c: &mut C, button: usize) {
 /// `EEUIFMainGame::Load(major, minor, file)`: the information and civilization builder blinking flags, from saved
 /// games of version 1.210 on (`major > 1 || (major == 0 && minor >= 0xd2)`, the original's test), each read only
 /// after the last succeeded.
-pub(crate) fn main_load<C: Cpp + ?Sized>(c: &mut C, info: usize, button: usize, major: u32, minor: u32, file: usize) -> i64 {
+pub(crate) fn main_load<C: Cpp + ?Sized>(
+    c: &mut C,
+    info: usize,
+    button: usize,
+    major: u32,
+    minor: u32,
+    file: usize,
+) -> i64 {
     let mut result = 0;
     if major > 1 || (major == 0 && minor >= 0xd2) {
         result = c.mff_read_bool(file, info);
@@ -149,10 +156,7 @@ mod tests {
         fake.answer("sbm_is_command", &[0, 1]);
         assert_eq!(status_right_down(&mut fake, 3), 0);
         assert_eq!(status_right_down(&mut fake, 3), 0);
-        assert_eq!(
-            fake.calls(),
-            "sbm_is_command(3)\nsbm_capture_mouse(3)\nsbm_base_button_down(3)\nsbm_is_command(3)"
-        );
+        assert_eq!(fake.calls(), "sbm_is_command(3)\nsbm_capture_mouse(3)\nsbm_base_button_down(3)\nsbm_is_command(3)");
         let mut fake = Fake::default();
         fake.answer("sbm_state", &[2, 1]);
         status_tabbed_from(&mut fake, 3);
@@ -173,10 +177,7 @@ mod tests {
         fake.answer("mff_write_bool", &[3]);
         assert_eq!(main_save(&mut fake, true, false, 9), 3);
         assert_eq!(main_save(&mut fake, true, false, 9), 0);
-        assert_eq!(
-            fake.calls(),
-            "mff_write_bool(9, true)\nmff_write_bool(9, true)\nmff_write_bool(9, false)"
-        );
+        assert_eq!(fake.calls(), "mff_write_bool(9, true)\nmff_write_bool(9, true)\nmff_write_bool(9, false)");
     }
 
     #[test]

@@ -9,11 +9,11 @@
 
 use core::ffi::c_ulong;
 
-use crate::screens::ui_ids::EEMainGameControl;
 use crate::screens::command_panel::*;
 use crate::screens::game_cpp::{Cpp, EeScreensShimText, EeScreensShimULongOut};
 use crate::screens::main_group::*;
 use crate::screens::status_button_calls;
+use crate::screens::ui_ids::EEMainGameControl;
 
 /// `kMainGameActionButton1`: the stop button's control.
 pub(crate) const EE_SCREENS_MGC_ACTION_BUTTON1: u32 = EEMainGameControl::kMainGameActionButton1 as u32;

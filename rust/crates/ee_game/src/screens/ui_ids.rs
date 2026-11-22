@@ -381,9 +381,18 @@ mod tests {
     #[test]
     fn the_manager_ids_are_the_enums() {
         assert_eq!(EETextureResolutionControl::kTextureResolutionControlID as i32, EE_SCREENS_UM_TEXTURE_RESOLUTION_ID);
-        assert_eq!(EEGameSettingsControl::kGameSettingsTextureResolutionComboBox as i32, EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX);
-        assert_eq!(EETextureResolutionControl::kTextureResolutionOriginalString as i32, EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING);
-        assert_eq!(EETextureResolutionControl::kTextureResolutionHelpString as i32, EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP);
+        assert_eq!(
+            EEGameSettingsControl::kGameSettingsTextureResolutionComboBox as i32,
+            EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX
+        );
+        assert_eq!(
+            EETextureResolutionControl::kTextureResolutionOriginalString as i32,
+            EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING
+        );
+        assert_eq!(
+            EETextureResolutionControl::kTextureResolutionHelpString as i32,
+            EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP
+        );
         assert_eq!(EEFormID::kFormLobby as i32, EE_SCREENS_UM_FORM_LOBBY);
         assert_eq!(EELobbyEngineControl::kLobbyEngineControlID as i32, EE_SCREENS_UM_ENGINE_ID);
         assert_eq!(EELobbyControl::kLobbyEngineHeader as i32, EE_SCREENS_UM_ENGINE_HEADER);

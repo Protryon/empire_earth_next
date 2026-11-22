@@ -4,10 +4,10 @@
 //! `EECreateFormEvent`, `EECreateWonNetServerSelectEvent`) and the members `CreateScenarioEditor`,
 //! `DeleteScenarioEditor`, `CreateForm`, `CreateUserDefinedBackground` and `CreateUserDefinedControl`.
 
-use crate::screens::ui_ids::EEFormID;
 use crate::screens::factories::{EE_SCREENS_CPP_CANCEL_LOAD, EE_SCREENS_CPP_LOAD_UNIT, EE_SCREENS_CPP_WNS_OPEN};
 use crate::screens::game_cpp::Cpp;
 use crate::screens::save_load::EE_SCREENS_SL_ACTIVATE;
+use crate::screens::ui_ids::EEFormID;
 use crate::screens::ui_manager::*;
 
 /// `kFormMainGame` (the form `CreateForm` makes as the game's class).
