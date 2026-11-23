@@ -30,18 +30,10 @@ EERuleNumber EERuleNumber::World(long inRow, int inValue)
     return n;
 }
 
-static bool Contains(const EERuleList<long>& inList, long inValue)
-{
-    for (long v : inList)
-        if (v == inValue)
-            return true;
-    return false;
-}
-
-bool EECombatRules::IsElevationAttacker(long inCategory) const { return Contains(this->mElevationAttackers, inCategory); }
-bool EECombatRules::IsElevationLauncher(long inCategory) const { return Contains(this->mElevationLaunchers, inCategory); }
-bool EECombatRules::IsElevationTarget(long inCategory) const { return Contains(this->mElevationTargets, inCategory); }
-bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return Contains(this->mMoraleBuildings, inUnitType); }
+bool EECombatRules::IsElevationAttacker(long inCategory) const { return this->mElevationAttackers.contains(inCategory); }
+bool EECombatRules::IsElevationLauncher(long inCategory) const { return this->mElevationLaunchers.contains(inCategory); }
+bool EECombatRules::IsElevationTarget(long inCategory) const { return this->mElevationTargets.contains(inCategory); }
+bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return this->mMoraleBuildings.contains(inUnitType); }
 
 long EEDifficultyAILevel(unsigned long inDifficulty)
 {

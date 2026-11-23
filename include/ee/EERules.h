@@ -10,6 +10,7 @@
 #ifndef EE_EERULES_H
 #define EE_EERULES_H
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -47,6 +48,7 @@ struct EERuleList {
     const T& operator[](size_t inIndex) const { return mData[inIndex]; }
     const T* begin() const { return mData; }
     const T* end() const { return mData + mSize; }
+    bool contains(const T& inValue) const { return std::find(begin(), end(), inValue) != end(); }
 };
 
 // A NUL-terminated text the Rust rules own (ee_data rules.rs RuleTextC)
