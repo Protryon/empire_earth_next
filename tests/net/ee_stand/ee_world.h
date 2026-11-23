@@ -17,6 +17,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "rust/game/app.h"
+#include "rust/net/net.h"
 #include "lle/GEColor.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEWorldConstants.h"
@@ -330,8 +331,10 @@ public:
     virtual ~NESynchronousCommunications() {}
     virtual void ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting) = 0;
     virtual unsigned long GetCurrentCommunicationsTick() const { T("comms current ct"); return gFake.mCurrentCT; }
-    virtual bool IsClient() = 0;
-    virtual bool IsServer() = 0;
+    // non-virtual since LLE round 13 (the engine's answer by the Rust object the subclass made)
+    bool IsClient() const { return !this->mIsServer; }
+    bool IsServer() const { return this->mIsServer; }
+    bool mIsServer = false;
     virtual long ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer);
     virtual void SetCurrentCommunicationsTick(unsigned long inTick) { T("comms set ct %lu", inTick); gFake.mCurrentCT = inTick; }
     bool GetIsGamePaused() { return gFake.mGamePaused; }
@@ -352,6 +355,15 @@ public:
                         unsigned long inMaxPTs, unsigned long inMinPTs, float inTuning, unsigned long inMaxCTSend,
                         unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT, unsigned long inPT,
                         UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter);
+    // the engine's since LLE round 13: the game's hosts first (GameHost<Game>, GameMessageManagerHost<Game>)
+    NESynchronousServer(EeNetSvHostFn, EeNetMmHostFn, unsigned char inMaxPlayers, unsigned long inDefaultSendInterval,
+                        unsigned char inPTsPerCT, unsigned long inMaxPTs, unsigned long inMinPTs, float inTuning,
+                        unsigned long inMaxCTSend, unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT,
+                        unsigned long inPT, UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter)
+        : NESynchronousServer(inMaxPlayers, inDefaultSendInterval, inPTsPerCT, inMaxPTs, inMinPTs, inTuning, inMaxCTSend,
+                              inStepUp, inStepDown, inCT, inPT, inName, inAllowNew, inAnnounce, inAdapter) {}
+    template <class Game> static ptrdiff_t GameHost(void*, EeNetSvOp, size_t, size_t, size_t, size_t) { return 0; }
+    template <class Game> static ptrdiff_t GameMessageManagerHost(void*, EeNetMmOp, size_t, size_t, size_t, size_t) { return 0; }
     virtual ~NESynchronousServer() {}
     void ClearSendToSlotArray() { T("server clear send-to slots"); }
     long GetClientAddress(unsigned long inIndex, UWideString& outAddress);
@@ -411,6 +423,8 @@ public:
 class NESynchronousClient : public NESynchronousCommunications {
 public:
     NESynchronousClient() { T("client base ctor"); }
+    explicit NESynchronousClient(EeNetClHostFn) : NESynchronousClient() {}   // the engine's since LLE round 13
+    template <class Game> static ptrdiff_t GameHost(void*, EeNetClOp, size_t, size_t, size_t, size_t) { return 0; }
     virtual ~NESynchronousClient() {}
     unsigned long GetCurrentPhysicsTick() const { T("client current pt"); return gFake.mCurrentPT; }
     unsigned char GetMySendToSlot() const { T("client my send-to slot"); return gFake.mMySendToSlot; }

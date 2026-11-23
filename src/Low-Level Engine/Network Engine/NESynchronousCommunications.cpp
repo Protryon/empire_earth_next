@@ -75,18 +75,14 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     case EeNetQOp::FileClose:
         reinterpret_cast<FSFileSpec*>(a)->Close();
         return 0;
-    case EeNetQOp::FileWrite: {
-        unsigned long theWritten;
-        return reinterpret_cast<FSFileSpec*>(a)->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, theWritten);
-    }
+    case EeNetQOp::FileWrite:
+        return reinterpret_cast<FSFileSpec*>(a)->Write(reinterpret_cast<const unsigned char*>(b), (unsigned long)c, Temp(0ul));
     case EeNetQOp::FileWriteU32:
         return reinterpret_cast<FSFileSpec*>(a)->Write((uint32_t)b);
     case EeNetQOp::FileReadU32:
         return reinterpret_cast<FSFileSpec*>(a)->Read(*reinterpret_cast<uint32_t*>(b));
-    case EeNetQOp::FileRead: {
-        unsigned long theRead;
-        return reinterpret_cast<FSFileSpec*>(a)->Read(reinterpret_cast<unsigned char*>(b), (unsigned long)c, theRead);
-    }
+    case EeNetQOp::FileRead:
+        return reinterpret_cast<FSFileSpec*>(a)->Read(reinterpret_cast<unsigned char*>(b), (unsigned long)c, Temp(0ul));
     }
     return 0;
 }

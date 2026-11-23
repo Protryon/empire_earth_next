@@ -50,7 +50,7 @@ static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: t
 // Creates the game server with the lock-step rates from the game preferences, no vote or load running, and its locks
 EEServer::EEServer(UWideString& inName, unsigned long inNetworkAdapter, unsigned long inCurrentCommunicationsTick, unsigned long inCurrentPhysicsTick, bool inAllowNewConnections,
                    bool inAnnounce)
-    : NESynchronousServer(16, 0x15e, 0x3c, gGamePreferences.mSettings.mMaxPTsPerSecond,
+    : NESynchronousServer(GameHost<EEServer>, GameMessageManagerHost<EEServer>, 16, 0x15e, 0x3c, gGamePreferences.mSettings.mMaxPTsPerSecond,
                           gGamePreferences.mSettings.mMinPTsPerSecond,
                           100.0f / gGamePreferences.mSettings.mPTRateTuningThreshold, gGamePreferences.mSettings.mMaxCTSendInterval,
                           gGamePreferences.mSettings.mCTSendIntervalStepUp, gGamePreferences.mSettings.mCTSendIntervalStepDown, inCurrentCommunicationsTick, inCurrentPhysicsTick, inName, inAllowNewConnections,
@@ -343,16 +343,6 @@ bool EEServer::GetDebugOOSHandling()
 
 void EEServer::BeforeRemovingPlayers()
 {
-}
-
-bool EEServer::IsClient()
-{
-    return false;
-}
-
-bool EEServer::IsServer()
-{
-    return true;
 }
 
 // ---- the host of ee_netmsg session.rs: ee_game gamecpp server.rs (ee_gamecpp_session_host) over the cases below ----

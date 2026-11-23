@@ -23,7 +23,7 @@
 UWideString gU4E6058;
 
 // Creates the game client: no lobby slot yet, server migration allowed, fast selection reset, its lock created
-EEClient::EEClient()
+EEClient::EEClient() : NESynchronousClient(GameHost<EEClient>)
 {
     this->mUISlotNumber = 0xff;
     this->mHasLeftGame = false;
@@ -162,16 +162,6 @@ void EEClient::HandleConnectionTimeoutWarning(unsigned long inRemaining)
 
 void EEClient::HandleStopGame()
 {
-}
-
-bool EEClient::IsClient()
-{
-    return true;
-}
-
-bool EEClient::IsServer()
-{
-    return false;
 }
 
 // ------------------------------------------------------------------------- round 9, lane D: the client's bodies' C++

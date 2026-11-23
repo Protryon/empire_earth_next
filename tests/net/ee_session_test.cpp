@@ -273,6 +273,7 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
                                          unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT, unsigned long inPT,
                                          UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter)
 {
+    this->mIsServer = true;
     T("server base ctor %u %lu %u %lu %lu %g %lu %lu %lu %lu %lu %s %d %d %lu", inMaxPlayers, inDefaultSendInterval,
       inPTsPerCT, inMaxPTs, inMinPTs, inTuning, inMaxCTSend, inStepUp, inStepDown, inCT, inPT, TName(inName).c_str(),
       inAllowNew, inAnnounce, inAdapter);
