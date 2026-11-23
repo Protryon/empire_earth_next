@@ -74,8 +74,6 @@ public:
     }
     // +0x98: whether the button is greyed out (the improvement can no longer be raised)
     virtual bool GetDisabled() { return ee_screens_upgrade_disabled(EEUIBUpgradeCall(this).Ptr()); }
-    // the button's host (ee_screenscpp_upgrade, EEUIBUpgrade.cpp): a member for the protected toolkit calls
-    static int64_t HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
     // the base and protected calls of the Rust bodies' shims (EEUIBUpgrade.cpp, hud_bodies.rs)
     static void BaseButtonDown(EEUIBUpgrade* inButton) { inButton->UIButton::ButtonDown(); }
     static void BaseMouseOver(EEUIBUpgrade* inButton) { inButton->UIButton::MouseOver(); }

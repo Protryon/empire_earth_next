@@ -11,7 +11,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_upgrade(call: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
     }
 }
 
@@ -27,7 +26,7 @@ impl UpgradeHost for Call {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_upgrade(self.0, op, a, b, c) }
+        crate::screens::upgrade_ops::op(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b).unwrap_or(0)
     }
 }
 
