@@ -104,11 +104,6 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_UPD_R_PHYSICS_MODEL:
         return theClass->mPhysicsModel != NULL ? 1 : 0;
     // (the plain member reads are Rust's: ee_units update_views.rs)
-    case EE_UNITS_UPD_R_POSITION_Z: {
-        GE3DPoint thePosition;
-        theUnit->GetPosition(thePosition);
-        return EEUpdateBits(thePosition.GetZ());
-    }
     case EE_UNITS_UPD_R_CALAMITY_CAMOUFLAGE:
         return USingleton<EECalamityManager>::GetInstance()->IsCalamityActive(0x17) ? 1 : 0;
     case EE_UNITS_UPD_R_IS_PRIEST:
@@ -126,10 +121,6 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
         return theUnit->IsSwimming() ? 1 : 0;
     case EE_UNITS_ACT_R_RANDOM:
         return EEUpdateBits(gPhysics->GetRandom());
-    case EE_UNITS_ACT_R_PATH_ATTEMPTS_EXCEEDED: {
-        EEUnitGoal* theGoal = theUnit->mGoalState;
-        return (unsigned long)theGoal->mPathAttempts > (unsigned long)theGoal->GetMaxPathAttempts() ? 1 : 0;
-    }
     case EE_UNITS_ACT_R_WORLD_CLEARING:
         return gWorldClearing ? 1 : 0;
     case EE_UNITS_ACT_R_QUEUED_GOALS:
@@ -429,19 +420,18 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
 
 }  // namespace
 
+// the host table's reads and acts (ee_sim units upd_entry.rs makes the table over an EEUpdateContext)
+static_assert(sizeof(EEUpdateContext) == 4 * sizeof(void*), "the update context is upd_entry.rs EeUnitsUpdateContext");
+extern "C" int64_t ee_units_upd_read(void* inContext, int32_t inCode) { return EEUpdateRead(inContext, inCode); }
+extern "C" int64_t ee_units_upd_act(void* inContext, int32_t inCode, int64_t inA, int64_t inB) { return EEUpdateAct(inContext, inCode, inA, inB); }
+
 void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
-    EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct, EEObj(inClass)};
-    ee_units_update(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), &theHost);
+    ee_units_class_update(inKind, EEObj(inClass), EEObj(inUnit));   // upd_entry.rs
 }
 
+// (its USST notes, kind 13, around the sequence: upd_entry.rs)
 void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    ee_units_note_action_begin((uint32_t)inUnit->mUnitID);   // TEST ONLY (USST kind 13)
-    EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
-    EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct, EEObj(inClass)};
-    ee_units_action_changed(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
-                            &theHost);
-    ee_units_note_action_end();
+    ee_units_class_action_changed(inKind, EEObj(inClass), EEObj(inUnit));
 }

@@ -2710,13 +2710,6 @@ EeContagionFunctorHit ee_contagion_functor_apply_damage(const EeContagionFunctor
 /// `list` is the list the call was handed.
 void ee_contagion_unit_list_push(EeContagionUnitList *list, uint64_t unit);
 
-extern int64_t ee_contagion_world(uint32_t op,
-                                  uint64_t a,
-                                  uint64_t b,
-                                  uint64_t c,
-                                  float x,
-                                  void *io);
-
 /// `new EEContagionManager`: no helpers, the last id 0.
 EeContagionManager *ee_contagion_manager_new();
 

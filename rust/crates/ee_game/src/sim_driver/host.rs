@@ -77,10 +77,6 @@ pub struct EeSimDriverHost {
     pub lock: unsafe extern "C" fn(i32),
     /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
     pub dump_after_load: unsafe extern "C" fn(*const c_char),
-    /// the checksum line's fields (after "CT n " or "LOADED "), its new line included
-    pub checksum_fields: unsafe extern "C" fn(*mut c_char, usize) -> usize,
-    /// the state dump into the file
-    pub dump_state: unsafe extern "C" fn(*const c_char),
     /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
     pub extension: unsafe extern "C" fn(i32, *mut c_char, usize) -> usize,
     /// `gPlatSimRun`
@@ -224,10 +220,10 @@ impl Game for CppGame {
         unsafe { (self.0.dump_after_load)(c(path).as_ptr()) }
     }
     fn checksum_fields(&self) -> String {
-        text_of(|b, n| unsafe { (self.0.checksum_fields)(b, n) })
+        super::dump::checksum_text()
     }
     fn dump_state(&self, path: &str) {
-        unsafe { (self.0.dump_state)(c(path).as_ptr()) }
+        super::dump::dump_state(path)
     }
     fn request_save(&self, name: &str) {
         super::sim_host::request_save(name)

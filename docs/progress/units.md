@@ -20,6 +20,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | 6 | `rust-units6` | -603 (logic -1,358) | GoalOp's compound cases split into one-statement cases; 51 `EEComplexUnit` and `EEUnitClass` bodies (Kill, Invalidate, StartProduction, ProduceUnit, the cargo, garrison and production queue, Heal, UpdateBuilding, ...) in Rust over one-statement hosts |
 | 7 | `rust-units7` | -2,737 (logic -4,623) | three forks: the EEUnitClass family (creation, LaunchShot, Animate, the media, the buildings', shots', people's, ground and transport bodies), EEComplexUnit's remaining bodies with the doppelganger load/save and RepairPointers, EEUnit's TakeHit and Kill, the placement ghosts, the doppelganger manager, the unit utilities (EEConvertUnit, EEReplaceUnit, the searches), the cloaking utilities whole, EEGatherNextTree; each C++ statement one host case |
 | 8 | `rust-units8` | -2,416 (logic -2,969) | three forks: EEUnitClassAir, the kinds, the constructor, gates and impact tests; EEUnitHost, the save operation's sections, EEUnit's and EEComplexUnit's bodies, the store check, GoalOp's list cases, the trigger host; the target searches, line of fire, EEWorldOp, EECombatCondition/Step, EEUpdateAct (each body in Rust, its C++ statements one-statement host cases) |
+| 9 | `rust-units9` | logic -2,445 | three forks and the lead: the unit constants' enums Rust's (ee_sim unit_ids.rs); the EEUnitClass family's remaining bodies, the kind dispatchers, EEShotOp; the doppelgangers, ghosts, AIStep whole, the store fill, the constructors; the combat queries' entry points, the goal accessors, the unit utilities' adapters |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -337,7 +338,69 @@ calamity failure it found was fixed in 5e3cdadaa, and the gates that fix can rea
 - The fix changes only which C++ calls the same Doppler math (no TEST ONLY note now), so the saveloads, the editor
   gates, eedata and gates.sh were not run again on it.
 
+## Round 9 (branch `rust-units9`, from round 8's tip 3cae25114, 2026-11-22)
+
+The brief: C++ logic lines removed (target -3,000) in the lane's files, by round 8's method, plus the lane's constant
+enums. Three forks ran in their own worktrees with disjoint files and host op ranges (A: the EEUnitClass family, ops
+3000-3999; B: the unit objects, ops 4000-4999; C: the unit utilities, the combat queries and goals, ops 5000-5999),
+merged with `--no-ff` (one trivial mod.rs conflict, the generated headers regenerated). The lead moved the lane's enums
+to Rust and merged origin/rust's batches 16, 17 and 18.
+
+| Commit | What | Logic |
+|---|---|---|
+| a653c7f91, 0eff7ee42 (lead) | the unit constants Rust's: EEUnitClassIDs.h's enums (AI kinds, categories, families, unit types, the movement, kind, hidden and media flags), EEUnitAction.h's action and trigger ids and EEUnitGoal.h's goal kinds are `#[repr(C)]` enums of ee_sim::unit_ids that cbindgen emits back as plain C++ enums (rust/sim/unit_ids.h, LLE round 10's method); the header readers (eedata rules.py/rulesgen.py, the editor and scenario constant tests, script.rs, header_consts.rs) read the generated header | -752 |
+| 32c61811c .. 0f291f631 (A) | the dead constants and declarations; the sea and ambient classes (ucg_sea.rs); the remaining class bodies (uc_rest.rs: GetElevationFactor, the sound parameters, FindTargetNear, GetContainerContinent, the tile and registry bodies, EruptVolcano, ...); the class bodies' host's compound cases (cls_host.rs); the kind dispatchers (uck_dispatch.rs); EEShotOp's compound cases (combat shots.rs over EEShotOp64); FacesTarget, BaseGetSurroundingTiles, Upgrade::Init, the UCBD note (ucbd_note.rs) | class family 1,330 -> 642 (-688) |
+| d0b7f6510 .. d0adacb3d (B) | EEDoppelganger and the manager's Release (dm_dop.rs); the ghosts' media, Reset, Load, Save, AddChecksum (ghost_more.rs); EEWheel (cu_wheel.rs); Describe/DescribeLong (eu_describe.rs); AIStep whole with its USST notes, the AI host table replaced by `ee_units_ai_host`; the sight and sunk cases split; 12 small EEComplexUnit bodies (cu_small.rs); the store's Fill (us_fill.rs); the AI script file read (`ee_units_script_host`); the dump fill; EEUnit's and EEComplexUnit's constructors and destructor | -474 |
+| 8fe7db0cc .. ac7429727 (C) | the combat queries' entry points over one trampoline (combat cg_query.rs, the host-read scope a Rust thread_local); the goal accessors and the update entry points (goal_calls.rs, upd_entry.rs); the unit utilities' adapters (uu_adapt.rs); EECombatGoals.h's capture code enums Rust constants | -528 |
+| b098958de, 754676fe1, 42e3e6cc1, 22f9ff8b8 (lead) | the AI host table's stale declarations; header_consts.rs reads unit_ids.h; EEGoalPointOf over batch 18's renamed EeGe3DPoint fields; rustfmt | -3 |
+
+Round total (logic_lines.py over src, include/ee, include/lle; the units' commits alone): logic **-2,445**
+(the enums fed74b2a7 -> a653c7f91 -740; the forks, the goal kinds and the cleanup 2fcab79b2 -> b098958de -1,705; on
+the final tree d968d89bd -> HEAD 32,816 -> 30,371). Target -3,000: short by about 555. Per file (3cae25114 -> the
+forks' merge, other lanes' files left out): EEUnitAction.h 431 -> 9, EEUnitClassIDs.h 321 -> 0, EEComplexUnit 319 ->
+164, EEUnitClassGround 149 -> 9, EEUnitClass 301 -> 165, EEFOFindNewTargetNearOldTarget 349 -> 224, EECombatGoals 223
+-> 101, EEUnitClassKinds 185 -> 76, EEUnitGoal.h 149 -> 56, Transports 128 -> 37, People 145 -> 55, EEDoppelganger 74
+-> 4, EEGhostUnit 98 -> 39, EEUGRust 169 -> 110, EEUGRustCombat 86 -> 27, Shots 138 -> 79, EEUnitAction.cpp 62 -> 12,
+EEUnit 87 -> 46, Buildings 138 -> 98, EECombatGoals.h 76 -> 39, EEUnitStore 77 -> 47, EEWheel 33 -> 5,
+EEUnitUtilities.h 77 -> 50, EEUnitUpdate 53 -> 36, Upgrade 40 -> 26, EEComplexDoppelganger 86 -> 73, EEUnitAI 30 ->
+17, EESightRings 48 -> 40, Air 66 -> 58, EEDoppelgangerManager 21 -> 16, EEUGRust.h 10 -> 8, EEUnit.h 745 -> 743.
+
+New Rust (ee_sim unless noted): unit_ids (the enums), units ucg_sea, uc_rest, cls_host, uck_dispatch, ucbd_note,
+dm_dop, ghost_more, cu_wheel, eu_describe, cu_small, us_fill, goal_calls, upd_entry, uu_adapt; combat cg_query and
+shots' compose; each with recording-mock op-sequence tests.
+
+Gates on the final tree (22f9ff8b8: the forks, origin/rust d968d89bd = batch 18):
+- Builds: both 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0; headers current (312).
+- Rust gate: PASS, 6,469 tests (after the rustfmt fix 22f9ff8b8; the chain's run on 42e3e6cc1 failed on rustfmt only).
+- Oracle seeds 2-7: identical (6087, 5300, 6072, 7649, 7842, 6540 lines).
+- Captures at seeds 2-3: all twelve PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6,
+  missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests).
+- Saveloads: the plain run PASS; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect` PASS.
+- Editors and data: scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata
+  check and cppgate PASS.
+- The tour `random-game --box-select --orders --seed 7`: RESULT PASS (gather, repair, queued repair, move; patrol and
+  attack-ground skipped by the fixture).
+- `gates.sh`: GATES PASS (tour; ai-game time-cap PT 12241, units [4, 37, 38], alive_computers [2, 3],
+  `engines ['classic_lua', 'classic_lua']`; lan-game PT 2780/2774).
+- The rustfmt commit 22f9ff8b8 changes a test's formatting only; the other gates ran on 42e3e6cc1.
+
 ## What is left (behaviour)
+
+- **Round 9's measure** (logic_lines.py's per-file count after the forks' merge): EEUnit.h 743 (declarations and
+  one-line accessors whose callers are other lanes'), EEFOFindNewTargetNearOldTarget.cpp 224 (the uu host callbacks
+  marshalling C++ vectors and tiles, the sr/lf/ub hosts' preambles and file statics, EEComputeSoundParameters over the
+  camera and viewport, EEGetRandomInt over URandom, the wall piece orientation, the deposit case's computer-player
+  trace, RTSMap::IsEdgeTile), EEWorldLayout 166 (the C++ layout registry: stays), EEUnitClass.cpp 165, EEComplexUnit.cpp
+  164 (GetModel, the SetLocation family and IsInReach left as hot or scope-bracketed paths; the hosts' preambles and
+  scratch statics), EEUGRust 110 (the goal context, ReadInto and the file helpers, WonderStartedChat, CreateGoal,
+  NewLoad's sort/unique), EECombatGoals 101 (the query context and its callbacks, the turret callback), Buildings 98,
+  Shots 79, EEUnitClassKinds 76, EEComplexDoppelganger 73 (Load/Save bodies building C++ save contexts), Air 58,
+  EEUnitGoal.h 56, People 55, EEUnitUtilities.h 50, EEUnitStore 47 (EEUnitStoreWrote), EEUnit 46, EESightRings 40,
+  EEGhostUnit 39, EECombatGoals.h 39, Transports 37, EEUnitUpdate 36, EEGoalQueueContainer 33 (its callbacks, not
+  attempted), EEUGRustCombat 27, Upgrade 26. EEUnitClassRecord.h (247) stays C++: tools/eedata/overlay.py reads it as
+  the record's layout source.
+- Hosts' one-statement cases that wrap across lines count as logic in logic_lines.py; they were not reformatted.
+- NavalBuildingHasSunk (uc chain) and EEUnitAI's COND_SUNK compute the same transformed-box test twice.
 
 - **Round 8's measure** (logic_lines.py's per-file count at the tip): EEFOFindNewTargetNearOldTarget.cpp 349,
   EEComplexUnit.cpp 319 (EECuDumpFill, EEInsuranceChat, EEReportLeakingUnits, AIStep and its note, IsInReach, the

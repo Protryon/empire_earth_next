@@ -10,7 +10,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::netmsg::session::*;
 
-use super::{h, hf, hp, ptr, Owned, O, P};
+use super::{h, hp, ptr, session_objs, Owned, O, P};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// `kSlotServer`, `kSlotNone` (NEMessageID.h).
@@ -290,7 +290,18 @@ fn reg(f: P, v: &[i64; 8]) -> i64 {
 
 fn send(f: P, v: &[i64; 8]) -> i64 {
     match v[0] {
-        EE_NETMSG_SESS_SEND_RESPONSE => h(O::SsSendResponse, f, &[v[1], v[2], v[3], v[4], v[5]]),
+        EE_NETMSG_SESS_SEND_RESPONSE => {
+            let server = session_objs::frame_server(f);
+            session_objs::send_connection_response(
+                server,
+                v[1] as u8 as i64,
+                v[2] as c_long as i64,
+                v[3] as u8 as i64,
+                v[4] as u8 as i64,
+                v[5] != 0,
+            );
+            0
+        }
         EE_NETMSG_SESS_SEND_LOCAL_RESPONSE => h(O::SsSendLocalResponse, f, &[v[1], v[2], v[3], v[4]]),
         EE_NETMSG_SESS_SEND_FULL_OPTIONS => h(O::SsSendFullOptions, f, &[v[1]]),
         EE_NETMSG_SESS_SEND_PLAYER_INFO => {
@@ -308,7 +319,10 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
             3 => h(O::SsNewRecord3, f, &[v[1], v[3], v[4], v[5]]),
             _ => h(O::SsNewRecord4, f, &[v[1], v[3], v[4], v[5], v[6]]),
         },
-        EE_NETMSG_SESS_SEND_PING_STAT => hf(O::SsSendPingStat, f, &[v[1]], &[f32::from_bits(v[2] as u32)]),
+        EE_NETMSG_SESS_SEND_PING_STAT => {
+            session_objs::send_ping_stat(session_objs::frame_server(f), v[1] as u8 as i64, f32::from_bits(v[2] as u32));
+            0
+        }
         EE_NETMSG_SESS_SEND_SLOT_INFO => {
             // player v1 at send-to slot v2: the host's address, none, a client's
             let (index, slot) = (v[1] as u8 as i64, v[2] as u8 as i64);
@@ -360,7 +374,10 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
             h(O::SsSendToAll, f, &[m]);
             h(O::SsMsgDereference, f, &[m])
         }
-        _ => h(O::SsTakeConnectionRequest, f, &[m]),
+        _ => {
+            session_objs::take_connection_request(session_objs::frame_server(f), m as P);
+            0
+        }
     }
 }
 

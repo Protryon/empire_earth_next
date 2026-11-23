@@ -32,46 +32,23 @@
 
 
 
-const float kMinimumWheelDistance = 0.1f;
 // (the wheel's construction, destruction and EEIsWheelModel: EEGraphicObject.cpp, which makes the wheels)
 
 // Rolls the wheel back by the unit's travel this tick (speed or turn rate, whichever is the larger share of its top)
 // over its scaled radius, in physics actions 0, 4 and 5 above a tenth of the top; wraps the angle by a full turn
 void EEWheel::Update(EEComplexUnit* inUnit)
 {
-    float theCircumference = inUnit->mPhysicalModel.GetScale() * this->mRadius;
-    EEUnitStats* theStats = inUnit->mStats;
-    if (!(theCircumference < -0.0001f) && !(theCircumference > 0.0001f))
-        return;
-    unsigned long theMode = inUnit->mCurrentPhysicsAction;
-    if (theMode != 0 && theMode != 4 && theMode != 5)
-        return;
-    float theSpeed = inUnit->mVelocity;
-    float theDistance = theStats->GetInverseMaxVelocity() * (theSpeed < 0.0f ? -theSpeed : theSpeed);
-    float theYaw = inUnit->mAngularVelocity.mYaw;
-    float theTurn = theStats->GetInverseMaxAngularVelocity() * (theYaw < 0.0f ? -theYaw : theYaw);
-    if (theDistance > theTurn)
-        theTurn = theDistance;
-    if (!(theTurn >= kMinimumWheelDistance))
-        return;
-    this->mAngle -= gPhysics->GetTickSeconds() * theStats->GetMaxVelocity() * theTurn / theCircumference;
-    // wrap by a full turn (adding pi made the wheel jump half a turn at each wrap)
-    while (this->mAngle < -3.1415927f)
-        this->mAngle += 2.0f * 3.1415927f;
+    this->mAngle = ee_units_cu_wheel_angle(EeUnitsWheelIn{this->mAngle, inUnit->mPhysicalModel.GetScale(), this->mRadius,
+        (uint32_t)inUnit->mCurrentPhysicsAction, inUnit->mVelocity, inUnit->mAngularVelocity.mYaw, inUnit->mStats->GetInverseMaxVelocity(),
+        inUnit->mStats->GetInverseMaxAngularVelocity(), inUnit->mStats->GetMaxVelocity(), gPhysics->GetTickSeconds()});   // cu_wheel.rs
 }
 
 // Returns the unit's attack animation set: 0xb for the special attack of Roman Legionnaires and capital ships,
 // 8 when it fires high over walls, else 0
 long EEGetAttackFrameSet(EEComplexUnit* inUnit)
 {
-    if (inUnit->mIsSpecialAttack) {
-        unsigned long theType = inUnit->mUnitClass->mUnitType;
-        if (theType == kUnitTypeX04RomanLegionnaire || theType == kUnitTypeSp15CapitalShip || theType == kUnitTypeCapitalShipYamato)
-            return 0xb;
-    }
-    if (inUnit->mStats->mCanFireOverWalls && inUnit->mIsFiringHigh)
-        return 8;
-    return 0;
+    return ee_units_cu_attack_frame_set(inUnit->mIsSpecialAttack, (uint32_t)inUnit->mUnitClass->mUnitType, inUnit->mStats->mCanFireOverWalls,
+                                        inUnit->mIsFiringHigh);   // cu_wheel.rs
 }
 
 // Replaces a target the unit can't reach: with its position when that is reachable, else with a reachable spot up to

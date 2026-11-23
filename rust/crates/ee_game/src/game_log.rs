@@ -7,9 +7,11 @@
 //! lines the computer players' trace adds, and the end. It reads the world on the physics thread (the world views;
 //! the C++ host for the objects' methods) and writes nothing back.
 //!
-//! The host (`ee_game_log_host`, EEGameLog.cpp): the file through the platform layer (PlatFOpen's C library text
-//! mode, the data root), the lobby options, a player's texts (name, civilization, the computer's personality, cheats
-//! and engine) and colour row, a gather goal's resource, a unit's killer, the physics' clock and game over.
+//! The file is the platform layer's (the data root, a game path made native) and std's (CR LF lines on Windows, as
+//! the C library's text mode wrote them); the lobby options, a player's texts (name, civilization, the computer's
+//! personality, cheats and engine) and colour row, a gather goal's resource, a unit's killer, the physics' clock
+//! and game over are one-statement cases of EEGameLog.cpp's `EECore11OpB` (gamecpp's `Eg` ops; was the C++ host
+//! `ee_game_log_host`, game core lane round 11, lane B).
 
 use std::os::raw::{c_char, c_long, c_ulong};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
@@ -17,83 +19,79 @@ use std::sync::Mutex;
 
 use ee_sim::world::{PlayerView, UnitView, WorldRead, WorldView};
 
-/// The host's operations (`EeGameLogCall::op`).
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeGameLogOp {
-    /// the log wanted (the settings' game log on, not EE-SIM) -> 1 and `text` the data root; 0
-    Wanted = 1,
-    /// `text` (a path in the game's form) made a directory
-    MakeDirectory,
-    /// `text` opened for writing (PlatFOpen "w") -> 1, 0 failed (`text` then strerror)
-    Open,
-    /// `text` written and flushed
-    Write,
-    /// the file closed
-    Close,
-    /// the lobby options: `text` the map type, i0 the map size, i1 the difficulty
-    Options,
-    /// player `handle`: i0 the kind (0 human, 1 computer, 2 other), i1 its colour's row, f its rgb, `text` its
-    /// name, its civilization's, the personality, the cheats and the engine, separated by 0x1f ("-" none)
-    Player,
-    /// player `handle`'s civilization's name in `text`
-    Civilization,
-    /// goal `handle`'s gather resource's type (0: none)
-    GatherType,
-    /// unit `handle`'s last attacker's owner: 0 a human, 1 a computer, 2 none or the world
-    Killer,
-    /// the physics: i0 its game time, i1 game over
-    Physics,
-    /// the computer players' decision trace into the log too (gCPTraceOn)
-    TraceOn,
-    /// `text` the file's name, "/game-%Y%m%d-%H%M%S.log" in local time
-    FileName,
+use crate::gamecpp::{h, hd, hp, rec, O, P};
+
+/// A text from a C++ call that writes it into a buffer of 1024 bytes (`snprintf`).
+fn text_from(op: O, p: P) -> String {
+    let mut buffer = [0u8; 1024];
+    h(op, p, &[buffer.as_mut_ptr() as usize as i64, buffer.len() as i64]);
+    let n = buffer.iter().position(|&b| b == 0).unwrap_or(buffer.len());
+    String::from_utf8_lossy(&buffer[..n]).into_owned()
 }
 
-/// One host call.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeGameLogCall {
-    pub op: EeGameLogOp,
-    pub handle: u64,
-    pub i: [i64; 2],
-    pub f: [f32; 3],
-    /// a text in or out (NUL ended)
-    pub text: [c_char; 1024],
+/// A `UWideString` member's text (its UTF-8 bytes).
+fn wide_text(member: P) -> String {
+    String::from_utf8_lossy(&crate::gamecpp::preferences::get_text(member, true)).into_owned()
 }
 
-#[cfg(not(test))]
-extern "C" {
-    fn ee_game_log_host(call: *mut EeGameLogCall) -> i64;
-}
-
-#[cfg(test)]
-unsafe fn ee_game_log_host(_call: *mut EeGameLogCall) -> i64 {
-    0
-}
-
-struct Call(EeGameLogCall);
-
-impl Call {
-    fn new(op: EeGameLogOp, handle: u64) -> Call {
-        Call(EeGameLogCall { op, handle, i: [0; 2], f: [0.0; 3], text: [0; 1024] })
+/// The physics' game time and game over (0, false without the physics).
+fn physics() -> (u64, bool) {
+    let ph = hp(O::EgPhysics, 0, &[]);
+    if ph == 0 {
+        return (0, false);
     }
-    fn text(mut self, text: &str) -> Call {
-        for (k, b) in text.bytes().take(1023).enumerate() {
-            self.0.text[k] = b as c_char;
-        }
-        self
-    }
-    fn run(mut self) -> (i64, EeGameLogCall) {
-        // SAFETY: the host's contract: the call lives through it
-        let r = unsafe { ee_game_log_host(&mut self.0) };
-        (r, self.0)
+    (h(O::EgGameTime, ph, &[]) as c_ulong as u64, h(O::EgGameOver, ph, &[]) != 0)
+}
+
+/// The log's file name in local time: "/game-%Y%m%d-%H%M%S.log".
+pub fn file_name(t: &ee_base::plat_core::time::PlatDateTime) -> String {
+    format!("/game-{:04}{:02}{:02}-{:02}{:02}{:02}.log", t.year, t.month, t.day, t.hour, t.minute, t.second)
+}
+
+/// A line as the C library's text mode writes it (CR LF on Windows).
+pub fn text_mode(text: &str) -> std::borrow::Cow<'_, str> {
+    if cfg!(windows) {
+        text.replace('\n', "\r\n").into()
+    } else {
+        text.into()
     }
 }
 
-fn text_of(call: &EeGameLogCall) -> String {
-    let bytes: Vec<u8> = call.text.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
-    String::from_utf8_lossy(&bytes).into_owned()
+/// The log wanted (the settings' game log on, not EE-SIM) -> the data root.
+fn wanted() -> Option<String> {
+    let settings = hp(O::EpPrefsSettings, hp(O::EpGlobalPrefs, 0, &[]), &[]);
+    // SAFETY: the settings' plain members, read at once
+    let on =
+        unsafe { (*rec::<crate::app::settings::EeAppSettingsFields>(O::EpSettingsFields, settings)).mGameLog } != 0;
+    if !on || ee_base::plat_core::sim::gPlatSimMode.get() != 0 {
+        return None;
+    }
+    let mut root = [0 as c_char; 1024];
+    // SAFETY: the buffer and its size
+    if unsafe { ee_base::plat_core::path::PlatPathGetDataRoot(root.as_mut_ptr(), root.len() as u32) } == 0 {
+        return None;
+    }
+    // SAFETY: NUL ended
+    Some(unsafe { std::ffi::CStr::from_ptr(root.as_ptr()) }.to_string_lossy().into_owned())
+}
+
+/// A path in the game's form (the data root's drive form on POSIX too) as the system's.
+fn native(path: &str) -> Option<std::path::PathBuf> {
+    let c = std::ffi::CString::new(path).ok()?;
+    let mut out = [0 as c_char; 1024];
+    // SAFETY: a NUL-ended path, the buffer and its size
+    if unsafe { ee_base::plat_core::path::PlatPathToNative(c.as_ptr(), out.as_mut_ptr(), out.len() as u32) } == 0 {
+        return None;
+    }
+    // SAFETY: NUL ended
+    let n = unsafe { std::ffi::CStr::from_ptr(out.as_ptr()) }.to_string_lossy().into_owned();
+    Some(n.into())
+}
+
+static FILE: Mutex<Option<std::fs::File>> = Mutex::new(None);
+
+fn file() -> std::sync::MutexGuard<'static, Option<std::fs::File>> {
+    FILE.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 const EE_GAME_LOG_MAX_PLAYERS: usize = 64;
@@ -144,7 +142,11 @@ fn log() -> std::sync::MutexGuard<'static, Log> {
 
 fn write(text: &str) {
     if OPEN.load(Ordering::SeqCst) {
-        Call::new(EeGameLogOp::Write, 0).text(text).run();
+        if let Some(f) = file().as_mut() {
+            use std::io::Write;
+            let _ = f.write_all(text_mode(text).as_bytes());
+            let _ = f.flush();
+        }
     }
 }
 
@@ -189,7 +191,7 @@ fn close(l: &mut Log) {
         if !l.ended {
             write(&format!("EE-GAME {} p0 end\n", l.last_time));
         }
-        Call::new(EeGameLogOp::Close, 0).run();
+        *file() = None;
         l.open = false;
         OPEN.store(false, Ordering::SeqCst);
     }
@@ -200,23 +202,31 @@ fn epoch_of(p: &PlayerView) -> i64 {
 }
 
 fn civilization(p: &PlayerView) -> String {
-    narrow(&text_of(&Call::new(EeGameLogOp::Civilization, p.handle()).run().1))
+    narrow(&text_from(O::EgCivilizationName, p.handle() as P))
 }
 
 fn open(l: &mut Log) {
     close(l);
-    let (wanted, call) = Call::new(EeGameLogOp::Wanted, 0).run();
-    if wanted == 0 {
+    let Some(root) = wanted() else {
         return; // off, or the headless simulation (its own report and trace)
+    };
+    let dir = format!("{root}/Logs");
+    if let Some(d) = native(&dir) {
+        let _ = std::fs::create_dir(d);
     }
-    let dir = format!("{}/Logs", text_of(&call));
-    Call::new(EeGameLogOp::MakeDirectory, 0).text(&dir).run();
-    let name = text_of(&Call::new(EeGameLogOp::FileName, 0).run().1);
-    let path = format!("{dir}{name}");
-    let (opened, call) = Call::new(EeGameLogOp::Open, 0).text(&path).run();
-    if opened == 0 {
-        crate::fixture::host::stderr(&format!("EE-GAME: cannot write the game log {path}: {}\n", text_of(&call)));
-        return;
+    let mut now = ee_base::plat_core::time::PlatDateTime::default();
+    // SAFETY: a live out value
+    unsafe { ee_base::plat_core::time::PlatGetLocalTime(&mut now) };
+    let path = format!("{dir}{}", file_name(&now));
+    let opened = native(&path)
+        .ok_or_else(|| "not a path".to_string())
+        .and_then(|n| std::fs::File::create(n).map_err(|e| e.to_string()));
+    match opened {
+        Ok(f) => *file() = Some(f),
+        Err(e) => {
+            crate::fixture::host::stderr(&format!("EE-GAME: cannot write the game log {path}: {e}\n"));
+            return;
+        }
     }
     crate::fixture::host::stderr(&format!("EE-GAME: the game log is {path}\n"));
     l.open = true;
@@ -230,40 +240,48 @@ fn open(l: &mut Log) {
     // SAFETY: the physics thread reads the world it steps
     let t = unsafe { WorldRead::begin() };
     let Some(world) = WorldView::global(&t) else { return };
-    let (_, o) = Call::new(EeGameLogOp::Options, 0).run();
+    let lobby = hp(O::EgLobbyOptions, 0, &[]);
+    // SAFETY: the lobby options' plain members, copied
+    let o = unsafe { *rec::<crate::app::game_options::EeAppOptionsFields>(O::EoFields, lobby) };
     write(&format!(
         "EE-GAME 0 p0 start map={} size={} difficulty={} players={}\n",
-        narrow(&text_of(&o)),
-        o.i[0] as c_ulong,
-        o.i[1] as c_ulong,
+        narrow(&wide_text(hp(O::EoMapType, lobby, &[]))),
+        o.mMapSize,
+        o.mDifficulty,
         world.num_players() as c_ulong
     ));
     l.civ = vec![String::new(); EE_GAME_LOG_MAX_PLAYERS];
     for i in 1..world.num_players() as usize {
         let Some(p) = world.player(i) else { continue };
-        let (_, c) = Call::new(EeGameLogOp::Player, p.handle()).run();
-        let texts = text_of(&c);
-        let parts: Vec<String> = texts.split('\x1f').map(String::from).collect();
-        let part = |k: usize| parts.get(k).cloned().unwrap_or_default();
-        let kind = ["human", "computer", "other"][c.i[0].clamp(0, 2) as usize];
+        let pl = p.handle() as P;
+        let ai = hp(O::EgComputer, pl, &[]);
+        let kind = if h(O::EgIsHuman, pl, &[]) != 0 {
+            "human"
+        } else if ai != 0 {
+            "computer"
+        } else {
+            "other"
+        };
+        let of_ai = |op: O| if ai != 0 { text_from(op, ai) } else { "-".to_string() };
+        let civ = text_from(O::EgCivilizationName, pl);
         // color: the dbcolortable row (tools/game_log.py names it from the data); rgb its colour
         write(&format!(
             "EE-GAME 0 p{i} player kind={kind} name={} color={} rgb={:.2}/{:.2}/{:.2} civ={} personality={} cheats={} engine={}\n",
-            narrow(&part(0)),
-            c.i[1] as c_ulong,
-            c.f[0],
-            c.f[1],
-            c.f[2],
-            narrow(&part(1)),
-            part(2),
-            part(3),
-            part(4)
+            narrow(&wide_text(hp(O::EgName, pl, &[]))),
+            h(O::EgColorIndex, pl, &[]) as c_ulong,
+            hd(O::EgColorRed, pl, &[], &[]),
+            hd(O::EgColorGreen, pl, &[], &[]),
+            hd(O::EgColorBlue, pl, &[], &[]),
+            narrow(&civ),
+            of_ai(O::EgPersonality),
+            of_ai(O::EgCheatNames),
+            of_ai(O::EgEngineName)
         ));
         if i < EE_GAME_LOG_MAX_PLAYERS {
-            l.civ[i] = narrow(&part(1));
+            l.civ[i] = narrow(&civ);
         }
     }
-    Call::new(EeGameLogOp::TraceOn, 0).run();
+    h(O::EgTraceOn, 0, &[]);
 }
 
 /// A player's sample's counts (the units in its list).
@@ -339,9 +357,7 @@ fn sample(l: &mut Log, world: &WorldView, time: u64) {
             let goal = x.active_goal_handle();
             let goal_kind = x.active_goal().map(|g| g.0);
             let goal_kind = if goal == 0 { None } else { goal_kind.or(Some(0xff)) };
-            count(&mut c, kind, x.is_built(), tower, goal_kind, || {
-                Call::new(EeGameLogOp::GatherType, goal).run().0 as u64
-            });
+            count(&mut c, kind, x.is_built(), tower, goal_kind, || gather_type(goal as P));
         }
         let s: [c_long; 7] = ee_sim::world_field!(p.saved(), mResourceCaps);
         let population: c_long = ee_sim::world_field!(p.saved(), mPopulationCount);
@@ -387,6 +403,35 @@ fn sample(l: &mut Log, world: &WorldView, time: u64) {
     }
 }
 
+/// A player's id.
+fn player_id(pl: P) -> c_ulong {
+    // SAFETY: the player's record, read at once
+    unsafe { (*rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+}
+
+/// A gather goal's resource's type (0: none).
+fn gather_type(goal: P) -> u64 {
+    let r = hp(O::EgGatherResource, goal, &[]);
+    if r == 0 {
+        return 0;
+    }
+    // SAFETY: the resource's record, read at once
+    unsafe { (*rec::<ee_sim::world::unit_fields::EeUnitsUnitFields>(O::UnFields, r)).mResourceType as u64 }
+}
+
+/// Who took a unit: 0 a human's unit, 1 a computer player's, 2 none or the world's (player 0).
+fn killer(unit: P) -> usize {
+    let attacker = hp(O::EgLastAttacker, unit, &[]);
+    let owner = if attacker != 0 { hp(O::UnPlayer, attacker, &[]) } else { 0 };
+    if owner == 0 || player_id(owner) == 0 {
+        2
+    } else if h(O::EgIsHuman, owner, &[]) != 0 {
+        0
+    } else {
+        1
+    }
+}
+
 /// `EEGameLogOn`: a game log is open.
 #[no_mangle]
 pub extern "C" fn ee_game_log_on() -> bool {
@@ -419,8 +464,7 @@ pub extern "C" fn ee_game_log_tick(time: c_ulong) {
             l.epoch[i] = e;
         }
     }
-    let (_, physics) = Call::new(EeGameLogOp::Physics, 0).run();
-    if physics.i[1] != 0 && !l.ended {
+    if physics().1 && !l.ended {
         // the game's result: a last sample and the end line
         sample(&mut l, &world, time);
         write(&format!("EE-GAME {time} p0 end result=over\n"));
@@ -451,12 +495,13 @@ pub unsafe extern "C" fn ee_game_log_line(text: *const c_char) {
     write(&text);
 }
 
-/// `EEGameLogIncome`: EEPlayer::AddResource's amount for player `id`.
+/// `EEGameLogIncome`: EEPlayer::AddResource's amount for `player` (NULL: none).
 #[no_mangle]
-pub extern "C" fn ee_game_log_income(id: c_ulong, resource: c_long, amount: c_long) {
-    if !OPEN.load(Ordering::SeqCst) || amount <= 0 || !(0..=6).contains(&resource) {
+pub extern "C" fn ee_game_log_income(player: u64, resource: c_long, amount: c_long) {
+    if !OPEN.load(Ordering::SeqCst) || player == 0 || amount <= 0 || !(0..=6).contains(&resource) {
         return;
     }
+    let id = player_id(player as P);
     if let Some(row) = INCOME.get(id as usize) {
         row[resource as usize].fetch_add(i64::from(amount), Ordering::SeqCst);
     }
@@ -490,7 +535,7 @@ pub extern "C" fn ee_game_log_unit_lost(player: u64, unit: u64) {
         1
     }]
     .fetch_add(1, Ordering::SeqCst);
-    let killer = Call::new(EeGameLogOp::Killer, unit).run().0.clamp(0, 2) as usize;
+    let killer = killer(unit as P);
     LOST_BY[id][killer].fetch_add(1, Ordering::SeqCst);
 }
 
@@ -506,13 +551,28 @@ pub unsafe extern "C" fn ee_game_log_chat(player: c_ulong, text: *const c_char) 
     }
     // SAFETY: the contract
     let text = unsafe { std::ffi::CStr::from_ptr(text) }.to_string_lossy().replace(['\n', '\r'], " ");
-    let (_, physics) = Call::new(EeGameLogOp::Physics, 0).run();
-    write(&format!("EE-GAME {} p{player} chat text={text}\n", physics.i[0] as c_ulong));
+    write(&format!("EE-GAME {} p{player} chat text={text}\n", physics().0));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_file_name_and_text_mode() {
+        let t = ee_base::plat_core::time::PlatDateTime {
+            year: 2026,
+            month: 3,
+            day: 9,
+            hour: 7,
+            minute: 5,
+            second: 4,
+            ..Default::default()
+        };
+        assert_eq!(file_name(&t), "/game-20260309-070504.log");
+        let line = text_mode("a\nb\n");
+        assert_eq!(line, if cfg!(windows) { "a\r\nb\r\n" } else { "a\nb\n" });
+    }
 
     #[test]
     fn narrow_words() {

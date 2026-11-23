@@ -168,21 +168,7 @@ EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
 void EEUnitClassUpgrade::Init()
 {
-    long i;
-    this->mButton = this->mUnitClass->mButton;
-    this->SetModel(this->mUnitClass->mModel);
-    for (i = 0; i < 2; i++)
-        this->SetAcknowledgeSound(this->mUnitClass->mAcknowledgeSounds[i], i);
-    this->SetCreationSound(this->mUnitClass->mCreationSound);
-    this->SetDeathSound(this->mUnitClass->mDeathSound);
-    for (i = 0; i < 2; i++)
-        this->SetSelectionSound(this->mUnitClass->mSelectionSounds[i], i);
-    // New (R5b.4, round 28): the copies from the class's record are Rust (ee_units stats.rs init, init_finish), the
-    // original's statements in order around SetRange (which writes none of them) and Reapply
-    this->SetRange(this->mUnitClass->mRange);
-    ee_units_upgrade_init(this, this->mUnitClass);
-    this->mImprovement.Reapply(this->mUnitClass, this);
-    ee_units_upgrade_init_finish(this, this->mUnitClass);
+    ee_units_uc_rest(EE_UNITS_UC_DO_R_UPGRADE_INIT, NULL, NULL, (uint64_t)(uintptr_t)this, 0, 0, NULL);   // uc_rest.rs
 }
 
 // Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error

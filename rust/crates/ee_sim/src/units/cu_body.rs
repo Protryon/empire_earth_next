@@ -348,8 +348,6 @@ pub const EE_UNITS_CU_SET_REFUND_TOTAL: i32 = 168;
 pub const EE_UNITS_CU_CURRENT_PLAYER: i32 = 169;
 /// the disband emitter on the unit (`CreateUnitEffect(this, kGraphicEffectDisbandUnitEmitter, NULL, true, 0, 0)`)
 pub const EE_UNITS_CU_DISBAND_EFFECT: i32 = 170;
-/// player `a`'s chat line "received `c` of resource `b` in insurance"
-pub const EE_UNITS_CU_INSURANCE_CHAT: i32 = 171;
 /// `EESoundObject::Get(kSoundInsuranceCollected)`
 pub const EE_UNITS_CU_INSURANCE_SOUND: i32 = 172;
 /// sound `a`'s `Play(its GetVolume(), 0.0f, 1.0f)`
@@ -931,7 +929,7 @@ pub fn pay_insurance<H: CuHost + ?Sized>(h: &mut H, unit: u64, fraction: f32) {
                 continue;
             }
         }
-        h.cu(EE_UNITS_CU_INSURANCE_CHAT, unit, player, resource, i64::from(shown), &mut [0.0; 4]);
+        crate::units::cu_small::insurance_chat(h, unit, player, resource, i64::from(shown));
         let sound = s(h, EE_UNITS_CU_INSURANCE_SOUND, unit) as u64;
         if sound != 0 {
             sa(h, EE_UNITS_CU_PLAY_AT_VOLUME, unit, sound);

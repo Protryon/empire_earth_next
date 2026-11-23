@@ -20,7 +20,6 @@
 
 extern EEWorld gWorld;
 extern EEPhysics* gPhysics;
-extern bool& gInCinematic;                   // 0x5318e0 (no wonder victory while set; provisional name)
 
 // (the wonder entries, their sort and the countdown: ee_game gamecpp civilization.rs)
 
@@ -49,34 +48,4 @@ long EEVCWonder::GetVictoryState()
     return ee_gamecpp_wonder_state(this);
 }
 
-// ------------------------------------------------------------------------- round 10, lane D: the wonder victory
-
-int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
-double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
-#define P64(x) ((int64_t)(intptr_t)(x))
-#define VC ((EEVictoryCondition*)p)
-
-// the C++ calls and members of the wonder victory's bodies in Rust (gamecpp civilization.rs): p the victory
-// condition unless noted, one statement each
-int64_t EECore10OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::DwTeamCount: return VC->mTeam->GetNumPlayers();
-    case O::DwTeamPlayer: return VC->mTeam->mPlayers[a[0]];
-    case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
-    case O::DwWonderCount: return ((EEPlayer*)p)->GetNumWonderUnits();
-    case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
-    case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
-    case O::DwGameTime: return gPhysics->mGameTime;
-    case O::DwInCinematic: return gInCinematic;
-    default: return EECore10OpD7(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EECore10OpD6F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpD7F(inOp, p, a, f);
-}
+// (round 10, lane D: the wonder victory's cases are EEGameLog.cpp's EECore11OpB, round 11 lane B)

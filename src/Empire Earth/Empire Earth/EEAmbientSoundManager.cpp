@@ -8,8 +8,9 @@
 //
 // The ambient sounds are whole in Rust (rust/crates/ee_game/src/app ambient.rs, app and world lane round 1): the manager's, the
 // sounds' and the analyzer's plain members are records the classes derive from, every decision is Rust over the host
-// below (the sound objects and instances, the random generator, the world's reads). This unit keeps the host, Load
-// (the file), the analyzer's counting of the rendered units and the forwarders.
+// (the sound objects and instances, the random generator, the world's reads; ee_game gamecpp ambient_io.rs, game
+// core lane round 11, with Load and the analyzer's counting of the rendered units). This unit keeps the
+// constructors and the forwarders.
 #include <windows.h>
 #include <vector>
 
@@ -34,8 +35,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAmbientSound.h"
 #include "ee/EEAmbientSoundManager.h"
-
-extern EEAIContinentManager gContinentManager;
+#include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp ambient_io.rs)
 
 // 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
 // ESCallerLog, never called), deleted with the class (LLE lane round 1)
@@ -53,72 +53,15 @@ EEAmbientSound::~EEAmbientSound()
         this->mSound->UnloadMedia();
 }
 
-// Sets up the ambient sound from its database record (sound, fades, volumes, probability, interval in ms), silent
-void EEAmbientSound::Init(const EEAmbientSoundRecord& inRecord)
-{
-    EeAppAmbientRecord theRecord = {inRecord.mSoundID, inRecord.mMaximumVolume, inRecord.mStartVolume, inRecord.mFadeUp,
-                                    inRecord.mFadeDown, inRecord.mProbability, inRecord.mIntervalSeconds};
-    this->mSound = NULL;
-    ee_app_ambient_sound_init(this, &theRecord);
-}
-
 // Counts a visible unit for the ambient sounds: citizens, farms, goats, eagles, attackers, and enemy bombers over
 // the local player's towns (from the atomic epochs on)
-void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit)
-{
-    U2DPoint<long> theTile(0, 0);
-    EEComplexUnit* theUnit = inUnit;
-    EEUnitClass* theClass = theUnit->mUnitClass;
-    if (theClass->mCategory == kUnitCategoryLandCitizen)
-        this->mNumCitizens++;
-    switch (theClass->mUnitType) {
-    case kUnitTypeFarm:
-        this->mNumFarms++;
-        break;
-    case kUnitTypeResGoat:
-        this->mNumGoats++;
-        break;
-    case kUnitTypeResEagle:
-        this->mNumEagles++;
-        break;
-    }
-    if (theUnit->mGoalState != NULL && theUnit->mGoalState->mKind == kGoalAttackUnit && (theClass->mIsHuman || theClass->mIsHorse)
-        && theClass->mEpoch >= kTechEpochStone && theClass->mEpoch <= kTechEpochIndustrial)
-        this->mNumAttackers++;
-    if (theClass->mFamily != kUnitFamilyBomber || theClass->mIsParatrooperBomber)
-        return;
-    EEPlayer* thePlayer = gWorld.mPlayers[gWorld.mCurrentPlayer];
-    if (theUnit->mPlayer == thePlayer || thePlayer->mEnemies[theUnit->mPlayer->mPlayerID] == 0)
-        return;
-    theTile.mX = theUnit->mTileX;
-    theTile.mY = theUnit->mTileY;
-    if (!(thePlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicWW1))
-        return;
-    for (long i = thePlayer->mTowns.size() - 1; i >= 0; i--) {
-        if (thePlayer->mTowns[i]->HullContains(theTile)) {
-            this->mNumAirRaiders++;
-            break;
-        }
-    }
-}
+void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit) { ee_gamecpp_ambient_count_unit(this, inUnit); }
 
 // Counts a visible tree when the unit is a wood resource
-void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit)
-{
-    if (inUnit->mUnitClass->mResourceType == kResourceWood)
-        this->AddTree(inUnit);
-}
+void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit) { ee_gamecpp_ambient_count_tree(this, inUnit); }
 
 // Counts a visible tree and, if no forest type is known yet, takes it from the AI forest at the unit
-void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit)
-{
-    this->mNumTrees++;
-    if (this->mForestType != 0)
-        return;
-    EEAIForest* theForest = gContinentManager.GetForestAt(inUnit);
-    if (theForest != NULL)
-        this->mForestType = theForest->GetResourceKind();
-}
+void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit) { ee_gamecpp_ambient_add_tree(this, inUnit); }
 
 // Resets the world analyzer's counters for the next ambient update
 void EEAmbientWorldAnalyzer::Clear()
@@ -126,54 +69,8 @@ void EEAmbientWorldAnalyzer::Clear()
     ee_app_ambient_clear(this);
 }
 
-// The ambient sounds' host (ee_app ambient_ffi.rs): the context is the manager
-static void EEAmbientHost(void* inContext, int32_t inOp, EeAppAmbientIo* io)
-{
-    EEAmbientSoundManager* theManager = static_cast<EEAmbientSoundManager*>(inContext);
-    EEAmbientSound* theSound = inOp >= EE_APP_AMBIENT_OP_SOUND && inOp <= EE_APP_AMBIENT_OP_UNLOAD_SOUND && inOp != EE_APP_AMBIENT_OP_RANDOM
-                                   ? &theManager->mSounds[io->slot] : NULL;
-    switch (inOp) {
-    case EE_APP_AMBIENT_OP_SOUNDS: io->n = (uint32_t)theManager->mSounds.size(); break;
-    case EE_APP_AMBIENT_OP_SOUND: io->sound = theSound; break;
-    case EE_APP_AMBIENT_OP_RANDOM: io->volume = theManager->Random(); break;
-    case EE_APP_AMBIENT_OP_PLAY:
-        gSoundManager->Play(theSound->mSound->GetSampleID(), io->volume, io->pan, io->pitch, false, NULL);
-        break;
-    case EE_APP_AMBIENT_OP_HAS_INSTANCE: io->flag = theSound->mInstance != NULL; break;
-    case EE_APP_AMBIENT_OP_START:
-        theSound->mInstance = gSoundManager->PlayAndReturnReferencedNode(theSound->mSound->GetSampleID(), io->volume, io->pan,
-                                                                          io->pitch, io->flag, NULL);
-        break;
-    case EE_APP_AMBIENT_OP_SET_PARAMETERS: gSoundManager->SetSoundParameters(theSound->mInstance, io->volume, io->pan, io->pitch); break;
-    case EE_APP_AMBIENT_OP_STOP_INSTANCE:
-        gSoundManager->Stop(theSound->mInstance, true);
-        theSound->ReleaseInstance();
-        break;
-    case EE_APP_AMBIENT_OP_LOAD_SOUND:
-        io->flag = theSound->mSound != NULL;
-        if (theSound->mSound != NULL)
-            break;
-        theSound->mSound = EESoundObject::Get(theSound->mSoundIndex);
-        if (theSound->mSound != NULL) {
-            io->flag = true;
-            theSound->mSound->LoadMedia();
-            io->has = true;
-            io->n = theSound->mSound->GetLooping() ? 1 : 0;
-        }
-        break;
-    case EE_APP_AMBIENT_OP_UNLOAD_SOUND:
-        if (theSound->mSound != NULL)
-            theSound->mSound->UnloadMedia();
-        theSound->mSound = NULL;
-        break;
-    case EE_APP_AMBIENT_OP_TIME_OF_DAY: io->volume = gWorld.GetTimeOfDay(); break;
-    case EE_APP_AMBIENT_OP_TIME: io->n = (uint32_t)TMGetTime(); break;
-    case EE_APP_AMBIENT_OP_VISIBLE_TILES: io->n = (uint32_t)gWorld.mMap->mTerrainMesh.GetNumVisibleTiles(); break;
-    case EE_APP_AMBIENT_OP_VISIBLE_WATER: io->volume = gWorld.mMap->mTerrainMesh.GetVisibleWaterTilePercentage(); break;
-    case EE_APP_AMBIENT_OP_VISIBLE_SPACE: io->volume = gWorld.mMap->mTerrainMesh.GetVisibleSpaceTilePercentage(); break;
-    }
-}
-#define EE_AMBIENT_HOST this, &this->mAnalyzer, this, EEAmbientHost
+// the host (ee_app ambient_ffi.rs): ee_game gamecpp ambient_io.rs; the context is the manager
+#define EE_AMBIENT_HOST this, &this->mAnalyzer, this, ee_gamecpp_ambient_host
 
 // Creates the ambient sound manager, disabled and unpaused, updating every 10 frames
 EEAmbientSoundManager::EEAmbientSoundManager() : mRandom(1)
@@ -190,26 +87,7 @@ EEAmbientSoundManager::~EEAmbientSoundManager()
 
 // Loads the ambient sound records from the file into their slots and seeds the random generator; returns the last
 // read status
-long EEAmbientSoundManager::Load(FSFile& inFile)
-{
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEAmbientSoundRecord theRecord;
-    long theResult;
-    inFile.Open(kFileAccessRead);
-    this->mRandom.SetSeed(TMGetTime());
-    theResult = inFile.Read(theCount);
-    if (theResult == 0) {
-        this->mSounds.resize(theCount);
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            if (theRecord.mIndex >= 0)
-                this->mSounds[theRecord.mIndex].Init(theRecord);
-        }
-    }
-    inFile.Close();
-    return theResult;
-}
+long EEAmbientSoundManager::Load(FSFile& inFile) { return ee_gamecpp_ambient_load(this, &inFile); }
 
 // Stops every ambient sound and pauses the manager
 void EEAmbientSoundManager::Pause()
