@@ -88,7 +88,13 @@ fn records() -> (EeUnitsRtsUnitFields, EeUnitsUnitFields, EeUnitsComplexUnitFiel
         mIsValid: true,
         ..Default::default()
     };
-    let unit = EeUnitsUnitFields { mResourceType: 2, mHitPoints: 50, mResourceAmount: 300, mHiddenFlags: 0 };
+    let unit = EeUnitsUnitFields {
+        mResourceType: 2,
+        mHitPoints: 50,
+        mResourceAmount: 300,
+        mHiddenFlags: 0,
+        ..Default::default()
+    };
     let cx = EeUnitsComplexUnitFields {
         mHeight: 1.25,
         mVelocity: 3.5,

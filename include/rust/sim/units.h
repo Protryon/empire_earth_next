@@ -18053,6 +18053,42 @@ struct EeUnitsPlayerUnit {
   long build_queue;
 };
 
+/// `EEGhostUnit`'s plain members (after its vtable; its `mTransformation` follows the record).
+struct EeUnitsGhostFields {
+  /// the footprint's ground heights (Reset zeroes them)
+  float mHeights[144];
+  long mTileX;
+  long mTileY;
+  long mFrame;
+  /// 7 after Reset
+  long mAnimation;
+  class EEPlayer *mPlayer;
+  /// `gUnitClassTable[inUnitClass]`
+  class EEUnitClass *mUnitClass;
+  long mUnitSet;
+  /// per footprint tile: placeable (UpdateFootprint fills it with mCanPlace; Reset clears it)
+  bool mFootprint[12][12];
+  bool mCanPlace;
+  bool mNoMedia;
+  int16_t mU332;
+};
+
+/// `EEComplexDoppelganger`'s plain members (its `mTransformation`, the unit's location, follows the record).
+struct EeUnitsComplexDopFields {
+  class EEGraphicObject *mModel;
+  /// the unit's animation
+  unsigned long mAnimation;
+  /// the unit's model scale
+  float mScale;
+  /// the hit points, bit 31 the built flag
+  long mPackedHitPoints;
+  long mTileX;
+  long mTileY;
+  /// the unit's model frame
+  unsigned long mFrame;
+  bool mIsFoundation;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
@@ -18618,6 +18654,20 @@ void ee_units_cu_out_of_synch_dump(void *unit, void *file);
 /// # Safety
 /// `unit` is a live `EEComplexUnit`, `text` a live `UWideString`.
 void ee_units_cu_describe(void *unit, void *text);
+
+/// `EEComplexUnit::GetOutermostCarrier`.
+///
+/// # Safety
+/// `unit` and its carriers are live complex units.
+class EEComplexUnit *ee_units_cu_outermost_carrier(class EEComplexUnit *unit);
+
+/// `EEComplexUnit::SetVelocity`: `unit` and `cx` are the unit's two records, its `mStats` a live class upgrade.
+///
+/// # Safety
+/// Both records are the same live complex unit's.
+void ee_units_cu_set_velocity(const EeUnitsUnitFields *unit,
+                              EeUnitsComplexUnitFields *cx,
+                              float value);
 
 /// `EEComplexUnit::Init(class, placement, player, goal_queues)` on `unit` (more arguments than
 /// `ee_units_cu_body` carries).
@@ -22754,11 +22804,15 @@ bool ee_units_waypoints_next_auto(uint64_t unit);
 /// `unit` is a live complex unit; `points` holds `count` points (or is null with none).
 void ee_units_waypoints_group_path_goals(uint64_t unit, const float *points, size_t count);
 
-/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, its index in `index`.
+/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, the waypoint in `out` (valid until the list
+/// changes).
 ///
 /// # Safety
-/// `unit` is a live complex unit; `index` writable.
-bool ee_units_waypoints_at_tile(uint64_t unit, long x, long y, size_t *index);
+/// `unit` is a live complex unit; `out` writable.
+bool ee_units_waypoints_at_tile(uint64_t unit,
+                                long x,
+                                long y,
+                                const EeUnitsWaypoint **out);
 
 /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
 extern int64_t ee_units_wp_host(int32_t op, uint64_t unit, uint64_t arg, float *point);

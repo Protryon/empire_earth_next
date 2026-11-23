@@ -110,19 +110,8 @@ void EEWorldLayoutRegister()
     theLayout.unit_next = offsetof(RTSUnit, mNext);
     theLayout.unit_tile = offsetof(RTSUnit, mTile);
     theLayout.unit_player = offsetof(RTSUnit, mPlayer);
-    theLayout.unit_class = offsetof(EEUnit, mUnitClass);
-    theLayout.unit_complex_unit = offsetof(EEUnit, mComplexUnit);
-    theLayout.unit_stats = offsetof(EEUnit, mStats);
     theLayout.complex_location = offsetof(EEComplexUnit, mPhysicalModel) + theLocation;
-    theLayout.complex_active_group = offsetof(EEComplexUnit, mActiveGroup);
-    theLayout.complex_container = offsetof(EEComplexUnit, mContainer);
-    theLayout.complex_command = offsetof(EEComplexUnit, mCommand);
-    theLayout.complex_goal_state = offsetof(EEComplexUnit, mGoalState);
-    theLayout.complex_active_goal = offsetof(EEComplexUnit, mActiveGoal);
-    theLayout.complex_herd = offsetof(EEComplexUnit, mHerd);
     theLayout.complex_cargo = offsetof(EEComplexUnit, mCargo);
-    theLayout.complex_previous_part = offsetof(EEComplexUnit, mPreviousPart);
-    theLayout.complex_next_part = offsetof(EEComplexUnit, mNextPart);
     theLayout.complex_build_queue = offsetof(EEComplexUnit, mBuildQueue);
     theLayout.build_entry_stride = sizeof(EEProductionEntry);
     theLayout.build_entry_technology = offsetof(EEProductionEntry, mTechnology);
@@ -186,16 +175,7 @@ void EEWorldLayoutRegister()
     theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
     // the units' saves (the units' state lane: unit_save_views.rs)
     const size_t theModelAt = offsetof(EEComplexUnit, mPhysicalModel);
-    theLayout.complex_launcher_class = offsetof(EEComplexUnit, mLauncherClass);
     theLayout.complex_patrol_group = offsetof(EEComplexUnit, mPatrolGroup);
-    theLayout.complex_home_base = offsetof(EEComplexUnit, mHomeBase);
-    theLayout.complex_gathered_resource = offsetof(EEComplexUnit, mGatheredResource);
-    theLayout.complex_last_attacker = offsetof(EEComplexUnit, mLastAttacker);
-    theLayout.complex_owner = offsetof(EEComplexUnit, mOwner);
-    theLayout.complex_mine = offsetof(EEComplexUnit, mMine);
-    theLayout.complex_holder = offsetof(EEComplexUnit, mHolder);
-    theLayout.complex_behavior = offsetof(EEComplexUnit, mBehavior);
-    theLayout.complex_last_resource = offsetof(EEComplexUnit, mLastResource);
     theLayout.complex_held_units = offsetof(EEComplexUnit, mHeldUnits);
     theLayout.complex_unit_variables = offsetof(EEComplexUnit, mUnitVariables);
     theLayout.complex_bounded_path_tiles = offsetof(EEComplexUnit, mBoundedPathTiles);
