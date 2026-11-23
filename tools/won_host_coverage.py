@@ -187,6 +187,11 @@ CHECKS = [
          rust=[], allowed={}),
     # R6 WON round 34 (net): the model's directory reads (dirread.rs)
     dict(enum="EeWonDirReadOp", header="won_lobby/dirread.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
+    # R6 WON lobby and network round 35: the typed config values' containers, the logic manager, the error screen
+    dict(enum="EeWonCfgValOp", header="won_lobby/cfgval.h",
+         hosts=[ROOT / "src" / "Empire Earth" / "WONAPI" / "WONConfig" / "ConfigObject.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLogicMgrOp", header="won_lobby/logicmgr.h", hosts=[LOBBY / "LobbyLogicMgr.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonErrScreenOp", header="won_lobby/errscreen.h", hosts=[LOBBY / "LobbyErrorScreen.cpp"], rust=[], allowed={}),
 ]
 
 

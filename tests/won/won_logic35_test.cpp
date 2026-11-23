@@ -1,6 +1,7 @@
 // The lobby logics' host cases R6 WON lobby and network round 35 composed in Rust (ee_won_lobby logicsplit.rs)
 // and LobbyLogicMgr, whole in Rust (logicmgr.rs; RunMgr below), against the deleted code as it was at 207fb805f
-// (DialogLogic.cpp's WmPopups, Bounds, NewWindow, SetUpPopup, StatusSetStatus and OkCancelSetText; LobbyLogicMgr.cpp),
+// (DialogLogic.cpp's WmPopups, Bounds, NewWindow, SetUpPopup, StatusSetStatus and OkCancelSetText; LobbyLogicMgr.cpp;
+// LobbyErrorScreen.cpp's LobbyGetContainer, errscreen.rs: RunErr below),
 // over one stand-in world that logs every call ("WON goldens by reach": the popup windows and the Yes/No boxes no
 // LAN game opens, the status and bounds cases the LAN game reaches only in part, the manager's Kill and its menu
 // clicks, which the LAN game never makes).
@@ -22,6 +23,7 @@
 #include "rust/won_lobby/logicsplit.h"
 #include "rust/won_lobby/resource.h"
 #include "rust/won_lobby/logicmgr.h"
+#include "rust/won_lobby/errscreen.h"
 #include "ee/wonapi/WONLobbyGuard.h"
 
 typedef EeWonDlgLogicOp Op;
@@ -531,6 +533,221 @@ static void RunMgr()
 }
 }
 
+// ---- LobbyGetContainer (errscreen.rs this round) against LobbyErrorScreen.cpp as it was at 207fb805f, over stand-in
+// GUI objects that log every call (the error dialog shows only after a failed lobby start, which no LAN game makes)
+namespace Err {
+using namespace WONAPI;
+enum HorzAlign { HorzAlign_Center = 2 };
+enum class EeWonShellKind { MsDlgBack = 1, MsButton = 2 };
+struct Comp : RefCount {
+    virtual ~Comp() {}
+    void Do(const std::string& s) { Log(Id(this) + " " + s); }
+};
+struct Component : Comp {};
+struct Container : Component {};
+struct Label : Component {
+    void SetWrap(bool b) { Do("SetWrap " + N(b)); }
+    void SetHorzAlign(HorzAlign a) { Do("SetHorzAlign " + N(a)); }
+    void SetAdjustHeightToFitText(bool b) { Do("SetAdjustHeightToFitText " + N(b)); }
+    void SetText(const GUIString& t, bool b) { Do("SetText " + Show(&t) + " " + N(b)); }
+};
+struct Button : Component {
+    void SetButtonFlags(int f, bool b) { Do("SetButtonFlags " + N(f) + " " + N(b)); }
+    void SetSizeAtLeast(int w, int h) { Do("SetSizeAtLeast " + N(w) + " " + N(h)); }
+    void RequestFocus() { Do("RequestFocus"); }
+};
+struct CenterLayout {
+    int mId;
+    static int sNext;
+    CenterLayout(Container* d, Component* c, bool h, bool v) : mId(sNext++)
+    {
+        Log("CenterLayout " + N(mId) + " " + Id(d) + " " + Id(c) + " " + N(h) + " " + N(v));
+    }
+    void Add(Component* c) { Log("CenterLayout " + N(mId) + " Add " + Id(c)); }
+};
+int CenterLayout::sNext;
+struct Dialog : Container {
+    void SetEndOnEscape(int i) { Do("SetEndOnEscape " + N(i)); }
+    void Fn2F6140(Component* a, int f, Component* b, int x, int y, int w, int h, int z)
+    {
+        Do("Fn2F6140 " + Id(a) + " " + N(f) + " " + Id(b) + " " + N(x) + " " + N(y) + " " + N(w) + " " + N(h) + " " + N(z));
+    }
+    void AddChildLayout(CenterLayout* l, int i) { Do("AddChildLayout " + N(l->mId) + " " + N(i)); }
+    void AddChild(Component* c) { Do("AddChild " + Id(c)); }
+};
+static int sNextComp;
+template <class T> static T* New() { T* o = Make<T>(300 + sNextComp++); return o; }
+static Component* WONShellNew(EeWonShellKind k, intptr_t a = 0)
+{
+    Component* c = k == EeWonShellKind::MsButton ? static_cast<Component*>(New<Button>()) : New<Component>();
+    Log("WONShellNew " + N((int)k) + " " + Id(c) + (a ? " " + Show((const GUIString*)a) : std::string()));
+    return c;
+}
+struct LobbyContainer : Container {};
+struct Prv : RefCount { SmartPtr<LobbyContainer> mLobbyContainer; };
+static SmartPtr<Prv> gLobbyData;
+static SmartPtr<Dialog> gLobbyFailureDialog;
+static GUIString gLobbyInitError;
+static bool gLobbyInitFailed;
+static GUIString Text(const char* s)
+{
+    GUIStringData* d = Make<GUIStringData>(700 + sNextComp++);
+    d->mText = s;
+    return GUIString(d);
+}
+// GUIString's append (a copy on write as the class does: a shared data is copied first)
+static void Append(GUIString& t, const GUIString& a)
+{
+    if (t.mData->mRefs > 1 || t.mData.get() == &sEmpty) {
+        GUIStringData* d = Make<GUIStringData>(700 + sNextComp++);
+        d->mText = t.mData->mText;
+        t.mData = d;
+    }
+    t.mData->mText += a.mData->mText;
+}
+
+namespace Orig {
+// LobbyErrorScreen.cpp at 207fb805f (GUIString's constructor from a text and its append spelt as the stand-in's)
+static Container* LobbyGetContainer()
+{
+    if(gLobbyData.get()!=NULL) return gLobbyData->mLobbyContainer.get();
+    if(gLobbyInitFailed) {
+    if(gLobbyFailureDialog.get()==NULL) {
+        SmartPtr<Dialog> dialog=New<Dialog>();
+        dialog->SetEndOnEscape(0);
+        SmartPtr<Component> background=WONShellNew(EeWonShellKind::MsDlgBack);
+        SmartPtr<Label> label=New<Label>();
+        label->SetWrap(true);
+        label->SetHorzAlign(HorzAlign_Center);
+        label->SetAdjustHeightToFitText(true);
+        GUIString text(Text("Lobby Error\n\n"));
+        Append(text, gLobbyInitError);
+        label->SetText(text,true);
+        GUIString okText(Text("Ok"));
+        SmartPtr<Button> button=static_cast<Button*>(WONShellNew(EeWonShellKind::MsButton,(intptr_t)&okText));
+        button->SetButtonFlags(0x100,true);
+        button->SetSizeAtLeast(100,0);
+        button->RequestFocus();
+        dialog->Fn2F6140(background.get(),3,dialog.get(),0,0,0,0,0);
+        dialog->Fn2F6140(label.get(),0x1001,dialog.get(),10,0,-20,0,0);
+        dialog->AddChildLayout(new CenterLayout(dialog.get(),button.get(),true,false),0);
+        dialog->Fn2F6140(button.get(),0x200,label.get(),0,20,0,0,0);
+        CenterLayout* vertical=new CenterLayout(dialog.get(),label.get(),false,true);
+        vertical->Add(button.get());
+        dialog->AddChildLayout(vertical,0);
+        dialog->AddChild(background.get());
+        dialog->AddChild(label.get());
+        dialog->AddChild(button.get());
+        gLobbyFailureDialog=dialog;
+    }
+    return gLobbyFailureDialog.get();
+    }
+    return NULL;
+}
+}
+
+// the new host (LobbyErrorScreen.cpp's, as it is; the stand-in's constructor and append as above)
+static SmartPtr<Dialog> sErrDialog;
+static SmartPtr<Component> sErrBackground;
+static SmartPtr<Label> sErrLabel;
+static GUIString sErrText;
+static GUIString sErrOkText;
+static SmartPtr<Button> sErrButton;
+static CenterLayout* sErrVertical;
+static intptr_t ErrorScreenHost(EeWonErrScreenOp inOp)
+{
+    typedef EeWonErrScreenOp Op;
+    if ((int)inOp + 200000 == sSkip) {
+        // a skipped maker answers another object (a null one would only crash the next statement)
+        if (inOp == Op::DialogNew) sErrDialog = Make<Dialog>(990);
+        if (inOp == Op::BackgroundNew) sErrBackground = Make<Component>(991);
+        if (inOp == Op::LabelNew) sErrLabel = Make<Label>(992);
+        if (inOp == Op::ButtonNew) sErrButton = Make<Button>(993);
+        if (inOp == Op::VerticalNew) sErrVertical = new CenterLayout(NULL, NULL, false, false);
+        return 0;
+    }
+    switch (inOp) {
+    case Op::PrvExists: return gLobbyData.get() != NULL ? 1 : 0;
+    case Op::PrvContainer: return (intptr_t)static_cast<Container*>(gLobbyData->mLobbyContainer.get());
+    case Op::InitFailed: return gLobbyInitFailed ? 1 : 0;
+    case Op::FailureExists: return gLobbyFailureDialog.get() != NULL ? 1 : 0;
+    case Op::FailureGet: return (intptr_t)static_cast<Container*>(gLobbyFailureDialog.get());
+    case Op::DialogNew: sErrDialog = New<Dialog>(); return 0;
+    case Op::DialogNoEscape: sErrDialog->SetEndOnEscape(0); return 0;
+    case Op::BackgroundNew: sErrBackground = WONShellNew(EeWonShellKind::MsDlgBack); return 0;
+    case Op::LabelNew: sErrLabel = New<Label>(); return 0;
+    case Op::LabelWrap: sErrLabel->SetWrap(true); return 0;
+    case Op::LabelCenter: sErrLabel->SetHorzAlign(HorzAlign_Center); return 0;
+    case Op::LabelFit: sErrLabel->SetAdjustHeightToFitText(true); return 0;
+    case Op::TextNew: sErrText = Text("Lobby Error\n\n"); return 0;
+    case Op::TextAppendError: Append(sErrText, gLobbyInitError); return 0;
+    case Op::LabelSetText: sErrLabel->SetText(sErrText, true); return 0;
+    case Op::OkTextNew: sErrOkText = Text("Ok"); return 0;
+    case Op::ButtonNew: sErrButton = static_cast<Button*>(WONShellNew(EeWonShellKind::MsButton, (intptr_t)&sErrOkText)); return 0;
+    case Op::ButtonFlags: sErrButton->SetButtonFlags(0x100, true); return 0;
+    case Op::ButtonSize: sErrButton->SetSizeAtLeast(100, 0); return 0;
+    case Op::ButtonFocus: sErrButton->RequestFocus(); return 0;
+    case Op::LayoutBackground: sErrDialog->Fn2F6140(sErrBackground.get(), 3, sErrDialog.get(), 0, 0, 0, 0, 0); return 0;
+    case Op::LayoutLabel: sErrDialog->Fn2F6140(sErrLabel.get(), 0x1001, sErrDialog.get(), 10, 0, -20, 0, 0); return 0;
+    case Op::CenterButton: sErrDialog->AddChildLayout(new CenterLayout(sErrDialog.get(), sErrButton.get(), true, false), 0); return 0;
+    case Op::LayoutButton: sErrDialog->Fn2F6140(sErrButton.get(), 0x200, sErrLabel.get(), 0, 20, 0, 0, 0); return 0;
+    case Op::VerticalNew: sErrVertical = new CenterLayout(sErrDialog.get(), sErrLabel.get(), false, true); return 0;
+    case Op::VerticalAdd: sErrVertical->Add(sErrButton.get()); return 0;
+    case Op::VerticalLayout: sErrDialog->AddChildLayout(sErrVertical, 0); return 0;
+    case Op::AddBackground: sErrDialog->AddChild(sErrBackground.get()); return 0;
+    case Op::AddLabel: sErrDialog->AddChild(sErrLabel.get()); return 0;
+    case Op::AddButton: sErrDialog->AddChild(sErrButton.get()); return 0;
+    case Op::FailureSet: gLobbyFailureDialog = sErrDialog; return 0;
+    case Op::ButtonDrop: sErrButton = NULL; return 0;
+    case Op::OkTextDrop: sErrOkText = GUIString(); return 0;
+    case Op::TextDrop: sErrText = GUIString(); return 0;
+    case Op::LabelDrop: sErrLabel = NULL; return 0;
+    case Op::BackgroundDrop: sErrBackground = NULL; return 0;
+    case Op::DialogDrop: sErrDialog = NULL; return 0;
+    }
+    return 0;
+}
+
+static void RunErr()
+{
+    // the lobby up; down and not failed; failed with the dialog to build (two errors), then already built
+    for (int k = 0; k < 5; k++) {
+        std::vector<std::string> t[2];
+        for (int side = 0; side < 2; side++) {
+            sMade.clear();
+            sNextComp = 0;
+            CenterLayout::sNext = 0;
+            sErrDialog = NULL;
+            sErrBackground = NULL;
+            sErrLabel = NULL;
+            sErrText = GUIString();
+            sErrOkText = GUIString();
+            sErrButton = NULL;
+            gLobbyData = NULL;
+            gLobbyFailureDialog = NULL;
+            gLobbyInitFailed = k >= 2;
+            gLobbyInitError = k == 3 ? Text("") : Text("no WONLobby.cfg");
+            if (k == 0) {
+                gLobbyData = Make<Prv>(1);
+                gLobbyData->mLobbyContainer = Make<LobbyContainer>(2);
+            }
+            if (k == 4) gLobbyFailureDialog = Make<Dialog>(3);
+            sTrace.clear();
+            Container* r = side == 0 ? Orig::LobbyGetContainer() : reinterpret_cast<Container*>(ee_won_lobby_error_container(ErrorScreenHost));
+            Log("result " + Id(r));
+            // a second call returns the dialog the first built
+            Container* r2 = side == 0 ? Orig::LobbyGetContainer() : reinterpret_cast<Container*>(ee_won_lobby_error_container(ErrorScreenHost));
+            Log("again " + Id(r2) + " failure " + Id(gLobbyFailureDialog.get()));
+            gLobbyData = NULL;
+            gLobbyFailureDialog = NULL;
+            for (RefCount* m : sMade) Log("made " + Id(m));
+            t[side] = sTrace;
+        }
+        Compare("LobbyGetContainer " + N(k), t[0], t[1]);
+    }
+}
+}
+
 int main()
 {
     for (int i = 0; i < 700; i++) {
@@ -541,18 +758,21 @@ int main()
     }
     Run();
     Mgr::RunMgr();
+    Err::RunErr();
     int aReal = sFailures;
     printf("won_logic35_test: %d checks, %d mismatches\n", sChecks, aReal);
     std::vector<int> aSkips;
     for (int op = (int)Op::WmDefault; op <= (int)Op::OkCancelSetHeldText; op++) aSkips.push_back(op);
     aSkips.push_back((int)Op::AddRefWindow);
     for (int op = (int)EeWonLogicMgrOp::AddRef; op <= (int)EeWonLogicMgrOp::ControlId; op++) aSkips.push_back(op + 100000);
+    for (int op = (int)EeWonErrScreenOp::PrvExists; op <= (int)EeWonErrScreenOp::DialogDrop; op++) aSkips.push_back(op + 200000);
     int aCaught = 0;
     for (int s : aSkips) {
         sSkip = s;
         sFailures = 0;
         Run();
         Mgr::RunMgr();
+        Err::RunErr();
         if (sFailures > 0) aCaught++;
         else printf("skip of op %d not caught\n", s);
     }

@@ -202,6 +202,7 @@
 #include "rust/won_lobby/eesound.h"
 #include "rust/won_lobby/eesplit.h"
 #include "rust/won_lobby/eexfer.h"
+#include "rust/won_lobby/errscreen.h"
 #include "rust/won_lobby/evmap.h"
 #include "rust/won_lobby/ffi_lan.h"
 #include "rust/won_lobby/flow.h"

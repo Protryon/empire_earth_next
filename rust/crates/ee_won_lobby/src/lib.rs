@@ -68,6 +68,7 @@ pub mod wonnet;
 pub mod cfgval;
 pub mod dlgsplit;
 pub mod eesplit;
+pub mod errscreen;
 pub mod lobbyids;
 pub mod logicmgr;
 pub mod logicsplit;
