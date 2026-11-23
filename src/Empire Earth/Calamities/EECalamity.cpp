@@ -111,72 +111,18 @@ bool EECalamity::GetTargetUnit(EEUnit*& outUnit)
     return (outUnit = this->mTargetUnit) != NULL;
 }
 
-namespace {
-
-// New (port): the file and the calamity's C++ members for its Rust Load and Save (ee_tech calamity_record.rs
-// EE_CALAMITY_IO_*): the numbers through the FSFile overload the original called, the members by part
-struct EECalamityIo {
-    EECalamity* mCalamity;
-    FSFile* mFile;
-    bool mLoading;
-};
-
-long EECalamityIoCall(void* inContext, uint32_t inOp, void* ioValue)
-{
-    EECalamityIo& theIo = *static_cast<EECalamityIo*>(inContext);
-    EECalamity* theCalamity = theIo.mCalamity;
-    FSFile& theFile = *theIo.mFile;
-    switch (inOp) {
-    case EE_CALAMITY_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
-    case EE_CALAMITY_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
-    case EE_CALAMITY_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
-    case EE_CALAMITY_IO_READ_BOOL: return theFile.Read(*static_cast<bool*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_BOOL: return theFile.Write(*static_cast<const bool*>(ioValue));
-    case EE_CALAMITY_IO_RECTANGLE:
-        return theIo.mLoading ? theCalamity->mRectangle.Load(theFile) : theCalamity->mRectangle.Save(theFile);
-    case EE_CALAMITY_IO_TARGET_LOCATION:
-        return theIo.mLoading ? theCalamity->mTargetLocation.Load(theFile) : theCalamity->mTargetLocation.Save(theFile);
-    case EE_CALAMITY_IO_SHAKE_LOCATION:
-        return theIo.mLoading ? theCalamity->mShakeLocation.Load(theFile) : theCalamity->mShakeLocation.Save(theFile);
-    case EE_CALAMITY_IO_EFFECT_GENERATION:
-        return theIo.mLoading ? FSLoadVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID)
-                              : FSSaveVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-    case EE_CALAMITY_IO_CLASS: return ee_gamecpp_calamity_io_class(theCalamity, &theFile, theIo.mLoading);
-    case EE_CALAMITY_IO_TARGET_ID:
-        *static_cast<unsigned long*>(ioValue) = theCalamity->mTargetUnit != NULL ? theCalamity->mTargetUnit->GetUnitID() : -1;
-        return kErrorOK;
-    case EE_CALAMITY_IO_CASTER_ID:
-        *static_cast<unsigned long*>(ioValue) = theCalamity->mCasterUnit != NULL ? theCalamity->mCasterUnit->GetUnitID() : -1;
-        return kErrorOK;
-    case EE_CALAMITY_IO_TILE_X: return ee_gamecpp_calamity_io_tile(theCalamity, &theFile, theIo.mLoading, false);
-    case EE_CALAMITY_IO_TILE_Y: return ee_gamecpp_calamity_io_tile(theCalamity, &theFile, theIo.mLoading, true);
-    case EE_CALAMITY_IO_EFFECT_HANDLE:
-        return theIo.mLoading ? theFile.Read(theCalamity->mEffectHandle.mValue) : theFile.Write(theCalamity->mEffectHandle.mValue);
-    }
-    return kErrorFailed;
-}
-
-}   // namespace
-
 // Reads the calamity from a saved game (the class by id; target and caster only as ids); returns the first read error
 // (ee_tech calamity_record.rs load)
 long EECalamity::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EECalamityIo theIo = {this, &inFile, true};
-    EeCalamityIoFfi theFfi = {&theIo, &EECalamityIoCall};
-    return ee_calamity_record_load(this, theFfi);
+    return ee_gamecpp_calamity_io(this, &inFile, true);   // (gamecpp calamity_io.rs, over EEContagionManager.cpp's cases)
 }
 
 // Writes the calamity to the saved game (target and caster as ids, -1 if none); returns the first write error
 // (ee_tech calamity_record.rs save)
 long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EECalamityIo theIo = {this, &outFile, false};
-    EeCalamityIoFfi theFfi = {&theIo, &EECalamityIoCall};
-    return ee_calamity_record_save(this, theFfi);
+    return ee_gamecpp_calamity_io(this, &outFile, false);
 }
 
 // Plays the calamity's sound through its class

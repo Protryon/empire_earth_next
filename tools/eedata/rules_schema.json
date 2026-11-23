@@ -5,7 +5,6 @@
  ],
  "enums": {
   "unit_category": {
-   "cpp_table": "kEERuleCategoryNames",
    "cpp_count": "kEERuleCategoryCount",
    "names": [
     "ambient",
@@ -153,7 +152,6 @@
    "cpp_prefix": "kAICheat",
    "bits": true,
    "cpp_all": "kAICheatAll",
-   "cpp_table": "kEEAICheatNames",
    "cpp_count": "kEEAICheatCount",
    "names": [
     "cost",
@@ -785,11 +783,6 @@
   {
    "name": "EECivBuilderRules",
    "rust": "CivBuilderRules",
-   "methods": [
-    "const EECivAttribute* Find(long inLevel) const;",
-    "const EECivAttribute* FindID(const std::string& inID) const;",
-    "const EECivCategoryText* FindCategory(long inRow) const;"
-   ],
    "fields": [
     {
      "cpp": "mAttributes",
@@ -914,9 +907,6 @@
   {
    "name": "EECivPowerRules",
    "rust": "CivPowerRules",
-   "methods": [
-    "const EECivPowerRule* Find(long inRow) const;"
-   ],
    "fields": [
     {
      "cpp": "mPowers",
@@ -1184,10 +1174,6 @@
   {
    "name": "EEAIPersonalityRules",
    "rust": "AIPersonalityRules",
-   "methods": [
-    "const EEAIPersonalityRule& ForPlayer(unsigned long inPlayerID) const;",
-    "long Find(const std::string& inID) const;   // the position, -1 when none"
-   ],
    "fields": [
     {
      "cpp": "mPersonalities",

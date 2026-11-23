@@ -162,6 +162,16 @@ CHECKS = [
          hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
     dict(enum="EeWonFrontEvent", header="won_lobby/wonfront.h",
          hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+    # R6 WON round 33 (lobby): WONLobbyPrv (lobbyprv.rs), the model's buffers (modelbuf.rs), ChatCtrl's link
+    # (chatlink.rs), LobbyConfig's constructor (lobbyconf.rs), the controls' config readers (lobbycfgrd.rs: four
+    # units' hosts, the reads in LobbyNetCtrlHost.cpp's)
+    dict(enum="EeWonLobbyPrvOp", header="won_lobby/lobbyprv.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonModelBufOp", header="won_lobby/modelbuf.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonChatLinkOp", header="won_lobby/chatlink.h", hosts=[LOBBY / "LobbyNetCtrlHost.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLobbyConfOp", header="won_lobby/lobbyconf.h", hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLobbyCfgRdOp", header="won_lobby/lobbycfgrd.h",
+         hosts=[LOBBY / f for f in ("LobbyNetCtrlHost.cpp", "LobbyCtrlHost.cpp", "CrossPromotionButton.cpp", "CreditsDialog.cpp")],
+         rust=[], allowed={}),
 ]
 
 

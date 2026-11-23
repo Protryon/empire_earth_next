@@ -82,63 +82,25 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
             theTiles.push_back(U2DPoint<long>(theIDs[i], 0));
         break;
     }
-    case EE_UNITS_CLS_BLOCKED: {
-        std::vector<EEUnit*> theUnits;
-        return ee_units_uu_tile_units_standing(inA, (int32_t)inC, inB, 0, 2, &theUnits) != 0;
-    }
     case EE_UNITS_CLS_TILES_IN_RADIUS:
         ee_units_uu_tiles_in_radius((long)inC, (long)inD, (uint32_t)(2), true, &theTiles);
         break;
     case EE_UNITS_CLS_LINE_TILES:
         U2DPoint<long>((long)inC, (long)inD).GetLineTiles(U2DPoint<long>((long)ioIo->a, (long)ioIo->b), 1.0f, theTiles);
         break;
-    case EE_UNITS_CLS_PATH_LENGTH: {
-        EETileCoordinate theTile((long)ioIo->a, (long)ioIo->b);
-        ioIo->f = EEGetPathLengthTo(theUnit, theTile, 0x10, inB != 0);
-        ioIo->a = theTile.mX;
-        ioIo->b = theTile.mY;
-        return 0;
-    }
-    case EE_UNITS_CLS_TILE_LOCATION: {
-        GE3DPoint thePoint;
-        ::gWorld.mMap->GetTileLocation((long)inC, (long)inD, thePoint);
-        ioIo->p[0] = thePoint.mX; ioIo->p[1] = thePoint.mY; ioIo->p[2] = thePoint.mZ;
-        return 0;
-    }
     case EE_UNITS_CLS_SET_LOCATION:
         theUnit->SetLocation(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), false);
         return 0;
     case EE_UNITS_CLS_SURROUNDING:
         theUnit->mUnitClass->GetSurroundingTiles(theUnit, theTiles, 0, false);
         break;
-    case EE_UNITS_CLS_LOAD_GOAL_TILE: {
-        EEUGRust* theGoal = EELoadTransportGoalCast(theUnit->GetGoal());
-        if (theGoal == NULL)
-            return 0;
-        ioIo->a = theGoal->GetLoadUnitTile().mX;
-        ioIo->b = theGoal->GetLoadUnitTile().mY;
-        return 1;
-    }
     // the waypoints' operations: Rust (cls_host.rs waypoint_op)
-    case EE_UNITS_CLS_GROUND_HEIGHT: {
-        GE3DPoint thePoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]);
-        ((EEUnitClass*)(uintptr_t)inB)->GetGroundHeight(thePoint, &ioIo->f);
-        return 0;
-    }
     case EE_UNITS_CLS_BOMB_ON_TARGET:
         return ((EEUnitClass*)(uintptr_t)inB)->IsBombOnTarget(theUnit);
     case EE_UNITS_CLS_AWAY_FROM_GOAL:
         return ((EEUnitClass*)(uintptr_t)inB)->IsAwayFromGoal(theUnit);
-    case EE_UNITS_CLS_ATTACK_TARGET_ALIVE: {
-        EEUGRust* theAttack = EEAttackUnitCast(theUnit->GetGoal());
-        return theAttack != NULL && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0;
-    }
     case EE_UNITS_CLS_GOAL_HAS_LOCATION:
         return EEGoalHasLocation(theUnit->GetGoal());
-    case EE_UNITS_CLS_REQUEST_QUEUED: {
-        EeUnitsAtc* theControl = theUnit->mPlayer->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1];
-        return ee_units_atc_queue_position(theControl, theUnit, 1) >= 0 || ee_units_atc_queue_position(theControl, theUnit, 0) >= 0;
-    }
     case EE_UNITS_CLS_QUEUE_GOALS:
         return (int64_t)theUnit->GetQueueGoals((unsigned long)inC).size();
     case EE_UNITS_CLS_TILES_NEAR_POINT:
@@ -146,75 +108,9 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         break;
     case EE_UNITS_CLS_IS_SPACE_MAP:
         return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    case EE_UNITS_CLS_HULL_CENTER:
-        ioIo->a = ((EEAIContinent*)(uintptr_t)inA)->GetHullCenter().mX;
-        ioIo->b = ((EEAIContinent*)(uintptr_t)inA)->GetHullCenter().mY;
-        return 0;
-    case EE_UNITS_CLS_UNITS_NEAR: {
-        std::vector<EEUnit*> theUnits;
-        ee_units_uu_units_near((const float(*)[3])ioIo->p, ioIo->f, &theUnits);
-        for (size_t i = 0; i < theUnits.size(); i++)
-            ee_units_cls_push((EeUnitsClsListHandle*)ioIo->list, (int32_t)EEObj(theUnits[i]), (int32_t)(EEObj(theUnits[i]) >> 32));
-        return 0;
-    }
-    case EE_UNITS_CLS_FLIGHT_TARGET: {   // GetNextFlightState's goal target (0x615ccf)
-        EEUnitGoal* theGoal = theUnit->mGoalState;
-        GE3DPoint theTarget;
-        if (theGoal == NULL)
-            return 0;
-        switch (theGoal->mKind) {
-        case kGoalLocation:
-        case kGoalAttackGround:
-            theTarget = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
-            break;
-        case kGoalAttackUnit: {
-            EEUnit* theOther = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
-            if (theOther == NULL)
-                return 0;
-            if (theOther->mComplexUnit != NULL) {
-                const GETransformation& theLocation = theOther->mComplexUnit->mPhysicalModel.GetLocation();
-                theTarget.SetXYZ(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-            } else
-                theTarget.SetXYZ((float)theOther->GetTileX() + 0.5f, (float)theOther->GetTileY() + 0.5f, theOther->mTile->GetHeight());
-            break;
-        }
-        case kGoalPatrol: {
-            const GETransformation& theLocation = static_cast<EEUGRust*>(theGoal)->GetPatrolTarget()->mPhysicalModel.GetLocation();
-            theTarget.SetXYZ(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-            break;
-        }
-        case kGoalExplore:
-            static_cast<EEUGRust*>(theGoal)->GetExploreTileCenter(theTarget);
-            break;
-        default:
-            return 0;
-        }
-        ioIo->p[0] = theTarget.mX; ioIo->p[1] = theTarget.mY; ioIo->p[2] = theTarget.mZ;
-        return 1;
-    }
     case EE_UNITS_CLS_ADD_WAYPOINT:
         ((EEUnitClass*)(uintptr_t)inB)->AddWaypointAt(theUnit, ioIo->p[0], ioIo->p[1], ioIo->p[2], inC != 0);
         return 0;
-    case EE_UNITS_CLS_PATH_TOWARD: {
-        GE3DPoint theFrom(ioIo->p[0], ioIo->p[1], ioIo->p[2]);
-        GE3DPoint theTo(ioIo->q[0], ioIo->q[1], ioIo->q[2]);
-        ((EEUnitClass*)(uintptr_t)inB)->PathToward(theUnit, theFrom, theTo, inC != 0);
-        return 0;
-    }
-    case EE_UNITS_CLS_FLY_TO_GOAL: {
-        GE3DPoint thePoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]);
-        ((EEUnitClass*)(uintptr_t)inB)->FlyToGoal(thePoint, theUnit);
-        return 0;
-    }
-    case EE_UNITS_CLS_RUNWAY_GOAL: {   // ApproachRunway's move goal (0x615f7d)
-        GE3DPoint thePoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]);
-        EEUGRust* theMove = EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false);
-        bool theKeep = theUnit->mGoalState != NULL && theUnit->mGoalState->mKind == kGoalExplore;
-        if (!theKeep)
-            theUnit->ClearGoalQueue(0);
-        theUnit->SetGoal(theMove, theKeep, 0);
-        return 0;
-    }
     }
     for (size_t i = 0; i < theTiles.size(); i++)
         ee_units_cls_push((EeUnitsClsListHandle*)ioIo->list, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
@@ -224,10 +120,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
 // Returns the squared 3D distance from the unit to a point
 float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
 {
-    float theDZ = this->mPhysicalModel.GetLocation().GetZ() - inPoint.GetZ();
-    float theDY = this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY();
-    float theDX = this->mPhysicalModel.GetLocation().GetX() - inPoint.GetX();
-    return theDX * theDX + theDY * theDY + theDZ * theDZ;
+    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_DISTANCE_3D, NULL, this, 0, inPoint.mX, inPoint.mY, inPoint.mZ);   // uc_rest.rs
 }
 
 // Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
@@ -269,7 +162,6 @@ void EEUnitClass::LandTransportBadlyHurt(EEUnit* inUnit)
 // factory); slots +0xe4, +0x24, +0xf0, +0xf8, +0x74, +0x78, +0xa0, +0xb8 in address order.
 
 // 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way) (provisional name)
-void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
 // New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
@@ -318,8 +210,7 @@ void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
 void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
 {
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
 }
 
 void EEUnitClass::SpaceshipVirtual78(EEComplexUnit* inUnit)

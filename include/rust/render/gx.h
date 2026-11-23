@@ -225,14 +225,6 @@ GXRESULT gx_device_draw_indexed_primitive_vb(void *device,
                                              const uint16_t *indices,
                                              unsigned long index_count);
 
-void gx_set_render_percent(unsigned long percent);
-
-void gx_set_frame_limit(long frames_per_second);
-
-void gx_set_texture_filtering(unsigned long mode);
-
-void gx_set_brightness(float gamma);
-
 void gx_game_size(unsigned long percent,
                   bool windowed,
                   unsigned long *out_width,

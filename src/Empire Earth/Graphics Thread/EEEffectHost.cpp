@@ -70,220 +70,29 @@ bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
 #endif
 
-// where Base sits in a Derived object (a cast of a made-up address: nothing is read)
-template <class Derived, class Base> static uint64_t EEBaseOffset()
-{
-    Derived* theObject = reinterpret_cast<Derived*>(static_cast<uintptr_t>(0x10000));
-    return reinterpret_cast<uintptr_t>(static_cast<Base*>(theObject)) - 0x10000;
-}
-
-// The members ee_gfx effect_reads.rs reads in place (the graphic objects, the graphic effects' records and links, the
-// complex units' physical models and turret angles) and gobj_media.rs loads and releases (the graphic objects' media)
+// The effects' layout, world and manager world: gamecpp fx_world.rs (EECore9OpB's round 11 cases below) registers them before
+// main; the physical model's scale and frame are GEPhysicalModel's friend's (here)
 void EEGfxObjectLayoutRegister()
 {
-    static_assert(sizeof(std::vector<EETurretPart*>) == 3 * sizeof(void*), "a vector is three words");
-    EeGfxObjectLayout theLayout = {};
-    theLayout.size = sizeof(EeGfxObjectLayout);
-    theLayout.gobj_fields = EEBaseOffset<EEGraphicObject, EeDataGraphicObjectFields>();
-    theLayout.gobj_models = offsetof(EEGraphicObject, mModels);
-    theLayout.gobj_textures = offsetof(EEGraphicObject, mTextures);
-    theLayout.gobj_tag_points = offsetof(EEGraphicObject, mTagPoints);
-    theLayout.gobj_tags = offsetof(EEGraphicObject, mTags);
-    theLayout.gobj_model = offsetof(EEGraphicObject, mModel);
-    theLayout.gobj_default_point = offsetof(EEGraphicObject, mDefaultPoint);
-    theLayout.gobj_top_point = offsetof(EEGraphicObject, mTopPoint);
-    theLayout.gobj_turret_parts = offsetof(EEGraphicObject, mTurretParts);
-    theLayout.gobj_orbitals = offsetof(EEGraphicObject, mOrbitals);
-    theLayout.turret_part_model = offsetof(EETurretPart, mModel);
-    theLayout.orbital_model = offsetof(EEOrbital, mModel);
-    theLayout.orbital_speed = offsetof(EEOrbital, mSpeed);
-    theLayout.orbital_angle = offsetof(EEOrbital, mAngle);
-    theLayout.geffect_fields = EEBaseOffset<EEGraphicEffect, EeDataGraphicEffectFields>();
-    theLayout.geffect_object = offsetof(EEGraphicEffect, mGraphicObject);
-    theLayout.geffect_linked = offsetof(EEGraphicEffect, mLinkedEffect1);
-    static_assert(offsetof(EEGraphicEffect, mLinkedEffect3) == offsetof(EEGraphicEffect, mLinkedEffect1) + 2 * sizeof(void*),
-                  "the links in order");
-    theLayout.complex_scale = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mScale);
-    theLayout.complex_frame = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mFrame);
-    theLayout.complex_turret_angles = offsetof(EEComplexUnit, mTurretAngles);
-    theLayout.stats_model = offsetof(EEUnitClassUpgrade, mModel);
-    theLayout.gobj_file_name = offsetof(EEGraphicObject, mFileName);
-    theLayout.gobj_texture_name = offsetof(EEGraphicObject, mTextureName);
-    theLayout.gobj_shadow_model_name = offsetof(EEGraphicObject, mShadowModelName);
-    theLayout.gobj_shadow_texture_name = offsetof(EEGraphicObject, mShadowTextureName);
-    theLayout.gobj_model_names = offsetof(EEGraphicObject, mModelNames);
-    theLayout.gobj_texture_names = offsetof(EEGraphicObject, mTextureNames);
-    theLayout.gobj_texture = offsetof(EEGraphicObject, mTexture);
-    theLayout.gobj_shadow_model = offsetof(EEGraphicObject, mShadowModel);
-    theLayout.gobj_shadow_texture = offsetof(EEGraphicObject, mShadowTexture);
-    theLayout.gobj_sounds1 = offsetof(EEGraphicObject, mSounds1);
-    theLayout.gobj_sounds2 = offsetof(EEGraphicObject, mSounds2);
-    theLayout.gobj_bar = offsetof(EEGraphicObject, mBar);
-    theLayout.gobj_media_use = EEBaseOffset<EEGraphicObject, EeDataMediaUse>();
-    theLayout.geffect_num_loads = offsetof(EEGraphicEffect, mNumLoads);
-    ee_gfx_object_layout_set(&theLayout);
+    ee_gamecpp_fw_register(offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mScale), offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mFrame));
 }
 
 namespace {
-EeGfxEffectHead* H(EEEffect* inEffect) { return reinterpret_cast<EeGfxEffectHead*>(inEffect); }
-EEEffect* Fx(EeGfxEffectHead* inEffect) { return reinterpret_cast<EEEffect*>(inEffect); }
-uint64_t U(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
-template <class T> T* P(uint64_t inObject) { return reinterpret_cast<T*>((uintptr_t)inObject); }
-EeGe3DPoint R(const GE3DPoint& inPoint) { return EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ}; }
-
-// the map a weather storm reads and calls into (ee_gfx effect_storm.rs; the storms' and EEEMStorm's moves)
-struct EEStormHostOps {
-    static bool OnMap(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->GetTile(inX, inY) != NULL; }
-    static float GroundZ(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->mTerrainMesh.GetZ(inX, inY); }
-};
-
-// The C++ answers of one call (the call's EeGfxEffectAsk: its effect, its operation, a constructor's argument; the
-// reads of the graphic objects, tag points and physical models and the effects' own answers are ee_gfx's)
-struct Ask {
-    static EEEffect* E(void* inAsk) { return Fx(static_cast<EeGfxEffectAsk*>(inAsk)->effect); }
-    // a unit's graphic (a virtual: a foundation shows its player's class graphic)
-    static uint64_t UnitGraphic(void*, uint64_t inUnit) { return U(P<EEUnit>(inUnit)->GetModel()); }
-    static void FarmSetVariant(void* inAsk, int32_t inVariant) { E(inAsk)->mUnit->mComplexUnit->mCloaked = inVariant; }
-    static bool FarmDoppelgangerAny(void* inAsk)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit) == true;
-    }
-    static void SetScaledModel(void* inAsk, void* inModel)
-    {
-        E(inAsk)->mUnit->mComplexUnit->SetScaledModel(static_cast<GEModel*>(inModel));
-    }
-    static bool DrawBlood(void*) { return gDrawBlood; }
-    static bool TileBlocked(void*, int32_t inX, int32_t inY) { return gWorld.IsTileBlocked(inX, inY); }
-    static bool AreaEffect(void* inAsk, int32_t inKind, float inX, float inY, uint32_t inPlayer)
-    {
-        return gAEManager.HasEffect(inKind, inX, inY, inPlayer, false, &E(inAsk)->mUnit->mComplexUnit->mAreaEffects);
-    }
-    static int32_t AreaEffects(void* inAsk) { return (int32_t)E(inAsk)->mUnit->mComplexUnit->mNumAreaEffects; }
-    static uint32_t GlowRows(void*) { return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows(); }
-};
-
-// The goal markers' questions (goal_markers.rs EeGfxGoalHost; the selection is the last player asked; the markers'
-// effects are ee_gfx's)
-struct EEGoalOps {
-    static uint32_t CurrentPlayer(void*) { return (uint32_t)::gWorld.mCurrentPlayer; }
-    static uint32_t PlayerCount(void*) { return (uint32_t)::gWorld.mNumPlayers; }
-};
-
-// The effects' file over an FSFile (each the FSFile call of that type) and the TEST ONLY captures' memory files
-struct EEFileOps {
-    static FSFile& File(void* inContext) { return *static_cast<FSFile*>(inContext); }
-    static bool IsOpen(void* inContext) { return File(inContext).GetIsOpen(); }
-    static int32_t ReadU32(void* inContext, uint32_t* outValue) { return (int32_t)File(inContext).Read(*outValue); }
-    static int32_t ReadI32(void* inContext, int32_t* outValue) { return (int32_t)File(inContext).Read(*outValue); }
-    static int32_t ReadF32(void* inContext, float* outValue) { return (int32_t)File(inContext).Read(*outValue); }
-    static int32_t ReadBool(void* inContext, bool* outValue) { return (int32_t)File(inContext).Read(*outValue); }
-    static int32_t WriteU32(void* inContext, uint32_t inValue) { return (int32_t)File(inContext).Write(inValue); }
-    static int32_t WriteI32(void* inContext, int32_t inValue) { return (int32_t)File(inContext).Write(inValue); }
-    static int32_t WriteF32(void* inContext, float inValue) { return (int32_t)File(inContext).Write(inValue); }
-    static int32_t WriteBool(void* inContext, bool inValue) { return (int32_t)File(inContext).Write(inValue); }
-    static EeGfxEffectFile Memory() { return EEEffectFile(*new FSMemoryFile); }
-    static void MemoryRewind(void* inContext) { static_cast<FSMemoryFile*>(inContext)->SetPosition(0, kFileOriginBegin, false); }
-    static void MemoryFree(void* inContext) { delete static_cast<FSMemoryFile*>(inContext); }
-};
-
-// The world the effects and their manager call into (ee_gfx effect_obj.rs EeGfxEffectWorld, ffi_manager.rs
-// EeGfxManagerWorld), registered before main
-template <class T> void Deref(uint64_t inObject) { P<T>(inObject)->Dereference(); }
-template <class T> void Ref(uint64_t inObject) { P<T>(inObject)->Reference(); }
-
-EeGfxEffectWorld EEMakeWorld()
-{
-    EeGfxEffectWorld w = {};
-    w.unit_reference = Ref<EEUnit>;
-    w.unit_release = Deref<EEUnit>;
-    w.unit_by_id = [](uint32_t inID) { return U(gWorld.GetUnit(inID)); };
-    w.graphic_effect_reference = Ref<EEGraphicEffect>;
-    w.graphic_effect_release = Deref<EEGraphicEffect>;
-    w.graphic_effect_load = [](uint64_t inEffect, bool inOnDemand) { P<EEGraphicEffect>(inEffect)->Load(inOnDemand); };
-    w.graphic_effect_unload = [](uint64_t inEffect) { P<EEGraphicEffect>(inEffect)->Unload(); };
-    w.graphic_effect_media = [](uint64_t inEffect) {
-        return U(static_cast<EEGraphicObject*>(P<EEGraphicEffect>(inEffect)->GetMedia()));
-    };
-    w.graphic_effect_by_id = [](uint32_t inID) { return U(EEGraphicEffect::Get(inID)); };
-    w.graphic_effect_count = []() { return (uint32_t)EEGraphicEffect::GetCount(); };
-    w.model_reference = Ref<GEModel>;
-    w.model_release = Deref<GEModel>;
-    w.media_load = [](uint64_t inObject) { return (int32_t)P<EEGraphicObject>(inObject)->LoadMedia(); };
-    w.media_unload = [](uint64_t inObject) { P<EEGraphicObject>(inObject)->UnloadMedia(); };
-    w.sound_release = ee_gamecpp_fx_sound_release;
-    w.sound_object_unload = ee_gamecpp_fx_sound_object_unload;
-    w.sound_object_load = ee_gamecpp_fx_sound_object_load;
-    w.unit_damaged = [](uint64_t inUnit) { P<EEUnit>(inUnit)->mUnitClass->UnitDamaged(P<EEUnit>(inUnit)->mComplexUnit, NULL, 0); };
-    w.loading_saved_game = []() { return (bool)gLoadingSavedGame; };
-    w.regions = []() { return gWorld.mMap != NULL ? gWorld.mMap->mEffectRegions : (EeGfxEffectRegions*)NULL; };
-    w.tile_seen = ee_gamecpp_fx_tile_seen;
-    w.doppelganger = ee_gamecpp_fx_doppelganger;
-    w.in_view = [](const EeGe3DPoint* inPoint, float inRadius) {
-        return ee_gfx_effect_in_view(reinterpret_cast<const EeGeViewport*>(&gViewport), gOrthographicView, inPoint, inRadius);
-    };
-    w.tick = []() {
-        return EeGfxEffectTick{gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)(unsigned long)gPhysics->mGameTime,
-                               gFreeCamera, gPhysics->mSpeed, gWorld.GetGameSpeed(), (int64_t)gPhysics->mGameTime,
-                               gPhysics->GetGameClock(), gPhysics->mGameOver,
-                               EeGe3DPoint{gWorld.mWindDirection.mX, gWorld.mWindDirection.mY, gWorld.mWindDirection.mZ}};
-    };
-    w.screen = [](bool inPreferences) {
-        return (uint32_t)(inPreferences ? gGamePreferences.mSettings.GetScreenID() : gScreenIndex);
-    };
-    // a shooter's weapon point (ee_combat's weapon_point with its CBEW capture): with the tag points at its
-    // animation when inTestList finds them, else assumed
-    w.weapon_point = ee_gamecpp_fx_weapon_point;
-    w.height = [](const EeGe3DPoint* inPoint) { return gWorld.mMap->GetHeight(*reinterpret_cast<const GE3DPoint*>(inPoint)); };
-    w.mesh = []() { return (const EeGeTerrainMesh*)gWorld.mMap->mTerrainMesh.GetRust(); };
-    w.raster = &gEERustRaster;
-    w.unit_graphic = Ask::UnitGraphic;
-    w.storm = EeGfxStormHost{NULL, EEStormHostOps::OnMap, ee_gamecpp_fx_storm_is_water, EEStormHostOps::GroundZ,
-                             ee_gamecpp_fx_storm_step_toward, ee_gamecpp_fx_storm_ripple};
-    w.answers3d = EeGfxEffectAnswers3D{ee_gamecpp_fx_animation_sound, ee_gamecpp_fx_wall_gate_posts, ee_gamecpp_fx_wall_piece,
-                                       ee_gamecpp_fx_volcano_build, ee_gamecpp_fx_farm_terrain, ee_gamecpp_fx_farm_drop_site,
-                                       Ask::FarmSetVariant, Ask::FarmDoppelgangerAny, ee_gamecpp_fx_farm_doppelganger,
-                                       ee_gamecpp_fx_farm_opacity, Ask::SetScaledModel, ee_gamecpp_fx_ground_point,
-                                       ee_gamecpp_fx_rain_sounds, ee_gamecpp_fx_emitter_sound};
-    w.answers2d = EeGfxEffectAnswers2D{ee_gamecpp_fx_confirm_goal, ee_gamecpp_fx_part_sound, Ask::DrawBlood, Ask::TileBlocked,
-                                       Ask::AreaEffect, Ask::AreaEffects, ee_gamecpp_fx_set_area_effects,
-                                       ee_gamecpp_fx_icons_selected, ee_gamecpp_fx_ground_at, ee_gamecpp_fx_glow_area,
-                                       Ask::GlowRows};
-    return w;
+const bool kRegistered = (EEGfxObjectLayoutRegister(), true);
 }
 
-EeGfxManagerWorld EEMakeManagerWorld()
-{
-    EeGfxManagerWorld w = {};
-    w.damaged_tick = ee_gamecpp_fx_damaged_tick;
-    w.effect_detail = ee_gamecpp_fx_effect_detail;
-    w.current = []() { return gEffectManager != NULL ? gEffectManager->mRust : (EeGfxEffectManager*)NULL; };
-    w.goals = EeGfxGoalHost{NULL, EEGoalOps::CurrentPlayer, EEGoalOps::PlayerCount, ee_gamecpp_fx_goal_player,
-                            ee_gamecpp_fx_goal_facts, ee_gamecpp_fx_goal_count, ee_gamecpp_fx_goal_step,
-                            ee_gamecpp_fx_goal_location, ee_gamecpp_fx_goal_unit_location, ee_gamecpp_fx_goal_target,
-                            ee_gamecpp_fx_goal_ground, NULL, NULL, NULL, NULL};
-    w.capture = ee_gamecpp_fx_capture;
-    w.memory_file = EEFileOps::Memory;
-    w.memory_file_data = ee_gamecpp_fx_memory_file_data;
-    w.memory_file_rewind = EEFileOps::MemoryRewind;
-    w.memory_file_free = EEFileOps::MemoryFree;
-    w.save_major = kSaveGameMajorVersion;
-    w.save_minor = kSaveGameMinorVersion;
-    return w;
-}
-
-const EeGfxEffectWorld kWorld = EEMakeWorld();
-const EeGfxManagerWorld kManagerWorld = EEMakeManagerWorld();
-const bool kRegistered = (EEGfxObjectLayoutRegister(), ee_gfx_effect_world_set(&kWorld), ee_gfx_manager_world_set(&kManagerWorld), true);
-}
-
-EeGfxEffectFile EEEffectFile(FSFile& inFile)
-{
-    EeGfxEffectFile theFile = {&inFile, EEFileOps::IsOpen, EEFileOps::ReadU32, EEFileOps::ReadI32, EEFileOps::ReadF32,
-                               EEFileOps::ReadBool, EEFileOps::WriteU32, EEFileOps::WriteI32, EEFileOps::WriteF32,
-                               EEFileOps::WriteBool};
-    return theFile;
-}
+// the effects' file, the manager's Load, Save and entry points, an effect's local flag: gamecpp fx_world.rs
+EeGfxEffectFile EEEffectFile(FSFile& inFile) { return ee_gamecpp_fw_file(&inFile); }
+long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_fw_load(this->mRust, &inFile, inMajorVersion, inMinorVersion); }
+long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_fw_save(this->mRust, &outFile, inMajorVersion, inMinorVersion); }
+long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, bool inKeepsUnit, long inTagPoint, long inGoalIndex) { return ee_gamecpp_fw_unit_effect(this->mRust, inUnit, inEffect, reinterpret_cast<uint32_t*>(outHandle), inKeepsUnit, inTagPoint, inGoalIndex); }
+long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_between_units(this->mRust, inFrom, inTo, inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
+long EEEffectManager::CreateEffect(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, long inGoalIndex) { return ee_gamecpp_fw_unit_to_point(this->mRust, inUnit, reinterpret_cast<const EeGe3DPoint*>(&inLocation), inEffect, reinterpret_cast<uint32_t*>(outHandle), inGoalIndex); }
+long EEEffectManager::CreatePlacedEffect(const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_placed(this->mRust, reinterpret_cast<const EeGe3DPoint*>(&inLocation), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
+long EEEffectManager::CreateTransformationEffect(const GETransformation& inTransformation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_transformation(this->mRust, reinterpret_cast<const EeGeTransformation*>(&inTransformation), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
+long EEEffectManager::CreateEffectBetween(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_between(this->mRust, reinterpret_cast<const EeGe3DPoint*>(&inFrom), reinterpret_cast<const EeGe3DPoint*>(&inTo), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
+long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_weather(this->mRust, reinterpret_cast<const long*>(inTiles.data()), inTiles.size(), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
+void EEEffect::SetLocalTo(long inPlayer) { ee_gamecpp_fw_set_local(this->mRecord, inPlayer); }
 
 // the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm
 // recentred on the terrain there; the tiles' bounds (gamecpp ro_views.rs over ee_gfx effect_storm.rs)
@@ -302,21 +111,6 @@ U2DPoint<long> EEEffect::GetCenterPoint() const
     return U2DPoint<long>(this->mRecord->storm.center_x, this->mRecord->storm.center_y);
 }
 
-// rain or snow over a set of tiles (their coordinates as x, y pairs)
-long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect,
-                                          EEEffectHandle* outHandle)
-{
-    std::vector<int32_t> theTiles;
-    for (size_t i = 0; i < inTiles.size(); i++) {
-        theTiles.push_back((int32_t)inTiles[i].mX);
-        theTiles.push_back((int32_t)inTiles[i].mY);
-    }
-    EeGfxEffectArgs a = Args(EeGfxEffectEntry::Weather, inEffect);
-    a.tiles = theTiles.empty() ? NULL : &theTiles[0];
-    a.tile_count = (uint32_t)inTiles.size();
-    return this->Create(a, outHandle);
-}
-
 void EEEffectCaptureSweep()
 {
     ee_gfx_effects_sweep(gEffectManager != NULL ? gEffectManager->mRust : NULL);
@@ -327,19 +121,6 @@ void EEEffectCaptureSweep()
 // effect_batch.rs's, the shared plane models (0x4e8df4, 0x4e8df8) too. The GE value classes pass as their mirrors.
 static GEVertexArray* sEffectVertices[2];
 static GEPolygonArray* sEffectPolygons;
-
-// A batch's quad: its four vertices from inIndex on (the raster table's batch_quad; AddEffectQuad)
-void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex)
-{
-    ee_gamecpp_fx_batch_quad(inWhich, inQuad, inIndex);
-}
-
-// A batch's draw: inCount vertices, half as many polygons (the raster table's batch_draw)
-int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture)
-{
-    return (int32_t)gRasterizer->Draw(*sEffectPolygons, inCount / 2, *sEffectVertices[inWhich], inCount,
-                                      static_cast<GETexture*>(inTexture), gScreenIndex, gOrthographicView);
-}
 
 // Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
 // (provisional name)
@@ -355,8 +136,8 @@ void DeleteEffectBatchBuffers()
 }
 
 // Creates and releases the two shared quad models (provisional names)
-void CreatePlaneModels() { ee_gfx_effect_planes_create(&gEERustRaster); }
-void ReleasePlaneModels() { ee_gfx_effect_planes_release(&gEERustRaster); }
+void CreatePlaneModels() { ee_gfx_effect_planes_create(ee_gamecpp_ro_raster()); }
+void ReleasePlaneModels() { ee_gfx_effect_planes_release(ee_gamecpp_ro_raster()); }
 
 // Places up to N shell-hole decals of the unit's class around a point (ambient effects on; ee_gfx
 // effect_placement.rs over the manager's list); the first one renews a decal already on that spot instead, unless
@@ -377,7 +158,6 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
 
 // the map's cases (EEMap.cpp), then lane C's
 int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpB2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane B section): one statement each
 // the constants the Rust names (gamecpp effect_host.rs)
@@ -396,6 +176,16 @@ static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GEVector) == sizeo
 #define FXUN ((EEUnit*)p)
 #define FXCX ((EEComplexUnit*)p)
 #define FXQUAD ((const EeGfxEffectQuad*)a[1])
+#define M ((EEMap*)p)
+
+// round 11, lane A: the effects' world tables' layout (gamecpp fx_world.rs)
+
+// where Base sits in a Derived object (a cast of a made-up address: nothing is read)
+#define FW_BASE(D, B) ((int64_t)(reinterpret_cast<uintptr_t>(static_cast<B*>(reinterpret_cast<D*>((uintptr_t)0x10000))) - 0x10000))
+#define FW_GOBJ(m) offsetof(EEGraphicObject, m)
+static_assert(sizeof(std::vector<EETurretPart*>) == 3 * sizeof(void*), "fx_world.rs: a vector is three words");
+static_assert(offsetof(EEGraphicEffect, mLinkedEffect3) == offsetof(EEGraphicEffect, mLinkedEffect1) + 2 * sizeof(void*), "the links in order");
+static_assert(sizeof(EEEffectHandle) == sizeof(uint32_t) && sizeof(U2DPoint<long>) == 2 * sizeof(long), "fx_world.rs: the handles and tiles");
 
 int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
@@ -546,17 +336,124 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FxDrawBlood: return gDrawBlood;
     case O::FxShellHoleEffect: return P64(FXCX->mUnitClass->mShellHoleEffect);
     case O::FxBloodStainEffect: return P64(FXCX->mUnitClass->mBloodStainEffect);
+    // round 11, lane A: the effects' world tables (gamecpp fx_world.rs)
+    // the layout ee_gfx effect_reads.rs and gobj_media.rs read
+    case O::FwLayGobjFields: return FW_BASE(EEGraphicObject, EeDataGraphicObjectFields);
+    case O::FwLayGobjModels: return FW_GOBJ(mModels);
+    case O::FwLayGobjTextures: return FW_GOBJ(mTextures);
+    case O::FwLayGobjTagPoints: return FW_GOBJ(mTagPoints);
+    case O::FwLayGobjTags: return FW_GOBJ(mTags);
+    case O::FwLayGobjModel: return FW_GOBJ(mModel);
+    case O::FwLayGobjDefaultPoint: return FW_GOBJ(mDefaultPoint);
+    case O::FwLayGobjTopPoint: return FW_GOBJ(mTopPoint);
+    case O::FwLayGobjTurretParts: return FW_GOBJ(mTurretParts);
+    case O::FwLayGobjOrbitals: return FW_GOBJ(mOrbitals);
+    case O::FwLayTurretPartModel: return offsetof(EETurretPart, mModel);
+    case O::FwLayOrbitalModel: return offsetof(EEOrbital, mModel);
+    case O::FwLayOrbitalSpeed: return offsetof(EEOrbital, mSpeed);
+    case O::FwLayOrbitalAngle: return offsetof(EEOrbital, mAngle);
+    case O::FwLayGeffectFields: return FW_BASE(EEGraphicEffect, EeDataGraphicEffectFields);
+    case O::FwLayGeffectObject: return offsetof(EEGraphicEffect, mGraphicObject);
+    case O::FwLayGeffectLinked: return offsetof(EEGraphicEffect, mLinkedEffect1);
+    case O::FwLayComplexTurretAngles: return offsetof(EEComplexUnit, mTurretAngles);
+    case O::FwLayStatsModel: return offsetof(EEUnitClassUpgrade, mModel);
+    case O::FwLayGobjFileName: return FW_GOBJ(mFileName);
+    case O::FwLayGobjTextureName: return FW_GOBJ(mTextureName);
+    case O::FwLayGobjShadowModelName: return FW_GOBJ(mShadowModelName);
+    case O::FwLayGobjShadowTextureName: return FW_GOBJ(mShadowTextureName);
+    case O::FwLayGobjModelNames: return FW_GOBJ(mModelNames);
+    case O::FwLayGobjTextureNames: return FW_GOBJ(mTextureNames);
+    case O::FwLayGobjTexture: return FW_GOBJ(mTexture);
+    case O::FwLayGobjShadowModel: return FW_GOBJ(mShadowModel);
+    case O::FwLayGobjShadowTexture: return FW_GOBJ(mShadowTexture);
+    case O::FwLayGobjSounds1: return FW_GOBJ(mSounds1);
+    case O::FwLayGobjSounds2: return FW_GOBJ(mSounds2);
+    case O::FwLayGobjBar: return FW_GOBJ(mBar);
+    case O::FwLayGobjMediaUse: return FW_BASE(EEGraphicObject, EeDataMediaUse);
+    case O::FwLayGeffectNumLoads: return offsetof(EEGraphicEffect, mNumLoads);
+    // the effects' world: the units, graphic effects, models and media
+    case O::FwUnitRef: ((EEUnit*)p)->Reference();
+        break;
+    case O::FwUnitDeref: ((EEUnit*)p)->Dereference();
+        break;
+    case O::FwGeffRef: ((EEGraphicEffect*)p)->Reference();
+        break;
+    case O::FwGeffDeref: ((EEGraphicEffect*)p)->Dereference();
+        break;
+    case O::FwGeffLoad: ((EEGraphicEffect*)p)->Load(a[0] != 0);
+        break;
+    case O::FwGeffUnload: ((EEGraphicEffect*)p)->Unload();
+        break;
+    case O::FwGeffMedia: return P64(static_cast<EEGraphicObject*>(((EEGraphicEffect*)p)->GetMedia()));
+    case O::FwGeffGet: return P64(EEGraphicEffect::Get((uint32_t)a[0]));
+    case O::FwGeffCount: return (uint32_t)EEGraphicEffect::GetCount();
+    case O::FwModelDeref: ((GEModel*)p)->Dereference();
+        break;
+    case O::FwMediaLoad: return (int32_t)((EEGraphicObject*)p)->LoadMedia();
+    case O::FwMediaUnload: ((EEGraphicObject*)p)->UnloadMedia();
+        break;
+    case O::FwUnitDamaged: ((EEUnit*)p)->mUnitClass->UnitDamaged(((EEUnit*)p)->mComplexUnit, NULL, 0);
+        break;
+    case O::FwLoadingSaved: return (bool)gLoadingSavedGame;
+    case O::FwMapEffectRegions: return P64(((EEMap*)p)->mEffectRegions);
+    case O::FwViewport: return P64(&gViewport);
+    case O::FwGameTime: return (int64_t)gPhysics->mGameTime;
+    case O::FwGameOver: return gPhysics->mGameOver;
+    case O::FwWind: *(EeGe3DPoint*)a[0] = EeGe3DPoint{gWorld.mWindDirection.mX, gWorld.mWindDirection.mY, gWorld.mWindDirection.mZ};
+        break;
+    case O::FwScreen: return (uint32_t)(a[0] != 0 ? gGamePreferences.mSettings.GetScreenID() : gScreenIndex);
+    // the answers of the 3D and 2D kinds
+    case O::FwDoppelgangerAny: return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(((EEUnit*)p)->mTile), (EEUnit*)p) == true;
+    case O::FwCxSetScaledModel: ((EEComplexUnit*)p)->SetScaledModel((GEModel*)a[0]);
+        break;
+    case O::FwTileBlocked: return gWorld.IsTileBlocked((int32_t)a[0], (int32_t)a[1]);
+    case O::FwAreaEffect: return gAEManager.HasEffect((int32_t)a[0], f[0], f[1], (uint32_t)a[1], false, &((EEComplexUnit*)p)->mAreaEffects);
+    case O::FwGlowRows: return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows();
+    // the manager's world, the memory files, the effects' file
+    case O::FwManagerRust: return P64(gEffectManager != NULL ? gEffectManager->mRust : (EeGfxEffectManager*)NULL);
+    case O::FwCurrentPlayerIndex: return (uint32_t)::gWorld.mCurrentPlayer;
+    case O::FwNumPlayers: return (uint32_t)::gWorld.mNumPlayers;
+    case O::FwMemoryNew: return P64(static_cast<FSFile*>(new FSMemoryFile));
+    case O::FwMemoryRewind: static_cast<FSMemoryFile*>((FSFile*)p)->SetPosition(0, kFileOriginBegin, false);
+        break;
+    case O::FwMemoryDelete: delete static_cast<FSMemoryFile*>((FSFile*)p);
+        break;
+    case O::FwSaveMajor: return kSaveGameMajorVersion;
+    case O::FwSaveMinor: return kSaveGameMinorVersion;
+    case O::FwReadU32: return ((FSFile*)p)->Read(*(uint32_t*)a[0]);
+    case O::FwReadI32: return ((FSFile*)p)->Read(*(int32_t*)a[0]);
+    case O::FwWriteU32: return ((FSFile*)p)->Write(*(const uint32_t*)a[0]);
+    case O::FwWriteI32: return ((FSFile*)p)->Write(*(const int32_t*)a[0]);
+    case O::RrBatchDraw: return (int32_t)gRasterizer->Draw(*sEffectPolygons, (uint32_t)a[1] / 2, *sEffectVertices[a[0]], (uint32_t)a[1], (GETexture*)p, gScreenIndex, gOrthographicView);
     default: return EECore9OpB2(inOp, p, a, f);
     }
     return 0;
 }
 
+double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::FxGeffSize: return ((EEGraphicEffect*)p)->mSize;
     case O::FxGeffParam2: return ((EEGraphicEffect*)p)->GetParam2();
-    default: return EECore9OpB2F(inOp, p, a, f);
+    // round 11, lane A (gamecpp fx_world.rs)
+    case O::FwTickSeconds: return gPhysics->GetTickSeconds();
+    case O::FwTickTime: return gPhysics->GetTickTime();
+    case O::FwPhysicsSpeed: return gPhysics->mSpeed;
+    case O::FwWorldSpeed: return gWorld.GetGameSpeed();
+    case O::FwGameClock: return gPhysics->GetGameClock();
+    case O::FwMeshGetZ: return ((EEMap*)p)->mTerrainMesh.GetZ((int32_t)a[0], (int32_t)a[1]);
+    case O::MpMeshZ: return M->mTerrainMesh.GetMeshZ(f[0], f[1]);
+    case O::MpTerrainWaterDepth: return ((EETerrainTable*)p)->mWaterDepth;
+    case O::MpViewHalfWidth: return gViewport.GetHalfWidth();
+    case O::MpViewXCenter: return gViewport.GetXCenter();
+    case O::MpViewYCenter: return gViewport.GetYCenter();
+    case O::MpViewFrontClip: return gViewport.GetFrontClippingDistance();
+    case O::MpViewRearClip: return gViewport.GetRearClippingDistance();
+    case O::TlHeight: return ((EETile*)p)->GetHeight();
+    case O::TlMapTileSize: return gMapTileSize;
+    case O::TlMeshZ: return ((EEMap*)p)->mTerrainMesh.GetZ((long)a[0], (long)a[1]);
+    default: return EECore9OpB5F(inOp, p, a, f);
     }
 }

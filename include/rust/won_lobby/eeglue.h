@@ -509,6 +509,10 @@ enum class EeWonEeGlueOp : uint32_t {
   UiLockCopy,
   /// `gWorld.mLock->WriteLock()`.
   WorldWriteLock,
+  /// `((GUIStringData*)a)->mLength`.
+  StringLength = 600,
+  /// `(uint32_t)((GUIStringData*)a)->mText[b]`.
+  StringUnitAt,
 };
 
 /// The inward calls (`a`.. as documented).
@@ -659,6 +663,20 @@ void ee_won_eeglue_set_host(EeWonEeGlueHostFn host);
 /// Sets the game's host (EELobbyGlueHost.cpp): as `ee_won_eeglue_set_host`, and its multi-statement ops are
 /// answered by gluesplit.rs over the host's one-statement ops (the drivers' scripted hosts see the ops whole).
 void ee_won_eeglue_set_game_host(EeWonEeGlueHostFn host);
+
+/// One op as the game's host answers it, for the drivers (won_split32_test): gluesplit.rs's composition over
+/// `host`'s one-statement cases, or `host`'s own case.
+///
+/// # Safety
+/// `host` answers the ops (EELobbyGlueHost.cpp's statements).
+ptrdiff_t ee_won_eeglue_split_op(EeWonEeGlueHostFn host,
+                                 EeWonEeGlueOp op,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b,
+                                 ptrdiff_t c,
+                                 ptrdiff_t d,
+                                 ptrdiff_t e,
+                                 ptrdiff_t f);
 
 /// One inward call (`EeWonEeGlueCall`).
 ///

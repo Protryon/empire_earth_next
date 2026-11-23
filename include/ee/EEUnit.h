@@ -292,17 +292,16 @@ public:
 
 // EEComplexUnit::mIgnoredTargets's element (0x18 bytes; ctor 0x1f5d8b out of line right after its first user
 // IgnoreTarget: six zero stores): an attacker record, found by its unit id (std::find 0x200eb6 with an unsigned long)
-// (provisional names)
+// (provisional names). The ctor's six zero stores are the members' initializers; its out-of-line memberwise copy
+// 0x20018a (the deque erase family's) is the implicit one.
 struct EEComplexUnitAttacker {
-    EEComplexUnitAttacker();
-    EEComplexUnitAttacker& operator=(const EEComplexUnitAttacker& inOther);   // 0x20018a (memberwise, out of line: the deque erase family 0x2001b5/0x200ef2/0x200f35 copies through it; ICF with EESEAPlaceWallEntry's)
     bool operator==(unsigned long inUnitID) const { return this->mUnitID == inUnitID; }
-    long mTileX;                            // +0x00 (the attacked unit's tile)
-    long mTileY;                            // +0x04
-    long mFromX;                            // +0x08 (the attacker's tile)
-    long mFromY;                            // +0x0c
-    unsigned long mUnitID;                  // +0x10
-    unsigned long mTime;                    // +0x14 (gPhysics +0xd0 plus 30000)
+    long mTileX = 0;                        // +0x00 (the attacked unit's tile)
+    long mTileY = 0;                        // +0x04
+    long mFromX = 0;                        // +0x08 (the attacker's tile)
+    long mFromY = 0;                        // +0x0c
+    unsigned long mUnitID = 0;              // +0x10
+    unsigned long mTime = 0;                // +0x14 (gPhysics +0xd0 plus 30000)
 };
 
 // A queued research/production order (EEComplexUnit::mBuildQueue; 0x1f5f97 pushes (technology, player flag)). Not a tile:

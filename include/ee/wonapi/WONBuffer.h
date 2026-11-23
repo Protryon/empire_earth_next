@@ -23,15 +23,13 @@ inline unsigned long WideUtf16Length(const std::wstring& inText)
     return static_cast<unsigned long>(ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),NULL,0)/2);
 }
 // the UTF-16 little-endian bytes of a wide string, appended to outBytes
+inline void WonAppendSink(void* inBytes, const uint8_t* inData, size_t inLength)
+{ static_cast<std::string*>(inBytes)->append(reinterpret_cast<const char*>(inData), inLength); }
 inline void WideAppendUtf16LE(std::string& outBytes, const std::wstring& inText)
-{
-    size_t at=outBytes.length();
-    size_t count=ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),NULL,0);
-    outBytes.resize(at+count);
-    if(count>0)
-        ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),
-                                 reinterpret_cast<uint8_t*>(&outBytes[at]),count);
-}
+{ ee_won_utf16le_from_wide_sink(inText.data(),sizeof(wchar_t),inText.length(),WonAppendSink,&outBytes); }
+// wchar_t text the conversions give into the std::wstring at inText
+inline void WonWideTextSink(void* inText, const void* inChars, size_t inCount)
+{ static_cast<std::wstring*>(inText)->assign(static_cast<const wchar_t*>(inChars), inCount); }
 // appends one UTF-16 unit; on UTF-32 systems a low surrogate after a high one joins it into one character
 inline void WideAppendUtf16Unit(std::wstring& ioText, uint16_t inUnit)
 {
@@ -48,12 +46,7 @@ inline void WideAppendUtf16Unit(std::wstring& ioText, uint16_t inUnit)
 }
 // a wide string of count UTF-16 little-endian units (surrogate pairs joined on UTF-32 systems)
 inline void WideAssignUtf16LE(std::wstring& outText, const void* inBytes, unsigned long inCount)
-{
-    outText.resize(inCount);
-    size_t n=inCount>0 ? ee_won_wide_from_utf16le(static_cast<const uint8_t*>(inBytes),inCount,sizeof(wchar_t),
-                                                    &outText[0],inCount) : 0;
-    outText.resize(n);
-}
+{ ee_won_wide_from_utf16le_sink(static_cast<const uint8_t*>(inBytes),inCount,sizeof(wchar_t),WonWideTextSink,&outText); }
 
 // WONCommon's buffers are Rust objects (rust/crates/ee_won_net/src/buffer.rs: the state, growth, length prefixes,
 // bounds and field codings); the classes below are the shims the C++ callers use. ByteBuffer keeps the reference
@@ -94,12 +87,7 @@ inline void WonByteBufferSink(void* inContext, const uint8_t* inBytes, size_t in
     *static_cast<ConstSmartPtr<ByteBuffer>*>(inContext)=new ByteBuffer(inBytes,static_cast<unsigned long>(inLength),false);
 }
 inline void WonWideSink(void* inContext, const uint16_t* inUnits, size_t inCount)
-{
-    std::wstring& text=*static_cast<std::wstring*>(inContext);
-    text.resize(inCount);
-    size_t n=inCount>0 ? ee_won_wide_from_utf16(inUnits,inCount,sizeof(wchar_t),&text[0],inCount) : 0;
-    text.resize(n);
-}
+{ ee_won_wide_from_utf16_sink(inUnits,inCount,sizeof(wchar_t),WonWideTextSink,inContext); }
 
 // RTTI: ReadBufferException : std::exception. Original dtor 0x2a3b40 destroys string +8.
 class ReadBufferException : public std::exception {
@@ -208,17 +196,14 @@ public:
     // a unit count field, then the UTF-16 little-endian units
     void AppendWString(const std::wstring& inText, int inLengthSize)
     {
-        std::string aBytes;
-        WideAppendUtf16LE(aBytes,inText);
-        ee_won_writer_append_utf16le(this->mBuffer,reinterpret_cast<const uint8_t*>(aBytes.data()),
-                                     static_cast<unsigned long>(aBytes.length()),
-                                     static_cast<unsigned char>(inLengthSize));
+        ee_won_writer_append_wide(this->mBuffer,inText.data(),sizeof(wchar_t),inText.length(),
+                                  static_cast<unsigned char>(inLengthSize));
     }
     // a length field, then the bytes; a NULL buffer writes only a zero length
     void AppendBuffer(const ByteBuffer* inBuffer, unsigned char inLengthFieldSize = 0)
     {
-        const uint8_t* aData=inBuffer!=NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL;
-        ee_won_writer_append_field(this->mBuffer,aData,inBuffer!=NULL ? inBuffer->length() : 0,inLengthFieldSize);
+        ee_won_writer_append_field(this->mBuffer,inBuffer!=NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL,
+                                   inBuffer!=NULL ? inBuffer->length() : 0,inLengthFieldSize);
     }
     void SetBytes(unsigned long inPos, const void* inData, unsigned long inLength)
     { ee_won_writer_set(this->mBuffer,inPos,static_cast<const uint8_t*>(inData),inLength); }

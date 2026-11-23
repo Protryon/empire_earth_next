@@ -42,6 +42,26 @@ pub fn view_read(t: &WorldRead, unit: u64, class_handle: u64, code: i32) -> Opti
     let world = || WorldView::global(t);
     Some(match code {
         EE_UNITS_UPD_R_MEDIC => b(world_field!(hf()?, mIsMedic)),
+        // theUnit->GetPosition(): the complex unit's location's z
+        EE_UNITS_UPD_R_POSITION_Z => bits(crate::units::unit_geom::position(&u)[2]),
+        // (unsigned long)mGoalState->mPathAttempts > (unsigned long)mGoalState->GetMaxPathAttempts()
+        EE_UNITS_ACT_R_PATH_ATTEMPTS_EXCEEDED => {
+            let goal = u.goal_handle();
+            // SAFETY: the unit's live goal (the original read it without a test)
+            let attempts =
+                unsafe { (*(goal as usize as *const crate::units::goal_obj::EeUnitsGoalBase)).path_attempts };
+            // SAFETY: as above
+            let max = unsafe {
+                crate::units::goal_obj::call(
+                    crate::units::rust_goal::EE_UNITS_GOAL_MAX_PATH_ATTEMPTS,
+                    goal,
+                    0,
+                    0,
+                    core::ptr::null_mut(),
+                )
+            };
+            b(attempts as core::ffi::c_ulong > max as core::ffi::c_long as core::ffi::c_ulong)
+        }
         EE_UNITS_UPD_R_REGENERATES => match stats() {
             Some(s) => b(world_field!(s, mRegeneration) > 0),
             None => 0,

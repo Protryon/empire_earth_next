@@ -27,6 +27,8 @@
 #include "ee/wonapi/WONLobbyControlConfig.h"
 #include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONLobbyGuard.h"
+#include "rust/won_lobby/lobbyprv.h"
 using namespace WONAPI;
 
 
@@ -37,206 +39,180 @@ template <EeWonLobbyCtlKind K> static Component* DlgCtlFactory() { return new Lo
 template <bool Lan> static Component* ScreenFactory() { return new RootScreen(Lan); }
 typedef EeWonLobbyCtlKind Ck;
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-// Builds the lobby's resource config table: the base GUI and browser types plus every lobby screen, control,
-// dialog and button type the _Lobby*.cfg files can name
-static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *theTable)
-{
-	ResourceConfigTablePtr aTable = LobbyResource_Init(theTable);
-	WONGUIConfig_Init(aTable.get());	
-	aTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>);
-
-	aTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>);
-	aTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>);
-	aTable->AddAllocator("DirectConnectCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::DirectConnect>);
-	aTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>);
-	aTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>);
-	aTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>);
-	aTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory);
-	aTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>);
-	aTable->AddAllocator("InternetOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::NetOptions>);
-	aTable->AddAllocator("InternetScreen",NewConfigOf<ContainerConfig>,ScreenFactory<false>);
-	aTable->AddAllocator("LanOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LanOptions>);
-	aTable->AddAllocator("LanScreen",NewConfigOf<ContainerConfig>,ScreenFactory<true>);
-	aTable->AddAllocator("LoginCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::Login>);
-	aTable->AddAllocator("LoginHelpCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<LoginHelpCtrl>);	
-	aTable->AddAllocator("LoginScreen",NewConfigOf<ContainerConfig>,NewComponentOf<LoginScreen>);
-	aTable->AddAllocator("LoginStatusCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LoginStatus>);
-	aTable->AddAllocator("LostPasswordCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostPassword>);
-	aTable->AddAllocator("LostUserNameCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostUserName>);
-	aTable->AddAllocator("MOTDCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<MOTDCtrl>);
-	aTable->AddAllocator("QuickPlayCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::QuickPlay>);
-	aTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>);
-	aTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>);
-	aTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>);
-	aTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>);
-	aTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory);
-
-	aTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>);
-	aTable->AddAllocator("AdminActionDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>);
-	aTable->AddAllocator("BadUserDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>);
-	aTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>);
-	aTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>);
-	aTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>);
-	aTable->AddAllocator("CreateRoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>);
-	aTable->AddAllocator("DirectConnectDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>);
-	aTable->AddAllocator("LanNameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanName>);
-	aTable->AddAllocator("LanPortDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>);
-	aTable->AddAllocator("OkCancelDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>);
-	aTable->AddAllocator("PasswordDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Password>);
-	aTable->AddAllocator("RoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Room>);
-	aTable->AddAllocator("StatusDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Status>);
-	aTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>);
-
-
-	aTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>);
-	aTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>);
-	aTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>);
-
-	aTable->AddAllocator("GameOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);
-	aTable->AddAllocator("PlayerOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);
-
-	return aTable;
-}
-
-
 namespace WONAPI {
 
-// Starts the lobby: parses WONLobby.cfg, builds the lobby screens from _LobbyMaster.cfg, inits the logic objects
-// and derives the internet and LAN product ids; on failure stores the reason in mInitError and returns false
-bool WONLobbyPrv::Init(ResourceConfigTable* input,void (*initFunc)(ComponentConfig*))
+// the methods' statements (lobbyprv.rs composes them, R6 WON round 33); Init's locals are these statics
+static ConfigParser* sPrvParser;
+static SmartPtr<ContainerConfig> sPrvComponentConfig;
+static ResourceConfigTablePtr sPrvTable;
+static std::map<std::string, std::string, StringLessNoCase>::iterator sPrvDefine;
+static CRC16 sPrvCrc;
+// Init's try: a config error is the init error (0); 1 when f returned
+template <class F> static intptr_t PrvConfigTry(WONLobbyPrv* p, F f)
 {
-    this->mInitError=GetEmptyGUIStringData();
-    ConfigParser parser;
-    parser.SetWarningsAsErrors(true);
-    if(!parser.OpenFile(WONAPICore::GetDefaultFileDirectory()+LobbyConfig::mDefaultFileName)) {
-        this->mInitError=GUIString("Couldn't find "+LobbyConfig::mDefaultFileName);
-        return false;
-    }
-    if(!this->mConfig->ParseTopLevel(parser,NULL)) {
-        this->mInitError=GUIString(LobbyConfig::mDefaultFileName+" error: ");
-        this->mInitError.append(GUIString(parser.GetAbortReason()));
-        return false;
-    }
-    this->mLobbyPort=this->mConfig->mLobbyPort;
-    SmartPtr<ContainerConfig> componentConfig=new ContainerConfig;
-    this->mLobbyContainer=new LobbyContainer;
-    ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory()+this->mConfig->mResourceDirectory);
-    SmartPtr<ResourceConfigTable> resources=GetLobbyResourceConfigTable(input);
-    ee_won_lobbyctl_init_columns();
-    std::map<std::string,std::string,StringLessNoCase>::iterator itr=this->mConfig->mDefines.begin();
-    while(itr!=this->mConfig->mDefines.end()) {
-        parser.AddDefine(itr->first,itr->second,false);
-        ++itr;
-    }
-    if(!componentConfig->ReadConfig_Unsafe(this->mLobbyContainer.get(),"_LobbyMaster.cfg",resources.get(),&parser)) {
-        this->mInitError=componentConfig->mConfigError;
-        return false;
-    }
     try {
-        this->mLogicMgr.Init(componentConfig.get());
-        if(initFunc!=NULL) initFunc(componentConfig.get());
+        f();
+        return 1;
+    } catch (ConfigObjectException& error) {
+        p->mInitError = GUIString(error.mText);
+        return 0;
     }
-    catch(ConfigObjectException& error) {
-        this->mInitError=GUIString(error.mText);
-        return false;
+}
+static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
+{
+    typedef EeWonLobbyPrvOp Op;
+    WONLobbyPrv* p = static_cast<WONLobbyPrv*>(inPrv);
+    switch (inOp) {
+    case Op::InitErrorClear: p->mInitError = GetEmptyGUIStringData(); return 0;
+    case Op::ParserNew: sPrvParser = new ConfigParser; return 0;
+    case Op::ParserWarningsAsErrors: sPrvParser->SetWarningsAsErrors(true); return 0;
+    case Op::ParserOpenDefault: return WON_GUARDED(sPrvParser->OpenFile(WONAPICore::GetDefaultFileDirectory() + LobbyConfig::mDefaultFileName));
+    case Op::ErrorNotFound: p->mInitError = GUIString("Couldn't find " + LobbyConfig::mDefaultFileName); return 0;
+    case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
+    case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
+    case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
+    case Op::LobbyPortFromConfig: p->mLobbyPort = p->mConfig->mLobbyPort; return 0;
+    case Op::ComponentConfigNew: sPrvComponentConfig = new ContainerConfig; return 0;
+    case Op::LobbyContainerNew: p->mLobbyContainer = new LobbyContainer; return 0;
+    case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory); return 0;
+    case Op::DefinesBegin: sPrvDefine = p->mConfig->mDefines.begin(); return 0;
+    case Op::DefinesAtEnd: return (sPrvDefine == p->mConfig->mDefines.end()) ? 1 : 0;
+    case Op::DefineAdd: sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false); return 0;
+    case Op::DefineNext: ++sPrvDefine; return 0;
+    case Op::ReadMaster: return WON_GUARDED(sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser));
+    case Op::ErrorFromConfig: p->mInitError = sPrvComponentConfig->mConfigError; return 0;
+    case Op::LogicMgrInit: return WON_GUARDED(PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }));
+    case Op::InitFuncRun: return WON_GUARDED(PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }));
+    case Op::CrcNew: sPrvCrc = CRC16(); return 0;
+    case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
+    case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;
+    case Op::ProductIdFromCrc: p->mProductId = sPrvCrc.Get(); return 0;
+    case Op::CrcReset: sPrvCrc.Reset(); return 0;
+    case Op::CrcPutLanVersion: sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length()); return 0;
+    case Op::LanProductIdFromCrc: p->mLanProductId = sPrvCrc.Get(); return 0;
+    case Op::ChatParserInitCommands: p->mChatCommandParser->InitCommands(); return 0;
+    case Op::ResDone: sPrvTable = NULL; return 0;
+    case Op::ComponentConfigDone: sPrvComponentConfig = NULL; return 0;
+    case Op::ParserFree: delete sPrvParser; return 0;
+    case Op::LogicMgrKill: p->mLogicMgr.Kill(); return 0;
+    case Op::UdpIs: return (p->mUDPManager.get() != NULL) ? 1 : 0;
+    case Op::UdpClose: p->mUDPManager->Close(); return 0;
+    case Op::UdpClear: p->mUDPManager = NULL; return 0;
+    case Op::AuthIs: return (p->mAuthContext.get() != NULL) ? 1 : 0;
+    case Op::AuthKill: p->mAuthContext->Kill(); return 0;
+    case Op::AuthClear: p->mAuthContext = NULL; return 0;
+    case Op::HashSetClear: p->mHasSetHashFileList = false; return 0;
+    case Op::HashListClear: p->mHashFileList.clear(); return 0;
+    case Op::HashListRead: StringParser(reinterpret_cast<const char*>(a)).ReadValue(p->mHashFileList); return 0;
+    case Op::CommunitySet: p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a); return 0;
+    case Op::AuthSetCommunity: p->mAuthContext->SetCommunity(p->mLoginCommunity); return 0;
+    case Op::CdKeyCheck: return (p->mConfig->mCDKeyCheck) ? 1 : 0;
+    case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
+    case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
+    case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
+    case Op::LobbyPort8888: p->mLobbyPort = 8888; return 0;
+    case Op::TouTimesClear: p->mSysTOUTime = p->mGameTOUTime = 0; return 0;
+    case Op::BehindFirewallClear: p->mBehindFirewall = false; return 0;
+    case Op::FirewallTestDoneClear: p->mFirewallTestDone = false; return 0;
+    case Op::SuspendedClear: p->mSuspended = false; return 0;
+    case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
+    case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
+    case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
+    case Op::ProductIdClear: p->mProductId = 0; return 0;
+    case Op::LanProductIdClear: p->mLanProductId = 0; return 0;
+    case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
+    case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
+    case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;
+    case Op::PersistentDataNew: p->mPersistentData = new LobbyPersistentData; return 0;
+    case Op::ChatParserNew: p->mChatCommandParser = new ChatCommandParser; return 0;
+    case Op::UdpNew: p->mUDPManager = new UDPManager; return 0;
+    case Op::AccountServersNew: p->mAccountServers = new ServerContext; return 0;
+    case Op::AuthServersNew: p->mAuthServers = new ServerContext; return 0;
+    case Op::DirServersNew: p->mDirServers = new ServerContext; return 0;
+    case Op::RoomDirServersNew: p->mRoomDirServers = new ServerContext; return 0;
+    case Op::FirewallServersNew: p->mFirewallDetectServers = new ServerContext; return 0;
+    case Op::PatchServersNew: p->mPatchServers = new ServerContext; return 0;
+    case Op::VersionStatusNone: p->mVersionStatus = WS_None; return 0;
+    case Op::AuthContextNew: p->mAuthContext = new AuthContext; return 0;
+    case Op::AuthSetServers: p->mAuthContext->SetServerContext(p->mAuthServers.get()); return 0;
+    case Op::AccountLogicNew: p->mAccountLogic = new AccountLogic; return 0;
+    case Op::DialogLogicNew: p->mDialogLogic = new DialogLogic; return 0;
+    case Op::InitLogicNew: p->mInitLogic = new InitLogic; return 0;
+    case Op::RoutingLogicNew: p->mRoutingLogic = new RoutingLogic; return 0;
+    case Op::StagingLogicNew: p->mStagingLogic = new StagingLogic; return 0;
+    case Op::LanLogicNew: p->mLanLogic = new LanLogic; return 0;
+    case Op::PingLogicNew: p->mPingLogic = new PingLogic; return 0;
+    case Op::AddAccountLogic: p->mLogicMgr.AddLogic(p->mAccountLogic.get()); return 0;
+    case Op::AddDialogLogic: p->mLogicMgr.AddLogic(p->mDialogLogic.get()); return 0;
+    case Op::AddStagingLogic: p->mLogicMgr.AddLogic(p->mStagingLogic.get()); return 0;
+    case Op::AddInitLogic: p->mLogicMgr.AddLogic(p->mInitLogic.get()); return 0;
+    case Op::AddLanLogic: p->mLogicMgr.AddLogic(p->mLanLogic.get()); return 0;
+    case Op::AddRoutingLogic: p->mLogicMgr.AddLogic(p->mRoutingLogic.get()); return 0;
+    case Op::AddPingLogic: p->mLogicMgr.AddLogic(p->mPingLogic.get()); return 0;
+    case Op::ResInit: sPrvTable = LobbyResource_Init(reinterpret_cast<ResourceConfigTable*>(a)); return 0;
+    case Op::ResGuiInit: WONGUIConfig_Init(sPrvTable.get()); return 0;
+    case Op::AllocBrowserComponent: sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>); return 0;
+    case Op::AllocChatCtrl: sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>); return 0;
+    case Op::AllocCreateAccountCtrl: sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>); return 0;
+    case Op::AllocDirectConnectCtrl: sPrvTable->AddAllocator("DirectConnectCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::DirectConnect>); return 0;
+    case Op::AllocFriendsListCtrl: sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>); return 0;
+    case Op::AllocGameBrowserCtrl: sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>); return 0;
+    case Op::AllocGameStagingCtrl: sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>); return 0;
+    case Op::AllocGameUserListCtrl: sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory); return 0;
+    case Op::AllocInitFailedCtrl: sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>); return 0;
+    case Op::AllocInternetOptionsCtrl: sPrvTable->AddAllocator("InternetOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::NetOptions>); return 0;
+    case Op::AllocInternetScreen: sPrvTable->AddAllocator("InternetScreen",NewConfigOf<ContainerConfig>,ScreenFactory<false>); return 0;
+    case Op::AllocLanOptionsCtrl: sPrvTable->AddAllocator("LanOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LanOptions>); return 0;
+    case Op::AllocLanScreen: sPrvTable->AddAllocator("LanScreen",NewConfigOf<ContainerConfig>,ScreenFactory<true>); return 0;
+    case Op::AllocLoginCtrl: sPrvTable->AddAllocator("LoginCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::Login>); return 0;
+    case Op::AllocLoginHelpCtrl: sPrvTable->AddAllocator("LoginHelpCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<LoginHelpCtrl>); return 0;
+    case Op::AllocLoginScreen: sPrvTable->AddAllocator("LoginScreen",NewConfigOf<ContainerConfig>,NewComponentOf<LoginScreen>); return 0;
+    case Op::AllocLoginStatusCtrl: sPrvTable->AddAllocator("LoginStatusCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LoginStatus>); return 0;
+    case Op::AllocLostPasswordCtrl: sPrvTable->AddAllocator("LostPasswordCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostPassword>); return 0;
+    case Op::AllocLostUserNameCtrl: sPrvTable->AddAllocator("LostUserNameCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostUserName>); return 0;
+    case Op::AllocMOTDCtrl: sPrvTable->AddAllocator("MOTDCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<MOTDCtrl>); return 0;
+    case Op::AllocQuickPlayCtrl: sPrvTable->AddAllocator("QuickPlayCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::QuickPlay>); return 0;
+    case Op::AllocRoomCtrl: sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>); return 0;
+    case Op::AllocRoomLabelCtrl: sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>); return 0;
+    case Op::AllocServerListCtrl: sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>); return 0;
+    case Op::AllocUpdateAccountCtrl: sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>); return 0;
+    case Op::AllocUserListCtrl: sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory); return 0;
+    case Op::AllocAddFriendDialog: sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>); return 0;
+    case Op::AllocAdminActionDialog: sPrvTable->AddAllocator("AdminActionDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>); return 0;
+    case Op::AllocBadUserDialog: sPrvTable->AddAllocator("BadUserDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>); return 0;
+    case Op::AllocChooseNetworkAdapterDialog: sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>); return 0;
+    case Op::AllocCreditsDialog: sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>); return 0;
+    case Op::AllocCreateGameDialog: sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>); return 0;
+    case Op::AllocCreateRoomDialog: sPrvTable->AddAllocator("CreateRoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>); return 0;
+    case Op::AllocDirectConnectDialog: sPrvTable->AddAllocator("DirectConnectDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>); return 0;
+    case Op::AllocLanNameDialog: sPrvTable->AddAllocator("LanNameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanName>); return 0;
+    case Op::AllocLanPortDialog: sPrvTable->AddAllocator("LanPortDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>); return 0;
+    case Op::AllocOkCancelDialog: sPrvTable->AddAllocator("OkCancelDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>); return 0;
+    case Op::AllocPasswordDialog: sPrvTable->AddAllocator("PasswordDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Password>); return 0;
+    case Op::AllocRoomDialog: sPrvTable->AddAllocator("RoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Room>); return 0;
+    case Op::AllocStatusDialog: sPrvTable->AddAllocator("StatusDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Status>); return 0;
+    case Op::AllocTOUDialog: sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>); return 0;
+    case Op::AllocCrossPromotionButton: sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>); return 0;
+    case Op::AllocImageTextButton: sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>); return 0;
+    case Op::AllocMaxSplitterButton: sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>); return 0;
+    case Op::AllocGameOptionsCtrl: sPrvTable->AddAllocator("GameOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>); return 0;
+    case Op::AllocPlayerOptionsCtrl: sPrvTable->AddAllocator("PlayerOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>); return 0;
     }
-    CRC16 crc;
-    crc.Put(this->mConfig->mProductName.data(),this->mConfig->mProductName.length());
-    crc.Put(this->mConfig->mVersion.data(),this->mConfig->mVersion.length());
-    this->mProductId=crc.Get();
-    crc.Reset();
-    crc.Put(this->mConfig->mProductName.data(),this->mConfig->mProductName.length());
-    crc.Put(this->mConfig->mLanVersion.data(),this->mConfig->mLanVersion.length());
-    this->mLanProductId=crc.Get();
-    this->mChatCommandParser->InitCommands();
-    return true;
+    return 0;
 }
 
+// Starts the lobby: parses WONLobby.cfg, builds the lobby screens from _LobbyMaster.cfg (over the resource table of
+// the base GUI and browser types and every lobby screen, control, dialog and button type), inits the logic objects
+// and derives the internet and LAN product ids; on failure stores the reason in mInitError and returns false
+bool WONLobbyPrv::Init(ResourceConfigTable* input, void (*initFunc)(ComponentConfig*)) { return WonRethrow(ee_won_lobbyprv_call(this, PrvHost, EeWonLobbyPrvCall::Init, (intptr_t)input, (intptr_t)initFunc)) != 0; }
 // Shuts the lobby down: stops the logic objects and releases the UDP manager and the auth context
-void WONLobbyPrv::Destroy()
-{
-    this->mLogicMgr.Kill();
-    if(this->mUDPManager.get()!=NULL) {
-        this->mUDPManager->Close();
-        this->mUDPManager=NULL;
-    }
-    if(this->mAuthContext.get()!=NULL) {
-        this->mAuthContext->Kill();
-        this->mAuthContext=NULL;
-    }
-}
-
-// Sets the login community and the list of files to hash for authentication; with CD key checks on, loads
-// the product's CD key from the registry into the auth context
-void WONLobbyPrv::InitAuth(const std::wstring& loginCommunity,const char* hashFileListStr)
-{
-    this->mHasSetHashFileList=false;
-    this->mHashFileList.clear();
-    if(hashFileListStr!=NULL) {
-        StringParser parser(hashFileListStr);
-        parser.ReadValue(this->mHashFileList);
-    }
-    this->mLoginCommunity=loginCommunity;
-    this->mAuthContext->SetCommunity(this->mLoginCommunity);
-    if(!this->mConfig->mCDKeyCheck)
-        return;
-    this->mCDKey.SetProductString(this->mConfig->mProductName);
-    this->mCDKey.LoadFromRegistry();
-    this->mAuthContext->SetCDKey(this->mLoginCommunity,this->mCDKey);
-}
-
-
-// Members not set here are left to their own constructors, as in the original
-// Creates the lobby's private state: configuration, saved settings, server contexts, auth context and the
-// account, dialog, staging, init, LAN, routing and ping logic objects (port 8888)
-WONLobbyPrv::WONLobbyPrv()
-{
-    this->mLobbyPort=8888;
-    this->mSysTOUTime=this->mGameTOUTime=0;
-    this->mBehindFirewall=false;
-    this->mFirewallTestDone=false;
-    this->mSuspended=false;
-    this->mCurGameType=(LobbyGameType)0;
-    this->mLobbyStatus=(LobbyStatus)0;
-    this->mRunMode=(LobbyRunMode)1;
-    this->mProductId=0;
-    this->mLanProductId=0;
-
-    this->mSysTOUPath=WONAPICore::GetDefaultFileDirectory()+"_wonsystou_m.txt";
-    this->mGameTOUPath=WONAPICore::GetDefaultFileDirectory()+"_wongametou_m.txt";
-
-    this->mConfig=LobbyConfig::mAllocator();
-    this->mPersistentData=new LobbyPersistentData;
-    this->mChatCommandParser=new ChatCommandParser;
-    this->mUDPManager=new UDPManager;
-    this->mAccountServers=new ServerContext;
-    this->mAuthServers=new ServerContext;
-    this->mDirServers=new ServerContext;
-    this->mRoomDirServers=new ServerContext;
-    this->mFirewallDetectServers=new ServerContext;
-    this->mPatchServers=new ServerContext;
-    this->mVersionStatus=WS_None;
-    this->mAuthContext=new AuthContext;
-    this->mAuthContext->SetServerContext(this->mAuthServers.get());
-
-    this->mAccountLogic=new AccountLogic;
-    this->mDialogLogic=new DialogLogic;
-    this->mInitLogic=new InitLogic;
-    this->mRoutingLogic=new RoutingLogic;
-    this->mStagingLogic=new StagingLogic;
-    this->mLanLogic=new LanLogic;
-    this->mPingLogic=new PingLogic;
-
-    this->mLogicMgr.AddLogic(this->mAccountLogic.get());
-    this->mLogicMgr.AddLogic(this->mDialogLogic.get());
-    this->mLogicMgr.AddLogic(this->mStagingLogic.get());
-    this->mLogicMgr.AddLogic(this->mInitLogic.get());
-    this->mLogicMgr.AddLogic(this->mLanLogic.get());
-    this->mLogicMgr.AddLogic(this->mRoutingLogic.get());
-    this->mLogicMgr.AddLogic(this->mPingLogic.get());
-}
+void WONLobbyPrv::Destroy() { ee_won_lobbyprv_call(this, PrvHost, EeWonLobbyPrvCall::Destroy, 0, 0); }
+// Sets the login community and the list of files to hash for authentication; with CD key checks on, loads the
+// product's CD key from the registry into the auth context
+void WONLobbyPrv::InitAuth(const std::wstring& loginCommunity, const char* hashFileListStr) { ee_won_lobbyprv_call(this, PrvHost, EeWonLobbyPrvCall::InitAuth, (intptr_t)&loginCommunity, (intptr_t)hashFileListStr); }
+// Creates the lobby's private state: configuration, saved settings, server contexts, auth context and the account,
+// dialog, staging, init, LAN, routing and ping logic objects (port 8888); members not set are left to their own
+// constructors, as in the original
+WONLobbyPrv::WONLobbyPrv() { ee_won_lobbyprv_call(this, PrvHost, EeWonLobbyPrvCall::Construct, 0, 0); }
 
 }
-

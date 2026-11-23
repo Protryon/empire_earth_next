@@ -41,6 +41,32 @@ void ee_app_sight_record(uint32_t shape,
                          uint64_t map,
                          const EeGeTerrainMesh *mesh);
 
+/// `EESightScope`'s tile constructor: a tile's call (`x`, `y` the coordinates it takes, -1 when none; `value`
+/// SetVisibility's).
+void ee_app_sight_open_tile(uint32_t kind,
+                            const void *player,
+                            const void *tile,
+                            long x,
+                            long y,
+                            unsigned long value);
+
+/// `EESightScope`'s circle constructor: a circle around (`x0`, `y0`), or a step from it to (`x1`, `y1`); `value` the
+/// map sight's shared flag.
+void ee_app_sight_open_circle(uint32_t kind,
+                              const void *player,
+                              float x0,
+                              float y0,
+                              float x1,
+                              float y1,
+                              float radius,
+                              unsigned long value);
+
+/// `EESightScope`'s whole-map constructor.
+void ee_app_sight_open_whole(uint32_t kind, const void *player);
+
+/// `EESightScope`'s destructor: the last scope closed; the outermost one's TSGT record when the capture runs.
+void ee_app_sight_close();
+
 }  // extern "C"
 
 #endif  // EE_RUST_GAME_SIGHT_CAPTURE_H

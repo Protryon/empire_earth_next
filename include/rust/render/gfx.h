@@ -1241,23 +1241,19 @@ struct EeGfxScreenLine {
   EeGe2DPoint end;
 };
 
-/// The tick facts the effects read besides their graphic effect's (`gPhysics`, `gWorld`, `gFreeCamera`).
-struct EeGfxEffectTick {
-  float tick_seconds;
-  float tick_time;
-  /// `(unsigned long)gPhysics->mGameTime`
-  uint32_t game_time_bits;
-  bool free_camera;
-  /// `gPhysics->mSpeed`
-  float speed;
-  /// `gWorld.GetGameSpeed()`
-  float world_speed;
-  /// `gPhysics->mGameTime`, `gPhysics->GetGameClock()`
-  int64_t game_time;
-  float game_clock;
-  /// `gPhysics->mGameOver`, `gWorld.mWindDirection`
-  bool game_over;
-  EeGe3DPoint wind;
+/// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
+/// type; `context` is the file).
+struct EeGfxEffectFile {
+  void *context;
+  bool (*is_open)(void *context);
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_i32)(void *context, int32_t *value);
+  int32_t (*read_f32)(void *context, float *value);
+  int32_t (*read_bool)(void *context, bool *value);
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_i32)(void *context, int32_t value);
+  int32_t (*write_f32)(void *context, float value);
+  int32_t (*write_bool)(void *context, bool value);
 };
 
 /// One vertex of a built mesh: `set` names the values a builder wrote.
@@ -1385,6 +1381,25 @@ struct EeGfxRaster {
   void *(*rasterizer)(void **base);
 };
 
+/// The tick facts the effects read besides their graphic effect's (`gPhysics`, `gWorld`, `gFreeCamera`).
+struct EeGfxEffectTick {
+  float tick_seconds;
+  float tick_time;
+  /// `(unsigned long)gPhysics->mGameTime`
+  uint32_t game_time_bits;
+  bool free_camera;
+  /// `gPhysics->mSpeed`
+  float speed;
+  /// `gWorld.GetGameSpeed()`
+  float world_speed;
+  /// `gPhysics->mGameTime`, `gPhysics->GetGameClock()`
+  int64_t game_time;
+  float game_clock;
+  /// `gPhysics->mGameOver`, `gWorld.mWindDirection`
+  bool game_over;
+  EeGe3DPoint wind;
+};
+
 /// The world a storm reads and calls into (`context`: the effect).
 struct EeGfxStormHost {
   void *context;
@@ -1505,21 +1520,6 @@ struct EeGfxEffectWorld {
   /// the 3D and the 2D kinds' C++ answers (their context: the call's [`EeGfxEffectAsk`])
   EeGfxEffectAnswers3D answers3d;
   EeGfxEffectAnswers2D answers2d;
-};
-
-/// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
-/// type; `context` is the file).
-struct EeGfxEffectFile {
-  void *context;
-  bool (*is_open)(void *context);
-  int32_t (*read_u32)(void *context, uint32_t *value);
-  int32_t (*read_i32)(void *context, int32_t *value);
-  int32_t (*read_f32)(void *context, float *value);
-  int32_t (*read_bool)(void *context, bool *value);
-  int32_t (*write_u32)(void *context, uint32_t value);
-  int32_t (*write_i32)(void *context, int32_t value);
-  int32_t (*write_f32)(void *context, float value);
-  int32_t (*write_bool)(void *context, bool value);
 };
 
 /// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).

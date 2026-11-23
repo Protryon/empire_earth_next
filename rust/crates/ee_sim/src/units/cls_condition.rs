@@ -134,8 +134,23 @@ pub const EE_UNITS_COND_CONVERSION_COST: i32 = 39;
 pub const EE_UNITS_COND_ATTACK_GOAL: i32 = 40;
 /// unit `a`'s class's `IsCrusader()`
 pub const EE_UNITS_COND_CRUSADER: i32 = 41;
-/// the sunk test of the ships (`DyingAnimationFinished`): unit `a`'s transformed bounding box below the water
-pub const EE_UNITS_COND_SUNK: i32 = 42;
+// the sunk test of the ships (`DyingAnimationFinished`: [`sunk`]), one statement each (the box and the
+// transformation are the host's locals)
+/// `unit a->GetPosition(thePosition = GE3DPoint(0, 0, 0))`
+pub const EE_UNITS_COND_SUNK_POSITION: i32 = 4000;
+/// `theTransformation = GETransformation(false)`, then unit `a`'s location `Apply`'d to its model's internal
+/// transform at its frame
+pub const EE_UNITS_COND_SUNK_LOCATE: i32 = 4001;
+/// `theTransformation.Scale(s, s, s)` with unit `a`'s model scale
+pub const EE_UNITS_COND_SUNK_SCALE: i32 = 4002;
+/// `theTransformation.SetX(thePosition.GetX())` (and Y, Z below)
+pub const EE_UNITS_COND_SUNK_SET_X: i32 = 4003;
+pub const EE_UNITS_COND_SUNK_SET_Y: i32 = 4004;
+pub const EE_UNITS_COND_SUNK_SET_Z: i32 = 4005;
+/// unit `a`'s model's bounding box at its frame `Transform`ed by `theTransformation` into `theTransformedBox`
+pub const EE_UNITS_COND_SUNK_BOX: i32 = 4006;
+/// `theTransformedBox.GetTopRightBack().GetZ()` into `f`
+pub const EE_UNITS_COND_SUNK_TOP_Z: i32 = 4007;
 /// class `b`'s `SelectUnitToRelease(a)` (`c` 0), `EruptVolcano(a)` (1), `HasSunk(a)` (2), `AreEnemiesNear(a)` (3),
 /// `IsPasserNear(a)` (4)
 pub const EE_UNITS_COND_MEMBER: i32 = 43;
@@ -523,7 +538,24 @@ fn ship<H: CondHost + ?Sized>(h: &mut H, x: &Ctx, other: fn(&mut H, &Ctx) -> i32
     if x.event != TRIGGER_DYING_ANIMATION_FINISHED {
         return other(h, x);
     }
-    i32::from(ask(h, EE_UNITS_COND_SUNK, x.unit, 0, 0) != 0)
+    i32::from(sunk(h, x.unit))
+}
+
+/// Whether the dying ship's bounding box, placed at its position with its model's internal transform and scale, is
+/// below the water (its top right back corner's z under 0).
+fn sunk<H: CondHost + ?Sized>(h: &mut H, unit: u64) -> bool {
+    for op in [
+        EE_UNITS_COND_SUNK_POSITION,
+        EE_UNITS_COND_SUNK_LOCATE,
+        EE_UNITS_COND_SUNK_SCALE,
+        EE_UNITS_COND_SUNK_SET_X,
+        EE_UNITS_COND_SUNK_SET_Y,
+        EE_UNITS_COND_SUNK_SET_Z,
+        EE_UNITS_COND_SUNK_BOX,
+    ] {
+        ask(h, op, unit, 0, 0);
+    }
+    ask_f(h, EE_UNITS_COND_SUNK_TOP_Z, unit, 0, 0, 0) < 0.0
 }
 
 /// `SubmergedNavalEvaluateCondition`: dying done below the ground.

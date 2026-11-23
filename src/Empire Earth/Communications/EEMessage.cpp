@@ -86,39 +86,15 @@ void EEMessage::ExecuteMessage()
 // Creates the game message object for a received buffer from its type byte (NULL and an assert for an unknown type)
 NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
 {
-    unsigned char theType = inMemory[1];
-    NEMessage* theMessage = NULL;
-    ESVERIFY_AT(inMemory != NULL, 841);
-    // every type the factory builds is a record (EEMRecord, ee_netmsg records.rs; not EEMEndCinematic's 0x9d: no game
-    // type)
-    if (ee_netmsg_record_class(theType) != 0xffffffffu && ee_netmsg_class_of_type(theType) != 0xffffffffu)
-        theMessage = new EEMRecord(inMemory);
-    else
-        ESVERIFY_AT("Undefined message type" == NULL, 1275);
-    EEMessageCaptureImport(theMessage, inMemory);   // TEST ONLY: the simulation capture's NMIM record (off by default)
-    return theMessage;
-     }
+    return (NEMessage*)ee_gamecpp_msg_build(inMemory);   // gamecpp msg_objs.rs (its asserts: EECore11OpC4's cases)
+}
 
 // Orders farms for EEMBuildUnit::Execute: built ones first, then paid-for ones, then the nearer to the tile. Inline
 // (header-declared); its COMDAT 0x4c995c lands among this unit's sort COMDATs after its first user, the sort
 // in EEMBuildUnit::Execute
 inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const
 {
-    if (inFirst->mIsBuilt) {
-        if (!inSecond->mIsBuilt)
-            return true;
-        return this->DistanceSquared(inFirst->GetTile()) < this->DistanceSquared(EETileCoordinate(inSecond->mTileX, inSecond->mTileY));
-    }
-    if (inSecond->mIsBuilt)
-        return false;
-    if (inFirst->mIsPaidFor) {
-        if (!inSecond->mIsPaidFor)
-            return true;
-        return this->DistanceSquared(inFirst->GetTile()) < this->DistanceSquared(inSecond->GetTile());
-    }
-    if (inSecond->mIsPaidFor)
-        return false;
-    return this->DistanceSquared(inFirst->GetTile()) < this->DistanceSquared(EETileCoordinate(inSecond->mTileX, inSecond->mTileY));
+    return ee_gamecpp_farm_order(this->mCenter.mX, this->mCenter.mY, inFirst, inSecond, false);   // gamecpp msg_objs.rs
 }
 
 #include "ee/EEStringIDs.h"
@@ -164,32 +140,13 @@ void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
 // ee_netmsg units.rs).
 EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
 {
-    std::vector<unsigned long> theUnits;
-    gUnitPicker.PickUnits(inRectangle, gWorld.GetCurrentPlayer(), inUnitType, theUnits);
-    std::vector<uint32_t> theIDs(theUnits.begin(), theUnits.end());   // only the low 24 bits count
-    unsigned char theBuffer[0x100];
-    unsigned char theSize = ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(),
-                                                     (uint32_t)gWorld.GetCurrentPlayer()->mPlayerID, theBuffer);
-    EEMRecord* theMessage = new EEMRecord(inType, {theSize, 0, 0, inUnitType});
-    theMessage->mList.assign(theBuffer, theBuffer + theSize);
-    theMessage->Set<GERectangle>(3, inRectangle);
-    if (gEESelectUnitsTestHook != NULL) {   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
-        std::vector<long> theUnitIDs;
-        EESelectUnitsIDs(theMessage, theUnitIDs);
-        gEESelectUnitsTestHook(theUnitIDs);
-    }
-    return theMessage;
+    return (EEMRecord*)ee_gamecpp_msg_select_units(&inRectangle, inUnitType, inType);   // gamecpp msg_objs.rs
 }
 
 // Decodes a box selection's compact buffer into unit ids, replacing the list
 void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
 {
-    int32_t theIDs[0x100];
-    size_t theCount = ee_netmsg_decompress_units(inMessage->mList.empty() ? NULL : &inMessage->mList[0],
-                                                 (unsigned char)inMessage->mList.size(), theIDs, 0x100);
-    outUnits.clear();
-    for (size_t i = 0; i < theCount && i < 0x100; i++)
-        outUnits.push_back(theIDs[i]);   // the original's long: the 32-bit value, sign-extended on LP64
+    ee_gamecpp_msg_select_ids(inMessage, &outUnits);   // gamecpp msg_objs.rs
 }
 
 // inline (header-declared; its COMDAT 0x4c7486 follows its first user EEMSetRallyGoal::Execute): the unit can
@@ -210,33 +167,10 @@ struct EEFarmDistanceGreater : public EETileDistanceLess {
     bool operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const;
 };
 
-// NEAR: the original is built without optimization (ebp frame, `this` and every bool test through memory
-// temporaries); `#pragma optimize("g", off)` alone does not reproduce it (59%), so it is not used
-
 // Orders farms for smart farmers: unpaid before paid-for before built farms, the farther farm first in a tier
 bool EEFarmDistanceGreater::operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const
 {
-    bool theResult = false;
-    if (inFirst->mIsBuilt) {
-        if (inSecond->mIsBuilt)
-            theResult = this->DistanceSquared(inFirst->GetTile())
-                        > this->DistanceSquared(EETileCoordinate(inSecond->mTileX, inSecond->mTileY));
-        else
-            theResult = false;
-    } else if (inSecond->mIsBuilt) {
-        theResult = true;
-    } else if (inFirst->mIsPaidFor) {
-        if (inSecond->mIsPaidFor)
-            theResult = this->DistanceSquared(inFirst->GetTile()) > this->DistanceSquared(inSecond->GetTile());
-        else
-            theResult = false;
-    } else if (inSecond->mIsPaidFor) {
-        theResult = true;
-    } else {
-        theResult = this->DistanceSquared(inFirst->GetTile())
-                    > this->DistanceSquared(EETileCoordinate(inSecond->mTileX, inSecond->mTileY));
-    }
-    return theResult;
+    return ee_gamecpp_farm_order(this->mCenter.mX, this->mCenter.mY, inFirst, inSecond, true);   // gamecpp msg_objs.rs
 }
 
 // New (R5b.4): the two farm sorts for the host (ee/EEUnitHost.h), here with their comparators
@@ -260,142 +194,17 @@ void EEStartLoading(EEMRecord* m)
 // members, makes the decisions and asks here for each world call (EE_NETMSG_OP_*: an object, a fact, an action); the
 // unit orders go to the units lane's bodies. The bodies the C++ kept (the lobby's, the files', the strings' and the
 // screens') and the world's, the units' and the players' actions are Rust too (game core round 8: gamecpp message.rs,
-// over EEMessageOp below); the chat texts (EE_NETMSG_OP_CHAT_TEXT, EE_NETMSG_WACT_SHOW_CHAT):
+// over EEMessageOp below), and so is the host (gamecpp msg_host.rs, over EECore11OpC4's C11Nm cases: game core round
+// 11); the chat texts (EE_NETMSG_OP_CHAT_TEXT, EE_NETMSG_WACT_SHOW_CHAT):
 static const long kNetMsgTexts[] = {IDS_WARNING_YOU_ARE_RUNNING_OUT, IDS_CIVILIZATION_SELECTION_TIME_HAS_EXPIRED,
                                     IDS_YOU_MAY_NOT_UNPACK_ALL_UNITS, IDS_SETUP_ALL, IDS_SETUP_ALLIES, IDS_SETUP_ENEMIES,
                                     IDS_SETUP_CUSTOM, IDS_OBSERVERS};
-static int64_t EENetMsgHost(uint32_t inOp, EeNetMsgCall* c)
-{
-    EEMRecord* m = (EEMRecord*)(uintptr_t)c->message;
-    EEPlayer* p = (EEPlayer*)(uintptr_t)c->a;
-    EEGroup* g = (EEGroup*)(uintptr_t)c->a;
-    EEComplexUnit* u = (EEComplexUnit*)(uintptr_t)c->b;   // an EEUnit* when a world lookup gave it
-    int64_t* i = c->i;
-    switch (inOp) {
-    case EE_NETMSG_OP_SENDER: return (int64_t)(uintptr_t)gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    case EE_NETMSG_OP_PLAYER: return (int64_t)(uintptr_t)gWorld.mPlayers[i[0]];
-    case EE_NETMSG_OP_CURRENT: return (int64_t)(uintptr_t)gWorld.GetCurrentPlayer();
-    case EE_NETMSG_OP_GROUP: return (int64_t)(uintptr_t)static_cast<EEGroup*>(p->mActiveGroup);
-    case EE_NETMSG_OP_SAVED_GROUP: return (int64_t)(uintptr_t)static_cast<EEGroup*>(p->mGroups[i[0]]);
-    case EE_NETMSG_OP_GROUP_COUNT: return g->GetNumUnits();
-    case EE_NETMSG_OP_GROUP_UNIT: return (int64_t)(uintptr_t)g->GetUnit(i[0]);
-    case EE_NETMSG_OP_GROUP_FIRST: return (int64_t)(uintptr_t)g->GetFirstUnit();
-    case EE_NETMSG_OP_GROUP_CONTAINS: return g->Contains(u);
-    case EE_NETMSG_OP_GROUP_ADD: g->Add(u); return 0;
-    case EE_NETMSG_OP_GROUP_CLEAR: g->Clear(); return 0;
-    case EE_NETMSG_OP_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit(i[0]);
-    case EE_NETMSG_OP_UNIT_FACT:
-        switch (i[0]) {
-        case EE_NETMSG_UNIT_HIT_POINTS: return u->mHitPoints;
-        case EE_NETMSG_UNIT_TYPE: return u->mUnitClass->mUnitType;
-        case EE_NETMSG_UNIT_CATEGORY: return u->GetUnitClass()->mCategory;
-        case EE_NETMSG_UNIT_MAX_HIT_POINTS: return u->mStats->mMaxHitPoints;
-        case EE_NETMSG_UNIT_CAN_DISBAND: return u->mUnitClass->mCanDisband;
-        case EE_NETMSG_UNIT_IS_PACKED: return u->mIsPacked;
-        case EE_NETMSG_UNIT_PACKED_CLASS: return (int64_t)(uintptr_t)u->mUnitClass->mPackedClass;
-        case EE_NETMSG_UNIT_FLIGHT_TIME: return u->mFlightTime;
-        case EE_NETMSG_UNIT_DEATH_SPAWN: return u->mUnitClass->mDeathSpawnClass != NULL;
-        case EE_NETMSG_UNIT_CAN_CHANGE_BEHAVIOR: return u->mUnitClass->mCanChangeBehavior;
-        case EE_NETMSG_UNIT_COMPLEX: return (int64_t)(uintptr_t)u->mComplexUnit;
-        case EE_NETMSG_UNIT_TILE_NODE: return u->mTileNode != NULL;
-        case EE_NETMSG_UNIT_OWNER: return (int64_t)(uintptr_t)u->mPlayer;
-        case EE_NETMSG_UNIT_LAND_BUILDING: return u->mUnitClass->IsLandBuilding();
-        case EE_NETMSG_UNIT_PAID_FOR: return u->mIsPaidFor;
-        case EE_NETMSG_UNIT_BUILT: return u->mIsBuilt;
-        case EE_NETMSG_UNIT_CAN_DELETE: return u->CanDelete();
-        case EE_NETMSG_UNIT_TILE_X: return u->GetTileX();
-        case EE_NETMSG_UNIT_TILE_Y: return u->GetTileY();
-        case EE_NETMSG_UNIT_DOMAINS: return u->mUnitClass->mDomains;
-        case EE_NETMSG_UNIT_NEXT: return (int64_t)(uintptr_t)u->mNext;
-        case EE_NETMSG_UNIT_AS_COMPLEX: return (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(u));
-        case EE_NETMSG_UNIT_IN_SET: return gUnitSetManager.GetSet(i[1])->Contains(u->mUnitClass->mUnitType);
-        }
-        return 0;
-    case EE_NETMSG_OP_PLAYER_FACT:
-        switch (i[0]) {
-        case EE_NETMSG_PLAYER_OBSERVER: return p->mObserverMode;
-        case EE_NETMSG_PLAYER_CIV_CHOSEN: return p->mCivilizationChosen;
-        case EE_NETMSG_PLAYER_SLOT: return p->mSlot;
-        case EE_NETMSG_PLAYER_CHAT_TYPE: return p->mChatType;
-        case EE_NETMSG_PLAYER_ENEMY: return p->mEnemies[i[1]];
-        case EE_NETMSG_PLAYER_SENDS_CHAT: return p->mSendChatMessage[i[1]];
-        case EE_NETMSG_PLAYER_ID: return p->mPlayerID;
-        case EE_NETMSG_PLAYER_RESOURCE: return p->mResourceCaps[i[1]];
-        case EE_NETMSG_PLAYER_FIRST_UNIT: return (int64_t)(uintptr_t)p->mFirstUnit;
-        case EE_NETMSG_PLAYER_TRADE_PRICE: return EEGetTradePrice(p, (long)i[1], (unsigned char)i[2]);
-        }
-        return 0;
-    case EE_NETMSG_OP_WORLD_FACT:
-        switch (i[0]) {
-        case EE_NETMSG_WORLD_NUM_PLAYERS: return gWorld.mNumPlayers;
-        case EE_NETMSG_WORLD_CURRENT_INDEX: return gWorld.mCurrentPlayer;
-        case EE_NETMSG_WORLD_EXECUTING_SELECTION:
-            return (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection)
-                   || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
-        case EE_NETMSG_WORLD_IS_SERVER: return gCommunications->IsServer();
-        case EE_NETMSG_WORLD_HAS_COMMUNICATIONS: return gCommunications != NULL;
-        case EE_NETMSG_WORLD_LOCAL_SEND_SLOT:
-            return gCommunications->IsClient() == true ? static_cast<EEClient*>(gCommunications)->GetMySendToSlot() : 0xfe;
-        case EE_NETMSG_WORLD_STRING_LENGTH: return m->mString.GetLength();
-        case EE_NETMSG_WORLD_PLAYBACK:
-            return (gCommunications->IsClient() == true
-                    && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
-                   || (gCommunications->IsServer() == true
-                       && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying);
-        case EE_NETMSG_WORLD_COLLISION_SPHERE_MODE: return gCollisionSphereMode;
-        case EE_NETMSG_WORLD_LOADED_HUMANS:
-            return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders;
-        case EE_NETMSG_WORLD_LOAD_RESPONSES: return static_cast<EEServer*>(gCommunications)->mNumLoadResponses;
-        case EE_NETMSG_WORLD_HUMANS: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers();
-        }
-        return 0;
-    case EE_NETMSG_OP_DECISION: ee_netmsg_capture_decision((uint32_t)i[0], &i[2], (uint32_t)i[1]); return 0;
-    case EE_NETMSG_OP_CHAT_TEXT: ee_gamecpp_msg_chat_text(i[0], i[1], i[2]); return 0;
-    case EE_NETMSG_OP_SOUND: ee_gamecpp_msg_sound(i[0]); return 0;
-    case EE_NETMSG_OP_BODY: ee_gamecpp_msg_body(i[0], m); return 0;
-    case EE_NETMSG_OP_SELECT_LIST: ee_gamecpp_msg_select_list(p, i[0], (const int32_t*)(uintptr_t)c->b, i[1]); return 0;
-    case EE_NETMSG_OP_SELECT: ee_gamecpp_msg_select(p, i[0], i[1]); return 0;
-    case EE_NETMSG_OP_RESOURCE: ee_gamecpp_msg_resource(p, i[0], i[1], i[2], i[3]); return 0;
-    case EE_NETMSG_OP_KILL: u->Kill(i[0], 0, 0); return 0;
-    case EE_NETMSG_OP_DISBAND: ee_gamecpp_msg_disband(p, u, c->f[0]); return 0;
-    case EE_NETMSG_OP_DELETE_REFUND: ee_gamecpp_msg_delete_refund(u); return 0;
-    case EE_NETMSG_OP_UNIT_ACT: ee_gamecpp_msg_unit_act(i, (void*)(uintptr_t)c->a, u); return 0;
-    case EE_NETMSG_OP_PLAYER_ACT: ee_gamecpp_msg_player_act(i, p); return 0;
-    case EE_NETMSG_OP_WORLD_ACT: ee_gamecpp_msg_world_act(m, i, c->f, p, (EEPlayer*)(uintptr_t)c->b); return 0;
-    case EE_NETMSG_OP_OPTION:
-        switch (i[0]) {
-        case 0: gGameOptions.mLoadType = i[1]; break;
-        case 1: gGameOptions.mMapSize = i[1]; break;
-        case 2: gGameOptions.mMapType = m->mString; break;
-        case 3: gGameOptions.mResources = i[1]; break;
-        case 4: gGameOptions.mEpochStart = i[1]; break;
-        case 5: gGameOptions.mEpochEnd = i[1]; break;
-        case 6: gGameOptions.mUnitLimit = i[1]; break;
-        case 7: gGameOptions.mWondersForVictory = i[1]; break;
-        case 8: gGameOptions.mVariant = i[1]; break;
-        case 9: gGameOptions.mDifficulty = i[1]; break;
-        case 10: gGameOptions.mGameSpeed = i[1]; break;
-        case 11: gGameOptions.mRecordGames = i[1] != 0; break;
-        case 12: gGameOptions.mAllowCustomCivs = i[1] != 0; break;
-        case 13: gGameOptions.mRevealMap = i[1] != 0; break;
-        case 14: gGameOptions.mLockTeams = i[1] != 0; break;
-        case 15: gGameOptions.mLockSpeed = i[1] != 0; break;
-        case 16: gGameOptions.mCheatCodes = i[1] != 0; break;
-        case 17: gGameOptions.mVictory = i[1] != 0; break;
-        }
-        return 0;
-    case EE_NETMSG_OP_CLASS_FACT: return i[0] == EE_NETMSG_CLASS_TYPE ? ((EEUnitClass*)(uintptr_t)c->a)->mUnitType : ((EEUnitClass*)(uintptr_t)c->a)->mTileSize;
-    case EE_NETMSG_OP_SELECTION: return ee_gamecpp_msg_selection(i, p);
-    case EE_NETMSG_OP_CAN_PLACE: return ee_gamecpp_msg_can_place(p, i[0], i[1], i[2], i[3], i[4]);
-    }
-    return 0;
-}
 
 // the type's body (ee_netmsg bodies.rs) over the record and its list, with the host above: alone (Execute) or in the
 // physics' framing (1: a selection, 2: a command)
 static void EENetMsgExecute(EEMRecord* inMessage, uint8_t inFraming)
 {
-    ee_netmsg_execute(EENetMsgHost, inMessage, inMessage->GetType(), inMessage->GetOriginatingSlot(), inMessage->mFastSelectionID,
+    ee_netmsg_execute((EeNetMsgHostFn)ee_gamecpp_netmsg_host, inMessage, inMessage->GetType(), inMessage->GetOriginatingSlot(), inMessage->mFastSelectionID,
                       inMessage->mRecord, inMessage->mList.empty() ? NULL : &inMessage->mList[0], inMessage->mList.size(),
                       inFraming);
 }
@@ -824,4 +633,122 @@ int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
 double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     return EEStartupOpF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the messages' C++
+
+int64_t EECore11OpC5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEContagionManager.cpp
+
+#define NC ((EeNetMsgCall*)p)
+#define NM_M ((EEMRecord*)(uintptr_t)NC->message)
+#define NM_P ((EEPlayer*)(uintptr_t)NC->a)
+#define NM_G ((EEGroup*)(uintptr_t)NC->a)
+#define NM_U ((EEComplexUnit*)(uintptr_t)NC->b)   // an EEUnit* when a world lookup gave it
+#define NM_I (NC->i)
+
+// the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
+// statement each
+int64_t EECore11OpC4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the net message host (gamecpp msg_host.rs; p the host's call, EeNetMsgCall)
+    case O::C11NmSender: return P64(gWorld.GetPlayerBySlot(NM_M->GetOriginatingSlot()));
+    case O::C11NmPlayer: return P64(gWorld.mPlayers[NM_I[0]]);
+    case O::C11NmCurrent: return P64(gWorld.GetCurrentPlayer());
+    case O::C11NmGroup: return P64(static_cast<EEGroup*>(NM_P->mActiveGroup));
+    case O::C11NmSavedGroup: return P64(static_cast<EEGroup*>(NM_P->mGroups[NM_I[0]]));
+    case O::C11NmGroupCount: return NM_G->GetNumUnits();
+    case O::C11NmGroupUnit: return P64(NM_G->GetUnit(NM_I[0]));
+    case O::C11NmGroupFirst: return P64(NM_G->GetFirstUnit());
+    case O::C11NmGroupContains: return NM_G->Contains(NM_U);
+    case O::C11NmGroupAdd: NM_G->Add(NM_U);
+        break;
+    case O::C11NmGroupClear: NM_G->Clear();
+        break;
+    case O::C11NmUnit: return P64(gWorld.GetUnit(NM_I[0]));
+    case O::C11NmKill: NM_U->Kill(NM_I[0], 0, 0);
+        break;
+    case O::C11NmClassFact: return NM_I[0] == EE_NETMSG_CLASS_TYPE ? ((EEUnitClass*)(uintptr_t)NC->a)->mUnitType : ((EEUnitClass*)(uintptr_t)NC->a)->mTileSize;
+    case O::C11NmUnitHitPoints: return NM_U->mHitPoints;
+    case O::C11NmUnitType: return NM_U->mUnitClass->mUnitType;
+    case O::C11NmUnitCategory: return NM_U->GetUnitClass()->mCategory;
+    case O::C11NmUnitMaxHitPoints: return NM_U->mStats->mMaxHitPoints;
+    case O::C11NmUnitCanDisband: return NM_U->mUnitClass->mCanDisband;
+    case O::C11NmUnitIsPacked: return NM_U->mIsPacked;
+    case O::C11NmUnitPackedClass: return P64(NM_U->mUnitClass->mPackedClass);
+    case O::C11NmUnitFlightTime: return NM_U->mFlightTime;
+    case O::C11NmUnitDeathSpawn: return NM_U->mUnitClass->mDeathSpawnClass != NULL;
+    case O::C11NmUnitCanChangeBehavior: return NM_U->mUnitClass->mCanChangeBehavior;
+    case O::C11NmUnitComplex: return P64(NM_U->mComplexUnit);
+    case O::C11NmUnitTileNode: return NM_U->mTileNode != NULL;
+    case O::C11NmUnitOwner: return P64(NM_U->mPlayer);
+    case O::C11NmUnitLandBuilding: return NM_U->mUnitClass->IsLandBuilding();
+    case O::C11NmUnitPaidFor: return NM_U->mIsPaidFor;
+    case O::C11NmUnitBuilt: return NM_U->mIsBuilt;
+    case O::C11NmUnitCanDelete: return NM_U->CanDelete();
+    case O::C11NmUnitTileX: return NM_U->GetTileX();
+    case O::C11NmUnitTileY: return NM_U->GetTileY();
+    case O::C11NmUnitDomains: return NM_U->mUnitClass->mDomains;
+    case O::C11NmUnitNext: return P64(NM_U->mNext);
+    case O::C11NmUnitAsComplex: return P64(EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(NM_U)));
+    case O::C11NmUnitInSet: return gUnitSetManager.GetSet(NM_I[1])->Contains(NM_U->mUnitClass->mUnitType);
+    case O::C11NmPlayerObserver: return NM_P->mObserverMode;
+    case O::C11NmPlayerCivChosen: return NM_P->mCivilizationChosen;
+    case O::C11NmPlayerSlot: return NM_P->mSlot;
+    case O::C11NmPlayerChatType: return NM_P->mChatType;
+    case O::C11NmPlayerEnemy: return NM_P->mEnemies[NM_I[1]];
+    case O::C11NmPlayerSendsChat: return NM_P->mSendChatMessage[NM_I[1]];
+    case O::C11NmPlayerId: return NM_P->mPlayerID;
+    case O::C11NmPlayerResource: return NM_P->mResourceCaps[NM_I[1]];
+    case O::C11NmPlayerFirstUnit: return P64(NM_P->mFirstUnit);
+    case O::C11NmPlayerTradePrice: return EEGetTradePrice(NM_P, (long)NM_I[1], (unsigned char)NM_I[2]);
+    case O::C11NmWorldNumPlayers: return gWorld.mNumPlayers;
+    case O::C11NmWorldCurrentIndex: return gWorld.mCurrentPlayer;
+    case O::C11NmWorldExecutingSelection: return (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection) || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
+    case O::C11NmWorldIsServer: return gCommunications->IsServer();
+    case O::C11NmWorldHasCommunications: return gCommunications != NULL;
+    case O::C11NmWorldLocalSendSlot: return gCommunications->IsClient() == true ? static_cast<EEClient*>(gCommunications)->GetMySendToSlot() : 0xfe;
+    case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
+    case O::C11NmWorldPlayback: return (gCommunications->IsClient() == true && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying) || (gCommunications->IsServer() == true && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying);
+    case O::C11NmWorldCollisionSphereMode: return gCollisionSphereMode;
+    case O::C11NmWorldLoadedHumans: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders;
+    case O::C11NmWorldLoadResponses: return static_cast<EEServer*>(gCommunications)->mNumLoadResponses;
+    case O::C11NmWorldHumans: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers();
+    case O::C11NmMapType: gGameOptions.mMapType = NM_M->mString;
+        break;
+    // the factory (p the received buffer)
+    case O::C11MsgBuildVerify: ESVERIFY_AT(p != 0, 841);
+        break;
+    case O::C11MsgNewRecord: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char*)p)));
+    case O::C11MsgBuildUndefined: ESVERIFY_AT("Undefined message type" == NULL, 1275);
+        break;
+    case O::C11MsgCaptureImport: EEMessageCaptureImport((NEMessage*)a[0], (unsigned char*)p);   // TEST ONLY: NMIM
+        break;
+    // a box selection (p the record; the picked ids a C++ vector)
+    case O::C11UlongsNew: return P64(new std::vector<unsigned long>);
+    case O::C11UlongsDelete: delete (std::vector<unsigned long>*)p;
+        break;
+    case O::C11UlongsCount: return (int64_t)((std::vector<unsigned long>*)p)->size();
+    case O::C11UlongsAt: return (int64_t)(*(std::vector<unsigned long>*)p)[a[0]];
+    case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);
+        break;
+    case O::C11CurrentPlayerId: return (int64_t)(uint32_t)gWorld.GetCurrentPlayer()->mPlayerID;
+    case O::C11NewSelectRecord: return P64((new EEMRecord((unsigned char)a[0], {(unsigned char)a[1], 0, 0, (long)a[2]})));
+    case O::C11MsgListAssign: MSG->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
+        break;
+    case O::C11MsgListData: return P64(MSG->mList.empty() ? NULL : &MSG->mList[0]);
+    case O::C11MsgListSize: return (int64_t)MSG->mList.size();
+    case O::C11MsgSetRectangle: MSG->Set<GERectangle>(3, *(const GERectangle*)a[0]);
+        break;
+    case O::C11SelectHookSet: return gEESelectUnitsTestHook != NULL;   // TEST ONLY: the UI fixture's box selection
+    case O::C11SelectHookCall: gEESelectUnitsTestHook(std::vector<long>((const int32_t*)a[0], (const int32_t*)a[0] + a[1]));
+        break;
+    case O::C11FarmKey: *(EeGamecppFarmKey*)a[0] = EeGamecppFarmKey{CX->mIsBuilt, CX->mIsPaidFor, CX->mTileX, CX->mTileY};
+        break;
+    case O::C11LongsAssign: ((std::vector<long>*)p)->assign((const int32_t*)a[0], (const int32_t*)a[0] + a[1]);
+        break;
+    default: return EECore11OpC5(inOp, p, a, f);
+    }
+    return 0;
 }

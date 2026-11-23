@@ -19,54 +19,8 @@
 #include "platform/PlatSocket.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/sockobj.h"
-// The socket error codes WON reports are Winsock's; the platform layer reports them in that numbering everywhere
-static_assert(WS_WSAEINTR == PLAT_SOCK_EINTR, "Winsock numbering");
-static_assert(WS_WSAEBADF == PLAT_SOCK_EBADF, "Winsock numbering");
-static_assert(WS_WSAEACCES == PLAT_SOCK_EACCES, "Winsock numbering");
-static_assert(WS_WSAEFAULT == PLAT_SOCK_EFAULT, "Winsock numbering");
-static_assert(WS_WSAEINVAL == PLAT_SOCK_EINVAL, "Winsock numbering");
-static_assert(WS_WSAEMFILE == PLAT_SOCK_EMFILE, "Winsock numbering");
-static_assert(WS_WSAEWOULDBLOCK == PLAT_SOCK_EWOULDBLOCK, "Winsock numbering");
-static_assert(WS_WSAEINPROGRESS == PLAT_SOCK_EINPROGRESS, "Winsock numbering");
-static_assert(WS_WSAEALREADY == PLAT_SOCK_EALREADY, "Winsock numbering");
-static_assert(WS_WSAENOTSOCK == PLAT_SOCK_ENOTSOCK, "Winsock numbering");
-static_assert(WS_WSAEDESTADDRREQ == PLAT_SOCK_EDESTADDRREQ, "Winsock numbering");
-static_assert(WS_WSAEMSGSIZE == PLAT_SOCK_EMSGSIZE, "Winsock numbering");
-static_assert(WS_WSAEPROTOTYPE == PLAT_SOCK_EPROTOTYPE, "Winsock numbering");
-static_assert(WS_WSAENOPROTOOPT == PLAT_SOCK_ENOPROTOOPT, "Winsock numbering");
-static_assert(WS_WSAEPROTONOSUPPORT == PLAT_SOCK_EPROTONOSUPPORT, "Winsock numbering");
-static_assert(WS_WSAESOCKTNOSUPPORT == PLAT_SOCK_ESOCKTNOSUPPORT, "Winsock numbering");
-static_assert(WS_WSAEOPNOTSUPP == PLAT_SOCK_EOPNOTSUPP, "Winsock numbering");
-static_assert(WS_WSAEPFNOSUPPORT == PLAT_SOCK_EPFNOSUPPORT, "Winsock numbering");
-static_assert(WS_WSAEAFNOSUPPORT == PLAT_SOCK_EAFNOSUPPORT, "Winsock numbering");
-static_assert(WS_WSAEADDRINUSE == PLAT_SOCK_EADDRINUSE, "Winsock numbering");
-static_assert(WS_WSAEADDRNOTAVAIL == PLAT_SOCK_EADDRNOTAVAIL, "Winsock numbering");
-static_assert(WS_WSAENETDOWN == PLAT_SOCK_ENETDOWN, "Winsock numbering");
-static_assert(WS_WSAENETUNREACH == PLAT_SOCK_ENETUNREACH, "Winsock numbering");
-static_assert(WS_WSAENETRESET == PLAT_SOCK_ENETRESET, "Winsock numbering");
-static_assert(WS_WSAECONNABORTED == PLAT_SOCK_ECONNABORTED, "Winsock numbering");
-static_assert(WS_WSAECONNRESET == PLAT_SOCK_ECONNRESET, "Winsock numbering");
-static_assert(WS_WSAENOBUFS == PLAT_SOCK_ENOBUFS, "Winsock numbering");
-static_assert(WS_WSAEISCONN == PLAT_SOCK_EISCONN, "Winsock numbering");
-static_assert(WS_WSAENOTCONN == PLAT_SOCK_ENOTCONN, "Winsock numbering");
-static_assert(WS_WSAESHUTDOWN == PLAT_SOCK_ESHUTDOWN, "Winsock numbering");
-static_assert(WS_WSAETOOMANYREFS == PLAT_SOCK_ETOOMANYREFS, "Winsock numbering");
-static_assert(WS_WSAETIMEDOUT == PLAT_SOCK_ETIMEDOUT, "Winsock numbering");
-static_assert(WS_WSAECONNREFUSED == PLAT_SOCK_ECONNREFUSED, "Winsock numbering");
-static_assert(WS_WSAELOOP == PLAT_SOCK_ELOOP, "Winsock numbering");
-static_assert(WS_WSAENAMETOOLONG == PLAT_SOCK_ENAMETOOLONG, "Winsock numbering");
-static_assert(WS_WSAEHOSTDOWN == PLAT_SOCK_EHOSTDOWN, "Winsock numbering");
-static_assert(WS_WSAEHOSTUNREACH == PLAT_SOCK_EHOSTUNREACH, "Winsock numbering");
-static_assert(WS_WSAENOTEMPTY == PLAT_SOCK_ENOTEMPTY, "Winsock numbering");
-static_assert(WS_WSAEPROCLIM == PLAT_SOCK_EPROCLIM, "Winsock numbering");
-static_assert(WS_WSAEUSERS == PLAT_SOCK_EUSERS, "Winsock numbering");
-static_assert(WS_WSAEDQUOT == PLAT_SOCK_EDQUOT, "Winsock numbering");
-static_assert(WS_WSAESTALE == PLAT_SOCK_ESTALE, "Winsock numbering");
-static_assert(WS_WSAEREMOTE == PLAT_SOCK_EREMOTE, "Winsock numbering");
-static_assert(WS_WSASYSNOTREADY == PLAT_SOCK_SYSNOTREADY, "Winsock numbering");
-static_assert(WS_WSAVERNOTSUPPORTED == PLAT_SOCK_VERNOTSUPPORTED, "Winsock numbering");
-static_assert(WS_WSANOTINITIALISED == PLAT_SOCK_NOTINITIALISED, "Winsock numbering");
-static_assert(WS_WSAEDISCON == PLAT_SOCK_EDISCON, "Winsock numbering");
+// The socket error codes WON reports are Winsock's, the platform layer's numbering everywhere (checked by
+// ee_won_net status_codes.rs's the_socket_errors_are_winsocks_numbering)
 namespace WONAPI {
 // The op is a Rust object (rust/crates/ee_won_net/src/opobj.rs EeWonAsyncOp): its state, lock, completion and
 // container, and every step below. These are the calls it makes back into the C++ (one table for every op and
@@ -264,15 +218,6 @@ void SocketOp::CleanupHook()
 bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
 static uint32_t AddressOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mAddress; }
 static uint16_t PortOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mPort; }
-static IPAddr MakeAddr(uint32_t inAddress, uint16_t inPort)
-{
-    PlatSockAddrIn anAddress;
-    memset(&anAddress, 0, sizeof(anAddress));
-    anAddress.mFamily = PLAT_AF_INET;
-    anAddress.mAddress = inAddress;
-    anAddress.mPort = inPort;
-    return IPAddr(anAddress);
-}
 
 // up to the time until writable or readable (no wait for 0 or a closed socket)
 void AsyncSocket::WaitForWrite(unsigned long inWaitTime)
@@ -281,14 +226,11 @@ void AsyncSocket::WaitForRead(unsigned long inWaitTime)
 { ee_won_asyncsocket_wait(this->mSock,PLAT_SOCKET_WAIT_READ,static_cast<uint32_t>(inWaitTime)); }
 WONStatus AsyncSocket::SendTo(const void* inData,int inLength,const IPAddr& inAddress)
 { return ee_won_asyncsocket_send_to(this->mSock,inData,inLength,AddressOf(inAddress),PortOf(inAddress)); }
+// the sender assigned as a new address of its platform address (sockobj.rs, R6 WON round 33)
 WONStatus AsyncSocket::RecvFrom(void* outData,int inLength,IPAddr* outAddress,int* outReceived)
 {
-    uint32_t anAddress=0;
-    uint16_t aPort=0;
-    bool aFrom=false;
-    WONStatus aStatus=ee_won_asyncsocket_recv_from(this->mSock,outData,inLength,&anAddress,&aPort,&aFrom,outReceived);
-    if(aFrom && outAddress!=NULL) *outAddress=MakeAddr(anAddress,aPort);
-    return aStatus;
+    return ee_won_asyncsocket_recv_from_ip(this->mSock,outData,inLength,
+                                           outAddress!=NULL ? const_cast<EeWonIpAddr*>(outAddress->GetValue()) : NULL,outReceived);
 }
 WONStatus AsyncSocket::Bind(const IPAddr& inAddress,bool inReuse)
 { return ee_won_asyncsocket_bind(this->mSock,AddressOf(inAddress),PortOf(inAddress),inReuse); }

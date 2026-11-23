@@ -22,10 +22,11 @@ namespace WONAPI {
 typedef EeWonRootScreenOp RO;
 typedef EeWonRootScreenCall RC;
 
-// InitComponent's local tab and the SWAT resize's rectangles (the original's locals)
+// InitComponent's local tab and the SWAT resize's window and rectangles (the original's locals)
 static SmartPtr<Container> sRootTab;
 static WONRectangle sRootWindowRect;
 static WONRectangle sRootClientRect;
+static Window* sRootWindow;
 
 static Component* RootPart(RootScreen* s, intptr_t inPart)
 {
@@ -109,11 +110,12 @@ static intptr_t RootHost(void* inScreen, EeWonRootScreenOp inOp, intptr_t a, int
     case RO::FindDirectConnectTab: SafeGetComponent(aConfig, sRootTab, "DirectConnectTab", __FILE__, 102); return 0;
     case RO::BroadcastRoomSpec: s->BroadcastEventDown(SetRoomSpecFlagsEvent((int)a)); return 0;
     case RO::Subscribe: s->SubscribeToBroadcast(1); return 0;
-    case RO::WindowRectGet: s->GetRoot()->GetRect(sRootWindowRect, false); return 0;
-    case RO::ClientRectGet: s->GetRoot()->GetRect(sRootClientRect, true); return 0;
+    case RO::WindowGet: sRootWindow = s->GetRoot(); return 0;
+    case RO::WindowRectGet: sRootWindow->GetRect(sRootWindowRect, false); return 0;
+    case RO::ClientRectGet: sRootWindow->GetRect(sRootClientRect, true); return 0;
     case RO::WindowHeight: return sRootWindowRect.height;
     case RO::ClientHeight: return sRootClientRect.height;
-    case RO::WindowSetHeight: s->GetRoot()->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, (int)a); return 0;
+    case RO::WindowSetHeight: sRootWindow->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, (int)a); return 0;
     }
     return 0;
 }

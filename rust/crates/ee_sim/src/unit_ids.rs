@@ -1,0 +1,1565 @@
+//! The units' named integer constants (ee/EEUnitClassIDs.h: the AI kinds, categories, families, unit types and the
+//! class flags; ee/EEUnitAction.h: the action and trigger ids; ee/EEUnitGoal.h: the goal kinds), as plain (unscoped)
+//! C enums for the C++ headers; each comment gives the evidence for its name, "(provisional name)" marks an inferred
+//! one. A composed value's parts are in its comment (`[= a | b]`).
+#![allow(non_camel_case_types, clippy::enum_variant_names, clippy::upper_case_acronyms)]
+
+/// The AI's unit kinds (dbobjects record +0x224, EEUnitClass::mL1D0 / mAIKind; counter kinds mL1D4..mL1DC). Provisional
+/// names from the dbobjects members of each kind.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitAIKind {
+    /// 386 dbobjects records (resources, projectiles, ambients); the AI tests `!= 0` for 'has a kind' (provisional name)
+    kAIKindNone = 0,
+    /// data: AT guns, Bazooka Infantry, Grenade Launcher (provisional name)
+    kAIKindAntiTank = 1,
+    /// data: Priest, Prophet, Citizen, Female Citizen, Diplomat, Emissary, Senator, Flame Thrower, Trident/Triton submarines; EECPASGUPCTargetIsUnitSetScreenRangedOrSpecialUnits (provisional name)
+    kAIKindSpecial = 3,
+    /// data: Stone Thrower, Scorpion, Balistae, Culverin, Bronze Cannon, Catapult ME (provisional name)
+    kAIKindFieldWeapon = 0xa,
+    /// data: the fighters and carrier fighters (provisional name)
+    kAIKindFighter = 0xc,
+    /// data: Stinger Soldier, AA guns, AA tanks, missile towers, Anti Missile Battery (provisional name)
+    kAIKindAntiAir = 0xd,
+    /// data: the bombers, AT fighters, Transport C-47 (provisional name)
+    kAIKindBomber = 0xe,
+    /// data: Enterprise, Nexus, Japanese Flattop carriers (provisional name)
+    kAIKindAircraftCarrier = 0xf,
+    /// data: Bombard, Artillery, Colossus (provisional name)
+    kAIKindArtillery = 0x10,
+    /// data: the naval transports, fishing boats, Naval Mine (provisional name)
+    kAIKindNavalTransport = 0x11,
+    /// data: rams, siege towers, catapults, trebuchets, siege cannons (provisional name)
+    kAIKindSiege = 0x14,
+    /// data: Nautilus, Hammerhead, U Boat (provisional name)
+    kAIKindSubmarine = 0x15,
+    /// data: bowmen, slingers, cavalry/chariot/elephant archers (provisional name)
+    kAIKindArcher = 0x18,
+    /// data: walls, gates, towers, barbed wire, tank obstacles (provisional name)
+    kAIKindFortification = 0x19,
+    /// data: the buildings and wonders (85 records) (provisional name)
+    kAIKindBuilding = 0x1a,
+    /// data: the heroes (50 records); EECPUGatherHeroesCount counts it (provisional name)
+    kAIKindHero = 0x1b,
+    /// data: Sea King, Sea King II (provisional name)
+    kAIKindAntiSubmarineHelicopter = 0x1c,
+    /// data: Mech Zeus, Mech Zeus (prototype) (provisional name)
+    kAIKindMechZeus = 0x1e,
+    /// data: Sp15 Space Carrier (provisional name)
+    kAIKindSpaceCarrier = 0x27,
+}
+
+/// Unit class categories (dbobjects record +0x120, EEUnitClass::mCategory): EEUnitClass::CreateUnitClasses 0x6358b1 builds one EEUC* subclass per category.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitCategory {
+    /// CreateUnitClasses 0x6358b1: category 0 -> new EEUCAmbient (RTTI); setrilo UnitClassCode
+    kUnitCategoryAmbient = 0,
+    /// CreateUnitClasses 0x6358b1: category 1 -> new EEUCResource (RTTI); setrilo UnitClassCode
+    kUnitCategoryResource = 1,
+    /// CreateUnitClasses 0x6358b1: category 2 -> new EEUCBuilding (RTTI); setrilo UnitClassCode
+    kUnitCategoryBuilding = 2,
+    /// CreateUnitClasses 0x6358b1: category 3 -> new EEUCAirplane (RTTI); setrilo UnitClassCode
+    kUnitCategoryAirplane = 3,
+    /// CreateUnitClasses 0x6358b1: category 4 -> new EEUCNaval (RTTI); setrilo UnitClassCode
+    kUnitCategoryNaval = 4,
+    /// CreateUnitClasses 0x6358b1: category 5 -> new EEUCLand (RTTI); setrilo UnitClassCode
+    kUnitCategoryLand = 5,
+    /// CreateUnitClasses 0x6358b1: category 6 -> new EEUCLandCitizen (RTTI); setrilo UnitClassCode
+    kUnitCategoryLandCitizen = 6,
+    /// CreateUnitClasses 0x6358b1: category 7 -> new EEUCHelicopter (RTTI); setrilo UnitClassCode
+    kUnitCategoryHelicopter = 7,
+    /// setrilo unit_class.h UnitClassCode kLand8; CreateUnitClasses 0x6358b1 builds EEUCLand for it; no dbobjects record has it
+    kUnitCategoryLand8 = 8,
+    /// CreateUnitClasses 0x6358b1: category 9 -> new EEUCProjectile (RTTI); setrilo UnitClassCode
+    kUnitCategoryProjectile = 9,
+    /// CreateUnitClasses 0x6358b1: category 10 -> new EEUCSubmergedNaval (RTTI); setrilo UnitClassCode
+    kUnitCategorySubmergedNaval = 0xa,
+    /// CreateUnitClasses 0x6358b1: category 11 -> new EEUCBomb (RTTI); setrilo UnitClassCode
+    kUnitCategoryBomb = 0xb,
+    /// CreateUnitClasses 0x6358b1: category 12 -> new EEUCMissile (RTTI); setrilo UnitClassCode
+    kUnitCategoryMissile = 0xc,
+    /// CreateUnitClasses 0x6358b1: category 13 -> new EEUCLandPriest (RTTI); setrilo UnitClassCode
+    kUnitCategoryLandPriest = 0xd,
+    /// CreateUnitClasses 0x6358b1: category 14 -> new EEUCNavalPriest (RTTI); setrilo UnitClassCode
+    kUnitCategoryNavalPriest = 0xe,
+    /// setrilo unit_class.h UnitClassCode kLand15; CreateUnitClasses 0x6358b1 builds EEUCLand for it; no dbobjects record has it
+    kUnitCategoryLand15 = 0xf,
+    /// CreateUnitClasses 0x6358b1: category 16 -> new EEUCLandTransport (RTTI); setrilo UnitClassCode
+    kUnitCategoryLandTransport = 0x10,
+    /// CreateUnitClasses 0x6358b1: category 17 -> new EEUCHelicopterTransport (RTTI); setrilo UnitClassCode
+    kUnitCategoryHelicopterTransport = 0x11,
+    /// CreateUnitClasses 0x6358b1: category 18 -> new EEUCNavalTransport (RTTI); setrilo UnitClassCode
+    kUnitCategoryNavalTransport = 0x12,
+    /// setrilo unit_class.h UnitClassCode kBuilding19; CreateUnitClasses 0x6358b1 builds EEUCBuilding for it; no dbobjects record has it
+    kUnitCategoryBuilding19 = 0x13,
+    /// CreateUnitClasses 0x6358b1: category 20 -> new EEUCTorpedo (RTTI); setrilo UnitClassCode
+    kUnitCategoryTorpedo = 0x14,
+    /// CreateUnitClasses 0x6358b1: category 21 -> new EEUCNavalBuilding (RTTI); setrilo UnitClassCode
+    kUnitCategoryNavalBuilding = 0x15,
+    /// CreateUnitClasses 0x6358b1: category 22 -> new EEUCNavalCitizen (RTTI); setrilo UnitClassCode
+    kUnitCategoryNavalCitizen = 0x16,
+    /// CreateUnitClasses 0x6358b1: category 23 -> new EEUCLandMilitaryHero (RTTI); setrilo UnitClassCode
+    kUnitCategoryLandMilitaryHero = 0x17,
+    /// CreateUnitClasses 0x6358b1: category 24 -> new EEUCMiningBuilding (RTTI); setrilo UnitClassCode
+    kUnitCategoryMiningBuilding = 0x18,
+    /// CreateUnitClasses 0x6358b1: category 25 -> new EEUCGate (RTTI); setrilo UnitClassCode
+    kUnitCategoryGate = 0x19,
+    /// CreateUnitClasses 0x6358b1: category 26 -> new EEUCHelicopterPriest (RTTI); setrilo UnitClassCode
+    kUnitCategoryHelicopterPriest = 0x1a,
+    /// CreateUnitClasses 0x6358b1: category 27 -> new EEUCSeaAnimal (RTTI); setrilo UnitClassCode
+    kUnitCategorySeaAnimal = 0x1b,
+    /// CreateUnitClasses 0x6358b1: category 28 -> new EEUCAirAnimal (RTTI); setrilo UnitClassCode
+    kUnitCategoryAirAnimal = 0x1c,
+    /// CreateUnitClasses 0x6358b1: category 29 -> new EEUCFortress (RTTI); setrilo UnitClassCode
+    kUnitCategoryFortress = 0x1d,
+    /// CreateUnitClasses 0x6358b1: category 30 -> new EEUCBuildingPriest (RTTI); setrilo UnitClassCode
+    kUnitCategoryBuildingPriest = 0x1e,
+    /// CreateUnitClasses 0x6358b1: category 31 -> new EEUCSpaceship (RTTI); setrilo UnitClassCode
+    kUnitCategorySpaceship = 0x1f,
+    /// CreateUnitClasses 0x6358b1: category 32 -> new EEUCSpaceBuilding (RTTI); setrilo UnitClassCode
+    kUnitCategorySpaceBuilding = 0x20,
+    /// CreateUnitClasses 0x6358b1: category 33 -> new EEUCSpaceTransport (RTTI); setrilo UnitClassCode
+    kUnitCategorySpaceTransport = 0x21,
+    /// CreateUnitClasses 0x6358b1: category 34 -> new EEUCPlanetSpaceship (RTTI); setrilo UnitClassCode
+    kUnitCategoryPlanetSpaceship = 0x22,
+}
+
+/// Unit families (dbobjects record +0x68, EEUnitClass::mL1C8 / mFamily): the row index of dbfamily.dat.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitFamily {
+    /// dbfamily.dat row 0 "No Family"
+    kUnitFamilyNoFamily = 0,
+    /// dbfamily.dat row 2 "Tank"
+    kUnitFamilyTank = 2,
+    /// dbfamily.dat row 3 "Building"
+    kUnitFamilyBuilding = 3,
+    /// dbfamily.dat row 4 "Anti Tank"
+    kUnitFamilyAntiTank = 4,
+    /// dbfamily.dat row 5 "Aircraft"
+    kUnitFamilyAircraft = 5,
+    /// dbfamily.dat row 6 "Priest"
+    kUnitFamilyPriest = 6,
+    /// dbfamily.dat row 7 "Submarine"
+    kUnitFamilySubmarine = 7,
+    /// dbfamily.dat row 8 "Hero"
+    kUnitFamilyHero = 8,
+    /// dbfamily.dat row 9 "Ship"
+    kUnitFamilyShip = 9,
+    /// dbfamily.dat row 10 "Spear Thrower"
+    kUnitFamilySpearThrower = 0xa,
+    /// dbfamily.dat row 11 "Machines"
+    kUnitFamilyMachines = 0xb,
+    /// dbfamily.dat row 12 "Human Musket"
+    kUnitFamilyHumanMusket = 0xc,
+    /// dbfamily.dat row 13 "Human Sword"
+    kUnitFamilyHumanSword = 0xd,
+    /// dbfamily.dat row 14 "Mounted Archer"
+    kUnitFamilyMountedArcher = 0xe,
+    /// dbfamily.dat row 15 "Lancer"
+    kUnitFamilyLancer = 0xf,
+    /// dbfamily.dat row 16 "Helicopter"
+    kUnitFamilyHelicopter = 0x10,
+    /// dbfamily.dat row 17 "Animal"
+    kUnitFamilyAnimal = 0x11,
+    /// dbfamily.dat row 18 "Fish"
+    kUnitFamilyFish = 0x12,
+    /// dbfamily.dat row 19 "Curiassier"
+    kUnitFamilyCuriassier = 0x13,
+    /// dbfamily.dat row 20 "Bomber"
+    kUnitFamilyBomber = 0x14,
+    /// dbfamily.dat row 21 "Battleship"
+    kUnitFamilyBattleship = 0x15,
+    /// dbfamily.dat row 22 "Mines"
+    kUnitFamilyMines = 0x16,
+    /// dbfamily.dat row 23 "Human"
+    kUnitFamilyHuman = 0x17,
+    /// dbfamily.dat row 25 "Mech - Minotaur"
+    kUnitFamilyMechMinotaur = 0x19,
+    /// dbfamily.dat row 26 "Mech - Medium"
+    kUnitFamilyMechMedium = 0x1a,
+    /// dbfamily.dat row 27 "Mech - Zeus"
+    kUnitFamilyMechZeus = 0x1b,
+    /// dbfamily.dat row 28 "Mech - Cyclops"
+    kUnitFamilyMechCyclops = 0x1c,
+    /// dbfamily.dat row 29 "Human Archer"
+    kUnitFamilyHumanArcher = 0x1d,
+    /// dbfamily.dat row 30 "Ram"
+    kUnitFamilyRam = 0x1e,
+    /// dbfamily.dat row 31 "Siege"
+    kUnitFamilySiege = 0x1f,
+    /// dbfamily.dat row 32 "Land AA"
+    kUnitFamilyLandAA = 0x20,
+    /// dbfamily.dat row 33 "Mech - Apollo"
+    kUnitFamilyMechApollo = 0x21,
+    /// dbfamily.dat row 34 "Tank - Strong"
+    kUnitFamilyTankStrong = 0x22,
+    /// dbfamily.dat row 35 "Ambient"
+    kUnitFamilyAmbient = 0x23,
+    /// dbfamily.dat row 36 "Citizen"
+    kUnitFamilyCitizen = 0x24,
+    /// dbfamily.dat row 37 "Towers"
+    kUnitFamilyTowers = 0x25,
+    /// dbfamily.dat row 38 "Human Machine Gun"
+    kUnitFamilyHumanMachineGun = 0x26,
+    /// dbfamily.dat row 39 "Medieval Field Weapon"
+    kUnitFamilyMedievalFieldWeapon = 0x27,
+    /// dbfamily.dat row 40 "Human Spear"
+    kUnitFamilyHumanSpear = 0x28,
+    /// dbfamily.dat row 41 "Mounted Spear"
+    kUnitFamilyMountedSpear = 0x29,
+    /// dbfamily.dat row 42 "Atomic Bomber"
+    kUnitFamilyAtomicBomber = 0x2a,
+    /// dbfamily.dat row 43 "Mech - Underwater"
+    kUnitFamilyMechUnderwater = 0x2b,
+    /// dbfamily.dat row 44 "Walls"
+    kUnitFamilyWalls = 0x2c,
+    /// dbfamily.dat row 45 "Viking"
+    kUnitFamilyViking = 0x2d,
+    /// dbfamily.dat row 46 "AA Building"
+    kUnitFamilyAABuilding = 0x2e,
+    /// dbfamily.dat row 47 "Ship Galley"
+    kUnitFamilyShipGalley = 0x2f,
+    /// dbfamily.dat row 48 "War Elephant"
+    kUnitFamilyWarElephant = 0x30,
+    /// dbfamily.dat row 49 "Elephant Archer"
+    kUnitFamilyElephantArcher = 0x31,
+    /// dbfamily.dat row 50 "Aircraft Carrier"
+    kUnitFamilyAircraftCarrier = 0x32,
+    /// dbfamily.dat row 52 "Elite Guard"
+    kUnitFamilyEliteGuard = 0x34,
+    /// dbfamily.dat row 53 "Artillery"
+    kUnitFamilyArtillery = 0x35,
+    /// dbfamily.dat row 54 "Cavalry Archer"
+    kUnitFamilyCavalryArcher = 0x36,
+    /// dbfamily.dat row 55 "ICBM"
+    kUnitFamilyICBM = 0x37,
+    /// dbfamily.dat row 56 "Spaceship"
+    kUnitFamilySpaceship = 0x38,
+    /// dbfamily.dat row 57 "Space Fighter"
+    kUnitFamilySpaceFighter = 0x39,
+    /// dbfamily.dat row 58 "Space Corvette"
+    kUnitFamilySpaceCorvette = 0x3a,
+    /// dbfamily.dat row 59 "Tower - Space Turret"
+    kUnitFamilyTowerSpaceTurret = 0x3b,
+}
+
+/// Unit types (dbobjects record +0x74, EEUnitClass::mUnitType, the gUnitClassTable index); only the ids the code uses, named from their dbobjects record.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitTypeID {
+    /// dbobjects.dat unit type 1 (record +0x74) "Priest"
+    kUnitTypePriest = 1,
+    /// dbobjects.dat unit type 10 (record +0x74) "Arch03 - Simple Bowman"
+    kUnitTypeArch03SimpleBowman = 0xa,
+    /// dbobjects.dat unit type 11 (record +0x74) "Arch06 - Cavalry Archer"
+    kUnitTypeArch06CavalryArcher = 0xb,
+    /// dbobjects.dat unit type 12 (record +0x74) "Arch04 - Chariot Archer"
+    kUnitTypeArch04ChariotArcher = 0xc,
+    /// dbobjects.dat unit type 14 (record +0x74) "Gun Spear04 Stone Thrower"
+    kUnitTypeGunSpear04StoneThrower = 0xe,
+    /// dbobjects.dat unit type 15 (record +0x74) "Arch05 - Composite Bow"
+    kUnitTypeArch05CompositeBow = 0xf,
+    /// dbobjects.dat unit type 16 (record +0x74) "Arch05 - Cross Bow"
+    kUnitTypeArch05CrossBow = 0x10,
+    /// dbobjects.dat unit type 17 (record +0x74) "Arch06 - Long Bow"
+    kUnitTypeArch06LongBow = 0x11,
+    /// dbobjects.dat unit type 22 (record +0x74) "Inf04 - Short Sword"
+    kUnitTypeInf04ShortSword = 0x16,
+    /// dbobjects.dat unit type 23 (record +0x74) "Inf06 - LongSword"
+    kUnitTypeInf06LongSword = 0x17,
+    /// dbobjects.dat unit type 25 (record +0x74) "Inf04 - Phalanx"
+    kUnitTypeInf04Phalanx = 0x19,
+    /// dbobjects.dat unit type 32 (record +0x74) "Citizen"
+    kUnitTypeCitizen = 0x20,
+    /// dbobjects.dat unit type 34 (record +0x74) "b  Barracks"
+    kUnitTypeBarracks = 0x22,
+    /// dbobjects.dat unit type 35 (record +0x74) "b  Town Center"
+    kUnitTypeTownCenter = 0x23,
+    /// dbobjects.dat unit type 36 (record +0x74) "b  Dock"
+    kUnitTypeDock = 0x24,
+    /// dbobjects.dat unit type 37 (record +0x74) "b  House"
+    kUnitTypeHouse = 0x25,
+    /// dbobjects.dat unit type 39 (record +0x74) "b  Temple"
+    kUnitTypeTemple = 0x27,
+    /// dbobjects.dat unit type 41 (record +0x74) "b  Capitol"
+    kUnitTypeCapitol = 0x29,
+    /// dbobjects.dat unit type 42 (record +0x74) "b  Farm"
+    kUnitTypeFarm = 0x2a,
+    /// dbobjects.dat unit type 43 (record +0x74) "b  Settlement"
+    kUnitTypeSettlement = 0x2b,
+    /// dbobjects.dat unit type 47 (record +0x74) "b  Guard Tower - Paleo"
+    kUnitTypeGuardTowerPaleo = 0x2f,
+    /// dbobjects.dat unit type 52 (record +0x74) "b  Granary"
+    kUnitTypeGranary = 0x34,
+    /// dbobjects.dat unit type 54 (record +0x74) "b  Archery Range"
+    kUnitTypeArcheryRange = 0x36,
+    /// dbobjects.dat unit type 55 (record +0x74) "Res - Forage Bush"
+    kUnitTypeResForageBush = 0x37,
+    /// dbobjects.dat unit type 59 (record +0x74) "w  Lighthouse at Alexandria"
+    kUnitTypeLighthouseAtAlexandria = 0x3b,
+    /// dbobjects.dat unit type 60 (record +0x74) "b  University"
+    kUnitTypeUniversity = 0x3c,
+    /// dbobjects.dat unit type 62 (record +0x74) "b  Hospital"
+    kUnitTypeHospital = 0x3e,
+    /// dbobjects.dat unit type 63 (record +0x74) "b  Siege Factory"
+    kUnitTypeSiegeFactory = 0x3f,
+    /// dbobjects.dat unit type 64 (record +0x74) "b  Stable"
+    kUnitTypeStable = 0x40,
+    /// dbobjects.dat unit type 65 (record +0x74) "b  Navy Yard"
+    kUnitTypeNavyYard = 0x41,
+    /// dbobjects.dat unit type 66 (record +0x74) "b  Airport"
+    kUnitTypeAirport = 0x42,
+    /// dbobjects.dat unit type 67 (record +0x74) "x Missile Base"
+    kUnitTypeMissileBase = 0x43,
+    /// dbobjects.dat unit type 68 (record +0x74) "b  Tank Factory"
+    kUnitTypeTankFactory = 0x44,
+    /// dbobjects.dat unit type 69 (record +0x74) "b  Cyber Factory"
+    kUnitTypeCyberFactory = 0x45,
+    /// dbobjects.dat unit type 80 (record +0x74) "a CarrierFighter12 F-14"
+    kUnitTypeCarrierFighter12F14 = 0x50,
+    /// dbobjects.dat unit type 85 (record +0x74) "a CarrierFighter11 Corsair1"
+    kUnitTypeCarrierFighter11Corsair1 = 0x55,
+    /// dbobjects.dat unit type 90 (record +0x74) "a Balloon10 Observation Balloon"
+    kUnitTypeBalloon10ObservationBalloon = 0x5a,
+    /// dbobjects.dat unit type 96 (record +0x74) "Inf05 - Pilum"
+    kUnitTypeInf05Pilum = 0x60,
+    /// dbobjects.dat unit type 103 (record +0x74) "Siege04 - Tower"
+    kUnitTypeSiege04Tower = 0x67,
+    /// dbobjects.dat unit type 105 (record +0x74) "Gun Siege06 Trebuchet"
+    kUnitTypeGunSiege06Trebuchet = 0x69,
+    /// dbobjects.dat unit type 107 (record +0x74) "Gun Siege09 Serpentine Cannon"
+    kUnitTypeGunSiege09SerpentineCannon = 0x6b,
+    /// dbobjects.dat unit type 108 (record +0x74) "s02 Fishing Boat Stone"
+    kUnitTypeS02FishingBoatStone = 0x6c,
+    /// dbobjects.dat unit type 109 (record +0x74) "s04 Fishing Boat Bronze"
+    kUnitTypeS04FishingBoatBronze = 0x6d,
+    /// dbobjects.dat unit type 126 (record +0x74) "s11 Enterprise Aircraft Carrier"
+    kUnitTypeS11EnterpriseAircraftCarrier = 0x7e,
+    /// dbobjects.dat unit type 137 (record +0x74) "Cav04 - Bronze Spear Cavalry"
+    kUnitTypeCav04BronzeSpearCavalry = 0x89,
+    /// dbobjects.dat unit type 139 (record +0x74) "Cav06 - Knight"
+    kUnitTypeCav06Knight = 0x8b,
+    /// dbobjects.dat unit type 142 (record +0x74) "Gun Cannon09 - Bronze Cannon"
+    kUnitTypeGunCannon09BronzeCannon = 0x8e,
+    /// dbobjects.dat unit type 144 (record +0x74) "Gun Spear06 Balistae"
+    kUnitTypeGunSpear06Balistae = 0x90,
+    /// dbobjects.dat unit type 145 (record +0x74) "b  AA10 Gun 88mm"
+    kUnitTypeAA10Gun88mm = 0x91,
+    /// dbobjects.dat unit type 147 (record +0x74) "b  AA13 Missile Tower"
+    kUnitTypeAA13MissileTower = 0x93,
+    /// dbobjects.dat unit type 163 (record +0x74) "s10 Cruiser"
+    kUnitTypeS10Cruiser = 0xa3,
+    /// dbobjects.dat unit type 165 (record +0x74) "h2-4 Hannibal (Morale)"
+    kUnitTypeH24HannibalMorale = 0xa5,
+    /// dbobjects.dat unit type 182 (record +0x74) "Hurricane"
+    kUnitTypeHurricane = 0xb6,
+    /// dbobjects.dat unit type 194 (record +0x74) "x Mech Zeus (prototype)"
+    kUnitTypeMechZeusPrototype = 0xc2,
+    /// dbobjects.dat unit type 209 (record +0x74) "x04 Trojan Horse"
+    kUnitTypeX04TrojanHorse = 0xd1,
+    /// dbobjects.dat unit type 211 (record +0x74) "s11 Fishing Boat Modern"
+    kUnitTypeS11FishingBoatModern = 0xd3,
+    /// dbobjects.dat unit type 213 (record +0x74) "Parachute Bomb"
+    kUnitTypeParachuteBomb = 0xd5,
+    /// dbobjects.dat unit type 216 (record +0x74) "Prophet"
+    kUnitTypeProphet = 0xd8,
+    /// dbobjects.dat unit type 223 (record +0x74) "PathPoint"
+    kUnitTypePathPoint = 0xdf,
+    /// dbobjects.dat unit type 236 (record +0x74) "Cav07 - Royal Cuirassier (Sword)"
+    kUnitTypeCav07RoyalCuirassierSword = 0xec,
+    /// dbobjects.dat unit type 238 (record +0x74) "Tree 01 [Maple]"
+    kUnitTypeTree01Maple = 0xee,
+    /// dbobjects.dat unit type 239 (record +0x74) "Tree 02 [Maple]"
+    kUnitTypeTree02Maple = 0xef,
+    /// dbobjects.dat unit type 240 (record +0x74) "b  Airport Runway"
+    kUnitTypeAirportRunway = 0xf0,
+    /// dbobjects.dat unit type 260 (record +0x74) "Waypoint"
+    kUnitTypeWaypoint = 0x104,
+    /// dbobjects.dat unit type 292 (record +0x74) "Res - Giraffe"
+    kUnitTypeResGiraffe = 0x124,
+    /// dbobjects.dat unit type 306 (record +0x74) "Foundation 2x2"
+    kUnitTypeFoundation2x2 = 0x132,
+    /// dbobjects.dat unit type 307 (record +0x74) "Foundation 3x3"
+    kUnitTypeFoundation3x3 = 0x133,
+    /// dbobjects.dat unit type 308 (record +0x74) "Siege06 - Heavy Tower"
+    kUnitTypeSiege06HeavyTower = 0x134,
+    /// dbobjects.dat unit type 309 (record +0x74) "s09 Royal Galleon"
+    kUnitTypeS09RoyalGalleon = 0x135,
+    /// dbobjects.dat unit type 310 (record +0x74) "Foundation 1x1"
+    kUnitTypeFoundation1x1 = 0x136,
+    /// dbobjects.dat unit type 311 (record +0x74) "Cav07 - Carabineers (gun)"
+    kUnitTypeCav07CarabineersGun = 0x137,
+    /// dbobjects.dat unit type 312 (record +0x74) "Cav09 - Imperial Cuirassier Sword"
+    kUnitTypeCav09ImperialCuirassierSword = 0x138,
+    /// dbobjects.dat unit type 314 (record +0x74) "Res - Shark"
+    kUnitTypeResShark = 0x13a,
+    /// dbobjects.dat unit type 315 (record +0x74) "Res - Fish"
+    kUnitTypeResFish = 0x13b,
+    /// dbobjects.dat unit type 326 (record +0x74) "Res - Goat"
+    kUnitTypeResGoat = 0x146,
+    /// dbobjects.dat unit type 327 (record +0x74) "Res - Eagle"
+    kUnitTypeResEagle = 0x147,
+    /// dbobjects.dat unit type 328 (record +0x74) "b  Tank Obstacle"
+    kUnitTypeTankObstacle = 0x148,
+    /// dbobjects.dat unit type 337 (record +0x74) "Tree 12 [Spruce]"
+    kUnitTypeTree12Spruce = 0x151,
+    /// dbobjects.dat unit type 338 (record +0x74) "Tree 03 [Spruce]"
+    kUnitTypeTree03Spruce = 0x152,
+    /// dbobjects.dat unit type 339 (record +0x74) "Tree 07 [Spruce]"
+    kUnitTypeTree07Spruce = 0x153,
+    /// dbobjects.dat unit type 340 (record +0x74) "Tree 09 [Spruce]"
+    kUnitTypeTree09Spruce = 0x154,
+    /// dbobjects.dat unit type 341 (record +0x74) "Tree 10 [Spruce]"
+    kUnitTypeTree10Spruce = 0x155,
+    /// dbobjects.dat unit type 342 (record +0x74) "Tree 11 [Spruce]"
+    kUnitTypeTree11Spruce = 0x156,
+    /// dbobjects.dat unit type 343 (record +0x74) "Tree 15 [Cactus]"
+    kUnitTypeTree15Cactus = 0x157,
+    /// dbobjects.dat unit type 344 (record +0x74) "Tree 16 [Cactus]"
+    kUnitTypeTree16Cactus = 0x158,
+    /// dbobjects.dat unit type 345 (record +0x74) "Tree 19"
+    kUnitTypeTree19 = 0x159,
+    /// dbobjects.dat unit type 346 (record +0x74) "Tree 20"
+    kUnitTypeTree20 = 0x15a,
+    /// dbobjects.dat unit type 350 (record +0x74) "Tree 18"
+    kUnitTypeTree18 = 0x15e,
+    /// dbobjects.dat unit type 351 (record +0x74) "Tree 24"
+    kUnitTypeTree24 = 0x15f,
+    /// dbobjects.dat unit type 352 (record +0x74) "Tree 25"
+    kUnitTypeTree25 = 0x160,
+    /// dbobjects.dat unit type 353 (record +0x74) "Tree 21 [Palm]"
+    kUnitTypeTree21Palm = 0x161,
+    /// dbobjects.dat unit type 359 (record +0x74) "x Camera Object"
+    kUnitTypeCameraObject = 0x167,
+    /// dbobjects.dat unit type 360 (record +0x74) "Foundation 6x6"
+    kUnitTypeFoundation6x6 = 0x168,
+    /// dbobjects.dat unit type 366 (record +0x74) "Volcano"
+    kUnitTypeVolcano = 0x16e,
+    /// dbobjects.dat unit type 367 (record +0x74) "Volcano - Projectile"
+    kUnitTypeVolcanoProjectile = 0x16f,
+    /// dbobjects.dat unit type 368 (record +0x74) "Inf08 - Halberdier"
+    kUnitTypeInf08Halberdier = 0x170,
+    /// dbobjects.dat unit type 373 (record +0x74) "Res - Horse"
+    kUnitTypeResHorse = 0x175,
+    /// dbobjects.dat unit type 386 (record +0x74) "s10 Naval Mine"
+    kUnitTypeS10NavalMine = 0x182,
+    /// dbobjects.dat unit type 460 (record +0x74) "Amb - Starfish3"
+    kUnitTypeAmbStarfish3 = 0x1cc,
+    /// dbobjects.dat unit type 461 (record +0x74) "b  Guard Tower - Copper"
+    kUnitTypeGuardTowerCopper = 0x1cd,
+    /// dbobjects.dat unit type 462 (record +0x74) "b  Guard Tower - Bronze"
+    kUnitTypeGuardTowerBronze = 0x1ce,
+    /// dbobjects.dat unit type 463 (record +0x74) "b  Guard Tower - Middle"
+    kUnitTypeGuardTowerMiddle = 0x1cf,
+    /// dbobjects.dat unit type 464 (record +0x74) "b  Guard Tower - Imperial"
+    kUnitTypeGuardTowerImperial = 0x1d0,
+    /// dbobjects.dat unit type 465 (record +0x74) "b  Guard Tower - WW1"
+    kUnitTypeGuardTowerWW1 = 0x1d1,
+    /// dbobjects.dat unit type 466 (record +0x74) "b  Guard Tower - Digital"
+    kUnitTypeGuardTowerDigital = 0x1d2,
+    /// dbobjects.dat unit type 475 (record +0x74) "x11 Hauptmann Durer [Prophet]"
+    kUnitTypeX11HauptmannDurerProphet = 0x1db,
+    /// dbobjects.dat unit type 477 (record +0x74) "x Flare 2"
+    kUnitTypeFlare2 = 0x1dd,
+    /// dbobjects.dat unit type 480 (record +0x74) "Female Citizen"
+    kUnitTypeFemaleCitizen = 0x1e0,
+    /// dbobjects.dat unit type 511 (record +0x74) "a Balloon09 Hot Air Balloon"
+    kUnitTypeBalloon09HotAirBalloon = 0x1ff,
+    /// dbobjects.dat unit type 564 (record +0x74) "Amb - Cattails 1"
+    kUnitTypeAmbCattails1 = 0x234,
+    /// dbobjects.dat unit type 586 (record +0x74) "b  Cyber Laboratory"
+    kUnitTypeCyberLaboratory = 0x24a,
+    /// dbobjects.dat unit type 606 (record +0x74) "x Pillbox"
+    kUnitTypePillbox = 0x25e,
+    /// dbobjects.dat unit type 660 (record +0x74) "Anti Matter Storm"
+    kUnitTypeAntiMatterStorm = 0x294,
+    /// dbobjects.dat unit type 661 (record +0x74) "Res - Dolphin"
+    kUnitTypeResDolphin = 0x295,
+    /// dbobjects.dat unit type 672 (record +0x74) "b  Fortress"
+    kUnitTypeFortress = 0x2a0,
+    /// dbobjects.dat unit type 680 (record +0x74) "a CarrierFighter13 Avenger"
+    kUnitTypeCarrierFighter13Avenger = 0x2a8,
+    /// dbobjects.dat unit type 698 (record +0x74) "b  Granary Improved"
+    kUnitTypeGranaryImproved = 0x2ba,
+    /// dbobjects.dat unit type 717 (record +0x74) "Foundation - Airport"
+    kUnitTypeFoundationAirport = 0x2cd,
+    /// dbobjects.dat unit type 724 (record +0x74) "Emissary"
+    kUnitTypeEmissary = 0x2d4,
+    /// dbobjects.dat unit type 725 (record +0x74) "Flaming Arrow"
+    kUnitTypeFlamingArrow = 0x2d5,
+    /// dbobjects.dat unit type 726 (record +0x74) "Arch03 - Simple Bowman(Flaming)"
+    kUnitTypeArch03SimpleBowmanFlaming = 0x2d6,
+    /// dbobjects.dat unit type 728 (record +0x74) "b  Space Dock"
+    kUnitTypeSpaceDock = 0x2d8,
+    /// dbobjects.dat unit type 729 (record +0x74) "Arch05 - Composite Bow(Flaming)"
+    kUnitTypeArch05CompositeBowFlaming = 0x2d9,
+    /// dbobjects.dat unit type 730 (record +0x74) "Sp15 - Capital Ship"
+    kUnitTypeSp15CapitalShip = 0x2da,
+    /// dbobjects.dat unit type 731 (record +0x74) "a Catalina"
+    kUnitTypeCatalina = 0x2db,
+    /// dbobjects.dat unit type 732 (record +0x74) "x04 Roman Legionnaire"
+    kUnitTypeX04RomanLegionnaire = 0x2dc,
+    /// dbobjects.dat unit type 733 (record +0x74) "Arch06 - Long Bow(Flaming)"
+    kUnitTypeArch06LongBowFlaming = 0x2dd,
+    /// dbobjects.dat unit type 737 (record +0x74) "a Paratrooper Plane"
+    kUnitTypeParatrooperPlane = 0x2e1,
+    /// dbobjects.dat unit type 740 (record +0x74) "Pilum"
+    kUnitTypePilum = 0x2e4,
+    /// dbobjects.dat unit type 741 (record +0x74) "14 Anti Missile Battery"
+    kUnitType14AntiMissileBattery = 0x2e5,
+    /// dbobjects.dat unit type 742 (record +0x74) "Inf04 - Short Sword(Crusader)"
+    kUnitTypeInf04ShortSwordCrusader = 0x2e6,
+    /// dbobjects.dat unit type 743 (record +0x74) "Inf06 - LongSword(Crusader)"
+    kUnitTypeInf06LongSwordCrusader = 0x2e7,
+    /// dbobjects.dat unit type 744 (record +0x74) "Cav04 - Bronze Spear Cavalry(Crusader)"
+    kUnitTypeCav04BronzeSpearCavalryCrusader = 0x2e8,
+    /// dbobjects.dat unit type 745 (record +0x74) "Cav06 - Knight(Crusader)"
+    kUnitTypeCav06KnightCrusader = 0x2e9,
+    /// dbobjects.dat unit type 748 (record +0x74) "Inf15 - Cyber Ninja"
+    kUnitTypeInf15CyberNinja = 0x2ec,
+    /// dbobjects.dat unit type 749 (record +0x74) "cp Missile Base"
+    kUnitTypeCpMissileBase = 0x2ed,
+    /// dbobjects.dat unit type 750 (record +0x74) "cp ICBM"
+    kUnitTypeCpICBM = 0x2ee,
+    /// dbobjects.dat unit type 751 (record +0x74) "Inf10 - Radio Man"
+    kUnitTypeInf10RadioMan = 0x2ef,
+    /// dbobjects.dat unit type 752 (record +0x74) "b  Priest Tower"
+    kUnitTypePriestTower = 0x2f0,
+    /// dbobjects.dat unit type 755 (record +0x74) "Sp15 - Space Carrier"
+    kUnitTypeSp15SpaceCarrier = 0x2f3,
+    /// dbobjects.dat unit type 756 (record +0x74) "Sp15 - Space Transport"
+    kUnitTypeSp15SpaceTransport = 0x2f4,
+    /// dbobjects.dat unit type 758 (record +0x74) "Sp15 - Space Fighter"
+    kUnitTypeSp15SpaceFighter = 0x2f6,
+    /// dbobjects.dat unit type 765 (record +0x74) "b  Guard Tower - Space"
+    kUnitTypeGuardTowerSpace = 0x2fd,
+    /// dbobjects.dat unit type 766 (record +0x74) "b  Wall - Space"
+    kUnitTypeWallSpace = 0x2fe,
+    /// dbobjects.dat unit type 767 (record +0x74) "b  Gate - Space"
+    kUnitTypeGateSpace = 0x2ff,
+    /// dbobjects.dat unit type 768 (record +0x74) "b  AA15 Missile Tower"
+    kUnitTypeAA15MissileTower = 0x300,
+    /// dbobjects.dat unit type 770 (record +0x74) "b  Space Turret"
+    kUnitTypeSpaceTurret = 0x302,
+    /// dbobjects.dat unit type 771 (record +0x74) "Inf10 - SAS Explosive Expert"
+    kUnitTypeInf10SASExplosiveExpert = 0x303,
+    /// dbobjects.dat unit type 773 (record +0x74) "Bomb for SAS Explosive Expert"
+    kUnitTypeBombForSASExplosiveExpert = 0x305,
+    /// dbobjects.dat unit type 777 (record +0x74) "Capital Ship Special Weapon"
+    kUnitTypeCapitalShipSpecialWeapon = 0x309,
+    /// dbobjects.dat unit type 780 (record +0x74) "a Carrier Fighter11 Dauntless"
+    kUnitTypeCarrierFighter11Dauntless = 0x30c,
+    /// dbobjects.dat unit type 781 (record +0x74) "a Carrier Fighter11 Zero"
+    kUnitTypeCarrierFighter11Zero = 0x30d,
+    /// dbobjects.dat unit type 785 (record +0x74) "b  Gate - Palisades"
+    kUnitTypeGatePalisades = 0x311,
+    /// dbobjects.dat unit type 786 (record +0x74) "b  Guard Tower - Palisades"
+    kUnitTypeGuardTowerPalisades = 0x312,
+    /// dbobjects.dat unit type 787 (record +0x74) "b  Teleporter"
+    kUnitTypeTeleporter = 0x313,
+    /// dbobjects.dat unit type 799 (record +0x74) "w  Orbital Space Station"
+    kUnitTypeOrbitalSpaceStation = 0x31f,
+    /// dbobjects.dat unit type 801 (record +0x74) "b  Market (CP)"
+    kUnitTypeMarketCP = 0x321,
+    /// dbobjects.dat unit type 802 (record +0x74) "b  Guard Tower - Bamboo"
+    kUnitTypeGuardTowerBamboo = 0x322,
+    /// dbobjects.dat unit type 805 (record +0x74) "Meteor"
+    kUnitTypeMeteor = 0x325,
+    /// dbobjects.dat unit type 816 (record +0x74) "a Fighter15 Planetary Fighter"
+    kUnitTypeFighter15PlanetaryFighter = 0x330,
+    /// dbobjects.dat unit type 826 (record +0x74) "b  Robotic Farm"
+    kUnitTypeRoboticFarm = 0x33a,
+    /// dbobjects.dat unit type 827 (record +0x74) "Space Fallow Farm"
+    kUnitTypeSpaceFallowFarm = 0x33b,
+    /// dbobjects.dat unit type 828 (record +0x74) "x Capital Ship Yamato"
+    kUnitTypeCapitalShipYamato = 0x33c,
+}
+
+/// EEUnitClass::mFlags2D0 (+0x2d0): where the class moves; the EEUnitClass ctor 0x62f317 sets the bits by mCategory (setrilo unit_class.h movement_ '1 air, 2 land, 4 water'; 8 = the AoC space categories)
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitMovementFlag {
+    /// setrilo movement_ bit 1 'air'; EEUnitClass ctor 0x62f317 (EEUnitClass.cpp:388): categories Airplane, Helicopter, HelicopterTransport, HelicopterPriest, AirAnimal
+    kMovementAir = 1,
+    /// setrilo movement_ bit 2 'land'; EEUnitClass ctor 0x62f317 (EEUnitClass.cpp:388): Land, LandCitizen, LandPriest, LandTransport, LandMilitaryHero, towers
+    kMovementLand = 2,
+    /// setrilo movement_ bit 4 'water'; EEUnitClass ctor 0x62f317 (EEUnitClass.cpp:388): Naval, NavalCitizen, Land8, SubmergedNaval, NavalPriest, NavalTransport, NavalBuilding, SeaAnimal
+    kMovementSea = 4,
+    /// kMovementAir | kMovementSea (EECPExplorationManager.cpp:295, EEUnitClass.cpp:6384) (provisional name)
+    kMovementAirOrSea = 5,
+    /// kMovementLand | kMovementSea (EEFOFindNewTargetNearOldTarget.cpp:724) (provisional name)
+    kMovementLandOrSea = 6,
+    /// EEUnitClass ctor 0x62f317 (EEUnitClass.cpp:388): Spaceship, SpaceTransport, SpaceBuilding, PlanetSpaceship; EECPExplorationManager::RequestExplorer kecpekSpace (provisional name)
+    kMovementSpace = 8,
+    /// kMovementSea | kMovementSpace (EEComplexUnit.cpp:1063) (provisional name)
+    kMovementSeaOrSpace = 0xc,
+    /// kMovementAir | kMovementSea | kMovementSpace; RequestExplorer case 0 (land explorers) takes classes without them (provisional name)
+    kMovementAirSeaOrSpace = 0xd,
+}
+
+/// EEUnitClass::mKindFlags (+0x1e0): the class's kind for selection and commands; the EEUnitClass ctor 0x62f317 sets one kind by mCategory (setrilo unit_class.cpp layer_) and ORs the mCanEnter* bits; EEGroup::mKindFlags ORs its units' (UpdateKindFlags); EEUIFMainGame::UpdateCursorKind picks the command by them
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitKindFlag {
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category LandCitizen; EEGroup::FindUnitWithFlags(1) finds the gatherer/repairer (provisional name)
+    kUnitKindCitizen = 1,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): Airplane, Naval, Land, Helicopter, SubmergedNaval, LandMilitaryHero, Spaceship..., towers (provisional name)
+    kUnitKindMilitary = 2,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): LandPriest, NavalPriest, HelicopterPriest (not unit type 0xd8) (provisional name)
+    kUnitKindPriest = 4,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category Resource (provisional name)
+    kUnitKindResource = 8,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): Building, Building19, NavalBuilding, MiningBuilding, Gate, SpaceBuilding (not towers) (provisional name)
+    kUnitKindBuilding = 0x10,
+    /// kUnitKindPriest | kUnitKindBuilding: EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category BuildingPriest (provisional name)
+    kUnitKindBuildingPriest = 0x14,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category Ambient with unit type 0xdf (kUnitTypePathPoint, dbobjects 'PathPoint')
+    kUnitKindPathPoint = 0x20,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category NavalCitizen (provisional name)
+    kUnitKindNavalCitizen = 0x40,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category HelicopterTransport (RTTI EEUCHelicopterTransport); EECanEnterUnit pairs it with kUnitKindCanEnterAirTransports
+    kUnitKindHelicopterTransport = 0x80,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category LandTransport (RTTI EEUCLandTransport)
+    kUnitKindLandTransport = 0x100,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category NavalTransport (RTTI EEUCNavalTransport)
+    kUnitKindNavalTransport = 0x200,
+    /// EEUnitClass.cpp:516: set when mCanEnterAirTransports
+    kUnitKindCanEnterAirTransports = 0x400,
+    /// EEUnitClass.cpp:518: set when mCanEnterLandTransports
+    kUnitKindCanEnterLandTransports = 0x800,
+    /// EEUnitClass.cpp:520: set when mCanEnterSeaTransports
+    kUnitKindCanEnterSeaTransports = 0x1000,
+    /// EEUnitClass.cpp:522: set when mCanEnterFortresses (provisional name)
+    kUnitKindCanEnterFortresses = 0x2000,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category Fortress (RTTI EEUCFortress)
+    kUnitKindFortress = 0x4000,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): added to kUnitKindMilitary when mRange > mLineOfSight; Fn265D7A tests it (provisional name)
+    kUnitKindLongRange = 0x8000,
+    /// kUnitKindLongRange | kUnitKindMilitary (EEUnitClass.cpp:480) (provisional name)
+    kUnitKindLongRangeMilitary = 0x8002,
+    /// EEUnitClass ctor 0x62f317 switch (mCategory) (EEUnitClass.cpp:442): category SpaceTransport (RTTI EEUCSpaceTransport)
+    kUnitKindSpaceTransport = 0x10000,
+    /// EEUnitClass.cpp:524: set when mCanEnterSpaceTransports (provisional name)
+    kUnitKindCanEnterSpaceTransports = 0x20000,
+}
+
+/// EEUnit::mHiddenFlags (+0x44): setrilo unit.h flags_ 'bit 4 moved, bit 5 hidden, bits 0-1 the hidden check's phase' (EEUnit::UpdateHidden 0x628f90)
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitHiddenFlag {
+    /// setrilo unit.h flags_ bits 0-1: the hidden check's phase ((game time / 1000) % 3)
+    kHiddenFlagPhaseMask = 3,
+    /// setrilo unit.h flags_ bit 4 'moved'; EEUnit::MoveTo sets it
+    kHiddenFlagMoved = 0x10,
+    /// setrilo unit.h flags_ bit 5 'hidden'; UpdateHidden returns it
+    kHiddenFlagHidden = 0x20,
+}
+
+/// The media EEUnitClassUpgrade::LoadMedia 0x63bcc3 loads, one bit each (inArg); EETechTree::GetUnitClassMediaMask 0x5cc710 starts from all of them and clears the bits of media from epochs before the start epoch
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitMediaFlag {
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mSounds74[0] (GetAcknowledgeSound / SetAcknowledgeSound index 0) (provisional name)
+    kMediaAcknowledgeSound1 = 1,
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mSounds74[1] (provisional name)
+    kMediaAcknowledgeSound2 = 2,
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mSound6C (SetCreationSound) (provisional name)
+    kMediaCreationSound = 4,
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mSound70 (SetDeathSound; UnitDied plays it) (provisional name)
+    kMediaDeathSound = 8,
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mSounds7C[0] (GetSelectionSound / SetSelectionSound index 0) (provisional name)
+    kMediaSelectionSound1 = 0x10,
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mSounds7C[1] (provisional name)
+    kMediaSelectionSound2 = 0x20,
+    /// EEUnitClassUpgrade::LoadMedia 0x63bcc3: mModel->LoadMedia() (provisional name)
+    kMediaModel = 0x40,
+    /// every media bit (GetUnitClassMediaMask's start value) (provisional name) [= kMediaAcknowledgeSound1 | kMediaAcknowledgeSound2 | kMediaCreationSound | kMediaDeathSound | kMediaSelectionSound1 | kMediaSelectionSound2 | kMediaModel]
+    kMediaAll = 0x7f,
+}
+
+/// Unit-AI action ids: EEUnitAction::RegisterAll 0x62bd05 registers each name with its id.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitActionID {
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Invalid", 0)
+    kActionInvalid = 0,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Takeoff", 1000)
+    kActionTakeoff = 1000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Taxi", 1002)
+    kActionTaxi = 1002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ContinueToTaxi", 1003)
+    kActionContinueToTaxi = 1003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Climb", 1004)
+    kActionClimb = 1004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ContinueToClimb", 1005)
+    kActionContinueToClimb = 1005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Fly", 1006)
+    kActionFly = 1006,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ContinueToFly", 1007)
+    kActionContinueToFly = 1007,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Circle", 1008)
+    kActionCircle = 1008,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForLandingClearance", 1009)
+    kActionWaitForLandingClearance = 1009,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("HoldingPattern", 1010)
+    kActionHoldingPattern = 1010,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Land", 1011)
+    kActionLand = 1011,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Descend", 1012)
+    kActionDescend = 1012,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ContinueToDescend", 1013)
+    kActionContinueToDescend = 1013,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Brake", 1014)
+    kActionBrake = 1014,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ContinueToBrake", 1015)
+    kActionContinueToBrake = 1015,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("EmergencyTakeoff", 1016)
+    kActionEmergencyTakeoff = 1016,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("SearchForSecondaryTarget", 1017)
+    kActionSearchForSecondaryTarget = 1017,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("BoardTransport", 1018)
+    kActionBoardTransport = 1018,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RecalculateLanding", 1019)
+    kActionRecalculateLanding = 1019,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ContinueToWaitForLandingClearance", 1020)
+    kActionContinueToWaitForLandingClearance = 1020,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RequestLanding", 1021)
+    kActionRequestLanding = 1021,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CircleAirtrafficController", 1022)
+    kActionCircleAirtrafficController = 1022,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("SendParatrooperPlaneOffMap", 1023)
+    kActionSendParatrooperPlaneOffMap = 1023,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AttackEnemyBuilding", 2000)
+    kActionAttackEnemyBuilding = 2000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AttackEnemyUnit", 2001)
+    kActionAttackEnemyUnit = 2001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AttackLocation", 2002)
+    kActionAttackLocation = 2002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ConvertEnemyBuilding", 2003)
+    kActionConvertEnemyBuilding = 2003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ConvertEnemyUnit", 2004)
+    kActionConvertEnemyUnit = 2004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("DefendBuilding", 2005)
+    kActionDefendBuilding = 2005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("DefendLocation", 2006)
+    kActionDefendLocation = 2006,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("DefendUnit", 2007)
+    kActionDefendUnit = 2007,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GuardBuilding", 2008)
+    kActionGuardBuilding = 2008,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GuardUnit", 2009)
+    kActionGuardUnit = 2009,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GarrisonAtBuilding", 2010)
+    kActionGarrisonAtBuilding = 2010,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("TrackEnemyUnit", 2011)
+    kActionTrackEnemyUnit = 2011,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FaceEnemyUnit", 2012)
+    kActionFaceEnemyUnit = 2012,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckRange", 2013)
+    kActionCheckRange = 2013,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToConversionRange", 2014)
+    kActionMoveToConversionRange = 2014,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("LookForEnemies", 2015)
+    kActionLookForEnemies = 2015,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("InitialAttackState", 2016)
+    kActionInitialAttackState = 2016,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CastCalamity", 2017)
+    kActionCastCalamity = 2017,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("UnderAttack", 2018)
+    kActionUnderAttack = 2018,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RunFromAttacker", 2019)
+    kActionRunFromAttacker = 2019,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RetaliateAgainstAttacker", 2020)
+    kActionRetaliateAgainstAttacker = 2020,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForReload", 2021)
+    kActionWaitForReload = 2021,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AnimalRetaliation", 2022)
+    kActionAnimalRetaliation = 2022,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AnimalParentalVengance", 2023)
+    kActionAnimalParentalVengance = 2023,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ShouldIFollowEnemyUnit", 2024)
+    kActionShouldIFollowEnemyUnit = 2024,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ShouldIReturnToInitialContactLocation", 2025)
+    kActionShouldIReturnToInitialContactLocation = 2025,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ReturnToInitialContactLocation", 2026)
+    kActionReturnToInitialContactLocation = 2026,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FaceLocation", 2027)
+    kActionFaceLocation = 2027,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PrepareToCastCalamity", 2028)
+    kActionPrepareToCastCalamity = 2028,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PostCalamityFlee", 2029)
+    kActionPostCalamityFlee = 2029,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CalamityPreCast", 2030)
+    kActionCalamityPreCast = 2030,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ChangeTargetForSpecialEnemy", 2031)
+    kActionChangeTargetForSpecialEnemy = 2031,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("SpecialLocation", 2032)
+    kActionSpecialLocation = 2032,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("SwitchToAttackGround", 2033)
+    kActionSwitchToAttackGround = 2033,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("BuildBuilding", 4000)
+    kActionBuildBuilding = 4000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("BuildListOfBuildings", 4001)
+    kActionBuildListOfBuildings = 4001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RepairBuilding", 4002)
+    kActionRepairBuilding = 4002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RepairUnit", 4003)
+    kActionRepairUnit = 4003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GatherResource", 4004)
+    kActionGatherResource = 4004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AddResourceToStorage", 4005)
+    kActionAddResourceToStorage = 4005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FindNewResource", 4006)
+    kActionFindNewResource = 4006,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FindNewStorage", 4007)
+    kActionFindNewStorage = 4007,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("BuildWall", 4008)
+    kActionBuildWall = 4008,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckForMoreWallSections", 4009)
+    kActionCheckForMoreWallSections = 4009,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckResourceCapacity", 4010)
+    kActionCheckResourceCapacity = 4010,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("DropoffResource", 4011)
+    kActionDropoffResource = 4011,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForBuildSiteToClear", 4012)
+    kActionWaitForBuildSiteToClear = 4012,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckBuildSiteVisibility", 4013)
+    kActionCheckBuildSiteVisibility = 4013,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckBuildSiteValidity", 4014)
+    kActionCheckBuildSiteValidity = 4014,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("QueueNewBuilding", 4015)
+    kActionQueueNewBuilding = 4015,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckPreviousResource", 4016)
+    kActionCheckPreviousResource = 4016,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckRepairSiteAccessibility", 4017)
+    kActionCheckRepairSiteAccessibility = 4017,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckSafety", 4018)
+    kActionCheckSafety = 4018,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ConvertToLocationGoal", 4019)
+    kActionConvertToLocationGoal = 4019,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckStorageAccessibility", 4020)
+    kActionCheckStorageAccessibility = 4020,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FindStorage", 4021)
+    kActionFindStorage = 4021,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckResourceAccessibility", 4022)
+    kActionCheckResourceAccessibility = 4022,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToWaitingArea", 4023)
+    kActionMoveToWaitingArea = 4023,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("NotifyWaitingCitizen", 4024)
+    kActionNotifyWaitingCitizen = 4024,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckForOpenPosition", 4025)
+    kActionCheckForOpenPosition = 4025,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForOpenPosition", 4026)
+    kActionWaitForOpenPosition = 4026,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("HasResourceGoal", 4027)
+    kActionHasResourceGoal = 4027,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("TaskSmartCitizen", 4028)
+    kActionTaskSmartCitizen = 4028,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FindFarm", 4029)
+    kActionFindFarm = 4029,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("InsufficientResources", 4030)
+    kActionInsufficientResources = 4030,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ChangeTargetForSpecialRepair", 4031)
+    kActionChangeTargetForSpecialRepair = 4031,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Idle", 5000)
+    kActionIdle = 5000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ReacquireGoal", 5001)
+    kActionReacquireGoal = 5001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ReacquireEnemyUnit", 5002)
+    kActionReacquireEnemyUnit = 5002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CheckOwner", 5003)
+    kActionCheckOwner = 5003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Dying", 6000)
+    kActionDying = 6000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ResourcesRotting", 6001)
+    kActionResourcesRotting = 6001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("UnitRotting", 6002)
+    kActionUnitRotting = 6002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Dead", 6003)
+    kActionDead = 6003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ResourcesDepleting", 6004)
+    kActionResourcesDepleting = 6004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Kill", 6005)
+    kActionKill = 6005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("HitTarget", 6007)
+    kActionHitTarget = 6007,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("KillSilently", 6008)
+    kActionKillSilently = 6008,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FadingOutInSpace", 6009)
+    kActionFadingOutInSpace = 6009,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Engage", 7000)
+    kActionEngage = 7000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Disband", 7001)
+    kActionDisband = 7001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PrepareToMove", 8000)
+    kActionPrepareToMove = 8000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToLocation", 8001)
+    kActionMoveToLocation = 8001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToBuilding", 8002)
+    kActionMoveToBuilding = 8002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToBuildSite", 8003)
+    kActionMoveToBuildSite = 8003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToNextBuildSite", 8004)
+    kActionMoveToNextBuildSite = 8004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToGuardedBuilding", 8005)
+    kActionMoveToGuardedBuilding = 8005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToDefendedBuilding", 8006)
+    kActionMoveToDefendedBuilding = 8006,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToDefendedLocation", 8007)
+    kActionMoveToDefendedLocation = 8007,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToResource", 8008)
+    kActionMoveToResource = 8008,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToStorage", 8009)
+    kActionMoveToStorage = 8009,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToSafeLocation", 8010)
+    kActionMoveToSafeLocation = 8010,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToTownCenter", 8011)
+    kActionMoveToTownCenter = 8011,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToUnexploredArea", 8012)
+    kActionMoveToUnexploredArea = 8012,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToNextPatrolPoint", 8013)
+    kActionMoveToNextPatrolPoint = 8013,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToGuardedUnit", 8014)
+    kActionMoveToGuardedUnit = 8014,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToDefendedUnit", 8015)
+    kActionMoveToDefendedUnit = 8015,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToUnit", 8016)
+    kActionMoveToUnit = 8016,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToRepairSite", 8017)
+    kActionMoveToRepairSite = 8017,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToWallSection", 8018)
+    kActionMoveToWallSection = 8018,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FleeDanger", 8019)
+    kActionFleeDanger = 8019,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GetNextPatrolPoint", 8020)
+    kActionGetNextPatrolPoint = 8020,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GetNextAutoWaypoint", 8021)
+    kActionGetNextAutoWaypoint = 8021,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToValidMapLocation", 8022)
+    kActionMoveToValidMapLocation = 8022,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GetNextMoveWaypoint", 9000)
+    kActionGetNextMoveWaypoint = 9000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForObstacleToClear", 9001)
+    kActionWaitForObstacleToClear = 9001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("RepathAroundObstacle", 9002)
+    kActionRepathAroundObstacle = 9002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("InitialCollision", 9003)
+    kActionInitialCollision = 9003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("InitialCollisionResolution", 9004)
+    kActionInitialCollisionResolution = 9004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PostCollisionNextWaypoint", 9005)
+    kActionPostCollisionNextWaypoint = 9005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("TurnToUnitFacing", 9006)
+    kActionTurnToUnitFacing = 9006,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PrepareToTurn", 10000)
+    kActionPrepareToTurn = 10000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PrepareToStop", 10001)
+    kActionPrepareToStop = 10001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Accelerate", 10002)
+    kActionAccelerate = 10002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Advance", 10003)
+    kActionAdvance = 10003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Turn", 10004)
+    kActionTurn = 10004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Decelerate", 10005)
+    kActionDecelerate = 10005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FindSafeLocation", 11001)
+    kActionFindSafeLocation = 11001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("FindUnexploredArea", 11002)
+    kActionFindUnexploredArea = 11002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("LoadIntoContainer", 12000)
+    kActionLoadIntoContainer = 12000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("UnloadTransport", 12001)
+    kActionUnloadTransport = 12001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("MoveToRendezvous", 12002)
+    kActionMoveToRendezvous = 12002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("PickedUpLoadableUnits", 12003)
+    kActionPickedUpLoadableUnits = 12003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GetContainerProgress", 12004)
+    kActionGetContainerProgress = 12004,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GetNextTransportWaypoint", 12005)
+    kActionGetNextTransportWaypoint = 12005,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("BumpExtraLoadableUnits", 12006)
+    kActionBumpExtraLoadableUnits = 12006,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("GarrisonUpgrade", 12007)
+    kActionGarrisonUpgrade = 12007,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForGarrisonCost", 12008)
+    kActionWaitForGarrisonCost = 12008,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("ReacquireLoadContainer", 12009)
+    kActionReacquireLoadContainer = 12009,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForPassengers", 12010)
+    kActionWaitForPassengers = 12010,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForTransport", 12011)
+    kActionWaitForTransport = 12011,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("CannotReachContainer", 12012)
+    kActionCannotReachContainer = 12012,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("AirportOpen", 13000)
+    kActionAirportOpen = 13000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("WaitForTakeoffClearance", 13001)
+    kActionWaitForTakeoffClearance = 13001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("LaunchNextAirplane", 13002)
+    kActionLaunchNextAirplane = 13002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("SelectNewTarget", 14000)
+    kActionSelectNewTarget = 14000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Open", 15000)
+    kActionOpen = 15000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Closed", 15001)
+    kActionClosed = 15001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Opening", 15002)
+    kActionOpening = 15002,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("Closing", 15003)
+    kActionClosing = 15003,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("LookForHealee", 16000)
+    kActionLookForHealee = 16000,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("HealUnit", 16001)
+    kActionHealUnit = 16001,
+    /// EEUnitAction::RegisterAll 0x62bd05 Register("TurnToFaceHealee", 16002)
+    kActionTurnToFaceHealee = 16002,
+}
+
+/// Unit-AI trigger (condition) ids: EEUnitTrigger::RegisterAll 0x62a8e5 registers each name with its id.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitTriggerID {
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("Invalid", 0)
+    kTriggerInvalid = 0,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("FlightTimeAlarm", 1000)
+    kTriggerFlightTimeAlarm = 1000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LandingClearanceGranted", 1001)
+    kTriggerLandingClearanceGranted = 1001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HoldingPatternComputed", 1002)
+    kTriggerHoldingPatternComputed = 1002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AirportDestroyed", 1003)
+    kTriggerAirportDestroyed = 1003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SecondaryTargetFound", 1004)
+    kTriggerSecondaryTargetFound = 1004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SecondaryTargetNotFound", 1005)
+    kTriggerSecondaryTargetNotFound = 1005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BoardedTransport", 1006)
+    kTriggerBoardedTransport = 1006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AirtrafficControllerMoved", 1007)
+    kTriggerAirtrafficControllerMoved = 1007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("RequestStillValid", 1008)
+    kTriggerRequestStillValid = 1008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("FlyOffMapAfterAttack", 1009)
+    kTriggerFlyOffMapAfterAttack = 1009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingInWeaponRange", 2000)
+    kTriggerBuildingInWeaponRange = 2000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingDestroyed", 2001)
+    kTriggerBuildingDestroyed = 2001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GarrisonedAtBuilding", 2002)
+    kTriggerGarrisonedAtBuilding = 2002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitDestroyed", 2003)
+    kTriggerEnemyUnitDestroyed = 2003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyBuildingDestroyed", 2004)
+    kTriggerEnemyBuildingDestroyed = 2004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DefendedBuildingTakingLightDamage", 2005)
+    kTriggerDefendedBuildingTakingLightDamage = 2005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DefendedBuildingTakingHeavyDamage", 2006)
+    kTriggerDefendedBuildingTakingHeavyDamage = 2006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DefendedBuildingDestroyed", 2007)
+    kTriggerDefendedBuildingDestroyed = 2007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GuardedBuildingTakingLightDamage", 2008)
+    kTriggerGuardedBuildingTakingLightDamage = 2008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GuardedBuildingTakingHeavyDamage", 2009)
+    kTriggerGuardedBuildingTakingHeavyDamage = 2009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GuardedBuildingDestroyed", 2010)
+    kTriggerGuardedBuildingDestroyed = 2010,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LocationUnderAttack", 2011)
+    kTriggerLocationUnderAttack = 2011,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingNotInWeaponRange", 2012)
+    kTriggerBuildingNotInWeaponRange = 2012,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitInWeaponRange", 2013)
+    kTriggerUnitInWeaponRange = 2013,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitDestroyed", 2014)
+    kTriggerUnitDestroyed = 2014,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DefendedUnitTakingLightDamage", 2015)
+    kTriggerDefendedUnitTakingLightDamage = 2015,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DefendedUnitTakingHeavyDamage", 2016)
+    kTriggerDefendedUnitTakingHeavyDamage = 2016,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DefendedUnitDestroyed", 2017)
+    kTriggerDefendedUnitDestroyed = 2017,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GuardedUnitTakingLightDamage", 2018)
+    kTriggerGuardedUnitTakingLightDamage = 2018,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GuardedUnitTakingHeavyDamage", 2019)
+    kTriggerGuardedUnitTakingHeavyDamage = 2019,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GuardedUnitDestroyed", 2020)
+    kTriggerGuardedUnitDestroyed = 2020,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitNotInWeaponRange", 2021)
+    kTriggerUnitNotInWeaponRange = 2021,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitNotOnMap", 2022)
+    kTriggerUnitNotOnMap = 2022,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitLeftLOS", 2023)
+    kTriggerEnemyUnitLeftLOS = 2023,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoTargetUnit", 2024)
+    kTriggerNoTargetUnit = 2024,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitMoving", 2025)
+    kTriggerEnemyUnitMoving = 2025,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitNoLongerVisible", 2026)
+    kTriggerEnemyUnitNoLongerVisible = 2026,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("FacingEnemyUnit", 2027)
+    kTriggerFacingEnemyUnit = 2027,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitInsideFiringArch", 2028)
+    kTriggerEnemyUnitInsideFiringArch = 2028,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AttackMoveEnabled", 2029)
+    kTriggerAttackMoveEnabled = 2029,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ChooseRandomVolcanoTarget", 2030)
+    kTriggerChooseRandomVolcanoTarget = 2030,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ReadyToFireAgain", 2031)
+    kTriggerReadyToFireAgain = 2031,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitOnTileBorderingTarget", 2032)
+    kTriggerUnitOnTileBorderingTarget = 2032,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AttackerIsRangedUnit", 2033)
+    kTriggerAttackerIsRangedUnit = 2033,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitMoved", 2034)
+    kTriggerEnemyUnitMoved = 2034,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyWithinMinimumRange", 2035)
+    kTriggerEnemyWithinMinimumRange = 2035,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CeaseFire", 2036)
+    kTriggerCeaseFire = 2036,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AmIUnderAttack", 2037)
+    kTriggerAmIUnderAttack = 2037,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyIsBuilding", 2038)
+    kTriggerEnemyIsBuilding = 2038,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsAttackerInRetaliationRange", 2039)
+    kTriggerIsAttackerInRetaliationRange = 2039,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AttackerIsReachable", 2040)
+    kTriggerAttackerIsReachable = 2040,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanDamageAttacker", 2041)
+    kTriggerCanDamageAttacker = 2041,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BlockedByWall", 2042)
+    kTriggerBlockedByWall = 2042,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AttackerIsNotBuilding", 2043)
+    kTriggerAttackerIsNotBuilding = 2043,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("Reloaded", 2044)
+    kTriggerReloaded = 2044,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanFlee", 2045)
+    kTriggerCanFlee = 2045,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TargetIsNotDefensiveBuilding", 2046)
+    kTriggerTargetIsNotDefensiveBuilding = 2046,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanITargetEnemies", 2047)
+    kTriggerCanITargetEnemies = 2047,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyInsideInitialContactLOS", 2048)
+    kTriggerEnemyInsideInitialContactLOS = 2048,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ReturnsToInitialContactLocation", 2049)
+    kTriggerReturnsToInitialContactLocation = 2049,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanIMoveFreely", 2050)
+    kTriggerCanIMoveFreely = 2050,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanIPursuePastInitialContactLOS", 2051)
+    kTriggerCanIPursuePastInitialContactLOS = 2051,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HasValidInitialContactLocation", 2052)
+    kTriggerHasValidInitialContactLocation = 2052,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LocationInsideFiringArch", 2053)
+    kTriggerLocationInsideFiringArch = 2053,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LocationInWeaponRange", 2054)
+    kTriggerLocationInWeaponRange = 2054,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TargetIsSpecialEnemy", 2055)
+    kTriggerTargetIsSpecialEnemy = 2055,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitHasNotMovedOneTile", 2056)
+    kTriggerEnemyUnitHasNotMovedOneTile = 2056,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitIdleOrAttackingDefenselessBuilding", 2057)
+    kTriggerUnitIdleOrAttackingDefenselessBuilding = 2057,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AmmoExhausted", 2058)
+    kTriggerAmmoExhausted = 2058,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitUndetectable", 2059)
+    kTriggerEnemyUnitUndetectable = 2059,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AttackerInWeaponRange", 2060)
+    kTriggerAttackerInWeaponRange = 2060,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingBuilt", 4000)
+    kTriggerBuildingBuilt = 4000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingRepaired", 4001)
+    kTriggerBuildingRepaired = 4001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtResource", 4002)
+    kTriggerArrivedAtResource = 4002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourceCapacityFilled", 4003)
+    kTriggerResourceCapacityFilled = 4003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtStorage", 4004)
+    kTriggerArrivedAtStorage = 4004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourceCapacityEmpty", 4005)
+    kTriggerResourceCapacityEmpty = 4005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NewResourceFound", 4006)
+    kTriggerNewResourceFound = 4006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitRepaired", 4007)
+    kTriggerUnitRepaired = 4007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourceDepleted", 4008)
+    kTriggerResourceDepleted = 4008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourceInRange", 4009)
+    kTriggerResourceInRange = 4009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("StorageInRange", 4010)
+    kTriggerStorageInRange = 4010,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("StorageFound", 4011)
+    kTriggerStorageFound = 4011,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildSiteInRange", 4012)
+    kTriggerBuildSiteInRange = 4012,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildSiteNotInRange", 4013)
+    kTriggerBuildSiteNotInRange = 4013,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("RepairSiteInRange", 4014)
+    kTriggerRepairSiteInRange = 4014,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WallSectionBuilt", 4015)
+    kTriggerWallSectionBuilt = 4015,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("MoreWallSectionsToBuild", 4016)
+    kTriggerMoreWallSectionsToBuild = 4016,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoMoreWallSectionsToBuild", 4017)
+    kTriggerNoMoreWallSectionsToBuild = 4017,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WallSectionInRange", 4018)
+    kTriggerWallSectionInRange = 4018,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WallSectionNotInRange", 4019)
+    kTriggerWallSectionNotInRange = 4019,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("StorageDestroyed", 4020)
+    kTriggerStorageDestroyed = 4020,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildSiteClear", 4021)
+    kTriggerBuildSiteClear = 4021,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildSiteVisible", 4022)
+    kTriggerBuildSiteVisible = 4022,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildSiteValid", 4023)
+    kTriggerBuildSiteValid = 4023,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingInBuildQueue", 4024)
+    kTriggerBuildingInBuildQueue = 4024,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DamagedBuildingSpotted", 4025)
+    kTriggerDamagedBuildingSpotted = 4025,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourceAccessible", 4026)
+    kTriggerResourceAccessible = 4026,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WaitingAreaInRange", 4027)
+    kTriggerWaitingAreaInRange = 4027,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourceTargetIsTree", 4028)
+    kTriggerResourceTargetIsTree = 4028,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("OpenPositionAvailable", 4029)
+    kTriggerOpenPositionAvailable = 4029,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildingNotPaidFor", 4030)
+    kTriggerBuildingNotPaidFor = 4030,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsBuild", 4031)
+    kTriggerGoalIsBuild = 4031,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("BuildQueueEmpty", 4032)
+    kTriggerBuildQueueEmpty = 4032,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SmartTaskNotAssigned", 4033)
+    kTriggerSmartTaskNotAssigned = 4033,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ImAFarmer", 4034)
+    kTriggerImAFarmer = 4034,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("FarmNotFound", 4035)
+    kTriggerFarmNotFound = 4035,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CannotAffordRepair", 4036)
+    kTriggerCannotAffordRepair = 4036,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("RepairIsSpecialUnit", 4037)
+    kTriggerRepairIsSpecialUnit = 4037,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanUseThisTileAsWaitingArea", 4038)
+    kTriggerCanUseThisTileAsWaitingArea = 4038,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TakingLightDamage", 5000)
+    kTriggerTakingLightDamage = 5000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TakingHeavyDamage", 5001)
+    kTriggerTakingHeavyDamage = 5001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoLongerUnderAttack", 5002)
+    kTriggerNoLongerUnderAttack = 5002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyBuildingSpotted", 5003)
+    kTriggerEnemyBuildingSpotted = 5003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitSpotted", 5004)
+    kTriggerEnemyUnitSpotted = 5004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitReachable", 5005)
+    kTriggerEnemyUnitReachable = 5005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsBuildSite", 5006)
+    kTriggerGoalIsBuildSite = 5006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsResource", 5007)
+    kTriggerGoalIsResource = 5007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsStorage", 5008)
+    kTriggerGoalIsStorage = 5008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsLocation", 5009)
+    kTriggerGoalIsLocation = 5009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsUnit", 5010)
+    kTriggerGoalIsUnit = 5010,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsRepairSite", 5011)
+    kTriggerGoalIsRepairSite = 5011,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsWall", 5012)
+    kTriggerGoalIsWall = 5012,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("OwnerIsHuman", 5013)
+    kTriggerOwnerIsHuman = 5013,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("OwnerIsComputer", 5014)
+    kTriggerOwnerIsComputer = 5014,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitInLOS", 5015)
+    kTriggerEnemyUnitInLOS = 5015,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsPlayerInitiated", 5016)
+    kTriggerGoalIsPlayerInitiated = 5016,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsExplore", 5017)
+    kTriggerGoalIsExplore = 5017,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AlwaysTrue", 5018)
+    kTriggerAlwaysTrue = 5018,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsWaitingArea", 5019)
+    kTriggerGoalIsWaitingArea = 5019,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsCalamity", 5020)
+    kTriggerGoalIsCalamity = 5020,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsNotPlayerInitiated", 5021)
+    kTriggerGoalIsNotPlayerInitiated = 5021,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitHasGoal", 5022)
+    kTriggerUnitHasGoal = 5022,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsAttackLocation", 5023)
+    kTriggerGoalIsAttackLocation = 5023,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("OneSecondElapsed", 5024)
+    kTriggerOneSecondElapsed = 5024,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TwoSecondsElapsed", 5025)
+    kTriggerTwoSecondsElapsed = 5025,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ThreeSecondsElapsed", 5026)
+    kTriggerThreeSecondsElapsed = 5026,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LocationOffMap", 5027)
+    kTriggerLocationOffMap = 5027,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LocationWayOffMap", 5028)
+    kTriggerLocationWayOffMap = 5028,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("OneAndAHalfSecondsElapsed", 5029)
+    kTriggerOneAndAHalfSecondsElapsed = 5029,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsNotCalamity", 5030)
+    kTriggerGoalIsNotCalamity = 5030,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LocationInSpace", 5031)
+    kTriggerLocationInSpace = 5031,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CargoIsEmpty", 5032)
+    kTriggerCargoIsEmpty = 5032,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitHitSpace", 5033)
+    kTriggerUnitHitSpace = 5033,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ReachedBottomOfSpace", 5034)
+    kTriggerReachedBottomOfSpace = 5034,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("DyingAnimationFinished", 6000)
+    kTriggerDyingAnimationFinished = 6000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ResourcesRottedAway", 6001)
+    kTriggerResourcesRottedAway = 6001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitRottedAway", 6002)
+    kTriggerUnitRottedAway = 6002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("MovePreparationComplete", 8000)
+    kTriggerMovePreparationComplete = 8000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtLocation", 8001)
+    kTriggerArrivedAtLocation = 8001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtBuilding", 8002)
+    kTriggerArrivedAtBuilding = 8002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtSafeLocation", 8003)
+    kTriggerArrivedAtSafeLocation = 8003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtTownCenter", 8004)
+    kTriggerArrivedAtTownCenter = 8004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtUnexploredArea", 8005)
+    kTriggerArrivedAtUnexploredArea = 8005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtPatrolPoint", 8006)
+    kTriggerArrivedAtPatrolPoint = 8006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtUnit", 8007)
+    kTriggerArrivedAtUnit = 8007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("MovedTooFarFromCharge", 8008)
+    kTriggerMovedTooFarFromCharge = 8008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoUnexploredAreasLeft", 8009)
+    kTriggerNoUnexploredAreasLeft = 8009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NextPatrolPointRetrieved", 8010)
+    kTriggerNextPatrolPointRetrieved = 8010,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CannotPathToTarget", 8011)
+    kTriggerCannotPathToTarget = 8011,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanIMove", 8012)
+    kTriggerCanIMove = 8012,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ObstacleDetected", 9000)
+    kTriggerObstacleDetected = 9000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ObstacleClearedPath", 9001)
+    kTriggerObstacleClearedPath = 9001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("InitalObstacleDetected", 9002)
+    kTriggerInitalObstacleDetected = 9002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("RepathCompleted", 9003)
+    kTriggerRepathCompleted = 9003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ArrivedAtMoveWaypoint", 9004)
+    kTriggerArrivedAtMoveWaypoint = 9004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NextWaypointRetrieved", 9005)
+    kTriggerNextWaypointRetrieved = 9005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoMoreWaypoints", 9006)
+    kTriggerNoMoreWaypoints = 9006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("MoveWaypointCollisionDetected", 9007)
+    kTriggerMoveWaypointCollisionDetected = 9007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WaypointOnGround", 9008)
+    kTriggerWaypointOnGround = 9008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WaypointInAir", 9009)
+    kTriggerWaypointInAir = 9009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WaypointIsHigherElevation", 9010)
+    kTriggerWaypointIsHigherElevation = 9010,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WaypointIsSameElevation", 9011)
+    kTriggerWaypointIsSameElevation = 9011,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("WaypointIsLowerElevation", 9012)
+    kTriggerWaypointIsLowerElevation = 9012,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsPatrol", 9013)
+    kTriggerGoalIsPatrol = 9013,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitFacingNotRequired", 9014)
+    kTriggerUnitFacingNotRequired = 9014,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CompletedUnitFacing", 9015)
+    kTriggerCompletedUnitFacing = 9015,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ShouldMoveToNextAutoWaypoint", 9016)
+    kTriggerShouldMoveToNextAutoWaypoint = 9016,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("OneWaypointRemaining", 9017)
+    kTriggerOneWaypointRemaining = 9017,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AtMaximumVelocity", 10000)
+    kTriggerAtMaximumVelocity = 10000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TurnParametersCalculated", 10001)
+    kTriggerTurnParametersCalculated = 10001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TurnComplete", 10002)
+    kTriggerTurnComplete = 10002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AtZeroVelocity", 10003)
+    kTriggerAtZeroVelocity = 10003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SafeLocationFound", 11001)
+    kTriggerSafeLocationFound = 11001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnexploredAreaFound", 11002)
+    kTriggerUnexploredAreaFound = 11002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SearchingForAreaToExplore", 11003)
+    kTriggerSearchingForAreaToExplore = 11003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsLoadContainer", 12000)
+    kTriggerGoalIsLoadContainer = 12000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsUnloadTransport", 12001)
+    kTriggerGoalIsUnloadTransport = 12001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ContainerInRange", 12002)
+    kTriggerContainerInRange = 12002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ContainerIsFull", 12003)
+    kTriggerContainerIsFull = 12003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ContainerIsDead", 12004)
+    kTriggerContainerIsDead = 12004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ContainerIsIdle", 12005)
+    kTriggerContainerIsIdle = 12005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoMoreLoadableUnitsToPickUp", 12006)
+    kTriggerNoMoreLoadableUnitsToPickUp = 12006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GarrisonUpgrade", 12007); also Register("LoadableUnitLoaded", 12007), the C++ kTriggerLoadableUnitLoaded (12007 is registered twice; a Rust enum holds one name per value)
+    kTriggerGarrisonUpgrade = 12007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ExtraLoadableUnitsBumped", 12008)
+    kTriggerExtraLoadableUnitsBumped = 12008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GarrisonCostMet", 12009)
+    kTriggerGarrisonCostMet = 12009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsLoadGarrison", 12010)
+    kTriggerGoalIsLoadGarrison = 12010,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HaveReachedRendezvousPoint", 12011)
+    kTriggerHaveReachedRendezvousPoint = 12011,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HaveNotReachedRendezvousPoint", 12012)
+    kTriggerHaveNotReachedRendezvousPoint = 12012,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("MoreLoadableUnitsToPickUp", 12013)
+    kTriggerMoreLoadableUnitsToPickUp = 12013,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsNotAttack", 12014)
+    kTriggerGoalIsNotAttack = 12014,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ContainerHasLostGoal", 12015)
+    kTriggerContainerHasLostGoal = 12015,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ContainerHasNoMoreWaypoints", 12016)
+    kTriggerContainerHasNoMoreWaypoints = 12016,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AirplaneAvailableToLaunch", 13000)
+    kTriggerAirplaneAvailableToLaunch = 13000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TakeoffClearanceGranted", 13001)
+    kTriggerTakeoffClearanceGranted = 13001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("LaunchedAirplane", 13002)
+    kTriggerLaunchedAirplane = 13002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NoLaunchRequests", 13003)
+    kTriggerNoLaunchRequests = 13003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ProjectileHitUnit", 14000)
+    kTriggerProjectileHitUnit = 14000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ProjectileHitGround", 14001)
+    kTriggerProjectileHitGround = 14001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ProjectileHitWater", 14002)
+    kTriggerProjectileHitWater = 14002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitTargetNoLongerValid", 14003)
+    kTriggerUnitTargetNoLongerValid = 14003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NewTargetSelected", 14004)
+    kTriggerNewTargetSelected = 14004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyBuildingConverted", 15000)
+    kTriggerEnemyBuildingConverted = 15000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("EnemyUnitConverted", 15001)
+    kTriggerEnemyUnitConverted = 15001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsConversion", 15004)
+    kTriggerGoalIsConversion = 15004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsNotConversion", 15005)
+    kTriggerGoalIsNotConversion = 15005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ConvertGoalStillValid", 15006)
+    kTriggerConvertGoalStillValid = 15006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CalamityTargetStillValid", 15007)
+    kTriggerCalamityTargetStillValid = 15007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HasEnoughManaForConversion", 15008)
+    kTriggerHasEnoughManaForConversion = 15008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("AttackerIsLegalConversionTarget", 15009)
+    kTriggerAttackerIsLegalConversionTarget = 15009,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("FighterHasGoal", 16000)
+    kTriggerFighterHasGoal = 16000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsOpen", 17000)
+    kTriggerIsOpen = 17000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsClosed", 17001)
+    kTriggerIsClosed = 17001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitInOpeningRange", 17002)
+    kTriggerUnitInOpeningRange = 17002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("UnitNotInOpeningRange", 17003)
+    kTriggerUnitNotInOpeningRange = 17003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("Locked", 17004)
+    kTriggerLocked = 17004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("NotLocked", 17005)
+    kTriggerNotLocked = 17005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SpecialUnitInOpeningRange", 17006)
+    kTriggerSpecialUnitInOpeningRange = 17006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("SpecialUnitNotInOpeningRange", 17007)
+    kTriggerSpecialUnitNotInOpeningRange = 17007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HealSearchTimeElapsed", 18000)
+    kTriggerHealSearchTimeElapsed = 18000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("TargetNeedsHealing", 18001)
+    kTriggerTargetNeedsHealing = 18001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HealeeInHealingRange", 18002)
+    kTriggerHealeeInHealingRange = 18002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("GoalIsHeal", 18003)
+    kTriggerGoalIsHeal = 18003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("FacingHealee", 18004)
+    kTriggerFacingHealee = 18004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HealeeDestroyed", 18005)
+    kTriggerHealeeDestroyed = 18005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HealeeNoLongerVisible", 18006)
+    kTriggerHealeeNoLongerVisible = 18006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsAnimal", 19000)
+    kTriggerIsAnimal = 19000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsNotAnimal", 19001)
+    kTriggerIsNotAnimal = 19001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsPartOfHerd", 19002)
+    kTriggerIsPartOfHerd = 19002,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsAnimalLeader", 19003)
+    kTriggerIsAnimalLeader = 19003,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsBaby", 19004)
+    kTriggerIsBaby = 19004,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("IsAdult", 19005)
+    kTriggerIsAdult = 19005,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HasGroupAttack", 19006)
+    kTriggerHasGroupAttack = 19006,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HasGroupFlee", 19007)
+    kTriggerHasGroupFlee = 19007,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("HasParentalVengance", 19008)
+    kTriggerHasParentalVengance = 19008,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ShouldIRun", 20000)
+    kTriggerShouldIRun = 20000,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("ShouldIRetaliate", 20001)
+    kTriggerShouldIRetaliate = 20001,
+    /// EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanISeeEnemy", 20002)
+    kTriggerCanISeeEnemy = 20002,
+}
+
+/// EEUnitGoal::mKind: EEUnitGoal::CreateGoal 0x23c3e6 creates the goal class of each kind.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEUnitGoalKind {
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 1: new EEUGLocation (RTTI)
+    kGoalLocation = 1,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 2: new EEUGAttackUnit (RTTI)
+    kGoalAttackUnit = 2,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 3: new EEUGAttackGround (RTTI)
+    kGoalAttackGround = 3,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 4: new EEUGBuildRepair (RTTI)
+    kGoalBuildRepair = 4,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 6: new EEUGGather (RTTI)
+    kGoalGather = 6,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 7: new EEUGLoadTransport (RTTI)
+    kGoalLoadTransport = 7,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 8: new EEUGUnloadTransport (RTTI)
+    kGoalUnloadTransport = 8,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 9: new EEUGPatrol (RTTI)
+    kGoalPatrol = 9,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 10: new EEUGExplore (RTTI)
+    kGoalExplore = 10,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 11: new EEUGCastCalamity (RTTI)
+    kGoalCastCalamity = 11,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 12: new EEUGLoadGarrison (RTTI)
+    kGoalLoadGarrison = 12,
+    /// EEUnitGoal::CreateGoal 0x23c3e6 case 15: new EEUGHealUnit (RTTI)
+    kGoalHealUnit = 15,
+}

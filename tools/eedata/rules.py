@@ -67,7 +67,7 @@ HEAD = '# {name}: Empire Earth: The Art of Conquest rules (tools/eedata/rules.py
 
 
 def combat(ids, spec):
-    ut = _consts('EEUnitClassIDs.h', 'kUnitType')
+    ut = _consts('../rust/sim/unit_ids.h', 'kUnitType')
     cats = lambda xs: '[' + ', '.join(xs) + ']'
     return HEAD.format(name='combat', format=spec['format'],
                        what='The damage function and its neighbours.') + f"""damage:                            # one function for a direct hit, splash damage and the trample
@@ -222,7 +222,7 @@ attributes:
 
 def civpowers(ids, spec):
     t = _consts('EETechTreeTechID.h', 'kTech')
-    ut = _consts('EEUnitClassIDs.h', 'kUnitType')
+    ut = _consts('../rust/sim/unit_ids.h', 'kUnitType')
     snd = _consts('EESoundObject.h', 'kSound')
     gfx = _consts('EEGraphicEffect.h', 'kGraphicEffect')
     out = [HEAD.format(name='civpowers', format=spec['format'],

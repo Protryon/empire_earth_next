@@ -584,6 +584,11 @@ pub enum EeWonEeGlueOp {
     UiLockCopy,
     /// `gWorld.mLock->WriteLock()`.
     WorldWriteLock,
+    // ---- R6 WON round 33
+    /// `((GUIStringData*)a)->mLength`.
+    StringLength = 600,
+    /// `(uint32_t)((GUIStringData*)a)->mText[b]`.
+    StringUnitAt,
 }
 
 /// The inward calls (`a`.. as documented).
@@ -1601,6 +1606,29 @@ pub extern "C" fn ee_won_eeglue_set_host(host: EeWonEeGlueHostFn) {
 pub extern "C" fn ee_won_eeglue_set_game_host(host: EeWonEeGlueHostFn) {
     GLUE.host.store(host.map_or(0, |f| f as usize), Ordering::Relaxed);
     GLUE.game.store(true, Ordering::Relaxed);
+}
+
+/// One op as the game's host answers it, for the drivers (won_split32_test): gluesplit.rs's composition over
+/// `host`'s one-statement cases, or `host`'s own case.
+///
+/// # Safety
+/// `host` answers the ops (EELobbyGlueHost.cpp's statements).
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_eeglue_split_op(
+    host: EeWonEeGlueHostFn,
+    op: EeWonEeGlueOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    e: isize,
+    f: isize,
+) -> isize {
+    let Some(h) = host else { return 0 };
+    // SAFETY: the caller's host
+    let out = |op: Op, a: isize, b: isize, c: isize, d: isize, e: isize, f: isize| unsafe { h(op, a, b, c, d, e, f) };
+    crate::gluesplit::game_op(op, [a, b, c, d, e, f], &out).unwrap_or_else(|| out(op, a, b, c, d, e, f))
 }
 
 /// One inward call (`EeWonEeGlueCall`).

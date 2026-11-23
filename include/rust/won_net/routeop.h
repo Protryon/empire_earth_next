@@ -172,6 +172,9 @@ constexpr static const int32_t EE_WON_RTR_OP_CLIENT = 7;
 /// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
 struct EeWonRouteOp;
 
+/// Receives one recipient id.
+using EeWonRouteIdSink = void(*)(void *context, uint16_t id);
+
 /// How `ee_won_routeop_reply` ended.
 struct EeWonRouteOpRead {
   /// the status `HandleReply` returns (when not cut)
@@ -263,6 +266,23 @@ void ee_won_routeop_text(const EeWonRouteOp *op, int32_t which, EeWonUnitSink si
 /// # Safety
 /// `op` is a live op; `units` holds `count` units.
 void ee_won_routeop_set_text(EeWonRouteOp *op, int32_t which, const uint16_t *units, size_t count);
+
+/// Assigns a text member from `count` `wchar_t`s of `wchar_size` bytes (R6 WON round 33: RoutingOp::SetText's
+/// conversion to UTF-16, WideAppendUtf16LE's, is Rust's).
+///
+/// # Safety
+/// `op` is a live op; `wide` holds `count` characters.
+void ee_won_routeop_set_text_wide(EeWonRouteOp *op,
+                                  int32_t which,
+                                  const void *wide,
+                                  uint32_t wchar_size,
+                                  size_t count);
+
+/// The recipients, each to `sink` in order (R6 WON round 33: RoutingOp::Recipients' copy).
+///
+/// # Safety
+/// `op` is a live op; `sink` is valid with `context`.
+void ee_won_routeop_ids_each(const EeWonRouteOp *op, EeWonRouteIdSink sink, void *context);
 
 /// `mDataType` into `sink`.
 ///

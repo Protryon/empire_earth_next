@@ -306,8 +306,6 @@ pub const EE_UNITS_UB_UNIT_TILES: i32 = 143;
 pub const EE_UNITS_UB_UNITS_ON_TILES: i32 = 144;
 /// the bits of `gPhysics->mRandom.Generate()`
 pub const EE_UNITS_UB_RANDOM_GENERATE: i32 = 145;
-/// `PermuteValues(the unit list, c)`
-pub const EE_UNITS_UB_PERMUTE_UNITS: i32 = 146;
 /// the unit list's size
 pub const EE_UNITS_UB_LIST_SIZE: i32 = 147;
 /// complex unit `a`'s command's `mType` (0 without one)
@@ -1138,8 +1136,10 @@ pub fn waiting_gatherer<H: UbHost + ?Sized>(h: &mut H, unit: u64) -> u64 {
     sa(h, EE_UNITS_UB_UNIT_TILES, unit);
     s(h, EE_UNITS_UB_UNITS_ON_TILES);
     let random = flt(s(h, EE_UNITS_UB_RANDOM_GENERATE));
-    sc(h, EE_UNITS_UB_PERMUTE_UNITS, i64::from(ee_base::math::um::lrintf(random)));
-    for candidate in unit_list(h) {
+    // the C++'s PermuteValues(the list, start) (ee_combat search.rs permute), on the list's copy
+    let mut units = unit_list(h);
+    crate::combat::search::permute(&mut units, ee_base::math::um::lrintf(random));
+    for candidate in units {
         let complex = obj(h, EE_UNITS_UB_COMPLEX_OF, candidate);
         if complex == 0 {
             continue;

@@ -263,18 +263,6 @@ constexpr static const uint32_t EE_APP_SETTINGS_LAST_SCENARIO_FILE = 6;
 /// `kErrorNotFound`: UConfig's failed read or write.
 constexpr static const int32_t EE_APP_SETTINGS_ERROR_NOT_FOUND = 3;
 
-/// the member's text's length in bytes
-constexpr static const int32_t EE_APP_SETTINGS_STRING_LENGTH = 1;
-
-/// the member's text into the buffer (size: the length + 1, NUL ended)
-constexpr static const int32_t EE_APP_SETTINGS_STRING_GET = 2;
-
-/// the member set to the buffer's `size` bytes
-constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
-
-/// the member set to the defaults' member
-constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
-
 /// The mini map's Rust half.
 struct EeAppMiniMap;
 
@@ -740,9 +728,6 @@ struct EeAppSettingsFields {
   /// port: the audio device's name (empty: the system's default)
   char mAudioDevice[128];
 };
-
-/// The string host: `(ctx, op, id, buffer, size) -> a length` (`EE_APP_SETTINGS_STRING_*`).
-using EeAppSettingsStringFn = uint32_t(*)(void*, int32_t, uint32_t, char*, uint32_t);
 
 extern "C" {
 
@@ -1267,29 +1252,6 @@ void ee_app_settings_default(EeAppSettingsFields *out);
 /// # Safety
 /// `out` is a live record.
 void ee_app_settings_last_options_default(EeAppOptionsFields *out, long epochs);
-
-/// `EEReadSettings`: every row of the settings (or, `game_options`, of the last game options) read from config.yaml,
-/// a missing or out-of-range value the defaults' (written back).
-///
-/// # Safety
-/// live records (the defaults' only read); `call` answers for `ctx` throughout.
-void ee_app_settings_read(EeAppSettingsFields *settings,
-                          EeAppOptionsFields *options,
-                          EeAppSettingsFields *default_settings,
-                          EeAppOptionsFields *default_options,
-                          bool game_options,
-                          void *ctx,
-                          EeAppSettingsStringFn call);
-
-/// `EEWriteSettings`: every row written to config.yaml; the first failure, else 0.
-///
-/// # Safety
-/// as [`ee_app_settings_read`]
-int32_t ee_app_settings_write(EeAppSettingsFields *settings,
-                              EeAppOptionsFields *options,
-                              bool game_options,
-                              void *ctx,
-                              EeAppSettingsStringFn call);
 
 /// `Load`'s rest after the rows (settings.rs `after_load`); true when the texture resolution was replaced and is to be
 /// written back.

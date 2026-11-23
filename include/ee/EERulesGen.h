@@ -8,8 +8,6 @@
 #include <vector>
 
 // unit category names (the data's category ids): kUnitCategory* by value
-extern const char* const kEERuleCategoryNames[];
-extern const unsigned long kEERuleCategoryCount;
 
 // What a civilization builder attribute raises (EECivilizationManager::ApplyUpgradeLevel). The stat and the mode are
 // C++ primitives; the data picks and combines them.
@@ -67,8 +65,6 @@ enum EEAICheat {
     kAICheatRetire = 64,   // retire: obsolete units no human sees are deleted
     kAICheatAll = 127,
 };
-extern const char* const kEEAICheatNames[];
-extern const unsigned long kEEAICheatCount;
 
 // ---------------------------------------------------------------------------------------- combat.yaml
 
@@ -211,9 +207,6 @@ struct EECivBuilderRules {
     float mPowersLevelValue = 0.01f;
     // dbcivilization.yaml's categories (ids and levels by attribute); empty without the text (the binary records)
     std::vector<EECivCategoryText> mCategories;
-    const EECivAttribute* Find(long inLevel) const;
-    const EECivAttribute* FindID(const std::string& inID) const;
-    const EECivCategoryText* FindCategory(long inRow) const;
 };
 
 // ---------------------------------------------------------------------------------------- civpowers.yaml
@@ -240,7 +233,6 @@ struct EECivPowerRule {
 
 struct EECivPowerRules {
     std::vector<EECivPowerRule> mPowers;
-    const EECivPowerRule* Find(long inRow) const;
 };
 
 // ---------------------------------------------------------------------------------------- epochs.yaml media
@@ -344,8 +336,6 @@ struct EEAIPersonalityRules {
     std::vector<EEAIPersonalityRule> mPersonalities;
     // positions in mPersonalities; computer player n takes mAssign[(n - 1) % size]
     std::vector<long> mAssign;
-    const EEAIPersonalityRule& ForPlayer(unsigned long inPlayerID) const;
-    long Find(const std::string& inID) const;   // the position, -1 when none
 };
 
 #endif

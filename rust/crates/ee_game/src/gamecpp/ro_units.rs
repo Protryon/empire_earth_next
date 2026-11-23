@@ -19,7 +19,7 @@ use ee_render::gfx::ro_units::{
 };
 use ee_render::gfx::units_lists::ee_gfx_ro_units_draw_lists;
 
-use super::{cptr, h, hd, hf, hp, pa, ptr, Owned, O, P};
+use super::{cptr, h, hd, hf, hp, pa, Owned, O, P};
 
 /// The line batch's size (`new GELine[0x40]`).
 const RU_LINES: i64 = 0x40;
@@ -30,15 +30,14 @@ pub static RU_UNIT_PANEL_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// The rasterizer as the Rust draws call it (`gEERustRaster`, EERenderObject.cpp).
 pub fn raster() -> *const EeGfxRaster {
-    hp(O::RuRaster, 0, &[]) as *const EeGfxRaster
+    super::ro_raster::ee_gamecpp_ro_raster()
 }
 
-/// The render lists as ee_gfx reads them in place (EERenderListsView over EEROUnits.cpp's pair storage, valid until
-/// the next view).
+/// The render lists as ee_gfx reads them in place (ro_lists.rs' view, valid until the next fill).
 pub fn lists_view() -> EeGfxRfilFrame {
     // SAFETY: a plain record of pointers and counts (C++'s `= {}`)
     let mut frame: EeGfxRfilFrame = unsafe { std::mem::zeroed() };
-    h(O::RuListsView, 0, &[ptr(&mut frame)]);
+    super::ro_lists::view(&mut frame);
     frame
 }
 

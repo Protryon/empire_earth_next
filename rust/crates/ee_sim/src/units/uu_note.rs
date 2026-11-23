@@ -50,7 +50,7 @@ extern "C" {
 }
 
 #[cfg(not(test))]
-fn host(which: i32, a: u32, b: u32, c: u32, d: u32) -> u32 {
+pub(crate) fn host(which: i32, a: u32, b: u32, c: u32, d: u32) -> u32 {
     // SAFETY: plain C++ reads, and a capture record's write
     unsafe { ee_units_uu_host_note(which, a, b, c, d) }
 }

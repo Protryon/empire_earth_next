@@ -876,6 +876,93 @@ pub unsafe extern "C" fn ee_won_url_entire(url: *const EeWonUrl, sink: EeWonByte
     unsafe { sink(context, s.as_ptr(), s.len()) }
 }
 
+// ---- URL whole (R6 WON round 33): the type, the absolute flag, the address and the path are this object's; the
+// C++ URL (ee/wonapi/WONURL.h) owns one and every method forwards.
+
+/// A URL (0x28 bytes in the original: the type, two strings, the absolute flag).
+#[derive(Clone, Debug, Default)]
+pub struct EeWonUrlObj(Url);
+
+/// `URL()` (no text: `URLType_None`), or `URL(text)` when `text` is not NULL.
+///
+/// # Safety
+/// `text` is NULL or holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_new(text: *const u8, len: usize) -> *mut EeWonUrlObj {
+    let u = if text.is_null() { Url::default() } else { Url::parse(unsafe { slice(text, len) }, KINDS) };
+    Box::into_raw(Box::new(EeWonUrlObj(u)))
+}
+
+/// A copy (the C++ copy constructor).
+///
+/// # Safety
+/// `u` is a live URL.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_clone(u: *const EeWonUrlObj) -> *mut EeWonUrlObj {
+    Box::into_raw(Box::new(unsafe { &*u }.clone()))
+}
+
+/// `*to = *from`.
+///
+/// # Safety
+/// Both are live URLs.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_assign(to: *mut EeWonUrlObj, from: *const EeWonUrlObj) {
+    if !std::ptr::eq(to, from) {
+        unsafe { (*to).clone_from(&*from) };
+    }
+}
+
+/// Frees a URL.
+///
+/// # Safety
+/// `u` came from `ee_won_url_obj_new` or `_clone`, freed once.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_free(u: *mut EeWonUrlObj) {
+    if !u.is_null() {
+        drop(unsafe { Box::from_raw(u) });
+    }
+}
+
+/// `GetType()`.
+///
+/// # Safety
+/// `u` is a live URL.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_kind(u: *const EeWonUrlObj) -> i32 {
+    unsafe { &*u }.0.kind
+}
+
+/// `CalcRelativeTo(base)`.
+///
+/// # Safety
+/// Both are live URLs.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_relative(u: *mut EeWonUrlObj, base: *const EeWonUrlObj) {
+    let b = unsafe { &*base }.0.clone();
+    unsafe { &mut *u }.0.relative_to(&b);
+}
+
+/// A URL's text to `sink`: 0 the address, 1 the path, 2 the whole URL (`GetEntire`).
+///
+/// # Safety
+/// `u` is a live URL; `sink` accepts `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_obj_text(
+    u: *const EeWonUrlObj,
+    which: i32,
+    sink: EeWonByteSink,
+    context: *mut c_void,
+) {
+    let u = &unsafe { &*u }.0;
+    let s = match which {
+        0 => u.address.clone(),
+        1 => u.path.clone(),
+        _ => u.entire(KINDS),
+    };
+    unsafe { sink(context, s.as_ptr(), s.len()) }
+}
+
 /// `HTTPCache::GetFreeId` over the sorted ids.
 ///
 /// # Safety

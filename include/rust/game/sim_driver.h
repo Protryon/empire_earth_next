@@ -717,6 +717,126 @@ enum class EeSimDriverSim : uint32_t {
   MapComputeChecksum,
   WorldNumPlayers,
   WorldPlayersAt,
+  DmPhysLastOos,
+  DmPhysSetLastOos,
+  DmPhysOos,
+  DmPhysTicksDone,
+  DmPhysCurrentTick,
+  DmPhysSeed,
+  DmPhysInputs,
+  DmPhysTickRandom,
+  DmPhysTicksToProcess,
+  DmCpOos,
+  DmWorldFirstUnit,
+  DmWorldNextUnit,
+  DmUnitChecksum,
+  DmComplexChecksum,
+  DmActiveUnitId,
+  DmPlPop,
+  DmPlEog,
+  DmPlEpoch,
+  DmPlTownCount,
+  DmPlTownAt,
+  DmTownId,
+  DmTownUnits,
+  DmTownPatrol,
+  DmTownHullCount,
+  DmTownHullX,
+  DmTownHullY,
+  DmPlPatrolCount,
+  DmPlPatrolAt,
+  DmPgId,
+  DmPgTown,
+  DmPgLoop,
+  DmPgCount,
+  DmPgPoint,
+  DmCxUnitId,
+  DmCxTileYRaw,
+  DmUnitIdRaw,
+  DmCpDump,
+  DmPathDump,
+  DmUnitTypeRaw,
+  DmUnitPlayerId,
+  DmUnitTileXRaw,
+  DmUnitTileYRaw,
+  DmComplexOf,
+  DmCxComplex,
+  DmCxUpdated,
+  DmCxCommand,
+  DmCxGroup,
+  DmCxWpCount,
+  DmCxPathDone,
+  DmCxArrived,
+  DmCxBlockingId,
+  DmCxAnim,
+  DmCxFrame,
+  DmCxAnimTime,
+  DmCxPaused,
+  DmCxReload,
+  DmCxQueues,
+  DmCxQueueSize,
+  DmCxGoal,
+  DmGoalKind,
+  DmGoalOos,
+  DmGoalDump,
+  DmCxContactHead,
+  DmNodeNext,
+  DmNodeUnitId,
+  DmCxAttackerId,
+  DmCxOwnerId,
+  DmCxHolderId,
+  DmCxAeCount,
+  DmCxAffectingCount,
+  DmCxAffectingUnitId,
+  DmCxSize,
+  DmUnitSize,
+  DmCalManager,
+  DmCalCount,
+  DmCalAt,
+  DmCalClass,
+  DmCalOos,
+  DmCalTileX,
+  DmCalTileY,
+  DmCalInt1,
+  DmCalInt2,
+  DmCalTargetId,
+  DmCalOriginId,
+  DmCalTargetUnitId,
+  DmCalCasterId,
+  DmCalPlayer,
+  DmCalBool1,
+  DmCalBool2,
+  DmCalInitialized,
+  DmCalHasLocation,
+  DmCalHasUnit,
+  DmMapRegions,
+  DmOpen,
+  DmPuts,
+  DmClose,
+  DmPhysClock,
+  DmPlResource,
+  DmUnitHp,
+  DmCxLocX,
+  DmCxLocY,
+  DmCxLocZ,
+  DmCxHeight,
+  DmCxWpX,
+  DmCxWpY,
+  DmCxWpZ,
+  DmCxWpDistance,
+  DmCxWpStart,
+  DmCxAeX,
+  DmCxAeY,
+  DmCalTargetX,
+  DmCalTargetY,
+  DmCalTargetZ,
+  DmCalFloat1,
+  DmCalFloat2,
+  DmCalHeight,
+  DmCalEpicenter,
+  DmCalTimeAlive,
+  DmCalDiscrete,
+  DmCalElapsed,
 };
 
 /// The sweep's inputs from the C++: the physics' tick, the rules' and the world table's numbers, the host.
@@ -741,10 +861,6 @@ struct EeSimDriverHost {
   void (*lock)(int32_t);
   /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
   void (*dump_after_load)(const char*);
-  /// the checksum line's fields (after "CT n " or "LOADED "), its new line included
-  size_t (*checksum_fields)(char*, size_t);
-  /// the state dump into the file
-  void (*dump_state)(const char*);
   /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
   size_t (*extension)(int32_t, char*, size_t);
   /// `gPlatSimRun`
@@ -803,6 +919,20 @@ extern "C" {
 /// # Safety
 /// `input` points to a valid record whose host answers for the world the caller holds.
 void ee_sim_driver_combat_sweep(const EeSimDriverCombatSweep *input);
+
+/// The state dump into the file (EESim.cpp's dump after a load, at the loaded game's first tick).
+///
+/// # Safety
+/// `path` is a NUL-ended text.
+void ee_sim_driver_dump_state(const char *path);
+
+/// Installs the fault report (first in the handler chain) with the exe's name as its prefix (`EE-SIM`, `EE-AOC`).
+///
+/// # Safety
+/// `prefix` is a NUL-ended text.
+void ee_sim_driver_fault_install(const char *prefix);
+
+extern int32_t _write(int32_t fd, const void *buffer, uint32_t count);
 
 /// EE-SIM's entry: the command line parsed, the driver made over the host, the output files opened, the switches
 /// and the environment set -> [`EE_SIM_DRIVER_CONTINUE`], or the exit code (0 after --help, 64 a bad command

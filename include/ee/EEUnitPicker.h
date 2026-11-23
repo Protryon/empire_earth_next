@@ -51,12 +51,9 @@ public:
 #endif
 private:
     friend struct EEPickOps;                // the walks' host (EEUnitPicker.cpp)
-    // port (R4.4, twenty-sixth round): PickUnits (with its worker PickUnitsOfType 0x118eaf) and PickUnitsInRectangle
-    // under the lock over the rectangle's frustum (ee_gfx pick_walk.rs)
-    void PickBox(const GERectangle& inRectangle, bool inAll, EEPlayer* inPlayer, long inType,
-                 std::vector<unsigned long>& outUnitIDs);
-    // port (R5a.3): ReferenceCarriers 0x119faa is gone with the references
-    EEUnit* FindUnit(const GE2DPoint& inPoint, long inPreferResources);   // PickUnit's search (mLock held)
+    // port (R4.4, twenty-sixth round; round 11): PickUnits (with its worker PickUnitsOfType 0x118eaf) and
+    // PickUnitsInRectangle's walk, PickUnit's search FindUnit: gamecpp picker.rs over ee_gfx pick_walk.rs. ReferenceCarriers
+    // 0x119faa is gone with the references (R5a.3)
     EEUnit* GetEntryUnit(unsigned long inIndex);   // an entry's unit, or NULL once it has left the world
 #ifdef LLE_GEVIEWPORT_H
     std::vector<EEComplexUnit*> mCarriers;  // +0x04 (the original's referenced carriers; unused since R5a.3)

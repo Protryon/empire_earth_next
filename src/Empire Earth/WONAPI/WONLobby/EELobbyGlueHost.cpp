@@ -421,12 +421,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetColor: g->SetColor((unsigned long)b); return 0;
     case Op::DrawText: g->DrawString(GlueText(b, c), (int)d, (int)e); return 0;
-    case Op::StringUnits: {
-        GUIStringData* aData = reinterpret_cast<GUIStringData*>(a);
-        if (b != 0)
-            for (unsigned i = 0; i < aData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)aData->mText[i];
-        return aData->mLength;
-    }
     case Op::FontHeight: return g->mFont->GetHeight();
     case Op::ListFontHeight: return reinterpret_cast<MultiListArea*>(a)->mFont->GetHeight();
     case Op::TextFind: return GlueText(b, c).findNoCase(*reinterpret_cast<const GUIString*>(d), 0);
@@ -753,6 +747,9 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::UiUnlockCopy: gUIManager->UnlockUIForCopyData(); return 0;
     case Op::UiLockCopy: gUIManager->LockUIForCopyData(); return 0;
     case Op::WorldWriteLock: gWorld.mLock->WriteLock(); return 0;
+    // StringUnits' (gluesplit.rs composes it, R6 WON round 33)
+    case Op::StringLength: return (intptr_t)reinterpret_cast<GUIStringData*>(a)->mLength;
+    case Op::StringUnitAt: return (intptr_t)(uint32_t)reinterpret_cast<GUIStringData*>(a)->mText[b];
     case Op::BoxDissolved: LobbyMessageBox(LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)); return 0;
     }
     return 0;

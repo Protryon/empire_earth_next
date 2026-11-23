@@ -15,7 +15,6 @@
 //! name tables keep the first registration of a name and of an id (`std::map::insert`): two triggers share 12007.
 
 use std::collections::BTreeMap;
-use std::ffi::c_void;
 use std::sync::Mutex;
 
 use crate::units::ai::EeUnitsTrigger;
@@ -378,45 +377,86 @@ pub fn delete_all() {
 
 // ---- the C++ seam
 
-/// The C++ reader of a script's file: `read(ctx, name, len, sink)` pushes the bytes (`ee_units_script_push`) and
-/// answers whether the file was found and opened.
-#[repr(C)]
-pub struct EeUnitsScriptReader {
-    pub ctx: *mut c_void,
-    pub read: unsafe extern "C" fn(*mut c_void, *const u8, usize, *mut c_void) -> bool,
+/// The C++ statements of the script file's read (`ee_units_script_host`, EEUnitAction.cpp: one statement a case;
+/// `a` a pointer, `b` a length), the round 9 replacement of the reader callback: the operations below.
+pub trait ScriptOps {
+    fn script(&mut self, op: i32, a: u64, b: i64) -> i64;
 }
 
-struct FfiSource<'a>(&'a EeUnitsScriptReader);
+/// `theName.Copy(the name's `b` bytes at `a`)` (the read's locals are the host's)
+pub const EE_UNITS_SCRIPT_H_NAME: i32 = 4000;
+/// `gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile = NULL)`
+pub const EE_UNITS_SCRIPT_H_FIND: i32 = 4001;
+/// `theFile != NULL`
+pub const EE_UNITS_SCRIPT_H_HAS_FILE: i32 = 4002;
+/// `theFile->Open(kFileAccessRead)`
+pub const EE_UNITS_SCRIPT_H_OPEN: i32 = 4003;
+/// `theFile->GetLength(theLength = 0)`
+pub const EE_UNITS_SCRIPT_H_GET_LENGTH: i32 = 4004;
+/// `theLength`
+pub const EE_UNITS_SCRIPT_H_LENGTH: i32 = 4005;
+/// `theFile->Read((char*)a, b, theCount = 0)`
+pub const EE_UNITS_SCRIPT_H_READ: i32 = 4006;
+/// `theFile->Close()`
+pub const EE_UNITS_SCRIPT_H_CLOSE: i32 = 4007;
+/// `delete theFile`
+pub const EE_UNITS_SCRIPT_H_DELETE: i32 = 4008;
 
-impl ScriptSource for FfiSource<'_> {
+/// The script file's read over the host's statements (was EEUnitAction.cpp's EEReadScript): `Unit AI
+/// Scripts\<name>.tai` through the data path; `None` when it is missing or does not open.
+pub struct OpSource<'a, O: ScriptOps + ?Sized>(pub &'a mut O);
+
+impl<O: ScriptOps + ?Sized> ScriptSource for OpSource<'_, O> {
     fn read(&mut self, name: &[u8]) -> Option<Vec<u8>> {
-        let mut bytes: Vec<u8> = Vec::new();
-        // SAFETY: the reader's contract; the sink is the Vec, live for the call
-        let ok = unsafe { (self.0.read)(self.0.ctx, name.as_ptr(), name.len(), (&mut bytes as *mut Vec<u8>).cast()) };
-        ok.then_some(bytes)
+        let h = &mut *self.0;
+        h.script(EE_UNITS_SCRIPT_H_NAME, name.as_ptr() as usize as u64, name.len() as i64);
+        let mut bytes = None;
+        if h.script(EE_UNITS_SCRIPT_H_FIND, 0, 0) == 0
+            && h.script(EE_UNITS_SCRIPT_H_HAS_FILE, 0, 0) != 0
+            && h.script(EE_UNITS_SCRIPT_H_OPEN, 0, 0) == 0
+        {
+            h.script(EE_UNITS_SCRIPT_H_GET_LENGTH, 0, 0);
+            let length = h.script(EE_UNITS_SCRIPT_H_LENGTH, 0, 0) as u32 as usize;
+            let mut buffer = vec![0u8; length + 1];
+            h.script(EE_UNITS_SCRIPT_H_READ, buffer.as_mut_ptr() as usize as u64, length as i64);
+            buffer.truncate(length);
+            bytes = Some(buffer);
+        }
+        if h.script(EE_UNITS_SCRIPT_H_HAS_FILE, 0, 0) != 0 {
+            h.script(EE_UNITS_SCRIPT_H_CLOSE, 0, 0);
+            h.script(EE_UNITS_SCRIPT_H_DELETE, 0, 0);
+        }
+        bytes
     }
 }
 
-/// The reader appends a file's bytes to the sink it was handed.
-///
-/// # Safety
-/// `sink` is the sink of the read in progress; `data` points to `len` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_script_push(sink: *mut c_void, data: *const u8, len: usize) {
-    // SAFETY: the caller's contract
-    let (bytes, data) = unsafe { (&mut *sink.cast::<Vec<u8>>(), std::slice::from_raw_parts(data, len)) };
-    bytes.extend_from_slice(data);
-}
+#[cfg(not(test))]
+mod game {
+    use super::*;
 
-/// `EEUnitAction::GetScript(name)`: the script's handle.
-///
-/// # Safety
-/// `name` points to `len` bytes; `reader` to a valid reader.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_script_get(name: *const u8, len: usize, reader: *const EeUnitsScriptReader) -> u64 {
-    // SAFETY: the caller's contract
-    let (name, reader) = unsafe { (std::slice::from_raw_parts(name, len), &*reader) };
-    get_script(name, &mut FfiSource(reader))
+    extern "C" {
+        fn ee_units_script_host(op: i32, a: u64, b: i64) -> i64;
+    }
+
+    struct Game;
+
+    impl ScriptOps for Game {
+        fn script(&mut self, op: i32, a: u64, b: i64) -> i64 {
+            // SAFETY: the read's statements over the data path and the buffers `OpSource` hands in
+            unsafe { ee_units_script_host(op, a, b) }
+        }
+    }
+
+    /// `EEUnitAction::GetScript(name)`: the script's handle (its file read through the data path).
+    ///
+    /// # Safety
+    /// `name` points to `len` bytes.
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_units_script_get(name: *const u8, len: usize) -> u64 {
+        // SAFETY: the caller's contract
+        let name = unsafe { std::slice::from_raw_parts(name, len) };
+        get_script(name, &mut OpSource(&mut Game))
+    }
 }
 
 /// The script's action of an id (0: none).
@@ -497,9 +537,8 @@ mod tests {
 
     #[test]
     fn every_name_is_a_header_enumerator_comment() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../include/ee");
-        let text =
-            String::from_utf8_lossy(&std::fs::read(root.join("EEUnitAction.h")).expect("the header")).into_owned();
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../include/rust/sim");
+        let text = String::from_utf8_lossy(&std::fs::read(root.join("unit_ids.h")).expect("the header")).into_owned();
         for (name, id) in ACTION_NAMES.iter().chain(TRIGGER_NAMES.iter()) {
             let n = std::str::from_utf8(&name[..name.len() - 1]).unwrap();
             assert!(text.contains(&format!("Register(\"{n}\", {id})")), "{n} {id}");
@@ -576,5 +615,69 @@ mod tests {
         // a missing file: only the idle action
         let empty = get_script(b"no such script", &mut Files(vec![]));
         assert_ne!(find_action(empty, 5000), 0);
+    }
+}
+
+/// The script file's read, recorded (round 9's op source).
+#[cfg(test)]
+mod op_source_tests {
+    use super::*;
+
+    struct Rec {
+        log: Vec<i32>,
+        find: i64,
+        open: i64,
+        length: i64,
+    }
+
+    impl ScriptOps for Rec {
+        fn script(&mut self, op: i32, a: u64, b: i64) -> i64 {
+            self.log.push(op);
+            match op {
+                EE_UNITS_SCRIPT_H_FIND => self.find,
+                EE_UNITS_SCRIPT_H_HAS_FILE => 1,
+                EE_UNITS_SCRIPT_H_OPEN => self.open,
+                EE_UNITS_SCRIPT_H_LENGTH => self.length,
+                EE_UNITS_SCRIPT_H_READ => {
+                    // SAFETY: the source's buffer of b + 1 bytes
+                    let out = unsafe { std::slice::from_raw_parts_mut(a as usize as *mut u8, b as usize + 1) };
+                    out[..b as usize].copy_from_slice(&b"abcdef"[..b as usize]);
+                    0
+                }
+                _ => 0,
+            }
+        }
+    }
+
+    #[test]
+    fn a_found_file_is_read_whole_then_closed_and_deleted() {
+        let mut r = Rec { log: vec![], find: 0, open: 0, length: 4 };
+        assert_eq!(OpSource(&mut r).read(b"Citizen").as_deref(), Some(&b"abcd"[..]));
+        assert_eq!(
+            r.log,
+            [
+                EE_UNITS_SCRIPT_H_NAME,
+                EE_UNITS_SCRIPT_H_FIND,
+                EE_UNITS_SCRIPT_H_HAS_FILE,
+                EE_UNITS_SCRIPT_H_OPEN,
+                EE_UNITS_SCRIPT_H_GET_LENGTH,
+                EE_UNITS_SCRIPT_H_LENGTH,
+                EE_UNITS_SCRIPT_H_READ,
+                EE_UNITS_SCRIPT_H_HAS_FILE,
+                EE_UNITS_SCRIPT_H_CLOSE,
+                EE_UNITS_SCRIPT_H_DELETE
+            ]
+        );
+    }
+
+    #[test]
+    fn a_file_that_does_not_open_is_none_but_still_closed() {
+        let mut r = Rec { log: vec![], find: 0, open: 3, length: 4 };
+        assert_eq!(OpSource(&mut r).read(b"Citizen"), None);
+        assert!(r.log.ends_with(&[EE_UNITS_SCRIPT_H_HAS_FILE, EE_UNITS_SCRIPT_H_CLOSE, EE_UNITS_SCRIPT_H_DELETE]));
+        assert!(!r.log.contains(&EE_UNITS_SCRIPT_H_READ));
+        let mut r = Rec { log: vec![], find: 5, open: 0, length: 4 };
+        assert_eq!(OpSource(&mut r).read(b"Citizen"), None);
+        assert!(!r.log.contains(&EE_UNITS_SCRIPT_H_OPEN));
     }
 }

@@ -289,7 +289,10 @@ fn dying_is_done_by_kind() {
     // a ship once sunk; a spaceship at once; a helicopter below its tile
     let mut m = with(category(EE_CLASS_KIND_NAVAL, EE_CLASS_KIND_NAVAL_TRANSPORT));
     assert_eq!(answer(&mut m, TRIGGER_DYING_ANIMATION_FINISHED), 0);
-    m.set(EE_UNITS_COND_SUNK, UNIT, 0, 0, 1);
+    m.setf(EE_UNITS_COND_SUNK_TOP_Z, UNIT, 0, 0, 0.5);
+    assert_eq!(answer(&mut m, TRIGGER_DYING_ANIMATION_FINISHED), 0);
+    assert!(m.asked(EE_UNITS_COND_SUNK_POSITION) && m.asked(EE_UNITS_COND_SUNK_BOX));
+    m.setf(EE_UNITS_COND_SUNK_TOP_Z, UNIT, 0, 0, -0.5);
     assert_eq!(answer(&mut m, TRIGGER_DYING_ANIMATION_FINISHED), 1);
     let mut m = with(category(EE_CLASS_KIND_SPACESHIP, EE_CLASS_KIND_PLANET_SPACESHIP));
     assert_eq!(answer(&mut m, TRIGGER_DYING_ANIMATION_FINISHED), 1);

@@ -69,7 +69,7 @@ unsafe fn copy_out<T: Copy>(src: &[T], out: *mut T, capacity: usize) -> usize {
 }
 
 /// The UTF-16 units of `wchar_t` text (`wchar_size` 2: the units as they are; 4: code points).
-unsafe fn wide_units(wide: *const c_void, wchar_size: u32, count: usize) -> Vec<u16> {
+pub(crate) unsafe fn wide_units(wide: *const c_void, wchar_size: u32, count: usize) -> Vec<u16> {
     if count == 0 || wide.is_null() {
         return Vec::new();
     }
@@ -99,6 +99,62 @@ pub unsafe extern "C" fn ee_won_utf16le_from_wide(
 ) -> usize {
     let le = text::utf16_to_le_bytes(&unsafe { wide_units(wide, wchar_size, count) });
     unsafe { copy_out(&le, out, capacity) }
+}
+
+/// `WideAppendUtf16LE` (R6 WON round 33): the UTF-16 little-endian bytes of `count` `wchar_t`s, given to `sink` once
+/// (WONBuffer.h's sink appends them).
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` bytes; `sink` is valid with `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_utf16le_from_wide_sink(
+    wide: *const c_void,
+    wchar_size: u32,
+    count: usize,
+    sink: EeWonByteSink,
+    context: *mut c_void,
+) {
+    let le = text::utf16_to_le_bytes(&unsafe { wide_units(wide, wchar_size, count) });
+    unsafe { give(sink, context, &le) }
+}
+
+/// `wchar_t` text (`wchar_size` bytes a character) of `count` UTF-16 units given to `sink` once (R6 WON round 33:
+/// WONBuffer.h's WonWideSink).
+///
+/// # Safety
+/// `data` holds `count` units; `sink` is valid with `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wide_from_utf16_sink(
+    data: *const u16,
+    count: usize,
+    wchar_size: u32,
+    sink: EeWonWideSink,
+    context: *mut c_void,
+) {
+    let src = unsafe { units(data, count) };
+    if wchar_size == 2 {
+        unsafe { sink(context, src.as_ptr() as *const c_void, src.len()) }
+    } else {
+        let w = text::utf32_from_utf16(src);
+        unsafe { sink(context, w.as_ptr() as *const c_void, w.len()) }
+    }
+}
+
+/// `WideAssignUtf16LE` (R6 WON round 33): the text of `count` UTF-16 little-endian units (`2 * count` bytes) given to
+/// `sink` once; see `ee_won_wide_from_utf16_sink`.
+///
+/// # Safety
+/// `data` holds `2 * count` bytes; `sink` is valid with `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wide_from_utf16le_sink(
+    data: *const u8,
+    count: usize,
+    wchar_size: u32,
+    sink: EeWonWideSink,
+    context: *mut c_void,
+) {
+    let u = text::utf16_from_le_bytes(unsafe { bytes(data, count * 2) });
+    unsafe { ee_won_wide_from_utf16_sink(u.as_ptr(), u.len(), wchar_size, sink, context) }
 }
 
 /// The code point a UTF-16 unit makes with the last character of a UTF-32 text: the joined code point when `last`

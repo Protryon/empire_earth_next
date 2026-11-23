@@ -545,7 +545,7 @@ pub fn run<H: DmHost + ?Sized>(h: &mut H, what: i32, a: u64, b: i64, c: i64, d: 
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
@@ -553,7 +553,8 @@ mod game {
         fn ee_units_dm_host(op: i32, a: u64, b: i64, c: i64) -> i64;
     }
 
-    struct Game;
+    /// the game's host (dm_dop.rs's too)
+    pub(crate) struct Game;
 
     impl DmHost for Game {
         fn dm(&mut self, op: i32, a: u64, b: i64, c: i64) -> i64 {

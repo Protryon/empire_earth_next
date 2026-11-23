@@ -24,6 +24,8 @@
 #include "ee/wonapi/WONURL.h"
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_gui/guiconf.h"
+#include "ee/wonapi/WONLobbyGuard.h"
+#include "rust/won_lobby/lobbycfgrd.h"
 #include "rust/won_lobby/lobbyctl.h"
 #include "rust/won_lobby/rows.h"
 
@@ -219,32 +221,32 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
 
 // The instruction keys and the flag and value names these readers compare are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
-// Reads the HOMELOCATION layout key, resolving a file URL to the resource file path
-bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)
+// the readers' statements (lobbycfgrd.rs composes them, R6 WON round 33); HOMELOCATION's path is this static
+// the config readers' reads (LobbyNetCtrlHost.cpp)
+intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc);
+static std::string sCfgRdPath;
+static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
 {
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_GAMEBROWSERCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(ContainerConfig::Virtual24(instruction))
-        return true;
-    if(aKeyIdx==0)
-    {
-        std::string path=this->ReadString(false);
-        URL url=path;
-        if(url.GetType()==URLType_File)
-            path=ComponentConfig::GetResourceFile(path);
-        this->mBrowser->SetHomeLocation(path);
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    GameBrowserCtrlConfig* gb = static_cast<GameBrowserCtrlConfig*>(c);
+    GameUserListCtrlConfig* gu = static_cast<GameUserListCtrlConfig*>(c);
+    switch (inOp) {
+    case Op::BrowserBase: return WON_GUARDED(gb->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
+    case Op::BrowserPathIsFile: return WON_GUARDED(URL(sCfgRdPath).GetType() == URLType_File);
+    case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
+    case Op::BrowserSetHome: return WON_GUARDED_V(gb->mBrowser->SetHomeLocation(sCfgRdPath));
+    case Op::GameUserListBase: return WON_GUARDED(gu->ContainerConfig::Virtual24(*(const std::string*)a));
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
-    else
-        return false;
-    return true;
 }
+static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
+
+// Reads the HOMELOCATION layout key, resolving a file URL to the resource file path
+bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::GameBrowser, instruction) != 0; }
 
 
 // Accepts (and ignores) the CTRLLINKID layout key; passes other keys to the container's reader
-bool GameUserListCtrlConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_GAMEUSERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) { }
-    else return ContainerConfig::Virtual24(instruction);
-    return true;
-}
+bool GameUserListCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::GameUserList, instruction) != 0; }
 }

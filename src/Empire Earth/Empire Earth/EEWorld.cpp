@@ -1310,6 +1310,9 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 
 // RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world): one statement each; the end of the
 // chain
+int64_t EECore11OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);    // round 11 (EEUnitPicker.cpp)
+double EECore11OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
 int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -1378,8 +1381,7 @@ int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
         break;
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-        break;
+    default: return EECore11OpA(inOp, p, a, f);
     }
     return 0;
 }
@@ -1389,8 +1391,23 @@ double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     typedef EeGameCpp O;
     switch (inOp) {
     case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
-    default: ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-        break;
+    default: return EECore11OpAF(inOp, p, a, f);
     }
+    return 0.0;
+}
+
+// ------------------------------------------------------------------------- round 11, lane E: the test drivers, the entry, the world (the end of the chain)
+
+// the C++ calls and members of lane E's bodies in Rust (gamecpp; EeGameCpp's round 11 lane E section): one
+// statement each
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    return 0;
+}
+
+double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
     return 0.0;
 }

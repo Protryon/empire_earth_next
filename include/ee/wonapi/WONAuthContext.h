@@ -7,108 +7,56 @@
 #include "rust/won_net/authflow.h"
 #include "rust/won_net/authlogin.h"
 #include "rust/won_net/authobj.h"
+#include "rust/won_net/cdkeystore.h"
 #include "rust/won_net/ffi.h"
 
 namespace WONAPI {
 inline const uint8_t* WonBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
 
-// CDKey (0x1c bytes, a vtable without a destructor): the key logic (the text form, the check byte, the storage key
-// and cipher) is ee_won's (rust/crates/ee_won_net/src/cdkey.rs); this class keeps the product, the raw key and validity
+// CDKey (0x1c bytes in the original, a vtable without a destructor) is ee_won's (rust/crates/ee_won_net/src/
+// cdkeystore.rs EeWonCdKeyObj, R6 WON round 33): the product, the raw key and its validity, the key logic (cdkey.rs)
+// and the stores; this class owns one and every method forwards. (The two virtuals had no override: the Rust always
+// uses the new encryption method and the old method's notice did nothing.)
 class CDKey {
 protected:
     static const char* mCDKeyPath; // genuine SDK static default registry path, no instance layout
 public:
-    CDKey() : mValid(false) {} //2e3090: an empty, invalid key
-    CDKey(const std::string& inProduct) : mProduct(inProduct), mValid(false) {}
+    CDKey() : mKey(ee_won_cdkey_obj_new(NULL, 0)) {} //2e3090: an empty, invalid key
+    CDKey(const std::string& inProduct) : mKey(ee_won_cdkey_obj_new(WonBytes(inProduct), inProduct.size())) {}
+    CDKey(const CDKey& inKey) : mKey(ee_won_cdkey_obj_clone(inKey.mKey)) {}
+    CDKey& operator=(const CDKey& inKey) { ee_won_cdkey_obj_assign(this->mKey, inKey.mKey); return *this; }
+    ~CDKey() { ee_won_cdkey_obj_free(this->mKey); }
     // 2e3ac0: the product's key from a registry value (genuine SDK defaults: local machine, the Sierra path), false
-    // when absent or invalid; the stores below (AuthContext.cpp)
-    bool LoadFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath);
-    void ClearFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath);
-    bool SaveToRegistry(long inMode = 2, const char* inKey = mCDKeyPath); //genuine SDK bool result
-    void Invalidate() { this->mValid = false; } //2e30c0
-    void SetProductString(const std::string& inProduct) { this->Invalidate(); this->mProduct = inProduct; } //2e30d0
+    // when absent or invalid; the stores are cdkeystore.rs's
+    bool LoadFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath) { return this->Call(EeWonCdKeyCall::LoadRegistry, inKey, inMode); }
+    void ClearFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath) { this->Call(EeWonCdKeyCall::ClearRegistry, inKey, inMode); }
+    bool SaveToRegistry(long inMode = 2, const char* inKey = mCDKeyPath) { return this->Call(EeWonCdKeyCall::SaveRegistry, inKey, inMode); }
+    void Invalidate() { this->Call(EeWonCdKeyCall::Invalidate, NULL, 0); } //2e30c0
+    void SetProductString(const std::string& inProduct) { this->Call(EeWonCdKeyCall::SetProduct, inProduct.data(), inProduct.size()); } //2e30d0
     // 2e3320: the machine's id (Windows: the volume serial number of the Windows drive), a failure without one
-    static DWORD GetMachineId(bool* outSuccess = NULL)
-    {
-        int found = 0;
-        DWORD serial = PlatSystemMachineId(&found);
-        if (outSuccess != NULL) *outSuccess = found != 0;
-        return serial;
-    }
+    static DWORD GetMachineId(bool* outSuccess = NULL) { return ee_won_cdkey_machine_id(outSuccess); }
     // 2e3880: a stored key decrypted with the machine-bound or the old key (the other tried on failure)
-    bool InitEncrypted(const void* inData, unsigned long inLength)
-    {
-        this->mValid = false;
-        this->mKey = NULL;
-        if (inData == NULL) return false;
-        bool gotId = false;
-        DWORD machineId = CDKey::GetMachineId(&gotId);
-        EeWonCdKeyDecoded d;
-        ee_won_cdkey_decrypt(WonBytes(this->mProduct), this->mProduct.length(), machineId, gotId,
-                             this->GetUseNewEncryptMethod(), static_cast<const uint8_t*>(inData), inLength, &d);
-        if (d.has_raw) {
-            this->mKey = new ByteBuffer(d.raw, 8, false);
-            this->mValid = d.valid;
-        }
-        if (!d.used_machine) this->NotifyUsedOldMethodToDecrypt();
-        return this->mValid;
-    }
+    bool InitEncrypted(const void* inData, unsigned long inLength) { return this->Call(EeWonCdKeyCall::InitEncrypted, inData, inLength); }
     // the key's text ("XXXX-XXXX-XXXX-XXXX-XXXX", dashes and white space optional); true when its check byte is right
-    bool Init(const std::string& inKey)
-    {
-        this->mValid = false;
-        this->mKey = NULL;
-        uint8_t raw[8];
-        return ee_won_cdkey_parse(WonBytes(inKey), inKey.length(), raw) && this->CalcKeyFromBuffer((const char*)raw);
-    }
-    std::string GetString() const // the key's text; empty without a key
-    {
-        if (this->mKey.get() == NULL || this->mKey->length() < 8) return "";
-        char text[25];
-        ee_won_cdkey_format(reinterpret_cast<const uint8_t*>(this->mKey->data()), text);
-        return text;
-    }
-    ConstSmartPtr<ByteBuffer> GetEncrypted() const // the key encrypted for storage; NULL when invalid
-    {
-        if (!this->IsValid()) return NULL;
-        bool useMachine = this->GetUseNewEncryptMethod();
-        bool gotId = false;
-        DWORD machineId = useMachine ? CDKey::GetMachineId(&gotId) : 0;
-        ConstSmartPtr<ByteBuffer> result;
-        ee_won_cdkey_encrypt(WonBytes(this->mProduct), this->mProduct.length(), machineId, useMachine && gotId,
-                             reinterpret_cast<const uint8_t*>(this->mKey->data()), WonByteBufferSink, &result);
-        return result;
-    }
-    bool InitRaw(const void* inRaw)
-    {
-        this->mValid = false;
-        this->mKey = NULL;
-        return this->CalcKeyFromBuffer(static_cast<const char*>(inRaw));
-    }
-    bool SaveToFile(const std::string&); // AuthContext.cpp
-    bool LoadFromFile(const std::string&);
-    const ByteBuffer* GetRaw() const { return mKey.get(); } //genuine SDK borrowed key accessor
-    bool IsValid() const { return mValid; } //genuine SDK CDKey validity bool18
-protected:
-    // 2e3220: 8 raw key bytes, valid when their check byte matches a CRC of the product and key
-    bool CalcKeyFromBuffer(const char* inRaw)
-    {
-        this->mKey = new ByteBuffer(inRaw, 8, false);
-        this->mValid = ee_won_cdkey_is_valid(WonBytes(this->mProduct), this->mProduct.length(),
-                                             reinterpret_cast<const uint8_t*>(inRaw));
-        return this->mValid;
-    }
-    virtual void NotifyUsedOldMethodToDecrypt() {} //actual slot0/326b60, no virtual destructor
-    virtual bool GetUseNewEncryptMethod() const { return true; } //actual slot4/2f30d0
-    bool Flag(int inWhich) const // the beta (0) and force-check (1) flags
-    {
-        return this->mKey.get() != NULL
-            && ee_won_cdkey_flag(reinterpret_cast<const uint8_t*>(this->mKey->data()), this->mKey->length(), inWhich);
-    }
-public:
-    std::string mProduct; //04..14; actual SDK mProduct
-    ConstSmartPtr<ByteBuffer> mKey; //14..18; actual SDK mKey, real ByteBuffer owner
-    bool mValid; //18; actual SDK mIsValid; complete extent1c
+    bool Init(const std::string& inKey) { return this->Call(EeWonCdKeyCall::Init, inKey.data(), inKey.size()); }
+    std::string GetString() const { return this->Bytes(2); } // the key's text; empty without a key
+    // the key encrypted for storage; NULL when invalid
+    ConstSmartPtr<ByteBuffer> GetEncrypted() const { ConstSmartPtr<ByteBuffer> r; ee_won_cdkey_obj_bytes(this->mKey, 3, WonByteBufferSink, &r); return r; }
+    bool InitRaw(const void* inRaw) { return this->Call(EeWonCdKeyCall::InitRaw, inRaw, 8); }
+    bool SaveToFile(const std::string& inFileName) { return this->Call(EeWonCdKeyCall::SaveFile, inFileName.c_str(), 0); }
+    bool LoadFromFile(const std::string& inFileName) { return this->Call(EeWonCdKeyCall::LoadFile, inFileName.c_str(), 0); }
+    // genuine SDK borrowed key accessor (now a copy: the key's bytes are Rust's); NULL without a key
+    ConstSmartPtr<ByteBuffer> GetRaw() const { ConstSmartPtr<ByteBuffer> r; ee_won_cdkey_obj_bytes(this->mKey, 1, WonByteBufferSink, &r); return r; }
+    bool IsValid() const { return this->Call(EeWonCdKeyCall::IsValid, NULL, 0); } //genuine SDK CDKey validity bool18
+    bool HasKey() const { return this->Call(EeWonCdKeyCall::HasKey, NULL, 0); } // the SDK's mKey.get() != NULL
+    std::string KeyBytes() const { return this->Bytes(1); } // the raw key's bytes (empty without a key)
+    std::string GetProduct() const { return this->Bytes(0); } // the SDK's mProduct
+    bool IsBeta() const { return this->Call(EeWonCdKeyCall::Flag, NULL, 0); }
+    bool IsForceCheck() const { return this->Call(EeWonCdKeyCall::Flag, NULL, 1); }
+private:
+    bool Call(EeWonCdKeyCall inCall, const void* inData, intptr_t inA) const { return ee_won_cdkey_obj_call(this->mKey, inCall, static_cast<const uint8_t*>(inData), inA); }
+    std::string Bytes(int inWhich) const { std::string s; ee_won_cdkey_obj_bytes(this->mKey, inWhich, WonStringSink, &s); return s; }
+    EeWonCdKeyObj* mKey; // owned
 };
 
 // AuthContext (0xc0 bytes in the original, allocation 362dba, ctor 2dddf0, dtor 2de370) is ee_won's
@@ -135,7 +83,7 @@ public:
     { return this->GetServerContext()->AddAddressesFromDir(inDir, inNameFilter); }
     void RemoveAllCommunity() { this->LoginSet(EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY, std::wstring()); }
     void AddCDKeyCommunityJoin(const std::wstring& inCommunity, const CDKey& inKey)
-    { this->LoginSet(EE_WON_AUTH_LOGIN_ADD_JOIN, inCommunity, KeyBytes(inKey), inKey.mKey.get() != NULL ? 1 : 0); }
+    { this->LoginSet(EE_WON_AUTH_LOGIN_ADD_JOIN, inCommunity, inKey.KeyBytes(), inKey.HasKey() ? 1 : 0); }
     void AddUserData(const std::wstring& inCommunity, const ByteBuffer* inData)
     {
         this->LoginSet(EE_WON_AUTH_LOGIN_ADD_USER_DATA, inCommunity,
@@ -154,14 +102,8 @@ public:
     { return ee_won_auth_verifier_load(WonBytes(inFile), inFile.size()); }
     void SetServerContext(ServerContext* inContext) //2df330
     { ee_won_authctx_set_server_context(this->mCore, inContext != NULL ? static_cast<RefCount*>(inContext) : NULL); }
-    SmartPtr<ServerContext> GetServerContext() //2df3e0: the context's own reference handed to the result
-    {
-        void* aServers = ee_won_authctx_server_context(this->mCore);
-        if (aServers == NULL) return NULL;
-        SmartPtr<ServerContext> servers(static_cast<ServerContext*>(static_cast<RefCount*>(aServers)));
-        static_cast<RefCount*>(aServers)->Release();
-        return servers;
-    }
+    SmartPtr<ServerContext> GetServerContext() //2df3e0: a reference of the result's own
+    { return static_cast<ServerContext*>(static_cast<RefCount*>(ee_won_authctx_server_context_borrowed(this->mCore))); }
     void ClearCDKeyCommunityJoins() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_JOINS, std::wstring()); } //2e0510
     void ClearUserData() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_USER_DATA, std::wstring()); } //2e05e0
     void ClearOneTimeData() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME, std::wstring()); } //2e06b0
@@ -193,8 +135,7 @@ public:
     void SetCommunity(const std::wstring& inCommunity) { this->LoginSet(EE_WON_AUTH_LOGIN_SET_COMMUNITY, inCommunity); }
     void SetCDKey(const std::wstring& inCommunity, const CDKey& inKey) //2e0380
     {
-        this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY, inCommunity, KeyBytes(inKey),
-                       (inKey.mKey.get() != NULL ? 1 : 0) | (inKey.mValid ? 2 : 0));
+        this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY, inCommunity, inKey.KeyBytes(), (inKey.HasKey() ? 1 : 0) | (inKey.IsValid() ? 2 : 0));
     }
     bool SetHashFile(const std::wstring&); //2e06d0: the exe's path (AuthContext.cpp)
     bool SetHashFile(const std::wstring& inCommunity, const std::string& inFile) //2e07f0
@@ -231,28 +172,17 @@ public:
 private:
     const EeWonAuthCtx* mCore; // one reference
     static std::string Utf16(const std::wstring& inText) { std::string b; WideAppendUtf16LE(b, inText); return b; }
-    static std::string KeyBytes(const CDKey& inKey)
-    { return inKey.mKey.get() != NULL ? std::string(inKey.mKey->data(), inKey.mKey->length()) : std::string(); }
     std::wstring LoginText(int inWhich) const
-    {
-        std::string aBytes;
-        ee_won_auth_login_text(ee_won_authctx_login(this->mCore), inWhich, WonStringSink, &aBytes);
-        std::wstring aText;
-        WideAssignUtf16LE(aText, aBytes.data(), (unsigned long)(aBytes.size() / 2));
-        return aText;
-    }
+    { std::wstring s; ee_won_auth_login_text_wide(ee_won_authctx_login(this->mCore), inWhich, sizeof(wchar_t), WonWideTextSink, &s); return s; }
     void LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue = std::string(), long long inNum = 0)
     {
-        std::string aKey = Utf16(inKey);
-        ee_won_auth_login_set(ee_won_authctx_login(this->mCore), inWhich, WonBytes(aKey), aKey.size(), WonBytes(inValue),
-                              inValue.size(), inNum);
+        ee_won_auth_login_set_wide(ee_won_authctx_login(this->mCore), inWhich, inKey.data(), sizeof(wchar_t), inKey.size(),
+                                   WonBytes(inValue), inValue.size(), inNum);
     }
     void AppendBlock(int inWhich, WriteBuffer& outBuffer, const std::basic_string<unsigned char>* inChallenge)
     {
-        std::string aBytes;
-        ee_won_auth_login_block(ee_won_authctx_login(this->mCore), inWhich, inChallenge != NULL ? inChallenge->data() : NULL,
-                                inChallenge != NULL ? inChallenge->size() : 0, WonStringSink, &aBytes);
-        outBuffer.AppendBytes(aBytes.data(), aBytes.length());
+        ee_won_auth_login_block_to(ee_won_authctx_login(this->mCore), inWhich, inChallenge != NULL ? inChallenge->data() : NULL,
+                                   inChallenge != NULL ? inChallenge->size() : 0, outBuffer.mBuffer);
     }
     bool Secrets(int inWhich, const void* inKey = NULL, time_t inT0 = 0, time_t inT1 = 0)
     {

@@ -123,11 +123,7 @@ static int LobbyDoYesNoDialog(const GUIString& t, const GUIString& d, bool f)
     Log("YesNo " + t.s + " " + d.s + " " + N(f));
     return sDialogResult;
 }
-static int LobbyDoDialog(Dialog* d)
-{
-    Log("DoDialog " + Id(d));
-    return sDialogResult;
-}
+// LobbyDoDialog is LoWorld's (won_lobbyops_world.h), its answer set with sDialogResult
 static void LobbyShowCreateAccount() { Log("ShowCreateAccount"); }
 static void LobbyShowLostPassword() { Log("ShowLostPassword"); }
 static void LobbyShowLostUsername() { Log("ShowLostUsername"); }

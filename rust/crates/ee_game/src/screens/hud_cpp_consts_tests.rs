@@ -16,10 +16,11 @@ use crate::screens::status_button::*;
 use crate::screens::ui_manager_calls::*;
 
 /// The headers the C++ names come from.
-const HEADERS: [&str; 9] = [
+const HEADERS: [&str; 10] = [
     "include/ee/EEStringIDs.h",
     "include/ee/EESoundObject.h",
     "include/ee/EEUnitClassIDs.h",
+    "include/rust/sim/unit_ids.h",
     "include/ee/EEWorldConstants.h",
     "include/ee/EEImprovementIDs.h",
     "include/ee/EEControlEventID.h",

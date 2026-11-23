@@ -41,9 +41,6 @@ bool EEIsLandTerrain(long);
 bool EEIsSpaceDockSiteOpen(long, long, EEPlayer*);
 extern GEViewport gViewport;
 
-// .rdata 0x446dc0: the four facing yaws (docks, robotic farm pieces) (provisional name)
-static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
-
 template <class T> static T* EEGhostObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
@@ -68,27 +65,13 @@ static float EEGhostFloat(int64_t inBits)
 // Creates a placement ghost of a unit class for a player, loading the class media unless told not to
 EEGhostUnit::EEGhostUnit(long inUnitClass, EEPlayer* inPlayer, bool inNoMedia)
 {
-    this->Reset();
-    this->mUnitClass = gUnitClassTable[inUnitClass];
-    this->mPlayer = inPlayer;
-    if (gFreeCamera) {
-        inPlayer->LoadUnitClassMedia(inUnitClass);
-        this->mPlayer->SetUnitClassMedia(inUnitClass, 0x7f);
-    } else if (!inNoMedia)
-        gDataPreLoading->PostLoadUnitClass(inPlayer->mPlayerID, inUnitClass);
-    this->mNoMedia = inNoMedia;
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_CONSTRUCT, this, inPlayer, inUnitClass, inNoMedia);   // ghost_more.rs
 }
 
 // Destroys the ghost, unloading its class media (queued unless in free camera or shutting down)
 EEGhostUnit::~EEGhostUnit()
 {
-    if (!this->mNoMedia) {
-        if (!gFreeCamera && UShutdownInProgress() != true) {
-            gDataPreLoading->PostUnloadUnitClass(this->mPlayer->mPlayerID, this->mUnitClass->GetUnitType());
-            return;
-        }
-        this->mPlayer->UnloadUnitClassMedia(this->mUnitClass->GetUnitType());
-    }
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_DESTROY, this, NULL, 0, 0);   // ghost_more.rs
 }
 
 // Fills a space building's footprint and heights: placeable when its space dock site is open or every
@@ -125,19 +108,7 @@ void EEGhostUnit::FillVolcanoSquare()
 // Resets the ghost to an empty, unplaceable one at the origin with animation 7
 void EEGhostUnit::Reset()
 {
-    this->mTransformation.SetX(0.0f);
-    this->mTransformation.SetY(0.0f);
-    this->mTransformation.SetZ(0.0f);
-    this->mCanPlace = false;
-    this->mPlayer = NULL;
-    this->mTileX = 0;
-    this->mTileY = 0;
-    this->mUnitClass = NULL;
-    this->mFrame = 0;
-    this->mAnimation = 7;
-    this->mNoMedia = false;
-    memset(this->mFootprint, 0, sizeof(this->mFootprint));
-    memset(this->mHeights, 0, sizeof(this->mHeights));
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_RESET, this, NULL, 0, 0);   // ghost_more.rs
 }
 
 // Replaces the placement ghosts with a unit's ghost, plus 3 runway ghosts for an airport (0x42) and the
@@ -166,11 +137,7 @@ void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>
 // Adds the ghost's player number and unit class name to the sync checksum
 void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
 {
-    UString theText;
-    sprintf(theText, "The Ghost Unit Player Number was: %ld", this->mPlayer->mPlayerID);
-    ioChecksum.AddChecksum(theText, 0);
-    sprintf(theText, "The Object Type was %s", (const char*)this->mUnitClass->mName);
-    ioChecksum.AddChecksum(theText, 1);
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_ADD_CHECKSUM, this, &ioChecksum, 0, 0);   // ghost_more.rs
 }
 
 // Returns the half-width of the footprint square around the ghost's tile (1 for a one-tile unit)
@@ -182,43 +149,25 @@ float EEGhostUnit::GetFootprintOffset()
 // Reads the unit class and player ids from the saved game; returns the first read error
 long EEGhostUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theValue;
-    long theResult = inFile.Read(theValue);
-    this->mUnitClass = reinterpret_cast<EEUnitClass*>(theValue);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theValue);
-        this->mPlayer = reinterpret_cast<EEPlayer*>(theValue);
-    }
-    return theResult;
+    return (long)ee_units_ghost_more(EE_UNITS_GHOST_M_DO_LOAD, this, &inFile, 0, 0);   // ghost_more.rs
 }
 
 // Moves a farm ghost to the slot tile in the given direction from its tile
 void EEGhostUnit::SetFarmSlotTile(EEGhostUnit* inGhost, long inDirection)
 {
-    EETileCoordinate theNext(0, 0);
-    EETileCoordinate theTile;
-    theTile.mX = inGhost->mTileX;
-    theTile.mY = inGhost->mTileY;
-    EEGetSlotTile(theTile, inDirection, theNext);
-    inGhost->mTileX = theNext.GetX();
-    inGhost->mTileY = theNext.mY;
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SET_FARM_SLOT_TILE, inGhost, NULL, inDirection, 0);   // ghost_more.rs
 }
 
 // Writes the unit type and player id to the saved game; returns the first write error
 long EEGhostUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theType = this->mUnitClass->GetUnitType();
-    long theResult = outFile.Write(theType);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mPlayer->GetPlayerID());
-    return theResult;
+    return (long)ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SAVE, this, &outFile, 0, 0);   // ghost_more.rs
 }
 
 // Sets the ghost's animation and its frame to that animation's first
 void EEGhostUnit::SetAnimation(long inIndex)
 {
-    this->mFrame = this->GetModel()->mStartFrames[inIndex];
-    this->mAnimation = inIndex;
+    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SET_ANIMATION, this, NULL, inIndex, 0);   // ghost_more.rs
 }
 
 // Moves the placement ghosts under the cursor and rechecks where each can be placed; an airport turns
@@ -244,6 +193,9 @@ static long sGhostXY[2];
 static std::vector<U2DPoint<long> > sGhostPoints;
 static GETransformation sGhostTransform(false);
 static bool sGhostPieceFlag;
+static FSFile* sGhostFile;
+static unsigned long sGhostValue;
+static UString sGhostText;
 
 // a GE3DPoint's x, y or z (0, 1, 2)
 static float& EEGhostPart(GE3DPoint& inPoint, int64_t inIndex)
@@ -360,6 +312,31 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SET_X: theGhost->mTransformation.SetX(EEGhostFloat(inB)); return 0;
     case EE_UNITS_GHOST_SET_Y: theGhost->mTransformation.SetY(EEGhostFloat(inB)); return 0;
     case EE_UNITS_GHOST_SET_Z: theGhost->mTransformation.SetZ(EEGhostFloat(inB)); return 0;
+    // ghost_more.rs's
+    case EE_UNITS_GHOST_M_SET_PLAYER: theGhost->mPlayer = EEGhostObject<EEPlayer>((uint64_t)inB); return 0;
+    case EE_UNITS_GHOST_M_SET_CLASS: theGhost->mUnitClass = EEGhostObject<EEUnitClass>((uint64_t)inB); return 0;
+    case EE_UNITS_GHOST_M_FREE_CAMERA: return gFreeCamera;
+    case EE_UNITS_GHOST_M_LOAD_CLASS_MEDIA: EEGhostObject<EEPlayer>(inA)->LoadUnitClassMedia((long)inB); return 0;
+    case EE_UNITS_GHOST_M_SET_CLASS_MEDIA: theGhost->mPlayer->SetUnitClassMedia((long)inB, 0x7f); return 0;
+    case EE_UNITS_GHOST_M_POST_LOAD: gDataPreLoading->PostLoadUnitClass(EEGhostObject<EEPlayer>(inA)->mPlayerID, (long)inB); return 0;
+    case EE_UNITS_GHOST_M_SET_NO_MEDIA: theGhost->mNoMedia = inB != 0; return 0;
+    case EE_UNITS_GHOST_M_NO_MEDIA: return theGhost->mNoMedia;
+    case EE_UNITS_GHOST_M_SHUTTING_DOWN: return UShutdownInProgress() == true;
+    case EE_UNITS_GHOST_M_POST_UNLOAD: gDataPreLoading->PostUnloadUnitClass(theGhost->mPlayer->mPlayerID, theGhost->mUnitClass->GetUnitType()); return 0;
+    case EE_UNITS_GHOST_M_UNLOAD_CLASS_MEDIA: theGhost->mPlayer->UnloadUnitClassMedia(theGhost->mUnitClass->GetUnitType()); return 0;
+    case EE_UNITS_GHOST_M_SET_FRAME: theGhost->mFrame = (long)inB; return 0;
+    case EE_UNITS_GHOST_M_SET_ANIMATION_INDEX: theGhost->mAnimation = (long)inB; return 0;
+    case EE_UNITS_GHOST_M_CLEAR_FOOTPRINT: memset(theGhost->mFootprint, 0, sizeof(theGhost->mFootprint)); return 0;
+    case EE_UNITS_GHOST_M_CLEAR_HEIGHTS: memset(theGhost->mHeights, 0, sizeof(theGhost->mHeights)); return 0;
+    case EE_UNITS_GHOST_M_SET_FILE: sGhostFile = EEGhostObject<FSFile>(inA); return 0;
+    case EE_UNITS_GHOST_M_READ_ULONG: return sGhostFile->Read(sGhostValue);
+    case EE_UNITS_GHOST_M_VALUE: return sGhostValue;
+    case EE_UNITS_GHOST_M_WRITE_ULONG: return sGhostFile->Write((unsigned long)inB);
+    case EE_UNITS_GHOST_M_WRITE_PLAYER_ID: return sGhostFile->Write(theGhost->mPlayer->GetPlayerID());
+    case EE_UNITS_GHOST_M_START_FRAME: return theGhost->GetModel()->mStartFrames[inB];
+    case EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT: sprintf(sGhostText, "The Ghost Unit Player Number was: %ld", theGhost->mPlayer->mPlayerID); return 0;
+    case EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT: sprintf(sGhostText, "The Object Type was %s", (const char*)theGhost->mUnitClass->mName); return 0;
+    case EE_UNITS_GHOST_M_CHECKSUM_ADD: EEGhostObject<ESChecksum>(inA)->AddChecksum(sGhostText, (long)inB); return 0;
     default: return 0;
     }
 }
