@@ -370,7 +370,12 @@ pub unsafe extern "C" fn ee_data_rules_load(
 /// # Safety
 /// `rules` live, `out` an `EERulesData` (no list or text of it read across the call), `sizes` readable for `count`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_rules_mirror(rules: *mut EeDataRules, out: *mut c_void, sizes: *const usize, count: usize) {
+pub unsafe extern "C" fn ee_data_rules_mirror(
+    rules: *mut EeDataRules,
+    out: *mut c_void,
+    sizes: *const usize,
+    count: usize,
+) {
     let theirs = std::slice::from_raw_parts(sizes, count);
     assert_eq!(theirs, &rules_gen::mirror_sizes()[..], "ee/EERulesGen.h's layout is not rules_gen.rs's");
     let mut store = rules::MirrorStore::default();

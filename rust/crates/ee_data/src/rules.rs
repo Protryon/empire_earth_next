@@ -69,7 +69,12 @@ pub struct RuleNumberC {
 
 impl RuleNumberC {
     pub fn of(n: &RuleNumber) -> RuleNumberC {
-        RuleNumberC { float: n.float, long: n.long as c_long, world_row: n.world_row as c_long, world_value: n.world_value }
+        RuleNumberC {
+            float: n.float,
+            long: n.long as c_long,
+            world_row: n.world_row as c_long,
+            world_value: n.world_value,
+        }
     }
 }
 
