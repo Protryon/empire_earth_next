@@ -3,8 +3,9 @@
 // each after its first user). Unit flags: the exe's module set. Data: the fade constants 0x441fb0/0x441fb4, the vtable
 // 0x441fbc, the song delay constants 0x441fc0/0x441fc4.
 // The decisions (the thread's step, start, pause, stop, the song changes, the fades, the intensity rules, the time
-// to the next song) are Rust: rust/crates/ee_audio/src/sound music.rs (docs/RUST_PLAN.md R3.6). This file keeps the members,
-// the thread, its events and the wait; the Rust reaches the rest through the trampolines ee_musiccpp_*.
+// to the next song) are Rust: rust/crates/ee_audio/src/sound music.rs (docs/RUST_PLAN.md R3.6); the thread, its events,
+// the wait and the members' reads are ee_game gamecpp music_io.rs (game core lane round 11). This file keeps the
+// constructor's and destructor's forwarders and the trampolines ee_musiccpp_* the Rust reaches the rest through.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -19,109 +20,39 @@
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
 #include "rust/audio/sound.h"
-
-static UString sThreadName("MusicManager");
+#include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp music_io.rs)
 
 // Creates the music manager and starts its music thread at the given priority, waiting until the thread runs
 EEMusicManager::EEMusicManager(SEConductor* inConductor, long inThreadPriority)
     : mConductor(inConductor)
 {
-    this->mMusic = NULL;
-    this->mScoreID = 0;
-    this->mIntensityDelay = 0;
-    this->mIntensity = 0;
-    this->mRequestedIntensity = 0;
-    this->mState = 0;
-    this->mTimeToNextSong = 600000;
-    this->mRandom.SetSeed(TMGetTime());
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadCreated, false) == keseOK, 124);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadDone, false) == keseOK, 125);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mExit, false) == keseOK, 126);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mPause, false) == keseOK, 127);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mSetIntensity, false) == keseOK, 128);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mStart, false) == keseOK, 129);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mStop, false) == keseOK, 130);
-
-    ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, EEMusicManager::MusicManagerMain, (void*)this) == keseOK, 133);
-    ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 134);
-    this->mThreadCreated->Wait(kTSWaitInfinite);
-    this->mThread->SetName(sThreadName);
-    this->mConductor->SetIntensity(this->mIntensity, true);
+    ee_gamecpp_music_init(this, inThreadPriority);
 }
 
 // Destroys the music manager: tells the thread to exit, waits for it and frees the events and the thread
 EEMusicManager::~EEMusicManager()
 {
-    this->mExit->Set();
-    this->mThreadDone->Wait(kTSWaitInfinite);
-    TSScheduler::DestroyEvent(this->mThreadCreated);
-    TSScheduler::DestroyEvent(this->mThreadDone);
-    TSScheduler::DestroyEvent(this->mExit);
-    TSScheduler::DestroyEvent(this->mPause);
-    TSScheduler::DestroyEvent(this->mSetIntensity);
-    TSScheduler::DestroyEvent(this->mStart);
-    TSScheduler::DestroyEvent(this->mStop);
-    TSScheduler::DestroyThread(this->mThread);
+    ee_gamecpp_music_destroy(this);
 }
 
 // The C++ side of the Rust music manager: the members, the conductor, the songs, the world and the preferences
 static EEMusicManager* Of(void* inContext) { return static_cast<EEMusicManager*>(inContext); }
 
 extern "C" {
-// the members by number (music_ffi.rs: 0 score id, 1 state, 2 intensity delay, 3 intensity, 4 time to the next
-// song, 5 requested intensity), as 32-bit values
-uint32_t ee_musiccpp_get(void* inContext, uint32_t inField)
-{
-    EEMusicManager* m = Of(inContext);
-    switch (inField) {
-    case 0: return (uint32_t)m->mScoreID;
-    case 1: return (uint32_t)m->mState;
-    case 2: return (uint32_t)m->mIntensityDelay;
-    case 3: return (uint32_t)m->mIntensity;
-    case 4: return (uint32_t)m->mTimeToNextSong;
-    default: return (uint32_t)m->mRequestedIntensity;
-    }
-}
-void ee_musiccpp_set(void* inContext, uint32_t inField, uint32_t inValue)
-{
-    EEMusicManager* m = Of(inContext);
-    switch (inField) {
-    case 0: m->mScoreID = (int32_t)inValue; break;
-    case 1: m->mState = (int32_t)inValue; break;
-    case 2: m->mIntensityDelay = inValue; break;
-    case 3: m->mIntensity = inValue; break;
-    case 4: m->mTimeToNextSong = inValue; break;
-    default: m->mRequestedIntensity = inValue; break;
-    }
-}
+// (ee_musiccpp_get, _set: ee_game gamecpp music_io.rs)
 void* ee_musiccpp_music(void* inContext) { return Of(inContext)->mMusic; }
 void ee_musiccpp_set_music(void* inContext, void* inSong) { Of(inContext)->mMusic = static_cast<EEMusicObject*>(inSong); }
 float ee_musiccpp_random(void* inContext) { return Of(inContext)->mRandom.Generate(); }
 void ee_musiccpp_request_stop(void* inContext) { Of(inContext)->Stop(); }
 void ee_musiccpp_last_error() { PlatGetLastError(); }
-bool ee_musiccpp_current_epoch(int32_t* outEpoch)
-{
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EETechTree* theTechnologies = thePlayer != NULL ? thePlayer->mTechnologies : NULL;
-    if (theTechnologies == NULL)
-        return false;
-    *outEpoch = (int32_t)theTechnologies->mCurrentEpoch;
-    return true;
-}
+// (ee_musiccpp_current_epoch: ee_game gamecpp music_io.rs)
 float ee_musiccpp_music_volume() { return gGamePreferences.mSettings.GetMusicVolume(); }
 void ee_musiccpp_sleep(uint32_t inMilliseconds) { PlatSleep(inMilliseconds); }
 void* ee_musiccpp_random_song(int32_t inEpoch) { return EEMusicObject::GetRandom(inEpoch); }
 void ee_musiccpp_song_load(void* inSong) { static_cast<EEMusicObject*>(inSong)->LoadScore(); }
 int32_t ee_musiccpp_song_score_id(void* inSong) { return (int32_t)static_cast<EEMusicObject*>(inSong)->mScoreID; }
 int32_t ee_musiccpp_song_unload(void* inSong) { return (int32_t)static_cast<EEMusicObject*>(inSong)->UnloadScore(); }
-void ee_musiccpp_song_reverb(void* inSong, float* outReverb)
-{
-    EEMusicObject* s = static_cast<EEMusicObject*>(inSong);
-    outReverb[0] = s->GetReverbGain();
-    outReverb[1] = s->GetReverbHighFreqRTRatio();
-    outReverb[2] = s->GetReverbMix();
-    outReverb[3] = s->GetReverbTime();
-}
+// (ee_musiccpp_song_reverb: ee_game gamecpp music_io.rs)
 float ee_musiccpp_volume(void* inContext) { return Of(inContext)->mConductor->GetVolume(); }
 void ee_musiccpp_set_volume(void* inContext, float inVolume) { Of(inContext)->mConductor->SetVolume(inVolume); }
 void ee_musiccpp_stop(void* inContext) { Of(inContext)->mConductor->Stop(); }
@@ -149,35 +80,7 @@ void ee_musiccpp_global_set_intensity(uint32_t inIntensity, bool inImmediate)
 }
 }
 
-// Runs the music thread: waits for exit, pause, intensity, start or stop requests (or the next-song timeout) and
-// hands each wake-up to the Rust step until it says to exit
-unsigned long EEMusicManager::MusicManagerMain(void* inThis)
-{
-    unsigned long theLastTime = TMGetTime();
-    EEMusicManager* theThis = static_cast<EEMusicManager*>(inThis);
-    bool theDone = false;
-    theThis->mThreadCreated->Set();
-    TSEvent* theEvents[5];
-    theEvents[0] = theThis->mExit;
-    theEvents[1] = theThis->mPause;
-    theEvents[2] = theThis->mSetIntensity;
-    theEvents[3] = theThis->mStart;
-    theEvents[4] = theThis->mStop;
-    UMSetFloatingPointPrecision(kFPPrecision53);
-    do {
-        if (UMGetFloatingPointPrecision() != kFPPrecision53)
-            UMSetFloatingPointPrecision(kFPPrecision53);
-        if (UMGetFloatingPointRoundingMode() != 0)
-            UMSetFloatingPointRoundingMode(0);
-        long theResult = TSEvent::WaitAny(theEvents, 5, theThis->mTimeToNextSong);
-        unsigned long theTime = TMGetTime();
-        unsigned long theElapsedTime = theTime - theLastTime;
-        theLastTime = theTime;
-        theDone = ee_music_step(theThis, (int32_t)theResult, (uint32_t)theElapsedTime);
-    } while (!theDone);
-    theThis->mThreadDone->Set();
-    return 0;
-}
+// (the music thread, MusicManagerMain: ee_game gamecpp music_io.rs ee_gamecpp_music_main)
 
 // Asks the music thread to pause the music
 void EEMusicManager::Pause()

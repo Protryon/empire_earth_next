@@ -3303,6 +3303,199 @@ enum class EeGameCpp : uint32_t {
   WsRecHuman,
   WsSetCurrentRecord,
   WsRecPlayTime,
+  EpAssignLastOptions,
+  EpCameraMaxZoom,
+  EpDefaultSettings,
+  EpDeleteSettings,
+  EpGlobalPrefs,
+  EpHostGameName,
+  EpInstalledDirectory,
+  EpInstalledVolume,
+  EpLastAutoSave,
+  EpLastGameFile,
+  EpLastQuickSave,
+  EpLastScenarioFile,
+  EpMapType,
+  EpNarrowCopy,
+  EpNarrowGet,
+  EpNarrowLength,
+  EpNarrowSet,
+  EpNarrowUpper,
+  EpNewSettings,
+  EpOptionsFields,
+  EpOsLanguage,
+  EpPlayerName,
+  EpPrefsSettings,
+  EpRasterizerName,
+  EpResourceLanguage,
+  EpSettingsFields,
+  EpSierraGameName,
+  EpSierraUserID,
+  EpStartupDirectory,
+  EpStartupVolume,
+  EpUnknownName,
+  EpWideCopy,
+  EpWideGet,
+  EpWideLength,
+  EpWideSet,
+  EpWindowSizeDefaulted,
+  EpWonNetPassword,
+  EoAssign,
+  EoCampaignName,
+  EoDifficulties,
+  EoDifficultyLevel,
+  EoFields,
+  EoFindGenerator,
+  EoFirstGeneratorName,
+  EoGeneratorCount,
+  EoInScenarioEditor,
+  EoLobbyOptions,
+  EoLock,
+  EoMapName,
+  EoMapSizeDefault,
+  EoMapSizeTiles,
+  EoMapSizes,
+  EoMapType,
+  EoPrimitive,
+  EoResourceLevels,
+  EoScenarioName,
+  EoSlot,
+  EoSlotCopy,
+  EoSlotEmpty,
+  EoSlotName,
+  EoSpeedDefault,
+  EoSpeeds,
+  EoUnitLimitDefault,
+  EoUnitLimitMaximum,
+  EoUnitLimitMinimum,
+  EoVariantKnown,
+  EoVariants,
+  EoWideLoad,
+  EoWideSave,
+  EoWondersDefault,
+  EoWondersMaximum,
+  EcBackPlane,
+  EcClearKeys,
+  EcContainer,
+  EcContainerId,
+  EcCurrentPlayer,
+  EcDereference,
+  EcFacesCamera,
+  EcFarRearClipping,
+  EcFreeCamera,
+  EcFrontPlane,
+  EcGameSpeed,
+  EcHasMap,
+  EcHitPoints,
+  EcInCinematic,
+  EcIsSeen,
+  EcLeftPlane,
+  EcLocation,
+  EcLocationOnLine,
+  EcOrthographic,
+  EcPushKey,
+  EcReference,
+  EcResolve,
+  EcRightPlane,
+  EcScreenLine,
+  EcSetFrontClipping,
+  EcSetRearClipping,
+  EcSetUnitA,
+  EcSetUnitB,
+  EcTileXRaw,
+  EcUnitAGet,
+  EcUnitBGet,
+  EcValidPoint,
+  EcValidTile,
+  EcVelocity,
+  EcViewportCameraX,
+  EcViewportCameraY,
+  EcViewportCameraZ,
+  EcViewportHalfHeight,
+  EcViewportXCenter,
+  EcViewportYCenter,
+  EcWorldCameraYaw,
+  EcWorldTransformation,
+  EaFileClose,
+  EaFileOpen,
+  EaFileReadBytes,
+  EaFileReadCount,
+  EaForestAt,
+  EaForestKind,
+  EaForgetSound,
+  EaGetSound,
+  EaGoalKind,
+  EaGoalState,
+  EaHasInstance,
+  EaHasSound,
+  EaLoadMedia,
+  EaLooping,
+  EaPlay,
+  EaPlayerEpoch,
+  EaRandom,
+  EaReleaseInstance,
+  EaResize,
+  EaSeed,
+  EaSetParameters,
+  EaSoundAt,
+  EaSoundCount,
+  EaSoundFields,
+  EaStart,
+  EaStop,
+  EaTime,
+  EaTimeOfDay,
+  EaTownCount,
+  EaTownHullContains,
+  EaUnloadMedia,
+  EaVisibleSpace,
+  EaVisibleTiles,
+  EaVisibleWater,
+  EmConductorIntensity,
+  EmCurrentEpoch,
+  EmMembers,
+  EmReverbGain,
+  EmReverbHighFreqRatio,
+  EmReverbMix,
+  EmReverbTime,
+  EmTechnologies,
+  EgCheatNames,
+  EgCivilizationName,
+  EgColorBlue,
+  EgColorGreen,
+  EgColorIndex,
+  EgColorRed,
+  EgComputer,
+  EgEngineName,
+  EgGameOver,
+  EgGameTime,
+  EgGatherResource,
+  EgIsHuman,
+  EgLastAttacker,
+  EgLobbyOptions,
+  EgName,
+  EgPersonality,
+  EgPhysics,
+  EgTraceOn,
+  EbEnvF40,
+  EbEnvF44,
+  EwCampaignName,
+  EwColorSize,
+  EwHistory,
+  EwHistoryTail,
+  EwNumPlayers,
+  EwPhysicsSeed,
+  EwPlayerAt,
+  EwPlayerStatistics,
+  EwRecordAt,
+  EwRecordColor,
+  EwRecordCount,
+  EwRecordName,
+  EwRecordStatistics,
+  EwRecordStatisticsOf,
+  EwRecordSuffix,
+  EwRecordTail,
+  EwStatsEndTime,
+  EwStatsSeries,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -5319,14 +5512,13 @@ void ee_gamecpp_msgcap_sweep();
 void ee_gamecpp_camera_unit_point(void *unit,
                                   void *out);
 
-/// `Update`: the camera's frame (ee_game app camera.rs over the C++ host `call`); when it moved, the view to the
+/// `Update`: the camera's frame (ee_game app camera.rs over the host, camera_io.rs); when it moved, the view to the
 /// world and the viewport (the orthographic size, the field of view, the clipping distances) and the mini map's
 /// view; CAMU before and after (TEST ONLY).
 ///
 /// # Safety
-/// `camera` is a live EECameraControl and `call` its host.
+/// `camera` is a live EECameraControl.
 void ee_gamecpp_camera_update(void *camera,
-                              EeAppCameraFn call,
                               float elapsed);
 
 /// CAMU (TEST ONLY): the camera's whole state (the poses, the view, the target, the followed units' ids, the move's
@@ -5498,6 +5690,10 @@ void ee_gamecpp_storm_step(void *storm, unsigned long time);
 /// EE-SIM --app-sweep's storms (TEST ONLY): the weather on, one storm of each kind, each recorded (STRM phase 0).
 void ee_gamecpp_capture_storm_sweep();
 
+/// `EEEnvironmentManager()`'s members (game core lane round 11, lane B): disabled, no storms, a calm wind, a
+/// weather step every 5 s, at most three storms at a time.
+void ee_gamecpp_env_init(void *manager);
+
 /// `IsInStorm`: whether a tile is inside a rain or hurricane storm (`rain`) and/or a snow or blizzard storm (`snow`).
 bool ee_gamecpp_env_is_in_storm(void *manager,
                                 const void *tile,
@@ -5525,6 +5721,138 @@ void ee_gamecpp_env_set_enabled(void *manager, bool enabled);
 
 /// `DeleteStorms`: every storm released and deleted, the list emptied.
 void ee_gamecpp_env_delete_storms(void *manager);
+
+/// The ambient sounds' host (ambient_ffi.rs `EeAppAmbientFn`): the context is the manager.
+///
+/// # Safety
+/// `context` is a live EEAmbientSoundManager and `io` the operation's record.
+void ee_gamecpp_ambient_host(void *context, int32_t op, EeAppAmbientIo *io);
+
+/// `Load`: the sound records from the file into their slots (a negative slot is unused) and the random generator
+/// seeded with the time -> the last read's status.
+long ee_gamecpp_ambient_load(void *manager,
+                             void *file);
+
+/// `EEAmbientWorldAnalyzer::CountUnit`: a visible unit counted (citizens, farms, goats, eagles, attackers), and an
+/// enemy bomber over one of the local player's towns (from the atomic epochs on) as an air raider.
+void ee_gamecpp_ambient_count_unit(EeAppAmbientCounts *counts,
+                                   void *unit);
+
+/// `CountTree`: a visible wood resource counted as a tree.
+void ee_gamecpp_ambient_count_tree(EeAppAmbientCounts *counts, void *unit);
+
+/// `AddTree`: a visible tree counted and, while no forest type is known, the AI forest's at the unit.
+void ee_gamecpp_ambient_add_tree(EeAppAmbientCounts *counts,
+                                 void *unit);
+
+/// The camera's host (camera_ffi.rs `EeAppCameraFn`): the context is the camera.
+///
+/// # Safety
+/// `context` is a live EECameraControl and `io` the operation's record.
+int32_t ee_gamecpp_camera_host(void *context, int32_t op, EeAppCameraIo *io);
+
+/// `AddKey`: a key appended to the camera's path -> 0, or 5 while a path plays (the camera locked).
+long ee_gamecpp_camera_add_key(void *camera, const void *key);
+
+/// The constructor: no song, intensity 0, ten minutes to the next song, the generator seeded with the time, the
+/// seven events, the music thread started at `priority` and waited for, then the conductor's intensity.
+void ee_gamecpp_music_init(void *manager,
+                           long priority);
+
+/// The destructor: the thread told to exit and waited for, the events and the thread freed.
+void ee_gamecpp_music_destroy(void *manager);
+
+/// `MusicManagerMain`: the music thread. It waits for exit, pause, intensity, start or stop (or the time to the
+/// next song) and hands each wake-up to the Rust step (ee_audio music.rs) until it says to exit.
+unsigned long ee_gamecpp_music_main(void *manager);
+
+/// The members `ee_musiccpp_get`/`set` reach by number (ee_audio music_ffi.rs: 0 score id, 1 state, 2 intensity
+/// delay, 3 intensity, 4 time to the next song, 5 requested intensity), as 32-bit values.
+uint32_t ee_musiccpp_get(void *manager,
+                         uint32_t field);
+
+/// as [`ee_musiccpp_get`]
+void ee_musiccpp_set(void *manager, uint32_t field, uint32_t value);
+
+/// The local player's current epoch (false with no player or tech tree).
+bool ee_musiccpp_current_epoch(int32_t *epoch);
+
+/// A song's reverb: gain, high-frequency ratio, mix, time.
+void ee_musiccpp_song_reverb(void *song, float *out);
+
+/// `EEGameOptions()`: default options (random epochs, normal speed and map size, unit limit 50, three wonders to
+/// win) with sixteen empty slots.
+void ee_gamecpp_options_init(void *options);
+
+/// `EEGameOptions(const EEGameOptions&)`: its own lock, the defaults, then the assignment (the copy keeps the
+/// defaults' mB407: the assignment leaves it).
+void ee_gamecpp_options_copy(void *options,
+                             const void *other);
+
+/// `operator=`: each out-of-range setting replaced with a default (game_options.rs assign); the names, flags and
+/// the sixteen slots copied as they are. A new game's map type must be a known generator's, else the first one's.
+void ee_gamecpp_options_assign(void *options,
+                               const void *other);
+
+/// `SetDefaults`: the lobby's defaults (all resources, random epochs, the first map type, cheats on, victory off,
+/// the preferred difficulty) with sixteen empty slots.
+void ee_gamecpp_options_set_defaults(void *options);
+
+/// `GetMapDimensions`: the map's width and height in tiles for the map size (0 x 0 for an unknown size).
+void ee_gamecpp_options_map_dimensions(void *options,
+                                       long *width,
+                                       long *height);
+
+/// `GetCampaignMapName`: the campaign scenario's map name when the options name a campaign with a checksum and a
+/// map, else "".
+bool ee_gamecpp_options_campaign_map_name(void *options,
+                                          void *name);
+
+/// `CanBuyCivilization`: not in the scenario editor and not in a scenario game.
+bool ee_gamecpp_options_can_buy_civilization(void *options);
+
+/// `Load`: the options and the sixteen slots from a saved game (game_options.rs load) -> the first read error.
+long ee_gamecpp_options_load(void *options,
+                             unsigned long major,
+                             unsigned long minor,
+                             void *file);
+
+/// `Save`: the sixteen slots and the options to a saved game (game_options.rs save) -> the first write error.
+long ee_gamecpp_options_save(void *options,
+                             void *file);
+
+/// `IsNotKorean`: neither the game resources' language nor the system's is Korean.
+bool ee_gamecpp_prefs_is_not_korean();
+
+/// `EESetTextureResolution`.
+void ee_gamecpp_prefs_texture_resolution(long resolution);
+
+/// `EEApplyPortSettings`: the port's settings to the camera, the renderer and the mixer.
+void ee_gamecpp_prefs_apply_port(void *settings);
+
+/// `EEGamePreferences::Load` but its full-screen line: every setting read from config.yaml (the default written
+/// for each missing value; no blood in Korean), the settings that are not stored, the port's switches, then the
+/// game options -> their result.
+long ee_gamecpp_prefs_load(void *prefs);
+
+/// `LoadGameOptions`: the last game options from config.yaml's game_options block -> 0.
+long ee_gamecpp_prefs_load_options(void *prefs);
+
+/// `Save`: every setting, then the game options -> the first failure (0 when every value was written).
+long ee_gamecpp_prefs_save(void *prefs);
+
+/// `SaveGameOptions` -> the first failure, else 0.
+long ee_gamecpp_prefs_save_options(void *prefs);
+
+/// `SetLastGameOptions`: a new random-map game's options (load type 0) kept as the last ones, then the save.
+void ee_gamecpp_prefs_set_last_options(void *prefs,
+                                       const void *options);
+
+/// `EEInitializeDefaultSettings`: the default player, host and Sierra names the "unknown" string, the WON password "".
+void ee_gamecpp_prefs_init_defaults();
+
+/// WSTA (`EEAppCaptureStatisticsSweep`).
+void ee_gamecpp_capture_statistics_sweep();
 
 }  // extern "C"
 
