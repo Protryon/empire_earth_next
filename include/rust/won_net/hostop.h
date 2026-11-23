@@ -665,6 +665,9 @@ struct EeWonAsyncOpHooks {
   bool (*callback_hook)(void *op, void *child, int32_t param);
 };
 
+/// A logic's `RemoveTrackedOp(op)`: whether the op was tracked (and is not any more).
+using EeWonRemoveTrackedFn = bool(*)(void *logic, void *op);
+
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
 struct EeWonThreadBody {
@@ -1029,6 +1032,17 @@ void ee_won_completion_run(const EeWonCompletion *c, void *op);
 /// # Safety
 /// `c` came from [`EeWonCompletion::make`] (or is null), not used after.
 void ee_won_completion_free(EeWonCompletion *c);
+
+/// `LogicCompletion<T>::Run`'s decision (R6 WON round 33): the callback runs unless the logic was killed or, with
+/// `check_tracker`, the op was not tracked by it (`remove` untracks it; not called otherwise).
+///
+/// # Safety
+/// `remove` is valid with `logic` and `op`.
+bool ee_won_logic_completion_runs(bool killed,
+                                  bool check_tracker,
+                                  EeWonRemoveTrackedFn remove,
+                                  void *logic,
+                                  void *op);
 
 EeWonThread *ee_won_thread_new(EeWonThreadBody body);
 

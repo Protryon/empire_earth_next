@@ -597,12 +597,13 @@ template <class T> class LogicCompletion : public LogicCompletionBase {
 public:
     typedef void (T::*Callback)(AsyncOp* inOp);
     LogicCompletion(Callback inCallback, T* inObject) : mCallback(inCallback), mObject(inObject) {}
+    // unless the logic was killed or (checked) the op was not its tracked one (opobj.rs decides, R6 WON round 33)
     virtual void Run(AsyncOp* inOp)
     {
-        if (this->mObject->mKilled) return;
-        if (this->mCheckTracker && !this->mObject->RemoveTrackedOp(inOp)) return;
-        (this->mObject.mPtr->*mCallback)(inOp);
+        if (ee_won_logic_completion_runs(this->mObject->mKilled, this->mCheckTracker, &Untrack, this->mObject.mPtr, inOp))
+            (this->mObject.mPtr->*mCallback)(inOp);
     }
+    static bool Untrack(void* inLogic, void* inOp) { return static_cast<T*>(inLogic)->RemoveTrackedOp(static_cast<AsyncOp*>(inOp)); }
     Callback mCallback;                    // +0x0c
     SmartPtr<T> mObject;                    // +0x10; original allocation0x14
 };
