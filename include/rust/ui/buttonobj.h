@@ -198,6 +198,15 @@ enum class EeUiButtonCall : uint32_t {
   ScalableCopyData = 111,
   /// `DrawPolygons()` -> its result.
   ScalableDrawPolygons = 112,
+  /// `UIDualButton`'s constructor part (UI round 16: the class folded into UIButton): the right button presses and
+  /// releases as the left.
+  DualInit = 113,
+  /// `GetTabable()`: a scroll arrow is not tabbable.
+  Tabable = 114,
+  /// `MouseRButtonDown()` -> its result (a dual button's press, else kErrorOK).
+  MouseRButtonDown = 115,
+  /// `MouseRButtonUp()` -> its result (a dual button's release, else kErrorOK).
+  MouseRButtonUp = 116,
 };
 
 /// The Rust UIButton.

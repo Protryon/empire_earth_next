@@ -227,6 +227,15 @@ pub enum EeUiButtonCall {
     ScalableCopyData = 111,
     /// `DrawPolygons()` -> its result.
     ScalableDrawPolygons = 112,
+    /// `UIDualButton`'s constructor part (UI round 16: the class folded into UIButton): the right button presses and
+    /// releases as the left.
+    DualInit = 113,
+    /// `GetTabable()`: a scroll arrow is not tabbable.
+    Tabable = 114,
+    /// `MouseRButtonDown()` -> its result (a dual button's press, else kErrorOK).
+    MouseRButtonDown = 115,
+    /// `MouseRButtonUp()` -> its result (a dual button's release, else kErrorOK).
+    MouseRButtonUp = 116,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -246,6 +255,8 @@ pub(crate) enum Sub {
     Blink(crate::variantobj::BlinkObj),
     /// `UIScalableButton` (`variantobj.rs`).
     Scalable(crate::variantobj::ScalableFields),
+    /// `UIDualButton` (no record of its own).
+    Dual,
 }
 
 /// The Rust UIButton.
@@ -566,6 +577,25 @@ impl EeUiButton {
         let at = UiPoint { x: buf[0], y: buf[1] };
         let mut h = Btn::new(self);
         let fields = self.fields();
+        // the folded subclasses' overrides (UI round 16: UIScalableButton, UIDualButton, UIScrollButton)
+        let sub = *self.sub.borrow();
+        match (call, sub) {
+            (C::CopyData, Sub::Scalable(_)) => return self.call_variant(C::ScalableCopyData, a, b, buf),
+            (C::DrawPolygons, Sub::Scalable(_)) => return self.call_variant(C::ScalableDrawPolygons, a, b, buf),
+            (C::ButtonDown, Sub::Scroll(_)) => return self.call_variant(C::ScrollButtonDown, a, b, buf),
+            (C::ButtonUp, Sub::Scroll(_)) => return self.call_variant(C::ScrollButtonUp, a, b, buf),
+            (C::UpdateKeyboard, Sub::Scroll(_)) => return 0,
+            (C::Tabable, Sub::Scroll(_)) => return 0,
+            (C::Tabable, _) => return 1,
+            (C::MouseRButtonDown, Sub::Dual) => return button::dual_mouse_r_button_down(&mut h) as isize,
+            (C::MouseRButtonUp, Sub::Dual) => return button::dual_mouse_r_button_up(&mut h) as isize,
+            (C::MouseRButtonDown | C::MouseRButtonUp, _) => return 0,
+            (C::DualInit, _) => {
+                *self.sub.borrow_mut() = Sub::Dual;
+                return 0;
+            }
+            _ => {}
+        }
         match call {
             C::CopyData => return button::copy_data(&mut h) as isize,
             C::DrawPolygons => return self.draw_polygons(),

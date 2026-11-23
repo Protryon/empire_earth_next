@@ -24,14 +24,10 @@
 #include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
 #include "lle/UIObjHost.h"
+#include "lle/UReferenceCounter.h"
+#include "lle/UIForm.h"
+#include "lle/UIManager.h"
 
-class GEFont;
-class GERasterizer;
-class GESurface;
-class SESoundManager;
-class UIEvent;
-class UIForm;
-class UIHotKey;
 
 // winspool.h maps GetForm to GetFormA; the export is ?GetForm@UIControl@@
 #ifdef GetForm
@@ -53,7 +49,8 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     static bool DeleteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Delete); }
     // Returns whether Down (or keypad 2 with Num Lock off) is held
     static bool DownKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Down); }
-    virtual long DrawPolygons();
+    // Draws the copied background (when it has an opacity) and the border (ee_ui controlobj.rs)
+    virtual long DrawPolygons() { return (long)this->Call(EeUiControlCall::DrawPolygons); }
     virtual long DrawTextA() { this->mDrawCount--; return kErrorOK; }
     // Returns whether End (or keypad 1 with Num Lock off) is held
     static bool EndKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::End); }
@@ -63,12 +60,7 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
     float GetBorderOpacity() const { return this->mBorderOpacity; }
     unsigned long GetBorderThickness() { return this->mBorderThickness; }
-    float GetBgOpacity() const
-    {
-        float theOpacity;
-        this->BgRhombus()->GetOpacityPerVertex(theOpacity, theOpacity, theOpacity, theOpacity);
-        return theOpacity;
-    }
+    float GetBgOpacity() const { return UIOut(ee_ui_control_call, const_cast<UIControl*>(this), EeUiControlCall::BgOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
     void GetBgColor(GEColor& outColor) const { this->BgRhombus()->GetColorPerVertex(outColor, outColor, outColor, outColor); }
     const GERectangle& GetCopiedDrawRectangle() const { return UIControl::AsRect(this->mCopiedDrawRectangle); }
     unsigned long GetDisplayMode() const { return this->mDisplayMode; }
@@ -85,14 +77,13 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     bool GetIsDirty() const { return this->mIsDirty; }
     bool GetLeftMouseButtonDown() const { return this->Call(EeUiControlCall::LeftButtonDown) != 0; }
     // Returns the UI manager's rasterizer
-    GERasterizer* GetRasterizer() const;
+    GERasterizer* GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }
     const GERectangle& GetRectangle() const { return UIControl::AsRect(this->mRectangle); }
     bool GetRightMouseButtonDown() const { return this->Call(EeUiControlCall::RightButtonDown) != 0; }
-    // (their bodies need the form's, the manager's or the background table's class)
     // Returns the UI manager's screen index
-    unsigned long GetScreenIndex() const;
+    unsigned long GetScreenIndex() const { return this->GetForm()->GetManager()->GetScreen(); }
     // Returns the UI manager's sound manager
-    SESoundManager* GetSoundManager() const;
+    SESoundManager* GetSoundManager() const { return this->GetForm()->GetManager()->GetSoundManager(); }
     unsigned long GetStringTableID() const { return this->mStringTableID; }
     virtual bool GetTabable() const { return true; }
     UIEvent* GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(EeUiControlCall::TriggerEvent, inEvent); }
@@ -105,11 +96,8 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     static bool LeftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Left); }
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
-    virtual long MouseLButtonDoublePressed()
-    {
-        this->mLeftButtonDown = true;
-        return this->MouseLButtonDown();
-    }
+    // The left button down, then MouseLButtonDown (ee_ui controlobj.rs)
+    virtual long MouseLButtonDoublePressed() { return (long)this->Call(EeUiControlCall::MouseDoublePressed); }
     virtual long MouseMove(const GE2DPoint& inLocation) = 0;  // slot 0x40
     virtual long MouseRButtonDown() = 0;
     virtual long MouseRButtonUp() = 0;
@@ -164,9 +152,9 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
     // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
     // Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
-    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness); // slot 0x84
+    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness) { return ee_ui_control_draw_border(this->GetRasterizer(), this->GetScreenIndex(), UIRect(inRectangle), inThickness, this->mCopiedBorderOpacity, this->mCopiedBorderType); } // slot 0x84
     // Returns the form's mouse location
-    const GE2DPoint& GetMouseLocation() const;
+    const GE2DPoint& GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
     void SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetBgRectangle, inRectangle); }
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }

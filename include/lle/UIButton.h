@@ -15,8 +15,6 @@
 #include "rust/ui/buttonobj.h"
 #include "rust/ui/lle_hosts.h"
 
-class GEBitmap;
-class GEText;
 
 class LLE_API UIButton : public UIControl {
 public:
@@ -56,8 +54,11 @@ public:
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiButtonCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallF(EeUiButtonCall::MouseMove, inLocation.GetX(), inLocation.GetY()); }
     virtual void MouseOver() { this->Call(EeUiButtonCall::MouseOver); } // slot 0x90
-    virtual long MouseRButtonDown() { return kErrorOK; }
-    virtual long MouseRButtonUp() { return kErrorOK; }
+    // the right button: a dual button's presses and releases as the left; kErrorOK for the others (buttonobj.rs)
+    virtual long MouseRButtonDown() { return (long)this->Call(EeUiButtonCall::MouseRButtonDown); }
+    virtual long MouseRButtonUp() { return (long)this->Call(EeUiButtonCall::MouseRButtonUp); }
+    // false for a scroll bar's arrow (buttonobj.rs)
+    virtual bool GetTabable() const { return this->Call(EeUiButtonCall::Tabable) != 0; }
     virtual void TabbedTo() { this->Call(EeUiButtonCall::TabbedTo); }
     virtual void TabbedFrom() { this->Call(EeUiButtonCall::TabbedFrom); }
 
