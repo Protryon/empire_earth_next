@@ -49,6 +49,7 @@ pub mod imgobj;
 pub mod inputobj;
 pub mod labelobj;
 pub mod layoutobj;
+pub mod leafpaint;
 pub mod listobj;
 pub mod localize;
 pub mod menuobj;

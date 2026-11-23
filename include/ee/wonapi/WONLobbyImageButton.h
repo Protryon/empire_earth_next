@@ -8,9 +8,9 @@ enum ImageButtonType { ImageButtonType_Normal, ImageButtonType_Over, ImageButton
 class ImageButton : public Button {
 protected:
     virtual ~ImageButton(); // explicit destructor (stores its own vptr), at 0x006f7e20
-    SmartPtr<Image> mImages[5]; //44..54
-    bool mStretch; //58
 public:
+    SmartPtr<Image> mImages[5]; //44..54 (read by ImageButton.cpp's host for leafpaint.rs)
+    bool mStretch; //58
     ImageButton(); //2f7d70
     void SetImage(ImageButtonType type,Image* image) { this->mImages[type]=image; } // inline (used at 0x0078ad5d)
     virtual void GetDesiredSize(int&,int&); //2f7e80, GetDesiredSize
