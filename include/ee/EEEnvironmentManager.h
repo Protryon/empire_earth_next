@@ -37,9 +37,7 @@ public:
     void Step(unsigned long inTime);
     // EEEnvironmentManager.cpp's other members (provisional names)
     bool IsInStorm(const U2DPoint<long>& inPoint, bool inTypes13, bool inTypes24);
-    void DeleteStorms();
-    void UpdateStorms(float inTimeOfDay, unsigned long inTime);
-    void UpdateWind(float inTimeOfDay, unsigned long inTime);   // 0x12f3d6 (ret 8; both unused)
+    // (DeleteStorms, UpdateStorms, UpdateWind: ee_game gamecpp weather.rs)
     // inline (out-of-line COMDAT 0x15439f at the end of EEPhysics.cpp, its first user UpdateWeather passes mLD0; unsigned: ja)
     // Provisional name
     void Tick(unsigned long inTime);

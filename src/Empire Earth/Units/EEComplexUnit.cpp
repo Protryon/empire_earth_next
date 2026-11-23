@@ -238,22 +238,10 @@ bool EEComplexUnit::AddGarrison(long inAmount, long inGarrisonPopulation)
 }
 
 // Queues and pays for a technology or unit at this building (front or back), honouring the hero limit
+// (TEST ONLY: a capture records the research start, TQRS; cu_more.rs)
 void EEComplexUnit::QueueResearch(long inTechnology, bool inFront)
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY: a research start (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TQRS"));
-        theRecord.I32(this->GetPlayer()->mPlayerID);
-        theRecord.I32((long)this->mUnitID);
-        theRecord.I32(this->GetUnitClass()->GetUnitType());
-        theRecord.I32(inTechnology);
-        theRecord.U32(inFront ? 1 : 0);
-        theRecord.U32((unsigned int)this->mBuildQueue.size());
-        this->QueueResearchUncaptured(inTechnology, inFront);
-        theRecord.U32((unsigned int)this->mBuildQueue.size());
-        theRecord.Commit();
-        return;
-    }
-    this->QueueResearchUncaptured(inTechnology, inFront);
+    ee_units_cu_more(EE_UNITS_CUM_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);
 }
 
 void EEComplexUnit::QueueResearchUncaptured(long inTechnology, bool inFront)
@@ -470,14 +458,7 @@ EEComplexUnit* EEComplexUnit::Create(EEUnitClass* inClass, const GETransformatio
 // Reallocates the turret angle array with the given count, all zero
 void EEComplexUnit::ResizeTurretAngles(unsigned long inCount)
 {
-    delete[] this->mTurretAngles;
-    if (inCount == 0)
-        this->mTurretAngles = NULL;
-    else {
-        this->mTurretAngles = new float[inCount];
-        for (unsigned long i = 0; i < inCount; i++)
-            this->mTurretAngles[i] = 0.0f;
-    }
+    ee_units_cu_more(EE_UNITS_CUM_DO_RESIZE_TURRETS, this, (int64_t)inCount, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
 }
 
 // Sets the water state of a sea or space unit from its class's water kind (and the tile's depth level)
@@ -642,15 +623,7 @@ EEComplexUnit* EEComplexUnit::FindPassenger(unsigned long inUnitID)
 // Moves a tile position to the centre of the unit's footprint
 void EEComplexUnit::AddCenterOffset(float& ioX, float& ioY)
 {
-    EEUnitClass* theClass = this->GetUnitClass();
-    long theSize = theClass->GetTileSize();
-    if (theSize <= 1) {
-        ioX += 0.5f;
-        ioY += 0.5f;
-    } else {
-        ioX += theSize * 0.5f;
-        ioY += theClass->GetTileSize() * 0.5f;
-    }
+    ee_units_cu_more(EE_UNITS_CUM_DO_CENTER_OFFSET, this, 0, 0, 0, ioX, ioY, 0.0f, &ioX, &ioY);   // cu_more.rs
 }
 
 // Returns the unit's out-of-sync checksum for the selected parts (tile, physics, goals, area effects)
@@ -695,16 +668,7 @@ void EEComplexUnit::GetPosition(GE3DPoint& outPosition)
 // Returns the height of the model's top for effects, scaled by build progress while unbuilt
 float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
 {
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    if (inUseCurrentFrame)
-        this->mPhysicalModel.GetLocation().Apply(
-            this->GetModel()->mModels[this->GetAnimation()]->GetBoundingBox(this->mPhysicalModel.GetFrame()).GetTopRightBack(), thePoint);
-    else
-        this->mPhysicalModel.GetLocation().Apply(this->GetModel()->mModels[this->GetAnimation()]->GetBoundingBox(0).GetTopRightBack(), thePoint);
-    float theHeight = this->GetStats()->GetScale() * thePoint.GetZ();
-    if (!this->mIsBuilt)
-        theHeight *= (float)this->mHitPoints / this->GetStats()->mMaxHitPoints;
-    return theHeight;
+    return ee_units_cu_more(EE_UNITS_CUM_DO_EFFECT_HEIGHT, this, inUseCurrentFrame, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
 }
 
 // Returns whether a target is ignored (optionally only from the same tiles), dropping expired entries
@@ -868,26 +832,7 @@ void EEComplexUnit::ReplaceUnits(const std::vector<EEPUnitSwap>& inReplacements)
 // Places the unit on the ground at the location, pitching and rolling it with the terrain when its class does
 void EEComplexUnit::PlaceOnGround(const GE3DPoint& inLocation)
 {
-    GETransformation theTransformation(this->mPhysicalModel.GetLocation());
-    GE3DPoint theGround(0.0f, 0.0f, 0.0f);
-    EEMap* theMap = ::gWorld.mMap;
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theDirection(0.0f, 0.0f, 0.0f);
-    float theRoll = 0.0f;
-    float thePitch = 0.0f;
-    theMap->GetGroundPoint(inLocation, theGround);
-    this->GetUnitClass()->GroundLocation(theGround);
-    theTransformation.SetX(theGround.GetX());
-    theTransformation.SetY(theGround.GetY());
-    theTransformation.SetZ(theGround.GetZ());
-    theTransformation.Apply(theUp, theDirection);
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    if (this->GetUnitClass()->mPitchesWithTerrain)
-        thePitch = theMap->GetTerrainPitch(theTransformation);
-    if (this->GetUnitClass()->mRollsWithTerrain)
-        theRoll = theMap->GetTerrainRoll(theTransformation);
-    theTransformation.SetOrientationYPR(theYaw, thePitch, theRoll);
-    this->mPhysicalModel.SetLocation(theTransformation);
+    ee_units_cu_more(EE_UNITS_CUM_DO_PLACE_ON_GROUND, this, 0, 0, 0, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ(), NULL, NULL);   // cu_more.rs
 }
 
 // Queues a goal on squadron queues 1..3 (1..4 with the paratroopers power), as the goal or clones of it
@@ -1175,46 +1120,19 @@ void EEComplexUnit::ReplaceCargo(EEComplexUnit* inOld, EEComplexUnit* inNew)
 // Turns the unit level to face a point
 void EEComplexUnit::FaceToward(GE3DPoint inPoint)
 {
-    GETransformation theTransformation(this->mPhysicalModel.GetLocation());
-    float theDY = inPoint.GetY() - theTransformation.GetY();
-    float theYaw = UMArcTan2(-(inPoint.GetX() - theTransformation.GetX()), theDY);
-    theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-    this->SetTransformation(theTransformation, true);
+    ee_units_cu_more(EE_UNITS_CUM_DO_FACE_TOWARD, this, 0, 0, 0, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), NULL, NULL);   // cu_more.rs
 }
 
 // Turns the unit level to face the center of a square of tiles
 void EEComplexUnit::FaceTowardSquare(long inX, long inY, long inSize)
 {
-    GETransformation theTransformation(this->mPhysicalModel.GetLocation());
-    float theHalf = inSize * 0.5f;
-    long theX = UMFloor(inX + theHalf);
-    long theY = UMFloor(inY + theHalf);
-    EEMap* theMap = ::gWorld.mMap;
-    theTransformation.SetOrientationYPR(UMArcTan2(-((theX + 0.5f) - theTransformation.GetX()),
-                                                  (theY + 0.5f) - theTransformation.GetY()),
-                                        0.0f, 0.0f);
-    this->SetTransformation(theTransformation, true);
+    ee_units_cu_more(EE_UNITS_CUM_DO_FACE_SQUARE, this, inX, inY, inSize, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
 }
 
 // Turns the unit to face a target: a large target's footprint center, else its scaled top point or position
 void EEComplexUnit::FaceTarget(EEUnit* inTarget)
 {
-    GE3DPoint theLocation;
-    GE3DPoint theTop;
-    long theSize = inTarget->mUnitClass->mTileSize;
-    if (theSize > 1)
-        this->FaceTowardSquare(inTarget->GetTileX(), inTarget->GetTileY(), theSize);
-    else {
-        if (inTarget->GetComplexUnit() != NULL && inTarget->GetModel()->mModel != NULL) {
-            theTop = inTarget->GetModel()->mTopPoint;
-            float theScale = inTarget->GetComplexUnit()->mPhysicalModel.GetScale();
-            theTop.SetX(theTop.GetX() * theScale);
-            theTop.SetY(theTop.GetY() * theScale);
-            inTarget->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(theTop, theLocation);
-        } else
-            inTarget->GetPosition(theLocation);
-        this->FaceToward(theLocation);
-    }
+    ee_units_cu_more(EE_UNITS_CUM_DO_FACE_TARGET, this, (int64_t)(uintptr_t)inTarget, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
 }
 
 // Stops the unit: clears its build targets, goals and airport queue and sets it idle (aircraft circle)
@@ -1517,6 +1435,11 @@ template <class T> static T* EECuObject(uint64_t inHandle)
 
 // The C++ of EEComplexUnit's Rust bodies (ee_units cu_body.rs; EE_UNITS_CU_*): one statement of the original bodies
 // each, in their order; inA an object, inB and inC values, ioF floats in and out
+// cu_more.rs's shared locals (the transformation, point and vector its bodies kept), set where they were declared
+static GETransformation sCuMoreTransformation;
+static GE3DPoint sCuMorePoint;
+static GEVector sCuMoreVector;
+
 extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC, float (*ioF)[4])
 {
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
@@ -1704,11 +1627,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SOUND_PARAMETERS:
         theUnit->GetUnitClass()->GetSoundParameters(theUnit, EECuObject<EESoundObject>(inA), &f[0], &f[1], &f[2]);
         return 0;
-    case EE_UNITS_CU_PLAY_FRAME_SOUND:
-        theUnit->SetSound(gSoundManager->PlayAndReturnReferencedNode(
-            EECuObject<EESoundObject>(inA)->GetSampleID(), f[0], f[1], f[2], EECuObject<EESoundObject>(inA)->GetLooping(),
-            const_cast<char*>((const char*)theUnit->GetUnitClass()->mName)));
-        return 0;
+    case EE_UNITS_CU_PLAY_FRAME_SOUND: theUnit->SetSound(gSoundManager->PlayAndReturnReferencedNode( EECuObject<EESoundObject>(inA)->GetSampleID(), f[0], f[1], f[2], EECuObject<EESoundObject>(inA)->GetLooping(), const_cast<char*>((const char*)theUnit->GetUnitClass()->mName))); return 0;
     // PayInsurance's (inA the player)
     case EE_UNITS_CU_PLAYER: return (uint64_t)(uintptr_t)theUnit->mPlayer;
     case EE_UNITS_CU_CLASS_TECH_NODE: return (uint64_t)(uintptr_t)thePlayer->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
@@ -1965,20 +1884,14 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_DUMP_PART:
         ee_units_complex_dump((uint32_t)inB, theUnit, theUnit, theUnit, theUnit->GetUnitClass(), theUnit->GetStats(), &sCuDumpIn, &EEDumpWrite, theFile);
         return 0;
-    case EE_UNITS_CU_DUMP_ACTION:
-        fprintf(theFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n",
-                (const char*)EEUnitAction::GetActionName(theUnit->GetComplexUnit()->GetCommandType()), theUnit->GetComplexUnit()->GetCommandType());
-        return 0;
+    case EE_UNITS_CU_DUMP_ACTION: fprintf(theFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(theUnit->GetComplexUnit()->GetCommandType()), theUnit->GetComplexUnit()->GetCommandType()); return 0;
     case EE_UNITS_CU_NO_ACTIVE_GROUP: return theUnit->GetComplexUnit()->mActiveGroup == NULL;
     case EE_UNITS_CU_DUMP_NO_GROUP: fprintf(theFile, "OUT OF SYNCH DUMP:  This unit has no active group\n"); return 0;
     case EE_UNITS_CU_DUMP_GROUP:
         fprintf(theFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", theUnit->GetComplexUnit()->mActiveGroup->mFields.mAction);
         return 0;
     case EE_UNITS_CU_DUMP_GOALS: fprintf(theFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n"); return 0;
-    case EE_UNITS_CU_DUMP_QUEUE:
-        fprintf(theFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", (long)inB,
-                theUnit->GetComplexUnit()->mGoalQueues[(size_t)inB].mGoals.size());
-        return 0;
+    case EE_UNITS_CU_DUMP_QUEUE: fprintf(theFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", (long)inB, theUnit->GetComplexUnit()->mGoalQueues[(size_t)inB].mGoals.size()); return 0;
     case EE_UNITS_CU_DUMP_GOAL_KIND:
         fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", (long)inC, theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->mKind);
         return 0;
@@ -1997,12 +1910,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         fprintf(theFile, "OUT OF SYNCH DUMP:  Current Goal:\t%6d\n", theUnit->GetComplexUnit()->mGoalState->mKind);
         return 0;
     case EE_UNITS_CU_DUMP_WAYPOINT_SIZE: fprintf(theFile, "OUT OF SYNCH DUMP:  Waypoint Size:%zu\n", theUnit->GetComplexUnit()->mWaypoints.size()); return 0;
-    case EE_UNITS_CU_DUMP_WAYPOINT:
-        fprintf(theFile, "OUT OF SYNCH DUMP:  Waypoint[%ld]: X:%f, Y:%f, Z:%f\n", (long)inB,
-                (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetX(),
-                (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetY(),
-                (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetZ());
-        return 0;
+    case EE_UNITS_CU_DUMP_WAYPOINT: fprintf(theFile, "OUT OF SYNCH DUMP:  Waypoint[%ld]: X:%f, Y:%f, Z:%f\n", (long)inB, (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetX(), (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetY(), (double)theUnit->GetComplexUnit()->mWaypoints[(size_t)inB].mLocation.GetZ()); return 0;
     case EE_UNITS_CU_DUMP_AREA_HEADER:
         fprintf(theFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects ********************\n\n");
         return 0;
@@ -2042,9 +1950,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_LINK_PART_TO: theUnit->LinkPart(theOther); return 0;
     case EE_UNITS_CU_DEACTIVATE_THIS: ::gWorld.DeactivateUnit(theUnit); return 0;
     case EE_UNITS_CU_PAIRS_SIZE: return (int64_t)EECuObject<const std::vector<EEPUnitSwap> >(inA)->size();
-    case EE_UNITS_CU_PAIR_UNIT:
-        return (uint64_t)(uintptr_t)(inC == 0 ? (*EECuObject<const std::vector<EEPUnitSwap> >(inA))[(size_t)inB].mOld
-                                              : (*EECuObject<const std::vector<EEPUnitSwap> >(inA))[(size_t)inB].mNew);
+    case EE_UNITS_CU_PAIR_UNIT: return (uint64_t)(uintptr_t)(inC == 0 ? (*EECuObject<const std::vector<EEPUnitSwap> >(inA))[(size_t)inB].mOld : (*EECuObject<const std::vector<EEPUnitSwap> >(inA))[(size_t)inB].mNew);
     case EE_UNITS_CU_GOAL_CHANGED:
         return theUnit->mGoalQueues[(size_t)inB].mGoals.size() <= (size_t)inC || theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC] != EECuObject<EEUnitGoal>(inA);
     case EE_UNITS_CU_QUEUE_GOAL_AT: return (uint64_t)(uintptr_t)theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC];
@@ -2116,10 +2022,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_QUEUE_GOAL: theUnit->QueueGoal(EECuObject<EEUnitGoal>(inA), (unsigned long)inB); return 0;
     case EE_UNITS_CU_AREA_EFFECTS_SIZE: return (int64_t)theUnit->mAreaEffects.GetSize();
     case EE_UNITS_CU_AREA_EFFECT_RADIUS: return EECuBits(theUnit->mAreaEffects.mItems[(size_t)inB]->GetRadius());
-    case EE_UNITS_CU_COLLECT_EFFECTS:
-        ::gAEManager.CollectEffects(EECuFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()),
-                                    (unsigned long)inC, &theUnit->mAreaEffects, theUnit);
-        return 0;
+    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(EECuFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
     case EE_UNITS_CU_PLAYER_ID: return theUnit->mPlayer->mPlayerID;
     case EE_UNITS_CU_AFFECTING_KIND: return theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->mTemplate->mKind;
     case EE_UNITS_CU_SET_OUT_EFFECT:
@@ -2357,10 +2260,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_TIMES_UPDATED: return (int64_t)theUnit->mComplexUnit->mTimesUpdated;
     case EE_UNITS_CU_HAS_ACTIVE_GROUP: return theUnit->mComplexUnit->mActiveGroup != NULL;
     case EE_UNITS_CU_COMMAND_OR_ZERO: return theUnit->mComplexUnit->mCommand ? theUnit->mComplexUnit->mCommand->mType : 0;
-    case EE_UNITS_CU_CHECKSUM_LOCATION:
-        return EECuBits(inB == 0 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX()
-                        : inB == 1 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY()
-                                   : theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetZ());
+    case EE_UNITS_CU_CHECKSUM_LOCATION: return EECuBits(inB == 0 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX() : inB == 1 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY() : theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetZ());
     case EE_UNITS_CU_HEIGHT: return EECuBits(theUnit->mComplexUnit->mHeight);
     case EE_UNITS_CU_GOAL_CHECKSUM: return theUnit->mComplexUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC]->GetOutOfSynchChecksum();
     case EE_UNITS_CU_AFFECTING_COUNT: return (int64_t)theUnit->mAffectingAreaEffects.mItems.size();
@@ -2370,14 +2270,8 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_CHECKSUM: return theUnit->EEUnit::GetChecksum((unsigned long)inB);
     // Init's
     case EE_UNITS_CU_UNIT_INIT: theUnit->EEUnit::Init(theClass, EECuObject<EEPlayer>((uint64_t)inB)); return 0;
-    case EE_UNITS_CU_INIT_COLLIDABLE:
-        theUnit->mIsCollidable = theClass->mIsCollidable && (!(theClass->mDomains & kMovementAir) || theClass->FliesOver()) &&
-            !theClass->mIsProjectile && theClass->mUnitType != kUnitTypeWaypoint;
-        return 0;
-    case EE_UNITS_CU_INIT_CAN_BE_HIDDEN:
-        theUnit->mCanBeHidden = (!(theClass->mDomains & kMovementAir) && !theClass->mIsObstacle && !theClass->mIsProjectile &&
-            theClass->mMaxVelocity > 0.0f) || theClass->mFamily == kUnitFamilyAABuilding;
-        return 0;
+    case EE_UNITS_CU_INIT_COLLIDABLE: theUnit->mIsCollidable = theClass->mIsCollidable && (!(theClass->mDomains & kMovementAir) || theClass->FliesOver()) && !theClass->mIsProjectile && theClass->mUnitType != kUnitTypeWaypoint; return 0;
+    case EE_UNITS_CU_INIT_CAN_BE_HIDDEN: theUnit->mCanBeHidden = (!(theClass->mDomains & kMovementAir) && !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f) || theClass->mFamily == kUnitFamilyAABuilding; return 0;
     case EE_UNITS_CU_UM_FLOOR: return UMFloor(EECuFloat(inB));
     case EE_UNITS_CU_MOVE_TO: theUnit->MoveTo((long)inB, (long)inC, false); return 0;
     case EE_UNITS_CU_UPDATE_WATER_STATE_OFF: theUnit->UpdateWaterState(false); return 0;
@@ -2397,6 +2291,45 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_AREA_EFFECTS_ADD: theUnit->mAreaEffects.Add(EECuObject<EEAreaEffect>(inA)); return 0;
     case EE_UNITS_CU_EFFECT_DEREFERENCE: EECuObject<EEAreaEffect>(inA)->Dereference(); return 0;
     case EE_UNITS_CU_CLASS_CATEGORY_OF: return theClass->mCategory;
+    // cu_more.rs's (QueueResearch, ResizeTurretAngles, AddCenterOffset, GetEffectHeight, PlaceOnGround, the facings)
+    case EE_UNITS_CUM_PLAYER_ID: return theUnit->GetPlayer()->mPlayerID;
+    case EE_UNITS_CUM_UNIT_ID: return (long)theUnit->mUnitID;
+    case EE_UNITS_CUM_UNIT_TYPE: return theUnit->GetUnitClass()->GetUnitType();
+    case EE_UNITS_CUM_BUILD_QUEUE_SIZE: return (int64_t)theUnit->mBuildQueue.size();
+    case EE_UNITS_CUM_QUEUE_UNCAPTURED: theUnit->QueueResearchUncaptured((long)inB, inC != 0); return 0;
+    case EE_UNITS_CUM_TURRETS_DELETE: delete[] theUnit->mTurretAngles; return 0;
+    case EE_UNITS_CUM_TURRETS_NULL: theUnit->mTurretAngles = NULL; return 0;
+    case EE_UNITS_CUM_TURRETS_NEW: theUnit->mTurretAngles = new float[(unsigned long)inB]; return 0;
+    case EE_UNITS_CUM_TURRET_ZERO: theUnit->mTurretAngles[(unsigned long)inB] = 0.0f; return 0;
+    case EE_UNITS_CUM_TILE_SIZE: return theUnit->GetUnitClass()->GetTileSize();
+    case EE_UNITS_CUM_EFFECT_TOP: theUnit->mPhysicalModel.GetLocation().Apply(theUnit->GetModel()->mModels[theUnit->GetAnimation()]->GetBoundingBox(inB != 0 ? theUnit->mPhysicalModel.GetFrame() : 0).GetTopRightBack(), sCuMorePoint = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
+    case EE_UNITS_CUM_POINT_OUT: memcpy(f, &sCuMorePoint.mX, 3 * sizeof(float)); return 0;
+    case EE_UNITS_CUM_STATS_SCALE: f[0] = theUnit->GetStats()->GetScale(); return 0;
+    case EE_UNITS_CUM_IS_BUILT: return theUnit->mIsBuilt;
+    case EE_UNITS_CUM_HIT_POINTS: return theUnit->mHitPoints;
+    case EE_UNITS_CUM_MAX_HIT_POINTS: return theUnit->GetStats()->mMaxHitPoints;
+    case EE_UNITS_CUM_LOAD_LOCATION: sCuMoreTransformation = theUnit->mPhysicalModel.GetLocation(); return 0;
+    case EE_UNITS_CUM_LOCATION_OUT: sCuMoreTransformation.GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_CUM_SET_YPR: sCuMoreTransformation.SetOrientationYPR(f[0], f[1], f[2]); return 0;
+    case EE_UNITS_CUM_APPLY_TRANSFORMATION: theUnit->SetTransformation(sCuMoreTransformation, true); return 0;
+    case EE_UNITS_CUM_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), sCuMorePoint = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
+    case EE_UNITS_CUM_CLASS_GROUND: theUnit->GetUnitClass()->GroundLocation(sCuMorePoint); return 0;
+    case EE_UNITS_CUM_POSITION_AT_POINT: sCuMoreTransformation.SetPosition(sCuMorePoint.GetX(), sCuMorePoint.GetY(), sCuMorePoint.GetZ()); return 0;
+    case EE_UNITS_CUM_APPLY_UP: sCuMoreTransformation.Apply(GEVector(0.0f, 1.0f, 0.0f), sCuMoreVector = GEVector(0.0f, 0.0f, 0.0f)); return 0;
+    case EE_UNITS_CUM_VECTOR_OUT: f[0] = sCuMoreVector.GetX(), f[1] = sCuMoreVector.GetY(), f[2] = sCuMoreVector.GetZ(); return 0;
+    case EE_UNITS_CUM_PITCHES: return theUnit->GetUnitClass()->mPitchesWithTerrain;
+    case EE_UNITS_CUM_ROLLS: return theUnit->GetUnitClass()->mRollsWithTerrain;
+    case EE_UNITS_CUM_TERRAIN_PITCH: f[0] = ::gWorld.mMap->GetTerrainPitch(sCuMoreTransformation); return 0;
+    case EE_UNITS_CUM_TERRAIN_ROLL: f[0] = ::gWorld.mMap->GetTerrainRoll(sCuMoreTransformation); return 0;
+    case EE_UNITS_CUM_SET_LOCATION: theUnit->mPhysicalModel.SetLocation(sCuMoreTransformation); return 0;
+    case EE_UNITS_CUM_TILE_SIZE_OF: return EECuObject<EEUnit>(inA)->mUnitClass->mTileSize;
+    case EE_UNITS_CUM_TILE_X_OF: return EECuObject<EEUnit>(inA)->GetTileX();
+    case EE_UNITS_CUM_TILE_Y_OF: return EECuObject<EEUnit>(inA)->GetTileY();
+    case EE_UNITS_CUM_HAS_MODEL: return EECuObject<EEUnit>(inA)->GetComplexUnit() != NULL && EECuObject<EEUnit>(inA)->GetModel()->mModel != NULL;
+    case EE_UNITS_CUM_TOP_POINT_OF: memcpy(f, &EECuObject<EEUnit>(inA)->GetModel()->mTopPoint.mX, 3 * sizeof(float)); return 0;
+    case EE_UNITS_CUM_SCALE_OF: f[0] = EECuObject<EEUnit>(inA)->GetComplexUnit()->mPhysicalModel.GetScale(); return 0;
+    case EE_UNITS_CUM_APPLY_OF: EECuObject<EEUnit>(inA)->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(GE3DPoint(f[0], f[1], f[2]), sCuMorePoint); return 0;
+    case EE_UNITS_CUM_POSITION_OF: EECuObject<EEUnit>(inA)->GetPosition(sCuMorePoint); return 0;
     }
     return 0;
 }

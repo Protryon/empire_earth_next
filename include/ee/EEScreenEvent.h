@@ -5,11 +5,15 @@
 // Requires lle/UIEvent.h.
 #ifndef EE_EESCREENEVENT_H
 #define EE_EESCREENEVENT_H
+#include "rust/game/screens.h"
 
 class EEScreenEvent : public UIEvent {
 public:
     explicit EEScreenEvent(unsigned long inEvent) : mEvent(inEvent) {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        return ee_screens_event(this->mEvent, inForm, inEntity);
+    }
 
     unsigned long mEvent;                   // EE_SCREENS_*
 };

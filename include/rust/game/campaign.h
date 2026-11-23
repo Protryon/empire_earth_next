@@ -17,12 +17,10 @@ enum class EeCampaignCpp : uint32_t {
   /// `new FSPath`
   PathNew,
   PathDereference,
-  /// `AddDirectory` of "<startup>Users\<a0>\"
-  PathAddUserDirectory,
+  /// `AddDirectory(*(FSFileSpec*)a0, true)`
+  PathAddDirectory,
   /// `FindFile(UString(a0), *(FSFileSpec**)a1)`
   PathFindFile,
-  /// a new `FSFileSpec` of "<startup>Users\<a0>\" with the file a1
-  SpecNewUser,
   SpecDelete,
   /// `Delete()` of the file
   SpecRemove,
@@ -30,8 +28,6 @@ enum class EeCampaignCpp : uint32_t {
   ArchiveOpen,
   ArchiveClose,
   ArchiveDelete,
-  /// `GetTag(a0, value)` with the value a1 in and out (the sink a2) -> the result
-  ArchiveGetTag,
   ArchiveSetTag,
   /// `FindFile(UString(a0), *(FSMemoryFile**)a1)`
   ArchiveFindFile,
@@ -53,6 +49,7 @@ enum class EeCampaignCpp : uint32_t {
   CivBuilderEdit,
   CivBuilderSave,
   CivBuilderFree,
+  /// `EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer())`
   ApplyCivilization,
   MemberRequiredCiv,
   MemberBackgroundImage,
@@ -68,19 +65,92 @@ enum class EeCampaignCpp : uint32_t {
   DataPathExists,
   /// `GetTag(a0, *(UWideString*)a1)`
   ArchiveGetTagInto,
-  /// a line of the list file into the sink a0 -> `UString::Load`'s result
+  /// `new UString(a0)`
+  LineNew,
+  /// `((UString*)p)->Load(*(FSMemoryFile*)a0)`
   LineLoad,
+  /// the `UString`'s text into the sink a0
+  LineText,
+  LineDelete,
   MemoryDelete,
-  /// `*(UWideString*)a1 = DecryptPassword(a0)`
-  Decrypt,
-  /// `GetScenarioListFile()` into the sink a0
-  ScenarioListFile,
   ScenariosClear,
   /// the scenario without its extension (the last four characters) pushed
   ScenariosPushStripped,
   ErrorReadingTag,
   ErrorCouldntOpen,
-  ErrorScenarioMissing,
+  /// a `UWideString`'s text into the sink a0
+  WideText,
+  /// `*(UWideString*)p += a0`
+  WideAppend,
+  /// `new UWideString`
+  WideNew,
+  WideDelete,
+  MemberDirectory,
+  MemberScenarios,
+  /// `new std::vector<UWideString>`
+  WideListNew,
+  WideListDelete,
+  WideListLen,
+  /// element a1 into the sink a0
+  WideListAt,
+  /// `std::find` of a0 (`operator==`) in the list
+  WideListContains,
+  /// `gScenarioExtension` into the sink a0
+  ScenarioExtension,
+  /// `gCampaignExtension` into the sink a0
+  CampaignExtension,
+  /// `gU52A280` (the campaign scenarios' prefix) into the sink a0
+  ScenarioPrefix,
+  /// `gResource->GetString(a0, *(UWideString*)p)`
+  ResourceString,
+  /// `sprintf(*(UWideString*)p, *(UWideString*)a0, a1, a2)`
+  Sprintf,
+  /// `new FSFileSpec`
+  SpecNew,
+  SpecSetStartupVolume,
+  SpecSetDirectory,
+  SpecSetFile,
+  SpecCreate,
+  SpecOpenWrite,
+  SpecClose,
+  /// `Copy(UString(a0), false, false)`
+  SpecCopy,
+  /// volume + directory + file into the sink a0
+  SpecPathText,
+  /// `UString(a0).Save(*(FSFileSpec*)p)`
+  LineSave,
+  /// `gDataPath->GetFileArchiveStatus(a0, *(bool*)a1)`
+  ArchiveStatus,
+  /// `new EEPSaveGameHeader`
+  HeaderNew,
+  /// `LoadFromFile(*(FSFileSpec*)a0)`
+  HeaderLoad,
+  /// a copy of the header's media strings' `ListMediaFiles(a0, list a1, error a2, prefixed a3)`
+  HeaderListMedia,
+  HeaderDelete,
+  /// `EELoadPersistent(a0, 6, *(FSPersistent**)a1)`
+  PersistentLoad,
+  /// the restorable's scenario manager, or 0
+  PersistentManager,
+  ManagerEffects,
+  ManagerEffect,
+  /// a media effect that plays a sound or sends a dialogue
+  EffectIsSound,
+  /// the effect's file name into the sink a0
+  EffectFileName,
+  /// the restorable's manager deleted (its pointer cleared)
+  PersistentFreeManager,
+  PersistentDelete,
+  /// `&mCampaignName`
+  FormCampaignName,
+  /// `mChecksum = a0`
+  FormSetChecksum,
+  /// `EEGetFileChecksum(*(FSFileSpec*)p, UString(a0), 0)`
+  FileChecksum,
+  /// built-in campaign a1's name (gCampaignAOCRoman .. gCampaignEELearning) into the sink a0
+  BuiltInName,
+  /// built-in campaign a0's checksum (gAOCRomanChecksum ..)
+  BuiltInChecksum,
 };
 
 /// `EECampaignProgress`' lists (the C++ class's handle).
@@ -102,6 +172,30 @@ void ee_campaign_text_push(EeCampaignText *sink, const uint8_t *bytes, size_t le
 /// # Safety
 /// `file` is a C string; the objects are live.
 bool ee_campaign_load(void *campaign, const char *file, void *error, bool check);
+
+/// # Safety
+/// `manager` is a live `EECampaignFormManager`.
+void ee_campaign_update_checksum(void *manager);
+
+/// # Safety
+/// `name` is a C string or null.
+unsigned long ee_campaign_built_in(const char *name);
+
+/// `EECampaign::Save` (`campaign` the C++ object, `error` its `UWideString&`).
+///
+/// # Safety
+/// The objects are live.
+bool ee_campaign_save(void *campaign, void *error);
+
+/// `EECampaign::ListScenarioFiles` (`files` a `std::vector<UWideString>*`, `error` a `UWideString*`).
+///
+/// # Safety
+/// The objects are live.
+bool ee_campaign_list_scenario_files(void *campaign,
+                                     void *files,
+                                     void *error,
+                                     bool add,
+                                     bool prefixed);
 
 EeCampaignProgress *ee_campaign_progress_new();
 

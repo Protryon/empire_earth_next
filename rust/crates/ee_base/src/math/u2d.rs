@@ -222,9 +222,64 @@ pub unsafe extern "C" fn ee_u2d_rect_io(
     rect_io(&mut CppFile(file), open, fields, write)
 }
 
+/// `U2DPoint<T>::Load` (`write` false) and `Save` over a C++ `FSFile*`: x, then y (when x went), through the file's
+/// typed calls (`Read(long&)`'s 32-bit copy and `Write(int32_t)`, or the float calls); `kErrorNotOpen` (and no
+/// access) when the file's `GetIsOpen()` is false. `point` is the point's two `long`s, or with `float` two floats.
+///
+/// # Safety
+/// `file` is a live C++ `FSFile*`; `point` points at the two members.
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // (c_long: 32 bits on Windows, 64 on LP64)
+pub unsafe extern "C" fn ee_u2d_point_io(file: *mut c_void, point: *mut c_void, float: bool, write: bool) -> c_long {
+    let mut file = CppFile(file);
+    if !file.is_open() {
+        return ERROR_NOT_OPEN;
+    }
+    for i in 0..2 {
+        // SAFETY: the point is valid for the call (the function's contract)
+        let status = unsafe {
+            match (float, write) {
+                (false, false) => ee_fs_read_long(file.0, point.cast::<c_long>().add(i)),
+                (false, true) => file.write_i32(*point.cast::<c_long>().add(i) as i32) as c_long,
+                (true, false) => file.read_f32(&mut *point.cast::<f32>().add(i)) as c_long,
+                (true, true) => file.write_f32(*point.cast::<f32>().add(i)) as c_long,
+            }
+        };
+        if status != 0 {
+            return status;
+        }
+    }
+    0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_point_goes_x_then_y_and_asks_whether_the_file_is_open() {
+        use crate::fs::cppfile::tests::with_file;
+        let mut longs: [c_long; 2] = [-3, 7];
+        let ((), m) = with_file(&[], |f| {
+            // SAFETY: a registered file and a valid point
+            assert_eq!(unsafe { ee_u2d_point_io(f.0, longs.as_mut_ptr().cast(), false, true) }, 0);
+        });
+        assert_eq!(m.log, ["is_open", "write_i32 -3", "write_i32 7"]);
+        let mut back: [c_long; 2] = [0, 0];
+        let ((), _) = with_file(&m.data, |f| {
+            // SAFETY: as above
+            assert_eq!(unsafe { ee_u2d_point_io(f.0, back.as_mut_ptr().cast(), false, false) }, 0);
+        });
+        assert_eq!(back, longs);
+        // a short file: x read, y's error returned and y untouched
+        let mut floats = [0.0f32, 9.0];
+        let ((), m) = with_file(&1.5f32.to_bits().to_le_bytes(), |f| {
+            // SAFETY: as above
+            assert_eq!(unsafe { ee_u2d_point_io(f.0, floats.as_mut_ptr().cast(), true, false) }, 0x12);
+        });
+        assert_eq!(floats, [1.5, 9.0]);
+        assert_eq!(m.log, ["is_open", "read_f32", "read_f32"]);
+    }
 
     #[test]
     fn a_line_of_tiles_ends_at_its_target() {

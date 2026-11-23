@@ -491,8 +491,45 @@ impl EventHost for FnHost {
         !self.player.is_null()
     }
     fn op(&mut self, op: i32, event: &EeUnitsPlayerEvent) -> i32 {
+        let (list, player, f) = (self.list, self.player, self.f);
         // SAFETY: the C++ callback's contract
-        unsafe { (self.f)(self.list, self.player, op, event) }
+        let mut call = |op: i32, e: &EeUnitsPlayerEvent| unsafe { f(list, player, op, e) };
+        // the compound operations as their one-statement ones (player_events_split.rs)
+        let mut shared = || shared_sight(player as u64);
+        if let Some(r) = crate::units::player_events_split::split(op, event, &mut call, &mut shared) {
+            return r;
+        }
+        call(op, event)
+    }
+}
+
+/// Whether the local player sees player `player`'s sight: it is the local player, or the two are allied
+/// (`IsAlliedWith`: neither at war with the other) and both share their line of sight (`mSharedLOS`).
+fn shared_sight(player: u64) -> bool {
+    // SAFETY: the C++ calls the list with a live player and holds the world
+    let t = unsafe { crate::world::WorldRead::begin() };
+    let Some(local) = crate::world::WorldView::global(&t).and_then(|w| w.current_player()) else { return false };
+    if local.handle() == player {
+        return true;
+    }
+    // SAFETY: as above
+    let Some(p) = (unsafe { crate::world::PlayerView::of(&t, player) }) else { return false };
+    local.enemy(p.id() as usize) == 0 && p.enemy(local.id() as usize) == 0 && local.shared_los() && p.shared_los()
+}
+
+/// The list's alert sounds got and loaded (`load`, the constructor's) or unloaded and the one playing released (the
+/// destructor's) over the C++ host on `list` (player_events_split.rs).
+///
+/// # Safety
+/// `list` is a live list and `f` its host.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_events_sounds(list: *mut c_void, f: EeUnitsEventsFn, load: bool) {
+    // SAFETY: the caller's contract
+    let mut call = |op: i32, e: &EeUnitsPlayerEvent| unsafe { f(list, std::ptr::null_mut(), op, e) };
+    if load {
+        crate::units::player_events_split::load_sounds(&mut call);
+    } else {
+        crate::units::player_events_split::unload_sounds(&mut call);
     }
 }
 

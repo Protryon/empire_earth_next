@@ -17,9 +17,9 @@ inline void EEStoreMesh(GEModel* inModel, const EeGfxMeshVertex* inVertices, siz
     for (unsigned long i = 0; i < inVertexCount; i++) {
         const EeGfxMeshVertex& v = inVertices[i];
         if (v.set & EE_GFX_MESH_POINT)
-            theVertices->SetPoint(GE3DPoint(v.point.x, v.point.y, v.point.z), i);
+            theVertices->SetPoint(GE3DPoint(v.point.mX, v.point.mY, v.point.mZ), i);
         if (v.set & EE_GFX_MESH_NORMAL)
-            theVertices->SetNormal(GEVector(v.normal.x, v.normal.y, v.normal.z), i);
+            theVertices->SetNormal(GEVector(v.normal.mX, v.normal.mY, v.normal.mZ), i);
         if (v.set & EE_GFX_MESH_COORD)
             theVertices->SetTextureCoordinate(GETextureCoordinate(v.coord.u, v.coord.v), i);
         if (v.set & EE_GFX_MESH_COLOR)

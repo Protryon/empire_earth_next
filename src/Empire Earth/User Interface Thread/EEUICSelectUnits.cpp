@@ -44,14 +44,6 @@ EEUICSelectUnits::~EEUICSelectUnits()
     this->mLasso->Dereference();
 }
 
-// CopyData, DrawPolygons, the double click, the release, the drag and StartSelection: ee_screens select_units.rs
-// (EE_SCREENS_SU_DO_*) over the picker's and actions' ops below (the lines and the unit's reads: hud_ctl_ffi.rs)
-long EEUICSelectUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)
-{
-    return (long)ee_screens_select_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f,
-                                         inLocation ? inLocation->GetY() : 0.0f);
-}
-
 int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
     EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);

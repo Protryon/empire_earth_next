@@ -101,7 +101,7 @@ pub const EE_SCENARIO_STRING_NONE: usize = 4;
 pub const EE_SCENARIO_STRING_OFF_MAP: usize = 5;
 pub const EE_SCENARIO_STRING_PREVIOUS_LOCATION: usize = 6;
 /// Their string ids (`IDS_COPY` .. `IDS_PREVIOUS_LOCATION`, ee/EEStringIDs.h).
-const EE_SCENARIO_STRING_IDS: [usize; 7] = [13002, 13003, 13004, 13005, 13001, 13006, 13007];
+pub(crate) const EE_SCENARIO_STRING_IDS: [usize; 7] = [13002, 13003, 13004, 13005, 13001, 13006, 13007];
 
 /// `kSMConditionObject`: an object's Exists condition (they stay at the end of the conditions).
 const CONDITION_OBJECT: c_ulong = 1;

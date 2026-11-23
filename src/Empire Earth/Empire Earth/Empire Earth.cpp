@@ -208,166 +208,12 @@ EE_CONSTRUCT_GLOBAL(UString, gCDAudioThreadName, ("CDAudio"));
 extern FSPath* gDataPath;
 extern FSPath* gCivilizationDataPath;
 
-// The unit's own data (provisional names): the start screen's window class (0x4c05e8, a char array: both
-// RegisterClassEx and CreateWindowEx take its address), its bitmap, the bitmap's BITMAP and the memory DC
-// (0x52a18c / 0x52a190 / 0x52a188)
-#ifdef _WIN32
-static char sStartScreenClassName[] = "Loading Game Window";
-static HBITMAP sStartScreenBitmap;
-static BITMAP sStartScreenBitmapInfo;
-static HDC sStartScreenDC;
-#endif
 static TMTimer* sTimer;                     // 0x5319ec (EECreateGameTimer's assert names it)
 extern HINSTANCE gInstance;                 // 0x5319d8 (WinMain's instance, set by 0x540d73)
-volatile bool gStartScreenPainted;              // 0x5319f0 (the start screen's first WM_PAINT sets it)
-char gGameWindowTitle[4];                   // 0x5319f4 the start screen's title (only use 0x13f520 pushes it; never written; size 1..4 inferred)
 
 void EESetThreadFloatingPoint(const char* inThreadName);
 
-// the loading splash screen ("Loading Game Window", thread "StartScreenMainThread"; the class has no virtuals: no
-// RTTI; provisional names, mEndThreadEvent from the ctor's assert)
-class EEStartScreen {
-public:
-    EEStartScreen(HINSTANCE inInstance);
-    ~EEStartScreen();
-    void Start();
-    void Stop();
-#ifdef _WIN32
-    static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
-#endif
-    static unsigned long ThreadMain(void* inParameter);
-    HINSTANCE mInstance;                    // +0x00
-    TSThread* mThread;                      // +0x04
-    TSEvent* mEndThreadEvent;               // +0x08
-    bool mQuit;                             // +0x0c
-};
-// Creates the loading splash screen for the instance, with its end-of-thread event
-EEStartScreen::EEStartScreen(HINSTANCE inInstance)
-{
-    this->mInstance = inInstance;
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mEndThreadEvent) == keseOK, 411);
-    this->mQuit = false;
-}
-
-// Destroys the splash screen's end-of-thread event
-EEStartScreen::~EEStartScreen()
-{
-    TSScheduler::DestroyEvent(this->mEndThreadEvent);
-}
-
-// In full screen only: starts the splash screen thread and waits until it has painted the splash bitmap
-// (Win32 only: elsewhere there is no splash window yet; PORT.md step 4)
-void EEStartScreen::Start()
-{
-#ifdef _WIN32
-    if (gGamePreferences.mSettings.GetFullScreen() != true)
-        return;
-    gStartScreenPainted = false;
-    TSScheduler::CreateThread(this->mThread, EEStartScreen::ThreadMain, this);
-    while (gStartScreenPainted == false)
-        PlatSleep(1);
-#endif
-}
-
-// In full screen only: tells the splash screen thread to quit, waits for it to end and destroys it
-void EEStartScreen::Stop()
-{
-#ifdef _WIN32
-    if (gGamePreferences.mSettings.GetFullScreen() != true)
-        return;
-    this->mQuit = true;
-    this->mEndThreadEvent->Wait(kTSWaitInfinite);
-    TSScheduler::DestroyThread(this->mThread);
-#endif
-}
-
-#ifdef _WIN32
-
-// Splash window procedure: hides the cursor, skips background erases and paints the splash bitmap (flagging it painted)
-LRESULT CALLBACK EEStartScreen::WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
-{
-    HDC theDC;
-    HGDIOBJ theOldObject;
-    switch (inMessage) {
-    case WM_SETCURSOR:
-        ShowCursor(FALSE);
-    case WM_ERASEBKGND:
-        return 0;
-    case WM_PAINT:
-        theDC = GetDC(inWindow);
-        theOldObject = SelectObject(sStartScreenDC, sStartScreenBitmap);
-        BitBlt(theDC, 0, 0, sStartScreenBitmapInfo.bmWidth, sStartScreenBitmapInfo.bmHeight, sStartScreenDC, 0, 0,
-               SRCCOPY);
-        ReleaseDC(inWindow, theDC);
-        SelectObject(sStartScreenDC, theOldObject);
-        gStartScreenPainted = true;
-        return 0;
-    }
-    return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-}
-
-// Splash screen thread: loads the splash bitmap, shows it in a centred popup window and pumps messages until
-// told to quit, then signals its end event and frees the bitmap
-unsigned long EEStartScreen::ThreadMain(void* inParameter)
-{
-    EEStartScreen* theScreen = static_cast<EEStartScreen*>(inParameter);
-    unsigned long theMessage;
-    void* theParameter1;
-    void* theParameter2;
-    sStartScreenBitmap = LoadBitmap(theScreen->mInstance, MAKEINTRESOURCE(0x70));
-    if (sStartScreenBitmap != NULL) {
-        GetObject(sStartScreenBitmap, sizeof(BITMAP), &sStartScreenBitmapInfo);
-        WNDCLASSEX theClass;
-        theClass.cbSize = sizeof(WNDCLASSEX);
-        theClass.style = CS_HREDRAW | CS_VREDRAW;
-        theClass.lpfnWndProc = EEStartScreen::WindowProc;
-        theClass.cbClsExtra = 0;
-        theClass.cbWndExtra = 0;
-        theClass.hInstance = theScreen->mInstance;
-        theClass.hIcon = NULL;
-        theClass.hCursor = LoadCursor(gInstance, MAKEINTRESOURCE(0x68));
-        theClass.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
-        theClass.lpszMenuName = NULL;
-        theClass.lpszClassName = sStartScreenClassName;
-        theClass.hIconSm = NULL;
-        RegisterClassEx(&theClass);
-        RECT theDesktop;
-        HWND theDesktopWindow = GetDesktopWindow();
-        GetWindowRect(theDesktopWindow, &theDesktop);
-        theDesktop.left = UMFloatToLong((theDesktop.right - theDesktop.left) * 0.5f)
-                          - UMFloatToLong(sStartScreenBitmapInfo.bmWidth * 0.5f);
-        theDesktop.top = UMFloatToLong((theDesktop.bottom - theDesktop.top) * 0.5f)
-                         - UMFloatToLong(sStartScreenBitmapInfo.bmHeight * 0.5f);
-        HWND theWindow = CreateWindowEx(WS_EX_TOOLWINDOW, sStartScreenClassName, gGameWindowTitle,
-                                        WS_POPUP | WS_VISIBLE, theDesktop.left, theDesktop.top,
-                                        sStartScreenBitmapInfo.bmWidth, sStartScreenBitmapInfo.bmHeight, NULL, NULL,
-                                        theScreen->mInstance, NULL);
-        if (theWindow != NULL) {
-            HDC theDC = GetDC(theWindow);
-            sStartScreenDC = CreateCompatibleDC(theDC);
-            ReleaseDC(theWindow, theDC);
-            // the splash window's own message pump (TSThread::Receive no longer dispatches Win32 messages)
-            do {
-                MSG theWin32Message;
-                theMessage = 0;
-                if (PeekMessage(&theWin32Message, NULL, 0, 0, PM_REMOVE)) {
-                    theMessage = theWin32Message.message;
-                    TranslateMessage(&theWin32Message);
-                    DispatchMessage(&theWin32Message);
-                }
-                EESetThreadFloatingPoint("StartScreenMainThread");
-                if (theScreen->mQuit == true)
-                    PostQuitMessage(0);
-                PlatSleep(1);
-            } while (theMessage != 0x12);
-            theScreen->mEndThreadEvent->Set();
-            ReleaseDC(theWindow, sStartScreenDC);
-        }
-        DeleteObject(sStartScreenBitmap);
-    }
-    return 0;
-}
-#endif   // _WIN32: the start screen's window
+// (the loading splash screen, EEStartScreen: ee_game gamecpp start_screen.rs)
 
 // Puts the calling thread's FPU into 53-bit precision and round-to-nearest mode (the thread name is unused)
 // (every game thread calls it first, passing its name)
@@ -1822,13 +1668,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
         break;
-    case O::RunSplashNew: return P64(new EEStartScreen((HINSTANCE)a[0]));
-    case O::RunSplashDelete: delete (EEStartScreen*)p;
-        break;
-    case O::RunSplashStart: ((EEStartScreen*)p)->Start();
-        break;
-    case O::RunSplashStop: ((EEStartScreen*)p)->Stop();
-        break;
     case O::RunInstanceMutex: return EECreateInstanceMutex();
     case O::RunSetEventPump: TSThread::SetEventPump(EEPumpWindowEvent, PlatCurrentThreadId());
         break;
@@ -1875,10 +1714,11 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
+double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
+
 double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-    return 0.0;
+    return EECore10OpAF(inOp, p, a, f);
 }
 
 // The deferred COMDATs at the end of the unit (0x14494d..0x14622a: the inline-class deleting dtors and every template
@@ -1891,4 +1731,26 @@ double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 long EEFn0FCA98()
 {
     return 0;
+}
+
+// ------------------------------------------------------------------------- round 10, lane E: the entry, the start screen, the test drivers (the end of the chain)
+
+// the C++ calls and members of lane E's bodies in Rust (gamecpp; EeGameCpp's round 10 lane E section): one
+// statement each
+int64_t EECore10OpE2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
+
+int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::RunSplashFullScreen: return gGamePreferences.mSettings.GetFullScreen() == true;
+    default: return EECore10OpE2(inOp, p, a, f);
+    }
+}
+
+double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
+
+double EECore10OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpE3F(inOp, p, a, f);
 }

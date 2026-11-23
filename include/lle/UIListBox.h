@@ -187,7 +187,7 @@ public:
     void SetStartingDisplayLine(unsigned long inLine) { this->Call(UIListBoxCall::SetScrollValue, inLine); }
     void Sort() { std::sort(this->mData.begin(), this->mData.end(), UWSNoCaseAlphaSort()); }
     virtual long UpdateKeyboard() { return (long)this->Call(UIListBoxCall::UpdateKeyboard); }
-protected:
+public:   // (UI round 13: the hosts' and the game's shims read these; once protected, reached by `using`)
     virtual void ButtonDown() { this->Call(UIListBoxCall::ButtonDown); }   // slot 0xa0
     virtual void ButtonUp() { this->FireTriggerEvent(kControlTriggerButtonUp); }
     long DrawScrollBarText() { return (long)this->Call(UIListBoxCall::DrawScrollBarText); }

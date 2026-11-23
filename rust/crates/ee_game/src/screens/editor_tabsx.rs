@@ -102,16 +102,16 @@ pub const EE_SCREENS_SEELX_TILE_Y: u32 = 20;
 /// The screen font's height.
 pub const EE_SCREENS_SEELX_FONT_HEIGHT: u32 = 21;
 
-// ---- the upgrade panel's statements (`ee_screenscpp_seupx`; p0 the panel, p1 the form, p2 an object; i0 the id,
-// i1 the index, i2 a row; f a rectangle)
-/// `mStatusBox = new EEUIFMGStatusBox(form)`; `mPortrait = new EEUICPortrait(form, GERectangle(f0, f1, f2, f3), i0,
-/// i1, false)` (a handle); the portrait's right and top into f0.
+// ---- the upgrade panel's statements (`ee_screenscpp_seupx`; p0 the box or a control, p1 the form or a control, p2
+// the layout or a control; i0 the id, i1 the index, i2 a row; f a rectangle; made objects answer their handles)
+/// `new EEUIFMGStatusBox(form)`; `new EEUICPortrait(form, GERectangle(f0, f1, f2, f3), i0, i1, false)`; the
+/// portrait p0's right and top into f0.
 pub const EE_SCREENS_SEUPX_NEW_BOX: u32 = 0;
 pub const EE_SCREENS_SEUPX_NEW_PORTRAIT: u32 = 1;
 pub const EE_SCREENS_SEUPX_PORTRAIT_RIGHT: u32 = 2;
 pub const EE_SCREENS_SEUPX_PORTRAIT_TOP: u32 = 3;
-/// `mUnitNameLabel = new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1,
-/// 0)`; `new UILayoutUtility`, p2's `SetLeft(0, f0)`, `SetRight(0, f0)`, `SetTop(3, f0)`, `SetBottom(3, f0)`, its
+/// `new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1, 0)`; `new
+/// UILayoutUtility`, p2's `SetLeft(0, f0)`, `SetRight(0, f0)`, `SetTop(3, f0)`, `SetBottom(3, f0)`, its
 /// `CalculateRectangle(the form's rectangle, f as a `GERectangle`, false)`, `delete`.
 pub const EE_SCREENS_SEUPX_NEW_NAME_LABEL: u32 = 4;
 pub const EE_SCREENS_SEUPX_NEW_LAYOUT: u32 = 5;
@@ -121,36 +121,32 @@ pub const EE_SCREENS_SEUPX_LAYOUT_TOP: u32 = 8;
 pub const EE_SCREENS_SEUPX_LAYOUT_BOTTOM: u32 = 9;
 pub const EE_SCREENS_SEUPX_LAYOUT_CALCULATE: u32 = 10;
 pub const EE_SCREENS_SEUPX_LAYOUT_DELETE: u32 = 11;
-/// `mLeftStatusBar`, `mMiddleStatusBar = new EEUIFMGStatusBar(i0, i1, p2, 0x400, 0x300, GERectangle(f0, f1, f2, f3),
-/// form, true, true, false)`.
-pub const EE_SCREENS_SEUPX_NEW_LEFT_BAR: u32 = 12;
-pub const EE_SCREENS_SEUPX_NEW_MIDDLE_BAR: u32 = 13;
-/// `mAttributes[i2] = new EEUIFMGAttribute(gFontTahoma10, form, GERectangle(f0, f1, f2, f3), i1, i0, black, true,
-/// 0)`; `mLabels[i2] = new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1,
-/// 0)`; `mStatusBox->SetControls(i2, mAttributes[i2], mLabels[i2])`.
+/// A status bar (the left and the middle one): `new EEUIFMGStatusBar(i0, i1, p2, 0x400, 0x300, GERectangle(f0, f1,
+/// f2, f3), form, true, true, false)`.
+pub const EE_SCREENS_SEUPX_NEW_BAR: u32 = 12;
+/// `new EEUIFMGAttribute(gFontTahoma10, form, GERectangle(f0, f1, f2, f3), i1, i0, black, true, 0)`; `new
+/// UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1, 0)`; the box p0's
+/// `SetControls(i2, p1, p2)`.
 pub const EE_SCREENS_SEUPX_NEW_ATTRIBUTE: u32 = 14;
 pub const EE_SCREENS_SEUPX_NEW_ROW_LABEL: u32 = 15;
 pub const EE_SCREENS_SEUPX_BOX_ROW: u32 = 16;
-/// `mArmorTitleLabel = new UITextLabel(gSefxText, gFontTahoma12, i0, GERectangle(156, 634, 240, 650), form, 0, i1,
-/// 0)`.
+/// `new UITextLabel(gSefxText, gFontTahoma12, i0, GERectangle(156, 634, 240, 650), form, 0, i1, 0)`.
 pub const EE_SCREENS_SEUPX_NEW_ARMOR_LABEL: u32 = 17;
-/// The status box's portrait (`mC8C`), name label (`mC90`), left bar (`mC84`), middle bar (`mC88`), armor title
-/// (`mC98`) set from the panel's.
+/// The box p0's portrait (`mC8C`), name label (`mC90`), left bar (`mC84`), middle bar (`mC88`), armor title (`mC98`)
+/// set to p1.
 pub const EE_SCREENS_SEUPX_BOX_PORTRAIT: u32 = 18;
 pub const EE_SCREENS_SEUPX_BOX_NAME: u32 = 19;
 pub const EE_SCREENS_SEUPX_BOX_LEFT_BAR: u32 = 20;
 pub const EE_SCREENS_SEUPX_BOX_MIDDLE_BAR: u32 = 21;
 pub const EE_SCREENS_SEUPX_BOX_ARMOR: u32 = 22;
-/// The destructor's `delete`s: the status box, the portrait, the armor title, the left and middle bars, the name
-/// label, attribute i2, label i2.
+/// `delete` p0: the status box, the portrait, a text label, a status bar, an attribute icon.
 pub const EE_SCREENS_SEUPX_DELETE_BOX: u32 = 23;
 pub const EE_SCREENS_SEUPX_DELETE_PORTRAIT: u32 = 24;
-pub const EE_SCREENS_SEUPX_DELETE_ARMOR: u32 = 25;
-pub const EE_SCREENS_SEUPX_DELETE_LEFT_BAR: u32 = 26;
-pub const EE_SCREENS_SEUPX_DELETE_MIDDLE_BAR: u32 = 27;
-pub const EE_SCREENS_SEUPX_DELETE_NAME: u32 = 28;
+pub const EE_SCREENS_SEUPX_DELETE_LABEL: u32 = 25;
+pub const EE_SCREENS_SEUPX_DELETE_BAR: u32 = 26;
 pub const EE_SCREENS_SEUPX_DELETE_ATTRIBUTE: u32 = 29;
-pub const EE_SCREENS_SEUPX_DELETE_LABEL: u32 = 30;
+/// The box p0's `Fill(p1)` (`EEUIFSEUpgradePanel::ShowUnit`: the status box shows the unit).
+pub const EE_SCREENS_SEUPX_FILL: u32 = 5000;
 
 // ---- the editor events' statements (`ee_screenscpp_sex`; p0 the object, p1 the form)
 /// `gWorld.mScenarioManager->mShowDebugIDs`, set to i0 != 0.
@@ -474,15 +470,31 @@ pub unsafe fn seel(x: &mut Sefmx, y: &mut Sefmx, op: u32, p: [usize; 3], i: &[i3
 
 // --------------------------------------------------------------------------------------------- the upgrade panel
 
-/// `EEUIFSEUpgradePanel`'s constructor: the status box, the portrait, the unit name, the two status bars, the nine
-/// attribute rows and the armor title, each hidden and wired into the box, the id and index advanced past each.
+/// The unit tab's upgrade panel (once the C++ class `EEUIFSEUpgradePanel`, EESEUnit +0xb4, new 0x60; ctor 0x1a4e99,
+/// dtor 0x1a549d, ShowUnit 0x1a551a): a status box of the main game's kind over the editor form with its portrait,
+/// unit name, two status bars, nine attribute icons and their labels and the armor title (the handles; the box's
+/// own +0x8c, +0x90, +0x84, +0x88, +0x98 and rows point at them).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SeupPanel {
+    pub status_box: usize,
+    pub portrait: usize,
+    pub name: usize,
+    pub left_bar: usize,
+    pub middle_bar: usize,
+    pub armor: usize,
+    pub attributes: [usize; 9],
+    pub labels: [usize; 9],
+}
+
+/// The panel's constructor: the status box, the portrait, the unit name, the two status bars, the nine attribute
+/// rows and the armor title, each hidden and wired into the box, the id and index advanced past each.
 ///
 /// # Safety
 /// `id` and `index` are the caller's counters.
 pub unsafe fn upgrade_panel(
     x: &mut Sefmx,
     y: &mut Sefmx,
-    panel: usize,
+    panel: &mut SeupPanel,
     id: *mut c_ulong,
     index: *mut c_ulong,
     form: usize,
@@ -493,7 +505,7 @@ pub unsafe fn upgrade_panel(
         *id = (*id).wrapping_add(1);
         *index = (*index).wrapping_add(1);
     };
-    let pf = [panel, form, 0];
+    let pf = [0, form, 0];
     // a control added to the panel's group 6 and hidden
     let show = |x: &mut Sefmx, t: usize| {
         st(x, EE_SCREENS_SEFMX_ADD_CONTROL, [t, form, 0], [6, 0, 0, 0], none);
@@ -503,27 +515,29 @@ pub unsafe fn upgrade_panel(
         let g = mk(x, EE_SCREENS_SEFMX_LABEL_GETEXT, [t, form, 0], [0; 4], none);
         color(x, g, TABSX_BLACK, false);
     };
-    on(y, EE_SCREENS_SEUPX_NEW_BOX, panel, form);
+    panel.status_box = mk(y, EE_SCREENS_SEUPX_NEW_BOX, pf, [0; 4], none);
+    let b = panel.status_box;
     // (left, top, right, bottom)
     let mut r = [6.0f32, 619.0, 36.0, 649.0];
     let t = mk(y, EE_SCREENS_SEUPX_NEW_PORTRAIT, pf, ids(), r);
+    panel.portrait = t;
     st(x, EE_SCREENS_SEFMX_ADD_CONTROL, [t, form, 0], [6, 0, 0, 0], none);
-    on(y, EE_SCREENS_SEUPX_BOX_PORTRAIT, panel, form);
+    on(y, EE_SCREENS_SEUPX_BOX_PORTRAIT, b, t);
     on(x, EE_SCREENS_SEFMX_HIDE, t, form);
     next();
-    let mut pos =
-        [fl(y, EE_SCREENS_SEUPX_PORTRAIT_RIGHT, pf, [0; 4]) + 4.0, fl(y, EE_SCREENS_SEUPX_PORTRAIT_TOP, pf, [0; 4])];
+    let mut pos = [
+        fl(y, EE_SCREENS_SEUPX_PORTRAIT_RIGHT, [t, form, 0], [0; 4]) + 4.0,
+        fl(y, EE_SCREENS_SEUPX_PORTRAIT_TOP, [t, form, 0], [0; 4]),
+    ];
     let t = mk(y, EE_SCREENS_SEUPX_NEW_NAME_LABEL, pf, ids(), [pos[0], pos[1], 200.0, 15.0]);
+    panel.name = t;
     black(x, t);
     st(x, EE_SCREENS_SEFMX_ADD_CONTROL, [t, form, 0], [6, 0, 0, 0], none);
-    on(y, EE_SCREENS_SEUPX_BOX_NAME, panel, form);
+    on(y, EE_SCREENS_SEUPX_BOX_NAME, b, t);
     on(x, EE_SCREENS_SEFMX_HIDE, t, form);
     next();
     let layout = mk(y, EE_SCREENS_SEUPX_NEW_LAYOUT, [0; 3], [0; 4], none);
-    for (top, bottom, bar, boxed) in [
-        (111.0f32, 76.0f32, EE_SCREENS_SEUPX_NEW_LEFT_BAR, EE_SCREENS_SEUPX_BOX_LEFT_BAR),
-        (74.0, 39.0, EE_SCREENS_SEUPX_NEW_MIDDLE_BAR, EE_SCREENS_SEUPX_BOX_MIDDLE_BAR),
-    ] {
+    for (top, bottom, left_bar) in [(111.0f32, 76.0f32, true), (74.0, 39.0, false)] {
         let lp = [0, form, layout];
         st(y, EE_SCREENS_SEUPX_LAYOUT_LEFT, lp, [0; 4], [6.0, 0.0, 0.0, 0.0]);
         st(y, EE_SCREENS_SEUPX_LAYOUT_RIGHT, lp, [0; 4], [57.0, 0.0, 0.0, 0.0]);
@@ -533,9 +547,15 @@ pub unsafe fn upgrade_panel(
         let mut g = [0.0f32; 4];
         y(EE_SCREENS_SEUPX_LAYOUT_CALCULATE, lp, &mut [0; 4], &mut g);
         r = [g[1], g[3], g[2], g[0]];
-        let t = mk(y, bar, [panel, form, layout], ids(), r);
+        let t = mk(y, EE_SCREENS_SEUPX_NEW_BAR, [0, form, layout], ids(), r);
         st(x, EE_SCREENS_SEFMX_ADD_CONTROL, [t, form, 0], [6, 0, 0, 0], none);
-        on(y, boxed, panel, form);
+        if left_bar {
+            panel.left_bar = t;
+            on(y, EE_SCREENS_SEUPX_BOX_LEFT_BAR, b, t);
+        } else {
+            panel.middle_bar = t;
+            on(y, EE_SCREENS_SEUPX_BOX_MIDDLE_BAR, b, t);
+        }
         on(x, EE_SCREENS_SEFMX_HIDE, t, form);
         next();
     }
@@ -549,23 +569,26 @@ pub unsafe fn upgrade_panel(
         r[2] = r[0] + width as f32 + 19.0;
         r[3] = r[1] + 17.0;
         let row = |a: [i32; 4]| [a[0], a[1], k, 0];
-        let t = mk(y, EE_SCREENS_SEUPX_NEW_ATTRIBUTE, pf, row(ids()), r);
-        show(x, t);
+        let icon = mk(y, EE_SCREENS_SEUPX_NEW_ATTRIBUTE, pf, row(ids()), r);
+        panel.attributes[k as usize] = icon;
+        show(x, icon);
         next();
         pos[0] = r[0] + 19.0;
         let t = mk(y, EE_SCREENS_SEUPX_NEW_ROW_LABEL, pf, row(ids()), [pos[0], pos[1], width as f32, 17.0]);
+        panel.labels[k as usize] = t;
         black(x, t);
         st(x, EE_SCREENS_SEFMX_LABEL_ALIGN, [t, form, 0], [2, 0, 0, 0], none);
         show(x, t);
         next();
-        st(y, EE_SCREENS_SEUPX_BOX_ROW, pf, [0, 0, k, 0], none);
+        st(y, EE_SCREENS_SEUPX_BOX_ROW, [b, icon, t], [0, 0, k, 0], none);
     }
     st(x, EE_SCREENS_SEFMX_STRING, [0; 3], [TABSX_IDS_GAME_ARMOR, 0, 0, 0], none);
     let t = mk(y, EE_SCREENS_SEUPX_NEW_ARMOR_LABEL, pf, ids(), none);
+    panel.armor = t;
     st(x, EE_SCREENS_SEFMX_LABEL_ALIGN, [t, form, 0], [1, 0, 0, 0], none);
     black(x, t);
     st(x, EE_SCREENS_SEFMX_ADD_CONTROL, [t, form, 0], [6, 0, 0, 0], none);
-    on(y, EE_SCREENS_SEUPX_BOX_ARMOR, panel, form);
+    on(y, EE_SCREENS_SEUPX_BOX_ARMOR, b, t);
     on(x, EE_SCREENS_SEFMX_HIDE, t, form);
     next();
     on(y, EE_SCREENS_SEUPX_LAYOUT_DELETE, 0, layout);
@@ -574,22 +597,27 @@ pub unsafe fn upgrade_panel(
 /// `TABSX_IDS_GAME_ARMOR`.
 const TABSX_IDS_GAME_ARMOR: i32 = 30423;
 
-/// `EEUIFSEUpgradePanel`'s destructor: the box and every control deleted (the original's order).
-pub fn upgrade_panel_free(y: &mut Sefmx, panel: usize) {
-    for k in [
-        EE_SCREENS_SEUPX_DELETE_BOX,
-        EE_SCREENS_SEUPX_DELETE_PORTRAIT,
-        EE_SCREENS_SEUPX_DELETE_ARMOR,
-        EE_SCREENS_SEUPX_DELETE_LEFT_BAR,
-        EE_SCREENS_SEUPX_DELETE_MIDDLE_BAR,
-        EE_SCREENS_SEUPX_DELETE_NAME,
+/// The panel's destructor: the box and every control deleted (the original's order).
+pub fn upgrade_panel_free(y: &mut Sefmx, panel: &SeupPanel) {
+    for (op, c) in [
+        (EE_SCREENS_SEUPX_DELETE_BOX, panel.status_box),
+        (EE_SCREENS_SEUPX_DELETE_PORTRAIT, panel.portrait),
+        (EE_SCREENS_SEUPX_DELETE_LABEL, panel.armor),
+        (EE_SCREENS_SEUPX_DELETE_BAR, panel.left_bar),
+        (EE_SCREENS_SEUPX_DELETE_BAR, panel.middle_bar),
+        (EE_SCREENS_SEUPX_DELETE_LABEL, panel.name),
     ] {
-        on(y, k, panel, 0);
+        on(y, op, c, 0);
     }
     for k in 0..9 {
-        st(y, EE_SCREENS_SEUPX_DELETE_ATTRIBUTE, [panel, 0, 0], [0, 0, k, 0], [0.0; 4]);
-        st(y, EE_SCREENS_SEUPX_DELETE_LABEL, [panel, 0, 0], [0, 0, k, 0], [0.0; 4]);
+        on(y, EE_SCREENS_SEUPX_DELETE_ATTRIBUTE, panel.attributes[k], 0);
+        on(y, EE_SCREENS_SEUPX_DELETE_LABEL, panel.labels[k], 0);
     }
+}
+
+/// `ShowUnit(unit)`: the status box filled with the unit's details.
+pub fn upgrade_panel_show(y: &mut Sefmx, panel: &SeupPanel, unit: usize) {
+    on(y, EE_SCREENS_SEUPX_FILL, panel.status_box, unit);
 }
 
 // ------------------------------------------------------------------------------------------- the editor's events
@@ -935,27 +963,37 @@ pub(crate) unsafe fn seel_host(op: u32, p: *const *mut c_void, i: *mut i32, f: *
     }
 }
 
-/// `EEUIFSEUpgradePanel::EEUIFSEUpgradePanel` (the C++ constructor forwards here).
+/// The unit tab's upgrade panel made (once `new EEUIFSEUpgradePanel(id, index, form)`): its handle, freed by
+/// `ee_screens_seup_free`.
 ///
 /// # Safety
-/// `panel` is the panel being made, `id` and `index` the caller's counters, `form` the live editor form.
+/// `id` and `index` are the caller's counters, `form` the live editor form.
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_seup_new(
-    panel: *mut c_void,
-    id: *mut c_ulong,
-    index: *mut c_ulong,
-    form: *mut c_void,
-) {
-    unsafe { upgrade_panel(&mut cpp, &mut seupx, panel as usize, id, index, form as usize) };
+pub unsafe extern "C" fn ee_screens_seup_new(id: *mut c_ulong, index: *mut c_ulong, form: *mut c_void) -> *mut c_void {
+    let mut panel = SeupPanel::default();
+    unsafe { upgrade_panel(&mut cpp, &mut seupx, &mut panel, id, index, form as usize) };
+    Box::into_raw(Box::new(panel)).cast()
 }
 
-/// `EEUIFSEUpgradePanel::~EEUIFSEUpgradePanel`.
+/// The panel's `ShowUnit(unit)`.
 ///
 /// # Safety
-/// `panel` is the panel being destroyed.
+/// `panel` comes from `ee_screens_seup_new`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_seup_show(panel: *mut c_void, unit: *mut c_void) {
+    // a copy: no Rust reference into the box across the C++ call
+    let p = unsafe { (*(panel as *const SeupPanel)).clone() };
+    upgrade_panel_show(&mut seupx, &p, unit as usize);
+}
+
+/// The panel destroyed (once `delete` of the `EEUIFSEUpgradePanel`): its box and controls deleted.
+///
+/// # Safety
+/// `panel` comes from `ee_screens_seup_new` and is not used after.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_seup_free(panel: *mut c_void) {
-    upgrade_panel_free(&mut seupx, panel as usize);
+    let p = unsafe { Box::from_raw(panel as *mut SeupPanel) };
+    upgrade_panel_free(&mut seupx, &p);
 }
 
 #[cfg(test)]

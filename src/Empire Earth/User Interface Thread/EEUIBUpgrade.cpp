@@ -41,15 +41,6 @@ EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsi
     ee_screens_upb_construct((uintptr_t)this);
 }
 
-// Presses the button unless the improvement is unavailable, and updates the help text
-void EEUIBUpgrade::ButtonDown() { ee_screens_upb_button_down((uintptr_t)this); }
-
-// Snapshots the button and its cost label for drawing
-long EEUIBUpgrade::CopyData() { return (long)ee_screens_upb_copy_data((uintptr_t)this); }
-
-// Draws the button text and its cost label
-long EEUIBUpgrade::DrawTextA() { return (long)ee_screens_upb_draw_text((uintptr_t)this); }
-
 // One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
 // NULL for none), the held text, the mouse location
 struct EEUIBUpgradeCall {
@@ -116,14 +107,8 @@ void EEUIBUpgrade::UpdateCost(const UWideString& inText)
     ee_screens_upgrade_update_cost(&theCall);
 }
 
-// Shows the hover state only when the improvement can be bought
-void EEUIBUpgrade::MouseOver() { ee_screens_upb_mouse_over((uintptr_t)this); }
-
 // Presses the button on a right press, capturing the mouse
 long EEUIBUpgrade::MouseRButtonDown() { return (long)ee_screens_upb_right_down((uintptr_t)this); }
-
-// Marks the button and its cost label dirty
-void EEUIBUpgrade::SetDirty(bool inDirty) { ee_screens_upb_set_dirty((uintptr_t)this, inDirty); }
 
 // The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
 // are hud_views.rs')

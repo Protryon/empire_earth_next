@@ -29,7 +29,7 @@ public:
     std::vector<long> mL04;                 // +0x04 (record +0x88..+0x94, the positive ones)
     std::vector<EEMedia*> mSounds;          // +0x14 (record +0xe8..+0xf0; LoadMedia'd)
     EEMedia* GetMedia() const { return this->mMedia; }
-    EEMedia* mMedia;                        // +0x24 (record +0xe4)
+    EEMedia* mMedia = nullptr;              // +0x24 (record +0xe4)
     float GetGrowthStep() const { return this->mGrowthStep; }  // inline (EEHerd 0x4a31fd) (provisional name)
     // inline (EEHerd's GetRandom(min, max) calls load both before pushing: 0x4a475f) (provisional names)
     long GetMinHerdSize() const { return this->mMinHerdSize; }

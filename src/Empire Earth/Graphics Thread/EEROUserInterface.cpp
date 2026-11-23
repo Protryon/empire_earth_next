@@ -23,17 +23,13 @@
 #include "ee/EEGraphics.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEROUserInterface.h"
+#include "rust/game/gamecpp.h"
 
 // the UI's viewport (0x529518) (provisional name)
 GEViewport gUIViewport;
 
-// the panel corners of the z-buffer clears (.rdata 0x441c00.., reloaded per use: named consts) (provisional names)
-const float kUnitPanelRight = 0.17f;
-const float kPanelTop = 0.71666664f;
-const float kRightPanelLeft = 0.8275f;
-
-// the current player has a selection (FrameStarting sets it, EEROUnits reads it; 0x5297a0) (provisional name)
-bool gUnitPanelActive;
+// the panel corners of the z-buffer clears (.rdata 0x441c00..) and the unit panel's flag (0x5297a0): gamecpp ro_views.rs,
+// ro_units.rs
 
 // Creates the UI's render object for a UI manager
 EEROUserInterface::EEROUserInterface(UIManager* inManager)
@@ -46,62 +42,21 @@ EEROUserInterface::~EEROUserInterface()
 {
 }
 
-// Copies the UI's frame data and notes whether the current player has a selection or a viewed unit (the unit
-// panel is shown)
+// The frame's data and the unit panel's flag, the z-buffer clears under the panels and the UI's polygons: gamecpp
+// ro_views.rs
 void EEROUserInterface::FrameStarting()
 {
-    this->mUIManager->CopyData();
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    if (thePlayer != NULL &&
-        ((thePlayer->mSelectedGroup != NULL && thePlayer->mSelectedGroup->GetFirstUnit() != NULL) ||
-         gWorld.GetCurrentPlayer()->mSelectedViewedUnit != NULL))
-        gUnitPanelActive = true;
-    else
-        gUnitPanelActive = false;
+    ee_gamecpp_gu_frame_starting(this);
 }
 
-// Clears the z buffer under the bottom-right panel, and under the unit panel when it is shown, so the
-// world draws behind them (not with the free camera or in UI state 0x11)
 void EEROUserInterface::SceneStarting()
 {
-    GERectangle theZero = gU4E8F08.GetViewRectangle();
-    GERectangle theRectangle;
-    if (gFreeCamera || gUIManager->GetMainGameForm()->mUIState == 0x11)
-        return;
-    theRectangle.SetLeft(gGameWindowWidth * kRightPanelLeft);
-    theRectangle.SetTop(gGameWindowHeight * kPanelTop);
-    theRectangle.SetRight(theZero.GetRight());
-    theRectangle.SetBottom(theZero.GetBottom());
-    gRasterizer->ClearZBuffer(0.0f, theRectangle, gScreenIndex);
-    if (!gUnitPanelActive)
-        return;
-    theRectangle.SetLeft(0.0f);
-    theRectangle.SetTop(gGameWindowHeight * kPanelTop);
-    theRectangle.SetRight(gGameWindowWidth * kUnitPanelRight);
-    theRectangle.SetBottom(theZero.GetBottom());
-
-    gRasterizer->ClearZBuffer(0.0f, theRectangle, gScreenIndex);
+    ee_gamecpp_gu_scene_starting();
 }
 
-// Draws the UI's polygons over the whole render target with fog, lighting, alpha test and z buffer off,
-// restoring the fog and alpha reference (lighting stays off)
 void EEROUserInterface::RenderScene()
 {
-    unsigned long theFog = gRasterizer->GetFog(gScreenIndex);
-    float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
-    gRasterizer->SetFog(0, gScreenIndex);
-    gRasterizer->SetShadingColorSource(1, gScreenIndex);
-    gRasterizer->SetLighting(0, gScreenIndex);
-    gRasterizer->SetAlphaTestingRefValue(0.0f, gScreenIndex);
-    gRasterizer->SetZBuffer(kZBufferDisabled, gScreenIndex);
-    gRasterizer->SetCulling(kCullNone);
-    GERectangle theRectangle(0.0f, 0.0f, (float)gRasterizer->GetRenderTarget(gScreenIndex)->GetWidth(),
-                             (float)gRasterizer->GetRenderTarget(gScreenIndex)->GetHeight());
-    gUIViewport.SetViewRectangle(theRectangle);
-    gRasterizer->SetViewport(gUIViewport, gScreenIndex);
-    this->mUIManager->DrawPolygons();
-    gRasterizer->SetFog(theFog, gScreenIndex);
-    gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
+    ee_gamecpp_gu_render_scene(this);
 }
 
 // Draws the UI's text

@@ -3067,4 +3067,35 @@ shims! {
     fn disp_current_refresh(screen: u32) -> u64 = ee_screenscpp_disp_current_refresh;
     fn disp_current_bits(screen: u32) -> u64 = ee_screenscpp_disp_current_bits;
     fn disp_game_size(percent: u32, windowed: bool, width: EeScreensShimULongOut, height: EeScreensShimULongOut) = ee_screenscpp_disp_game_size;
+    // the attribute button's and the status button's bodies (hud_more.rs, UI lane round 13)
+    fn att_new_text(attr: usize, font: usize) -> usize = ee_screenscpp_att_new_text;
+    fn att_text_transparent(attr: usize) = ee_screenscpp_att_text_transparent;
+    fn att_text_fg(attr: usize, color: usize) = ee_screenscpp_att_text_fg;
+    fn att_left(attr: usize) -> f32 = ee_screenscpp_att_left;
+    fn att_top(attr: usize) -> f32 = ee_screenscpp_att_top;
+    fn att_border(attr: usize) -> u32 = ee_screenscpp_att_border;
+    fn att_text_set_location(attr: usize, x: f32, y: f32) = ee_screenscpp_att_text_set_location;
+    fn att_base_copy_data(attr: usize) -> i64 = ee_screenscpp_att_base_copy_data;
+    fn att_queued(attr: usize) -> i64 = ee_screenscpp_att_queued;
+    fn att_level_text(attr: usize, text: EeScreensShimText) = ee_screenscpp_att_level_text;
+    fn att_set_show(attr: usize, show: bool) = ee_screenscpp_att_set_show;
+    fn att_show(attr: usize) -> bool = ee_screenscpp_att_show;
+    fn att_text_x(attr: usize) -> f32 = ee_screenscpp_att_text_x;
+    fn att_text_y(attr: usize) -> f32 = ee_screenscpp_att_text_y;
+    fn att_height(attr: usize) -> u32 = ee_screenscpp_att_height;
+    fn att_width(attr: usize) -> u32 = ee_screenscpp_att_width;
+    fn att_base_draw_text(attr: usize) -> i64 = ee_screenscpp_att_base_draw_text;
+    fn att_draw_level(attr: usize, left: f32, top: f32, right: f32, bottom: f32) -> i64 = ee_screenscpp_att_draw_level;
+    fn sbm_is_command(button: usize) -> bool = ee_screenscpp_sbm_is_command;
+    fn sbm_capture_mouse(button: usize) = ee_screenscpp_sbm_capture_mouse;
+    fn sbm_base_button_down(button: usize) = ee_screenscpp_sbm_base_button_down;
+    fn sbm_state(button: usize) -> u32 = ee_screenscpp_sbm_state;
+    fn sbm_hot_key_up(button: usize) = ee_screenscpp_sbm_hot_key_up;
+    fn sbm_base_tabbed_from(button: usize) = ee_screenscpp_sbm_base_tabbed_from;
+    fn mff_read_bool(file: usize, field: usize) -> i64 = ee_screenscpp_mff_read_bool;
+    fn mff_write_bool(file: usize, value: bool) -> i64 = ee_screenscpp_mff_write_bool;
+    fn mff_error_enter(form: usize) = ee_screenscpp_mff_error_enter;
+    fn mff_error_set(form: usize, index: u32, text: usize) = ee_screenscpp_mff_error_set;
+    fn mff_strings_changed(form: usize) = ee_screenscpp_mff_strings_changed;
+    fn mff_error_leave(form: usize) = ee_screenscpp_mff_error_leave;
 }

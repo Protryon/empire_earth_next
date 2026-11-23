@@ -56,8 +56,7 @@ struct TWorld {
 };
 static TWorld* gW;
 
-enum { kSlotServer = 0xfe, kSlotNone = 0xff };
-enum NEServerGameState { kServerStateOpen = 0, kServerStateClosed = 1, kServerStateRunning = 3, kServerStatePaused = 4 };
+// the slots and server states are Rust's (rust/net/msgid.h, LLE round 10)
 
 class TSEvent {
 public:

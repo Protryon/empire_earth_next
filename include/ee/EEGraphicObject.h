@@ -142,10 +142,10 @@ public:
     std::vector<EEWheel*> mWheels;         // +0x024 (0x10 bytes, source identity provisional)
     // +0x114: the "weapon_mount" tag-point lists per model part (EEE3DTracers ctor 0xfd46e / EEE3DPulseCannonBall ctor
     // 0xf6af0 index it by the complex unit's animation): lists of mTags (provisional name)
-    EETagPointList* mTagPoints[14];
+    EETagPointList* mTagPoints[14] = {};
     // the tag-point lists by point kind and model (the original's mTagPointMaps), the colour groups (mColorGroups,
     // +0x034) and the attack points (mPoints, +0x164): ee_gfx tags.rs, made by the first load, freed by the last unload
-    EeGfxGraphicTags* mTags;
+    EeGfxGraphicTags* mTags = NULL;
     // +0x158: the default point (a GE3DPoint: the tag-point users Apply() it when there is no list)
     GE3DPoint mDefaultPoint;                // +0x158 (PickPoint returns it when the point list is empty; the ctor
                                             // 0xd7354's three fldz; EEE2DSmokeMuzzleBlast 0xe6664 copies it)
@@ -155,29 +155,29 @@ public:
     // it) (provisional names)
     GE3DPoint mBar;                         // +0x180 (CollectTagPoints 0xd8bb2 passes &+0x180 to
                                             // GETransformation::Apply as the "status bar" point's out-arg)
-    UString* mFileName;                     // +0x18c (EEDumpGraphicObjectTable 0xd7acf prints it as the filename; the dtor deletes it) (provisional name)
+    UString* mFileName = NULL;                     // +0x18c (EEDumpGraphicObjectTable 0xd7acf prints it as the filename; the dtor deletes it) (provisional name)
     // +0x190..+0x20c: the names the loader 0xd85ed loads from (each tested by GetLength(); the dtor deletes them)
     // (provisional names)
-    UString* mTextureName;                  // +0x190 (texture name for mTexture)
-    UString* mShadowModelName;              // +0x194 (model name for mShadowModel)
-    UString* mShadowTextureName;            // +0x198 (texture name for mShadowTexture)
-    UString* mModelNames[14];               // +0x19c (per part: mModels)
-    UString* mTextureNames[14];             // +0x1d4 (per part: mTextures)
+    UString* mTextureName = NULL;                  // +0x190 (texture name for mTexture)
+    UString* mShadowModelName = NULL;              // +0x194 (model name for mShadowModel)
+    UString* mShadowTextureName = NULL;            // +0x198 (texture name for mShadowTexture)
+    UString* mModelNames[14] = {};               // +0x19c (per part: mModels)
+    UString* mTextureNames[14] = {};             // +0x1d4 (per part: mTextures)
 
     // +0x20c: one texture per screen (EEE2DMarchingIcons::Queue indexes it by gScreenIndex, Virtual18 takes [0]);
     // 14 entries (the ctor's 14-iteration loop zeroes +0x20c+4i together with 12 other per-screen arrays)
-    GETexture* mTextures[14];
+    GETexture* mTextures[14] = {};
     // +0x244: 14 models (the ctor's 14-iteration loop 0xd7433 zeroes +0x244+4i with mTextures; EEE3DTeleport's ctor
     // reads [0]'s bounding box; EEE3DAdditivePass::DrawPass5 indexes it by the unit's +0x264) (provisional name)
-    GEModel* mModels[14];
-    GEModel* mModel;                        // +0x27c (the 3D effects draw it: EEE3DBlastWave::DrawPass6 0xe9187)
+    GEModel* mModels[14] = {};
+    GEModel* mModel = NULL;                        // +0x27c (the 3D effects draw it: EEE3DBlastWave::DrawPass6 0xe9187)
                                             // (provisional name)
-    GETexture* mTexture;                    // +0x280 (EEROUnits::DrawUnitModel sets it on mModel's material 0 for the
+    GETexture* mTexture = NULL;                    // +0x280 (EEROUnits::DrawUnitModel sets it on mModel's material 0 for the
                                             // unit's second object) (provisional name)
-    GEModel* mShadowModel;                  // +0x284 (0: the static quad; EEROGroundShadows 0x1122bb) (provisional name)
-    GETexture* mShadowTexture;              // +0x288 (EEROGroundShadows 0x1122bb) (provisional name)
-    EESoundObject* mSounds1[14];   // actual original ctor zero loop and sample-ID reader
-    EESoundObject* mSounds2[14];   // +0x2c4
+    GEModel* mShadowModel = NULL;                  // +0x284 (0: the static quad; EEROGroundShadows 0x1122bb) (provisional name)
+    GETexture* mShadowTexture = NULL;              // +0x288 (EEROGroundShadows 0x1122bb) (provisional name)
+    EESoundObject* mSounds1[14] = {};   // actual original ctor zero loop and sample-ID reader
+    EESoundObject* mSounds2[14] = {};   // +0x2c4
 };
 
 #endif

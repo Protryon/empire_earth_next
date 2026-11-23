@@ -10,14 +10,9 @@
 #define LLE_UITILEDBACKGROUND_H
 
 #include "lle/UIBitmapBackground.h"
+#include "rust/ui/ids.h"
 
-// UITiledBackground's tiling (bgobj.rs mTiling)
-enum UITiling {
-    kTilingBoth = 0,        // UITiledBackground
-    kTilingLeftRight = 1,   // was UILRTiledBackground
-    kTilingTopBottom = 2,   // was UITBTiledBackground
-    kTilingStretched = 3,   // was UIStretchedTiledBackground (inAcross x inDown tiles)
-};
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 
 class LLE_API UITiledBackground : public UIBitmapBackground {
 public:
@@ -25,7 +20,7 @@ public:
                       const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
                       const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible,
                       UITiling inTiling = kTilingBoth, float inAcross = 0.0f, float inDown = 0.0f);
-    virtual long DrawBackground(const GERectangle& inRectangle);
+    virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::TiledDraw, inRectangle); }
     // slot 0x20: draws the tiles [inFirstRow, inLastRow] x [inFirstColumn, inLastColumn] clipped to inClip
     virtual long DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
                                      unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,

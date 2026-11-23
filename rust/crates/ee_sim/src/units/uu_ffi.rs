@@ -376,14 +376,20 @@ pub unsafe extern "C" fn ee_units_uu_sorted_ring_tiles(
     corners: i32,
     out: *mut c_void,
 ) {
-    let n = Note::begin(6);
     // SAFETY: the caller's contract
     unsafe {
-        n.p(*from).i(x.into()).i(y.into()).i(size.into()).i(range.into()).i(corners.into());
-        let tiles = uu::sorted_ring_tiles(&mut Game, *from, x, y, size, range, corners);
+        let tiles = sorted_ring_tiles(*from, x, y, size, range, corners);
         set_tiles(out, &tiles);
-        n.t(&tiles);
     }
+}
+
+/// `EEGetSortedRingTiles` (6), noted: the tiles.
+pub(crate) fn sorted_ring_tiles(from: [f32; 3], x: i32, y: i32, size: i32, range: i32, corners: i32) -> Vec<Tile> {
+    let n = Note::begin(6);
+    n.p(from).i(x.into()).i(y.into()).i(size.into()).i(range.into()).i(corners.into());
+    let tiles = uu::sorted_ring_tiles(&mut Game, from, x, y, size, range, corners);
+    n.t(&tiles);
+    tiles
 }
 
 /// `EEGetUnitsOn` (`which` 0, 42: appended to `io`), `EEGetUnitsOnTiles` (1, not noted); the number found (all of
@@ -1425,6 +1431,27 @@ pub unsafe extern "C" fn ee_units_uu_doppler_pitch(
             *pitch = p;
         }
         n.f(*pitch);
+    }
+}
+
+/// `EEGetDopplerPitch`'s factor without its note: the air animal's and the landable's sound parameters (their own
+/// bodies in the original, never noted; round 8 made them call the shared Doppler pitch).
+///
+/// # Safety
+/// `location` holds a matrix, `camera` three floats, `pitch` one.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_doppler_pitch_unnoted(
+    volume: f32,
+    velocity: f32,
+    location: *const [[f32; 4]; 4],
+    camera: *const [f32; 3],
+    pitch: *mut f32,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        if let Some(p) = uu_world::doppler_pitch(volume, velocity, &GeTransformation { m: *location }, *camera) {
+            *pitch = p;
+        }
     }
 }
 

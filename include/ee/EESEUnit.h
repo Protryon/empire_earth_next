@@ -11,9 +11,7 @@
 #include "ee/EEUIBuildGate.h"
 #include "ee/EESEUIBuildWall.h"
 
-class GEFont;
 class UIForm;
-class UILBString;
 
 // The unit tab's C++ parts (the tab whole in Rust: ee_screens editor_unit.rs, its controls, the palettes, sorts and
 // owners and the class list they fill, the cargo, the placement state, the mouse and keys; its group

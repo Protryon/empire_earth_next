@@ -24,32 +24,75 @@ use std::sync::Mutex;
 
 use crate::world::{ClassView, PlayerView, UnitView, WorldRead, WorldView};
 
-// The sweeps' host operations (`ee_units_sweep_host(op, a, b, c, d, point)`):
+// The sweeps' host operations (`ee_units_sweep_host(op, a, b, c, d, point)`: each one C++ call; the point is the
+// four floats a call reads or writes, [`set_point`] and [`point`]):
 
-/// class `a`: bit 0 `IsBuilding()`, bit 1 `IsLandBuilding()`, bit 2 `IsAircraft()`, bits 8.. the index of its
-/// `mPhysicsModel` in `gPhysicsModels` (0xff: none of them, or no model)
-pub const EE_UNITS_SWEEP_OP_CLASS_INFO: i32 = 1;
-/// class `a`'s `CreateUnit(c, d, player b's id, false, NULL)`, the player's pending units added and the queued
-/// placements flushed, the unit built (when it has a tile node) and put on the ground -> its id (0 none)
-pub const EE_UNITS_SWEEP_OP_CREATE: i32 = 2;
-/// producer `a`'s class `ProduceUnit(a, class b, false)`, then its player's pending units added and the queued
-/// placements flushed -> 1 done
-pub const EE_UNITS_SWEEP_OP_PRODUCE: i32 = 3;
-/// unit `a`'s goal at `b`: `NewAttackUnit(a, b, true, false)` when `c`, else `NewLocation` at b's position;
-/// `SetGoal(goal, 0, 0)`
-pub const EE_UNITS_SWEEP_OP_ORDER: i32 = 4;
-/// the active groups' sweep (ag_sweep.rs): a new `EEActiveGroup` of player `a`, units `b` (`c` handles) that
-/// live and are valid added (`AddMember(u, true)`), formation kind `d` set -> the group
-pub const EE_UNITS_SWEEP_OP_NEW_GROUP: i32 = 5;
-/// group `a`'s `SetGoal(goal b, c != 0)`; `d` >= 0: then `mAction = d`, into its player's pending groups, `Plan()`
-pub const EE_UNITS_SWEEP_OP_RUN: i32 = 6;
-/// a goal by its kind `a` (ag_sweep.rs `EE_UNITS_SWEEP_GOAL_*`): unit `b`, target `c` (a unit or a patrol group),
-/// the point in the call's floats, `d` the flag word -> the goal
-pub const EE_UNITS_SWEEP_OP_GOAL: i32 = 7;
-/// the AGPL record of case `a`, player `b`, group `c`, the units (`d` handles), the answers word
-pub const EE_UNITS_SWEEP_OP_RECORD: i32 = 8;
-/// group `a`'s `TellGroup(unit b, its position)`
+/// class `a`'s `IsBuilding()`
+pub const EE_UNITS_SWEEP_OP_IS_BUILDING: i32 = 10;
+/// class `a`'s `IsLandBuilding()`
+pub const EE_UNITS_SWEEP_OP_IS_LAND_BUILDING: i32 = 11;
+/// class `a`'s `IsAircraft()`
+pub const EE_UNITS_SWEEP_OP_IS_AIRCRAFT: i32 = 12;
+/// class `a`'s `mPhysicsModel->mKind` (its `gPhysicsModels` index; 0xff: no model)
+pub const EE_UNITS_SWEEP_OP_MODEL_KIND: i32 = 13;
+/// class `a`'s `CreateUnit(c, d, player b's id, false, NULL)` -> the `EEUnit*` (0: none)
+pub const EE_UNITS_SWEEP_OP_CREATE_UNIT: i32 = 14;
+/// player `a`'s `AddPendingUnits(false, true)`
+pub const EE_UNITS_SWEEP_OP_ADD_PENDING: i32 = 15;
+/// `gWorld.FlushQueuedPlacements()`
+pub const EE_UNITS_SWEEP_OP_FLUSH_PLACEMENTS: i32 = 16;
+/// unit `a`'s `GetComplexUnit()->SetBuilt(1, 0, 1)`
+pub const EE_UNITS_SWEEP_OP_SET_BUILT: i32 = 17;
+/// `gWorld.mMap->PlaceUnitOnGround(a)`
+pub const EE_UNITS_SWEEP_OP_PLACE_ON_GROUND: i32 = 18;
+/// producer `a`'s class `ProduceUnit(a, class b, false)` -> 1 done
+pub const EE_UNITS_SWEEP_OP_PRODUCE_UNIT: i32 = 19;
+/// `EEUnitGoal::NewAttackUnit(a, b, true, false)`
+pub const EE_UNITS_SWEEP_OP_NEW_ATTACK_ORDER: i32 = 20;
+/// unit `a`'s `GetPosition(point)`
+pub const EE_UNITS_SWEEP_OP_POSITION: i32 = 21;
+/// `EEUnitGoal::NewLocation(&point, false, true, false, 0.0f, false, 0)`
+pub const EE_UNITS_SWEEP_OP_NEW_LOCATION_ORDER: i32 = 22;
+/// unit `a`'s `SetGoal(goal b, 0, 0)`
+pub const EE_UNITS_SWEEP_OP_SET_GOAL: i32 = 23;
+/// `EEActiveGroup::New(player a)`
+pub const EE_UNITS_SWEEP_OP_GROUP_NEW: i32 = 24;
+/// group `a`'s `AddMember(b, true)`
+pub const EE_UNITS_SWEEP_OP_ADD_MEMBER: i32 = 25;
+/// `EEFormation::Create(a)` (0: none)
+pub const EE_UNITS_SWEEP_OP_FORMATION_CREATE: i32 = 26;
+/// group `a`'s `SetFormation(b)`
+pub const EE_UNITS_SWEEP_OP_SET_FORMATION: i32 = 27;
+/// formation `a`'s `Dereference()`
+pub const EE_UNITS_SWEEP_OP_FORMATION_DEREFERENCE: i32 = 28;
+/// group `a`'s `SetGoal(goal b, c != 0)`
+pub const EE_UNITS_SWEEP_OP_GROUP_SET_GOAL: i32 = 29;
+/// group `a` into its player's pending groups
+pub const EE_UNITS_SWEEP_OP_ADD_PENDING_GROUP: i32 = 30;
+/// group `a`'s `Plan()`
+pub const EE_UNITS_SWEEP_OP_PLAN: i32 = 31;
+/// town `a`'s `mPatrolGroup`
+pub const EE_UNITS_SWEEP_OP_TOWN_PATROL: i32 = 32;
+/// `gPhysics->GetRandom(0, 0x3fffffff)`
+pub const EE_UNITS_SWEEP_OP_RANDOM: i32 = 33;
+/// goal `a`'s `GetGoalLocation(point)`
+pub const EE_UNITS_SWEEP_OP_GOAL_LOCATION: i32 = 34;
+/// goal `a`'s `SetUseGroupMovement(b != 0)`
+pub const EE_UNITS_SWEEP_OP_GROUP_MOVEMENT: i32 = 35;
+/// player `a`'s `GetNumPendingGroups()`
+pub const EE_UNITS_SWEEP_OP_PENDING_GROUPS: i32 = 36;
+/// group `a`'s `TellGroup(unit b, point)`
 pub const EE_UNITS_SWEEP_OP_TELL: i32 = 9;
+/// the goals (ag_sweep.rs `EE_UNITS_SWEEP_GOAL_*` added): unit `a`, target `b` (a unit or a patrol group), the point
+/// (a move's yaw its fourth float)
+pub const EE_UNITS_SWEEP_OP_GOAL_MOVE: i32 = 40;
+pub const EE_UNITS_SWEEP_OP_GOAL_ATTACK_UNIT: i32 = 41;
+pub const EE_UNITS_SWEEP_OP_GOAL_ATTACK_GROUND: i32 = 42;
+pub const EE_UNITS_SWEEP_OP_GOAL_GATHER: i32 = 43;
+pub const EE_UNITS_SWEEP_OP_GOAL_HEAL: i32 = 44;
+pub const EE_UNITS_SWEEP_OP_GOAL_EXPLORE: i32 = 45;
+pub const EE_UNITS_SWEEP_OP_GOAL_UNLOAD: i32 = 46;
+pub const EE_UNITS_SWEEP_OP_GOAL_PATROL: i32 = 47;
 
 /// The host (`ee_units_sweep_host`).
 pub trait SweepHost {
@@ -61,28 +104,42 @@ pub struct Game;
 
 #[cfg(not(test))]
 extern "C" {
-    fn ee_units_sweep_host(op: i32, a: u64, b: u64, c: i64, d: i64, f: *const f32) -> i64;
+    fn ee_units_sweep_host(op: i32, a: u64, b: u64, c: i64, d: i64, f: *mut f32) -> i64;
 }
 
 #[cfg(test)]
-unsafe fn ee_units_sweep_host(_op: i32, _a: u64, _b: u64, _c: i64, _d: i64, _f: *const f32) -> i64 {
+unsafe fn ee_units_sweep_host(_op: i32, _a: u64, _b: u64, _c: i64, _d: i64, _f: *mut f32) -> i64 {
     0
 }
 
-/// The floats the next host call reads (a goal's point).
-static POINT: Mutex<[f32; 3]> = Mutex::new([0.0; 3]);
+/// The floats the next host call reads, and the last call wrote (a goal's point, a position).
+static POINT: Mutex<[f32; 4]> = Mutex::new([0.0; 4]);
 
 impl SweepHost for Game {
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64) -> i64 {
-        let p = *POINT.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: the host's contract: live objects of the world, the point three floats
-        unsafe { ee_units_sweep_host(op, a, b, c, d, p.as_ptr()) }
+        let mut p = point();
+        // SAFETY: the host's contract: live objects of the world, the point four floats
+        let r = unsafe { ee_units_sweep_host(op, a, b, c, d, p.as_mut_ptr()) };
+        set_point(p);
+        r
     }
 }
 
-/// Sets the point the next `Goal` call reads.
-pub fn set_point(p: [f32; 3]) {
+/// Sets the point the next host call reads.
+pub fn set_point(p: [f32; 4]) {
     *POINT.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = p;
+}
+
+/// The point the last host call left.
+pub fn point() -> [f32; 4] {
+    *POINT.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// A unit's `GetPosition` (the point's first three floats).
+pub fn unit_position(h: &mut dyn SweepHost, unit: u64) -> [f32; 3] {
+    h.op(EE_UNITS_SWEEP_OP_POSITION, unit, 0, 0, 0);
+    let p = point();
+    [p[0], p[1], p[2]]
 }
 
 // ee/EEUnitClassIDs.h
@@ -186,8 +243,55 @@ fn on_map(u: &UnitView<'_>) -> bool {
     u.complex_unit_handle() != 0 && u.hit_points() > 0 && u.has_tile_node() && u.tile_xy().0 != -10000
 }
 
+/// class `class`: bit 0 `IsBuilding()`, bit 1 `IsLandBuilding()`, bit 2 `IsAircraft()`, bits 8.. the index of its
+/// `mPhysicsModel` in `gPhysicsModels` (0xff: no model)
 fn class_info(h: &mut dyn SweepHost, class: u64) -> u32 {
-    h.op(EE_UNITS_SWEEP_OP_CLASS_INFO, class, 0, 0, 0) as u32
+    let mut on = |op: i32| u32::from(h.op(op, class, 0, 0, 0) != 0);
+    let flags = on(EE_UNITS_SWEEP_OP_IS_BUILDING)
+        | on(EE_UNITS_SWEEP_OP_IS_LAND_BUILDING) << 1
+        | on(EE_UNITS_SWEEP_OP_IS_AIRCRAFT) << 2;
+    flags | (h.op(EE_UNITS_SWEEP_OP_MODEL_KIND, class, 0, 0, 0) as u32) << 8
+}
+
+/// Class `class`'s new unit at (x, y) for `player`: its id first (the player's insert gives it: finishing it
+/// activates it, and the active list holds ids), the queued placements flushed, built when it has a tile node, put
+/// on the ground -> its id (0: none).
+fn create(h: &mut dyn SweepHost, t: &WorldRead, class: u64, player: u64, x: i64, y: i64) -> i64 {
+    let unit = h.op(EE_UNITS_SWEEP_OP_CREATE_UNIT, class, player, x, y) as u64;
+    if unit == 0 {
+        return 0;
+    }
+    h.op(EE_UNITS_SWEEP_OP_ADD_PENDING, player, 0, 0, 0);
+    h.op(EE_UNITS_SWEEP_OP_FLUSH_PLACEMENTS, 0, 0, 0, 0);
+    // SAFETY: the new live unit
+    if unsafe { UnitView::of(t, unit) }.is_some_and(|u| u.has_tile_node()) {
+        h.op(EE_UNITS_SWEEP_OP_SET_BUILT, unit, 0, 0, 0);
+    }
+    h.op(EE_UNITS_SWEEP_OP_PLACE_ON_GROUND, unit, 0, 0, 0);
+    // SAFETY: as above
+    unsafe { UnitView::of(t, unit) }.map_or(0, |u| i64::from(u.id()))
+}
+
+/// Producer `from` produces class `class`, its player's pending units added, the queued placements flushed -> done.
+fn produce(h: &mut dyn SweepHost, t: &WorldRead, from: u64, class: u64) -> bool {
+    let done = h.op(EE_UNITS_SWEEP_OP_PRODUCE_UNIT, from, class, 0, 0) != 0;
+    // SAFETY: the live producer
+    let player = unsafe { UnitView::of(t, from) }.and_then(|u| u.player()).map_or(0, |p| p.handle());
+    h.op(EE_UNITS_SWEEP_OP_ADD_PENDING, player, 0, 0, 0);
+    h.op(EE_UNITS_SWEEP_OP_FLUSH_PLACEMENTS, 0, 0, 0, 0);
+    done
+}
+
+/// Unit `unit`'s goal at `target`: an attack, else a move to its position.
+fn order(h: &mut dyn SweepHost, unit: u64, target: u64, attack: bool) {
+    let goal = if attack {
+        h.op(EE_UNITS_SWEEP_OP_NEW_ATTACK_ORDER, unit, target, 0, 0)
+    } else {
+        let at = unit_position(h, target);
+        set_point([at[0], at[1], at[2], 0.0]);
+        h.op(EE_UNITS_SWEEP_OP_NEW_LOCATION_ORDER, 0, 0, 0, 0)
+    };
+    h.op(EE_UNITS_SWEEP_OP_SET_GOAL, unit, goal as u64, 0, 0);
 }
 
 fn anchor(h: &mut dyn SweepHost, p: &PlayerView<'_>) -> u64 {
@@ -262,7 +366,7 @@ fn make_producers(
         }
         let Some(class) = ClassView::by_index(t, ty as usize) else { continue };
         let Some((x, y)) = find_spot(t, player, ty, anchor) else { continue };
-        let id = h.op(EE_UNITS_SWEEP_OP_CREATE, class.handle(), player, x, y);
+        let id = create(h, t, class.handle(), player, x, y);
         if id != 0 {
             producers[p][i] = id as u32;
         }
@@ -327,7 +431,7 @@ pub fn sweep(h: &mut dyn SweepHost, call: i64) -> (i64, i64) {
                 continue;
             }
             let before = player.units().map(|u| u.id()).max().unwrap_or(0);
-            let done = h.op(EE_UNITS_SWEEP_OP_PRODUCE, from, class.handle(), 0, 0) != 0;
+            let done = produce(h, &t, from, class.handle());
             let mut new = 0;
             for u in player.units() {
                 if u.id() > before
@@ -347,7 +451,7 @@ pub fn sweep(h: &mut dyn SweepHost, call: i64) -> (i64, i64) {
             let attack = unsafe { UnitView::of(&t, new) }
                 .and_then(|u| u.stats())
                 .is_some_and(|s| crate::world_field!(s.fields(), mAttack) > 0.0f32);
-            h.op(EE_UNITS_SWEEP_OP_ORDER, new, target, i64::from(attack), 0);
+            order(h, new, target, attack);
         }
     }
     (made, failed)

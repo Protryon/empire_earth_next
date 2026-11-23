@@ -182,14 +182,30 @@ pub unsafe extern "C" fn ee_cp_herd_free(f: *mut EeHerdFields) {
     }
 }
 
-/// `EEHerd()`: no units, leader, target or path request, then `Clear`.
+/// The constructors' start: the record's lists made, the area's type the herd kind (`kAIAreaHerd`).
 ///
 /// # Safety
-/// `herd` is the live `EEHerd*` whose record is `f` (its lists made).
+/// `herd` is the `EEHerd*` being constructed (its `EEAIArea` base, the area record at offset 0, made); `f` its record.
+unsafe fn herd_begin(herd: *mut c_void, f: *mut EeHerdFields) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_cp_herd_init(f);
+        (*(herd as *mut crate::astar::area::EeAStarAreaRecord)).area_type = AREA_KIND_HERD;
+    }
+}
+
+/// `kAIAreaHerd` (ee/EEAIKindIDs.h)
+const AREA_KIND_HERD: c_long = 9;
+
+/// `EEHerd()`: the lists, the area kind; no units, leader, target or path request, then `Clear`.
+///
+/// # Safety
+/// `herd` is the `EEHerd*` being constructed whose record is `f`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_cp_herd_construct_default(herd: *mut c_void, f: *mut EeHerdFields) {
     // SAFETY: the caller's contract
     unsafe {
+        herd_begin(herd, f);
         (*f).mLeader = herd::EE_CP_HERD_NONE;
         (*f).mTarget = herd::EE_CP_HERD_NONE;
         (*f).mPathRequest = 0;
@@ -210,7 +226,10 @@ pub unsafe extern "C" fn ee_cp_herd_construct(
     id: u16,
 ) {
     // SAFETY: the caller's contract
-    unsafe { with(herd, f, |h| h.construct(player, animal, id)) }
+    unsafe {
+        herd_begin(herd, f);
+        with(herd, f, |h| h.construct(player, animal, id))
+    }
 }
 
 /// `Clear` (the destructor's).
@@ -316,14 +335,14 @@ pub unsafe extern "C" fn ee_cp_herd_create(
     unsafe { with(herd, f, |h| h.create(&tiles)) }
 }
 
-/// `GetRandomPoint` (the area's override) into `out`.
+/// `GetRandomPoint` (the area's override).
 ///
 /// # Safety
-/// As [`ee_cp_herd_construct_default`]; `out` a live point.
+/// As [`ee_cp_herd_construct_default`].
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_herd_random_point(herd: *mut c_void, f: *mut EeHerdFields, out: *mut EeHerdPoint) {
+pub unsafe extern "C" fn ee_cp_herd_random_point(herd: *mut c_void, f: *mut EeHerdFields) -> EeHerdPoint {
     // SAFETY: the caller's contract
-    unsafe { *out = with(herd, f, |h| h.random_point()) }
+    unsafe { with(herd, f, |h| h.random_point()) }
 }
 
 /// `Load` over the saved game's file (`host` its primitives).

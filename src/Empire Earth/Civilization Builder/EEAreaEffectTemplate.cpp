@@ -24,58 +24,6 @@ void EEAreaEffectTemplate::Load(bool inIsOnDemand)
     ee_screens_ael_template_load(this, inIsOnDemand);
 }
 
-// Unloads the template's graphic effects and sound media
-void EEAreaEffectTemplate::Unload()
-{
-    ee_screens_ael_template_unload(this);
-}
-
-// Adds an area effect to the unit's list (taking a reference)
-void EEUnitAreaEffectList::Add(EEAreaEffect* inEffect)
-{
-    UReferenceContainer<EEAreaEffect*>::Add(inEffect);
-}
-
-// Adds an area effect unless the unit already has a stronger or equal one of the same kind (all morale kinds
-// count as one), replacing a weaker one
-void EEUnitAreaEffectList::AddAreaEffect(EEAreaEffect* inEffect)
-{
-    ee_screens_ael_add(this, inEffect);
-}
-
-// Lets every effect modify a value of the given kind, showing each effect that applied
-void EEUnitAreaEffectList::ApplyModifiers(long inKind, const long& inDamage, long& outDamage, EEComplexUnit* inUnit)
-{
-    ee_screens_ael_apply_modifiers(this, inKind, &inDamage, &outDamage, inUnit);
-}
-
-// Removes the first effect of the given kind; returns whether one was found
-bool EEUnitAreaEffectList::Remove(long inKind)
-{
-    return ee_screens_ael_remove(this, inKind);
-}
-
-// Rebuilds the list keeping only the strongest effect of each kind
-void EEUnitAreaEffectList::KeepStrongest() { ee_screens_ael_keep_strongest((uintptr_t)this); }
-
-// Marks every effect in the list for a recount
-void EEUnitAreaEffectList::MarkDirty()
-{
-    ee_screens_ael_mark_dirty(this);
-}
-
-// Moves every effect in the list to a new location and recounts it
-void EEUnitAreaEffectList::MoveAndUpdate(const GE2DPoint& inPoint, float inValue)
-{
-    ee_screens_ael_move_and_update(this, inPoint.mX, inPoint.mY, inValue);
-}
-
-// Ticks every effect in the list on the unit
-void EEUnitAreaEffectList::Tick(EEComplexUnit* inUnit, float inElapsed)
-{
-    ee_screens_ael_tick(this, inUnit, inElapsed);
-}
-
 // The template's media and the list members' logic: area_effect_lists.rs over the one-statement shims below (UI lane
 // round 11)
 #define AEL_L(l) ((EEUnitAreaEffectList*)(l))

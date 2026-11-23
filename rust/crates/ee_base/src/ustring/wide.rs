@@ -593,6 +593,32 @@ pub unsafe extern "C" fn ee_uwstring_format_end(s: *mut EeUWideString, buffer: *
     measure(s);
 }
 
+/// Receives `ee_uwstring_tokens`' calls (`UWideString::PushToken`): first with `s` NULL (clear the vector), then
+/// once per token with the string and the token's first and last characters.
+pub type EeUWideStringPushToken =
+    unsafe extern "C" fn(tokens: *mut std::ffi::c_void, s: *const EeUWideString, first: u32, last: u32);
+
+/// `UWideString::Tokenize`: `push(tokens, NULL)` to clear the C++ vector, then `push` with each token's (first,
+/// last) characters in order; always true.
+///
+/// # Safety
+/// As [`ee_uwstring_tokenize`]; `push` takes `tokens`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_uwstring_tokens(
+    s: *const EeUWideString,
+    separators: *const EeUWideString,
+    tokens: *mut std::ffi::c_void,
+    push: EeUWideStringPushToken,
+) -> bool {
+    let mut pairs = vec![0u32; 2 * ((*s).length as usize + 1)];
+    let count = ee_uwstring_tokenize(s, separators, pairs.as_mut_ptr());
+    push(tokens, ptr::null(), 0, 0);
+    for pair in pairs.chunks(2).take(count as usize) {
+        push(tokens, s, pair[0], pair[1]);
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -630,6 +656,28 @@ mod tests {
             assert_eq!(ee_uwstring_at(&s, 2), 0xe2u8 as c_char);
             ee_uwstring_free(&mut s);
         }
+    }
+
+    unsafe extern "C" fn record_push(tokens: *mut std::ffi::c_void, s: *const EeUWideString, first: u32, last: u32) {
+        let tokens = &mut *(tokens as *mut Vec<(u32, u32)>);
+        if s.is_null() {
+            tokens.clear();
+        } else {
+            tokens.push((first, last));
+        }
+    }
+
+    #[test]
+    fn tokens_clear_then_push_each_pair() {
+        let mut s = new_text("a\u{1F600}b c".as_bytes());
+        let mut sep = new_text(b" ");
+        let mut tokens: Vec<(u32, u32)> = vec![(7, 7)];
+        unsafe {
+            assert!(ee_uwstring_tokens(&s, &sep, (&mut tokens as *mut Vec<(u32, u32)>).cast(), record_push));
+            ee_uwstring_free(&mut sep);
+            ee_uwstring_free(&mut s);
+        }
+        assert_eq!(tokens, vec![(0, 2), (4, 4)]);
     }
 
     #[test]

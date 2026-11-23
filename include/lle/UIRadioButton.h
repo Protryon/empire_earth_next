@@ -22,28 +22,41 @@ public:
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inIsPushButton,
                   bool inIsChecked, bool inScaleBitmap);
     // the dtor (0x1005fc41) deleted the label and released the other state's bitmaps: the Rust button's release does
-    virtual void Check();                   // slot 0x94
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
-    bool GetIsChecked() const;
-    UITextLabel* GetTextLabel() const;
-    virtual bool GetTabable() const;        // 0x1005fc88: not a push button
+    // Checks the button: unchecks its checked neighbour, swaps to the checked bitmaps and fires the checked trigger
+    virtual void Check() { this->SubCall(EeUiButtonCall::RadioCheck); } // slot 0x94
+    // Snapshots the button and its label (deleted once its text is cleared); a checked push button loses its border
+    virtual long CopyData() { return (long)this->SubCall(EeUiButtonCall::RadioCopyData); }
+    // Draws the button (its bitmap scaled to the control height when scaled), then its label
+    virtual long DrawPolygons() { return (long)this->SubCall(EeUiButtonCall::RadioDrawPolygons); }
+    // Draws the button's text and its label
+    virtual long DrawTextA() { return (long)this->SubCall(EeUiButtonCall::RadioDrawText); }
+    bool GetIsChecked() const { return this->SubCall(EeUiButtonCall::RadioIsChecked) != 0; }
+    UITextLabel* GetTextLabel() const { return (UITextLabel*)this->SubCall(EeUiButtonCall::TextLabel); }
+    virtual bool GetTabable() const { return this->SubCall(EeUiButtonCall::RadioTabable) != 0; } // 0x1005fc88: not a push button
     virtual unsigned long GetType() const { return kControlTypeRadioButton; }
-    void SetDownCheckedBitmap(GEBitmap* inBitmap);
-    void SetDownUncheckedBitmap(GEBitmap* inBitmap);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetText(const UWideString& inText, GEFont* inFont);
-    void SetUpCheckedBitmap(GEBitmap* inBitmap);
-    void SetUpUncheckedBitmap(GEBitmap* inBitmap);
+    // Sets the pressed bitmap shown while checked
+    void SetDownCheckedBitmap(GEBitmap* inBitmap) { this->SubCall(EeUiButtonCall::RadioSetDownChecked, (intptr_t)inBitmap); }
+    // Sets the pressed bitmap shown while unchecked
+    void SetDownUncheckedBitmap(GEBitmap* inBitmap) { this->SubCall(EeUiButtonCall::RadioSetDownUnchecked, (intptr_t)inBitmap); }
+    // Moves the button, keeping its label to the right of the bitmap
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->SubCall(EeUiButtonCall::RadioSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY()); }
+    // Sets the label text, creating the label right of the bitmap on first use; empty text hides the label
+    void SetText(const UWideString& inText, GEFont* inFont) { this->SubCall(EeUiButtonCall::RadioSetText, (intptr_t)&inText, (intptr_t)inFont); }
+    // Sets the normal bitmap shown while checked
+    void SetUpCheckedBitmap(GEBitmap* inBitmap) { this->SubCall(EeUiButtonCall::RadioSetUpChecked, (intptr_t)inBitmap); }
+    // Sets the normal bitmap shown while unchecked
+    void SetUpUncheckedBitmap(GEBitmap* inBitmap) { this->SubCall(EeUiButtonCall::RadioSetUpUnchecked, (intptr_t)inBitmap); }
 protected:
-    virtual void ButtonUp();                // 0x1005fc98: the virtual Check, then UIButton's
-    virtual long MouseLButtonDown();
+    // Checks the button (the virtual Check), then releases it
+    virtual void ButtonUp() { this->SubCall(EeUiButtonCall::RadioButtonUp); } // 0x1005fc98: the virtual Check, then UIButton's
+    // Presses the button, except a checked push button
+    virtual long MouseLButtonDown() { return (long)this->SubCall(EeUiButtonCall::RadioMouseLButtonDown); }
     // Releases the button (plain button behaviour)
     virtual long MouseLButtonUp() { return UIButton::MouseLButtonUp(); }
     virtual void TabbedTo() { UIButton::TabbedTo(); }
     virtual void TabbedFrom() { UIButton::TabbedFrom(); }
-    virtual void UnCheck();                 // slot 0x98
+    // Unchecks the button: swaps to the unchecked bitmaps, restores its border and fires the unchecked trigger
+    virtual void UnCheck() { this->SubCall(EeUiButtonCall::RadioUnCheck); } // slot 0x98
     // the original's members (+0x104 mOtherNormalBitmap, +0x108 mOtherPressedBitmap, +0x10c mTextLabel, +0x110
     // mIsChecked, +0x111 mHasText, +0x112 mIsPushButton, +0x113 mScaleBitmap; sizeof 0x114) and the private
     // RemoveOtherChecks are the Rust button's (checkobj.rs)

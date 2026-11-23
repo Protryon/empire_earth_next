@@ -64,20 +64,7 @@ long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMino
 // Returns the statistics series a dead unit counts in: 14 citizens, 15 heroes, 13 other moving units, 0 none
 long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
 {
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    long theSeries = 0;
-    if (theClass->mCategory != kUnitCategoryResource && theClass->mCategory != kUnitCategoryAmbient && theClass->mFamily != kUnitFamilyAnimal &&
-        theClass->mUnitType != kUnitTypePathPoint) {
-        long theCategory = theClass->mCategory;
-        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
-            theSeries = 14;
-        else if (theClass->mFamily == kUnitFamilyHero)
-            theSeries = 15;
-        else if (theClass->mCategory != kUnitCategoryProjectile && theClass->mCategory != kUnitCategoryMissile && theClass->mCategory != kUnitCategoryBomb &&
-                 theClass->mCategory != kUnitCategoryTorpedo && inUnit->mStats->mMaxVelocity > 0.0f)
-            theSeries = 13;
-    }
-    return theSeries;
+    return ee_units_dead_unit_statistic((uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit));   // ee_units player_rest.rs
 }
 
 // Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources

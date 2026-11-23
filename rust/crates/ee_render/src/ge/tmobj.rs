@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use std::ffi::{c_long, c_ulong, c_void};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::ge::io::{CppIo, EeGeFieldIo};
+use crate::ge::io::{cpp_file_io, CppIo, EeGeFieldIo};
 use crate::ge::terrain::{edge_planes, GeTerrainView, GeTmPoint, GeTmRow};
 use crate::ge::terrain_mesh::{self, GeTerrainFog, GeTerrainLoad, GeTmTile, WATER_GRID};
 use crate::ge::terrain_visible::{self, GeTextureSetView, GeVisibleInput, GeVisiblePolygon};
@@ -1525,21 +1525,21 @@ pub unsafe extern "C" fn ee_ge_tm_update_visible_terrain(
 /// `Load(major, minor, file)`.
 ///
 /// # Safety
-/// `p` is live; `io` is a live field stream.
+/// `p` is live; `file` is a live C++ `FSFile*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ge_tm_load(p: *mut EeGeTerrainMesh, io: *const EeGeFieldIo) -> c_long {
+pub unsafe extern "C" fn ee_ge_tm_load(p: *mut EeGeTerrainMesh, file: *mut c_void) -> c_long {
     // SAFETY: the function's contract
-    unsafe { EeGeTerrainMesh::load(p, &*io) }
+    unsafe { EeGeTerrainMesh::load(p, &cpp_file_io(file)) }
 }
 
 /// `Save(file)`.
 ///
 /// # Safety
-/// `p` is live; `io` is a live field stream.
+/// `p` is live; `file` is a live C++ `FSFile*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ge_tm_save(p: *const EeGeTerrainMesh, io: *const EeGeFieldIo) -> c_long {
+pub unsafe extern "C" fn ee_ge_tm_save(p: *const EeGeTerrainMesh, file: *mut c_void) -> c_long {
     // SAFETY: the function's contract
-    unsafe { (*p).save(&*io) }
+    unsafe { (*p).save(&cpp_file_io(file)) }
 }
 
 /// The visible tile row `index`: (y, first x, last x) into `out`.

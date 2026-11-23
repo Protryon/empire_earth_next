@@ -928,12 +928,13 @@ pub fn run<H: UcHost + UcbRust + ?Sized>(
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
     extern "C" {
-        fn ee_units_ucb_host(
+        /// the buildings' host (EEUnitClassBuildings.cpp; ucb_gate.rs's too)
+        pub(crate) fn ee_units_ucb_host(
             op: i32,
             class: *mut c_void,
             unit: *mut c_void,

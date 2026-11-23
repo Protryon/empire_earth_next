@@ -25,15 +25,11 @@ class EEComputerPlayer;
 extern bool gCPTraceHashOn;                 // EE_AI_TRACE set: the sim hash lines too (EEArtificialIntelligence)
 extern bool gCPTraceOn;                     // EE_AI_TRACE set (read at the first EECPTraceInit)
 
-void EECPTraceInit();                       // reads the environment once; every accessor calls it
 void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* inFormat, ...)
 #if defined(__clang__) || defined(__GNUC__)
     __attribute__((format(printf, 3, 4)))
 #endif
     ;
-void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime);   // every 30 game s per player
-void EECPTraceHash(unsigned long inTime);   // every 10 game s: the out-of-synch checksum's parts ("sim hash")
-void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long long inMicroseconds);
 // a new game (EEWorld, before its players are made): the per-player state the computer players keep in file statics
 // (the trace's counters, the loss incidents, the reflexes' cool-downs) cleared, as at the process's start, so a game
 // plays and traces the same after another game in the process (EE-SIM --games) as alone

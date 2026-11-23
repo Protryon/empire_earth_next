@@ -19,9 +19,9 @@
 //! (`EEPMBuilding::Step2`'s two) in order; the USST notes of the arithmetic leaves (physics.rs, motion.rs) with the
 //! same words, so the capture's digests stay equal.
 //!
-//! The projectile's and the missile's steps stay host calls: their arithmetic is ee_combat's (flight.rs) already and
-//! their inputs and captures (CBPJ, CBPS, CBMA, CBMH) are the combat lane's C++. The carrier planes' deck walk
-//! (`IsDocked`, `FollowCarrier`, `OrientOnCarrier`: the carrier model's tag points) stays C++ too.
+//! The projectile's and the missile's steps are host calls the game answers in Rust (pm_flight.rs: ee_combat's
+//! flight arithmetic and the combat lane's captures CBPJ, CBPS, CBMA, CBMH); the carrier planes' deck walk reads the
+//! carrier model's tag points through the host.
 
 // the C++'s statements as written: its negated tests (NaN goes their way), its compound assignments, its constants
 #![allow(
@@ -1568,18 +1568,26 @@ fn with_game_host<R>(f: impl FnOnce(&mut dyn PmHost) -> R) -> R {
     f(&mut host)
 }
 
-/// `EEPhysicsModel::Step(unit)` of the kind's model.
+/// `EEPhysicsModel::Step(unit)` of the kind's model, then (TEST ONLY) its PMST note while the capture runs.
 ///
 /// # Safety
-/// `unit`'s records point into a live complex unit; the call runs on the physics thread under the world lock.
+/// `obj` is a live complex unit; the call runs on the physics thread under the world lock.
 #[cfg(not(test))]
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_pm_step(kind: i32, unit: EeUnitsPmUnit) {
+pub unsafe extern "C" fn ee_units_pm_step(kind: i32, obj: *mut std::ffi::c_void) {
+    let obj = obj as u64;
     let Some(k) = Kind::from_index(kind) else { return };
-    with_game_host(|h| {
+    let action = with_game_host(|h| {
+        let unit = h.view(obj);
+        // SAFETY: the live unit's record (the caller's contract)
+        let action = unsafe { (*unit.cx).mCurrentPhysicsAction };
         let t = h.tick();
         step(&mut Ctx { h, t }, k, unit);
+        action
     });
+    if crate::app::capture_record::active() {
+        crate::units::pm_host::note_step(kind, obj, action as u32);
+    }
 }
 
 /// The kind's `Step0(unit)` alone (EE-SIM's missile sweep).
@@ -1588,9 +1596,10 @@ pub unsafe extern "C" fn ee_units_pm_step(kind: i32, unit: EeUnitsPmUnit) {
 /// As [`ee_units_pm_step`].
 #[cfg(not(test))]
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_pm_step0(kind: i32, unit: EeUnitsPmUnit) {
+pub unsafe extern "C" fn ee_units_pm_step0(kind: i32, obj: *mut std::ffi::c_void) {
     let Some(k) = Kind::from_index(kind) else { return };
     with_game_host(|h| {
+        let unit = h.view(obj as u64);
         let t = h.tick();
         step0(&mut Ctx { h, t }, k, unit);
     });
@@ -1602,9 +1611,10 @@ pub unsafe extern "C" fn ee_units_pm_step0(kind: i32, unit: EeUnitsPmUnit) {
 /// As [`ee_units_pm_step`].
 #[cfg(not(test))]
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_pm_compute_roll(kind: i32, unit: EeUnitsPmUnit, value: f32) -> f32 {
+pub unsafe extern "C" fn ee_units_pm_compute_roll(kind: i32, obj: *mut std::ffi::c_void, value: f32) -> f32 {
     let Some(k) = Kind::from_index(kind) else { return 0.0 };
     with_game_host(|h| {
+        let unit = h.view(obj as u64);
         let t = h.tick();
         compute_roll(&mut Ctx { h, t }, k, unit, value)
     })

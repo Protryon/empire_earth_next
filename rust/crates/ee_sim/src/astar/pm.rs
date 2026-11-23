@@ -28,6 +28,8 @@ use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
+use ee_base::fs::{CppFile, FsFile, FsWrite};
+
 use crate::astar::pm_record::PathRecord;
 
 /// `EEUnitHandle::kNone`: no unit.
@@ -1027,19 +1029,6 @@ fn clamp(host: &mut dyn PathHost, tile: (i32, i32)) -> (i32, i32) {
 
 // ---- the saved game
 
-/// The save file through the C++ `FSFile`'s typed calls: `kind` 1 `uint32_t`, 2 `int32_t`, 3 `unsigned short`,
-/// 4 `bool`, 5 `float` (the value's bits), 6 the bytes `data[..len]`. A read returns 0 and the value (or fills the
-/// bytes), else the file's error.
-pub type EePathFileFn =
-    unsafe extern "C" fn(ctx: *mut c_void, kind: u32, value: *mut u32, data: *mut u8, len: u32) -> i32;
-
-pub const EE_PATH_FILE_U32: u32 = 1;
-pub const EE_PATH_FILE_I32: u32 = 2;
-pub const EE_PATH_FILE_U16: u32 = 3;
-pub const EE_PATH_FILE_BOOL: u32 = 4;
-pub const EE_PATH_FILE_F32: u32 = 5;
-pub const EE_PATH_FILE_BYTES: u32 = 6;
-
 /// One typed value of the file (the layouts below are these in order).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item {
@@ -1072,18 +1061,15 @@ pub trait FileIn {
     fn bytes(&mut self, len: usize) -> Result<Vec<u8>, i32>;
 }
 
-/// The C++ file.
-pub struct CFile {
-    pub f: EePathFileFn,
-    pub ctx: *mut c_void,
-}
+/// The C++ `FSFile` (ee_base's [`CppFile`]): each typed value as the bytes of its C++ type (the memory and disk
+/// files' typed calls write `sizeof(T)` bytes of the value, as these do); a read answers the file's status.
+pub struct CFile(pub CppFile);
 
 impl CFile {
-    fn get(&mut self, kind: u32) -> Result<u32, i32> {
-        let mut v = 0u32;
-        // SAFETY: the C++ file callback's contract
-        match unsafe { (self.f)(self.ctx, kind, &mut v, std::ptr::null_mut(), 0) } {
-            0 => Ok(v),
+    fn get<const N: usize>(&mut self) -> Result<[u8; N], i32> {
+        let mut b = [0u8; N];
+        match self.0.read_bytes(&mut b).0 {
+            0 => Ok(b),
             e => Err(e),
         }
     }
@@ -1091,45 +1077,43 @@ impl CFile {
 
 impl FileOut for CFile {
     fn put(&mut self, item: Item) {
-        let (kind, mut v, mut bytes) = match item {
-            Item::U32(v) => (EE_PATH_FILE_U32, v, Vec::new()),
-            Item::I32(v) => (EE_PATH_FILE_I32, v as u32, Vec::new()),
-            Item::U16(v) => (EE_PATH_FILE_U16, v as u32, Vec::new()),
-            Item::Bool(v) => (EE_PATH_FILE_BOOL, v as u32, Vec::new()),
-            Item::F32(v) => (EE_PATH_FILE_F32, v.to_bits(), Vec::new()),
-            Item::Bytes(b) => (EE_PATH_FILE_BYTES, 0, b),
+        match item {
+            Item::U32(v) => self.0.write_u32(v),
+            Item::I32(v) => self.0.write_u32(v as u32),
+            Item::U16(v) => self.0.write_bytes(&v.to_le_bytes()).0,
+            Item::Bool(v) => self.0.write_bytes(&[u8::from(v)]).0,
+            Item::F32(v) => self.0.write_u32(v.to_bits()),
+            Item::Bytes(b) => self.0.write_bytes(&b).0,
         };
-        let (ptr, len) =
-            if bytes.is_empty() { (std::ptr::null_mut(), 0) } else { (bytes.as_mut_ptr(), bytes.len() as u32) };
-        // SAFETY: the C++ file callback's contract
-        unsafe { (self.f)(self.ctx, kind, &mut v, ptr, len) };
     }
 }
 
 impl FileIn for CFile {
     fn u32(&mut self) -> Result<u32, i32> {
-        self.get(EE_PATH_FILE_U32)
+        let mut v = 0u32;
+        match self.0.read_u32(&mut v) {
+            0 => Ok(v),
+            e => Err(e),
+        }
     }
     fn i32(&mut self) -> Result<i32, i32> {
-        self.get(EE_PATH_FILE_I32).map(|v| v as i32)
+        self.u32().map(|v| v as i32)
     }
     fn u16(&mut self) -> Result<u16, i32> {
-        self.get(EE_PATH_FILE_U16).map(|v| v as u16)
+        self.get::<2>().map(u16::from_le_bytes)
     }
     fn bool(&mut self) -> Result<bool, i32> {
-        self.get(EE_PATH_FILE_BOOL).map(|v| v != 0)
+        self.get::<1>().map(|b| b[0] != 0)
     }
     fn f32(&mut self) -> Result<f32, i32> {
-        self.get(EE_PATH_FILE_F32).map(f32::from_bits)
+        self.u32().map(f32::from_bits)
     }
     fn bytes(&mut self, len: usize) -> Result<Vec<u8>, i32> {
         let mut b = vec![0u8; len];
-        let mut v = 0u32;
-        // SAFETY: the C++ file callback's contract (fills `len` bytes; `v` the count read)
-        match unsafe { (self.f)(self.ctx, EE_PATH_FILE_BYTES, &mut v, b.as_mut_ptr(), len as u32) } {
-            0 if v as usize == len => Ok(b),
-            0 => Err(1),
-            e => Err(e),
+        match self.0.read_bytes(&mut b) {
+            (0, n) if n as usize == len => Ok(b),
+            (0, _) => Err(1),
+            (e, _) => Err(e),
         }
     }
 }
@@ -2124,15 +2108,9 @@ pub unsafe extern "C" fn ee_path_manager_pending(p: *mut EePathManager, k: u32, 
 /// # Safety
 /// `p` a live manager; `f` called with `ctx`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_path_manager_file(
-    p: *mut EePathManager,
-    what: i32,
-    load: bool,
-    f: EePathFileFn,
-    ctx: *mut c_void,
-) -> i32 {
-    let mut file = CFile { f, ctx };
-    with(p, |m, host| match (what, load) {
+pub unsafe extern "C" fn ee_path_manager_file(p: *mut EePathManager, what: i32, load: bool, file: *mut c_void) -> i32 {
+    let mut file = CFile(CppFile(file));
+    let r = with(p, |m, host| match (what, load) {
         (0, false) => {
             m.save_running(&mut file);
             0
@@ -2149,7 +2127,39 @@ pub unsafe extern "C" fn ee_path_manager_file(
         }
         (2, true) => m.load_graph_searches(host, &mut file),
         _ => -1,
-    })
+    });
+    // a loaded running state (18) and tile searches (26) go back at the loaded game's first tick
+    if load && r == 0 && what < 2 {
+        ee_path_after_load(if what == 0 { after_load_running } else { after_load_searches });
+    }
+    r
+}
+
+#[cfg(not(test))]
+extern "C" {
+    /// `EEAfterLoad(fixup)` (EEPathManager.cpp).
+    fn ee_path_after_load(f: extern "C" fn());
+}
+
+#[cfg(test)]
+extern "C" fn ee_path_after_load(_: extern "C" fn()) {}
+
+/// One call of the game's manager with no values (the after-load fixups).
+fn call_global(what: i32) {
+    let p = GLOBAL.load(Ordering::Acquire);
+    if !p.is_null() {
+        let mut io = EePathIo::default();
+        // SAFETY: the game's live manager
+        unsafe { ee_path_manager_call(p, what, &mut io) };
+    }
+}
+
+extern "C" fn after_load_running() {
+    call_global(18);
+}
+
+extern "C" fn after_load_searches() {
+    call_global(26);
 }
 
 /// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
@@ -2210,38 +2220,6 @@ pub unsafe extern "C" fn ee_path_saved_storage(lists: *mut EePathSavedLists) -> 
     &mut (*lists).storage as *mut Vec<u8> as *mut c_void
 }
 
-/// A tile list (`EEPathManager::FindPath`'s): new, its tiles, freed.
-#[no_mangle]
-pub extern "C" fn ee_path_tiles_new() -> *mut c_void {
-    Box::into_raw(Box::new(Vec::<[i32; 2]>::new())) as *mut c_void
-}
-
-/// Tile `k` of the list into `out`; false past the end.
-///
-/// # Safety
-/// `list` from `ee_path_tiles_new`, `out` writable for two values.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_tiles_get(list: *mut c_void, k: u32, out: *mut i32) -> bool {
-    let list = &*(list as *mut Vec<[i32; 2]>);
-    match list.get(k as usize) {
-        Some(p) => {
-            *out = p[0];
-            *out.add(1) = p[1];
-            true
-        }
-        None => false,
-    }
-}
-
-/// # Safety
-/// `list` from `ee_path_tiles_new`, not used after.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_tiles_free(list: *mut c_void) {
-    if !list.is_null() {
-        drop(Box::from_raw(list as *mut Vec<[i32; 2]>));
-    }
-}
-
 /// A dump's text into `out` (up to `cap` bytes, no terminator); its length. `what` 0: `DumpSim`'s (TEST ONLY, EE-SIM's
 /// state dumps: the searches in progress, the pending requests, the timers, then the bounded machine's storage as
 /// a digest of its bytes); 1: `DumpOutOfSynch`'s (the sub sectors and the queued searches).
@@ -2250,17 +2228,97 @@ pub unsafe extern "C" fn ee_path_tiles_free(list: *mut c_void) {
 /// `p` a live manager, `out` writable for `cap` bytes.
 #[no_mangle]
 pub unsafe extern "C" fn ee_path_manager_dump(p: *mut EePathManager, what: i32, out: *mut u8, cap: u32) -> u32 {
-    let bounded = (*p).bounded as *const c_void;
-    let s =
-        with(p, |m, host| if what == 0 { m.dump(host) + &dump_bounded(bounded) } else { m.dump_out_of_synch(host) });
+    let s = dump_text(p, what);
     let n = s.len().min(cap as usize);
     std::ptr::copy_nonoverlapping(s.as_ptr(), out, n);
     s.len() as u32
 }
 
+/// `DumpSim` (`what` 0) / `DumpOutOfSynch` (1): the dump's text written to the C++ stream `file`.
+///
+/// # Safety
+/// `p` a live manager, `file` an open `FILE*`.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_manager_dump_file(p: *mut EePathManager, what: i32, file: *mut c_void) {
+    let s = dump_text(p, what);
+    if !s.is_empty() {
+        libc::fwrite(s.as_ptr().cast(), 1, s.len(), file.cast());
+    }
+}
+
+/// `EEPathManager::Call(what, h0, h1, values, out)`: the call's io from the handles and the `n` values, then
+/// [`ee_path_manager_call`]; `out` (when not null) gets the io's first two values after it.
+///
+/// # Safety
+/// `p` a live manager; `values` holds `n` (at most 12) values; `out` null or writable for two.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_manager_call_values(
+    p: *mut EePathManager,
+    what: i32,
+    h0: u64,
+    h1: u64,
+    values: *const i64,
+    n: usize,
+    out: *mut i64,
+) -> i64 {
+    let mut io = EePathIo::default();
+    io.h[0] = h0;
+    io.h[1] = h1;
+    if n != 0 {
+        io.i[..n].copy_from_slice(std::slice::from_raw_parts(values, n));
+    }
+    let r = ee_path_manager_call(p, what, &mut io);
+    if !out.is_null() {
+        *out = io.i[0];
+        *out.add(1) = io.i[1];
+    }
+    r
+}
+
+/// `GetPathGoal(unit, out)` (call 13): the answer, the goal tile into `out` (two `long`s).
+///
+/// # Safety
+/// `p` a live manager; `unit` a live unit; `out` writable for two `long`s.
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+pub unsafe extern "C" fn ee_path_manager_path_goal(
+    p: *mut EePathManager,
+    unit: u64,
+    out: *mut std::ffi::c_long,
+) -> bool {
+    let mut io = EePathIo::default();
+    io.h[0] = unit;
+    let r = ee_path_manager_call(p, 13, &mut io) != 0;
+    *out = io.i[0] as std::ffi::c_long;
+    *out.add(1) = io.i[1] as std::ffi::c_long;
+    r
+}
+
+/// The destructor: `Clear` (call 3), then the manager freed; null (the handle's new value).
+///
+/// # Safety
+/// `p` from `ee_path_manager_new`, not used after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_manager_destroy(p: *mut EePathManager) -> *mut EePathManager {
+    let mut io = EePathIo::default();
+    ee_path_manager_call(p, 3, &mut io);
+    ee_path_manager_free(p);
+    std::ptr::null_mut()
+}
+
 #[cfg(test)]
 #[path = "pm_tests.rs"]
 mod tests;
+
+/// A dump's text (`ee_path_manager_dump`'s `what`).
+///
+/// # Safety
+/// `p` a live manager.
+unsafe fn dump_text(p: *mut EePathManager, what: i32) -> String {
+    let bounded = (*p).bounded as *const c_void;
+    with(p, |m, host| if what == 0 { m.dump(host) + &dump_bounded(bounded) } else { m.dump_out_of_synch(host) })
+}
 
 /// `DumpSim`'s last line: the bounded machine (null for none) and its storage's digest.
 fn dump_bounded(bounded: *const c_void) -> String {

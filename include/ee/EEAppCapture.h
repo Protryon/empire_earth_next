@@ -9,15 +9,12 @@ class EEEMStorm;
 class GETransformation;
 class UWideString;
 
-// CAMU: the camera's whole state (the poses, the view, the target, the followed units' ids, the move's numbers, the
-// mode and flags, every key of the path) and the viewport's clipping distances, at each Update's start (inPhase 0,
-// with its elapsed time) and end (1)
-void EEAppCaptureCamera(const EECameraControl& inCamera, unsigned int inPhase, float inElapsedTime);
+// (CAMU, the camera's whole state at each Update's start and end: ee_game gamecpp camera_host.rs)
 
 // MAPS: after a sight change of EEMap (AddSight inKind 0, RemoveSight 1): its arguments and an FNV-1a of what it
 // changed on the tiles near the point (each tile's visibility words and the mesh tile's reference count)
 // The world's hooks the game calls are pointers that EEAppCaptureWorld.cpp sets before main, so no game unit names a
-// symbol of that TEST ONLY unit (PORT_LEARNINGS "Cycle cuts"); EEAppCaptureCamera stays a function of EEAppCapture.cpp
+// symbol of that TEST ONLY unit (PORT_LEARNINGS "Cycle cuts")
 inline void (*EEAppCaptureSight)(unsigned int inKind, EEPlayer* inPlayer, float inX, float inY, float inRadius,
                                  bool inShared) = nullptr;
 
@@ -61,8 +58,7 @@ private:
 
 // (MAPK, MAPP, MMPX, MMSN, CHLS: ee_game app world_capture.rs, called directly)
 
-// STRM: a storm's state after its creation (inPhase 0) and each Step (1, with its time)
-inline void (*EEAppCaptureStorm)(const EEEMStorm& inStorm, unsigned int inPhase, unsigned long inTime) = nullptr;
+// (STRM, a storm's state after its creation and each step: ee_game gamecpp weather.rs)
 
 // EE-SIM --app-sweep (the capture's app profile): at five game minutes the cheat codes (CHET: each chat line, its
 // parse and, when applied, CHEF: every player's state after it), at ten one storm of each kind

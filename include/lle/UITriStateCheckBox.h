@@ -12,6 +12,7 @@
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 #include "lle/UIButtonRust.h"
+#include "rust/ui/ids.h"
 #include "rust/ui/checkobj.h"
 
 class LLE_API UITriStateCheckBox : public UIButton {
@@ -56,11 +57,6 @@ private:
     }
 };
 
-// UITriStateCheckBox::SetCheckState: the UIManager check bitmaps each state shows
-enum UICheckState {
-    kCheckStateOff = 0,  // SetCheckState case -> UIManager::GetCheckOff/GetCheckDownOff
-    kCheckStateOn = 1,  // SetCheckState case -> UIManager::GetCheckOn/GetCheckDownOn
-    kCheckStateNot = 2,  // SetCheckState case -> UIManager::GetCheckNot/GetCheckDownNot
-};
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 
 #endif

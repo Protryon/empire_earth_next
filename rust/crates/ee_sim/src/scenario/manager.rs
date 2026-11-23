@@ -20,6 +20,15 @@ pub const EE_SCENARIO_MANAGER_EXPORT_NAME: u32 = 0;
 pub const EE_SCENARIO_MANAGER_LAST_CHAT: u32 = 1;
 
 /// `EEScenarioManager`'s numbers, in the class's order.
+/// One unit class whose media the scenario loaded (`EESMUnitClassMedia`, ee/EEScenarioManager.h's typedef of this
+/// record; the manager's `mUnitClassMedia`): the player and the unit class type.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeScenarioUnitClassMedia {
+    pub mPlayer: std::os::raw::c_long,
+    pub mUnitClass: std::os::raw::c_long,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeScenarioManagerFields {

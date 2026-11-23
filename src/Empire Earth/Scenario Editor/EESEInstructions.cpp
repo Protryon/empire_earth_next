@@ -25,7 +25,7 @@
 #include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIShell.h"
-#include "ee/EESEIAExport.h"
+#include "ee/EESEARust.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -86,6 +86,7 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
 {
     void** theOut = static_cast<void**>(p[2]);
     switch (inOp) {
+    case EE_SCREENS_SEIN_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
     case EE_SCREENS_SEINX_DIR_RESET:
         sSeinDirectories[i[0]] = FSFileSpec();
         return 0;
@@ -128,10 +129,10 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
         static_cast<UIForm*>(p[0])->AddControl(static_cast<UIComboBox*>(p[1]), 7);
         return 0;
     case EE_SCREENS_SEINX_NEW_IMPORT:
-        *theOut = static_cast<UIEvent*>(new EESEIEImport);
+        *theOut = static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_TEXT_IMPORT));
         return 0;
     case EE_SCREENS_SEINX_NEW_EXPORT:
-        *theOut = static_cast<UIEvent*>(new EESEIEExport);
+        *theOut = static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_TEXT_EXPORT));
         return 0;
     case EE_SCREENS_SEINX_SET_BUTTON_UP:
         static_cast<UIControl*>(p[0])->SetTriggerEvent(kControlTriggerButtonUp, static_cast<UIEvent*>(p[1]));
@@ -191,13 +192,6 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
     return 0;
 }
 
-extern "C" int32_t ee_screenscpp_sein(uint32_t inOp, void* const* p, int32_t* i, float* f)
-{
-    switch (inOp) {
-    case EE_SCREENS_SEIN_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
-    }
-    return 0;
-}
 
 extern "C" int32_t ee_screenscpp_seinx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {

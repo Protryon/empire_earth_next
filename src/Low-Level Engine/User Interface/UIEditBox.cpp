@@ -50,8 +50,8 @@ struct UIEditBoxRust {
     {
         switch (inKey) {
         case 0: return UIControl::ShiftKeyPressed();
-        case 1: return UIEditBox::sControlKey->GetValue() != 0;
-        case 2: return UIEditBox::sBackSpaceKey->GetValue() != 0;
+        case 1: return UIControl::Key(EeUiKey::Control)->GetValue() != 0;
+        case 2: return UIControl::Key(EeUiKey::BackSpace)->GetValue() != 0;
         case 3: return UIControl::DeleteKeyPressed();
         case 4: return UIControl::RightKeyPressed();
         case 5: return UIControl::LeftKeyPressed();
@@ -63,8 +63,8 @@ struct UIEditBoxRust {
         case 11: return UIControl::CutKeyPressed();
         case 12: return UIControl::CopyKeyPressed();
         case 13: return UIControl::PasteKeyPressed();
-        case 17: return UIEditBox::sEnterKey->JustPressed();
-        case 18: return UIEditBox::sNumEnterKey->JustPressed();
+        case 17: return UIControl::Key(EeUiKey::Enter)->JustPressed();
+        case 18: return UIControl::Key(EeUiKey::NumEnter)->JustPressed();
         }
         return false;
     }
@@ -121,23 +121,7 @@ struct UIEditBoxRust {
         }
         return 0;
     }
-    static intptr_t Call(const UIEditBox* e, EeUiEditCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0,
-                         intptr_t d = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_edit_call(e->mRust, c, a, b, cc, d, f);
-    }
-    static intptr_t Color(const UIEditBox* e, EeUiEditCall c, const GEColor& inColor)
-    {
-        return Call(e, c, 0, 0, 0, 0, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-    }
-    static intptr_t Point(const UIEditBox* e, EeUiEditCall c, const GE2DPoint& inPoint, intptr_t a = 0)
-    {
-        return Call(e, c, a, 0, 0, 0, inPoint.GetX(), inPoint.GetY());
-    }
 };
-typedef EeUiEditCall C;
-typedef UIEditBoxRust R;
 
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
 // lle_bg_edit.rs, UI lane round 12) before the host above
@@ -169,51 +153,3 @@ UIEditBox::UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChar
 }
 
 UIEditBox::~UIEditBox() { ee_ui_edit_free(this->mRust); }
-void UIEditBox::AddIMEResultString(const UWideString& inString) { R::Call(this, C::AddImeResult, (intptr_t)(const char*)inString); }
-long UIEditBox::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes, unsigned long inCursor)
-{
-    return (long)R::Call(this, C::ImeChange, (intptr_t)(const char*)inString, inCursor, (intptr_t)(const char*)inAttributes);
-}
-void UIEditBox::ChangeFont(GEFont* inFont) { R::Call(this, C::ChangeFont, (intptr_t)inFont); }
-void UIEditBox::ChangeWidth(unsigned long inWidth) { R::Call(this, C::ChangeWidth, inWidth); }
-long UIEditBox::CloseIMECompositionString() { return (long)R::Call(this, C::ImeClose); }
-void UIEditBox::Copy() { R::Call(this, C::Copy); }
-long UIEditBox::CopyData() { return (long)R::Call(this, C::CopyData); }
-void UIEditBox::Cut() { R::Call(this, C::Cut); }
-void UIEditBox::DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex, unsigned long inEndLine)
-{
-    R::Call(this, C::DeleteRange, inStartIndex, inStartLine, inEndIndex, inEndLine);
-}
-void UIEditBox::DeleteText() { R::Call(this, C::Clear); }
-long UIEditBox::DrawPolygons() { return (long)R::Call(this, C::DrawPolygons); }
-long UIEditBox::DrawTextA() { return (long)R::Call(this, C::DrawText); }
-void UIEditBox::GetAllText(UWideString& outString) const { outString = (const char*)R::Call(this, C::AllText); }
-GEText* UIEditBox::GetGEText() const { return reinterpret_cast<GEText*>(R::Call(this, C::Text)); }
-bool UIEditBox::GetIMEEnabled() const { return R::Call(this, C::ImeEnabled) != 0; }
-unsigned long UIEditBox::GetLineCount() const { return (unsigned long)R::Call(this, C::LineCount); }
-const char* UIEditBox::GetText(unsigned long inLine) const { return (const char*)R::Call(this, C::Line, inLine); }
-long UIEditBox::OpenIMECompositionString() { return (long)R::Call(this, C::ImeOpen); }
-void UIEditBox::ReleaseCapturedKeyboard() { R::Call(this, C::ReleaseKeyboard); }
-void UIEditBox::SelectText() { R::Call(this, C::SelectAll); }
-void UIEditBox::SelectText(unsigned long inCaretIndex, unsigned long inStartIndex, unsigned long inCaretLine, unsigned long inStartLine)
-{
-    R::Call(this, C::Select, inCaretIndex, inStartIndex, inCaretLine, inStartLine);
-}
-void UIEditBox::SetCaretLocation(unsigned long inIndex, unsigned long inLine) { R::Call(this, C::SetCaretLocation, inIndex, inLine); }
-void UIEditBox::SetCursorColor(const GEColor& inColor) { R::Color(this, C::SetCursorColor, inColor); }
-void UIEditBox::SetIsPasswordBox(bool inPasswordBox) { R::Call(this, C::SetIsPasswordBox, inPasswordBox); }
-void UIEditBox::SetLocation(const GE2DPoint& inLocation) { R::Point(this, C::SetLocation, inLocation); }
-void UIEditBox::SetSelectedBgColor(const GEColor& inColor) { R::Color(this, C::SetSelectedBgColor, inColor); }
-void UIEditBox::SetText(const UWideString& inString) { R::Call(this, C::SetText, (intptr_t)(const char*)inString); }
-long UIEditBox::UpdateKeyboard() { return (long)R::Call(this, C::UpdateKeyboard); }
-long UIEditBox::UpdateTranslatedKey(const char* inKey, short inRepeat)
-{
-    return (long)R::Call(this, C::UpdateTranslatedKey, (intptr_t)inKey, inRepeat);
-}
-long UIEditBox::MouseLButtonDoublePressed() { return (long)R::Call(this, C::MouseDoublePressed); }
-long UIEditBox::MouseLButtonDown() { return (long)R::Call(this, C::MouseLButtonDown); }
-long UIEditBox::MouseLButtonUp() { return (long)R::Call(this, C::MouseLButtonUp); }
-long UIEditBox::MouseMove(const GE2DPoint& inLocation) { return (long)R::Point(this, C::MouseMove, inLocation); }
-void UIEditBox::ProcessEnterKey() { R::Call(this, C::ProcessEnterKey); }
-void UIEditBox::TabbedFrom() { R::Call(this, C::TabbedFrom); }
-void UIEditBox::TabbedTo() { R::Call(this, C::TabbedTo); }

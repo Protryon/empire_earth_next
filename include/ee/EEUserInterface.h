@@ -84,46 +84,29 @@ public:
     void PostMessage424Once() { ee_screens_ui_post_icon_bar_once(this); }
 
     // the posts that build C++ objects
-    long PostEvent(UIEvent* inEvent, UIForm* inForm)   // 0x40e (a reference)
+    // 0x40e and 0x40c post a reference (ee_screens ui_objects_ffi.rs)
+    long PostEvent(UIEvent* inEvent, UIForm* inForm) { return (long)ee_screens_ui_post_event(this, inEvent, inForm); }
+    void ShowLoadedObject(UReferenceCounter* inObject) { ee_screens_ui_show_loaded(this, inObject); }
+    // 0x41b: a new EEScreenCapture of a width (no surface or completion event yet)
+    void PostScreenShot(long inX, bool inFlag1, bool inFlag2)
     {
-        inEvent->Reference();
-        return this->Post(0x40e, inEvent, inForm);
-    }
-    void ShowLoadedObject(UReferenceCounter* inObject)   // 0x40c (a reference)
-    {
-        inObject->Reference();
-        this->Post(0x40c, inObject, NULL);
-    }
-    void PostScreenShot(long inX, bool inFlag1, bool inFlag2)   // 0x41b (a new EEScreenCapture)
-    {
-        EEScreenCapture* theCapture = new EEScreenCapture;
-        theCapture->mCaptureComplete = NULL;
-        theCapture->mSurface = NULL;
-        theCapture->mIsPostGame = inFlag2;
-        theCapture->mWidth = inX;
-        this->Post(0x41b, theCapture, (void*)inFlag1);
+        this->Post(0x41b, new EEScreenCapture{inX, NULL, NULL, inFlag2}, (void*)inFlag1);
     }
     // 0x422 (a copy)
     void PostDialogMessage(const EESMDialogMessage& inMessage) { this->Post(0x422, new EESMDialogMessage(inMessage), NULL); }
-    void PostLoadSavedGame(const FSFileSpec& inSpec);   // 0x408 (a copy; EEUserInterface.cpp)
+    // Posts loading a saved game file (message 0x408)
+    void PostLoadSavedGame(const FSFileSpec& inSpec) { this->Post(0x408, new FSFileSpec(inSpec), NULL); }   // 0x408 (a copy; EEUserInterface.cpp)
     // 0x418: a new EEChatLogEntry with a name, colour, text, display time and type
     long AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inTime, unsigned long inType)
     {
-        EEChatLogEntry* theEntry = new EEChatLogEntry;
-        theEntry->mName = inName;
-        theEntry->mColor = inColor;
-        theEntry->mText = inText;
-        theEntry->mTime = inTime;
-        theEntry->mType = inType;
-        return this->Post(0x418, theEntry, NULL);
+        return this->Post(0x418, new EEChatLogEntry{inColor, inName, inText, inType, inTime}, NULL);
     }
     // a white system line to the chat log, shown three times the usual time (gWorldTable's
     // kWorldChatLogDisplayTime: ee/EEDatabaseTables.h's GetLongValue)
     long AddChatLogEntry(const UWideString& inText, long inY)
     {
-        GEColor theColor(1.0f, 1.0f, 1.0f);
-        return this->AddChatLogEntry(theColor, " > ", inText,
+        return this->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), " > ", inText,
                                      ee_data_world_entry((uint32_t)kWorldChatLogDisplayTime).mLongValue * 3, 2);
     }
 
@@ -139,19 +122,29 @@ public:
         ee_screens_ui_event(inEvent.mType, inEvent.mKey.mVirtualKey, inEvent.mText.mText, inEvent.mText.mCursor,
                             inEvent.mText.mLength);
     }
-    void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (message 0x41e)
-    void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);
-    void ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem);  // 0x276a38 (message 0x440)
-    void OpenSelectServer();                // 0x27783c (message 0x441)
-    void PauseGraphics();
-    // Resumes the graphics thread and waits until it runs
-    void ResumeGraphics()
+    // (the members below are Rust's: ee_game screens ui_calls.rs)
+    // Switches to another rasterizer: hides the cursor, releases the screens, deactivates the old rasterizer and
+    // resizes the game screen to 1024x768
+    void ChangeRasterizer(long inRasterizer, long inScreen) { ee_screens_ui_change_rasterizer(inRasterizer, inScreen); }  // 0x276804 (message 0x41e)
+    // Resizes the game screen (unless the size is unchanged and not forced), relays out the forms and redraws the
+    // mini map
+    void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag)
     {
-        gGraphics->PostResume();
-        for (bool theStarted = gGraphics->mIsPaused; theStarted != false; theStarted = gGraphics->mIsPaused)
-            PlatSleep(1);
+        ee_screens_ui_resize_game_screen((uint32_t)inWidth, (uint32_t)inHeight, inForce, inFlag);
     }
-    void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
+    // Shows the WON game and system messages of the day on the multiplayer form when it is visible
+    void ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem)
+    {
+        ee_screens_ui_show_motd(&inGame, &inSystem);
+    }  // 0x276a38 (message 0x440)
+    // Opens the WON server selection, remembering the password when asked
+    void OpenSelectServer() { ee_screens_ui_open_select_server(); }                // 0x27783c (message 0x441)
+    // Pauses the graphics thread and waits until it is paused
+    void PauseGraphics() { ee_screens_ui_pause_graphics(); }
+    // Resumes the graphics thread and waits until it runs
+    void ResumeGraphics() { ee_screens_ui_resume_graphics(); }
+    // Updates the interface: keyboard and mouse input, the UI under the world read lock, then the queued actions
+    void UpdateInterface() { ee_screens_ui_update_interface(); }                 // 0x278ed3 (input, UpdateUI, the actions)
 };
 
 // 0x27fa40 (no arguments; returns a status): what EEUIEProcessTimerExpired's event does (provisional name)
