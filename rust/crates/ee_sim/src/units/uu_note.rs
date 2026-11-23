@@ -44,15 +44,38 @@ static STATE: Mutex<State> = Mutex::new(State { digest: FNV_OFFSET, calls: 0, ti
 
 #[cfg(not(test))]
 extern "C" {
-    /// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
-    /// the digest's halves) written (2).
-    fn ee_units_uu_host_note(which: i32, a: u32, b: u32, c: u32, d: u32) -> u32;
+    /// `gPhysics != NULL ? gPhysics->mNumTicksDone : 0`
+    fn ee_units_uu_host_ticks() -> u32;
 }
 
+/// "UUTL", the record's tag (the first letter in the low byte)
+const UUTL: u32 = u32::from_le_bytes(*b"UUTL");
+
+/// The note's world: whether the capture runs (0), the physics' ticks done (1), the UUTL record of (a tick, b calls,
+/// c and d the digest's halves) written (2).
 #[cfg(not(test))]
 pub(crate) fn host(which: i32, a: u32, b: u32, c: u32, d: u32) -> u32 {
-    // SAFETY: plain C++ reads, and a capture record's write
-    unsafe { ee_units_uu_host_note(which, a, b, c, d) }
+    match which {
+        0 => u32::from(crate::app::capture::ee_app_capture_active()),
+        // SAFETY: a plain C++ read
+        1 => unsafe { ee_units_uu_host_ticks() },
+        _ => {
+            crate::app::capture::commit(UUTL, &record(a, b, c, d));
+            0
+        }
+    }
+}
+
+/// The UUTL record's payload: its four words, little-endian (as `EESimCaptureRecord::U32` wrote them).
+fn record(a: u32, b: u32, c: u32, d: u32) -> Vec<u8> {
+    [a, b, c, d].iter().flat_map(|w| w.to_le_bytes()).collect()
+}
+
+#[cfg(test)]
+#[test]
+fn the_record_is_four_little_endian_words_under_uutl() {
+    assert_eq!(UUTL, 0x4c54_5555);
+    assert_eq!(record(1, 0x0302, 4, 0x0807_0605), vec![1, 0, 0, 0, 2, 3, 0, 0, 4, 0, 0, 0, 5, 6, 7, 8]);
 }
 
 #[cfg(test)]

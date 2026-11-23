@@ -16560,6 +16560,19 @@ constexpr static const int32_t EE_UNITS_SR_OWN_TECHNOLOGY = 53;
 /// technology `a`'s `mData->mKind`
 constexpr static const int32_t EE_UNITS_SR_TECHNOLOGY_KIND = 54;
 
+/// The view's reads of [`EeUnitsUuSoundView`] (`EE_UNITS_UU_SOUND_*`, the C++ host `ee_units_uu_host_sound_view`):
+/// whether the current player sees the location's tile, `EEGetCameraPoint` (the screen point and depth into the four
+/// outputs), the camera's position, the viewport's y clipping plane, the camera control's zoom.
+constexpr static const int32_t EE_UNITS_UU_SOUND_SEEN = 0;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_CAMERA_POINT = 1;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_CAMERA = 2;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_Y_CLIP = 3;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_ZOOM = 4;
+
 /// `GetPathStart`'s and the others' "no path" answer.
 constexpr static const int32_t EE_UNITS_WAYPOINTS_NONE = 7;
 
@@ -19370,6 +19383,10 @@ void ee_units_goal_set_location_point_any(const EeUnitsGoalBase *goal,
 /// # Safety
 /// `goal` a live goal or null.
 float ee_units_goal_location_yaw_any(const EeUnitsGoalBase *goal);
+
+/// `EEUnitGoal::CreateGoal(kind)` (0x23c3e6): the load's empty goal of `kind` given the id it drew back (the loaded
+/// record sets its own), or null for an unknown kind.
+EeUnitsGoalBase *ee_units_goal_create(uint8_t kind);
 
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
@@ -22420,6 +22437,21 @@ void ee_units_uu_sound_parameters(const EeUnitsUuSoundView *view,
                                   const float (*location)[3],
                                   float (*out)[3]);
 
+extern float ee_units_uu_host_sound_view(int32_t which,
+                                         const float (*location)[3],
+                                         float (*out)[4]);
+
+/// `EEComputeSoundParameters` whole: the camera's view of `location` (the C++ reads, before the note), then the
+/// note (82) and the arithmetic; `volume`, `pan`, `pitch` written in that order after `location` is read.
+///
+/// # Safety
+/// `location` holds three floats; `volume_out`, `pan`, `pitch` are writable.
+void ee_units_uu_compute_sound(float volume,
+                               const float (*location)[3],
+                               float *volume_out,
+                               float *pan,
+                               float *pitch);
+
 /// `EEGetDopplerPitch` (83)'s factor (`pitch` written unless silent or still).
 ///
 /// # Safety
@@ -22656,13 +22688,8 @@ void ee_units_lf_tile_line(int32_t x1,
                            uint8_t thin,
                            void *out);
 
-/// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
-/// the digest's halves) written (2).
-extern uint32_t ee_units_uu_host_note(int32_t which,
-                                      uint32_t a,
-                                      uint32_t b,
-                                      uint32_t c,
-                                      uint32_t d);
+/// `gPhysics != NULL ? gPhysics->mNumTicksDone : 0`
+extern uint32_t ee_units_uu_host_ticks();
 
 /// Opens a note of `kind`; whether it records (its words are worth sending).
 uint8_t ee_units_uu_note_begin(uint32_t kind);

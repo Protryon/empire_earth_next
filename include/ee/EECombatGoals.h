@@ -21,25 +21,34 @@
 
 class EEComplexUnit;
 class EEUnit;
+class EEUnitGoal;
+class EEUnitClass;
+typedef EEUnitGoal EEUGRust;
+class EEPlayer;
+class GE3DPoint;
 
-// CBTC, CBGS (no record while the capture is off)
-void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut);
+// an object's handle for the Rust (a complex unit's EEUnit base is at its address: its first base)
+inline uint64_t EECombatObj(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
+
+// CBTC, CBGS (no record while the capture is off; the records' batches are Rust's: ee_sim combat/capture_fold.rs)
+inline void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut)
+    { ee_combat_capture_condition(&in, &inOut); }
 // writes the tests' last CBTC batch (EE-SIM at the game's end, before the capture closes)
-void EECombatCaptureFlush();
+inline void EECombatCaptureFlush() { ee_combat_capture_fold_flush(); }
 
 // The trigger test inKind (EE_COMBAT_GOAL_*) of inUnit on inEvent with the target inTarget (NULL: none): its record
 // filled (ee_combat store.rs; the attack goal's last target tile and convert flag from inGoal), the test through
 // ee_combat_condition over the C++ host (inGoal for the goals, inClass for the shots), the action applied (a shot's
-// attack goal on the unit it hit), then the CBTC record. Returns the test's value. Defined in EECombatGoals.cpp.
-class EEUnitGoal;
-class EEUnitClass;
-long EECombatCondition(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent, EEUnit* inTarget,
-                       EEUnitGoal* inGoal, EEUnitClass* inClass);
+// attack goal on the unit it hit), then the CBTC record. Returns the test's value (ee_sim combat cg_goal.rs).
+inline long EECombatCondition(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent, EEUnit* inTarget,
+                              EEUnitGoal* inGoal, EEUnitClass* inClass)
+    { return ee_units_cg_condition(inKind, EECombatObj(inUnit), (uint32_t)inEvent, EECombatObj(inTarget), EECombatObj(inGoal), EECombatObj(inClass)); }
 // The step of inGoal (inKind) through ee_combat_goal_step: the plan's operations executed on inUnit and inGoal as
 // they are issued, then the CBGS record
-void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnit* inTarget);
-// A shot's target: its attack-unit goal's (NULL under another goal)
-EEUnit* EECombatShotTarget(EEComplexUnit* inUnit);
+inline void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnit* inTarget)
+    { ee_units_cg_step(inKind, EECombatObj(inUnit), EECombatObj(inGoal), EECombatObj(inTarget)); }
+// A shot's target: its attack-unit goal's (NULL under another goal; cg_query.rs)
+inline EEUnit* EECombatShotTarget(EEComplexUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_cgq_shot_target(EECombatObj(inUnit)); }
 
 // CBQR (TEST ONLY): one call of a read behind the hosts (R5b.2, seventh round), its outcome: the function, the
 // unit's and target's ids (0 without one), the result and what the call left behind (per function below). Folded
@@ -55,17 +64,19 @@ inline void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
 // EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
-class EEUnitGoal;
-typedef EEUnitGoal EEUGRust;
-class EEPlayer;
-class GE3DPoint;
-EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit);
-bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget);
-bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal);
-bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal);
-bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
-bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget);
-bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);
+// (ee_sim combat cg_query.rs: the marshalling and the CBQR records)
+inline EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_cgq_impact_unit(EECombatObj(inUnit)); }
+inline bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget) { return ee_units_cgq_in_reach(EECombatObj(inUnit), EECombatObj(inTarget)); }
+inline bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal)
+    { return ee_units_cgq_still_reachable(EECombatObj(inUnit), EECombatObj(inGoal)); }
+inline bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal)
+    { return ee_units_cgq_gate_closed(EECombatObj(inUnit), EECombatObj(inGoal)); }
+inline bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit) { return ee_units_cgq_enemy_in_range(EECombatObj(inUnit)); }
+inline bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget)
+    { return ee_units_cgq_heal_in_range(EECombatObj(inHealer), EECombatObj(inTarget)); }
+// (a GE3DPoint is its EeGe3DPoint record: x, y first)
+inline bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
+    { return ee_units_cgq_faces_point(EECombatObj(inClass), EECombatObj(inUnit), ((const float*)&inLocation)[0], ((const float*)&inLocation)[1], inUseTolerance); }
 
 // CBSO (TEST ONLY): the outcome of a shot's ActionChanged or Update (the unit's command before and after, animation,
 // physics action, hit points, goal and its target, location, rotting, flight and lifetime timers, opacity, velocity,
@@ -92,8 +103,9 @@ inline void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, c
     ee_combat_capture_read_of(1, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, inExtra0, inExtra1, 0);
 }
 // IsTargetIgnored's and IgnoreTarget's record: the list's size and FNV-1a 32 (each entry's six fields in order)
-void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
-                            uint32_t inCheckLocation);
+inline void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
+                                   uint32_t inCheckLocation)
+    { ee_units_cgq_capture_ignored(inFunc, EECombatObj(inUnit), EECombatObj(inTarget), inResult, inCheckLocation); }
 // CBXA (TEST ONLY): the outcome of FireShot, Attacked, ApplyHit and ApplyAreaDamage, at each call's end: the unit's
 // command, animation, hit points, reload timer, weapon tag point, ammunition, flight time, special attack and
 // firing high flags, experience, goal kind and attack target, last attacker and the target's hit points and
@@ -112,18 +124,23 @@ inline void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUni
 // IsOnTileBorderingTarget, EEIsAttackReachable, Attacked, FireShot) of inUnit on inTarget over the world host
 // (EECombatGoals.cpp); inClass the class of Attacked or FireShot (`this`), ioX, ioY EEIsAttackReachable's tile (written
 // when the body sets it). Returns the body's answer (0/1).
-int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
-                      long* ioX = NULL, long* ioY = NULL);
+inline int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
+                             long* ioX = NULL, long* ioY = NULL)
+    { return ee_units_cgq_world(inFunction, EECombatObj(inUnit), EECombatObj(inTarget), EECombatObj(inClass), ioX, ioY); }
 // EEGetFiringPosition (inFiring) or EEGetLeadPosition (ee_combat leaves.rs firing_position, lead_position) over the
 // world host: ioLocation in and out.
-void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation);
+inline void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation)
+    { ee_units_cgq_attack_position(inFiring, EECombatObj(inAttacker), EECombatObj(inTarget), (float(*)[3])&ioLocation); }
 // EEFindDropLocation (ee_combat leaves.rs find_drop_location) over the world host: the target out (NULL: none), the
 // point in outLocation.
-EEUnit* EECombatFindDropLocation(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation);
+inline EEUnit* EECombatFindDropLocation(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation)
+    { return (EEUnit*)(uintptr_t)ee_units_cgq_find_drop_location(EECombatObj(inUnit), EECombatObj(inTarget), (float(*)[3])&outLocation); }
 // EEGetHitDistanceSquared (ee_combat leaves.rs hit_distance_squared) over the world host.
-float EECombatHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY);
+inline float EECombatHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY)
+    { return ee_units_cgq_hit_distance_squared(EECombatObj(inUnit), EECombatObj(inTarget), inX, inY); }
 // EEIsSeenBy (ee_combat leaves.rs is_seen_by) over the world host.
-bool EECombatIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored);
+inline bool EECombatIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
+    { return ee_units_cgq_is_seen_by(EECombatObj(inUnit), EECombatObj(inPlayer), inExplored); }
 // The damage of one hit (ee_combat damage.rs compute_damage; ee/EERules.h EEDamageForm, combat.yaml's constants):
 // inUnit hits inTarget with inAttack, attack kind inAmmo (dbfamily column) and weapon inWeapon (dbweapontohit row);
 // the elevation rule is inUnit's class's. inFriendlyFactor: splash on the own player's units. False when the hit does
@@ -134,9 +151,10 @@ bool EECombatComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, 
 
 // The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
 // Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running
+// (the depth is ee_sim combat cg_query.rs's)
 struct EECombatHostReadScope {
-    explicit EECombatHostReadScope(int inSlot = 0);
-    ~EECombatHostReadScope();
+    explicit EECombatHostReadScope(int inSlot = 0) : mSlot(inSlot), mOuter(ee_combat_host_read_enter(inSlot)) {}
+    ~EECombatHostReadScope() { ee_combat_host_read_leave(this->mSlot); }
     int mSlot;
     bool mOuter;
 };

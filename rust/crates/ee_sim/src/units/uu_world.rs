@@ -987,6 +987,36 @@ pub fn path_length_to<H: UuWorld + ?Sized>(h: &mut H, unit: u64, tile: &mut Tile
 
 // ---- the sound ----
 
+/// The view's reads of [`EeUnitsUuSoundView`] (`EE_UNITS_UU_SOUND_*`, the C++ host `ee_units_uu_host_sound_view`):
+/// whether the current player sees the location's tile, `EEGetCameraPoint` (the screen point and depth into the four
+/// outputs), the camera's position, the viewport's y clipping plane, the camera control's zoom.
+pub const EE_UNITS_UU_SOUND_SEEN: i32 = 0;
+pub const EE_UNITS_UU_SOUND_CAMERA_POINT: i32 = 1;
+pub const EE_UNITS_UU_SOUND_CAMERA: i32 = 2;
+pub const EE_UNITS_UU_SOUND_Y_CLIP: i32 = 3;
+pub const EE_UNITS_UU_SOUND_ZOOM: i32 = 4;
+
+/// `EEComputeSoundParameters`' view of `location`, read in the C++ forwarder's order over `host(which, location,
+/// out)` (its answer, `out` four floats it may write): the tile first, the camera's reads only when it is seen.
+pub fn sound_view(
+    mut host: impl FnMut(i32, &[f32; 3], &mut [f32; 4]) -> f32,
+    location: [f32; 3],
+) -> EeUnitsUuSoundView {
+    let mut v = EeUnitsUuSoundView::default();
+    let mut out = [0.0f32; 4];
+    v.seen = u8::from(host(EE_UNITS_UU_SOUND_SEEN, &location, &mut out) != 0.0);
+    if v.seen != 0 {
+        host(EE_UNITS_UU_SOUND_CAMERA_POINT, &location, &mut out);
+        v.screen = [out[0], out[1], out[2]];
+        v.depth = out[3];
+        host(EE_UNITS_UU_SOUND_CAMERA, &location, &mut out);
+        v.camera = [out[0], out[1], out[2]];
+        v.y_clip = host(EE_UNITS_UU_SOUND_Y_CLIP, &location, &mut out);
+        v.zoom = host(EE_UNITS_UU_SOUND_ZOOM, &location, &mut out);
+    }
+    v
+}
+
 /// `EEComputeSoundParameters` (0x2449ca): the volume, pan and pitch (always 1) of a sound at `location`, as the
 /// camera hears it: silent off a tile the current player sees; panned outside the screen's middle half; faded off
 /// screen, behind the camera and past the far distance (the port's: the far fade grows with a zoom past 100%).

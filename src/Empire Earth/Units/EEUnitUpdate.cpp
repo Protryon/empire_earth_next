@@ -71,74 +71,60 @@ struct EEUpdateContext {
 
 // (the initial contact location and heading, EEUpdateContact: ee_sim units upd_split.rs update_contact)
 
-int64_t EEUpdateBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof(theBits));
-    return (int64_t)theBits;
-}
-
-float EEUpdateFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, sizeof(theValue));
-    return theValue;
-}
-
 template <class T> T* EEObjectOf(int64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
 
+EEUpdateContext* EEUpdateContextOf(void* inContext) { return static_cast<EEUpdateContext*>(inContext); }
+EEComplexUnit* EEUpdateUnit(void* inContext) { return EEUpdateContextOf(inContext)->mUnit; }
+EEUnitClass* EEUpdateClass(void* inContext) { return EEUpdateContextOf(inContext)->mClass; }
+
 int64_t EEUpdateRead(void* inContext, int32_t inCode)
 {
-    EEUpdateContext* theContext = static_cast<EEUpdateContext*>(inContext);
-    EEComplexUnit* theUnit = theContext->mUnit;
-    EEUnitClass* theClass = theContext->mClass;
     switch (inCode) {
     case EE_UNITS_UPD_R_FRAME:
-        return theUnit->mPhysicalModel.GetFrame();
+        return EEUpdateUnit(inContext)->mPhysicalModel.GetFrame();
     case EE_UNITS_UPD_R_ANIMAL_ON_MAP:
-        return EEHerd::IsAnimalOnMap(theUnit) ? 1 : 0;
+        return EEHerd::IsAnimalOnMap(EEUpdateUnit(inContext)) ? 1 : 0;
     case EE_UNITS_UPD_R_PHYSICS_MODEL:
-        return theClass->mPhysicsModel != NULL ? 1 : 0;
+        return EEUpdateClass(inContext)->mPhysicsModel != NULL ? 1 : 0;
     // (the plain member reads are Rust's: ee_units update_views.rs)
     case EE_UNITS_UPD_R_CALAMITY_CAMOUFLAGE:
         return USingleton<EECalamityManager>::GetInstance()->IsCalamityActive(0x17) ? 1 : 0;
     case EE_UNITS_UPD_R_IS_PRIEST:
-        return theClass->IsPriest() ? 1 : 0;
+        return EEUpdateClass(inContext)->IsPriest() ? 1 : 0;
     case EE_UNITS_UPD_R_WORK_TIME_FACTOR:
-        return EEUpdateBits(::gWorld.GetGameVariant()->mWorkTimeFactor);
+        return (int64_t)UFloatBits(::gWorld.GetGameVariant()->mWorkTimeFactor);
     case EE_UNITS_UPD_R_MINE:
-        return theUnit->mMine != NULL ? 1 : 0;
+        return EEUpdateUnit(inContext)->mMine != NULL ? 1 : 0;
     case EE_UNITS_UPD_R_MINE_RESOURCE_TYPE:
-        return (int64_t)theUnit->mMine->mResourceType;
+        return (int64_t)EEUpdateUnit(inContext)->mMine->mResourceType;
     // ActionChanged's
     case EE_UNITS_ACT_R_ATTACK_FRAME_SET:
-        return (int64_t)(unsigned long)EEGetAttackFrameSet(theUnit);
+        return (int64_t)(unsigned long)EEGetAttackFrameSet(EEUpdateUnit(inContext));
     case EE_UNITS_ACT_R_SWIMMING:
-        return theUnit->IsSwimming() ? 1 : 0;
+        return EEUpdateUnit(inContext)->IsSwimming() ? 1 : 0;
     case EE_UNITS_ACT_R_RANDOM:
-        return EEUpdateBits(gPhysics->GetRandom());
+        return (int64_t)UFloatBits(gPhysics->GetRandom());
     case EE_UNITS_ACT_R_WORLD_CLEARING:
         return gWorldClearing ? 1 : 0;
     case EE_UNITS_ACT_R_QUEUED_GOALS:
-        return theUnit->GetQueueGoals(0).size() > 1 ? 1 : 0;
+        return EEUpdateUnit(inContext)->GetQueueGoals(0).size() > 1 ? 1 : 0;
     case EE_UNITS_ACT_R_DEATH_EFFECT:
-        return theClass->mDeathEffect != NULL ? 1 : 0;
+        return EEUpdateClass(inContext)->mDeathEffect != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_DEATH_SOUND:
-        return theUnit->mStats->mDeathSound != NULL ? 1 : 0;
+        return EEUpdateUnit(inContext)->mStats->mDeathSound != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_BLOOD_STAIN:
-        return theUnit->mUnitClass->mBloodStainEffect != NULL ? 1 : 0;
+        return EEUpdateUnit(inContext)->mUnitClass->mBloodStainEffect != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_IS_HUMAN:
-        return theUnit->mPlayer->IsHuman() ? 1 : 0;
+        return EEUpdateUnit(inContext)->mPlayer->IsHuman() ? 1 : 0;
     case EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY:
-        return theUnit->mCitizenBuildQueue.size() == 0 ? 1 : 0;
+        return EEUpdateUnit(inContext)->mCitizenBuildQueue.size() == 0 ? 1 : 0;
     case EE_UNITS_ACT_R_HOME_BASE:
-        return theUnit->mHomeBase != NULL ? 1 : 0;
+        return EEUpdateUnit(inContext)->mHomeBase != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_BOMBER:
-        return theClass->mProjectileClass != NULL && theClass->mProjectileClass->mCategory == kUnitCategoryBomb ? 1 : 0;
+        return EEUpdateClass(inContext)->mProjectileClass != NULL && EEUpdateClass(inContext)->mProjectileClass->mCategory == kUnitCategoryBomb ? 1 : 0;
     default:
         return 0;
     }
@@ -146,271 +132,268 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
 
 int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
 {
-    EEUpdateContext* theContext = static_cast<EEUpdateContext*>(inContext);
-    EEComplexUnit* theUnit = theContext->mUnit;
-    EEUnitClass* theClass = theContext->mClass;
     // (the one-member stores and the death effect are Rust's: ee_units update_views.rs view_act; the notes (USST
     // kinds 12, 13) and the compound cases' choices too: update_views.rs, upd_split.rs; each statement a case here)
     switch (inCode) {
     case EE_UNITS_UPD_PHYSICS_STEP:
-        theClass->mPhysicsModel->Step(theUnit);
+        EEUpdateClass(inContext)->mPhysicsModel->Step(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_TURRETS:
-        theUnit->UpdateTurrets();
+        EEUpdateUnit(inContext)->UpdateTurrets();
         break;
     case EE_UNITS_UPD_WHEELS:
-        theUnit->UpdateWheels();
+        EEUpdateUnit(inContext)->UpdateWheels();
         break;
     case EE_UNITS_UPD_ORBITALS:
-        theUnit->UpdateOrbitals();
+        EEUpdateUnit(inContext)->UpdateOrbitals();
         break;
     case EE_UNITS_UPD_EFFECTS:
-        theClass->UpdateEffects(theUnit);
+        EEUpdateClass(inContext)->UpdateEffects(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_RELOAD_TIMER:
-        theUnit->UpdateReloadTimer();
+        EEUpdateUnit(inContext)->UpdateReloadTimer();
         break;
     case EE_UNITS_UPD_TARGET_SEARCH_TIMER:
-        theUnit->UpdateTargetSearchTimer();
+        EEUpdateUnit(inContext)->UpdateTargetSearchTimer();
         break;
     case EE_UNITS_UPD_CAMOUFLAGE_TIMER:
-        theClass->UpdateCamouflageTimer(theUnit);
+        EEUpdateClass(inContext)->UpdateCamouflageTimer(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_ANIMATE:
-        return theClass->Animate(theUnit);
+        return EEUpdateClass(inContext)->Animate(EEUpdateUnit(inContext));
     case EE_UNITS_UPD_REFRESH_SOUND:
-        theClass->RefreshSound(theUnit);
+        EEUpdateClass(inContext)->RefreshSound(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_REGENERATE_POWER:
-        theClass->RegeneratePower(theUnit);
+        EEUpdateClass(inContext)->RegeneratePower(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_FANATICISM_COLOR:
-        theUnit->UpdateFanaticismColor();
+        EEUpdateUnit(inContext)->UpdateFanaticismColor();
         break;
     case EE_UNITS_UPD_FIRE_ON_ATTACK_FRAME:
-        theClass->FireOnAttackFrame(theUnit, (long)inA, (long)inB);
+        EEUpdateClass(inContext)->FireOnAttackFrame(EEUpdateUnit(inContext), (long)inA, (long)inB);
         break;
     case EE_UNITS_UPD_ROTTING:
-        return (int64_t)theUnit->UpdateRottingAwayTime();
+        return (int64_t)EEUpdateUnit(inContext)->UpdateRottingAwayTime();
     case EE_UNITS_UPD_HEAL_SEARCH_TIMER:
-        theUnit->UpdateHealSearchTimer();
+        EEUpdateUnit(inContext)->UpdateHealSearchTimer();
         break;
     case EE_UNITS_UPD_GOAL_WORK:
-        theUnit->mGoalState->Work(theUnit);
+        EEUpdateUnit(inContext)->mGoalState->Work(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_REGENERATE:
-        theClass->Regenerate(theUnit);
+        EEUpdateClass(inContext)->Regenerate(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_DONE:
-        theClass->UpdateDone(theUnit);
+        EEUpdateClass(inContext)->UpdateDone(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_ANIMAL:
-        theClass->UpdateAnimal(theUnit);
+        EEUpdateClass(inContext)->UpdateAnimal(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_RESOURCE_UNIT:
-        theClass->UpdateResourceUnit(theUnit);
+        EEUpdateClass(inContext)->UpdateResourceUnit(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_CONTINUE_PRODUCTION:
-        theUnit->ContinueProduction();
+        EEUpdateUnit(inContext)->ContinueProduction();
         break;
     case EE_UNITS_UPD_UPDATE_CITIZEN:
-        theClass->UpdateCitizen(theUnit);
+        EEUpdateClass(inContext)->UpdateCitizen(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_UPDATE_CONVERSION:
-        theClass->BasicPriestUpdateConversion(theUnit);
+        EEUpdateClass(inContext)->BasicPriestUpdateConversion(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_RELEASE_CONVERSION_EFFECT:
-        theUnit->ReleaseConversionEffect();
+        EEUpdateUnit(inContext)->ReleaseConversionEffect();
         break;
     case EE_UNITS_UPD_HIDE_CONVERSION_EFFECTS:
-        theClass->BasicPriestHideConversionEffects(theUnit);
+        EEUpdateClass(inContext)->BasicPriestHideConversionEffects(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_RESOURCES_ROTTING:
-        theUnit->UpdateResourcesRotting();
+        EEUpdateUnit(inContext)->UpdateResourcesRotting();
         break;
     case EE_UNITS_UPD_NEXT_FLIGHT_STATE:
-        return (int64_t)theClass->GetNextFlightState(theUnit);
+        return (int64_t)EEUpdateClass(inContext)->GetNextFlightState(EEUpdateUnit(inContext));
     case EE_UNITS_UPD_GOAL_QUEUES: {
         // the started, non-empty queues' expiry and the goals' refresh (ee_units goals.rs)
-        EEGoalQueueIO theIO = {NULL, 0, 0, theUnit};
+        EEGoalQueueIO theIO = {NULL, 0, 0, EEUpdateUnit(inContext)};
         EeGoalQueueHost theHost;
         EEGoalQueueHostOf(theIO, theHost);
-        ee_units_goal_queues_update(reinterpret_cast<uintptr_t>(theUnit), &theHost);
+        ee_units_goal_queues_update(reinterpret_cast<uintptr_t>(EEUpdateUnit(inContext)), &theHost);
         break;
     }
     case EE_UNITS_UPD_OPACITY_CHAIN:
-        theUnit->SetOpacityChain(EEUpdateFloat(inA));
+        EEUpdateUnit(inContext)->SetOpacityChain(UBitsFloat(inA));
         break;
     case EE_UNITS_UPD_UPDATE_BUILDING:
-        theClass->UpdateBuilding(theUnit);
+        EEUpdateClass(inContext)->UpdateBuilding(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_UPDATE_ARMED:
-        theClass->UpdateArmed(theUnit);
+        EEUpdateClass(inContext)->UpdateArmed(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_ADD_RESOURCE:
-        theUnit->mPlayer->AddResource((long)inA, (long)inB);
+        EEUpdateUnit(inContext)->mPlayer->AddResource((long)inA, (long)inB);
         break;
     case EE_UNITS_UPD_SAVED_GROUPS_RESET:
-        theUnit->mPlayer->mSavedGroups.Reset(7, 1);
+        EEUpdateUnit(inContext)->mPlayer->mSavedGroups.Reset(7, 1);
         break;
-    case EE_UNITS_UPD_X_OPEN_FRACTION: theUnit->SetOpenFraction(EEUpdateFloat(inA)); break;
-    case EE_UNITS_UPD_X_CARRIER_OPEN_FRACTION: theClass->GetLastLinkedCarrier(theUnit)->SetOpenFraction(EEUpdateFloat(inA)); break;
-    case EE_UNITS_UPD_X_LINKED_OPEN_FRACTION: theClass->GetLastLinked(theUnit)->SetOpenFraction(EEUpdateFloat(inA)); break;
+    case EE_UNITS_UPD_X_OPEN_FRACTION: EEUpdateUnit(inContext)->SetOpenFraction(UBitsFloat(inA)); break;
+    case EE_UNITS_UPD_X_CARRIER_OPEN_FRACTION: EEUpdateClass(inContext)->GetLastLinkedCarrier(EEUpdateUnit(inContext))->SetOpenFraction(UBitsFloat(inA)); break;
+    case EE_UNITS_UPD_X_LINKED_OPEN_FRACTION: EEUpdateClass(inContext)->GetLastLinked(EEUpdateUnit(inContext))->SetOpenFraction(UBitsFloat(inA)); break;
     case EE_UNITS_UPD_DEPLETE_MINE:
-        theUnit->mMine->DepleteResource(1);
+        EEUpdateUnit(inContext)->mMine->DepleteResource(1);
         break;
     // ActionChanged's
     case EE_UNITS_ACT_RELEASE_HEAL_EFFECT:
-        theUnit->ReleaseHealEffect();
+        EEUpdateUnit(inContext)->ReleaseHealEffect();
         break;
     case EE_UNITS_ACT_HERD_ATTACK_BACK:
-        theUnit->mHerd->AttackBack(theUnit, true);
+        EEUpdateUnit(inContext)->mHerd->AttackBack(EEUpdateUnit(inContext), true);
         break;
     case EE_UNITS_ACT_HERD_UNIT_HIT:
-        theUnit->mHerd->HandleUnitHit(theUnit);
+        EEUpdateUnit(inContext)->mHerd->HandleUnitHit(EEUpdateUnit(inContext));
         break;
-    case EE_UNITS_UPD_X_LOCATION_MATRIX: memcpy(EEObjectOf<float>(inA), theUnit->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float)); break;
-    case EE_UNITS_UPD_X_SET_CONTACT_LOCATION: theUnit->SetInitialContactLocation(*EEObjectOf<GE3DPoint>(inA)); break;
-    case EE_UNITS_UPD_X_CONTACT_LOCATION: *EEObjectOf<GE3DPoint>(inA) = theUnit->mInitialContactLocation; break;
-    case EE_UNITS_UPD_X_STORE_CONTACT_LOCATION: theUnit->mInitialContactLocation = *EEObjectOf<GE3DPoint>(inA); break;
-    case EE_UNITS_UPD_X_CONTACT_HEADING: return EEUpdateBits(theUnit->mInitialContactHeading);
-    case EE_UNITS_UPD_X_STORE_CONTACT_HEADING: theUnit->mInitialContactHeading = EEUpdateFloat(inA); break;
+    case EE_UNITS_UPD_X_LOCATION_MATRIX: memcpy(EEObjectOf<float>(inA), EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float)); break;
+    case EE_UNITS_UPD_X_SET_CONTACT_LOCATION: EEUpdateUnit(inContext)->SetInitialContactLocation(*EEObjectOf<GE3DPoint>(inA)); break;
+    case EE_UNITS_UPD_X_CONTACT_LOCATION: *EEObjectOf<GE3DPoint>(inA) = EEUpdateUnit(inContext)->mInitialContactLocation; break;
+    case EE_UNITS_UPD_X_STORE_CONTACT_LOCATION: EEUpdateUnit(inContext)->mInitialContactLocation = *EEObjectOf<GE3DPoint>(inA); break;
+    case EE_UNITS_UPD_X_CONTACT_HEADING: return (int64_t)UFloatBits(EEUpdateUnit(inContext)->mInitialContactHeading);
+    case EE_UNITS_UPD_X_STORE_CONTACT_HEADING: EEUpdateUnit(inContext)->mInitialContactHeading = UBitsFloat(inA); break;
     case EE_UNITS_ACT_ATTACKED:
-        theClass->Attacked(theUnit);
+        EEUpdateClass(inContext)->Attacked(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_FLEE_ATTACKER:
-        theClass->FleeAttacker(theUnit);
+        EEUpdateClass(inContext)->FleeAttacker(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_SET_ANIMATION:
-        theUnit->SetAnimation((long)inA, -1, inB != 0);
+        EEUpdateUnit(inContext)->SetAnimation((long)inA, -1, inB != 0);
         break;
-    case EE_UNITS_UPD_X_RETURN_TO_CONTACT: theUnit->SetGoal(EEUGRust::NewLocation(&theUnit->mInitialContactLocation, false, false, true, theUnit->mInitialContactHeading, false, false), inA != 0, 0); break;
+    case EE_UNITS_UPD_X_RETURN_TO_CONTACT: EEUpdateUnit(inContext)->SetGoal(EEUGRust::NewLocation(&EEUpdateUnit(inContext)->mInitialContactLocation, false, false, true, EEUpdateUnit(inContext)->mInitialContactHeading, false, false), inA != 0, 0); break;
     case EE_UNITS_ACT_FLEE_AFTER_CALAMITY:
-        theUnit->FleeAfterCalamity(0);
+        EEUpdateUnit(inContext)->FleeAfterCalamity(0);
         break;
     case EE_UNITS_ACT_RANDOM_ANIMATION_TIME:
-        theUnit->SetAnimationTime(gPhysics->GetRandom(0L, (long)theUnit->mStats->mModel->mHoldTimes[theUnit->GetAnimation()]));
+        EEUpdateUnit(inContext)->SetAnimationTime(gPhysics->GetRandom(0L, (long)EEUpdateUnit(inContext)->mStats->mModel->mHoldTimes[EEUpdateUnit(inContext)->GetAnimation()]));
         break;
     case EE_UNITS_ACT_DROP_PATH:
-        theUnit->DropPath();
+        EEUpdateUnit(inContext)->DropPath();
         break;
     case EE_UNITS_ACT_UPDATE_WATER_STATE:
-        theUnit->UpdateWaterState(false);
+        EEUpdateUnit(inContext)->UpdateWaterState(false);
         break;
     case EE_UNITS_ACT_UNIT_GOAL_DONE:
-        theUnit->mPlayer->UnitGoalDone(theUnit);
+        EEUpdateUnit(inContext)->mPlayer->UnitGoalDone(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_CLEAR_GOALS:
-        theUnit->ClearGoals((long)inA);
+        EEUpdateUnit(inContext)->ClearGoals((long)inA);
         break;
-    case EE_UNITS_UPD_X_UNIT: return EEObj(theUnit);
+    case EE_UNITS_UPD_X_UNIT: return EEObj(EEUpdateUnit(inContext));
     case EE_UNITS_UPD_X_NEXT_PART_OF: return EEObj(EEObjectOf<EEComplexUnit>(inA)->mNextPart);
     case EE_UNITS_UPD_X_START_ACTION_OF: EEObjectOf<EEComplexUnit>(inA)->StartAction((unsigned long)inB); break;
     case EE_UNITS_UPD_X_ACTION_CHANGED_OF: EEObjectOf<EEComplexUnit>(inA)->mUnitClass->ActionChanged(EEObjectOf<EEComplexUnit>(inA)); break;
     case EE_UNITS_ACT_UNIT_DIED:
-        theClass->UnitDied(theUnit);
+        EEUpdateClass(inContext)->UnitDied(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_GOAL_STEP:
-        theUnit->mGoalState->Step(theUnit);
+        EEUpdateUnit(inContext)->mGoalState->Step(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_DESELECT:
-        theUnit->mPlayer->DeselectUnit(theUnit);
+        EEUpdateUnit(inContext)->mPlayer->DeselectUnit(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_CLOAK_CHAIN:
-        theUnit->SetCloakedChain(true);
+        EEUpdateUnit(inContext)->SetCloakedChain(true);
         break;
     case EE_UNITS_ACT_OPAQUE_CHAIN:
-        theUnit->SetOpacityChain(1.0f);
+        EEUpdateUnit(inContext)->SetOpacityChain(1.0f);
         break;
     case EE_UNITS_ACT_KILL:
-        theUnit->Kill(inA != 0, false, false);
+        EEUpdateUnit(inContext)->Kill(inA != 0, false, false);
         break;
-    case EE_UNITS_UPD_X_KILL_UNIT: theUnit->mPlayer->KillUnit(EEObjectOf<EEComplexUnit>(inA), false); break;
+    case EE_UNITS_UPD_X_KILL_UNIT: EEUpdateUnit(inContext)->mPlayer->KillUnit(EEObjectOf<EEComplexUnit>(inA), false); break;
     case EE_UNITS_ACT_PATH_TO_GOAL:
-        theClass->PathToGoal(theUnit);
+        EEUpdateClass(inContext)->PathToGoal(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_MOVE_TO_TILE_CENTRE:
-        theClass->MoveToTileCentre(theUnit);
+        EEUpdateClass(inContext)->MoveToTileCentre(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_FLEE:
-        theClass->Flee(theUnit);
+        EEUpdateClass(inContext)->Flee(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_NEXT_WAYPOINT:
-        theClass->NextWaypoint(theUnit);
+        EEUpdateClass(inContext)->NextWaypoint(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_FIND_SAFE_LOCATION:
-        theClass->FindSafeLocation(theUnit);
+        EEUpdateClass(inContext)->FindSafeLocation(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_FACE_YAW:
-        return static_cast<EEUGRust*>(theUnit->mGoalState)->FaceYaw(theUnit) ? 1 : 0;
+        return static_cast<EEUGRust*>(EEUpdateUnit(inContext)->mGoalState)->FaceYaw(EEUpdateUnit(inContext)) ? 1 : 0;
     case EE_UNITS_ACT_FIND_PATH:
-        theClass->FindPath(theUnit);
+        EEUpdateClass(inContext)->FindPath(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_HEAL:
-        theClass->Heal(theUnit);
+        EEUpdateClass(inContext)->Heal(EEUpdateUnit(inContext));
         break;
-    case EE_UNITS_UPD_X_CLEAR_HEALEE: theContext->mHealee = NULL; break;
-    case EE_UNITS_UPD_X_FIND_HEALEE: return theClass->FindTargetNear(theUnit, theUnit->mStats->GetLineOfSight(), &theContext->mHealee);
-    case EE_UNITS_UPD_X_SET_HEAL_GOAL: theUnit->SetGoal(EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(theContext->mHealee), false), inA != 0, 0); break;
+    case EE_UNITS_UPD_X_CLEAR_HEALEE: EEUpdateContextOf(inContext)->mHealee = NULL; break;
+    case EE_UNITS_UPD_X_FIND_HEALEE: return EEUpdateClass(inContext)->FindTargetNear(EEUpdateUnit(inContext), EEUpdateUnit(inContext)->mStats->GetLineOfSight(), &EEUpdateContextOf(inContext)->mHealee);
+    case EE_UNITS_UPD_X_SET_HEAL_GOAL: EEUpdateUnit(inContext)->SetGoal(EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(EEUpdateContextOf(inContext)->mHealee), false), inA != 0, 0); break;
     case EE_UNITS_ACT_GOAL_START_TIME:
-        theUnit->mGoalState->SetStartTime(gPhysics->mGameTime);
+        EEUpdateUnit(inContext)->mGoalState->SetStartTime(gPhysics->mGameTime);
         break;
     case EE_UNITS_ACT_CALL_PARATROOP_PLANE:
-        theClass->CallParatroopPlane(theUnit);
+        EEUpdateClass(inContext)->CallParatroopPlane(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_PLACE_TRACK_DECAL:
-        EEPlaceTrackDecal(theUnit);
+        EEPlaceTrackDecal(EEUpdateUnit(inContext));
         break;
-    case EE_UNITS_UPD_X_DEATH_SOUND: return EEObj(theUnit->mStats->mDeathSound);
-    case EE_UNITS_UPD_X_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, EEObjectOf<EESoundObject>(inA), EEObjectOf<float>(inB), EEObjectOf<float>(inB) + 1, EEObjectOf<float>(inB) + 2); break;
+    case EE_UNITS_UPD_X_DEATH_SOUND: return EEObj(EEUpdateUnit(inContext)->mStats->mDeathSound);
+    case EE_UNITS_UPD_X_SOUND_PARAMETERS: EEUpdateClass(inContext)->GetSoundParameters(EEUpdateUnit(inContext), EEObjectOf<EESoundObject>(inA), EEObjectOf<float>(inB), EEObjectOf<float>(inB) + 1, EEObjectOf<float>(inB) + 2); break;
     case EE_UNITS_UPD_X_PLAY_SAMPLE: gSoundManager->Play(EEObjectOf<EESoundObject>(inA)->mSampleID, EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2], EEObjectOf<EESoundObject>(inA)->mLooping, NULL); break;
     case EE_UNITS_ACT_RELEASE_CONVERSION_EFFECT:
-        theUnit->ReleaseConversionEffect();
+        EEUpdateUnit(inContext)->ReleaseConversionEffect();
         break;
     case EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS:
         // (the temple's too: its copy was the basic priest's body)
-        theClass->BasicPriestHideConversionEffects(theUnit);
+        EEUpdateClass(inContext)->BasicPriestHideConversionEffects(EEUpdateUnit(inContext));
         break;
-    case EE_UNITS_UPD_X_FIND_STORAGE: return EEObj(theClass->FindStorage(theUnit, inA != 0));
-    case EE_UNITS_UPD_X_GATHER_AT: theUnit->SetGoal(EEUGRust::NewGather(NULL, EEObjectOf<EEUnit>(inA), false), 0, 0); break;
-    case EE_UNITS_UPD_X_ATTACK_GOAL: return EEObj(EEAttackUnitCast(theUnit->GetGoal()));
+    case EE_UNITS_UPD_X_FIND_STORAGE: return EEObj(EEUpdateClass(inContext)->FindStorage(EEUpdateUnit(inContext), inA != 0));
+    case EE_UNITS_UPD_X_GATHER_AT: EEUpdateUnit(inContext)->SetGoal(EEUGRust::NewGather(NULL, EEObjectOf<EEUnit>(inA), false), 0, 0); break;
+    case EE_UNITS_UPD_X_ATTACK_GOAL: return EEObj(EEAttackUnitCast(EEUpdateUnit(inContext)->GetGoal()));
     case EE_UNITS_UPD_X_ATTACK_TARGET: return EEObj(EEObjectOf<EEUGRust>(inA)->GetAttackTarget());
-    case EE_UNITS_UPD_X_NEAREST_TARGET_BUILDING: return EEObj(theClass->FindNearestTargetBuilding(EEObjectOf<EEUnit>(inA)));
+    case EE_UNITS_UPD_X_NEAREST_TARGET_BUILDING: return EEObj(EEUpdateClass(inContext)->FindNearestTargetBuilding(EEObjectOf<EEUnit>(inA)));
     case EE_UNITS_UPD_X_SET_ATTACK_TARGET: EEObjectOf<EEUGRust>(inA)->SetAttackTarget(EEObjectOf<EEUnit>(inB)); break;
-    case EE_UNITS_UPD_X_EXITING_PASSENGER: return EEObj(theUnit->FindPassenger(theUnit->mExitingUnitID));
-    case EE_UNITS_UPD_X_QUEUE_TAKEOFF: ee_units_atc_queue_request(EEObjectOf<EEComplexUnit>(inA)->mPlayer->mAirTraffic[EEObjectOf<EEComplexUnit>(inA)->mUnitClass->mAirTrafficType - 1], theUnit, EEObjectOf<EEComplexUnit>(inA), 0); break;
+    case EE_UNITS_UPD_X_EXITING_PASSENGER: return EEObj(EEUpdateUnit(inContext)->FindPassenger(EEUpdateUnit(inContext)->mExitingUnitID));
+    case EE_UNITS_UPD_X_QUEUE_TAKEOFF: ee_units_atc_queue_request(EEObjectOf<EEComplexUnit>(inA)->mPlayer->mAirTraffic[EEObjectOf<EEComplexUnit>(inA)->mUnitClass->mAirTrafficType - 1], EEUpdateUnit(inContext), EEObjectOf<EEComplexUnit>(inA), 0); break;
     case EE_UNITS_ACT_RELEASE_UNIT:
-        theClass->ReleaseUnit(theUnit);
+        EEUpdateClass(inContext)->ReleaseUnit(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_UPD_X_GATE_SOUND: return EEObj(EESoundObject::Get(kSoundGate));
     case EE_UNITS_UPD_X_PLAY_SOUND: EEObjectOf<EESoundObject>(inA)->Play(EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2]); break;
-    case EE_UNITS_UPD_X_LOCATION: *EEObjectOf<GE3DPoint>(inA) = GE3DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(), theUnit->mPhysicalModel.GetLocation().GetZ()); break;
-    case EE_UNITS_UPD_X_NEXT_WAYPOINT_POINT: return theUnit->GetNextWaypointPoint(*EEObjectOf<GE3DPoint>(inA));
-    case EE_UNITS_UPD_X_SET_HEIGHT_AT: theUnit->SetHeight(theClass->GetHeightAt(theUnit, *EEObjectOf<GE3DPoint>(inA))); break;
+    case EE_UNITS_UPD_X_LOCATION: *EEObjectOf<GE3DPoint>(inA) = GE3DPoint(EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().GetX(), EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().GetY(), EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().GetZ()); break;
+    case EE_UNITS_UPD_X_NEXT_WAYPOINT_POINT: return EEUpdateUnit(inContext)->GetNextWaypointPoint(*EEObjectOf<GE3DPoint>(inA));
+    case EE_UNITS_UPD_X_SET_HEIGHT_AT: EEUpdateUnit(inContext)->SetHeight(EEUpdateClass(inContext)->GetHeightAt(EEUpdateUnit(inContext), *EEObjectOf<GE3DPoint>(inA))); break;
     case EE_UNITS_ACT_RETURN_TO_AIRPORT:
-        theClass->AirAnimalReturnToAirport(theUnit);
+        EEUpdateClass(inContext)->AirAnimalReturnToAirport(EEUpdateUnit(inContext));
         break;
-    case EE_UNITS_UPD_X_AIR_ANIMAL_DEATH_ROLL: EEAirAnimalDeathRoll(theClass, theUnit); break;
-    case EE_UNITS_UPD_X_LANDABLE: return EELandableActionOperation((int32_t)inA, theClass, theUnit, inB, &theContext->mAirport);
-    case EE_UNITS_UPD_X_HELICOPTER_PATH: EEHelicopterPathToGoal(theClass, theUnit); break;
-    case EE_UNITS_UPD_X_HELICOPTER_TRANSPORT_PATH: EEHelicopterTransportPathToGoal(theClass, theUnit); break;
-    case EE_UNITS_UPD_X_HELICOPTER_PRIEST_PATH: EEHelicopterPriestPathToGoal(theClass, theUnit); break;
+    case EE_UNITS_UPD_X_AIR_ANIMAL_DEATH_ROLL: EEAirAnimalDeathRoll(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
+    case EE_UNITS_UPD_X_LANDABLE: return EELandableActionOperation((int32_t)inA, EEUpdateClass(inContext), EEUpdateUnit(inContext), inB, &EEUpdateContextOf(inContext)->mAirport);
+    case EE_UNITS_UPD_X_HELICOPTER_PATH: EEHelicopterPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
+    case EE_UNITS_UPD_X_HELICOPTER_TRANSPORT_PATH: EEHelicopterTransportPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
+    case EE_UNITS_UPD_X_HELICOPTER_PRIEST_PATH: EEHelicopterPriestPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_AIR_ANIMAL_PATH:
-        EEAirAnimalPathToGoal(theClass, theUnit);
+        EEAirAnimalPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_CIRCLE_SIDE:
-        EEAirplaneCircleSide(theClass, theUnit);
+        EEAirplaneCircleSide(EEUpdateClass(inContext), EEUpdateUnit(inContext));
         break;
-    case EE_UNITS_UPD_X_AIRPLANE_HOLDING: EEAirplaneHoldingPattern(theClass, theUnit); break;
-    case EE_UNITS_UPD_X_SPACESHIP_HOLDING: EEPlanetSpaceshipHoldingPattern(theClass, theUnit); break;
+    case EE_UNITS_UPD_X_AIRPLANE_HOLDING: EEAirplaneHoldingPattern(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
+    case EE_UNITS_UPD_X_SPACESHIP_HOLDING: EEPlanetSpaceshipHoldingPattern(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_FLY_OFF_MAP:
-        theClass->FlyOffMap(theUnit);
+        EEUpdateClass(inContext)->FlyOffMap(EEUpdateUnit(inContext));
         break;
     case EE_UNITS_ACT_START_ACTION:
-        theUnit->StartAction((unsigned long)inA);
+        EEUpdateUnit(inContext)->StartAction((unsigned long)inA);
         break;
     case EE_UNITS_ACT_CLASS_ACTION_CHANGED:
-        theClass->ActionChanged(theUnit);
+        EEUpdateClass(inContext)->ActionChanged(EEUpdateUnit(inContext));
         break;
     default:
         break;
