@@ -341,3 +341,19 @@ fn a_group_is_a_byte_compared_with_the_int() {
     m.clear();
     assert_eq!(m.call(EeWonLayoutMgrCall::Count, 0, 0, 0, 0), 0);
 }
+
+#[test]
+fn the_constructors_records_are_the_originals() {
+    let r = child_init(3, 10, 20, 1, 2, 3, 4);
+    assert_eq!(
+        (r.kind, r.refs, r.ints, r.horz, r.vert),
+        (EeWonLayoutKind::Child, [10, 20, 0, 0, 0], [3, 1, 2, 3, 4, 0, 0, 0], false, false)
+    );
+    let r = percent_init(1, [2, 3, 4, 5], [6, 7, 8, 9, 10, 11, 12, 13]);
+    assert_eq!((r.kind, r.refs, r.ints), (EeWonLayoutKind::Percent, [1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11, 12, 13]));
+    let r = basic_init(EeWonLayoutKind::SpaceEvenly, 7, 0, 4, 5, 0, true, false);
+    assert_eq!(
+        (r.kind, r.refs, r.ints, r.horz, r.vert),
+        (EeWonLayoutKind::SpaceEvenly, [7, 0, 0, 0, 0], [4, 5, 0, 0, 0, 0, 0, 0], true, false)
+    );
+}

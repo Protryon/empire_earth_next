@@ -33,6 +33,7 @@ pub mod guilayout;
 pub mod guilist;
 pub mod guimenu;
 pub mod guimulti;
+pub mod guireg;
 pub mod guiscroll;
 pub mod guisplit;
 pub mod guistring;

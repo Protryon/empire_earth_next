@@ -8,10 +8,11 @@
 //!
 //! Also here: `MultiListHeader::GetSortTypeForButton`, Rust over one-statement ops of the header's host.
 
+use crate::guictl::EeWonRect4;
 use crate::guidraw::{EeWonDrawOp, EeWonInputPaint, EeWonSelColor, EE_WON_DRAW_CALL};
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp, EeWonGuiOp as Op};
 use crate::wmcache::EeWonWmRefKind;
-use crate::wmobj::{EeWonWmEvent, EeWonWmMouse};
+use crate::wmobj::{EeWonWmEvent, EeWonWmMouse, EeWonWmWin};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -64,7 +65,7 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
         EeWonGuiSplitHost::Input => input_op(op, a, b, c, &out),
         EeWonGuiSplitHost::Label => label_op(op, a, b, &out),
         EeWonGuiSplitHost::Split => split_op(op, a, &out),
-        EeWonGuiSplitHost::List => list_op(op, &out),
+        EeWonGuiSplitHost::List => list_op(op, [a, b, c, d], &out),
         EeWonGuiSplitHost::Wm => wm_op(op, a, b, c, &out),
     };
     match answer {
@@ -192,12 +193,25 @@ fn text_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
         }
         // a segment's font and text in the slots; without a segment the plain draw (ComponentOp's)
         Op::Draw if c != 0 => Some(out(Op::TextDrawSeg, a, b, c, 0)),
+        // the link's parameter kept, then its event delivered (R6 WON round 33)
+        Op::LinkActivated => {
+            out(Op::TextSetLinkParam, a, 0, 0, 0);
+            out(Op::TextDeliverLinkEvent, a, 0, 0, 0);
+            Some(0)
+        }
         _ => None,
     }
 }
 
 fn input_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
     match op {
+        // the clipboard's text into the sink `a` (the original's local GUIString is the host's text; R6 WON round 33)
+        Op::ClipboardTake => {
+            out(Op::HostTextClipboard, 0, 0, 0, 0);
+            out(Op::HostTextSink, a, 0, 0, 0);
+            out(Op::HostTextClear, 0, 0, 0, 0);
+            Some(0)
+        }
         // the filter over the typed text (the original's local GUIString is the host's text), 2 without one
         Op::Filter => {
             if out(Op::InputHasFilter, 0, 0, 0, 0) == 0 {
@@ -270,8 +284,57 @@ fn split_op(op: Op, a: isize, out: Out) -> Option<isize> {
     }
 }
 
-fn list_op(op: Op, out: Out) -> Option<isize> {
+fn list_op(op: Op, v: [isize; 4], out: Out) -> Option<isize> {
+    let [a, b, c, d] = v;
     match op {
+        // ---- R6 WON round 33
+        // 1 when the pointer is outside the list (in its parent's coordinates), 0 without a window or a parent
+        Op::PointerOutside => {
+            let window = out(Op::ListRoot, 0, 0, 0, 0);
+            if window == 0 {
+                return Some(0);
+            }
+            let mut at = [out(Op::WinMouseX, window, 0, 0, 0) as i32, 0];
+            at[1] = out(Op::WinMouseY, window, 0, 0, 0) as i32;
+            let parent = out(Op::ListParent, 0, 0, 0, 0);
+            if parent == 0 {
+                return Some(0);
+            }
+            out(Op::ParentRootToChild, parent, at.as_mut_ptr() as isize, 0, 0);
+            Some(if out(Op::ListContains, at[0] as isize, at[1] as isize, 0, 0) != 0 { 0 } else { 1 })
+        }
+        // the item tooltip made on first use, then shown for the item `a`
+        Op::TipShow => {
+            if out(Op::TipExists, 0, 0, 0, 0) == 0 {
+                out(Op::TipNew, 0, 0, 0, 0);
+            }
+            out(Op::TipDo, a, 0, 0, 0);
+            Some(0)
+        }
+        Op::TipHide => {
+            if out(Op::TipExists, 0, 0, 0, 0) != 0 {
+                out(Op::TipDo, 0, 0, 0, 0);
+            }
+            Some(0)
+        }
+        // a submenu's popup queued on the window: the menu `a` at the point `b` (two ints) avoiding the rectangle
+        // `c`, with the flags `d`
+        Op::QueueSubMenu => {
+            // SAFETY: `b` points at two ints (QueueSubMenu's contract)
+            let at = unsafe { std::slice::from_raw_parts(b as *const i32, 2) };
+            out(Op::ParamsMake, a, d, at[0] as isize, at[1] as isize);
+            out(Op::ParamsAvoid, c, 0, 0, 0);
+            out(Op::QueueDoPopup, 0, 0, 0, 0);
+            Some(0)
+        }
+        // a mouse up of the button `c` at the list's point (a, b) queued on its window, in the root's coordinates
+        Op::QueueMouseUp => {
+            let window = out(Op::ListRoot, 0, 0, 0, 0);
+            let mut at = [a as i32, b as i32];
+            out(Op::ListLocalToRoot, at.as_mut_ptr() as isize, 0, 0, 0);
+            out(Op::WinQueueMouseUp, window, at[0] as isize, at[1] as isize, c);
+            Some(0)
+        }
         // the item tooltip's end, when there is one
         Op::TipEnd => {
             if out(Op::TipExists, 0, 0, 0, 0) != 0 {
@@ -299,7 +362,59 @@ fn list_op(op: Op, out: Out) -> Option<isize> {
 fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
     const MOUSE: isize = EeWonWmEvent::Mouse as isize;
     const SET_MOUSE: isize = EeWonWmEvent::SetMouse as isize;
+    const SIZE: isize = EeWonWmEvent::Size as isize;
+    const SET_SIZE: isize = EeWonWmEvent::SetSize as isize;
     match op {
+        // ---- R6 WON round 33
+        // a size event's place and size read into the record `c`, or set from it
+        Op::WmEvent if a == SIZE => {
+            let r = EeWonRect4 {
+                x: out(Op::WmSizeEvX, b, 0, 0, 0) as i32,
+                y: out(Op::WmSizeEvY, b, 0, 0, 0) as i32,
+                w: out(Op::WmSizeEvW, b, 0, 0, 0) as i32,
+                h: out(Op::WmSizeEvH, b, 0, 0, 0) as i32,
+            };
+            // SAFETY: `c` is the record (the op's contract)
+            unsafe { *(c as *mut EeWonRect4) = r };
+            Some(0)
+        }
+        Op::WmEvent if a == SET_SIZE => {
+            // SAFETY: `c` is the record (the op's contract)
+            let r = unsafe { *(c as *const EeWonRect4) };
+            out(Op::WmSizeEvSetX, b, r.x as isize, 0, 0);
+            out(Op::WmSizeEvSetY, b, r.y as isize, 0, 0);
+            out(Op::WmSizeEvSetW, b, r.w as isize, 0, 0);
+            out(Op::WmSizeEvSetH, b, r.h as isize, 0, 0);
+            Some(0)
+        }
+        // DoPopup's popup window: made, held for the Rust, set up as a one-component popup of `a` and created at
+        // the rectangle `b`
+        Op::WmNewPopupWindow => {
+            let w = out(Op::WmNativeWindowNew, 0, 0, 0, 0);
+            out(Op::WmWin, EeWonWmWin::Hold as isize, w, 0, 0);
+            out(Op::WinSetOneComponent, w, 0, 0, 0);
+            out(Op::WinSetStyle, w, 0x20, 0, 0);
+            out(Op::WinSetParent, w, a, 0, 0);
+            out(Op::WmWin, EeWonWmWin::SetIsPopup as isize, w, 1, 0);
+            out(Op::WinCreate, w, b, 0, 0);
+            Some(w)
+        }
+        // the default window's 8-point Tahoma with one reference for the caller (the local SmartPtr: the host's)
+        Op::WmDefaultWindowFont => {
+            out(Op::WmFontKeep, 0, 0, 0, 0);
+            let f = out(Op::WmHostFont, 0, 0, 0, 0);
+            if f != 0 {
+                out(Op::WmFontHold, f, 0, 0, 0);
+            }
+            out(Op::WmHostFontClear, 0, 0, 0, 0);
+            Some(f)
+        }
+        // the screen's resolution read (`a` 0: into the ints at `b`, `c`) or set (whether it was)
+        Op::WmResolution if a == 0 => {
+            out(Op::WmScreenResGet, b, c, 0, 0);
+            Some(0)
+        }
+        Op::WmResolution => Some(out(Op::WmScreenResSet, b, c, 0, 0)),
         // a mouse event's window, point and button read, or its window and point set (`b` the event, `c` the record)
         Op::WmEvent if a == MOUSE => {
             let ev = |sub: EeWonWmEvent| out(Op::WmEvent, sub as isize, b, 0, 0);
@@ -442,17 +557,16 @@ mod tests {
         // a plain draw is the C++ host's (ComponentOp's)
         assert_eq!(run(|o| text_op(Op::Draw, 1, 2, 0, o), |_, _| 0).0, None);
         assert_eq!(run(|o| text_op(Op::Draw, 1, 2, 3, o), |_, _| 0).1, ["TextDrawSeg 1 2 3 0"]);
-        let (_, log) = run(|o| list_op(Op::TipEnd, o), |_, _| 0);
+        let (_, log) = run(|o| list_op(Op::TipEnd, [0; 4], o), |_, _| 0);
         assert_eq!(log, ["TipExists 0 0 0 0"]);
-        let (_, log) = run(|o| list_op(Op::TipEnd, o), |_, _| 1);
+        let (_, log) = run(|o| list_op(Op::TipEnd, [0; 4], o), |_, _| 1);
         assert_eq!(log, ["TipExists 0 0 0 0", "TipEndCall 0 0 0 0"]);
-        let (r, log) = run(|o| list_op(Op::NewColumnViewport, o), |_, _| 77);
+        let (r, log) = run(|o| list_op(Op::NewColumnViewport, [0; 4], o), |_, _| 77);
         assert_eq!(r, Some(77));
         assert_eq!(log, ["NewViewport 0 0 0 0", "ChildHold 77 0 0 0", "ViewportAddChild 77 0 0 0"]);
-        let (r, log) = run(|o| list_op(Op::NewTreeItem, o), |_, _| 5);
+        let (r, log) = run(|o| list_op(Op::NewTreeItem, [0; 4], o), |_, _| 5);
         assert_eq!(r, Some(5));
         assert_eq!(log, ["NewTreeItemRaw 0 0 0 0", "ItemHold 5 0 0 0"]);
-        assert_eq!(run(|o| list_op(Op::TipShow, o), |_, _| 0).0, None);
     }
 
     #[test]
@@ -556,7 +670,7 @@ mod tests {
             ]
         );
         // other events are the C++ host's
-        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Size as isize, 6, mp, o), |_, _| 0).0, None);
+        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Key as isize, 6, mp, o), |_, _| 0).0, None);
         // references
         assert_eq!(
             run(|o| wm_op(Op::WmRef, EeWonWmRefKind::Font as isize, 5, 1, o), |_, _| 0).1,
@@ -619,5 +733,35 @@ mod tests {
             },
         );
         assert_eq!(r, Some(2));
+    }
+
+    #[test]
+    fn the_round_33_compositions_stop_where_the_original_returned() {
+        // no window: nothing else read
+        assert_eq!(
+            run(|o| list_op(Op::PointerOutside, [0; 4], o), |_, _| 0),
+            (Some(0), vec!["ListRoot 0 0 0 0".into()])
+        );
+        // a window, no parent
+        let (r, log) = run(|o| list_op(Op::PointerOutside, [0; 4], o), |op, _| if op == Op::ListRoot { 9 } else { 0 });
+        assert_eq!((r, log.len()), (Some(0), 4));
+        // inside: 0; the tooltip made once
+        let (r, log) = run(|o| list_op(Op::PointerOutside, [0; 4], o), |_, _| 3);
+        assert_eq!((r, log.last().unwrap().as_str()), (Some(0), "ListContains 3 3 0 0"));
+        assert_eq!(
+            run(|o| list_op(Op::TipShow, [5, 0, 0, 0], o), |_, _| 0).1,
+            ["TipExists 0 0 0 0", "TipNew 0 0 0 0", "TipDo 5 0 0 0"]
+        );
+        assert_eq!(run(|o| list_op(Op::TipHide, [0; 4], o), |_, _| 0).1, ["TipExists 0 0 0 0"]);
+        // the popup window: made, held, set up, created
+        let (r, log) =
+            run(|o| wm_op(Op::WmNewPopupWindow, 4, 8, 0, o), |op, _| if op == Op::WmNativeWindowNew { 70 } else { 0 });
+        assert_eq!((r, log.len(), log[6].as_str()), (Some(70), 7, "WinCreate 70 8 0 0"));
+        // the font held only when there is one
+        assert_eq!(run(|o| wm_op(Op::WmDefaultWindowFont, 0, 0, 0, o), |_, _| 0).1.len(), 3);
+        assert_eq!(
+            run(|o| wm_op(Op::WmResolution, 1, 800, 600, o), |_, _| 1),
+            (Some(1), vec!["WmScreenResSet 800 600 0 0".into()])
+        );
     }
 }

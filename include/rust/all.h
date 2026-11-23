@@ -136,6 +136,7 @@
 #include "rust/won_gui/guilist.h"
 #include "rust/won_gui/guimenu.h"
 #include "rust/won_gui/guimulti.h"
+#include "rust/won_gui/guireg.h"
 #include "rust/won_gui/guiscroll.h"
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/guistring.h"

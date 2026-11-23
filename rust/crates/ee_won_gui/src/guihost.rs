@@ -1026,6 +1026,76 @@ pub enum EeWonGuiOp {
     WmNewDelayImage,
     /// `mColorScheme->SetStandardColor(a, b)`.
     WmSetStandardColor,
+    // ---- the statements of the cases R6 WON round 33 composes in guisplit.rs (the LAN game reaches none of them;
+    // won_guisplit33_test checks them against the original cases)
+    /// `sHostText = Clipboard::Get()` (ClipboardTake's local).
+    HostTextClipboard = 2000,
+    /// TextArea: `mLinkParam = ((TextSegment*)a)->GetLinkParam()`.
+    TextSetLinkParam,
+    /// TextArea: `DeliverEvent(new TextLinkActivatedEvent(this, (TextSegment*)a), false)`.
+    TextDeliverLinkEvent,
+    /// ListArea: `GetRoot()` (the window).
+    ListRoot,
+    /// `((Window*)a)->GetMouseX()`.
+    WinMouseX,
+    /// `((Window*)a)->GetMouseY()`.
+    WinMouseY,
+    /// ListArea: `mParent`.
+    ListParent,
+    /// `((Container*)a)->RootToChild(((int*)b)[0], ((int*)b)[1])`.
+    ParentRootToChild,
+    /// ListArea: `Contains(a, b)` (0 or 1).
+    ListContains,
+    /// ListArea: `mItemToolTip = new ListAreaToolTip(this)`.
+    TipNew,
+    /// ListArea: `mItemToolTip->DoTip((ListItem*)a)`.
+    TipDo,
+    /// ListArea: `sHostParams = PopupParams((PopupMenu*)a, b, this, c, d)` (QueueSubMenu's local).
+    ParamsMake,
+    /// `sHostParams.mAvoidRect = WONRectangle(the EeWonRect4 at a)`.
+    ParamsAvoid,
+    /// ListArea: `GetRoot()->QueueEvent(new DoPopupEvent(sHostParams))`.
+    QueueDoPopup,
+    /// ListArea: `LocalToRoot(((int*)a)[0], ((int*)a)[1])`.
+    ListLocalToRoot,
+    /// `((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, b, c, ((Window*)a)->GetKeyMod(), d))`.
+    WinQueueMouseUp,
+    /// `CreateNativeWindow()` (DoPopup's popup window, unheld).
+    WmNativeWindowNew,
+    /// `((Window*)a)->SetOneComponentWindow(true)`.
+    WinSetOneComponent,
+    /// `((Window*)a)->SetStyle(b)`.
+    WinSetStyle,
+    /// `((Window*)a)->SetParent((Window*)b)`.
+    WinSetParent,
+    /// `((Window*)a)->Create(*(const WONRectangle*)b)`.
+    WinCreate,
+    /// `sHostFont = GetDefaultWindow()->GetFont(FontDescriptor("Tahoma", 0, 8))` (the local SmartPtr).
+    WmFontKeep,
+    /// `sHostFont.get()`.
+    WmHostFont,
+    /// `sHostFont = SmartPtr<Font>()`.
+    WmHostFontClear,
+    /// `GetScreenResolutionHook(*(int*)a, *(int*)b)`.
+    WmScreenResGet,
+    /// `SetScreenResolutionHook(a, b)` (0 or 1).
+    WmScreenResSet,
+    /// `((SizeEvent*)a)->mx`.
+    WmSizeEvX,
+    /// `((SizeEvent*)a)->my`.
+    WmSizeEvY,
+    /// `((SizeEvent*)a)->mWidth`.
+    WmSizeEvW,
+    /// `((SizeEvent*)a)->mHeight`.
+    WmSizeEvH,
+    /// `((SizeEvent*)a)->mx = b`.
+    WmSizeEvSetX,
+    /// `((SizeEvent*)a)->my = b`.
+    WmSizeEvSetY,
+    /// `((SizeEvent*)a)->mWidth = b`.
+    WmSizeEvSetW,
+    /// `((SizeEvent*)a)->mHeight = b`.
+    WmSizeEvSetH,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).
