@@ -6,8 +6,24 @@
 use crate::units::sight::{sight, EeUnitsSightUnit, SightHost};
 use crate::world::view::{PlayerView, WorldRead, WorldView};
 
-/// unit `a` into `unit`
-pub const EE_UNITS_SIGHT_UNIT: i32 = 1;
+/// unit `a`'s `GetLineOfSight()` into `f[0]` (the reads of [`EeUnitsSightUnit`], one statement each)
+pub const EE_UNITS_SIGHT_U_LINE_OF_SIGHT: i32 = 4000;
+/// unit `a`'s `mPlayer`
+pub const EE_UNITS_SIGHT_U_PLAYER: i32 = 4001;
+/// unit `a`'s `mPlayer != NULL && mPlayer->mSaveVisMap`
+pub const EE_UNITS_SIGHT_U_SAVE_VIS_MAP: i32 = 4002;
+/// unit `a`'s `mHitPoints`
+pub const EE_UNITS_SIGHT_U_HIT_POINTS: i32 = 4003;
+/// unit `a`'s `mIsBuilt`
+pub const EE_UNITS_SIGHT_U_IS_BUILT: i32 = 4004;
+/// unit `a`'s `GetUnitClass()->IsLandBuilding()`
+pub const EE_UNITS_SIGHT_U_LAND_BUILDING: i32 = 4005;
+/// unit `a`'s `GetUnitClass()->mTileSize`
+pub const EE_UNITS_SIGHT_U_TILE_SIZE: i32 = 4006;
+/// unit `a`'s `GetUnitClass()->mWonderBonus`
+pub const EE_UNITS_SIGHT_U_WONDER_BONUS: i32 = 4007;
+/// unit `a`'s `GetTechTreeNode() != NULL ? GetTechTreeNode()->mData->mKind : -1`
+pub const EE_UNITS_SIGHT_U_NODE_KIND: i32 = 4008;
 /// `gSightUpdatesEnabled`
 pub const EE_UNITS_SIGHT_ENABLED: i32 = 2;
 /// unit `a`'s `IsFoundation()`
@@ -98,10 +114,19 @@ impl Game {
 
 impl SightHost for Game {
     fn unit(&mut self, u: u64) -> EeUnitsSightUnit {
-        let mut unit = EeUnitsSightUnit::default();
-        // SAFETY: as `op`
-        unsafe { ee_units_sight_host(EE_UNITS_SIGHT_UNIT, 0, u, 0, 0, 0, &mut [0.0; 3], &mut unit) };
-        unit
+        let mut f = [0.0f32; 3];
+        self.op(EE_UNITS_SIGHT_U_LINE_OF_SIGHT, false, u, 0, 0, 0, &mut f);
+        EeUnitsSightUnit {
+            line_of_sight: f[0],
+            player: self.q(EE_UNITS_SIGHT_U_PLAYER, u, 0, 0, 0) as u64,
+            save_vis_map: self.q(EE_UNITS_SIGHT_U_SAVE_VIS_MAP, u, 0, 0, 0) as u8,
+            hit_points: self.q(EE_UNITS_SIGHT_U_HIT_POINTS, u, 0, 0, 0) as i32,
+            is_built: self.q(EE_UNITS_SIGHT_U_IS_BUILT, u, 0, 0, 0) as u8,
+            land_building: self.q(EE_UNITS_SIGHT_U_LAND_BUILDING, u, 0, 0, 0) as u8,
+            tile_size: self.q(EE_UNITS_SIGHT_U_TILE_SIZE, u, 0, 0, 0) as i32,
+            wonder_bonus: self.q(EE_UNITS_SIGHT_U_WONDER_BONUS, u, 0, 0, 0) as i32,
+            node_kind: self.q(EE_UNITS_SIGHT_U_NODE_KIND, u, 0, 0, 0) as i32,
+        }
     }
     fn updates_enabled(&mut self) -> bool {
         self.q(EE_UNITS_SIGHT_ENABLED, 0, 0, 0, 0) != 0

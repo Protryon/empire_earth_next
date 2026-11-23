@@ -147,117 +147,11 @@ float EEGhostUnit::GetScale()
 
 // EERenderShadow is ee_gfx fill.rs's EeGfxFillObject and EERenderUnit's head its EeGfxFillUnit (ee/EERenderLists.h)
 
-// GetUnitOpacity's calls (ee_gfx fill.rs EeGfxOpacityHost)
-static EEUnit* EEOpacityUnit(uint64_t inUnit)
-{
-    return reinterpret_cast<EEUnit*>((uintptr_t)inUnit);
-}
-static bool EEOpacityOwn(void*, uint64_t inUnit, bool inTranslucent, float* ioOpacity)
-{
-    return Fn23CEE2(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit), inTranslucent, *ioOpacity);
-}
-static bool EEOpacityLandBuilding(void*, uint64_t inClass)
-{
-    return reinterpret_cast<EEUnitClass*>((uintptr_t)inClass)->IsLandBuilding();
-}
-static EeGe3DPoint EEOpacityModelCenter(void*, uint64_t inUnit, unsigned long inIndex)
-{
-    const GE3DPoint& theCenter = EEOpacityUnit(inUnit)->GetModel()->mModels[inIndex]->GetCenterPoint();
-    return EeGe3DPoint{theCenter.mX, theCenter.mY, theCenter.mZ};
-}
-static float EEOpacityModelRadius(void*, uint64_t inUnit, unsigned long inIndex, unsigned long inFrame)
-{
-    return EEOpacityUnit(inUnit)->GetModel()->mModels[inIndex]->GetBoundingRadius(inFrame);
-}
-static float EEOpacityPhysicalScale(void*, uint64_t inUnit)
-{
-    return reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit)->mPhysicalModel.GetScale();
-}
-static unsigned long EEOpacityPhysicalFrame(void*, uint64_t inUnit)
-{
-    return reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit)->mPhysicalModel.GetFrame();
-}
-static float EEOpacityMeshZ(void*, float inX, float inY)
-{
-    return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
-}
-static const EeGfxOpacityHost* EEOpacityHost()
-{
-    static const EeGfxOpacityHost sHost = {NULL, EEOpacityOwn, EEOpacityLandBuilding, EEOpacityModelCenter,
-                                           EEOpacityModelRadius, EEOpacityPhysicalScale, EEOpacityPhysicalFrame, EEOpacityMeshZ};
-    return &sHost;
-}
+// GetUnitOpacity (ee_gfx fill.rs over its EeGfxOpacityHost) and the rasterizer table the Rust draws call (was
+// gEERustRaster): gamecpp ro_raster.rs (the Rr cases below)
 
 // EEROUnits.cpp's screen point (0x118676; the goal's countdown)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
-
-// the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
-extern const EeGfxRaster gEERustRaster;
-// the raster table's models (ee_gfx raster.rs; the farm's and the ground shadows'): made through the model manager
-static void* EERasterCreateModel(uint32_t inPolygons, uint32_t inVertices, uint32_t inSubModels, const uint8_t* inName,
-                                 uint32_t inFlags)
-{
-    return gModelManager->CreateModel(inPolygons, inVertices, 1, 0, 1, inSubModels,
-                                      UString(reinterpret_cast<const char*>(inName)), inFlags);
-}
-static void* EERasterCreateSubModel(uint32_t inPolygons, uint32_t inVertices, void* inParent)
-{
-    return gModelManager->CreateSubModel(inPolygons, inVertices, 1, 0, 1, 0, 0, 0, static_cast<GEModel*>(inParent));
-}
-static void EERasterStoreMesh(void* inModel, const EeGfxMeshVertex* inVertices, size_t inVertexCount,
-                              const EeGfxMeshTriangle* inTriangles, size_t inTriangleCount)
-{
-    EEStoreMesh(static_cast<GEModel*>(inModel), inVertices, inVertexCount, inTriangles, inTriangleCount);
-}
-
-// EEEffect.cpp's quad batches' quad and draw
-void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex);
-int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture);
-// EEROUnits.cpp's bars (their set, the placement lines and the labels: gamecpp ro_units.rs)
-int32_t EEROUnitsBarDraw(uint32_t inWhich);
-
-// Computes a unit's opacity this frame (see-through modes, its own fade, and buildings fading in front of the near
-// clipping plane); returns whether it is drawn translucent (ee_gfx fill.rs over the world views; the calls here)
-static bool EEGetUnitOpacity(EEUnit* inUnit, long inShowHiddenUnits, float& outOpacity)
-{
-    return ee_gfx_fill_unit_opacity((uint64_t)(uintptr_t)inUnit, inShowHiddenUnits, gWorld.mInCinematic,
-                                    gOrthographicView, reinterpret_cast<const EeGeViewport*>(&gViewport), EEOpacityHost(),
-                                    &outOpacity);
-}
-
-const EeGfxRaster gEERustRaster = {
-    [](EeGfxLighting inKind) { ee_gamecpp_ro_lighting((uint32_t)inKind); },
-    [](const EeGe3DPoint* inLocation, uint32_t inFog) { return ee_gamecpp_ro_fog_factor(&inLocation->mX, inFog); },
-    [](void* inModel, float inOpacity) { return (int32_t)gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, gOrthographicView); },
-    []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
-    ee_gamecpp_ro_depth_range,
-    []() { return gRenderSnapshot.mCameraYaw; },
-    [](const EeGe3DPoint* inPoint, float* outX, float* outY) { ee_gamecpp_ro_screen_point(&inPoint->mX, outX, outY); },
-    // EEE3DGoal::DrawPass3's text (0xf13db)
-    [](float inX, float inY, const uint8_t* inText, EeGfxColor inColor) { ee_gamecpp_ro_draw_text(inX, inY, inText, inColor.red, inColor.green, inColor.blue); },
-    EERasterCreateModel,
-    EERasterCreateSubModel,
-    EERasterStoreMesh,
-    [](const uint8_t* inName, const EeGfxTextureLoad* inLoad) { return ee_gamecpp_ro_load_texture(inName, inLoad); },
-    // EEE3DMarchingLine::DrawPass4's line (0xf3c68)
-    ee_gamecpp_ro_screen_line,
-    ee_gamecpp_ro_rear_clipping,
-    [](void* inModel, bool inSorted) { return (int32_t)gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted); },
-    []() { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
-    ee_gamecpp_ru_bar_set,
-    EEROUnitsBarDraw,
-    ee_gamecpp_ru_screen_lines,
-    ee_gamecpp_ru_label,
-    // the effects' quad batches (ee_gfx effect_batch.rs; EEEffect.cpp's arrays)
-    []() { return *reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()); },
-    []() { return gRenderSnapshot.mCameraPitch; },
-    EEEffectBatchQuad,
-    EEEffectBatchDraw,
-    // the screen the models' textures are set for (raster_direct.rs: the model, material and texture calls are Rust's)
-    []() { return (uint32_t)gScreenIndex; },
-    // gRasterizer's Rust objects (raster_direct.rs: the state calls the lambdas made on it)
-    [](void** outBase) { return GERasterizer::RustObjects(gRasterizer, outBase); },
-};
 
 // ------------------------------------------------------------------------- round 9, lane A: this file's bodies' C++
 
@@ -287,8 +181,6 @@ static_assert(kUnitTypeRoboticFarm == 0x33a && kUnitTypeSpaceTurret == 0x302 && 
 #define RO_TEX ((GETexture*)p)
 #define RO_TEXT ((GEText*)p)
 #define RO_GELINE ((GELine*)p)
-#define RO_SHADOWS(k) ((k) == 0 ? RS.mShadows0 : (k) == 1 ? RS.mShadows1 : RS.mShadows2)
-#define RO_UNITS(k) ((k) == 0 ? RS.mUnits0 : (k) == 1 ? RS.mUnits1 : RS.mUnits2)
 
 // the C++ calls and members of this file's bodies in Rust (gamecpp render_object.rs; EeGameCpp's lane A section): one
 // statement each
@@ -356,26 +248,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoUnitNameClear: RU->mName.Clear();
         break;
     case O::RoUnitNameFromStats: RU->mName = ((EEUnit*)a[0])->GetComplexUnit()->mStats->mName;
-        break;
-    case O::RoObjectsClear: RO_SHADOWS(a[0]).clear();
-        break;
-    case O::RoUnitsClear: RO_UNITS(a[0]).clear();
-        break;
-    case O::RoObjectsInsert: RO_SHADOWS(a[0]).insert(EERenderShadowMap::value_type((GETexture*)a[1], (EERenderShadow*)p));
-        break;
-    case O::RoUnitsInsert: RO_UNITS(a[0]).insert(EERenderUnitMap::value_type((GETexture*)a[1], RU));
-        break;
-    case O::RoSelectedObjectsClear: RS.mSelectedObjects.clear();
-        break;
-    case O::RoSelectedUnitsClear: RS.mSelectedUnits.clear();
-        break;
-    case O::RoSelectedObjectsPush: RS.mSelectedObjects.push_back((EERenderShadow*)p);
-        break;
-    case O::RoSelectedUnitsPush: RS.mSelectedUnits.push_back(RU);
-        break;
-    case O::RoSetSelectedUnit: RS.mSelectedUnit = RU;
-        break;
-    case O::RoSelectedClear: RS.mSelectedUnit = NULL, RS.mSelectedObject = NULL;
         break;
     case O::RoSetLabelUnit: gU529044 = RU;
         break;
@@ -500,7 +372,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoGobjShadowTexture: return RO_P64(RO_GOBJ->mShadowTexture);
     case O::RoMeshWaterTile: return gWorld.mMap->mTerrainMesh.GetIsWaterTile((long)a[0], (long)a[1]);
     case O::RoModelInView: return GEPhysicalModel((GEModel*)p, *(const GETransformation*)a[0], f[0]).Intersects(gViewport, gOrthographicView);
-    case O::RoUnitOpacity: return EEGetUnitOpacity(RO_UN, (long)a[1], *(float*)a[0]);
     // the picker, the selection, the ambient sounds
     case O::RoPickerAdd: gUnitPicker.AddUnit(RO_UN, *(const GETransformation*)a[0], f[0]);
         break;
@@ -652,6 +523,27 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoPostPushRenderObject: gGraphics->PostPushRenderObject(a[0] == 0 ? gU565360 : a[0] == 1 ? gU56535C : a[0] == 2 ? gU565358 : a[0] == 3 ? gU565354 : a[0] == 4 ? gU565350 : gU56534C);
         break;
+    // round 11, lane A: the raster table and the opacity host (gamecpp ro_raster.rs)
+    case O::RrModelDraw: return (int32_t)gRasterizer->Draw((GEModel*)p, gScreenIndex, f[0], gOrthographicView);
+    case O::RrCamera: *(GETransformation*)a[0] = gRenderSnapshot.mCamera;
+        break;
+    case O::RrCreateModel: return RO_P64(gModelManager->CreateModel((uint32_t)a[0], (uint32_t)a[1], 1, 0, 1, (uint32_t)a[2], UString((const char*)a[3]), (uint32_t)a[4]));
+    case O::RrCreateSubModel: return RO_P64(gModelManager->CreateSubModel((uint32_t)a[0], (uint32_t)a[1], 1, 0, 1, 0, 0, 0, (GEModel*)a[2]));
+    case O::RrDrawSky: return (int32_t)gRasterizer->DrawSky((GEModel*)p, gScreenIndex, 1.0f, a[0] != 0);
+    case O::RrTexture32: return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport();
+    case O::RrScreen: return (uint32_t)gScreenIndex;
+    case O::RrObjects: return RO_P64(GERasterizer::RustObjects(gRasterizer, (void**)a[0]));
+    case O::RrOpacityOwn: return Fn23CEE2((EEComplexUnit*)p, a[0] != 0, *(float*)a[1]);
+    case O::RrModelCenter: *(GE3DPoint*)a[1] = RO_UN->GetModel()->mModels[a[0]]->GetCenterPoint();
+        break;
+    case O::RrPhysicalFrame: return ((EEComplexUnit*)p)->mPhysicalModel.GetFrame();
+    case O::RrCinematic: return gWorld.mInCinematic;
+    // round 11, lane A: EEOrbital::Init (gamecpp ro_misc.rs)
+    case O::OvSetSpeed: ((EEOrbital*)p)->mSpeed = f[0];
+        break;
+    case O::OvSetModel: ((EEOrbital*)p)->mModel = (GEModel*)a[0];
+        break;
+    case O::OvModelName: return RO_P64((const char*)((GEModel*)p)->GetName());
     default: return EEPickerOp(inOp, p, a, f);
     }
     return 0;
@@ -676,6 +568,11 @@ double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoDoppelScale: return RO_DG->GetScale();
     case O::RoGhostScale: return RO_GH->GetScale();
     case O::RoCxAnimationFraction: return ((EEComplexUnit*)p)->mAnimationFraction;
+    // round 11, lane A (gamecpp ro_raster.rs)
+    case O::RrCameraYaw: return gRenderSnapshot.mCameraYaw;
+    case O::RrCameraPitch: return gRenderSnapshot.mCameraPitch;
+    case O::RrModelRadius: return RO_UN->GetModel()->mModels[a[0]]->GetBoundingRadius((unsigned long)a[1]);
+    case O::RrPhysicalScale: return ((EEComplexUnit*)p)->mPhysicalModel.GetScale();
     default: return EEPickerOpF(inOp, p, a, f);
     }
 }

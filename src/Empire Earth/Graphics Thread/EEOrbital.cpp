@@ -14,6 +14,7 @@
 #include "ee/EEGraphicObject.h"
 
 #include "rust/render/gfx.h"
+#include "rust/game/gamecpp.h"
 
 // The name tests, the speed and the update are ee_gfx effect_orbit.rs' (the prefixes "orbital_cw_" and "orbital_ccw_",
 // any case; the degrees between the prefix and the name's last '_')
@@ -22,9 +23,7 @@
 // orbital_ccw_ counterclockwise)
 void EEOrbital::Init(GEModel* inModel)
 {
-    this->mSpeed = 0.0f;
-    this->mModel = inModel;
-    this->mSpeed = ee_gfx_orbital_speed(inModel->GetName());
+    ee_gamecpp_ov_orbital_init(this, inModel);   // gamecpp ro_misc.rs
 }
 
 // Advances the orbiting part's angle by its speed over the tick, wrapped to -pi..pi

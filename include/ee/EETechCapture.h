@@ -82,36 +82,8 @@ class EECalamityClass;
 class EEComplexUnit;
 class EEUnit;
 class GE3DPoint;
-// CALW: one world call of a calamity's update (an EECalamityCaptureOp, two integers, two floats), collected while
-// EECalamityCaptureUpdate runs the update
-enum EECalamityCaptureOp {
-    kCalamityOpHelperUpdate = 1,    // the contagion helper's Update (id)
-    kCalamityOpUnitsNear,           // EEGetUnitsNear (count)
-    kCalamityOpTakeHit,             // TakeHit (unit id, damage; player, mode as floats)
-    kCalamityOpImmune,              // the unit's immunity effect blocks it (unit id)
-    kCalamityOpStrike,              // the hurricane's strike effect on a unit (unit id)
-    kCalamityOpCracks,              // the earthquake's cracks
-    kCalamityOpRandom,              // a physics random draw (its value)
-    kCalamityOpShake,               // the camera shake (angle, amplitude)
-    kCalamityOpCreateStorm,         // the hurricane's storm unit
-    kCalamityOpLaunchMeteor,
-    kCalamityOpCreateVolcano,       // (the effect manager's result)
-    kCalamityOpWarpTint,            // the time warp's departure effect
-    kCalamityOpWarpDepart,
-    kCalamityOpWarpReturn,
-    kCalamityOpWarpBlink,
-    kCalamityOpHold,                // the teleport's hold
-    kCalamityOpTeleport,
-    kCalamityOpLogicBombMark,
-    kCalamityOpLogicBombDisable,
-    kCalamityOpCreateHelper,        // a contagion helper (id)
-    kCalamityOpApplyEffect,         // an area effect class's ApplyEffect
-    kCalamityOpPlacedEffect,        // a placed effect at the target (x, y as floats)
-    kCalamityOpMorale,
-    kCalamityOpSpecialAttack,
-    kCalamityOpSpecialLocation,
-    kCalamityOpDestroyEffect,       // (the handle)
-};
+// CALW: one world call of a calamity's update (an op, two integers, two floats: the ops are ee_game gamecpp
+// calamity.rs's `cap` constants, the C++ names them no more), collected while EECalamityCaptureUpdate runs the update
 inline void (*EECalamityCaptureEventHook)(long inOp, long inA, long inB, float inC, float inD) = nullptr;
 inline void EECalamityCaptureEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f)
 {

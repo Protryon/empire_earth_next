@@ -221,7 +221,7 @@ pub struct Ignored {
     pub time: u32,
 }
 
-fn ignored_entry<H: WorldHost>(h: &mut H, unit: EeCombatHandle, index: u32) -> Ignored {
+pub(crate) fn ignored_entry<H: WorldHost>(h: &mut H, unit: EeCombatHandle, index: u32) -> Ignored {
     let mut a = [0; 12];
     a[0] = i64::from(index);
     h.op(EE_COMBAT_W_IGNORED_ENTRY, unit, 0, &mut a);

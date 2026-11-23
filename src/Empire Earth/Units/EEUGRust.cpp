@@ -156,28 +156,6 @@ void PointOut(EeUnitsGoalIo* ioArgs, const GE3DPoint& inPoint)
     ioArgs->f[2] = inPoint.GetZ();
 }
 
-void PointIn(const EeUnitsGoalIo& inArgs, GE3DPoint& outLocation)
-{
-    outLocation.SetX(inArgs.f[0]);
-    outLocation.SetY(inArgs.f[1]);
-    outLocation.SetZ(inArgs.f[2]);
-}
-
-// the tiles of an argument block (i[2k], i[2k + 1]) in and out
-void TilesIn(const EeUnitsGoalIo* inArgs, U2DPoint<long>* outTiles, int inCount)
-{
-    for (int k = 0; k < inCount; k++)
-        outTiles[k].SetXY((long)inArgs->i[2 * k], (long)inArgs->i[2 * k + 1]);
-}
-
-void TilesOut(EeUnitsGoalIo* ioArgs, const U2DPoint<long>* inTiles, int inCount)
-{
-    for (int k = 0; k < inCount; k++) {
-        ioArgs->i[2 * k] = inTiles[k].mX;
-        ioArgs->i[2 * k + 1] = inTiles[k].mY;
-    }
-}
-
 // a goal body's float argument from its bits
 float FloatOf(int64_t inBits)
 {
@@ -573,12 +551,6 @@ int64_t Goal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t
 
 }  // namespace
 
-int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs,
-                     FSFile* inFile)
-{
-    return Goal(inOperation, inGoal, inA, inB, ioArgs, inFile);
-}
-
 // the goal's members are the Rust object's head (ee_units goal_obj.rs)
 static_assert(sizeof(EEUnitGoal) == sizeof(EeUnitsGoalBase) && offsetof(EEUnitGoal, mKind) == offsetof(EeUnitsGoalBase, kind)
                   && offsetof(EEUnitGoal, mAction) == offsetof(EeUnitsGoalBase, action)
@@ -622,24 +594,9 @@ namespace {
 EEUGRust* NewLocationGoal(const GE3DPoint& inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace, float inYaw,
                           bool inIsAutoWaypoint, unsigned char inGroupPathState)
 {
-    EEUGRust* theGoal = EEUGRust::Make(kGoalLocation, inArg);
-    EeUnitsGoalIo theArgs = {{inIsForcedMove, inShouldFace, inIsAutoWaypoint, inGroupPathState}};
-    PointOut(&theArgs, inLocation);
-    theArgs.f[3] = inYaw;
-    Goal(EE_UNITS_GOAL_NEW_LOCATION, theGoal, 0, 0, &theArgs);
-    return theGoal;
-}
-
-EeUnitsLocationGoal LocationOf(const EEUGRust* inGoal)
-{
-    EeUnitsLocationGoal theRecord;
-    ee_units_location_goal_get(Handle(inGoal), &theRecord);
-    return theRecord;
-}
-
-void LocationSet(EEUGRust* inGoal, const EeUnitsLocationGoal& inRecord)
-{
-    ee_units_location_goal_set(Handle(inGoal), &inRecord);
+    return reinterpret_cast<EEUGRust*>(ee_units_goal_new_location(inArg, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ(),
+                                                                  inIsForcedMove, inShouldFace, inYaw, inIsAutoWaypoint,
+                                                                  inGroupPathState));
 }
 
 }  // namespace
@@ -672,32 +629,22 @@ EEUGRust* EEUGRust::NewLocation(bool inArg, bool inIsForcedMove, bool inIsAutoWa
 
 GE3DPoint EEUGRust::GetLocation() const
 {
-    EeUnitsLocationGoal theRecord = LocationOf(this);
-    return GE3DPoint(theRecord.location[0], theRecord.location[1], theRecord.location[2]);
+    return EEGoalPointOf(ee_units_location_goal_point(Handle(this)));
 }
 
 void EEUGRust::SetLocation(const GE3DPoint& inLocation)
 {
-    EeUnitsLocationGoal theRecord = LocationOf(this);
-    theRecord.location[0] = inLocation.GetX();
-    theRecord.location[1] = inLocation.GetY();
-    theRecord.location[2] = inLocation.GetZ();
-    LocationSet(this, theRecord);
+    ee_units_location_goal_set_point(Handle(this), inLocation.GetX(), inLocation.GetY(), inLocation.GetZ());
 }
 
 void EEUGRust::GetCalamityTargetLocation(GE3DPoint& outLocation)
 {
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION, this, 0, 0, &theArgs);
-    PointIn(theArgs, outLocation);
+    ee_units_goal_point(EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION, this->Base(), 0, (float(*)[3])&outLocation.mX, false);
 }
 
 void EEUGRust::GetExploreTileCenter(GE3DPoint& outLocation)
 {
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_EXPLORE_TILE, this, 0, 0, &theArgs);
-    outLocation.SetX((float)(long)theArgs.i[0] + 0.5f);
-    outLocation.SetY((float)(long)theArgs.i[1] + 0.5f);
+    ee_units_goal_explore_center(EE_UNITS_GOAL_EXPLORE_TILE, this->Base(), (float(*)[3])&outLocation.mX);
 }
 
 EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, std::vector<EEComplexUnit*>& inUnits,
@@ -706,23 +653,12 @@ EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, st
     std::sort(inUnits.begin(), inUnits.end(),
               [](EEComplexUnit* inFirst, EEComplexUnit* inSecond) { return inFirst->mUnitID < inSecond->mUnitID; });
     inUnits.erase(std::unique(inUnits.begin(), inUnits.end()), inUnits.end());
-    EEUGRust* theGoal = EEUGRust::Make(inKind, inArg);
-    std::vector<uint64_t> theUnits;
-    for (size_t i = 0; i < inUnits.size(); i++)
-        theUnits.push_back(Handle(inUnits[i]));
-    EeUnitsGoalIo theArgs = {};
-    theArgs.list = theUnits.data();
-    theArgs.list_len = theUnits.size();
-    Goal(EE_UNITS_GOAL_NEW_LOAD, theGoal, Handle(inContainer), 0, &theArgs);
-    return theGoal;
+    return reinterpret_cast<EEUGRust*>(ee_units_goal_new_load(inKind, inArg, Handle(inContainer), &inUnits));   // goal_calls.rs
 }
 
 void EEUGRust::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
 {
-    EeUnitsGoalIo theArgs = {};
-    PointOut(&theArgs, outLocation);
-    Goal(EE_UNITS_GOAL_DESTINATION, this, Handle(inUnit), 0, &theArgs);
-    PointIn(theArgs, outLocation);
+    ee_units_goal_point(EE_UNITS_GOAL_DESTINATION, this->Base(), Handle(inUnit), (float(*)[3])&outLocation.mX, true);
 }
 
 void EEUGRust::DumpOutOfSynch(FILE* inFile)
@@ -737,10 +673,7 @@ void EEUGRust::GetDebugLine(UWideString& ioText)
 
 void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)
 {
-    EeUnitsGoalIo theArgs = {};
-    PointOut(&theArgs, outLocation);
-    Goal(EE_UNITS_GOAL_LOCATION, this, 0, 0, &theArgs);
-    PointIn(theArgs, outLocation);
+    ee_units_goal_point(EE_UNITS_GOAL_LOCATION, this->Base(), 0, (float(*)[3])&outLocation.mX, true);
 }
 
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)

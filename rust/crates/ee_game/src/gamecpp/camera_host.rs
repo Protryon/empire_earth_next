@@ -45,15 +45,16 @@ pub extern "C" fn ee_gamecpp_camera_unit_point(unit: *mut c_void, out: *mut c_vo
     }
 }
 
-/// `Update`: the camera's frame (ee_game app camera.rs over the C++ host `call`); when it moved, the view to the
+/// `Update`: the camera's frame (ee_game app camera.rs over the host, camera_io.rs); when it moved, the view to the
 /// world and the viewport (the orthographic size, the field of view, the clipping distances) and the mini map's
 /// view; CAMU before and after (TEST ONLY).
 ///
 /// # Safety
-/// `camera` is a live EECameraControl and `call` its host.
+/// `camera` is a live EECameraControl.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_camera_update(camera: *mut c_void, call: EeAppCameraFn, elapsed: f32) {
+pub unsafe extern "C" fn ee_gamecpp_camera_update(camera: *mut c_void, elapsed: f32) {
     let c = camera as P;
+    let call: EeAppCameraFn = super::camera_io::ee_gamecpp_camera_host;
     ee_gamecpp_capture_camera(camera, 0, elapsed);
     let mut size = 0.0f32;
     // SAFETY: the function's contract

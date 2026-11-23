@@ -53,22 +53,16 @@ public:
                                   const UWideString& inVersion, unsigned long inChecksum);
     void RefuseClient(EEGameOptionsPlayer& inPlayer);  // 0xcb850 (the lobby's opened/closed slot 0x1db1ce)
     // New (LLE Network Engine round 6): the server's connection response (its error, the send-to slot it names, the
-    // lobby slot, 0xff for none); sent to a slot from the server's, the slot forgotten after it when inUnregister; a
-    // client's connection request taken (ProcessSystemMessage and FilterPlayerInput took it alike)
+    // lobby slot, 0xff for none). Sending it to a slot, taking a client's connection request, the fast selection's
+    // reset (0xcc9ce), a slot's full player information (0xcd144) and a ping statistic (0xcd1dc) are gamecpp
+    // session_objs.rs
     NEMessage* NewConnectionResponse(long inError, unsigned char inSendToSlot, unsigned char inUISlot);
-    void SendConnectionResponse(unsigned char inSlot, long inError, unsigned char inSendToSlot, unsigned char inUISlot,
-                                bool inUnregister);
-    void TakeConnectionRequest(NEMRecord* inRequest);
     unsigned char GetSendToSlot(unsigned char inPlayer);  // 0xcbc02 (mU214's value for inPlayer, 0xff if none)
     unsigned char GetLobbySlot(unsigned char inValue);  // 0xcbc35 (the key whose mU214 value is inValue, 0 if none)
     void HandleLobbyInput(NEMessage* inMessage);  // 0xcc34e (ProcessSystemMessage)
     bool StartVote(unsigned short inCount);  // 0xcc937 (FilterPlayerInput)
-    // 0xcc9ce: clears the fast-selection state (the ctor's last call; EEClient has the same member)
-    void ResetFastSelection();
     void SendPlayerSlotInfo();              // 0xcccc8 (EEMStartLoadingResponse: everybody has loaded)
     void CastVote(unsigned char inIndex, bool inYes, unsigned char inCount);  // 0xccfe7 (a vote on mU32C)
-    void SendFullPlayerInformation(unsigned char inPlayer, EEGameOptionsPlayer& inOptions);  // 0xcd144 (RefuseClient)
-    void SendPingStat(unsigned char inPlayer, float inPing);  // 0xcd1dc (ProcessSystemMessage: a ping statistic)
 
     friend class EESessionAccess;   // EEServer.cpp's session host: the engine's protected sends
 

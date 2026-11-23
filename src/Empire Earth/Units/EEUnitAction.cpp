@@ -28,33 +28,32 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEPhysics.h"
 #include "rust/sim/units.h"
 
 extern FSPath* gDataPath;
 
-// New (R5b.4 round 20): the reader of a script's file for the Rust parser (ee_units script.rs): Unit AI
-// Scripts\<name>.tai through the data path, its bytes pushed to the sink; false when it is missing or does not open
-static bool EEReadScript(void*, const uint8_t* inName, size_t inLength, void* inSink)
+// The script file's read (ee_units script.rs OpSource; EE_UNITS_SCRIPT_H_*): one statement of the original's each; its
+// locals (the name, the file, the length and the count read) are these
+static UString sScriptName;
+static FSFileSpec* sScriptFile;
+static unsigned long sScriptLength;
+static unsigned long sScriptCount;
+
+extern "C" int64_t ee_units_script_host(int32_t inOp, uint64_t inA, int64_t inB)
 {
-    UString theName;
-    theName.Copy((const char*)std::string((const char*)inName, inLength).c_str(), 0, (unsigned long)inLength, 0, true);
-    FSFileSpec* theFile = NULL;
-    bool theRead = false;
-    long theResult = gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile);
-    if (theResult == kErrorOK && theFile != NULL && theFile->Open(kFileAccessRead) == kErrorOK) {
-        unsigned long theLength = 0;
-        unsigned long theCount = 0;
-        theFile->GetLength(theLength);
-        std::vector<char> theBytes(theLength + 1);
-        theFile->Read(&theBytes[0], theLength, theCount);
-        ee_units_script_push(inSink, (const uint8_t*)&theBytes[0], theLength);
-        theRead = true;
+    switch (inOp) {
+    case EE_UNITS_SCRIPT_H_NAME: sScriptName.Copy((const char*)std::string((const char*)(uintptr_t)inA, (size_t)inB).c_str(), 0, (unsigned long)inB, 0, true); return 0;
+    case EE_UNITS_SCRIPT_H_FIND: return gDataPath->FindFile("Unit AI Scripts\\" + sScriptName + ".tai", sScriptFile = NULL);
+    case EE_UNITS_SCRIPT_H_HAS_FILE: return sScriptFile != NULL;
+    case EE_UNITS_SCRIPT_H_OPEN: return sScriptFile->Open(kFileAccessRead);
+    case EE_UNITS_SCRIPT_H_GET_LENGTH: sScriptFile->GetLength(sScriptLength = 0); return 0;
+    case EE_UNITS_SCRIPT_H_LENGTH: return (int64_t)sScriptLength;
+    case EE_UNITS_SCRIPT_H_READ: sScriptFile->Read((char*)(uintptr_t)inA, (unsigned long)inB, sScriptCount = 0); return 0;
+    case EE_UNITS_SCRIPT_H_CLOSE: sScriptFile->Close(); return 0;
+    case EE_UNITS_SCRIPT_H_DELETE: delete sScriptFile; return 0;
+    default: return 0;
     }
-    if (theFile != NULL) {
-        theFile->Close();
-        delete theFile;
-    }
-    return theRead;
 }
 
 long EEUnitAction::GetActionID(const char* inName)
@@ -69,9 +68,7 @@ const char* EEUnitAction::GetActionName(unsigned long inAction)
 
 void* EEUnitAction::GetScript(const UString& inName)
 {
-    EeUnitsScriptReader theReader = {NULL, EEReadScript};
-    return reinterpret_cast<void*>(static_cast<uintptr_t>(
-        ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength(), &theReader)));
+    return reinterpret_cast<void*>(static_cast<uintptr_t>(ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength())));   // script.rs
 }
 
 void EEUnitAction::DeleteScripts()
@@ -79,86 +76,34 @@ void EEUnitAction::DeleteScripts()
     ee_units_script_delete_all();
 }
 
-// the host calls (ee_units ai.rs EeUnitsAIHost); the context is the unit
-static EEComplexUnit* AIUnit(void* inContext)
-{
-    return static_cast<EEComplexUnit*>(inContext);
-}
+// IsActive's action (the gather test's local)
+static unsigned long sAIAction;
 
-static void AIMembers(void* inContext, EeUnitsAIState* outState)
+// The C++ of EEComplexUnit::AIStep's Rust body (ee_units ai.rs; EE_UNITS_AI_H_*): one statement of the original's calls
+// each; inA an object, inB a value
+extern "C" int64_t ee_units_ai_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB)
 {
-    EEComplexUnit* theUnit = AIUnit(inContext);
-    outState->command = theUnit->mCommand != NULL ? (int64_t)theUnit->mCommand->mType : 0;
-    outState->next_trigger_time = (int64_t)theUnit->mNextTriggerTime;
-    outState->goal_kind = theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
-}
-
-static uint64_t AICommand(void* inContext)
-{
-    return reinterpret_cast<uintptr_t>(AIUnit(inContext)->mCommand);
-}
-
-static bool AIGatherInactive(void* inContext, uint32_t* outAction)
-{
-    EEComplexUnit* theUnit = AIUnit(inContext);
-    unsigned long theAction = 0;
-    if (theUnit->mGoalState == NULL || theUnit->mGoalState->IsActive(&theAction))
-        return false;
-    *outAction = (uint32_t)theAction;
-    return true;
-}
-
-static int64_t AICondition(void* inContext, int64_t inTrigger)
-{
-    EEComplexUnit* theUnit = AIUnit(inContext);
-    long theEvent = theUnit->mUnitClass->EvaluateCondition(theUnit, (long)inTrigger);
-    if (ee_units_note_noting()) {   // TEST ONLY (USST)
-        uint32_t theWords[2] = {(uint32_t)inTrigger, (uint32_t)theEvent};
-        ee_units_note_state(kUnitStateCondition, (uint32_t)theUnit->mUnitID, theWords, 2);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    switch (inOp) {
+    case EE_UNITS_AI_H_COMMAND_TYPE: return theUnit->mCommand != NULL ? (int64_t)theUnit->mCommand->mType : 0;
+    case EE_UNITS_AI_H_NEXT_TRIGGER_TIME: return (int64_t)theUnit->mNextTriggerTime;
+    case EE_UNITS_AI_H_GOAL_KIND: return theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
+    case EE_UNITS_AI_H_COMMAND: return (int64_t)reinterpret_cast<uintptr_t>(theUnit->mCommand);
+    case EE_UNITS_AI_H_HAS_GOAL: return theUnit->mGoalState != NULL;
+    case EE_UNITS_AI_H_GOAL_ACTION_RESET: sAIAction = 0; return 0;
+    case EE_UNITS_AI_H_GOAL_ACTIVE: return theUnit->mGoalState->IsActive(&sAIAction);
+    case EE_UNITS_AI_H_GOAL_ACTION: return (int64_t)sAIAction;
+    case EE_UNITS_AI_H_CONDITION: return theUnit->mUnitClass->EvaluateCondition(theUnit, (long)inB);
+    case EE_UNITS_AI_H_ACTION_TYPE: return reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inA))->mType;
+    case EE_UNITS_AI_H_START_ACTION: theUnit->StartAction((long)inB); return 0;
+    case EE_UNITS_AI_H_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
+    case EE_UNITS_AI_H_DROP_FINISHED_GOALS: theUnit->DropFinishedGoals(false); return 0;
+    case EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: theUnit->UpdateCamouflage((long)inB); return 0;
+    case EE_UNITS_AI_H_SET_COMMAND: theUnit->mCommand = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inA)); return 0;
+    case EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME: theUnit->mNextTriggerTime = (unsigned long)inB; return 0;
+    case EE_UNITS_AI_H_UNIT_ID: return (int64_t)theUnit->mUnitID;
+    case EE_UNITS_AI_H_IS_CITIZEN: return theUnit->mIsCitizen;
+    case EE_UNITS_AI_H_GAME_TIME: return (int64_t)gPhysics->mGameTime;
+    default: return 0;
     }
-    return theEvent;
-}
-
-static uint32_t AIActionType(void* inContext, uint64_t inAction)
-{
-    return (uint32_t)reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inAction))->mType;
-}
-
-static void AIStartAction(void* inContext, uint32_t inAction)
-{
-    EEComplexUnit* theUnit = AIUnit(inContext);
-    theUnit->StartAction(inAction);
-    theUnit->GetUnitClass()->ActionChanged(theUnit);
-}
-
-static void AIDropFinishedGoals(void* inContext)
-{
-    AIUnit(inContext)->DropFinishedGoals(false);
-}
-
-static void AISetCommand(void* inContext, uint64_t inAction, uint32_t inType)
-{
-    EEComplexUnit* theUnit = AIUnit(inContext);
-    theUnit->UpdateCamouflage(inType);
-    theUnit->mCommand = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inAction));
-    theUnit->GetUnitClass()->ActionChanged(theUnit);
-}
-
-static void AISetNextTriggerTime(void* inContext, uint32_t inValue)
-{
-    AIUnit(inContext)->mNextTriggerTime = (unsigned long)inValue;
-}
-
-void EEUnitAIHostFor(EEComplexUnit* inUnit, EeUnitsAIHost& outHost)
-{
-    outHost.ctx = inUnit;
-    outHost.members = AIMembers;
-    outHost.command = AICommand;
-    outHost.gather_inactive = AIGatherInactive;
-    outHost.condition = AICondition;
-    outHost.action_type = AIActionType;
-    outHost.start_action = AIStartAction;
-    outHost.drop_finished_goals = AIDropFinishedGoals;
-    outHost.set_command = AISetCommand;
-    outHost.set_next_trigger_time = AISetNextTriggerTime;
 }

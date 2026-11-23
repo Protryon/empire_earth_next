@@ -141,6 +141,8 @@ mod tests {
         let dir = root().join("include/ee");
         let mut files: Vec<_> = std::fs::read_dir(&dir).expect("include/ee").flatten().map(|e| e.path()).collect();
         files.sort();
+        // the unit constants' enums are Rust's (unit_ids.rs), emitted back as this generated header
+        files.push(root().join("include/rust/sim/unit_ids.h"));
         for path in files {
             if path.extension().and_then(|x| x.to_str()) != Some("h") {
                 continue;

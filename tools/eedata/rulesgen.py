@@ -18,7 +18,7 @@ INC = ROOT / 'include' / 'ee'
 CPP_TYPES = INC / 'EERulesGen.h'
 CPP_DECODE = ROOT / 'src' / 'Empire Earth' / 'Database' / 'EERulesGenDecode.h'
 RUST_OUT = ROOT / 'rust' / 'crates' / 'ee_data' / 'src' / 'generated' / 'rules_gen.rs'
-HEADERS = [('EEUnitClassIDs.h', 'kUnitCategory'), ('EEUnitClassIDs.h', 'kUnitType'), ('EEStringIDs.h', 'IDS_'),
+HEADERS = [('../rust/sim/unit_ids.h', 'kUnitCategory'), ('../rust/sim/unit_ids.h', 'kUnitType'), ('EEStringIDs.h', 'IDS_'),
            ('EETechTreeTechID.h', 'kTech'), ('EECivPowerIDs.h', 'kCivPower')]
 
 

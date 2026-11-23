@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 
 /// `kDamageDirect`, `kDamageSplash`, `kDamageTrample` (`ee/EERules.h`).
 constexpr static const int32_t EE_COMBAT_DAMAGE_DIRECT = 0;
@@ -168,6 +169,82 @@ constexpr static const int32_t EE_UNITS_CG_PATH_ATTEMPTS = 42;
 
 /// `unit->mIsFiringHigh`
 constexpr static const int32_t EE_UNITS_CG_FIRING_HIGH = 43;
+
+/// CBQR: one call of a read behind the hosts, its outcome: the function, the unit's and target's ids (0 without
+/// one), the result and what the call left behind. A read made inside another captured read records nothing.
+/// FindImpactUnit: extra 0 the unit hit's id, 1 the owner's mIsFiringHigh
+constexpr static const uint32_t EE_COMBAT_HR_IMPACT_UNIT = 1;
+
+/// IsStillReachable: extra 0 mPathAttempts, 1 the ignored targets' count
+constexpr static const uint32_t EE_COMBAT_HR_STILL_REACHABLE = 2;
+
+/// IsGateClosed
+constexpr static const uint32_t EE_COMBAT_HR_GATE_CLOSED = 3;
+
+/// EEIsEnemyWithinRange: extra 0 mTargetSearchTimer
+constexpr static const uint32_t EE_COMBAT_HR_ENEMY_IN_RANGE = 4;
+
+/// IsInReach: extra 0 mWeaponTagPoint before, 1 after
+constexpr static const uint32_t EE_COMBAT_HR_IN_REACH = 5;
+
+/// FacesPoint: extra 0, 1 the point's x, y bits, 2 inUseTolerance
+constexpr static const uint32_t EE_COMBAT_HR_FACES_POINT = 6;
+
+/// FacesTarget: extra 2 inUseTolerance
+constexpr static const uint32_t EE_COMBAT_HR_FACES_TARGET = 7;
+
+/// CBSO: the outcome of a shot's ActionChanged or Update or of the heal goal's Work (only the outermost call of
+/// each kind, scope slots 1 to 3)
+constexpr static const uint32_t EE_COMBAT_SO_PROJECTILE_ACTION = 1;
+
+constexpr static const uint32_t EE_COMBAT_SO_MISSILE_ACTION = 2;
+
+constexpr static const uint32_t EE_COMBAT_SO_PROJECTILE_UPDATE = 3;
+
+constexpr static const uint32_t EE_COMBAT_SO_MISSILE_UPDATE = 4;
+
+constexpr static const uint32_t EE_COMBAT_SO_TORPEDO_UPDATE = 5;
+
+constexpr static const uint32_t EE_COMBAT_SO_HEAL_WORK = 6;
+
+/// CBXR: one call of the eighth round's reads (every call records). IsTargetIgnored: extra 0 inCheckLocation, 1
+/// the list's size after, 2 its hash
+constexpr static const uint32_t EE_COMBAT_XR_IS_IGNORED = 1;
+
+/// IgnoreTarget: extra 1 the list's size after, 2 its hash
+constexpr static const uint32_t EE_COMBAT_XR_IGNORE = 2;
+
+/// CanReachUnit
+constexpr static const uint32_t EE_COMBAT_XR_CAN_REACH_UNIT = 3;
+
+/// EEIsAttackReachable: extra 0, 1 the tile's x, y after
+constexpr static const uint32_t EE_COMBAT_XR_ATTACK_REACHABLE = 4;
+
+/// IsOnTileBorderingTarget
+constexpr static const uint32_t EE_COMBAT_XR_BORDERING = 5;
+
+/// CBXA: the outcome of FireShot, Attacked, ApplyHit and ApplyAreaDamage at each call's end
+constexpr static const uint32_t EE_COMBAT_XA_FIRE_SHOT = 1;
+
+/// inBefore: the last attacker's id before
+constexpr static const uint32_t EE_COMBAT_XA_ATTACKED = 2;
+
+constexpr static const uint32_t EE_COMBAT_XA_APPLY_HIT = 3;
+
+/// inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
+constexpr static const uint32_t EE_COMBAT_XA_AREA_DAMAGE = 4;
+
+/// CBGO: the attack, attack-ground and heal goals' GetDestination (extra 0, 1: the attack goal's last target tile
+/// after) and Suits (attack ground: the target point's bits)
+constexpr static const uint32_t EE_COMBAT_GO_DESTINATION = 1;
+
+constexpr static const uint32_t EE_COMBAT_GO_SUITS = 2;
+
+/// `ee_units_cg_host`'s `GetModel()->GetNumParts()` of the unit
+constexpr static const int32_t EE_UNITS_CG_MODEL_PARTS = 5000;
+
+/// `mStats->GetScale()` of the unit (`f[0]`)
+constexpr static const int32_t EE_UNITS_CG_STATS_SCALE = 5001;
 
 /// `object->mIgnoredTargets[a[0]].mTileX`
 constexpr static const int32_t EE_COMBAT_W_IGN_TILE_X = 100;
@@ -1359,6 +1436,96 @@ constexpr static const int32_t EE_COMBAT_SHOT_SET_CLOAKED = 72;
 /// the torpedo held at the water plane: the location with z 0 (`SetTransformation(t, true)`).
 constexpr static const int32_t EE_COMBAT_SHOT_WATER_PLANE = 73;
 
+/// `GetCalamityClass(0x17, the class pointer at a)` (the flaming arrows)
+constexpr static const int32_t EE_COMBAT_SHOT_X_FLAMING_CLASS = 3600;
+
+/// `gUnitSetManager.GetSet(calamity class a->GetUnitSet())`
+constexpr static const int32_t EE_COMBAT_SHOT_X_UNIT_SET = 3601;
+
+/// `static_cast<EEUGRust*>(unit->mComplexUnit->mGoalState)->GetAttackTarget()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_COMPLEX_GOAL_TARGET = 3602;
+
+/// unit `a`'s `mUnitClass->mUnitType`
+constexpr static const int32_t EE_COMBAT_SHOT_X_UNIT_TYPE_OF = 3603;
+
+/// unit set `a`'s `Contains(b)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_CONTAINS = 3604;
+
+/// `unit->GetPosition(f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_POSITION = 3605;
+
+/// `f[0..3] = EEShotLocation(unit)` (the location's point)
+constexpr static const int32_t EE_COMBAT_SHOT_X_LOCATION = 3606;
+
+/// `gEffectManager->CreatePlacedEffect(f[0..3], class->mSplashEffect, NULL)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SPLASH_AT = 3607;
+
+/// `::gWorld.mMap->GetGroundPoint(f[0..3], f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GROUND_POINT = 3608;
+
+/// `unit->mPhysicalModel.SetLocationXYZ(f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_LOCATION_XYZ = 3609;
+
+/// `unit->mStats->mDeathSound`
+constexpr static const int32_t EE_COMBAT_SHOT_X_DEATH_SOUND = 3610;
+
+/// `class->GetSoundParameters(unit, sound a, &f[0], &f[1], &f[2])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SOUND_PARAMETERS = 3611;
+
+/// `gSoundManager->Play(sound a's mSampleID, f[0], f[1], f[2], its mLooping, NULL)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_PLAY = 3612;
+
+/// `EEShotAttack(unit)` (the attack goal)
+constexpr static const int32_t EE_COMBAT_SHOT_X_ATTACK_GOAL = 3613;
+
+/// attack goal `a`'s `GetAttackTarget()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_ATTACK_TARGET = 3614;
+
+/// `EEUnitCast<EEComplexUnit>(unit a)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_COMPLEX_CAST = 3615;
+
+/// complex unit `a`'s `SetIsTinted(false)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_UNTINT = 3616;
+
+/// unit `a`'s `mTileX`
+constexpr static const int32_t EE_COMBAT_SHOT_X_TILE_X_OF = 3617;
+
+/// unit `a`'s `mTileY`
+constexpr static const int32_t EE_COMBAT_SHOT_X_TILE_Y_OF = 3618;
+
+/// `::gWorld.mMap->GetTile(a, b)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_MAP_TILE = 3619;
+
+/// `f[0] = ` tile `a`'s `GetHeight()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_TILE_HEIGHT = 3620;
+
+/// `unit->SetGoal(EEUGRust::NewAttackGround(f[0..3], b), 0, 0)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_ATTACK_GROUND = 3621;
+
+/// unit `a`'s `mComplexUnit`
+constexpr static const int32_t EE_COMBAT_SHOT_X_COMPLEX_OF = 3622;
+
+/// complex unit `a`'s `mContainer`
+constexpr static const int32_t EE_COMBAT_SHOT_X_CONTAINER_OF = 3623;
+
+/// attack goal `a`'s `SetAttackTarget(unit b)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_ATTACK_TARGET = 3624;
+
+/// `unit->mGoalState`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GOAL_STATE = 3625;
+
+/// goal `a`'s `GetGoalLocation(f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GOAL_LOCATION = 3626;
+
+/// goal `a`'s `GetB1C()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GOAL_B1C = 3627;
+
+/// `*(GETransformation*)a = unit->mPhysicalModel.GetLocation()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_LOCATION_MATRIX = 3628;
+
+/// `unit->SetTransformation(the transformation at a, true)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_TRANSFORMATION = 3629;
+
 /// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
 constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_UNIT = 2;
 
@@ -2341,10 +2508,12 @@ struct EeCombatScreenIn {
 /// The host's distance of a screen's candidate (asked only for a living one).
 using EeCombatScreenDistance = float(*)(void *context);
 
-/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`.
+/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`; `op64` is one statement
+/// of the operations composed here ([`compose`]: `EE_COMBAT_SHOT_X_*`, an object `a`, a value `b`, floats `f`).
 struct EeCombatShotHost {
   void *ctx;
   int32_t (*op)(void *ctx, int32_t op, int32_t arg, int32_t arg1);
+  int64_t (*op64)(void *ctx, int32_t op, uint64_t a, int64_t b, float *f);
 };
 
 /// What the work does: the goal's new elapsed time (`work`), and the target's new hit points (`heal`).
@@ -2552,6 +2721,160 @@ int32_t ee_units_cg_condition(int32_t kind,
 
 /// `EECombatStep`
 void ee_units_cg_step(int32_t kind, uint64_t unit, uint64_t goal, uint64_t target);
+
+/// `EECombatHostReadScope(slot)`: one more nesting of the slot; whether it is the outermost (`depth++ == 0`).
+bool ee_combat_host_read_enter(int32_t slot);
+
+/// `~EECombatHostReadScope`: `depth--`.
+void ee_combat_host_read_leave(int32_t slot);
+
+/// `EECombatCaptureHostRead` (`which` 0, three extras) and `EECombatCaptureXRead` (1, two) with the extras as
+/// arguments.
+void ee_combat_capture_read_of(uint32_t which,
+                               uint32_t func,
+                               uint64_t unit,
+                               uint64_t target,
+                               int32_t result,
+                               uint32_t e0,
+                               uint32_t e1,
+                               uint32_t e2);
+
+/// `EECombatFacesPoint(class, unit, location, useTolerance)` (the point's x, y)
+/// # Safety
+/// Inside the game's call; the class and unit live.
+bool ee_units_cgq_faces_point(uint64_t class_, uint64_t unit, float x, float y, bool use_tolerance);
+
+/// `EECombatWorld(function, unit, target, class, ioX, ioY)`
+/// # Safety
+/// As above.
+int32_t ee_units_cgq_world(int32_t function,
+                           uint64_t unit,
+                           uint64_t target,
+                           uint64_t class_,
+                           long *io_x,
+                           long *io_y);
+
+/// `EECombatComputeDamage(form, unit, target, attack, ammo, weapon, friendly, outAmount)` (`class` the unit's)
+/// # Safety
+/// As above.
+bool ee_units_cgq_compute_damage(int32_t form,
+                                 uint64_t unit,
+                                 uint64_t target,
+                                 uint64_t class_,
+                                 float attack,
+                                 long ammo,
+                                 long weapon,
+                                 float friendly_factor,
+                                 long *out_amount);
+
+/// `EECombatAttackPosition(firing, attacker, target, ioLocation)` (the point's three floats)
+/// # Safety
+/// As above.
+void ee_units_cgq_attack_position(bool firing,
+                                  uint64_t attacker,
+                                  uint64_t target,
+                                  float (*point)[3]);
+
+/// `EECombatFindDropLocation(unit, target, outLocation)`
+/// # Safety
+/// As above.
+uint64_t ee_units_cgq_find_drop_location(uint64_t unit, uint64_t target, float (*point)[3]);
+
+/// `EECombatHitDistanceSquared(unit, target, x, y)`
+/// # Safety
+/// As above.
+float ee_units_cgq_hit_distance_squared(uint64_t unit, uint64_t target, float x, float y);
+
+/// `EECombatIsSeenBy(unit, player, explored)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_is_seen_by(uint64_t unit, uint64_t player, bool explored);
+
+/// `EECombatFindImpactUnit(unit)`
+/// # Safety
+/// As above.
+uint64_t ee_units_cgq_impact_unit(uint64_t unit);
+
+/// `EECombatIsInReach(unit, target)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_in_reach(uint64_t unit, uint64_t target);
+
+/// `EECombatIsStillReachable(unit, goal)` with its CBQR record
+/// # Safety
+/// As above.
+bool ee_units_cgq_still_reachable(uint64_t unit, uint64_t goal);
+
+/// `EECombatIsGateClosed(unit, goal)` with its CBQR record
+/// # Safety
+/// As above.
+bool ee_units_cgq_gate_closed(uint64_t unit, uint64_t goal);
+
+/// `EEIsEnemyWithinRange(unit)` with its CBQR record
+/// # Safety
+/// As above.
+bool ee_units_cgq_is_enemy_within_range(uint64_t unit);
+
+/// `EEIsAttackReachable(unit, target, outTile)` with its CBXR record (`x`, `y` the tile's longs)
+/// # Safety
+/// As above.
+bool ee_units_cgq_is_attack_reachable(uint64_t unit, uint64_t target, long *x, long *y);
+
+/// `EENearOldScreen`: a candidate of the old target's screen (`range` its `mDistanceSquared`) with its CBFS record
+/// # Safety
+/// As above.
+bool ee_units_cgq_near_old_screen(uint64_t candidate,
+                                  uint64_t target,
+                                  float range);
+
+/// `EEIsInWorkReach(unit, target)` with its CBRW record
+/// # Safety
+/// As above.
+bool ee_units_cgq_in_work_reach(uint64_t unit, uint64_t target);
+
+/// `EEIsInGatherReach(distance, unit, target)` with its CBRT record
+/// # Safety
+/// As above.
+bool ee_units_cgq_in_gather_reach(float distance_squared, uint64_t unit, uint64_t target);
+
+/// `EEIsInContactRange(unit, target, distance)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_in_contact_range(uint64_t unit, uint64_t target, float distance_squared);
+
+/// `EECombatCaptureIgnored(func, unit, target, result, checkLocation)` (CBXR's fold)
+/// # Safety
+/// As above.
+void ee_units_cgq_capture_ignored(uint32_t func,
+                                  uint64_t unit,
+                                  uint64_t target,
+                                  int32_t result,
+                                  uint32_t check);
+
+/// `EECombatShotTarget(unit)`
+/// # Safety
+/// As above.
+uint64_t ee_units_cgq_shot_target(uint64_t unit);
+
+/// The query host's `ATTACK_REACHABLE` (`EEIsAttackReachable` from a zero tile, its CBXR record)
+/// # Safety
+/// As above.
+bool ee_units_cgq_attack_reachable_from_zero(uint64_t unit, uint64_t target);
+
+/// The query host's `CONTACT_RANGE` (`EEIsInContactRange` of the distance's bits)
+/// # Safety
+/// As above.
+bool ee_units_cgq_in_contact_range_bits(uint64_t unit, uint64_t target, int32_t bits);
+
+/// `EECombatHealInRange(healer, target)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_heal_in_range(uint64_t healer, uint64_t target);
+
+/// `EECombatIsEnemyWithinRange(unit)`
+/// # Safety
+/// As above.
+bool ee_units_cgq_enemy_in_range(uint64_t unit);
 
 /// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
 ///
@@ -2778,6 +3101,12 @@ void ee_combat_attack_get(uint64_t goal, EeCombatAttackGoal *out);
 void ee_combat_attack_set(uint64_t goal,
                           const EeCombatAttackGoal *value);
 
+/// The attack goal's record by value (`EEUnitGoal::Attack()`).
+EeCombatAttackGoal ee_combat_attack_of(uint64_t goal);
+
+/// `SetAttacker(attacker)` (`which` 0) or `SetSidestepCount(count)` (1): one field of the record.
+void ee_combat_attack_set_field(uint64_t goal, int32_t which, uint64_t value);
+
 /// The record of the goal into `out` (zeroes for none).
 ///
 /// # Safety
@@ -2791,11 +3120,20 @@ void ee_combat_heal_set_location(uint64_t goal,
                                  uint32_t y,
                                  uint32_t z);
 
+/// The heal goal's healee (`GetHealTarget()`).
+uint64_t ee_combat_heal_target(uint64_t goal);
+
+/// The heal goal's location as a point (`GetHealLocation()`).
+EeGe3DPoint ee_combat_heal_location(uint64_t goal);
+
 /// The attack-ground goal's target into `out` (0, 0, 0 for a goal without a record).
 ///
 /// # Safety
 /// `out` must point to three writable floats.
 void ee_combat_ground_target(uint64_t goal, float (*out)[3]);
+
+/// The attack-ground goal's target point by value (`GetGroundTarget()`).
+EeGe3DPoint ee_combat_ground_target_point(uint64_t goal);
 
 /// The trigger test of `input.kind`; the lazy reads go to `host` and are logged into `*input`.
 ///

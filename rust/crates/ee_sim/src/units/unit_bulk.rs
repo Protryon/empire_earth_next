@@ -185,7 +185,7 @@ pub fn copy_third(cx: &mut EeUnitsComplexUnitFields, other: &EeUnitsComplexUnitF
 
 /// The values of `OutOfSynchDump` that are not in the records.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct EeUnitsComplexDumpIn {
     pub player_id: c_ulong,
     pub tile_x: c_long,

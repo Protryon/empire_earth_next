@@ -7,8 +7,26 @@ use crate::units::cu_body::*;
 use crate::units::cu_life::*;
 
 // ---- the statements (`op`; `a` the FILE* or the UWideString*)
-/// the dump's input record filled from the unit (its tile, physics and queues; `EECuDumpIn`)
-pub const EE_UNITS_CU_DUMP_FILL: i32 = 900;
+// the dump's input record (`EeUnitsComplexDumpIn`, the host's `sCuDumpIn`) filled from the unit by [`dump_fill`],
+// one statement each
+/// `&sCuDumpIn`
+pub const EE_UNITS_CU_DUMP_IN: i32 = 4041;
+/// `mPlayer->mPlayerID`
+pub const EE_UNITS_CU_DUMP_PLAYER_ID: i32 = 4042;
+/// `GetTileX()`, `GetTileY()` (`b` 0, 1)
+pub const EE_UNITS_CU_DUMP_TILE: i32 = 4043;
+/// `mAngularVelocity`'s `GetYaw()`, `GetPitch()`, `GetRoll()` (`b` 0, 1, 2) into `f[0]`
+pub const EE_UNITS_CU_DUMP_ANGULAR_VELOCITY: i32 = 4044;
+/// `mBuildQueue.size()`, `mCitizenBuildQueue.size()` (`b` 0, 1)
+pub const EE_UNITS_CU_DUMP_QUEUE_SIZE: i32 = 4045;
+/// `mCollisionTile.mX`, `.GetY()` (`b` 0, 1)
+pub const EE_UNITS_CU_DUMP_COLLISION_TILE: i32 = 4046;
+/// `mPhysicalModel.GetFrame()`
+pub const EE_UNITS_CU_DUMP_FRAME: i32 = 4047;
+/// `mProjectileStart`'s `GetX()`, `GetY()`, `GetZ()` (`b` 0, 1, 2) into `f[0]`
+pub const EE_UNITS_CU_DUMP_PROJECTILE_START: i32 = 4048;
+/// `mPhysicalModel.GetLocation().GetElement(b, c)` into `f[0]`
+pub const EE_UNITS_CU_DUMP_LOCATION_ELEMENT: i32 = 4049;
 /// `ee_units_complex_dump(b, this, this, this, GetUnitClass(), GetStats(), the input, EEDumpWrite, (FILE*)a)`
 pub const EE_UNITS_CU_DUMP_PART: i32 = 901;
 /// the action line
@@ -95,9 +113,46 @@ fn locations<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64) {
 
 /// `OutOfSynchDump(file, flags)`: the unit's goals, physics, class stats, waypoints and area effects in the
 /// out-of-sync file `file` (a `FILE*`).
+/// The dump's input record (the host's) filled from the unit: its player, tile, physics and queues.
+pub fn dump_fill<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
+    let mut f = [0.0f32; 4];
+    let mut q = |h: &mut H, op: i32, b: i64, c: i64| h.cu(op, unit, 0, b, c, &mut f);
+    let at = q(h, EE_UNITS_CU_DUMP_IN, 0, 0) as usize;
+    let mut d = crate::units::unit_bulk::EeUnitsComplexDumpIn {
+        player_id: q(h, EE_UNITS_CU_DUMP_PLAYER_ID, 0, 0) as _,
+        tile_x: q(h, EE_UNITS_CU_DUMP_TILE, 0, 0) as _,
+        tile_y: q(h, EE_UNITS_CU_DUMP_TILE, 1, 0) as _,
+        ..Default::default()
+    };
+    for i in 0..3 {
+        h.cu(EE_UNITS_CU_DUMP_ANGULAR_VELOCITY, unit, 0, i as i64, 0, &mut f);
+        d.angular_velocity[i] = f[0];
+    }
+    d.build_queue = h.cu(EE_UNITS_CU_DUMP_QUEUE_SIZE, unit, 0, 0, 0, &mut f) as usize;
+    d.citizen_build_queue = h.cu(EE_UNITS_CU_DUMP_QUEUE_SIZE, unit, 0, 1, 0, &mut f) as usize;
+    for i in 0..2 {
+        d.collision_tile[i] = h.cu(EE_UNITS_CU_DUMP_COLLISION_TILE, unit, 0, i as i64, 0, &mut f) as _;
+    }
+    d.frame = h.cu(EE_UNITS_CU_DUMP_FRAME, unit, 0, 0, 0, &mut f) as _;
+    for i in 0..3 {
+        h.cu(EE_UNITS_CU_DUMP_PROJECTILE_START, unit, 0, i as i64, 0, &mut f);
+        d.projectile_start[i] = f[0];
+    }
+    for r in 0..4 {
+        for c in 0..4 {
+            h.cu(EE_UNITS_CU_DUMP_LOCATION_ELEMENT, unit, 0, r as i64, c as i64, &mut f);
+            d.location[r][c] = f[0];
+        }
+    }
+    if at != 0 {
+        // SAFETY: the host's live record (0 in a test)
+        unsafe { *(at as *mut crate::units::unit_bulk::EeUnitsComplexDumpIn) = d };
+    }
+}
+
 pub fn out_of_synch_dump<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64) {
     let q = |h: &mut H, op: i32, b: i64, c: i64| h.cu(op, unit, file, b, c, &mut [0.0; 4]);
-    q(h, EE_UNITS_CU_DUMP_FILL, 0, 0);
+    dump_fill(h, unit);
     q(h, EE_UNITS_CU_DUMP_PART, 0, 0);
     q(h, EE_UNITS_CU_DUMP_ACTION, 0, 0);
     if q(h, EE_UNITS_CU_NO_ACTIVE_GROUP, 0, 0) != 0 {
@@ -288,6 +343,22 @@ mod tests {
                 EE_UNITS_CU_HAS_GOAL_STATE_NOW
             ]
         );
+    }
+
+    #[test]
+    fn the_dump_record_is_filled_field_by_field() {
+        let mut h = Mock::default();
+        let mut h2 = Wrap(&mut h);
+        dump_fill(&mut h2, 1);
+        assert_eq!(h.log[0].0, EE_UNITS_CU_DUMP_IN);
+        assert_eq!(h.count(EE_UNITS_CU_DUMP_ANGULAR_VELOCITY), 3);
+        assert_eq!(h.count(EE_UNITS_CU_DUMP_QUEUE_SIZE), 2);
+        assert_eq!(h.count(EE_UNITS_CU_DUMP_COLLISION_TILE), 2);
+        assert_eq!(h.count(EE_UNITS_CU_DUMP_PROJECTILE_START), 3);
+        let cells: Vec<(i64, i64)> =
+            h.log.iter().filter(|e| e.0 == EE_UNITS_CU_DUMP_LOCATION_ELEMENT).map(|e| (e.1, e.2)).collect();
+        assert_eq!(cells.len(), 16);
+        assert_eq!((cells[0], cells[5], cells[15]), ((0, 0), (1, 1), (3, 3)));
     }
 
     /// the reads that pass another object than the file (the goal's kind) answered as if they named the file
