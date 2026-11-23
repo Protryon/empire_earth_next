@@ -196,6 +196,15 @@ pub trait QueryHost {
     fn intersects(&mut self, candidate: EeCombatHandle, line: &Ge3DLine, segment: bool, lod: u32, scale: f32) -> bool;
     /// the call's unit's `GetNearestFootprintTile(<object>, &x, &y)`.
     fn footprint_tile(&mut self, object: EeCombatHandle) -> (i32, i32);
+    /// the units of the map's unit region under `unit`'s tile (`gWorld.mMap->mUnitRegions`'s region (x / size,
+    /// y / size)), None off the grid; by default the count read and each unit's handle.
+    fn region_units(&mut self, unit: EeCombatHandle) -> Option<Vec<EeCombatHandle>> {
+        let count = self.read(EE_COMBAT_Q_REGION_COUNT, unit, 0);
+        if count == EE_COMBAT_Q_NONE {
+            return None;
+        }
+        Some((0..count).map(|i| self.handle(EE_COMBAT_H_REGION_UNIT, unit, i as i32)).collect())
+    }
 }
 
 fn float(bits: u32) -> f32 {
@@ -276,13 +285,12 @@ pub fn impact_unit<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> EeCombatHan
         if unit_type == TYPE_FLAMING_ARROW || unit_type == TYPE_PILUM || unit_type == TYPE_ICBM {
             return result;
         }
-        let count = h.read(EE_COMBAT_Q_REGION_COUNT, unit, 0);
-        if count == EE_COMBAT_Q_NONE {
+        let Some(region) = h.region_units(unit) else {
             return result;
-        }
-        let mut i = 0u32;
-        while i < count && result == 0 {
-            let candidate = h.handle(EE_COMBAT_H_REGION_UNIT, unit, i as i32);
+        };
+        let mut i = 0usize;
+        while i < region.len() && result == 0 {
+            let candidate = region[i];
             i += 1;
             if !flag(h, EE_COMBAT_Q_TARGETABLE, candidate) || candidate == h.handle(EE_COMBAT_H_OWNER, unit, 0) {
                 continue;
@@ -769,6 +777,9 @@ impl<H: QueryHost> QueryHost for Stored<'_, H> {
     fn footprint_tile(&mut self, object: EeCombatHandle) -> (i32, i32) {
         self.host.footprint_tile(object)
     }
+    fn region_units(&mut self, unit: EeCombatHandle) -> Option<Vec<EeCombatHandle>> {
+        self.host.region_units(unit)
+    }
 }
 
 // ---- the C ABI
@@ -826,6 +837,19 @@ impl QueryHost for EeCombatQueryHost {
         let mut out = [0i32; 2];
         unsafe { (self.footprint_tile)(self.ctx, object, &mut out) };
         (out[0], out[1])
+    }
+    /// the world's table (Rust's, regions.rs) and the unit's tile (its view)
+    fn region_units(&mut self, unit: EeCombatHandle) -> Option<Vec<EeCombatHandle>> {
+        crate::world::layout::get()?;
+        // SAFETY: the host's calls run on the simulation thread, which holds the world; the unit is live
+        let t = unsafe { crate::world::view::WorldRead::begin() };
+        let map = crate::world::view::WorldView::global(&t)?.map()?;
+        // SAFETY: the map's live table (the map owns it)
+        let table = unsafe { map.unit_regions().as_ref() }?;
+        // SAFETY: as above
+        let (x, y) = unsafe { crate::world::view::UnitView::of(&t, unit) }?.tile_xy();
+        let size = i64::from(table.size());
+        table.region((x / size) as u32, (y / size) as u32).cloned()
     }
 }
 

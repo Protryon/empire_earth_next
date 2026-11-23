@@ -134,7 +134,6 @@ namespace {
 struct EEQueryContext {
     EEComplexUnit* mUnit;                   // the call's unit
     EEUGRust* mGoal;                  // IsStillReachable's, IsGateClosed's attack goal
-    const uint64_t* mRegion;                // FindImpactUnit's region (ee_combat regions.rs), found by its count read
     EEUnitClass* mClass = NULL;             // world.rs: the class of Attacked or FireShot
     EEUnitGoal* mAttackedGoal = NULL;       // Attacked's goal (the helpers' clones)
     std::vector<EEUnit*> mNear;             // Attacked's units near the attacked unit
@@ -213,14 +212,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_BALLISTIC_HIT:
         return EECanBallisticHit(EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject));
     case EE_COMBAT_Q_CONTACT_RANGE: return ee_units_cgq_in_contact_range_bits(EEQueryHandleOf(EEQueryContextOf(inContext)->mUnit), inObject, inArg);
-    case EE_COMBAT_Q_REGION_COUNT: {
-        EeCombatUnitRegions* theTable = ::gWorld.mMap->mUnitRegions;
-        long theSize = ee_combat_regions_size(theTable);
-        int32_t theCount;
-        EEQueryContextOf(inContext)->mRegion = ee_combat_regions_units(theTable, (uint32_t)(EEQueryUnit(inObject)->GetTileX() / theSize),
-                                                      (uint32_t)(EEQueryUnit(inObject)->GetTileY() / theSize), &theCount);
-        return EEQueryContextOf(inContext)->mRegion != NULL ? (uint32_t)theCount : EE_COMBAT_Q_NONE;
-    }
+    // (EE_COMBAT_Q_REGION_COUNT and the region's units: ee_combat reads.rs region_units over the Rust table)
     case EE_COMBAT_Q_CONTACT_X:
         return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetX());
     case EE_COMBAT_Q_CONTACT_Y:
@@ -260,8 +252,6 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
     case EE_COMBAT_H_OWNER:
         return EEQueryHandleOf(EEQueryComplex(inObject)->mOwner);
     case EE_COMBAT_H_GOAL_TARGET: return ee_units_cgq_shot_target(inObject);   // its attack-unit goal's target (cg_query.rs)
-    case EE_COMBAT_H_REGION_UNIT:
-        return EEQueryContextOf(inContext)->mRegion[inArg];
     case EE_COMBAT_H_TILE_PREV:
         return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mPrev));
     case EE_COMBAT_H_TILE_NEXT:
@@ -442,7 +432,7 @@ extern "C" void ee_units_cg_facing_turret(uint64_t inUnit, int32_t inIndex, EeCo
 extern "C" void ee_units_cg_query(uint64_t inUnit, uint64_t inGoal, uint64_t inClass, void* inData,
                                   void (*inBody)(void*, const EeCombatWorldHost*))
 {
-    EEQueryContext theContext = {EEQueryComplex(inUnit), EECgObject<EEUGRust>((int64_t)inGoal), NULL};
+    EEQueryContext theContext = {EEQueryComplex(inUnit), EECgObject<EEUGRust>((int64_t)inGoal)};
     theContext.mClass = EECgObject<EEUnitClass>((int64_t)inClass);
     EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, inClass};
     inBody(inData, &theHost);

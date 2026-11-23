@@ -45,6 +45,24 @@ fn the_values_walk_the_regions_backwards_from_the_last_unit_and_collect_sorts() 
 }
 
 #[test]
+fn the_collector_s_walk_goes_column_by_column_each_region_backwards() {
+    let mut t = EeCombatUnitRegions::new(3, 3);
+    t.add(0, 0, 5);
+    t.add(0, 0, 3);
+    t.add(0, 1, 9);
+    t.add(1, 0, 4);
+    t.add(2, 2, 1);
+    // regions (0,0), (0,1), then (1,0), (1,1): x outer, y inner, each region from its last unit
+    assert_eq!(t.walk(0, 0, 5, 5), [3, 5, 9, 4]);
+    // no clamping: region -1 is off the grid and skipped, as an unsigned coordinate
+    assert_eq!(t.walk(-4, -4, 8, 8), [3, 5, 9, 4, 1]);
+    let mut out = [0u64; 2];
+    // SAFETY: a live table, a buffer of two
+    assert_eq!(unsafe { ee_combat_regions_walk(&t, 0, 0, 5, 5, out.as_mut_ptr(), 2) }, 4);
+    assert_eq!(out, [3, 5]);
+}
+
+#[test]
 fn a_footprint_enters_or_leaves_every_region_under_it() {
     let mut t = EeCombatUnitRegions::new(4, 3);
     // tiles 2..5 by 2..5: regions 0..1 by 0..1

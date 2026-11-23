@@ -94,18 +94,13 @@ long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the tele
 // Orders units farthest from the reference tile first, so a sort leaves the nearest unit last
 inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const
 {
-    EETileCoordinate theTile;
-    theTile.mX = inUnit->mTileX;
-    theTile.mY = inUnit->mTileY;
-    return this->DistanceSquared(theTile);
+    return this->DistanceSquared(EETileCoordinate(inUnit->mTileX, inUnit->mTileY));
 }
 
+// (the two distances are pure reads: their order does not matter)
 bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 {
-    long theLeft = this->DistanceSquared(inFirst);
-    long theRight = this->DistanceSquared(inSecond);
-    bool theResult = theLeft > theRight;
-    return theResult;
+    return this->DistanceSquared(inFirst) > this->DistanceSquared(inSecond);
 }
 
 // ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
@@ -149,11 +144,10 @@ template <class T> T* ObjectOf(uint64_t inHandle)
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
 
+// (a GE3DPoint is its three floats)
 void PointOut(EeUnitsGoalIo* ioArgs, const GE3DPoint& inPoint)
 {
-    ioArgs->f[0] = inPoint.GetX();
-    ioArgs->f[1] = inPoint.GetY();
-    ioArgs->f[2] = inPoint.GetZ();
+    memcpy(ioArgs->f, &inPoint, 3 * sizeof(float));
 }
 
 // a goal body's float argument from its bits
@@ -170,9 +164,7 @@ long ReadFloatInto(FSFile* inFile, int64_t& ioValue)
 {
     float theValue = UBitsFloat(ioValue);
     long theResult = inFile->Read(theValue);
-    uint32_t theBits;
-    memcpy(&theBits, &theValue, sizeof(theBits));
-    ioValue = theBits;
+    ioValue = UFloatBits(theValue);
     return theResult;
 }
 
@@ -553,28 +545,7 @@ static_assert(sizeof(EEUnitGoal) == sizeof(EeUnitsGoalBase) && offsetof(EEUnitGo
 // the world host of the goals' context-free calls (EEUnitGoal::Call)
 static const int sGoalHostRegistered = (ee_units_goal_register_host(GoalOp), 0);
 
-// 0x23c3e6: an empty goal of a kind for loading, giving the drawn goal id back (NULL for an unknown kind)
-EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
-{
-    EEUnitGoal* theGoal = NULL;
-    switch (inKind) {
-    case kGoalAttackGround: theGoal = NewAttackGround(GE3DPoint(), false); break;
-    case kGoalAttackUnit: theGoal = NewAttackUnitEmpty(false); break;
-    case kGoalBuildRepair: theGoal = NewBuildRepair(false); break;
-    case kGoalCastCalamity: theGoal = NewCastCalamity(false); break;
-    case kGoalExplore: theGoal = NewExplore(false); break;
-    case kGoalGather: theGoal = NewGather(false); break;
-    case kGoalLoadGarrison:
-    case kGoalLoadTransport: theGoal = NewLoad(inKind, false); break;
-    case kGoalLocation: theGoal = NewLocation(false, false, false, false); break;
-    case kGoalPatrol: theGoal = NewPatrol(false); break;
-    case kGoalUnloadTransport: theGoal = NewUnloadTransport(false); break;
-    case kGoalHealUnit: theGoal = NewHealUnit(false); break;
-    }
-    if (theGoal != NULL)
-        theGoal->mID = ee_units_goal_counter_back();
-    return theGoal;
-}
+// (CreateGoal: ee_units goal_calls.rs ee_units_goal_create)
 
 // (the location goal, location.rs: its constructors and accessors are inline in ee/EEUnitGoal.h)
 

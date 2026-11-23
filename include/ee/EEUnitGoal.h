@@ -56,7 +56,8 @@ public:
     static void* operator new(size_t) = delete;
     static void operator delete(void* inGoal) { ee_units_goal_dealloc(static_cast<EeUnitsGoalBase*>(inGoal)); }
     // 0x23c3e6: an empty goal of kind inKind for loading (NULL for an unknown kind); it hands the counter value back
-    static EEUnitGoal* CreateGoal(unsigned char inKind);
+    // (ee_units goal_calls.rs)
+    static EEUnitGoal* CreateGoal(unsigned char inKind) { return reinterpret_cast<EEUnitGoal*>(ee_units_goal_create(inKind)); }
     ~EEUnitGoal() { this->Call(EE_UNITS_GOAL_DESTROY); }
 
     // the original's virtuals (vtable 0x43cc64, by slot), each one call of the kind's body

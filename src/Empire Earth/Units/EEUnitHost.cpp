@@ -64,19 +64,15 @@
 #include "rust/sim/units.h"
 #include "ee/EECombatGoals.h"
 
-static EEUnit* UnitOf(uint32_t inID)
+// the unit of an id (EEUnitHandleResolve's overload for T)
+template <class T> static T* Resolved(uint32_t inID)
 {
-    EEUnit* theUnit;
+    T* theUnit;
     EEUnitHandleResolve(inID, theUnit);
     return theUnit;
 }
-
-static EEComplexUnit* ComplexOf(uint32_t inID)
-{
-    EEComplexUnit* theUnit;
-    EEUnitHandleResolve(inID, theUnit);
-    return theUnit;
-}
+static EEUnit* UnitOf(uint32_t inID) { return Resolved<EEUnit>(inID); }
+static EEComplexUnit* ComplexOf(uint32_t inID) { return Resolved<EEComplexUnit>(inID); }
 
 // ---- the host's calls ----
 

@@ -78,10 +78,7 @@ inline EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea,
     return EEUUUnit(ee_units_sr_search_target(EEUUHandle(inUnit), inArea->mLeft, inArea->mTop, inArea->mRight, inArea->mBottom, inX, inY, inScale));
 }
 // Returns a target near a unit (along the unit list for anti-air ammunition 0x3c)
-inline EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
-{
-    return EEUUUnit(ee_units_ub_body(EE_UNITS_UB_DO_FIND_NEARBY_TARGET, EEUUHandle(inUnit), 0, 0, 0, 0));   // uu_body.rs
-}
+EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit);
 // Returns the best target for a unit around a tile along the x-sorted unit list, scored by its targeting table
 // The best target for inUnit around (inX, inY) along the x-sorted unit list (both ways), scored by the targeting
 // table row of its mode (the unit-list twin of EEUUTargetSearch) (uu_search.rs over ee_combat's search_along_list)
@@ -90,10 +87,7 @@ inline EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY
     return EEUUUnit(ee_units_sr_search_along_list(EEUUHandle(inUnit), inX, inY, inScale));   // uu_search.rs
 }
 // Returns the best target for a unit around a tile when the influence table shows enemies within its reach
-inline EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale)
-{
-    return EEUUUnit(ee_units_ub_body(EE_UNITS_UB_DO_FIND_TARGET_NEAR, EEUUHandle(inUnit), 0, inX, inY, (int64_t)UFloatBits(inScale)));   // uu_body.rs
-}
+EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale);
 // 0x148992 (cdecl): inPoint in camera space (outScreen) and its depth provisional name and meaning
 void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth);
 // Replaces a queued technology on every living unit of a player whose class makes it
@@ -109,10 +103,7 @@ inline EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEU
 // 0x24f0e9.. (the rest of the TU) (provisional names)
 // Raises a class upgrade's hit points by a share of its base, and the player's units of that type with it
 // inUpgrade's hit points raised by inFactor of its class's base; inPlayer's units of type inType follow (inferred)
-inline void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer)  // (EEWorld.cpp declares it too)
-{
-    ee_units_ub_body(EE_UNITS_UB_DO_UPGRADE_HIT_POINTS, EEUUHandle(inUpgrade), EEUUHandle(inPlayer), inType, (int64_t)UFloatBits(inFactor), 0);
-}
+void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);  // (EEWorld.cpp declares it too)
 // Gives a space wall its energy wall effect
 inline void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit)  // 0x24f8c0 (after the range)
 {
@@ -151,11 +142,8 @@ inline bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 // out of reach
 // The launch angle for a shot from inFrom to inTo at inStats' speed under its projectile class's gravity (the low
 // arc, or the high one for a class with +0x2e5 or a mortar-like unit); false (and PI/4) when it cannot reach
-inline bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo,
-                float* outAngle)  // 0x241a6a (before the range)
-{
-    return ee_units_lf_ballistic_pitch(EEUUHandle(inUnit), EEUUHandle(inStats), (const float(*)[3])inFrom, (const float(*)[3])inTo, outAngle) != 0;   // uu_fill.rs
-}
+bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo,
+                float* outAngle);  // 0x241a6a (before the range)
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
 class URandom;
 // 0x249201 is EEFOFindLocation (bool; its tile screen is the RTTI-named EEFOLocationScreenBase): declared in

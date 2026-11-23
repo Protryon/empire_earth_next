@@ -166,21 +166,8 @@ static uint32_t UUPairs(const std::vector<U2DPoint<long> >& inTiles, int32_t (*o
 // TEST ONLY: the unit utilities' record (UUTL) is Rust's (ee_units uu_note.rs); the host's writes note their events
 static long UUId(const EEUnit* inUnit) { return inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2; }
 static void UUEvent(long inA, long inB = 0, long inC = 0) { ee_units_uu_note_event((int32_t)inA, (int32_t)inB, (int32_t)inC); }
-// the record's world: whether the capture runs (0), the physics' ticks (1), a UUTL record written (2)
-extern "C" uint32_t ee_units_uu_host_note(int32_t inWhich, uint32_t inTick, uint32_t inCalls, uint32_t inLow, uint32_t inHigh)
-{
-    if (inWhich == 0)
-        return EESimCaptureRecord::Active();
-    if (inWhich == 1)
-        return gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0;
-    EESimCaptureRecord theRecord(0x4c545555u);   // "UUTL"
-    theRecord.U32(inTick);
-    theRecord.U32(inCalls);
-    theRecord.U32(inLow);
-    theRecord.U32(inHigh);
-    theRecord.Commit();
-    return 0;
-}
+// the record's tick (the capture's state and the UUTL record itself are Rust's: uu_note.rs)
+extern "C" uint32_t ee_units_uu_host_ticks() { return gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0; }
 
 // Units by id: EEUUUnitIDLess / EEUUUnitIDEqual are declared in ee/EEUnitCollector.h (its EEGetUnitsInRectangle
 // sorts with them too; EEAIArea.cpp's family 0xe3d7.. calls these bodies)
@@ -232,22 +219,7 @@ EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass)
     return (EEModel*)(uintptr_t)ee_units_ub_body(EE_UNITS_UB_DO_PLAYER_CLASS_GRAPHIC, UUHandle(inPlayer), UUHandle(inClass), 0, 0, 0);
 }
 
-// Accepts a living unit within the screen's distance of the old target (ee_sim combat cg_query.rs near_old_screen, its
-// CBFS record)
-static bool EENearOldScreen(EEFOFindNewTargetNearOldTarget* inScreen, EEComplexUnit* inUnit)
-{
-    return ee_units_cgq_near_old_screen(UUHandle(inUnit), UUHandle(inScreen->mTarget), inScreen->mDistanceSquared);
-}
-
-bool EEFOFindNewTargetNearOldTarget::Virtual04(EEComplexUnit* inUnit)
-{
-    return EENearOldScreen(this, inUnit);
-}
-
-bool EEFOFindNewTargetNearOldTarget::Virtual08(EEComplexUnit* inUnit)
-{
-    return EENearOldScreen(this, inUnit);
-}
+// (EEFOFindNewTargetNearOldTarget's screen: inline in its header)
 
 // Computes a moving unit's Doppler pitch shift against the camera
 void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch)
@@ -282,6 +254,31 @@ void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETil
 // (The target search of 0x243d43, EEUUTargetSearch with its filter 0x24ffca and scoring 0x25000c, and the tile
 // searches 0x24fcd1 / 0x2503d7, EEUUSearchTiles: ee_combat's search_target, search.rs; its constructor 0x643e0a is
 // Search::new there. The world it asks is below.)
+
+// (out of line: its callers declare it themselves)
+bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo,
+                float* outAngle)
+{
+    return ee_units_lf_ballistic_pitch(UUHandle(inUnit), UUHandle(inStats), (const float(*)[3])inFrom, (const float(*)[3])inTo, outAngle) != 0;   // uu_fill.rs
+}
+
+// (out of line: its callers declare it themselves)
+EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
+{
+    return UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_FIND_NEARBY_TARGET, UUHandle(inUnit), 0, 0, 0, 0));   // uu_body.rs
+}
+
+// (out of line: its callers declare it themselves)
+EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale)
+{
+    return UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_FIND_TARGET_NEAR, UUHandle(inUnit), 0, inX, inY, (int64_t)UFloatBits(inScale)));   // uu_body.rs
+}
+
+// (out of line: its callers declare it themselves)
+void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer)
+{
+    ee_units_ub_body(EE_UNITS_UB_DO_UPGRADE_HIT_POINTS, UUHandle(inUpgrade), UUHandle(inPlayer), inType, (int64_t)UFloatBits(inFactor), 0);
+}
 
 // ---- the target searches (EESearchTarget, EESearchTargetAlongList, EEGetPursuerOf, EEFindNewTarget): their bodies,
 // tests, inputs and CBST/CBSL/CBPU/CBFT records are ee_sim units uu_search.rs over ee_combat's walks; each C++
@@ -699,17 +696,12 @@ extern "C" uint8_t ee_units_uu_host_reserved(uint64_t inGroup, const float* inPo
 }
 extern "C" void ee_units_uu_host_ground_point(const float* inPoint, float* outPoint)
 {
-    GE3DPoint theGround;
-    ::gWorld.mMap->GetGroundPoint(GE3DPoint(inPoint[0], inPoint[1], inPoint[2]), theGround);
-    outPoint[0] = theGround.mX;
-    outPoint[1] = theGround.mY;
-    outPoint[2] = theGround.mZ;
+    ::gWorld.mMap->GetGroundPoint(GE3DPoint(inPoint[0], inPoint[1], inPoint[2]), *reinterpret_cast<GE3DPoint*>(outPoint));
 }
 extern "C" float ee_units_uu_host_terrain_tilt(const float* inMatrix, uint8_t inRoll)
 {
-    GETransformation theTransformation;
-    memcpy(theTransformation.mMatrix, inMatrix, sizeof(theTransformation.mMatrix));
-    return inRoll ? ::gWorld.mMap->GetTerrainRoll(theTransformation) : ::gWorld.mMap->GetTerrainPitch(theTransformation);
+    return inRoll ? ::gWorld.mMap->GetTerrainRoll(GETransformation((const float(*)[4])inMatrix))
+                  : ::gWorld.mMap->GetTerrainPitch(GETransformation((const float(*)[4])inMatrix));
 }
 // a player's questions (uu_host.rs PLAYER_*; the unit set's in the player's place)
 extern "C" int32_t ee_units_uu_host_player(int32_t inWhich, uint64_t inPlayer, int32_t inValue)
@@ -733,10 +725,7 @@ extern "C" void ee_units_uu_host_set_animation(uint64_t inComplex, int32_t inAni
 }
 extern "C" void ee_units_uu_host_set_transformation(uint64_t inComplex, const float* inMatrix)
 {
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(UUUnit(inComplex));
-    GETransformation theTransformation(theUnit->mPhysicalModel.GetLocation());
-    memcpy(theTransformation.mMatrix, inMatrix, sizeof(theTransformation.mMatrix));
-    theUnit->SetTransformation(theTransformation, true);
+    static_cast<EEComplexUnit*>(UUUnit(inComplex))->SetTransformation(GETransformation((const float(*)[4])inMatrix), true);
 }
 
 // a tile's questions: flat (the map's), visible to the player, a valid or a space tile of the terrain mesh
@@ -910,15 +899,6 @@ extern "C" void ee_units_uu_host_units_set(void* outUnits, const uint64_t* inUni
     ((std::vector<EEUnit*>*)outUnits)->assign(reinterpret_cast<EEUnit* const*>(inUnits), reinterpret_cast<EEUnit* const*>(inUnits) + inCount);
 }
 
-bool EEFOFindNewTargetScreenBase::Virtual04(class EEComplexUnit *)
-{
-    return true;
-}
-
-bool EEFOFindNewTargetScreenBase::Virtual08(class EEComplexUnit *)
-{
-    return true;
-}
 
 // Makes the units on the footprint of a unit of inClass placed at inTile (or of inUnit) step aside for it
 void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, const U2DPoint<long>& inTile, bool inArg)
