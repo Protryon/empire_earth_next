@@ -720,8 +720,10 @@ mod tests {
     #[test]
     fn group_center_is_the_bounds_center() {
         // bottom 10, left 2, right 6, top 4
-        let mut fake =
-            Fake { floats: vec![(EE_SCREENS_GAH_G_BOUNDS, [10.0, 2.0, 6.0, 4.0, 0.0, 0.0, 0.0, 0.0])], ..Fake::default() };
+        let mut fake = Fake {
+            floats: vec![(EE_SCREENS_GAH_G_BOUNDS, [10.0, 2.0, 6.0, 4.0, 0.0, 0.0, 0.0, 0.0])],
+            ..Fake::default()
+        };
         let (_, _, f) = run(&mut fake, EE_SCREENS_GA_OP_GROUP, 0, &[EE_SCREENS_GA_G_CENTER], &[]);
         assert_eq!((f[0], f[1]), (4.0, 7.0));
     }
@@ -782,7 +784,11 @@ mod tests {
         assert_eq!((ret, i[1], i[2], i[3]), (1, 8, 5, 6));
         assert_eq!(
             &fake.log[..3],
-            &[(EE_SCREENS_GAH_PT_SET_TILE, 0, 7, 0), (EE_SCREENS_GAH_PT_SET_X, 0, 2, 0), (EE_SCREENS_GAH_PT_SET_Y, 0, 3, 0)]
+            &[
+                (EE_SCREENS_GAH_PT_SET_TILE, 0, 7, 0),
+                (EE_SCREENS_GAH_PT_SET_X, 0, 2, 0),
+                (EE_SCREENS_GAH_PT_SET_Y, 0, 3, 0)
+            ]
         );
     }
 
@@ -825,7 +831,11 @@ mod tests {
     #[test]
     fn promote_keeps_the_ticks_and_selection() {
         let mut fake = Fake {
-            answers: vec![(EE_SCREENS_GAH_N_CTS, 11), (EE_SCREENS_GAH_N_CURRENT_TICK, 22), (EE_SCREENS_GAH_N_FAST_ID, 7)],
+            answers: vec![
+                (EE_SCREENS_GAH_N_CTS, 11),
+                (EE_SCREENS_GAH_N_CURRENT_TICK, 22),
+                (EE_SCREENS_GAH_N_FAST_ID, 7),
+            ],
             ..Fake::default()
         };
         run(&mut fake, EE_SCREENS_GA_OP_NET, 0, &[EE_SCREENS_GA_N_PROMOTE], &[]);
