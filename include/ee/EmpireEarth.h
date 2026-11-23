@@ -185,4 +185,8 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inFile, 
 class GEFont;
 extern GEFont* gFontArial18;
 
+// port: the menus' resolution (Empire Earth.cpp)
+unsigned long EEMenuWidth();
+unsigned long EEMenuHeight();
+
 #endif

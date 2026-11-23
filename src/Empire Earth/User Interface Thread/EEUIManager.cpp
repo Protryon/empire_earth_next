@@ -53,12 +53,6 @@
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEControlEventID.h"
 
-extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
-
-// the event factories (UIManager's control-event callbacks, then its form-event callback)
-UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID);
-UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 
 #include "lle/GELine.h"
 #include "lle/UIBackgroundTable.h"
@@ -81,6 +75,7 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "rust/game/screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "rust/ui/graphobj.h"
 #include "ee/EEScreensShims.h"
+#include "ee/EEGameState.h"   // gGameState
 // The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
 // UpdateMouse's location)
 struct EEUIManagerCall : public EeScreensManagerCallObjects {   // the pointers: the Rust record (hud_fields.rs)
@@ -101,8 +96,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     // save/load, main game, main screen, post-game summary, scenario intro, scenario load, single player load, game
     // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own;
     // the port's controls, the forms, the music and the save form's event: ee_screens ui_manager.rs)
-    ee_screens_ui_manager_fields(this);
-    ee_screens_ui_manager_construct(EEUIManagerCall(this).Ptr());
+    ee_screens_ui_manager_new(this, EEUIManagerCall(this).Ptr());
 }
 
 // Destroys the UI manager and its scenario editor form
@@ -192,7 +186,7 @@ extern "C" void ee_screenscpp_um_clear_u138(uintptr_t inManager) { UMG(inManager
 extern "C" void ee_screenscpp_um_save_form_set_activate(uintptr_t inManager, uintptr_t inEvent)
 { UMG(inManager)->GetFormByID(kFormSaveGame)->SetFormActivateEvent(reinterpret_cast<UIEvent*>(inEvent)); }
 extern "C" void ee_screenscpp_um_set_in_editor(uintptr_t inManager) { UMG(inManager)->mInScenarioEditor = true; }
-extern "C" void ee_screenscpp_um_clear_multiplayer() { gGameStateIsMultiplayer = false; }
+extern "C" void ee_screenscpp_um_clear_multiplayer() { gGameState.mGameOptions.mIsMultiplayer = false; }   // (the original's gGameStateIsMultiplayer)
 extern "C" bool ee_screenscpp_comms_present() { return gCommunications != NULL; }
 extern "C" void ee_screenscpp_comms_delete() { delete gCommunications; }
 extern "C" void ee_screenscpp_um_new_server()

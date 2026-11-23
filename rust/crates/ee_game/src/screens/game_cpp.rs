@@ -551,7 +551,7 @@ shims! {
     fn game_window_height() -> u32 = ee_screenscpp_game_window_height;
     fn pointer_post(message: u32) = ee_screenscpp_pointer_post;
     fn pointer_post_surface(message: u32) = ee_screenscpp_pointer_post_surface;
-    fn change_game_screen(width: u32, height: u32, flag: bool) = ee_screenscpp_change_game_screen;
+    fn change_game_screen(width: u32, height: u32, flag: bool) = ee_screens_change_game_screen;
     fn manager_relayout_all() = ee_screenscpp_manager_relayout_all;
     fn mini_map() -> usize = ee_screenscpp_mini_map;
     fn world_write_lock() = ee_screenscpp_world_write_lock;
@@ -562,7 +562,7 @@ shims! {
     fn game_window_client_origin() = ee_screenscpp_game_window_client_origin;
     fn rasterizer_screen_count() -> u32 = ee_screenscpp_rasterizer_screen_count;
     fn rasterizer_release_screen(index: u32) = ee_screenscpp_rasterizer_release_screen;
-    fn delete_effect_batch_buffers() = ee_screenscpp_delete_effect_batch_buffers;
+    fn delete_effect_batch_buffers() = ee_gamecpp_fx_batch_delete;
     fn rasterizer_deactivate() -> i32 = ee_screenscpp_rasterizer_deactivate;
     fn verify_rasterizer_deactivated(result: i32) = ee_screenscpp_verify_rasterizer_deactivated;
     fn rasterizer_select(index: i32) = ee_screenscpp_rasterizer_select;
@@ -646,11 +646,11 @@ shims! {
     fn player_civilization_locked() = ee_screenscpp_player_civilization_locked;
     fn event_process(event: usize, entity: usize) = ee_screenscpp_event_process;
     fn quick_save_set_load(action: usize) = ee_screenscpp_quick_save_set_load;
-    fn chat_entry_new() -> usize = ee_screenscpp_chat_entry_new;
+    fn chat_entry_new() -> usize = ee_screens_chat_entry_blank;
     fn chat_entry_text_from_dialog(entry: usize, dialog: usize) = ee_screenscpp_chat_entry_text_from_dialog;
-    fn chat_entry_set_type(entry: usize, kind: u32) = ee_screenscpp_chat_entry_set_type;
-    fn chat_log_add(entry: usize) = ee_screenscpp_chat_log_add;
-    fn chat_entry_delete(entry: usize) = ee_screenscpp_chat_entry_delete;
+    fn chat_entry_set_type(entry: usize, kind: u32) = ee_screens_chat_entry_set_kind;
+    fn chat_log_add(entry: usize) = ee_screens_chat_entry_add;
+    fn chat_entry_delete(entry: usize) = ee_screens_chat_entry_delete;
     fn set_quit_flag() = ee_screenscpp_set_quit_flag;
     fn boot_client_host_gone_new() -> usize = ee_screenscpp_boot_client_host_gone_new;
     fn client_disconnect() = ee_screenscpp_client_disconnect;
@@ -2754,7 +2754,7 @@ shims! {
     fn uim_gfx_post_pause() -> bool = ee_screenscpp_uim_gfx_post_pause;
     fn uim_gfx_paused() -> bool = ee_screenscpp_uim_gfx_paused;
     fn uim_gfx_post_resume() = ee_screenscpp_uim_gfx_post_resume;
-    fn uim_reset_gfx_values() = ee_screenscpp_uim_reset_gfx_values;
+    fn uim_reset_gfx_values() = ee_screens_reset_graphics_values;
     fn uim_capture_event(capture: usize) -> bool = ee_screenscpp_uim_capture_event;
     fn uim_capture_post(capture: usize) = ee_screenscpp_uim_capture_post;
     fn uim_capture_wait(capture: usize) = ee_screenscpp_uim_capture_wait;
@@ -2769,9 +2769,9 @@ shims! {
     fn uim_delete_form(form: usize) = ee_screenscpp_uim_delete_form;
     fn uim_delete_error_data(data: usize) = ee_screenscpp_uim_delete_error_data;
     fn uim_chat_show(main: usize, entry: usize) = ee_screenscpp_uim_chat_show;
-    fn uim_chat_type(entry: usize) -> i64 = ee_screenscpp_uim_chat_type;
-    fn uim_chat_log(entry: usize) = ee_screenscpp_uim_chat_log;
-    fn uim_delete_chat(entry: usize) = ee_screenscpp_uim_delete_chat;
+    fn uim_chat_type(entry: usize) -> i64 = ee_screens_chat_entry_kind;
+    fn uim_chat_log(entry: usize) = ee_screens_chat_entry_log;
+    fn uim_delete_chat(entry: usize) = ee_screens_chat_entry_free;
     fn uim_show_information(main: usize, info: usize) = ee_screenscpp_uim_show_information;
     fn uim_delete_dialog(dialog: usize) = ee_screenscpp_uim_delete_dialog;
     fn uim_icon_bar_posted_clear(ui: usize) = ee_screenscpp_uim_icon_bar_posted_clear;
@@ -2787,7 +2787,7 @@ shims! {
     fn ug_path_reset() = ee_screenscpp_ug_path_reset;
     fn ug_sight_on() = ee_screenscpp_ug_sight_on;
     fn ug_restart_units() = ee_screenscpp_ug_restart_units;
-    fn ug_land_continents() = ee_screenscpp_ug_land_continents;
+    fn ug_land_continents() = ee_screens_update_land_continents;
     fn ug_resize_game(ui: usize, a: bool, b: bool) = ee_screenscpp_ug_resize_game;
     fn ug_resize_menu(ui: usize, a: bool, b: bool) = ee_screenscpp_ug_resize_menu;
     fn ug_physics_post(message: u64) = ee_screenscpp_ug_physics_post;
@@ -2799,7 +2799,7 @@ shims! {
     fn ug_collect_computers() = ee_screenscpp_ug_collect_computers;
     fn ug_timer_running() -> bool = ee_screenscpp_ug_timer_running;
     fn ug_state_clear() = ee_screenscpp_ug_state_clear;
-    fn ug_stop_sounds() = ee_screenscpp_ug_stop_sounds;
+    fn ug_stop_sounds() = ee_gamecpp_startup_stop_sounds;
     fn ug_options_defaults() = ee_screenscpp_ug_options_defaults;
     fn ug_file_name_length(file: usize) -> u64 = ee_screenscpp_ug_file_name_length;
     fn ug_file_scenario_at(file: usize) -> u64 = ee_screenscpp_ug_file_scenario_at;
@@ -2814,7 +2814,7 @@ shims! {
     fn ug_has_communications() -> bool = ee_screenscpp_ug_has_communications;
     fn ug_is_client() -> bool = ee_screenscpp_ug_is_client;
     fn ug_server_lost_after_loading() -> bool = ee_screenscpp_ug_server_lost_after_loading;
-    fn ug_unload_media() = ee_screenscpp_ug_unload_media;
+    fn ug_unload_media() = ee_gamecpp_startup_unload_media;
     fn ug_lobby_open() -> bool = ee_screenscpp_ug_lobby_open;
     fn ug_create_editor() = ee_screenscpp_ug_create_editor;
     fn ug_load_scendefault() -> i64 = ee_screenscpp_ug_load_scendefault;

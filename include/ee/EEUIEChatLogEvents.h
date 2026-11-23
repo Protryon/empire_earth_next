@@ -11,14 +11,8 @@
 
 #include "rust/game/screens.h"   // ee_screens_chat_log_*
 
-// One chat line (sizeof 0x3c in the original)
-struct EEChatLogEntry {
-    GEColor mColor;                         // +0x00
-    UWideString mName;                      // +0x0c the sender (empty: a game message)
-    UWideString mText;                      // +0x20
-    unsigned long mType;                    // +0x34 (2: not logged, EEUserInterface 0x2787f7)
-    unsigned long mTime;                    // +0x38 (provisional name)
-};
+// (the original's EEChatLogEntry, one chat line of sizeof 0x3c: colour, sender, text, type (2: not logged), time, is
+// the Rust EeScreensChatEntry: ee_screens chat_log_ffi.rs, UI lane round 16)
 
 // (EEUIECLEFormManager's statics AddEntry 0x1d32bf (keeps the last 40), Clear, Load and Save are the Rust log's
 // ee_screens_chat_log_add, _clear, _load and _save: UI lane round 16)

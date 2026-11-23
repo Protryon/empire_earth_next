@@ -125,9 +125,7 @@
 #include "lle/UITextureBackground.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
-void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
-unsigned long EEMenuWidth();   // Empire Earth.cpp
-unsigned long EEMenuHeight();
+#include "gx/GX.h"   // GXGameSize
 
 // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it): stored in EEGlobals.cpp (ee/EEGlobalStorage.h),
 // constructed here, where its definition was

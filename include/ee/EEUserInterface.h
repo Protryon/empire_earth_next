@@ -96,11 +96,12 @@ public:
     void PostDialogMessage(const EESMDialogMessage& inMessage) { this->Post(0x422, new EESMDialogMessage(inMessage), NULL); }
     // Posts loading a saved game file (message 0x408)
     void PostLoadSavedGame(const FSFileSpec& inSpec) { this->Post(0x408, new FSFileSpec(inSpec), NULL); }   // 0x408 (a copy; EEUserInterface.cpp)
-    // 0x418: a new EEChatLogEntry with a name, colour, text, display time and type
+    // 0x418: a new chat line (the original's EEChatLogEntry: the Rust EeScreensChatEntry, ee_screens chat_log_ffi.rs)
+    // with a name, colour, text, display time and type
     long AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inTime, unsigned long inType)
     {
-        return this->Post(0x418, new EEChatLogEntry{inColor, inName, inText, inType, inTime}, NULL);
+        return this->Post(0x418, (void*)ee_screens_chat_entry_new(EeScreensChatLogHead{{inColor.mRed, inColor.mGreen, inColor.mBlue}, (uint32_t)inType, (uint32_t)inTime}, (const char*)inName, (const char*)inText), NULL);
     }
     // a white system line to the chat log, shown three times the usual time (gWorldTable's
     // kWorldChatLogDisplayTime: ee/EEDatabaseTables.h's GetLongValue)
