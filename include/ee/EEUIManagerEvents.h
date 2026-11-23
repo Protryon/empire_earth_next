@@ -11,7 +11,7 @@ public:
     virtual ~EEUIELoadUnit() {}
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     {
-        ((EEUIFMainGame*)inForm)->mUnitHack->LoadUnitData();
+        static_cast<EEUIFMGUnitHack*>(((EEUIFMainGame*)inForm)->mUnitHack)->LoadUnitData();
         return kErrorOK;
     }
 };

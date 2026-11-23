@@ -12,16 +12,8 @@
 #include "lle/FSMemoryFile.h"                // FindFile's new memory file
 #include "rust/base/fs.h"                    // the members' Rust (rust/crates/ee_base/src/fs/archive_obj.rs)
 
-typedef long int32;                         // Inferred home: the assert text "(int32)theCompressedSize" (0x100d8f64)
-
 class LLE_API FSArchive {                   // sizeof 0x6c (FSPath's vector<FSArchive> stride)
 public:
-    struct ArchivedFile {                   // 0xc bytes; field names from the assert texts (0x100d8c4c..)
-        int32 mStart;                       // +0x00 offset of the data in the archive
-        int32 mEnd;                         // +0x04 last byte (mStart when empty)
-        int32 mLength;                      // +0x08 compressed length
-    };
-
     FSArchive() { ee_fs_arch_init(Rec(this)); }                                // no file set, nothing mapped
     FSArchive(const FSFileSpec& inFile) { ee_fs_arch_init_file(Rec(this), Spec(&inFile)); }   // not yet opened
     virtual ~FSArchive() { ee_fs_arch_finish(Rec(this)); }                     // unmaps and closes
@@ -45,24 +37,11 @@ public:
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
         { return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), Text(inFiles.data()), inFiles.size(), inCompression); }
     // every archived file below a destination directory, creating directories as needed
-    long ExtractAll(const FSFileSpec& inDestination)
-    {
-        fflush(stdout);   // (the progress lines are Rust's: after the C runtime's)
-        return ee_fs_arch_extract_all(Rec(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory));
-    }
+    long ExtractAll(const FSFileSpec& inDestination)   // (the progress lines are Rust's: after the C runtime's)
+        { return ee_fs_arch_extract_all(Rec(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory)); }
     // a file by name (case-insensitive), decompressed as a new memory file
     long FindFile(const UString& inName, FSMemoryFile*& outFile)
-    {
-        UString theName(inName);
-        theName.ToLower();
-        EeFsMemFile* theData = NULL;
-        long theResult = ee_fs_arch_find(Rec(this), theName, &theData);
-        if (theData != NULL) {
-            outFile = new FSMemoryFile(theData, true);
-            ee_fs_arch_name_member(Rec(this), Spec(outFile), Text(&theName));
-        }
-        return theResult;
-    }
+        { return ee_fs_arch_find_file(Rec(this), Text(&inName), reinterpret_cast<void**>(&outFile)); }
     long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
         { return this->FindFile(UString((const char*)inName), outFile); }
     const FSFileSpec& GetArchiveFile() const { return this->mArchiveFile; }    // folded 0x40cb (inline)

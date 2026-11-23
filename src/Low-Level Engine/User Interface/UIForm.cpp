@@ -56,10 +56,7 @@
 #include "rust/ui/form_state.h"
 #include "rust/ui/lle_hosts.h"
 
-// unreferenced (its init chain 0x10070706 is the only user)
-static const UString kUIFormKey("B7B2257DB7B2257DA49985B7B5A18DF4D49327D6B51165F42EB1A52ECC918DA616B16D26B41955F43C190DDE7EB1BD9624F92DDEFC610D9EB4B9559CB4210D84FC29"
-                                "8596249907BE14CB25F6142B25B61C1165C624F9F59696B18D269C2357BEB51955B41C1165C624F9F59696B18D269EB16D26B431B5C4F4F935F6149907CEB7B34FF5");
-
+// (the original's unreferenced key string, kUIFormKey, whose init chain 0x10070706 was its only user, is gone)
 
 static GERectangle UIFormRect(const float* inF) { return GERectangle(inF[1], inF[3], inF[2], inF[0]); }
 
@@ -124,15 +121,6 @@ EE_UI_CASE(group_is_tab_stop) { return ENTITY_CONTROL->GetForm()->GetTabStop() =
 EE_UI_VOID(group_tab) { ENTITY_CONTROL->GetForm()->Tab(); }
 EE_UI_VOID(group_set_enabled) { static_cast<UIHotKey*>(reinterpret_cast<UIEntity*>(a))->SetEnabled(b != 0); }
 #undef ENTITY_CONTROL
-
-// a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top)
-// an input entity by key or button
-template <class D> static ISEntity* UIFormEntity(D* inDevice, unsigned long inKey)
-{
-    ISEntity* theEntity = NULL;
-    inDevice->GetEntity(inKey, theEntity);
-    return theEntity;
-}
 
 // The Rust form's calls out (EeUiOp, obj.rs): a is the control, group, background, hot key, event, table or other
 // object the op names; rectangles and points travel in f
@@ -204,16 +192,14 @@ EE_UI_CASE(form_hot_key_copy) { return (intptr_t) new UIHotKey(theForm, *theKey)
 EE_UI_VOID(form_hot_key_delete) { delete theKey; }
 EE_UI_VOID(form_hot_key_set_enabled) { theKey->mEnabled = b != 0; }
 EE_UI_CASE(form_hot_key_fire) { return theKey->FireEvents(); }
-EE_UI_CASE(form_hot_key_temp)
-{
-    UIHotKey* theHotKey = new UIHotKey;
-    theHotKey->mForm = theForm;
-    theHotKey->SetKey((unsigned long)a);
-    return (intptr_t)theHotKey;
-}
+// the temporary hot key AddHotKey builds (lle_hosts.rs form_hot_key_temp): made, on this form, its key b
+EE_UI_CASE(form_hot_key_new) { return (intptr_t) new UIHotKey; }
+EE_UI_VOID(form_hot_key_set_form) { theKey->mForm = theForm; }
+EE_UI_VOID(form_hot_key_set_key) { theKey->SetKey((unsigned long)b); }
 EE_UI_VOID(form_hot_key_set_modifier) { theKey->SetModifier((unsigned long)b, (unsigned char)c); }
 EE_UI_VOID(form_hot_key_set_always) { theKey->mAlwaysFire = b != 0; }
-EE_UI_CASE(form_key_entity) { return (intptr_t)UIFormEntity(gISKeyboard, (unsigned long)a); }
+// an input entity by key or button a into the slot b (lle_hosts.rs form_entity)
+EE_UI_VOID(form_key_entity_get) { gISKeyboard->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_keys_ready) { return UIControl::Key(EeUiKey::Tab) != NULL; }
 EE_UI_CASE(form_tab_just_pressed) { return UIControl::Key(EeUiKey::Tab)->JustPressed(); }
 EE_UI_CASE(form_shift_value) { return UIControl::Key(EeUiKey::Shift)->GetValue(); }
@@ -221,7 +207,7 @@ EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
 EE_UI_CASE(form_wheel_event_new) { return (intptr_t) new UIEMouseWheelScroll; }
 EE_UI_CASE(form_mouse_wheel) { return UIManager::GetMouseWheel() != NULL; }
 EE_UI_CASE(form_wheel_amount) { return UIManager::GetMouseWheelScrollAmount(); }
-EE_UI_CASE(form_mouse_entity) { return (intptr_t)UIFormEntity(gISMouse, (unsigned long)a); }
+EE_UI_VOID(form_mouse_entity_get) { gISMouse->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_table) { return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a); }
 EE_UI_CASE(form_table_form_index) { return theTable->GetFormIndex(); }
 EE_UI_CASE(form_table_group) { return theTable->GetGroup(); }
@@ -269,49 +255,15 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 // Creates an empty form with the given control and group counts, tool tips and tabbing off
 UIForm::UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
                unsigned long inFormID, bool inUseGDIForText)
-    : mRust(NULL)
-{
-    this->mRust = ee_ui_form_new(this, ee_ui_form_host, inControlCount, inControlGroupCount, inManager, inFormID,
-                                 inUseGDIForText);
-}
+    : mRust(ee_ui_form_new(this, ee_ui_form_host, inControlCount, inControlGroupCount, inManager, inFormID,
+                           inUseGDIForText)) {}
 
 // Creates a form from its UI database record: counts, layout, tool-tip settings, music file (lower-cased), tabbing
 UIForm::UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText)
-    : mRust(NULL)
-{
-    UWideString theMusic(reinterpret_cast<const char*>(inData.mMusicFile));
-    PlatMbsLwr((unsigned char*)(const char*)theMusic);
-    this->mRust = ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, (const char*)theMusic, inUseGDIForText);
-}
+    : mRust(ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, inUseGDIForText)) {}
 
 // Destroys the form, releasing its events, hot keys, groups, backgrounds, database-created controls and draw lock
-UIForm::~UIForm()
-{
-    ee_ui_form_free(this->mRust);
-    this->mRust = NULL;
-}
-
-// Builds a hot key from a key, up to three modifiers and four events, then adds it to the given group
-void UIForm::AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
-                       unsigned long inModifier3, UIEvent* inJustPressedEvent, UIEvent* inPressedEvent,
-                       UIEvent* inJustUnpressedEvent, UIEvent* inDoublePressedEvent, unsigned long inGroup,
-                       bool inAlwaysFire)
-{
-    this->Call(EeUiFormCall::AddHotKeyEvents, (intptr_t)inJustPressedEvent, (intptr_t)inPressedEvent);
-    this->Call(EeUiFormCall::AddHotKeyEvents2, (intptr_t)inJustUnpressedEvent, (intptr_t)inDoublePressedEvent);
-    this->Call(EeUiFormCall::AddHotKeyBuild, ee_ui_form_pack_keys(inKey, inModifier1, inModifier2, inModifier3),
-               (intptr_t)((uint64_t)(uint32_t)inGroup | (uint64_t)inAlwaysFire << 32));
-}
-
-// Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
-long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
-                            const GERectangle& inTileRectangle)
-{
-    this->CallRect(EeUiFormCall::StageRect, 0, 0, inRectangle);
-    this->CallRect(EeUiFormCall::StageRect, 1, 0, inDrawRectangle);
-    this->CallRect(EeUiFormCall::StageRect, 2, 0, inTileRectangle);
-    return (long)this->Call(EeUiFormCall::DrawTiles, (intptr_t)inBitmap);
-}
+UIForm::~UIForm() { ee_ui_form_free(this->mRust); }
 
 
 // Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over

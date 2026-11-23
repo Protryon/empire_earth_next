@@ -749,7 +749,8 @@ impl FullHost for Grid {
     }
 }
 
-/// `UIBackground`'s constructor over its record (`layout` an `EeUiLayout`).
+/// `UIBackground`'s constructor over its record (`layout` an `EeUiLayout`), registered for the direct path as the
+/// C++ `background` (NULL: not registered).
 ///
 /// # Safety
 /// `rec` is the C++ background's base, `layout` a live layout.
@@ -764,9 +765,15 @@ pub unsafe extern "C" fn ee_ui_bg_init(
     form: *mut c_void,
     priority: c_ulong,
     visible: bool,
+    background: *mut c_void,
 ) {
     // SAFETY: the contract
-    unsafe { Bg::new(rec).init(cpp, host, id, *layout, form, priority, visible) }
+    unsafe { Bg::new(rec).init(cpp, host, id, *layout, form, priority, visible) };
+    // the direct path's registry (direct.rs): the UIBackground's record
+    if !background.is_null() {
+        // SAFETY: the contract
+        unsafe { crate::direct::ee_ui_direct_background(rec, background) };
+    }
 }
 
 /// `UITextureBackground`'s constructor: the texture's rectangle (four floats), description and NUL-terminated name.

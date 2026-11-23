@@ -146,6 +146,15 @@ ptrdiff_t ee_ui_edit_call(const EeUiEdit *edit,
                           ptrdiff_t d,
                           float *f);
 
+/// The constructor's flags: numbers only (1), multi-line (2), password box (4).
+uint32_t ee_ui_edit_flags(bool numbers_only, bool multi_line, bool password);
+
+/// `SetText(value)`: `_itoa(value, 10)`'s decimal (of the value as an `int`).
+///
+/// # Safety
+/// `edit` is live.
+void ee_ui_edit_set_number(const EeUiEdit *edit, unsigned long value);
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_EDITOBJ_H

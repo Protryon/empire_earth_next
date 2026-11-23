@@ -78,8 +78,8 @@ public:
         { return UString(kUnset, ee_ustring_indexed_substring, &this->mState, inFirst, inLast); }
     // the length and the characters, both counting the terminator (lle/FSFile.h: on a failed read the string is
     // left empty and the error returned)
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile) const;
+    long Load(FSFile& inFile) { return ee_ustring_load_file(&this->mState, &inFile); }
+    long Save(FSFile& inFile) const { return ee_ustring_save_file(&this->mState, &inFile); }
     bool Tokenize(const UString& inSeparators, std::vector<UString>& outTokens) const
         { return ee_ustring_tokens(&this->mState, &inSeparators.mState, NULL, &outTokens, PushToken); }
     bool NestedTokenize(const UString& inSeparators, const UString& inBrackets,
@@ -88,7 +88,7 @@ public:
 private:
     friend UString operator+(const UString& inLeft, const UString& inRight);
     friend UString operator+(const UString& inLeft, const char* inRight);
-    friend long sprintf(UString& outString, const char* inFormat, ...);   // sets mLength
+    template <class... A> friend long sprintf(UString& outString, const char* inFormat, A... inArguments);   // sets mLength
 
     enum Unset { kUnset };                  // a result the Rust side initialises
     explicit UString(Unset) {}
@@ -128,30 +128,11 @@ inline bool operator>(const UString& inLeft, const UString& inRight) { return ee
 inline bool operator>(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) > 0; }
 inline bool operator>=(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) >= 0; }
 inline bool operator>=(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) >= 0; }
-// formats into a buffer the string's record gives for the text's size (grown when the text does not fit: the original
-// wrote past it), then ends the record over it (UString's and UWideString's sprintf); vsprintf's result
-template <class S>
-inline long UFormat(S* inState, char* (*inBuffer)(S*, unsigned long), void (*inEnd)(S*, char*, unsigned long),
-                    const char* inFormat, va_list inArguments)
-{
-    va_list theCopy;
-    va_copy(theCopy, inArguments);
-    int theNeeded = vsnprintf(NULL, 0, inFormat, theCopy);
-    va_end(theCopy);
-    unsigned long theSize = theNeeded < 0 ? 0 : (unsigned long)theNeeded + 1;
-    char* theBuffer = inBuffer(inState, theSize);
-    long theResult = vsprintf(theBuffer, inFormat, inArguments);
-    inEnd(inState, theBuffer, theSize);
-    return theResult;
-}
-inline long sprintf(UString& outString, const char* inFormat, ...) PLAT_PRINTF_FORMAT(2, 3);
-inline long sprintf(UString& outString, const char* inFormat, ...)
-{
-    va_list theArguments;
-    va_start(theArguments, inFormat);
-    long theResult = UFormat(&outString.mState, ee_ustring_format_buffer, ee_ustring_format_end, inFormat, theArguments);
-    va_end(theArguments);
-    return theResult;
-}
+// formats into the string (lle/LowLevelEngineCore.h UFormat); vsprintf's result
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgcc-compat"
+template <class... A> LLE_PRINTF_TEMPLATE(2, 3) inline long sprintf(UString& outString, const char* inFormat, A... inArguments)
+    { return UFormat(&outString.mState, ee_ustring_format_buffer, ee_ustring_format_end, inFormat, inArguments...); }
+#pragma clang diagnostic pop
 
 #endif

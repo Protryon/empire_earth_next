@@ -28,8 +28,8 @@
 #include <stdint.h>   // uintptr_t (USavedID)
 #include <vector>   // UString::Tokenize
 #include "platform/Platform.h"   // the platform layer (time, threads, ...): every engine and game unit sees it
-#include <stdarg.h>   // ESDebugOut
-#include <stdio.h>    // vsnprintf (ESDebugOut)
+#include <stdarg.h>   // UFormat
+#include <stdio.h>    // vsnprintf (UFormat)
 // The free functions below are one-line inlines over Rust (LLE lane round 8): the Error System, the Time Manager, the
 // shutdown list and the UM math (rust/crates/ee_base: error, time, util, math)
 #include "rust/base/error.h"
@@ -64,18 +64,40 @@ inline float UBitsFloat(intptr_t inBits) { return __builtin_bit_cast(float, (uin
 inline unsigned long ESRecordNativeError(unsigned long inError) { return ee_error_record_native(inError); }
 inline unsigned long ESGetNativeError() { return ee_error_native(); }
 inline void ESInitialize(HINSTANCE) { ee_error_initialize(); }
-// Formats a debug message (cut at 1023 characters: the original's vsprintf overran its buffer) and sends it to the
-// debugger when the startup directory's Filter.txt lets it through (ee_error_debug_out)
-inline void ESDebugOut(const char* inFormat, ...) PLAT_PRINTF_FORMAT(1, 2);
-inline void ESDebugOut(const char* inFormat, ...)
+// The engine's printf-style formatters (UString's and UWideString's sprintf, ESDebugOut) are variadic templates over
+// one C-variadic formatter, UFormat: it formats into a buffer the record gives for the text's size (grown when the text
+// does not fit: the original wrote past it), then ends the record over it; vsprintf's result. The format attribute
+// on a variadic template is clang's (it checks the arguments as printf's; GCC would want a C variadic function).
+#if defined(__clang__)
+#define LLE_PRINTF_TEMPLATE(f, a) __attribute__((format(printf, f, a)))
+#else
+#define LLE_PRINTF_TEMPLATE(f, a)
+#endif
+template <class S>
+inline long UFormat(S* inState, char* (*inBuffer)(S*, unsigned long), void (*inEnd)(S*, char*, unsigned long),
+                    const char* inFormat, ...)
 {
-    char theText[1024];
-    va_list theArguments;
+    va_list theArguments, theCopy;
     va_start(theArguments, inFormat);
-    vsnprintf(theText, sizeof(theText), inFormat, theArguments);
+    va_copy(theCopy, theArguments);
+    int theNeeded = vsnprintf(NULL, 0, inFormat, theCopy);
+    va_end(theCopy);
+    unsigned long theSize = theNeeded < 0 ? 0 : (unsigned long)theNeeded + 1;
+    char* theBuffer = inBuffer(inState, theSize);
+    long theResult = vsprintf(theBuffer, inFormat, theArguments);
     va_end(theArguments);
-    ee_error_debug_out(theText, &gStartupVolume, &gStartupDirectory);
+    inEnd(inState, theBuffer, theSize);
+    return theResult;
 }
+// Formats a debug message (cut at 1023 characters: the original's vsprintf overran its buffer) and sends it to the
+// debugger when the startup directory's Filter.txt lets it through (ee_error_debug_end)
+inline void ESDebugEnd(void*, char* inText, unsigned long inSize)
+    { ee_error_debug_end(inText, inSize, &gStartupVolume, &gStartupDirectory); }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgcc-compat"
+template <class... A> LLE_PRINTF_TEMPLATE(1, 2) inline void ESDebugOut(const char* inFormat, A... inArguments)
+    { UFormat<void>(NULL, ee_error_debug_buffer, ESDebugEnd, inFormat, inArguments...); }
+#pragma clang diagnostic pop
 
 // inferred: release-build verify macro; the call passes __FILE__, __LINE__ and the expression text
 #define ESVERIFY(expr) if (!(expr)) ESVerify(__FILE__, __LINE__, #expr)

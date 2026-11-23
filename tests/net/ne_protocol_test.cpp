@@ -49,7 +49,9 @@ static bool SameProtocol(NEProtocol* inFound, Proto* inProtocol)
 }
 #endif
 
-// ---- the engine functions the units call (the test links only the strings, events and locks)
+// ---- the engine functions the original units call (the test links only the strings, events and locks; the
+// engine's own are inline over Rust since 456ed11cb)
+#ifdef NE_PROTOCOL_ORIG
 
 static unsigned long sNativeError;
 unsigned long ESRecordNativeError(unsigned long inError)
@@ -77,6 +79,7 @@ float URandom::Generate()   // as GEBitmap.cpp
     this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
     return (float)((double)this->mSeed / (double)this->mModulus);
 }
+#endif
 
 #ifdef NE_PROTOCOL_ORIG
 // PIMModule.cpp's members the original protocol uses

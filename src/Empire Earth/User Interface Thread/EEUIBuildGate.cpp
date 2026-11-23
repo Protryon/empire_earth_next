@@ -41,5 +41,5 @@ void EEUIBuildGate::Cancel()
 
 void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    gUIManager->GetMainGameForm()->mBuild->BuildGate(inLocation, inDirection);
+    static_cast<EEABuild*>(gUIManager->GetMainGameForm()->mBuild)->BuildGate(inLocation, inDirection);
 }

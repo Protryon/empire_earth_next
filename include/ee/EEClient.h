@@ -14,8 +14,6 @@ public:
     // the engine's pure callbacks, implemented by the game (vtable 0x43d054; bodies in EEClient.cpp, names by base
     // slot; declared so that EEAJoinOrHostAGame.cpp can `new EEClient`)
     virtual void ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting);   // +0x04 0xb7722
-    virtual bool IsClient();                // +0x0c 0x18aa9
-    virtual bool IsServer();                // +0x10 (ICF: 0xac9f3)
     virtual FSFile* CreateXferFile(const UWideString& inName, unsigned long inSize);  // +0x24 0xb743b
     virtual bool IsPlaybackRecordingSession();   // +0x28 0xb799d
     virtual unsigned long GetConnectTimeout();   // +0x2c 0xb79a4
