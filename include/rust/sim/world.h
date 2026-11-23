@@ -296,7 +296,7 @@ struct EeUnitsUnitClassUpgradeFields {
   bool mIsInitialized;
 };
 
-/// `EEUnit`'s plain members (ee/EEUnit.h).
+/// `EEUnit`'s plain members (ee/EEUnit.h), then its class, complex unit and stats pointers (units round 10).
 struct EeUnitsUnitFields {
   /// saved
   unsigned long mResourceType;
@@ -306,10 +306,18 @@ struct EeUnitsUnitFields {
   long mResourceAmount;
   /// 0x10: `MoveTo` moved it; 0x20 and the low 2 bits: `UpdateHidden`
   uint8_t mHiddenFlags;
+  /// +0x2c (the unit store reads it: EEUnitStore.h)
+  class EEUnitClass *mUnitClass;
+  /// +0x30: the complex unit this unit belongs to (the calamities read its hit points, transformation and goals
+  /// through it); the unit store reads it
+  class EEComplexUnit *mComplexUnit;
+  /// +0x34 (provisional name)
+  class EEUnitClassUpgrade *mStats;
 };
 
-/// `EEComplexUnit`'s plain members (ee/EEUnit.h), in the class's order; its pointers (`mSound`), effect handles
-/// (`mConversionEffect`, `mHealEffect`, `mFireEffect`), points, containers and parts stay C++ members.
+/// `EEComplexUnit`'s plain members (ee/EEUnit.h), in the class's order, then its pointer members (units round 10: the
+/// C++ reads them by name, typed `class X*`; the layout's offsets of them are derived here, layout.rs); its effect
+/// handles (`mConversionEffect`, `mHealEffect`, `mFireEffect`), points, containers and parts stay C++ members.
 struct EeUnitsComplexUnitFields {
   float mHeight;
   float mInitialContactHeading;
@@ -421,6 +429,56 @@ struct EeUnitsComplexUnitFields {
   float mRoll;
   /// port: a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit)
   bool mHasShiftQueuedBuild;
+  /// +0x1b8 (+0x1b8..+0x20c: zeroed by 0x1fac37; mAreaEffectTemplate0 copies of the model's orbitals:
+  /// Virtual64/Virtual30)
+  class EEOrbital **mOrbitals;
+  /// +0x1bc (mAreaEffectTemplate1 copies of the model's wheels: Virtual64/Virtual30)
+  class EEWheel **mWheels;
+  /// +0x1c0 provisional name (drop object: the dropped class)
+  class EEUnitClass *mLauncherClass;
+  /// +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store reads it)
+  class EEActiveGroup *mActiveGroup;
+  /// +0x1cc: the unit carrying this one (non-zero: not selectable by the aircraft hot key; the fire and plague
+  /// functors walk the chain to the outermost carrier)
+  class EEComplexUnit *mPreviousPart;
+  /// +0x1d0 the next unit of a linked group (EEDoppelgangerManager 0x20278c walks it)
+  class EEComplexUnit *mNextPart;
+  /// +0x1d4
+  class EEComplexUnit *mHomeBase;
+  /// +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store reads it)
+  class EEComplexUnit *mContainer;
+  /// +0x1dc (released by Virtual04)
+  class EEComplexUnit *mLastAttacker;
+  /// +0x1e0 provisional name (SetOwner; referenced)
+  class EEComplexUnit *mOwner;
+  /// +0x1e4 (Virtual04: mRegeneration->ReleaseHeld(this))
+  class EEComplexUnit *mHolder;
+  /// +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store reads it)
+  class EEUnitAction *mCommand;
+  /// +0x1ec: a goal (EECPASGUHero::CheckCondition tests its mKind == 0xb; EECPASGUProphet::CanStillCast casts it
+  /// to EEUnitGoal)
+  class EEUnitGoal *mActiveGoal;
+  /// +0x1f0: the unit's goal (EEMAddPatrolPoint casts it to EEUGPatrol; mKind 0xb: not to be cloaked); the unit
+  /// store reads it
+  class EEUnitGoal *mGoalState;
+  /// +0x1f4
+  class RTSUnit *mLastResource;
+  /// +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
+  class EEUnit *mGatheredResource;
+  /// +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
+  class EEUnit *mMine;
+  /// +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store reads
+  /// it)
+  class EEHerd *mHerd;
+  /// +0x204 (ResizeTurretAngles: delete[], new float[n] zeroed)
+  float *mTurretAngles;
+  /// +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with
+  /// EEUnitBehavior::sTable[i])
+  class EEUnitBehavior *mBehavior;
+  /// +0x20c
+  class RTSUnit *mBlockingUnit;
+  /// +0x25c
+  class SESMInstanceNode *mSound;
 };
 
 /// `EEMap`'s plain members (ee/EEMap.h), in the class's order.

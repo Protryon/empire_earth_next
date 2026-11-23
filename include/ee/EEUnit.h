@@ -250,11 +250,8 @@ public:
     // (provisional name)
     static bool IsCarbonRock(unsigned long inUnitType) { return inUnitType == 0x2fb || inUnitType == 0x306 || inUnitType == 0x307 || (inUnitType >= 0x340 && inUnitType <= 0x345) || inUnitType == 0x348 || inUnitType == 0x24b || inUnitType == 0x24c; }
 
-    EEUnitClass* mUnitClass;                // +0x2c (the unit store reads it: EEUnitStore.h)
-    // +0x30: the complex unit this unit belongs to (the calamities read its hit points, transformation +0x130 and
-    // goals through it: 0xafe2c, 0xb1a5d) (provisional name)
-    EEComplexUnit* mComplexUnit;            // (the unit store reads it)
-    EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
+    // mUnitClass (+0x2c), mComplexUnit (+0x30: the complex unit this unit belongs to) and mStats (+0x34): the record
+    // EeUnitsUnitFields (ee_sim world unit_fields.rs), with
     // +0x38 mResourceType (saved), +0x3c mHitPoints (> 0: alive), +0x40 mResourceAmount (saved), +0x44 mHiddenFlags
     // (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90): EeUnitsUnitFields
 };
@@ -794,48 +791,25 @@ public:
     std::vector<U2DPoint<long> > mBoundedPathTiles;  // +0x194 (filled from EEGetUnitTiles's vector 0x2373bd; assigned with operator= 0x1a4f4 at 0x419ccb)
     U2DPoint<long> mCollisionTile;          // +0x1a4 (the ctor's dead lea: U2DPoint's inline ctor; Virtual10 prints it as the tile)
     GEColor mColor;                         // +0x1ac (1, 1, 1; saved)
-    EEOrbital** mOrbitals;                  // +0x1b8 (+0x1b8..+0x20c: zeroed by 0x1fac37; mAreaEffectTemplate0 copies of the model's orbitals: Virtual64/Virtual30)
-    EEWheel** mWheels;                      // +0x1bc (mAreaEffectTemplate1 copies of the model's wheels: Virtual64/Virtual30)
-    EEUnitClass* mLauncherClass;            // +0x1c0 provisional name (drop object: the dropped class)
+    // +0x1b8..+0x20c and +0x25c, the pointer members (mOrbitals, mWheels, mLauncherClass, mActiveGroup,
+    // mPreviousPart, mNextPart, mHomeBase, mContainer, mLastAttacker, mOwner, mHolder, mCommand, mActiveGoal,
+    // mGoalState, mLastResource, mGatheredResource, mMine, mHerd, mTurretAngles, mBehavior, mBlockingUnit, mSound):
+    // the record EeUnitsComplexUnitFields (ee_sim world unit_fields.rs; the views read them there)
     EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
-    EEPPatrolGroup* mPatrolGroup;           // +0x1c4 (RTTI EEPPatrolGroup, ee/EEPPatrolGroup.h)
+    EEPPatrolGroup* mPatrolGroup;           // +0x1c4 (RTTI EEPPatrolGroup, ee/EEPPatrolGroup.h; a C++ member: its Rust type is the
+                                            // units module's, which the world records' header cannot include)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEActiveGroup* mActiveGroup;            // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store reads it)
-    // +0x1cc (non-zero: not selectable by the aircraft hot key; the unit carrying this one: the fire/plague functors
-    // walk the chain to the outermost carrier; provisional name)
     EEComplexUnit* GetPreviousPart() const { return this->mPreviousPart; }
-    EEComplexUnit* mPreviousPart;
     EEComplexUnit* GetNextPart() const { return this->mNextPart; }
-    EEComplexUnit* mNextPart;               // +0x1d0 the next unit of a linked group (EEDoppelgangerManager 0x20278c walks it)
-    EEComplexUnit* mHomeBase;               // +0x1d4
     EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
-    EEComplexUnit* mContainer;              // +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store reads it)
-    EEComplexUnit* mLastAttacker;                 // +0x1dc (released by Virtual04)
     void SetLastAttacker(EEComplexUnit* inUnit) { ee_units_eu_more(EE_UNITS_EUM_DO_SET_LAST_ATTACKER, static_cast<EEUnit*>(this), inUnit, 0, 0); }  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
-    EEComplexUnit* mOwner;                        // +0x1e0 provisional name (SetOwner; referenced)
     EEComplexUnit* GetHolder() const { return this->mHolder; }
-    EEComplexUnit* mHolder;                 // +0x1e4 (Virtual04: mRegeneration->ReleaseHeld(this))
     EEUnitAction* GetCommand() const { return this->mCommand; }
-    EEUnitAction* mCommand;                 // +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store reads it)
-    // +0x1ec a goal (EECPASGUHero::CheckCondition 0x64fd tests its mKind == 0xb; EECPASGUProphet::CanStillCast
-    // dynamic_casts it to EEUnitGoal) (provisional name)
-    EEUnitGoal* mActiveGoal;
-    // +0x1f0 the unit's goal (EEMAddPatrolPoint dynamic_casts it to EEUGPatrol, src TD EEUnitGoal). Its
-    // mKind 0xb = not to be cloaked (EECCCloaking). Name is provisional
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
-    EEUnitGoal* mGoalState;                 // (the unit store reads it)
-    RTSUnit* mLastResource;                 // +0x1f4
-    EEUnit* mGatheredResource;              // +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
-    EEUnit* mMine;                          // +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
-    EEHerd* mHerd;                          // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store reads it)
-    float* mTurretAngles;                   // +0x204 (ResizeTurretAngles: delete[], new float[n] zeroed)
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
-    EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
-    RTSUnit* mBlockingUnit;                 // +0x20c
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
     // inline value getter (the Physics Virtual0C family: `fld [F98]; fld [ecx]; faddp`, ecx = &mF24C kept from the
     // `!= 0` test; a member read gives `fadd [ecx]`)
-    SESMInstanceNode* mSound;               // +0x25c
     EEEffectHandle mConversionEffect;       // +0x2c0 (saved; -1: none, ReleaseConversionEffect)
     EEEffectHandle mHealEffect;             // +0x2c4 (saved; -1: none, ReleaseHealEffect)
     long GetFormationRank() const { return this->mFormationRank; }

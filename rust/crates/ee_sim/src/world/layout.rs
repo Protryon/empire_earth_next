@@ -240,11 +240,40 @@ thread_local! {
 
 /// Registers the build's layout: the first call wins (the layout is the build's); false for a record of another
 /// size or a second, different layout.
-pub fn set(layout: EeWorldLayout) -> bool {
+pub fn set(mut layout: EeWorldLayout) -> bool {
+    derive_record_members(&mut layout);
     if layout.size != std::mem::size_of::<EeWorldLayout>() as u64 {
         return false;
     }
     *LAYOUT.get_or_init(|| layout) == layout
+}
+
+/// The offsets of the members the unit records hold (ee_sim world unit_fields.rs): the record's base plus the
+/// member's place in it (the C++ registers only the bases).
+pub fn derive_record_members(l: &mut EeWorldLayout) {
+    use crate::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsUnitFields};
+    use std::mem::offset_of;
+    l.unit_class = l.unit_fields + offset_of!(EeUnitsUnitFields, mUnitClass) as u64;
+    l.unit_complex_unit = l.unit_fields + offset_of!(EeUnitsUnitFields, mComplexUnit) as u64;
+    l.unit_stats = l.unit_fields + offset_of!(EeUnitsUnitFields, mStats) as u64;
+    l.complex_launcher_class = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mLauncherClass) as u64;
+    l.complex_active_group = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mActiveGroup) as u64;
+    l.complex_previous_part = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mPreviousPart) as u64;
+    l.complex_next_part = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mNextPart) as u64;
+    l.complex_home_base = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mHomeBase) as u64;
+    l.complex_container = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mContainer) as u64;
+    l.complex_last_attacker = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mLastAttacker) as u64;
+    l.complex_owner = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mOwner) as u64;
+    l.complex_holder = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mHolder) as u64;
+    l.complex_command = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mCommand) as u64;
+    l.complex_active_goal = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mActiveGoal) as u64;
+    l.complex_goal_state = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mGoalState) as u64;
+    l.complex_last_resource = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mLastResource) as u64;
+    l.complex_gathered_resource =
+        l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mGatheredResource) as u64;
+    l.complex_mine = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mMine) as u64;
+    l.complex_herd = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mHerd) as u64;
+    l.complex_behavior = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mBehavior) as u64;
 }
 
 /// The registered layout (None before the C++ registered it, as in the unit tests).
