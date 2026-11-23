@@ -13,7 +13,6 @@ class FSPath;
 class GEScreen;
 class GESurface;
 class GETexture;
-class UString;
 
 // How a texture file is loaded (the original's sizeof 0x14, copied with `rep movsd` x5 by the User Interface
 // backgrounds, UITextureBackground 0x1005c84e; 0x18 with the port's mUseTexturePack). Fields from
@@ -36,8 +35,10 @@ struct GETextureDescription {
 // port (R4.3, seventh part): a whole Rust object (ee_ge texobj.rs); this class is its shell.
 class LLE_API GETextureManager {            // sizeof 0x1c in the original (implicit copy ctor 0xdfd3, operator= 0xe013)
 public:
-    GETextureManager(FSPath* inTexturePath);
-    ~GETextureManager();
+    // a texture manager on a search path (referenced), with no textures and its own lock
+    GETextureManager(FSPath* inTexturePath) { this->mRust = ee_ge_texman_new(&GETextureManager::Host, this, inTexturePath); }
+    // removes every unreferenced texture, releases the path and the lock
+    ~GETextureManager() { ee_ge_texman_free(this->mRust); }
     GETextureManager(const GETextureManager&) = delete;   // port: one Rust object per manager
     GETextureManager& operator=(const GETextureManager&) = delete;
     // Prints every loaded texture file and its reference count to a dump file
@@ -78,9 +79,10 @@ public:
     // they were loaded from until they are released.
     static void SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
         { ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop); }
-    // the pack's name of a "textures\..." file (false with no pack, or for a picture read as data), and the logical
+    // the pack's name of a "textures\..." file ("textures\x" -> "textures-4x\x"; false for a name outside
+    // "textures\" or with no pack directory, for a picture read as data and while the pack is off), and the logical
     // shift and extra MIP drop of its files: for pictures loaded around the texture manager (RTSMouse's pointers)
-    static bool GetTexturePackName(const UString& inName, UString& outName);
+    static bool GetTexturePackName(const UString& inName, UString& outName) { return ee_ge_texpack_name(inName, &outName); }
     static long GetTexturePackLogicalShift() { return ee_ge_texpack_logical_shift(); }
     static long GetTexturePackMipLevelsToDrop() { return ee_ge_texpack_mip_levels_to_drop(); }
 private:

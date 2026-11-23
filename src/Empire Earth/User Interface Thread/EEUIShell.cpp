@@ -75,61 +75,6 @@
 #include "ee/EEUIShell.h"
 #include "lle/UIObjHost.h"
 
-int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UIButton)
-    EE_SHELL_BUTTON_BASE(UIButton)
-    }
-    return 0;
-}
-
-int64_t EEUIShellControl::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(EEUIRustControl)
-    }
-    return 0;
-}
-
-int64_t EEUIShellForm::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    GERectangle r = ioF != NULL ? GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]) : GERectangle();
-    switch (inVirtual) {
-    case EE_SCREENS_SV_ACTIVATE: UIForm::Activate(); return 0;
-    case EE_SCREENS_SV_DEACTIVATE: UIForm::Deactivate(); return 0;
-    case EE_SCREENS_SV_HELP_POPUP: UIForm::SetHelpTextPopupLocation(); return 0;
-    case EE_SCREENS_SV_UPDATE_KEYBOARD: return UIForm::UpdateKeyboard();
-    case EE_SCREENS_SV_UPDATE_MOUSE: return UIForm::UpdateMouse();
-    case EE_SCREENS_SV_RELAYOUT: UIForm::RelayoutForm(r); return 0;
-    case EE_SCREENS_SV_TRANSLATED_KEY: return UIForm::UpdateTranslatedKey(reinterpret_cast<const char*>(inA), (short)inB);
-    case EE_SCREENS_SV_DRAW_BACKGROUND: return UIForm::DrawBackground(r);
-    case EE_SCREENS_SV_CLOSE: UIForm::Close(); return 0;
-    case EE_SCREENS_SV_COPY_DATA: return UIForm::CopyData();
-    case EE_SCREENS_SV_DRAW_POLYGONS: return UIForm::DrawPolygons();
-    case EE_SCREENS_SV_DRAW_TEXT: return UIForm::DrawTextA();
-    case EE_SCREENS_SV_OPEN: UIForm::Open(); return 0;
-    case EE_SCREENS_SV_SET_RECTANGLE: UIForm::SetRectangle(r); return 0;
-    }
-    return 0;
-}
-
-// the form's own virtual inVirtual through its vtable (a kind's override runs)
-int64_t EEUIShellForm::SelfCall(uint32_t inVirtual)
-{
-    switch (inVirtual) {
-    case EE_SCREENS_SV_ACTIVATE: this->Activate(); return 0;
-    case EE_SCREENS_SV_DEACTIVATE: this->Deactivate(); return 0;
-    case EE_SCREENS_SV_UPDATE_KEYBOARD: return this->UpdateKeyboard();
-    case EE_SCREENS_SV_UPDATE_MOUSE: return this->UpdateMouse();
-    case EE_SCREENS_SV_CLOSE: this->Close(); return 0;
-    case EE_SCREENS_SV_COPY_DATA: return this->CopyData();
-    case EE_SCREENS_SV_DRAW_POLYGONS: return this->DrawPolygons();
-    case EE_SCREENS_SV_OPEN: this->Open(); return 0;
-    }
-    return 0;
-}
-
 // The icon bar kind's own ops (the old RustOp: a unit's class flags and goals, the selection message, the sounds,
 // the keys, the mouse, the icons and the frame) are icon_bar_ops.rs' over the one-statement shims below (UI lane
 // round 11)
@@ -179,96 +124,22 @@ UIComboBox* EEUIShellNewFileCombo(FSPath* inPath, const UString& inPattern, unsi
                               inFont, GERectangle(inLocation, (float)inWidth, 20.0f), 400, inForm, inIndex, 0, 2);
 }
 
-int64_t EEUIShellRadio::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UIRadioButton)
-    EE_SHELL_BUTTON_BASE(UIRadioButton)
-    case EE_SCREENS_SV_CHECK: UIRadioButton::Check(); return 0;
-    case EE_SCREENS_SV_UNCHECK: UIRadioButton::UnCheck(); return 0;
-    }
-    return 0;
-}
-
-int64_t EEUIShellCheck::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UICheckBox)
-    EE_SHELL_BUTTON_BASE(UICheckBox)
-    }
-    return 0;
-}
-
-int64_t EEUIShellCombo::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UIComboBox)
-    case EE_SCREENS_SV_CHANGE_SELECTION: UIComboBox::ChangeSelection(); return 0;
-    }
-    return 0;
-}
-
-int64_t EEUIShellList::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UILBString)
-    case EE_SCREENS_SV_BUTTON_UP: UILBString::ButtonUp(); return 0;
-    case EE_SCREENS_SV_CHANGE_SELECTION_INDEX:
-        UILBString::ChangeSelectionIndex((unsigned long)inA, (inB & 1) != 0, (inB & 2) != 0);
-        return 0;
-    }
-    return 0;
-}
-
-int64_t EEUIShellEdit::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UIEditBox)
-    case EE_SCREENS_SV_PROCESS_ENTER: UIEditBox::ProcessEnterKey(); return 0;
-    }
-    return 0;
-}
-
-int64_t EEUIShellSlider::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
-{
-    switch (inVirtual) {
-    EE_SHELL_COMMON_BASE(UISlider)
-    case EE_SCREENS_SV_CHANGE_RANGE: UISlider::ChangeRange((unsigned long)inA); return 0;
-    }
-    return 0;
-}
-
-// the control's text (inWhich 0: its own GEText, 1: its label's)
-static GEText* EEShellText(UIControl* inControl, int64_t inWhich)
-{
-    if (UIRadioButton* r = dynamic_cast<UIRadioButton*>(inControl))
-        return inWhich ? r->GetTextLabel()->GetGEText() : r->GetGEText();
-    if (UICheckBox* k = dynamic_cast<UICheckBox*>(inControl))
-        return inWhich ? k->GetTextLabel()->GetGEText() : k->GetGEText();
-    if (UIButton* b = dynamic_cast<UIButton*>(inControl))
-        return b->GetGEText();
-    if (UIComboBox* c = dynamic_cast<UIComboBox*>(inControl))
-        return c->GetGEText();
-    if (UILBString* l = dynamic_cast<UILBString*>(inControl))
-        return l->GetGEText();
-    return static_cast<UIEditBox*>(inControl)->GetGEText();
-}
-
 static EEUIFScenarioEditor* EEShellTriggers()
 {
     return gUIManager->GetScenarioEditorForm();
 }
 
+// a shell's base class virtual (a form shell's: its host object is the UIForm*) and a form shell's own virtual
+extern "C" int64_t ee_screenscpp_shell_base(void* inControl, uint32_t inVirtual, int64_t a, int64_t b, float* f)
+{ return EEUIShell::Of(static_cast<UIControl*>(inControl))->BaseCall(inVirtual, a, b, f); }
+extern "C" int64_t ee_screenscpp_shell_form_base(void* inForm, uint32_t inVirtual, int64_t a, int64_t b, float* f)
+{ return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inForm))->BaseCall(inVirtual, a, b, f); }
+extern "C" int64_t ee_screenscpp_shell_form_self(void* inForm, uint32_t inVirtual)
+{ return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inForm))->SelfCall(inVirtual); }
+
 extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a, int64_t b, float* f)
 {
     UIControl* c = static_cast<UIControl*>(inControl);
-    UWideString theText;
-    if (inOp >= EE_SCREENS_SH_FORM_BASE)   // a form shell's (its host object is the UIForm*)
-        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->BaseCall(inOp - EE_SCREENS_SH_FORM_BASE, a, b, f);
-    if (inOp == EE_SCREENS_SH_FORM_SELF)
-        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->SelfCall((uint32_t)a);
-    if (inOp >= EE_SCREENS_SH_BASE)
-        return EEUIShell::Of(c)->BaseCall(inOp - EE_SCREENS_SH_BASE, a, b, f);
     switch (inOp) {
     case EE_SCREENS_SH_BG_OPACITY: c->SetBgOpacity(f[0]); break;
     case EE_SCREENS_SH_BG_COLOR: c->SetBgColor(GEColor(f[0], f[1], f[2])); break;
@@ -382,9 +253,9 @@ static GE3DPoint sShimPoint;
 static EEMapTile* sShimMapTile;    // the map tile read's
 // shims6
 extern "C" void ee_screenscpp_shell_text_fg(uintptr_t inControl, uint32_t inWhich, float inRed, float inGreen, float inBlue)
-{ EEShellText(C(inControl), inWhich)->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
+{ EEUIShell::Of(C(inControl))->Text(inWhich)->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
 extern "C" void ee_screenscpp_shell_text_transparent(uintptr_t inControl, uint32_t inWhich)
-{ EEShellText(C(inControl), inWhich)->SetIsTransparent(true); }
+{ EEUIShell::Of(C(inControl))->Text(inWhich)->SetIsTransparent(true); }
 extern "C" void ee_screenscpp_shell_button_set_text(uintptr_t inControl, EeScreensShimText inText, uintptr_t inFont)
 { static_cast<UIButton*>(C(inControl))->SetText(EEShimText(inText), reinterpret_cast<GEFont*>(inFont)); }
 extern "C" void ee_screenscpp_shell_combo_append(uintptr_t inControl, EeScreensShimText inText)

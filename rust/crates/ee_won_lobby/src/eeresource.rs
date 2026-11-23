@@ -5,7 +5,7 @@
 //! uses them by name; the C++ runs the loads over these rows, the global of row `i` its table's entry `i`.
 //! `golden_eeresource.txt` holds the original's statements, read from the C++ before the port.
 
-use std::ffi::{c_char, CStr};
+use std::ffi::{c_char, c_void, CStr};
 
 /// One row: the section, the key, the global's name.
 #[derive(Clone, Copy, Debug)]
@@ -169,9 +169,146 @@ pub unsafe extern "C" fn ee_won_eeresource_find(name: *const c_char) -> isize {
     EE_RESOURCES.iter().position(|r| r.name == name).map_or(-1, |i| i as isize)
 }
 
+// ---- the loader, the reset and the look-up (R6 WON round 34: EELobbyResource.cpp's bodies; its host keeps the
+// string array and the resource table's reads, each one statement)
+
+/// The loader's calls out (EELobbyResource.cpp's host). A read that threw (the table lacks the section or key)
+/// answers [`EE_WON_EERES_THROWN`] with the exception kept; the C++ entry rethrows it.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonEeResOp {
+    /// `((ResourceConfigTable*)table)->SafeGetConfig((const char*)a)` (the section's config).
+    Config = 0,
+    /// `strings[a] = ((ResourceConfig*)b)->SafeGetString((const char*)c)`.
+    Read,
+    /// `strings[a] = GetEmptyGUIStringData()`.
+    Erase,
+}
+
+/// The host: `(op, table, a, b, c) -> result`.
+pub type EeWonEeResHostFn =
+    Option<unsafe extern "C" fn(op: EeWonEeResOp, table: *mut c_void, a: isize, b: isize, c: isize) -> isize>;
+
+/// A host op's answer when its statement threw (WonGuard's `kWonThrown`).
+pub const EE_WON_EERES_THROWN: isize = isize::MIN;
+
+/// The original's check that the strings and the table agree (EELobbyResourceSlotFor): the program stops when not.
+fn check_count(strings: usize) {
+    if EE_RESOURCES.len() != strings {
+        eprintln!("EELobbyResource: {} rows for {} strings", EE_RESOURCES.len() as u32, strings as u32);
+        std::process::abort();
+    }
+}
+
+fn call(host: EeWonEeResHostFn, op: EeWonEeResOp, table: *mut c_void, a: isize, b: isize, c: isize) -> isize {
+    match host {
+        // SAFETY: the host's contract
+        Some(f) => unsafe { f(op, table, a, b, c) },
+        None => 0,
+    }
+}
+
+/// EELobbyResource_Load: every row's string read from its section's config (a section looked up where it changes,
+/// as the original's statements did); `EE_WON_EERES_THROWN` when a read threw (the rest not read).
+#[no_mangle]
+pub extern "C" fn ee_won_eeresource_load(table: *mut c_void, strings: usize, host: EeWonEeResHostFn) -> isize {
+    let mut config = 0;
+    for (i, row) in EE_RESOURCES.iter().enumerate() {
+        check_count(strings);
+        if i == 0 || EE_RESOURCES[i - 1].section != row.section {
+            config = call(host, EeWonEeResOp::Config, table, row.section.as_ptr() as isize, 0, 0);
+            if config == EE_WON_EERES_THROWN {
+                return EE_WON_EERES_THROWN;
+            }
+        }
+        if call(host, EeWonEeResOp::Read, table, i as isize, config, row.key.as_ptr() as isize) == EE_WON_EERES_THROWN {
+            return EE_WON_EERES_THROWN;
+        }
+    }
+    0
+}
+
+/// EELobbyResource_Destroy: every string reset to the empty one, in the rows' order.
+#[no_mangle]
+pub extern "C" fn ee_won_eeresource_destroy(strings: usize, host: EeWonEeResHostFn) {
+    for i in 0..EE_RESOURCES.len() {
+        check_count(strings);
+        call(host, EeWonEeResOp::Erase, std::ptr::null_mut(), i as isize, 0, 0);
+    }
+}
+
+/// EELobbyResource_Named's row: the string of a global's name; the program stops for a name the table lacks.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_eeresource_index(name: *const c_char, strings: usize) -> usize {
+    // SAFETY: the contract
+    let index = unsafe { ee_won_eeresource_find(name) };
+    if index < 0 || index as usize >= strings {
+        let text = if name.is_null() {
+            String::new()
+        } else {
+            // SAFETY: the contract
+            unsafe { CStr::from_ptr(name) }.to_string_lossy().into_owned()
+        };
+        eprintln!("EELobbyResource: no string {text}");
+        std::process::abort();
+    }
+    index as usize
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static LOG: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+        static THROW_AT: std::cell::Cell<isize> = const { std::cell::Cell::new(-1) };
+    }
+
+    unsafe extern "C" fn host(op: EeWonEeResOp, _: *mut c_void, a: isize, b: isize, c: isize) -> isize {
+        let text = |p: isize| unsafe { CStr::from_ptr(p as *const c_char) }.to_str().unwrap().to_string();
+        let line = match op {
+            EeWonEeResOp::Config => format!("config {}", text(a)),
+            EeWonEeResOp::Read => format!("get {} -> {}", text(c), EE_RESOURCES[a as usize].name.to_str().unwrap()),
+            EeWonEeResOp::Erase => format!("erase {}", EE_RESOURCES[a as usize].name.to_str().unwrap()),
+        };
+        LOG.with(|l| l.borrow_mut().push(line));
+        let n = LOG.with(|l| l.borrow().len()) as isize;
+        if THROW_AT.with(|t| t.get()) == n {
+            return EE_WON_EERES_THROWN;
+        }
+        if op == EeWonEeResOp::Config {
+            0x100 + b
+        } else {
+            0
+        }
+    }
+
+    #[test]
+    fn the_loader_and_reset_run_the_tables_statements() {
+        LOG.with(|l| l.borrow_mut().clear());
+        assert_eq!(ee_won_eeresource_load(std::ptr::null_mut(), EE_RESOURCES.len(), Some(host)), 0);
+        ee_won_eeresource_destroy(EE_RESOURCES.len(), Some(host));
+        assert_eq!(LOG.with(|l| l.take()), statements());
+    }
+
+    #[test]
+    fn a_read_that_threw_stops_the_loader() {
+        LOG.with(|l| l.borrow_mut().clear());
+        THROW_AT.with(|t| t.set(3));
+        assert_eq!(ee_won_eeresource_load(std::ptr::null_mut(), EE_RESOURCES.len(), Some(host)), EE_WON_EERES_THROWN);
+        THROW_AT.with(|t| t.set(-1));
+        assert_eq!(LOG.with(|l| l.take()), statements()[..3].to_vec());
+    }
+
+    #[test]
+    fn a_name_finds_its_row() {
+        // SAFETY: a NUL-terminated name
+        assert_eq!(unsafe { ee_won_eeresource_index(c"gEELobbyGame_StartGameError".as_ptr(), EE_RESOURCES.len()) }, 71);
+    }
 
     #[test]
     fn the_table_is_the_originals_statements() {

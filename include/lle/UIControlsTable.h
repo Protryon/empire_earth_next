@@ -52,8 +52,7 @@ public:
     // port: moves the form inFormID's controls with form index inFirstIndex .. inLastIndex horizontally (after
     // Create, before the form makes its controls): inLeftDelta and inRightDelta are added to their left and right
     // offsets, which must be fractions of the window (offset type 4; others are left alone). -> the number moved
-    static long MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
-                                         float inRightDelta);
+    static long MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta, float inRightDelta) { return (long)ee_ui_controls_tables(EeUiTablesCall::MoveControlsHorizontally, inFormID, (intptr_t)((uint64_t)(uint32_t)inFirstIndex | (uint64_t)(uint32_t)inLastIndex << 32), NULL, UIF4(inLeftDelta, inRightDelta)); }
     // Loads a UI texture (clamped, point mip, given alpha) and returns a bitmap stretched over the rectangle, or NULL
     GEBitmap* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle, const UString& inFileName,
                            bool inHasAlpha, const GERectangle& inTextureRectangle) const { return (GEBitmap*)ee_ui_table_create_bitmap(inManager, &inRectangle, &inFileName, inHasAlpha, &inTextureRectangle); }
@@ -113,8 +112,6 @@ public:
     void SetupGEText(GEText* inText) const;
     // Fills a list with the description's string-table range (empty when the range is unset)
     void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const { ee_ui_table_setup_strings(this, inManager, &outStrings); }
-private:
-    friend struct UIControlsTableHost;      // UIControlsTable.cpp: the Rust table's calls out
     UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}
     UIControlsTable(const UIControlsTable&);             // not copied (the Rust table is owned)
     UIControlsTable& operator=(const UIControlsTable&);

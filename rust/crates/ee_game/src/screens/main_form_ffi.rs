@@ -129,6 +129,22 @@ pub extern "C" fn ee_screens_main_form_construct(call: *mut c_void) {
     main_form::construct(&mut Host(call));
 }
 
+/// `EEUIFMainGame`'s constructor body: the form's record registered (`fields`, its `EeScreensMainFormFields` base),
+/// then the construction (`ee_screens_main_form_construct`; `call`'s first word is the form).
+///
+/// # Safety
+/// `call` is the constructor's live call record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_main_form_new(
+    call: *mut c_void,
+    fields: *mut crate::screens::main_form_fields::EeScreensMainFormFields,
+) {
+    // SAFETY: the contract (the record's first word is the form)
+    let form = unsafe { *(call as *const *mut c_void) };
+    crate::screens::main_form_fields::ee_screens_main_form_fields(form, fields);
+    ee_screens_main_form_construct(call);
+}
+
 /// `EEUIFMainGame::SetHotKeyMode(mode)`.
 #[no_mangle]
 pub extern "C" fn ee_screens_main_form_hot_key_mode(call: *mut c_void, mode: i64) {

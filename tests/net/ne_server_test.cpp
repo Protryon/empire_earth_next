@@ -894,11 +894,9 @@ struct Sequence {
             snprintf(theCall, sizeof(theCall), "xfer f%d %lu %d", theSpec.mTok, theSpec.mLength, theSlot);
             this->Call(theCall);
             unsigned long theID = 0;
-            if (R) {
-                uint32_t theRID = 0;
-                r = ee_net_sv_xfer_file_to_client(s, &theSpec, 5, theSlot, &theRID) ? 0 : 0x10;
-                theID = theRID;
-            } else
+            if (R)
+                r = ee_net_sv_xfer_file_to_client(s, &theSpec, 5, theSlot, &theID) == kErrorOK ? 0 : 0x10;
+            else
                 r = o->XferFileToClient(theSpec, 5, theSlot, theID, false);
             gQ->Line("xfer id %lu", theID);
         } else if (theWhat < 73) {

@@ -51,10 +51,29 @@ pub extern "C" fn ee_screens_portrait_draw(portrait: *mut c_void) -> i64 {
     portrait::draw(&mut Portrait(portrait))
 }
 
-/// `EEUICPortrait::GetHelpString`: whether there is a tooltip (the host builds its text).
+/// `EEUICPortrait::GetHelpString`: whether there is a tooltip; `out` (a `UWideString*`) emptied, then the host builds
+/// the text there.
+///
+/// # Safety
+/// `out` is the caller's live string.
 #[no_mangle]
-pub extern "C" fn ee_screens_portrait_help(portrait: *mut c_void) -> bool {
+pub unsafe extern "C" fn ee_screens_portrait_help(portrait: *mut c_void, out: *mut c_void) -> bool {
+    // SAFETY: the contract
+    unsafe {
+        sys::ee_screenscpp_pt_help_target(out);
+        sys::ee_screenscpp_pt_help_clear();
+    }
     portrait::help(&mut Portrait(portrait))
+}
+
+/// cbindgen:ignore
+mod sys {
+    use core::ffi::c_void;
+
+    extern "C" {
+        pub fn ee_screenscpp_pt_help_target(out: *mut c_void);
+        pub fn ee_screenscpp_pt_help_clear();
+    }
 }
 
 /// `EEUICPortrait::MouseLButtonDown` (and the right press).

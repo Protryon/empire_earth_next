@@ -17,13 +17,11 @@
 #include "rust/base/math.h"   // the model (ee_ge modobj.rs), its host's EeGeModOp
 #include "rust/render/ge.h"
 
-class FSFileSpec;
 class GEMaterial;
 class GEModelManager;
 class GEPolygonArray;
 class GETexture;
 class GEVertexArray;
-struct GETextureDescription;
 
 class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 in the original (GEModelManager: operator new(0x188))
     friend class GEModelManager;
@@ -94,10 +92,14 @@ public:
     GEModel(const GEModel&) = delete;
     GEModel& operator=(const GEModel&) = delete;
 protected:
-    GEModel(GEModelManager* inManager);
-    GEModel(unsigned long inA, unsigned long inB, unsigned long inC, unsigned long inD, unsigned long inE,
-            unsigned long inF, const UString& inName, unsigned long inG, GEModelManager* inManager);
-    virtual ~GEModel();
+    // an empty model owned by a model manager, with one LOD and no data allocated
+    GEModel(GEModelManager* inManager) { this->mRust = ee_ge_mod_new(&GEModel::Host, this, inManager); }
+    // a named model with the counts and flags of CreateModel or CreateSubModel (EeGeManOp::ModelNew), its data
+    // allocated (no shared frames)
+    GEModel(const EeGeModelCreate& inArgs, const UString& inName, GEModelManager* inManager)
+        { this->mRust = ee_ge_mod_new_with_counts(&GEModel::Host, this, inArgs.counts, &inName, inArgs.flags, inManager); }
+    // frees the vertex, polygon and tag point arrays (shared frames once), releases the materials and sub-models
+    virtual ~GEModel() { ee_ge_mod_destroy(this->mRust); }
 private:
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)

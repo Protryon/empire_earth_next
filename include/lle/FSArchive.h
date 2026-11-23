@@ -43,12 +43,7 @@ public:
                                       Text(&gStartupVolume), Text(&gStartupDirectory));
     }
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
-    {
-        std::vector<const EeFsString*> theNames;
-        for (unsigned long i = 0; i < inFiles.size(); i++)
-            theNames.push_back(Text(&inFiles[i]));
-        return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), theNames.data(), theNames.size(), inCompression);
-    }
+        { return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), Text(inFiles.data()), inFiles.size(), inCompression); }
     // every archived file below a destination directory, creating directories as needed
     long ExtractAll(const FSFileSpec& inDestination)
     {
@@ -69,35 +64,29 @@ public:
         return theResult;
     }
     long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
-        { UString theName((const char*)inName); return this->FindFile(theName, outFile); }
+        { return this->FindFile(UString((const char*)inName), outFile); }
     const FSFileSpec& GetArchiveFile() const { return this->mArchiveFile; }    // folded 0x40cb (inline)
     // a named archive tag's value, or kErrorNotFound
     long GetTag(const UWideString& inName, UWideString& outValue) const
     {
-        return ee_fs_archive_get_tag(this->mTable, (const char*)inName,
-                                     [](void* c, const char* v) { *static_cast<UWideString*>(c) = v; }, &outValue);
+        return ee_fs_archive_get_tag(this->mTable, (const char*)inName, AssignTag, &outValue);
     }
     // the archived files matching a '*' pattern
     long ListFiles(const UString& inPattern, std::set<UString>& outFiles, bool inClear)
-    {
-        if (inClear)
-            outFiles.clear();
-        ee_fs_archive_list(this->mTable, (const char*)inPattern,
-                           [](void* c, const char* n) { static_cast<std::set<UString>*>(c)->insert(UString(n)); }, &outFiles);
-        return kErrorOK;
-    }
+        { return ee_fs_archive_list_files(this->mTable, (const char*)inPattern, inClear, ListName, &outFiles); }
     // checks the header, reads the file and tag tables, maps the file into memory
     long Open() { return ee_fs_arch_open(Rec(this)); }
     // closes the archive and points it at another archive file
     long SetArchive(const FSFileSpec& inFile) { return ee_fs_arch_set_archive(Rec(this), Spec(&inFile)); }
     // an empty value removes the tag
     long SetTag(const UWideString& inName, const UWideString& inValue)
-    {
-        ee_fs_archive_set_tag(this->mTable, (const char*)inName, (const char*)inValue);
-        return kErrorOK;
-    }
+        { return ee_fs_archive_set_tag(this->mTable, (const char*)inName, (const char*)inValue); }
 
 private:
+    static void AssignTag(void* inValue, const char* inText) { *static_cast<UWideString*>(inValue) = inText; }
+    // a listed name into the set; null clears it (ee_fs_archive_list_files)
+    static void ListName(void* inFiles, const char* inName)
+        { inName ? (void)static_cast<std::set<UString>*>(inFiles)->insert(UString(inName)) : static_cast<std::set<UString>*>(inFiles)->clear(); }
     static EeFsArchiveObj* Rec(FSArchive* inArchive) { return reinterpret_cast<EeFsArchiveObj*>(inArchive); }
     static const EeFsArchiveObj* Rec(const FSArchive* inArchive) { return reinterpret_cast<const EeFsArchiveObj*>(inArchive); }
     static EeFsSpec* Spec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }

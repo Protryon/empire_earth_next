@@ -153,11 +153,7 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
     return 0;
 }
 
-EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm)
-{
-    this->mForm = inForm;
-    this->mRecord = ee_screens_unit_hack_new(inForm);
-}
+EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm) : mForm(inForm), mRecord(ee_screens_unit_hack_new(inForm)) {}
 
 // (EEUIFMGFormCall, one call of the form's work in Rust: ee/EEUIFMainGame.h)
 static_assert(offsetof(EEUIFMGFormCall, mForm) == 0, "main_form_ffi.rs reads the form as the record's first word");
@@ -168,63 +164,7 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
                   offsetof(EEUIFMGFormCall, mOut) == 16 * sizeof(void*) + 3 * sizeof(UWideString),
               "hud_direct.rs FormCallHead: the held text, the chat line's name and text, the button, the help");
 
-// Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
-// the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
-// construct; it reads no control: they are made after it)
-EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
-    : UIForm(inManager, inData, true), EeScreensMainFormFields()
-{
-    ee_screens_main_form_fields(this, static_cast<EeScreensMainFormFields*>(this));
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_construct(&theCall);
-}
-
-// Shows a chat message in the next free chat line (scrolling the lines up when full), wrapping the rest of a
-// long message onto further lines (ee_screens main_form.rs)
-void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                                    unsigned long inFlags)
-{
-    EEUIFMGFormCall theCall(this);
-    theCall.mColor = &inColor;
-    theCall.mName = inName;
-    theCall.mChat = inText;
-    theCall.mFlags = inFlags;
-    ee_screens_main_form_chat_line(&theCall);
-}
-
 // (BuildGate and BuildWall: the placements call the build action, ee/EEARust.h)
-
-// Snapshots the form for drawing: selection state, error log, status refresh each poll, the panel group, edge
-// scrolling and the gate or wall preview of the current mode (ee_screens main_form.rs)
-long EEUIFMainGame::CopyData()
-{
-    EEUIFMGFormCall theCall(this);
-    return (long)ee_screens_main_form_copy_data(&theCall);
-}
-
-// Shows a chat message when the form has its chat lines
-void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                                unsigned long inFlags, unsigned long inArg5)
-{
-    if (this->GetControl(kMainGameChatLine7) != NULL)
-        this->DisplayChatLine(inColor, inName, inText, inFlags);
-}
-
-// Shows an information message: scrolling text, the speaker's portrait and its sound; hides the messages
-// without a text control (ee_screens main_form.rs)
-void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
-{
-    EEUIFMGFormCall theCall(this);
-    theCall.mMessage = reinterpret_cast<const EESMDialogMessage*>(inInformation);
-    ee_screens_main_form_show_information(&theCall);
-}
-
-// Switches the bottom panel to another entity group and selects its panel group (ee_screens main_form.rs)
-void EEUIFMainGame::SetEntityGroup(long inGroup)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_entity_group(&theCall, inGroup);
-}
 
 // (BuildUnit and the start modes StartGate, StartWall, StartCalamity, StartFlare, StartPatrol: inline in
 // ee/EEUIFMainGame.h)
@@ -237,16 +177,10 @@ void EEUIFMainGame::SetEntityGroup(long inGroup)
 #include "ee/EECombatGoals.h"
 #include "rust/sim/units.h"
 
-static_assert(EE_SCREENS_MF_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_MF_SOUND_BUTTON2 == kSoundButton2 &&
-                  EE_SCREENS_MF_IDS_FPS == IDS_FPS && EE_SCREENS_MF_IDS_GAME_PAUSED == IDS_GAME_PAUSED,
-              "main_form.rs' sounds and strings");
+// (main_form.rs' sounds and strings and mouse_modes.rs' farms and keys equal the headers': hud_cpp_consts_tests.rs)
 
 // ---- the mouse modes' ops (ee_screens mouse_modes.rs, EE_SCREENS_MF_OP_MD_*): the picked unit, the first selected
 // unit and the pointed tile held in the call; io.f[0..2] the mouse location where an op takes one
-static_assert(EE_SCREENS_MF_TYPE_FARM == kUnitTypeFarm && EE_SCREENS_MF_TYPE_ROBOTIC_FARM == kUnitTypeRoboticFarm &&
-                  EE_SCREENS_MF_KEY_ESCAPE == kKeyEscape && EE_SCREENS_MF_KEY_F1 == kKeyF1 && EE_SCREENS_MF_KEY_F3 == kKeyF3 &&
-                  EE_SCREENS_MF_KEY_F9 == kKeyF9,
-              "mouse_modes.rs' farms and keys");
 // ---- (the mouse modes' ops end)
 
 // The cursor's reads for one UpdateCursorKind (ee_screens cursor.rs asks them through ee_screenscpp_cursor)
@@ -292,6 +226,11 @@ extern "C" void ee_screenscpp_cur_set_shielded(bool inShielded) { sCurShielded =
 extern "C" bool ee_screenscpp_cur_convert(uintptr_t inCtx, uint32_t inIndex)
 { return EECanConvert(CR(inCtx)->mGroup->GetUnit(inIndex), CR(inCtx)->mTarget->mComplexUnit, sCurShielded); }
 extern "C" bool ee_screenscpp_cur_shielded() { return sCurShielded; }
+// UpdateCursorKind's reads (cursor_ffi.rs ee_screens_update_cursor_kind) and its result
+extern "C" EEPlayer* ee_screenscpp_cur_local_player() { return gWorld.GetCurrentPlayer(); }
+extern "C" EESelectedGroup* ee_screenscpp_cur_selected_group(EEPlayer* inPlayer) { return inPlayer->mSelectedGroup; }
+extern "C" EEComplexUnit* ee_screenscpp_cur_group_first(EESelectedGroup* inGroup) { return inGroup->GetFirstUnit(); }
+extern "C" void ee_screenscpp_cur_set_pointer(int32_t inKind) { gMouse->mPointer = inKind; }
 #define theRead (*static_cast<EEUIFMGCursorRead*>(inContext))
 #define theTarget theRead.mTarget
 #define theUnit theRead.mGroup->GetUnit(inA)
@@ -330,19 +269,6 @@ extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t
 #undef theUnit
 #undef theCargo
 
-// Picks the mouse cursor for the unit under it from what the selection can do to it (ee_screens cursor.rs, with
-// GetAttackStance, GetTransportCommand, GetRepairCommand, GetCommandOnUnit, Fn265D7A and EEGetAttackRangeKind)
-void EEUIFMainGame::UpdateCursorKind()
-{
-    EEUIFMGCursorRead theRead;
-    theRead.mForm = this;
-    theRead.mPlayer = gWorld.GetCurrentPlayer();
-    theRead.mGroup = theRead.mPlayer->mSelectedGroup;
-    theRead.mFirst = theRead.mGroup->GetFirstUnit();
-    theRead.mTarget = NULL;
-    gMouse->mPointer = ee_screens_cursor_kind(&theRead);
-}
-
 // the wall's and the gate's members from mState / mUnitClass on as mouse_modes.rs' records
 static_assert(offsetof(EEUIBuildWall, mPlayer) - offsetof(EEUIBuildWall, mState) == offsetof(EeScreensBuildWallFields, player) &&
                   offsetof(EEUIBuildWall, mEnd) - offsetof(EEUIBuildWall, mState) == offsetof(EeScreensBuildWallFields, end) &&
@@ -354,19 +280,16 @@ static_assert(offsetof(EEUIBuildWall, mPlayer) - offsetof(EEUIBuildWall, mState)
 // builds each segment and chains from its end; a right click cancels; moving previews the wall ghosts
 void EEUIBuildWall::Update(const GE2DPoint& inLocation)
 {
-    EEUIFMGFormCall theCall(gUIManager->GetMainGameForm());
-    theCall.mWall = this;
-    ee_screens_wall_update(&theCall, reinterpret_cast<EeScreensBuildWallFields*>(&this->mState), inLocation.GetX(),
-                           inLocation.GetY());
+    ee_screens_wall_update(EEUIFMGFormCall(gUIManager->GetMainGameForm(), this).Ptr(),
+                           reinterpret_cast<EeScreensBuildWallFields*>(&this->mState), inLocation.GetX(), inLocation.GetY());
 }
 
 // Tracks the mouse in gate placement (ee_screens mouse_modes.rs gate_update): a gate ghost on the wall under the
 // mouse, built on a left click, cancelled on a right click
 void EEUIBuildGate::Update(const GE2DPoint& inLocation)
 {
-    EEUIFMGFormCall theCall(gUIManager->GetMainGameForm());
-    theCall.mGate = this;
-    ee_screens_gate_update(&theCall, reinterpret_cast<EeScreensBuildGateFields*>(&this->mUnitClass), inLocation.GetX(),
+    ee_screens_gate_update(EEUIFMGFormCall(gUIManager->GetMainGameForm(), this).Ptr(),
+                           reinterpret_cast<EeScreensBuildGateFields*>(&this->mUnitClass), inLocation.GetX(),
                            inLocation.GetY());
 }
 

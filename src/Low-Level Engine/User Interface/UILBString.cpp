@@ -37,59 +37,50 @@
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
 
 // The Rust list box's ops that do not depend on T (ee_ui listobj.rs; UIListBoxRust<T>::Op answers the rest):
 // UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's, the keys
-intptr_t UIObjHost::List(UIControl* l, EeUiOp inOp, intptr_t a, intptr_t b, float* f)
+#define lst static_cast<UIControl*>(inObj)
+#define theBar reinterpret_cast<UIScrollBar*>(a)
+#define thePoll reinterpret_cast<TMPoll*>(a)
+#define theLine reinterpret_cast<GELine*>(a)
+#define theRhombus reinterpret_cast<GERhombus*>(a)
+EE_UI_CASE(list_edit_key)
 {
-    UIScrollBar* theBar = reinterpret_cast<UIScrollBar*>(a);
-    TMPoll* thePoll = reinterpret_cast<TMPoll*>(a);
-    GELine* theLine = reinterpret_cast<GELine*>(a);
-    GERhombus* theRhombus = reinterpret_cast<GERhombus*>(a);
-    intptr_t r = 0;
-    if (UIObjHost::Base(l, inOp, a, f, &r) || UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
-        return r;
-    switch (inOp) {
-    case EeUiOp::EditKey:
-        switch (a) {
-        case 6: return UIControl::HomeKeyPressed();
-        case 7: return UIControl::EndKeyPressed();
-        case 8: return UIControl::UpKeyPressed();
-        case 9: return UIControl::DownKeyPressed();
-        default: return UIControl::EnterKeyPressed();
-        }
-    case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
-    case EeUiOp::PollDelete: delete thePoll; break;
-    case EeUiOp::PollRunning: return thePoll->GetIsRunning();
-    case EeUiOp::PollPoll: return thePoll->Poll();
-    case EeUiOp::PollStart: thePoll->Start(); break;
-    case EeUiOp::PollStop: thePoll->Stop(); break;
-    case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus();
-    case EeUiOp::RhombusDelete: delete theRhombus; break;
-    case EeUiOp::LineCreate:
-        return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f),
-                                     GEColor(0.0f, 0.0f, 0.0f), 1.0f);
-    case EeUiOp::LineDelete: delete theLine; break;
-    case EeUiOp::DrawCountDecrement: l->UIControl::DrawTextA(); break;
-    case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
-    case EeUiOp::BaseMouseDoublePressed: return l->UIControl::MouseLButtonDoublePressed();
-    case EeUiOp::CreateScrollBar:
-        return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(),
-                                          l->GetBorderThickness());
-    case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
-    case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
-    case EeUiOp::BarValue: return theBar->GetSlider()->GetCurrentRangeValue();
-    case EeUiOp::BarMax: return theBar->GetSlider()->GetMaxRange();
-    case EeUiOp::BarSetValue: theBar->SetCurrentRangeValue((unsigned long)b); break;
-    case EeUiOp::BarIncrementBy: theBar->IncrementBy((long)b); break;
-    default: break;
+    switch (a) {
+    case 6: return UIControl::HomeKeyPressed();
+    case 7: return UIControl::EndKeyPressed();
+    case 8: return UIControl::UpKeyPressed();
+    case 9: return UIControl::DownKeyPressed();
+    default: return UIControl::EnterKeyPressed();
     }
-    return 0;
 }
-intptr_t UIListBoxHostOp(UIControl* inList, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
-{
-    return UIObjHost::List(inList, inOp, a, b, f);
-}
+EE_UI_CASE(list_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
+EE_UI_VOID(list_poll_delete) { delete thePoll; }
+EE_UI_CASE(list_poll_running) { return thePoll->GetIsRunning(); }
+EE_UI_CASE(list_poll_poll) { return thePoll->Poll(); }
+EE_UI_VOID(list_poll_start) { thePoll->Start(); }
+EE_UI_VOID(list_poll_stop) { thePoll->Stop(); }
+EE_UI_CASE(list_rhombus_create) { return (intptr_t) new GERhombus(); }
+EE_UI_VOID(list_rhombus_delete) { delete theRhombus; }
+EE_UI_CASE(list_line_create) { return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
+EE_UI_VOID(list_line_delete) { delete theLine; }
+EE_UI_VOID(list_draw_count_decrement) { lst->UIControl::DrawTextA(); }
+EE_UI_VOID(list_set_bg_rectangle) { lst->SetBgRectangle(UIObjHost::Rect(f)); }
+EE_UI_CASE(list_base_mouse_double_pressed) { return lst->UIControl::MouseLButtonDoublePressed(); }
+EE_UI_CASE(list_create_scroll_bar) { return (intptr_t) new UIScrollBar(lst->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, lst->GetForm(), lst->GetIndex(), lst->GetBorderThickness()); }
+EE_UI_VOID(list_bar_set_range) { theBar->SetRange(0, (unsigned long)b); }
+EE_UI_VOID(list_bar_set_page_size) { theBar->SetPageSize((unsigned long)b); }
+EE_UI_CASE(list_bar_value) { return theBar->GetSlider()->GetCurrentRangeValue(); }
+EE_UI_CASE(list_bar_max) { return theBar->GetSlider()->GetMaxRange(); }
+EE_UI_VOID(list_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b); }
+EE_UI_VOID(list_bar_increment_by) { theBar->IncrementBy((long)b); }
+#undef theRhombus
+#undef theLine
+#undef thePoll
+#undef theBar
+#undef lst
 
 // Draws the scroll bar text and each visible line of the string list box, clipped by the form
 long UILBString::DrawTextA()

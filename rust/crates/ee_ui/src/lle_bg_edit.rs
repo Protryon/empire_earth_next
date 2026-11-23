@@ -31,7 +31,7 @@ pub(crate) fn background_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Optio
 
 lle_host!(
     /// The backgrounds' host: [`background_call`], then `UIBackgroundHost::Op`.
-    ee_ui_background_host => background_call, ee_uicpp_background_host
+    ee_ui_background_host => background_call, [crate::lle_hosts::background]
 );
 
 /// The keyboard keys of `EditKey` 14..16 (`kKeyA`, `kKeyL`, `kKeyReturn` just pressed).
@@ -73,7 +73,7 @@ pub(crate) fn edit_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isiz
 
 lle_host!(
     /// The edit boxes' host: [`edit_call`], then `UIEditBoxRust::Op`.
-    ee_ui_edit_host => edit_call, ee_uicpp_edit_host
+    ee_ui_edit_host => edit_call, [crate::lle_hosts::base, crate::lle_hosts::media, crate::lle_hosts::part, crate::lle_hosts::edit]
 );
 
 #[cfg(test)]

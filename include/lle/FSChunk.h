@@ -18,14 +18,7 @@ public:
     // implicit copy ctor (0x41b2) and operator= (0x41f1), emitted with File System.cpp's inlines
 
     // the chunk's size once its header is loaded; false before that
-    bool GetChunkSize(unsigned long& outSize) const
-    {
-        uint32_t theSize = 0;
-        if (!ee_fs_chunk_size(&this->mState, &theSize))
-            return false;
-        outSize = theSize;
-        return true;
-    }
+    bool GetChunkSize(unsigned long& outSize) const { return ee_fs_chunk_size(&this->mState, &outSize); }
     // the header if needed, then the chunk data read and decompressed
     long LoadChunkFromFile(FSFile& inFile) { return ee_fs_chunk_load_from_file(&this->mState, &inFile); }
     // creates the persistent object registered for the chunk's tag and loads it from the chunk data

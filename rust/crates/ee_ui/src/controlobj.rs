@@ -115,6 +115,12 @@ pub enum EeUiControlCall {
     CaptureKeyboard = 17,
     /// `CaptureMouse()`.
     CaptureMouse = 18,
+    /// `SetBgColor(f[0..3])`: the background rhombus's colour, then the (virtual) `SetDirty(true)`.
+    SetBgColor = 19,
+    /// `SetBgOpacity(f[0])`: whether the background draws, the rhombus's opacity.
+    SetBgOpacity = 20,
+    /// `SetBorderThickness(a)`, then the (virtual) `SetDirty(true)`.
+    SetBorderThickness = 21,
 }
 
 /// The background rhombus (the rhombus ops' `a`; 1 is its copy, `RhombusCopy`'s target).
@@ -503,6 +509,27 @@ impl Ctl {
             C::SetTrigger => self.set_trigger(a as c_ulong, b),
             C::CaptureKeyboard => self.capture_keyboard(),
             C::CaptureMouse => self.capture_mouse(),
+            C::SetBgColor => {
+                let bg = self.get(|r| r.mBgRhombus) as isize;
+                let h = self.host();
+                let rgb = [buf[0], buf[1], buf[2]];
+                crate::draw2d::rhombus_set_color(bg, rgb, || {
+                    h.op_f(Op::RhombusSetColor, BG, 0, 0, 0, &mut [buf[0], buf[1], buf[2], 0.0])
+                });
+                self.op(Op::SetDirty, 1, 0);
+            }
+            C::SetBgOpacity => {
+                self.set(|r| r.mHasBgOpacity = buf[0] != 0.0);
+                let bg = self.get(|r| r.mBgRhombus) as isize;
+                let h = self.host();
+                crate::draw2d::rhombus_set_opacity(bg, buf[0], || {
+                    h.op_f(Op::RhombusSetOpacity, BG, 0, 0, 0, &mut [buf[0], 0.0, 0.0, 0.0])
+                });
+            }
+            C::SetBorderThickness => {
+                self.set(|r| r.mBorderThickness = a as c_ulong);
+                self.op(Op::SetDirty, 1, 0);
+            }
         }
         0
     }

@@ -23,7 +23,6 @@ extern template class LLE_API UIListBox<UWideString>;
 #endif
 
 class LLE_API UILBString : public UIListBox<UWideString> {
-    friend struct UILBStringRust;           // UILBString.cpp: the Rust type-to-find's questions (ee_ui find_key.rs)
 public:
     UILBString(unsigned long inId, std::vector<UWideString>& inData, GEFont* inFont, bool inAutoSelect,
                const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
@@ -55,7 +54,6 @@ public:
     GEText* GetGEText() const { return this->mText; }  // ICF-folded (0x1005966a)
     GEText* GetCopiedGEText() const { return this->mCopiedText; }   // the draw pass's text (UI round 13: for the hosts)
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat);
-private:
     GEText* mText;                          // +0x134
     GEText* mCopiedText;                    // +0x138 drawing
 };

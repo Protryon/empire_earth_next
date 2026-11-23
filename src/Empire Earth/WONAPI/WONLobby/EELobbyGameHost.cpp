@@ -25,6 +25,7 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_lobby/eegame.h"
 #include "rust/won_lobby/eexfer.h"
+#include "ee/wonapi/WONLobbyGuard.h"
 
 using namespace WONAPI;
 
@@ -85,32 +86,8 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
         static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->UpdateTransferProgress((int)b, (int)c);
         return 0;
     case Op::BytesRead: return (intptr_t) static_cast<RecvChunkOp*>(anOp)->GetRecvOp()->GetBytesRead();
-    case Op::NewSocket: {
-        QueueSocket* aNew = new QueueSocket(0);
-        aNew->AddRef();
-        return (intptr_t) static_cast<AsyncSocket*>(aNew);
-    }
     case Op::Bind: return aSocket->Fn2B0D90((unsigned short)b, 0);
-    case Op::RepeatAccept:
-        aSocket->SetRepeatCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientAccepted));
-        aSocket->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::Accept));
-        return 0;
-    case Op::QueueSend:
-        aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientClosed));
-        aSocket->QueueOp(new SendFileOp(std::string(reinterpret_cast<const char*>(b), (size_t)c)), -1);
-        aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Close), -1);
-        return 0;
     case Op::HostValid: return aTransfer->mHost.IsValid() ? 1 : 0;
-    case Op::QueueDownload: {
-        aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientClosed));
-        SmartPtr<SocketOp> theOp = new SocketOp(EeWonCoreSocketOp::RecvBytes);
-        theOp->SetCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnFileReceived));
-        theOp->SetFilePath(std::string(reinterpret_cast<const char*>(b), (size_t)c));
-        theOp->SetProgressCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnProgress), 10000);
-        aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, &aTransfer->mHost), -1);
-        aSocket->QueueOp(theOp.mPtr, -1);
-        return 0;
-    }
     case Op::Open: return (intptr_t)PlatFOpen(reinterpret_cast<const char*>(a), "rb");
     case Op::Read: return (intptr_t)fread(reinterpret_cast<void*>(b), 1, (size_t)c, reinterpret_cast<FILE*>(a));
     case Op::Close: fclose(reinterpret_cast<FILE*>(a)); return 0;
@@ -118,6 +95,20 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::Send:
         return aSend->GetSocket()->Send(reinterpret_cast<const void*>(a), (unsigned long)b, reinterpret_cast<int*>(c));
     case Op::TimeLeft: return (intptr_t)aSend->TimeLeft();
+    // R6 WON round 34: the statements of the compound cases eesplit.rs composes (the sockets, the completions, the
+    // receive op and the queued ops)
+    case Op::NewQueueSocket: return (intptr_t) static_cast<AsyncSocket*>(new QueueSocket(0));
+    case Op::SetRepeatCompletion: aSocket->SetRepeatCompletion(new EELobbyTransferCompletion(aTransfer, (EeWonEeXferCall)b)); return 0;
+    case Op::SetRepeatAccept: aSocket->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::Accept)); return 0;
+    case Op::SetCloseCompletion: aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, (EeWonEeXferCall)b)); return 0;
+    case Op::QueueSendFile: aSocket->QueueOp(new SendFileOp(std::string(reinterpret_cast<const char*>(b), (size_t)c)), -1); return 0;
+    case Op::QueueCloseOp: aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Close), -1); return 0;
+    case Op::NewRecvBytes: return (intptr_t) static_cast<AsyncOp*>(new SocketOp(EeWonCoreSocketOp::RecvBytes));
+    case Op::OpSetCompletion: anOp->SetCompletion(new EELobbyTransferCompletion(aTransfer, (EeWonEeXferCall)b)); return 0;
+    case Op::OpSetFilePath: static_cast<SocketOp*>(anOp)->SetFilePath(std::string(reinterpret_cast<const char*>(b), (size_t)c)); return 0;
+    case Op::OpSetProgress: static_cast<SocketOp*>(anOp)->SetProgressCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnProgress), 10000); return 0;
+    case Op::QueueConnect: aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, &aTransfer->mHost), -1); return 0;
+    case Op::QueueOpOn: aSocket->QueueOp(static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(b)), -1); return 0;
     }
     return 0;
 }
@@ -126,22 +117,12 @@ typedef EeWonEeGameCall GC;
 
 static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 
-static intptr_t Threw(intptr_t inResult)
-{
-    if (inResult == INTPTR_MIN)
-        throw ReadBufferException("Attempt to read past end of buffer.");
-    return inResult;
-}
 
 // ---- the shell
 
-// Creates a lobby game with every game option 0, its eight slots numbered and no saved game file here
+// Creates a lobby game with every game option 0, its eight slots (the Rust game's) and no saved game file here
 EELobbyGame::EELobbyGame() : mRust(NULL)
 {
-    for (int i = 0; i < 8; i++) {
-        this->mSlots[i].mGame = this;
-        this->mSlots[i].mIndex = (unsigned char)i;
-    }
     this->mRust = ee_won_eegame_new_model(this, EELobbyGameHost);
 }
 
@@ -166,13 +147,13 @@ void EELobbyGame::HandleHostGameHook(LobbyClient* inClient) { this->RCall(GC::Ha
 void EELobbyGame::GetJoinGameRequestHook(WriteBuffer& outBuffer) { this->RCall(GC::GetJoinGameRequestHook, (intptr_t)&outBuffer); }
 short EELobbyGame::HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* inClient)
 {
-    return (short)Threw(this->RCall(GC::HandleJoinGameRequestHook, (intptr_t)&inBuffer, (intptr_t)inClient));
+    return (short)WonRethrow(this->RCall(GC::HandleJoinGameRequestHook, (intptr_t)&inBuffer, (intptr_t)inClient));
 }
 void EELobbyGame::GetJoinGameReplyHook(LobbyClient* inClient, WriteBuffer& outBuffer)
 {
     this->RCall(GC::GetJoinGameReplyHook, (intptr_t)inClient, (intptr_t)&outBuffer);
 }
-void EELobbyGame::HandleJoinGameReplyHook(ReadBuffer& inBuffer) { Threw(this->RCall(GC::HandleJoinGameReplyHook, (intptr_t)&inBuffer)); }
+void EELobbyGame::HandleJoinGameReplyHook(ReadBuffer& inBuffer) { WonRethrow(this->RCall(GC::HandleJoinGameReplyHook, (intptr_t)&inBuffer)); }
 void EELobbyGame::HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPlayer)
 {
     this->RCall(GC::HandlePlayerLeftHook, (intptr_t)inClient, (intptr_t) static_cast<EELobbyPlayer*>(inPlayer));
@@ -180,11 +161,11 @@ void EELobbyGame::HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPla
 void EELobbyGame::HandlePlayerJoinedHook(LobbyClient* inClient) { this->RCall(GC::HandlePlayerJoinedHook, (intptr_t)inClient); }
 void EELobbyGame::WriteSummaryHook(WriteBuffer& outBuffer) { this->RCall(GC::WriteSummaryHook, (intptr_t)&outBuffer); }
 void EELobbyGame::WriteDetailsHook(WriteBuffer& outBuffer) { this->RCall(GC::WriteDetailsHook, (intptr_t)&outBuffer); }
-bool EELobbyGame::ReadSummaryHook(ReadBuffer& inBuffer) { return Threw(this->RCall(GC::ReadSummaryHook, (intptr_t)&inBuffer)) != 0; }
-bool EELobbyGame::ReadDetailsHook(ReadBuffer& inBuffer) { return Threw(this->RCall(GC::ReadDetailsHook, (intptr_t)&inBuffer)) != 0; }
+bool EELobbyGame::ReadSummaryHook(ReadBuffer& inBuffer) { return WonRethrow(this->RCall(GC::ReadSummaryHook, (intptr_t)&inBuffer)) != 0; }
+bool EELobbyGame::ReadDetailsHook(ReadBuffer& inBuffer) { return WonRethrow(this->RCall(GC::ReadDetailsHook, (intptr_t)&inBuffer)) != 0; }
 void EELobbyGame::HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom)
 {
-    Threw(this->RCall(GC::HandleGameMessageHook, inType, (intptr_t)&inBuffer, (intptr_t)inFrom));
+    WonRethrow(this->RCall(GC::HandleGameMessageHook, inType, (intptr_t)&inBuffer, (intptr_t)inFrom));
 }
 // Returns the text for a refused join: not in the saved game, wrong version or modified game files
 GUIString EELobbyGame::GetStatusStringHook(short inStatus)
@@ -197,21 +178,13 @@ GUIString EELobbyGame::GetStatusStringHook(short inStatus)
     return gEmptyGUIString;
 }
 
-// ---- the slot view (EELobbyPlayerSlot's methods on the Rust game's slot)
-
-intptr_t EELobbyPlayerSlot::RCall(EeWonEeGameCall inCall, intptr_t b, intptr_t c)
-{
-    return this->mGame->RCall(inCall, this->mIndex, b, c);
-}
-unsigned char EELobbyPlayerSlot::Option(int inOption) { return (unsigned char)this->RCall(GC::SlotRawOption, inOption); }
-
 // ---- the lobby player (EELobbyPlayer.cpp's)
 
 // Creates a lobby game player in slot 0 with no slot attached
 EELobbyPlayer::EELobbyPlayer()
 {
     this->mSlot = 0;
-    this->mPlayerSlot = NULL;
+    this->mSlotGame = NULL;
 }
 // Destroys the lobby game player (members only)
 EELobbyPlayer::~EELobbyPlayer() {}
@@ -232,34 +205,21 @@ bool EELobbyPlayer::IsTeammate(LobbyPlayer* inOther)
 // Returns the team of the player's slot, or 0 when the player has no slot
 unsigned char EELobbyPlayer::GetTeam()
 {
-    if (this->mPlayerSlot != NULL)
-        return this->mPlayerSlot->Option(1);
+    if (this->mSlotGame != NULL)
+        return (unsigned char)this->mSlotGame->RCall(GC::SlotRawOption, this->mSlotIndex, 1);
     return 0;
 }
 
 // ---- the host
 
-static intptr_t Read(EeWonEeGameOp inOp, ReadBuffer* inBuffer)
+// a message's text as a new GUIStringData with one reference (ReadWString's; a short buffer throws)
+static GUIStringData* ReadText(ReadBuffer* inBuffer)
 {
-    typedef EeWonEeGameOp Op;
-    try {
-        switch (inOp) {
-        case Op::ReadByte: return inBuffer->ReadByte();
-        case Op::ReadShort: return inBuffer->ReadShort();
-        case Op::ReadBool: return inBuffer->ReadBool() ? 1 : 0;
-        case Op::ReadLong: return inBuffer->ReadLong();
-        case Op::ReadWString: {
-            std::wstring aText;
-            inBuffer->ReadWString(aText, 2);
-            GUIStringData* aData = new GUIStringData(aText);
-            aData->AddRef();
-            return (intptr_t)aData;
-        }
-        default: return 0;
-        }
-    } catch (ReadBufferException&) {
-        return INTPTR_MIN;
-    }
+    std::wstring aText;
+    inBuffer->ReadWString(aText, 2);
+    GUIStringData* aData = new GUIStringData(aText);
+    aData->AddRef();
+    return aData;
 }
 
 static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
@@ -273,8 +233,12 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     switch (inOp) {
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case Op::ReadByte: case Op::ReadShort: case Op::ReadBool: case Op::ReadLong: case Op::ReadWString:
-        return Read(inOp, reinterpret_cast<ReadBuffer*>(a));
+    // a read past the message's end: the exception kept (WonGuard), kWonThrown answered, the shell rethrows it
+    case Op::ReadByte: return WON_GUARDED(reinterpret_cast<ReadBuffer*>(a)->ReadByte());
+    case Op::ReadShort: return WON_GUARDED(reinterpret_cast<ReadBuffer*>(a)->ReadShort());
+    case Op::ReadBool: return WON_GUARDED(reinterpret_cast<ReadBuffer*>(a)->ReadBool() ? 1 : 0);
+    case Op::ReadLong: return WON_GUARDED(reinterpret_cast<ReadBuffer*>(a)->ReadLong());
+    case Op::ReadWString: return WON_GUARDED(ReadText(reinterpret_cast<ReadBuffer*>(a)));
     case Op::Available: return reinterpret_cast<ReadBuffer*>(a)->Available();
     case Op::AppendByte: aWrite->AppendByte((unsigned char)b); return 0;
     case Op::AppendShort: aWrite->AppendShort((short)b); return 0;
@@ -291,11 +255,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
     case Op::PlayerSlot: return aPlayer->GetSlot();
     case Op::PlayerTeam: return aPlayer->GetTeam();
-    case Op::PlayerAttach:
-        aPlayer->mPlayerSlot = &aGame->mSlots[b];
-        aPlayer->mSlot = (unsigned char)b;
-        return 0;
-    case Op::PlayerDetach: aPlayer->mPlayerSlot = NULL; return 0;
+    case Op::PlayerDetach: aPlayer->mSlotGame = NULL; return 0;
     case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::NotifyStagingChange: LobbyNotifyStagingChange(); return 0;
@@ -325,9 +285,6 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     }
     case Op::StringsEqual: return EELobbyStr(a) == EELobbyStr(b) ? 1 : 0;
     case Op::TransferNew: return (intptr_t) new EELobbyFileTransfer;
-    case Op::TransferSetFileInfo:
-        aTransfer->mName = EELobbyStr(b);
-        return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::SetFileInfo, (uint32_t)c, (uint32_t)d);
     case Op::TransferSetSavesPath: {
         GUIString thePath = EELobbyFn2988E9();
         thePath.append(aTransfer->mName);
@@ -338,16 +295,18 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::TransferName: return (intptr_t)aTransfer->mName.mData.get();
     case Op::TransferSize: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 2, 0);
     case Op::TransferChecksum: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 3, 0);
-    case Op::TransferSetHost: {
-        IPAddr theAddress(aGame->GetAddress());
-        theAddress.SetPort((unsigned short)b);
-        aTransfer->mHost = theAddress;
-        return 0;
-    }
     case Op::TransferStop: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Stop, 0, 0);
     case Op::TransferCloseClients: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::CloseClients, 0, 0);
     case Op::TransferIsFileHere: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::IsFileHere, 0, 0);
     case Op::TransferDownload: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Download, 0, 0);
+    // R6 WON round 34: the statements of the compound cases eesplit.rs composes
+    case Op::PlayerSetSlotGame: aPlayer->mSlotGame = aGame; return 0;
+    case Op::PlayerSetSlotIndex: aPlayer->mSlotIndex = (unsigned char)b; return 0;
+    case Op::PlayerSetSlot: aPlayer->mSlot = (unsigned char)b; return 0;
+    case Op::TransferSetName: aTransfer->mName = EELobbyStr(b); return 0;
+    case Op::TransferRust: return (intptr_t)aTransfer->mRust;
+    case Op::TransferHostFromGame: aTransfer->mHost = aGame->GetAddress(); return 0;
+    case Op::TransferHostSetPort: aTransfer->mHost.SetPort((unsigned short)b); return 0;
     }
     return 0;
 }

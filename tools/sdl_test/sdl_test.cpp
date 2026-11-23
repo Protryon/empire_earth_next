@@ -36,10 +36,9 @@ static void Check(bool inOk, const char* inText, int inLine)
     }
 }
 
-// GX's test hook (GX.h's harness seam): counts the frames GX was asked to present
-extern "C" void GXTestSetPresentHook(void (*inHook)(void* inWindow, GXSurface* inFrame));
+// GX's test hook (GX.h's harness seam, rust/render/gx.h): counts the frames GX was asked to present (the window, the frame)
 static int sPresented;
-static void OnPresent(void*, GXSurface*)
+static void OnPresent(void*, void*)
 {
     sPresented++;
 }
