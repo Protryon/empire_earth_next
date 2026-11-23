@@ -66,9 +66,9 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::InitErrorClear: p->mInitError = GetEmptyGUIStringData(); return 0;
     case Op::ParserNew: sPrvParser = new ConfigParser; return 0;
     case Op::ParserWarningsAsErrors: sPrvParser->SetWarningsAsErrors(true); return 0;
-    case Op::ParserOpenDefault: return WonGuard([&] { return sPrvParser->OpenFile(WONAPICore::GetDefaultFileDirectory() + LobbyConfig::mDefaultFileName); });
+    case Op::ParserOpenDefault: return WON_GUARDED(sPrvParser->OpenFile(WONAPICore::GetDefaultFileDirectory() + LobbyConfig::mDefaultFileName));
     case Op::ErrorNotFound: p->mInitError = GUIString("Couldn't find " + LobbyConfig::mDefaultFileName); return 0;
-    case Op::ParseTopLevel: return WonGuard([&] { return p->mConfig->ParseTopLevel(*sPrvParser, NULL); });
+    case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
     case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
     case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
     case Op::LobbyPortFromConfig: p->mLobbyPort = p->mConfig->mLobbyPort; return 0;
@@ -79,10 +79,10 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::DefinesAtEnd: return (sPrvDefine == p->mConfig->mDefines.end()) ? 1 : 0;
     case Op::DefineAdd: sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false); return 0;
     case Op::DefineNext: ++sPrvDefine; return 0;
-    case Op::ReadMaster: return WonGuard([&] { return sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser); });
+    case Op::ReadMaster: return WON_GUARDED(sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser));
     case Op::ErrorFromConfig: p->mInitError = sPrvComponentConfig->mConfigError; return 0;
-    case Op::LogicMgrInit: return WonGuard([&] { return PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }); });
-    case Op::InitFuncRun: return WonGuard([&] { return PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }); });
+    case Op::LogicMgrInit: return WON_GUARDED(PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }));
+    case Op::InitFuncRun: return WON_GUARDED(PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }));
     case Op::CrcNew: sPrvCrc = CRC16(); return 0;
     case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
     case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;

@@ -28,6 +28,9 @@ template <class F> intptr_t WonGuardV(F f)
 {
     return WonGuard([&] { f(); return 0; });
 }
+// an op's one guarded statement: the expression's value (or kWonThrown), the statement run (0, or kWonThrown)
+#define WON_GUARDED(...) ::WONAPI::WonGuard([&] { return (intptr_t)(__VA_ARGS__); })
+#define WON_GUARDED_V(...) ::WONAPI::WonGuardV([&] { __VA_ARGS__; })
 // the Rust's answer, the kept exception rethrown when it is kWonThrown
 inline intptr_t WonRethrow(intptr_t inResult)
 {

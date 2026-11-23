@@ -232,12 +232,12 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     GameBrowserCtrlConfig* gb = static_cast<GameBrowserCtrlConfig*>(c);
     GameUserListCtrlConfig* gu = static_cast<GameUserListCtrlConfig*>(c);
     switch (inOp) {
-    case Op::BrowserBase: return WonGuard([&] { return (intptr_t)(gb->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::BrowserPathRead: return WonGuardV([&] { sCfgRdPath = (std::string)c->ReadString(false); });
-    case Op::BrowserPathIsFile: return WonGuard([&] { return (intptr_t)(URL(sCfgRdPath).GetType() == URLType_File); });
-    case Op::BrowserPathResolve: return WonGuardV([&] { sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath); });
-    case Op::BrowserSetHome: return WonGuardV([&] { gb->mBrowser->SetHomeLocation(sCfgRdPath); });
-    case Op::GameUserListBase: return WonGuard([&] { return (intptr_t)(gu->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::BrowserBase: return WON_GUARDED(gb->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
+    case Op::BrowserPathIsFile: return WON_GUARDED(URL(sCfgRdPath).GetType() == URLType_File);
+    case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
+    case Op::BrowserSetHome: return WON_GUARDED_V(gb->mBrowser->SetHomeLocation(sCfgRdPath));
+    case Op::GameUserListBase: return WON_GUARDED(gu->ContainerConfig::Virtual24(*(const std::string*)a));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }

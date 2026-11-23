@@ -299,18 +299,18 @@ intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a
 {
     typedef EeWonLobbyCfgRdOp Op;
     switch (inOp) {
-    case Op::ReadString: return WonGuard([&] { return (intptr_t)(Held(c->ReadString(false))); });
-    case Op::ReadColor: return WonGuard([&] { return (intptr_t)(c->ReadColor()); });
-    case Op::ReadInt: return WonGuard([&] { return (intptr_t)(c->ReadInt()); });
-    case Op::EnsureComma: return WonGuardV([&] { c->EnsureComma(); });
-    case Op::EndOfString: return WonGuard([&] { return (intptr_t)(c->EndOfString()); });
-    case Op::FindNamed: return WonGuard([&] { return (intptr_t)(c->Fn386860(std::string((const char*)a))); });
-    case Op::FindNamedText: return WonGuard([&] { return (intptr_t)(c->Fn386860((std::string)Txt(a))); });
+    case Op::ReadString: return WON_GUARDED(Held(c->ReadString(false)));
+    case Op::ReadColor: return WON_GUARDED(c->ReadColor());
+    case Op::ReadInt: return WON_GUARDED(c->ReadInt());
+    case Op::EnsureComma: return WON_GUARDED_V(c->EnsureComma());
+    case Op::EndOfString: return WON_GUARDED(c->EndOfString());
+    case Op::FindNamed: return WON_GUARDED(c->Fn386860(std::string((const char*)a)));
+    case Op::FindNamedText: return WON_GUARDED(c->Fn386860((std::string)Txt(a)));
     case Op::TextRelease: ((GUIStringData*)a)->Release(); return 0;
     case Op::TextNameIndex: return (intptr_t)(ee_won_gui_cfg_name((int)b, ((GUIStringData*)a)->mText, ((GUIStringData*)a)->mLength, sizeof(wchar_t)));
     case Op::TextIsNoCase: return (Txt(a).CompareNoCase((const char*)b, 0) == 0) ? 1 : 0;
-    case Op::Throw: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a)); });
-    case Op::ThrowWithText: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)); });
+    case Op::Throw: return WON_GUARDED_V(throw ConfigObjectException(std::string((const char*)a)));
+    case Op::ThrowWithText: return WON_GUARDED_V(throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)));
     }
     return 0;
 }
@@ -323,15 +323,15 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
     ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
     switch (inOp) {
-    case Op::ChatBase: return WonGuard([&] { return (intptr_t)(cc_->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ChatBase: return WON_GUARDED(cc_->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::ChatSetField: cc_->mChatCtrl->SetField((int)a, b); return 0;
-    case Op::RoomBase: return WonGuard([&] { return (intptr_t)(rl->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::RoomSetPrefixRead: return WonGuardV([&] { rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))); });
+    case Op::RoomBase: return WON_GUARDED(rl->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::RoomSetPrefixRead: return WON_GUARDED_V(rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))));
     case Op::RoomSetField: rl->mRoomLabel->SetField((int)a, b); return 0;
-    case Op::RoomSetFieldBoolRead: return WonGuardV([&] { rl->mRoomLabel->SetField((int)a, c->ReadBool()); });
-    case Op::UserListBase: return WonGuard([&] { return (intptr_t)(ul->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::ServerBase: return WonGuard([&] { return (intptr_t)(sl->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::ServerNamedBase: return WonGuard([&] { return (intptr_t)(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b)); });
+    case Op::RoomSetFieldBoolRead: return WON_GUARDED_V(rl->mRoomLabel->SetField((int)a, c->ReadBool()));
+    case Op::UserListBase: return WON_GUARDED(ul->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::ServerBase: return WON_GUARDED(sl->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::ServerNamedBase: return WON_GUARDED(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b));
     case Op::ServerCfg: return (intptr_t)(sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b));
     case Op::ServerPushColumn: return (intptr_t)(sl->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
     case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(sl->mServerList, (std::string)Txt(a)));
@@ -339,7 +339,7 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     case Op::AsMultiList: return (intptr_t)(dynamic_cast<MultiListArea*>((Component*)a));
     case Op::ServerHeaderFrom: return (intptr_t)(sl->mHeader = dynamic_cast<MultiListHeader*>((Component*)a));
     case Op::ServerHeaderIsNull: return (sl->mHeader == NULL) ? 1 : 0;
-    case Op::ReadCombo: return WonGuard([&] { return (intptr_t)(SafeConfigGetComponent<ComboBox*>(c->ReadComponent(), "ComboBox")); });
+    case Op::ReadCombo: return WON_GUARDED(SafeConfigGetComponent<ComboBox*>(c->ReadComponent(), "ComboBox"));
     case Op::ServerColumnsInc: ((MultiListArea*)a)->SetNumColumns(++sl->mNumColumns); return 0;
     case Op::ServerNumColumns: return (intptr_t)(sl->mNumColumns);
     case Op::ListDynamicColumn: ((MultiListArea*)a)->SetDynamicSizeColumn((int)b); return 0;

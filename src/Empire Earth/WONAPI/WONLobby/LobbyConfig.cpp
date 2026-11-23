@@ -77,7 +77,7 @@ static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intp
     case Op::DefineReadValue: ((StringParser*)a)->ReadString(sConfValue, false); return 0;
     case Op::DefineNameEmpty: return (sConfName.empty()) ? 1 : 0;
     case Op::DefineStore: c->mDefines[sConfName] = sConfValue; return 0;
-    case Op::BaseHandleValue: return WonGuard([&] { return c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc); });
+    case Op::BaseHandleValue: return WON_GUARDED(c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc));
     }
     return 0;
 }

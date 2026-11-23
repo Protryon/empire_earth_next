@@ -30,8 +30,8 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
     CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
     switch (inOp) {
-    case Op::CreditsBase: return WonGuard([&] { return (intptr_t)(cr->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::CreditsAddLine: return WonGuard([&] { return (intptr_t)(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)); });
+    case Op::CreditsBase: return WON_GUARDED(cr->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }

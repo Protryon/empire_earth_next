@@ -73,13 +73,13 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     CrossPromotionButtonConfig* cp = static_cast<CrossPromotionButtonConfig*>(c);
     ImageTextButtonConfig* it = static_cast<ImageTextButtonConfig*>(c);
     switch (inOp) {
-    case Op::CrossBase: return WonGuard([&] { return (intptr_t)(cp->ComponentConfig::Virtual24(*(const std::string*)a)); });
-    case Op::CrossDefaultImageRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)); });
-    case Op::CrossDefaultBrowseRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)); });
-    case Op::ImageTextBase: return WonGuard([&] { return (intptr_t)(it->ComponentConfig::Virtual24(*(const std::string*)a)); });
-    case Op::ImageTextFontRead: return WonGuardV([&] { it->mImageTextButton->mFont = c->ReadFont(); });
-    case Op::ImageTextTextRead: return WonGuardV([&] { it->mImageTextButton->mText = c->ReadString(false); });
-    case Op::ImageTextBrowseRead: return WonGuardV([&] { it->mImageTextButton->mBrowse = c->ReadString(false); });
+    case Op::CrossBase: return WON_GUARDED(cp->ComponentConfig::Virtual24(*(const std::string*)a));
+    case Op::CrossDefaultImageRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)));
+    case Op::CrossDefaultBrowseRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)));
+    case Op::ImageTextBase: return WON_GUARDED(it->ComponentConfig::Virtual24(*(const std::string*)a));
+    case Op::ImageTextFontRead: return WON_GUARDED_V(it->mImageTextButton->mFont = c->ReadFont());
+    case Op::ImageTextTextRead: return WON_GUARDED_V(it->mImageTextButton->mText = c->ReadString(false));
+    case Op::ImageTextBrowseRead: return WON_GUARDED_V(it->mImageTextButton->mBrowse = c->ReadString(false));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }

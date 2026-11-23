@@ -143,6 +143,8 @@ template <class F> static intptr_t ReadOr(F f)
         return INTPTR_MIN;
     }
 }
+#define READ_OR(...) ReadOr([&] { return (intptr_t)(__VA_ARGS__); })
+#define READ_OR_V(...) ReadOr([&] { __VA_ARGS__; return (intptr_t)0; })
 static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonModelBufOp Op;
@@ -155,8 +157,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::BufData: return (intptr_t)(rb->data());
     case Op::BufLength: return (intptr_t)(rb->length());
     case Op::BufSetPos: rb->SetPos((int)b); return 0;
-    case Op::ReadShort: return ReadOr([&] { return (intptr_t)rb->ReadShort(); });
-    case Op::ReadBool: return ReadOr([&] { return (intptr_t)rb->ReadBool(); });
+    case Op::ReadShort: return READ_OR(rb->ReadShort());
+    case Op::ReadBool: return READ_OR(rb->ReadBool());
     case Op::WriteNew: return (intptr_t)(new WriteBuffer(0, true));
     case Op::WriteFree: delete wb; return 0;
     case Op::AppendBytes: wb->AppendBytes(reinterpret_cast<const void*>(b), (unsigned long)c); return 0;
@@ -182,8 +184,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::NameUtf16: SinkBytes(a, Utf16LE((std::wstring)g->GetName())); return 0;
     case Op::WriteSummaryHook: g->WriteSummaryHook(*wb); return 0;
     case Op::StoreSummary: g->M(LobbyMC::GameStoreSummary, a, b); return 0;
-    case Op::ReadSummaryHook: return ReadOr([&] { return (intptr_t)g->ReadSummaryHook(*rb); });
-    case Op::ReadDetailsHook: return ReadOr([&] { return (intptr_t)g->ReadDetailsHook(*rb); });
+    case Op::ReadSummaryHook: return READ_OR(g->ReadSummaryHook(*rb));
+    case Op::ReadDetailsHook: return READ_OR(g->ReadDetailsHook(*rb));
     case Op::SetHaveDetails: g->MSet(LobbyMF::GameHaveDetails, true); return 0;
     case Op::Ping: return (intptr_t)(g->GetPing());
     case Op::JoinRequestHook: g->GetJoinGameRequestHook(*wb); return 0;
@@ -197,7 +199,7 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::PlayerCreate: return (intptr_t)(Held(LobbyPlayer::CreatePlayer()));
     case Op::ClientSetPlayer: reinterpret_cast<LobbyClient*>(a)->SetPlayer(reinterpret_cast<LobbyPlayer*>(b)); return 0;
     case Op::PlayerSetPing: reinterpret_cast<LobbyPlayer*>(a)->SetPing((unsigned short)b); return 0;
-    case Op::JoinRequestHookRead: return ReadOr([&] { return (intptr_t)g->HandleJoinGameRequestHook(*rb, reinterpret_cast<LobbyClient*>(b)); });
+    case Op::JoinRequestHookRead: return READ_OR(g->HandleJoinGameRequestHook(*rb, reinterpret_cast<LobbyClient*>(b)));
     case Op::SetNumPlayers: g->MSet(LobbyMF::GameNumPlayers, (long)a); return 0;
     case Op::IterNew: return (intptr_t)(new LobbyClientSetIterator(reinterpret_cast<LobbyClientList*>(a)));
     case Op::IterHasMore: return (reinterpret_cast<LobbyClientSetIterator*>(a)->HasMore()) ? 1 : 0;
@@ -209,7 +211,7 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::HandleJoinRequest: return (intptr_t)(g->HandleJoinRequest(*rb, reinterpret_cast<LobbyClient*>(b), *reinterpret_cast<WriteBuffer*>(c)));
     case Op::FindClient: return (intptr_t)(g->FindClient((unsigned short)a));
     case Op::PlayerReadFrom: return (reinterpret_cast<LobbyPlayer*>(a)->ReadFromBuffer(*reinterpret_cast<ReadBuffer*>(b))) ? 1 : 0;
-    case Op::JoinReplyHookRead: return ReadOr([&] { g->HandleJoinGameReplyHook(*rb); return (intptr_t)0; });
+    case Op::JoinReplyHookRead: return READ_OR_V(g->HandleJoinGameReplyHook(*rb));
     case Op::StatusSuccess: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_Success_String)));
     case Op::StatusGameFull: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_GameFull_String)));
     case Op::StatusGameInProgress: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_GameInProgress_String)));
@@ -219,7 +221,7 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::StatusInvalidPassword: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_InvalidPassword_String)));
     case Op::StatusDuplicateName: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_DuplicateName_String)));
     case Op::StatusHook: return (intptr_t)(HeldText(g->GetStatusStringHook((short)a)));
-    case Op::PlayerReadData: return ReadOr([&] { return (intptr_t)pl->ReadData(*rb); });
+    case Op::PlayerReadData: return READ_OR(pl->ReadData(*rb));
     case Op::SelfSetPing: pl->SetPing((unsigned short)a); return 0;
     case Op::SelfSetReady: pl->SetReady(a != 0); return 0;
     case Op::PlayerPing: return (intptr_t)(pl->GetPing());
