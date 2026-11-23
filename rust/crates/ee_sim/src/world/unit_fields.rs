@@ -339,5 +339,9 @@ mod tests {
         assert_eq!(l.unit_class, 0x40 + std::mem::offset_of!(EeUnitsUnitFields, mUnitClass) as u64);
         assert_eq!(l.complex_owner, 0x100 + std::mem::offset_of!(EeUnitsComplexUnitFields, mOwner) as u64);
         assert_eq!(l.complex_herd, 0x100 + std::mem::offset_of!(EeUnitsComplexUnitFields, mHerd) as u64);
+        // an offset the layout names itself is kept (a test's made-up objects)
+        let mut k = crate::world::layout::EeWorldLayout { complex_owner: 8, ..Default::default() };
+        crate::world::layout::derive_record_members(&mut k);
+        assert_eq!(k.complex_owner, 8);
     }
 }

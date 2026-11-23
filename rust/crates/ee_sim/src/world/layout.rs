@@ -249,31 +249,37 @@ pub fn set(mut layout: EeWorldLayout) -> bool {
 }
 
 /// The offsets of the members the unit records hold (ee_sim world unit_fields.rs): the record's base plus the
-/// member's place in it (the C++ registers only the bases).
+/// member's place in it (the C++ registers only the bases; an offset already set is kept).
 pub fn derive_record_members(l: &mut EeWorldLayout) {
     use crate::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsUnitFields};
     use std::mem::offset_of;
-    l.unit_class = l.unit_fields + offset_of!(EeUnitsUnitFields, mUnitClass) as u64;
-    l.unit_complex_unit = l.unit_fields + offset_of!(EeUnitsUnitFields, mComplexUnit) as u64;
-    l.unit_stats = l.unit_fields + offset_of!(EeUnitsUnitFields, mStats) as u64;
-    l.complex_launcher_class = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mLauncherClass) as u64;
-    l.complex_active_group = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mActiveGroup) as u64;
-    l.complex_previous_part = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mPreviousPart) as u64;
-    l.complex_next_part = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mNextPart) as u64;
-    l.complex_home_base = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mHomeBase) as u64;
-    l.complex_container = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mContainer) as u64;
-    l.complex_last_attacker = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mLastAttacker) as u64;
-    l.complex_owner = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mOwner) as u64;
-    l.complex_holder = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mHolder) as u64;
-    l.complex_command = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mCommand) as u64;
-    l.complex_active_goal = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mActiveGoal) as u64;
-    l.complex_goal_state = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mGoalState) as u64;
-    l.complex_last_resource = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mLastResource) as u64;
+    // a layout that names a member itself (a test's made-up objects) keeps its own offset
+    fn fill(at: &mut u64, base: u64, offset: usize) {
+        if *at == 0 {
+            *at = base + offset as u64;
+        }
+    }
+    fill(&mut l.unit_class, l.unit_fields, offset_of!(EeUnitsUnitFields, mUnitClass));
+    fill(&mut l.unit_complex_unit, l.unit_fields, offset_of!(EeUnitsUnitFields, mComplexUnit));
+    fill(&mut l.unit_stats, l.unit_fields, offset_of!(EeUnitsUnitFields, mStats));
+    fill(&mut l.complex_launcher_class, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mLauncherClass));
+    fill(&mut l.complex_active_group, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mActiveGroup));
+    fill(&mut l.complex_previous_part, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mPreviousPart));
+    fill(&mut l.complex_next_part, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mNextPart));
+    fill(&mut l.complex_home_base, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mHomeBase));
+    fill(&mut l.complex_container, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mContainer));
+    fill(&mut l.complex_last_attacker, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mLastAttacker));
+    fill(&mut l.complex_owner, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mOwner));
+    fill(&mut l.complex_holder, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mHolder));
+    fill(&mut l.complex_command, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mCommand));
+    fill(&mut l.complex_active_goal, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mActiveGoal));
+    fill(&mut l.complex_goal_state, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mGoalState));
+    fill(&mut l.complex_last_resource, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mLastResource));
     l.complex_gathered_resource =
         l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mGatheredResource) as u64;
-    l.complex_mine = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mMine) as u64;
-    l.complex_herd = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mHerd) as u64;
-    l.complex_behavior = l.complex_unit_fields + offset_of!(EeUnitsComplexUnitFields, mBehavior) as u64;
+    fill(&mut l.complex_mine, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mMine));
+    fill(&mut l.complex_herd, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mHerd));
+    fill(&mut l.complex_behavior, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mBehavior));
 }
 
 /// The registered layout (None before the C++ registered it, as in the unit tests).
