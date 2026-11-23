@@ -538,8 +538,7 @@ mod tests {
     #[test]
     fn every_name_is_a_header_enumerator_comment() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../include/rust/sim");
-        let text =
-            String::from_utf8_lossy(&std::fs::read(root.join("unit_ids.h")).expect("the header")).into_owned();
+        let text = String::from_utf8_lossy(&std::fs::read(root.join("unit_ids.h")).expect("the header")).into_owned();
         for (name, id) in ACTION_NAMES.iter().chain(TRIGGER_NAMES.iter()) {
             let n = std::str::from_utf8(&name[..name.len() - 1]).unwrap();
             assert!(text.contains(&format!("Register(\"{n}\", {id})")), "{n} {id}");
