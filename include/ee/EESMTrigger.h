@@ -8,9 +8,12 @@
 #define EE_EESMTRIGGER_H
 
 #include <vector>
-#include "ee/EESMTConditionWrapper.h"
-#include "ee/EESMTEffectWrapper.h"
 #include "rust/sim/scenario.h"
+
+// a condition entry and an effect entry (new'd value-initialized: zeros, the End operator) are Rust records
+// (ee_scenario fields.rs)
+typedef EeScenarioTConditionWrapper EESMTConditionWrapper;
+typedef EeScenarioTEffectWrapper EESMTEffectWrapper;
 
 // the numbers (mConditionDuration .. mIsInCinematic) are EeScenarioTriggerFields (ee_scenario fields.rs)
 class EESMTrigger : public EeScenarioTriggerFields {

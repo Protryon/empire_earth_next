@@ -390,7 +390,8 @@ pub(crate) mod game {
     use std::os::raw::c_void;
 
     extern "C" {
-        fn ee_units_uc_host(
+        /// the class host (EEUnitClass.cpp; uc_class.rs's too)
+        pub(crate) fn ee_units_uc_host(
             op: i32,
             class: *mut c_void,
             unit: *mut c_void,

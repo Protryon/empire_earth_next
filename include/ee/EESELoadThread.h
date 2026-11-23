@@ -27,16 +27,8 @@ public:
     // the posting side (one TSThread::Post each; provisional names by message number)
     void Post404() { this->mThread->Post(0x404, NULL, NULL, true); }   // start the scenario test and finish
     void Post401() { this->mThread->Post(kThreadMessageQuit, NULL, NULL, true); }   // leave the editor and quit
-    void Post40B(UReferenceCounter* inObject)   // 0x1729e7: a UI event to post (keeps a reference)
-    {
-        inObject->Reference();
-        this->mThread->Post(0x40b, inObject, NULL, true);
-    }
-    void Post40C(UReferenceCounter* inObject)   // 0x172a04: a loaded object to display (keeps a reference)
-    {
-        inObject->Reference();
-        this->mThread->Post(0x40c, inObject, NULL, true);
-    }
+    // (0x1729e7 Post40B, a UI event to post, and 0x172a04 Post40C, a loaded object to display, each keeping a
+    // reference: composed in Rust, editor_sefmx.rs EE_SCREENS_SEFMX_REFERENCE + _THREAD_POST)
     // a terrain type's media to load
     void Post408(void* inParameter) { this->mThread->Post(0x408, inParameter, NULL, true); }
     // a player's epoch media to load

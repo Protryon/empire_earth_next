@@ -436,11 +436,11 @@ fn a_saved_mesh_loads_back_with_its_heights_tiles_and_normals() {
         let (tx, ty) = *points.iter().find(|&&(x, y)| ee_ge_tm_is_valid(p, x, y, true)).unwrap();
         ee_ge_tm_tile_edit(p, tx, ty, 4, 0x1e);
         let mut out = BufferIo::writer();
-        assert_eq!(ee_ge_tm_save(p, &table(&mut out)), 0);
+        assert_eq!((*p).save(&table(&mut out)), 0);
         let q = mesh(1, 1);
         ee_ge_tm_register_texture_set(q, 0x1111 as *mut c_void);
         let mut input = BufferIo::reader(out.bytes.clone());
-        assert_eq!(ee_ge_tm_load(q, &table(&mut input)), 0);
+        assert_eq!(EeGeTerrainMesh::load(q, &table(&mut input)), 0);
         assert_eq!(take_log(), vec![format!("fractal compute {}", obj(p).fractal_seed)]);
         assert_eq!(valid_points(q, 10), points);
         for &(x, y) in &points {
@@ -453,7 +453,7 @@ fn a_saved_mesh_loads_back_with_its_heights_tiles_and_normals() {
         assert_eq!(ee_ge_tm_get_f(q, EeGeTmVal::MinimumZ), -1.0);
         // a truncated file fails and keeps what it read
         let mut short = BufferIo::reader(out.bytes[..20].to_vec());
-        assert_eq!(ee_ge_tm_load(q, &table(&mut short)), crate::ge::io::END_OF_FILE);
+        assert_eq!(EeGeTerrainMesh::load(q, &table(&mut short)), crate::ge::io::END_OF_FILE);
         ee_ge_tm_destroy(p);
         ee_ge_tm_destroy(q);
         take_log();
@@ -473,13 +473,13 @@ fn a_loaded_tile_naming_an_unregistered_set_reads_zero() {
         ee_ge_tm_tile_edit(p, tiles[0].0, tiles[0].1, 3, 1);
         ee_ge_tm_tile_edit(p, tiles[1].0, tiles[1].1, 3, 2);
         let mut out = BufferIo::writer();
-        assert_eq!(ee_ge_tm_save(p, &table(&mut out)), 0);
+        assert_eq!((*p).save(&table(&mut out)), 0);
         let q = mesh(1, 1);
         ee_ge_tm_register_texture_set(q, 0x1111 as *mut c_void);
         ee_ge_tm_register_texture_set(q, std::ptr::null_mut());
         ee_ge_tm_register_texture_set(q, 0x1221 as *mut c_void);
         let mut input = BufferIo::reader(out.bytes);
-        assert_eq!(ee_ge_tm_load(q, &table(&mut input)), 0);
+        assert_eq!(EeGeTerrainMesh::load(q, &table(&mut input)), 0);
         assert_eq!((*ee_ge_tm_tile(q, tiles[0].0, tiles[0].1)).texture_set_id, 0, "the NULL slot is not registered");
         assert_eq!((*ee_ge_tm_tile(q, tiles[1].0, tiles[1].1)).texture_set_id, 2);
         ee_ge_tm_destroy(p);

@@ -1,6 +1,6 @@
 // New (port), TEST ONLY: the scenario manager's capture records (ee/EEScenarioCapture.h; tools/sim_capture.py
 // --profile scenario). The records are built in Rust (ee_sim scenario sm_capture.rs, moved whole from here in the
-// scenario editor lane's round 3); this unit keeps the hooks' forwards and the world's reads, one statement each.
+// scenario editor lane's round 3); this unit keeps the world's reads, one statement each.
 // Reads only: nothing here changes the game.
 #include <windows.h>
 #include <vector>
@@ -44,8 +44,6 @@ const std::vector<long>* SV(const void* p) { return (const std::vector<long>*)p;
 int64_t P(const void* p) { return (int64_t)(intptr_t)p; }
 unsigned long Major(int64_t inVersion) { return (unsigned long)(inVersion >> 32); }
 unsigned long Minor(int64_t inVersion) { return (unsigned long)(uint32_t)inVersion; }
-int64_t Version(unsigned long inMajor, unsigned long inMinor) { return ((int64_t)inMajor << 32) | inMinor; }
-int64_t SaveVersion() { return Version(kSaveGameMajorVersion, kSaveGameMinorVersion); }
 
 }   // namespace
 
@@ -188,27 +186,3 @@ extern "C" double ee_scenariocpp_capture_f(uint32_t inOp, const void* inP)
     }
     return 0.0;
 }
-
-// the hooks (ee/EEScenarioCapture.h): each the Rust record's
-static unsigned int EESMCaptureSeedImpl() { return (unsigned int)ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0); }
-static void EESMCapturePlayersImpl(long inType, bool inSingle, long inResult, const void* inPlayers,
-                                   unsigned int inSeed)
-{
-    ee_scenario_cap_players(inType, inSingle, inResult, inPlayers, inSeed);
-}
-static void EESMCaptureUpdateImpl(EEScenarioManager* inManager, bool inHumanPlaying)
-{
-    ee_scenario_cap_update(inManager, inHumanPlaying, SaveVersion());
-}
-static void EESMCaptureUnitChangeImpl(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
-                                      EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
-{
-    ee_scenario_cap_unit_change(inKind, inArgs, inUnit, inPlayer, inUpgrade, inSeed, SaveVersion());
-}
-
-// The game calls these through the header's hook pointers, set here before main: the game's units name no
-// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EESMCapturePlayers = EESMCapturePlayersImpl,
-                                      EESMCaptureSeed = EESMCaptureSeedImpl,
-                                      EESMCaptureUnitChange = EESMCaptureUnitChangeImpl,
-                                      EESMCaptureUpdate = EESMCaptureUpdateImpl, true);

@@ -1538,6 +1538,26 @@ pub unsafe extern "C" fn ee_ge_mod_dereference(p: *mut EeGeModel) {
     unsafe { EeGeModel::dereference(p) }
 }
 
+/// `GEPhysicalModel::SetModel` (and its constructor's, assignment's and destructor's model): the old model in
+/// `slot` released (`Dereference`), the new one stored and referenced; NULL for none.
+///
+/// # Safety
+/// `slot` is a placed model's model member; the models are NULL or live C++ `GEModel`s.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pm_set_model(slot: *mut *mut c_void, model: *mut c_void) {
+    // SAFETY: the function's contract (the old model may be freed by its release)
+    unsafe {
+        let old = *slot;
+        if !old.is_null() {
+            ee_ge_mod_dereference(crate::ge::cppobj::counted::<EeGeModel>(old as usize));
+        }
+        *slot = model;
+        if !model.is_null() {
+            crate::ge::cppobj::reference(model as usize);
+        }
+    }
+}
+
 /// `GetPolygonCount(lod)`.
 ///
 /// # Safety

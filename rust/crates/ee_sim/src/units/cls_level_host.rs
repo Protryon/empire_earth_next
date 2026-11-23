@@ -16,7 +16,7 @@ use crate::units::uu_host::Game;
 pub const EE_UNITS_CLS_LV_MESH_Z: i32 = 85;
 /// the mesh `a`'s `SetZ(c, d, io.f)`
 pub const EE_UNITS_CLS_LV_SET_MESH_Z: i32 = 86;
-/// the tile `a`'s `mHeight = io.f`
+/// the tile `a`'s `mHeight = io.f` (not NULL)
 pub const EE_UNITS_CLS_LV_SET_TILE_HEIGHT: i32 = 87;
 /// `&gWorld.mMap->mTerrainMesh`
 pub const EE_UNITS_CLS_LV_MAP_MESH: i32 = 88;
@@ -49,7 +49,9 @@ impl LevelHost for ClsGame {
         self.0.tile_height(tile)
     }
     fn set_tile_height(&mut self, tile: u64, height: f32) {
-        self.lv(EE_UNITS_CLS_LV_SET_TILE_HEIGHT, tile, 0, 0, 0, height);
+        if tile != 0 {
+            self.lv(EE_UNITS_CLS_LV_SET_TILE_HEIGHT, tile, 0, 0, 0, height);
+        }
     }
     fn mesh_z(&mut self, mesh: u64, x: i64, y: i64) -> f32 {
         self.lv(EE_UNITS_CLS_LV_MESH_Z, mesh, 0, x, y, 0.0).1.f

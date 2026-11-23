@@ -54,35 +54,12 @@ static long EETechCapturePlayerIndexImpl(EETechTree* inTree)
 
 static void EETechCaptureUpgradeImpl(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade)
 {
-    if (inUpgrade == NULL) {
-        ioRecord.U32(0);
-        return;
-    }
-    const unsigned char* theFirst = (const unsigned char*)&inUpgrade->mAreaEffectScale;
-    const unsigned char* theEnd = (const unsigned char*)&inUpgrade->mIsInitialized;   // the bools before it included
-    unsigned int theSize = (unsigned int)(theEnd - theFirst);
-    // mMediaCount and mButtonLoadCount count the presentation's media loads (EEPlayer::LoadUnitClassMedia,
-    // SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the record carries simulation
-    // state only
-    std::vector<unsigned char> theBytes(theFirst, theEnd);
-    const unsigned char* theZeroed[] = {(const unsigned char*)&inUpgrade->mMediaCount,
-                                        (const unsigned char*)&inUpgrade->mButtonLoadCount};
-    for (const unsigned char* theField : theZeroed)
-        memset(theBytes.data() + (theField - theFirst), 0, sizeof(long));
-    ioRecord.U32(theSize);
-    ioRecord.Bytes(theBytes.data(), theSize);
+    ee_gamecpp_tech_capture_upgrade(&ioRecord, inUpgrade);   // (gamecpp tech_capture.rs)
 }
 
 static void EETechCapturePlayerImpl(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)
 {
-    if (inPlayer == NULL) {
-        ioRecord.I32(-1);
-        return;
-    }
-    ioRecord.I32(inPlayer->mPlayerID);
-    ioRecord.I32(inPlayer->mPopulationLimitBonus);
-    ioRecord.F32(inPlayer->mTributeFee);
-    ioRecord.U32(inPlayer->mBB44 ? 1 : 0);
+    ee_gamecpp_tech_capture_player(&ioRecord, inPlayer);   // (gamecpp tech_capture.rs)
 }
 
 static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
@@ -92,42 +69,6 @@ static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inRe
                          inNode->mTree != NULL ? inNode->mTree->mCurrentEpoch : -1, inResource, inUnitClass, inScale, inCost);
 }
 
-namespace {
-
-// whether GetCost and SumCosts index gUnitClassTable and the upgrades in range for the node (the sweep calls them on
-// every node; the game only on the ones it offers)
-bool NodeIndexesSafe(EETechTreeNode* inNode)
-{
-    unsigned long theCount = EEUnitClassCount();
-    if ((unsigned long)inNode->GetUnitClass(0) >= theCount)
-        return false;
-    return !inNode->mData->mMakesUnit || (unsigned long)inNode->mData->mUnitClass < theCount;
-}
-
-// whether SumCosts can walk from the id without meeting a missing node (it dereferences every id in 0..99999)
-bool SumCostsSafe(EETechTree* inTree, long inID, std::set<long>& ioVisiting)
-{
-    if (!(inID >= kTechEpochPrehistoric && inID < kTechNone))
-        return true;
-    EETechTreeNode* theNode = inTree->Get(inID);
-    if (theNode == NULL)
-        return false;
-    if (ioVisiting.count(inID))
-        return true;
-    if (!NodeIndexesSafe(theNode))
-        return false;
-    ioVisiting.insert(inID);
-    RTSTechTreeNodeData* d = theNode->mData;
-    bool theSafe = SumCostsSafe(inTree, d->mPrerequisite1, ioVisiting) && SumCostsSafe(inTree, d->mPrerequisite2, ioVisiting) &&
-                   SumCostsSafe(inTree, d->mPrerequisite3, ioVisiting) && SumCostsSafe(inTree, d->mPrerequisite4, ioVisiting);
-    EEUnitClass* theClass = gUnitClassTable[theNode->GetUnitClass(0)];
-    if (theSafe && theClass != NULL)
-        theSafe = SumCostsSafe(inTree, theClass->mTechnology, ioVisiting);
-    ioVisiting.erase(inID);
-    return theSafe;
-}
-
-}   // namespace
 
 // the calamities' game (EE-SIM --calamities: ee_game gamecpp calamity_capture.rs)
 static void EETechCaptureCastCalamitiesImpl(long inCall)
@@ -135,66 +76,11 @@ static void EETechCaptureCastCalamitiesImpl(long inCall)
     ee_gamecpp_capture_cast_calamities(inCall);
 }
 
+// TSWP: per player and node its availability, obsolescence, costs, SumCosts and prerequisite closure, and the tree's
+// checksum (gamecpp tech_capture.rs)
 static void EETechCaptureSweepImpl()
 {
-    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(p);
-        if (thePlayer == NULL || thePlayer->GetTechTree() == NULL)
-            continue;
-        EETechTree* theTree = thePlayer->GetTechTree();
-        std::vector<long> theIDs;
-        theTree->GetNodeIDs(theIDs);
-        for (long e = 0; e < theTree->mEpochs.size(); e++)
-            theIDs.push_back(theTree->mEpochs[e].mData->mID);
-        EESimCaptureRecord theHead(EECaptureTag("TSWP"));
-        theHead.U32(0);
-        EETechCaptureTree(theHead, theTree);
-        theHead.U32((unsigned int)theIDs.size());
-        ESChecksum theChecksum(true);
-        theTree->GetChecksum(theChecksum);
-        theHead.U32((unsigned int)theChecksum.GetTotalChecksum());
-        theHead.Commit();
-        for (size_t i = 0; i < theIDs.size(); i++) {
-            EETechTreeNode* theNode = theTree->Get(theIDs[i]);
-            if (theNode == NULL)
-                continue;
-            EESimCaptureRecord theRecord(EECaptureTag("TSWP"));
-            theRecord.U32(1);
-            theRecord.I32((long)p);
-            EETechCaptureNode(theRecord, theNode);
-            theRecord.U32(theNode->GetIsAvailable() ? 1 : 0);
-            theRecord.U32(theNode->GetIsObsolete() ? 1 : 0);
-            long theClass = theNode->GetUnitClass(0);
-            theRecord.I32(theClass);
-            bool theSafe = NodeIndexesSafe(theNode);
-            theRecord.U32(theSafe ? 1 : 0);
-            for (long r = 0; r < 7 && theSafe; r++) {
-                theRecord.I32(theNode->GetCost(r, theClass, 1.0f));
-                theRecord.I32(theNode->GetCost(r, theClass, 0.75f));
-                theRecord.I32(theNode->GetCost(r, theClass, 1.5f));
-            }
-            std::set<long> theVisiting;
-            if (SumCostsSafe(theTree, theIDs[i], theVisiting)) {
-                long theCosts[7] = {0, 0, 0, 0, 0, 0, 0};
-                theTree->SumCosts(theIDs[i], theClass, theCosts);
-                theRecord.U32(1);
-                for (long r = 0; r < 7; r++)
-                    theRecord.I32(theCosts[r]);
-            } else
-                theRecord.U32(0);
-            // the prerequisite closure, one bit per id of the list
-            unsigned int theBits = 0;
-            for (size_t j = 0; j < theIDs.size(); j++) {
-                if (theNode->DependsOn(theIDs[j]))
-                    theBits |= 1u << (j % 32);
-                if (j % 32 == 31 || j + 1 == theIDs.size()) {
-                    theRecord.U32(theBits);
-                    theBits = 0;
-                }
-            }
-            theRecord.Commit();
-        }
-    }
+    ee_gamecpp_tech_capture_sweep();
 }
 
 // ---- CALW, CCAS, CALT, CONT: the calamities' runs (their records: ee_game gamecpp calamity_capture.rs) -----------
@@ -274,6 +160,35 @@ static void EECalamityCaptureContagionEventImpl(long inOp, long inA, long inB, f
 static void EECalamityCaptureContagionImpl(EeContagionHelper* inHelper, float inElapsedTime)
 {
     ee_gamecpp_capture_contagion(inHelper, inElapsedTime);
+}
+
+// ------------------------------------------------------------------------- round 10, lane B: the records' C++
+
+int64_t EECore10OpB7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeEpoch.cpp
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define TC_UPGRADE ((EEUnitClassUpgrade*)p)
+#define TC_PLAYER ((EEPlayer*)p)
+
+// the upgrade's and the player's record fields (gamecpp tech_capture.rs; p the record, the upgrade or the player): one
+// statement each
+int64_t EECore10OpB6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TcBytes: ((EESimCaptureRecord*)p)->Bytes((const void*)a[0], (unsigned int)a[1]);
+        break;
+    case O::TcUpgradeFirst: return P64(&TC_UPGRADE->mAreaEffectScale);
+    case O::TcUpgradeEnd: return P64(&TC_UPGRADE->mIsInitialized);   // (the bools before it included)
+    case O::TcUpgradeMediaCount: return P64(&TC_UPGRADE->mMediaCount);
+    case O::TcUpgradeButtonCount: return P64(&TC_UPGRADE->mButtonLoadCount);
+    case O::TcPlayerId: return TC_PLAYER->mPlayerID;
+    case O::TcPlayerPopulationBonus: return TC_PLAYER->mPopulationLimitBonus;
+    case O::TcPlayerTributeFee: return P64(&TC_PLAYER->mTributeFee);
+    case O::TcPlayerBB44: return TC_PLAYER->mBB44;
+    default: return EECore10OpB7(inOp, p, a, f);
+    }
+    return 0;
 }
 
 // The game calls these through the header's hook pointers, set here before main: the game's units name no

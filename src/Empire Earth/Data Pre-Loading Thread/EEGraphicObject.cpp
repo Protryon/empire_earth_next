@@ -39,6 +39,7 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EESoundObject.h"
 #include "ee/EEGlobalConstants.h"
 #include "rust/render/gfx.h"
+#include "rust/game/preload_media.h"
 
 // The wheels of a unit model, as the graphic object makes them from its model's parts (were EEWheel.cpp's, which
 // keeps their Update: the graphic object named no unit code for them; PORT_LEARNINGS "Cycle cuts")
@@ -80,24 +81,6 @@ extern bool& gTrilinearFilter;
 EEGraphicObject::EEGraphicObject() : EeDataMediaUse()
 {
     ee_data_graphic_object_default(this);
-    for (unsigned long i = 0; i < 14; i++) {
-        this->mTextures[i] = NULL;
-        this->mModels[i] = NULL;
-        this->mSounds1[i] = NULL;
-        this->mSounds2[i] = NULL;
-        this->mTagPoints[i] = NULL;
-        this->mModelNames[i] = NULL;
-        this->mTextureNames[i] = NULL;
-    }
-    this->mFileName = NULL;
-    this->mTextureName = NULL;
-    this->mShadowModelName = NULL;
-    this->mShadowTextureName = NULL;
-    this->mModel = NULL;
-    this->mTexture = NULL;
-    this->mShadowModel = NULL;
-    this->mShadowTexture = NULL;
-    this->mTags = NULL;
 }
 
 // Destroys the graphic object: unloads its media if loaded, frees its file names
@@ -157,24 +140,16 @@ long EEGraphicObject::LoadTable(FSFile* inFile)
         });
 }
 
-// Deletes every entry of the media table and empties it
+// Deletes every entry of the media table and empties it (ee_game preload_media.rs)
 void EEDeleteMediaTable()
 {
-    for (unsigned long i = 0; i < gMediaTable.size(); i++)
-        delete gMediaTable[i];
-    gMediaTable.resize(0);
+    ee_preload_delete_media_table();
 }
 
-// Writes to the file each graphic object that is still loaded, with its file name and use count
+// Writes to the file each graphic object that is still loaded, with its file name and use count (preload_media.rs)
 void EEDumpGraphicObjectTable(FSFileSpec& inFile)
 {
-    fprintf(inFile, "\n\n**********Graphic Object Table*********\n\n");
-    for (unsigned long i = 0; i < gMediaTable.size(); i++) {
-        EEGraphicObject* theObject = static_cast<EEGraphicObject*>(gMediaTable[i]);
-        if (theObject != NULL && theObject->mMediaCount > 0)
-            fprintf(inFile, "\t%s (filename) has a media count of %ld\n",(const char*)*theObject->mFileName,
-                    theObject->mMediaCount);
-    }
+    ee_preload_dump_graphic_objects(&inFile);
 }
 
 // Returns the tag points of a kind on a part's model, or NULL when it has none (ee_gfx tags.rs)
@@ -183,19 +158,10 @@ EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
     return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind));
 }
 
-// Finds the turret part for a model and returns its index; returns 0 when found, else 3
+// Finds the turret part for a model and returns its index; returns 0 when found, else 3 (preload_media.rs)
 long EEGraphicObject::FindTurretPart(GEModel* inModel, unsigned long& outIndex)
 {
-    long theResult = 3;
-    unsigned long theCount = this->mTurretParts.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (this->mTurretParts[i]->mModel == inModel) {
-            outIndex = i;
-            theResult = 0;
-            break;
-        }
-    }
-    return theResult;
+    return ee_preload_find_turret_part(this, inModel, &outIndex);
 }
 
 // The calls ee_gfx gobj_media.rs makes back into the C++: the sounds' loads (the EEMedia virtuals) and the part

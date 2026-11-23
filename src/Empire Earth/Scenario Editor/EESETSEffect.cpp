@@ -45,8 +45,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUIShell.h"
-#include "ee/EESETSEffectControls.h"
-#include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESEARust.h"
 #include "ee/EESMObject.h"
@@ -125,14 +123,6 @@ UIControl* SeetControl(const int32_t* i)
 // the controls by array (EE_SCREENS_SEET_A_*): the effect screen's and the condition screen's records are Rust's
 // (ee_screens editor_direct.rs: made, freed, their slots and the toolkit's ops); the cases below read a member
 // through it
-static_assert(sizeof(EESETSEffectControls) == EE_SCREENS_SEET_EFFECT_SLOTS * sizeof(void*) &&
-                  offsetof(EESETSEffectControls, mComboBoxes) == 19 * sizeof(void*) &&
-                  offsetof(EESETSEffectControls, mListBoxes) == 44 * sizeof(void*),
-              "editor_direct.rs's effect record");
-static_assert(sizeof(EESETSConditionControls) == EE_SCREENS_SEET_CONDITION_SLOTS * sizeof(void*) &&
-                  offsetof(EESETSConditionControls, mCheckBoxes) == 15 * sizeof(void*) &&
-                  offsetof(EESETSConditionControls, mSlider) == 22 * sizeof(void*),
-              "editor_direct.rs's condition record");
 
 struct SeetC {
     void* mControls;
@@ -311,8 +301,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
         *theOut = static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[0]), f[0], (long)i[0]));
         return 0;
     case EE_SCREENS_SEETX_EV_SLIDER_FORMAT:
-        *theOut = static_cast<UIEvent*>(
-            EESEENewSliderChange(static_cast<UITextLabel*>(p[0]), i[0] != 0 ? "%#2.1f" : "%2.0f", f[0], f[1]));
+        *theOut = static_cast<UIEvent*>(EESEENewSliderChange(static_cast<UITextLabel*>(p[0]), static_cast<const char*>(p[1]), f[0], f[1]));
         return 0;
     case EE_SCREENS_SEETX_EV_USE_OBJECT_AREA:
         *theOut = static_cast<UIEvent*>(

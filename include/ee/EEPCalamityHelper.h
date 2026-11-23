@@ -24,7 +24,7 @@ public:
     void ClearContagionManager();           // 0x149880 (deletes mContagionManager; provisional name)
     void Reset();                           // 0x149897 (both, then a new EEContagionManager; EEGameState 0x13181d)
 
-    std::vector<EECalamity*>* mCalamities;  // +0x08 (EEWorld::StartGame passes *mL08 to EECalamityManager::Restore when non-zero)
+    std::vector<EECalamity*>* mCalamities = nullptr;   // +0x08 (EEWorld::StartGame passes *mL08 to EECalamityManager::Restore when non-zero)
     EEContagionManager* mContagionManager;  // +0x0c (provisional name)
 };
 

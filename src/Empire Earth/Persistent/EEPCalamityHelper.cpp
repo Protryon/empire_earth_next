@@ -3,6 +3,7 @@
 // 0x44220c.
 #include <windows.h>
 #include <stdio.h>
+#include <utility>
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
@@ -25,55 +26,37 @@
 EEPCalamityHelper::EEPCalamityHelper()
     : FSPersistent(kPersistentCalamities)
 {
-    this->mCalamities = NULL;
-    this->mContagionManager = new EEContagionManager;
+    ee_gamecpp_pch_reset(this, false, true);   // (gamecpp persist_more.rs; mCalamities NULL: its initializer)
 }
 
 // Destroys the chunk, deleting its calamity list and contagion manager
 EEPCalamityHelper::~EEPCalamityHelper()
 {
-    this->ClearCalamities();
-    this->ClearContagionManager();
+    ee_gamecpp_pch_reset(this, true, false);
 }
 
 // Deletes the calamity list
 void EEPCalamityHelper::ClearCalamities()
 {
-    delete this->mCalamities;
-    this->mCalamities = NULL;
+    delete std::exchange(this->mCalamities, nullptr);
 }
 
 // Deletes the contagion manager
 void EEPCalamityHelper::ClearContagionManager()
 {
-    delete this->mContagionManager;
-    this->mContagionManager = NULL;
+    delete std::exchange(this->mContagionManager, nullptr);
 }
 
 // Empties the chunk: no calamity list and a fresh contagion manager
 void EEPCalamityHelper::Reset()
 {
-    this->ClearCalamities();
-    this->ClearContagionManager();
-    this->mContagionManager = new EEContagionManager;
+    ee_gamecpp_pch_reset(this, true, true);
 }
 
 // Copies another chunk's calamity list and contagion manager into fresh copies of its own
 EEPCalamityHelper& EEPCalamityHelper::operator=(const EEPCalamityHelper& inOther)
 {
-    if (this->mCalamities != inOther.mCalamities) {
-        this->ClearCalamities();
-        this->mCalamities = new std::vector<EECalamity*>;
-        if (inOther.mCalamities != NULL)
-            *this->mCalamities = *inOther.mCalamities;
-    }
-    if (this->mContagionManager != inOther.mContagionManager) {
-        this->ClearContagionManager();
-        this->mContagionManager = new EEContagionManager;
-        if (inOther.mContagionManager != NULL)
-            *this->mContagionManager = *inOther.mContagionManager;
-    }
-    return *this;
+    return *(EEPCalamityHelper*)ee_gamecpp_pch_assign(this, &inOther);   // (gamecpp persist_more.rs)
 }
 
 // Creates an empty saved-calamities chunk (persistent factory)
@@ -166,6 +149,30 @@ int64_t EEPCalamityOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::PchGetTarget: return CL->GetTargetUnit(*(EEUnit**)a[0]);
     case O::PchContagionSave: return gWorld.GetContagionManager()->Save((unsigned long)a[0], (unsigned long)a[1], AFILE);
     default: return EEPChecksumOp(inOp, p, a, f);
+    }
+    return 0;
+}
+
+// ------------------------------------------------------------------------- round 10, lane B: the chunk's own C++
+
+int64_t EECore10OpB9(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETerrainColorTable.cpp
+
+// the chunk's constructor's, destructor's, Reset's and copy's C++ (gamecpp persist_more.rs; p the chunk): one
+// statement each
+int64_t EECore10OpB8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PchClearContagion: PCH->ClearContagionManager();
+        break;
+    case O::PchNewContagion: PCH->mContagionManager = new EEContagionManager;
+        break;
+    case O::PchContagion: return P64(PCH->mContagionManager);
+    case O::PchCopyCalamities: *PCH->mCalamities = *((const EEPCalamityHelper*)a[0])->mCalamities;
+        break;
+    case O::PchCopyContagion: *PCH->mContagionManager = *((const EEPCalamityHelper*)a[0])->mContagionManager;
+        break;
+    default: return EECore10OpB9(inOp, p, a, f);
     }
     return 0;
 }

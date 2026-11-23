@@ -1,47 +1,55 @@
-# The world lane (Physics Thread, Random Map, Campaign, Data Pre-Loading Thread)
+# The world lane (Physics Thread, Random Map, Campaign, Data Pre-Loading Thread, Player)
 
 The lane's state. Each round rewrites this file to the current state; the rounds' stories go in PORT_LEARNINGS.md
-("The world lane, round 1").
+("The world lane, round 1", "The world lane, round 2").
 
 **In Rust**
-- The random map whole (round 1, ee_sim rmap `object.rs`): the generator state (`EERandomMapData`, the Default PIMs'
-  struct), a try's set-up (InitializeValues, the script read, CreateGrids, CreateValidMap, CreateTeams), Generate
-  (the generator steps with exactly what Default.cpp's adapter copied back; the game passes over the object's own
-  grid rows), PlaceWall, the retries of `CreateRandomMap`, the generator list's set-up (`Initialize`) and lookup.
-  The C++ keeps the generator list (a `std::vector<EERMGenerator>` of `UWideString`s the lobby and the editor read,
-  sorted by `std::sort`) and `ee_rmap_cpp`, one statement per world call. Default.cpp, ee/EERandomMap.h and
-  ee/EERandomMapView.h live on only as the rmap gate's adapter (tools/rmap_gate/rmap_adapter.cpp, rmap_state.h,
-  rmap_view.h); the "default" module is gone.
-- `EEPhysics`' bodies (round 1, ee_game `physics.rs`): Tick, DrainInput, GetOutOfSynchChecksum and its OOS dump,
-  EndGame, FlushWorld, the unit swaps, Init, HandleMessage, Idle, AutoSave, the civilization and resource timers,
-  CheckShiftMode, ReportStatistics, UpdateWeather, UpdateTiming, the area effects clock, the load/save requests,
-  GetTimeString, the posts; over the saved block (`EeUnitsPhysicsSaved`) in place and `ee_physcpp`.
-- `EEDataPreLoading`'s bodies (round 1, ee_game `preload.rs`): the thread loop, the messages, the queue and its two
-  flags (Rust state now), the media loads, LoadGame, WaitForMessageQueue; over `ee_preloadcpp`.
-- `EECampaignProgress` whole (round 1, ee_game `campaign.rs`): the lists, Load, RestoreCivilization,
-  SaveCompletedScenario, MakeKey; the C++ class is a handle. `EECampaign::Load`'s body (same module).
+- The random map whole (round 1, ee_sim rmap `object.rs`): the generator state, a try's set-up, Generate, PlaceWall,
+  the retries, the generator list's set-up and lookup. The C++ keeps the generator list (`std::vector<EERMGenerator>`
+  of `UWideString`s) and `ee_rmap_cpp`. Default.cpp and its headers live on only as the rmap gate's adapter.
+- `EEPhysics`' bodies (round 1, ee_game `physics.rs`) over the saved block and `ee_physcpp`.
+- The physics model host (round 2, ee_sim units `pm_flight.rs`, `pm_note.rs`, `pm_host.rs`): the projectile and
+  missile steps with their CBPA/CBPJ/CBPS/CBMA/CBMH records written in Rust at the C++'s points, the group-aware rates,
+  the TEST ONLY PMST note, the models as statics and every multi-statement `ee_units_pm_host_*` (views or one-call
+  shims). The sweeps' host (`unit_sweep.rs`, ops 10..47) and the AGPL record (`ag_sweep.rs`), the patrol group's
+  and the ATC's hosts (`patrol_group.rs`, `atc.rs`).
+- `EEDataPreLoading`'s bodies (round 1, ee_game `preload.rs`); the media objects (round 2, ee_game
+  `preload_media.rs`): the graphic object table's dump and delete, FindTurretPart, the effects' links, DumpIDs,
+  UnloadTable and GetMedia, the sounds' dump, unload and one-shot Play, the "New Music.txt" override and the epochs'
+  songs, over `ee_preload_mediacpp`.
+- `EECampaignProgress` whole and `EECampaign::Load` (round 1); EECampaign's editor side (round 2, ee_game
+  `campaign.rs`): Save, SaveArchive, CreateScenarioList, CopyScenarioFiles, ListScenarioFiles, ListScenarioMedia,
+  ListEffectSound(s), NotArchived, GetScenarioListFile, the password crypt (ee_base's codec), EECampaignFormManager's
+  UpdateChecksum and GetBuiltInCampaign, and the progress' helpers (the user spec, the tag read, the list line).
+- The player (round 2, ee_sim units `save_prim.rs`, `player_econ.rs`, `player_rest.rs`, `player_split_more.rs`,
+  `town_split.rs`, `player_events_split.rs`, `player_save_split.rs`, `player_views.rs`): the save primitives, the
+  economy and improvements with their PLEC record, about 30 bodies (ClearFootprint, ReloadTechTree, SetGameResult's
+  decisions, AdoptTownPatrol, GetNearestArea, the wonder timers, the cloak chains, ...), every multi-statement case of
+  the player, town-save, event-list and save hosts; 22 members only the hosts called are gone.
 
 **Stays C++**
-- Physics Thread: `UpdateUnits`' tick host, the after-load fixups (`std::function` lists), Load/Save's file host,
-  EEPhysicsModel.cpp's model host (about 80 small functions: the unit, goal, tile and effect calls of pm.rs), the
-  projectile and missile steps (their CBPJ/CBPS/CBMA/CBMH captures), PMStepNote (TEST ONLY PMST), EEPhysicsSweep.cpp
-  (TEST ONLY: the units and groups sweeps' host and the AGPL record), EEPPatrolGroup.cpp's and
-  EEAirTrafficControl.cpp's hosts.
-- Campaign: EECampaign's editor side (Save, SaveArchive, CreateScenarioList, CopyScenarioFiles, ListScenarioFiles,
-  ListScenarioMedia, ListEffectSound(s), NotArchived, the password crypt), EECampaignFormManager.
-- Data Pre-Loading Thread: EEGraphicObject, EEGraphicEffect, EEMusicObject, EESoundObject (object lifetimes and
-  table loads over C++ GE objects; their algorithms were already Rust).
+- Physics Thread: EEPhysics.cpp's structure (UpdateUnits' tick host, the after-load fixups, Load/Save's file host;
+  99 logic lines), the host switch heads and data definitions (~50 in the other four files).
+- Campaign: the class layouts, the ctors, EECampaignFormManager::Get, the host switch (one-statement cases), the
+  scenario list's stripped push (`EECampaignPushStripped`) and the built-in campaign tables.
+- Data Pre-Loading Thread: the classes' object lifetimes (the dtors, the table loads' record readers
+  `EEDbReadLeadRecords`/`EEDbReadRecords` with their lambdas, the `EEMediaAcquire`/`EEMediaRelease` lambdas, the gobj
+  host's part lists), EEDataPreLoading's ctor/dtor.
+- Player: EEPlayer.cpp (166: the hosts' prologues and context structs, EEPlayerAnnounceResult's chat text,
+  EEPlayerShareBonus, the float-bits helpers), EEPlayer.h (427, almost all declarations; the tech tree's ~200 and
+  RTSPlayer's belong to other lanes' .cpp), EEPlayerStatistics.cpp (51: the record's and history's resets).
 
-**Gates of this lane**: the rmap gate (`tools/rmap_gate/rmap_gate.py check`, `check --reader`: 2088 maps each), the
-oracle and the capture profiles, the saveload matrix, scenario_check (the Learning Campaign through the campaign
-screens: EECampaign::Load, EECampaignProgress::Load and RestoreCivilization's built-in path), the tour and gates.sh.
+**Gates of this lane**: the rmap gate (`tools/rmap_gate/rmap_gate.py check`, `check --reader`), the oracle and the
+twelve capture profiles (missile and calamity check the flight steps and PMST; units and groups the sweeps; oracle
+and late the player's PLEC/PLST), the saveload matrix, scenario_check (the campaign screens), the tour and gates.sh.
 
-**What only a live game exercises**: the campaign progress' save after a won campaign scenario
-(SaveCompletedScenario), RestoreCivilization for a user campaign (the extracted civilization), EECampaign::Load with
-a password; the physics' autosave (a server with autosaves on), the OOS dump (a dump request), the civilization
-timer's warnings (a lobby game with civilization buying), the shift-mode exit (a human holding Shift), the
-pre-loader's queueing messages.
+**What only a live game exercises**: the campaign editor's Save and file list (the scenario archive, the copies, the
+media and sound lists), UpdateChecksum and GetBuiltInCampaign (the campaign screens), the progress' save after a won
+scenario, a user campaign's RestoreCivilization, a passworded Load; the media objects' dumps (a media dump request),
+the one-shot sound Play (EEUGUnloadTransport), the New Music override (a "Data\Music\New Music.txt"), GetMedia's
+random graphic (kind-only effects: drawn only); the physics' autosave, OOS dump, the trample hit's effects, the
+carrier deck walk, the ATC reroute; the player's SetGameResult chat line, the event list's alert sounds and mini-map
+ping, DumpMedia, ReloadTechTree (the editor's load thread) and the 0.260-era saves' town matching.
 
-**Next**: EECampaign's editor side over the same host (about 250 lines); EEPhysicsSweep.cpp's record and cases as
-Rust (TEST ONLY, the units and groups captures check it); the projectile/missile steps and PMStepNote into pm_host.rs
-(their captures check them); the model host's multi-statement cases.
+**Next**: EEPhysics.cpp's hosts once the units lane's merge of round 1 settles; the media objects' table loads (a Rust
+record reader over the db callbacks); EEPlayerStatistics' resets; the player's remaining host prologues.

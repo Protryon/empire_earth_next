@@ -22,33 +22,12 @@ public:
     const EeAStarRectRecord* Record() const { return this; }
     const U2DRectangle<long>& GetRect() const { return reinterpret_cast<const U2DRectangle<long>&>(this->rect); }
     void SetRect(const U2DRectangle<long>& inRect) { reinterpret_cast<U2DRectangle<long>&>(this->rect) = inRect; }
-    void SetScenarioAreaID(long inID) { this->scenario_area_id = inID; }
     long GetNumLandTiles() const { return this->num_land_tiles; }
     long GetNumWaterTiles() const { return this->num_water_tiles; }
     long GetNumSpaceTiles() const { return this->num_space_tiles; }
-    void SetNumLandTiles(long inCount) { this->num_land_tiles = inCount; }
-    void SetNumWaterTiles(long inCount) { this->num_water_tiles = inCount; }
-    void SetNumSpaceTiles(long inCount) { this->num_space_tiles = inCount; }
     unsigned short GetContinentID() const { return this->continent_id; }
     unsigned short GetID() const { return this->id; }
     void SetID(unsigned short inID) { this->id = inID; }
-    // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
-    template <class W> void WriteFields(W& ioWriter) const
-    {
-        ioWriter.Rect(this->GetRect());
-        ioWriter.I32(this->scenario_area_id);
-        ioWriter.I32(this->num_land_tiles);
-        ioWriter.I32(this->num_water_tiles);
-        ioWriter.I32(this->num_space_tiles);
-        ioWriter.U16(this->continent_id);
-        ioWriter.U16(this->id);
-    }
-    template <class R> bool ReadFields(R& ioReader)
-    {
-        return ioReader.Rect(reinterpret_cast<U2DRectangle<long>&>(this->rect)) && ioReader.I32(this->scenario_area_id)
-            && ioReader.I32(this->num_land_tiles) && ioReader.I32(this->num_water_tiles) && ioReader.I32(this->num_space_tiles)
-            && ioReader.U16(this->continent_id) && ioReader.U16(this->id);
-    }
 
 private:
     EEAIRectangleArea();

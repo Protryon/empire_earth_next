@@ -32,6 +32,7 @@
 #include "rust/game/lle.h"
 #include "rust/game/physics.h"
 #include "rust/game/preload.h"
+#include "rust/game/preload_media.h"
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
 #include "rust/game/sight_capture.h"

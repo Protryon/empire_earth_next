@@ -388,7 +388,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_parse_command_line(line: *const c_char
                 host_or_join(ENTRY_JOIN_BY_IP, player, address, Some(*tries))
             }
             EntryCommand::UpdateSavedGames => {
-                h(O::EntryUpdateSavedGames, 0, &[]);
+                super::saved_games::ee_gamecpp_update_saved_games();
                 result = false;
             }
             EntryCommand::LoadGame(name) => load_game(name),
@@ -462,7 +462,7 @@ const ENTRY_S_FALSE: i64 = 1;
 pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, command_line: *const c_char) -> i32 {
     h(O::RunRustInit, 0, &[]); // first: a panic anywhere after this reaches a log
     h(O::RunFixtureConfigure, 0, &[]); // TEST ONLY: nothing unless EE_TEST_UI is set
-    let splash = hp(O::RunSplashNew, 0, &[pa(instance as P)]);
+    let mut splash = super::start_screen::StartScreen::new(instance as usize);
     let sim = ee_base::plat_core::sim::gPlatSimMode.get() != 0;
     // the simulation: any number of copies at once
     if sim || h(O::RunInstanceMutex, 0, &[]) != 0 {
@@ -471,7 +471,6 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         PlatWindowSetAppName(c"Empire Earth Expansion".as_ptr(), 0x66);
         if PlatWindowSystemStart() == 0 {
             PlatMessageShow(c"Empire Earth".as_ptr(), PlatWindowLastError(), ENTRY_MESSAGE_ERROR);
-            h(O::RunSplashDelete, splash, &[]);
             return 1;
         }
         h(O::RunSetEventPump, 0, &[]);
@@ -499,11 +498,11 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         super::startup::ee_gamecpp_startup_data_paths();
         // the original tests the constant 1 here
         if !sim {
-            h(O::RunSplashStart, splash, &[]); // the simulation shows no splash window
+            splash.start(); // the simulation shows no splash window
         }
         let mut initialized = super::startup::ee_gamecpp_startup_part1();
         if !sim {
-            h(O::RunSplashStop, splash, &[]);
+            splash.stop();
         }
         if initialized {
             super::startup::ee_gamecpp_startup_menu_screen();
@@ -527,7 +526,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         h(O::RunComUninit, 0, &[]);
         PlatWindowSystemStop();
     }
-    h(O::RunSplashDelete, splash, &[]);
+    drop(splash);
     0
 }
 

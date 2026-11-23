@@ -11,18 +11,14 @@ class FSFile;
 class GE3DLine;
 class GE3DPlane;
 
-class GETransformation {                    // sizeof 0x40 (SizeOf 0xd98d): row-major 4x4, translation in column 3
-public:
+class GETransformation : public EeGeTransformation {   // the Rust record (mMatrix: row-major 4x4, the translation in
+public:                                                // column 3; rust/base/math.h)
     GETransformation() { ee_ge_t_identity(GERust(*this)); }
     // inline (COMDAT 0x1000d5a1 in GE3DPoint.cpp's block): leaves the matrix uninitialized; Revolve/Rotate/Scale
     // (0x3513a..) construct their temporaries with no call, and no module imports it
     GETransformation(bool inInitialize) {}
     GETransformation(const float inMatrix[4][4])
         { ee_ge_t_copy(GERust(*this), reinterpret_cast<const float(*)[4][4]>(inMatrix)); }
-    GETransformation(const GETransformation& inTransformation)
-        { ee_ge_t_copy(GERust(*this), &GERust(inTransformation)->m); }
-    GETransformation& operator=(const GETransformation& inTransformation)
-        { ee_ge_t_copy(GERust(*this), &GERust(inTransformation)->m); return *this; }
     bool operator==(const GETransformation& inTransformation)   // all sixteen elements
         { return ee_ge_t_equal(GERust(*this), GERust(inTransformation)); }
     bool operator==(const GE3DPoint& inPoint) const { return ee_ge_t_at_point(GERust(*this), GERust(inPoint)); }
@@ -69,15 +65,14 @@ public:
     float GetElement(unsigned long inRow, unsigned long inColumn) const { return this->mMatrix[inRow][inColumn]; }
     float GetPitch() const { return ee_ge_t_pitch(GERust(*this)); }   // the angles taken from the matrix
     GE3DPoint GetPosition() const { return GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
-    void GetPosition(GE3DPoint& outPosition) const
-        { outPosition.mX = this->GetX(); outPosition.mY = this->GetY(); outPosition.mZ = this->GetZ(); }
+    void GetPosition(GE3DPoint& outPosition) const { outPosition = GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
     float GetRoll() const { return ee_ge_t_roll(GERust(*this)); }
     float GetX() const { return this->mMatrix[0][3]; }  // exported, ICF-folded (0x10058d38)
     float GetY() const { return this->mMatrix[1][3]; }
     float GetYaw() const { return ee_ge_t_yaw(GERust(*this)); }
     float GetZ() const { return this->mMatrix[2][3]; }
     // the sixteen elements from (to) a file, stopping at the first error
-    template <class F> long Load(F& inFile) { EeGeFieldIo theIO = GERustFieldIO(inFile); return ee_ge_t_io(GERust(*this), &theIO, false); }
+    template <class F> long Load(F& inFile) { return ee_ge_t_load(GERust(*this), GERustFile(inFile)); }
     void MakeIdentity() { ee_ge_t_identity(GERust(*this)); }
     // the inverse of a rigid transformation (transposed rotation, negated rotated position), element by element as
     // the C++ stored them (an output equal to this transposes through its own stores)
@@ -90,11 +85,7 @@ public:
     void Rotate(const GEOrientation& inOrientation)
         { this->Rotate(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
     void Rotate(float inYaw, float inPitch, float inRoll) { ee_ge_t_rotate(GERust(*this), inYaw, inPitch, inRoll); }
-    template <class F> long Save(F& inFile) const
-    {
-        EeGeFieldIo theIO = GERustFieldIO(inFile);
-        return ee_ge_t_io(const_cast<EeGeTransformation*>(GERust(*this)), &theIO, true);
-    }
+    template <class F> long Save(F& inFile) const { return ee_ge_t_save(GERust(*this), GERustFile(inFile)); }
     // inline: EE-AOC.exe imports only Scale(x, y, z); GEPhysicalModel::Intersects expands it (GE3DPoint.cpp emits the
     // exported copy 0x1000d848)
     void Scale(float inScale) { this->Scale(inScale, inScale, inScale); }
@@ -131,14 +122,10 @@ public:
     void Translate(const GEVector& inVector) { this->Translate(inVector.GetX(), inVector.GetY(), inVector.GetZ()); }
     void Translate(float inX, float inY, float inZ) { this->mMatrix[0][3] += inX; this->mMatrix[1][3] += inY; this->mMatrix[2][3] += inZ; }
     bool Verify() const { return true; }    // (no consistency check in the retail build)
-
-    float mMatrix[4][4];                    // +0x00
 };
 
 inline GE3DPoint::GE3DPoint(const GETransformation& inTransformation)
-    : mX(inTransformation.GetX()), mY(inTransformation.GetY()), mZ(inTransformation.GetZ())
-{
-}
+    : EeGe3DPoint{inTransformation.GetX(), inTransformation.GetY(), inTransformation.GetZ()} {}
 inline bool GE3DPoint::operator==(const GETransformation& inTransformation) const
 {
     return this->GetX() == inTransformation.GetX() && this->GetY() == inTransformation.GetY() &&

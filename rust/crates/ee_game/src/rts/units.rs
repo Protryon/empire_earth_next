@@ -808,8 +808,97 @@ mod ffi {
     }
 }
 
+// ---- the unit registry's C++ entry points (RTSUnit.cpp; LLE round 11) ----
+
+/// The id of a unit without one.
+const NO_ID: u32 = 0xffff_ffff;
+
+/// `RTSResolveUnitID`: the registered unit of an id (NULL for the no-id value or an unregistered id).
+#[no_mangle]
+pub extern "C" fn ee_rts_unit_resolve(id: u32) -> *mut core::ffi::c_void {
+    if id == NO_ID {
+        return core::ptr::null_mut();
+    }
+    ee_sim::units::ffi::ee_units_resolve(id)
+}
+
+/// `RTSRegisterUnit` (`register`) and `RTSUnregisterUnit`: the unit `unit` (whose record is `fields`) under its id,
+/// unless it has none; an unregister leaves an entry that is another unit's.
+///
+/// # Safety
+/// `fields` is the live unit's record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rts_unit_registry(
+    fields: *const EeUnitsRtsUnitFields,
+    unit: *mut core::ffi::c_void,
+    register: bool,
+) {
+    // SAFETY: the function's contract
+    let id = unsafe { (*fields).mUnitID } as u32;
+    if id == NO_ID {
+        return;
+    }
+    if register {
+        ee_sim::units::ffi::ee_units_register(id, unit);
+    } else {
+        ee_sim::units::ffi::ee_units_unregister(id, unit);
+    }
+}
+
+/// `EEUnitHandleID`: the unit's id; a unit without one is reported once (its handle resolves to nothing).
+///
+/// # Safety
+/// `fields` is the live unit's record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rts_unit_handle_id(fields: *const EeUnitsRtsUnitFields) -> u32 {
+    static REPORTED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+    // SAFETY: the function's contract
+    let id = unsafe { (*fields).mUnitID } as u32;
+    if id == NO_ID && !REPORTED.swap(true, core::sync::atomic::Ordering::Relaxed) {
+        eprintln!("EE-HANDLE: a handle to a unit without an id ({fields:p}): it resolves to nothing");
+    }
+    id
+}
+
+/// `RTSUnit::Describe` (`long` false: "uid N, at X,Y:") and `DescribeLong` ("UnitID:N\nTile:(X,Y)\n"): the text
+/// appended, the id's low 24 bits. The text lives until the thread's next call.
+///
+/// # Safety
+/// `fields` is the live unit's record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rts_unit_describe(fields: *const EeUnitsRtsUnitFields, long: bool) -> *const c_char {
+    thread_local!(static TEXT: core::cell::RefCell<std::ffi::CString> = core::cell::RefCell::default());
+    // SAFETY: the function's contract
+    let f = unsafe { &*fields };
+    let text = describe(f.mUnitID, f.mTileX, f.mTileY, long);
+    TEXT.with(|t| {
+        *t.borrow_mut() = std::ffi::CString::new(text).unwrap_or_default();
+        t.borrow().as_ptr()
+    })
+}
+
+fn describe(id: c_ulong, x: c_long, y: c_long, long: bool) -> String {
+    let id = id & 0xff_ffff;
+    if long {
+        format!("UnitID:{id}\nTile:({x},{y})\n")
+    } else {
+        format!("uid {id}, at {x},{y}:")
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_description_is_the_low_id_and_the_tile() {
+        assert_eq!(describe(0x0300_0012, 4, -1, false), "uid 18, at 4,-1:");
+        assert_eq!(describe(5, 7, 8, true), "UnitID:5\nTile:(7,8)\n");
+    }
+
+    #[test]
+    fn the_no_id_value_resolves_to_nothing() {
+        assert!(ee_rts_unit_resolve(NO_ID).is_null());
+    }
+
     use super::*;
     use std::cell::RefCell;
     use std::collections::BTreeMap;

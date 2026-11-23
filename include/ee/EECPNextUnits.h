@@ -25,10 +25,6 @@ void* EECPUnitsRust(const EEComputerPlayer* inPlayer);
 void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim);
 void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend);
 
-// every physics tick (EEArtificialIntelligence::Update): the enemy memory once a game second (what the player sees
-// now) and the scripts' `micro` every 250 game ms
-void EECPUnitsMicroTick(unsigned long inTime);
-
 // the save (EEPPlayerHelper, from version 0.254): the held set, the pending events, the forwarding map, the reflex
 // switches, the enemy memory; empty: none
 void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes);

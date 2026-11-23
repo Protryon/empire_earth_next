@@ -23,13 +23,7 @@ bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
 template <class T> class U2DRectangle;
 template <class T> class U2DPoint;
 
-// Orders tiles by their squared distance from mUnit (std::sort 0x24fa5e from 0x241e49; its operator() 0x23ddc1 is
-// out of line in the range before 0x241c2d, built without /Og) (provisional name)
-struct EEUUTileNearerToUnit {
-    EEUUTileNearerToUnit(EEComplexUnit* inUnit) : mUnit(inUnit) {}
-    bool operator()(const U2DPoint<long>& inFirst, const U2DPoint<long>& inSecond) const;
-    EEComplexUnit* mUnit;
-};
+// (EEUUTileNearerToUnit, the firing ring's sort order: ee_sim combat cg_world.rs over uu.rs distance_squared_to_tile)
 
 // 0x241bc9 (before the range): inUnit's attack goal moves to inTarget (provisional name)
 void EERetargetAttack(EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEComplexUnit* inTarget);

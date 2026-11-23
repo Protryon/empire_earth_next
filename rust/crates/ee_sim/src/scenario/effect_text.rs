@@ -87,9 +87,9 @@ pub const EE_SCENARIO_WY_CU_TAKEN: u32 = 852;
 pub const EE_SCENARIO_WY_CU_KILL_UNIT: u32 = 853;
 
 /// `kSoundTrumpets`
-const SOUND_TRUMPETS: i64 = 0x1b7;
+pub(crate) const SOUND_TRUMPETS: i64 = 0x1b7;
 /// `kActionWaitForGarrisonCost`
-const ACTION_WAIT_FOR_GARRISON_COST: i64 = 12008;
+pub(crate) const ACTION_WAIT_FOR_GARRISON_COST: i64 = 12008;
 /// Change Text's sections by action: hints, instructions, history (`GetSection`'s slots).
 const SECTIONS: [i64; 3] = [0, 3, 2];
 

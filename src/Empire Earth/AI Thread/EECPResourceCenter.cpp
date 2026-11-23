@@ -45,17 +45,6 @@ float EEComplexUnit::DistanceSquaredToUnit(EEUnit* inOther)
     return ee_cp_distance_squared_to_unit(EECPRCHandle(static_cast<EEUnit*>(this)), EECPRCHandle(inOther));
 }
 
-// the unit's morale-from-buildings area effect (NULL: none)
-static EEAreaEffect* EECPRCMoraleEffect(EEComplexUnit* inUnit)
-{
-    for (std::vector<EEAreaEffect*>::iterator theIterator = inUnit->mAreaEffects.mItems.begin();
-         theIterator != inUnit->mAreaEffects.mItems.end(); ++theIterator) {
-        if ((*theIterator)->mKind == kAreaEffectMoraleFromBuildings)
-            return *theIterator;
-    }
-    return NULL;
-}
-
 // The centres' world (ee_sim::cp::place_game's EE_CP_CENTER_* operations; `inA`, `inB` units): the references, the
 // area effects
 extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,
@@ -75,8 +64,12 @@ extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return gAEManager.HasAreaEffect((long)v[0], (long)v[1], (long)v[2], (long)v[3]) ? 1 : 0;
     case EE_CP_CENTER_TEMPLATE_RADIUS: io->f[0] = gAEManager.mTemplates[(unsigned long)v[0]]->mRadius;
         return 0;
-    case EE_CP_CENTER_MORALE_EFFECT:
-        return (int64_t)EECPRCHandle(EECPRCMoraleEffect(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))));
+    case EE_CP_CENTER_EFFECT_COUNT:
+        return (int64_t)static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))->mAreaEffects.mItems.size();
+    case EE_CP_CENTER_EFFECT_AT:
+        return (int64_t)EECPRCHandle(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))->mAreaEffects.mItems[(size_t)v[0]]);
+    case EE_CP_CENTER_EFFECT_KIND:
+        return theEffect->mKind;
     case EE_CP_CENTER_EFFECT_RADIUS: io->f[0] = theEffect->GetRadius();
         return 0;
     case EE_CP_CENTER_EFFECT_DIRTY: theEffect->MarkDirty();

@@ -1117,6 +1117,16 @@ pub unsafe extern "C" fn ee_astar_cm_shutdown(r: *mut EeAStarCmRecord) {
     free_grids(r);
 }
 
+/// `~EEAIContinentManager`: `Shutdown` of the game's manager `global`, then this one's tables freed.
+///
+/// # Safety
+/// `global` the game's live record; `r` this manager's record, not used after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_cm_destroy(global: *mut EeAStarCmRecord, r: *mut EeAStarCmRecord) {
+    ee_astar_cm_shutdown(global);
+    crate::astar::cm::ee_astar_cm_free(r);
+}
+
 /// `Clear(map)`: clearing, reset, the grids freed, the continents and hills of the map made.
 ///
 /// # Safety

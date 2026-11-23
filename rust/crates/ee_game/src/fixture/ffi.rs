@@ -66,3 +66,9 @@ pub unsafe extern "C" fn ee_fixture_lasso(ids: *const i64, n: usize) {
 pub extern "C" fn ee_fixture_message(message: u64, kind: u64, local: bool, phase: i32) {
     super::orders::message(message, kind, local, phase);
 }
+
+/// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
+#[no_mangle]
+pub extern "C" fn ee_fixture_lobby_work() {
+    super::lobby::work();
+}

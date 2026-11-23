@@ -63,7 +63,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
 {
     EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inA;
     std::vector<U2DPoint<long> > theTiles;
-    if (inOp >= EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT)
+    if (inOp >= EE_UNITS_CLS_MV_CLOSEST_TILE)
         return EEUnitClassMoveOp(inOp, theUnit, inB, inC, inD, ioIo);   // EEUnitClass.cpp
     // (the cargo, container, command, home base, turn speeds, projectile category and map size: cls_host.rs)
     switch (inOp) {

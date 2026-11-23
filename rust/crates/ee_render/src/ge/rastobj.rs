@@ -847,6 +847,16 @@ pub unsafe extern "C" fn ee_ge_rast_ripple(p: *mut EeGeRasterizer, ripple: *mut 
     }
 }
 
+/// `SetWaterRippleEffect(r0, r1, r2)`: the three ripple values.
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_rast_ripple_values(p: *mut EeGeRasterizer, r0: f32, r1: f32, r2: f32) {
+    // SAFETY: the caller's contract
+    unsafe { rs(p).water_ripple = [r0, r1, r2] };
+}
+
 /// One of the base's render state setters on screen `screen` (floats as their bits).
 ///
 /// # Safety

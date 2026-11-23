@@ -1,6 +1,7 @@
 // C:\EEX\Empire Earth\Empire Earth\EECheatCodes.cpp (name from RTTI EECheatCodes; no __FILE__). The cheat codes:
 // the table, the chat line's parse, the lookup, the code list and the dispatch are ee_app cheats.rs (RUST_PLAN R6
-// "app and world"); this unit is their host: the strings, the chat log, the camera and each cheat's world walk.
+// "app and world"); their host (the strings, the chat log, the camera and each cheat's world walk) is ee_game gamecpp
+// cheats.rs over this unit's one-statement cases.
 #include <windows.h>
 #include <string.h>
 #include <string>
@@ -27,184 +28,16 @@
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "ee/EECheatCodes.h"
-#include "ee/EEAppCapture.h"
+#include <utility>
 #include "rust/sim/app.h"
-#include "rust/game/app.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp cheats.rs)
 
-// New (port): the Rust table's host (ee_app cheats_ffi.rs)
-struct EECheatHostContext {
-    UWideString mString;                    // STRING's answer
-};
-
-// Kills every unit of a player (emptying its resource units); not all: the local player's selected and viewed
-// units are spared
-static void EECheatKill(unsigned long inPlayer, bool inAll)
-{
-    for (EEUnit* theUnit = gWorld.mPlayers[inPlayer]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (!inAll && gWorld.GetCurrentPlayer()->mViewedUnit == theUnit)
-            continue;
-        if (theComplexUnit != NULL) {
-            if (inAll || !gWorld.GetCurrentPlayer()->mActiveGroup->Contains(theComplexUnit))
-                theComplexUnit->Kill(0, 0, 0);
-        } else {
-            if (theUnit->mResourceAmount != 0)
-                theUnit->mResourceAmount = 0;
-            theUnit->Kill(0, 0, 0);
-            if (theUnit->mUnitClass->mCategory == kUnitCategoryResource)
-                theUnit->mPlayer->KillUnit(theUnit, false);
-        }
-    }
-}
-
-// One cheat's work for a player (below the player count)
-static void EECheatAction(uint32_t inAction, unsigned long inPlayer, long inA, long inB)
-{
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    switch (inAction) {
-    case EE_APP_CHEAT_KILL:
-        EECheatKill(inPlayer, inA != 0);
-        break;
-    case EE_APP_CHEAT_EXPLORE:
-        gWorld.mMap->ExploreUnseen(thePlayer);
-        break;
-    case EE_APP_CHEAT_MAKE_VISIBLE:
-        // the message that makes the whole world visible, from the local player only
-        if (thePlayer == gWorld.GetCurrentPlayer()) {
-            EEMRecord* theMessage = new EEMRecord(kMessageMakeWorldVisible);
-            theMessage->SetOriginatingSlot(thePlayer->mSlot);
-            gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-        }
-        break;
-    case EE_APP_CHEAT_RESEARCH_ALL:
-        // every improvement the player can still get, to its highest level; the queued ones dropped
-        for (long i = 0; i < EEUnitClassCount(); i++) {
-            EEUnitClass* theClass = gUnitClassTable[i];
-            if (theClass == NULL)
-                continue;
-            EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[i];
-            if (theUpgrade != NULL) {
-                for (unsigned long j = 0; j < 0x10; j++) {
-                    if (!thePlayer->CanImprove(i, j, NULL))
-                        continue;
-                    long theMax = theClass->mImprovements->mMaxLevel;
-                    for (long n = theMax - theUpgrade->mImprovement.GetLevel(j) + 1; n != 0; n--)
-                        thePlayer->ApplyImprovement(i, j, false);
-                }
-            }
-            thePlayer->EraseQueuedImprovements(i);
-        }
-        break;
-    case EE_APP_CHEAT_ADVANCE_EPOCH:
-        // a valid later epoch above the prehistoric one
-        if (inA < EEEpochCount() && inA > kTechEpochPrehistoric && inA > thePlayer->mTechnologies->mCurrentEpoch)
-            thePlayer->SetEpoch(inA);
-        break;
-    case EE_APP_CHEAT_RESTORE_POWER:
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-            if (theUnit->mHitPoints > 0 && theComplexUnit != NULL && theComplexUnit->mPowerRegenTimer > 0 &&
-                theComplexUnit->mPower != theComplexUnit->GetStats()->mPower)
-                theComplexUnit->mPower = theComplexUnit->mStats->mPower;
-        }
-        break;
-    case EE_APP_CHEAT_HEAL:
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (theUnit->mHitPoints > 0)
-                theUnit->SetHitPoints(theUnit->mStats->mMaxHitPoints);
-        }
-        break;
-    case EE_APP_CHEAT_REFUEL:
-        // living aircraft refuelled; grounded ones commandable again
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-            if (!(theUnit->mHitPoints > 0) || theComplexUnit == NULL || !(theComplexUnit->mStats->mFlightTime > 0))
-                continue;
-            if (theComplexUnit->mFlightTime == 0 && theComplexUnit->mIsCommandable != 0 && theComplexUnit->mIsCommandable != 1)
-                theComplexUnit->mIsCommandable = 1;
-            if (theComplexUnit->mFlightTime != theComplexUnit->mStats->mFlightTime)
-                theComplexUnit->mFlightTime = theComplexUnit->mStats->mFlightTime;
-        }
-        break;
-    case EE_APP_CHEAT_TOGGLE_INSTANT_BUILD:
-        thePlayer->mInstantBuild = !thePlayer->mInstantBuild;
-        break;
-    case EE_APP_CHEAT_END_GAME:
-        // a victory for the local player (inA) or a defeat
-        gPhysics->EndGame(inA != 0 ? thePlayer == gWorld.GetCurrentPlayer() : thePlayer != gWorld.GetCurrentPlayer());
-        break;
-    case EE_APP_CHEAT_ADD_RESOURCE:
-        thePlayer->AddResource(inA, inB);
-        break;
-    case EE_APP_CHEAT_CLEAR_RESOURCE:
-        thePlayer->mResourceCaps[inA] = 0;
-        break;
-    }
-}
-
-static void EECheatHostOp(void* inContext, int32_t inOp, EeAppCheatIo* io)
-{
-    EECheatHostContext& theContext = *static_cast<EECheatHostContext*>(inContext);
-    switch (inOp) {
-    case EE_APP_CHEAT_OP_STRING:
-        gResource->GetString(io->id, theContext.mString);
-        io->text = reinterpret_cast<const uint8_t*>((const char*)theContext.mString);
-        io->len = strlen((const char*)theContext.mString);
-        break;
-    case EE_APP_CHEAT_OP_MULTIPLAYER:
-        io->flag = gCommunications->GetIsMultiplayerSession();
-        break;
-    case EE_APP_CHEAT_OP_CHEATS_ENABLED:
-        io->flag = gWorld.mCheatsEnabled;
-        break;
-    case EE_APP_CHEAT_OP_PLAYERS:
-        io->n = gWorld.mNumPlayers;
-        break;
-    case EE_APP_CHEAT_OP_CHAT: {
-        UWideString theLine(std::string(reinterpret_cast<const char*>(io->text), io->len).c_str());
-        gUserInterface->AddChatLogEntry(theLine, 0);
-        ee_app_capture_cheat_list((const char*)theLine);   // CHLS (TEST ONLY: ee_game app world_capture.rs)
-        break;
-    }
-    case EE_APP_CHEAT_OP_GOTO: {
-        // the camera to the map's closest tile of the point
-        GE3DPoint thePoint;
-        GE3DPoint theLocation;
-        long theX;
-        long theY;
-        thePoint.SetX(io->x);
-        thePoint.SetY(io->y);
-        if (gWorld.mMap != NULL && gWorld.mMap->GetClosestTile(&thePoint, &theX, &theY) != NULL) {
-            gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theLocation);
-            theLocation.mX = (float)theX;
-            theLocation.mY = (float)theY;
-            gWorld.mCameraControl.SetLocation(theLocation, true, true);
-        }
-        break;
-    }
-    case EE_APP_CHEAT_OP_FIND: {
-        // the camera to the unit's tile
-        RTSUnit* theUnit = gWorld.GetUnit(io->n);
-        if (theUnit != NULL) {
-            GE3DPoint theLocation;
-            gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theLocation);
-            theLocation.SetX((float)theUnit->mTileX);
-            theLocation.SetY((float)theUnit->mTileY);
-            gWorld.mCameraControl.SetLocation(theLocation, true, true);
-        }
-        break;
-    }
-    case EE_APP_CHEAT_OP_ACTION:
-        EECheatAction(io->id, io->n, io->a, io->b);
-        break;
-    }
-}
+// (the table's host, each cheat's work and the camera's goto and find: ee_game gamecpp cheats.rs)
 
 // Creates the cheat code table from the string resources
 EECheatCodes::EECheatCodes()
 {
-    EECheatHostContext theContext;
-    this->mRust = ee_app_cheats_new(&EECheatHostOp, &theContext);
+    this->mRust = ee_gamecpp_cheats_new();
 }
 
 // Destroys the cheat code table
@@ -217,16 +50,87 @@ EECheatCodes::~EECheatCodes()
 // research, healing, power, refuel, win/lose, kill units, or the code list
 void EECheatCodes::ApplyCheatCode(long inCode, long inPlayerID, long inParameter)
 {
-    EECheatHostContext theContext;
-    ee_app_cheats_apply(this->mRust, &EECheatHostOp, &theContext, inCode, inPlayerID, inParameter);
+    ee_gamecpp_cheats_apply(this->mRust, inCode, inPlayerID, inParameter);
 }
 
 // Parses a chat line: "goto x y" and "find [player] id" move the camera; otherwise strips a trailing number as
 // the parameter and looks the rest up as a cheat code
 void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long& outParameter)
 {
-    EECheatHostContext theContext;
-    const char* theText = (const char*)inText;
-    ee_app_cheats_parse(this->mRust, &EECheatHostOp, &theContext, reinterpret_cast<const uint8_t*>(theText),
-                        strlen(theText), &outCode, &outParameter);
+    ee_gamecpp_cheats_parse(this->mRust, (const char*)inText, &outCode, &outParameter);
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the cheat codes
+
+int64_t EECore10OpD5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECivilization.cpp
+double EECore10OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(kUnitCategoryResource == 1 && kTechEpochPrehistoric == 0, "gamecpp cheats.rs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define UN ((EEUnit*)p)
+#define PL ((EEPlayer*)p)
+
+// the C++ calls and members of the cheats' bodies in Rust (gamecpp cheats.rs), one statement each
+int64_t EECore10OpD4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DcStrBytes: return P64((const char*)*(UWideString*)p);
+    case O::DcMultiplayer: return gCommunications->GetIsMultiplayerSession();
+    case O::DcCheatsEnabled: return gWorld.mCheatsEnabled;
+    case O::DcNumPlayers: return (int64_t)gWorld.mNumPlayers;
+    case O::DcChatLog: gUserInterface->AddChatLogEntry(UWideString((const char*)a[0]), 0);
+        break;
+    case O::DcClosestTile: return gWorld.mMap != NULL && gWorld.mMap->GetClosestTile((GE3DPoint*)a[0], (long*)a[1], (long*)a[2]) != NULL;
+    case O::DcWorldUnit: return P64(static_cast<EeUnitsRtsUnitFields*>(gWorld.GetUnit((unsigned long)a[0])));
+    case O::DcStats: return P64(static_cast<EeUnitsUnitClassUpgradeFields*>(UN->mStats));
+    case O::DcIsViewed: return PL->mViewedUnit == (EEUnit*)a[0];
+    case O::DcActiveContains: return PL->mActiveGroup->Contains((EEComplexUnit*)a[0]);
+    case O::DcCxKill: ((EEComplexUnit*)p)->Kill(0, 0, 0);
+        break;
+    case O::DcPlayerKillUnit: PL->KillUnit((EEUnit*)a[0], false);
+        break;
+    case O::DcExplore: gWorld.mMap->ExploreUnseen(PL);
+        break;
+    case O::DcNewMakeVisible: return P64(new EEMRecord(kMessageMakeWorldVisible));
+    case O::DcSetOriginatingSlot: ((EEMRecord*)p)->SetOriginatingSlot(((EEPlayer*)a[0])->mSlot);
+        break;
+    case O::DcProcessInput: gCommunications->ProcessLocalUserInput((EEMRecord*)p, kSlotNone);
+        break;
+    case O::DcClassCount: return EEUnitClassCount();
+    case O::DcPlayerUpgradeCount: return (int64_t)PL->mUnitClassUpgrades.size();
+    case O::DcPlayerUpgrade: return P64(PL->mUnitClassUpgrades[a[0]]);
+    case O::DcCanImprove: return PL->CanImprove((long)a[0], (unsigned long)a[1], NULL);
+    case O::DcClassMaxLevel: return ((EEUnitClass*)p)->mImprovements->mMaxLevel;
+    case O::DcUpgradeLevel: return ((EEUnitClassUpgrade*)p)->mImprovement.GetLevel((unsigned long)a[0]);
+    case O::DcApplyImprovement: PL->ApplyImprovement((long)a[0], (unsigned long)a[1], false);
+        break;
+    case O::DcEraseQueued: PL->EraseQueuedImprovements((long)a[0]);
+        break;
+    case O::DcEpochCount: return EEEpochCount();
+    case O::DcCurrentEpoch: return PL->mTechnologies->mCurrentEpoch;
+    case O::DcSetEpoch: PL->SetEpoch((long)a[0]);
+        break;
+    case O::DcSetHitPoints: UN->SetHitPoints((long)a[0]);
+        break;
+    case O::DcEndGame: gPhysics->EndGame(a[0] != 0);
+        break;
+    case O::DcAddResource: PL->AddResource((long)a[0], (long)a[1]);
+        break;
+    // the app profile's cheat sweep (TEST ONLY)
+    case O::DcHaveCheats: return gCheatCodes != NULL;
+    case O::DcParse: gCheatCodes->ParseCheatCode(UWideString((const char*)a[0]), *(long*)a[1], *(long*)a[2]);
+        break;
+    case O::DcApply: gCheatCodes->ApplyCheatCode((long)a[0], (long)a[1], (long)a[2]);
+        break;
+    case O::DcSwapCheatsEnabled: return std::exchange(gWorld.mCheatsEnabled, a[0] != 0);
+    default: return EECore10OpD5(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore10OpD4F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpD5F(inOp, p, a, f);
 }

@@ -58,6 +58,8 @@ pub const EE_SCREENS_SEW_MOVE_UNIT: u32 = 13;
 /// `EESEADeleteUnit` (a the unit's id, or -1: the player b's selection, all of it when c != 0); posted when made
 /// (the one unit only when it exists).
 pub const EE_SCREENS_SEW_DELETE_UNIT: u32 = 14;
+/// `EESEAChangeWorldPlayerCount` (a: the count): `gMaxPlayers` set when it runs (round 6: the player tab's count).
+pub const EE_SCREENS_SEW_PLAYER_COUNT: u32 = 4000;
 
 // ---- the host's ops (`ee_screenscpp_sew`: `p` a pointer, `i` up to 8 integers, `f` up to 4 floats, in and out)
 
@@ -163,6 +165,12 @@ pub const EE_SCREENS_SEW_OP_BUILD_GATE: u32 = 49;
 pub const EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE: u32 = 50;
 /// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
 pub const EE_SCREENS_SEW_OP_UNIT_PLAYER: u32 = 51;
+/// `gMaxPlayers = i0` (`EESEAChangeWorldPlayerCount::Virtual4`).
+pub const EE_SCREENS_SEW_OP_SET_MAX_PLAYERS: u32 = 4000;
+/// A text action's run (p its info, i0 1 for the import) and its info freed (`editor_selt.rs`; the adapter answers
+/// them).
+pub const EE_SCREENS_SEW_OP_TEXT_RUN: u32 = 5000;
+pub const EE_SCREENS_SEW_OP_TEXT_FREE: u32 = 5001;
 
 /// The elevation file picked on the map tab, read whole.
 #[derive(Clone, Debug, PartialEq)]
@@ -265,6 +273,14 @@ pub enum SewKind {
         player: i32,
         group: bool,
     },
+    PlayerCount {
+        count: u32,
+    },
+    /// the trigger text export or import (`editor_selt.rs`): `info` its `EeScreensSeltInfo`, owned
+    Text {
+        info: usize,
+        import: bool,
+    },
 }
 
 /// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
@@ -310,6 +326,9 @@ impl SewAction {
             EE_SCREENS_SEW_PLACE_UNIT => SewKind::PlaceUnit(SepPlace::default()),
             EE_SCREENS_SEW_MOVE_UNIT => SewKind::MoveUnit(SepMove::default()),
             EE_SCREENS_SEW_DELETE_UNIT => SewKind::DeleteUnit { id: a as u32, player: b, group: c != 0 },
+            EE_SCREENS_SEW_PLAYER_COUNT => SewKind::PlayerCount { count: a as u32 },
+            crate::screens::editor_selt::EE_SCREENS_SEW_TEXT_EXPORT => SewKind::Text { info: object, import: false },
+            crate::screens::editor_selt::EE_SCREENS_SEW_TEXT_IMPORT => SewKind::Text { info: object, import: true },
             _ => return None,
         };
         Some(SewAction { owner, kind })
@@ -341,10 +360,13 @@ impl SewAction {
         }
     }
 
-    /// The action freed: the quick save's object released.
+    /// The action freed: the quick save's object released, a text action's info freed.
     pub fn free<H: SewHost + ?Sized>(&self, h: &mut H) {
         if let SewKind::QuickSave { quick_save } = self.kind {
             h.op(EE_SCREENS_SEW_OP_DEREFERENCE, quick_save, &mut [0; 8], &mut [0.0; 4]);
+        }
+        if let SewKind::Text { info, .. } = self.kind {
+            h.op(EE_SCREENS_SEW_OP_TEXT_FREE, info, &mut [0; 8], &mut [0.0; 4]);
         }
     }
 
@@ -467,6 +489,12 @@ impl SewAction {
                     SeuDelete::Selection { group: *group }
                 };
                 h.delete(what);
+            }
+            SewKind::PlayerCount { count } => {
+                op(h, EE_SCREENS_SEW_OP_SET_MAX_PLAYERS, &[*count as i32]);
+            }
+            SewKind::Text { info, import } => {
+                h.op(EE_SCREENS_SEW_OP_TEXT_RUN, *info, &mut [i32::from(*import), 0, 0, 0, 0, 0, 0, 0], &mut [0.0; 4]);
             }
         }
     }
@@ -820,6 +848,15 @@ mod tests {
     }
 
     #[test]
+    fn player_count_sets_the_world_count_when_it_runs() {
+        let mut h = Rec::new();
+        let mut a = make(&mut h, EE_SCREENS_SEW_PLAYER_COUNT, 0, 5, 0, 0, 0);
+        assert!(h.log.is_empty());
+        a.run(&mut h);
+        assert_eq!(h.log, [format!("{EE_SCREENS_SEW_OP_SET_MAX_PLAYERS} p0 [5, 0, 0, 0, 0] [0.0, 0.0, 0.0]")]);
+    }
+
+    #[test]
     fn delete_posts_one_unit_only_when_it_exists_with_its_player() {
         // the unit 7 exists (player 3): posted, run with that player; the unit 8 does not: not posted
         struct Units(Rec);
@@ -916,6 +953,22 @@ mod tests {
         let ops: Vec<&str> = h.log.iter().map(|l| l.split(' ').next().unwrap()).collect();
         assert_eq!(ops, ["2", "5", "9", "3"]);
         assert!(h.log[2].starts_with("9 p85"));
+    }
+
+    #[test]
+    fn text_actions_run_and_free_their_info() {
+        use crate::screens::editor_selt::{EE_SCREENS_SEW_TEXT_EXPORT, EE_SCREENS_SEW_TEXT_IMPORT};
+        for (kind, import) in [(EE_SCREENS_SEW_TEXT_EXPORT, 0), (EE_SCREENS_SEW_TEXT_IMPORT, 1)] {
+            let mut h = Rec::new();
+            let mut a = make(&mut h, kind, 0x66, 1, 0, 0, 0);
+            assert_eq!(a.kind, SewKind::Text { info: 0x66, import: import != 0 });
+            a.run(&mut h);
+            a.free(&mut h);
+            // not posted when made; the run on the info, then the info freed
+            assert_eq!(h.log.len(), 2);
+            assert_eq!(h.log[0], format!("5000 p102 [{import}, 0, 0, 0, 0] [0.0, 0.0, 0.0]"));
+            assert!(h.log[1].starts_with("5001 p102"));
+        }
     }
 
     #[test]
