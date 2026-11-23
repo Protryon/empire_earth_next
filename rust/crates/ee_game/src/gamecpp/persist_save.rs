@@ -654,7 +654,7 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
         h(O::PsStOptionsFromHeader, st, &[pa(header.0)]);
         let tags = header_tags(header.0);
         // port (decision D6): the chunks of a save older than 0.255 hold Windows-1252 text, converted as it loads
-        h(O::PsLegacyTextLoad, 0, &[(h(O::PsTextIsUtf8, 0, &[hmaj as i64, hmin as i64]) == 0) as i64]);
+        h(O::PsLegacyTextLoad, 0, &[!ee_sim::save_versions::EESaveTextIsUtf8(hmaj, hmin) as i64]);
         if restore_persistents(st, &tags, file) == PF_OK {
             result = true;
         }
@@ -874,7 +874,7 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
                 (*v, *v.add(1))
             };
             // port (decision D6): a chunk of a save older than 0.255 holds Windows-1252 text
-            let legacy = r == PF_OK && h(O::PsTextIsUtf8, 0, &[hmaj as i64, hmin as i64]) == 0;
+            let legacy = r == PF_OK && !ee_sim::save_versions::EESaveTextIsUtf8(hmaj, hmin);
             h(O::PsLegacyTextLoad, 0, &[legacy as i64]);
             for &t in &tags {
                 let chunk = owned(O::PsChunkNew, O::PsChunkDelete);

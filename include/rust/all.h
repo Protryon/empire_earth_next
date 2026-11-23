@@ -56,6 +56,7 @@
 #include "rust/sim/message_ids.h"
 #include "rust/sim/netmsg.h"
 #include "rust/sim/rmap.h"
+#include "rust/sim/save_versions.h"
 #include "rust/sim/scenario.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/tech_tree_ids.h"

@@ -16,6 +16,7 @@ use std::ptr::addr_of_mut;
 
 use ee_base::math::types::GeTransformation;
 use ee_sim::ai::next_game::schedule;
+use ee_sim::save_versions::*;
 use ee_sim::app::active_ffi::{ee_app_active_list, ee_app_active_set, ee_app_active_set_list};
 use ee_sim::combat::regions::{ee_combat_regions_order, ee_combat_regions_restore, EeCombatUnitRegions};
 use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
@@ -169,7 +170,7 @@ pub extern "C" fn ee_gamecpp_pwh_load(
             file.read_bool(addr_of_mut!((*f).mUsingCarbon));
         }
     }
-    if h(O::PwHasLiveState, 0, &[major as i64, minor as i64]) != 0 {
+    if EESaveHasLiveState(major, minor) {
         let mut ctx = PwCtx { file: file.0, major, minor };
         // SAFETY: the context lives for the call; the host answers its operations
         unsafe { ee_units_world_load_live(&mut ctx as *mut PwCtx as *mut c_void, ee_gamecpp_pworld_host) };
@@ -204,7 +205,7 @@ pub extern "C" fn ee_gamecpp_pwh_save(
     file.write_long(f.mTownIDCounter);
     file.write_u16(f.mHerdIDCounter);
     file.write_bool(f.mUsingCarbon);
-    if h(O::PwHasLiveState, 0, &[major as i64, minor as i64]) != 0 {
+    if EESaveHasLiveState(major, minor) {
         let mut ctx = PwCtx { file: file.0, major, minor };
         // SAFETY: as Load's
         unsafe { ee_units_world_save_live(&mut ctx as *mut PwCtx as *mut c_void, ee_gamecpp_pworld_host) };
@@ -294,25 +295,25 @@ fn is_primitive(op: i32) -> bool {
         || op == EE_UNITS_PLAYER_SAVE_WRITE_USHORT
 }
 
-/// The save's part predicates (`EE_UNITS_WORLD_HAS`'s `a`) as their cases.
-fn has_op(which: i64) -> Option<O> {
+/// The save's part predicates (`EE_UNITS_WORLD_HAS`'s `a`).
+fn has_op(which: i64) -> Option<extern "C" fn(c_ulong, c_ulong) -> bool> {
     Some(match which {
-        EE_UNITS_WORLD_HAS_RUNNING_STATE => O::PwHasRunningState,
-        EE_UNITS_WORLD_HAS_REGION_ORDER => O::PwHasRegionOrder,
-        EE_UNITS_WORLD_HAS_EXPERIMENT_TIMERS => O::PwHasExperimentTimers,
-        EE_UNITS_WORLD_HAS_TOWNS => O::PwHasTowns,
-        EE_UNITS_WORLD_HAS_TOWN_AREAS => O::PwHasTownAreas,
-        EE_UNITS_WORLD_HAS_GHOSTS => O::PwHasGhosts,
-        EE_UNITS_WORLD_HAS_GHOST_RESOURCES => O::PwHasGhostResources,
-        EE_UNITS_WORLD_HAS_GOAL_GHOSTS => O::PwHasGoalGhosts,
-        EE_UNITS_WORLD_HAS_CONTINENT_REGIONS => O::PwHasContinentRegions,
-        EE_UNITS_WORLD_HAS_RESOURCE_STATE => O::PwHasResourceState,
-        EE_UNITS_WORLD_HAS_PLAYER_UNIT_ORDER => O::PwHasPlayerUnitOrder,
-        EE_UNITS_WORLD_HAS_PATH_SEARCHES => O::PwHasPathSearches,
-        EE_UNITS_WORLD_HAS_ACTIVE_GROUPS => O::PwHasActiveGroups,
-        EE_UNITS_WORLD_HAS_GRAPH_SEARCHES => O::PwHasGraphSearches,
-        EE_UNITS_WORLD_HAS_TECH_ALLOWED => O::PwHasTechAllowed,
-        EE_UNITS_WORLD_HAS_TILE_TYPES => O::PwHasTileTypes,
+        EE_UNITS_WORLD_HAS_RUNNING_STATE => EESaveHasRunningState,
+        EE_UNITS_WORLD_HAS_REGION_ORDER => EESaveHasRegionOrder,
+        EE_UNITS_WORLD_HAS_EXPERIMENT_TIMERS => EESaveHasExperimentTimers,
+        EE_UNITS_WORLD_HAS_TOWNS => EESaveHasTowns,
+        EE_UNITS_WORLD_HAS_TOWN_AREAS => EESaveHasTownAreas,
+        EE_UNITS_WORLD_HAS_GHOSTS => EESaveHasGhosts,
+        EE_UNITS_WORLD_HAS_GHOST_RESOURCES => EESaveHasGhostResources,
+        EE_UNITS_WORLD_HAS_GOAL_GHOSTS => EESaveHasGoalGhosts,
+        EE_UNITS_WORLD_HAS_CONTINENT_REGIONS => EESaveHasContinentRegions,
+        EE_UNITS_WORLD_HAS_RESOURCE_STATE => EESaveHasResourceState,
+        EE_UNITS_WORLD_HAS_PLAYER_UNIT_ORDER => EESaveHasPlayerUnitOrder,
+        EE_UNITS_WORLD_HAS_PATH_SEARCHES => EESaveHasPathSearches,
+        EE_UNITS_WORLD_HAS_ACTIVE_GROUPS => EESaveHasActiveGroups,
+        EE_UNITS_WORLD_HAS_GRAPH_SEARCHES => EESaveHasGraphSearches,
+        EE_UNITS_WORLD_HAS_TECH_ALLOWED => EESaveHasTechAllowed,
+        EE_UNITS_WORLD_HAS_TILE_TYPES => EESaveHasTileTypes,
         _ => return None,
     })
 }
@@ -392,7 +393,7 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
             // SAFETY: as above
             let c = unsafe { &*ctx };
             match has_op(io.a) {
-                Some(o) => (h(o, 0, &[c.major as i64, c.minor as i64]) != 0) as i64,
+                Some(has) => has(c.major, c.minor) as i64,
                 None => 0,
             }
         }

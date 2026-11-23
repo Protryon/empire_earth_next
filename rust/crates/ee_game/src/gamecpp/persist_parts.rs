@@ -250,7 +250,7 @@ fn load_player(helper: P, file: Pf, major: c_ulong, minor: c_ulong, v: [i64; 2])
         }
     }
     // port: from 0.280 the per-unit Lua interface's state (0 for none; EESaveHasUnitsLuaState)
-    if r == PF_OK && kind == 1 && cp != 0 && h(O::PphHasUnitsLuaState, 0, &v) != 0 {
+    if r == PF_OK && kind == 1 && cp != 0 && ee_sim::save_versions::EESaveHasUnitsLuaState(major, minor) {
         let (rr, bytes) = read_block(file, PP_STATE_LIMIT, false, b' ');
         r = rr;
         if r == PF_OK && !bytes.is_empty() && h(O::PphCpUnitsLoad, cp, &bytes_arg(&bytes)) == 0 {
@@ -388,7 +388,7 @@ pub extern "C" fn ee_gamecpp_hdr_load(header: *mut c_void, file: *mut c_void) ->
     if r == PF_OK {
         // SAFETY: the header's versions
         let (maj, min) = unsafe { (*hdr_versions(header), *hdr_versions(header).add(1)) };
-        h(O::PsLegacyTextLoad, 0, &[(h(O::PsTextIsUtf8, 0, &[maj as i64, min as i64]) == 0) as i64]);
+        h(O::PsLegacyTextLoad, 0, &[!ee_sim::save_versions::EESaveTextIsUtf8(maj, min) as i64]);
         r = load_body(header, file);
         h(O::PsLegacyTextLoad, 0, &[0]);
     }

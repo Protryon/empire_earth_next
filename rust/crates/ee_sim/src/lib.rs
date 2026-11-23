@@ -23,6 +23,8 @@ pub mod message_ids;
 pub mod netmsg;
 /// The crate ee_rmap before the restructure.
 pub mod rmap;
+/// The save versions' predicates (EESaveHas*), under their C++ names.
+pub mod save_versions;
 /// The crate ee_scenario before the restructure.
 pub mod scenario;
 /// The crate ee_tech before the restructure.
