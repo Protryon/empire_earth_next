@@ -130,12 +130,6 @@ void RustServerOp::StrSink(void* inContext, const uint8_t* inData, size_t inLeng
 {
     static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inData), inLength);
 }
-DirEntityList RustServerOp::GetEntities(int inWhich, long long inIndex) const
-{
-    DirEntityList aList;
-    ee_won_hostop_entities(this->mRustOp, inWhich, inIndex, DirEntityReplyParser::TakeEntity, &aList);
-    return aList;
-}
 std::string RustServerOp::GetBytes(int inWhich, long long inIndex) const
 {
     std::string aBytes;

@@ -13,20 +13,10 @@ namespace WONAPI {
 // EE_WON_MULTIPING_CLEAR; once finished, the list by number (EE_WON_MULTIPING_COUNT, _ADDR, _TIME, _FAILURES,
 // _ENTITY). The two helpers below are the original's AddServers and GetServerContext over it.
 
-// AddServers: each service entity (not a directory) whose name passes the filter and whose address is valid
-inline void MultiPingAddServers(RustServerOp* inOp, const DirEntityList& inDir, const wchar_t* inNameFilter = NULL)
-{
-    std::wstring aFilter = inNameFilter != NULL ? inNameFilter : L"";
-    for (DirEntityList::const_iterator i = inDir.begin(); i != inDir.end(); ++i) {
-        const DirEntity* anEntity = *i;
-        if (anEntity->mType == 'D' || (!aFilter.empty() && aFilter != anEntity->mName)) continue;
-        IPAddr anAddr = anEntity->GetNetAddrAsIP();
-        if (anAddr.IsValid())
-            ee_won_hostop_set(inOp->GetRustOp(), EE_WON_MULTIPING_ADD, 0, NULL, 0,
-                              reinterpret_cast<const uint8_t*>(anAddr.GetSixByte()),
-                              static_cast<RefCount*>(const_cast<DirEntity*>(anEntity)));
-    }
-}
+// AddServers: each service entity (not a directory) whose name passes the filter and whose address is valid (Rust's:
+// dirlist.rs, R6 WON round 34; the elements hold no entity object)
+inline void MultiPingAddServers(RustServerOp* inOp, const DirList& inDir, const wchar_t* inNameFilter = NULL)
+{ ee_won_multiping_add_servers(inOp->GetRustOp(), inDir.get(), inNameFilter, inNameFilter != NULL ? wcslen(inNameFilter) : 0, sizeof(wchar_t)); }
 
 inline void MultiPingSixSink(void* inContext, const uint8_t* inBytes, size_t inLength)
 {

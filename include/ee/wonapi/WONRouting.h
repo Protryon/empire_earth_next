@@ -24,6 +24,7 @@
 #include "rust/won_net/certhost.h"
 #include "rust/won_net/debug.h"
 #include "rust/won_net/dir.h"
+#include "rust/won_net/dirlist.h"
 #include "rust/won_net/ffi_net.h"
 #include "rust/won_net/fwhost.h"
 #include "rust/won_net/hostbase.h"
@@ -767,12 +768,12 @@ inline const char* GetBufferData(const ByteBufferPtr& inBuffer)
 // the WON server list the account ops use (??_G 0xceaec, dtor 0xceb08; sizeof 0x3c).: layout from
 // the dtor and the base game's out-of-line ctor (base exe 0x4c772a; AoC's WONAPI inlines it: 0x2ddb70, 0x3628c0);
 // (provisional member names)
-typedef std::map<std::wstring,DirEntityList> DirEntityMap;
 typedef std::set<IPAddr> AddrSet;
 // A shim over ee_won's server list (rust/crates/ee_won_net/src/servctx.rs: the addresses, their order, the one-time
 // shuffle and the lock); the original's 0x3c-byte layout is gone
 // a shim over ee_won's server list (servctx.rs: the addresses, their order, the one-time shuffle and the lock);
-// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values and walks the entities
+// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values; the directory's entities are
+// walked in Rust (dirlist.rs, R6 WON round 34: the path-map overloads had no caller and went with DirEntityMap)
 class ServerContext : public RefCount {
 public:
     EeWonServerList* GetListObject() const { return this->mList; }
@@ -784,13 +785,8 @@ public:
     // a server that failed to the end of the list
     void NotifyFailed(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); ee_won_ctx_notify_failed(this->mList, &a); } //2ac980
     // the directory's services' addresses (only those of the name when one is given)
-    bool AddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
-    {
-        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
-        bool added = false;
-        for (size_t i = 0; i < anAddrs.size(); i++) if (this->AddAddress(anAddrs[i])) added = true;
-        return added;
-    }
+    bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
+    { return ee_won_ctx_add_from_dir(this->mList, inDir.get(), inNameFilter, WideLength(inNameFilter), sizeof(wchar_t)); }
     void RemoveAllAddresses() { this->Clear(); } //2acc00
     unsigned long GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }
     typedef std::list<IPAddr> AddrList;
@@ -798,44 +794,16 @@ public:
     void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
     bool RemoveAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_remove(this->mList, &a); }
     void CopyAddresses(AddrSet& outCopy) { outCopy.clear(); ee_won_ctx_copy_sorted(this->mList, ToSet, &outCopy); }
-    bool AddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
-    {
-        DirEntityMap::const_iterator i = inDir.find(inPath);
-        return i != inDir.end() && this->AddAddressesFromDir(i->second, inNameFilter);
-    }
     // cleared and refilled under the list's one lock
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL)
-    {
-        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
-        std::vector<EeWonAddr> aRaw;
-        for (size_t i = 0; i < anAddrs.size(); i++) aRaw.push_back(anAddrs[i].ToRaw());
-        return ee_won_ctx_replace(this->mList, aRaw.empty() ? NULL : &aRaw[0], aRaw.size());
-    }
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
-    {
-        DirEntityMap::const_iterator i = inDir.find(inPath);
-        if (i != inDir.end()) return this->AtomicClearAndAddAddressesFromDir(i->second, inNameFilter);
-        ee_won_ctx_replace(this->mList, NULL, 0); // the original cleared the list before looking the path up
-        return false;
-    }
+    bool AtomicClearAndAddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL)
+    { return ee_won_ctx_replace_from_dir(this->mList, inDir.get(), inNameFilter, WideLength(inNameFilter), sizeof(wchar_t)); }
     // the original's public mShuffleAddresses (copies shuffle once while it is on)
     void SetShuffleAddresses(bool inShuffle) { ee_won_ctx_set_shuffle(this->mList, inShuffle); }
 
 private:
     ServerContext(const ServerContext&);
     ServerContext& operator=(const ServerContext&);
-    static std::vector<IPAddr> DirAddresses(const DirEntityList& inDir, const wchar_t* inNameFilter)
-    {
-        std::wstring aFilter;
-        if (inNameFilter != NULL) aFilter = inNameFilter;
-        std::vector<IPAddr> anAddrs;
-        for (DirEntityList::const_iterator i = inDir.begin(); i != inDir.end(); ++i) {
-            DirEntity* e = i->get();
-            if (e->mType == 'D' || (!aFilter.empty() && !(aFilter == e->mName))) continue;
-            anAddrs.push_back(e->GetNetAddrAsIP());
-        }
-        return anAddrs;
-    }
+    static size_t WideLength(const wchar_t* inText) { return inText != NULL ? wcslen(inText) : 0; }
     static IPAddr FromRaw(const EeWonAddr* inRaw) { IPAddr a; a.FromRaw(*inRaw); return a; }
     static void ToList(void* inList, const EeWonAddr* inRaw) { static_cast<AddrList*>(inList)->push_back(FromRaw(inRaw)); }
     static void ToSet(void* inSet, const EeWonAddr* inRaw)
@@ -914,7 +882,7 @@ public:
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
     // the results of a directory or account op (ee_won reqdir.rs): its entities by number and element
     // (EE_WON_REQOP_DIR_LIST and a query's index, EE_WON_REQOP_DIR_SERVICE), a number, bytes
-    DirEntityList GetEntities(int inWhich, long long inIndex = 0) const;
+    DirList GetEntities(int inWhich, long long inIndex = 0) const { return DirList(ee_won_dirlist_of_op(this->mRustOp, inWhich, inIndex)); }
     long long GetNum(int inWhich, long long inIndex = 0) const { return ee_won_hostop_num(this->mRustOp, inWhich, inIndex); }
     std::string GetBytes(int inWhich, long long inIndex = 0) const;
     // the directory and account ops the game makes (ee_won reqdir.rs), with their members
@@ -977,13 +945,9 @@ inline void HTTPSession::AddOp(RustServerOp* inOp)
 // the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
 
 
-// The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
-// objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
-// GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
-class DirEntityReplyParser {
-public:
-    static void TakeEntity(void* inList, const EeWonDirEntity* inEntity); // appends to the DirEntityList
-};
+// The directory server's entity replies: the reading and the lists of what it read are ee_won's (dir.rs, dirlist.rs:
+// DirEntityReplyParser::TakeEntity is gone with DirEntity, R6 WON round 34). GetEntityRequest, GetDirOp,
+// GetMultiDirOp, GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
 
 // PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950): Rust ops on the base (ee_won
 // peerop.rs over peerobj.rs: the address, the certificate refresh status, the peer data, the handshake of

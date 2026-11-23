@@ -22,7 +22,7 @@ class UITextLabel;
 
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
-struct EeWonDirEntity; // rust/won_net/dir.h (an entity the directory replies read)
+struct EeWonDirList; // rust/won_net/dirlist.h (a directory listing)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
@@ -155,9 +155,6 @@ public:
     void Leave() { if (mEnterCt>0) { PlatMutexUnlock(mCrit); --mEnterCt; } }
 };
 
-// a directory server entry of WONAPI (class name and layout PROVISIONAL: the server list form shows mDisplayName,
-// or mName when it is empty, and connects to GetNetAddrAsIP())
-class DirEntity; //complete native definition follows SmartPtr; preserves all borrowed offsets
 
 // WONAPI's reference-counting pointer (only operator-> is needed here; its out-of-line copy is 0x8306a)
 // WONAPI's ConstSmartPtr, SmartPtr's base. One operator= symbol per T: the game's -O1 COMDAT wins the link for a T the
@@ -244,46 +241,28 @@ class Blowfish;
 class CDKey; // ee/wonapi/WONAuthContext.h
 
 
-struct DirDataObject {
-    std::string mDataType; //00..0f
-    ConstSmartPtr<ByteBuffer> mData; //10, owning
-};
-typedef std::list<DirDataObject> DirDataObjectList;
-struct DirACL {
-    char mType; //00, naturalalignment01..03
-    unsigned long mUser; //04
-    unsigned long mCommunity; //08
-    unsigned short mTrust; //0c, naturalalignment0e..0f
-};
-typedef std::list<DirACL> DirACLList;
-// Complete native7c owner; ctor2f0190/new7c2f066e/dtor2f0290.
-class DirEntity : public RefCount {
-protected:
-    virtual ~DirEntity();
+// A directory listing (R6 WON round 34): DirEntity (0x7c bytes: ctor 2f0190, dtor 2f0290, GetNetAddrAsIP 2f0400), its
+// data objects and ACLs and the DirEntityList of SmartPtrs are Rust's (rust/crates/ee_won_net/src/dirlist.rs); this
+// owns one Rust list (moved, never copied) and reads its entities by index (WONDir/DirEntityReplyParser.cpp).
+class DirList {
 public:
-    DirEntity(); // DirEntityReplyParser.cpp (its members need ByteBuffer)
-    explicit DirEntity(const EeWonDirEntity* inEntity); // the members ee_won read (DirEntityReplyParser.cpp)
-    IPAddr GetNetAddrAsIP() const; //native2f0400
-    char mType; //08, naturalalignment09..0b
-    std::wstring mPath; //0c
-    std::wstring mName; //1c
-    std::wstring mDisplayName; //2c
-    long mLifespan; //3c, native32bit time_t
-    unsigned long mCRC; //40
-    long mCreated; //44
-    unsigned long mCreateIP; //48
-    unsigned long mCreateId; //4c
-    long mTouched; //50
-    unsigned long mTouchIP; //54
-    unsigned long mTouchId; //58
-    bool mReqUnique; //5c, naturalalignment5d..5f
-    ConstSmartPtr<ByteBuffer> mNetAddr; //60
-    DirDataObjectList mDataObjects; //64..6f
-    DirACLList mACLs; //70..7b
+    explicit DirList(EeWonDirList* inList = NULL); // takes the list; NULL: a new empty one
+    DirList(DirList&& inOther) : mList(inOther.mList) { inOther.mList = NULL; }
+    DirList& operator=(DirList&& inOther) { std::swap(this->mList, inOther.mList); return *this; }
+    ~DirList();
+    size_t size() const;
+    bool empty() const { return this->size() == 0; }
+    void clear();
+    void Keep(const DirList& inFrom, size_t inIndex); // push_back(inFrom's entity)
+    std::wstring Name(size_t inIndex) const; // mName
+    std::wstring DisplayName(size_t inIndex) const; // mDisplayName
+    IPAddr Addr(size_t inIndex) const; // GetNetAddrAsIP()
+    EeWonDirList* get() const { return this->mList; }
+private:
+    DirList(const DirList&);
+    DirList& operator=(const DirList&);
+    EeWonDirList* mList; // owned
 };
-
-typedef SmartPtr<DirEntity> DirEntityPtr;
-typedef std::list<DirEntityPtr> DirEntityList;
 }
 
 // Actual completec0 AuthContext owner, allocation362dba/ctor2dddf0/dtor2de370.
@@ -381,7 +360,7 @@ public:
     WONAPI::WONAPICore* mLobby; //+0x020 actual core; FnCFFDD pumps milliseconds
     WONAPI::WONLobbyWindow* mLobbyWindow;   // +0x024
     WONAPI::AuthContext* mUser;                    // +0x028
-    WONAPI::DirEntityList mServers;         // +0x02c (the server-select form lists them)
+    WONAPI::DirList mServers;               // +0x02c (the server-select form lists them)
     WONAPI::SmartPtr<WONAPI::RustServerOp> mMOTDOp;      // +0x038: the message-of-the-day request (base game)
     WONAPI::SmartPtr<WONAPI::GetCertOp> mLoginOp;  // +0x03c (base game: Login)
     WONAPI::SmartPtr<WONAPI::RustServerOp> mDirOp;       // +0x040: the directory query (a Rust GetDirOp)

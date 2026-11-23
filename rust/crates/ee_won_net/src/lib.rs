@@ -41,6 +41,7 @@ pub mod debug;
 pub mod der;
 pub mod dir;
 pub mod dirchange;
+pub mod dirlist;
 pub mod dirops;
 pub mod elgamal;
 pub mod ffi;
