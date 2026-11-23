@@ -153,6 +153,8 @@ pub mod tech_hooks;
 
 // ---- round 12, fork D: the Empire Earth directory (EECore11OpB)
 //
+/// cbindgen:ignore
+pub mod globals;
 //
 
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
