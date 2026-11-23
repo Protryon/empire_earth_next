@@ -163,6 +163,22 @@ pub mod teams;
 pub mod window_pump;
 //
 
+// ---- round 13, fork A: the Empire Earth directory's start-up, globals and managers (EEStartupOp)
+//
+//
+
+// ---- round 13, fork B: the world, the game state, Physics Thread, Player, Random Map, Campaign, Data Pre-Loading (EECore11OpE)
+//
+//
+
+// ---- round 13, fork C: the test drivers, the actions, the Graphics Thread and the Map (EECore9OpA)
+//
+//
+
+// ---- round 13, fork D: Communications, Persistent, Database, Tech Tree, Calamities, Civilization Builder (EECore11OpC2)
+//
+//
+
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
@@ -4028,6 +4044,15 @@ pub enum EeGameCpp {
     C12TeamSetPlayers,
     C12PlayerObserver,
     C12PlayerEnemy,
+    //
+    // ---- round 13, fork A (EEStartupOp's cases)
+    //
+    // ---- round 13, fork B (EECore11OpE's cases)
+    //
+    // ---- round 13, fork C (EECore9OpA's cases)
+    //
+    // ---- round 13, fork D (EECore11OpC2's cases)
+    //
 }
 
 pub use EeGameCpp as O;
