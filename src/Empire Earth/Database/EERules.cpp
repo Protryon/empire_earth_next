@@ -1,7 +1,7 @@
 // EERules: the game rules that were literals in the code, as data (ee/EERules.h; docs/DATA_FORMATS.md 8.8). New unit
 // (not in the original game). The fields and defaults are generated from tools/eedata/rules_schema.json; the reading,
-// the checks and the dump are Rust (rust/crates/ee_data/src/rules.rs): this file fills the C++ structs from its
-// snapshot and holds the lookups the game uses. Portable C++17 (no platform or engine headers; the converter's gate
+// the checks and the dump are Rust (rust/crates/ee_data/src/rules.rs), which writes the C++ structs in place; this
+// file holds the lookups the game uses. Portable C++17 (no platform or engine headers; the converter's gate
 // builds it too).
 // UNIT-FLAGS: -EHsc
 #include "ee/EERules.h"
@@ -13,7 +13,6 @@
 
 #include "EEDataText.h"   // TakeBytes
 
-#include "EERulesGenDecode.h"
 
 EERuleNumber EERuleNumber::Constant(float inValue)
 {
@@ -31,7 +30,7 @@ EERuleNumber EERuleNumber::World(long inRow, int inValue)
     return n;
 }
 
-static bool Contains(const std::vector<long>& inList, long inValue)
+static bool Contains(const EERuleList<long>& inList, long inValue)
 {
     for (long v : inList)
         if (v == inValue)
@@ -46,7 +45,7 @@ bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return Contains(th
 
 long EEDifficultyAILevel(unsigned long inDifficulty)
 {
-    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+    const EERuleList<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
     return inDifficulty < theList.size() ? theList[inDifficulty].mAILevel : (long)inDifficulty;
 }
 
@@ -71,11 +70,8 @@ EERules::~EERules()
 
 void EERules::Refresh()
 {
-    EeDataBytes theBytes{nullptr, 0};
-    ee_data_rules_encode(this->mRust, &theBytes);
-    const unsigned char* p = theBytes.ptr;
-    EERulesGen::DecodeAll(p, *this);
-    ee_data_bytes_free(theBytes);
+    ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this), kEERulesMirrorSizes,
+                         sizeof(kEERulesMirrorSizes) / sizeof(kEERulesMirrorSizes[0]));
 }
 
 void EERules::SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount)
