@@ -91,25 +91,11 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
         ESVERIFY_AT(theTarget->GetClass()->GetWeapon() >= 0 && theTarget->GetClass()->GetWeapon() < keeucwTotal, 730);
         return 0;
     }
-    case EE_COMBAT_G_POSITION: {
-        EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
-        GE3DPoint thePoint(Float(a[2]), Float(a[3]), Float(a[4]));
-        if (a[1])
-            EECombatAttackPosition(true, theUnit, theTarget, thePoint);
-        else
-            EECombatAttackPosition(false, theUnit, theTarget, thePoint);
-        a[0] = Bits(thePoint.GetX());
-        a[1] = Bits(thePoint.GetY());
-        a[2] = Bits(thePoint.GetZ());
-        return 0;
-    }
+    // (EE_COMBAT_G_POSITION, EE_COMBAT_G_EVALUATE: ee_sim combat goal_objects.rs common_op)
     // the dispatch's (ee_combat goal_dispatch.rs; the projectile test and the TEST ONLY records: goal_objects.rs)
     case EE_COMBAT_G_STEP:
         EECombatStep((int32_t)a[0], theUnit, UnitGoalOf((uint64_t)a[2]), reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[1])));
         return 0;
-    case EE_COMBAT_G_EVALUATE:
-        return EECombatCondition((int32_t)a[0], theUnit, (unsigned long)a[1], reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[2])),
-                                 UnitGoalOf((uint64_t)a[3]), NULL);
     case EE_COMBAT_G_PATH_ATTEMPTS: return UnitGoalOf(inUnit)->mPathAttempts;
     case EE_COMBAT_G_CLASS_NAME: {
         EEUnitClass* theClass = reinterpret_cast<EEUnit*>(theUnit)->mUnitClass;
@@ -122,57 +108,20 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
     return 0;
 }
 
-namespace {
-
-// one combat body through the goal dispatch; the point in and out
-int64_t Combat(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0, int64_t inI0 = 0,
-               GE3DPoint* ioPoint = NULL)
-{
-    EeUnitsGoalIo theArgs = {};
-    theArgs.i[0] = inI0;
-    if (ioPoint != NULL) {
-        theArgs.f[0] = ioPoint->GetX();
-        theArgs.f[1] = ioPoint->GetY();
-        theArgs.f[2] = ioPoint->GetZ();
-    }
-    int64_t theResult = EEUGRustGoal(inOperation, inGoal, inA, inB, &theArgs);
-    if (ioPoint != NULL)
-        ioPoint->SetXYZ(theArgs.f[0], theArgs.f[1], theArgs.f[2]);
-    return theResult;
-}
-
-}  // namespace
-
 EEUGRust* EEUGRust::NewAttackGround(const GE3DPoint& inTarget, bool inArg)
 {
-    EEUGRust* theGoal = EEUGRust::Make(kGoalAttackGround, inArg);
-    GE3DPoint thePoint = inTarget;
-    Combat(EE_COMBAT_GOAL_NEW_GROUND, theGoal, 0, 0, 0, &thePoint);
-    return theGoal;
+    return reinterpret_cast<EEUGRust*>(ee_units_goal_new_point(kGoalAttackGround, inArg, EE_COMBAT_GOAL_NEW_GROUND, inTarget.GetX(),
+                                                               inTarget.GetY(), inTarget.GetZ()));
 }
 
 GE3DPoint EEUGRust::GetGroundTarget()
 {
-    float thePoint[3];
-    ee_combat_ground_target(Handle(this), &thePoint);
-    return GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
+    return EEGoalPointOf(ee_combat_ground_target_point(Handle(this)));
 }
-
-namespace {
-
-EeCombatHealGoal HealOf(const EEUGRust* inGoal)
-{
-    EeCombatHealGoal theRecord;
-    ee_combat_heal_get(Handle(inGoal), &theRecord);
-    return theRecord;
-}
-
-}  // namespace
 
 GE3DPoint EEUGRust::GetHealLocation() const
 {
-    EeCombatHealGoal theRecord = HealOf(this);
-    return GE3DPoint(Float(theRecord.location[0]), Float(theRecord.location[1]), Float(theRecord.location[2]));
+    return EEGoalPointOf(ee_combat_heal_location(Handle(this)));
 }
 
 void EEUGRust::SetHealLocation(const GE3DPoint& inLocation)
@@ -180,26 +129,19 @@ void EEUGRust::SetHealLocation(const GE3DPoint& inLocation)
     ee_combat_heal_set_location(Handle(this), Bits(inLocation.GetX()), Bits(inLocation.GetY()), Bits(inLocation.GetZ()));
 }
 
+// (ee_units goal_calls.rs: a location goal's, a heal goal's, else 0, 0, 0; the yaw a location goal's, else 0)
 GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal)
 {
-    if (EEUGRust* theLocation = EELocationGoalCast(inGoal))
-        return theLocation->GetLocation();
-    if (EEUGRust* theHeal = EEHealGoalCast(inGoal))
-        return theHeal->GetHealLocation();
-    return GE3DPoint();
+    return EEGoalPointOf(ee_units_goal_location_point_any(reinterpret_cast<const EeUnitsGoalBase*>(inGoal)));
 }
 
 void EESetLocationGoalPoint(EEUnitGoal* inGoal, const GE3DPoint& inLocation)
 {
-    if (EEUGRust* theLocation = EELocationGoalCast(inGoal))
-        theLocation->SetLocation(inLocation);
-    else if (EEUGRust* theHeal = EEHealGoalCast(inGoal))
-        theHeal->SetHealLocation(inLocation);
+    ee_units_goal_set_location_point_any(reinterpret_cast<const EeUnitsGoalBase*>(inGoal), inLocation.GetX(), inLocation.GetY(),
+                                         inLocation.GetZ());
 }
 
 float EELocationGoalYaw(EEUnitGoal* inGoal)
 {
-    if (EEUGRust* theLocation = EELocationGoalCast(inGoal))
-        return theLocation->GetYaw();
-    return 0.0f;   // the heal goal's (its location goal was made with yaw 0, which nothing changed)
+    return ee_units_goal_location_yaw_any(reinterpret_cast<const EeUnitsGoalBase*>(inGoal));
 }

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 #include "rust/sim/astar.h"
 #include "rust/sim/world.h"
 
@@ -14523,9 +14524,6 @@ constexpr static const int32_t EE_UNITS_UB_UNITS_ON_TILES = 144;
 /// the bits of `gPhysics->mRandom.Generate()`
 constexpr static const int32_t EE_UNITS_UB_RANDOM_GENERATE = 145;
 
-/// `PermuteValues(the unit list, c)`
-constexpr static const int32_t EE_UNITS_UB_PERMUTE_UNITS = 146;
-
 /// the unit list's size
 constexpr static const int32_t EE_UNITS_UB_LIST_SIZE = 147;
 
@@ -15988,6 +15986,21 @@ struct EeUnitsGoalIo {
   size_t list_len;
 };
 
+/// A location goal's state (`EEUGLocation`'s members).
+struct EeUnitsLocationGoal {
+  /// `mLocation`
+  float location[3];
+  /// `mYaw`: the heading to face on arrival
+  float yaw;
+  /// `mIsForcedMove`, `mShouldFace`, `mIsAutoWaypoint`, `mUseGroupMovement`
+  bool forced_move;
+  bool should_face;
+  bool auto_waypoint;
+  bool group_movement;
+  /// `mGroupPathState`
+  uint8_t group_path_state;
+};
+
 /// The world host the context-free calls use (EEUGRust.cpp's operation callback, registered at start-up).
 using EeUnitsGoalHostOp = int64_t(*)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
 
@@ -16100,21 +16113,6 @@ struct EeUnitsImproveClass {
   /// the class has an improvement table (`mImprovements`), and its entries' step factors
   bool has_table;
   float step_factors[16];
-};
-
-/// A location goal's state (`EEUGLocation`'s members).
-struct EeUnitsLocationGoal {
-  /// `mLocation`
-  float location[3];
-  /// `mYaw`: the heading to face on arrival
-  float yaw;
-  /// `mIsForcedMove`, `mShouldFace`, `mIsAutoWaypoint`, `mUseGroupMovement`
-  bool forced_move;
-  bool should_face;
-  bool auto_waypoint;
-  bool group_movement;
-  /// `mGroupPathState`
-  uint8_t group_path_state;
 };
 
 /// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
@@ -17890,6 +17888,156 @@ void ee_units_ghost_create_gate(float rotation, void *class_, void *player);
 /// # Safety
 /// The arguments' vectors and player are live, on the thread that owns the ghosts.
 void ee_units_ghost_build_walls(const EeUnitsGhostWalls *args);
+
+/// `EEUnitGoal::New(kind, arg, operation, a, b, ioArgs)`: `Make(kind, arg)`, then the operation.
+///
+/// # Safety
+/// `io` null or a writable block; `a`, `b` the operation's live handles (or 0).
+EeUnitsGoalBase *ee_units_goal_new_io(uint8_t kind,
+                                      bool arg,
+                                      int32_t op,
+                                      uint64_t a,
+                                      uint64_t b,
+                                      EeUnitsGoalIo *io);
+
+/// [`ee_units_goal_new_io`] with an answer block of `i[0..3]` (the New functions' `{{x, y, z}}` blocks).
+///
+/// # Safety
+/// As [`ee_units_goal_new_io`].
+EeUnitsGoalBase *ee_units_goal_new_call(uint8_t kind,
+                                        bool arg,
+                                        int32_t op,
+                                        uint64_t a,
+                                        uint64_t b,
+                                        int64_t i0,
+                                        int64_t i1,
+                                        int64_t i2);
+
+/// A new goal of a kind made by its operation over a point (`f[0..3]`; the attack-ground goal's
+/// `EE_COMBAT_GOAL_NEW_GROUND`).
+EeUnitsGoalBase *ee_units_goal_new_point(uint8_t kind,
+                                         bool arg,
+                                         int32_t op,
+                                         float x,
+                                         float y,
+                                         float z);
+
+/// `EEUGRust::NewLoad(kind, container, units, arg)` after the C++ sorted the units by id and dropped the
+/// duplicates: the goal made, its `EE_UNITS_GOAL_NEW_LOAD` with the container and the units' handles.
+///
+/// # Safety
+/// `units` a live `std::vector<EEComplexUnit*>`; the handles live.
+EeUnitsGoalBase *ee_units_goal_new_load(uint8_t kind,
+                                        bool arg,
+                                        uint64_t container,
+                                        const void *units);
+
+/// `goal->Call(operation, a, b, {{i0, i1, i2}})`.
+///
+/// # Safety
+/// `goal` a live goal; the handles live (or 0).
+int64_t ee_units_goal_call3(int32_t op,
+                            const EeUnitsGoalBase *goal,
+                            uint64_t a,
+                            uint64_t b,
+                            int64_t i0,
+                            int64_t i1,
+                            int64_t i2);
+
+/// `EEUnitGoal::Field(operation, index)`: the operation over an empty block, then its `i[index]`.
+///
+/// # Safety
+/// `goal` a live goal.
+int64_t ee_units_goal_field(int32_t op, const EeUnitsGoalBase *goal, int32_t index);
+
+/// `SetPathAttempts(value)`: the base's `mPathAttempts`, then the kind's operation.
+///
+/// # Safety
+/// `goal` a live, writable goal.
+void ee_units_goal_set_path_attempts(int32_t op, EeUnitsGoalBase *goal, long value);
+
+/// `GetCalamityType(outTileX, outTileY, outTarget)`: the operation's answer (the target its result, the type and
+/// tile in the block), each out pointer written when set.
+///
+/// # Safety
+/// `goal` a live cast-calamity goal; the out pointers writable or null.
+long ee_units_goal_calamity_type(int32_t op,
+                                 const EeUnitsGoalBase *goal,
+                                 long *out_x,
+                                 long *out_y,
+                                 uint64_t *out_target);
+
+/// `GetUnloadTransport(outX, outY)`: the operation's transport (its result), the tile from the block into the out
+/// pointers that are set.
+///
+/// # Safety
+/// `goal` a live unload goal; the out pointers writable or null.
+uint64_t ee_units_goal_unload_transport(int32_t op,
+                                        const EeUnitsGoalBase *goal,
+                                        long *out_x,
+                                        long *out_y);
+
+/// The location goal's record by value (`EEUnitGoal::Location()`).
+EeUnitsLocationGoal ee_units_location_goal_of(uint64_t goal);
+
+/// `SetUseGroupMovement(value)` (`which` 0) or `SetGroupPathState(value)` (1).
+void ee_units_location_goal_set_group(uint64_t goal, int32_t which, uint8_t value);
+
+/// `SetLocation(point)`: the record's location.
+void ee_units_location_goal_set_point(uint64_t goal, float x, float y, float z);
+
+/// The location goal's point by value (`EEUGRust::GetLocation`).
+EeGe3DPoint ee_units_location_goal_point(uint64_t goal);
+
+/// `NewLocationGoal(point, arg, forced, face, yaw, auto, state)` (EEUGRust.cpp): a location goal made by its
+/// `EE_UNITS_GOAL_NEW_LOCATION` (the flags in `i`, the point and yaw in `f`).
+EeUnitsGoalBase *ee_units_goal_new_location(bool arg,
+                                            float x,
+                                            float y,
+                                            float z,
+                                            bool forced_move,
+                                            bool should_face,
+                                            float yaw,
+                                            bool auto_waypoint,
+                                            uint8_t group_path_state);
+
+/// A point operation (`GetDestination`, `GetGoalLocation` seed the block with `point`, `GetCalamityTargetLocation`
+/// with zeros): the operation, then the point from `f[0..3]`.
+///
+/// # Safety
+/// `goal` a live goal, `point` three writable floats, `a` a live handle or 0.
+void ee_units_goal_point(int32_t op,
+                         const EeUnitsGoalBase *goal,
+                         uint64_t a,
+                         float (*point)[3],
+                         bool seed);
+
+/// `GetExploreTileCenter(outLocation)`: the explored tile's centre into x and y (z kept).
+///
+/// # Safety
+/// `goal` a live explore goal, `point` three writable floats.
+void ee_units_goal_explore_center(int32_t op, const EeUnitsGoalBase *goal, float (*point)[3]);
+
+/// `EELocationGoalPoint(goal)`: a location goal's point, a heal goal's location, else 0, 0, 0.
+///
+/// # Safety
+/// `goal` a live goal or null.
+EeGe3DPoint ee_units_goal_location_point_any(const EeUnitsGoalBase *goal);
+
+/// `EESetLocationGoalPoint(goal, point)`: a location goal's point, a heal goal's location (another goal untouched).
+///
+/// # Safety
+/// `goal` a live goal or null.
+void ee_units_goal_set_location_point_any(const EeUnitsGoalBase *goal,
+                                          float x,
+                                          float y,
+                                          float z);
+
+/// `EELocationGoalYaw(goal)`: a location goal's yaw, else 0 (the heal goal's was made 0 and never changed).
+///
+/// # Safety
+/// `goal` a live goal or null.
+float ee_units_goal_location_yaw_any(const EeUnitsGoalBase *goal);
 
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
@@ -20018,6 +20166,12 @@ extern int64_t ee_units_sweep_host(int32_t op,
 /// `EEPhysicsUnitSweep(call)` (EESim.cpp's every five game minutes).
 void ee_units_unit_sweep(int64_t call);
 
+/// `EEUnitClassUpdate(kind, class, unit)` (handles: the `EEUnitClass*`, the `EEComplexUnit*`).
+void ee_units_class_update(int32_t kind, uint64_t class_, uint64_t unit);
+
+/// `EEUnitClassActionChanged(kind, class, unit)`.
+void ee_units_class_action_changed(int32_t kind, uint64_t class_, uint64_t unit);
+
 /// A class's `Update` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
 ///
 /// # Safety
@@ -20043,6 +20197,92 @@ extern int64_t ee_units_us_host(int32_t op, uint64_t a, int64_t b, uint64_t c, v
 
 /// TEST ONLY: `EEUnitStoreCheck(where)`.
 uint64_t ee_units_us_check(uint64_t at);
+
+/// `EEGetDopplerPitch(unit, sound, outVolume, outPan, outPitch)`: the pitch of the unit's complex unit's velocity
+/// and location from the camera (`camera` the world's transformation's position).
+///
+/// # Safety
+/// `unit` a live unit with a complex unit; `pitch` writable.
+void ee_units_uu_doppler_pitch_of(uint64_t unit,
+                                  float volume,
+                                  float cx,
+                                  float cy,
+                                  float cz,
+                                  float *pitch);
+
+/// `EEMakeWallJunctions(units, tiles, player, map)` (`units` the `std::vector<EEComplexUnit*>`).
+///
+/// # Safety
+/// The vectors live; the handles live.
+void ee_units_uu_make_wall_junctions_of(const void *units,
+                                        const void *placed,
+                                        uint64_t player,
+                                        uint64_t map);
+
+/// `EEFindFreeFarm`
+/// # Safety
+/// As above.
+uint64_t ee_units_uu_find_free_farm_at(uint64_t unit, bool free_only, long *ring);
+
+/// `EEGetFootprintDistance`
+/// # Safety
+/// As above.
+float ee_units_uu_footprint_distance(uint64_t unit, long x, long y, long *out_x, long *out_y);
+
+/// `EEGetNextTile(inTile, outTile, direction, distance)`
+/// # Safety
+/// As above.
+void ee_units_uu_next_tile(long x, long y, long direction, long distance, long *out_x, long *out_y);
+
+/// `EEGetSlotTile(inTile, direction, outTile)`
+/// # Safety
+/// As above.
+void ee_units_uu_slot_tile_at(long x, long y, long direction, long *out_x, long *out_y);
+
+/// `EEGetPathLengthTo`
+/// # Safety
+/// As above.
+float ee_units_uu_path_length_at(uint64_t unit, long *io_x, long *io_y, uint32_t limit, bool walls);
+
+/// `EEIsTileTopAbove` (the wall always written; `wall` an `EEUnit**`)
+/// # Safety
+/// As above.
+bool ee_units_uu_tile_top_above_at(long x, long y, float height, uint64_t *wall, bool bare);
+
+/// `EEIsLineBlocked` (`wall` an `EEUnit**`)
+/// # Safety
+/// As above.
+bool ee_units_uu_line_blocked_at(long x1,
+                                 long y1,
+                                 long x2,
+                                 long y2,
+                                 uint64_t *wall,
+                                 long *out_x,
+                                 long *out_y);
+
+/// `EECanPlaceUnitOnTile`
+/// # Safety
+/// As above.
+bool ee_units_uu_can_place_on_tile_at(uint64_t player,
+                                      uint64_t unit,
+                                      long unit_type,
+                                      long x,
+                                      long y,
+                                      bool skip_player_checks,
+                                      long ignore_owner,
+                                      bool *flag);
+
+/// `EECanPlace` (`free_camera` the C++'s `gFreeCamera`)
+/// # Safety
+/// As above; `at` three readable floats.
+bool ee_units_uu_can_place_at(bool free_camera,
+                              uint64_t player,
+                              long unit_type,
+                              const float (*at)[3],
+                              long x,
+                              long y,
+                              bool skip_player_checks,
+                              long ignore_owner);
 
 extern int64_t ee_units_ub_host(int32_t op,
                                 uint64_t a,

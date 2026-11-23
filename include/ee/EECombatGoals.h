@@ -45,21 +45,12 @@ EEUnit* EECombatShotTarget(EEComplexUnit* inUnit);
 // unit's and target's ids (0 without one), the result and what the call left behind (per function below). Folded
 // like CBTC, 4096 calls to a record (count, FNV-1a 64; EE_SIM_CAPTURE_CBQR_FULL=1 writes every call). A read made
 // inside another captured read (FacesTarget's FacesPoint, IsInReach's facing) records nothing: only the outer call.
-enum {
-    EE_COMBAT_HR_IMPACT_UNIT = 1,           // FindImpactUnit: extra 0 the unit hit's id, 1 the owner's mIsFiringHigh
-    EE_COMBAT_HR_STILL_REACHABLE = 2,       // IsStillReachable: extra 0 mPathAttempts, 1 the ignored targets' count
-    EE_COMBAT_HR_GATE_CLOSED = 3,           // IsGateClosed
-    EE_COMBAT_HR_ENEMY_IN_RANGE = 4,        // EEIsEnemyWithinRange: extra 0 mTargetSearchTimer
-    EE_COMBAT_HR_IN_REACH = 5,              // IsInReach: extra 0 mWeaponTagPoint before, 1 after
-    EE_COMBAT_HR_FACES_POINT = 6,           // FacesPoint: extra 0, 1 the point's x, y bits, 2 inUseTolerance
-    EE_COMBAT_HR_FACES_TARGET = 7,          // FacesTarget: extra 2 inUseTolerance
-};
+// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 // (the records' words: ee_sim combat capture_units.rs, read through the views)
 inline void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
                                     uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0)
 {
-    const uint32_t theExtra[3] = {inExtra0, inExtra1, inExtra2};
-    ee_combat_capture_read(0, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, &theExtra);
+    ee_combat_capture_read_of(0, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, inExtra0, inExtra1, inExtra2);
 }
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
@@ -80,14 +71,7 @@ bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DP
 // physics action, hit points, goal and its target, location, rotting, flight and lifetime timers, opacity, velocity,
 // its player's population) or of the heal goal's Work (the target's hit points, the elapsed time); folded like CBQR
 // (EE_SIM_CAPTURE_CBSO_FULL=1: every call), only the outermost call of each kind (scope slots 1 to 3)
-enum {
-    EE_COMBAT_SO_PROJECTILE_ACTION = 1,
-    EE_COMBAT_SO_MISSILE_ACTION = 2,
-    EE_COMBAT_SO_PROJECTILE_UPDATE = 3,
-    EE_COMBAT_SO_MISSILE_UPDATE = 4,
-    EE_COMBAT_SO_TORPEDO_UPDATE = 5,
-    EE_COMBAT_SO_HEAL_WORK = 6,
-};
+// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
 inline void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore)
     { ee_combat_capture_shot(inFunc, (uint64_t)(uintptr_t)inUnit, inBefore); }
@@ -101,18 +85,11 @@ void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inU
 // CBXR (TEST ONLY): one call of the eighth round's reads (R5b.2), its outcome: the function, the unit's and target's
 // ids (0 without one), the result and what the call left behind (per function below); folded like CBQR
 // (EE_SIM_CAPTURE_CBXR_FULL=1 writes every call). Every call records (none of them calls another).
-enum {
-    EE_COMBAT_XR_IS_IGNORED = 1,        // IsTargetIgnored: extra 0 inCheckLocation, 1 the list's size after, 2 its hash
-    EE_COMBAT_XR_IGNORE = 2,            // IgnoreTarget: extra 1 the list's size after, 2 its hash
-    EE_COMBAT_XR_CAN_REACH_UNIT = 3,    // CanReachUnit
-    EE_COMBAT_XR_ATTACK_REACHABLE = 4,  // EEIsAttackReachable: extra 0, 1 the tile's x, y after
-    EE_COMBAT_XR_BORDERING = 5,         // IsOnTileBorderingTarget
-};
+// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 inline void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
                                  uint32_t inExtra0 = 0, uint32_t inExtra1 = 0)
 {
-    const uint32_t theExtra[3] = {inExtra0, inExtra1, 0};
-    ee_combat_capture_read(1, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, &theExtra);
+    ee_combat_capture_read_of(1, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, inExtra0, inExtra1, 0);
 }
 // IsTargetIgnored's and IgnoreTarget's record: the list's size and FNV-1a 32 (each entry's six fields in order)
 void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
@@ -122,22 +99,14 @@ void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const 
 // firing high flags, experience, goal kind and attack target, last attacker and the target's hit points and
 // resource amount (inTarget: FireShot's attack goal's target after the shot, ApplyHit's and ApplyAreaDamage's
 // inTarget, none for Attacked); folded like CBQR (EE_SIM_CAPTURE_CBXA_FULL=1)
-enum {
-    EE_COMBAT_XA_FIRE_SHOT = 1,
-    EE_COMBAT_XA_ATTACKED = 2,          // inBefore: the last attacker's id before
-    EE_COMBAT_XA_APPLY_HIT = 3,
-    EE_COMBAT_XA_AREA_DAMAGE = 4,       // inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
-};
+// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 inline void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
     { ee_combat_capture_x_action(inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inBefore); }
 // CBGO (TEST ONLY): the attack, attack-ground and heal goals' GetDestination and Suits, at each call's end: the
 // function, the goal's kind, the unit's and target's ids (0 without one), the result, a point's x, y, z bits
 // (GetDestination's out location) and two extras (per function below); folded like CBQR (EE_SIM_CAPTURE_CBGO_FULL=1).
 // Recorded from the original C++ bodies before the goals moved to EEUGRust (R5b.2, twelfth round).
-enum {
-    EE_COMBAT_GO_DESTINATION = 1,       // extra 0, 1: the attack goal's last target tile after
-    EE_COMBAT_GO_SUITS = 2,             // attack ground: the target point's bits
-};
+// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 // (the CBGO record: ee_sim combat/goal_objects.rs capture_op)
 // A body of ee_combat world.rs (EE_COMBAT_WORLD_*: IsTargetIgnored, IgnoreTarget, CanReachUnit,
 // IsOnTileBorderingTarget, EEIsAttackReachable, Attacked, FireShot) of inUnit on inTarget over the world host

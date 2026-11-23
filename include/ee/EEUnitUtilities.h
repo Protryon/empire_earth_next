@@ -13,7 +13,6 @@ class EEUnitClass;
 class EEPlayer;
 class EEUnitGoal;
 class EEUUUnitFunctor;
-class EEUnitGoal;
 typedef EEUnitGoal EEUGRust;
 class EEFOFindNewTargetScreenBase;
 class EEUnitClassUpgrade;
@@ -46,51 +45,14 @@ void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long in
 EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass);
 // 0x24f0e9.. (the rest of the TU) (provisional names)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);  // (EEWorld.cpp declares it too)
-bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnitType, long inX, long inY, bool inSkipPlayerChecks,
-                long inIgnoreOwner, bool& outFlag);
 void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit);  // 0x24f8c0 (after the range)
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit);  // 0x24f8f9 (after the range)
 EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit);
 void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor);
 void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance);  // 0x248ecc: the tile inDistance steps from inTile in inDirection (also in ee/EEE3DStorm.h)
 bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint);
-// Genuine generic game permutation at original4eef9; nominal PermuteValues identity inferred.
-// Independent callers prove vector<T*> instantiations, including nested region-vector pointers.
-// Body: element access through operator[] each time, one temporary for the swaps (U2DPoint: its zeroing ctor first),
-// the signed modulo of the size; exact for vector<EEUnit*> 0x4eef9 (SeaTransport), <ushort> 0x8909e and
-// <U2DPoint<long> > 0x89273 (Personnel).
-template <class Container> void PermuteValues(Container& ioValues, long inStart)
-{
-    typename Container::value_type theTemporary;
-    if (ioValues.size() > 1) {
-        long theCount = ioValues.size();
-        long theIndex = inStart % (long)ioValues.size();
-        long i;
-        for (i = theCount - 1; i > 0; i--) {
-            if (i != theIndex) {
-                theTemporary = ioValues[i];
-                ioValues[i] = ioValues[theIndex];
-                ioValues[theIndex] = theTemporary;
-            }
-            i--;
-            long theOpposite = theCount - theIndex - 1;
-            if (i != theOpposite) {
-                theTemporary = ioValues[i];
-                ioValues[i] = ioValues[theOpposite];
-                ioValues[theOpposite] = theTemporary;
-            }
-            theIndex = (theOpposite * 2 + 1) % theCount;
-        }
-        if (i == 0 && theIndex < theCount && theIndex != 0) {
-            theTemporary = ioValues[0];
-            ioValues[0] = ioValues[theIndex];
-            ioValues[theIndex] = theTemporary;
-        }
-    }
-}
-bool EEIsInGatherReach(float inDistanceSquared, EEComplexUnit* inUnit, EEUnit* inTarget);
+// (PermuteValues, the generic permutation at 0x4eef9: ee_sim combat search.rs permute)
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);  // 0x241a6a (before the range)
-template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
 class URandom;
 // 0x249201 is EEFOFindLocation (bool; its tile screen is the RTTI-named EEFOLocationScreenBase): declared in

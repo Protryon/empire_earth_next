@@ -321,7 +321,9 @@ fn the_waiting_gatherer_is_the_first_waiting_gather_goal_on_the_unit() {
         .answer(EE_UNITS_UB_GATHER_RESOURCE, 81, UNIT as i64)
         .answer(EE_UNITS_UB_RANDOM_GENERATE, 0, bits(2.5));
     assert_eq!(waiting_gatherer(&mut h, UNIT), 2);
-    assert_eq!(h.find(EE_UNITS_UB_PERMUTE_UNITS)[0].3, 2);
+    // the list read once, then its units in PermuteValues' order (start 2 of two: unchanged)
+    assert_eq!(h.count(EE_UNITS_UB_LIST_SIZE), 1);
+    assert_eq!(h.find(EE_UNITS_UB_COMPLEX_OF).iter().map(|e| e.1).collect::<Vec<_>>(), [1, 2]);
 }
 
 #[test]
