@@ -86,6 +86,4 @@ EE_UI_CASE(bgt_make) { return (intptr_t)UIBackgroundTableHost::Make(m, *t, reint
 #undef t
 
 // Creates an empty background table entry (IDs -1, bitmap type, hidden, full opacity, draw priority 1)
-long UIBackgroundTable::Create(FSFileSpec& inFile) { return ee_ui_bgtable_create(&inFile, ee_ui_bg_table_host); }
 void UIBackgroundTable::CreateBackgrounds(UIManager* inManager) { ee_ui_bgtable_create_backgrounds(inManager, ee_ui_bg_table_host); }
-void UIBackgroundTable::DeleteAll() { ee_ui_bgtable_delete_all(ee_ui_bg_table_host); }

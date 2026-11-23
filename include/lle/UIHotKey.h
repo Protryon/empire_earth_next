@@ -13,6 +13,7 @@
 #include "rust/ui/hotkey_ffi.h"
 #include "lle/UIEntity.h"
 #include "lle/TMPoll.h"
+#include "rust/ui/lle_hosts.h"
 
 class FSFileSpec;
 class ISEntity;
@@ -26,11 +27,12 @@ class UIForm;
 
 class LLE_API UIHotKey : public UIEntity, public EeUiHotKeyFields {
 public:
-    UIHotKey();
-    UIHotKey(UIForm* inForm, const UIHotKey& inHotKey);
+    // a hot key with no keys or events, enabled; a copy onto a form, referencing its events
+    UIHotKey() : UIEntity(0) { ee_ui_hotkey_init(this, ee_ui_hotkey_host); }
+    UIHotKey(UIForm* inForm, const UIHotKey& inHotKey) : UIEntity(0) { ee_ui_hotkey_copy(this, ee_ui_hotkey_host, const_cast<UIHotKey*>(&inHotKey), inForm); }
     virtual ~UIHotKey();
-    static long CreateHotKeys(FSFileSpec& inFile);
-    static void DeleteHotKeys();
+    static long CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_all(&inFile, ee_ui_hotkey_host); }
+    static void DeleteHotKeys() { ee_ui_hotkey_delete_all(ee_ui_hotkey_host); }
     virtual bool FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }              // slot 0x04
     bool GetAlwaysFire() const { return this->mAlwaysFire; }
     static UIHotKey* GetHotKey(unsigned long inIndex) { return static_cast<UIHotKey*>(ee_ui_hotkey_at(inIndex)); }

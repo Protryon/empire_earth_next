@@ -12,6 +12,7 @@
 #include "rust/ui/bgtableobj.h"
 #include "rust/ui/ids.h"
 #include "lle/UILayoutUtility.h"
+#include "rust/ui/lle_hosts.h"
 
 class FSFileSpec;
 class UIManager;
@@ -23,11 +24,11 @@ public:
     UIBackgroundTable(const EeUiBgTableFields& inFields, const char* inTextureFile) : EeUiBgTableFields(inFields), mTextureFile(inTextureFile) {}
     virtual ~UIBackgroundTable() {}
     // Loads every background table entry from the file (NULL for nameless records); returns the last read result
-    static long Create(FSFileSpec& inFile);
+    static long Create(FSFileSpec& inFile) { return ee_ui_bgtable_create(&inFile, ee_ui_bg_table_host); }
     // Creates every background in the UI background database on its form, by type (UIManager::CreateBackgrounds)
     static void CreateBackgrounds(UIManager* inManager);
     // Deletes every background table entry and empties the table
-    static void DeleteAll();
+    static void DeleteAll() { ee_ui_bgtable_delete_all(ee_ui_bg_table_host); }
     bool GetAttribute1() const { return this->mAttribute1; }
     bool GetAttribute2() const { return this->mAttribute2; }
     bool GetAttribute3() const { return this->mAttribute3; }

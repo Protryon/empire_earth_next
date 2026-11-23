@@ -59,24 +59,9 @@ extern "C" intptr_t ee_uicpp_hk_get_entity(intptr_t inKey, ISEntity** ioEntity) 
 #undef theEntity
 #undef r
 
-// Creates a hot key with no keys or events, enabled
-UIHotKey::UIHotKey()
-    : UIEntity(0)
-{
-    ee_ui_hotkey_init(this, ee_ui_hotkey_host);
-}
-
-// Copies a hot key onto a form, referencing its events
-UIHotKey::UIHotKey(UIForm* inForm, const UIHotKey& inHotKey)
-    : UIEntity(0)
-{
-    ee_ui_hotkey_copy(this, ee_ui_hotkey_host, const_cast<UIHotKey*>(&inHotKey), inForm);
-}
 
 UIHotKey::~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
 
 // the entities' names (ee_ui hotkey_ffi.rs: the hot key's display name)
 extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast<ISEntity*>(inEntity)->GetName(); }
 
-long UIHotKey::CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_all(&inFile, ee_ui_hotkey_host); }
-void UIHotKey::DeleteHotKeys() { ee_ui_hotkey_delete_all(ee_ui_hotkey_host); }

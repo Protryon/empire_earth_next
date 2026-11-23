@@ -59,25 +59,3 @@ EE_UI_VOID(font_release) { theFont->Dereference(); }
 #undef theFont
 #undef theFile
 // Creates an empty font table entry
-UIFontTable::UIFontTable()
-{
-}
-
-long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager) { return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, ee_ui_font_table_host); }
-
-void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, ee_ui_font_table_host); }
-
-GEFont* UIFontTable::GetFont(unsigned long inIndex) { return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, ee_ui_font_table_host)); }
-
-GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPixelHeight)
-{
-    return reinterpret_cast<GEFont*>(
-        ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, inIndex, inPixelHeight, 0, 0, ee_ui_font_table_host));
-}
-
-GEFont* UIFontTable::FindOrCreateFont(const UString& inName, unsigned long inStyle, unsigned long inQuality,
-    unsigned long inSize)
-{
-    return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::FindOrCreateFont, (intptr_t)&inName, inStyle,
-                                                       inQuality, inSize, ee_ui_font_table_host));
-}
