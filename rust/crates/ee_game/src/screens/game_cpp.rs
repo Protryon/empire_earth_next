@@ -1260,6 +1260,9 @@ shims! {
     fn mm_tile_exists(x: i64, y: i64) -> bool = ee_screenscpp_mm_tile_exists;
     fn mm_send_flare(x: i64, y: i64) = ee_screenscpp_mm_send_flare;
     fn mm_pointer_clear() = ee_screenscpp_mm_pointer_clear;
+    fn mm_has_capture(map: usize) -> bool = ee_screenscpp_mm_has_capture;
+    fn mm_left_down(map: usize) -> bool = ee_screenscpp_mm_left_down;
+    fn mm_pointer() -> i64 = ee_screenscpp_mm_pointer;
     fn mm_form_ui_state_clear(map: usize) = ee_screenscpp_mm_form_ui_state_clear;
     fn mm_map_width() -> i32 = ee_screenscpp_mm_map_width;
     fn mm_map_height() -> i32 = ee_screenscpp_mm_map_height;
