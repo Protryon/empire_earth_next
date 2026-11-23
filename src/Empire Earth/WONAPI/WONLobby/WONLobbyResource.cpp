@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyResourceGlobals.h"
 #include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/lobbyids.h"
 using namespace WONAPI;
 
 // the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row
@@ -26,29 +27,10 @@ ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
     if(theTable==NULL)
         aTable=theTable=new ResourceConfigTable;
     theTable->RegisterGlueResourceFunc(LobbyResource_SafeGlueResources);
-    theTable->RegisterControlId("ShowCreateAccount",ID_ShowCreateAccount);
-    theTable->RegisterControlId("ShowLostPassword",ID_ShowLostPassword);
-    theTable->RegisterControlId("ShowLostUserName",ID_ShowLostUserName);
-    theTable->RegisterControlId("ShowMOTD",ID_ShowMOTD);
-    theTable->RegisterControlId("ShowTOU",ID_ShowTOU);
-    theTable->RegisterControlId("LoginScreenBack",ID_LoginScreenBack);
-    theTable->RegisterControlId("ShowLoginHelp",ID_ShowLoginHelp);
-    theTable->RegisterControlId("ShowInternetScreen",ID_ShowInternetScreen);
-    theTable->RegisterControlId("ShowLanScreen",ID_ShowLanScreen);
-    theTable->RegisterControlId("Logout",ID_Logout);
-    theTable->RegisterControlId("HostGame",ID_HostGame);
-    theTable->RegisterControlId("ChangeRoom",ID_ChangeRoom);
-    theTable->RegisterControlId("JoinGame",ID_JoinGame);
-    theTable->RegisterControlId("LeaveGame",ID_LeaveGame);
-    theTable->RegisterControlId("StartGame",ID_StartGame);
-    theTable->RegisterControlId("RefreshGameList",ID_RefreshGameList);
-    theTable->RegisterControlId("AddFriend",ID_AddFriend);
-    theTable->RegisterControlId("RefreshFriends",ID_RefreshFriends);
-    theTable->RegisterControlId("AddLANName",ID_AddLANName);
-    theTable->RegisterControlId("ChangeLANBroadcast",ID_ChangeLANBroadcast);
-    theTable->RegisterControlId("FilterDirtyWordsCheck",ID_FilterDirtyWordsCheck);
-    theTable->RegisterControlId("AnonymousToFriendsCheck",ID_AnonymousToFriendsCheck);
-    theTable->RegisterControlId("ChooseNetworkAdapter",ID_ChooseNetworkAdapter);
+    // the controls by name, in the original's order (lobbyids.rs's rows)
+    int anId=0;
+    for(size_t i=0; const char* aName=ee_won_lobbyids_control(i,&anId); ++i)
+        theTable->RegisterControlId(aName,anId);
     return aTable;
 }
 

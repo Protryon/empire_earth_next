@@ -269,4 +269,16 @@ constexpr static const int32_t ID_AnonymousToFriendsCheck = 200022;
 
 constexpr static const int32_t ID_ChooseNetworkAdapter = 200023;
 
+extern "C" {
+
+/// LobbyResource_Init's control row `index` (in registration order): its name (a NUL-terminated text) and number into
+/// `*out_id`; NULL past the last row.
+///
+/// # Safety
+/// `out_id` is writable.
+const char *ee_won_lobbyids_control(size_t index,
+                                    int32_t *out_id);
+
+}  // extern "C"
+
 #endif  // EE_RUST_WON_LOBBY_LOBBYIDS_H

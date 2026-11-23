@@ -3,7 +3,8 @@
 //! type), the chat parser's commands (`LobbyChatCommand_*`, WONLobbyChatCommands.h's enum: the commands the parser
 //! registers and the ids it stores) and the lobby's control numbers (`ID_*`, WONLobbyResourceGlobals.h's enum
 //! `LobbyResourceCtrlId`, from 200001). The C++ reads them through `rust/won_lobby/lobbyids.h` (those three headers
-//! include it); the Rust's choices on control numbers read them here.
+//! include it); the Rust's choices on control numbers read them here, and LobbyResource_Init registers the controls
+//! by the names here (`ee_won_lobbyids_control`).
 
 #![allow(non_upper_case_globals)]
 
@@ -180,6 +181,51 @@ pub const ID_FilterDirtyWordsCheck: i32 = 200021;
 pub const ID_AnonymousToFriendsCheck: i32 = 200022;
 pub const ID_ChooseNetworkAdapter: i32 = 200023;
 
+/// The control numbers' names as LobbyResource_Init registers them on the resource table
+/// (`RegisterControlId(name, id)`), in its order.
+const CONTROL_NAMES: [(&std::ffi::CStr, i32); 23] = [
+    (c"ShowCreateAccount", ID_ShowCreateAccount),
+    (c"ShowLostPassword", ID_ShowLostPassword),
+    (c"ShowLostUserName", ID_ShowLostUserName),
+    (c"ShowMOTD", ID_ShowMOTD),
+    (c"ShowTOU", ID_ShowTOU),
+    (c"LoginScreenBack", ID_LoginScreenBack),
+    (c"ShowLoginHelp", ID_ShowLoginHelp),
+    (c"ShowInternetScreen", ID_ShowInternetScreen),
+    (c"ShowLanScreen", ID_ShowLanScreen),
+    (c"Logout", ID_Logout),
+    (c"HostGame", ID_HostGame),
+    (c"ChangeRoom", ID_ChangeRoom),
+    (c"JoinGame", ID_JoinGame),
+    (c"LeaveGame", ID_LeaveGame),
+    (c"StartGame", ID_StartGame),
+    (c"RefreshGameList", ID_RefreshGameList),
+    (c"AddFriend", ID_AddFriend),
+    (c"RefreshFriends", ID_RefreshFriends),
+    (c"AddLANName", ID_AddLANName),
+    (c"ChangeLANBroadcast", ID_ChangeLANBroadcast),
+    (c"FilterDirtyWordsCheck", ID_FilterDirtyWordsCheck),
+    (c"AnonymousToFriendsCheck", ID_AnonymousToFriendsCheck),
+    (c"ChooseNetworkAdapter", ID_ChooseNetworkAdapter),
+];
+
+/// LobbyResource_Init's control row `index` (in registration order): its name (a NUL-terminated text) and number into
+/// `*out_id`; NULL past the last row.
+///
+/// # Safety
+/// `out_id` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyids_control(index: usize, out_id: *mut i32) -> *const std::ffi::c_char {
+    match CONTROL_NAMES.get(index) {
+        Some((name, id)) => {
+            // SAFETY: the contract
+            unsafe { *out_id = *id };
+            name.as_ptr()
+        }
+        None => std::ptr::null(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,5 +246,18 @@ mod tests {
         assert_eq!(LobbyResourceCtrlId_Min, 200000);
         assert_eq!(ID_ShowCreateAccount, 200001);
         assert_eq!(ID_ChooseNetworkAdapter, 200023);
+    }
+
+    #[test]
+    fn the_control_rows_are_every_control_in_order() {
+        let mut id = 0;
+        for (i, want) in (ID_ShowCreateAccount..=ID_ChooseNetworkAdapter).enumerate() {
+            let name = unsafe { ee_won_lobbyids_control(i, &mut id) };
+            assert!(!name.is_null());
+            assert_eq!(id, want);
+        }
+        let first = unsafe { std::ffi::CStr::from_ptr(ee_won_lobbyids_control(0, &mut id)) };
+        assert_eq!(first, c"ShowCreateAccount");
+        assert!(unsafe { ee_won_lobbyids_control(23, &mut id) }.is_null());
     }
 }
