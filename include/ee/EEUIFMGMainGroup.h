@@ -26,9 +26,9 @@ public:
     ~EEUIFMGMainGroup();                    // (??_G 0x267f1c)
     // The group's members but ShowCommands (the original's Refresh, SetUnit, GetSelectedUnit, Open, ShowCommandButton,
     // ShowSpecialButtons, Update, WantsRefresh): ee_screens main_group.rs over the host below
-    void Refresh() { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0); }                 // 0x267f61
+    void Refresh() { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0); }
     void Reset() { this->mReset = true; }  // 0x267f17 (inline provisional name)
-    bool WantsRefresh() { return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0; }   // 0x26915e
+    bool WantsRefresh() { return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0; }
     // 0x268162: the first selected unit with a +0x3c value, else the first selected unit, else the local player's
     // +0x9d4 (does not read `this`)
     EEUnit* GetSelectedUnit()
