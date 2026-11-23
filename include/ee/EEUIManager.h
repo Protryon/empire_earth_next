@@ -40,7 +40,6 @@ inline void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const 
     gEEGameUI.mErrorDisplay(inManager, inKind, inMessage, inAlignment, inData, inFirst, inSecond, inCloseForm, inFlag);
 }
 
-struct EEUIManagerCall;                     // (EEUIManager.cpp: the host's record of one ui_manager.rs call)
 
 // the own members (the main game and scenario editor forms, the editor flags) are the Rust record
 // EeScreensUiManagerFields (ee_screens ui_objects.rs), under their names

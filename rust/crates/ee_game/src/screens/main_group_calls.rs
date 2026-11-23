@@ -264,8 +264,9 @@ mod ffi {
     }
     /// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
     #[no_mangle]
-    pub extern "C" fn ee_screens_mg_hot_key_event(event: usize) {
-        super::hot_key_event(&mut Ffi, event)
+    pub extern "C" fn ee_screens_mg_hot_key_event(event: usize) -> i64 {
+        super::hot_key_event(&mut Ffi, event);
+        0
     }
 }
 

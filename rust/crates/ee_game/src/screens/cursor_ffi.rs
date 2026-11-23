@@ -52,10 +52,14 @@ pub unsafe extern "C" fn ee_screens_update_cursor_kind(form: *mut c_void) {
     unsafe {
         let player = sys::ee_screenscpp_cur_local_player();
         let group = sys::ee_screenscpp_cur_selected_group(player);
-        let mut read =
-            crate::screens::hud_direct::CursorRead::new(form, player, group, sys::ee_screenscpp_cur_group_first(group));
+        let mut read = crate::screens::hud_direct::EeScreensCursorRead::new(
+            form,
+            player,
+            group,
+            sys::ee_screenscpp_cur_group_first(group),
+        );
         sys::ee_screenscpp_cur_set_pointer(ee_screens_cursor_kind(
-            (&mut read as *mut crate::screens::hud_direct::CursorRead).cast(),
+            (&mut read as *mut crate::screens::hud_direct::EeScreensCursorRead).cast(),
         ));
     }
 }

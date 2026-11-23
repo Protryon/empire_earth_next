@@ -7,14 +7,10 @@
 #define EE_EEUIFMGSTATUSBAR_H
 #include "rust/game/screens.h"
 
-class GEBitmap;
-class GEText;
-class UIBitmap;
-class UIStatusBar;
 class UITextLabel;
 class UILayoutUtility;
 
-class EEUIFMGStatusBar : public EEUIBUpgrade {
+class EEUIFMGStatusBar : public EEUIBUpgrade, public EeScreensStatusBarFields {
 public:
     // 0x2691b2: args3..5 unread; arg3 actual layout address, pointer-vs-reference spelling inferred
     EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout, unsigned long inScreenWidth,
@@ -43,19 +39,8 @@ protected:
 public:
     // inline: the value labels' first lines (out of line after their first user, EEUIFMGStatusBox::Fn26CBE1:
     // 0x26dac9 / 0x26dad8, in this order) (provisional names)
-    const UWideString& GetValueText() const { return this->mValue->GetText(0); }
-    const UWideString& GetValue2Text() const { return this->mValue2->GetText(0); }
-    UIBitmap* mIcon;                        // +0x130
-    UITextLabel* mValue;                    // +0x134 ("this->mValue")
-    UITextLabel* mValue2;                   // +0x138
-    UIStatusBar* mBar;                      // +0x13c ("this->mBar")
-    GEBitmap* mBitmap140;                   // +0x140 (dereferenced by the dtor)
-    GEBitmap* mBitmap144;                   // +0x144
-    GEText* mCount;                         // +0x148 mL128 as text (CopyData)
-    bool mPressed;                          // +0x14c the icon is moved by (1, 1)
-    bool mShowCount;                        // +0x14d
-    bool mCopiedEnabled;                    // +0x14e mEnabled as of the last CopyData (DrawPolygons)
-    bool mEnabled;                          // +0x14f
+    const UWideString& GetValueText() const { return static_cast<UITextLabel*>(this->mValue)->GetText(0); }
+    const UWideString& GetValue2Text() const { return static_cast<UITextLabel*>(this->mValue2)->GetText(0); }
 };
 
 #endif

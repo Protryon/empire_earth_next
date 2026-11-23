@@ -39,15 +39,6 @@
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEUIEMGHotKeyStatusButton.h"
 
-// Presses or releases a status button by hot key (pressing also resets the saved-group state). The original (0x6601da)
-// lay among the main game form's events (EEUIEMainGameEvents.cpp, now Rust's: ee_screens main_game.rs); this one
-// holds a C++ button, so it stays with the panel that makes it.
-long EEUIEMGHotKeyStatusButton::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ee_screens_mg_hot_key_event((uintptr_t)this);   // (main_group_calls.rs)
-    return kErrorOK;
-}
-
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
     : EEUIFMGGroup(inOwner), EeScreensMainGroupFields()
@@ -71,49 +62,15 @@ EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
     return this->mCitizenBuildQueue[inIndex];
 }
 
-// Returns the epoch the tech tree shows to the player (two past the start, at most the end; at least the Bronze
-// Age's): the statistics group's "wonders available in" (inline in the original EEUIFMGGStatistics.h)
-long EETechTree::GetShownEpoch() const
-{
-    long theEpoch = this->mStartEpoch + 2 > this->mEndEpoch ? this->mEndEpoch : this->mStartEpoch + 2;
-    return theEpoch > kTechEpochBronze ? theEpoch : 3;
-}
-
-// The panel groups' host (ee_screens panel_groups.rs): a value (EE_SCREENS_GROUP_VALUE_*), or a label's text
-// printed from the format with the resource strings[0] and strings[1] (when not -1) or strings[0] and the two values
-extern "C" int32_t ee_screenscpp_group(void* inGroup, bool inPrint, uint32_t inWhich, uint32_t inControl,
-                                       bool inIfChanged, const char* inFormat, const int32_t* inStrings,
-                                       const int32_t* inValues)
-{
-    EEUIFMGGRust* theGroup = static_cast<EEUIFMGGRust*>(inGroup);
-    if (!inPrint) {
-        switch (inWhich) {
-        case EE_SCREENS_GROUP_VALUE_CONVERSIONS:
-            return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5);
-        case EE_SCREENS_GROUP_VALUE_CONVERSIONS_MAX:
-            return gWorldTable.GetLongValue(kWorldConversionsStatisticMax);
-        case EE_SCREENS_GROUP_VALUE_WONDERS_TO_WIN:
-            return gWorld.mNumberOfWondersToWin;
-        case EE_SCREENS_GROUP_VALUE_EPOCH_TITLE:
-            return EEEpochTitleID(gWorld.GetCurrentPlayer()->GetTechTree()->GetShownEpoch());
-        case EE_SCREENS_GROUP_VALUE_HAS_PLAYER:
-            return gWorld.GetCurrentPlayer() != NULL;
-        }
-        return 0;
-    }
-    UWideString theText, theFirst, theSecond;
-    gResource->GetString(inStrings[0], theFirst);
-    if (inStrings[1] != -1) {
-        gResource->GetString(inStrings[1], theSecond);
-        sprintf(theText, inFormat, (const char*)theFirst, (const char*)theSecond);
-    } else {
-        sprintf(theText, inFormat, (const char*)theFirst, (long)inValues[0], (long)inValues[1]);
-    }
-    UITextLabel* theLabel = static_cast<UITextLabel*>(theGroup->mOwner->GetControl(inControl));
-    if (!inIfChanged || theLabel->GetText(0) != theText)
-        theLabel->SetText(theText);
-    return 0;
-}
+// The panel groups' values (ee_screens panel_groups_ffi.rs, which prints their texts): each one call, no logic
+extern "C" uintptr_t ee_screenscpp_group_owner(void* inGroup) { return (uintptr_t)static_cast<EEUIFMGGRust*>(inGroup)->mOwner; }
+extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5); }
+extern "C" int32_t ee_screenscpp_group_conversions_max() { return gWorldTable.GetLongValue(kWorldConversionsStatisticMax); }
+extern "C" int32_t ee_screenscpp_group_wonders_to_win() { return gWorld.mNumberOfWondersToWin; }
+extern "C" bool ee_screenscpp_group_has_player() { return gWorld.GetCurrentPlayer() != NULL; }
+extern "C" int32_t ee_screenscpp_group_start_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mStartEpoch; }
+extern "C" int32_t ee_screenscpp_group_end_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mEndEpoch; }
+extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return EEEpochTitleID(inEpoch); }
 
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
 // the status buttons' hot keys): each one call, no logic

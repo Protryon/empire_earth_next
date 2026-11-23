@@ -45,14 +45,14 @@ extern "C" int64_t ee_screenscpp_upgrade(void* inCall, uint32_t inOp, int64_t in
 
 int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
-    EEUIBUpgrade* theButton = ioCall.mButton;
+    EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(ioCall.mButton);
     EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
     long theAttribute = theButton->mAttribute;
     switch (inOp) {
     case EE_SCREENS_UP_OP_ALLOWED:
         return gUnitImprovementsAllowed == true;
     case EE_SCREENS_UP_OP_CAN_BUY:
-        return theUnit->mPlayer->CanBuy(theUnit->mUnitClass->GetUnitType(), theAttribute, ioCall.mOut);
+        return theUnit->mPlayer->CanBuy(theUnit->mUnitClass->GetUnitType(), theAttribute, static_cast<UWideString*>(ioCall.mOut));
     case EE_SCREENS_UP_OP_EDITOR_UNIT:
         return (int64_t) static_cast<EEUIFScenarioEditor*>(theButton->GetForm())->GetFirstSelectedUnit();
     case EE_SCREENS_UP_OP_CAN_RAISE:
@@ -71,28 +71,28 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         gResource->GetString((long)inA, ioCall.mText);
         return 0;
     case EE_SCREENS_UP_OP_OUT_APPEND:
-        *ioCall.mOut += ioCall.mText;
+        *static_cast<UWideString*>(ioCall.mOut) += ioCall.mText;
         return 0;
     case EE_SCREENS_UP_OP_OUT_SET:
-        *ioCall.mOut = ioCall.mText;
+        *static_cast<UWideString*>(ioCall.mOut) = ioCall.mText;
         return 0;
     case EE_SCREENS_UP_OP_OUT_BYTES:
-        *ioCall.mOut += std::string(reinterpret_cast<const char*>(inA), (size_t)inB).c_str();
+        *static_cast<UWideString*>(ioCall.mOut) += std::string(reinterpret_cast<const char*>(inA), (size_t)inB).c_str();
         return 0;
     case EE_SCREENS_UP_OP_BASE_HELP:
-        theButton->UIControl::GetHelpString(inA == 0 ? *ioCall.mOut : ioCall.mText);
+        theButton->UIControl::GetHelpString(inA == 0 ? *static_cast<UWideString*>(ioCall.mOut) : ioCall.mText);
         return 0;
     case EE_SCREENS_UP_OP_UPGRADE:
         (new EEAUpgradeImprovement(theUnit, theAttribute, inB != 0, !theButton->mScenarioEditor))->Dereference();
         return 0;
     case EE_SCREENS_UP_OP_OUT_LENGTH:
-        return ioCall.mOut->GetLength();
+        return static_cast<UWideString*>(ioCall.mOut)->GetLength();
     case EE_SCREENS_UP_OP_REFUSAL_INTERVAL:
         return gWorldTable.GetLongValue(kWorldRefusalMessageInterval);
     case EE_SCREENS_UP_OP_TIME:
         return TMGetTime();
     case EE_SCREENS_UP_OP_CHAT:
-        gUserInterface->AddChatLogEntry(*ioCall.mOut, 0);
+        gUserInterface->AddChatLogEntry(*static_cast<UWideString*>(ioCall.mOut), 0);
         return 0;
     case EE_SCREENS_UP_OP_UPDATE_HELP:
         theButton->GetForm()->UpdateHelpString();
@@ -103,7 +103,7 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         theButton->UIButton::ButtonUp();
         return 0;
     case EE_SCREENS_UP_OP_BASE_MOVE:
-        return theButton->UIButton::MouseMove(*ioCall.mLocation);
+        return theButton->UIButton::MouseMove(*static_cast<const GE2DPoint*>(ioCall.mLocation));
     case EE_SCREENS_UP_OP_HELP_TEXT:
         theButton->GetHelpString(ioCall.mText);
         return 0;
@@ -113,9 +113,9 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         theButton->ReleaseCapturedMouse();
         return 0;
     case EE_SCREENS_UP_OP_COST_DIFFERS:
-        return theButton->mCostLabel != NULL && *ioCall.mOut != theButton->mCostLabel->GetText(0);
+        return static_cast<UITextLabel*>(theButton->mCostLabel) != NULL && *static_cast<UWideString*>(ioCall.mOut) != static_cast<UITextLabel*>(theButton->mCostLabel)->GetText(0);
     case EE_SCREENS_UP_OP_COST_SET:
-        theButton->mCostLabel->SetText(*ioCall.mOut);
+        static_cast<UITextLabel*>(theButton->mCostLabel)->SetText(*static_cast<UWideString*>(ioCall.mOut));
         return 0;
     case EE_SCREENS_UP_OP_DIRTY:
         theButton->SetDirty(true);
@@ -135,7 +135,7 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
 // the call record's button
 #include "ee/EEScreensShims.h"
 #define UPC(inCall) (*reinterpret_cast<EEUIBUpgradeCall*>(inCall))
-#define UPB(inCall) UPC(inCall).mButton
+#define UPB(inCall) static_cast<EEUIBUpgrade*>(UPC(inCall).mButton)
 static const unsigned long kUpSounds[] = {kSoundButton2, kSoundButton1};
 extern "C" int64_t ee_screenscpp_up_attribute(uintptr_t inCall) { return (int64_t)UPB(inCall)->mAttribute; }
 extern "C" void ee_screenscpp_up_set_attribute(uintptr_t inCall, int64_t inValue)
@@ -181,13 +181,13 @@ extern "C" bool ee_screenscpp_up_has_capture(uintptr_t inCall) { return UPB(inCa
 extern "C" bool ee_screenscpp_up_inside_form_mouse(uintptr_t inCall)
 { return UPB(inCall)->GetRectangle().Contains(UPB(inCall)->GetForm()->GetMouseLocation()); }
 extern "C" bool ee_screenscpp_up_inside_location(uintptr_t inCall)
-{ return UPB(inCall)->GetRectangle().Contains(*UPC(inCall).mLocation); }
+{ return UPB(inCall)->GetRectangle().Contains(*static_cast<const GE2DPoint*>(UPC(inCall).mLocation)); }
 extern "C" float ee_screenscpp_up_icon_left(uintptr_t inCall)
-{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetX(); }
+{ return static_cast<UIBitmap*>(static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon)->GetRectangle().GetTopLeft().GetX(); }
 extern "C" float ee_screenscpp_up_icon_top(uintptr_t inCall)
-{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetY(); }
+{ return static_cast<UIBitmap*>(static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon)->GetRectangle().GetTopLeft().GetY(); }
 extern "C" void ee_screenscpp_up_icon_set_location(uintptr_t inCall, float inX, float inY)
-{ static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->SetLocation(GE2DPoint(inX, inY)); }
+{ static_cast<UIBitmap*>(static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon)->SetLocation(GE2DPoint(inX, inY)); }
 // the constructor's body and the draw, dirty, mouse and press overrides: hud_bodies.rs over these (UI lane round 12)
 #define UPBB(b) ((EEUIBUpgrade*)(b))
 extern "C" void ee_screenscpp_upb_set_num_queued(uintptr_t inButton, int64_t inValue)
@@ -211,7 +211,7 @@ extern "C" void ee_screenscpp_upb_base_button_down(uintptr_t inButton) { EEUIBUp
 extern "C" void ee_screenscpp_upb_update_help(uintptr_t inButton) { UPBB(inButton)->GetForm()->UpdateHelpString(); }
 extern "C" int64_t ee_screenscpp_upb_base_copy_data(uintptr_t inButton)
 { return (int64_t)UPBB(inButton)->UIButton::CopyData(); }
-extern "C" uintptr_t ee_screenscpp_upb_cost_label(uintptr_t inButton) { return (uintptr_t)UPBB(inButton)->mCostLabel; }
+extern "C" uintptr_t ee_screenscpp_upb_cost_label(uintptr_t inButton) { return (uintptr_t)static_cast<UITextLabel*>(UPBB(inButton)->mCostLabel); }
 extern "C" void ee_screenscpp_upb_label_dirty_rect(uintptr_t inButton, uintptr_t inLabel)
 { UPBB(inButton)->GetForm()->GetManager()->AddDirtyRectangle(((UITextLabel*)inLabel)->GetRectangle(), UPBB(inButton)->GetForm()); }
 extern "C" int64_t ee_screenscpp_upb_label_copy_data(uintptr_t inLabel)
