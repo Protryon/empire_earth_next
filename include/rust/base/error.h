@@ -27,6 +27,22 @@ void ee_error_debug_out(const char *text,
                         const void *volume,
                         const void *directory);
 
+/// `ESDebugOut`'s buffer for its formatted text (`UFormat`, lle/LowLevelEngineCore.h): `size` bytes (at least 1),
+/// freed by [`ee_error_debug_end`].
+char *ee_error_debug_buffer(void *_state,
+                            unsigned long size);
+
+/// `ESDebugOut`'s end: the formatted text cut at 1023 bytes (the original's 1024-byte `vsnprintf`) through
+/// [`ee_error_debug_out`], then the buffer freed.
+///
+/// # Safety
+/// `text` and `size` are from [`ee_error_debug_buffer`], the text NUL-terminated inside it; as
+/// [`ee_error_debug_out`] for `volume` and `directory`.
+void ee_error_debug_end(char *text,
+                        unsigned long size,
+                        const void *volume,
+                        const void *directory);
+
 /// `ESInitialize`: [`ee_error_shutdown_hook`] registered with the engine's shutdown list (ee_util).
 void ee_error_initialize();
 
