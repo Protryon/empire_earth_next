@@ -458,6 +458,184 @@ static bool ConfHandleValue(LobbyConfig* self, ConfigParser* parser, const std::
     return self->ConfigObject::HandleValueInstruction(parser, key, values);
 }
 
+static bool RoomLabel_Virtual24(RoomLabelCtrlConfig* self, const std::string& inKey)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_ROOMLABELCTRLCONFIG_VIRTUAL24_INKEY,inKey.data(),inKey.size());
+    if(aKeyIdx==0) self->mRoomLabel->SetField(0,Dat(self->ReadString(false)));
+    else if(aKeyIdx==1)
+    {
+        GUIString aGroup=self->ReadString(false);
+        if(aGroup.CompareNoCase("CHAT",0)==0) self->mRoomLabel->SetField(1,1);
+        else if(aGroup.CompareNoCase("GAME",0)==0) self->mRoomLabel->SetField(1,2);
+        else throw ConfigObjectException("Invalid Group Type: "+(std::string)aGroup);
+    }
+    else if(aKeyIdx==2) self->mRoomLabel->SetField(2,self->ReadBool());
+    else if(aKeyIdx==3) self->mRoomLabel->SetField(3,self->ReadBool());
+    else return self->ContainerConfig::Virtual24(inKey);
+    return true;
+}
+
+static bool UserList_Virtual24(UserListCtrlConfig* self, const std::string& instruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0 || aKeyIdx==1) return true;
+    return self->ContainerConfig::Virtual24(instruction);
+}
+
+static bool Chat_Virtual24(ChatCtrlConfig* self, const std::string& inKey)
+{
+    const int aKeyIdx = ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY, inKey.data(), inKey.size());
+    if (self->ContainerConfig::Virtual24(inKey)) return true;
+    if (aKeyIdx == 0) {
+        GUIString group = self->ReadString(false);
+        const int aName = ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CHATCTRLCONFIG_VIRTUAL24_GROUP, group.mData->mText, group.mData->mLength, sizeof(wchar_t));
+        if (aName < 0 || aName > 2) throw ConfigObjectException("Invalid Group Type: " + (std::string)group);
+        self->mChatCtrl->SetField(20, aName == 0 ? 1 : aName == 1 ? 2 : 0x12);
+    } else if (aKeyIdx == 1) {
+    } else if (aKeyIdx >= 2 && aKeyIdx <= 12) {
+        // DEFAULT, ERROR, HELP, USER, EMOTE, WHISPER, WARNING, GROUP, MESSAGE, ACCEPT, REJECT
+        static const int kColor[11] = {0, 5, 6, 1, 3, 2, 4, 7, 8, 9, 10};
+        self->mChatCtrl->SetField(kColor[aKeyIdx - 2], self->ReadColor());
+    } else return false;
+    return true;
+}
+
+static bool ServerList_GetNamedValue(ServerListCtrlConfig* self, const std::string& inName, int& outValue)
+{
+    const int aKeyIdx = ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_GETNAMEDVALUE_INNAME, inName.data(), inName.size());
+    if (aKeyIdx == 0) { outValue = (int)self->mServerList->Cfg(EeWonLobbyCtlCfg::ColumnCount); return true; }
+    return self->ComponentConfig::GetNamedValue(inName, outValue);
+}
+
+static bool ServerList_Virtual24(ServerListCtrlConfig* self, const std::string& inInstruction)
+{
+    const int aKeyIdx = ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_VIRTUAL24_ININSTRUCTION, inInstruction.data(), inInstruction.size());
+    if (self->ContainerConfig::Virtual24(inInstruction)) return true;
+    if (aKeyIdx == 0) {
+        GUIString aType = self->ReadString(false);
+        const int aName = ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE, aType.mData->mText, aType.mData->mLength, sizeof(wchar_t));
+        if (aName < 0 || aName > 2) throw ConfigObjectException("Invalid server list id: " + static_cast<std::string>(aType));
+        self->mServerList->Cfg(EeWonLobbyCtlCfg::SetGameType, aName == 0 ? 2 : aName == 1 ? 1 : 3);
+    } else if (aKeyIdx == 1) self->HandleAddColumn();
+    else if (aKeyIdx == 2) {
+        GUIString aColumn = self->ReadString(false);
+        self->EnsureComma();
+        GUIString aFilters = self->ReadString(false);
+        LobbyAddGameOption(aColumn, aFilters, false);
+    } else if (aKeyIdx == 3) self->mServerList->Cfg(EeWonLobbyCtlCfg::SetNumColumns, self->ReadInt());
+    else if (aKeyIdx == 4) {
+        self->ReadInt();
+        self->EnsureComma();
+        GUIString aType = self->ReadString(false);
+        // the filter type is only validated; ReadInt's column and the type are not kept
+        const int aName = ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE, aType.mData->mText, aType.mData->mLength, sizeof(wchar_t));
+        if (aName < 3 || aName > 5) throw ConfigObjectException("Unknown filter type: " + static_cast<std::string>(aType));
+    } else return false;
+    return true;
+}
+
+static void ServerList_HandleAddColumn(ServerListCtrlConfig* self)
+{
+    MultiListArea* aList = (MultiListArea*)self->mServerList->Cfg(EeWonLobbyCtlCfg::List);
+    if (aList == NULL) {
+        Component* aComponent = self->Fn386860(std::string("ServerList"));
+        if (aComponent == NULL) throw ConfigObjectException("Need ServerList before calling AddColumn");
+        aList = dynamic_cast<MultiListArea*>(aComponent);
+        if (aList == NULL) throw ConfigObjectException("ServerList needs to be a MultiListArea");
+        self->mServerList->Cfg(EeWonLobbyCtlCfg::SetList, (intptr_t)aList);
+        aComponent = self->Fn386860(std::string("ServerListHeader"));
+        if (aComponent == NULL) throw ConfigObjectException("Need ServerList header before calling AddColumn");
+        self->mHeader = dynamic_cast<MultiListHeader*>(aComponent);
+        if (self->mHeader == NULL) throw ConfigObjectException("ServerListHeader needs to be a MultiListHeader");
+    }
+    GUIString aColumn = self->ReadString(false);
+    self->EnsureComma();
+    Component* aComponent = self->Fn386860(aColumn);
+    if (aComponent == NULL) throw ConfigObjectException("Component not found: " + static_cast<std::string>(aColumn));
+    int aWidth = self->ReadInt();
+    ComboBox* aCombo = NULL;
+    if (!self->EndOfString()) {
+        self->EnsureComma();
+        aCombo = SafeConfigGetComponent<ComboBox*>(self->ReadComponent(), "ComboBox");
+    }
+    std::string aName = aColumn;
+    intptr_t aDef = self->mServerList->Cfg(EeWonLobbyCtlCfg::AddColumn, (intptr_t)aName.data(), (intptr_t)aName.size());
+    if (aDef < 0) throw ConfigObjectException("Column not defined: " + aName);
+    if (aDef == 0) return;
+    aList->SetNumColumns(++self->mNumColumns);
+    int aCol = self->mNumColumns;
+    if (aWidth == 0) aList->SetDynamicSizeColumn(--aCol);
+    else aList->SetColumnWidth(--aCol, aWidth, false);
+    self->mHeader->SetColumnItem(self->mNumColumns - 1, aComponent);
+    self->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, aDef - 1, (intptr_t)aCombo);
+}
+
+static bool GameBrowser_Virtual24(GameBrowserCtrlConfig* self, const std::string& instruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_GAMEBROWSERCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(self->ContainerConfig::Virtual24(instruction))
+        return true;
+    if(aKeyIdx==0)
+    {
+        std::string path=self->ReadString(false);
+        URL url=path;
+        if(url.GetType()==URLType_File)
+            path=ComponentConfig::GetResourceFile(path);
+        self->mBrowser->SetHomeLocation(path);
+    }
+    else
+        return false;
+    return true;
+}
+
+static bool GameUserList_Virtual24(GameUserListCtrlConfig* self, const std::string& instruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_GAMEUSERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) { }
+    else return self->ContainerConfig::Virtual24(instruction);
+    return true;
+}
+
+static bool Cross_Virtual24(CrossPromotionButtonConfig* self, const std::string& key) {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CROSSPROMOTIONBUTTONCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0)
+        self->mCrossPromotionButton->SetDefaultImage(self->ReadImage(false));
+    else if(aKeyIdx==1)
+        self->mCrossPromotionButton->SetDefaultBrowse(self->ReadString(false));
+    else
+        return self->ComponentConfig::Virtual24(key);
+    return true;
+}
+
+static bool ImageText_Virtual24(ImageTextButtonConfig* self, const std::string& key) {
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGETEXTBUTTONCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0)
+        self->mImageTextButton->mFont=self->ReadFont();
+    else if(aKeyIdx==1)
+        self->mImageTextButton->mText=self->ReadString(false);
+    else if(aKeyIdx==2)
+        self->mImageTextButton->mBrowse=self->ReadString(false);
+    else
+        return self->ComponentConfig::Virtual24(key);
+    return true;
+}
+
+static bool Credits_Virtual24(CreditsDialogConfig* self, const std::string& inInstruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CREDITSDIALOGCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) {
+    GUIString aLine=self->ReadString(false);
+    DWORD aColor=-1;
+    if(!self->EndOfString()) {
+        self->EnsureComma();
+        aColor=self->ReadColor();
+    }
+    self->mCredits->LCall(EeWonLobbyDlgCall::AddLine,(intptr_t)&aLine,(intptr_t)self->Fn386860(std::string("DialogComponent")),(intptr_t)(uint32_t)aColor);
+    return true;
+    }
+    return self->ContainerConfig::Virtual24(inInstruction);
+}
+
 }
 
 #endif

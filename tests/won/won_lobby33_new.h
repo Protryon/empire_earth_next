@@ -344,6 +344,115 @@ static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intp
     return 0;
 }
 
+// ---- the config readers: their bodies are lobbycfgrd.rs's (R6 WON round 33) over these statements
+
+static intptr_t CfgAddColumn(ServerListCtrl* inList, const std::string& inName) { return inList->Cfg(EeWonLobbyCtlCfg::AddColumn, (intptr_t)inName.data(), (intptr_t)inName.size()); }
+static intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    switch (inOp) {
+    case Op::ReadString: return WonGuard([&] { return (intptr_t)(Held(c->ReadString(false))); });
+    case Op::ReadColor: return WonGuard([&] { return (intptr_t)(c->ReadColor()); });
+    case Op::ReadInt: return WonGuard([&] { return (intptr_t)(c->ReadInt()); });
+    case Op::EnsureComma: return WonGuardV([&] { c->EnsureComma(); });
+    case Op::EndOfString: return WonGuard([&] { return (intptr_t)(c->EndOfString()); });
+    case Op::FindNamed: return WonGuard([&] { return (intptr_t)(c->Fn386860(std::string((const char*)a))); });
+    case Op::FindNamedText: return WonGuard([&] { return (intptr_t)(c->Fn386860((std::string)Txt(a))); });
+    case Op::TextRelease: ((GUIStringData*)a)->Release(); return 0;
+    case Op::TextNameIndex: return (intptr_t)(ee_won_gui_cfg_name((int)b, ((GUIStringData*)a)->mText, ((GUIStringData*)a)->mLength, sizeof(wchar_t)));
+    case Op::TextIsNoCase: return (Txt(a).CompareNoCase((const char*)b, 0) == 0) ? 1 : 0;
+    case Op::Throw: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a)); });
+    case Op::ThrowWithText: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)); });
+    }
+    return 0;
+}
+static intptr_t CfgRdHostNet(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    ChatCtrlConfig* cc_ = static_cast<ChatCtrlConfig*>(c);
+    RoomLabelCtrlConfig* rl = static_cast<RoomLabelCtrlConfig*>(c);
+    UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
+    ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
+    switch (inOp) {
+    case Op::ChatBase: return WonGuard([&] { return (intptr_t)(cc_->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ChatSetField: cc_->mChatCtrl->SetField((int)a, b); return 0;
+    case Op::RoomBase: return WonGuard([&] { return (intptr_t)(rl->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::RoomSetPrefixRead: return WonGuardV([&] { rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))); });
+    case Op::RoomSetField: rl->mRoomLabel->SetField((int)a, b); return 0;
+    case Op::RoomSetFieldBoolRead: return WonGuardV([&] { rl->mRoomLabel->SetField((int)a, c->ReadBool()); });
+    case Op::UserListBase: return WonGuard([&] { return (intptr_t)(ul->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ServerBase: return WonGuard([&] { return (intptr_t)(sl->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ServerNamedBase: return WonGuard([&] { return (intptr_t)(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b)); });
+    case Op::ServerCfg: return (intptr_t)(sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b));
+    case Op::ServerPushColumn: return (intptr_t)(sl->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
+    case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(sl->mServerList, (std::string)Txt(a)));
+    case Op::ServerAddGameOption: LobbyAddGameOption(Txt(a), Txt(b), false); return 0;
+    case Op::AsMultiList: return (intptr_t)(dynamic_cast<MultiListArea*>((Component*)a));
+    case Op::ServerHeaderFrom: return (intptr_t)(sl->mHeader = dynamic_cast<MultiListHeader*>((Component*)a));
+    case Op::ServerHeaderIsNull: return (sl->mHeader == NULL) ? 1 : 0;
+    case Op::ReadCombo: return WonGuard([&] { return (intptr_t)(SafeConfigGetComponent<ComboBox*>(c->ReadComponent(), "ComboBox")); });
+    case Op::ServerColumnsInc: ((MultiListArea*)a)->SetNumColumns(++sl->mNumColumns); return 0;
+    case Op::ServerNumColumns: return (intptr_t)(sl->mNumColumns);
+    case Op::ListDynamicColumn: ((MultiListArea*)a)->SetDynamicSizeColumn((int)b); return 0;
+    case Op::ListColumnWidth: ((MultiListArea*)a)->SetColumnWidth((int)b, (int)cc, false); return 0;
+    case Op::ServerHeaderSetColumnItem: sl->mHeader->SetColumnItem(sl->mNumColumns - 1, (Component*)a); return 0;
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    }
+}
+
+// the config readers' reads (LobbyNetCtrlHost.cpp)
+static std::string sCfgRdPath;
+static intptr_t CfgRdHostCtl(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    GameBrowserCtrlConfig* gb = static_cast<GameBrowserCtrlConfig*>(c);
+    GameUserListCtrlConfig* gu = static_cast<GameUserListCtrlConfig*>(c);
+    switch (inOp) {
+    case Op::BrowserBase: return WonGuard([&] { return (intptr_t)(gb->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::BrowserPathRead: return WonGuardV([&] { sCfgRdPath = (std::string)c->ReadString(false); });
+    case Op::BrowserPathIsFile: return WonGuard([&] { return (intptr_t)(URL(sCfgRdPath).GetType() == URLType_File); });
+    case Op::BrowserPathResolve: return WonGuardV([&] { sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath); });
+    case Op::BrowserSetHome: return WonGuardV([&] { gb->mBrowser->SetHomeLocation(sCfgRdPath); });
+    case Op::GameUserListBase: return WonGuard([&] { return (intptr_t)(gu->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    }
+}
+
+// the config readers' reads (LobbyNetCtrlHost.cpp)
+static intptr_t CfgRdHostCross(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    CrossPromotionButtonConfig* cp = static_cast<CrossPromotionButtonConfig*>(c);
+    ImageTextButtonConfig* it = static_cast<ImageTextButtonConfig*>(c);
+    switch (inOp) {
+    case Op::CrossBase: return WonGuard([&] { return (intptr_t)(cp->ComponentConfig::Virtual24(*(const std::string*)a)); });
+    case Op::CrossDefaultImageRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)); });
+    case Op::CrossDefaultBrowseRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)); });
+    case Op::ImageTextBase: return WonGuard([&] { return (intptr_t)(it->ComponentConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ImageTextFontRead: return WonGuardV([&] { it->mImageTextButton->mFont = c->ReadFont(); });
+    case Op::ImageTextTextRead: return WonGuardV([&] { it->mImageTextButton->mText = c->ReadString(false); });
+    case Op::ImageTextBrowseRead: return WonGuardV([&] { it->mImageTextButton->mBrowse = c->ReadString(false); });
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    }
+}
+
+// the config readers' reads (LobbyNetCtrlHost.cpp)
+static intptr_t CreditsAddLine(LobbyRustDialog* inCredits, const GUIString& inLine, Component* inComponent, intptr_t inColor) { return inCredits->LCall(EeWonLobbyDlgCall::AddLine, (intptr_t)&inLine, (intptr_t)inComponent, (intptr_t)(uint32_t)inColor); }
+static intptr_t CfgRdHostCredits(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
+    switch (inOp) {
+    case Op::CreditsBase: return WonGuard([&] { return (intptr_t)(cr->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::CreditsAddLine: return WonGuard([&] { return (intptr_t)(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)); });
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    }
+}
+
 }
 
 #endif

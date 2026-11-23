@@ -77,6 +77,24 @@ out.append(func(lc, "LobbyConfig::LobbyConfig()", "static void ConfConstruct(Lob
 out.append(func(lc, "bool LobbyConfig::HandleValueInstruction(ConfigParser* parser, const std::string& key,\n                           StringParser& values)",
                 "static bool ConfHandleValue(LobbyConfig* self, ConfigParser* parser, const std::string& key, StringParser& values)")
            .replace("return ConfigObject::", "return self->ConfigObject::"))
+READERS = [
+    ("LobbyNetCtrlHost.cpp", "bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey)", "static bool RoomLabel_Virtual24(RoomLabelCtrlConfig* self, const std::string& inKey)"),
+    ("LobbyNetCtrlHost.cpp", "bool UserListCtrlConfig::Virtual24(const std::string& instruction)", "static bool UserList_Virtual24(UserListCtrlConfig* self, const std::string& instruction)"),
+    ("LobbyNetCtrlHost.cpp", "bool ChatCtrlConfig::Virtual24(const std::string& inKey)", "static bool Chat_Virtual24(ChatCtrlConfig* self, const std::string& inKey)"),
+    ("LobbyNetCtrlHost.cpp", "bool ServerListCtrlConfig::GetNamedValue(const std::string& inName, int& outValue)", "static bool ServerList_GetNamedValue(ServerListCtrlConfig* self, const std::string& inName, int& outValue)"),
+    ("LobbyNetCtrlHost.cpp", "bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction)", "static bool ServerList_Virtual24(ServerListCtrlConfig* self, const std::string& inInstruction)"),
+    ("LobbyNetCtrlHost.cpp", "void ServerListCtrlConfig::HandleAddColumn()", "static void ServerList_HandleAddColumn(ServerListCtrlConfig* self)"),
+    ("LobbyCtrlHost.cpp", "bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)", "static bool GameBrowser_Virtual24(GameBrowserCtrlConfig* self, const std::string& instruction)"),
+    ("LobbyCtrlHost.cpp", "bool GameUserListCtrlConfig::Virtual24(const std::string& instruction)", "static bool GameUserList_Virtual24(GameUserListCtrlConfig* self, const std::string& instruction)"),
+    ("CrossPromotionButton.cpp", "bool CrossPromotionButtonConfig::Virtual24(const std::string& key)", "static bool Cross_Virtual24(CrossPromotionButtonConfig* self, const std::string& key)"),
+    ("CrossPromotionButton.cpp", "bool ImageTextButtonConfig::Virtual24(const std::string& key)", "static bool ImageText_Virtual24(ImageTextButtonConfig* self, const std::string& key)"),
+    ("CreditsDialog.cpp", "bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)", "static bool Credits_Virtual24(CreditsDialogConfig* self, const std::string& inInstruction)"),
+]
+for f, sig, new_sig in READERS:
+    b = func(show(L + f), sig, new_sig)
+    for base in ("ContainerConfig::Virtual24(", "ComponentConfig::Virtual24(", "ComponentConfig::GetNamedValue("):
+        b = b.replace(base, "self->" + base).replace("self->self->", "self->")
+    out.append(b)
 out += ["}", "#endif", ""]
 open(ROOT + "/tests/won/won_lobby33_orig.h", "w", encoding="utf-8", newline="\n").write(
     "\n".join(out[:6]) + "\n\n" + "\n\n".join(out[6:]))
@@ -102,6 +120,17 @@ cur = open(ROOT + "/" + L + "LobbyConfig.cpp", encoding="utf-8").read()
 i = cur.index("// the constructor's and HandleValueInstruction's statements")
 new.append("\n".join(l for l in cur[i:cur.index("static intptr_t ConfHost", i)].split("\n") if l.startswith("static")))
 new.append(body_at(cur, cur.index("static intptr_t ConfHost", i)))
+for f, tag in (("LobbyNetCtrlHost.cpp", "Net"), ("LobbyCtrlHost.cpp", "Ctl"), ("CrossPromotionButton.cpp", "Cross"),
+               ("CreditsDialog.cpp", "Credits")):
+    cur = open(ROOT + "/" + L + f, encoding="utf-8").read()
+    i = cur.index("static intptr_t CfgRdHost(")
+    k = cur.rfind("\n//", 0, i)
+    j = cur.index("static intptr_t CfgRd(ComponentConfig*", i)
+    if tag == "Net":
+        k = cur.index("// ---- the config readers: their bodies are lobbycfgrd.rs's")
+    part = cur[k:j]
+    part = "\n".join(l for l in part.split("\n") if not l.startswith("intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc);"))
+    new.append(part.replace("static intptr_t CfgRdHost(", "static intptr_t CfgRdHost" + tag + "(").replace("\nintptr_t LobbyCfgReadHost(", "\nstatic intptr_t LobbyCfgReadHost(").strip())
 new += ["}", "#endif", ""]
 open(ROOT + "/tests/won/won_lobby33_new.h", "w", encoding="utf-8", newline="\n").write(
     "\n".join(new[:6]) + "\n\n" + "\n\n".join(new[6:]))

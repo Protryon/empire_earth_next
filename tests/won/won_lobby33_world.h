@@ -24,9 +24,11 @@
 #include "rust/won_lobby/srvlistctl.h"
 #include "rust/won_lobby/chatctl.h"
 #include "rust/won_net/ipobj.h"
+#include "rust/won_gui/guiconf.h"
 
 namespace L33World {
 using WONAPI::WonGuard;
+using WONAPI::WonGuardV;
 using WONAPI::WonRethrow;
 static std::vector<std::string> sTrace;
 static void Log(const std::string& s) { sTrace.push_back(s); }
@@ -82,6 +84,7 @@ public:
     SmartPtr& operator=(const SmartPtr& o) { this->operator=(o.mPtr); return *this; }
     T* operator->() const { return this->mPtr; }
     T* get() const { return this->mPtr; }
+    operator T*() const { return this->mPtr; }
     T* mPtr;
 };
 template <class T> using ConstSmartPtr = SmartPtr<T>;
@@ -89,11 +92,12 @@ template <class T> using ConstSmartPtr = SmartPtr<T>;
 // ---- texts
 
 struct GUIStringData : RefCount {
-    std::wstring mText;
+    std::wstring mWide;
+    const wchar_t* mText; // the real one's units
     unsigned short mLength;
-    explicit GUIStringData(const std::wstring& w) : mText(w), mLength((unsigned short)w.size()) {}
-    explicit GUIStringData(const char* s) : mText(s, s + strlen(s)), mLength((unsigned short)strlen(s)) {}
-    GUIStringData(const char* s, unsigned short n) : mText(s, s + n), mLength(n) {}
+    explicit GUIStringData(const std::wstring& w) : mWide(w), mText(mWide.c_str()), mLength((unsigned short)w.size()) {}
+    explicit GUIStringData(const char* s) : mWide(s, s + strlen(s)), mText(mWide.c_str()), mLength((unsigned short)strlen(s)) {}
+    GUIStringData(const char* s, unsigned short n) : mWide(s, s + n), mText(mWide.c_str()), mLength(n) {}
 };
 static GUIStringData* GetEmptyGUIStringData()
 {
@@ -113,16 +117,23 @@ struct GUIString {
     GUIString(const char* s) : mData(new GUIStringData(s)) {}
     GUIString(const std::string& s) : mData(new GUIStringData(s.c_str())) {}
     GUIString(const std::wstring& w) : mData(new GUIStringData(w)) {}
-    void append(const GUIString& o) { this->mData = new GUIStringData(this->mData->mText + o.mData->mText); }
+    void append(const GUIString& o) { this->mData = new GUIStringData(this->mData->mWide + o.mData->mWide); }
     int length() const { return this->mData->mLength; }
-    operator std::wstring() const { return this->mData->mText; }
-    operator std::string() const { return Narrow(this->mData->mText); }
-    bool operator==(const GUIString& o) const { return this->mData->mText == o.mData->mText; }
+    operator std::wstring() const { return this->mData->mWide; }
+    operator std::string() const { return Narrow(this->mData->mWide); }
+    bool operator==(const GUIString& o) const { return this->mData->mWide == o.mData->mWide; }
+    int CompareNoCase(const char* s, int) const
+    {
+        std::string a = Narrow(this->mData->mWide), b(s);
+        for (char& c : a) c = (char)tolower((unsigned char)c);
+        for (char& c : b) c = (char)tolower((unsigned char)c);
+        return a.compare(b);
+    }
 };
-static std::string Text(const GUIString& s) { return "'" + Narrow(s.mData->mText) + "'"; }
+static std::string Text(const GUIString& s) { return "'" + Narrow(s.mData->mWide) + "'"; }
 static std::string TextOf(intptr_t inData)
 {
-    return inData == 0 ? std::string("null") : "'" + Narrow(reinterpret_cast<GUIStringData*>(inData)->mText) + "'";
+    return inData == 0 ? std::string("null") : "'" + Narrow(reinterpret_cast<GUIStringData*>(inData)->mWide) + "'";
 }
 static const GUIString& LobbyStr(const char* inName)
 {
@@ -195,11 +206,70 @@ struct ConfigParser {
     void AddDefine(const std::string& k, const std::string& v, bool b) { Log("parser AddDefine " + k + "=" + v + " " + N(b)); }
 };
 int ConfigParser::sNext;
+struct Component : Tracked {};
+// a config reader's tokens: a string, an int, a bool, a colour, a comma, a component (by number)
+struct Tok {
+    int mKind;
+    std::string mText;
+    int mValue;
+};
+static int sBaseRead; // the base readers: 0 false, 1 true, 2 a ConfigObjectException
+static std::map<std::string, Component*> sNamed;
+static std::vector<Component*> sReadComponents;
+static std::vector<GUIStringData*> sReadTexts; // the texts the readers read: their references are compared
+struct Image : Tracked {};
+struct Font : Tracked {};
 struct ComponentConfig : Tracked {
     GUIString mConfigError = GUIString("the master's error");
     static void SetResourceFolder(const std::string& s) { Log("SetResourceFolder " + s); }
+    std::vector<Tok> mToks;
+    size_t mAt = 0;
+    const Tok& Next(int inKind, const char* inWhat)
+    {
+        if (this->mAt >= this->mToks.size() || this->mToks[this->mAt].mKind != inKind) {
+            Log(std::string("config read fails: ") + inWhat);
+            throw ConfigObjectException(std::string("Expected ") + inWhat);
+        }
+        return this->mToks[this->mAt++];
+    }
+    GUIString ReadString(bool)
+    {
+        const Tok& k = this->Next(0, "string");
+        Log("ReadString " + k.mText);
+        GUIStringData* d = new GUIStringData(k.mText.c_str());
+        sReadTexts.push_back(d);
+        return GUIString(d);
+    }
+    int ReadColor() { const Tok& k = this->Next(3, "color"); Log("ReadColor " + N(k.mValue)); return k.mValue; }
+    bool ReadBool() { const Tok& k = this->Next(2, "bool"); Log("ReadBool " + N(k.mValue)); return k.mValue != 0; }
+    int ReadInt() { const Tok& k = this->Next(1, "int"); Log("ReadInt " + N(k.mValue)); return k.mValue; }
+    void EnsureComma() { this->Next(4, "comma"); Log("EnsureComma"); }
+    bool EndOfString() { Log("EndOfString"); return this->mAt >= this->mToks.size(); }
+    Component* ReadComponent() { const Tok& k = this->Next(5, "component"); Log("ReadComponent"); return sReadComponents[k.mValue]; }
+    SmartPtr<Image> ReadImage(bool) { this->Next(0, "image"); Image* i = new Image; Log("ReadImage " + Id(i)); return i; }
+    SmartPtr<Font> ReadFont();
+    Component* Fn386860(const std::string& n)
+    {
+        std::map<std::string, Component*>::iterator it = sNamed.find(n);
+        Component* c = it == sNamed.end() ? NULL : it->second;
+        Log("Fn386860 " + n + " " + Id(c));
+        return c;
+    }
+    virtual bool Virtual24(const std::string& k)
+    {
+        Log("base Virtual24 " + k);
+        if (sBaseRead == 2) throw ConfigObjectException("the base's error");
+        return sBaseRead != 0;
+    }
+    virtual bool GetNamedValue(const std::string& k, int& out)
+    {
+        Log("base GetNamedValue " + k);
+        if (sBaseRead == 2) throw ConfigObjectException("the base's error");
+        out = 77;
+        return sBaseRead != 0;
+    }
+    static std::string GetResourceFile(const std::string& p) { Log("GetResourceFile " + p); return "res/" + p; }
 };
-struct Component : Tracked {};
 struct Container : Component {};
 struct LobbyContainer : Container {
     LobbyContainer() { Log("new LobbyContainer " + Id(this)); }
@@ -243,24 +313,24 @@ template <EeWonLobbyCtlKind K> static Component* DlgCtlFactory() { return new Lo
 template <bool Lan> static Component* ScreenFactory() { return new RootScreen(Lan); }
 typedef EeWonLobbyCtlKind Ck;
 struct BrowserComponent {};
-struct ChatCtrlConfig {};
-struct ChatCtrl {};
-struct GameBrowserCtrlConfig {};
-struct GameBrowserCtrl {};
-struct GameUserListCtrlConfig { static Component* CompFactory() { return NULL; } };
-struct UserListCtrlConfig { static Component* CompFactory() { return NULL; } };
+struct ChatCtrlConfig;
+struct ChatCtrl;
+struct GameBrowserCtrlConfig;
+struct GameBrowserCtrl;
+struct GameUserListCtrlConfig;
+struct UserListCtrlConfig;
 struct LoginHelpCtrl {};
 struct LoginScreen {};
 struct MOTDCtrl {};
-struct RoomLabelCtrlConfig {};
-struct RoomLabelCtrl {};
-struct ServerListCtrlConfig {};
-struct ServerListCtrl {};
-struct CreditsDialogConfig {};
-struct CrossPromotionButtonConfig {};
-struct CrossPromotionButton {};
-struct ImageTextButtonConfig {};
-struct ImageTextButton {};
+struct RoomLabelCtrlConfig;
+struct RoomLabelCtrl;
+struct ServerListCtrlConfig;
+struct ServerListCtrl;
+struct CreditsDialogConfig;
+struct CrossPromotionButtonConfig;
+struct CrossPromotionButton;
+struct ImageTextButtonConfig;
+struct ImageTextButton;
 
 struct LobbyLogic : Tracked {
     const char* mName;
@@ -680,7 +750,6 @@ struct WONLobbyPrv {
 
 // ---- ChatCtrl's links
 
-struct Font : Tracked {};
 struct LobbyFriend : Tracked {
     GUIString mName;
     const GUIString& GetName() const { return this->mName; }
@@ -709,6 +778,110 @@ struct ChatLink : Tracked {
             N(this->mGroupId) + " client " + Id(this->mClient.get()) + " friend " + Id(this->mFriend.get()) +
             " enabled " + N(this->mEnabled) + " previous " + (this->mPrevious == NULL ? "null" : "set"));
     }
+};
+// ---- the lobby controls' config readers
+
+SmartPtr<Font> ComponentConfig::ReadFont() { this->Next(0, "font"); Font* f = new Font; Log("ReadFont " + Id(f)); return f; }
+static intptr_t Held(const GUIString& inText)
+{
+    inText.mData->AddRef();
+    return (intptr_t)inText.mData.get();
+}
+static intptr_t Dat(const GUIString& inText) { return (intptr_t)inText.mData.get(); }
+struct ChatCtrl : Container {
+    void SetField(int f, intptr_t v) { Log("ChatCtrl SetField " + N(f) + " " + N((long long)v)); }
+};
+struct RoomLabelCtrl : Container {
+    void SetField(int f, intptr_t v) { Log("RoomLabel SetField " + N(f) + " " + (f == 0 ? TextOf(v) : N((long long)v))); }
+};
+struct MultiListArea : Component {
+    void SetNumColumns(int n) { Log("list SetNumColumns " + N(n)); }
+    void SetDynamicSizeColumn(int c) { Log("list SetDynamicSizeColumn " + N(c)); }
+    void SetColumnWidth(int c, int w, bool b) { Log("list SetColumnWidth " + N(c) + " " + N(w) + " " + N(b)); }
+};
+struct MultiListHeader : Component {
+    void SetColumnItem(int c, Component* x) { Log("header SetColumnItem " + N(c) + " " + Id(x)); }
+};
+struct ComboBox : Component {};
+template <class T> static T SafeConfigGetComponent(Component* c, const char* n)
+{
+    T t = dynamic_cast<T>(c);
+    Log(std::string("SafeConfigGetComponent ") + n + " " + Id(c));
+    if (t == NULL) throw ConfigObjectException(std::string("not a ") + n);
+    return t;
+}
+struct ServerListCtrl : Container {
+    intptr_t mList = 0;
+    intptr_t Cfg(EeWonLobbyCtlCfg c, intptr_t a = 0, intptr_t b = 0)
+    {
+        if (c == EeWonLobbyCtlCfg::AddColumn) {
+            std::string n((const char*)a, (size_t)b);
+            Log("Cfg AddColumn " + n);
+            return n == "Name" ? 3 : n == "Skip" ? 0 : -1;
+        }
+        bool aPointers = c == EeWonLobbyCtlCfg::SetList || c == EeWonLobbyCtlCfg::PushColumn;
+        Log("Cfg " + N((int)c) + " " + (c == EeWonLobbyCtlCfg::SetList ? Id((Component*)a) : N((long long)a)) + " " +
+            (aPointers ? Id((Component*)b) : N((long long)b)));
+        if (c == EeWonLobbyCtlCfg::SetList) this->mList = a;
+        if (c == EeWonLobbyCtlCfg::List) return this->mList;
+        if (c == EeWonLobbyCtlCfg::ColumnCount) return 5;
+        return 0;
+    }
+};
+static void LobbyAddGameOption(const GUIString& c, const GUIString& v, bool b) { Log("LobbyAddGameOption " + Text(c) + " " + Text(v) + " " + N(b)); }
+enum URLType { URLType_Http, URLType_File };
+struct URL {
+    std::string mText;
+    URL(const std::string& s) : mText(s) {}
+    URLType GetType() const { return this->mText.compare(0, 5, "file:") == 0 ? URLType_File : URLType_Http; }
+};
+struct GameBrowserCtrl : Container {
+    void SetHomeLocation(const GUIString& s) { Log("SetHomeLocation " + Text(s)); }
+};
+struct CrossPromotionButton : Component {
+    void SetDefaultImage(Image* i) { Log("SetDefaultImage " + Id(i)); }
+    void SetDefaultBrowse(const GUIString& s) { Log("SetDefaultBrowse " + Text(s)); }
+};
+struct ImageTextButton : Component {
+    SmartPtr<Font> mFont;
+    GUIString mText, mBrowse;
+};
+struct LobbyRustDialog : Container {
+    intptr_t LCall(EeWonLobbyDlgCall c, intptr_t a, intptr_t b, intptr_t d)
+    {
+        Log("LCall " + N((int)c) + " " + Text(*reinterpret_cast<const GUIString*>(a)) + " " + Id((Component*)b) + " " + N((long long)d));
+        return 0;
+    }
+};
+struct ChatCtrlConfig : ContainerConfig {
+    ChatCtrl* mChatCtrl;
+};
+struct RoomLabelCtrlConfig : ContainerConfig {
+    RoomLabelCtrl* mRoomLabel;
+};
+struct UserListCtrlConfig : ContainerConfig {
+    static Component* CompFactory() { return NULL; }
+};
+struct ServerListCtrlConfig : ContainerConfig {
+    ServerListCtrl* mServerList;
+    MultiListHeader* mHeader = NULL;
+    int mNumColumns = 0;
+    void HandleAddColumn();
+};
+struct GameBrowserCtrlConfig : ContainerConfig {
+    GameBrowserCtrl* mBrowser;
+};
+struct GameUserListCtrlConfig : ContainerConfig {
+    static Component* CompFactory() { return NULL; }
+};
+struct CrossPromotionButtonConfig : ComponentConfig {
+    CrossPromotionButton* mCrossPromotionButton;
+};
+struct ImageTextButtonConfig : ComponentConfig {
+    ImageTextButton* mImageTextButton;
+};
+struct CreditsDialogConfig : ContainerConfig {
+    LobbyRustDialog* mCredits;
 };
 }
 #endif

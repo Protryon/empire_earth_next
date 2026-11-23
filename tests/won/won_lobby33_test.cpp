@@ -18,6 +18,7 @@
 #include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/chatlink.h"
 #include "rust/won_lobby/lobbyconf.h"
+#include "rust/won_lobby/lobbycfgrd.h"
 #include "won_lobby33_orig.h"
 #include "won_lobby33_new.h"
 
@@ -80,6 +81,33 @@ static intptr_t MutLink(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
     if (sMutate == 15 && inOp == EeWonChatLinkOp::ClearPrevious) return 0;
     if (sMutate == 16 && inOp == EeWonChatLinkOp::AddressOfServer) return 0;
     return L33New::ChatLinkHost(inLink, inOp, a);
+}
+static std::map<int, int> sCfgRdHits;
+static int sCfgRdFile; // the unit whose host answers: 0 LobbyNetCtrlHost, 1 LobbyCtrlHost, 2 CrossPromotionButton, 3 CreditsDialog
+static intptr_t MutCfgRd(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    sCfgRdHits[(int)inOp]++;
+    if (sMutate == 20 && inOp == Op::TextRelease) return 0;
+    if (sMutate == 21 && inOp == Op::ChatSetField) b += 1;
+    if (sMutate == 22 && inOp == Op::ServerNumColumns) return L33New::CfgRdHostNet(inCfg, inOp, a, b, c) + 1;
+    if (sMutate == 23 && inOp == Op::EndOfString) return 1;
+    if (sMutate == 24 && inOp == Op::Throw) return WonGuardV([&] { throw ConfigObjectException("mutated"); });
+    switch (sCfgRdFile) {
+    case 0: return L33New::CfgRdHostNet(inCfg, inOp, a, b, c);
+    case 1: return L33New::CfgRdHostCtl(inCfg, inOp, a, b, c);
+    case 2: return L33New::CfgRdHostCross(inCfg, inOp, a, b, c);
+    default: return L33New::CfgRdHostCredits(inCfg, inOp, a, b, c);
+    }
+}
+static intptr_t NewCfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0)
+{
+    return WonRethrow(ee_won_lobbycfgrd_call(inCfg, MutCfgRd, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d));
+}
+void ServerListCtrlConfig::HandleAddColumn()
+{
+    if (sSide == 0) L33Orig::ServerList_HandleAddColumn(this);
+    else NewCfgRd(this, EeWonLobbyCfgRdCall::ServerListAddColumn, std::string());
 }
 static std::map<int, int> sConfHits;
 static intptr_t MutConf(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -498,6 +526,187 @@ static void ConfCases()
     }
 }
 
+// ---- the config readers: each reader's keys (and one it does not know) over random tokens, named components and
+// base answers
+
+static Tok RandTok()
+{
+    static const char* kStrings[] = {"chat", "GAME", "team", "x", "net", "lan", "direct", "int", "string", "player",
+                                     "bad", "Name", "Skip", "Nope", "file:home.htm", "http://won.net/", "a line"};
+    Tok k;
+    k.mKind = (int)Rand(6);
+    k.mText = kStrings[Rand(17)];
+    k.mValue = (int)Rand(3) == 0 ? 0 : (int)Rand(400);
+    if (k.mKind == 5) k.mValue = (int)Rand(2);
+    return k;
+}
+static void CfgRdCase(int inReader, unsigned seed)
+{
+    static const char* kKeys[11][14] = {
+        {"GROUPTYPE", "CTRLLINKID", "COLOR_DEFAULT", "COLOR_ERROR", "COLOR_HELP", "COLOR_USER", "COLOR_EMOTE", "COLOR_WHISPER",
+         "COLOR_WARNING", "COLOR_GROUP", "COLOR_MESSAGE", "COLOR_ACCEPT", "COLOR_REJECT", NULL},
+        {"PREFIX", "GROUPTYPE", "SHOWUSERCOUNT", "SHOWSERVER", NULL},
+        {"GROUPTYPE", "CTRLLINKID", NULL},
+        {"LISTID", "ADDCOLUMN", "DEFAULTFILTER", "NUMCOLUMNS", "SETCOLUMNFILTERTYPE", NULL},
+        {"NUMCOLUMNS", NULL},
+        {NULL},
+        {"HOMELOCATION", NULL},
+        {"CTRLLINKID", NULL},
+        {"DEFAULTIMAGE", "DEFAULTBROWSE", NULL},
+        {"FONT", "TEXT", "BROWSELOCATION", NULL},
+        {"ADDLINE", NULL}};
+    static const char* kNames[] = {"ChatCtrl", "RoomLabel", "UserList", "ServerList", "ServerListNamed", "ServerListAddColumn",
+                                   "GameBrowser", "GameUserList", "CrossPromotion", "ImageText", "Credits"};
+    std::vector<std::string> aTraces[2];
+    for (int aSide = 0; aSide < 2; aSide++) {
+        sObjects.clear();
+        sTrace.clear();
+        sSide = aSide;
+        sRand = seed;
+        int n = 0;
+        while (kKeys[inReader][n] != NULL) n++;
+        std::string aKey = (int)Rand((unsigned)n + 1) == n ? std::string("BOGUS") : std::string(kKeys[inReader][Rand((unsigned)n)]);
+        sBaseRead = (int)Rand(3);
+        // the named components: the server list (a list, another component or none), its header, a column, the dialog's
+        sNamed.clear();
+        int aList = (int)Rand(3), aHeader = (int)Rand(3);
+        sNamed["ServerList"] = aList == 0 ? NULL : aList == 1 ? (Component*)new MultiListArea : new Component;
+        sNamed["ServerListHeader"] = aHeader == 0 ? NULL : aHeader == 1 ? (Component*)new MultiListHeader : new Component;
+        if (Rand(2)) sNamed["Name"] = new Component;
+        if (Rand(3)) sNamed["Skip"] = new Component;
+        if (Rand(2)) sNamed["DialogComponent"] = new Component;
+        sReadComponents.clear();
+        sReadComponents.push_back(new ComboBox);
+        sReadComponents.push_back(new Component);
+        std::vector<Tok> aToks;
+        int m = (int)Rand(6);
+        for (int i = 0; i < m; i++) aToks.push_back(RandTok());
+        // a plausible line half the time: a string, a comma, then an int or a string
+        if (Rand(2)) {
+            aToks.insert(aToks.begin(), Tok{0, RandTok().mText, 0});
+            if (Rand(2)) aToks.insert(aToks.begin() + 1, Tok{4, "", 0});
+        }
+        // a column's line most of the time for the column readers: a name, a comma, a width, maybe a comma and a combo
+        if ((inReader == 3 || inReader == 5) && Rand(4) != 0) {
+            static const char* kColumns[3] = {"Name", "Skip", "Nope"};
+            aToks = {Tok{0, kColumns[Rand(3)], 0}, Tok{4, "", 0}, Tok{1, "", Rand(2) ? 0 : 120}};
+            if (Rand(2)) aToks.push_back(Tok{4, "", 0}), aToks.push_back(Tok{5, "", (int)Rand(2)});
+            if (Rand(4) == 0) aToks.resize(Rand((unsigned)aToks.size()));
+            if (inReader == 3) aKey = "ADDCOLUMN";
+        }
+        ComponentConfig* c = NULL;
+        intptr_t r = 0;
+        int aOut = -1;
+        try {
+            switch (inReader) {
+            case 0: {
+                ChatCtrlConfig* x = new ChatCtrlConfig;
+                x->mChatCtrl = new ChatCtrl;
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 0;
+                r = aSide == 0 ? L33Orig::Chat_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::ChatCtrl, aKey);
+                break;
+            }
+            case 1: {
+                RoomLabelCtrlConfig* x = new RoomLabelCtrlConfig;
+                x->mRoomLabel = new RoomLabelCtrl;
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 0;
+                r = aSide == 0 ? L33Orig::RoomLabel_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::RoomLabel, aKey);
+                break;
+            }
+            case 2: {
+                UserListCtrlConfig* x = new UserListCtrlConfig;
+                c = x;
+                sTrace.clear();
+                sCfgRdFile = 0;
+                r = aSide == 0 ? L33Orig::UserList_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::UserList, aKey);
+                break;
+            }
+            case 3: case 4: case 5: {
+                ServerListCtrlConfig* x = new ServerListCtrlConfig;
+                x->mServerList = new ServerListCtrl;
+                if (Rand(3) == 0) x->mServerList->mList = (intptr_t)new MultiListArea;
+                if (x->mServerList->mList != 0 || Rand(2)) x->mHeader = new MultiListHeader;
+                x->mNumColumns = (int)Rand(3);
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 0;
+                if (inReader == 3) r = aSide == 0 ? L33Orig::ServerList_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::ServerList, aKey);
+                else if (inReader == 4) r = aSide == 0 ? L33Orig::ServerList_GetNamedValue(x, aKey, aOut) : NewCfgRd(c, EeWonLobbyCfgRdCall::ServerListNamed, aKey, (intptr_t)&aOut);
+                else x->HandleAddColumn();
+                Log("columns " + N(x->mNumColumns) + " header " + Id(x->mHeader) + " list " + N(x->mServerList->mList != 0));
+                break;
+            }
+            case 6: {
+                GameBrowserCtrlConfig* x = new GameBrowserCtrlConfig;
+                x->mBrowser = new GameBrowserCtrl;
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 1;
+                r = aSide == 0 ? L33Orig::GameBrowser_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::GameBrowser, aKey);
+                break;
+            }
+            case 7: {
+                GameUserListCtrlConfig* x = new GameUserListCtrlConfig;
+                c = x;
+                sTrace.clear();
+                sCfgRdFile = 1;
+                r = aSide == 0 ? L33Orig::GameUserList_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::GameUserList, aKey);
+                break;
+            }
+            case 8: {
+                CrossPromotionButtonConfig* x = new CrossPromotionButtonConfig;
+                x->mCrossPromotionButton = new CrossPromotionButton;
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 2;
+                r = aSide == 0 ? L33Orig::Cross_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::CrossPromotion, aKey);
+                break;
+            }
+            case 9: {
+                ImageTextButtonConfig* x = new ImageTextButtonConfig;
+                x->mImageTextButton = new ImageTextButton;
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 2;
+                r = aSide == 0 ? L33Orig::ImageText_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::ImageText, aKey);
+                Log("button font " + Id(x->mImageTextButton->mFont.get()) + " text " + Text(x->mImageTextButton->mText) +
+                    " browse " + Text(x->mImageTextButton->mBrowse));
+                break;
+            }
+            default: {
+                CreditsDialogConfig* x = new CreditsDialogConfig;
+                x->mCredits = new LobbyRustDialog;
+                c = x;
+                c->mToks = aToks;
+                sTrace.clear();
+                sCfgRdFile = 3;
+                r = aSide == 0 ? L33Orig::Credits_Virtual24(x, aKey) : NewCfgRd(c, EeWonLobbyCfgRdCall::Credits, aKey);
+                break;
+            }
+            }
+            Log("result " + N((long long)r) + " out " + N(aOut));
+        } catch (ConfigObjectException& e) {
+            Log("threw " + e.mText);
+        }
+        if (c != NULL) Log("read to " + N((long long)c->mAt));
+        for (GUIStringData* d : sReadTexts) Log("text refs " + Narrow(d->mWide) + " " + N(d->mRefs));
+        sReadTexts.clear();
+        Refs();
+        aTraces[aSide].swap(sTrace);
+    }
+    Compare(std::string("reader ") + kNames[inReader], aTraces);
+}
+
 int main()
 {
     const char* m = getenv("EE_L33_MUTATE");
@@ -508,8 +717,11 @@ int main()
     int aPrvChecks = sChecks;
     for (int aCall = 0; aCall < 10; aCall++)
         for (unsigned seed = 1; seed <= 3000; seed++) BufCase(aCall, seed * 7919u + (unsigned)aCall);
-    printf("won_lobby33_test: WONLobbyPrv, ChatLink and LobbyConfig %d cases, the model's buffers %d cases, %d mismatches\n", aPrvChecks,
-           sChecks - aPrvChecks, sFailures);
+    int aBufChecks = sChecks;
+    for (int aReader = 0; aReader < 11; aReader++)
+        for (unsigned seed = 1; seed <= 4000; seed++) CfgRdCase(aReader, seed * 104729u + (unsigned)aReader);
+    printf("won_lobby33_test: WONLobbyPrv, ChatLink and LobbyConfig %d cases, the model's buffers %d cases, the config readers %d cases, %d mismatches\n",
+           aPrvChecks, aBufChecks - aPrvChecks, sChecks - aBufChecks, sFailures);
     for (const auto& f : sFailed) printf("  %s: %d\n", f.first.c_str(), f.second);
     // every op of the two hosts reached (their enums' last values: AllocPlayerOptionsCtrl, PlayerWriteData)
     int aMissed = 0;
@@ -523,6 +735,11 @@ int main()
             printf("  buf op %d not reached\n", i);
             aMissed++;
         }
+    for (int i = 1; i <= (int)EeWonLobbyCfgRdOp::CreditsAddLine; i++)
+        if (sCfgRdHits.count(i) == 0) {
+            printf("  reader op %d not reached\n", i);
+            aMissed++;
+        }
     for (int i = 1; i <= (int)EeWonLobbyConfOp::BaseHandleValue; i++)
         if (sConfHits.count(i) == 0) {
             printf("  conf op %d not reached\n", i);
@@ -533,9 +750,9 @@ int main()
             printf("  link op %d not reached\n", i);
             aMissed++;
         }
-    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size() + sConfHits.size()),
+    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size() + sConfHits.size() + sCfgRdHits.size()),
            (int)EeWonLobbyPrvOp::AllocPlayerOptionsCtrl + (int)EeWonModelBufOp::PlayerWriteData +
-               (int)EeWonChatLinkOp::ClearPrevious + (int)EeWonLobbyConfOp::BaseHandleValue);
+               (int)EeWonChatLinkOp::ClearPrevious + (int)EeWonLobbyConfOp::BaseHandleValue + (int)EeWonLobbyCfgRdOp::CreditsAddLine);
     if (sMutate == 0) sFailures += aMissed;
     if (sMutate != 0) {
         printf("mutation %d: %s\n", sMutate, sFailures > 0 ? "caught" : "MISSED");
