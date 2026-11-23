@@ -93,13 +93,10 @@ extern "C" uint32_t ee_screenscpp_sbm_state(uintptr_t inButton) { return (uint32
 extern "C" void ee_screenscpp_sbm_hot_key_up(uintptr_t inButton) { SBM(inButton)->HotKeyUp(); }
 extern "C" void ee_screenscpp_sbm_base_tabbed_from(uintptr_t inButton) { SBM(inButton)->BaseTabbedFrom(); }
 
-// Ends the cinematic at its saved end time (sends the end-cinematic message)
-// (EEMEndCinematic takes the end time as a float)
-long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone);
-    return kErrorOK;
-}
+// EEUIEndCinematicModeEvent's body (cpp_events.rs): ends the cinematic at its saved end time (EEMEndCinematic takes the
+// end time as a float)
+extern "C" void ee_screenscpp_ev_end_cinematic()
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone); }
 
 // ---- the one-statement shims of ee_screens status_button_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
@@ -203,9 +200,9 @@ extern "C" void ee_screenscpp_sbt_object_pressed_icon(uintptr_t inRec)
 extern "C" void ee_screenscpp_sbt_object_face_icon(uintptr_t inRec)
 { static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject)->SetFaceBitmap(static_cast<GEBitmap*>(SBRB(inRec)->mIcon), SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sbt_main_group_l1c(int64_t inValue)
-{ static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->mL1C = (long)inValue; }
+{ gUIManager->GetMainGameForm()->mMainGroup->mL1C = (long)inValue; }
 extern "C" void ee_screenscpp_sbt_main_group_reset()
-{ static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->mReset = true; }
+{ gUIManager->GetMainGameForm()->mMainGroup->mReset = true; }
 extern "C" uintptr_t ee_screenscpp_sbt_object(uintptr_t inButton) { return (uintptr_t)static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject); }
 extern "C" void ee_screenscpp_sbt_object_release(uintptr_t inButton) { static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject)->Release(); }
 extern "C" void ee_screenscpp_sbt_object_clear(uintptr_t inButton) { SBB(inButton)->mButtonObject = NULL; }

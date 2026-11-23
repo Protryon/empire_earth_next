@@ -1015,6 +1015,21 @@ constexpr static const int64_t EE_SCREENS_CU_EXECUTE_FACING = 2;
 
 constexpr static const int64_t EE_SCREENS_CU_EXECUTE_DRAGGED = 4;
 
+/// `EEUIECancel` (the save and load forms' Cancel): a the form to open.
+constexpr static const uint32_t EE_SCREENS_EV_CANCEL = 2113929217;
+
+/// `EEUIELoadUnit` (the main game form's debug unit reload): the unit hack of the form it runs on loads.
+constexpr static const uint32_t EE_SCREENS_EV_LOAD_UNIT = 2113929218;
+
+/// `EEUIEMGHotKeyStatusButton`: a the command button (`EEUIFMGStatusButton*`), b 1 pressed, 0 released.
+constexpr static const uint32_t EE_SCREENS_EV_HOT_KEY = 2113929219;
+
+/// `EEUIEProcessTimerExpired` (posted by `EEMCivTimerExpired::Execute`): `EEProcessTimerExpired`.
+constexpr static const uint32_t EE_SCREENS_EV_TIMER_EXPIRED = 2113929220;
+
+/// `EEUIEndCinematicModeEvent`: the cinematic ended at its saved end time.
+constexpr static const uint32_t EE_SCREENS_EV_END_CINEMATIC = 2113929221;
+
 /// Whether the mouse is over no control, or over the command units control.
 constexpr static const uint32_t EE_SCREENS_CURSOR_OP_MOUSE_OK = 1;
 
@@ -11089,6 +11104,9 @@ constexpr static const int64_t EE_SCREENS_MF_TYPE_FARM = 42;
 
 constexpr static const int64_t EE_SCREENS_MF_TYPE_ROBOTIC_FARM = 826;
 
+/// `kTechNone`: the placements' technology until one is started.
+constexpr static const int32_t EE_SCREENS_PLACEMENT_TECH_NONE = 100000;
+
 /// The flare's colour (`EeScreensMiniMapCopy::flare_color`): none set, `sFlareColor` (red), `sFlareBlinkColor`.
 constexpr static const uint8_t EE_SCREENS_MM_COLOR_NONE = 0;
 
@@ -15576,26 +15594,30 @@ struct EeScreensMainFormFields {
   bool mIsButtonBlinking;
 };
 
-/// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
-/// the tile centres, the wall's technology and player.
+/// `EEUIBuildWall` (the C++ name is a typedef of this record; UI lane round 16: the class and its vtable gone): placing
+/// (0 no start, 1 dragging), the tile centres, the wall's technology and player; `editor` the scenario editor's
+/// placement (the original's `EESEUIBuildWall`, whose Cancel and Build were its own).
 struct EeScreensBuildWallFields {
-  uint32_t state;
-  EeScreensPoint start;
-  EeScreensPoint end;
-  int32_t technology;
-  int32_t player;
+  uint32_t mState;
+  EeScreensPoint mStart;
+  EeScreensPoint mEnd;
+  int32_t mTechnology;
+  int32_t mPlayer;
+  bool mEditor;
 };
 
-/// `EEUIBuildGate`'s members from `mUnitClass` on: the gate's class, the tile of the last build, the technology,
-/// the highlighted walls' type, the gate's direction, the player.
+/// `EEUIBuildGate` (a typedef of this record, as the wall's): the gate's class, the tile of the last build, the
+/// technology, the highlighted walls' type, the gate's direction, the player; `editor` the scenario editor's
+/// (`EESEUIBuildGate`).
 struct EeScreensBuildGateFields {
-  void *unit_class;
-  int32_t tile_x;
-  int32_t tile_y;
-  int32_t technology;
-  int32_t wall_type;
-  int32_t direction;
-  int32_t player;
+  void *mUnitClass;
+  int32_t mTileX;
+  int32_t mTileY;
+  int32_t mTechnology;
+  int32_t mWallType;
+  int32_t mDirection;
+  int32_t mPlayer;
+  bool mEditor;
 };
 
 /// `EEUIFMGStatusBox`'s members (ee/EEUIFMGStatusBox.h) as the record the class is (its only base, at offset 0:
@@ -16564,6 +16586,14 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 size_t count,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
+
+/// `EEScreenEvent::ProcessEvent`: the event `event` with its arguments on `form` from `entity`; a screen event's
+/// code without arguments goes on to `ee_screens_event`.
+long ee_screens_event_args(uint32_t event,
+                           size_t a,
+                           size_t b,
+                           void *form,
+                           void *entity);
 
 /// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
 int32_t ee_screens_cursor_kind(void *ctx);
@@ -17922,9 +17952,6 @@ void ee_screens_main_group_fields(void *group, EeScreensMainGroupFields *fields)
 /// `EEUIFMGMainGroup::ShowCommands(unit)`.
 void ee_screens_mg_show_commands(size_t group, size_t unit);
 
-/// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
-int64_t ee_screens_mg_hot_key_event(size_t event);
-
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.
 int64_t ee_screens_main_group_member(void *group,
@@ -18009,8 +18036,11 @@ long ee_screens_mini_map_left_down(void *map);
 /// `map` is the live mini map.
 long ee_screens_mini_map_right_up(void *map);
 
-/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
-void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind, on the main game
+/// form of the form's call record `rec` (an `EEUIFMGFormCall*`).
+void ee_screens_group_call(size_t rec,
+                           uint32_t kind,
+                           uint32_t call);
 
 /// `EEUIFErrorShow` (`EEUIFErrorDisplay` through the game's UI table): the new box `dialog` (its `UIForm*`) shown as
 /// `kind` with the message, its alignment, the callbacks and their data, the form Cancel closes and the flag.
@@ -18035,6 +18065,28 @@ void *ee_screens_dlg_close_form();
 
 /// The message (a `const UWideString*`).
 const void *ee_screens_dlg_message();
+
+/// `EEUIBuildWall()` (`editor`: `EESEUIBuildWall()`).
+EeScreensBuildWallFields ee_screens_wall_new(bool editor);
+
+/// `EEUIBuildGate()` (`editor`: `EESEUIBuildGate()`).
+EeScreensBuildGateFields ee_screens_gate_new(bool editor);
+
+/// `EEUIBuildWall::Cancel` (the main game form leaves the mode) or `EESEUIBuildWall::Cancel` (the unit tab's).
+void ee_screens_wall_cancel(EeScreensBuildWallFields *wall);
+
+/// `EEUIBuildWall::Build` (the main game form's build action builds the wall from the start to the end) or
+/// `EESEUIBuildWall::Build` (the unit tab places it).
+void ee_screens_wall_build(EeScreensBuildWallFields *wall);
+
+/// `EEUIBuildGate::Cancel` or `EESEUIBuildGate::Cancel`.
+void ee_screens_gate_cancel(EeScreensBuildGateFields *gate);
+
+/// `EEUIBuildGate::Build(location, direction)` (the main game form's build action) or `EESEUIBuildGate::Build`.
+void ee_screens_gate_build(EeScreensBuildGateFields *gate,
+                           float x,
+                           float y,
+                           int32_t direction);
 
 /// `EEUIBuildWall::Initialize`: starts wall placement for a player: no points yet, the wall class's media loaded.
 void ee_screens_wall_initialize(EeScreensBuildWallFields *wall,

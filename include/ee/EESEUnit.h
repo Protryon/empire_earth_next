@@ -9,7 +9,6 @@
 #include "lle/GERhombus.h"
 #include "ee/EEUIBuildWall.h"
 #include "ee/EEUIBuildGate.h"
-#include "ee/EESEUIBuildWall.h"
 
 class UIForm;
 
@@ -21,8 +20,8 @@ class UIForm;
 struct EESEUnit {
     explicit EESEUnit(UIForm* inForm) : mForm(inForm) { this->mRhombus.SetColor(GEColor(0.0f, 0.0f, 0.0f)); }
     GERhombus mRhombus;                     // +0x04
-    EESEUIBuildWall mBuildWall;             // +0x1c
-    EESEUIBuildGate mBuildGate;             // +0x3c
+    EEUIBuildWall mBuildWall = ee_screens_wall_new(true);   // +0x1c (the original's EESEUIBuildWall)
+    EEUIBuildGate mBuildGate = ee_screens_gate_new(true);   // +0x3c (EESEUIBuildGate)
     GERectangle mPanelRectangle;            // +0x5c
     UIForm* mForm;
 };
