@@ -1,4 +1,5 @@
-// The lobby's logic manager: one list of logic objects that it initializes, kills and passes events to
+// The lobby's logic manager: one list of logic objects that it initializes, kills and passes events to (the list and
+// every method are ee_won_lobby logicmgr.rs's since R6 WON lobby and network round 35; this is its host)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,78 +13,32 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 namespace WONAPI {
-// Adds a logic object to the end of the list
-void LobbyLogicMgr::AddLogic(LobbyLogic* logic)
+// the manager's host (logicmgr.rs): one statement each on a logic or an event; a logic's virtual runs under WonGuard
+static intptr_t LogicMgrHost(EeWonLogicMgrOp inOp, intptr_t a, intptr_t b)
 {
-    this->mLogicList.push_back(logic);
-}
-// Lets every logic object find its controls in the lobby layout
-void LobbyLogicMgr::Init(ComponentConfig* config)
-{
-    LogicList::iterator itr=this->mLogicList.begin();
-    while(itr!=this->mLogicList.end()) {
-        (*itr)->InitComponent(config);
-        ++itr;
+    typedef EeWonLogicMgrOp Op;
+    LobbyLogic* aLogic = reinterpret_cast<LobbyLogic*>(a);
+    ListItemClickedEvent* aClick = static_cast<ListItemClickedEvent*>(reinterpret_cast<ComponentEvent*>(a));
+    switch (inOp) {
+    case Op::AddRef: aLogic->AddRef(); return 0;
+    case Op::Release: aLogic->Release(); return 0;
+    case Op::InitComponent: return WON_GUARDED_V(aLogic->InitComponent(reinterpret_cast<ComponentConfig*>(b)));
+    case Op::Kill: return WON_GUARDED_V(aLogic->Kill());
+    case Op::HandleControlEvent: return WON_GUARDED_V(aLogic->HandleControlEvent((int)b));
+    case Op::HandleComponentEvent: return WON_GUARDED_V(aLogic->HandleComponentEvent(reinterpret_cast<ComponentEvent*>(b)));
+    case Op::Reset: return WON_GUARDED_V(aLogic->Reset());
+    case Op::ClickItem: return (intptr_t)aClick->mItem.get();
+    case Op::ClickButton: return aClick->mButton;
+    case Op::IsMenuItem: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a)) != NULL ? 1 : 0;
+    case Op::MenuId: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a))->mMenuId;
+    case Op::ControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
     }
-}
-// Kills every logic object, cancelling their tracked operations
-void LobbyLogicMgr::Kill()
-{
-    LogicList::iterator itr=this->mLogicList.begin();
-    while(itr!=this->mLogicList.end()) {
-        (*itr)->Kill();
-        ++itr;
-    }
-}
-// Passes a control or menu id to every logic object
-void LobbyLogicMgr::DispatchControlEvent(int control)
-{
-    LogicList::iterator itr=this->mLogicList.begin();
-    while(itr!=this->mLogicList.end()) {
-        (*itr)->HandleControlEvent(control);
-        ++itr;
-    }
-}
-// Passes a component event to every logic object
-void LobbyLogicMgr::DispatchComponentEvent(ComponentEvent* event)
-{
-    LogicList::iterator itr=this->mLogicList.begin();
-    while(itr!=this->mLogicList.end()) {
-        (*itr)->HandleComponentEvent(event);
-        ++itr;
-    }
-}
-// Gives every logic object its timer tick (vtable slot 0xc, declared as Reset)
-void LobbyLogicMgr::DispatchTimerEvent()
-{
-    LogicList::iterator itr=this->mLogicList.begin();
-    while(itr!=this->mLogicList.end()) {
-        (*itr)->Reset();
-        ++itr;
-    }
-}
-// Turns left clicks on menu items and button presses into control events; passes other events to the logics
-void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* event)
-{
-    switch(event->mType) {
-    default:
-        this->DispatchComponentEvent(event);
-        break;
-    case ComponentEvent_ListItemUpClicked: {
-        ListItemClickedEvent* click=static_cast<ListItemClickedEvent*>(event);
-        if(click->mItem.get()==NULL || click->mButton!=0) return;
-        MenuItem* menu=dynamic_cast<MenuItem*>(click->mItem.get());
-        if(menu!=NULL) this->DispatchControlEvent(menu->mMenuId);
-        break;
-    }
-    case ComponentEvent_ButtonPressed:
-        this->DispatchControlEvent(event->GetControlId());
-        break;
-    }
-}
+    return 0;
 }
 
-namespace WONAPI {
 // The constructor (0x766b30) only builds the empty logic list; the class has no vtable (0xc bytes)
-LobbyLogicMgr::LobbyLogicMgr() {}
+LobbyLogicMgr::LobbyLogicMgr() : mRust(ee_won_logicmgr_new(LogicMgrHost)) {}
+LobbyLogicMgr::~LobbyLogicMgr() { ee_won_logicmgr_free(this->mRust); }
+// Turns left clicks on menu items and button presses into control events; passes other events to the logics
+void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
 }

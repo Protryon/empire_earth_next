@@ -221,6 +221,7 @@
 #include "rust/won_lobby/lobbypopup.h"
 #include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/lobbyrun.h"
+#include "rust/won_lobby/logicmgr.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_lobby/logicsplit.h"
 #include "rust/won_lobby/model.h"
