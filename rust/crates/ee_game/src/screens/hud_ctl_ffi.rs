@@ -289,3 +289,45 @@ pub unsafe extern "C" fn ee_screens_command_units(
         _ => 0,
     }
 }
+
+/// cbindgen:ignore
+mod su_sys {
+    use core::ffi::c_void;
+
+    extern "C" {
+        pub fn ee_screenscpp_su_hide(box_: *mut c_void);
+        pub fn ee_screenscpp_su_click_reference(box_: *mut c_void);
+        pub fn ee_screenscpp_su_lasso_reference(box_: *mut c_void);
+        pub fn ee_screenscpp_su_always_dirty(box_: *mut c_void);
+        pub fn ee_screenscpp_su_click_release(box_: *mut c_void);
+        pub fn ee_screenscpp_su_lasso_release(box_: *mut c_void);
+    }
+}
+
+/// `EEUICSelectUnits`' constructor body (0x25958f): hidden, its click and lasso handlers referenced, always dirty.
+///
+/// # Safety
+/// `box_` is the box being constructed (its handlers set).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_su_construct(box_: *mut c_void) {
+    // SAFETY: the contract
+    unsafe {
+        su_sys::ee_screenscpp_su_hide(box_);
+        su_sys::ee_screenscpp_su_click_reference(box_);
+        su_sys::ee_screenscpp_su_lasso_reference(box_);
+        su_sys::ee_screenscpp_su_always_dirty(box_);
+    }
+}
+
+/// `EEUICSelectUnits`' destructor body: its click and lasso handlers released.
+///
+/// # Safety
+/// `box_` is the box being destroyed.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_su_destroy(box_: *mut c_void) {
+    // SAFETY: the contract
+    unsafe {
+        su_sys::ee_screenscpp_su_click_release(box_);
+        su_sys::ee_screenscpp_su_lasso_release(box_);
+    }
+}

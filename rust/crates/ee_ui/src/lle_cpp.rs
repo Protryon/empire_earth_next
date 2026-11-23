@@ -277,9 +277,10 @@ impl HostArgs {
 }
 
 /// A host that answers the moved ops (`$call`, `fn(&mut impl Cpp, &HostArgs) -> Option<isize>`) and passes the
-/// others to the C++ host `$cpp` (the class's `HostOp`, through one statement). Declared for C++ in `lle/UIShims.h`.
+/// others to the class's tables (`lle_hosts.rs`: the C++ cases' one-statement shims). Declared for C++ in
+/// `lle/UIShims.h`.
 macro_rules! lle_host {
-    ($(#[$m:meta])* $name:ident => $call:path, $cpp:ident) => {
+    ($(#[$m:meta])* $name:ident => $call:path, [$($t:path),*]) => {
         $(#[$m])*
         ///
         /// # Safety
@@ -295,22 +296,11 @@ macro_rules! lle_host {
             d: isize,
             f: *mut f32,
         ) -> isize {
-            extern "C" {
-                fn $cpp(
-                    obj: *mut core::ffi::c_void,
-                    op: crate::obj::EeUiOp,
-                    a: isize,
-                    b: isize,
-                    c: isize,
-                    d: isize,
-                    f: *mut f32,
-                ) -> isize;
-            }
             let args = crate::lle_cpp::HostArgs { obj: obj as usize, op, a, b, c, d, f };
             match $call(&mut crate::lle_cpp::Ffi, &args) {
                 Some(r) => r,
-                // SAFETY: the C++ host's own contract, the arguments as given
-                None => unsafe { $cpp(obj, op, a, b, c, d, f) },
+                // SAFETY: the host contract, the arguments as given
+                None => unsafe { crate::lle_hosts::chain(&[$($t),*], obj, op, a, b, c, d, f) },
             }
         }
     };
@@ -404,7 +394,7 @@ shims! {
     fn mgr_form_by_id(m: usize, id: u32) -> usize = ee_uicpp_mgr_form_by_id;
     fn table_add_event(table: usize, id: u32, kind: u32) = ee_uicpp_table_add_event;
     fn form_add_event(form: usize, id: u32, kind: u32) = ee_uicpp_form_add_event;
-    fn db_find(path: usize, directory: usize, table: u32, file: EeUiShimPtrOut) -> c_long = ee_uicpp_db_find;
+    fn db_find(path: usize, directory: usize, name: EeUiShimText, file: EeUiShimPtrOut) -> c_long = ee_uicpp_db_find;
     fn db_fonts(file: usize, m: usize) -> c_long = ee_uicpp_db_fonts;
     fn db_forms(file: usize, m: usize) -> c_long = ee_uicpp_db_forms;
     fn db_backgrounds(file: usize) -> c_long = ee_uicpp_db_backgrounds;

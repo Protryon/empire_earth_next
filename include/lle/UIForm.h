@@ -17,6 +17,7 @@
 #include "rust/ui/lle_form.h"
 #include "rust/ui/ids.h"
 #include "rust/ui/obj.h"
+#include "lle/UIObjHost.h"
 
 class FSFileSpec;
 class GEBitmap;
@@ -53,7 +54,6 @@ struct UIEventData {
 
 enum class EeUiOp : uint32_t;              // rust/ee_ui.h: the Rust form's calls out
 enum class EeUiFormCall : uint32_t;        // rust/ee_ui.h: its methods
-struct EeUiForm;                           // rust/ee_ui.h: the Rust form (formobj.rs)
 
 // The class is whole in Rust (rust/crates/ee_ui/src/formobj.rs, R6 ui round 16): its state (the controls, groups,
 // backgrounds, hot keys, database records, events, the dirty-rectangle lists, the captures, the popup, the help text,
@@ -64,8 +64,6 @@ struct EeUiForm;                           // rust/ee_ui.h: the Rust form (formo
 // object. GetRectangle and GetMouseLocation answer the address of the Rust object's members (GERectangle's and
 // GE2DPoint's layouts); GetMusicFileName answers a copy.
 class LLE_API UIForm {
-    friend class UIControl;                 // CaptureMouse/CaptureKeyboard call SetMouseCaptured/SetKeyboardCaptured
-    friend class UIManager;                 // UIManager::HostOp: the protected Close/CopyData/DrawPolygons/Open, AddDirtyRectangle
 public:
     UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
            unsigned long inFormID, bool inUseGDIForText);
@@ -84,10 +82,8 @@ public:
     virtual long CloseIMECompositionString() { return ee_ui_form_pass_to_keyboard(this, 2, NULL, NULL, 0); }
     // Fires the deactivate event, hides the popup and help text, and releases the captured mouse and keyboard
     virtual void Deactivate() { this->Call(EeUiFormCall::Deactivate); }
-protected:
     // Redraws every visible background that overlaps the rectangle; returns the last draw result
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiFormCall::DrawBackground, 0, 0, inRectangle); } // slot 0x18
-public:
     // Opens an IME composition string in the control holding the keyboard; kErrorFailed when none does
     virtual long OpenIMECompositionString() { return ee_ui_form_pass_to_keyboard(this, 3, NULL, NULL, 0); }
     // Lays the form out again inside a new rectangle, with its backgrounds and database controls
@@ -101,7 +97,6 @@ public:
     virtual long UpdateMouse() { return (long)this->Call(EeUiFormCall::UpdateMouse); }
     // Passes a typed character to the control holding the keyboard
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return ee_ui_form_pass_to_keyboard(this, 4, inKey, NULL, (uint32_t)(int)inRepeat); }
-protected:
     // Closes the form: fires the close event, clears the draw list and popup, closes the backgrounds, flushes its events
     // and deletes the controls created from the database
     virtual void Close() { this->Call(EeUiFormCall::Close); }                   // slot 0x38
@@ -117,7 +112,6 @@ protected:
     virtual void Open() { this->Call(EeUiFormCall::Open); }
     // The header's members (inline in the original, emitted first by UIBackground.cpp 0x10059559..0x10059795)
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::SetRectangle, 0, 0, inRectangle); } // slot 0x4c
-public:
     // Inserts a background before the first one with an equal or higher draw priority
     void AddBackground(UIBackground* inBackground) { this->Call(EeUiFormCall::AddBackground, (intptr_t)inBackground); }
     // Adds a rectangle that text drawing must keep out of
@@ -157,7 +151,7 @@ public:
     UIEntityGroup* GetEntityGroup(unsigned long inIndex) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroup, (intptr_t)inIndex)); }
     // Returns the group holding the control with the given ID; falls back to group 0 when no group holds it
     UIEntityGroup* GetEntityGroupById(unsigned long inId) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId)); }
-    float GetFadeOpacity();
+    float GetFadeOpacity() { return UIOut(ee_ui_form_call, this->mRust, EeUiFormCall::FadeOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
     unsigned long GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
     UIFormManager* GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
     UIEvent* GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
@@ -203,7 +197,7 @@ public:
     void SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
     // Enables or disables every hot key of a group
     void SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled) { this->Call(EeUiFormCall::SetHotKeyGroupEnabled, (intptr_t)inGroup, inEnabled); }
-    void SetLayout(UILayoutUtility& inLayout);
+    void SetLayout(UILayoutUtility& inLayout) { this->Call(EeUiFormCall::SetLayout, ee_ui_form_pack_types(inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(), inLayout.GetBottomOffsetType()), 0, UIF4(inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset())); }
     void SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
     void SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
     void SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
@@ -220,17 +214,12 @@ public:
     void UnlockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 0); }
     // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
     void UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
-    void UpdateMouseLocation(const GE2DPoint& inLocation);
-protected:
+    void UpdateMouseLocation(const GE2DPoint& inLocation) { this->Call(EeUiFormCall::UpdateMouseLocation, 0, 0, UIF4(inLocation)); }
     bool GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
     void SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
-public:   // (the shims' access: UIForm.cpp)
     UIControl* GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
     UIControl* GetMouseCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseCaptured)); }
     // the Rust form's calls out that are not Rust's (ee_ui lle_form.rs: ee_ui_form_host comes first)
-    static intptr_t HostOp(void* inForm, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
-                           float* ioF);
-private:
     // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
     void AddDirtyRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddDirtyRectangle, 0, 0, inRectangle); }
     // Gives the keyboard to a control and fires the keyboard-captured event
@@ -238,7 +227,7 @@ private:
     void SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
     // the forwarders' one call into the Rust form (with a rectangle)
     intptr_t Call(EeUiFormCall inCall, intptr_t inA = 0, intptr_t inB = 0, float* ioF = NULL) const { return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF); }
-    intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const;
+    intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const { return this->Call(inCall, inA, inB, UIF4(inRectangle)); }
 
     EeUiForm* mRust;                        // the state (formobj.rs)
 };

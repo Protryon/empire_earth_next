@@ -34,6 +34,11 @@ extern "C" intptr_t ee_ui_combo_host(EE_UI_HOST_ARGS);
 extern "C" intptr_t ee_ui_background_host(EE_UI_HOST_ARGS);
 extern "C" intptr_t ee_ui_edit_host(EE_UI_HOST_ARGS);
 
+// a host case (ee_ui lle_hosts.rs: the Rust host's table names the op's shim): one statement on inObj, the host's
+// object, with the op's numbers a..d and floats f; EE_UI_CASE answers a number, EE_UI_VOID nothing (0)
+#define EE_UI_CASE(name) extern "C" intptr_t ee_uicpp_##name(void* inObj, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+#define EE_UI_VOID(name) extern "C" void ee_uicpp_##name(void* inObj, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+
 // the text as a string (the bytes up to the first 0)
 inline UWideString UIShimText(EeUiShimText inText) { return UWideString(std::string((const char*)inText.ptr, inText.len).c_str()); }
 inline UString UIShimString(EeUiShimText inText) { return UString(std::string((const char*)inText.ptr, inText.len).c_str()); }

@@ -30,85 +30,11 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "rust/game/screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
 
-// Creates an improvement button, faintly tinted with a thin border, without a cost label
-EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsigned long inWidth,
-                           unsigned long inHeight, UIForm* inForm, unsigned long inIndex, bool inScenarioEditor,
-                           unsigned long inBorderThickness)
-    : UIButton(inId, NULL, NULL, NULL, GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
-               inBorderThickness),
-      mScenarioEditor(inScenarioEditor)
-{
-    ee_screens_upb_construct((uintptr_t)this);
-}
-
-// One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
-// NULL for none), the held text, the mouse location
-struct EEUIBUpgradeCall {
-    EEUIBUpgrade* mButton;
-    UWideString* mOut;
-    UWideString mText;
-    const GE2DPoint* mLocation;
-};
-
 // The status bar's mouse handler `inWhich` (EE_SCREENS_UP_BAR_*) at the location (MouseMove's)
 long EEUIFMGStatusBar::BarMouse(uint32_t inWhich, const GE2DPoint* inLocation)
 {
-    EEUIBUpgradeCall theCall = {this, NULL};
-    theCall.mLocation = inLocation;
-    return (long)ee_screens_upgrade_bar_mouse(&theCall, inWhich);
+    return (long)ee_screens_upgrade_bar_mouse(EEUIBUpgradeCall(this, NULL, inLocation).Ptr(), inWhich);
 }
-
-// The presses, availability, tooltip, level tracking and cost update: ee_screens upgrade.rs over the host below
-void EEUIBUpgrade::ButtonUp()
-{
-    UWideString theReason;
-    EEUIBUpgradeCall theCall = {this, &theReason};
-    ee_screens_upgrade_button_up(&theCall);
-}
-
-bool EEUIBUpgrade::GetCanUpgrade(EEUnit*& outUnit, UWideString* outReason)
-{
-    EEUIBUpgradeCall theCall = {this, outReason};
-    int64_t theUnit = -1;
-    bool theResult = ee_screens_upgrade_can_upgrade(&theCall, &theUnit);
-    if (theUnit != -1)
-        outUnit = reinterpret_cast<EEUnit*>(theUnit);
-    return theResult;
-}
-
-bool EEUIBUpgrade::GetDisabled()
-{
-    EEUIBUpgradeCall theCall = {this, NULL};
-    return ee_screens_upgrade_disabled(&theCall);
-}
-
-bool EEUIBUpgrade::GetHelpString(UWideString& outString) const
-{
-    EEUIBUpgradeCall theCall = {const_cast<EEUIBUpgrade*>(this), &outString};
-    return ee_screens_upgrade_help(&theCall);
-}
-
-long EEUIBUpgrade::MouseMove(const GE2DPoint& inLocation)
-{
-    EEUIBUpgradeCall theCall = {this, NULL};
-    theCall.mLocation = &inLocation;
-    return (long)ee_screens_upgrade_mouse_move(&theCall);
-}
-
-long EEUIBUpgrade::MouseRButtonUp()
-{
-    EEUIBUpgradeCall theCall = {this, NULL};
-    return (long)ee_screens_upgrade_mouse_r_up(&theCall);
-}
-
-void EEUIBUpgrade::UpdateCost(const UWideString& inText)
-{
-    EEUIBUpgradeCall theCall = {this, const_cast<UWideString*>(&inText)};
-    ee_screens_upgrade_update_cost(&theCall);
-}
-
-// Presses the button on a right press, capturing the mouse
-long EEUIBUpgrade::MouseRButtonDown() { return (long)ee_screens_upb_right_down((uintptr_t)this); }
 
 // The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
 // are hud_views.rs')

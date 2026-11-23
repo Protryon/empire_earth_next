@@ -28,21 +28,18 @@
 EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                                    EEALasso* inLasso)
     : EEUIRustControl(inId, GERectangle(GE2DPoint(gViewport.GetViewRectangle().GetTopLeft()), 2.0f, 2.0f), inForm, inIndex, 0),
-      EeScreensSelectUnitsFields(), mClick(inClick)
+      EeScreensSelectUnitsFields(), mClick(inClick), mLasso(inLasso)
 {
-    this->StoreDisplayMode(kDisplayModeHidden);
-    this->mClick->Reference();
-    this->mLasso = inLasso;
-    this->mLasso->Reference();
-    this->SetAlwaysDirty(true);
+    ee_screens_su_construct(this);   // (hud_ctl_ffi.rs: hidden, the handlers referenced, always dirty)
 }
 
-// Destroys the selection box, releasing its click and lasso handlers
-EEUICSelectUnits::~EEUICSelectUnits()
-{
-    this->mClick->Dereference();
-    this->mLasso->Dereference();
-}
+// the constructor's and destructor's calls (hud_ctl_ffi.rs)
+extern "C" void ee_screenscpp_su_hide(EEUICSelectUnits* inBox) { EEUICSelectUnits::Hide(inBox); }
+extern "C" void ee_screenscpp_su_click_reference(EEUICSelectUnits* inBox) { inBox->mClick->Reference(); }
+extern "C" void ee_screenscpp_su_lasso_reference(EEUICSelectUnits* inBox) { inBox->mLasso->Reference(); }
+extern "C" void ee_screenscpp_su_always_dirty(EEUICSelectUnits* inBox) { inBox->SetAlwaysDirty(true); }
+extern "C" void ee_screenscpp_su_click_release(EEUICSelectUnits* inBox) { inBox->mClick->Dereference(); }
+extern "C" void ee_screenscpp_su_lasso_release(EEUICSelectUnits* inBox) { inBox->mLasso->Dereference(); }
 
 int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {

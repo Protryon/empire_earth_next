@@ -12,25 +12,21 @@
 #ifndef LLE_UICOMBOBOX_H
 #define LLE_UICOMBOBOX_H
 #include "rust/ui/comboobj.h"
+#include "rust/ui/lle_combo.h"
 
 class UIButton;
 class UIEditBox;
 class UITextLabel;
 
 class LLE_API UIComboBox : public UIControl {
-    friend class EESEPlayerRow; // original direct field/method caller17a3f0..17a3f6; access policy only
+public:
     intptr_t Call(EeUiComboCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
     {
         return ee_ui_combo_call(this->mRust, inCall, a, b, f);
     }
-public:   // (the shims' access: UIComboBox.cpp)
     UIControl* PartOf(int inPart) const { return reinterpret_cast<UIControl*>(this->Call(EeUiComboCall::Part, inPart)); }
     struct Rust;                            // the Rust object's host (UIComboBox.cpp; a member: the class's friendships)
-    UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
-               const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
-               unsigned long inMaxChars, unsigned long inBorderThickness);
-    UIComboBox(const UIComboBox&) = delete;
-    UIComboBox& operator=(const UIComboBox&) = delete;
+    UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont, const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness) : UIControl(kControlTypeComboBox, inId, inRectangle, inForm, inIndex, 0) { ee_ui_combo_construct(this, inTextBoxType, &inData, inFont, reinterpret_cast<const EeUiRect*>(&inRectangle), inMaxListBoxHeight, inForm, inMaxChars, inBorderThickness); }
     virtual ~UIComboBox();
     void AppendLine(UWideString& inLine);
 #ifdef __clang__
@@ -78,14 +74,9 @@ public:   // (the shims' access: UIComboBox.cpp)
     void SetListBoxSelectedBgColor(const GEColor& inColor)
     {
         this->GetList()->GetSelectedBackground()->SetColor(inColor);
-        float f[4] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), 0.0f};
-        this->Call(EeUiComboCall::SetSelectedColor, 0, 0, f);
+        this->Call(EeUiComboCall::SetSelectedColor, 0, 0, UIF4(inColor));
     }
-    virtual void SetLocation(const GE2DPoint& inLocation)
-    {
-        float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-        this->Call(EeUiComboCall::SetLocation, 0, 0, f);
-    }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiComboCall::SetLocation, 0, 0, UIF4(inLocation)); }
     void SetScrollBarBgColor(const GEColor& inColor) { this->GetList()->SetScrollBarBgColor(inColor); }
     void SetTextBoxBgColor(const GEColor& inColor) { this->PartOf(0)->SetBgColor(inColor); }
     void SetTextBoxBgOpacity(float inOpacity) { this->PartOf(0)->SetBgOpacity(inOpacity); }
@@ -94,31 +85,23 @@ public:   // (the shims' access: UIComboBox.cpp)
     {
         return (long)this->Call(EeUiComboCall::UpdateTranslatedKey, (intptr_t)inKey, inRepeat);
     }
-protected:
     virtual long AddString() { return (long)this->Call(EeUiComboCall::AddString); }   // slot 0x88
     virtual void ChangeSelection() { this->Call(EeUiComboCall::ChangeSelection); }
     virtual void CloseListBox() { this->Call(EeUiComboCall::CloseListBox); }
     virtual void HideControl() { this->Call(EeUiComboCall::HideControl); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiComboCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiComboCall::MouseLButtonUp); }
-    virtual long MouseMove(const GE2DPoint& inLocation)
-    {
-        float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-        return (long)this->Call(EeUiComboCall::MouseMove, 0, 0, f);
-    }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiComboCall::MouseMove, 0, 0, UIF4(inLocation)); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void OpenListBox() { this->Call(EeUiComboCall::OpenListBox); }   // slot 0x94
-public:   // (the shims' access: UIComboBox.cpp)
     virtual void ProcessDown() { this->Call(EeUiComboCall::ProcessArrow); }   // slot 0x98 (ICF-folded with ProcessUp)
     virtual void ProcessUp() { this->Call(EeUiComboCall::ProcessArrow); }
-protected:
     virtual void TabbedTo() { this->Call(EeUiComboCall::Tabbed, 1); }
     virtual void TabbedFrom() { this->Call(EeUiComboCall::Tabbed, 0); }
     // the subclasses' reads of the members (R6 ui round 15's census)
     UILBString* GetList() const { return reinterpret_cast<UILBString*>(this->PartOf(2)); }
     unsigned long GetSelectionIndex() const { return (unsigned long)this->Call(EeUiComboCall::Selection); }
-public:   // (the constructor's shim sets it: UIComboBox.cpp)
     EeUiCombo* mRust;                       // the state (comboobj.rs)
 };
 

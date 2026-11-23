@@ -12,7 +12,6 @@
 #include "lle/UITextLabel.h"
 #include "lle/UISlider.h"
 
-class UITextLabel;
 
 class LLE_API UIESliderChange : public UIEvent {
 public:
@@ -40,7 +39,6 @@ public:
     }
     void SetModifier(float inModifier) { this->mModifier = inModifier; }
     void SetOffset(long inOffset) { this->mOffset = inOffset; }
-private:
     std::map<float, UWideString> mStrings;  // +0x0c value -> text shown instead of the number
     UITextLabel* mLabel;                    // +0x18
     long mOffset;                           // +0x1c

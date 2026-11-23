@@ -713,6 +713,14 @@ pub(crate) struct CursorRead {
     target: *mut c_void,
 }
 
+impl CursorRead {
+    /// The reads of one `UpdateCursorKind`: the form, the local player, its selected group and the group's first
+    /// unit (no target yet).
+    pub(crate) fn new(form: Cpp, player: *mut c_void, group: *mut c_void, first: *mut c_void) -> Self {
+        Self { form, player, group, first, target: core::ptr::null_mut() }
+    }
+}
+
 /// The cursor's world reads (`ee_screenscpp_cursor`, `EE_SCREENS_CURSOR_OP_*`) on the world's views: the first
 /// selected unit's, the target's (the picked `mTarget`), the selection's unit `a` and its cargo `b`; positions and
 /// ranges into `f`. The tests that are a unit's or class's method (gathering, healing, converting, attacking a
