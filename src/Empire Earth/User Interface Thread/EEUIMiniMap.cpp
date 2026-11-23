@@ -60,13 +60,6 @@ EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigne
     ee_screens_mm_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uint32_t)inBorderThickness);   // (mini_map_calls.rs)
 }
 
-// Releases the mouse after a right click on the mini map
-long EEUIMiniMap::MouseRButtonUp()
-{
-    this->ReleaseCapturedMouse();
-    return 0;
-}
-
 // Snapshots the mini map for drawing: refreshes the units texture, scales the map to the window, places the
 // camera outline and the blinking flare (redrawing the screen when the flare leaves the map's inner area); the
 // numbers are ee_screens mini_map.rs', the C++ reads and applies them in the original's order
@@ -77,25 +70,9 @@ long EEUIMiniMap::CopyData()
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
 // tile's slot after operator new
-// Captures the mouse on a left press (folded with EEUICUnitIconBar::MouseRButtonDown in the original)
-long EEUIMiniMap::MouseLButtonDown()
-{
-    this->CaptureMouse();
-    return 0;
-}
 
-// The Rust's calls on the control, the mouse and the world (EE_SCREENS_MM_OP_*, EEUIRustControl's host the
-// toolkit's), each the original's; the mouse's read into the op's floats
-int64_t EEUIMiniMap::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    EEUIMiniMap* inMap = this;
-    switch (inOp - EE_SCREENS_HC_CLASS) {   // (the other cases are Rust's: mini_map_calls.rs rust_op)
-    case EE_SCREENS_MM_OP_HAS_CAPTURE: return inMap->GetHasMouseCapture();
-    case EE_SCREENS_MM_OP_LEFT_DOWN: return inMap->GetLeftMouseButtonDown();
-    case EE_SCREENS_MM_OP_POINTER: return gMouse->mPointer;
-    }
-    return 0;
-}
+// (the Rust's calls on the control, the mouse and the world, EE_SCREENS_MM_OP_*, are mini_map_calls.rs' over the
+// shims below)
 
 // ---- the one-statement shims of ee_screens mini_map_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
@@ -218,6 +195,10 @@ extern "C" bool ee_screenscpp_mm_tile_exists(int64_t inX, int64_t inY)
 extern "C" void ee_screenscpp_mm_send_flare(int64_t inX, int64_t inY)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {(long)inX, (long)inY}), kSlotNone); }
 extern "C" void ee_screenscpp_mm_pointer_clear() { gMouse->mPointer = 0; }
+extern "C" void ee_screenscpp_mm_release(EEUIMiniMap* inMap) { inMap->ReleaseCapturedMouse(); }
+extern "C" bool ee_screenscpp_mm_has_capture(uintptr_t inMap) { return MM(inMap)->GetHasMouseCapture(); }
+extern "C" bool ee_screenscpp_mm_left_down(uintptr_t inMap) { return MM(inMap)->GetLeftMouseButtonDown(); }
+extern "C" int64_t ee_screenscpp_mm_pointer() { return gMouse->mPointer; }
 extern "C" void ee_screenscpp_mm_form_ui_state_clear(uintptr_t inMap)
 { static_cast<EEUIFMainGame*>(MM(inMap)->GetForm())->SetUIState(0); }
 extern "C" int32_t ee_screenscpp_mm_map_width() { return (int32_t)::gWorld.mMap->mL195614; }

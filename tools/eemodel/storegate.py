@@ -47,9 +47,6 @@ FAKES = [
       "GetSurfaceVolatility", "GetSurfaceDescription", "GetTransparencyColor", "GetType", "GetWidth", "Lock",
       "RestoreSurface", "SetTransparencyColor", "TextLock", "TextUnlock", "Unlock"}),
     ("GEScreen.h", "GEScreen", "fakes_generated_screen.h", {"CreateSurface"}),
-    ("GERasterizer.h", "GERasterizer", "fakes_generated_rasterizer.h",
-     {"CreatePolygonArray", "CreateVertexArray", "ActivateRasterizer", "CreateTextureHandle",
-      "DestroyTextureHandle"}),
 ]
 
 

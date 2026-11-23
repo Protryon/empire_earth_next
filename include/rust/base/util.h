@@ -71,6 +71,23 @@ using EeUtilShutdownFn = void(*)(bool forced);
 
 extern "C" {
 
+/// `UConfig::GetValue(block, key, long&)`: kErrorOK with the value, kErrorNotFound (the value left) when the key
+/// holds no integer.
+///
+/// # Safety
+/// As `PlatConfigGetInt`; `out` is valid.
+long ee_uconfig_get_long(const char *block,
+                         const char *key,
+                         long *out);
+
+/// `UConfig::GetFlag`: kErrorOK with whether the integer is nonzero, kErrorNotFound (the flag left) otherwise.
+///
+/// # Safety
+/// As `PlatConfigGetInt`; `out` is valid.
+long ee_uconfig_get_flag(const char *block,
+                         const char *key,
+                         bool *out);
+
 /// `UMGetFloatingPointPrecision`: `_PC_53`.
 unsigned long ee_util_fp_precision();
 
@@ -375,6 +392,15 @@ uint16_t ee_util_resource_strings_language();
 
 /// String `id` as a NUL-terminated UTF-8 C string that lives for the whole run, or null when it is missing.
 const uint8_t *ee_util_resource_string(uint16_t id);
+
+/// `UResourceFile::GetString`: string `id` handed to `assign` (the C++ `UWideString` assignment) and kErrorOK, or
+/// kErrorNativeError with native error 1814 (ERROR_RESOURCE_NAME_NOT_FOUND, as LoadStringA left) when it is missing.
+///
+/// # Safety
+/// `assign` takes `target` and a NUL-terminated text.
+long ee_util_resource_string_get(uint16_t id,
+                                 void (*assign)(void*, const char*),
+                                 void *target);
 
 extern void exit(int code);
 

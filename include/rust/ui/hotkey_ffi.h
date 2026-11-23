@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/hotkeyobj.h"
 
 extern "C" {
 
@@ -17,6 +18,13 @@ size_t ee_ui_hotkey_name(const char *m0,
                          const char *key,
                          uint8_t *out,
                          size_t capacity);
+
+/// `UIHotKey::GetHotKeyName`: the record's modifiers' and key's entity names (UIHotKey.cpp's
+/// `ee_uicpp_entity_name`) as the display name, e.g. "Ctrl + Shift + A"; valid until the next call on this thread.
+///
+/// # Safety
+/// `rec` a live hot key record whose key is set.
+const char *ee_ui_hotkey_display_name(const EeUiHotKeyFields *rec);
 
 }  // extern "C"
 

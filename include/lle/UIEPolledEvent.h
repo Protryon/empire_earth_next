@@ -31,7 +31,6 @@ public:
             theResult = this->ProcessPolledEvent(inForm, inEntity);
         return theResult;
     }
-protected:
     virtual long ProcessPolledEvent(UIForm* inForm, UIEntity* inEntity) = 0;   // slot 0x10 (provisional name)
 
     TMPoll* mPoll;                          // +0x0c

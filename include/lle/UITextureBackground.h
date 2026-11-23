@@ -27,7 +27,6 @@ public:
         { this->mTextureDescription = *reinterpret_cast<const EeUiTextureDescription*>(&inDescription); }
     void SetTextureRectangle(const GERectangle& inRectangle)
         { this->mTextureRectangle = *reinterpret_cast<const EeUiRect*>(&inRectangle); }
-protected:
     UString mTextureFileName;
 };
 

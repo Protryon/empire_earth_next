@@ -256,7 +256,7 @@ const EeGfxRaster gEERustRaster = {
     // the screen the models' textures are set for (raster_direct.rs: the model, material and texture calls are Rust's)
     []() { return (uint32_t)gScreenIndex; },
     // gRasterizer's Rust objects (raster_direct.rs: the state calls the lambdas made on it)
-    [](void** outBase) { return DX7Rasterizer::RustObjects(gRasterizer, outBase); },
+    [](void** outBase) { return GERasterizer::RustObjects(gRasterizer, outBase); },
 };
 
 // ------------------------------------------------------------------------- round 9, lane A: this file's bodies' C++

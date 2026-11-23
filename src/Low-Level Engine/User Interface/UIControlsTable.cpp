@@ -71,6 +71,7 @@
 #include "lle/UIManager.h"
 #include "lle/UIShims.h"
 #include "rust/ui/lle_table.h"
+#include "rust/ui/lle_hosts.h"
 
 // the one-statement shims of the moved host cases, CreateBitmap and SetupStringArray (ee_ui lle_table.rs)
 #define FORM(x) reinterpret_cast<UIForm*>(x)
@@ -299,15 +300,6 @@ UIControlsTable::UIControlsTable() : mRust(ee_ui_controls_table_new(this, ee_ui_
 UIControlsTable::~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
 
 // port: see the header
-long UIControlsTable::MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
-                                               float inRightDelta)
-{
-    float f[4] = {inLeftDelta, inRightDelta, 0.0f, 0.0f};
-    return (long)ee_ui_controls_tables(EeUiTablesCall::MoveControlsHorizontally, inFormID,
-                                       (intptr_t)((uint64_t)(uint32_t)inFirstIndex | (uint64_t)(uint32_t)inLastIndex << 32),
-                                       NULL, f);
-}
-
 // Sets text to transparent in the description's text colour
 void UIControlsTable::SetupGEText(GEText* inText) const
 {

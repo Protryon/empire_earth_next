@@ -44,14 +44,8 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
 // the tooltip being built (the UI thread's)
 static UWideString* sPortraitHelp;
 
-bool EEUICPortrait::GetHelpString(UWideString& outString) const
-{
-    UWideString theResult;
-    sPortraitHelp = &theResult;
-    bool theFound = ee_screens_portrait_help(const_cast<EEUICPortrait*>(this));
-    outString = theResult;
-    return theFound;
-}
+extern "C" void ee_screenscpp_pt_help_target(UWideString* inOut) { sPortraitHelp = inOut; }
+extern "C" void ee_screenscpp_pt_help_clear() { *sPortraitHelp = UWideString(); }
 
 // The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*: units and nodes as handles), its constructor's,
 // destructor's, DrawTextA's and MouseMove's bodies: portrait_calls.rs over the one-statement shims below (UI lane

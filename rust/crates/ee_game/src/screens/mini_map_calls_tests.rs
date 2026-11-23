@@ -83,8 +83,12 @@ fn the_presses_and_the_ops() {
     let mut f = Fake::default();
     assert_eq!(rust_op(&mut f, MAP, EE_SCREENS_MM_OP_FLARE_DONE, 0, 0, None), Some(0));
     assert_eq!(rust_op(&mut f, MAP, EE_SCREENS_MM_OP_SEND_FLARE, 3, 4, None), Some(0));
-    assert_eq!(rust_op(&mut f, MAP, EE_SCREENS_MM_OP_POINTER, 0, 0, None), None);
-    assert_eq!(f.calls(), "mm_pointer_clear()\nmm_form_ui_state_clear(144)\nmm_send_flare(3, 4)");
+    assert_eq!(rust_op(&mut f, MAP, EE_SCREENS_MM_OP_POINTER, 0, 0, None), Some(0));
+    assert_eq!(rust_op(&mut f, MAP, EE_SCREENS_MM_OP_HAS_CAPTURE, 0, 0, None), Some(0));
+    assert_eq!(
+        f.calls(),
+        "mm_pointer_clear()\nmm_form_ui_state_clear(144)\nmm_send_flare(3, 4)\nmm_pointer()\nmm_has_capture(144)"
+    );
     let mut m = EeScreensMiniMapMouse::default();
     let mut f = Fake::default();
     f.answer("mm_form_mouse_x", &[0]).answer("mm_pixel_to_map", &[1, 2, 3, 4, 5, 6]);

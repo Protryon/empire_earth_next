@@ -12,17 +12,12 @@
 #include "lle/GETextureCoordinate.h"
 #include "lle/GEBitmap.h"      // the units including this header rely on it
 #include "rust/ui/sliderobj.h"
+#include "rust/ui/lle_hosts.h"
 
-struct EeUiSlider;
 
 class LLE_API UISlider : public UIControl {
-    friend struct UIScrollBarRust;          // UIScrollBar.cpp: the scroll bar's host
-    friend struct UISliderHost;             // UISlider.cpp: the Rust object's calls out
 public:
-    UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
-             unsigned long inIndex, unsigned long inBorderThickness);
-    UISlider(const UISlider&) = delete;
-    UISlider& operator=(const UISlider&) = delete;
+    UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_slider_new(this, ee_ui_slider_host, inSliderStyle); }
     virtual ~UISlider();
     virtual long CopyData() { return (long)this->Call(EeUiSliderCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiSliderCall::DrawPolygons); }
@@ -35,7 +30,6 @@ public:
     void SetPageSize(unsigned long inPageSize) { this->Call(EeUiSliderCall::SetPageSize, inPageSize); }
     void SetRange(unsigned long inMin, unsigned long inMax) { this->Call(EeUiSliderCall::SetRange, inMin, inMax); }
     virtual long UpdateKeyboard() { return kErrorOK; }
-protected:
     virtual void ButtonDown() {}            // slot 0x88
     virtual void ButtonUp() { this->Call(EeUiSliderCall::ButtonUp); } // slot 0x8c
     virtual void ChangeRange(unsigned long inValue) { this->Call(EeUiSliderCall::ChangeRange, inValue); } // slot 0x90
@@ -49,10 +43,8 @@ protected:
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
 
-private:
     intptr_t Call(EeUiSliderCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_slider_call(this->mRust, c, a, b, f); }
-    intptr_t CallAt(EeUiSliderCall c, const GE2DPoint& p) const { float f[4] = {p.GetX(), p.GetY(), 0.0f, 0.0f}; return ee_ui_slider_call(this->mRust, c, 0, 0, f); }
-protected:
+    intptr_t CallAt(EeUiSliderCall c, const GE2DPoint& p) const { return ee_ui_slider_call(this->mRust, c, 0, 0, UIF4(p)); }
     EeUiSlider* mRust;                      // the state (sliderobj.rs)
 };
 

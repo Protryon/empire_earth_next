@@ -148,6 +148,8 @@ pub enum EeUiBgCall {
     FullLoad = 24,
     /// `UIFullBackground::UnloadBackground()`.
     FullUnload = 25,
+    /// `UITiledBackground`'s constructor: its tiling `a`, the counts across and down in `f[0]`, `f[1]`.
+    TiledInit = 26,
 }
 
 /// A background's record, reached by address: every access reads or writes the C++ object's base afresh.
@@ -482,8 +484,8 @@ impl Bg {
             }
             C::BitmapDraw => background::bitmap_draw(&mut Virtual(*self), self.rect(), rect_in()) as isize,
             C::BitmapStretched => {
-                // SAFETY: twelve floats
-                let w = unsafe { core::slice::from_raw_parts(f, 12) };
+                // SAFETY: eight floats
+                let w = unsafe { core::slice::from_raw_parts(f, 8) };
                 let source = buf_rect(&[w[0], w[1], w[2], w[3]]);
                 let destination = buf_rect(&[w[4], w[5], w[6], w[7]]);
                 let (bitmap, texture) = self.get(|r| (r.mBitmap as isize, r.mTextureRectangle));
@@ -538,8 +540,8 @@ impl Bg {
                 }
             }
             C::DrawTiled => {
-                // SAFETY: twelve floats
-                let w = unsafe { core::slice::from_raw_parts(f, 12) };
+                // SAFETY: eight floats
+                let w = unsafe { core::slice::from_raw_parts(f, 8) };
                 let clip = buf_rect(&[w[0], w[1], w[2], w[3]]);
                 let (c0, c1) = (w[4].to_bits() as c_ulong, w[5].to_bits() as c_ulong);
                 background::draw_tiled(
@@ -613,6 +615,16 @@ impl Bg {
                     if bitmap != 0 && self.texture_of(bitmap) != 0 {
                         self.op(Op::BgBitmapSetTexture, bitmap, 0);
                     }
+                });
+                0
+            }
+            C::TiledInit => {
+                // SAFETY: four floats
+                let (across, down) = unsafe { (*f, *f.add(1)) };
+                self.set(|r| {
+                    r.mTiling = a as c_ulong;
+                    r.mHorizontalCount = across;
+                    r.mVerticalCount = down;
                 });
                 0
             }
@@ -805,6 +817,28 @@ pub unsafe extern "C" fn ee_ui_bg_full_init(
 /// `rec` is a record [`ee_ui_bg_init`] or [`ee_ui_bg_full_init`] set up.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_bg_free(rec: *mut EeUiBackgroundFields) {
+    // SAFETY: the contract
+    unsafe { bg_free(rec) }
+}
+
+/// `UIFullBackground`'s destructor: its tiles released ([`EeUiBgCall::FullRelease`]), then [`ee_ui_bg_free`].
+///
+/// # Safety
+/// As [`ee_ui_bg_free`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_bg_full_free(rec: *mut EeUiBackgroundFields) {
+    // SAFETY: the contract
+    unsafe {
+        Bg::new(rec).call(EeUiBgCall::FullRelease, 0, 0, core::ptr::null_mut());
+        bg_free(rec);
+    }
+}
+
+/// The record's release (both destructors').
+///
+/// # Safety
+/// As [`ee_ui_bg_free`].
+unsafe fn bg_free(rec: *mut EeUiBackgroundFields) {
     crate::direct::forget(crate::direct::Kind::Background, rec as *const c_void);
     // SAFETY: the contract
     unsafe { Bg::new(rec).free() }

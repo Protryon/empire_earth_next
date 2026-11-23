@@ -6,7 +6,7 @@
 
 use crate::screens::dialog::{
     EE_SCREENS_DLG_BACKGROUND, EE_SCREENS_DLG_BUTTON, EE_SCREENS_DLG_CALC, EE_SCREENS_DLG_EDIT_COLORS,
-    EE_SCREENS_DLG_FONT, EE_SCREENS_DLG_NEW,
+    EE_SCREENS_DLG_FONT, EE_SCREENS_DLG_MESSAGE, EE_SCREENS_DLG_NEW, EE_SCREENS_DLG_RECT,
 };
 use crate::screens::game_cpp::Cpp;
 use crate::screens::shells_dialog::{
@@ -24,6 +24,13 @@ pub(crate) fn call<C: Cpp + ?Sized>(
     b: u32,
 ) -> Option<u32> {
     match op {
+        // the message label (slot 0): its alignment, then the box's message
+        EE_SCREENS_DLG_MESSAGE => {
+            c.dlg_message_align(slots[0], a);
+            c.dlg_message_text(slots[0]);
+        }
+        // the layout rectangle's side `a` (left, top, right, bottom) as the float's bits
+        EE_SCREENS_DLG_RECT => return Some(c.dlg_rect_side(a).to_bits()),
         EE_SCREENS_DLG_BUTTON => {
             let button = slots[a as usize];
             c.dlg_text_load(b >> 2);

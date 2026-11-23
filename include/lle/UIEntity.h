@@ -7,7 +7,9 @@
 class LLE_API UIEntity {
 public:
     unsigned long GetType() const { return this->mType; }  // exported 0x10004380 (ICF)
-protected:
+    // port: no element is copied (every control and hot key holds a Rust object)
+    UIEntity(const UIEntity&) = delete;
+    UIEntity& operator=(const UIEntity&) = delete;
     // 0x10058e86: the vptr is stored before mType (assigned in the body)
     UIEntity(unsigned long inType) { this->mType = inType; }
     virtual ~UIEntity() {}

@@ -78,7 +78,7 @@ pub(crate) fn table_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isi
 
 lle_host!(
     /// The table's host: [`table_call`], then `UIControlsTable::HostOp`.
-    ee_ui_table_host => table_call, ee_uicpp_table_host
+    ee_ui_table_host => table_call, [crate::lle_hosts::table]
 );
 
 /// `UIControlsTable::SetupStringArray(m, strings)`: the list emptied, then filled with the description's

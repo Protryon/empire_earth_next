@@ -247,3 +247,34 @@ fn a_rhombus_takes_its_rectangles_corners_and_keeps_its_depths() {
         ee_ge_prim_destroy(p);
     }
 }
+
+#[test]
+fn the_four_corner_calls_are_the_per_vertex_calls_in_turn() {
+    take_log();
+    let p = unsafe { ee_ge_prim_new(host, std::ptr::null_mut(), EeGePrimKind::Rhombus) };
+    let colors = [[0.25f32, 0.5, 0.75], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+    unsafe {
+        take_log();
+        let c = |i: usize| colors[i].as_ptr() as *const c_void;
+        ee_ge_prim_vertices4(p, EeGeBmpOp::VertexSetColor, c(0), c(1), c(2), c(3));
+        let set = take_log();
+        assert_eq!(set.len(), 4);
+        assert_eq!(set[0], "color 0 [0.25, 0.5, 0.75]");
+        assert_eq!(set[3], "color 3 [0.0, 0.0, 1.0]");
+        // a line's two: up to the first NULL
+        let none = std::ptr::null();
+        ee_ge_prim_vertices4(p, EeGeBmpOp::VertexSetColor, c(1), c(2), none, c(3));
+        assert_eq!(take_log(), ["color 0 [1.0, 0.0, 0.0]", "color 1 [0.0, 1.0, 0.0]"]);
+        ee_ge_prim_set_opacities(p, 4, 0.5, 0.25, 0.125, 1.0);
+        let (mut a, mut b, mut c2, mut d) = (0.0f32, 0.0f32, 0.0f32, 0.0f32);
+        ee_ge_prim_opacities(p, &mut a, &mut b, &mut c2, &mut d);
+        assert_eq!((a, b, c2, d), (0.5, 0.25, 0.125, 1.0));
+        ee_ge_prim_set_opacities(p, 2, 0.75, 0.75, 0.0, 0.0);
+        ee_ge_prim_opacities(p, &mut a, &mut b, &mut c2, std::ptr::null_mut());
+        assert_eq!((a, b, c2), (0.75, 0.75, 0.125), "the first two set, the third kept");
+        ee_ge_prim_set_z(p, 1.0, 2.0, 3.0, 4.0);
+        let z: Vec<_> = vertices(p).iter().map(|v| v.point.z).collect();
+        assert_eq!(z, [1.0, 2.0, 3.0, 4.0]);
+        ee_ge_prim_destroy(p);
+    }
+}

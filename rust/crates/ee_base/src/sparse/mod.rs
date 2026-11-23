@@ -6,7 +6,7 @@
 pub mod set;
 
 use set::{PointList, SparseArray};
-use std::ffi::c_void;
+use std::ffi::{c_long, c_void};
 
 /// A tile (`U2DPoint<long>`).
 #[repr(C)]
@@ -224,4 +224,131 @@ pub unsafe extern "C" fn ee_sparse_random_point(
     // SAFETY: the caller's contract
     let set = &unsafe { &*s }.set;
     set.random_point(&mut || generate(random))
+}
+
+/// A C++ `std::vector<U2DPoint<long>>` or `std::vector<long>` resized to `count` points or numbers: its data, as
+/// `long`s (a point is two).
+pub type EeSparseResize = unsafe extern "C" fn(*mut c_void, usize) -> *mut c_long;
+
+/// `BuildPointList(list, step)` (`extremes` false) and `GetOnlyExtremeEdgePoints(list)` (true): the points into the
+/// C++ vector `out`, which `resize` makes their count long.
+///
+/// # Safety
+/// `s` a live set; `resize(out, n)` returns room for `n` points (`2 n` longs).
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_points_into(
+    s: *mut EeSparseArray,
+    extremes: bool,
+    step: i32,
+    out: *mut c_void,
+    resize: EeSparseResize,
+) {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    let list = if extremes { PointList::Extremes } else { PointList::All(step) };
+    s.set.points(list, &mut s.scratch);
+    // SAFETY: the caller's contract
+    let data = unsafe { resize(out, s.scratch.len()) };
+    for (i, point) in s.scratch.iter().enumerate() {
+        // SAFETY: `data` has room for the points
+        unsafe {
+            *data.add(2 * i) = point.x as c_long;
+            *data.add(2 * i + 1) = point.y as c_long;
+        }
+    }
+}
+
+/// `Create(points)` (`create`) and `Insert(points)`: `count` points of a `std::vector<U2DPoint<long>>` (two `long`s
+/// each, taken as their low 32 bits as the C++ did).
+///
+/// # Safety
+/// `s` a live set, `points` `2 count` longs (NULL with 0).
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // `long` is `i32` on Windows, `i64` on Linux and macOS: the low 32 bits
+pub unsafe extern "C" fn ee_sparse_insert_longs(
+    s: *mut EeSparseArray,
+    points: *const c_long,
+    count: usize,
+    create: bool,
+) {
+    let points: Vec<EePoint> = (0..count)
+        // SAFETY: the caller's contract
+        .map(|i| unsafe { EePoint { x: *points.add(2 * i) as i32, y: *points.add(2 * i + 1) as i32 } })
+        .collect();
+    // SAFETY: the caller's contract
+    unsafe { ee_sparse_insert_list(s, points.as_ptr(), points.len(), create) }
+}
+
+/// `GetRaw(raw)`: [`ee_sparse_raw`]'s numbers into the C++ vector `out`, which `resize` makes their count long.
+///
+/// # Safety
+/// `s` a live set; `resize(out, n)` returns room for `n` longs.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sparse_raw_into(s: *mut EeSparseArray, out: *mut c_void, resize: EeSparseResize) {
+    // SAFETY: the caller's contract
+    let s = unsafe { &mut *s };
+    s.set.raw(&mut s.raw);
+    // SAFETY: the caller's contract
+    let data = unsafe { resize(out, s.raw.len()) };
+    for (i, &number) in s.raw.iter().enumerate() {
+        // SAFETY: `data` has room for the numbers
+        unsafe { *data.add(i) = number as c_long };
+    }
+}
+
+/// `SetRaw(raw)`: [`ee_sparse_set_raw`] over `count` longs (their low 32 bits).
+///
+/// # Safety
+/// `s` a live set, `data` `count` longs (NULL with 0).
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // `long` is `i32` on Windows, `i64` on Linux and macOS: the low 32 bits
+pub unsafe extern "C" fn ee_sparse_set_raw_longs(s: *mut EeSparseArray, data: *const c_long, count: usize) -> bool {
+    // SAFETY: the caller's contract
+    let numbers: Vec<i32> = (0..count).map(|i| unsafe { *data.add(i) } as i32).collect();
+    // SAFETY: the caller's contract
+    unsafe { ee_sparse_set_raw(s, numbers.as_ptr(), numbers.len()) }
+}
+
+#[cfg(test)]
+mod long_tests {
+    use super::*;
+
+    unsafe extern "C" fn resize(out: *mut c_void, count: usize) -> *mut c_long {
+        let v = &mut *(out as *mut Vec<c_long>);
+        v.resize(count, 0);
+        v.as_mut_ptr()
+    }
+
+    /// A `std::vector<U2DPoint<long>>`'s resize: two longs a point.
+    unsafe extern "C" fn resize_points(out: *mut c_void, count: usize) -> *mut c_long {
+        resize(out, 2 * count)
+    }
+
+    #[test]
+    fn the_long_forms_equal_the_point_forms() {
+        unsafe {
+            let s = ee_sparse_new();
+            let input: Vec<c_long> = vec![3, 4, 5, 4, 3, 9, -2, 7];
+            ee_sparse_insert_longs(s, input.as_ptr(), 4, true);
+            let mut got: Vec<c_long> = vec![99];
+            ee_sparse_points_into(s, false, 1, &mut got as *mut Vec<c_long> as *mut c_void, resize_points);
+            let mut count = 0;
+            let points = std::slice::from_raw_parts(ee_sparse_points(s, false, 1, &mut count), count).to_vec();
+            assert_eq!(got.len(), 2 * points.len());
+            for (i, p) in points.iter().enumerate() {
+                assert_eq!((got[2 * i], got[2 * i + 1]), (p.x as c_long, p.y as c_long));
+            }
+            assert_eq!(ee_sparse_size(s), 4);
+            let mut raw: Vec<c_long> = Vec::new();
+            ee_sparse_raw_into(s, &mut raw as *mut Vec<c_long> as *mut c_void, resize);
+            let mut n = 0;
+            let expected = std::slice::from_raw_parts(ee_sparse_raw(s, &mut n), n).to_vec();
+            assert_eq!(raw, expected.iter().map(|&x| x as c_long).collect::<Vec<_>>());
+            let t = ee_sparse_new();
+            assert!(ee_sparse_set_raw_longs(t, raw.as_ptr(), raw.len()));
+            assert_eq!(ee_sparse_size(t), 4);
+            ee_sparse_free(t);
+            ee_sparse_free(s);
+        }
+    }
 }

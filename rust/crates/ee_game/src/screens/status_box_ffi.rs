@@ -12,7 +12,9 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_status_box_unit(call: *mut c_void, two_bars: *mut bool) -> i64;
+        pub fn ee_screenscpp_status_box_unit(call: *mut c_void) -> i64;
+        pub fn ee_screenscpp_status_box_bar3(call: *mut c_void) -> bool;
+        pub fn ee_screenscpp_status_box_bar4(call: *mut c_void) -> bool;
     }
 }
 
@@ -28,8 +30,13 @@ impl BoxHost for Host {
         crate::screens::status_box_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c)
     }
     fn view(&mut self, fill: bool) -> EeScreensHudUnit {
-        let mut two_bars = false;
-        let unit = unsafe { sys::ee_screenscpp_status_box_unit(self.0, &mut two_bars) };
+        // SAFETY: the host's live call record
+        let (unit, two_bars) = unsafe {
+            (
+                sys::ee_screenscpp_status_box_unit(self.0),
+                sys::ee_screenscpp_status_box_bar3(self.0) && sys::ee_screenscpp_status_box_bar4(self.0),
+            )
+        };
         crate::screens::hud_views::status_box_view(unit, two_bars, fill)
     }
 }

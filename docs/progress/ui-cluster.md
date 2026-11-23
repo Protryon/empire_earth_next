@@ -69,17 +69,29 @@ build/ui13/plan.md (the classes in dependency order, the fields other code reads
 
 The totals are in PORT_LEARNINGS.md "The UI lane, round 13".
 
+## Round 14 (branches `rust-ui14a` toolkit, `rust-ui14b` game, merged on `rust-ui14`, 2026-11-22)
+
+| Piece | What moved |
+|---|---|
+| ee_ui `lle_hosts.rs`, `lle_hosts_tables.rs`, `lle_hosts_shims.rs` | the toolkit's host switches (UIControl, UIObjHost, UIForm, the backgrounds, the list boxes, the file lists, the hot keys, the font and background tables) as Rust tables over one-statement `EE_UI_CASE`/`EE_UI_VOID` shims (lle/UIShims.h); the toolkit classes' members public |
+| toolkit records | the float buffers one `UIF4`; UIControl's construction and its border colours Rust's; the UI database's file names (`DB_NAMES`) Rust's; UIListBox's constructor and destructor inline |
+| ee_game `EEUIShellOf<B, D>` | the seven shell classes one template over the toolkit base: every override one statement, BaseCall's common cases once, the kind's extras `D::Extra`; `Make`, `Op` (by address) and the base-call routing in Rust (shells_ffi.rs); `EEShellText` a shell virtual |
+| ee_game screens | the settings record's copy (settings_form_ffi.rs over `EeAppSettingsFields`), the question answers and their tables (question_answers_ffi.rs), the message box's Display inputs (dialog_inputs_ffi.rs), the lobby's option setter, the placements' Initialize/Terminate/ClearGhostUnits (placement_ffi.rs), `UpdateCursorKind`, the main form's constructor, the mini map's RustOp (mini_map_calls.rs), the selection box's constructor and destructor |
+| call records | the main form's, status box's, improvement button's and UI manager's call records made at the call (a constructor and `Ptr()` on a temporary): every member one forward; the UI manager's and the action queues' hosts one-statement shims |
+| static_asserts | the game UI's constant asserts as Rust tests reading the headers (hud_cpp_consts_tests.rs) |
+| `EECBUIListBox` | its ten `using` lines gone |
+
+The totals are in PORT_LEARNINGS.md "The UI lane, round 14".
+
 ## What is left (the lane's part)
 
-Lane logic 2,718 (from 3,682), 1,274 of it in headers. The biggest: EEUIShell.h/.cpp (about 218: the `BaseCall`
-switches, `EEShellText`, the host frame), EEUIFMainGame.h/.cpp (about 190), EEScreens.cpp (142: the statics holding
-C++ objects, the settings X-macro, the callback tables), EEUIManager.cpp; the toolkit's host frames (`UI*Host::Op`
-switches), the class heads, access specifiers and constructors that every control keeps; the C++ call records that
-hold a `UWideString` (not done this round); `EECBUIListBox`'s `using` lines (the public accessors now exist);
-the vtable-shell collapse of the derived controls' override declarations (T7 in the plan, not started).
-- Left on purpose (as rounds 7-12): the printfs of a resource format (`EEAreaEffect::Dump`), qualified base-class
+Lane logic 1,553 (from 2,718 at round 13's end), 865 of it in headers; toolkit 673, game 880. The biggest: UIListBox.h
+(99: the template's inline bodies), UIForm's and UIManager's declarations, UILBString, the combo box's and the
+controls table's C++ hosts; EEScreens.cpp's about 45 scratch statics holding C++ objects (strings, vectors,
+FSFileSpec), EEUIFMainGame's form-call record fields and own members, the main group's print host, the status box's
+icon struct.
+- Left on purpose (as rounds 7-13): the printfs of a resource format (`EEAreaEffect::Dump`), qualified base-class
   calls, the collectors' predicates (C++ templates).
-- The `--civbuilder` flake: see PORT_LEARNINGS "The UI lane, round 13".
 
 ## Checks
 

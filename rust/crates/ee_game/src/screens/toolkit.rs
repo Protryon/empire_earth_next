@@ -102,15 +102,24 @@ const FORM_EVENT_KEYBOARD: isize = 16;
 mod sys {
     use core::ffi::c_void;
     extern "C" {
-        /// `op` 0: a new `EEScreenEvent(code)` (`EECreateScreenEvent`: NULL for code 0); 1 the event's `Reference()`;
-        /// 2 its `Dereference()` (UI Events/EEScreens.cpp).
-        pub fn ee_screenscpp_event(op: u32, event: *mut c_void, code: u32) -> *mut c_void;
+        /// a new `EEScreenEvent(code)` (`EECreateScreenEvent`: NULL for code 0), the event's `Reference()`, its
+        /// `Dereference()` (UI Events/EEScreenEvent.cpp)
+        pub fn ee_screenscpp_event_new(code: u32) -> *mut c_void;
+        pub fn ee_screenscpp_event_ref(event: *mut c_void);
+        pub fn ee_screenscpp_event_unref(event: *mut c_void);
     }
 }
 #[cfg(not(test))]
 fn event_op(op: u32, event: Cpp, code: u32) -> Cpp {
-    // SAFETY: the host's helper; `event` is one it made (or NULL for a new one)
-    unsafe { sys::ee_screenscpp_event(op, event, code) }
+    // SAFETY: the host's helpers; `event` is one they made (op 0: a new one of `code`; 1 its reference, 2 its release)
+    unsafe {
+        match op {
+            0 => return sys::ee_screenscpp_event_new(code),
+            1 => sys::ee_screenscpp_event_ref(event),
+            _ => sys::ee_screenscpp_event_unref(event),
+        }
+    }
+    core::ptr::null_mut()
 }
 #[cfg(test)]
 fn event_op(op: u32, event: Cpp, code: u32) -> Cpp {

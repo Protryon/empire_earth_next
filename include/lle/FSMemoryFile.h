@@ -48,7 +48,8 @@ public:
     FSMemoryFile& operator=(const FSMemoryFile&) = delete;
 
     virtual long Create() { return this->GetData() ? kErrorOK : kErrorFailed; }   // +0x04 0x4644 (provisional names)
-    virtual long Close();                                                       // +0x08 0x9fbe (and the temporary file)
+    virtual long Close()                                                        // +0x08 0x9fbe (and FOpen's temporary file)
+        { return ee_fs_mem_close_disk(this->mState, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<const EeFsString*>(&this->mTemporaryFileName)); }
     // +0x0c 0xa176 (to a disk file)
     virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes)
         { return ee_fs_mem_copy_disk(this->mState, inDestination, inOverwrite); }
