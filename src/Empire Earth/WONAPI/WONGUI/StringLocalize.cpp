@@ -1,7 +1,9 @@
-// Localized string substitution: fills <s1>..<s9> placeholders in a GUI string (file name inferred)
+// Localized string substitution (file name inferred). R6 WON round 34: StringLocalize::GetStr (each <sN> tag replaced
+// by substitution N, << a literal <) is Rust's (rust/crates/ee_won_gui/src/localize.rs) and the class is gone; these
+// are the Rust's readers of a GUIString and its maker of the result, and the call the lobby's formatting functions
+// (StringLocalizeCalls.cpp) make.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <ctype.h>
 #include <string>
 #include <list>
 #include <map>
@@ -9,47 +11,15 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONStringLocalize.h"
+#include "rust/won_gui/localize.h"
 namespace WONAPI {
-// Returns the string with each <sN> tag replaced by substitution N (missing ones dropped); << gives a literal <
-GUIString StringLocalize::GetStr(const GUIString &theStr, const GUIString **subs, int numSubs)
+static void LocalizeUnits(const void* inText, EeWonLocalizeText* outText)
 {
-	GUIString aNewStr;
-	int aStartPos = 0;
-	while(true)
-	{
-		int aBracketPos = theStr.find('<',aStartPos);
-		if(aBracketPos<0)
-			break;
-
-		aNewStr.append(theStr,aStartPos,aBracketPos-aStartPos);
-		int aNextChar = theStr[aBracketPos+1];
-		if(aNextChar=='<') // literal '<' character
-		{
-			aNewStr.append('<');
-			aStartPos = aBracketPos+2;
-			continue;
-		}
-		else if(aBracketPos+1<theStr.length()) // substitution
-		{
-			int aNextNextChar = theStr[aBracketPos+2];
-			int aSubId = aNextNextChar - '0' - 1;
-			if(tolower(aNextChar)=='s' && aSubId>=0 && aSubId<numSubs && subs[aSubId]!=NULL)
-				aNewStr.append(*(subs[aSubId]));
-		}
-
-		aStartPos = aBracketPos+1;
-		aBracketPos = theStr.find('>',aStartPos); // find ending bracket
-		if(aBracketPos<0)
-			break;
-			
-		aStartPos = aBracketPos+1;
-	}
-
-	if(aStartPos < theStr.length())
-		aNewStr.append(theStr,aStartPos);
-
-	return aNewStr;
+    *outText = EeWonLocalizeText{static_cast<const GUIString*>(inText)->mData->mText, static_cast<const GUIString*>(inText)->length()};
 }
-
+static void* LocalizeNew(const void* inUnits, size_t inLength) { return new GUIStringData(std::wstring((const wchar_t*)inUnits, inLength)); }
+GUIString WONLocalize(const GUIString& inFormat, const GUIString* a, const GUIString* b, const GUIString* c, int n)
+{
+    return GUIString((GUIStringData*)ee_won_gui_localize(&inFormat, a, b, c, n, LocalizeUnits, LocalizeNew, sizeof(wchar_t)));
+}
 }

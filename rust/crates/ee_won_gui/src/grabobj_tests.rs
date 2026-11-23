@@ -24,6 +24,9 @@ struct World {
     /// window
     bg: Option<usize>,
     debug: bool,
+    /// the tint's raw image (its pixels and size, from RawNew to RawRelease)
+    raw: Vec<u32>,
+    raw_size: (i32, i32),
     trace: Vec<String>,
 }
 
@@ -49,17 +52,33 @@ fn grab_of(n: isize) -> EeWonGrab {
         G::DrawImage,
         G::Clip,
         G::CompSize,
-        G::ImageSize,
+        G::HasImage,
+        G::ImageWidth,
+        G::ImageHeight,
         G::NewImage,
         G::FlagSet,
         G::DebugExists,
-        G::DebugCreate,
-        G::DebugShow,
+        G::DebugNew,
+        G::DebugParent,
+        G::DebugStyle,
+        G::DebugCreateAt,
+        G::DebugRemoveAll,
+        G::DebugAddImage,
+        G::ScreenRect,
+        G::DebugPos,
         G::DebugInvalidate,
-        G::Capture,
+        G::Offscreen,
+        G::RootToChild,
+        G::CaptureDraw,
         G::BlendSupported,
-        G::Blend,
-        G::Tint,
+        G::SetColor,
+        G::FillBlend,
+        G::RawNew,
+        G::RawPixels,
+        G::RawWidth,
+        G::RawHeight,
+        G::DrawRaw,
+        G::RawRelease,
     ][(n - 1) as usize]
 }
 
@@ -96,18 +115,9 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, 
                 }
                 0
             }
-            EeWonGrab::ImageSize => match w.bg {
-                None => 0,
-                Some(i) => {
-                    let (_, iw, ih, _) = w.images[i];
-                    // SAFETY: two ints
-                    unsafe {
-                        *(c as *mut i32) = iw as u16 as i32;
-                        *(c as *mut i32).add(1) = ih as u16 as i32;
-                    }
-                    1
-                }
-            },
+            EeWonGrab::HasImage => w.bg.is_some() as isize,
+            EeWonGrab::ImageWidth => w.images[w.bg.unwrap()].1 as u16 as isize,
+            EeWonGrab::ImageHeight => w.images[w.bg.unwrap()].2 as u16 as isize,
             EeWonGrab::NewImage => {
                 w.next_image += 1;
                 let id = w.next_image;
@@ -118,60 +128,106 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, 
             }
             EeWonGrab::FlagSet => (w.flags as isize & c != 0) as isize,
             EeWonGrab::DebugExists => w.debug as isize,
-            EeWonGrab::DebugCreate => {
-                let (_, iw, ih, _) = w.images[w.bg.unwrap()];
+            EeWonGrab::DebugNew => {
                 w.trace.push("debug new".into());
                 w.debug = true;
-                w.trace.push("debug parent 1".into());
-                w.trace.push("debug style 40".into());
-                w.trace.push(format!("debug create 0 0 {} {}", iw as u16, ih as u16));
                 0
             }
-            EeWonGrab::DebugShow => {
-                let id = bg_id(&w);
+            EeWonGrab::DebugParent => {
+                w.trace.push("debug parent 1".into());
+                0
+            }
+            EeWonGrab::DebugStyle => {
+                w.trace.push("debug style 40".into());
+                0
+            }
+            EeWonGrab::DebugCreateAt => {
+                w.trace.push(format!("debug create 0 0 {c} {d}"));
+                0
+            }
+            EeWonGrab::DebugRemoveAll => {
                 w.trace.push("debug removeall".into());
+                0
+            }
+            EeWonGrab::DebugAddImage => {
+                let id = bg_id(&w);
                 w.trace.push(format!("debug add {id}"));
-                let (x, y) = (w.root_x + w.screen_x, w.root_y + w.screen_y);
-                w.trace.push(format!("debug pos {x} {y} -1 -1"));
+                0
+            }
+            EeWonGrab::ScreenRect => {
+                // SAFETY: four ints
+                unsafe {
+                    *(c as *mut i32) = w.screen_x;
+                    *(c as *mut i32).add(1) = w.screen_y;
+                }
+                0
+            }
+            EeWonGrab::DebugPos => {
+                w.trace.push(format!("debug pos {c} {d} -1 -1"));
                 0
             }
             EeWonGrab::DebugInvalidate => {
                 w.trace.push("debug invalidate".into());
                 0
             }
-            EeWonGrab::Capture => {
+            EeWonGrab::Offscreen => {
                 w.trace.push("offscreen".into());
+                999
+            }
+            EeWonGrab::RootToChild => {
+                // SAFETY: two ints
+                unsafe {
+                    *(c as *mut i32) -= w.root_x;
+                    *(c as *mut i32).add(1) -= w.root_y;
+                }
+                0
+            }
+            EeWonGrab::CaptureDraw => {
                 let i = w.bg.unwrap();
-                let (id, rx, ry) = (w.images[i].0, -w.root_x, -w.root_y);
-                w.trace.push(format!("bgdraw {id} from 999 at {rx} {ry}"));
+                // SAFETY: two ints
+                let (rx, ry) = unsafe { (*(d as *const i32), *(d as *const i32).add(1)) };
+                let id = w.images[i].0;
+                w.trace.push(format!("bgdraw {id} from {c} at {rx} {ry}"));
                 w.images[i].3 += 1;
                 0
             }
             EeWonGrab::BlendSupported => w.blend as isize,
-            EeWonGrab::Blend => {
+            EeWonGrab::SetColor => {
+                w.trace.push(format!("setcolor {:x}", c as i32 as u32));
+                0
+            }
+            EeWonGrab::FillBlend => {
                 // SAFETY: three ints
                 let p = unsafe { std::slice::from_raw_parts(d as *const i32, 3) };
-                w.trace.push(format!("setcolor {:x}", c as i32 as u32));
                 w.trace.push(format!("blend 0 0 {} {} {}", p[0], p[1], p[2]));
                 0
             }
-            EeWonGrab::Tint => {
+            EeWonGrab::RawNew => {
                 let (id, iw, ih, gen) = w.images[w.bg.unwrap()];
                 w.trace.push(format!("getraw {id} {iw} {ih}"));
                 let n = (iw * ih).max(0) as usize;
                 let mut s = (id as u32).wrapping_mul(2654435761).wrapping_add((gen as u32).wrapping_mul(40503));
-                let mut px: Vec<u32> = (0..n)
+                w.raw = (0..n.max(1))
                     .map(|_| {
                         s = s.wrapping_mul(1103515245).wrapping_add(12345);
                         s ^ (s << 13)
                     })
                     .collect();
-                if n > 0 {
-                    tint(&mut px, c as i32, d as i32);
-                }
-                w.trace.push(format!("drawraw {iw} {ih} at 0 0 hash {:016x}", fnv(&px)));
+                w.raw.truncate(n.max(1));
+                w.raw_size = (iw, ih);
+                1
+            }
+            EeWonGrab::RawPixels => w.raw.as_mut_ptr() as isize,
+            EeWonGrab::RawWidth => w.raw_size.0 as isize,
+            EeWonGrab::RawHeight => w.raw_size.1 as isize,
+            EeWonGrab::DrawRaw => {
+                let (iw, ih) = w.raw_size;
+                let n = (iw * ih).max(0) as usize;
+                let h = fnv(&w.raw[..n]);
+                w.trace.push(format!("drawraw {iw} {ih} at 0 0 hash {h:016x}"));
                 0
             }
+            EeWonGrab::RawRelease => 0,
         }
     })
 }

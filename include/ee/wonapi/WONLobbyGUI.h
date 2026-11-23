@@ -19,6 +19,8 @@
 #include "ee/wonapi/WONEventTypes.h"
 #include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 #include "rust/won_gui/barobj.h"
+#include "rust/won_gui/browserobj.h" // BrowserComponent
+#include "rust/won_gui/tipobj.h" // ListAreaToolTip
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/comboobj.h"
 #include "rust/won_gui/cfgkind.h"
@@ -684,15 +686,12 @@ protected:
     intptr_t MCall(EeWonMsBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0) { return ee_won_msbtn_call(this->mMsb,c,a,b,d); }
     void MSet(EeWonMsBtnField f,int v) { this->MCall(EeWonMsBtnCall::Set,(intptr_t)f,v); }
 };
-// SDK utility class: static functions only, never instantiated.
+// SDK utility class: static functions only, never instantiated (the MS button base's check box and radio circle;
+// the frames, arrows, tabs and close X the MS kinds draw are mspaint.rs plans).
 class MSGraphicsUtil {
 public:
-    static void DrawArrow(Graphics&,Direction,int,int,int,int,bool); //2fdfb0
-    static void DrawFrame3(Graphics&,int,int,int,int,bool); //2fdee0
-    static void DrawTab(Graphics&,int,int,int,int); //2fe4d0
     static void DrawCheck(Graphics&,int,int,int,int,bool,bool); //2fe250
     static void DrawRadio(Graphics&,int,int,int,int,bool,bool); //2fe3b0
-    static void DrawCloseX(Graphics&,int,int,int,int); //2fe5e0
 };
 // The concrete MS controls (MSButton, MSCheckbox, MSRadioButton, MSArrowButton, MaxSplitterButton, MSTabButton,
 // MS3DFrame, ...) are shell kinds (ee/wonapi/WONGUIShell.h, ee_won_gui shell_ms.rs).
@@ -2014,14 +2013,19 @@ private:
 enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };
 // ListAreaToolTip (0x38 bytes): allocated at 0x2fbbb6, constructor 0x2fb7b0,
 // Component (0x30) plus the ListArea pointer at +0x30 and the owned item at +0x34; 43 vtable slots.
+// R6 WON round 34: the methods are the Rust tip's (rust/crates/ee_won_gui/src/tipobj.rs) over the host's
+// one-statement ops (WONGUI/ListAreaToolTip.cpp)
+extern "C" intptr_t ee_won_guicpp_tip_call(void*,EeWonTipOp,intptr_t,intptr_t);
 class ListAreaToolTip : public Component {
 public:
-    ListAreaToolTip(ListArea*);
-    virtual void Paint(Graphics&); // 0x2fb8d0, vtable +0x18
-    void DoTip(ListItem*); //2fb9b0
-    void EndTip(); //2fbab0
+    ListAreaToolTip(ListArea* area) : mListArea(area) {} // no item
+    virtual void Paint(Graphics& g) { this->TCall(EeWonTipCall::Paint,(intptr_t)&g); } // 0x2fb8d0, vtable +0x18
+    void DoTip(ListItem* i) { this->TCall(EeWonTipCall::DoTip,(intptr_t)i); } //2fb9b0
+    void EndTip() { this->TCall(EeWonTipCall::EndTip); } //2fbab0
     ListArea* mListArea; //30 borrowed
     SmartPtr<ListItem> mItem; // at +0x34
+private:
+    void TCall(EeWonTipCall c,intptr_t a=0) { ee_won_tip_call(this,ee_won_guicpp_tip_call,c,a); }
 };
 // ListArea (0x164 bytes): ScrollArea (0x110) base plus vectors and SmartPtr members.
 // ListArea (R6 WON round 23): its items, top line, flags, batch, paint width, sort type, selection, keyboard and mouse
@@ -2316,16 +2320,18 @@ class TextArea;
 // The lobby's page view (layout type BrowserComponent; WONGUI/BrowserComponent.cpp). WON's HTML rendering is not
 // ported (docs/RUST_PLAN.md D8): a page is plain text in a TextArea, an HTML page with its tags dropped and entities
 // decoded (ee_won's plaintext.rs). There are no links, so no history: back, forward and stop stay disabled.
+// R6 WON round 34: the Rust record (rust/crates/ee_won_gui/src/browserobj.rs) holds the font size, the background
+// flag and the location and runs every method; the view and the scroller stay C++ members its host sets.
 class BrowserComponent : public Container {
 public:
     BrowserComponent();
     virtual ~BrowserComponent();
-    virtual void AddedToParent();
-    void SetTransparent(bool);
-    void SetScroller(Scroller*);
-    void SetFontSize(HTMLFontSize size) { this->mFontSize=size; }
-    void Reset(); // empties the view
-    void Refresh(); // shows the current location again
+    virtual void AddedToParent() { this->BCall(EeWonBrowserCall::AddedToParent); }
+    void SetTransparent(bool t) { this->BCall(EeWonBrowserCall::SetTransparent,t); }
+    void SetScroller(Scroller* s) { this->BCall(EeWonBrowserCall::SetScroller,(intptr_t)s); }
+    void SetFontSize(HTMLFontSize size) { this->BCall(EeWonBrowserCall::SetFontSize,size); }
+    void Reset() { this->BCall(EeWonBrowserCall::Reset); } // empties the view
+    void Refresh() { this->BCall(EeWonBrowserCall::Refresh); } // shows the current location again
     void Stop() {}
     void Back() {}
     void Forward() {}
@@ -2333,19 +2339,19 @@ public:
     bool BackButtonEnabled() { return false; }
     bool ForwardButtonEnabled() { return false; }
     bool FindStr(const GUIString&,bool=true,bool=false) { return false; }
-    void Go(const GUIString&,bool=false,bool=false,int=-1); // a file's text; a web address as text
+    // a file's text; a web address as text
+    void Go(const GUIString& l,bool=false,bool=false,int=-1) { this->BCall(EeWonBrowserCall::Go,(intptr_t)l.mData->mText,l.length()); }
     // the readable ones of two page files, with a blank line between (the MOTD's and the terms of use's pages)
-    void ShowFiles(const std::string& inFirst,const std::string& inSecond,bool inSkipFirstCharIfText);
+    void ShowFiles(const std::string& inFirst,const std::string& inSecond,bool inSkipFirstCharIfText)
+    { this->BCall(EeWonBrowserCall::ShowFiles,(intptr_t)inFirst.data(),(intptr_t)inFirst.size(),(intptr_t)inSecond.data(),(intptr_t)inSecond.size(),inSkipFirstCharIfText); }
     TextArea* GetHTMLView() { return this->mHTMLView.get(); }
-    const GUIString& GetCurStatus() { return this->mCurStatus; }
-protected:
-    void SetPageText(const std::wstring&);
+    const GUIString& GetCurStatus() { return gEmptyGUIString; } // (never set)
     SmartPtr<TextArea> mHTMLView;
     SmartPtr<Scroller> mScroller;
-    HTMLFontSize mFontSize;
-    bool mHaveBackground;
-    GUIString mCurStatus;
-    GUIString mCurLocation;
+    EeWonBrowser* mRust;
+private:
+    intptr_t BCall(EeWonBrowserCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0,intptr_t e=0)
+    { return ee_won_browser_call(this->mRust,c,a,b,cc,d,e); }
 };
 
 // 0x3c5ff0: the sort/filter handlers of a server-list column

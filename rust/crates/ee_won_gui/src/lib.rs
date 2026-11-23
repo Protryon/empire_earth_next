@@ -6,6 +6,7 @@
 #![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
 
 pub mod barobj;
+pub mod browserobj;
 pub mod btnobj;
 pub mod cfgbody;
 pub mod cfgcomp;
@@ -51,7 +52,9 @@ pub mod imgobj;
 pub mod inputobj;
 pub mod labelobj;
 pub mod layoutobj;
+pub mod leafpaint;
 pub mod listobj;
+pub mod localize;
 pub mod menuobj;
 pub mod msbtnobj;
 pub mod mspaint;
@@ -79,6 +82,7 @@ pub mod stretchobj;
 pub mod surface;
 pub mod tabobj;
 pub mod textobj;
+pub mod tipobj;
 pub mod treeobj;
 pub mod winobj;
 pub mod wmcache;
