@@ -153,6 +153,18 @@ enum class EeWonEeGameOp : uint32_t {
   TransferIsFileHere,
   /// `a->Download()`.
   TransferDownload,
+  /// `a->mPlayerSlot = &this->mSlots[b]`.
+  PlayerSetSlotView,
+  /// `a->mSlot = b`.
+  PlayerSetSlot,
+  /// `a->mName = GUIString(b)` (the transfer's file name).
+  TransferSetName,
+  /// `a->mRust` (the transfer's Rust object).
+  TransferRust,
+  /// `a->mHost = this->GetAddress()`.
+  TransferHostFromGame,
+  /// `a->mHost.SetPort(b)`.
+  TransferHostSetPort,
 };
 
 /// The inward calls: EELobbyGame's methods and virtual hooks, then EELobbyPlayerSlot's (`a` the slot's number).

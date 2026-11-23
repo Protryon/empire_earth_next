@@ -171,6 +171,19 @@ pub enum EeWonEeGameOp {
     TransferIsFileHere,
     /// `a->Download()`.
     TransferDownload,
+    // R6 WON round 34: the statements of the compound cases eesplit.rs composes in the game
+    /// `a->mPlayerSlot = &this->mSlots[b]`.
+    PlayerSetSlotView,
+    /// `a->mSlot = b`.
+    PlayerSetSlot,
+    /// `a->mName = GUIString(b)` (the transfer's file name).
+    TransferSetName,
+    /// `a->mRust` (the transfer's Rust object).
+    TransferRust,
+    /// `a->mHost = this->GetAddress()`.
+    TransferHostFromGame,
+    /// `a->mHost.SetPort(b)`.
+    TransferHostSetPort,
 }
 
 /// The host: `(game, op, a, b, c, d) -> result`.
@@ -437,6 +450,17 @@ impl EeWonEeGame {
                 return r;
             }
         }
+        // the compound cases' statements (R6 WON round 34), while the network core is bound
+        if ee_won_net::cppnet::bound() {
+            if let Some(r) = crate::eesplit::game_op(op, a, b, c, d, &|o, w, x, y, z| self.host_op(o, w, x, y, z)) {
+                return r;
+            }
+        }
+        self.host_op(op, a, b, c, d)
+    }
+
+    /// An op of the C++ host itself.
+    fn host_op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
         match self.host {
             // SAFETY: the host is the C++ game's (or a test's), called with the game it was given
             Some(f) => unsafe { f(self.game, op, a, b, c, d) },

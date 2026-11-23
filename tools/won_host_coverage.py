@@ -125,11 +125,14 @@ CHECKS = [
          rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op")], allowed={}),
     dict(enum="EeWonEeGameOp", header="won_lobby/eegame.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
-         rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op")], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op"),
+               # the compound cases composed in Rust over one-statement cases (R6 WON round 34)
+               (RS / "ee_won_lobby" / "src" / "eesplit.rs", "game_op")], allowed={}),
     # the saved game transfer's calls out (R6 WONLobby round 28: its network ops netops.rs's in the game)
     dict(enum="EeWonEeXferOp", header="won_lobby/eexfer.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
-         rust=[(RS / "ee_won_lobby" / "src" / "netops.rs", "xfer_op")], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "netops.rs", "xfer_op"),
+               (RS / "ee_won_lobby" / "src" / "eesplit.rs", "xfer_op")], allowed={}),
     dict(enum="EeWonEeGlueOp", header="won_lobby/eeglue.h",
          hosts=[LOBBY / "EELobbyGlueHost.cpp"],
          # the multi-statement cases composed in Rust over one-statement cases (R6 WON round 32)
