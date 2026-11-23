@@ -122,9 +122,9 @@ public:
     void PopFront() { this->GoalOp(4, 0, NULL); }                        // the first goal removed and deleted
     EEUnitGoal* GetFront() { return this->mGoals.front(); }             // 0x1f8a26 (EEUICUnitIconBar 0x25ad15)
     EEUnitGoal* GetGoalAt(unsigned long inIndex) { return this->mGoals[inIndex]; }
-    // the goals (kind, then data) and the timer from and to the saved game; the first error (EEGoalQueueContainer.cpp)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    // the goals (kind, then data) and the timer from and to the saved game; the first error (ee_units goals.rs)
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_units_gq_load_file(this->mGoals.mQueue, &inFile, inMajorVersion, inMinorVersion); }
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_units_gq_save_file(this->mGoals.mQueue, &outFile, inMajorVersion, inMinorVersion); }
 
     void GoalOp(int32_t inOp, unsigned long inIndex, EEUnitGoal* inGoal)
     {
@@ -132,18 +132,6 @@ public:
     }
 
     EEGoalDeque mGoals;                     // the Rust queue (+0x04 of the original: its goals' deque)
-
-    static const UString sData;             // "EEGoalQueueContainer-Data" (init chain 0x20560c)
 };
-
-// the context of the queues' Rust host (EEGoalQueueContainer.cpp): the file and its version for the record, the unit
-// for the per-tick update's refresh (ee_units goals.rs)
-struct EEGoalQueueIO {
-    FSFile* mFile;
-    unsigned long mMajor;
-    unsigned long mMinor;
-    EEComplexUnit* mUnit;
-};
-void EEGoalQueueHostOf(EEGoalQueueIO& inIO, EeGoalQueueHost& outHost);
 
 #endif

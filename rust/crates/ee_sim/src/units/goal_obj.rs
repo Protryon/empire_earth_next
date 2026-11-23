@@ -222,6 +222,19 @@ pub unsafe fn call(op: i32, goal: u64, a: u64, b: u64, io: *mut EeUnitsGoalIo) -
     unsafe { ee_units_rust_goal(op, base(goal).kind, goal, a, b, io, &host) }
 }
 
+/// One body (`EE_UNITS_GOAL_*`) of `goal` with the registered host over `context` (a file body's context: the
+/// goal queue's record loads and saves, goals.rs): its result.
+///
+/// # Safety
+/// `goal` is a live goal object; `context` is what the registered host's cases for `op` read.
+pub(crate) unsafe fn call_in(op: i32, goal: u64, a: u64, b: u64, context: *mut c_void) -> i64 {
+    let Some(f) = registered() else { return 0 };
+    let host = EeUnitsGoalHost { context, op: f };
+    let mut io = EeUnitsGoalIo::default();
+    // SAFETY: the caller's contract; the kind read from the live goal
+    unsafe { ee_units_rust_goal(op, base(goal).kind, goal, a, b, &mut io, &host) }
+}
+
 /// Deletes the goal `goal`: its kind's destroy (the references it holds dropped), then the object.
 ///
 /// # Safety

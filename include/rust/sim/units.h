@@ -17271,20 +17271,6 @@ struct EeUnitsLocationGoal {
 /// The world host the context-free calls use (EEUGRust.cpp's operation callback, registered at start-up).
 using EeUnitsGoalHostOp = int64_t(*)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
 
-/// The C++ host of the codec and the update (`EEGoalQueueContainer.cpp`'s table).
-struct EeGoalQueueHost {
-  void *context;
-  int32_t (*write_u32)(void *context, uint32_t value);
-  int32_t (*write_u8)(void *context, uint8_t value);
-  int32_t (*write_bool)(void *context, bool value);
-  int32_t (*read_u32)(void *context, uint32_t *value);
-  int32_t (*read_u8)(void *context, uint8_t *value);
-  int32_t (*read_bool)(void *context, bool *value);
-  int32_t (*save_goal)(void *context, uint64_t goal);
-  int32_t (*load_goal)(void *context, uint8_t kind, uint64_t *goal);
-  void (*refresh)(void *context);
-};
-
 /// One host operation's values.
 struct EeUnitsGroupIo {
   int64_t a;
@@ -19492,23 +19478,30 @@ void ee_units_gq_goal_op(EeUnitsGoalQueue *q,
 /// `q` is a live queue.
 unsigned long ee_units_gq_timer(EeUnitsGoalQueue *q, int32_t op, long time);
 
-/// The container's save (`save`): the status.
+/// `EEGoalQueueContainer::Save(major, minor, file)` (`save` over the C++ file): the status.
 ///
 /// # Safety
-/// `q` is a live queue, `host` a valid table for the call.
-int32_t ee_units_gq_save(const EeUnitsGoalQueue *q, const EeGoalQueueHost *host);
+/// `q` is a live queue, `file` a live C++ `FSFile*`.
+long ee_units_gq_save_file(const EeUnitsGoalQueue *q,
+                           void *file,
+                           unsigned long major,
+                           unsigned long minor);
 
-/// The container's load (`load`): the status.
+/// `EEGoalQueueContainer::Load(major, minor, file)` (`load` over the C++ file): the status.
 ///
 /// # Safety
-/// `q` is a live queue, `host` a valid table for the call.
-int32_t ee_units_gq_load(EeUnitsGoalQueue *q, const EeGoalQueueHost *host);
+/// `q` is a live queue, `file` a live C++ `FSFile*`.
+long ee_units_gq_load_file(EeUnitsGoalQueue *q,
+                           void *file,
+                           unsigned long major,
+                           unsigned long minor);
 
-/// The unit's goal queues' per-tick update (`update_unit`).
+/// The unit's goal queues' per-tick update (`update_unit`, the refresh the unit's `RefreshGoals` and
+/// `RefreshActiveGoal`).
 ///
 /// # Safety
-/// `unit` is a live complex unit, `host` a valid table for the call.
-void ee_units_goal_queues_update(uint64_t unit, const EeGoalQueueHost *host);
+/// `unit` is a live complex unit.
+void ee_units_goal_queues_tick(uint64_t unit);
 
 /// The length of a unit's queue `index`; -1 when it has no such queue.
 int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
