@@ -30,9 +30,9 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::InitErrorClear: p->mInitError = GetEmptyGUIStringData(); return 0;
     case Op::ParserNew: sPrvParser = new ConfigParser; return 0;
     case Op::ParserWarningsAsErrors: sPrvParser->SetWarningsAsErrors(true); return 0;
-    case Op::ParserOpenDefault: return WonGuard([&] { return sPrvParser->OpenFile(WONAPICore::GetDefaultFileDirectory() + LobbyConfig::mDefaultFileName); });
+    case Op::ParserOpenDefault: return WON_GUARDED(sPrvParser->OpenFile(WONAPICore::GetDefaultFileDirectory() + LobbyConfig::mDefaultFileName));
     case Op::ErrorNotFound: p->mInitError = GUIString("Couldn't find " + LobbyConfig::mDefaultFileName); return 0;
-    case Op::ParseTopLevel: return WonGuard([&] { return p->mConfig->ParseTopLevel(*sPrvParser, NULL); });
+    case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
     case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
     case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
     case Op::LobbyPortFromConfig: p->mLobbyPort = p->mConfig->mLobbyPort; return 0;
@@ -43,10 +43,10 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::DefinesAtEnd: return (sPrvDefine == p->mConfig->mDefines.end()) ? 1 : 0;
     case Op::DefineAdd: sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false); return 0;
     case Op::DefineNext: ++sPrvDefine; return 0;
-    case Op::ReadMaster: return WonGuard([&] { return sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser); });
+    case Op::ReadMaster: return WON_GUARDED(sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser));
     case Op::ErrorFromConfig: p->mInitError = sPrvComponentConfig->mConfigError; return 0;
-    case Op::LogicMgrInit: return WonGuard([&] { return PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }); });
-    case Op::InitFuncRun: return WonGuard([&] { return PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }); });
+    case Op::LogicMgrInit: return WON_GUARDED(PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }));
+    case Op::InitFuncRun: return WON_GUARDED(PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }));
     case Op::CrcNew: sPrvCrc = CRC16(); return 0;
     case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
     case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;
@@ -190,6 +190,8 @@ template <class F> static intptr_t ReadOr(F f)
         return INTPTR_MIN;
     }
 }
+#define READ_OR(...) ReadOr([&] { return (intptr_t)(__VA_ARGS__); })
+#define READ_OR_V(...) ReadOr([&] { __VA_ARGS__; return (intptr_t)0; })
 static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonModelBufOp Op;
@@ -202,8 +204,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::BufData: return (intptr_t)(rb->data());
     case Op::BufLength: return (intptr_t)(rb->length());
     case Op::BufSetPos: rb->SetPos((int)b); return 0;
-    case Op::ReadShort: return ReadOr([&] { return (intptr_t)rb->ReadShort(); });
-    case Op::ReadBool: return ReadOr([&] { return (intptr_t)rb->ReadBool(); });
+    case Op::ReadShort: return READ_OR(rb->ReadShort());
+    case Op::ReadBool: return READ_OR(rb->ReadBool());
     case Op::WriteNew: return (intptr_t)(new WriteBuffer(0, true));
     case Op::WriteFree: delete wb; return 0;
     case Op::AppendBytes: wb->AppendBytes(reinterpret_cast<const void*>(b), (unsigned long)c); return 0;
@@ -229,8 +231,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::NameUtf16: SinkBytes(a, Utf16LE((std::wstring)g->GetName())); return 0;
     case Op::WriteSummaryHook: g->WriteSummaryHook(*wb); return 0;
     case Op::StoreSummary: g->M(LobbyMC::GameStoreSummary, a, b); return 0;
-    case Op::ReadSummaryHook: return ReadOr([&] { return (intptr_t)g->ReadSummaryHook(*rb); });
-    case Op::ReadDetailsHook: return ReadOr([&] { return (intptr_t)g->ReadDetailsHook(*rb); });
+    case Op::ReadSummaryHook: return READ_OR(g->ReadSummaryHook(*rb));
+    case Op::ReadDetailsHook: return READ_OR(g->ReadDetailsHook(*rb));
     case Op::SetHaveDetails: g->MSet(LobbyMF::GameHaveDetails, true); return 0;
     case Op::Ping: return (intptr_t)(g->GetPing());
     case Op::JoinRequestHook: g->GetJoinGameRequestHook(*wb); return 0;
@@ -244,7 +246,7 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::PlayerCreate: return (intptr_t)(Held(LobbyPlayer::CreatePlayer()));
     case Op::ClientSetPlayer: reinterpret_cast<LobbyClient*>(a)->SetPlayer(reinterpret_cast<LobbyPlayer*>(b)); return 0;
     case Op::PlayerSetPing: reinterpret_cast<LobbyPlayer*>(a)->SetPing((unsigned short)b); return 0;
-    case Op::JoinRequestHookRead: return ReadOr([&] { return (intptr_t)g->HandleJoinGameRequestHook(*rb, reinterpret_cast<LobbyClient*>(b)); });
+    case Op::JoinRequestHookRead: return READ_OR(g->HandleJoinGameRequestHook(*rb, reinterpret_cast<LobbyClient*>(b)));
     case Op::SetNumPlayers: g->MSet(LobbyMF::GameNumPlayers, (long)a); return 0;
     case Op::IterNew: return (intptr_t)(new LobbyClientSetIterator(reinterpret_cast<LobbyClientList*>(a)));
     case Op::IterHasMore: return (reinterpret_cast<LobbyClientSetIterator*>(a)->HasMore()) ? 1 : 0;
@@ -256,7 +258,7 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::HandleJoinRequest: return (intptr_t)(g->HandleJoinRequest(*rb, reinterpret_cast<LobbyClient*>(b), *reinterpret_cast<WriteBuffer*>(c)));
     case Op::FindClient: return (intptr_t)(g->FindClient((unsigned short)a));
     case Op::PlayerReadFrom: return (reinterpret_cast<LobbyPlayer*>(a)->ReadFromBuffer(*reinterpret_cast<ReadBuffer*>(b))) ? 1 : 0;
-    case Op::JoinReplyHookRead: return ReadOr([&] { g->HandleJoinGameReplyHook(*rb); return (intptr_t)0; });
+    case Op::JoinReplyHookRead: return READ_OR_V(g->HandleJoinGameReplyHook(*rb));
     case Op::StatusSuccess: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_Success_String)));
     case Op::StatusGameFull: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_GameFull_String)));
     case Op::StatusGameInProgress: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_GameInProgress_String)));
@@ -266,7 +268,7 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::StatusInvalidPassword: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_InvalidPassword_String)));
     case Op::StatusDuplicateName: return (intptr_t)(HeldText(LOBBY_STRING(LobbyGameStatus_DuplicateName_String)));
     case Op::StatusHook: return (intptr_t)(HeldText(g->GetStatusStringHook((short)a)));
-    case Op::PlayerReadData: return ReadOr([&] { return (intptr_t)pl->ReadData(*rb); });
+    case Op::PlayerReadData: return READ_OR(pl->ReadData(*rb));
     case Op::SelfSetPing: pl->SetPing((unsigned short)a); return 0;
     case Op::SelfSetReady: pl->SetReady(a != 0); return 0;
     case Op::PlayerPing: return (intptr_t)(pl->GetPing());
@@ -339,7 +341,7 @@ static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intp
     case Op::DefineReadValue: ((StringParser*)a)->ReadString(sConfValue, false); return 0;
     case Op::DefineNameEmpty: return (sConfName.empty()) ? 1 : 0;
     case Op::DefineStore: c->mDefines[sConfName] = sConfValue; return 0;
-    case Op::BaseHandleValue: return WonGuard([&] { return c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc); });
+    case Op::BaseHandleValue: return WON_GUARDED(c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc));
     }
     return 0;
 }
@@ -351,18 +353,18 @@ static intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, int
 {
     typedef EeWonLobbyCfgRdOp Op;
     switch (inOp) {
-    case Op::ReadString: return WonGuard([&] { return (intptr_t)(Held(c->ReadString(false))); });
-    case Op::ReadColor: return WonGuard([&] { return (intptr_t)(c->ReadColor()); });
-    case Op::ReadInt: return WonGuard([&] { return (intptr_t)(c->ReadInt()); });
-    case Op::EnsureComma: return WonGuardV([&] { c->EnsureComma(); });
-    case Op::EndOfString: return WonGuard([&] { return (intptr_t)(c->EndOfString()); });
-    case Op::FindNamed: return WonGuard([&] { return (intptr_t)(c->Fn386860(std::string((const char*)a))); });
-    case Op::FindNamedText: return WonGuard([&] { return (intptr_t)(c->Fn386860((std::string)Txt(a))); });
+    case Op::ReadString: return WON_GUARDED(Held(c->ReadString(false)));
+    case Op::ReadColor: return WON_GUARDED(c->ReadColor());
+    case Op::ReadInt: return WON_GUARDED(c->ReadInt());
+    case Op::EnsureComma: return WON_GUARDED_V(c->EnsureComma());
+    case Op::EndOfString: return WON_GUARDED(c->EndOfString());
+    case Op::FindNamed: return WON_GUARDED(c->Fn386860(std::string((const char*)a)));
+    case Op::FindNamedText: return WON_GUARDED(c->Fn386860((std::string)Txt(a)));
     case Op::TextRelease: ((GUIStringData*)a)->Release(); return 0;
     case Op::TextNameIndex: return (intptr_t)(ee_won_gui_cfg_name((int)b, ((GUIStringData*)a)->mText, ((GUIStringData*)a)->mLength, sizeof(wchar_t)));
     case Op::TextIsNoCase: return (Txt(a).CompareNoCase((const char*)b, 0) == 0) ? 1 : 0;
-    case Op::Throw: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a)); });
-    case Op::ThrowWithText: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)); });
+    case Op::Throw: return WON_GUARDED_V(throw ConfigObjectException(std::string((const char*)a)));
+    case Op::ThrowWithText: return WON_GUARDED_V(throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)));
     }
     return 0;
 }
@@ -375,15 +377,15 @@ static intptr_t CfgRdHostNet(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, in
     UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
     ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
     switch (inOp) {
-    case Op::ChatBase: return WonGuard([&] { return (intptr_t)(cc_->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ChatBase: return WON_GUARDED(cc_->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::ChatSetField: cc_->mChatCtrl->SetField((int)a, b); return 0;
-    case Op::RoomBase: return WonGuard([&] { return (intptr_t)(rl->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::RoomSetPrefixRead: return WonGuardV([&] { rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))); });
+    case Op::RoomBase: return WON_GUARDED(rl->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::RoomSetPrefixRead: return WON_GUARDED_V(rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))));
     case Op::RoomSetField: rl->mRoomLabel->SetField((int)a, b); return 0;
-    case Op::RoomSetFieldBoolRead: return WonGuardV([&] { rl->mRoomLabel->SetField((int)a, c->ReadBool()); });
-    case Op::UserListBase: return WonGuard([&] { return (intptr_t)(ul->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::ServerBase: return WonGuard([&] { return (intptr_t)(sl->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::ServerNamedBase: return WonGuard([&] { return (intptr_t)(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b)); });
+    case Op::RoomSetFieldBoolRead: return WON_GUARDED_V(rl->mRoomLabel->SetField((int)a, c->ReadBool()));
+    case Op::UserListBase: return WON_GUARDED(ul->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::ServerBase: return WON_GUARDED(sl->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::ServerNamedBase: return WON_GUARDED(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b));
     case Op::ServerCfg: return (intptr_t)(sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b));
     case Op::ServerPushColumn: return (intptr_t)(sl->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
     case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(sl->mServerList, (std::string)Txt(a)));
@@ -391,7 +393,7 @@ static intptr_t CfgRdHostNet(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, in
     case Op::AsMultiList: return (intptr_t)(dynamic_cast<MultiListArea*>((Component*)a));
     case Op::ServerHeaderFrom: return (intptr_t)(sl->mHeader = dynamic_cast<MultiListHeader*>((Component*)a));
     case Op::ServerHeaderIsNull: return (sl->mHeader == NULL) ? 1 : 0;
-    case Op::ReadCombo: return WonGuard([&] { return (intptr_t)(SafeConfigGetComponent<ComboBox*>(c->ReadComponent(), "ComboBox")); });
+    case Op::ReadCombo: return WON_GUARDED(SafeConfigGetComponent<ComboBox*>(c->ReadComponent(), "ComboBox"));
     case Op::ServerColumnsInc: ((MultiListArea*)a)->SetNumColumns(++sl->mNumColumns); return 0;
     case Op::ServerNumColumns: return (intptr_t)(sl->mNumColumns);
     case Op::ListDynamicColumn: ((MultiListArea*)a)->SetDynamicSizeColumn((int)b); return 0;
@@ -410,12 +412,12 @@ static intptr_t CfgRdHostCtl(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, in
     GameBrowserCtrlConfig* gb = static_cast<GameBrowserCtrlConfig*>(c);
     GameUserListCtrlConfig* gu = static_cast<GameUserListCtrlConfig*>(c);
     switch (inOp) {
-    case Op::BrowserBase: return WonGuard([&] { return (intptr_t)(gb->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::BrowserPathRead: return WonGuardV([&] { sCfgRdPath = (std::string)c->ReadString(false); });
-    case Op::BrowserPathIsFile: return WonGuard([&] { return (intptr_t)(URL(sCfgRdPath).GetType() == URLType_File); });
-    case Op::BrowserPathResolve: return WonGuardV([&] { sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath); });
-    case Op::BrowserSetHome: return WonGuardV([&] { gb->mBrowser->SetHomeLocation(sCfgRdPath); });
-    case Op::GameUserListBase: return WonGuard([&] { return (intptr_t)(gu->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::BrowserBase: return WON_GUARDED(gb->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
+    case Op::BrowserPathIsFile: return WON_GUARDED(URL(sCfgRdPath).GetType() == URLType_File);
+    case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
+    case Op::BrowserSetHome: return WON_GUARDED_V(gb->mBrowser->SetHomeLocation(sCfgRdPath));
+    case Op::GameUserListBase: return WON_GUARDED(gu->ContainerConfig::Virtual24(*(const std::string*)a));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }
@@ -428,13 +430,13 @@ static intptr_t CfgRdHostCross(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, 
     CrossPromotionButtonConfig* cp = static_cast<CrossPromotionButtonConfig*>(c);
     ImageTextButtonConfig* it = static_cast<ImageTextButtonConfig*>(c);
     switch (inOp) {
-    case Op::CrossBase: return WonGuard([&] { return (intptr_t)(cp->ComponentConfig::Virtual24(*(const std::string*)a)); });
-    case Op::CrossDefaultImageRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)); });
-    case Op::CrossDefaultBrowseRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)); });
-    case Op::ImageTextBase: return WonGuard([&] { return (intptr_t)(it->ComponentConfig::Virtual24(*(const std::string*)a)); });
-    case Op::ImageTextFontRead: return WonGuardV([&] { it->mImageTextButton->mFont = c->ReadFont(); });
-    case Op::ImageTextTextRead: return WonGuardV([&] { it->mImageTextButton->mText = c->ReadString(false); });
-    case Op::ImageTextBrowseRead: return WonGuardV([&] { it->mImageTextButton->mBrowse = c->ReadString(false); });
+    case Op::CrossBase: return WON_GUARDED(cp->ComponentConfig::Virtual24(*(const std::string*)a));
+    case Op::CrossDefaultImageRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)));
+    case Op::CrossDefaultBrowseRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)));
+    case Op::ImageTextBase: return WON_GUARDED(it->ComponentConfig::Virtual24(*(const std::string*)a));
+    case Op::ImageTextFontRead: return WON_GUARDED_V(it->mImageTextButton->mFont = c->ReadFont());
+    case Op::ImageTextTextRead: return WON_GUARDED_V(it->mImageTextButton->mText = c->ReadString(false));
+    case Op::ImageTextBrowseRead: return WON_GUARDED_V(it->mImageTextButton->mBrowse = c->ReadString(false));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }
@@ -447,8 +449,8 @@ static intptr_t CfgRdHostCredits(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a
     ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
     CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
     switch (inOp) {
-    case Op::CreditsBase: return WonGuard([&] { return (intptr_t)(cr->ContainerConfig::Virtual24(*(const std::string*)a)); });
-    case Op::CreditsAddLine: return WonGuard([&] { return (intptr_t)(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)); });
+    case Op::CreditsBase: return WON_GUARDED(cr->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }
