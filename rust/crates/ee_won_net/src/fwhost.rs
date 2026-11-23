@@ -27,6 +27,9 @@ pub const EE_WON_FWOP_WAIT_FOR_CONNECT: i32 = 3;
 pub const EE_WON_FWOP_HAS_PUBLIC: i32 = 4;
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 pub const EE_WON_FWOP_PUBLIC_HOST: i32 = 5;
+/// the public address with port 0, six bytes, none without one (`ee_won_hostop_bytes`; DetectFirewallOp's
+/// GetPublicAddr, R6 WON lobby and network round 35: `RustServerOp::AddrOf`)
+pub const EE_WON_FWOP_PUBLIC_ADDR: i32 = 6;
 
 /// `ServerRequestOp::RecvServerDatagram`'s receive id.
 const RECV_ID: i32 = 1000;
@@ -209,8 +212,11 @@ impl HostRequest for FwReq {
             _ => 0,
         }
     }
-    fn bytes(&self, _which: i32, _index: i64) -> Option<Vec<u8>> {
-        None
+    fn bytes(&self, which: i32, _index: i64) -> Option<Vec<u8>> {
+        match which {
+            EE_WON_FWOP_PUBLIC_ADDR => self.0.public.map(|h| crate::ipaddr::Addr::from_host(h as u32, 0).six_bytes().to_vec()),
+            _ => None,
+        }
     }
     fn set(&mut self, _c: &Calls, which: i32, value: &SetValue) {
         match which {
@@ -234,4 +240,25 @@ impl HostRequest for FwReq {
 #[no_mangle]
 pub extern "C" fn ee_won_hostop_firewall() -> *mut EeWonHostOp {
     EeWonHostOp::boxed(ReqPlan::new(Box::new(FwReq(FirewallOp::new()))))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_public_address_is_six_bytes_of_the_host_with_port_0() {
+        let mut r = FwReq(FirewallOp::new());
+        assert_eq!(r.bytes(EE_WON_FWOP_PUBLIC_ADDR, 0), None);
+        assert_eq!(r.num(EE_WON_FWOP_HAS_PUBLIC, 0), 0);
+        for h in [0x0a00_0001_i32, -1, i32::MIN, 0x7f00_0001] {
+            r.0.public = Some(h);
+            let six = r.bytes(EE_WON_FWOP_PUBLIC_ADDR, 0).expect("an address");
+            // GetPublicAddr's Fn2B2C20(host, 0), as the six bytes AddrOf reads back
+            let a = crate::ipaddr::Addr::from_six_bytes(six.as_slice().try_into().expect("six"));
+            assert_eq!((a.host(), u16::from_be(a.port)), (h as u32, 0));
+            assert_eq!(r.num(EE_WON_FWOP_PUBLIC_HOST, 0), i64::from(h));
+        }
+        assert_eq!(r.bytes(EE_WON_FWOP_PUBLIC_HOST, 0), None);
+    }
 }

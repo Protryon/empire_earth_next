@@ -7,7 +7,8 @@
 // statements and through the game's classes, and compares what each side's objects then hold. The Internet code
 // none of the live gates reach is proven here (owner rule "WON goldens by reach").
 //
-// EE_W33_MUTATE=n changes the original side in one way (1..13, the Mutate(n) calls below): the run must then report
+// EE_W33_MUTATE=n changes the original side in one way (1..14, the Mutate(n) calls below; 14: R6 WON lobby and
+// network round 35's DetectFirewallOp maker): the run must then report
 // mismatches. The exit code is the number of mismatches.
 #include <windows.h>
 #include <stdio.h>
@@ -421,7 +422,7 @@ static EeWonReqOp* RandomRequest(int k)
 static void ServerOpPhase(int inCases)
 {
     for (int q = 0; q < inCases; q++) {
-        int kind = (int)R(9);
+        int kind = (int)R(10);
         int req = (int)R(3);
         unsigned seed = sRand;
         std::string states[2];
@@ -501,6 +502,12 @@ static void ServerOpPhase(int inCases)
                     op->SetAuthType(AUTH_TYPE_NONE, auth);
                     op->SetSocket(nullContext ? NULL : s.mSocket);
                 } else op = new PeerAuthServerOp(auth, nullContext ? NULL : s.mSocket);
+                break;
+            case 8: // DetectFirewallOp's constructor (R6 WON lobby and network round 35: RustServerOp::NewFirewall)
+                if (orig) {
+                    op = new RustServerOp(ee_won_hostop_firewall());
+                    op->Set(EE_WON_REQHOST_CONTEXT, Mutate(14) ? NULL : static_cast<RefCount*>(ctx));
+                } else op = RustServerOp::NewFirewall(ctx);
                 break;
             default: // GetCertOp's constructor (an auth context of its own servers)
                 if (orig) {

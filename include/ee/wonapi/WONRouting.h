@@ -820,6 +820,10 @@ protected:
 class RustServerOp : public ServerOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
+    RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj); // and the init's members (hostbase.rs)
+    // DetectFirewallOp(servers) (fwhost.rs): the public address is AddrOf(EE_WON_FWOP_PUBLIC_ADDR), port 0
+    static RustServerOp* NewFirewall(ServerContext* inContext)
+    { return new RustServerOp(ee_won_hostop_firewall(), EeWonHostInit::Firewall, inContext); }
     // ServerRequestOp(context or address) with a Rust op derived from it (ee_won_reqop_* constructors), taken
     static RustServerOp* NewRequest(EeWonReqOp* inOp, ServerContext* inContext);
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
@@ -974,16 +978,9 @@ public:
 // forms are ee_won patch.rs, the ops that read them verop.rs; no game code made the C++ classes, deleted in WON
 // Internet round 21 (their statements are tests/won/won_patch_msg.h, over the drivers' stand-ins)
 // CheckValidVersionOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs)
-// DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
-// the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.
-class DetectFirewallOp : public RustServerOp {
-public:
-    explicit DetectFirewallOp(ServerContext* inContext); //2cf600
-    void SetListenPort(unsigned short inPort) { this->SetNum(EE_WON_FWOP_LISTEN_PORT, inPort); }
-    void SetDoListen(bool inDoListen) { this->SetNum(EE_WON_FWOP_DO_LISTEN, inDoListen); }
-    void SetWaitForConnect(bool inWait) { this->SetNum(EE_WON_FWOP_WAIT_FOR_CONNECT, inWait); }
-    IPAddr GetPublicAddr() const; // a copy (the original returned a reference to the member)
-};
+// DetectFirewallOp (2cf600) is a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step):
+// RustServerOp::NewFirewall, its setters and public address by EE_WON_FWOP_* number (its C++ class went in R6 WON
+// lobby and network round 35)
 
 // RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won_net/src/adminop.rs)
 
