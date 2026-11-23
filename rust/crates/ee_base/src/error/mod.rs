@@ -295,10 +295,9 @@ mod tests {
 
     #[test]
     fn verify_calls_the_hook_and_returns() {
-        use std::sync::atomic::AtomicU32;
-        static SEEN: AtomicU32 = AtomicU32::new(0);
+        static SEEN: AtomicU64 = AtomicU64::new(0);
         unsafe extern "C" fn hook(_file: *const c_char, line: c_ulong, _expression: *const c_char) {
-            SEEN.store(line as u32, Ordering::Relaxed);
+            SEEN.store(u64::from(line), Ordering::Relaxed);
         }
         ee_error_set_verify_hook(Some(hook));
         // SAFETY: C strings

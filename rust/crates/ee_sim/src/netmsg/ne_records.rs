@@ -239,7 +239,9 @@ pub extern "C" fn ee_netmsg_register_builder(
 pub unsafe extern "C" fn ee_netmsg_header_slots(ty: *mut u8, out: *mut crate::netmsg::ffi::EeNetMsgSlot) {
     for (k, member) in [3usize, 0, 1, 2].into_iter().enumerate() {
         // SAFETY: the function's contract
-        unsafe { *out.add(k) = crate::netmsg::ffi::EeNetMsgSlot { data: ty.add(member), size: 1, count: 0, offset: 0 } };
+        unsafe {
+            *out.add(k) = crate::netmsg::ffi::EeNetMsgSlot { data: ty.add(member), size: 1, count: 0, offset: 0 }
+        };
     }
 }
 
