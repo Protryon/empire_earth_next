@@ -14,7 +14,6 @@
 #include "rust/ui/comboobj.h"
 #include "rust/ui/lle_combo.h"
 
-class UIButton;
 class UIEditBox;
 class UITextLabel;
 
@@ -25,33 +24,22 @@ public:
         return ee_ui_combo_call(this->mRust, inCall, a, b, f);
     }
     UIControl* PartOf(int inPart) const { return reinterpret_cast<UIControl*>(this->Call(EeUiComboCall::Part, inPart)); }
-    struct Rust;                            // the Rust object's host (UIComboBox.cpp; a member: the class's friendships)
     UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont, const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness) : UIControl(kControlTypeComboBox, inId, inRectangle, inForm, inIndex, 0) { ee_ui_combo_construct(this, inTextBoxType, &inData, inFont, reinterpret_cast<const EeUiRect*>(&inRectangle), inMaxListBoxHeight, inForm, inMaxChars, inBorderThickness); }
-    virtual ~UIComboBox();
-    void AppendLine(UWideString& inLine);
-#ifdef __clang__
-    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
-    // forward to them (clang build only; remove once the parameters themselves are const).
-    void AppendLine(const UWideString& inLine) { AppendLine(const_cast<UWideString&>(inLine)); }
-#endif
-    void AppendStringArray(std::vector<UWideString>& inLines);
+    virtual ~UIComboBox() { ee_ui_combo_free(this->mRust); }
+    // Appends lines to the list, reopening an open list so it resizes
+    void AppendLine(const UWideString& inLine) { ee_ui_combo_append_line(this->mRust, this->GetList()->mRust, &inLine); }
+    void AppendStringArray(std::vector<UWideString>& inLines)
+    {
+        ee_ui_combo_append_lines(this->mRust, this->GetList()->mRust, inLines.data(), inLines.size(), sizeof(UWideString));
+    }
     void ChangeWidth(unsigned long inWidth) { this->Call(EeUiComboCall::ChangeWidth, inWidth); }
     virtual long CopyData() { return (long)this->Call(EeUiComboCall::CopyData); }
     void DeleteAllEntries() { this->Call(EeUiComboCall::DeleteAllEntries); }
     void DeleteLine(unsigned long inLine) { this->Call(EeUiComboCall::DeleteLine, inLine); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiComboCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiComboCall::DrawText); }
-    long GetCurrentSelection(unsigned long& outSelection) const
-    {
-        outSelection = this->GetSelectionIndex();
-        return outSelection != -1 ? kErrorOK : kErrorFailed;
-    }
-    GEText* GetGEText() const
-    {
-        if (this->GetTextLabel())
-            return this->GetTextLabel()->GetGEText();
-        return reinterpret_cast<UIEditBox*>(this->PartOf(3))->GetGEText();
-    }
+    long GetCurrentSelection(unsigned long& outSelection) const { return ee_ui_combo_current_selection(this->mRust, &outSelection); }
+    GEText* GetGEText() const { return static_cast<GEText*>(ee_ui_combo_ge_text(this->mRust)); }   // the label's or edit box's
     const UILBString* GetListBox() const { return this->GetList(); }
     GERhombus* GetSelectedBackground() const { return this->GetList()->GetSelectedBackground(); }
 #ifdef LLE_EXE_HEADERS   // the game sets the label's text (EESEInstructions::Virtual14 0x171ce3 calls

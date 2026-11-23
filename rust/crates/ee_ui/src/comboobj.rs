@@ -699,6 +699,81 @@ pub unsafe extern "C" fn ee_ui_combo_call(
     unsafe { (*combo).call(call, a, b, f) }
 }
 
+/// `AppendLine(line)`: the combo box dirty, the line appended to its list (`list`, the list's Rust object), an open
+/// list reopened so it resizes.
+///
+/// # Safety
+/// `combo` and `list` are live; `line` is a live `UWideString`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_combo_append_line(
+    combo: *const EeUiCombo,
+    list: *const crate::listobj::EeUiList,
+    line: *const c_void,
+) {
+    // SAFETY: the contract
+    let c = unsafe { &*combo };
+    Bridge(c).act(EeUiComboAct::SetDirty, 0, 0);
+    // SAFETY: the contract
+    unsafe { (*list).append(line) };
+    // SAFETY: live
+    unsafe { c.call(EeUiComboCall::Reopen, 0, 0, core::ptr::null_mut()) };
+}
+
+/// `AppendStringArray(lines)`: as [`ee_ui_combo_append_line`] with the `count` lines at `data`, `stride` bytes apart.
+///
+/// # Safety
+/// `combo` and `list` are live; `data` holds `count` live `UWideString`s.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_combo_append_lines(
+    combo: *const EeUiCombo,
+    list: *const crate::listobj::EeUiList,
+    data: *const c_void,
+    count: usize,
+    stride: usize,
+) {
+    // SAFETY: the contract
+    let c = unsafe { &*combo };
+    Bridge(c).act(EeUiComboAct::SetDirty, 0, 0);
+    // SAFETY: the contract
+    unsafe { (*list).append_n(data, count, stride) };
+    // SAFETY: live
+    unsafe { c.call(EeUiComboCall::Reopen, 0, 0, core::ptr::null_mut()) };
+}
+
+/// `GetCurrentSelection(out)`: the selection in `out`; OK unless it is -1 (kErrorFailed).
+///
+/// # Safety
+/// `combo` is live; `out` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_combo_current_selection(combo: *const EeUiCombo, out: *mut c_ulong) -> c_long {
+    // SAFETY: the contract
+    let s = unsafe { (*combo).call(EeUiComboCall::Selection, 0, 0, core::ptr::null_mut()) } as c_ulong;
+    // SAFETY: the contract
+    unsafe { *out = s };
+    if s != c_ulong::MAX {
+        0
+    } else {
+        9
+    }
+}
+
+/// `GetGEText()`: the label's text (a label combo box) or the edit box's.
+///
+/// # Safety
+/// `combo` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_combo_ge_text(combo: *const EeUiCombo) -> *mut c_void {
+    // SAFETY: the contract
+    let part =
+        |p: isize| unsafe { (*combo).call(EeUiComboCall::Part, p, 0, core::ptr::null_mut()) } as crate::direct::Cpp;
+    let label = part(4);
+    if !label.is_null() {
+        return crate::direct::label_call(label, crate::labelobj::EeUiLabelCall::Text, 0, 0).unwrap_or(0)
+            as *mut c_void;
+    }
+    crate::direct::edit_call(part(3), crate::editobj::EeUiEditCall::Text, 0, 0).unwrap_or(0) as *mut c_void
+}
+
 /// The constructor's drop button ([`combo::drop_rect`]).
 #[no_mangle]
 pub extern "C" fn ee_ui_combo_drop_rect(control: UiRect, given: UiRect) -> UiRect {

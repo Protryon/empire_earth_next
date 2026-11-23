@@ -322,6 +322,14 @@ tables! {
         VirtSetLocation => v ee_uicpp_label_virt_set_location,
         VirtSetRectangle => v ee_uicpp_label_virt_set_rectangle,
     }
+    /// the combo box's calls out (its queries and actions one shim each: lle_hosts.rs combo_query, combo_act)
+    combo {
+        ComboQuery => x combo_query,
+        ComboAct => x combo_act,
+        RhombusCreate => r ee_uicpp_combo_rhombus_create,
+        RhombusDelete => v ee_uicpp_combo_rhombus_delete,
+        DrawCountDecrement => v ee_uicpp_combo_draw_count_decrement,
+    }
     /// the list boxes' ops that do not depend on T (the polls, the rhombi, the line, the scroll bar, the keys)
     list {
         EditKey => x ui_key,

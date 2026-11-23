@@ -138,6 +138,129 @@ unsafe fn bgt_make(o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: 
     }
 }
 
+/// The combo box's `ComboQuery` (`a`: the query in the top 8 bits, its argument below) and `ComboAct` (`a` the
+/// action, `b`, `c`, `d`, `f` its arguments): one shim each; 0 for one that has none.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn combo_query(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract (a query's argument goes in a)
+    unsafe { combo_shim(combo_query_shim(a >> 24), o, a & 0xff_ffff, b, c, d, f) }
+}
+
+/// See [`combo_query`].
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    use crate::comboobj::EeUiComboAct as A;
+    let shim = match a {
+        x if x == A::ListChangeSelection as isize => V(ee_uicpp_combo_a_list_change_selection),
+        x if x == A::ListInsertLine as isize => V(ee_uicpp_combo_a_list_insert_line),
+        x if x == A::ListDeleteLine as isize => V(ee_uicpp_combo_a_list_delete_line),
+        x if x == A::ListDeleteAll as isize => V(ee_uicpp_combo_a_list_delete_all),
+        x if x == A::ListChangeWidth as isize => V(ee_uicpp_combo_a_list_change_width),
+        x if x == A::PartMouseDown as isize => R(ee_uicpp_combo_a_part_mouse_down),
+        x if x == A::PartMouseUp as isize => R(ee_uicpp_combo_a_part_mouse_up),
+        x if x == A::PartMouseMove as isize => R(ee_uicpp_combo_a_part_mouse_move),
+        x if x == A::ListWheel as isize => R(ee_uicpp_combo_a_list_wheel),
+        x if x == A::PartUpdateKeyboard as isize => R(ee_uicpp_combo_a_part_update_keyboard),
+        x if x == A::PartTranslatedKey as isize => R(ee_uicpp_combo_a_part_translated_key),
+        x if x == A::PartSetRectangle as isize => V(ee_uicpp_combo_a_part_set_rectangle),
+        x if x == A::PartSetLocation as isize => V(ee_uicpp_combo_a_part_set_location),
+        x if x == A::PartCopyData as isize => R(ee_uicpp_combo_a_part_copy_data),
+        x if x == A::BaseCopyData as isize => R(ee_uicpp_combo_a_base_copy_data),
+        x if x == A::SetPopup as isize => V(ee_uicpp_combo_a_set_popup),
+        x if x == A::SetDirty as isize => V(ee_uicpp_combo_a_set_dirty),
+        x if x == A::SetRectangle as isize => V(ee_uicpp_combo_a_set_rectangle),
+        x if x == A::BaseSetRectangle as isize => V(ee_uicpp_combo_a_base_set_rectangle),
+        x if x == A::BaseSetLocation as isize => V(ee_uicpp_combo_a_base_set_location),
+        x if x == A::SetAlwaysDirty as isize => V(ee_uicpp_combo_a_set_always_dirty),
+        x if x == A::Fire as isize => V(ee_uicpp_combo_a_fire),
+        x if x == A::CaptureMouse as isize => V(ee_uicpp_combo_a_capture_mouse),
+        x if x == A::CaptureKeyboard as isize => V(ee_uicpp_combo_a_capture_keyboard),
+        x if x == A::ReleaseMouse as isize => V(ee_uicpp_combo_a_release_mouse),
+        x if x == A::ReleaseKeyboard as isize => V(ee_uicpp_combo_a_release_keyboard),
+        x if x == A::OpenList as isize => V(ee_uicpp_combo_a_open_list),
+        x if x == A::CloseList as isize => V(ee_uicpp_combo_a_close_list),
+        x if x == A::AddString as isize => R(ee_uicpp_combo_a_add_string),
+        x if x == A::ChangeSelection as isize => V(ee_uicpp_combo_a_change_selection),
+        _ => None,
+    };
+    // SAFETY: the contract
+    unsafe { combo_shim(shim, o, a, b, c, d, f) }
+}
+
+/// The shim of a combo box query.
+#[cfg(not(any(test, feature = "no_cpp")))]
+fn combo_query_shim(q: isize) -> Option<ComboShim> {
+    use crate::comboobj::EeUiComboQuery as Q;
+    match q {
+        x if x == Q::RectOf as isize => V(ee_uicpp_combo_q_rect_of),
+        x if x == Q::TextBoxBorder as isize => R(ee_uicpp_combo_q_text_box_border),
+        x if x == Q::LineCount as isize => R(ee_uicpp_combo_q_line_count),
+        x if x == Q::Line as isize => R(ee_uicpp_combo_q_line),
+        x if x == Q::LineHeight as isize => R(ee_uicpp_combo_q_line_height),
+        x if x == Q::ListBorder as isize => R(ee_uicpp_combo_q_list_border),
+        x if x == Q::ListScrollBarCaptured as isize => R(ee_uicpp_combo_q_list_scroll_bar_captured),
+        x if x == Q::WindowHeight as isize => R(ee_uicpp_combo_q_window_height),
+        x if x == Q::EditText as isize => R(ee_uicpp_combo_q_edit_text),
+        x if x == Q::TabbingOn as isize => R(ee_uicpp_combo_q_tabbing_on),
+        x if x == Q::TabStop as isize => R(ee_uicpp_combo_q_tab_stop),
+        x if x == Q::HasMouseCapture as isize => R(ee_uicpp_combo_q_has_mouse_capture),
+        _ => None,
+    }
+}
+
+/// A combo box shim: a number's or a void one.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[derive(Clone, Copy)]
+enum ComboShim {
+    R(unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize),
+    V(unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32)),
+}
+
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[allow(non_snake_case)]
+fn R(f: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize) -> Option<ComboShim> {
+    Some(ComboShim::R(f))
+}
+
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[allow(non_snake_case)]
+fn V(f: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32)) -> Option<ComboShim> {
+    Some(ComboShim::V(f))
+}
+
+/// Calls the shim (0 for none or a void one).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn combo_shim(
+    s: Option<ComboShim>,
+    o: *mut c_void,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        match s {
+            Some(ComboShim::R(r)) => r(o, a, b, c, d, f),
+            Some(ComboShim::V(v)) => {
+                v(o, a, b, c, d, f);
+                0
+            }
+            None => 0,
+        }
+    }
+}
+
 /// The manager's form calls (`b`: managerobj.rs F_OPEN .. F_DELETE) -> the call's result (0 for the void ones).
 ///
 /// # Safety
@@ -530,7 +653,7 @@ pub unsafe extern "C" fn ee_ui_background_full_host(
     unsafe { chain(&[background], o, op, a, b, c, d, f) }
 }
 
-/// The hosts still C++ (`UIComboBox::Rust::Op`, `UIControlsTableHost::Op`): each a table of every op.
+/// The host still C++ (`UIControlsTableHost::Op`): a table of every op.
 macro_rules! cpp_hosts {
     ($( $(#[$m:meta])* $name:ident = $sym:ident; )*) => {$(
         $(#[$m])*
@@ -554,8 +677,6 @@ macro_rules! cpp_hosts {
 }
 
 cpp_hosts! {
-    /// The combo box's.
-    combo = ee_uicpp_combo_host;
     /// The controls table's.
     table = ee_uicpp_table_host;
 }
