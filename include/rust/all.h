@@ -114,6 +114,7 @@
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/cfgkind.h"
+#include "rust/won_gui/cfgload.h"
 #include "rust/won_gui/cfgset.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/comboobj.h"

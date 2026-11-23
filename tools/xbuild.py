@@ -649,6 +649,9 @@ WON_TESTS = {
     "won_platwin_test": [],
     # the GUI hosts' cases R6 WON round 33 composed in Rust (guisplit.rs) against the deleted cases over a stand-in world
     "won_guisplit33_test": [],
+    # ComponentConfig::ReadConfig_Unsafe in Rust (R6 WON round 34: cfgload.rs) against its original body over a stand-in
+    # world: the failure paths, the exceptions and the parse-time report no LAN game reaches; each host op mutated
+    "won_cfgload34_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
