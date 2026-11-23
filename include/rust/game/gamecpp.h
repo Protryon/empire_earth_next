@@ -542,9 +542,6 @@ enum class EeGameCpp : uint32_t {
   CalDelete,
   CalEffectGenerationZero,
   CalNew,
-  CalRunStart,
-  CalRunStop,
-  CalRunUpdate,
   CalSetCasterRaw,
   CalSetClassRaw,
   CalSetSecondaryRaw,
@@ -2387,7 +2384,6 @@ enum class EeGameCpp : uint32_t {
   SsRegNameEq,
   SsRegNameFromMsg,
   SsRegNameIcmpPlayer,
-  SsSendResponse,
   SsSendLocalResponse,
   SsSendFullOptions,
   SsNewPlayerInfo,
@@ -2398,7 +2394,6 @@ enum class EeGameCpp : uint32_t {
   SsNewRecord2,
   SsNewRecord3,
   SsNewRecord4,
-  SsSendPingStat,
   SsNewString,
   SsDeleteString,
   SsClientAddress,
@@ -2422,7 +2417,6 @@ enum class EeGameCpp : uint32_t {
   SsMsgLogResponse,
   SsBroadcast,
   SsSendToAll,
-  SsTakeConnectionRequest,
   SsLobbyUpdatePlayer,
   SsNewRemovePlayer,
   SsNewBootClient,
@@ -3303,6 +3297,151 @@ enum class EeGameCpp : uint32_t {
   WsRecHuman,
   WsSetCurrentRecord,
   WsRecPlayTime,
+  C11NmSender,
+  C11NmPlayer,
+  C11NmCurrent,
+  C11NmGroup,
+  C11NmSavedGroup,
+  C11NmGroupCount,
+  C11NmGroupUnit,
+  C11NmGroupFirst,
+  C11NmGroupContains,
+  C11NmGroupAdd,
+  C11NmGroupClear,
+  C11NmUnit,
+  C11NmKill,
+  C11NmClassFact,
+  C11NmUnitHitPoints,
+  C11NmUnitType,
+  C11NmUnitCategory,
+  C11NmUnitMaxHitPoints,
+  C11NmUnitCanDisband,
+  C11NmUnitIsPacked,
+  C11NmUnitPackedClass,
+  C11NmUnitFlightTime,
+  C11NmUnitDeathSpawn,
+  C11NmUnitCanChangeBehavior,
+  C11NmUnitComplex,
+  C11NmUnitTileNode,
+  C11NmUnitOwner,
+  C11NmUnitLandBuilding,
+  C11NmUnitPaidFor,
+  C11NmUnitBuilt,
+  C11NmUnitCanDelete,
+  C11NmUnitTileX,
+  C11NmUnitTileY,
+  C11NmUnitDomains,
+  C11NmUnitNext,
+  C11NmUnitAsComplex,
+  C11NmUnitInSet,
+  C11NmPlayerObserver,
+  C11NmPlayerCivChosen,
+  C11NmPlayerSlot,
+  C11NmPlayerChatType,
+  C11NmPlayerEnemy,
+  C11NmPlayerSendsChat,
+  C11NmPlayerId,
+  C11NmPlayerResource,
+  C11NmPlayerFirstUnit,
+  C11NmPlayerTradePrice,
+  C11NmWorldNumPlayers,
+  C11NmWorldCurrentIndex,
+  C11NmWorldExecutingSelection,
+  C11NmWorldIsServer,
+  C11NmWorldHasCommunications,
+  C11NmWorldLocalSendSlot,
+  C11NmWorldStringLength,
+  C11NmWorldPlayback,
+  C11NmWorldCollisionSphereMode,
+  C11NmWorldLoadedHumans,
+  C11NmWorldLoadResponses,
+  C11NmWorldHumans,
+  C11NmMapType,
+  C11FarmKey,
+  C11MsgBuildVerify,
+  C11MsgNewRecord,
+  C11MsgBuildUndefined,
+  C11MsgCaptureImport,
+  C11UlongsNew,
+  C11UlongsDelete,
+  C11UlongsCount,
+  C11UlongsAt,
+  C11PickUnits,
+  C11CurrentPlayerId,
+  C11NewSelectRecord,
+  C11MsgListAssign,
+  C11MsgListData,
+  C11MsgListSize,
+  C11MsgSetRectangle,
+  C11SelectHookSet,
+  C11SelectHookCall,
+  C11LongsAssign,
+  C11CalHostNew,
+  C11CalHostDelete,
+  C11CalRectLoad,
+  C11CalRectSave,
+  C11CalTargetLoad,
+  C11CalTargetSave,
+  C11CalShakeLoad,
+  C11CalShakeSave,
+  C11CalGenerationLoad,
+  C11CalGenerationSave,
+  C11CalTargetId,
+  C11CalCasterId,
+  C11CalHandleRead,
+  C11CalHandleWrite,
+  C11CgInfect,
+  C11CgCure,
+  C11CgApply,
+  C11CgFunctorUpdate,
+  C11CgCanInfect,
+  C11CgUnit,
+  C11CgChecksum,
+  C11CgFunctor,
+  C11CgDump,
+  C11CgText,
+  C11CgCapture,
+  C11CgUnknown,
+  C11CgRandom,
+  C11CgDistance,
+  C11ClTail,
+  C11ClCreateLock,
+  C11ClStopThreads,
+  C11ClDestroyLock,
+  C11FrameNew,
+  C11FrameDelete,
+  C11FrameComms,
+  C11SvTail,
+  C11SvCreateSearchLock,
+  C11SvCreateFastLock,
+  C11SvCreateAttemptLock,
+  C11SvStopThreads,
+  C11SvDestroySearchLock,
+  C11SvDestroyFastLock,
+  C11SvDestroyAttemptLock,
+  C11SvMaxPlayers,
+  C11SvSendToSlot,
+  C11SvLobbySlot,
+  C11SvSendToErase,
+  C11SvUnregister,
+  C11SvNewResponse,
+  C11SvSendTo,
+  C11SvSendPlayerInfo,
+  C11SvPingStat,
+  C11SvXferStatus,
+  C11RequestFirewall,
+  C11RequestString,
+  C11RequestChecksum,
+  C11PlayerNew,
+  C11PlayerDelete,
+  C11PlayerFields,
+  C11PlayerNameCopy,
+  C11PlayerNameFromRequest,
+  C11OptionsReadLock,
+  C11OptionsReadUnlock,
+  C11OptionsPlayerFields,
+  C11WarningSound,
+  C11UiPost12,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -3322,6 +3461,14 @@ struct EeGamecppMrValue {
   const uint8_t *list;
   size_t list_count;
   size_t list_element;
+};
+
+/// A farm's sort key: built, paid for, its tile (EEMessage.cpp's `C11FarmKey` fills it in one statement).
+struct EeGamecppFarmKey {
+  bool built;
+  bool paid;
+  long tile_x;
+  long tile_y;
 };
 
 extern "C" {
@@ -5525,6 +5672,125 @@ void ee_gamecpp_env_set_enabled(void *manager, bool enabled);
 
 /// `DeleteStorms`: every storm released and deleted, the list emptied.
 void ee_gamecpp_env_delete_storms(void *manager);
+
+/// The host ee_sim's bodies call (`EeNetMsgHostFn`).
+///
+/// # Safety
+/// `c` is the body's live call; its objects are the world's.
+int64_t ee_gamecpp_netmsg_host(uint32_t op, void *c);
+
+/// GetSaveTextName: the answer as a C string (the thread's buffer, valid until its next call).
+///
+/// # Safety
+/// `name` is a C string.
+const char *ee_gamecpp_save_text_name(const char *name, unsigned long length, bool keep);
+
+/// EEMessage::BuildEEMessage: the game message object of a received buffer from its type byte (a record; NULL and
+/// an assert for an unknown type), then the capture's NMIM record (TEST ONLY).
+///
+/// # Safety
+/// `memory` is a received message buffer (its type at byte 1).
+void *ee_gamecpp_msg_build(void *memory);
+
+/// EENewSelectUnits: the local player's units of a type in the rectangle picked and stored compressed (the count,
+/// the blob), the rectangle and the type beside (members 3 and 4, off the wire); the UI fixture's hook sees the ids.
+///
+/// # Safety
+/// `rectangle` is a live GERectangle.
+void *ee_gamecpp_msg_select_units(const void *rectangle,
+                                  long unit_type,
+                                  uint8_t kind);
+
+/// EESelectUnitsIDs: a box selection's compact buffer decoded into unit ids, replacing the list (a C++
+/// `std::vector<long>`: each the 32-bit value, sign-extended on LP64).
+///
+/// # Safety
+/// `message` is a live record, `out` a live `std::vector<long>`.
+void ee_gamecpp_msg_select_ids(const void *message,
+                               void *out);
+
+/// The farm sorts' comparison of two complex units (the comparators' bodies).
+///
+/// # Safety
+/// `first` and `second` are live complex units.
+bool ee_gamecpp_farm_order(long cx, long cy, void *first, void *second, bool greater);
+
+/// The farm order of two keys (exported so that the header declares the key, which EEMessage.cpp's case fills).
+bool ee_gamecpp_farm_key_order(long cx,
+                               long cy,
+                               const EeGamecppFarmKey *a,
+                               const EeGamecppFarmKey *b,
+                               bool greater);
+
+/// EECalamity::Load (`loading`) or Save: the calamity's record read from or written to the saved game (the class by
+/// id; target and caster as ids, -1 if none); the first error.
+///
+/// # Safety
+/// `calamity` and `file` are live.
+long ee_gamecpp_calamity_io(void *calamity,
+                            void *file,
+                            bool loading);
+
+/// EEServer's constructor body: the members, the fast selection, the three locks (search, fast selection, attempt).
+void ee_gamecpp_server_init(void *server);
+
+/// EEServer's destructor body: the threads stopped, the three locks released.
+void ee_gamecpp_server_drop(void *server);
+
+/// EEClient's constructor body: the members, the fast selection, the lock.
+void ee_gamecpp_client_init(void *client);
+
+/// EEClient's destructor body.
+void ee_gamecpp_client_drop(void *client);
+
+/// EEClient::ResetFastSelection.
+void ee_gamecpp_client_reset_fast(void *client);
+
+/// EESession: the server's (`server`) or client's member `what` (EE_NETMSG_SESS_DO_*) over the session host, in a
+/// frame of its own (a join request's player and version for a connection request).
+///
+/// # Safety
+/// `comms` is the live server or client; `player` and `version` are NULL or live for the call.
+int64_t ee_gamecpp_session(void *comms,
+                           bool server,
+                           uint32_t what,
+                           int64_t a,
+                           int64_t b,
+                           int64_t c,
+                           int64_t d,
+                           const void *player,
+                           const void *version);
+
+/// EEServer::RefuseClient: the client removed from its lobby slot (removed-by-host response), its slot forgotten and
+/// the slot's info sent again.
+///
+/// # Safety
+/// `server` and `player` are live.
+void ee_gamecpp_server_refuse(void *server,
+                              void *player);
+
+/// EEServer::GetFreePlayerSlot: the first world player index below the maximum that holds no player, else 0xff.
+uint8_t ee_gamecpp_server_free_player_slot(void *server);
+
+/// EEServer::PlayWarningSound: 1 out of sync, 2 resending.
+void ee_gamecpp_server_warning_sound(long sound);
+
+/// EEServer::HandleXferStatus: a file transfer's progress sent for the lobby slot of the network slot.
+void ee_gamecpp_server_xfer_status(void *server,
+                                   uint8_t slot,
+                                   uint8_t percent,
+                                   uint32_t xfer_id,
+                                   uint8_t status);
+
+/// EEServer::ServerSlot48: message 0x12 posted to the UI thread (two zero parameters).
+void ee_gamecpp_server_post_12();
+
+extern int64_t ee_contagion_world(uint32_t op,
+                                  uint64_t a,
+                                  uint64_t b,
+                                  uint64_t c,
+                                  float x,
+                                  void *io);
 
 }  // extern "C"
 

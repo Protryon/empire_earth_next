@@ -17,48 +17,22 @@
 #include "ee/EECalamityUpdate.h"
 #include "rust/game/gamecpp.h"
 
-namespace {
+// ------------------------------------------------------------------------- round 11, lane C: the run's host
 
-// the host of one Rust run over the class and calamity (its sounds: the ones the class's run passes); the calamity's
-// members in and out (EeCalamityState) around it
-struct EECalamityRun {
-    EECalamityUpdateHost mHost;
-    EeCalamityHostFfi mFfi;
-    EeCalamityState mState;
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
-    EECalamityRun(EECalamityClass* inClass, EECalamity* inCalamity, EESoundObject* inSound, EESoundObject* inSecondarySound)
-    {
-        this->mHost.mClass = inClass;
-        this->mHost.mCalamity = inCalamity;
-        this->mHost.mSounds[0] = inSound;
-        this->mHost.mSounds[1] = inSecondarySound;
-        this->mHost.mPending = NULL;
-        this->mFfi.ctx = &this->mHost;
-        this->mFfi.call = &ee_gamecpp_calamity_call;
-        this->mState = ee_gamecpp_calamity_state(inCalamity);
+#define P64(x) ((int64_t)(intptr_t)(x))
+
+// a class's run (gamecpp calamity_io.rs class_run): its host made and deleted around it (EEContagionManager.cpp's
+// EECore11OpC5 default); p the class, a0 the calamity, a1 and a2 the sounds
+int64_t EECore11OpC6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::C11CalHostNew: return P64((new EECalamityUpdateHost{(EECalamityClass*)p, (EECalamity*)a[0], {(EESoundObject*)a[1], (EESoundObject*)a[2]}, {}, NULL, {}, {}}));
+    case O::C11CalHostDelete: delete (EECalamityUpdateHost*)p;
+        break;
+    default: return EECore11OpE(inOp, p, a, f);
     }
-    ~EECalamityRun() { ee_gamecpp_calamity_set_state(&this->mState, this->mHost.mCalamity); }
-};
-
-}   // namespace
-
-bool EECalamityRunStart(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
-                        EESoundObject* inSound, EESoundObject* inSecondarySound)
-{
-    EECalamityRun theRun(inClass, inCalamity, inSound, inSecondarySound);
-    return ee_calamity_start(&inParams, &theRun.mState, &theRun.mFfi);
-}
-
-void EECalamityRunStop(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
-                       EESoundObject* inSound, EESoundObject* inSecondarySound)
-{
-    EECalamityRun theRun(inClass, inCalamity, inSound, inSecondarySound);
-    ee_calamity_stop(&inParams, &theRun.mState, &theRun.mFfi);
-}
-
-long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime, const EeCalamityParams& inParams,
-                         EESoundObject* inSound, EESoundObject* inSecondarySound)
-{
-    EECalamityRun theRun(inClass, inCalamity, inSound, inSecondarySound);
-    return ee_calamity_update(&inParams, &theRun.mState, inElapsedTime, &theRun.mFfi);
+    return 0;
 }

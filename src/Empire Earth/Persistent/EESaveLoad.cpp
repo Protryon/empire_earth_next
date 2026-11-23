@@ -79,14 +79,7 @@ extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaig
 // Returns a save file's name with its last three characters replaced by "txt", or unchanged when asked to keep it
 UString GetSaveTextName(const UString& inName, bool inKeep)
 {
-    UString theName;
-    if (!inKeep) {
-        theName.Copy((const char*)inName, 0, inName.GetLength() - 3, 0, false);
-        theName += "txt";
-    } else {
-        theName += inName;
-    }
-    return theName;
+    return UString(ee_gamecpp_save_text_name((const char*)inName, inName.GetLength(), inKeep));   // gamecpp persist_text.rs
 }
 
 // Returns the current date and time as text (asctime), or "Date/time failed."

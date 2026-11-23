@@ -344,10 +344,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CalEffectGenerationZero: *(CL->mEffectGeneration.begin() + a[0]) = 0;
         break;
-    case O::CalRunStart: return EECalamityRunStart(KL, (EECalamity*)a[0], *(const EeCalamityParams*)a[1], (EESoundObject*)a[2], (EESoundObject*)a[3]);
-    case O::CalRunStop: EECalamityRunStop(KL, (EECalamity*)a[0], *(const EeCalamityParams*)a[1], (EESoundObject*)a[2], (EESoundObject*)a[3]);
-        break;
-    case O::CalRunUpdate: return EECalamityRunUpdate(KL, (EECalamity*)a[0], f[0], *(const EeCalamityParams*)a[1], (EESoundObject*)a[2], (EESoundObject*)a[3]);
     case O::KlNew: return P64(new EECalamityClass);
     case O::KlInitialize: KL->Initialize((EECalamityData*)a[0]);
         break;
