@@ -40,7 +40,6 @@
 #include "rust/game/screens.h"   // the host (area_effect_host.rs)
 #include "ee/EEScreensShims.h"
 
-extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
 namespace {
 
@@ -119,7 +118,7 @@ extern "C" uint64_t ee_screenscpp_aeh_unit_type(uintptr_t inT)
 extern "C" int32_t ee_screenscpp_aeh_planet(uintptr_t inCarrier) { return (int)AE_T(inCarrier)->mPlanetID; }
 extern "C" int32_t ee_screenscpp_aeh_hit_points(uintptr_t inT) { return AE_T(inT)->mHitPoints; }
 extern "C" int32_t ee_screenscpp_aeh_max_hit_points(uintptr_t inT) { return AE_T(inT)->mStats->mMaxHitPoints; }
-extern "C" bool ee_screenscpp_aeh_in_cinematic() { return gInCinematic; }
+extern "C" bool ee_screenscpp_aeh_in_cinematic() { return gWorld.mInCinematic; }
 extern "C" void ee_screenscpp_aeh_set_hit_points(uintptr_t inT, int32_t inV) { AE_T(inT)->SetHitPoints(inV); }
 extern "C" void ee_screenscpp_aeh_cloak(uintptr_t inT) { AE_T(inT)->SetCloakableChain(true); }
 extern "C" bool ee_screenscpp_aeh_has_camouflage(uintptr_t inT)

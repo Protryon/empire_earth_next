@@ -15359,6 +15359,14 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
+/// A chat line posted to the UI thread (message 0x418; the dialog log's line): the original's `EEChatLogEntry`
+/// (UI round 16), its name and text NUL-terminated (`UWideString`'s bytes).
+struct EeScreensChatEntry {
+  EeScreensChatLogHead head;
+  char *name;
+  char *text;
+};
+
 /// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
 using EeScreensAesIo = long(*)(void *ctx, uint32_t op, void *value);
 
@@ -16430,6 +16438,36 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
+
+/// `new EEChatLogEntry{colour, name, text, kind, time}` (`EEUserInterface::AddChatLogEntry`) -> the entry.
+EeScreensChatEntry *ee_screens_chat_entry_new(EeScreensChatLogHead head,
+                                              const char *name,
+                                              const char *text);
+
+/// `new EEChatLogEntry` (the dialog log's: white, no name or text, kind and time 0; the original left the kind and
+/// time unset) -> the entry.
+size_t ee_screens_chat_entry_blank();
+
+/// The entry's text set from NUL-terminated bytes.
+void ee_screens_chat_entry_set_text(size_t e, const char *text);
+
+/// The entry's kind (`mType`).
+void ee_screens_chat_entry_set_kind(size_t e, uint32_t kind);
+
+/// The entry's kind (`mType`).
+int64_t ee_screens_chat_entry_kind(size_t e);
+
+/// The entry added to the chat log (the original's `EEUIECLEFormManager::AddEntry`).
+void ee_screens_chat_entry_log(size_t e);
+
+/// The entry freed.
+void ee_screens_chat_entry_free(size_t e);
+
+/// The dialog log's add (the shim list's second name for [`ee_screens_chat_entry_log`]).
+void ee_screens_chat_entry_add(size_t e);
+
+/// The dialog log's delete (the shim list's second name for [`ee_screens_chat_entry_free`]).
+void ee_screens_chat_entry_delete(size_t e);
 
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
@@ -18659,6 +18697,14 @@ size_t ee_screens_um_create_control(size_t manager, size_t table);
 /// `EEUIManager`'s constructor's work after its base, on the host's call record `call`.
 void ee_screens_ui_manager_construct(void *call);
 
+/// `EEUIManager`'s constructor body (UI round 16): its own members' record `rec` made (the default state, the
+/// manager registered), then [`ee_screens_ui_manager_construct`] on `call`.
+///
+/// # Safety
+/// `rec` is the live manager's record base; `call` its call record.
+void ee_screens_ui_manager_new(EeScreensUiManagerFields *rec,
+                               void *call);
+
 /// `EEUIManager::StartScenarioEditor` on the host's call record `call`.
 void ee_screens_ui_manager_start_editor(void *call);
 
@@ -18667,6 +18713,15 @@ int64_t ee_screens_ui_manager_update_keyboard(void *call);
 
 /// `EEUIManager::UpdateMouse` on the host's call record `call`: its result.
 int64_t ee_screens_ui_manager_update_mouse(void *call);
+
+/// `EEResetGraphicsValues()` (EERenderObject.cpp): the game's render objects posted, not all.
+void ee_screens_reset_graphics_values();
+
+/// `EEChangeGameScreen(width, height, flag)` (Empire Earth.cpp).
+void ee_screens_change_game_screen(uint32_t width, uint32_t height, bool flag);
+
+/// `EEUpdateLandContinents()` (EECloakingUtilities.cpp: the units' cloak body).
+void ee_screens_update_land_continents();
 
 /// `EEUIManager`'s constructor: its members zeroed (the constructor's own stores come in `EE_SCREENS_UM_OP_FORMS`)
 /// and the record registered.
