@@ -5,7 +5,10 @@
 
 #![allow(non_snake_case)]
 
+use core::cell::UnsafeCell;
 use core::ffi::c_void;
+
+use ee_base::math::types::GeRectangle;
 use std::os::raw::{c_long, c_ulong};
 
 /// `EEUIBUpgrade`'s members (ee/EEUIBUpgrade.h).
@@ -151,4 +154,31 @@ pub struct EeScreensCommandUnitsObjects {
     pub mListener: *mut c_void,
     pub mModel: *mut c_void,
     pub mTexture: *mut c_void,
+}
+
+/// One loaded icon of the status box (the original's `EEUIFMGStatusBox::sIconBitmaps[50]`, 0x14 bytes each): its
+/// cell in the icon textures and its `GEBitmap*`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct EeScreensIconBitmap {
+    pub mRectangle: GeRectangle,
+    pub mBitmap: *mut c_void,
+}
+
+/// The status box's icons (`LoadIcons` fills them; the UI and graphics threads read them).
+const ICON_COUNT: usize = 50;
+struct Icons(UnsafeCell<[EeScreensIconBitmap; ICON_COUNT]>);
+// SAFETY: the C++ reaches the icons through the pointer below, as it did its static array
+unsafe impl Sync for Icons {}
+// SAFETY: a zeroed rectangle and a null pointer are the icons' values before LoadIcons
+static ICONS: Icons = Icons(UnsafeCell::new(unsafe { core::mem::zeroed() }));
+
+/// The status box's icon `icon` (0..50).
+#[no_mangle]
+pub extern "C" fn ee_screens_icon_bitmap(icon: i64) -> *mut EeScreensIconBitmap {
+    if !(0..ICON_COUNT as i64).contains(&icon) {
+        std::process::abort();
+    }
+    // SAFETY: the index is in the array
+    unsafe { (ICONS.0.get() as *mut EeScreensIconBitmap).add(icon as usize) }
 }

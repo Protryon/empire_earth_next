@@ -13,7 +13,6 @@ class EEUnit;
 class UIControl;
 class UIForm;
 
-struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes)
 
 // the members are the Rust record EeScreensStatusBoxFields' (ee_screens main_form_fields.rs), the class's only base:
 // the box's pointer is the record's (status_box.rs reads it through the call record)
@@ -34,9 +33,7 @@ public:
     // Reloads the three unit improvement textures (after a device loss); returns the first error
     // (status_box_calls.rs)
     static long ReloadIcons() { return (long)ee_screens_sb_reload_icons(); }              // 0x26dcd9 (ReloadTexture of the three textures)
-    // 0x564ed8: the 50 loaded icons, a class static (its atexit dtor is guarded: bit of 0x564ed0)
-    // (provisional name)
-    static EEUIFMGIconBitmap sIconBitmaps[50];
+    // (0x564ed8, the 50 loaded icons, a class static in the original: Rust's, ee_screens_icon_bitmap, hud_fields.rs)
     // (the host of ee_screens status_box.rs is Rust over EEUIFMGStatusBox.cpp's shims: status_box_calls.rs)
     // The control an EE_SCREENS_BOX_CTL_* names
     // (the record's slots)

@@ -38,16 +38,9 @@
 #include "ee/EEScreensShims.h"
 extern unsigned long& gTexturePixelDepth;
 
-// one loaded icon (0x14 bytes) (provisional name)
-struct EEUIFMGIconBitmap {
-    GERectangle mRectangle;                 // +0x00 the texture rectangle
-    GEBitmap* mBitmap;                      // +0x10
-};
-
 static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);
 static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);
 static GEColor kStatusColor3(0.0f, 1.0f, 0.5f);
-EEUIFMGIconBitmap EEUIFMGStatusBox::sIconBitmaps[50];
 // (the icon cells' table, 0x564890, is Rust's: ee_screens status_box.rs CELLS)
 extern bool sIconsLoaded;                           // 0x5652ec; cross-TU flag (stored in EEGlobals.cpp)
 
@@ -126,7 +119,7 @@ extern "C" void ee_screenscpp_sb_text_civ(uintptr_t inCall)
 extern "C" uintptr_t ee_screenscpp_sb_bar_control(uintptr_t inCall, int64_t inCtl)
 { return (uintptr_t)SBBAR(inCall, inCtl); }
 extern "C" uintptr_t ee_screenscpp_sb_icon_rect(int64_t inIcon)
-{ return (uintptr_t)&EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle; }
+{ return (uintptr_t)&ee_screens_icon_bitmap(inIcon)->mRectangle; }
 extern "C" void ee_screenscpp_sb_bar_range(uintptr_t inCall, int64_t inCtl, int64_t inValue)
 { static_cast<UIStatusBar*>(SBBAR(inCall, inCtl)->mBar)->SetRange(0, (unsigned long)(long)inValue); }
 extern "C" void ee_screenscpp_sb_bar_value(uintptr_t inCall, int64_t inCtl, int64_t inValue)
@@ -136,15 +129,15 @@ extern "C" void ee_screenscpp_sb_bar_color(uintptr_t inCall, int64_t inCtl, uint
 extern "C" void ee_screenscpp_sb_bar_enabled(uintptr_t inCall, int64_t inCtl, bool inEnabled)
 { SBBAR(inCall, inCtl)->mEnabled = inEnabled; }
 extern "C" void ee_screenscpp_sb_stretch(uintptr_t inCall, int64_t inIcon, int64_t inRectangle, int64_t inCtl)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->ComputeStretchedCoordsAndScale(static_cast<EEUIFMGAttribute*>(SBX(inCall, inRectangle))->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(SBX(inCall, inRectangle))->GetIconRectangle(), EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle, SBX(inCall, inCtl)->GetScreenIndex()); }
+{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->ComputeStretchedCoordsAndScale(static_cast<EEUIFMGAttribute*>(SBX(inCall, inRectangle))->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(SBX(inCall, inRectangle))->GetIconRectangle(), static_cast<const GERectangle&>(ee_screens_icon_bitmap(inIcon)->mRectangle), SBX(inCall, inCtl)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sb_button_set_normal(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
-{ static_cast<UIButton*>(SBX(inCall, inCtl))->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap); }
+{ static_cast<UIButton*>(SBX(inCall, inCtl))->SetNormalBitmap(static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)); }
 extern "C" void ee_screenscpp_sb_button_set_pressed(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
-{ static_cast<UIButton*>(SBX(inCall, inCtl))->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap); }
+{ static_cast<UIButton*>(SBX(inCall, inCtl))->SetPressedBitmap(static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)); }
 extern "C" bool ee_screenscpp_sb_button_normal_is(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
-{ return static_cast<UIButton*>(SBX(inCall, inCtl))->GetNormalBitmap() == EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap; }
+{ return static_cast<UIButton*>(SBX(inCall, inCtl))->GetNormalBitmap() == static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap); }
 extern "C" bool ee_screenscpp_sb_button_pressed_is(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
-{ return static_cast<UIButton*>(SBX(inCall, inCtl))->GetPressedBitmap() == EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap; }
+{ return static_cast<UIButton*>(SBX(inCall, inCtl))->GetPressedBitmap() == static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap); }
 extern "C" void ee_screenscpp_sb_portrait_set_unit(uintptr_t inCall)
 { static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->SetUnit(SBC(inCall).mUnit); }
 extern "C" void ee_screenscpp_sb_portrait_clear(uintptr_t inCall)
@@ -178,7 +171,7 @@ extern "C" int64_t ee_screenscpp_sb_complex_unit_type(uintptr_t inCall)
 extern "C" int64_t ee_screenscpp_sb_count_queued(uintptr_t inCall, int64_t inImprovement, int64_t inKind)
 { return SBC(inCall).mComplex->GetPlayer()->CountQueuedImprovements((unsigned long)inImprovement, (long)inKind); }
 extern "C" void ee_screenscpp_sb_new_bitmap(int64_t inIcon)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap = new GEBitmap; }
+{ ee_screens_icon_bitmap(inIcon)->mBitmap = new GEBitmap; }
 extern "C" uint32_t ee_screenscpp_sb_primary_width()
 { return (uint32_t)gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth(); }
 extern "C" void ee_screenscpp_sb_set_description(uintptr_t inCall, int32_t inDrop)
@@ -187,23 +180,23 @@ extern "C" uintptr_t ee_screenscpp_sb_description(uintptr_t inCall) { return (ui
 extern "C" void ee_screenscpp_sb_set_texture(uintptr_t inCall, int64_t inIndex, uintptr_t inTexture)
 { SBC(inCall).mTextures[inIndex] = reinterpret_cast<GETexture*>(inTexture); }
 extern "C" void ee_screenscpp_sb_set_rect(int64_t inIcon, float inLeft, float inTop, float inRight, float inBottom)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle = GERectangle(inLeft, inTop, inRight, inBottom); }
+{ ee_screens_icon_bitmap(inIcon)->mRectangle = GERectangle(inLeft, inTop, inRight, inBottom); }
 extern "C" uint32_t ee_screenscpp_sb_texture_width(uintptr_t inCall, int64_t inIndex)
 { return (uint32_t)SBC(inCall).mTextures[inIndex]->GetSurface()->GetWidth(); }
 extern "C" uint32_t ee_screenscpp_sb_texture_height(uintptr_t inCall, int64_t inIndex)
 { return (uint32_t)SBC(inCall).mTextures[inIndex]->GetSurface()->GetHeight(); }
 extern "C" void ee_screenscpp_sb_bitmap_set_texture(int64_t inIcon, uintptr_t inCall, int64_t inIndex)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->SetTexture(SBC(inCall).mTextures[inIndex], gScreenIndex); }
+{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->SetTexture(SBC(inCall).mTextures[inIndex], gScreenIndex); }
 extern "C" void ee_screenscpp_sb_bitmap_set_coordinates(int64_t inIcon, float inU0, float inV0, float inU1, float inV1)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->SetTextureCoordinates(GETextureCoordinate(inU0, inV0), GETextureCoordinate(inU1, inV0), GETextureCoordinate(inU1, inV1), GETextureCoordinate(inU0, inV1)); }
+{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->SetTextureCoordinates(GETextureCoordinate(inU0, inV0), GETextureCoordinate(inU1, inV0), GETextureCoordinate(inU1, inV1), GETextureCoordinate(inU0, inV1)); }
 extern "C" void ee_screenscpp_sb_bitmap_scale(int64_t inIcon, float inX, float inY)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->SetXYScale(inX, inY); }
+{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->SetXYScale(inX, inY); }
 extern "C" void ee_screenscpp_sb_icons_set_loaded(bool inLoaded) { sIconsLoaded = inLoaded; }
 extern "C" uintptr_t ee_screenscpp_sb_bitmap(int64_t inIcon)
-{ return (uintptr_t)EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap; }
+{ return (uintptr_t)static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap); }
 extern "C" void ee_screenscpp_sb_bitmap_dereference(int64_t inIcon)
-{ EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->Dereference(); }
-extern "C" void ee_screenscpp_sb_bitmap_clear(int64_t inIcon) { EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap = NULL; }
+{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->Dereference(); }
+extern "C" void ee_screenscpp_sb_bitmap_clear(int64_t inIcon) { ee_screens_icon_bitmap(inIcon)->mBitmap = NULL; }
 extern "C" void ee_screenscpp_sb_set_reload_description(int32_t inDrop)
 { EEScratch<GETextureDescription>(kScratchSBReload) = GETextureDescription{1, 0, gTexturePixelDepth, inDrop, false, false, true, false}; }
 extern "C" int64_t ee_screenscpp_sb_reload(int64_t inIndex)
