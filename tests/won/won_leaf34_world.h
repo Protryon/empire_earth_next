@@ -245,7 +245,13 @@ public:
     template <class Plan> explicit WONDrawOps(Plan plan)
     {
         mOps.resize(64);
-        mOps.resize(plan(&mOps[0], mOps.size()));
+        const size_t n = plan(&mOps[0], mOps.size());
+        if (n > mOps.size()) { // asked again at the plan's length (WONGUIDraw.h's)
+            mOps.resize(n);
+            mOps.resize(plan(&mOps[0], mOps.size()));
+        } else {
+            mOps.resize(n);
+        }
     }
     std::vector<EeWonDrawOp> mOps;
 };
@@ -315,4 +321,12 @@ struct ImageButtonBase : Component {
     bool IsPressed() { return mPressed; }
     bool IsMouseOver() { return mOver; }
 };
+} // namespace Lf
+
+// ---- Background's world: its component (a sizeable, invalidated, painted component) and the run with a call
+namespace Lf {
+template <class Call> inline void WONDrawRun(PaintGraphics& g, const WONDrawOps& ops, const WONDrawSlots& s, Call call)
+{
+    for (const EeWonDrawOp& o : ops.mOps) WONDrawOne(g, o, s, call);
+}
 } // namespace Lf

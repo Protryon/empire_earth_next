@@ -26,3 +26,12 @@ public:
     SmartPtr<ListItem> mSubMenu;
     bool mDisabled = false;
 };
+// Background (WONLobbyBackground.h's members; Init and the constructors are not this round's)
+class Background {
+public:
+    SmartPtr<Image> mImage;
+    int mColor = -1, mBorderColor = -1;
+    bool mUseOffsets = true, mStretchImage = false;
+    SmartPtr<Component> mComponent;
+    void Paint(PaintGraphics&, int, int, int, int, int = 0, int = 0);
+};

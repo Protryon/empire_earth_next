@@ -329,4 +329,32 @@ void MenuItem::Paint(PaintGraphics& g,PaintList* area)
     WONDrawRun(g,anOps,aSlots);
 }
 
+// Background::Paint as it was (Background.cpp at ab1b33bcb)
+void Background::Paint(PaintGraphics &g, int xpos, int ypos, int width, int height, int xoff, int yoff)
+{
+	// guidraw.rs background: the stretched image, or the fill, border, tiles and component
+	EeWonBackground b;
+	b.has_image = this->mImage.get()!=NULL;
+	b.stretch_image = this->mStretchImage;
+	b.use_offsets = this->mUseOffsets;
+	b.has_component = this->mComponent.get()!=NULL;
+	b.image_width = b.has_image ? this->mImage->GetWidth() : 0;
+	b.image_height = b.has_image ? this->mImage->GetHeight() : 0;
+	b.color = this->mColor;
+	b.border_color = this->mBorderColor;
+	b.x = xpos;
+	b.y = ypos;
+	b.width = width;
+	b.height = height;
+	b.x_offset = xoff;
+	b.y_offset = yoff;
+	WONDrawSlots aSlots;
+	aSlots.mImages[0] = this->mImage.get();
+	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_background(&b,o,n); });
+	WONDrawRun(g,anOps,aSlots,[&](const EeWonDrawOp& o) {
+		this->mComponent->SetSize(o.b,o.c);
+		this->mComponent->Invalidate();
+		this->mComponent->Paint(g);
+	});
+}
 } // namespace LfOrig
