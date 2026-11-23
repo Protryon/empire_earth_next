@@ -5,6 +5,7 @@
 #define LLE_UIOBJHOST_H
 #include <string.h>
 #include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEColor.h"
 #include "lle/GERectangle.h"
@@ -35,6 +36,9 @@ template <class F, class... A> UIF4 UIOut(F inCall, A... inArgs)
     inCall(inArgs..., theOut.f);
     return theOut;
 }
+
+// a rectangle as the Rust record (EeUiRect is GERectangle's layout: lle/UILayoutUtility.h's asserts)
+inline EeUiRect UIRect(const GERectangle& inRectangle) { return *reinterpret_cast<const EeUiRect*>(&inRectangle); }
 
 struct UIObjHost {
     // the buffer's rectangle (bottom, left, right, top: GERectangle's own order) and the buffer set from one

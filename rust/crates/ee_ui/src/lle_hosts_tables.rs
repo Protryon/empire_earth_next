@@ -32,7 +32,7 @@ tables! {
         BgtTextureDepth => r ee_uicpp_bgt_texture_depth,
         BgtEntryAlpha => r ee_uicpp_bgt_entry_alpha,
         BgtEntryFormId => r ee_uicpp_bgt_entry_form_id,
-        BgtMake => r ee_uicpp_bgt_make,
+        BgtMake => x bgt_make,
     }
     /// the button's own ops (its virtuals, the sounds, the label, the radio group, the polls, the stretch)
     button {
@@ -78,10 +78,10 @@ tables! {
         BarSetValue => v ee_uicpp_edit_bar_set_value,
         BarMax => r ee_uicpp_edit_bar_max,
         VirtSetRectangle => v ee_uicpp_edit_virt_set_rectangle,
-        EditKey => r ee_uicpp_edit_key,
+        EditKey => x ui_key,
         VirtProcessEnterKey => v ee_uicpp_edit_virt_process_enter_key,
         ClipboardSet => v ee_uicpp_edit_clipboard_set,
-        ClipboardGet => r ee_uicpp_edit_clipboard_get,
+        ClipboardGet => x clipboard_get,
         TranslatedKey => v ee_uicpp_edit_translated_key,
         TextInputCancel => v ee_uicpp_edit_text_input_cancel,
         BaseReleaseKeyboard => v ee_uicpp_edit_base_release_keyboard,
@@ -112,9 +112,9 @@ tables! {
         MgrFormUseGdi => r ee_uicpp_mgr_form_use_gdi,
         MgrFormKeyboard => r ee_uicpp_mgr_form_keyboard,
         MgrFormMouse => r ee_uicpp_mgr_form_mouse,
-        MgrFormCall => r ee_uicpp_mgr_form_call,
-        MgrFormRectCall => r ee_uicpp_mgr_form_rect_call,
-        MgrFormIme => r ee_uicpp_mgr_form_ime,
+        MgrFormCall => x mgr_form_call,
+        MgrFormRectCall => x mgr_form_rect_call,
+        MgrFormIme => x mgr_form_ime,
         MgrCtlIme => r ee_uicpp_mgr_ctl_ime,
         PartRect => v ee_uicpp_mgr_part_rect,
         MgrEventProcess => v ee_uicpp_mgr_event_process,
@@ -218,10 +218,10 @@ tables! {
         FormHotKeyDelete => v ee_uicpp_form_hot_key_delete,
         FormHotKeySetEnabled => v ee_uicpp_form_hot_key_set_enabled,
         FormHotKeyFire => r ee_uicpp_form_hot_key_fire,
-        FormHotKeyTemp => r ee_uicpp_form_hot_key_temp,
+        FormHotKeyTemp => x form_hot_key_temp,
         FormHotKeySetModifier => v ee_uicpp_form_hot_key_set_modifier,
         FormHotKeySetAlways => v ee_uicpp_form_hot_key_set_always,
-        FormKeyEntity => r ee_uicpp_form_key_entity,
+        FormKeyEntity => x form_key_entity,
         FormKeysReady => r ee_uicpp_form_keys_ready,
         FormTabJustPressed => r ee_uicpp_form_tab_just_pressed,
         FormShiftValue => r ee_uicpp_form_shift_value,
@@ -229,7 +229,7 @@ tables! {
         FormWheelEventNew => r ee_uicpp_form_wheel_event_new,
         FormMouseWheel => r ee_uicpp_form_mouse_wheel,
         FormWheelAmount => r ee_uicpp_form_wheel_amount,
-        FormMouseEntity => r ee_uicpp_form_mouse_entity,
+        FormMouseEntity => x form_mouse_entity,
         FormTable => r ee_uicpp_form_table,
         FormTableFormIndex => r ee_uicpp_form_table_form_index,
         FormTableGroup => r ee_uicpp_form_table_group,
@@ -322,9 +322,20 @@ tables! {
         VirtSetLocation => v ee_uicpp_label_virt_set_location,
         VirtSetRectangle => v ee_uicpp_label_virt_set_rectangle,
     }
+    /// the combo box's calls out (its queries and actions one shim each: lle_hosts.rs combo_query, combo_act)
+    combo {
+        ComboQuery => x combo_query,
+        ComboAct => x combo_act,
+        RhombusCreate => r ee_uicpp_combo_rhombus_create,
+        RhombusDelete => v ee_uicpp_combo_rhombus_delete,
+        DrawCountDecrement => v ee_uicpp_combo_draw_count_decrement,
+    }
     /// the list boxes' ops that do not depend on T (the polls, the rhombi, the line, the scroll bar, the keys)
     list {
-        EditKey => r ee_uicpp_list_edit_key,
+        EditKey => x ui_key,
+        StringListTextAt => v ee_uicpp_lbs_text_at,
+        StringListTextLine => v ee_uicpp_lbs_text_line,
+        StringListDrawClipped => r ee_uicpp_lbs_draw_clipped,
         PollCreate => r ee_uicpp_list_poll_create,
         PollDelete => v ee_uicpp_list_poll_delete,
         PollRunning => r ee_uicpp_list_poll_running,

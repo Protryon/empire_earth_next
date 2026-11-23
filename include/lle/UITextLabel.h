@@ -50,13 +50,7 @@ public:
     void SetScrollBarBgOpacity(float inOpacity) { this->Call(EeUiLabelCall::SetScrollBarBgOpacity, 0, 0, inOpacity); }
     void SetScrollBarBgColor(const GEColor& inColor) { this->Call(EeUiLabelCall::SetScrollBarBgColor, 0, 0, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
     void SetText(const UWideString& inText) { this->SetText(inText, true); }
-    void SetText(long inValue)
-    {
-        char theBuffer[50];
-        PlatIToA(inValue, theBuffer, 10);
-        UWideString theText(theBuffer);
-        this->SetText(theText, true);
-    }
+    void SetText(long inValue) { ee_ui_label_set_number(this->mRust, inValue); }   // _itoa's decimal
     virtual long UpdateKeyboard() { return kErrorFailed; }
     virtual void CheckScrollBar() { this->Call(EeUiLabelCall::CheckScrollBar); } // slot 0x90
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiLabelCall::MouseLButtonDown); }

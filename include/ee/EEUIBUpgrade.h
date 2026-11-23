@@ -8,34 +8,31 @@
 #include "rust/game/screens.h"
 
 class EEUnit;
-class UITextLabel;
 class EEUIBUpgrade;
 
 // One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
 // NULL for none, the call's own mReason for a reason nobody reads), the held text, the mouse location
-struct EEUIBUpgradeCall {
-    EEUIBUpgrade* mButton;
-    UWideString* mOut;
+struct EEUIBUpgradeCall : public EeScreensUpgradeCallObjects {   // the pointers: the Rust record (hud_fields.rs)
     UWideString mText;
-    const GE2DPoint* mLocation;
     UWideString mReason;
     EEUIBUpgradeCall(EEUIBUpgrade* inButton, UWideString* inOut = NULL, const GE2DPoint* inLocation = NULL)
-        : mButton(inButton), mOut(inOut), mLocation(inLocation) {}
-    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : mButton(inButton), mOut(&mReason), mLocation(NULL) {}
+        : EeScreensUpgradeCallObjects{inButton, inOut, inLocation} {}
+    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : EeScreensUpgradeCallObjects{inButton} { this->mOut = &this->mReason; }
     // the record of a call (a temporary's, for the full expression)
     EEUIBUpgradeCall* Ptr() { return this; }
 };
 
 
-class EEUIBUpgrade : public UIButton {
+class EEUIBUpgrade : public UIButton, public EeScreensUpgradeFields {
 public:
     // Creates an improvement button, faintly tinted with a thin border, without a cost label
     EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
                  UIForm* inForm, unsigned long inIndex, bool inScenarioEditor, unsigned long inBorderThickness)
         : UIButton(inId, NULL, NULL, NULL, GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
                    inBorderThickness),
-          mScenarioEditor(inScenarioEditor)
+          EeScreensUpgradeFields()
     {
+        this->mScenarioEditor = inScenarioEditor;
         ee_screens_upb_construct((uintptr_t)this);
     }
     // Snapshots the button and its cost label for drawing
@@ -88,13 +85,6 @@ public:
     static void ButtonDownOf(EEUIBUpgrade* inButton) { inButton->ButtonDown(); }
     static void CaptureOf(EEUIBUpgrade* inButton) { inButton->CaptureMouse(); }
 
-    long mAttribute;                        // +0x118 the improvement (0x10: help string only, 0xc: no cost)
-    UITextLabel* mCostLabel;                // +0x11c
-    unsigned long mLastMessageTime;         // +0x120 TMGetTime of the last "cannot" chat line
-    long mLevel;                            // +0x124 the level last shown
-    long mNumQueued;                        // +0x128
-    bool mScenarioEditor;                   // +0x12c the button is on the scenario editor's form
-    bool mDisabled;                         // +0x12d GetDisabled() as of the last UpdateCost
 };
 
 #endif

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/listobj.h"
 #include "rust/ui/obj.h"
 #include "rust/ui/rect.h"
 
@@ -218,6 +219,37 @@ ptrdiff_t ee_ui_combo_call(const EeUiCombo *combo,
                            ptrdiff_t a,
                            ptrdiff_t b,
                            float *f);
+
+/// `AppendLine(line)`: the combo box dirty, the line appended to its list (`list`, the list's Rust object), an open
+/// list reopened so it resizes.
+///
+/// # Safety
+/// `combo` and `list` are live; `line` is a live `UWideString`.
+void ee_ui_combo_append_line(const EeUiCombo *combo,
+                             const EeUiList *list,
+                             const void *line);
+
+/// `AppendStringArray(lines)`: as [`ee_ui_combo_append_line`] with the `count` lines at `data`, `stride` bytes apart.
+///
+/// # Safety
+/// `combo` and `list` are live; `data` holds `count` live `UWideString`s.
+void ee_ui_combo_append_lines(const EeUiCombo *combo,
+                              const EeUiList *list,
+                              const void *data,
+                              size_t count,
+                              size_t stride);
+
+/// `GetCurrentSelection(out)`: the selection in `out`; OK unless it is -1 (kErrorFailed).
+///
+/// # Safety
+/// `combo` is live; `out` writable.
+long ee_ui_combo_current_selection(const EeUiCombo *combo, unsigned long *out);
+
+/// `GetGEText()`: the label's text (a label combo box) or the edit box's.
+///
+/// # Safety
+/// `combo` is live.
+void *ee_ui_combo_ge_text(const EeUiCombo *combo);
 
 /// The constructor's drop button ([`combo::drop_rect`]).
 EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);

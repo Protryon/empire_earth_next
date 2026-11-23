@@ -38,6 +38,7 @@
 #include "ee/EEAreaEffectKindIDs.h"
 #include "rust/sim/units.h"
 #include "rust/game/screens.h"   // the host (area_effect_host.rs)
+#include "ee/EEScreensShims.h"
 
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
@@ -91,9 +92,6 @@ struct EEAEMFBBuildingInRange {
 #define AE_T(t) ((EEComplexUnit*)(t))
 #define AE_P(p) ((EEPlayer*)(p))
 #define AE_E(e) ((EEAreaEffect*)(e))
-static EETileCoordinate sAETile;                // the continent's tile
-static U2DRectangle<long> sAERect;              // the morale buildings' rectangle
-static std::vector<EEComplexUnit*> sAEUnits;    // and the units collected in it
 extern "C" bool ee_screenscpp_aeh_set_contains(uintptr_t inT, int32_t inSet)
 { return gUnitSetManager.Contains(AE_T(inT)->GetUnitClass()->GetUnitType(), inSet); }
 extern "C" uintptr_t ee_screenscpp_aeh_tech_node(int32_t inPlayer, uintptr_t inT)
@@ -111,9 +109,9 @@ extern "C" float ee_screenscpp_aeh_position_x(uintptr_t inT)
 { return AE_T(inT)->mPhysicalModel.GetLocation().GetPosition().GetX(); }
 extern "C" float ee_screenscpp_aeh_position_y(uintptr_t inT)
 { return AE_T(inT)->mPhysicalModel.GetLocation().GetPosition().GetY(); }
-extern "C" void ee_screenscpp_aeh_tile_x(int32_t inV) { sAETile.mX = inV; }
-extern "C" void ee_screenscpp_aeh_tile_y(int32_t inV) { sAETile.mY = inV; }
-extern "C" int32_t ee_screenscpp_aeh_continent() { return gContinentManager.GetContinent(sAETile, kAIPathNonSpace); }
+extern "C" void ee_screenscpp_aeh_tile_x(int32_t inV) { EEScratch<EETileCoordinate>(kScratchAETile).mX = inV; }
+extern "C" void ee_screenscpp_aeh_tile_y(int32_t inV) { EEScratch<EETileCoordinate>(kScratchAETile).mY = inV; }
+extern "C" int32_t ee_screenscpp_aeh_continent() { return gContinentManager.GetContinent(EEScratch<EETileCoordinate>(kScratchAETile), kAIPathNonSpace); }
 extern "C" uintptr_t ee_screenscpp_aeh_carrier(uintptr_t inT)
 { return (uintptr_t)(EEComplexUnit*)AE_T(inT)->mComplexUnit; }
 extern "C" uint64_t ee_screenscpp_aeh_unit_type(uintptr_t inT)
@@ -143,15 +141,15 @@ extern "C" float ee_screenscpp_aeh_owner_scale(uintptr_t inOwner) { return AE_T(
 extern "C" float ee_screenscpp_aeh_leadership(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mLeadership; }
 extern "C" float ee_screenscpp_aeh_garrison_bonus(uintptr_t inOwner)
 { return AE_T(inOwner)->mUnitClass->mGarrisonBonus; }
-extern "C" void ee_screenscpp_aeh_rect_top(int32_t inV) { sAERect.mTop = inV; }
-extern "C" void ee_screenscpp_aeh_rect_left(int32_t inV) { sAERect.mLeft = inV; }
-extern "C" void ee_screenscpp_aeh_rect_right(int32_t inV) { sAERect.mRight = inV; }
-extern "C" void ee_screenscpp_aeh_rect_bottom(int32_t inV) { sAERect.mBottom = inV; }
-extern "C" void ee_screenscpp_aeh_units_clear() { sAEUnits.clear(); }
+extern "C" void ee_screenscpp_aeh_rect_top(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mTop = inV; }
+extern "C" void ee_screenscpp_aeh_rect_left(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mLeft = inV; }
+extern "C" void ee_screenscpp_aeh_rect_right(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mRight = inV; }
+extern "C" void ee_screenscpp_aeh_rect_bottom(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mBottom = inV; }
+extern "C" void ee_screenscpp_aeh_units_clear() { EEScratch<std::vector<EEComplexUnit*>>(kScratchAEUnits).clear(); }
 extern "C" int32_t ee_screenscpp_aeh_count_in_rect(uintptr_t inEffect)
-{ return EEGetUnitsInRectangle(sAERect, sAEUnits, EEAEMFBBuildingInRectangle(sAERect, gWorld.mPlayers[AE_E(inEffect)->mPlayer]), true); }
+{ return EEGetUnitsInRectangle(EEScratch<U2DRectangle<long>>(kScratchAERect), EEScratch<std::vector<EEComplexUnit*>>(kScratchAEUnits), EEAEMFBBuildingInRectangle(EEScratch<U2DRectangle<long>>(kScratchAERect), gWorld.mPlayers[AE_E(inEffect)->mPlayer]), true); }
 extern "C" int32_t ee_screenscpp_aeh_count_in_range(uintptr_t inEffect, int32_t inX, int32_t inY, float inRange)
-{ return EEGetUnitsInRectangle(sAERect, sAEUnits, EEAEMFBBuildingInRange(U2DPoint<long>(inX, inY), gWorld.mPlayers[AE_E(inEffect)->mPlayer], inRange), true); }
+{ return EEGetUnitsInRectangle(EEScratch<U2DRectangle<long>>(kScratchAERect), EEScratch<std::vector<EEComplexUnit*>>(kScratchAEUnits), EEAEMFBBuildingInRange(U2DPoint<long>(inX, inY), gWorld.mPlayers[AE_E(inEffect)->mPlayer], inRange), true); }
 
 // the effect's and the template's C++ objects for area_effect_obj.rs (UI lane round 12)
 extern "C" uintptr_t ee_screenscpp_ae_fields(uintptr_t inEffect)

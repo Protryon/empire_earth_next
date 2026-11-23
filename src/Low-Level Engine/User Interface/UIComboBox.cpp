@@ -130,98 +130,58 @@ extern "C" void ee_uicpp_list_set_scroll_bg_color(uintptr_t inList, float inRed,
 extern "C" void ee_uicpp_combo_base_set_rect(uintptr_t inCombo, uintptr_t inTextBox, uintptr_t inDrop)
 { COMBO(inCombo)->UIControl::SetRectangle(GERectangle(CTL(inTextBox)->GetRectangle().GetTopLeft(), CTL(inDrop)->GetRectangle().GetBottomRight())); }
 
-// A nested struct: a member of UIComboBox, so it has the class's friendships (UIControl's, UITextLabel's, UIListBox's)
-struct UIComboBox::Rust {
-    static UIControl* Part(UIComboBox* c, intptr_t inPart) { return c->PartOf((int)inPart); }
-    static UILBString* List(UIComboBox* c) { return c->GetList(); }
-    static UIEditBox* Edit(UIComboBox* c) { return reinterpret_cast<UIEditBox*>(c->PartOf(3)); }
-    static intptr_t Query(UIComboBox* c, intptr_t q, intptr_t arg, float* f)
-    {
-        switch ((EeUiComboQuery)q) {
-        case EeUiComboQuery::RectOf: UIObjHost::PutRect(f, Part(c, arg)->GetRectangle()); return 0;
-        case EeUiComboQuery::TextBoxBorder: return Part(c, 0)->GetBorderThickness();
-        case EeUiComboQuery::LineCount: return List(c)->GetLineCount();
-        case EeUiComboQuery::Line: return (intptr_t)(const char*)List(c)->GetData((unsigned long)arg);
-        case EeUiComboQuery::LineHeight: return List(c)->GetLineHeight();
-        case EeUiComboQuery::ListBorder: return List(c)->GetBorderThickness();
-        case EeUiComboQuery::ListScrollBarCaptured: return List(c)->GetScrollBarCaptured();
-        case EeUiComboQuery::WindowHeight: return c->GetRasterizer()->GetWindow(c->GetScreenIndex())->GetHeight();
-        case EeUiComboQuery::EditText: return (intptr_t)Edit(c)->GetText(0);
-        case EeUiComboQuery::TabbingOn: return c->GetForm()->GetTabbingOn();
-        case EeUiComboQuery::TabStop: return c->GetForm()->GetTabStop();
-        case EeUiComboQuery::HasMouseCapture: return c->GetHasMouseCapture();
-        }
-        return 0;
-    }
-    static intptr_t Act(UIComboBox* c, intptr_t inAct, intptr_t b, intptr_t cc, intptr_t d, float* f)
-    {
-        switch ((EeUiComboAct)inAct) {
-        case EeUiComboAct::ListChangeSelection: List(c)->ChangeSelectionIndex((unsigned long)b, (cc & 1) != 0, (cc & 2) != 0); break;
-        case EeUiComboAct::ListInsertLine: List(c)->InsertLine(UWideString(reinterpret_cast<const char*>(b)), (unsigned long)cc); break;
-        case EeUiComboAct::ListDeleteLine: List(c)->DeleteLine((unsigned long)b); break;
-        case EeUiComboAct::ListDeleteAll: List(c)->DeleteAllEntries(); break;
-        case EeUiComboAct::ListChangeWidth: List(c)->ChangeWidth((unsigned long)b); break;
-        case EeUiComboAct::PartMouseDown: return Part(c, b)->MouseLButtonDown();
-        case EeUiComboAct::PartMouseUp: return Part(c, b)->MouseLButtonUp();
-        case EeUiComboAct::PartMouseMove: return Part(c, b)->MouseMove(GE2DPoint(f[0], f[1]));
-        case EeUiComboAct::ListWheel: return List(c)->MouseWheelTurned((long)b);
-        case EeUiComboAct::PartUpdateKeyboard: return Part(c, b)->UpdateKeyboard();
-        case EeUiComboAct::PartTranslatedKey: return Part(c, b)->UpdateTranslatedKey(reinterpret_cast<const char*>(cc), (short)d);
-        case EeUiComboAct::PartSetRectangle: Part(c, b)->SetRectangle(UIObjHost::Rect(f)); break;
-        case EeUiComboAct::PartSetLocation: Part(c, b)->SetLocation(GE2DPoint(f[0], f[1])); break;
-        case EeUiComboAct::PartCopyData: return Part(c, b)->CopyData();
-        case EeUiComboAct::BaseCopyData: return c->UIControl::CopyData();
-        case EeUiComboAct::SetPopup: c->GetForm()->SetPopup(b ? c : NULL); break;
-        case EeUiComboAct::SetDirty: c->SetDirty(true); break;
-        case EeUiComboAct::SetRectangle: c->SetRectangle(UIObjHost::Rect(f)); break;
-        case EeUiComboAct::BaseSetRectangle: c->UIControl::SetRectangle(UIObjHost::Rect(f)); break;
-        case EeUiComboAct::BaseSetLocation: c->UIControl::SetLocation(GE2DPoint(f[0], f[1])); break;
-        case EeUiComboAct::SetAlwaysDirty: c->SetAlwaysDirty(b != 0); break;
-        case EeUiComboAct::Fire: c->FireTriggerEvent((unsigned long)b); break;
-        case EeUiComboAct::CaptureMouse: c->CaptureMouse(); break;
-        case EeUiComboAct::CaptureKeyboard: c->CaptureKeyboard(); break;
-        case EeUiComboAct::ReleaseMouse: c->ReleaseCapturedMouse(); break;
-        case EeUiComboAct::ReleaseKeyboard: c->ReleaseCapturedKeyboard(); break;
-        case EeUiComboAct::OpenList: c->OpenListBox(); break;
-        case EeUiComboAct::CloseList: c->CloseListBox(); break;
-        case EeUiComboAct::AddString: return c->AddString();
-        case EeUiComboAct::ChangeSelection: c->ChangeSelection(); break;
-        }
-        return 0;
-    }
-    static intptr_t Op(void* inCombo, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t cc, intptr_t d, float* f)
-    {
-        UIComboBox* c = static_cast<UIComboBox*>(inCombo);
-        switch (inOp) {
-        case EeUiOp::ComboQuery: return Query(c, a >> 24, a & 0xffffff, f);
-        case EeUiOp::ComboAct: return Act(c, a, b, cc, d, f);
-        case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus();
-        case EeUiOp::RhombusDelete: delete reinterpret_cast<GERhombus*>(a); break;
-        case EeUiOp::DrawCountDecrement: c->mDrawCount--; break;
-        default: break;
-        }
-        return 0;
-    }
-};
-
-// Creates a combo box: a text label (type 1) or edit box, a drop button and a hidden list box showing the first entry
-extern "C" intptr_t ee_uicpp_combo_host(EE_UI_HOST_ARGS) { return UIComboBox::Rust::Op(inObj, inOp, a, b, c, d, f); }
-
-// Destroys the combo box and its text box, list box and drop button
-UIComboBox::~UIComboBox() { ee_ui_combo_free(this->mRust); }
-
-// Appends a line to the list, reopening an open list so it resizes
-void UIComboBox::AppendLine(UWideString& inLine)
-{
-    this->SetDirty(true);
-    this->GetList()->AppendLine(inLine);
-    this->Call(EeUiComboCall::Reopen);
-}
-
-// Appends several lines to the list, reopening an open list so it resizes
-void UIComboBox::AppendStringArray(std::vector<UWideString>& inLines)
-{
-    this->SetDirty(true);
-    this->GetList()->AppendStringArray(inLines);
-    this->Call(EeUiComboCall::Reopen);
-}
+// The Rust combo box's calls out (ee_ui lle_hosts.rs combo: ComboQuery's and ComboAct's one shim each, by its
+// number; a the query's argument, or b, c, d, f the action's)
+#define CB static_cast<UIComboBox*>(inObj)
+#define CB_PART(x) CB->PartOf((int)(x))
+#define CB_LIST CB->GetList()
+#define CB_EDIT reinterpret_cast<UIEditBox*>(CB->PartOf(3))
+EE_UI_VOID(combo_q_rect_of) { UIObjHost::PutRect(f, CB_PART(a)->GetRectangle()); }
+EE_UI_CASE(combo_q_text_box_border) { return CB_PART(0)->GetBorderThickness(); }
+EE_UI_CASE(combo_q_line_count) { return CB_LIST->GetLineCount(); }
+EE_UI_CASE(combo_q_line) { return (intptr_t)(const char*)CB_LIST->GetData((unsigned long)a); }
+EE_UI_CASE(combo_q_line_height) { return CB_LIST->GetLineHeight(); }
+EE_UI_CASE(combo_q_list_border) { return CB_LIST->GetBorderThickness(); }
+EE_UI_CASE(combo_q_list_scroll_bar_captured) { return CB_LIST->GetScrollBarCaptured(); }
+EE_UI_CASE(combo_q_window_height) { return CB->GetRasterizer()->GetWindow(CB->GetScreenIndex())->GetHeight(); }
+EE_UI_CASE(combo_q_edit_text) { return (intptr_t)CB_EDIT->GetText(0); }
+EE_UI_CASE(combo_q_tabbing_on) { return CB->GetForm()->GetTabbingOn(); }
+EE_UI_CASE(combo_q_tab_stop) { return CB->GetForm()->GetTabStop(); }
+EE_UI_CASE(combo_q_has_mouse_capture) { return CB->GetHasMouseCapture(); }
+EE_UI_VOID(combo_a_list_change_selection) { CB_LIST->ChangeSelectionIndex((unsigned long)b, (c & 1) != 0, (c & 2) != 0); }
+EE_UI_VOID(combo_a_list_insert_line) { CB_LIST->InsertLine(UWideString(reinterpret_cast<const char*>(b)), (unsigned long)c); }
+EE_UI_VOID(combo_a_list_delete_line) { CB_LIST->DeleteLine((unsigned long)b); }
+EE_UI_VOID(combo_a_list_delete_all) { CB_LIST->DeleteAllEntries(); }
+EE_UI_VOID(combo_a_list_change_width) { CB_LIST->ChangeWidth((unsigned long)b); }
+EE_UI_CASE(combo_a_part_mouse_down) { return CB_PART(b)->MouseLButtonDown(); }
+EE_UI_CASE(combo_a_part_mouse_up) { return CB_PART(b)->MouseLButtonUp(); }
+EE_UI_CASE(combo_a_part_mouse_move) { return CB_PART(b)->MouseMove(GE2DPoint(f[0], f[1])); }
+EE_UI_CASE(combo_a_list_wheel) { return CB_LIST->MouseWheelTurned((long)b); }
+EE_UI_CASE(combo_a_part_update_keyboard) { return CB_PART(b)->UpdateKeyboard(); }
+EE_UI_CASE(combo_a_part_translated_key) { return CB_PART(b)->UpdateTranslatedKey(reinterpret_cast<const char*>(c), (short)d); }
+EE_UI_VOID(combo_a_part_set_rectangle) { CB_PART(b)->SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_VOID(combo_a_part_set_location) { CB_PART(b)->SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_CASE(combo_a_part_copy_data) { return CB_PART(b)->CopyData(); }
+EE_UI_CASE(combo_a_base_copy_data) { return CB->UIControl::CopyData(); }
+EE_UI_VOID(combo_a_set_popup) { CB->GetForm()->SetPopup(b ? CB : NULL); }
+EE_UI_VOID(combo_a_set_dirty) { CB->SetDirty(true); }
+EE_UI_VOID(combo_a_set_rectangle) { CB->SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_VOID(combo_a_base_set_rectangle) { CB->UIControl::SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_VOID(combo_a_base_set_location) { CB->UIControl::SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(combo_a_set_always_dirty) { CB->SetAlwaysDirty(b != 0); }
+EE_UI_VOID(combo_a_fire) { CB->FireTriggerEvent((unsigned long)b); }
+EE_UI_VOID(combo_a_capture_mouse) { CB->CaptureMouse(); }
+EE_UI_VOID(combo_a_capture_keyboard) { CB->CaptureKeyboard(); }
+EE_UI_VOID(combo_a_release_mouse) { CB->ReleaseCapturedMouse(); }
+EE_UI_VOID(combo_a_release_keyboard) { CB->ReleaseCapturedKeyboard(); }
+EE_UI_VOID(combo_a_open_list) { CB->OpenListBox(); }
+EE_UI_VOID(combo_a_close_list) { CB->CloseListBox(); }
+EE_UI_CASE(combo_a_add_string) { return CB->AddString(); }
+EE_UI_VOID(combo_a_change_selection) { CB->ChangeSelection(); }
+EE_UI_CASE(combo_rhombus_create) { return (intptr_t) new GERhombus(); }
+EE_UI_VOID(combo_rhombus_delete) { delete reinterpret_cast<GERhombus*>(a); }
+EE_UI_VOID(combo_draw_count_decrement) { CB->mDrawCount--; }
+#undef CB_EDIT
+#undef CB_LIST
+#undef CB_PART
+#undef CB

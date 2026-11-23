@@ -10,7 +10,10 @@
 
 #include "ee/EEUIRustControl.h"
 
-class EEUICSelectUnits : public EEUIRustControl, protected EeScreensSelectUnitsFields {
+class EEAMouseClick;
+class EEALasso;
+
+class EEUICSelectUnits : public EEUIRustControl, protected EeScreensSelectUnitsFields, public EeScreensSelectUnitsObjects {
 public:
     virtual bool GetTabable() const { return false; }
     // 0x25958f (the user-defined control factory 0x2748f7; EESEUICTriggerSelectUnits 0x1973a8): a 2x2 rectangle at
@@ -44,8 +47,6 @@ protected:
     }
 
 public:   // (the constructor's and destructor's shims: EEUICSelectUnits.cpp)
-    EEAMouseClick* mClick;                  // referenced; the mouse click action
-    EEALasso* mLasso;                       // referenced
 };
 
 #endif

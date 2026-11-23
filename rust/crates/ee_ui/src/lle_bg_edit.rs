@@ -44,7 +44,9 @@ pub(crate) fn edit_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isiz
     Some(match h.op {
         EeUiOp::EditKey if (EDIT_KEY_A..=EDIT_KEY_RETURN).contains(&h.a) => {
             let mut key = 0usize;
-            c.edit_key_fetch((h.a - EDIT_KEY_A) as u32, EeUiShimPtrOut::of(&mut key));
+            use ee_base::lle_enums::ISKeyCode as K;
+            let code = [K::kKeyA, K::kKeyL, K::kKeyReturn][(h.a - EDIT_KEY_A) as usize];
+            c.keyboard_entity(code as u32, EeUiShimPtrOut::of(&mut key));
             c.entity_just_pressed(key) as isize
         }
         EeUiOp::CreateScrollBar => c.edit_scroll_bar_new(e, h.f(0), h.f(1), h.f(2)) as isize,
@@ -101,7 +103,7 @@ mod tests {
     #[test]
     fn an_edit_box_answers_its_moved_cases() {
         let mut fake = Fake::default();
-        fake.out("edit_key_fetch", 9).answer("entity_just_pressed", &[1]);
+        fake.out("keyboard_entity", 9).answer("entity_just_pressed", &[1]);
         fake.answer("line_new_black", &[40]).answer("line_new", &[41]);
         fake.answer("edit_form_mouse_x", &[3]).answer("text_fg_green", &[1]);
         let mut f = [0.0f32; 4];
@@ -114,7 +116,7 @@ mod tests {
         edit_call(&mut fake, &HostArgs::new(5, EeUiOp::TextFgColor, [8, 0, 0, 0], &mut f));
         assert_eq!(&f[..3], &[0.0, 1.0, 0.0]);
         assert!(fake.calls().starts_with(
-            "edit_key_fetch(1, out)\nentity_just_pressed(9)\nline_new_black()\nline_new()\nedit_form_mouse_x(5)"
+            "keyboard_entity(38, out)\nentity_just_pressed(9)\nline_new_black()\nline_new()\nedit_form_mouse_x(5)"
         ));
     }
 }
