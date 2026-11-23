@@ -176,35 +176,15 @@ UWideString EEPhysics::GetTimeString()
 // port: the loaded values the load's rebuilding set again (EEAfterLoad), then those that wait for the others
 // (EEAfterLoadLast), run at the loaded game's first tick (R5a.2, "load equals continue"; the loaded seed is Rust's:
 // ee_physics_loaded_seed)
-static std::vector<std::function<void()> > sAfterLoad;   // EEAfterLoad's (ee/EESaveGameFiles.h)
-
+// (ee/EESaveGameFiles.h; the lists and their run are physics.rs')
 void EEAfterLoad(std::function<void()> inFixup)
 {
-    sAfterLoad.push_back(inFixup);
+    ee_physics_after_load(false, new std::function<void()>(inFixup));
 }
-
-static std::vector<std::function<void()> > sAfterLoadLast;   // EEAfterLoadLast's
 
 void EEAfterLoadLast(std::function<void()> inFixup)
 {
-    sAfterLoadLast.push_back(inFixup);
-}
-
-static void EEPhysicsRunAfterLoad()
-{
-    if (!sAfterLoad.empty()) {
-        std::vector<std::function<void()> > theFixups;
-        theFixups.swap(sAfterLoad);
-        for (size_t i = 0; i < theFixups.size(); i++)
-            theFixups[i]();
-        EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
-    }
-    if (!sAfterLoadLast.empty()) {
-        std::vector<std::function<void()> > theFixups;
-        theFixups.swap(sAfterLoadLast);
-        for (size_t i = 0; i < theFixups.size(); i++)
-            theFixups[i]();
-    }
+    ee_physics_after_load(true, new std::function<void()>(inFixup));
 }
 
 // New (R5b.4, round 28): the C++ parts of EEPhysics::Load and Save (ee_units physics_save.rs): the file's primitives
@@ -265,29 +245,8 @@ extern "C" size_t ee_units_order_log_host(uint8_t inOp, int64_t inKey, uint8_t* 
 }
 
 // The just-in-time manufacturing chat line (Tick's resource timer)
-static void EEPhysicsJitChat()
-{
-    UWideString theText;
-    gResource->GetString(IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW, theText);
-    gUserInterface->AddChatLogEntry(theText, 0);
-}
-
 // A won campaign scenario recorded in the campaign progress (EndGame)
-static void EEPhysicsCampaignWin()
-{
-    EECampaignProgress theProgress;
-    if (theProgress.Load(UWideString(gCampaignUser), gWorld.mGameOptions.mCampaignName, gWorld.mGameOptions.mCampaignChecksum,
-                         true) == kErrorOK)
-        theProgress.SaveCompletedScenario(UWideString(gCampaignUser), gWorld.mGameOptions.mCampaignName,
-                                          gWorld.mGameOptions.mScenarioName, gWorld.mGameOptions.mCampaignChecksum);
-}
-
 // The Shift key (0xe1) is up (CheckShiftMode)
-static bool EEPhysicsShiftKeyUp()
-{
-    ISEntity* theKey;
-    return gISKeyboard != NULL && gISKeyboard->GetEntity(kKeyShift, theKey) == kErrorOK && theKey->GetValue() == 0;
-}
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define PH ((EEPhysics*)p)
@@ -324,7 +283,11 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::RtsHandleMessage: PH->RTSPhysics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
         break;
     case O::UpdateUnits: return PH->UpdateUnits();
-    case O::RunAfterLoad: EEPhysicsRunAfterLoad();
+    case O::FixupRun: (*(std::function<void()>*)p)();
+        break;
+    case O::FixupDelete: delete (std::function<void()>*)p;
+        break;
+    case O::UnitOrderReset: EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
         break;
     case O::ServerLockEnter: PH->mServerMessageQueueLock->Enter();
         break;
@@ -546,7 +509,11 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);
     case O::HasJitPower: return gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing);
-    case O::JitChat: EEPhysicsJitChat();
+    case O::TextNew: return P64(new UWideString);
+    case O::TextDelete: delete (UWideString*)p;
+        break;
+    case O::ResourceString: return gResource->GetString((unsigned long)a[0], *(UWideString*)p);
+    case O::ChatLog: gUserInterface->AddChatLogEntry(*(UWideString*)p, 0);
         break;
     case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
         break;
@@ -556,7 +523,8 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CivTimerLimit: return EEGetCivTimerLimit();
     case O::CivTimerSecondWarning: return EEGetCivTimerSecondWarning();
     case O::CivTimerFirstWarning: return EEGetCivTimerFirstWarning();
-    case O::ShiftKeyUp: return EEPhysicsShiftKeyUp();
+    case O::ShiftKey: return gISKeyboard != NULL ? gISKeyboard->GetEntity(kKeyShift, *(ISEntity**)a[0]) : -1;
+    case O::EntityValue: return ((ISEntity*)p)->GetValue();
     case O::AutoSaves: return gGamePreferences.mSettings.mNumberOfAutoSaves;
     case O::AutoSaveMilliseconds: return gGamePreferences.mSettings.mAutoSaveInMilliseconds;
     case O::SetLastAutoSave: gGamePreferences.mSettings.mLastAutoSave = UWideString((const char*)a[0]);
@@ -578,8 +546,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ContinentChecksum: return gContinentManagerChecksum;
     case O::StoreChecksumFlag1: return (int64_t)ee_units_store_checksum_flag1();
     case O::StoreChecksumFlag2: return (int64_t)ee_units_store_checksum_flag2();
-    case O::CampaignWin: EEPhysicsCampaignWin();
-        break;
+    case O::CampaignText: return snprintf((char*)a[1], (size_t)a[2], "%s", a[0] == 0 ? (const char*)gCampaignUser : a[0] == 1 ? (const char*)gWorld.mGameOptions.mCampaignName : (const char*)gWorld.mGameOptions.mScenarioName);
     case O::AppTeamsClear: ee_app_teams_clear();   // (the teams: ee_sim app teams.rs)
         break;
     case O::Srand: srand((unsigned int)a[0]);

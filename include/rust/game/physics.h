@@ -28,8 +28,12 @@ enum class EePhysCpp : uint32_t {
   ThreadPost,
   RtsHandleMessage,
   UpdateUnits,
-  /// the loaded game's fixups (EEAfterLoad, EEAfterLoadLast)
-  RunAfterLoad,
+  /// `(*(std::function<void()>*)p)()` (a loaded game's fixup: EEAfterLoad, EEAfterLoadLast)
+  FixupRun,
+  /// `delete (std::function<void()>*)p`
+  FixupDelete,
+  /// `EEUnitOrderReset()`
+  UnitOrderReset,
   ServerLockEnter,
   ServerLockLeave,
   ServerQueueSize,
@@ -187,15 +191,23 @@ enum class EePhysCpp : uint32_t {
   AiUpdate,
   WorldTableLong,
   HasJitPower,
-  /// the just-in-time manufacturing chat line
-  JitChat,
+  /// `new UWideString`
+  TextNew,
+  TextDelete,
+  /// `gResource->GetString(a0, *(UWideString*)p)`
+  ResourceString,
+  /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
+  ChatLog,
   CivBuilderBlink,
   IsMainGameForm,
   OptionsButtonBlink,
   CivTimerLimit,
   CivTimerSecondWarning,
   CivTimerFirstWarning,
-  ShiftKeyUp,
+  /// `gISKeyboard != NULL ? gISKeyboard->GetEntity(kKeyShift, *(ISEntity**)a0) : -1`
+  ShiftKey,
+  /// `((ISEntity*)p)->GetValue()`
+  EntityValue,
   AutoSaves,
   AutoSaveMilliseconds,
   SetLastAutoSave,
@@ -212,8 +224,8 @@ enum class EePhysCpp : uint32_t {
   ContinentChecksum,
   StoreChecksumFlag1,
   StoreChecksumFlag2,
-  /// the campaign progress's won scenario (EndGame)
-  CampaignWin,
+  /// the campaign user (a0 0), the game's campaign (1) or scenario (2) into the buffer a1 (room a2): its length
+  CampaignText,
   AppTeamsClear,
   Srand,
   Rand,
@@ -221,6 +233,9 @@ enum class EePhysCpp : uint32_t {
 };
 
 extern "C" {
+
+/// Queues a fixup (`last`: after every EEAfterLoad fixup of that tick).
+void ee_physics_after_load(bool last, void *fixup);
 
 /// A loaded game's seed, put back at its first tick.
 void ee_physics_loaded_seed(uint32_t seed);

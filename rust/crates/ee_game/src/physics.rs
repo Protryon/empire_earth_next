@@ -51,8 +51,12 @@ pub enum EePhysCpp {
     ThreadPost,
     RtsHandleMessage,
     UpdateUnits,
-    /// the loaded game's fixups (EEAfterLoad, EEAfterLoadLast)
-    RunAfterLoad,
+    /// `(*(std::function<void()>*)p)()` (a loaded game's fixup: EEAfterLoad, EEAfterLoadLast)
+    FixupRun,
+    /// `delete (std::function<void()>*)p`
+    FixupDelete,
+    /// `EEUnitOrderReset()`
+    UnitOrderReset,
     ServerLockEnter,
     ServerLockLeave,
     ServerQueueSize,
@@ -218,15 +222,23 @@ pub enum EePhysCpp {
     AiUpdate,
     WorldTableLong,
     HasJitPower,
-    /// the just-in-time manufacturing chat line
-    JitChat,
+    /// `new UWideString`
+    TextNew,
+    TextDelete,
+    /// `gResource->GetString(a0, *(UWideString*)p)`
+    ResourceString,
+    /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
+    ChatLog,
     CivBuilderBlink,
     IsMainGameForm,
     OptionsButtonBlink,
     CivTimerLimit,
     CivTimerSecondWarning,
     CivTimerFirstWarning,
-    ShiftKeyUp,
+    /// `gISKeyboard != NULL ? gISKeyboard->GetEntity(kKeyShift, *(ISEntity**)a0) : -1`
+    ShiftKey,
+    /// `((ISEntity*)p)->GetValue()`
+    EntityValue,
     AutoSaves,
     AutoSaveMilliseconds,
     SetLastAutoSave,
@@ -243,8 +255,8 @@ pub enum EePhysCpp {
     ContinentChecksum,
     StoreChecksumFlag1,
     StoreChecksumFlag2,
-    /// the campaign progress's won scenario (EndGame)
-    CampaignWin,
+    /// the campaign user (a0 0), the game's campaign (1) or scenario (2) into the buffer a1 (room a2): its length
+    CampaignText,
     AppTeamsClear,
     Srand,
     Rand,
@@ -367,6 +379,80 @@ const AREA_EFFECT_INTERVAL: f32 = 2000.0;
 const WIND_DRIFT: f32 = 0.005;
 
 // ---- the loaded game's seed (Load sets it, the first tick spends it: "load equals continue", R5a.2)
+/// The loaded game's fixups (EEAfterLoad's, then EEAfterLoadLast's): C++ `std::function<void()>*`s, run at its first
+/// tick (R5a.2, "load equals continue").
+static AFTER_LOAD: Mutex<(Vec<P>, Vec<P>)> = Mutex::new((Vec::new(), Vec::new()));
+
+/// Queues a fixup (`last`: after every EEAfterLoad fixup of that tick).
+#[no_mangle]
+pub extern "C" fn ee_physics_after_load(last: bool, fixup: *mut c_void) {
+    let mut lists = AFTER_LOAD.lock().unwrap_or_else(|e| e.into_inner());
+    if last { &mut lists.1 } else { &mut lists.0 }.push(fixup as P);
+}
+
+/// Runs and frees the queued fixups (a fixup may queue more: they run at the next tick); the stepped units reordered
+/// after the first list (R5b.4: as a fixup ordered them).
+fn run_after_load() {
+    for last in [false, true] {
+        let fixups = {
+            let mut lists = AFTER_LOAD.lock().unwrap_or_else(|e| e.into_inner());
+            std::mem::take(if last { &mut lists.1 } else { &mut lists.0 })
+        };
+        if fixups.is_empty() {
+            continue;
+        }
+        for &fixup in &fixups {
+            h(O::FixupRun, fixup, &[]);
+        }
+        if !last {
+            h0(O::UnitOrderReset);
+        }
+        for &fixup in &fixups {
+            h(O::FixupDelete, fixup, &[]);
+        }
+    }
+}
+
+/// IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW (ee/EEStringIDs.h).
+const IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW: i64 = 31891;
+
+/// A string of the resource file as a chat log line.
+fn chat(id: i64) {
+    let text = hp(O::TextNew, 0, &[]);
+    h(O::ResourceString, text, &[id]);
+    h(O::ChatLog, text, &[]);
+    h(O::TextDelete, text, &[]);
+}
+
+/// The shift key is up (no keyboard: not).
+fn shift_key_up() -> bool {
+    let mut entity: P = 0;
+    h(O::ShiftKey, 0, &[&mut entity as *mut P as usize as i64]) == 0 && h(O::EntityValue, entity, &[]) == 0
+}
+
+/// The campaign texts (CampaignText's `which`) as bytes.
+fn campaign_text(which: i64) -> Vec<u8> {
+    let mut buffer = vec![0u8; 256];
+    loop {
+        let length = h(O::CampaignText, 0, &[which, buffer.as_mut_ptr() as usize as i64, buffer.len() as i64]) as usize;
+        if length < buffer.len() {
+            buffer.truncate(length);
+            return buffer;
+        }
+        buffer = vec![0u8; length + 1];
+    }
+}
+
+/// EndGame's won campaign scenario: the user's progress loaded, the scenario saved as completed.
+fn campaign_win() {
+    let (user, campaign, scenario) = (campaign_text(0), campaign_text(1), campaign_text(2));
+    let checksum = h0(O::CampaignChecksum) as c_ulong;
+    let mut progress = crate::campaign::EeCampaignProgress::default();
+    if progress.load(&user, &campaign, checksum, true) == 0 {
+        progress.save_completed_scenario(&user, &campaign, &scenario, checksum);
+    }
+}
+
 static LOADED_SEED: AtomicU32 = AtomicU32::new(0);
 static LOADED_SEED_PENDING: AtomicBool = AtomicBool::new(false);
 
@@ -499,7 +585,7 @@ fn end_game(p: P, victory: bool) {
         && h0(O::CampaignChecksum) as c_ulong > 0
         && h(O::PlayerGameResult, hp(O::CurrentPlayer, 0, &[]), &[]) == 1
     {
-        h0(O::CampaignWin);
+        campaign_win();
     }
     if h(O::PlayerGameResult, hp(O::CurrentPlayer, 0, &[]), &[]) != 0 {
         h(O::CivBuilderBlink, 0, &[0]);
@@ -817,7 +903,7 @@ fn tick(p: P) {
         // a loaded game goes on from the saved seed
         h(O::SetRandomSeed, p, &[LOADED_SEED.load(Ordering::Relaxed) as i64]);
     }
-    h(O::RunAfterLoad, p, &[]);
+    run_after_load();
     report_statistics(p);
     let r = rec(p);
     if get!(r, mTicksToProcess) == 0 {
@@ -848,7 +934,7 @@ fn tick(p: P) {
         if resource_time as f32 <= get!(r, mGameClock) {
             set!(r, mResourceTimerPending, false);
             if h0(O::Resources) == 4 && h0(O::HasJitPower) != 0 {
-                h0(O::JitChat);
+                chat(IDS_JUST_IN_TIME_MANUFANUFACTURING_IS_NOW);
             }
         }
     }
@@ -1231,7 +1317,7 @@ fn check_shift_mode(p: P) {
     if !b(O::PlayerShiftMode, hp(O::CurrentPlayer, 0, &[]), &[]) {
         return;
     }
-    if h0(O::ShiftKeyUp) != 0 {
+    if shift_key_up() {
         let message = hp(O::NewExitShiftMode, 0, &[get!(r, mGameTime) as i64]);
         h(O::ProcessLocalInput, message, &[SLOT_NONE]);
     }
