@@ -214,7 +214,9 @@ impl HostRequest for FwReq {
     }
     fn bytes(&self, which: i32, _index: i64) -> Option<Vec<u8>> {
         match which {
-            EE_WON_FWOP_PUBLIC_ADDR => self.0.public.map(|h| crate::ipaddr::Addr::from_host(h as u32, 0).six_bytes().to_vec()),
+            EE_WON_FWOP_PUBLIC_ADDR => {
+                self.0.public.map(|h| crate::ipaddr::Addr::from_host(h as u32, 0).six_bytes().to_vec())
+            }
             _ => None,
         }
     }
