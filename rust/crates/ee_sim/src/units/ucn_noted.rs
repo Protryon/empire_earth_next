@@ -533,3 +533,37 @@ pub extern "C" fn ee_units_ucn_tiles_level(tiles: u64) -> bool {
     done(n);
     r
 }
+
+// ---- EEUnitClass.cpp: the facing test's host-read record
+
+/// `FacesTarget` within its host-read scope (slot 0); its CBQR record (`EECombatCaptureHostRead`) when outermost.
+#[no_mangle]
+pub extern "C" fn ee_units_ucn_faces_target(class: u64, unit: u64, target: u64, tolerance: bool) -> bool {
+    let outer = crate::combat::cg_query::ee_combat_host_read_enter(0);
+    // SAFETY: the member's live class, unit and target
+    let faces = unsafe {
+        crate::units::uc_rest::game::ee_units_uc_rest(
+            crate::units::uc_rest::EE_UNITS_UC_DO_R_FACES_TARGET,
+            ptr(class),
+            ptr(unit),
+            target,
+            i64::from(tolerance),
+            0,
+            std::ptr::null_mut(),
+        )
+    } != 0;
+    if outer {
+        crate::combat::cg_query::ee_combat_capture_read_of(
+            0,
+            crate::combat::cg_query::EE_COMBAT_HR_FACES_TARGET,
+            unit,
+            target,
+            i32::from(faces),
+            0,
+            0,
+            u32::from(tolerance),
+        );
+    }
+    crate::combat::cg_query::ee_combat_host_read_leave(0);
+    faces
+}

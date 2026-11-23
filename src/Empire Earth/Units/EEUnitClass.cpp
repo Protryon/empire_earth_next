@@ -171,14 +171,6 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 }
 
 // Returns whether the unit faces the target unit (or its tile's centre)
-bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
-{
-    EECombatHostReadScope theScope;   // CBQR records the outcome
-    bool theFaces = ee_units_uc_rest(EE_UNITS_UC_DO_R_FACES_TARGET, this, inUnit, EEObj(inTarget), inUseTolerance, 0, NULL) != 0;   // uc_rest.rs
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_TARGET, inUnit, inTarget, theFaces, 0, 0, inUseTolerance);
-    return theFaces;
-}
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)

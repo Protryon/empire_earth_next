@@ -1016,7 +1016,7 @@ public:
     void ActionChanged(EEComplexUnit* inUnit) { ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, this, inUnit, 0, 0, 0, 0.0f); }  // +0x74 (the cloaking calamity calls it on each cloaked unit)
     bool CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType) { return ee_units_cls_can_move_on_terrain(this, inUnit != NULL ? inUnit->mStats : NULL, (int32_t)inTerrainType) != 0; }  // 0x234ad8 (the missile's +0xe4: true = stays) (provisional name)
     void RouteDockWaypoint(EEComplexUnit* inUnit) { ee_units_ucn_route_dock_waypoint(H(this), H(inUnit)); }  // 0x213db5 (the airplane on its carrier after its move: EEPMAirplane::OrientOnCarrier) (provisional name)
-    bool FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance);  // 0x233a14 (EEUGHealUnit)
+    bool FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance) { return ee_units_ucn_faces_target(H(this), H(inUnit), H(inTarget), inUseTolerance); }  // 0x233a14 (EEUGHealUnit)
     // 0x238087: the projectile launch from the weapon tag point (FireShot) (provisional name)
     void LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation) { ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_FROM_TURRET, this, inUnit, H(inTarget), 0, 0, (const float(*)[3])&inLocation.mX, NULL); }
     void FireShot(EEComplexUnit* inUnit);   // 0x231312 (EEUGAttackGround::Step; provisional name)
@@ -1028,10 +1028,10 @@ public:
     void UpdateCloakDetection(EEComplexUnit* inUnit) { ee_units_st_cloak_detection(H(this), H(inUnit)); }  // original void thiscall, ret4
     void Regenerate(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_REGENERATE, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x239d8a (units whose stats +0x15c is positive)
     bool SharesResearch(long inUnitType) { return ee_units_cls_shares_research(this, inUnitType) != 0; }  // 0x234fbd (EEMResearchTechnology: another type that may research; provisional name)
-    bool IsDropSite();                      // 0x4249 (inline in the real header: an out-of-line COMDAT; EEUGBuildRepair::FindNextWork) (provisional name)
-    bool IsCrusader();                      // 0x5b96d (ICF-shared with EECPAttackSubGroup::Fn5B96D): mUnitType 0x2e6..0x2e9 (0x24722d) (provisional name)
-    bool IsTransport();                     // 0x4292 (categories 0x10..: a transport class; EEMImmediateCargoUnload)
-    bool IsAirBase();                       // 0x4229 (+0x28 set and +0x1b8 2, 0x15 or 0x20: the icon bar's aircraft carrier test) (provisional name)
+    bool IsDropSite() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_DROP_SITE); }                      // 0x4249 (inline in the real header: an out-of-line COMDAT; EEUGBuildRepair::FindNextWork) (provisional name)
+    bool IsCrusader() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_CRUSADER); }                      // 0x5b96d (ICF-shared with EECPAttackSubGroup::Fn5B96D): mUnitType 0x2e6..0x2e9 (0x24722d) (provisional name)
+    bool IsTransport() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_TRANSPORT); }                     // 0x4292 (categories 0x10..: a transport class; EEMImmediateCargoUnload)
+    bool IsAirBase() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_AIR_BASE); }                       // 0x4229 (+0x28 set and +0x1b8 2, 0x15 or 0x20: the icon bar's aircraft carrier test) (provisional name)
     // 0x1fdf06 (inline in the real header? its COMDAT follows EEComplexUnit::StartProduction; EEUnitClass 0x231b55
     // calls it too): mAirTrafficType set, not WriteDetailsHook, category not 0x15/0x20 (provisional name)
     bool IsAircraft();
@@ -1042,7 +1042,7 @@ public:
     unsigned long GetWeapon() const { return this->mWeapon; }  // unsigned: the assert compiles to one `cmp 6; jb`
     // inline: the garrison goal's ComputeUpgrade loads both before its tech-tree lookups (0x226bfa) (provisional names)
     long GetTechnology() const { return this->mTechnology; }
-    bool IsPriest();                        // 0x6ef9 (EEUGAttackUnit's ctor; provisional name)
+    bool IsPriest() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_PRIEST); }                        // 0x6ef9 (EEUGAttackUnit's ctor; provisional name)
     long GetNumResearchTechnologies() { return this->mResearchTechnologies.size(); }      // 0x196dff (EECPDefenseCommander 0x78dc8: mResearchTechnologies's count) (provisional name)
     // EEUnitClass.cpp members (provisional names)
     void AddWaypointAt(EEComplexUnit* inUnit, float inX, float inY, float inZ, bool inSnapToMap) { ee_units_mv_add_waypoint_at(H(inUnit), inX, inY, inZ, inSnapToMap); }
@@ -1226,7 +1226,6 @@ public:
     bool ProjectileCheckWaterImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_WATER, this, inUnit); }
     void ResourceSimpleUnitCreated(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_CREATED, this, NULL, H(inUnit), 0.0f); }
     void ResourceAddToTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_ADD, this, NULL, H(inUnit), 0.0f); }
-    void SeaAnimalAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
     void SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
     EEUnit* SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
     EEUnit* SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }

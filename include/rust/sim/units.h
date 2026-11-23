@@ -11635,6 +11635,21 @@ constexpr static const int32_t EE_UNITS_UC_DO_BASE_UNIT_CREATED = 30;
 /// `class a`'s `mCategory` (the creations read the field, as `GetCategory()` does)
 constexpr static const int32_t EE_UNITS_UC_CLASS_CATEGORY_FIELD = 410;
 
+/// `IsDropSite()`: units can drop resources off at the class.
+constexpr static const int32_t EE_UNITS_UC_IS_DROP_SITE = 0;
+
+/// `IsCrusader()`: one of the four crusader types.
+constexpr static const int32_t EE_UNITS_UC_IS_CRUSADER = 1;
+
+/// `IsTransport()`: a land, helicopter, naval or space transport or a fortress.
+constexpr static const int32_t EE_UNITS_UC_IS_TRANSPORT = 2;
+
+/// `IsAirBase()`: air traffic on a building, naval building or space building.
+constexpr static const int32_t EE_UNITS_UC_IS_AIR_BASE = 3;
+
+/// `IsPriest()`: a land, naval, helicopter or building priest.
+constexpr static const int32_t EE_UNITS_UC_IS_PRIEST = 4;
+
 /// `class->mAcknowledgeSounds[b]`
 constexpr static const int32_t EE_UNITS_UC_ACKNOWLEDGE_SOUND = 520;
 
@@ -21157,6 +21172,9 @@ void *ee_units_uc_create_at(void *class_,
                             void *map,
                             float heading);
 
+/// `EEUnitClass::Is*()` (`which` an `EE_UNITS_UC_IS_*`) of the live class `class`.
+bool ee_units_uc_is(uint64_t class_, int32_t which);
+
 /// `EEUnitClass::ProduceUnit(unit, made, arg)` of `class`.
 ///
 /// # Safety
@@ -21423,6 +21441,12 @@ bool ee_units_ucn_gate_near(uint64_t class_, uint64_t unit, bool passers);
 
 /// `EEAreTilesLevel` (note 26): `tiles` a live `std::vector<U2DPoint<long> >`.
 bool ee_units_ucn_tiles_level(uint64_t tiles);
+
+/// `FacesTarget` within its host-read scope (slot 0); its CBQR record (`EECombatCaptureHostRead`) when outermost.
+bool ee_units_ucn_faces_target(uint64_t class_,
+                               uint64_t unit,
+                               uint64_t target,
+                               bool tolerance);
 
 extern int64_t ee_units_ucg_host(int32_t op,
                                  void *class_,

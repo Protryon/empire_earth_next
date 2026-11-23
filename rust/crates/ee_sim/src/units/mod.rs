@@ -171,6 +171,7 @@ pub mod uc_anim;
 pub mod uc_body;
 pub mod uc_class;
 pub mod uc_create;
+pub mod uc_is;
 pub mod uc_media;
 #[cfg(test)]
 mod uc_mock;
