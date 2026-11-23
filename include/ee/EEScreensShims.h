@@ -20,8 +20,6 @@ struct EeScreensShimText {
     size_t len;
 };
 
-extern "C" void ee_screens_shim_out(void* inOut, const uint8_t* inText, size_t inLength);
-
 // the text as a string (the bytes up to the first 0, as the C++ cases' UWideString(const char*))
 inline UWideString EEShimText(EeScreensShimText inText) { return UWideString(std::string((const char*)inText.ptr, inText.len).c_str()); }
 inline UString EEShimString(EeScreensShimText inText) { return UString(std::string((const char*)inText.ptr, inText.len).c_str()); }
@@ -30,13 +28,7 @@ inline void EEShimOut(void* inOut, const UWideString& inText) { ee_screens_shim_
 inline void EEShimOutC(void* inOut, const char* inText) { ee_screens_shim_out(inOut, (const uint8_t*)inText, strlen(inText)); }
 inline void EEShimOut(void* inOut, const UString& inText) { EEShimOutC(inOut, (const char*)inText); }
 // a float handed over as its bits in an integer's low 32
-inline float EEShimBitsFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theFloat;
-    memcpy(&theFloat, &theBits, 4);
-    return theFloat;
-}
+inline float EEShimBitsFloat(int64_t inBits) { return __builtin_bit_cast(float, (uint32_t)inBits); }
 
 // The C++ object a shim keeps between calls (a former file static): slot inSlot of the Rust-owned table (ee_game
 // screens scratch.rs), made by T's default constructor at its first use (a plain type is its zeros, as a static's)
