@@ -93,14 +93,32 @@ extern "C" uint32_t ee_stand_time_get()
     return gFake.mTime;
 }
 
-// the game's operation host (EEGameOps.cpp's ee_gamecpp, not linked): the session's bodies are Rust (ee_game gamecpp
-// server.rs) over the session cases of EEServer.cpp and EEClient.cpp (EECore9OpD, D2, D3); the chain's next link
-// (EETechTree.cpp) is not linked either, and any operation reaching it is a trace line
+// the game's operation host (EEGameOps.cpp's ee_gamecpp, not linked): the message records' C++ reads first
+// (EEMessageCapture.cpp's link: EEMRecord's bodies are Rust, ee_game gamecpp mrecord.rs), then the session's bodies
+// (Rust, ee_game gamecpp server.rs) over the session cases of EEServer.cpp and EEClient.cpp (EECore9OpD, D2, D3);
+// the chain's next link (EETechTree.cpp) is not linked either, and any operation reaching it is a trace line. The
+// original units (ee_session_orig) define no EECore9OpD: their bodies are C++ and ask none, so the link's alternate
+// name for it is EESessionNoOps.
 int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpC(inOp, p, a, f);
+}
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     return EECore9OpD(inOp, p, a, f);
 }
+double EECore10OpDF(EeGameCpp, uintptr_t, const int64_t*, const float*)
+{
+    return 0.0;
+}
+int64_t EESessionNoOps(EeGameCpp inOp, uintptr_t, const int64_t*, const float*)
+{
+    T("gamecpp op %u", (unsigned)inOp);
+    return 0;
+}
+#pragma comment(linker, "/alternatename:?EECore9OpD@@YA_JW4EeGameCpp@@_KPEB_JPEBM@Z=?EESessionNoOps@@YA_JW4EeGameCpp@@_KPEB_JPEBM@Z")
 int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t, const int64_t*, const float*)
 {
     T("gamecpp op %u", (unsigned)inOp);

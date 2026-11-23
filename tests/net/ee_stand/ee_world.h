@@ -6,6 +6,7 @@
 #ifndef EE_STAND_WORLD_H
 #define EE_STAND_WORLD_H
 
+#include "rust/game/screens.h"   // the form ids (kFormMainGame, kFormLobby, ...: a Rust enum since batch 18)
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -245,9 +246,6 @@ public:
     EEUIFMainGame* mMainGameForm;
 };
 extern EEUIManager* gUIManager;
-const unsigned long kFormMainGame = 11;
-const unsigned long kFormLobby = 26;
-const unsigned long kFormAvailableGames = 32;
 extern UResourceFile* gResource;
 
 // ---- sounds, graphics, physics ----
