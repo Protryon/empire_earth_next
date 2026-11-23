@@ -141,7 +141,8 @@ public:
     }
     void UnpauseGame() { ee_net_sv_pause_game(this->mRust, false); }
     long XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot, unsigned long& outXferID,
-                          bool inP5);
+                          bool inP5)
+        { return ee_net_sv_xfer_file_to_client(this->mRust, &inFile, (uint32_t)inUserData, inSlot, &outXferID); }
 
     // vtable 0x9891c slots 9..27: the server's own virtuals. StartThreads/StopThreads are implemented; the rest are
     // pure (the game implements them). Names and signatures inferred (slots by offset).

@@ -45,6 +45,7 @@
 #include "rust/render/gestate.h"
 #include "rust/render/geval.h"
 #include "rust/render/gfx.h"
+#include "rust/render/gx.h"
 #include "rust/render/openformats.h"
 #include "rust/sim/ai.h"
 #include "rust/sim/app.h"

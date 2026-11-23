@@ -13,23 +13,10 @@ public:
     // proven inline (TCP NPIMGetStatus/NPIMActivate): LCG constants stored before the seed; seed 0 -> 1
     // default argument 0: the exported `default constructor closure' 0xde43 inlines this ctor (seed 0 -> store 1);
     // exe EERandomMapData's implicit ctor 0x283e06 calls the import for its +0x10 member with `push 0`
-    URandom(unsigned long inSeed = 0)
-        : mMultiplier(0x343fd), mModulus(0x80000000), mIncrement(0x269ec3)
-    {
-        if (inSeed == 0)                    // proven if/else: two stores (TCP 0x1345, 0x1df6)
-            this->mSeed = 1;
-        else
-            this->mSeed = inSeed;
-    }
-    // user-defined (field moves, exported ICF pair 0x1000ddca), not the implicit movsd copy
-    URandom& operator=(const URandom& inRandom)
-    {
-        this->mSeed = inRandom.mSeed;
-        this->mMultiplier = inRandom.mMultiplier;
-        this->mModulus = inRandom.mModulus;
-        this->mIncrement = inRandom.mIncrement;
-        return *this;
-    }
+    URandom(unsigned long inSeed = 0)       // proven if/else: two stores (TCP 0x1345, 0x1df6)
+        : mSeed(inSeed == 0 ? 1 : (uint32_t)inSeed), mMultiplier(0x343fd), mModulus(0x80000000), mIncrement(0x269ec3) {}
+    // user-defined in the original (field moves, exported ICF pair 0x1000ddca): the same four copies
+    URandom& operator=(const URandom& inRandom) = default;
     float Generate() { return ee_urandom_generate(reinterpret_cast<EeURandom*>(this)); }
     // proven inline (LLE 0x1000de1a, exported in the inline region): Default.dll 0xc0db expands it around a
     // call to the Generate() import
@@ -56,21 +43,13 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom);
 
 class LLE_API URandomIntegers : public URandom {   // proven base: LLE Generate(long,long) 0xde5f calls
 public:                                             // URandom::Generate on the same this
-    URandomIntegers();
+    URandomIntegers() {}
     // EETreeClumps ctor 0xa53e expands LLE's body inline (URandom::Generate import, fimul (max + 1 - min),
     // fld/fistp, `== max + 1` clamp) and GEModel Caching.cpp expands it (MutateTriGenes 0x17735, MutateVertexGenes
     // 0x1784f) as well as the ctor (OptimizeMemoryCoherency 0x17912, OptimizeVertexCaching 0x180e1): both are inline
     // after the class in the newer-header view (emitted by GEBitmap.cpp, the first includer, at 0xde5f/0xde95).
-    long Generate(long inMinimum, long inMaximum);
+    long Generate(long inMinimum, long inMaximum)
+        { return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(this), inMinimum, inMaximum); }
 };
-
-inline long URandomIntegers::Generate(long inMinimum, long inMaximum)
-{
-    return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(this), inMinimum, inMaximum);
-}
-
-inline URandomIntegers::URandomIntegers()
-{
-}
 
 #endif

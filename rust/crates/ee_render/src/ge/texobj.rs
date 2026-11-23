@@ -26,13 +26,15 @@ use std::ffi::{c_char, c_long, c_ulong, c_void};
 
 use crate::ge::cppobj;
 use crate::ge::managers::{self, with_pack, NOT_FOUND, OK};
-use crate::ge::manobj::{c_bytes, c_string, next_after, EeGeManHostFn, EeGeManOp};
+use crate::ge::manobj::{c_bytes, c_string, dump_line, next_after, EeGeManHostFn, EeGeManOp};
 use crate::ge::texobj_tex::{self as tex, EeGeTexStageField, EeGeTexVal, EeGeTexture};
 
 /// The original's buffer for a made texture's name (`char theName[64]`).
 const MADE_NAME_CAPACITY: usize = 64;
 /// The original's buffer for a texture pack name (`char theBuffer[1024]`).
 const PACK_NAME_CAPACITY: usize = 1024;
+/// The texture manager's dump heading.
+const TEXTURE_DUMP_HEADER: &[u8] = b"\n\n*********Texture Manager - Current Loaded Files In Memory*********\n\n\0";
 
 /// `GESurfaceDescription`: the C++ struct derives from it (lle/GESurface.h), so C++ names its fields.
 /// cbindgen:field-names=[mType, mPixelFormat, mSurfaceVolatility, mWidth, mHeight, m14, mMipLevelCount, mPixelDepth, mIs3DRenderable, mIsTransparencyEnabled, mNoAlpha]
@@ -269,6 +271,16 @@ pub(crate) unsafe fn tex_direct(op: EeGeManOp, obj: usize, a: isize, b: isize) -
             0
         }
         O::RefCount => unsafe { cppobj::reference_count(obj) as isize },
+        O::TexSurfaceDescription => {
+            // SAFETY: a is the manager's own description
+            unsafe { EeGeTexture::surface_description(t(), &mut *(a as *mut EeGeSurfaceDescription)) };
+            0
+        }
+        O::TexPackLog => {
+            // SAFETY: a is the manager's NUL-terminated name
+            unsafe { EeGeTexture::pack_log(t(), c_bytes(a as *const c_char), b as c_long) };
+            0
+        }
         O::TexRecreate => unsafe { tex::ee_ge_tex_recreate(t(), a as *mut c_void) as isize },
         O::TexAllocatedSize => unsafe { tex::ee_ge_tex_allocated_size(t()) as isize },
         O::TexLoad => {
@@ -474,7 +486,9 @@ impl EeGeTextureManager {
             if path != 0 {
                 Self::op(p, EeGeManOp::PathReference, path, 0, 0, 0);
             }
-            let lock = Self::op(p, EeGeManOp::LockCreate, 0, 0, 0, 0) as usize;
+            let mut lock: usize = 0;
+            let created = Self::op(p, EeGeManOp::LockCreate, 0, &mut lock as *mut usize as isize, 0, 0);
+            Self::op(p, EeGeManOp::LockVerify, 0, created, 0, 0);
             tm(p).lock = lock;
         }
         p
@@ -505,11 +519,12 @@ impl EeGeTextureManager {
         // SAFETY: the caller's contract
         unsafe {
             Self::enter(p);
-            Self::op(p, EeGeManOp::DumpHeader, file, 0, 0, 0);
+            Self::op(p, EeGeManOp::DumpText, file, TEXTURE_DUMP_HEADER.as_ptr() as isize, 0, 0);
             let mut at: Option<Vec<u8>> = None;
             while let Some((key, tex)) = next_after(&tm(p).textures, at.as_deref()) {
-                let name = c_string(&key);
-                Self::op(p, EeGeManOp::DumpLine, tex, name.as_ptr() as isize, file as isize, 0);
+                let count = Self::op(p, EeGeManOp::RefCount, tex, 0, 0, 0) as c_long;
+                let line = dump_line("texture", &key, count);
+                Self::op(p, EeGeManOp::DumpText, file, line.as_ptr() as isize, 0, 0);
                 at = Some(key);
             }
             Self::leave(p);

@@ -1,11 +1,10 @@
-//! The C ABI of the pixel formats (`pixel.rs`; 'Graphics Engine.cpp' forwards `GEPackColor` and `GEUnpack*`), of a
-//! frame's store into a surface (`GETexture.cpp`'s `GEStoreFrame`) and of `GETextureSet`'s and `GEMaterial`'s logic
-//! (`texture.rs`; `GETexture` is the whole object of `texobj_tex.rs`). The surfaces stay C++: `GEStoreFrame` locks
-//! the surface and passes its memory.
+//! The C ABI of the pixel formats (`pixel.rs`; 'Graphics Engine.cpp' forwards `GEPackColor` and `GEUnpack*`) and of
+//! `GETextureSet`'s and `GEMaterial`'s logic (`texture.rs`; `GETexture` is the whole object of `texobj_tex.rs`, which
+//! stores a decoded frame into a surface itself: `GEStoreFrame`).
 
 use std::ffi::c_ulong;
 
-use crate::ge::pixel::{self, StoreTarget};
+use crate::ge::pixel;
 use crate::ge::texture;
 
 /// `GEPackColor(format, red, green, blue, alpha)`.
@@ -48,59 +47,6 @@ pub extern "C" fn ee_ge_unpack_blue(format: c_ulong, color: c_ulong) -> u8 {
 #[no_mangle]
 pub extern "C" fn ee_ge_unpack_alpha(format: c_ulong, color: c_ulong) -> u8 {
     pixel::unpack_alpha(format, color)
-}
-
-/// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeGeStoreTarget {
-    pub pixel_depth: c_ulong,
-    pub pixel_format: c_ulong,
-    pub no_alpha: bool,
-    pub pixel_width: c_ulong,
-    pub pixel_height: c_ulong,
-    pub bytes_per_row: c_ulong,
-}
-
-impl From<&EeGeStoreTarget> for StoreTarget {
-    fn from(t: &EeGeStoreTarget) -> Self {
-        StoreTarget {
-            pixel_depth: t.pixel_depth,
-            pixel_format: t.pixel_format,
-            no_alpha: t.no_alpha,
-            pixel_width: t.pixel_width,
-            pixel_height: t.pixel_height,
-            bytes_per_row: t.bytes_per_row,
-        }
-    }
-}
-
-/// Whether a `width` x `height` frame fits the surface (else `GEStoreFrame` fails before locking).
-///
-/// # Safety
-/// `target` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_frame_fits(target: *const EeGeStoreTarget, width: u32, height: u32) -> bool {
-    // SAFETY: the caller's contract
-    pixel::frame_fits(&StoreTarget::from(unsafe { &*target }), width, height)
-}
-
-/// Stores a decoded frame (`channels` 3 or 4, top row first) into the locked surface's `memory`.
-///
-/// # Safety
-/// `target` is valid, `memory` holds the surface's rows, `pixels` the frame's, and the frame fits
-/// (`ee_ge_texture_frame_fits`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_store_frame(
-    target: *const EeGeStoreTarget,
-    width: u32,
-    height: u32,
-    channels: u32,
-    pixels: *const u8,
-    memory: *mut u8,
-) {
-    // SAFETY: the caller's contract
-    unsafe { pixel::store_frame(&StoreTarget::from(&*target), width, height, channels, pixels, memory) };
 }
 
 /// `GETextureSet`'s slot of tile (x, y): the texture column and row.

@@ -476,6 +476,60 @@ pub unsafe extern "C" fn ee_ge_prim_set_depths(p: *mut EeGePrim, z: *const [f32;
     }
 }
 
+/// A rhombus's or a line's per-vertex member: `op` (`VertexGetColor`, `VertexSetColor`, `VertexGetUv`, `VertexSetUv`)
+/// on the vertices 0, 1, 2 and 3 with `a`, `b`, `c` and `d`, up to the first NULL (a line's two).
+///
+/// # Safety
+/// `p` is live; the pointers before the first NULL are valid for `op`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_prim_vertices4(
+    p: *mut EeGePrim,
+    op: EeGeBmpOp,
+    a: *const c_void,
+    b: *const c_void,
+    c: *const c_void,
+    d: *const c_void,
+) {
+    for (i, arg) in [a, b, c, d].into_iter().take_while(|v| !v.is_null()).enumerate() {
+        // SAFETY: the caller's contract
+        unsafe { EeGePrim::vertex(p, op, i, arg) };
+    }
+}
+
+/// `GetOpacityPerVertex`: vertex 0's, 1's, 2's and 3's opacity into `a`, `b`, `c` and `d`, up to the first NULL.
+///
+/// # Safety
+/// `p` is live; the pointers before the first NULL are valid for writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_prim_opacities(p: *mut EeGePrim, a: *mut f32, b: *mut f32, c: *mut f32, d: *mut f32) {
+    for (i, out) in [a, b, c, d].into_iter().take_while(|v| !v.is_null()).enumerate() {
+        // SAFETY: the caller's contract
+        unsafe { *out = ee_ge_prim_opacity(p, i as c_ulong) };
+    }
+}
+
+/// `SetOpacityPerVertex`: the first `count` of `a`, `b`, `c`, `d` to the vertices 0.. in turn.
+///
+/// # Safety
+/// `p` is live with at least `count` vertices.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_prim_set_opacities(p: *mut EeGePrim, count: c_ulong, a: f32, b: f32, c: f32, d: f32) {
+    for (i, opacity) in [a, b, c, d].into_iter().take(count as usize).enumerate() {
+        // SAFETY: the caller's contract
+        unsafe { EeGePrim::set_opacity(p, i, opacity) };
+    }
+}
+
+/// A rhombus's `SetZPerVertex(a, b, c, d)`.
+///
+/// # Safety
+/// `p` is a live rhombus.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_prim_set_z(p: *mut EeGePrim, a: f32, b: f32, c: f32, d: f32) {
+    // SAFETY: the caller's contract
+    unsafe { ee_ge_prim_set_depths(p, &[a, b, c, d]) }
+}
+
 /// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
 ///
 /// # Safety

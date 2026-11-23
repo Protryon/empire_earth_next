@@ -236,10 +236,11 @@ long ee_fs_arch_create_walk(EeFsArchiveObj *a,
 /// `Create(root, files, level)`: the archive built from the listed files under the root.
 ///
 /// # Safety
-/// `a` is a live record, `root` a live spec, `files` `count` live `UString` records.
+/// `a` is a live record, `root` a live spec, `files` an array of `count` live `UString`s (a `std::vector<UString>`'s
+/// data: a `UString` is an [`EeFsString`]).
 long ee_fs_arch_create_list(EeFsArchiveObj *a,
                             const EeFsSpec *root,
-                            const EeFsString *const *files,
+                            const EeFsString *files,
                             size_t count,
                             unsigned long level);
 
@@ -439,11 +440,11 @@ void ee_fs_chunk_init(EeFsChunk *chunk);
 /// `chunk` is valid; its `data` is null or live and not used again.
 void ee_fs_chunk_free(EeFsChunk *chunk);
 
-/// `GetChunkSize`.
+/// `GetChunkSize`: the size into `out_size` (untouched when the header is not loaded).
 ///
 /// # Safety
 /// `chunk` and `out_size` are valid.
-bool ee_fs_chunk_size(const EeFsChunk *chunk, uint32_t *out_size);
+bool ee_fs_chunk_size(const EeFsChunk *chunk, unsigned long *out_size);
 
 /// `LoadChunkHeader`.
 ///
@@ -568,11 +569,11 @@ int32_t ee_fs_archive_write_tags(const EeFsArchive *archive, const EeFsFileOps *
 /// As `ee_fs_archive_write_header`.
 int32_t ee_fs_archive_read_tags(EeFsArchive *archive, const EeFsFileOps *ops);
 
-/// `SetTag` (always `kErrorOK` in C++).
+/// `SetTag`: always `kErrorOK`.
 ///
 /// # Safety
 /// `archive` is valid; `name` and `value` NUL-terminated.
-void ee_fs_archive_set_tag(EeFsArchive *archive, const char *name, const char *value);
+int32_t ee_fs_archive_set_tag(EeFsArchive *archive, const char *name, const char *value);
 
 /// `GetTag`: gives the value to `sink` and returns `kErrorOK`, or `kErrorNotFound`.
 ///
@@ -591,6 +592,17 @@ void ee_fs_archive_list(const EeFsArchive *archive,
                         const char *pattern,
                         EeFsTextSink sink,
                         void *context);
+
+/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
+/// [`ee_fs_archive_list`]; always `kErrorOK`.
+///
+/// # Safety
+/// As [`ee_fs_archive_list`]; `sink` takes a null text.
+int32_t ee_fs_archive_list_files(const EeFsArchive *archive,
+                                 const char *pattern,
+                                 bool clear,
+                                 EeFsTextSink sink,
+                                 void *context);
 
 /// Visits the FAT in order (the `Create` check loop, `ExtractAll`).
 ///
