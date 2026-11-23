@@ -33,68 +33,51 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIFontTable.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
 // The Rust font table's calls out (EeUiOp, obj.rs; ee_ui fonttableobj.rs): a the file, manager, name or font
-static intptr_t UIFontTableHost(void* inObject, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+static UWideString sFace;
+#define theFile reinterpret_cast<FSFileSpec*>(a)
+#define theFont reinterpret_cast<GEFont*>(a)
+#define theName (*reinterpret_cast<const UString*>(b))
+EE_UI_VOID(font_tbl_file_open) { theFile->Open(kFileAccessRead); }
+EE_UI_VOID(font_tbl_file_close) { theFile->Close(); }
+EE_UI_CASE(font_name)
 {
-    static UWideString sFace;   // Create's face name (kept between records, as the original's local was)
-    FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
-    GEFont* theFont = reinterpret_cast<GEFont*>(a);
-    const UString& theName = *reinterpret_cast<const UString*>(b);
-    (void)inObject;
-    (void)f;
-    switch (inOp) {
-    case EeUiOp::TblFileOpen: theFile->Open(kFileAccessRead); return 0;
-    case EeUiOp::TblFileReadCount: {
-        unsigned long theCount = 0;
-        long theResult = theFile->Read(theCount);
-        return (intptr_t)((uint64_t)theCount << 32 | (uint32_t)theResult);
-    }
-    case EeUiOp::TblFileRead: {
-        unsigned long theRead = 0;
-        return theFile->Read(reinterpret_cast<unsigned char*>(b), (unsigned long)c, theRead);
-    }
-    case EeUiOp::TblFileClose: theFile->Close(); return 0;
-    case EeUiOp::FontName: {
-        reinterpret_cast<UIManager*>(a)->GetStringTable()->GetString((unsigned long)b, sFace);
-        UString* theCopy = new UString;
-        theCopy->Copy(sFace, 0, sFace.GetLength(), 0, true);
-        return (intptr_t)theCopy;
-    }
-    case EeUiOp::FontNameDelete: delete reinterpret_cast<UString*>(a); return 0;
-    case EeUiOp::FontCompare:
-        return theFont->CompareFont(theName, (unsigned long)c, (unsigned long)(uint32_t)d, (unsigned long)((uint64_t)d >> 32));
-    case EeUiOp::FontReference: theFont->Reference(); return 0;
-    case EeUiOp::FontNew: {
-        GEFont* theNew = new GEFont(*reinterpret_cast<const UString*>(a), (unsigned long)d, (unsigned long)b, (unsigned long)c);
-        theNew->Reference();
-        return (intptr_t)theNew;
-    }
-    case EeUiOp::FontRelease: theFont->Dereference(); return 0;
-    default: return 0;
-    }
+    reinterpret_cast<UIManager*>(a)->GetStringTable()->GetString((unsigned long)b, sFace);
+    UString* theCopy = new UString;
+    theCopy->Copy(sFace, 0, sFace.GetLength(), 0, true);
+    return (intptr_t)theCopy;
 }
-
+EE_UI_VOID(font_name_delete) { delete reinterpret_cast<UString*>(a); }
+EE_UI_CASE(font_compare) { return theFont->CompareFont(theName, (unsigned long)c, (unsigned long)(uint32_t)d, (unsigned long)((uint64_t)d >> 32)); }
+EE_UI_VOID(font_reference) { theFont->Reference(); }
+EE_UI_CASE(font_create) { return (intptr_t) new GEFont(*reinterpret_cast<const UString*>(a), (unsigned long)d, (unsigned long)b, (unsigned long)c); }
+EE_UI_VOID(font_release) { theFont->Dereference(); }
+#undef theName
+#undef theFont
+#undef theFile
 // Creates an empty font table entry
 UIFontTable::UIFontTable()
 {
 }
 
-long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager) { return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, UIFontTableHost); }
+long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager) { return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, ee_ui_font_table_host); }
 
-void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, UIFontTableHost); }
+void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, ee_ui_font_table_host); }
 
-GEFont* UIFontTable::GetFont(unsigned long inIndex) { return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, UIFontTableHost)); }
+GEFont* UIFontTable::GetFont(unsigned long inIndex) { return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, ee_ui_font_table_host)); }
 
 GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPixelHeight)
 {
     return reinterpret_cast<GEFont*>(
-        ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, inIndex, inPixelHeight, 0, 0, UIFontTableHost));
+        ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, inIndex, inPixelHeight, 0, 0, ee_ui_font_table_host));
 }
 
 GEFont* UIFontTable::FindOrCreateFont(const UString& inName, unsigned long inStyle, unsigned long inQuality,
     unsigned long inSize)
 {
     return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::FindOrCreateFont, (intptr_t)&inName, inStyle,
-                                                       inQuality, inSize, UIFontTableHost));
+                                                       inQuality, inSize, ee_ui_font_table_host));
 }

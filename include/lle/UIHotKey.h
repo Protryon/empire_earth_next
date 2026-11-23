@@ -10,6 +10,7 @@
 #define LLE_UIHOTKEY_H
 
 #include "rust/ui/hotkeyobj.h"
+#include "rust/ui/hotkey_ffi.h"
 #include "lle/UIEntity.h"
 #include "lle/TMPoll.h"
 
@@ -34,7 +35,7 @@ public:
     bool GetAlwaysFire() const { return this->mAlwaysFire; }
     static UIHotKey* GetHotKey(unsigned long inIndex) { return static_cast<UIHotKey*>(ee_ui_hotkey_at(inIndex)); }
     static unsigned long GetHotKeyCount() { return ee_ui_hotkey_count(); }
-    void GetHotKeyName(UWideString& outName);
+    void GetHotKeyName(UWideString& outName) { outName = ee_ui_hotkey_display_name(this); }
     unsigned long GetKeyCount() const { return this->mKeyCount; }
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }
     void SetDoublePressedEvent(UIEvent* inEvent) { this->Call(EeUiHotKeyCall::SetEvent, 0, (intptr_t)inEvent); }

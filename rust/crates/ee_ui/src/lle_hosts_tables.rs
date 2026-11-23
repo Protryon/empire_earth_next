@@ -20,6 +20,20 @@ tables! {
         BgFormRect => v ee_uicpp_bg_form_rect,
         BgFormFade => v ee_uicpp_bg_form_fade,
     }
+    /// the background table's calls out (the file, an entry's new and delete, the manager)
+    bg_table {
+        BgtFileOpen => v ee_uicpp_bgt_file_open,
+        BgtFileCount => x bg_table_file_count,
+        BgtFileRead => r ee_uicpp_bgt_file_read,
+        BgtFileClose => v ee_uicpp_bgt_file_close,
+        BgtNew => r ee_uicpp_bgt_new,
+        BgtDelete => v ee_uicpp_bgt_delete,
+        BgtForm => r ee_uicpp_bgt_form,
+        BgtTextureDepth => r ee_uicpp_bgt_texture_depth,
+        BgtEntryAlpha => r ee_uicpp_bgt_entry_alpha,
+        BgtEntryFormId => r ee_uicpp_bgt_entry_form_id,
+        BgtMake => r ee_uicpp_bgt_make,
+    }
     /// the button's own ops (its virtuals, the sounds, the label, the radio group, the polls, the stretch)
     button {
         ButtonDown => v ee_uicpp_button_down,
@@ -77,6 +91,19 @@ tables! {
         RhombusDelete => v ee_uicpp_edit_rhombus_delete,
         TextSetBgColor => v ee_uicpp_edit_text_set_bg_color,
         TextSetTransparent => v ee_uicpp_edit_text_set_transparent,
+    }
+    /// the font table's calls out (a the file, manager, name or font)
+    fonts {
+        TblFileOpen => v ee_uicpp_font_tbl_file_open,
+        TblFileReadCount => x font_file_read_count,
+        TblFileRead => x font_file_read,
+        TblFileClose => v ee_uicpp_font_tbl_file_close,
+        FontName => r ee_uicpp_font_name,
+        FontNameDelete => v ee_uicpp_font_name_delete,
+        FontCompare => r ee_uicpp_font_compare,
+        FontReference => v ee_uicpp_font_reference,
+        FontNew => x font_new,
+        FontRelease => v ee_uicpp_font_release,
     }
     /// the manager's calls out (a the form, event, bitmap, texture, lock or sound instance)
     manager {
@@ -247,6 +274,22 @@ tables! {
         DrawBorder => r ee_uicpp_graph_draw_border,
         LineCreate => r ee_uicpp_graph_line_create,
         LineDelete => v ee_uicpp_graph_line_delete,
+    }
+    /// the hot keys' calls out (the keyboard's entities, the events, new and delete; the object the record)
+    hotkey {
+        HkValue => r ee_uicpp_hk_value,
+        HkDoublePressed => r ee_uicpp_hk_double_pressed,
+        HkJustPressed => r ee_uicpp_hk_just_pressed,
+        HkJustUnpressed => r ee_uicpp_hk_just_unpressed,
+        HkKeyboardState => r ee_uicpp_hk_keyboard_state,
+        HkModifierState => r ee_uicpp_hk_modifier_state,
+        HkKeyIndex => r ee_uicpp_hk_key_index,
+        HkProcess => v ee_uicpp_hk_process,
+        HkNew => r ee_uicpp_hk_new,
+        HkDelete => v ee_uicpp_hk_delete,
+        HkEntity => x hotkey_entity,
+        HkEntityResult => x hotkey_entity_result,
+        HkEventCall => x hotkey_event_call,
     }
     /// the text label's own ops (the strings, the scroll bar, the polls, its virtuals)
     label {
@@ -431,5 +474,39 @@ tables! {
         RhombusSetOpacity => v ee_uicpp_status_rhombus_set_opacity,
         RhombusSetColor => v ee_uicpp_status_rhombus_set_color,
         RhombusDraw => r ee_uicpp_status_rhombus_draw,
+    }
+    /// the file lists' search, path and file ops (a the search or the path)
+    file_shared {
+        FlSearchNew => r ee_uicpp_fl_search_new,
+        FlSearchDelete => v ee_uicpp_fl_search_delete,
+        FlDirCount => r ee_uicpp_fl_dir_count,
+        FlDirFirst => x file_dir_first,
+        FlNext => r ee_uicpp_fl_next,
+        FlRewind => v ee_uicpp_fl_rewind,
+        FlNameLength => r ee_uicpp_fl_name_length,
+        FlNameCopy => v ee_uicpp_fl_name_copy,
+        FlDeleteFile => x file_delete,
+        FlPathReference => v ee_uicpp_fl_path_reference,
+        FlPathRelease => v ee_uicpp_fl_path_release,
+    }
+    /// UIFileListBox's own list methods
+    file_list {
+        FlDeleteAll => v ee_uicpp_fl_list_delete_all,
+        FlAppend => v ee_uicpp_fl_list_append,
+        FlInsertSorted => v ee_uicpp_fl_list_insert_sorted,
+        FlSelection => r ee_uicpp_fl_list_selection,
+        FlLineLength => r ee_uicpp_fl_list_line_length,
+        FlLineCopy => v ee_uicpp_fl_list_line_copy,
+        FlDeleteLine => v ee_uicpp_fl_list_delete_line,
+    }
+    /// UIFileComboBox's own list methods
+    file_combo {
+        FlDeleteAll => v ee_uicpp_fl_combo_delete_all,
+        FlAppend => v ee_uicpp_fl_combo_append,
+        FlInsertSorted => v ee_uicpp_fl_combo_insert_sorted,
+        FlSelection => r ee_uicpp_fl_combo_selection,
+        FlLineLength => r ee_uicpp_fl_combo_line_length,
+        FlLineCopy => v ee_uicpp_fl_combo_line_copy,
+        FlDeleteLine => v ee_uicpp_fl_combo_delete_line,
     }
 }

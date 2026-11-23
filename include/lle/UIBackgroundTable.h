@@ -19,6 +19,8 @@ class UIManager;
 class LLE_API UIBackgroundTable : public EeUiBgTableFields {
 public:
     UIBackgroundTable() { ee_ui_bgtable_init(this); }
+    // an entry read from the database (the Rust record's fields, the texture file's name)
+    UIBackgroundTable(const EeUiBgTableFields& inFields, const char* inTextureFile) : EeUiBgTableFields(inFields), mTextureFile(inTextureFile) {}
     virtual ~UIBackgroundTable() {}
     // Loads every background table entry from the file (NULL for nameless records); returns the last read result
     static long Create(FSFileSpec& inFile);

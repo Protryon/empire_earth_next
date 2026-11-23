@@ -130,6 +130,66 @@ ptrdiff_t ee_ui_background_full_host(void *o,
                                      ptrdiff_t d,
                                      float *f);
 
+/// UIFileListBox's host.
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_file_list_host(void *o,
+                               EeUiOp op,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c,
+                               ptrdiff_t d,
+                               float *f);
+
+/// UIFileComboBox's host.
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_file_combo_host(void *o,
+                                EeUiOp op,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                ptrdiff_t c,
+                                ptrdiff_t d,
+                                float *f);
+
+/// UIHotKey's host (its object the record).
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_hotkey_host(void *o,
+                            EeUiOp op,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c,
+                            ptrdiff_t d,
+                            float *f);
+
+/// UIFontTable's host.
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_font_table_host(void *o,
+                                EeUiOp op,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                ptrdiff_t c,
+                                ptrdiff_t d,
+                                float *f);
+
+/// UIBackgroundTable's host (its object the file or the manager).
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_bg_table_host(void *o,
+                              EeUiOp op,
+                              ptrdiff_t a,
+                              ptrdiff_t b,
+                              ptrdiff_t c,
+                              ptrdiff_t d,
+                              float *f);
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_LLE_HOSTS_H

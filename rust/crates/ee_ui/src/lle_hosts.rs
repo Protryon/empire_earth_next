@@ -362,3 +362,252 @@ cpp_hosts! {
     /// The controls table's.
     table = ee_uicpp_table_host;
 }
+
+/// The file lists' `FlDirFirst`: directory `c` of the path `b` into the search `a`, then its first file.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn file_dir_first(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    extern "C" {
+        fn ee_uicpp_fl_dir_get(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32);
+        fn ee_uicpp_fl_first(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize;
+    }
+    // SAFETY: the contract
+    unsafe {
+        ee_uicpp_fl_dir_get(o, a, b, c, d, f);
+        ee_uicpp_fl_first(o, a, b, c, d, f)
+    }
+}
+
+/// The file lists' `FlDeleteFile`: the file named by the bytes at `a` found on the path `b` and deleted; `f[0]`'s
+/// bits whether it was found; the find's (or the delete's) result.
+///
+/// # Safety
+/// The host contract: `f` four live floats.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn file_delete(_o: *mut c_void, a: isize, b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    extern "C" {
+        fn ee_uicpp_fl_find_file(name: isize, path: isize, file: *mut *mut c_void) -> isize;
+        fn ee_uicpp_fl_file_delete(file: *mut c_void) -> isize;
+        fn ee_uicpp_fl_file_free(file: *mut c_void);
+    }
+    let mut file = core::ptr::null_mut();
+    // SAFETY: the contract; file is the find's out
+    let mut result = unsafe { ee_uicpp_fl_find_file(a, b, &mut file) };
+    let found = result == 0;
+    if found {
+        // SAFETY: the file the find made
+        unsafe {
+            result = ee_uicpp_fl_file_delete(file);
+            ee_uicpp_fl_file_free(file);
+        }
+    }
+    // SAFETY: the contract
+    unsafe { *f = f32::from_bits(found as u32) };
+    result
+}
+
+/// UIFileListBox's host.
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_file_list_host(
+    o: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe { chain(&[file_shared, file_list], o, op, a, b, c, d, f) }
+}
+
+/// UIFileComboBox's host.
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_file_combo_host(
+    o: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe { chain(&[file_shared, file_combo], o, op, a, b, c, d, f) }
+}
+
+/// The hot keys' `HkEntity`: the keyboard's entity of key `a` (`a` itself when there is none, the original's
+/// unset local).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn hotkey_entity(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    let mut e = a as *mut c_void;
+    // SAFETY: e is the shim's in-out entity
+    unsafe { hotkey_get_entity(a, &mut e) };
+    e as isize
+}
+
+/// The hot keys' `HkEntityResult`: the keyboard's lookup of key `a`'s entity, its result.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn hotkey_entity_result(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    let mut e = a as *mut c_void;
+    // SAFETY: e is the shim's in-out entity
+    unsafe { hotkey_get_entity(a, &mut e) }
+}
+
+/// The hot keys' `HkEventCall`: event `a`'s 0 `Uninitialize`, 1 `Dereference`, 2 `Reference`, else `Initialize`.
+///
+/// # Safety
+/// The host contract: `a` a live event.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn hotkey_event_call(_o: *mut c_void, a: isize, b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::lle_cpp::Cpp;
+    let mut cpp = crate::lle_cpp::Ffi;
+    let e = a as usize;
+    match b {
+        0 => cpp.event_uninitialize(e),
+        1 => cpp.event_dereference(e),
+        2 => cpp.event_reference(e),
+        _ => cpp.event_initialize(e),
+    }
+    0
+}
+
+/// The keyboard's entity of a key into `entity` (UIHotKey.cpp), the lookup's result.
+///
+/// # Safety
+/// `entity` a live pointer.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn hotkey_get_entity(key: isize, entity: *mut *mut c_void) -> isize {
+    extern "C" {
+        fn ee_uicpp_hk_get_entity(key: isize, entity: *mut *mut c_void) -> isize;
+    }
+    // SAFETY: the contract
+    unsafe { ee_uicpp_hk_get_entity(key, entity) }
+}
+
+/// UIHotKey's host (its object the record).
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_hotkey_host(
+    o: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe { chain(&[hotkey], o, op, a, b, c, d, f) }
+}
+
+
+/// The font table's `TblFileReadCount`: the file `a`'s next count, packed with the read's result (count << 32).
+///
+/// # Safety
+/// The host contract: `a` a live open file.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn font_file_read_count(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::lle_cpp::{Cpp, EeUiShimULongOut};
+    let mut count: core::ffi::c_ulong = 0;
+    let result = crate::lle_cpp::Ffi.file_read_count(a as usize, EeUiShimULongOut::of(&mut count));
+    ((count as u64) << 32 | result as u32 as u64) as isize
+}
+
+/// The font table's `TblFileRead`: `c` bytes of the file `a` into `b`.
+///
+/// # Safety
+/// The host contract: `b` `c` writable bytes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn font_file_read(_o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::lle_cpp::{Cpp, EeUiShimU8Out};
+    crate::lle_cpp::Ffi.file_read(a as usize, EeUiShimU8Out(b as *mut u8), c as core::ffi::c_ulong) as isize
+}
+
+/// The font table's `FontNew`: a new font (name `a`, size `d`, style `b`, quality `c`), referenced.
+///
+/// # Safety
+/// The host contract: `a` a live UString.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn font_new(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    extern "C" {
+        fn ee_uicpp_font_create(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize;
+    }
+    // SAFETY: the contract; the reference is the new font's
+    unsafe {
+        let font = ee_uicpp_font_create(o, a, b, c, d, f);
+        ee_uicpp_font_reference(o, font, 0, 0, 0, f);
+        font
+    }
+}
+
+/// UIFontTable's host.
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_font_table_host(
+    o: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe { chain(&[fonts], o, op, a, b, c, d, f) }
+}
+
+/// The background table's `BgtFileCount`: the file's (the object's) next count in `f[0]`'s bits, the read's result.
+///
+/// # Safety
+/// The host contract: `o` a live open file, `f` four live floats.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn bg_table_file_count(o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    use crate::lle_cpp::{Cpp, EeUiShimULongOut};
+    let mut count: core::ffi::c_ulong = 0;
+    let result = crate::lle_cpp::Ffi.file_read_count(o as usize, EeUiShimULongOut::of(&mut count));
+    // SAFETY: the contract
+    unsafe { *f = f32::from_bits(count as u32) };
+    result as isize
+}
+
+/// UIBackgroundTable's host (its object the file or the manager).
+///
+/// # Safety
+/// The host contract: `o` the class's live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_bg_table_host(
+    o: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe { chain(&[bg_table], o, op, a, b, c, d, f) }
+}

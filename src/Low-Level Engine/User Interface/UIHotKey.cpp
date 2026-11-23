@@ -7,7 +7,7 @@
 // UIIMECandidate.cpp's key chains start at 0x100774b9.
 //
 // UIHotKey is whole in Rust (rust/crates/ee_ui/src/hotkeyobj.rs, R6 ui round 20): the members forward to the Rust
-// record, which calls out through UIHotKeyHost::Op (the keyboard's entities, the events, new and delete); the
+// record, which calls out through ee_ui_hotkey_host (the keyboard's entities, the events, new and delete); the
 // database records are read in Rust (hotkey.rs DbHotKey, 124 bytes).
 #include <windows.h>
 #include <string.h>
@@ -22,6 +22,8 @@
 #include "lle/ISKeyboard.h"
 #include "lle/UIEvent.h"
 #include "lle/UIHotKey.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
 TMPoll UIHotKey::sPressedPoll(50, 0, true);
 unsigned long UIHotKey::sPressedPollAmount;
@@ -33,79 +35,48 @@ extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount)
 {
     return static_cast<FSFileSpec*>(inFile)->Read(*outCount);
 }
+static unsigned long sUIFileRead;   // the reads' byte counts (unread)
 extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength)
-{
-    unsigned long theRead = 0;
-    return static_cast<FSFileSpec*>(inFile)->Read(outData, inLength, theRead);
-}
+{ return static_cast<FSFileSpec*>(inFile)->Read(outData, inLength, sUIFileRead); }
 extern "C" void ee_uicpp_file_close(void* inFile) { static_cast<FSFileSpec*>(inFile)->Close(); }
 
 // The Rust hot keys' calls out (EeUiOp 570..581): the object is the record (NULL for the table's own calls)
-struct UIHotKeyHost {
-    static intptr_t Op(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float*)
-    {
-        EeUiHotKeyFields* r = static_cast<EeUiHotKeyFields*>(inObj);
-        ISEntity* theEntity = reinterpret_cast<ISEntity*>(a);
-        UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
-        switch (inOp) {
-        case EeUiOp::HkValue: return theEntity->GetValue();
-        case EeUiOp::HkDoublePressed: return theEntity->JustDoublePressed();
-        case EeUiOp::HkJustPressed: return theEntity->JustPressed();
-        case EeUiOp::HkJustUnpressed: return theEntity->JustUnpressed();
-        case EeUiOp::HkKeyboardState: return gISKeyboard->GetModifierState();
-        case EeUiOp::HkModifierState: return ISKeyboard::ComputeModifierState((unsigned long)a);
-        case EeUiOp::HkKeyIndex: return theEntity->GetIndex();
-        case EeUiOp::HkEntity: gISKeyboard->GetEntity((unsigned long)a, theEntity); return (intptr_t)theEntity;
-        case EeUiOp::HkEntityResult: return gISKeyboard->GetEntity((unsigned long)a, theEntity);
-        case EeUiOp::HkEventCall:
-            switch (b) {
-    case 0: theEvent->Uninitialize(); break;
-    case 1: theEvent->Dereference(); break;
-    case 2: theEvent->Reference(); break;
-    default: theEvent->Initialize(); break;
-            }
-            break;
-        case EeUiOp::HkProcess: theEvent->ProcessEvent(static_cast<UIForm*>(r->mForm), static_cast<UIHotKey*>(r)); break;
-        case EeUiOp::HkNew: return (intptr_t) static_cast<EeUiHotKeyFields*>(new UIHotKey);
-        case EeUiOp::HkDelete: delete static_cast<UIHotKey*>(reinterpret_cast<EeUiHotKeyFields*>(a)); break;
-        default: break;
-        }
-        return 0;
-    }
-};
+#define r static_cast<EeUiHotKeyFields*>(inObj)
+#define theEntity reinterpret_cast<ISEntity*>(a)
+#define theEvent reinterpret_cast<UIEvent*>(a)
+EE_UI_CASE(hk_value) { return theEntity->GetValue(); }
+EE_UI_CASE(hk_double_pressed) { return theEntity->JustDoublePressed(); }
+EE_UI_CASE(hk_just_pressed) { return theEntity->JustPressed(); }
+EE_UI_CASE(hk_just_unpressed) { return theEntity->JustUnpressed(); }
+EE_UI_CASE(hk_keyboard_state) { return gISKeyboard->GetModifierState(); }
+EE_UI_CASE(hk_modifier_state) { return ISKeyboard::ComputeModifierState((unsigned long)a); }
+EE_UI_CASE(hk_key_index) { return theEntity->GetIndex(); }
+EE_UI_VOID(hk_process) { theEvent->ProcessEvent(static_cast<UIForm*>(r->mForm), static_cast<UIHotKey*>(r)); }
+EE_UI_CASE(hk_new) { return (intptr_t) static_cast<EeUiHotKeyFields*>(new UIHotKey); }
+EE_UI_VOID(hk_delete) { delete static_cast<UIHotKey*>(reinterpret_cast<EeUiHotKeyFields*>(a)); }
+extern "C" intptr_t ee_uicpp_hk_get_entity(intptr_t inKey, ISEntity** ioEntity) { return gISKeyboard->GetEntity((unsigned long)inKey, *ioEntity); }
+#undef theEvent
+#undef theEntity
+#undef r
 
 // Creates a hot key with no keys or events, enabled
 UIHotKey::UIHotKey()
     : UIEntity(0)
 {
-    ee_ui_hotkey_init(this, UIHotKeyHost::Op);
+    ee_ui_hotkey_init(this, ee_ui_hotkey_host);
 }
 
 // Copies a hot key onto a form, referencing its events
 UIHotKey::UIHotKey(UIForm* inForm, const UIHotKey& inHotKey)
     : UIEntity(0)
 {
-    ee_ui_hotkey_copy(this, UIHotKeyHost::Op, const_cast<UIHotKey*>(&inHotKey), inForm);
+    ee_ui_hotkey_copy(this, ee_ui_hotkey_host, const_cast<UIHotKey*>(&inHotKey), inForm);
 }
 
 UIHotKey::~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
 
-// Builds the hot key's display name, e.g. "Ctrl + Shift + A" (key names without " key")
-void UIHotKey::GetHotKeyName(UWideString& outName)
-{
-    const char* theNames[3];
-    unsigned long theLength = 1;
-    for (long i = 0; i < 3; i++) {
-        theNames[i] = this->mModifiers[i] ? (const char*)static_cast<ISEntity*>(this->mModifiers[i])->GetName() : NULL;
-        if (theNames[i])
-            theLength += strlen(theNames[i]) + 3;
-    }
-    const char* theKey = static_cast<ISEntity*>(this->mKey)->GetName();
-    theLength += strlen(theKey);
-    std::vector<unsigned char> theName(theLength);
-    ee_ui_hotkey_name(theNames[0], theNames[1], theNames[2], theKey, &theName[0], theName.size());
-    outName = (const char*)&theName[0];
-}
+// the entities' names (ee_ui hotkey_ffi.rs: the hot key's display name)
+extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast<ISEntity*>(inEntity)->GetName(); }
 
-long UIHotKey::CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_all(&inFile, UIHotKeyHost::Op); }
-void UIHotKey::DeleteHotKeys() { ee_ui_hotkey_delete_all(UIHotKeyHost::Op); }
+long UIHotKey::CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_all(&inFile, ee_ui_hotkey_host); }
+void UIHotKey::DeleteHotKeys() { ee_ui_hotkey_delete_all(ee_ui_hotkey_host); }

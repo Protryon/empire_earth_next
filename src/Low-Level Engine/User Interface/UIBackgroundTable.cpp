@@ -7,7 +7,7 @@
 //
 // UIBackgroundTable is whole in Rust with UIManager::CreateBackgrounds (rust/crates/ee_ui/src/bgtableobj.rs, R6 ui
 // round 20): the members are the record EeUiBgTableFields, the array a Rust list; Create, DeleteAll and
-// CreateBackgrounds call out through UIBackgroundTableHost::Op (the database file, an entry's new and delete, the
+// CreateBackgrounds call out through ee_ui_bg_table_host (the database file, an entry's new and delete, the
 // manager's forms, a background's construction by type).
 #include <windows.h>
 #include <stddef.h>
@@ -34,6 +34,8 @@
 #include "lle/UIManager.h"
 #include "lle/UITiledBackground.h"
 #include "lle/UIBFull.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
 static_assert(sizeof(EeUiLayout) == sizeof(UILayoutUtility) && sizeof(EeUiColor) == sizeof(GEColor), "bgtableobj.rs");
 
@@ -45,36 +47,6 @@ extern "C" void ee_uicpp_file_close(void* inFile);
 
 // The Rust table's calls out (EeUiOp 590..600): the object is the file (Create) or the manager (CreateBackgrounds)
 struct UIBackgroundTableHost {
-    static intptr_t Op(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t, float* f)
-    {
-        UIBackgroundTable* t = static_cast<UIBackgroundTable*>(reinterpret_cast<EeUiBgTableFields*>(a));
-        UIManager* m = static_cast<UIManager*>(inObj);
-        switch (inOp) {
-        case EeUiOp::BgtFileOpen: ee_uicpp_file_open(inObj); break;
-        case EeUiOp::BgtFileCount: {
-            unsigned long theCount = 0;
-            long theResult = ee_uicpp_file_read_count(inObj, &theCount);
-            uint32_t theBits = (uint32_t)theCount;
-            memcpy(f, &theBits, 4);
-            return theResult;
-        }
-        case EeUiOp::BgtFileRead: return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c);
-        case EeUiOp::BgtFileClose: ee_uicpp_file_close(inObj); break;
-        case EeUiOp::BgtNew:
-            t = new UIBackgroundTable;
-            *static_cast<EeUiBgTableFields*>(t) = *reinterpret_cast<const EeUiBgTableFields*>(a);
-            t->mTextureFile = reinterpret_cast<const char*>(b);
-            return (intptr_t) static_cast<EeUiBgTableFields*>(t);
-        case EeUiOp::BgtDelete: delete t; break;
-        case EeUiOp::BgtForm: return (intptr_t)m->GetFormByID((unsigned long)a);
-        case EeUiOp::BgtTextureDepth: return m->GetUITextureBitDepth();
-        case EeUiOp::BgtEntryAlpha: return t->GetHasAlpha();
-        case EeUiOp::BgtEntryFormId: return t->GetFormID();
-        case EeUiOp::BgtMake: return (intptr_t)Make(m, *t, reinterpret_cast<UIForm*>(b), *reinterpret_cast<const GETextureDescription*>(c));
-        default: break;
-        }
-        return 0;
-    }
     // A background of the entry's type on the form (others the manager's user-defined backgrounds)
     static UIBackground* Make(UIManager* m, const UIBackgroundTable& t, UIForm* inForm, const GETextureDescription& d)
     {
@@ -98,8 +70,22 @@ struct UIBackgroundTableHost {
         }
     }
 };
+#define t (static_cast<UIBackgroundTable*>(reinterpret_cast<EeUiBgTableFields*>(a)))
+#define m static_cast<UIManager*>(inObj)
+EE_UI_VOID(bgt_file_open) { ee_uicpp_file_open(inObj); }
+EE_UI_CASE(bgt_file_read) { return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c); }
+EE_UI_VOID(bgt_file_close) { ee_uicpp_file_close(inObj); }
+EE_UI_CASE(bgt_new) { return (intptr_t) static_cast<EeUiBgTableFields*>(new UIBackgroundTable(*reinterpret_cast<const EeUiBgTableFields*>(a), reinterpret_cast<const char*>(b))); }
+EE_UI_VOID(bgt_delete) { delete t; }
+EE_UI_CASE(bgt_form) { return (intptr_t)m->GetFormByID((unsigned long)a); }
+EE_UI_CASE(bgt_texture_depth) { return m->GetUITextureBitDepth(); }
+EE_UI_CASE(bgt_entry_alpha) { return t->GetHasAlpha(); }
+EE_UI_CASE(bgt_entry_form_id) { return t->GetFormID(); }
+EE_UI_CASE(bgt_make) { return (intptr_t)UIBackgroundTableHost::Make(m, *t, reinterpret_cast<UIForm*>(b), *reinterpret_cast<const GETextureDescription*>(c)); }
+#undef m
+#undef t
 
 // Creates an empty background table entry (IDs -1, bitmap type, hidden, full opacity, draw priority 1)
-long UIBackgroundTable::Create(FSFileSpec& inFile) { return ee_ui_bgtable_create(&inFile, UIBackgroundTableHost::Op); }
-void UIBackgroundTable::CreateBackgrounds(UIManager* inManager) { ee_ui_bgtable_create_backgrounds(inManager, UIBackgroundTableHost::Op); }
-void UIBackgroundTable::DeleteAll() { ee_ui_bgtable_delete_all(UIBackgroundTableHost::Op); }
+long UIBackgroundTable::Create(FSFileSpec& inFile) { return ee_ui_bgtable_create(&inFile, ee_ui_bg_table_host); }
+void UIBackgroundTable::CreateBackgrounds(UIManager* inManager) { ee_ui_bgtable_create_backgrounds(inManager, ee_ui_bg_table_host); }
+void UIBackgroundTable::DeleteAll() { ee_ui_bgtable_delete_all(ee_ui_bg_table_host); }
