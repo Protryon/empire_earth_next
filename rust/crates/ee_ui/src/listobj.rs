@@ -1051,7 +1051,12 @@ pub unsafe extern "C" fn ee_ui_list_delete_all(list: *const EeUiList) {
 /// # Safety
 /// `list` is live; `line` is a live line; `eq` takes two live lines; `out` is writable.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ui_list_find(list: *const EeUiList, line: *const c_void, eq: EeUiLineEq, out: *mut c_ulong) -> bool {
+pub unsafe extern "C" fn ee_ui_list_find(
+    list: *const EeUiList,
+    line: *const c_void,
+    eq: EeUiLineEq,
+    out: *mut c_ulong,
+) -> bool {
     // SAFETY: the contract
     match unsafe { (*list).find(line, eq) } {
         Some(i) => {

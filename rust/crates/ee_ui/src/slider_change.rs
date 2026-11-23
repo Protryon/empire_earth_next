@@ -77,7 +77,12 @@ pub unsafe extern "C" fn ee_ui_slider_change_add(event: *const EeUiSliderChange,
 /// # Safety
 /// `event` is live.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ui_slider_change_set(event: *const EeUiSliderChange, which: u32, value: f32, offset: c_long) {
+pub unsafe extern "C" fn ee_ui_slider_change_set(
+    event: *const EeUiSliderChange,
+    which: u32,
+    value: f32,
+    offset: c_long,
+) {
     // SAFETY: the contract
     let e = unsafe { &*event };
     if which == 0 {
