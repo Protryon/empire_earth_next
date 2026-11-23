@@ -304,6 +304,13 @@ return {
     train_by_need = true,           -- the producers train what the need asks (produce.lua)
     fleet_by_need = false,          -- ... the fleet likewise (off upstream)
     train_room = 65535,             -- a mask of players whose producers count the room (all)
+    -- armies.c (the port forward): the force
+    raid_parties = true,            -- a part of the force answers a raid it beats by 200% instead of the whole force
+                                    -- (army.lua; armies.c RAID PARTIES)
+    ally_aid = false,               -- an ally's buildings within this many tiles of home are answered too (0 = off)
+    mod_armies_sea = true,          -- the force on island maps too (its landings lent its soldiers: not ported yet)
+    force_at_front = true,          -- the force's home in the land front with the heaviest open border (fronts.lua's
+                                    -- station stands in until the territories are in)
     -- explore.c
     explore = true,                 -- the citizens round their town for food, the dog's rings, the scouts (explore.lua)
     -- airguard.c, airstrike.c, storms.c
