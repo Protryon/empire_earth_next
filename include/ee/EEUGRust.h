@@ -15,7 +15,7 @@ struct EeUnitsGoalIo;
 
 typedef EEUnitGoal EEUGRust;
 // a Rust point (ee_base math types.rs Ge3DPoint) as a GE3DPoint (a template: GE3DPoint is complete where it is used)
-template <class P = GE3DPoint> inline P EEGoalPointOf(const EeGe3DPoint& inPoint) { return P(inPoint.x, inPoint.y, inPoint.z); }
+template <class P = GE3DPoint> inline P EEGoalPointOf(const EeGe3DPoint& inPoint) { return P(inPoint.mX, inPoint.mY, inPoint.mZ); }
 
 // one body of inGoal through the kind dispatch (ee_units_rust_goal over EEUGRust.cpp's host), for the accessors
 // defined outside EEUGRust.cpp (EEUGRustCombat.cpp)
