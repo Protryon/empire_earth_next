@@ -108,6 +108,7 @@
 #include "rust/ui/scrollbar.h"
 #include "rust/ui/scrollbarobj.h"
 #include "rust/ui/scrolling.h"
+#include "rust/ui/slider_change.h"
 #include "rust/ui/sliderobj.h"
 #include "rust/ui/statusobj.h"
 #include "rust/ui/tableobj.h"

@@ -70,6 +70,7 @@ pub mod scrollbar;
 pub mod scrollbarobj;
 pub mod scrolling;
 pub mod slider;
+pub mod slider_change;
 pub mod sliderobj;
 pub mod status;
 pub mod statusobj;
