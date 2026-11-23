@@ -158,28 +158,17 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 
 // (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)
 
-// The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*), each the original's
-extern "C" int64_t ee_screenscpp_ui_manager(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    return EEUIManager::HostOp(*static_cast<EEUIManagerCall*>(inCall), inOp, inA, inB, inC);
-}
-
-// (a member: UIManager's UpdateKeyboard and UpdateMouse are protected)
-int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    EEUIManager* theManager = ioCall.mManager;
-    switch (inOp) {   // (the cases of more than one call are Rust's: ee_screens ui_manager_calls.rs)
-    case EE_SCREENS_UM_OP_ENGINE_COUNT: return EECPEngineChoiceCount();
-    case EE_SCREENS_UM_OP_MUSIC:
-        theManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
-        break;
-    case EE_SCREENS_UM_OP_CITIZENS: return gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    case EE_SCREENS_UM_OP_POST_F9: EEPostF9Key(); break;
-    case EE_SCREENS_UM_OP_BASE_KEYBOARD: return theManager->UIManager::UpdateKeyboard();
-    case EE_SCREENS_UM_OP_BASE_MOUSE: return theManager->UIManager::UpdateMouse(*ioCall.mMouse);
-    }
-    return 0;
-}
+// The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*, ui_manager_ffi.rs
+// picks), each the original's
+extern "C" int64_t ee_screenscpp_um_engine_count() { return EECPEngineChoiceCount(); }
+extern "C" void ee_screenscpp_um_music(void* inCall)
+{ static_cast<EEUIManagerCall*>(inCall)->mManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
+extern "C" int64_t ee_screenscpp_um_citizens() { return gWorldTable.GetLongValue(kWorldStartingCitizensDefault); }
+extern "C" void ee_screenscpp_um_post_f9() { EEPostF9Key(); }
+extern "C" int64_t ee_screenscpp_um_base_keyboard(void* inCall)
+{ return EEUIManager::BaseKeyboard(static_cast<EEUIManagerCall*>(inCall)->mManager); }
+extern "C" int64_t ee_screenscpp_um_base_mouse(void* inCall)
+{ return EEUIManager::BaseMouse(static_cast<EEUIManagerCall*>(inCall)->mManager, *static_cast<EEUIManagerCall*>(inCall)->mMouse); }
 
 // ---- the one-statement shims of ee_screens ui_manager_calls.rs (UI lane round 8): each one call, no logic
 #define UMCALL(x) (*reinterpret_cast<EEUIManagerCall*>(x))
