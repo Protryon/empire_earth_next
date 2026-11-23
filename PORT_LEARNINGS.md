@@ -38928,3 +38928,118 @@ PT 2967/2968).
 - `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12722, game_s 795, units [4, 39, 40],
   alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2871, joiner 2877).
 - Not run: the POSIX builds, `gates.sh --legacy`.
+
+## R6 WON, round 33: goldens for round 32's unreached moves; WONLobbyPrv, CDKey and URL whole, the model's buffers, the lobby's config readers, the GUI hosts' unreached cases and the network classes' bodies in Rust (ee_won_lobby lobbyprv.rs, modelbuf.rs, chatlink.rs, lobbyconf.rs, lobbycfgrd.rs; ee_won_gui guireg.rs; ee_won_net cdkeystore.rs, http.rs; branch rust-won33, 2026-11-22)
+
+The parent wrote the goldens round 32 owed and moved StringUnits; three forks in their own worktrees with disjoint
+files moved code: gui (WONGUI, WONConfig, WONLobbyGUI.h), lobby (WONLobby but the parent's files), net (WONRouting.h,
+WONAPICore.h, WONCommon, WONAuth, WONDir, WONServer, the front end). The aim was -2,000 C++ logic lines.
+
+### What moved (logic: `logic_lines.py` over the whole tree, each part against fb32b70d8)
+
+| Part | What | Logic |
+|---|---|---|
+| fedfb24a9 | RootScreen's SWAT resize reads its window once (`WindowGet`), as the original's `aWindow` (the golden found the round 32 host calling GetRoot per op) | +1 |
+| 0929f50ef | the glue's StringUnits loop composed in gluesplit.rs over `StringLength`, `StringUnitAt` (EeWonEeGlueOp 600..) | -5 |
+| 824593415 | won_split32_test; won_lobbyops_test's LanPortDialogRun | 0 |
+| gui (5 commits) | the layout instructions' constructors (layoutobj.rs), WONGUIConfig_Init's registrations (guireg.rs), round 32's unreached GUI cases composed (guisplit.rs, EeWonGuiOp from 2000: clipboard take, link activated, the list's tooltip and pointer cases, queued submenu and mouse up, the window manager's popup window, default font, resolution, size events) | -162 |
+| gui 8daef3cea | **no move**: WONCfgTable.inl's `EE_CFG_SET` setters spelled as `case EE_CFG_KEY(..)` labels, so the counter sees the one-statement cases it hid | -132 |
+| net (11 commits) | CDKey whole (cdkeystore.rs), URL whole (http.rs); ThreadBase::Stop, SocketThreadSimple::Pump, RoutingOp's members, the user status op's settings, RustServerOp's settings and requests, the peer auth and certificate ops' constructors; DirMakeEntity's decisions; WONBuffer.h's text conversions; AuthContext's text and block calls; RecvFrom's address; LogicCompletion::Run's decision; AsyncOp.cpp's static_asserts as a Rust test; EEWonNetGameInfo's `operator=` as `= default` | -312 |
+| lobby (13 commits) | WONLobbyPrv whole (lobbyprv.rs: constructor, Init, Destroy, InitAuth, the 46 allocators) -113; the model's buffer methods (modelbuf.rs: the summaries, details, join request, check and reply, status texts, a player's bytes) -100; ChatLink's constructor (chatlink.rs) -13; LobbyConfig's constructor and LOBBYDEFINE (lobbyconf.rs) -33; nine controls' config readers (lobbycfgrd.rs) -68; the guarded cases as one statement each (`WON_GUARDED`) -45 | -372 |
+
+Round total: 42,078 -> 41,096 (**-982**; -850 without the respelling); the WON files 8,850 -> 7,868. Short of
+-2,000 (below).
+
+### The goldens round 32 owed (won_split32_test; won_lobbyops_test)
+
+- **won_split32_test**: the deleted C++ as it was at af02fb9a5 against the Rust over the hosts' one-statement cases
+  copied as they are, over stand-in worlds that log every call. Disp: the 17 network entry points (Logout,
+  LeaveGame, RemoveGameAdvertisement, KickClient, Resume among them) over every world of data, logics, types,
+  screens, captain, game, client and answers, 1,139,200 cases. Run: LobbyRun, Exit, Suspend, Resume, Start, 81,920.
+  Cfg: PostParse's four errors and the defaults, 256. Root: 20,000 random call sequences on the Internet and LAN
+  screens, SWAT layouts among them (the function-local statics run alike on both sides). Glue: TextWidth, SaveNew,
+  SaveLength, SaveLoadHeader, AddressesGet, DeleteCommunications and StringUnits, through `ee_won_eeglue_split_op`
+  (the drivers' entry to gluesplit.rs). 1,241,824 cases, 0 mismatches; then 81 mutations (a statement skipped, an
+  answer flipped or off by one), each caught.
+- **won_lobbyops_test**: LanPortDialogRun's deleted case (ports past 16 bits and negative ones cut as the
+  original's); a hand mutation (the `unsigned short` cut dropped) gave 16,384 mismatches. LobbyDoDialog's stand-in
+  is LoWorld's now, shared with the Internet logics' world (their phase unchanged: 52,472 cases).
+- What the golden found: RootScreen's SWAT resize called `GetRoot()` once per rectangle op where the original read
+  it once; fixed (WindowGet). ChatLinkNew's golden is the lobby fork's (won_lobby33_test).
+- Lessons: an existence check flipped to true reads through NULL in both sides' stand-ins (an access violation, not
+  a mismatch): mutate those only to false. Mutation passes run after the real one in the same process, so the
+  Rust's statics carry over; the static lists the host keeps (the address list) are cleared at a phase's start.
+
+### The forks
+
+- **gui**: golden won_guisplit33_test (the deleted cases against the game hosts over one world: 6,144 runs, 0
+  mismatches, 39 of 39 mutations). The new host keeps the font reference in a static SmartPtr, so the world
+  compares counts after each case, not the AddRef/Release calls. A probe LAN game reached the layout constructors
+  and WONGUIConfig_Init (proven by the LAN game); every case of 33dc8d6e1 was unreached (the golden).
+- **net**: golden won_net33_test (46,010 checks, 13 of 13 mutations: CDKey, DirMakeEntity, RustServerOp,
+  RoutingOp, the user status op, ThreadBase::Stop); the existing won_dir, won_cdkeystore, won_http, won_buffer,
+  won_authhost, won_sockobj, won_userstatus drivers pass. Several new ee_won_net FFI land in rust/won_net/hostop.h
+  rather than their module's header: check where cbindgen puts a function before adding includes.
+- **lobby**: golden won_lobby33_test (generated by tests/won/won_lobby33_gen.py from fb32b70d8 and the tree: about
+  75,000 cases, 0 mismatches, 303 of 303 ops reached, 24 of 24 mutations). Exceptions: an op that can throw runs
+  under `WonGuard` (WONLobbyGuard.h), which keeps the exception and answers `kWonThrown`; the Rust releases its
+  locals in the order the original's unwinding would and the C++ entry rethrows (`WonRethrow`); the model's reads
+  catch ReadBufferException inside the op and the Rust takes the original's catch branch. No C++ exception crosses
+  a Rust frame. The counter scores a lambda-guarded case as logic (two semicolons); `WON_GUARDED(expr)` makes it one
+  statement.
+
+### Behaviour changes
+
+- RootScreen's SWAT resize reads its window once again (round 32's host read it per op).
+- CDKey's GetRaw returns a ByteBufferPtr copy, URL's GetAddress and GetPath a std::string (no caller held the
+  references); CDKey always uses the new encryption method (its two virtuals had no override).
+- The moved bodies' locals are host statics or heap objects, released where the original's locals died.
+
+### Why short (-982 against -2,000)
+
+- What is left in the WON files is mostly class declarations (WONLobbyGUI.h 912, WONRouting.h 393, EEWonNet.h 162)
+  that go only with whole-class moves of Component, Window, the sockets and EEWonNet (the last needs other lanes'
+  files: EEServer, EEWorld, EEScreens).
+- The lobby dialog host's and EE game host's remaining compound cases are called by Rust objects whose replay
+  goldens expect each op whole: splitting them needs the `cppnet::bound()` gate hostops.rs uses, and a golden each.
+- ComponentConfig::ReadConfig_Unsafe and BrowserComponent's Go/ShowFiles/ReadPage/Refresh, HTTPConnection and
+  HTTPSession, DNSTestOp/Thread as whole classes, the model's directory reads: next round's.
+
+### The merges
+
+origin/rust a85f71862 at the start (PORT_LEARNINGS, by `git merge-file --union`: the default and diff3 marker styles
+both leave markers to clear by hand, and a `sed -i` on this file drops its CRLF), the three forks (clean), then
+origin/rust d968d89bd (batch 18): cbindgen.toml's export list as the union of both sides (one `include` line; the
+union merge left two, which tomllib rejects), PORT_LEARNINGS both sides, headers regenerated. Batch 18 moved the form
+and control ids into rust/game/screens.h and rust/ui/ids.h: wonfront's header test reads them there (9afab1bce).
+`tools/rust_includes.py` added module includes to tests/won files that made `WS_None` ambiguous in won_lobby33_test:
+its edits to the goldens were reverted (run it on src, not on the drivers).
+
+### The pointer frame in host-lobby-open (the lead's check)
+
+The final compare showed 310 pixels in host-lobby-open outside the known carets. Enlarged side by side, it is the
+lobby's gold pointer at the same place in another frame of its glint. Deterministic per exe: two runs of the base exe
+gave the old frame, three runs of the tip the new one. A bisect over the network fork (its first, second and fifth
+commits) gave the new frame at every step, and fb32b70d8 itself, rebuilt in a clean worktree, gave it too: the
+round's base exe and a rebuild of the same commit differ. So the frame depends on the build, not on round 33's code;
+capture comparisons should use a base exe built in the same session as the round's exe (or rebuilt from the base
+commit at the end), and a pointer-only difference in host-lobby-open is not a regression.
+
+### Gates (the merged tip)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 6 --sim` | 0 / 0 (EE-AOC 412 inputs, EE-SIM 413) |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py header` | 324 headers current |
+| `rust_build.py gate` | PASS, 6,410 tests (the chain's run failed wonfront's header test before 9afab1bce; a run beside the LAN games failed ee_audio's real-time null-device test, a load flake; the rerun on an idle machine passed whole) |
+| `won_host_coverage.py` | PASS |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines; oracle: PASS) |
+| `xbuild.py wontest` | exit 0, every program exits 0 (won_split32_test 1,241,824 cases, 81/81 mutations) |
+| LAN game (lan_game.py through slot.py) | `RESULT PASS lan-game` PT host 2760 / joiner 2766 |
+| `lan_capture_compare.py` against the base exe's run (build/w33lanA) | every lobby capture identical but the carets (create dialog x 575..576, staging x 121..122) and host-lobby-open's pointer (310 pixels at x 511..538, y 383..409): another frame of the animated pointer, the same shape at the same place. Not this round's code: fb32b70d8 rebuilt in a clean worktree shows the new frame too (identical to this tip's capture), while the base exe build/w33base (built from the same commit at the round's start) shows the other frame in each of its runs; three runs of this tip all show the new frame |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, app 26, units 175, groups 2, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 PASS (exit 0); matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12059` units [4, 36, 37] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2772 joiner=2769`, GATES PASS |
