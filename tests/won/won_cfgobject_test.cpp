@@ -153,6 +153,8 @@ template <class B> static std::string Dump(const std::string& inPrefix, B* g, in
 
 static const char* const kPieces[] = {
     "Text: v\n", "Count: 12\n", "Count: x\n", "Flag: yes\n", "Wide: L\"w\"\n", "Items: c, d\n", "Repl: q\n",
+    "Wide: L\"wide text\"\n", "SETKEY: Wide abc\n", "GETKEY: Wide\n", "GETKEY: Items\n", "GETKEY: LL\n",
+    "GETKEY: Flag\n", "GETKEY: Int\n", "GETKEY: Text\n",
     "Int: -5\n", "LL: (4, 5), (6)\n", "Unknown: 1\n", "DEFINE: N val\n", "REDEFINE: N v2\n", "DEFINE: N\n",
     "Text: $N$\n", "INCLUDEGROUP: G\n", "INCLUDEGROUP: G, optional\n", "INCLUDEGROUP: Q, bad\n", "INCLUDEGROUP: Q,\n",
     "INCLUDEFILE: cK.cfg\n", "INCLUDEFILE: dir/cK.cfg, optional\n", "INCLUDEFILE: none.cfg\n",

@@ -187,6 +187,7 @@
 #include "rust/won_gui/wmobj.h"
 #include "rust/won_gui/wonbtnobj.h"
 #include "rust/won_gui/wrapobj.h"
+#include "rust/won_lobby/cfgval.h"
 #include "rust/won_lobby/chatctl.h"
 #include "rust/won_lobby/chatlink.h"
 #include "rust/won_lobby/chatobj.h"
