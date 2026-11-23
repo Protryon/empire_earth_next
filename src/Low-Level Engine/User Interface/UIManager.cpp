@@ -78,7 +78,6 @@ static GERectangle UIManagerRect(const float* inF) { return GERectangle(inF[1], 
 #define FILE_SPEC(x) reinterpret_cast<FSFileSpec*>(x)
 static UWideString sUIManagerKey;   // UpdateTranslatedKey's character (the UI thread's)
 // the database's table files in load order, the shared mouse buttons (lle_manager.rs)
-static UString* const kUIManagerDbNames[] = {&gDbUIFontsFileName, &gDbUIFormsFileName, &gDbUIBackgroundFileName, &gDbUIControlsFileName, &gDbUIControlEventsFileName, &gDbUIFormEventsFileName, &gDbUIHotKeyFileName};
 static const unsigned long kUIManagerMouseKeys[] = {kMouseLeftButton, kMouseRightButton, kMouseZAxis};
 extern "C" uint32_t ee_uicpp_mgr_screen(uintptr_t inM) { return MGR(inM)->GetScreen(); }
 extern "C" void ee_uicpp_mgr_rasterizer_screen(uintptr_t inM)
@@ -152,8 +151,8 @@ extern "C" void ee_uicpp_table_add_event(uintptr_t inTable, uint32_t inId, uint3
 { reinterpret_cast<UIControlsTable*>(inTable)->AddEvent(UIEventData{inId, inKind}); }
 extern "C" void ee_uicpp_form_add_event(uintptr_t inForm, uint32_t inId, uint32_t inKind)
 { reinterpret_cast<UIForm*>(inForm)->AddEvent(UIEventData{inId, inKind}); }
-extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, uint32_t inTable, uintptr_t* inFile)
-{ return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + *kUIManagerDbNames[inTable], *reinterpret_cast<FSFileSpec**>(inFile)); }
+extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, EeUiShimText inName, uintptr_t* inFile)
+{ return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + UIShimString(inName), *reinterpret_cast<FSFileSpec**>(inFile)); }
 extern "C" long ee_uicpp_db_fonts(uintptr_t inFile, uintptr_t inM)
 { return UIFontTable::Create(*FILE_SPEC(inFile), MGR(inM)); }
 extern "C" long ee_uicpp_db_forms(uintptr_t inFile, uintptr_t inM)

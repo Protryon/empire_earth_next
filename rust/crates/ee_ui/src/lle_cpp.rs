@@ -394,7 +394,7 @@ shims! {
     fn mgr_form_by_id(m: usize, id: u32) -> usize = ee_uicpp_mgr_form_by_id;
     fn table_add_event(table: usize, id: u32, kind: u32) = ee_uicpp_table_add_event;
     fn form_add_event(form: usize, id: u32, kind: u32) = ee_uicpp_form_add_event;
-    fn db_find(path: usize, directory: usize, table: u32, file: EeUiShimPtrOut) -> c_long = ee_uicpp_db_find;
+    fn db_find(path: usize, directory: usize, name: EeUiShimText, file: EeUiShimPtrOut) -> c_long = ee_uicpp_db_find;
     fn db_fonts(file: usize, m: usize) -> c_long = ee_uicpp_db_fonts;
     fn db_forms(file: usize, m: usize) -> c_long = ee_uicpp_db_forms;
     fn db_backgrounds(file: usize) -> c_long = ee_uicpp_db_backgrounds;

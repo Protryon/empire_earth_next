@@ -33,13 +33,6 @@ class UResourceFile;
 struct UIDbDataForms;
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
-LLE_API extern UString gDbUIHotKeyFileName;
-LLE_API extern UString gDbUIFontsFileName;
-LLE_API extern UString gDbUIFormEventsFileName;
-LLE_API extern UString gDbUIControlEventsFileName;
-LLE_API extern UString gDbUIFormsFileName;
-LLE_API extern UString gDbUIControlsFileName;
-LLE_API extern UString gDbUIBackgroundFileName;
 
 // winspool.h maps AddForm to AddFormA; the export is ?AddForm@UIManager@@
 #ifdef AddForm

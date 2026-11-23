@@ -193,13 +193,24 @@ const DB_TABLES: [(u32, u32, u32); 7] = [
     (1127, 1128, 0),
 ];
 
+/// The UI database's table files, in load order (once lle/UIManager.h's `gDbUI*FileName` globals).
+const DB_NAMES: [&[u8]; 7] = [
+    b"DB\\dbuifonts.dat",
+    b"DB\\dbuiforms.dat",
+    b"DB\\dbuiback.dat",
+    b"DB\\dbuicontrols.dat",
+    b"DB\\dbuicontrolevents.dat",
+    b"DB\\dbuiformevents.dat",
+    b"DB\\dbuihotkey.dat",
+];
+
 /// `UIManager::LoadDatabase(path, directory)`: the fonts, forms, backgrounds (and their creation), controls, control
 /// and form events and hot keys, each from its table file found under the directory; every find and the first
 /// three creates verified.
 pub(crate) fn load_database<C: Cpp + ?Sized>(c: &mut C, m: usize, path: usize, directory: usize) {
     for (table, &(find_line, file_line, create_line)) in DB_TABLES.iter().enumerate() {
         let mut file = 0usize;
-        let found = c.db_find(path, directory, table as u32, PtrOut::of(&mut file));
+        let found = c.db_find(path, directory, Text::of(DB_NAMES[table]), PtrOut::of(&mut file));
         if found != 0 {
             c.es_verify(find_line, Text::of(b"theResult == keseOK"));
         }

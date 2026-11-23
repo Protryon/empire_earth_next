@@ -66,9 +66,14 @@ public:
     intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_list_call(this->mRust, inCall, 0, 0, UIF4(f0, f1, f2)); }
     GEColor Color(UIListBoxCall inCall) const { return UIOut(ee_ui_list_call, this->mRust, inCall, (intptr_t)0, (intptr_t)0).Color(); }
     UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
-              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-              unsigned long inBorderThickness);
-    virtual ~UIListBox();
+              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+        : UIControl(kControlTypeListBox, inId, inRectangle, inForm, inIndex, inBorderThickness),
+          mRust(ee_ui_list_new(this, UIListBoxRust<T>::Op, inLineHeight, inAutoSelect, inBorderThickness)), mData(inData),
+          mCopyLineArray(this->GetNumberLinesDisplayed())
+    {
+        this->CheckScrollBar();
+    }
+    virtual ~UIListBox() { ee_ui_list_free(this->mRust); }
 #ifdef __clang__
     // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
     // forward to them (clang build only; remove once the parameters themselves are const).
@@ -214,9 +219,9 @@ public:
     virtual void TabbedTo() { this->SetDirty(true); }
     void CheckScrollBar() { this->Call(UIListBoxCall::CheckScrollBar); }
 
+    EeUiList* mRust;                        // the state (listobj.rs; first: the lines' copy is sized from it)
     std::vector<T> mData;                   // the lines
     std::vector<T> mCopyLineArray;          // the visible lines as of the last CopyData
-    EeUiList* mRust;                        // the state (listobj.rs)
 };
 
 // The Rust list box's ops that need the instantiation: the virtuals (a subclass's override runs) and the copy of the
@@ -270,23 +275,5 @@ template <class T> struct UIListBoxRust {
     }
 };
 
-template <class T>
-UIListBox<T>::UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
-                        const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                        unsigned long inBorderThickness)
-    : UIControl(kControlTypeListBox, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->mRust = ee_ui_list_new(static_cast<UIListBox<T>*>(this), UIListBoxRust<T>::Op, inLineHeight, inAutoSelect,
-                                 inBorderThickness);
-    this->mCopyLineArray.resize(this->GetNumberLinesDisplayed());
-    this->mData = inData;
-    this->CheckScrollBar();
-}
-
-template <class T> UIListBox<T>::~UIListBox()
-{
-    this->mData.clear();
-    ee_ui_list_free(this->mRust);
-}
 
 #endif
