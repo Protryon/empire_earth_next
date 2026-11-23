@@ -64,24 +64,21 @@ EEUnit* EEUnitClass::BuildingCreateUnitAt(GETransformation& inTransformation, lo
 // sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
 long EEGetDockFacing(unsigned long inX, unsigned long inY)
 {
-    EEUCNote theNote(23); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_dock_facing((uint32_t)inX, (uint32_t)inY));
+    return ee_units_ucn_facing(0, (int32_t)inX, (int32_t)inY);
 }
 
 // Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
 // that has them, else the side with the longest run (cls_building.rs)
 static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
 {
-    EEUCNote theNote(22); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_navy_yard_facing((uint32_t)inX, (uint32_t)inY));
+    return ee_units_ucn_facing(1, (int32_t)inX, (int32_t)inY);
 }
 
 // Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
 // (cls_building.rs)
 long EEGetFacingQuarter(long inX, long inY)
 {
-    EEUCNote theNote(21); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_facing_quarter((int32_t)inX, (int32_t)inY));
+    return ee_units_ucn_facing(2, (int32_t)inX, (int32_t)inY);
 }
 
 // Returns the map quarter the unit's tile faces
@@ -98,14 +95,6 @@ long EEGetWallPiecePart(long inIndex, bool* outFlag)
 }
 
 // Returns the first living targetable building found in rings 1..19 around a unit's tile
-EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
-{
-    EEUCNote theNote(35); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_ucb_gate(EE_UNITS_UCB_DO_NEAREST_TARGET_BUILDING, this, NULL, EEObj(inUnit), 0, 0, 0.0f);   // ucb_gate.rs
-    theNote.U(theResult);
-    return theResult;
-}
-
 // Lists the tiles around a building; an airport's include its runway (four times its size toward its facing)
 void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners,
                              bool inAppend)
@@ -199,12 +188,7 @@ bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType
 bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigned long inUnitType,
                 std::vector<EEUnit*>& outUnits)
 {
-    EEUCNote theNote(25); theNote.T(inTile).I(inDirection).I(inUnitType);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R(ee_units_ucb_gate(EE_UNITS_UCB_DO_WALL_GATE_FIT, NULL, NULL, EEObj(&outUnits),
-                                                 (int64_t)(uint32_t)inTile.mX | (int64_t)((uint64_t)(uint32_t)inTile.mY << 32),
-                                                 (int64_t)(uint32_t)inDirection | (int64_t)((uint64_t)(uint32_t)inUnitType << 32), 0.0f) != 0);   // ucb_gate.rs
-    theNote.Us(outUnits);
-    return theResult;
+    return ee_units_ucn_wall_gate_fit((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, (uint32_t)inUnitType, EEObj(&outUnits));
 }
 
 // Returns the first piece of a unit's linked chain (+0x1cc)
@@ -263,27 +247,13 @@ EEComplexUnit* EEUnitClass::GetPart(EEComplexUnit* inGate, long inIndex)
 // (cls_building.rs)
 void EEGetWallGateTiles(const U2DPoint<long>& inTile, long inDirection, std::vector<U2DPoint<long> >& outTiles)
 {
-    EEUCNote theNote(33); theNote.T(inTile).I(inDirection).Ts(outTiles);   // TEST ONLY (UCBD)
-    ee_units_cls_wall_gate_tiles((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, &outTiles);
-    theNote.Ts(outTiles);   // TEST ONLY (UCBD)
+    ee_units_ucn_wall_gate_tiles((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, EEObj(&outTiles));
 }
 
 // Returns whether a living enemy unit of unit set 0x62 is within reach of the gate or its next two pieces
 // (the squared distance is compared with the unsquared reach; cls_building.rs)
-bool EEUnitClass::AreEnemiesNear(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(27); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), false));
-}
-
 // Returns whether a unit that may pass is within reach of the gate or its next two pieces: a mobile land unit
 // the owner is not hostile to, or an enemy of unit set 0x62 (cls_building.rs)
-bool EEUnitClass::IsPasserNear(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(28); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), true));
-}
-
 // Returns whether a tile holds a highlighted living wall that can take a gate, giving its gate direction
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 {
@@ -319,8 +289,7 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
 // 0.6 (0x447014; cls_building.rs) (EECPWallManager.cpp declares it the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 {
-    EEUCNote theNote(26); theNote.Ts(inTiles);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_tiles_level(&inTiles));
+    return ee_units_ucn_tiles_level(EEObj(&inTiles));
 }
 
 // ---- EEUCMiningBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The mining

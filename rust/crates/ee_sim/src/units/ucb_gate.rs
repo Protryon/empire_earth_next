@@ -555,7 +555,7 @@ pub fn run<H: UcHost + ?Sized>(h: &mut H, what: i32, class: u64, unit: u64, a: u
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::ucb_release::game::ee_units_ucb_host;
     use std::os::raw::c_void;

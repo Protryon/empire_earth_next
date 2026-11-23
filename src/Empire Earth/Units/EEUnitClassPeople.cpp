@@ -59,17 +59,6 @@ static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEff
 // Returns the nearest gatherable resource of a kind within inRange rings of a centre unit, not in ioUnits (tiles
 // shuffled per ring; another path area costs 400; a dead animal wins at once; boats look for naval resources)
 // (ee_units citizen.rs)
-EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange,
-                                   unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms)
-{
-    EEUCNote theNote(41); theNote.C(this).U(inUnit).U(inCenter).U(inResource).I(inRange).I((long)inKind).Us(*ioUnits).I(inFarms);   // TEST ONLY (UCBD)
-    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_cz_find_resource_of_kind((uint32_t)this->mCategory, EEObj(inUnit),
-        EEObj(inCenter), EEObj(inResource), (int32_t)inRange, (uint32_t)inKind,
-        ioUnits->empty() ? NULL : reinterpret_cast<const uint64_t*>(ioUnits->data()), ioUnits->size(), inFarms);
-    theNote.U(theResult);   // TEST ONLY (UCBD)
-    return theResult;
-}
-
 // Finds the next resource of a kind within five times the citizen's sight: around its gather goal's resource first,
 // then around the citizen
 EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind,
@@ -80,14 +69,6 @@ EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource,
 
 // Returns where the citizen drops its load: its goal's storage, else a farm's nearest drop site within 20, else the
 // owner's nearest built drop site that takes the load (docks and navy yards for boats) (ee_units citizen.rs)
-EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
-{
-    EEUCNote theNote(43); theNote.C(this).U(inUnit).I(inAnyStorage).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
-    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_cz_find_storage(EEObj(inUnit), inAnyStorage);
-    theNote.U(theResult).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
-    return theResult;
-}
-
 // Researches a tech on a unit (idling it unless only goal kinds 1, 2, 7, 10 are queued); if that kills the unit,
 // plays the epoch's lightning or disintegration effects and thunder at its position
 // (EETechTree::Research for inUnit)
@@ -102,12 +83,6 @@ void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
 // (instant build: at once); a kind-3 tech tied to the Bundeswehr power goes through EEPlayUnitEffect
 // Returns whether the citizen has a gather point beside a resource (not just the resource's own corner tile)
 // (ee_units citizen.rs)
-bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    EEUCNote theNote(45); theNote.C(this).U(inUnit).U(inResource);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cz_has_gather_point(EEObj(inUnit), EEObj(inResource)) != 0);
-}
-
 // The citizens' searches' host (ee_units citizen.rs, citizen_host.rs; EE_UNITS_CZ_*): the units' reads, the noted
 // world tests, each as the original called it (the tile rings, the shuffle and the plain reads are Rust's)
 // (the plain reads, EE_UNITS_CZ_UNIT and the tiles' and players' lists, are Rust's views: citizen_host.rs)

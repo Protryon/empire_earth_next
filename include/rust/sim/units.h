@@ -13385,9 +13385,6 @@ constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION = 3530;
 /// `class->SubmergedNavalGroundLocation(f[0..3])`
 constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION = 3531;
 
-/// `class->NavalBuildingHasSunk(unit)`
-constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK = 3532;
-
 /// `class->IsSidePart(unit)`
 constexpr static const int32_t EE_UNITS_UCK_D_IS_SIDE_PART = 3533;
 
@@ -21282,6 +21279,150 @@ uint8_t ee_units_ucbd_begin();
 /// # Safety
 /// `words` holds `count` words (or is NULL with 0).
 void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
+
+/// `CanUnloadAt` (note 2).
+bool ee_units_ucn_can_unload_at(uint64_t class_, uint64_t transport, int32_t x, int32_t y);
+
+/// `FilterLoadable` (note 6).
+///
+/// # Safety
+/// `units` and `rejected` are live `std::vector<EEComplexUnit*>`.
+void ee_units_ucn_filter_loadable(uint64_t class_,
+                                  uint64_t units,
+                                  uint64_t transport,
+                                  uint64_t rejected);
+
+/// `FindBoardingLocation` (note 32).
+///
+/// # Safety
+/// `at` is a live point, `out` a writable one.
+bool ee_units_ucn_boarding_location(uint64_t class_,
+                                    uint64_t unit,
+                                    uint64_t transport,
+                                    const float *at,
+                                    float *out);
+
+/// `FindRendezvousTiles` (note 4).
+///
+/// # Safety
+/// `units` a live `std::vector<EEComplexUnit*>`, the outs writable tiles.
+void ee_units_ucn_rendezvous_tiles(uint64_t class_,
+                                   uint64_t units,
+                                   uint64_t transport,
+                                   long (*out_transport)[2],
+                                   long (*out_unit)[2]);
+
+/// `FindUnloadTiles` (note 5).
+///
+/// # Safety
+/// `destination` a live tile, the outs writable tiles.
+void ee_units_ucn_unload_tiles(uint64_t class_,
+                               uint64_t transport,
+                               const long (*destination)[2],
+                               long (*out_unload)[2],
+                               long (*out_first)[2],
+                               long (*out_tile)[2]);
+
+/// `GetHeightAt` (note 11).
+float ee_units_ucn_height_at(uint64_t class_, uint64_t unit, float x, float y, float z);
+
+/// `GetSurroundingTiles` (note 31): `tiles` a live `std::vector<EETileCoordinate>`.
+void ee_units_ucn_surrounding_tiles(uint64_t class_,
+                                    uint64_t unit,
+                                    uint64_t tiles,
+                                    int32_t corners,
+                                    bool append);
+
+/// `HasArrived` (note 7).
+bool ee_units_ucn_has_arrived(uint64_t class_, uint64_t unit, float value);
+
+/// `HasRoom` (note 10).
+bool ee_units_ucn_has_room(uint64_t class_, uint64_t unit, uint64_t cargo);
+
+/// `SelectUnitToRelease` (note 30).
+bool ee_units_ucn_select_to_release(uint64_t class_, uint64_t unit);
+
+/// `LandableReturnToAirport` (note 19).
+bool ee_units_ucn_return_to_airport(uint64_t class_, uint64_t unit);
+
+/// `RouteDockWaypoint` (note 20).
+void ee_units_ucn_route_dock_waypoint(uint64_t class_, uint64_t unit);
+
+/// `IsBombOnTarget` (note 17).
+bool ee_units_ucn_bomb_on_target(uint64_t class_, uint64_t unit);
+
+/// `ApproachCarrier` (note 13).
+void ee_units_ucn_approach_carrier(uint64_t class_, uint64_t unit, bool steep);
+
+/// `TakeOffFromCarrier` (note 14): the unit's state and its model's scale after.
+void ee_units_ucn_take_off_from_carrier(uint64_t class_, uint64_t unit);
+
+/// `GetNextFlightState` (note 12).
+uint32_t ee_units_ucn_next_flight_state(uint64_t class_, uint64_t unit);
+
+/// `ApproachRunway` (note 15).
+void ee_units_ucn_approach_runway(uint64_t class_, uint64_t unit, int32_t dx, int32_t dy);
+
+/// `TakeOffFromRunway` (note 16).
+void ee_units_ucn_take_off_from_runway(uint64_t class_, uint64_t unit, int32_t dx, int32_t dy);
+
+/// `IsAwayFromGoal` (note 18).
+bool ee_units_ucn_away_from_goal(uint64_t class_, uint64_t unit);
+
+/// `FindResourceOfKind` (note 41): `units` a live `std::vector<EEUnit*>` (the units already taken).
+uint64_t ee_units_ucn_resource_of_kind(uint64_t class_,
+                                       uint32_t category,
+                                       uint64_t unit,
+                                       uint64_t center,
+                                       uint64_t wanted,
+                                       int32_t range,
+                                       uint32_t kind,
+                                       uint64_t units,
+                                       bool farms);
+
+/// `FindStorage` (note 43).
+uint64_t ee_units_ucn_find_storage(uint64_t class_, uint64_t unit, bool any_storage);
+
+/// `HasGatherPoint` (note 45).
+bool ee_units_ucn_has_gather_point(uint64_t class_, uint64_t unit, uint64_t resource);
+
+/// `CanLoad` (note 8).
+bool ee_units_ucn_can_load(uint64_t class_, uint64_t transport, uint64_t unit);
+
+/// `CanUnloadNear` (note 9).
+///
+/// # Safety
+/// Three live tiles.
+bool ee_units_ucn_can_unload_near(uint64_t class_,
+                                  uint64_t transport,
+                                  uint64_t cargo,
+                                  const long (*unload)[2],
+                                  const long (*first)[2],
+                                  const long (*destination)[2]);
+
+/// `EEGetDockFacing` (note 23), `GetNavyYardFacing` (22), `EEGetFacingQuarter` (21): `which` 0, 1, 2.
+int32_t ee_units_ucn_facing(int32_t which,
+                            int32_t x,
+                            int32_t y);
+
+/// `FindNearestTargetBuilding` (note 35).
+uint64_t ee_units_ucn_nearest_target_building(uint64_t class_, uint64_t unit);
+
+/// `EEDoesWallGateFit` (note 25): `units` a live `std::vector<EEUnit*>` (the units in the way, out).
+bool ee_units_ucn_wall_gate_fit(int32_t x,
+                                int32_t y,
+                                int32_t direction,
+                                uint32_t unit_type,
+                                uint64_t units);
+
+/// `EEGetWallGateTiles` (note 33): `tiles` a live `std::vector<U2DPoint<long> >`.
+void ee_units_ucn_wall_gate_tiles(int32_t x, int32_t y, int32_t direction, uint64_t tiles);
+
+/// `AreEnemiesNear` (note 27) and `IsPasserNear` (note 28).
+bool ee_units_ucn_gate_near(uint64_t class_, uint64_t unit, bool passers);
+
+/// `EEAreTilesLevel` (note 26): `tiles` a live `std::vector<U2DPoint<long> >`.
+bool ee_units_ucn_tiles_level(uint64_t tiles);
 
 extern int64_t ee_units_ucg_host(int32_t op,
                                  void *class_,

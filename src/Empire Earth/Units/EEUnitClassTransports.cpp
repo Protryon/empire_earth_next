@@ -38,23 +38,6 @@
 // The transports' tile searches are Rust (R5b.4 round 33: ee_units cls_transport.rs; the dispatchers in
 // EEUnitClassKinds.cpp call it). CanLoad (0x61b613) and CanUnloadNear (0x61b83f) stay members for the load and unload
 // goals' host (EEUGRust.cpp).
-bool EEUnitClass::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(8); theNote.C(this).U(inTransport).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_tr_can_load(EEObj(this), EEObj(inTransport), EEObj(inUnit)));
-}
-
-bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
-                             U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile,
-                             U2DPoint<long>* inDestination)
-{
-    EEUCNote theNote(9); theNote.C(this).U(inTransport).U(inCargo).T(*ioUnloadTile).T(*ioFirstCargoTile).T(*inDestination);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R(ee_units_tr_can_unload_near(EEObj(this), EEObj(inTransport), EEObj(inCargo),
-        (const long(*)[2])ioUnloadTile, (const long(*)[2])ioFirstCargoTile, (const long(*)[2])inDestination));
-    theNote.S(inCargo);   // TEST ONLY (UCBD)
-    return theResult;
-}
-
 // The class bodies' host (ee_units cls_host.rs; EE_UNITS_CLS_*): the continent manager's lists, the unit utilities'
 // leaves that keep their records, the path lengths and a unit's reads and trial location
 int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int64_t inC, int64_t inD, EeUnitsClsIo* io);

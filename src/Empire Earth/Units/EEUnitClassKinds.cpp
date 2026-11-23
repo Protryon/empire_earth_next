@@ -24,77 +24,10 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEUGRust.h"
 
-bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
-{
-    EEUCNote theNote(2); theNote.C(this).U(inTransport).I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_tr_can_unload_at(EEObj(this), EEObj(inTransport), (int32_t)inX, (int32_t)inY));
-}
-
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
-void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected)
-{
-    EEUCNote theNote(6); theNote.C(this).Us(*ioUnits).U(inTransport).Us(*outRejected);   // TEST ONLY (UCBD)
-    ee_units_tr_filter_loadable(EEObj(this), ioUnits, EEObj(inTransport), outRejected);
-    theNote.Us(*ioUnits).Us(*outRejected);
-}
-
-bool EEUnitClass::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inTransport, GE3DPoint& inLocation, GE3DPoint& outLocation)
-{
-    EEUCNote theNote(32); theNote.C(this).U(inUnit).U(inTransport).P(inLocation);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_BOARDING_LOCATION, this, inUnit, EEObj(inTransport), (int64_t)EEObj(&inLocation), (int64_t)EEObj(&outLocation), 0.0f) != 0);   // uck_kinds.rs
-    theNote.P(outLocation);
-    return theResult;
-}
-
-void EEUnitClass::FindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile)
-{
-    EEUCNote theNote(4); theNote.C(this).Us(*inUnits).U(inTransport);   // TEST ONLY (UCBD)
-    ee_units_tr_rendezvous_tiles(EEObj(this), inUnits, EEObj(inTransport), (long(*)[2])outTransportTile, (long(*)[2])outUnitTile);
-    theNote.T(*outTransportTile).T(*outUnitTile);
-}
-
-void EEUnitClass::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile)
-{
-    EEUCNote theNote(5); theNote.C(this).U(inTransport).T(*inDestination);   // TEST ONLY (UCBD)
-    ee_units_tr_unload_tiles(EEObj(this), EEObj(inTransport), (const long(*)[2])inDestination, (long(*)[2])outUnloadTile,
-                             (long(*)[2])outFirstCargoTile, (long(*)[2])outTile);
-    theNote.T(*outUnloadTile).T(*outFirstCargoTile).T(*outTile);
-}
-
-float EEUnitClass::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    EEUCNote theNote(11); theNote.C(this).U(inUnit).P(inLocation);   // TEST ONLY (UCBD)
-    return theNote.RF(ee_units_cls_height_at(EEObj(this), EEObj(inUnit), inLocation.mX, inLocation.mY, inLocation.mZ));
-}
-
-void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
-{
-    EEUCNote theNote(31); theNote.C(this).U(inUnit).I(inCorners).I(inAppend).Ts(outTiles);   // TEST ONLY (UCBD)
-    ee_units_uck_call(EE_UNITS_UCK_DO_SURROUNDING_TILES, this, inUnit, EEObj(&outTiles), inCorners, inAppend, 0.0f);   // uck_kinds.rs
-    theNote.Ts(outTiles);
-}
-
-bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    EEUCNote theNote(7); theNote.C(this).U(inUnit).F(inValue);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_HAS_ARRIVED, this, inUnit, 0, 0, 0, inValue) != 0);   // uck_kinds.rs
-}
-
-bool EEUnitClass::HasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
-{
-    EEUCNote theNote(10); theNote.C(this).U(inUnit).U(inCargo);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_HAS_ROOM, this, inUnit, EEObj(inCargo), 0, 0, 0.0f) != 0);   // uck_kinds.rs
-}
-
 bool EEUnitClass::IsBuilding()
 {
     return EEClassBody(this, EE_UNITS_BODY_IS_BUILDING) == 1;
-}
-
-bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(30); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, 0.0f) != 0);   // uck_kinds.rs
 }
 
 long EEUnitClass::Virtual70()
@@ -248,30 +181,6 @@ EEUCNote& EEUCNote::U(const EEUnit* inUnit)
 EEUCNote& EEUCNote::C(const EEUnitClass* inClass)
 {
     return this->I(inClass != NULL ? (long)inClass->mUnitType : -2);
-}
-
-EEUCNote& EEUCNote::Ts(const std::vector<U2DPoint<long> >& inTiles)
-{
-    this->I((long)inTiles.size());
-    for (size_t i = 0; this->mOn && i < inTiles.size(); i++)
-        this->T(inTiles[i]);
-    return *this;
-}
-
-EEUCNote& EEUCNote::Us(const std::vector<EEComplexUnit*>& inUnits)
-{
-    this->I((long)inUnits.size());
-    for (size_t i = 0; this->mOn && i < inUnits.size(); i++)
-        this->U(inUnits[i]);
-    return *this;
-}
-
-EEUCNote& EEUCNote::Us(const std::vector<EEUnit*>& inUnits)
-{
-    this->I((long)inUnits.size());
-    for (size_t i = 0; this->mOn && i < inUnits.size(); i++)
-        this->U(inUnits[i]);
-    return *this;
 }
 
 EEUCNote& EEUCNote::S(EEComplexUnit* inUnit)

@@ -51,22 +51,7 @@ EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRang
 
 // Takes off from the ground: rolls 3 ahead, climbs 7 ahead to 3/4 cruising height (plus the ground height when the
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
-bool EEUnitClass::LandableReturnToAirport(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(19); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R(ee_units_cr_return_to_airport(EEObj(this), EEObj(inUnit)) != 0);
-    theNote.S(inUnit);
-    return theResult;
-}
-
 // Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
-void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(20); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
-    ee_units_cr_route_dock_waypoint(EEObj(inUnit));
-    theNote.S(inUnit);
-}
-
 // Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
 
 
@@ -92,64 +77,18 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
 // half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
-bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(17); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_uca_call(EE_UNITS_UCA_DO_BOMB_ON_TARGET, this, inUnit, 0, 0, 0, NULL) != 0);   // uca_air.rs
-}
-
 // Plans a plane's approach to its home carrier's deck (tag point 0): turn, descent and touch-down (inSteep: the
 // full approach whatever the height), or just the deck when braking; makes the deck the move goal
-void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
-{
-    EEUCNote theNote(13); theNote.C(this).S(inUnit).U(inUnit->mHomeBase).I(inSteep);   // TEST ONLY (UCBD)
-    ee_units_cr_approach_carrier(EEObj(this), EEObj(inUnit), inSteep);
-    theNote.S(inUnit);
-}
-
 // Plans a take-off from the home carrier: on take-off, sits at the deck start (tag point 0) and heads for the
 // take-off point; otherwise flies off the deck end (tag point 2) towards the goal
-void EEUnitClass::TakeOffFromCarrier(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(14); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
-    ee_units_cr_take_off_from_carrier(EEObj(this), EEObj(inUnit));
-    theNote.S(inUnit).F(inUnit->mPhysicalModel.GetScale());
-}
-
 // Returns 0 (left) or 1 (right) when the next waypoint or goal lies inside the turning circle beside or behind
 // the plane, else 5 (ee_units cls_air.rs, R5b.4 round 33)
-unsigned long EEUnitClass::GetNextFlightState(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(12); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_next_flight_state(EEObj(inUnit)));
-}
-
 // Plans a land plane's runway approach in a direction: turn onto the line, descent and touch-down at the airport
 // (a navy yard: its pier), then makes the airport the move goal (ee_units cls_air.rs, R5b.4 round 33). The four
 // direction wrappers (0x616308..0x616338) and the take-off's (0x616430..0x616460) are the runway direction's table.
-void EEUnitClass::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
-{
-    EEUCNote theNote(15); theNote.C(this).S(inUnit).U(inUnit->mHomeBase).I(inDX).I(inDY);   // TEST ONLY (UCBD)
-    ee_units_cls_approach_runway(EEObj(this), EEObj(inUnit), (int32_t)inDX, (int32_t)inDY);
-    theNote.S(inUnit);   // TEST ONLY (UCBD)
-}
-
 // Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
 // flies to the goal (ee_units cls_air.rs)
-void EEUnitClass::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
-{
-    EEUCNote theNote(16); theNote.C(this).S(inUnit).I(inDX).I(inDY);   // TEST ONLY (UCBD)
-    ee_units_cls_take_off_from_runway(EEObj(this), EEObj(inUnit), (int32_t)inDX, (int32_t)inDY);
-    theNote.S(inUnit);   // TEST ONLY (UCBD)
-}
-
 // Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
-bool EEUnitClass::IsAwayFromGoal(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(18); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cr_is_away_from_goal(EEObj(inUnit)) != 0);
-}
-
 // Sets the opacity of a unit and the pieces linked after it (stops at the first already at the value)
 void EEComplexUnit::SetOpacityChain(float inValue)
 {

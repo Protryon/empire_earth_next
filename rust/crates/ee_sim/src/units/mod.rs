@@ -180,6 +180,8 @@ pub mod uca_air;
 pub mod ucb_gate;
 pub mod ucb_release;
 pub mod ucbd_note;
+#[cfg(not(test))]
+pub mod ucn_noted;
 pub mod ucg_ground;
 pub mod ucg_sea;
 pub mod uck_dispatch;
