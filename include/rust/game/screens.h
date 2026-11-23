@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 #include "rust/render/ge.h"
 
 /// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
@@ -15477,6 +15478,13 @@ struct EeScreensGaFields {
   bool mWriteToFile;
 };
 
+/// One loaded icon of the status box (the original's `EEUIFMGStatusBox::sIconBitmaps[50]`, 0x14 bytes each): its
+/// cell in the icon textures and its `GEBitmap*`.
+struct EeScreensIconBitmap {
+  EeGeRectangle mRectangle;
+  void *mBitmap;
+};
+
 /// `EEUICPing`'s members (its protected base) but the bars.
 struct EeScreensPingFields {
   /// The lit bars less one (`SetPing`'s quality times 5).
@@ -17660,6 +17668,9 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_military,
                                            bool select_all);
 
+/// The status box's icon `icon` (0..50).
+EeScreensIconBitmap *ee_screens_icon_bitmap(int64_t icon);
+
 extern int64_t ee_screenscpp_hud_ctl(void *ctl, uint32_t op, int64_t a, int64_t b, float *f);
 
 /// `EEUICPing`'s constructor part: the bars placed from the location (x, y).
@@ -17850,7 +17861,7 @@ void ee_screens_main_group_fields(void *group, EeScreensMainGroupFields *fields)
 void ee_screens_mg_show_commands(size_t group, size_t unit);
 
 /// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
-void ee_screens_mg_hot_key_event(size_t event);
+int64_t ee_screens_mg_hot_key_event(size_t event);
 
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.

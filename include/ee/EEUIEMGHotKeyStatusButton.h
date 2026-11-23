@@ -7,12 +7,15 @@
 #ifndef EE_EEUIEMGHOTKEYSTATUSBUTTON_H
 #define EE_EEUIEMGHOTKEYSTATUSBUTTON_H
 
+#include "rust/game/screens.h"   // ee_screens_mg_hot_key_event (main_group_calls.rs)
+
 class EEUIEMGHotKeyStatusButton : public UIEvent {
 public:
     EEUIEMGHotKeyStatusButton(EEUIFMGStatusButton* inButton, bool inPressed) : mButton(inButton), mPressed(inPressed) {}
     virtual ~EEUIEMGHotKeyStatusButton() {}
     // 0x2601da: pressed: mButton->Fn26F16C() and the local player's statistics Reset(0x14, 1); else Fn26F174()
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
+    // (the button pressed or released by hot key, pressing also resetting the saved-group state: Rust's; kErrorOK)
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_screens_mg_hot_key_event((uintptr_t)this); }
 
     EEUIFMGStatusButton* mButton;           // +0x0c
     bool mPressed;                          // +0x10

@@ -106,6 +106,125 @@ fn statistics_refresh(h: &mut impl GroupHost) {
     });
 }
 
+/// The epoch the local player's tech tree shows (the original's inline `EETechTree::GetShownEpoch`, 0x267eaa):
+/// two past the start, at most the end, at least the Bronze Age (3).
+pub fn shown_epoch(start: i32, end: i32) -> i32 {
+    let epoch = if start + 2 > end { end } else { start + 2 };
+    if epoch > 3 {
+        epoch
+    } else {
+        3
+    }
+}
+
+/// One argument of [`c_printf`]: a string's bytes or a number.
+#[derive(Clone, Copy, Debug)]
+pub enum PrintArg<'a> {
+    Text(&'a [u8]),
+    Number(i64),
+}
+
+/// The CRT's `sprintf` over the conversions the groups' formats use: `%s` and `%d` / `%i` / `%ld` / `%u` with the
+/// `-` and `0` flags, a width and a precision (a string's at most that many bytes, a number's at least that many
+/// digits), and `%%`; another conversion is copied as written, a missing argument prints nothing.
+pub fn c_printf(format: &[u8], args: &[PrintArg]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut next = args.iter();
+    let mut i = 0;
+    while i < format.len() {
+        if format[i] != b'%' {
+            out.push(format[i]);
+            i += 1;
+            continue;
+        }
+        let start = i;
+        i += 1;
+        let (mut left, mut zero) = (false, false);
+        while i < format.len() && matches!(format[i], b'-' | b'0') {
+            left |= format[i] == b'-';
+            zero |= format[i] == b'0';
+            i += 1;
+        }
+        let number = |i: &mut usize| {
+            let mut n: Option<usize> = None;
+            while *i < format.len() && format[*i].is_ascii_digit() {
+                n = Some(n.unwrap_or(0) * 10 + (format[*i] - b'0') as usize);
+                *i += 1;
+            }
+            n
+        };
+        let width = number(&mut i).unwrap_or(0);
+        let precision = if i < format.len() && format[i] == b'.' {
+            i += 1;
+            Some(number(&mut i).unwrap_or(0))
+        } else {
+            None
+        };
+        while i < format.len() && matches!(format[i], b'l' | b'h') {
+            i += 1;
+        }
+        let Some(&conversion) = format.get(i) else {
+            out.extend_from_slice(&format[start..]);
+            break;
+        };
+        i += 1;
+        let body: Vec<u8> = match (conversion, conversion == b'%') {
+            (_, true) => {
+                out.push(b'%');
+                continue;
+            }
+            (b's', _) => match next.next() {
+                Some(PrintArg::Text(t)) => t[..precision.map_or(t.len(), |p| p.min(t.len()))].to_vec(),
+                _ => Vec::new(),
+            },
+            (b'd' | b'i' | b'u', _) => match next.next() {
+                Some(&PrintArg::Number(n)) => {
+                    let n = if conversion == b'u' { n as u32 as i64 } else { n as i32 as i64 };
+                    let mut digits = n.unsigned_abs().to_string().into_bytes();
+                    if precision == Some(0) && n == 0 {
+                        digits.clear();
+                    }
+                    while digits.len() < precision.unwrap_or(0) {
+                        digits.insert(0, b'0');
+                    }
+                    let sign: &[u8] = if n < 0 { b"-" } else { b"" };
+                    if zero && !left && precision.is_none() {
+                        while digits.len() + sign.len() < width {
+                            digits.insert(0, b'0');
+                        }
+                    }
+                    [sign, &digits].concat()
+                }
+                _ => Vec::new(),
+            },
+            _ => {
+                out.extend_from_slice(&format[start..i]);
+                continue;
+            }
+        };
+        let pad = width.saturating_sub(body.len());
+        if !left {
+            out.resize(out.len() + pad, b' ');
+        }
+        out.extend_from_slice(&body);
+        if left {
+            out.resize(out.len() + pad, b' ');
+        }
+    }
+    out
+}
+
+/// A group text's line: its format printed with the first string and the second (when `strings[1]` is not -1),
+/// else the first string and the two values (the original host's `sprintf` into a `UWideString`).
+pub fn group_line(t: &GroupText, first: &[u8], second: &[u8]) -> Vec<u8> {
+    let format = t.format.to_bytes();
+    if t.strings[1] != -1 {
+        c_printf(format, &[PrintArg::Text(first), PrintArg::Text(second)])
+    } else {
+        c_printf(format, &[PrintArg::Text(first), PrintArg::Number(t.values[0] as i64), PrintArg::Number(t.values[1] as i64)])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,5 +294,27 @@ mod tests {
                 assert!(h.calls.is_empty());
             }
         }
+    }
+
+    #[test]
+    fn the_shown_epoch_is_two_past_the_start_within_the_end_from_bronze() {
+        assert_eq!(shown_epoch(1, 14), 3);
+        assert_eq!(shown_epoch(5, 14), 7);
+        assert_eq!(shown_epoch(5, 6), 6);
+        assert_eq!(shown_epoch(0, 2), 3);
+    }
+
+    #[test]
+    fn the_groups_formats_print_as_the_crt() {
+        assert_eq!(c_printf(b"%-18.18s  %4.4ld", &[PrintArg::Text(b"Wonders"), PrintArg::Number(2)]), b"Wonders             0002");
+        assert_eq!(
+            c_printf(b"%-18.18s %-18.18s", &[PrintArg::Text(b"Available in the epoch"), PrintArg::Text(b"Bronze")]),
+            b"Available in the e Bronze            "
+        );
+        assert_eq!(
+            c_printf(b"%-18.18s  %4.4ld/%-4.4ld", &[PrintArg::Text(b"C"), PrintArg::Number(3), PrintArg::Number(25)]),
+            b"C                   0003/0025"
+        );
+        assert_eq!(c_printf(b"%5d|%-5d|%05d|%d%%|%x", &[PrintArg::Number(-12), PrintArg::Number(7), PrintArg::Number(-3), PrintArg::Number(1)]), b"  -12|7    |-0003|1%|%x");
     }
 }
