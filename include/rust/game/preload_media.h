@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/data/tables.h"
 
 /// The media objects' calls (p: the object a call names).
 enum class EePreloadMediaCpp : uint32_t {
@@ -80,6 +79,71 @@ enum class EePreloadMediaCpp : uint32_t {
   /// `((EEMusicObject*)p)->Reference()`
   SongReference,
   SongDereference,
+  /// `((FSFile*)p)->Open(kFileAccessRead)`
+  FileOpenRead,
+  /// `((FSFile*)p)->Close()`
+  FileClose,
+  /// `new UString` (a scratch name)
+  NameNew,
+  NameDelete,
+  /// `((UString*)p)->Load(*(FSFile*)a0)`
+  NameLoad,
+  /// `gSoundObjects.resize(a0, NULL)`
+  SoundsResize,
+  /// `new EESoundObject`
+  SoundNew,
+  /// `static_cast<EeDataSoundFields*>(p)`
+  SoundFields,
+  /// `mName.Load(*(FSFile*)a0)`
+  SoundNameLoad,
+  /// `gSoundObjects[a0] = a1`
+  SoundSet,
+  /// `static_cast<EeDataMediaUse*>(p)`
+  SoundUse,
+  /// `mSampleID = a0`
+  SoundSetSample,
+  /// the sound unit's `sDatabaseLock.mLock`
+  SoundLock,
+  /// the music unit's `sDatabaseLock.mLock` (`EEMusicDatabaseLock()`)
+  MusicLock,
+  /// `((TSCriticalSection*)p)->Enter()`
+  LockEnter,
+  LockLeave,
+  /// `PlatSleep(1)`
+  Sleep1,
+  /// `gMediaTable.resize(a0, NULL)`
+  MediaTableResize,
+  /// `gMediaTable[a0] = a1`
+  MediaTableSet,
+  /// `new EEGraphicObject`
+  GraphicNew,
+  /// `static_cast<EeDataGraphicObjectFields*>(p)`
+  GraphicFields,
+  /// the name slot a0 (0 mFileName, 1 mTextureName, 2 + 2j mTextureNames[j], 3 + 2j mModelNames[j], 30
+  /// mShadowModelName, 31 mShadowTextureName) = `new UString(*(UString*)a1)`
+  GraphicName,
+  /// `(a0 ? mSounds2 : mSounds1)[a1] = a2`
+  GraphicSetSound,
+  /// `(a0 ? mSound2Frames : mSound1Frames)[a1] = -1`
+  GraphicNoFrames,
+  /// `mMediaIndex`
+  GraphicMediaIndex,
+  /// `new EEGraphicEffect(*(EeDataGraphicEffectFields*)a0, EEMedia::Get(a1))`
+  EffectNew,
+  /// `new EEMusicObject((const unsigned char*)a0)`
+  MusicNew,
+  /// `gMusicRandom.SetSeed(TMGetTime())`
+  MusicSeed,
+  /// `EEGetRules().SetMusicFromFlags(a0, (bool*)a1, 14)`
+  RulesMusicFromFlags,
+  /// `static_cast<EeDataMediaUse*>(p)`
+  MusicUse,
+  /// `gConductor->GetConductor().LoadScore(mFileName, *(long*)a0)`
+  MusicLoadScore,
+  /// `mScoreID = a0`
+  MusicSetScore,
+  /// `gConductor->GetConductor().UnloadScore(mScoreID)`
+  MusicUnloadScore,
 };
 
 /// The text sink the C++ fills (`ee_preload_media_text_push`).
@@ -104,12 +168,6 @@ void ee_preload_delete_media_table();
 long ee_preload_find_turret_part(void *object, const void *model, unsigned long *index);
 
 /// # Safety
-/// `effects` holds `count` effects (or NULLs) and `links` `count` link triples.
-void ee_preload_link_effects(void *const *effects,
-                             const EeDataGraphicEffectLinks *links,
-                             size_t count);
-
-/// # Safety
 /// `file` is a live `FSFileSpec`.
 void ee_preload_dump_effect_ids(void *file);
 
@@ -130,16 +188,36 @@ void ee_preload_unload_sounds();
 long ee_preload_play_sound(void *sound, float volume, float pan, float pitch);
 
 /// # Safety
-/// `out` has room for a music record.
-long ee_preload_read_new_music(uint8_t *out);
+/// `file` is a live `FSFile` (the table's).
+long ee_preload_load_sounds(void *file);
 
 /// # Safety
-/// `songs` holds `count` songs.
-void ee_preload_add_epoch_songs(void *const *songs, size_t count);
+/// As [`ee_preload_load_sounds`].
+long ee_preload_load_graphic_objects(void *file);
+
+/// # Safety
+/// As [`ee_preload_load_sounds`].
+long ee_preload_load_effects(void *file);
+
+/// # Safety
+/// As [`ee_preload_load_sounds`].
+long ee_preload_load_music(void *file);
+
+/// # Safety
+/// `sound` is a live `EESoundObject`.
+long ee_preload_sound_load_media(void *sound);
+
+/// # Safety
+/// As [`ee_preload_sound_load_media`].
+long ee_preload_sound_unload_media(void *sound);
 
 /// # Safety
 /// `song` is a live `EEMusicObject`.
-void ee_preload_add_song_to_every_epoch(void *song);
+long ee_preload_music_load_score(void *song);
+
+/// # Safety
+/// As [`ee_preload_music_load_score`].
+long ee_preload_music_unload_score(void *song);
 
 }  // extern "C"
 

@@ -5,9 +5,13 @@
 //! game reads); each C++ call is one operation ([`EePreloadMediaCpp`]) answered by a one-statement case of
 //! `ee_preload_mediacpp` (`src/Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp`).
 
+use std::cell::{Cell, RefCell};
 use std::ffi::{c_long, c_ulong, c_void};
 
-use ee_data::tables::EeDataGraphicEffectLinks;
+use ee_base::fs::{CppFile, FsFile};
+use ee_data::media::{EeDataMediaLock, EeDataMediaStep, EeDataMediaUse};
+
+use ee_data::tables::{EeDataGraphicEffectFields, EeDataGraphicEffectLinks};
 use ee_render::gfx::geffect_table as table;
 
 /// The media objects' calls (p: the object a call names).
@@ -84,6 +88,72 @@ pub enum EePreloadMediaCpp {
     /// `((EEMusicObject*)p)->Reference()`
     SongReference,
     SongDereference,
+    // ---- the tables' loads and the media uses (round 12)
+    /// `((FSFile*)p)->Open(kFileAccessRead)`
+    FileOpenRead,
+    /// `((FSFile*)p)->Close()`
+    FileClose,
+    /// `new UString` (a scratch name)
+    NameNew,
+    NameDelete,
+    /// `((UString*)p)->Load(*(FSFile*)a0)`
+    NameLoad,
+    /// `gSoundObjects.resize(a0, NULL)`
+    SoundsResize,
+    /// `new EESoundObject`
+    SoundNew,
+    /// `static_cast<EeDataSoundFields*>(p)`
+    SoundFields,
+    /// `mName.Load(*(FSFile*)a0)`
+    SoundNameLoad,
+    /// `gSoundObjects[a0] = a1`
+    SoundSet,
+    /// `static_cast<EeDataMediaUse*>(p)`
+    SoundUse,
+    /// `mSampleID = a0`
+    SoundSetSample,
+    /// the sound unit's `sDatabaseLock.mLock`
+    SoundLock,
+    /// the music unit's `sDatabaseLock.mLock` (`EEMusicDatabaseLock()`)
+    MusicLock,
+    /// `((TSCriticalSection*)p)->Enter()`
+    LockEnter,
+    LockLeave,
+    /// `PlatSleep(1)`
+    Sleep1,
+    /// `gMediaTable.resize(a0, NULL)`
+    MediaTableResize,
+    /// `gMediaTable[a0] = a1`
+    MediaTableSet,
+    /// `new EEGraphicObject`
+    GraphicNew,
+    /// `static_cast<EeDataGraphicObjectFields*>(p)`
+    GraphicFields,
+    /// the name slot a0 (0 mFileName, 1 mTextureName, 2 + 2j mTextureNames[j], 3 + 2j mModelNames[j], 30
+    /// mShadowModelName, 31 mShadowTextureName) = `new UString(*(UString*)a1)`
+    GraphicName,
+    /// `(a0 ? mSounds2 : mSounds1)[a1] = a2`
+    GraphicSetSound,
+    /// `(a0 ? mSound2Frames : mSound1Frames)[a1] = -1`
+    GraphicNoFrames,
+    /// `mMediaIndex`
+    GraphicMediaIndex,
+    /// `new EEGraphicEffect(*(EeDataGraphicEffectFields*)a0, EEMedia::Get(a1))`
+    EffectNew,
+    /// `new EEMusicObject((const unsigned char*)a0)`
+    MusicNew,
+    /// `gMusicRandom.SetSeed(TMGetTime())`
+    MusicSeed,
+    /// `EEGetRules().SetMusicFromFlags(a0, (bool*)a1, 14)`
+    RulesMusicFromFlags,
+    /// `static_cast<EeDataMediaUse*>(p)`
+    MusicUse,
+    /// `gConductor->GetConductor().LoadScore(mFileName, *(long*)a0)`
+    MusicLoadScore,
+    /// `mScoreID = a0`
+    MusicSetScore,
+    /// `gConductor->GetConductor().UnloadScore(mScoreID)`
+    MusicUnloadScore,
 }
 
 use EePreloadMediaCpp as O;
@@ -357,6 +427,291 @@ pub fn add_song_to_every_epoch(song: P) {
     h(O::SongDereference, song, &[]);
 }
 
+// ---- the tables' loads (EEDbReadLeadRecords' shape: the count, then each record after its lead strings)
+
+/// Reads a counted table from an open file: the u32 count, `begin(count)` (false: no records), then for each record
+/// `lead(index)` and `each(index, bytes)` (a failed read still hands the buffer on). Returns the last read status.
+pub fn read_records<F: FsFile>(
+    file: &mut F,
+    size: usize,
+    mut begin: impl FnMut(u32) -> bool,
+    mut lead: impl FnMut(u32),
+    mut each: impl FnMut(u32, &[u8]),
+) -> c_long {
+    let mut record = vec![0u8; size];
+    let mut count = 0u32;
+    let mut result = file.read_u32(&mut count) as c_long;
+    if result == 0 && begin(count) {
+        for i in 0..count {
+            lead(i);
+            result = file.read_bytes(&mut record).0 as c_long;
+            each(i, &record);
+        }
+    }
+    result
+}
+
+/// [`read_records`] over the C++ file `file`, opened for reading first and closed after.
+fn read_table(
+    file: P,
+    size: usize,
+    begin: impl FnMut(u32) -> bool,
+    lead: impl FnMut(u32),
+    each: impl FnMut(u32, &[u8]),
+) -> c_long {
+    h(O::FileOpenRead, file, &[]);
+    let result = read_records(&mut CppFile(file as *mut c_void), size, begin, lead, each);
+    h(O::FileClose, file, &[]);
+    result
+}
+
+/// `EESoundObject::Get`: the sound at a table index, NULL past the end.
+fn sound_get(index: c_ulong) -> P {
+    if (index as u64) < h(O::SoundCount, 0, &[]) as u64 {
+        h(O::SoundAt, 0, &[index as i64]) as P
+    } else {
+        0
+    }
+}
+
+/// `EESoundObject::LoadTable`: each sound record after its sample's name.
+pub fn load_sounds(file: P) -> c_long {
+    let sound = Cell::new(0 as P);
+    read_table(
+        file,
+        ee_data::tables::ee_data_sound_record_size(),
+        |count| {
+            h(O::SoundsResize, 0, &[i64::from(count)]);
+            true
+        },
+        |_| {
+            sound.set(h(O::SoundNew, 0, &[]) as P);
+            h(O::SoundNameLoad, sound.get(), &[file as i64]);
+        },
+        |index, record| {
+            let fields = h(O::SoundFields, sound.get(), &[]) as *mut ee_data::tables::EeDataSoundFields;
+            // SAFETY: a whole record; the fields are the new sound's base
+            unsafe { ee_data::tables::ee_data_sound_from_record(record.as_ptr(), fields) };
+            h(O::SoundSet, 0, &[i64::from(index), sound.get() as i64]);
+        },
+    )
+}
+
+/// The graphic object's name slots in the file's order (after one skipped name).
+const GRAPHIC_NAMES: i64 = 32;
+
+/// `EEGraphicObject::LoadTable`: each graphic record after its 33 names (a skipped one, the file, the texture, the
+/// 14 parts' texture and model, the shadow's model and texture); a record with no media index is deleted again.
+pub fn load_graphic_objects(file: P) -> c_long {
+    let object = Cell::new(0 as P);
+    let name = h(O::NameNew, 0, &[]) as P;
+    let result = read_table(
+        file,
+        ee_data::tables::ee_data_graphic_object_record_size(),
+        |count| {
+            h(O::MediaTableResize, 0, &[i64::from(count)]);
+            true
+        },
+        |index| {
+            object.set(h(O::GraphicNew, 0, &[]) as P);
+            h(O::MediaTableSet, 0, &[i64::from(index), object.get() as i64]);
+            h(O::NameLoad, name, &[file as i64]);
+            for slot in 0..GRAPHIC_NAMES {
+                h(O::NameLoad, name, &[file as i64]);
+                h(O::GraphicName, object.get(), &[slot, name as i64]);
+            }
+        },
+        |index, record| {
+            let o = object.get();
+            let fields = h(O::GraphicFields, o, &[]) as *mut ee_data::tables::EeDataGraphicObjectFields;
+            // SAFETY: a whole record; the fields are the new object's base
+            let sounds = unsafe { ee_data::tables::ee_data_graphic_object_from_record(record.as_ptr(), fields) };
+            for k in 0..sounds.sound1.len() {
+                for (which, id) in [(0, sounds.sound1[k]), (1, sounds.sound2[k])] {
+                    let sound = sound_get(id);
+                    h(O::GraphicSetSound, o, &[which, k as i64, sound as i64]);
+                    if sound == 0 {
+                        h(O::GraphicNoFrames, o, &[which, k as i64]);
+                    }
+                }
+            }
+            if h(O::GraphicMediaIndex, o, &[]) == 0 {
+                h(O::MediaTableDelete, 0, &[i64::from(index)]);
+                h(O::MediaTableSet, 0, &[i64::from(index), 0]);
+            }
+        },
+    );
+    h(O::NameDelete, name, &[]);
+    result
+}
+
+/// `EEGraphicEffect::LoadTable`: the effects (rows that are not effects stay NULL), their follow-on links, the table.
+pub fn load_effects(file: P) -> c_long {
+    let effects: RefCell<Vec<P>> = RefCell::new(Vec::new());
+    let links: RefCell<Vec<EeDataGraphicEffectLinks>> = RefCell::new(Vec::new());
+    let result = read_table(
+        file,
+        ee_data::tables::ee_data_graphic_effect_record_size(),
+        |count| {
+            effects.borrow_mut().resize(count as usize, 0);
+            links.borrow_mut().resize(count as usize, EeDataGraphicEffectLinks::default());
+            true
+        },
+        |_| {},
+        |index, record| {
+            let mut fields = EeDataGraphicEffectFields::default();
+            let mut links = links.borrow_mut();
+            let link = &mut links[index as usize];
+            // SAFETY: a whole record; the outputs are locals
+            let is_effect =
+                unsafe { ee_data::tables::ee_data_graphic_effect_from_record(record.as_ptr(), &mut fields, link) };
+            let effect = if is_effect {
+                let at = &fields as *const EeDataGraphicEffectFields as usize as i64;
+                h(O::EffectNew, 0, &[at, link.media as i64]) as P
+            } else {
+                0
+            };
+            effects.borrow_mut()[index as usize] = effect;
+        },
+    );
+    let effects = effects.into_inner();
+    link_effects(&effects, &links.into_inner());
+    // SAFETY: `effects` holds its length of effects (or NULLs)
+    unsafe { table::ee_gfx_geffect_table_set(effects.as_ptr().cast(), effects.len()) };
+    result
+}
+
+/// `EEMusicObject::LoadTable`: the songs by epoch (a "New Music.txt" override plays in every epoch instead of the
+/// table); the rules' per-epoch music from each row's flags (a no-op when epochs.yaml names it).
+pub fn load_music(file: P) -> c_long {
+    let size = ee_data::tables::ee_data_music_record_size();
+    let mut record = vec![0u8; size];
+    ee_data::tables::ee_data_songs_reset(h(O::EpochCount, 0, &[]) as usize);
+    h(O::MusicSeed, 0, &[]);
+    // SAFETY: room for a music record
+    let mut result = unsafe { read_new_music(record.as_mut_ptr()) };
+    if result != 0 {
+        let songs: RefCell<Vec<P>> = RefCell::new(Vec::new());
+        result = read_table(
+            file,
+            size,
+            |_| true,
+            |_| {},
+            |index, row| {
+                songs.borrow_mut().push(h(O::MusicNew, 0, &[row.as_ptr() as usize as i64]) as P);
+                let mut flags = [false; 14];
+                // SAFETY: a whole record; room for its 14 flags
+                unsafe { ee_data::tables::ee_data_music_epoch_flags(row.as_ptr(), flags.as_mut_ptr()) };
+                h(O::RulesMusicFromFlags, 0, &[i64::from(index), flags.as_ptr() as usize as i64]);
+            },
+        );
+        add_epoch_songs(&songs.into_inner());
+    } else {
+        add_song_to_every_epoch(h(O::MusicNew, 0, &[record.as_ptr() as usize as i64]) as P);
+    }
+    result
+}
+
+// ---- the media uses (ee/EEMediaUse.h's acquire and release over the unit's lock)
+
+extern "C" fn lock_enter(lock: *mut c_void) {
+    h(O::LockEnter, lock as P, &[]);
+}
+
+extern "C" fn lock_leave(lock: *mut c_void) {
+    h(O::LockLeave, lock as P, &[]);
+}
+
+extern "C" fn lock_sleep() {
+    h(O::Sleep1, 0, &[]);
+}
+
+fn media_lock(op: O) -> EeDataMediaLock {
+    EeDataMediaLock { lock: h(op, 0, &[]) as *mut c_void, enter: lock_enter, leave: lock_leave, sleep: lock_sleep }
+}
+
+fn step(context: *mut c_void, call: extern "C" fn(*mut c_void) -> c_long) -> EeDataMediaStep {
+    EeDataMediaStep { context, call: Some(call) }
+}
+
+const NO_STEP: EeDataMediaStep = EeDataMediaStep { context: std::ptr::null_mut(), call: None };
+
+fn acquire(usage: O, object: P, lock: O, load: EeDataMediaStep, reset_on_failure: bool) -> c_long {
+    let usage = h(usage, object, &[]) as *mut EeDataMediaUse;
+    // SAFETY: the object's live use; the steps outlive the call
+    unsafe { ee_data::media::ee_data_media_acquire(usage, &media_lock(lock), &load, &NO_STEP, reset_on_failure) }
+}
+
+fn release(usage: O, object: P, lock: O, unload: EeDataMediaStep) {
+    let usage = h(usage, object, &[]) as *mut EeDataMediaUse;
+    // SAFETY: as `acquire`
+    unsafe { ee_data::media::ee_data_media_release(usage, &media_lock(lock), &unload) }
+}
+
+extern "C" fn sound_load_step(sound: *mut c_void) -> c_long {
+    if text(O::SoundName, sound as P).is_empty() || is_none32(h(O::SoundLoad, sound as P, &[])) {
+        9
+    } else {
+        0
+    }
+}
+
+extern "C" fn sound_unload_step(sound: *mut c_void) -> c_long {
+    h(O::SoundUnload, sound as P, &[]);
+    h(O::SoundSetSample, sound as P, &[0]);
+    1
+}
+
+/// `EESoundObject::LoadMedia`: the sample loaded on first use; 9 when it has no name or does not load.
+pub fn sound_load_media(sound: P) -> c_long {
+    acquire(O::SoundUse, sound, O::SoundLock, step(sound as *mut c_void, sound_load_step), false)
+}
+
+/// `EESoundObject::UnloadMedia`: the last use unloads the sample; 0.
+pub fn sound_unload_media(sound: P) -> c_long {
+    release(O::SoundUse, sound, O::SoundLock, step(sound as *mut c_void, sound_unload_step));
+    0
+}
+
+extern "C" fn music_load_step(song: *mut c_void) -> c_long {
+    let mut id: c_long = 0;
+    let result = h(O::MusicLoadScore, song as P, &[&mut id as *mut c_long as usize as i64]) as c_long;
+    if result == 0 {
+        h(O::MusicSetScore, song as P, &[i64::from(id)]);
+    }
+    result
+}
+
+/// The music unload's song and the conductor's answer.
+struct MusicUnload {
+    song: P,
+    result: c_long,
+}
+
+extern "C" fn music_unload_step(context: *mut c_void) -> c_long {
+    // SAFETY: `music_unload_score`'s local
+    let unload = unsafe { &mut *(context as *mut MusicUnload) };
+    unload.result = h(O::MusicUnloadScore, unload.song, &[]) as c_long;
+    if unload.result == 5 {
+        return 0;
+    }
+    h(O::MusicSetScore, unload.song, &[-1]);
+    1
+}
+
+/// `EEMusicObject::LoadScore`: the score loaded on first use (a failed load leaves the count at 0).
+pub fn music_load_score(song: P) -> c_long {
+    acquire(O::MusicUse, song, O::MusicLock, step(song as *mut c_void, music_load_step), true)
+}
+
+/// `EEMusicObject::UnloadScore`: the last use unloads the score unless the conductor is busy with it (5).
+pub fn music_unload_score(song: P) -> c_long {
+    let mut unload = MusicUnload { song, result: 0 };
+    let context = &mut unload as *mut MusicUnload as *mut c_void;
+    release(O::MusicUse, song, O::MusicLock, step(context, music_unload_step));
+    unload.result
+}
+
 // ---- the C++ forwards
 
 /// # Safety
@@ -386,23 +741,6 @@ pub unsafe extern "C" fn ee_preload_find_turret_part(
         unsafe { *index = found };
     }
     result
-}
-
-/// # Safety
-/// `effects` holds `count` effects (or NULLs) and `links` `count` link triples.
-#[no_mangle]
-pub unsafe extern "C" fn ee_preload_link_effects(
-    effects: *const *mut c_void,
-    links: *const EeDataGraphicEffectLinks,
-    count: usize,
-) {
-    if count == 0 {
-        return;
-    }
-    // SAFETY: the caller's guarantee
-    let (effects, links) =
-        unsafe { (std::slice::from_raw_parts(effects.cast::<P>(), count), std::slice::from_raw_parts(links, count)) };
-    link_effects(effects, links)
 }
 
 /// # Safety
@@ -448,31 +786,59 @@ pub unsafe extern "C" fn ee_preload_play_sound(sound: *mut c_void, volume: f32, 
 }
 
 /// # Safety
-/// `out` has room for a music record.
+/// `file` is a live `FSFile` (the table's).
 #[no_mangle]
-pub unsafe extern "C" fn ee_preload_read_new_music(out: *mut u8) -> c_long {
-    // SAFETY: the caller's guarantee
-    unsafe { read_new_music(out) }
+pub unsafe extern "C" fn ee_preload_load_sounds(file: *mut c_void) -> c_long {
+    load_sounds(file as P)
 }
 
 /// # Safety
-/// `songs` holds `count` songs.
+/// As [`ee_preload_load_sounds`].
 #[no_mangle]
-pub unsafe extern "C" fn ee_preload_add_epoch_songs(songs: *const *mut c_void, count: usize) {
-    let songs = if count == 0 {
-        &[][..]
-    } else {
-        // SAFETY: the caller's guarantee
-        unsafe { std::slice::from_raw_parts(songs.cast::<P>(), count) }
-    };
-    add_epoch_songs(songs)
+pub unsafe extern "C" fn ee_preload_load_graphic_objects(file: *mut c_void) -> c_long {
+    load_graphic_objects(file as P)
+}
+
+/// # Safety
+/// As [`ee_preload_load_sounds`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_load_effects(file: *mut c_void) -> c_long {
+    load_effects(file as P)
+}
+
+/// # Safety
+/// As [`ee_preload_load_sounds`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_load_music(file: *mut c_void) -> c_long {
+    load_music(file as P)
+}
+
+/// # Safety
+/// `sound` is a live `EESoundObject`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_sound_load_media(sound: *mut c_void) -> c_long {
+    sound_load_media(sound as P)
+}
+
+/// # Safety
+/// As [`ee_preload_sound_load_media`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_sound_unload_media(sound: *mut c_void) -> c_long {
+    sound_unload_media(sound as P)
 }
 
 /// # Safety
 /// `song` is a live `EEMusicObject`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_preload_add_song_to_every_epoch(song: *mut c_void) {
-    add_song_to_every_epoch(song as P)
+pub unsafe extern "C" fn ee_preload_music_load_score(song: *mut c_void) -> c_long {
+    music_load_score(song as P)
+}
+
+/// # Safety
+/// As [`ee_preload_music_load_score`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_music_unload_score(song: *mut c_void) -> c_long {
+    music_unload_score(song as P)
 }
 
 #[cfg(test)]
@@ -502,5 +868,64 @@ mod tests {
         ];
         link_effects(&[0, 0], &links);
         link_effects(&[], &[]);
+    }
+
+    /// A table file in memory: the count, then records (no lead strings).
+    struct Mem(Vec<u8>, usize);
+
+    impl FsFile for Mem {
+        fn read_u32(&mut self, value: &mut u32) -> i32 {
+            if self.1 + 4 > self.0.len() {
+                return 1;
+            }
+            *value = u32::from_le_bytes(self.0[self.1..self.1 + 4].try_into().unwrap());
+            self.1 += 4;
+            0
+        }
+        fn read_bytes(&mut self, out: &mut [u8]) -> (i32, u32) {
+            let n = out.len().min(self.0.len() - self.1);
+            out[..n].copy_from_slice(&self.0[self.1..self.1 + n]);
+            self.1 += n;
+            (if n == out.len() { 0 } else { 1 }, n as u32)
+        }
+    }
+
+    #[test]
+    fn a_table_is_its_count_then_each_record_after_its_lead() {
+        let mut file = Mem(vec![2, 0, 0, 0, 1, 2, 3, 4, 5, 6], 0);
+        let mut seen = Vec::new();
+        let mut leads = Vec::new();
+        let result = read_records(
+            &mut file,
+            3,
+            |n| {
+                assert_eq!(n, 2);
+                true
+            },
+            |i| leads.push(i),
+            |i, r| seen.push((i, r.to_vec())),
+        );
+        assert_eq!(result, 0);
+        assert_eq!(leads, [0, 1]);
+        assert_eq!(seen, [(0, vec![1, 2, 3]), (1, vec![4, 5, 6])]);
+    }
+
+    #[test]
+    fn a_short_record_is_still_handed_on_and_its_status_returned() {
+        let mut file = Mem(vec![2, 0, 0, 0, 1, 2, 3, 4], 0);
+        let mut seen = Vec::new();
+        let result = read_records(&mut file, 3, |_| true, |_| {}, |i, r| seen.push((i, r.to_vec())));
+        assert_eq!(result, 1);
+        // the buffer keeps the last record's bytes past a short read
+        assert_eq!(seen, [(0, vec![1, 2, 3]), (1, vec![4, 2, 3])]);
+    }
+
+    #[test]
+    fn no_count_or_a_refused_begin_reads_no_record() {
+        let mut file = Mem(vec![1, 0], 0);
+        assert_eq!(read_records(&mut file, 3, |_| panic!("no count"), |_| {}, |_, _| panic!()), 1);
+        let mut file = Mem(vec![1, 0, 0, 0, 9, 9, 9], 0);
+        assert_eq!(read_records(&mut file, 3, |_| false, |_| panic!(), |_, _| panic!()), 0);
+        assert_eq!(file.1, 4);
     }
 }

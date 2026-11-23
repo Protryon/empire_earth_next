@@ -18,7 +18,6 @@ public:
     virtual ~EEMusicObject();                       // ??_G 0xd9f1c (EEMedia's thunk 0xda3a6), dtor 0xd9f38
     virtual long LoadMedia();                       // EEMedia +0x04 0xda3ae
     virtual long UnloadMedia();                     // EEMedia +0x08 0xda3b6
-    static long ReadNewMusic(unsigned char* outRecord);   // 0xd9c6b (Data\Music\New Music.txt)
     static long LoadTable(FSFile* inFile);
     static void ClearAll();
     static EEMusicObject* GetRandom(long inEpoch);  // 0xda116 (a random song of the epoch's list)
