@@ -76,6 +76,15 @@ pub(crate) fn game_op(op: G, a: isize, b: isize, c: isize, d: isize, out: GameOu
             out(G::TransferHostSetPort, a, b, 0, 0);
             Some(0)
         }
+        // EELobbyGetVersion's: the version text (one reference the caller's), then the checksum into `*(uint32_t*)a`
+        G::Version => {
+            let text = out(G::VersionTextNew, 0, 0, 0, 0);
+            out(G::AddRef, text, 0, 0, 0);
+            let checksum = out(G::VersionChecksum, 0, 0, 0, 0) as u32;
+            // SAFETY: the caller's `uint32_t` (the op's contract)
+            unsafe { *(a as *mut u32) = checksum };
+            Some(text)
+        }
         _ => None,
     }
 }

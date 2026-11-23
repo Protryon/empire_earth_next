@@ -210,14 +210,13 @@ class EEGameOptionsPlayer;
 class EEPSaveGameHeader;
 class UWideString;
 // 0x297f2d: a saved game's file length and header checksum (false when it cannot be read)
-bool EELobbyGetSavedGameInfo(const char* inFile, unsigned long& outLength, unsigned long& outChecksum);
+bool EELobbyGetSavedGameInfo(const char* inFile, uint32_t& outLength, uint32_t& outChecksum);
 bool EELobbyLoadSavedGame(const char* inFile);              // 0x298005 (checks the room's players against it)
 WONAPI::GUIString EELobbyToGUIString(const UWideString& inText);
 void EELobbyFillMapTypeCombo(WONAPI::ComboBox* inCombo);    // 0x29876a (fills the map types)
 unsigned long EELobbyGetNumMapTypes();                      // 0x298824 (jmp EERMGetNumberOfGenerators)
 void EELobbySetDefaultGameOptions(WONAPI::EELobbyGame* inGame);  // 0x2988d8 (the preferences' last game options)
 const WONAPI::GUIString& EELobbyFn2988E9();                 // 0x2988e9 (a function-local static GUIString)
-void EELobbyGetVersion(WONAPI::GUIString& outVersion, unsigned long& outChecksum);
 // the 0x296aaa unit
 void EELobbyClose();
 bool EELobbyHostGame();

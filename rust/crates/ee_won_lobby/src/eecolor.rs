@@ -83,6 +83,23 @@ pub enum EeWonEeColorOp {
     GameRust,
     /// `((RefCount*)a)->Release()`.
     Release,
+    // ---- R6 WON round 35: ChooserNew's and OpenPopup's statements (composed while the network core is bound)
+    /// `new EELobbyColorChooser` (no reference).
+    ChooserAlloc = 100,
+    /// `((EELobbyColorChooser*)a)->AddRef()`.
+    ChooserAddRef,
+    /// `new PopupParams((Component*)b, 0x23e7, (Component*)a, c, d)` (OpenPopup's local).
+    PopupNew,
+    /// `((PopupParams*)b)->mAvoidRect.height = c`.
+    PopupAvoidHeight,
+    /// `((PopupParams*)b)->mAvoidRect.y = c`.
+    PopupAvoidY,
+    /// `((PopupParams*)b)->mInputComponent = (Component*)a`.
+    PopupInput,
+    /// `((Component*)a)->GetRoot()->OpenPopup(*(PopupParams*)b)`.
+    PopupOpen,
+    /// `delete (PopupParams*)b`.
+    PopupFree,
 }
 
 /// The inward calls (the classes' methods and virtuals).
@@ -278,7 +295,11 @@ impl EeWonEeColor {
     /// HandleActivate: the chooser made once; open, it closes; else it opens centred below the button.
     fn activate(&self) {
         if self.chooser.get() == 0 {
-            let c = self.op1(Op::ChooserNew, 0);
+            let c = if ee_won_net::cppnet::bound() {
+                chooser_new(&|op, a, b, c, d| self.op(op, a, b, c, d, 0, 0))
+            } else {
+                self.op1(Op::ChooserNew, 0)
+            };
             let old = self.chooser.replace(c);
             if old != 0 {
                 self.op1(Op::Release, old);
@@ -299,7 +320,11 @@ impl EeWonEeColor {
         let mut x = ((w as i32).wrapping_sub(cw as i32)) / 2;
         let mut y = self.op1(Op::Height, self.me()) as i32;
         self.op(Op::LocalToRoot, self.me(), &mut x as *mut i32 as isize, &mut y as *mut i32 as isize, 0, 0, 0);
-        self.op(Op::OpenPopup, self.me(), self.chooser.get(), x as isize, y as isize, 0, 0);
+        if ee_won_net::cppnet::bound() {
+            open_popup(&|op, a, b, c, d| self.op(op, a, b, c, d, 0, 0), self.me(), self.chooser.get(), x, y);
+        } else {
+            self.op(Op::OpenPopup, self.me(), self.chooser.get(), x as isize, y as isize, 0, 0);
+        }
     }
 
     fn button_event(&self, event: isize, end_popup: bool) {
@@ -478,6 +503,57 @@ pub unsafe extern "C" fn ee_won_eecolor_set_palette(colors: *const u32, n: u32) 
     // SAFETY: the contract
     let colors = unsafe { std::slice::from_raw_parts(colors, (n as usize).min(16)) };
     set_palette(colors);
+}
+
+/// The calls out of the compositions below: the host's op with `a`..`d`.
+type Out<'a> = &'a dyn Fn(Op, isize, isize, isize, isize) -> isize;
+
+/// ChooserNew's statements (R6 WON round 35): the chooser made, then the button's reference on it.
+fn chooser_new(out: Out) -> isize {
+    let c = out(Op::ChooserAlloc, 0, 0, 0, 0);
+    out(Op::ChooserAddRef, c, 0, 0, 0);
+    c
+}
+
+/// OpenPopup's statements: the params for the chooser at (x, y) owned by the button `me`, avoiding the button's
+/// height above y, the button the input component; opened, then the local gone.
+fn open_popup(out: Out, me: isize, chooser: isize, x: i32, y: i32) {
+    let p = out(Op::PopupNew, me, chooser, x as isize, y as isize);
+    let h = out(Op::Height, me, 0, 0, 0);
+    out(Op::PopupAvoidHeight, me, p, h, 0);
+    let h = out(Op::Height, me, 0, 0, 0) as i32;
+    out(Op::PopupAvoidY, me, p, y.wrapping_sub(h) as isize, 0);
+    out(Op::PopupInput, me, p, 0, 0);
+    out(Op::PopupOpen, me, p, 0, 0);
+    out(Op::PopupFree, me, p, 0, 0);
+}
+
+/// The drivers' entry (won_ctl35_test): ChooserNew (its result) or OpenPopup (`a` the button, `b` the chooser, `c`
+/// and `d` the place) as the game composes them, over `host` with the object `obj`; `INTPTR_MIN` for another op.
+///
+/// # Safety
+/// `host` answers the ops (a driver's world).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_eecolor_split_op(
+    obj: *mut c_void,
+    host: EeWonEeColorHostFn,
+    op: EeWonEeColorOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
+    let Some(h) = host else { return isize::MIN };
+    // SAFETY: the caller's host and object
+    let out = |op: Op, a: isize, b: isize, c: isize, d: isize| unsafe { h(obj, op, a, b, c, d, 0, 0) };
+    match op {
+        Op::ChooserNew => chooser_new(&out),
+        Op::OpenPopup => {
+            open_popup(&out, a, b, c as i32, d as i32);
+            0
+        }
+        _ => isize::MIN,
+    }
 }
 
 #[cfg(test)]

@@ -70,5 +70,14 @@ fn the_game_ops_split() {
     // the transfer's Rust object: none here (a null object's call answers 0)
     assert_eq!(game_op(G::TransferSetFileInfo, 4, 1, 2, 3, &game), Some(0));
     assert_eq!(take(), ["TransferSetName 4 1 0 0", "TransferRust 4 0 0 0"]);
-    assert_eq!(game_op(G::Version, 0, 0, 0, 0, &game), None);
+    // EELobbyGetVersion's: the text with its reference, then the checksum written to the caller's
+    let mut checksum: u32 = 7;
+    let answer = |o: G, a: isize, b: isize, c: isize, d: isize| match o {
+        G::VersionTextNew => 90,
+        G::VersionChecksum => 0x1234,
+        _ => game(o, a, b, c, d),
+    };
+    assert_eq!(game_op(G::Version, &mut checksum as *mut u32 as isize, 0, 0, 0, &answer), Some(90));
+    assert_eq!((take(), checksum), (vec!["AddRef 90 0 0 0".to_string()], 0x1234));
+    assert_eq!(game_op(G::StringsEqual, 0, 0, 0, 0, &game), None);
 }
