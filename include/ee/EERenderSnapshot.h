@@ -41,9 +41,7 @@ struct EERenderSnapshot {
 // the frame's snapshot (graphics thread only)
 extern EERenderSnapshot gRenderSnapshot;
 
-// Takes the world-wide part of the snapshot; the caller holds the world's lock (EEGraphics::FrameStarting)
-void EETakeRenderSnapshot();
-// Takes EEROTerrain's part (the coloured rectangles, the editor's brush); its FrameStarting, in a game
-void EETakeTerrainSnapshot();
+// The world-wide part of the snapshot is taken under the world's lock (EEGraphics::FrameStarting), EEROTerrain's part
+// (the coloured rectangles, the editor's brush) in its FrameStarting: gamecpp ro_views.rs
 
 #endif

@@ -34,10 +34,9 @@ pub const EE_SCREENS_SETNX_T_AMBIENTS: u32 = 12;
 pub const EE_SCREENS_SETNX_T_CLASS_COUNT: u32 = 13;
 pub const EE_SCREENS_SETNX_T_PREVIEW: u32 = 14;
 pub const EE_SCREENS_SETNX_T_CLASS: u32 = 15;
-/// String i0 into the host's text; the paint type radio (id i0, the text, index i2, checked i3, at f0, f1, on form
-/// p1); radio p1's label's background 0.4, its text transparent, yellow; radio p1 as a control.
+/// String i0 into the host's text; radio p1's label's background 0.4, its text transparent, coloured f0, f1, f2
+/// (`SetnYellow`); radio p1 as a control.
 pub const EE_SCREENS_SETNX_STRING: u32 = 16;
-pub const EE_SCREENS_SETNX_PAINT_RADIO: u32 = 17;
 pub const EE_SCREENS_SETNX_LABEL_BG: u32 = 18;
 pub const EE_SCREENS_SETNX_LABEL_TRANSPARENT: u32 = 19;
 pub const EE_SCREENS_SETNX_LABEL_YELLOW: u32 = 20;
@@ -97,14 +96,10 @@ pub const EE_SCREENS_SETNX_LINE_TEXTURE: u32 = 60;
 /// `gUnitClassTable[i0] != NULL`, its button's texture.
 pub const EE_SCREENS_SETNX_CLASS_EXISTS: u32 = 61;
 pub const EE_SCREENS_SETNX_CLASS_BUTTON_TEXTURE: u32 = 62;
-/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height; the preview p1's
-/// `ComputeStretchedCoordsAndScale(its rectangle, its rectangle, f, list p0's screen)`.
+/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height.
 pub const EE_SCREENS_SETNX_PREVIEW_TEXTURE: u32 = 63;
 pub const EE_SCREENS_SETNX_TEXTURE_WIDTH: u32 = 64;
 pub const EE_SCREENS_SETNX_TEXTURE_HEIGHT: u32 = 65;
-pub const EE_SCREENS_SETNX_PREVIEW_STRETCH: u32 = 66;
-/// The preview p2's bitmap's `SetColorPerVertex` of the colour list p1's line i0's colours 0, i1, i2, i3.
-pub const EE_SCREENS_SETNX_TINT: u32 = 67;
 /// Form p1's load thread's `Post408(i0)`, `Post409(i0)`.
 pub const EE_SCREENS_SETNX_POST_408: u32 = 68;
 pub const EE_SCREENS_SETNX_POST_409: u32 = 69;
@@ -113,8 +108,38 @@ pub const EE_SCREENS_SETNX_POST_409: u32 = 69;
 pub const EE_SCREENS_SETNX_PAINT_CENTERED: u32 = 70;
 pub const EE_SCREENS_SETNX_PAINT_TERRAIN: u32 = 71;
 pub const EE_SCREENS_SETNX_PAINT_BULLDOZER: u32 = 72;
-/// A brush radio (group p2's brush i0, id i1, the text, index i3, at f0, f1, form p1; checked for brush 0).
-pub const EE_SCREENS_SETNX_BRUSH_RADIO: u32 = 73;
+
+// round 6 (4000..): the shell radio of either kind, its rectangle's inputs, the bitmaps' Rust objects
+/// The screen font's height; the form p1's radio-on bitmap's height into f0; `new EEUIShellRadio(kind i0, the
+/// arguments at p2 (`[count, ...]`), id i1, the host's text, the screen font, the rectangle f (left, top, right,
+/// bottom), form p1, index i2, border 0, checked i3)`.
+pub const EE_SCREENS_SETNX_FONT_HEIGHT: u32 = 4000;
+pub const EE_SCREENS_SETNX_RADIO_ON_HEIGHT: u32 = 4001;
+pub const EE_SCREENS_SETNX_NEW_RADIO: u32 = 4002;
+/// The preview p1's bitmap's Rust object (`EeGeBitmap`); its rectangle into *p2; control p1's screen; the colour
+/// list p1's line i0's colours (a `GEColor` array); the type list p1's bitmap's Rust object.
+pub const EE_SCREENS_SETNX_PREVIEW_BITMAP: u32 = 4003;
+pub const EE_SCREENS_SETNX_PREVIEW_RECT: u32 = 4004;
+pub const EE_SCREENS_SETNX_SCREEN: u32 = 4005;
+pub const EE_SCREENS_SETNX_LINE_COLORS: u32 = 4006;
+pub const EE_SCREENS_SETNX_T_BITMAP: u32 = 4007;
+/// The host's text's bytes (NUL-terminated) into the out slot (after `EE_SCREENS_SETNX_STRING`).
+pub const EE_SCREENS_SETNX_TEXT: u32 = 4008;
+/// Rust's own statements (`ge_op`, never the C++): the bitmap p0's `ComputeStretchedCoordsAndScale` of the three
+/// rectangles at p1 (texture, source, destination) on screen i0; the bitmap p0's `SetColorPerVertex` of the
+/// colours i0..i3 of the `GEColor` array p1.
+pub const EE_SCREENS_SETNX_GE_STRETCH: u32 = 4010;
+pub const EE_SCREENS_SETNX_GE_COLORS: u32 = 4011;
+/// The type list p1's destructor's parts: its bitmap released, its text deleted, its copy text deleted.
+pub const EE_SCREENS_SETNX_T_BITMAP_RELEASE: u32 = 4012;
+pub const EE_SCREENS_SETNX_T_TEXT_DELETE: u32 = 4013;
+pub const EE_SCREENS_SETNX_T_COPY_TEXT_DELETE: u32 = 4014;
+
+/// The shell kinds the radios are (`EE_SCREENS_SK_PAINT_TYPE`, `EE_SCREENS_SK_BRUSH`).
+const SETNX_KIND_PAINT_TYPE: i32 = crate::screens::shells_editor::EE_SCREENS_SK_PAINT_TYPE as i32;
+const SETNX_KIND_BRUSH: i32 = crate::screens::shells::EE_SCREENS_SK_BRUSH as i32;
+/// The labels' and the type list's text colour (0x445... `SetnYellow`).
+const SETNX_YELLOW: [f32; 4] = [0.99607843, 0.96862745, 0.1254902, 0.0];
 
 /// The colour list p1 (from 100): its base `CopyData()`, `SetCopiedHasFocus(true)`, its copied lines' count, line
 /// i0's colour count, its copy text rectangle into *p2 (a `GERectangle`), its line height; `new GERhombus`, rhombus
@@ -159,7 +184,6 @@ pub const EE_SCREENS_SETNX_T_COPY_TEXTURE: u32 = 134;
 pub const EE_SCREENS_SETNX_T_BITMAP_TEXTURE: u32 = 135;
 pub const EE_SCREENS_SETNX_T_COPY_RECT: u32 = 137;
 pub const EE_SCREENS_SETNX_T_LINE_HEIGHT: u32 = 138;
-pub const EE_SCREENS_SETNX_T_STRETCH: u32 = 139;
 pub const EE_SCREENS_SETNX_T_BITMAP_AT: u32 = 140;
 pub const EE_SCREENS_SETNX_T_DRAW_BITMAP: u32 = 141;
 pub const EE_SCREENS_SETNX_T_SELECTED_RECT: u32 = 142;
@@ -185,6 +209,8 @@ pub const EE_SCREENS_SETLB_COLOR_DRAW: u32 = 2;
 pub const EE_SCREENS_SETLB_TYPE_COPY: u32 = 3;
 pub const EE_SCREENS_SETLB_TYPE_DRAW: u32 = 4;
 pub const EE_SCREENS_SETLB_TYPE_TEXT: u32 = 5;
+/// The type list's destructor (`~EESEUITerrainTypeLB`, 0x1ac40d).
+pub const EE_SCREENS_SETLB_TYPE_FREE: u32 = 4000;
 
 /// `kErrorOK`.
 const ERROR_OK: i32 = 0;
@@ -234,7 +260,74 @@ fn label(x: &mut Setnx, radio: usize, background: bool) {
         on(x, EE_SCREENS_SETNX_LABEL_BG, radio, 0, 0);
     }
     on(x, EE_SCREENS_SETNX_LABEL_TRANSPARENT, radio, 0, 0);
-    on(x, EE_SCREENS_SETNX_LABEL_YELLOW, radio, 0, 0);
+    raw(x, EE_SCREENS_SETNX_LABEL_YELLOW, [0, radio, 0], [0; 4], SETNX_YELLOW);
+}
+
+/// `GERectangle(GE2DPoint(x, y), width, height)` as left, top, right, bottom (its constructor's sums).
+fn sized(x: f32, y: f32, width: f32, height: f32) -> [f32; 4] {
+    [x, y, x + (width - 1.0), y + (height - 1.0)]
+}
+
+/// A shell radio of `kind` with `args`, id, index and checked, at `rect`, on form p1 (the host's text).
+fn radio(x: &mut Setnx, form: usize, kind: i32, args: &[i64], ints: [i32; 3], rect: [f32; 4]) -> usize {
+    let mut block = vec![args.len() as i64];
+    block.extend_from_slice(args);
+    let i = [kind, ints[0], ints[1], ints[2]];
+    mk(x, EE_SCREENS_SETNX_NEW_RADIO, form, block.as_ptr() as usize, i, rect)
+}
+
+/// The rectangle as the four floats a statement's f takes (left, top, right, bottom).
+fn floats(r: &GeRectangle) -> [f32; 4] {
+    [r.left, r.top, r.right, r.bottom]
+}
+
+/// The bitmap `bitmap` stretched: the texture rectangle `texture` (also the source), `destination`, on `screen`.
+fn stretch(x: &mut Setnx, bitmap: usize, texture: GeRectangle, destination: GeRectangle, screen: i32) {
+    let rects = [texture, texture, destination];
+    raw(x, EE_SCREENS_SETNX_GE_STRETCH, [bitmap, rects.as_ptr() as usize, 0], [screen, 0, 0, 0], [0.0; 4]);
+}
+
+/// The terrain names' order (`EESETerrainNameLess`, 0x1aee71): string `first` before string `second`, compared
+/// without case (`PlatMbsICmp`).
+pub fn terrain_less(x: &mut Setnx, first: i32, second: i32) -> bool {
+    let mut text = |id: i32| -> Vec<u8> {
+        on(x, EE_SCREENS_SETNX_STRING, 0, 0, id);
+        let bytes = mk(x, EE_SCREENS_SETNX_TEXT, 0, 0, [0; 4], [0.0; 4]);
+        if bytes == 0 {
+            return vec![0];
+        }
+        // SAFETY: the host's text, NUL-terminated, lives until the next string
+        let mut v =
+            unsafe { core::ffi::CStr::from_ptr(bytes as *const core::ffi::c_char) }.to_bytes_with_nul().to_vec();
+        v.shrink_to_fit();
+        v
+    };
+    let (a, b) = (text(first), text(second));
+    // SAFETY: both NUL-terminated
+    unsafe { ee_base::plat_core::string::PlatMbsICmp(a.as_ptr(), b.as_ptr()) < 0 }
+}
+
+/// Rust's own statements (`EE_SCREENS_SETNX_GE_*` on the bitmaps' Rust objects), `None` for the C++'s.
+///
+/// # Safety
+/// The operands are the live objects the statement names.
+pub unsafe fn ge_op(op: u32, p: [usize; 3], i: &[i32; 4]) -> Option<i32> {
+    use ee_render::ge::bmpobj::{ee_ge_bmp_set_colors, ee_ge_bmp_stretch, EeGeBitmap};
+    let bitmap = p[0] as *mut EeGeBitmap;
+    match op {
+        EE_SCREENS_SETNX_GE_STRETCH => {
+            let r = p[1] as *const GeRectangle;
+            unsafe { ee_ge_bmp_stretch(bitmap, r, r.add(1), r.add(2), i[0] as u32 as c_ulong) };
+        }
+        EE_SCREENS_SETNX_GE_COLORS => {
+            // a GEColor is three floats
+            let color = |k: i32| (p[1] as *mut [f32; 3]).wrapping_add(k as usize).cast::<core::ffi::c_void>();
+            let quad = [color(i[0]), color(i[1]), color(i[2]), color(i[3])];
+            unsafe { ee_ge_bmp_set_colors(bitmap, &quad) };
+        }
+        _ => return None,
+    }
+    Some(0)
 }
 
 /// The op composed, or `None` for the C++ host's.
@@ -301,7 +394,15 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
         }
         EE_SCREENS_SETN_OP_RADIO => {
             on(x, EE_SCREENS_SETNX_STRING, 0, 0, i[1]);
-            let radio = mk(x, EE_SCREENS_SETNX_PAINT_RADIO, p[1], 0, *i, *f);
+            let font = on(x, EE_SCREENS_SETNX_FONT_HEIGHT, 0, 0, 0) as f32;
+            let on_height = {
+                let mut g = [0.0f32; 4];
+                x(EE_SCREENS_SETNX_RADIO_ON_HEIGHT, [0, p[1], 0], &mut [0; 4], &mut g);
+                g[0]
+            };
+            let height = if font < on_height { on_height } else { font };
+            let rect = sized(f[0], f[1], 125.0, height);
+            let radio = radio(x, p[1], SETNX_KIND_PAINT_TYPE, &[], [i[0], i[2], i32::from(i[3] != 0)], rect);
             label(x, radio, true);
             let c = mk(x, EE_SCREENS_SETNX_RADIO_CONTROL, radio, 0, [0; 4], z);
             // SAFETY: p0 the op's out slot
@@ -319,18 +420,14 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
                 let set = unsafe { *(sets as *const i32).add(k as usize) };
                 raw(x, EE_SCREENS_SETNX_LINE_COLOR_SET, [0; 3], [k, set, 0, 0], z);
             }
-            let list = mk(x, EE_SCREENS_SETNX_TYPE_LIST_NEW, p[1], 0, [i[1], 0, 0, 0], *f);
+            let list = mk(x, EE_SCREENS_SETNX_TYPE_LIST_NEW, p[1], 0, [i[1], 0, 0, 0], sized(f[0], f[1], f[2], 85.0));
             let event = mk(x, EE_SCREENS_SETNX_TYPE_EVENT, group, 0, [0; 4], z);
             on(x, EE_SCREENS_SETNX_TYPE_TRIGGER, list, event, 0);
             on(x, EE_SCREENS_SETNX_EVENT_RELEASE, event, 0, 0);
-            for s in [
-                EE_SCREENS_SETNX_TYPE_TEXT_TRANSPARENT,
-                EE_SCREENS_SETNX_TYPE_TEXT_YELLOW,
-                EE_SCREENS_SETNX_TYPE_SELECTED_CLEAR,
-                EE_SCREENS_SETNX_TYPE_BG,
-            ] {
-                on(x, s, list, 0, 0);
-            }
+            on(x, EE_SCREENS_SETNX_TYPE_TEXT_TRANSPARENT, list, 0, 0);
+            raw(x, EE_SCREENS_SETNX_TYPE_TEXT_YELLOW, [0, list, 0], [0; 4], SETNX_YELLOW);
+            on(x, EE_SCREENS_SETNX_TYPE_SELECTED_CLEAR, list, 0, 0);
+            on(x, EE_SCREENS_SETNX_TYPE_BG, list, 0, 0);
             on(x, EE_SCREENS_SETNX_TYPE_ADD, p[1], list, 0);
             let c = mk(x, EE_SCREENS_SETNX_TYPE_CONTROL, list, 0, [0; 4], z);
             on(x, EE_SCREENS_SETNX_LINES_CLEAR, 0, 0, 0);
@@ -351,7 +448,7 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
                     color += 1;
                 }
             }
-            let list = mk(x, EE_SCREENS_SETNX_COLOR_LIST_NEW, p[1], 0, [i[1], 0, 0, 0], *f);
+            let list = mk(x, EE_SCREENS_SETNX_COLOR_LIST_NEW, p[1], 0, [i[1], 0, 0, 0], sized(f[0], f[1], f[2], 85.0));
             let event = mk(x, EE_SCREENS_SETNX_COLOR_EVENT, group, 0, [0; 4], z);
             on(x, EE_SCREENS_SETNX_COLOR_TRIGGER, list, event, 0);
             on(x, EE_SCREENS_SETNX_EVENT_RELEASE, event, 0, 0);
@@ -366,7 +463,10 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
             0
         }
         EE_SCREENS_SETN_OP_PAINT => {
-            let t = mk(x, EE_SCREENS_SETNX_PAINT_NEW, p[1], p[2], [i[0], 0, 0, 0], z);
+            // SAFETY: p2 the op's three handles, the shell's arguments
+            let args = unsafe { [3, at(p[2], 0) as i64, at(p[2], 1) as i64, at(p[2], 2) as i64] };
+            let rect = sized(0.0, 0.0, 1024.0, 606.0);
+            let t = mk(x, EE_SCREENS_SETNX_PAINT_NEW, p[1], args.as_ptr() as usize, [i[0], 0, 0, 0], rect);
             on(x, EE_SCREENS_SETNX_ADD_CONTROL, p[1], t, 0);
             // SAFETY: p0 the op's out slot
             unsafe { put(p[0], 0, t) };
@@ -374,7 +474,7 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
         }
         EE_SCREENS_SETN_OP_BITMAP => {
             let bitmap = mk(x, EE_SCREENS_SETNX_NEW_BITMAP, 0, 0, [0; 4], z);
-            let t = mk(x, EE_SCREENS_SETNX_UIBITMAP_NEW, p[1], bitmap, [i[0], 0, 0, 0], *f);
+            let t = mk(x, EE_SCREENS_SETNX_UIBITMAP_NEW, p[1], bitmap, [i[0], 0, 0, 0], sized(f[0], f[1], 64.0, 64.0));
             on(x, EE_SCREENS_SETNX_BITMAP_RELEASE, bitmap, 0, 0);
             on(x, EE_SCREENS_SETNX_UIBITMAP_ADD, p[1], t, 0);
             let c = mk(x, EE_SCREENS_SETNX_UIBITMAP_CONTROL, t, 0, [0; 4], z);
@@ -409,7 +509,10 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
             raw(x, EE_SCREENS_SETNX_PREVIEW_TEXTURE, [p[0], p[1], texture], [0; 4], z);
             let w = on(x, EE_SCREENS_SETNX_TEXTURE_WIDTH, texture, 0, 0) as u32 as f32;
             let h = on(x, EE_SCREENS_SETNX_TEXTURE_HEIGHT, texture, 0, 0) as u32 as f32;
-            raw(x, EE_SCREENS_SETNX_PREVIEW_STRETCH, [p[0], p[1], 0], [0; 4], [0.0, 0.0, w, h]);
+            let bitmap = mk(x, EE_SCREENS_SETNX_PREVIEW_BITMAP, p[1], 0, [0; 4], z);
+            let preview = rect_of(x, EE_SCREENS_SETNX_PREVIEW_RECT, p[1]);
+            let screen = on(x, EE_SCREENS_SETNX_SCREEN, p[0], 0, 0);
+            stretch(x, bitmap, preview, GeRectangle { left: 0.0, top: 0.0, right: w, bottom: h }, screen);
             0
         }
         EE_SCREENS_SETN_OP_SET_TEXTURE => {
@@ -424,7 +527,9 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
             0
         }
         EE_SCREENS_SETN_OP_TINT => {
-            raw(x, EE_SCREENS_SETNX_TINT, [0, p[0], p[1]], *i, z);
+            let colors = mk(x, EE_SCREENS_SETNX_LINE_COLORS, p[0], 0, [i[0], 0, 0, 0], z);
+            let bitmap = mk(x, EE_SCREENS_SETNX_PREVIEW_BITMAP, p[1], 0, [0; 4], z);
+            raw(x, EE_SCREENS_SETNX_GE_COLORS, [bitmap, colors, 0], [0, i[1], i[2], i[3]], z);
             0
         }
         EE_SCREENS_SETN_OP_POST => {
@@ -447,7 +552,9 @@ pub unsafe fn compose(x: &mut Setnx, op: u32, p: [usize; 3], i: &mut [i32; 4], f
         }
         EE_SCREENS_SETN_OP_BRUSH => {
             on(x, EE_SCREENS_SETNX_STRING, 0, 0, i[2]);
-            let radio = mk(x, EE_SCREENS_SETNX_BRUSH_RADIO, p[1], p[2], *i, *f);
+            let args = [p[2] as i64, i64::from(i[0])];
+            let rect = sized(f[0], f[1], 100.0, 20.0);
+            let radio = radio(x, p[1], SETNX_KIND_BRUSH, &args, [i[1], i[3], i32::from(i[0] == 0)], rect);
             label(x, radio, false);
             let c = mk(x, EE_SCREENS_SETNX_RADIO_CONTROL, radio, 0, [0; 4], z);
             // SAFETY: p0 the op's out slot
@@ -557,7 +664,9 @@ fn type_draw(x: &mut Setnx, list: usize) -> i32 {
         if !dest.and_in_place(&copy) {
             continue;
         }
-        with_rect(x, EE_SCREENS_SETNX_T_STRETCH, list, &dest, [0.0, 0.0, w, h]);
+        let bitmap = mk(x, EE_SCREENS_SETNX_T_BITMAP, list, 0, [0; 4], z);
+        let screen = on(x, EE_SCREENS_SETNX_SCREEN, list, 0, 0);
+        stretch(x, bitmap, dest, GeRectangle { left: 0.0, top: 0.0, right: w, bottom: h }, screen);
         with_rect(x, EE_SCREENS_SETNX_T_BITMAP_AT, list, &dest, z);
         r = on(x, EE_SCREENS_SETNX_T_DRAW_BITMAP, list, 0, 0);
     }
@@ -602,7 +711,7 @@ fn type_text(x: &mut Setnx, list: usize) -> i32 {
         rect.bottom = rect.top + height as f32;
         raw(x, EE_SCREENS_SETNX_T_TEXT_AT, [0, list, 0], [0; 4], [rect.left, rect.top, 0.0, 0.0]);
         on(x, EE_SCREENS_SETNX_T_TEXT_NAME, list, 0, i as i32);
-        r = with_rect(x, EE_SCREENS_SETNX_T_DRAW_TEXT, list, &rect, [0.0; 4]);
+        r = raw(x, EE_SCREENS_SETNX_T_DRAW_TEXT, [0, list, 0], [0; 4], floats(&rect));
         offset = offset.wrapping_add(height);
         i += 1;
     }
@@ -621,6 +730,19 @@ pub fn compose_list(x: &mut Setnx, which: u32, list: usize) -> i32 {
         EE_SCREENS_SETLB_TYPE_COPY => type_copy(x, list),
         EE_SCREENS_SETLB_TYPE_DRAW => type_draw(x, list),
         EE_SCREENS_SETLB_TYPE_TEXT => type_text(x, list),
+        EE_SCREENS_SETLB_TYPE_FREE => {
+            // the copied lines (the original walks +0xb0, mCopyLineArray), then the bitmap and the texts
+            let n = on(x, EE_SCREENS_SETNX_T_COPY_COUNT, list, 0, 0) as u32;
+            for k in 0..n {
+                if on(x, EE_SCREENS_SETNX_T_COPY_HAS_TEXTURE, list, 0, k as i32) != 0 {
+                    on(x, EE_SCREENS_SETNX_T_COPY_RELEASE, list, 0, k as i32);
+                }
+            }
+            on(x, EE_SCREENS_SETNX_T_BITMAP_RELEASE, list, 0, 0);
+            on(x, EE_SCREENS_SETNX_T_TEXT_DELETE, list, 0, 0);
+            on(x, EE_SCREENS_SETNX_T_COPY_TEXT_DELETE, list, 0, 0);
+            0
+        }
         _ => 0,
     }
 }

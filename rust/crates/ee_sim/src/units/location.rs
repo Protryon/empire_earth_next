@@ -161,6 +161,12 @@ pub fn face_yaw(goal: u64, unit: u64, host: &mut dyn LocationHost) -> bool {
 
 fn face_yaw_at(yaw: f32, unit: u64, host: &mut dyn LocationHost) -> bool {
     let t = host.unit_transformation(unit);
+    face_yaw_with(yaw, t, |turned| host.set_transformation(unit, turned))
+}
+
+/// `FaceYaw`'s test and turn over a unit's transformation `t`: whether it faces `yaw` within one degree; if so `set`
+/// gets it turned to that yaw exactly (the combat heal goal's location fallback, combat/cg_goal.rs, at yaw 0).
+pub(crate) fn face_yaw_with(yaw: f32, t: GeTransformation, set: impl FnOnce(&GeTransformation)) -> bool {
     let d = t.apply_vector(GeVector { x: 0.0, y: 1.0, z: 0.0 });
     let heading = um_arctan2(-d.x, d.y);
     let mut delta = heading - yaw;
@@ -174,7 +180,7 @@ fn face_yaw_at(yaw: f32, unit: u64, host: &mut dyn LocationHost) -> bool {
     if faces {
         let mut turned = t;
         turned.set_orientation(RotationOrder::Ypr, yaw, 0.0, 0.0);
-        host.set_transformation(unit, &turned);
+        set(&turned);
     }
     faces
 }

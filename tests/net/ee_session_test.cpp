@@ -195,14 +195,14 @@ extern "C" long ee_stand_resource_string_get(uint16_t inID16, void (*inAssign)(v
     case IDS_PLAYER_IS_OUT_OF_SYNCH:
     case IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME:
     case IDS_HOST_IS_OUT_OF_SYNCH:
-        snprintf(theText, sizeof(theText), "<%ld %%s>", inID);
+        snprintf(theText, sizeof(theText), "<%ld %%s>", (long)inID);
         break;
     case IDS_TO_JOIN_THIS_GAME_YOU:
     case IDS_GAME_IS_IN_PROGRESS:
-        snprintf(theText, sizeof(theText), "<%ld %%s %%s>", inID);
+        snprintf(theText, sizeof(theText), "<%ld %%s %%s>", (long)inID);
         break;
     default:
-        snprintf(theText, sizeof(theText), "<%ld>", inID);
+        snprintf(theText, sizeof(theText), "<%ld>", (long)inID);
         break;
     }
     T("resource %ld", inID);

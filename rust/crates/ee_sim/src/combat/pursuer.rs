@@ -2,7 +2,6 @@
 //! searches' host (`SearchHost`).
 
 use crate::combat::search::{SearchHost, EE_COMBAT_SEARCH_TEST_PURSUES};
-use crate::combat::search_ffi::EeCombatSearchHost;
 use crate::combat::walks::EeCombatHandle;
 
 /// `EEGetPursuerOf`: the nearest unit (by the squared tile distance to its nearest footprint tile of the unit, the
@@ -41,14 +40,4 @@ pub fn pursuer_of(unit: EeCombatHandle, x: i32, y: i32, host: &mut dyn SearchHos
         backward_done = backward == 0;
     }
     result
-}
-
-/// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
-///
-/// # Safety
-/// `host` must point to a valid record whose callbacks are callable with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_pursuer_of(unit: u64, x: i32, y: i32, host: *const EeCombatSearchHost) -> u64 {
-    let mut host = unsafe { *host };
-    pursuer_of(unit, x, y, &mut host)
 }

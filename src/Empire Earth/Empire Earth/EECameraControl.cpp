@@ -29,7 +29,7 @@
 #include "rust/base/math.h"
 #include "rust/game/app.h"
 #include "rust/render/gfx.h"
-#include "ee/EEAppCapture.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp camera_host.rs)
 #include "ee/EECombatGoals.h"
 
 // the GE value classes and their Rust mirrors share their storage (GERustMath.h)
@@ -192,24 +192,10 @@ void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint
 }
 
 // Returns the point the camera focuses on for a unit: its model centre at camera-focus height, else its tile centre
-// (the host's EE_APP_CAMERA_OP_UNIT_POINT)
+// (the host's EE_APP_CAMERA_OP_UNIT_POINT; ee_game gamecpp camera_host.rs)
 void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
 {
-    GE3DPoint theOffset;
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    if (theUnit != NULL) {
-        float theScale = theUnit->mPhysicalModel.GetScale();
-        theOffset = theUnit->mPhysicalModel.GetModel()->GetCenterPoint();
-        theOffset.SetX(theOffset.GetX() * theScale);
-        theOffset.SetY(theOffset.GetY() * theScale);
-        theOffset.SetZ(theUnit->mPhysicalModel.GetModel()->GetBoundingBox(0).GetHeight() * theUnit->mStats->GetCameraFocus() *
-                       theScale);
-        theUnit->mPhysicalModel.GetLocation().Apply(theOffset, outPoint);
-    } else {
-        outPoint.SetX(inUnit->GetTileX() + 0.5f);
-        outPoint.SetY(0.5f + inUnit->GetTileY());
-        outPoint.SetZ(gWorld.GetMap()->mTerrainMesh.GetMeshZ(outPoint.GetX(), outPoint.GetY()) + 0.3f);
-    }
+    ee_gamecpp_camera_unit_point(inUnit, &outPoint);
 }
 
 void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation)
@@ -276,31 +262,11 @@ void EECameraControl::ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST);
 void EECameraControl::ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST); }
 
 // Advances the camera each frame (ee_app camera.rs update), then applies the view, the orthographic size, the
-// clipping distances and the field of view to the viewport and refreshes the mini map's view
+// clipping distances and the field of view to the viewport and refreshes the mini map's view; CAMU at its start and
+// end (TEST ONLY) (ee_game gamecpp camera_host.rs)
 void EECameraControl::Update(float inElapsedTime)
 {
-    EEAppCaptureCamera(*this, 0, inElapsedTime);   // CAMU (TEST ONLY)
-    float theSize = 0.0f;
-    int32_t theAction = ee_app_camera_update(EE_CAMERA_HOST, inElapsedTime, &theSize);
-    if (theAction != EE_APP_CAMERA_UPDATE_DONE) {
-        if (theAction == EE_APP_CAMERA_UPDATE_ORTHO) {
-            GERectangle theRectangle(-1.0f, -1.0f, 1.0f, 1.0f);
-            theRectangle.SetLeft(-theSize);
-            theRectangle.SetTop(-theSize);
-            theRectangle.SetRight(theSize);
-            theRectangle.SetBottom(theSize);
-            gViewport.SetOrthographicRectangle(theRectangle);
-        }
-        gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(this->mView));
-        gViewport.SetFieldOfView(sCameraFieldOfView);
-        this->SetClippingDistances();
-        if (gMiniMap != NULL)
-            gMiniMap->RefreshView();
-        gB529066 = false;
-        gCameraFollowing = false;
-        gB529068 = false;
-    }
-    EEAppCaptureCamera(*this, 1, inElapsedTime);   // CAMU (TEST ONLY)
+    ee_gamecpp_camera_update(this, EECameraHost, inElapsedTime);
 }
 
 void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch)
@@ -314,4 +280,64 @@ void EECameraControl::SetZoom(float inZoom) { ee_app_camera_set_zoom(EE_CAMERA_H
 bool EEIsSeen(EEUnit* inUnit)
 {
     return EECombatIsSeenBy(inUnit, gWorld.GetCurrentPlayer(), true);
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the camera
+
+int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define CAM ((EECameraControl*)p)
+#define CX ((EEComplexUnit*)p)
+
+// the C++ calls and members of the camera's bodies in Rust (gamecpp camera_host.rs): p the camera unless noted,
+// one statement each; the end of lane D's cases
+int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DkFields: return P64(static_cast<EeAppCameraFields*>(CAM));
+    case O::DkModelCenter: *(GE3DPoint*)a[0] = CX->mPhysicalModel.GetModel()->GetCenterPoint();
+        break;
+    case O::DkLocationApply: CX->mPhysicalModel.GetLocation().Apply(*(const GE3DPoint*)a[0], *(GE3DPoint*)a[1]);
+        break;
+    case O::DkTileX: return ((EEUnit*)p)->GetTileX();
+    case O::DkTileY: return ((EEUnit*)p)->GetTileY();
+    case O::DkSetOrtho: gViewport.SetOrthographicRectangle(GERectangle(f[0], f[1], f[2], f[3]));
+        break;
+    case O::DkSetWorldCamera: gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(CAM->mView));
+        break;
+    case O::DkSetFieldOfView: gViewport.SetFieldOfView(sCameraFieldOfView);
+        break;
+    case O::DkHaveMiniMap: return gMiniMap != NULL;
+    case O::DkMiniMapRefresh: gMiniMap->RefreshView();
+        break;
+    case O::DkClearB529066: gB529066 = false;
+        break;
+    case O::DkClearFollowing: gCameraFollowing = false;
+        break;
+    case O::DkClearB529068: gB529068 = false;
+        break;
+    case O::DkUnitASaved: return CAM->mUnitA.GetSavedID();
+    case O::DkUnitBSaved: return CAM->mUnitB.GetSavedID();
+    case O::DkKeyCount: return (int64_t)CAM->mKeys.size();
+    case O::DkKeyAt: *(EECameraKey*)a[1] = CAM->mKeys[a[0]];
+        break;
+    default: return EECore10OpE(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DkModelScale: return CX->mPhysicalModel.GetScale();
+    case O::DkModelHeight: return CX->mPhysicalModel.GetModel()->GetBoundingBox(0).GetHeight();
+    case O::DkCameraFocus: return CX->mStats->GetCameraFocus();
+    case O::DkFrontClipping: return gViewport.GetFrontClippingDistance();
+    case O::DkRearClipping: return gViewport.GetRearClippingDistance();
+    default: return EECore10OpEF(inOp, p, a, f);
+    }
 }

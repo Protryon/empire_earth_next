@@ -50,6 +50,10 @@ pub const EE_SCREENS_SEE_SORT_UNIT_LIST: u32 = 14;
 pub const EE_SCREENS_SEE_START_EPOCH: u32 = 15;
 /// `EESEEGameUnitLimit` (its label, modifier and offset: `ee_screens_see_slider` with the format "%g").
 pub const EE_SCREENS_SEE_UNIT_LIMIT: u32 = 16;
+/// `EEUIETerrainTypeChange` (object: the terrain tab's group, `EeScreensSeGroup`): the tab's type change.
+pub const EE_SCREENS_SEE_TERRAIN_TYPE: u32 = 4000;
+/// `EEUIETerrainColorChange` (object: the terrain tab's group): the tab's colour change.
+pub const EE_SCREENS_SEE_TERRAIN_COLOR: u32 = 4001;
 
 /// The game page's per-player count label (`kSERBUnitTypesPerPlayerCountLabel`).
 pub const EE_SCREENS_SEE_PER_PLAYER_LABEL_ID: i32 = 0x162;
@@ -120,6 +124,13 @@ pub const EE_SCREENS_SEE_OP_FILL_EPOCHS: u32 = 27;
 pub const EE_SCREENS_SEE_OP_MAX_PLAYERS: u32 = 28;
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 pub const EE_SCREENS_SEE_OP_LABEL_NUMBER: u32 = 29;
+/// `ee_screenscpp_seex`'s statements for the host's last ops (round 6): whether the editor's form exists,
+/// `gWorld.mMaxPlayers` (with `EE_SCREENS_SEEX_EPOCH_COUNT`, editor_tabsx.rs).
+pub const EE_SCREENS_SEEX_HAS_EDITOR: u32 = 4000;
+pub const EE_SCREENS_SEEX_MAX_PLAYERS: u32 = 4001;
+/// The terrain tab of the group p told of its list q's change i0 (`EE_SCREENS_SETN_TYPE_CHANGE` or
+/// `EE_SCREENS_SETN_COLOR_CHANGE`; `ee_screens_setn_call`, Rust).
+pub const EE_SCREENS_SEE_OP_TERRAIN_CHANGE: u32 = 4000;
 
 /// The form, the controls and the actions.
 pub trait SeeHost {
@@ -211,9 +222,19 @@ pub enum SeeKind {
         combo_id: i32,
         area_id: u32,
     },
+    /// the terrain tab's list change: `group` the tab's group, `what` its `EE_SCREENS_SETN_*_CHANGE`
+    TerrainChange {
+        group: usize,
+        what: u32,
+    },
     /// the trigger-only save (Ctrl+S, once `EEUIESaveScenarioTriggersOnly`): run by the editor form's host
     /// (`editor_form.rs`), not by `process_in`
     SaveTriggersOnly,
+    /// the instructions screen's trigger text export or import button (`editor_selt.rs`): run by the adapter
+    /// (`ee_screens_see_process`), not by `process_in`
+    Text {
+        import: bool,
+    },
 }
 
 impl SeeKind {
@@ -236,7 +257,17 @@ impl SeeKind {
             EE_SCREENS_SEE_SORT_UNIT_LIST => SeeKind::SortUnitList,
             EE_SCREENS_SEE_START_EPOCH => SeeKind::StartEpoch { end_combo: object },
             EE_SCREENS_SEE_UNIT_LIMIT => SeeKind::UnitLimit { label: 0, format: vec![0], scale: 0.0, offset: 0.0 },
+            EE_SCREENS_SEE_TERRAIN_TYPE => SeeKind::TerrainChange {
+                group: object,
+                what: crate::screens::editor_terrain::EE_SCREENS_SETN_TYPE_CHANGE,
+            },
+            EE_SCREENS_SEE_TERRAIN_COLOR => SeeKind::TerrainChange {
+                group: object,
+                what: crate::screens::editor_terrain::EE_SCREENS_SETN_COLOR_CHANGE,
+            },
             crate::screens::editor_form::EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY => SeeKind::SaveTriggersOnly,
+            crate::screens::editor_selt::EE_SCREENS_SEE_TEXT_EXPORT => SeeKind::Text { import: false },
+            crate::screens::editor_selt::EE_SCREENS_SEE_TEXT_IMPORT => SeeKind::Text { import: true },
             EE_SCREENS_SEE_QUICK_LOAD | EE_SCREENS_SEE_QUICK_SAVE => {
                 call(h, EE_SCREENS_SEE_OP_REFERENCE, object, [0; 2], [0.0; 4]);
                 if kind == EE_SCREENS_SEE_QUICK_LOAD {
@@ -439,8 +470,12 @@ impl SeeKind {
                 );
                 0
             }
+            SeeKind::TerrainChange { group, what } => {
+                call2(h, EE_SCREENS_SEE_OP_TERRAIN_CHANGE, *group, entity, [*what as i32, 0], [0.0; 4]);
+                0
+            }
             // the editor form's host runs it (`ee_screens_see_process`)
-            SeeKind::SaveTriggersOnly => 0,
+            SeeKind::SaveTriggersOnly | SeeKind::Text { .. } => 0,
         }
     }
 
@@ -479,7 +514,10 @@ mod tests {
                 EE_SCREENS_SEE_OP_EPOCH_COUNT => return 15,
                 EE_SCREENS_SEE_OP_LINE_COUNT => return self.lines,
                 EE_SCREENS_SEE_OP_MAX_PLAYERS => return self.players,
-                EE_SCREENS_SEE_OP_CAMG_ADD | EE_SCREENS_SEE_OP_CAMG_REMOVE | EE_SCREENS_SEE_OP_FILL_AREA_OBJECT => {
+                EE_SCREENS_SEE_OP_CAMG_ADD
+                | EE_SCREENS_SEE_OP_CAMG_REMOVE
+                | EE_SCREENS_SEE_OP_FILL_AREA_OBJECT
+                | EE_SCREENS_SEE_OP_TERRAIN_CHANGE => {
                     self.log.push(format!("{op} p{p} q{q} r{r} {i:?}"));
                     return 0;
                 }
@@ -727,5 +765,17 @@ mod tests {
         h.log.clear();
         e.process_in(&mut h, 0x50, 2);
         assert_eq!(h.log, ["text p48 \"%g\" 301"]);
+    }
+
+    #[test]
+    fn terrain_changes_tell_the_tab_of_the_list() {
+        let mut h = rec();
+        let t = SeeKind::new(&mut h, EE_SCREENS_SEE_TERRAIN_TYPE, 0x50).unwrap();
+        let c = SeeKind::new(&mut h, EE_SCREENS_SEE_TERRAIN_COLOR, 0x50).unwrap();
+        assert_eq!(t.process(&mut h, 0x60), 0);
+        c.process(&mut h, 0x70);
+        t.free(&mut h);
+        let op = EE_SCREENS_SEE_OP_TERRAIN_CHANGE;
+        assert_eq!(h.log, [format!("{op} p80 q96 r0 [5, 0, 0, 0]"), format!("{op} p80 q112 r0 [6, 0, 0, 0]")]);
     }
 }

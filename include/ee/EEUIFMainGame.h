@@ -11,6 +11,7 @@
 #include "lle/GERhombus.h"
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEUIBuildWall.h"
+#include "rust/ui/formobj.h"
 
 class EEABuild;
 class EEACalamity;
@@ -20,7 +21,6 @@ class EEAScroll;
 class EEUIFMGGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
-class EEUIFMGMainGroup;
 class EEUIFMGUnitHack;
 class EEUnit;
 class UIBackground;
@@ -72,38 +72,43 @@ class EEUIFMainGame : public UIForm, public EeScreensMainFormFields {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
     EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);
-    virtual ~EEUIFMainGame();
-    virtual void Activate();                // +0x04 0x2648d4
-    virtual void Deactivate();              // +0x14 0x264d40
-    virtual long UpdateKeyboard();          // +0x2c 0x271290 (EEUIFMGStatusButton.cpp's range)
-    virtual long UpdateMouse();             // +0x30 0x2712b8 (likewise)
-    virtual void Close();                   // +0x38 0x264cf1
+    // Destroys the main game form, its actions, panel groups, poll and unit hack
+    virtual ~EEUIFMainGame() { ee_screens_mfb_destroy((uintptr_t)this); }
+    // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
+    virtual void Activate() { this->Rust(EE_SCREENS_MF_DO_ACTIVATE); }                // +0x04 0x2648d4
+    // Deactivates the form: frees and resets the mouse and leaves any interface mode
+    virtual void Deactivate() { this->Rust(EE_SCREENS_MF_DO_DEACTIVATE); }              // +0x14 0x264d40
+    // Runs the keyboard mode of the current interface state (the cinematic's keys), else the form's keys
+    virtual long UpdateKeyboard()
+    {
+        return (long)this->Rust(EE_SCREENS_MF_DO_KEYBOARD, this->mKeyboardModes[this->mUIState]);
+    }          // +0x2c 0x271290 (EEUIFMGStatusButton.cpp's range)
+    // Runs the mouse: the unit hack, the form's controls, then the current interface mode's mouse (ee_screens
+    // mouse_modes.rs update_mouse); returns the last UpdateMouse result (the modes answer 0)
+    virtual long UpdateMouse() { return (long)this->Rust(EE_SCREENS_MF_DO_MOUSE); }             // +0x30 0x2712b8 (likewise)
+    // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
+    // background media
+    virtual void Close() { this->Rust(EE_SCREENS_MF_DO_CLOSE); }                   // +0x38 0x264cf1
     virtual long CopyData();                // +0x3c 0x264dc4
-    virtual long DrawPolygons();            // +0x40 0x26550c
-    virtual void Open();                    // +0x48 0x266038
+    // Draws the form's fixed background panels (the unit panels only with a selection)
+    virtual long DrawPolygons() { return (long)this->Rust(EE_SCREENS_MF_DO_DRAW); }            // +0x40 0x26550c
+    // Stores an error log line for the next snapshot
+    // Opens the form: sound latency and volume, centred mouse, empty error log, the cancel-mode event, the
+    // backgrounds and the civilization builder button's blinking
+    virtual void Open() { this->Rust(EE_SCREENS_MF_DO_OPEN); }                    // +0x48 0x266038
 
     // the saved game's main-form state (EEPWorldHelper's Load 0x14c39b / Save 0x14c525 call them; provisional
     // names)
     // Reads the information and civilization builder blinking flags from a saved game (version 0.0xd2 on)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
     {
-        long theResult = kErrorOK;
-
-        if (inMajorVersion > 1 || (inMajorVersion == kErrorOK && inMinorVersion >= 0xd2)) {
-            theResult = inFile.Read(this->mInfoBlinking);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mIsButtonBlinking);
-        }
-        return theResult;
+        return (long)ee_screens_mff_load((uintptr_t)&this->mInfoBlinking, (uintptr_t)&this->mIsButtonBlinking,
+                                         (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, (uintptr_t)&inFile);
     }
     // Writes the information and civilization builder blinking flags to the saved game
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
     {
-        long theResult = outFile.Write(this->mInfoBlinking);
-
-        if (theResult == kErrorOK)
-            theResult = outFile.Write(this->mIsButtonBlinking);
-        return theResult;
+        return (long)ee_screens_mff_save(this->mInfoBlinking, this->mIsButtonBlinking, (uintptr_t)&outFile);
     }
 
     // 0x2668ee (EEMLoadMainScreen passes 0x11, EEMSavedGroupSelect 0)
@@ -118,17 +123,19 @@ public:
     // the rest in address order (provisional names)
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
-    void CreateGroup(unsigned long inIndex);
+    // Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
+    void CreateGroup(unsigned long inIndex) { ee_screens_mfb_create_group((uintptr_t)this, (uint32_t)inIndex); }
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                      unsigned long inFlags, unsigned long inArg5);
     void SetEntityGroup(long inGroup);
-    bool IsInGameView(const GE2DPoint& inLocation);     // 0x265a06 (in the view, outside background 0x64)
+    // Tells whether a screen point is in the game view and not under the unit information panel
+    bool IsInGameView(const GE2DPoint& inLocation)
+    {
+        return ee_screens_mfb_in_game_view((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
+    }     // 0x265a06 (in the view, outside background 0x64)
     void SetErrorString(const UWideString& inText, unsigned long inIndex)   // 0x265ff6 (mStrings, mStringsChanged)
     {
-        this->mErrorCriticalSection->Enter();
-        this->mStrings[inIndex] = inText;
-        this->mStringsChanged = true;
-        this->mErrorCriticalSection->Leave();
+        ee_screens_mff_set_error((uintptr_t)this, (uint32_t)inIndex, (uintptr_t)&inText);   // (hud_more.rs)
     }
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
     // 0x266384: starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
@@ -178,14 +185,11 @@ public:
     using UIForm::SetDrawToolTipShadow;
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
-    GE3DPoint mPoint470;                    // +0x470 (the inline ctor's zeros)
-    GERhombus mRhombus47C;                  // +0x47c
     EEUIBuildWall mBuildWall;               // +0x494
     EEUIBuildGate mBuildGate;               // +0x4b4
     UIBackground* mUnitInfoBackground;      // +0x4d4 the background 0x64 (Open)
     UIEvent* mWheelZoom;                    // +0x4d8 (EE_SCREENS_CAM_WHEEL_ZOOM)
     UIEvent* mGrabScroll;                   // +0x4dc (the middle button's pressed and unpressed event: EECreateGrabScroll)
-    long mL4E0;                             // +0x4e0
     TSCriticalSection* mErrorCriticalSection;        // +0x4e4 (guards mStrings)
     EEUIFMGUnitHack* mUnitHack;             // +0x4e8
     EEUIFMGGroup* mGroups[6];               // +0x4ec (0: EEUIFMGMainGroup, 1: statistics, 2: chat, 3: diplomacy,
@@ -196,7 +200,6 @@ public:
     EEALasso* mLasso;                       // +0x510
     EEABuild* mBuild;                       // +0x514
     EEACalamity* mCalamity;                 // +0x518
-    long mL51C;                             // +0x51c
 };
 
 #endif

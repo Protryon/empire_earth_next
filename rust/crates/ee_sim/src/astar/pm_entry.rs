@@ -8,7 +8,7 @@ use crate::astar::path_splice::EePathPoint;
 #[cfg(not(test))]
 use crate::astar::pm::{global, EePathIo, EePathManager};
 #[cfg(not(test))]
-use std::ffi::c_void;
+use std::ffi::{c_long, c_void};
 
 /// A bounded tile search's window (`EEAIAStarBounds`: top, left, bottom, right).
 #[repr(C)]
@@ -203,36 +203,56 @@ mod game {
 #[cfg(not(test))]
 pub use game::*;
 
-/// `EEPathManager::FindPath` for the C++ callers: the path's tiles into the tile list `path` and, when `visited`
-/// is not null, the visited tiles into it (`ee_path_tiles_new` lists).
+/// `EEPathManager::FindPath` for the C++ callers: `from`, `to` the ends, `bounds` the window (a
+/// `U2DRectangle<long>`); `clear(path)` then the path's tiles pushed into `path`, and when `visited` is not null the
+/// visited tiles appended to it.
 ///
 /// # Safety
-/// `p` the live manager; the handles as [`find_path_on`]'s; the lists live.
+/// `p` the live manager; the handles as [`find_path_on`]'s; the points and the rectangle readable; the lists the
+/// callbacks' own.
 #[cfg(not(test))]
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_path_find_path(
+#[allow(clippy::too_many_arguments, clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+pub unsafe extern "C" fn ee_path_find_path_into(
     p: *mut EePathManager,
     unit: u64,
     map: u64,
-    ends: *const i32,
-    window: EePathWindow,
-    kind: i32,
-    revs: i32,
+    from: *const crate::astar::hull::EeHullPoint,
+    to: *const crate::astar::hull::EeHullPoint,
+    bounds: *const crate::astar::area_geom::EeHullRect,
+    kind: c_long,
+    revs: c_long,
     modifier: u64,
     path: *mut c_void,
     visited: *mut c_void,
+    push: extern "C" fn(*mut c_void, i32, i32),
+    clear: extern "C" fn(*mut c_void),
 ) {
-    // SAFETY: the caller's contract (four ints: from x, y, to x, y)
-    let e = unsafe { std::slice::from_raw_parts(ends, 4) };
+    // SAFETY: the caller's contract
+    let (from, to, b) = unsafe { (*from, *to, *bounds) };
+    let window =
+        EePathWindow { top: b.top as i32, left: b.left as i32, bottom: b.bottom as i32, right: b.right as i32 };
     let (tiles, seen) = unsafe {
-        find_path_on(p, unit, map, (e[0], e[1]), (e[2], e[3]), window, kind, revs, modifier, !visited.is_null())
+        find_path_on(
+            p,
+            unit,
+            map,
+            (from.x as i32, from.y as i32),
+            (to.x as i32, to.y as i32),
+            window,
+            kind as i32,
+            revs as i32,
+            modifier,
+            !visited.is_null(),
+        )
     };
-    // SAFETY: the lists are `ee_path_tiles_new`'s
-    unsafe {
-        (*(path as *mut Vec<[i32; 2]>)).extend(tiles.iter().map(|t| [t.x, t.y]));
-        if !visited.is_null() {
-            (*(visited as *mut Vec<[i32; 2]>)).extend(seen.iter().map(|t| [t.x, t.y]));
+    clear(path);
+    for t in &tiles {
+        push(path, t.x, t.y);
+    }
+    if !visited.is_null() {
+        for t in &seen {
+            push(visited, t.x, t.y);
         }
     }
 }

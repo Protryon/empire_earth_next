@@ -124,6 +124,8 @@ pub unsafe extern "C" fn ee_app_capture_player_state(
     if !capture::ee_app_capture_active() {
         return;
     }
+    // the economy's records (PLEC) come from this thread (player_econ.rs)
+    crate::units::player_econ::note_capture_thread();
     // SAFETY: the caller holds the player
     let token = unsafe { WorldRead::begin() };
     let Some(p) = (unsafe { PlayerView::of(&token, player) }) else { return };

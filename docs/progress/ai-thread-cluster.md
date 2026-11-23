@@ -123,18 +123,37 @@ Round 8 (rust-aicluster8), the hosts' last bodies, the trace, the schedule:
 - Deleted besides: EECPPlacement.cpp's epoch classes (three unused), EECPNextPlaceSearch, the EETileDistanceLess
   pair and choke point overloads (no caller), EECPNextUnits.cpp's unused held-set accessors.
 
-What is left in C++ of the cluster:
+Round 9 (rust-aicluster9, with forks rust-aicluster9p and rust-aicluster9n; the cluster from about 1,680 logic lines
+to about 650):
 
-- EEPathManager.cpp (the Paths lane's).
-- EECPNextUnits.cpp: the units host's one-statement cases, its messages (EEMRecord built per argument count, the
-  borrowed slot), the improvement cost, the tiles' level test (EEAreTilesLevel with its UCBD note), a few
-  two-statement cases (class and tech names, the map size, the gather target, the selection).
-- EECPNext.cpp: the names tables (EEDbRowIds), the engine's seat helpers, the area hull, the SIM_HASH dump (a C++
-  unit list and a virtual checksum).
-- EEAIContinentSave.cpp: the layout checks and the host's few two-statement cases.
-- EEAIContinentManager.cpp: BuildRegions' scenario inputs (EESMArea's rect).
-- EEHerd.cpp's formation placement, IsAnimalOnMap, GetUnits; EEAIRectangleArea.cpp's random point; EETown.cpp's
-  input points; EECPEngineHelpers.cpp's small members of other classes.
+- `cp/placement.rs`, `cp/player_game.rs`: **EECPPlacement whole** (the record `EeCpPlacementObj`, made and freed with
+  the computer player; the town tile's Load and Save with their PLCE scopes); ee/EECPPlaceCapture.h deleted.
+- `cp/herd_game.rs`, `cp/town.rs`, `cp/place_world.rs`: the herd's constructors' start, the area and random points
+  by value, the patrol points as U2DPoints, the centres' morale effect search, the path area id.
+- `astar/pm.rs`, `pm_entry.rs`, `pm_apply.rs`: **EEPathManager's members one call each** (its save file over
+  ee_base's CppFile, Call's io, GetPathGoal, FindPath into the C++ lists, the dumps, the destructor).
+- `astar/cm_inline.rs`, `cm_world.rs`, `cm_host.rs`: the continent manager's inline lookups and list fillers,
+  BuildRegions' scenario areas (`scenario::entry::region_inputs`), Reset, Shutdown, the destructor; the areas'
+  random points (AreaRandomPoint, EEAIRectangleArea::GetRandomPoint), AreaCreate, the AI value, the area bytes.
+- `ai/units_cases.rs`: the classic_lua units host's multi-statement cases (map size, attach, upgrade, gather target,
+  selection, the command's borrowed-slot sequence and message types, block test, affordability, garrison fill,
+  level test, the improvement cost, the gather safety's cases); `ai/names_db.rs`: **the names tables** (the db
+  loader hands each load's row ids to `ee_ai_names_capture`; EEDbRowIds gone); `ai/next_host.rs`: the next host's
+  stderr line, area hull, SIM_HASH; the seats' helpers one statement each.
+- Deleted (no C++ user left): the kCPBehavior* names (now tools/eedata ids.py CPBEHAVIOR_NAMES, the converter's),
+  EECPUnitRequirement.h, EECPASGWeights, EECPNext.h's result, gather and event enums, EEComputerPlayer.h's difficulty
+  and manager kinds, the continent manager's, areas' and path manager's unused members and enumerators.
+
+What is left in C++ of the cluster (about 650 logic lines, most of them class declarations other lanes use):
+
+- The classes other lanes call: EEComputerPlayer (a vtable over EEPlayer; one forwarder per member), EEHerd,
+  EETown, EEAIArea and the area views, EEAIContinentManager and EEPathManager (inline forwarders), with their
+  hosts' one-statement cases.
+- EECPNextUnits.cpp: the EEMRecord per argument count (needs a value-list constructor in the Communications lane's
+  EEMRecord).
+- EEHerd.cpp: the formation placement (EEFormation::Place over std::vectors), GetUnits, MAP_SIZE, SAVE_FLAGS.
+- EEAIContinentSave.cpp: the layout checks; EECPEngineHelpers.cpp: small members of other lanes' classes;
+  EEComputerPlayer.cpp: EEComplexUnit::QueueGoal (the Units lane's class) and the epoch research case.
 
 ## Goldens and gates
 
@@ -147,9 +166,6 @@ Results: PORT_LEARNINGS "AI Thread cluster, round 4".
 
 - **The units host's messages**: an EEMRecord built from a value list (a constructor over a pointer and a count in
   the Communications lane's EEMRecord) would let the per-count switch go.
-- **The improvement cost**: the class improvements' table (`mImprovements`: max level, cost factors) and the
-  upgrade's cost scale as Rust reads.
-- **EECPNext.cpp's names tables** (the db row ids as a Rust read from the Database lane) and the seat helpers (the
-  manifest is ee_game's); the SIM_HASH dump (a world unit list in the world views).
-- **BuildRegions' scenario inputs** (EESMArea's rect: the Scenario lane's record).
+- **The herd's formation placement** (EEFormation, the Units lane's) and its GetUnits.
+- **The classes' declarations** go only when their callers in other lanes call Rust directly.
 - **The herd paths no game reaches** (round 2's list) stay unit-tested only.

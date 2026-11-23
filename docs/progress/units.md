@@ -19,6 +19,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | 5 | `rust-units5` | -887 | the game log's human orders, the units sweep and the active groups' sweep whole in Rust (EEActiveGroupSweep.cpp deleted); the gather goal's spot search and accessibility; the combat records of a unit's state (CBSO, CBXA, CBQR, CBXR, CBAD); EEFindLandingPoint, EEGetRandomPointAhead; host cases answered over the views and the Rust continent manager |
 | 6 | `rust-units6` | -603 (logic -1,358) | GoalOp's compound cases split into one-statement cases; 51 `EEComplexUnit` and `EEUnitClass` bodies (Kill, Invalidate, StartProduction, ProduceUnit, the cargo, garrison and production queue, Heal, UpdateBuilding, ...) in Rust over one-statement hosts |
 | 7 | `rust-units7` | -2,737 (logic -4,623) | three forks: the EEUnitClass family (creation, LaunchShot, Animate, the media, the buildings', shots', people's, ground and transport bodies), EEComplexUnit's remaining bodies with the doppelganger load/save and RepairPointers, EEUnit's TakeHit and Kill, the placement ghosts, the doppelganger manager, the unit utilities (EEConvertUnit, EEReplaceUnit, the searches), the cloaking utilities whole, EEGatherNextTree; each C++ statement one host case |
+| 8 | `rust-units8` | -2,416 (logic -2,969) | three forks: EEUnitClassAir, the kinds, the constructor, gates and impact tests; EEUnitHost, the save operation's sections, EEUnit's and EEComplexUnit's bodies, the store check, GoalOp's list cases, the trigger host; the target searches, line of fire, EEWorldOp, EECombatCondition/Step, EEUpdateAct (each body in Rust, its C++ statements one-statement host cases) |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -289,7 +290,68 @@ ai-game time-cap PT 12471, units [4, 38, 39], alive_computers [2, 3], `engines [
 lan-game PT 2718/2718). The saveloads, scenario_check, the editor gates and eedata ran on the merged build before
 the tag fix (it changes only a TEST ONLY capture record's tag).
 
+## Round 8 (branch `rust-units8`, from round 7's tip 77c7ac956, 2026-11-21/22)
+
+The brief: C++ logic lines removed (target -3,000) by round 7's method, the files round 7 left. The round ran as three
+forks in their own worktrees with disjoint files and disjoint host op ranges (A: the EEUnitClass family, UC 600-999,
+UCB 1100-1199, UCS 1230-1399, UCA 2000-2199, UCK 2200-2399; B: the unit objects, CU 1000-1499, DOP 400-699, EU
+200-399, GOAL 800-1099, UNIT 200-499 and the new US/UH/UAI/EUM hosts; C: the unit utilities and combat hosts, UB
+300-699, WORLD 100-299, UPD 340-380 and the new SR/LF/CG hosts), merged with `--no-ff` without a conflict, then
+merged with origin/rust 5143a9696 (batch 15; only PORT_LEARNINGS.md conflicted). EEPhysicsModel was left to the
+world lane (its round 2, rust-world2y dae093b54, moves it).
+
+| Commit | What | Logic (per file, 77c7ac956 -> tip) |
+|---|---|---|
+| bb629020a, e118fc3f4, 18e8a970f, 18626e2f7, 000f7603e, 66054376a, f57fcf858 (A) | EEUnitClassAir's bodies (uca_air.rs: FlyToGoal, GetGroundHeight, EELandableActionOperation, IsBombOnTarget, EECreateCarrierAircraft, FlyOffMap, the air animal's, planet spaceship's and helicopter's bodies); EEUnitClassMoveOp's compound cases split (the cls hosts); the gates and the buildings' remaining bodies (ucb_gate.rs); EEUnitClass's constructor fill and CreateUnitClasses (uc_class.rs); the shots' impact tests (ucs_impact.rs); the kind dispatchers' compound bodies (uck_kinds.rs) | EEUnitClassAir 503 -> 66, EEUnitClass 535 -> 301, Buildings 347 -> 138, Shots 270 -> 138, Kinds 266 -> 185 |
+| b262bd0c0, 408e01939, 3e37b5189, 28381a1da, 0679319f6, be5f17f31, 0c9ee696a, 03353434c (B) | AttackNearby and the trigger host's compound cases (uai_cond.rs); EEUnitSaveOperation's sections and loads, the waypoint and goal-queue loads, the doppelganger's Reset/Clear/RepairPointers, FinishLoad (dop_save.rs, dop_more.rs); GoalOp's BOARDING, SURROUNDING_TILES, NEXT_RESOURCE, RESOURCE_OF_KIND, MINING_BEAM (goal_more.rs); the TEST ONLY store check whole (us_check.rs, USCK written from Rust); the unit host's multi-statement bodies (uh_body.rs); EEUnit's Remove, CopyFrom, Inits, ResetEEUnit, LoadMedia, RegrowForest, SetLastAttacker (eu_more.rs over `ee_units_eum_host`, no preamble: Init runs before mPlayer is set); QueueResearch with TQRS, ResizeTurretAngles, AddCenterOffset, GetEffectHeight, PlaceOnGround, the facings (cu_more.rs) | EEUnitHost 291 -> 25, EEComplexDoppelganger 248 -> 86, EEComplexUnit 448 -> 319, EEUnitAI 156 -> 30, EEUnit 182 -> 87, EEUnitStore 170 -> 77, EEUGRust 246 -> 169 |
+| 5a60be9b3, 642b9c2e7, 308dc4e90, e580fd118, 30612d9cf (C) | EEWorldOp's and EEUpdateAct's compound cases split (combat cg_world.rs, units upd_split.rs); the target searches, the line of fire, the uu world host's compound cases and the formula fills (`ee_units_sr_host`, `ee_units_lf_host`); EECombatCondition, EECombatStep, their reads and step operations, CBGS (`ee_units_cg_host`); EEUpdateContact | EEFOFindNewTargetNearOldTarget 884 -> 349, EECombatGoals 471 -> 223, EEUnitUpdate 185 -> 53 |
+| (the merge fix) | the air animal's and the landable's sound parameters call an unnoted Doppler pitch (`ee_units_uu_doppler_pitch_unnoted`, `EEUnitClass::AirGetSoundParameters`): fork A had pointed them at `EEGetDopplerPitch`, whose UUTL note (kind 83) the original's inline bodies never wrote; the calamity capture's seed 2 had one extra call at tick 11401 | +4 |
+
+Round total (logic_lines.py over src, include/ee, include/lle; 77c7ac956 -> the forks' merge 4ef8cd8e5, so batch 15
+is not counted): logic 60,308 -> 57,339 (**-2,969**; the fix adds 4); lines 153,434 -> 151,018 (-2,416). Target
+-3,000: short by about 35. Shims added: about 1,000 one-statement host cases (A ~360, B ~330, C ~300); shims
+deleted: the uu searches' old two-call protocols and `EEComplexUnitLoadSection`.
+
+New Rust (ee_sim::units unless noted): uca_air, uck_kinds, uc_class, ucb_gate, ucs_impact, uai_cond, dop_save,
+dop_more, goal_more, us_check, uh_body, eu_more, cu_more, upd_split, combat::cg_world and the search, line-of-fire
+and combat-goal host modules; each with recording-mock op-sequence tests. New capture tags written from Rust and
+pinned by tests: USCK (0x4b435355), TQRS (0x53525154).
+
+Gates on the final tree. The full chain ran on the merge eabdfe150 (the forks and origin/rust 5143a9696); the
+calamity failure it found was fixed in 5e3cdadaa, and the gates that fix can reach were run again on that tip.
+- Builds: both 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0.
+- Headers: 305 current.
+- Rust gate: PASS (6,080 tests). On the merge it failed once on ee_audio's real-time test
+  `the_null_device_pulls_the_mix_in_real_time` under load; it passed on the rerun.
+- Oracle seeds 2-7: identical (6087, 5300, 6072, 7649, 7842, 6540 lines), on the merge and on the fix.
+- Captures at seeds 2-3 on the merge: oracle 212, late 214, space 210, units 175, effects 6, missile 22, app 26,
+  scenario 43, transport 185, groups 2, placement 4. Calamity failed there (UUTL, seed 2) and PASSES on the fix
+  (222). Oracle and space were run again on the fix: PASS.
+- Saveloads: the plain run PASS; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect` PASS.
+- Editors and data: scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata
+  check and cppgate PASS.
+- The tour `random-game --box-select --orders --seed 7`: RESULT PASS on the merge and on the fix (gather, repair,
+  queued repair, move; patrol and attack-ground skipped by the fixture).
+- `gates.sh` on the merge: GATES PASS (tour; ai-game time-cap PT 13196, units [4, 41, 40], alive_computers [2, 3],
+  `engines ['classic_lua', 'classic_lua']`; lan-game PT 2689/2689).
+- The fix changes only which C++ calls the same Doppler math (no TEST ONLY note now), so the saveloads, the editor
+  gates, eedata and gates.sh were not run again on it.
+
 ## What is left (behaviour)
+
+- **Round 8's measure** (logic_lines.py's per-file count at the tip): EEFOFindNewTargetNearOldTarget.cpp 349,
+  EEComplexUnit.cpp 319 (EECuDumpFill, EEInsuranceChat, EEReportLeakingUnits, AIStep and its note, IsInReach, the
+  hosts' preambles), EEUnitClass.cpp 301, EECombatGoals.cpp 223, EEUnitClassKinds 185, EEUGRust 169 (the helpers,
+  GoalOp's preamble; PATH_REACHABLE is the Paths lane's), EEWorldLayout 166 (untouched), EEUnitClassGround 149,
+  EEUnitClassPeople 145, EEUnitClassBuildings 138, EEUnitClassShots 138, EEUnitClassTransports 128, EEGhostUnit 98,
+  EEUnit 87 (Describe/DescribeLong, the eu preamble), EEComplexDoppelganger 86 (the field switches), EEUGRustCombat
+  86, EEUnitStore 77 (Fill and the bridges), EEUnitClassAir 66, EEUnitUpdate 53, EEUnitAI 30 (COND_SUNK).
+  EEPhysicsModel and EEPhysicsSweep are the world lane's (its round 2).
+- **A shared utility is not a twin of an unnoted body**: when two inline bodies equal a noted unit utility
+  (EEGetDopplerPitch, UUTL kind 83), call the utility's math without its note, or the capture counts a call the
+  original never made (round 8's calamity seed 2).
+- **Never hand an `EEUnitClass*` straight to a fields-taking Rust function**: the static_cast to the base shifts the
+  pointer (fork A's one crash); read the field through a host case.
 
 - **Round 7's measure** (logic_lines.py's per-file count at the tip): EEFOFindNewTargetNearOldTarget.cpp 884 (the
   search and line-of-fire host callbacks with their CB* records, EESearchTarget and its siblings, EEFindNewTarget,

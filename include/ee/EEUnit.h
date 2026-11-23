@@ -1070,7 +1070,6 @@ public:
     void UpdateTrail(EEComplexUnit* inUnit);  // 0x2393a9 (the unit's +0x284 timer; the EEUC* VirtualB8s) (provisional name)
     void TurnTurretsBack(EEComplexUnit* inUnit);  // 0x2364f3 (the unit's mTabButtons values back towards 0; TurnTurrets) (provisional name)
     void MoveToTileCentre(EEComplexUnit* inUnit);  // 0x23658b (to its tile centre, or a step forward; 0x22db0f) (provisional name)
-    bool AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal);  // 0x22d95f (ret 8; this unread): an attack goal on a target (EEUnitAI.cpp) (provisional name)
     void CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation);  // 0x232e4a (CreateUnitAt for unit type 0x42; bool: CreateUnitAt passes its bool through) (provisional name)
     void ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer);  // 0x232c9f (EEMReplantFarms, farm classes)
     // EEUCProjectile.cpp's callees (provisional names)
@@ -1136,7 +1135,6 @@ public:
     void UnloadAt(EEComplexUnit* inTransport, long inX, long inY);  // (EEUCTransport)
     // The kinds' bodies (the EEUC* classes' members until R5b.4 round 32: EEUnitClassAir, -Buildings,
     // -Transports, -Shots, -People and -Ground.cpp); the overrides' run behind the dispatchers
-    void AirAnimalGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void AirAnimalUnitCreated(EEComplexUnit* inUnit);
     bool AirAnimalReturnToAirport(EEComplexUnit* inUnit);
     void FlyOffMap(EEComplexUnit* inUnit);
@@ -1185,7 +1183,6 @@ public:
     void LandCallParatroopPlane(EEComplexUnit* inUnit);
     void LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void LandTransportBadlyHurt(EEUnit* inUnit);
-    void LandableGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void LandableUnitCreated(EEComplexUnit* inUnit);
     void FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit);
     unsigned long GetNextFlightState(EEComplexUnit* inUnit);
@@ -1235,6 +1232,7 @@ public:
     void SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void SpaceshipVirtual78(EEComplexUnit* inUnit);
     void SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void SubmergedNavalGroundLocation(GE3DPoint& ioLocation);
     void SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
     EEUnit* SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator);

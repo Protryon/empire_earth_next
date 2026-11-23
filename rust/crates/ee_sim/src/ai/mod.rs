@@ -31,6 +31,7 @@ pub mod lua_value;
 pub mod manifest;
 pub mod military;
 pub mod names;
+pub mod names_db;
 pub mod next_game;
 pub mod next_save;
 pub mod next_state;

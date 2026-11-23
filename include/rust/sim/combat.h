@@ -40,6 +40,342 @@ constexpr static const uint32_t EE_COMBAT_FOLD_X_ACTIONS = 4;
 
 constexpr static const uint32_t EE_COMBAT_FOLD_GOAL_OBJECTS = 5;
 
+/// target `a`'s `mComplexUnit` (0 for none)
+constexpr static const int32_t EE_UNITS_CG_TARGET_COMPLEX = 1;
+
+/// `unit->mPlayer != NULL && unit->mPlayer->IsHuman()`
+constexpr static const int32_t EE_UNITS_CG_HUMAN = 2;
+
+/// attack goal `a`'s `GetAttackTileX()`
+constexpr static const int32_t EE_UNITS_CG_ATTACK_TILE_X = 3;
+
+/// attack goal `a`'s `GetAttackTileY()`
+constexpr static const int32_t EE_UNITS_CG_ATTACK_TILE_Y = 4;
+
+/// attack goal `a`'s `IsConvertAttack()`
+constexpr static const int32_t EE_UNITS_CG_CONVERT = 5;
+
+/// `unit->SetGoal(EEUGRust::NewAttackUnit(unit, unit a, false, false), 0, 0)`
+constexpr static const int32_t EE_UNITS_CG_ATTACK_IMPACT = 6;
+
+/// `f[0] = unit->GetLineOfSight()`
+constexpr static const int32_t EE_UNITS_CG_LINE_OF_SIGHT = 7;
+
+/// heal goal `a`'s `GetHealTarget()`
+constexpr static const int32_t EE_UNITS_CG_HEAL_TARGET = 8;
+
+/// attack goal `a`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_CG_ATTACK_TARGET = 9;
+
+/// `EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, unit, unit a) != 0`
+constexpr static const int32_t EE_UNITS_CG_IN_RANGE_TO_HIT = 10;
+
+/// `unit->IsInReach(unit a)`
+constexpr static const int32_t EE_UNITS_CG_IN_REACH = 11;
+
+/// `EECombatIsSeenBy(unit a, unit->mPlayer, b != 0)`
+constexpr static const int32_t EE_UNITS_CG_SEEN = 12;
+
+/// `unit->mUnitClass->FacesTarget(unit, unit a, b != 0)`
+constexpr static const int32_t EE_UNITS_CG_FACES = 13;
+
+/// `f[0] = unit->DistanceSquaredToUnit(unit a)`
+constexpr static const int32_t EE_UNITS_CG_DISTANCE_SQUARED = 14;
+
+/// `unit->IsOnTileBorderingTarget(unit a)`
+constexpr static const int32_t EE_UNITS_CG_BORDERING = 15;
+
+/// `EECombatIsGateClosed(unit, attack goal a)`
+constexpr static const int32_t EE_UNITS_CG_GATE_CLOSED = 16;
+
+/// `EECombatIsStillReachable(unit, attack goal a)`
+constexpr static const int32_t EE_UNITS_CG_STILL_REACHABLE = 17;
+
+/// `EEIsEnemyWithinRange(unit)`
+constexpr static const int32_t EE_UNITS_CG_ENEMY_IN_RANGE = 18;
+
+/// class `a`'s `MissileEvaluateCondition(unit, b)`
+constexpr static const int32_t EE_UNITS_CG_MISSILE_CONDITION = 19;
+
+/// the three floats at `b` = attack-ground goal `a`'s `GetGroundTarget()`
+constexpr static const int32_t EE_UNITS_CG_GROUND_TARGET = 20;
+
+/// `unit->CanReachTile(b, c)`
+constexpr static const int32_t EE_UNITS_CG_CAN_REACH_TILE = 21;
+
+/// `unit->GetUnitClass()->FacesPoint(unit, attack-ground goal a's GetGroundTarget(), true)`
+constexpr static const int32_t EE_UNITS_CG_FACES_POINT = 22;
+
+/// `EECombatHealInRange(unit, unit a)`
+constexpr static const int32_t EE_UNITS_CG_HEAL_IN_RANGE = 23;
+
+/// unit `a`'s `IsRepairable()`
+constexpr static const int32_t EE_UNITS_CG_REPAIRABLE = 24;
+
+/// class `a`'s `FindImpactUnit(unit)`
+constexpr static const int32_t EE_UNITS_CG_FIND_IMPACT = 25;
+
+/// unit `a`'s `GetUnitClass()`
+constexpr static const int32_t EE_UNITS_CG_CLASS = 26;
+
+/// class `a`'s `CheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_CG_GROUND_IMPACT = 27;
+
+/// class `a`'s `CheckWaterImpact(unit)`
+constexpr static const int32_t EE_UNITS_CG_WATER_IMPACT = 28;
+
+/// the 16 floats at `b` = `unit->mPhysicalModel.GetLocation().mMatrix`
+constexpr static const int32_t EE_UNITS_CG_LOCATION = 29;
+
+/// `unit->SetTransformation(the transformation at b, true)`
+constexpr static const int32_t EE_UNITS_CG_SET_TRANSFORMATION = 30;
+
+/// `unit->SetCurrentPhysicsAction(b)`
+constexpr static const int32_t EE_UNITS_CG_PHYSICS_ACTION = 31;
+
+/// `unit->mAnimation`
+constexpr static const int32_t EE_UNITS_CG_ANIMATION = 32;
+
+/// `unit->SetAnimation(b, -1, 0)`
+constexpr static const int32_t EE_UNITS_CG_SET_ANIMATION = 33;
+
+/// `unit->DropPath()`
+constexpr static const int32_t EE_UNITS_CG_DROP_PATH = 34;
+
+/// attack goal `a`'s `RetargetGatePart(unit)`
+constexpr static const int32_t EE_UNITS_CG_RETARGET_GATE = 35;
+
+/// `EEGetAttackFrameSet(unit)`
+constexpr static const int32_t EE_UNITS_CG_ATTACK_FRAME_SET = 36;
+
+/// `unit->GetModel()->mSound1Frames[b]`
+constexpr static const int32_t EE_UNITS_CG_SOUND_FRAME = 37;
+
+/// `unit->mPhysicalModel.GetFrame()`
+constexpr static const int32_t EE_UNITS_CG_FRAME = 38;
+
+/// `unit->mUnitClass->FireShot(unit)`
+constexpr static const int32_t EE_UNITS_CG_FIRE_SHOT = 39;
+
+/// `unit->SetRandomReloadTimer(b)`
+constexpr static const int32_t EE_UNITS_CG_RELOAD_TIMER = 40;
+
+/// `unit->SetTargetSearchTimer(b)`
+constexpr static const int32_t EE_UNITS_CG_SEARCH_TIMER = 41;
+
+/// goal `a`'s `SetPathAttempts(b)`
+constexpr static const int32_t EE_UNITS_CG_PATH_ATTEMPTS = 42;
+
+/// `unit->mIsFiringHigh`
+constexpr static const int32_t EE_UNITS_CG_FIRING_HIGH = 43;
+
+/// `object->mIgnoredTargets[a[0]].mTileX`
+constexpr static const int32_t EE_COMBAT_W_IGN_TILE_X = 100;
+
+/// `.mTileY` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_TILE_Y = 101;
+
+/// `.mFromX` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_FROM_X = 102;
+
+/// `.mFromY` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_FROM_Y = 103;
+
+/// `.mUnitID` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_UNIT_ID = 104;
+
+/// `.mTime` of entry `a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_TIME = 105;
+
+/// `object->mIgnoredTargets.erase(begin() + a[0], end())`
+constexpr static const int32_t EE_COMBAT_W_IGN_ERASE_TO_END = 106;
+
+/// `object->mIgnoredTargets.erase(begin() + a[0], begin() + a[1])`
+constexpr static const int32_t EE_COMBAT_W_IGN_ERASE_RANGE = 107;
+
+/// `object->mIgnoredTargets.push_front(EEComplexUnitAttacker())`
+constexpr static const int32_t EE_COMBAT_W_IGN_PUSH_FRONT = 108;
+
+/// `object->mIgnoredTargets[0].mTileX = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_TILE_X = 109;
+
+/// `[0].mTileY = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_TILE_Y = 110;
+
+/// `[0].mFromX = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_FROM_X = 111;
+
+/// `[0].mFromY = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_FROM_Y = 112;
+
+/// `[0].mUnitID = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_UNIT_ID = 113;
+
+/// `[0].mTime = a[0]`
+constexpr static const int32_t EE_COMBAT_W_IGN_SET_TIME = 114;
+
+/// `mAttackedGoal = EEUGRust::NewLocation(other's x, y, 0, false, false, false, 0, false, 0)`
+constexpr static const int32_t EE_COMBAT_W_AG_NEW_LOCATION = 115;
+
+/// `mAttackedGoal = EEUGRust::NewAttackUnit(object, other, false, false)`
+constexpr static const int32_t EE_COMBAT_W_AG_NEW_ATTACK = 116;
+
+/// `object->SetGoal(mAttackedGoal, 1, 0)`
+constexpr static const int32_t EE_COMBAT_W_AG_SET_GOAL = 117;
+
+/// the context's `&mNear` (Attacked's units near)
+constexpr static const int32_t EE_COMBAT_W_NEAR_LIST = 118;
+
+/// `mHelpGoal = mAttackedGoal->Clone()`
+constexpr static const int32_t EE_COMBAT_W_HELP_CLONE = 119;
+
+/// `object->GetClass()->FindAction(mHelpGoal->GetStartAction()) != NULL`
+constexpr static const int32_t EE_COMBAT_W_HELP_HAS_ACTION = 120;
+
+/// `object->SetGoal(mHelpGoal, 1, 0)`
+constexpr static const int32_t EE_COMBAT_W_HELP_SET_GOAL = 121;
+
+/// `object->StartAction(mHelpGoal->GetStartAction())`
+constexpr static const int32_t EE_COMBAT_W_HELP_START_ACTION = 122;
+
+/// `object->GetUnitClass()->ActionChanged(object)`
+constexpr static const int32_t EE_COMBAT_W_ACTION_CHANGED = 123;
+
+/// `object->mLastAttacker != NULL`
+constexpr static const int32_t EE_COMBAT_W_HAS_LAST_ATTACKER = 124;
+
+/// `object->mLastAttacker->Dereference()`
+constexpr static const int32_t EE_COMBAT_W_DEREFERENCE_LAST_ATTACKER = 125;
+
+/// `object->mLastAttacker = NULL`
+constexpr static const int32_t EE_COMBAT_W_CLEAR_LAST_ATTACKER = 126;
+
+/// `EEIsLineToUnitBlocked(object, other, a[0] (EEUnit**), a[1] (long*), a[2] (long*))`
+constexpr static const int32_t EE_COMBAT_W_LINE_BLOCKED_AT = 127;
+
+/// the bits of `gToHitTable.GetAttackFactor(a[0], other's class, object's player id, other's player id)`
+constexpr static const int32_t EE_COMBAT_W_DI_ATTACK_FACTOR = 128;
+
+/// the bits of `gWeaponToHitFactors[other's class's mWeapon][a[0]]`
+constexpr static const int32_t EE_COMBAT_W_DI_WEAPON_FACTOR = 129;
+
+/// combat.yaml's `mMinimumDamage`
+constexpr static const int32_t EE_COMBAT_W_RULE_MINIMUM_DAMAGE = 130;
+
+/// the bits of `EERuleFloat(mFanaticFactor)`
+constexpr static const int32_t EE_COMBAT_W_RULE_FANATIC_FACTOR = 131;
+
+/// the bits of `mElevationStep`
+constexpr static const int32_t EE_COMBAT_W_RULE_ELEVATION_STEP = 132;
+
+/// the bits of `mAllyFactor`
+constexpr static const int32_t EE_COMBAT_W_RULE_ALLY_FACTOR = 133;
+
+/// the bits of `mHerdAllyFactor`
+constexpr static const int32_t EE_COMBAT_W_RULE_HERD_ALLY_FACTOR = 134;
+
+/// `mTrampleDamage`
+constexpr static const int32_t EE_COMBAT_W_RULE_TRAMPLE_DAMAGE = 135;
+
+/// the bits of `mTrampleThreshold`
+constexpr static const int32_t EE_COMBAT_W_RULE_TRAMPLE_THRESHOLD = 136;
+
+/// the bits of `mDeadFoodShare`
+constexpr static const int32_t EE_COMBAT_W_RULE_DEAD_FOOD_SHARE = 137;
+
+/// `object->mUnitClass->mCategory`
+constexpr static const int32_t EE_COMBAT_W_HC_CATEGORY = 138;
+
+/// `object->mIsSpecialAttack`
+constexpr static const int32_t EE_COMBAT_W_HC_SPECIAL_ATTACK = 139;
+
+/// `object->mLauncherClass`
+constexpr static const int32_t EE_COMBAT_W_HC_LAUNCHER = 140;
+
+/// `gUnitClassTable[kUnitTypeCapitalShipSpecialWeapon]`
+constexpr static const int32_t EE_COMBAT_W_HC_SPECIAL_WEAPON = 141;
+
+/// `object->mPlayer->GetUpgrade(class a[0]'s mUnitType)`
+constexpr static const int32_t EE_COMBAT_W_HC_UPGRADE = 142;
+
+/// the bits of upgrade `a[0]`'s `GetAttack()`
+constexpr static const int32_t EE_COMBAT_W_HC_UPGRADE_ATTACK = 143;
+
+/// the bits of upgrade `a[0]`'s `mAreaEffect`
+constexpr static const int32_t EE_COMBAT_W_HC_UPGRADE_AREA = 144;
+
+/// the bits of class `a[0]`'s `mAttack`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_ATTACK = 145;
+
+/// the bits of class `a[0]`'s `mAreaEffect`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_AREA = 146;
+
+/// class `a[0]`'s `mAmmoType`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_AMMO = 147;
+
+/// class `a[0]`'s `mWeapon`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_WEAPON = 148;
+
+/// class `a[0]`'s `mCategory`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_CATEGORY = 149;
+
+/// the bits of class `a[0]`'s `mFriendlyDamageFactor`
+constexpr static const int32_t EE_COMBAT_W_HC_CLASS_FRIENDLY = 150;
+
+/// the host's class's `mShotEffect != NULL`
+constexpr static const int32_t EE_COMBAT_W_HC_SHOT_EFFECT = 151;
+
+/// `mEffect = NULL`
+constexpr static const int32_t EE_COMBAT_W_UE_CLEAR = 152;
+
+/// `object->GetEffect(3, mEffect)`
+constexpr static const int32_t EE_COMBAT_W_UE_GET = 153;
+
+/// `mEffect != NULL`
+constexpr static const int32_t EE_COMBAT_W_UE_HAS = 154;
+
+/// `gEffectManager->CreateUnitEffect(object, mEffect, NULL, false, 0, 0)`
+constexpr static const int32_t EE_COMBAT_W_UE_CREATE = 155;
+
+/// `object->GetPathStart(the point at a[0], the float at a[1])`
+constexpr static const int32_t EE_COMBAT_W_PATH_START_AT = 156;
+
+/// unit `other`'s `GetTileX()`
+constexpr static const int32_t EE_COMBAT_W_RING_TILE_X = 157;
+
+/// unit `other`'s `GetTileY()`
+constexpr static const int32_t EE_COMBAT_W_RING_TILE_Y = 158;
+
+/// unit `other`'s `GetUnitClass()->GetTileSize()`
+constexpr static const int32_t EE_COMBAT_W_RING_TILE_SIZE = 159;
+
+/// `mFootprint[a[0]].mX`
+constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_X = 160;
+
+/// `mFootprint[a[0]].mY`
+constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_Y = 161;
+
+/// `::gWorld.mMap->GetTileAtLocation(EETileLocation(a[0], a[1]))`
+constexpr static const int32_t EE_COMBAT_W_TS_TILE_AT_LOCATION = 162;
+
+/// `::gWorld.mMap->GetTile(a[0], a[1])`
+constexpr static const int32_t EE_COMBAT_W_TS_TILE = 163;
+
+/// tile `a[0]`'s `IsSeenBy(player object)`
+constexpr static const int32_t EE_COMBAT_W_TS_SEEN = 164;
+
+/// tile `a[0]`'s `GetVisibility(player object's GetPlayerID()) > 1`
+constexpr static const int32_t EE_COMBAT_W_TS_VISIBLE = 165;
+
+/// `object->mActiveGoal->GetGoalLocation(the point at a[0])`
+constexpr static const int32_t EE_COMBAT_W_GOAL_LOCATION_AT = 166;
+
+/// unit `object`'s `GetModel()->mModel != NULL`
+constexpr static const int32_t EE_COMBAT_W_DM_HAS_MODEL = 167;
+
+/// the point at `a[0]` = unit `object`'s `GetModel()->mDefaultPoint`
+constexpr static const int32_t EE_COMBAT_W_DM_DEFAULT_POINT = 168;
+
 /// `EEUnit::mResourceAmount` (the store's).
 constexpr static const int32_t EE_COMBAT_Q_RESOURCE_AMOUNT = 68;
 
@@ -1958,24 +2294,6 @@ struct EeCombatTargetableIn {
   int32_t can_be_attacked;
 };
 
-/// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
-/// function of the right type.
-struct EeCombatSearchHost {
-  void *ctx;
-  /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
-  const EeCombatUnitRegions *unit_regions;
-  uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
-  int32_t (*dummy_head)(void *ctx, uint64_t unit);
-  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
-  float (*hit_distance_squared)(void *ctx, uint64_t unit, float x, float y);
-  float (*attack_factor)(void *ctx, uint64_t unit);
-  int32_t (*line_blocked)(void *ctx, uint64_t unit);
-  int32_t (*reachable)(void *ctx, uint64_t unit);
-  void (*ignore)(void *ctx, uint64_t unit);
-  void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
-  void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
-};
-
 /// `FacesPoint`'s reads (plain): the unit's location, the point, the class's arc, offset and broadside flag, the unit's
 /// type and special attack, its model's turret part count and its stats' scale.
 struct EeCombatFacingIn {
@@ -2022,47 +2340,6 @@ struct EeCombatScreenIn {
 
 /// The host's distance of a screen's candidate (asked only for a living one).
 using EeCombatScreenDistance = float(*)(void *context);
-
-/// A search's result: the best target (0 for none), its score, and whether the search ended early.
-struct EeCombatSearchOut {
-  uint64_t best;
-  int32_t score;
-  int32_t done;
-};
-
-/// A search's inputs: the searching unit's stats and tile, the search's tile, area and scale, and the targeting
-/// table (`EEAIUnitTargetingTable::sTable`, three rows of ten).
-struct EeCombatSearchIn {
-  /// its stats' `GetAttack`, `GetMaxVelocity`, `GetRange`; its `GetLineOfSight`
-  float attack;
-  float max_velocity;
-  float range;
-  float reach;
-  float scale;
-  /// its class's `mMinRange`
-  float min_range;
-  /// its class's `mIsMelee`, `mShootsHigh`; its stats' `mCanFireOverWalls`
-  int32_t melee;
-  int32_t shoots_high;
-  int32_t over_walls;
-  /// its tile
-  int32_t unit_x;
-  int32_t unit_y;
-  /// the search's tile
-  int32_t x;
-  int32_t y;
-  /// `EESearchTarget`: the area (inclusive), the unit regions' size, the physics' tick value, the unit's location
-  int32_t left;
-  int32_t top;
-  int32_t right;
-  int32_t bottom;
-  int32_t region_size;
-  int32_t tick_random;
-  float position_x;
-  float position_y;
-  /// the targeting table, row by row
-  int32_t table[30];
-};
 
 /// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`.
 struct EeCombatShotHost {
@@ -2228,28 +2505,6 @@ struct EeCombatLineHost {
   int32_t (*tile_top_above)(void *ctx, int32_t x, int32_t y, float height, int32_t bare);
 };
 
-/// `EEFindNewTarget`'s inputs.
-struct EeCombatFindTargetIn {
-  /// the area's tiles, inclusive (the tile less and plus the radius)
-  int32_t left;
-  int32_t top;
-  int32_t right;
-  int32_t bottom;
-  /// `inArg6`: skip the technology kind test
-  int32_t skip_kind;
-};
-
-/// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
-struct EeCombatTargetHost {
-  void *ctx;
-  /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
-  const EeCombatUnitRegions *unit_regions;
-  int32_t (*screen)(void *ctx, uint64_t unit);
-  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
-  /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
-  void (*push)(void *ctx, uint64_t unit);
-};
-
 extern "C" {
 
 /// TEST ONLY: one call of the folder `which` (`size` bytes at `data`).
@@ -2279,6 +2534,24 @@ void ee_combat_capture_read(uint32_t which,
                             uint64_t target,
                             int32_t result,
                             const uint32_t (*extra)[3]);
+
+extern int64_t ee_units_cg_host(int32_t op,
+                                uint64_t unit,
+                                uint64_t a,
+                                int64_t b,
+                                int64_t c,
+                                float (*f)[4]);
+
+/// `EECombatCondition`
+int32_t ee_units_cg_condition(int32_t kind,
+                              uint64_t unit,
+                              uint32_t event,
+                              uint64_t target,
+                              uint64_t goal,
+                              uint64_t class_);
+
+/// `EECombatStep`
+void ee_units_cg_step(int32_t kind, uint64_t unit, uint64_t goal, uint64_t target);
 
 /// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
 ///
@@ -2603,12 +2876,6 @@ float ee_combat_hit_distance_squared(uint64_t unit,
 /// `input` must point to a valid record.
 bool ee_combat_targetable(const EeCombatTargetableIn *input, int32_t can_target);
 
-/// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
-///
-/// # Safety
-/// `host` must point to a valid record whose callbacks are callable with its `ctx`.
-uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
-
 /// `FindImpactUnit` of `unit` (an `EEUnit*`): the unit hit, 0 for none.
 ///
 /// # Safety
@@ -2747,21 +3014,6 @@ int32_t ee_combat_screen(EeCombatScreenIn *input,
                          void *context,
                          EeCombatScreenDistance distance);
 
-/// `EESearchTarget`.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-EeCombatSearchOut ee_combat_search_target(const EeCombatSearchIn *input,
-                                          const EeCombatSearchHost *host);
-
-/// `EESearchTargetAlongList` from `unit` (the searching unit's handle in the list).
-///
-/// # Safety
-/// As `ee_combat_search_target`.
-EeCombatSearchOut ee_combat_search_along_list(const EeCombatSearchIn *input,
-                                              uint64_t unit,
-                                              const EeCombatSearchHost *host);
-
 /// A shot's `ActionChanged` over the C++ host (`unit`: the shot, its plain reads the store's).
 ///
 /// # Safety
@@ -2821,22 +3073,6 @@ int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
 /// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
 EeCombatLineOut ee_combat_line_blocked(const EeCombatLineIn *input,
                                        const EeCombatLineHost *host);
-
-/// `EEUUGetUnitsInArea`: pushes the candidates in order (`host.push`); returns their number.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-uint32_t ee_combat_units_in_area(const EeCombatFindTargetIn *input,
-                                 const EeCombatTargetHost *host);
-
-/// `EEFindNewTarget`'s choice among `count` candidates: the index of the first that passes, -1 for none.
-///
-/// # Safety
-/// `units` must point to `count` handles, `host` to a valid record whose callbacks are callable with its `ctx`.
-int32_t ee_combat_choose_target(const uint64_t *units,
-                                uint32_t count,
-                                int32_t skip_kind,
-                                const EeCombatTargetHost *host);
 
 /// One body of this module (`EE_COMBAT_WORLD_*`) of `unit` on `target` over `host`: the answer (0/1); the attack
 /// reach writes its tile into `tile` when it sets one.

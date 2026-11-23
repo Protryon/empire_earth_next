@@ -10,17 +10,7 @@ use crate::screens::editor_actions::{
     SePaint, SePaintKind, SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
 };
 use crate::screens::editor_seax;
-use crate::screens::editor_seax_ffi::Seax;
-
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_sea(op: u32, i: *mut i32, f: *mut f32) -> i32;
-        pub fn ee_screenscpp_seu(op: u32, unit: *mut c_void, a: isize, f: f32) -> usize;
-    }
-}
+use crate::screens::editor_seax_ffi::{self, Seax};
 
 struct Host;
 
@@ -29,7 +19,8 @@ impl SeaHost for Host {
         if let Some(r) = editor_seax::sea(&mut Seax, op, i, f) {
             return r;
         }
-        unsafe { sys::ee_screenscpp_sea(op, i.as_mut_ptr(), f.as_mut_ptr()) }
+        let (null, op) = (core::ptr::null_mut(), editor_seax::EE_SCREENS_SEAX_SEA + op);
+        unsafe { editor_seax_ffi::host(op, null, null, core::ptr::null_mut(), i.as_mut_ptr(), f.as_mut_ptr()) as i32 }
     }
     fn tile_units(&mut self, x: i32, y: i32) -> Vec<(usize, bool)> {
         editor_seax::tile_units(&mut Seax, x, y)
@@ -103,7 +94,10 @@ impl SeuHost for Selection {
         if let Some(r) = editor_seax::seu(&mut Seax, op, unit, a, f) {
             return r;
         }
-        unsafe { sys::ee_screenscpp_seu(op, unit as *mut c_void, a, f) }
+        let (mut i, mut f) = ([0i32; 8], [f, 0.0, 0.0, 0.0]);
+        let (p, q) = (unit as *mut c_void, a as *mut c_void);
+        let op = editor_seax::EE_SCREENS_SEAX_SEU + op;
+        unsafe { editor_seax_ffi::host(op, p, q, core::ptr::null_mut(), i.as_mut_ptr(), f.as_mut_ptr()) as usize }
     }
     fn pick(&mut self, rectangle: usize, unit_type: i32) -> Vec<u32> {
         editor_seax::pick(&mut Seax, rectangle, unit_type)

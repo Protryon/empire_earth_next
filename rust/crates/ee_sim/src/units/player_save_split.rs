@@ -5,11 +5,12 @@
 //! order.
 
 use crate::units::player_save::{
-    EeUnitsPlayerSaveIo, EE_UNITS_PLAYER_SAVE_PATROL_KIND, EE_UNITS_PLAYER_SAVE_PATROL_LOAD,
-    EE_UNITS_PLAYER_SAVE_TECH_LOAD, EE_UNITS_PLAYER_SAVE_TECH_PRESENT, EE_UNITS_PLAYER_SAVE_TECH_SAVE,
-    EE_UNITS_PLAYER_SAVE_UNIT_FITS, EE_UNITS_PLAYER_SAVE_UNIT_KIND, EE_UNITS_PLAYER_SAVE_UNIT_LOAD,
-    EE_UNITS_PLAYER_SAVE_UNIT_STANDIN, EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW, EE_UNITS_PLAYER_SAVE_UPGRADE_LOAD,
-    EE_UNITS_PLAYER_SAVE_WONDERS_CLEAR,
+    EeUnitsPlayerSaveIo, EE_UNITS_PLAYER_SAVE_HERD_LOAD, EE_UNITS_PLAYER_SAVE_PATROL_KIND,
+    EE_UNITS_PLAYER_SAVE_PATROL_LOAD, EE_UNITS_PLAYER_SAVE_TECH_DELETE, EE_UNITS_PLAYER_SAVE_TECH_LOAD,
+    EE_UNITS_PLAYER_SAVE_TECH_PRESENT, EE_UNITS_PLAYER_SAVE_TECH_SAVE, EE_UNITS_PLAYER_SAVE_UNIT_FITS,
+    EE_UNITS_PLAYER_SAVE_UNIT_KIND, EE_UNITS_PLAYER_SAVE_UNIT_LOAD, EE_UNITS_PLAYER_SAVE_UNIT_STANDIN,
+    EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_DELETE, EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW,
+    EE_UNITS_PLAYER_SAVE_UPGRADE_LOAD, EE_UNITS_PLAYER_SAVE_WONDERS_CLEAR,
 };
 
 // ---- the one-statement operations (EEPlayerSaveOperation's cases)
@@ -55,6 +56,14 @@ pub const EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR: i32 = 318;
 pub const EE_UNITS_PLAYER_SAVE_X_TECH_SAVE: i32 = 319;
 /// `mPatrolGroups[index]` (into `io.i`)
 pub const EE_UNITS_PLAYER_SAVE_X_PATROL_AT: i32 = 320;
+/// `delete` the load's stand-in upgrade (the world lane, round 2)
+pub const EE_UNITS_PLAYER_SAVE_X_DUMMY_DELETE: i32 = 321;
+/// `delete mTechnologies`, `mTechnologies = NULL`
+pub const EE_UNITS_PLAYER_SAVE_X_TECH_DELETE: i32 = 322;
+pub const EE_UNITS_PLAYER_SAVE_X_TECH_NULL: i32 = 323;
+/// `mHerds[index] = new EEHerd`, `mHerds[index]->Load(...)` (its result)
+pub const EE_UNITS_PLAYER_SAVE_X_HERD_NEW: i32 = 324;
+pub const EE_UNITS_PLAYER_SAVE_X_HERD_LOAD: i32 = 325;
 
 // LoadUnit's and SaveUnit's (EEPlayerUnitOperation's cases): `io.i` the class id or the unit
 /// `gUnitClassTable[io.i]` is there
@@ -105,6 +114,20 @@ fn ask(f: Call, op: i32, index: u32, i: i64) -> (i32, i64) {
 /// `None` for the others.
 pub(crate) fn split(op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo, f: Call) -> Option<i32> {
     Some(match op {
+        EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_DELETE => {
+            ask(f, EE_UNITS_PLAYER_SAVE_X_DUMMY_DELETE, 0, 0);
+            ask(f, EE_UNITS_PLAYER_SAVE_X_DUMMY_CLEAR, 0, 0);
+            OK
+        }
+        EE_UNITS_PLAYER_SAVE_TECH_DELETE => {
+            ask(f, EE_UNITS_PLAYER_SAVE_X_TECH_DELETE, 0, 0);
+            ask(f, EE_UNITS_PLAYER_SAVE_X_TECH_NULL, 0, 0);
+            OK
+        }
+        EE_UNITS_PLAYER_SAVE_HERD_LOAD => {
+            ask(f, EE_UNITS_PLAYER_SAVE_X_HERD_NEW, index, 0);
+            ask(f, EE_UNITS_PLAYER_SAVE_X_HERD_LOAD, index, 0).0
+        }
         EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW => {
             ask(f, EE_UNITS_PLAYER_SAVE_X_DUMMY_CLEAR, 0, 0);
             let mut i = 0;
@@ -379,5 +402,21 @@ mod tests {
         let mut io = EeUnitsPlayerSaveIo::default();
         assert_eq!(split(EE_UNITS_PLAYER_SAVE_UNIT_KIND, 0, &mut io, &mut f), Some(1));
         assert_eq!((io.i, io.b), (0xdf, 1));
+    }
+
+    #[test]
+    fn the_deletes_clear_and_a_herd_loads_into_its_slot() {
+        let (r, log) = run(EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_DELETE, 0, 0, &[]);
+        assert_eq!(r, Some(OK));
+        let ops: Vec<i32> = log.iter().map(|l| l.0).collect();
+        assert_eq!(ops, vec![EE_UNITS_PLAYER_SAVE_X_DUMMY_DELETE, EE_UNITS_PLAYER_SAVE_X_DUMMY_CLEAR]);
+        let (_, log) = run(EE_UNITS_PLAYER_SAVE_TECH_DELETE, 0, 0, &[]);
+        assert_eq!(
+            log.iter().map(|l| l.0).collect::<Vec<_>>(),
+            vec![EE_UNITS_PLAYER_SAVE_X_TECH_DELETE, EE_UNITS_PLAYER_SAVE_X_TECH_NULL]
+        );
+        let (r, log) = run(EE_UNITS_PLAYER_SAVE_HERD_LOAD, 3, 0, &[(EE_UNITS_PLAYER_SAVE_X_HERD_LOAD, 7, 0)]);
+        assert_eq!(r, Some(7), "the herd's load result");
+        assert_eq!(log, vec![(EE_UNITS_PLAYER_SAVE_X_HERD_NEW, 3, 0), (EE_UNITS_PLAYER_SAVE_X_HERD_LOAD, 3, 0)]);
     }
 }

@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "rust/ui/layout_ffi.h"
+#include "rust/ui/ids.h"
 
 // GERectangle: the pinned record every UI seam passes
 static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui/src/rect.rs");
@@ -18,75 +19,28 @@ static_assert(offsetof(GERectangle, mLeft) == offsetof(EeUiRect, left), "ee_ui/s
 static_assert(offsetof(GERectangle, mRight) == offsetof(EeUiRect, right), "ee_ui/src/rect.rs");
 static_assert(offsetof(GERectangle, mTop) == offsetof(EeUiRect, top), "ee_ui/src/rect.rs");
 
-class LLE_API UILayoutUtility {
+class LLE_API UILayoutUtility : public EeUiLayout {   // the record is Rust's (layout.rs; UI round 13)
 public:
-    UILayoutUtility() { ee_ui_layout_init(reinterpret_cast<EeUiLayout*>(this)); }
+    UILayoutUtility() { ee_ui_layout_init(this); }
     ~UILayoutUtility() {}                   // exported, ICF-folded `ret` (0x1000c16a)
     void CalculateRectangle(const GERectangle& inParent, GERectangle& outRectangle, bool inExclusive) const
     {
-        ee_ui_layout_calculate(reinterpret_cast<const EeUiLayout*>(this), reinterpret_cast<const EeUiRect*>(&inParent),
-                               reinterpret_cast<EeUiRect*>(&outRectangle), inExclusive);
+        ee_ui_layout_calculate(this, reinterpret_cast<const EeUiRect*>(&inParent), reinterpret_cast<EeUiRect*>(&outRectangle),
+                               inExclusive);
     }
-    float GetBottomOffset() const { return this->mBottomOffset; }
-    unsigned long GetBottomOffsetType() const { return this->mBottomOffsetType; }
-    float GetLeftOffset() const { return this->mLeftOffset; }
-    unsigned long GetLeftOffsetType() const { return this->mLeftOffsetType; }
-    float GetRightOffset() const { return this->mRightOffset; }
-    unsigned long GetRightOffsetType() const { return this->mRightOffsetType; }
-    float GetTopOffset() const { return this->mTopOffset; }
-    unsigned long GetTopOffsetType() const { return this->mTopOffsetType; }
-    void SetBottom(unsigned long inType, float inOffset)
-    {
-        this->mBottomOffset = inOffset;
-        this->mBottomOffsetType = inType;
-    }
-    void SetLeft(unsigned long inType, float inOffset)
-    {
-        this->mLeftOffset = inOffset;
-        this->mLeftOffsetType = inType;
-    }
-    void SetTop(unsigned long inType, float inOffset)
-    {
-        this->mTopOffset = inOffset;
-        this->mTopOffsetType = inType;
-    }
-    void SetRight(unsigned long inType, float inOffset)
-    {
-        this->mRightOffset = inOffset;
-        this->mRightOffsetType = inType;
-    }
-private:
-    float mLeftOffset;                      // +0x00
-    float mRightOffset;                     // +0x04
-    float mTopOffset;                       // +0x08
-    float mBottomOffset;                    // +0x0c
-    unsigned long mLeftOffsetType;          // +0x10
-    unsigned long mRightOffsetType;         // +0x14 (3 at construction)
-    unsigned long mTopOffsetType;           // +0x18
-    unsigned long mBottomOffsetType;        // +0x1c (3 at construction)
-
-    static void CheckLayout()               // the record EeUiLayout (ee_ui/src/layout.rs)
-    {
-        static_assert(sizeof(UILayoutUtility) == sizeof(EeUiLayout), "ee_ui/src/layout.rs");
-        static_assert(offsetof(UILayoutUtility, mLeftOffset) == offsetof(EeUiLayout, left_offset), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mRightOffset) == offsetof(EeUiLayout, right_offset), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mTopOffset) == offsetof(EeUiLayout, top_offset), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mBottomOffset) == offsetof(EeUiLayout, bottom_offset), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mLeftOffsetType) == offsetof(EeUiLayout, left_type), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mRightOffsetType) == offsetof(EeUiLayout, right_type), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mTopOffsetType) == offsetof(EeUiLayout, top_type), "layout.rs");
-        static_assert(offsetof(UILayoutUtility, mBottomOffsetType) == offsetof(EeUiLayout, bottom_type), "layout.rs");
-    }
+    float GetBottomOffset() const { return this->bottom_offset; }
+    unsigned long GetBottomOffsetType() const { return this->bottom_type; }
+    float GetLeftOffset() const { return this->left_offset; }
+    unsigned long GetLeftOffsetType() const { return this->left_type; }
+    float GetRightOffset() const { return this->right_offset; }
+    unsigned long GetRightOffsetType() const { return this->right_type; }
+    float GetTopOffset() const { return this->top_offset; }
+    unsigned long GetTopOffsetType() const { return this->top_type; }
+    void SetBottom(unsigned long inType, float inOffset) { ee_ui_layout_set(this, EeUiEdge::Bottom, inType, inOffset); }
+    void SetLeft(unsigned long inType, float inOffset) { ee_ui_layout_set(this, EeUiEdge::Left, inType, inOffset); }
+    void SetTop(unsigned long inType, float inOffset) { ee_ui_layout_set(this, EeUiEdge::Top, inType, inOffset); }
+    void SetRight(unsigned long inType, float inOffset) { ee_ui_layout_set(this, EeUiEdge::Right, inType, inOffset); }
 };
 
-// UILayoutUtility edge offset types (GetHorizontalPoint/GetVerticalPoint switch); the database layouts store them
-enum UILayoutType {
-    kLayoutFromStart = 0,    // UILayoutUtility::GetHorizontalPoint: left/top + offset (provisional name)
-    kLayoutAfterCenter = 1,  // UILayoutUtility::GetHorizontalPoint: centre + offset (provisional name)
-    kLayoutBeforeCenter = 2,  // UILayoutUtility::GetHorizontalPoint: centre - offset (provisional name)
-    kLayoutFromEnd = 3,      // UILayoutUtility::GetHorizontalPoint: right/bottom - offset (provisional name)
-    kLayoutProportional = 4,  // UILayoutUtility::GetHorizontalPoint: left/top + size x offset (fraction) (provisional name)
-    kLayoutFromStartEdge = 5,  // UILayoutUtility::GetHorizontalPoint: the left/top edge point + offset (a width/height) (provisional name)
-};
-
+// the edge offset types (UILayoutType): rust/ui/ids.h (ee_ui ids.rs)
 #endif

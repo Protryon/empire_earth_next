@@ -47,6 +47,48 @@ pub unsafe extern "C" fn ee_screens_ui_destroy(rec: *mut EeScreensUserInterfaceF
     ui_objects::forget_ui(rec);
 }
 
+/// `EEUserInterface::PostEvent(event, form)` (0x40e): the event referenced, then posted with its form.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_ui_post_event(
+    rec: *const EeScreensUserInterfaceFields,
+    event: *mut c_void,
+    form: *mut c_void,
+) -> c_long {
+    sys::ee_screenscpp_ui_event_reference(event);
+    post(&*rec, 0x40e, event, form)
+}
+
+/// `EEUserInterface::ShowLoadedObject(object)` (0x40c): the object referenced, then posted.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_ui_show_loaded(rec: *const EeScreensUserInterfaceFields, object: *mut c_void) {
+    sys::ee_screenscpp_ui_object_reference(object);
+    post(&*rec, 0x40c, object, core::ptr::null_mut());
+}
+
+/// `EEUserInterface::ResumeGraphics`: the graphics thread told to resume, then waited for (1 ms sleeps) until it
+/// is not paused.
+#[no_mangle]
+pub extern "C" fn ee_screens_ui_resume_graphics() {
+    // SAFETY: the game's graphics object (EEUserInterface.cpp's shims)
+    unsafe {
+        sys::ee_screenscpp_ui_graphics_post_resume();
+        while sys::ee_screenscpp_ui_graphics_paused() {
+            ee_base::plat_core::time::PlatSleep(1);
+        }
+    }
+}
+
+/// cbindgen:ignore
+mod sys {
+    use core::ffi::c_void;
+    extern "C" {
+        pub fn ee_screenscpp_ui_event_reference(event: *mut c_void);
+        pub fn ee_screenscpp_ui_object_reference(object: *mut c_void);
+        pub fn ee_screenscpp_ui_graphics_post_resume();
+        pub fn ee_screenscpp_ui_graphics_paused() -> bool;
+    }
+}
+
 /// One of `EEUserInterface`'s posts: `mThread->Post(message, p1, p2, true)` -> Post's result.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_ui_post(

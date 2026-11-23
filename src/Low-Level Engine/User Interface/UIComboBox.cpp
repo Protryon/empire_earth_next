@@ -79,7 +79,7 @@ extern "C" bool ee_uicpp_key_down_pressed() { return UIControl::DownKeyPressed()
 extern "C" bool ee_uicpp_key_up_pressed() { return UIControl::UpKeyPressed(); }
 extern "C" bool ee_uicpp_key_home_pressed() { return UIControl::HomeKeyPressed(); }
 extern "C" bool ee_uicpp_key_end_pressed() { return UIControl::EndKeyPressed(); }
-extern "C" bool ee_uicpp_key_enter_value() { return UIControl::sEnterKey->GetValue() != 0; }
+extern "C" bool ee_uicpp_key_enter_value() { return UIControl::Key(EeUiKey::Enter)->GetValue() != 0; }
 extern "C" void ee_uicpp_label_set_text_line(uintptr_t inLabel, uintptr_t inList, uint32_t inLine)
 { LABEL(inLabel)->SetText(LIST(inList)->GetData(inLine), true); }
 extern "C" void ee_uicpp_edit_set_text_line(uintptr_t inEdit, uintptr_t inList, uint32_t inLine)

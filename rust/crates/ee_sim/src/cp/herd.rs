@@ -239,7 +239,7 @@ pub const EE_CP_HERD_CONTINENT_AT: i32 = 15;
 /// a continent (v1: 0 `GetContinentFromID(v0)`, 1 `GetContinentByID(v0)`, 2 `GetContinents()[v0]`): whether there
 /// is one, its category into `v0` and its hull's bounds into `v1..v4` (bottom, left, right, top)
 pub const EE_CP_HERD_CONTINENT: i32 = 16;
-/// area `a`'s `GetRandomPoint()` into `v0`, `v1`
+/// area `a`'s `GetRandomPoint()` (x high, y low: [`super::town_world::unpack`])
 pub const EE_CP_HERD_AREA_POINT: i32 = 17;
 /// `gContinentManager.GetArea(v0)`
 pub const EE_CP_HERD_AREA: i32 = 18;
@@ -257,7 +257,7 @@ pub const EE_CP_HERD_CLOSEST_HULL: i32 = 23;
 pub const EE_CP_HERD_HULL_BOUNDS: i32 = 24;
 /// `((EEHerd*)a)->GetHullDistanceSquared((EEHerd*)b)` into `f0`
 pub const EE_CP_HERD_HULL_DISTANCE: i32 = 25;
-/// `EEAIArea::GetRandomPoint()` into `v0`, `v1`
+/// `EEAIArea::GetRandomPoint()` (x high, y low)
 pub const EE_CP_HERD_BASE_POINT: i32 = 26;
 /// `GetTileSet().BuildPointList(tiles, 1)` (pushed)
 pub const EE_CP_HERD_TILES: i32 = 27;
@@ -996,8 +996,8 @@ impl<'h, H: HerdHost + ?Sized> Herd<'h, H> {
         if area != 0 {
             let mut i = 0;
             while i < 15 && !found {
-                let (_, io) = self.opv(EE_CP_HERD_AREA_POINT, area, &[]);
-                tile = EeHerdPoint::new(io.v[0] as c_long, io.v[1] as c_long);
+                let (x, y) = super::town_world::unpack(self.op0(EE_CP_HERD_AREA_POINT, area, 0));
+                tile = EeHerdPoint::new(x, y);
                 found = self.stand(unit, tile.mX, tile.mY);
                 i += 1;
             }
@@ -1588,8 +1588,7 @@ impl<'h, H: HerdHost + ?Sized> Herd<'h, H> {
                     let mut exit = EeHerdPoint::default();
                     let area = self.op0(EE_CP_HERD_MAP_EDGE, 0, 0) as u64;
                     if area != 0 {
-                        let (_, io) = self.opv(EE_CP_HERD_AREA_POINT, area, &[]);
-                        let (px, py) = (io.v[0] as c_long, io.v[1] as c_long);
+                        let (px, py) = super::town_world::unpack(self.op0(EE_CP_HERD_AREA_POINT, area, 0));
                         // EEAIAStarBounds of the point, grown by 10 (unclamped)
                         let b = EeHerdRect {
                             mLeft: px.wrapping_sub(10),
@@ -2041,8 +2040,8 @@ pub fn random_area_point(mut op: impl FnMut(i32, &[i64]) -> (i64, EeHerdIo)) -> 
         }
     }
     if !found {
-        let io = op(EE_CP_HERD_BASE_POINT, &[]).1;
-        result = EeHerdPoint::new(io.v[0] as c_long, io.v[1] as c_long);
+        let (x, y) = super::town_world::unpack(op(EE_CP_HERD_BASE_POINT, &[]).0);
+        result = EeHerdPoint::new(x, y);
     }
     result
 }

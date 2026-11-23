@@ -54,7 +54,6 @@
 #include "ee/EEUIManagerEvents.h"
 #include "ee/EEControlEventID.h"
 
-
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
 extern bool& gLoadingSavedGame;
 extern unsigned long& gTexturePixelDepth;
@@ -136,41 +135,10 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID));
 }
 
-// Creates the scenario editor form on first use
-void EEUIManager::CreateScenarioEditor()
-{
-    ee_screens_um_create_editor((uintptr_t)this);
-}
-
-// Creates the game's framed generic background for a background table entry (flags from its attributes)
-UIBackground* EEUIManager::CreateUserDefinedBackground(const UIBackgroundTable& inTable)
-{
-    return reinterpret_cast<UIBackground*>(ee_screens_um_create_background((uintptr_t)this, (uintptr_t)&inTable));
-}
-
-// Creates the game's own controls from the UI database (mini map, status buttons, icon bars, WON lists ...;
-// ee_screens ui_manager_calls.rs over the shims below)
-UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
-{
-    return reinterpret_cast<UIControl*>(ee_screens_um_create_control((uintptr_t)this, (uintptr_t)&inTable));
-}
-
-// Creates the main game form as the game's own class; other forms as the base manager does
-UIForm* EEUIManager::CreateForm(const UIDbDataForms& inData)
-{
-    return reinterpret_cast<UIForm*>(ee_screens_um_create_form((uintptr_t)this, (uintptr_t)&inData));
-}
-
 // Creates the WON server select form's cancel event; NULL for other ids
 UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 {
     return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
-}
-
-// Deletes the scenario editor form
-void EEUIManager::DeleteScenarioEditor()
-{
-    ee_screens_um_delete_editor((uintptr_t)this);
 }
 
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
@@ -197,17 +165,7 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
     return (long)ee_screens_ui_manager_update_mouse(&theCall);
 }
 
-static_assert(EE_SCREENS_UM_TEXTURE_RESOLUTION_ID == kTextureResolutionControlID &&
-              EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX == kGameSettingsTextureResolutionComboBox &&
-              EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING == kTextureResolutionOriginalString &&
-              EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP == kTextureResolutionHelpString &&
-              EE_SCREENS_UM_FORM_LOBBY == kFormLobby && EE_SCREENS_UM_ENGINE_ID == kLobbyEngineControlID &&
-              EE_SCREENS_UM_ENGINE_HEADER == kLobbyEngineHeader && EE_SCREENS_UM_ENGINE_COMBO == kLobbyEngineCombo &&
-              EE_SCREENS_UM_ENGINE_LABEL == kLobbyEngineLabel && EE_SCREENS_UM_ENGINE_CLASSIC == kLobbyEngineClassicString &&
-              EE_SCREENS_UM_ENGINE_RANDOM == kLobbyEngineRandomString &&
-              EE_SCREENS_UM_ENGINE_HEADER_STRING == kLobbyEngineHeaderString &&
-              EE_SCREENS_UM_ENGINE_HELP == kLobbyEngineHelpString && kGameSettingsQualityComboBox == 123,
-              "ee_screens ui_manager.rs' ids");
+// (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)
 
 // The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*), each the original's
 extern "C" int64_t ee_screenscpp_ui_manager(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
@@ -244,7 +202,7 @@ static const unsigned long kUMKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF
 static ISEntity* sUMKey;                       // the key um_key_load found
 static GERectangle sUMParent, sUMRect;         // CreateUserDefinedControl's window and control rectangles
 static std::vector<UWideString> sUMStrings;    // and its strings
-static_assert(EE_SCREENS_UMC_FORM_MAIN_GAME == kFormMainGame && EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
+static_assert(EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
                   EE_SCREENS_UMC_BACKGROUND_GENERIC == kBackgroundGeneric &&
                   EE_SCREENS_UMC_STATUS_BUTTON == kDbControlStatusButton && EE_SCREENS_UMC_MINI_MAP == kDbControlMiniMap &&
                   EE_SCREENS_UMC_ERROR_LOG == kDbControlErrorLog && EE_SCREENS_UMC_ATTRIBUTE == kDbControlAttribute &&

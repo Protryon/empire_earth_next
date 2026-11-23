@@ -12,6 +12,7 @@
 
 #include "lle/UIControl.h"
 #include "lle/UIButtonState.h"
+#include "rust/ui/buttonobj.h"
 
 class GEBitmap;
 class GEText;
@@ -26,38 +27,47 @@ public:
     UIButton(const UIButton&) = delete;
     UIButton& operator=(const UIButton&) = delete;
     virtual ~UIButton();
-    virtual void ChangeFont(GEFont* inFont);
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
+    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiButtonCall::ChangeFont, (intptr_t)inFont); }
+    virtual long CopyData() { return (long)this->Call(EeUiButtonCall::CopyData); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiButtonCall::DrawPolygons); }
+    virtual long DrawTextA() { return (long)this->Call(EeUiButtonCall::DrawText); }
     GE2DPoint GetBitmapLocation() const;
-    unsigned long GetState() const;         // UIButtonState
-    GEText* GetGEText();
-    GEBitmap* GetNormalBitmap() const;
-    GEBitmap* GetPressedBitmap() const;
-    void SetBitmapDrawOffset(const GE2DPoint& inOffset);
-    void SetButtonDownSound(const UString& inName);
-    void SetButtonUpSound(const UString& inName);
-    void SetFocusedBitmap(GEBitmap* inBitmap);
-    void SetFocusedTextColor(const GEColor& inColor);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetNormalBitmap(GEBitmap* inBitmap);
-    void SetPressedBitmap(GEBitmap* inBitmap);
-    void SetText(const UWideString& inText, GEFont* inFont);
-    void SetTextRectangle(const GERectangle& inRectangle);
-    virtual long UpdateKeyboard();
+    unsigned long GetState() const { return (unsigned long)this->Call(EeUiButtonCall::State); } // UIButtonState
+    GEText* GetGEText() { return (GEText*)this->Call(EeUiButtonCall::Text); }
+    GEBitmap* GetNormalBitmap() const { return (GEBitmap*)this->Call(EeUiButtonCall::NormalBitmap); }
+    GEBitmap* GetPressedBitmap() const { return (GEBitmap*)this->Call(EeUiButtonCall::PressedBitmap); }
+    void SetBitmapDrawOffset(const GE2DPoint& inOffset) { this->CallF(EeUiButtonCall::SetBitmapDrawOffset, inOffset.GetX(), inOffset.GetY()); }
+    void SetButtonDownSound(const UString& inName) { this->Call(EeUiButtonCall::SetButtonDownSound, (intptr_t)&inName); }
+    void SetButtonUpSound(const UString& inName) { this->Call(EeUiButtonCall::SetButtonUpSound, (intptr_t)&inName); }
+    void SetFocusedBitmap(GEBitmap* inBitmap) { this->Call(EeUiButtonCall::SetFocusedBitmap, (intptr_t)inBitmap); }
+    void SetFocusedTextColor(const GEColor& inColor) { this->CallF(EeUiButtonCall::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->CallF(EeUiButtonCall::SetLocation, inLocation.GetX(), inLocation.GetY()); }
+    void SetNormalBitmap(GEBitmap* inBitmap) { this->Call(EeUiButtonCall::SetNormalBitmap, (intptr_t)inBitmap); }
+    void SetPressedBitmap(GEBitmap* inBitmap) { this->Call(EeUiButtonCall::SetPressedBitmap, (intptr_t)inBitmap); }
+    void SetText(const UWideString& inText, GEFont* inFont) { this->Call(EeUiButtonCall::SetText, (intptr_t)&inText, (intptr_t)inFont); }
+    void SetTextRectangle(const GERectangle& inRectangle)
+    {
+        this->CallF(EeUiButtonCall::SetTextRectangle, inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight,
+                            inRectangle.mTop);
+    }
+    virtual long UpdateKeyboard() { return (long)this->Call(EeUiButtonCall::UpdateKeyboard); }   // Fixed (kept): a key press on it
 protected:
-    virtual void ButtonDown();              // slot 0x88
-    virtual void ButtonUp();                // slot 0x8c
-    virtual long MouseLButtonDown();
-    virtual long MouseLButtonUp();
-    virtual long MouseMove(const GE2DPoint& inLocation);
-    virtual void MouseOver();               // slot 0x90
+    virtual void ButtonDown() { this->Call(EeUiButtonCall::ButtonDown); } // slot 0x88
+    virtual void ButtonUp() { this->Call(EeUiButtonCall::ButtonUp); }   // Fixed (kept): plays the button-up sound                // slot 0x8c
+    virtual long MouseLButtonDown() { return (long)this->Call(EeUiButtonCall::MouseLButtonDown); }
+    virtual long MouseLButtonUp() { return (long)this->Call(EeUiButtonCall::MouseLButtonUp); }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallF(EeUiButtonCall::MouseMove, inLocation.GetX(), inLocation.GetY()); }
+    virtual void MouseOver() { this->Call(EeUiButtonCall::MouseOver); } // slot 0x90
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    virtual void TabbedTo();
-    virtual void TabbedFrom();
+    virtual void TabbedTo() { this->Call(EeUiButtonCall::TabbedTo); }
+    virtual void TabbedFrom() { this->Call(EeUiButtonCall::TabbedFrom); }
 
+protected:
+    intptr_t Call(EeUiButtonCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_button_call(this->mRust, c, a, b, f); }
+    intptr_t CallF(EeUiButtonCall c, float f0, float f1, float f2 = 0.0f, float f3 = 0.0f) const { float f[4] = {f0, f1, f2, f3}; return ee_ui_button_call(this->mRust, c, 0, 0, f); }
+    // the subclasses' calls (UIButtonRust::Call's)
+    intptr_t SubCall(EeUiButtonCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f) const { float f[4] = {f0, f1, f2, f3}; return ee_ui_button_call(this->mRust, c, a, b, f); }
     EeUiButton* mRust;                      // the state (buttonobj.rs)
 };
 

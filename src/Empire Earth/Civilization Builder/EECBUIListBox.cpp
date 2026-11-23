@@ -34,48 +34,6 @@ EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::
     ee_screens_cbb_construct((uintptr_t)&inTable, (uintptr_t)static_cast<UIControl*>(this), inIsTabable);
 }
 
-EECBUIListBox::~EECBUIListBox()
-{
-}
-
-void EECBUIListBox::AddLine(const UWideString& inLine)
-{
-    ee_screens_cbl_add_line(this, reinterpret_cast<const uint8_t*>((const char*)inLine), inLine.GetTCHARLength());
-}
-
-void EECBUIListBox::AppendStringArray(std::vector<UWideString>& inLines)
-{
-    ee_screens_cbb_append((uintptr_t)static_cast<UIControl*>(this), (uintptr_t)&inLines);
-}
-
-void EECBUIListBox::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
-{
-    ee_screens_cbl_change_selection(this, (uint32_t)inIndex, inFireEvent, inScrollTo);
-}
-
-// Snapshots the list for drawing: no highlight on line 0, the header colour and the show-points flag
-long EECBUIListBox::CopyData() { return (long)ee_screens_cbb_copy_data((uintptr_t)static_cast<UIControl*>(this)); }
-
-void EECBUIListBox::DeleteLine(unsigned long inLine)
-{
-    ee_screens_cbl_delete_line(this, (uint32_t)inLine);
-}
-
-long EECBUIListBox::DrawTextA()
-{
-    return ee_screens_cbl_draw_text(this);
-}
-
-void EECBUIListBox::SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades)
-{
-    ee_screens_cbl_set_civilization_upgrades(this, inUpgrades.data(), inUpgrades.size());
-}
-
-void EECBUIListBox::TabbedTo()
-{
-    ee_screens_cbl_tabbed_to(this);
-}
-
 // the constructor's body, AppendStringArray and CopyData: hud_bodies.rs over these (UI lane round 12)
 #define CBB(l) static_cast<EECBUIListBox*>(reinterpret_cast<UIControl*>(l))
 extern "C" void ee_screenscpp_cbb_setup_text(uintptr_t inTable, uintptr_t inList)

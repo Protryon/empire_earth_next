@@ -11,8 +11,9 @@
 //! its sweep (a group path found at once hands a unit `SetGoal(goal, true)`, whose keep-current branch reads
 //! `mCommand->mType`); its golden is not recorded.
 //!
-//! The units are chosen over the views; the C++ host (EEPhysicsSweep.cpp `ee_units_sweep_host`) makes the groups,
-//! the goals and the records; the spreads, keeps and reserved tests are the group's Rust bodies (ag_host.rs).
+//! The units are chosen and the records written over the views; the C++ host (EEPhysicsSweep.cpp
+//! `ee_units_sweep_host`) makes the groups and the goals and answers the members' calls, one call each; the spreads,
+//! keeps and reserved tests are the group's Rust bodies (ag_host.rs).
 
 use crate::app::capture_record;
 #[cfg(not(test))]
@@ -30,12 +31,13 @@ mod ag_host {
         0
     }
 }
+use crate::units::ag_fields::EeUnitsActiveGroupFields;
 use crate::units::unit_geom::position;
 use crate::units::unit_sweep as op;
 use crate::units::unit_sweep::{set_point, Game, SweepHost};
 use crate::world::{UnitView, WorldRead, WorldView};
 
-/// The goals the sweep makes (`EeUnitsSweepop::EE_UNITS_SWEEP_OP_GOAL`'s kind).
+/// The goals the sweep makes (`EE_UNITS_SWEEP_OP_GOAL_MOVE` + the kind).
 pub const EE_UNITS_SWEEP_GOAL_MOVE: u64 = 0;
 pub const EE_UNITS_SWEEP_GOAL_ATTACK_UNIT: u64 = 1;
 pub const EE_UNITS_SWEEP_GOAL_ATTACK_GROUND: u64 = 2;
@@ -71,15 +73,36 @@ struct Sweep<'h> {
 }
 
 impl Sweep<'_> {
+    /// A new active group of the player: the units that live and are valid added, formation kind `formation` set
     fn group(&mut self, units: &[u64], formation: i64) -> u64 {
-        self.h.op(op::EE_UNITS_SWEEP_OP_NEW_GROUP, self.player, units.as_ptr() as u64, units.len() as i64, formation)
-            as u64
+        let g = self.h.op(op::EE_UNITS_SWEEP_OP_GROUP_NEW, self.player, 0, 0, 0) as u64;
+        for &u in units {
+            // SAFETY: the sweep runs on the physics thread inside its hold of the world
+            let t = unsafe { WorldRead::begin() };
+            if view(&t, u).is_some_and(|v| v.hit_points() > 0 && v.valid()) {
+                self.h.op(op::EE_UNITS_SWEEP_OP_ADD_MEMBER, g, u, 0, 0);
+            }
+        }
+        let f = self.h.op(op::EE_UNITS_SWEEP_OP_FORMATION_CREATE, formation as u64, 0, 0, 0) as u64;
+        if f != 0 {
+            self.h.op(op::EE_UNITS_SWEEP_OP_SET_FORMATION, g, f, 0, 0);
+            self.h.op(op::EE_UNITS_SWEEP_OP_FORMATION_DEREFERENCE, f, 0, 0, 0);
+        }
+        g
     }
+    /// A goal of `kind` for `unit` at `target` and the point (a move's yaw its fourth float, its `flags` bit 0: the
+    /// group moves together); [`EE_UNITS_SWEEP_GOAL_FIND_PATROL`]: player `unit`'s first town patrol group with a
+    /// last point (0: none)
     fn goal(&mut self, kind: u64, unit: u64, target: u64, point: [f32; 4], flags: i64) -> u64 {
-        set_point([point[0], point[1], point[2]]);
-        // the yaw (a move's) in the flag word's high half
-        let flags = flags | i64::from(point[3].to_bits()) << 32;
-        self.h.op(op::EE_UNITS_SWEEP_OP_GOAL, kind, unit, target as i64, flags) as u64
+        if kind == EE_UNITS_SWEEP_GOAL_FIND_PATROL {
+            return find_patrol(self.h, unit);
+        }
+        set_point(point);
+        let g = self.h.op(op::EE_UNITS_SWEEP_OP_GOAL_MOVE + kind as i32, unit, target, 0, 0) as u64;
+        if kind == EE_UNITS_SWEEP_GOAL_MOVE {
+            self.h.op(op::EE_UNITS_SWEEP_OP_GROUP_MOVEMENT, g, (flags & 1) as u64, 0, 0);
+        }
+        g
     }
     /// `Move(point, together, yaw)`
     fn moving(&mut self, p: [f32; 3], together: bool, yaw: f32) -> u64 {
@@ -88,7 +111,16 @@ impl Sweep<'_> {
     /// `Run(group, goal, action, queued)`; `action` < 0: the goal set alone (the spreads'); `special` the group's
     /// `mIsSpecialAttack` first
     fn run(&mut self, g: u64, goal: u64, action: i64, queued: bool, special: bool) {
-        self.h.op(op::EE_UNITS_SWEEP_OP_RUN, g, goal, i64::from(queued) | i64::from(special) << 1, action);
+        if special {
+            group_fields(g, |f| f.mIsSpecialAttack = true);
+        }
+        self.h.op(op::EE_UNITS_SWEEP_OP_GROUP_SET_GOAL, g, goal, i64::from(queued), 0);
+        if action >= 0 {
+            // the commands' way: the action, into the pending groups, Plan
+            group_fields(g, |f| f.mAction = action as std::os::raw::c_long);
+            self.h.op(op::EE_UNITS_SWEEP_OP_ADD_PENDING_GROUP, g, 0, 0, 0);
+            self.h.op(op::EE_UNITS_SWEEP_OP_PLAN, g, 0, 0, 0);
+        }
     }
     fn record(&mut self, g: u64, units: &[u64], answers: u32) {
         let case = self.case;
@@ -256,6 +288,8 @@ pub fn sweep(h: &mut dyn SweepHost) {
         // the reserved destinations: every unit's position told, then points at, near and away from them
         let g = s.group(&all, 0);
         for &u in &all {
+            let at = op::unit_position(s.h, u);
+            set_point([at[0], at[1], at[2], 0.0]);
             s.h.op(op::EE_UNITS_SWEEP_OP_TELL, g, u, 0, 0);
         }
         let mut answers = 0u32;
@@ -274,12 +308,165 @@ pub fn sweep(h: &mut dyn SweepHost) {
     }
 }
 
-/// The `Record` host call: the units' handles and the answers through the point's static (the host reads the
-/// list as `d`'s pointer and its count from the high word of the case).
+/// Unit `u`'s view.
+fn view<'t>(t: &'t WorldRead, u: u64) -> Option<UnitView<'t>> {
+    // SAFETY: a live unit the sweep handed out
+    unsafe { UnitView::of(t, u) }
+}
+
+/// A store on group `g`'s record (`EeUnitsActiveGroupFields`; the group's handle is its `EEActiveGroup*`).
+fn group_fields(g: u64, f: impl FnOnce(&mut EeUnitsActiveGroupFields)) {
+    #[cfg(not(test))]
+    {
+        let at = g as usize + crate::world::layout::layout().active_group_fields as usize;
+        // SAFETY: a live active group's record; the borrow ends inside `f`
+        f(unsafe { &mut *(at as *mut EeUnitsActiveGroupFields) })
+    }
+    #[cfg(test)]
+    let _ = (g, f);
+}
+
+/// Player `player`'s first town patrol group with a last point (0: none).
+fn find_patrol(h: &mut dyn SweepHost, player: u64) -> u64 {
+    // SAFETY: as [`view`]
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: the live player the sweep handed out
+    let Some(p) = (unsafe { crate::world::PlayerView::of(&t, player) }) else { return 0 };
+    for i in 0..p.towns_len() {
+        let town = p.town_handle(i);
+        if town == 0 {
+            continue;
+        }
+        let patrol = h.op(op::EE_UNITS_SWEEP_OP_TOWN_PATROL, town, 0, 0, 0) as u64;
+        if patrol != 0 && last_point(patrol) != 0 {
+            return patrol;
+        }
+    }
+    0
+}
+
+#[cfg(not(test))]
+fn last_point(patrol: u64) -> u64 {
+    // SAFETY: a live patrol group
+    unsafe { crate::units::patrol_group::ee_units_pg_last(patrol as usize as *mut _) as u64 }
+}
+#[cfg(test)]
+fn last_point(_patrol: u64) -> u64 {
+    0
+}
+
+/// The record's goal: its kind (-1: none), id and location.
+fn record_goal(h: &mut dyn SweepHost, r: &mut capture_record::Record, goal: u64) {
+    if goal == 0 {
+        r.i32(-1);
+        return;
+    }
+    let (kind, id) = goal_kind_id(goal);
+    r.i32(i32::from(kind));
+    r.u32(id);
+    set_point([0.0; 4]);
+    h.op(op::EE_UNITS_SWEEP_OP_GOAL_LOCATION, goal, 0, 0, 0);
+    let p = op::point();
+    r.f32(p[0]);
+    r.f32(p[1]);
+    r.f32(p[2]);
+}
+
+#[cfg(not(test))]
+fn goal_kind_id(goal: u64) -> (u8, u32) {
+    let l = crate::world::layout::layout();
+    // SAFETY: a live unit's goal
+    unsafe {
+        let kind = std::ptr::read_unaligned((goal as usize + l.goal_kind as usize) as *const u8);
+        let id = std::ptr::read_unaligned((goal as usize + l.goal_id as usize) as *const std::os::raw::c_ulong);
+        (kind, id as u32)
+    }
+}
+#[cfg(test)]
+fn goal_kind_id(goal: u64) -> (u8, u32) {
+    (goal as u8, goal as u32)
+}
+
+/// The group's units (`GetNumUnits`, `GetUnit`) and its record (`mFields`): its 17 speeds from `mSpeed` on, whether
+/// it moves together.
+#[cfg(not(test))]
+fn group_state(g: u64) -> (Vec<u64>, [f32; 17], bool) {
+    let group = g as usize as *mut crate::units::group_obj::EeUnitsGroup;
+    // SAFETY: a live group
+    let n = unsafe { crate::units::group_host::ee_units_group_len(group) };
+    let units = (0..n)
+        .map(|i| unsafe { crate::units::group_host::ee_units_group_unit(group, i as std::os::raw::c_long) } as u64)
+        .collect();
+    let at = g as usize + crate::world::layout::layout().active_group_fields as usize;
+    // SAFETY: the live group's record: 17 floats from mSpeed on, as the C++ record wrote them
+    unsafe {
+        let f = &*(at as *const EeUnitsActiveGroupFields);
+        (units, std::ptr::read_unaligned(std::ptr::addr_of!(f.mSpeed) as *const [f32; 17]), f.mMovesTogether)
+    }
+}
+#[cfg(test)]
+fn group_state(_g: u64) -> (Vec<u64>, [f32; 17], bool) {
+    (Vec::new(), [0.0; 17], false)
+}
+
+/// The AGPL record: the group as left, every unit's goal, queues, command, formation place and group, one draw.
+// `c_ulong`/`c_long` are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#[allow(clippy::unnecessary_cast)]
 fn record_call(h: &mut dyn SweepHost, case: i64, player: u64, g: u64, units: &[u64], answers: u32) {
-    let packed = (case as u64 & 0xffff_ffff) | (units.len() as u64) << 32;
-    set_point([f32::from_bits(answers), 0.0, 0.0]);
-    h.op(op::EE_UNITS_SWEEP_OP_RECORD, packed, player, g as i64, units.as_ptr() as i64);
+    let mut r = capture_record::Record::new(TAG);
+    r.i32(case as i32);
+    // SAFETY: as [`view`]
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: the live player
+    r.u32(unsafe { crate::world::PlayerView::of(&t, player) }.map_or(0, |p| p.id()));
+    r.u32(answers);
+    let (members, speeds, together) = group_state(g);
+    r.u32(members.len() as u32);
+    for &m in &members {
+        r.u32(view(&t, m).map_or(0, |v| v.id()));
+    }
+    for v in speeds {
+        r.f32(v);
+    }
+    r.u32(u32::from(together));
+    r.u32(h.op(op::EE_UNITS_SWEEP_OP_PENDING_GROUPS, player, 0, 0, 0) as u32);
+    for &u in units {
+        let Some(v) = view(&t, u) else { continue };
+        r.u32(v.id());
+        r.i32(v.hit_points() as i32);
+        record_goal(h, &mut r, v.goal_handle());
+        let queues = v.goal_queues();
+        r.u32(queues.len() as u32);
+        for q in queues {
+            let goals = queue_goals(q);
+            r.u32(goals.len() as u32);
+            for goal in goals {
+                record_goal(h, &mut r, goal);
+            }
+        }
+        let c = v.complex();
+        r.u32(v.command_type());
+        r.u32(crate::world_field!(c, mFormationSlot) as u32);
+        r.i32(crate::world_field!(c, mFormationRank) as i32);
+        r.u32(u32::from(crate::world_field!(c, mIsSpecialAttack)));
+        r.u32(u32::from(v.active_group_handle() == g));
+        r.u32(u32::from(v.active_group_handle() != 0));
+    }
+    r.i32(h.op(op::EE_UNITS_SWEEP_OP_RANDOM, 0, 0, 0, 0) as i32);
+    r.commit();
+}
+
+/// A goal queue's goals in order.
+#[cfg(not(test))]
+fn queue_goals(q: u64) -> Vec<u64> {
+    let q = q as usize as *const crate::units::goals::EeUnitsGoalQueue;
+    // SAFETY: a live unit's queue
+    let n = unsafe { crate::units::goals::ee_units_gq_len(q) };
+    (0..n).map(|k| unsafe { crate::units::goals::ee_units_gq_get(q, k) }).collect()
+}
+#[cfg(test)]
+fn queue_goals(_q: u64) -> Vec<u64> {
+    Vec::new()
 }
 
 /// `EEActiveGroupCaptureSweep()` (EE-SIM's game end, with the capture's groups profile): the capture only takes AGPL

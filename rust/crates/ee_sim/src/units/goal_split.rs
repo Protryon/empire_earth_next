@@ -130,7 +130,7 @@ pub const EE_UNITS_GOAL_HOST_X_SOUND_PLAY_PLAIN: i32 = 657;
 pub const EE_UNITS_GOAL_HOST_X_NO_WAYPOINTS: i32 = 658;
 /// the transport class's `CanLoad(a, b)`
 pub const EE_UNITS_GOAL_HOST_X_TRANSPORT_CAN_LOAD: i32 = 659;
-/// the transport class's `FindRendezvousTiles(list, a, the two tiles of `text`)`
+/// the transport class's `FindRendezvousTiles(&` the shared complex unit list (goal_more.rs) `, a, the two tiles of `text`)`
 pub const EE_UNITS_GOAL_HOST_X_FIND_RENDEZVOUS: i32 = 660;
 /// `a->mPlayer->GetTechTree()->Get(i[0])`
 pub const EE_UNITS_GOAL_HOST_X_TECH_TREE_GET: i32 = 661;
@@ -511,6 +511,7 @@ pub fn split<H: GoalSplitHost + ?Sized>(h: &mut H, op: i32, a: u64, b: u64, io: 
         ),
         EE_UNITS_GOAL_HOST_RENDEZVOUS => {
             if io.i[4] == 0 {
+                crate::units::goal_more::complexes_in(h, io);
                 with_tiles(h, EE_UNITS_GOAL_HOST_X_FIND_RENDEZVOUS, a, 0, io, 2);
             } else {
                 // the transport base's rendezvous: its own tile for both
@@ -689,7 +690,7 @@ pub fn split<H: GoalSplitHost + ?Sized>(h: &mut H, op: i32, a: u64, b: u64, io: 
             op_ints(h, EE_UNITS_GOAL_HOST_X_SET_WORK_TIMER, a, 0, &[i64::from(rate)]);
             0
         }
-        _ => return None,
+        _ => return crate::units::goal_more::split_more(h, op, a, b, io),
     })
 }
 

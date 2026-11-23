@@ -18,9 +18,6 @@ public:
     void SetContinentID(unsigned short inID) { this->continent_id = inID; }
     unsigned short GetID() const { return this->id; }
     void SetID(unsigned short inID) { this->id = inID; }
-    // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
-    template <class W> void WriteFields(W& ioWriter) const { ioWriter.U16(this->continent_id); ioWriter.U16(this->id); }
-    template <class R> bool ReadFields(R& ioReader) { return ioReader.U16(this->continent_id) && ioReader.U16(this->id); }
 
 private:
     EEAIHill();

@@ -78,8 +78,8 @@ pub const EE_SCENARIO_WZ_TILE_X: u32 = 937;
 pub const EE_SCENARIO_WZ_TILE_Y: u32 = 938;
 
 /// `kTerrainDeepWater`, `kTerrainShallowWater`.
-const TERRAIN_DEEP_WATER: i64 = 1;
-const TERRAIN_SHALLOW_WATER: i64 = 10;
+pub(crate) const TERRAIN_DEEP_WATER: i64 = 1;
+pub(crate) const TERRAIN_SHALLOW_WATER: i64 = 10;
 
 /// Two longs as one read: x low, y high (`SMPack`).
 fn pack(x: c_long, y: c_long) -> i64 {

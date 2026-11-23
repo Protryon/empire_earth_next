@@ -11,10 +11,6 @@ enum EEStormType {
     kStormSnow = 2,        // EEEMStorm::GetTypeName case 2: "Snow"
     kStormHurricane = 3,   // EEEMStorm::GetTypeName case 3: "Hurricane"
     kStormBlizzard = 4,    // EEEMStorm::GetTypeName case 4: "Blizzard"
-    kStormPlaceHolder1 = 5,  // EEEMStorm::GetTypeName case 5: "PlaceHolder1"
-    kStormPlaceHolder2 = 6,  // EEEMStorm::GetTypeName case 6: "PlaceHolder2"
-    kStormPlaceHolder3 = 7,  // EEEMStorm::GetTypeName case 7: "PlaceHolder3"
-    kStormPlaceHolder4 = 8,  // EEEMStorm::GetTypeName case 8: "PlaceHolder4"
 };
 
 #endif // EE_EESTORMTYPE_H

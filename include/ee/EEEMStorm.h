@@ -33,12 +33,7 @@ public:
     // exact only with both).
     long GetType() const { return this->mType; }
     bool Contains(const U2DPoint<long>& inPoint) const { return this->mArea.Contains(inPoint); }
-    void Begin();                           // 0x12df63 (the ctor's, type != 0): start/goal, the shaped path, the weather effect
-    bool IsOver();                          // 0x12e588 (true: the storm is over; EEEnvironmentManager::Update)
-    void RequestRoute();                    // 0x12e74e: cancel the old request; RequestPath with a Snow/Rain route planner (the caller sets state 2)
-    void TakePath();                        // 0x12e817: mPath = the request's path, reversed; release the request (the step sets state 3)
-    void Release();                         // 0x12e9eb (before the storm is deleted)
-    void Step(unsigned long inTime);        // 0x12ea48 (each update)
+    // (Begin, IsOver, RequestRoute, TakePath, Release, Step and the step's host: ee_game gamecpp weather.rs)
 
     static UString sStormData;              // "Storm-Data" (chain 0x12dba8; guarded atexit, bit 1 of 0x529b20; unreferenced)
     static UString sEnvironmentData;        // "Environment-Data" (chain 0x12dbeb; bit 2)

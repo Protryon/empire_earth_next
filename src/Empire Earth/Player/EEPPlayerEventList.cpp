@@ -25,72 +25,28 @@
 // port (the player lane, round 1): the events and every decision on them are Rust (ee_units player_events.rs, mList);
 // this is their world: the sight at an event's location and the local view of it, the local player, the alert sounds
 // (loaded with the list), the mini-map ping and the chat text
-EEPPlayerEventList::EEPPlayerEventList() : mList(ee_units_events_new()), mSound(NULL)
+EEPPlayerEventList::EEPPlayerEventList() : mList(ee_units_events_new()), mSound(NULL), mPlayed(NULL)
 {
-    static const unsigned long kSounds[5] = {kSoundUnderAttack, kSoundGarrison, kSoundFlare, 0x7d0, 0x7d0};
-    for (long i = 0; i < 5; i++) {
-        this->mSounds[i] = EESoundObject::Get(kSounds[i]);
-        if (this->mSounds[i])
-            this->mSounds[i]->LoadMedia();
-    }
+    ee_units_events_sounds(this, &EEPPlayerEventList::Host, true);   // the alert sounds got and loaded (player_events_split.rs)
 }
 
 EEPPlayerEventList::~EEPPlayerEventList()
 {
     ee_units_events_free(this->mList);
-    for (long i = 0; i < 5; i++)
-        if (this->mSounds[i])
-            this->mSounds[i]->UnloadMedia();
-    if (this->mSound)
-        this->mSound->Dereference();
+    ee_units_events_sounds(this, &EEPPlayerEventList::Host, false);   // unloaded, the one playing released
 }
 
+// the alert sounds (the event's kind - 1)
+static const unsigned long kEEPlayerEventSounds[5] = {kSoundUnderAttack, kSoundGarrison, kSoundFlare, 0x7d0, 0x7d0};
+
+// the list's world, one statement an operation (the compound ones are Rust: player_events_split.rs)
 int32_t EEPPlayerEventList::Host(void* inList, void* inPlayer, int32_t inOp, const EeUnitsPlayerEvent* inEvent)
 {
     EEPPlayerEventList* theList = static_cast<EEPPlayerEventList*>(inList);
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
-    EEPlayer* theLocal = gWorld.GetCurrentPlayer();
-    EETileLocation theLocation(inEvent->x, inEvent->y);
     switch (inOp) {
-    case EE_UNITS_EVENTS_SHOW:
-    case EE_UNITS_EVENTS_HIDE: {
-        bool theShared = theLocal == thePlayer || (theLocal->IsAlliedWith(thePlayer) && theLocal->mSharedLOS && thePlayer->mSharedLOS);
-        if (inOp == EE_UNITS_EVENTS_SHOW)
-            thePlayer->AddSharedSightAt(theLocation);
-        else
-            thePlayer->RemoveSharedSightAt(theLocation);
-        if (theShared && inOp == EE_UNITS_EVENTS_SHOW) {
-            gMiniMap->CountCellOn(theLocation.GetX(), theLocation.GetY());
-            gWorld.mMap->mTerrainMesh.ReferenceTile(theLocation.GetX(), theLocation.GetY());
-        } else if (theShared) {
-            gMiniMap->CountCellOff(theLocation.GetX(), theLocation.GetY());
-            gWorld.mMap->mTerrainMesh.DereferenceTile(theLocation.GetX(), theLocation.GetY());
-        }
-        return 0;
-    }
-    case EE_UNITS_EVENTS_IS_LOCAL:
-        return thePlayer == theLocal;
-    case EE_UNITS_EVENTS_PLAYING:
-        return theList->mSound != NULL && gSoundManager->GetIsPlaying(theList->mSound);
-    case EE_UNITS_EVENTS_SOUND: {
-        EESoundObject* theSound = theList->mSounds[inEvent->kind - 1];
-        if (theSound == NULL)
-            return 0;
-        SESMInstanceNode* theNode = gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-        if (theList->mSound)
-            theList->mSound->Dereference();
-        theList->mSound = theNode;
-        if (theNode != NULL)
-            theNode->Reference();
-        if (theList->mSound != NULL)
-            theList->mSound->Dereference();
-        return 0;
-    }
-    case EE_UNITS_EVENTS_PING:
-        gMiniMap->mU1216C.SetX(inEvent->source_x);
-        gMiniMap->mU1216C.SetY(inEvent->source_y);
-        gMiniMap->mB12185 = true;
-        return 0;
+    case EE_UNITS_EVENTS_IS_LOCAL: return thePlayer == gWorld.GetCurrentPlayer();
+    case EE_UNITS_EVENTS_PLAYING: return theList->mSound != NULL && gSoundManager->GetIsPlaying(theList->mSound);
     case EE_UNITS_EVENTS_TEXT:
         if (inEvent->text != -1) {
             UWideString theText;
@@ -98,8 +54,42 @@ int32_t EEPPlayerEventList::Host(void* inList, void* inPlayer, int32_t inOp, con
             gUserInterface->AddChatLogEntry(theText, 0);
         }
         return 0;
-    case EE_UNITS_EVENTS_STOP_PING:
-        gMiniMap->mB12185 = false;
+    case EE_UNITS_EVENTS_STOP_PING: gMiniMap->mB12185 = false;
+        return 0;
+    case EE_UNITS_EVENTS_X_SIGHT_ON: thePlayer->AddSharedSightAt(EETileLocation(inEvent->x, inEvent->y));
+        return 0;
+    case EE_UNITS_EVENTS_X_SIGHT_OFF: thePlayer->RemoveSharedSightAt(EETileLocation(inEvent->x, inEvent->y));
+        return 0;
+    case EE_UNITS_EVENTS_X_CELL_ON: gMiniMap->CountCellOn(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_CELL_OFF: gMiniMap->CountCellOff(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_TILE_ON: gWorld.mMap->mTerrainMesh.ReferenceTile(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_TILE_OFF: gWorld.mMap->mTerrainMesh.DereferenceTile(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_HAS_SOUND: return theList->mSounds[inEvent->kind - 1] != NULL;
+    case EE_UNITS_EVENTS_X_PLAY: theList->mPlayed = gSoundManager->PlayAndReturnReferencedNode(theList->mSounds[inEvent->kind - 1]->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_UNITS_EVENTS_X_HAS_CURRENT: return theList->mSound != NULL;
+    case EE_UNITS_EVENTS_X_CURRENT_RELEASE: theList->mSound->Dereference();
+        return 0;
+    case EE_UNITS_EVENTS_X_CURRENT_SET: theList->mSound = theList->mPlayed;
+        return 0;
+    case EE_UNITS_EVENTS_X_HAS_PLAYED: return theList->mPlayed != NULL;
+    case EE_UNITS_EVENTS_X_PLAYED_REFERENCE: theList->mPlayed->Reference();
+        return 0;
+    case EE_UNITS_EVENTS_X_PING_X: gMiniMap->mU1216C.SetX(inEvent->source_x);
+        return 0;
+    case EE_UNITS_EVENTS_X_PING_Y: gMiniMap->mU1216C.SetY(inEvent->source_y);
+        return 0;
+    case EE_UNITS_EVENTS_X_PING_ON: gMiniMap->mB12185 = true;
+        return 0;
+    case EE_UNITS_EVENTS_X_SOUND_GET: theList->mSounds[inEvent->kind - 1] = EESoundObject::Get(kEEPlayerEventSounds[inEvent->kind - 1]);
+        return 0;
+    case EE_UNITS_EVENTS_X_SOUND_LOAD: theList->mSounds[inEvent->kind - 1]->LoadMedia();
+        return 0;
+    case EE_UNITS_EVENTS_X_SOUND_UNLOAD: theList->mSounds[inEvent->kind - 1]->UnloadMedia();
         return 0;
     }
     return 0;

@@ -12,6 +12,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EECivilizationManager.h"
 #include "rust/sim/tech.h"
+#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp civilization.rs)
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern EECivilizationManager gCivilizationManager;
@@ -19,21 +20,12 @@ extern EEGameOptions& gGameOptions;
 
 // the six key statics' guarded chains 0x52c3eb..0x52c57d (guard byte 0x529a88)
 
-// The upgrades' application step for ee_tech civilization.rs: gCivilizationManager.ApplyUpgrade for the player
-static bool EECivApply(void* inPlayerID, uint32_t inUpgrade)
-{
-    return gCivilizationManager.ApplyUpgrade(inUpgrade, *static_cast<long*>(inPlayerID));
-}
+// (the defaults, the points, the save, the purchases and the reapplied order: ee_game gamecpp civilization.rs)
 
 // Creates an unnamed civilization with no points or upgrades, marked unchanged
 EECivilization::EECivilization()
 {
-    this->mName = gEmptyString;
-    this->mAvailablePoints = 0;
-    this->mMaxPoints = 0;
-    this->mNoPointsAdded = true;
-    this->mUnchanged = true;
-    this->mDeferredUpgrades.clear();
+    ee_gamecpp_civ_init(this);
 }
 
 // Returns an upgrade's cost: the base cost plus the step for each upgrade already bought in its category
@@ -80,10 +72,7 @@ long EECivilization::GetExtraCost(EECivUpgrade inUpgrade)
 // Counts the upgrades of an upgrade's category in a list (by default the purchased upgrades)
 long EECivilization::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
 {
-    std::vector<EECivUpgrade>* theList = &this->mPurchasedUpgrades;
-    if (inList != NULL)
-        theList = inList;
-    return gCivilizationManager.CountInCategory(inUpgrade, theList);
+    return gCivilizationManager.CountInCategory(inUpgrade, inList != NULL ? inList : &this->mPurchasedUpgrades);
 }
 
 // Returns whether the civilization is unchanged
@@ -113,138 +102,51 @@ std::vector<EECivUpgrade>& EECivilization::GetPurchasedUpgrades()
 // Adds points to both the available and the maximum points
 void EECivilization::AddPoints(long inAmount)
 {
-    this->mAvailablePoints += inAmount;
-    this->mMaxPoints += inAmount;
-    this->mNoPointsAdded = false;
+    ee_gamecpp_civ_add_points(this, inAmount);
 }
 
 // Loads the purchased upgrades, points, flags and name from a saved game (old versions: a narrow name); returns
 // the first read error
 long EECivilization::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UString theOldName;
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
-        unsigned long theValue;
-        theResult = inFile.Read(theValue);
-        if (theResult == kErrorOK) {
-            EECivUpgrade theUpgrade = (EECivUpgrade)theValue;
-            this->mPurchasedUpgrades.push_back(theUpgrade);
-        }
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mAvailablePoints);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mMaxPoints);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mNoPointsAdded);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mUnchanged);
-    if (theResult == kErrorOK) {
-        if (inMajorVersion == 0 && inMinorVersion < 0xd8) {
-            theResult = theOldName.Load(inFile);
-            this->mName = (const char*)theOldName;
-        } else {
-            theResult = this->mName.Load(inFile);
-        }
-    }
-    return theResult;
+    return ee_gamecpp_civ_load(this, inMajorVersion, inMinorVersion, &inFile);
 }
 
 // Applies an upgrade to a player, first paying for it and recording it when buying; returns whether it applied
 bool EECivilization::Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase)
 {
-    bool theResult = false;
-    unsigned long theCost = 0;
-    if (!inPurchase || this->CanAfford(inUpgrade, &theCost, NULL)) {
-        if (inPurchase) {
-            this->mAvailablePoints -= theCost;
-            this->mPurchasedUpgrades.push_back(inUpgrade);
-        }
-        gCivilizationManager.ApplyUpgrade(inUpgrade, inPlayer);
-        this->mUnchanged = false;
-        theResult = true;
-    }
-    return theResult;
+    return ee_gamecpp_civ_buy(this, inUpgrade, inPlayer, inPurchase);
 }
 
 // Applies a list of upgrades to a player, stopping at the first that fails
 void EECivilization::AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inPlayer, bool inFlag)
 {
-    bool theResult = true;
-    for (std::vector<EECivUpgrade>::iterator i = inUpgrades.begin(); i != inUpgrades.end() && theResult; i++)
-        theResult = this->Buy(*i, inPlayer, inFlag);
+    ee_gamecpp_civ_add_upgrades(this, &inUpgrades, inPlayer, inFlag);
 }
 
 // Applies the purchased upgrades with attribute index 21 to the world (player 0)
 void EECivilization::ApplyLevel21ToWorld()
 {
-    long thePlayerID = 0;
-    ee_tech_civ_apply_deferred_kind(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(), EECivApply,
-                                    &thePlayerID);
+    ee_gamecpp_civ_apply_level21(this);
 }
 
 // Reapplies the purchased upgrades to a player after loading, deferring those with attribute index 21; returns 13
 // when one fails
 long EECivilization::Reapply(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    long thePlayerID = inPlayer->mPlayerID;
-    std::vector<EECivUpgrade> theDeferred(this->mPurchasedUpgrades.size());
-    size_t theCount = 0;
-    bool theApplied = ee_tech_civ_reapply(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(), EECivApply,
-                                          &thePlayerID, theDeferred.data(), &theCount);
-    this->mDeferredUpgrades.insert(this->mDeferredUpgrades.end(), theDeferred.begin(), theDeferred.begin() + theCount);
-    return theApplied ? 0 : 0xd;
+    return ee_gamecpp_civ_reapply(this, inPlayer->mPlayerID);
 }
 
 // Applies the deferred upgrades to a player and forgets them; returns 13 when one fails
 long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    long thePlayerID = inPlayer->mPlayerID;
-    if (!ee_tech_civ_apply_all(this->mDeferredUpgrades.data(), this->mDeferredUpgrades.size(), EECivApply, &thePlayerID))
-        return 0xd;
-    this->mDeferredUpgrades.clear();
-    return 0;
+    return ee_gamecpp_civ_apply_deferred(this, inPlayer->mPlayerID);
 }
 
 // Writes the purchased upgrades, points, flags and name to the saved game; returns the first error
 long EECivilization::Save(FSFile& outFile)
 {
-    unsigned long theCount = this->mPurchasedUpgrades.size();
-    long theResult = outFile.Write(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    std::vector<EECivUpgrade>::iterator i = this->mPurchasedUpgrades.begin();
-    // stop at the first failed upgrade write (each result used to overwrite the previous one)
-    while (theResult == kErrorOK) {
-        if (i == this->mPurchasedUpgrades.end())
-            break;
-        unsigned long theValue = *i;
-        theResult = outFile.Write(theValue);
-        i++;
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mAvailablePoints);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mMaxPoints);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mNoPointsAdded);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mUnchanged);
-    if (theResult == kErrorOK)
-        theResult = this->mName.Save(outFile);
-    return theResult;
+    return ee_gamecpp_civ_save(this, &outFile);
 }
 
 // Sets the points left to spend
@@ -265,4 +167,52 @@ void EECivilization::SetName(const UWideString& inName)
 {
     this->mName = inName;
     this->mUnchanged = false;
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the civilization
+
+int64_t EECore10OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEVCWonder.cpp
+double EECore10OpD6F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define CV ((EECivilization*)p)
+#define LIST ((std::vector<EECivUpgrade>*)p)
+
+// the C++ calls and members of the civilization's bodies in Rust (gamecpp civilization.rs): p the civilization
+// unless noted, one statement each
+int64_t EECore10OpD5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DvAvailable: return P64(&CV->mAvailablePoints);
+    case O::DvMaximum: return P64(&CV->mMaxPoints);
+    case O::DvNoPointsAdded: return P64(&CV->mNoPointsAdded);
+    case O::DvUnchanged: return P64(&CV->mUnchanged);
+    case O::DvPurchased: return P64(&CV->mPurchasedUpgrades);
+    case O::DvDeferred: return P64(&CV->mDeferredUpgrades);
+    case O::DvListCount: return (int64_t)LIST->size();
+    case O::DvListAt: return (*LIST)[a[0]];
+    case O::DvPurchasedPush: CV->mPurchasedUpgrades.push_back((EECivUpgrade)a[0]);
+        break;
+    case O::DvDeferredPush: CV->mDeferredUpgrades.push_back((EECivUpgrade)a[0]);
+        break;
+    case O::DvDeferredClear: CV->mDeferredUpgrades.clear();
+        break;
+    case O::DvNameEmpty: CV->mName = gEmptyString;
+        break;
+    case O::DvNameLoad: return CV->mName.Load(*(FSFile*)a[0]);
+    case O::DvNameSave: return CV->mName.Save(*(FSFile*)a[0]);
+    case O::DvUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
+    case O::DvNameNarrow: CV->mName = (const char*)*(UString*)a[0];
+        break;
+    case O::DvCanAfford: return CV->CanAfford((EECivUpgrade)a[0], (unsigned long*)a[1], NULL);
+    case O::DvApplyUpgrade: return gCivilizationManager.ApplyUpgrade((EECivUpgrade)a[0], (long)a[1]);
+    default: return EECore10OpD6(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore10OpD5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpD6F(inOp, p, a, f);
 }

@@ -286,28 +286,15 @@ EeGfxEffectFile EEEffectFile(FSFile& inFile)
 }
 
 // the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm
-// recentred on the terrain there; the tiles' bounds (ee_gfx effect_storm.rs)
+// recentred on the terrain there; the tiles' bounds (gamecpp ro_views.rs over ee_gfx effect_storm.rs)
 void EEEffect::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
 {
-    int32_t theBounds[4] = {(int32_t)outBounds.mLeft, (int32_t)outBounds.mTop, (int32_t)outBounds.mRight,
-                            (int32_t)outBounds.mBottom};
-    if (!ee_gfx_effect_storm_move(H(this), (int32_t)inCenter.mX, (int32_t)inCenter.mY, theBounds))
-        return;
-    outBounds.mLeft = theBounds[0];
-    outBounds.mTop = theBounds[1];
-    outBounds.mRight = theBounds[2];
-    outBounds.mBottom = theBounds[3];
+    ee_gamecpp_fx_storm_move(this, inCenter.mX, inCenter.mY, reinterpret_cast<EeGameCppTileBounds*>(&outBounds));
 }
 
 void EEEffect::GetBounds(U2DRectangle<long>& outBounds)
 {
-    int32_t theBounds[4];
-    if (!ee_gfx_storm_bounds(this->mRecord, theBounds))
-        return;
-    outBounds.mLeft = theBounds[0];
-    outBounds.mTop = theBounds[1];
-    outBounds.mRight = theBounds[2];
-    outBounds.mBottom = theBounds[3];
+    ee_gamecpp_fx_storm_bounds(this->mRecord, reinterpret_cast<EeGameCppTileBounds*>(&outBounds));
 }
 
 U2DPoint<long> EEEffect::GetCenterPoint() const

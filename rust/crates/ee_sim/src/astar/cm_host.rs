@@ -64,6 +64,20 @@ pub unsafe fn update_hull(h: u64) {
     crate::astar::area_ops::ee_astar_area_update_hull_captured(cm_io::area(h), cm_io::area_tiles(h), region_size());
 }
 
+/// `EEAIArea::AreaCreate(tiles)` for the C++ (`EEAIArea::Create` of every kind but a herd).
+///
+/// # Safety
+/// `h` a live area (an `EEAIArea*`); `points` holds `n` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_area_create_of(h: u64, points: *const EeHullPoint, n: usize) {
+    let points: Vec<EePoint> = if n == 0 || points.is_null() {
+        Vec::new()
+    } else {
+        std::slice::from_raw_parts(points, n).iter().map(|q| EePoint { x: q.x as i32, y: q.y as i32 }).collect()
+    };
+    area_create(h, &points);
+}
+
 /// `EEAIArea::UpdateHull()` for the C++.
 ///
 /// # Safety
@@ -149,6 +163,15 @@ pub(crate) fn answer(op: i32, io: &mut EeAStarCmIo) -> Option<i64> {
                 let t = token();
                 map(&t).map_or(-1, |m| m.size())
             }
+            cm_io::EE_ASTAR_CM_SET_AI_VALUE => {
+                // `EETile::mAIValue` of the map's tile (none off the map or without a map)
+                let t = token();
+                if let Some(tl) = tile(&t, x as i64, y as i64) {
+                    let at = tl.handle() as usize + crate::world::layout::layout().tile_ai_value as usize;
+                    *(at as *mut i8) = io.i[2] as i8;
+                }
+                0
+            }
             cm_io::EE_ASTAR_CM_AI_VALUE => {
                 let t = token();
                 tile(&t, x as i64, y as i64).map_or(0, |tl| tl.ai_value() as i64)
@@ -200,14 +223,9 @@ mod tests {
 
     #[test]
     fn the_host_questions_rust_answers_are_the_tile_and_area_ones() {
-        // a town's or herd's owner, the region size global, the AI value's write and the random stream stay C++
+        // a town's or herd's owner, the region size global and the random stream stay C++
         let mut io = EeAStarCmIo::default();
-        for op in [
-            cm_io::EE_ASTAR_CM_OWNER,
-            cm_io::EE_ASTAR_CM_REGION_SIZE,
-            cm_io::EE_ASTAR_CM_SET_REGION_SIZE,
-            cm_io::EE_ASTAR_CM_SET_AI_VALUE,
-        ] {
+        for op in [cm_io::EE_ASTAR_CM_OWNER, cm_io::EE_ASTAR_CM_REGION_SIZE, cm_io::EE_ASTAR_CM_SET_REGION_SIZE] {
             assert_eq!(answer(op, &mut io), None);
         }
     }

@@ -36,29 +36,11 @@ unsigned short EEAIRectangleArea::UpdateContinents()
     return ee_astar_cm_rect_update_continents(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this);   // Rust: cm_build.rs
 }
 
-// NEAR: the original calls RTSMap::GetTile (0x2f85), _Ptrit::operator+ and begin() out of line and builds the
-// random point straight in its local (inline-budget / U2DPoint copy family)
 // Returns a random area tile; when it is off the map, a random on-map tile of the area instead (unchanged when
-// there is none)
+// there is none) (Rust: cm_world.rs)
 U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
 {
-    std::vector<U2DPoint<long> > thePoints;
-    std::vector<U2DPoint<long> > theTiles;
-    U2DPoint<long> theResult = this->AreaRandomPoint();
-    EEMap* theMap = gWorld.mMap;
-    if (!theMap || theMap->GetTile(theResult.mX, theResult.mY))
-        return theResult;
-    this->GetTileSet().BuildPointList(thePoints, 1);
-    theTiles.reserve(thePoints.size());
-    for (long i = thePoints.size() - 1; i >= 0; i--) {
-        if (theMap->GetTile((*(thePoints.begin() + i)).mX, (*(thePoints.begin() + i)).mY))
-            theTiles.push_back(thePoints[i]);
-    }
-    if (theTiles.size() != 0) {
-        EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-        theResult = theTiles.front();
-    }
-    return theResult;
+    return EEAIArea::PointOf(ee_astar_rect_random_point((uint64_t)(uintptr_t)this));
 }
 
 // EEAIArea's two slots that read the game's objects (the rest are inline over ee_sim::astar area_ops.rs; EEAIArea.cpp
@@ -70,7 +52,7 @@ void EEAIArea::Create(const std::vector<U2DPoint<long> >& inTiles)
     if (this->area_type == kAIAreaHerd)
         static_cast<EEHerd*>(this)->Create(inTiles);
     else
-        this->AreaCreate(inTiles);
+        ee_astar_area_create_of((uint64_t)(uintptr_t)this, reinterpret_cast<const EeHullPoint*>(inTiles.data()), inTiles.size());
 }
 
 U2DPoint<long> EEAIArea::GetRandomPoint()
@@ -86,10 +68,7 @@ U2DPoint<long> EEAIArea::GetRandomPoint()
 // Returns a random tile of the area from the game's random stream, or (0, 0) when it is empty
 U2DPoint<long> EEAIArea::AreaRandomPoint()
 {
-    U2DPoint<long> theResult(0, 0);
-    if (this->mTiles.Size() > 0)
-        theResult = this->mTiles.GetRandomPoint(gPhysics->mRandom);
-    return theResult;
+    return EEAIArea::PointOf(ee_astar_area_random_point((uint64_t)(uintptr_t)this));
 }
 
 // Sets the area's bounds in influence-table regions from its hull's bounding box (no table: unchanged)
