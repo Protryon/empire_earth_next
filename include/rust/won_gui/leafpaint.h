@@ -87,6 +87,30 @@ enum class EeWonLeafOp : uint32_t {
   MenuListSel,
   /// `l->GetViewWidth()`.
   MenuListViewWidth,
+  /// `t->mImage.get() != NULL` (0 or 1; `t` a Background).
+  BgHasImage,
+  /// `t->mStretchImage` (0 or 1).
+  BgStretch,
+  /// `t->mUseOffsets` (0 or 1).
+  BgUseOffsets,
+  /// `t->mComponent.get() != NULL` (0 or 1).
+  BgHasComponent,
+  /// `t->mImage->GetWidth()`.
+  BgImageWidth,
+  /// `t->mImage->GetHeight()`.
+  BgImageHeight,
+  /// `t->mColor`.
+  BgColor,
+  /// `t->mBorderColor`.
+  BgBorderColor,
+  /// one operation (the `EeWonDrawOp` at `b`) on `g` with the background's image as slot 0.
+  BgDraw,
+  /// `t->mComponent->SetSize(a, b)`.
+  BgCompSetSize,
+  /// `t->mComponent->Invalidate()`.
+  BgCompInvalidate,
+  /// `t->mComponent->Paint(g)`.
+  BgCompPaint,
 };
 
 /// The inward calls.
@@ -115,6 +139,21 @@ extern "C" {
 /// # Safety
 /// `host` answers `me`'s ops; the arguments as the call says.
 void ee_won_leaf_call(void *me, EeWonLeafHostFn host, EeWonLeafCall c, ptrdiff_t a, ptrdiff_t b);
+
+/// `Background::Paint(*(Graphics*)g, x, y, width, height, x_offset, y_offset)` on the C++ background `me` through its
+/// host.
+///
+/// # Safety
+/// `host` answers `me`'s ops; `g` is the Graphics the host's draw ops take.
+void ee_won_leaf_background(void *me,
+                            EeWonLeafHostFn host,
+                            ptrdiff_t g,
+                            int32_t x,
+                            int32_t y,
+                            int32_t width,
+                            int32_t height,
+                            int32_t x_offset,
+                            int32_t y_offset);
 
 }  // extern "C"
 

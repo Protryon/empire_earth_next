@@ -2,7 +2,8 @@
 //! the largest of its five state images; its paint, the state's image or the normal one, stretched to the button
 //! when it stretches), TextListItem (CalcDimensions: the list's font and text colour taken when unset, the size from
 //! the text and the image; Paint: guidraw.rs's text row over the item's and the list's members) and MenuItem
-//! (CalcDimensions: the text item's plus room for the icon and the submenu arrow; Paint: guidraw.rs's menu item).
+//! (CalcDimensions: the text item's plus room for the icon and the submenu arrow; Paint: guidraw.rs's menu item);
+//! and Background::Paint (guidraw.rs's background over the background's members, its component's call made here).
 //!
 //! The C++ classes keep their members (the images, the text, the font, the colour, the sizes); the methods are one
 //! call here each, and each host op (`EeWonLeafOp`; WONGUI/ImageButton.cpp, TextListItem.cpp, MenuBehavior.cpp) is
@@ -12,7 +13,8 @@
 use std::ffi::c_void;
 
 use crate::guidraw::{
-    menu_item, text_item_size, text_row, EeWonDrawOp, EeWonMenuItemPaint, EeWonSelColor, EeWonTextRowPaint,
+    background, menu_item, text_item_size, text_row, EeWonBackground, EeWonDrawOp, EeWonMenuItemPaint, EeWonSelColor,
+    EeWonTextRowPaint, EE_WON_DRAW_CALL,
 };
 use crate::guiwin::menu_item_size;
 
@@ -112,6 +114,30 @@ pub enum EeWonLeafOp {
     MenuListSel,
     /// `l->GetViewWidth()`.
     MenuListViewWidth,
+    /// `t->mImage.get() != NULL` (0 or 1; `t` a Background).
+    BgHasImage,
+    /// `t->mStretchImage` (0 or 1).
+    BgStretch,
+    /// `t->mUseOffsets` (0 or 1).
+    BgUseOffsets,
+    /// `t->mComponent.get() != NULL` (0 or 1).
+    BgHasComponent,
+    /// `t->mImage->GetWidth()`.
+    BgImageWidth,
+    /// `t->mImage->GetHeight()`.
+    BgImageHeight,
+    /// `t->mColor`.
+    BgColor,
+    /// `t->mBorderColor`.
+    BgBorderColor,
+    /// one operation (the `EeWonDrawOp` at `b`) on `g` with the background's image as slot 0.
+    BgDraw,
+    /// `t->mComponent->SetSize(a, b)`.
+    BgCompSetSize,
+    /// `t->mComponent->Invalidate()`.
+    BgCompInvalidate,
+    /// `t->mComponent->Paint(g)`.
+    BgCompPaint,
 }
 
 /// The host: `me` the C++ object, `op`, two arguments.
@@ -279,6 +305,38 @@ impl EeWonLeaf {
         self.run(g, &menu_item(&r));
     }
 
+    /// `Background::Paint(g, x, y, width, height, x_offset, y_offset)`: the stretched image alone, or the fill, the
+    /// border, the tiled image and the component (sized to the area, invalidated and painted).
+    pub fn background_paint(&self, g: isize, area: [i32; 6]) {
+        use EeWonLeafOp::*;
+        let has_image = self.yes(BgHasImage, 0);
+        let b = EeWonBackground {
+            has_image,
+            stretch_image: self.yes(BgStretch, 0),
+            use_offsets: self.yes(BgUseOffsets, 0),
+            has_component: self.yes(BgHasComponent, 0),
+            image_width: if has_image { self.get(BgImageWidth, 0) } else { 0 },
+            image_height: if has_image { self.get(BgImageHeight, 0) } else { 0 },
+            color: self.get(BgColor, 0),
+            border_color: self.get(BgBorderColor, 0),
+            x: area[0],
+            y: area[1],
+            width: area[2],
+            height: area[3],
+            x_offset: area[4],
+            y_offset: area[5],
+        };
+        for o in background(&b) {
+            if o.kind == EE_WON_DRAW_CALL {
+                self.op(BgCompSetSize, o.b as isize, o.c as isize);
+                self.op(BgCompInvalidate, 0, 0);
+                self.op(BgCompPaint, g, 0);
+            } else {
+                self.op(BgDraw, g, &o as *const EeWonDrawOp as isize);
+            }
+        }
+    }
+
     fn call(&self, c: EeWonLeafCall, a: isize, b: isize) {
         match c {
             EeWonLeafCall::ImageButtonSize => {
@@ -311,6 +369,26 @@ pub unsafe extern "C" fn ee_won_leaf_call(
     b: isize,
 ) {
     EeWonLeaf::new(me, host).call(c, a, b)
+}
+
+/// `Background::Paint(*(Graphics*)g, x, y, width, height, x_offset, y_offset)` on the C++ background `me` through its
+/// host.
+///
+/// # Safety
+/// `host` answers `me`'s ops; `g` is the Graphics the host's draw ops take.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_leaf_background(
+    me: *mut c_void,
+    host: EeWonLeafHostFn,
+    g: isize,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    x_offset: i32,
+    y_offset: i32,
+) {
+    EeWonLeaf::new(me, host).background_paint(g, [x, y, width, height, x_offset, y_offset])
 }
 
 #[cfg(test)]
