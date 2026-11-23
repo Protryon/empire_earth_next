@@ -65,18 +65,8 @@ fn head(text: &str, chat: &str) -> FormCallHead {
     let mut name = CppWide { vtable: core::ptr::null(), s: unsafe { core::mem::zeroed() } };
     unsafe { ee_uwstring_init(&mut name.s) };
     unsafe { wide_assign(&mut name, b"Somebody") };
-    FormCallHead {
-        form: core::ptr::null_mut(),
-        picked: core::ptr::null_mut(),
-        text: wide(text),
-        color: core::ptr::null(),
-        name,
-        chat: wide(chat),
-        flags: 0,
-        objects: [core::ptr::null_mut(); 11],
-        button: core::ptr::null_mut(),
-        out: core::ptr::null_mut(),
-    }
+    // SAFETY: the objects are pointers and a number, all zero
+    FormCallHead { o: unsafe { core::mem::zeroed() }, text: wide(text), name, chat: wide(chat) }
 }
 
 #[test]

@@ -15770,6 +15770,31 @@ struct EeScreensMainFormObjects {
   void *mCalamity;
 };
 
+/// The main game form's call record's pointers and numbers (the C++ `EEUIFMGFormCall` derives from it, UI lane
+/// round 15; its three strings follow): the form (first: main_form_ffi.rs reads it), the picked unit, the chat
+/// line's colour and flags, the dialog message, the start modes' tech tree node, unit, caster and calamity, the old
+/// and new media, the mouse modes' first selected unit and tile, the placement whose Update runs, the command
+/// button and its help string's result (a `UWideString*`).
+struct EeScreensFormCallObjects {
+  void *mForm;
+  void *mPicked;
+  const void *mColor;
+  unsigned long mFlags;
+  const void *mMessage;
+  void *mNode;
+  void *mUnit;
+  void *mCaster;
+  void *mCalamity;
+  void *mOldMedia;
+  void *mMedia;
+  void *mFirst;
+  void *mTile;
+  void *mWall;
+  void *mGate;
+  void *mButton;
+  void *mOut;
+};
+
 /// The cursor's reads for one `UpdateCursorKind` (the C++'s `EeScreensCursorRead`, EEUIFMainGame.cpp's shims read
 /// it): the form, the local player, its selected group, the group's first unit and the picked target.
 ///

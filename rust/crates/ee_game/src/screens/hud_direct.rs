@@ -139,23 +139,40 @@ const MF_CTL_TITLE: i64 = 25;
 const MF_CTL_ERROR_LOG: i64 = 27;
 const MF_CTL_DIALOG_MESSAGE: i64 = 211;
 
-/// The main game form's call record (`EEUIFMGFormCall`, EEUIFMainGame.cpp, which asserts its layout): the form,
-/// the picked unit, the held text, the chat line's colour, name and text, then the C++ objects of the call (the
-/// command button and its help string's result last).
+/// The main game form's call record's pointers and numbers (the C++ `EEUIFMGFormCall` derives from it, UI lane
+/// round 15; its three strings follow): the form (first: main_form_ffi.rs reads it), the picked unit, the chat
+/// line's colour and flags, the dialog message, the start modes' tech tree node, unit, caster and calamity, the old
+/// and new media, the mouse modes' first selected unit and tile, the placement whose Update runs, the command
+/// button and its help string's result (a `UWideString*`).
+#[repr(C)]
+#[allow(non_snake_case)]
+pub struct EeScreensFormCallObjects {
+    pub mForm: *mut c_void,
+    pub mPicked: *mut c_void,
+    pub mColor: *const c_void,
+    pub mFlags: c_ulong,
+    pub mMessage: *const c_void,
+    pub mNode: *mut c_void,
+    pub mUnit: *mut c_void,
+    pub mCaster: *mut c_void,
+    pub mCalamity: *mut c_void,
+    pub mOldMedia: *mut c_void,
+    pub mMedia: *mut c_void,
+    pub mFirst: *mut c_void,
+    pub mTile: *mut c_void,
+    pub mWall: *mut c_void,
+    pub mGate: *mut c_void,
+    pub mButton: *mut c_void,
+    pub mOut: *mut c_void,
+}
+
+/// The whole call record (`EEUIFMGFormCall`): the objects, then the held text and the chat line's name and text.
 #[repr(C)]
 pub(crate) struct FormCallHead {
-    pub(crate) form: Cpp,
-    picked: *mut c_void,
+    pub(crate) o: EeScreensFormCallObjects,
     pub(crate) text: CppWide,
-    color: *const c_void,
     pub(crate) name: CppWide,
     pub(crate) chat: CppWide,
-    flags: c_ulong,
-    /// the dialog message, node, unit, caster, calamity, old and new media, first unit, tile, wall and gate
-    objects: [*mut c_void; 11],
-    /// the command button (an `EEUIFMGStatusButton*`) and its help string's result (a `UWideString*`)
-    pub(crate) button: Cpp,
-    pub(crate) out: *mut CppWide,
 }
 
 /// The call's picked unit and first selected unit (`mPicked`, `mFirst`).
@@ -164,7 +181,7 @@ pub(crate) struct FormCallHead {
 /// `call` is the host's live call record.
 pub(crate) unsafe fn picked_and_first(call: *const FormCallHead) -> (u64, u64) {
     // SAFETY: the contract
-    unsafe { ((*call).picked as u64, (*call).objects[7] as u64) }
+    unsafe { ((*call).o.mPicked as u64, (*call).o.mFirst as u64) }
 }
 
 /// The main game form's host ops on the toolkit, its call's strings and the language strings (`call` the host's
@@ -180,7 +197,7 @@ pub(crate) unsafe fn main_form(
     io: &mut EeScreensMainFormIo,
 ) -> Option<i64> {
     // SAFETY: the contract (the record's members are reached through the pointer, never held across a call)
-    let form = unsafe { (*call).form };
+    let form = unsafe { (*call).o.mForm };
     let text = || unsafe { wide_bytes(&(*call).text) };
     let set_text = |t: &[u8]| unsafe { wide_assign(&mut (*call).text, t) };
     Some(match op {
@@ -233,7 +250,7 @@ pub(crate) unsafe fn main_form(
         // ---- the chat lines (hud_ctl_ffi.rs: their records, timers and texts; absent from a test build)
         #[cfg(not(test))]
         EE_SCREENS_MF_OP_CHAT_DISPLAY => unsafe {
-            let (color, flags) = ((*call).color, (*call).flags);
+            let (color, flags) = ((*call).o.mColor, (*call).o.mFlags);
             let (name, chat) =
                 (&(*call).name as *const CppWide as *const c_void, &(*call).chat as *const CppWide as *const c_void);
             crate::screens::hud_ctl_ffi::ee_screens_chat_line_display(ctl(form, a), color, name, chat, flags as u32)
@@ -347,7 +364,7 @@ pub(crate) unsafe fn main_form(
         EE_SCREENS_MF_OP_BASE_COPY_DATA => direct::form_call(form, EeUiFormCall::CopyData, 0, 0) as c_long as i64,
         op if op >= crate::screens::status_button::EE_SCREENS_MF_OP_SB => {
             // SAFETY: the contract
-            let (button, out) = unsafe { ((*call).button, (*call).out) };
+            let (button, out) = unsafe { ((*call).o.mButton, (*call).o.mOut as *mut CppWide) };
             return status_button(form, button, out, op - crate::screens::status_button::EE_SCREENS_MF_OP_SB, a, b);
         }
         EE_SCREENS_MF_OP_BASE => {

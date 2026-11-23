@@ -104,8 +104,8 @@ long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // ---- the one-statement shims of ee_screens status_button_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
 #define SBR(x) reinterpret_cast<EEUIFMGFormCall*>(x)
-#define SBRB(x) SBR(x)->mButton
-#define SBRF(x) static_cast<EEUIFMainGame*>(SBR(x)->mButton->GetForm())
+#define SBRB(x) static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)
+#define SBRF(x) static_cast<EEUIFMainGame*>(static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)->GetForm())
 #define SBB(x) reinterpret_cast<EEUIFMGStatusButton*>(x)
 #define SBU(x) reinterpret_cast<EEComplexUnit*>(x)
 #define SBN(x) reinterpret_cast<EETechTreeNode*>(x)
@@ -122,11 +122,11 @@ extern "C" int64_t ee_screenscpp_sbt_conversion_cost(uintptr_t inUnit)
 { return EEGetConversionCost(SBU(inUnit)->mComplexUnit); }
 extern "C" int64_t ee_screenscpp_sbt_unload_cost() { return gFortressUnloadCost; }
 extern "C" int64_t ee_screenscpp_sbt_first_category(uintptr_t inRec)
-{ return SBR(inRec)->mFirst->GetUnitClass()->mCategory; }
+{ return static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetUnitClass()->mCategory; }
 extern "C" int64_t ee_screenscpp_sbt_first_type(uintptr_t inRec)
-{ return SBR(inRec)->mFirst->GetUnitClass()->mUnitType; }
+{ return static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetUnitClass()->mUnitType; }
 extern "C" void ee_screenscpp_sbt_send_unload(uintptr_t inRec)
-{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageUnloadTransport, {SBR(inRec)->mFirst->mUnitID, SBR(inRec)->mFirst->GetTileX(), SBR(inRec)->mFirst->GetTileY()}), kSlotNone); }
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageUnloadTransport, {static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->mUnitID, static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetTileX(), static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetTileY()}), kSlotNone); }
 extern "C" void ee_screenscpp_sbt_send_research(uintptr_t inRec, bool inShift)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageResearchTechnology, {SBRB(inRec)->mUnitID, SBRB(inRec)->mTechnology, inShift}), kSlotNone); }
 extern "C" void ee_screenscpp_sbt_send_remove(uintptr_t inRec, bool inShift)
