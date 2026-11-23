@@ -68,11 +68,18 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
         }
         Op::Install => {
             if i[0] == 0 {
-                go(Op::FxInstallDebug, 0, &[]);
+                // the game's debug output (PlatDebugOutput: GX's log, EE-AI lines, ...) to stderr
+                ee_base::plat_core::sim::PlatDebugSetHandler(Some(debug_to_stderr));
                 go(Op::FxInstallFault, 0, &[]);
             } else {
                 go(Op::FxInstallLasso, 0, &[]);
-                go(Op::FxInstallMessageHook, 0, &[]);
+                // each executed input's view (gEEMessageExecutedTestHook, gamecpp globals.rs)
+                let hook: unsafe extern "C" fn(*mut std::ffi::c_void, i32) = message_hook;
+                // SAFETY: the physics' hook pointer, set before a game runs
+                unsafe {
+                    *std::ptr::addr_of_mut!(crate::gamecpp::globals::gEEMessageExecutedTestHook) =
+                        hook as *mut std::ffi::c_void
+                };
             }
             0
         }
@@ -492,5 +499,47 @@ mod tests {
     #[test]
     fn a_selection_is_thirty_two_bits() {
         assert_eq!(0xffff_ffffi64 as u32 as i32 as i64, -1);
+    }
+}
+
+/// The debug line the debugger harness read (no debugger runs under the fixture driver): "debugstring <text>", with a
+/// new line unless the text ends in one (was EETestFixture.cpp's DebugToStderr).
+pub fn debug_line(text: &[u8]) -> Vec<u8> {
+    let mut line = b"debugstring ".to_vec();
+    line.extend_from_slice(text);
+    if text.last() != Some(&10) {
+        line.push(10); // a new line
+    }
+    line
+}
+
+/// PlatDebugSetHandler's handler: the line on the C library's stderr, flushed.
+///
+/// # Safety
+/// `text` is NULL or NUL-ended.
+unsafe extern "C" fn debug_to_stderr(text: *const std::ffi::c_char) {
+    let text = if text.is_null() { &[][..] } else { unsafe { std::ffi::CStr::from_ptr(text) }.to_bytes() };
+    crate::sim_driver::stdio::write(2, &debug_line(text), true);
+}
+
+/// gEEMessageExecutedTestHook (EEPhysics::DrainInput, the world's write lock held): an input message before (phase
+/// 0) and after (1) it executes, and whether the local player sent it (was EETestFixture.cpp's MessageHook).
+///
+/// # Safety
+/// `message` is the executing message.
+unsafe extern "C" fn message_hook(message: *mut std::ffi::c_void, phase: i32) {
+    let m = message as u64;
+    let kind = go(Op::FxMessageType, m, &[]) as u64;
+    let local = go(Op::FxMessageLocal, m, &[]) != 0;
+    super::orders::message(m, kind, local, phase);
+}
+
+#[cfg(test)]
+mod debug_line_tests {
+    #[test]
+    fn a_new_line_unless_the_text_ends_in_one() {
+        assert_eq!(super::debug_line(b"GX up"), b"debugstring GX up\x0a");
+        assert_eq!(super::debug_line(b"x\x0a"), b"debugstring x\x0a");
+        assert_eq!(super::debug_line(b""), b"debugstring \x0a");
     }
 }

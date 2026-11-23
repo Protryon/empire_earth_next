@@ -17,17 +17,16 @@ pub const EE_SIM_DRIVER_CONTINUE: c_int = -1;
 /// line, 66 a file that cannot be opened).
 ///
 /// # Safety
-/// `argv` holds `argc` NUL-ended texts; `host` and `events` point to filled tables (copied).
+/// `argv` holds `argc` NUL-ended texts; `host` points to a filled table (copied).
 #[no_mangle]
 pub unsafe extern "C" fn ee_sim_driver_main(
     argc: c_int,
     argv: *const *const c_char,
     host: *const EeSimDriverHost,
-    events: *const EeSimDriverEvents,
 ) -> c_int {
     let start = Instant::now();
     // SAFETY: the caller's contract
-    let (game, events) = unsafe { (CppGame(*host), *events) };
+    let (game, events) = unsafe { (CppGame(*host), EeSimDriverEvents::game()) };
     let args: Vec<String> = (1..argc.max(1) as usize)
         // SAFETY: argv's entries are NUL-ended texts
         .map(|i| unsafe { CStr::from_ptr(*argv.add(i)) }.to_string_lossy().into_owned())

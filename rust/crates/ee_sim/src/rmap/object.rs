@@ -15,7 +15,10 @@
 
 #![allow(clippy::unnecessary_cast)] // `long` and `unsigned long` are 32-bit here, 64-bit on LP64
 
-use std::ffi::{c_long, c_ulong, c_void};
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
+use std::sync::Mutex;
+
+use ee_base::plat_core::utf8;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use ee_base::math::types::Ge2DPoint;
@@ -142,18 +145,7 @@ pub enum EeRmapCpp {
     /// `ESDebugOut("%s", a0)`
     DebugOut,
     Time,
-    // ---- the generator list (EERandomMap::sRandomMapGenerators; p: the script search, EERMFind)
-    GeneratorsClear,
-    GeneratorsSort,
-    GeneratorCount,
-    /// `PlatMbsICmp(sRandomMapGenerators[a0].mName, *(UWideString*)a1) == 0`
-    GeneratorMatches,
-    /// `PlatStrICmp(sRandomMapGenerators[a0].mModuleName, "Default") == 0`
-    GeneratorIsDefault,
-    /// the generator's name into the sink a1
-    GeneratorName,
-    /// a generator pushed: its name, module and display name (C strings a0, a1, a2)
-    GeneratorPush,
+    // ---- the script search (p: the EERMFind)
     FindNew,
     FindDelete,
     /// `mDirectory.GetFirstFile("*.rmv", mFile)`
@@ -1149,7 +1141,7 @@ fn debug_out(line: &str) {
 /// linked generator (Default), with its string table display name (else its name), sorted by display name (the C++'s
 /// `std::sort`); at least one.
 pub fn initialize_generators() {
-    h(O::GeneratorsClear, 0, &[]);
+    let mut list = Vec::new();
     debug_out(
         "EERandomMap::Initialize: Default random map generator detected.
 ",
@@ -1175,14 +1167,8 @@ pub fn initialize_generators() {
                             }
                             None => g.name.clone(),
                         };
-                        let c = |b: &[u8]| {
-                            let mut v = b.to_vec();
-                            v.push(0);
-                            v
-                        };
-                        let (name, module, display) = (c(&g.name), c(&g.module), c(&display));
-                        let at = |v: &Vec<u8>| v.as_ptr() as usize as i64;
-                        h(O::GeneratorPush, 0, &[at(&name), at(&module), at(&display)]);
+                        let module = g.module.split(|&c| c == 0).next().unwrap_or(&[]).to_vec();
+                        list.push(Generator::new(&g.name, &display, &module));
                     }
                 }
             }
@@ -1192,8 +1178,103 @@ pub fn initialize_generators() {
         }
     }
     h(O::FindDelete, find, &[]);
-    h(O::Verify, 0, &[(h(O::GeneratorCount, 0, &[]) > 0) as i64, 1652]);
-    h(O::GeneratorsSort, 0, &[]);
+    h(O::Verify, 0, &[(!list.is_empty()) as i64, 1652]);
+    sort_generators(&mut list);
+    *generators() = list;
+}
+
+/// One random map generator (the C++'s `EERMGenerator`, 0x38 bytes): each text NUL-terminated for the C++.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Generator {
+    /// The script's name (the game options' map type).
+    pub name: Vec<u8>,
+    /// The string table's display name, else the name.
+    pub display: Vec<u8>,
+    /// The generator plug-in the script names ("Default").
+    pub module: Vec<u8>,
+}
+
+impl Generator {
+    pub fn new(name: &[u8], display: &[u8], module: &[u8]) -> Generator {
+        let z = |b: &[u8]| [b, &[0]].concat();
+        Generator { name: z(name), display: z(display), module: z(module) }
+    }
+    fn text(field: &[u8]) -> &[u8] {
+        &field[..field.len() - 1]
+    }
+}
+
+/// The generator list (`EERandomMap::sRandomMapGenerators`): set by [`initialize_generators`], read by the screens
+/// (their pointers stay valid until the list is set again or cleared).
+static GENERATORS: Mutex<Vec<Generator>> = Mutex::new(Vec::new());
+
+fn generators() -> std::sync::MutexGuard<'static, Vec<Generator>> {
+    GENERATORS.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// `std::sort` by display name (`UWideString::operator<`: the multibyte order). A stable sort: the C++'s insertion
+/// sort for up to 32 entries is stable too.
+pub fn sort_generators(list: &mut [Generator]) {
+    list.sort_by(|a, b| utf8::compare(Generator::text(&a.display), Generator::text(&b.display)).cmp(&0));
+}
+
+/// The index of the generator named `name` (`==`: the multibyte order's equality).
+pub fn find_generator(list: &[Generator], name: &[u8]) -> Option<usize> {
+    list.iter().position(|g| utf8::compare(Generator::text(&g.name), name) == 0)
+}
+
+/// `EERMGetNumberOfGenerators`.
+#[no_mangle]
+pub extern "C" fn ee_rmap_generator_count() -> c_ulong {
+    generators().len() as c_ulong
+}
+
+/// A generator's name (`display` false) or display name as a C string ("" past the end); valid until the list
+/// changes.
+#[no_mangle]
+pub extern "C" fn ee_rmap_generator_text(index: c_ulong, display: bool) -> *const c_char {
+    match generators().get(index as usize) {
+        Some(g) => if display { &g.display } else { &g.name }.as_ptr().cast(),
+        None => c"".as_ptr(),
+    }
+}
+
+/// `EERMFindGenerator`: 0 and the index in `out`, else 3.
+///
+/// # Safety
+/// `name` is a C string; `out` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rmap_find_generator(name: *const c_char, out: *mut c_ulong) -> c_long {
+    // SAFETY: the caller's guarantee
+    match find_generator(&generators(), unsafe { CStr::from_ptr(name) }.to_bytes()) {
+        Some(index) => {
+            // SAFETY: the caller's guarantee
+            unsafe { *out = index as c_ulong };
+            0
+        }
+        None => 3,
+    }
+}
+
+/// `EERMGetGeneratorDisplayName(name)`: the named generator's display name, else `name` itself.
+///
+/// # Safety
+/// `name` is a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rmap_generator_display(name: *const c_char) -> *const c_char {
+    let list = generators();
+    // SAFETY: the caller's guarantee
+    match find_generator(&list, unsafe { CStr::from_ptr(name) }.to_bytes()) {
+        Some(index) => list[index].display.as_ptr().cast(),
+        None => name,
+    }
+}
+
+/// `EEClearRandomMapGenerators` (the shutdown's): 0.
+#[no_mangle]
+pub extern "C" fn ee_rmap_generators_clear() -> c_long {
+    generators().clear();
+    0
 }
 
 /// `EERandomMap::Initialize` (its directory argument is unused, as the original's).
@@ -1213,23 +1294,24 @@ pub unsafe extern "C" fn ee_rmap_create_random_map(
     context: *mut c_void,
     map: *mut c_void,
     player: u32,
-    generator: *const c_void,
+    generator: *const c_char,
     seed: u32,
     out: *mut f32,
 ) -> i32 {
-    let count = h(O::GeneratorCount, 0, &[]);
-    let mut index = 0;
-    while index < count {
-        if h(O::GeneratorMatches, 0, &[index, generator as usize as i64]) != 0 {
-            break;
-        }
-        index += 1;
-    }
-    h(O::Verify, 0, &[(index < count) as i64, 1340]);
-    if h(O::GeneratorIsDefault, 0, &[index]) == 0 {
+    let found = {
+        // SAFETY: the caller's guarantee
+        let generator = unsafe { CStr::from_ptr(generator) }.to_bytes();
+        let list = generators();
+        // `PlatMbsICmp(mName, generator) == 0`
+        list.iter().find(|g| utf8::compare_folded(Generator::text(&g.name), generator) == 0).cloned()
+    };
+    h(O::Verify, 0, &[found.is_some() as i64, 1340]);
+    let Some(found) = found else { return 7 };
+    // `PlatStrICmp(mModuleName, "Default") == 0`
+    if utf8::compare_folded(Generator::text(&found.module), b"Default") != 0 {
         return 7;
     }
-    let script = text(O::GeneratorName, 0, &[index]);
+    let script = Generator::text(&found.name).to_vec();
     let location = create_random_map(World { context: context as usize, map: map as usize }, player, &script, seed);
     // SAFETY: the caller's guarantee
     unsafe { std::ptr::copy_nonoverlapping(location.as_ptr(), out, 3) };
@@ -1306,5 +1388,31 @@ mod tests {
         assert_eq!(s.is_space_map, 1);
         assert_eq!(s.kind_spacing[3], [4, 5]);
         assert_eq!(s.ring.min_radius, 2.0);
+    }
+}
+
+#[cfg(test)]
+mod generator_tests {
+    use super::*;
+
+    #[test]
+    fn generators_sort_by_display_name_and_keep_equal_ones_in_order() {
+        let mut list = vec![
+            Generator::new(b"b", b"Zulu", b"Default"),
+            Generator::new(b"a", b"Alpha", b"Default"),
+            Generator::new(b"c", b"Zulu", b"Default"),
+        ];
+        sort_generators(&mut list);
+        let names: Vec<&[u8]> = list.iter().map(|g| Generator::text(&g.name)).collect();
+        assert_eq!(names, [&b"a"[..], b"b", b"c"]);
+        assert_eq!(list[0].display, b"Alpha\0");
+    }
+
+    #[test]
+    fn a_generator_is_found_by_its_exact_name() {
+        let list = vec![Generator::new(b"Continental", b"Continents", b"Default")];
+        assert_eq!(find_generator(&list, b"Continental"), Some(0));
+        assert_eq!(find_generator(&list, b"continental"), None);
+        assert_eq!(find_generator(&list, b"Continental2"), None);
     }
 }

@@ -26,7 +26,6 @@
 #include "ee/EERules.h"
 #include "rust/sim/rmap.h"
 
-std::vector<EERMGenerator> EERandomMap::sRandomMapGenerators;
 
 // The world a random map is made in (ee_rmap_cpp's p)
 struct EERMWorld {
@@ -174,19 +173,6 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;
     case O::Time: return TMGetTime();
-    // the generator list
-    case O::GeneratorsClear: EERandomMap::sRandomMapGenerators.clear();
-        break;
-    // a predicate: the sort COMDATs pass a 4-byte P (0x68b733 _Unguarded_insert, _Adjust_heap); provisional name
-    case O::GeneratorsSort: std::sort(EERandomMap::sRandomMapGenerators.begin(), EERandomMap::sRandomMapGenerators.end(), std::less<EERMGenerator>());
-        break;
-    case O::GeneratorCount: return (int64_t)EERandomMap::sRandomMapGenerators.size();
-    case O::GeneratorMatches: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)EERandomMap::sRandomMapGenerators[(size_t)a[0]].mName), reinterpret_cast<const unsigned char*>((const char*)*(const UWideString*)a[1])) == 0;
-    case O::GeneratorIsDefault: return PlatStrICmp(EERandomMap::sRandomMapGenerators[(size_t)a[0]].mModuleName, kEERMGeneratorName) == 0;
-    case O::GeneratorName: EERMText(a[0], UString((const char*)EERandomMap::sRandomMapGenerators[(size_t)a[1]].mName));
-        break;
-    case O::GeneratorPush: EERandomMap::sRandomMapGenerators.push_back(EERMGenerator{UWideString((const char*)a[0]), UWideString((const char*)a[2]), UString((const char*)a[1])});
-        break;
     case O::FindNew: return P64(new EERMFind);
     case O::FindDelete: delete (EERMFind*)p;
         break;
@@ -231,51 +217,35 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
                                   GE3DPoint& outLocation)
 {
     EERMWorld theWorld = {inMap, &inPlayers, inOptions};
-    return ee_rmap_create_random_map(&theWorld, inMap, (uint32_t)inPlayer, &inGenerator, (uint32_t)inSeed, &outLocation.mX);
+    return ee_rmap_create_random_map(&theWorld, inMap, (uint32_t)inPlayer, inGenerator, (uint32_t)inSeed, &outLocation.mX);
 }
 
-// Returns the number of random-map generators
+// The generator list is ee_sim rmap object.rs' (initialize_generators): the names by value
 unsigned long EERMGetNumberOfGenerators()
 {
-    return EERandomMap::sRandomMapGenerators.size();
+    return ee_rmap_generator_count();
 }
 
-// Returns a generator's display name by index
-const UWideString& EERMGetGeneratorDisplayName(unsigned long inIndex)
+UWideString EERMGetGeneratorDisplayName(unsigned long inIndex)
 {
-    return EERandomMap::sRandomMapGenerators[inIndex].mDisplayName;
+    return UWideString(ee_rmap_generator_text(inIndex, true));
 }
 
-// Returns the display name of the generator with the given name, or the name itself when none matches
-const UWideString& EERMGetGeneratorDisplayName(const UWideString& inName)
+// the display name of the generator with the given name, or the name itself when none matches
+UWideString EERMGetGeneratorDisplayName(const UWideString& inName)
 {
-    unsigned long i; for (i = 0; i < EERandomMap::sRandomMapGenerators.size(); i++) {
-        if (inName == EERandomMap::sRandomMapGenerators[i].mName)
-            break;
-    }
-    if (i < EERandomMap::sRandomMapGenerators.size())
-        return EERandomMap::sRandomMapGenerators[i].mDisplayName;
-    return inName;
+    return UWideString(ee_rmap_generator_display(inName));
 }
 
-// Returns a generator's name by index
-const UWideString& EERMGetGeneratorName(unsigned long inIndex)
+UWideString EERMGetGeneratorName(unsigned long inIndex)
 {
-    return EERandomMap::sRandomMapGenerators[inIndex].mName;
+    return UWideString(ee_rmap_generator_text(inIndex, false));
 }
 
-// Finds a generator by name and returns its index; returns 3 when there is none
+// a generator's index by name; 3 when there is none
 long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex)
 {
-    long theResult = 3;
-    for (unsigned long i = 0; i < EERandomMap::sRandomMapGenerators.size(); i++) {
-        if (inName == EERandomMap::sRandomMapGenerators[i].mName) {
-            theResult = 0;
-            outIndex = i;
-            break;
-        }
-    }
-    return theResult;
+    return ee_rmap_find_generator(inName, &outIndex);
 }
 
 // Lists the random-map generators: each .rmv script naming the linked generator (Default), with its string-table
@@ -290,6 +260,5 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
 // (cdecl; provisional name)
 long EEClearRandomMapGenerators()
 {
-    EERandomMap::sRandomMapGenerators.clear();
-    return 0;
+    return ee_rmap_generators_clear();
 }

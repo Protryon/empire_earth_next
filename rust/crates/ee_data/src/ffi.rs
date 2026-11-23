@@ -4,6 +4,7 @@
 
 use crate::content::{compile_table, text_extension, Content};
 use crate::dump::dump_table;
+use crate::generated::rules_gen;
 use crate::node::Kind;
 use crate::rules::{self, Rules};
 use crate::spec::{find_table, table};
@@ -318,6 +319,7 @@ pub unsafe extern "C" fn ee_data_civ_read(
 /// The rules (ee/EERules.h, its `mRust`). Every field starts at its default.
 pub struct EeDataRules {
     rules: Rules,
+    mirror: rules::MirrorStore,
 }
 
 impl EeDataRules {
@@ -330,7 +332,7 @@ impl EeDataRules {
 
 #[no_mangle]
 pub extern "C" fn ee_data_rules_new() -> *mut EeDataRules {
-    Box::into_raw(Box::new(EeDataRules { rules: Rules::default() }))
+    Box::into_raw(Box::new(EeDataRules { rules: Rules::default(), mirror: rules::MirrorStore::default() }))
 }
 
 /// # Safety
@@ -361,13 +363,25 @@ pub unsafe extern "C" fn ee_data_rules_load(
     }
 }
 
-/// The snapshot the C++ `EERules` decodes (EERulesGenDecode.inl).
+/// Writes the C++ `EERulesData` (ee/EERulesGen.h) of the rules in place: its lists and texts point into storage the
+/// rules own until the next call. `sizes` are the C++ structs' sizes (`kEERulesMirrorSizes`); a layout that differs
+/// from the Rust mirror's stops the game.
 ///
 /// # Safety
-/// `rules` live, `out` writable.
+/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call), `sizes` readable for `count`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_rules_encode(rules: *const EeDataRules, out: *mut EeDataBytes) {
-    *out = EeDataBytes::from_vec((*rules).rules.encode());
+pub unsafe extern "C" fn ee_data_rules_mirror(
+    rules: *mut EeDataRules,
+    out: *mut c_void,
+    sizes: *const usize,
+    count: usize,
+) {
+    let theirs = std::slice::from_raw_parts(sizes, count);
+    assert_eq!(theirs, &rules_gen::mirror_sizes()[..], "ee/EERulesGen.h's layout is not rules_gen.rs's");
+    let mut store = rules::MirrorStore::default();
+    let data = (*rules).rules.mirror(&mut store);
+    std::ptr::write(out as *mut rules_gen::RulesDataC, data);
+    (*rules).mirror = store;
 }
 
 /// The content dump of the rules (`"rules.<doc>":{...}` lines).
@@ -624,8 +638,10 @@ mod tests {
             let mut out = EeDataBytes::empty();
             ee_data_rules_dump(r, &mut out);
             assert!(take(&mut out).starts_with(b"\"rules.combat\":{\"minimum_damage\":2,"));
-            ee_data_rules_encode(r, &mut out);
-            assert!(!take(&mut out).is_empty());
+            let sizes = rules_gen::mirror_sizes();
+            let mut data = std::mem::MaybeUninit::<rules_gen::RulesDataC>::uninit();
+            ee_data_rules_mirror(r, data.as_mut_ptr() as *mut c_void, sizes.as_ptr(), sizes.len());
+            assert_eq!(data.assume_init().combat.minimum_damage, 2);
             let flags = [true; 14];
             ee_data_rules_set_music_from_flags(r, 3, flags.as_ptr(), flags.len());
             ee_data_rules_free(r);

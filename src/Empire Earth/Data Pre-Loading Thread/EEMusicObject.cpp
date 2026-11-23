@@ -27,13 +27,6 @@
 
 URandomIntegers gMusicRandom;
 
-// Reads a song override from Data\Music\New Music.txt (file name, four reverb values; every epoch on) into a dbmusic
-// record (ee_data tables.rs); returns 0 when the file was read
-long EEMusicObject::ReadNewMusic(unsigned char* outRecord)
-{
-    return ee_preload_read_new_music(outRecord);
-}
-
 // Creates an unloaded song from its record (name + ".sgt", reverb, epochs; the space epoch copies nano's flag: the
 // record and its copy are ee_data tables.rs')
 EEMusicObject::EEMusicObject(const unsigned char* inRecord) : EeDataMediaUse()
@@ -56,26 +49,13 @@ EEMusicObject::~EEMusicObject()
 // table's per-epoch flags, as in the original (the space age plays the nano age's songs).
 long EEMusicObject::LoadTable(FSFile* inFile)
 {
-    std::vector<unsigned char> theRecord(ee_data_music_record_size(), 0);
-    EERules& theRules = EEGetRules();
-    ee_data_songs_reset(theRules.mEpochs.size());   // the songs by epoch: ee_data tables.rs
-    gMusicRandom.SetSeed(TMGetTime());
-    long theResult = EEMusicObject::ReadNewMusic(theRecord.data());
-    if (theResult != 0) {
-        std::vector<EEMusicObject*> theSongs;   // by row
-        theResult = EEDbReadRecords(inFile, ee_data_music_record_size(),
-            [](unsigned long) { return true; },
-            [&](unsigned long inIndex, const unsigned char* inRow) {
-                bool theFlags[14];
-                theSongs.push_back(new EEMusicObject(inRow));
-                ee_data_music_epoch_flags(inRow, theFlags);
-                theRules.SetMusicFromFlags((long)inIndex, theFlags, 14);   // (no-op when epochs.yaml has them)
-            });
-        ee_preload_add_epoch_songs(reinterpret_cast<void* const*>(theSongs.data()), theSongs.size());   // preload_media.rs
-    } else {
-        ee_preload_add_song_to_every_epoch(new EEMusicObject(theRecord.data()));   // the override plays in every epoch
-    }
-    return theResult;
+    return ee_preload_load_music(inFile);   // (preload_media.rs; the override: Data\Music\New Music.txt)
+}
+
+// This unit's database lock (the songs' uses: preload_media.rs)
+TSCriticalSection* EEMusicDatabaseLock()
+{
+    return sDatabaseLock.mLock;
 }
 
 // Releases every song and empties all epoch song lists and shuffled lists
@@ -94,29 +74,13 @@ EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
 // Loads the song's score on first use (counting later uses, which wait for the load); returns the load result
 long EEMusicObject::LoadScore()
 {
-    SEConductor& theConductor = gConductor->GetConductor();
-    return EEMediaAcquire(this, sDatabaseLock.mLock, [&] {
-        long theID;
-        long theResult = theConductor.LoadScore(this->mFileName, theID);
-        if (theResult == 0)
-            this->mScoreID = theID;
-        return theResult;
-    }, [] {}, true);
+    return ee_preload_music_load_score(this);   // (preload_media.rs)
 }
 
 // Counts one use down; on the last use unloads the score unless the conductor reports it busy (5)
 long EEMusicObject::UnloadScore()
 {
-    SEConductor& theConductor = gConductor->GetConductor();
-    long theResult = 0;
-    EEMediaRelease(this, sDatabaseLock.mLock, [&] {
-        theResult = theConductor.UnloadScore(this->mScoreID);
-        if (theResult == 5)
-            return false;
-        this->mScoreID = -1;
-        return true;
-    });
-    return theResult;
+    return ee_preload_music_unload_score(this);   // (preload_media.rs)
 }
 
 // (0x4da37a: vector<EEMusicObject*>::push_back, ICF-shared)

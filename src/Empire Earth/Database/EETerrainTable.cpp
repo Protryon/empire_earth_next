@@ -146,7 +146,6 @@ EETerrainTable::~EETerrainTable()
 
 // ------------------------------------------------------------------------- round 10, lane B: the terrain tables' C++
 
-int64_t EECore10OpB3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEButtonObject.cpp
 
 static_assert(kStageOpModulate == 2 && kAddressingClamp == 0 && kMipFilterNone == 0 && kMipFilterPoint == 1 &&
               kMipFilterLinear == 2, "gamecpp db_media.rs");
@@ -155,76 +154,3 @@ static_assert(kStageOpModulate == 2 && kAddressingClamp == 0 && kMipFilterNone =
 #define TT ((EETerrainTable*)p)
 #define CLIFF ((EECliffTerrainTable*)p)
 
-// the terrain tables' C++ calls and members (gamecpp db_media.rs; p the terrain or the cliff terrain): one statement
-// each
-int64_t EECore10OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::DtTerrainFields: return P64(static_cast<EeDataTerrainFields*>(TT));
-    case O::DtTerrainUse: return P64(static_cast<EeDataMediaUse*>(TT));
-    case O::DtTerrainLock: return P64(sDatabaseLock.mLock);
-    case O::DtTerrainNew: return P64(new EETerrainTable);
-    case O::DtTerrainDelete: delete TT;
-        break;
-    case O::DtTerrainResize: EETerrainTable::sTable.resize((unsigned long)a[0], NULL);
-        break;
-    case O::DtTerrainCount: return (int64_t)EETerrainTable::sTable.size();
-    case O::DtTerrainAt: return P64(EETerrainTable::sTable[a[0]]);
-    case O::DtTerrainSet: EETerrainTable::sTable[a[0]] = (EETerrainTable*)a[1];
-        break;
-    case O::DtTerrainGet: return P64(EETerrainTable::Get((long)a[0]));
-    case O::DtDefaultTerrain: return P64(&gDefaultTerrain);
-    case O::DtFirstCliffTerrain: return P64(&gFirstCliffTerrain);
-    case O::DtTerrainFirstTexture: return P64(&TT->mFirstTexture);
-    case O::DtTerrainTextureSetId: return TT->mTextureSetID;
-    case O::DtTerrainTextures: return P64(&TT->mTextures);
-    case O::DtTerrainPreview: return P64(&TT->mPreviewTexture);
-    case O::DtTerrainLoadTextureName: TT->mTextureName.Load(*(FSFile*)a[0]);
-        break;
-    case O::DtTerrainTextureName: return P64((const char*)TT->mTextureName);
-    case O::DtTerrainCopyName: EEDbCopyName(TT->mName, *(const EeDataName*)a[0]);
-        break;
-    case O::DtTerrainName: return P64((const char*)TT->mName);
-    case O::DtTerrainNameLength: return (int64_t)TT->mName.GetLength();
-    case O::DtTerrainPushClass: TT->mUnitClasses.push_back((long)a[0]);
-        break;
-    case O::DtTerrainClassCount: return (int64_t)TT->mUnitClasses.size();
-    case O::DtTerrainClass0: return TT->mUnitClasses[0];
-    case O::DtTerrainColor: TT->mColor = GEColor(f[0], f[1], f[2]);
-        break;
-    case O::DtTerrainNewTextures: TT->mTextures = new GETexture*[(unsigned long)a[0]];
-        break;
-    case O::DtTerrainDeleteTextures: delete[] std::exchange(TT->mTextures, nullptr);
-        break;
-    case O::DtTerrainLoadTexture: return P64(gTextureManager->LoadTexture(UString((const char*)a[0]), GETextureDescription{1, 0, gTexturePixelDepth, gTerrainMIPLevelsToDrop, false, false, TT->mHasAlpha, true}));
-    case O::DtTrilinearFilter: return gTrilinearFilter;
-    case O::DtTexSetFrame: ((GETexture*)p)->SetFrame((unsigned long)a[0]);
-        break;
-    case O::DtTexDereference: ((GETexture*)p)->Dereference();
-        break;
-    case O::DtMeshTextureSet: return P64(((GETerrainMesh*)p)->GetRegisteredTextureSet((unsigned long)a[0]));
-    case O::DtSetTexture: ((GETextureSet*)p)->SetTexture((unsigned long)a[0], (unsigned long)a[1], (GETexture*)a[2]);
-        break;
-    case O::DtClassButton: return P64(((EEUnitClass*)p)->mButton);
-    case O::DtCliffNew: return P64(new EECliffTerrainTable);
-    case O::DtCliffDelete: delete CLIFF;
-        break;
-    case O::DtCliffFields: return P64(static_cast<EeDataCliffTerrainFields*>(CLIFF));
-    case O::DtCliffCopyName: EEDbCopyName(CLIFF->mName, *(const EeDataName*)a[0]);
-        break;
-    case O::DtCliffResize: EETerrainTable::sCliffTable.resize((unsigned long)a[0], NULL);
-        break;
-    case O::DtCliffCount: return (int64_t)EETerrainTable::sCliffTable.size();
-    case O::DtCliffAt: return P64(EETerrainTable::sCliffTable[a[0]]);
-    case O::DtCliffSet: EETerrainTable::sCliffTable[a[0]] = (EECliffTerrainTable*)a[1];
-        break;
-    case O::DtCliffClear: EETerrainTable::sCliffTable.clear();
-        break;
-    case O::DtFileReadRecord: return ((FSFileSpec*)p)->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
-    case O::DtFilePrint: fprintf(*(FSFileSpec*)p, "%s", (const char*)a[0]);
-        break;
-    default: return EECore10OpB3(inOp, p, a, f);
-    }
-    return 0;
-}

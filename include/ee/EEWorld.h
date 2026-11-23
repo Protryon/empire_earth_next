@@ -137,7 +137,6 @@ public:
     void NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x13c0cb (each player's VirtualA0)
     void MarkPlayerOut(unsigned long inPlayer);  // 0x13c2a2 (marks the player out: mObserverMode, its options slot type 2)
     void UnloadMedia();                     // 0x13c772 (LoadMedia's twin)
-    void TeamsChanged();                    // (an empty member: ICF-folded into 0xe123d)
 
     EEStatisticsHistory mStatistics;        // +0x0d8 (provisional name; Reset() again at the end of the ctor)
     EEGameOptions& GetGameOptions() { return this->mGameOptions; }

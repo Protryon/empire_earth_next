@@ -14,6 +14,8 @@
 #include "lle/SESample.h"
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
+#include "lle/URandom.h"
+#include "lle/SEMixer.h"
 
 #include "ee/RTSGraphics.h"
 #include "ee/EEGameSound.h"
@@ -41,27 +43,14 @@ EESoundObject::EESoundObject() : EeDataSoundFields(), EeDataMediaUse()
 // Destroys the sound, unloading its sample if it is loaded
 EESoundObject::~EESoundObject()
 {
-    if (this->mMediaCount > 0) {
-        this->mMediaCount = 1;
-        this->UnloadMedia();
-    }
+    ee_preload_sound_free(this);   // (preload_media.rs)
 }
 
 // Reads the sound table (each record after its sample's name; the record and its copy are ee_data tables.rs':
 // instance limit, category, looping, volume percent); returns the last read result
 long EESoundObject::LoadTable(FSFile* inFile)
 {
-    EESoundObject* theSound = NULL;
-    return EEDbReadLeadRecords(inFile, ee_data_sound_record_size(),
-        [](unsigned long inCount) { gSoundObjects.resize(inCount, NULL); return true; },
-        [&](unsigned long) {
-            theSound = new EESoundObject;
-            theSound->mName.Load(*inFile);
-        },
-        [&](unsigned long inIndex, const unsigned char* inRecord) {
-            ee_data_sound_from_record(inRecord, theSound);
-            gSoundObjects[inIndex] = theSound;
-        });
+    return ee_preload_load_sounds(inFile);   // (preload_media.rs)
 }
 
 // Deletes every sound of the table and empties it
@@ -79,12 +68,7 @@ void EESoundObject::Dump(FSFileSpec& inFile)
 // Loads the sound's sample on first use (later uses wait for the load: ee/EEMediaUse.h); returns 9 on failure
 long EESoundObject::LoadMedia()
 {
-    return EEMediaAcquire(this, sDatabaseLock.mLock, [this]() -> long {
-        if (this->mName.GetLength() <= 0)
-            return 9;
-        this->mSampleID = gSoundManager->Load(this->mName, this->mCategory, this->mMaxInstances);
-        return !UIsNone32(this->mSampleID) ? 0 : 9;
-    });
+    return ee_preload_sound_load_media(this);   // (preload_media.rs)
 }
 
 // Sets the sound's volume (folded with EEContagionHelper::SetFunctor in the original: the store to +0x14; a float
@@ -109,11 +93,7 @@ long EESoundObject::Play(float inVolume, float inPan, float inPitch)
 // Counts one use down; on the last use unloads the sample. Returns 0
 long EESoundObject::UnloadMedia()
 {
-    EEMediaRelease(this, sDatabaseLock.mLock, [this] {
-        gSoundManager->Unload(this->mSampleID);
-        this->mSampleID = 0;
-    });
-    return 0;
+    return ee_preload_sound_unload_media(this);   // (preload_media.rs; 0)
 }
 
 // A text into the Rust side's sink
@@ -123,11 +103,20 @@ static void EEPreloadMediaText(int64_t inSink, const char* inText)
 }
 
 extern std::vector<EEMedia*> gMediaTable;   // (EEGraphicObject.cpp)
+extern URandomIntegers gMusicRandom;        // (EEMusicObject.cpp)
+TSCriticalSection* EEMusicDatabaseLock();   // (EEMusicObject.cpp: that unit's sDatabaseLock)
+
+// The graphic object's name slots in its table's order (preload_media.rs GraphicName)
+static UString** EEGraphicObjectName(EEGraphicObject* inObject, int64_t inSlot)
+{
+    return inSlot == 0 ? &inObject->mFileName : inSlot == 1 ? &inObject->mTextureName : inSlot == 30 ? &inObject->mShadowModelName : inSlot == 31 ? &inObject->mShadowTextureName : (inSlot & 1) == 0 ? &inObject->mTextureNames[(inSlot - 2) / 2] : &inObject->mModelNames[(inSlot - 2) / 2];
+}
 
 #define GO(x) static_cast<EEGraphicObject*>((EEMedia*)(x))
 #define GFX(x) ((EEGraphicEffect*)(x))
 #define SO(x) ((EESoundObject*)(x))
 #define SPEC(x) ((FSFileSpec*)(x))
+#define MO(x) ((EEMusicObject*)(x))
 
 // The media objects' calls (ee_game preload_media.rs EePreloadMediaCpp): p the object named, a the integers, f the
 // floats
@@ -189,6 +178,63 @@ extern "C" int64_t ee_preload_mediacpp(EePreloadMediaCpp inOp, uintptr_t p, cons
     case O::SongReference: ((EEMusicObject*)p)->Reference();
         break;
     case O::SongDereference: ((EEMusicObject*)p)->Dereference();
+        break;
+    // the tables' loads and the media uses
+    case O::FileOpenRead: return ((FSFile*)p)->Open(kFileAccessRead);
+    case O::FileClose: return ((FSFile*)p)->Close();
+    case O::NameNew: return (int64_t)(intptr_t)new UString;
+    case O::NameDelete: delete (UString*)p;
+        break;
+    case O::NameLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
+    case O::SoundsResize: gSoundObjects.resize((size_t)a[0], NULL);
+        break;
+    case O::SoundNew: return (int64_t)(intptr_t)new EESoundObject;
+    case O::SoundFields: return (int64_t)(intptr_t)static_cast<EeDataSoundFields*>(SO(p));
+    case O::SoundNameLoad: return SO(p)->mName.Load(*(FSFile*)a[0]);
+    case O::SoundSet: gSoundObjects[(size_t)a[0]] = SO(a[1]);
+        break;
+    case O::SoundUse: return (int64_t)(intptr_t)static_cast<EeDataMediaUse*>(SO(p));
+    case O::SoundSetSample: SO(p)->mSampleID = (unsigned long)a[0];
+        break;
+    case O::SoundLock: return (int64_t)(intptr_t)sDatabaseLock.mLock;
+    case O::MusicLock: return (int64_t)(intptr_t)EEMusicDatabaseLock();
+    case O::LockEnter: ((TSCriticalSection*)p)->Enter();
+        break;
+    case O::LockLeave: ((TSCriticalSection*)p)->Leave();
+        break;
+    case O::Sleep1: PlatSleep(1);
+        break;
+    case O::MediaTableResize: gMediaTable.resize((size_t)a[0], NULL);
+        break;
+    case O::MediaTableSet: gMediaTable[(size_t)a[0]] = (EEMedia*)a[1];
+        break;
+    case O::GraphicNew: return (int64_t)(intptr_t)static_cast<EEMedia*>(new EEGraphicObject);
+    case O::GraphicFields: return (int64_t)(intptr_t)static_cast<EeDataGraphicObjectFields*>(GO(p));
+    case O::GraphicName: *EEGraphicObjectName(GO(p), a[0]) = new UString((const char*)*(UString*)a[1]);
+        break;
+    case O::GraphicSetSound: (a[0] ? GO(p)->mSounds2 : GO(p)->mSounds1)[a[1]] = SO(a[2]);
+        break;
+    case O::GraphicNoFrames: (a[0] ? GO(p)->mSound2Frames : GO(p)->mSound1Frames)[a[1]] = -1;
+        break;
+    case O::GraphicMediaIndex: return GO(p)->mMediaIndex;
+    case O::EffectNew: return (int64_t)(intptr_t)new EEGraphicEffect(*(const EeDataGraphicEffectFields*)a[0], static_cast<EEGraphicObject*>(EEMedia::Get((unsigned long)a[1])));
+    case O::MusicNew: return (int64_t)(intptr_t)new EEMusicObject((const unsigned char*)a[0]);
+    case O::MusicSeed: gMusicRandom.SetSeed(TMGetTime());
+        break;
+    case O::RulesMusicFromFlags: EEGetRules().SetMusicFromFlags((long)a[0], (bool*)a[1], 14);
+        break;
+    case O::MusicUse: return (int64_t)(intptr_t)static_cast<EeDataMediaUse*>(MO(p));
+    case O::MusicLoadScore: return gConductor->GetConductor().LoadScore(MO(p)->mFileName, *(long*)a[0]);
+    case O::MusicSetScore: MO(p)->mScoreID = (long)a[0];
+        break;
+    case O::MusicUnloadScore: return gConductor->GetConductor().UnloadScore(MO(p)->mScoreID);
+    case O::GraphicNameDelete: delete *EEGraphicObjectName(GO(p), a[0]);
+        break;
+    case O::MediaForceUnload: return a[0] ? (SO(p)->mMediaCount = 1, SO(p)->UnloadMedia()) : (GO(p)->mMediaCount = 1, GO(p)->UnloadMedia());
+    case O::PartsCount: return a[0] == 0 ? GO(p)->mOrbitals.size() : a[0] == 1 ? GO(p)->mTurretParts.size() : GO(p)->mWheels.size();
+    case O::PartDelete: a[0] == 0 ? delete GO(p)->mOrbitals[a[1]] : a[0] == 1 ? delete GO(p)->mTurretParts[a[1]] : delete GO(p)->mWheels[a[1]];
+        break;
+    case O::PartsClear: a[0] == 0 ? GO(p)->mOrbitals.clear() : a[0] == 1 ? GO(p)->mTurretParts.clear() : GO(p)->mWheels.clear();
         break;
     }
     return 0;

@@ -170,9 +170,7 @@ void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, lon
 // cases: EEMap.cpp's EECore9OpB2)
 
 // the Rust's constants and the members it reads in place (gamecpp minimap.rs)
-static_assert(kUnitCategoryResource == 1 && kUnitTypeResForageBush == 0x37 && kUnitTypeAirport == 0x42 && kResourceStone == 4 &&
-                  kResourceGold == 5 && kResourceIron == 6,
-              "gamecpp minimap.rs");
+// (its constants are checked against the headers by gamecpp cpp_consts_tests.rs)
 static_assert(offsetof(EEMiniMap, mL12178) == offsetof(EEMiniMap, mL12174) + sizeof(void*) &&
                   offsetof(EEMiniMap, mL1217C) == offsetof(EEMiniMap, mL12178) + sizeof(long) &&
                   offsetof(EEMiniMap, mL12180) == offsetof(EEMiniMap, mL1217C) + sizeof(long) &&

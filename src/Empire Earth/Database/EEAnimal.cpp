@@ -80,43 +80,7 @@ EEMedia* EEMedia::Get(unsigned long inIndex)
 
 // ------------------------------------------------------------------------- round 10, lane B: the animals' C++
 
-int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEDataTextFile.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define ANIMAL ((EEAnimal*)p)
 
-// the animals' C++ calls and members (gamecpp db_media.rs; p the animal or the medium): one statement each
-int64_t EECore10OpB4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::DanFields: return P64(static_cast<EeDataAnimalFields*>(ANIMAL));
-    case O::DanNew: return P64(new EEAnimal);
-    case O::DanDelete: delete ANIMAL;
-        break;
-    case O::DanResize: EEAnimal::sTable.resize((unsigned long)a[0], NULL);
-        break;
-    case O::DanCount: return (int64_t)EEAnimal::sTable.size();
-    case O::DanAt: return P64(EEAnimal::sTable[a[0]]);
-    case O::DanSet: EEAnimal::sTable[a[0]] = (EEAnimal*)a[1];
-        break;
-    case O::DanClear: EEAnimal::sTable.clear();
-        break;
-    case O::DanMedia: return P64(&ANIMAL->mMedia);
-    case O::DanSoundCount: return (int64_t)ANIMAL->mSounds.size();
-    case O::DanSoundAt: return P64(ANIMAL->mSounds[a[0]]);
-    case O::DanSoundPush: ANIMAL->mSounds.push_back((EEMedia*)a[0]);
-        break;
-    case O::DanSoundsClear: ANIMAL->mSounds.clear();
-        break;
-    case O::DanListPush: ANIMAL->mL04.push_back((long)a[0]);
-        break;
-    case O::DanMediaGet: return P64(EEMedia::Get((unsigned long)a[0]));
-    case O::DanMediaLoad: ((EEMedia*)p)->LoadMedia();
-        break;
-    case O::DanMediaUnload: ((EEMedia*)p)->UnloadMedia();
-        break;
-    default: return EECore10OpB5(inOp, p, a, f);
-    }
-    return 0;
-}

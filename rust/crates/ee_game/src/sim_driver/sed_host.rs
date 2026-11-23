@@ -1,6 +1,6 @@
 //! TEST ONLY: what the scripted scenario editor ([`super::sed_steps`], [`super::sed_digest`]) asks of the game's C++
 //! objects: one host operation per C++ call or member (EESimEditor.cpp `ee_simcpp_sed`, `ee_simcpp_sed_text`,
-//! `ee_simcpp_sed_float`: a one-statement case each), the step's run on the UI thread (`ee_simcpp_sed_run`), and
+//! `ee_simcpp_sed_float`: a one-statement case each), the step's run on the UI thread ([`super::sed_run`]), and
 //! the editor's Rust objects (ee_screens) called directly.
 
 use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
@@ -452,6 +452,12 @@ pub enum EeSimDriverSed {
     SetFreeCamera,
     SetAllowCustomCivs,
     SetScenarioGame,
+    // the steps' action and end (sed_run.rs)
+    C12ActionNew,
+    C12ActionPost,
+    C12DoneNew,
+    C12DonePost,
+    C12Dereference,
 }
 
 use EeSimDriverSed as O;
@@ -463,7 +469,7 @@ pub(crate) const TRIGGER_BUTTON_UP: c_ulong = 0x3f0;
 
 /// cbindgen:ignore
 mod sys {
-    use std::ffi::{c_char, c_void};
+    use std::ffi::c_char;
 
     use super::EeSimDriverSed;
 
@@ -472,7 +478,6 @@ mod sys {
         pub fn ee_simcpp_sed(op: EeSimDriverSed, p: usize, a: *const i64, f: *const f32, s: *const c_char) -> i64;
         pub fn ee_simcpp_sed_text(op: EeSimDriverSed, p: usize, a: i64, s: *const c_char) -> *const c_char;
         pub fn ee_simcpp_sed_float(op: EeSimDriverSed, p: usize, a: *const i64, f: *const f32) -> f64;
-        pub fn ee_simcpp_sed_run(code: extern "C" fn(*mut c_void), ctx: *mut c_void) -> bool;
     }
 }
 
@@ -908,7 +913,7 @@ extern "C" fn run_code(ctx: *mut c_void) {
 pub fn run_step(mut code: StepCode<'_>, out: &mut Vec<String>) -> bool {
     let mut ctx = StepContext { code: &mut *code, out };
     // SAFETY: the host runs `run_code` on the UI thread while this thread waits for it
-    unsafe { sys::ee_simcpp_sed_run(run_code, &mut ctx as *mut StepContext as *mut c_void) }
+    super::sed_run::run(run_code, &mut ctx as *mut StepContext as *mut c_void)
 }
 
 #[cfg(test)]

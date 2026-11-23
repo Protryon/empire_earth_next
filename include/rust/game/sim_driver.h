@@ -551,6 +551,11 @@ enum class EeSimDriverSed : uint32_t {
   SetFreeCamera,
   SetAllowCustomCivs,
   SetScenarioGame,
+  C12ActionNew,
+  C12ActionPost,
+  C12DoneNew,
+  C12DonePost,
+  C12Dereference,
 };
 
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
@@ -681,6 +686,8 @@ enum class EeSimDriverSim : uint32_t {
   MissileCategory,
   TorpedoCategory,
   CaptureActive,
+  CaptureFlush,
+  PhysicsRandom,
   CaptureOnly,
   CaptureOnlyList,
   CaptureExclusive,
@@ -863,53 +870,13 @@ struct EeSimDriverHost {
   void (*dump_after_load)(const char*);
   /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
   size_t (*extension)(int32_t, char*, size_t);
-  /// `gPlatSimRun`
-  void (*set_run)(int32_t);
-  /// `gPlatSimAfterTick` to the driver's after-tick (true) or none
-  void (*set_after_tick)(bool);
   /// `gUserInterface->PostCancelGame()`
   void (*cancel_game)();
-  /// `EESimCaptureRecord::Active()`
-  bool (*capture_active)();
   /// `EECPChoiceByName` (-1: none)
   long (*engine_choice)(const char*);
-  /// the C library's environment (`_putenv_s` / `setenv`)
-  void (*set_env)(const char*, const char*);
-  /// a duplicate of the process's stderr descriptor
-  int32_t (*dup_stderr)();
-  /// stderr (descriptor 2) from the file (opened for writing) or, for NULL, back to the descriptor
-  void (*set_stderr)(const char*, int32_t);
-  /// bytes to the C library's stdout (1) or stderr (2), or to a descriptor (3 + fd); flushed when asked (stderr
-  /// always)
-  void (*write)(int32_t, const uint8_t*, size_t, bool);
-  /// --rng-trace: from game ms `ms` into the file
-  void (*rng_trace)(long, const char*);
-  /// --dump-tick: the physics' after-tick hook to the driver's
-  void (*tick_hook)();
-  /// the C library's streams and the capture flushed, then the process ended with the code
-  void (*quit)(int32_t);
   /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
   /// node of `technology`, the class's unit type), every resource summed
   long (*wonders)(uint64_t);
-};
-
-/// The screen events the driver clicks (EE_SCREENS_*, rust/game/screens.h), passed in by the C++ (the codes are
-/// ee_screens' own).
-struct EeSimDriverEvents {
-  uint32_t sp_load_game;
-  uint32_t spl_load;
-  uint32_t pc_learning;
-  uint32_t sp_campaign;
-  uint32_t pc_campaign[3];
-  uint32_t cs_start;
-  uint32_t si_start;
-  uint32_t editors_open;
-  uint32_t editors_scenario_editor;
-  uint32_t pgs_exit;
-  /// the post-game summary's form id
-  uint32_t form_post_game_summary;
-  /// the play scenario screen's Load button (kLoadGameLoadButton)
-  uint32_t load_scenario_button;
 };
 
 extern "C" {
@@ -939,11 +906,10 @@ extern int32_t _write(int32_t fd, const void *buffer, uint32_t count);
 /// line, 66 a file that cannot be opened).
 ///
 /// # Safety
-/// `argv` holds `argc` NUL-ended texts; `host` and `events` point to filled tables (copied).
+/// `argv` holds `argc` NUL-ended texts; `host` points to a filled table (copied).
 int ee_sim_driver_main(int argc,
                        const char *const *argv,
-                       const EeSimDriverHost *host,
-                       const EeSimDriverEvents *events);
+                       const EeSimDriverHost *host);
 
 /// The driver's thread started (EERun, after the engine and the threads are up, before the UI loop).
 void ee_sim_driver_start();
@@ -969,6 +935,21 @@ void ee_sim_driver_game_ended(int result);
 /// # Safety
 /// The out values are writable.
 void ee_sim_driver_preferences(long *pt_rate, long *autosave_ms);
+
+/// An action's run (EEAction::Virtual4 of the C++ action class): the step's code then its marker, or the marker's
+/// repost or end.
+///
+/// # Safety
+/// `action` is the C++ action, `state` its act from [`post`].
+void ee_sim_driver_sed_action(void *action,
+                              void *state);
+
+/// The end's run (UIEvent::ProcessEvent of the C++ event class): another round, or the clock let run and the driver
+/// woken. Always 0.
+///
+/// # Safety
+/// `state` is the event's act from [`post`].
+int64_t ee_sim_driver_sed_done(void *state);
 
 }  // extern "C"
 

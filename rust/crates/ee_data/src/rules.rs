@@ -13,6 +13,7 @@ use crate::msg::{At, Part};
 use crate::node::{Kind, Node};
 use crate::spec::table;
 use crate::text::{self, node_bool, node_float, node_int, node_scalar, parse_yaml, Res};
+use std::os::raw::{c_int, c_long};
 #[cfg(not(test))]
 use std::sync::Mutex;
 
@@ -52,28 +53,69 @@ impl RuleNumber {
     }
 }
 
-// the snapshot's primitives (rules_gen.rs; EERulesGenDecode.inl reads them back)
-pub fn enc_int(out: &mut Vec<u8>, v: i32) {
-    out.extend_from_slice(&v.to_le_bytes());
+// ------------------------------------------------------------------------------------------------ the C++ mirror
+// The C++ structs of ee/EERulesGen.h are written by Rust in place (`mirror`, rules_gen.rs): the same layout, the lists
+// and texts views into a `MirrorStore` the rules own until the next mirror.
+
+/// `EERuleNumber` (ee/EERules.h): float, long, long, int.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RuleNumberC {
+    pub float: f32,
+    pub long: c_long,
+    pub world_row: c_long,
+    pub world_value: c_int,
 }
-pub fn enc_float(out: &mut Vec<u8>, v: f32) {
-    out.extend_from_slice(&v.to_bits().to_le_bytes());
+
+impl RuleNumberC {
+    pub fn of(n: &RuleNumber) -> RuleNumberC {
+        RuleNumberC {
+            float: n.float,
+            long: n.long as c_long,
+            world_row: n.world_row as c_long,
+            world_value: n.world_value,
+        }
+    }
 }
-pub fn enc_bool(out: &mut Vec<u8>, v: bool) {
-    out.push(v as u8);
+
+/// `EERuleList<T>` (ee/EERules.h): a view of a list the store owns.
+#[repr(C)]
+pub struct RuleListC<T> {
+    pub data: *const T,
+    pub size: usize,
 }
-pub fn enc_len(out: &mut Vec<u8>, n: usize) {
-    enc_int(out, n as i32);
+
+/// `EERuleText` (ee/EERules.h): a NUL-terminated text the store owns, its length without the NUL.
+#[repr(C)]
+pub struct RuleTextC {
+    pub data: *const u8,
+    pub size: usize,
 }
-pub fn enc_string(out: &mut Vec<u8>, v: &[u8]) {
-    enc_len(out, v.len());
-    out.extend_from_slice(v);
+
+/// The storage the C++ mirror's lists and texts point into.
+#[derive(Default)]
+pub struct MirrorStore {
+    blocks: Vec<Box<dyn std::any::Any + Send>>,
 }
-pub fn enc_number(out: &mut Vec<u8>, n: &RuleNumber) {
-    enc_float(out, n.float);
-    enc_int(out, n.long);
-    enc_int(out, n.world_row);
-    enc_int(out, n.world_value);
+
+// SAFETY: the raw pointers in the mirror types point into boxed vectors the store owns; nothing aliases them mutably.
+unsafe impl<T> Send for RuleListC<T> {}
+// SAFETY: as RuleListC's.
+unsafe impl Send for RuleTextC {}
+
+impl MirrorStore {
+    pub fn list<T: Send + 'static>(&mut self, v: Vec<T>) -> RuleListC<T> {
+        let list = RuleListC { data: v.as_ptr(), size: v.len() };
+        self.blocks.push(Box::new(v));
+        list
+    }
+    pub fn text(&mut self, v: &[u8]) -> RuleTextC {
+        let mut bytes = v.to_vec();
+        bytes.push(0);
+        let text_view = RuleTextC { data: bytes.as_ptr(), size: v.len() };
+        self.blocks.push(Box::new(bytes));
+        text_view
+    }
 }
 
 /// All the rules (`EERules`). Every field starts at its default (the schema); `load` applies the documents on the path.
@@ -859,11 +901,9 @@ impl Rules {
         }
     }
 
-    /// The snapshot the C++ `EERules` reads (ee/EERulesGen.h, EERulesGenDecode.inl).
-    pub fn encode(&self) -> Vec<u8> {
-        let mut out = Vec::new();
-        encode_top(self, &mut out);
-        out
+    /// The C++ `EERulesData` (ee/EERulesGen.h) of these rules, its lists and texts in `store`.
+    pub fn mirror(&self, store: &mut MirrorStore) -> RulesDataC {
+        mirror_top(self, store)
     }
 
     /// The content dump of the rules (`"rules.<doc>":{...}` lines, values resolved).
@@ -1397,13 +1437,29 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_encodes_every_section() {
+    fn mirror_writes_every_section() {
         let r = Rules::default();
-        let a = r.encode();
-        let mut r2 = r.clone();
-        r2.combat.minimum_damage = 9;
-        assert_ne!(a, r2.encode());
-        assert!(a.len() > 1000);
+        let mut s = MirrorStore::default();
+        let m = r.mirror(&mut s);
+        assert_eq!(m.combat.minimum_damage, r.combat.minimum_damage as c_long);
+        assert_eq!(m.combat.fanatic_factor, RuleNumberC::of(&r.combat.fanatic_factor));
+        assert_eq!(m.epochs.size, r.epochs.len());
+        let e = unsafe { &*m.epochs.data.add(m.epochs.size - 1) };
+        assert_eq!(e.high_tech_tools, r.epochs.last().unwrap().high_tech_tools);
+        assert_eq!(e.removal_effects.size, r.epochs.last().unwrap().removal_effects.len());
+        let g = &m.game_options;
+        assert_eq!(g.map_sizes.size, r.game_options.map_sizes.len());
+        let first = unsafe { &*g.map_sizes.data };
+        let id = unsafe { std::slice::from_raw_parts(first.id.data, first.id.size + 1) };
+        assert_eq!(&id[..first.id.size], &r.game_options.map_sizes[0].id[..]);
+        assert_eq!(id[first.id.size], 0);
+        assert_eq!(first.tiles, r.game_options.map_sizes[0].tiles as c_long);
+        let p = &m.ai_personalities;
+        assert_eq!(p.personalities.size, r.ai_personalities.personalities.len());
+        let p0 = unsafe { &*p.personalities.data };
+        assert_eq!(p0.floor, r.ai_personalities.personalities[0].floor);
+        assert_eq!(m.civ_builder.powers_id.size, r.civ_builder.powers_id.len());
+        assert_eq!(mirror_sizes().len(), 16);
     }
 
     #[test]

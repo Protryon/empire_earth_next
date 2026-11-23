@@ -37,15 +37,7 @@ EECampaignFormManager::~EECampaignFormManager()
 // Returns the campaign scenario selection form's manager, creating and attaching it on first use
 EECampaignFormManager* EECampaignFormManager::Get()
 {
-    UIForm* theForm = gUIManager->GetFormByID(kFormCampaignScenarioSelect);
-    EECampaignFormManager* theManager;
-    if (theForm->GetFormManager() != NULL)
-        theManager = static_cast<EECampaignFormManager*>(theForm->GetFormManager());
-    else {
-        theManager = new EECampaignFormManager;
-        theForm->SetFormManager(theManager);
-    }
-    return theManager;
+    return static_cast<EECampaignFormManager*>(static_cast<UIFormManager*>(ee_campaign_form_manager()));   // (campaign.rs)
 }
 
 // Returns the expected checksum of a built-in campaign (the three AoC campaigns, the demo and the tutorial), else 0
