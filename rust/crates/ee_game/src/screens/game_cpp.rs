@@ -2177,6 +2177,16 @@ shims! {
     fn uh_point_x() -> f32 = ee_screenscpp_uh_point_x;
     fn uh_point_y() -> f32 = ee_screenscpp_uh_point_y;
     fn uh_point_reset() = ee_screenscpp_uh_point_reset;
+    // the select control's ops (select_units_ops.rs; EEUICSelectUnits::RustOp until UI lane round 16)
+    fn su_pick() -> usize = ee_screenscpp_su_pick;
+    fn su_lasso_type(ctl: usize, unit: usize, mode: i64) = ee_screenscpp_su_lasso_type;
+    fn su_unit_release(unit: usize) = ee_screenscpp_su_unit_release;
+    fn su_lasso_box(ctl: usize, left: f32, top: f32, right: f32, bottom: f32, mode: i64) = ee_screenscpp_su_lasso_box;
+    fn su_click(ctl: usize, mode: u32) = ee_screenscpp_su_click;
+    fn su_point_at(ctl: usize) = ee_screenscpp_su_point_at;
+    fn su_lasso_in_rect(ctl: usize, left: f32, top: f32, right: f32, bottom: f32, mode: i64) = ee_screenscpp_su_lasso_in_rect;
+    fn su_click_execute(ctl: usize, x: f32, y: f32) = ee_screenscpp_su_click_execute;
+    fn su_left_down(ctl: usize) -> i64 = ee_screenscpp_su_left_down;
     fn uh_class_count() -> i32 = ee_screenscpp_uh_class_count;
     fn uh_class_category(index: i32) -> i32 = ee_screenscpp_uh_class_category;
     fn uh_class_type(index: i32) -> i32 = ee_screenscpp_uh_class_type;

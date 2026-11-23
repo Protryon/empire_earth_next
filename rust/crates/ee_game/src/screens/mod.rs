@@ -422,6 +422,7 @@ pub(crate) mod civ_manager_calls;
 mod civ_manager_ffi;
 pub(crate) mod civ_manager_obj;
 pub(crate) mod command_units_ops;
+pub(crate) mod select_units_ops;
 pub(crate) mod cursor_calls;
 pub(crate) mod dialog_calls;
 pub(crate) mod icon_bar_ops;
