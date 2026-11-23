@@ -6,11 +6,11 @@
 #define EE_EERANDOMMAPGENERATORS_H
 
 unsigned long EERMGetNumberOfGenerators();                          // 0x286714 (size of the vector)
-const UWideString& EERMGetGeneratorDisplayName(unsigned long inIndex);  // 0x28672f (entry +0x14, a UWideString)
-const UWideString& EERMGetGeneratorName(unsigned long inIndex);     // 0x2867a8 (entry +0x00)
+UWideString EERMGetGeneratorDisplayName(unsigned long inIndex);  // 0x28672f (entry +0x14, a UWideString; by value: Rust's)
+UWideString EERMGetGeneratorName(unsigned long inIndex);     // 0x2867a8 (entry +0x00)
 // 0x2867b6: the index of the generator named inName (entry +0x00); 3 when there is none
 long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex);
 // 0x286741: the display name (entry +0x14) of the generator named inName, else inName
-const UWideString& EERMGetGeneratorDisplayName(const UWideString& inName);
+UWideString EERMGetGeneratorDisplayName(const UWideString& inName);
 
 #endif

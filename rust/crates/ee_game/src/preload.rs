@@ -4,7 +4,7 @@
 //! pre-loader per game). Each C++ call is one operation ([`EePreloadCpp`]) answered by a one-statement case of
 //! `ee_preloadcpp` (`src/Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp`).
 
-use std::ffi::{c_ulong, c_void};
+use std::ffi::{c_long, c_ulong, c_void};
 use std::sync::Mutex;
 
 /// The pre-loader's calls (p: the `EEDataPreLoading`, or the object a call names).
@@ -70,6 +70,21 @@ pub enum EePreloadCpp {
     SetHasLoaded,
     ExitGame,
     DisplayError,
+    // ---- the constructor and destructor (round 12)
+    /// `TSScheduler::CreateEvent(<a0: 0 mThreadCreated, 1 mThreadDone, 2 mMessageQueueDone>) == keseOK`
+    CreateEvent,
+    /// `TSScheduler::DestroyEvent(<a0 as CreateEvent>)`
+    DestroyEvent,
+    /// `TSScheduler::CreateThread(mThread, EEDataPreLoading::Main, p) == keseOK`
+    CreateThread,
+    DestroyThread,
+    /// `mThread->SetPriority(a0) == keseOK`
+    SetThreadPriorityOk,
+    ThreadCreatedWait,
+    /// `mThread->SetName(gDataPreLoadingThreadName)`
+    SetThreadName,
+    /// `ESVERIFY_AT(a0 != 0, a1)`
+    Verify,
 }
 
 use EePreloadCpp as O;
@@ -342,6 +357,32 @@ pub extern "C" fn ee_preload_start_queueing() {
 }
 
 /// The pre-loader made (`fresh`) or destroyed: the flags cleared, the queued messages dropped.
+/// The constructor's body: the three events, the queue reset, the thread made at `priority` and waited for, then
+/// named.
+#[no_mangle]
+pub extern "C" fn ee_preload_construct(p: *mut c_void, priority: c_long) {
+    let p = p as P;
+    for (event, line) in [(0, 55), (1, 56), (2, 57)] {
+        h(O::Verify, 0, &[h(O::CreateEvent, p, &[event]), line]);
+    }
+    ee_preload_reset();
+    h(O::Verify, 0, &[h(O::CreateThread, p, &[]), 65]);
+    h(O::Verify, 0, &[h(O::SetThreadPriorityOk, p, &[i64::from(priority)]), 66]);
+    h(O::ThreadCreatedWait, p, &[]);
+    h(O::SetThreadName, p, &[]);
+}
+
+/// The destructor's body: the events destroyed, the queue reset, the thread destroyed.
+#[no_mangle]
+pub extern "C" fn ee_preload_destruct(p: *mut c_void) {
+    let p = p as P;
+    for event in 0..3 {
+        h(O::DestroyEvent, p, &[event]);
+    }
+    ee_preload_reset();
+    h(O::DestroyThread, p, &[]);
+}
+
 #[no_mangle]
 pub extern "C" fn ee_preload_reset() {
     let mut s = state();
