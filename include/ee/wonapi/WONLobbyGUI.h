@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONEventTypes.h"
 #include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 #include "rust/won_gui/barobj.h"
+#include "rust/won_gui/browserobj.h" // BrowserComponent
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/comboobj.h"
 #include "rust/won_gui/cfgkind.h"
@@ -2316,16 +2317,18 @@ class TextArea;
 // The lobby's page view (layout type BrowserComponent; WONGUI/BrowserComponent.cpp). WON's HTML rendering is not
 // ported (docs/RUST_PLAN.md D8): a page is plain text in a TextArea, an HTML page with its tags dropped and entities
 // decoded (ee_won's plaintext.rs). There are no links, so no history: back, forward and stop stay disabled.
+// R6 WON round 34: the Rust record (rust/crates/ee_won_gui/src/browserobj.rs) holds the font size, the background
+// flag and the location and runs every method; the view and the scroller stay C++ members its host sets.
 class BrowserComponent : public Container {
 public:
     BrowserComponent();
     virtual ~BrowserComponent();
-    virtual void AddedToParent();
-    void SetTransparent(bool);
-    void SetScroller(Scroller*);
-    void SetFontSize(HTMLFontSize size) { this->mFontSize=size; }
-    void Reset(); // empties the view
-    void Refresh(); // shows the current location again
+    virtual void AddedToParent() { this->BCall(EeWonBrowserCall::AddedToParent); }
+    void SetTransparent(bool t) { this->BCall(EeWonBrowserCall::SetTransparent,t); }
+    void SetScroller(Scroller* s) { this->BCall(EeWonBrowserCall::SetScroller,(intptr_t)s); }
+    void SetFontSize(HTMLFontSize size) { this->BCall(EeWonBrowserCall::SetFontSize,size); }
+    void Reset() { this->BCall(EeWonBrowserCall::Reset); } // empties the view
+    void Refresh() { this->BCall(EeWonBrowserCall::Refresh); } // shows the current location again
     void Stop() {}
     void Back() {}
     void Forward() {}
@@ -2333,19 +2336,19 @@ public:
     bool BackButtonEnabled() { return false; }
     bool ForwardButtonEnabled() { return false; }
     bool FindStr(const GUIString&,bool=true,bool=false) { return false; }
-    void Go(const GUIString&,bool=false,bool=false,int=-1); // a file's text; a web address as text
+    // a file's text; a web address as text
+    void Go(const GUIString& l,bool=false,bool=false,int=-1) { this->BCall(EeWonBrowserCall::Go,(intptr_t)l.mData->mText,l.length()); }
     // the readable ones of two page files, with a blank line between (the MOTD's and the terms of use's pages)
-    void ShowFiles(const std::string& inFirst,const std::string& inSecond,bool inSkipFirstCharIfText);
+    void ShowFiles(const std::string& inFirst,const std::string& inSecond,bool inSkipFirstCharIfText)
+    { this->BCall(EeWonBrowserCall::ShowFiles,(intptr_t)inFirst.data(),(intptr_t)inFirst.size(),(intptr_t)inSecond.data(),(intptr_t)inSecond.size(),inSkipFirstCharIfText); }
     TextArea* GetHTMLView() { return this->mHTMLView.get(); }
-    const GUIString& GetCurStatus() { return this->mCurStatus; }
-protected:
-    void SetPageText(const std::wstring&);
+    const GUIString& GetCurStatus() { return gEmptyGUIString; } // (never set)
     SmartPtr<TextArea> mHTMLView;
     SmartPtr<Scroller> mScroller;
-    HTMLFontSize mFontSize;
-    bool mHaveBackground;
-    GUIString mCurStatus;
-    GUIString mCurLocation;
+    EeWonBrowser* mRust;
+private:
+    intptr_t BCall(EeWonBrowserCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0,intptr_t e=0)
+    { return ee_won_browser_call(this->mRust,c,a,b,cc,d,e); }
 };
 
 // 0x3c5ff0: the sort/filter handlers of a server-list column

@@ -6,6 +6,7 @@
 #![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
 
 pub mod barobj;
+pub mod browserobj;
 pub mod btnobj;
 pub mod cfgimg;
 pub mod cfgkind;

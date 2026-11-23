@@ -112,6 +112,7 @@
 #include "rust/ui/string_list_ffi.h"
 #include "rust/ui/tableobj.h"
 #include "rust/won_gui/barobj.h"
+#include "rust/won_gui/browserobj.h"
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgset.h"
